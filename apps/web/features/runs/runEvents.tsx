@@ -20,9 +20,11 @@ import { allTaskRunsKey } from "./queries/keys";
  * Payload mirror of the API's events (see apps/api/src/shared/sse/sse.ts and the
  * channels SSE merge). Run events carry `{ scope, runId, status }`; channel-item
  * events carry `{ scope: "channel-items", itemId, state }`. Unknown scopes are
- * ignored, so the channel scope was safe to add to the server merge.
+ * ignored, so the channel scope was safe to add to the server merge. Exported (Phase
+ * 89) so the subsystem web's particle mapping can type the events it reads off
+ * {@link onRunEvent} without re-declaring the shape.
  */
-interface RunStatusEvent {
+export interface RunStatusEvent {
   scope: "agent-runs" | "pipeline-runs" | "goal-runs" | "channel-items" | "activity";
   runId?: string;
   status?: string;
@@ -30,6 +32,27 @@ interface RunStatusEvent {
   kind?: string;
   /** Activity-scope only: the full entry, prepended onto the live-log feed. */
   entry?: ActivityEntry;
+}
+
+type RunEventListener = (event: RunStatusEvent) => void;
+
+/**
+ * Phase 89: every parsed event the provider's ONE `EventSource` receives, fanned out
+ * to plain listeners — no second connection, no state library, no re-shaping. A
+ * module-level set rather than context state because the provider is mounted once,
+ * high in the tree ("Mounted once, high in the tree" — see the provider's own doc
+ * comment below); a listener added before the provider itself mounts (or surviving
+ * across a remount in tests) still works, since it's independent of any component
+ * instance. The subsystem web's particle layer (`SubsystemWeb`) is the first
+ * consumer: it turns a real dispatch/report transition into a center↔node flight,
+ * never a timer.
+ */
+const listeners = new Set<RunEventListener>();
+
+/** Subscribe to every `RunStatusEvent` the provider parses. Returns an unsubscribe. */
+export function onRunEvent(listener: RunEventListener): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
 }
 
 /**
@@ -71,6 +94,19 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
       } catch {
         return;
       }
+      // Fan out to plain subscribers first (Phase 89) — every scope, unfiltered;
+      // consumers decide what's actionable, the same posture the invalidation
+      // branches below already take toward unknown scopes. Isolated per-listener:
+      // a subscriber's bug must never break the invalidation this provider exists
+      // for, so one throwing listener is swallowed (loudly, via console.error) and
+      // the rest still run.
+      listeners.forEach((listener) => {
+        try {
+          listener(parsed);
+        } catch (error) {
+          console.error("RunEventsProvider: onRunEvent listener threw", error);
+        }
+      });
       if (parsed.scope === "agent-runs") {
         void qc.invalidateQueries({ queryKey: getRunningAgentsQueryKey() });
         void qc.invalidateQueries({ queryKey: allTaskRunsKey });

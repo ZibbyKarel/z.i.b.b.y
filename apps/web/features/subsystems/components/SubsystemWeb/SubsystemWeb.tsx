@@ -1,8 +1,12 @@
-import type { SubsystemId, SubsystemState, SubsystemWithStatus } from "@zibby/contracts";
+import { SUBSYSTEMS, type SubsystemId, type SubsystemState, type SubsystemWithStatus } from "@zibby/contracts";
 import { cn } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import type { KeyboardEvent } from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import type { Pipeline } from "../../../../domain";
 import { usePrefersReducedMotion } from "../../../chat/hooks/usePrefersReducedMotion";
+import type { RunView } from "../../../runs/run";
+import { onRunEvent } from "../../../runs/runEvents";
+import { appendParticle, flightForEvent, particleDuration } from "./particle-mapping";
 import {
   NODE_RADIUS,
   ORB_RADIUS,
@@ -13,6 +17,7 @@ import {
   WEB_VIEWBOX_WIDTH,
   computeSlots,
   layoutSubsystems,
+  pathFor,
   rimEdges,
   rimPath,
   slotForId,
@@ -25,6 +30,10 @@ export enum SubsystemWebTestId {
   Spokes = "subsystem-web-spokes",
   Rim = "subsystem-web-rim",
   Particles = "subsystem-web-particles",
+  /** One flight/glow glyph. Shared across every live particle — not unique per id,
+   * since a particle's id is an opaque event-derived key, not something a test
+   * needs to target individually (`getAllByTestId` + count is the assertion shape). */
+  Particle = "subsystem-web-particle",
   /** Per subsystem: `${Node}-${id}`. */
   Node = "subsystem-web-node",
   /** Per subsystem: `${Badge}-${id}`. */
@@ -35,6 +44,29 @@ export interface SubsystemWebProps {
   subsystems: SubsystemWithStatus[];
   selectedId?: SubsystemId | null;
   onSelect: (id: SubsystemId) => void;
+  /**
+   * Phase 89: the catalogs the particle layer resolves a run's owning subsystem
+   * through (`runId` → owning pipeline → `ownerSubsystem`). Both already fetched by
+   * the Chat screen for other purposes (the constellation roster / dock) — passed
+   * in rather than queried again here, so the particle layer adds no new request.
+   * Optional/defaulted so every existing call site (and every other test) keeps
+   * compiling unchanged.
+   */
+  pipelines?: Pipeline[];
+  runs?: RunView[];
+}
+
+/** One live particle: a spoke flight (`animateMotion` along the phase-83 path) or,
+ * under `prefers-reduced-motion`, a brief static glow at its destination node. */
+interface RenderedParticle {
+  id: string;
+  from: SubsystemId | "orb";
+  to: SubsystemId | "orb";
+  /** The owning subsystem's registry color — looked up once at flight creation
+   * (not re-derived from the live `subsystems` prop, which can momentarily drop an
+   * entry; the static registry always has one for any valid `SubsystemId`). */
+  color: string;
+  durationS: number;
 }
 
 /** Fill opacity per state — `klid` reads dim, everything else full-strength; the
@@ -68,6 +100,65 @@ const BADGE_TONE_CLASS: Record<"hlaseni" | "ceka", string> = {
 const SLOTS = computeSlots();
 const RIM_EDGES = rimEdges();
 
+interface ParticleGlyphProps {
+  particle: RenderedParticle;
+  reducedMotion: boolean;
+  onEnd: (id: string) => void;
+}
+
+/**
+ * One particle's glyph (Phase 89). Full motion: a small dot riding
+ * `<animateMotion>` along the exact spoke path {@link pathFor} already draws
+ * statically, removed the moment the SMIL animation actually finishes (its native
+ * `endEvent`, listened for imperatively — React has no synthetic prop for SMIL
+ * events). `prefers-reduced-motion`: no motion at all, just a brief static glow at
+ * the flight's destination node (the `ripple` keyframe already in the design
+ * system, reused rather than adding a new one), removed on its own CSS
+ * `animationend`. Both paths converge on the same `onEnd(particle.id)` callback, so
+ * the parent's cap/removal logic doesn't care which path fired it.
+ */
+function ParticleGlyph({ particle, reducedMotion, onEnd }: ParticleGlyphProps) {
+  // Typed as the generic `SVGElement` (not `SVGAnimateMotionElement`) — React's own
+  // `animateMotion` JSX typing is `SVGProps<SVGElement>`, so this is the ref shape
+  // the element actually accepts; `endEvent` is available on any `EventTarget`.
+  const animateRef = useRef<SVGElement>(null);
+
+  useEffect(() => {
+    if (reducedMotion) return;
+    const el = animateRef.current;
+    if (!el) return;
+    const handleEnd = () => onEnd(particle.id);
+    el.addEventListener("endEvent", handleEnd);
+    return () => el.removeEventListener("endEvent", handleEnd);
+  }, [reducedMotion, particle.id, onEnd]);
+
+  if (reducedMotion) {
+    const dest = particle.to === "orb" ? WEB_CENTER : slotForId(particle.to);
+    if (!dest) return null;
+    return (
+      <circle
+        className="animate-[ripple_0.9s_ease-out_forwards]"
+        cx={dest.x}
+        cy={dest.y}
+        data-testid={SubsystemWebTestId.Particle}
+        fill={particle.color}
+        onAnimationEnd={() => onEnd(particle.id)}
+        opacity={0.85}
+        r={6}
+      />
+    );
+  }
+
+  const path = pathFor(particle.from, particle.to);
+  if (!path) return null;
+
+  return (
+    <circle data-testid={SubsystemWebTestId.Particle} fill={particle.color} opacity={0.95} r={3.2}>
+      <animateMotion dur={`${particle.durationS}s`} fill="freeze" path={path} ref={animateRef} />
+    </circle>
+  );
+}
+
 /**
  * The subsystem web (Phase 83, design doc "the web, not an orbit"): 8 fixed nodes on a
  * flattened ellipse, one per named subsystem, a ZIBBY orb at the center, thin static
@@ -92,10 +183,55 @@ const RIM_EDGES = rimEdges();
  * pattern for an interactive SVG shape. Selecting a node just sets the selection ring
  * (Phase 84's drawer will consume `selectedId`) — no navigation yet.
  */
-export function SubsystemWeb({ subsystems, selectedId = null, onSelect }: SubsystemWebProps) {
+export function SubsystemWeb({
+  subsystems,
+  selectedId = null,
+  onSelect,
+  pipelines = [],
+  runs = [],
+}: SubsystemWebProps) {
   const t = useTranslations("subsystems");
   const reducedMotion = usePrefersReducedMotion();
   const positioned = layoutSubsystems(subsystems);
+
+  // Phase 89: turn real dispatch/report events into particles. `runs`/`pipelines`
+  // are read through refs (not effect deps) so a fresh array reference on every
+  // query refetch never tears down and resubscribes the listener — the provider's
+  // ONE `EventSource` keeps delivering events the whole time regardless.
+  const runsRef = useRef(runs);
+  useEffect(() => {
+    runsRef.current = runs;
+  }, [runs]);
+  const pipelinesRef = useRef(pipelines);
+  useEffect(() => {
+    pipelinesRef.current = pipelines;
+  }, [pipelines]);
+
+  const [particles, setParticles] = useState<RenderedParticle[]>([]);
+  const particleSeq = useRef(0);
+
+  useEffect(() => {
+    return onRunEvent((event) => {
+      const flight = flightForEvent(event, runsRef.current, pipelinesRef.current);
+      if (!flight) return;
+      const color = SUBSYSTEMS.find((s) => s.id === flight.subsystemId)?.color;
+      if (!color) return;
+      particleSeq.current += 1;
+      const id = `${event.runId}:${event.status}:${particleSeq.current}`;
+      const next: RenderedParticle = {
+        id,
+        from: flight.from,
+        to: flight.to,
+        color,
+        durationS: particleDuration(id),
+      };
+      setParticles((prev) => appendParticle(prev, next));
+    });
+  }, []);
+
+  const handleParticleEnd = (id: string) => {
+    setParticles((prev) => prev.filter((p) => p.id !== id));
+  };
 
   const handleKeyDown = (event: KeyboardEvent<SVGGElement>, id: SubsystemId) => {
     if (event.key === "Enter" || event.key === " ") {
@@ -164,8 +300,19 @@ export function SubsystemWeb({ subsystems, selectedId = null, onSelect }: Subsys
           })}
         </g>
 
-        {/* Reserved for Phase 89's particle layer — nothing animated here yet. */}
-        <g aria-hidden="true" data-testid={SubsystemWebTestId.Particles} />
+        {/* Phase 89: one glyph per live particle — each one traces to a real
+            RunStatusEvent (dispatch or report), never a timer. Decorative (the
+            nodes/orb themselves already carry the interactive/aria surface). */}
+        <g aria-hidden="true" data-testid={SubsystemWebTestId.Particles}>
+          {particles.map((p) => (
+            <ParticleGlyph
+              key={p.id}
+              onEnd={handleParticleEnd}
+              particle={p}
+              reducedMotion={reducedMotion}
+            />
+          ))}
+        </g>
 
         {/* The ZIBBY orb — not interactive in v1, diameter ≈ 2× a node's. */}
         <g aria-hidden="true" data-testid={SubsystemWebTestId.Orb}>
