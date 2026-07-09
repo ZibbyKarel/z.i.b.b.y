@@ -12,13 +12,16 @@ import type {
   CreateTaskInput,
   CreateTaskResult,
   GoalRun,
+  Pipeline,
   PipelineRun,
   Project,
   ScheduledTask,
+  SubsystemId,
   TaskOutcome,
   TaskOutput,
   TaskTarget,
 } from "@zibby/contracts";
+import { SUBSYSTEMS } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { AgentRunnerService, type RunAttachments } from "../agents/agent-runner.service";
 import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service";
@@ -28,6 +31,7 @@ import { GateEvaluatorService } from "../gates/gate-evaluator.service";
 import { LimitsService } from "../limits/limits.service";
 import { GoalRunnerService } from "../goals/goal-runner.service";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
+import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { matchProject } from "../projects/project-matcher";
 import { ResolvedProjectService } from "../projects/resolved-project.service";
@@ -51,6 +55,21 @@ export class EmptyCatalogError extends Error {
   constructor() {
     super("No agents or pipelines available to route to");
     this.name = "EmptyCatalogError";
+  }
+}
+
+/**
+ * Phase 91 — thrown when a task explicitly targets a subsystem with ZERO owned
+ * pipelines. A described task must never silently no-op (Law 5), and a mandate
+ * without capability shouldn't pretend to execute (deliberate v1 floor: this does
+ * NOT fall back to the orchestrator) — so it surfaces as a clear, immediate,
+ * Czech-language validation rejection instead. The controller maps it to 422,
+ * mirroring {@link EmptyCatalogError}.
+ */
+export class SubsystemEmptyRosterError extends Error {
+  constructor(subsystemName: string) {
+    super(`Subsystém ${subsystemName} zatím nemá žádnou pipeline.`);
+    this.name = "SubsystemEmptyRosterError";
   }
 }
 
@@ -113,6 +132,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     private readonly classifier: TaskClassifierService,
     private readonly agentRunner: AgentRunnerService,
     private readonly pipelineRunner: PipelineRunnerService,
+    private readonly pipelinesStore: PipelinesStorageService,
     private readonly goalRunner: GoalRunnerService,
     private readonly chainRunner: ChainRunnerService,
     private readonly logger: LoggerService,
@@ -273,7 +293,15 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     // Phase 11: the unified composer carries a pre-chosen target on the wire (a
     // scheduled loop's goal). A server-side `explicitTarget` arg (proposed-task
     // resume) still wins when both are present.
-    const target = explicitTarget ?? input.target;
+    const rawTarget = explicitTarget ?? input.target;
+    // Phase 91: an explicit subsystem target is resolved to a concrete pipeline
+    // target HERE — before either persistence path below (scheduled or immediate)
+    // — so a 0-owned rejection is a clean validation error, never a task record
+    // that later fails on dispatch. See `resolveSubsystemTarget`.
+    const target =
+      rawTarget?.kind === "subsystem"
+        ? await this.resolveSubsystemTarget(rawTarget, input.text, input.paths ?? [])
+        : rawTarget;
     const project = trustedProjectId
       ? await this.projects.get(trustedProjectId).catch((): Project | null => null)
       : matchProject(await this.projects.list().catch((): Project[] => []), {
@@ -313,6 +341,46 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       refs: { taskId, ...(project ? { projectId: project.id } : {}) },
     });
     return this.attemptCreate(taskId, resolvedInput, project, now, target, background, titleAuto);
+  }
+
+  /**
+   * Phase 91 — resolve an explicit subsystem target to a concrete pipeline target
+   * (the design doc's 0/1/N-owned-pipeline rule), called once, up front, by
+   * {@link createTask} before any persistence:
+   *  - **0 owned** → rejects immediately ({@link SubsystemEmptyRosterError}, a
+   *    clear Czech validation message) — a mandate without capability shouldn't
+   *    pretend to execute (deliberate v1 floor, not a fallback to the
+   *    orchestrator).
+   *  - **1 owned** → dispatches straight to it; the classifier is never called.
+   *  - **2+ owned** → `TaskClassifierService.classifyWithinSubsystem`, restricted
+   *    to just the owned pipelines (never the full catalog, never a fallback to
+   *    the orchestrator — the operator already named the subsystem).
+   *
+   * The resolved pipeline target IS the run's "via <subsystem>" attribution: any
+   * consumer can already read `Pipeline.ownerSubsystem` (Phase 81) off the
+   * dispatched pipeline id, so this adds no new run-level field.
+   */
+  private async resolveSubsystemTarget(
+    target: Extract<TaskTarget, { kind: "subsystem" }>,
+    text: string,
+    paths: string[],
+  ): Promise<TaskTarget> {
+    const owned = (await this.pipelinesStore.list().catch((): Pipeline[] => [])).filter(
+      (p) => p.ownerSubsystem === target.id,
+    );
+    if (owned.length === 0) {
+      throw new SubsystemEmptyRosterError(subsystemDisplayName(target.id));
+    }
+    if (owned.length === 1) {
+      return pipelineTaskTarget(owned[0]!);
+    }
+    const routing = await this.classifier.classifyWithinSubsystem(
+      { text, paths },
+      owned.map((p) => p.id),
+    );
+    // Defensive only: `classifyWithinSubsystem` returns null solely for an empty
+    // candidate set, which `owned.length > 1` already rules out.
+    return routing?.target ?? pipelineTaskTarget(owned[0]!);
   }
 
   /**
@@ -1204,6 +1272,24 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
 /** Display id of a routing target (the orchestrator is synthetic, with no id). */
 function targetIdOf(target: TaskTarget): string {
   return target.kind === "orchestrator" ? "orchestrator" : target.id;
+}
+
+/**
+ * A subsystem's mythic display name for {@link SubsystemEmptyRosterError}'s
+ * message — falls back to the raw id (never happens with a valid `SubsystemId`,
+ * since {@link SUBSYSTEMS} is the closed registry it comes from).
+ */
+function subsystemDisplayName(id: SubsystemId): string {
+  return SUBSYSTEMS.find((s) => s.id === id)?.name ?? id;
+}
+
+/**
+ * Project a stored pipeline definition onto the routing-target shape — Phase 91's
+ * 1-owned direct-dispatch path (mirrors `TaskClassifierService`'s own candidate
+ * projection, minus the internal `search` blob this call site has no use for).
+ */
+function pipelineTaskTarget(p: Pipeline): TaskTarget {
+  return { kind: "pipeline", id: p.id, name: p.name ?? p.id, glyph: "flow", avatar: p.avatar };
 }
 
 /** The activity ref the target contributes (agentId / pipelineId / chainId), if any. */

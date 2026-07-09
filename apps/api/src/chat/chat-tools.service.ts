@@ -159,6 +159,8 @@ export function describeTarget(target: TaskTarget): string {
       return `cíl ${target.name}`;
     case "chain":
       return `řetězec ${target.name}`;
+    case "subsystem":
+      return `podsystém ${target.name}`;
     case "orchestrator":
       return "orchestrátor";
   }

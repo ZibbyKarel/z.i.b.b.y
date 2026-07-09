@@ -39,8 +39,21 @@ vi.mock("../../../agents/queries/useAgentsQuery", () => ({
   getAgentsQueryKey: () => ["agents"],
 }));
 vi.mock("../../../pipelines/queries/usePipelinesQuery", () => ({
-  usePipelinesQuery: () => ({ data: [{ id: "delivery", name: "Delivery" }] }),
+  usePipelinesQuery: () => ({
+    data: [{ id: "delivery", name: "Delivery", ownerSubsystem: "forge" }],
+  }),
   getPipelinesQueryKey: () => ["pipelines"],
+}));
+// Phase 91: two subsystems in the registry — only "forge" owns a pipeline (see the
+// pipelines mock above), "puls" owns none — so the mention catalog roster-filter
+// (≥1 owned pipeline) has something real to exclude.
+vi.mock("../../../subsystems/queries/useSubsystemsQuery", () => ({
+  useSubsystemsQuery: () => ({
+    data: [
+      { id: "forge", name: "Forge", color: "#f97316", state: "klid", tier2Count: 0, tier3Count: 0 },
+      { id: "puls", name: "Puls", color: "#14b8a6", state: "klid", tier2Count: 0, tier3Count: 0 },
+    ],
+  }),
 }));
 vi.mock("../../../projects/queries/useProjectsQuery", () => ({
   useProjectsQuery: () => ({
@@ -307,6 +320,59 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
     });
   });
 
+  describe("Phase 91 — subsystem @-mentions (roster-only, explicit target)", () => {
+    it("lists a roster-bearing subsystem (≥1 owned pipeline) as a colored-dot row, never a capability-less one", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "@");
+
+      // "forge" owns the "delivery" pipeline (mocked above) — it's dispatchable,
+      // so it belongs in the picker.
+      expect(screen.getByTestId(`${CommandLineTestId.MentionItem}-subsystem-forge`)).toBeInTheDocument();
+      // "puls" owns nothing — mentioning it would only ever hit the 0-owned
+      // validation reject, so it must never appear, at ANY query (including empty).
+      expect(
+        screen.queryByTestId(`${CommandLineTestId.MentionItem}-subsystem-puls`),
+      ).not.toBeInTheDocument();
+
+      // The icon is a colored dot (the subsystem's own brand color), not the usual
+      // agent/pipeline Tag+glyph chip.
+      const dot = screen.getByTestId(`${CommandLineTestId.MentionItem}-subsystem-forge-dot`);
+      expect(dot).toHaveStyle({ background: "#f97316" });
+    });
+
+    it("filters the subsystem row by query exactly like agents/pipelines", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "@puls");
+
+      // "puls" never matches the query either, because it's excluded from the
+      // candidate list before filtering even runs.
+      expect(screen.getByTestId(CommandLineTestId.MentionEmpty)).toBeInTheDocument();
+    });
+
+    it("selecting a subsystem sets the explicit subsystem target — the create payload carries kind: subsystem", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "@Forge");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-subsystem-forge`));
+
+      expect(input).toHaveValue("@Forge ");
+      await user.type(input, "dispatch this to the subsystem");
+      await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
+
+      expect(createTask.mock.calls[0]?.[0].body.target).toEqual({
+        kind: "subsystem",
+        id: "forge",
+        name: "Forge",
+        glyph: "grid",
+      });
+    });
+  });
+
   describe("attachments", () => {
     it("uploads a file picked via the + button and shows it as a compact tile inside the box", async () => {
       const onAttachmentsChange = vi.fn();
@@ -465,7 +531,7 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
     it("wraps the input in the panel chrome by default (header icon + label + hint)", () => {
       render(<CommandLine />);
       expect(screen.getByTestId(PanelTestId.Header)).toHaveTextContent("Zadej směr");
-      expect(screen.getByText(/hledá agenty a pipeliny/)).toBeInTheDocument();
+      expect(screen.getByText(/hledá agenty, pipeliny a podsystémy/)).toBeInTheDocument();
     });
 
     it("renders a bare input with no panel chrome when chrome={false}", () => {

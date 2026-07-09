@@ -143,6 +143,22 @@ describe("CreateTaskInputSchema (Phase 11 explicit target)", () => {
     expect(parsed.success).toBe(true);
   });
 
+  it("Phase 91: accepts a subsystem target with a valid closed-enum id", () => {
+    const parsed = CreateTaskInputSchema.safeParse({
+      text: "dispatch to the subsystem",
+      target: { kind: "subsystem", id: "herald", name: "Herald" },
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("Phase 91: rejects a subsystem target whose id isn't in the closed registry", () => {
+    const parsed = CreateTaskInputSchema.safeParse({
+      text: "dispatch to the subsystem",
+      target: { kind: "subsystem", id: "not-a-real-subsystem", name: "??" },
+    });
+    expect(parsed.success).toBe(false);
+  });
+
   it("stays valid with no target (the default path)", () => {
     expect(CreateTaskInputSchema.safeParse({ text: "just do it" }).success).toBe(true);
   });

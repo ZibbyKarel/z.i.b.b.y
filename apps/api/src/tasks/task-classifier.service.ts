@@ -3,6 +3,7 @@ import {
   type ClassifyTaskInput,
   type MakerRef,
   ORCHESTRATOR_TARGET,
+  type Pipeline,
   type ProposedGoal,
   type ResolvedPath,
   type TaskRouting,
@@ -73,13 +74,49 @@ export class TaskClassifierService {
   }
 
   /**
+   * Phase 91 — classify a task within ONE subsystem's owned pipelines only: the
+   * design doc's "recursive scoped routing", the same {@link route}/{@link isCoherent}
+   * machinery reused with a candidate catalog restricted to the owned pipelines (never
+   * agents, never the full catalog). Called only for the N-owned case (2+ pipelines);
+   * the caller (`TaskSchedulerService`'s subsystem dispatch) resolves 0/1 owned
+   * pipelines itself without a classify round-trip. The terminal fallback for "nothing
+   * matched confidently" is the FIRST owned pipeline (registry/file order) — never the
+   * global orchestrator, because the operator already named the subsystem (scope
+   * guard: `docs/plans/phase-91-subsystem-dispatch.md`). Returns `null` only when
+   * `ownedPipelineIds` resolves to zero live pipelines (defensive — the caller never
+   * invokes this with an empty set).
+   */
+  async classifyWithinSubsystem(
+    input: ClassifyTaskInput,
+    ownedPipelineIds: readonly string[],
+  ): Promise<TaskRouting | null> {
+    const allPipelines = await this.pipelines.list().catch((): Pipeline[] => []);
+    const owned = allPipelines.filter((p) => ownedPipelineIds.includes(p.id));
+    const candidates = this.pipelineCandidates(owned);
+    const first = candidates[0];
+    if (!first) return null;
+
+    const base = await this.route(input, candidates, {
+      target: toTaskTarget(first),
+      reason: "No pipeline matched confidently — routed to the subsystem's first pipeline.",
+    });
+    return this.enrich(base, input, candidates);
+  }
+
+  /**
    * Resolve the base verdict (the maker pick): the LLM router when coherent, else
-   * the keyword scorer, else the orchestrator terminal rule. This is the pre-Phase-11
-   * routing — `mode`/`proposedGoal`/`paths` are overlaid by {@link enrich}.
+   * the keyword scorer, else the terminal fallback (the orchestrator, by default).
+   * This is the pre-Phase-11 routing — `mode`/`proposedGoal`/`paths` are overlaid by
+   * {@link enrich}. Phase 91: `fallback` lets a scoped caller ({@link classifyWithinSubsystem})
+   * swap the terminal target/reason without duplicating the router/scorer flow.
    */
   private async route(
     input: ClassifyTaskInput,
     candidates: RoutableTarget[],
+    fallback: { target: TaskTarget; reason: string } = {
+      target: ORCHESTRATOR_TARGET,
+      reason: "No agent or pipeline matched confidently — the orchestrator will handle it.",
+    },
   ): Promise<TaskRouting> {
     try {
       const routed = await this.router.route(input, candidates);
@@ -91,16 +128,17 @@ export class TaskClassifierService {
     const scored = this.fallback.score(input, candidates);
     if (scored && scored.confidence >= ORCHESTRATOR_FALLBACK_THRESHOLD) return scored;
 
-    // Terminal rule: nothing matched confidently — the orchestrator takes the task.
-    this.log.info("no confident match, routing to orchestrator", {
+    // Terminal rule: nothing matched confidently.
+    this.log.info("no confident match, using terminal fallback", {
       confidence: scored?.confidence ?? 0,
+      fallbackKind: fallback.target.kind,
     });
     return {
-      target: ORCHESTRATOR_TARGET,
+      target: fallback.target,
       // Carry the weak score through so the UI still reads this as a low-confidence
       // verdict (steering the user toward the manual picker on the preview path).
       confidence: scored?.confidence ?? 0,
-      reason: "No agent or pipeline matched confidently — the orchestrator will handle it.",
+      reason: fallback.reason,
       matchedTerms: scored?.matchedTerms ?? [],
       candidates: candidates.map(toTaskTarget),
       mode: "single",
@@ -197,7 +235,17 @@ export class TaskClassifierService {
       search: [a.name, a.id, a.category, a.description].filter(Boolean).join(" "),
     }));
 
-    const pipelineTargets: RoutableTarget[] = pipelines.map((p) => ({
+    return [...agentTargets, ...this.pipelineCandidates(pipelines)];
+  }
+
+  /**
+   * Project stored pipelines onto the rankable candidate shape — shared by
+   * {@link buildCandidates} (the full catalog) and {@link classifyWithinSubsystem}
+   * (a pre-filtered, subsystem-owned subset), so the two never compute a pipeline
+   * candidate's `search`/`glyph` shape differently.
+   */
+  private pipelineCandidates(pipelines: readonly Pipeline[]): RoutableTarget[] {
+    return pipelines.map((p) => ({
       kind: "pipeline",
       id: p.id,
       name: p.name ?? p.id,
@@ -206,8 +254,6 @@ export class TaskClassifierService {
       // A pipeline's desc carries most of the routable signal; the phase agents add a few terms.
       search: [p.name, p.id, p.desc, ...p.phases.map((ph) => ph.agent)].filter(Boolean).join(" "),
     }));
-
-    return [...agentTargets, ...pipelineTargets];
   }
 
   /** A verdict is usable only if it parses and names a target that's actually in the catalog. */
@@ -215,13 +261,18 @@ export class TaskClassifierService {
     if (!TaskRoutingSchema.safeParse(routing).success) return false;
     const target = routing.target;
     // The orchestrator is this service's own terminal rule — a router that picks
-    // it (instead of a catalog entry) is not a usable verdict. A goal (Phase 10) and
-    // a chain (Phase 05) are explicit-only: they never appear in the routable catalog,
-    // so the classifier must never route to one (the same posture as orchestrator).
+    // it (instead of a catalog entry) is not a usable verdict. A goal (Phase 10), a
+    // chain (Phase 05) and a subsystem (Phase 91) are explicit-only: they never
+    // appear in the routable catalog, so the classifier must never route to one
+    // (the same posture as orchestrator — this is also the scope-guard belt to the
+    // `candidates.some(...)` braces below, which already reject it structurally
+    // since neither `buildCandidates` nor `pipelineCandidates` ever emits a
+    // `kind: "subsystem"` entry).
     if (
       target.kind === "orchestrator" ||
       target.kind === "goal" ||
-      target.kind === "chain"
+      target.kind === "chain" ||
+      target.kind === "subsystem"
     ) {
       return false;
     }

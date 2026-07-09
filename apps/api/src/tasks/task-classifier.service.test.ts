@@ -258,3 +258,73 @@ describe("TaskClassifierService — Phase 11 path resolution", () => {
     expect(r?.paths).toEqual([]);
   });
 });
+
+describe("TaskClassifierService — Phase 91 classifyWithinSubsystem (recursive scoped routing)", () => {
+  it("restricts the candidate catalog to ONLY the owned pipelines — no agents, no un-owned pipelines", async () => {
+    const routeSpy = vi.fn(async (_input: unknown, _candidates: unknown) => null);
+    const svc = makeService({
+      agents: catalogAgents, // must never appear in a subsystem-scoped candidate list
+      pipelines: [
+        pipeline({ id: "delivery", name: "Delivery" }),
+        pipeline({ id: "build-feature", name: "Build Feature" }),
+        pipeline({ id: "unowned", name: "Unowned" }), // not in ownedPipelineIds — must be excluded
+      ],
+      router: { route: routeSpy },
+    });
+    await svc.classifyWithinSubsystem({ text: "ship the auth feature" }, ["delivery", "build-feature"]);
+    expect(routeSpy).toHaveBeenCalledTimes(1);
+    const candidates = routeSpy.mock.calls[0]?.[1] as { kind: string; id: string }[];
+    expect(candidates.map((c) => `${c.kind}:${c.id}`).sort()).toEqual([
+      "pipeline:build-feature",
+      "pipeline:delivery",
+    ]);
+  });
+
+  it("low-confidence fallback lands on the FIRST owned pipeline (registry order) — never the orchestrator", async () => {
+    const svc = makeService({
+      agents: catalogAgents,
+      pipelines: [
+        pipeline({ id: "delivery", name: "Delivery", desc: "fix or implement a feature or bug" }),
+        pipeline({ id: "build-feature", name: "Build Feature", desc: "spec implementace testy docs" }),
+      ],
+      router: silentRouter, // forces the deterministic keyword leg
+    });
+    const r = await svc.classifyWithinSubsystem(
+      { text: "xyzzy zzz no keyword overlap at all" },
+      ["delivery", "build-feature"],
+    );
+    expect(r?.target.kind).toBe("pipeline");
+    expect(r?.target).toMatchObject({ kind: "pipeline", id: "delivery" });
+  });
+
+  it("a confident router pick among the owned pipelines wins", async () => {
+    const routerVerdict: TaskRouting = {
+      target: { kind: "pipeline", id: "build-feature", name: "Build Feature" },
+      confidence: 0.9,
+      reason: "matched build-feature",
+      matchedTerms: [],
+      candidates: [{ kind: "pipeline", id: "build-feature", name: "Build Feature" }],
+      mode: "single",
+      proposedGoal: null,
+      paths: [],
+    };
+    const svc = makeService({
+      pipelines: [
+        pipeline({ id: "delivery", name: "Delivery" }),
+        pipeline({ id: "build-feature", name: "Build Feature" }),
+      ],
+      router: fixedRouter(routerVerdict),
+    });
+    const r = await svc.classifyWithinSubsystem({ text: "spec out the feature" }, [
+      "delivery",
+      "build-feature",
+    ]);
+    expect(r?.target).toEqual({ kind: "pipeline", id: "build-feature", name: "Build Feature" });
+  });
+
+  it("returns null when the owned id set resolves to zero live pipelines (defensive)", async () => {
+    const svc = makeService({ pipelines: [pipeline({ id: "delivery", name: "Delivery" })] });
+    const r = await svc.classifyWithinSubsystem({ text: "anything" }, ["gone-now"]);
+    expect(r).toBeNull();
+  });
+});

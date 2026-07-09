@@ -3,9 +3,12 @@ import type {
   TaskTarget as ApiTaskTarget,
   ProposedGoal,
   ResolvedPath,
+  SubsystemId,
   TaskMode,
 } from "@zibby/contracts";
 import type { IconName } from "@zibby/design-system";
+
+export type { SubsystemId };
 
 export type { ProposedGoal, ResolvedPath, TaskMode };
 
@@ -55,31 +58,46 @@ export function basename(path: string): string {
   return slash >= 0 ? trimmed.slice(slash + 1) : trimmed;
 }
 
-/** A destination for a task — an agent, pipeline, goal, chain, or the orchestrator fallback. */
-export type TaskTargetKind = "agent" | "pipeline" | "goal" | "chain" | "orchestrator";
+/**
+ * A destination for a task — an agent, pipeline, goal, chain, a named subsystem
+ * (Phase 91, explicit-only — never emitted by the top-level classifier), or the
+ * orchestrator fallback.
+ */
+export type TaskTargetKind = "agent" | "pipeline" | "goal" | "chain" | "subsystem" | "orchestrator";
 
 /** A stable key for a target, used to pre-select and dedupe entries in the picker. */
 export function targetKey(target: TaskTarget): string {
   return target.kind === "orchestrator" ? "orchestrator" : `${target.kind}:${target.id}`;
 }
 
-/** Project a client target onto the wire shape `createTask` accepts (drops nothing). */
+/**
+ * Project a client target onto the wire shape `createTask` accepts (drops nothing).
+ * The API's `TaskTarget` is a properly-distributed zod discriminated union (six
+ * separate object types); this module's own `TaskTarget` isn't (`kind` is a single
+ * unioned property on one shared shape — see the type below), so a generic
+ * `{ kind: target.kind, ... }` return infers as ONE object type with a unioned
+ * `kind`, which TS stops treating as assignable to the distributed union once
+ * there are enough branches (Phase 91 tipped it over). An explicit per-kind
+ * `case` — each with a literal `"…" as const` — makes every return statement its
+ * own literal-discriminated type, so the inferred return type is the matching
+ * distributed union again.
+ */
 export function toApiTarget(target: TaskTarget) {
-  if (target.kind === "orchestrator") {
-    return {
-      kind: "orchestrator" as const,
-      name: target.name,
-      glyph: target.glyph,
-      category: target.category,
-    };
+  const { name, glyph, category } = target;
+  switch (target.kind) {
+    case "orchestrator":
+      return { kind: "orchestrator" as const, name, glyph, category };
+    case "agent":
+      return { kind: "agent" as const, id: target.id, name, glyph, category };
+    case "pipeline":
+      return { kind: "pipeline" as const, id: target.id, name, glyph, category };
+    case "goal":
+      return { kind: "goal" as const, id: target.id, name, glyph, category };
+    case "chain":
+      return { kind: "chain" as const, id: target.id, name, glyph, category };
+    case "subsystem":
+      return { kind: "subsystem" as const, id: target.id, name, glyph, category };
   }
-  return {
-    kind: target.kind,
-    id: target.id,
-    name: target.name,
-    glyph: target.glyph,
-    category: target.category,
-  };
 }
 
 interface TaskTargetDisplay {
@@ -91,13 +109,28 @@ interface TaskTargetDisplay {
 }
 
 /**
- * Mirrors the contract's discriminated union: agents and pipelines carry the
- * filesystem-safe `id` of their stored definition; the orchestrator is synthetic
- * (no stored definition, no id) and exists in the UI purely as a name + glyph.
+ * Mirrors the contract's discriminated union: agents/pipelines/goals/chains carry
+ * the filesystem-safe `id` of their stored definition, a subsystem (Phase 91)
+ * carries the closed `SubsystemId` enum, and the orchestrator is synthetic (no
+ * stored definition, no id) and exists in the UI purely as a name + glyph.
+ *
+ * Each `kind` is its OWN intersection member (not one shape with a unioned `kind`
+ * property) — `TaskTargetDisplay & (A | B | …)` distributes the intersection over
+ * the union, so this evaluates to a properly-discriminated 6-member union, exactly
+ * like the API's zod `discriminatedUnion`. That distribution matters: a single
+ * shape with a *unioned* `kind` stops being assignable to the API's distributed
+ * union once there are enough branches (see `toApiTarget`'s doc comment) — Phase
+ * 91 (subsystem, the 5th non-orchestrator kind) is what surfaced it.
  */
-export type TaskTarget =
-  | (TaskTargetDisplay & { kind: "agent" | "pipeline" | "goal" | "chain"; id: string })
-  | (TaskTargetDisplay & { kind: "orchestrator" });
+export type TaskTarget = TaskTargetDisplay &
+  (
+    | { kind: "agent"; id: string }
+    | { kind: "pipeline"; id: string }
+    | { kind: "goal"; id: string }
+    | { kind: "chain"; id: string }
+    | { kind: "subsystem"; id: SubsystemId }
+    | { kind: "orchestrator" }
+  );
 
 /**
  * The classifier verdict the approval gate renders: the chosen target, a 0–1
@@ -135,6 +168,7 @@ const KIND_FALLBACK_GLYPH: Record<TaskTargetKind, IconName> = {
   pipeline: "flow",
   goal: "retry",
   chain: "link",
+  subsystem: "grid",
   orchestrator: "compass",
 };
 
@@ -144,8 +178,24 @@ export function toClientTarget(target: ApiTaskTarget): TaskTarget {
     glyph: (target.glyph as IconName | undefined) ?? KIND_FALLBACK_GLYPH[target.kind],
     category: target.category,
   };
-  if (target.kind === "orchestrator") return { kind: "orchestrator", ...display };
-  return { kind: target.kind, id: target.id, ...display };
+  // A per-kind switch (not a generic `{ kind: target.kind, ... }` return) so each
+  // branch's return statement has a LITERAL `kind` — see `toApiTarget`'s doc
+  // comment for why a unioned-kind construction stops being assignable once there
+  // are enough branches.
+  switch (target.kind) {
+    case "orchestrator":
+      return { kind: "orchestrator", ...display };
+    case "agent":
+      return { kind: "agent", id: target.id, ...display };
+    case "pipeline":
+      return { kind: "pipeline", id: target.id, ...display };
+    case "goal":
+      return { kind: "goal", id: target.id, ...display };
+    case "chain":
+      return { kind: "chain", id: target.id, ...display };
+    case "subsystem":
+      return { kind: "subsystem", id: target.id, ...display };
+  }
 }
 
 /** Map the `POST /api/tasks/classify` response body onto the client routing shape. */

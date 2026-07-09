@@ -30,7 +30,11 @@ import {
   ScheduledTasksStorageService,
 } from "./scheduled-tasks.storage.service";
 import { TaskClassifierService } from "./task-classifier.service";
-import { EmptyCatalogError, TaskSchedulerService } from "./task-scheduler.service";
+import {
+  EmptyCatalogError,
+  SubsystemEmptyRosterError,
+  TaskSchedulerService,
+} from "./task-scheduler.service";
 
 const errors = makeErrorMapper("Scheduled task", {
   missing: [ScheduledTaskNotFoundError, InvalidScheduledTaskIdError],
@@ -161,7 +165,7 @@ export class TasksController {
             body: await this.scheduler.createTask(body, undefined, undefined, undefined, true),
           };
         } catch (error) {
-          if (error instanceof EmptyCatalogError) {
+          if (error instanceof EmptyCatalogError || error instanceof SubsystemEmptyRosterError) {
             return { status: 422, body: { message: error.message } };
           }
           if (error instanceof ClaudeUnavailableError) {
