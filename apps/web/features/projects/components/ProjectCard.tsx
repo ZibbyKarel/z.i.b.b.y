@@ -6,7 +6,6 @@ import Link from "next/link";
 import { formatCostUsd } from "../../../utils/cost";
 import { HudCard } from "../../../components/HudCard/HudCard";
 import { groupFilterParam } from "../../runs/statusGroups";
-import { useActiveProject } from "../context/ProjectProvider";
 import { useProjectTaskStats } from "../queries";
 
 export interface ProjectCardProps {
@@ -84,21 +83,20 @@ export function ProjectCard({ project, budget, onOpen }: ProjectCardProps) {
   const tr = useTranslations("runs");
   const hasBudget = project.budget != null;
   const { groups } = useProjectTaskStats(project.id);
-  const { setActiveProject } = useActiveProject();
 
   // Per-status task stats (minus the "Celkem" total). Each stat is its own
   // `next/link` — living in the card footer, outside the body's click target, so a
   // stat click deep-links to /runs and never triggers the card's open-detail nav.
-  // Like the detail summary, each link arms the top-bar project scope before it
-  // navigates (Phase 24 — the runs feed reads scope from that context, not a query).
+  // Phase 108: the runs feed has no global scope any more — each href carries the
+  // project explicitly via `?project=<id>` (the pre-Phase-24 mechanism), restored
+  // as the one way to drill into a single project's runs.
   const taskStats = (
     <Stack wrap direction="row" gap="200">
       {groups.map(({ group: g, count }) => (
         <Link
           data-testid={`project-card-stat-${g.key}`}
-          href={`/runs?filter=${groupFilterParam(g)}` as Route}
+          href={`/runs?project=${project.id}&filter=${groupFilterParam(g)}` as Route}
           key={g.key}
-          onClick={() => setActiveProject(project.id)}
         >
           <Stat
             icon={g.icon}

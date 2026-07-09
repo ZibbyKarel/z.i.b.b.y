@@ -2,7 +2,7 @@
 import { Button, Container, Dialog, IconTile, Stack, TextInputField, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
-import { useActiveProject, useProjectsQuery } from "../../projects";
+import { useProjectsQuery } from "../../projects";
 import { useTaskClassification } from "../hooks/useTaskClassification";
 import { useTaskOutput } from "../hooks/useTaskOutput";
 import { type TaskRouting, type TaskTarget, extractPaths } from "../task";
@@ -47,10 +47,11 @@ export interface NewTaskDialogProps {
  * Submitting dispatches a task or — for a loop — creates the goal and starts its run.
  * Risky actions are still caught later by the approval gate.
  *
- * `text`/`target` below are MIRRORS of CommandLine's own internal state (it owns the
- * textarea and the `@`-mention picker) — this dialog only needs them to drive the live
- * classify preview and to decide whether the Loop editor should appear; the actual
- * dispatch happens inside CommandLine via {@link useTaskSubmit}.
+ * `text`/`target`/`taskProjectId` below are MIRRORS of CommandLine's own internal
+ * state (it owns the textarea, the `@`-mention picker, and the inline project
+ * picker) — this dialog only needs them to drive the live classify preview and
+ * to decide whether the Loop editor should appear; the actual dispatch happens
+ * inside CommandLine via {@link useTaskSubmit}.
  */
 export function NewTaskDialog({
   onClose,
@@ -60,7 +61,6 @@ export function NewTaskDialog({
 }: NewTaskDialogProps) {
   const t = useTranslations("tasks");
   const { data: projects } = useProjectsQuery();
-  const { activeProjectId } = useActiveProject();
 
   const [title, setTitle] = useState("");
   const [text, setText] = useState(initialText ?? "");
@@ -69,17 +69,18 @@ export function NewTaskDialog({
   // classifier's proposal, editable, threaded into the dispatched body below.
   const [checkedGrants, setCheckedGrants] = useState<string[]>([]);
   const [seededGrantsKey, setSeededGrantsKey] = useState<string | null>(null);
+  // Phase 108: there is no app-wide "active project" scope any more — the
+  // project is whatever CommandLine's own inline picker reports, mirrored up
+  // here purely to drive this dialog's live preview (CommandLine folds the same
+  // pick into the dispatched task's `paths` independently).
+  const [taskProjectId, setTaskProjectId] = useState<string | null>(null);
 
-  // Phase 24: the project is sourced from the top bar, not a dialog field. A real
-  // active project resolves here (its `path` joins `paths`); "Bez projektu"
-  // (`activeProjectId === null`) resolves to `null` — nothing folds in.
   const selectedProject = useMemo(
-    () =>
-      activeProjectId ? ((projects ?? []).find((p) => p.id === activeProjectId) ?? null) : null,
-    [projects, activeProjectId],
+    () => (taskProjectId ? ((projects ?? []).find((p) => p.id === taskProjectId) ?? null) : null),
+    [projects, taskProjectId],
   );
 
-  // Every path referenced in the description — plus the top-bar active project's
+  // Every path referenced in the description — plus the picked project's
   // folder — feeds the live classify preview below (CommandLine folds the same set
   // into the dispatched task's allowed directories independently).
   const paths = useMemo(() => {
@@ -178,6 +179,7 @@ export function NewTaskDialog({
           isLoop={isLoop}
           loop={loop}
           onClose={onClose}
+          onProjectChange={setTaskProjectId}
           onTargetChange={setTarget}
           onTextChange={setText}
           output={output.output}

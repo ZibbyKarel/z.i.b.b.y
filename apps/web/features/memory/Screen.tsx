@@ -19,12 +19,11 @@ import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
-import { ProjectScopeChip, useActiveProject } from "../projects";
 import { MemoryGraph } from "./components/MemoryGraph";
 import { NoteEditorDialog } from "./components/NoteEditorDialog";
 import { NoteView } from "./components/NoteView";
 import { QuickCapture } from "./components/QuickCapture";
-import { type TierFilter, filterGraphByProject, filterGraphByTier } from "./filterGraph";
+import { type TierFilter, filterGraphByTier } from "./filterGraph";
 import { useMemoryGraphQuery, useMemorySearchQuery, useNoteQuery } from "./queries";
 
 const TIER_FILTERS: TierFilter[] = ["all", "memory", "daily", "knowledge"];
@@ -51,27 +50,18 @@ export function Screen() {
   const { data: note } = useNoteQuery(selected);
   const { data: searchHits } = useMemorySearchQuery(search);
 
-  // Phase 24: the top-bar active project scopes the graph and search to notes
-  // attributed via `project:` frontmatter; "Bez projektu" shows only notes with no
-  // `project:` frontmatter. Client-side — the shared cache stays unscoped.
-  const { activeProjectId } = useActiveProject();
+  // Phase 108: no global project scope any more — the graph and search always
+  // cover every project's notes at once, filtered only by tier.
   const filteredGraph = useMemo(
-    () => (graph ? filterGraphByTier(filterGraphByProject(graph, activeProjectId), tier) : graph),
-    [graph, tier, activeProjectId],
+    () => (graph ? filterGraphByTier(graph, tier) : graph),
+    [graph, tier],
   );
   const hits = useMemo(
-    () =>
-      (searchHits?.results ?? []).filter(
-        (h) =>
-          (tier === "all" || h.tier === tier) &&
-          (activeProjectId === null ? !h.project : h.project === activeProjectId),
-      ),
-    [searchHits, tier, activeProjectId],
+    () => (searchHits?.results ?? []).filter((h) => tier === "all" || h.tier === tier),
+    [searchHits, tier],
   );
   const tierChips = (
     <Stack wrap align="center" direction="row" gap="75">
-      {/* Fáze 11: subtle indication that the vault view is project-scoped. */}
-      <ProjectScopeChip />
       {TIER_FILTERS.map((value) => (
         <Pressable data-testid={`memory-tier-${value}`} key={value} onClick={() => setTier(value)}>
           <Chip tone={tier === value ? "accent" : "idle"}>{t(`tier.${value}`)}</Chip>

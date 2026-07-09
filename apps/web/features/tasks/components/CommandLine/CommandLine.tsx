@@ -27,7 +27,7 @@ import { createPortal } from "react-dom";
 import { useAgentsQuery } from "../../../agents";
 import { useLimitsQuery } from "../../../limits";
 import { usePipelinesQuery } from "../../../pipelines";
-import { ProjectSelect, useActiveProject, useProjectsQuery } from "../../../projects";
+import { ProjectSelect, useProjectsQuery } from "../../../projects";
 import { useSubsystemsQuery } from "../../../subsystems/queries/useSubsystemsQuery";
 import { type TaskSubmitResult, useTaskSubmit } from "../../hooks/useTaskSubmit";
 import { INITIAL_LOOP_STATE, type LoopFormState, canSubmitLoop } from "../../loop";
@@ -51,7 +51,7 @@ export enum CommandLineTestId {
   Attach = "command-line-attach",
   Pin = "command-line-pin",
   /** The inline project chip (Phase 102) that replaces the retired standalone
-   *  `ProjectSwitcher` — beside the attach `+` in the bottom control row. */
+   *  project switcher — beside the attach `+` in the bottom control row. */
   ProjectSelector = "command-line-project-selector",
   FileInput = "command-line-file-input",
   MentionMenu = "command-line-mention-menu",
@@ -182,17 +182,14 @@ export interface CommandLineProps {
    */
   showAttach?: boolean;
   /**
-   * Overrides the one-shot seed for the per-task project scope (Phase 107): by
-   * default the inline `ProjectSelect` seeds itself once from the GLOBAL
-   * `activeProjectId` (a convenience default for an operator who already has a
-   * project selected), but never writes back to it — the pick only scopes THIS
-   * task. A host that wants a different starting point (or `null`) passes this
-   * instead of relying on the global seed.
+   * The one-shot seed for the per-task project scope (Phase 107; the app-wide
+   * "active project" scope this used to default from was removed in Phase 108).
+   * Defaults to `null` ("Bez projektu") — a host that wants a different
+   * starting point passes this instead.
    */
   initialProjectId?: string | null;
-  /** Mirrors the per-task project selection up whenever it changes — the local
-   *  counterpart of the retired global `setActiveProject` wiring; a host that
-   *  wants to observe (never drive) the pick reads this instead. */
+  /** Mirrors the per-task project selection up whenever it changes — a host
+   *  that wants to observe (never drive) the pick reads this instead. */
   onProjectChange?: (id: string | null) => void;
 }
 
@@ -491,15 +488,10 @@ export function CommandLine({
   const { data: pipelines = [] } = usePipelinesQuery();
   const { data: subsystems = [] } = useSubsystemsQuery();
   const { data: projects = [] } = useProjectsQuery();
-  // Phase 107: the inline ProjectSelect used to write straight back to the
-  // GLOBAL active project (re-scoping the whole dashboard from a single-task
-  // pick). It's now a LOCAL, per-task scope — `activeProjectId` is read only to
-  // seed the initial value once; nothing here ever calls back into
-  // `ProjectProvider`.
-  const { activeProjectId } = useActiveProject();
-  const [taskProjectId, setTaskProjectId] = useState<string | null>(() =>
-    initialProjectId !== undefined ? initialProjectId : activeProjectId,
-  );
+  // Phase 107: a LOCAL, per-task scope — seeded once from `initialProjectId`
+  // (default `null`, Phase 108: there is no global "active project" to fall
+  // back to any more). Nothing here writes back to any app-wide scope.
+  const [taskProjectId, setTaskProjectId] = useState<string | null>(() => initialProjectId ?? null);
   const { data: limits } = useLimitsQuery();
   const resetsAt = limits?.rolling.resetsAt ?? null;
   // A stable "now" for this instance's lifetime — presets and the goal id's
@@ -1089,14 +1081,14 @@ export function CommandLine({
         )}
 
         {/* Attach + the inline project selector — pinned bottom-left INSIDE the
-            input, over the reserved strip. Phase 102: the project scope used to
-            live in the now-retired standalone `ProjectSwitcher` (HUD topbar + chat
+            input, over the reserved strip. Phase 102: the project picker used to
+            live in the now-retired standalone project switcher (HUD topbar + chat
             header); it's a peer control here, right beside the attach `+`, so
             every CommandLine host (the overview command bar, the chat composer,
-            NewTaskDialog's bare input) keeps a way to change it. Phase 107: the
-            pick now scopes ONLY this task (local `taskProjectId`) — it never
-            mutates the global `activeProject`, so the rest of the dashboard keeps
-            its own scope untouched. */}
+            NewTaskDialog's bare input) keeps a way to set it. Phase 107/108: the
+            pick scopes ONLY this task (local `taskProjectId`) — there is no
+            app-wide "active project" scope left to mutate; every other screen
+            always shows every project's data at once. */}
         <Container bottom={CONTROLS_INSET} left={CONTROLS_INSET} position="absolute" zIndex={10}>
           <Stack align="center" direction="row" gap="50">
             {showAttach && (

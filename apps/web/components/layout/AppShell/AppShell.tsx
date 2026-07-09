@@ -9,7 +9,6 @@ import { LimitsRings } from "../LimitsRings/LimitsRings";
 import { RightRail } from "../RightRail/RightRail";
 import { NAV_ITEMS, type NavId, ROUTE_ONLY_ITEMS, SETTINGS_ITEM } from "../../../state/config";
 import { CatalogProvider } from "../../../state/store";
-import { ProjectProvider } from "../../../features/projects";
 import { NewTaskButton, NewTaskProvider } from "../../../features/tasks";
 import { ChatButton, ChatProvider } from "../../../features/chat";
 import { navBadgeCount, useNotifications } from "../../../features/notifications";
@@ -89,19 +88,18 @@ function AppShellInner({ children }: { children: ReactNode }) {
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <CatalogProvider>
-      {/* ProjectProvider (Fáze 11) sits beside CatalogProvider: the active-project
-          scope is a dashboard concern, so it mounts here, not in root providers. */}
-      <ProjectProvider>
-        {/* NewTaskProvider stays the OUTER provider (the position the removed
-            VoiceProvider held), so the chat overlay can reach the task flow later. */}
-        <NewTaskProvider>
-          <ChatProvider>
-            <Suspense>
-              <AppShellInner>{children}</AppShellInner>
-            </Suspense>
-          </ChatProvider>
-        </NewTaskProvider>
-      </ProjectProvider>
+      {/* NewTaskProvider stays the OUTER provider (the position the removed
+          VoiceProvider held), so the chat overlay can reach the task flow later.
+          Phase 108: the Fáze-11/Phase-24 app-wide "active project" scope is
+          gone — ZIBBY always shows every project's data at once, so there is
+          no dashboard-level scope left to mount here. */}
+      <NewTaskProvider>
+        <ChatProvider>
+          <Suspense>
+            <AppShellInner>{children}</AppShellInner>
+          </Suspense>
+        </ChatProvider>
+      </NewTaskProvider>
     </CatalogProvider>
   );
 }

@@ -7,7 +7,6 @@ const { hooks } = vi.hoisted(() => ({
   hooks: {
     rules: { data: [] as GlobalGateRule[], isPending: false, isError: false, refetch: vi.fn() },
     floor: { data: [] as GateRule[] },
-    activeProjectId: null as string | null,
     projects: [] as Project[],
   },
 }));
@@ -28,7 +27,6 @@ vi.mock("../../../gates/mutations", () => ({
 vi.mock("../../../agents", () => ({ useAgentsQuery: () => ({ data: [] }) }));
 vi.mock("../../../skills", () => ({ useSkillsQuery: () => ({ data: [] }) }));
 vi.mock("../../../projects", () => ({
-  useActiveProject: () => ({ activeProjectId: hooks.activeProjectId, setActiveProject: vi.fn() }),
   useProjectsQuery: () => ({ data: hooks.projects }),
 }));
 
@@ -94,7 +92,6 @@ describe("GatesTab (Phase 87)", () => {
   beforeEach(() => {
     hooks.rules = { data: [], isPending: false, isError: false, refetch: vi.fn() };
     hooks.floor = { data: [] };
-    hooks.activeProjectId = null;
     hooks.projects = [];
   });
 
@@ -153,18 +150,17 @@ describe("GatesTab (Phase 87)", () => {
     expect(screen.getByTestId(GatesTabTestId.Catalog)).not.toHaveTextContent("channel");
   });
 
-  it("shows an honest empty note when there is no active project", () => {
-    hooks.activeProjectId = null;
+  it("shows an honest empty note when no project has an autopilot policy set", () => {
+    hooks.projects = [{ id: "acme", name: "Acme Corp", path: "/repo/acme" }];
     hooks.rules = { data: [], isPending: false, isError: false, refetch: vi.fn() };
 
     renderWithProviders(<GatesTab subsystem={subsystem} />);
 
     expect(screen.getByTestId(GatesTabTestId.AutopilotEmpty)).toBeInTheDocument();
-    expect(screen.queryByTestId(GatesTabTestId.AutopilotLink)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(`${GatesTabTestId.AutopilotLink}-acme`)).not.toBeInTheDocument();
   });
 
-  it("shows the active project's autonomy policy summary read-only, with a link to its profile tab", () => {
-    hooks.activeProjectId = "acme";
+  it("shows a compact autonomy-policy dial for every project that has one, each linking to its own profile tab", () => {
     hooks.projects = [
       {
         id: "acme",
@@ -172,6 +168,9 @@ describe("GatesTab (Phase 87)", () => {
         path: "/repo/acme",
         autonomy_policy: { can_do_alone: ["reply"], always_ask: ["merge"] },
       },
+      // No policy set — must NOT get a row (Phase 108: only policy-bearing
+      // projects are listed; there is no active-project scope to fall back to).
+      { id: "beta", name: "Beta Inc", path: "/repo/beta" },
     ];
     hooks.rules = { data: [], isPending: false, isError: false, refetch: vi.fn() };
 
@@ -180,19 +179,23 @@ describe("GatesTab (Phase 87)", () => {
     expect(screen.getByText("Acme Corp")).toBeInTheDocument();
     expect(screen.getByText("reply")).toBeInTheDocument();
     expect(screen.getByText("merge")).toBeInTheDocument();
-    const link = screen.getByTestId(GatesTabTestId.AutopilotLink);
+    expect(screen.queryByText("Beta Inc")).not.toBeInTheDocument();
+
+    const link = screen.getByTestId(`${GatesTabTestId.AutopilotLink}-acme`);
     expect(link).toHaveAttribute("href", "/projects/acme?tab=profile");
+    expect(screen.queryByTestId(GatesTabTestId.AutopilotEmpty)).not.toBeInTheDocument();
   });
 
-  it("reports no project-specific policy honestly when the active project has none set", () => {
-    hooks.activeProjectId = "acme";
-    hooks.projects = [{ id: "acme", name: "Acme Corp", path: "/repo/acme" }];
+  it("lists every policy-bearing project at once — not just one", () => {
+    hooks.projects = [
+      { id: "acme", name: "Acme Corp", path: "/repo/acme", autonomy_policy: { can_do_alone: ["reply"] } },
+      { id: "beta", name: "Beta Inc", path: "/repo/beta", autonomy_policy: { always_ask: ["merge"] } },
+    ];
     hooks.rules = { data: [], isPending: false, isError: false, refetch: vi.fn() };
 
     renderWithProviders(<GatesTab subsystem={subsystem} />);
 
-    expect(
-      screen.getByText("Bez vlastního nastavení — platí jen globální podlaha."),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId(`${GatesTabTestId.AutopilotRow}-acme`)).toBeInTheDocument();
+    expect(screen.getByTestId(`${GatesTabTestId.AutopilotRow}-beta`)).toBeInTheDocument();
   });
 });

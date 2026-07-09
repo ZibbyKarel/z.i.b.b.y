@@ -1,7 +1,7 @@
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DropDownButtonTestId, FilePreviewTestId } from "@zibby/design-system";
-import { renderWithProviders as render, screen, waitFor } from "../../../test/render";
+import { DropDownButtonTestId, DropdownTestId, FilePreviewTestId } from "@zibby/design-system";
+import { renderWithProviders as render, screen, waitFor, within } from "../../../test/render";
 import { CommandLineTestId } from "./CommandLine/CommandLine";
 import { NewTaskDialog } from "./NewTaskDialog";
 import { ToolGrantsFieldTestId } from "./ToolGrantsField";
@@ -183,15 +183,6 @@ vi.mock("../../projects/queries/useProjectsQuery", () => ({
   getProjectsQueryKey: () => ["projects"],
 }));
 
-// Phase 24: the project is sourced from the top-bar active-project context, not a
-// dialog field — a mutable hoisted fixture lets each test set the scope.
-const { activeProject } = vi.hoisted(() => ({
-  activeProject: { id: null as string | null },
-}));
-vi.mock("../../projects/context/ProjectProvider", () => ({
-  useActiveProject: () => ({ activeProjectId: activeProject.id, setActiveProject: vi.fn() }),
-}));
-
 vi.mock("../../agents/queries/useAgentsQuery", () => ({
   useAgentsQuery: () => ({ data: [{ id: "koder", name: "Kodér", instructions: "x" }] }),
   // useCreateAgentMutation (pulled in via the agents/mutations barrel) reads this
@@ -234,7 +225,6 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
     createGoal.mockClear();
     createProject.mockClear();
     uploadMutateAsync.mockClear();
-    activeProject.id = null;
     toolGrantsFixture.length = 0;
   });
 
@@ -432,15 +422,20 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
     expect(taskBody?.scheduledAt).toBeGreaterThan(Date.now());
   });
 
-  it("has no project field — the project is sourced from the top-bar scope", () => {
+  it("has no project field — the project is picked via CommandLine's own inline selector", () => {
     render(<NewTaskDialog onClose={() => {}} />);
     expect(screen.queryByLabelText(/Projekt/)).not.toBeInTheDocument();
   });
 
-  it("folds the top-bar active project's path into the dispatched task, exactly like a typed path", async () => {
-    activeProject.id = "beta";
+  it("folds the picked project's path into the dispatched task, exactly like a typed path", async () => {
     const user = userEvent.setup();
     render(<NewTaskDialog onClose={() => {}} />);
+
+    const chip = screen.getByTestId(CommandLineTestId.ProjectSelector);
+    await user.click(within(chip).getByTestId(DropdownTestId.Trigger));
+    const options = screen.getAllByTestId(DropdownTestId.Option);
+    await user.click(options[2] as HTMLElement); // "Bez projektu", Alpha, Beta
+
     await user.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");
 
     // It flows through the live classify (attribution) and into the dispatched task.
@@ -451,8 +446,7 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
     expect(createTask.mock.calls[0]?.[0].body.paths).toContain("/Users/zibby/Projects/beta");
   });
 
-  it("folds nothing when the top-bar scope is 'Bez projektu' (null)", async () => {
-    activeProject.id = null;
+  it("folds nothing when no project is picked (default 'Bez projektu')", async () => {
     const user = userEvent.setup();
     render(<NewTaskDialog onClose={() => {}} />);
     await user.type(screen.getByLabelText(/Zadání/), "zkontroluj zálohy");

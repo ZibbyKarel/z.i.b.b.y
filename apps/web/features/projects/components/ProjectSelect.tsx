@@ -19,8 +19,9 @@ function truncateLabel(label: string): string {
 }
 
 export interface ProjectSelectProps {
-  /** The active engagement scoping the dashboard — `null` = "Bez projektu"; see
-   *  `useActiveProject`. */
+  /** The currently selected project — `null` = "Bez projektu". Phase 108: this is
+   *  always a per-task pick (`CommandLine`'s own local state); there is no
+   *  app-wide "active project" any more. */
   activeProjectId: string | null;
   /** The project registry — every host reads its own copy of `useProjectsQuery()`. */
   projects: { id: string; name: string }[];
@@ -32,11 +33,12 @@ export interface ProjectSelectProps {
 }
 
 /**
- * The one shared option-building + rendering for the app's single project scope
- * (Phase 24; relocated inline by Phase 102): always populated with "Bez projektu"
- * plus one row per registered project — never an "all projects" state. Purely
- * presentational — every host (the inline chip in `CommandLine`, the retired
- * standalone `ProjectSwitcher`) supplies `activeProjectId`/`projects`/`onChange`
+ * The shared option-building + rendering for picking a project (Phase 24;
+ * relocated inline by Phase 102; the app-wide scope it used to drive was
+ * removed in Phase 108 — it is now purely a per-task picker): always populated
+ * with "Bez projektu" plus one row per registered project — never an "all
+ * projects" state. Purely presentational — its one remaining host (the inline
+ * chip in `CommandLine`) supplies `activeProjectId`/`projects`/`onChange`
  * itself, so this component owns no data fetching or context read of its own.
  */
 export function ProjectSelect({

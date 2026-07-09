@@ -6,22 +6,14 @@ import { ChatTaskRowTestId } from "./ChatTaskRow";
 import { ChatTasksPanel, ChatTasksPanelTestId } from "./ChatTasksPanel";
 
 // The panel reads the STABLE unified runs feed (not the chat data-layer); stub it
-// and the active-project scope so each test controls exactly which tasks exist and
-// under which engagement.
-const { runsMock, activeProjectMock } = vi.hoisted(() => ({
+// so each test controls exactly which tasks exist.
+const { runsMock } = vi.hoisted(() => ({
   runsMock: vi.fn(() => ({ runs: [] as RunView[] })),
-  activeProjectMock: vi.fn(() => ({
-    activeProjectId: null as string | null,
-    setActiveProject: vi.fn(),
-  })),
 }));
 vi.mock("../../runs/queries/useRunsQuery", () => ({
   useRunsQuery: () => runsMock(),
   useRunGlyphMap: () => new Map(),
   useRunAvatarMap: () => new Map(),
-}));
-vi.mock("../../projects", () => ({
-  useActiveProject: () => activeProjectMock(),
 }));
 
 function run(overrides: Partial<RunView>): RunView {
@@ -43,11 +35,9 @@ function run(overrides: Partial<RunView>): RunView {
 describe("ChatTasksPanel (Phase 57, selection wiring Phase 100)", () => {
   beforeEach(() => {
     runsMock.mockReset();
-    activeProjectMock.mockReset();
-    activeProjectMock.mockReturnValue({ activeProjectId: null, setActiveProject: vi.fn() });
   });
 
-  it("lists ALL tasks in scope — not just running — each a selectable row", () => {
+  it("lists ALL tasks — not just running — each a selectable row", () => {
     runsMock.mockReturnValue({
       runs: [
         run({ runId: "run_a", title: "Fix login bug", status: "running" }),
@@ -82,7 +72,7 @@ describe("ChatTasksPanel (Phase 57, selection wiring Phase 100)", () => {
     expect(titles).toEqual(["Live task", "Gate task", "Scheduled task", "Done task"]);
   });
 
-  it("shows the quiet empty hint when the scope has no tasks", () => {
+  it("shows the quiet empty hint when there are no tasks", () => {
     runsMock.mockReturnValue({ runs: [] });
     render(<ChatTasksPanel onSelectRun={vi.fn()} selectedRunId={null} />);
 
@@ -90,8 +80,9 @@ describe("ChatTasksPanel (Phase 57, selection wiring Phase 100)", () => {
     expect(screen.queryByTestId(ChatTasksPanelTestId.List)).not.toBeInTheDocument();
   });
 
-  it("scopes to the active project (a real project shows only its own tasks)", () => {
-    activeProjectMock.mockReturnValue({ activeProjectId: "alpha", setActiveProject: vi.fn() });
+  // Phase 108: no global project scope any more — every project's tasks (and
+  // unattributed ones) show together, simultaneously.
+  it("shows tasks from every project at once", () => {
     runsMock.mockReturnValue({
       runs: [
         run({ runId: "run_alpha", title: "Alpha task", status: "running", projectId: "alpha" }),
@@ -101,21 +92,9 @@ describe("ChatTasksPanel (Phase 57, selection wiring Phase 100)", () => {
     });
     render(<ChatTasksPanel onSelectRun={vi.fn()} selectedRunId={null} />);
 
-    expect(screen.getAllByTestId(ChatTaskRowTestId.Row)).toHaveLength(1);
+    expect(screen.getAllByTestId(ChatTaskRowTestId.Row)).toHaveLength(3);
     expect(screen.getByText("Alpha task")).toBeInTheDocument();
-    expect(screen.queryByText("Beta task")).not.toBeInTheDocument();
-  });
-
-  it("scopes to unattributed tasks when no project is active (Bez projektu)", () => {
-    runsMock.mockReturnValue({
-      runs: [
-        run({ runId: "run_loose", title: "Loose task", status: "done" }),
-        run({ runId: "run_alpha", title: "Alpha task", status: "running", projectId: "alpha" }),
-      ],
-    });
-    render(<ChatTasksPanel onSelectRun={vi.fn()} selectedRunId={null} />);
-
-    expect(screen.getAllByTestId(ChatTaskRowTestId.Row)).toHaveLength(1);
+    expect(screen.getByText("Beta task")).toBeInTheDocument();
     expect(screen.getByText("Loose task")).toBeInTheDocument();
   });
 

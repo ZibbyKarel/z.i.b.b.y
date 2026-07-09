@@ -101,17 +101,18 @@ Server component — renders `AppShell` with children.
 Client component (`"use client"`):
 
 - Uses `usePathname()` to derive the active nav item
-- Mounts `CatalogProvider` → `ProjectProvider` → `NewTaskProvider` →
-  `ChatProvider` (in that nesting order; `NewTaskProvider` stays the outer task
-  provider — the position the now-removed `VoiceProvider` used to hold — so the
-  chat page can reach the task flow). `ProjectProvider`
-  (`features/projects/context/`) is the Fáze 11 app-wide active-project scope,
-  persisted in the `activeProject` cookie; screens read it via
-  `useActiveProject()` and filter client-side.
+- Mounts `CatalogProvider` → `NewTaskProvider` → `ChatProvider` (in that
+  nesting order; `NewTaskProvider` stays the outer task provider — the
+  position the now-removed `VoiceProvider` used to hold — so the chat page can
+  reach the task flow). **Phase 108** deleted the Fáze-11/Phase-24 app-wide
+  "active project" scope (`ProjectProvider`/`useActiveProject`, persisted in
+  the `activeProject` cookie) entirely — every screen now shows every
+  project's data at once. The only project control left is `ProjectSelect`,
+  mounted inline in `CommandLine` (Phase 102); it scopes just the task being
+  launched, never any view.
 - Renders `MainLayout` with `navItems`, `railSlot` (`RightRail`), `chatSlot`
-  (`ChatButton`), `taskSlot` (`NewTaskButton`), `projectSlot`
-  (`ProjectSwitcher` — the one app-wide project switcher, top bar next to the
-  breadcrumb on every screen), and `walletSlot` (`LimitsRings`) slots
+  (`ChatButton`), `taskSlot` (`NewTaskButton`), and `walletSlot`
+  (`LimitsRings`) slots
 - **Phase 27:** on `/chat` (and any `/chat/*` sub-path), `AppShellInner`
   bypasses `MainLayout` entirely and renders `children` fullscreen in a
   `Container` sized to the viewport (`height="100dvh"`) — no nav rail, top bar,
