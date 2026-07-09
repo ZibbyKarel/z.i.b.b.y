@@ -9,14 +9,16 @@ import { onRunEvent } from "../../../runs/runEvents";
 import { appendParticle, flightForEvent, particleDuration } from "./particle-mapping";
 import {
   NODE_RADIUS,
-  WEB_CENTER,
   WEB_VIEWBOX_HEIGHT,
   WEB_VIEWBOX_WIDTH,
+  type WebPoint,
   computeSlots,
+  hubEdges,
+  hubVertexForId,
+  hubVertexForIndex,
   layoutSubsystems,
+  pathBetween,
   pathFor,
-  rimEdges,
-  rimPath,
   slotForId,
   spokePath,
 } from "./subsystem-web-geometry";
@@ -94,7 +96,18 @@ const BADGE_TONE_CLASS: Record<"hlaseni" | "ceka", string> = {
 };
 
 const SLOTS = computeSlots();
-const RIM_EDGES = rimEdges();
+const HUB_EDGES = hubEdges();
+
+/** Reduced-motion glow destination for one live particle: a dispatch's
+ * destination is the node itself; a report's "destination" is the near-orb hub
+ * vertex it's riding back to (Phase 94 — never the true centre). `undefined` only
+ * for the type-level `"orb"`↔`"orb"` case, which never fires in practice. */
+function reducedMotionDestination(particle: RenderedParticle): WebPoint | undefined {
+  if (particle.to === "orb") {
+    return particle.from === "orb" ? undefined : hubVertexForId(particle.from);
+  }
+  return slotForId(particle.to);
+}
 
 interface ParticleGlyphProps {
   particle: RenderedParticle;
@@ -129,7 +142,7 @@ function ParticleGlyph({ particle, reducedMotion, onEnd }: ParticleGlyphProps) {
   }, [reducedMotion, particle.id, onEnd]);
 
   if (reducedMotion) {
-    const dest = particle.to === "orb" ? WEB_CENTER : slotForId(particle.to);
+    const dest = reducedMotionDestination(particle);
     if (!dest) return null;
     return (
       <circle
@@ -156,13 +169,15 @@ function ParticleGlyph({ particle, reducedMotion, onEnd }: ParticleGlyphProps) {
 }
 
 /**
- * The subsystem web (Phase 83, design doc "the web, not an orbit"): 8 fixed nodes on a
- * flattened ellipse, one per named subsystem, thin static spokes (center→node) and a
- * faint rim (neighbor→neighbor). An SVG/DOM overlay concentric with `CosmicScene`'s
- * (half-size) WebGL orb — the orb IS the web's center, so nothing is drawn there here;
- * the spokes radiate straight out of it. The design's whole argument against orbiting
- * sub-agents was clickability, so this is real hit-targets and keyboard focus, not a
- * WebGL scene.
+ * The subsystem web (Phase 83, design doc "the web, not an orbit"; reshaped into a
+ * regular octagon by Phase 94): 8 fixed nodes on a REGULAR octagon (`forge` anchored
+ * at the bottom, 6 o'clock), one per named subsystem, thin static spokes (node→hub
+ * vertex) and a faint inner hub ring (hub vertex→hub vertex). An SVG/DOM overlay
+ * concentric with `CosmicScene`'s (half-size, raised into the top third) WebGL orb —
+ * the orb sits at the web's center, but the net never touches it: every spoke stops
+ * at a small hub octagon that clears the orb with margin, instead of converging on
+ * the centre. The design's whole argument against orbiting sub-agents was
+ * clickability, so this is real hit-targets and keyboard focus, not a WebGL scene.
  * Nodes never move: their geometry comes from {@link computeSlots}/{@link layoutSubsystems},
  * keyed by the subsystem's rank in the canonical registry, not by array position — the
  * `subsystems` prop may arrive severity-sorted (or momentarily short an entry) without
@@ -250,35 +265,41 @@ export function SubsystemWeb({
         preserveAspectRatio="xMidYMid meet"
         viewBox={`0 0 ${WEB_VIEWBOX_WIDTH} ${WEB_VIEWBOX_HEIGHT}`}
       >
-        {/* Spokes: center → each fixed slot. Thin, faint, static. They radiate from
-            the cosmic orb behind this SVG (the web's center is concentric with it),
-            so no SVG orb is drawn here — the WebGL orb IS the center. */}
+        {/* Spokes (Phase 94): each fixed slot → ITS hub vertex. Thin, faint, static,
+            radial — they stop well short of the orb behind this SVG rather than
+            converging on its centre, so the net rings the orb instead of crossing
+            it. */}
         <g aria-hidden="true" data-testid={SubsystemWebTestId.Spokes}>
-          {SLOTS.map((slot) => (
-            <path
-              className="stroke-foreground-faint"
-              d={spokePath(slot)}
-              fill="none"
-              key={`spoke-${slot.index}`}
-              opacity={0.22}
-              strokeWidth={1}
-            />
-          ))}
+          {SLOTS.map((slot) => {
+            const hub = hubVertexForIndex(slot.index);
+            if (!hub) return null;
+            return (
+              <path
+                className="stroke-foreground-faint"
+                d={spokePath(slot, hub)}
+                fill="none"
+                key={`spoke-${slot.index}`}
+                opacity={0.22}
+                strokeWidth={1}
+              />
+            );
+          })}
         </g>
 
-        {/* Rim: ellipse-neighbor → ellipse-neighbor. Even fainter than the spokes —
-            it's ambient structure, not a primary read. */}
+        {/* Rim (Phase 94): the inner hub octagon — hub vertex → neighbouring hub
+            vertex, closing the ring that surrounds the orb. Even fainter than the
+            spokes — it's ambient structure, not a primary read. */}
         <g aria-hidden="true" data-testid={SubsystemWebTestId.Rim}>
-          {RIM_EDGES.map(([fromId, toId]) => {
-            const a = slotForId(fromId);
-            const b = slotForId(toId);
+          {HUB_EDGES.map(([fromId, toId]) => {
+            const a = hubVertexForId(fromId);
+            const b = hubVertexForId(toId);
             if (!a || !b) return null;
             return (
               <path
                 className="stroke-foreground-faint"
-                d={rimPath(a, b)}
+                d={pathBetween(a, b)}
                 fill="none"
-                key={`rim-${fromId}-${toId}`}
+                key={`hub-${fromId}-${toId}`}
                 opacity={0.12}
                 strokeWidth={1}
               />

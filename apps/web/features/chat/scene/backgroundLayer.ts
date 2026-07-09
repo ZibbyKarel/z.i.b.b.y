@@ -8,8 +8,10 @@ import { CATEGORY_COLORS, resolveSceneTokens } from "./tokens";
  * smoothness). Two passes:
  *
  *  1. A full-screen procedural sky — drifting nebula clouds, two independently
- *     twinkling star layers, a soft glow pooled behind the orb that tracks the
- *     orb's live colour, and corner darkening — all in one fragment shader.
+ *     twinkling star layers, a soft glow pooled behind the orb (Phase 94: centred on
+ *     wherever the controller says the orb actually projects to, not always screen
+ *     centre — see `uGlowCenter`) that tracks the orb's live colour, and corner
+ *     darkening — all in one fragment shader.
  *  2. The faint distant node-web: ~100 nodes in 7 clusters coloured by the real
  *     agent categories (so it reads as the same taxonomy as the constellation),
  *     joined by proximity lines, plus drifting dust. Rendered with the shared
@@ -43,6 +45,7 @@ uniform float uReveal;
 uniform vec3 uOrbColor;
 uniform vec3 uNebulaA;
 uniform vec3 uNebulaB;
+uniform vec2 uGlowCenter;
 
 varying vec2 vUv;
 
@@ -101,8 +104,10 @@ void main() {
   col += vec3(0.75, 0.82, 1.0) * s1 * 0.9;
   col += vec3(0.85, 0.9, 1.0) * s2 * 0.6;
 
-  // Soft glow pooled behind the orb (screen centre), tracking its live colour.
-  float glow = smoothstep(0.55, 0.0, length(p));
+  // Soft glow pooled behind the orb — Phase 94: centred on uGlowCenter (defaults
+  // to screen centre, vec2(0), until the controller feeds the raised orb's actual
+  // projected position), tracking its live colour.
+  float glow = smoothstep(0.55, 0.0, length(p - uGlowCenter));
   col += uOrbColor * glow * glow * 0.28;
 
   // Corner darkening.
@@ -121,6 +126,7 @@ interface SkyUniforms {
   uOrbColor: THREE.IUniform<THREE.Color>;
   uNebulaA: THREE.IUniform<THREE.Color>;
   uNebulaB: THREE.IUniform<THREE.Color>;
+  uGlowCenter: THREE.IUniform<THREE.Vector2>;
 }
 
 export interface BackgroundContext {
@@ -137,6 +143,11 @@ export interface BackgroundLayer {
   render(renderer: THREE.WebGLRenderer, camera: THREE.PerspectiveCamera): void;
   /** Set the drawing-buffer aspect so the sky shader stays undistorted. */
   setAspect(aspect: number): void;
+  /** Phase 94: recentre the behind-orb glow at `(x, y)` in the sky shader's
+   * centred, aspect-corrected `p` space (screen centre is `(0, 0)`; `+y` is up) —
+   * the controller feeds the raised orb's own projected position so the glow keeps
+   * pooling behind it instead of at screen centre. */
+  setGlowCenter(x: number, y: number): void;
   dispose(): void;
 }
 
@@ -152,6 +163,7 @@ export function createBackgroundLayer(mobile: boolean): BackgroundLayer {
     uOrbColor: { value: new THREE.Color(tokens.accent) },
     uNebulaA: { value: new THREE.Color(tokens.accent) },
     uNebulaB: { value: new THREE.Color(tokens.run) },
+    uGlowCenter: { value: new THREE.Vector2(0, 0) },
   };
   const skyMaterial = new THREE.ShaderMaterial({
     uniforms: skyUniforms,
@@ -312,6 +324,9 @@ export function createBackgroundLayer(mobile: boolean): BackgroundLayer {
     },
     setAspect(aspect) {
       skyUniforms.uAspect.value = aspect;
+    },
+    setGlowCenter(x, y) {
+      skyUniforms.uGlowCenter.value.set(x, y);
     },
     dispose() {
       skyMaterial.dispose();

@@ -463,17 +463,20 @@ export function ChatScreen({
         )}
 
         <div
-          className="relative z-10 flex h-1/2 w-full max-w-[720px] flex-col overflow-y-auto px-5 py-8"
+          className="relative z-10 flex h-2/3 w-full max-w-[720px] flex-col overflow-y-auto px-5 py-8"
           data-testid={ChatScreenTestId.ScrollArea}
           ref={scrollRef}
           style={{
-            // A stable half-height box pinned to the bottom (right above the composer):
-            // the conversation grows UP from the input — newest turn always at the
-            // bottom — and `mt-auto` keeps a short thread bottom-anchored. The mask
-            // fades the box's top third into nothing so turns dissolve into the orb's
-            // band as they rise (the logo is never overrun) while the lower two-thirds
-            // stay fully readable. It still scrolls all the way back to the start —
-            // turns near the orb just stay ghosted (declarative mask, scroll intact).
+            // Phase 94: grown from half- to two-thirds-height now that the cluster
+            // sits in the top third rather than dead centre — the transcript owns
+            // the lower region below it. Still a box pinned to the bottom (right
+            // above the composer): the conversation grows UP from the input —
+            // newest turn always at the bottom — and `mt-auto` keeps a short thread
+            // bottom-anchored. The mask fades the box's top third into nothing so
+            // turns dissolve into the cluster's band as they rise (nothing there is
+            // ever overrun) while the lower two-thirds stay fully readable. It still
+            // scrolls all the way back to the start — turns near the top just stay
+            // ghosted (declarative mask, scroll intact).
             maskImage: "linear-gradient(to bottom, transparent 0%, #000 34%, #000 100%)",
             WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, #000 34%, #000 100%)",
           }}
@@ -505,17 +508,25 @@ export function ChatScreen({
       </div>
 
       {/* ── Subsystem web ────────────────────────────────────────────────
-          The scene's centerpiece: 8 fixed nodes on a flattened ellipse whose
-          center is the (half-size) cosmic orb — the spokes now radiate straight
-          out of the orb, so the web reads as part of it rather than a separate
-          band. A full-bleed, centered overlay concentric with the WebGL orb (both
-          center on the ChatScreen root, so they align); `pointer-events-none` so it
-          never steals the transcript's scroll — only the interactive nodes re-enable
-          events. `pipelines`/`runs` (Phase 89) are the SAME `pipelineCatalog`/`runs`
-          already fetched above for the dock roster — the particle layer's run→owner
-          resolution rides those existing queries, no new request. */}
-      <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
-        <div className="pointer-events-none aspect-[32/11] w-full max-w-[820px] px-6">
+          Phase 94: the scene's centerpiece raised into the TOP THIRD alongside the
+          orb — a regular octagon now (not a flattened ellipse), Forge anchored at
+          the bottom, its net an inner hub ring that clears the orb rather than
+          converging on it (see `subsystem-web-geometry.ts`). `top-[19.8%]` is the
+          exact screen-space projection of `sceneController.ts`'s `CLUSTER_Y` — the
+          two are tuned together so this box's own centre (the octagon/hub's
+          `WEB_CENTER`) coincides with the raised WebGL orb (the #1 acceptance
+          check for this phase). `max-w-[460px]` is the other half of the hub-ring
+          calibration in `subsystem-web-geometry.ts`'s `HUB_RADIUS` doc comment —
+          together they clear the orb's actual rendered footprint (bigger on
+          screen than the SVG's own `ORB_RADIUS` doc constant implies) while still
+          leaving headroom so the top node isn't clipped by the viewport.
+          `pointer-events-none` so it never steals the transcript's scroll — only
+          the interactive nodes re-enable events. `pipelines`/`runs` (Phase 89) are
+          the SAME `pipelineCatalog`/`runs` already fetched above for the dock
+          roster — the particle layer's run→owner resolution rides those existing
+          queries, no new request. */}
+      <div className="pointer-events-none absolute left-1/2 top-[19.8%] z-20 w-full max-w-[460px] -translate-x-1/2 -translate-y-1/2 px-6">
+        <div className="pointer-events-none aspect-square w-full">
           <SubsystemWeb
             onSelect={setSelectedSubsystemId}
             pipelines={pipelineCatalog ?? []}

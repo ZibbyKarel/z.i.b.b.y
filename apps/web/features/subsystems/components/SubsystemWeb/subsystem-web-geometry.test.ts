@@ -1,20 +1,21 @@
 import { SUBSYSTEMS, type SubsystemWithStatus } from "@zibby/contracts";
 import { describe, expect, it } from "vitest";
 import {
+  HUB_RADIUS,
   NODE_RADIUS,
   ORB_RADIUS,
   REGISTRY_ORDER,
   SLOT_COUNT,
   WEB_CENTER,
-  WEB_RX,
-  WEB_RY,
-  WEB_RY_RATIO,
+  WEB_RADIUS,
+  computeHubVertices,
   computeSlots,
+  hubEdges,
+  hubVertexForId,
+  hubVertexForIndex,
   layoutSubsystems,
   pathBetween,
   pathFor,
-  rimEdges,
-  rimPath,
   slotForId,
   spokePath,
 } from "./subsystem-web-geometry";
@@ -35,6 +36,10 @@ function fixture(overrides: Partial<SubsystemWithStatus> = {}): SubsystemWithSta
   };
 }
 
+function distance(a: { x: number; y: number }, b: { x: number; y: number }): number {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
 describe("subsystem-web-geometry", () => {
   describe("computeSlots", () => {
     it("is deterministic — same input, same output, every call", () => {
@@ -49,39 +54,82 @@ describe("subsystem-web-geometry", () => {
       expect(REGISTRY_ORDER).toHaveLength(8);
     });
 
-    it("spaces slots evenly (45°) starting at the top, clockwise", () => {
+    it("forge (index 0) is at the bottom — max y, angle +90°", () => {
       const slots = computeSlots();
-      expect(slots[0]!.angle).toBe(-90);
+      expect(slots[0]!.angle).toBe(90);
+      expect(REGISTRY_ORDER[0]).toBe("forge");
+      const maxY = Math.max(...slots.map((s) => s.y));
+      expect(slots[0]!.y).toBe(maxY);
+    });
+
+    it("spaces slots evenly (45°), clockwise, starting at the bottom", () => {
+      const slots = computeSlots();
       for (let i = 1; i < slots.length; i++) {
         expect(slots[i]!.angle - slots[i - 1]!.angle).toBeCloseTo(45, 5);
       }
     });
 
-    it("flattens the ellipse: ry ≈ 0.35 × rx", () => {
-      expect(WEB_RY).toBeCloseTo(WEB_RX * 0.35, 6);
-      expect(WEB_RY_RATIO).toBe(0.35);
-
-      // The leftmost/rightmost slot (angle 0/180) sits at the full horizontal radius
-      // from center; the top/bottom slot (angle -90/90) sits at the flattened vertical
-      // radius — never the full rx.
+    it("forms a REGULAR octagon — every slot sits the same radius from the centre", () => {
       const slots = computeSlots();
-      const rightmost = slots.find((s) => s.angle === 0)!;
-      const top = slots.find((s) => s.angle === -90)!;
-      expect(Math.abs(rightmost.x - WEB_CENTER.x)).toBeCloseTo(WEB_RX, 1);
-      expect(Math.abs(top.y - WEB_CENTER.y)).toBeCloseTo(WEB_RY, 1);
-      expect(Math.abs(top.y - WEB_CENTER.y)).toBeLessThan(Math.abs(rightmost.x - WEB_CENTER.x));
+      for (const slot of slots) {
+        expect(distance(slot, WEB_CENTER)).toBeCloseTo(WEB_RADIUS, 1);
+      }
     });
 
     it("supports an arbitrary count (defensive — real app always uses 8)", () => {
       expect(computeSlots(4)).toHaveLength(4);
-      expect(computeSlots(4)[0]!.angle).toBe(-90);
-      expect(computeSlots(4)[1]!.angle).toBe(0);
+      expect(computeSlots(4)[0]!.angle).toBe(90);
+      expect(computeSlots(4)[1]!.angle).toBe(180);
     });
   });
 
-  describe("orb sizing", () => {
+  describe("orb / hub sizing", () => {
     it("orb radius is 2× node radius (diameter ≈ 2× a node's)", () => {
       expect(ORB_RADIUS).toBe(NODE_RADIUS * 2);
+    });
+
+    it("the hub ring clears the orb with margin, and sits inside the node ring", () => {
+      expect(HUB_RADIUS).toBeGreaterThan(ORB_RADIUS);
+      expect(HUB_RADIUS).toBeLessThan(WEB_RADIUS);
+    });
+  });
+
+  describe("computeHubVertices / hubVertexForIndex / hubVertexForId", () => {
+    it("sits on a smaller regular octagon, at the same angles as the node ring", () => {
+      const slots = computeSlots();
+      const hubs = computeHubVertices();
+      expect(hubs).toHaveLength(slots.length);
+      hubs.forEach((hub, i) => {
+        expect(hub.angle).toBe(slots[i]!.angle);
+        expect(distance(hub, WEB_CENTER)).toBeCloseTo(HUB_RADIUS, 1);
+      });
+    });
+
+    it("hubVertexForIndex/hubVertexForId resolve to the same ring computed above", () => {
+      const hubs = computeHubVertices();
+      hubs.forEach((hub, i) => {
+        expect(hubVertexForIndex(i)).toEqual(hub);
+      });
+      REGISTRY_ORDER.forEach((id, index) => {
+        expect(hubVertexForId(id)).toEqual(hubs[index]);
+      });
+    });
+
+    it("returns undefined for an id outside the registry", () => {
+      expect(hubVertexForId("not-a-real-subsystem" as never)).toBeUndefined();
+    });
+
+    it("a node, its hub vertex, and the centre are colinear (the spoke is radial)", () => {
+      for (const id of REGISTRY_ORDER) {
+        const node = slotForId(id)!;
+        const hub = hubVertexForId(id)!;
+        // Cross product of (node - centre) and (hub - centre) is ~0 for colinear points.
+        const nx = node.x - WEB_CENTER.x;
+        const ny = node.y - WEB_CENTER.y;
+        const hx = hub.x - WEB_CENTER.x;
+        const hy = hub.y - WEB_CENTER.y;
+        expect(nx * hy - ny * hx).toBeCloseTo(0, 1);
+      }
     });
   });
 
@@ -135,9 +183,9 @@ describe("subsystem-web-geometry", () => {
     });
   });
 
-  describe("rimEdges", () => {
-    it("connects every consecutive registry neighbor, wrapping last→first", () => {
-      const edges = rimEdges();
+  describe("hubEdges", () => {
+    it("connects every consecutive registry neighbor, wrapping last→first — a closed 8-edge ring", () => {
+      const edges = hubEdges();
       expect(edges).toHaveLength(REGISTRY_ORDER.length);
       REGISTRY_ORDER.forEach((id, i) => {
         expect(edges[i]).toEqual([id, REGISTRY_ORDER[(i + 1) % REGISTRY_ORDER.length]]);
@@ -150,27 +198,32 @@ describe("subsystem-web-geometry", () => {
       expect(pathBetween({ x: 1, y: 2 }, { x: 3, y: 4 })).toBe("M 1 2 L 3 4");
     });
 
-    it("spokePath always starts at the web center", () => {
-      const slot = slotForId("forge")!;
-      expect(spokePath(slot)).toBe(pathBetween(WEB_CENTER, slot));
-      expect(spokePath(slot).startsWith(`M ${WEB_CENTER.x} ${WEB_CENTER.y}`)).toBe(true);
+    it("spokePath ends at the hub vertex, not the centre", () => {
+      const node = slotForId("forge")!;
+      const hub = hubVertexForId("forge")!;
+      expect(spokePath(node, hub)).toBe(pathBetween(node, hub));
+      expect(spokePath(node, hub).endsWith(`L ${hub.x} ${hub.y}`)).toBe(true);
+      // Never reaches the centre.
+      expect(spokePath(node, hub)).not.toContain(`${WEB_CENTER.x} ${WEB_CENTER.y}`);
     });
 
-    it("rimPath connects two given points directly", () => {
-      const a = slotForId("forge")!;
-      const b = slotForId("puls")!;
-      expect(rimPath(a, b)).toBe(pathBetween(a, b));
-    });
-
-    it("pathFor resolves 'orb' to the center and ids to their fixed slots", () => {
-      expect(pathFor("orb", "forge")).toBe(pathBetween(WEB_CENTER, slotForId("forge")!));
+    it("pathFor resolves 'orb' to the counterpart node's HUB vertex, ids to their fixed slots", () => {
+      expect(pathFor("orb", "forge")).toBe(pathBetween(hubVertexForId("forge")!, slotForId("forge")!));
+      expect(pathFor("forge", "orb")).toBe(pathBetween(slotForId("forge")!, hubVertexForId("forge")!));
       expect(pathFor("forge", "puls")).toBe(pathBetween(slotForId("forge")!, slotForId("puls")!));
-      expect(pathFor("orb", "orb")).toBe(pathBetween(WEB_CENTER, WEB_CENTER));
     });
 
-    it("pathFor fails soft on an unknown id", () => {
+    it("a dispatch/report ride never passes through the centre", () => {
+      const dispatch = pathFor("orb", "puls")!;
+      const report = pathFor("puls", "orb")!;
+      expect(dispatch).not.toContain(`${WEB_CENTER.x} ${WEB_CENTER.y}`);
+      expect(report).not.toContain(`${WEB_CENTER.x} ${WEB_CENTER.y}`);
+    });
+
+    it("pathFor fails soft on an unknown id, or the now-meaningless 'orb'-to-'orb'", () => {
       expect(pathFor("orb", "ghost" as never)).toBeUndefined();
       expect(pathFor("ghost" as never, "orb")).toBeUndefined();
+      expect(pathFor("orb", "orb")).toBeUndefined();
     });
   });
 });

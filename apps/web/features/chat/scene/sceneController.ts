@@ -43,10 +43,39 @@ const ENERGY_PER_CHAR = 0.06;
 const ENERGY_DECAY = 1.6;
 
 const CAMERA_Z = 6;
+/** Vertical field of view (degrees) — matches the `PerspectiveCamera` constructor
+ * below; kept as its own constant so {@link CLUSTER_Y}'s screen-position maths
+ * stays in sync with the camera it's projected through. */
+const CAMERA_FOV_DEG = 45;
 
 /** The orb (and its halo) render at half scale — the subsystem web is the scene's
  * centerpiece now, ringing a smaller orb rather than a full-bleed one. */
 const ORB_SCALE = 0.5;
+
+/**
+ * Phase 94 ("top third, not centre"): how far up (world Y) the orb/rings `core`
+ * group is translated so the cluster lands in the top third of the page instead of
+ * dead centre — the ChatScreen's SVG octagon overlay is positioned in CSS to match
+ * this exact projected screen offset (see `ChatScreen.tsx`'s `top-[19.8%]` wrapper),
+ * so the two stay concentric. Camera is untouched — still `lookAt(0, 0, 0)` — only
+ * the cluster moves, which is what keeps the projected offset a pure function of
+ * `CLUSTER_Y` and the camera's fixed FOV/distance (see {@link glowCenterFromClusterY}).
+ */
+const CLUSTER_Y = 1.5;
+
+/**
+ * The world-Y offset {@link CLUSTER_Y} projected into the background sky shader's
+ * centred, aspect-corrected `p`-space (screen centre `(0,0)`, `+y` up) — pure
+ * perspective-projection trig, no live camera state needed, since the camera's
+ * `lookAt` target and distance from the (raised) cluster are both fixed constants.
+ * Kept as one small function (rather than a hardcoded literal) so a future change
+ * to `CLUSTER_Y`/`CAMERA_Z`/FOV can't silently desync the glow from the orb.
+ */
+function glowCenterFromClusterY(clusterY: number): number {
+  const halfHeightWorld = Math.tan((CAMERA_FOV_DEG * Math.PI) / 360) * CAMERA_Z;
+  const ndcY = clusterY / halfHeightWorld;
+  return ndcY / 2;
+}
 
 export function createSceneController(
   container: HTMLElement,
@@ -83,15 +112,24 @@ export function createSceneController(
   container.appendChild(orbRenderer.domElement);
 
   const orbScene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+  const camera = new THREE.PerspectiveCamera(CAMERA_FOV_DEG, 1, 0.1, 100);
   camera.position.set(0, 0, CAMERA_Z);
 
   // The orb and its halo live in a half-scale core group so the subsystem web (the
-  // centerpiece now) rings a smaller orb — see ORB_SCALE. The per-frame pulse/ring
-  // easing stays relative to this group, so nothing snaps.
+  // centerpiece now) rings a smaller orb — see ORB_SCALE. Phase 94 raises the whole
+  // group into the top third (CLUSTER_Y) — the camera keeps looking at the world
+  // origin (never re-targeted), so this translation is the ONLY thing that moves
+  // the cluster on screen. The per-frame pulse/ring easing stays relative to this
+  // group, so nothing snaps.
   const core = new THREE.Group();
   core.scale.setScalar(ORB_SCALE);
+  core.position.y = CLUSTER_Y;
   orbScene.add(core);
+
+  // The background's behind-orb glow pools at the same projected position as the
+  // raised orb, not screen centre — a pure function of CLUSTER_Y/camera constants
+  // (see glowCenterFromClusterY), so it never needs recomputing per frame.
+  background.setGlowCenter(0, glowCenterFromClusterY(CLUSTER_Y));
 
   const orb: OrbLayer = createOrbLayer();
   core.add(orb.object3d);
