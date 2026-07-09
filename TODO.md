@@ -2,19 +2,19 @@
 
 ## Fáze 90 (hero art) — vědomě osekaná kvůli limitům, dodělat:
 
-- [ ] **Testy k hero artu**: drawer-header test na image větev (heroImage set → background obsahuje url(), fallback větev bez obrázku zůstává pokrytá); registry test rozšířit z „cesta existuje" na kontrolu, že soubor v `apps/web/public/subsystems/` reálně leží (build-time check nebo aspoň vitest fs check).
-- [ ] **Konzistenční pass přes rodinu**: vygenerován jen 1 kandidát na subsystém (plán chtěl 2–3 + výběr). Udělat contact-sheet všech 8, vyřadit/regenerovat outliery, sladit měřítko figury a hustotu efektů.
-- [ ] **Výška hero bandu v draweru**: band je content-driven (~120 px) — portrét je jen proužek. Zvážit vyšší band (min-height) nebo aspect-ratio variantu, ať art dýchá; případně `EntityHero imageBleed` idiom z run-detailu.
-- [ ] **Optimalizace assetů**: PNG → WebP/AVIF + srcset; teď jen sips komprese na ~×00 kB.
-- [ ] **Oficiální Forge boss art**: zvážit crop originálu z `design/Z.I.B.B.Y/uploads/Forge.png` (bez textového panelu) místo re-generace, pokud regenerovaná verze neladí s brandem.
-- [ ] **Finální barvy subsystémů**: registry barvy jsou pořád provizorní (deferred design item) — až padne rozhodnutí, přegenerovat/přebarvit art podle finální palety.
+- [x] **Testy k hero artu**: drawer-header test na image větev + fallback; registry fs check, že soubor reálně leží. _(Fáze 103)_
+- [ ] **Konzistenční pass přes rodinu**: vygenerován jen 1 kandidát na subsystém (plán chtěl 2–3 + výběr). Udělat contact-sheet všech 8, vyřadit/regenerovat outliery, sladit měřítko figury a hustotu efektů. _(ODLOŽENO — image-generation taste work, vyžaduje lidský výběr kandidátů; není součástí autonomního code PR.)_
+- [x] **Výška hero bandu v draweru**: band vyšší, ať art dýchá. _(Fáze 103: `minHeight` 168→224 + posun pozice.)_
+- [x] **Optimalizace assetů**: PNG/JPG → WebP + fallback. _(Fáze 103: 8× WebP, 58–64 % úspora, `image-set(webp, jpg)` v `heroBandStyle`.)_
+- [ ] **Oficiální Forge boss art**: zvážit crop originálu z `design/Z.I.B.B.Y/uploads/Forge.png` místo re-generace. _(ODLOŽENO — brand/taste rozhodnutí operátora.)_
+- [ ] **Finální barvy subsystémů**: registry barvy jsou pořád provizorní. _(ODLOŽENO — čeká na rozhodnutí o paletě; regrade artu až potom.)_
 
 ## Otevřené otázky z federation arc (PR #49, rozhodnutí operátora):
 
-- [ ] Per-project gate rules — re-homing globálního katalogu na projekt + precedence; do té doby je odložené i sentence-builder AUTHORING UI (renderování vět už je).
-- [ ] Drawer na mobilu + více draverů najednou (v1: sheet pod lg, jeden drawer).
-- [ ] Rim particles (node→node) — potřebují chain-runs SSE scope na API (`ChainRunnerService.onRunStatus` není zapojený do `/api/events`); bez něj by byly fake.
-- [ ] `.playwright-mcp/*.png` historicky trackované v gitu (před gitignore) — rozhodnout, jestli vyčistit.
+- [ ] Per-project gate rules — re-homing globálního katalogu na projekt + precedence; do té doby je odložené i sentence-builder AUTHORING UI (renderování vět už je). _(ODLOŽENO — velká architektonická změna vlastnictví/precedence pravidel; vyžaduje design rozhodnutí před implementací.)_
+- [ ] Drawer na mobilu + více draverů najednou (v1: sheet pod lg, jeden drawer). _(ODLOŽENO — UX design úloha navazující na Fázi 99; vědomý v1 scope.)_
+- [x] Rim particles (node→node) — chain-runs SSE scope na API. _(Fáze 104: `chain-runs` scope zapojen do `/api/events` (`ChainRunnerService.onRunStatus`) + web invalidace; reálný datový tok. Samotné vykreslování rim particles zůstává odloženou vizuální polish na tomto reálném feedu — už ne fake.)_
+- [x] `.playwright-mcp/*.png` historicky trackované v gitu (před gitignore). _(Fáze 104: untrackováno přes `git rm --cached`.)_
 
 ## Další nalezené věci
 
