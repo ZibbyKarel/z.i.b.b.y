@@ -1,5 +1,3 @@
-- [ ] Chat UI - CommandLine komponenta - project selector - neměl by měnit globální vybraný projekt. Globálně chci vždy vidět informace ze všech projektů (běžící úkoly a tak podobně). Tento selector jen nastavuje projekt pro konkrétní task, který operátor pouští
-- [ ] Chat UI - Upravíme náváznost oktagonů subsystémů na centrální oktagon. Momentálně se oktagony kříží v jedonom rohu. Měla by mezi nimy být ta spojnice aby se oktagony navzájem nedotýkaly
 - [ ] Chat UI - Detail tasku je moc úzký. Udělejme ho stejně široký jako je na stránce /runs
 - [ ] Chat UI - Detail subsystému nejde zavřít klikem na křížek a detail samotný je moc úzký. Udělejme ho stejně široký jako nově detail tasku
 - [ ] Chat UI - hvězdná mlhovina by měla být okolo orbu a subagentů. nyní jak je pod reprezentacý systémů tak jsou orby poněkud málo výrazné.
