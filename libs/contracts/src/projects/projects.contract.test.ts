@@ -290,8 +290,13 @@ describe("project schema", () => {
     ).toBe(true);
   });
 
-  it("requires a non-empty path", () => {
+  it("requires a non-empty path when present", () => {
     expect(ProjectSchema.safeParse({ id: "x", name: "x", path: "" }).success).toBe(false);
+  });
+
+  it("accepts a project with no path at all (Phase 98 — machine-local, derived from cloneRoot)", () => {
+    const parsed = ProjectSchema.parse({ id: "x", name: "x" });
+    expect(parsed.path).toBeUndefined();
   });
 
   it("rejects an id with a path separator (defense in depth)", () => {

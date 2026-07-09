@@ -1259,12 +1259,10 @@
     "fields": {
       "name": "Project name",
       "namePlaceholder": "media-vault",
-      "path": "Root path",
-      "pathHint": "On the host system.",
-      "pathPlaceholder": "~/Projects/media-vault",
       "gitRemote": "Git remote",
       "gitRemoteHint": "Git remote URL — where ZIBBY clones the project from on another machine.",
       "category": "Category",
+      "categoryNone": "No category",
       "desc": "Description",
       "descPlaceholder": "What the project is about",
       "logo": "Logo",

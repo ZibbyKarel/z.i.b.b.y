@@ -612,9 +612,14 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     }
     if (rec?.workspace && rec.project) {
       const resolved = await this.resolveProject(rec.project);
-      if (resolved) {
+      // Re-resolve THIS machine's local clone (Phase 76/98: `project.path` may be
+      // absent — the canonical registry field is machine-local and optional) rather
+      // than trusting the raw registry `path`, which may not be where the worktree's
+      // main repo actually lives (e.g. a cloneRoot-sourced clone).
+      const local = resolved ? await this.projectLocal.resolve(resolved) : null;
+      if (local?.resolvedPath) {
         await this.workspace
-          .removeWorktree({ projectPath: resolved.path, worktreePath: rec.workspace.path })
+          .removeWorktree({ projectPath: local.resolvedPath, worktreePath: rec.workspace.path })
           .catch(() => {});
       }
     }

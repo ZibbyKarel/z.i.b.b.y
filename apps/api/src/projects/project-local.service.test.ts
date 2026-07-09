@@ -34,12 +34,16 @@ describe("ProjectLocalService (Phase 76 — per-machine clone resolution)", () =
   let workspace: WorkspaceService;
   let service: ProjectLocalService;
 
-  const project = (over: Partial<Project> = {}): Project => ({
-    id: "alpha",
-    name: "Alpha",
-    path: path.join(root, "at-path"),
-    ...over,
-  });
+  // Every test in this suite supplies (or defaults to) a concrete `path`; the
+  // intersection narrows it back to `string` so call sites don't need `!`/casts —
+  // `path` itself stays optional on the real `Project` type (Phase 98).
+  const project = (over: Partial<Project> = {}): Project & { path: string } =>
+    ({
+      id: "alpha",
+      name: "Alpha",
+      path: path.join(root, "at-path"),
+      ...over,
+    }) as Project & { path: string };
 
   beforeEach(async () => {
     root = await fs.mkdtemp(path.join(os.tmpdir(), "project-local-"));

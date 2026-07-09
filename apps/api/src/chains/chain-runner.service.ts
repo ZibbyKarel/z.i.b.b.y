@@ -309,7 +309,7 @@ export class ChainRunnerService implements OnModuleInit, OnModuleDestroy {
       const projectId = record.producedBy.projectId;
       if (!projectId) return null;
       const project = await this.projects.get(projectId).catch(() => null);
-      if (!project) return null;
+      if (!project?.path) return null; // no local path on this machine — nothing to read
       return fs.readFile(path.join(project.path, record.locator), "utf8").catch(() => null);
     }
     return null;

@@ -79,7 +79,7 @@ export function NewTaskDialog({
   // into the dispatched task's allowed directories independently).
   const paths = useMemo(() => {
     const detected = extractPaths(text);
-    const all = selectedProject ? [selectedProject.path, ...detected] : detected;
+    const all = selectedProject?.path ? [selectedProject.path, ...detected] : detected;
     return [...new Set(all)];
   }, [text, selectedProject]);
 

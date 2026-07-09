@@ -70,6 +70,7 @@ export class DiscoveryTriageService {
     const out: Candidate[] = [];
     for (const project of projects) {
       if (!project.checks?.length) continue; // opt-in: never autorun checks on undeclared repos
+      if (!project.path) continue; // no local path on this machine — nothing to run checks against
       const { code, output } = await this.runShell(project.checks.join(" && "), project.path);
       if (code === 0) continue;
       const tail = output.length > TAIL_MAX ? output.slice(output.length - TAIL_MAX) : output;

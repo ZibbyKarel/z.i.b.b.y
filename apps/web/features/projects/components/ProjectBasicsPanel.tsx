@@ -1,22 +1,17 @@
 "use client";
 
-import { type ChangeEvent, type ReactNode } from "react";
+import { type ChangeEvent } from "react";
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Button,
-  IconTile,
-  Pressable,
-  Stack,
-  Tag,
-  TextAreaField,
-  Typography,
-} from "@zibby/design-system";
+import { Button, IconTile, SelectField, Stack, TextAreaField, Typography } from "@zibby/design-system";
 import type { Category, Project } from "@zibby/contracts";
 import { Controller, FormTextInput, useFormControls } from "@zibby/forms";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { toastBus } from "../../../components/Toaster/toastBus";
 import { KeyValueEditor, type KeyValueRow } from "./KeyValueEditor";
+
+/** The `SelectField` sentinel value for "no category" — a category name can never be empty. */
+const NO_CATEGORY = "";
 
 /**
  * Mirrors `ProjectSchema.logo`'s cap (280 000 base64 chars, ~200 KB) so an
@@ -24,10 +19,9 @@ import { KeyValueEditor, type KeyValueRow } from "./KeyValueEditor";
  */
 const LOGO_MAX_DATA_URI_LENGTH = 280_000;
 
-/** The core project record fields this panel edits (name/path/category/desc/logo/budget/checks/env). */
+/** The core project record fields this panel edits (name/category/desc/logo/budget/checks/env). */
 export interface ProjectBasicsBody {
   name: string;
-  path: string;
   desc?: string;
   category?: string;
   /** Git remote URL — where ZIBBY clones this project from on another machine (Phase 76/77). */
@@ -75,7 +69,6 @@ function fromRows(rows: KeyValueRow[]): Record<string, string> | undefined {
 
 type ProjectEditValues = {
   name: string;
-  path: string;
   desc: string;
   category: string;
   gitRemote: string;
@@ -100,25 +93,9 @@ function toPositiveFloat(raw: string): number | undefined {
   return Number.isFinite(n) && n > 0 ? n : undefined;
 }
 
-function ChipToggle({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <Pressable onClick={onClick}>
-      <Tag tone={active ? "accent" : "neutral"}>{children}</Tag>
-    </Pressable>
-  );
-}
-
 /**
- * The core-record editor for a project (name, host path, category, description,
- * budget, verify checks and env vars). Lives on the project detail page — there is
+ * The core-record editor for a project (name, category, description, budget,
+ * verify checks and env vars). Lives on the project detail page — there is
  * no project dialog; the same panel creates a new project (`isNew`) and edits an
  * existing one. Mount with `key={project?.id ?? "new"}` so switching projects
  * resets the captured form defaults.
@@ -162,7 +139,6 @@ export function ProjectBasicsPanel({
   const { renderForm, submit, form } = useFormControls<ProjectEditValues>({
     defaultValues: {
       name: project?.name ?? "",
-      path: project?.path ?? "~/Projects/",
       desc: project?.desc ?? "",
       category: project?.category ?? categories[0]?.name ?? "",
       gitRemote: project?.gitRemote ?? "",
@@ -212,7 +188,6 @@ export function ProjectBasicsPanel({
         .filter(Boolean);
       onSave({
         name: values.name.trim(),
-        path: values.path.trim(),
         desc: values.desc.trim() || undefined,
         category: values.category || undefined,
         gitRemote: values.gitRemote.trim() || undefined,
@@ -224,8 +199,8 @@ export function ProjectBasicsPanel({
     },
   });
 
-  const [watchedName, watchedPath] = form.watch(["name", "path"]);
-  const canSave = (watchedName ?? "").trim().length > 0 && (watchedPath ?? "").trim().length > 0;
+  const watchedName = form.watch("name");
+  const canSave = (watchedName ?? "").trim().length > 0;
 
   return renderForm(
     <HudPanel
@@ -258,13 +233,6 @@ export function ProjectBasicsPanel({
         />
 
         <FormTextInput<ProjectEditValues>
-          hint={t("fields.pathHint")}
-          label={t("fields.path")}
-          name="path"
-          placeholder={t("fields.pathPlaceholder")}
-        />
-
-        <FormTextInput<ProjectEditValues>
           hint={t("fields.gitRemoteHint")}
           label={t("fields.gitRemote")}
           name="gitRemote"
@@ -276,22 +244,15 @@ export function ProjectBasicsPanel({
             control={form.control}
             name="category"
             render={({ field }) => (
-              <Stack gap="75">
-                <Typography mono size="sm" type="note" variant="secondary">
-                  {t("fields.category")}
-                </Typography>
-                <Stack wrap direction="row" gap="75">
-                  {categories.map((c) => (
-                    <ChipToggle
-                      active={field.value === c.name}
-                      key={c.name}
-                      onClick={() => field.onChange(c.name)}
-                    >
-                      {c.name}
-                    </ChipToggle>
-                  ))}
-                </Stack>
-              </Stack>
+              <SelectField
+                label={t("fields.category")}
+                onValueChange={(v) => field.onChange(v || undefined)}
+                options={[
+                  { value: NO_CATEGORY, label: t("fields.categoryNone") },
+                  ...categories.map((c) => ({ value: c.name, label: c.name })),
+                ]}
+                value={field.value ?? NO_CATEGORY}
+              />
             )}
           />
         )}

@@ -577,7 +577,7 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
             <Stack align="start" direction="row">
               <Button
                 data-testid="clone-project"
-                disabled={!project?.gitRemote || cloneProject.isPending}
+                disabled={!project?.gitRemote}
                 icon="branch"
                 intent="primary"
                 loading={cloneProject.isPending}

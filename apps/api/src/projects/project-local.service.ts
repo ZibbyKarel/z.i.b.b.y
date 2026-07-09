@@ -39,7 +39,8 @@ export class ProjectLocalService {
       return {
         present: true,
         isGitRepo: true,
-        resolvedPath: project.path,
+        // Non-null: `isPresentGitRepo` only returns true for a defined `dir`.
+        resolvedPath: project.path as string,
         source: "path",
         cloneRoot,
       };
@@ -107,15 +108,16 @@ export class ProjectLocalService {
       const cloned = await this.clone(project);
       return { path: cloned.resolvedPath as string, isGitRepo: true };
     }
-    const stat = await fs.stat(project.path).catch(() => null);
-    if (stat?.isDirectory()) {
+    const stat = project.path ? await fs.stat(project.path).catch(() => null) : null;
+    if (stat?.isDirectory() && project.path) {
       return { path: project.path, isGitRepo: false };
     }
     throw new ProjectLocalUnresolvedError(project.id);
   }
 
-  /** `dir` exists, is a directory, and is a git work tree — tolerant of ENOENT. */
-  private async isPresentGitRepo(dir: string): Promise<boolean> {
+  /** `dir` exists, is a directory, and is a git work tree — tolerant of ENOENT/undefined. */
+  private async isPresentGitRepo(dir: string | undefined): Promise<boolean> {
+    if (!dir) return false;
     const stat = await fs.stat(dir).catch(() => null);
     if (!stat?.isDirectory()) return false;
     return this.workspace.isGitRepo(dir);

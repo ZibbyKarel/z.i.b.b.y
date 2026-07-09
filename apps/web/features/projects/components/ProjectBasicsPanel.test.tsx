@@ -1,6 +1,6 @@
 import { fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { IconTileTestId } from "@zibby/design-system";
+import { DropdownTestId, IconTileTestId } from "@zibby/design-system";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen } from "../../../test/render";
 import { toastBus } from "../../../components/Toaster/toastBus";
@@ -36,7 +36,6 @@ describe("ProjectBasicsPanel logo upload", () => {
     await screen.findByTestId(IconTileTestId.Image);
 
     await userEvent.type(screen.getByPlaceholderText("media-vault"), "Alpha");
-    await userEvent.type(screen.getByDisplayValue("~/Projects/"), "alpha");
     await userEvent.click(screen.getByTestId("save-basics"));
 
     expect(onSave).toHaveBeenCalledWith(
@@ -77,7 +76,6 @@ describe("ProjectBasicsPanel dollar caps (Phase 12)", () => {
     render(<ProjectBasicsPanel isNew categories={[]} onSave={onSave} />);
 
     await userEvent.type(screen.getByPlaceholderText("media-vault"), "Alpha");
-    await userEvent.type(screen.getByDisplayValue("~/Projects/"), "alpha");
     await userEvent.type(screen.getByLabelText("$ / den"), "5");
     await userEvent.type(screen.getByLabelText("$ / týden"), "20");
     await userEvent.type(screen.getByLabelText("$ / měsíc"), "80");
@@ -117,10 +115,67 @@ describe("ProjectBasicsPanel dollar caps (Phase 12)", () => {
     render(<ProjectBasicsPanel isNew categories={[]} onSave={onSave} />);
 
     await userEvent.type(screen.getByPlaceholderText("media-vault"), "Alpha");
-    await userEvent.type(screen.getByDisplayValue("~/Projects/"), "alpha");
     await userEvent.click(screen.getByTestId("save-basics"));
 
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ budget: undefined }));
+  });
+});
+
+describe("ProjectBasicsPanel category selector (Phase 98)", () => {
+  const categories = [
+    { name: "Dev", glyph: "code" },
+    { name: "Ops", glyph: "code" },
+  ];
+
+  it("renders no selector when there are no categories", () => {
+    render(<ProjectBasicsPanel isNew categories={[]} onSave={vi.fn()} />);
+    expect(screen.queryByTestId(DropdownTestId.Trigger)).not.toBeInTheDocument();
+  });
+
+  it("offers a 'no category' option alongside every category", async () => {
+    const user = userEvent.setup();
+    render(<ProjectBasicsPanel isNew categories={categories} onSave={vi.fn()} />);
+
+    await user.click(screen.getByTestId(DropdownTestId.Trigger));
+    const labels = screen.getAllByTestId(DropdownTestId.Option).map((o) => o.textContent);
+    expect(labels).toEqual(["Bez kategorie", "Dev", "Ops"]);
+  });
+
+  it("saves the picked category name", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    render(<ProjectBasicsPanel isNew categories={categories} onSave={onSave} />);
+
+    await user.click(screen.getByTestId(DropdownTestId.Trigger));
+    const opsOption = screen.getAllByTestId(DropdownTestId.Option).find((o) => o.textContent === "Ops");
+    await user.click(opsOption!);
+
+    await userEvent.type(screen.getByPlaceholderText("media-vault"), "Alpha");
+    await userEvent.click(screen.getByTestId("save-basics"));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ category: "Ops" }));
+  });
+
+  it("saves undefined when 'no category' is picked", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ProjectBasicsPanel
+        categories={categories}
+        isNew={false}
+        onSave={onSave}
+        project={{ id: "alpha", name: "Alpha", category: "Dev" }}
+      />,
+    );
+
+    await user.click(screen.getByTestId(DropdownTestId.Trigger));
+    const noneOption = screen
+      .getAllByTestId(DropdownTestId.Option)
+      .find((o) => o.textContent === "Bez kategorie");
+    await user.click(noneOption!);
+    await userEvent.click(screen.getByTestId("save-basics"));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ category: undefined }));
   });
 });
 
@@ -147,7 +202,6 @@ describe("ProjectBasicsPanel gitRemote field (Phase 77)", () => {
     render(<ProjectBasicsPanel isNew categories={[]} onSave={onSave} />);
 
     await userEvent.type(screen.getByPlaceholderText("media-vault"), "Alpha");
-    await userEvent.type(screen.getByDisplayValue("~/Projects/"), "alpha");
     await userEvent.click(screen.getByTestId("save-basics"));
 
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ gitRemote: undefined }));
@@ -158,7 +212,6 @@ describe("ProjectBasicsPanel gitRemote field (Phase 77)", () => {
     render(<ProjectBasicsPanel isNew categories={[]} onSave={onSave} />);
 
     await userEvent.type(screen.getByPlaceholderText("media-vault"), "Alpha");
-    await userEvent.type(screen.getByDisplayValue("~/Projects/"), "alpha");
     await userEvent.type(
       screen.getByPlaceholderText("git@github.com:org/repo.git"),
       "  git@github.com:acme/alpha.git  ",

@@ -552,7 +552,7 @@ export function CommandLine({
   );
   const paths = useMemo(() => {
     const detected = extractPaths(text);
-    const all = selectedProject ? [selectedProject.path, ...detected] : detected;
+    const all = selectedProject?.path ? [selectedProject.path, ...detected] : detected;
     return [...new Set(all)];
   }, [text, selectedProject]);
   const pathHighlights = useMemo(() => extractPathRanges(text), [text]);
