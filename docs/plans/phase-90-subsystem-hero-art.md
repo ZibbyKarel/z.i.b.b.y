@@ -1,13 +1,13 @@
 # Phase 90 — Hero art for the seven faceless subsystems + Forge wiring
 
-> **STATUS 2026-07-09: PARKED, not started — the only phase of the 80–92 arc not delivered.**
-> Deliberately deferred at the arc's end for weekly-rate-limit budget (art is polish; the
-> drawer's color-band fallback works and every registry entry has `heroImage: null`).
-> Everything else (80–89, 91, 92) is committed on `feat/subsystem-federation`.
-> To resume: run this phase file as written — generate 7 heroes matching
-> `design/Z.I.B.B.Y/uploads/Forge.png`, copy assets to `apps/web/public/subsystems/`,
-> set `heroImage` in `libs/contracts/src/subsystems/subsystem.schema.ts`. No other phase
-> depends on it; it can land as a follow-up PR.
+> **STATUS 2026-07-09 (later the same day): DELIVERED in a deliberately LEAN cut** on
+> operator request ("dokončit v rámci limitů, vynech testy…"). All 8 heroes generated
+> (pollinations-flux free tier, 940×627, style-locked to Forge.png, no text), compressed
+> to 69–128K JPEGs in `apps/web/public/subsystems/`, registry `heroImage` set, drawer
+> hero band gained the image branch (color-band fallback kept). CUT from the full spec
+> and tracked in `todo.md`: multi-candidate generation + contact-sheet consistency pass,
+> new tests for the image branch, band-height/EntityHero polish, WebP/AVIF optimization,
+> per-note watermark cleanup (two images carry a microscopic edge watermark).
 
 > Design doc: only Forge has hero art (`design/Z.I.B.B.Y/uploads/Forge.png` — orange-glowing
 > mecha-boss with its 5-agent squad strip, "FORGE / DELIVERY PIPELINE ORCHESTRATION" label).

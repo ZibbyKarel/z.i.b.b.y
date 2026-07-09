@@ -34,8 +34,11 @@ type-safely with zero fs plumbing, since the eight entries are fixed,
 non-user-generated data. Each entry: `{ id, name, tagline, mandate, color,
 heroImage }`. `name` is the mythic name ("Forge"), `tagline` a short Czech
 epithet, `mandate` the one-line Czech mandate from the design doc's federation
-table, `heroImage` a root-relative path or `null` (all `null` until phase 90
-ships the art).
+table, `heroImage` a root-relative path or `null`. Phase 90 shipped the art:
+all eight point at `/subsystems/<id>.jpg` (assets in
+`apps/web/public/subsystems/`, one visual family style-locked to
+`design/Z.I.B.B.Y/uploads/Forge.png`); the `null` fallback (color-graded band
+in the drawer header) stays a supported path.
 
 **Colors are PROVISIONAL.** Forge is orange `#f97316`, established by its
 existing hero art (`design/Z.I.B.B.Y/uploads/Forge.png`). The other seven carry

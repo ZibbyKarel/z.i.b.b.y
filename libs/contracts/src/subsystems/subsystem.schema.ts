@@ -21,8 +21,9 @@ export type SubsystemId = z.infer<typeof SubsystemIdSchema>;
 /**
  * A subsystem's identity: its mythic name, a short Czech epithet, its one-line
  * Czech mandate (from the design doc's federation table), a brand color, and an
- * optional hero portrait. `heroImage` is a root-relative path or `null` — every
- * entry is `null` until phase 90 ships the art.
+ * optional hero portrait. `heroImage` is a root-relative path or `null` — the
+ * `null` fallback path (color-graded band) stays supported forever; phase 90
+ * filled in `/subsystems/*.jpg` art for all eight.
  */
 export const SubsystemSchema = z.object({
   id: SubsystemIdSchema,
@@ -39,7 +40,9 @@ export type Subsystem = z.infer<typeof SubsystemSchema>;
  * orange `#f97316`, established by its existing hero art
  * (`design/Z.I.B.B.Y/uploads/Forge.png`); the other seven get placeholder hues,
  * each swappable by editing one line here. Do not treat these as final brand
- * colors. `heroImage` stays `null` for all eight until phase 90.
+ * colors. `heroImage` points at the phase-90 hero art in
+ * `apps/web/public/subsystems/` (one visual family, style-locked to
+ * `design/Z.I.B.B.Y/uploads/Forge.png`).
  */
 export const SUBSYSTEMS: readonly Subsystem[] = [
   {
@@ -49,7 +52,7 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     mandate:
       "Orchestrace delivery pipeline: Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor.",
     color: "#f97316",
-    heroImage: null,
+    heroImage: "/subsystems/forge.jpg",
   },
   {
     id: "puls",
@@ -57,7 +60,7 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     tagline: "Tep systému",
     mandate: "Sledování kanálů, kalendáře a CI/CD na srdečním tepu.",
     color: "#14b8a6",
-    heroImage: null,
+    heroImage: "/subsystems/puls.jpg",
   },
   {
     id: "sentinel",
@@ -65,7 +68,7 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     tagline: "Strážce hranic",
     mandate: "Bezpečnost vůči externímu prostředí — CVE závislostí, úniky tajemství.",
     color: "#ef4444",
-    heroImage: null,
+    heroImage: "/subsystems/sentinel.jpg",
   },
   {
     id: "maestro",
@@ -73,7 +76,7 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     tagline: "Dirigent vydání",
     mandate: "Releasy — příprava, přehled a operátorem schválené sloučení.",
     color: "#8b5cf6",
-    heroImage: null,
+    heroImage: "/subsystems/maestro.jpg",
   },
   {
     id: "beacon",
@@ -81,7 +84,7 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     tagline: "Maják v noci",
     mandate: "Eskalace incidentů — vlastní podoba Tier-3 kontraktu surface-and-wait.",
     color: "#f59e0b",
-    heroImage: null,
+    heroImage: "/subsystems/beacon.jpg",
   },
   {
     id: "scout",
@@ -89,7 +92,7 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     tagline: "Zvěd na cestách",
     mandate: "Výzkumné pipeline, které předávají výsledný artefakt dál.",
     color: "#22c55e",
-    heroImage: null,
+    heroImage: "/subsystems/scout.jpg",
   },
   {
     id: "herald",
@@ -97,7 +100,7 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     tagline: "Hlas navenek",
     mandate: "Mluví za ZIBBY navenek — reaktivní odpovědi i proaktivní dotazování.",
     color: "#3b82f6",
-    heroImage: null,
+    heroImage: "/subsystems/herald.jpg",
   },
   {
     id: "loom",
@@ -105,7 +108,7 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     tagline: "Tkadlec kvality",
     mandate: "Proaktivní analýza kvality a architektury codebase, nálezy předává Forge.",
     color: "#6366f1",
-    heroImage: null,
+    heroImage: "/subsystems/loom.jpg",
   },
 ];
 

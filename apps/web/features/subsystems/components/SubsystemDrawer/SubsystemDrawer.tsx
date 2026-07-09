@@ -77,11 +77,10 @@ const STATE_TAG_TONE: Partial<Record<SubsystemState, TagTone>> = {
 };
 
 /**
- * A color-graded gradient band using the subsystem's own brand `color` — the
- * fallback the design doc calls for until phase 90 fills in real hero
- * portraits (`heroImage` stays `null` for every subsystem until then; THIS
- * fallback path stays forever as the no-image case, phase 90 only adds the
- * image branch on top of it).
+ * The drawer's hero band. With `heroImage` set (phase 90 art), the portrait
+ * layers under the subsystem-colored glow + the bottom legibility gradient;
+ * with `heroImage: null` it falls back to the color-graded band alone — that
+ * fallback path stays supported forever as the no-image case.
  *
  * Not literally the DS `EntityHero` component: `EntityHero`'s own no-image
  * fallback is a fixed accent tint with no per-instance color prop, so it
@@ -95,9 +94,19 @@ const STATE_TAG_TONE: Partial<Record<SubsystemState, TagTone>> = {
  * value with no DS prop equivalent, routed through the DS `Panel`'s own
  * `style` passthrough below rather than a raw inline style on a DOM node.
  */
-function heroBandStyle(color: string): CSSProperties {
+function heroBandStyle(color: string, heroImage: string | null): CSSProperties {
+  const glow = `radial-gradient(130% 160% at 12% -15%, ${color}40 0%, ${color}14 45%, transparent 78%)`;
+  if (!heroImage) return { backgroundImage: glow };
+  // Phase 90: the hero portrait layers UNDER the color glow; the existing
+  // bottom `from-surface` gradient overlay keeps the text legible over it. A
+  // taller band so the art reads as a portrait, not a sliver (follow-up in
+  // todo.md considers a full EntityHero-style bleed).
   return {
-    backgroundImage: `radial-gradient(130% 160% at 12% -15%, ${color}40 0%, ${color}14 45%, transparent 78%)`,
+    backgroundImage: `${glow}, url("${heroImage}")`,
+    backgroundSize: "auto, cover",
+    backgroundPosition: "center, center 22%",
+    backgroundRepeat: "no-repeat",
+    minHeight: 168,
   };
 }
 
@@ -193,7 +202,7 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
             overflow="hidden"
             position="relative"
             shrink={false}
-            style={heroBandStyle(subsystem.color)}
+            style={heroBandStyle(subsystem.color, subsystem.heroImage)}
           >
             <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/55 to-transparent" />
 

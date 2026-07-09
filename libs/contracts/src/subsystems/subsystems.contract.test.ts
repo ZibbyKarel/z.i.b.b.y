@@ -50,8 +50,10 @@ describe("SUBSYSTEMS registry", () => {
     expect(SUBSYSTEMS.find((s) => s.id === "forge")?.color).toBe("#f97316");
   });
 
-  it("every heroImage is null (art lands in phase 90)", () => {
-    expect(SUBSYSTEMS.every((s) => s.heroImage === null)).toBe(true);
+  it("every heroImage points at the phase-90 art under /subsystems/", () => {
+    for (const s of SUBSYSTEMS) {
+      expect(s.heroImage).toBe(`/subsystems/${s.id}.jpg`);
+    }
   });
 
   it("rejects a malformed color", () => {
