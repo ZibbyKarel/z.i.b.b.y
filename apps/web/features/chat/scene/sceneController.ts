@@ -10,7 +10,9 @@ import {
   hubSlots,
   mitosisProgress,
   octagonSlots,
+  octagonSlotsAround,
   orbFlightSlots,
+  pointToward,
   resolveFlightEndpoints,
 } from "./clusterGeometry";
 import { type DockLayer, createDockLayer } from "./dockLayer";
@@ -124,6 +126,14 @@ const ORB_SCALE = 0.46;
 const MINI_ORB_WORLD_RADIUS = 0.16;
 const NODE_RING_RADIUS = 0.85;
 const HUB_RADIUS = 0.7;
+
+/**
+ * Phase 101 — the radius of the small octagon wrapping EACH mini-orb, ringing it
+ * the same way {@link HUB_RADIUS}'s octagon rings the central orb. A touch larger
+ * than the mini-orb itself ({@link MINI_ORB_WORLD_RADIUS}) so it visibly clears
+ * the orb's own glow instead of hugging it pixel-tight.
+ */
+const NODE_OCTAGON_RADIUS = MINI_ORB_WORLD_RADIUS * 1.35;
 
 /**
  * Phase 97 legibility pass — the orb-side endpoint a handoff-flight particle
@@ -308,11 +318,13 @@ export function createSceneController(
     };
   });
 
-  // --- WebGL net (phase 95): the inner octagon (hub→hub, ringing the orb) + long
-  // radial spokes (hub→mini-orb). One additive faint LineSegments in the shared
-  // foreground-faint tone — the same neutral "wiring" colour the retired SVG web
-  // used. Nothing in it ever overlaps the central orb: the innermost points are the
-  // hub vertices (HUB_RADIUS), which clear the orb's glow with a gap. ---
+  // --- WebGL net (phase 95, reworked phase 101): the inner octagon (hub→hub,
+  // ringing the orb) + a small octagon ringing EACH mini-orb + a SHORT link
+  // between the two rings' facing vertices (not a spoke piercing the mini-orb's
+  // centre). One additive faint LineSegments in the shared foreground-faint tone
+  // — the same neutral "wiring" colour the retired SVG web used. Nothing in it
+  // ever overlaps the central orb: the innermost points are the hub vertices
+  // (HUB_RADIUS), which clear the orb's glow with a gap. ---
   const hubVerts = hubSlots(HUB_RADIUS);
   // Phase 97 legibility pass — a SEPARATE, smaller-radius ring than the net's own
   // hub vertices, used only as a handoff flight's orb-side endpoint (see
@@ -326,8 +338,21 @@ export function createSceneController(
     const node = nodeSlots[i]!;
     // Inner octagon edge (hub → next hub).
     netPositions.push(hub.x, hub.y, 0, nextHub.x, nextHub.y, 0);
-    // Spoke (hub → its mini-orb).
-    netPositions.push(hub.x, hub.y, 0, node.x, node.y, 0);
+    // Phase 101: the mini-orb's own small octagon, baked into the SAME buffer so
+    // it inherits the net's entry fade/scale for free (no separate object).
+    const nodeOctagon = octagonSlotsAround(node, NODE_OCTAGON_RADIUS);
+    for (let v = 0; v < nodeOctagon.length; v++) {
+      const a = nodeOctagon[v]!;
+      const b = nodeOctagon[(v + 1) % nodeOctagon.length]!;
+      netPositions.push(a.x, a.y, 0, b.x, b.y, 0);
+    }
+    // Short link (hub octagon's outer vertex, already pointing straight at the
+    // node by construction — hub/node/origin are colinear — → the node octagon's
+    // near vertex, walked IN from the node's centre toward the hub by the node
+    // octagon's own radius). Replaces the old hub→node.center spoke that pierced
+    // the mini-orb; this bridges just the gap between the two rings.
+    const nodeNear = pointToward(node, hub, NODE_OCTAGON_RADIUS);
+    netPositions.push(hub.x, hub.y, 0, nodeNear.x, nodeNear.y, 0);
   }
   const netGeometry = new THREE.BufferGeometry();
   netGeometry.setAttribute("position", new THREE.Float32BufferAttribute(netPositions, 3));

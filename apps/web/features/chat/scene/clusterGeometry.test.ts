@@ -10,7 +10,9 @@ import {
   hubSlots,
   mitosisProgress,
   octagonSlots,
+  octagonSlotsAround,
   orbFlightSlots,
+  pointToward,
   resolveFlightEndpoints,
   slotForId,
 } from "./clusterGeometry";
@@ -66,6 +68,75 @@ describe("clusterGeometry", () => {
       expect(octagonSlots(1, 4)).toHaveLength(4);
       expect(octagonSlots(1, 4)[0]!.angle).toBe(90);
       expect(octagonSlots(1, 4)[1]!.angle).toBe(180);
+    });
+  });
+
+  describe("octagonSlotsAround (phase 101 — per-node octagon)", () => {
+    it("re-centres the same regular octagon on an arbitrary point", () => {
+      const center = { x: 1.5, y: -0.3 };
+      const radius = 0.2;
+      const around = octagonSlotsAround(center, radius);
+      const atOrigin = octagonSlots(radius);
+      around.forEach((slot, i) => {
+        expect(slot.x).toBeCloseTo(atOrigin[i]!.x + center.x, 6);
+        expect(slot.y).toBeCloseTo(atOrigin[i]!.y + center.y, 6);
+        expect(slot.angle).toBe(atOrigin[i]!.angle);
+        expect(slot.index).toBe(i);
+      });
+    });
+
+    it("returns exactly `count` (default 8) vertices", () => {
+      expect(octagonSlotsAround({ x: 0, y: 0 }, 0.2)).toHaveLength(8);
+      expect(octagonSlotsAround({ x: 0, y: 0 }, 0.2, 4)).toHaveLength(4);
+    });
+
+    it("honours the given radius — every vertex sits exactly `radius` from `center`", () => {
+      const center = { x: 0.4, y: 0.9 };
+      const radius = 0.216;
+      for (const slot of octagonSlotsAround(center, radius)) {
+        expect(distance(slot, center)).toBeCloseTo(radius, 5);
+      }
+    });
+
+    it("centred at the origin matches octagonSlots itself (modulo signed-zero)", () => {
+      const around = octagonSlotsAround({ x: 0, y: 0 }, 0.5);
+      const atOrigin = octagonSlots(0.5);
+      around.forEach((slot, i) => {
+        expect(slot.x).toBeCloseTo(atOrigin[i]!.x, 6);
+        expect(slot.y).toBeCloseTo(atOrigin[i]!.y, 6);
+        expect(slot.angle).toBe(atOrigin[i]!.angle);
+        expect(slot.index).toBe(atOrigin[i]!.index);
+      });
+    });
+  });
+
+  describe("pointToward (phase 101 — short-link endpoint math)", () => {
+    it("moves the given distance from `from`, toward `to`", () => {
+      const from = { x: 0, y: 0 };
+      const to = { x: 10, y: 0 };
+      expect(pointToward(from, to, 3)).toEqual({ x: 3, y: 0 });
+    });
+
+    it("honours direction along an arbitrary (non-axis-aligned) line", () => {
+      const from = { x: 0, y: 0 };
+      const to = { x: 3, y: 4 }; // 3-4-5 triangle, hypotenuse length 5
+      const point = pointToward(from, to, 5);
+      expect(point.x).toBeCloseTo(3, 6);
+      expect(point.y).toBeCloseTo(4, 6);
+    });
+
+    it("falls back to `from` unchanged when `from` and `to` coincide", () => {
+      const p = { x: 1.2, y: -3.4 };
+      expect(pointToward(p, p, 0.5)).toEqual({ x: 1.2, y: -3.4 });
+    });
+
+    it("shortens a hub→node spoke to the node's near edge, strictly inside the node's own centre", () => {
+      const hub = hubForId("forge", HUB_RADIUS)!;
+      const node = slotForId("forge", NODE_RADIUS)!;
+      const nodeOctagonRadius = 0.05;
+      const near = pointToward(node, hub, nodeOctagonRadius);
+      expect(distance(near, node)).toBeCloseTo(nodeOctagonRadius, 6);
+      expect(distance(near, hub)).toBeLessThan(distance(node, hub));
     });
   });
 
