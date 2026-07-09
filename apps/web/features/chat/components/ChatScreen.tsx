@@ -38,7 +38,9 @@ import { useChainsQuery } from "../../chains";
 import { usePinsQuery } from "../../pins";
 import { usePipelineRunQuery, usePipelinesQuery } from "../../pipelines";
 import { ProjectSwitcher } from "../../projects";
-import { useRunsQuery } from "../../runs/queries/useRunsQuery";
+import { useRunAvatarMap, useRunGlyphMap, useRunsQuery } from "../../runs/queries/useRunsQuery";
+import { runAvatar, runGlyph } from "../../runs/run";
+import { useRunActions } from "../../runs/useRunActions";
 import { SubsystemDrawer } from "../../subsystems/components/SubsystemDrawer/SubsystemDrawer";
 import { useSubsystemsQuery } from "../../subsystems/queries/useSubsystemsQuery";
 import { CommandLine } from "../../tasks/components/CommandLine/CommandLine";
@@ -50,6 +52,7 @@ import { buildDock } from "../scene/dock";
 import type { SceneMode } from "../scene/sceneTypes";
 import { ChatDetailDialog, type ChatDetailTarget } from "./ChatDetailDialog";
 import { ChatPalette } from "./ChatPalette";
+import { ChatTaskDetailColumn } from "./ChatTaskDetailColumn";
 import { ChatTasksPanel } from "./ChatTasksPanel";
 import { ChatTranscript } from "./ChatTranscript";
 
@@ -329,6 +332,26 @@ export function ChatScreen({
   // dropping an entry) just renders nothing rather than stale data.
   const selectedSubsystem = subsystems?.find((s) => s.id === selectedSubsystemId) ?? null;
 
+  // Phase 100: the left tasks panel's selection — a click opens the run's detail
+  // inline, in a column beside the panel, rather than the old `/runs?run=<id>`
+  // redirect. Re-clicking the already-selected row toggles it off (mirrors the
+  // Phase 92 accordion this replaces). Resolved against the same `runs` feed the
+  // dock reads above — no second fetch.
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const selectRun = useCallback((runId: string) => {
+    setSelectedRunId((cur) => (cur === runId ? null : runId));
+  }, []);
+  const selectedRun = runs.find((r) => r.runId === selectedRunId) ?? null;
+  const runGlyphById = useRunGlyphMap();
+  const runAvatarById = useRunAvatarMap();
+  // Same Stop/Resume/Delete wiring `runs/Screen.tsx` uses (factored into
+  // `useRunActions`, Phase 100) — resuming jumps the selection to the fresh run;
+  // deleting clears it so the column never briefly points at a now-gone run.
+  const runActions = useRunActions(
+    (runId) => setSelectedRunId(runId),
+    () => setSelectedRunId(null),
+  );
+
   const errorMode = stream.error !== null || sendMessage.isError;
   const waitingApproval = lastRun !== undefined && WAITING_APPROVAL_STATUSES.has(lastRun.status);
 
@@ -463,7 +486,7 @@ export function ChatScreen({
               on a narrow viewport. */}
           <div className="pointer-events-none absolute inset-y-0 left-0 z-20 hidden w-[300px] flex-col p-4 lg:flex">
             <div className="pointer-events-auto">
-              <ChatTasksPanel />
+              <ChatTasksPanel onSelectRun={selectRun} selectedRunId={selectedRunId} />
             </div>
           </div>
 
@@ -523,6 +546,30 @@ export function ChatScreen({
           <SubsystemDrawer
             onClose={() => setSelectedSubsystemId(null)}
             subsystem={selectedSubsystem}
+          />
+        )}
+
+        {/* ── Task detail column (Phase 100) ──────────────────────────────
+            A click in `ChatTasksPanel` (the 300px left gutter above) opens the
+            run's detail HERE, immediately to its right, instead of redirecting
+            to `/runs?run=<id>`. Mounted the same way the subsystem drawer is —
+            a sibling of it, outside the inner z-10 wrapper — so its own z-index
+            competes directly with the composer/top bar rather than being capped
+            by that wrapper's stacking context (see the drawer's doc comment
+            above); the two never overlap (opposite sides of the same band). */}
+        {selectedRun && (
+          <ChatTaskDetailColumn
+            avatar={runAvatar(selectedRun, runAvatarById)}
+            deleting={runActions.deleting}
+            glyph={runGlyph(selectedRun, runGlyphById)}
+            now={now}
+            onClose={() => setSelectedRunId(null)}
+            onDelete={() => runActions.remove(selectedRun.runId, selectedRun.kind)}
+            onResume={() => runActions.resume(selectedRun)}
+            onStop={() => runActions.stop(selectedRun)}
+            resuming={runActions.resuming}
+            run={selectedRun}
+            stopping={runActions.stopping}
           />
         )}
       </div>

@@ -11,25 +11,11 @@ import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { ProjectScopeChip, useActiveProject } from "../projects";
-import { useCancelScheduledTaskMutation } from "../tasks";
 import { RunDetail } from "./components/RunDetail";
 import { TaskCard } from "./components/TaskCard";
-import {
-  useDeleteAgentRunMutation,
-  useDeletePipelineRunMutation,
-  useResumeTaskRunMutation,
-  useStopTaskRunMutation,
-} from "./mutations";
 import { useRunAvatarMap, useRunGlyphMap, useRunsQuery } from "./queries/useRunsQuery";
-import {
-  type FeedStatus,
-  type RunView,
-  findSelectedRun,
-  isResumableRun,
-  isStoppableRun,
-  runAvatar,
-  runGlyph,
-} from "./run";
+import { type FeedStatus, type RunView, findSelectedRun, runAvatar, runGlyph } from "./run";
+import { useRunActions } from "./useRunActions";
 
 // No synthetic "all" entry — an empty selection already reads as "every state"
 // (see `list` below), which is what the header segmented control's own "Vše"
@@ -114,15 +100,15 @@ export function Screen() {
   );
   const [selId, setSelId] = useState<string | null>(searchParams.get("run"));
 
-  const stopRun = useStopTaskRunMutation();
-  const resumeRun = useResumeTaskRunMutation();
-
   // Deleting a run erases its on-disk artifacts; clearing the selection first keeps
   // the detail pane from briefly pointing at a now-gone run before the refetch.
-  // A scheduled task has no artifacts yet — "delete" cancels it instead.
-  const deleteAgent = useDeleteAgentRunMutation();
-  const deletePipeline = useDeletePipelineRunMutation();
-  const cancelTask = useCancelScheduledTaskMutation();
+  // A scheduled task has no artifacts yet — "delete" cancels it instead. Re-running
+  // an errored/interrupted run (Phase 49) jumps the selection to the fresh run the
+  // endpoint returns.
+  const { stop, stopping, resume, resuming, remove, deleting } = useRunActions(
+    (runId) => setSelId(runId),
+    () => setSelId(null),
+  );
 
   // The top-bar project already scopes `runs`; status narrows within that scope.
   // Keeping them ordered this way means the status counts and header stats read
@@ -148,30 +134,6 @@ export function Screen() {
     }
     return relative(r.startedAt, now, ago);
   };
-
-  const stop = (run: RunView) => {
-    if (isStoppableRun(run)) stopRun.mutate({ params: { runId: run.runId }, body: {} });
-  };
-
-  // Phase 49: re-run an errored/interrupted agent run. The endpoint returns the NEW
-  // run; jump the selection to it so the detail follows the fresh run (the feed
-  // refetch, fired by the mutation's onSuccess, then brings the row in).
-  const resume = (run: RunView) => {
-    if (!isResumableRun(run)) return;
-    resumeRun.mutate(
-      { params: { runId: run.runId }, body: {} },
-      { onSuccess: (res) => setSelId(res.body.runId) },
-    );
-  };
-
-  const remove = (runId: string, kind: string) => {
-    setSelId(null);
-    if (kind === "agent") deleteAgent.mutate({ params: { runId } });
-    else if (kind === "pipeline") deletePipeline.mutate({ params: { runId } });
-    else if (kind === "scheduled") cancelTask.mutate({ params: { id: runId } });
-  };
-
-  const deleting = deleteAgent.isPending || deletePipeline.isPending || cancelTask.isPending;
 
   const running = count("running");
   const awaiting = count("awaiting-approval");
@@ -285,9 +247,9 @@ export function Screen() {
                 onDelete={() => remove(selected.runId, selected.kind)}
                 onResume={() => resume(selected)}
                 onStop={() => stop(selected)}
-                resuming={resumeRun.isPending}
+                resuming={resuming}
                 run={selected}
-                stopping={stopRun.isPending}
+                stopping={stopping}
               />
             ) : (
               <HudPanel padding="500">
