@@ -3,7 +3,6 @@
 import { Container, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
-import { useActiveProject } from "../../projects";
 import { useRunAvatarMap, useRunGlyphMap, useRunsQuery } from "../../runs/queries/useRunsQuery";
 import { type FeedStatus, runAvatar, runGlyph, runTitle } from "../../runs/run";
 import { RUN_STATUS_GROUPS } from "../../runs/statusGroups";
@@ -48,8 +47,9 @@ export interface ChatTasksPanelProps {
 }
 
 /**
- * The chat page's left tasks panel: EVERY task in the active-project scope (Phase 57,
- * generalizing Phase 44's running-only rail), so the chat is a full task view — not
+ * The chat page's left tasks panel: EVERY task across EVERY project (Phase 57,
+ * generalizing Phase 44's running-only rail; Phase 108 dropped the Phase 24
+ * project scope this used to honor), so the chat is a full task view — not
  * just a "what's running now" strip. Ordered so live tasks (running / spawning /
  * awaiting-approval) surface first, then waiting/scheduled, then finished — a stable
  * sort by {@link taskRank} preserving the feed's own (newest-first) order within each
@@ -59,26 +59,21 @@ export interface ChatTasksPanelProps {
  * covers everything the chevron's per-kind live view showed, plus the full picture).
  *
  * Reads the STABLE unified runs feed ({@link useRunsQuery}, kept fresh by the shared
- * SSE bus) rather than the chat data-layer, and honors the same active-project scope
- * the chat top bar switches (Phase 24/33): a real project shows only its own runs,
- * "Bez projektu" only unattributed ones — the same client-side filter the runs screen
- * uses. Scrollable, with a quiet empty hint when the scope has no tasks at all.
+ * SSE bus) rather than the chat data-layer. Phase 108: there is no global project
+ * scope any more — every project's tasks show here at once (the Phase 24/33
+ * top-bar scope this used to honor is gone). Scrollable, with a quiet empty hint
+ * when there are no tasks at all.
  */
 export function ChatTasksPanel({ selectedRunId, onSelectRun }: ChatTasksPanelProps) {
   const t = useTranslations("chat.tasks");
   const tRuns = useTranslations("runs");
   const { runs } = useRunsQuery();
-  const { activeProjectId } = useActiveProject();
   const glyphById = useRunGlyphMap();
   const avatarById = useRunAvatarMap();
 
-  const scoped =
-    activeProjectId === null
-      ? runs.filter((r) => !r.projectId)
-      : runs.filter((r) => r.projectId === activeProjectId);
   // Live first, then waiting/scheduled, then finished. `Array.prototype.sort` is
   // stable, so the feed's own newest-first order is kept within each rank.
-  const ordered = [...scoped].sort((a, b) => taskRank(a.status) - taskRank(b.status));
+  const ordered = [...runs].sort((a, b) => taskRank(a.status) - taskRank(b.status));
 
   return (
     <Container data-testid={ChatTasksPanelTestId.Root}>

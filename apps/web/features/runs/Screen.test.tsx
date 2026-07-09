@@ -1,18 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, renderWithProviders as render, screen } from "../../test/render";
+import { fireEvent, renderWithProviders as render, screen, within } from "../../test/render";
 import type { RunView } from "./run";
 import { Screen } from "./Screen";
 
 /**
- * Phase 24 scoping: the top-bar project is the single, always-set scope. A real
- * project renders ONLY runs attributed to it (`TaskRun.projectId`); `null`
- * ("Bez projektu") renders ONLY unattributed runs. There is no "show everything"
- * branch. The heavy child composites (TaskCard/RunDetail) are stubbed — this
- * suite proves the Screen-level filtering, not the cards.
+ * Phase 108: there is no global project view-scope any more — the runs feed
+ * always shows every project's runs at once. Per-project drill-down is restored
+ * via an explicit `?project=<id>` URL param (the pre-Phase-24 mechanism):
+ * present, it filters to that project and shows a clearable filter tag; absent,
+ * every run shows. The heavy child composites (TaskCard/RunDetail) are stubbed —
+ * this suite proves the Screen-level filtering, not the cards.
  */
-const { active } = vi.hoisted(() => ({
-  active: { id: null as string | null },
+const { searchParams } = vi.hoisted(() => ({
+  searchParams: { value: new URLSearchParams() },
 }));
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => searchParams.value,
+}));
+
 vi.mock("../projects", () => ({
   useProjectsQuery: () => ({
     data: [
@@ -20,8 +25,6 @@ vi.mock("../projects", () => ({
       { id: "beta", name: "Beta" },
     ],
   }),
-  useActiveProject: () => ({ activeProjectId: active.id, setActiveProject: vi.fn() }),
-  ProjectScopeChip: () => <span data-testid="project-scope-chip" />,
 }));
 
 const RUNS: RunView[] = [
@@ -75,38 +78,45 @@ function makeRun(id: string, projectId?: string): RunView {
   };
 }
 
-describe("Runs Screen — project scoping (Phase 24)", () => {
+describe("Runs Screen — every project at once (Phase 108)", () => {
   beforeEach(() => {
-    active.id = null;
+    searchParams.value = new URLSearchParams();
     query.runs = RUNS;
     query.isPending = false;
     query.isError = false;
     refetch.mockClear();
   });
 
-  it("renders only unattributed runs under 'Bez projektu' (default)", () => {
-    render(<Screen />);
-    expect(screen.queryByTestId("task-card-run-alpha")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("task-card-run-beta")).not.toBeInTheDocument();
-    expect(screen.getByTestId("task-card-run-global")).toBeInTheDocument();
-    // The chip is always shown — there is no "show everything" state to hide under.
-    expect(screen.getByTestId("project-scope-chip")).toBeInTheDocument();
-  });
-
-  it("renders only the attributed runs with an active project, plus the scope chip", () => {
-    active.id = "alpha";
+  it("shows runs from every project simultaneously by default — no filter tag", () => {
     render(<Screen />);
     expect(screen.getByTestId("task-card-run-alpha")).toBeInTheDocument();
-    // The other project's run and the unattributed run are scoped out.
+    expect(screen.getByTestId("task-card-run-beta")).toBeInTheDocument();
+    expect(screen.getByTestId("task-card-run-global")).toBeInTheDocument();
+    expect(screen.queryByTestId("runs-project-filter")).not.toBeInTheDocument();
+  });
+
+  it("filters to the ?project= param and shows a clearable filter tag naming it", () => {
+    searchParams.value = new URLSearchParams("project=alpha");
+    render(<Screen />);
+    expect(screen.getByTestId("task-card-run-alpha")).toBeInTheDocument();
     expect(screen.queryByTestId("task-card-run-beta")).not.toBeInTheDocument();
     expect(screen.queryByTestId("task-card-run-global")).not.toBeInTheDocument();
-    expect(screen.getByTestId("project-scope-chip")).toBeInTheDocument();
+
+    const filterTag = screen.getByTestId("runs-project-filter");
+    expect(filterTag).toHaveTextContent("Alpha");
+  });
+
+  it("the filter tag's clear control links back to /runs", () => {
+    searchParams.value = new URLSearchParams("project=alpha");
+    render(<Screen />);
+    const filterTag = screen.getByTestId("runs-project-filter");
+    expect(within(filterTag).getByRole("link")).toHaveAttribute("href", "/runs");
   });
 });
 
 describe("Runs Screen — honest load states (Phase 18.2)", () => {
   beforeEach(() => {
-    active.id = null;
+    searchParams.value = new URLSearchParams();
     query.runs = [];
     query.isPending = false;
     query.isError = false;

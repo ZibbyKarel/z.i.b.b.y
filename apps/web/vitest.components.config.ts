@@ -34,8 +34,7 @@ export default defineConfig({
       "features/*/scene/**/*.test.{ts,tsx}",
       // Feature hooks (client-side browser-API wrappers).
       "features/*/hooks/**/*.test.{ts,tsx}",
-      // Feature context providers (React context + browser persistence, e.g. the
-      // Fáze 11 ProjectProvider's cookie round-trip).
+      // Feature context providers (React context + browser persistence).
       "features/*/context/**/*.test.{ts,tsx}",
       // Feature mutation hooks (TanStack Query mutations; renderHook needs jsdom).
       "features/*/mutations/**/*.test.{ts,tsx}",

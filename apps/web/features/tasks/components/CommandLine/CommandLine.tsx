@@ -27,7 +27,7 @@ import { createPortal } from "react-dom";
 import { useAgentsQuery } from "../../../agents";
 import { useLimitsQuery } from "../../../limits";
 import { usePipelinesQuery } from "../../../pipelines";
-import { ProjectSelect, useActiveProject, useProjectsQuery } from "../../../projects";
+import { ProjectSelect, useProjectsQuery } from "../../../projects";
 import { useSubsystemsQuery } from "../../../subsystems/queries/useSubsystemsQuery";
 import { type TaskSubmitResult, useTaskSubmit } from "../../hooks/useTaskSubmit";
 import { INITIAL_LOOP_STATE, type LoopFormState, canSubmitLoop } from "../../loop";
@@ -51,7 +51,7 @@ export enum CommandLineTestId {
   Attach = "command-line-attach",
   Pin = "command-line-pin",
   /** The inline project chip (Phase 102) that replaces the retired standalone
-   *  `ProjectSwitcher` — beside the attach `+` in the bottom control row. */
+   *  project switcher — beside the attach `+` in the bottom control row. */
   ProjectSelector = "command-line-project-selector",
   FileInput = "command-line-file-input",
   MentionMenu = "command-line-mention-menu",
@@ -181,6 +181,16 @@ export interface CommandLineProps {
    * yet, so the affordance would silently be ignored rather than hidden.
    */
   showAttach?: boolean;
+  /**
+   * The one-shot seed for the per-task project scope (Phase 107; the app-wide
+   * "active project" scope this used to default from was removed in Phase 108).
+   * Defaults to `null` ("Bez projektu") — a host that wants a different
+   * starting point passes this instead.
+   */
+  initialProjectId?: string | null;
+  /** Mirrors the per-task project selection up whenever it changes — a host
+   *  that wants to observe (never drive) the pick reads this instead. */
+  onProjectChange?: (id: string | null) => void;
 }
 
 /** The honest, non-fabricated classification ack shown below the box after submit. */
@@ -423,6 +433,8 @@ export function CommandLine({
   injectedTarget,
   onInjectedTargetConsumed,
   showAttach = true,
+  initialProjectId,
+  onProjectChange,
 }: CommandLineProps) {
   const t = useTranslations("tasks");
   const tMention = useTranslations("chat.mention");
@@ -476,7 +488,10 @@ export function CommandLine({
   const { data: pipelines = [] } = usePipelinesQuery();
   const { data: subsystems = [] } = useSubsystemsQuery();
   const { data: projects = [] } = useProjectsQuery();
-  const { activeProjectId, setActiveProject } = useActiveProject();
+  // Phase 107: a LOCAL, per-task scope — seeded once from `initialProjectId`
+  // (default `null`, Phase 108: there is no global "active project" to fall
+  // back to any more). Nothing here writes back to any app-wide scope.
+  const [taskProjectId, setTaskProjectId] = useState<string | null>(() => initialProjectId ?? null);
   const { data: limits } = useLimitsQuery();
   const resetsAt = limits?.rolling.resetsAt ?? null;
   // A stable "now" for this instance's lifetime — presets and the goal id's
@@ -557,8 +572,8 @@ export function CommandLine({
   }, [injectedTarget]);
 
   const selectedProject = useMemo(
-    () => (activeProjectId ? (projects.find((p) => p.id === activeProjectId) ?? null) : null),
-    [projects, activeProjectId],
+    () => (taskProjectId ? (projects.find((p) => p.id === taskProjectId) ?? null) : null),
+    [projects, taskProjectId],
   );
   const paths = useMemo(() => {
     const detected = extractPaths(text);
@@ -855,6 +870,13 @@ export function CommandLine({
     dispatch(resolveScheduledAt(preset, now, resetsAt));
   }
 
+  /** Updates the LOCAL per-task project scope only — never the global
+   *  `activeProject` — and mirrors the change up via `onProjectChange` (Phase 107). */
+  function handleProjectChange(id: string | null) {
+    setTaskProjectId(id);
+    onProjectChange?.(id);
+  }
+
   // The inline dropdown's rows — agents then pipelines, filtered live by the
   // in-progress query. Capped only as a runaway guard (50) — a real catalog
   // easily exceeds the old 6-row cap, and MenuSurface's own `scroll` +
@@ -1059,11 +1081,14 @@ export function CommandLine({
         )}
 
         {/* Attach + the inline project selector — pinned bottom-left INSIDE the
-            input, over the reserved strip. Phase 102: the project scope used to
-            live in the now-retired standalone `ProjectSwitcher` (HUD topbar + chat
+            input, over the reserved strip. Phase 102: the project picker used to
+            live in the now-retired standalone project switcher (HUD topbar + chat
             header); it's a peer control here, right beside the attach `+`, so
             every CommandLine host (the overview command bar, the chat composer,
-            NewTaskDialog's bare input) keeps a way to change it. */}
+            NewTaskDialog's bare input) keeps a way to set it. Phase 107/108: the
+            pick scopes ONLY this task (local `taskProjectId`) — there is no
+            app-wide "active project" scope left to mutate; every other screen
+            always shows every project's data at once. */}
         <Container bottom={CONTROLS_INSET} left={CONTROLS_INSET} position="absolute" zIndex={10}>
           <Stack align="center" direction="row" gap="50">
             {showAttach && (
@@ -1080,8 +1105,8 @@ export function CommandLine({
               <Stack align="center" direction="row" gap="25">
                 <Icon name="code" size="xs" tone="faint" />
                 <ProjectSelect
-                  activeProjectId={activeProjectId}
-                  onChange={setActiveProject}
+                  activeProjectId={taskProjectId}
+                  onChange={handleProjectChange}
                   projects={projects}
                 />
               </Stack>

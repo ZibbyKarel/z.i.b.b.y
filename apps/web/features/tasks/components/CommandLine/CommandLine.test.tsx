@@ -62,13 +62,6 @@ vi.mock("../../../projects/queries/useProjectsQuery", () => ({
   }),
   getProjectsQueryKey: () => ["projects"],
 }));
-const { activeProject, setActiveProject } = vi.hoisted(() => ({
-  activeProject: { id: null as string | null },
-  setActiveProject: vi.fn(),
-}));
-vi.mock("../../../projects/context/ProjectProvider", () => ({
-  useActiveProject: () => ({ activeProjectId: activeProject.id, setActiveProject }),
-}));
 
 const RESET_AT = Date.now() + 3 * 60 * 60 * 1000;
 const { limitsResetAt } = vi.hoisted(() => ({ limitsResetAt: { value: null as number | null } }));
@@ -142,8 +135,6 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
     createTask.mockClear();
     createGoal.mockClear();
     uploadMutateAsync.mockClear();
-    setActiveProject.mockClear();
-    activeProject.id = null;
     limitsResetAt.value = null;
   });
 
@@ -196,10 +187,9 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
     expect(createTask.mock.calls[0]?.[0].body.paths).toContain("/tmp/scratch/widget");
   });
 
-  it("folds the active project's path into the dispatched task", async () => {
-    activeProject.id = "alpha";
+  it("folds the initial project's path into the dispatched task", async () => {
     const user = userEvent.setup();
-    render(<CommandLine />);
+    render(<CommandLine initialProjectId="alpha" />);
     await user.type(screen.getByTestId(CommandLineTestId.Input), "zkontroluj zálohy");
     await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
     expect(createTask.mock.calls[0]?.[0].body.paths).toContain("/Users/zibby/Projects/alpha");
@@ -378,7 +368,7 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
     });
   });
 
-  describe("Phase 102 — inline project selector (retires the standalone ProjectSwitcher)", () => {
+  describe("Phase 102/108 — inline project selector (per-task only, no global scope)", () => {
     it("renders the inline chip in the bottom control row, defaulting to 'Bez projektu'", () => {
       render(<CommandLine />);
       const chip = screen.getByTestId(CommandLineTestId.ProjectSelector);
@@ -386,16 +376,16 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
       expect(within(chip).getByTestId(DropdownTestId.Trigger)).toHaveTextContent("Bez projektu");
     });
 
-    it("shows the active project's name in the closed trigger", () => {
-      activeProject.id = "alpha";
-      render(<CommandLine />);
+    it("shows the seeded initialProjectId's name in the closed trigger", () => {
+      render(<CommandLine initialProjectId="alpha" />);
       const chip = screen.getByTestId(CommandLineTestId.ProjectSelector);
       expect(within(chip).getByTestId(DropdownTestId.Trigger)).toHaveTextContent("Alpha");
     });
 
-    it("lists 'Bez projektu' + every project, and picking one calls setActiveProject", async () => {
+    it("lists 'Bez projektu' + every project, and picking one scopes ONLY this task — mirrored up via onProjectChange, never a global setter", async () => {
+      const onProjectChange = vi.fn();
       const user = userEvent.setup();
-      render(<CommandLine />);
+      render(<CommandLine onProjectChange={onProjectChange} />);
       const chip = screen.getByTestId(CommandLineTestId.ProjectSelector);
       await user.click(within(chip).getByTestId(DropdownTestId.Trigger));
 
@@ -403,18 +393,31 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
       expect(options.map((o) => o.textContent)).toEqual(["Bez projektu", "Alpha"]);
 
       await user.click(options[1] as HTMLElement);
-      expect(setActiveProject).toHaveBeenCalledWith("alpha");
+      expect(onProjectChange).toHaveBeenCalledWith("alpha");
+      expect(within(chip).getByTestId(DropdownTestId.Trigger)).toHaveTextContent("Alpha");
+
+      // The per-task pick still reaches the dispatched task via `paths` — the
+      // only mechanism a selected project uses to scope a task (there's no
+      // `projectId` field on the create-task body).
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "zkontroluj zálohy");
+      await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
+      expect(createTask.mock.calls[0]?.[0].body.paths).toContain("/Users/zibby/Projects/alpha");
     });
 
     it("maps the 'Bez projektu' option back to null", async () => {
-      activeProject.id = "alpha";
+      const onProjectChange = vi.fn();
       const user = userEvent.setup();
-      render(<CommandLine />);
+      render(<CommandLine initialProjectId="alpha" onProjectChange={onProjectChange} />);
       const chip = screen.getByTestId(CommandLineTestId.ProjectSelector);
       await user.click(within(chip).getByTestId(DropdownTestId.Trigger));
 
       await user.click(screen.getAllByTestId(DropdownTestId.Option)[0] as HTMLElement);
-      expect(setActiveProject).toHaveBeenCalledWith(null);
+      expect(onProjectChange).toHaveBeenCalledWith(null);
+      expect(within(chip).getByTestId(DropdownTestId.Trigger)).toHaveTextContent("Bez projektu");
+
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "zkontroluj zálohy");
+      await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
+      expect(createTask.mock.calls[0]?.[0].body.paths).not.toContain("/Users/zibby/Projects/alpha");
     });
 
     it("keeps the selector visible even when showAttach is false (chat's message API has no attachment channel)", () => {

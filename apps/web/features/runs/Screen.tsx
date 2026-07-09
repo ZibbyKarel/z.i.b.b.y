@@ -1,7 +1,8 @@
 "use client";
 
-import { ButtonGroup, Container, Grid, Icon, Stack, Typography } from "@zibby/design-system";
+import { Button, ButtonGroup, Container, Grid, Icon, Stack, Tag, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
@@ -10,7 +11,7 @@ import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
-import { ProjectScopeChip, useActiveProject } from "../projects";
+import { useProjectsQuery } from "../projects";
 import { RunDetail } from "./components/RunDetail";
 import { TaskCard } from "./components/TaskCard";
 import { useRunAvatarMap, useRunGlyphMap, useRunsQuery } from "./queries/useRunsQuery";
@@ -69,26 +70,30 @@ export function Screen() {
     isError: runsError,
     refetch: refetchRuns,
   } = useRunsQuery();
-  // Phase 24: the top-bar active project is the single, always-set scope — a real
-  // project shows only its own runs; "Bez projektu" shows only unattributed runs.
-  // There is no "show everything" branch. Client-side over the shared cache, so
-  // switching projects is instant.
-  const { activeProjectId } = useActiveProject();
-  const runs =
-    activeProjectId === null
-      ? allRuns.filter((r) => !r.projectId)
-      : allRuns.filter((r) => r.projectId === activeProjectId);
+  const { data: projects = [] } = useProjectsQuery();
   const glyphById = useRunGlyphMap();
   const avatarById = useRunAvatarMap();
   // A render-stable "now" for coarse relative times (Date.now() in render is impure).
   const [now] = useState(() => Date.now());
 
   // Deep-link the active filter via `?filter=` (e.g. ApprovalsPanel/ParkedRunsPanel
-  // point here at a single state — "awaiting-approval" / "parked") and the selected
-  // run via `?run=` (the New Task dialog lands on its fresh run). The underlying
+  // point here at a single state — "awaiting-approval" / "parked"), the selected
+  // run via `?run=` (the New Task dialog lands on its fresh run), and — Phase 108,
+  // restoring the pre-Phase-24 mechanism — an optional single-project drill-down
+  // via `?project=` (a project card/summary tile's stat link). The underlying
   // `filter` state seeds from that value; an empty selection means "every state"
   // (see `list`) — the header segmented control is just one way to set it.
   const searchParams = useSearchParams();
+  // Phase 108: there is no app-wide project scope any more — every project's runs
+  // show at once by default. `?project=<id>` present narrows to just that project;
+  // absent, `runs` is the whole unfiltered feed.
+  const projectParam = searchParams.get("project");
+  const runs = projectParam ? allRuns.filter((r) => r.projectId === projectParam) : allRuns;
+  // Only read when `projectParam` is set (see the filter tag below) — falls back
+  // to the raw id `""` never renders unused.
+  const filteredProjectName = projectParam
+    ? (projects.find((p) => p.id === projectParam)?.name ?? projectParam)
+    : "";
   // `?filter=` seeds `filter`. A single value (ApprovalsPanel/ParkedRunsPanel) and a
   // comma-separated set (a project summary bucket links with every state in its
   // bucket) both round-trip; unknown tokens are dropped.
@@ -110,9 +115,9 @@ export function Screen() {
     () => setSelId(null),
   );
 
-  // The top-bar project already scopes `runs`; status narrows within that scope.
-  // Keeping them ordered this way means the status counts and header stats read
-  // the selected project, not the global feed.
+  // The optional `?project=` filter already scopes `runs`; status narrows within
+  // that scope. Keeping them ordered this way means the status counts and header
+  // stats read the `?project=`-filtered set, not the unfiltered feed.
   const list = filter.length === 0 ? runs : runs.filter((r) => filter.includes(r.status));
   // Keep the detail in sync with the filtered list: a selection only counts when
   // it's actually visible, and we fall back to the first row of the *current* filter —
@@ -180,10 +185,21 @@ export function Screen() {
         <PageHeader
           actions={
             <Stack align="center" direction="row" gap="150">
-              {/* Phase 24: the top bar's project selector is the single scope —
-                  this chip is the only in-screen indication of it, so an empty
-                  filtered list is never confusing. */}
-              <ProjectScopeChip />
+              {/* Phase 108: no global project scope any more — every project's
+                  runs show by default, and this tag only appears when a
+                  `?project=<id>` drill-down (from a project card/summary tile)
+                  is active, so a filtered-empty list is never confusing. Its ✕
+                  clears the filter back to `/runs`. */}
+              {projectParam && (
+                <Stack align="center" data-testid="runs-project-filter" direction="row" gap="75">
+                  <Tag icon="code" tone="accent">
+                    {t("filterActive", { name: filteredProjectName })}
+                  </Tag>
+                  <Link href="/runs">
+                    <Button aria-label={t("filterClearAria")} icon="x" intent="ghost" size="sm" />
+                  </Link>
+                </Stack>
+              )}
               <ButtonGroup
                 ariaLabel={t("title")}
                 onChange={(id) => {

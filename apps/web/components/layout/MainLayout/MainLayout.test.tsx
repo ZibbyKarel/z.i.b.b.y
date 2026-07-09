@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import userEvent from "@testing-library/user-event";
 import type { NavItem } from "@zibby/design-system";
 import { renderWithProviders, screen } from "../../../test/render";
@@ -6,14 +6,6 @@ import { CatalogProvider } from "../../../state/store";
 import { TopBarTestId } from "../TopBar/TopBar";
 import { SkipLinkTestId } from "../SkipLink/SkipLink";
 import { MainLayout } from "./MainLayout";
-
-// MainLayout renders BrandLogo, which reads the Phase 25 project scope; stub it
-// to the "Bez projektu" default so these layout-shell tests stay focused on
-// layout/rail behaviour rather than project-registry data.
-vi.mock("../../../features/projects", () => ({
-  useActiveProject: () => ({ activeProjectId: null, setActiveProject: vi.fn() }),
-  useProjectsQuery: () => ({ data: [] }),
-}));
 
 const RAIL_CONTENT_TESTID = "test-rail-content";
 

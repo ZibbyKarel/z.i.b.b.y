@@ -11,13 +11,6 @@ vi.mock("../../runs", () => ({
   useRunsQuery: () => ({ runs: feed }),
 }));
 
-// Phase 24: a stat deep-link arms the top-bar active-project scope before it
-// navigates — stub the context so we can assert that.
-const setActiveProject = vi.fn();
-vi.mock("../context/ProjectProvider", () => ({
-  useActiveProject: () => ({ activeProjectId: null, setActiveProject }),
-}));
-
 let seq = 0;
 function taskRun(projectId: string | undefined, statusValue: TaskRunStatus): TaskRun {
   return {
@@ -36,7 +29,6 @@ function taskRun(projectId: string | undefined, statusValue: TaskRunStatus): Tas
 
 beforeEach(() => {
   feed = [];
-  setActiveProject.mockClear();
 });
 
 const project = (over: Partial<Project> = {}): Project => ({
@@ -129,23 +121,18 @@ describe("ProjectCard task stats (Phase 52)", () => {
     expect(screen.queryByTestId("project-card-stat-total")).toBeNull();
   });
 
-  it("deep-links each stat into /runs pre-filtered to the bucket's states", () => {
+  it("deep-links each stat into /runs pre-filtered to this project and the bucket's states", () => {
     feed = [taskRun("alpha", "done")];
     render(<ProjectCard project={project()} />);
 
-    expect(screen.getByTestId("project-card-stat-done")).toHaveAttribute("href", "/runs?filter=done");
+    expect(screen.getByTestId("project-card-stat-done")).toHaveAttribute(
+      "href",
+      "/runs?project=alpha&filter=done",
+    );
     expect(screen.getByTestId("project-card-stat-waiting")).toHaveAttribute(
       "href",
-      "/runs?filter=queued,scheduled,pending,held,awaiting-approval",
+      "/runs?project=alpha&filter=queued,scheduled,pending,held,awaiting-approval",
     );
-  });
-
-  it("arms the top-bar project scope before navigating from a stat", () => {
-    feed = [taskRun("alpha", "done")];
-    render(<ProjectCard project={project()} />);
-
-    screen.getByTestId("project-card-stat-done").click();
-    expect(setActiveProject).toHaveBeenCalledWith("alpha");
   });
 });
 

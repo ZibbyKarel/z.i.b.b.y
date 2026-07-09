@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { groupFilterParam } from "../../runs/statusGroups";
-import { useActiveProject } from "../context/ProjectProvider";
 import { useProjectTaskStats } from "../queries";
 
 export interface ProjectRunSummaryProps {
@@ -20,10 +19,9 @@ export interface ProjectRunSummaryProps {
  * from the same unified `useRunsQuery` feed the runs screen reads, filtered client-
  * side by `projectId` — the field the API now joins onto every task-spawned run.
  *
- * Phase 24: the runs feed no longer reads a `?project=` query — the top-bar
- * selector is the single scope now — so each tile arms that scope (via
- * `setActiveProject`) before the `Link`'s own navigation fires, dropping the
- * now-dead `project=` param from the href.
+ * Phase 108: the runs feed has no global scope any more — every tile's `href`
+ * carries the project explicitly via `?project=<id>` (the pre-Phase-24
+ * mechanism, restored), so a click needs no scope-arming side effect.
  *
  * Typed routes can't infer a query-string-carrying template stored in a variable,
  * so each `href` is cast `as Route` (the codebase-wide convention for `<Link>`).
@@ -31,7 +29,6 @@ export interface ProjectRunSummaryProps {
 export function ProjectRunSummary({ projectId }: ProjectRunSummaryProps) {
   const t = useTranslations("runs");
   const tp = useTranslations("projects");
-  const { setActiveProject } = useActiveProject();
   const { total, groups } = useProjectTaskStats(projectId);
 
   return (
@@ -39,20 +36,14 @@ export function ProjectRunSummary({ projectId }: ProjectRunSummaryProps) {
       <Stack wrap direction="row" gap="450">
         <Link
           data-testid="project-run-summary-total"
-          href={"/runs" as Route}
-          onClick={() => setActiveProject(projectId)}
+          href={`/runs?project=${projectId}` as Route}
         >
           <Stat icon="pulse" label={t("group.total")} tone="neutral" value={total} />
         </Link>
         {groups.map(({ group: g, count }) => {
-          const href = `/runs?filter=${groupFilterParam(g)}` as Route;
+          const href = `/runs?project=${projectId}&filter=${groupFilterParam(g)}` as Route;
           return (
-            <Link
-              data-testid={`project-run-summary-${g.key}`}
-              href={href}
-              key={g.key}
-              onClick={() => setActiveProject(projectId)}
-            >
+            <Link data-testid={`project-run-summary-${g.key}`} href={href} key={g.key}>
               <Stat
                 icon={g.icon}
                 label={t(`group.${g.key}`)}

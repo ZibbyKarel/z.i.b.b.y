@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen } from "../../../test/render";
-import { ProjectSwitcherTestId } from "../../../features/projects/components/ProjectSwitcher";
 import { AppShell } from "./AppShell";
 
 // `AppShellInner` reads the route via `usePathname()` to decide whether to render
@@ -47,18 +46,6 @@ describe("AppShell", () => {
       </AppShell>,
     );
     expect(screen.getByRole("navigation")).toBeInTheDocument();
-  });
-
-  // Phase 102: the standalone topbar `ProjectSwitcher` is retired — project
-  // selection moved inline into `CommandLine`. The topbar chrome must never
-  // resurrect it.
-  it("no longer mounts the standalone project switcher in the topbar", () => {
-    renderWithProviders(
-      <AppShell>
-        <div>obsah dashboardu</div>
-      </AppShell>,
-    );
-    expect(screen.queryByTestId(ProjectSwitcherTestId.Root)).not.toBeInTheDocument();
   });
 
   // Phase 27: `/chat` is a coequal, parallel UI to the HUD, not a screen nested

@@ -102,15 +102,11 @@ vi.mock("../../memory/queries/useMemorySearchQuery", () => ({
   useMemorySearchQuery: () => ({ data: undefined, isFetching: false }),
   getMemorySearchQueryKey: (q: string) => ["memory", "search", q],
 }));
-// The top-bar `ProjectSwitcher` (Phase 33) reads the app-wide project registry
-// and the active-project scope — stub both the same way `NewTaskDialog.test.tsx`
-// does, since this suite never mounts the real `ProjectProvider`.
+// CommandLine's inline project picker (Phase 102/108 — the only project
+// control left, per-task only) reads the project registry — stub it.
 vi.mock("../../projects/queries/useProjectsQuery", () => ({
   useProjectsQuery: () => ({ data: [{ id: "alpha", name: "Alpha" }] }),
   getProjectsQueryKey: () => ["projects"],
-}));
-vi.mock("../../projects/context/ProjectProvider", () => ({
-  useActiveProject: () => ({ activeProjectId: null, setActiveProject: vi.fn() }),
 }));
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -130,7 +126,6 @@ vi.mock("../../pipelines", async (importOriginal) => {
 import { useState } from "react";
 import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
 import { EntityHeroTestId, SearchBarTestId, SearchMenuTestId } from "@zibby/design-system";
-import { ProjectSwitcherTestId } from "../../projects/components/ProjectSwitcher";
 import { ChatScreen, ChatScreenTestId } from "./ChatScreen";
 import { CommandLineTestId } from "../../tasks/components/CommandLine/CommandLine";
 import { CosmicSceneTestId } from "../scene/CosmicScene";
@@ -199,9 +194,9 @@ describe("ChatScreen", () => {
     expect(screen.getByText("Mám se dobře.")).toBeInTheDocument();
   });
 
-  it("has no standalone project switcher in the header — the composer's inline chip is the only way to change it (Phase 102)", () => {
+  it("has no standalone project switcher in the header — the composer's inline chip is the only project control (Phase 102/108)", () => {
     renderWithProviders(<ChatScreenHarness />);
-    expect(screen.queryByTestId(ProjectSwitcherTestId.Root)).not.toBeInTheDocument();
+    expect(screen.queryByTestId("project-switcher")).not.toBeInTheDocument();
     expect(screen.getByTestId(CommandLineTestId.ProjectSelector)).toBeInTheDocument();
   });
 

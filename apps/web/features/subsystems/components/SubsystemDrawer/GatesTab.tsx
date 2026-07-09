@@ -1,6 +1,6 @@
 "use client";
 
-import type { GlobalGateRule, SubsystemWithStatus } from "@zibby/contracts";
+import type { GlobalGateRule, Project, SubsystemWithStatus } from "@zibby/contracts";
 import { Divider, Icon, Stack, Tag, Typography } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
@@ -10,7 +10,7 @@ import { HudPanel } from "../../../../components/HudPanel/HudPanel";
 import { DecisionBadge, MatcherText, ResolveChips } from "../../../gates/components/RuleParts";
 import { GateRulesSection } from "../../../gates/components/GateRulesSection";
 import { useGateRulesQuery } from "../../../gates/queries";
-import { useActiveProject, useProjectsQuery } from "../../../projects";
+import { useProjectsQuery } from "../../../projects";
 
 export enum GatesTabTestId {
   Root = "gates-tab-root",
@@ -18,6 +18,9 @@ export enum GatesTabTestId {
   SentenceRow = "gates-tab-sentence-row",
   AutopilotPanel = "gates-tab-autopilot-panel",
   AutopilotEmpty = "gates-tab-autopilot-empty",
+  /** One per-project autonomy dial row — suffixed `-${project.id}` (Phase 108). */
+  AutopilotRow = "gates-tab-autopilot-row",
+  /** Suffixed `-${project.id}` (Phase 108: one per listed project). */
   AutopilotLink = "gates-tab-autopilot-link",
   Catalog = "gates-tab-catalog",
 }
@@ -70,22 +73,91 @@ function GateRuleSentenceRow({ rule, subsystemName }: { rule: GlobalGateRule; su
 }
 
 /**
- * Read-only summary of the ACTIVE project's autonomy policy (`can_do_alone`/
- * `always_ask`, `ProjectAutonomyPolicy` on the project entity) — the "autopilot
- * dial" the design doc wants on this tab. Deliberately NOT an editor: the project
- * profile tab already owns editing this data (`ProfileScreen`'s autonomy panel),
- * so this links there instead of duplicating the form (CLAUDE.md "never leave the
- * DS-or-local decision implicit" reasoning extends to "never duplicate an editor").
- * The active project is a pure client-side view scope (`useActiveProject`, NOT a
- * security boundary) shared with the inline project selector in `CommandLine`
- * (Phase 102) — this dial just reads whichever project is currently selected there.
+ * One project's read-only autonomy-policy row (`can_do_alone`/`always_ask`,
+ * `ProjectAutonomyPolicy` on the project entity) inside {@link AutopilotSummary}.
+ * Deliberately NOT an editor: the project profile tab already owns editing this
+ * data (`ProfileScreen`'s autonomy panel), so this links there instead of
+ * duplicating the form (CLAUDE.md "never leave the DS-or-local decision
+ * implicit" reasoning extends to "never duplicate an editor").
+ */
+function ProjectAutopilotRow({ project }: { project: Project }) {
+  const t = useTranslations("subsystems.gates");
+  const policy = project.autonomy_policy ?? {};
+  const canDoAlone = policy.can_do_alone ?? [];
+  const alwaysAsk = policy.always_ask ?? [];
+
+  return (
+    <div data-testid={`${GatesTabTestId.AutopilotRow}-${project.id}`}>
+      <HudPanel
+        action={
+          <Link
+            data-testid={`${GatesTabTestId.AutopilotLink}-${project.id}`}
+            href={`/projects/${project.id}?tab=profile` as Route}
+          >
+            <Stack align="center" direction="row" gap="50">
+              <Typography mono size="xs" tone="accent" type="note">
+                {t("autopilotEditLink")}
+              </Typography>
+              <Icon name="arrow" size="xs" tone="accent" />
+            </Stack>
+          </Link>
+        }
+        padding="150"
+        title={project.name}
+      >
+        <Stack gap="100">
+          {canDoAlone.length > 0 && (
+            <Stack wrap align="center" direction="row" gap="75">
+              <Typography mono size="2xs" type="note" variant="tertiary">
+                {t("autopilotCanDoAlone")}
+              </Typography>
+              {canDoAlone.map((action) => (
+                <Tag key={action} tone="ok">
+                  {action}
+                </Tag>
+              ))}
+            </Stack>
+          )}
+          {alwaysAsk.length > 0 && (
+            <Stack wrap align="center" direction="row" gap="75">
+              <Typography mono size="2xs" type="note" variant="tertiary">
+                {t("autopilotAlwaysAsk")}
+              </Typography>
+              {alwaysAsk.map((action) => (
+                <Tag key={action} tone="warn">
+                  {action}
+                </Tag>
+              ))}
+            </Stack>
+          )}
+        </Stack>
+      </HudPanel>
+    </div>
+  );
+}
+
+/** True when a project has ANY autonomy policy set — the only ones {@link
+ * AutopilotSummary} lists (Phase 108: no active-project scope left to pick a
+ * single one, so every policy-bearing project gets its own row instead). */
+function hasAutonomyPolicy(project: Project): boolean {
+  const policy = project.autonomy_policy ?? {};
+  return (policy.can_do_alone?.length ?? 0) > 0 || (policy.always_ask?.length ?? 0) > 0;
+}
+
+/**
+ * Read-only summary of every project's autonomy policy — the "autopilot dial"
+ * the design doc wants on this tab. Phase 108: the Phase-24/102 "active
+ * project" scope this used to read is gone — ZIBBY always shows every
+ * project's data at once, so this lists one compact dial per project that HAS
+ * a policy set (never an editor — see {@link ProjectAutopilotRow}), and an
+ * honest empty state when none do.
  */
 function AutopilotSummary() {
   const t = useTranslations("subsystems.gates");
-  const { activeProjectId } = useActiveProject();
   const { data: projects = [] } = useProjectsQuery();
+  const withPolicy = projects.filter(hasAutonomyPolicy);
 
-  if (!activeProjectId) {
+  if (withPolicy.length === 0) {
     return (
       <div data-testid={GatesTabTestId.AutopilotPanel}>
         <HudPanel title={t("autopilotTitle")}>
@@ -99,66 +171,13 @@ function AutopilotSummary() {
     );
   }
 
-  const project = projects.find((p) => p.id === activeProjectId);
-  const policy = project?.autonomy_policy ?? {};
-  const canDoAlone = policy.can_do_alone ?? [];
-  const alwaysAsk = policy.always_ask ?? [];
-  const hasPolicy = canDoAlone.length > 0 || alwaysAsk.length > 0;
-
   return (
     <div data-testid={GatesTabTestId.AutopilotPanel}>
-      <HudPanel
-        action={
-          <Link
-            data-testid={GatesTabTestId.AutopilotLink}
-            href={`/projects/${activeProjectId}?tab=profile` as Route}
-          >
-            <Stack align="center" direction="row" gap="50">
-              <Typography mono size="xs" tone="accent" type="note">
-                {t("autopilotEditLink")}
-              </Typography>
-              <Icon name="arrow" size="xs" tone="accent" />
-            </Stack>
-          </Link>
-        }
-        title={t("autopilotTitle")}
-      >
-        <Stack gap="100">
-          <Typography size="sm" type="text" weight="semibold">
-            {project?.name ?? activeProjectId}
-          </Typography>
-          {!hasPolicy ? (
-            <Typography size="xs" type="note" variant="tertiary">
-              {t("autopilotNoneSet")}
-            </Typography>
-          ) : (
-            <>
-              {canDoAlone.length > 0 && (
-                <Stack wrap align="center" direction="row" gap="75">
-                  <Typography mono size="2xs" type="note" variant="tertiary">
-                    {t("autopilotCanDoAlone")}
-                  </Typography>
-                  {canDoAlone.map((action) => (
-                    <Tag key={action} tone="ok">
-                      {action}
-                    </Tag>
-                  ))}
-                </Stack>
-              )}
-              {alwaysAsk.length > 0 && (
-                <Stack wrap align="center" direction="row" gap="75">
-                  <Typography mono size="2xs" type="note" variant="tertiary">
-                    {t("autopilotAlwaysAsk")}
-                  </Typography>
-                  {alwaysAsk.map((action) => (
-                    <Tag key={action} tone="warn">
-                      {action}
-                    </Tag>
-                  ))}
-                </Stack>
-              )}
-            </>
-          )}
+      <HudPanel title={t("autopilotTitle")}>
+        <Stack gap="150">
+          {withPolicy.map((project) => (
+            <ProjectAutopilotRow key={project.id} project={project} />
+          ))}
         </Stack>
       </HudPanel>
     </div>
@@ -182,7 +201,9 @@ function AutopilotSummary() {
  *    resolve) is deferred until the per-project open question above is resolved —
  *    building a bespoke authoring surface now risks colliding with whatever
  *    precedence model that decision picks.
- * 2. The active project's autopilot dial (read-only + link out).
+ * 2. A per-project autopilot dial for every project with a policy set (read-only
+ *    + link out; Phase 108 dropped the single "active project" this used to
+ *    read — there is no global project scope left in the app).
  * 3. The full editable catalog, scoped via `GateRulesSection`'s `ownerSubsystem`
  *    prop (Phase 87 addition) — create/edit/delete still go through the EXISTING
  *    `RuleModal` form, unchanged. `GateRulesSection` already renders the locked

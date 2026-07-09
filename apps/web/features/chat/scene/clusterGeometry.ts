@@ -34,6 +34,61 @@ export interface ClusterSlot extends ClusterPoint {
 export const REGISTRY_ORDER: readonly SubsystemId[] = SUBSYSTEMS.map((s) => s.id);
 export const SLOT_COUNT = REGISTRY_ORDER.length;
 
+// --- Phase 107: WebGL net geometry constants ---------------------------------
+//
+// Lives here (not in sceneController.ts, which pulls in `three` for its
+// renderer/geometry work) so clusterGeometry.test.ts can import and assert
+// against the REAL numbers the net draws with, rather than duplicating copies
+// into the test. sceneController.ts imports every one of these instead of
+// hardcoding its own — single source of truth for the tuned geometry.
+
+/** A mini-orb's world radius (its group scale) — a smaller sibling of the
+ * central orb (`ORB_SCALE = 0.46` in sceneController.ts). */
+export const MINI_ORB_WORLD_RADIUS = 0.16;
+
+/** The octagon the 8 mini-orbs sit on (forge at the bottom). Phase 107 pushed
+ * this OUT from 0.85 to clear {@link HUB_RADIUS} plus {@link NODE_LINK_GAP} —
+ * see the no-overlap invariant documented on {@link NET_GEOMETRY}. */
+export const NODE_RING_RADIUS = 1.05;
+
+/** The inner octagon that rings the central orb. Must clear the central orb's
+ * rendered glow (world radius `ORB_SCALE × 1.25 = 0.575`) with a visible gap,
+ * and sit well inside the node ring so nothing in the net ever touches the
+ * orb. Unchanged by phase 107 (still 0.7). */
+export const HUB_RADIUS = 0.7;
+
+/** Phase 101 — the radius of the small octagon wrapping EACH mini-orb, ringing
+ * it the same way {@link HUB_RADIUS}'s octagon rings the central orb. A touch
+ * larger than the mini-orb itself ({@link MINI_ORB_WORLD_RADIUS}) so it
+ * visibly clears the mini-orb's own glow instead of hugging it pixel-tight.
+ * Formula unchanged by phase 107. */
+export const NODE_OCTAGON_RADIUS = MINI_ORB_WORLD_RADIUS * 1.35;
+
+/** Phase 107 — the visible connector's target length: the gap deliberately
+ * left between the hub octagon's outer vertex and each node octagon's near
+ * point, so the two octagons never touch/overlap and the "link" line between
+ * them reads as a real outward connector instead of a reversed inward stub.
+ * Tuned during the phase-107 screenshot pass. */
+export const NODE_LINK_GAP = 0.12;
+
+/**
+ * Phase 107 — the no-overlap invariant these constants are tuned to satisfy:
+ * `NODE_RING_RADIUS − NODE_OCTAGON_RADIUS > HUB_RADIUS` (every node octagon's
+ * near point sits strictly outside the hub octagon, with roughly
+ * {@link NODE_LINK_GAP} of daylight between them — `NODE_RING_RADIUS` is
+ * rounded UP for a clean margin, so the realized gap is slightly more than
+ * the nominal `NODE_LINK_GAP`). Exported as one object so both
+ * sceneController.ts and clusterGeometry.test.ts read the SAME tuned values —
+ * see clusterGeometry.test.ts's "NET_GEOMETRY" describe block for the
+ * assertion.
+ */
+export const NET_GEOMETRY = {
+  HUB_RADIUS,
+  NODE_RING_RADIUS,
+  NODE_OCTAGON_RADIUS,
+  NODE_LINK_GAP,
+} as const;
+
 /**
  * `count` points evenly spaced (45° for the real 8) around a regular octagon of
  * the given `radius`, index 0 at the BOTTOM, proceeding CLOCKWISE (see module

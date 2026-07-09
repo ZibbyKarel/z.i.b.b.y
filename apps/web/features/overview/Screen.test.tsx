@@ -46,13 +46,12 @@ vi.mock("../pins", () => ({
 }));
 vi.mock("../chains", () => ({ useChainsQuery: () => ({ data: [{ id: "c1", name: "My chain" }] }) }));
 vi.mock("../tasks", () => ({ useNewTask: () => ({ open: vi.fn() }) }));
-// ApprovalsPanel reads the Phase 24 project context; `null` ("Bez projektu") here
-// scopes it to unattributed approvals (the scoping itself is covered by the runs
-// Screen test) — with no approvals/runs data mocked, the queue renders empty either way.
+// CommandLine (Phase 40 command bar) reads the project registry for its inline
+// per-task picker (`ProjectSelect`) — stub both so mounting it never hits the
+// network and never needs the real picker's own Dropdown internals.
 vi.mock("../projects", () => ({
-  useActiveProject: () => ({ activeProjectId: null, setActiveProject: vi.fn() }),
-  ProjectScopeChip: () => null,
   useProjectsQuery: () => ({ data: [] }),
+  ProjectSelect: () => null,
 }));
 
 vi.mock("./queries", () => ({
