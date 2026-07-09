@@ -208,9 +208,19 @@ Tests: `run-recorder.service.test.ts:145,178,192`.
   - [ ] `self-knowledge.composer.test.ts`: subsystems fixture; confirm `computeDrift` picks up the new
     key without touching its loop (verify, don't assume).
 
-## Phase 107 — API: raw-note nightly triage sweep + quick-capture entry point
+## Phase 107 — API: raw-note nightly triage sweep + quick-capture entry point — ✅ DONE
 
-- [ ] `VaultService`: extend `typedFieldsOf()` (`:99-108`) to promote `raw` (boolean) to a typed
+> Landed: `typedFieldsOf` promotes `raw`; `VaultService.rawNotes()`; `createNote` defaults
+> `tier=knowledge`+forces `raw:true` when tier omitted (one place — REST + internal callers get it),
+> clearing the `:300,305` ripple; `updateNote` folds top-level `raw` into frontmatter. Distiller
+> `gather()` collects raw notes (shared cap/defer); `distill()` routes them through
+> `triageRawNotes`→`triageOne` (durable→condense+link+clear raw; noise→`triaged-noise` tag; never
+> delete); idempotent via note `triagedAt`; fully fail-open. Also regenerated the data-test fixture
+> self-knowledge note (SUBSYSTEMS block — a phase-106 fixup; e2e drift check green again). Tests:
+> vault (+7) + distiller (+4); `apps/api/src/memory` 75 passed. (Pre-existing unrelated e2e failures
+> in projects/pipelines/runner-core confirmed present at the pre-arc baseline.)
+
+- [x] `VaultService`: extend `typedFieldsOf()` (`:99-108`) to promote `raw` (boolean) to a typed
   top-level `Note` field; add `rawNotes(): Promise<Note[]>` filtering `scan()` by `raw === true`
   (reuse the 5s cache — no new I/O).
 - [ ] `MemoryDistillerService.gather()`: also collect `rawNotes()` as triage candidates — add a

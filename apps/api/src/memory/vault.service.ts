@@ -92,18 +92,21 @@ function tagsOf(frontmatter: Record<string, unknown>): string[] {
 }
 
 /**
- * Parse the optional typed `type`/`tags` frontmatter fields back into top-level
- * `Note` fields (Fáze 3). Tolerant of malformed/foreign frontmatter — an invalid
- * `type` or non-string-array `tags` is simply omitted rather than surfaced.
+ * Parse the optional typed `type`/`tags`/`raw` frontmatter fields back into
+ * top-level `Note` fields (Fáze 3 / Fáze 107). Tolerant of malformed/foreign
+ * frontmatter — an invalid `type`, non-string-array `tags`, or non-boolean
+ * `raw` is simply omitted rather than surfaced.
  */
 function typedFieldsOf(frontmatter: Record<string, unknown>): {
   type?: NoteType;
   tags?: string[];
+  raw?: boolean;
 } {
-  const out: { type?: NoteType; tags?: string[] } = {};
+  const out: { type?: NoteType; tags?: string[]; raw?: boolean } = {};
   const parsedType = NoteTypeSchema.safeParse(frontmatter.type);
   if (parsedType.success) out.type = parsedType.data;
   if (Array.isArray(frontmatter.tags)) out.tags = tagsOf(frontmatter);
+  if (typeof frontmatter.raw === "boolean") out.raw = frontmatter.raw;
   return out;
 }
 
@@ -224,6 +227,31 @@ export class VaultService implements OnModuleInit {
     return { nodes, edges };
   }
 
+  /**
+   * All notes flagged `raw: true` — the nightly triage sweep's candidate pool
+   * (Fáze 107). Shaped exactly like {@link note} (backlinks computed the same
+   * way, body included). Reuses the 5s scan cache — no new I/O.
+   */
+  async rawNotes(): Promise<Note[]> {
+    const notes = await this.scan();
+    return notes
+      .filter((n) => typedFieldsOf(n.frontmatter).raw === true)
+      .map((found) => {
+        const backlinks = notes.filter((n) => n.links.includes(found.id)).map((n) => n.id);
+        return {
+          id: found.id,
+          path: found.path,
+          tier: found.tier,
+          title: found.title,
+          frontmatter: found.frontmatter,
+          links: found.links,
+          backlinks,
+          body: found.body,
+          ...typedFieldsOf(found.frontmatter),
+        };
+      });
+  }
+
   async search(q: string): Promise<SearchHit[]> {
     const query = q.trim().toLowerCase();
     if (!query) return [];
@@ -295,14 +323,22 @@ export class VaultService implements OnModuleInit {
    * `CreateNoteSchema`) runs {@link findSimilar} first and throws
    * `SimilarNoteError` instead of writing when a same-tier near-duplicate exists;
    * default behavior is untouched.
+   *
+   * `tier` is OPTIONAL on the input (Fáze 107 quick-capture): when the caller
+   * omits it, this defaults to `"knowledge"` AND unconditionally forces
+   * `raw: true` in the persisted frontmatter — the zero-friction "halda" path
+   * that the nightly triage sweep ({@link rawNotes}) later resolves. An explicit
+   * `tier` behaves exactly as before and respects any explicit `raw` untouched.
    */
   async createNote(input: CreateNoteInput): Promise<Note> {
-    const file = this.resolveNoteFile(input.tier, input.id);
+    const tier: MemoryTier = input.tier ?? "knowledge";
+    const raw = input.tier === undefined ? true : input.raw;
+    const file = this.resolveNoteFile(tier, input.id);
     const existing = (await this.scan()).find((n) => n.id === input.id);
     if (existing) throw new DuplicateNoteError(input.id);
     if (input.dedupe) {
       const similar = await this.findSimilar({
-        tier: input.tier,
+        tier,
         title: input.title ?? input.id,
         tags: input.tags,
         body: input.body,
@@ -313,6 +349,7 @@ export class VaultService implements OnModuleInit {
     if (input.title !== undefined) data.title = input.title;
     if (input.type !== undefined) data.type = input.type;
     if (input.tags !== undefined) data.tags = input.tags;
+    if (raw !== undefined) data.raw = raw;
     await fs.mkdir(path.dirname(file), { recursive: true });
     await writeFileAtomic(file, matter.stringify(input.body, data));
     this.cache = null;
@@ -357,6 +394,9 @@ export class VaultService implements OnModuleInit {
    * Patch a note in place. Frontmatter merges per key (patch wins; unknown
    * operator keys are preserved — never normalize a real Obsidian note's
    * metadata); `body` is replaced only when provided. tier/id are immutable.
+   * `raw` is a first-class sibling field on the patch (Fáze 107) that folds
+   * into frontmatter the same way `title` does, applied AFTER the frontmatter
+   * merge so an explicit `raw` always wins over one nested inside `frontmatter`.
    */
   async updateNote(id: string, patch: UpdateNoteInput): Promise<Note> {
     const found = (await this.scan()).find((n) => n.id === id);
@@ -366,6 +406,7 @@ export class VaultService implements OnModuleInit {
     const data: Record<string, unknown> = { ...(parsed.data as Record<string, unknown>) };
     if (patch.frontmatter) Object.assign(data, patch.frontmatter);
     if (patch.title !== undefined) data.title = patch.title;
+    if (patch.raw !== undefined) data.raw = patch.raw;
     const body = patch.body !== undefined ? patch.body : parsed.content;
     await writeFileAtomic(abs, matter.stringify(body, data));
     this.cache = null;

@@ -191,6 +191,88 @@ describe("VaultService write paths", () => {
     expect(read.type).toBeUndefined();
   });
 
+  describe("raw notes (Fáze 107)", () => {
+    it("promotes a boolean `raw` frontmatter value to a typed top-level field", async () => {
+      const created = await vault.createNote({
+        id: "raw-typed",
+        tier: "knowledge",
+        body: "x",
+        raw: true,
+      });
+      expect(created.raw).toBe(true);
+      expect(created.frontmatter.raw).toBe(true);
+
+      const read = await vault.note("raw-typed");
+      expect(read.raw).toBe(true);
+    });
+
+    it("omits `raw` when absent, and ignores a foreign non-boolean value", async () => {
+      const untouched = await vault.createNote({ id: "raw-absent", tier: "knowledge", body: "x" });
+      expect(untouched.raw).toBeUndefined();
+
+      await vault.createNote({
+        id: "raw-foreign",
+        tier: "knowledge",
+        body: "x",
+        frontmatter: { raw: "yes" },
+      });
+      const read = await vault.note("raw-foreign");
+      expect(read.raw).toBeUndefined();
+    });
+
+    it("rawNotes(): returns only notes with `raw: true`, shaped like note()", async () => {
+      await vault.createNote({ id: "raw-a", tier: "knowledge", title: "Raw A", body: "a", raw: true });
+      await vault.createNote({ id: "raw-b", tier: "memory", body: "b", raw: false });
+      await vault.createNote({ id: "raw-c", tier: "knowledge", body: "c" });
+
+      const rawOnes = await vault.rawNotes();
+      expect(rawOnes.map((n) => n.id)).toEqual(["raw-a"]);
+      expect(rawOnes[0]?.title).toBe("Raw A");
+      expect(rawOnes[0]?.body).toBe("a");
+      expect(rawOnes[0]?.backlinks).toEqual([]);
+    });
+
+    it("createNote: omitted `tier` defaults to knowledge and forces `raw: true`", async () => {
+      const created = await vault.createNote({ id: "quick-capture", body: "captured text" });
+      expect(created.tier).toBe("knowledge");
+      expect(created.raw).toBe(true);
+      expect(created.frontmatter.raw).toBe(true);
+
+      const rawOnes = await vault.rawNotes();
+      expect(rawOnes.map((n) => n.id)).toContain("quick-capture");
+    });
+
+    it("createNote: explicit `tier` + explicit `raw: false` behaves exactly as today", async () => {
+      const created = await vault.createNote({
+        id: "explicit-note",
+        tier: "memory",
+        body: "x",
+        raw: false,
+      });
+      expect(created.tier).toBe("memory");
+      expect(created.raw).toBe(false);
+
+      const rawOnes = await vault.rawNotes();
+      expect(rawOnes.map((n) => n.id)).not.toContain("explicit-note");
+    });
+
+    it("createNote: explicit `tier` with no `raw` leaves it unset (unchanged default behavior)", async () => {
+      const created = await vault.createNote({ id: "explicit-no-raw", tier: "daily", body: "x" });
+      expect(created.tier).toBe("daily");
+      expect(created.raw).toBeUndefined();
+      expect(created.frontmatter.raw).toBeUndefined();
+    });
+
+    it("updateNote: clears `raw` via the top-level patch field", async () => {
+      await vault.createNote({ id: "toggle-raw", tier: "knowledge", body: "x", raw: true });
+      const updated = await vault.updateNote("toggle-raw", { raw: false });
+      expect(updated.raw).toBe(false);
+
+      const rawOnes = await vault.rawNotes();
+      expect(rawOnes.map((n) => n.id)).not.toContain("toggle-raw");
+    });
+  });
+
   describe("createNote: dedupe (findSimilar)", () => {
     it("dedupe: false (default) ignores a near-duplicate and writes anyway", async () => {
       await vault.createNote({

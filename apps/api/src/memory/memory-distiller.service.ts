@@ -1,6 +1,6 @@
 import * as path from "node:path";
 import { Injectable, Logger } from "@nestjs/common";
-import type { AgentRun, GoalRun, NoteType, PipelineRun, Project } from "@zibby/contracts";
+import type { AgentRun, GoalRun, Note, NoteType, PipelineRun, Project } from "@zibby/contracts";
 import { AgentRunnerService } from "../agents/agent-runner.service";
 import { GoalRunnerService } from "../goals/goal-runner.service";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
@@ -8,7 +8,7 @@ import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ChatTranscriptStore } from "../chat/chat-transcript.store";
 import { fileExists, writeFileAtomic } from "../shared/file-storage/file-utils";
 import { ClaudeCliDistiller, type Learning, type RunDigest } from "./claude-cli-distiller";
-import { DuplicateNoteError, SimilarNoteError, VaultService } from "./vault.service";
+import { DuplicateNoteError, SimilarNoteError, VaultService, ownerProjectOf } from "./vault.service";
 
 /**
  * Union of unique tags across a batch of learnings (Fáze 3), sorted for a stable
@@ -50,6 +50,13 @@ interface Candidate {
   chatId?: string;
   /** Message count distilled through, persisted on the chat marker after filing. */
   chatCount?: number;
+  /**
+   * Set for a raw ("halda") vault note (Fáze 107) — like `chatId`, a note has no
+   * run `cwd` either. Marks this candidate for the DEDICATED per-note triage path
+   * in {@link MemoryDistillerService.distill} rather than the batch digest flow;
+   * idempotency is the note's own `triagedAt` frontmatter, not a marker file.
+   */
+  noteId?: string;
 }
 
 /**
@@ -85,31 +92,52 @@ export class MemoryDistillerService {
    */
   async distill(now: Date = new Date()): Promise<string> {
     try {
-      const candidates = await this.gather();
-      if (candidates.length === 0) return "memory-distill:0";
+      const all = await this.gather();
+      // Raw vault notes (Fáze 107) take a DEDICATED per-note triage path — they
+      // have no run `cwd` and their fate (durable/noise) is decided individually,
+      // not merged into the shared run/chat digest below.
+      const runCandidates = all.filter((c) => c.noteId === undefined);
+      const noteCandidates = all.filter((c) => c.noteId !== undefined);
 
-      const learnings = await this.distiller.distill(candidates.map((c) => c.summary));
-      if (learnings.length > 0) await this.fileDigest(now, learnings, candidates);
+      let learningsCount = 0;
+      if (runCandidates.length > 0) {
+        const learnings = await this.distiller.distill(runCandidates.map((c) => c.summary));
+        if (learnings.length > 0) await this.fileDigest(now, learnings, runCandidates);
 
-      // Mark only AFTER the digest is filed: a crash before this re-considers the
-      // batch next pass (at-least-once — a duplicated digest line is harmless, a
-      // silently dropped learning is not).
-      await Promise.all(
-        candidates.map((c) =>
-          c.chatId !== undefined
-            ? this.chat.markDistilled(c.chatId, c.chatCount ?? 0, now)
-            : this.markDistilled(c.cwd),
-        ),
+        // Mark only AFTER the digest is filed: a crash before this re-considers
+        // the batch next pass (at-least-once — a duplicated digest line is
+        // harmless, a silently dropped learning is not).
+        await Promise.all(
+          runCandidates.map((c) =>
+            c.chatId !== undefined
+              ? this.chat.markDistilled(c.chatId, c.chatCount ?? 0, now)
+              : this.markDistilled(c.cwd),
+          ),
+        );
+        learningsCount = learnings.length;
+      }
+
+      const triagedCount =
+        noteCandidates.length > 0 ? await this.triageRawNotes(noteCandidates, now) : 0;
+
+      const total = runCandidates.length + noteCandidates.length;
+      if (total === 0) return "memory-distill:0";
+      this.logger.log(
+        `distilled ${runCandidates.length} run(s) → ${learningsCount} learning(s); triaged ${triagedCount}/${noteCandidates.length} raw note(s)`,
       );
-      this.logger.log(`distilled ${candidates.length} run(s) → ${learnings.length} learning(s)`);
-      return `memory-distill:${candidates.length}`;
+      return `memory-distill:${total}`;
     } catch (error) {
       this.logger.warn(`memory distillation failed: ${String(error)}`);
       return "memory-distill:error";
     }
   }
 
-  /** Terminal, not-yet-distilled runs across all three runners (capped per pass). */
+  /**
+   * Terminal, not-yet-distilled runs across all three runners + incremental chats
+   * + raw ("halda") vault notes pending triage (Fáze 107) — capped per pass. All
+   * four sources share the SAME `MAX_RUNS_PER_PASS` cap and defer-never-drop
+   * posture: overflow is deferred (logged), never silently dropped.
+   */
   private async gather(): Promise<Candidate[]> {
     const out: Candidate[] = [];
     let deferred = 0;
@@ -153,6 +181,29 @@ export class MemoryDistillerService {
         continue;
       }
       out.push({ cwd: "", projectId: null, chatId: id, chatCount: summary.count, summary: summary.digest });
+    }
+
+    // Raw ("halda") notes: idempotency is the note's own `triagedAt` frontmatter
+    // (a note has no run `cwd` for the file marker) — skip anything already
+    // triaged before it ever reaches the cap check.
+    for (const note of await this.vault.rawNotes().catch((): Note[] => [])) {
+      if (note.frontmatter?.triagedAt !== undefined) continue;
+      if (out.length >= MAX_RUNS_PER_PASS) {
+        deferred++;
+        continue;
+      }
+      out.push({
+        cwd: "",
+        projectId: ownerProjectOf(note.frontmatter ?? {}) ?? null,
+        noteId: note.id,
+        summary: {
+          kind: "note",
+          id: note.id,
+          name: note.title,
+          status: "raw",
+          excerpt: (note.body ?? "").slice(0, EXCERPT_LIMIT),
+        },
+      });
     }
 
     if (deferred > 0) {
@@ -303,6 +354,108 @@ export class MemoryDistillerService {
 
   private renderSections(learnings: Learning[]): string {
     return learnings.map((l) => `## ${l.title}\n\n${l.body}`).join("\n\n");
+  }
+
+  /**
+   * Triage every raw-note candidate in turn (Fáze 107). FAIL-OPEN per note: a
+   * single failure (thrown by the triage call itself or by the vault write) is
+   * logged and skipped — the note is left untouched (no `triagedAt`, so it is
+   * reconsidered next pass) rather than aborting the rest of the batch.
+   */
+  private async triageRawNotes(candidates: Candidate[], now: Date): Promise<number> {
+    let triaged = 0;
+    for (const candidate of candidates) {
+      if (!candidate.noteId) continue;
+      try {
+        await this.triageOne(candidate.noteId, candidate.summary, candidate.projectId, now);
+        triaged++;
+      } catch (error) {
+        this.logger.warn(`raw-note triage failed for ${candidate.noteId}: ${String(error)}`);
+      }
+    }
+    return triaged;
+  }
+
+  /**
+   * Triage one raw note: durable → condense body/title/type/tags in place, clear
+   * `raw`, link related notes; noise → clear `raw`, tag `triaged-noise`. Either
+   * way the note gets a `triagedAt` stamp (idempotency — see {@link gather}) and
+   * exactly one daily line. NEVER deletes the note. A `null` verdict (model
+   * unavailable/unparsable — mirrors {@link ClaudeCliDistiller.distill}'s own
+   * empty-learnings fallback) is treated as noise rather than left to retry
+   * forever.
+   */
+  private async triageOne(
+    noteId: string,
+    digest: RunDigest,
+    projectId: string | null,
+    now: Date,
+  ): Promise<void> {
+    const stamp = now.toISOString();
+    const verdict = await this.distiller.triageNote({
+      id: noteId,
+      title: digest.name,
+      body: digest.excerpt,
+    });
+
+    if (!verdict || verdict.verdict === "noise") {
+      const tags = [...new Set([...(verdict?.tags ?? []), "triaged-noise"])];
+      await this.vault.updateNote(noteId, { frontmatter: { triagedAt: stamp, raw: false, tags } });
+      await this.vault
+        .appendDaily(`poznámka [[${noteId}]] vytříděna jako šum`)
+        .catch((error) => this.logger.warn(`could not append daily triage line: ${String(error)}`));
+      return;
+    }
+
+    await this.vault.updateNote(noteId, {
+      title: verdict.title,
+      body: verdict.body,
+      frontmatter: {
+        triagedAt: stamp,
+        raw: false,
+        ...(verdict.type !== undefined ? { type: verdict.type } : {}),
+        ...(verdict.tags.length > 0 ? { tags: verdict.tags } : {}),
+      },
+    });
+    await this.linkRelated(noteId, projectId, verdict.title, verdict.tags);
+    await this.vault
+      .appendDaily(`poznámka [[${noteId}]] vytříděna do paměti`)
+      .catch((error) => this.logger.warn(`could not append daily triage line: ${String(error)}`));
+  }
+
+  /**
+   * Link a freshly-triaged durable note into the vault graph (Fáze 107). When
+   * the note has an owning project, reuse the exact `updateIndex` MOC call
+   * {@link fileDigest} uses. Otherwise fall back to `search()` restricted to
+   * `index()`'s entry points (the vault's MOCs) — the first topical match, by
+   * title/tags, gets a `[[noteId]]` line. Best-effort: a miss or a lookup
+   * failure is silently a no-op, never surfaced to the caller.
+   */
+  private async linkRelated(
+    noteId: string,
+    projectId: string | null,
+    title: string,
+    tags: string[],
+  ): Promise<void> {
+    if (projectId) {
+      await this.vault.updateIndex(projectId, noteId, "Vytříděno z paměti").catch((error) => {
+        this.logger.warn(`could not link ${noteId} from ${projectId}: ${String(error)}`);
+      });
+      return;
+    }
+    const query = [title, ...tags].filter(Boolean).join(" ").trim();
+    if (!query) return;
+    try {
+      const [entries, hits] = await Promise.all([this.vault.index(), this.vault.search(query)]);
+      const mocIds = new Set(entries.map((e) => e.id));
+      const target = hits.find((h) => h.id !== noteId && mocIds.has(h.id));
+      if (!target) return;
+      await this.vault.updateIndex(target.id, noteId).catch((error) => {
+        this.logger.warn(`could not link ${noteId} from ${target.id}: ${String(error)}`);
+      });
+    } catch (error) {
+      this.logger.warn(`related-note lookup failed for ${noteId}: ${String(error)}`);
+    }
   }
 
   private async isDistilled(cwd: string): Promise<boolean> {

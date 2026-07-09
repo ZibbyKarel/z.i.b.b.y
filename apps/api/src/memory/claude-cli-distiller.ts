@@ -6,10 +6,12 @@ import { LoggerService, type ScopedLogger } from "../shared/logging/logger.servi
 
 /** How long the headless `claude -p` distiller may take before we fall back. */
 const DISTILLER_TIMEOUT_MS = 30_000;
+/** Cap on the note body fed to a single-note triage prompt. */
+const NOTE_TRIAGE_BODY_LIMIT = 2400;
 
 /** A finished run reduced to what the distiller model needs to see. */
 export interface RunDigest {
-  kind: "pipeline" | "agent" | "goal" | "chat";
+  kind: "pipeline" | "agent" | "goal" | "chat" | "note";
   /** The run id (forensic; the model shouldn't echo it back as a learning). */
   id: string;
   /** pipelineId / agentId / goalId — the reusable identity. */
@@ -41,6 +43,49 @@ const LearningSchema = z.object({
   tags: z.array(z.string()).catch([]),
 });
 const DistillSchema = z.object({ learnings: z.array(LearningSchema).max(12) }).strict();
+
+/**
+ * The nightly raw-note triage verdict (Fáze 107). A "halda" note (`raw: true`,
+ * created via quick-capture) is either DURABLE — worth condensing and filing
+ * properly — or NOISE — a duplicate/throwaway that just needs unflagging.
+ * `type`/`tags` reuse the same Fáze 3 typed-memory vocabulary as {@link Learning}.
+ */
+export interface NoteTriage {
+  verdict: "durable" | "noise";
+  title: string;
+  body: string;
+  type?: NoteType;
+  tags: string[];
+}
+
+const NoteTriageSchema = z
+  .object({
+    verdict: z.enum(["durable", "noise"]).catch("noise"),
+    title: z.string().min(1).max(160),
+    body: z.string().min(1).max(3000),
+    type: NoteTypeSchema.optional().catch(undefined),
+    tags: z.array(z.string()).catch([]),
+  })
+  .strict();
+
+const NOTE_TRIAGE_SYSTEM_PROMPT = [
+  "You are ZIBBY's memory triage pass. You are given ONE raw, unsorted note (a",
+  "quick-capture 'halda' dump — could be a transcript excerpt, a stray thought, or",
+  "a duplicate of something already known). Decide whether it is DURABLE (worth",
+  "keeping as a proper memory note) or NOISE (a duplicate, throwaway, or nothing",
+  "reusable).",
+  "",
+  "If DURABLE: condense it into a short, clean title + body — strip filler,",
+  "chit-chat, and restated context; keep only decisions/facts/preferences/patterns",
+  "worth recalling later. Classify `type` as one of decision|preference|fact|pattern",
+  "and give it a short `tags` list (lowercase, kebab-case where useful).",
+  "",
+  "If NOISE: still return a short title/body (a one-line summary of what it was) so",
+  "the record isn't empty, but set verdict to \"noise\".",
+  "",
+  "Reply with ONLY a JSON object, no prose and no code fences:",
+  '{"verdict":"durable"|"noise","title":string,"body":string,"type":"decision"|"preference"|"fact"|"pattern"|null,"tags":string[]}',
+].join("\n");
 
 const DISTILLER_SYSTEM_PROMPT = [
   "You are ZIBBY's memory distiller. You are given a batch of FINISHED runs",
@@ -106,6 +151,42 @@ export class ClaudeCliDistiller {
       excerpt: r.excerpt,
     }));
     return [DISTILLER_SYSTEM_PROMPT, "", "RUNS:", JSON.stringify(compact)].join("\n");
+  }
+
+  /**
+   * Triage ONE raw ("halda") note into a durable/noise verdict (Fáze 107).
+   * Same fail-open shape as {@link distill}: `VITEST` never spawns, any CLI/parse/
+   * schema failure returns `null` rather than throwing — the caller decides how
+   * to treat a missing verdict.
+   */
+  async triageNote(note: { id: string; title: string; body: string }): Promise<NoteTriage | null> {
+    if (process.env.VITEST) return null;
+
+    let raw: string;
+    try {
+      raw = await this.runClaude(this.buildTriagePrompt(note));
+    } catch (err) {
+      this.log.debug("triage CLI call failed", { error: (err as Error).message });
+      return null;
+    }
+
+    const obj = this.parse(raw);
+    if (!obj) return null;
+    const parsed = NoteTriageSchema.safeParse(obj);
+    if (!parsed.success) {
+      this.log.debug("triage output failed schema (rejected)", {});
+      return null;
+    }
+    return parsed.data;
+  }
+
+  private buildTriagePrompt(note: { id: string; title: string; body: string }): string {
+    const compact = {
+      id: note.id,
+      title: note.title,
+      body: note.body.slice(0, NOTE_TRIAGE_BODY_LIMIT),
+    };
+    return [NOTE_TRIAGE_SYSTEM_PROMPT, "", "NOTE:", JSON.stringify(compact)].join("\n");
   }
 
   protected runClaude(prompt: string): Promise<string> {
