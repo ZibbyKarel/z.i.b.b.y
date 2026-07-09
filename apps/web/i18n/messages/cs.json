@@ -1634,7 +1634,9 @@
       "title": "Tasky",
       "empty": "Žádné tasky",
       "openAria": "Otevřít běh: {title}",
-      "toggleLog": "zobrazit nebo skrýt živý log tasku"
+      "detailAriaLabel": "Detail běhu: {title}",
+      "openFull": "Otevřít na stránce Běhy",
+      "closeDetail": "Zavřít detail"
     },
     "palette": {
       "placeholder": "Hledat agenta, pipeline, gate nebo poznámku…",

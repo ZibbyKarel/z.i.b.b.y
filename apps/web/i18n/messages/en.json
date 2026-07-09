@@ -1634,7 +1634,9 @@
       "title": "Tasks",
       "empty": "No tasks",
       "openAria": "Open run: {title}",
-      "toggleLog": "show or hide this task's live log"
+      "detailAriaLabel": "Run detail: {title}",
+      "openFull": "Open on Runs page",
+      "closeDetail": "Close detail"
     },
     "palette": {
       "placeholder": "Search agents, pipelines, gates or notes…",
