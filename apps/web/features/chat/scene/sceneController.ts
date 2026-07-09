@@ -1,13 +1,10 @@
 import * as THREE from "three";
 import { type BackgroundLayer, createBackgroundLayer } from "./backgroundLayer";
-import { type ConstellationLayer, createConstellationLayer } from "./constellationLayer";
-import { type DispatchLayer, createDispatchLayer } from "./dispatchLayer";
 import { type DockLayer, createDockLayer } from "./dockLayer";
 import { orbTarget } from "./modeVisuals";
 import { type OrbLayer, createOrbLayer } from "./orbLayer";
 import { type RingsLayer, createRingsLayer } from "./ringsLayer";
 import type { SceneInputs } from "./sceneTypes";
-import { resolveSceneTokens } from "./tokens";
 
 /**
  * The vanilla-three controller that owns the whole cosmic scene: its renderer(s),
@@ -30,10 +27,6 @@ export interface SceneController {
   /** Fire the brief completion flash (a `done` turn) — an `ok`-green pulse on the
    * orb and its background glow that decays back to the current mode. */
   flashComplete(): void;
-  /** Fire a dispatch reaction toward an agent's avatar (a `tool` event named it):
-   * a beam races out and back, the avatar flares, rings bloom (Tier 5). No-op if
-   * the agent isn't in the constellation (e.g. a pipeline-only dispatch). */
-  triggerDispatch(agentId: string): void;
   /** Pause the loop (overlay closed / tab hidden). Idempotent. */
   pause(): void;
   /** Resume without a time jump (the clock is reset so `dt` stays small). Idempotent. */
@@ -50,6 +43,10 @@ const ENERGY_PER_CHAR = 0.06;
 const ENERGY_DECAY = 1.6;
 
 const CAMERA_Z = 6;
+
+/** The orb (and its halo) render at half scale — the subsystem web is the scene's
+ * centerpiece now, ringing a smaller orb rather than a full-bleed one. */
+const ORB_SCALE = 0.5;
 
 export function createSceneController(
   container: HTMLElement,
@@ -89,30 +86,19 @@ export function createSceneController(
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
   camera.position.set(0, 0, CAMERA_Z);
 
-  const orb: OrbLayer = createOrbLayer();
-  orbScene.add(orb.object3d);
+  // The orb and its halo live in a half-scale core group so the subsystem web (the
+  // centerpiece now) rings a smaller orb — see ORB_SCALE. The per-frame pulse/ring
+  // easing stays relative to this group, so nothing snaps.
+  const core = new THREE.Group();
+  core.scale.setScalar(ORB_SCALE);
+  orbScene.add(core);
 
-  // --- Constellation (Tier 4). Its sprites render in the orb scene (shared camera,
-  // transparent); its DOM labels live in an overlay above the canvases. Hidden on
-  // small mobile — the roster would clutter a phone-width viewport. ---
-  const labelRoot = document.createElement("div");
-  labelRoot.setAttribute("data-scene-layer", "labels");
-  labelRoot.style.position = "absolute";
-  labelRoot.style.inset = "0";
-  labelRoot.style.overflow = "hidden";
-  labelRoot.style.pointerEvents = "none";
-  container.appendChild(labelRoot);
-  const constellation: ConstellationLayer = createConstellationLayer(labelRoot);
-  orbScene.add(constellation.object3d);
-  constellation.setAgents(mobile ? [] : initial.agents);
+  const orb: OrbLayer = createOrbLayer();
+  core.add(orb.object3d);
 
   // --- Rings (Tier 5): a soft halo around the orb during live states. ---
   const rings: RingsLayer = createRingsLayer();
-  orbScene.add(rings.object3d);
-
-  // --- Dispatch beams (Tier 5): fired on a tool event naming an agent. ---
-  const dispatch: DispatchLayer = createDispatchLayer();
-  orbScene.add(dispatch.object3d);
+  core.add(rings.object3d);
 
   // --- Dock (Tier 5): a DOM bar of the running/queued agents & pipelines. ---
   const dockRoot = document.createElement("div");
@@ -120,20 +106,6 @@ export function createSceneController(
   container.appendChild(dockRoot);
   const dock: DockLayer = createDockLayer(container, dockRoot);
   dock.setItems(initial.dock);
-
-  // agentId → accent colour, kept in sync with the roster for dispatch beams.
-  const agentColors = new Map<string, THREE.Color>();
-  const dockTargets = new Map<string, { x: number; y: number }>();
-  function syncRoster(next: SceneInputs) {
-    agentColors.clear();
-    for (const a of next.agents) agentColors.set(a.id, new THREE.Color(a.color));
-    // Working pulse: agents with a live run (present in the dock).
-    constellation.setWorking(
-      new Set(next.dock.filter((d) => d.kind === "agent" && d.targetId).map((d) => d.targetId!)),
-    );
-    dock.setItems(next.dock);
-  }
-  syncRoster(initial);
 
   const clock = new THREE.Clock();
   let elapsed = 0;
@@ -185,23 +157,6 @@ export function createSceneController(
       camera.lookAt(0, 0, 0);
     }
 
-    // Which agents are docked this frame (a live run with a dock chip) → fly-to.
-    dockTargets.clear();
-    for (const d of inputs.dock) {
-      if (d.kind !== "agent" || !d.targetId) continue;
-      const pos = dock.chipScreenPos(d.targetId);
-      if (pos) dockTargets.set(d.targetId, pos);
-    }
-
-    constellation.update(dt, elapsed, {
-      camera,
-      width: container.clientWidth || 1,
-      height: container.clientHeight || 1,
-      reducedMotion: inputs.reducedMotion,
-      dockTargets,
-    });
-    dispatch.update(dt, (id) => constellation.positionOf(id));
-
     // Background always advances (wall-clock steady) but renders every OTHER frame
     // — at ~30fps its slow drift is indistinguishable, and the orb keeps every
     // frame. The skipped frame keeps its last-drawn contents on the canvas.
@@ -223,19 +178,13 @@ export function createSceneController(
   return {
     setInputs(next) {
       inputs = next;
-      constellation.setAgents(mobile ? [] : next.agents);
-      syncRoster(next);
+      dock.setItems(next.dock);
     },
     pushActivity(chars) {
       energy = Math.min(1, energy + Math.max(1, chars) * ENERGY_PER_CHAR);
     },
     flashComplete() {
       flash = 1;
-    },
-    triggerDispatch(agentId) {
-      const color = agentColors.get(agentId) ?? new THREE.Color(resolveSceneTokens().accent);
-      constellation.flare(agentId);
-      dispatch.fire(agentId, color);
     },
     pause() {
       if (!running) return;
@@ -253,11 +202,8 @@ export function createSceneController(
       resizeObserver?.disconnect();
       orb.dispose();
       background.dispose();
-      constellation.dispose();
       rings.dispose();
-      dispatch.dispose();
       dock.dispose();
-      labelRoot.remove();
       dockRoot.remove();
       orbRenderer.dispose();
       orbRenderer.domElement.remove();

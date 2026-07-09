@@ -28,11 +28,10 @@ function allSubsystems(overrides: Record<string, Partial<SubsystemWithStatus>> =
 }
 
 describe("SubsystemWeb", () => {
-  it("renders all 8 nodes from the registry, plus the orb, spokes and rim", () => {
+  it("renders all 8 nodes from the registry, plus the spokes and rim", () => {
     renderWithProviders(<SubsystemWeb onSelect={vi.fn()} subsystems={allSubsystems()} />);
 
     expect(screen.getByTestId(SubsystemWebTestId.Root)).toBeInTheDocument();
-    expect(screen.getByTestId(SubsystemWebTestId.Orb)).toBeInTheDocument();
     expect(screen.getByTestId(SubsystemWebTestId.Spokes)).toBeInTheDocument();
     expect(screen.getByTestId(SubsystemWebTestId.Rim)).toBeInTheDocument();
     expect(screen.getByTestId(SubsystemWebTestId.Particles)).toBeInTheDocument();

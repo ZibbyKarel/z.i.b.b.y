@@ -15,10 +15,10 @@ import { Container, Typography } from "@zibby/design-system";
 import type { ReactNode } from "react";
 import { categoryColor } from "./tokens";
 import { CosmicScene, type CosmicSceneProps } from "./CosmicScene";
-import type { SceneAgent, SceneDockItem, SceneMode } from "./sceneTypes";
+import type { SceneDockItem, SceneMode } from "./sceneTypes";
 
-/** The full mode union driving the orb + constellation reaction (`sceneTypes.ts`) —
- * the source of truth `ChatScreen`'s `MODE_DOT` map also switches on. */
+/** The full mode union driving the orb reaction (`sceneTypes.ts`) — the source of
+ * truth `ChatScreen`'s `MODE_DOT` map also switches on. */
 const SCENE_MODES: SceneMode[] = [
   "idle",
   "listening",
@@ -27,56 +27,6 @@ const SCENE_MODES: SceneMode[] = [
   "tool",
   "waiting-approval",
   "error",
-];
-
-/** A small, deterministic constellation roster (Tier 4): a pinned agent per real
- * category, plus one pipeline — enough to see the cluster colours without a live
- * catalog fetch. Mirrors the shape `buildConstellation` produces. */
-const ROSTER: SceneAgent[] = [
-  {
-    category: "Vývoj",
-    color: categoryColor("Vývoj"),
-    id: "agent-koder",
-    kind: "agent",
-    name: "Kodér",
-    specialty: "Implementuje podle architektury",
-  },
-  {
-    category: "Kvalita",
-    color: categoryColor("Kvalita"),
-    id: "agent-tester",
-    kind: "agent",
-    name: "Tester",
-    specialty: "Píše a spouští testy",
-  },
-  {
-    category: "Výzkum",
-    color: categoryColor("Výzkum"),
-    id: "agent-vyzkumnik",
-    kind: "agent",
-    name: "Výzkumník",
-    specialty: "Zjišťuje kontext a zdroje",
-  },
-  {
-    category: "Dokumentace",
-    color: categoryColor("Dokumentace"),
-    id: "agent-dokumentator",
-    kind: "agent",
-    name: "Dokumentátor",
-    specialty: "Píše dokumentaci a changelog",
-  },
-  {
-    // Pipelines carry no category — the constellation's stronger mark uses the
-    // push/purple risk accent instead (tokens.ts `resolvePipelineAccentHex`); the
-    // hex is inlined here rather than resolved live so the fixture stays
-    // deterministic (matches its documented `--color-risk-push` fallback).
-    category: "",
-    color: "#b07cff",
-    id: "pipeline-delivery",
-    kind: "pipeline",
-    name: "Delivery Pipeline",
-    specialty: "",
-  },
 ];
 
 /** The dock (Tier 5): one running agent, one queued pipeline. */
@@ -166,16 +116,14 @@ function CosmicSceneStory({ reducedMotion = false, ...sceneProps }: CosmicSceneS
 
 const meta: Meta<typeof CosmicSceneStory> = {
   argTypes: {
-    agents: { control: false },
     completedTick: {
       control: { max: 5, min: 0, step: 1, type: "number" },
       description: "Bumped once per finished turn — fires the completion flash.",
     },
-    dispatch: { control: false },
     dock: { control: false },
     mode: {
       control: "select",
-      description: "The derived conversational state driving the orb + constellation.",
+      description: "The derived conversational state driving the orb.",
       options: SCENE_MODES,
     },
     reducedMotion: {
@@ -188,7 +136,6 @@ const meta: Meta<typeof CosmicSceneStory> = {
     },
   },
   args: {
-    agents: ROSTER,
     completedTick: 0,
     dock: DOCK,
     mode: "idle",
@@ -213,10 +160,10 @@ export const Thinking: Story = { args: { mode: "thinking" } };
  * see the streaming/active vs idle backdrop difference. */
 export const Streaming: Story = { args: { mode: "streaming", streamChars: 240 } };
 
-/** A mid-turn agent dispatch — fires the beam/flare/ring reaction toward the
- * roster's "Kodér" node. */
+/** A mid-turn agent dispatch — the orb takes its `tool` target (a pronounced pulse
+ * and rings) even though the constellation ring it used to beam toward is gone. */
 export const ToolDispatch: Story = {
-  args: { dispatch: { agentId: "agent-koder", seq: 1 }, mode: "tool" },
+  args: { mode: "tool" },
 };
 
 /** A run parked on the operator's decision. Reads in the shared `warn` (amber) tone —

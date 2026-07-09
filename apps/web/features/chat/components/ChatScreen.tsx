@@ -294,9 +294,11 @@ export function ChatScreen({
   ]);
   const { data: lastRun } = usePipelineRunQuery(lastRunRef);
 
-  // The constellation roster (Tier 4): the operator's pinned agents/pipelines/
-  // chains first, then the imaged tail of the deduped agent catalog — coloured by
-  // category. Only rebuilt when one of its source catalogs changes.
+  // The agent/pipeline roster: the operator's pinned agents/pipelines/chains first,
+  // then the imaged tail of the deduped agent catalog — coloured by category. The
+  // WebGL constellation ring is gone (the subsystem web is the centerpiece now); this
+  // survives only to colour the dock chips (`buildDock` resolves a run → its entry).
+  // Only rebuilt when one of its source catalogs changes.
   const { data: agentCatalog } = useAgentsQuery();
   const { data: pipelineCatalog } = usePipelinesQuery();
   const { data: chainCatalog } = useChainsQuery();
@@ -327,23 +329,6 @@ export function ChatScreen({
   // state/counts (Phase 84) — a dangling id (the polled list momentarily
   // dropping an entry) just renders nothing rather than stale data.
   const selectedSubsystem = subsystems?.find((s) => s.id === selectedSubsystemId) ?? null;
-
-  // Dispatch signal (Tier 5): each new `tool` event naming an agent bumps a seq the
-  // scene fires the beam/flare on. Seen callIds are tracked so the two-phase
-  // started→ok pair (same callId) fires exactly once.
-  const dispatchSeen = useRef<Set<string>>(new Set());
-  const dispatchSeq = useRef(0);
-  const [dispatch, setDispatch] = useState<{ seq: number; agentId: string } | undefined>(undefined);
-  useEffect(() => {
-    for (const ev of stream.toolEvents) {
-      if (ev.target?.kind !== "agent") continue;
-      const key = ev.callId ?? `${ev.name}:${ev.target.id}`;
-      if (dispatchSeen.current.has(key)) continue;
-      dispatchSeen.current.add(key);
-      dispatchSeq.current += 1;
-      setDispatch({ seq: dispatchSeq.current, agentId: ev.target.id });
-    }
-  }, [stream.toolEvents]);
 
   const errorMode = stream.error !== null || sendMessage.isError;
   const waitingApproval = lastRun !== undefined && WAITING_APPROVAL_STATUSES.has(lastRun.status);
@@ -438,37 +423,17 @@ export function ChatScreen({
         </Stack>
       </div>
 
-      {/* The living cosmic scene, filling the page — the text-reactive orb,
-          procedural nebula and sub-agent constellation. Sits behind every
-          interactive surface (its own canvas layers are pointer-events:none);
-          the transcript floats over it in a legibility-protected band. */}
+      {/* The living cosmic scene, filling the page — the text-reactive orb (at half
+          scale, so the subsystem web can ring it) and the procedural nebula. Sits
+          behind every interactive surface (its own canvas layers are
+          pointer-events:none); the transcript floats over it in a legibility-
+          protected band. */}
       <CosmicScene
-        agents={agents}
         completedTick={completedTick}
-        dispatch={dispatch}
         dock={dock}
         mode={mode}
         streamChars={stream.streaming ? stream.text.length : 0}
       />
-
-      {/* ── Subsystem web (Phase 83) ─────────────────────────────────────
-          The living centerpiece: 8 fixed nodes on a flattened ellipse around a
-          ZIBBY orb, floating over the nebula between the top bar and the
-          transcript. A fixed-height band (own `z-20` above the borderless
-          `CosmicScene`, same idiom as the top bar/composer) so it never steals
-          the transcript's scroll below it. `pipelines`/`runs` (Phase 89) are the
-          SAME `pipelineCatalog`/`runs` already fetched above for the constellation
-          roster/dock — the particle layer's run→owner resolution rides those
-          existing queries, no new request. */}
-      <div className="relative z-20 h-[200px] w-full shrink-0">
-        <SubsystemWeb
-          onSelect={setSelectedSubsystemId}
-          pipelines={pipelineCatalog ?? []}
-          runs={runs}
-          selectedId={selectedSubsystemId}
-          subsystems={subsystems ?? []}
-        />
-      </div>
 
       {/* ── Main area: scene behind, scrollable conversation over it ───── */}
       <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-end">
@@ -536,6 +501,28 @@ export function ChatScreen({
               />
             )}
           </div>
+        </div>
+      </div>
+
+      {/* ── Subsystem web ────────────────────────────────────────────────
+          The scene's centerpiece: 8 fixed nodes on a flattened ellipse whose
+          center is the (half-size) cosmic orb — the spokes now radiate straight
+          out of the orb, so the web reads as part of it rather than a separate
+          band. A full-bleed, centered overlay concentric with the WebGL orb (both
+          center on the ChatScreen root, so they align); `pointer-events-none` so it
+          never steals the transcript's scroll — only the interactive nodes re-enable
+          events. `pipelines`/`runs` (Phase 89) are the SAME `pipelineCatalog`/`runs`
+          already fetched above for the dock roster — the particle layer's run→owner
+          resolution rides those existing queries, no new request. */}
+      <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+        <div className="pointer-events-none aspect-[32/11] w-full max-w-[820px] px-6">
+          <SubsystemWeb
+            onSelect={setSelectedSubsystemId}
+            pipelines={pipelineCatalog ?? []}
+            runs={runs}
+            selectedId={selectedSubsystemId}
+            subsystems={subsystems ?? []}
+          />
         </div>
       </div>
 

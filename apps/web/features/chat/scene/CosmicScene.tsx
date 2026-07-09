@@ -9,7 +9,7 @@ import { useEffect, useRef } from "react";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 import { canMountWebGL } from "./canMountWebGL";
 import type { SceneController } from "./sceneController";
-import type { SceneAgent, SceneDockItem, SceneMode } from "./sceneTypes";
+import type { SceneDockItem, SceneMode } from "./sceneTypes";
 
 export enum CosmicSceneTestId {
   /** The scene root — carries `data-mode` so the derivation tests (and console
@@ -18,10 +18,8 @@ export enum CosmicSceneTestId {
 }
 
 export interface CosmicSceneProps {
-  /** The derived conversational state — drives every orb/constellation reaction. */
+  /** The derived conversational state — drives every orb reaction. */
   mode?: SceneMode;
-  /** The constellation roster (Tier 4). */
-  agents?: SceneAgent[];
   /** Running/queued agents & pipelines shown in the dock (Tier 5). */
   dock?: SceneDockItem[];
   /** Cumulative character count of the in-flight streamed turn. The scene diffs it
@@ -31,16 +29,14 @@ export interface CosmicSceneProps {
   /** A monotonically increasing counter bumped once per completed (`done`) turn.
    * The scene fires the brief ok-green completion flash on each increment. */
   completedTick?: number;
-  /** The most recent agent dispatch (a `tool` event named an agent). The scene
-   * fires the beam/flare/ring reaction whenever `seq` increases. */
-  dispatch?: { seq: number; agentId: string };
 }
 
 /**
  * The full-screen living cosmic interface behind ZIBBY's chat: a text-reactive orb
- * in a procedural deep-space nebula, ringed by a constellation of sub-agents. A thin
- * React shell over the vanilla-three {@link SceneController} — it owns no visual
- * state, only the controller's lifecycle and the flow of derived chat state into it.
+ * (rendered at half scale so the subsystem web can ring it) in a procedural
+ * deep-space nebula. A thin React shell over the vanilla-three {@link SceneController}
+ * — it owns no visual state, only the controller's lifecycle and the flow of derived
+ * chat state into it.
  *
  * The controller is created once (browser + WebGL only) and disposed on unmount;
  * jsdom and GPU-less environments skip it entirely and this renders just its root
@@ -49,18 +45,15 @@ export interface CosmicSceneProps {
  */
 export function CosmicScene({
   mode = "idle",
-  agents = EMPTY_AGENTS,
   dock = EMPTY_DOCK,
   streamChars = 0,
   completedTick = 0,
-  dispatch,
 }: CosmicSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<SceneController | null>(null);
   const reducedMotion = usePrefersReducedMotion();
   const prevChars = useRef(0);
   const prevTick = useRef(0);
-  const prevDispatchSeq = useRef(0);
 
   // Instantiate the controller once. Dynamically imported so three.js never loads
   // in SSR or the initial HUD bundle, and never instantiates in jsdom/no-WebGL.
@@ -71,7 +64,7 @@ export function CosmicScene({
 
     void import("./sceneController").then(({ createSceneController }) => {
       if (cancelled || !containerRef.current) return;
-      const controller = createSceneController(container, { mode, agents, dock, reducedMotion });
+      const controller = createSceneController(container, { mode, dock, reducedMotion });
       controllerRef.current = controller;
       // Expose the key setters for console testing during development — drive the
       // orb/dispatch by hand without a live turn (e.g. `__cosmicScene.triggerDispatch("koder")`).
@@ -102,8 +95,8 @@ export function CosmicScene({
 
   // Push derived chat state whenever it changes.
   useEffect(() => {
-    controllerRef.current?.setInputs({ mode, agents, dock, reducedMotion });
-  }, [mode, agents, dock, reducedMotion]);
+    controllerRef.current?.setInputs({ mode, dock, reducedMotion });
+  }, [mode, dock, reducedMotion]);
 
   // Feed each stream increment into the energy signal (Tier 3).
   useEffect(() => {
@@ -119,14 +112,6 @@ export function CosmicScene({
     prevTick.current = completedTick;
   }, [completedTick]);
 
-  // Fire the dispatch reaction whenever a new agent dispatch lands.
-  useEffect(() => {
-    if (dispatch && dispatch.seq > prevDispatchSeq.current) {
-      controllerRef.current?.triggerDispatch(dispatch.agentId);
-    }
-    if (dispatch) prevDispatchSeq.current = dispatch.seq;
-  }, [dispatch]);
-
   return (
     <div
       aria-hidden="true"
@@ -138,5 +123,4 @@ export function CosmicScene({
   );
 }
 
-const EMPTY_AGENTS: SceneAgent[] = [];
 const EMPTY_DOCK: SceneDockItem[] = [];

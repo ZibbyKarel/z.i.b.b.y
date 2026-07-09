@@ -76,8 +76,6 @@ export interface SceneDockItem {
  */
 export interface SceneInputs {
   mode: SceneMode;
-  /** The constellation roster (Tier 4). */
-  agents: SceneAgent[];
   /** The active dock items (Tier 5) — running/queued agents & pipelines. */
   dock: SceneDockItem[];
   /** Whether the operator asked the OS for reduced motion. */

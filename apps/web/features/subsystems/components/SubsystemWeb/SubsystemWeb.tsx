@@ -9,10 +9,7 @@ import { onRunEvent } from "../../../runs/runEvents";
 import { appendParticle, flightForEvent, particleDuration } from "./particle-mapping";
 import {
   NODE_RADIUS,
-  ORB_RADIUS,
   WEB_CENTER,
-  WEB_RX,
-  WEB_RY,
   WEB_VIEWBOX_HEIGHT,
   WEB_VIEWBOX_WIDTH,
   computeSlots,
@@ -26,7 +23,6 @@ import {
 
 export enum SubsystemWebTestId {
   Root = "subsystem-web-root",
-  Orb = "subsystem-web-orb",
   Spokes = "subsystem-web-spokes",
   Rim = "subsystem-web-rim",
   Particles = "subsystem-web-particles",
@@ -161,10 +157,12 @@ function ParticleGlyph({ particle, reducedMotion, onEnd }: ParticleGlyphProps) {
 
 /**
  * The subsystem web (Phase 83, design doc "the web, not an orbit"): 8 fixed nodes on a
- * flattened ellipse, one per named subsystem, a ZIBBY orb at the center, thin static
- * spokes (center→node) and a faint rim (neighbor→neighbor). A NEW SVG/DOM layer over
- * the existing `CosmicScene` — the design's whole argument against orbiting sub-agents
- * was clickability, so this is real hit-targets and keyboard focus, not a WebGL scene.
+ * flattened ellipse, one per named subsystem, thin static spokes (center→node) and a
+ * faint rim (neighbor→neighbor). An SVG/DOM overlay concentric with `CosmicScene`'s
+ * (half-size) WebGL orb — the orb IS the web's center, so nothing is drawn there here;
+ * the spokes radiate straight out of it. The design's whole argument against orbiting
+ * sub-agents was clickability, so this is real hit-targets and keyboard focus, not a
+ * WebGL scene.
  * Nodes never move: their geometry comes from {@link computeSlots}/{@link layoutSubsystems},
  * keyed by the subsystem's rank in the canonical registry, not by array position — the
  * `subsystems` prop may arrive severity-sorted (or momentarily short an entry) without
@@ -177,7 +175,7 @@ function ParticleGlyph({ particle, reducedMotion, onEnd }: ParticleGlyphProps) {
  * glance without relying on a scale transform (SVG's default transform-origin isn't the
  * shape's own center, so nothing here animates `transform`; only opacity/stroke).
  *
- * The orb is decorative in v1 (not a button); each node is a focusable, clickable `<g
+ * Each node is a focusable, clickable `<g
  * role="button">` — SVG doesn't support a real `<button>` element without `foreignObject`,
  * and `role="button"` + `tabIndex` + `Enter`/`Space` handling is the standard accessible
  * pattern for an interactive SVG shape. Selecting a node just sets the selection ring
@@ -252,21 +250,9 @@ export function SubsystemWeb({
         preserveAspectRatio="xMidYMid meet"
         viewBox={`0 0 ${WEB_VIEWBOX_WIDTH} ${WEB_VIEWBOX_HEIGHT}`}
       >
-        {/* A soft, static backdrop so the web reads legibly over the nebula behind it
-            — the same "fade to something readable" idea as the transcript's top mask,
-            just a flat low-opacity ellipse instead of a gradient (no CSS var()
-            resolution risk inside an SVG attribute). Purely decorative. */}
-        <ellipse
-          aria-hidden="true"
-          className="fill-background"
-          cx={WEB_CENTER.x}
-          cy={WEB_CENTER.y}
-          opacity={0.4}
-          rx={WEB_RX * 1.08}
-          ry={WEB_RY * 1.7}
-        />
-
-        {/* Spokes: center → each fixed slot. Thin, faint, static. */}
+        {/* Spokes: center → each fixed slot. Thin, faint, static. They radiate from
+            the cosmic orb behind this SVG (the web's center is concentric with it),
+            so no SVG orb is drawn here — the WebGL orb IS the center. */}
         <g aria-hidden="true" data-testid={SubsystemWebTestId.Spokes}>
           {SLOTS.map((slot) => (
             <path
@@ -314,13 +300,9 @@ export function SubsystemWeb({
           ))}
         </g>
 
-        {/* The ZIBBY orb — not interactive in v1, diameter ≈ 2× a node's. */}
-        <g aria-hidden="true" data-testid={SubsystemWebTestId.Orb}>
-          <circle className="fill-accent" cx={WEB_CENTER.x} cy={WEB_CENTER.y} opacity={0.14} r={ORB_RADIUS * 1.4} />
-          <circle className="fill-accent" cx={WEB_CENTER.x} cy={WEB_CENTER.y} opacity={0.9} r={ORB_RADIUS} />
-        </g>
-
-        {/* The 8 subsystem nodes — the only interactive layer. */}
+        {/* The 8 subsystem nodes — the only interactive layer. `pointer-events-auto`
+            re-enables hit-testing through the `pointer-events-none` overlay wrapper
+            (so the web never blocks the transcript's scroll, only its own nodes). */}
         {positioned.map((p) => {
           const selected = selectedId === p.id;
           const stateLabel = t(`state.${p.state}`);
@@ -337,7 +319,7 @@ export function SubsystemWeb({
             <g
               aria-label={ariaLabel}
               aria-pressed={selected}
-              className="cursor-pointer outline-none"
+              className="pointer-events-auto cursor-pointer outline-none"
               data-testid={`${SubsystemWebTestId.Node}-${p.id}`}
               key={p.id}
               onClick={() => onSelect(p.id)}
