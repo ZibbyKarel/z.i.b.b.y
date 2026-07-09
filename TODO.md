@@ -18,9 +18,9 @@
 
 ## Další nalezené věci
 
-- [ ] Detail projektu - odstranit z projektu pole "Cesta k rootu". Cesta k rootu je definovaná v nastavení - otázka je jak naložit s projektem Z.I.B.B.Y. který definuje současné repo. Možná to neřešit a prostě naklonovat duplicitní repo vedle a řešit to jako standartní projekt (asi preferuji)
-- [ ] Detail projektu - Kategorie se bude vybírat přes Selector
-- [ ] Detail projektu - Tlačítko "Klonovat" by mělo být ve stavu loading když se klonuje a né disabled. Loading state zařídí, že se na tlačítko nedá kliknout
+- [x] Detail projektu - odstranit z projektu pole "Cesta k rootu". _(Fáze 98: `path` je nyní volitelný v kontraktu — machine-local, odvozený ze Settings clone-base; pole odstraněno. Preferovaný model „naklonovat duplicitní repo vedle" zůstává v platnosti.)_
+- [x] Detail projektu - Kategorie se bude vybírat přes Selector _(Fáze 98: DS `SelectField`)_
+- [x] Detail projektu - Tlačítko "Klonovat" by mělo být ve stavu loading když se klonuje a né disabled. _(Fáze 98)_
 - [ ] Chat UI - detail subsystému by měl být širší aby se tam všely všechny informace v pohodě
 - [ ] Chat UI - detail subsystému nejde zavřít
 - [ ] Chat UI - detail subsystému - Tlačítko přidat pravidlo nelze zmáčknout
