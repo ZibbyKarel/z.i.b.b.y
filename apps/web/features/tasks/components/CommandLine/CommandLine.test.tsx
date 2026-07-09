@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DropDownButtonTestId,
+  DropdownTestId,
   FilePreviewTestId,
   HighlightTextAreaFieldTestId,
   PanelTestId,
@@ -61,9 +62,12 @@ vi.mock("../../../projects/queries/useProjectsQuery", () => ({
   }),
   getProjectsQueryKey: () => ["projects"],
 }));
-const { activeProject } = vi.hoisted(() => ({ activeProject: { id: null as string | null } }));
+const { activeProject, setActiveProject } = vi.hoisted(() => ({
+  activeProject: { id: null as string | null },
+  setActiveProject: vi.fn(),
+}));
 vi.mock("../../../projects/context/ProjectProvider", () => ({
-  useActiveProject: () => ({ activeProjectId: activeProject.id, setActiveProject: vi.fn() }),
+  useActiveProject: () => ({ activeProjectId: activeProject.id, setActiveProject }),
 }));
 
 const RESET_AT = Date.now() + 3 * 60 * 60 * 1000;
@@ -138,6 +142,7 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
     createTask.mockClear();
     createGoal.mockClear();
     uploadMutateAsync.mockClear();
+    setActiveProject.mockClear();
     activeProject.id = null;
     limitsResetAt.value = null;
   });
@@ -370,6 +375,51 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
         name: "Forge",
         glyph: "grid",
       });
+    });
+  });
+
+  describe("Phase 102 — inline project selector (retires the standalone ProjectSwitcher)", () => {
+    it("renders the inline chip in the bottom control row, defaulting to 'Bez projektu'", () => {
+      render(<CommandLine />);
+      const chip = screen.getByTestId(CommandLineTestId.ProjectSelector);
+      expect(chip).toBeInTheDocument();
+      expect(within(chip).getByTestId(DropdownTestId.Trigger)).toHaveTextContent("Bez projektu");
+    });
+
+    it("shows the active project's name in the closed trigger", () => {
+      activeProject.id = "alpha";
+      render(<CommandLine />);
+      const chip = screen.getByTestId(CommandLineTestId.ProjectSelector);
+      expect(within(chip).getByTestId(DropdownTestId.Trigger)).toHaveTextContent("Alpha");
+    });
+
+    it("lists 'Bez projektu' + every project, and picking one calls setActiveProject", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine />);
+      const chip = screen.getByTestId(CommandLineTestId.ProjectSelector);
+      await user.click(within(chip).getByTestId(DropdownTestId.Trigger));
+
+      const options = screen.getAllByTestId(DropdownTestId.Option);
+      expect(options.map((o) => o.textContent)).toEqual(["Bez projektu", "Alpha"]);
+
+      await user.click(options[1] as HTMLElement);
+      expect(setActiveProject).toHaveBeenCalledWith("alpha");
+    });
+
+    it("maps the 'Bez projektu' option back to null", async () => {
+      activeProject.id = "alpha";
+      const user = userEvent.setup();
+      render(<CommandLine />);
+      const chip = screen.getByTestId(CommandLineTestId.ProjectSelector);
+      await user.click(within(chip).getByTestId(DropdownTestId.Trigger));
+
+      await user.click(screen.getAllByTestId(DropdownTestId.Option)[0] as HTMLElement);
+      expect(setActiveProject).toHaveBeenCalledWith(null);
+    });
+
+    it("keeps the selector visible even when showAttach is false (chat's message API has no attachment channel)", () => {
+      render(<CommandLine onSubmit={vi.fn()} showAttach={false} />);
+      expect(screen.getByTestId(CommandLineTestId.ProjectSelector)).toBeInTheDocument();
     });
   });
 

@@ -77,8 +77,8 @@ function GateRuleSentenceRow({ rule, subsystemName }: { rule: GlobalGateRule; su
  * so this links there instead of duplicating the form (CLAUDE.md "never leave the
  * DS-or-local decision implicit" reasoning extends to "never duplicate an editor").
  * The active project is a pure client-side view scope (`useActiveProject`, NOT a
- * security boundary) shared with `ProjectSwitcher` in the chat header — this dial
- * just reads whichever project is currently selected there.
+ * security boundary) shared with the inline project selector in `CommandLine`
+ * (Phase 102) — this dial just reads whichever project is currently selected there.
  */
 function AutopilotSummary() {
   const t = useTranslations("subsystems.gates");

@@ -9,7 +9,7 @@ import { LimitsRings } from "../LimitsRings/LimitsRings";
 import { RightRail } from "../RightRail/RightRail";
 import { NAV_ITEMS, type NavId, ROUTE_ONLY_ITEMS, SETTINGS_ITEM } from "../../../state/config";
 import { CatalogProvider } from "../../../state/store";
-import { ProjectProvider, ProjectSwitcher } from "../../../features/projects";
+import { ProjectProvider } from "../../../features/projects";
 import { NewTaskButton, NewTaskProvider } from "../../../features/tasks";
 import { ChatButton, ChatProvider } from "../../../features/chat";
 import { navBadgeCount, useNotifications } from "../../../features/notifications";
@@ -77,7 +77,6 @@ function AppShellInner({ children }: { children: ReactNode }) {
       chatSlot={<ChatButton />}
       footerItem={footerItem}
       navItems={navItems}
-      projectSlot={<ProjectSwitcher />}
       railSlot={<RightRail />}
       taskSlot={<NewTaskButton />}
       walletSlot={<LimitsRings />}

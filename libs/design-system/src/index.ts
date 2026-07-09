@@ -274,6 +274,7 @@ export type {
   DropdownOption,
   DropdownProps,
   DropdownSingleProps,
+  DropdownSize,
   DropdownVariant,
 } from "./components/Dropdown/Dropdown";
 

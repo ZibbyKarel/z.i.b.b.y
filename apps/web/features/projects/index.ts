@@ -7,3 +7,4 @@ export * from "./mutations";
 export { ACTIVE_PROJECT_COOKIE, ProjectProvider, useActiveProject } from "./context/ProjectProvider";
 export { ProjectSwitcher, ProjectSwitcherTestId } from "./components/ProjectSwitcher";
 export { ProjectScopeChip, ProjectScopeChipTestId } from "./components/ProjectScopeChip";
+export { ProjectSelect } from "./components/ProjectSelect";
