@@ -176,22 +176,31 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
 
   return (
     <div
-      className="pointer-events-none absolute inset-y-0 right-0 z-20 flex w-full flex-col p-4 lg:w-[380px]"
+      className="pointer-events-none absolute inset-y-0 right-0 z-30 flex w-full flex-col p-4 lg:w-[520px]"
       data-testid={SubsystemDrawerTestId.Root}
     >
-      <div className="pointer-events-auto flex w-full flex-col">
+      <div className="pointer-events-auto flex h-full w-full flex-col">
         <Panel
           elevated
           aria-label={t("drawer.ariaLabel", { name: subsystem.name })}
           data-testid={SubsystemDrawerTestId.Panel}
           ref={panelRef}
           role="region"
-          // Viewport-bounded height with its own scroll — a computed value with
-          // no dedicated `Panel` prop, routed through its `style` passthrough
-          // (sanctioned per CLAUDE.md; a v1 simplification that scrolls the
-          // whole card as one unit rather than pinning the tab bar — still fine
-          // now that every tab (85-88) renders real, potentially long content).
-          style={{ maxHeight: "calc(100vh - 96px)", overflowY: "auto" }}
+          // Bounded to the height this root wrapper is actually given (its
+          // `inset-y-0` resolves against `ChatScreen`'s middle band, between
+          // the top bar and the composer — see `ChatScreen.tsx`'s outer/inner
+          // main-area split, Phase 99) with its own scroll — a computed value
+          // with no dedicated `Panel` prop, routed through its `style`
+          // passthrough (sanctioned per CLAUDE.md). `100%` (not a viewport
+          // `calc`) so the cap always matches that band exactly, however tall
+          // the top bar/composer render — the old `calc(100vh - 96px)` guessed
+          // a fixed reserve that was shorter than the actual chrome, so the
+          // panel's bottom (and the GatesTab "Add rule" button at the end of
+          // it) spilled past this wrapper into the composer's band. Still a
+          // v1 simplification that scrolls the whole card as one unit rather
+          // than pinning the tab bar — fine now that every tab (85-88) renders
+          // real, potentially long content.
+          style={{ maxHeight: "100%", overflowY: "auto" }}
           tabIndex={-1}
         >
           {/* The DS `Container` (not a raw `div`) so the per-subsystem gradient
