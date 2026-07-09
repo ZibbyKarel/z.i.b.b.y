@@ -91,3 +91,79 @@ export function hubForId(
 function round(n: number): number {
   return Math.round(n * 1_000_000) / 1_000_000;
 }
+
+// --- Phase 96: the "mitosis" entry animation --------------------------------
+//
+// Pure timing/easing math for the one-shot entry fork (the 8 mini-orbs budding
+// out of the central orb on mount). No `three` import — the scene controller
+// drives `THREE.Vector3`/`.scale` lerps from the `[0,1]` progress this returns;
+// this module only owns the WHEN, not the WebGL.
+
+/** Default total wall-clock duration (seconds) for the whole ripple — every
+ * index (including the last-starting one) reaches progress 1 by exactly this
+ * many seconds, regardless of `stagger`/`count`. Mid the plan's 1.2-1.8s band. */
+export const MITOSIS_TOTAL_DURATION = 1.5;
+
+/** Default per-index stagger (seconds) — mini-orb `index` starts travelling at
+ * `index * stagger`. 8 orbs × 0.09s spans a 0.63s ripple before the last orb
+ * even starts, well inside {@link MITOSIS_TOTAL_DURATION}. */
+export const MITOSIS_STAGGER = 0.09;
+
+/**
+ * Cubic ease-out — monotonic and stays in `[0, 1]` for `t` in `[0, 1]`. The
+ * default easing for {@link mitosisProgress}: safe to drive a `scale` or
+ * `position` lerp directly with no dip or overshoot.
+ */
+export function easeOutCubic(t: number): number {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+/**
+ * Back ease-out — overshoots past 1 (peaking ~1.10 around `t≈0.58` for the
+ * standard `c1 = 1.70158` constant used here) before settling back to exactly
+ * 1 at `t = 1` — the "division wobble" / settle-with-overshoot read the phase
+ * plan asks for. NOT monotonic near the tail (it rises past 1, then eases back
+ * down) — only pass this to {@link mitosisProgress} for a visual flourish, not
+ * anywhere a strictly monotonic `[0,1]` progress is required.
+ */
+export function easeOutBack(t: number): number {
+  const c1 = 1.70158;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+}
+
+export interface MitosisOptions {
+  /** Total duration (seconds) for the whole staggered ripple. Default
+   * {@link MITOSIS_TOTAL_DURATION}. */
+  totalDuration?: number;
+  /** Per-index stagger (seconds). Default {@link MITOSIS_STAGGER}. */
+  stagger?: number;
+  /** Easing applied to each mini-orb's own local `[0,1]` progress. Default
+   * {@link easeOutCubic}. Pass {@link easeOutBack} for a touch of overshoot. */
+  easing?: (t: number) => number;
+}
+
+/**
+ * Mini-orb `index`'s entry progress at wall-clock `elapsed` seconds, in
+ * `[0, 1]` (or briefly past it with an overshooting `easing`) — pure, no
+ * WebGL, so it's unit-testable standalone. `index` starts travelling at
+ * `index * stagger` and reaches its own local 1 after `totalDuration -
+ * (count - 1) * stagger` seconds of travel, so EVERY index reaches exactly 1
+ * by `totalDuration` regardless of `count`/`stagger` — the ripple stays one
+ * bounded beat instead of a slow crawl for later indices. Before its own
+ * staggered start, always exactly 0.
+ */
+export function mitosisProgress(
+  elapsed: number,
+  index: number,
+  count: number,
+  opts: MitosisOptions = {},
+): number {
+  const totalDuration = opts.totalDuration ?? MITOSIS_TOTAL_DURATION;
+  const stagger = opts.stagger ?? MITOSIS_STAGGER;
+  const easing = opts.easing ?? easeOutCubic;
+  const start = index * stagger;
+  const perOrbDuration = Math.max(totalDuration - Math.max(count - 1, 0) * stagger, 1e-6);
+  const local = Math.min(Math.max((elapsed - start) / perOrbDuration, 0), 1);
+  return easing(local);
+}

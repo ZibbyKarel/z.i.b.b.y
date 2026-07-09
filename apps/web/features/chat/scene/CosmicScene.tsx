@@ -164,6 +164,7 @@ export function CosmicScene({
           without a controller (jsdom), so component tests stay WebGL-free. */}
       <SubsystemOrbsOverlay
         onSelect={onSelectSubsystem}
+        reducedMotion={reducedMotion}
         selectedId={selectedSubsystemId}
         subscribe={controller?.subscribeProjections}
         subsystems={subsystems}

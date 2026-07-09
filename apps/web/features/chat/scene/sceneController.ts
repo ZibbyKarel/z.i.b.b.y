@@ -1,7 +1,14 @@
 import { SUBSYSTEMS, type SubsystemId } from "@zibby/contracts";
 import * as THREE from "three";
 import { type BackgroundLayer, createBackgroundLayer } from "./backgroundLayer";
-import { hubSlots, octagonSlots } from "./clusterGeometry";
+import {
+  MITOSIS_TOTAL_DURATION,
+  easeOutBack,
+  easeOutCubic,
+  hubSlots,
+  mitosisProgress,
+  octagonSlots,
+} from "./clusterGeometry";
 import { type DockLayer, createDockLayer } from "./dockLayer";
 import { type OrbTarget, miniOrbTarget, orbTarget } from "./modeVisuals";
 import { type OrbLayer, createOrbLayer } from "./orbLayer";
@@ -44,6 +51,20 @@ export interface SceneController {
   resume(): void;
   /** Tear down the loop, remove the canvas, and free all GPU resources. */
   dispose(): void;
+  /** DEV/TESTING ONLY (phase 96) — replay the one-shot mitosis entry animation
+   * from the current frame, as if the controller had just been created. A
+   * no-op under reduced motion (there is nothing to replay — the contract is
+   * "no motion"). Lets visual verification retrigger the fork without a full
+   * page reload (whose navigation overhead makes reload-based timing
+   * unreliable). Exposed on `window.__cosmicScene` outside production. */
+  replayEntry(): void;
+  /** DEV/TESTING ONLY (phase 96) — freeze the RAF loop and force the entry
+   * animation to an EXACT elapsed time `t` (seconds), rendering once so a
+   * screenshot captures a deterministic frame regardless of real wall-clock or
+   * tool round-trip timing (unlike `replayEntry`, which keeps advancing in real
+   * time). A no-op under reduced motion. Call `resume()` to return to normal
+   * playback afterward. Exposed on `window.__cosmicScene` outside production. */
+  scrubEntry(t: number): void;
 }
 
 /** How much a token chunk bumps energy (per char, capped). Tuned so a typical
@@ -84,6 +105,29 @@ const ORB_SCALE = 0.46;
 const MINI_ORB_WORLD_RADIUS = 0.16;
 const NODE_RING_RADIUS = 0.85;
 const HUB_RADIUS = 0.7;
+
+// Phase 96 — the one-shot "mitosis" entry animation: on controller creation the
+// 8 mini-orbs bud out of the central orb (cluster-local origin) and travel to
+// their NODE_RING_RADIUS octagon slot while growing from scale 0 to
+// MINI_ORB_WORLD_RADIUS, staggered per index (see clusterGeometry's
+// mitosisProgress). Purely additive on top of the phase-95 rest state: once
+// every mini-orb's progress reaches 1, everything below snaps to its exact rest
+// value and is never touched again (no re-trigger).
+/** The net's rest opacity (phase 95's `netMaterial` value) — single source so
+ * the entry fade-in and its final snap-back can never drift from the rest look. */
+const NET_OPACITY = 0.6;
+/** The net starts this fraction of its final scale (a gentle scale-in, not a
+ * pop) at the moment it begins to fade in. */
+const NET_ENTRY_START_SCALE = 0.85;
+/** The net stays fully invisible for the first half of the entry animation,
+ * then fades/scales in over the second half — it must never draw to empty
+ * space while the mini-orbs are still bunched near the centre. */
+const NET_FADE_START_FRACTION = 0.5;
+/** Central-orb "division" impulse (a brief scale pop at entry t≈0, decaying
+ * fast) that sells the mitosis moment without lingering into the travel phase. */
+const ENTRY_IMPULSE_PEAK = 0.15;
+const ENTRY_IMPULSE_DECAY_RATE = 10; // 1/s — ~0 well before ENTRY_IMPULSE_WINDOW
+const ENTRY_IMPULSE_WINDOW = 0.6; // s
 
 /**
  * How far up (world Y) the whole `cluster` group (central orb + mini-orbs + net) is
@@ -191,7 +235,10 @@ export function createSceneController(
   interface MiniOrb {
     id: SubsystemId;
     layer: OrbLayer;
-    /** The mini-orb's world centre (for projection) — cluster-local + CLUSTER_Y. */
+    /** Scratch target for the mini-orb's LIVE world centre (for projection) —
+     * `computeProjections` overwrites this every call via `getWorldPosition`
+     * (phase 96: tracks the entry animation, not just the rest slot). The
+     * constructor value below is just its allocation, immediately stale. */
     worldPos: THREE.Vector3;
     /** The per-state target it eases toward; defaults to `klid` until setSubsystems. */
     target: OrbTarget;
@@ -244,12 +291,92 @@ export function createSceneController(
     // not ambient sky. Additive over the dark nebula gives it a clean glow.
     color: new THREE.Color(resolveForegroundFaintHex()),
     transparent: true,
-    opacity: 0.6,
+    opacity: NET_OPACITY,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   });
   const net = new THREE.LineSegments(netGeometry, netMaterial);
   cluster.add(net);
+
+  // --- Phase 96 entry ("mitosis") animation state. Reduced motion → skip the
+  // clock entirely and leave everything at the rest state it was just built in
+  // (mini-orbs at their slots, net at full opacity/scale, core at ORB_SCALE). ---
+  let entryActive = !initial.reducedMotion;
+  let entryElapsed = 0;
+  /** Collapse the mini-orbs into the central orb and hide the net — the
+   * "before mitosis" state {@link entryActive}'s per-frame block then animates
+   * out of. Shared by the initial setup (below) and `replayEntry`. */
+  function collapseForEntry() {
+    for (const mini of minis) {
+      mini.layer.object3d.position.set(0, 0, 0);
+      mini.layer.object3d.scale.setScalar(0);
+    }
+    netMaterial.opacity = 0;
+    net.scale.setScalar(NET_ENTRY_START_SCALE);
+  }
+  if (entryActive) {
+    // Collapse right away so the very FIRST rendered frame already shows the
+    // "before mitosis" state, not one frame of the phase-95 rest look followed
+    // by a visible pop backward.
+    collapseForEntry();
+  }
+  /**
+   * Apply the entry animation's visual state for an EXACT elapsed time `t`
+   * (mini-orb positions/scales, the net's fade/scale-in, the central-orb
+   * impulse) — a pure function of `t` over the mutable three.js state, with no
+   * side effect on `entryElapsed` itself. Returns whether every mini-orb has
+   * reached progress 1 (i.e. the whole ripple is done at `t`). Shared by the
+   * per-frame tick (which calls it with the accumulating `entryElapsed`) and
+   * {@link SceneController.scrubEntry} (dev/testing — calls it with an
+   * arbitrary `t` for a deterministic single-frame render).
+   */
+  function applyEntryAt(t: number): boolean {
+    let allDone = true;
+    for (let i = 0; i < minis.length; i++) {
+      const mini = minis[i]!;
+      const slot = nodeSlots[i]!;
+      const p = mitosisProgress(t, i, minis.length, { easing: easeOutBack });
+      if (p < 1) allDone = false;
+      // lerp(origin=(0,0), slot, p) — origin is the cluster-local (0,0), so
+      // this is literally `slot * p`; a p briefly > 1 (easeOutBack's
+      // overshoot) reads as a slight overshoot-then-settle past the slot.
+      mini.layer.object3d.position.set(slot.x * p, slot.y * p, 0);
+      mini.layer.object3d.scale.setScalar(Math.max(MINI_ORB_WORLD_RADIUS * p, 0));
+    }
+
+    // The net fades/scales in over the second half of the entry window — it
+    // never renders to empty space while the mini-orbs are still near the
+    // centre.
+    const netStart = MITOSIS_TOTAL_DURATION * NET_FADE_START_FRACTION;
+    const netLocal = (t - netStart) / (MITOSIS_TOTAL_DURATION - netStart);
+    const netP = easeOutCubic(Math.min(Math.max(netLocal, 0), 1));
+    netMaterial.opacity = NET_OPACITY * netP;
+    net.scale.setScalar(NET_ENTRY_START_SCALE + (1 - NET_ENTRY_START_SCALE) * netP);
+
+    // A brief, colour-neutral scale impulse on the central orb at t≈0 — decays
+    // fast, well before the mini-orbs finish travelling.
+    const impulse =
+      t < ENTRY_IMPULSE_WINDOW ? ENTRY_IMPULSE_PEAK * Math.exp(-t * ENTRY_IMPULSE_DECAY_RATE) : 0;
+    core.scale.setScalar(ORB_SCALE * (1 + impulse));
+
+    return allDone;
+  }
+  /** Snap every entry-animated transform to its exact rest value and stop the
+   * clock — called once, either naturally (all mini-orbs' progress reached 1)
+   * or immediately if reduced motion is asserted mid-flight. Idempotent-safe:
+   * once `entryActive` is false the frame loop never calls this again. */
+  function finishEntry() {
+    entryActive = false;
+    for (let i = 0; i < minis.length; i++) {
+      const mini = minis[i]!;
+      const slot = nodeSlots[i]!;
+      mini.layer.object3d.position.set(slot.x, slot.y, 0);
+      mini.layer.object3d.scale.setScalar(MINI_ORB_WORLD_RADIUS);
+    }
+    netMaterial.opacity = NET_OPACITY;
+    net.scale.setScalar(1);
+    core.scale.setScalar(ORB_SCALE);
+  }
 
   // --- Dock (Tier 5): a DOM bar of the running/queued agents & pipelines. ---
   const dockRoot = document.createElement("div");
@@ -277,10 +404,15 @@ export function createSceneController(
   function computeProjections() {
     const w = container.clientWidth || 1;
     const h = container.clientHeight || 1;
-    // Ensure the camera matrices are current regardless of call order relative to
-    // render (drift moves the camera every frame) — cheap for a single camera.
+    // Ensure the camera AND the cluster's matrices are current regardless of
+    // call order relative to render (drift moves the camera every frame, and
+    // the phase-96 entry animation moves the mini-orbs) — cheap: the orb scene
+    // graph is small, and `subscribeProjections` also fires this before the
+    // very first render (mount), where the mini-orbs' matrixWorld would
+    // otherwise still be the identity from construction.
     camera.updateMatrixWorld();
     camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
+    cluster.updateMatrixWorld();
     // The camera's world-space right axis (drift rotates it slightly) — offset the
     // edge sample along it so the on-screen radius is measured across the screen,
     // not along a fixed world axis.
@@ -288,8 +420,16 @@ export function createSceneController(
     for (let i = 0; i < minis.length; i++) {
       const mini = minis[i]!;
       const proj = projections[i]!;
+      // Phase 96: read the LIVE world position + radius off the group itself
+      // (rather than a stale value cached at rest) so the DOM overlay's
+      // hit-target/label/badge track the mitosis entry animation frame-by-frame,
+      // not just the phase-95 static rest slot. `mini.worldPos` is reused as the
+      // write target (allocation-light) — at rest this is numerically identical
+      // to the old cached value, so nothing changes once the entry settles.
+      mini.layer.object3d.getWorldPosition(mini.worldPos);
+      const liveRadius = mini.layer.object3d.scale.x;
       projCenter.copy(mini.worldPos).project(camera);
-      projEdge.copy(mini.worldPos).addScaledVector(cameraRight, MINI_ORB_WORLD_RADIUS).project(camera);
+      projEdge.copy(mini.worldPos).addScaledVector(cameraRight, liveRadius).project(camera);
       const cx = (projCenter.x * 0.5 + 0.5) * w;
       const cy = (-projCenter.y * 0.5 + 0.5) * h;
       const ex = (projEdge.x * 0.5 + 0.5) * w;
@@ -349,6 +489,22 @@ export function createSceneController(
     for (const mini of minis) {
       mini.layer.object3d.visible = mini.present;
       if (mini.present) mini.layer.update(dt, mini.target, inputs.reducedMotion, 0);
+    }
+
+    // Phase 96: the one-shot mitosis entry — overrides each mini-orb GROUP's
+    // position/scale (never its internal mesh, updated above) until every
+    // index's staggered progress reaches 1, then hands back to the static rest
+    // placement for good (see `finishEntry`, no re-trigger).
+    if (entryActive) {
+      if (inputs.reducedMotion) {
+        // Reduced motion asserted mid-flight (rare) — snap to rest immediately,
+        // honoring "no travel, no scale-in, no impulse" even if it changes
+        // after the fork already started.
+        finishEntry();
+      } else {
+        entryElapsed += dt;
+        if (applyEntryAt(entryElapsed)) finishEntry();
+      }
     }
 
     // Gentle camera parallax — disabled under reduced motion.
@@ -422,6 +578,22 @@ export function createSceneController(
     },
     resume() {
       start();
+    },
+    replayEntry() {
+      if (inputs.reducedMotion) return; // nothing to replay — no-motion contract
+      collapseForEntry();
+      entryElapsed = 0;
+      entryActive = true;
+    },
+    scrubEntry(t) {
+      if (inputs.reducedMotion) return; // nothing to scrub — no-motion contract
+      running = false;
+      cancelAnimationFrame(rafId);
+      entryActive = true;
+      entryElapsed = Math.max(t, 0);
+      applyEntryAt(entryElapsed);
+      orbRenderer.render(orbScene, camera);
+      emitProjections();
     },
     dispose() {
       if (disposed) return;

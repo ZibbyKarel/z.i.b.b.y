@@ -6,6 +6,15 @@ import { useTranslations } from "next-intl";
 import { type KeyboardEvent, useEffect, useRef } from "react";
 import type { SubsystemProjection } from "./sceneTypes";
 
+/** How long (ms) after mount the visible label/badge fade-in waits before it
+ * starts — timed to roughly land inside the second half of the WebGL mitosis
+ * entry animation (phase 96; see `sceneController`'s `NET_FADE_START_FRACTION`
+ * × `MITOSIS_TOTAL_DURATION`), so labels don't fly across the screen still
+ * attached to their still-travelling orb. The hit-target itself is never
+ * delayed — only the visible label/badge opacity. */
+const LABEL_FADE_DELAY_MS = 900;
+const LABEL_FADE_TRANSITION = "opacity 300ms ease-out";
+
 export enum SubsystemOrbsOverlayTestId {
   /** The overlay root — the `pointer-events-none` group host over the WebGL scene. */
   Root = "subsystem-orbs-overlay",
@@ -34,6 +43,10 @@ export interface SubsystemOrbsOverlayProps {
   onSelect: (id: SubsystemId) => void;
   /** Projection subscription from the scene controller — see {@link SubscribeProjections}. */
   subscribe?: SubscribeProjections;
+  /** Whether the operator asked the OS for reduced motion (phase 96) — skips the
+   * delayed label/badge fade-in entirely; they render at full opacity immediately,
+   * matching the WebGL scene's own reduced-motion "instant placement" contract. */
+  reducedMotion?: boolean;
 }
 
 /** Registry rank, for stable registry-order rendering regardless of feed order. */
@@ -65,9 +78,14 @@ export function SubsystemOrbsOverlay({
   selectedId = null,
   onSelect,
   subscribe,
+  reducedMotion = false,
 }: SubsystemOrbsOverlayProps) {
   const t = useTranslations("subsystems");
   const nodeRefs = useRef(new Map<SubsystemId, HTMLDivElement>());
+  // Phase 96: the wrapper around each node's visible label + badge (never the
+  // hit-target) — faded in imperatively so it doesn't fly across the screen
+  // still attached to its still-travelling WebGL orb.
+  const fadeRefs = useRef(new Map<SubsystemId, HTMLDivElement>());
 
   // Subscribe to projections and position each node imperatively — no per-frame
   // React state. Re-subscribes if `subscribe` changes (controller ready) — the
@@ -84,6 +102,25 @@ export function SubsystemOrbsOverlay({
     });
     return unsubscribe;
   }, [subscribe]);
+
+  // Phase 96: delay the visible label/badge fade-in so it lands roughly in the
+  // second half of the WebGL entry animation, not synchronized to the (still
+  // travelling) orb. One-shot — never replays on a later re-render. Reduced
+  // motion skips the delay entirely: labels render at full opacity from the
+  // start, matching the WebGL scene's own "instant placement" contract.
+  useEffect(() => {
+    if (reducedMotion) return;
+    for (const el of fadeRefs.current.values()) {
+      el.style.opacity = "0";
+      el.style.transition = LABEL_FADE_TRANSITION;
+    }
+    const timer = window.setTimeout(() => {
+      for (const el of fadeRefs.current.values()) el.style.opacity = "1";
+    }, LABEL_FADE_DELAY_MS);
+    return () => window.clearTimeout(timer);
+    // Re-fires only if reducedMotion flips — not per subsystems-list change
+    // (fadeRefs is a ref, so it's correctly excluded from the dep array).
+  }, [reducedMotion]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>, id: SubsystemId) => {
     if (event.key === "Enter" || event.key === " ") {
@@ -148,26 +185,36 @@ export function SubsystemOrbsOverlay({
               tabIndex={0}
             />
 
-            {/* Badge (top-right) — hlaseni ⇒ calm ok, ceka ⇒ urgent warn. */}
-            {badgeCount > 0 && (
-              <div
-                className={cn(
-                  "absolute left-0 top-0 flex h-[18px] min-w-[18px] translate-x-[9px] -translate-y-[18px] items-center justify-center rounded-full px-[5px] font-mono text-[10px] font-semibold text-background",
-                  badgeTone,
-                )}
-                data-testid={`${SubsystemOrbsOverlayTestId.Badge}-${s.id}`}
-              >
-                {badgeCount}
-              </div>
-            )}
-
-            {/* Name label — below the orb (offset by its projected radius + a gap). */}
+            {/* Phase 96: wraps the visible label + badge only (never the
+                hit-target above) so their opacity can fade in on a delay
+                without affecting layout or interactivity. */}
             <div
-              aria-hidden="true"
-              className="absolute left-0 top-0 -translate-x-1/2 translate-y-[calc(var(--orb-d,44px)/2_+_7px)] whitespace-nowrap font-mono text-[9px] text-foreground-dim"
-              data-testid={`${SubsystemOrbsOverlayTestId.Label}-${s.id}`}
+              ref={(el) => {
+                if (el) fadeRefs.current.set(s.id, el);
+                else fadeRefs.current.delete(s.id);
+              }}
             >
-              {s.name}
+              {/* Badge (top-right) — hlaseni ⇒ calm ok, ceka ⇒ urgent warn. */}
+              {badgeCount > 0 && (
+                <div
+                  className={cn(
+                    "absolute left-0 top-0 flex h-[18px] min-w-[18px] translate-x-[9px] -translate-y-[18px] items-center justify-center rounded-full px-[5px] font-mono text-[10px] font-semibold text-background",
+                    badgeTone,
+                  )}
+                  data-testid={`${SubsystemOrbsOverlayTestId.Badge}-${s.id}`}
+                >
+                  {badgeCount}
+                </div>
+              )}
+
+              {/* Name label — below the orb (offset by its projected radius + a gap). */}
+              <div
+                aria-hidden="true"
+                className="absolute left-0 top-0 -translate-x-1/2 translate-y-[calc(var(--orb-d,44px)/2_+_7px)] whitespace-nowrap font-mono text-[9px] text-foreground-dim"
+                data-testid={`${SubsystemOrbsOverlayTestId.Label}-${s.id}`}
+              >
+                {s.name}
+              </div>
             </div>
           </div>
         );
