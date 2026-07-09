@@ -1,48 +1,32 @@
 "use client";
 
-import { Container, Dropdown, type DropdownOption } from "@zibby/design-system";
-import { useTranslations } from "next-intl";
+import { Container } from "@zibby/design-system";
 import { useActiveProject } from "../context/ProjectProvider";
 import { useProjectsQuery } from "../queries";
+import { ProjectSelect } from "./ProjectSelect";
 
 export enum ProjectSwitcherTestId {
   Root = "project-switcher",
 }
 
 /**
- * Sentinel for "Bez projektu" (no-project). The DS `Dropdown` is a single-select
- * over string values and real project ids are non-empty, so `""` is safe.
- */
-const NO_PROJECT = "";
-
-/**
- * The one app-wide project switcher (Phase 24; began as Fáze 11) — a domain
- * composite mounted at a single consistent spot in the `AppShell` chrome (the top
- * bar, next to the breadcrumb), the same place on every screen. Always populated:
- * either a real project or "Bez projektu" — there is no "all projects" option.
- *
- * DS primitive decision: composed from the existing `Dropdown` (inline
- * single-select variant — the same primitive the `LanguageSwitcher` uses), so the
- * current selection stays permanently visible in the trigger. No new primitive.
+ * The standalone project switcher (Phase 24; began as Fáze 11) — a domain
+ * composite that used to be mounted at one consistent spot in the `AppShell` chrome
+ * (the top bar) and the chat header. Phase 102 relocated that control surface
+ * inline into `CommandLine` (via the same shared {@link ProjectSelect}) and
+ * unmounted this component from both hosts; it's kept as a generic standalone
+ * switcher for any future non-CommandLine host, not currently rendered anywhere.
  */
 export function ProjectSwitcher() {
-  const t = useTranslations("projects");
   const { activeProjectId, setActiveProject } = useActiveProject();
   const { data: projects = [] } = useProjectsQuery();
 
-  const options: DropdownOption<string>[] = [
-    { value: NO_PROJECT, label: t("switcherNoProject") },
-    ...projects.map((p) => ({ value: p.id, label: p.name })),
-  ];
-
   return (
     <Container data-testid={ProjectSwitcherTestId.Root} shrink={false}>
-      <Dropdown<string>
-        aria-label={t("switcherLabel")}
-        onChange={(value) => setActiveProject(value === NO_PROJECT ? null : value)}
-        options={options}
-        size="sm"
-        value={activeProjectId ?? NO_PROJECT}
+      <ProjectSelect
+        activeProjectId={activeProjectId}
+        onChange={setActiveProject}
+        projects={projects}
       />
     </Container>
   );

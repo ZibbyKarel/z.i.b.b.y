@@ -130,6 +130,7 @@ vi.mock("../../pipelines", async (importOriginal) => {
 import { useState } from "react";
 import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
 import { EntityHeroTestId, SearchBarTestId, SearchMenuTestId } from "@zibby/design-system";
+import { ProjectSwitcherTestId } from "../../projects/components/ProjectSwitcher";
 import { ChatScreen, ChatScreenTestId } from "./ChatScreen";
 import { CommandLineTestId } from "../../tasks/components/CommandLine/CommandLine";
 import { CosmicSceneTestId } from "../scene/CosmicScene";
@@ -196,6 +197,12 @@ describe("ChatScreen", () => {
     // exactly once (the live bubble gave way to the committed message).
     expect(screen.getByText("Jak se máš")).toBeInTheDocument();
     expect(screen.getByText("Mám se dobře.")).toBeInTheDocument();
+  });
+
+  it("has no standalone project switcher in the header — the composer's inline chip is the only way to change it (Phase 102)", () => {
+    renderWithProviders(<ChatScreenHarness />);
+    expect(screen.queryByTestId(ProjectSwitcherTestId.Root)).not.toBeInTheDocument();
+    expect(screen.getByTestId(CommandLineTestId.ProjectSelector)).toBeInTheDocument();
   });
 
   it("hides New chat on an empty thread and clears the transcript when used", async () => {

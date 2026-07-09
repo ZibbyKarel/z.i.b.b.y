@@ -37,7 +37,6 @@ import { useAgentsQuery } from "../../agents/queries/useAgentsQuery";
 import { useChainsQuery } from "../../chains";
 import { usePinsQuery } from "../../pins";
 import { usePipelineRunQuery, usePipelinesQuery } from "../../pipelines";
-import { ProjectSwitcher } from "../../projects";
 import { useRunAvatarMap, useRunGlyphMap, useRunsQuery } from "../../runs/queries/useRunsQuery";
 import { runAvatar, runGlyph } from "../../runs/run";
 import { useRunActions } from "../../runs/useRunActions";
@@ -413,7 +412,6 @@ export function ChatScreen({
         </Typography>
 
         <Stack align="center" direction="row" gap="100">
-          <ProjectSwitcher />
           <Container width="220px">
             <SearchBar
               ariaLabel={t("palette.openAria")}

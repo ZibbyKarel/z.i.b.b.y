@@ -27,7 +27,7 @@ import { createPortal } from "react-dom";
 import { useAgentsQuery } from "../../../agents";
 import { useLimitsQuery } from "../../../limits";
 import { usePipelinesQuery } from "../../../pipelines";
-import { useActiveProject, useProjectsQuery } from "../../../projects";
+import { ProjectSelect, useActiveProject, useProjectsQuery } from "../../../projects";
 import { useSubsystemsQuery } from "../../../subsystems/queries/useSubsystemsQuery";
 import { type TaskSubmitResult, useTaskSubmit } from "../../hooks/useTaskSubmit";
 import { INITIAL_LOOP_STATE, type LoopFormState, canSubmitLoop } from "../../loop";
@@ -50,6 +50,9 @@ export enum CommandLineTestId {
   Input = "command-line-input",
   Attach = "command-line-attach",
   Pin = "command-line-pin",
+  /** The inline project chip (Phase 102) that replaces the retired standalone
+   *  `ProjectSwitcher` — beside the attach `+` in the bottom control row. */
+  ProjectSelector = "command-line-project-selector",
   FileInput = "command-line-file-input",
   MentionMenu = "command-line-mention-menu",
   MentionItem = "command-line-mention-item",
@@ -466,7 +469,7 @@ export function CommandLine({
   const { data: pipelines = [] } = usePipelinesQuery();
   const { data: subsystems = [] } = useSubsystemsQuery();
   const { data: projects = [] } = useProjectsQuery();
-  const { activeProjectId } = useActiveProject();
+  const { activeProjectId, setActiveProject } = useActiveProject();
   const { data: limits } = useLimitsQuery();
   const resetsAt = limits?.rolling.resetsAt ?? null;
   // A stable "now" for this instance's lifetime — presets and the goal id's
@@ -1047,19 +1050,36 @@ export function CommandLine({
           </Container>
         )}
 
-        {/* Attach — pinned bottom-left INSIDE the input, over the reserved strip. */}
-        {showAttach && (
-          <Container bottom={CONTROLS_INSET} left={CONTROLS_INSET} position="absolute" zIndex={10}>
-            <Button
-              aria-label={t("commandLine.attachAria")}
-              data-testid={CommandLineTestId.Attach}
-              icon="plus"
-              intent="ghost"
-              onClick={openFilePicker}
-              size="sm"
-            />
-          </Container>
-        )}
+        {/* Attach + the inline project selector — pinned bottom-left INSIDE the
+            input, over the reserved strip. Phase 102: the project scope used to
+            live in the now-retired standalone `ProjectSwitcher` (HUD topbar + chat
+            header); it's a peer control here, right beside the attach `+`, so
+            every CommandLine host (the overview command bar, the chat composer,
+            NewTaskDialog's bare input) keeps a way to change it. */}
+        <Container bottom={CONTROLS_INSET} left={CONTROLS_INSET} position="absolute" zIndex={10}>
+          <Stack align="center" direction="row" gap="50">
+            {showAttach && (
+              <Button
+                aria-label={t("commandLine.attachAria")}
+                data-testid={CommandLineTestId.Attach}
+                icon="plus"
+                intent="ghost"
+                onClick={openFilePicker}
+                size="sm"
+              />
+            )}
+            <Container data-testid={CommandLineTestId.ProjectSelector} shrink={false}>
+              <Stack align="center" direction="row" gap="25">
+                <Icon name="code" size="xs" tone="faint" />
+                <ProjectSelect
+                  activeProjectId={activeProjectId}
+                  onChange={setActiveProject}
+                  projects={projects}
+                />
+              </Stack>
+            </Container>
+          </Stack>
+        </Container>
 
         {/* Run / Send — pinned bottom-right INSIDE the input, over the reserved strip. */}
         <Container bottom={CONTROLS_INSET} position="absolute" right={CONTROLS_INSET} zIndex={10}>

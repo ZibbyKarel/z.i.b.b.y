@@ -35,8 +35,6 @@ export interface MainLayoutProps {
   walletSlot?: ReactNode;
   taskSlot?: ReactNode;
   chatSlot?: ReactNode;
-  /** The app-wide project switcher (Fáze 11), threaded to the top bar. */
-  projectSlot?: ReactNode;
   /**
    * Persistent right rail, mirrored on the left navigation: when provided it
    * renders as a fixed-width aside that stays visible on every page.
@@ -53,7 +51,6 @@ export function MainLayout({
   walletSlot,
   taskSlot,
   chatSlot,
-  projectSlot,
   railSlot,
   children,
 }: MainLayoutProps) {
@@ -86,7 +83,6 @@ export function MainLayout({
           breadcrumb={breadcrumb}
           chatSlot={chatSlot}
           onToggleRail={railSlot ? () => setRailHidden(!railHidden) : undefined}
-          projectSlot={projectSlot}
           railHidden={railSlot ? railHidden : undefined}
           taskSlot={taskSlot}
           walletSlot={walletSlot}
