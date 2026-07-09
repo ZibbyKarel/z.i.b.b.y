@@ -21,9 +21,9 @@
 - [x] Detail projektu - odstranit z projektu pole "Cesta k rootu". _(Fáze 98: `path` je nyní volitelný v kontraktu — machine-local, odvozený ze Settings clone-base; pole odstraněno. Preferovaný model „naklonovat duplicitní repo vedle" zůstává v platnosti.)_
 - [x] Detail projektu - Kategorie se bude vybírat přes Selector _(Fáze 98: DS `SelectField`)_
 - [x] Detail projektu - Tlačítko "Klonovat" by mělo být ve stavu loading když se klonuje a né disabled. _(Fáze 98)_
-- [ ] Chat UI - detail subsystému by měl být širší aby se tam všely všechny informace v pohodě
-- [ ] Chat UI - detail subsystému nejde zavřít
-- [ ] Chat UI - detail subsystému - Tlačítko přidat pravidlo nelze zmáčknout
+- [x] Chat UI - detail subsystému by měl být širší aby se tam všely všechny informace v pohodě _(Fáze 99: `lg:w-[520px]`)_
+- [x] Chat UI - detail subsystému nejde zavřít _(Fáze 99: drawer vyzvednut z z-10 stacking kontextu na z-30 — close/Escape teď fungují)_
+- [x] Chat UI - detail subsystému - Tlačítko přidat pravidlo nelze zmáčknout _(Fáze 99: stejný stacking fix + Panel maxHeight 100 %)_
 - [ ] Chat UI - kliknutí na kartu tasku nalevo by mělo otevřít detail tasku přímo hned vedle karty nikoliv přesměrovat na stránku "/runs"
-- [ ] Chat UI - orby subsystémů by měly být obalené vlastním oktagonem, který bude spojený s oktagonem okolo hlavního Orbu krátkou čarou místo toho aby vedla čára od centrálního oktagonu do středu orbu sub systému
+- [x] Chat UI - orby subsystémů by měly být obalené vlastním oktagonem, který bude spojený s oktagonem okolo hlavního Orbu krátkou čarou místo toho aby vedla čára od centrálního oktagonu do středu orbu sub systému _(Fáze 101)_
 - [ ] Odstraníme globální selector projektu jak v HUD tak v Chat UI - projekt se bude vybírat přes inline selector v CommandLine komponentě
