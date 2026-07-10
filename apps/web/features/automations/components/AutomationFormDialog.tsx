@@ -1,22 +1,16 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Button, Dialog } from "@zibby/design-system";
+import { Button, Dialog, Stack } from "@zibby/design-system";
 import type { Automation } from "@zibby/contracts";
 import { slug } from "../../../utils/slug";
-import {
-  AutomationFormFields,
-  AutomationFormTestId,
-  type TargetOption,
-  useAutomationFormState,
-} from "./AutomationFormFields";
-
-// Re-exported so the tests and screens keep one import site for the testids.
-export { AutomationFormTestId };
+import { CommandLine } from "../../tasks/components/CommandLine/CommandLine";
+import type { TaskAttachmentSet } from "../../tasks/components/TaskAttachments";
+import type { TaskTarget } from "../../tasks";
+import { useAutomationFormState } from "./AutomationFormFields";
+import { TriggerFields } from "./TriggerFields";
 
 export interface AutomationFormDialogProps {
-  agents: ReadonlyArray<TargetOption>;
-  pipelines: ReadonlyArray<TargetOption>;
   onClose: () => void;
   /**
    * Emits the new automation body; the screen persists it. `system` is
@@ -26,53 +20,62 @@ export interface AutomationFormDialogProps {
   onCreate: (body: Omit<Automation, "lastFiredAt" | "system">) => void;
 }
 
+/** Trims the trailing/leading blanks off the FIRST non-empty line of the typed
+ *  instruction, capped so it stays a readable card title — never the whole
+ *  (potentially multi-paragraph) prompt. */
+function deriveName(text: string): string {
+  const firstLine = text.split("\n").find((line) => line.trim().length > 0) ?? text;
+  return firstLine.trim().slice(0, 60);
+}
+
 /**
- * The CREATE-ONLY automation dialog (N4f) — grammar: dialogs create and
- * confirm, nothing else. Editing an existing automation (including the
- * schedule-only system ones) lives on the `/automations/:id` detail page
- * ({@link ../DetailScreen}), which renders the same
- * {@link AutomationFormFields}.
+ * The CREATE-ONLY automation dialog (N4f — dialogs create and confirm,
+ * nothing else; Phase 116d redesign): the operator picks a schedule/trigger
+ * (via {@link TriggerFields}) and then types the instruction straight into
+ * {@link CommandLine} — which already knows how to `@`-mention an agent or
+ * pipeline and attach files. There is NO dialog-owned submit button: the
+ * CommandLine's own send action (label overridden to "Naplánovat"/"Schedule")
+ * both derives the automation's name from the typed text and persists it,
+ * via `onSubmit`'s send-delegation mode.
+ *
+ * Editing an existing automation (including the schedule-only system ones)
+ * lives on the `/automations/:id` detail page ({@link ../DetailScreen}),
+ * which still renders the older {@link AutomationFormFields}.
  */
-export function AutomationFormDialog({
-  agents,
-  pipelines,
-  onClose,
-  onCreate,
-}: AutomationFormDialogProps) {
+export function AutomationFormDialog({ onClose, onCreate }: AutomationFormDialogProps) {
   const t = useTranslations("automations");
   const form = useAutomationFormState();
 
-  const submit = () => {
+  const scheduleValid =
+    form.triggerType === "cron"
+      ? form.schedule.time.trim().length > 0 &&
+        (form.schedule.repeat === "monthly" || form.schedule.weekdays.length > 0)
+      : form.events.length > 0;
+
+  const save = (text: string, target?: TaskTarget, attachments?: TaskAttachmentSet) => {
+    const name = deriveName(text);
     onCreate({
-      id: slug(form.name, "automation"),
-      name: form.name.trim(),
+      id: slug(name, "automation"),
+      name,
       trigger: form.buildTrigger(),
-      target: form.buildTarget(),
-      // Top-level: always forwarded to whatever the target runs (agent prompt,
-      // research focus, briefing voice).
-      prompt: form.prompt.trim(),
+      target: {
+        type: "task",
+        text: text.trim(),
+        target,
+        attachmentSetId: attachments?.attachmentSetId,
+      },
       enabled: true,
     });
+    onClose();
   };
 
   return (
     <Dialog
       open
       actions={
-        <>
-          <Button intent="ghost" onClick={onClose}>
-            {t("cancel")}
-          </Button>
-          <Button
-            data-testid={AutomationFormTestId.Submit}
-            disabled={!form.canSave(false, { agents, pipelines })}
-            icon="plus"
-            intent="primary"
-            onClick={submit}
-          >
-            {t("create")}
-          </Button>
-        </>
+        <Button intent="ghost" onClick={onClose}>
+          {t("cancel")}
+        </Button>
       }
       ariaLabel={t("formCreateTitle")}
       closeLabel={t("close")}
@@ -80,7 +83,17 @@ export function AutomationFormDialog({
       title={t("formCreateTitle")}
       width="lg"
     >
-      <AutomationFormFields agents={agents} form={form} pipelines={pipelines} />
+      <Stack gap="200">
+        <TriggerFields form={form} />
+        <CommandLine
+          showAttach
+          chrome={false}
+          disabled={!scheduleValid}
+          onSubmit={save}
+          placeholder={t("commandLinePlaceholder")}
+          submitLabel={t("scheduleAction")}
+        />
+      </Stack>
     </Dialog>
   );
 }

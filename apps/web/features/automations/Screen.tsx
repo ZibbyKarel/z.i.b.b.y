@@ -49,6 +49,11 @@ export function Screen() {
       return { name: pipeline?.name ?? target.pipelineId, glyph: "flow" };
     }
     if (target.type === "memory-distill") return { glyph: "brain" };
+    if (target.type === "task") {
+      const kind = target.target?.kind;
+      const glyph: IconName = kind === "agent" ? "bot" : kind === "pipeline" ? "flow" : "spark";
+      return { name: target.target?.name ?? t("targetTask"), glyph };
+    }
     return { glyph: "spark" };
   };
 
@@ -101,12 +106,7 @@ export function Screen() {
   );
 
   const addModal = creating && (
-    <AutomationFormDialog
-      agents={agents}
-      onClose={() => setCreating(false)}
-      onCreate={onCreate}
-      pipelines={pipelines}
-    />
+    <AutomationFormDialog onClose={() => setCreating(false)} onCreate={onCreate} />
   );
 
   // Honest load states (Phase 18.2): a pending/failed automations fetch must never

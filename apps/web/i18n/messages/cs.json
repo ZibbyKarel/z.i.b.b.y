@@ -1537,6 +1537,8 @@
     "promptLabel": "Prompt",
     "promptHint": "Volitelné — předá se jako vstup tomu, co se spustí (zadání agenta, zaměření researche, tón briefingu).",
     "promptPlaceholder": "např. Zaměř research na AI agenty; briefing piš stručně",
+    "scheduleAction": "Naplánovat",
+    "commandLinePlaceholder": "Napiš, co má automatizace dělat — @zmiň agenta či pipelinu, přidej soubory…",
     "cancel": "Zrušit",
     "close": "Zavřít",
     "create": "Vytvořit automatizaci",

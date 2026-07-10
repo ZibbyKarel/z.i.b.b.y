@@ -1537,6 +1537,8 @@
     "promptLabel": "Prompt",
     "promptHint": "Optional — passed as input to whatever this runs (agent task, research focus, briefing tone).",
     "promptPlaceholder": "e.g. Focus the research on AI agents; keep the briefing terse",
+    "scheduleAction": "Schedule",
+    "commandLinePlaceholder": "Describe what the automation should do — @mention an agent or pipeline, attach files…",
     "cancel": "Cancel",
     "close": "Close",
     "create": "Create automation",

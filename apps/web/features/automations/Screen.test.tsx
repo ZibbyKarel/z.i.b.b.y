@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Automation } from "@zibby/contracts";
+import userEvent from "@testing-library/user-event";
 import { fireEvent, renderWithProviders as render, screen } from "../../test/render";
 import { Screen } from "./Screen";
 import { AutomationCardTestId } from "./components/AutomationCard";
-import { AutomationFormTestId } from "./components/AutomationFormDialog";
+import { AutomationFormTestId } from "./components/AutomationFormFields";
+import { CommandLineTestId } from "../tasks/components/CommandLine/CommandLine";
 
 const automation: Automation = {
   id: "morning-standup",
@@ -49,6 +51,33 @@ vi.mock("./mutations", () => ({
   useCreateAutomationMutation: () => ({ mutate: create, isPending: false }),
   useUpdateAutomationMutation: () => ({ mutate: update, isPending: false }),
   useTriggerAutomationMutation: () => ({ mutate: trigger, isPending: false }),
+}));
+// The create dialog (Phase 116d) renders the REAL `CommandLine` (not a stub) so
+// the "@-mention an agent/pipeline, attach files, Naplánovat saves" flow is
+// tested end-to-end — mirrors ChatScreen.test.tsx's own mocking pattern for the
+// same component: stub every query/mutation CommandLine reads so mounting it
+// never hits the network, but let the component itself run for real.
+vi.mock("../subsystems/queries/useSubsystemsQuery", () => ({
+  useSubsystemsQuery: () => ({ data: [] }),
+  getSubsystemsQueryKey: () => ["subsystems"],
+}));
+vi.mock("../projects/queries/useProjectsQuery", () => ({
+  useProjectsQuery: () => ({ data: [] }),
+  getProjectsQueryKey: () => ["projects"],
+}));
+vi.mock("../limits/queries/useLimitsQuery", () => ({
+  useLimitsQuery: () => ({
+    data: {
+      rolling: { usedPct: 10, resetsAt: null },
+      weekly: { usedPct: 5, resetsAt: null },
+      capturedAt: Date.now(),
+      stale: false,
+    },
+  }),
+  getLimitsQueryKey: () => ["limits"],
+}));
+vi.mock("../tasks/mutations/useUploadTaskAttachmentsMutation", () => ({
+  useUploadTaskAttachmentsMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 describe("Automations Screen", () => {
@@ -110,12 +139,39 @@ describe("Automations Screen", () => {
     expect(screen.queryByText("Upravit automatizaci")).toBeNull();
   });
 
-  it("opens the create dialog from the header action with the prompt always visible", () => {
+  it("opens the create dialog: schedule block + CommandLine, no dialog submit button", () => {
     render(<Screen />);
     fireEvent.click(screen.getByRole("button", { name: "Nová automatizace" }));
-    expect(screen.getByTestId(AutomationFormTestId.Submit)).toBeInTheDocument();
-    // The prompt is no longer agent-only — it's shown for every new automation.
-    expect(screen.getByTestId(AutomationFormTestId.Prompt)).toBeInTheDocument();
+    // The trigger/schedule block (extracted TriggerFields) is present…
+    expect(screen.getByText("Cron (Europe/Prague)")).toBeInTheDocument();
+    // …and so is CommandLine, in its bare (chrome={false}) shape.
+    expect(screen.getByTestId(CommandLineTestId.Root)).toBeInTheDocument();
+    expect(screen.getByTestId(CommandLineTestId.Input)).toBeInTheDocument();
+    // The dialog itself owns no submit/create button any more — only CommandLine's
+    // own send action (relabelled "Naplánovat") does.
+    expect(screen.queryByTestId(AutomationFormTestId.Submit)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Naplánovat" })).toBeInTheDocument();
+  });
+
+  it("submitting via CommandLine's Naplánovat action creates a task-target automation", async () => {
+    const user = userEvent.setup();
+    render(<Screen />);
+    fireEvent.click(screen.getByRole("button", { name: "Nová automatizace" }));
+
+    await user.type(screen.getByTestId(CommandLineTestId.Input), "Zkontroluj otevřené PR");
+    await user.click(screen.getByTestId(CommandLineTestId.Send));
+
+    expect(create).toHaveBeenCalledTimes(1);
+    const body = create.mock.calls[0]![0].body;
+    expect(body.name).toBe("Zkontroluj otevřené PR");
+    expect(body.enabled).toBe(true);
+    expect(body.trigger).toEqual({ type: "cron", expr: expect.any(String) });
+    expect(body.target).toEqual({
+      type: "task",
+      text: "Zkontroluj otevřené PR",
+      target: undefined,
+      attachmentSetId: undefined,
+    });
   });
 });
 

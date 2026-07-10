@@ -1,14 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import {
   Card,
   Container,
   Icon,
   type Schedule,
-  ScheduleField,
-  type SchedulePickerLabels,
   SegmentPickerField,
   SelectField,
   Stack,
@@ -16,16 +14,9 @@ import {
   TextInputField,
   Typography,
 } from "@zibby/design-system";
-import { AUTOMATION_EVENTS, type AutomationEvent } from "@zibby/contracts";
-import type { Automation, Target, Trigger } from "@zibby/contracts";
-import {
-  DEFAULT_SCHEDULE,
-  cronToSchedule,
-  dayName,
-  dayNameShort,
-  scheduleToCron,
-} from "../schedule";
-import { useCronLabel } from "../useCronLabel";
+import type { Automation, AutomationEvent, Target, Trigger } from "@zibby/contracts";
+import { DEFAULT_SCHEDULE, cronToSchedule, scheduleToCron } from "../schedule";
+import { TriggerFields } from "./TriggerFields";
 
 /** Testids for the automation form (the screens + tests select via these). */
 export enum AutomationFormTestId {
@@ -171,12 +162,6 @@ export function AutomationFormFields({
   isSystem = false,
 }: AutomationFormFieldsProps) {
   const t = useTranslations("automations");
-  const locale = useLocale();
-  const cronLabel = useCronLabel();
-
-  // The closed event catalog → multi-select options (the value IS the label: these are
-  // self-descriptive signal ids the operator picks from, not free text).
-  const eventOptions = AUTOMATION_EVENTS.map((e) => ({ value: e, label: e }));
 
   const targetList =
     form.targetType === "agent" ? agents : form.targetType === "pipeline" ? pipelines : [];
@@ -185,25 +170,6 @@ export function AutomationFormFields({
     ...targetList.map((o) => ({ value: o.id, label: o.name ?? o.id })),
   ];
   const targetValue = targetList.some((o) => o.id === form.targetId) ? form.targetId : "";
-
-  // Friendly-picker strings, localized. Weekday names come from the cron helper
-  // (0 = Sunday) so the UI and the scheduler agree on the index.
-  const scheduleLabels: Partial<SchedulePickerLabels> = {
-    repeat: {
-      weekly: t("schedule.weekly"),
-      monthly: t("schedule.monthly"),
-    },
-    weekdays: Array.from({ length: 7 }, (_, d) =>
-      dayName(d, locale),
-    ) as SchedulePickerLabels["weekdays"],
-    weekdaysShort: Array.from({ length: 7 }, (_, d) =>
-      dayNameShort(d, locale),
-    ) as SchedulePickerLabels["weekdaysShort"],
-    weekdaysLabel: t("schedule.weekdaysLabel"),
-    monthDayLabel: t("schedule.monthDayLabel"),
-    timeLabel: t("schedule.timeLabel"),
-    formatMonthDay: (day) => t("schedule.dayOfMonth", { day }),
-  };
 
   return (
     <Stack direction="col" gap="150">
@@ -228,37 +194,7 @@ export function AutomationFormFields({
         />
       )}
 
-      {!isSystem && (
-        <SegmentPickerField
-          label={t("triggerLabel")}
-          onValueChange={(v) => form.setTriggerType(v as TriggerType)}
-          options={[
-            { value: "cron", label: t("triggerCron") },
-            { value: "event", label: t("triggerEvent") },
-          ]}
-          value={form.triggerType}
-        />
-      )}
-      {form.triggerType === "cron" ? (
-        <ScheduleField
-          hint={cronLabel(form.expr)}
-          label={t("cronLabel")}
-          labels={scheduleLabels}
-          onValueChange={form.setSchedule}
-          value={form.schedule}
-        />
-      ) : (
-        <SelectField<AutomationEvent>
-          multi
-          hint={t("eventHint")}
-          label={t("eventLabel")}
-          onValueChange={form.setEvents}
-          options={eventOptions}
-          placeholder={t("eventPlaceholder")}
-          removeLabel={t("eventRemove")}
-          value={form.events}
-        />
-      )}
+      <TriggerFields form={form} isSystem={isSystem} />
 
       {/* Target is server-owned for system automations — only the schedule above moves. */}
       {!isSystem && (
