@@ -45,6 +45,40 @@ const driftPhases = (process.env.PIPELINE_DEMO_DRIFT_PHASES || "")
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Under full-suite CI load (many concurrent NestJS forks, each spawning stage
+// children that all touch the filesystem) a bare mkdir/writeFile can transiently
+// fail — EMFILE/ENFILE (fd exhaustion), EAGAIN (libuv threadpool saturation), EBUSY.
+// A real stage rides that out; the fixture must too. A spurious throw here exits the
+// child non-zero, which the runner scores as a stage `error` (not the intended
+// pass/gap) — so the qualify/verify back-edge burns a retry on infrastructure noise
+// and can PARK a run that should have gone green (the flaky delivery-chain e2e).
+// Retry only genuinely transient errno codes; a real error (bad path, ENOSPC) still
+// surfaces. This never masks an intentional failure: those exit(1) directly, below.
+const TRANSIENT_FS = new Set(["EMFILE", "ENFILE", "EAGAIN", "EBUSY", "ETIMEDOUT"]);
+async function withFsRetry(op) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await op();
+    } catch (err) {
+      if (attempt >= 12 || !TRANSIENT_FS.has(err?.code)) throw err;
+      await sleep(10 * (attempt + 1)); // ~10..130ms backoff, <1s worst case
+    }
+  }
+}
+const writeFileR = (file, data, opts) => withFsRetry(() => writeFile(file, data, opts));
+const mkdirR = (dir, opts) => withFsRetry(() => mkdir(dir, opts));
+// A "fired once" marker read: ENOENT means genuinely absent (first attempt); a
+// transient error is retried; anything else throws rather than silently reading as
+// absent (which would wrongly re-gap / re-fire on every dispatch).
+async function readMarker(marker) {
+  try {
+    return await withFsRetry(() => readFile(marker, "utf8"));
+  } catch (err) {
+    if (err?.code === "ENOENT") return null;
+    throw err;
+  }
+}
+
 // "Fired once" markers must survive a re-dispatch of the same phase. Stage
 // sandboxes are numbered per dispatch (P1-T1: 01_developer, 03_developer, …),
 // so the stage cwd is NOT stable across a loop back-edge or a limit resume —
@@ -66,9 +100,9 @@ async function main() {
   // which every re-dispatch shares, so the second attempt skips this and succeeds.
   if (limitPhases.includes(phaseId)) {
     const marker = path.join(runRoot, `.limit-fired-${phaseId}`);
-    const already = await readFile(marker, "utf8").catch(() => null);
+    const already = await readMarker(marker);
     if (already === null) {
-      await writeFile(marker, "1", "utf8");
+      await writeFileR(marker, "1", "utf8");
       const reset = Math.floor(Date.now() / 1000) + 2;
       console.error(`Claude AI usage limit reached|${reset}`);
       process.exit(1);
@@ -82,20 +116,20 @@ async function main() {
 
   if (producesRel) {
     const out = path.join(cwd, producesRel);
-    await mkdir(path.dirname(out), { recursive: true });
+    await mkdirR(path.dirname(out), { recursive: true });
     // Phase 45: append a <verdict> tag the runner's qualify gate parses. gapPhases
     // emit `gap` once (marker in the stable run root) then `pass`; driftPhases always
     // emit `drift`. A phase in neither set produces no tag → runner fails closed to gap.
     let verdict = "";
     if (gapPhases.includes(phaseId)) {
       const marker = path.join(runRoot, `.verdict-${phaseId}`);
-      const already = await readFile(marker, "utf8").catch(() => null);
+      const already = await readMarker(marker);
       verdict = `\n<verdict>${already === null ? "gap" : "pass"}</verdict>\n`;
-      if (already === null) await writeFile(marker, "1", "utf8");
+      if (already === null) await writeFileR(marker, "1", "utf8");
     } else if (driftPhases.includes(phaseId)) {
       verdict = `\n<verdict>drift</verdict>\n`;
     }
-    await writeFile(out, `output of ${phaseId} @ ${new Date().toISOString()}\n${verdict}`, "utf8");
+    await writeFileR(out, `output of ${phaseId} @ ${new Date().toISOString()}\n${verdict}`, "utf8");
     console.log(`Stage ${phaseId} produced ${producesRel}`);
   }
 
@@ -106,7 +140,7 @@ async function main() {
     process.env.PIPELINE_DEMO_EMIT_LEARNED === phaseId
   ) {
     const learned = path.join(cwd, "learned.md");
-    await writeFile(
+    await writeFileR(
       learned,
       `# Learned\n\n- Demo learning from stage ${phaseId}: the delivery loop runs end to end.\n`,
       "utf8",
@@ -122,6 +156,8 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(`Stage ${phaseId} crashed: ${err?.message ?? err}`);
+  // Surface the errno so a genuine crash (as opposed to an intentional exit(1)) is
+  // diagnosable from the stage log — transient FS errors are already retried above.
+  console.error(`Stage ${phaseId} crashed: ${err?.code ?? ""} ${err?.message ?? err}`);
   process.exit(1);
 });

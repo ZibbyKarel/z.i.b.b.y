@@ -596,11 +596,15 @@ describe("Pipelines API (e2e)", () => {
 
         // architekt → koder → review (qualify) → verify → dokumentator → pr-autor,
         // green → done (the current seed: verify IS the deterministic Tester; the old
-        // n-9 test-automator phase no longer exists).
+        // n-9 test-automator phase no longer exists). Poll to any TERMINAL state, not
+        // just `done`: a spurious park (e.g. a stage child that died on transient CI
+        // load) then fails fast with the real status instead of burning the whole
+        // window on an opaque `until: timed out`. The 50s budget stays under this
+        // test's 60s override so a merely-slow-under-load chain still has headroom.
         const done = await until(async () => {
           const res = app.get(PipelineRunnerService).get(pipelineRunId);
-          return res.status === "done" ? res : null;
-        });
+          return res.status !== "running" ? res : null;
+        }, 50000);
         expect(done.status).toBe("done");
 
         // The full handoff chain exists in the run tree (verify produces nothing).
