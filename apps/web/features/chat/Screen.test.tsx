@@ -168,15 +168,17 @@ describe("chat Screen — reload hydration", () => {
   });
 
   it(
-    "KNOWN GAP (review finding #1): an eager ensureConversation() mint strands the " +
-      "server's active thread instead of adopting it on cold start",
+    "resolves review finding #1: an eager ensureConversation() mint no longer strands " +
+      "the server's active thread — it still adopts it on cold start",
     () => {
       // Reproduces 03_review/review.md finding #1: with empty localStorage AND a
       // pre-existing server active thread, the mount effect's `ensureConversation()`
-      // mints a client id before the no-id query resolves. The query key then
-      // switches to that client id, which the store `ensureMeta`s into a fresh
-      // EMPTY thread (never marked active) — so the server's real active thread
-      // (2 messages) is stranded, not adopted.
+      // mints a client id before the no-id query resolves. Plan §7 edge case 1 calls
+      // for adopting the server's real active thread (2 messages) regardless — and
+      // the hydration effect (declared after the mint effect, so it runs and
+      // commits its `setConversationId`/`setMessages` last in the same effect
+      // flush) does exactly that: it overwrites the client mint with the transcript
+      // query's authoritative `conversationId`, per `hydratedFor`'s one-shot guard.
       chatState.conversationId = null;
       chatState.autoMint = true; // mirrors the real ensureConversation firing on mount
       transcriptByKey.clear();
@@ -188,11 +190,8 @@ describe("chat Screen — reload hydration", () => {
 
       render(<Screen />);
 
-      // This is the CURRENT (buggy) outcome, not the desired one — plan §7 edge
-      // case 1 calls for adopting conv_server/2 messages here. Pinned so a fix for
-      // finding #1 shows up as a test change here rather than silently.
-      expect(screen.getByTestId("conversation-id")).toHaveTextContent("conv_client");
-      expect(screen.getByTestId("message-count")).toHaveTextContent("0");
+      expect(screen.getByTestId("conversation-id")).toHaveTextContent("conv_server");
+      expect(screen.getByTestId("message-count")).toHaveTextContent("2");
     },
   );
 });

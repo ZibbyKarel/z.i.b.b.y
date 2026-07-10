@@ -192,13 +192,23 @@ describe("RunDetail — pipeline header", () => {
 
   it("shows a formatted cost meta cell when costUsd is set", () => {
     renderDetail({ ...pipelineRun, costUsd: 0.2934669 });
-    expect(screen.getByText("cena (odhad)")).toBeInTheDocument();
+    expect(screen.getByText("cena")).toBeInTheDocument();
     expect(screen.getByText("$0.29")).toBeInTheDocument();
   });
 
   it("omits the cost cell entirely when costUsd is absent", () => {
     renderDetail();
-    expect(screen.queryByText("cena (odhad)")).not.toBeInTheDocument();
+    expect(screen.queryByText("cena")).not.toBeInTheDocument();
+  });
+
+  it("carries the written-back task outcome on the task meta cell when the title differs from the headline", () => {
+    renderDetail({
+      ...pipelineRun,
+      title: "Pipeline run headline",
+      taskTitle: "Oprav rozbitý test",
+      taskOutcome: "done",
+    });
+    expect(screen.getByText(/Oprav rozbitý test → úspěch/)).toBeInTheDocument();
   });
 
   it("shows the total run duration once the task outcome carries a finish time", () => {

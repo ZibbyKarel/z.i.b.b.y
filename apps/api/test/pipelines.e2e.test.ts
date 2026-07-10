@@ -151,7 +151,7 @@ describe("Pipelines API (e2e)", () => {
     expect(handoff).toContain("output of a");
   });
 
-  it("records a delivery's learned.md as a knowledge note linked from the project MOC (Phase 4)", async () => {
+  it("records a delivery as a daily line with the project backlink, but NO learned.md knowledge note (Phase 108 retired fileLearned)", async () => {
     const today = new Date().toISOString().slice(0, 10);
     const project = await request(app.getHttpServer())
       .post("/api/projects")
@@ -168,6 +168,10 @@ describe("Pipelines API (e2e)", () => {
       .send({ id: "learnpipe", phases: [phase("doc")], instructions: "deliver" })
       .expect(201);
 
+    // The stage still emits a learned.md artifact (a Dokumentátor phase can produce
+    // one) — Phase 108 retired only `RunRecorderService.fileLearned`'s promotion of
+    // it into a vault knowledge note; the nightly `MemoryDistillerService` is now the
+    // sole write path for run-derived learnings (see docs/plans/phase-105-…, item 5).
     process.env.PIPELINE_DEMO_EMIT_LEARNED = "doc";
     let pipelineRunId: string;
     try {
@@ -188,22 +192,20 @@ describe("Pipelines API (e2e)", () => {
       if (res.status !== 200) return null;
       return res.body.body?.includes(pipelineRunId) ? res.body : null;
     });
-    expect(daily.body).toContain(`[[${learnedId}]]`);
+    expect(daily.body).toContain(`pipeline ${pipelineRunId} (learnpipe) → done`);
     expect(daily.body).toContain(`[[${projectId}]]`);
+    // No learned-note backlink was ever written.
+    expect(daily.body).not.toContain(`[[${learnedId}]]`);
 
-    // The learned note is filed in knowledge/ and the project MOC links it.
-    const learned = await request(app.getHttpServer())
-      .get(`/api/memory/note/${learnedId}`)
-      .expect(200);
-    expect(learned.body.tier).toBe("knowledge");
-    expect(learned.body.frontmatter.source).toBe(pipelineRunId);
+    // No learned note was filed, and the project MOC carries no backlink to it.
+    await request(app.getHttpServer()).get(`/api/memory/note/${learnedId}`).expect(404);
     const moc = await request(app.getHttpServer()).get(`/api/memory/note/${projectId}`).expect(200);
-    expect(moc.body.links).toContain(learnedId);
+    expect(moc.body.links).not.toContain(learnedId);
 
-    // The graph gained the note + the MOC→learned edge.
+    // The graph never gained a learned-note node or a MOC→learned edge.
     const graph = await request(app.getHttpServer()).get("/api/memory/graph").expect(200);
-    expect(graph.body.nodes.map((n: { id: string }) => n.id)).toContain(learnedId);
-    expect(graph.body.edges).toContainEqual({ from: projectId, to: learnedId });
+    expect(graph.body.nodes.map((n: { id: string }) => n.id)).not.toContain(learnedId);
+    expect(graph.body.edges).not.toContainEqual({ from: projectId, to: learnedId });
 
     // Restart-shaped dedup: a fresh app over the same data dir sweeps terminal runs
     // on bootstrap, but the marker means it never writes a second daily line.
@@ -212,8 +214,6 @@ describe("Pipelines API (e2e)", () => {
       const after = await request(app2.getHttpServer())
         .get(`/api/memory/note/${today}`)
         .expect(200);
-      // Count the daily-line prefix (the runId also appears inside [[learned-…]], so
-      // a naive runId count would be 2 per line — match the line start instead).
       const lines = after.body.body.split(`pipeline ${pipelineRunId} (`).length - 1;
       expect(lines).toBe(1);
     } finally {
@@ -887,6 +887,13 @@ describe("PR gate on a git project (claude mode, e2e)", () => {
     await git(repo, "commit", "-m", "initial");
     await exec("git", ["init", "--bare", bare]);
     await git(repo, "remote", "add", "origin", bare);
+    // Push the initial commit so `origin/main` actually exists before the pipeline
+    // runs: `createWorktree` fetches `origin` and cuts from `origin/<default>` (only
+    // degrading to local HEAD when the fetch itself fails, e.g. offline) — a bare
+    // remote with zero refs makes the later `git rev-parse origin/main` fail, which
+    // is not the "offline" case the graceful fallback covers. A real registered
+    // project's origin always already has its default branch pushed.
+    await git(repo, "push", "-u", "origin", "main");
 
     process.env.PIPELINES_DIR = p;
     process.env.PIPELINE_RUNS_DIR = r;

@@ -10,8 +10,31 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { Fragment } from "react";
-import { type Pipeline, glyphForPhase } from "../../../../domain";
+import { type Pipeline, type PipelineState, glyphForPhase } from "../../../../domain";
+import { RunStateBadge } from "../../../runs/components/RunStateBadge";
+import { type FeedStatus } from "../../../runs/run";
 import { PipelineOwnerChip } from "./PipelineOwnerChip";
+
+/**
+ * Pipeline states map onto the canonical run-state tone/glyph (`RUN_STATE` in
+ * `features/runs/run.ts`, via {@link RunStateBadge}) — one shared source of
+ * tone/pulse so this can't re-diverge from the runs feed's coloring (that
+ * divergence is why phase 42 deleted the old forked `stateMeta` map). The
+ * label itself keeps its own pipeline-specific Czech phrasing (`stateDone` /
+ * `stateParked` / `stateFailed` / `stateRunning`).
+ */
+const PIPELINE_STATE_TO_FEED_STATUS: Record<PipelineState, FeedStatus> = {
+  done: "done",
+  parked: "parked",
+  failed: "error",
+  running: "running",
+};
+const PIPELINE_STATE_LABEL_KEY = {
+  done: "stateDone",
+  parked: "stateParked",
+  failed: "stateFailed",
+  running: "stateRunning",
+} as const satisfies Record<PipelineState, string>;
 
 export interface PipelineCardProps {
   showPhases?: boolean;
@@ -43,9 +66,15 @@ export function PipelineCard({
           <Stack align="start" direction="row" gap="150">
             <IconTile alt={pipeline.name} glyph="flow" size="md" src={pipeline.avatar} />
             <Stack gap="75">
-              <Typography mono size="md" type="note" weight="bold">
-                {pipeline.name}
-              </Typography>
+              <Stack align="center" direction="row" gap="100" justify="between">
+                <Typography mono size="md" type="note" weight="bold">
+                  {pipeline.name}
+                </Typography>
+                <RunStateBadge
+                  label={t(PIPELINE_STATE_LABEL_KEY[pipeline.lastState])}
+                  status={PIPELINE_STATE_TO_FEED_STATUS[pipeline.lastState]}
+                />
+              </Stack>
               <Typography leading="snug" size="caption" type="note" variant="secondary">
                 {pipeline.desc}
               </Typography>
