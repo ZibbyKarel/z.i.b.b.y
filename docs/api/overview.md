@@ -51,7 +51,7 @@ Imports in `AppModule`, in the order they're registered:
 | `ChannelsModule`          | `channels/channels.module`           | Heartbeat watcher, triage, channel item store                                |
 | `MachineModule`           | `machine/machine.module`             | Controlling the machine directly (file ops), gated behind the approval floor |
 | `MonitorsModule`          | `monitors/monitors.module`           | CI/CD monitor adapters (GitHub CI) + alert dispatch                          |
-| `DiscoveryModule`         | `discovery/discovery.module`         | Bug/request triage from inbound channels → proposed tasks                    |
+| `DiscoveryModule`         | `discovery/discovery.module`         | Proposals inbox: parks a candidate behind an approval, dispatches on approval (Phase 116a: the triage scan that produced candidates is gone — the operator targets a pipeline directly instead) |
 | `ResearchModule`          | `research/research.module`           | Watched-source digest for the morning briefing                              |
 | `HealthModule`            | `health/health.module`               | Health check endpoint                                                       |
 | `SubsystemsModule`        | `subsystems/subsystems.module`       | Subsystem-federation registry (Forge/Puls/Sentinel/Maestro/Beacon/Scout/Herald/Loom) + status |
@@ -119,7 +119,7 @@ data/
 ├── commands/             custom slash-command catalog
 ├── machine/              machine (file-op) action proposals
 ├── monitors/             CI/CD monitor state
-├── proposals/            discovery-triage proposed tasks
+├── proposals/            discovery proposals inbox (parked candidates, not scheduled)
 ├── mandate.json          operator autonomy scope
 ├── pins.json             quick-launch pins
 ├── system-config.json   file-backed runtime system config

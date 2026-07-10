@@ -39,9 +39,12 @@ overlap, and folds a digest into the morning briefing. It is **operator-level**
 
 ## Scheduling
 
-The `research-digest` automation target (`data/automations/research-digest.json`,
-`0 6 * * *`) dispatches a digest pass before the 07:00 briefing. Deterministic
-assembly — no `claude` run.
+> Phase 116a retired the dedicated `research-digest` automation target — a
+> digest pass is no longer scheduled by default. The operator instead creates
+> an ordinary prompt (`task`-target) automation pointed at the `research`
+> pipeline (`.zibby/data/pipelines/research.pipeline.md`) on whatever cron they
+> want. `ResearchService` and its endpoints are unchanged; only the dedicated
+> scheduling machinery was removed.
 
 ## Adding real sources
 

@@ -76,3 +76,30 @@ Each phase: sonnet subagent implements the phase plan → I review (return for r
 ## Verification per phase
 `pnpm check:lint && pnpm check:types && pnpm test` must pass for the touched projects before a
 phase is considered done. Contract changes rebuild `@zibby/contracts` consumers.
+
+## Status — all sub-phases done
+
+| Phase | Status | Commit |
+|---|---|---|
+| 116a | done | `972e6fe3` |
+| 116b | done | `2442667d` |
+| 116c | done | `07c8e6a4` |
+| 116d | done | `38543acf` |
+| 116e | done | `4cb93e2e` |
+| 116f | done | `ded0aa13` |
+| 116g | done | final sweep (i18n parity confirmed, docs cross-checked/fixed, knip run, `check:lint`/`check:types`/`test` green) |
+
+i18n parity, docs (`docs/api/overview.md`, `docs/api/research.md`) and a `knip` dead-code sweep
+were verified/fixed in 116g; no orphaned code from 116a–f was found beyond two stale doc
+paragraphs (fixed). `pnpm check:lint`, `check:types` and `test` are green (one `runner-core.test.ts`
+failure seen under full-suite load did not reproduce on a rerun — pre-existing full-suite flake,
+unrelated to this feature).
+
+### Deferred follow-ups (accepted, not blocking)
+- **Pipeline/chain/subsystem attachment seam**: a `task`-target automation's attachments only flow
+  to an agent/orchestrator/goal destination today — a pipeline/chain/subsystem target carries
+  neither prompt-attachment (a pre-existing `TaskSchedulerService`/runner gap, not introduced by
+  this feature). Documented in `docs/api/automations.md`.
+- **Research digest scheduling**: Phase 116a removed the dedicated `research-digest` automation
+  target; there is no default-scheduled digest pass anymore. An operator who wants one back creates
+  an ordinary `task`-target automation against the `research` pipeline (see `docs/api/research.md`).
