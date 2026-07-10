@@ -890,7 +890,14 @@
     },
     "automations": {
       "title": "Systémové automatizace",
-      "hint": "Automatizace, které si ZIBBY sám naseeduje (např. destilace paměti). Tady je můžeš zapnout nebo vypnout; úprava rozvrhu se otevře na detailu automatizace."
+      "hint": "Automatizace, které si ZIBBY sám naseeduje (např. destilace paměti). Tady je můžeš zapnout nebo vypnout; úprava rozvrhu se otevře na detailu automatizace.",
+      "desc": {
+        "briefing": "Sestaví ranní briefing z aktivit, běhů a paměti a doručí ho do sekce Tasky.",
+        "memory-distill": "Noční průchod dokončenými běhy — levný model vydestiluje trvalé poznatky do vaultu.",
+        "pattern-extract": "Prohledá 30 dní schvalovacích rozhodnutí a navrhne pravidla do vaultu pro briefing.",
+        "gap-detect": "Sleduje opakovaně vytvářené ruční tasky a navrhuje, co by šlo automatizovat.",
+        "agent-factory": "Sleduje opakované orchestrator-fallback běhy a navrhne chybějícího specialistu (čeká na schválení)."
+      }
     },
     "runtime": {
       "title": "Běhové parametry",

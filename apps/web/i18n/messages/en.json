@@ -890,7 +890,14 @@
     },
     "automations": {
       "title": "System automations",
-      "hint": "Automations ZIBBY seeds itself (e.g. memory distillation). You can enable or disable them here; rescheduling opens the automation's detail page."
+      "hint": "Automations ZIBBY seeds itself (e.g. memory distillation). You can enable or disable them here; rescheduling opens the automation's detail page.",
+      "desc": {
+        "briefing": "Assembles the morning briefing from activity, runs and memory, delivered to Tasks.",
+        "memory-distill": "Nightly pass over finished runs; a cheap model distils durable learnings into the vault.",
+        "pattern-extract": "Scans 30 days of approval decisions and drafts rule proposals into the vault for the briefing.",
+        "gap-detect": "Watches repeatedly created manual tasks and suggests what could be automated.",
+        "agent-factory": "Watches repeated orchestrator-fallback runs and proposes a missing specialist agent (pending approval)."
+      }
     },
     "runtime": {
       "title": "Runtime parameters",

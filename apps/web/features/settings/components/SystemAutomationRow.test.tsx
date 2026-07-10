@@ -46,4 +46,24 @@ describe("SystemAutomationRow", () => {
     renderRow({});
     expect(screen.getByTestId(SystemAutomationRowTestId.Toggle)).not.toBeDisabled();
   });
+
+  it("renders the description when provided", () => {
+    render(
+      <SystemAutomationRow
+        automation={base}
+        description="Prohledá 30 dní schvalovacích rozhodnutí a navrhne pravidla do vaultu pro briefing."
+        onEdit={noop}
+        onToggle={noop}
+        onTrigger={noop}
+      />,
+    );
+    expect(screen.getByTestId(SystemAutomationRowTestId.Description)).toHaveTextContent(
+      "Prohledá 30 dní schvalovacích rozhodnutí a navrhne pravidla do vaultu pro briefing.",
+    );
+  });
+
+  it("omits the description block when none is given", () => {
+    renderRow({});
+    expect(screen.queryByTestId(SystemAutomationRowTestId.Description)).not.toBeInTheDocument();
+  });
 });

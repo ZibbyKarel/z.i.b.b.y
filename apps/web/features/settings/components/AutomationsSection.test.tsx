@@ -62,6 +62,23 @@ describe("AutomationsSection", () => {
     expect(screen.queryByText("Ranní standup")).not.toBeInTheDocument();
   });
 
+  it("shows a description resolved from the automation's target type", () => {
+    render(<AutomationsSection />);
+    expect(
+      screen.getByTestId(SystemAutomationRowTestId.Description),
+    ).toHaveTextContent(
+      "Noční průchod dokončenými běhy — levný model vydestiluje trvalé poznatky do vaultu.",
+    );
+  });
+
+  it("renders no description for an unknown target type, without throwing", () => {
+    query.automations = [
+      { ...systemAutomation, id: "weird", target: { type: "pipeline", pipelineId: "koder" } },
+    ];
+    expect(() => render(<AutomationsSection />)).not.toThrow();
+    expect(screen.queryByTestId(SystemAutomationRowTestId.Description)).not.toBeInTheDocument();
+  });
+
   it("toggles a system automation on/off via the update mutation", () => {
     render(<AutomationsSection />);
     fireEvent.click(screen.getByTestId(SystemAutomationRowTestId.Toggle));

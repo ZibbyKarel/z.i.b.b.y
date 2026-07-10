@@ -11,6 +11,7 @@ export enum SystemAutomationRowTestId {
   Toggle = "system-automation-row-toggle",
   Edit = "system-automation-row-edit",
   Run = "system-automation-row-run",
+  Description = "system-automation-row-desc",
 }
 
 export interface SystemAutomationRowProps {
@@ -19,6 +20,8 @@ export interface SystemAutomationRowProps {
   onEdit: () => void;
   onTrigger: () => void;
   triggering?: boolean;
+  /** One-line explanation of what this system automation does, keyed by `target.type`. */
+  description?: string;
 }
 
 /**
@@ -35,6 +38,7 @@ export function SystemAutomationRow({
   onEdit,
   onTrigger,
   triggering,
+  description,
 }: SystemAutomationRowProps) {
   const t = useTranslations("automations");
   const locale = useLocale();
@@ -88,6 +92,18 @@ export function SystemAutomationRow({
               size="sm"
             />
           </Stack>
+
+          {description ? (
+            <Typography
+              data-testid={SystemAutomationRowTestId.Description}
+              leading="snug"
+              size="caption"
+              type="note"
+              variant="secondary"
+            >
+              {description}
+            </Typography>
+          ) : null}
 
           <Divider />
 
