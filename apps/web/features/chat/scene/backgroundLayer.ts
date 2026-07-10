@@ -95,25 +95,43 @@ void main() {
   // Deep base.
   vec3 col = vec3(0.020, 0.031, 0.055);
 
-  // Two drifting nebula cloud layers.
+  // Phase 113: distance from this pixel to the orb + subagent cluster, in the
+  // same aspect-corrected, centred space as p/uGlowCenter (screen centre
+  // (0,0), +y up — the same convention the vignette's length(p) below
+  // uses) so the falloff stays circular rather than stretched by the viewport
+  // aspect. The nebula bias, star focus, and orb glow below all key off this
+  // one distance so the sky reads as a single nebula pocket wrapped around the
+  // cluster instead of independently-tuned overlays.
+  float clusterDist = length(p - uGlowCenter);
+  // 1 right on the cluster, fading to 0 well before the frame edges.
+  float clusterFalloff = smoothstep(1.35, 0.05, clusterDist);
+
+  // Two drifting nebula cloud layers — density/brightness biased up around the
+  // cluster (clusterFalloff) while keeping a visible floor at the edges so
+  // corners never go pure black.
   float n1 = fbm(vec3(p * 1.6 + vec2(uTime * 0.012, 0.0), uTime * 0.02));
   float n2 = fbm(vec3(p * 2.7 - vec2(0.0, uTime * 0.009), 5.0 + uTime * 0.015));
   float cloudA = smoothstep(0.0, 0.72, n1);
   float cloudB = smoothstep(0.05, 0.82, n2 * 0.5 + 0.5);
-  col += uNebulaA * cloudA * 0.22;
-  col += uNebulaB * cloudB * 0.15;
+  float nebulaBoost = mix(0.45, 1.2, clusterFalloff);
+  col += uNebulaA * cloudA * 0.22 * nebulaBoost;
+  col += uNebulaB * cloudB * 0.15 * nebulaBoost;
 
-  // Two independent star layers.
+  // Two independent star layers, thinned slightly away from the cluster so
+  // focus stays on the top-third pocket instead of a uniform full-screen field.
+  float starFocus = mix(0.7, 1.0, clusterFalloff);
   float s1 = stars(uv, 90.0, 2.3, 0.0);
   float s2 = stars(uv, 160.0, 3.7, 11.0);
-  col += vec3(0.75, 0.82, 1.0) * s1 * 0.9;
-  col += vec3(0.85, 0.9, 1.0) * s2 * 0.6;
+  col += vec3(0.75, 0.82, 1.0) * s1 * 0.9 * starFocus;
+  col += vec3(0.85, 0.9, 1.0) * s2 * 0.6 * starFocus;
 
-  // Soft glow pooled behind the orb — Phase 94: centred on uGlowCenter (defaults
-  // to screen centre, vec2(0), until the controller feeds the raised orb's actual
-  // projected position), tracking its live colour.
-  float glow = smoothstep(0.55, 0.0, length(p - uGlowCenter));
-  col += uOrbColor * glow * glow * 0.28;
+  // Luminous halo pooled behind the orb + subagent cluster — Phase 94 centred
+  // this on uGlowCenter (defaults to screen centre, vec2(0), until the
+  // controller feeds the raised orb's actual projected position), tracking its
+  // live colour. Phase 113 widens the radius and raises the intensity so the
+  // cluster reads as embedded in a real glowing nebula pocket, not a faint tint.
+  float glow = smoothstep(0.85, 0.0, clusterDist);
+  col += uOrbColor * glow * glow * 0.5;
 
   // Corner darkening.
   float vig = smoothstep(1.15, 0.35, length(p));
