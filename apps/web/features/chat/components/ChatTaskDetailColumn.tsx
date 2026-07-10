@@ -63,7 +63,7 @@ export function ChatTaskDetailColumn({
 
   return (
     <div
-      className="pointer-events-none absolute inset-y-0 left-[316px] z-20 hidden w-[420px] flex-col p-4 lg:flex"
+      className="pointer-events-none absolute inset-y-0 left-[316px] right-4 z-20 hidden w-auto flex-col p-4 lg:flex"
       data-testid={ChatTaskDetailColumnTestId.Root}
     >
       <div className="pointer-events-auto flex h-full w-full flex-col">
