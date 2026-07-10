@@ -888,6 +888,10 @@
         "finance": "Finance"
       }
     },
+    "automations": {
+      "title": "Systémové automatizace",
+      "hint": "Automatizace, které si ZIBBY sám naseeduje (např. destilace paměti). Tady je můžeš zapnout nebo vypnout; úprava rozvrhu se otevře na detailu automatizace."
+    },
     "runtime": {
       "title": "Běhové parametry",
       "hint": "Dříve proměnné prostředí, teď konfigurace v souboru. Změny intervalů a režimu adaptéru se projeví okamžitě (schedulery se přearmují); auto-resume cílů se uplatní až po restartu.",
@@ -1503,15 +1507,10 @@
     "targetAgent": "agent",
     "targetPipeline": "pipeline",
     "targetBriefing": "briefing",
-    "targetDiscovery": "discovery",
     "targetMemoryDistill": "Destilace paměti",
     "targetPatternExtract": "Extrakce vzorů",
-    "targetResearchDigest": "Výzkumný přehled",
     "targetGapDetect": "Detekce mezer",
-    "targetAppIdeas": "Nápady na aplikace",
     "targetAgentFactory": "Továrna agentů",
-    "discoveryNote": "Trigger prohledá práci a navrhne tasky za schvalovací bránou. Nic se nespustí, dokud neschválíš.",
-    "systemBadge": "Systémová",
     "systemEditNote": "Systémová automatizace — seedovaná ZIBBYM. Měnit lze jen rozvrh; cíl ani název upravit nelze a smazat ji nejde.",
     "formCreateTitle": "Nová automatizace",
     "formEditTitle": "Upravit automatizaci",

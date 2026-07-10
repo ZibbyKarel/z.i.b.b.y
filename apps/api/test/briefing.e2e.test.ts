@@ -164,17 +164,9 @@ describe("Briefing (e2e)", () => {
   });
 
   it("the morning-briefing automation fires once per wall minute", async () => {
-    await request(app.getHttpServer())
-      .post("/api/automations")
-      .send({
-        id: "morning-briefing",
-        name: "Morning briefing",
-        trigger: { type: "cron", expr: "0 7 * * *" },
-        target: { type: "briefing" },
-        enabled: true,
-      })
-      .expect(201);
-
+    // `morning-briefing` is a system automation (Phase 116a) — seeded on boot with
+    // its default `0 7 * * *` cron, already `enabled: true`, so there is nothing to
+    // create here; a fresh POST with the same id would 409 as a duplicate.
     const scheduler = app.get(SchedulerService);
     // 07:00 Europe/Prague (CEST = UTC+2 in June) = 05:00 UTC.
     const at0700 = new Date("2026-06-12T05:00:00.000Z");

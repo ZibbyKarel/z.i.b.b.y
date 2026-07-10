@@ -33,9 +33,9 @@ only as a scheduled automation and is read back through the vault note it writes
 5. `readProposals()` parses the `- [ ]` / `- [x]` bullet lines back out of the note
    body for the morning briefing.
 
-**Proposes ≠ acts.** Like `GapDetector` (`docs/api/gaps.md`) and the app-ideas
-generator (`docs/api/ideas.md`), this service only writes a vault note describing a
-candidate gate rule; turning a proposal into an actual rule is an operator decision
+**Proposes ≠ acts.** Like `GapDetector` (`docs/api/gaps.md`), this service only
+writes a vault note describing a candidate gate rule; turning a proposal into an
+actual rule is an operator decision
 — "Approve each line to turn it into a gate rule" is the note's own closing line.
 Reading is the only side effect on the activity log; the vault write is idempotent
 (it always overwrites the whole suggestions note, never appends).

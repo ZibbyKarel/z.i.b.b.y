@@ -4,13 +4,10 @@ import type { Automation } from "@zibby/contracts";
 import { AgentFactoryService } from "../agent-factory/agent-factory.service";
 import { AgentRunnerService } from "../agents/agent-runner.service";
 import { BriefingService } from "../briefing/briefing.service";
-import { DiscoveryTriageService } from "../discovery/discovery-triage.service";
 import { MemoryDistillerService } from "../memory/memory-distiller.service";
 import { PatternExtractorService } from "../patterns/pattern-extractor.service";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { GapDetectorService } from "../gaps/gap-detector.service";
-import { IdeaGeneratorService } from "../ideas/idea-generator.service";
-import { ResearchService } from "../research/research.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TraceContextService } from "../shared/logging/trace-context.service";
 import { SystemConfigStore } from "../system/system-config.store";
@@ -41,12 +38,9 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
     private readonly briefing: BriefingService,
-    private readonly discovery: DiscoveryTriageService,
     private readonly distiller: MemoryDistillerService,
     private readonly patterns: PatternExtractorService,
-    private readonly research: ResearchService,
     private readonly gaps: GapDetectorService,
-    private readonly ideas: IdeaGeneratorService,
     private readonly systemConfig: SystemConfigStore,
     private readonly agentFactory: AgentFactoryService,
   ) {
@@ -146,12 +140,6 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
         const { noteId } = await this.briefing.generate(new Date(), prompt);
         return noteId;
       }
-      case "discovery": {
-        // Phase 10.3: deterministic scan → task candidates parked behind the gate.
-        // *Proposed ≠ dispatched* — discovery never starts a run; the ref is a count.
-        const parked = await this.discovery.run();
-        return `discovery:${parked.length}`;
-      }
       case "memory-distill": {
         // Nightly system automation: distil durable learnings out of finished runs
         // into the vault. Not a claude run in the usual sense — a single cheap model
@@ -164,24 +152,11 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
         const { proposals } = await this.patterns.extract();
         return `patterns:${proposals.length}`;
       }
-      case "research-digest": {
-        // M6: fetch + rank the operator's research sources, mirror the digest to the
-        // vault for the morning briefing. Deterministic; ref = `research:<count>`. The
-        // prompt narrows the ranking ("what to research") on top of the saved interests.
-        const digest = await this.research.refresh(new Date(), prompt);
-        return `research:${digest.items.length}`;
-      }
       case "gap-detect": {
         // M5: scan recurring task creation for automatable manual work, draft
         // suggestions into the vault. Deterministic; ref = `gaps:<count>`.
         const { suggestions } = await this.gaps.detect();
         return `gaps:${suggestions.length}`;
-      }
-      case "app-ideas": {
-        // M6: pair research interests with the latest digest trends into prototype
-        // pitches in the vault. Deterministic; ref = `ideas:<count>`.
-        const { ideas } = await this.ideas.generate();
-        return `ideas:${ideas.length}`;
       }
       case "agent-factory": {
         // Phase 4b: scan recurring orchestrator-fallback telemetry for a missing

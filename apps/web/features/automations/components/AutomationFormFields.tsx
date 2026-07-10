@@ -128,9 +128,7 @@ export function useAutomationFormState(automation?: Automation): AutomationFormS
       const triggerOk = triggerType === "cron" ? scheduleOk : events.length > 0;
       if (isSystem) return triggerOk;
       const targetOk =
-        targetType === "briefing" ||
-        targetType === "discovery" ||
-        validTargetId(targetType, targetId, agents, pipelines).length > 0;
+        targetType === "briefing" || validTargetId(targetType, targetId, agents, pipelines).length > 0;
       return name.trim().length > 0 && triggerOk && targetOk;
     },
     buildTrigger: () =>
@@ -140,11 +138,9 @@ export function useAutomationFormState(automation?: Automation): AutomationFormS
         ? { type: "agent", agentId: targetId }
         : targetType === "pipeline"
           ? { type: "pipeline", pipelineId: targetId }
-          : targetType === "discovery"
-            ? { type: "discovery" }
-            : targetType === "memory-distill"
-              ? { type: "memory-distill" }
-              : { type: "briefing" },
+          : targetType === "memory-distill"
+            ? { type: "memory-distill" }
+            : { type: "briefing" },
   };
 }
 
@@ -274,22 +270,17 @@ export function AutomationFormFields({
               { value: "agent", label: t("targetAgent") },
               { value: "pipeline", label: t("targetPipeline") },
               { value: "briefing", label: t("targetBriefing") },
-              { value: "discovery", label: t("targetDiscovery") },
             ]}
             value={form.targetType}
           />
 
-          {form.targetType === "briefing" || form.targetType === "discovery" ? (
+          {form.targetType === "briefing" ? (
             <Card background="background" radius="default">
               <Container padding="150">
                 <Stack align="start" direction="row" gap="100">
-                  <Icon
-                    name={form.targetType === "discovery" ? "search" : "spark"}
-                    size="sm"
-                    tone="accent"
-                  />
+                  <Icon name="spark" size="sm" tone="accent" />
                   <Typography leading="snug" size="caption" type="note" variant="secondary">
-                    {form.targetType === "discovery" ? t("discoveryNote") : t("briefingNote")}
+                    {t("briefingNote")}
                   </Typography>
                 </Stack>
               </Container>

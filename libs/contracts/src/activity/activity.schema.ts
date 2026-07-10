@@ -69,9 +69,6 @@ export const ActivityKindSchema = z.enum([
   // M8 (hardening). A task's dispatch exhausted its retry budget and was dead-lettered —
   // surfaced in the briefing's needs-you so a repeatedly-failing task never fails silently.
   "task-dead-lettered",
-  // M6 (proposes app ideas, Tier 1 — silent + recorded). A weekly pass paired interests
-  // with trends into prototype pitches in the vault; the morning briefing surfaces them.
-  "app-ideas-generated",
   // N2b (pipeline chaining, Tier 1 — silent + recorded). An operator-authored chain
   // started, handed an artifact to its next step, parked on a broken/gated handoff,
   // or reached a terminal state (done/failed — the `status` ref carries which).

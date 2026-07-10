@@ -29,10 +29,13 @@ export class InvalidAutomationIdError extends Error {
   }
 }
 /** A system automation is seeded by ZIBBY: it can't be deleted, and only its
- *  schedule (`trigger`) may be edited. Both routes surface this as a 409. */
+ *  schedule (`trigger`) and `enabled` state may be edited. Both routes surface
+ *  this as a 409. */
 export class SystemAutomationError extends Error {
   constructor(public readonly id: string) {
-    super(`Automation "${id}" is a system automation — it cannot be deleted, only rescheduled`);
+    super(
+      `Automation "${id}" is a system automation — it cannot be deleted, only rescheduled or toggled`,
+    );
     this.name = "SystemAutomationError";
   }
 }
@@ -44,15 +47,49 @@ export const MEMORY_DISTILL_AUTOMATION_ID = "memory-distill";
  * System automations ZIBBY owns and seeds on boot. They embody capabilities that
  * are the *system's*, not an agent's or the operator's — so they can't be deleted,
  * only rescheduled. Memory distillation is the canonical one: agents stay
- * memory-blind, and learning-from-runs runs here as infrastructure.
+ * memory-blind, and learning-from-runs runs here as infrastructure. (Phase 116a:
+ * `discovery`/`research-digest`/`app-ideas` were retired — the operator now
+ * targets the `code-audit`/`research` pipelines directly for that work instead.)
  */
 export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
+  {
+    id: "morning-briefing",
+    name: "Ranní briefing",
+    trigger: { type: "cron", expr: "0 7 * * *" },
+    target: { type: "briefing" },
+    enabled: true,
+    system: true,
+  },
   {
     id: MEMORY_DISTILL_AUTOMATION_ID,
     name: "Destilace paměti",
     trigger: { type: "cron", expr: "0 3 * * *" },
     target: { type: "memory-distill" },
     enabled: true,
+    system: true,
+  },
+  {
+    id: "nightly-patterns",
+    name: "Extrakce vzorů",
+    trigger: { type: "cron", expr: "0 23 * * *" },
+    target: { type: "pattern-extract" },
+    enabled: true,
+    system: true,
+  },
+  {
+    id: "gap-detect",
+    name: "Návrhy na automatizaci",
+    trigger: { type: "cron", expr: "0 23 * * *" },
+    target: { type: "gap-detect" },
+    enabled: false,
+    system: true,
+  },
+  {
+    id: "agent-factory",
+    name: "Továrna agentů",
+    trigger: { type: "cron", expr: "0 4 * * 1" },
+    target: { type: "agent-factory" },
+    enabled: false,
     system: true,
   },
 ];
@@ -106,12 +143,13 @@ export class AutomationsStorageService extends EntityFileStore<Automation> {
 
   async update(id: string, patch: UpdateAutomationInput): Promise<Automation> {
     const existing = await this.get(id);
-    // System automations are rescheduling-only: any non-`trigger` change is refused.
+    // System automations allow only a reschedule or an enable/disable toggle —
+    // any change to `target`/`name`/`prompt` etc. is refused.
     if (existing.system) {
-      const touchesNonSchedule = Object.entries(patch).some(
-        ([key, value]) => key !== "trigger" && value !== undefined,
+      const touchesLockedField = Object.entries(patch).some(
+        ([key, value]) => key !== "trigger" && key !== "enabled" && value !== undefined,
       );
-      if (touchesNonSchedule) throw new SystemAutomationError(id);
+      if (touchesLockedField) throw new SystemAutomationError(id);
     }
     const merged: Automation = { ...existing, ...patch, id: existing.id, system: existing.system };
     await this.writeEntity(merged);

@@ -38,19 +38,9 @@ describe("AutomationCard (38) — honest next-run", () => {
 });
 
 describe("AutomationCard — system automations", () => {
-  it("shows the system badge for a system automation", () => {
+  it("leaves the enable toggle interactive for a system automation (the storage layer allows the enabled patch)", () => {
     renderCard({ system: true });
-    expect(screen.getByTestId(AutomationCardTestId.SystemBadge)).toHaveTextContent("Systémová");
-  });
-
-  it("does not show the system badge for a user automation", () => {
-    renderCard({ system: false });
-    expect(screen.queryByTestId(AutomationCardTestId.SystemBadge)).not.toBeInTheDocument();
-  });
-
-  it("disables the enable toggle for a system automation (schedule-only edit)", () => {
-    renderCard({ system: true });
-    expect(screen.getByTestId(AutomationCardTestId.Toggle)).toBeDisabled();
+    expect(screen.getByTestId(AutomationCardTestId.Toggle)).not.toBeDisabled();
   });
 
   it("leaves the enable toggle interactive for a user automation", () => {

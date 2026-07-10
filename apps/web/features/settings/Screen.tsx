@@ -23,6 +23,7 @@ import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { useHealthQuery } from "../health";
 import { GateRulesSection } from "../gates/components/GateRulesSection";
 import { ActivitySection } from "./components/ActivitySection";
+import { AutomationsSection } from "./components/AutomationsSection";
 import { ChatSection } from "./components/ChatSection";
 import { MachineSection } from "./components/MachineSection";
 import { MandateSection } from "./components/MandateSection";
@@ -122,6 +123,7 @@ export function Screen() {
           <TabList>
             <Tab value="preferences">{t("preferences")}</Tab>
             <Tab value="gates">{t("subnav.gates")}</Tab>
+            <Tab value="automations">{t("automations.title")}</Tab>
             <Tab value="chat">{t("chat.title")}</Tab>
             <Tab value="activity">{t("activity.title")}</Tab>
             <Tab value="mandate">{t("mandate.title")}</Tab>
@@ -168,6 +170,10 @@ export function Screen() {
 
           <TabPanel value="gates">
             <GateRulesSection />
+          </TabPanel>
+
+          <TabPanel value="automations">
+            <AutomationsSection />
           </TabPanel>
 
           <TabPanel value="chat">

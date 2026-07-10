@@ -72,7 +72,6 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   "monitor-alert": "integrations",
   "machine-action": "approvals",
   "research-digest": "research",
-  "app-ideas-generated": "research",
   "briefing-generated": "briefing",
 };
 

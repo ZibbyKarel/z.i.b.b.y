@@ -66,7 +66,6 @@ type ActivityKind =
   | "monitor-alert" // a CI/CD monitor ingested a red status
   | "machine-action" // an approved machine action executed (or failed)
   | "task-dead-lettered" // a task's dispatch exhausted its retry budget
-  | "app-ideas-generated" // a weekly pass proposed app ideas to the vault
   | "chain-started" // an operator-authored chain started
   | "chain-advanced" // ...handed an artifact to its next step
   | "chain-parked" // ...parked on a broken/gated handoff

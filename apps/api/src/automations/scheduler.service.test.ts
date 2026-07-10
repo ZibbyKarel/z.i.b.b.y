@@ -42,12 +42,9 @@ function makeService(opts: {
     fakeLogger as never,
     fakeTrace as never,
     { generate: vi.fn() } as never,
-    { run: vi.fn() } as never,
     { distill: vi.fn() } as never,
     { extract: vi.fn() } as never,
-    { refresh: vi.fn() } as never,
     { detect: vi.fn() } as never,
-    { generate: vi.fn() } as never,
     fakeSystemConfigStore(),
     { detect: opts.detect } as never,
   );

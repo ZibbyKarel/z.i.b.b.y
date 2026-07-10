@@ -43,10 +43,6 @@ export const TargetSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("pipeline"), pipelineId: AgentIdSchema }),
   z.object({ type: z.literal("agent"), agentId: AgentIdSchema }),
   z.object({ type: z.literal("briefing") }),
-  // Phase 10.3: scan git/tests/vault for work and emit task CANDIDATES into the
-  // approvals queue (a `proposed-task` per candidate). Deterministic assembly, not
-  // a claude run — the scheduler dispatches it straight to the discovery service.
-  z.object({ type: z.literal("discovery") }),
   // Memory distillation: nightly sweep of terminal pipeline/agent/goal runs, a cheap
   // model (haiku) extracts durable learnings into the vault. Agents stay memory-blind;
   // learning is a SYSTEM capability — this is the canonical system automation. The
@@ -56,17 +52,10 @@ export const TargetSchema = z.discriminatedUnion("type", [
   // repeated action+outcome pairs, and drafts rule proposals into the vault for the
   // morning briefing to surface. Deterministic; no LLM call.
   z.object({ type: z.literal("pattern-extract") }),
-  // Research digest (M6): fetch the operator's configured sources, rank by interest
-  // overlap, mirror the digest to the vault for the morning briefing to fold in.
-  // Deterministic assembly through the source-adapter seam; no claude run.
-  z.object({ type: z.literal("research-digest") }),
   // Gap detection (M5): scan recurring `task-created` activity for manual work that
   // could be automated, drafting "automate it?" suggestions into the vault for the
   // briefing. Deterministic; proposes ≠ acts (never creates an automation itself).
   z.object({ type: z.literal("gap-detect") }),
-  // App ideas (M6 weekly bonus): pair the operator's research interests with the
-  // latest digest trends into prototype pitches in the vault. Deterministic.
-  z.object({ type: z.literal("app-ideas") }),
   // Agent Factory (Phase 4b): scan recurring `orchestrator-fallback` activity for a
   // missing specialist, draft a deterministic candidate agent `.md`, and park it
   // behind an `agent-proposal` approval. Deterministic; proposes ≠ activates (only
@@ -95,8 +84,9 @@ export const AutomationSchema = z.object({
   enabled: z.boolean(),
   /**
    * Server-owned: a system automation is seeded by ZIBBY and cannot be deleted; only
-   * its schedule (`trigger`) may be edited. It is never settable through create/update
-   * (omitted from both input schemas) — the storage layer is the sole authority.
+   * its schedule (`trigger`) and `enabled` state may be edited. It is never settable
+   * through create/update (omitted from both input schemas) — the storage layer is
+   * the sole authority.
    */
   system: z.boolean().default(false),
   /** ISO timestamp of the last fire, for idempotence + display. */

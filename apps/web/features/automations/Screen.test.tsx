@@ -119,35 +119,16 @@ describe("Automations Screen", () => {
   });
 });
 
-describe("Automations Screen — system automation", () => {
+describe("Automations Screen — system automations moved to Settings", () => {
   beforeEach(() => {
-    query.automations = [systemAutomation];
+    query.automations = [automation, systemAutomation];
     query.isPending = false;
     query.isError = false;
-    trigger.mockClear();
-    update.mockClear();
-    create.mockClear();
-    push.mockClear();
   });
 
-  it("shows the system badge and renders the memory-distill target label", () => {
+  it("excludes system automations from this page — they live in Settings → Automations now", () => {
     render(<Screen />);
-    expect(screen.getByTestId(AutomationCardTestId.SystemBadge)).toHaveTextContent("Systémová");
-    // Goes through Screen.resolveTarget → the real label/glyph mapping path.
-    expect(screen.getByTestId(AutomationCardTestId.Target)).toHaveTextContent("Destilace paměti");
-  });
-
-  it("disables the enable toggle so it can't be flipped (server rejects it)", () => {
-    render(<Screen />);
-    fireEvent.click(screen.getByTestId(AutomationCardTestId.Toggle));
-    expect(screen.getByTestId(AutomationCardTestId.Toggle)).toBeDisabled();
-    expect(update).not.toHaveBeenCalled();
-  });
-
-  it("Edit navigates to the detail (the schedule-only lock lives there now)", () => {
-    render(<Screen />);
-    fireEvent.click(screen.getByTestId(AutomationCardTestId.Edit));
-    expect(push).toHaveBeenCalledWith("/automations/memory-distill");
-    expect(update).not.toHaveBeenCalled();
+    expect(screen.getByText("Ranní standup")).toBeInTheDocument();
+    expect(screen.queryByText("Destilace paměti")).not.toBeInTheDocument();
   });
 });

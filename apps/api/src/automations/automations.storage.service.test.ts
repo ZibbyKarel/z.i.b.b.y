@@ -102,18 +102,22 @@ describe("AutomationsStorageService", () => {
     expect((await service.get(MEMORY_DISTILL_AUTOMATION_ID)).system).toBe(true);
   });
 
-  it("lets a system automation be rescheduled but refuses other changes", async () => {
+  it("lets a system automation be rescheduled or toggled but refuses other changes", async () => {
     const rescheduled = await service.update(MEMORY_DISTILL_AUTOMATION_ID, {
       trigger: { type: "cron", expr: "30 2 * * *" },
     });
     expect(rescheduled.trigger).toEqual({ type: "cron", expr: "30 2 * * *" });
     expect(rescheduled.system).toBe(true);
 
+    const toggled = await service.update(MEMORY_DISTILL_AUTOMATION_ID, { enabled: false });
+    expect(toggled.enabled).toBe(false);
+    expect(toggled.system).toBe(true);
+
     await expect(
-      service.update(MEMORY_DISTILL_AUTOMATION_ID, { enabled: false }),
+      service.update(MEMORY_DISTILL_AUTOMATION_ID, { target: { type: "briefing" } }),
     ).rejects.toBeInstanceOf(SystemAutomationError);
     await expect(
-      service.update(MEMORY_DISTILL_AUTOMATION_ID, { target: { type: "discovery" } }),
+      service.update(MEMORY_DISTILL_AUTOMATION_ID, { name: "Renamed" }),
     ).rejects.toBeInstanceOf(SystemAutomationError);
   });
 
@@ -126,7 +130,7 @@ describe("AutomationsStorageService", () => {
     const tampered = JSON.parse(await fs.readFile(file, "utf8"));
     await fs.writeFile(
       file,
-      JSON.stringify({ ...tampered, system: false, target: { type: "discovery" } }),
+      JSON.stringify({ ...tampered, system: false, target: { type: "briefing" } }),
       "utf8",
     );
 

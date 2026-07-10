@@ -54,7 +54,7 @@ export const automationsContract = c.router(
       pathParams: IdParam,
       body: UpdateAutomationSchema,
       responses: { 200: AutomationSchema, 404: ErrorSchema, 409: ErrorSchema },
-      summary: "Update an automation (enable/disable, retarget; system: reschedule only)",
+      summary: "Update an automation (enable/disable, retarget; system: reschedule/toggle only)",
     },
     deleteAutomation: {
       method: "DELETE",

@@ -1,1 +1,0 @@
-{"id":"research-digest","name":"Research digest","trigger":{"type":"cron","expr":"0 6 * * *"},"target":{"type":"research-digest"},"enabled":true,"system":true}

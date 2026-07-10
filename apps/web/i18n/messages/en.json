@@ -888,6 +888,10 @@
         "finance": "Finance"
       }
     },
+    "automations": {
+      "title": "System automations",
+      "hint": "Automations ZIBBY seeds itself (e.g. memory distillation). You can enable or disable them here; rescheduling opens the automation's detail page."
+    },
     "runtime": {
       "title": "Runtime parameters",
       "hint": "Formerly environment variables, now file-backed config. Interval and adapter-mode changes apply immediately (the schedulers re-arm); goal auto-resume applies on the next restart.",
@@ -1503,15 +1507,10 @@
     "targetAgent": "agent",
     "targetPipeline": "pipeline",
     "targetBriefing": "briefing",
-    "targetDiscovery": "discovery",
     "targetMemoryDistill": "Memory distillation",
     "targetPatternExtract": "Pattern extraction",
-    "targetResearchDigest": "Research digest",
     "targetGapDetect": "Gap detection",
-    "targetAppIdeas": "App ideas",
     "targetAgentFactory": "Agent factory",
-    "discoveryNote": "The trigger scans for work and proposes tasks behind the approval gate. Nothing runs until you approve.",
-    "systemBadge": "System",
     "systemEditNote": "System automation — seeded by ZIBBY. Only its schedule can change; the target and name can't be edited and it can't be deleted.",
     "formCreateTitle": "New automation",
     "formEditTitle": "Edit automation",

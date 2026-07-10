@@ -65,11 +65,6 @@ interface BriefingTarget {
   // no extra fields — deterministic briefing assembly
 }
 
-interface DiscoveryTarget {
-  type: "discovery";
-  // deterministic scan → task candidates behind the approval gate
-}
-
 interface MemoryDistillTarget {
   type: "memory-distill";
   // nightly memory distillation — see System automations
@@ -80,21 +75,20 @@ interface PatternExtractTarget {
   // scans 30 days of approval-decision activity, drafts rule proposals to the vault
 }
 
-interface ResearchDigestTarget {
-  type: "research-digest";
-  // fetches the operator's configured sources, mirrors a ranked digest to the vault
-}
-
 interface GapDetectTarget {
   type: "gap-detect";
   // scans recurring task-created activity for automatable manual work
 }
 
-interface AppIdeasTarget {
-  type: "app-ideas";
-  // pairs research interests with digest trends into prototype pitches
+interface AgentFactoryTarget {
+  type: "agent-factory";
+  // scans recurring orchestrator-fallback activity, drafts a candidate agent
 }
 ```
+
+> Phase 116a retired the `discovery`, `research-digest` and `app-ideas` targets —
+> that work is now an ordinary prompt automation targeting the `code-audit` or
+> `research` pipeline directly, rather than dedicated system machinery.
 
 `prompt` is a top-level, optional field (not per-target): free-text steering
 forwarded to whatever the automation runs — the agent's prompt, the research
@@ -122,12 +116,10 @@ when the config changes.
    - `pipeline` → `PipelineRunnerService.start(...)`
    - `agent` → `AgentRunnerService.start(...)`
    - `briefing` → `BriefingService.generate(...)`
-   - `discovery` → `DiscoveryTriageService.run()`
    - `memory-distill` → `MemoryDistillerService.distill()`
    - `pattern-extract` → `PatternExtractorService.extract()`
-   - `research-digest` → `ResearchService.refresh(...)`
    - `gap-detect` → `GapDetectorService.detect()`
-   - `app-ideas` → `IdeaGeneratorService.generate()`
+   - `agent-factory` → `AgentFactoryService.detect()`
 4. Updates `lastFiredAt = now` (idempotence — a double fire within the same
    minute is safe).
 5. Logs the fire; missed triggers are skipped, not caught up.
@@ -139,7 +131,7 @@ GET    /api/automations           list all
 POST   /api/automations           create
 GET    /api/automations/search?q= search by id or name
 GET    /api/automations/:id       get one
-PATCH  /api/automations/:id       update (enable/disable, retarget; system: reschedule only, else 409)
+PATCH  /api/automations/:id       update (enable/disable, retarget; system: reschedule/toggle only, else 409)
 DELETE /api/automations/:id       delete (409 for a system automation)
 POST   /api/automations/:id/trigger  fire now (returns runRef)
 ```
@@ -155,16 +147,29 @@ Some capabilities belong to **the ZIBBY system itself**, not the operator or an
 agent. Such automations have `system: true`:
 
 - **Cannot be deleted** — `DELETE /api/automations/:id` returns `409`.
-- **Only the schedule can be edited** — `PATCH` accepts only a `trigger` change;
-  any other change (`target`, `enabled`, `name`) returns `409`.
+- **Only the schedule and enabled state can be edited** — `PATCH` accepts a
+  `trigger` change and/or an `enabled` toggle; any other change (`target`,
+  `name`, `prompt`) returns `409`.
 - **Seeded and self-healed on boot** — `AutomationsStorageService.onModuleInit`
   creates any missing ones and re-asserts `system`/`target`/`name` on existing
   ones, while preserving the operator's `trigger`, `enabled`, and `lastFiredAt`
   from disk.
+- **Surfaced in Settings, not the Automations page** — the web app lists
+  system automations under Settings → Automations (with the enable/disable
+  toggle live there); the `/automations` page only shows operator-created ones.
+  Rescheduling a system automation still opens its `/automations/:id` detail
+  page.
 
 Definitions live in the `SYSTEM_AUTOMATIONS` constant
-(`apps/api/src/automations/automations.storage.service.ts`). Today it seeds a
-single automation:
+(`apps/api/src/automations/automations.storage.service.ts`). Today it seeds five:
+
+| id (data file)     | target.type       | default schedule    | enabled |
+| ------------------- | ------------------- | ---------------------- | ------- |
+| `morning-briefing`  | `briefing`        | `0 7 * * *`          | yes     |
+| `memory-distill`    | `memory-distill`  | `0 3 * * *`          | yes     |
+| `nightly-patterns`  | `pattern-extract` | `0 23 * * *`         | yes     |
+| `gap-detect`        | `gap-detect`      | `0 23 * * *`         | no      |
+| `agent-factory`     | `agent-factory`   | `0 4 * * 1`          | no      |
 
 ### Memory distillation (`memory-distill`)
 

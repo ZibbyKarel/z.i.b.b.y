@@ -42,7 +42,7 @@ my channels and handle what you can."
 - [Channels & autonomy](./api/channels.md) — email/Slack, triage, mandate
 - [Mandate](./api/mandate.md) — the per-channel autonomy scope
 - [Approval system](./api/approvals.md) — approval kinds, lifecycle
-- [Discovery](./api/discovery.md) — triage that turns found problems into proposed tasks
+- [Discovery](./api/discovery.md) — the proposals inbox for found-work candidates
 - [Integrations](./api/integrations.md) — configured inbound channels and their credentials
 
 **Budget & resilience**
@@ -53,7 +53,6 @@ my channels and handle what you can."
 **Self-modification & intelligence**
 
 - [Gap detection](./api/gaps.md) — noticing recurring manual work worth automating
-- [App ideas](./api/ideas.md) — the weekly automation-idea generator
 - [Pattern extraction](./api/patterns.md) — mining approval history for rule proposals
 - [Research / Intelligence](./api/research.md) — the operator's watched-source digest
 

@@ -5,7 +5,6 @@ import { ProjectsModule } from "../projects/projects.module";
 import { TasksModule } from "../tasks/tasks.module";
 import { dataDir } from "../shared/data-dir";
 import { DiscoveryController } from "./discovery.controller";
-import { DiscoveryTriageService } from "./discovery-triage.service";
 import { ProposedTaskFlowService } from "./proposed-task-flow.service";
 import { PROPOSALS_DIR, ProposalsStorageService } from "./proposals.storage.service";
 
@@ -15,12 +14,13 @@ export function resolveProposalsDir(): string {
 }
 
 /**
- * Discovery triage (Phase 10.3). Scans projects/vault for work (DiscoveryTriageService),
- * parks each candidate behind a `proposed-task` approval (ProposedTaskFlowService,
- * the ResumableRunner) and dispatches an approved one via the task scheduler. Imports
- * MemoryModule (the vault read surface), Projects, Approvals (the gate) and Tasks
- * (createTask on approval). Exports the triage service so the scheduler's `discovery`
- * automation target can dispatch it.
+ * Discovery proposals (Phase 10.3). Parks each candidate behind a `proposed-task`
+ * approval (ProposedTaskFlowService, the ResumableRunner) and dispatches an approved
+ * one via the task scheduler. The triage scan that produced candidates is gone
+ * (Phase 116a — the operator now targets pipelines like `code-audit` directly); this
+ * module keeps the proposals-inbox feature: storage, the dispatch flow, and the
+ * read-only controller. Imports MemoryModule (the vault read surface, still used by
+ * the flow), Projects, Approvals (the gate) and Tasks (createTask on approval).
  */
 @Module({
   imports: [MemoryModule, ProjectsModule, ApprovalsModule, TasksModule],
@@ -29,8 +29,7 @@ export function resolveProposalsDir(): string {
     { provide: PROPOSALS_DIR, useFactory: resolveProposalsDir },
     ProposalsStorageService,
     ProposedTaskFlowService,
-    DiscoveryTriageService,
   ],
-  exports: [DiscoveryTriageService, ProposalsStorageService],
+  exports: [ProposalsStorageService],
 })
 export class DiscoveryModule {}

@@ -27,7 +27,9 @@ export function Screen() {
   const t = useTranslations("automations");
   const router = useRouter();
   const automationsQuery = useAutomationsQuery();
-  const automations = automationsQuery.data ?? [];
+  // System automations moved to Settings → Automations — this page is the
+  // operator's own automations only.
+  const automations = (automationsQuery.data ?? []).filter((a) => !a.system);
   const { data: agents = [] } = useAgentsQuery();
   const { data: pipelines = [] } = usePipelinesQuery();
   const create = useCreateAutomationMutation();
@@ -46,7 +48,6 @@ export function Screen() {
       const pipeline = pipelines.find((p) => p.id === target.pipelineId);
       return { name: pipeline?.name ?? target.pipelineId, glyph: "flow" };
     }
-    if (target.type === "discovery") return { glyph: "search" };
     if (target.type === "memory-distill") return { glyph: "brain" };
     return { glyph: "spark" };
   };

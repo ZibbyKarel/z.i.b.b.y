@@ -2,13 +2,10 @@ import { Module } from "@nestjs/common";
 import { AgentFactoryModule } from "../agent-factory/agent-factory.module";
 import { AgentsModule } from "../agents/agents.module";
 import { BriefingModule } from "../briefing/briefing.module";
-import { DiscoveryModule } from "../discovery/discovery.module";
 import { GapsModule } from "../gaps/gaps.module";
-import { IdeasModule } from "../ideas/ideas.module";
 import { MemoryDistillerModule } from "../memory/memory-distiller.module";
 import { PatternsModule } from "../patterns/patterns.module";
 import { PipelinesModule } from "../pipelines/pipelines.module";
-import { ResearchModule } from "../research/research.module";
 import { dataDir } from "../shared/data-dir";
 import { AUTOMATIONS_DIR, AutomationsStorageService } from "./automations.storage.service";
 import { AutomationsController } from "./automations.controller";
@@ -22,20 +19,20 @@ export function resolveAutomationsDir(): string {
 /**
  * Automations + the scheduler daemon. Imports the runner modules so the scheduler
  * can start agent/pipeline runs on a trigger (those modules export their runner
- * services). No cycle — the runner modules don't depend on this one.
+ * services). No cycle — the runner modules don't depend on this one. Discovery and
+ * Research are no longer imported here (Phase 116a): the scheduler dropped their
+ * targets, and both modules are registered directly in `app.module.ts` so their
+ * controllers keep working.
  */
 @Module({
   imports: [
     AgentFactoryModule,
     AgentsModule,
     BriefingModule,
-    DiscoveryModule,
     GapsModule,
-    IdeasModule,
     MemoryDistillerModule,
     PatternsModule,
     PipelinesModule,
-    ResearchModule,
   ],
   controllers: [AutomationsController],
   providers: [
