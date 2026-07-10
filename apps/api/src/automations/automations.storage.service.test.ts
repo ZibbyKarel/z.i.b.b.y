@@ -87,6 +87,31 @@ describe("AutomationsStorageService", () => {
     }
   });
 
+  it("Phase 116b — round-trips a `task`-target automation through create/list", async () => {
+    const promptAutomation: CreateAutomationInput = {
+      id: "prompt-audit",
+      name: "Prompt: audit the repo",
+      trigger: { type: "cron", expr: "0 2 * * *" },
+      target: {
+        type: "task",
+        text: "audit the repo for stale deps",
+        target: { kind: "pipeline", id: "code-audit", name: "Code audit" },
+        attachmentSetId: "set_abc123",
+        output: { type: "pr" },
+        toolGrants: ["web_search"],
+      },
+      enabled: true,
+    };
+    const created = await service.create(promptAutomation);
+    expect(created.target).toEqual(promptAutomation.target);
+
+    const fetched = await service.get("prompt-audit");
+    expect(fetched.target).toEqual(promptAutomation.target);
+
+    const listed = await service.list();
+    expect(listed.find((a) => a.id === "prompt-audit")?.target).toEqual(promptAutomation.target);
+  });
+
   it("seeds the memory-distill system automation on init", async () => {
     const seeded = await service.get(MEMORY_DISTILL_AUTOMATION_ID);
     expect(seeded.system).toBe(true);

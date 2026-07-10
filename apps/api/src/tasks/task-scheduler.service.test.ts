@@ -399,6 +399,51 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     expect(await attachmentStorage.list(referenced)).toHaveLength(1);
   });
 
+  it("Phase 116b — a registered AttachmentSetRefProvider keeps its referenced set alive past the sweep", async () => {
+    // No ScheduledTask references either set — a `task`-target automation's set
+    // would otherwise age out between cron fires (it never becomes a ScheduledTask
+    // until it actually dispatches). A contributor registered via the
+    // ATTACHMENT_SET_REF_PROVIDER DI token exempts it (see attachment-set-refs.module.ts).
+    for (const s of await attachmentStorage.listSetIds()) await attachmentStorage.remove(s.id);
+    const orphan = (
+      await attachmentStorage.save([{ originalname: "o.txt", size: 1, buffer: Buffer.from("x") }])
+    ).attachmentSetId;
+    const referencedByAutomation = (
+      await attachmentStorage.save([{ originalname: "a.txt", size: 1, buffer: Buffer.from("y") }])
+    ).attachmentSetId;
+    const refProvider = { referencedSetIds: vi.fn(async () => [referencedByAutomation]) };
+    const svcWithProvider = new TaskSchedulerService(
+      storage,
+      classifier as never,
+      agentRunner as never,
+      pipelineRunner as never,
+      pipelinesStore as never,
+      goalRunner as never,
+      chainRunner as never,
+      fakeLogger as never,
+      fakeTrace as never,
+      activity as never,
+      { list: async () => [], get: async () => { throw new Error("no project"); } } as never,
+      { resolveBudget: async () => undefined } as never,
+      fakeBudget as never,
+      { register: vi.fn(), requestApproval: async () => ({ id: "appr_x" }), reject: async () => {} } as never,
+      fakeGates as never,
+      fakeLimits as never,
+      { handleTerminal: async () => null } as never,
+      systemConfig,
+      { name: async () => null } as never,
+      attachmentStorage,
+      [refProvider] as never,
+    );
+
+    const removed = await svcWithProvider.sweepOrphanAttachmentSets(Date.now() + 25 * 60 * 60 * 1000);
+
+    expect(refProvider.referencedSetIds).toHaveBeenCalledTimes(1);
+    expect(removed).toBe(1);
+    expect(await attachmentStorage.list(orphan)).toEqual([]);
+    expect(await attachmentStorage.list(referencedByAutomation)).toHaveLength(1);
+  });
+
   it("an explicit target on the wire bypasses the classifier entirely (DNA: explicit target overrides)", async () => {
     // N1: naming a pipeline/agent is a hard override — the named unit runs and the
     // classifier is never consulted, so an explicit run is fully deterministic.

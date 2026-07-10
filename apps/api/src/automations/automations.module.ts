@@ -7,6 +7,7 @@ import { MemoryDistillerModule } from "../memory/memory-distiller.module";
 import { PatternsModule } from "../patterns/patterns.module";
 import { PipelinesModule } from "../pipelines/pipelines.module";
 import { dataDir } from "../shared/data-dir";
+import { TasksModule } from "../tasks/tasks.module";
 import { AUTOMATIONS_DIR, AutomationsStorageService } from "./automations.storage.service";
 import { AutomationsController } from "./automations.controller";
 import { SchedulerService } from "./scheduler.service";
@@ -22,7 +23,11 @@ export function resolveAutomationsDir(): string {
  * services). No cycle — the runner modules don't depend on this one. Discovery and
  * Research are no longer imported here (Phase 116a): the scheduler dropped their
  * targets, and both modules are registered directly in `app.module.ts` so their
- * controllers keep working.
+ * controllers keep working. Phase 116b: also imports `TasksModule` so the `task`
+ * target can dispatch through `TaskSchedulerService.createTask` — still no cycle,
+ * `TasksModule` doesn't (and must never) import this module back (see
+ * `attachment-set-refs.module.ts` for how the reverse reference the sweep needs is
+ * wired without one).
  */
 @Module({
   imports: [
@@ -33,6 +38,7 @@ export function resolveAutomationsDir(): string {
     MemoryDistillerModule,
     PatternsModule,
     PipelinesModule,
+    TasksModule,
   ],
   controllers: [AutomationsController],
   providers: [

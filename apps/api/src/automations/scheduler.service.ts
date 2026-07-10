@@ -11,6 +11,7 @@ import { GapDetectorService } from "../gaps/gap-detector.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TraceContextService } from "../shared/logging/trace-context.service";
 import { SystemConfigStore } from "../system/system-config.store";
+import { TaskSchedulerService } from "../tasks/task-scheduler.service";
 import { AutomationsStorageService } from "./automations.storage.service";
 import { matchesCron } from "./cron";
 
@@ -43,6 +44,7 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     private readonly gaps: GapDetectorService,
     private readonly systemConfig: SystemConfigStore,
     private readonly agentFactory: AgentFactoryService,
+    private readonly taskScheduler: TaskSchedulerService,
   ) {
     this.log = logger.child(SchedulerService.name);
   }
@@ -130,7 +132,19 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
         return run.runId;
       }
       case "pipeline": {
-        const run = await this.pipelineRunner.start(target.pipelineId);
+        // Phase 116b: the automation's free-text prompt rides as the pipeline's
+        // first-phase input (`PipelineRunnerService.start`'s trailing `input` param)
+        // — the same seam a chain's instructions already use. Absent for every
+        // automation predating a prompt (no behaviour change).
+        const run = await this.pipelineRunner.start(
+          target.pipelineId,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          prompt,
+        );
         return run.pipelineRunId;
       }
       case "briefing": {
@@ -164,6 +178,32 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
         // `agent-proposal` Tier-3 approval. Deterministic; ref = `agent-proposals:<count>`.
         const { proposed } = await this.agentFactory.detect();
         return `agent-proposals:${proposed.length}`;
+      }
+      case "task": {
+        // Phase 116b — the "prompt automation": fire through the EXISTING task
+        // pipeline exactly like the New Task dialog, reusing classification, the
+        // orchestrator fallback, attribution, the budget/limit/concurrency guard,
+        // the approval gate, attachment feeding and toolGrants. `target.target`
+        // (an @-mentioned run target) is threaded BOTH into the input and as the
+        // explicit-target arg — present, it bypasses classification; absent, the
+        // task classifier/orchestrator-fallback decides at fire time.
+        const result = await this.taskScheduler.createTask(
+          {
+            text: target.text,
+            target: target.target,
+            attachmentSetId: target.attachmentSetId,
+            output: target.output,
+            toolGrants: target.toolGrants,
+          },
+          Date.now(),
+          undefined,
+          target.target,
+          false, // synchronous cron fire — the existing dispatch() contract
+        );
+        // A synchronous (`background: false`) create only ever resolves to
+        // "dispatched" (a live run) or "scheduled" (held/queued/limit-deferred) —
+        // "pending" is exclusively the interactive dialog's background path.
+        return result.outcome === "dispatched" ? result.runRef : result.task.id;
       }
     }
   }

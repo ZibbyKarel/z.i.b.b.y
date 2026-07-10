@@ -1518,6 +1518,7 @@
     "targetPatternExtract": "Pattern extraction",
     "targetGapDetect": "Gap detection",
     "targetAgentFactory": "Agent factory",
+    "targetTask": "prompt task",
     "systemEditNote": "System automation — seeded by ZIBBY. Only its schedule can change; the target and name can't be edited and it can't be deleted.",
     "formCreateTitle": "New automation",
     "formEditTitle": "Edit automation",

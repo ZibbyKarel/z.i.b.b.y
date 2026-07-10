@@ -77,4 +77,46 @@ describe("automation schema", () => {
       }).success,
     ).toBe(false);
   });
+
+  describe("Phase 116b — the `task` (prompt automation) target", () => {
+    it("accepts a bare task target (text only — classifier/orchestrator decides at fire time)", () => {
+      expect(
+        AutomationSchema.safeParse({
+          id: "nightly-audit",
+          trigger: { type: "cron", expr: "0 2 * * *" },
+          target: { type: "task", text: "audit the repo for stale deps" },
+          enabled: true,
+        }).success,
+      ).toBe(true);
+    });
+
+    it("accepts a task target carrying an explicit @-mentioned target, attachments, output and toolGrants", () => {
+      expect(
+        AutomationSchema.safeParse({
+          id: "nightly-audit",
+          trigger: { type: "cron", expr: "0 2 * * *" },
+          target: {
+            type: "task",
+            text: "audit the repo for stale deps",
+            target: { kind: "pipeline", id: "code-audit", name: "Code audit" },
+            attachmentSetId: "set_abc123",
+            output: { type: "pr" },
+            toolGrants: ["web_search"],
+          },
+          enabled: true,
+        }).success,
+      ).toBe(true);
+    });
+
+    it("rejects a task target with empty text", () => {
+      expect(
+        AutomationSchema.safeParse({
+          id: "x",
+          trigger: { type: "cron", expr: "0 2 * * *" },
+          target: { type: "task", text: "" },
+          enabled: true,
+        }).success,
+      ).toBe(false);
+    });
+  });
 });

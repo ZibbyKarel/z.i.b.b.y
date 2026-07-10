@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { IsoDateTimeSchema } from "../common.schema";
 import { AgentIdSchema } from "../agents/agent.schema";
+import { TaskOutputSchema, TaskTargetSchema } from "../tasks/task.schema";
 
 /**
  * The closed catalog of named events an automation can listen for. A closed set (not
@@ -61,6 +62,37 @@ export const TargetSchema = z.discriminatedUnion("type", [
   // behind an `agent-proposal` approval. Deterministic; proposes ≠ activates (only
   // an approval flips a candidate to `status: active`).
   z.object({ type: z.literal("agent-factory") }),
+  /**
+   * Phase 116b — the "prompt automation" shape: a full task spec that fires through
+   * the EXISTING task pipeline (`TaskSchedulerService.createTask`) exactly like the
+   * New Task dialog — reusing classification, the orchestrator fallback, project
+   * attribution, the budget/limit/concurrency guard, the approval gate, attachment
+   * feeding and `toolGrants`. This replaces the retired `discovery`/`research-digest`/
+   * `app-ideas` targets (Phase 116a): instead of a bespoke deterministic service, the
+   * operator points a `task` automation at whatever pipeline/agent it should drive.
+   */
+  z.object({
+    type: z.literal("task"),
+    /** The typed prompt — forwarded as the task's free-text (`CreateTaskInput.text`). */
+    text: z.string().min(1),
+    /**
+     * Optional @-mentioned run target (agent/pipeline/subsystem/goal/chain/…).
+     * Absent = the task classifier/orchestrator-fallback decides at fire time,
+     * exactly like an unrouted task from the dialog.
+     */
+    target: TaskTargetSchema.optional(),
+    /**
+     * Files uploaded into the automation's context (a tasks attachment-set id, see
+     * `AttachmentSchema`). Fed to the run for agent/orchestrator/goal targets;
+     * pipeline/chain/subsystem targets cannot carry attachments yet (pre-existing
+     * runner gap — same limitation an ordinary task has today).
+     */
+    attachmentSetId: z.string().optional(),
+    /** The chosen terminal output (PR / file / void) for this automation's runs. */
+    output: TaskOutputSchema.optional(),
+    /** The operator's confirmed tool-grant set, threaded into dispatch like a task's. */
+    toolGrants: z.array(z.string()).optional(),
+  }),
 ]);
 export type Target = z.infer<typeof TargetSchema>;
 

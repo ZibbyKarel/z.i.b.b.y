@@ -84,15 +84,48 @@ interface AgentFactoryTarget {
   type: "agent-factory";
   // scans recurring orchestrator-fallback activity, drafts a candidate agent
 }
+
+interface PromptAutomationTarget {
+  type: "task";
+  text: string; // the typed prompt — forwarded as the task's free-text
+  target?: RunTarget; // optional @-mentioned run target (agent/pipeline/subsystem/goal/chain/…);
+  // absent = the task classifier/orchestrator-fallback decides at fire time
+  attachmentSetId?: string; // uploaded files (a tasks attachment-set id)
+  output?: TaskOutput; // chosen terminal output (pr / file / void)
+  toolGrants?: string[]; // confirmed tool-grant set, threaded into dispatch
+}
 ```
+
+`RunTarget` here is `TaskTarget` from `libs/contracts/src/tasks/task.schema.ts` (the
+same discriminated union a New Task uses: `agent` / `pipeline` / `goal` / `chain` /
+`subsystem` / `orchestrator`); `TaskOutput` is that same file's terminal-output
+schema (`pr` / `file` / `void`).
 
 > Phase 116a retired the `discovery`, `research-digest` and `app-ideas` targets —
 > that work is now an ordinary prompt automation targeting the `code-audit` or
 > `research` pipeline directly, rather than dedicated system machinery.
 
+> Phase 116b added the `task` target — the general "prompt automation" shape.
+> On fire it dispatches through the EXISTING task pipeline
+> (`TaskSchedulerService.createTask`), reusing classification, the orchestrator
+> fallback, project attribution, the budget/limit/concurrency guard, the
+> approval gate, attachment feeding and `toolGrants` — exactly like a task
+> created from the New Task dialog. `target` (the @-mention) is optional: when
+> present it bypasses classification (an explicit override); when absent the
+> classifier/orchestrator-fallback picks a destination at fire time. As with an
+> ordinary task, attachments only flow to an agent/orchestrator/goal
+> destination — a pipeline/chain/subsystem target carries neither (a
+> pre-existing runner gap, not new to automations). An attachment set
+> referenced by a `task`-target automation is exempted from the tasks
+> attachment-sweep's 24h TTL (it never becomes a `ScheduledTask` — and thus
+> isn't "referenced" the ordinary way — until the automation actually fires);
+> see `AttachmentSetRefProvider` / `attachment-set-refs.module.ts`.
+
 `prompt` is a top-level, optional field (not per-target): free-text steering
 forwarded to whatever the automation runs — the agent's prompt, the research
-focus, or the briefing voice.
+focus, the briefing voice, or (Phase 116b) the legacy `pipeline` target's
+first-phase input (`PipelineRunnerService.start`'s `input` param). A `task`
+target ignores the top-level `prompt` — its own `text` field is the prompt.
 
 ## SchedulerService
 
@@ -113,13 +146,15 @@ when the config changes.
      within the same wall-clock minute (idempotence via `lastFiredAt`).
    - Event: fired only via the manual `trigger` path today (no event bus yet).
 3. When due, dispatches the target:
-   - `pipeline` → `PipelineRunnerService.start(...)`
+   - `pipeline` → `PipelineRunnerService.start(pipelineId, …, input: prompt)`
    - `agent` → `AgentRunnerService.start(...)`
    - `briefing` → `BriefingService.generate(...)`
    - `memory-distill` → `MemoryDistillerService.distill()`
    - `pattern-extract` → `PatternExtractorService.extract()`
    - `gap-detect` → `GapDetectorService.detect()`
    - `agent-factory` → `AgentFactoryService.detect()`
+   - `task` → `TaskSchedulerService.createTask({ text, target, attachmentSetId,
+     output, toolGrants }, now, undefined, target, background: false)` (Phase 116b)
 4. Updates `lastFiredAt = now` (idempotence — a double fire within the same
    minute is safe).
 5. Logs the fire; missed triggers are skipped, not caught up.
@@ -236,4 +271,19 @@ target:
   type: agent
   agentId: code-reviewer
 prompt: "Review the latest push and add comments to the PR."
+
+# Prompt automation (Phase 116b): a full task spec, dispatched through the
+# normal task pipeline — classification decides the destination since no
+# explicit `target` is given.
+id: nightly-audit
+name: Nightly dependency audit
+enabled: true
+trigger:
+  type: cron
+  expr: "0 2 * * *"
+target:
+  type: task
+  text: "Audit the repo for stale/vulnerable dependencies and open a PR with fixes."
+  output:
+    type: pr
 ```

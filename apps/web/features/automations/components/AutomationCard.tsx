@@ -31,6 +31,9 @@ const TRIGGER_GLYPH = { cron: "clock", event: "bolt" } as const satisfies Record
 const TARGET_GLYPH = {
   agent: "bot",
   pipeline: "flow",
+  // Phase 116b: the full create-dialog treatment for `task` (the "prompt
+  // automation" shape) lands in 116d/116e — this only keeps the card exhaustive.
+  task: "bot",
   briefing: "spark",
   "memory-distill": "brain",
   "pattern-extract": "pulse",
@@ -232,7 +235,11 @@ function targetIdOf(target: Target): string {
     ? target.agentId
     : target.type === "pipeline"
       ? target.pipelineId
-      : "";
+      : // Phase 116b: a `task` target has no stored definition id — its "identity"
+        // is the typed prompt itself (full create-dialog treatment: 116d/116e).
+        target.type === "task"
+        ? target.text
+        : "";
 }
 
 /** i18n key for the target kind label. Exhaustive over the target union. */
@@ -241,6 +248,7 @@ function targetKindKey(
 ):
   | "targetAgent"
   | "targetPipeline"
+  | "targetTask"
   | "targetBriefing"
   | "targetMemoryDistill"
   | "targetPatternExtract"
@@ -251,6 +259,8 @@ function targetKindKey(
       return "targetAgent";
     case "pipeline":
       return "targetPipeline";
+    case "task":
+      return "targetTask";
     case "briefing":
       return "targetBriefing";
     case "memory-distill":

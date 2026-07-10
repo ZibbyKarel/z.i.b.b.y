@@ -1518,6 +1518,7 @@
     "targetPatternExtract": "Extrakce vzorů",
     "targetGapDetect": "Detekce mezer",
     "targetAgentFactory": "Továrna agentů",
+    "targetTask": "prompt úkol",
     "systemEditNote": "Systémová automatizace — seedovaná ZIBBYM. Měnit lze jen rozvrh; cíl ani název upravit nelze a smazat ji nejde.",
     "formCreateTitle": "Nová automatizace",
     "formEditTitle": "Upravit automatizaci",

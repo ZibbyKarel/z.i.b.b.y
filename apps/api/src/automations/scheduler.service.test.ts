@@ -20,11 +20,37 @@ function agentFactoryAutomation(over: Partial<Automation> = {}): Automation {
   };
 }
 
-/** Build a SchedulerService with every non-agent-factory dependency stubbed to a
- * no-op — this suite only exercises the `agent-factory` case of the dispatch switch. */
+function pipelineAutomation(over: Partial<Automation> = {}): Automation {
+  return {
+    id: "nightly-pipeline",
+    name: "Nightly pipeline",
+    trigger: { type: "cron", expr: "0 3 * * *" },
+    target: { type: "pipeline", pipelineId: "release" },
+    enabled: true,
+    system: false,
+    ...over,
+  };
+}
+
+function taskAutomation(over: Partial<Automation> = {}): Automation {
+  return {
+    id: "prompt-automation",
+    name: "Prompt automation",
+    trigger: { type: "cron", expr: "0 9 * * *" },
+    target: { type: "task", text: "check the inbox" },
+    enabled: true,
+    system: false,
+    ...over,
+  };
+}
+
+/** Build a SchedulerService with every non-exercised dependency stubbed to a
+ * no-op — each describe block below only wires the dependency its own case needs. */
 function makeService(opts: {
   automation: Automation;
-  detect: ReturnType<typeof vi.fn>;
+  detect?: ReturnType<typeof vi.fn>;
+  pipelineRunner?: { start: ReturnType<typeof vi.fn> };
+  taskScheduler?: { createTask: ReturnType<typeof vi.fn> };
 }): { service: SchedulerService; storage: { markFired: ReturnType<typeof vi.fn> } } {
   const storage = {
     list: async () => [opts.automation],
@@ -38,7 +64,7 @@ function makeService(opts: {
   const service = new SchedulerService(
     storage as never,
     noRunner as never,
-    noRunner as never,
+    (opts.pipelineRunner ?? noRunner) as never,
     fakeLogger as never,
     fakeTrace as never,
     { generate: vi.fn() } as never,
@@ -46,7 +72,8 @@ function makeService(opts: {
     { extract: vi.fn() } as never,
     { detect: vi.fn() } as never,
     fakeSystemConfigStore(),
-    { detect: opts.detect } as never,
+    { detect: opts.detect ?? vi.fn() } as never,
+    (opts.taskScheduler ?? { createTask: vi.fn() }) as never,
   );
   return { service, storage };
 }
@@ -67,5 +94,115 @@ describe("SchedulerService — dispatch (Phase 4b: agent-factory case)", () => {
     const { service } = makeService({ automation: agentFactoryAutomation(), detect });
 
     expect(await service.trigger("agent-factory-nightly")).toBe("agent-proposals:0");
+  });
+});
+
+describe("SchedulerService — dispatch (Phase 116b: pipeline prompt forwarding)", () => {
+  it("forwards the automation's prompt into PipelineRunnerService.start's input param", async () => {
+    const start = vi.fn(async () => ({ pipelineRunId: "release_1" }));
+    const { service } = makeService({
+      automation: pipelineAutomation({ prompt: "focus on regressions" }),
+      pipelineRunner: { start },
+    });
+
+    const ref = await service.trigger("nightly-pipeline");
+
+    expect(start).toHaveBeenCalledWith(
+      "release",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      "focus on regressions",
+    );
+    expect(ref).toBe("release_1");
+  });
+
+  it("forwards undefined when the automation carries no prompt (no behaviour change)", async () => {
+    const start = vi.fn(async () => ({ pipelineRunId: "release_2" }));
+    const { service } = makeService({ automation: pipelineAutomation(), pipelineRunner: { start } });
+
+    await service.trigger("nightly-pipeline");
+
+    expect(start).toHaveBeenCalledWith(
+      "release",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    );
+  });
+});
+
+describe("SchedulerService — dispatch (Phase 116b: task target)", () => {
+  it("fires a task-target automation through TaskSchedulerService.createTask and refs the run", async () => {
+    const createTask = vi.fn(async () => ({
+      outcome: "dispatched" as const,
+      runRef: "writer_1_1",
+      target: { kind: "agent" as const, id: "writer", name: "Writer" },
+      task: { id: "task_1" },
+    }));
+    const { service } = makeService({
+      automation: taskAutomation({
+        target: { type: "task", text: "check the inbox", attachmentSetId: "set_1" },
+      }),
+      taskScheduler: { createTask },
+    });
+
+    const ref = await service.trigger("prompt-automation");
+
+    expect(createTask).toHaveBeenCalledWith(
+      {
+        text: "check the inbox",
+        target: undefined,
+        attachmentSetId: "set_1",
+        output: undefined,
+        toolGrants: undefined,
+      },
+      expect.any(Number),
+      undefined,
+      undefined,
+      false,
+    );
+    expect(ref).toBe("writer_1_1");
+  });
+
+  it("forwards an explicit @-mentioned target and bypasses classification", async () => {
+    const explicitTarget = { kind: "pipeline" as const, id: "code-audit", name: "Code audit" };
+    const createTask = vi.fn(async () => ({
+      outcome: "dispatched" as const,
+      runRef: "code-audit_1",
+      target: explicitTarget,
+      task: { id: "task_2" },
+    }));
+    const { service } = makeService({
+      automation: taskAutomation({
+        target: { type: "task", text: "audit the repo", target: explicitTarget },
+      }),
+      taskScheduler: { createTask },
+    });
+
+    await service.trigger("prompt-automation");
+
+    expect(createTask).toHaveBeenCalledWith(
+      expect.objectContaining({ target: explicitTarget }),
+      expect.any(Number),
+      undefined,
+      explicitTarget,
+      false,
+    );
+  });
+
+  it("refs the parked task's id when createTask holds/queues/defers instead of dispatching", async () => {
+    const createTask = vi.fn(async () => ({
+      outcome: "scheduled" as const,
+      task: { id: "task_3" },
+    }));
+    const { service } = makeService({ automation: taskAutomation(), taskScheduler: { createTask } });
+
+    expect(await service.trigger("prompt-automation")).toBe("task_3");
   });
 });

@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
 import {
+  Inject,
   Injectable,
   type OnApplicationBootstrap,
   type OnModuleDestroy,
   type OnModuleInit,
+  Optional,
 } from "@nestjs/common";
 import type {
   AgentRun,
@@ -23,6 +25,8 @@ import type {
 } from "@zibby/contracts";
 import { SUBSYSTEMS } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
+import type { AttachmentSetRefProvider } from "./attachment-set-ref-provider";
+import { ATTACHMENT_SET_REF_PROVIDER } from "./attachment-set-ref-provider";
 import { AgentRunnerService, type RunAttachments } from "../agents/agent-runner.service";
 import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service";
 import { type BudgetOverMetrics, BudgetService } from "../budget/budget.service";
@@ -148,6 +152,16 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     private readonly systemConfig: SystemConfigStore,
     private readonly namer: ClaudeCliTaskNamer,
     private readonly attachmentStorage: AttachmentStorageService,
+    /**
+     * Phase 116b: extra contributors to the sweep's "keep" set — e.g. a `task`-target
+     * automation, which references an attachment set without ever becoming a
+     * `ScheduledTask` until it fires (see `AttachmentSetRefProvider`). Optional and
+     * defaulted so every pre-existing caller/test (constructing this service
+     * directly, with no DI container) is unaffected.
+     */
+    @Optional()
+    @Inject(ATTACHMENT_SET_REF_PROVIDER)
+    private readonly attachmentRefProviders: AttachmentSetRefProvider[] = [],
   ) {
     this.log = logger.child(TaskSchedulerService.name);
   }
@@ -482,12 +496,21 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
    * Task 9: best-effort cleanup of attachment-set dirs no persisted task references,
    * once they're past the TTL. Never throws — every I/O step is guarded — so it's safe
    * to fire-and-forget from {@link tick}. Returns the count removed (tests only).
+   *
+   * Phase 116b: also asks every registered {@link AttachmentSetRefProvider} — a
+   * `task`-target automation references a set without ever persisting a
+   * `ScheduledTask` until it fires, so its set would otherwise age out between cron
+   * runs. A provider that throws is skipped (best-effort, never blocks the sweep).
    */
   async sweepOrphanAttachmentSets(now: number): Promise<number> {
     const tasks = await this.storage.list().catch(() => []);
     const referenced = new Set(
       tasks.map((t) => t.attachmentSetId).filter((id): id is string => Boolean(id)),
     );
+    for (const provider of this.attachmentRefProviders) {
+      const ids = await provider.referencedSetIds().catch(() => []);
+      for (const id of ids) referenced.add(id);
+    }
     const sets = await this.attachmentStorage.listSetIds().catch(() => []);
     let removed = 0;
     for (const s of sets) {
