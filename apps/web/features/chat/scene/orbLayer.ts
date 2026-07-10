@@ -25,8 +25,8 @@ const RADIUS = 1;
 const DETAIL = 4;
 /** Default glow-shell scale/strength/segment-count — the central orb's phase-93
  * values, reused as the factory's defaults so its call site is unchanged. */
-const GLOW_SCALE = 1.25;
-const GLOW_STRENGTH = 0.35;
+const GLOW_SCALE = 1.4;
+const GLOW_STRENGTH = 0.6;
 const GLOW_SEGMENTS = 48;
 /** Spatial frequency of the noise field — how many lobes the deformation has. */
 const NOISE_FREQ = 1.4;

@@ -240,6 +240,12 @@ export function createSceneController(
   // dropped to half framerate on weak devices (Tier 6) without the orb stuttering.
   // Appended FIRST so it paints under the orb canvas. ---
   const bgRenderer = new THREE.WebGLRenderer({ alpha: false, antialias: false });
+  // ACES tone mapping gives the bright orb glow (phase 114a bump) headroom to roll off
+  // gracefully instead of clipping flat against the sky's mid-brights; both renderers
+  // share the same mapping/exposure/colour space so the composited canvases match.
+  bgRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+  bgRenderer.toneMappingExposure = 1.15;
+  bgRenderer.outputColorSpace = THREE.SRGBColorSpace;
   bgRenderer.domElement.setAttribute("data-scene-layer", "background");
   applyCanvasStyle(bgRenderer.domElement);
   container.appendChild(bgRenderer.domElement);
@@ -248,6 +254,9 @@ export function createSceneController(
   // --- Orb renderer (transparent, composited over the background). Full quality,
   // always. Appended second so it stacks on top. ---
   const orbRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+  orbRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+  orbRenderer.toneMappingExposure = 1.15;
+  orbRenderer.outputColorSpace = THREE.SRGBColorSpace;
   orbRenderer.setClearColor(0x000000, 0);
   orbRenderer.domElement.setAttribute("data-scene-layer", "orb");
   applyCanvasStyle(orbRenderer.domElement);
