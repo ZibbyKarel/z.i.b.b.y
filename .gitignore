@@ -40,6 +40,7 @@ graphify-out/
 # frontmatter — binary, regenerable from an upload, never versioned.
 .zibby/data/agents/assets/
 .zibby/data/pipelines/assets/
+.zibby/data/projects/assets/
 
 .!zibby/data/agents
 .!zibby/data/automations

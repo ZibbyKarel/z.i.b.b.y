@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AVATAR_MAX, IsoDateTimeSchema } from "../common.schema";
+import { AvatarSchema, IsoDateTimeSchema } from "../common.schema";
 import { AgentIdSchema } from "../agents/agent.schema";
 
 /**
@@ -161,13 +161,15 @@ export const ProjectSchema = z.object({
   hasSecrets: z.boolean().optional(),
 
   /**
-   * Optional custom logo as a data URI (`data:image/*;base64,…`), shown on the
-   * project card in place of the default glyph (the glyph remains the fallback
-   * when absent, or when the image fails to load). Capped at AVATAR_MAX (~2 MB image
-   * as base64) — the shared image data-URI backstop — to bound the cost of reading it
-   * back on every `GET /projects`.
+   * Optional custom logo, shown on the project card in place of the default
+   * glyph (the glyph remains the fallback when absent, or when the image fails
+   * to load): either an uploaded `data:image/*;base64,…` URI or a `/`-rooted
+   * path to a bundled static asset — same `AvatarSchema` agents/pipelines use
+   * (Phase 113). On disk the bytes are externalized to
+   * `assets/<id>.<ext>` (`ProjectsStorageService`/`AvatarAssetStore`); the wire
+   * value here is always the full data URI or `/`-path, never the bare ref.
    */
-  logo: z.string().startsWith("data:image/").max(AVATAR_MAX).optional(),
+  logo: AvatarSchema.optional(),
 
   // --- Operational profile (M1) ---
   /** Team members, clients, and stakeholders associated with this project. */
@@ -209,11 +211,16 @@ export type CreateProjectInput = z.infer<typeof CreateProjectSchema>;
  * a JSON PATCH body silently drops `undefined`-valued keys on the wire, so
  * "unset this field" is otherwise inexpressible for an already-linked project —
  * `null` is the explicit "unlink the company" signal the storage layer acts on,
- * while `undefined`/absent still means "leave the current link alone".
+ * while `undefined`/absent still means "leave the current link alone". `logo` is
+ * likewise re-widened to accept `null` (Phase 113, parity with agents/pipelines'
+ * `avatar`) as the explicit "clear the logo" signal.
  */
 export const UpdateProjectSchema = ProjectSchema.omit({ id: true, hasSecrets: true })
   .partial()
-  .extend({ companyId: z.string().optional().nullable() });
+  .extend({
+    companyId: z.string().optional().nullable(),
+    logo: AvatarSchema.optional().nullable(),
+  });
 export type UpdateProjectInput = z.infer<typeof UpdateProjectSchema>;
 
 /**
