@@ -8,6 +8,7 @@ import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ChatTranscriptStore } from "../chat/chat-transcript.store";
 import { fileExists, writeFileAtomic } from "../shared/file-storage/file-utils";
 import { ClaudeCliDistiller, type Learning, type RunDigest } from "./claude-cli-distiller";
+import { MemoryImportService } from "./memory-import.service";
 import { DuplicateNoteError, SimilarNoteError, VaultService, ownerProjectOf } from "./vault.service";
 
 /**
@@ -83,6 +84,7 @@ export class MemoryDistillerService {
     private readonly goals: GoalRunnerService,
     private readonly projects: ProjectsStorageService,
     private readonly chat: ChatTranscriptStore,
+    private readonly importer: MemoryImportService,
   ) {}
 
   /**
@@ -91,6 +93,17 @@ export class MemoryDistillerService {
    * failure is swallowed (fail-open, like the briefer).
    */
   async distill(now: Date = new Date()): Promise<string> {
+    // Front-phase (phase 112): ingest anything already staged in the halda import
+    // queue BEFORE gathering candidates below, so the freshly-created raw notes
+    // are present for `triageRawNotes()` later in this SAME pass — no separate
+    // triage code needed, the existing sweep just sees more raw notes. Fail-open:
+    // an ingest error must never abort the nightly tick.
+    try {
+      await this.importer.ingestQueue();
+    } catch (error) {
+      this.logger.warn(`import ingest failed: ${String(error)}`);
+    }
+
     try {
       const all = await this.gather();
       // Raw vault notes (Fáze 107) take a DEDICATED per-note triage path — they

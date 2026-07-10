@@ -17,6 +17,7 @@ import { SkillsModule } from "../skills/skills.module";
 import { EntityMcpController } from "./entity-mcp.controller";
 import { GroundingService } from "./grounding.service";
 import { MemoryController } from "./memory.controller";
+import { MemoryImportService } from "./memory-import.service";
 import { VAULT_DIR, VaultService } from "./vault.service";
 
 /**
@@ -50,6 +51,7 @@ export function resolveVaultDir(): string {
   providers: [
     { provide: VAULT_DIR, useFactory: resolveVaultDir },
     VaultService,
+    MemoryImportService,
     GroundingService,
     { provide: PROJECTS_DIR, useFactory: () => process.env.PROJECTS_DIR ?? dataDir("projects") },
     ProjectsStorageService,
@@ -72,6 +74,6 @@ export function resolveVaultDir(): string {
     },
     AutomationsStorageService,
   ],
-  exports: [VaultService, GroundingService],
+  exports: [VaultService, MemoryImportService, GroundingService],
 })
 export class MemoryModule {}

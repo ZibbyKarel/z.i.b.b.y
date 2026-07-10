@@ -121,9 +121,25 @@
   `distillNow` default `false`, `skippedByReason` optional/back-compat.
 - [x] Barrel unchanged (wildcard) — verified, not edited.
 
-## Phase 112b — API: import staging + ingest front-phase + "distill now"
+## Phase 112b — API: import staging + ingest front-phase + "distill now" — ✅ DONE
 
-- [ ] **`MemoryImportService`** (new, `apps/api/src/memory/memory-import.service.ts`):
+> Landed: `MemoryImportService` (`stageFrom` — typed path errors 400/422, symlink/dotdir-safe walk,
+> 5 MiB per-file cap, collision-safe staging, skip reasons `unsupported-type`/`oversized`/`unreadable`;
+> `ingestQueue` — diacritics-aware note-id slug, `.md` frontmatter-title preserved else humanized
+> filename, `createNote` with tier omitted → knowledge+`raw:true`, source moved to
+> `import/_imported/<day>/`, archive excluded from the queue scan → idempotent). Distiller `distill()`
+> calls `ingestQueue()` as a fail-open front-phase before `gather()`. Controller `import` handler maps
+> errors (NotFound→400, NotDirectory/Unreadable→422) and, on `distillNow`, fires `distill()` DETACHED
+> (`void`, not awaited) inside a `trace.run({traceId})` scope, resolving the distiller lazily via
+> `ModuleRef.get(..., {strict:false})` to avoid a `MemoryModule ↔ MemoryDistillerModule` DI cycle.
+> `.zibby/data/import` gitignored. Verified (Opus review + independent re-run): `pnpm check:lint` 0
+> errors; `pnpm check:types` clean (the plan's expected `machine.service.ts` error is not present on
+> this branch); `vitest run apps/api/src/memory` = 24 files / **92 tests, all passed** (incl. new
+> import-service, controller, and distiller ingest-before-triage tests). Full `api:test` had 2
+> unrelated pre-existing/flaky failures (runner-core restart timing, parallel.e2e queue drain), green
+> in isolation.
+
+- [x] **`MemoryImportService`** (new, `apps/api/src/memory/memory-import.service.ts`):
   - `stageFrom(sourcePath): Promise<ImportResult>` — validate the path (exists, is a directory,
     readable → else 422/400); walk it recursively skipping dotdirs and NOT following symlinks out
     of the tree; collect `.md`/`.txt`; **copy** each into `dataDir("import")` with a
@@ -136,19 +152,19 @@
     file's text as body (`.md` keeps its own frontmatter title if present, `.txt` gets the
     filename as title); on success **move** the source file to `import/_imported/<day>/`. Fail-open
     per file (a bad file stays in the queue, logged, not fatal). Returns the count ingested.
-- [ ] **Distiller front-phase**: `MemoryDistillerService.distill()` calls
+- [x] **Distiller front-phase**: `MemoryDistillerService.distill()` calls
   `this.import.ingestQueue()` at the very start (before `gather()`), so freshly-ingested raw notes
   are present when `triageRawNotes()` runs later in the same pass. Guard fail-open (an ingest error
   must never abort the nightly tick). Inject `MemoryImportService` into the distiller module.
-- [ ] **Import controller** (implement the `import` contract route): call
+- [x] **Import controller** (implement the `import` contract route): call
   `MemoryImportService.stageFrom(body.sourcePath)`; if `body.distillNow`, fire
   `this.distiller.distill()` **detached** inside a `trace.run({ traceId })` scope (do NOT await —
   the HTTP response returns immediately with `distillTriggered:true`); fail-open if the detached
   run rejects (log only). Map path errors → 400/422 like the other memory controller mappings.
-- [ ] **Staging dirs + gitignore**: ensure `dataDir("import")` and `import/_imported/` are created
+- [x] **Staging dirs + gitignore**: ensure `dataDir("import")` and `import/_imported/` are created
   on demand; add both to `.gitignore` (mirror how `daily/` is ignored) — imported/archived content
   is runtime data, never committed.
-- [ ] Tests (`memory-import.service.test.ts` + distiller/controller):
+- [x] Tests (`memory-import.service.test.ts` + distiller/controller):
   - `stageFrom`: mixed folder → only `.md`/`.txt` staged, others counted in `skippedByReason`;
     non-existent / non-directory path → typed error; source folder left untouched (copy, not move).
   - `ingestQueue`: staged file → raw note created (tier `knowledge`, `raw:true`), source moved to

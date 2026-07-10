@@ -14,6 +14,7 @@ import {
   mergeLearningTags,
   mergeLearningType,
 } from "./memory-distiller.service";
+import type { MemoryImportService } from "./memory-import.service";
 import { DuplicateNoteError, SimilarNoteError, type VaultService } from "./vault.service";
 
 /**
@@ -91,6 +92,7 @@ function makeService(over: {
   chat?: Partial<ChatTranscriptStore>;
   learnings?: Learning[];
   triage?: NoteTriage | null | ((note: { id: string; title: string; body: string }) => Promise<NoteTriage | null>);
+  importer?: Partial<MemoryImportService>;
 }) {
   const triageImpl =
     typeof over.triage === "function" ? over.triage : async () => over.triage ?? null;
@@ -114,6 +116,7 @@ function makeService(over: {
       readTranscript: async () => ({ conversationId: "", sessionId: null, messages: [] }),
       markDistilled: async () => undefined,
     } as unknown as ChatTranscriptStore);
+  const importer = (over.importer ?? { ingestQueue: async () => 0 }) as unknown as MemoryImportService;
   return new MemoryDistillerService(
     over.vault as unknown as VaultService,
     distiller,
@@ -122,6 +125,7 @@ function makeService(over: {
     (over.goals ?? { listAll: async () => [] }) as unknown as GoalRunnerService,
     projects as ProjectsStorageService,
     chat as ChatTranscriptStore,
+    importer,
   );
 }
 
@@ -446,6 +450,78 @@ describe("MemoryDistillerService — raw-note triage (Fáze 107)", () => {
     expect(vault.updates).toHaveLength(1);
     expect(vault.updates[0]?.id).toBe("halda-ok");
     expect(vault.daily).toHaveLength(1);
+  });
+});
+
+describe("MemoryDistillerService — import ingest front-phase (phase 112)", () => {
+  const now = new Date("2026-07-10T03:00:00.000Z");
+
+  function rawNote(id: string, overrides: Partial<Note> = {}): Note {
+    return {
+      id,
+      path: `knowledge/${id}.md`,
+      tier: "knowledge",
+      title: id,
+      frontmatter: {},
+      links: [],
+      body: "raw body dump",
+      raw: true,
+      ...overrides,
+    };
+  }
+
+  it("ingests the queue before gathering, so a freshly-ingested note is triaged in the SAME pass", async () => {
+    const calls: string[] = [];
+    // `rawNotes()` is only ever read by `gather()`, so seeding it up front and
+    // recording call order proves ingestQueue() runs strictly before gather().
+    const note = rawNote("ingested-1", { title: "Ingested note" });
+    const vault = makeVault({ raw: [note] });
+    vault.rawNotes.mockImplementation(async () => {
+      calls.push("gather:rawNotes");
+      return [note];
+    });
+    const importer = {
+      ingestQueue: vi.fn(async () => {
+        calls.push("ingestQueue");
+        return 1;
+      }),
+    };
+    const service = makeService({
+      vault,
+      importer,
+      triage: { verdict: "durable", title: "Condensed", body: "Condensed body.", tags: [] },
+    });
+
+    const ref = await service.distill(now);
+
+    expect(ref).toBe("memory-distill:1");
+    expect(importer.ingestQueue).toHaveBeenCalledTimes(1);
+    expect(calls).toEqual(["ingestQueue", "gather:rawNotes"]);
+    // The note ended the pass triaged (condensed via updateNote), not left raw.
+    expect(vault.updates).toHaveLength(1);
+    expect(vault.updates[0]?.id).toBe("ingested-1");
+  });
+
+  it("is fail-open: an ingestQueue rejection does not abort the rest of the pass", async () => {
+    const note = rawNote("halda-survives");
+    const vault = makeVault({ raw: [note] });
+    const importer = {
+      ingestQueue: vi.fn(async () => {
+        throw new Error("disk exploded");
+      }),
+    };
+    const service = makeService({
+      vault,
+      importer,
+      triage: { verdict: "durable", title: "t", body: "b", tags: [] },
+    });
+
+    const ref = await service.distill(now);
+
+    expect(ref).toBe("memory-distill:1");
+    expect(importer.ingestQueue).toHaveBeenCalledTimes(1);
+    expect(vault.updates).toHaveLength(1);
+    expect(vault.updates[0]?.id).toBe("halda-survives");
   });
 });
 

@@ -19,6 +19,7 @@ graphify-out/
 .zibby/data/approvals
 .zibby/data/tasks
 .zibby/data/vault/daily
+.zibby/data/import
 .zibby/data/credentials
 .zibby/data/channels
 .zibby/data/integration-state
