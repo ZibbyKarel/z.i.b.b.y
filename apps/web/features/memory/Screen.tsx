@@ -19,6 +19,7 @@ import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
+import { ImportDialog } from "./components/ImportDialog";
 import { MemoryGraph } from "./components/MemoryGraph";
 import { NoteEditorDialog } from "./components/NoteEditorDialog";
 import { NoteView } from "./components/NoteView";
@@ -46,6 +47,8 @@ export function Screen() {
   // NoteEditorDialog flow — visually subordinate (a ghost trigger beside the primary
   // "New note" button), never a replacement for it.
   const [quickCapturing, setQuickCapturing] = useState(false);
+  // Phase 112c: bulk-import external .md/.txt files into the halda queue.
+  const [importing, setImporting] = useState(false);
 
   const { data: note } = useNoteQuery(selected);
   const { data: searchHits } = useMemorySearchQuery(search);
@@ -82,6 +85,15 @@ export function Screen() {
             size="sm"
           >
             {t("quickCapture.trigger")}
+          </Button>
+          <Button
+            data-testid="memory-import-open"
+            icon="file"
+            intent="ghost"
+            onClick={() => setImporting(true)}
+            size="sm"
+          >
+            {t("import.trigger")}
           </Button>
           <Button
             data-testid="memory-note-new"
@@ -127,11 +139,14 @@ export function Screen() {
     <NoteEditorDialog onClose={() => setCreating(false)} onSaved={(id) => setSelected(id)} />
   );
 
+  const importDialog = importing && <ImportDialog onClose={() => setImporting(false)} />;
+
   if (graphQuery.isPending) {
     return (
       <PageContainer>
         <QueryLoading />
         {editorDialog}
+        {importDialog}
       </PageContainer>
     );
   }
@@ -141,6 +156,7 @@ export function Screen() {
       <PageContainer>
         <QueryError onRetry={() => void graphQuery.refetch()} />
         {editorDialog}
+        {importDialog}
       </PageContainer>
     );
   }
@@ -155,6 +171,7 @@ export function Screen() {
           </Button>
         </Stack>
         {editorDialog}
+        {importDialog}
       </PageContainer>
     );
   }
@@ -213,6 +230,7 @@ export function Screen() {
         </Grid>
 
         {editorDialog}
+        {importDialog}
       </Stack>
     </PageContainer>
   );

@@ -61,6 +61,17 @@
       "bodyLabel": "Text",
       "bodyPlaceholder": "Vysyp to sem — vytřídí se to později",
       "save": "Zapsat"
+    },
+    "import": {
+      "trigger": "Import",
+      "title": "Import poznámek",
+      "sourcePathLabel": "Cesta ke složce",
+      "sourcePathHint": "Absolutní cesta na tomto počítači; soubory se zkopírují do haldy k roztřídění.",
+      "sourcePathPlaceholder": "/cesta/ke/slozce",
+      "distillNowLabel": "Destilovat hned",
+      "submit": "Importovat",
+      "toastNow": "Zařazeno {staged} souborů ({skipped} přeskočeno). Roztřídí se hned na pozadí.",
+      "toastLater": "Zařazeno {staged} souborů ({skipped} přeskočeno). Roztřídí se při noční destilaci."
     }
   },
   "common": {

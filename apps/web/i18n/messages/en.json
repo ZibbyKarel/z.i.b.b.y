@@ -61,6 +61,17 @@
       "bodyLabel": "Text",
       "bodyPlaceholder": "Dump it here — sorted out later",
       "save": "Capture"
+    },
+    "import": {
+      "trigger": "Import",
+      "title": "Import notes",
+      "sourcePathLabel": "Folder path",
+      "sourcePathHint": "An absolute path on this machine; files are copied into the halda queue.",
+      "sourcePathPlaceholder": "/path/to/folder",
+      "distillNowLabel": "Distill now",
+      "submit": "Import",
+      "toastNow": "Staged {staged} files ({skipped} skipped). Distilling now in the background.",
+      "toastLater": "Staged {staged} files ({skipped} skipped). Will sort during the nightly distillation."
     }
   },
   "common": {

@@ -174,19 +174,31 @@
   - controller: `distillNow:false` → staged only, `distillTriggered:false`; `distillNow:true` →
     returns immediately, `distillTriggered:true` (assert the detached call was invoked, not awaited).
 
-## Phase 112c — Web: Import button + dialog + mutation
+## Phase 112c — Web: Import button + dialog + mutation — ✅ DONE
 
-- [ ] `features/memory/Screen.tsx`: add a third `PageHeader` action **"Import"** (ghost/secondary,
-  `download`/`folder` icon) opening a new `ImportDialog`. testid `memory-import-open`.
-- [ ] `features/memory/components/ImportDialog.tsx`: DS `Dialog` with a text field for the folder
-  path + a DS `Switch`/`Checkbox` "Destilovat hned" (default off) + submit. On success, close and
+> Landed: third `PageHeader` action "Import" (ghost, `file` icon, testid `memory-import-open`) on the
+> Memory screen, mounting `ImportDialog` in all four render branches (mirrors `editorDialog`).
+> `ImportDialog` = DS `Dialog` + `TextInputField` (folder path) + a `Checkbox` "Destilovat hned"
+> (default off) — labelled via a `Typography` heading + Checkbox `aria-label`, the SAME pattern as
+> the phase-109 `ToolGrantsField` (DS ships no `Switch`; `Checkbox.label` is aria-only). Success →
+> close + `toastBus.emit` with copy that switches on the toggle. `useImportMutation` =
+> `apiClient.memory.import.useMutation`, returned directly, `onSuccess` invalidates `["memory"]`.
+> i18n `memory.import.*` in cs+en with `{staged}`/`{skipped}` interpolation. Verified (Opus review +
+> independent re-run): `pnpm check:lint` 0 errors; `pnpm check:types` clean; `vitest run
+> apps/web/features/memory` = 6 files / **31 tests passed** (incl. 3 new `ImportDialog` cases).
+> Icon note: DS has no `download`/`folder` glyph → used `file`.
+
+- [x] `features/memory/Screen.tsx`: add a third `PageHeader` action **"Import"** (ghost, `file`
+  icon) opening a new `ImportDialog`. testid `memory-import-open`.
+- [x] `features/memory/components/ImportDialog.tsx`: DS `Dialog` with a text field for the folder
+  path + a DS `Checkbox` "Destilovat hned" (default off) + submit. On success, close and
   toast: _"Zařazeno N souborů (M přeskočeno). {Roztřídí se hned na pozadí | Roztřídí se při noční
   destilaci}."_ `<ImportDialogTestId>` enum, `data-testid` on the field / toggle / submit.
-- [ ] `features/memory/mutations/useImportMutation.ts`: ts-rest mutation on `POST /memory/import`;
+- [x] `features/memory/mutations/useImportMutation.ts`: ts-rest mutation on `POST /memory/import`;
   `onSuccess` invalidates `["memory"]` (re-exported from `mutations/index.ts`).
-- [ ] i18n: add the CS (default) + EN strings for the button, dialog labels, and the two toast
+- [x] i18n: add the CS (default) + EN strings for the button, dialog labels, and the two toast
   variants to `apps/web/i18n/messages/{cs,en}.json`.
-- [ ] Component test (`ImportDialog.test.tsx`, mirror `NoteEditorDialog.test.tsx`): renders field +
+- [x] Component test (`ImportDialog.test.tsx`, mirror `NoteEditorDialog.test.tsx`): renders field +
   toggle; submit calls the mutation with `{ sourcePath, distillNow }`; success toast copy switches
   on the toggle.
 
