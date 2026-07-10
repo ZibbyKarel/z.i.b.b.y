@@ -24,6 +24,11 @@ export class MachineActionRejectedError extends Error {
   }
 }
 
+/** Compile-time exhaustiveness guard for the closed `MachineAction` union. */
+function assertNever(action: never): never {
+  throw new Error(`unhandled machine action: ${JSON.stringify(action)}`);
+}
+
 /**
  * Controlling the machine (N5a) — the {@link ResumableRunner} for the `machine`
  * approval kind, on the jira-issue seam: {@link propose} NEVER touches the disk
@@ -131,6 +136,22 @@ export class MachineService implements OnModuleInit, ResumableRunner {
           risk: "low",
         };
       }
+      case "open-url": {
+        // Only opens a browser tab — reversible, low risk — but still gated. The
+        // scheme is validated http(s) here (the dry-run) and again at execute, so
+        // inbound content can never coax a file:/javascript: URL through.
+        this.assertHttpUrl(action.url);
+        return {
+          preview: [],
+          gateAction: "url.open",
+          detail: `Open URL: ${action.url}`,
+          risk: "low",
+        };
+      }
+      default:
+        // Exhaustiveness: a future MachineAction kind must be handled here or this
+        // fails at compile time rather than falling through to `undefined`.
+        return assertNever(action);
     }
   }
 
@@ -193,6 +214,14 @@ export class MachineService implements OnModuleInit, ResumableRunner {
         await this.opener(action.path);
         return `opened folder ${action.path}`;
       }
+      case "open-url": {
+        // Re-validate the scheme right before acting (fail-closed) — http(s) only.
+        this.assertHttpUrl(action.url);
+        await this.opener(action.url);
+        return `opened URL ${action.url}`;
+      }
+      default:
+        return assertNever(action);
     }
   }
 
@@ -260,6 +289,24 @@ export class MachineService implements OnModuleInit, ResumableRunner {
       throw new MachineActionRejectedError(
         `path does not exist or is not a directory: ${folderPath}`,
       );
+    }
+  }
+
+  /**
+   * Fail-closed scheme guard for `open-url`: only http(s) may reach the browser,
+   * so inbound content can never coax a `file:`/`javascript:` (or any other)
+   * scheme through. Used at propose time (the dry-run) and again right before
+   * execute (the world — and the record — is re-checked before we act).
+   */
+  private assertHttpUrl(url: string): void {
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      throw new MachineActionRejectedError(`url is not a valid URL: ${url}`);
+    }
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      throw new MachineActionRejectedError(`url scheme must be http(s): ${url}`);
     }
   }
 }
