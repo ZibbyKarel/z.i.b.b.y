@@ -20,6 +20,12 @@ const E2E_DATA = path.resolve(".e2e-data");
 const dir = (name: string) => path.join(E2E_DATA, name);
 
 const apiEnv: Record<string, string> = {
+  // The data-root switch: every file-backed store that has no explicit `*_DIR` below
+  // (activity, tasks, projects, chat, system-config, …) lands under `.e2e-data`
+  // instead of the live `.zibby/data`. Without this a store added after the harness
+  // was written reads/writes the real data root, so global-setup's seed and the UI
+  // diverge (Phase 111 root cause). The explicit `*_DIR` vars still win where set.
+  ZIBBY_DATA_DIR: E2E_DATA,
   AGENTS_DIR: dir("agents"),
   AGENT_RUNS_DIR: dir("agent-runs"),
   SKILLS_DIR: dir("skills"),
@@ -30,7 +36,6 @@ const apiEnv: Record<string, string> = {
   POLICY_DIR: dir("policy"),
   VAULT_DIR: dir("vault"),
   AUTOMATIONS_DIR: dir("automations"),
-  AUTOMATION_TICK_MS: "0",
   INTEGRATIONS_DIR: dir("integrations"),
   CREDENTIALS_DIR: dir("credentials"),
   CHANNELS_DIR: dir("channels"),
@@ -38,10 +43,10 @@ const apiEnv: Record<string, string> = {
   // test-only seam; there is no operator-facing adapter-mode knob).
   CHANNEL_FAKE_DIR: dir("channel-fake"),
   MANDATE_FILE: path.join(E2E_DATA, "mandate.json"),
-  // A modest live tick so the channels throughline runs unprompted without adding
-  // constant load to the shared single-process dev server.
-  CHANNEL_TICK_MS: "1000",
-  TASK_TICK_MS: "0",
+  // The tick heartbeats (task/channel/automation) are no longer env-driven — they
+  // moved into the file-backed SystemConfig (operator-editable from /settings).
+  // `global-setup` seeds the fast channel tick via `PUT /api/system/config` so the
+  // channels throughline runs unprompted without a 30s wait.
   AGENT_DEMO_STEPS: "3",
   AGENT_DEMO_DELAY_MS: "80",
   PORT: "3333",

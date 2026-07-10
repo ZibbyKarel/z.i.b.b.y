@@ -35,6 +35,19 @@ export default async function globalSetup(): Promise<void> {
 
   const ctx = await request.newContext({ baseURL: API });
 
+  // The tick heartbeats moved from start-only env vars into the file-backed
+  // SystemConfig (Phase ~12.5). The store loads synchronously at boot — before this
+  // setup runs — so seeding the file now would be read too late; instead PUT the
+  // config over the live API, which updates the in-memory copy AND re-arms the
+  // watchers (they subscribe to `onChange`). A fast channel tick makes the channels
+  // throughline surface its approval well within a spec's 20s wait; task/automation
+  // ticks stay disabled so dispatch is driven explicitly by the specs.
+  await ctx
+    .put("/api/system/config", {
+      data: { taskTickMs: 0, channelTickMs: 1000, automationTickMs: 0 },
+    })
+    .catch(() => {});
+
   // Drain any pending approvals BEFORE seeding. `.e2e-data` (agent-runs, approvals)
   // persists across runs and isn't reset here, so without this a repeated `pnpm e2e`
   // accumulates stale gated-agent approvals (the queue grows to 2, 3, … cards and
@@ -116,12 +129,22 @@ export default async function globalSetup(): Promise<void> {
   const fakeDir = path.join(E2E_DATA, "channel-fake");
   await fs.rm(fakeDir, { recursive: true, force: true });
   await fs.rm(path.join(E2E_DATA, "channels"), { recursive: true, force: true });
+  // An integration now REQUIRES an owner (Phase 68: exactly one of projectId/companyId).
+  // Seed the owning project first — the inbox that shows the triaged item lives on the
+  // project's detail page (`/projects/:id?tab=integrations`), there is no standalone
+  // `/integrations` route any more.
+  await ctx
+    .post("/api/projects", {
+      data: { id: "demo-project", name: "Demo Project" },
+    })
+    .catch(() => {});
   await ctx
     .post("/api/integrations", {
       data: {
         id: "team-slack",
         kind: "slack",
         name: "Team Slack",
+        projectId: "demo-project",
         config: { kind: "slack", channels: ["C1"] },
       },
     })

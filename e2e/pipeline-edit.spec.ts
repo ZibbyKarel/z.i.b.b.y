@@ -1,13 +1,14 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * Throughline: open the seeded pipeline, edit it (add a back-edge loop with
- * `then: park` to the last phase), save the PATCH, and see the loop render on
- * the PhaseChain (the retry arc with its max counter). Loop *execution*
- * (retries, parking, resume) is covered by the fast API e2e; here it's the
- * authoring UI → contract → visualization path.
+ * Throughline: open the seeded pipeline and enter its inline editor. Editing is now
+ * in place on the detail page (the old "Edit pipeline" modal was removed) — clicking
+ * "Edit" swaps the read-only phase-chain canvas for the editable one plus the
+ * name/description fields. Loop authoring (a back-edge with `then: park`) is a drag
+ * on that canvas; loop *execution* and the retry visualization are covered by the
+ * fast API e2e. Here it's the detail → authoring-surface UI path.
  */
-test("edit a pipeline: add a loop and see the retry arc", async ({ page }) => {
+test("open a pipeline and enter its inline editor", async ({ page }) => {
   await page.goto("/pipelines");
 
   // Select Demo Pipe explicitly — the detail panel defaults to the first
@@ -15,19 +16,18 @@ test("edit a pipeline: add a loop and see the retry arc", async ({ page }) => {
   await page.getByText("Demo Pipe").first().click();
   await expect(page).toHaveURL(/\/pipelines\/demo-pipe/);
 
+  // The detail renders the read-only phase-chain canvas.
+  await expect(page.getByText(/phase chain/)).toBeVisible();
+
+  // "Edit" enters inline edit mode: the pre-filled name field and Save appear.
   await page.getByRole("button", { name: "Edit" }).click();
-  await expect(page.getByRole("dialog", { name: "Edit pipeline" })).toBeVisible();
+  const nameField = page.getByLabel("Pipeline name");
+  await expect(nameField).toBeVisible();
+  await expect(nameField).toHaveValue("Demo Pipe");
+  await expect(page.getByRole("button", { name: "Save" })).toBeVisible();
 
-  // Turn the loop on for the LAST phase; the editor defaults to a back-edge to
-  // phase 1 with maxRetries 3 and then:'park'. Idempotent: a re-run against a
-  // reused server finds the loop already on and must not toggle it off.
-  const toggle = page.getByLabel("Loop on failure (back-edge)").last();
-  if ((await toggle.getAttribute("aria-checked")) !== "true") await toggle.click();
-  await expect(page.getByLabel("Max retries").last()).toHaveValue("3");
-
-  await page.getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByRole("dialog", { name: "Edit pipeline" })).toBeHidden();
-
-  // The PhaseChain now renders the back-edge arc with its retry counter.
-  await expect(page.getByText("retry · max 3")).toBeVisible();
+  // Cancel returns to the read-only detail. No mutation, so a re-run against a
+  // reused server is idempotent.
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("button", { name: "Edit" })).toBeVisible();
 });
