@@ -124,6 +124,15 @@ describe("SubsystemDrawer (Phase 84)", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps the decorative hero gradient overlay non-interactive so it can't swallow the close click", () => {
+    renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />);
+
+    const hero = screen.getByTestId(SubsystemDrawerTestId.Hero);
+    const overlay = hero.querySelector(".bg-gradient-to-t");
+    expect(overlay).not.toBeNull();
+    expect(overlay).toHaveClass("pointer-events-none");
+  });
+
   it("closes on Escape", () => {
     const onClose = vi.fn();
     renderWithProviders(<SubsystemDrawer onClose={onClose} subsystem={fixture()} />);

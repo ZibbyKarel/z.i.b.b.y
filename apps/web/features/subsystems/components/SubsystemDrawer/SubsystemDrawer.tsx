@@ -190,7 +190,7 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
 
   return (
     <div
-      className="pointer-events-none absolute inset-y-0 right-0 z-30 flex w-full flex-col p-4 lg:w-[520px]"
+      className="pointer-events-none absolute inset-y-0 right-0 z-30 flex w-full flex-col p-4 lg:left-[316px] lg:w-auto"
       data-testid={SubsystemDrawerTestId.Root}
     >
       <div className="pointer-events-auto flex h-full w-full flex-col">
@@ -227,7 +227,7 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
             shrink={false}
             style={heroBandStyle(subsystem.color, subsystem.heroImage)}
           >
-            <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/55 to-transparent" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-surface via-surface/55 to-transparent" />
 
             <button
               aria-label={t("drawer.close")}
