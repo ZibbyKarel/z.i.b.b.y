@@ -2,12 +2,12 @@ import { expect, test } from "@playwright/test";
 
 /**
  * Accountability (Phase 6): /overview shows the butler's briefing card and the
- * activity feed. Generating a briefing persists it, flips the card to its ready
- * state, and records a `briefing-generated` activity entry — so after generating,
- * the feed is guaranteed non-empty (no dependency on seeded-run timing, which the
- * approval/channels specs already cover and which flakes on a cold worker).
+ * live activity log. Generating a briefing persists it, flips the card to its ready
+ * state, and records a `briefing-generated` activity entry — which surfaces in the
+ * overview's right-rail live log (the on-overview activity view; the standalone
+ * `ActivityFeed` component now lives on the project detail page).
  */
-test("the overview briefing card generates a briefing and the activity feed records it", async ({
+test("the overview briefing card generates a briefing and the live log records it", async ({
   page,
 }) => {
   await page.goto("/overview");
@@ -20,7 +20,9 @@ test("the overview briefing card generates a briefing and the activity feed reco
   await page.getByTestId("briefing-generate").click();
   await expect(page.getByTestId("briefing-ready")).toBeVisible({ timeout: 20000 });
 
-  // That generate recorded a `briefing-generated` entry, so the feed is non-empty.
-  await expect(page.getByTestId("activity-feed")).toBeVisible({ timeout: 20000 });
-  await expect(page.getByTestId("activity-feed-item").first()).toBeVisible({ timeout: 20000 });
+  // That generate recorded a `briefing-generated` entry, so the right-rail live log
+  // is non-empty and shows the grouped "Briefing" line.
+  const log = page.getByTestId("right-rail-log");
+  await expect(log).toBeVisible({ timeout: 20000 });
+  await expect(log.getByText("Briefing").first()).toBeVisible({ timeout: 20000 });
 });

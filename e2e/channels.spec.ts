@@ -9,8 +9,11 @@ import { expect, test } from "@playwright/test";
 test("a triaged inbound message surfaces an approval; approving it handles the item", async ({
   page,
 }) => {
-  // The watcher (small live tick) ingests + triages the seeded Tier-3 fixture.
-  await page.goto("/integrations");
+  // The watcher (fast tick seeded via system config) ingests + triages the seeded
+  // Tier-3 fixture. The inbox lives on the owning project's detail page now
+  // (integrations tab, addressable via `?tab=`) — there is no standalone /integrations
+  // route. The seeded integration is owned by `demo-project`, so its item shows here.
+  await page.goto("/projects/demo-project?tab=integrations");
   const inbox = page.getByTestId("inbox-panel");
   await expect(inbox).toBeVisible({ timeout: 20000 });
   await expect(inbox.getByText("needs approval")).toBeVisible({ timeout: 20000 });
@@ -24,8 +27,8 @@ test("a triaged inbound message surfaces an approval; approving it handles the i
   await expect(approve).toBeVisible({ timeout: 20000 });
   await approve.click();
 
-  // Back on the inbox, the item is now handled (the reply was sent on approve).
-  await page.goto("/integrations");
+  // Back on the project inbox, the item is now handled (the reply was sent on approve).
+  await page.goto("/projects/demo-project?tab=integrations");
   await expect(page.getByTestId("inbox-panel").getByText("handled").first()).toBeVisible({
     timeout: 20000,
   });

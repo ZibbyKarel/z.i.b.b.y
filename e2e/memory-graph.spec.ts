@@ -43,10 +43,14 @@ test("the knowledge tier filter hides the memory-tier node", async ({ page }) =>
   await expect(page.getByTestId("memory-node-rohlik")).toBeVisible();
 });
 
-test("the daily timeline lists today's daily note", async ({ page }) => {
+test("the daily tier filter shows today's daily note as a graph node", async ({ page }) => {
   await page.goto("/memory");
   const today = new Date().toISOString().slice(0, 10);
-  await expect(page.getByTestId(`memory-daily-${today}`)).toBeVisible();
+  // The daily note (id = today's date) lives in the `daily` tier — selecting that
+  // filter keeps its node and prunes the rest. (The separate daily-timeline list was
+  // removed in Phase 108; "daily" survives only as a tier of the one memory graph.)
+  await page.getByTestId("memory-tier-daily").click();
+  await expect(page.getByTestId(`memory-node-${today}`)).toBeVisible();
 });
 
 test("creating a note via the dialog adds a graph node", async ({ page }) => {
