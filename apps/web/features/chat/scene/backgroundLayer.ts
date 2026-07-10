@@ -31,6 +31,10 @@ const CLUSTER_COUNT = 7;
 const DUST_COUNT = 70;
 /** Fade the whole layer in over this many seconds on first load. */
 export const REVEAL_SECONDS = 1.5;
+/** Phase 114c: the birth wavefront runs a touch longer than the global reveal
+ * fade so the travelling front stays legible instead of being swallowed by
+ * REVEAL_SECONDS's opacity ramp. */
+export const BIRTH_SECONDS = 1.9;
 
 const SKY_VERTEX = /* glsl */ `
 varying vec2 vUv;
@@ -47,6 +51,7 @@ precision highp float;
 uniform float uTime;
 uniform float uAspect;
 uniform float uReveal;
+uniform float uBirth;
 uniform vec3 uOrbColor;
 uniform vec3 uNebulaA;
 uniform vec3 uNebulaB;
@@ -106,6 +111,18 @@ void main() {
   // nebula frames the orbs instead of pooling under them.
   float clusterDist = length(p - uGlowCenter);
 
+  // Phase 114c: birth wavefront. On first mount the sky is "born from the
+  // orb" — a soft front expands outward from uGlowCenter (the orb's
+  // projected position) and grows to fill the frame, echoing the mini-orbs'
+  // mitosis. maxR spans corner-to-centre so the front clears the whole frame
+  // by uBirth ≈ 1. birthMask is 1 inside the front (already born) and 0 ahead
+  // of it (not yet); birthEdge is a thin glinting ridge riding the front that
+  // fades out once the bloom completes.
+  float maxR = 1.9;
+  float front = uBirth * maxR;
+  float birthMask = smoothstep(front, front - 0.35, clusterDist);
+  float birthEdge = smoothstep(0.18, 0.0, abs(clusterDist - front)) * (1.0 - uBirth);
+
   // Ring profile: 0 in the calm core, rising to 1 at the ring's densest band,
   // falling back to 0 toward the frame edges. innerR is the clear pocket the
   // orbs sit in, peakR is where the cloud band peaks, outerR is where it has
@@ -127,17 +144,21 @@ void main() {
   float cloudA = smoothstep(0.0, 0.72, n1);
   float cloudB = smoothstep(0.05, 0.82, n2 * 0.5 + 0.5);
   float nebulaBoost = mix(0.12, 1.35, nebulaRing);
-  col += uNebulaA * cloudA * 0.26 * nebulaBoost;
-  col += uNebulaB * cloudB * 0.18 * nebulaBoost;
+  // Phase 114c: nebula clouds are gated by birthMask so they only appear once
+  // the birth wavefront has passed through this pixel — they "condense out"
+  // of the orb rather than fading in uniformly everywhere at once.
+  col += uNebulaA * cloudA * 0.26 * nebulaBoost * birthMask;
+  col += uNebulaB * cloudB * 0.18 * nebulaBoost * birthMask;
 
   // Two independent star layers — thinned in the calm core AND at the far
   // edges, fuller in the nebula ring, so stars stay present without piling up
-  // directly behind the orbs.
+  // directly behind the orbs. Also gated by birthMask (phase 114c) so the
+  // star field blooms outward with the rest of the sky.
   float starFocus = mix(0.6, 1.0, max(nebulaRing, 0.15));
   float s1 = stars(uv, 90.0, 2.3, 0.0);
   float s2 = stars(uv, 160.0, 3.7, 11.0);
-  col += vec3(0.75, 0.82, 1.0) * s1 * 0.9 * starFocus;
-  col += vec3(0.85, 0.9, 1.0) * s2 * 0.6 * starFocus;
+  col += vec3(0.75, 0.82, 1.0) * s1 * 0.9 * starFocus * birthMask;
+  col += vec3(0.85, 0.9, 1.0) * s2 * 0.6 * starFocus * birthMask;
 
   // Luminous halo pooled right at the orb + subagent cluster — the tight,
   // orb-coloured seat that hugs the orbs, distinct from the nebula ring above
@@ -145,14 +166,26 @@ void main() {
   // from phase 113's 0.85 so it reads as a compact luminous cushion sitting
   // inside the calm core rather than a broad wash, and nudged brighter
   // (0.5→0.6) so it seats the orbs firmly now that the ring around it is calmer.
+  // Phase 114c: NOT gated by birthMask (it sits at clusterDist ≈ 0, which the
+  // front clears within its first fraction of a second anyway) — instead it
+  // rides its own quick ease so it is the very first thing to appear, reading
+  // as the seed the rest of the sky blooms out of, without a hard instant pop.
   float glow = smoothstep(0.7, 0.0, clusterDist);
-  col += uOrbColor * glow * glow * 0.6;
+  col += uOrbColor * glow * glow * 0.6 * smoothstep(0.0, 0.15, uBirth);
+
+  // Phase 114c: the travelling ridge of the birth wavefront itself — a thin
+  // glint of orb colour riding the expanding front, fading out once uBirth
+  // reaches 1 and the bloom is complete.
+  col += uOrbColor * birthEdge * 0.35;
 
   // Corner darkening.
   float vig = smoothstep(1.15, 0.35, length(p));
   col *= mix(0.55, 1.0, vig);
 
-  gl_FragColor = vec4(col * uReveal, 1.0);
+  // Final visibility is the birth wavefront's shape (already baked into col
+  // above via birthMask) times uReveal, the gentle global opacity floor kept
+  // from phase 94 so t=0 is never a hard black snap.
+  gl_FragColor = vec4(col * max(uReveal, 0.0), 1.0);
 }
 `;
 
@@ -161,6 +194,7 @@ interface SkyUniforms {
   uTime: THREE.IUniform<number>;
   uAspect: THREE.IUniform<number>;
   uReveal: THREE.IUniform<number>;
+  uBirth: THREE.IUniform<number>;
   uOrbColor: THREE.IUniform<THREE.Color>;
   uNebulaA: THREE.IUniform<THREE.Color>;
   uNebulaB: THREE.IUniform<THREE.Color>;
@@ -198,6 +232,7 @@ export function createBackgroundLayer(mobile: boolean): BackgroundLayer {
     uTime: { value: 0 },
     uAspect: { value: 1 },
     uReveal: { value: 0 },
+    uBirth: { value: 0 },
     uOrbColor: { value: new THREE.Color(tokens.accent) },
     uNebulaA: { value: new THREE.Color(tokens.accent) },
     uNebulaB: { value: new THREE.Color(tokens.run) },
@@ -342,6 +377,10 @@ export function createBackgroundLayer(mobile: boolean): BackgroundLayer {
       elapsed += dt;
       const reveal = Math.min(1, elapsed / REVEAL_SECONDS);
       skyUniforms.uReveal.value = reveal;
+      // Phase 114c: under reduced motion the birth wavefront snaps straight to
+      // "fully born" — no travelling front for motion-sensitive users, mirroring
+      // how the controller's own entry animation is skipped.
+      skyUniforms.uBirth.value = ctx.reducedMotion ? 1 : Math.min(1, elapsed / BIRTH_SECONDS);
       skyUniforms.uTime.value += ctx.reducedMotion ? dt * 0.15 : dt;
       // Ease the behind-orb glow toward the orb's live colour.
       glowColor.lerp(ctx.orbColor, 1 - Math.exp(-dt * 4));
