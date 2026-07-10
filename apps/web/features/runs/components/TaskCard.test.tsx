@@ -58,7 +58,7 @@ describe("TaskCard", () => {
     expect(screen.getAllByText("projdi /backups a ověř včerejší snapshot")).toHaveLength(1);
   });
 
-  it("renders the task-origin line and the written-back outcome badge", () => {
+  it("renders the task-origin line (the written-back outcome badge now lives on RunDetail)", () => {
     render(
       <TaskCard
         glyph="bot"
@@ -77,22 +77,6 @@ describe("TaskCard", () => {
       />,
     );
     expect(screen.getByText(/úkol · Oprav rozbitý test/)).toBeInTheDocument();
-    expect(screen.getByText(/úkol → úspěch/)).toBeInTheDocument();
-  });
-
-  it("marks a failed task outcome as selhání", () => {
-    render(
-      <TaskCard
-        glyph="bot"
-        now={NOW}
-        onSelect={() => {}}
-        run={{ ...run, status: "error", taskId: "task-9", taskOutcome: "error" }}
-        selected={false}
-        startedLabel="před 5 m"
-        stateLabel="chyba"
-      />,
-    );
-    expect(screen.getByText(/úkol → selhání/)).toBeInTheDocument();
   });
 
   it("renders a held task's reason caption (Phase 8)", () => {

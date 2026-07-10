@@ -88,8 +88,9 @@ describe("Projects API (e2e)", () => {
   it("rejects a duplicate id (409) and an invalid body (400)", async () => {
     await request(app.getHttpServer()).post(BASE).send(project).expect(201);
     await request(app.getHttpServer()).post(BASE).send(project).expect(409);
-    // Missing required path → contract 400.
-    await request(app.getHttpServer()).post(BASE).send({ id: "x", name: "x" }).expect(400);
+    // Missing required name (Phase 98 made `path` optional/machine-local, so a
+    // bare `{ id }` is the reliable contract-400 case now) → contract 400.
+    await request(app.getHttpServer()).post(BASE).send({ id: "x" }).expect(400);
     await request(app.getHttpServer()).delete(`${BASE}/media-vault`).expect(200);
   });
 
