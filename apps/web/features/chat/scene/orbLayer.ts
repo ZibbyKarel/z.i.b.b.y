@@ -32,6 +32,12 @@ const GLOW_SEGMENTS = 48;
 const NOISE_FREQ = 1.4;
 /** Exponential-approach rate; ~95% of the way to target in 3/RATE s (~0.6s at 5). */
 const DAMPING_RATE = 5;
+/** Always-on idle "breath" of the glow halo — a slow swell/brighten the orb
+ * carries in every state, on top of the mode/energy pulse. Gated off under
+ * reduced motion. Period ≈ 2π / BREATH_SPEED ≈ 7s. */
+const BREATH_SPEED = 0.9; // rad/s
+const BREATH_GLOW_AMP = 0.35; // fraction of base strength the breath adds/removes
+const BREATH_SCALE_AMP = 0.06; // shell-radius swell fraction
 
 const ORB_VERTEX = /* glsl */ `
 uniform float uTime;
@@ -201,6 +207,9 @@ export function createOrbLayer(opts: OrbLayerOptions = {}): OrbLayer {
   let glow = glowStrengthBase;
   // A slow secondary tumble axis so the orb never looks like it spins on one axis.
   let tiltPhase = 0;
+  // Always-on breath phase (b1) — independent of the mode `pulsePhase`, which is
+  // 0-amplitude at idle. Frozen under reduced motion.
+  let breathPhase = 0;
 
   return {
     object3d: group,
@@ -220,6 +229,9 @@ export function createOrbLayer(opts: OrbLayerOptions = {}): OrbLayer {
 
       pulsePhase += dt * pulseSpeed;
       const pulse = pulseAmp * (0.5 + 0.5 * Math.sin(pulsePhase));
+
+      breathPhase += reducedMotion ? 0 : dt * BREATH_SPEED;
+      const breath = reducedMotion ? 0 : Math.sin(breathPhase); // [-1, 1], mean 0
 
       // Colour resolves from a design token (the central orb, driven by SceneMode) or
       // a direct hex override (mini-orbs, tinted to their fixed subsystem colour —
@@ -249,8 +261,9 @@ export function createOrbLayer(opts: OrbLayerOptions = {}): OrbLayer {
       orbUniforms.uColor.value.copy(currentColor);
 
       glowUniforms.uColor.value.copy(currentColor);
-      glowUniforms.uStrength.value = glow * (1 + pulse) + flash * 0.5;
-      glowMesh.scale.setScalar(1 + pulse * 0.5);
+      glowUniforms.uStrength.value =
+        glow * (1 + pulse + breath * BREATH_GLOW_AMP) + flash * 0.5;
+      glowMesh.scale.setScalar(1 + pulse * 0.5 + breath * BREATH_SCALE_AMP);
     },
     dispose() {
       orbGeometry.dispose();

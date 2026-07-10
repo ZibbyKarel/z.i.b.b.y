@@ -53,7 +53,7 @@ const BASE: Record<SceneMode, OrbTarget> = {
     rotationSpeed: 0.05,
     pulseAmp: 0,
     pulseSpeed: 0,
-    glow: 0.35,
+    glow: 0.55,
     rings: 0,
   },
   // Composing (operator typing): one notch more awake — brighter accent, quicker
@@ -66,7 +66,7 @@ const BASE: Record<SceneMode, OrbTarget> = {
     rotationSpeed: 0.09,
     pulseAmp: 0,
     pulseSpeed: 0,
-    glow: 0.5,
+    glow: 0.62,
     rings: 0,
   },
   // Reasoning / dispatching before the first token: shifts to the run (working) hue
@@ -184,7 +184,7 @@ const MINI_BASE: Record<SubsystemState, Omit<OrbTarget, "color">> = {
     rotationSpeed: 0.05,
     pulseAmp: 0.02,
     pulseSpeed: 0.8,
-    glow: 0.18,
+    glow: 0.3,
     rings: 0,
   },
   // Working: full presence, a gentle breathing pulse.
@@ -206,7 +206,7 @@ const MINI_BASE: Record<SubsystemState, Omit<OrbTarget, "color">> = {
     rotationSpeed: 0.08,
     pulseAmp: 0.02,
     pulseSpeed: 0.8,
-    glow: 0.42,
+    glow: 0.48,
     rings: 0,
   },
   // Awaiting a decision: full presence, a louder + faster pulse — reads urgent.
