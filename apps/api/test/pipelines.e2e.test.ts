@@ -1,11 +1,11 @@
+import type { INestApplication } from "@nestjs/common";
+import { Test } from "@nestjs/testing";
 import { execFile } from "node:child_process";
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import type { INestApplication } from "@nestjs/common";
-import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
@@ -570,50 +570,59 @@ describe("Pipelines API (e2e)", () => {
       await fs.copyFile(DELIVERY_SEED, path.join(pipelinesDir, "delivery.pipeline.md"));
     });
 
-    it("runs the chain through verify + the qualify review, finishing done", async () => {
-      // This pipeline declares no `outputs:`, so a green chain finishes `done` directly
-      // (the `pr` sink behaviour is covered by pipeline-runner.outputs.test.ts). A project
-      // with a trivially-passing check lets the deterministic `verify` phase go green; the
-      // GAP lever makes the qualify `review` return gap once (loop back to Kodér) then pass.
-      process.env.PIPELINE_DEMO_GAP_PHASES = "review";
-      const projectDir = await fs.mkdtemp(path.join(os.tmpdir(), "delivery-proj-"));
-      await request(app.getHttpServer())
-        .post("/api/projects")
-        .send({ id: "delivery-proj", name: "Delivery project", path: projectDir, checks: ["true"] })
-        .expect(201);
+    it(
+      "runs the chain through verify + the qualify review, finishing done",
+      async () => {
+        // This pipeline declares no `outputs:`, so a green chain finishes `done` directly
+        // (the `pr` sink behaviour is covered by pipeline-runner.outputs.test.ts). A project
+        // with a trivially-passing check lets the deterministic `verify` phase go green; the
+        // GAP lever makes the qualify `review` return gap once (loop back to Kodér) then pass.
+        process.env.PIPELINE_DEMO_GAP_PHASES = "review";
+        const projectDir = await fs.mkdtemp(path.join(os.tmpdir(), "delivery-proj-"));
+        await request(app.getHttpServer())
+          .post("/api/projects")
+          .send({
+            id: "delivery-proj",
+            name: "Delivery project",
+            path: projectDir,
+            checks: ["true"],
+          })
+          .expect(201);
 
-      const start = await app
-        .get(PipelineRunnerService)
-        .start("delivery", undefined, "delivery-proj");
-      const { pipelineRunId } = start as { pipelineRunId: string };
+        const start = await app
+          .get(PipelineRunnerService)
+          .start("delivery", undefined, "delivery-proj");
+        const { pipelineRunId } = start as { pipelineRunId: string };
 
-      // architekt → koder → review (qualify) → verify → dokumentator → pr-autor,
-      // green → done (the current seed: verify IS the deterministic Tester; the old
-      // n-9 test-automator phase no longer exists).
-      const done = await until(async () => {
-        const res = app.get(PipelineRunnerService).get(pipelineRunId);
-        return res.status === "done" ? res : null;
-      });
-      expect(done.status).toBe("done");
+        // architekt → koder → review (qualify) → verify → dokumentator → pr-autor,
+        // green → done (the current seed: verify IS the deterministic Tester; the old
+        // n-9 test-automator phase no longer exists).
+        const done = await until(async () => {
+          const res = app.get(PipelineRunnerService).get(pipelineRunId);
+          return res.status === "done" ? res : null;
+        });
+        expect(done.status).toBe("done");
 
-      // The full handoff chain exists in the run tree (verify produces nothing).
-      // Sandboxes are numbered in dispatch order; the gap loop re-ran koder and
-      // review, so their LATEST folders are 04/05 (03_review holds the gap attempt).
-      for (const [dir, file] of [
-        ["01_architekt", "plan.md"],
-        ["04_koder", "implementation.md"],
-        ["05_review", "review.md"],
-        ["07_dokumentator", "docs.md"],
-        ["08_pr-autor", "pr-draft.md"],
-      ] as const) {
-        await fs.access(path.join(done.cwd, dir, file));
-      }
-      // The qualify review looped once on gap, then passed.
-      const reviews = done.stageRuns.filter((s) => s.phaseId === "review");
-      expect(reviews.map((s) => s.verdict)).toEqual(["gap", "pass"]);
+        // The full handoff chain exists in the run tree (verify produces nothing).
+        // Sandboxes are numbered in dispatch order; the gap loop re-ran koder and
+        // review, so their LATEST folders are 04/05 (03_review holds the gap attempt).
+        for (const [dir, file] of [
+          ["01_architekt", "plan.md"],
+          ["04_koder", "implementation.md"],
+          ["05_review", "review.md"],
+          ["07_dokumentator", "docs.md"],
+          ["08_pr-autor", "pr-draft.md"],
+        ] as const) {
+          await fs.access(path.join(done.cwd, dir, file));
+        }
+        // The qualify review looped once on gap, then passed.
+        const reviews = done.stageRuns.filter((s) => s.phaseId === "review");
+        expect(reviews.map((s) => s.verdict)).toEqual(["gap", "pass"]);
 
-      await fs.rm(projectDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
-    }, 15_000);
+        await fs.rm(projectDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+      },
+      1 * 60 * 1000, // 1 minute
+    );
 
     it("a persistently failing review exhausts its retries and parks", async () => {
       // verify passes (trivial project check) so the run reaches review; review then
