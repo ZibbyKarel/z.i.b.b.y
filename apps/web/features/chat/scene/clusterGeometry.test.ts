@@ -22,8 +22,8 @@ import {
 const NODE_RADIUS = 0.85;
 const HUB_RADIUS = 0.7;
 // Mirrors sceneController.ts's real ORB_FLIGHT_RADIUS: just outside the central
-// orb's glow (ORB_SCALE × 1.25 = 0.46 × 1.25 = 0.575) and inside HUB_RADIUS.
-const ORB_FLIGHT_RADIUS = 0.6;
+// orb's glow (ORB_SCALE × 1.4 = 0.46 × 1.4 = 0.644) and inside HUB_RADIUS.
+const ORB_FLIGHT_RADIUS = 0.67;
 
 function distance(a: { x: number; y: number }, b: { x: number; y: number }): number {
   return Math.hypot(a.x - b.x, a.y - b.y);

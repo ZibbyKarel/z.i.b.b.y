@@ -130,7 +130,7 @@ const ORB_SCALE = 0.46;
  *    connector gap ({@link NODE_LINK_GAP} in `clusterGeometry.ts`) — see the
  *    no-overlap invariant on the net block below.
  *  - `HUB_RADIUS` — the inner octagon that rings the orb. Must clear the
- *    central orb's glow (world radius `ORB_SCALE × 1.25 = 0.575`) with a visible gap,
+ *    central orb's glow (world radius `ORB_SCALE × 1.4 = 0.644`) with a visible gap,
  *    and sit well inside the node ring so nothing in the net ever touches the orb.
  *  - `NODE_OCTAGON_RADIUS` — the radius of the small octagon wrapping EACH
  *    mini-orb, ringing it the same way `HUB_RADIUS`'s octagon rings the central
@@ -144,12 +144,14 @@ const ORB_SCALE = 0.46;
  * net's own inner-octagon vertex): a flight confined to the hub→node segment
  * (0.7 → 1.05, post phase 107) only crosses 0.35 world units — still a fairly
  * faint tick at full-viewport scale. Sitting just outside the central orb's
- * rendered glow (`ORB_SCALE × 1.25 = 0.575`) instead means a dispatch visibly
+ * rendered glow (`ORB_SCALE × 1.4 = 0.644`) instead means a dispatch visibly
  * leaves the orb's surface and crosses the WHOLE inner octagon on its way out
- * (report: the reverse) — a clearly-legible flight, while the 0.025 gap to the
- * glow still guarantees it never passes through the orb itself.
+ * (report: the reverse) — a clearly-legible flight, while the 0.026 gap to the
+ * glow still guarantees it never passes through the orb itself. Phase 114a
+ * widened the glow shell (GLOW_SCALE 1.25→1.4, world radius 0.575→0.644), so
+ * this was nudged 0.6→0.67 to stay outside it while remaining inside HUB_RADIUS.
  */
-const ORB_FLIGHT_RADIUS = 0.6;
+const ORB_FLIGHT_RADIUS = 0.67;
 
 // Phase 96 — the one-shot "mitosis" entry animation: on controller creation the
 // 8 mini-orbs bud out of the central orb (cluster-local origin) and travel to
