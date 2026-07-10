@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Button, Stack } from "@zibby/design-system";
+import { Button, Card, Container, Icon, Stack, Typography } from "@zibby/design-system";
 import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import type { Automation } from "@zibby/contracts";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
@@ -11,9 +11,11 @@ import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { PageHeader } from "../../components/PageHeader/PageHeader";
-import { useAgentsQuery } from "../agents/queries";
-import { usePipelinesQuery } from "../pipelines/queries";
+import { CommandLine } from "../tasks/components/CommandLine/CommandLine";
+import type { TaskAttachmentSet } from "../tasks/components/TaskAttachments";
+import { type TaskTarget, toClientTarget } from "../tasks";
 import { AutomationFormFields, useAutomationFormState } from "./components/AutomationFormFields";
+import { TriggerFields } from "./components/TriggerFields";
 import {
   useDeleteAutomationMutation,
   useTriggerAutomationMutation,
@@ -33,13 +35,20 @@ export interface AutomationDetailScreenProps {
 }
 
 /**
- * The `/automations/:id` detail page (N4f, on the N4c template) — the card's
- * Edit action NAVIGATES here, the page IS the edit surface (the same
- * {@link AutomationFormFields} the create dialog renders) and every action sits
- * top-right: Save (primary), Run now (the trigger mutation) and Delete behind a
- * confirm dialog — the FIRST delete surface automations ever had (the contract
- * existed, the web didn't). A system automation locks everything but the
- * schedule and offers no Delete (the server 409s it anyway).
+ * The `/automations/:id` detail page — the card's Edit action NAVIGATES here,
+ * the page IS the edit surface. Three shapes, keyed on `automation.system` and
+ * `automation.target.type` (Phase 116e):
+ * - **system**: schedule-only ({@link AutomationFormFields}) with a top-right
+ *   Save that sends `{ trigger }` alone — everything else is server-owned.
+ * - **task** (the "prompt automation" shape, Phase 116b): the SAME
+ *   `CommandLine` surface the create dialog uses, seeded from the stored spec —
+ *   its own send action IS the save, so there is no top-right Save here.
+ * - anything else (a legacy `agent`/`pipeline`/`briefing` target predating
+ *   `task`): a minimal schedule-only fallback so the page never crashes,
+ *   without rebuilding the retired target/prompt pickers.
+ * Every action sits top-right: Run now (the trigger mutation) and Delete
+ * behind a confirm dialog. A system automation offers no Delete (the server
+ * 409s it anyway).
  */
 export function DetailScreen({ automationId }: AutomationDetailScreenProps) {
   const query = useAutomationQuery(automationId);
@@ -55,8 +64,6 @@ function AutomationEditor({ automation }: { automation: Automation }) {
   const tk = useTranslations();
   const router = useRouter();
   const cronLabel = useCronLabel();
-  const { data: agents = [] } = useAgentsQuery();
-  const { data: pipelines = [] } = usePipelinesQuery();
   const updateAutomation = useUpdateAutomationMutation();
   const deleteAutomation = useDeleteAutomationMutation();
   const triggerAutomation = useTriggerAutomationMutation();
@@ -64,26 +71,41 @@ function AutomationEditor({ automation }: { automation: Automation }) {
   const form = useAutomationFormState(automation);
 
   const isSystem = automation.system ?? false;
+  const target = automation.target;
+  const isTask = target.type === "task";
   const name = automation.name ?? automation.id;
   const subtitle =
     automation.trigger.type === "cron"
       ? cronLabel(automation.trigger.expr)
       : automation.trigger.events.join(" · ");
 
-  const save = () => {
-    // System automation: only the schedule moves — send the trigger ALONE so we
-    // never even attempt the target/name/enabled changes the server would reject.
-    const body = isSystem
-      ? { trigger: form.buildTrigger() }
-      : {
-          name: form.name.trim(),
-          trigger: form.buildTrigger(),
-          target: form.buildTarget(),
-          // Always sent (empty string clears it on edit).
-          prompt: form.prompt.trim(),
-          enabled: automation.enabled,
-        };
-    updateAutomation.mutate({ params: { id: automation.id }, body });
+  // System AND the legacy schedule-only fallback both persist ONLY the trigger —
+  // the target/name (system: server-owned; legacy: no picker to edit it with) never
+  // moves through this path.
+  const saveSchedule = () => {
+    updateAutomation.mutate({ params: { id: automation.id }, body: { trigger: form.buildTrigger() } });
+  };
+
+  // The `task` automation's own save path — CommandLine's send action calls this
+  // directly (send-delegation mode) instead of a top-right Save button.
+  const saveTask = (text: string, tgt?: TaskTarget, attachments?: TaskAttachmentSet) => {
+    if (target.type !== "task") return;
+    updateAutomation.mutate({
+      params: { id: automation.id },
+      body: {
+        trigger: form.buildTrigger(),
+        target: {
+          type: "task",
+          text: text.trim(),
+          target: tgt,
+          // CommandLine has no `initialAttachments` — a re-save without attaching new
+          // files preserves whatever was already stored rather than dropping it. Known
+          // limitation: editing can ADD files, never remove one individually.
+          attachmentSetId: attachments?.attachmentSetId ?? target.attachmentSetId,
+        },
+        enabled: automation.enabled,
+      },
+    });
   };
 
   return (
@@ -113,17 +135,21 @@ function AutomationEditor({ automation }: { automation: Automation }) {
                   {tk("common.delete")}
                 </Button>
               )}
-              <Button
-                data-testid={AutomationDetailScreenTestId.Save}
-                disabled={!form.canSave(isSystem, { agents, pipelines })}
-                icon="check"
-                intent="primary"
-                loading={updateAutomation.isPending}
-                onClick={save}
-                size="sm"
-              >
-                {t("save")}
-              </Button>
+              {/* A `task` automation saves via CommandLine's own send action below —
+                  no top-right Save for it. */}
+              {!isTask && (
+                <Button
+                  data-testid={AutomationDetailScreenTestId.Save}
+                  disabled={!form.canSave()}
+                  icon="check"
+                  intent="primary"
+                  loading={updateAutomation.isPending}
+                  onClick={saveSchedule}
+                  size="sm"
+                >
+                  {t("save")}
+                </Button>
+              )}
               <Button intent="ghost" onClick={() => router.push("/automations")} size="sm">
                 {tk("common.back")}
               </Button>
@@ -134,12 +160,36 @@ function AutomationEditor({ automation }: { automation: Automation }) {
         />
 
         <HudPanel title={t("formEditTitle")}>
-          <AutomationFormFields
-            agents={agents}
-            form={form}
-            isSystem={isSystem}
-            pipelines={pipelines}
-          />
+          {isSystem ? (
+            <AutomationFormFields isSystem form={form} />
+          ) : target.type === "task" ? (
+            <Stack gap="200">
+              <TriggerFields form={form} />
+              <CommandLine
+                showAttach
+                chrome={false}
+                disabled={!form.canSave()}
+                initialTarget={target.target ? toClientTarget(target.target) : undefined}
+                initialText={target.text}
+                onSubmit={saveTask}
+                submitLabel={tk("common.save")}
+              />
+            </Stack>
+          ) : (
+            <Stack gap="200">
+              <Card background="background" radius="default">
+                <Container padding="150">
+                  <Stack align="start" direction="row" gap="100">
+                    <Icon name="shield" size="sm" tone="accent" />
+                    <Typography leading="snug" size="caption" type="note" variant="secondary">
+                      {t("legacyEditNote")}
+                    </Typography>
+                  </Stack>
+                </Container>
+              </Card>
+              <TriggerFields form={form} />
+            </Stack>
+          )}
         </HudPanel>
       </Stack>
 

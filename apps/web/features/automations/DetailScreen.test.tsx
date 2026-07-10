@@ -3,19 +3,18 @@ import type { Automation } from "@zibby/contracts";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders as render, screen } from "../../test/render";
 import { AutomationDetailScreenTestId, DetailScreen } from "./DetailScreen";
-import { AutomationFormTestId } from "./components/AutomationFormFields";
+import { CommandLineTestId } from "../tasks/components/CommandLine/CommandLine";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
-const eventAutomation: Automation = {
+const legacyAutomation: Automation = {
   id: "on-file",
   name: "Po události",
   trigger: { type: "event", events: ["file.created", "pr.opened"] },
-  // A briefing target (no agent picker) so the round-trip doesn't depend on the
-  // mocked-empty agents list — and it proves the prompt shows for a non-agent target.
+  // A briefing target predates the `task` shape (Phase 116b) — the detail page
+  // falls back to a minimal schedule-only editor for it rather than crashing.
   target: { type: "briefing" },
-  prompt: "Piš stručně",
   enabled: true,
   system: false,
 };
@@ -27,6 +26,20 @@ const systemAutomation: Automation = {
   target: { type: "memory-distill" },
   enabled: true,
   system: true,
+};
+
+const taskAutomation: Automation = {
+  id: "check-prs",
+  name: "Zkontroluj PR",
+  trigger: { type: "cron", expr: "0 8 * * *" },
+  target: {
+    type: "task",
+    text: "Zkontroluj otevřené PR",
+    target: { kind: "agent", id: "builder", name: "Builder", glyph: "hammer" },
+    attachmentSetId: "set-1",
+  },
+  enabled: true,
+  system: false,
 };
 
 const { hooks } = vi.hoisted(() => ({
@@ -41,12 +54,38 @@ const { hooks } = vi.hoisted(() => ({
 vi.mock("./queries", () => ({
   useAutomationQuery: () => hooks.automation,
 }));
-vi.mock("../agents/queries", () => ({ useAgentsQuery: () => ({ data: [] }) }));
-vi.mock("../pipelines/queries", () => ({ usePipelinesQuery: () => ({ data: [] }) }));
 vi.mock("./mutations", () => ({
   useUpdateAutomationMutation: () => ({ mutate: hooks.update, isPending: false }),
   useDeleteAutomationMutation: () => ({ mutate: hooks.del, isPending: false }),
   useTriggerAutomationMutation: () => ({ mutate: hooks.trigger, isPending: false }),
+}));
+// The `task` edit surface mounts the REAL `CommandLine` (not a stub) — mirrors
+// Screen.test.tsx's / ChatScreen.test.tsx's own mocking pattern for the same
+// component: stub every query/mutation it reads so mounting never hits the
+// network, but let the component itself run for real.
+vi.mock("../agents/queries", () => ({ useAgentsQuery: () => ({ data: [] }) }));
+vi.mock("../pipelines/queries", () => ({ usePipelinesQuery: () => ({ data: [] }) }));
+vi.mock("../subsystems/queries/useSubsystemsQuery", () => ({
+  useSubsystemsQuery: () => ({ data: [] }),
+  getSubsystemsQueryKey: () => ["subsystems"],
+}));
+vi.mock("../projects/queries/useProjectsQuery", () => ({
+  useProjectsQuery: () => ({ data: [] }),
+  getProjectsQueryKey: () => ["projects"],
+}));
+vi.mock("../limits/queries/useLimitsQuery", () => ({
+  useLimitsQuery: () => ({
+    data: {
+      rolling: { usedPct: 10, resetsAt: null },
+      weekly: { usedPct: 5, resetsAt: null },
+      capturedAt: Date.now(),
+      stale: false,
+    },
+  }),
+  getLimitsQueryKey: () => ["limits"],
+}));
+vi.mock("../tasks/mutations/useUploadTaskAttachmentsMutation", () => ({
+  useUploadTaskAttachmentsMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 describe("automations DetailScreen (N4f grammar)", () => {
@@ -55,18 +94,18 @@ describe("automations DetailScreen (N4f grammar)", () => {
     hooks.update.mockClear();
     hooks.del.mockClear();
     hooks.trigger.mockClear();
-    hooks.automation = { data: eventAutomation, isPending: false, isError: false, refetch: vi.fn() };
+    hooks.automation = { data: legacyAutomation, isPending: false, isError: false, refetch: vi.fn() };
   });
 
-  it("page is the edit surface: prompt prefills and Save round-trips the full patch", async () => {
-    render(<DetailScreen automationId="on-file" />);
-    expect(screen.getByTestId(AutomationFormTestId.Prompt)).toHaveValue("Piš stručně");
-    await userEvent.click(screen.getByTestId(AutomationDetailScreenTestId.Save));
-    expect(hooks.update).toHaveBeenCalledTimes(1);
-    const body = hooks.update.mock.calls[0]![0].body;
-    expect(body.trigger).toEqual({ type: "event", events: ["file.created", "pr.opened"] });
-    expect(body.prompt).toBe("Piš stručně");
-    expect(body.enabled).toBe(true);
+  describe("legacy (non-task, non-system) target — schedule-only fallback", () => {
+    it("Save persists ONLY the schedule (trigger) — the retired target picker never comes back", async () => {
+      render(<DetailScreen automationId="on-file" />);
+      await userEvent.click(screen.getByTestId(AutomationDetailScreenTestId.Save));
+      expect(hooks.update).toHaveBeenCalledTimes(1);
+      const body = hooks.update.mock.calls[0]![0].body;
+      expect(Object.keys(body)).toEqual(["trigger"]);
+      expect(body.trigger).toEqual({ type: "event", events: ["file.created", "pr.opened"] });
+    });
   });
 
   it("Run now fires the trigger mutation from the top-right", async () => {
@@ -105,9 +144,6 @@ describe("automations DetailScreen (N4f grammar)", () => {
 
     it("Save persists ONLY the schedule (trigger) — never target/name/enabled", async () => {
       render(<DetailScreen automationId="memory-distill" />);
-      // The schedule-only form has no name field or target picker.
-      expect(screen.queryByTestId(AutomationFormTestId.Name)).toBeNull();
-      expect(screen.queryByTestId(AutomationFormTestId.Prompt)).toBeNull();
       await userEvent.click(screen.getByTestId(AutomationDetailScreenTestId.Save));
       expect(hooks.update).toHaveBeenCalledTimes(1);
       const call = hooks.update.mock.calls[0]![0];
@@ -119,6 +155,50 @@ describe("automations DetailScreen (N4f grammar)", () => {
     it("offers no Delete affordance (the server 409s it anyway)", () => {
       render(<DetailScreen automationId="memory-distill" />);
       expect(screen.queryByTestId(AutomationDetailScreenTestId.Delete)).toBeNull();
+    });
+  });
+
+  describe("task automation — the CommandLine edit surface", () => {
+    beforeEach(() => {
+      hooks.automation = {
+        data: taskAutomation,
+        isPending: false,
+        isError: false,
+        refetch: vi.fn(),
+      };
+    });
+
+    it("has NO top-right Save — CommandLine's own send action is the save", () => {
+      render(<DetailScreen automationId="check-prs" />);
+      expect(screen.queryByTestId(AutomationDetailScreenTestId.Save)).toBeNull();
+    });
+
+    it("seeds CommandLine with the stored text and @-mentioned target", () => {
+      render(<DetailScreen automationId="check-prs" />);
+      expect(screen.getByTestId(CommandLineTestId.Input)).toHaveValue(
+        "@Builder Zkontroluj otevřené PR",
+      );
+    });
+
+    it("saving via CommandLine issues a task-target update preserving the attachmentSetId when no new files are attached", async () => {
+      const user = userEvent.setup();
+      render(<DetailScreen automationId="check-prs" />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.clear(input);
+      await user.type(input, "Zkontroluj i draft PR");
+      await user.click(screen.getByTestId(CommandLineTestId.Send));
+
+      expect(hooks.update).toHaveBeenCalledTimes(1);
+      const call = hooks.update.mock.calls[0]![0];
+      expect(call.params).toEqual({ id: "check-prs" });
+      expect(call.body.target).toEqual({
+        type: "task",
+        text: "Zkontroluj i draft PR",
+        target: undefined,
+        attachmentSetId: "set-1",
+      });
+      expect(call.body.enabled).toBe(true);
+      expect(call.body.trigger).toEqual({ type: "cron", expr: expect.any(String) });
     });
   });
 });

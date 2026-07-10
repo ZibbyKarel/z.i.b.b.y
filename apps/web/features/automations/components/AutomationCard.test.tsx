@@ -55,3 +55,23 @@ describe("AutomationCard — target rendering", () => {
     expect(screen.getByTestId(AutomationCardTestId.Target)).toHaveTextContent("Destilace paměti");
   });
 });
+
+describe("AutomationCard — task target (Phase 116e)", () => {
+  it("renders the @-mentioned agent's name and resolves an agent glyph", () => {
+    renderCard({
+      target: {
+        type: "task",
+        text: "Zkontroluj otevřené PR",
+        target: { kind: "agent", id: "builder", name: "Builder", glyph: "hammer" },
+      },
+    });
+    const target = screen.getByTestId(AutomationCardTestId.Target);
+    expect(target).toHaveTextContent("Builder");
+    expect(screen.getByText("Daily briefing")).toBeInTheDocument();
+  });
+
+  it("falls back to the generic 'prompt task' label when unrouted (no @-mention)", () => {
+    renderCard({ target: { type: "task", text: "Zkontroluj otevřené PR" } });
+    expect(screen.getByTestId(AutomationCardTestId.Target)).toHaveTextContent("prompt úkol");
+  });
+});

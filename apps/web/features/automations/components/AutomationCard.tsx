@@ -28,18 +28,26 @@ export enum AutomationCardTestId {
 }
 
 const TRIGGER_GLYPH = { cron: "clock", event: "bolt" } as const satisfies Record<string, IconName>;
+// `task` isn't in here — its glyph depends on the @-mentioned target's OWN kind
+// (agent/pipeline/none), resolved by `taskGlyph` below, not a static per-type map.
 const TARGET_GLYPH = {
   agent: "bot",
   pipeline: "flow",
-  // Phase 116b: the full create-dialog treatment for `task` (the "prompt
-  // automation" shape) lands in 116d/116e — this only keeps the card exhaustive.
-  task: "bot",
   briefing: "spark",
   "memory-distill": "brain",
   "pattern-extract": "pulse",
   "gap-detect": "flask",
   "agent-factory": "gear",
-} as const satisfies Record<Target["type"], IconName>;
+} as const satisfies Record<Exclude<Target["type"], "task">, IconName>;
+
+/** A `task` automation's glyph mirrors its @-mentioned run target (Screen.tsx's
+ *  own `resolveTarget` computes the same thing when it CAN resolve a stored
+ *  agent/pipeline's real glyph; this is the fallback for when no `targetGlyph`
+ *  prop is supplied — e.g. this card rendered standalone). */
+function taskGlyph(target: Extract<Target, { type: "task" }>): IconName {
+  const kind = target.target?.kind;
+  return kind === "agent" ? "bot" : kind === "pipeline" ? "flow" : "spark";
+}
 
 export interface AutomationCardProps {
   automation: Automation;
@@ -102,7 +110,9 @@ export function AutomationCard({
       ? t("targetBriefing")
       : target.type === "memory-distill"
         ? t("targetMemoryDistill")
-        : (targetName ?? targetIdOf(target));
+        : target.type === "task"
+          ? (targetName ?? target.target?.name ?? t("targetTask"))
+          : (targetName ?? targetIdOf(target));
 
   return (
     <Card background="surface" data-testid={AutomationCardTestId.Root}>
@@ -147,7 +157,7 @@ export function AutomationCard({
             />
             <Icon name="arrow" size="sm" tone="faint" />
             <FlowBox
-              glyph={targetGlyph ?? TARGET_GLYPH[target.type]}
+              glyph={targetGlyph ?? (target.type === "task" ? taskGlyph(target) : TARGET_GLYPH[target.type])}
               kind={t(targetKindKey(target.type))}
               testid={AutomationCardTestId.Target}
               value={targetText}
@@ -229,17 +239,10 @@ function FlowBox({
   );
 }
 
-/** Display id for a non-briefing target (used when no resolved name is supplied). */
+/** Display id for an agent/pipeline target (used when no resolved name is supplied);
+ *  every other target type resolves its display text before ever reaching this. */
 function targetIdOf(target: Target): string {
-  return target.type === "agent"
-    ? target.agentId
-    : target.type === "pipeline"
-      ? target.pipelineId
-      : // Phase 116b: a `task` target has no stored definition id — its "identity"
-        // is the typed prompt itself (full create-dialog treatment: 116d/116e).
-        target.type === "task"
-        ? target.text
-        : "";
+  return target.type === "agent" ? target.agentId : target.type === "pipeline" ? target.pipelineId : "";
 }
 
 /** i18n key for the target kind label. Exhaustive over the target union. */
