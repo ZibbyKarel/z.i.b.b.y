@@ -35,7 +35,16 @@
 ## Fix order (cheapest + most certain first; commit per group)
 
 - [x] **T1 — lint**: added `"design/**"` to `ignores` in `eslint.config.mjs`. `pnpm exec eslint .` now exits 0 (9 warnings, 0 errors). Greens the `lint` job. ✓
-- [x] **T2 — self-knowledge**: regenerated the committed fixture note with `ZIBBY_DATA_DIR=apps/api/data-test`; `ZIBBY_DATA_DIR=apps/api/data-test pnpm check:self-knowledge` now reports "up to date — no drift". Cleaned runtime pollution the generator wrote into `apps/api/data-test/`. Greens the `self-knowledge` job **and** `self-knowledge.e2e.test.ts`. ✓
+- [x] **T2 — self-knowledge**: two root causes, both fixed.
+  1. The note embedded a codebase-shape section from `graphify-out/GRAPH_REPORT.md` (present in
+     dev, absent in CI). Regenerate the fixture with the report absent; pin `GRAPH_REPORT_PATH`
+     to `/nonexistent` in `self-knowledge.e2e.test.ts` via `overrideProvider`.
+  2. **Cross-platform sort bug (the persistent CI drift):** the composer sorted ids with
+     `localeCompare()` (no locale) — macOS collates the Czech "ch" digraph so `chronicler` sorts
+     after `curator`; CI's Linux locale sorts it after `architekt`. So the macOS-generated
+     committed note never matched CI's fresh compose → drift every run. Fixed
+     `self-knowledge.composer.ts` to sort by UTF-16 code units (`ascendingById`), regenerated both
+     the fixture and live notes. CI-exact check + composer/e2e tests green locally. ✓
 - [x] **T3 — typecheck**: implemented the `open-url` case in `machine.service.ts` `plan()` and `execute()` (new `assertHttpUrl` fail-closed http(s) guard per the schema; reuses `opener`), plus a module-level `assertNever` exhaustiveness guard on both switches. `pnpm check:types` exits 0; existing machine tests still pass (22/22). ✓
 - [x] **T4 — web-component text drift**: not a shared cause — three distinct fixes.
   - `RunDetail.test.tsx`: label was renamed `cena (odhad)` → `cena` (catalog) — updated the
