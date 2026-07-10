@@ -418,8 +418,13 @@ export class RunnerCore<R extends BaseRun> {
     const run = this.strategy.assemble(base, spec);
     const handle: RunHandle<R> = { run, child, log, spec };
     this.runs.set(runId, handle);
-    await this.writeSidecar(run);
+    // Attach the child's exit/error listeners SYNCHRONOUSLY, before any await. A
+    // trivially-fast child — e.g. a verify phase's `/bin/sh -c "true"` — can exit
+    // during the sidecar write below; `exit` is a one-shot event, so wiring it
+    // AFTER the await lost the event under CI timing and the run hung `running`
+    // forever (the delivery-chain e2e's CI-only `until: timed out`, Phase 111 B).
     this.wire(handle);
+    await this.writeSidecar(run);
     this.logger?.info("run spawned", {
       runId,
       kind: spec.kind,
@@ -501,8 +506,10 @@ export class RunnerCore<R extends BaseRun> {
     handle.run.status = "running";
     // A respawn clears any prior limit-pause marker; a fresh pause re-stamps it.
     handle.run.resumeAt = null;
-    await this.writeSidecar(handle.run);
+    // Wire before the await (see start()): a fast respawned child must not out-race
+    // its exit listener during the sidecar write.
     this.wire(handle);
+    await this.writeSidecar(handle.run);
     this.emitStatus(handle.run);
     this.logger?.info("run resumed (spawned)", { runId, pid: handle.run.pid });
     return handle.run;
