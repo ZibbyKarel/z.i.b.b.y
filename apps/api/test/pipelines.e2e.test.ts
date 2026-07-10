@@ -64,6 +64,54 @@ describe("Pipelines API (e2e)", () => {
     return fresh;
   }
 
+  // Dump everything knowable about a stuck run to stderr, so a CI-only flake is
+  // diagnosable from the workflow log (no live debugger, no reproduction on dev).
+  // Prints the live aggregate (status/currentStage/retries/parkedReason + every
+  // stageRun's phase/attempt/status/verdict) and tails each stage child's `.log`
+  // (RunnerCore writes `<runsDir>/<stageRunId>.log`; those survive until an explicit
+  // delete, so terminal AND in-flight attempts are readable). Never throws — a
+  // diagnostic must not mask the original failure.
+  async function dumpRunDiagnostics(pipelineRunId: string): Promise<void> {
+    try {
+      const res = app.get(PipelineRunnerService).get(pipelineRunId);
+      console.error(
+        `\n===== PIPELINE RUN DIAGNOSTIC (${pipelineRunId}) =====\n` +
+          JSON.stringify(
+            {
+              status: res.status,
+              currentStage: res.currentStage,
+              currentStageRunId: res.currentStageRunId,
+              parkedReason: res.parkedReason,
+              parked: res.parked,
+              retries: res.retries,
+              cwd: res.cwd,
+              stageRuns: res.stageRuns.map((s) => ({
+                phaseId: s.phaseId,
+                runId: s.runId,
+                attempt: s.attempt,
+                status: s.status,
+                verdict: s.verdict,
+                dir: s.dir,
+              })),
+            },
+            null,
+            2,
+          ),
+      );
+      const ids = new Set<string>();
+      for (const s of res.stageRuns) ids.add(s.runId);
+      if (res.currentStageRunId) ids.add(res.currentStageRunId);
+      for (const id of ids) {
+        const logFile = path.join(runsDir, `${id}.log`);
+        const txt = await fs.readFile(logFile, "utf8").catch((e) => `<no log: ${e?.code ?? e}>`);
+        console.error(`\n----- stage log ${id} -----\n${txt}`);
+      }
+      console.error(`===== END DIAGNOSTIC (${pipelineRunId}) =====\n`);
+    } catch (e) {
+      console.error("dumpRunDiagnostics failed:", e);
+    }
+  }
+
   beforeAll(async () => {
     pipelinesDir = await fs.mkdtemp(path.join(os.tmpdir(), "pipelines-e2e-"));
     runsDir = await fs.mkdtemp(path.join(os.tmpdir(), "pipeline-runs-e2e-"));
@@ -601,10 +649,22 @@ describe("Pipelines API (e2e)", () => {
         // load) then fails fast with the real status instead of burning the whole
         // window on an opaque `until: timed out`. The 50s budget stays under this
         // test's 60s override so a merely-slow-under-load chain still has headroom.
-        const done = await until(async () => {
-          const res = app.get(PipelineRunnerService).get(pipelineRunId);
-          return res.status !== "running" ? res : null;
-        }, 50000);
+        let done: ReturnType<PipelineRunnerService["get"]>;
+        try {
+          done = await until(async () => {
+            const res = app.get(PipelineRunnerService).get(pipelineRunId);
+            return res.status !== "running" ? res : null;
+          }, 50000);
+        } catch (err) {
+          // Last-resort diagnostic (Phase 111 part B): this chain flakes ONLY in CI
+          // (slower box, higher FS/CPU contention) and has never reproduced on dev.
+          // When the poll gives up, dump the live run state + every stage child's log
+          // so the CI output (plain `pnpm run test`, no rtk filter) reveals which
+          // phase is stuck, its attempt/verdict, and what the demo-stage child printed
+          // before it hung or crashed — instead of an opaque "until: timed out".
+          await dumpRunDiagnostics(pipelineRunId);
+          throw err;
+        }
         expect(done.status).toBe("done");
 
         // The full handoff chain exists in the run tree (verify produces nothing).
