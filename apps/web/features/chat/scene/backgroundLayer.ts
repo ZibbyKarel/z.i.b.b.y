@@ -7,11 +7,13 @@ import { CATEGORY_COLORS, resolveSceneTokens } from "./tokens";
  * back, droppable to half framerate on weak devices without the orb losing
  * smoothness). Two passes:
  *
- *  1. A full-screen procedural sky — drifting nebula clouds, two independently
- *     twinkling star layers, a soft glow pooled behind the orb (Phase 94: centred on
- *     wherever the controller says the orb actually projects to, not always screen
- *     centre — see `uGlowCenter`) that tracks the orb's live colour, and corner
- *     darkening — all in one fragment shader.
+ *  1. A full-screen procedural sky — drifting nebula clouds in a ring around the
+ *     orb + subagent cluster (Phase 94: centred on wherever the controller says the
+ *     orb actually projects to, not always screen centre — see `uGlowCenter`), two
+ *     independently twinkling star layers, and corner darkening — all in one
+ *     fragment shader. Phase 115a removed the seat-glow term that used to pool an
+ *     orb-coloured wash directly behind the orbs; the halo now lives entirely on the
+ *     orb layer itself (see `orbLayer.ts`).
  *  2. The faint distant node-web: ~100 nodes in 7 clusters coloured by the real
  *     agent categories (so it reads as the same taxonomy as the constellation),
  *     joined by proximity lines, plus drifting dust. Rendered with the shared
@@ -44,8 +46,8 @@ void main() {
 }
 `;
 
-// Nebula + stars + orb-glow + vignette. Kept deliberately restrained — a deep,
-// slow sky, not a blown-out screensaver.
+// Nebula ring + stars + birth wavefront + vignette. Kept deliberately
+// restrained — a deep, slow sky, not a blown-out screensaver.
 const SKY_FRAGMENT = /* glsl */ `
 precision highp float;
 uniform float uTime;
@@ -160,19 +162,6 @@ void main() {
   col += vec3(0.75, 0.82, 1.0) * s1 * 0.9 * starFocus * birthMask;
   col += vec3(0.85, 0.9, 1.0) * s2 * 0.6 * starFocus * birthMask;
 
-  // Luminous halo pooled right at the orb + subagent cluster — the tight,
-  // orb-coloured seat that hugs the orbs, distinct from the nebula ring above
-  // (this is the only term that should visually touch the orbs). Tightened
-  // from phase 113's 0.85 so it reads as a compact luminous cushion sitting
-  // inside the calm core rather than a broad wash, and nudged brighter
-  // (0.5→0.6) so it seats the orbs firmly now that the ring around it is calmer.
-  // Phase 114c: NOT gated by birthMask (it sits at clusterDist ≈ 0, which the
-  // front clears within its first fraction of a second anyway) — instead it
-  // rides its own quick ease so it is the very first thing to appear, reading
-  // as the seed the rest of the sky blooms out of, without a hard instant pop.
-  float glow = smoothstep(0.7, 0.0, clusterDist);
-  col += uOrbColor * glow * glow * 0.6 * smoothstep(0.0, 0.15, uBirth);
-
   // Phase 114c: the travelling ridge of the birth wavefront itself — a thin
   // glint of orb colour riding the expanding front, fading out once uBirth
   // reaches 1 and the bloom is complete.
@@ -215,10 +204,12 @@ export interface BackgroundLayer {
   render(renderer: THREE.WebGLRenderer, camera: THREE.PerspectiveCamera): void;
   /** Set the drawing-buffer aspect so the sky shader stays undistorted. */
   setAspect(aspect: number): void;
-  /** Phase 94: recentre the behind-orb glow at `(x, y)` in the sky shader's
-   * centred, aspect-corrected `p` space (screen centre is `(0, 0)`; `+y` is up) —
-   * the controller feeds the raised orb's own projected position so the glow keeps
-   * pooling behind it instead of at screen centre. */
+  /** Phase 94: recentre the nebula ring and birth wavefront on `(x, y)` in the sky
+   * shader's centred, aspect-corrected `p` space (screen centre is `(0, 0)`; `+y` is
+   * up) — the controller feeds the raised orb's own projected position so the ring
+   * frames it and the birth blooms outward from it instead of from screen centre.
+   * (Phase 115a removed the seat-glow term this uniform used to feed directly; the
+   * orb's own halo — see `orbLayer.ts` — now carries that job.) */
   setGlowCenter(x: number, y: number): void;
   dispose(): void;
 }
