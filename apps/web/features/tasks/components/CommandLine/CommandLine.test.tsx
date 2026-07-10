@@ -738,6 +738,26 @@ describe("CommandLine (Phase 26 unified launcher)", () => {
       expect(screen.getByTestId(CommandLineTestId.Send)).toBeDisabled();
     });
 
+    it("renders `submitLabel` instead of the default Send label when provided, without changing the submit action", async () => {
+      const onSubmit = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine onSubmit={onSubmit} submitLabel="Naplánovat" />);
+
+      const sendButton = screen.getByTestId(CommandLineTestId.Send);
+      expect(sendButton).toHaveTextContent("Naplánovat");
+      expect(sendButton).not.toHaveTextContent("Odeslat");
+
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "ahoj");
+      await user.click(sendButton);
+
+      expect(onSubmit).toHaveBeenCalledWith("ahoj", undefined, undefined);
+    });
+
+    it("falls back to the default `commandLine.send` label when `submitLabel` is omitted", () => {
+      render(<CommandLine onSubmit={vi.fn()} />);
+      expect(screen.getByTestId(CommandLineTestId.Send)).toHaveTextContent("Odeslat");
+    });
+
     it("applies an externally injected target (the chat quick-switcher palette) into the text, then reports it consumed", () => {
       const onInjectedTargetConsumed = vi.fn();
       const target = { kind: "agent", id: "builder", name: "Builder", glyph: "bot" } as const;

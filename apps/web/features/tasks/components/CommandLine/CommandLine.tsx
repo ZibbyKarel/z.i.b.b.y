@@ -191,6 +191,10 @@ export interface CommandLineProps {
   /** Mirrors the per-task project selection up whenever it changes — a host
    *  that wants to observe (never drive) the pick reads this instead. */
   onProjectChange?: (id: string | null) => void;
+  /** Overrides the run/submit button label. Label only — the submit action is
+   *  still whatever the mode dictates (in send-delegation mode, `onSubmit`).
+   *  Defaults to the classify/send translation. */
+  submitLabel?: string;
 }
 
 /** The honest, non-fabricated classification ack shown below the box after submit. */
@@ -435,6 +439,7 @@ export function CommandLine({
   showAttach = true,
   initialProjectId,
   onProjectChange,
+  submitLabel,
 }: CommandLineProps) {
   const t = useTranslations("tasks");
   const tMention = useTranslations("chat.mention");
@@ -626,7 +631,7 @@ export function CommandLine({
   const canRun =
     !disabled &&
     (sendMode ? text.trim().length > 0 : isLoop ? canSubmitLoop(loop) : text.trim().length > 2);
-  const runLabel = isLoop ? t("loop.submit") : t("classifyRun");
+  const runLabel = submitLabel ?? (isLoop ? t("loop.submit") : t("classifyRun"));
   const runIcon: IconName = isLoop ? "retry" : "play";
 
   const ackKindLabel: Record<TaskTargetKind, string> = {
@@ -1125,7 +1130,7 @@ export function CommandLine({
               onClick={() => dispatch(null)}
               size="sm"
             >
-              {t("commandLine.send")}
+              {submitLabel ?? t("commandLine.send")}
             </Button>
           ) : (
             <DropDownButton
