@@ -92,6 +92,19 @@ function extractBlockContent(doc: string, key: BlockKey): string | null {
   return match ? (match[1] ?? "") : null;
 }
 
+/**
+ * Locale-independent ascending compare (UTF-16 code units). Deterministic across
+ * platforms — unlike `String.prototype.localeCompare` with no explicit locale,
+ * whose runtime-default collation reordered ids like `chronicler` (macOS treats
+ * the Czech "ch" digraph as one letter sorting after "h") differently on CI's
+ * Linux locale, so the committed note never matched CI's fresh compose → phantom
+ * self-knowledge drift. `renderChannels` already used the default `.sort()`
+ * (code-unit) for the same reason; this shares that ordering for id-keyed lists.
+ */
+function ascendingById<T extends { id: string }>(a: T, b: T): number {
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
+
 /** One human-readable line describing a rule's AND-ed match conditions. */
 function describeCondition(condition: MatchCondition): string {
   switch (condition.type) {
@@ -117,7 +130,7 @@ function renderMeta(generatedAt: string): string {
 }
 
 function renderAgents(agents: Agent[]): string {
-  const sorted = [...agents].sort((a, b) => a.id.localeCompare(b.id));
+  const sorted = [...agents].sort(ascendingById);
   const lines = [`## Agents (${sorted.length})`];
   if (sorted.length === 0) {
     lines.push("_No agents registered yet._");
@@ -133,7 +146,7 @@ function renderAgents(agents: Agent[]): string {
 }
 
 function renderPipelines(pipelines: Pipeline[]): string {
-  const sorted = [...pipelines].sort((a, b) => a.id.localeCompare(b.id));
+  const sorted = [...pipelines].sort(ascendingById);
   const lines = [`## Pipelines (${sorted.length})`];
   if (sorted.length === 0) {
     lines.push("_No pipelines registered yet._");
@@ -158,7 +171,7 @@ function renderPipelines(pipelines: Pipeline[]): string {
  * defeating the drift signal — live status stays a live-query surface).
  */
 function renderSubsystems(subsystems: Subsystem[]): string {
-  const sorted = [...subsystems].sort((a, b) => a.id.localeCompare(b.id));
+  const sorted = [...subsystems].sort(ascendingById);
   const lines = [`## Subsystems (${sorted.length})`];
   if (sorted.length === 0) {
     lines.push("_No subsystems registered yet._");
@@ -181,7 +194,7 @@ function renderGates(floor: GateRule[], catalog: GlobalGateRule[]): string {
   if (floor.length === 0) {
     lines.push("_None._");
   } else {
-    for (const rule of [...floor].sort((a, b) => a.id.localeCompare(b.id))) {
+    for (const rule of [...floor].sort(ascendingById)) {
       lines.push(`- \`${rule.id}\`: ${describeMatch(rule.match)} → **${rule.decision}**`);
     }
   }
@@ -190,7 +203,7 @@ function renderGates(floor: GateRule[], catalog: GlobalGateRule[]): string {
   if (catalog.length === 0) {
     lines.push("_None._");
   } else {
-    for (const rule of [...catalog].sort((a, b) => a.id.localeCompare(b.id))) {
+    for (const rule of [...catalog].sort(ascendingById)) {
       const label = rule.name ? `${rule.name} (\`${rule.id}\`)` : `\`${rule.id}\``;
       lines.push(`- ${label}: ${describeMatch(rule.match)} → **${rule.decision}**`);
     }
