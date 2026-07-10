@@ -3,6 +3,7 @@ import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
+import { GRAPH_REPORT_PATH } from "../src/self-knowledge/self-knowledge.service";
 
 describe("Self-Knowledge API (e2e)", () => {
   let app: INestApplication;
@@ -11,7 +12,16 @@ describe("Self-Knowledge API (e2e)", () => {
     // No per-suite dir isolation needed: `vitest.setup.ts` already seeds a fresh,
     // per-test-file `ZIBBY_DATA_DIR` (from `apps/api/data-test`) before this file's
     // `AppModule` ever boots — the same read-only-endpoint pattern as `gates.e2e.test.ts`.
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    //
+    // Pin the graph report to an absent path so the composed note is deterministic
+    // regardless of whether a machine-local `graphify-out/GRAPH_REPORT.md` happens to
+    // exist (it does in dev, never in CI). The committed fixture note tracks the
+    // fixture *catalog* (agents/pipelines/gate-rules/channels) — not the volatile,
+    // machine-local codebase-shape section — so the drift check must ignore it too.
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(GRAPH_REPORT_PATH)
+      .useValue("/nonexistent/GRAPH_REPORT.md")
+      .compile();
     app = moduleRef.createNestApplication();
     await app.init();
   });
