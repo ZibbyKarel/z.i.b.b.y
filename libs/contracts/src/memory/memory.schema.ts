@@ -148,3 +148,30 @@ export const UpdateIndexLinkSchema = z.object({
   label: z.string().optional(),
 });
 export type UpdateIndexLinkInput = z.infer<typeof UpdateIndexLinkSchema>;
+
+/**
+ * Bulk-import request (phase 112): copy every `.md`/`.txt` file under a
+ * server-side `sourcePath` into the halda queue (`dataDir("import")`) for the
+ * existing nightly triage sweep to pick up — other file types are skipped and
+ * counted, never silently dropped. `distillNow` opts into firing the distiller
+ * immediately (detached) instead of waiting for the nightly `memory-distill` cron.
+ */
+export const ImportRequestSchema = z.object({
+  sourcePath: z.string().min(1),
+  distillNow: z.boolean().optional().default(false),
+});
+export type ImportRequestInput = z.infer<typeof ImportRequestSchema>;
+
+/**
+ * Result of a bulk import: how many files were staged into the halda queue vs.
+ * skipped (unsupported type, oversized, unreadable, ...), a breakdown of skip
+ * reasons (optional/backwards compatible), and whether `distillNow` triggered an
+ * immediate (detached) distiller run.
+ */
+export const ImportResultSchema = z.object({
+  staged: z.number().int(),
+  skipped: z.number().int(),
+  skippedByReason: z.record(z.string(), z.number()).optional(),
+  distillTriggered: z.boolean(),
+});
+export type ImportResult = z.infer<typeof ImportResultSchema>;

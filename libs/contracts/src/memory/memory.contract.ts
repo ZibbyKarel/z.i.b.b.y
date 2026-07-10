@@ -5,6 +5,8 @@ import {
   AppendDailySchema,
   AppendNoteSchema,
   CreateNoteSchema,
+  ImportRequestSchema,
+  ImportResultSchema,
   IndexEntrySchema,
   MemoryGraphSchema,
   NoteSchema,
@@ -86,6 +88,14 @@ export const memoryContract = c.router(
       body: UpdateIndexLinkSchema,
       responses: { 200: NoteSchema, 422: ErrorSchema },
       summary: "Ensure a [[target]] wiki-link exists in a MOC (auto-creates it)",
+    },
+    import: {
+      method: "POST",
+      path: "/memory/import",
+      body: ImportRequestSchema,
+      responses: { 200: ImportResultSchema, 400: ErrorSchema, 422: ErrorSchema },
+      summary:
+        "Bulk-import .md/.txt files from a server-side folder into the halda queue (phase 112)",
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   CreateNoteSchema,
+  ImportRequestSchema,
+  ImportResultSchema,
   MemoryGraphSchema,
   NoteIdSchema,
   NoteSchema,
@@ -25,6 +27,8 @@ describe("memoryContract", () => {
     expect(memoryContract.updateNote.path).toBe("/api/memory/notes/:id");
     expect(memoryContract.appendToNote.path).toBe("/api/memory/notes/:id/append");
     expect(memoryContract.updateIndex.path).toBe("/api/memory/index/:id/links");
+    expect(memoryContract.import.method).toBe("POST");
+    expect(memoryContract.import.path).toBe("/api/memory/import");
   });
 });
 
@@ -219,5 +223,59 @@ describe("CreateNoteSchema", () => {
     expect(
       CreateNoteSchema.safeParse({ id: "note-1", tier: "memory", body: "x" }).success,
     ).toBe(true);
+  });
+});
+
+describe("ImportRequestSchema", () => {
+  it("parses a valid import request", () => {
+    const parsed = ImportRequestSchema.safeParse({
+      sourcePath: "/Users/karel/notes",
+      distillNow: true,
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.sourcePath).toBe("/Users/karel/notes");
+      expect(parsed.data.distillNow).toBe(true);
+    }
+  });
+
+  it("defaults `distillNow` to false when omitted", () => {
+    const parsed = ImportRequestSchema.safeParse({ sourcePath: "/Users/karel/notes" });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.distillNow).toBe(false);
+    }
+  });
+
+  it("rejects an empty `sourcePath`", () => {
+    expect(ImportRequestSchema.safeParse({ sourcePath: "" }).success).toBe(false);
+  });
+});
+
+describe("ImportResultSchema", () => {
+  it("parses a valid import result with `skippedByReason`", () => {
+    const parsed = ImportResultSchema.safeParse({
+      staged: 12,
+      skipped: 3,
+      skippedByReason: { unsupported: 2, oversized: 1 },
+      distillTriggered: true,
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.staged).toBe(12);
+      expect(parsed.data.skippedByReason).toEqual({ unsupported: 2, oversized: 1 });
+    }
+  });
+
+  it("omitting `skippedByReason` still validates (backwards compatible)", () => {
+    const parsed = ImportResultSchema.safeParse({
+      staged: 0,
+      skipped: 0,
+      distillTriggered: false,
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.skippedByReason).toBeUndefined();
+    }
   });
 });
