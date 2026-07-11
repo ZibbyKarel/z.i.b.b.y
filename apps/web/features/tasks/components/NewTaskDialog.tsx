@@ -6,7 +6,7 @@ import { useProjectsQuery } from "../../projects";
 import { useTaskClassification } from "../hooks/useTaskClassification";
 import { useTaskOutput } from "../hooks/useTaskOutput";
 import { type TaskRouting, type TaskTarget, extractPaths } from "../task";
-import { CommandLine } from "./CommandLine/CommandLine";
+import { TaskCommandLine } from "./CommandLine/TaskCommandLine";
 import { LoopComposer } from "./LoopComposer";
 import { PlanPreview } from "./PlanPreview";
 import { TaskContextPanel } from "./TaskContextPanel";
@@ -170,7 +170,7 @@ export function NewTaskDialog({
 
         {initialContext && <TaskContextPanel context={initialContext} />}
 
-        <CommandLine
+        <TaskCommandLine
           chrome={false}
           context={initialContext}
           disabled={!outputReady}

@@ -14,7 +14,7 @@ import { usePinToggle } from "../pins";
 import { usePipelinesQuery } from "../pipelines";
 import { ParkedRunsPanel } from "../runs/components/ParkedRunsPanel";
 import { useSkillsQuery } from "../skills";
-import { CommandLine } from "../tasks/components/CommandLine/CommandLine";
+import { TaskCommandLine } from "../tasks/components/CommandLine/TaskCommandLine";
 import { ApprovalsPanel } from "./components/ApprovalsPanel";
 import { BriefingCard } from "./components/BriefingCard/BriefingCard";
 import { QuickLaunchPanel } from "./components/QuickLaunchPanel/QuickLaunchPanel";
@@ -126,7 +126,7 @@ export function Screen() {
         {/* Prominent command bar (Phase 40) — task launcher right under the status
             header, matching velin-b's VbCommandBar placement. Default task-launch mode
             (no onSubmit): dispatches via useTaskSubmit and navigates to /runs. */}
-        <CommandLine chrome showAck suggestions={commandBarSuggestions} />
+        <TaskCommandLine chrome showAck suggestions={commandBarSuggestions} />
 
         {/* Dynamic two-zone dashboard: below lg it collapses to a single column, at lg+
             the needs-you queue (main) sits beside the quick-launch rail so the page
