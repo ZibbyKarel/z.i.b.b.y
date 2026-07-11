@@ -114,10 +114,48 @@ function CosmicSceneView({
 
   // Instantiate the controller once. Dynamically imported so three.js never loads
   // in SSR or the initial HUD bundle, and never instantiates in jsdom/no-WebGL.
+  //
+  // Phase 117d — the render loop is gated by THREE independent "should this be
+  // running" reasons: the tab being hidden, the window losing OS focus, and the
+  // scene container scrolling out of the viewport. Each is tracked as its own
+  // blocking boolean; they collapse into a single derived `shouldRun` that is
+  // only re-applied to the controller on an actual transition (`lastAppliedRef`
+  // guards this). This is what makes it safe to have three uncoordinated event
+  // sources: `resume()` clears the controller's own `hostPaused` flag and
+  // restarts the loop, so calling it while a *second* reason is still active
+  // would wrongly un-pause the scene out from under that reason. Only the
+  // transition from "some reason blocked" to "all clear" may call `resume()`.
   useEffect(() => {
     if (!canMountWebGL() || !containerRef.current) return;
     const container = containerRef.current;
     let cancelled = false;
+
+    // Seed from the real environment at mount time — the scene can mount into
+    // an already-hidden tab, an already-unfocused window (`document.hasFocus()`
+    // is the only reliable read for this — there's no "initial focus" event),
+    // or (in principle) already off-screen. `offScreen` starts `false` since
+    // the `IntersectionObserver` below reports the true state on its first
+    // callback almost immediately; defaulting to "on screen" just means at
+    // most one avoidable frame if it's wrong.
+    const reasons = {
+      documentHidden: document.visibilityState === "hidden",
+      windowBlurred: typeof document.hasFocus === "function" ? !document.hasFocus() : false,
+      offScreen: false,
+    };
+    const lastAppliedRunningRef = {
+      current: !reasons.documentHidden && !reasons.windowBlurred && !reasons.offScreen,
+    };
+
+    // Re-derive "should the loop run" from the three reasons and, on an actual
+    // transition, apply it. Idempotent by construction — repeated calls with no
+    // change to `reasons` are no-ops.
+    const applyRunState = () => {
+      const shouldRun = !reasons.documentHidden && !reasons.windowBlurred && !reasons.offScreen;
+      if (shouldRun === lastAppliedRunningRef.current) return;
+      lastAppliedRunningRef.current = shouldRun;
+      if (shouldRun) controllerRef.current?.resume();
+      else controllerRef.current?.pause();
+    };
 
     void import("./sceneController").then(({ createSceneController }) => {
       if (cancelled || !containerRef.current) return;
@@ -129,6 +167,11 @@ function CosmicSceneView({
       });
       controllerRef.current = created;
       setController(created);
+      // The controller starts its loop running unconditionally on construction
+      // (it has no way to know about blur/visibility/viewport at birth) — sync
+      // it to whatever was already true (e.g. mounted into a blurred window)
+      // before anything else can observe a frame.
+      if (!lastAppliedRunningRef.current) created.pause();
       // Push the initial subsystem roster (the effect below only fires on CHANGE).
       created.setSubsystems(toSceneSubsystems(subsystems));
       // Expose the key setters for console testing during development — drive the
@@ -139,14 +182,43 @@ function CosmicSceneView({
     });
 
     const onVisibility = () => {
-      if (document.hidden) controllerRef.current?.pause();
-      else controllerRef.current?.resume();
+      reasons.documentHidden = document.visibilityState === "hidden";
+      applyRunState();
+    };
+    const onBlur = () => {
+      reasons.windowBlurred = true;
+      applyRunState();
+    };
+    const onFocus = () => {
+      reasons.windowBlurred = false;
+      applyRunState();
     };
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("blur", onBlur);
+    window.addEventListener("focus", onFocus);
+
+    // Feature-detect: jsdom/older browsers may lack `IntersectionObserver` —
+    // treat "no observer available" as never off-screen rather than blocking
+    // the loop forever.
+    let observer: IntersectionObserver | undefined;
+    if (typeof IntersectionObserver !== "undefined") {
+      observer = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0];
+          reasons.offScreen = entry ? !entry.isIntersecting : false;
+          applyRunState();
+        },
+        { threshold: 0 },
+      );
+      observer.observe(container);
+    }
 
     return () => {
       cancelled = true;
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("focus", onFocus);
+      observer?.disconnect();
       controllerRef.current?.dispose();
       controllerRef.current = null;
       setController(null);
