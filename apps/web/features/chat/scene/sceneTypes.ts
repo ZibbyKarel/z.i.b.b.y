@@ -81,6 +81,12 @@ export interface SceneInputs {
   dock: SceneDockItem[];
   /** Whether the operator asked the OS for reduced motion. */
   reducedMotion: boolean;
+  /** Phase 117b — the operator-owned power-saver toggle (`SystemConfig.powerSaver`).
+   * Caps the orb renderer to no antialiasing (fixed at construction — see
+   * `sceneController.ts`), throttles the render loop to ~30fps, and freezes the
+   * loop entirely once the scene is at rest. Distinct from `reducedMotion` (an OS
+   * media query): power-saver is a stricter, explicit opt-in. */
+  powerSaver: boolean;
 }
 
 /**

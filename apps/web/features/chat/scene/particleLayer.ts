@@ -114,6 +114,10 @@ export interface ParticleLayer {
   /** Advance every active flight by `dt` seconds: lerps position along
    * `from → to`, fades near both ends, deactivates once `t >= 1`. */
   update(dt: number): void;
+  /** Phase 117b — whether any flight is currently in mid-travel. Feeds the
+   * power-saver "is the scene at rest" check in `sceneController.ts`: a resting
+   * scene must have zero active particles before the loop can park. */
+  hasActive(): boolean;
   dispose(): void;
 }
 
@@ -266,6 +270,9 @@ export function createParticleLayer(): ParticleLayer {
         alphaAttr.needsUpdate = true;
         sizeAttr.needsUpdate = true;
       }
+    },
+    hasActive() {
+      return slots.some((s) => s.active);
     },
     dispose() {
       geometry.dispose();

@@ -99,6 +99,27 @@ const ENERGY_PER_CHAR = 0.06;
  * asymmetric envelope (attack is instant on `pushActivity`). */
 const ENERGY_DECAY = 1.6;
 
+/** Phase 117b (variant 4b) — power-saver's target frame interval (~30fps), in
+ * seconds. `frame()` still schedules a `requestAnimationFrame` every tick (so
+ * timing stays accurate and the browser doesn't further throttle the callback)
+ * but only runs the update+render body once the wall-clock accumulator reaches
+ * this interval. Composes with the existing background half-rate skip
+ * (`frameCount % 2`) for a further /2 on top. */
+const POWER_SAVER_FRAME_INTERVAL_S = 1 / 30;
+
+/** Phase 117b — how long the power-saver loop must keep running after a
+ * target-CHANGING wake (a mode change or a subsystem status/colour change, and a
+ * `resume()` that may have missed a change while hidden) before it is allowed to
+ * freeze again. The orb/mini-orb eases are an asymptotic `damp` at
+ * `DAMPING_RATE = 5` (`orbLayer.ts`) — time constant 0.2s — so ~1s (five time
+ * constants) lets a colour/scale transition visually complete before the loop
+ * parks. Without this the loop would run a single tick and re-freeze the orb
+ * partway to its new target (e.g. stuck pinkish instead of fully red).
+ * Activity-only wakes (`pushActivity`/`flashComplete`/`emitFlight`) don't need it
+ * — their own decaying energy/flash/particle signals already keep the scene
+ * non-resting for their whole duration. */
+const SETTLE_DURATION_S = 1;
+
 const CAMERA_Z = 6;
 /** Vertical field of view (degrees) — matches the `PerspectiveCamera` constructor
  * below; kept as its own constant so {@link CLUSTER_Y}'s screen-position maths
@@ -232,6 +253,23 @@ export function createSceneController(
   // tick still get visibly different jitter.
   let flightSeq = 0;
 
+  // Phase 117b (variant 4b/5) — power-saver bookkeeping. `powerSaverAccum` is the
+  // wall-clock accumulator for the ~30fps throttle. Once the scene reaches rest
+  // under power-saver, `frame()` sets `running = false` and stops scheduling —
+  // the same "loop stopped" signal `pause()` already uses, just reached by a
+  // different path — distinct from `hostPaused` (tab hidden / overlay closed via
+  // `pause()`), so a real activity signal can `wake()` a scene parked-at-rest
+  // but never one that's paused by the host; `resume()` un-pauses and restarts
+  // the loop, which — if still genuinely at rest — draws exactly one frame
+  // before parking again on its own.
+  let powerSaverAccum = 0;
+  let hostPaused = false;
+  // Phase 117b — while > 0 the power-saver loop must not park (see
+  // SETTLE_DURATION_S): a target-changing wake arms it so the eased transition
+  // finishes on screen instead of freezing after one tick. Decremented by real
+  // `dt` in `tick`.
+  let settleTimer = 0;
+
   const mobile = (container.clientWidth || window.innerWidth || 0) < 640;
   // Low-power devices (mobile, or few cores) get an extra-frugal background: lower
   // resolution on top of the always-on half-framerate. The orb stays full quality.
@@ -253,9 +291,11 @@ export function createSceneController(
   container.appendChild(bgRenderer.domElement);
   const background: BackgroundLayer = createBackgroundLayer(mobile);
 
-  // --- Orb renderer (transparent, composited over the background). Full quality,
-  // always. Appended second so it stacks on top. ---
-  const orbRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+  // --- Orb renderer (transparent, composited over the background). Full quality
+  // by default; phase 117b's power-saver toggle drops antialiasing (fixed at
+  // construction — the whole reason `CosmicScene` remounts on a toggle flip).
+  // Appended second so it stacks on top. ---
+  const orbRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: !initial.powerSaver });
   orbRenderer.toneMapping = THREE.ACESFilmicToneMapping;
   orbRenderer.toneMappingExposure = 1.15;
   orbRenderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -314,6 +354,12 @@ export function createSceneController(
     /** The per-state target it eases toward; defaults to `klid` until setSubsystems. */
     target: OrbTarget;
     present: boolean;
+    /** Phase 117b — a cheap `${color}:${state}` signature of the LAST pushed
+     * target, so `setSubsystems` can tell a genuine status/colour change (which
+     * must `wake()` a parked power-saver scene and let the mini ease to its new
+     * target) from a no-op feed refresh (same array, unchanged values — must NOT
+     * wake, or a periodic refetch would defeat the freeze). */
+    stateKey: string;
   }
   const nodeSlots = octagonSlots(NODE_RING_RADIUS);
   const minis: MiniOrb[] = SUBSYSTEMS.map((subsystem, index) => {
@@ -334,6 +380,7 @@ export function createSceneController(
       worldPos: new THREE.Vector3(slot.x, CLUSTER_Y + slot.y, 0),
       target: miniOrbTarget(subsystem.color, "klid"),
       present: true,
+      stateKey: `${subsystem.color}:klid`,
     };
   });
 
@@ -579,11 +626,15 @@ export function createSceneController(
   resizeObserver?.observe(container);
   resize();
 
-  function frame() {
-    if (!running) return;
-    rafId = requestAnimationFrame(frame);
-    const dt = Math.min(clock.getDelta(), 0.05); // clamp after a tab-switch stall
+  /** The full per-tick update+render body — extracted from `frame()` so
+   * power-saver's ~30fps throttle (117b variant 4b) can run it at an accumulated
+   * `dt` instead of the raw per-`requestAnimationFrame` delta, while the
+   * non-power-saver path calls it every frame exactly as before. */
+  function tick(dt: number) {
     elapsed += dt;
+    // Phase 117b — burn down the post-target-change settle window (see
+    // SETTLE_DURATION_S); only consulted by `isAtRest` on the power-saver path.
+    settleTimer = Math.max(0, settleTimer - dt);
 
     // Energy: instant attack happens in pushActivity; here we only decay.
     energy = Math.max(0, energy - ENERGY_DECAY * dt);
@@ -643,33 +694,124 @@ export function createSceneController(
     frameCount++;
   }
 
+  /** Phase 117b — whether the scene has nothing left to animate: the one-shot
+   * mitosis entry is done, the energy/flash envelopes have fully decayed, and no
+   * handoff particle is mid-flight. The power-saver freeze (variant 5) parks the
+   * loop once this goes true; factored as its own function so 117c's always-on
+   * idle demand-render can reuse the same "is anything actually moving" check. */
+  function isAtRest(): boolean {
+    return (
+      !entryActive && energy <= 0 && flash <= 0 && !particles.hasActive() && settleTimer <= 0
+    );
+  }
+
+  function frame() {
+    if (!running) return;
+
+    if (!inputs.powerSaver) {
+      // Unchanged full-rate path: schedule the next frame up front (so a thrown
+      // `tick` never stalls the loop) and always render.
+      rafId = requestAnimationFrame(frame);
+      const dt = Math.min(clock.getDelta(), 0.05); // clamp after a tab-switch stall
+      tick(dt);
+      return;
+    }
+
+    // Power-saver (variant 4b): accumulate wall-clock time and only run the
+    // update+render body once ~1/30s has elapsed, still scheduling a
+    // `requestAnimationFrame` every tick until we decide to park below.
+    const dt = Math.min(clock.getDelta(), 0.05);
+    powerSaverAccum += dt;
+    if (powerSaverAccum < POWER_SAVER_FRAME_INTERVAL_S) {
+      rafId = requestAnimationFrame(frame);
+      return;
+    }
+    const stepDt = powerSaverAccum;
+    powerSaverAccum = 0;
+    tick(stepDt);
+
+    if (isAtRest()) {
+      // Power-saver freeze (variant 5): nothing is moving — stop scheduling
+      // frames entirely (zero draws while resting). `running = false` mirrors
+      // `pause()`'s own bookkeeping so `wake()`'s `start()` call actually
+      // restarts the loop instead of no-op'ing on a stale `running === true`.
+      running = false;
+      return;
+    }
+    rafId = requestAnimationFrame(frame);
+  }
+
   function start() {
     if (running || disposed) return;
     running = true;
+    powerSaverAccum = 0;
     clock.getDelta(); // drop the accumulated gap so the first dt is small
     rafId = requestAnimationFrame(frame);
+  }
+
+  /** Re-arm the loop after real activity (`pushActivity`/`flashComplete`/a mode
+   * change/`emitFlight`/a subsystem status change) once it has parked at rest
+   * under power-saver. A no-op when not parked (non-power-saver never parks, so
+   * this is also a harmless no-op there), and — deliberately — when the host has
+   * paused the scene (`pause()`, tab hidden): activity arriving in a hidden tab
+   * must not start rendering; `resume()` is the only path back from a host-pause.
+   *
+   * `settle: true` is passed by wakes that change an EASED target (a mode change
+   * or a subsystem status/colour change) — it arms the {@link SETTLE_DURATION_S}
+   * window so the transition finishes on screen before the loop can freeze again,
+   * rather than parking after a single tick with the orb stuck partway. The
+   * settle window is armed even while `hostPaused` (before the early-return) so a
+   * change that landed while the tab was hidden still settles cleanly once
+   * `resume()` restarts the loop. Activity-only wakes pass `false` — their own
+   * energy/flash/particle signals already keep the scene non-resting. */
+  function wake(settle = false) {
+    if (settle) settleTimer = SETTLE_DURATION_S;
+    if (disposed || hostPaused) return;
+    start();
   }
 
   start();
 
   return {
     setInputs(next) {
+      const modeChanged = next.mode !== inputs.mode;
       inputs = next;
+      // The dock is a DOM overlay: `setItems` reconciles chips synchronously and
+      // fades them via CSS transitions + its OWN internal rAF — the WebGL render
+      // loop's `tick` never touches it, so a dock change while the scene is parked
+      // under power-saver applies immediately and needs no `wake()`.
       dock.setItems(next.dock);
+      // A mode change (e.g. `idle` → `listening`/`thinking`) is genuine activity
+      // worth waking a parked power-saver scene for, and it changes the orb's
+      // EASED target — `settle: true` so the transition completes on screen
+      // instead of freezing after one tick.
+      if (modeChanged) wake(true);
     },
     setSubsystems(list) {
       // Key by id so a severity-sorted or momentarily-short feed never reflows the
       // fixed octagon — each mini-orb reads its own entry (missing → not present).
       const byId = new Map(list.map((s) => [s.id, s]));
+      let changed = false;
       for (const mini of minis) {
         const next = byId.get(mini.id);
         if (next) {
+          const key = `${next.color}:${next.state}`;
+          if (next.present !== mini.present || key !== mini.stateKey) changed = true;
           mini.present = next.present;
           mini.target = miniOrbTarget(next.color, next.state);
+          mini.stateKey = key;
         } else {
+          if (mini.present) changed = true;
           mini.present = false;
         }
       }
+      // A genuine status/colour change updates a mini-orb's EASED target, which
+      // `tick` only advances while the loop runs — so under power-saver a subsystem
+      // going red while the scene is parked would otherwise never ease in. Wake
+      // (with the settle window) so the transition plays out. `changed` gates this
+      // so a no-op feed refresh (same values, new array reference) can't defeat
+      // the freeze by waking on every poll.
+      if (changed) wake(true);
     },
     subscribeProjections(cb) {
       projectionSubscribers.add(cb);
@@ -683,9 +825,11 @@ export function createSceneController(
     },
     pushActivity(chars) {
       energy = Math.min(1, energy + Math.max(1, chars) * ENERGY_PER_CHAR);
+      wake();
     },
     flashComplete() {
       flash = 1;
+      wake();
     },
     emitFlight(from, to, color) {
       // `flightForEvent` guarantees exactly one side is "orb"; the other names the
@@ -696,6 +840,11 @@ export function createSceneController(
       const orbPoint = orbFlightVerts[index];
       const mini = minis.find((m) => m.id === subsystemId);
       if (!orbPoint || !mini) return; // unknown/unregistered id — nothing to draw
+      // A real dispatch/report flight is genuine activity — wake a parked scene
+      // so the mote is actually drawn instead of animating invisibly behind a
+      // stopped loop (not explicitly called out in the plan's wake-trigger list,
+      // but required for the animation to be visible under power-saver).
+      wake();
       const { from: fromPoint, to: toPoint } = resolveFlightEndpoints(
         from,
         to,
@@ -718,11 +867,22 @@ export function createSceneController(
       );
     },
     pause() {
+      // Set unconditionally (even if already parked at rest under power-saver)
+      // so a subsequent `pushActivity`/`flashComplete`/mode-change arriving
+      // while hidden can't `wake()` the loop — only `resume()` clears this.
+      hostPaused = true;
       if (!running) return;
       running = false;
       cancelAnimationFrame(rafId);
     },
     resume() {
+      hostPaused = false;
+      // A subsystem/mode change may have landed while the tab was hidden (its
+      // `wake()` was suppressed by `hostPaused`, though it did arm the settle
+      // window). Arm settle again here too so, regardless, the first frames after
+      // resuming let any pending eased transition complete before the loop can
+      // re-freeze under power-saver.
+      settleTimer = SETTLE_DURATION_S;
       start();
     },
     replayEntry() {

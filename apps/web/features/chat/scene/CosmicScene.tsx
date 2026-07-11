@@ -11,6 +11,7 @@ import type { Pipeline } from "../../../domain";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 import type { RunView } from "../../runs/run";
 import { onRunEvent } from "../../runs/runEvents";
+import { useSystemConfigQuery } from "../../system";
 import { flightForEvent } from "../../subsystems/components/SubsystemWeb/particle-mapping";
 import { SubsystemOrbsOverlay } from "./SubsystemOrbsOverlay";
 import { canMountWebGL } from "./canMountWebGL";
@@ -72,8 +73,24 @@ function toSceneSubsystems(subsystems: SubsystemWithStatus[]): SceneSubsystem[] 
  * jsdom and GPU-less environments skip it entirely and this renders just its root
  * `div`, so component tests stay WebGL-free while still asserting the `data-mode`
  * contract.
+ *
+ * Phase 117b — reads the operator's persisted `powerSaver` toggle and keys the
+ * inner view by it: `antialias` is fixed at `WebGLRenderer` construction and can't
+ * be changed live, so flipping the toggle fully remounts the scene (rare, explicit
+ * user action — the remount cost is acceptable and avoids renderer dispose/recreate
+ * plumbing).
  */
-export function CosmicScene({
+export function CosmicScene(props: CosmicSceneProps) {
+  const { data: systemConfig } = useSystemConfigQuery();
+  const powerSaver = systemConfig?.powerSaver ?? false;
+  return <CosmicSceneView key={`scene-${powerSaver}`} powerSaver={powerSaver} {...props} />;
+}
+
+interface CosmicSceneViewProps extends CosmicSceneProps {
+  powerSaver: boolean;
+}
+
+function CosmicSceneView({
   mode = "idle",
   dock = EMPTY_DOCK,
   streamChars = 0,
@@ -83,7 +100,8 @@ export function CosmicScene({
   onSelectSubsystem = noop,
   pipelines = EMPTY_PIPELINES,
   runs = EMPTY_RUNS,
-}: CosmicSceneProps) {
+  powerSaver,
+}: CosmicSceneViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<SceneController | null>(null);
   // Controller as state (not just a ref) so the overlay re-subscribes to
@@ -103,7 +121,12 @@ export function CosmicScene({
 
     void import("./sceneController").then(({ createSceneController }) => {
       if (cancelled || !containerRef.current) return;
-      const created = createSceneController(container, { mode, dock, reducedMotion });
+      const created = createSceneController(container, {
+        mode,
+        dock,
+        reducedMotion,
+        powerSaver,
+      });
       controllerRef.current = created;
       setController(created);
       // Push the initial subsystem roster (the effect below only fires on CHANGE).
@@ -136,10 +159,13 @@ export function CosmicScene({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Push derived chat state whenever it changes.
+  // Push derived chat state whenever it changes. `powerSaver` itself only takes
+  // effect via the remount above (antialias can't change live) but is included
+  // here too so a mid-session config refetch (unlikely — the key remount already
+  // covers the real toggle path) never leaves the controller's cached inputs stale.
   useEffect(() => {
-    controllerRef.current?.setInputs({ mode, dock, reducedMotion });
-  }, [mode, dock, reducedMotion]);
+    controllerRef.current?.setInputs({ mode, dock, reducedMotion, powerSaver });
+  }, [mode, dock, reducedMotion, powerSaver]);
 
   // Feed each stream increment into the energy signal (Tier 3).
   useEffect(() => {
