@@ -168,6 +168,17 @@ export interface CommandLineProps {
    * post-dispatch reset. Omit for the default task-launch behaviour (unchanged).
    */
   onSubmit?: (text: string, target?: TaskTarget, attachments?: TaskAttachmentSet) => void;
+  /**
+   * Whether a send-delegation (`onSubmit`) dispatch clears text/target/attachments
+   * afterwards — default `true` (today's behaviour: the chat/automations composer
+   * resets itself, ready for the next turn). A container that navigates/confirms
+   * instead of staying mounted on the same draft (e.g. the coming `TaskCommandLine`,
+   * whose ack row needs the just-submitted text to survive) passes `false` to keep
+   * the input intact. Has no effect outside send-delegation mode (the task-launch
+   * path doesn't reset the draft here at all — it navigates or shows
+   * `ScheduledConfirmation` instead).
+   */
+  resetOnSubmit?: boolean;
   /** Fired whenever the trimmed draft flips between empty and non-empty — lets an
    *  embedding parent (e.g. `ChatScreen`) derive a "listening" state without owning
    *  the text itself. Mirrors `ChatComposer`'s `onDraftChange` contract. */
@@ -459,6 +470,7 @@ export function CommandLine({
   onLaunched,
   onClose = noop,
   onSubmit,
+  resetOnSubmit = true,
   onDraftChange,
   injectedTarget,
   onInjectedTargetConsumed,
@@ -701,14 +713,16 @@ export function CommandLine({
       if (!trimmed) return;
       const attachmentPayload = attachments.files.length > 0 ? attachments : undefined;
       onSubmit(trimmed, target, attachmentPayload);
-      setText("");
-      onTextChange?.("");
-      notifyDraftChange("");
-      setTarget(undefined);
-      onTargetChange?.(undefined);
-      if (attachmentPayload) {
-        setAttachments({ files: [] });
-        onAttachmentsChange?.({ files: [] });
+      if (resetOnSubmit) {
+        setText("");
+        onTextChange?.("");
+        notifyDraftChange("");
+        setTarget(undefined);
+        onTargetChange?.(undefined);
+        if (attachmentPayload) {
+          setAttachments({ files: [] });
+          onAttachmentsChange?.({ files: [] });
+        }
       }
       return;
     }

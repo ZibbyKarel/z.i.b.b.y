@@ -171,7 +171,7 @@ Branch `refactor/commandline-composer-split` off `main`. One commit per sub-phas
 |---|---|---|
 | plan | done | (this file) |
 | 118a | done | (seam: `leadingActions` + `renderTrailing` slots, additive) |
-| 118b | pending | |
+| 118b | done | (`TaskCommandLine` container + `resetOnSubmit`; not yet wired) |
 | 118c | pending | |
 | 118d | pending | |
 | 118e | pending | |

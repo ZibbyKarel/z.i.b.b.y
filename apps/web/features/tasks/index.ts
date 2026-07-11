@@ -2,6 +2,11 @@ export { NewTaskProvider, useNewTask, NEW_TASK_SHORTCUT } from "./TaskContext";
 export { NewTaskButton } from "./components/NewTaskButton";
 export { NewTaskDialog } from "./components/NewTaskDialog";
 export {
+  TaskCommandLine,
+  TaskCommandLineTestId,
+  type TaskCommandLineProps,
+} from "./components/CommandLine/TaskCommandLine";
+export {
   useClassifyTaskMutation,
   useCreateTaskMutation,
   useCancelScheduledTaskMutation,
