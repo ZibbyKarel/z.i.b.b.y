@@ -1,5 +1,1 @@
-- [x] Chat UI - Detail tasku je moc úzký. Udělejme ho stejně široký jako je na stránce /runs
-- [x] Chat UI - Detail subsystému nejde zavřít klikem na křížek a detail samotný je moc úzký. Udělejme ho stejně široký jako nově detail tasku
-- [x] Chat UI - hvězdná mlhovina by měla být okolo orbu a subagentů. nyní jak je pod reprezentacý systémů tak jsou orby poněkud málo výrazné.
-- [x] Project json file - odstranit base64 logo z jsonu. Logo by měl být mimo json file. Inspiruj se tím jak je dělaná třeba @.zibby/agents/architect.md
-- [x] sjednoť fungování a ukládání obrázků v agentech, pipelinách a projektech. Loga a avataři by měla být uloženene we web/public složce a v .json souboru by měl být jen jejich název
+- [ ] oprav chyby sepsané v posledním antipatern reportu v docs/audits/component-antipatterns-2026-07-11.md

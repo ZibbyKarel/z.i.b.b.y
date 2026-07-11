@@ -70,9 +70,10 @@ chat & automations           ← use <CommandLine onSubmit=… submitLabel=… /
 `onInjectedTargetConsumed`, `onTextChange`, `onTargetChange`, `onAttachmentsChange`, `onDraftChange`.
 
 **New props:**
-- `onSubmit(text: string, target?: TaskTarget, attachments?: TaskAttachmentSet): void` — **required** after the strip (118d). Fired by Enter (no Shift) or the trailing control's `submit()`. After it returns the composer resets its own draft (text/target/attachments) — mirroring today's send-mode reset.
-- `leadingActions?: ReactNode` — extra controls rendered beside the attach `+` (bottom-left row). `TaskCommandLine` injects `<ProjectSelect>` here.
-- `renderTrailing?(api: { canSubmit: boolean; submit: () => void }): ReactNode` — overrides the default bottom-right control. `submit()` runs validate → `onSubmit(draft)` → reset. Default (when omitted) = the existing **Send** `Button` (`CommandLineTestId.Send`, label = `submitLabel ?? t("commandLine.send")`).
+- `onSubmit(text: string, target?: TaskTarget, attachments?: TaskAttachmentSet): void` — **required** after the strip (118d). Fired by Enter (no Shift) or the trailing control's `submit()`. `text` is the composed text (context already folded when the caller passed a `context`-less generic — chat/automations read the args directly). After it returns the composer resets its own draft unless `resetOnSubmit={false}`.
+- `resetOnSubmit?: boolean` (default `true`) — clears text/target/attachments after `onSubmit`. Chat/automations keep the default (today's send-mode reset); `TaskCommandLine` passes `false` (task navigates/confirms, and its ack needs the just-submitted text to survive).
+- `leadingActions?: ReactNode` — extra controls rendered beside the attach `+` (bottom-left row). `TaskCommandLine` injects `<ProjectSelect>` here **from 118d** (until then it uses the generic's still-present built-in selector via `initialProjectId`/`onProjectChange`).
+- `renderTrailing?(api: { canSubmit: boolean; submit: () => void }): ReactNode` — overrides the default bottom-right control. `submit()` runs the generic's own submit path (fires `onSubmit`, then reset). Default (when omitted) = the existing **Send** `Button` (`CommandLineTestId.Send`, label = `submitLabel ?? t("commandLine.send")`). `TaskCommandLine`'s split-button ignores `submit`/`canSubmit` and instead calls its **own** render-configured `handleSubmit(scheduledAt)` directly (see below), so scheduling and empty-text loops work without the generic knowing about either.
 
 **Removed props (→ `TaskCommandLine`):** `title`, `output`, `toolGrants`, `context`, `isLoop`,
 `loop`, `showAck`, `onLaunched`, `onClose`, `initialProjectId`, `onProjectChange`. Also removed:
@@ -80,22 +81,34 @@ the derived `sendMode`, `buildAck`/`AckInfo`/`ack`, the `DropDownButton` schedul
 `scheduledWhen`/`ScheduledConfirmation`, `useTaskSubmit`/`useLimitsQuery`/`useProjectsQuery`/`now`/
 `paths`/`composedText`, and the `@deprecated TargetChip` enum member (if no live consumer remains).
 
-**`scheduledAt` seam:** the generic `onSubmit` stays 3-arg. `TaskCommandLine` holds a
-`scheduledAtRef`; its `renderTrailing` split-button sets `scheduledAtRef.current` **synchronously**
-right before calling `submit()`, and its `onSubmit` handler reads the ref → `handleSubmit(ref)`. No
-extra arg pollutes the generic signature.
+**`useTaskSubmit` stays render-configured and UNCHANGED.** Instead of restructuring the hook, the
+container treats the generic `CommandLine` as a rich input that (a) *emits* its draft via the
+existing `onTextChange`/`onTargetChange`/`onAttachmentsChange`/`onProjectChange` callbacks and (b)
+*signals* a submit via `onSubmit`. `TaskCommandLine` mirrors that emitted draft into its own state,
+feeds it to `useTaskSubmit` at render (exactly as today's `CommandLine`), and dispatches from that
+mirror — so scheduling, empty-text loops, and context-folding all work with zero hook change.
 
 ### `TaskCommandLine` — responsibilities
 
-Reproduces today's task-launch exactly:
-- Owns `taskProjectId` (seed `initialProjectId ?? null`), `useProjectsQuery`, `selectedProject`,
-  `paths`, `composedText`, `useTaskSubmit`, `useLimitsQuery`/`resetsAt`/`now`, `scheduledWhen`.
-- `<CommandLine onSubmit={handle} leadingActions={<ProjectSelect …/>} renderTrailing={scheduleSplitButton} … />`.
-- Renders the **ack row** (honest, built from the `onSubmit` payload + its own `isLoop`/`target`) and
-  short-circuits to `<ScheduledConfirmation>` on a deferred launch (today's `if (scheduledWhen !== null)`).
-- Keeps `showAck` as its **own** prop (overview passes it; NewTaskDialog does not).
-- Forwards `onTextChange`/`onTargetChange`/`onProjectChange` up for `NewTaskDialog`'s preview (still
-  needed there — the dialog reads them for its classify preview; unchanged behaviour, just moved).
+A faithful relocation of today's task half of `CommandLine`:
+- **Mirrors the draft**: local `draftText`/`draftTarget`/`draftAttachments`/`taskProjectId`, each set
+  in a wrapped `onXChange` that *also* forwards to the same-named prop (so `NewTaskDialog`'s classify
+  preview keeps receiving `onTextChange`/`onTargetChange`/`onProjectChange` — unchanged).
+- Owns `useProjectsQuery`, `selectedProject`, `composedText` (folds `context`), `paths`
+  (`extractPaths(draftText)` + `selectedProject?.path`), `useLimitsQuery`/`resetsAt`/`now`,
+  `scheduledWhen`, and `useTaskSubmit({ …, composedText, paths, chosenTarget: draftTarget, text: draftText, attachmentSetId, isLoop, loop, title, output, toolGrants, onLaunched, onClose, setScheduledWhen })`.
+- Renders `<CommandLine … onSubmit={() => handleSubmit(null)} resetOnSubmit={false} renderTrailing={splitButton} initialProjectId onProjectChange={wrapped} />`.
+  - `onSubmit` is the **Enter/default trigger** → immediate `handleSubmit(null)`; its args are ignored
+    (the mirror is the source of truth). `resetOnSubmit={false}` keeps the input intact.
+  - `renderTrailing` = the schedule split-button (single task) or "Run loop" split-button (loop); each
+    primary click / menu item calls `handleSubmit(null)` / `handleSubmit(resolveScheduledAt(…))`
+    **directly**. The button's `disabled` is computed here from the mirror
+    (`isLoop ? !canSubmitLoop(loop) : draftText.trim().length <= 2`) + `busy`.
+- Renders the **ack row** (its own `showAck` prop; built from the mirror captured at dispatch time)
+  and short-circuits to `<ScheduledConfirmation>` when `scheduledWhen !== null`.
+- **Project selector**: through 118c uses the generic's still-present built-in `<ProjectSelect>` via
+  `initialProjectId`/`onProjectChange`; in 118d (generic loses it) renders `<ProjectSelect>` in
+  `leadingActions` and owns `taskProjectId` outright.
 
 ---
 
@@ -120,8 +133,9 @@ Reproduces today's task-launch exactly:
 - **118a — Generic seam (additive).** Add `leadingActions` + `renderTrailing` slots and route
   Enter/click through a single internal `submit()` that calls `onSubmit`. Keep the existing
   task path working (no removals yet). No consumer changes. Existing tests stay green. *(wave 1)*
-- **118b — Create `TaskCommandLine` (not yet wired).** New container reproducing task-launch on top
-  of the 118a slots; add its own unit test. Not imported by any screen yet. *(after 118a)*
+- **118b — Create `TaskCommandLine` (not yet wired).** Add the `resetOnSubmit` prop to the generic
+  (additive), then build the container reproducing task-launch on top of the 118a slots (+ its own
+  unit test). Not imported by any screen yet. *(after 118a)*
 - **118c — Swap task consumers.** Point `overview/Screen.tsx` + `NewTaskDialog.tsx` at
   `TaskCommandLine`; update their tests. *(after 118b)*
 - **118d — Strip the primitive.** Delete all task-launch code + `sendMode` from `CommandLine`; make
