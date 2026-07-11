@@ -107,6 +107,18 @@ const ENERGY_DECAY = 1.6;
  * (`frameCount % 2`) for a further /2 on top. */
 const POWER_SAVER_FRAME_INTERVAL_S = 1 / 30;
 
+/** Phase 117c (variant 1) — the always-on idle demand-render's resting cadence,
+ * in seconds. Only applied outside power-saver, and only while genuinely at
+ * rest (see {@link isAtRest}) with the camera-parallax drift still enabled
+ * (`!reducedMotion`) — the drift is a continuous animation so the loop can't
+ * fully park the way {@link SETTLE_DURATION_S}'s reduced-motion/power-saver
+ * case can, but ~10fps is a fraction of the full-rate GPU cost while the
+ * drift stays wall-clock-smooth (each throttled tick still runs with the
+ * accumulated real `dt`, not a fixed step). Any activity restores full rate
+ * on the very next `requestAnimationFrame` (the loop keeps scheduling every
+ * real frame even while throttled — only the update+render body is skipped). */
+const IDLE_FRAME_INTERVAL_S = 1 / 10;
+
 /** Phase 117b — how long the power-saver loop must keep running after a
  * target-CHANGING wake (a mode change or a subsystem status/colour change, and a
  * `resume()` that may have missed a change while hidden) before it is allowed to
@@ -253,16 +265,20 @@ export function createSceneController(
   // tick still get visibly different jitter.
   let flightSeq = 0;
 
-  // Phase 117b (variant 4b/5) — power-saver bookkeeping. `powerSaverAccum` is the
-  // wall-clock accumulator for the ~30fps throttle. Once the scene reaches rest
-  // under power-saver, `frame()` sets `running = false` and stops scheduling —
-  // the same "loop stopped" signal `pause()` already uses, just reached by a
-  // different path — distinct from `hostPaused` (tab hidden / overlay closed via
+  // Phase 117b (variant 4b/5) / 117c (variant 1) — throttled-cadence bookkeeping,
+  // shared by both gates. `frameAccum` is the wall-clock accumulator for
+  // whichever throttle is active this tick (power-saver's ~30fps floor, or
+  // 117c's resting ~10fps while the camera drift is still live) — see
+  // `restFrameBudget`. Once the scene reaches rest under a gate that PARKS
+  // (power-saver always; non-power-saver only when `reducedMotion` disables the
+  // drift), `frame()` sets `running = false` and stops scheduling — the same
+  // "loop stopped" signal `pause()` already uses, just reached by a different
+  // path — distinct from `hostPaused` (tab hidden / overlay closed via
   // `pause()`), so a real activity signal can `wake()` a scene parked-at-rest
   // but never one that's paused by the host; `resume()` un-pauses and restarts
   // the loop, which — if still genuinely at rest — draws exactly one frame
   // before parking again on its own.
-  let powerSaverAccum = 0;
+  let frameAccum = 0;
   let hostPaused = false;
   // Phase 117b — while > 0 the power-saver loop must not park (see
   // SETTLE_DURATION_S): a target-changing wake arms it so the eased transition
@@ -705,56 +721,106 @@ export function createSceneController(
     );
   }
 
+  /** Phase 117c — the shared "how hard should we throttle this tick" decision,
+   * used by BOTH power-saver's always-on ~30fps cap (117b) and the always-on
+   * idle demand-render's resting ~10fps cap (117c variant 1), so the two never
+   * fight over one clock/accumulator. `frame()` calls this TWICE per tick: once
+   * with the PRE-tick `atRest` to choose the interval this tick is gated
+   * behind, and once with the POST-tick `atRest` to decide whether the loop may
+   * stop scheduling entirely (`park`) — mirroring the two-phase shape 117b
+   * already used inline before this was factored out.
+   *
+   * Power-saver throttles to ~30fps unconditionally (active or resting) and
+   * parks the instant it's at rest — the harder, opt-in floor, unchanged from
+   * 117b. Outside power-saver, the loop runs full rate whenever there's real
+   * work to animate; once at rest, `reducedMotion` (which disables the
+   * camera-parallax drift — nothing left to move) lets it park exactly like
+   * power-saver, while a still-drifting camera can only be throttled to the
+   * resting ~10fps cadence, never fully stopped — `park` is false in that case
+   * even though `atRest` is true. */
+  function restFrameBudget(params: {
+    powerSaver: boolean;
+    reducedMotion: boolean;
+    atRest: boolean;
+  }): { intervalS: number; park: boolean } {
+    const { powerSaver, reducedMotion, atRest } = params;
+    const park = atRest && (powerSaver || reducedMotion);
+    if (powerSaver) return { intervalS: POWER_SAVER_FRAME_INTERVAL_S, park };
+    if (atRest && !reducedMotion) return { intervalS: IDLE_FRAME_INTERVAL_S, park };
+    return { intervalS: 0, park };
+  }
+
   function frame() {
     if (!running) return;
 
-    if (!inputs.powerSaver) {
-      // Unchanged full-rate path: schedule the next frame up front (so a thrown
-      // `tick` never stalls the loop) and always render.
+    const dt = Math.min(clock.getDelta(), 0.05); // clamp after a tab-switch stall
+    const preTick = restFrameBudget({
+      powerSaver: inputs.powerSaver,
+      reducedMotion: inputs.reducedMotion,
+      atRest: isAtRest(),
+    });
+
+    if (preTick.intervalS <= 0) {
+      // Full rate: schedule the next frame up front (so a thrown `tick` never
+      // stalls the loop) and always render this tick. Reached whenever there's
+      // real activity to animate, OR (117c) the single tick that confirms a
+      // `reducedMotion` scene has settled at rest — that case parks right
+      // below instead of throttling toward a cadence it will never use.
       rafId = requestAnimationFrame(frame);
-      const dt = Math.min(clock.getDelta(), 0.05); // clamp after a tab-switch stall
       tick(dt);
-      return;
+    } else {
+      // Throttled cadence — power-saver's always-on ~30fps floor (variant 4b),
+      // or 117c's resting ~10fps while the camera drift is still live (variant
+      // 1). Accumulate wall-clock time and only run the update+render body
+      // once the interval elapses; nothing is (re)scheduled until the park
+      // decision below.
+      frameAccum += dt;
+      if (frameAccum < preTick.intervalS) {
+        rafId = requestAnimationFrame(frame);
+        return;
+      }
+      const stepDt = frameAccum;
+      frameAccum = 0;
+      tick(stepDt);
     }
 
-    // Power-saver (variant 4b): accumulate wall-clock time and only run the
-    // update+render body once ~1/30s has elapsed, still scheduling a
-    // `requestAnimationFrame` every tick until we decide to park below.
-    const dt = Math.min(clock.getDelta(), 0.05);
-    powerSaverAccum += dt;
-    if (powerSaverAccum < POWER_SAVER_FRAME_INTERVAL_S) {
-      rafId = requestAnimationFrame(frame);
-      return;
-    }
-    const stepDt = powerSaverAccum;
-    powerSaverAccum = 0;
-    tick(stepDt);
-
-    if (isAtRest()) {
-      // Power-saver freeze (variant 5): nothing is moving — stop scheduling
-      // frames entirely (zero draws while resting). `running = false` mirrors
+    const postTick = restFrameBudget({
+      powerSaver: inputs.powerSaver,
+      reducedMotion: inputs.reducedMotion,
+      atRest: isAtRest(),
+    });
+    if (postTick.park) {
+      // Nothing left to animate under the active gate (power-saver, always; or
+      // reducedMotion, whose camera never drifts) — stop scheduling frames
+      // entirely (zero draws while resting). Cancels a frame the full-rate
+      // branch above may already have pre-scheduled. `running = false` mirrors
       // `pause()`'s own bookkeeping so `wake()`'s `start()` call actually
       // restarts the loop instead of no-op'ing on a stale `running === true`.
       running = false;
+      cancelAnimationFrame(rafId);
       return;
     }
+    if (preTick.intervalS <= 0) return; // already (re)scheduled in the full-rate branch above
     rafId = requestAnimationFrame(frame);
   }
 
   function start() {
     if (running || disposed) return;
     running = true;
-    powerSaverAccum = 0;
+    frameAccum = 0;
     clock.getDelta(); // drop the accumulated gap so the first dt is small
     rafId = requestAnimationFrame(frame);
   }
 
   /** Re-arm the loop after real activity (`pushActivity`/`flashComplete`/a mode
-   * change/`emitFlight`/a subsystem status change) once it has parked at rest
-   * under power-saver. A no-op when not parked (non-power-saver never parks, so
-   * this is also a harmless no-op there), and — deliberately — when the host has
-   * paused the scene (`pause()`, tab hidden): activity arriving in a hidden tab
-   * must not start rendering; `resume()` is the only path back from a host-pause.
+   * change/`emitFlight`/a subsystem status change) once it has parked at rest —
+   * under power-saver (always parks at rest), or (117c) outside power-saver
+   * when `reducedMotion` parked it too. A no-op when not parked (including the
+   * 117c resting ~10fps cadence, which never parks — the loop is already
+   * running, so `start()` below no-ops harmlessly), and — deliberately — when
+   * the host has paused the scene (`pause()`, tab hidden): activity arriving in
+   * a hidden tab must not start rendering; `resume()` is the only path back
+   * from a host-pause.
    *
    * `settle: true` is passed by wakes that change an EASED target (a mode change
    * or a subsystem status/colour change) — it arms the {@link SETTLE_DURATION_S}
