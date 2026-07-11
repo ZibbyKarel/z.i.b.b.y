@@ -864,6 +864,12 @@
         "formal": "Neutrální a profesionální, věcně a zdvořile, bez humoru."
       }
     },
+    "chatUi": {
+      "title": "Chat UI",
+      "hint": "Vzhled a výkon 3D scény v chatu.",
+      "powerSaver": "Úsporný mód",
+      "powerSaverHint": "Omezí 3D scénu (30 fps, bez vyhlazení, po úvodní animaci se zastaví) — méně zatíží grafiku a větrák."
+    },
     "research": {
       "title": "Výzkum & rozhled",
       "hint": "Co ZIBBY sleduje za tebe. Noční digest seřadí každý zdroj podle tvých zájmů a nejlepší položky vloží do ranního briefingu.",

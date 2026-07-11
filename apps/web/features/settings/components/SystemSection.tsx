@@ -71,6 +71,9 @@ function SystemEditor({ config }: { config: SystemConfig }) {
         // Not edited here — passed through so a runtime save can't reset the operator's
         // chosen chat persona (the whole document is PUT). Owned by the Chat section.
         chatPersona: config.chatPersona,
+        // Not edited here — passed through so a runtime save can't reset the operator's
+        // power-saver preference (the whole document is PUT). Owned by the Chat UI section.
+        powerSaver: config.powerSaver,
       },
     });
 

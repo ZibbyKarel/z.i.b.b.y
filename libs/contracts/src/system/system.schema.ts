@@ -39,6 +39,12 @@ export const SystemConfigSchema = z
      * restart); applies to the next conversation. Default `"jarvis"`.
      */
     chatPersona: ChatPersonaSchema.default("jarvis"),
+    /**
+     * Caps the chat 3D scene for lower GPU/fan load (30 fps, no antialiasing,
+     * freezes after the intro animation). Instant-apply from `/settings`. Default
+     * `false`.
+     */
+    powerSaver: z.boolean().default(false),
   })
   .strict();
 export type SystemConfig = z.infer<typeof SystemConfigSchema>;

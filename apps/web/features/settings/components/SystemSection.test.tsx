@@ -14,6 +14,7 @@ const DEFAULTS: SystemConfig = {
   goalVerifyTimeoutMs: 600000,
   goalAutoResume: false,
   chatPersona: "jarvis",
+  powerSaver: false,
 };
 
 let config: SystemConfig = { ...DEFAULTS };

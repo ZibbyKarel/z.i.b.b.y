@@ -864,6 +864,12 @@
         "formal": "Neutral and professional, matter-of-fact and polite, no humour."
       }
     },
+    "chatUi": {
+      "title": "Chat UI",
+      "hint": "Look and performance of the chat 3D scene.",
+      "powerSaver": "Power-saver mode",
+      "powerSaverHint": "Caps the 3D scene (30 fps, no antialiasing, freezes after the intro) — easier on the GPU and fan."
+    },
     "research": {
       "title": "Research & intelligence",
       "hint": "What ZIBBY watches for you. The nightly digest ranks each source against your interests and folds the top items into the morning briefing.",
