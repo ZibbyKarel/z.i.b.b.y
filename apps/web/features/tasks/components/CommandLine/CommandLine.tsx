@@ -21,7 +21,14 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import type { CSSProperties, ChangeEvent, DragEvent, KeyboardEvent, MouseEvent } from "react";
+import type {
+  CSSProperties,
+  ChangeEvent,
+  DragEvent,
+  KeyboardEvent,
+  MouseEvent,
+  ReactNode,
+} from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAgentsQuery } from "../../../agents";
@@ -195,6 +202,25 @@ export interface CommandLineProps {
    *  still whatever the mode dictates (in send-delegation mode, `onSubmit`).
    *  Defaults to the classify/send translation. */
   submitLabel?: string;
+  /**
+   * Extra controls rendered in the bottom-left control row, immediately after
+   * the attach `+` button and the inline `<ProjectSelect>`. This is the seam
+   * a container (e.g. the coming `TaskCommandLine`) uses to inject its own
+   * leading controls without this component knowing what they are. Omit for
+   * no visual change (today's control row, unchanged).
+   */
+  leadingActions?: ReactNode;
+  /**
+   * Overrides the bottom-right control — today `sendMode ? <Send> :
+   * <DropDownButton>` — entirely. Called with `{ canSubmit, submit }` so a
+   * container (e.g. `TaskCommandLine`'s schedule split-button) can own the
+   * trailing action's rendering while this component still owns validation
+   * and the actual dispatch. `canSubmit` mirrors the existing `canRun` guard;
+   * `submit()` runs the same submit path this component runs itself (Enter /
+   * the default trailing control). Omit to keep today's default trailing
+   * control unchanged.
+   */
+  renderTrailing?: (api: { canSubmit: boolean; submit: () => void }) => ReactNode;
 }
 
 /** The honest, non-fabricated classification ack shown below the box after submit. */
@@ -440,6 +466,8 @@ export function CommandLine({
   initialProjectId,
   onProjectChange,
   submitLabel,
+  leadingActions,
+  renderTrailing,
 }: CommandLineProps) {
   const t = useTranslations("tasks");
   const tMention = useTranslations("chat.mention");
@@ -1117,12 +1145,15 @@ export function CommandLine({
                 projects={projects}
               />
             </Container>
+            {leadingActions}
           </Stack>
         </Container>
 
         {/* Run / Send — pinned bottom-right INSIDE the input, over the reserved strip. */}
         <Container bottom={CONTROLS_INSET} position="absolute" right={CONTROLS_INSET} zIndex={10}>
-          {sendMode ? (
+          {renderTrailing ? (
+            renderTrailing({ canSubmit: canRun, submit: () => dispatch(null) })
+          ) : sendMode ? (
             <Button
               data-testid={CommandLineTestId.Send}
               disabled={!canRun}

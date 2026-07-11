@@ -156,7 +156,7 @@ Branch `refactor/commandline-composer-split` off `main`. One commit per sub-phas
 | Phase | Status | Commit |
 |---|---|---|
 | plan | done | (this file) |
-| 118a | pending | |
+| 118a | done | (seam: `leadingActions` + `renderTrailing` slots, additive) |
 | 118b | pending | |
 | 118c | pending | |
 | 118d | pending | |
