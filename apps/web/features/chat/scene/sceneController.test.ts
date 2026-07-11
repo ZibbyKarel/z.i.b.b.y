@@ -48,6 +48,13 @@ vi.mock("three", async (importOriginal) => {
     clear() {
       /* noop */
     }
+    // Phase 117e — the background layer's two-pass render (sky → half-res
+    // render target, then an upscale blit → screen) calls this to switch the
+    // active framebuffer; a real GL context isn't needed for the controller's
+    // own logic under test, so this stays an inert no-op like the rest.
+    setRenderTarget() {
+      /* noop */
+    }
     render() {
       this.renderCount++;
     }

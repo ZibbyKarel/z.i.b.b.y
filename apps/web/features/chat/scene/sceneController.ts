@@ -629,9 +629,14 @@ export function createSceneController(
     orbRenderer.setSize(w, h, false);
     // The background can afford a lower resolution (it's soft and out of focus) —
     // lower still on low-power devices.
-    bgRenderer.setPixelRatio(Math.min(dpr, lowPower ? 1 : 1.5));
+    const bgDpr = Math.min(dpr, lowPower ? 1 : 1.5);
+    bgRenderer.setPixelRatio(bgDpr);
     bgRenderer.setSize(w, h, false);
     background.setAspect(w / h);
+    // Phase 117e — the sky pass renders into a half-resolution target sized off
+    // this SAME effective dpr, so the render-target size composes with the DPR
+    // cap above instead of duplicating/drifting from it.
+    background.resize(w, h, bgDpr);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     dock.measure();

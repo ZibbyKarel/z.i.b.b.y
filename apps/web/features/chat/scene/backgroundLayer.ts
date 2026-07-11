@@ -13,11 +13,18 @@ import { CATEGORY_COLORS, resolveSceneTokens } from "./tokens";
  *     independently twinkling star layers, and corner darkening — all in one
  *     fragment shader. Phase 115a removed the seat-glow term that used to pool an
  *     orb-coloured wash directly behind the orbs; the halo now lives entirely on the
- *     orb layer itself (see `orbLayer.ts`).
+ *     orb layer itself (see `orbLayer.ts`). Phase 117e: this fragment shader is the
+ *     single heaviest continuous per-pixel cost in the whole scene (a full-screen
+ *     quad, every pixel, every frame it renders), so it's drawn into a half-resolution
+ *     `THREE.WebGLRenderTarget` (see `resize`/`render` below) and upscaled to the
+ *     screen via a cheap passthrough blit (`UPSCALE_FRAGMENT`) — a slow drift is
+ *     visually indistinguishable at half-res and the fragment work is quartered.
  *  2. The faint distant node-web: ~100 nodes in 7 clusters coloured by the real
  *     agent categories (so it reads as the same taxonomy as the constellation),
  *     joined by proximity lines, plus drifting dust. Rendered with the shared
- *     perspective camera so it parallaxes under the scene's camera drift.
+ *     perspective camera so it parallaxes under the scene's camera drift. Kept at
+ *     full resolution straight to screen — sparse points/lines are cheap and stay
+ *     crisp, unlike the fullscreen sky.
  *
  * Nothing here reacts to conversation state except the orb-glow colour — the
  * background is the stable, ever-drifting world the orb lives in.
@@ -63,10 +70,13 @@ varying vec2 vUv;
 
 ${SIMPLEX_NOISE_GLSL}
 
+// Phase 117e: 5 octaves cut to 3 — the highest two octaves are fine, barely-visible
+// grain on a slow-drifting nebula, so this trims ~40% of fbm's snoise() calls for no
+// perceptible loss of character.
 float fbm(vec3 p) {
   float v = 0.0;
   float a = 0.5;
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 3; i++) {
     v += a * snoise(p);
     p *= 2.0;
     a *= 0.5;
@@ -141,8 +151,16 @@ void main() {
   // ambient floor everywhere so the calm core and the far corners are never
   // pure black. Base coefficients lifted slightly (0.22→0.26, 0.15→0.18) to
   // compensate for the suppressed core so the ring itself reads richer.
+  // Phase 117e: this used to be TWO full fbm() calls (n1, n2 — 3 octaves each
+  // post-cut, so 6 snoise() evals total) at different scales/phases so the two
+  // tinted cloud layers (uNebulaA/uNebulaB) drifted independently instead of
+  // reading as one flat blob. Collapsed to ONE fbm() call (n1, 3 snoise evals)
+  // plus a single cheap extra snoise() sample at n2's original scale/time-drift
+  // domain (p * 2.7, its own time offset) — reusing n1's low-frequency shape for
+  // n2's base while still layering in an independently-scaled ripple, at ~4
+  // snoise() evals total instead of 6.
   float n1 = fbm(vec3(p * 1.6 + vec2(uTime * 0.012, 0.0), uTime * 0.02));
-  float n2 = fbm(vec3(p * 2.7 - vec2(0.0, uTime * 0.009), 5.0 + uTime * 0.015));
+  float n2 = n1 * 0.6 + 0.5 * snoise(vec3(p * 2.7 - vec2(0.0, uTime * 0.009), 5.0 + uTime * 0.015));
   float cloudA = smoothstep(0.0, 0.72, n1);
   float cloudB = smoothstep(0.05, 0.82, n2 * 0.5 + 0.5);
   float nebulaBoost = mix(0.12, 1.35, nebulaRing);
@@ -178,6 +196,20 @@ void main() {
 }
 `;
 
+// Phase 117e: samples the half-resolution sky render target and draws it as a
+// fullscreen quad — the upscale side of the two-pass background render. Linear
+// filtering (set on the render target below) does the actual upscaling; this
+// shader is just a passthrough so the blit costs one texture read per pixel,
+// nothing more.
+const UPSCALE_FRAGMENT = /* glsl */ `
+precision highp float;
+uniform sampler2D uMap;
+varying vec2 vUv;
+void main() {
+  gl_FragColor = texture2D(uMap, vUv);
+}
+`;
+
 interface SkyUniforms {
   [uniform: string]: THREE.IUniform;
   uTime: THREE.IUniform<number>;
@@ -204,6 +236,15 @@ export interface BackgroundLayer {
   render(renderer: THREE.WebGLRenderer, camera: THREE.PerspectiveCamera): void;
   /** Set the drawing-buffer aspect so the sky shader stays undistorted. */
   setAspect(aspect: number): void;
+  /** Phase 117e — (re)size the half-resolution render target the nebula/star sky
+   * pass renders into. `width`/`height` are the canvas's CSS pixel size; `dpr` is
+   * the SAME effective device-pixel ratio the caller just set on its background
+   * `THREE.WebGLRenderer` via `setPixelRatio` (already capped by the caller's own
+   * DPR/lowPower rules) — the target is sized at half of the renderer's own
+   * device-pixel resolution, so this composes with the existing DPR cap instead
+   * of duplicating it. Call after every `setPixelRatio`/`setSize` on that
+   * renderer (mirroring how `setAspect` is called alongside it). */
+  resize(width: number, height: number, dpr: number): void;
   /** Phase 94: recentre the nebula ring and birth wavefront on `(x, y)` in the sky
    * shader's centred, aspect-corrected `p` space (screen centre is `(0, 0)`; `+y` is
    * up) — the controller feeds the raised orb's own projected position so the ring
@@ -241,6 +282,33 @@ export function createBackgroundLayer(mobile: boolean): BackgroundLayer {
   const skyScene = new THREE.Scene();
   skyScene.add(skyMesh);
   const skyCamera = new THREE.Camera();
+
+  // --- Phase 117e: half-resolution target the sky pass renders into, plus the
+  // fullscreen quad that upscales it back to the screen. No depth/stencil buffer
+  // (the sky mesh never depth-tests) and no mipmaps (a single blit per frame, no
+  // minification beyond the linear filter) — as cheap a target as three.js allows.
+  // Sized 1×1 here; the very first `resize()` call (made by the controller right
+  // after construction) sets the real dimensions before anything renders. ---
+  const skyRenderTarget = new THREE.WebGLRenderTarget(1, 1, {
+    depthBuffer: false,
+    stencilBuffer: false,
+    generateMipmaps: false,
+    minFilter: THREE.LinearFilter,
+    magFilter: THREE.LinearFilter,
+    wrapS: THREE.ClampToEdgeWrapping,
+    wrapT: THREE.ClampToEdgeWrapping,
+  });
+  const upscaleMaterial = new THREE.ShaderMaterial({
+    uniforms: { uMap: { value: skyRenderTarget.texture } },
+    vertexShader: SKY_VERTEX,
+    fragmentShader: UPSCALE_FRAGMENT,
+    depthTest: false,
+    depthWrite: false,
+  });
+  const upscaleMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), upscaleMaterial);
+  upscaleMesh.frustumCulled = false;
+  const upscaleScene = new THREE.Scene();
+  upscaleScene.add(upscaleMesh);
 
   // --- Pass 2: node-web + dust (perspective, shares the orb camera) ---
   const webScene = new THREE.Scene();
@@ -388,12 +456,30 @@ export function createBackgroundLayer(mobile: boolean): BackgroundLayer {
     },
     render(renderer, camera) {
       renderer.autoClear = false;
+      // Pass 1 — the drifting nebula/star sky, into the half-resolution target.
+      // This is the scene's single heaviest per-pixel cost (a fullscreen fragment
+      // shader), so it runs at ~1/4 the fill-rate here (117e) and gets upscaled
+      // below rather than drawn straight to the full-resolution screen.
+      renderer.setRenderTarget(skyRenderTarget);
       renderer.clear();
       renderer.render(skyScene, skyCamera);
+      // Pass 2 — back to the screen (this renderer's own default framebuffer;
+      // `background` is the only thing that ever calls `setRenderTarget` on it, so
+      // there's no caller state to save/restore). Blit the low-res sky up via the
+      // upscale quad, then draw the node-web on top at full resolution so its
+      // sparse points/lines stay crisp instead of also being softened by the blit.
+      renderer.setRenderTarget(null);
+      renderer.clear();
+      renderer.render(upscaleScene, skyCamera);
       renderer.render(webScene, camera);
     },
     setAspect(aspect) {
       skyUniforms.uAspect.value = aspect;
+    },
+    resize(width, height, dpr) {
+      const w = Math.max(1, Math.round(width * dpr * 0.5));
+      const h = Math.max(1, Math.round(height * dpr * 0.5));
+      skyRenderTarget.setSize(w, h);
     },
     setGlowCenter(x, y) {
       skyUniforms.uGlowCenter.value.set(x, y);
@@ -401,6 +487,9 @@ export function createBackgroundLayer(mobile: boolean): BackgroundLayer {
     dispose() {
       skyMaterial.dispose();
       skyMesh.geometry.dispose();
+      skyRenderTarget.dispose();
+      upscaleMaterial.dispose();
+      upscaleMesh.geometry.dispose();
       nodeGeometry.dispose();
       nodeMaterial.dispose();
       lineGeometry.dispose();

@@ -7,5 +7,6 @@
   "limitResumeMax": 3,
   "goalVerifyTimeoutMs": 600000,
   "goalAutoResume": false,
-  "chatPersona": "jarvis"
+  "chatPersona": "jarvis",
+  "powerSaver": false
 }
