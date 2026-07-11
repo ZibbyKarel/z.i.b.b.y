@@ -38,6 +38,7 @@ import { goalsContract } from "./goals/goals.contract";
 import { pinsContract } from "./pins/pins.contract";
 import { projectsContract } from "./projects/projects.contract";
 import { skillsContract } from "./skills/skills.contract";
+import { speechContract } from "./speech/speech.contract";
 import { systemContract } from "./system/system.contract";
 import { tasksContract } from "./tasks/tasks.contract";
 import { taskRunsContract } from "./tasks/task-runs.contract";
@@ -95,6 +96,7 @@ export const appContract = c.router({
   briefing: briefingContract,
   budget: budgetContract,
   chat: chatContract,
+  speech: speechContract,
 });
 
 export type AppContract = typeof appContract;

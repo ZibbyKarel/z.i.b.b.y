@@ -37,6 +37,7 @@ import { PinsModule } from "./pins/pins.module";
 import { SelfModule } from "./self/self.module";
 import { SelfKnowledgeModule } from "./self-knowledge/self-knowledge.module";
 import { SkillsModule } from "./skills/skills.module";
+import { SpeechModule } from "./speech/speech.module";
 import { SubsystemsModule } from "./subsystems/subsystems.module";
 import { SystemModule } from "./system/system.module";
 import { AttachmentSetRefsModule } from "./tasks/attachment-set-refs.module";
@@ -84,6 +85,7 @@ import { TasksModule } from "./tasks/tasks.module";
     EventsModule,
     BudgetModule,
     ChatModule,
+    SpeechModule,
     TasksModule,
     // Phase 116b: the automation attachment-sweep contributor — see the module doc
     // for why this can't just be TasksModule importing AutomationsModule directly.
