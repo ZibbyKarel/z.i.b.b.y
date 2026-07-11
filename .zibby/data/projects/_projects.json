@@ -22,7 +22,7 @@
   },
   {
     "id": "zibby-self",
-    "name": "Z.I.B.B.Y",
+    "name": "Z.I.B.B.Y - copy",
     "path": "/Users/zibby/Workspace/z.i.b.b.y",
     "desc": "ZIBBY's own repo — self-development target. Worktree-isolated; PR is the gate.",
     "category": "Internal",
@@ -42,6 +42,7 @@
     "identity": {
       "people": [
         {
+          "id": "karel",
           "name": "Karel",
           "role": "Operator",
           "vip": true,
@@ -67,6 +68,7 @@
       "standup_time": "09:00",
       "format": "yesterday / today / blockers",
       "active_hours": "09:00-19:00"
-    }
+    },
+    "gitRemote": "https://github.com/ZibbyKarel/z.i.b.b.y"
   }
 ]

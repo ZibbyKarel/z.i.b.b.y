@@ -59,7 +59,7 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     name: "Puls",
     tagline: "Tep systému",
     mandate: "Sledování kanálů, kalendáře a CI/CD na srdečním tepu.",
-    color: "#14b8a6",
+    color: "#15c187",
     heroImage: "/subsystems/puls.jpg",
   },
   {
@@ -67,7 +67,7 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     name: "Sentinel",
     tagline: "Strážce hranic",
     mandate: "Bezpečnost vůči externímu prostředí — CVE závislostí, úniky tajemství.",
-    color: "#ef4444",
+    color: "#ef3977",
     heroImage: "/subsystems/sentinel.jpg",
   },
   {
@@ -75,7 +75,7 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     name: "Maestro",
     tagline: "Dirigent vydání",
     mandate: "Releasy — příprava, přehled a operátorem schválené sloučení.",
-    color: "#8b5cf6",
+    color: "#e552f4",
     heroImage: "/subsystems/maestro.jpg",
   },
   {
@@ -83,7 +83,7 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     name: "Beacon",
     tagline: "Maják v noci",
     mandate: "Eskalace incidentů — vlastní podoba Tier-3 kontraktu surface-and-wait.",
-    color: "#f59e0b",
+    color: "#f2f20d",
     heroImage: "/subsystems/beacon.jpg",
   },
   {
@@ -91,7 +91,7 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     name: "Scout",
     tagline: "Zvěd na cestách",
     mandate: "Výzkumné pipeline, které předávají výsledný artefakt dál.",
-    color: "#22c55e",
+    color: "#2cc91d",
     heroImage: "/subsystems/scout.jpg",
   },
   {
@@ -99,7 +99,7 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     name: "Herald",
     tagline: "Hlas navenek",
     mandate: "Mluví za ZIBBY navenek — reaktivní odpovědi i proaktivní dotazování.",
-    color: "#3b82f6",
+    color: "#1998f0",
     heroImage: "/subsystems/herald.jpg",
   },
   {
@@ -107,7 +107,7 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     name: "Loom",
     tagline: "Tkadlec kvality",
     mandate: "Proaktivní analýza kvality a architektury codebase, nálezy předává Forge.",
-    color: "#6366f1",
+    color: "#775ff1",
     heroImage: "/subsystems/loom.jpg",
   },
 ];

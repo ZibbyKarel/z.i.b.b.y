@@ -49,10 +49,10 @@ export const CATEGORY_COLORS: Record<string, string> = {
   Vývoj: "#5b8def", // accent blue — building
   Kvalita: "#3fcf8e", // green — quality/tests
   Výzkum: "#4fd1e0", // cyan — research
-  Dokumentace: "#a78bfa", // violet — docs
+  Dokumentace: "#be89fa", // violet — docs
   Média: "#e879a8", // magenta — media
   Domácnost: "#f0b429", // amber — household
-  Psaní: "#7c8cf8", // indigo — writing
+  Psaní: "#f87cf8", // orchid — writing
   // "Delivery" isn't one of the 7 canonical categories, but the delivery-pipeline
   // agent files carry it; map it to the dev-blue family so those roles still cluster.
   Delivery: "#5b8def",
