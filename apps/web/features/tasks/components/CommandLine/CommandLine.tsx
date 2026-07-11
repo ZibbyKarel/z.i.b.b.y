@@ -1110,11 +1110,13 @@ export function CommandLine({
                 size="sm"
               />
             )}
-            <ProjectSelect
-              activeProjectId={taskProjectId}
-              onChange={handleProjectChange}
-              projects={projects}
-            />
+            <Container data-testid={CommandLineTestId.ProjectSelector}>
+              <ProjectSelect
+                activeProjectId={taskProjectId}
+                onChange={handleProjectChange}
+                projects={projects}
+              />
+            </Container>
           </Stack>
         </Container>
 
