@@ -174,7 +174,13 @@ Branch `refactor/commandline-composer-split` off `main`. One commit per sub-phas
 | 118b | done | (`TaskCommandLine` container + `resetOnSubmit`; not yet wired) |
 | 118c | done | (overview + NewTaskDialog → `TaskCommandLine`; 151+211 tests green) |
 | 118d | done | (`sendMode` + task-launch stripped from generic; props 30→21, ids 17→13; 346 tests green) |
-| 118e | pending | |
+| 118e | done | (full web suite 1002/1002 green; i18n parity OK; no stale live docs; graphify + self-knowledge refreshed) |
+
+**Outcome.** `sendMode` and the antipattern are gone. The generic `CommandLine` is a pure draft
+composer (props 30→21, test-ids 17→13, `onSubmit` required, one `submit()` path); `TaskCommandLine`
+owns task-launch and composes the generic via `leadingActions`/`renderTrailing`; chat & automations
+call the generic directly and no longer render a dead project picker. Net −493 lines in 118d. Whole
+web app green (158 files / 1002 tests). No contract/API change.
 
 ---
 
