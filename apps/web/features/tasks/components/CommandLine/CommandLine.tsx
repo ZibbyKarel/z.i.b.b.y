@@ -951,7 +951,11 @@ export function CommandLine({
       MENTION_GAP,
       Math.min(caretRect.left, viewportW - MENTION_MAX_WIDTH - MENTION_GAP),
     );
-    const horizontal: CSSProperties = { left, minWidth: MENTION_MIN_WIDTH, maxWidth: MENTION_MAX_WIDTH };
+    const horizontal: CSSProperties = {
+      left,
+      minWidth: MENTION_MIN_WIDTH,
+      maxWidth: MENTION_MAX_WIDTH,
+    };
     return flip
       ? { bottom: viewportH - caretRect.top + MENTION_GAP, ...horizontal, maxHeight }
       : { top: caretRect.bottom + MENTION_GAP, ...horizontal, maxHeight };
@@ -1106,16 +1110,11 @@ export function CommandLine({
                 size="sm"
               />
             )}
-            <Container data-testid={CommandLineTestId.ProjectSelector} shrink={false}>
-              <Stack align="center" direction="row" gap="25">
-                <Icon name="code" size="xs" tone="faint" />
-                <ProjectSelect
-                  activeProjectId={taskProjectId}
-                  onChange={handleProjectChange}
-                  projects={projects}
-                />
-              </Stack>
-            </Container>
+            <ProjectSelect
+              activeProjectId={taskProjectId}
+              onChange={handleProjectChange}
+              projects={projects}
+            />
           </Stack>
         </Container>
 
