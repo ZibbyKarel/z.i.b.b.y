@@ -194,10 +194,12 @@ describe("ChatScreen", () => {
     expect(screen.getByText("Mám se dobře.")).toBeInTheDocument();
   });
 
-  it("has no standalone project switcher in the header — the composer's inline chip is the only project control (Phase 102/108)", () => {
+  it("has no project control at all — chat is send-delegation only, and the project selector moved to the task-launch container (Phase 118d)", () => {
     renderWithProviders(<ChatScreenHarness />);
     expect(screen.queryByTestId("project-switcher")).not.toBeInTheDocument();
-    expect(screen.getByTestId(CommandLineTestId.ProjectSelector)).toBeInTheDocument();
+    // The generic `CommandLine` chat composes directly no longer renders a project
+    // selector at all — that control is `TaskCommandLine`-only now.
+    expect(screen.queryByTestId("task-command-line-project-selector")).not.toBeInTheDocument();
   });
 
   it("hides New chat on an empty thread and clears the transcript when used", async () => {
@@ -393,7 +395,10 @@ describe("ChatScreen", () => {
       expect(screen.getByTestId(EntityHeroTestId.Name)).toHaveTextContent("Builder");
 
       // The old duplicated behaviour is gone: nothing is injected into the composer.
-      expect(screen.queryByTestId(CommandLineTestId.TargetChip)).not.toBeInTheDocument();
+      // The top target chip was retired in Phase 59 and its testid enum member
+      // removed in Phase 118d (no live consumer needed it any more) — this literal
+      // keeps the "never resolves to a rendered chip" regression assertion intact.
+      expect(screen.queryByTestId("command-line-target-chip")).not.toBeInTheDocument();
       expect(screen.getByTestId(CommandLineTestId.Input)).toHaveValue("");
     });
 

@@ -173,7 +173,7 @@ Branch `refactor/commandline-composer-split` off `main`. One commit per sub-phas
 | 118a | done | (seam: `leadingActions` + `renderTrailing` slots, additive) |
 | 118b | done | (`TaskCommandLine` container + `resetOnSubmit`; not yet wired) |
 | 118c | done | (overview + NewTaskDialog → `TaskCommandLine`; 151+211 tests green) |
-| 118d | pending | |
+| 118d | done | (`sendMode` + task-launch stripped from generic; props 30→21, ids 17→13; 346 tests green) |
 | 118e | pending | |
 
 ---

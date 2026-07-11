@@ -234,7 +234,7 @@ describe("TaskCommandLine (Phase 118b task-launch container)", () => {
     const user = userEvent.setup();
     render(<TaskCommandLine onProjectChange={onProjectChange} />);
 
-    const chip = screen.getByTestId(CommandLineTestId.ProjectSelector);
+    const chip = screen.getByTestId(TaskCommandLineTestId.ProjectSelector);
     await user.click(within(chip).getByTestId(DropdownTestId.Trigger));
     const options = screen.getAllByTestId(DropdownTestId.Option);
     await user.click(options[1] as HTMLElement);

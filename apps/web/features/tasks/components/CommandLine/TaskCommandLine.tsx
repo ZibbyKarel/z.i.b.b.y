@@ -2,6 +2,7 @@
 import type { TaskOutput } from "@zibby/contracts";
 import {
   Button,
+  Container,
   DropDownButton,
   type DropDownButtonItem,
   type IconName,
@@ -13,7 +14,7 @@ import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { useLimitsQuery } from "../../../limits";
-import { useProjectsQuery } from "../../../projects";
+import { ProjectSelect, useProjectsQuery } from "../../../projects";
 import { type TaskSubmitResult, useTaskSubmit } from "../../hooks/useTaskSubmit";
 import { INITIAL_LOOP_STATE, type LoopFormState, canSubmitLoop } from "../../loop";
 import {
@@ -32,6 +33,10 @@ export enum TaskCommandLineTestId {
   Root = "task-command-line-root",
   AckRow = "task-command-line-ack-row",
   AckDismiss = "task-command-line-ack-dismiss",
+  /** The inline project chip (Phase 102, relocated here in Phase 118d — the generic
+   *  `CommandLine` no longer knows what a "project" is) — beside the attach `+` in
+   *  the bottom control row, rendered via `CommandLine`'s `leadingActions` slot. */
+  ProjectSelector = "task-command-line-project-selector",
 }
 
 /** The honest, non-fabricated classification ack shown below the box after submit —
@@ -94,20 +99,24 @@ export interface TaskCommandLineProps {
 }
 
 /**
- * The task-launch CONTAINER (Phase 118b): composes the generic {@link CommandLine} —
- * which owns only the draft (text, `@`-mention target, attachments, highlights) — with
- * everything task-launch: {@link useTaskSubmit}, the schedule split-button, the project
- * scope, the loop path, and the honest classification ack row. A faithful relocation of
- * what used to be `CommandLine`'s own default (non-`onSubmit`) behaviour — see phase-118
- * plan — not a redesign.
+ * The task-launch CONTAINER (Phase 118b; owns the project selector as of 118d):
+ * composes the generic {@link CommandLine} — which owns only the draft (text,
+ * `@`-mention target, attachments, highlights) — with everything task-launch:
+ * {@link useTaskSubmit}, the schedule split-button, the project scope, the loop path,
+ * and the honest classification ack row. A faithful relocation of what used to be
+ * `CommandLine`'s own default (non-`onSubmit`) behaviour — see phase-118 plan — not a
+ * redesign.
  *
  * Mirrors `CommandLine`'s emitted draft (`onTextChange`/`onTargetChange`/
- * `onAttachmentsChange`/`onProjectChange`) into local state so `useTaskSubmit` — which
- * stays render-configured and unchanged — can be fed exactly as it was fed before, and
+ * `onAttachmentsChange`) into local state so `useTaskSubmit` — which stays
+ * render-configured and unchanged — can be fed exactly as it was fed before, and
  * dispatches from that mirror rather than from `CommandLine`'s own internal state.
  * `CommandLine` is composed with `onSubmit`/`resetOnSubmit={false}` purely as an Enter-key
  * trigger; the actual dispatch (including scheduling and the loop path) is driven directly
- * from the split-button `renderTrailing` slot.
+ * from the split-button `renderTrailing` slot. The project selector — `ProjectSelect`,
+ * scoped by the local `taskProjectId` — is injected into `CommandLine`'s own
+ * `leadingActions` slot (Phase 118d: the generic composer no longer knows what a
+ * "project" is).
  */
 export function TaskCommandLine({
   title = "",
@@ -311,16 +320,23 @@ export function TaskCommandLine({
       <CommandLine
         chrome={chrome}
         disabled={disabled}
-        initialProjectId={initialProjectId}
         initialTarget={initialTarget}
         initialText={initialText}
         injectedTarget={injectedTarget}
         label={label}
+        leadingActions={
+          <Container data-testid={TaskCommandLineTestId.ProjectSelector}>
+            <ProjectSelect
+              activeProjectId={taskProjectId}
+              onChange={handleProjectChange}
+              projects={projects}
+            />
+          </Container>
+        }
         maxRows={maxRows}
         onAttachmentsChange={handleAttachmentsChange}
         onDraftChange={onDraftChange}
         onInjectedTargetConsumed={onInjectedTargetConsumed}
-        onProjectChange={handleProjectChange}
         onSubmit={() => dispatch(null)}
         onTargetChange={handleTargetChange}
         onTextChange={handleTextChange}

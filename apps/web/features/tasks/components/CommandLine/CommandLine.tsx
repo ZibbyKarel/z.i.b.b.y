@@ -1,12 +1,9 @@
 "use client";
-import type { TaskOutput } from "@zibby/contracts";
 import {
   Button,
   Card,
   CardContent,
   Container,
-  DropDownButton,
-  type DropDownButtonItem,
   FilePreview,
   type HighlightRange,
   HighlightTextAreaField,
@@ -14,7 +11,6 @@ import {
   Icon,
   type IconName,
   MenuSurface,
-  OrbitLoader,
   Panel,
   Stack,
   Tag,
@@ -32,24 +28,10 @@ import type {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAgentsQuery } from "../../../agents";
-import { useLimitsQuery } from "../../../limits";
 import { usePipelinesQuery } from "../../../pipelines";
-import { ProjectSelect, useProjectsQuery } from "../../../projects";
 import { useSubsystemsQuery } from "../../../subsystems/queries/useSubsystemsQuery";
-import { type TaskSubmitResult, useTaskSubmit } from "../../hooks/useTaskSubmit";
-import { INITIAL_LOOP_STATE, type LoopFormState, canSubmitLoop } from "../../loop";
 import { useUploadTaskAttachmentsMutation } from "../../mutations/useUploadTaskAttachmentsMutation";
-import {
-  type SchedulePreset,
-  type SubsystemId,
-  type TaskTarget,
-  type TaskTargetKind,
-  clockLabel,
-  extractPathRanges,
-  extractPaths,
-  resolveScheduledAt,
-} from "../../task";
-import { ScheduledConfirmation } from "../ScheduledConfirmation";
+import { type SubsystemId, type TaskTarget, extractPathRanges } from "../../task";
 import type { TaskAttachmentSet } from "../TaskAttachments";
 
 export enum CommandLineTestId {
@@ -57,9 +39,6 @@ export enum CommandLineTestId {
   Input = "command-line-input",
   Attach = "command-line-attach",
   Pin = "command-line-pin",
-  /** The inline project chip (Phase 102) that replaces the retired standalone
-   *  project switcher — beside the attach `+` in the bottom control row. */
-  ProjectSelector = "command-line-project-selector",
   FileInput = "command-line-file-input",
   MentionMenu = "command-line-mention-menu",
   MentionItem = "command-line-mention-item",
@@ -67,24 +46,10 @@ export enum CommandLineTestId {
   Box = "command-line-box",
   DropOverlay = "command-line-drop-overlay",
   Suggestion = "command-line-suggestion",
-  AckRow = "command-line-ack-row",
-  AckDismiss = "command-line-ack-dismiss",
   Send = "command-line-send",
   /** One compact attached-file tile — suffixed `-${file.name}` so a test can
    *  scope into a SPECIFIC file's remove button among several tiles. */
   FileTile = "command-line-file-tile",
-  /**
-   * @deprecated Phase 59 removed the top target chip — the picked `@Name`
-   * inline in the text is now the only trace of `target`. Kept as a value
-   * (never rendered by this component any more) purely so out-of-scope
-   * consumers of this identifier — `ChatScreen.test.tsx` and
-   * `NewTaskDialog.test.tsx`, both outside this phase's edit scope — keep
-   * compiling; `queryByTestId(TargetChip)` there correctly resolves to
-   * "not in the document". Two `getByTestId(TargetChip)` assertions in
-   * `NewTaskDialog.test.tsx` (expecting it to render) will still fail at
-   * runtime and need updating in a follow-up.
-   */
-  TargetChip = "command-line-target-chip",
 }
 
 export interface CommandLineProps {
@@ -99,26 +64,8 @@ export interface CommandLineProps {
   label?: string;
   initialText?: string;
   initialTarget?: TaskTarget;
-  /** An optional task title — passed straight through to the dispatched body. */
-  title?: string;
-  /** An optional terminal-output choice — passed straight through (undefined = inherit). */
-  output?: TaskOutput;
-  /**
-   * Phase 109: the operator's confirmed tool-grant set (from {@link ToolGrantsField}) —
-   * passed straight through into `useTaskSubmit`'s dispatched body. Undefined/empty
-   * omits the field entirely (inherit — no grants beyond the always-on entity server).
-   */
-  toolGrants?: string[];
-  /** Prior-run context ("Continue in a new task") appended to the dispatched text. */
-  context?: string;
-  /** True when the caller's own live classify verdict says this text synthesizes a
-   *  loop — flips the run control to "Run loop" and routes dispatch through the goal
-   *  creation path. Defaults to false: a bare CommandLine always does a single dispatch. */
-  isLoop?: boolean;
-  /** The Loop form state — read when `isLoop` is true. */
-  loop?: LoopFormState;
   /** An extra guard from the caller (e.g. an incomplete "write to a file" output
-   *  choice) that blocks the run control regardless of the text/loop guard. */
+   *  choice) that blocks the submit control regardless of the text guard. */
   disabled?: boolean;
   /**
    * Wrap the input in the full velin-b panel chrome — an elevated `Panel` with a
@@ -135,16 +82,6 @@ export interface CommandLineProps {
    * (the default — a dialog host has its own affordances for this).
    */
   suggestions?: string[];
-  /**
-   * Show the compact classification ack row once a submit goes out (spinner +
-   * "Klasifikováno jako … → spouštím …" + the quoted text + a dismiss ✕). Built
-   * honestly from what CommandLine already knows at submit time — the resolved
-   * `@`-mention target, the loop verdict, or (absent either) an explicit "auto"
-   * label; it never fabricates a backend classification result. Default `false`:
-   * a host that navigates away / unmounts on submit (e.g. `NewTaskDialog`) has no
-   * use for it.
-   */
-  showAck?: boolean;
   /** Mirrors the live text up so an embedding parent can drive its own classify
    *  preview off the same value without owning the textarea itself. */
   onTextChange?: (text: string) => void;
@@ -153,30 +90,21 @@ export interface CommandLineProps {
   /** Mirrors the attached file set up — needed by a parent whose OWN submit path
    *  (e.g. a synthesized loop) must carry the same attachment set. */
   onAttachmentsChange?: (set: TaskAttachmentSet) => void;
-  /** Fired with the raw create-task result as soon as it lands. */
-  onLaunched?: (result: TaskSubmitResult) => void;
-  /** Called once the launch settles: immediately for a dispatched/pending task, after
-   *  the scheduled confirmation lingers for a deferred one. Defaults to a no-op — a
-   *  standalone quick-launch has nothing to close. */
-  onClose?: () => void;
   /**
-   * Send-delegation mode (Phase 38 — the chat composer): when present, a submit
-   * (Enter, or the trailing action) calls this INSTEAD of launching a task via
-   * `useTaskSubmit`. Renders a plain **Send** action rather than the run
-   * split-button (scheduling is meaningless for a chat turn), and clears the
-   * text/target/attachments itself once called — mirroring `useTaskSubmit`'s own
-   * post-dispatch reset. Omit for the default task-launch behaviour (unchanged).
+   * Fired on submit (Enter, or the trailing action) with the composed text, the
+   * picked `@`-mention target (if any), and the attached file set (if any). This is
+   * the ONLY dispatch path this component knows about — what happens after firing
+   * (launching a task, sending a chat message, saving an automation) is entirely the
+   * caller's concern; a container that needs task-launch semantics (scheduling, ack,
+   * loop) composes {@link TaskCommandLine} instead of reaching for those here.
    */
-  onSubmit?: (text: string, target?: TaskTarget, attachments?: TaskAttachmentSet) => void;
+  onSubmit: (text: string, target?: TaskTarget, attachments?: TaskAttachmentSet) => void;
   /**
-   * Whether a send-delegation (`onSubmit`) dispatch clears text/target/attachments
-   * afterwards — default `true` (today's behaviour: the chat/automations composer
-   * resets itself, ready for the next turn). A container that navigates/confirms
-   * instead of staying mounted on the same draft (e.g. the coming `TaskCommandLine`,
-   * whose ack row needs the just-submitted text to survive) passes `false` to keep
-   * the input intact. Has no effect outside send-delegation mode (the task-launch
-   * path doesn't reset the draft here at all — it navigates or shows
-   * `ScheduledConfirmation` instead).
+   * Whether a submit dispatch clears text/target/attachments afterwards — default
+   * `true` (the chat/automations composer resets itself, ready for the next turn).
+   * A container that navigates/confirms instead of staying mounted on the same draft
+   * (e.g. `TaskCommandLine`, whose ack row needs the just-submitted text to survive)
+   * passes `false` to keep the input intact.
    */
   resetOnSubmit?: boolean;
   /** Fired whenever the trimmed draft flips between empty and non-empty — lets an
@@ -199,46 +127,26 @@ export interface CommandLineProps {
    * yet, so the affordance would silently be ignored rather than hidden.
    */
   showAttach?: boolean;
-  /**
-   * The one-shot seed for the per-task project scope (Phase 107; the app-wide
-   * "active project" scope this used to default from was removed in Phase 108).
-   * Defaults to `null` ("Bez projektu") — a host that wants a different
-   * starting point passes this instead.
-   */
-  initialProjectId?: string | null;
-  /** Mirrors the per-task project selection up whenever it changes — a host
-   *  that wants to observe (never drive) the pick reads this instead. */
-  onProjectChange?: (id: string | null) => void;
-  /** Overrides the run/submit button label. Label only — the submit action is
-   *  still whatever the mode dictates (in send-delegation mode, `onSubmit`).
-   *  Defaults to the classify/send translation. */
+  /** Overrides the submit button label. Defaults to the send translation. */
   submitLabel?: string;
   /**
    * Extra controls rendered in the bottom-left control row, immediately after
-   * the attach `+` button and the inline `<ProjectSelect>`. This is the seam
-   * a container (e.g. the coming `TaskCommandLine`) uses to inject its own
-   * leading controls without this component knowing what they are. Omit for
-   * no visual change (today's control row, unchanged).
+   * the attach `+` button. This is the seam a container (e.g. `TaskCommandLine`)
+   * uses to inject its own leading controls — its project selector — without
+   * this component knowing what they are. Omit for no visual change (today's
+   * control row, unchanged).
    */
   leadingActions?: ReactNode;
   /**
-   * Overrides the bottom-right control — today `sendMode ? <Send> :
-   * <DropDownButton>` — entirely. Called with `{ canSubmit, submit }` so a
-   * container (e.g. `TaskCommandLine`'s schedule split-button) can own the
-   * trailing action's rendering while this component still owns validation
-   * and the actual dispatch. `canSubmit` mirrors the existing `canRun` guard;
-   * `submit()` runs the same submit path this component runs itself (Enter /
-   * the default trailing control). Omit to keep today's default trailing
-   * control unchanged.
+   * Overrides the bottom-right control — today the default **Send** `Button` —
+   * entirely. Called with `{ canSubmit, submit }` so a container (e.g.
+   * `TaskCommandLine`'s schedule split-button) can own the trailing action's
+   * rendering while this component still owns validation and the actual
+   * dispatch. `canSubmit` mirrors the existing `canRun` guard; `submit()` runs
+   * the same submit path this component runs itself (Enter / the default
+   * trailing control). Omit to keep today's default trailing control unchanged.
    */
   renderTrailing?: (api: { canSubmit: boolean; submit: () => void }) => ReactNode;
-}
-
-/** The honest, non-fabricated classification ack shown below the box after submit. */
-interface AckInfo {
-  text: string;
-  kind: string;
-  exec: string;
 }
 
 /** An in-progress `@query` the caret is currently sitting inside — `start` is the
@@ -333,10 +241,6 @@ function hasMentionFor(text: string, name: string): boolean {
     if (match[0].slice(1).toLowerCase() === needle) return true;
   }
   return false;
-}
-
-function noop() {
-  /* no-op default for CommandLine's onClose */
 }
 
 /** A caret position in viewport coordinates — `top`/`bottom` bracket the caret's
@@ -435,17 +339,19 @@ const CONTROLS_RESERVED_BOTTOM_WITH_FILES = "6.5rem";
 const CONTROLS_INSET = "8px";
 
 /**
- * The unified task launcher (Phase 26; restyled to the velin-b command bar in Phase
- * 31a): one growable input that does everything — free-text description, an inline
- * `@` search to assign an agent/pipeline target, a `+`/pin button (and drag-and-drop)
- * to attach files, and a trailing split-button to run now / in 1 h / when limits
- * reset. Composed entirely from DS primitives plus the reused
- * {@link HighlightTextAreaField} (path highlights AND per-type `@token` tones), the
- * `@`-mention picker ported from `ChatComposer`, and {@link useTaskSubmit} (single
- * dispatch, or a synthesized loop when the caller passes `isLoop`/`loop` from its own
- * classify). The panel chrome (header row), suggestion chips and classification ack
- * row are opt-in via `chrome`/`suggestions`/`showAck` so the same component serves a
- * dialog-hosted bare input and a standalone command bar alike.
+ * The generic draft composer (Phase 26; restyled to the velin-b command bar in Phase
+ * 31a; stripped of all task-launch machinery in Phase 118d): one growable input that
+ * owns ONLY the draft — free-text description, an inline `@` search to assign an
+ * agent/pipeline/subsystem target, a `+`/pin button (and drag-and-drop) to attach
+ * files, highlights (path + `@token` tones), and suggestion chips — firing `onSubmit`
+ * on Enter or the trailing action. Composed entirely from DS primitives plus the
+ * reused {@link HighlightTextAreaField} and the `@`-mention picker ported from
+ * `ChatComposer`. What happens after a submit (launching a task, sending a chat
+ * message, saving an automation) is the caller's concern: send-delegation consumers
+ * (`ChatScreen`, the automations dialogs) pass `onSubmit` directly; the task-launch
+ * container {@link TaskCommandLine} composes this component via the `leadingActions`/
+ * `renderTrailing` slots instead of this component knowing about scheduling, loops,
+ * or the project scope.
  */
 export function CommandLine({
   rows = 1,
@@ -454,40 +360,24 @@ export function CommandLine({
   label,
   initialText,
   initialTarget,
-  title = "",
-  output,
-  toolGrants,
-  context,
-  isLoop = false,
-  loop = INITIAL_LOOP_STATE,
   disabled = false,
   chrome = true,
   suggestions,
-  showAck = false,
   onTextChange,
   onTargetChange,
   onAttachmentsChange,
-  onLaunched,
-  onClose = noop,
   onSubmit,
   resetOnSubmit = true,
   onDraftChange,
   injectedTarget,
   onInjectedTargetConsumed,
   showAttach = true,
-  initialProjectId,
-  onProjectChange,
   submitLabel,
   leadingActions,
   renderTrailing,
 }: CommandLineProps) {
   const t = useTranslations("tasks");
   const tMention = useTranslations("chat.mention");
-
-  // Send-delegation mode (Phase 38): an `onSubmit` caller (the chat composer)
-  // dispatches through it instead of `useTaskSubmit`, and gets a plain Send
-  // action instead of the schedule split-button.
-  const sendMode = onSubmit !== undefined;
 
   // A pre-assigned `initialTarget` seeds an inline `@Name ` into the text (exactly
   // like `injectedTarget` and an in-picker pick do) so the target has a VISIBLE
@@ -518,11 +408,10 @@ export function CommandLine({
   // fixed position (and its flip). Null when there's no open mention.
   const [caretRect, setCaretRect] = useState<CaretRect | null>(null);
   const [dragOver, setDragOver] = useState(false);
-  const [ack, setAck] = useState<AckInfo | null>(null);
   // Set on a suggestion-chip click: the text state hasn't re-rendered yet at click
-  // time, so the actual dispatch is deferred to the effect below, which fires once
-  // `text` reflects the suggestion — the same closure staleness pitfall useTaskSubmit
-  // is built to avoid.
+  // time, so the actual submit is deferred to the effect below, which fires once
+  // `text` reflects the suggestion — the same closure staleness pitfall a
+  // straight-through call would hit.
   const pendingSuggestionRef = useRef(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -532,19 +421,8 @@ export function CommandLine({
   const { data: agents = [] } = useAgentsQuery();
   const { data: pipelines = [] } = usePipelinesQuery();
   const { data: subsystems = [] } = useSubsystemsQuery();
-  const { data: projects = [] } = useProjectsQuery();
-  // Phase 107: a LOCAL, per-task scope — seeded once from `initialProjectId`
-  // (default `null`, Phase 108: there is no global "active project" to fall
-  // back to any more). Nothing here writes back to any app-wide scope.
-  const [taskProjectId, setTaskProjectId] = useState<string | null>(() => initialProjectId ?? null);
-  const { data: limits } = useLimitsQuery();
-  const resetsAt = limits?.rolling.resetsAt ?? null;
-  // A stable "now" for this instance's lifetime — presets and the goal id's
-  // uniqueness suffix resolve against it (lazy: Date.now() in render is lint-banned).
-  const [now] = useState(() => Date.now());
 
   const upload = useUploadTaskAttachmentsMutation();
-  const [scheduledWhen, setScheduledWhen] = useState<string | null>(null);
 
   // The mention picker never steals focus — it's inline, the textarea stays the
   // only input — so a pick only needs to move the CARET past the spliced-in
@@ -616,15 +494,6 @@ export function CommandLine({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [injectedTarget]);
 
-  const selectedProject = useMemo(
-    () => (taskProjectId ? (projects.find((p) => p.id === taskProjectId) ?? null) : null),
-    [projects, taskProjectId],
-  );
-  const paths = useMemo(() => {
-    const detected = extractPaths(text);
-    const all = selectedProject?.path ? [selectedProject.path, ...detected] : detected;
-    return [...new Set(all)];
-  }, [text, selectedProject]);
   const pathHighlights = useMemo(() => extractPathRanges(text), [text]);
 
   const agentNames = useMemo(
@@ -644,102 +513,40 @@ export function CommandLine({
     [pathHighlights, mentionHighlights],
   );
 
-  // The dispatched description: the operator's text plus, when continuing from a
-  // prior run, that run's output appended as a labelled context block.
-  const composedText = useMemo(
-    () => (context ? `${text.trim()}\n\n---\n${t("context.heading")}\n${context}` : text),
-    [text, context, t],
-  );
+  // The send-delegation guard — the only one left now that task-launch (loop /
+  // 2-char classify minimum) moved to `TaskCommandLine`.
+  const canRun = !disabled && text.trim().length > 0;
 
-  const { handleSubmit, busy } = useTaskSubmit({
-    title,
-    composedText,
-    paths,
-    attachmentSetId: attachments.attachmentSetId,
-    output,
-    toolGrants,
-    chosenTarget: target ?? null,
-    isLoop,
-    loop,
-    now,
-    text,
-    onClose,
-    setScheduledWhen,
-    onLaunched,
-  });
-
-  const canRun =
-    !disabled &&
-    (sendMode ? text.trim().length > 0 : isLoop ? canSubmitLoop(loop) : text.trim().length > 2);
-  const runLabel = submitLabel ?? (isLoop ? t("loop.submit") : t("classifyRun"));
-  const runIcon: IconName = isLoop ? "retry" : "play";
-
-  const ackKindLabel: Record<TaskTargetKind, string> = {
-    agent: t("commandLine.ack.kind.agent"),
-    pipeline: t("commandLine.ack.kind.pipeline"),
-    goal: t("commandLine.ack.kind.goal"),
-    chain: t("commandLine.ack.kind.chain"),
-    subsystem: t("commandLine.ack.kind.subsystem"),
-    orchestrator: t("commandLine.ack.kind.orchestrator"),
-  };
-
-  /** The honest ack built from what's already known at the moment of submit — never
-   * a fabricated backend verdict (see {@link CommandLineProps.showAck}). */
-  function buildAck(): AckInfo | null {
-    if (!canRun || busy) return null;
-    if (isLoop) {
-      return {
-        text,
-        kind: t("commandLine.ack.kind.loop"),
-        exec: title.trim() || loop.objective || t("commandLine.ack.execFallback"),
-      };
-    }
-    if (target) return { text, kind: ackKindLabel[target.kind], exec: target.name };
-    return { text, kind: t("commandLine.ack.kind.auto"), exec: t("commandLine.ack.execPending") };
-  }
-
-  /** Every submit path (Enter, the primary run action, a schedule-menu item, or a
-   * suggestion chip) funnels through here so the ack row — when enabled — always
-   * reflects the actual dispatch, computed at the same moment it fires.
-   *
-   * In send-delegation mode (`onSubmit` set) this calls the caller INSTEAD of
-   * `useTaskSubmit` and clears the text/target/attachments itself — mirroring
-   * `useTaskSubmit`'s own post-dispatch reset (a host that navigates away/unmounts
-   * on submit has nothing further to clear; a chat thread that stays mounted does). */
-  function dispatch(scheduledAt: number | null) {
-    if (onSubmit) {
-      if (!canRun) return;
-      const trimmed = composedText.trim();
-      if (!trimmed) return;
-      const attachmentPayload = attachments.files.length > 0 ? attachments : undefined;
-      onSubmit(trimmed, target, attachmentPayload);
-      if (resetOnSubmit) {
-        setText("");
-        onTextChange?.("");
-        notifyDraftChange("");
-        setTarget(undefined);
-        onTargetChange?.(undefined);
-        if (attachmentPayload) {
-          setAttachments({ files: [] });
-          onAttachmentsChange?.({ files: [] });
-        }
+  /** The only dispatch path this component owns: guard, trim, fire `onSubmit`, then
+   * reset the draft unless the caller opted out via `resetOnSubmit={false}`. Every
+   * submit trigger (Enter, the default Send button, a container's own
+   * `renderTrailing` control, or a suggestion chip) funnels through here. */
+  function submit() {
+    if (!canRun) return;
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const attachmentPayload = attachments.files.length > 0 ? attachments : undefined;
+    onSubmit(trimmed, target, attachmentPayload);
+    if (resetOnSubmit) {
+      setText("");
+      onTextChange?.("");
+      notifyDraftChange("");
+      setTarget(undefined);
+      onTargetChange?.(undefined);
+      if (attachmentPayload) {
+        setAttachments({ files: [] });
+        onAttachmentsChange?.({ files: [] });
       }
-      return;
     }
-    if (showAck) {
-      const info = buildAck();
-      if (info) setAck(info);
-    }
-    handleSubmit(scheduledAt);
   }
 
-  // A suggestion chip sets `text` then flags a pending dispatch; this fires once
-  // that state has landed, so `dispatch` (and the `useTaskSubmit` it calls into)
-  // reads the suggestion text instead of a stale prior render's closure.
+  // A suggestion chip sets `text` then flags a pending submit; this fires once
+  // that state has landed, so `submit` reads the suggestion text instead of a
+  // stale prior render's closure.
   useEffect(() => {
     if (!pendingSuggestionRef.current) return;
     pendingSuggestionRef.current = false;
-    dispatch(null);
+    submit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text]);
 
@@ -831,7 +638,7 @@ export function CommandLine({
     }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      dispatch(null);
+      submit();
     }
   }
 
@@ -913,17 +720,6 @@ export function CommandLine({
     onAttachmentsChange?.(next);
   }
 
-  function run(preset: SchedulePreset) {
-    dispatch(resolveScheduledAt(preset, now, resetsAt));
-  }
-
-  /** Updates the LOCAL per-task project scope only — never the global
-   *  `activeProject` — and mirrors the change up via `onProjectChange` (Phase 107). */
-  function handleProjectChange(id: string | null) {
-    setTaskProjectId(id);
-    onProjectChange?.(id);
-  }
-
   // The inline dropdown's rows — agents then pipelines, filtered live by the
   // in-progress query. Capped only as a runaway guard (50) — a real catalog
   // easily exceeds the old 6-row cap, and MenuSurface's own `scroll` +
@@ -1002,22 +798,6 @@ export function CommandLine({
       ? { bottom: viewportH - caretRect.top + MENTION_GAP, ...horizontal, maxHeight }
       : { top: caretRect.bottom + MENTION_GAP, ...horizontal, maxHeight };
   }, [caretRect]);
-
-  const menuItems: DropDownButtonItem[] = [
-    { id: "in-1h", label: t("schedule.in1h"), icon: "clock", onSelect: () => run("in-1h") },
-    ...(resetsAt !== null && resetsAt > now
-      ? [
-          {
-            id: "limit-reset",
-            label: t("schedule.limitReset", { time: clockLabel(resetsAt) }),
-            icon: "clock" as const,
-            onSelect: () => run("limit-reset"),
-          },
-        ]
-      : []),
-  ];
-
-  if (scheduledWhen !== null) return <ScheduledConfirmation when={scheduledWhen} />;
 
   const openFilePicker = () => fileInputRef.current?.click();
 
@@ -1131,15 +911,9 @@ export function CommandLine({
           </Container>
         )}
 
-        {/* Attach + the inline project selector — pinned bottom-left INSIDE the
-            input, over the reserved strip. Phase 102: the project picker used to
-            live in the now-retired standalone project switcher (HUD topbar + chat
-            header); it's a peer control here, right beside the attach `+`, so
-            every CommandLine host (the overview command bar, the chat composer,
-            NewTaskDialog's bare input) keeps a way to set it. Phase 107/108: the
-            pick scopes ONLY this task (local `taskProjectId`) — there is no
-            app-wide "active project" scope left to mutate; every other screen
-            always shows every project's data at once. */}
+        {/* Attach + `leadingActions` — pinned bottom-left INSIDE the input, over the
+            reserved strip. `TaskCommandLine` injects its own project selector here
+            (Phase 118d) — this component no longer knows what a "project" is. */}
         <Container bottom={CONTROLS_INSET} left={CONTROLS_INSET} position="absolute" zIndex={10}>
           <Stack align="center" direction="row" gap="50">
             {showAttach && (
@@ -1152,44 +926,25 @@ export function CommandLine({
                 size="sm"
               />
             )}
-            <Container data-testid={CommandLineTestId.ProjectSelector}>
-              <ProjectSelect
-                activeProjectId={taskProjectId}
-                onChange={handleProjectChange}
-                projects={projects}
-              />
-            </Container>
             {leadingActions}
           </Stack>
         </Container>
 
-        {/* Run / Send — pinned bottom-right INSIDE the input, over the reserved strip. */}
+        {/* Send — pinned bottom-right INSIDE the input, over the reserved strip. */}
         <Container bottom={CONTROLS_INSET} position="absolute" right={CONTROLS_INSET} zIndex={10}>
           {renderTrailing ? (
-            renderTrailing({ canSubmit: canRun, submit: () => dispatch(null) })
-          ) : sendMode ? (
+            renderTrailing({ canSubmit: canRun, submit })
+          ) : (
             <Button
               data-testid={CommandLineTestId.Send}
               disabled={!canRun}
               icon="arrow"
               intent="primary"
-              onClick={() => dispatch(null)}
+              onClick={submit}
               size="sm"
             >
               {submitLabel ?? t("commandLine.send")}
             </Button>
-          ) : (
-            <DropDownButton
-              disabled={!canRun || busy}
-              icon={runIcon}
-              intent="primary"
-              label={runLabel}
-              loading={busy}
-              menuAriaLabel={t("commandLine.moreRunOptions")}
-              menuItems={menuItems}
-              onClick={() => dispatch(null)}
-              size="sm"
-            />
           )}
         </Container>
       </Container>
@@ -1275,28 +1030,7 @@ export function CommandLine({
     </Container>
   );
 
-  const belowBox = ack ? (
-    <Stack align="center" data-testid={CommandLineTestId.AckRow} direction="row" gap="150">
-      <OrbitLoader size="sm" />
-      <Stack grow gap="25" style={{ minWidth: 0 }}>
-        <Typography size="sm" type="note">
-          {t("commandLine.ack.headline", { kind: ack.kind, exec: ack.exec })}
-        </Typography>
-        <Typography mono truncate size="xs" type="note" variant="tertiary">
-          {t("commandLine.ack.quoted", { text: ack.text })}
-        </Typography>
-      </Stack>
-      <Button
-        aria-label={t("commandLine.ack.dismissAria")}
-        data-testid={CommandLineTestId.AckDismiss}
-        icon="x"
-        intent="ghost"
-        onClick={() => setAck(null)}
-        size="sm"
-      />
-    </Stack>
-  ) : (
-    suggestions &&
+  const belowBox = suggestions &&
     suggestions.length > 0 &&
     text.trim().length === 0 && (
       <Stack wrap direction="row" gap="75">
@@ -1312,8 +1046,7 @@ export function CommandLine({
           </Button>
         ))}
       </Stack>
-    )
-  );
+    );
 
   return (
     <Stack data-testid={CommandLineTestId.Root} direction="col" gap="150">

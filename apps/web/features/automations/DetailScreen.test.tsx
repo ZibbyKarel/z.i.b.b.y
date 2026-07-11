@@ -180,6 +180,11 @@ describe("automations DetailScreen (N4f grammar)", () => {
       );
     });
 
+    it("has no project selector — this edit surface is the generic CommandLine (send-delegation), not the task-launch container (Phase 118d)", () => {
+      render(<DetailScreen automationId="check-prs" />);
+      expect(screen.queryByTestId("task-command-line-project-selector")).not.toBeInTheDocument();
+    });
+
     it("saving via CommandLine issues a task-target update preserving the attachmentSetId when no new files are attached", async () => {
       const user = userEvent.setup();
       render(<DetailScreen automationId="check-prs" />);

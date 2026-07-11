@@ -151,6 +151,10 @@ describe("Automations Screen", () => {
     // own send action (relabelled "Naplánovat") does.
     expect(screen.queryByTestId(AutomationFormTestId.Submit)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Naplánovat" })).toBeInTheDocument();
+    // Phase 118d: the project selector is task-launch-only (`TaskCommandLine`) —
+    // this dialog composes the generic `CommandLine` directly (send-delegation via
+    // `onSubmit`), which no longer renders one at all.
+    expect(screen.queryByTestId("task-command-line-project-selector")).not.toBeInTheDocument();
   });
 
   it("submitting via CommandLine's Naplánovat action creates a task-target automation", async () => {

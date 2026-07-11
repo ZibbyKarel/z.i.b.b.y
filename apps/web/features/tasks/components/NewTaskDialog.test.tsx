@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DropDownButtonTestId, DropdownTestId, FilePreviewTestId } from "@zibby/design-system";
 import { renderWithProviders as render, screen, waitFor, within } from "../../../test/render";
 import { CommandLineTestId } from "./CommandLine/CommandLine";
+import { TaskCommandLineTestId } from "./CommandLine/TaskCommandLine";
 import { NewTaskDialog } from "./NewTaskDialog";
 import { ToolGrantsFieldTestId } from "./ToolGrantsField";
 
@@ -431,7 +432,7 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
     const user = userEvent.setup();
     render(<NewTaskDialog onClose={() => {}} />);
 
-    const chip = screen.getByTestId(CommandLineTestId.ProjectSelector);
+    const chip = screen.getByTestId(TaskCommandLineTestId.ProjectSelector);
     await user.click(within(chip).getByTestId(DropdownTestId.Trigger));
     const options = screen.getAllByTestId(DropdownTestId.Option);
     await user.click(options[2] as HTMLElement); // "Bez projektu", Alpha, Beta
