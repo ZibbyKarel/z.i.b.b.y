@@ -10,8 +10,8 @@ export const MACHINE_CONFIG_FILE = "MACHINE_CONFIG_FILE";
 
 /**
  * Phase 76 — THIS machine's per-machine config, persisted as a single
- * `data/machine/config.json`. Unlike `SystemConfigStore`/`ResearchConfigStore`
- * (operator-owned, synced knobs), this file is deliberately per-machine and
+ * `data/machine/config.json`. Unlike `SystemConfigStore` (operator-owned, synced
+ * knobs), this file is deliberately per-machine and
  * gitignored (see `.gitignore`: `.zibby/data/machine/config.json`) — it must
  * NEVER be committed/synced, since a clone root is a local filesystem detail
  * that differs machine to machine. A missing/garbage file reads as the

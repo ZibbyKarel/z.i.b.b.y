@@ -15,7 +15,7 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
@@ -28,7 +28,6 @@ import { ChatSection } from "./components/ChatSection";
 import { ChatUiSection } from "./components/ChatUiSection";
 import { MachineSection } from "./components/MachineSection";
 import { MandateSection } from "./components/MandateSection";
-import { ResearchSection } from "./components/ResearchSection";
 import { SelfKnowledgeSection } from "./components/SelfKnowledgeSection";
 import { SystemSection } from "./components/SystemSection";
 
@@ -89,6 +88,31 @@ function InfoRow({ label, value, tone }: { label: string; value: string; tone?: 
   );
 }
 
+// ---------------------------------------------------------------------------
+// Tabs — each is a directly addressable `?tab=` URL
+// ---------------------------------------------------------------------------
+
+const SETTINGS_TABS = [
+  "preferences",
+  "gates",
+  "automations",
+  "chat",
+  "chatUi",
+  "activity",
+  "mandate",
+  "runtime",
+  "machine",
+  "selfKnowledge",
+  "system",
+] as const;
+type SettingsTab = (typeof SETTINGS_TABS)[number];
+
+function asSettingsTab(value: string | null): SettingsTab {
+  return (SETTINGS_TABS as readonly string[]).includes(value ?? "")
+    ? (value as SettingsTab)
+    : "preferences";
+}
+
 const CAFFEINATE_KEY = "zibby.caffeinate";
 
 /** Module-scoped so the cookie write isn't analyzed as an in-render mutation. */
@@ -100,7 +124,17 @@ export function Screen() {
   const t = useTranslations("settings");
   const locale = useLocale() as Locale;
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: health, isSuccess } = useHealthQuery();
+
+  // The tab is a directly addressable `?tab=` URL: read once as the initial tab
+  // (deep-linkable) and write back on change for shareability — same pattern as
+  // the project profile screen's `?tab=`.
+  const initialTab = asSettingsTab(searchParams.get("tab"));
+  const setTab = (tab: string) => {
+    const next = asSettingsTab(tab);
+    router.replace(next === "preferences" ? "/settings" : `/settings?tab=${next}`);
+  };
 
   const [caffeinate, setCaffeinate] = useState(() =>
     typeof window === "undefined" ? true : localStorage.getItem(CAFFEINATE_KEY) !== "false",
@@ -120,7 +154,7 @@ export function Screen() {
       <Stack gap="250">
         <PageHeader subtitle={`${DAEMON} · ${t("daemonOn")} ${HOST}`} title={t("title")} />
 
-        <Tabs defaultValue="preferences" direction="vertical">
+        <Tabs defaultValue={initialTab} direction="vertical" onValueChange={setTab}>
           <TabList>
             <Tab value="preferences">{t("preferences")}</Tab>
             <Tab value="gates">{t("subnav.gates")}</Tab>
@@ -129,7 +163,6 @@ export function Screen() {
             <Tab value="chatUi">{t("chatUi.title")}</Tab>
             <Tab value="activity">{t("activity.title")}</Tab>
             <Tab value="mandate">{t("mandate.title")}</Tab>
-            <Tab value="research">{t("research.title")}</Tab>
             <Tab value="runtime">{t("runtime.title")}</Tab>
             <Tab value="machine">{t("machine.title")}</Tab>
             <Tab value="selfKnowledge">{t("selfKnowledge.title")}</Tab>
@@ -192,10 +225,6 @@ export function Screen() {
 
           <TabPanel value="mandate">
             <MandateSection />
-          </TabPanel>
-
-          <TabPanel value="research">
-            <ResearchSection />
           </TabPanel>
 
           <TabPanel value="runtime">

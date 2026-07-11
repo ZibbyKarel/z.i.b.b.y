@@ -9,7 +9,6 @@ import { approvalsContract } from "./approvals/approvals.contract";
 import { artifactsContract } from "./artifacts/artifacts.contract";
 import { chainRunsContract, chainsContract } from "./chains/chains.contract";
 import { discoveryContract } from "./discovery/discovery.contract";
-import { researchContract } from "./research/research.contract";
 import { gatesContract } from "./gates/gate.contract";
 import { gateRulesContract } from "./gates/gate-rules.contract";
 import { automationsContract } from "./automations/automations.contract";
@@ -71,7 +70,6 @@ export const appContract = c.router({
   chains: chainsContract,
   chainRuns: chainRunsContract,
   discovery: discoveryContract,
-  research: researchContract,
   gates: gatesContract,
   gateRules: gateRulesContract,
   memory: memoryContract,

@@ -21,7 +21,6 @@ export interface NavConfig {
 
 export const NAV_ITEMS = [
   { id: "overview", glyph: "grid", href: "/overview" },
-  { id: "chat", glyph: "butlerSign", href: "/chat" },
   { id: "runs", glyph: "pulse", href: "/runs" },
   { id: "projects", glyph: "code", href: "/projects" },
   { id: "companies", glyph: "branch", href: "/companies" },

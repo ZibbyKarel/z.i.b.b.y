@@ -53,9 +53,6 @@ export const ActivityKindSchema = z.enum([
   // attention — ZIBBY flagged it (reply/decision needed) but took no action itself.
   "channel-needs-attention",
   "briefing-generated",
-  // M6 (research / intelligence, Tier 1 — silent + recorded). A digest pass ran and
-  // mirrored its result to the vault; the morning briefing reads the digest note.
-  "research-digest",
   // M8 (hardening). An integration poll exhausted its retry/backoff budget — surfaced
   // (not just stamped as lastError) so a persistently failing channel never fails silently.
   "integration-retry-exhausted",

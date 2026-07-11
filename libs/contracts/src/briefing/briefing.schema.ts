@@ -97,8 +97,6 @@ export const BriefingSchema = z.object({
   trend7d: z.array(z.string()).optional(),
   /** Proposed autonomous rules extracted from 30-day approval patterns (M4). */
   learnedPatterns: z.array(z.string()).optional(),
-  /** Top research-digest headlines from the watched sources (M6 intelligence). */
-  intelligence: z.array(z.string()).optional(),
   /** Recurring-manual-work "automate it?" suggestions (M5 GapDetector). */
   automationGaps: z.array(z.string()).optional(),
   /** Weekly "3 app ideas" — interests × trends prototype pitches (M6). */

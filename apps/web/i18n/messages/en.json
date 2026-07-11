@@ -870,30 +870,6 @@
       "powerSaver": "Power-saver mode",
       "powerSaverHint": "Caps the 3D scene (30 fps, no antialiasing, freezes after the intro) — easier on the GPU and fan."
     },
-    "research": {
-      "title": "Research & intelligence",
-      "hint": "What ZIBBY watches for you. The nightly digest ranks each source against your interests and folds the top items into the morning briefing.",
-      "interests": "Interests",
-      "interestsHint": "Comma-separated terms the digest ranks against",
-      "financeWatch": "Finance watch",
-      "financeWatchHint": "Surface market signal in the overview — never advice.",
-      "sources": "Sources",
-      "sourceLabel": "Label",
-      "sourceKind": "Kind",
-      "sourceUrl": "URL",
-      "sourceEnabled": "On",
-      "addSource": "Add source",
-      "removeSource": "Remove",
-      "save": "Save",
-      "kind": {
-        "rss": "RSS feed",
-        "hn": "Hacker News",
-        "producthunt": "Product Hunt",
-        "tech": "Tech news",
-        "competitor": "Competitor",
-        "finance": "Finance"
-      }
-    },
     "automations": {
       "title": "System automations",
       "hint": "Automations ZIBBY seeds itself (e.g. memory distillation). You can enable or disable them here; rescheduling opens the automation's detail page.",
@@ -970,7 +946,6 @@
         "approvals": "Approvals",
         "channels": "Channels",
         "integrations": "Integrations",
-        "research": "Research",
         "briefing": "Briefing"
       }
     }

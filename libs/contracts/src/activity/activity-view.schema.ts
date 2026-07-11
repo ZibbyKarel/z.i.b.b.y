@@ -16,7 +16,6 @@ export const ActivityGroupSchema = z.enum([
   "approvals",
   "channels",
   "integrations",
-  "research",
   "briefing",
 ]);
 export type ActivityGroup = z.infer<typeof ActivityGroupSchema>;
@@ -71,7 +70,6 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   // N3: a monitor alert rides the integration that watches the source (same PAT/config).
   "monitor-alert": "integrations",
   "machine-action": "approvals",
-  "research-digest": "research",
   "briefing-generated": "briefing",
 };
 
@@ -98,7 +96,6 @@ export const ActivityViewSchema = z
     approvals: ActivityViewModeSchema,
     channels: ActivityViewModeSchema,
     integrations: ActivityViewModeSchema,
-    research: ActivityViewModeSchema,
     briefing: ActivityViewModeSchema,
   })
   .strict();
@@ -106,8 +103,8 @@ export type ActivityView = z.infer<typeof ActivityViewSchema>;
 
 /**
  * The seeded default: the operator-actionable groups stay `visible`; the noisier,
- * digest-like ones (`channels`, `research`, `briefing`) start `grouped` so the log
- * reads as a clean timeline out of the box. Nothing hidden by default.
+ * digest-like ones (`channels`, `briefing`) start `grouped` so the log reads as a
+ * clean timeline out of the box. Nothing hidden by default.
  */
 export const DEFAULT_ACTIVITY_VIEW: ActivityView = {
   tasks: "visible",
@@ -117,6 +114,5 @@ export const DEFAULT_ACTIVITY_VIEW: ActivityView = {
   approvals: "visible",
   channels: "grouped",
   integrations: "visible",
-  research: "grouped",
   briefing: "grouped",
 };

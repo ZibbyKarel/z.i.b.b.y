@@ -870,30 +870,6 @@
       "powerSaver": "Úsporný mód",
       "powerSaverHint": "Omezí 3D scénu (30 fps, bez vyhlazení, po úvodní animaci se zastaví) — méně zatíží grafiku a větrák."
     },
-    "research": {
-      "title": "Výzkum & rozhled",
-      "hint": "Co ZIBBY sleduje za tebe. Noční digest seřadí každý zdroj podle tvých zájmů a nejlepší položky vloží do ranního briefingu.",
-      "interests": "Zájmy",
-      "interestsHint": "Termíny oddělené čárkou, podle nichž se digest řadí",
-      "financeWatch": "Sledování financí",
-      "financeWatchHint": "Ukáže tržní signál v přehledu — nikdy ne radu.",
-      "sources": "Zdroje",
-      "sourceLabel": "Název",
-      "sourceKind": "Typ",
-      "sourceUrl": "URL",
-      "sourceEnabled": "Zap",
-      "addSource": "Přidat zdroj",
-      "removeSource": "Odebrat",
-      "save": "Uložit",
-      "kind": {
-        "rss": "RSS feed",
-        "hn": "Hacker News",
-        "producthunt": "Product Hunt",
-        "tech": "Tech zprávy",
-        "competitor": "Konkurence",
-        "finance": "Finance"
-      }
-    },
     "automations": {
       "title": "Systémové automatizace",
       "hint": "Automatizace, které si ZIBBY sám naseeduje (např. destilace paměti). Tady je můžeš zapnout nebo vypnout; úprava rozvrhu se otevře na detailu automatizace.",
@@ -970,7 +946,6 @@
         "approvals": "Schválení",
         "channels": "Kanály",
         "integrations": "Integrace",
-        "research": "Výzkum",
         "briefing": "Briefing"
       }
     }

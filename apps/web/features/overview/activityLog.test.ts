@@ -15,7 +15,6 @@ const ALL_VISIBLE: ActivityView = {
   approvals: "visible",
   channels: "visible",
   integrations: "visible",
-  research: "visible",
   briefing: "visible",
 };
 

@@ -41,8 +41,6 @@ export interface BriefingInput {
   trend7d?: string[];
   /** Proposed autonomous rules extracted from 30-day approval patterns (M4). */
   learnedPatterns?: string[];
-  /** Top research-digest headlines from the watched sources (M6 intelligence). */
-  intelligence?: string[];
   /** Recurring-manual-work "automate it?" suggestions (M5 GapDetector). */
   automationGaps?: string[];
   /** Weekly "3 app ideas" — interests × trends prototype pitches (M6). */
@@ -105,9 +103,6 @@ export function assembleBriefing(input: BriefingInput): Briefing {
     ...(input.trend7d && input.trend7d.length > 0 ? { trend7d: input.trend7d } : {}),
     ...(input.learnedPatterns && input.learnedPatterns.length > 0
       ? { learnedPatterns: input.learnedPatterns }
-      : {}),
-    ...(input.intelligence && input.intelligence.length > 0
-      ? { intelligence: input.intelligence }
       : {}),
     ...(input.automationGaps && input.automationGaps.length > 0
       ? { automationGaps: input.automationGaps }
@@ -348,12 +343,6 @@ export function renderBriefingMarkdown(briefing: Briefing): string {
         lines.push(`- ${w.integrationId}: ${w.newItems ?? 0} new`);
       }
     }
-    lines.push("");
-  }
-
-  if (briefing.intelligence && briefing.intelligence.length > 0) {
-    lines.push("## Intelligence");
-    for (const item of briefing.intelligence) lines.push(`- ${item}`);
     lines.push("");
   }
 

@@ -54,7 +54,6 @@ my channels and handle what you can."
 
 - [Gap detection](./api/gaps.md) — noticing recurring manual work worth automating
 - [Pattern extraction](./api/patterns.md) — mining approval history for rule proposals
-- [Research / Intelligence](./api/research.md) — the operator's watched-source digest
 
 **Automations, extensibility & machine**
 

@@ -31,7 +31,6 @@ import { MachineModule } from "./machine/machine.module";
 import { MonitorsModule } from "./monitors/monitors.module";
 import { PipelinesModule } from "./pipelines/pipelines.module";
 import { ProjectsModule } from "./projects/projects.module";
-import { ResearchModule } from "./research/research.module";
 import { LoggingModule } from "./shared/logging/logging.module";
 import { PinsModule } from "./pins/pins.module";
 import { SelfModule } from "./self/self.module";
@@ -75,7 +74,6 @@ import { TasksModule } from "./tasks/tasks.module";
     MachineModule,
     MonitorsModule,
     DiscoveryModule,
-    ResearchModule,
     HealthModule,
     SubsystemsModule,
     SelfModule,
