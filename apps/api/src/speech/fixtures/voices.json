@@ -1,0 +1,10 @@
+[
+  {
+    "id": "cs-male-01",
+    "label": "Czech male (default)",
+    "language": "cs",
+    "gender": "male",
+    "source": "Mozilla Common Voice Czech",
+    "license": "CC0-1.0"
+  }
+]

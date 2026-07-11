@@ -80,4 +80,6 @@ export * from "./budget/budget.schema";
 export * from "./budget/budget.contract";
 export * from "./chat/chat.schema";
 export * from "./chat/chat.contract";
+export * from "./speech/speech.schema";
+export * from "./speech/speech.contract";
 export * from "./app.contract";

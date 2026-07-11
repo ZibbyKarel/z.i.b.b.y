@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "queue_full",
+    "message": "synth queue is full, try again shortly"
+  }
+}
