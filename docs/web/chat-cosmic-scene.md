@@ -26,13 +26,20 @@ state in and disposes on unmount.
 | `modeVisuals.ts` / `tokens.ts` / `glsl.ts` | Mode → visual target map; token/category-colour resolution; shared simplex noise. |
 | `constellation.ts` / `dock.ts` | Pure builders: dedupe the live agent catalog → roster; live runs feed → dock items. |
 
-## Driven entirely by real chat plumbing (no audio)
+## Driven by real chat plumbing (`listening`/`speaking` now voice-aware)
 
-Everything reacts to conversation activity, not voice. `ChatScreen` derives the state
-and feeds the scene:
+Everything reacts to conversation activity — no raw audio ever reaches the scene.
+`ChatScreen` derives the state and feeds the scene:
 
-- **Mode** (`idle`/`listening`/`thinking`/`streaming`/`tool`/`waiting-approval`/`error`)
-  from `useChatStream` events + composer draft + last-run status (unchanged derivation).
+- **Mode** (`idle`/`listening`/`thinking`/`streaming`/`tool`/`speaking`/
+  `waiting-approval`/`error`) from `useChatStream` events + composer draft +
+  last-run status (unchanged derivation), plus two phase-119 additions:
+  `listening` is driven by real mic state (`useSpeechRecognition`'s `listening`
+  flag) when voice mode is on, falling back to the composer draft otherwise;
+  `speaking` fires while `useAutoSpeak`'s playback queue is active — the turn
+  itself is done, but its voice reply is still playing back — and gets its own
+  `OrbTarget` in `modeVisuals.ts` (an `ok`-hued, speech-cadence pulse, visibly
+  distinct from `streaming`'s run hue; phase 119b).
 - **Streaming energy** — the token-cadence signal: `streamChars` diffs feed
   `pushActivity`, smoothed asymmetrically (fast attack, slow decay) inside the loop,
   driving surface displacement, the size pulse and glow. The direct substitute for the

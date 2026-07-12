@@ -162,3 +162,31 @@ rtk pnpm test
 
 `speakd` may be down throughout — nothing requires a live daemon (voices/status
 queries degrade per 119c; synthesize failures toast).
+
+## Status
+
+**Delivered 2026-07-12.** All five sub-phases landed on `feat/voice-mode-chat`;
+this file is complete.
+
+| Sub-phase | Commit | Summary |
+| --- | --- | --- |
+| 119a | `51589e13` | STT hook (`useSpeechRecognition`) + mic toggle + voice status strip |
+| 119b | `d886efbf` | Auto-speak: chunked sequential TTS (`useAutoSpeak`) + `speaking` `SceneMode` |
+| 119c | `bfd1be76` | `ttsVoice` knob, settings voice picker + speakd status line, `features/speech` queries |
+| 119d | `82e2366b` | Hands-free turn-taking: idle-gated mic via `suspended`, `voicePaused` latch, `useAnyAudioPlaying` echo guard |
+| 119e | (this change) | Docs sweep |
+
+Review findings fixed along the way:
+
+- **119a** — the mic-denied error toast was generic; gave it its own actionable
+  copy (`chat.voice.errorMicDenied`, distinct from the generic
+  `chat.voice.error`) telling the operator to allow mic access in site settings.
+- **119b** — `playAudioPlayback`'s settle path didn't distinguish *why* a
+  playback ended; added `PlaybackSettleReason` (`ended`/`error`/`stopped`/
+  `superseded`) so a manual read-aloud click mid-reply (barge-in) tears the
+  auto-speak queue down instead of being mistaken for the queue's own chunk
+  advancing.
+- **119d** — voice-mode turn-taking only suspended the mic for its own
+  auto-speak queue, missing the case of a manual phase-120 read-aloud playing
+  concurrently; added `useAnyAudioPlaying` so the mic also disarms for that
+  playback, closing the echo/self-talk hazard (mic transcribing the speakers).

@@ -128,6 +128,25 @@ The Voice UI (JARVIS-style takeover, speech-to-text input, TTS read-back) was
 removed in favor of a chat-first interface (`features/chat`); there is no
 `VoiceProvider` and no `features/voice` module anymore.
 
+**Phase 119 — voice mode lives inside chat, not as a separate surface.** A mic
+toggle (`VoiceToggleButton`, rendered only when the browser supports
+`SpeechRecognition`/`webkitSpeechRecognition`) arms `useSpeechRecognition`
+(`features/chat/hooks`); a final transcript calls `ChatScreen`'s `send(text)`
+directly, bypassing the composer. `useVoiceMode` holds the
+idle → listening → thinking/streaming → speaking → listening turn-taking state
+(mic stays disarmed via the recognizer's `suspended` option while a turn is in
+flight or a reply is speaking, then re-arms once playback settles); a
+recognition error drops voice mode off with a toast. While voice mode is on,
+`useAutoSpeak` sentence-chunks each completed reply and plays it sequentially
+through the `speakd` TTS proxy (`POST /api/speech/synthesize`, same player
+singleton as the phase-120 manual read-aloud button — one speaks at a time).
+The voice used for synthesis is a `SystemConfig` knob, `ttsVoice` (settings →
+Chat UI section, alongside a compact daemon status line from
+`features/speech`'s `useSpeechVoicesQuery`/`useSpeechStatusQuery`), not
+per-message UI. STT is entirely client-side (Web Speech API); there is still
+no backend STT and no command-grammar bridge — a spoken utterance is just a
+chat message.
+
 **Phase 23 — chat is a routed page, not an overlay.** `ChatProvider` only owns
 the conversation state (`conversationId`/`messages`, minted lazily and
 preserved across navigation) and the `open()`/`close()`/`toggle()` navigation
@@ -194,8 +213,9 @@ features/
 ├── approvals/      Approval queue
 ├── automations/    Cron/event triggers
 ├── chains/         Completion-driven chain primitive (queue + settle)
-├── chat/           Chat-first interface (replaces the old Voice UI); its
-│                   full-screen WebGL backdrop lives in `chat/scene`
+├── chat/           Chat-first interface (replaces the old Voice UI), including
+│                   phase-119 voice mode (STT hook, mic toggle, auto-speak);
+│                   its full-screen WebGL backdrop lives in `chat/scene`
 │                   (see docs/web/chat-cosmic-scene.md)
 ├── commands/       Slash-command catalog
 ├── gates/          Gate rule catalog
@@ -216,6 +236,8 @@ features/
 │                   (`runEvents`, `useRunLogStream`)
 ├── settings/       Workspace settings
 ├── skills/         Skill inventory
+├── speech/         `speakd` voices/status queries (settings voice picker);
+│                   the synthesize mutation itself stays in `features/chat`
 ├── system/         Runtime system-config surface
 └── tasks/          New task dialog (tabs: Standard task / Loop) + scheduler
 ```
@@ -274,7 +296,7 @@ madge.)
   nav item).
 - **Shared services** (no `Screen`, consumed by other features / mounted in
   chrome): approvals, chat, goals, health, integrations, limits, notifications,
-  pins, research, system, tasks.
+  pins, research, speech, system, tasks.
 
 ### Open follow-up cleanups
 

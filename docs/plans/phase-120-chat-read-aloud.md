@@ -7,10 +7,10 @@ since `57866ca8` with no consumer anywhere in `apps/web`. This phase adds the sm
 useful one: a manual "read aloud" button on a completed assistant chat bubble. Click →
 synthesize that message's text → play it back. Click again while it's speaking → stop.
 
-This is **not** the full Voice-mode arc (`phase-119-voice-mode-chat.md`, not yet started):
-no mic, no auto-speak, no sentence streaming, no voice picker. It is a small, independent
-slice that happens to share the same backend endpoint 119c will also call — nothing here
-blocks or is blocked by 119.
+This is **not** the full Voice-mode arc (`phase-119-voice-mode-chat.md`, delivered
+2026-07-12): no mic, no auto-speak, no sentence streaming, no voice picker. It is a small,
+independent slice that happens to share the same backend endpoint 119c also calls — nothing
+here blocks or is blocked by 119.
 
 ## Decisions
 

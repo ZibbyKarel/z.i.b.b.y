@@ -35,7 +35,11 @@ tested; a long build run must **extend or polish** it, never re-create it:
 - **Self-learning** — approval-pattern extractor, nightly consolidation, gap detector, app-ideas.
 - **Pipeline internals** — phases pass artifacts **within** a pipeline (`consumes`/`produces`);
   a pipeline yields a durable `pr` or `file` output (project|vault).
-- **Voice loop** — live STT, command bridge, TTS read-back, spoken briefing (pull-not-push).
+- **Voice mode (chat-native)** — phase 119 on `/chat`: browser Web Speech API STT +
+  `speakd` TTS read-back (mic toggle, auto-speak with idle-gated turn-taking, `ttsVoice`
+  picker in settings). This is **not** the old standalone `features/voice` module (removed
+  in `3ef70a88`) — there is no command bridge and no spoken briefing; a spoken utterance is
+  just a chat message.
 - **Live streams** — RightRail is already an SSE-streamed activity log (the reference for the
   DNA change below).
 
