@@ -43,6 +43,7 @@ import { useRunActions } from "../../runs/useRunActions";
 import { SubsystemDrawer } from "../../subsystems/components/SubsystemDrawer/SubsystemDrawer";
 import { useSubsystemsQuery } from "../../subsystems/queries/useSubsystemsQuery";
 import { CommandLine } from "../../tasks/components/CommandLine/CommandLine";
+import { useSystemConfigQuery } from "../../system";
 import { useAutoSpeak } from "../hooks/useAutoSpeak";
 import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
 import { useVoiceMode } from "../hooks/useVoiceMode";
@@ -159,11 +160,19 @@ export function ChatScreen({
   const setMessages = onMessagesChange;
   const sendMessage = useSendChatMessageMutation();
 
+  // The operator's `/settings` voice pick (Phase 119c) — read here (not inside
+  // `useAutoSpeak`) so the hook's own tests stay free of a QueryClient dependency;
+  // the hook holds it in a ref (see its doc comment) so a config change never
+  // rebuilds the stable `speak`/`cancel` controller.
+  const { data: systemConfig } = useSystemConfigQuery();
+
   // Voice-reply orchestrator (Phase 119b) — chunked TTS of a finished turn, played
   // under the single `"voice-mode"` player key. `speakReply`/`cancelReply` are
   // stable identities (so composing them into the stream's `onComplete` doesn't
   // re-subscribe); `speakingReply` drives the `speaking` scene mode.
-  const { speak: speakReply, cancel: cancelReply, speaking: speakingReply } = useAutoSpeak();
+  const { speak: speakReply, cancel: cancelReply, speaking: speakingReply } = useAutoSpeak({
+    voice: systemConfig?.ttsVoice,
+  });
   // The latest voice-mode on/off, read inside the (stable) completion handler
   // without re-creating it. Assigned just below, once `voice` exists.
   const voiceActiveRef = useRef(false);

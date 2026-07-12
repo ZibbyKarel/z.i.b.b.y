@@ -866,9 +866,22 @@
     },
     "chatUi": {
       "title": "Chat UI",
-      "hint": "Look and performance of the chat 3D scene.",
+      "hint": "Look and performance of the chat 3D scene, and the voice ZIBBY speaks with.",
       "powerSaver": "Power-saver mode",
-      "powerSaverHint": "Caps the 3D scene (30 fps, no antialiasing, freezes after the intro) — easier on the GPU and fan."
+      "powerSaverHint": "Caps the 3D scene (30 fps, no antialiasing, freezes after the intro) — easier on the GPU and fan.",
+      "voiceLabel": "TTS voice",
+      "voiceHint": "Used for read-aloud and voice-mode replies. \"Auto\" leaves it to the speakd daemon's own default.",
+      "voiceAuto": "Auto (daemon default)",
+      "voiceErrorTitle": "Couldn't load voices",
+      "voiceErrorDesc": "The speakd daemon is unreachable, so its voice catalog can't load. Your saved choice is unaffected — try again once it's running.",
+      "statusLine": "speakd: {state} · default voice {voice}",
+      "statusUnreachable": "speakd: unreachable",
+      "statusVoiceUnknown": "unknown",
+      "statusState": {
+        "loading": "loading",
+        "ready": "ready",
+        "degraded": "degraded"
+      }
     },
     "automations": {
       "title": "System automations",

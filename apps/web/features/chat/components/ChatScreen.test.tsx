@@ -108,6 +108,12 @@ vi.mock("../../projects/queries/useProjectsQuery", () => ({
   useProjectsQuery: () => ({ data: [{ id: "alpha", name: "Alpha" }] }),
   getProjectsQueryKey: () => ["projects"],
 }));
+// The `/settings` voice pick (Phase 119c) — both `ChatScreen` itself and every
+// `ChatMessage`'s read-aloud button read it. Mocked at the same module path
+// `CosmicScene.test.tsx` uses, so it also covers the real (unmocked) `CosmicScene`
+// child this suite renders. `undefined` data = `ttsVoice: null`, matching the
+// suite's existing behaviour before this option existed.
+vi.mock("../../system", () => ({ useSystemConfigQuery: () => ({ data: undefined }) }));
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 // `ChatScreen` reads `usePipelineRunQuery` (the same aggregate `ChatRunCard` polls,

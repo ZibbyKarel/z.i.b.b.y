@@ -93,6 +93,14 @@ interface SpeakSession {
   synth: Map<number, Promise<string>>;
 }
 
+export interface UseAutoSpeakOptions {
+  /** The operator's `/settings` voice pick (`SystemConfig.ttsVoice`, Phase 119c) —
+   * `ChatScreen` reads it via `useSystemConfigQuery` and passes it straight
+   * through. `null`/`undefined` (the common case) omits the override entirely so
+   * the daemon uses its own default. */
+  voice?: string | null;
+}
+
 export interface UseAutoSpeak {
   /** Speak `text` as a voice reply — sentence-chunked, synthesized sequentially
    * with one-ahead prefetch, played under {@link VOICE_MODE_PLAYER_KEY}. A second
@@ -125,8 +133,15 @@ export interface UseAutoSpeak {
  *
  * A synthesize failure mid-queue toasts `chat.voice.speakError` and cancels the
  * remainder.
+ *
+ * `options.voice` is read through a ref for the same reason as `t` below: the
+ * controller (`speak`/`cancel`) is built once via `useMemo([])` so its identity
+ * stays stable across re-renders (`useChatStream`'s `onComplete` depends on
+ * `speak`) — a config change must not rebuild it, just change what the NEXT
+ * `ensureSynth` call sends.
  */
-export function useAutoSpeak(): UseAutoSpeak {
+export function useAutoSpeak(options: UseAutoSpeakOptions = {}): UseAutoSpeak {
+  const { voice } = options;
   const t = useTranslations("chat");
   // `t` isn't referentially stable; hold it in a ref so `speak`/`cancel` can be
   // created once (stable identities keep `useChatStream`'s `onComplete` stable).
@@ -136,6 +151,12 @@ export function useAutoSpeak(): UseAutoSpeak {
   useEffect(() => {
     tRef.current = t;
   }, [t]);
+
+  // Same pattern for the configured voice — see the doc comment above.
+  const voiceRef = useRef(voice);
+  useEffect(() => {
+    voiceRef.current = voice;
+  }, [voice]);
 
   const [speaking, setSpeaking] = useState(false);
   const sessionRef = useRef<SpeakSession | null>(null);
@@ -148,7 +169,10 @@ export function useAutoSpeak(): UseAutoSpeak {
       const existing = session.synth.get(i);
       if (existing) return existing;
       const p = (async () => {
-        const res = await apiClient.speech.synthesize.mutate({ body: { text: chunk } });
+        const currentVoice = voiceRef.current;
+        const res = await apiClient.speech.synthesize.mutate({
+          body: { text: chunk, ...(currentVoice ? { voice: currentVoice } : {}) },
+        });
         if (res.status !== 200) throw new Error(`speech synthesize failed: ${res.status}`);
         return res.body.audioBase64;
       })();

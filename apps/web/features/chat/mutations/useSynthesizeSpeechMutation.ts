@@ -2,10 +2,11 @@ import { apiClient } from "../../../state/api";
 
 /**
  * Synthesize speech for a chat message (`POST /api/speech/synthesize`) via the
- * local `speakd` daemon proxy. Body is just `{ text }` — no `voice` override,
- * so the daemon's own default voice is used (Phase 120, minimal read-aloud; no
- * voice picker, no streaming). Returns the ts-rest mutation result directly;
- * the 200 body is `{ audioBase64, format: "wav", audioMs, synthMs, voice }`.
+ * local `speakd` daemon proxy (Phase 120, minimal read-aloud; no streaming). The
+ * call site (`ReadAloudButton`) passes `voice` from `SystemConfig.ttsVoice`
+ * (Phase 119c) when the operator picked one in `/settings`; omitted, the daemon
+ * uses its own default. Returns the ts-rest mutation result directly; the 200
+ * body is `{ audioBase64, format: "wav", audioMs, synthMs, voice }`.
  *
  * A non-2xx response (400 bad text/voice, 409 daemon busy, 422 invalid input,
  * 503 daemon down/loading) throws — ts-rest's default for any status outside

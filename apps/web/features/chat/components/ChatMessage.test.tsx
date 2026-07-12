@@ -28,6 +28,13 @@ vi.mock("../hooks/useAudioPlayback", () => ({
   useAudioPlayback: audioPlaybackMock,
 }));
 
+// The `/settings` voice pick (Phase 119c) — every read-aloud mount reads it too,
+// so it's stubbed the same way as the two hooks above. Default `undefined` (no
+// config loaded yet / `ttsVoice: null`) so the existing "no voice" assertions
+// keep holding without every test having to opt in.
+let systemConfigResult: { data?: { ttsVoice: string | null } } = { data: undefined };
+vi.mock("../../system", () => ({ useSystemConfigQuery: () => systemConfigResult }));
+
 describe("ChatMessage", () => {
   beforeEach(() => {
     // Idle defaults — every test that renders an assistant, non-streaming
@@ -35,6 +42,7 @@ describe("ChatMessage", () => {
     // whether or not the test is actually about read-aloud.
     synthesizeMock.mockReturnValue({ mutate: vi.fn(), isPending: false });
     audioPlaybackMock.mockReturnValue({ isPlaying: false, play: vi.fn(), stop: vi.fn() });
+    systemConfigResult = { data: undefined };
   });
 
   it("renders a user turn in the user bubble", () => {
@@ -215,6 +223,20 @@ describe("ChatMessage", () => {
         expect.objectContaining({ onSuccess: expect.any(Function) }),
       );
       expect(play).toHaveBeenCalledWith("d2F2ZQ==");
+    });
+
+    it("includes the configured /settings voice (Phase 119c) in the synthesize body", async () => {
+      const mutate = vi.fn();
+      synthesizeMock.mockReturnValue({ mutate, isPending: false });
+      systemConfigResult = { data: { ttsVoice: "cs-jarvis" } };
+
+      renderWithProviders(<ChatMessage role="assistant" text="Ahoj světe" />);
+      await userEvent.click(screen.getByTestId(ChatMessageTestId.ReadAloudButton));
+
+      expect(mutate).toHaveBeenCalledWith(
+        { body: { text: "Ahoj světe", voice: "cs-jarvis" } },
+        expect.objectContaining({ onSuccess: expect.any(Function) }),
+      );
     });
 
     it("shows a loading state while synthesizing", () => {

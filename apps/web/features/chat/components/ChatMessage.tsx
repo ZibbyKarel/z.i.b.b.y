@@ -6,6 +6,7 @@ import { Button, Card, Container, Icon, Stack, StatusDot, Typography } from "@zi
 import type { DotTone } from "@zibby/design-system";
 import type { ChatMessage as ChatMessageType, ChatToolEvent } from "@zibby/contracts";
 import { MarkdownProse } from "../../../components/MarkdownProse/MarkdownProse";
+import { useSystemConfigQuery } from "../../system";
 import { useAudioPlayback } from "../hooks/useAudioPlayback";
 import { useSynthesizeSpeechMutation } from "../mutations/useSynthesizeSpeechMutation";
 import { ChatRunCard } from "./ChatRunCard";
@@ -83,12 +84,18 @@ function ToolEventRow({ event }: { event: ChatToolEvent }) {
  * suppresses clicks); speaking → `stop`, clicking stops it. A failed
  * synthesize call throws and is surfaced by the app-wide mutation-error toast
  * (`MutationCache.onError`) — nothing bespoke here.
+ *
+ * Sends the operator's `/settings` voice pick (`SystemConfig.ttsVoice`, Phase
+ * 119c) when set; omitting the key when it's `null` (the common case) lets the
+ * daemon use its own default rather than sending an explicit "default" id it
+ * may not recognize.
  */
 function ReadAloudButton({ text }: { text: string }) {
   const t = useTranslations("chat");
   const key = useId();
   const { isPlaying, play, stop } = useAudioPlayback(key);
   const synthesize = useSynthesizeSpeechMutation();
+  const { data: config } = useSystemConfigQuery();
 
   const handleClick = () => {
     if (isPlaying) {
@@ -96,7 +103,7 @@ function ReadAloudButton({ text }: { text: string }) {
       return;
     }
     synthesize.mutate(
-      { body: { text } },
+      { body: { text, ...(config?.ttsVoice ? { voice: config.ttsVoice } : {}) } },
       { onSuccess: (result) => play(result.body.audioBase64) },
     );
   };

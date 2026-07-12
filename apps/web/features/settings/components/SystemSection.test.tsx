@@ -15,6 +15,7 @@ const DEFAULTS: SystemConfig = {
   goalAutoResume: false,
   chatPersona: "jarvis",
   powerSaver: false,
+  ttsVoice: null,
 };
 
 let config: SystemConfig = { ...DEFAULTS };

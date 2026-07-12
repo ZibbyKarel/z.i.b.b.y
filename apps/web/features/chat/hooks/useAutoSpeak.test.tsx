@@ -290,4 +290,51 @@ describe("useAutoSpeak", () => {
     expect(playCalls).toHaveLength(0);
     expect(result.current.speaking).toBe(false);
   });
+
+  describe("configured voice (Phase 119c)", () => {
+    it("sends options.voice in every synthesize call", async () => {
+      const { result } = renderHook(() => useAutoSpeak({ voice: "cs-jarvis" }), { wrapper });
+
+      act(() => result.current.speak(SENT_A));
+      await flush();
+
+      expect(synthesizeMutate).toHaveBeenCalledWith({
+        body: { text: SENT_A, voice: "cs-jarvis" },
+      });
+    });
+
+    it("omits voice when unset — the daemon's own default is used", async () => {
+      const { result } = renderHook(() => useAutoSpeak(), { wrapper });
+
+      act(() => result.current.speak(SENT_A));
+      await flush();
+
+      expect(synthesizeMutate).toHaveBeenCalledWith({ body: { text: SENT_A } });
+    });
+
+    it("reads a changed voice through a ref — the stable speak/cancel identities never rebuild", async () => {
+      const initialProps: { voice?: string } = { voice: undefined };
+      const { result, rerender } = renderHook(({ voice }) => useAutoSpeak({ voice }), {
+        wrapper,
+        initialProps,
+      });
+      const speakBefore = result.current.speak;
+      const cancelBefore = result.current.cancel;
+
+      rerender({ voice: "en-nova" });
+
+      // A config change is absorbed by the ref — it must NOT rebuild the
+      // controller (that would break `useChatStream`'s stable `onComplete`).
+      expect(result.current.speak).toBe(speakBefore);
+      expect(result.current.cancel).toBe(cancelBefore);
+
+      act(() => result.current.speak(SENT_A));
+      await flush();
+
+      // But the NEXT synthesize call picks up the latest voice.
+      expect(synthesizeMutate).toHaveBeenCalledWith({
+        body: { text: SENT_A, voice: "en-nova" },
+      });
+    });
+  });
 });

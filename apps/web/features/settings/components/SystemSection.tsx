@@ -74,6 +74,9 @@ function SystemEditor({ config }: { config: SystemConfig }) {
         // Not edited here — passed through so a runtime save can't reset the operator's
         // power-saver preference (the whole document is PUT). Owned by the Chat UI section.
         powerSaver: config.powerSaver,
+        // Not edited here — passed through so a runtime save can't reset the operator's
+        // TTS voice pick (Phase 119c; the whole document is PUT). Owned by the Chat UI section.
+        ttsVoice: config.ttsVoice,
       },
     });
 

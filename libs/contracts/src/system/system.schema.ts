@@ -45,6 +45,15 @@ export const SystemConfigSchema = z
      * `false`.
      */
     powerSaver: z.boolean().default(false),
+    /**
+     * The `speakd` voice id chat TTS requests (phase-120 read-aloud button and
+     * phase-119b auto-speak). `null` (default) means "let the daemon pick its own
+     * default voice" — no override is sent. Set from `/settings`'s voice picker
+     * (`GET /api/speech/voices`); an unknown id is the daemon's problem to reject,
+     * surfaced at synthesize time as the usual mutation-error toast, not validated
+     * here.
+     */
+    ttsVoice: z.string().min(1).nullable().default(null),
   })
   .strict();
 export type SystemConfig = z.infer<typeof SystemConfigSchema>;
