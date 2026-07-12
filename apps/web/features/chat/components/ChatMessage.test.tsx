@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { renderWithProviders, screen } from "../../../test/render";
 import { ChatMessage, ChatMessageTestId } from "./ChatMessage";
 import { TargetIdentityTestId } from "./TargetIdentity";
@@ -12,7 +13,30 @@ const { pipelineRunMock } = vi.hoisted(() => ({
 }));
 vi.mock("../../pipelines", () => ({ usePipelineRunQuery: pipelineRunMock }));
 
+// The read-aloud button (Phase 120) is exercised at the mutation/player-hook
+// boundary — mirrors `SubsystemDrawer.test.tsx`'s pattern of mocking a
+// `mutations/use*Mutation` (and here, the sibling player hook) module rather
+// than the ts-rest client underneath it.
+const { synthesizeMock, audioPlaybackMock } = vi.hoisted(() => ({
+  synthesizeMock: vi.fn(),
+  audioPlaybackMock: vi.fn(),
+}));
+vi.mock("../mutations/useSynthesizeSpeechMutation", () => ({
+  useSynthesizeSpeechMutation: synthesizeMock,
+}));
+vi.mock("../hooks/useAudioPlayback", () => ({
+  useAudioPlayback: audioPlaybackMock,
+}));
+
 describe("ChatMessage", () => {
+  beforeEach(() => {
+    // Idle defaults — every test that renders an assistant, non-streaming
+    // message with text mounts `ReadAloudButton`, which calls both hooks
+    // whether or not the test is actually about read-aloud.
+    synthesizeMock.mockReturnValue({ mutate: vi.fn(), isPending: false });
+    audioPlaybackMock.mockReturnValue({ isPlaying: false, play: vi.fn(), stop: vi.fn() });
+  });
+
   it("renders a user turn in the user bubble", () => {
     renderWithProviders(<ChatMessage role="user" text="Ahoj ZIBBY" />);
     expect(screen.getByTestId(ChatMessageTestId.UserBubble)).toBeInTheDocument();
@@ -146,5 +170,73 @@ describe("ChatMessage", () => {
     );
     expect(screen.queryByTestId(ChatMessageTestId.ToolEventLink)).not.toBeInTheDocument();
     expect(screen.getByTestId(ChatMessageTestId.ToolEvent)).toHaveTextContent("search");
+  });
+
+  describe("read aloud (Phase 120)", () => {
+    it("shows the button on a completed assistant message", () => {
+      renderWithProviders(<ChatMessage role="assistant" text="Hotovo." />);
+      expect(screen.getByTestId(ChatMessageTestId.ReadAloudButton)).toBeInTheDocument();
+    });
+
+    it("hides the button on a user turn", () => {
+      renderWithProviders(<ChatMessage role="user" text="Ahoj" />);
+      expect(screen.queryByTestId(ChatMessageTestId.ReadAloudButton)).not.toBeInTheDocument();
+    });
+
+    it("hides the button on the still-streaming assistant bubble", () => {
+      renderWithProviders(<ChatMessage streaming role="assistant" text="Pí…" />);
+      expect(screen.queryByTestId(ChatMessageTestId.ReadAloudButton)).not.toBeInTheDocument();
+    });
+
+    it("hides the button on an empty assistant turn (pure tool dispatch, no text)", () => {
+      renderWithProviders(
+        <ChatMessage
+          role="assistant"
+          text=""
+          toolEvents={[{ name: "search", status: "started" }]}
+        />,
+      );
+      expect(screen.queryByTestId(ChatMessageTestId.ReadAloudButton)).not.toBeInTheDocument();
+    });
+
+    it("synthesizes the message text on click and plays the result on success", async () => {
+      const mutate = vi.fn((_vars, opts?: { onSuccess?: (r: { body: { audioBase64: string } } ) => void }) => {
+        opts?.onSuccess?.({ body: { audioBase64: "d2F2ZQ==" } });
+      });
+      const play = vi.fn();
+      synthesizeMock.mockReturnValue({ mutate, isPending: false });
+      audioPlaybackMock.mockReturnValue({ isPlaying: false, play, stop: vi.fn() });
+
+      renderWithProviders(<ChatMessage role="assistant" text="Ahoj světe" />);
+      await userEvent.click(screen.getByTestId(ChatMessageTestId.ReadAloudButton));
+
+      expect(mutate).toHaveBeenCalledWith(
+        { body: { text: "Ahoj světe" } },
+        expect.objectContaining({ onSuccess: expect.any(Function) }),
+      );
+      expect(play).toHaveBeenCalledWith("d2F2ZQ==");
+    });
+
+    it("shows a loading state while synthesizing", () => {
+      synthesizeMock.mockReturnValue({ mutate: vi.fn(), isPending: true });
+      renderWithProviders(<ChatMessage role="assistant" text="Ahoj" />);
+      expect(screen.getByTestId(ChatMessageTestId.ReadAloudButton)).toHaveAttribute(
+        "aria-busy",
+        "true",
+      );
+    });
+
+    it("stops playback (without re-synthesizing) when clicked while playing", async () => {
+      const mutate = vi.fn();
+      const stop = vi.fn();
+      synthesizeMock.mockReturnValue({ mutate, isPending: false });
+      audioPlaybackMock.mockReturnValue({ isPlaying: true, play: vi.fn(), stop });
+
+      renderWithProviders(<ChatMessage role="assistant" text="Ahoj" />);
+      await userEvent.click(screen.getByTestId(ChatMessageTestId.ReadAloudButton));
+
+      expect(stop).toHaveBeenCalledTimes(1);
+      expect(mutate).not.toHaveBeenCalled();
+    });
   });
 });

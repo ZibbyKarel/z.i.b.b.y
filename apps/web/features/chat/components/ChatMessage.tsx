@@ -1,10 +1,13 @@
+import { useId } from "react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Card, Container, Icon, Stack, StatusDot, Typography } from "@zibby/design-system";
+import { Button, Card, Container, Icon, Stack, StatusDot, Typography } from "@zibby/design-system";
 import type { DotTone } from "@zibby/design-system";
 import type { ChatMessage as ChatMessageType, ChatToolEvent } from "@zibby/contracts";
 import { MarkdownProse } from "../../../components/MarkdownProse/MarkdownProse";
+import { useAudioPlayback } from "../hooks/useAudioPlayback";
+import { useSynthesizeSpeechMutation } from "../mutations/useSynthesizeSpeechMutation";
 import { ChatRunCard } from "./ChatRunCard";
 import { TargetIdentity } from "./TargetIdentity";
 
@@ -16,6 +19,7 @@ export enum ChatMessageTestId {
   ToolEvent = "chat-message-tool-event",
   ToolEventLink = "chat-message-tool-event-link",
   StreamingCursor = "chat-message-streaming-cursor",
+  ReadAloudButton = "chat-message-read-aloud",
 }
 
 export interface ChatMessageProps {
@@ -67,6 +71,49 @@ function ToolEventRow({ event }: { event: ChatToolEvent }) {
     >
       {body}
     </Link>
+  );
+}
+
+/**
+ * Manual "read aloud" trigger for one completed assistant message (Phase 120).
+ * `useId()` gives this mounted instance a stable player key so
+ * {@link useAudioPlayback} knows whether IT is the one currently speaking (the
+ * player is a module-level singleton — only one message speaks at a time).
+ * Idle → `play`; synthesizing → the `Button`'s own spinner (`loading`,
+ * suppresses clicks); speaking → `stop`, clicking stops it. A failed
+ * synthesize call throws and is surfaced by the app-wide mutation-error toast
+ * (`MutationCache.onError`) — nothing bespoke here.
+ */
+function ReadAloudButton({ text }: { text: string }) {
+  const t = useTranslations("chat");
+  const key = useId();
+  const { isPlaying, play, stop } = useAudioPlayback(key);
+  const synthesize = useSynthesizeSpeechMutation();
+
+  const handleClick = () => {
+    if (isPlaying) {
+      stop();
+      return;
+    }
+    synthesize.mutate(
+      { body: { text } },
+      { onSuccess: (result) => play(result.body.audioBase64) },
+    );
+  };
+
+  const label = t(isPlaying ? "readAloudStop" : "readAloud");
+
+  return (
+    <Button
+      aria-label={label}
+      data-testid={ChatMessageTestId.ReadAloudButton}
+      icon={isPlaying ? "stop" : "play"}
+      intent="ghost"
+      loading={synthesize.isPending}
+      onClick={handleClick}
+      size="sm"
+      title={label}
+    />
   );
 }
 
@@ -132,6 +179,10 @@ export function ChatMessage({ role, text, toolEvents, streaming }: ChatMessagePr
           ))}
         </Stack>
       )}
+
+      {/* Manual read-aloud (Phase 120) — only on a settled assistant turn, never
+          the live-streaming bubble (its text isn't final yet) or a user turn. */}
+      {!isUser && !streaming && text.trim().length > 0 && <ReadAloudButton text={text} />}
     </Stack>
   );
 }

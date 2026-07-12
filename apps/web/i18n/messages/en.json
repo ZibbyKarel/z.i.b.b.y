@@ -1615,6 +1615,8 @@
     "triggerAria": "Open chat with ZIBBY",
     "triggerTitle": "Chat with ZIBBY",
     "streaming": "ZIBBY is typing…",
+    "readAloud": "Read aloud",
+    "readAloudStop": "Stop playback",
     "composer": {
       "label": "Message",
       "placeholder": "Message ZIBBY… (Enter to send, Shift+Enter for a newline)",
