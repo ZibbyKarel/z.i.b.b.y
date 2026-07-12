@@ -1617,6 +1617,14 @@
     "streaming": "ZIBBY is typing…",
     "readAloud": "Read aloud",
     "readAloudStop": "Stop playback",
+    "voice": {
+      "start": "Turn on voice mode",
+      "stop": "Turn off voice mode",
+      "listening": "LISTENING",
+      "paused": "VOICE MODE",
+      "error": "Voice recognition failed, voice mode is off.",
+      "errorMicDenied": "The browser blocked microphone access — allow it in the site settings."
+    },
     "composer": {
       "label": "Message",
       "placeholder": "Message ZIBBY… (Enter to send, Shift+Enter for a newline)",

@@ -1617,6 +1617,14 @@
     "streaming": "ZIBBY píše…",
     "readAloud": "Přečíst nahlas",
     "readAloudStop": "Zastavit přehrávání",
+    "voice": {
+      "start": "Zapnout hlasový režim",
+      "stop": "Vypnout hlasový režim",
+      "listening": "POSLOUCHÁM",
+      "paused": "HLASOVÝ REŽIM",
+      "error": "Rozpoznávání řeči selhalo, hlasový režim je vypnutý.",
+      "errorMicDenied": "Prohlížeč zablokoval přístup k mikrofonu — povolte ho v nastavení stránky."
+    },
     "composer": {
       "label": "Zpráva",
       "placeholder": "Napište ZIBBY… (Enter odešle, Shift+Enter nový řádek)",

@@ -44,6 +44,7 @@ import { SubsystemDrawer } from "../../subsystems/components/SubsystemDrawer/Sub
 import { useSubsystemsQuery } from "../../subsystems/queries/useSubsystemsQuery";
 import { CommandLine } from "../../tasks/components/CommandLine/CommandLine";
 import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
+import { useVoiceMode } from "../hooks/useVoiceMode";
 import { useSendChatMessageMutation } from "../mutations/useSendChatMessageMutation";
 import { buildConstellation } from "../scene/constellation";
 import { CosmicScene } from "../scene/CosmicScene";
@@ -54,6 +55,8 @@ import { ChatPalette } from "./ChatPalette";
 import { ChatTaskDetailColumn } from "./ChatTaskDetailColumn";
 import { ChatTasksPanel } from "./ChatTasksPanel";
 import { ChatTranscript } from "./ChatTranscript";
+import { VoiceStatusStrip } from "./VoiceStatusStrip";
+import { VoiceToggleButton } from "./VoiceToggleButton";
 
 /**
  * The header status dot — the same canonical state vocabulary that drives the orb,
@@ -207,6 +210,12 @@ export function ChatScreen({
     // selection once this fires — nothing further to reset here.
     sendMessage.mutate({ body: { conversationId, text, ...(target ? { target } : {}) } });
   };
+
+  // Voice mode (Phase 119a) — hands-free STT over the Web Speech API. A finalized
+  // utterance is a chat message: it calls `send` directly, bypassing the composer
+  // (Decision 1). ChatScreen-local, ephemeral state (Decision 2) — leaving `/chat`
+  // unmounts this and stops the mic. The toggle is rendered only when `supported`.
+  const voice = useVoiceMode({ onSend: send });
 
   // Keep the latest turn in view as messages land and tokens stream in.
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -364,7 +373,9 @@ export function ChatScreen({
           ? "streaming"
           : sendMessage.isPending || stream.streaming
             ? "thinking"
-            : hasDraft
+            : // `listening` is driven by REAL mic state while voice mode is on
+              // (Phase 119a); otherwise it falls back to the composer draft.
+              (voice.active && voice.listening) || hasDraft
               ? "listening"
               : "idle";
 
@@ -412,6 +423,9 @@ export function ChatScreen({
         </Typography>
 
         <Stack align="center" direction="row" gap="100">
+          {voice.supported && (
+            <VoiceToggleButton active={voice.active} onToggle={voice.toggle} />
+          )}
           <Container width="220px">
             <SearchBar
               ariaLabel={t("palette.openAria")}
@@ -592,15 +606,23 @@ export function ChatScreen({
           channel yet (Phase 38 plan §5). */}
       <div className="relative z-20 shrink-0 border-t border-border px-5 py-4">
         <div className="mx-auto max-w-[720px]">
-          <CommandLine
-            showAttach
-            chrome={false}
-            disabled={thinking}
-            label={t("composer.label")}
-            onDraftChange={setHasDraft}
-            onSubmit={send}
-            placeholder={t("composer.placeholder")}
-          />
+          {/* Voice status strip (Phase 119a) — the listening indicator + live
+              interim transcript, ABOVE the composer, never inside it (Decision 1).
+              Mounted only while voice mode is on. */}
+          <Stack align="stretch" direction="col" gap="100">
+            {voice.active && (
+              <VoiceStatusStrip interim={voice.interim} listening={voice.listening} />
+            )}
+            <CommandLine
+              showAttach
+              chrome={false}
+              disabled={thinking}
+              label={t("composer.label")}
+              onDraftChange={setHasDraft}
+              onSubmit={send}
+              placeholder={t("composer.placeholder")}
+            />
+          </Stack>
         </div>
       </div>
 
