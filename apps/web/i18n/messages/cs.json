@@ -1623,7 +1623,8 @@
       "listening": "POSLOUCHÁM",
       "paused": "HLASOVÝ REŽIM",
       "error": "Rozpoznávání řeči selhalo, hlasový režim je vypnutý.",
-      "errorMicDenied": "Prohlížeč zablokoval přístup k mikrofonu — povolte ho v nastavení stránky."
+      "errorMicDenied": "Prohlížeč zablokoval přístup k mikrofonu — povolte ho v nastavení stránky.",
+      "speakError": "Mluvenou odpověď se nepodařilo přehrát."
     },
     "composer": {
       "label": "Zpráva",

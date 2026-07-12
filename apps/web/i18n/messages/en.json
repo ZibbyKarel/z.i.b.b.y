@@ -1623,7 +1623,8 @@
       "listening": "LISTENING",
       "paused": "VOICE MODE",
       "error": "Voice recognition failed, voice mode is off.",
-      "errorMicDenied": "The browser blocked microphone access — allow it in the site settings."
+      "errorMicDenied": "The browser blocked microphone access — allow it in the site settings.",
+      "speakError": "Couldn't play the spoken reply."
     },
     "composer": {
       "label": "Message",

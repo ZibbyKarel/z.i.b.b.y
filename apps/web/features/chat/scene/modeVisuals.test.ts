@@ -7,6 +7,7 @@ const MODES: SceneMode[] = [
   "listening",
   "thinking",
   "streaming",
+  "speaking",
   "tool",
   "waiting-approval",
   "error",

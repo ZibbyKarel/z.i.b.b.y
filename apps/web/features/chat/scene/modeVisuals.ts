@@ -95,6 +95,21 @@ const BASE: Record<SceneMode, OrbTarget> = {
     glow: 0.7,
     rings: 0.4,
   },
+  // A voice reply speaking (Phase 119b): derived from `streaming` — the turn is
+  // done but the orb is still "talking" — with a distinct **ok** hue (visibly
+  // different from streaming's run) and a steady speech-cadence pulse, so a spoken
+  // reply reads as its own state, not just "still streaming".
+  speaking: {
+    colorToken: "ok",
+    intensity: 1,
+    noiseAmp: 0.16,
+    noiseSpeed: 0.6,
+    rotationSpeed: 0.2,
+    pulseAmp: 0.1,
+    pulseSpeed: 2,
+    glow: 0.72,
+    rings: 0.3,
+  },
   // Mid-turn agent dispatch: run (working) hue + a pronounced pulse and rings.
   tool: {
     colorToken: "run",

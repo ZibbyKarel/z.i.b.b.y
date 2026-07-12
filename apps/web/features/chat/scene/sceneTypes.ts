@@ -10,13 +10,15 @@ import type { SubsystemId, SubsystemState } from "@zibby/contracts";
  * from the real chat-stream events + composer draft + last-run status — never a
  * store of its own. Substitutes chat activity for the reference design's audio
  * reactions: `listening` is the operator composing (typing), `streaming` is tokens
- * arriving, `tool` is a mid-turn agent dispatch.
+ * arriving, `tool` is a mid-turn agent dispatch, `speaking` is a voice reply
+ * playing back (Phase 119b — the turn is done, its audio is speaking).
  */
 export type SceneMode =
   | "idle"
   | "listening"
   | "thinking"
   | "streaming"
+  | "speaking"
   | "tool"
   | "waiting-approval"
   | "error";

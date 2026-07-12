@@ -212,4 +212,84 @@ describe("useAudioPlayback", () => {
     expect(result.current.isPlaying).toBe(true);
     expect(revokeObjectURL).not.toHaveBeenCalled();
   });
+
+  // ── Phase 119b: the optional onSettled callback + settle reasons ─────────
+
+  it("onSettled fires exactly once with reason 'ended' when the instance ends", () => {
+    const onSettled = vi.fn();
+    act(() => playAudioPlayback("voice-mode", "aGVsbG8=", onSettled));
+    const audio = FakeAudio.instances[0]!;
+
+    act(() => audio.onended?.());
+
+    expect(onSettled).toHaveBeenCalledTimes(1);
+    expect(onSettled).toHaveBeenCalledWith("ended");
+  });
+
+  it("onSettled fires exactly once with reason 'error' when the instance errors", () => {
+    const onSettled = vi.fn();
+    act(() => playAudioPlayback("voice-mode", "aGVsbG8=", onSettled));
+    const audio = FakeAudio.instances[0]!;
+
+    act(() => audio.onerror?.());
+
+    expect(onSettled).toHaveBeenCalledTimes(1);
+    expect(onSettled).toHaveBeenCalledWith("error");
+    expect(toastEmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("onSettled fires exactly once with reason 'superseded' when a newer play takes over", () => {
+    const onSettled = vi.fn();
+    act(() => playAudioPlayback("voice-mode", "aGVsbG8=", onSettled));
+    const staleAudio = FakeAudio.instances[0]!;
+
+    // A newer play supersedes the first — its onSettled must fire, with the
+    // accurate reason (NOT "stopped": the new audio is already starting).
+    act(() => playAudioPlayback("msg-1", "d29ybGQ="));
+    expect(onSettled).toHaveBeenCalledTimes(1);
+    expect(onSettled).toHaveBeenCalledWith("superseded");
+    // The new playback is untouched by the old instance's finalization.
+    expect(getPlayingKey()).toBe("msg-1");
+
+    // The superseded instance's own late `ended` must NOT fire it again.
+    act(() => staleAudio.onended?.());
+    expect(onSettled).toHaveBeenCalledTimes(1);
+  });
+
+  it("onSettled fires exactly once with reason 'stopped' on an external stop", () => {
+    const onSettled = vi.fn();
+    act(() => playAudioPlayback("voice-mode", "aGVsbG8=", onSettled));
+
+    act(() => stopAudioPlayback());
+    expect(onSettled).toHaveBeenCalledTimes(1);
+    expect(onSettled).toHaveBeenCalledWith("stopped");
+
+    // A second stop is a no-op and must not re-fire it.
+    act(() => stopAudioPlayback());
+    expect(onSettled).toHaveBeenCalledTimes(1);
+  });
+
+  it("onSettled fires at most once when both failure signals hit the same instance", async () => {
+    FakeAudio.rejectPlay = true;
+    const onSettled = vi.fn();
+
+    await act(async () => {
+      playAudioPlayback("voice-mode", "aGVsbG8=", onSettled);
+    });
+    const audio = FakeAudio.instances[0]!;
+    act(() => audio.onerror?.());
+
+    expect(onSettled).toHaveBeenCalledTimes(1);
+    expect(onSettled).toHaveBeenCalledWith("error");
+    expect(toastEmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the pre-119b behavior when no onSettled is passed (ended is a clean no-throw)", () => {
+    act(() => playAudioPlayback("msg-1", "aGVsbG8="));
+    const audio = FakeAudio.instances[0]!;
+
+    expect(() => act(() => audio.onended?.())).not.toThrow();
+    expect(getPlayingKey()).toBeNull();
+    expect(toastEmit).not.toHaveBeenCalled();
+  });
 });

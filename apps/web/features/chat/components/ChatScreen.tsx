@@ -43,6 +43,7 @@ import { useRunActions } from "../../runs/useRunActions";
 import { SubsystemDrawer } from "../../subsystems/components/SubsystemDrawer/SubsystemDrawer";
 import { useSubsystemsQuery } from "../../subsystems/queries/useSubsystemsQuery";
 import { CommandLine } from "../../tasks/components/CommandLine/CommandLine";
+import { useAutoSpeak } from "../hooks/useAutoSpeak";
 import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
 import { useVoiceMode } from "../hooks/useVoiceMode";
 import { useSendChatMessageMutation } from "../mutations/useSendChatMessageMutation";
@@ -68,6 +69,7 @@ const MODE_DOT: Record<SceneMode, { tone: DotTone; pulse: boolean }> = {
   listening: { tone: "accent", pulse: true },
   thinking: { tone: "run", pulse: true },
   streaming: { tone: "run", pulse: true },
+  speaking: { tone: "ok", pulse: true },
   tool: { tone: "run", pulse: true },
   "waiting-approval": { tone: "wait", pulse: true },
   error: { tone: "bad", pulse: false },
@@ -157,6 +159,15 @@ export function ChatScreen({
   const setMessages = onMessagesChange;
   const sendMessage = useSendChatMessageMutation();
 
+  // Voice-reply orchestrator (Phase 119b) — chunked TTS of a finished turn, played
+  // under the single `"voice-mode"` player key. `speakReply`/`cancelReply` are
+  // stable identities (so composing them into the stream's `onComplete` doesn't
+  // re-subscribe); `speakingReply` drives the `speaking` scene mode.
+  const { speak: speakReply, cancel: cancelReply, speaking: speakingReply } = useAutoSpeak();
+  // The latest voice-mode on/off, read inside the (stable) completion handler
+  // without re-creating it. Assigned just below, once `voice` exists.
+  const voiceActiveRef = useRef(false);
+
   // Bumped once per finished turn so the scene can fire its completion flash
   // (Tier 3). Kept separate from the transcript so an empty-but-done turn — a pure
   // tool dispatch with no text — still flashes.
@@ -195,13 +206,27 @@ export function ChatScreen({
     [setMessages],
   );
 
+  // In voice mode, a finished turn is spoken (Phase 119b) — after the transcript
+  // commit, never before. Stable (deps are all stable), so the stream doesn't
+  // re-subscribe as voice mode toggles; the live `voice.active` is read via the ref.
+  const handleComplete = useCallback(
+    (turn: CompletedTurn) => {
+      appendAssistant(turn);
+      if (voiceActiveRef.current && turn.text) speakReply(turn.text);
+    },
+    [appendAssistant, speakReply],
+  );
+
   const stream = useChatStream(conversationId, {
-    onComplete: appendAssistant,
+    onComplete: handleComplete,
     onError: appendError,
   });
 
   const send = (text: string, target?: TaskTarget) => {
     if (!conversationId) return;
+    // Barge-in (Decision 6): a new operator message — typed or a spoken final —
+    // stops any voice reply mid-playback.
+    cancelReply();
     setMessages((prev) => [
       ...prev,
       { id: `u-${crypto.randomUUID()}`, role: "user", text, at: new Date().toISOString() },
@@ -216,6 +241,15 @@ export function ChatScreen({
   // (Decision 1). ChatScreen-local, ephemeral state (Decision 2) — leaving `/chat`
   // unmounts this and stops the mic. The toggle is rendered only when `supported`.
   const voice = useVoiceMode({ onSend: send });
+
+  // Mirror the live voice-mode flag into the ref the (stable) completion handler
+  // reads, and barge-in (Decision 6): toggling voice mode off stops any in-flight
+  // reply. Written in an effect, never during render (`react-hooks/refs`).
+  // Unmounting is handled inside `useAutoSpeak`'s own cleanup.
+  useEffect(() => {
+    voiceActiveRef.current = voice.active;
+    if (!voice.active) cancelReply();
+  }, [voice.active, cancelReply]);
 
   // Keep the latest turn in view as messages land and tokens stream in.
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -373,11 +407,16 @@ export function ChatScreen({
           ? "streaming"
           : sendMessage.isPending || stream.streaming
             ? "thinking"
-            : // `listening` is driven by REAL mic state while voice mode is on
-              // (Phase 119a); otherwise it falls back to the composer draft.
-              (voice.active && voice.listening) || hasDraft
-              ? "listening"
-              : "idle";
+            : // `speaking` (Phase 119b): the turn is done, its voice reply is
+              // playing. Sits below the live-turn states (thinking/streaming/tool
+              // still win while the turn is in flight) and above listening/idle.
+              speakingReply
+              ? "speaking"
+              : // `listening` is driven by REAL mic state while voice mode is on
+                // (Phase 119a); otherwise it falls back to the composer draft.
+                (voice.active && voice.listening) || hasDraft
+                ? "listening"
+                : "idle";
 
   const time = new Date(now);
   const timeStr = `${String(time.getHours()).padStart(2, "0")}:${String(time.getMinutes()).padStart(2, "0")}`;
