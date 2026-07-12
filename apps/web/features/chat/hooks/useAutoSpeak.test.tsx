@@ -291,6 +291,99 @@ describe("useAutoSpeak", () => {
     expect(result.current.speaking).toBe(false);
   });
 
+  describe("turn-taking outcome (Phase 119d)", () => {
+    it("reports 'completed' once the whole queue plays out naturally", async () => {
+      const onSettled = vi.fn();
+      const { result } = renderHook(() => useAutoSpeak({ onSettled }), { wrapper });
+
+      act(() => result.current.speak(`${SENT_A} ${SENT_B}`));
+      await flush();
+
+      // Mid-queue: the first chunk ending advances but is NOT terminal.
+      await settle(0);
+      expect(onSettled).not.toHaveBeenCalled();
+
+      // Last chunk ends → the reply completed (the mic re-arms).
+      await settle(1);
+      expect(onSettled).toHaveBeenCalledTimes(1);
+      expect(onSettled).toHaveBeenCalledWith("completed");
+    });
+
+    it("reports 'interrupted' when a manual read-aloud supersedes the queue", async () => {
+      const onSettled = vi.fn();
+      const { result } = renderHook(() => useAutoSpeak({ onSettled }), { wrapper });
+
+      act(() => result.current.speak(`${SENT_A} ${SENT_B}`));
+      await flush();
+      await settle(0, "superseded");
+
+      expect(onSettled).toHaveBeenCalledTimes(1);
+      expect(onSettled).toHaveBeenCalledWith("interrupted");
+    });
+
+    it("reports 'interrupted' when playback is externally stopped", async () => {
+      const onSettled = vi.fn();
+      const { result } = renderHook(() => useAutoSpeak({ onSettled }), { wrapper });
+
+      act(() => result.current.speak(`${SENT_A} ${SENT_B}`));
+      await flush();
+      await settle(0, "stopped");
+
+      expect(onSettled).toHaveBeenCalledTimes(1);
+      expect(onSettled).toHaveBeenCalledWith("interrupted");
+    });
+
+    it("reports 'interrupted' on a synth failure mid-queue", async () => {
+      synthesizeMutate.mockImplementation(({ body }: { body: { text: string } }) =>
+        body.text === SENT_B
+          ? Promise.resolve({ status: 503 as const, body: { message: "daemon down" } })
+          : ok(body.text),
+      );
+      const onSettled = vi.fn();
+      const { result } = renderHook(() => useAutoSpeak({ onSettled }), { wrapper });
+
+      act(() => result.current.speak(`${SENT_A} ${SENT_B}`));
+      await flush();
+      await settle(0); // advance to chunk 1, whose synth fails
+
+      expect(onSettled).toHaveBeenCalledTimes(1);
+      expect(onSettled).toHaveBeenCalledWith("interrupted");
+    });
+
+    it("does NOT report on an explicit cancel() — the caller drives its own next state", async () => {
+      const onSettled = vi.fn();
+      const { result } = renderHook(() => useAutoSpeak({ onSettled }), { wrapper });
+
+      act(() => result.current.speak(`${SENT_A} ${SENT_B}`));
+      await flush();
+      act(() => result.current.cancel());
+
+      expect(onSettled).not.toHaveBeenCalled();
+
+      // A stale settle after cancel stays silent too.
+      await settle(0);
+      expect(onSettled).not.toHaveBeenCalled();
+    });
+
+    it("does NOT report the replaced session when a second speak() supersedes it", async () => {
+      const onSettled = vi.fn();
+      const { result } = renderHook(() => useAutoSpeak({ onSettled }), { wrapper });
+
+      act(() => result.current.speak(`${SENT_A} ${SENT_B}`));
+      await flush();
+      act(() => result.current.speak(SENT_Z));
+      await flush();
+
+      // The discarded first session reports nothing…
+      expect(onSettled).not.toHaveBeenCalled();
+
+      // …only the new session's own natural end reports 'completed'.
+      await settle(1);
+      expect(onSettled).toHaveBeenCalledTimes(1);
+      expect(onSettled).toHaveBeenCalledWith("completed");
+    });
+  });
+
   describe("configured voice (Phase 119c)", () => {
     it("sends options.voice in every synthesize call", async () => {
       const { result } = renderHook(() => useAutoSpeak({ voice: "cs-jarvis" }), { wrapper });

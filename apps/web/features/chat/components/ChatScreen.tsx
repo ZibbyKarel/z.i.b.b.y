@@ -44,7 +44,8 @@ import { SubsystemDrawer } from "../../subsystems/components/SubsystemDrawer/Sub
 import { useSubsystemsQuery } from "../../subsystems/queries/useSubsystemsQuery";
 import { CommandLine } from "../../tasks/components/CommandLine/CommandLine";
 import { useSystemConfigQuery } from "../../system";
-import { useAutoSpeak } from "../hooks/useAutoSpeak";
+import { useAnyAudioPlaying } from "../hooks/useAudioPlayback";
+import { type AutoSpeakReplyOutcome, useAutoSpeak } from "../hooks/useAutoSpeak";
 import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
 import { useVoiceMode } from "../hooks/useVoiceMode";
 import { useSendChatMessageMutation } from "../mutations/useSendChatMessageMutation";
@@ -166,12 +167,25 @@ export function ChatScreen({
   // rebuilds the stable `speak`/`cancel` controller.
   const { data: systemConfig } = useSystemConfigQuery();
 
+  // Turn-taking paused latch (Phase 119d / Decision 7): set when a voice reply is
+  // interrupted (a manual read-aloud took over, an external stop, or a synth
+  // fault) so the mic does NOT auto re-arm — the operator took over; voice mode
+  // stays on but paused (the status strip shows the paused state). Cleared on a
+  // natural completion, on a new operator turn (`send`), and on toggling voice
+  // off — so toggling off/on always recovers.
+  const [voicePaused, setVoicePaused] = useState(false);
+  const handleReplySettled = useCallback((outcome: AutoSpeakReplyOutcome) => {
+    setVoicePaused(outcome === "interrupted");
+  }, []);
+
   // Voice-reply orchestrator (Phase 119b) — chunked TTS of a finished turn, played
   // under the single `"voice-mode"` player key. `speakReply`/`cancelReply` are
   // stable identities (so composing them into the stream's `onComplete` doesn't
-  // re-subscribe); `speakingReply` drives the `speaking` scene mode.
+  // re-subscribe); `speakingReply` drives the `speaking` scene mode; `onSettled`
+  // reports the terminal outcome that drives the turn-taking latch above.
   const { speak: speakReply, cancel: cancelReply, speaking: speakingReply } = useAutoSpeak({
     voice: systemConfig?.ttsVoice,
+    onSettled: handleReplySettled,
   });
   // The latest voice-mode on/off, read inside the (stable) completion handler
   // without re-creating it. Assigned just below, once `voice` exists.
@@ -231,11 +245,21 @@ export function ChatScreen({
     onError: appendError,
   });
 
+  // A turn is in flight from send (`isPending`) through the streamed reply until
+  // the terminal `done`/`error` (Fáze 14.1). Hoisted above `send`/`voice` (was
+  // derived lower down pre-119d) because turn-taking now needs it as the mic's
+  // idle gate.
+  const thinking = sendMessage.isPending || stream.streaming;
+
   const send = (text: string, target?: TaskTarget) => {
     if (!conversationId) return;
     // Barge-in (Decision 6): a new operator message — typed or a spoken final —
     // stops any voice reply mid-playback.
     cancelReply();
+    // A new operator turn clears the paused latch: whatever the operator did to
+    // pause the loop (a manual read-aloud), sending resumes the hands-free cycle
+    // once this turn's reply settles.
+    setVoicePaused(false);
     setMessages((prev) => [
       ...prev,
       { id: `u-${crypto.randomUUID()}`, role: "user", text, at: new Date().toISOString() },
@@ -245,11 +269,30 @@ export function ChatScreen({
     sendMessage.mutate({ body: { conversationId, text, ...(target ? { target } : {}) } });
   };
 
+  // Whether ANY audio is playing — voice queue OR a manual phase-120 read-aloud.
+  // Guards the echo hazard below.
+  const anyAudioPlaying = useAnyAudioPlaying();
+
+  // Turn-taking gate (Phase 119d / Decision 7): the mic is armed only when idle —
+  // disarmed while a turn is in flight (`thinking`), while the reply is speaking
+  // (`speakingReply` — kept even though `anyAudioPlaying` overlaps it: it also
+  // covers the synth gaps between chunks when nothing is playing yet), while
+  // paused after a manual read-aloud took over mid-reply (`voicePaused`), and
+  // while ANY audio plays (`anyAudioPlaying`) — the ECHO HAZARD: a manual
+  // read-aloud clicked while the mic is idle-armed would otherwise be transcribed
+  // off the speakers and auto-SENT as a chat message (a self-talk loop). That
+  // manual playback suspends the mic only transiently: when it ends, the store
+  // notifies, this clears, and the mic re-arms — no latch involved, since no
+  // voice-reply session was interrupted. A single boolean the mic effect reacts
+  // to; it re-arms on the settle/state transition, never a timer, so the mic
+  // can't catch the tail of the TTS audio.
+  const voiceSuspended = thinking || speakingReply || voicePaused || anyAudioPlaying;
+
   // Voice mode (Phase 119a) — hands-free STT over the Web Speech API. A finalized
   // utterance is a chat message: it calls `send` directly, bypassing the composer
   // (Decision 1). ChatScreen-local, ephemeral state (Decision 2) — leaving `/chat`
   // unmounts this and stops the mic. The toggle is rendered only when `supported`.
-  const voice = useVoiceMode({ onSend: send });
+  const voice = useVoiceMode({ onSend: send, suspended: voiceSuspended });
 
   // Mirror the live voice-mode flag into the ref the (stable) completion handler
   // reads, and barge-in (Decision 6): toggling voice mode off stops any in-flight
@@ -259,6 +302,15 @@ export function ChatScreen({
     voiceActiveRef.current = voice.active;
     if (!voice.active) cancelReply();
   }, [voice.active, cancelReply]);
+
+  // The paused latch is cleared on every toggle (off→on and on→off), so toggling
+  // voice mode off/on always recovers a paused loop to an armed mic — done here in
+  // the click handler rather than the effect above (`set-state-in-effect`), and it
+  // reads cleaner beside the toggle anyway.
+  const handleVoiceToggle = useCallback(() => {
+    setVoicePaused(false);
+    voice.toggle();
+  }, [voice.toggle]);
 
   // Keep the latest turn in view as messages land and tokens stream in.
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -330,7 +382,6 @@ export function ChatScreen({
   // 14.1 of the phase-14 plan).
   const [hasDraft, setHasDraft] = useState(false);
 
-  const thinking = sendMessage.isPending || stream.streaming;
   const isEmpty = messages.length === 0 && !stream.streaming;
 
   const lastTool = stream.toolEvents[stream.toolEvents.length - 1];
@@ -472,7 +523,7 @@ export function ChatScreen({
 
         <Stack align="center" direction="row" gap="100">
           {voice.supported && (
-            <VoiceToggleButton active={voice.active} onToggle={voice.toggle} />
+            <VoiceToggleButton active={voice.active} onToggle={handleVoiceToggle} />
           )}
           <Container width="220px">
             <SearchBar

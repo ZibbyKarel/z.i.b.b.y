@@ -3,15 +3,89 @@ import { act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders, screen } from "../../../test/render";
 import { installEventSourceMock } from "../../../test/eventSourceMock";
+import {
+  installMockSpeechRecognition,
+  latestRecognition,
+  uninstallSpeechRecognition,
+} from "../../../test/speechRecognitionMock";
 
 // The stream hook reads API_URL off the env; pin it so the EventSource opens. Keep
 // the REAL `apiClient` (via importOriginal) — the mention picker's agent/pipeline
 // queries are stubbed at their own hook level below, but other modules pulled in
 // transitively through the agents/pipelines barrels (e.g. mutation hooks) still
 // reference `apiClient` at import time and would break on a bare `{ API_URL }` mock.
+// Voice-mode turn-taking (Phase 119d) drives the auto-speak orchestrator, which
+// synthesizes over `apiClient.speech.synthesize` and plays through
+// `useAudioPlayback`. Capture both at the module boundary (via `vi.hoisted`, so
+// the factories can close over them) — the full-loop test resolves synth and
+// fires the captured `onSettled` to walk the state machine deterministically,
+// with no real fetch or `<Audio>`.
+const { synthesizeMutate, playCalls, stopAudioSpy, anyAudioStore } = vi.hoisted(() => {
+  const listeners = new Set<() => void>();
+  return {
+    synthesizeMutate: vi.fn(),
+    playCalls: [] as Array<{
+      key: string;
+      onSettled?: (reason: "ended" | "error" | "stopped" | "superseded") => void;
+    }>,
+    stopAudioSpy: vi.fn(),
+    /** Drives the mocked `useAnyAudioPlaying` — the echo-hazard tests flip it to
+     * simulate a MANUAL read-aloud playback starting/ending (the real store lives
+     * in the mocked-away `useAudioPlayback` module). */
+    anyAudioStore: {
+      playing: false,
+      set(value: boolean) {
+        this.playing = value;
+        for (const listener of listeners) listener();
+      },
+      subscribe(listener: () => void): () => void {
+        listeners.add(listener);
+        return () => {
+          listeners.delete(listener);
+        };
+      },
+    },
+  };
+});
 vi.mock("../../../state/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../state/api")>();
-  return { ...actual, API_URL: "http://localhost:3333" };
+  return {
+    ...actual,
+    API_URL: "http://localhost:3333",
+    apiClient: {
+      ...actual.apiClient,
+      speech: {
+        ...actual.apiClient.speech,
+        synthesize: { ...actual.apiClient.speech.synthesize, mutate: synthesizeMutate },
+      },
+    },
+  };
+});
+// The player is a module-level singleton wrapping a real `<Audio>` element (no-op
+// in jsdom). Mock it so the auto-speak queue is fully controllable and no other
+// suite behaviour changes (nothing here clicks a read-aloud button).
+// `useAnyAudioPlaying` is a real subscription over the hoisted `anyAudioStore`
+// above, so a test flipping it re-renders `ChatScreen` exactly as the real
+// `useSyncExternalStore` would on a manual read-aloud starting/ending.
+vi.mock("../hooks/useAudioPlayback", async () => {
+  const { useSyncExternalStore } = await import("react");
+  return {
+    playAudioPlayback: (
+      key: string,
+      _audioBase64: string,
+      onSettled?: (reason: "ended" | "error" | "stopped" | "superseded") => void,
+    ) => {
+      playCalls.push({ key, onSettled });
+    },
+    stopAudioPlayback: stopAudioSpy,
+    useAudioPlayback: () => ({ isPlaying: false, play: vi.fn(), stop: vi.fn() }),
+    useAnyAudioPlaying: () =>
+      useSyncExternalStore(
+        (listener: () => void) => anyAudioStore.subscribe(listener),
+        () => anyAudioStore.playing,
+        () => false,
+      ),
+  };
 });
 // Sending is fire-and-forget over the network — stub it so the test drives only
 // the optimistic append + the stream, never a real fetch. `sendState.isPending` is
@@ -133,6 +207,7 @@ import { useState } from "react";
 import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
 import { EntityHeroTestId, SearchBarTestId, SearchMenuTestId } from "@zibby/design-system";
 import { ChatScreen, ChatScreenTestId } from "./ChatScreen";
+import { VoiceToggleButtonTestId } from "./VoiceToggleButton";
 import { CommandLineTestId } from "../../tasks/components/CommandLine/CommandLine";
 import { CosmicSceneTestId } from "../scene/CosmicScene";
 import { SubsystemOrbsOverlayTestId } from "../scene/SubsystemOrbsOverlay";
@@ -419,6 +494,154 @@ describe("ChatScreen", () => {
 
       expect(push).toHaveBeenCalledWith("/gates");
       expect(onClose).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("voice-mode turn-taking (Phase 119d)", () => {
+    // Drain the microtask queue so a synth promise's `.then` (the play step) runs.
+    async function flush() {
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+    }
+
+    beforeEach(() => {
+      installMockSpeechRecognition();
+      playCalls.length = 0;
+      anyAudioStore.playing = false;
+      stopAudioSpy.mockClear();
+      synthesizeMutate.mockReset();
+      synthesizeMutate.mockImplementation(({ body }: { body: { text: string } }) =>
+        Promise.resolve({
+          status: 200 as const,
+          body: { audioBase64: `wav:${body.text}`, format: "wav", audioMs: null, synthMs: null, voice: null },
+        }),
+      );
+    });
+    afterEach(() => {
+      uninstallSpeechRecognition();
+    });
+
+    /** Toggle voice mode on and return the (now-armed) recognizer. */
+    async function armVoice(user: ReturnType<typeof userEvent.setup>) {
+      await user.click(screen.getByTestId(VoiceToggleButtonTestId.Root));
+      const rec = latestRecognition();
+      expect(rec.started).toBe(true);
+      return rec;
+    }
+
+    it("runs the full hands-free loop: listen → send → disarm → speak → re-arm", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatScreenHarness />);
+      const rec = await armVoice(user);
+
+      // A finalized utterance is sent verbatim, bypassing the composer (Decision 1).
+      act(() => rec.emitResult([{ transcript: "jak se máš", isFinal: true }]));
+      expect(mutate).toHaveBeenCalledWith({ body: { conversationId: "c1", text: "jak se máš" } });
+
+      // The turn goes in flight (streaming) → the mic disarms.
+      act(() => mock.last().emit({ conversationId: "c1", turnId: "t1", type: "delta", text: "Mám" }));
+      expect(rec.started).toBe(false);
+
+      // The turn finishes WITH text → the reply is synthesized and played; the mic
+      // stays disarmed while speaking.
+      act(() => mock.last().emit({ conversationId: "c1", turnId: "t1", type: "done", text: "Mám se dobře." }));
+      await flush();
+      expect(playCalls.length).toBeGreaterThan(0);
+      expect(playCalls[playCalls.length - 1]?.key).toBe("voice-mode");
+      expect(rec.started).toBe(false);
+
+      // The auto-speak queue settles naturally ("ended" on the last chunk) → re-arm.
+      await act(async () => {
+        playCalls[playCalls.length - 1]?.onSettled?.("ended");
+        await Promise.resolve();
+      });
+      expect(rec.started).toBe(true);
+    });
+
+    it("does NOT re-arm when a manual read-aloud supersedes the reply (operator took over) — voice mode stays on but paused", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatScreenHarness />);
+      const rec = await armVoice(user);
+
+      act(() => rec.emitResult([{ transcript: "jak se máš", isFinal: true }]));
+      act(() => mock.last().emit({ conversationId: "c1", turnId: "t1", type: "delta", text: "Mám" }));
+      act(() => mock.last().emit({ conversationId: "c1", turnId: "t1", type: "done", text: "Mám se dobře." }));
+      await flush();
+      expect(rec.started).toBe(false);
+
+      // A phase-120 read-aloud click supersedes the voice-mode playback.
+      await act(async () => {
+        playCalls[playCalls.length - 1]?.onSettled?.("superseded");
+        await Promise.resolve();
+      });
+
+      // The mic stays off (paused), but voice mode is still ON (the strip shows the
+      // paused state; toggling off/on recovers).
+      expect(rec.started).toBe(false);
+      expect(screen.getByTestId(VoiceToggleButtonTestId.Root)).toHaveAttribute("aria-pressed", "true");
+    });
+
+    it("returns to listening when a turn completes with no speakable text (never strands the loop)", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatScreenHarness />);
+      const rec = await armVoice(user);
+
+      act(() => rec.emitResult([{ transcript: "naplánuj úkol", isFinal: true }]));
+      // A pure tool dispatch drives the turn in flight (streaming) with no text.
+      act(() =>
+        mock.last().emit({
+          conversationId: "c1",
+          turnId: "t1",
+          type: "tool",
+          tool: { name: "create_task", status: "started" },
+        }),
+      );
+      expect(rec.started).toBe(false);
+
+      // Done with empty text → nothing to speak → straight back to listening.
+      act(() => mock.last().emit({ conversationId: "c1", turnId: "t1", type: "done", text: "" }));
+      await flush();
+      expect(playCalls).toHaveLength(0);
+      expect(rec.started).toBe(true);
+    });
+
+    it("suspends the idle-armed mic during a MANUAL read-aloud and re-arms when it ends (echo hazard)", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatScreenHarness />);
+      const rec = await armVoice(user);
+
+      // A phase-120 read-aloud starts while the conversation is idle and the mic
+      // is armed. No voice-reply session exists, so the `speakingReply` gate can't
+      // help — without the any-playing gate the live mic would transcribe the TTS
+      // audio off the speakers and auto-send it (the self-talk loop).
+      act(() => anyAudioStore.set(true));
+      expect(rec.started).toBe(false);
+      // Voice mode itself stays on — this is a transient suspension, not a pause.
+      expect(screen.getByTestId(VoiceToggleButtonTestId.Root)).toHaveAttribute("aria-pressed", "true");
+
+      // The manual playback ends → the store notifies → the mic re-arms by itself
+      // (no latch: no voice-reply session was interrupted).
+      act(() => anyAudioStore.set(false));
+      expect(rec.started).toBe(true);
+    });
+
+    it("stops everything when voice mode is toggled off mid-loop", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatScreenHarness />);
+      const rec = await armVoice(user);
+
+      act(() => rec.emitResult([{ transcript: "jak se máš", isFinal: true }]));
+      act(() => mock.last().emit({ conversationId: "c1", turnId: "t1", type: "delta", text: "Mám" }));
+      act(() => mock.last().emit({ conversationId: "c1", turnId: "t1", type: "done", text: "Mám se dobře." }));
+      await flush();
+
+      // Toggle voice mode OFF while the reply is speaking → mic off, playback stopped.
+      await user.click(screen.getByTestId(VoiceToggleButtonTestId.Root));
+      expect(rec.started).toBe(false);
+      expect(stopAudioSpy).toHaveBeenCalled();
+      expect(screen.getByTestId(VoiceToggleButtonTestId.Root)).toHaveAttribute("aria-pressed", "false");
     });
   });
 });

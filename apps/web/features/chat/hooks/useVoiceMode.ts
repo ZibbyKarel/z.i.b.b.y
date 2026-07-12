@@ -15,6 +15,15 @@ export interface UseVoiceModeOptions {
   /** A finalized utterance is a chat message — sent verbatim, bypassing the
    * composer (Decision 1). */
   onSend: (text: string) => void;
+  /** Turn-taking gate (Phase 119d / Decision 7). While `true`, voice mode stays
+   * ON but the mic is DISARMED — the conversation isn't idle (a turn is in
+   * flight or a reply is speaking) or the operator took over via a manual
+   * read-aloud (paused). `ChatScreen` computes it as
+   * `thinking || speaking || paused`; the mic re-arms the instant it clears, on
+   * the auto-speak settle transition (never a timer, so it can't catch the tail
+   * of the TTS audio). Defaults to `false` — the plain 119a follow-the-toggle
+   * behaviour. */
+  suspended?: boolean;
 }
 
 export interface VoiceMode {
@@ -36,10 +45,14 @@ export interface VoiceMode {
  * `onSend` as a chat message. Any surfaced recognition fault drops voice mode
  * and surfaces a toast — never silent.
  *
- * Turn-taking (arming the mic only while idle, re-arming after a spoken reply)
- * is layered on in 119d; here the session simply follows the toggle.
+ * Turn-taking (Phase 119d / Decision 7): the mic is armed only when voice mode
+ * is on AND the conversation is idle — the caller raises `suspended` while a turn
+ * is in flight, while a reply is speaking, and while paused after a manual
+ * read-aloud took over. A single effect owns the complete arm/disarm condition
+ * (`active && !suspended`) so there is no ping-pong between competing effects; the
+ * mic re-arms on the state transition, never a timer.
  */
-export function useVoiceMode({ onSend }: UseVoiceModeOptions): VoiceMode {
+export function useVoiceMode({ onSend, suspended = false }: UseVoiceModeOptions): VoiceMode {
   const locale = useLocale();
   const t = useTranslations("chat");
   const [active, setActive] = useState(false);
@@ -70,12 +83,15 @@ export function useVoiceMode({ onSend }: UseVoiceModeOptions): VoiceMode {
     onError: handleError,
   });
 
-  // Voice mode on ⇒ arm the mic; off (or unmount) ⇒ the cleanup disarms it.
+  // Arm the mic only when voice mode is on AND not suspended (idle turn-taking
+  // window). The cleanup disarms it on every transition — toggling off, unmount,
+  // or `suspended` flipping true — and the effect re-arms once it flips back
+  // false. One effect, complete condition: no competing-effect ping-pong.
   useEffect(() => {
-    if (!active) return;
+    if (!active || suspended) return;
     start();
     return () => stop();
-  }, [active, start, stop]);
+  }, [active, suspended, start, stop]);
 
   const toggle = useCallback(() => {
     setActive((v) => !v);

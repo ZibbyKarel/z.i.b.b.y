@@ -101,6 +101,48 @@ describe("useVoiceMode", () => {
     });
   });
 
+  describe("turn-taking suspension (Phase 119d)", () => {
+    it("disarms the mic while suspended and re-arms when it clears, staying on throughout", () => {
+      const { result, rerender } = renderHook(
+        ({ suspended }) => useVoiceMode({ onSend: vi.fn(), suspended }),
+        { wrapper, initialProps: { suspended: false } },
+      );
+
+      act(() => result.current.toggle());
+      const rec = latestRecognition();
+      expect(result.current.listening).toBe(true);
+      expect(rec.startCount).toBe(1);
+
+      // A turn goes in flight / a reply speaks → suspend: the mic stops, but voice
+      // mode stays ON (this is the paused strip state, not a toggle-off).
+      rerender({ suspended: true });
+      expect(rec.started).toBe(false);
+      expect(result.current.listening).toBe(false);
+      expect(result.current.active).toBe(true);
+
+      // The reply settled → suspend clears → the same recognizer re-arms (a fresh
+      // start on the state transition, never a timer).
+      rerender({ suspended: false });
+      expect(rec.started).toBe(true);
+      expect(rec.startCount).toBe(2);
+      expect(result.current.listening).toBe(true);
+    });
+
+    it("never arms while suspended, even after toggling voice mode on", () => {
+      const { result } = renderHook(
+        ({ suspended }) => useVoiceMode({ onSend: vi.fn(), suspended }),
+        { wrapper, initialProps: { suspended: true } },
+      );
+
+      act(() => result.current.toggle());
+      expect(result.current.active).toBe(true);
+      // The recognizer is built on mount but never started while suspended.
+      expect(result.current.listening).toBe(false);
+      expect(latestRecognition().started).toBe(false);
+      expect(latestRecognition().startCount).toBe(0);
+    });
+  });
+
   it("stops the mic when it unmounts (leaving /chat)", () => {
     const { result, unmount } = renderHook(() => useVoiceMode({ onSend: vi.fn() }), { wrapper });
     act(() => result.current.toggle());

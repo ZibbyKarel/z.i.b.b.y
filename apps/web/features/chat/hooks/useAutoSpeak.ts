@@ -93,12 +93,29 @@ interface SpeakSession {
   synth: Map<number, Promise<string>>;
 }
 
+/**
+ * How a spoken reply reached its end (Phase 119d):
+ * - `"completed"` — the whole chunk queue played out naturally (last chunk
+ *   `"ended"`), including reaching the end of an empty queue;
+ * - `"interrupted"` — a manual read-aloud superseded it, an external
+ *   `stopAudioPlayback` stopped it, or a synth fault tore it down.
+ * Voice-mode turn-taking re-arms the mic on `"completed"` only. NOT reported for
+ * an explicit {@link UseAutoSpeak.cancel} (a barge-in the CALLER initiated — it
+ * drives its own next state, so latching the loop paused there would be wrong).
+ */
+export type AutoSpeakReplyOutcome = "completed" | "interrupted";
+
 export interface UseAutoSpeakOptions {
   /** The operator's `/settings` voice pick (`SystemConfig.ttsVoice`, Phase 119c) —
    * `ChatScreen` reads it via `useSystemConfigQuery` and passes it straight
    * through. `null`/`undefined` (the common case) omits the override entirely so
    * the daemon uses its own default. */
   voice?: string | null;
+  /** Fired exactly once when a `speak()` reply reaches a terminal state
+   * ({@link AutoSpeakReplyOutcome}) — the turn-taking signal (Phase 119d).
+   * Held in a ref (like `voice`), so a changed identity never rebuilds the
+   * stable `speak`/`cancel` controller. */
+  onSettled?: (outcome: AutoSpeakReplyOutcome) => void;
 }
 
 export interface UseAutoSpeak {
@@ -141,7 +158,7 @@ export interface UseAutoSpeak {
  * `ensureSynth` call sends.
  */
 export function useAutoSpeak(options: UseAutoSpeakOptions = {}): UseAutoSpeak {
-  const { voice } = options;
+  const { voice, onSettled } = options;
   const t = useTranslations("chat");
   // `t` isn't referentially stable; hold it in a ref so `speak`/`cancel` can be
   // created once (stable identities keep `useChatStream`'s `onComplete` stable).
@@ -157,6 +174,13 @@ export function useAutoSpeak(options: UseAutoSpeakOptions = {}): UseAutoSpeak {
   useEffect(() => {
     voiceRef.current = voice;
   }, [voice]);
+
+  // …and for the turn-taking callback (Phase 119d): the controller is built once,
+  // so read the latest `onSettled` through a ref rather than rebuilding it.
+  const onSettledRef = useRef(onSettled);
+  useEffect(() => {
+    onSettledRef.current = onSettled;
+  }, [onSettled]);
 
   const [speaking, setSpeaking] = useState(false);
   const sessionRef = useRef<SpeakSession | null>(null);
@@ -180,18 +204,40 @@ export function useAutoSpeak(options: UseAutoSpeakOptions = {}): UseAutoSpeak {
       return p;
     };
 
+    // The whole queue played out naturally → report `"completed"` (the mic
+    // re-arms). Guarded by `sessionRef.current === session` so it fires once, for
+    // the active session only.
     const finish = (session: SpeakSession) => {
+      session.cancelled = true;
       if (sessionRef.current === session) {
         sessionRef.current = null;
         setSpeaking(false);
+        onSettledRef.current?.("completed");
       }
     };
 
-    // Abandon a session WITHOUT touching the player. Used when the barge-in
-    // arrived AS the player settling under us: `"superseded"` (a manual
-    // read-aloud's audio is already playing — stopping would kill it) or an
-    // external `"stopped"` (playback is already gone).
+    // Abandon a session WITHOUT touching the player, reporting `"interrupted"`
+    // (the mic does NOT re-arm). Used when the barge-in arrived AS the player
+    // settling under us: `"superseded"` (a manual read-aloud's audio is already
+    // playing — stopping would kill it) or an external `"stopped"` (playback is
+    // already gone). Same one-shot guard as `finish`.
     const abandon = (session: SpeakSession) => {
+      session.cancelled = true;
+      if (sessionRef.current === session) {
+        sessionRef.current = null;
+        setSpeaking(false);
+        onSettledRef.current?.("interrupted");
+      }
+    };
+
+    // Discard a session on OUR OWN barge-in (`cancel()`, or a newer `speak()`
+    // replacing this one): identical teardown, but NO `onSettled` — the caller
+    // initiated it and drives its own next state (a fresh turn/reply, or voice
+    // toggled off), so reporting `"interrupted"` here would wrongly latch the
+    // turn-taking loop paused. Marks cancelled + clears BEFORE stopping playback,
+    // so the `"stopped"` `onSettled` `stopAudioPlayback` fires sees an inactive
+    // session and neither advances the queue nor re-reports.
+    const discard = (session: SpeakSession) => {
       session.cancelled = true;
       if (sessionRef.current === session) {
         sessionRef.current = null;
@@ -199,18 +245,19 @@ export function useAutoSpeak(options: UseAutoSpeakOptions = {}): UseAutoSpeak {
       }
     };
 
-    // Cancel a session: mark it cancelled and clear it BEFORE stopping playback,
-    // so the `"stopped"` `onSettled` that `stopAudioPlayback` fires sees an
-    // inactive session and does not advance the queue.
     const stop = (session: SpeakSession) => {
-      abandon(session);
+      discard(session);
       stopAudioPlayback();
     };
 
+    // A synth fault IS a terminal interruption the turn-taking loop must hear
+    // (no re-arm): report `"interrupted"` (via `abandon`) BEFORE stopping
+    // playback, so the resulting `"stopped"` settle is a no-op.
     const fail = (session: SpeakSession) => {
       if (!isActive(session)) return;
       toastBus.emit({ message: tRef.current("voice.speakError") });
-      stop(session);
+      abandon(session);
+      stopAudioPlayback();
     };
 
     const playChunk = (session: SpeakSession, i: number) => {

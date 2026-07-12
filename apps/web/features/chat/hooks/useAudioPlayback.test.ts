@@ -5,6 +5,7 @@ import {
   getPlayingKey,
   playAudioPlayback,
   stopAudioPlayback,
+  useAnyAudioPlaying,
   useAudioPlayback,
   wavBase64ToBlob,
 } from "./useAudioPlayback";
@@ -282,6 +283,46 @@ describe("useAudioPlayback", () => {
     expect(onSettled).toHaveBeenCalledTimes(1);
     expect(onSettled).toHaveBeenCalledWith("error");
     expect(toastEmit).toHaveBeenCalledTimes(1);
+  });
+
+  // ── Phase 119d: useAnyAudioPlaying (the voice-mode echo-hazard gate) ──────
+
+  it("useAnyAudioPlaying reflects playback under ANY key — true on play, false on stop", () => {
+    const { result } = renderHook(() => useAnyAudioPlaying());
+    expect(result.current).toBe(false);
+
+    // A manual read-aloud key, NOT the voice-mode key — the whole point of this
+    // hook is that it doesn't care whose playback it is.
+    act(() => playAudioPlayback("msg-1", "aGVsbG8="));
+    expect(result.current).toBe(true);
+
+    act(() => stopAudioPlayback());
+    expect(result.current).toBe(false);
+  });
+
+  it("useAnyAudioPlaying clears when the audio ends naturally", () => {
+    const { result } = renderHook(() => useAnyAudioPlaying());
+    act(() => playAudioPlayback("msg-1", "aGVsbG8="));
+    expect(result.current).toBe(true);
+    const audio = FakeAudio.instances[0]!;
+
+    act(() => audio.onended?.());
+
+    expect(result.current).toBe(false);
+  });
+
+  it("useAnyAudioPlaying stays true across a supersession (playback never gapped)", () => {
+    const { result } = renderHook(() => useAnyAudioPlaying());
+    act(() => playAudioPlayback("msg-1", "aGVsbG8="));
+
+    act(() => playAudioPlayback("msg-2", "d29ybGQ="));
+
+    expect(result.current).toBe(true);
+    expect(getPlayingKey()).toBe("msg-2");
+
+    // End playing state inside act — the suite's afterEach stop is unwrapped and
+    // would otherwise warn against the still-mounted hook.
+    act(() => stopAudioPlayback());
   });
 
   it("keeps the pre-119b behavior when no onSettled is passed (ended is a clean no-throw)", () => {

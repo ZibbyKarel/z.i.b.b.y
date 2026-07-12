@@ -155,6 +155,19 @@ function subscribe(listener: Listener): () => void {
 }
 
 /**
+ * Whether ANY audio is playing right now, regardless of key — a live
+ * `useSyncExternalStore` view over the same singleton store as
+ * {@link useAudioPlayback} (Phase 119d). Voice-mode turn-taking reads this to
+ * suspend the mic during MANUAL read-aloud playback too, not just the voice
+ * queue's own: an armed mic would otherwise transcribe the synthesized speech
+ * coming out of the speakers and auto-send it back as a chat message (the echo
+ * / self-talk hazard). SSR snapshot is `false` — nothing plays on the server.
+ */
+export function useAnyAudioPlaying(): boolean {
+  return useSyncExternalStore(subscribe, () => getPlayingKey() !== null, () => false);
+}
+
+/**
  * One button's view onto the shared player. `key` should be stable for the
  * button's lifetime (callers pass their own `useId()`); `isPlaying` is true
  * only while THIS key is the one playing. This hook only knows about
