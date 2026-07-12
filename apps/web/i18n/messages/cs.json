@@ -1615,6 +1615,8 @@
     "triggerAria": "Otevřít chat se ZIBBY",
     "triggerTitle": "Chat se ZIBBY",
     "streaming": "ZIBBY píše…",
+    "readAloud": "Přečíst nahlas",
+    "readAloudStop": "Zastavit přehrávání",
     "composer": {
       "label": "Zpráva",
       "placeholder": "Napište ZIBBY… (Enter odešle, Shift+Enter nový řádek)",
