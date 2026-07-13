@@ -1,1 +1,1 @@
-- [ ] oprav chyby sepsané v posledním antipatern reportu v docs/audits/component-antipatterns-2026-07-11.md
+- [ ] vytvořit implementační plány pro zpracování chyb nahlášených v docs/audit
