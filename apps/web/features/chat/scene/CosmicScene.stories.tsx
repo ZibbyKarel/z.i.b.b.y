@@ -14,6 +14,8 @@ import { SUBSYSTEMS, type SubsystemState, type SubsystemWithStatus } from "@zibb
 import type { Meta, StoryObj } from "@storybook/react";
 import { Container, Typography } from "@zibby/design-system";
 import type { ReactNode } from "react";
+import type { Pipeline } from "../../../domain";
+import type { RunView } from "../../runs/run";
 import { categoryColor } from "./tokens";
 import { CosmicScene, type CosmicSceneProps } from "./CosmicScene";
 import type { SceneDockItem, SceneMode } from "./sceneTypes";
@@ -70,6 +72,100 @@ const SUBSYSTEM_ROSTER: SubsystemWithStatus[] = SUBSYSTEMS.map((s) => {
     tier3Count: override?.tier3Count ?? 0,
   };
 });
+
+/** Task C2 (Velín-D retune) — a couple of pipelines tagged to the `bezi` (running)
+ * subsystems above, so the story exercises B4's per-subsystem orbital task
+ * particles ("each light = one processing task") alongside B3's connector live
+ * pulse — not just the idle/`klid` octagon. */
+const PIPELINE_ROSTER: Pipeline[] = [
+  {
+    id: "forge-delivery",
+    name: "Forge Delivery",
+    lastRun: "—",
+    lastState: "running",
+    desc: "",
+    file: "~/zibby/pipelines/forge-delivery.pipeline.md",
+    phases: [],
+    outputs: [],
+    ownerSubsystem: "forge",
+  },
+  {
+    id: "puls-sync",
+    name: "Puls Sync",
+    lastRun: "—",
+    lastState: "running",
+    desc: "",
+    file: "~/zibby/pipelines/puls-sync.pipeline.md",
+    phases: [],
+    outputs: [],
+    ownerSubsystem: "puls",
+  },
+  {
+    id: "scout-scan",
+    name: "Scout Scan",
+    lastRun: "—",
+    lastState: "running",
+    desc: "",
+    file: "~/zibby/pipelines/scout-scan.pipeline.md",
+    phases: [],
+    outputs: [],
+    ownerSubsystem: "scout",
+  },
+];
+
+/** A handful of active (`running`/`queued`) runs against {@link PIPELINE_ROSTER} —
+ * `activeRunsBySubsystem` (`subsystemLoad.ts`) tallies these into the orbiter count
+ * per subsystem: forge gets 2 (one running, one queued), puls and scout get 1 each. */
+const RUN_ROSTER: RunView[] = [
+  {
+    runId: "forge-delivery_1",
+    kind: "pipeline",
+    owner: "forge-delivery",
+    status: "running",
+    pct: null,
+    title: "",
+    prompt: "",
+    project: "",
+    startedAt: "2026-07-13T20:00:00.000Z",
+    logBase: null,
+  },
+  {
+    runId: "forge-delivery_2",
+    kind: "pipeline",
+    owner: "forge-delivery",
+    status: "queued",
+    pct: null,
+    title: "",
+    prompt: "",
+    project: "",
+    startedAt: "2026-07-13T20:01:00.000Z",
+    logBase: null,
+  },
+  {
+    runId: "puls-sync_1",
+    kind: "pipeline",
+    owner: "puls-sync",
+    status: "running",
+    pct: null,
+    title: "",
+    prompt: "",
+    project: "",
+    startedAt: "2026-07-13T20:02:00.000Z",
+    logBase: null,
+  },
+  {
+    runId: "scout-scan_1",
+    kind: "pipeline",
+    owner: "scout-scan",
+    status: "running",
+    pct: null,
+    title: "",
+    prompt: "",
+    project: "",
+    startedAt: "2026-07-13T20:03:00.000Z",
+    logBase: null,
+  },
+];
 
 interface SceneFrameProps {
   children: ReactNode;
@@ -150,6 +246,8 @@ const meta: Meta<typeof CosmicSceneStory> = {
     },
     subsystems: { control: false },
     selectedSubsystemId: { control: false },
+    pipelines: { control: false },
+    runs: { control: false },
     reducedMotion: {
       control: "boolean",
       description: "Simulates the OS prefers-reduced-motion setting.",
@@ -165,8 +263,15 @@ const meta: Meta<typeof CosmicSceneStory> = {
     mode: "idle",
     reducedMotion: false,
     streamChars: 0,
+    // The full 8-subsystem registry — `clusterGeometry.ts`'s `ellipseSlots` places
+    // all 8 on the widened elliptical node ring (task B1) regardless of story; the
+    // roster's live (`bezi`/`hlaseni`/`ceka`) states are what make the center→node
+    // connector pulse (B3) and orbital particles (B4, via `pipelines`/`runs` below)
+    // visible rather than a static idle octagon.
     subsystems: SUBSYSTEM_ROSTER,
     selectedSubsystemId: "sentinel",
+    pipelines: PIPELINE_ROSTER,
+    runs: RUN_ROSTER,
   },
   component: CosmicSceneStory,
   parameters: { layout: "fullscreen" },
