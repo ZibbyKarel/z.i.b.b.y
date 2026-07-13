@@ -58,6 +58,7 @@ import { ChatPalette } from "./ChatPalette";
 import { ChatTaskDetailColumn } from "./ChatTaskDetailColumn";
 import { ChatTasksPanel } from "./ChatTasksPanel";
 import { ChatTranscript } from "./ChatTranscript";
+import { CoreOverviewDialog } from "./CoreOverviewDialog";
 import { StatusPill } from "./StatusPill";
 import { VoiceStatusStrip } from "./VoiceStatusStrip";
 import { VoiceToggleButton } from "./VoiceToggleButton";
@@ -430,6 +431,12 @@ export function ChatScreen({
   // render the subsystem's detail alongside the transcript.
   const { data: subsystems } = useSubsystemsQuery();
   const [selectedSubsystemId, setSelectedSubsystemId] = useState<SubsystemId | null>(null);
+  // Task C1: clicking the central orb opens the whole-federation overview dialog
+  // (Task A1's `CoreOverviewDialog`) instead of the per-subsystem drawer below.
+  // Picking a subsystem row inside it reuses the EXISTING `setSelectedSubsystemId`
+  // (Decision D4) — it closes the overview and opens the same drawer a direct
+  // mini-orb click would.
+  const [coreOpen, setCoreOpen] = useState(false);
   // Resolved against the live status list so the drawer always shows fresh
   // state/counts (Phase 84) — a dangling id (the polled list momentarily
   // dropping an entry) just renders nothing rather than stale data.
@@ -580,6 +587,7 @@ export function ChatScreen({
         completedTick={completedTick}
         dock={dock}
         mode={mode}
+        onOpenCore={() => setCoreOpen(true)}
         onSelectSubsystem={setSelectedSubsystemId}
         pipelines={pipelineCatalog ?? []}
         runs={runs}
@@ -758,6 +766,21 @@ export function ChatScreen({
       {detailTarget && (
         <ChatDetailDialog detail={detailTarget} onClose={() => setDetailTarget(undefined)} />
       )}
+
+      {/* ── ZIBBY overview (Task C1) ─────────────────────────────────────
+          Clicking the central orb (via `CosmicScene` → `SubsystemOrbsOverlay`'s
+          center hit-target) opens this whole-federation snapshot. Picking a
+          subsystem row inside it reuses the existing selection state, so it
+          closes the overview and opens the same `SubsystemDrawer` a direct
+          mini-orb click would (Decision D4). */}
+      <CoreOverviewDialog
+        onClose={() => setCoreOpen(false)}
+        onSelectSubsystem={(id) => {
+          setCoreOpen(false);
+          setSelectedSubsystemId(id);
+        }}
+        open={coreOpen}
+      />
     </div>
   );
 }

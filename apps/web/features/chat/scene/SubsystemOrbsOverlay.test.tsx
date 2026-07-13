@@ -128,6 +128,39 @@ describe("SubsystemOrbsOverlay", () => {
     );
   });
 
+  it("does not render the center hit-target when onOpenCore is omitted", () => {
+    renderWithProviders(<SubsystemOrbsOverlay onSelect={vi.fn()} subsystems={allSubsystems()} />);
+    expect(screen.queryByTestId(SubsystemOrbsOverlayTestId.Core)).not.toBeInTheDocument();
+  });
+
+  it("click on the center hit-target fires onOpenCore (once)", async () => {
+    const user = userEvent.setup();
+    const onOpenCore = vi.fn();
+    renderWithProviders(
+      <SubsystemOrbsOverlay onOpenCore={onOpenCore} onSelect={vi.fn()} subsystems={allSubsystems()} />,
+    );
+
+    const core = screen.getByTestId(SubsystemOrbsOverlayTestId.Core);
+    expect(core).toHaveAttribute("role", "button");
+    expect(core).toHaveAttribute("aria-label");
+    await user.click(core);
+    expect(onOpenCore).toHaveBeenCalledTimes(1);
+  });
+
+  it("Enter on the focused center hit-target fires onOpenCore (keyboard interaction)", () => {
+    const onOpenCore = vi.fn();
+    renderWithProviders(
+      <SubsystemOrbsOverlay onOpenCore={onOpenCore} onSelect={vi.fn()} subsystems={allSubsystems()} />,
+    );
+
+    const core = screen.getByTestId(SubsystemOrbsOverlayTestId.Core);
+    core.focus();
+    core.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }),
+    );
+    expect(onOpenCore).toHaveBeenCalledTimes(1);
+  });
+
   it("every fixture state renders without throwing, one of each", () => {
     renderWithProviders(
       <SubsystemOrbsOverlay

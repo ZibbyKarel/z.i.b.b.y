@@ -44,6 +44,10 @@ export interface CosmicSceneProps {
   selectedSubsystemId?: SubsystemId | null;
   /** Selecting a mini-orb (click / keyboard) — opens the subsystem drawer upstream. */
   onSelectSubsystem?: (id: SubsystemId) => void;
+  /** Task C1 — activating the central orb's hit-target (click / keyboard), opening
+   * `CoreOverviewDialog` upstream. Threaded straight through to
+   * {@link SubsystemOrbsOverlay}, which owns the interactive DOM layer. */
+  onOpenCore?: () => void;
   /** Phase 97: the pipeline catalog — `flightForEvent`'s owner resolution
    * (`runId` → owning pipeline → `ownerSubsystem`) reads this. Already fetched by
    * `ChatScreen` for other purposes; read via a ref (see the mount effect below) so
@@ -99,6 +103,7 @@ function CosmicSceneView({
   subsystems = EMPTY_SUBSYSTEMS,
   selectedSubsystemId = null,
   onSelectSubsystem = noop,
+  onOpenCore,
   pipelines = EMPTY_PIPELINES,
   runs = EMPTY_RUNS,
   powerSaver,
@@ -312,6 +317,7 @@ function CosmicSceneView({
           projected (container-px) coordinates line up. Renders all its nodes even
           without a controller (jsdom), so component tests stay WebGL-free. */}
       <SubsystemOrbsOverlay
+        onOpenCore={onOpenCore}
         onSelect={onSelectSubsystem}
         reducedMotion={reducedMotion}
         selectedId={selectedSubsystemId}

@@ -1672,6 +1672,7 @@
     },
     "overview": {
       "title": "Přehled ZIBBY",
+      "openAria": "Otevřít přehled ZIBBY",
       "role": "orchestrátor · řídím {count} podsystémů",
       "summary": "{working} v akci, {report} s hlášením, {waiting} čeká na tebe.",
       "statWorking": "pracují",

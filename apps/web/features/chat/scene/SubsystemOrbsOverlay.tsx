@@ -24,6 +24,9 @@ export enum SubsystemOrbsOverlayTestId {
   Badge = "subsystem-orb-badge",
   /** Per subsystem: `${Label}-${id}` — the name label below the orb. */
   Label = "subsystem-orb-label",
+  /** Task C1 — the central orb's hit-target, opening {@link CoreOverviewDialog}.
+   * Rendered only when `onOpenCore` is supplied. */
+  Core = "subsystem-orbs-overlay-core",
 }
 
 /** Subscribe to the controller's per-frame mini-orb projections. Absent in jsdom /
@@ -41,6 +44,11 @@ export interface SubsystemOrbsOverlayProps {
   selectedId?: SubsystemId | null;
   /** Selecting a node (click / Enter / Space). */
   onSelect: (id: SubsystemId) => void;
+  /** Task C1 — activating the central orb's hit-target (click / Enter / Space),
+   * opening `CoreOverviewDialog`. The hit-target itself is only rendered when
+   * this is supplied — omitting it (Storybook, unit tests scoped to the
+   * per-subsystem nodes) simply leaves the center un-clickable. */
+  onOpenCore?: () => void;
   /** Projection subscription from the scene controller — see {@link SubscribeProjections}. */
   subscribe?: SubscribeProjections;
   /** Whether the operator asked the OS for reduced motion (phase 96) — skips the
@@ -77,10 +85,12 @@ export function SubsystemOrbsOverlay({
   subsystems,
   selectedId = null,
   onSelect,
+  onOpenCore,
   subscribe,
   reducedMotion = false,
 }: SubsystemOrbsOverlayProps) {
   const t = useTranslations("subsystems");
+  const tOverview = useTranslations("chat.overview");
   const nodeRefs = useRef(new Map<SubsystemId, HTMLDivElement>());
   // Phase 96: the wrapper around each node's visible label + badge (never the
   // hit-target) — faded in imperatively so it doesn't fly across the screen
@@ -129,6 +139,13 @@ export function SubsystemOrbsOverlay({
     }
   };
 
+  const handleCoreKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onOpenCore?.();
+    }
+  };
+
   // Registry order, keyed by id — drop unknown ids, keep only present entries.
   const ordered = [...subsystems]
     .filter((s) => REGISTRY_RANK.has(s.id))
@@ -141,6 +158,26 @@ export function SubsystemOrbsOverlay({
       data-testid={SubsystemOrbsOverlayTestId.Root}
       role="group"
     >
+      {/* Task C1 — the central orb's hit-target, opening `CoreOverviewDialog`.
+          A fixed anchor (not a per-frame projection like the subsystem nodes
+          below): the central orb has no controller-pushed projection of its
+          own, and this page's whole cluster is already anchored at a fixed
+          `50% 42%` (see `ChatScreen`'s B6 radial backdrop, which frames the
+          same cluster) — reusing that anchor keeps the hit-target visually
+          centered on the orb without inventing a second coordinate space.
+          Rendered only when `onOpenCore` is supplied. */}
+      {onOpenCore && (
+        <div
+          aria-label={tOverview("openAria")}
+          className="pointer-events-auto absolute left-1/2 top-[42%] h-11 w-11 -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          data-testid={SubsystemOrbsOverlayTestId.Core}
+          onClick={onOpenCore}
+          onKeyDown={handleCoreKeyDown}
+          role="button"
+          tabIndex={0}
+        />
+      )}
+
       {ordered.map((s) => {
         const selected = selectedId === s.id;
         const stateLabel = t(`state.${s.state}`);
