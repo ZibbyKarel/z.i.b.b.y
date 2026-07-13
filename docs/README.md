@@ -85,6 +85,7 @@ my channels and handle what you can."
 - [Deployment](./ops/deployment.md) — launchd, backups, log rotation, CI
 - [Environment](./ops/environment.md) — environment variables, data directories, runtime system config
 - [Self-development runbook](./ops/self-development.md) — ZIBBY as a safe target for its own loop engine
+- [Connecting Slack](./ops/slack-setup.md) — bot token, scopes, channel IDs, wiring up the integration + mandate
 
 ---
 
