@@ -19,6 +19,10 @@ import { CATEGORY_COLORS, resolveSceneTokens } from "./tokens";
  *     `THREE.WebGLRenderTarget` (see `resize`/`render` below) and upscaled to the
  *     screen via a cheap passthrough blit (`UPSCALE_FRAGMENT`) — a slow drift is
  *     visually indistinguishable at half-res and the fragment work is quartered.
+ *     Task B6: this pass is now muted way down (base tone lifted to Velín-D's
+ *     gradient center color, nebula/star intensity cut ~3-4x) so it reads as
+ *     Velín-D's clean radial gradient with only a faint drifting texture,
+ *     rather than a busy nebula competing with the wireframe orb map.
  *  2. The faint distant node-web: ~100 nodes in 7 clusters coloured by the real
  *     agent categories (so it reads as the same taxonomy as the constellation),
  *     joined by proximity lines, plus drifting dust. Rendered with the shared
@@ -109,8 +113,15 @@ void main() {
   vec2 uv = vUv;
   vec2 p = (uv - 0.5) * vec2(uAspect, 1.0);
 
-  // Deep base.
-  vec3 col = vec3(0.020, 0.031, 0.055);
+  // Task B6: base tone lifted from a near-black navy to Velín-D's own gradient
+  // center (#121a27 — same hex the scene-root CSS radial gradient starts
+  // from), so the sky's calm core reads as an extension of that gradient
+  // rather than a much darker patch behind it. The existing corner-darkening
+  // vignette below (vig) already falls this back toward ~0.55x at the
+  // frame edges, which lands within a hair of --color-background (the
+  // gradient's own outer stop) — so the radial falloff Velín-D asks for
+  // falls out of the shader's existing mechanics instead of a new pass.
+  vec3 col = vec3(0.071, 0.102, 0.153);
 
   // Phase 114b: distance from this pixel to the orb + subagent cluster, in the
   // same aspect-corrected, centred space as p/uGlowCenter (screen centre
@@ -163,7 +174,11 @@ void main() {
   float n2 = n1 * 0.6 + 0.5 * snoise(vec3(p * 2.7 - vec2(0.0, uTime * 0.009), 5.0 + uTime * 0.015));
   float cloudA = smoothstep(0.0, 0.72, n1);
   float cloudB = smoothstep(0.05, 0.82, n2 * 0.5 + 0.5);
-  float nebulaBoost = mix(0.12, 1.35, nebulaRing);
+  // Task B6: the master pass-1 intensity knob. Was mix(0.12, 1.35, …) — muted
+  // ~4x at both the ambient floor and the ring's peak so the nebula reads as
+  // a faint texture over Velín-D's clean gradient rather than the dominant
+  // element; the wireframe orb map is what should read cleanly here now.
+  float nebulaBoost = mix(0.03, 0.32, nebulaRing);
   // Phase 114c: nebula clouds are gated by birthMask so they only appear once
   // the birth wavefront has passed through this pixel — they "condense out"
   // of the orb rather than fading in uniformly everywhere at once.
@@ -177,8 +192,10 @@ void main() {
   float starFocus = mix(0.6, 1.0, max(nebulaRing, 0.15));
   float s1 = stars(uv, 90.0, 2.3, 0.0);
   float s2 = stars(uv, 160.0, 3.7, 11.0);
-  col += vec3(0.75, 0.82, 1.0) * s1 * 0.9 * starFocus * birthMask;
-  col += vec3(0.85, 0.9, 1.0) * s2 * 0.6 * starFocus * birthMask;
+  // Task B6: star brightness cut ~3.5x (0.9→0.25, 0.6→0.17) alongside the
+  // nebula — still visible as a faint scatter of pinpricks, not a busy sky.
+  col += vec3(0.75, 0.82, 1.0) * s1 * 0.25 * starFocus * birthMask;
+  col += vec3(0.85, 0.9, 1.0) * s2 * 0.17 * starFocus * birthMask;
 
   // Phase 114c: the travelling ridge of the birth wavefront itself — a thin
   // glint of orb colour riding the expanding front, fading out once uBirth

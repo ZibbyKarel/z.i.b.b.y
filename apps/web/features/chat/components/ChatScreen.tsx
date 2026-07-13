@@ -488,6 +488,17 @@ export function ChatScreen({
       className="relative flex h-full w-full flex-col overflow-hidden font-sans"
       data-testid={ChatScreenTestId.Root}
     >
+      {/* Task B6: Velín-D's clean radial backdrop, centered at 50% 42% (the
+          app-shell's shared --gradient-scene token is top-anchored at -8% for
+          other pages — this page needs its own center to frame the orb map).
+          Sits behind the WebGL scene, which normally paints over it fully;
+          it shows through only while that scene hasn't mounted yet (no-GPU
+          fallback, or the first frame before the async-imported controller
+          is ready) and at any edge the canvas doesn't cover. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-0 bg-[image:radial-gradient(ellipse_130%_100%_at_50%_42%,#121a27_0%,var(--color-background)_62%)]"
+      />
       {/* Scanlines + grid overlays */}
       <div
         aria-hidden="true"
