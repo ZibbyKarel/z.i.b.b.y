@@ -17,6 +17,7 @@ import { SubsystemOrbsOverlay } from "./SubsystemOrbsOverlay";
 import { canMountWebGL } from "./canMountWebGL";
 import type { SceneController } from "./sceneController";
 import type { SceneDockItem, SceneMode, SceneSubsystem } from "./sceneTypes";
+import { activeRunsBySubsystem } from "./subsystemLoad";
 
 export enum CosmicSceneTestId {
   /** The scene root — carries `data-mode` so the derivation tests (and console
@@ -273,6 +274,15 @@ function CosmicSceneView({
   useEffect(() => {
     pipelinesRef.current = pipelines;
   }, [pipelines]);
+
+  // Task B4 — the per-subsystem orbital task particles ("each light = one
+  // processing task"): recompute the active-run tally whenever `runs` changes
+  // and push it to the controller. Reads `pipelinesRef` (not `pipelines`
+  // directly) so a pipeline-catalog-only refetch never forces a recompute —
+  // same rationale as the `onRunEvent` subscriber below.
+  useEffect(() => {
+    controller?.setSubsystemLoad(activeRunsBySubsystem(runsRef.current, pipelinesRef.current));
+  }, [controller, runs]);
 
   useEffect(() => {
     return onRunEvent((event) => {

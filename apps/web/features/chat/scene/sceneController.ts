@@ -21,6 +21,7 @@ import { CONNECTORS_OPACITY, type ConnectorsLayer, createConnectorsLayer } from 
 import { type DockLayer, createDockLayer } from "./dockLayer";
 import { type OrbTarget, miniOrbTarget, orbTarget } from "./modeVisuals";
 import { type OrbLayer, createOrbLayer } from "./orbLayer";
+import { type OrbitFieldLayer, createOrbitFieldLayer } from "./orbitFieldLayer";
 import { type ParticleLayer, createParticleLayer } from "./particleLayer";
 import { type RingsLayer, createRingsLayer } from "./ringsLayer";
 import type { SceneInputs, SceneSubsystem, SubsystemProjection } from "./sceneTypes";
@@ -43,6 +44,11 @@ export interface SceneController {
   /** Push the latest subsystem roster (phase 95) — drives the 8 mini-orbs'
    * show/hide and per-state visual. Eased toward, never snapped. */
   setSubsystems(list: SceneSubsystem[]): void;
+  /** Task B4 — push `subsystemLoad.ts`'s latest active-run tally per subsystem;
+   * forwarded verbatim to the orbit field's `setCount` (absent ids reset to 0).
+   * Wakes a parked scene (with the settle window) only on a genuine change,
+   * mirroring `setSubsystems`' own no-op-refresh guard. */
+  setSubsystemLoad(counts: Partial<Record<SubsystemId, number>>): void;
   /** Subscribe to per-frame mini-orb projections (world → container px + on-screen
    * radius) — the {@link SubsystemOrbsOverlay} positions its DOM nodes from these
    * without re-rendering React. Returns an unsubscribe. Called immediately once with
@@ -459,6 +465,26 @@ export function createSceneController(
   const particles: ParticleLayer = createParticleLayer();
   cluster.add(particles.object3d);
 
+  // --- Per-subsystem orbital task particles (task B4): a fixed pool of ambient
+  // motes ringing each mini-orb, one per active run the subsystem currently owns
+  // ("each light = one processing task"). Added directly to `orbScene` (a
+  // SIBLING of `cluster`, not a child) because it's driven from each mini-orb's
+  // WORLD position (`mini.worldPos`, refreshed every tick below) rather than
+  // cluster-local coordinates — the same live position `computeProjections`
+  // already tracks for the DOM overlay, reused verbatim so an orbiter never lags
+  // a subsystem still mid-entry-animation. ---
+  const orbitField: OrbitFieldLayer = createOrbitFieldLayer();
+  orbScene.add(orbitField.object3d);
+  /** Each subsystem id → its mini-orb's live WORLD-space centre — built ONCE
+   * from the SAME `Vector3` instances the minis already own (`mini.worldPos`),
+   * so this map's entries update in place every time `tick` refreshes
+   * `mini.worldPos` below; never reallocated. */
+  const orbitCenters = new Map<SubsystemId, THREE.Vector3>(minis.map((m) => [m.id, m.worldPos]));
+  /** The last per-subsystem count actually applied via `setSubsystemLoad` — lets
+   * a no-op feed refresh (same tally, new object reference) skip `wake()`,
+   * mirroring `setSubsystems`' own no-op guard. */
+  const lastAppliedLoad = new Map<SubsystemId, number>(SUBSYSTEMS.map((s) => [s.id, 0]));
+
   // --- Phase 96 entry ("mitosis") animation state. Reduced motion → skip the
   // clock entirely and leave everything at the rest state it was just built in
   // (mini-orbs at their slots, connectors at full opacity/scale, core at
@@ -698,6 +724,19 @@ export function createSceneController(
       camera.lookAt(0, 0, 0);
     }
 
+    // Task B4 — refresh each mini-orb's LIVE world centre for the orbit field
+    // (independent of `emitProjections`'s own subscriber-gated read below — the
+    // orbit field always needs a fresh centre, whether or not the DOM overlay is
+    // subscribed) and drive its per-orbiter ring positions off it. Must run
+    // AFTER the entry animation above (which may have just moved a mini-orb's
+    // LOCAL position for this frame) and BEFORE `orbRenderer.render` (so this
+    // frame's buffer writes are the ones actually drawn); `updateMatrixWorld()`
+    // mirrors `computeProjections`' own explicit refresh — call order relative
+    // to render can't be assumed here either.
+    cluster.updateMatrixWorld();
+    for (const mini of minis) mini.layer.object3d.getWorldPosition(mini.worldPos);
+    orbitField.update(dt, orbitCenters, inputs.reducedMotion);
+
     // Background always advances (wall-clock steady) but renders every OTHER frame
     // — at ~30fps its slow drift is indistinguishable, and the orb keeps every
     // frame. The skipped frame keeps its last-drawn contents on the canvas.
@@ -880,6 +919,22 @@ export function createSceneController(
       // the freeze by waking on every poll.
       if (changed) wake(true);
     },
+    setSubsystemLoad(counts) {
+      // Same "no-op refresh must not wake a parked scene" guard as
+      // `setSubsystems` — a fresh feed refetch that resolves to the SAME tally
+      // must not defeat the power-saver freeze; only a genuine change (a run
+      // starting/finishing) wakes the loop, with the settle window so the
+      // newly-appeared/removed orbiter actually gets a chance to ease in/out
+      // on screen before the loop can re-park.
+      let changed = false;
+      for (const subsystem of SUBSYSTEMS) {
+        const n = counts[subsystem.id] ?? 0;
+        if (n !== lastAppliedLoad.get(subsystem.id)) changed = true;
+        lastAppliedLoad.set(subsystem.id, n);
+        orbitField.setCount(subsystem.id, n);
+      }
+      if (changed) wake(true);
+    },
     subscribeProjections(cb) {
       projectionSubscribers.add(cb);
       // Fire once immediately so the overlay can place its nodes before the next
@@ -979,6 +1034,7 @@ export function createSceneController(
       for (const mini of minis) mini.layer.dispose();
       connectors.dispose();
       particles.dispose();
+      orbitField.dispose();
       background.dispose();
       rings.dispose();
       dock.dispose();

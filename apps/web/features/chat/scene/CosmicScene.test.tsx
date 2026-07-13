@@ -36,6 +36,7 @@ function fakeController(): SceneController {
   return {
     setInputs: vi.fn(),
     setSubsystems: vi.fn(),
+    setSubsystemLoad: vi.fn(),
     subscribeProjections: vi.fn(() => vi.fn()),
     pushActivity: vi.fn(),
     flashComplete: vi.fn(),
