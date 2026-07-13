@@ -25,7 +25,6 @@ import { GateRulesSection } from "../gates/components/GateRulesSection";
 import { ActivitySection } from "./components/ActivitySection";
 import { AutomationsSection } from "./components/AutomationsSection";
 import { ChatSection } from "./components/ChatSection";
-import { ChatUiSection } from "./components/ChatUiSection";
 import { MachineSection } from "./components/MachineSection";
 import { MandateSection } from "./components/MandateSection";
 import { SelfKnowledgeSection } from "./components/SelfKnowledgeSection";
@@ -97,7 +96,6 @@ const SETTINGS_TABS = [
   "gates",
   "automations",
   "chat",
-  "chatUi",
   "activity",
   "mandate",
   "runtime",
@@ -160,7 +158,6 @@ export function Screen() {
             <Tab value="gates">{t("subnav.gates")}</Tab>
             <Tab value="automations">{t("automations.title")}</Tab>
             <Tab value="chat">{t("chat.title")}</Tab>
-            <Tab value="chatUi">{t("chatUi.title")}</Tab>
             <Tab value="activity">{t("activity.title")}</Tab>
             <Tab value="mandate">{t("mandate.title")}</Tab>
             <Tab value="runtime">{t("runtime.title")}</Tab>
@@ -213,10 +210,6 @@ export function Screen() {
 
           <TabPanel value="chat">
             <ChatSection />
-          </TabPanel>
-
-          <TabPanel value="chatUi">
-            <ChatUiSection />
           </TabPanel>
 
           <TabPanel value="activity">

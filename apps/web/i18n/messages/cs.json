@@ -866,25 +866,6 @@
         "formal": "Neutrální a profesionální, věcně a zdvořile, bez humoru."
       }
     },
-    "chatUi": {
-      "title": "Chat UI",
-      "hint": "Vzhled a výkon 3D scény v chatu a hlas, kterým ZIBBY mluví.",
-      "powerSaver": "Úsporný mód",
-      "powerSaverHint": "Omezí 3D scénu (30 fps, bez vyhlazení, po úvodní animaci se zastaví) — méně zatíží grafiku a větrák.",
-      "voiceLabel": "Hlas TTS",
-      "voiceHint": "Použije se pro přečtení nahlas i pro odpovědi v hlasovém režimu. „Automaticky” nechá volbu na výchozím hlasu daemonu speakd.",
-      "voiceAuto": "Automaticky (výchozí od daemonu)",
-      "voiceErrorTitle": "Hlasy se nepodařilo načíst",
-      "voiceErrorDesc": "Daemon speakd je nedostupný, takže se nepodařilo načíst jeho katalog hlasů. Tvoje uložená volba tím není dotčená — zkus to znovu, až poběží.",
-      "statusLine": "speakd: {state} · výchozí hlas {voice}",
-      "statusUnreachable": "speakd: nedostupný",
-      "statusVoiceUnknown": "neznámý",
-      "statusState": {
-        "loading": "načítá se",
-        "ready": "připraven",
-        "degraded": "omezený provoz"
-      }
-    },
     "automations": {
       "title": "Systémové automatizace",
       "hint": "Automatizace, které si ZIBBY sám naseeduje (např. destilace paměti). Tady je můžeš zapnout nebo vypnout; úprava rozvrhu se otevře na detailu automatizace.",
