@@ -8,12 +8,13 @@ import {
   MITOSIS_TOTAL_DURATION,
   NODE_OCTAGON_RADIUS,
   NODE_RING_RADIUS,
+  NODE_RING_RADIUS_X,
   REGISTRY_ORDER,
   easeOutBack,
   easeOutCubic,
+  ellipseSlots,
   hubSlots,
   mitosisProgress,
-  octagonSlots,
   octagonSlotsAround,
   orbFlightSlots,
   pointToward,
@@ -157,11 +158,14 @@ const ORB_SCALE = 0.46;
  *
  *  - `MINI_ORB_WORLD_RADIUS` — a mini-orb's world radius (its group scale). A
  *    smaller sibling of the central orb (`ORB_SCALE = 0.46`).
- *  - `NODE_RING_RADIUS` — the octagon the 8 mini-orbs sit on (forge at the
+ *  - `NODE_RING_RADIUS` — the ring the 8 mini-orbs sit on (forge at the
  *    bottom). Well OUTSIDE the hub, so the spokes are long and radial. Phase 107
  *    pushed this from 0.85 to 1.05 to clear `HUB_RADIUS` plus a deliberate
  *    connector gap ({@link NODE_LINK_GAP} in `clusterGeometry.ts`) — see the
- *    no-overlap invariant on the net block below.
+ *    no-overlap invariant on the net block below. Task B2 (Velín-D retune)
+ *    widened the ring into an ELLIPSE — this is now its vertical radius only;
+ *    {@link NODE_RING_RADIUS_X} is the (wider) horizontal radius. The hub ring
+ *    and orb-flight ring stay regular octagons.
  *  - `HUB_RADIUS` — the inner octagon that rings the orb. Must clear the
  *    central orb's glow (world radius `ORB_SCALE × 1.4 = 0.644`) with a visible gap,
  *    and sit well inside the node ring so nothing in the net ever touches the orb.
@@ -188,7 +192,7 @@ const ORB_FLIGHT_RADIUS = 0.67;
 
 // Phase 96 — the one-shot "mitosis" entry animation: on controller creation the
 // 8 mini-orbs bud out of the central orb (cluster-local origin) and travel to
-// their NODE_RING_RADIUS octagon slot while growing from scale 0 to
+// their elliptical node-ring slot (task B2) while growing from scale 0 to
 // MINI_ORB_WORLD_RADIUS, staggered per index (see clusterGeometry's
 // mitosisProgress). Purely additive on top of the phase-95 rest state: once
 // every mini-orb's progress reaches 1, everything below snaps to its exact rest
@@ -217,16 +221,18 @@ const ENTRY_IMPULSE_WINDOW = 0.6; // s
  * to hardcode the matching CSS `top`; this replaces that coupling entirely). Camera
  * is untouched — still `lookAt(0, 0, 0)` — only the cluster moves, which keeps the
  * background glow's projected offset a pure function of `CLUSTER_Y` and the fixed
- * FOV/distance (see {@link glowCenterFromClusterY}). Paired with the COMPACT octagon
+ * FOV/distance (see {@link glowCenterFromClusterY}). Paired with the COMPACT ring
  * ({@link NODE_RING_RADIUS}, pushed from 0.85 to 1.05 in phase 107 to clear the hub
- * octagon plus a connector gap — see `clusterGeometry.ts`'s `NET_GEOMETRY`), so the
- * whole cluster (all 8 mini-orbs + their labels) sits in the upper region and the
- * lower half+ of the page stays clear for the transcript — no chat bubble ever
- * overlaps a mini-orb, and the top mini-orb (Beacon) clears the top bar. Phase 107
- * widened the ring, which nudges every mini-orb slightly closer to the viewport
- * edge than phase 94/98's tuning assumed — verify with a screenshot that nothing
- * clips (mini-orb, its octagon, or its label) before calling the tune final; if it
- * does, prefer trimming `NODE_LINK_GAP` first, then `NODE_RING_RADIUS` itself.
+ * octagon plus a connector gap — see `clusterGeometry.ts`'s `NET_GEOMETRY`; task B2
+ * widened it into an ellipse via {@link NODE_RING_RADIUS_X}, vertical radius
+ * unchanged), so the whole cluster (all 8 mini-orbs + their labels) sits in the
+ * upper region and the lower half+ of the page stays clear for the transcript —
+ * no chat bubble ever overlaps a mini-orb, and the top mini-orb (Beacon) clears
+ * the top bar. Phase 107 widened the ring, which nudges every mini-orb slightly
+ * closer to the viewport edge than phase 94/98's tuning assumed — verify with a
+ * screenshot that nothing clips (mini-orb, its octagon, or its label) before
+ * calling the tune final; if it does, prefer trimming `NODE_LINK_GAP` first,
+ * then `NODE_RING_RADIUS`/`NODE_RING_RADIUS_X` themselves.
  */
 const CLUSTER_Y = 1.22;
 
@@ -377,7 +383,11 @@ export function createSceneController(
      * wake, or a periodic refetch would defeat the freeze). */
     stateKey: string;
   }
-  const nodeSlots = octagonSlots(NODE_RING_RADIUS);
+  // Task B2 (Velín-D retune) — the NODE ring is now a wider ELLIPSE
+  // (NODE_RING_RADIUS_X horizontal, NODE_RING_RADIUS vertical, unchanged); the
+  // hub ring (hubSlots below) and the orb-flight ring (orbFlightSlots) stay
+  // regular octagons.
+  const nodeSlots = ellipseSlots(NODE_RING_RADIUS_X, NODE_RING_RADIUS);
   const minis: MiniOrb[] = SUBSYSTEMS.map((subsystem, index) => {
     const slot = nodeSlots[index]!;
     const layer = createOrbLayer({
@@ -438,11 +448,14 @@ export function createSceneController(
       const b = nodeOctagon[(v + 1) % nodeOctagon.length]!;
       netPositions.push(a.x, a.y, 0, b.x, b.y, 0);
     }
-    // Connector (hub octagon's outer vertex, already pointing straight at the
-    // node by construction — hub/node/origin are colinear — → the node octagon's
-    // near vertex, walked IN from the node's centre toward the hub by the node
-    // octagon's own radius). Replaces the old hub→node.center spoke that pierced
-    // the mini-orb. Since phase 107's no-overlap invariant guarantees
+    // Connector (hub octagon's outer vertex → the node octagon's near vertex,
+    // walked IN from the node's centre toward the hub by the node octagon's own
+    // radius — pointToward works off the straight hub→node line, so this needs
+    // no colinearity: with the octagon hub ring, hub/node/origin were colinear
+    // by construction on every spoke; task B2's elliptical node ring keeps that
+    // true only for the on-axis (top/bottom) slots, but pointToward's walked-in
+    // distance is exact regardless). Replaces the old hub→node.center spoke that
+    // pierced the mini-orb. Since phase 107's no-overlap invariant guarantees
     // nodeNear sits strictly outside the hub octagon, this is now a genuine
     // positive-length OUTWARD segment bridging the NODE_LINK_GAP daylight
     // between the two octagons — not a reversed inward stub.

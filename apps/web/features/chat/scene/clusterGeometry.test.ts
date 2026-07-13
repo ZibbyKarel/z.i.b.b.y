@@ -3,11 +3,13 @@ import {
   MITOSIS_STAGGER,
   MITOSIS_TOTAL_DURATION,
   NET_GEOMETRY,
+  NODE_RING_RADIUS_X,
   MINI_ORB_WORLD_RADIUS as REAL_MINI_ORB_WORLD_RADIUS,
   REGISTRY_ORDER,
   SLOT_COUNT,
   easeOutBack,
   easeOutCubic,
+  ellipseSlots,
   hubForId,
   hubSlots,
   mitosisProgress,
@@ -192,6 +194,80 @@ describe("clusterGeometry", () => {
         const index = REGISTRY_ORDER.indexOf(id);
         const orbPoint = orbFlightSlots(ORB_FLIGHT_RADIUS)[index]!;
         expect(node.x * orbPoint.y - node.y * orbPoint.x).toBeCloseTo(0, 5);
+      }
+    });
+  });
+
+  describe("ellipseSlots (task B2 — Velín-D's wider elliptical NODE ring)", () => {
+    it("returns exactly `count` slots (default 8, matching the registry size)", () => {
+      expect(ellipseSlots(3, 2)).toHaveLength(8);
+      expect(ellipseSlots(3, 2, 4)).toHaveLength(4);
+    });
+
+    it("slot 0 sits at the BOTTOM, on the vertical axis (x ≈ 0, y ≈ -radiusY)", () => {
+      const slots = ellipseSlots(3, 2);
+      expect(slots[0]!.x).toBeCloseTo(0, 5);
+      expect(slots[0]!.y).toBeCloseTo(-2, 5);
+      expect(slots[0]!.angle).toBe(90);
+    });
+
+    it("spreads WIDER horizontally than vertically when radiusX > radiusY", () => {
+      const slots = ellipseSlots(3, 2);
+      const maxAbsX = Math.max(...slots.map((s) => Math.abs(s.x)));
+      const maxAbsY = Math.max(...slots.map((s) => Math.abs(s.y)));
+      expect(maxAbsX).toBeCloseTo(3, 5);
+      expect(maxAbsY).toBeCloseTo(2, 5);
+      expect(maxAbsX).toBeGreaterThan(maxAbsY);
+    });
+
+    it("is symmetric about the vertical axis — every slot has a mirror slot at -x, same y", () => {
+      const slots = ellipseSlots(3, 2);
+      for (const slot of slots) {
+        const mirror = slots.find(
+          (s) => Math.abs(s.x + slot.x) < 1e-6 && Math.abs(s.y - slot.y) < 1e-6,
+        );
+        expect(mirror).toBeDefined();
+      }
+    });
+
+    it("degenerates to octagonSlots when radiusX === radiusY (a circle is a degenerate ellipse)", () => {
+      expect(ellipseSlots(NODE_RADIUS, NODE_RADIUS)).toEqual(octagonSlots(NODE_RADIUS));
+    });
+
+    it("is deterministic — same input, same output, every call", () => {
+      expect(ellipseSlots(3, 2)).toEqual(ellipseSlots(3, 2));
+    });
+  });
+
+  describe("elliptical NODE ring no-overlap invariant (task B2 — replaces the octagon-only colinear check for the wider node ring)", () => {
+    // The real controller now builds nodeSlots via ellipseSlots(NODE_RING_RADIUS_X,
+    // NODE_RING_RADIUS) instead of octagonSlots(NODE_RING_RADIUS) — the vertical
+    // radius (NET_GEOMETRY.NODE_RING_RADIUS) is UNCHANGED, only the horizontal
+    // radius widens, so every slot's distance from the origin is >= the original
+    // circular NODE_RING_RADIUS (minimum at the top/bottom slots, which sit
+    // exactly on the vertical axis) — the phase-107 no-overlap invariant this
+    // block asserts still holds for the full elliptical ring, not just the
+    // colinear bottom slot the phase-107 tests above check.
+    const ellipticalNodes = ellipseSlots(NODE_RING_RADIUS_X, NET_GEOMETRY.NODE_RING_RADIUS);
+
+    it("NODE_RING_RADIUS_X is 1.5x the (unchanged) vertical NODE_RING_RADIUS — a wider horizontal spread", () => {
+      expect(NODE_RING_RADIUS_X).toBeCloseTo(NET_GEOMETRY.NODE_RING_RADIUS * 1.5, 6);
+    });
+
+    it("keeps a strictly positive gap between every pair of adjacent nodes on the ellipse", () => {
+      for (let i = 0; i < ellipticalNodes.length; i++) {
+        const a = ellipticalNodes[i]!;
+        const b = ellipticalNodes[(i + 1) % ellipticalNodes.length]!;
+        expect(distance(a, b)).toBeGreaterThan(0);
+      }
+    });
+
+    it("every elliptical node still clears the hub octagon — dist(node, origin) - NODE_OCTAGON_RADIUS > HUB_RADIUS, for all 8 slots", () => {
+      for (const node of ellipticalNodes) {
+        const distFromOrigin = distance(node, { x: 0, y: 0 });
+        expect(distFromOrigin - NET_GEOMETRY.NODE_OCTAGON_RADIUS).toBeGreaterThan(
+          NET_GEOMETRY.HUB_RADIUS,
+        );
       }
     });
   });

@@ -46,10 +46,28 @@ export const SLOT_COUNT = REGISTRY_ORDER.length;
  * central orb (`ORB_SCALE = 0.46` in sceneController.ts). */
 export const MINI_ORB_WORLD_RADIUS = 0.16;
 
-/** The octagon the 8 mini-orbs sit on (forge at the bottom). Phase 107 pushed
- * this OUT from 0.85 to clear {@link HUB_RADIUS} plus {@link NODE_LINK_GAP} —
- * see the no-overlap invariant documented on {@link NET_GEOMETRY}. */
+/** The vertical radius of the ring the 8 mini-orbs sit on (forge at the
+ * bottom). Phase 107 pushed this OUT from 0.85 to clear {@link HUB_RADIUS}
+ * plus {@link NODE_LINK_GAP} — see the no-overlap invariant documented on
+ * {@link NET_GEOMETRY}. Task B2 (Velín-D retune) widened the node ring into an
+ * ELLIPSE — this constant now serves as the ellipse's vertical radius only;
+ * see {@link NODE_RING_RADIUS_X} for the horizontal radius. The hub ring
+ * ({@link HUB_RADIUS}, via {@link hubSlots}) and the orb-flight ring (via
+ * {@link orbFlightSlots}) stay regular octagons — only the outer node ring
+ * went elliptical. */
 export const NODE_RING_RADIUS = 1.05;
+
+/** Task B2 (Velín-D retune) — the node ring's HORIZONTAL radius, wider than
+ * {@link NODE_RING_RADIUS} (kept as the vertical radius) for the wider
+ * elliptical spread Velín-D's look calls for. The node ring's minimum
+ * distance from the cluster origin is still exactly {@link NODE_RING_RADIUS}
+ * (achieved at the top/bottom slots, which sit on the vertical axis where the
+ * horizontal radius doesn't apply) — every other slot sits FARTHER from the
+ * origin than the original regular octagon did, so the phase-107 no-overlap
+ * invariant (`NODE_RING_RADIUS − NODE_OCTAGON_RADIUS > HUB_RADIUS`) still
+ * holds for the full ellipse, not just the bottom slot — see
+ * clusterGeometry.test.ts's "elliptical NODE ring no-overlap invariant" block. */
+export const NODE_RING_RADIUS_X = NODE_RING_RADIUS * 1.5;
 
 /** The inner octagon that rings the central orb. Must clear the central orb's
  * rendered glow (world radius `ORB_SCALE × 1.25 = 0.575`) with a visible gap,
@@ -110,6 +128,37 @@ export function octagonSlots(radius: number, count: number = SLOT_COUNT): Cluste
       // difference from the SVG geometry, and it's what keeps index 0 at the
       // bottom while preserving the same clockwise progression on screen.
       y: round(-radius * Math.sin(rad)),
+    });
+  }
+  return points;
+}
+
+/**
+ * Task B2 (Velín-D retune) — `count` points evenly spaced around an ELLIPSE
+ * with independent horizontal (`radiusX`) and vertical (`radiusY`) radii,
+ * same angle parametrization (and the same index-0-at-the-BOTTOM,
+ * proceeding-CLOCKWISE convention) as {@link octagonSlots} — passing
+ * `radiusX === radiusY` degenerates to exactly {@link octagonSlots}'s output
+ * (a circle is a degenerate ellipse). Pure function of `(radiusX, radiusY,
+ * count)` alone — deterministic, no live data. Used ONLY for the outer NODE
+ * ring (the wider Velín-D look) — the hub ring ({@link hubSlots}) and the
+ * orb-flight ring ({@link orbFlightSlots}) stay regular octagons.
+ */
+export function ellipseSlots(
+  radiusX: number,
+  radiusY: number,
+  count: number = SLOT_COUNT,
+): ClusterSlot[] {
+  const points: ClusterSlot[] = [];
+  for (let index = 0; index < count; index++) {
+    const angle = 90 + (360 / count) * index;
+    const rad = (angle * Math.PI) / 180;
+    points.push({
+      index,
+      angle,
+      x: round(radiusX * Math.cos(rad)),
+      // Same +y-up negation as octagonSlots — see its own comment above.
+      y: round(-radiusY * Math.sin(rad)),
     });
   }
   return points;
