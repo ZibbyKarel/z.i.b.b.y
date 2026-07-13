@@ -1,0 +1,967 @@
+{
+  "started_at": "2026-07-12T18:53:32.137Z",
+  "updated_at": "2026-07-12T19:49:41.681Z",
+  "status": "completed",
+  "batches": [
+    {
+      "id": "web-chat-core",
+      "app": "web",
+      "paths": [
+        "apps/web/features/chat (pouze root soubory: ChatContext, Screen, index)",
+        "apps/web/features/chat/hooks",
+        "apps/web/features/chat/mutations",
+        "apps/web/features/chat/queries"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/web-chat-core.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 1,
+        "medium": 4,
+        "low": 3
+      }
+    },
+    {
+      "id": "web-chat-components",
+      "app": "web",
+      "paths": [
+        "apps/web/features/chat/components"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/web-chat-components.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 2,
+        "medium": 5,
+        "low": 4
+      }
+    },
+    {
+      "id": "web-chat-scene",
+      "app": "web",
+      "paths": [
+        "apps/web/features/chat/scene"
+      ],
+      "status": "done",
+      "assigned_model": "opus",
+      "result_file": ".audit/batches/web-chat-scene.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 2,
+        "medium": 2,
+        "low": 7
+      }
+    },
+    {
+      "id": "web-runs-core",
+      "app": "web",
+      "paths": [
+        "apps/web/features/runs (pouze root soubory)",
+        "apps/web/features/runs/queries",
+        "apps/web/features/runs/mutations"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/web-runs-core.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 5,
+        "low": 5
+      }
+    },
+    {
+      "id": "web-runs-components",
+      "app": "web",
+      "paths": [
+        "apps/web/features/runs/components"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/web-runs-components.md",
+      "severity_counts": {
+        "critical": 1,
+        "high": 3,
+        "medium": 7,
+        "low": 4
+      }
+    },
+    {
+      "id": "web-tasks-core",
+      "app": "web",
+      "paths": [
+        "apps/web/features/tasks (pouze root soubory)",
+        "apps/web/features/tasks/hooks",
+        "apps/web/features/tasks/queries",
+        "apps/web/features/tasks/mutations"
+      ],
+      "status": "done",
+      "assigned_model": "haiku",
+      "result_file": ".audit/batches/web-tasks-core.md",
+      "severity_counts": {
+        "critical": 3,
+        "high": 3,
+        "medium": 5,
+        "low": 3
+      }
+    },
+    {
+      "id": "web-tasks-components",
+      "app": "web",
+      "paths": [
+        "apps/web/features/tasks/components"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/web-tasks-components.md",
+      "severity_counts": {
+        "critical": 1,
+        "high": 3,
+        "medium": 4,
+        "low": 4
+      }
+    },
+    {
+      "id": "web-projects-core",
+      "app": "web",
+      "paths": [
+        "apps/web/features/projects (pouze root soubory vč. ProfileScreen)",
+        "apps/web/features/projects/queries",
+        "apps/web/features/projects/mutations"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/web-projects-core.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 2,
+        "medium": 5,
+        "low": 4
+      }
+    },
+    {
+      "id": "web-projects-components",
+      "app": "web",
+      "paths": [
+        "apps/web/features/projects/components"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/web-projects-components.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 1,
+        "medium": 4,
+        "low": 5
+      }
+    },
+    {
+      "id": "web-pipelines",
+      "app": "web",
+      "paths": [
+        "apps/web/features/pipelines"
+      ],
+      "status": "done",
+      "assigned_model": "opus",
+      "result_file": ".audit/batches/web-pipelines.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 3,
+        "medium": 4,
+        "low": 4
+      }
+    },
+    {
+      "id": "web-subsystems",
+      "app": "web",
+      "paths": [
+        "apps/web/features/subsystems"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/web-subsystems.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 6,
+        "low": 3
+      }
+    },
+    {
+      "id": "web-agents",
+      "app": "web",
+      "paths": [
+        "apps/web/features/agents"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/web-agents.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 1,
+        "medium": 2,
+        "low": 5
+      }
+    },
+    {
+      "id": "web-automations",
+      "app": "web",
+      "paths": [
+        "apps/web/features/automations"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/web-automations.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 3,
+        "low": 5
+      }
+    },
+    {
+      "id": "web-integrations",
+      "app": "web",
+      "paths": [
+        "apps/web/features/integrations"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/web-integrations.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 2,
+        "low": 4
+      }
+    },
+    {
+      "id": "web-companies",
+      "app": "web",
+      "paths": [
+        "apps/web/features/companies"
+      ],
+      "status": "done",
+      "assigned_model": "haiku",
+      "result_file": ".audit/batches/web-companies.md",
+      "severity_counts": {
+        "critical": 2,
+        "high": 4,
+        "medium": 2,
+        "low": 0
+      }
+    },
+    {
+      "id": "web-gates-approvals",
+      "app": "web",
+      "paths": [
+        "apps/web/features/gates",
+        "apps/web/features/approvals"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/web-gates-approvals.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 1,
+        "medium": 4,
+        "low": 4
+      }
+    },
+    {
+      "id": "web-memory",
+      "app": "web",
+      "paths": [
+        "apps/web/features/memory"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/web-memory.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 3,
+        "low": 4
+      }
+    },
+    {
+      "id": "web-overview",
+      "app": "web",
+      "paths": [
+        "apps/web/features/overview"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/web-overview.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 2,
+        "low": 5
+      }
+    },
+    {
+      "id": "web-settings",
+      "app": "web",
+      "paths": [
+        "apps/web/features/settings"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/web-settings.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 4,
+        "low": 4
+      }
+    },
+    {
+      "id": "web-skills-commands",
+      "app": "web",
+      "paths": [
+        "apps/web/features/skills",
+        "apps/web/features/commands"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/web-skills-commands.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 2,
+        "medium": 5,
+        "low": 6
+      }
+    },
+    {
+      "id": "web-mcp-chains-hooks",
+      "app": "web",
+      "paths": [
+        "apps/web/features/mcp",
+        "apps/web/features/chains",
+        "apps/web/features/hooks"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/web-mcp-chains-hooks.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 1,
+        "medium": 4,
+        "low": 3
+      }
+    },
+    {
+      "id": "web-feat-tiny",
+      "app": "web",
+      "paths": [
+        "apps/web/features/artifacts, apps/web/features/goals, apps/web/features/health, apps/web/features/limits, apps/web/features/machine, apps/web/features/notifications, apps/web/features/pins, apps/web/features/self, apps/web/features/self-knowledge, apps/web/features/speech, apps/web/features/system"
+      ],
+      "status": "done",
+      "assigned_model": "haiku",
+      "result_file": ".audit/batches/web-feat-tiny.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 1,
+        "medium": 1,
+        "low": 2
+      }
+    },
+    {
+      "id": "web-components-a",
+      "app": "web",
+      "paths": [
+        "apps/web/components/CategoryDialog, apps/web/components/Collection, apps/web/components/ConfirmDeleteDialog, apps/web/components/DialogFormFooter, apps/web/components/DialogTitle, apps/web/components/EmptyState, apps/web/components/EntityFormModal, apps/web/components/HudCard, apps/web/components/HudPanel"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/web-components-a.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 1,
+        "medium": 4,
+        "low": 3
+      }
+    },
+    {
+      "id": "web-components-b",
+      "app": "web",
+      "paths": [
+        "apps/web/components/LoadError, apps/web/components/LoadingScreen, apps/web/components/LoadingState, apps/web/components/MarkdownProse, apps/web/components/PageContainer, apps/web/components/PageHeader, apps/web/components/QueryBoundary, apps/web/components/RuntimeBadges, apps/web/components/SectionLabel, apps/web/components/Toaster, apps/web/components/layout, apps/web/components/BrandIcon.tsx, apps/web/components/BrandName.tsx"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/web-components-b.md",
+      "severity_counts": {
+        "critical": 1,
+        "high": 2,
+        "medium": 5,
+        "low": 4
+      }
+    },
+    {
+      "id": "web-app-shell",
+      "app": "web",
+      "paths": [
+        "apps/web/app",
+        "apps/web/state",
+        "apps/web/utils",
+        "apps/web/hooks",
+        "apps/web/i18n",
+        "apps/web/domain.ts"
+      ],
+      "status": "done",
+      "assigned_model": "haiku",
+      "result_file": ".audit/batches/web-app-shell.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 2,
+        "low": 2
+      }
+    },
+    {
+      "id": "libs-forms",
+      "app": "web",
+      "paths": [
+        "libs/forms/src"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/libs-forms.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 1,
+        "medium": 4,
+        "low": 6
+      }
+    },
+    {
+      "id": "libs-ds-components-a",
+      "app": "web",
+      "paths": [
+        "libs/design-system/src/components — POUZE adresáře začínající písmeny A–K (Accordion až Kbd)"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/libs-ds-components-a.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 3,
+        "medium": 6,
+        "low": 5
+      }
+    },
+    {
+      "id": "libs-ds-components-b",
+      "app": "web",
+      "paths": [
+        "libs/design-system/src/components — POUZE adresáře začínající písmeny L–Z (List až Typography) + form/"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/libs-ds-components-b.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 1,
+        "medium": 5,
+        "low": 6
+      }
+    },
+    {
+      "id": "libs-ds-misc",
+      "app": "web",
+      "paths": [
+        "libs/design-system/src/assets",
+        "libs/design-system/src/themes",
+        "libs/design-system/src/DesignSystemContext",
+        "libs/design-system/src/utils"
+      ],
+      "status": "done",
+      "assigned_model": "haiku",
+      "result_file": ".audit/batches/libs-ds-misc.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 4,
+        "medium": 3,
+        "low": 1
+      }
+    },
+    {
+      "id": "contracts-a",
+      "app": "shared",
+      "paths": [
+        "libs/contracts/src/activity, libs/contracts/src/agents, libs/contracts/src/approvals, libs/contracts/src/artifacts, libs/contracts/src/automations, libs/contracts/src/briefing, libs/contracts/src/budget, libs/contracts/src/categories, libs/contracts/src/chains, libs/contracts/src/channels, libs/contracts/src/chat, libs/contracts/src/commands"
+      ],
+      "status": "done",
+      "assigned_model": "haiku",
+      "result_file": ".audit/batches/contracts-a.md",
+      "severity_counts": {
+        "critical": 1,
+        "high": 2,
+        "medium": 7,
+        "low": 2
+      }
+    },
+    {
+      "id": "contracts-b",
+      "app": "shared",
+      "paths": [
+        "libs/contracts/src/companies, libs/contracts/src/discovery, libs/contracts/src/gates, libs/contracts/src/goals, libs/contracts/src/health, libs/contracts/src/hooks, libs/contracts/src/integrations, libs/contracts/src/limits, libs/contracts/src/machine, libs/contracts/src/mandate, libs/contracts/src/mcp, libs/contracts/src/memory, libs/contracts/src/monitors"
+      ],
+      "status": "done",
+      "assigned_model": "haiku",
+      "result_file": ".audit/batches/contracts-b.md",
+      "severity_counts": {
+        "critical": 1,
+        "high": 2,
+        "medium": 3,
+        "low": 2
+      }
+    },
+    {
+      "id": "contracts-c",
+      "app": "shared",
+      "paths": [
+        "libs/contracts/src/pins, libs/contracts/src/pipelines, libs/contracts/src/projects, libs/contracts/src/self, libs/contracts/src/self-knowledge, libs/contracts/src/skills, libs/contracts/src/speech, libs/contracts/src/subsystems, libs/contracts/src/system, libs/contracts/src/tasks, libs/contracts/src/app.contract.ts, libs/contracts/src/common.schema.ts, libs/contracts/src/index.ts"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/contracts-c.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 4,
+        "medium": 8,
+        "low": 5
+      }
+    },
+    {
+      "id": "api-tasks-scheduler",
+      "app": "api",
+      "paths": [
+        "apps/api/src/tasks — POUZE: task-scheduler.service.ts, scheduled-tasks.storage.service.ts, scheduled-tasks-storage.module.ts, task-runs.service.ts, task-runs.controller.ts, task-run-logs.controller.ts (+ jejich testy jen zběžně)"
+      ],
+      "status": "done",
+      "assigned_model": "opus",
+      "result_file": ".audit/batches/api-tasks-scheduler.md",
+      "severity_counts": {
+        "critical": 1,
+        "high": 3,
+        "medium": 5,
+        "low": 6
+      }
+    },
+    {
+      "id": "api-tasks-routing",
+      "app": "api",
+      "paths": [
+        "apps/api/src/tasks — POUZE: task-classifier.service.ts, task-router.ts, keyword-scorer.ts, claude-cli-router.ts, claude-cli-task-namer.ts, task-output.service.ts, attachment-storage.service.ts, attachment-set-ref-provider.ts, attachment-set-refs.module.ts, tasks.controller.ts, tasks.module.ts"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/api-tasks-routing.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 2,
+        "medium": 3,
+        "low": 7
+      }
+    },
+    {
+      "id": "api-runner-core",
+      "app": "api",
+      "paths": [
+        "apps/api/src/runner — POUZE: runner-core.ts, runner-core.types.ts, claude-run-command.service.ts (+ testy zběžně, vč. claude-approval-hook.test.ts)"
+      ],
+      "status": "done",
+      "assigned_model": "opus",
+      "result_file": ".audit/batches/api-runner-core.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 3,
+        "medium": 6,
+        "low": 5
+      }
+    },
+    {
+      "id": "api-runner-aux",
+      "app": "api",
+      "paths": [
+        "apps/api/src/runner — POUZE: claude-preflight.service.ts, claude-stream-format.ts, claude-tools.ts, command-materializer.service.ts, detect-limit.ts, claude-run.module.ts"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/api-runner-aux.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 4,
+        "low": 6
+      }
+    },
+    {
+      "id": "api-pipelines-runner",
+      "app": "api",
+      "paths": [
+        "apps/api/src/pipelines — POUZE: pipeline-runner.service.ts, build-stage-task.ts, pipeline-stage.record.ts, stage-verdict.ts, resume-context.ts"
+      ],
+      "status": "done",
+      "assigned_model": "opus",
+      "result_file": ".audit/batches/api-pipelines-runner.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 2,
+        "medium": 5,
+        "low": 5
+      }
+    },
+    {
+      "id": "api-pipelines-rest",
+      "app": "api",
+      "paths": [
+        "apps/api/src/pipelines — POUZE: pipelines.controller.ts, pipeline-runs.controller.ts, pipelines.storage.service.ts, progress.ts, verify-command.ts, pipelines.errors.ts, pipelines.module.ts"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/api-pipelines-rest.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 2,
+        "low": 5
+      }
+    },
+    {
+      "id": "api-channels-core",
+      "app": "api",
+      "paths": [
+        "apps/api/src/channels (root soubory: channel-triage-flow, channel-watcher, channel-events, channel-item.store, channels.controller, jira-issue-flow, sanitize, channels.module)",
+        "apps/api/src/channels/triage"
+      ],
+      "status": "done",
+      "assigned_model": "opus",
+      "result_file": ".audit/batches/api-channels-core.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 3,
+        "medium": 4,
+        "low": 5
+      }
+    },
+    {
+      "id": "api-channels-adapters",
+      "app": "api",
+      "paths": [
+        "apps/api/src/channels/adapters"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/api-channels-adapters.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 1,
+        "medium": 2,
+        "low": 8
+      }
+    },
+    {
+      "id": "api-memory-core",
+      "app": "api",
+      "paths": [
+        "apps/api/src/memory — POUZE: vault.service.ts, memory-distiller.service.ts, claude-cli-distiller.ts, memory-import.service.ts, grounding.service.ts, memory-distiller.module.ts"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/api-memory-core.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 1,
+        "medium": 3,
+        "low": 4
+      }
+    },
+    {
+      "id": "api-memory-aux",
+      "app": "api",
+      "paths": [
+        "apps/api/src/memory — POUZE: memory.controller.ts, entity-mcp.controller.ts, recall.helper.ts, run-recorder.service.ts, run-recorder.module.ts, memory.module.ts"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/api-memory-aux.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 4,
+        "low": 5
+      }
+    },
+    {
+      "id": "api-chat",
+      "app": "api",
+      "paths": [
+        "apps/api/src/chat"
+      ],
+      "status": "done",
+      "assigned_model": "opus",
+      "result_file": ".audit/batches/api-chat.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 2,
+        "medium": 5,
+        "low": 3
+      }
+    },
+    {
+      "id": "api-projects",
+      "app": "api",
+      "paths": [
+        "apps/api/src/projects"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/api-projects.md",
+      "severity_counts": {
+        "critical": 1,
+        "high": 0,
+        "medium": 3,
+        "low": 5
+      }
+    },
+    {
+      "id": "api-agents-factory",
+      "app": "api",
+      "paths": [
+        "apps/api/src/agents",
+        "apps/api/src/agent-factory"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/api-agents-factory.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 1,
+        "medium": 3,
+        "low": 5
+      }
+    },
+    {
+      "id": "api-goals",
+      "app": "api",
+      "paths": [
+        "apps/api/src/goals"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/api-goals.md",
+      "severity_counts": {
+        "critical": 1,
+        "high": 2,
+        "medium": 4,
+        "low": 4
+      }
+    },
+    {
+      "id": "api-budget-limits",
+      "app": "api",
+      "paths": [
+        "apps/api/src/budget",
+        "apps/api/src/limits",
+        "apps/api/src/limits-resume"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/api-budget-limits.md",
+      "severity_counts": {
+        "critical": 1,
+        "high": 2,
+        "medium": 4,
+        "low": 4
+      }
+    },
+    {
+      "id": "api-activity-briefing",
+      "app": "api",
+      "paths": [
+        "apps/api/src/activity",
+        "apps/api/src/activity-view",
+        "apps/api/src/briefing"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/api-activity-briefing.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 3,
+        "low": 6
+      }
+    },
+    {
+      "id": "api-automations-chains",
+      "app": "api",
+      "paths": [
+        "apps/api/src/automations",
+        "apps/api/src/chains"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/api-automations-chains.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 3,
+        "medium": 4,
+        "low": 4
+      }
+    },
+    {
+      "id": "api-gates-approvals",
+      "app": "api",
+      "paths": [
+        "apps/api/src/gates",
+        "apps/api/src/gate-rules",
+        "apps/api/src/approvals",
+        "apps/api/src/mandate"
+      ],
+      "status": "done",
+      "assigned_model": "opus",
+      "result_file": ".audit/batches/api-gates-approvals.md",
+      "severity_counts": {
+        "critical": 1,
+        "high": 3,
+        "medium": 3,
+        "low": 2
+      }
+    },
+    {
+      "id": "api-monitors-events-discovery",
+      "app": "api",
+      "paths": [
+        "apps/api/src/monitors",
+        "apps/api/src/events",
+        "apps/api/src/discovery"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/api-monitors-events-discovery.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 2,
+        "medium": 4,
+        "low": 4
+      }
+    },
+    {
+      "id": "api-machine-workspace",
+      "app": "api",
+      "paths": [
+        "apps/api/src/machine",
+        "apps/api/src/workspace"
+      ],
+      "status": "done",
+      "assigned_model": "opus",
+      "result_file": ".audit/batches/api-machine-workspace.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 1,
+        "medium": 2,
+        "low": 3
+      }
+    },
+    {
+      "id": "api-shared-root",
+      "app": "api",
+      "paths": [
+        "apps/api/src/shared",
+        "apps/api/src/app.module.ts",
+        "apps/api/src/main.ts"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/api-shared-root.md",
+      "severity_counts": {
+        "critical": 1,
+        "high": 2,
+        "medium": 4,
+        "low": 3
+      }
+    },
+    {
+      "id": "api-integrations-companies",
+      "app": "api",
+      "paths": [
+        "apps/api/src/integrations",
+        "apps/api/src/companies"
+      ],
+      "status": "done",
+      "assigned_model": "haiku",
+      "result_file": ".audit/batches/api-integrations-companies.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 3,
+        "medium": 5,
+        "low": 2
+      }
+    },
+    {
+      "id": "api-self-skills-speech",
+      "app": "api",
+      "paths": [
+        "apps/api/src/self",
+        "apps/api/src/self-knowledge",
+        "apps/api/src/skills",
+        "apps/api/src/speech"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/api-self-skills-speech.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 3,
+        "low": 5
+      }
+    },
+    {
+      "id": "api-mcp-misc",
+      "app": "api",
+      "paths": [
+        "apps/api/src/mcp",
+        "apps/api/src/hooks",
+        "apps/api/src/commands",
+        "apps/api/src/pins",
+        "apps/api/src/patterns",
+        "apps/api/src/gaps"
+      ],
+      "status": "done",
+      "assigned_model": "sonnet",
+      "result_file": ".audit/batches/api-mcp-misc.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 3,
+        "low": 6
+      }
+    },
+    {
+      "id": "api-subsystems-system-health",
+      "app": "api",
+      "paths": [
+        "apps/api/src/subsystems",
+        "apps/api/src/system",
+        "apps/api/src/health"
+      ],
+      "status": "done",
+      "assigned_model": "haiku",
+      "result_file": ".audit/batches/api-subsystems-system-health.md",
+      "severity_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 3,
+        "low": 3
+      }
+    }
+  ]
+}
