@@ -1669,6 +1669,16 @@
       "kindPipeline": "Pipeline",
       "noDescription": "No description yet.",
       "phaseCount": "{count, plural, one {# phase} other {# phases}}"
+    },
+    "overview": {
+      "title": "ZIBBY overview",
+      "role": "orchestrator · directing {count} subsystems",
+      "summary": "{working} at work, {report} awaiting review, {waiting} waiting on you.",
+      "statWorking": "working",
+      "statReport": "reports waiting",
+      "statWaiting": "waiting on you",
+      "statIdle": "idle",
+      "crossSubsystems": "Across subsystems"
     }
   },
   "subsystems": {

@@ -1669,6 +1669,16 @@
       "kindPipeline": "Pipeline",
       "noDescription": "Zatím bez popisu.",
       "phaseCount": "{count, plural, one {# fáze} few {# fáze} other {# fází}}"
+    },
+    "overview": {
+      "title": "Přehled ZIBBY",
+      "role": "orchestrátor · řídím {count} podsystémů",
+      "summary": "{working} v akci, {report} s hlášením, {waiting} čeká na tebe.",
+      "statWorking": "pracují",
+      "statReport": "hlášení čeká",
+      "statWaiting": "čekají na tebe",
+      "statIdle": "v klidu",
+      "crossSubsystems": "Napříč subsystémy"
     }
   },
   "subsystems": {
