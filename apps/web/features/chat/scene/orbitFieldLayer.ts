@@ -103,7 +103,10 @@ void main() {
 /** One slot's fixed (construction-time-only) orbit parameters. */
 interface SlotParams {
   radius: number;
-  inclination: number;
+  /** Ring inclination — precomputed cos/sin so `update` never calls
+   * `Math.cos`/`Math.sin` for this fixed value every frame. */
+  cosInc: number;
+  sinInc: number;
   /** Ring-plane yaw (radians) — precomputed cos/sin so `update` never calls
    * `Math.cos`/`Math.sin` for this fixed value every frame. */
   cosRot: number;
@@ -127,7 +130,8 @@ function buildParams(subsystemId: SubsystemId, index: number): SlotParams {
   const phase = hashJitter(`${seed}:phase`) * Math.PI * 2;
   return {
     radius,
-    inclination,
+    cosInc: Math.cos(inclination),
+    sinInc: Math.sin(inclination),
     cosRot: Math.cos(rot),
     sinRot: Math.sin(rot),
     speed: speedMag * direction,
@@ -210,10 +214,12 @@ export function createOrbitFieldLayer(): OrbitFieldLayer {
     update(dt, centers, reducedMotion) {
       if (!reducedMotion) elapsed += dt;
       for (let slot = 0; slot < POOL_SIZE; slot++) {
-        const subsystemId = slotSubsystemId[slot]!;
-        const idx = subsystemIndex.get(subsystemId)!;
+        // The owning subsystem's registry index is just the block number — the
+        // pool is laid out as MAX_ORBITERS contiguous slots per subsystem, in
+        // SUBSYSTEMS order (same integer op the construction color loop uses).
+        const idx = Math.floor(slot / MAX_ORBITERS);
         const orbiterIndex = slot - idx * MAX_ORBITERS;
-        const center = centers.get(subsystemId);
+        const center = centers.get(slotSubsystemId[slot]!);
         if (orbiterIndex >= activeCounts[idx]! || !center) {
           alphas[slot] = 0;
           continue;
@@ -222,12 +228,12 @@ export function createOrbitFieldLayer(): OrbitFieldLayer {
         const angle = p.phase + p.speed * elapsed;
         const cosA = Math.cos(angle);
         const sinA = Math.sin(angle);
-        // A circle of `radius` tilted by `inclination` around the local X axis,
-        // then yawed by the slot's own fixed `rot` around the local Y axis —
-        // "a tilted 3D ring" per the Velín-D reference.
+        // A circle of `radius` tilted by its inclination around the local X axis
+        // (precomputed cos/sin), then yawed by the slot's own fixed `rot` around
+        // the local Y axis — "a tilted 3D ring" per the Velín-D reference.
         const lx = p.radius * cosA;
-        const ly = p.radius * sinA * Math.cos(p.inclination);
-        const lz = p.radius * sinA * Math.sin(p.inclination);
+        const ly = p.radius * sinA * p.cosInc;
+        const lz = p.radius * sinA * p.sinInc;
         const rx = lx * p.cosRot - lz * p.sinRot;
         const rz = lx * p.sinRot + lz * p.cosRot;
 

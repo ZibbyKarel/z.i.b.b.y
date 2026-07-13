@@ -589,18 +589,42 @@ export function createSceneController(
   const projEdge = new THREE.Vector3();
   const cameraRight = new THREE.Vector3();
 
+  /**
+   * Refresh every mini-orb's LIVE world position into its own `mini.worldPos`
+   * (the cluster subtree matrix recompute + one `getWorldPosition` per mini) —
+   * the single, once-per-frame traversal shared by BOTH the orbit field (task
+   * B4, which reads `mini.worldPos` via `orbitCenters` pre-render) and
+   * {@link computeProjections} (post-render). Task B4 split this out of
+   * `computeProjections` so the heaviest new layer doesn't force a second
+   * identical traversal every frame — call this ONCE per frame before render;
+   * both readers then reuse the refreshed values (nothing moves the minis
+   * between the pre-render orbit update and the post-render projection). Also
+   * called standalone by `subscribeProjections`/`scrubEntry`, which need fresh
+   * positions outside the tick loop.
+   */
+  function refreshMiniWorldPositions() {
+    cluster.updateMatrixWorld();
+    for (let i = 0; i < minis.length; i++) {
+      // Phase 96: read the LIVE world position off the group itself (tracks the
+      // mitosis entry animation frame-by-frame, not just the phase-95 static
+      // rest slot). `mini.worldPos` is reused as the write target
+      // (allocation-light) — at rest numerically identical to the rest slot.
+      minis[i]!.layer.object3d.getWorldPosition(minis[i]!.worldPos);
+    }
+  }
+
   function computeProjections() {
     const w = container.clientWidth || 1;
     const h = container.clientHeight || 1;
-    // Ensure the camera AND the cluster's matrices are current regardless of
-    // call order relative to render (drift moves the camera every frame, and
-    // the phase-96 entry animation moves the mini-orbs) — cheap: the orb scene
-    // graph is small, and `subscribeProjections` also fires this before the
-    // very first render (mount), where the mini-orbs' matrixWorld would
-    // otherwise still be the identity from construction.
+    // The camera matrices must be current for `.project()` (drift moves the
+    // camera every frame) — a cheap single-node update, kept here. The cluster
+    // subtree traversal + per-mini world-position refresh is NOT redone here:
+    // `mini.worldPos` was already refreshed once this frame by
+    // `refreshMiniWorldPositions` (in `tick`, pre-render; or explicitly by
+    // `subscribeProjections`/`scrubEntry` before they call this), so projection
+    // only does the NDC→px math off those already-fresh positions.
     camera.updateMatrixWorld();
     camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
-    cluster.updateMatrixWorld();
     // The camera's world-space right axis (drift rotates it slightly) — offset the
     // edge sample along it so the on-screen radius is measured across the screen,
     // not along a fixed world axis.
@@ -608,13 +632,6 @@ export function createSceneController(
     for (let i = 0; i < minis.length; i++) {
       const mini = minis[i]!;
       const proj = projections[i]!;
-      // Phase 96: read the LIVE world position + radius off the group itself
-      // (rather than a stale value cached at rest) so the DOM overlay's
-      // hit-target/label/badge track the mitosis entry animation frame-by-frame,
-      // not just the phase-95 static rest slot. `mini.worldPos` is reused as the
-      // write target (allocation-light) — at rest this is numerically identical
-      // to the old cached value, so nothing changes once the entry settles.
-      mini.layer.object3d.getWorldPosition(mini.worldPos);
       const liveRadius = mini.layer.object3d.scale.x;
       projCenter.copy(mini.worldPos).project(camera);
       projEdge.copy(mini.worldPos).addScaledVector(cameraRight, liveRadius).project(camera);
@@ -724,17 +741,15 @@ export function createSceneController(
       camera.lookAt(0, 0, 0);
     }
 
-    // Task B4 — refresh each mini-orb's LIVE world centre for the orbit field
-    // (independent of `emitProjections`'s own subscriber-gated read below — the
-    // orbit field always needs a fresh centre, whether or not the DOM overlay is
-    // subscribed) and drive its per-orbiter ring positions off it. Must run
-    // AFTER the entry animation above (which may have just moved a mini-orb's
-    // LOCAL position for this frame) and BEFORE `orbRenderer.render` (so this
-    // frame's buffer writes are the ones actually drawn); `updateMatrixWorld()`
-    // mirrors `computeProjections`' own explicit refresh — call order relative
-    // to render can't be assumed here either.
-    cluster.updateMatrixWorld();
-    for (const mini of minis) mini.layer.object3d.getWorldPosition(mini.worldPos);
+    // Task B4 — the SINGLE per-frame mini world-position refresh, shared by the
+    // orbit field (here, pre-render) and the projection push (post-render, via
+    // `emitProjections`). Must run AFTER the entry animation above (which may
+    // have just moved a mini-orb's LOCAL position this frame) and BEFORE
+    // `orbRenderer.render`, so this frame's orbit-field buffer writes are the
+    // ones actually drawn. `computeProjections` (post-render) reuses these same
+    // `mini.worldPos` values rather than re-traversing — nothing moves the minis
+    // between here and render.
+    refreshMiniWorldPositions();
     orbitField.update(dt, orbitCenters, inputs.reducedMotion);
 
     // Background always advances (wall-clock steady) but renders every OTHER frame
@@ -938,7 +953,11 @@ export function createSceneController(
     subscribeProjections(cb) {
       projectionSubscribers.add(cb);
       // Fire once immediately so the overlay can place its nodes before the next
-      // frame (and even while paused).
+      // frame (and even while paused). Outside the tick loop, so refresh the
+      // mini world positions first (the tick's own shared refresh hasn't run for
+      // a brand-new subscriber — at mount the mini-orbs' matrixWorld is still the
+      // construction-time identity).
+      refreshMiniWorldPositions();
       computeProjections();
       cb(projections);
       return () => {
@@ -1020,6 +1039,10 @@ export function createSceneController(
       entryActive = true;
       entryElapsed = Math.max(t, 0);
       applyEntryAt(entryElapsed);
+      // `applyEntryAt` just moved the mini-orbs' LOCAL positions — refresh their
+      // world positions before projecting (this is outside the tick loop, so the
+      // tick's own shared refresh won't run for this one-shot scrub frame).
+      refreshMiniWorldPositions();
       orbRenderer.render(orbScene, camera);
       emitProjections();
     },
