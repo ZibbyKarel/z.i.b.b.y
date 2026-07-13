@@ -1,4 +1,4 @@
-import { SUBSYSTEMS, type SubsystemId } from "@zibby/contracts";
+import { SUBSYSTEMS, type SubsystemId, type SubsystemState } from "@zibby/contracts";
 import * as THREE from "three";
 import { particleDuration } from "../../subsystems/components/SubsystemWeb/particle-mapping";
 import { type BackgroundLayer, createBackgroundLayer } from "./backgroundLayer";
@@ -6,7 +6,6 @@ import {
   HUB_RADIUS,
   MINI_ORB_WORLD_RADIUS,
   MITOSIS_TOTAL_DURATION,
-  NODE_OCTAGON_RADIUS,
   NODE_RING_RADIUS,
   NODE_RING_RADIUS_X,
   REGISTRY_ORDER,
@@ -15,18 +14,16 @@ import {
   ellipseSlots,
   hubSlots,
   mitosisProgress,
-  octagonSlotsAround,
   orbFlightSlots,
-  pointToward,
   resolveFlightEndpoints,
 } from "./clusterGeometry";
+import { CONNECTORS_OPACITY, type ConnectorsLayer, createConnectorsLayer } from "./connectorsLayer";
 import { type DockLayer, createDockLayer } from "./dockLayer";
 import { type OrbTarget, miniOrbTarget, orbTarget } from "./modeVisuals";
 import { type OrbLayer, createOrbLayer } from "./orbLayer";
 import { type ParticleLayer, createParticleLayer } from "./particleLayer";
 import { type RingsLayer, createRingsLayer } from "./ringsLayer";
 import type { SceneInputs, SceneSubsystem, SubsystemProjection } from "./sceneTypes";
-import { resolveForegroundFaintHex } from "./tokens";
 
 /**
  * The vanilla-three controller that owns the whole cosmic scene: its renderer(s),
@@ -197,15 +194,16 @@ const ORB_FLIGHT_RADIUS = 0.67;
 // mitosisProgress). Purely additive on top of the phase-95 rest state: once
 // every mini-orb's progress reaches 1, everything below snaps to its exact rest
 // value and is never touched again (no re-trigger).
-/** The net's rest opacity (phase 95's `netMaterial` value) — single source so
- * the entry fade-in and its final snap-back can never drift from the rest look. */
-const NET_OPACITY = 0.6;
-/** The net starts this fraction of its final scale (a gentle scale-in, not a
- * pop) at the moment it begins to fade in. */
+/** The connectors' rest opacity — imported from `connectorsLayer.ts` (task B3)
+ * rather than redefined here, so the entry fade-in below and the layer's own
+ * material construction can never drift apart. Kept under its retired
+ * `NET_OPACITY` name in spirit only; see {@link CONNECTORS_OPACITY}. */
+/** The connectors start this fraction of their final scale (a gentle
+ * scale-in, not a pop) at the moment they begin to fade in. */
 const NET_ENTRY_START_SCALE = 0.85;
-/** The net stays fully invisible for the first half of the entry animation,
- * then fades/scales in over the second half — it must never draw to empty
- * space while the mini-orbs are still bunched near the centre. */
+/** The connectors stay fully invisible for the first half of the entry
+ * animation, then fade/scale in over the second half — they must never draw
+ * to empty space while the mini-orbs are still bunched near the centre. */
 const NET_FADE_START_FRACTION = 0.5;
 /** Central-orb "division" impulse (a brief scale pop at entry t≈0, decaying
  * fast) that sells the mitosis moment without lingering into the travel phase. */
@@ -376,12 +374,24 @@ export function createSceneController(
     /** The per-state target it eases toward; defaults to `klid` until setSubsystems. */
     target: OrbTarget;
     present: boolean;
+    /** Task B3 — the RAW subsystem state (not just the derived `target`), so
+     * `tick` can tell `connectors` which indices are currently LIVE
+     * (`bezi`/`hlaseni`/`ceka`) for the per-connector alpha pulse. Defaults to
+     * `klid` until `setSubsystems` pushes a real feed. */
+    state: SubsystemState;
     /** Phase 117b — a cheap `${color}:${state}` signature of the LAST pushed
      * target, so `setSubsystems` can tell a genuine status/colour change (which
      * must `wake()` a parked power-saver scene and let the mini ease to its new
      * target) from a no-op feed refresh (same array, unchanged values — must NOT
      * wake, or a periodic refetch would defeat the freeze). */
     stateKey: string;
+  }
+  /** Task B3 — `connectors.update`'s `liveFlags[i]` gate: a subsystem pulses
+   * its connector only while genuinely LIVE, matching the mini-orb's own
+   * livelier `MINI_BASE` targets (`bezi`/`hlaseni`/`ceka`) — `klid` (idle)
+   * never pulses. */
+  function isLiveState(state: SubsystemState): boolean {
+    return state === "bezi" || state === "hlaseni" || state === "ceka";
   }
   // Task B2 (Velín-D retune) — the NODE ring is now a wider ELLIPSE
   // (NODE_RING_RADIUS_X horizontal, NODE_RING_RADIUS vertical, unchanged); the
@@ -406,77 +416,40 @@ export function createSceneController(
       worldPos: new THREE.Vector3(slot.x, CLUSTER_Y + slot.y, 0),
       target: miniOrbTarget(subsystem.color, "klid"),
       present: true,
+      state: "klid",
       stateKey: `${subsystem.color}:klid`,
     };
   });
 
-  // --- WebGL net (phase 95, reworked phase 101, separated phase 107): the
-  // inner octagon (hub→hub, ringing the orb) + a small octagon ringing EACH
-  // mini-orb + a real CONNECTOR line between the two rings' facing vertices
-  // (not a spoke piercing the mini-orb's centre). One additive faint
-  // LineSegments in the shared foreground-faint tone — the same neutral
-  // "wiring" colour the retired SVG web used. Nothing in it ever overlaps the
-  // central orb: the innermost points are the hub vertices (HUB_RADIUS), which
-  // clear the orb's glow with a gap.
-  //
-  // Phase 107 no-overlap invariant (see clusterGeometry.ts's `NET_GEOMETRY`,
-  // asserted in clusterGeometry.test.ts against these SAME imported values):
-  //   NODE_RING_RADIUS − NODE_OCTAGON_RADIUS > HUB_RADIUS
-  // i.e. every node octagon's near point sits strictly OUTSIDE the hub
-  // octagon, separated by roughly NODE_LINK_GAP of daylight — the two
-  // octagons never touch by construction, and the connector below is always a
-  // positive-length outward segment bridging that gap (never a reversed
-  // inward stub). ---
   const hubVerts = hubSlots(HUB_RADIUS);
-  // Phase 97 legibility pass — a SEPARATE, smaller-radius ring than the net's own
-  // hub vertices, used only as a handoff flight's orb-side endpoint (see
-  // ORB_FLIGHT_RADIUS's doc). Same angles as hubVerts/nodeSlots (same spoke), so
-  // a flight still rides straight out along the visible spoke direction.
+  // Phase 97 legibility pass — a SEPARATE, smaller-radius ring than the
+  // connectors' own hub vertices, used only as a handoff flight's orb-side
+  // endpoint (see ORB_FLIGHT_RADIUS's doc). Same angles as hubVerts/nodeSlots
+  // (same spoke), so a flight still rides straight out along the visible
+  // spoke direction.
   const orbFlightVerts = orbFlightSlots(ORB_FLIGHT_RADIUS);
-  const netPositions: number[] = [];
-  for (let i = 0; i < hubVerts.length; i++) {
-    const hub = hubVerts[i]!;
-    const nextHub = hubVerts[(i + 1) % hubVerts.length]!;
-    const node = nodeSlots[i]!;
-    // Inner octagon edge (hub → next hub).
-    netPositions.push(hub.x, hub.y, 0, nextHub.x, nextHub.y, 0);
-    // Phase 101: the mini-orb's own small octagon, baked into the SAME buffer so
-    // it inherits the net's entry fade/scale for free (no separate object).
-    const nodeOctagon = octagonSlotsAround(node, NODE_OCTAGON_RADIUS);
-    for (let v = 0; v < nodeOctagon.length; v++) {
-      const a = nodeOctagon[v]!;
-      const b = nodeOctagon[(v + 1) % nodeOctagon.length]!;
-      netPositions.push(a.x, a.y, 0, b.x, b.y, 0);
-    }
-    // Connector (hub octagon's outer vertex → the node octagon's near vertex,
-    // walked IN from the node's centre toward the hub by the node octagon's own
-    // radius — pointToward works off the straight hub→node line, so this needs
-    // no colinearity: with the octagon hub ring, hub/node/origin were colinear
-    // by construction on every spoke; task B2's elliptical node ring keeps that
-    // true only for the on-axis (top/bottom) slots, but pointToward's walked-in
-    // distance is exact regardless). Replaces the old hub→node.center spoke that
-    // pierced the mini-orb. Since phase 107's no-overlap invariant guarantees
-    // nodeNear sits strictly outside the hub octagon, this is now a genuine
-    // positive-length OUTWARD segment bridging the NODE_LINK_GAP daylight
-    // between the two octagons — not a reversed inward stub.
-    const nodeNear = pointToward(node, hub, NODE_OCTAGON_RADIUS);
-    netPositions.push(hub.x, hub.y, 0, nodeNear.x, nodeNear.y, 0);
+
+  // --- Connectors (task B3, Velín-D retune): extracted from the retired
+  // inline "net" (phase 95/101/107, which also drew a hub octagon + a small
+  // octagon ringing each mini-orb) into `connectorsLayer.ts`. Velín-D's
+  // reference design has no octagon rings — just the radiating center↔node
+  // links — so only the connector segments survive the extraction; see that
+  // module's doc for the full rationale (including the "live pulse" as a
+  // vertex-color brightness wave rather than a real per-vertex alpha, since
+  // this stays ONE additive `LineSegments` draw call). Positions are fixed
+  // once built (the hub ring never moves; `setNodes` exists for a future
+  // node-ring change) — only the per-frame pulse below animates.
+  const connectors: ConnectorsLayer = createConnectorsLayer(hubVerts, nodeSlots);
+  cluster.add(connectors.object3d);
+  /** The entry ("mitosis") animation below fades/scales the connectors in
+   * directly (the same way the retired net's `netMaterial`/`net.scale` were
+   * driven) — `ConnectorsLayer`'s public surface has no `setOpacity`, so this
+   * reaches through `object3d.material` (always the single `LineBasicMaterial`
+   * {@link createConnectorsLayer} constructs) rather than inventing new API
+   * surface for a one-off entry effect. */
+  function connectorsMaterial(): THREE.LineBasicMaterial {
+    return connectors.object3d.material as THREE.LineBasicMaterial;
   }
-  const netGeometry = new THREE.BufferGeometry();
-  netGeometry.setAttribute("position", new THREE.Float32BufferAttribute(netPositions, 3));
-  const netMaterial = new THREE.LineBasicMaterial({
-    // Neutral "wiring" tone (the same `--color-foreground-faint` the retired SVG used)
-    // but at a crisp foreground alpha — with the background node-web toned right down
-    // (backgroundLayer pass 2), this reads as deliberate structure ringing the orb,
-    // not ambient sky. Additive over the dark nebula gives it a clean glow.
-    color: new THREE.Color(resolveForegroundFaintHex()),
-    transparent: true,
-    opacity: NET_OPACITY,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-  });
-  const net = new THREE.LineSegments(netGeometry, netMaterial);
-  cluster.add(net);
 
   // --- Handoff-flight particles (phase 97): a fixed pool of faint additive motes
   // riding the net's spokes — the restored Phase-89 dispatch/report animation, now
@@ -488,10 +461,11 @@ export function createSceneController(
 
   // --- Phase 96 entry ("mitosis") animation state. Reduced motion → skip the
   // clock entirely and leave everything at the rest state it was just built in
-  // (mini-orbs at their slots, net at full opacity/scale, core at ORB_SCALE). ---
+  // (mini-orbs at their slots, connectors at full opacity/scale, core at
+  // ORB_SCALE). ---
   let entryActive = !initial.reducedMotion;
   let entryElapsed = 0;
-  /** Collapse the mini-orbs into the central orb and hide the net — the
+  /** Collapse the mini-orbs into the central orb and hide the connectors — the
    * "before mitosis" state {@link entryActive}'s per-frame block then animates
    * out of. Shared by the initial setup (below) and `replayEntry`. */
   function collapseForEntry() {
@@ -499,8 +473,8 @@ export function createSceneController(
       mini.layer.object3d.position.set(0, 0, 0);
       mini.layer.object3d.scale.setScalar(0);
     }
-    netMaterial.opacity = 0;
-    net.scale.setScalar(NET_ENTRY_START_SCALE);
+    connectorsMaterial().opacity = 0;
+    connectors.object3d.scale.setScalar(NET_ENTRY_START_SCALE);
   }
   if (entryActive) {
     // Collapse right away so the very FIRST rendered frame already shows the
@@ -510,7 +484,7 @@ export function createSceneController(
   }
   /**
    * Apply the entry animation's visual state for an EXACT elapsed time `t`
-   * (mini-orb positions/scales, the net's fade/scale-in, the central-orb
+   * (mini-orb positions/scales, the connectors' fade/scale-in, the central-orb
    * impulse) — a pure function of `t` over the mutable three.js state, with no
    * side effect on `entryElapsed` itself. Returns whether every mini-orb has
    * reached progress 1 (i.e. the whole ripple is done at `t`). Shared by the
@@ -532,14 +506,14 @@ export function createSceneController(
       mini.layer.object3d.scale.setScalar(Math.max(MINI_ORB_WORLD_RADIUS * p, 0));
     }
 
-    // The net fades/scales in over the second half of the entry window — it
-    // never renders to empty space while the mini-orbs are still near the
+    // The connectors fade/scale in over the second half of the entry window —
+    // they never render to empty space while the mini-orbs are still near the
     // centre.
     const netStart = MITOSIS_TOTAL_DURATION * NET_FADE_START_FRACTION;
     const netLocal = (t - netStart) / (MITOSIS_TOTAL_DURATION - netStart);
     const netP = easeOutCubic(Math.min(Math.max(netLocal, 0), 1));
-    netMaterial.opacity = NET_OPACITY * netP;
-    net.scale.setScalar(NET_ENTRY_START_SCALE + (1 - NET_ENTRY_START_SCALE) * netP);
+    connectorsMaterial().opacity = CONNECTORS_OPACITY * netP;
+    connectors.object3d.scale.setScalar(NET_ENTRY_START_SCALE + (1 - NET_ENTRY_START_SCALE) * netP);
 
     // A brief, colour-neutral scale impulse on the central orb at t≈0 — decays
     // fast, well before the mini-orbs finish travelling.
@@ -561,8 +535,8 @@ export function createSceneController(
       mini.layer.object3d.position.set(slot.x, slot.y, 0);
       mini.layer.object3d.scale.setScalar(MINI_ORB_WORLD_RADIUS);
     }
-    netMaterial.opacity = NET_OPACITY;
-    net.scale.setScalar(1);
+    connectorsMaterial().opacity = CONNECTORS_OPACITY;
+    connectors.object3d.scale.setScalar(1);
     core.scale.setScalar(ORB_SCALE);
   }
 
@@ -687,6 +661,14 @@ export function createSceneController(
       mini.layer.object3d.visible = mini.present;
       if (mini.present) mini.layer.update(dt, mini.target, inputs.reducedMotion, 0);
     }
+
+    // Task B3 — the connectors' per-connector alpha pulse: only a PRESENT,
+    // genuinely LIVE subsystem's link pulses; everything else holds its
+    // steady base tone (mirrors the retired net's always-on faint look).
+    connectors.update(
+      dt,
+      minis.map((mini) => mini.present && isLiveState(mini.state)),
+    );
 
     // Phase 97: advance every in-flight handoff particle (real events only — never
     // fed by the clock itself, only `emitFlight` ever calls `particles.emit`).
@@ -883,6 +865,7 @@ export function createSceneController(
           if (next.present !== mini.present || key !== mini.stateKey) changed = true;
           mini.present = next.present;
           mini.target = miniOrbTarget(next.color, next.state);
+          mini.state = next.state;
           mini.stateKey = key;
         } else {
           if (mini.present) changed = true;
@@ -994,8 +977,7 @@ export function createSceneController(
       projectionSubscribers.clear();
       orb.dispose();
       for (const mini of minis) mini.layer.dispose();
-      netGeometry.dispose();
-      netMaterial.dispose();
+      connectors.dispose();
       particles.dispose();
       background.dispose();
       rings.dispose();
