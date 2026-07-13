@@ -1679,6 +1679,12 @@
       "statWaiting": "waiting on you",
       "statIdle": "idle",
       "crossSubsystems": "Across subsystems"
+    },
+    "statusPill": {
+      "nominal": "Nominal",
+      "working": "{n} working",
+      "report": "{n} reporting",
+      "waiting": "{n} waiting"
     }
   },
   "subsystems": {

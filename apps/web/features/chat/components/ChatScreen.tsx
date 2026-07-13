@@ -58,6 +58,7 @@ import { ChatPalette } from "./ChatPalette";
 import { ChatTaskDetailColumn } from "./ChatTaskDetailColumn";
 import { ChatTasksPanel } from "./ChatTasksPanel";
 import { ChatTranscript } from "./ChatTranscript";
+import { StatusPill } from "./StatusPill";
 import { VoiceStatusStrip } from "./VoiceStatusStrip";
 import { VoiceToggleButton } from "./VoiceToggleButton";
 
@@ -517,9 +518,12 @@ export function ChatScreen({
           <StatusDot pulse={MODE_DOT[mode].pulse} size="75" tone={MODE_DOT[mode].tone} />
         </Stack>
 
-        <Typography mono size="md" type="subtitle" weight="semibold">
-          {timeStr}
-        </Typography>
+        <Stack align="center" direction="row" gap="200">
+          <StatusPill />
+          <Typography mono size="md" type="subtitle" weight="semibold">
+            {timeStr}
+          </Typography>
+        </Stack>
 
         <Stack align="center" direction="row" gap="100">
           {voice.supported && (

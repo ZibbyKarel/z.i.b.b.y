@@ -1679,6 +1679,12 @@
       "statWaiting": "čekají na tebe",
       "statIdle": "v klidu",
       "crossSubsystems": "Napříč subsystémy"
+    },
+    "statusPill": {
+      "nominal": "Nominal",
+      "working": "{n} pracují",
+      "report": "{n} hlášení",
+      "waiting": "{n} čekají na tebe"
     }
   },
   "subsystems": {
