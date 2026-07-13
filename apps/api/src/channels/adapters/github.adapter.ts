@@ -28,8 +28,14 @@ function tokenOf(creds: CredentialsInput): string | null {
  * (the API returns issues *and* PRs; the `pull_request` field distinguishes them) with
  * `since` = the cursor, normalizes each to an {@link InboundMessage} with a
  * deterministic `gh-<repo>-<issue|pr>-<number>` id, and advances the cursor to the
- * newest `updated_at`. `streams` filters issues vs pulls. No method sleeps on a rate
- * limit; a failure surfaces to the watcher (M8 retry/backoff).
+ * newest `updated_at`. `streams` filters issues vs pulls. When `config.username` is
+ * set, polling narrows to the Search API instead (mentions + assigned — see
+ * {@link searchMineOrMentioned}) so ZIBBY only ingests items that actually concern
+ * the operator rather than every open issue/PR in the repo. A fresh integration (no
+ * persisted cursor) seeds the cursor to "now" and ingests nothing on that first poll —
+ * every later poll fetches only what changed since the last sync, never a full
+ * backfill (same contract as the email adapter). No method sleeps on a rate limit; a
+ * failure surfaces to the watcher (M8 retry/backoff).
  */
 export class GitHubChannelAdapter implements ChannelAdapter {
   readonly kind = "github" as const;
@@ -54,13 +60,12 @@ export class GitHubChannelAdapter implements ChannelAdapter {
     }
   }
 
-  async poll(
-    integration: Integration,
-    creds: CredentialsInput,
+  /** Every open issue/PR in the repo, via `/repos/{repo}/issues?since=`. */
+  private async listAll(
+    repo: string,
     cursor: string | undefined,
-  ): Promise<PollResult> {
-    if (integration.config.kind !== "github") throw new Error("not a github integration");
-    const { repo, streams } = integration.config;
+    creds: CredentialsInput,
+  ): Promise<GitHubIssue[]> {
     const params = new URLSearchParams({
       state: "open",
       sort: "updated",
@@ -75,7 +80,68 @@ export class GitHubChannelAdapter implements ChannelAdapter {
       throw new Error(`github rate limited (HTTP ${res.status})`);
     }
     if (!res.ok) throw new Error(`github issues: HTTP ${res.status}`);
-    const issues = (await res.json()) as GitHubIssue[];
+    return (await res.json()) as GitHubIssue[];
+  }
+
+  /**
+   * Only issues/PRs that mention or are assigned to `username`, via the Search API
+   * (`/search/issues`). Search's qualifier grammar doesn't reliably OR across
+   * different qualifier types, so this runs two queries — `mentions:` and
+   * `assignee:` — and merges by issue number rather than risking a query GitHub
+   * silently narrows. `updated:>=cursor` stands in for the issues endpoint's
+   * `since` (Search has no such param); items ship in the same shape as
+   * `/repos/{repo}/issues`, distinguished the same way via `pull_request`.
+   */
+  private async searchMineOrMentioned(
+    repo: string,
+    username: string,
+    cursor: string | undefined,
+    creds: CredentialsInput,
+  ): Promise<GitHubIssue[]> {
+    const since = cursor ? ` updated:>=${cursor}` : "";
+    const queries = [
+      `repo:${repo} is:open mentions:${username}${since}`,
+      `repo:${repo} is:open assignee:${username}${since}`,
+    ];
+    const byNumber = new Map<number, GitHubIssue>();
+    for (const q of queries) {
+      const params = new URLSearchParams({ q, sort: "updated", order: "asc", per_page: "50" });
+      const res = await this.fetchImpl(`${GITHUB_API}/search/issues?${params}`, {
+        headers: this.headers(creds),
+      });
+      if (res.status === 429 || res.status === 403) {
+        throw new Error(`github rate limited (HTTP ${res.status})`);
+      }
+      if (!res.ok) throw new Error(`github issues: HTTP ${res.status}`);
+      const body = (await res.json()) as { items?: GitHubIssue[] };
+      for (const item of body.items ?? []) {
+        if (item.number !== undefined) byNumber.set(item.number, item);
+      }
+    }
+    return [...byNumber.values()].sort((a, b) =>
+      (a.updated_at ?? "").localeCompare(b.updated_at ?? ""),
+    );
+  }
+
+  async poll(
+    integration: Integration,
+    creds: CredentialsInput,
+    cursor: string | undefined,
+  ): Promise<PollResult> {
+    if (integration.config.kind !== "github") throw new Error("not a github integration");
+    const { repo, streams, username } = integration.config;
+
+    // First enable (no persisted cursor): seed it to "now" and ingest nothing, so a
+    // fresh integration never backfills the repo's full issue/PR history — the same
+    // "initial sync = now" contract as the email adapter. No fetch happens on this
+    // pass; the next tick has a real cursor and polls only what changed since.
+    if (cursor === undefined) {
+      return { items: [], cursor: new Date().toISOString() };
+    }
+
+    const issues = username
+      ? await this.searchMineOrMentioned(repo, username, cursor, creds)
+      : await this.listAll(repo, cursor, creds);
 
     const items: InboundMessage[] = [];
     let newest = cursor;

@@ -522,6 +522,8 @@
     "githubRepoHint": "owner/name",
     "githubStreamIssues": "Sledovat issues",
     "githubStreamPulls": "Sledovat pull requesty",
+    "githubUsername": "Tvůj GitHub username",
+    "githubUsernameHint": "Stahovat jen issues/PR, kde jsi zmíněný nebo na tebe přiřazené — nech prázdné pro stažení celého repozitáře",
     "calendarId": "ID kalendáře",
     "calendarIdHint": "Kalendář ke sledování; 'primary' nebo adresa kalendáře sdíleného se service accountem",
     "calendarLookahead": "Výhled (dny)",

@@ -6,5 +6,9 @@
   {
     "name": "Testing",
     "glyph": "flask"
+  },
+  {
+    "name": "Shoptet",
+    "glyph": "cart"
   }
 ]

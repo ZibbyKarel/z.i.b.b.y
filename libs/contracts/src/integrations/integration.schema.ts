@@ -69,13 +69,17 @@ export type JiraConfig = z.infer<typeof JiraConfigSchema>;
  * credentials store. `streams` selects which event streams to ingest: `issues`
  * and/or `pulls` (the conversational channel), plus `ci` — which opts the repo
  * into the N3 CI monitor (workflow-run status alerts, not messages; the channel
- * adapter ignores it). Defaults to the conversational pair. `.strict()`.
+ * adapter ignores it). Defaults to the conversational pair. `username` (optional,
+ * the operator's GitHub handle) narrows polling to items that mention or are
+ * assigned to that user via the Search API — omit it to poll every open
+ * issue/PR in the repo (the original, unfiltered behaviour). `.strict()`.
  */
 export const GitHubConfigSchema = z
   .object({
     kind: z.literal("github"),
     repo: z.string().regex(/^[^/]+\/[^/]+$/, "repo must be 'owner/name'"),
     streams: z.array(z.enum(["issues", "pulls", "ci"])).default(["issues", "pulls"]),
+    username: z.string().min(1).optional(),
   })
   .strict();
 export type GitHubConfig = z.infer<typeof GitHubConfigSchema>;

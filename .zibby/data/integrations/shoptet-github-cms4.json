@@ -1,0 +1,8 @@
+{
+  "id": "shoptet-github-cms4",
+  "kind": "github",
+  "projectId": "cms4",
+  "name": "Shoptet-GitHub-CMS4",
+  "enabled": false,
+  "config": { "kind": "github", "repo": "shoptet/cms4", "streams": ["issues", "pulls"] }
+}

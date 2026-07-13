@@ -37,6 +37,7 @@ export enum IntegrationFormTestId {
   GithubRepo = "integration-github-repo",
   GithubStreamIssues = "integration-github-stream-issues",
   GithubStreamPulls = "integration-github-stream-pulls",
+  GithubUsername = "integration-github-username",
   CalendarId = "integration-calendar-id",
   CalendarLookahead = "integration-calendar-lookahead",
   Secret = "integration-secret",
@@ -90,6 +91,8 @@ export interface IntegrationFormState {
   setStreamIssues: (v: boolean) => void;
   streamPulls: boolean;
   setStreamPulls: (v: boolean) => void;
+  githubUsername: string;
+  setGithubUsername: (v: string) => void;
   calendarId: string;
   setCalendarId: (v: string) => void;
   lookaheadDays: string;
@@ -138,6 +141,7 @@ export function useIntegrationFormState(
   const [streamPulls, setStreamPulls] = useState(
     githubCfg ? githubCfg.streams.includes("pulls") : true,
   );
+  const [githubUsername, setGithubUsername] = useState(githubCfg?.username ?? "");
   const [calendarId, setCalendarId] = useState(calendarCfg?.calendarId ?? "");
   const [lookaheadDays, setLookaheadDays] = useState(String(calendarCfg?.lookaheadDays ?? 14));
 
@@ -174,7 +178,12 @@ export function useIntegrationFormState(
           ...(streamIssues ? (["issues"] as const) : []),
           ...(streamPulls ? (["pulls"] as const) : []),
         ];
-        return { kind: "github", repo: repo.trim(), streams };
+        return {
+          kind: "github",
+          repo: repo.trim(),
+          streams,
+          ...(githubUsername.trim() ? { username: githubUsername.trim() } : {}),
+        };
       }
       case "calendar":
         return {
@@ -245,6 +254,8 @@ export function useIntegrationFormState(
     setStreamIssues,
     streamPulls,
     setStreamPulls,
+    githubUsername,
+    setGithubUsername,
     calendarId,
     setCalendarId,
     lookaheadDays,
@@ -480,6 +491,14 @@ export function IntegrationFormFields({
             data-testid={IntegrationFormTestId.GithubStreamPulls}
             label={t("integrations.githubStreamPulls")}
             onChange={form.setStreamPulls}
+          />
+          <TextInputField
+            data-testid={IntegrationFormTestId.GithubUsername}
+            hint={t("integrations.githubUsernameHint")}
+            label={t("integrations.githubUsername")}
+            onChange={(e) => form.setGithubUsername(e.target.value)}
+            placeholder="octocat"
+            value={form.githubUsername}
           />
         </>
       )}

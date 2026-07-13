@@ -1,12 +1,13 @@
 {
-  "taskTickMs": 30000,
-  "channelTickMs": 30000,
-  "monitorTickMs": 60000,
+  "taskTickMs": 150000,
+  "channelTickMs": 150000,
+  "monitorTickMs": 300000,
   "automationTickMs": 0,
-  "limitResumeTickMs": 60000,
+  "limitResumeTickMs": 300000,
   "limitResumeMax": 3,
   "goalVerifyTimeoutMs": 600000,
   "goalAutoResume": false,
   "chatPersona": "jarvis",
-  "powerSaver": false
+  "powerSaver": false,
+  "ttsVoice": null
 }

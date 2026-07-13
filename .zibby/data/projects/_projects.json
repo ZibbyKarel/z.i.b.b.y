@@ -1,5 +1,13 @@
 [
   {
+    "id": "cms4",
+    "name": "cms4",
+    "desc": "Shoptet CMS4 is a multi-tenant e-commerce monorepo powering the Shoptet E-shop solution and related applications. It includes backend services, frontend applications, APIs, CRM, and shared platform packages. Use this README as a high-level navigation entrypoint; detailed workflows live in subsystem documentation.",
+    "category": "Shoptet",
+    "logo": "assets/cms4.png",
+    "gitRemote": "git@github.com:shoptet/cms4.git"
+  },
+  {
     "id": "kzphoto",
     "name": "kzphoto",
     "path": "/Users/zibby/Workspace/kzphoto",

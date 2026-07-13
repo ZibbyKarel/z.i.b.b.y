@@ -49,8 +49,10 @@ bottom of that panel (or in the URL when viewing Slack in a browser).
 Integrations are managed from the owning project's detail page (there is no
 standalone integrations page — one integration belongs to exactly one
 project/company):
+`http://localhost:3000/projects/<project-id>?tab=integrations`
+(swap the host/port for wherever the web app is actually running).
 
-1. Open the project → **Integrations** → **New Integration**.
+1. Open the project → **Integrations** tab → **New Integration**.
 2. **Kind**: `Slack`. **Id**: a short slug, e.g. `team-slack` (permanent — it
    keys the credentials file and can't be renamed later).
 3. **Channels**: the comma-separated channel IDs from step 3, e.g.
@@ -86,7 +88,8 @@ never installed to the workspace. This also stamps the integration's `status`
 
 ## 6. Turn on polling
 
-The channel watcher's heartbeat is `channelTickMs` in **Settings → System**
+The channel watcher's heartbeat is `channelTickMs` in **Settings → System**:
+`http://localhost:3000/settings?tab=system`
 (default 30s; `0` pauses all channel polling — useful while still wiring
 things up). Once non-zero, every enabled integration with credentials gets
 polled on that interval.
@@ -95,7 +98,8 @@ polled on that interval.
 
 A connected, polling integration only ever **investigates silently** (Tier 1)
 until the operator explicitly opts it into auto-reply. Check **Settings →
-Mandate** (or `GET/PUT /api/mandate`):
+Mandate**: `http://localhost:3000/settings?tab=mandate` (or
+`GET/PUT /api/mandate`):
 
 - `dispatch: true` (default) — ZIBBY may investigate/dispatch work from this
   channel's messages without asking.

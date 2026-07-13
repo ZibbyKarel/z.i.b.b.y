@@ -522,6 +522,8 @@
     "githubRepoHint": "owner/name",
     "githubStreamIssues": "Watch issues",
     "githubStreamPulls": "Watch pull requests",
+    "githubUsername": "Your GitHub username",
+    "githubUsernameHint": "Only poll issues/PRs that mention or are assigned to this user — leave blank to poll every open issue/PR in the repo",
     "calendarId": "Calendar ID",
     "calendarIdHint": "Calendar to watch; 'primary' or a calendar address shared with the service account",
     "calendarLookahead": "Look-ahead (days)",

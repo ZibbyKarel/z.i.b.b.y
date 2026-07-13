@@ -41,11 +41,22 @@ describe("GitHubChannelAdapter", () => {
       },
     ]);
     const adapter = new GitHubChannelAdapter(fetchImpl);
-    const { items, cursor } = await adapter.poll(gh, { token: "ghp" }, undefined);
+    const { items, cursor } = await adapter.poll(gh, { token: "ghp" }, "2026-06-17T08:00:00.000Z");
     expect(items.map((i) => i.id)).toEqual(["gh-acme-app-issue-1", "gh-acme-app-pr-2"]);
     expect(items[0]!.externalRef).toMatchObject({ channel: "acme/app", messageId: "1" });
     expect(items[0]!.from).toBe("dana");
     expect(cursor).toBe("2026-06-17T10:00:00.000Z");
+  });
+
+  it("first poll (no persisted cursor) seeds the cursor to now and ingests nothing", async () => {
+    const fetchImpl = vi.fn();
+    const adapter = new GitHubChannelAdapter(fetchImpl as unknown as typeof fetch);
+    const before = Date.now();
+    const { items, cursor } = await adapter.poll(gh, { token: "ghp" }, undefined);
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(items).toEqual([]);
+    expect(cursor).toBeDefined();
+    expect(new Date(cursor!).getTime()).toBeGreaterThanOrEqual(before);
   });
 
   it("respects the streams filter (issues only drops PRs)", async () => {
@@ -69,7 +80,7 @@ describe("GitHubChannelAdapter", () => {
       },
     ]);
     const adapter = new GitHubChannelAdapter(fetchImpl);
-    const { items } = await adapter.poll(issuesOnly, { token: "ghp" }, undefined);
+    const { items } = await adapter.poll(issuesOnly, { token: "ghp" }, "2026-06-17T08:00:00.000Z");
     expect(items.map((i) => i.id)).toEqual(["gh-acme-app-issue-1"]);
   });
 
@@ -80,7 +91,51 @@ describe("GitHubChannelAdapter", () => {
     const url = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls[0]![0] as string;
     expect(url).toContain("since=2026-06-17T10");
     const limited = new GitHubChannelAdapter(jsonFetch([], 403));
-    await expect(limited.poll(gh, { token: "ghp" }, undefined)).rejects.toThrow(/rate limited/);
+    await expect(
+      limited.poll(gh, { token: "ghp" }, "2026-06-17T08:00:00.000Z"),
+    ).rejects.toThrow(/rate limited/);
+  });
+
+  it("uses the Search API for mentions+assignee when username is configured", async () => {
+    const mine: Integration = {
+      ...gh,
+      config: { kind: "github", repo: "acme/app", streams: ["issues", "pulls"], username: "karel" },
+    };
+    const calls: string[] = [];
+    const fetchImpl = vi.fn(async (url: string) => {
+      calls.push(decodeURIComponent(url));
+      const items = url.includes("mentions")
+        ? [
+            {
+              number: 1,
+              title: "mentioned",
+              updated_at: "2026-06-17T09:00:00.000Z",
+              user: { login: "dana" },
+            },
+          ]
+        : [
+            {
+              number: 2,
+              title: "assigned",
+              updated_at: "2026-06-17T10:00:00.000Z",
+              user: { login: "eli" },
+              pull_request: {},
+            },
+          ];
+      return new Response(JSON.stringify({ items }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+
+    const adapter = new GitHubChannelAdapter(fetchImpl);
+    const { items, cursor } = await adapter.poll(mine, { token: "ghp" }, "2026-06-17T08:00:00.000Z");
+
+    expect(calls.every((u) => u.includes("/search/issues"))).toBe(true);
+    expect(calls.some((u) => u.includes("mentions:karel"))).toBe(true);
+    expect(calls.some((u) => u.includes("assignee:karel"))).toBe(true);
+    expect(items.map((i) => i.id)).toEqual(["gh-acme-app-issue-1", "gh-acme-app-pr-2"]);
+    expect(cursor).toBe("2026-06-17T10:00:00.000Z");
   });
 
   it("test maps /user to a TestResult", async () => {
