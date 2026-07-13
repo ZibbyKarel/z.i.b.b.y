@@ -20,6 +20,14 @@ import { MAX_PARTICLES } from "../../subsystems/components/SubsystemWeb/particle
  * scale. This still isn't a laser (additive, capped alpha, a handful of pixels
  * across), but it now reads clearly as a travelling mote with a short tail: "a
  * comet, not a laser".
+ *
+ * Task B5 COMET RETUNE: purely an envelope retune of the SAME straight-lerp,
+ * fixed-pool particles above — no new geometry, no pool-size change. The trail's
+ * size/alpha factors were re-spread so the 3 existing trail vertices read as "2
+ * echoes + a faint closing wisp" (see {@link TRAIL_SIZE_FACTORS}), and an
+ * {@link arrivalSpike} was added so the head (and trail, via a shared size
+ * multiplier) briefly flares brighter/larger just before `t = 1` instead of only
+ * fading out — a handoff now reads as "landing", not merely dimming to nothing.
  */
 
 /** Every active particle is drawn as ONE bright head point plus a few fading,
@@ -43,13 +51,20 @@ const POINTS_PER_PARTICLE = TRAIL_COUNT + 1;
 const HEAD_SIZE_PX = 14;
 
 /** Each trailing point's size, as a fraction of {@link HEAD_SIZE_PX} — shrinks
- * toward the tail so the streak tapers rather than reading as a row of equal dots. */
-const TRAIL_SIZE_FACTORS: readonly number[] = [0.75, 0.5, 0.3];
+ * toward the tail so the streak tapers rather than reading as a row of equal dots.
+ *
+ * Task B5 retune: the pool only budgets {@link TRAIL_COUNT} = 3 trail vertices,
+ * one short of the design spec's "head + 2 echo trails". Rather than growing the
+ * pool, the first two factors are pushed apart and brightened so they read as two
+ * distinct echoes, and the third is pulled down hard so it reads as a faint
+ * closing wisp completing the tail rather than competing as a third echo. */
+const TRAIL_SIZE_FACTORS: readonly number[] = [0.72, 0.42, 0.2];
 
 /** Each trailing point's alpha, as a fraction of the HEAD's current alpha —
  * fades toward the tail (a comet, not a dotted line). Sized to match
- * {@link TRAIL_COUNT}. */
-const TRAIL_ALPHA_FACTORS: readonly number[] = [0.6, 0.38, 0.2];
+ * {@link TRAIL_COUNT}; see the {@link TRAIL_SIZE_FACTORS} note on the "2 echoes
+ * + a faint wisp" reading within the existing 3-vertex trail budget. */
+const TRAIL_ALPHA_FACTORS: readonly number[] = [0.55, 0.3, 0.12];
 
 /** How far behind the head each trailing point sits, expressed as a fraction of
  * the flight's own `[0,1]` progress `t` (NOT a fixed world distance) — so the
@@ -87,6 +102,35 @@ function fadeEnvelope(t: number): number {
   if (t < FADE_FRACTION) return t / FADE_FRACTION;
   if (t > 1 - FADE_FRACTION) return (1 - t) / FADE_FRACTION;
   return 1;
+}
+
+/** Task B5: how much of the flight's own final progress the "arrival" brightness
+ * spike occupies — narrower than {@link FADE_FRACTION} so the spike sits INSIDE
+ * the existing exit fade (a bump on top of the fade-out) rather than replacing it. */
+const ARRIVAL_WINDOW_T = 0.12;
+
+/** Peak extra alpha the spike adds, as a fraction of {@link PEAK_ALPHA}, at its
+ * brightest instant. Additive on top of the ordinary fade — the comet briefly
+ * flares brighter just before touchdown instead of merely dimming to nothing. */
+const ARRIVAL_ALPHA_BOOST = 0.5;
+
+/** Peak extra size the spike adds, as a fraction of {@link HEAD_SIZE_PX} (applied
+ * to the head AND, via the same multiplier, every trail point — the whole comet
+ * swells together rather than just its head dot). */
+const ARRIVAL_SIZE_BOOST = 0.45;
+
+/** Task B5 comet retune: a brief brightness/size spike as a flight nears `t = 1`
+ * — reads as the mote "landing" rather than just fading out. Zero outside its
+ * window; rises via a half sine to a single peak mid-window and recedes back to
+ * exactly 0 at `t === 1`, so it never fights the hard `alphas[...] = 0` cut the
+ * pool applies on deactivation once `t >= 1`. Runs through the same code path for
+ * every flight — including the reduced-motion static `from === to` hold, which
+ * already shares {@link fadeEnvelope} and picks up this spike as part of that same
+ * envelope rather than as a special case. */
+function arrivalSpike(t: number): number {
+  if (t < 1 - ARRIVAL_WINDOW_T) return 0;
+  const u = (t - (1 - ARRIVAL_WINDOW_T)) / ARRIVAL_WINDOW_T;
+  return Math.sin(Math.PI * u);
 }
 
 interface ParticleSlot {
@@ -238,7 +282,13 @@ export function createParticleLayer(): ParticleLayer {
           for (let p = 0; p < POINTS_PER_PARTICLE; p++) alphas[base + p] = 0;
           continue;
         }
-        const headAlpha = fadeEnvelope(slot.t) * PEAK_ALPHA;
+        // Task B5: the arrival spike is computed once per active flight per frame
+        // and folded into both the head's alpha and a shared size multiplier that
+        // the trail loop below reuses, so the whole comet — not just the head dot
+        // — swells and flares together right before touchdown.
+        const spike = arrivalSpike(slot.t);
+        const headAlpha = Math.min(fadeEnvelope(slot.t) * PEAK_ALPHA + spike * ARRIVAL_ALPHA_BOOST, 1);
+        const sizeMultiplier = 1 + spike * ARRIVAL_SIZE_BOOST;
         // The HEAD — vertex 0 of this particle's block.
         positions[base * 3] = slot.from.x + (slot.to.x - slot.from.x) * slot.t;
         positions[base * 3 + 1] = slot.from.y + (slot.to.y - slot.from.y) * slot.t;
@@ -247,7 +297,7 @@ export function createParticleLayer(): ParticleLayer {
         colors[base * 3 + 1] = slot.color.g;
         colors[base * 3 + 2] = slot.color.b;
         alphas[base] = headAlpha;
-        sizes[base] = HEAD_SIZE_PX * PIXEL_RATIO;
+        sizes[base] = HEAD_SIZE_PX * sizeMultiplier * PIXEL_RATIO;
         // The TRAIL — vertices 1..TRAIL_COUNT, each a point further back along
         // [from, to] at an earlier `t` (clamped to 0 — never ahead of the flight's
         // own start), fading and shrinking toward the tail.
@@ -261,7 +311,7 @@ export function createParticleLayer(): ParticleLayer {
           colors[vi * 3 + 1] = slot.color.g;
           colors[vi * 3 + 2] = slot.color.b;
           alphas[vi] = headAlpha * TRAIL_ALPHA_FACTORS[k]!;
-          sizes[vi] = HEAD_SIZE_PX * TRAIL_SIZE_FACTORS[k]! * PIXEL_RATIO;
+          sizes[vi] = HEAD_SIZE_PX * TRAIL_SIZE_FACTORS[k]! * sizeMultiplier * PIXEL_RATIO;
         }
       }
       if (touched) {
