@@ -426,6 +426,11 @@ export function createSceneController(
       stateKey: `${subsystem.color}:klid`,
     };
   });
+  /** Task B3 — `connectors.update`'s per-connector "is this link live" buffer,
+   * allocated ONCE here and refilled in place every `tick` (see below) instead of
+   * a fresh `minis.map(...)` boolean array per frame — matches the sibling
+   * `orbitFieldLayer`/`particleLayer`'s no-per-frame-allocation contract. */
+  const liveFlags: boolean[] = minis.map(() => false);
 
   const hubVerts = hubSlots(HUB_RADIUS);
   // Phase 97 legibility pass — a SEPARATE, smaller-radius ring than the
@@ -609,7 +614,8 @@ export function createSceneController(
       // mitosis entry animation frame-by-frame, not just the phase-95 static
       // rest slot). `mini.worldPos` is reused as the write target
       // (allocation-light) — at rest numerically identical to the rest slot.
-      minis[i]!.layer.object3d.getWorldPosition(minis[i]!.worldPos);
+      const mini = minis[i]!;
+      mini.layer.object3d.getWorldPosition(mini.worldPos);
     }
   }
 
@@ -708,10 +714,13 @@ export function createSceneController(
     // Task B3 — the connectors' per-connector alpha pulse: only a PRESENT,
     // genuinely LIVE subsystem's link pulses; everything else holds its
     // steady base tone (mirrors the retired net's always-on faint look).
-    connectors.update(
-      dt,
-      minis.map((mini) => mini.present && isLiveState(mini.state)),
-    );
+    // `liveFlags` is filled IN PLACE (allocated once, above) rather than via a
+    // fresh `minis.map(...)` every frame.
+    for (let i = 0; i < minis.length; i++) {
+      const mini = minis[i]!;
+      liveFlags[i] = mini.present && isLiveState(mini.state);
+    }
+    connectors.update(dt, liveFlags);
 
     // Phase 97: advance every in-flight handoff particle (real events only — never
     // fed by the clock itself, only `emitFlight` ever calls `particles.emit`).

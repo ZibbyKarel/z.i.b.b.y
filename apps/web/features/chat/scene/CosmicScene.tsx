@@ -281,13 +281,20 @@ function CosmicSceneView({
   }, [pipelines]);
 
   // Task B4 — the per-subsystem orbital task particles ("each light = one
-  // processing task"): recompute the active-run tally whenever `runs` changes
-  // and push it to the controller. Reads `pipelinesRef` (not `pipelines`
-  // directly) so a pipeline-catalog-only refetch never forces a recompute —
-  // same rationale as the `onRunEvent` subscriber below.
+  // processing task"): recompute the active-run tally whenever `runs` OR
+  // `pipelines` changes and push it to the controller. `pipelines` is in the dep
+  // array (not just read via `pipelinesRef`) so a tally computed before the
+  // pipeline catalog resolves (runs arriving first → owner lookups miss →
+  // `{}`) recomputes once the catalog lands, instead of going stale until the
+  // next `runs` change; `pipelinesRef.current` is still read inside so this
+  // effect doesn't ALSO need to resubscribe `onRunEvent` below (that listener's
+  // own ref pattern is unrelated and untouched). `pipelines` is a query-result
+  // array that only changes when the catalog itself changes, and the
+  // controller's own `lastAppliedLoad` guard makes a recompute idempotent, so
+  // this doesn't cause excessive re-runs.
   useEffect(() => {
     controller?.setSubsystemLoad(activeRunsBySubsystem(runsRef.current, pipelinesRef.current));
-  }, [controller, runs]);
+  }, [controller, runs, pipelines]);
 
   useEffect(() => {
     return onRunEvent((event) => {
