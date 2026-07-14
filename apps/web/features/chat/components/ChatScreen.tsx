@@ -474,7 +474,7 @@ export function ChatScreen({
           markup left here. Voice and New-chat moved down to the composer
           (below); Close was removed entirely (the right tool dock is the
           navigation now). */}
-      <div className="relative z-20 shrink-0 border-b border-border px-[22px] py-[13px]">
+      <div className="relative z-20 shrink-0 px-[22px] py-[13px]">
         <ChatTopBar mode={mode} onOpenPalette={openPalette} />
       </div>
 

@@ -17,6 +17,10 @@ export const CHAT_TOOL_DOCK_WIDTH = 70;
 // The design's tool set, in order — a subset of the HUD nav (source of truth).
 const DOCK_IDS = ["companies", "projects", "agents", "skills", "commands", "mcp", "memory"] as const;
 
+// 38×38 hit target (spec §5.3), dim by default, accent on hover/focus.
+const DOCK_LINK_CLASS =
+  "flex size-[38px] items-center justify-center rounded-[6px] text-foreground-dim outline-none transition-colors hover:text-accent focus-visible:text-accent";
+
 /**
  * Right-side glass tool dock — icon links into the HUD pages (Velin-D design).
  * Position-agnostic: the mounting `Container` (Task 6) places it at
@@ -36,7 +40,12 @@ export function ChatToolDock() {
         <Stack align="center" direction="col" gap="75">
           {items.map((item) => (
             <Tooltip content={t(item.id)} key={item.id}>
-              <Link aria-label={t(item.id)} data-testid={`chat-tool-dock-${item.id}`} href={item.href}>
+              <Link
+                aria-label={t(item.id)}
+                className={DOCK_LINK_CLASS}
+                data-testid={`chat-tool-dock-${item.id}`}
+                href={item.href}
+              >
                 <Icon name={item.glyph} />
               </Link>
             </Tooltip>
@@ -45,6 +54,7 @@ export function ChatToolDock() {
           <Tooltip content={t(SETTINGS_ITEM.id)}>
             <Link
               aria-label={t(SETTINGS_ITEM.id)}
+              className={DOCK_LINK_CLASS}
               data-testid={ChatToolDockTestId.Settings}
               href={SETTINGS_ITEM.href}
             >

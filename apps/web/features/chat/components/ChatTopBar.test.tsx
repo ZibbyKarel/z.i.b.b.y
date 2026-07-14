@@ -14,4 +14,9 @@ describe("ChatTopBar", () => {
     // Close button was removed from the top bar this phase.
     expect(queryByTestId("chat-screen-close")).toBeNull();
   });
+
+  it("renders the clock in fixed 24h HH:MM, regardless of locale", () => {
+    const { getByTestId } = renderWithProviders(<ChatTopBar mode="idle" onOpenPalette={vi.fn()} />);
+    expect(getByTestId(ChatTopBarTestId.Clock)).toHaveTextContent(/^\d{2}:\d{2}$/);
+  });
 });

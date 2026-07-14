@@ -20,4 +20,13 @@ describe("ChatToolDock", () => {
     expect(nav).toHaveRole("navigation");
     expect(nav).toHaveAttribute("aria-label");
   });
+
+  it("gives each link a 38x38 hit target with the dim-to-accent hover/focus transition (spec §5.3)", () => {
+    const { getByTestId } = renderWithProviders(<ChatToolDock />);
+    const link = getByTestId("chat-tool-dock-companies");
+    expect(link.className).toMatch(/size-\[38px\]/);
+    expect(link.className).toMatch(/text-foreground-dim/);
+    expect(link.className).toMatch(/hover:text-accent/);
+    expect(link.className).toMatch(/focus-visible:text-accent/);
+  });
 });

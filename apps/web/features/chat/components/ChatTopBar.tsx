@@ -34,9 +34,11 @@ export function ChatTopBar({ mode, onOpenPalette }: ChatTopBarProps) {
   const t = useTranslations("chat");
   const now = useNow(MINUTE_MS);
   const dot = MODE_DOT[mode];
-  const clock = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(
-    now,
-  );
+  const clock = new Intl.DateTimeFormat(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(now);
 
   return (
     <Stack align="center" data-testid={ChatTopBarTestId.Root} direction="row" gap="150">
