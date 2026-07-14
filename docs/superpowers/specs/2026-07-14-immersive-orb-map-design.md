@@ -10,6 +10,16 @@ The previous arc *retuned* the old shared-scene Cosmic renderer toward Velín-D.
 match the design: the design has **no shared WebGL scene, no nebula, no WebGL particles/connectors**.
 Its architecture is fundamentally different — and fundamentally component-shaped.
 
+## Global constraints
+
+- **English-only identifiers.** No Czech (and no "velin") in component names, files, variables,
+  enum values, testids, story titles, commit messages. Czech appears ONLY in i18n catalogs
+  (`cs.json`). Where the old system used Czech identifiers, they get renamed to English —
+  concretely the contracts `SubsystemState` enum `klid/bezi/hlaseni/ceka` →
+  `idle/running/report/waiting` (own task; UI labels stay Czech via i18n).
+- Design file paths (`design/Z.I.B.B.Y/…Velin-D…`) are external reference material and keep
+  their names; nothing in `apps/`/`libs/` may reference "velin".
+
 ## Decisions (operator-approved 2026-07-14)
 
 1. **Greenfield.** Build new components 1:1 to the prototype's architecture. After the swap, **delete
@@ -58,7 +68,7 @@ The DS stays domain-agnostic. Components take colors/states/counts/slots — nev
 
 **`apps/web/features/chat/` — thin adapter (domain composite):**
 
-- `VelinMap` — maps domain → DS: `SubsystemWithStatus[]` + runs/pipelines → `OrbMapNode[]`;
+- `SubsystemOrbMap` — maps domain → DS: `SubsystemWithStatus[]` + runs/pipelines → `OrbMapNode[]`;
   implements the existing `ChatScreen` seam (same mount point, `onOpenCore`/`onSelectSubsystem`
   callbacks). Reuses `activeRunsBySubsystem` (moved out of `scene/` before deletion, it's a pure fn)
   and the subsystem→icon mapping (DS `Icon` instances passed as slots).
@@ -151,12 +161,12 @@ float/dash/flare animations. Must be honored in DS components (media query + `ma
 
 ## Data mapping (app adapter)
 
-| contracts `SubsystemState` | immersive `state` |
+| contracts `SubsystemState` (after EN rename) | immersive `state` |
 |---|---|
-| `klid` | `idle` |
-| `bezi` | `working` |
-| `hlaseni` | `report` |
-| `ceka` | `await` |
+| `idle` (was `klid`) | `idle` |
+| `running` (was `bezi`) | `working` |
+| `report` (was `hlaseni`) | `report` |
+| `waiting` (was `ceka`) | `await` |
 
 `incident` and `thinking` exist in the DS bundle (Storybook-playable, core uses `thinking`); the app
 maps only the 4 contract states today. Colors: pass each subsystem's contract hex as `hex` (identity),
@@ -173,7 +183,7 @@ no config change needed — DS glob covers `libs/design-system/src/**`.
 
 ## Replacement seam & deletion
 
-- Seam: `ChatScreen.tsx` (~line 586) — swap `<CosmicScene …>` for `<VelinMap …>` with the same
+- Seam: `ChatScreen.tsx` (~line 586) — swap `<CosmicScene …>` for `<SubsystemOrbMap …>` with the same
   callbacks `onOpenCore` / `onSelectSubsystem`; ChatScreen keeps owning state, drawer, dialog.
 - Props the new map consumes: `subsystems`, `runs`, `pipelines`, `selectedSubsystemId`, streaming
   flag (for core `thinking`). Old props that die with the scene: `dock`, `streamChars`,
