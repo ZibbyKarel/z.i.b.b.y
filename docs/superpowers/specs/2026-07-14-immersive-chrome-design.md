@@ -72,8 +72,8 @@ inventing data:
 
 | Prototype detail | App reality | Decision this phase |
 |---|---|---|
-| `VcTaskCard` left rail = **subsystem** identity hue (`task.sys`) | A `RunView` carries **no subsystem id** (`task.schema.ts`: a subsystem target "never reaches a stored run") | Rail hue = the run's **StateTone** hex (`resolveStateToneHex(runStateTone(run.status))`): run→blue, report→green, waiting→amber, error→red. Reproduces the colored-identity-bar look honestly. Subsystem-true coloring is deferred to when runs carry subsystem attribution. |
-| Meta row shows **subsystem name** | Runs resolve a routed **owner** (agent/pipeline) glyph+avatar, not a subsystem | Meta row shows the routed owner's display name in the hue color; the small square dot uses the same StateTone hue. |
+| `VcTaskCard` left rail = **subsystem** identity hue (`task.sys`) | A `RunView` carries **no subsystem id** (`task.schema.ts`: a subsystem target "never reaches a stored run") | Rail hue = the run's **StateTone**: `const tone = runStateTone(run.status) ?? "accent"` (note `runStateTone` returns `StateTone \| undefined` — default explicitly), rendered via the DS `Card` built-in `edge={tone}` prop ("a solid 3px accent bar on the left edge, tinted by state", `Card.tsx`) — no bespoke hex plumbing. run→blue, report→green, waiting→amber, error→red. Subsystem-true coloring is deferred to when runs carry subsystem attribution. |
+| Meta row shows **subsystem name** | Runs resolve a routed **owner** (agent/pipeline) glyph+avatar, not a subsystem | Meta row shows the routed owner's display name coloured by the same tone (`Typography tone={tone}`); the small dot is `StatusDot tone={tone}`. |
 | `task.status = "Nominal"` (English literal in Czech UI) | `StatusPill` already renders `t("statusPill.nominal")` | Keep the existing i18n key; Czech copy is the operator's call (default: `"Nominální"`). No English literal in source. |
 
 The status pill's `working / report / waiting` counts already come from
@@ -106,15 +106,25 @@ inert (app is dark-only) and is left untouched.
   `--color-foreground-faint` == `ZT.ink3`). Single-line fix.
 
 ### 4c. New glass tokens (the `VD_GLASS` recipe, verbatim from `design-analysis.md §1`)
-Add to `globals.css` `@theme` **and** `darkTheme.ts` (kept in lockstep). Names:
 ```
 --gradient-glass: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02) 40%, rgba(16,21,28,0.5));
 --color-glass-border: rgba(255,255,255,0.12);
 --shadow-glass: inset 0 1px 0 rgba(255,255,255,0.13), 0 16px 40px rgba(0,0,0,0.42);
 --blur-glass: blur(22px) saturate(180%);   /* consumed via the DS GlassSurface style, not a Tailwind util */
 ```
-`darkTheme.ts` equivalents (camelCase `Theme` keys): `gradientGlass`, `colorGlassBorder`,
-`shadowGlass`, `blurGlass` — same values.
+These land in **four** places so the token story typechecks and injects end-to-end
+(the `Theme` interface in `tokens.ts` is explicit and all-required, and both theme
+files are typed `: Theme`):
+1. `libs/design-system/src/tokens.ts` — add `gradientGlass`, `colorGlassBorder`,
+   `shadowGlass`, `blurGlass` (all `string`, **required**) to the `Theme` interface
+   **and** to `tokensToCssVars()` (`"--gradient-glass": t.gradientGlass`, …) so
+   `DesignSystemProvider` injects them at runtime (no reliance on Tailwind v4
+   emitting non-standard `@theme` namespaces).
+2. `libs/design-system/src/theme/globals.css` — the `@theme` block (SSR default).
+3. `libs/design-system/src/themes/darkTheme.ts` — the values above.
+4. `libs/design-system/src/themes/lightTheme.ts` — the **same values** (the app is
+   dark-only and lightTheme is inert, but the shared `Theme` type requires the keys;
+   a light-tuned glass recipe is out of scope).
 
 ### 4d. Subsystem identity hues → prototype values
 `libs/contracts/src/subsystems/subsystem.schema.ts` `SUBSYSTEMS` registry `color` fields.
@@ -144,7 +154,9 @@ All new user-visible chrome is composed from the DS. Glass surfaces are the new
 
 ### 5.1 `GlassSurface` — DS primitive (new)
 - **Location:** `libs/design-system/src/immersive/GlassSurface/GlassSurface.tsx`
-  (immersive bundle; follows `ensureImmersiveCss` / TestId-enum conventions).
+  (immersive bundle; follows the bundle's `"use client"` + TestId-enum conventions.
+  It deliberately does **not** call `ensureImmersiveCss()` — that injector exists for
+  the `im*` keyframes, and GlassSurface uses no animation).
 - **Renders:** a single `div` with the glass recipe applied via inline `style` (DS
   immersive components already use inline style — the `forbid-dom-props` rule targets
   `apps/web`, not the DS). Background `var(--gradient-glass)`, `backdropFilter`
@@ -170,21 +182,31 @@ All new user-visible chrome is composed from the DS. Glass surfaces are the new
     radius="pill"`. Counts-only (`working · report · waiting`), unchanged data. `StatusDot
     tone="ok"` + nominal label + up-to-three colored count segments (run/warn/accent tones).
   - **Search trigger** — `GlassSurface radius="pill"` wrapping the existing `SearchBar`
-    (opens `ChatPalette` ⌘K). Icon `search` (13px) + placeholder `t("palette.placeholder")`
-    (`foreground-faint`) + trailing `Kbd` "⌘K". Behavior unchanged; chrome restyled to glass.
+    (opens `ChatPalette` ⌘K). `SearchBar`'s real API: `ariaLabel` (required),
+    `placeholder`, `shortcut` (it renders its own `<kbd>` from this string), `onClick` —
+    so: `ariaLabel`+`placeholder` = `t("palette.placeholder")`, `shortcut="⌘K"`. No
+    separate `Kbd` composition. Behavior unchanged; chrome restyled to glass.
 - **Right group (glass pills):**
   - **`LimitsRings`** — reuse the existing component verbatim
     (`apps/web/components/layout/LimitsRings/LimitsRings.tsx`): two 30×30 SVG donut gauges
     (rolling 5h · weekly) + hover/focus popover. Wrap in `GlassSurface radius="pill"`.
-  - **`LangSwitch`** (new small component, `ChatTopBar`-local or
+    Its trigger is a `Pressable` + `Container` (no own `Card`), so the glass wrap does
+    not double-surface; the popover `Card` floats above it. Verify visually in the live
+    pass — if it reads nested, drop the wrap (the popover keeps its `Card`).
+  - **`LangSwitch`** (new small component,
     `apps/web/features/chat/components/LangSwitch.tsx`) — `GlassSurface radius="pill"`
-    wrapping a `ButtonGroup` (or `MenuButton`) with `{ id:"cs", label:"Čeština" }`,
+    wrapping a `ButtonGroup` with `{ id:"cs", label:"Čeština" }`,
     `{ id:"en", label:"English" }`. Reuses the **settings** mechanism exactly:
     `document.cookie = "locale=<v>; path=/; max-age=31536000"` then `router.refresh()`.
-    Current locale from `useLocale()`.
+    Current locale from `useLocale()`. Guard the change handler: `ButtonGroup.onChange`
+    emits `""` when the active option is toggled off — only `"cs" | "en"` may be written.
+    aria-label reuses the existing `topbar.langSwitcherLabel` key (no new key).
   - **Clock** — `Typography mono` `HH:MM`, `useNow(MINUTE_MS)` (unchanged).
-- **Removed:** the Close button (`chat-screen-close`) and, from this bar, the New-chat and
-  Voice-toggle controls (relocated — §5.5).
+- **Removed:** the Close button (`chat-screen-close`) — **including its whole prop chain**:
+  `ChatScreenProps.onClose` + its destructure, the `ChatScreenTestId.Close` enum member,
+  and `Screen.tsx`'s `onClose={close}` (and the `close` handler if it becomes unused);
+  the `chat.close` i18n key is deleted from both catalogs. Also removed from this bar:
+  the New-chat and Voice-toggle controls (relocated — §5.5).
 - **TestId enum:** `ChatTopBarTestId { Root = "chat-top-bar", Mode = "chat-top-bar-mode",
   Search = "chat-top-bar-search", Lang = "chat-top-bar-lang", Clock = "chat-top-bar-clock" }`.
   (Mode dot keeps `chat-screen-mode-dot`; status-pill keeps its own `chat-status-pill*` ids.)
@@ -212,10 +234,13 @@ All new user-visible chrome is composed from the DS. Glass surfaces are the new
   `/companies` route **verified to exist** (`apps/web/app/(dashboard)/companies/{page,[id],new}`
   + `NAV_ITEMS` entry `{ id:"companies", glyph:"branch", href:"/companies" }`).
 - **Each button:** a 38×38 `next/link` (`href`) wrapping `Icon` (13px, `foreground-dim`
-  default, `accent` on hover/focus), inside a `Tooltip` whose label is `t(`nav.${id}`)`
-  (the existing nav label namespace — companies/projects/… already localized; settings uses
-  `t("nav.settings")` or the existing settings label key). Keyboard-focusable; navigates
-  on click (leaves `/chat`).
+  default, `accent` on hover/focus), inside the DS `Tooltip` (`content={t(`nav.${id}`)}`;
+  note `TooltipSide` is `"top" | "bottom"` only — use the default `top`, there is no
+  left-side placement and extending it is out of scope). A tooltip provides a
+  *description*, not a *name*, so **every `Link` also carries an explicit
+  `aria-label={t(`nav.${id}`)}`**. Labels reuse the existing `nav.*` namespace verbatim —
+  including `nav.settings`, which already exists ("System settings" / "Nastavení systému");
+  do not re-add or reword it. Keyboard-focusable; navigates on click (leaves `/chat`).
 - **TestId enum:** `ChatToolDockTestId { Root = "chat-tool-dock", Settings =
   "chat-tool-dock-settings" }`; each nav link carries `data-testid={`chat-tool-dock-${id}`}`.
 - **Orb-map inset:** `SubsystemOrbMap` `insets.right` moves off `0` to the dock's occupied
@@ -228,12 +253,14 @@ All new user-visible chrome is composed from the DS. Glass surfaces are the new
 - **Panel header:** replace the plain `HudPanel title="Tasks"` label with a live 7px pulsing
   `StatusDot tone="run"` + `Typography type="label"` `t("tasks.title")` ("Running tasks") +
   right-aligned count (`runs.length`, `mono`, `foreground-dim`).
-- **Card anatomy** (`VcTaskCard` port, `Card` DS base; hue = `hueHex =
-  resolveStateToneHex(runStateTone(run.status))`):
-  - (a) 3px-wide left rail, full-height-inset, `background: hueHex` (via `Card edge`/style
-    passthrough).
-  - (b) meta row: 7px square dot (`hueHex`) + owner display name (`mono 11px`, `hueHex`,
-    600) + run `kind`/`RunStateBadge` (micro) + right-aligned relative start time.
+- **Card anatomy** (`VcTaskCard` port, `Card` DS base; `const tone =
+  runStateTone(run.status) ?? "accent"` — `runStateTone` returns `StateTone | undefined`,
+  default explicitly):
+  - (a) 3px-wide left rail via the built-in `<Card edge={tone}>` prop (Card ships exactly
+    this: "a solid 3px accent bar on the left edge, tinted by state") — no raw hex, no
+    style passthrough.
+  - (b) meta row: `StatusDot tone={tone}` + owner display name (`Typography mono`
+    `tone={tone}`, 600) + `RunStateBadge` (micro) + right-aligned relative start time.
   - (c) title (`runTitle(run)`, sans 13.5px 500, single-line ellipsis).
   - (d) agent·phase row: `Icon name="run"` (or `pulse` when live/continuous) + `"{owner} ·
     {phase}"` micro. For agent runs `phase` = current stage label; for goals/pipelines use
@@ -241,15 +268,16 @@ All new user-visible chrome is composed from the DS. Glass surfaces are the new
   - (e) progress meter: `Progress tone={tone}` + `mono` `{pct}%` — **only when `run.pct != null`**
     (agent runs); pipelines/goals omit the meter, matching today's behavior and the
     prototype's continuous-task rule.
-  - **Hover:** background → `elevated`, border → hue at `~40%` alpha, `translateX(4px)`,
-    deeper shadow (via `Card living`/tone + style passthrough; the decorative `vcFloat`
-    idle animation is **optional** and, if included, must be a keyframe in the immersive CSS
-    bundle — no per-element inline `@keyframes`).
+  - **Hover:** background → `elevated`, tone-tinted border, `translateX(4px)`, deeper
+    shadow (via `Card living`/`tone`). The prototype's decorative `vcFloat` idle-breathing
+    animation is **dropped** this phase (YAGNI — no keyframe step, no inline `@keyframes`
+    path left open).
 - **Selection:** keep today's behavior — selected = accent border/ring, click toggles,
   opens `ChatTaskDetailColumn` (unchanged; detail internals out of scope).
 - **TestId enum:** keep `ChatTaskRowTestId.Row = "chat-task-row"` (test continuity); add
-  `Rail = "chat-task-row-rail"`, `Meta = "chat-task-row-meta"`, `Progress =
-  "chat-task-row-progress"`. `ChatTasksPanelTestId` unchanged (`Root/List/Empty`).
+  `Meta = "chat-task-row-meta"`, `Progress = "chat-task-row-progress"`. (No `Rail` testid —
+  the rail is `Card`'s own `edge` rendering, not a node this component owns.)
+  `ChatTasksPanelTestId` unchanged (`Root/List/Empty`).
 
 ### 5.5 Displaced controls (relocated into the composer/bottom dock)
 - **New chat (trash icon):** move to the composer area — a small circular icon button
@@ -272,6 +300,8 @@ All new user-visible chrome is composed from the DS. Glass surfaces are the new
 - **Locale:** `useLocale()` (read) + cookie write + `router.refresh()` (write) — settings' mechanism.
 - **Tool-dock targets/glyphs/labels:** `NAV_ITEMS` / `SETTINGS_ITEM` (`state/config.ts`) +
   `t("nav.<id>")`.
+- **Task-card tone:** `runStateTone(run.status) ?? "accent"` (`StateTone | undefined` —
+  always default) fed to `Card edge`, `StatusDot`, `Typography`, `Progress` `tone` props.
 - **Subsystem hues:** `SUBSYSTEMS` registry `color` (after §4d recolor) — consumed wherever
   subsystem identity color is shown (orb map, drawer). The task card uses **StateTone**, not
   these (see §3).
@@ -284,24 +314,26 @@ DS components stay i18n-agnostic (English-default string props). Every user-visi
 string goes through next-intl in `apps/web/i18n/messages/{cs,en}.json`. Czech copy from
 `design-analysis.md §6`; English is the sensible default.
 
-**Already present (reuse, do not duplicate):** `chat.modeLabel`, `chat.newChat`,
-`chat.palette.placeholder`, `chat.statusPill.{nominal,working,report,waiting}`,
-`chat.tasks.title`, `nav.{companies,projects,agents,skills,commands,mcp,memory}`,
-`settings.language`, `limits.*`.
+**Already present (reuse verbatim, do not duplicate or reword):** `chat.modeLabel`,
+`chat.newChat`, `chat.palette.placeholder`,
+`chat.statusPill.{nominal,working,report,waiting}`,
+`nav.{companies,projects,agents,skills,commands,mcp,memory}`,
+`nav.settings` ("System settings" / "Nastavení systému" — exists, reuse as-is),
+`topbar.langSwitcherLabel` ("Interface language" / "Jazyk rozhraní" — the LangSwitch
+aria-label; do **not** mint a `chat.langSwitch.*` duplicate), `limits.*`, the existing
+voice-toggle labels.
 
-**New / to confirm this phase:**
+**Catalog changes this phase — ALL landing in one task (plan Task 7), never in the
+component tasks (they would collide under parallel execution):**
 
-| key | cs | en |
-|---|---|---|
-| `chat.tasks.title` (repurpose) | `Běžící úlohy` | `Running tasks` |
-| `chat.statusPill.nominal` (confirm CS) | `Nominální` | `Nominal` |
-| `chat.langSwitch.label` | `Jazyk rozhraní` | `Interface language` |
-| `chat.toolDock.label` | `Nástroje` | `Tools` |
-| `nav.settings` (if not present) | `Nastavení systému` | `Settings` |
-| `chat.voice.toggle` (if not already) | reuse existing voice label | reuse existing |
+| change | key | cs | en |
+|---|---|---|---|
+| copy update | `chat.tasks.title` | `Tasky` → `Běžící úlohy` | `Tasks` → `Running tasks` |
+| confirm copy | `chat.statusPill.nominal` | `Nominální` | `Nominal` |
+| add | `chat.toolDock.label` | `Nástroje` | `Tools` |
+| remove | `chat.close` | *(deleted — Close button removed)* | *(deleted)* |
 
-Any nav label the dock references that is missing gets added to **both** catalogs. A
-cs/en key-parity assertion (test) guards against a one-sided add.
+A cs/en key-parity assertion (test) guards against a one-sided add/remove.
 
 ---
 
@@ -309,8 +341,10 @@ cs/en key-parity assertion (test) guards against a one-sided add.
 
 **Tokens**
 - [ ] `darkTheme.ts` `colorForegroundFaint === "#66737f"`.
-- [ ] `--gradient-glass`, `--color-glass-border`, `--shadow-glass`, `--blur-glass` exist in
-      `globals.css` `@theme` and as `Theme` keys in `darkTheme.ts` with the §4c values.
+- [ ] `gradientGlass`, `colorGlassBorder`, `shadowGlass`, `blurGlass` are required keys on
+      the `Theme` interface, mapped in `tokensToCssVars()`, present in **both**
+      `darkTheme.ts` and `lightTheme.ts`, and mirrored in `globals.css` `@theme` with the
+      §4c values — `rtk pnpm check:types` passes with both theme files typed `: Theme`.
 - [ ] The eight `SUBSYSTEMS[].color` equal the §4d ZT hues; schema + fixtures pass.
 
 **Top panel**
@@ -319,8 +353,10 @@ cs/en key-parity assertion (test) guards against a one-sided add.
 - [ ] Search pill opens the existing ⌘K palette; ⌘K still works globally.
 - [ ] Limits gauge shows two rings + popover (reused `LimitsRings`).
 - [ ] Language switch changes locale (cookie + `router.refresh`) and the UI re-renders in
-      the new language.
-- [ ] No Close button; New-chat and Voice-toggle are absent from the top bar.
+      the new language; re-clicking the active language is a no-op (no empty cookie write).
+- [ ] No Close button; the `onClose` prop chain is fully removed (`ChatScreenProps`,
+      destructure, `ChatScreenTestId.Close`, `Screen.tsx` wiring) — lint has no unused-var;
+      New-chat and Voice-toggle are absent from the top bar.
 
 **Right tool dock**
 - [ ] Eight glass icon buttons in the §5.3 order; each is a keyboard-focusable link to the
@@ -330,8 +366,8 @@ cs/en key-parity assertion (test) guards against a one-sided add.
 
 **Left task list**
 - [ ] Header shows a pulsing dot + "Running tasks" + live count.
-- [ ] Each card shows: hue rail (StateTone), meta row (owner + kind + relative time), title,
-      agent·phase row, and a progress meter only when `pct != null`.
+- [ ] Each card shows: tone rail (`Card edge`), meta row (owner + state badge + relative
+      time), title, agent·phase row, and a progress meter only when `pct != null`.
 - [ ] Hover lifts/tints the card; selecting a card still opens the detail column.
 
 **Displaced controls**
@@ -349,10 +385,11 @@ cs/en key-parity assertion (test) guards against a one-sided add.
 **Live-browser verification (mandatory — jsdom cannot catch it; phase 1 proved it)**
 - [ ] With the dev server on `:3000`, load `/chat` in a real browser and confirm:
       glass pills are actually translucent (backdrop blur visible over the moving scene);
-      the tool dock is clickable (`pointer-events` correct) and each link navigates;
-      the status pill has no hover flyout; the language switch flips copy; the task cards
-      hover-lift; New-chat + Voice live in the composer. Capture a screenshot after first
-      paint (avoid the `.playwright-mcp/` Fast-Refresh trap; screenshot once loaded).
+      the `LimitsRings` glass pill does not read as a nested double surface; the tool dock
+      is clickable (`pointer-events` correct) and each link navigates; the status pill has
+      no hover flyout; the language switch flips copy; the task cards hover-lift; New-chat
+      + Voice live in the composer. Capture a screenshot after first paint (avoid the
+      `.playwright-mcp/` Fast-Refresh trap; screenshot once loaded).
 
 **Handoff**
 - [ ] PARK at the PR gate — commit on `feat/immersive-chrome`, **never push, never open a PR**

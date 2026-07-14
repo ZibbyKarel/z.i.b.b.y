@@ -12,13 +12,14 @@
 
 - **Palette is `ZT`** (`.superpowers/sdd2/design-analysis.md §1`), verbatim: bg `#0b0e13`, surface `#10151c`, surfaceHi `#151c25`, ink `#e6edf3` / ink2 `#9aa7b4` / ink3 `#66737f`, accent `#5b8def` / accentDim `rgba(91,141,239,0.14)`, ok `#3fcf8e`, run `#7aa5f8`, wait `#f0b429`, bad `#ff6b6b`, riskPay `#f0b429`, riskDel `#ff6b6b`, riskPush `#b07cff`, riskSend `#56c4d6`, radii 6 (controls) / 10 (panels).
 - **Glass recipe (verbatim):** `linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02) 40%, rgba(16,21,28,0.5))`; blur `blur(22px) saturate(180%)`; border `1px solid rgba(255,255,255,0.12)`; shadow `inset 0 1px 0 rgba(255,255,255,0.13), 0 16px 40px rgba(0,0,0,0.42)`. Scene gradient `radial-gradient(ellipse 130% 100% at 50% 42%, #121a27 0%, #0b0e13 62%)`.
-- **English-only identifiers/comments/keyframes.** No "velin"/Czech in source outside the i18n catalogs. Every user-visible string via next-intl; keys in `apps/web/i18n/messages/{cs,en}.json` (Czech copy from `design-analysis.md §6`, sensible English). DS components stay i18n-agnostic (English-default string props).
-- **Token value changes land in every mirror** (`current-state.md §1`): `libs/design-system/src/theme/globals.css`, `libs/design-system/src/themes/darkTheme.ts`, `libs/design-system/src/stateTone.ts`, `libs/design-system/src/immersive/orbState.ts`. `lightTheme.ts` is inert — leave it.
+- **English-only identifiers/comments/keyframes — including test fixtures/literals.** No "velin"/Czech in source outside the i18n catalogs. Every user-visible string via next-intl; keys in `apps/web/i18n/messages/{cs,en}.json` (Czech copy from `design-analysis.md §6`, sensible English). DS components stay i18n-agnostic (English-default string props).
+- **i18n catalog edits land ONLY in Task 7.** Tasks 3/4/5 must not touch `cs.json`/`en.json` (they run in parallel — concurrent edits to the same two files would lose updates). Components reference existing keys where they exist; a key that is new this phase renders as its key-path in component tests (next-intl missing-key fallback) until Task 7 lands it.
+- **Token value changes land in every mirror** (`current-state.md §1`): `libs/design-system/src/theme/globals.css`, `libs/design-system/src/themes/darkTheme.ts`, `libs/design-system/src/stateTone.ts`, `libs/design-system/src/immersive/orbState.ts`. New `Theme` keys additionally touch `libs/design-system/src/tokens.ts` (the explicit all-required `Theme` interface + `tokensToCssVars()`) **and** `libs/design-system/src/themes/lightTheme.ts` (typed `: Theme`, so required keys must exist there too — same values; the app is dark-only).
 - **No inline `style={{}}` on a DOM node in `apps/web`** (`react/forbid-dom-props`). Glass surfaces are the DS `GlassSurface` component; dynamic values go through a DS component's `style` passthrough.
 - **Repo laws:** pnpm + `rtk` prefix (even in `&&` chains); React 19 no `forwardRef`; no `any`; DS TestId enums + `getByTestId` (roles/ARIA as assertions only); never `--no-verify`; don't kill the `:3000` dev server; don't commit `.zibby/data/system-config.json`.
 - **Three gates after any codegen, in order:** `rtk pnpm check:lint` → `rtk pnpm check:types` **and** `pnpm exec tsc -p apps/web --noEmit` (base config misses `apps/web`) → `pnpm test`. Fix all before moving on.
 - **PARK at the PR gate:** commit on `feat/immersive-chrome`; never push, never open a PR without explicit operator instruction.
-- **Data reality (do not invent):** a `RunView` has no subsystem id → task-card hue = `resolveStateToneHex(runStateTone(run.status))`. Status-pill counts come from `useSubsystemsQuery`. Reuse `LimitsRings` for the gauge; reuse the settings locale mechanism (`document.cookie = "locale=<v>; path=/; max-age=31536000"` + `router.refresh()`).
+- **Data reality (do not invent):** a `RunView` has no subsystem id → task-card tone = `runStateTone(run.status) ?? "accent"` (**`runStateTone` returns `StateTone | undefined` — always default explicitly**), rendered via `Card`'s built-in `edge={tone}` prop. Status-pill counts come from `useSubsystemsQuery`. Reuse `LimitsRings` for the gauge; reuse the settings locale mechanism (`document.cookie = "locale=<v>; path=/; max-age=31536000"` + `router.refresh()`).
 
 ---
 
@@ -35,21 +36,25 @@
 | 7 | i18n catalog completion + cs/en parity test | 3, 4, 5 | 6 |
 | 8 | Final gates + Storybook smoke + live `:3000` verify (PARK) | all | — |
 
-Tasks 3, 4, 5 are independent app components on disjoint files — safe to run concurrently after Task 2.
+Tasks 3, 4, 5 are independent app components and are parallel-safe **because all i18n
+catalog edits are consolidated in Task 7** — with that rule, their file sets are disjoint.
+Task 7 must run after 3/4/5 (it needs the final set of referenced keys).
 
 ---
 
 ### Task 1: Global color-token alignment
 
 **Files:**
-- Modify: `libs/design-system/src/themes/darkTheme.ts` (foreground-faint drift + 4 glass keys)
+- Modify: `libs/design-system/src/tokens.ts` (4 glass keys on the `Theme` interface + `tokensToCssVars()` mappings)
+- Modify: `libs/design-system/src/themes/darkTheme.ts` (foreground-faint drift + 4 glass values)
+- Modify: `libs/design-system/src/themes/lightTheme.ts` (the same 4 glass values — `Theme` is all-required and lightTheme is typed `: Theme`; the app is dark-only so the dark-tuned recipe is acceptable there)
 - Modify: `libs/design-system/src/theme/globals.css` (add 4 glass tokens to `@theme`)
 - Modify: `libs/contracts/src/subsystems/subsystem.schema.ts` (recolor 8 `SUBSYSTEMS[].color`)
 - Verify (assert, no change): `libs/design-system/src/stateTone.ts`, `libs/design-system/src/immersive/orbState.ts`
 - Test: `libs/design-system/src/themes/darkTheme.test.ts` (create if absent), `libs/contracts/src/subsystems/subsystems.contract.test.ts` (update fixtures)
 
 **Interfaces:**
-- Produces (consumed by Task 2 and all chrome): CSS custom properties `--gradient-glass`, `--color-glass-border`, `--shadow-glass`, `--blur-glass`; `Theme` keys `gradientGlass`, `colorGlassBorder`, `shadowGlass`, `blurGlass` (all `string`).
+- Produces (consumed by Task 2 and all chrome): required `Theme` keys `gradientGlass`, `colorGlassBorder`, `shadowGlass`, `blurGlass` (all `string`), injected at runtime by `DesignSystemProvider` via `tokensToCssVars()` as CSS custom properties `--gradient-glass`, `--color-glass-border`, `--shadow-glass`, `--blur-glass` (also declared in the `globals.css` `@theme` block as the SSR default).
 - Produces: `SUBSYSTEMS[].color` recolored to ZT hues (unchanged shape/type).
 
 - [ ] **Step 1: Write/extend the failing token test**
@@ -82,9 +87,28 @@ describe("darkTheme ZT alignment", () => {
 Run: `rtk vitest run libs/design-system/src/themes/darkTheme.test.ts`
 Expected: FAIL — `colorForegroundFaint` is `#7a8793`; glass keys are `undefined`.
 
-- [ ] **Step 3: Reconcile the faint drift + add glass keys in `darkTheme.ts`**
+- [ ] **Step 3: Add the four glass keys to the `Theme` interface and `tokensToCssVars()` in `tokens.ts`**
 
-Change `colorForegroundFaint: "#7a8793"` → `colorForegroundFaint: "#66737f"`. Add near the gradients/shadows block (match the file's existing `Theme` object shape — these are plain string values):
+The `Theme` interface (`tokens.ts:71`) is explicit and **all-required**; both `darkTheme.ts` and `lightTheme.ts` are typed `: Theme`. Add to the interface (near `shadowGlowAccent`):
+```ts
+  /** Liquid-glass chrome recipe (Velín-D VD_GLASS), consumed by GlassSurface. */
+  gradientGlass: string;
+  colorGlassBorder: string;
+  shadowGlass: string;
+  blurGlass: string;
+```
+And add the mappings inside `tokensToCssVars()` (`tokens.ts:156+`, near `"--shadow-glow-accent"`), so `DesignSystemProvider` injects them at runtime and the vars never depend on Tailwind emitting a non-standard `@theme` namespace:
+```ts
+    // liquid glass (GlassSurface)
+    "--gradient-glass": t.gradientGlass,
+    "--color-glass-border": t.colorGlassBorder,
+    "--shadow-glass": t.shadowGlass,
+    "--blur-glass": t.blurGlass,
+```
+
+- [ ] **Step 4: Reconcile the faint drift + add glass values in `darkTheme.ts` AND `lightTheme.ts`**
+
+In `darkTheme.ts`: change `colorForegroundFaint: "#7a8793"` → `colorForegroundFaint: "#66737f"`, and add near the shadows block:
 ```ts
   // liquid-glass chrome recipe (Velín-D VD_GLASS), consumed by GlassSurface
   gradientGlass:
@@ -93,9 +117,9 @@ Change `colorForegroundFaint: "#7a8793"` → `colorForegroundFaint: "#66737f"`. 
   shadowGlass: "inset 0 1px 0 rgba(255,255,255,0.13), 0 16px 40px rgba(0,0,0,0.42)",
   blurGlass: "blur(22px) saturate(180%)",
 ```
-If the `Theme` type is declared explicitly (not inferred), add the four keys to that type too.
+In `lightTheme.ts`: add the **identical four lines** (the `Theme` type requires them; the app mounts dark-only, so a light-tuned glass recipe is deliberately out of scope — note this in a one-line comment above the block).
 
-- [ ] **Step 4: Add the matching tokens to the `@theme` block in `globals.css`**
+- [ ] **Step 5: Add the matching tokens to the `@theme` block in `globals.css`**
 
 Insert after `--color-surface-glass: rgba(16, 21, 28, 0.5);` (line ~48) and in the shadow block:
 ```css
@@ -105,26 +129,26 @@ Insert after `--color-surface-glass: rgba(16, 21, 28, 0.5);` (line ~48) and in t
   --blur-glass: blur(22px) saturate(180%);
 ```
 
-- [ ] **Step 5: Recolor the eight subsystem hues**
+- [ ] **Step 6: Recolor the eight subsystem hues**
 
 In `libs/contracts/src/subsystems/subsystem.schema.ts` `SUBSYSTEMS`, set `color` per id:
 `forge #5b8def`, `herald #56c4d6`, `sentinel #34c9bd`, `scout #46cf8b`, `maestro #e0a83c`, `beacon #f4785c`, `puls #f2749e`, `loom #b07cff`. (Regex `^#[0-9a-f]{6}$/i` accepts all.) Update any fixture in `subsystems.contract.test.ts` that asserts an old hex.
 
-- [ ] **Step 6: Assert the untouched mirrors already match ZT**
+- [ ] **Step 7: Assert the untouched mirrors already match ZT**
 
 Confirm by reading (no edit expected): `stateTone.ts` `stateToneHex` = accent `#5b8def`, ok `#3fcf8e`, warn `#f0b429`, bad `#ff6b6b`, run `#7aa5f8`; `orbState.ts` `ORB_STATE_COLOR` = working `#7aa5f8`, report `#3fcf8e`, await `#f0b429`, incident `#ff6b6b`, thinking `#5b8def`. If either drifts, fix to these values here.
 
-- [ ] **Step 7: Run tests to verify pass**
+- [ ] **Step 8: Run tests to verify pass**
 
 Run: `rtk vitest run libs/design-system/src/themes/darkTheme.test.ts libs/contracts/src/subsystems`
 Expected: PASS.
 
-- [ ] **Step 8: Gates**
+- [ ] **Step 9: Gates**
 
 Run: `rtk pnpm check:lint && rtk pnpm check:types && pnpm exec tsc -p apps/web --noEmit`
-Expected: clean.
+Expected: clean — in particular `lightTheme.ts` typechecks against the extended `Theme`.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
 rtk git add libs/design-system libs/contracts && rtk git commit -m "feat(tokens): align palette with ZT + add glass tokens + subsystem hues"
@@ -184,6 +208,8 @@ Expected: FAIL — module not found.
 - [ ] **Step 3: Implement the component**
 
 ```tsx
+"use client";
+
 import type { CSSProperties, ReactNode } from "react";
 
 export enum GlassSurfaceTestId {
@@ -209,7 +235,9 @@ const RADIUS_PX: Record<NonNullable<GlassSurfaceProps["radius"]>, string> = {
  * The Velín-D "liquid glass" surface: a translucent, blurred pane over the scene
  * gradient. The single home of the VD_GLASS recipe so no app node hand-rolls
  * backdrop-filter. Immersive-bundle convention: inline style is allowed here (the
- * forbid-dom-props rule targets apps/web, not the DS).
+ * forbid-dom-props rule targets apps/web, not the DS). Unlike its animated bundle
+ * siblings it does NOT call ensureImmersiveCss() — that injector exists for the
+ * im* keyframes, and this component uses no animation.
  */
 export function GlassSurface({
   radius = "panel",
@@ -287,8 +315,8 @@ rtk git add libs/design-system && rtk git commit -m "feat(ds): GlassSurface imme
 - Create: `apps/web/features/chat/components/ChatTopBar.test.tsx`
 - Create: `apps/web/features/chat/components/LangSwitch.tsx`
 - Create: `apps/web/features/chat/components/LangSwitch.test.tsx`
-- Reuse (no change): `apps/web/features/chat/components/StatusPill.tsx`, `apps/web/components/layout/LimitsRings/LimitsRings.tsx`, DS `SearchBar`, `Kbd`, `StatusDot`, `Icon`, `Typography`, `ButtonGroup`
-- Add i18n keys (both catalogs): `chat.langSwitch.label`
+- Reuse (no change): `apps/web/features/chat/components/StatusPill.tsx`, `apps/web/components/layout/LimitsRings/LimitsRings.tsx`, DS `SearchBar`, `StatusDot`, `Icon`, `Typography`, `ButtonGroup`
+- i18n: **no catalog edits in this task** (Task 7 owns all catalog work). This task only references existing keys: `chat.modeLabel`, `chat.palette.placeholder`, `topbar.langSwitcherLabel` (already shipped — do not mint a `chat.langSwitch.*` duplicate)
 
 **Interfaces:**
 - Consumes (Task 2): `GlassSurface`, `GlassSurfaceTestId`.
@@ -328,9 +356,16 @@ describe("LangSwitch", () => {
     expect(document.cookie).toContain("locale=en");
     expect(refresh).toHaveBeenCalled();
   });
+
+  it("ignores the empty value ButtonGroup emits when the active option is re-clicked", async () => {
+    const { getByText } = renderWithProviders(<LangSwitch />);
+    // Default locale in tests is "cs"; clicking the active option can emit "".
+    await userEvent.click(getByText("Čeština"));
+    expect(document.cookie).not.toContain("locale=;");
+  });
 });
 ```
-(Use the project's `renderWithProviders` — it supplies `NextIntlClientProvider` + DS provider; see `apps/web/test/`.)
+(Use the project's `renderWithProviders` — it supplies `NextIntlClientProvider` + DS provider; see `apps/web/test/render`.)
 
 - [ ] **Step 2: Run it to verify it fails**
 
@@ -342,8 +377,7 @@ Expected: FAIL — module not found.
 ```tsx
 "use client";
 
-import { GlassSurface } from "@zibby/design-system";
-import { ButtonGroup } from "@zibby/design-system";
+import { ButtonGroup, GlassSurface } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 
@@ -353,6 +387,10 @@ export enum LangSwitchTestId {
 
 type Locale = "cs" | "en";
 
+function isLocale(value: string): value is Locale {
+  return value === "cs" || value === "en";
+}
+
 /** Module-scoped so the cookie write isn't analysed as an in-render mutation
  * (same pattern as features/settings/Screen.tsx). */
 function writeLocaleCookie(value: Locale) {
@@ -360,13 +398,16 @@ function writeLocaleCookie(value: Locale) {
 }
 
 /** Glass-pill language switch. Reuses the settings locale mechanism exactly:
- * cookie write + router.refresh() so i18n/request.ts re-reads on the next render. */
+ * cookie write + router.refresh() so i18n/request.ts re-reads on the next render.
+ * ButtonGroup emits "" when the active option is toggled off — guarded, no-op. */
 export function LangSwitch() {
-  const t = useTranslations("chat");
+  // Reuses the shipped top-bar label key — no new catalog entry.
+  const t = useTranslations("topbar");
   const locale = useLocale() as Locale;
   const router = useRouter();
 
-  const setLocale = (value: Locale) => {
+  const setLocale = (value: string) => {
+    if (!isLocale(value) || value === locale) return;
     writeLocaleCookie(value);
     router.refresh();
   };
@@ -374,8 +415,8 @@ export function LangSwitch() {
   return (
     <GlassSurface radius="pill" data-testid={LangSwitchTestId.Root}>
       <ButtonGroup
-        ariaLabel={t("langSwitch.label")}
-        onChange={(v) => setLocale(v as Locale)}
+        ariaLabel={t("langSwitcherLabel")}
+        onChange={setLocale}
         options={[
           { id: "cs", label: "Čeština" },
           { id: "en", label: "English" },
@@ -421,12 +462,12 @@ Expected: FAIL — module not found.
 
 - [ ] **Step 7: Implement `ChatTopBar`**
 
-Compose from DS + reused components; every glass region is a `GlassSurface radius="pill"`. Left group = butler sign + mode label + `StatusDot` (keep `data-testid="chat-screen-mode-dot"`, tone/pulse from `MODE_DOT[mode]`). Center = `StatusPill` wrapped in glass + search-trigger glass pill (`SearchBar` + `Kbd` "⌘K", `onClick={onOpenPalette}`, `data-testid={ChatTopBarTestId.Search}`). Right = `<GlassSurface radius="pill"><LimitsRings /></GlassSurface>` + `<LangSwitch data-testid via its own root>` (assert `ChatTopBarTestId.Lang` on its wrapper) + clock `Typography mono` (`data-testid={ChatTopBarTestId.Clock}`, `useNow(MINUTE_MS)`, `HH:MM`). The bar wrapper is a `Stack direction="row"`; the rounded-pill outer container is a `Container`/`GlassSurface` — **no inline style on a raw div**. No `border-b`. Skeleton:
+Compose from DS + reused components; every glass region is a `GlassSurface radius="pill"`. Left group = butler sign + mode label + `StatusDot` (keep `data-testid="chat-screen-mode-dot"`, tone/pulse from `MODE_DOT[mode]`). Center = `StatusPill` wrapped in glass + search-trigger glass pill. `SearchBarProps` is `{ placeholder, ariaLabel (required), shortcut?, title?, onClick? }` — it renders its **own** `<kbd>` from the `shortcut` string; there is no `trailing` prop and no `Kbd` composition. Right = `<GlassSurface radius="pill"><LimitsRings /></GlassSurface>` (the `LimitsRings` trigger is `Pressable`+`Container`, no own `Card`, so this does not double-surface — its popover `Card` floats; eyeball in the Task 8 live pass) + `LangSwitch` (assert `ChatTopBarTestId.Lang` on its glass wrapper) + clock `Typography mono` (`data-testid={ChatTopBarTestId.Clock}`, `useNow(MINUTE_MS)`, `HH:MM`). The bar wrapper is a `Stack direction="row"`; **no inline style on a raw div**. No `border-b`. Skeleton:
 ```tsx
 "use client";
 
 import {
-  GlassSurface, Icon, Kbd, SearchBar, Stack, StatusDot, Typography,
+  GlassSurface, Icon, SearchBar, Stack, StatusDot, Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { LimitsRings } from "../../../components/layout/LimitsRings/LimitsRings";
@@ -470,7 +511,12 @@ export function ChatTopBar({ mode, onOpenPalette }: ChatTopBarProps) {
       <GlassSurface radius="pill"><StatusPill /></GlassSurface>
 
       <GlassSurface radius="pill" data-testid={ChatTopBarTestId.Search}>
-        <SearchBar onClick={onOpenPalette} placeholder={t("palette.placeholder")} trailing={<Kbd>⌘K</Kbd>} />
+        <SearchBar
+          ariaLabel={t("palette.placeholder")}
+          onClick={onOpenPalette}
+          placeholder={t("palette.placeholder")}
+          shortcut="⌘K"
+        />
       </GlassSurface>
 
       <GlassSurface radius="pill"><LimitsRings /></GlassSurface>
@@ -484,23 +530,19 @@ export function ChatTopBar({ mode, onOpenPalette }: ChatTopBarProps) {
   );
 }
 ```
-Adapt prop names to the actual `SearchBar`/`StatusDot`/`Typography`/`MODE_DOT` signatures (read them; do not guess — e.g. `SearchBar` may expose `onFocus`/`onActivate` rather than `onClick`, and `Kbd`/`trailing` may differ). Keep the exact behavior: the pill opens the existing `ChatPalette`.
+The `SearchBar` usage above matches its real signature (`ariaLabel` required, `shortcut` string, `onClick`). Adapt `StatusDot`/`Typography`/`MODE_DOT` prop names to their actual signatures (read them; do not guess). Keep the exact behavior: the pill opens the existing `ChatPalette`. Do **not** edit the i18n catalogs in this task.
 
 - [ ] **Step 8: Run `ChatTopBar` test to verify pass**
 
 Run: `rtk vitest run apps/web/features/chat/components/ChatTopBar.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 9: Add the i18n key**
-
-Add `"chat.langSwitch.label"` to **both** `apps/web/i18n/messages/cs.json` (`"Jazyk rozhraní"`) and `en.json` (`"Interface language"`). (Full copy sweep is Task 7; add what this task references now.)
-
-- [ ] **Step 10: Gates**
+- [ ] **Step 9: Gates**
 
 Run: `rtk pnpm check:lint && rtk pnpm check:types && pnpm exec tsc -p apps/web --noEmit && rtk vitest run apps/web/features/chat/components/ChatTopBar.test.tsx apps/web/features/chat/components/LangSwitch.test.tsx`
 Expected: clean + PASS.
 
-- [ ] **Step 11: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
 rtk git add apps/web && rtk git commit -m "feat(chat): glass top bar + language switch"
@@ -514,7 +556,7 @@ rtk git add apps/web && rtk git commit -m "feat(chat): glass top bar + language 
 - Create: `apps/web/features/chat/components/ChatToolDock.tsx`
 - Create: `apps/web/features/chat/components/ChatToolDock.test.tsx`
 - Reuse (no change): `apps/web/state/config.ts` (`NAV_ITEMS`, `SETTINGS_ITEM`), DS `Icon`, `Tooltip`, `Divider`, `Stack`, `GlassSurface`; `next/link`
-- Add i18n keys (both catalogs): `chat.toolDock.label`; `nav.settings` if absent
+- i18n: **no catalog edits in this task** (Task 7 owns all catalog work). This task references only existing keys: `nav.{companies,projects,agents,skills,commands,mcp,memory}` and `nav.settings` (already shipped as "System settings" / "Nastavení systému" — reuse verbatim, do not re-add or reword). The new `chat.toolDock.label` key lands in Task 7; until then it renders as its key path in tests, which assert hrefs, not copy.
 
 **Interfaces:**
 - Consumes (Task 2): `GlassSurface`.
@@ -582,15 +624,23 @@ export function ChatToolDock() {
     <GlassSurface radius="panel" data-testid={ChatToolDockTestId.Root}>
       <Stack align="center" direction="column" gap="75">
         {items.map((item) => (
-          <Tooltip key={item.id} label={t(item.id)} placement="left">
-            <Link data-testid={`chat-tool-dock-${item.id}`} href={item.href}>
+          <Tooltip key={item.id} content={t(item.id)}>
+            <Link
+              aria-label={t(item.id)}
+              data-testid={`chat-tool-dock-${item.id}`}
+              href={item.href}
+            >
               <Icon name={item.glyph} />
             </Link>
           </Tooltip>
         ))}
         <Divider />
-        <Tooltip label={t("settings")} placement="left">
-          <Link data-testid={ChatToolDockTestId.Settings} href={SETTINGS_ITEM.href}>
+        <Tooltip content={t("settings")}>
+          <Link
+            aria-label={t("settings")}
+            data-testid={ChatToolDockTestId.Settings}
+            href={SETTINGS_ITEM.href}
+          >
             <Icon name={SETTINGS_ITEM.glyph} />
           </Link>
         </Tooltip>
@@ -599,23 +649,19 @@ export function ChatToolDock() {
   );
 }
 ```
-Read `Tooltip`/`Icon`/`Divider` real signatures and adapt (e.g. `Tooltip` may need `content` not `label`, `placement` naming). The icon must be keyboard-focusable via the `Link` (add `aria-label={t(item.id)}` if the tooltip does not label it). Positioning (right:24, vertical-center) is applied by the mounting `Container` in Task 6 — the dock itself stays position-agnostic.
+The DS `Tooltip` API is `{ content, children, side? }` with `TooltipSide = "top" | "bottom"` — there is **no left-side placement**; use the default `top` (extending `TooltipSide` is out of scope). A tooltip is a *description*, not a *name*, so each icon-only `Link` carries an explicit `aria-label` (shown above) — that is what makes it accessible, tooltip or not. Positioning of the dock (right:24, vertical-center) is applied by the mounting `Container` in Task 6 — the dock itself stays position-agnostic.
 
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `rtk vitest run apps/web/features/chat/components/ChatToolDock.test.tsx`
-Expected: PASS.
+Expected: PASS. (Labels resolve from the existing `nav.*` keys; no catalog edit happens in this task.)
 
-- [ ] **Step 5: Add i18n keys**
-
-Ensure `nav.settings` exists in `cs.json` (`"Nastavení systému"`) + `en.json` (`"Settings"`). Add `chat.toolDock.label` (`"Nástroje"` / `"Tools"`) for the dock's `aria-label`/story use.
-
-- [ ] **Step 6: Gates**
+- [ ] **Step 5: Gates**
 
 Run: `rtk pnpm check:lint && rtk pnpm check:types && pnpm exec tsc -p apps/web --noEmit && rtk vitest run apps/web/features/chat/components/ChatToolDock.test.tsx`
 Expected: clean + PASS.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 rtk git add apps/web && rtk git commit -m "feat(chat): right-side glass tool dock linking HUD pages"
@@ -630,54 +676,80 @@ rtk git add apps/web && rtk git commit -m "feat(chat): right-side glass tool doc
 - Modify: `apps/web/features/chat/components/ChatTaskRow.test.tsx`
 - Modify: `apps/web/features/chat/components/ChatTasksPanel.tsx` (header)
 - Modify: `apps/web/features/chat/components/ChatTasksPanel.test.tsx`
-- Reuse (no change): `apps/web/features/runs/run.ts` (`runStateTone`, `runTitle`, `RunView`), `resolveStateToneHex` (DS), DS `Card`, `Progress`, `StatusDot`, `Icon`, `IconTile`, `Typography`, `RunStateBadge`
-- Add i18n key (both catalogs): confirm `chat.tasks.title` = "Běžící úlohy" / "Running tasks"
+- Reuse (no change): `apps/web/features/runs/run.ts` (`runStateTone`, `runTitle`, `RunView`), DS `Card` (its built-in `edge?: StateTone` prop renders the 3px state-tinted left bar), `Progress`, `StatusDot`, `Icon`, `IconTile`, `Typography`, `RunStateBadge`
+- i18n: **no catalog edits in this task** (Task 7 owns all catalog work — including the `chat.tasks.title` copy change to "Running tasks"/"Běžící úlohy"; the key itself already exists, so the header renders today's copy until Task 7)
 
 **Interfaces:**
-- Consumes: `runStateTone(status): StateTone`, `resolveStateToneHex(tone): string`, `runTitle(run): string`, `RunView`.
+- Consumes: `runStateTone(status): StateTone | undefined` (**always default: `?? "accent"`**), `runTitle(run): string`, `RunView`, `Card` `edge?: StateTone`.
 - Produces:
 ```ts
 export enum ChatTaskRowTestId {
   Row = "chat-task-row",       // unchanged (test continuity)
-  Rail = "chat-task-row-rail",
   Meta = "chat-task-row-meta",
   Progress = "chat-task-row-progress",
 }
+// No Rail testid: the rail is Card's own `edge` rendering, not a node this component owns.
 ```
 - `ChatTasksPanelTestId` unchanged (`Root/List/Empty`).
 
 - [ ] **Step 1: Extend the failing `ChatTaskRow` test**
 
-Add assertions for the new anatomy (keep existing selection/title assertions):
+The existing test file already has a complete-fixture builder — reuse it (do not hand-roll partial casts):
 ```tsx
-it("colours the rail by run state tone and shows a meter only with pct", () => {
-  const run = { runId: "r1", status: "running", pct: 74, /* …owner fields… */ } as RunView;
-  const { getByTestId, rerender, queryByTestId } = renderWithProviders(
-    <ChatTaskRow run={run} glyph="run" stateLabel="běží" selected={false} onSelect={() => {}} />,
+// Already at the top of ChatTaskRow.test.tsx:
+function run(overrides: Partial<RunView>): RunView {
+  const base: RunView = {
+    runId: "r_1", kind: "agent", owner: "writer", status: "running", pct: null,
+    title: "", prompt: "", project: "", startedAt: new Date().toISOString(), logBase: "agents",
+  };
+  return { ...base, ...overrides };
+}
+```
+Add assertions for the new anatomy (keep the existing selection/title/accessible-name tests):
+```tsx
+it("shows the meta row always and a progress meter only when the run carries pct", () => {
+  const { rerender } = render(
+    <ChatTaskRow
+      glyph="bot"
+      onSelect={vi.fn()}
+      openAria="Open run: Fix login bug"
+      run={run({ runId: "run_a", title: "Fix login bug", pct: 74 })}
+      selected={false}
+      stateLabel="Running"
+    />,
   );
-  expect(getByTestId(ChatTaskRowTestId.Rail)).toBeInTheDocument();
-  expect(getByTestId(ChatTaskRowTestId.Progress)).toHaveTextContent("74%");
+  expect(screen.getByTestId(ChatTaskRowTestId.Meta)).toBeInTheDocument();
+  expect(screen.getByTestId(ChatTaskRowTestId.Progress)).toHaveTextContent("74%");
 
-  const noPct = { ...run, status: "running", pct: null } as RunView;
-  rerender(<ChatTaskRow run={noPct} glyph="run" stateLabel="běží" selected={false} onSelect={() => {}} />);
-  expect(queryByTestId(ChatTaskRowTestId.Progress)).toBeNull();
+  rerender(
+    <ChatTaskRow
+      glyph="bot"
+      onSelect={vi.fn()}
+      openAria="Open run: Fix login bug"
+      run={run({ runId: "run_a", title: "Fix login bug", pct: null })}
+      selected={false}
+      stateLabel="Running"
+    />,
+  );
+  expect(screen.queryByTestId(ChatTaskRowTestId.Progress)).toBeNull();
 });
 ```
 
 - [ ] **Step 2: Run it to verify it fails**
 
 Run: `rtk vitest run apps/web/features/chat/components/ChatTaskRow.test.tsx`
-Expected: FAIL — `Rail`/`Progress` testids absent.
+Expected: FAIL — `Meta`/`Progress` testids absent.
 
 - [ ] **Step 3: Rebuild `ChatTaskRow` to the card anatomy**
 
-Keep `Card as="button"` + selection (accent border/ring, `onSelect(run.runId)`). Compute `const tone = runStateTone(run.status); const hue = resolveStateToneHex(tone);`. Layout, all via DS props / `Card` `edge`/`style` passthrough (no raw inline style):
-- Rail: a full-height 3px element coloured `hue` — use `Card`'s `edge`/accent-bar prop if it has one, else a `Container` with `style={{ background: hue }}` (passthrough on a DS component, allowed).
-- Meta row (`data-testid={ChatTaskRowTestId.Meta}`): 7px square dot (`hue`) + owner name (`mono`, coloured `hue`) + `RunStateBadge` + right-aligned relative start (`Intl.RelativeTimeFormat` or existing helper).
+Keep `Card as="button"` + selection (accent border/ring, `onSelect(run.runId)`). Compute `const tone = runStateTone(run.status) ?? "accent";` (`runStateTone` returns `StateTone | undefined` — the default is mandatory). Layout, all via DS props (no raw inline style, no hex plumbing):
+- Rail: `<Card as="button" edge={tone} …>` — `Card` ships exactly this feature ("a solid 3px accent bar on the left edge, tinted by state"); no bespoke rail node.
+- Meta row (`data-testid={ChatTaskRowTestId.Meta}`): `StatusDot tone={tone}` + owner name (`Typography mono` with `tone={tone}`) + `RunStateBadge` + right-aligned relative start (`Intl.RelativeTimeFormat` or existing helper).
 - Title: `runTitle(run)`, single-line ellipsis.
 - Agent·phase row: `Icon name={live ? "pulse" : "run"}` + `"{owner} · {phase}"`.
 - Meter (`data-testid={ChatTaskRowTestId.Progress}`): render `<Progress tone={tone} value={pct} />` + `mono {pct}%` **only when `run.pct != null`**.
-Keep the `avatar`/`glyph` `IconTile` if the card design keeps an avatar; otherwise the hue dot replaces it — match the spec's meta row.
+- Hover/live: `Card` `tone={tone}` + `living` on genuinely in-flight runs (glow on top of the matte edge bar), per Card's own docs.
+Keep the `avatar`/`glyph` `IconTile` if the card design keeps an avatar; otherwise the tone dot replaces it — match the spec's meta row. The prototype's decorative float animation is dropped (spec §5.4) — do not add keyframes.
 
 - [ ] **Step 4: Run `ChatTaskRow` test to verify pass**
 
@@ -691,18 +763,14 @@ Replace the `HudPanel title="Tasks"` label with a header row: pulsing `StatusDot
 - [ ] **Step 6: Run panel test to verify pass**
 
 Run: `rtk vitest run apps/web/features/chat/components/ChatTasksPanel.test.tsx`
-Expected: PASS.
+Expected: PASS. (The header keeps using the existing `chat.tasks.title` key; its copy change to "Running tasks"/"Běžící úlohy" lands in Task 7 — assert via the testid/key, not hardcoded copy.)
 
-- [ ] **Step 7: Confirm the i18n key**
-
-Ensure `chat.tasks.title` = `"Běžící úlohy"` (cs) / `"Running tasks"` (en) in both catalogs (it may currently read "Úkoly"/"Tasks" — update copy).
-
-- [ ] **Step 8: Gates**
+- [ ] **Step 7: Gates**
 
 Run: `rtk pnpm check:lint && rtk pnpm check:types && pnpm exec tsc -p apps/web --noEmit && rtk vitest run apps/web/features/chat/components/ChatTaskRow.test.tsx apps/web/features/chat/components/ChatTasksPanel.test.tsx`
 Expected: clean + PASS.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 rtk git add apps/web && rtk git commit -m "feat(chat): floating task cards + running-tasks header"
@@ -713,7 +781,8 @@ rtk git add apps/web && rtk git commit -m "feat(chat): floating task cards + run
 ### Task 6: `ChatScreen` integration + relocate New-chat/Voice + insets
 
 **Files:**
-- Modify: `apps/web/features/chat/components/ChatScreen.tsx` (replace inline top bar; mount dock; relocate controls; update insets)
+- Modify: `apps/web/features/chat/components/ChatScreen.tsx` (replace inline top bar; mount dock; relocate controls; update insets; remove the `onClose` chain)
+- Modify: `apps/web/features/chat/Screen.tsx` (drop the `onClose={close}` wiring)
 - Modify: `apps/web/features/chat/components/ChatScreen.test.tsx`
 - Reuse: `ChatTopBar`, `ChatToolDock` (+ `CHAT_TOOL_DOCK_WIDTH`), existing `VoiceToggleButton`, `VoiceStatusStrip`, `CommandLine`, `SubsystemOrbMap`
 
@@ -739,9 +808,11 @@ it("mounts the glass top bar and tool dock, and hosts new-chat + voice in the co
 Run: `rtk vitest run apps/web/features/chat/components/ChatScreen.test.tsx`
 Expected: FAIL — top-bar/dock testids absent; close still present.
 
-- [ ] **Step 3: Replace the inline top bar with `<ChatTopBar mode={mode} onOpenPalette={openPalette} />`**
+- [ ] **Step 3: Replace the inline top bar with `<ChatTopBar mode={mode} onOpenPalette={openPalette} />` and remove the `onClose` chain end-to-end**
 
-Delete the inline top-bar JSX (old lines ~485–539) including the Close button and the in-bar New-chat/Voice controls. Wire `mode` and the palette-open handler that already exists.
+Delete the inline top-bar JSX (old lines ~485–539) including the Close button and the in-bar New-chat/Voice controls. Wire `mode` and the palette-open handler that already exists. The Close removal must take the **whole prop chain** with it, or lint fails on unused vars:
+- `ChatScreen.tsx`: remove `onClose: () => void` from `ChatScreenProps` (~line 110) and `onClose` from the destructure (~line 135); remove the `Close = "chat-screen-close"` member from `ChatScreenTestId`.
+- `Screen.tsx`: remove the `onClose={close}` prop (~line 55) and delete the `close` handler if nothing else uses it.
 
 - [ ] **Step 4: Mount `ChatToolDock`**
 
@@ -781,6 +852,12 @@ rtk git add apps/web && rtk git commit -m "feat(chat): wire glass chrome; reloca
 
 **Interfaces:** none produced; guards copy completeness.
 
+**This is the ONLY task that edits the catalogs** (Tasks 3/4/5 run in parallel and must not
+touch these two files). The full change set: add `chat.toolDock.label`; update
+`chat.tasks.title` copy; confirm `chat.statusPill.nominal`; **remove** `chat.close`
+(the Close button is gone — Task 6). Existing keys `topbar.langSwitcherLabel` and
+`nav.settings` are reused as-is — do not re-add, duplicate, or reword them.
+
 - [ ] **Step 1: Write the failing parity test**
 
 ```ts
@@ -798,11 +875,21 @@ describe("i18n catalog parity", () => {
   it("cs and en have identical key sets", () => {
     expect(new Set(keys(cs))).toEqual(new Set(keys(en)));
   });
-  it("has the phase-2 chrome keys", () => {
-    for (const key of ["chat.langSwitch.label", "chat.toolDock.label", "chat.tasks.title", "nav.settings"]) {
+  it("has the phase-2 chrome keys (new + reused)", () => {
+    for (const key of [
+      "chat.toolDock.label",      // new this phase
+      "chat.tasks.title",         // existing, copy updated
+      "chat.statusPill.nominal",  // existing, copy confirmed
+      "topbar.langSwitcherLabel", // existing, reused by LangSwitch
+      "nav.settings",             // existing, reused by the tool dock
+    ]) {
       expect(keys(en)).toContain(key);
       expect(keys(cs)).toContain(key);
     }
+  });
+  it("dropped the removed Close-button key", () => {
+    expect(keys(en)).not.toContain("chat.close");
+    expect(keys(cs)).not.toContain("chat.close");
   });
 });
 ```
@@ -814,7 +901,13 @@ Expected: FAIL if any key is one-sided or missing.
 
 - [ ] **Step 3: Complete both catalogs**
 
-Add/repair every phase-2 key in **both** files with the §7 copy (`chat.statusPill.nominal` → `Nominální`/`Nominal`; `chat.tasks.title` → `Běžící úlohy`/`Running tasks`; `chat.langSwitch.label` → `Jazyk rozhraní`/`Interface language`; `chat.toolDock.label` → `Nástroje`/`Tools`; `nav.settings` → `Nastavení systému`/`Settings`). Fix any drift the parity test surfaces.
+In **both** files, per the spec §7 table:
+- Add `chat.toolDock.label` → `Nástroje` (cs) / `Tools` (en).
+- Update `chat.tasks.title` copy → `Běžící úlohy` (cs, was `Tasky`) / `Running tasks` (en, was `Tasks`).
+- Confirm `chat.statusPill.nominal` → `Nominální` (cs) / `Nominal` (en); repair if it drifted.
+- **Remove** `chat.close` from both (the Close button and its prop chain were deleted in Task 6).
+- Do **not** touch `topbar.langSwitcherLabel` or `nav.settings` — reused verbatim.
+Fix any other drift the parity test surfaces.
 
 - [ ] **Step 4: Run parity test to verify pass**
 
@@ -861,7 +954,8 @@ Expected: builds; the `GlassSurface` story renders on the scene background.
 - [ ] **Step 5: Live `:3000` verification (mandatory — jsdom cannot catch this)**
 
 Ensure the dev server runs (`pnpm web:dev`; do not kill an already-running one). In a real browser load `http://localhost:3000/chat` and confirm every item in the spec's live-verification checklist:
-- glass pills are actually translucent (backdrop blur visible over the moving scene, not opaque);
+- glass pills are actually translucent (backdrop blur visible over the moving scene, not opaque) — this also proves `--gradient-glass`/`--blur-glass` reach the DOM (runtime injection via `tokensToCssVars` is the primary path; the `@theme` declaration is the SSR default);
+- the `LimitsRings` glass pill does not read as a nested double surface (its trigger is `Pressable`+`Container`, no own `Card`; if it looks nested anyway, drop the glass wrap — the popover keeps its `Card`);
 - the tool dock is clickable — each icon navigates to its HUD route (Companies → `/companies` loads);
 - the status pill shows counts and has **no** hover flyout;
 - the language switch flips the UI copy (cs ⇄ en) and persists on reload;
@@ -884,8 +978,8 @@ Do **not** push and do **not** open a PR. Update `.superpowers/sdd2/progress.md`
 
 ## Self-Review
 
-**1. Spec coverage** — Tokens (§4) → Task 1. GlassSurface primitive (§5.1) → Task 2. Top panel with all components incl. counts-only pill, restyled search, reused LimitsRings, LangSwitch, removed Close (§5.2) → Task 3 + Task 6 (removal/wiring). Right tool dock linking HUD incl. verified `/companies` (§5.3) → Task 4. Left floating cards + header (§5.4) → Task 5. Relocated New-chat + Voice (§5.5) → Task 6. Data sources (§6) reused, not invented, throughout. i18n (§7) → keys added per task + Task 7 parity. Acceptance criteria incl. live `:3000` (§8) → Task 8. No spec section is unassigned.
+**1. Spec coverage** — Tokens (§4, incl. the `tokens.ts` `Theme` interface + `tokensToCssVars` + `lightTheme.ts` end-to-end story) → Task 1. GlassSurface primitive (§5.1, `"use client"`, no `ensureImmersiveCss` — no keyframes) → Task 2. Top panel with all components incl. counts-only pill, restyled search (real `SearchBar` API: `ariaLabel`+`shortcut`), reused LimitsRings, LangSwitch on `topbar.langSwitcherLabel` with the empty-value guard (§5.2) → Task 3. Close removal incl. the full `onClose` prop chain (§5.2) → Task 6. Right tool dock linking HUD incl. verified `/companies`, `Tooltip content` + default `top` side (no left in `TooltipSide`), explicit `aria-label` per link, existing `nav.settings` reused (§5.3) → Task 4. Left floating cards via `Card edge={tone}` with the `?? "accent"` default + header (§5.4, float animation dropped) → Task 5. Relocated New-chat + Voice (§5.5) → Task 6. Data sources (§6) reused, not invented, throughout. i18n (§7) → ALL catalog edits in Task 7 only (Tasks 3/4/5 reference existing keys), parity + `chat.close` removal guarded by test. Acceptance criteria incl. live `:3000` + LimitsRings double-surface check (§8) → Task 8. No spec section is unassigned.
 
-**2. Placeholder scan** — No "TBD"/"add error handling"/"similar to Task N". Every code step shows code; every test step shows the assertion and the run command with expected output. Where a DS prop signature must be read (SearchBar, Tooltip, Card edge), the step says so explicitly rather than guessing — that is a real instruction, not a placeholder.
+**2. Placeholder scan** — No "TBD"/"add error handling"/"similar to Task N". Every code step shows code; every test step shows the assertion and the run command with expected output. Task 5's fixture reuses the test file's existing complete `run(overrides)` builder (shown verbatim) — no partial casts, no Czech literals in source. Where a DS prop signature still needs confirming (`StatusDot`/`Typography`/`MODE_DOT` in Task 3), the step says so explicitly; the previously guessed signatures (`SearchBar`, `Tooltip`, `Card edge`, `ButtonGroup`) are now written against the verified real APIs.
 
-**3. Type consistency** — `GlassSurfaceProps.radius` = `"control"|"panel"|"pill"` used consistently in Tasks 2–5. `ChatTopBarProps { mode, onOpenPalette }` produced in Task 3, consumed in Task 6. `CHAT_TOOL_DOCK_WIDTH` produced in Task 4, consumed in Task 6's inset change. `runStateTone`/`resolveStateToneHex`/`runTitle`/`RunView` names match the reused `runs/run.ts` exports. TestId enum values are unique and stable (`chat-task-row` kept for continuity). i18n keys referenced (Tasks 3–5) match those completed in Task 7.
+**3. Type consistency** — `GlassSurfaceProps.radius` = `"control"|"panel"|"pill"` used consistently in Tasks 2–5. The four `Theme` keys (`gradientGlass`, `colorGlassBorder`, `shadowGlass`, `blurGlass`) are declared in Task 1's interface step and consumed by name in Task 2's CSS vars. `ChatTopBarProps { mode, onOpenPalette }` produced in Task 3, consumed in Task 6. `CHAT_TOOL_DOCK_WIDTH` produced in Task 4, consumed in Task 6's inset change. `runStateTone(status): StateTone | undefined` is stated identically in the Global Constraints, Task 5's Interfaces block, and Task 5's implementation (`?? "accent"`). `ChatTaskRowTestId` has no `Rail` member anywhere (rail = `Card edge`). TestId enum values are unique and stable (`chat-task-row` kept for continuity). i18n keys referenced in Tasks 3–5 (`topbar.langSwitcherLabel`, `nav.*`, `chat.tasks.title`, `chat.toolDock.label`) match exactly the set Task 7 lands/asserts.
