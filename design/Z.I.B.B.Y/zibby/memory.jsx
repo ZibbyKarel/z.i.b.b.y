@@ -108,16 +108,16 @@ const VaultGraph = ({ accent, selId, onSelect, layersOn }) => {
 
   return (
     <div ref={wrapRef} style={{ width: '100%' }}>
-      <svg height={dim.h} onPointerLeave={() => { onUp(); setHover(null); }} onPointerMove={onMove} onPointerUp={onUp}
-        ref={svgRef} style={{ display: 'block', cursor: dragRef.current ? 'grabbing' : 'default', touchAction: 'none' }} width={dim.w}>
+      <svg ref={svgRef} width={dim.w} height={dim.h} style={{ display: 'block', cursor: dragRef.current ? 'grabbing' : 'default', touchAction: 'none' }}
+        onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={() => { onUp(); setHover(null); }}>
         {/* edges */}
         {links.map(([u, v], i) => {
           const a = s[u], b = s[v]; if (!a || !b) return null;
           const vis = layerVisible(nodeById(u).layer) && layerVisible(nodeById(v).layer);
           const hot = focus && (u === focus || v === focus);
-          return <line key={i} opacity={!vis ? 0.05 : (focus ? (hot ? 0.85 : 0.12) : 0.28)} stroke={hot ? accent : Z.inkFaint} strokeWidth={hot ? 1.6 : 1} style={{ transition: 'opacity .2s' }}
-            x1={a.x} x2={b.x}
-            y1={a.y} y2={b.y} />;
+          return <line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+            stroke={hot ? accent : Z.inkFaint} strokeWidth={hot ? 1.6 : 1}
+            opacity={!vis ? 0.05 : (focus ? (hot ? 0.85 : 0.12) : 0.28)} style={{ transition: 'opacity .2s' }} />;
         })}
         {/* nodes */}
         {nodes.map((n) => {
@@ -130,14 +130,14 @@ const VaultGraph = ({ accent, selId, onSelect, layersOn }) => {
           const dim2 = focus && !(n.id === focus || (nbr && nbr.has(n.id)));
           const op = !vis ? 0.12 : (dim2 ? 0.32 : 1);
           return (
-            <g key={n.id} onPointerDown={(e) => { if (!vis) return; e.stopPropagation(); dragRef.current = n.id; alphaRef.current = Math.max(alphaRef.current, 0.35); try { e.currentTarget.setPointerCapture(e.pointerId); } catch (x) {} onSelect(n.id); }} onPointerEnter={() => vis && setHover(n.id)} onPointerLeave={() => setHover((h) => h === n.id ? null : h)}
-              opacity={op}
-              style={{ cursor: vis ? 'grab' : 'default', transition: 'opacity .2s' }} transform={`translate(${p.x},${p.y})`}>
-              {sel && <circle fill="none" opacity="0.5" r={r + 7} stroke={lc} strokeWidth="1" />}
-              {n.anchor && <circle fill="none" opacity="0.6" r={r + 4} stroke={lc} strokeDasharray="2 3" strokeWidth="1" />}
-              <circle fill={Z.bg1} r={r} stroke={lc} strokeWidth={sel ? 2.4 : 1.6} style={{ filter: sel || n.anchor ? `drop-shadow(0 0 7px ${lc})` : 'none' }} />
-              <circle fill={lc} opacity={n.anchor ? 0.9 : 0.55} r={r - 3.5} />
-              <text fill={sel ? Z.ink : Z.inkDim} fontFamily={Z.mono} fontSize="10.5" style={{ pointerEvents: 'none', fontWeight: sel || n.anchor ? 700 : 400 }} textAnchor="middle" y={r + 14}>
+            <g key={n.id} transform={`translate(${p.x},${p.y})`} style={{ cursor: vis ? 'grab' : 'default', transition: 'opacity .2s' }} opacity={op}
+              onPointerDown={(e) => { if (!vis) return; e.stopPropagation(); dragRef.current = n.id; alphaRef.current = Math.max(alphaRef.current, 0.35); try { e.currentTarget.setPointerCapture(e.pointerId); } catch (x) {} onSelect(n.id); }}
+              onPointerEnter={() => vis && setHover(n.id)} onPointerLeave={() => setHover((h) => h === n.id ? null : h)}>
+              {sel && <circle r={r + 7} fill="none" stroke={lc} strokeWidth="1" opacity="0.5" />}
+              {n.anchor && <circle r={r + 4} fill="none" stroke={lc} strokeWidth="1" strokeDasharray="2 3" opacity="0.6" />}
+              <circle r={r} fill={Z.bg1} stroke={lc} strokeWidth={sel ? 2.4 : 1.6} style={{ filter: sel || n.anchor ? `drop-shadow(0 0 7px ${lc})` : 'none' }} />
+              <circle r={r - 3.5} fill={lc} opacity={n.anchor ? 0.9 : 0.55} />
+              <text y={r + 14} textAnchor="middle" fontFamily={Z.mono} fontSize="10.5" fill={sel ? Z.ink : Z.inkDim} style={{ pointerEvents: 'none', fontWeight: sel || n.anchor ? 700 : 400 }}>
                 {n.label.replace(/^.*\//, '').replace(/\.md$/, '')}
               </text>
             </g>
@@ -177,14 +177,14 @@ const VaultFilePanel = ({ node, accent }) => {
         </div>
       </HudPanel>
 
-      <HudPanel accent={layer.c} pad={14} right={<GhostBtn accent={accent} icon="edit">Editovat</GhostBtn>} title="náhled souboru">
+      <HudPanel accent={layer.c} title="náhled souboru" pad={14} right={<GhostBtn icon="edit" accent={accent}>Editovat</GhostBtn>}>
         <div style={{ maxHeight: 250, overflow: 'auto', padding: '2px 2px 0' }}>
-          <MarkdownView accent={layer.c} source={node.body} />
+          <MarkdownView source={node.body} accent={layer.c} />
         </div>
       </HudPanel>
 
       {/* links out */}
-      <HudPanel accent={layer.c} pad={14} title={`propojeno · ${nbrs.length}`}>
+      <HudPanel accent={layer.c} title={`propojeno · ${nbrs.length}`} pad={14}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {nbrs.map((nb) => {
             const c = MEM_LAYER[nb.layer].c;
@@ -244,7 +244,7 @@ const MemoryBody = ({ accent }) => {
               {VAULT_NODES.length} souborů · {VAULT_LINKS.length} wiki-linků · navigace <span style={{ color: accent }}>index-first</span> (ne vektorový RAG)
             </Mono>
           </div>
-          <GhostBtn accent={accent} icon="search">Hledat ve vaultu</GhostBtn>
+          <GhostBtn icon="search" accent={accent}>Hledat ve vaultu</GhostBtn>
         </div>
 
         {/* tři vrstvy paměti — legenda + filtr */}
@@ -254,10 +254,10 @@ const MemoryBody = ({ accent }) => {
           ].map(([l, note]) => {
             const lm = MEM_LAYER[l], on = layersOn[l];
             return (
-              <button key={l} onClick={() => toggleLayer(l)} style={{
+              <button key={l} onClick={() => toggleLayer(l)} title="přepnout vrstvu" style={{
                 display: 'flex', alignItems: 'center', gap: 9, padding: '8px 12px', cursor: 'pointer', borderRadius: 3,
                 background: on ? Z.bg0 : 'transparent', border: `1px solid ${on ? lm.c + '44' : Z.line}`, opacity: on ? 1 : 0.45, transition: 'all .14s',
-              }} title="přepnout vrstvu">
+              }}>
                 <span style={{ width: 9, height: 9, borderRadius: '50%', background: lm.c, flex: '0 0 auto', boxShadow: on ? `0 0 7px ${lm.c}` : 'none' }} />
                 <div style={{ textAlign: 'left' }}>
                   <Mono style={{ fontSize: 11, color: Z.ink, fontWeight: 600, display: 'block' }}>{lm.label} <span style={{ color: Z.inkFaint, fontWeight: 400 }}>{counts[l]}</span></Mono>
@@ -271,10 +271,10 @@ const MemoryBody = ({ accent }) => {
 
       {/* graph + file panel */}
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 340px', gap: 20, alignItems: 'start' }}>
-        <HudPanel accent={accent} pad={12} style={{ overflow: 'hidden' }} title="graf vaultu · táhni uzly · klikni pro náhled">
-          <VaultGraph accent={accent} layersOn={layersOn} onSelect={setSelId} selId={selId} />
+        <HudPanel accent={accent} title="graf vaultu · táhni uzly · klikni pro náhled" pad={12} style={{ overflow: 'hidden' }}>
+          <VaultGraph accent={accent} selId={selId} onSelect={setSelId} layersOn={layersOn} />
         </HudPanel>
-        <VaultFilePanel accent={accent} node={sel} />
+        <VaultFilePanel node={sel} accent={accent} />
       </div>
     </div>
   );

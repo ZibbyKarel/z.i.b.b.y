@@ -71,12 +71,12 @@ const IntegrationCard = ({ it, accent, onOpen }) => {
 
       {/* tools */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 12 }}>
-        {it.tools.map((t) => <PermChip key={t} risky={it.risky.includes(t)} tool={t} />)}
+        {it.tools.map((t) => <PermChip key={t} tool={t} risky={it.risky.includes(t)} />)}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 13, paddingTop: 11, borderTop: `1px solid ${Z.line}` }}>
         <Mono style={{ fontSize: 9.5, color: Z.inkFaint, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 150 }}>{it.usedBy.length} skill{it.usedBy.length === 1 ? '' : 'ů'}{it.risky.length ? ` · ${it.risky.length} rizik.` : ''}</Mono>
-        <GhostBtn accent={accent} icon="gear">Spravovat</GhostBtn>
+        <GhostBtn icon="gear" accent={accent}>Spravovat</GhostBtn>
       </div>
     </div>
   );
@@ -112,7 +112,7 @@ const IntegrationModal = ({ it, accent, onClose, onToggle, onRemove }) => {
               <Mono style={{ fontSize: 11.5, color: Z.ink }}>{off ? 'Vypnuto' : 'Povoleno'}</Mono>
               <Mono style={{ fontSize: 9.5, color: Z.inkFaint, display: 'block', marginTop: 2 }}>{off ? 'skilly/agenti tento zdroj nedostanou' : `naposledy použito ${it.lastUsed}`}</Mono>
             </div>
-            <Switch accent={accent} on={it.enabled} onToggle={() => onToggle(it.id)} />
+            <Switch on={it.enabled} accent={accent} onToggle={() => onToggle(it.id)} />
           </div>
 
           {/* tools */}
@@ -173,7 +173,7 @@ const IntegrationsBody = ({ accent }) => {
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><Icon name={k.glyph} size={13} style={{ color: k.c }} /> {kind === 'mcp' ? 'MCP servery' : 'CLI nástroje'}</span>
         </SectionLabel>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 13 }}>
-          {items.map((it) => <IntegrationCard accent={accent} it={it} key={it.id} onOpen={setOpenId} />)}
+          {items.map((it) => <IntegrationCard key={it.id} it={it} accent={accent} onOpen={setOpenId} />)}
         </div>
       </div>
     );
@@ -194,8 +194,8 @@ const IntegrationsBody = ({ accent }) => {
         </div>
       </HudPanel>
 
-      <Section items={mcp} kind="mcp" />
-      <Section items={cli} kind="cli" />
+      <Section kind="mcp" items={mcp} />
+      <Section kind="cli" items={cli} />
 
       {/* catalog (add more) */}
       <div>
@@ -212,14 +212,14 @@ const IntegrationsBody = ({ accent }) => {
                   <div style={{ fontSize: 13, fontWeight: 600, color: Z.inkDim }}>{c.name}</div>
                   <Mono style={{ fontSize: 9.5, color: Z.inkFaint, display: 'block', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.desc}</Mono>
                 </div>
-                <button style={{ width: 28, height: 28, flex: '0 0 auto', display: 'grid', placeItems: 'center', borderRadius: 2, cursor: 'pointer', color: accent, background: 'transparent', border: `1px solid ${accent}55` }} title="Připojit"><Icon name="plus" size={14} /></button>
+                <button title="Připojit" style={{ width: 28, height: 28, flex: '0 0 auto', display: 'grid', placeItems: 'center', borderRadius: 2, cursor: 'pointer', color: accent, background: 'transparent', border: `1px solid ${accent}55` }}><Icon name="plus" size={14} /></button>
               </div>
             );
           })}
         </div>
       </div>
 
-      {open && <IntegrationModal accent={accent} it={open} key={open.id} onClose={() => setOpenId(null)} onRemove={remove} onToggle={toggle} />}
+      {open && <IntegrationModal key={open.id} it={open} accent={accent} onClose={() => setOpenId(null)} onToggle={toggle} onRemove={remove} />}
     </div>
   );
 };

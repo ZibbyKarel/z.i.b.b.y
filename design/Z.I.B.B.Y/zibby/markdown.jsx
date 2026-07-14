@@ -28,7 +28,7 @@ function mdInline(text, keyBase) {
       nodes.push(<em key={key} style={{ color: Z.ink }}>{tok.slice(1, -1)}</em>);
     } else if (m[4]) {
       const mm = /\[([^\]]+)\]\(([^)]+)\)/.exec(tok);
-      nodes.push(<a href={mm[2]} key={key} rel="noreferrer" style={{ color: Z.work, textDecoration: 'underline', textUnderlineOffset: 2 }} target="_blank">{mm[1]}</a>);
+      nodes.push(<a key={key} href={mm[2]} target="_blank" rel="noreferrer" style={{ color: Z.work, textDecoration: 'underline', textUnderlineOffset: 2 }}>{mm[1]}</a>);
     }
     last = m.index + tok.length;
   }
@@ -181,13 +181,13 @@ function MarkdownView({ source = '', accent = Z.work }) {
 
 // ---- toolbar button -------------------------------------------------------
 const MdToolBtn = ({ onClick, title, children, accent }) =>
-<button onClick={onClick} onMouseDown={(e) => e.preventDefault()} onMouseEnter={(e) => {e.currentTarget.style.color = accent;e.currentTarget.style.borderColor = `${accent}66`;}} onMouseLeave={(e) => {e.currentTarget.style.color = Z.inkDim;e.currentTarget.style.borderColor = Z.line;}} style={{
+<button type="button" onMouseDown={(e) => e.preventDefault()} onClick={onClick} title={title} style={{
   minWidth: 30, height: 28, padding: '0 7px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
   cursor: 'pointer', borderRadius: 2, color: Z.inkDim, background: 'transparent', border: `1px solid ${Z.line}`,
   fontFamily: Z.mono, fontSize: 12, fontWeight: 600, transition: 'all .12s'
 }}
-title={title}
-type="button">
+onMouseEnter={(e) => {e.currentTarget.style.color = accent;e.currentTarget.style.borderColor = `${accent}66`;}}
+onMouseLeave={(e) => {e.currentTarget.style.color = Z.inkDim;e.currentTarget.style.borderColor = Z.line;}}>
   {children}</button>;
 
 
@@ -242,10 +242,10 @@ function MarkdownEditor({ value = '', onChange, accent = Z.work, minHeight = 240
   const tabBtn = (id, label) => {
     const on = tab === id;
     return (
-      <button onClick={() => setTab(id)} style={{
+      <button type="button" onClick={() => setTab(id)} style={{
         fontFamily: Z.mono, fontSize: 11, fontWeight: 600, padding: '6px 13px', cursor: 'pointer', borderRadius: 2, border: 'none',
         color: on ? Z.bg0 : Z.inkDim, background: on ? accent : 'transparent', transition: 'all .12s'
-      }} type="button">{label}</button>);
+      }}>{label}</button>);
 
   };
 
@@ -254,16 +254,16 @@ function MarkdownEditor({ value = '', onChange, accent = Z.work, minHeight = 240
       {/* top bar: toolbar + tabs */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 9px', borderBottom: `1px solid ${Z.line}`, background: Z.bg1, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, opacity: tab === 'edit' ? 1 : 0.35, pointerEvents: tab === 'edit' ? 'auto' : 'none', transition: 'opacity .12s' }}>
-          <MdToolBtn accent={accent} onClick={() => linePrefix('## ')} title="Nadpis">H</MdToolBtn>
-          <MdToolBtn accent={accent} onClick={() => wrap('**')} title="Tučně (⌘B)"><span style={{ fontWeight: 800 }}>B</span></MdToolBtn>
-          <MdToolBtn accent={accent} onClick={() => wrap('*')} title="Kurzíva (⌘I)"><span style={{ fontStyle: 'italic' }}>I</span></MdToolBtn>
-          <MdToolBtn accent={accent} onClick={() => wrap('`', '`', 'kód')} title="Kód">{'</>'}</MdToolBtn>
+          <MdToolBtn accent={accent} title="Nadpis" onClick={() => linePrefix('## ')}>H</MdToolBtn>
+          <MdToolBtn accent={accent} title="Tučně (⌘B)" onClick={() => wrap('**')}><span style={{ fontWeight: 800 }}>B</span></MdToolBtn>
+          <MdToolBtn accent={accent} title="Kurzíva (⌘I)" onClick={() => wrap('*')}><span style={{ fontStyle: 'italic' }}>I</span></MdToolBtn>
+          <MdToolBtn accent={accent} title="Kód" onClick={() => wrap('`', '`', 'kód')}>{'</>'}</MdToolBtn>
           <div style={{ width: 1, height: 18, background: Z.line, margin: '0 2px' }} />
-          <MdToolBtn accent={accent} onClick={() => linePrefix('- ')} title="Odrážky">•—</MdToolBtn>
-          <MdToolBtn accent={accent} onClick={() => linePrefix('1. ')} title="Číslovaný seznam">1.</MdToolBtn>
-          <MdToolBtn accent={accent} onClick={() => linePrefix('> ')} title="Citace">❝</MdToolBtn>
-          <MdToolBtn accent={accent} onClick={insertFence} title="Blok kódu">```</MdToolBtn>
-          <MdToolBtn accent={accent} onClick={insertLink} title="Odkaz"><Icon name="link" size={14} /></MdToolBtn>
+          <MdToolBtn accent={accent} title="Odrážky" onClick={() => linePrefix('- ')}>•—</MdToolBtn>
+          <MdToolBtn accent={accent} title="Číslovaný seznam" onClick={() => linePrefix('1. ')}>1.</MdToolBtn>
+          <MdToolBtn accent={accent} title="Citace" onClick={() => linePrefix('> ')}>❝</MdToolBtn>
+          <MdToolBtn accent={accent} title="Blok kódu" onClick={insertFence}>```</MdToolBtn>
+          <MdToolBtn accent={accent} title="Odkaz" onClick={insertLink}><Icon name="link" size={14} /></MdToolBtn>
         </div>
         <div style={{ flex: 1 }} />
         <div style={{ display: 'inline-flex', gap: 3, padding: 3, background: Z.bg0, border: `1px solid ${Z.line}`, borderRadius: 3 }}>
@@ -275,25 +275,25 @@ function MarkdownEditor({ value = '', onChange, accent = Z.work, minHeight = 240
       {/* body */}
       {tab === 'edit' ?
       <textarea
+        ref={ref}
+        value={value}
         onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        spellCheck={false}
         onKeyDown={(e) => {
           if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {e.preventDefault();wrap('**');}
           if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'i') {e.preventDefault();wrap('*');}
           if (e.key === 'Tab') {e.preventDefault();apply((sel, val, s) => ({ text: val.slice(0, s) + '  ' + val.slice(s), selStart: s + 2, selEnd: s + 2 }));}
         }}
-        placeholder={placeholder}
-        ref={ref}
-        spellCheck={false}
         style={{
           display: 'block', width: '100%', minHeight, padding: '14px 15px', resize: 'vertical',
           background: Z.bg0, border: 'none', color: Z.ink, fontFamily: Z.mono, fontSize: 12.5, lineHeight: 1.6,
           outline: 'none', boxSizing: 'border-box'
-        }}
-        value={value} /> :
+        }} /> :
 
 
       <div style={{ minHeight, padding: '16px 18px', background: Z.bg0, overflow: 'auto', maxHeight: 420 }}>
-          {value.trim() ? <MarkdownView accent={accent} source={value} /> : <Mono style={{ fontSize: 12, color: Z.inkFaint }}>Nic k zobrazení.</Mono>}
+          {value.trim() ? <MarkdownView source={value} accent={accent} /> : <Mono style={{ fontSize: 12, color: Z.inkFaint }}>Nic k zobrazení.</Mono>}
         </div>
       }
     </div>);

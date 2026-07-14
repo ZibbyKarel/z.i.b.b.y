@@ -17,10 +17,10 @@ const RuleCard = ({ rule, locked = false, index, onEdit, onDelete, onReorder, dr
   return (
     <div
       draggable={!locked}
-      onDragEnd={() => onReorder('end', index)}
-      onDragOver={(e) => { if (locked) return; e.preventDefault(); onReorder('over', index); }}
       onDragStart={(e) => { if (locked) return; e.dataTransfer.effectAllowed = 'move'; onReorder('start', index); }}
+      onDragOver={(e) => { if (locked) return; e.preventDefault(); onReorder('over', index); }}
       onDrop={(e) => { if (locked) return; e.preventDefault(); onReorder('drop', index); }}
+      onDragEnd={() => onReorder('end', index)}
       onMouseEnter={() => setH(true)} onMouseLeave={() => { setH(false); setMenu(false); }}
       style={{
         position: 'relative', display: 'flex', flexDirection: 'column', gap: 9,
@@ -33,25 +33,25 @@ const RuleCard = ({ rule, locked = false, index, onEdit, onDelete, onReorder, dr
 
       {/* line 1: handle / lock · matcher · menu */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-        <span style={{ flex: '0 0 auto', display: 'grid', placeItems: 'center', width: 16, color: locked ? Z.warn : (h ? Z.inkDim : Z.inkFaint) }} title={locked ? 'systémové pravidlo' : (mt.label + ' — táhni pro pořadí')}>
+        <span title={locked ? 'systémové pravidlo' : (mt.label + ' — táhni pro pořadí')} style={{ flex: '0 0 auto', display: 'grid', placeItems: 'center', width: 16, color: locked ? Z.warn : (h ? Z.inkDim : Z.inkFaint) }}>
           {locked ? <Icon name="shield" size={13} /> : (h ? <Icon name="dots" size={15} /> : <Icon name={mt.icon} size={14} />)}
         </span>
         <div style={{ flex: 1, minWidth: 0 }}><MatcherText rule={rule} /></div>
 
         {locked ? (
-          <span style={{ flex: '0 0 auto', display: 'grid', placeItems: 'center', color: Z.inkFaint }} title="Zděděno ze systémové politiky — nelze upravit">
+          <span title="Zděděno ze systémové politiky — nelze upravit" style={{ flex: '0 0 auto', display: 'grid', placeItems: 'center', color: Z.inkFaint }}>
             <Icon name="link" size={13} style={{ opacity: 0 }} />
           </span>
         ) : (
           <div style={{ position: 'relative', flex: '0 0 auto' }}>
-            <button onClick={(e) => { e.stopPropagation(); setMenu((m) => !m); }} style={{ display: h || menu ? 'grid' : 'none', placeItems: 'center', width: 24, height: 24, cursor: 'pointer', borderRadius: 2, background: menu ? 'rgba(255,255,255,0.06)' : 'transparent', border: `1px solid ${menu ? Z.line : 'transparent'}`, color: Z.inkDim }}
-              title="Možnosti">
+            <button onClick={(e) => { e.stopPropagation(); setMenu((m) => !m); }} title="Možnosti"
+              style={{ display: h || menu ? 'grid' : 'none', placeItems: 'center', width: 24, height: 24, cursor: 'pointer', borderRadius: 2, background: menu ? 'rgba(255,255,255,0.06)' : 'transparent', border: `1px solid ${menu ? Z.line : 'transparent'}`, color: Z.inkDim }}>
               <Icon name="dots" size={15} />
             </button>
             {menu && (
               <div onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', top: 28, right: 0, zIndex: 30, minWidth: 140, background: Z.panelHi, border: `1px solid ${Z.lineHi}`, borderRadius: 3, boxShadow: '0 12px 34px rgba(0,0,0,0.5)', overflow: 'hidden', padding: 4 }}>
                 <MenuItem icon="edit" onClick={() => { setMenu(false); onEdit(rule); }}>Upravit</MenuItem>
-                <MenuItem danger icon="trash" onClick={() => { setMenu(false); onDelete(rule.id); }}>Smazat</MenuItem>
+                <MenuItem icon="trash" danger onClick={() => { setMenu(false); onDelete(rule.id); }}>Smazat</MenuItem>
               </div>
             )}
           </div>
@@ -61,7 +61,7 @@ const RuleCard = ({ rule, locked = false, index, onEdit, onDelete, onReorder, dr
       {/* line 2: decision + resolution */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap', paddingLeft: 25 }}>
         <DecisionBadge decision={rule.decision} />
-        {rule.decision === 'ask' && <ResolutionChips mode={rule.mode} resolution={rule.resolution} />}
+        {rule.decision === 'ask' && <ResolutionChips resolution={rule.resolution} mode={rule.mode} />}
         {rule.decision === 'notify' && <Mono style={{ fontSize: 9.5, color: Z.inkFaint }}>→ activity feed</Mono>}
       </div>
     </div>
@@ -71,7 +71,7 @@ const RuleCard = ({ rule, locked = false, index, onEdit, onDelete, onReorder, dr
 const MenuItem = ({ icon, children, onClick, danger }) => {
   const [h, setH] = useStateGR2(false);
   return (
-    <button onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+    <button onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} onClick={onClick}
       style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', textAlign: 'left', padding: '8px 10px', cursor: 'pointer', borderRadius: 2, border: 'none', fontFamily: Z.mono, fontSize: 12, color: danger ? Z.bad : (h ? Z.ink : Z.inkDim), background: h ? (danger ? 'rgba(255,107,107,0.1)' : 'rgba(255,255,255,0.05)') : 'transparent' }}>
       <Icon name={icon} size={13} /> {children}
     </button>
@@ -118,13 +118,13 @@ const GlobalRulePicker = ({ globalRules, linkedIds, accent, onLink, onClose }) =
         {available.map(r => {
           const d = DECISION[r.decision] || DECISION.ask;
           return (
-            <button key={r.id} onClick={() => { onLink(r.id); onClose(); }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              style={{
+            <button key={r.id} onClick={() => { onLink(r.id); onClose(); }} style={{
               display: 'flex', alignItems: 'flex-start', gap: 10, width: '100%', padding: '9px 11px',
               cursor: 'pointer', background: 'transparent', border: 'none', borderLeft: `3px solid ${d.c}`,
               borderRadius: 2, marginBottom: 2, textAlign: 'left', transition: 'background .12s',
-            }}>
+            }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
               <Icon name={(MATCHER[r.type] || MATCHER.action).icon} size={13} style={{ flex: '0 0 auto', color: Z.inkFaint, marginTop: 1 }} />
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
                 {r.name && <Mono style={{ fontSize: 11.5, fontWeight: 600, color: Z.ink }}>{r.name}</Mono>}
@@ -184,7 +184,7 @@ const ApprovalRulesSection = ({ accent, agentName = 'Tester', globalRules = [], 
           Bezpečnostní floor z <span style={{ color: Z.inkDim }}>POLICY.md</span> — agent je smí jen <span style={{ color: Z.ink }}>přitvrdit</span>, ne povolit.
         </Mono>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, opacity: 0.82 }}>
-          {SYSTEM_RULES.map((r) => <RuleCard locked key={r.id} rule={r} />)}
+          {SYSTEM_RULES.map((r) => <RuleCard key={r.id} rule={r} locked />)}
         </div>
       </div>
 
@@ -217,12 +217,12 @@ const ApprovalRulesSection = ({ accent, agentName = 'Tester', globalRules = [], 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
                       <MatcherText rule={r} />
                       <DecisionBadge decision={r.decision} />
-                      {r.decision === 'ask' && <ResolutionChips mode={r.mode} resolution={r.resolution || []} />}
+                      {r.decision === 'ask' && <ResolutionChips resolution={r.resolution || []} mode={r.mode} />}
                     </div>
                   </div>
                   {onLinkedChange && (
-                    <button onClick={() => onLinkedChange((linkedRuleIds || []).filter(x => x !== r.id))} style={{ flex: '0 0 auto', display: 'grid', placeItems: 'center', width: 26, height: 26, cursor: 'pointer', borderRadius: 2, background: 'transparent', border: `1px solid ${Z.line}`, color: Z.inkFaint }}
-                      title="Odlinkovat">
+                    <button onClick={() => onLinkedChange((linkedRuleIds || []).filter(x => x !== r.id))} title="Odlinkovat"
+                      style={{ flex: '0 0 auto', display: 'grid', placeItems: 'center', width: 26, height: 26, cursor: 'pointer', borderRadius: 2, background: 'transparent', border: `1px solid ${Z.line}`, color: Z.inkFaint }}>
                       <Icon name="x" size={12} />
                     </button>
                   )}
@@ -241,9 +241,9 @@ const ApprovalRulesSection = ({ accent, agentName = 'Tester', globalRules = [], 
               <Icon name="plus" size={12} stroke={2} /> Přilinkovat globální pravidlo
             </button>
             {pickerOpen && (
-              <GlobalRulePicker accent={accent} globalRules={globalRules} linkedIds={linkedRuleIds}
-                onClose={() => setPickerOpen(false)}
-                onLink={id => onLinkedChange([...(linkedRuleIds || []), id])} />
+              <GlobalRulePicker globalRules={globalRules} linkedIds={linkedRuleIds} accent={accent}
+                onLink={id => onLinkedChange([...(linkedRuleIds || []), id])}
+                onClose={() => setPickerOpen(false)} />
             )}
           </div>
         )}
@@ -253,18 +253,18 @@ const ApprovalRulesSection = ({ accent, agentName = 'Tester', globalRules = [], 
       <GroupHeading>Vlastní pravidla · {agentName}</GroupHeading>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {rules.map((r, i) => (
-          <RuleCard dragState={drag} index={i} key={r.id} onDelete={del}
-            onEdit={(rule) => setEditing(rule)} onReorder={onReorder} rule={r} />
+          <RuleCard key={r.id} rule={r} index={i} dragState={drag}
+            onEdit={(rule) => setEditing(rule)} onDelete={del} onReorder={onReorder} />
         ))}
       </div>
 
-      <button onClick={() => setEditing('new')} onMouseEnter={(e) => { e.currentTarget.style.background = `${accent}1c`; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = `${accent}0e`; }}
-        style={{
+      <button onClick={() => setEditing('new')} style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', marginTop: 11,
         padding: '10px 12px', cursor: 'pointer', borderRadius: 2, fontFamily: Z.mono, fontSize: 12, fontWeight: 600,
         color: accent, background: `${accent}0e`, border: `1px dashed ${accent}55`, transition: 'all .14s', whiteSpace: 'nowrap',
-      }}>
+      }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = `${accent}1c`; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = `${accent}0e`; }}>
         <Icon name="plus" size={14} stroke={2} /> Přidat vlastní pravidlo
       </button>
 

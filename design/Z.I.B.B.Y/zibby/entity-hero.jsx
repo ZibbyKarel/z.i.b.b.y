@@ -15,12 +15,12 @@ const fileToDataURL = (file) => new Promise((resolve, reject) => {
 // malé kruhové tlačítko nad hero (upload / odebrat)
 const HeroIconBtn = ({ icon, title, onClick, danger = false }) => (
   <button
-    onClick={onClick} style={{
+    onClick={onClick} title={title}
+    style={{
       width: 30, height: 30, display: 'grid', placeItems: 'center', borderRadius: 2, cursor: 'pointer',
       background: 'rgba(9,12,17,0.72)', border: `1px solid ${danger ? 'rgba(255,107,107,0.5)' : 'rgba(255,255,255,0.18)'}`,
       color: danger ? '#ff6b6b' : '#e6edf3', backdropFilter: 'blur(3px)', transition: 'all .13s',
     }}
-    title={title}
   >
     <Icon name={icon} size={14} stroke={1.8} />
   </button>
@@ -51,12 +51,12 @@ const EntityHero = ({ image, glyph = 'bot', accent = '#5b8def', name, tag, meta,
 
   return (
     <div
-      onClick={() => editable && !image && inputRef.current && inputRef.current.click()}
-      onDragLeave={() => editable && setDrag(false)}
-      onDragOver={(e) => { if (!editable) return; e.preventDefault(); setDrag(true); }}
-      onDrop={(e) => { if (!editable) return; e.preventDefault(); setDrag(false); handleFiles(e.dataTransfer.files); }}
       onMouseEnter={() => editable && setHover(true)}
       onMouseLeave={() => editable && setHover(false)}
+      onDragOver={(e) => { if (!editable) return; e.preventDefault(); setDrag(true); }}
+      onDragLeave={() => editable && setDrag(false)}
+      onDrop={(e) => { if (!editable) return; e.preventDefault(); setDrag(false); handleFiles(e.dataTransfer.files); }}
+      onClick={() => editable && !image && inputRef.current && inputRef.current.click()}
       style={{
         position: 'relative', height, flex: '0 0 auto', overflow: 'hidden',
         background: image ? '#05070a' : `linear-gradient(135deg, ${accent}26, ${Z.bg0} 72%)`,
@@ -65,7 +65,7 @@ const EntityHero = ({ image, glyph = 'bot', accent = '#5b8def', name, tag, meta,
       }}
     >
       {image && (
-        <img alt="" src={image} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: fit, objectPosition: 'center' }} />
+        <img src={image} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: fit, objectPosition: 'center' }} />
       )}
       {!image && (
         <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
@@ -81,16 +81,16 @@ const EntityHero = ({ image, glyph = 'bot', accent = '#5b8def', name, tag, meta,
       {/* upload / remove controls */}
       {editable && (
         <div style={{ position: 'absolute', top: 12, [controlsSide]: 12, display: 'flex', gap: 7, opacity: (hover || !image) ? 1 : 0, transition: 'opacity .15s' }}>
-          <HeroIconBtn icon={image ? 'edit' : 'upload'} onClick={(e) => { e.stopPropagation(); inputRef.current && inputRef.current.click(); }} title={image ? 'Nahradit obrázek' : 'Nahrát obrázek'} />
-          {image && <HeroIconBtn danger icon="trash" onClick={(e) => { e.stopPropagation(); onRemove && onRemove(); }} title="Odebrat obrázek" />}
+          <HeroIconBtn icon={image ? 'edit' : 'upload'} title={image ? 'Nahradit obrázek' : 'Nahrát obrázek'} onClick={(e) => { e.stopPropagation(); inputRef.current && inputRef.current.click(); }} />
+          {image && <HeroIconBtn icon="trash" title="Odebrat obrázek" danger onClick={(e) => { e.stopPropagation(); onRemove && onRemove(); }} />}
         </div>
       )}
       {editable && (
-        <input accept="image/*" onChange={(e) => { handleFiles(e.target.files); e.target.value = ''; }} ref={inputRef} style={{ display: 'none' }}
-          type="file" />
+        <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }}
+          onChange={(e) => { handleFiles(e.target.files); e.target.value = ''; }} />
       )}
       {extraControls && (
-        <div onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', top: 12, [controlsSide === 'right' ? 'left' : 'right']: 12, display: 'flex', gap: 7, zIndex: 2 }}>
+        <div style={{ position: 'absolute', top: 12, [controlsSide === 'right' ? 'left' : 'right']: 12, display: 'flex', gap: 7, zIndex: 2 }} onClick={(e) => e.stopPropagation()}>
           {extraControls}
         </div>
       )}
@@ -129,16 +129,16 @@ const AvatarSwap = ({ image, glyph = 'bot', accent = '#5b8def', size = 36, onUpl
   };
   return (
     <div
-      onClick={() => inputRef.current && inputRef.current.click()} onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      onClick={() => inputRef.current && inputRef.current.click()}
+      title="Nahrát obrázek"
       style={{
         position: 'relative', width: size, height: size, flex: '0 0 auto', borderRadius: 2, cursor: 'pointer',
         overflow: 'hidden', background: image ? '#000' : `${accent}1c`, border: `1px solid ${accent}44`,
       }}
-      title="Nahrát obrázek"
     >
       {image
-        ? <img alt="" src={image} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        ? <img src={image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: accent }}><Icon name={glyph} size={Math.round(size * 0.52)} /></div>}
       {hover && (
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(5,7,10,0.62)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
@@ -146,13 +146,13 @@ const AvatarSwap = ({ image, glyph = 'bot', accent = '#5b8def', size = 36, onUpl
         </div>
       )}
       {image && hover && (
-        <button onClick={(e) => { e.stopPropagation(); onRemove && onRemove(); }} style={{ position: 'absolute', top: -2, right: -2, width: 15, height: 15, borderRadius: '50%', display: 'grid', placeItems: 'center', background: '#0b0e13', border: '1px solid rgba(255,107,107,0.6)', color: '#ff6b6b', cursor: 'pointer', padding: 0 }}
-          title="Odebrat obrázek">
+        <button onClick={(e) => { e.stopPropagation(); onRemove && onRemove(); }} title="Odebrat obrázek"
+          style={{ position: 'absolute', top: -2, right: -2, width: 15, height: 15, borderRadius: '50%', display: 'grid', placeItems: 'center', background: '#0b0e13', border: '1px solid rgba(255,107,107,0.6)', color: '#ff6b6b', cursor: 'pointer', padding: 0 }}>
           <Icon name="x" size={9} />
         </button>
       )}
-      <input accept="image/*" onChange={(e) => { handleFiles(e.target.files); e.target.value = ''; }} onClick={(e) => e.stopPropagation()} ref={inputRef}
-        style={{ display: 'none' }} type="file" />
+      <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }}
+        onChange={(e) => { handleFiles(e.target.files); e.target.value = ''; }} onClick={(e) => e.stopPropagation()} />
     </div>
   );
 };

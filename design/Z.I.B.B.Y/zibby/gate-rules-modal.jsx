@@ -7,22 +7,22 @@ const grInput = {
 };
 const GRSelect = ({ value, onChange, options, accent }) => (
   <div style={{ position: 'relative', marginTop: 8 }}>
-    <select onChange={(e) => onChange(e.target.value)} style={{
+    <select value={value} onChange={(e) => onChange(e.target.value)} style={{
       width: '100%', padding: '9px 34px 9px 12px', background: Z.bg0, border: `1px solid ${Z.line}`, borderRadius: 3,
       color: Z.ink, fontFamily: Z.mono, fontSize: 13, outline: 'none', appearance: 'none', cursor: 'pointer', boxSizing: 'border-box',
-    }} value={value}>
-      {options.map((o) => Array.isArray(o) ? <option key={o[0]} style={{ background: Z.bg1 }} value={o[0]}>{o[1]}</option> : <option key={o} style={{ background: Z.bg1 }} value={o}>{o}</option>)}
+    }}>
+      {options.map((o) => Array.isArray(o) ? <option key={o[0]} value={o[0]} style={{ background: Z.bg1 }}>{o[1]}</option> : <option key={o} value={o} style={{ background: Z.bg1 }}>{o}</option>)}
     </select>
     <Icon name="chevron" size={14} style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%) rotate(90deg)', color: Z.inkFaint, pointerEvents: 'none' }} />
   </div>
 );
 const SegRow = ({ children }) => <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 8 }}>{children}</div>;
 const Seg = ({ active, accent, onClick, children, title }) => (
-  <button onClick={onClick} style={{
+  <button onClick={onClick} title={title} style={{
     fontFamily: Z.mono, fontSize: 11.5, padding: '7px 12px', cursor: 'pointer', borderRadius: 2,
     color: active ? Z.bg0 : Z.inkDim, background: active ? accent : 'transparent',
     border: `1px solid ${active ? accent : Z.line}`, transition: 'all .12s', fontWeight: active ? 600 : 400, whiteSpace: 'nowrap',
-  }} title={title}>{children}</button>
+  }}>{children}</button>
 );
 
 // ---- decision: 4 velká tlačítka ------------------------------------------
@@ -63,22 +63,22 @@ const ResolutionEditor = ({ resolution, mode, onChange, onMode, accent }) => {
           <div key={i}>
             {i > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '2px 0 8px' }}>
-                <Seg accent={accent} active={mode === 'all'} onClick={() => onMode('all')}>Všechny · AND</Seg>
-                <Seg accent={accent} active={mode === 'any'} onClick={() => onMode('any')}>Kterákoli · OR</Seg>
+                <Seg active={mode === 'all'} accent={accent} onClick={() => onMode('all')}>Všechny · AND</Seg>
+                <Seg active={mode === 'any'} accent={accent} onClick={() => onMode('any')}>Kterákoli · OR</Seg>
               </div>
             )}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ display: 'flex', gap: 6 }}>
                 {[['human', 'Ty'], ['check', 'check'], ['agent', 'agent']].map(([k, lbl]) => (
-                  <Seg accent={accent} active={r.kind === k} key={k}
+                  <Seg key={k} active={r.kind === k} accent={accent}
                     onClick={() => setRes(i, k === 'check' ? { kind: 'check', name: 'ci_green' } : k === 'agent' ? { kind: 'agent', name: 'reviewer' } : { kind: 'human' })}>{lbl}</Seg>
                 ))}
               </div>
-              {r.kind === 'check' && <div style={{ flex: 1, minWidth: 0 }}><GRSelect onChange={(v) => setRes(i, { name: v })} options={CHECK_NAMES.map((c) => [c[0], 'check.' + c[0]])} value={r.name} /></div>}
-              {r.kind === 'agent' && <div style={{ flex: 1, minWidth: 0 }}><GRSelect onChange={(v) => setRes(i, { name: v })} options={RESOLVE_AGENTS.map((a) => [a, 'agent: ' + a])} value={r.name} /></div>}
+              {r.kind === 'check' && <div style={{ flex: 1, minWidth: 0 }}><GRSelect value={r.name} onChange={(v) => setRes(i, { name: v })} options={CHECK_NAMES.map((c) => [c[0], 'check.' + c[0]])} /></div>}
+              {r.kind === 'agent' && <div style={{ flex: 1, minWidth: 0 }}><GRSelect value={r.name} onChange={(v) => setRes(i, { name: v })} options={RESOLVE_AGENTS.map((a) => [a, 'agent: ' + a])} /></div>}
               {r.kind === 'human' && <Mono style={{ flex: 1, fontSize: 10.5, color: Z.inkFaint }}>tvůj tap ve frontě schválení</Mono>}
               {resolution.length > 1 && (
-                <button onClick={() => remove(i)} style={{ flex: '0 0 auto', display: 'grid', placeItems: 'center', width: 28, height: 28, cursor: 'pointer', borderRadius: 2, background: 'transparent', border: `1px solid ${Z.line}`, color: Z.inkFaint }} title="Odebrat podmínku"><Icon name="x" size={13} /></button>
+                <button onClick={() => remove(i)} title="Odebrat podmínku" style={{ flex: '0 0 auto', display: 'grid', placeItems: 'center', width: 28, height: 28, cursor: 'pointer', borderRadius: 2, background: 'transparent', border: `1px solid ${Z.line}`, color: Z.inkFaint }}><Icon name="x" size={13} /></button>
               )}
             </div>
           </div>
@@ -136,41 +136,41 @@ const RuleModal = ({ accent, initial, onClose, onSave }) => {
           {/* 1) Spouštěč */}
           <FieldLabel><span style={{ color: accent }}>1</span> · Spouštěč — matcher</FieldLabel>
           <SegRow>
-            {MATCHER_ORDER.map((k) => <Seg accent={accent} active={type === k} key={k} onClick={() => setType(k)} title={MATCHER[k].hint}>{MATCHER[k].label}</Seg>)}
+            {MATCHER_ORDER.map((k) => <Seg key={k} active={type === k} accent={accent} title={MATCHER[k].hint} onClick={() => setType(k)}>{MATCHER[k].label}</Seg>)}
           </SegRow>
           <Mono style={{ fontSize: 9.5, color: Z.inkFaint, display: 'block', marginTop: 8 }}>{MATCHER[type].hint}</Mono>
 
           <div style={{ marginTop: 12 }}>
             {type === 'tool' && (<>
-              <SegRow>{['bash', 'git', 'web', 'read', 'write'].map((t) => <Seg accent={accent} active={tool === t} key={t} onClick={() => setTool(t)}>{t}</Seg>)}</SegRow>
-              {tool === 'git' && <SegRow>{['push', 'merge', 'fetch', 'reset'].map((v) => <Seg accent={accent} active={verb === v} key={v} onClick={() => setVerb(v)}>{v}</Seg>)}</SegRow>}
-              <input onChange={(e) => setPattern(e.target.value)} placeholder={tool === 'git' ? 'main' : 'rm -rf*'} style={grInput} value={pattern} />
+              <SegRow>{['bash', 'git', 'web', 'read', 'write'].map((t) => <Seg key={t} active={tool === t} accent={accent} onClick={() => setTool(t)}>{t}</Seg>)}</SegRow>
+              {tool === 'git' && <SegRow>{['push', 'merge', 'fetch', 'reset'].map((v) => <Seg key={v} active={verb === v} accent={accent} onClick={() => setVerb(v)}>{v}</Seg>)}</SegRow>}
+              <input value={pattern} onChange={(e) => setPattern(e.target.value)} placeholder={tool === 'git' ? 'main' : 'rm -rf*'} style={grInput} />
             </>)}
             {type === 'action' && (<>
-              <SegRow>{ACTION_VERBS.map((v) => <Seg accent={accent} active={label === v} key={v} onClick={() => setLabel(v)}>{v}</Seg>)}</SegRow>
+              <SegRow>{ACTION_VERBS.map((v) => <Seg key={v} active={label === v} accent={accent} onClick={() => setLabel(v)}>{v}</Seg>)}</SegRow>
             </>)}
             {type === 'threshold' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 0.7fr 1fr', gap: 9 }}>
-                <GRSelect onChange={setMetric} options={THRESHOLD_METRICS} value={metric} />
-                <GRSelect onChange={setOp} options={['>', '>=', '<', '<=', '==']} value={op} />
-                <input onChange={(e) => setVal(e.target.value)} placeholder="500" style={{ ...grInput, marginTop: 8 }} value={val} />
+                <GRSelect value={metric} onChange={setMetric} options={THRESHOLD_METRICS} />
+                <GRSelect value={op} onChange={setOp} options={['>', '>=', '<', '<=', '==']} />
+                <input value={val} onChange={(e) => setVal(e.target.value)} placeholder="500" style={{ ...grInput, marginTop: 8 }} />
               </div>
             )}
             {type === 'scope' && (<>
-              <SegRow>{SCOPE_KINDS.map(([k, l]) => <Seg accent={accent} active={scopeKind === k} key={k} onClick={() => setScopeKind(k)}>{l}</Seg>)}</SegRow>
-              <input onChange={(e) => setPattern(e.target.value)} placeholder="feature/*" style={grInput} value={pattern} />
+              <SegRow>{SCOPE_KINDS.map(([k, l]) => <Seg key={k} active={scopeKind === k} accent={accent} onClick={() => setScopeKind(k)}>{l}</Seg>)}</SegRow>
+              <input value={pattern} onChange={(e) => setPattern(e.target.value)} placeholder="feature/*" style={grInput} />
             </>)}
 
           </div>
 
           {/* 2) Rozhodnutí */}
           <FieldLabel style={{ marginTop: 22 }}><span style={{ color: accent }}>2</span> · Rozhodnutí</FieldLabel>
-          <DecisionPick onChange={setDecision} value={decision} />
+          <DecisionPick value={decision} onChange={setDecision} />
 
           {/* 3) Vyřešení */}
           {decision === 'ask' && (<>
             <FieldLabel style={{ marginTop: 22 }}><span style={{ color: accent }}>3</span> · Vyřešení</FieldLabel>
-            <ResolutionEditor accent={accent} mode={mode} onChange={setResolution} onMode={setMode} resolution={resolution} />
+            <ResolutionEditor resolution={resolution} mode={mode} onChange={setResolution} onMode={setMode} accent={accent} />
           </>)}
 
           {/* live náhled */}
@@ -183,7 +183,7 @@ const RuleModal = ({ accent, initial, onClose, onSave }) => {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap', paddingLeft: 23 }}>
                 <DecisionBadge decision={decision} />
-                {decision === 'ask' && <ResolutionChips mode={mode} resolution={resolution} />}
+                {decision === 'ask' && <ResolutionChips resolution={resolution} mode={mode} />}
                 {decision === 'notify' && <Mono style={{ fontSize: 9.5, color: Z.inkFaint }}>→ activity feed</Mono>}
               </div>
             </div>

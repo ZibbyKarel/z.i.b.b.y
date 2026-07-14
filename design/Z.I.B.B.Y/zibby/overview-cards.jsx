@@ -26,7 +26,7 @@ const SkillTile = ({ skill, accent, onRun, hud = false }) => {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 }}>
         <Mono style={{ fontSize: 9.5, color: Z.inkFaint, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 130 }}>{skill.file.replace('~/zibby/skills/', '')}</Mono>
-        <RunBtn accent={accent} onClick={() => onRun(skill)} size="sm" />
+        <RunBtn accent={accent} size="sm" onClick={() => onRun(skill)} />
       </div>
     </div>
   );
@@ -39,7 +39,7 @@ const ApprovalCard = ({ a = APPROVALS[0], hud = false }) => {
   return (
     <Card accent={Z.bad} hud={hud} pad={16} style={{ borderColor: 'rgba(255,107,107,0.32)', boxShadow: `0 0 0 1px rgba(255,107,107,0.12), 0 6px 24px rgba(0,0,0,0.3)` }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
-        <Dot pulse color={Z.bad} size={8} />
+        <Dot color={Z.bad} pulse size={8} />
         <Mono style={{ fontSize: 10, letterSpacing: '0.16em', color: Z.bad, textTransform: 'uppercase', fontWeight: 600 }}>Čeká na tvé schválení</Mono>
         <span style={{ marginLeft: 'auto', fontFamily: Z.mono, fontSize: 9.5, color: Z.inkFaint, border: `1px solid ${Z.line}`, borderRadius: 5, padding: '2px 7px' }}>{a.risk}</span>
       </div>
@@ -69,7 +69,7 @@ const AgentRow = ({ a, hud = false }) => {
   const accent = accentOf(a.ctx);
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: `1px solid ${Z.line}` }}>
-      <Dot pulse color={accent} size={8} />
+      <Dot color={accent} pulse size={8} />
       <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, whiteSpace: 'nowrap', overflow: 'hidden' }}>
           <Mono style={{ fontSize: 12.5, fontWeight: 600, color: Z.ink, flex: '0 0 auto' }}>{a.skill}</Mono>
@@ -78,7 +78,7 @@ const AgentRow = ({ a, hud = false }) => {
         <div style={{ fontSize: 11.5, color: Z.inkDim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>{a.prompt}</div>
 
       </div>
-      <button style={{ flex: '0 0 auto', width: 28, height: 28, borderRadius: 7, display: 'grid', placeItems: 'center', background: 'transparent', border: `1px solid ${Z.line}`, color: Z.inkFaint, cursor: 'pointer' }} title="Zastavit"><Icon name="stop" size={12} /></button>
+      <button title="Zastavit" style={{ flex: '0 0 auto', width: 28, height: 28, borderRadius: 7, display: 'grid', placeItems: 'center', background: 'transparent', border: `1px solid ${Z.line}`, color: Z.inkFaint, cursor: 'pointer' }}><Icon name="stop" size={12} /></button>
     </div>
   );
 };

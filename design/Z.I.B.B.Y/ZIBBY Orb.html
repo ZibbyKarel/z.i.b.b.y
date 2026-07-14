@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ZIBBY Orb</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0b0e13;
+    --ink: #e6edf3;
+    --ink2: #9aa7b4;
+    --ink3: #66737f;
+    --line: rgba(255,255,255,0.08);
+    --line-hi: rgba(255,255,255,0.14);
+    --accent: #5b8def;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: 'Geist', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    background: radial-gradient(ellipse 90% 80% at 50% 44%, #0d1521 0%, var(--bg) 62%);
+    color: var(--ink);
+    font-family: var(--sans);
+    overflow: hidden;
+  }
+  a { color: var(--accent); }
+  a:hover { color: #7aa5f8; }
+  #stage { position: fixed; inset: 0; }
+  canvas { display: block; }
+
+  /* ── stavový popisek uprostřed nahoře ── */
+  #label {
+    position: fixed; left: 50%; top: 8.5%; transform: translateX(-50%);
+    text-align: center; pointer-events: none; z-index: 5;
+  }
+  #label .state {
+    font-family: var(--mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.30em; text-transform: uppercase; white-space: nowrap;
+    transition: color 0.5s;
+  }
+  #label .desc {
+    margin-top: 9px; font-size: 15px; font-weight: 400; color: var(--ink2);
+    letter-spacing: -0.01em; white-space: nowrap;
+  }
+
+  /* ── ovládací panel dole ── */
+  #dock {
+    position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+    z-index: 5;
+  }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .seg {
+    display: flex; gap: 4px; padding: 4px;
+    background: rgba(16,21,28,0.72); backdrop-filter: blur(12px);
+    border: 1px solid var(--line); border-radius: 10px;
+  }
+  .seg button {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.04em; color: var(--ink3);
+    background: none; border: none; border-radius: 7px;
+    padding: 9px 13px; cursor: pointer;
+    transition: color 0.22s, background 0.22s;
+  }
+  .seg button:hover { color: var(--ink); }
+  .seg button[aria-selected="true"] { color: var(--ink); background: rgba(255,255,255,0.06); }
+  .seg button .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    box-shadow: 0 0 8px currentColor; flex: 0 0 auto;
+  }
+  .aux { display: flex; gap: 8px; }
+  .btn {
+    font-family: var(--mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.04em; color: var(--ink2);
+    background: rgba(16,21,28,0.72); backdrop-filter: blur(12px);
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 9px 14px; cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+  }
+  .btn:hover { color: var(--ink); border-color: var(--line-hi); }
+  .btn.primary { color: #3fcf8e; border-color: rgba(63,207,142,0.4); }
+  .btn.primary:hover { background: rgba(63,207,142,0.1); }
+
+  #hint {
+    position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%);
+    font-family: var(--mono); font-size: 10px; color: var(--ink3);
+    letter-spacing: 0.08em; z-index: 5; opacity: 0.7;
+  }
+  @media (prefers-reduced-motion: reduce) { /* engine respektuje níže */ }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+
+<div id="label">
+  <div class="state" id="labelState">IDLE</div>
+  <div class="desc" id="labelDesc">Naslouchám.</div>
+</div>
+
+<div id="dock">
+  <div class="seg" id="seg" role="tablist"></div>
+  <div class="aux">
+    <button class="btn primary" id="btnDone">✓ dokončit akci</button>
+  </div>
+</div>
+<div id="hint">1–5 přepíná stavy · mezerník = dokončit akci</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // ── Stavy: jeden HUE = jeden stav. Barva nese stav, ne jas/opacita. ──────
+  // hsl přesně odvozené z brand hexů ZIBBY.
+  const STATES = {
+    idle: {
+      key: 'idle', name: 'IDLE', desc: 'Naslouchám.', hex: '#5b8def',
+      hue: 220, sat: 0.82, light: 0.65,
+      amp: 0.055, speed: 0.22, halo: 0.0, glow: 0.55, pulse: 0.0, breath: 1.0,
+    },
+    thinking: {
+      key: 'thinking', name: 'PŘEMÝŠLÍM', desc: 'Zpracovávám…', hex: '#7aa5f8',
+      hue: 220, sat: 0.90, light: 0.73,
+      amp: 0.17, speed: 0.95, halo: 1.0, glow: 0.8, pulse: 0.0, breath: 0.7,
+    },
+    speaking: {
+      key: 'speaking', name: 'MLUVÍ', desc: 'ZIBBY odpovídá.', hex: '#3fcf8e',
+      hue: 153, sat: 0.60, light: 0.53,
+      amp: 0.11, speed: 0.5, halo: 0.35, glow: 0.75, pulse: 1.0, breath: 0.85,
+    },
+    waiting: {
+      key: 'waiting', name: 'ČEKÁ NA TEBE', desc: 'Čeká na schválení.', hex: '#f0b429',
+      hue: 42, sat: 0.87, light: 0.55,
+      amp: 0.05, speed: 0.16, halo: 0.16, glow: 0.6, pulse: 0.0, breath: 1.35,
+    },
+    error: {
+      key: 'error', name: 'CHYBA', desc: 'Něco se nepovedlo.', hex: '#ff6b6b',
+      hue: 0, sat: 1.0, light: 0.71,
+      amp: 0.012, speed: 0.04, halo: 0.0, glow: 0.42, pulse: 0.0, breath: 0.12,
+    },
+  };
+  const ORDER = ['idle', 'thinking', 'speaking', 'waiting', 'error'];
+  const FLASH = { hue: 153, sat: 0.62, light: 0.56 }; // zelený flash dokončení
+
+  const reduceMotion = window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ── HSL → RGB ─────────────────────────────────────────────────────────
+  function hslToRgb(h, s, l) {
+    h /= 360;
+    const hue2 = (p, q, t) => {
+      if (t < 0) t += 1; if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    return [hue2(p, q, h + 1 / 3), hue2(p, q, h), hue2(p, q, h - 1 / 3)];
+  }
+  // nejkratší úhlová cesta pro hue
+  function easeAngle(cur, tgt, k) {
+    let d = ((tgt - cur + 540) % 360) - 180;
+    return cur + d * k;
+  }
+  const lerp = (a, b, k) => a + (b - a) * k;
+
+  // ── Three.js scéna ──────────────────────────────────────────────────────
+  const stage = document.getElementById('stage');
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setClearColor(0x000000, 0);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  stage.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+  camera.position.set(0, 0, 4.6);
+
+  const group = new THREE.Group();
+  scene.add(group);
+
+  // ── 3D simplex noise (Ashima / McEwan, GLSL) ─────────────────────────────
+  const SIMPLEX = `
+  vec3 mod289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}
+  vec4 mod289(vec4 x){return x-floor(x*(1.0/289.0))*289.0;}
+  vec4 permute(vec4 x){return mod289(((x*34.0)+1.0)*x);}
+  vec4 taylorInvSqrt(vec4 r){return 1.79284291400159-0.85373472095314*r;}
+  float snoise(vec3 v){
+    const vec2 C=vec2(1.0/6.0,1.0/3.0); const vec4 D=vec4(0.0,0.5,1.0,2.0);
+    vec3 i=floor(v+dot(v,C.yyy)); vec3 x0=v-i+dot(i,C.xxx);
+    vec3 g=step(x0.yzx,x0.xyz); vec3 l=1.0-g;
+    vec3 i1=min(g.xyz,l.zxy); vec3 i2=max(g.xyz,l.zxy);
+    vec3 x1=x0-i1+C.xxx; vec3 x2=x0-i2+C.yyy; vec3 x3=x0-D.yyy;
+    i=mod289(i);
+    vec4 p=permute(permute(permute(i.z+vec4(0.0,i1.z,i2.z,1.0))+i.y+vec4(0.0,i1.y,i2.y,1.0))+i.x+vec4(0.0,i1.x,i2.x,1.0));
+    float n_=0.142857142857; vec3 ns=n_*D.wyz-D.xzx;
+    vec4 j=p-49.0*floor(p*ns.z*ns.z);
+    vec4 x_=floor(j*ns.z); vec4 y_=floor(j-7.0*x_);
+    vec4 x=x_*ns.x+ns.yyyy; vec4 y=y_*ns.x+ns.yyyy; vec4 h=1.0-abs(x)-abs(y);
+    vec4 b0=vec4(x.xy,y.xy); vec4 b1=vec4(x.zw,y.zw);
+    vec4 s0=floor(b0)*2.0+1.0; vec4 s1=floor(b1)*2.0+1.0; vec4 sh=-step(h,vec4(0.0));
+    vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy; vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
+    vec3 p0=vec3(a0.xy,h.x); vec3 p1=vec3(a0.zw,h.y); vec3 p2=vec3(a1.xy,h.z); vec3 p3=vec3(a1.zw,h.w);
+    vec4 norm=taylorInvSqrt(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
+    p0*=norm.x; p1*=norm.y; p2*=norm.z; p3*=norm.w;
+    vec4 m=max(0.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.0); m=m*m;
+    return 42.0*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
+  }`;
+
+  const uniforms = {
+    uTime:  { value: 0 },
+    uAmp:   { value: STATES.idle.amp },
+    uSpeed: { value: STATES.idle.speed },
+    uColor: { value: new THREE.Color(STATES.idle.hex) },
+    uGlow:  { value: STATES.idle.glow },
+  };
+
+  // ── Drátěná koule: ikosaedr, displacement podél normál + fresnel ─────────
+  const wireGeo = new THREE.IcosahedronGeometry(1, 4); // ~5120 hran → hustá drátěnka
+  const wireMat = new THREE.ShaderMaterial({
+    uniforms,
+    transparent: true,
+    depthWrite: false,
+    wireframe: true,
+    blending: THREE.NormalBlending,
+    vertexShader: SIMPLEX + `
+      uniform float uTime; uniform float uAmp; uniform float uSpeed;
+      varying float vFres;
+      void main(){
+        vec3 dir = normalize(position);
+        float t = uTime * uSpeed;
+        float n1 = snoise(dir * 1.7 + vec3(0.0, 0.0, t));
+        float n2 = snoise(dir * 3.4 + vec3(t * 0.7, 0.0, 0.0));
+        float disp = (n1 * 0.72 + n2 * 0.28) * uAmp;
+        vec3 p = position + normal * disp;
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        vec3 N = normalize(normalMatrix * normal);
+        vec3 V = normalize(-mv.xyz);
+        vFres = pow(1.0 - abs(dot(N, V)), 1.8);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      uniform vec3 uColor;
+      varying float vFres;
+      void main(){
+        float a = mix(0.6, 0.95, clamp(vFres, 0.0, 1.0));
+        gl_FragColor = vec4(uColor, a);
+      }`,
+  });
+  const wire = new THREE.Mesh(wireGeo, wireMat);
+  group.add(wire);
+
+  // ── Glow slupka: větší koule, zadní strana, aditivní blend → měkká záře ──
+  const glowMat = new THREE.ShaderMaterial({
+    uniforms,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.BackSide,
+    blending: THREE.AdditiveBlending,
+    vertexShader: `
+      varying float vFres;
+      void main(){
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vec3 N = normalize(normalMatrix * normal);
+        vec3 V = normalize(-mv.xyz);
+        vFres = pow(1.0 - abs(dot(N, V)), 3.4);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      uniform vec3 uColor; uniform float uGlow;
+      varying float vFres;
+      void main(){
+        gl_FragColor = vec4(uColor, vFres * uGlow);
+      }`,
+  });
+  const glow = new THREE.Mesh(new THREE.IcosahedronGeometry(1.32, 3), glowMat);
+  group.add(glow);
+
+  // ── Halo prstenec: tenký billboard s radiálním prstencovým gradientem ────
+  // (canvas textura → zamlžené okraje, aditivní blend; svítí jen v aktivních stavech)
+  function makeRingTexture() {
+    const S = 512, c = document.createElement('canvas'); c.width = c.height = S;
+    const g = c.getContext('2d');
+    const cx = S / 2, R = S * 0.5;
+    const img = g.createImageData(S, S);
+    const ringR = 0.74, ringW = 0.11; // poloměr a šířka prstence (v normalizovaných jednotkách)
+    for (let y = 0; y < S; y++) {
+      for (let x = 0; x < S; x++) {
+        const dx = (x - cx) / R, dy = (y - cx) / R;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        const a = Math.exp(-Math.pow((d - ringR) / ringW, 2)); // gaussovský prstenec = měkké okraje
+        const i = (y * S + x) * 4;
+        img.data[i] = 255; img.data[i + 1] = 255; img.data[i + 2] = 255;
+        img.data[i + 3] = Math.round(Math.min(1, a) * 255);
+      }
+    }
+    g.putImageData(img, 0, 0);
+    const tex = new THREE.CanvasTexture(c);
+    tex.needsUpdate = true;
+    return tex;
+  }
+  const haloMat = new THREE.MeshBasicMaterial({
+    map: makeRingTexture(),
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    opacity: 0,
+  });
+  const halo = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 4.4), haloMat);
+  halo.position.z = -0.2;
+  scene.add(halo); // mimo group → nerotuje s koulí, drží se čelně
+  const haloColor = new THREE.Color(STATES.idle.hex);
+
+  // ── Živý stav (vše exponenciálně doznívá k cíli) ─────────────────────────
+  let cur = {
+    hue: STATES.idle.hue, sat: STATES.idle.sat, light: STATES.idle.light,
+    amp: STATES.idle.amp, speed: STATES.idle.speed, halo: STATES.idle.halo,
+    glow: STATES.idle.glow, pulse: STATES.idle.pulse, breath: STATES.idle.breath,
+  };
+  let target = Object.assign({}, cur);
+  let flash = 0; // 0..1 obálka zeleného flashe dokončení
+
+  const savedKey = localStorage.getItem('zibby-orb-state');
+  let currentKey = STATES[savedKey] ? savedKey : 'idle';
+
+  function applyState(key) {
+    const s = STATES[key];
+    target.hue = s.hue; target.sat = s.sat; target.light = s.light;
+    target.amp = s.amp; target.speed = s.speed; target.halo = s.halo;
+    target.glow = s.glow; target.pulse = s.pulse; target.breath = s.breath;
+  }
+  applyState(currentKey);
+  // start bez animace z idle → nastav cur rovnou na cíl při načtení uloženého stavu
+  Object.assign(cur, target);
+
+  function setState(key) {
+    if (!STATES[key]) return;
+    currentKey = key;
+    localStorage.setItem('zibby-orb-state', key);
+    applyState(key);
+    buildDock();
+    const s = STATES[key];
+    labelState.textContent = s.name;
+    labelDesc.textContent = s.desc;
+    labelState.style.color = s.hex;
+  }
+  function triggerDone() { flash = 1.0; }
+
+  // ── UI ────────────────────────────────────────────────────────────────
+  const seg = document.getElementById('seg');
+  const labelState = document.getElementById('labelState');
+  const labelDesc = document.getElementById('labelDesc');
+  function buildDock() {
+    seg.innerHTML = '';
+    ORDER.forEach((key) => {
+      const s = STATES[key];
+      const b = document.createElement('button');
+      b.setAttribute('role', 'tab');
+      b.setAttribute('aria-selected', key === currentKey ? 'true' : 'false');
+      const dot = document.createElement('span');
+      dot.className = 'dot'; dot.style.color = s.hex; dot.style.background = s.hex;
+      const txt = document.createElement('span');
+      txt.textContent = s.name.toLowerCase();
+      b.appendChild(dot); b.appendChild(txt);
+      b.onclick = () => setState(key);
+      seg.appendChild(b);
+    });
+  }
+  buildDock();
+  labelState.textContent = STATES[currentKey].name;
+  labelDesc.textContent = STATES[currentKey].desc;
+  labelState.style.color = STATES[currentKey].hex;
+
+  document.getElementById('btnDone').onclick = triggerDone;
+  window.addEventListener('keydown', (e) => {
+    const n = parseInt(e.key, 10);
+    if (n >= 1 && n <= ORDER.length) setState(ORDER[n - 1]);
+    if (e.code === 'Space') { e.preventDefault(); triggerDone(); }
+  });
+
+  // ── Rozměr ──────────────────────────────────────────────────────────────
+  function resize() {
+    const w = window.innerWidth, h = window.innerHeight;
+    renderer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ── Smyčka ────────────────────────────────────────────────────────────
+  const TAU = 0.2; // 95 % za ~0.6 s: exp(-0.6/0.2)=0.05
+  let last = performance.now();
+  let simT = 0;
+
+  function frame(now) {
+    let dt = (now - last) / 1000; last = now;
+    dt = Math.min(dt, 0.05);
+    const k = 1 - Math.exp(-dt / TAU);
+
+    // dech: perioda ~7 s, moduluje amplitudu šumu i záři
+    const breathPhase = (now / 1000) * (Math.PI * 2 / 7);
+    const breath = (Math.sin(breathPhase) * 0.5 + 0.5); // 0..1
+
+    // exponenciální doznívání všech hodnot k cíli
+    cur.hue = easeAngle(cur.hue, target.hue, k);
+    cur.sat = lerp(cur.sat, target.sat, k);
+    cur.light = lerp(cur.light, target.light, k);
+    cur.amp = lerp(cur.amp, target.amp, k);
+    cur.speed = lerp(cur.speed, target.speed, k);
+    cur.halo = lerp(cur.halo, target.halo, k);
+    cur.glow = lerp(cur.glow, target.glow, k);
+    cur.pulse = lerp(cur.pulse, target.pulse, k);
+    cur.breath = lerp(cur.breath, target.breath, k);
+
+    // flash dokončení doznívá (~0.7 s)
+    flash *= Math.exp(-dt / 0.22);
+    if (flash < 0.002) flash = 0;
+
+    // simulační čas šumu (respektuje uloženou rychlost)
+    simT += dt * (reduceMotion ? 0 : 1);
+
+    // barva: hue-řízená; flash prolne k zelené
+    let h = cur.hue, s = cur.sat, l = cur.light;
+    if (flash > 0) {
+      h = easeAngle(h, FLASH.hue, flash * 0.9);
+      s = lerp(s, FLASH.sat, flash * 0.9);
+      l = lerp(l, FLASH.light, flash * 0.9);
+    }
+    const rgb = hslToRgb(((h % 360) + 360) % 360, s, l);
+    uniforms.uColor.value.setRGB(rgb[0], rgb[1], rgb[2]);
+
+    // amplituda šumu + dech (dech mírně bobtná i v klidu)
+    const breathAmp = 1 + (breath - 0.5) * 0.28 * cur.breath;
+    uniforms.uAmp.value = cur.amp * breathAmp;
+    uniforms.uSpeed.value = cur.speed;
+    uniforms.uTime.value = simT;
+
+    // pulz (mluví) — pravidelný, stálý; + záře od dechu a flashe
+    const pulse = cur.pulse > 0.01
+      ? (Math.sin((now / 1000) * (Math.PI * 2 / 1.5)) * 0.5 + 0.5) * cur.pulse
+      : 0;
+    uniforms.uGlow.value = cur.glow * (0.82 + breath * 0.18) + pulse * 0.35 + flash * 0.7;
+
+    // měřítko: jemný dech + pulz + pop při flashi
+    const scale = 1 + (breath - 0.5) * 0.03 * cur.breath + pulse * 0.035 + flash * 0.05;
+    group.scale.setScalar(scale);
+
+    // rotace na dvou osách + jemné naklánění
+    if (!reduceMotion) {
+      group.rotation.y += dt * 0.16;
+      group.rotation.x += dt * 0.07;
+      group.rotation.z = Math.sin(now / 1000 * 0.12) * 0.09;
+    }
+
+    // halo prstenec — čelní billboard, aditivní; svítí jen v aktivních stavech
+    const haloA = cur.halo * (0.72 + breath * 0.28) + flash * 0.5;
+    haloMat.opacity = Math.max(0, Math.min(1, haloA)) * 0.9;
+    haloColor.setRGB(rgb[0], rgb[1], rgb[2]);
+    haloMat.color.copy(haloColor);
+    halo.scale.setScalar(1 + pulse * 0.04 + flash * 0.06);
+
+    renderer.render(scene, camera);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

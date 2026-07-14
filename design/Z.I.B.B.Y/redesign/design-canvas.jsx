@@ -239,7 +239,7 @@ function DesignCanvas({ children, minScale, maxScale, style }) {
 
   return (
     <DCCtx.Provider value={api}>
-      <DCViewport maxScale={maxScale} minScale={minScale} style={style}>{ready && children}</DCViewport>
+      <DCViewport minScale={minScale} maxScale={maxScale} style={style}>{ready && children}</DCViewport>
       {state.focus && registry[state.focus] && (
         <DCFocusOverlay entry={registry[state.focus]} sectionMeta={sectionMeta} sectionOrder={sectionOrder} />
       )}
@@ -464,8 +464,8 @@ function DCViewport({ children, minScale = 0.1, maxScale = 8, style = {} }) {
   const gridSvg = `url("data:image/svg+xml,%3Csvg width='120' height='120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M120 0H0v120' fill='none' stroke='${encodeURIComponent(DC.grid)}' stroke-width='1'/%3E%3C/svg%3E")`;
   return (
     <div
-      className="design-canvas"
       ref={vpRef}
+      className="design-canvas"
       style={{
         height: '100vh', width: '100vw',
         background: DC.bg,
@@ -531,23 +531,23 @@ function DCSection({ id, title, subtitle, children, gap = 48 }) {
       style={{ marginBottom: 'calc(80px * var(--dc-inv-zoom, 1))', position: 'relative' }}>
       <div style={{ padding: '0 60px' }}>
         <div className="dc-sectionhead" style={{ paddingBottom: 36 }}>
-          <DCEditable onChange={(v) => ctx && sid && ctx.patchSection(sid, { title: v })} style={{ fontSize: 28, fontWeight: 600, color: DC.title, letterSpacing: -0.4, marginBottom: 6, display: 'inline-block' }}
-            tag="div"
-            value={sec.title ?? title} />
+          <DCEditable tag="div" value={sec.title ?? title}
+            onChange={(v) => ctx && sid && ctx.patchSection(sid, { title: v })}
+            style={{ fontSize: 28, fontWeight: 600, color: DC.title, letterSpacing: -0.4, marginBottom: 6, display: 'inline-block' }} />
           {subtitle && <div style={{ fontSize: 16, color: DC.subtitle }}>{subtitle}</div>}
         </div>
       </div>
       <div style={{ display: 'flex', gap, padding: '0 60px', alignItems: 'flex-start', width: 'max-content' }}>
         {order.map((k) => (
-          <DCArtboardFrame artboard={byId[k]} key={k} label={(sec.labels || {})[k] ?? byId[k].props.label} onDelete={() => ctx && ctx.patchSection(sid, (x) => ({
+          <DCArtboardFrame key={k} sectionId={sid} artboard={byId[k]} order={order}
+            label={(sec.labels || {})[k] ?? byId[k].props.label}
+            onRename={(v) => ctx && ctx.patchSection(sid, (x) => ({ labels: { ...x.labels, [k]: v } }))}
+            onReorder={(next) => ctx && ctx.patchSection(sid, { order: next })}
+            onDelete={() => ctx && ctx.patchSection(sid, (x) => ({
               hidden: [...(x.srcKey === srcKey ? (x.hidden || []) : []), k],
               srcKey,
             }))}
-            onFocus={() => ctx && ctx.setFocus(`${sid}/${k}`)}
-            onRename={(v) => ctx && ctx.patchSection(sid, (x) => ({ labels: { ...x.labels, [k]: v } }))}
-            onReorder={(next) => ctx && ctx.patchSection(sid, { order: next })}
-            order={order}
-            sectionId={sid} />
+            onFocus={() => ctx && ctx.setFocus(`${sid}/${k}`)} />
         ))}
       </div>
       {rest}
@@ -766,21 +766,21 @@ function DCArtboardFrame({ sectionId, artboard, label, order, onRename, onReorde
   };
 
   return (
-    <div data-dc-slot={id} ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
-      <div className="dc-header" data-omelette-chrome="" onPointerDown={(e) => e.stopPropagation()} style={{ color: DC.label }}>
+    <div ref={ref} data-dc-slot={id} style={{ position: 'relative', flexShrink: 0 }}>
+      <div className="dc-header" data-omelette-chrome="" style={{ color: DC.label }} onPointerDown={(e) => e.stopPropagation()}>
         <div className="dc-labelrow">
           <div className="dc-grip" onPointerDown={onGripDown} title="Drag to reorder">
-            <svg fill="currentColor" height="13" viewBox="0 0 9 13" width="9"><circle cx="2" cy="2" r="1.1"/><circle cx="7" cy="2" r="1.1"/><circle cx="2" cy="6.5" r="1.1"/><circle cx="7" cy="6.5" r="1.1"/><circle cx="2" cy="11" r="1.1"/><circle cx="7" cy="11" r="1.1"/></svg>
+            <svg width="9" height="13" viewBox="0 0 9 13" fill="currentColor"><circle cx="2" cy="2" r="1.1"/><circle cx="7" cy="2" r="1.1"/><circle cx="2" cy="6.5" r="1.1"/><circle cx="7" cy="6.5" r="1.1"/><circle cx="2" cy="11" r="1.1"/><circle cx="7" cy="11" r="1.1"/></svg>
           </div>
           <div className="dc-labeltext" onClick={onFocus} title="Click to focus">
-            <DCEditable onChange={onRename} onClick={(e) => e.stopPropagation()} style={{ fontSize: 15, fontWeight: 500, color: DC.label, lineHeight: 1 }}
-              value={label} />
+            <DCEditable value={label} onChange={onRename} onClick={(e) => e.stopPropagation()}
+              style={{ fontSize: 15, fontWeight: 500, color: DC.label, lineHeight: 1 }} />
           </div>
         </div>
         <div className="dc-btns">
           <div ref={menuRef} style={{ position: 'relative' }}>
-            <button className="dc-kebab" onClick={() => setMenuOpen((o) => !o)} title="More">
-              <svg fill="currentColor" height="12" viewBox="0 0 12 12" width="12"><circle cx="2.5" cy="6" r="1.1"/><circle cx="6" cy="6" r="1.1"/><circle cx="9.5" cy="6" r="1.1"/></svg>
+            <button className="dc-kebab" title="More" onClick={() => setMenuOpen((o) => !o)}>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><circle cx="2.5" cy="6" r="1.1"/><circle cx="6" cy="6" r="1.1"/><circle cx="9.5" cy="6" r="1.1"/></svg>
             </button>
             {menuOpen && (
               <div className="dc-menu" onPointerDown={(e) => e.stopPropagation()}>
@@ -795,11 +795,11 @@ function DCArtboardFrame({ sectionId, artboard, label, order, onRename, onReorde
             )}
           </div>
           <button className="dc-expand" onClick={onFocus} title="Focus">
-            <svg fill="none" height="12" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" viewBox="0 0 12 12" width="12"><path d="M7 1h4v4M5 11H1V7M11 1L7.5 4.5M1 11l3.5-3.5"/></svg>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M7 1h4v4M5 11H1V7M11 1L7.5 4.5M1 11l3.5-3.5"/></svg>
           </button>
         </div>
       </div>
-      <div className="dc-card" ref={cardRef}
+      <div ref={cardRef} className="dc-card"
         style={{ borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06)', overflow: 'hidden', width, height, background: '#fff', ...style }}>
         {children || <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 13, fontFamily: DC.font }}>{id}</div>}
       </div>
@@ -811,11 +811,11 @@ function DCArtboardFrame({ sectionId, artboard, label, order, onRename, onReorde
 function DCEditable({ value, onChange, style, tag = 'span', onClick }) {
   const T = tag;
   return (
-    <T contentEditable suppressContentEditableWarning className="dc-editable"
-      onBlur={(e) => onChange && onChange(e.currentTarget.textContent)}
+    <T className="dc-editable" contentEditable suppressContentEditableWarning
       onClick={onClick}
-      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
       onPointerDown={(e) => e.stopPropagation()}
+      onBlur={(e) => onChange && onChange(e.currentTarget.textContent)}
+      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
       style={style}>{value}</T>
   );
 }
@@ -865,13 +865,13 @@ function DCFocusOverlay({ entry, sectionMeta, sectionOrder }) {
   const [ddOpen, setDd] = React.useState(false);
   const Arrow = ({ dir, onClick }) => (
     <button onClick={(e) => { e.stopPropagation(); onClick(); }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,.18)')}
-      onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,.08)')}
       style={{ position: 'absolute', top: '50%', [dir]: 28, transform: 'translateY(-50%)',
         border: 'none', background: 'rgba(255,255,255,.08)', color: 'rgba(255,255,255,.9)',
         width: 44, height: 44, borderRadius: 22, fontSize: 18, cursor: 'pointer',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background .15s' }}>
-      <svg fill="none" height="18" stroke="currentColor" strokeLinecap="round" strokeWidth="2" viewBox="0 0 18 18" width="18">
+        display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background .15s' }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,.18)')}
+      onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,.08)')}>
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <path d={dir === 'left' ? 'M11 3L5 9l6 6' : 'M7 3l6 6-6 6'} /></svg>
     </button>
   );
@@ -893,7 +893,7 @@ function DCFocusOverlay({ entry, sectionMeta, sectionOrder }) {
               borderRadius: 6, textAlign: 'left', fontFamily: 'inherit' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 18, fontWeight: 600, letterSpacing: -0.3 }}>{meta.title}</span>
-              <svg fill="none" height="11" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" style={{ opacity: .7 }} viewBox="0 0 11 11" width="11"><path d="M2 4l3.5 3.5L9 4"/></svg>
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ opacity: .7 }}><path d="M2 4l3.5 3.5L9 4"/></svg>
             </span>
             {meta.subtitle && <span style={{ display: 'block', fontSize: 13, opacity: .6, fontWeight: 400, marginTop: 2 }}>{meta.subtitle}</span>}
           </button>

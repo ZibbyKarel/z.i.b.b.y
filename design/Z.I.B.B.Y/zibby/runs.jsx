@@ -8,12 +8,12 @@ const LOG_C = { sys: Z.inkFaint, info: Z.inkDim, ok: Z.ok, warn: Z.warn, err: Z.
 const RunStateBadge = ({ state, big = false }) => {
   const s = RUN_STATE[state] || RUN_STATE.done;
   return (
-    <span style={{
+    <span title={`stav: ${s.canon}`} style={{
       display: 'inline-flex', alignItems: 'center', gap: big ? 7 : 5, fontFamily: Z.mono,
       fontSize: big ? 11 : 9.5, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
       padding: big ? '4px 11px' : '2px 8px', borderRadius: 2, color: s.c,
       background: `${s.c}1a`, border: `1px solid ${s.c}55`, whiteSpace: 'nowrap',
-    }} title={`stav: ${s.canon}`}>
+    }}>
       <span style={{ position: 'relative', width: big ? 7 : 6, height: big ? 7 : 6 }}>
         {s.pulse && <span style={{ position: 'absolute', inset: -2, borderRadius: '50%', background: s.c, opacity: 0.35, animation: 'zpulse 1.8s ease-out infinite' }} />}
         <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: s.c }} />
@@ -134,7 +134,7 @@ const RunDetail = ({ run, accent }) => {
             <div style={{ minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ fontSize: 20, fontWeight: 600 }}>{run.name}</div>
-                <RunStateBadge big state={run.state} />
+                <RunStateBadge state={run.state} big />
               </div>
               <div style={{ fontSize: 13, color: Z.inkDim, marginTop: 6, lineHeight: 1.4 }}>{run.prompt}</div>
               <Mono style={{ fontSize: 10, color: Z.inkFaint, display: 'block', marginTop: 6 }}>{run.id} · {run.kind}{run.agent ? ' · agent ' + run.agent : ''}{run.phase ? ' · ' + run.phase : ''} · stav <span style={{ color: s.c }}>{s.canon}</span></Mono>
@@ -143,7 +143,7 @@ const RunDetail = ({ run, accent }) => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {run.state === 'running' && <button style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: Z.mono, fontSize: 12, fontWeight: 600, padding: '9px 14px', cursor: 'pointer', borderRadius: 2, color: Z.bad, background: 'transparent', border: `1px solid ${Z.bad}66` }}><Icon name="stop" size={13} /> Zastavit běh</button>}
             {run.state === 'await' && run.approvalId && <button style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: Z.mono, fontSize: 12, fontWeight: 700, padding: '9px 14px', cursor: 'pointer', borderRadius: 2, color: Z.bg0, background: Z.warn, border: 'none', boxShadow: `0 0 14px ${Z.warn}55` }}><Icon name="shield" size={13} /> Rozhodnout</button>}
-            {(run.state === 'done' || run.state === 'error' || run.state === 'interrupt') && <GhostBtn accent={accent} icon="retry" onClick={() => setReplayKey((k) => k + 1)}>Replay logu</GhostBtn>}
+            {(run.state === 'done' || run.state === 'error' || run.state === 'interrupt') && <GhostBtn icon="retry" accent={accent} onClick={() => setReplayKey((k) => k + 1)}>Replay logu</GhostBtn>}
           </div>
         </div>
 
@@ -179,8 +179,8 @@ const RunDetail = ({ run, accent }) => {
       )}
 
       {/* log */}
-      <HudPanel accent={accent} pad={16} title="výstup běhu">
-        <LogStream accent={accent} key={run.id + '-' + replayKey} run={run} />
+      <HudPanel accent={accent} title="výstup běhu" pad={16}>
+        <LogStream key={run.id + '-' + replayKey} run={run} accent={accent} />
       </HudPanel>
     </div>
   );
@@ -228,12 +228,12 @@ const RunsBody = ({ accent }) => {
       <div style={{ display: 'grid', gridTemplateColumns: '330px minmax(0,1fr)', gap: 20, alignItems: 'start' }}>
         {/* left: feed */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {list.length > 0 ? list.map((r) => <RunCard accent={accent} key={r.id} onSelect={setSelId} run={r} selected={sel && r.id === sel.id} />)
+          {list.length > 0 ? list.map((r) => <RunCard key={r.id} run={r} accent={accent} selected={sel && r.id === sel.id} onSelect={setSelId} />)
             : <div style={{ padding: '24px 16px', border: `1px dashed ${Z.line}`, borderRadius: 3, textAlign: 'center' }}><Mono style={{ fontSize: 11, color: Z.inkFaint }}>Žádné běhy v tomto stavu.</Mono></div>}
         </div>
 
         {/* right: detail */}
-        {sel ? <RunDetail accent={accent} key={sel.id} run={sel} /> : (
+        {sel ? <RunDetail key={sel.id} run={sel} accent={accent} /> : (
           <HudPanel accent={accent} pad={50}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center' }}>
               <Icon name="pulse" size={26} style={{ color: Z.inkFaint }} />

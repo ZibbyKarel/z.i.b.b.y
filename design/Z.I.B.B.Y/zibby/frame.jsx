@@ -58,7 +58,7 @@ const RunModal = ({ skill, accent, onClose, projects }) => {
       }}>
         {/* header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '18px 20px', borderBottom: `1px solid ${Z.line}` }}>
-          <Avatar accent={accent} dim={accentDimOf(skill.ctx)} glyph={skill.glyph || 'spark'} radius={Z.rCtl} size={38} src={skill.avatar} />
+          <Avatar src={skill.avatar} glyph={skill.glyph || 'spark'} size={38} radius={Z.rCtl} accent={accent} dim={accentDimOf(skill.ctx)} />
 
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: Z.mono, fontSize: 15, fontWeight: 700, color: Z.ink }}>{skill.name}</div>
@@ -70,13 +70,13 @@ const RunModal = ({ skill, accent, onClose, projects }) => {
         {!launched ? (
           <div style={{ padding: 20 }}>
             <label style={{ fontFamily: Z.mono, fontSize: 10, letterSpacing: '0.14em', color: Z.inkFaint, textTransform: 'uppercase' }}>Zadání / prompt</label>
-            <textarea autoFocus onChange={(e) => setPrompt(e.target.value)} placeholder={`Řekni ${skill.name}, co má udělat…`}
+            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} autoFocus
+              placeholder={`Řekni ${skill.name}, co má udělat…`}
               style={{
                 width: '100%', minHeight: 96, marginTop: 8, padding: '12px 14px', resize: 'vertical',
                 background: Z.bg0, border: `1px solid ${Z.line}`, borderRadius: Z.rCtl, color: Z.ink,
                 fontFamily: Z.sans, fontSize: 13.5, lineHeight: 1.5, outline: 'none', boxSizing: 'border-box',
-              }}
-              value={prompt} />
+              }} />
 
             <label style={{ fontFamily: Z.mono, fontSize: 10, letterSpacing: '0.14em', color: Z.inkFaint, textTransform: 'uppercase', display: 'block', marginTop: 16 }}>Cílový projekt</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 8 }}>

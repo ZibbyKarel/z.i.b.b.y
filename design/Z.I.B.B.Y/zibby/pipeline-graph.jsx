@@ -92,6 +92,7 @@ const GNode = ({ n, accent, pending, hover, dragging, onPortDown, onNodeDown, on
     const lit = (which === 'in' && inLit);
     return (
       <div
+        title={which === 'in' ? 'vstup — sem připoj výstup jiného agenta' : which === 'out' ? 'výstup — táhni do vstupu dalšího agenta' : 'při chybě vrátit práci — táhni na předchozího agenta'}
         onMouseDown={which === 'in' ? undefined : (e) => onPortDown(which, n.id, e)}
         onMouseEnter={which === 'in' ? () => onPortEnter('in', n.id) : undefined}
         onMouseLeave={which === 'in' ? () => onPortLeave('in', n.id) : undefined}
@@ -103,8 +104,7 @@ const GNode = ({ n, accent, pending, hover, dragging, onPortDown, onNodeDown, on
           display: 'grid', placeItems: 'center', zIndex: 4,
           boxShadow: lit ? `0 0 0 4px ${c}33` : 'none', transition: 'background .1s, box-shadow .1s',
           ...extra,
-        }}
-        title={which === 'in' ? 'vstup — sem připoj výstup jiného agenta' : which === 'out' ? 'výstup — táhni do vstupu dalšího agenta' : 'při chybě vrátit práci — táhni na předchozího agenta'}>
+        }}>
         <div style={{ width: 4, height: 4, borderRadius: '50%', background: lit ? Z.bg0 : c }} />
       </div>
     );
@@ -124,20 +124,20 @@ const GNode = ({ n, accent, pending, hover, dragging, onPortDown, onNodeDown, on
         userSelect: 'none', transition: 'box-shadow .12s, border-color .12s',
       }}>
       {/* delete */}
-      <button onClick={(e) => { e.stopPropagation(); onDelete(n.id); }} onMouseDown={(e) => { e.stopPropagation(); }}
-        style={{ position: 'absolute', top: -9, right: -9, width: 18, height: 18, borderRadius: '50%', display: 'grid', placeItems: 'center', cursor: 'pointer', background: Z.bg0, border: `1px solid ${Z.line}`, color: Z.inkFaint, zIndex: 5, padding: 0 }} title="Odebrat uzel">
+      <button onMouseDown={(e) => { e.stopPropagation(); }} onClick={(e) => { e.stopPropagation(); onDelete(n.id); }}
+        title="Odebrat uzel" style={{ position: 'absolute', top: -9, right: -9, width: 18, height: 18, borderRadius: '50%', display: 'grid', placeItems: 'center', cursor: 'pointer', background: Z.bg0, border: `1px solid ${Z.line}`, color: Z.inkFaint, zIndex: 5, padding: 0 }}>
         <Icon name="x" size={10} />
       </button>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Avatar accent={accent} dim={`${accent}1f`} glyph={a.glyph} radius={2} size={24} src={a.avatar} />
+        <Avatar src={a.avatar} glyph={a.glyph} size={24} radius={2} accent={accent} dim={`${accent}1f`} />
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ fontFamily: Z.mono, fontSize: 11.5, fontWeight: 700, color: Z.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.agent}</div>
         </div>
       </div>
       <div style={{ display: 'flex', gap: 5, marginTop: 7 }}>
-        <span onClick={(e) => { e.stopPropagation(); onCycleModel(n.id); }} onMouseDown={(e) => e.stopPropagation()} style={{ cursor: 'pointer', fontFamily: Z.mono, fontSize: 8.5, fontWeight: 600, padding: '2px 6px', borderRadius: 2, color: PG_MODEL_C[n.model] || Z.inkDim, background: `${PG_MODEL_C[n.model] || Z.inkDim}1f`, border: `1px solid ${PG_MODEL_C[n.model] || Z.inkDim}55` }} title="model">{n.model}</span>
-        <span onClick={(e) => { e.stopPropagation(); onCycleThink(n.id); }} onMouseDown={(e) => e.stopPropagation()} style={{ cursor: 'pointer', fontFamily: Z.mono, fontSize: 8.5, fontWeight: 600, padding: '2px 6px', borderRadius: 2, color: PG_THINK_C[n.thinking] || Z.inkDim, background: `${PG_THINK_C[n.thinking] || Z.inkDim}1f`, border: `1px solid ${PG_THINK_C[n.thinking] || Z.inkDim}55` }} title="thinking">◇ {n.thinking}</span>
+        <span onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onCycleModel(n.id); }} title="model" style={{ cursor: 'pointer', fontFamily: Z.mono, fontSize: 8.5, fontWeight: 600, padding: '2px 6px', borderRadius: 2, color: PG_MODEL_C[n.model] || Z.inkDim, background: `${PG_MODEL_C[n.model] || Z.inkDim}1f`, border: `1px solid ${PG_MODEL_C[n.model] || Z.inkDim}55` }}>{n.model}</span>
+        <span onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onCycleThink(n.id); }} title="thinking" style={{ cursor: 'pointer', fontFamily: Z.mono, fontSize: 8.5, fontWeight: 600, padding: '2px 6px', borderRadius: 2, color: PG_THINK_C[n.thinking] || Z.inkDim, background: `${PG_THINK_C[n.thinking] || Z.inkDim}1f`, border: `1px solid ${PG_THINK_C[n.thinking] || Z.inkDim}55` }}>◇ {n.thinking}</span>
       </div>
 
       {port('in', { left: -7, top: NODE_H / 2 - 7 })}
@@ -153,12 +153,12 @@ const PaletteItem = ({ a, accent, onAdd }) => {
   return (
     <div
       draggable
-      onClick={() => onAdd(a.name)}
       onDragStart={(e) => { e.dataTransfer.effectAllowed = 'copy'; e.dataTransfer.setData('text/agent', a.name); }}
+      onClick={() => onAdd(a.name)}
       onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
-      style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px', borderRadius: 3, cursor: 'grab', background: h ? 'rgba(255,255,255,0.04)' : 'transparent', border: `1px solid ${h ? accent + '44' : 'transparent'}`, transition: 'all .12s' }}
-      title="Přetáhni na plátno nebo klikni pro přidání">
-      <Avatar accent={accent} dim={`${accent}1c`} glyph={a.glyph} radius={2} size={26} src={a.avatar} />
+      title="Přetáhni na plátno nebo klikni pro přidání"
+      style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px', borderRadius: 3, cursor: 'grab', background: h ? 'rgba(255,255,255,0.04)' : 'transparent', border: `1px solid ${h ? accent + '44' : 'transparent'}`, transition: 'all .12s' }}>
+      <Avatar src={a.avatar} glyph={a.glyph} size={26} radius={2} accent={accent} dim={`${accent}1c`} />
       <div style={{ minWidth: 0, flex: 1 }}>
         <Mono style={{ fontSize: 11.5, fontWeight: 600, color: Z.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>{a.name}</Mono>
         <Mono style={{ fontSize: 9, color: Z.inkFaint, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>{a.category}</Mono>
@@ -266,16 +266,16 @@ const PipelineGraphEditor = ({ pipeline, mode, accent, onClose, onSave }) => {
 
         {/* header + toolbar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', borderBottom: `1px solid ${Z.line}`, flex: '0 0 auto' }}>
-          <AvatarSwap accent={accent} glyph="flow" image={avatar} onRemove={() => setAvatar(null)} onUpload={setAvatar} size={36} />
+          <AvatarSwap image={avatar} glyph="flow" accent={accent} onUpload={setAvatar} onRemove={() => setAvatar(null)} size={36} />
           <div style={{ flex: '0 0 auto' }}>
-            <input onBlur={(e) => e.target.style.borderColor = Z.line} onChange={(e) => setName(e.target.value)} onFocus={(e) => e.target.style.borderColor = `${accent}88`} placeholder="název pipeline…"
-              spellCheck={false}
-              style={{ width: 240, padding: '5px 9px', background: Z.bg0, border: `1px solid ${Z.line}`, borderRadius: 3, color: Z.ink, fontFamily: Z.mono, fontSize: 14, fontWeight: 700, outline: 'none' }} value={name} />
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="název pipeline…" spellCheck={false}
+              style={{ width: 240, padding: '5px 9px', background: Z.bg0, border: `1px solid ${Z.line}`, borderRadius: 3, color: Z.ink, fontFamily: Z.mono, fontSize: 14, fontWeight: 700, outline: 'none' }}
+              onFocus={(e) => e.target.style.borderColor = `${accent}88`} onBlur={(e) => e.target.style.borderColor = Z.line} />
             <Mono style={{ fontSize: 9, color: Z.inkFaint, display: 'block', marginTop: 4 }}>{isNew ? 'nová' : 'úprava'} · ~/zibby/pipelines/{docSlug(name) || 'nova-pipeline'}.pipeline.md</Mono>
           </div>
-          <input onBlur={(e) => e.target.style.borderColor = Z.line} onChange={(e) => setDesc(e.target.value)} onFocus={(e) => e.target.style.borderColor = `${accent}88`} placeholder="popis — co pipeline dělá (jedna věta)"
-            spellCheck={false}
-            style={{ flex: 1, minWidth: 0, padding: '7px 11px', background: Z.bg0, border: `1px solid ${Z.line}`, borderRadius: 3, color: Z.ink, fontFamily: Z.sans, fontSize: 13, outline: 'none' }} value={desc} />
+          <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="popis — co pipeline dělá (jedna věta)" spellCheck={false}
+            style={{ flex: 1, minWidth: 0, padding: '7px 11px', background: Z.bg0, border: `1px solid ${Z.line}`, borderRadius: 3, color: Z.ink, fontFamily: Z.sans, fontSize: 13, outline: 'none' }}
+            onFocus={(e) => e.target.style.borderColor = `${accent}88`} onBlur={(e) => e.target.style.borderColor = Z.line} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, flex: '0 0 auto' }}>
             <Mono style={{ fontSize: 9, color: Z.inkFaint, marginRight: 2 }}>STROP</Mono>
             {[10, 25, 50, 100].map((b) => (
@@ -294,21 +294,21 @@ const PipelineGraphEditor = ({ pipeline, mode, accent, onClose, onSave }) => {
               <Mono style={{ fontSize: 9.5, color: Z.inkFaint, display: 'block', marginTop: 6, lineHeight: 1.5 }}>Přetáhni na plátno → uzel grafu</Mono>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px 10px' }}>
-              {AGENTS.map((a) => <PaletteItem a={a} accent={accent} key={a.id} onAdd={(nm) => addNode(nm)} />)}
+              {AGENTS.map((a) => <PaletteItem key={a.id} a={a} accent={accent} onAdd={(nm) => addNode(nm)} />)}
             </div>
           </div>
 
           {/* canvas */}
-          <div onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
-            onDrop={(e) => { e.preventDefault(); const nm = e.dataTransfer.getData('text/agent'); if (!nm) return; const c = toCanvas(e.clientX, e.clientY); addNode(nm, c.x - NODE_W / 2, c.y - NODE_H / 2); }}
-            style={{ flex: 1, position: 'relative', overflow: 'auto', background: Z.bg1 }}>
+          <div style={{ flex: 1, position: 'relative', overflow: 'auto', background: Z.bg1 }}
+            onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
+            onDrop={(e) => { e.preventDefault(); const nm = e.dataTransfer.getData('text/agent'); if (!nm) return; const c = toCanvas(e.clientX, e.clientY); addNode(nm, c.x - NODE_W / 2, c.y - NODE_H / 2); }}>
             <div ref={canvasRef} style={{
               position: 'relative', width: CANVAS_W, height: CANVAS_H,
               backgroundImage: `radial-gradient(${Z.line} 1px, transparent 1px)`, backgroundSize: '22px 22px', backgroundPosition: '11px 11px',
               cursor: pending ? 'crosshair' : 'default', userSelect: (pending || nodeDrag) ? 'none' : 'auto',
             }}>
               {/* SVG edges */}
-              <svg height={CANVAS_H} style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'visible' }} width={CANVAS_W}>
+              <svg width={CANVAS_W} height={CANVAS_H} style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'visible' }}>
                 {graph.edges.map((e) => {
                   const a = portPt(nodeById(e.from), 'out'), b = portPt(nodeById(e.to), 'in');
                   if (!nodeById(e.from) || !nodeById(e.to)) return null;
@@ -324,21 +324,21 @@ const PipelineGraphEditor = ({ pipeline, mode, accent, onClose, onSave }) => {
                   if (!nodeById(r.from) || !nodeById(r.to)) return null;
                   return (
                     <g key={r.id}>
-                      <path d={reworkPath(a, b)} fill="none" stroke={Z.bad} strokeDasharray="4 3" strokeWidth="1.4" />
+                      <path d={reworkPath(a, b)} fill="none" stroke={Z.bad} strokeWidth="1.4" strokeDasharray="4 3" />
                       <path d={`M${b.x},${b.y} L${b.x - 4.5},${b.y - 8} L${b.x + 4.5},${b.y - 8} Z`} fill={Z.bad} />
                     </g>
                   );
                 })}
                 {pending && pendFrom && (
-                  <path d={pending.kind === 'rework' ? reworkPath(pendFrom, pending.cursor) : flowPath(pendFrom, pending.cursor)} fill="none" opacity="0.8" stroke={pending.kind === 'rework' ? Z.bad : accent} strokeDasharray="5 4" strokeWidth="1.6" />
+                  <path d={pending.kind === 'rework' ? reworkPath(pendFrom, pending.cursor) : flowPath(pendFrom, pending.cursor)} fill="none" stroke={pending.kind === 'rework' ? Z.bad : accent} strokeWidth="1.6" strokeDasharray="5 4" opacity="0.8" />
                 )}
               </svg>
 
               {/* nodes */}
               {graph.nodes.map((n) => (
-                <GNode accent={accent} dragging={nodeDrag && nodeDrag.id === n.id} hover={hover} key={n.id} n={n} onCycleModel={cycleModel}
-                  onCycleThink={cycleThink} onDelete={delNode} onNodeDown={onNodeDown} onNodeEnter={onNodeEnter} onNodeLeave={onNodeLeave}
-                  onPortDown={onPortDown} onPortEnter={onPortEnter} onPortLeave={onPortLeave} pending={pending} />
+                <GNode key={n.id} n={n} accent={accent} pending={pending} hover={hover} dragging={nodeDrag && nodeDrag.id === n.id}
+                  onPortDown={onPortDown} onNodeDown={onNodeDown} onDelete={delNode} onCycleModel={cycleModel} onCycleThink={cycleThink}
+                  onPortEnter={onPortEnter} onPortLeave={onPortLeave} onNodeEnter={onNodeEnter} onNodeLeave={onNodeLeave} />
               ))}
 
               {/* flow edge controls (filename) */}
@@ -349,9 +349,9 @@ const PipelineGraphEditor = ({ pipeline, mode, accent, onClose, onSave }) => {
                 return (
                   <div key={e.id} style={{ position: 'absolute', left: mx, top: my, transform: 'translate(-50%,-50%)', zIndex: 6, display: 'flex', alignItems: 'center', gap: 4, padding: '3px 4px 3px 7px', background: Z.bg0, border: `1px solid ${Z.line}`, borderRadius: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
                     <Icon name="file" size={10} style={{ color: Z.inkFaint, flex: '0 0 auto' }} />
-                    <input onChange={(ev) => setEdgeFile(e.id, ev.target.value)} spellCheck={false} style={{ width: 96, padding: 0, background: 'transparent', border: 'none', color: accent, fontFamily: Z.mono, fontSize: 10, outline: 'none' }} title="název souboru pro předání (výstup → vstup)"
-                      value={e.file} />
-                    <button onClick={() => delEdge(e.id)} style={{ width: 16, height: 16, flex: '0 0 auto', display: 'grid', placeItems: 'center', cursor: 'pointer', borderRadius: 2, background: 'transparent', border: 'none', color: Z.inkFaint, padding: 0 }} title="Odpojit"><Icon name="x" size={10} /></button>
+                    <input value={e.file} onChange={(ev) => setEdgeFile(e.id, ev.target.value)} spellCheck={false} title="název souboru pro předání (výstup → vstup)"
+                      style={{ width: 96, padding: 0, background: 'transparent', border: 'none', color: accent, fontFamily: Z.mono, fontSize: 10, outline: 'none' }} />
+                    <button onClick={() => delEdge(e.id)} title="Odpojit" style={{ width: 16, height: 16, flex: '0 0 auto', display: 'grid', placeItems: 'center', cursor: 'pointer', borderRadius: 2, background: 'transparent', border: 'none', color: Z.inkFaint, padding: 0 }}><Icon name="x" size={10} /></button>
                   </div>
                 );
               })}
@@ -370,9 +370,9 @@ const PipelineGraphEditor = ({ pipeline, mode, accent, onClose, onSave }) => {
                       <Mono style={{ fontSize: 11, fontWeight: 700, color: Z.ink, width: 12, textAlign: 'center' }}>{r.maxRetries}</Mono>
                       <button onClick={() => setRework(r.id, { maxRetries: clamp(r.maxRetries + 1, 1, 9) })} style={{ width: 15, height: 15, display: 'grid', placeItems: 'center', cursor: 'pointer', borderRadius: 2, background: 'transparent', border: `1px solid ${Z.line}`, color: Z.inkDim, fontFamily: Z.mono, fontSize: 11, lineHeight: 1, padding: 0 }}>+</button>
                     </div>
-                    <button onClick={() => setRework(r.id, { escalate: !r.escalate })} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontFamily: Z.mono, fontSize: 9, fontWeight: 600, padding: '2px 6px', cursor: 'pointer', borderRadius: 2, color: r.escalate ? Z.bg0 : Z.inkDim, background: r.escalate ? Z.warn : 'transparent', border: `1px solid ${r.escalate ? Z.warn : Z.line}` }}
-                      title="při přepracování zvýšit thinking effort">↑ effort</button>
-                    <button onClick={() => delRework(r.id)} style={{ width: 16, height: 16, flex: '0 0 auto', display: 'grid', placeItems: 'center', cursor: 'pointer', borderRadius: 2, background: 'transparent', border: 'none', color: Z.inkFaint, padding: 0 }} title="Zrušit vrácení"><Icon name="x" size={10} /></button>
+                    <button onClick={() => setRework(r.id, { escalate: !r.escalate })} title="při přepracování zvýšit thinking effort"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontFamily: Z.mono, fontSize: 9, fontWeight: 600, padding: '2px 6px', cursor: 'pointer', borderRadius: 2, color: r.escalate ? Z.bg0 : Z.inkDim, background: r.escalate ? Z.warn : 'transparent', border: `1px solid ${r.escalate ? Z.warn : Z.line}` }}>↑ effort</button>
+                    <button onClick={() => delRework(r.id)} title="Zrušit vrácení" style={{ width: 16, height: 16, flex: '0 0 auto', display: 'grid', placeItems: 'center', cursor: 'pointer', borderRadius: 2, background: 'transparent', border: 'none', color: Z.inkFaint, padding: 0 }}><Icon name="x" size={10} /></button>
                   </div>
                 );
               })}

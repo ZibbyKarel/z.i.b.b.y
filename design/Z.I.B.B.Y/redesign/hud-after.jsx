@@ -2,8 +2,8 @@
 // Bez scanlines/mřížky · glow jen na živém · informace jednou · rail jen na Přehledu
 
 const ZtMicIcon = ({ size = 13 }) => (
-  <svg fill="none" height={size} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24" width={size}>
-    <rect height="12" rx="3" width="6" x="9" y="2"></rect>
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="9" y="2" width="6" height="12" rx="3"></rect>
     <path d="M5 10v2a7 7 0 0 0 14 0v-2"></path>
     <path d="M12 19v3M8 22h8"></path>
   </svg>
@@ -13,7 +13,7 @@ const ZtMicIcon = ({ size = 13 }) => (
 const VaSidebar = () => (
   <nav style={{ width: 216, flex: '0 0 216px', borderRight: `1px solid ${ZT.line}`, display: 'flex', flexDirection: 'column', padding: '20px 12px', background: 'rgba(0,0,0,0.22)' }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '2px 8px 20px' }}>
-      <img alt="ZIBBY" src="uploads/icon.png" style={{ width: 38, height: 38, objectFit: 'contain' }} />
+      <img src="uploads/icon.png" alt="ZIBBY" style={{ width: 38, height: 38, objectFit: 'contain' }} />
       <div>
         <div style={{ fontFamily: ZT.mono, fontSize: 15, fontWeight: 700, letterSpacing: '0.30em', color: ZT.ink }}>Z·I·B·B·Y</div>
         <div style={{ ...T.micro, fontSize: 9.5, marginTop: 3, whiteSpace: 'nowrap' }}>tichý velín · v0.9</div>
@@ -58,9 +58,9 @@ const VaTopBar = () => (
       <span style={{ ...T.micro, fontSize: 10, border: `1px solid ${ZT.line}`, borderRadius: 4, padding: '1px 6px' }}>⌘K</span>
     </button>
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <ZtBtn icon="bolt" size="sm" variant="primary">Task</ZtBtn>
-      <ZtBtn size="sm" variant="ghost"><ZtMicIcon /> Voice</ZtBtn>
-      <ZtBtn size="sm" variant="ghost">CZ</ZtBtn>
+      <ZtBtn variant="primary" size="sm" icon="bolt">Task</ZtBtn>
+      <ZtBtn variant="ghost" size="sm"><ZtMicIcon /> Voice</ZtBtn>
+      <ZtBtn variant="ghost" size="sm">CZ</ZtBtn>
     </div>
   </header>
 );
@@ -79,17 +79,17 @@ const VaBriefRow = ({ state, title, sub, actions, last = false }) => (
 
 // ---- rail panely --------------------------------------------------------------
 const VaRunningPanel = () => (
-  <ZtPanel live liveColor={ZT.run} pad={18} right={<span style={{ ...T.micro }}>2 agenti</span>}
-    title="Běží">
+  <ZtPanel title="Běží" live liveColor={ZT.run} pad={18}
+    right={<span style={{ ...T.micro }}>2 agenti</span>}>
     {RUNNING_AGENTS.map((a, i) => (
       <div key={a.id} style={{ padding: '10px 0', borderBottom: i < RUNNING_AGENTS.length - 1 ? `1px solid ${ZT.line}` : 'none' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          <ZtDot size={6} state="run" />
+          <ZtDot state="run" size={6} />
           <span style={{ fontFamily: ZT.mono, fontSize: 12.5, fontWeight: 600, color: ZT.ink, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.skill}</span>
           <span style={{ ...T.micro, color: ZT.run }}>{a.pct} %</span>
         </div>
         <div style={{ ...T.micro, margin: '5px 0 7px', paddingLeft: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.prompt}</div>
-        <div style={{ paddingLeft: 14 }}><ZtMeter color={ZT.run} pct={a.pct} /></div>
+        <div style={{ paddingLeft: 14 }}><ZtMeter pct={a.pct} color={ZT.run} /></div>
       </div>
     ))}
   </ZtPanel>
@@ -103,23 +103,23 @@ const VaLimitRow = ({ label, pct, note }) => {
         <span style={{ ...T.micro, color: ZT.ink2 }}>{label}</span>
         <span style={{ fontFamily: ZT.mono, fontSize: 12, fontWeight: 600, color: pct >= 60 ? c : ZT.ink }}>{pct} %</span>
       </div>
-      <ZtMeter color={pct >= 60 ? c : 'rgba(255,255,255,0.28)'} h={4} pct={pct} />
+      <ZtMeter pct={pct} color={pct >= 60 ? c : 'rgba(255,255,255,0.28)'} h={4} />
       <div style={{ ...T.micro, fontSize: 10.5, marginTop: 6 }}>{note}</div>
     </div>
   );
 };
 
 const VaLimitsPanel = () => (
-  <ZtPanel pad={18} right={<span style={T.micro}>jediný domov limitů</span>} title="Limity & kredit">
-    <VaLimitRow label="Claude · 5h okno" note="reset za 2 h 11 m · 128k / 200k" pct={64} />
-    <VaLimitRow label="Claude · týden" note="reset po 09:00 · 1.9M / 5M" pct={38} />
+  <ZtPanel title="Limity & kredit" pad={18} right={<span style={T.micro}>jediný domov limitů</span>}>
+    <VaLimitRow label="Claude · 5h okno" pct={64} note="reset za 2 h 11 m · 128k / 200k" />
+    <VaLimitRow label="Claude · týden" pct={38} note="reset po 09:00 · 1.9M / 5M" />
     <div style={{ borderTop: `1px solid ${ZT.line}`, marginTop: 8, paddingTop: 13 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
         <span style={{ ...T.num, fontSize: 22 }}>$128</span>
         <span style={T.micro}>/ $200 · Agent SDK</span>
         <span style={{ ...T.micro, marginLeft: 'auto' }}>obnova 1. čer</span>
       </div>
-      <div style={{ marginTop: 9 }}><ZtMeter color={'rgba(255,255,255,0.28)'} pct={36} /></div>
+      <div style={{ marginTop: 9 }}><ZtMeter pct={36} color={'rgba(255,255,255,0.28)'} /></div>
     </div>
   </ZtPanel>
 );
@@ -138,9 +138,9 @@ const VelinAfter = () => (
         {/* hlavní sloupec */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
           {/* status — headline nese stav, žádný duplicitní stat řádek */}
-          <ZtPanel live liveColor={ZT.run} pad={24}>
+          <ZtPanel pad={24} live liveColor={ZT.run}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-              <ZtDot size={7} state="ok" />
+              <ZtDot state="ok" size={7} />
               <span style={{ ...T.label, color: ZT.ok }}>Nominal</span>
               <span style={{ ...T.micro, marginLeft: 6 }}>démon na Mac M5 · vzhůru 14 h · caffeinate</span>
             </div>
@@ -154,36 +154,36 @@ const VelinAfter = () => (
           </ZtPanel>
 
           {/* ranní brífink — každý řádek nese akci podle stavu */}
-          <ZtPanel pad={20} right={<span style={T.micro}>3 položky · $13.40</span>}
-            title="Ranní brífink · co se stalo přes noc">
-            <VaBriefRow actions={<ZtBtn icon="branch" size="sm">Otevřít PR</ZtBtn>}
-              state="ok"
+          <ZtPanel title="Ranní brífink · co se stalo přes noc" pad={20}
+            right={<span style={T.micro}>3 položky · $13.40</span>}>
+            <VaBriefRow state="ok"
+              title={<span><span style={{ fontFamily: ZT.mono, fontSize: '0.95em' }}>Build Feature</span> dokončil branch feat/search-filters</span>}
               sub="4 fáze · 42 min · $11.20 z $25 · test-report zelený"
-              title={<span><span style={{ fontFamily: ZT.mono, fontSize: '0.95em' }}>Build Feature</span> dokončil branch feat/search-filters</span>} />
-            <VaBriefRow actions={<React.Fragment>
-                <ZtBtn icon="retry" size="sm">Retry</ZtBtn>
-                <ZtBtn size="sm">Zahodit</ZtBtn>
-              </React.Fragment>}
-              state="wait"
+              actions={<ZtBtn size="sm" icon="branch">Otevřít PR</ZtBtn>} />
+            <VaBriefRow state="wait"
+              title={<span><span style={{ fontFamily: ZT.mono, fontSize: '0.95em' }}>Build Feature</span> zaparkován po 3 pokusech</span>}
               sub="Tester: flaky test v checkout-flow · poslední chyba v logu"
-              title={<span><span style={{ fontFamily: ZT.mono, fontSize: '0.95em' }}>Build Feature</span> zaparkován po 3 pokusech</span>} />
-            <VaBriefRow last actions={<React.Fragment>
-                <ZtBtn icon="check" size="sm" variant="primary">Schválit</ZtBtn>
-                <ZtBtn icon="x" size="sm">Zamítnout</ZtBtn>
-              </React.Fragment>}
-              state="wait"
+              actions={<React.Fragment>
+                <ZtBtn size="sm" icon="retry">Retry</ZtBtn>
+                <ZtBtn size="sm">Zahodit</ZtBtn>
+              </React.Fragment>} />
+            <VaBriefRow state="wait" last
+              title={<span><span style={{ fontFamily: ZT.mono, fontSize: '0.95em' }}>PR Guard</span> žádá souhlas s push → main</span>}
               sub="git push origin feat/api-rate-limit · +214 −38 · review.md čistý"
-              title={<span><span style={{ fontFamily: ZT.mono, fontSize: '0.95em' }}>PR Guard</span> žádá souhlas s push → main</span>} />
+              actions={<React.Fragment>
+                <ZtBtn variant="primary" size="sm" icon="check">Schválit</ZtBtn>
+                <ZtBtn size="sm" icon="x">Zamítnout</ZtBtn>
+              </React.Fragment>} />
           </ZtPanel>
         </div>
 
         {/* rail — jen na Přehledu; periferní vidění velínu */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <ZtApproval a={{
+          <ZtApproval density="rail" a={{
             actor: 'rohlik', action: 'objednat košík', risk: 'platba',
             impact: '1 248 Kč', impactNote: '14 položek · doručení zítra 18–20 h',
             detailLink: 'náhled košíku',
-          }} density="rail" />
+          }} />
           <VaRunningPanel />
           <VaLimitsPanel />
         </div>

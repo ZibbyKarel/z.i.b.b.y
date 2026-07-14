@@ -29,7 +29,7 @@ const RunBtn = ({ accent, label = 'Spustit', size = 'md', onClick, icon = 'play'
   const [h, setH] = useState(false);
   const pad = size === 'sm' ? '6px 12px' : '8px 16px';
   return (
-    <button onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+    <button onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} onClick={onClick}
     style={{
       display: 'inline-flex', alignItems: 'center', gap: 7, padding: pad, cursor: 'pointer',
       fontFamily: Z.mono, fontSize: 12, fontWeight: 600, letterSpacing: '0.02em',
@@ -45,7 +45,7 @@ const RunBtn = ({ accent, label = 'Spustit', size = 'md', onClick, icon = 'play'
 const GhostBtn = ({ children, icon, onClick, accent = Z.inkDim }) => {
   const [h, setH] = useState(false);
   return (
-    <button onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+    <button onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} onClick={onClick}
     style={{
       display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', cursor: 'pointer',
       fontFamily: Z.mono, fontSize: 11, color: h ? Z.ink : accent, background: h ? 'rgba(255,255,255,0.05)' : 'transparent',
@@ -73,7 +73,7 @@ const Sidebar = ({ active = 'overview', accent, onNav }) =>
     {/* brand */}
     <div style={{ padding: '4px 6px 22px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <img alt="ZIBBY" src="uploads/icon.png" style={{ width: 44, height: 44, objectFit: 'contain' }} />
+        <img src="uploads/icon.png" alt="ZIBBY" style={{ width: 44, height: 44, objectFit: 'contain' }} />
         <div data-zb-wordmark style={{ fontFamily: Z.mono, fontSize: 18, fontWeight: 700, letterSpacing: '0.30em', color: Z.ink }}>
           Z<span style={{ color: Z.inkFaint }}>·</span>I<span style={{ color: Z.inkFaint }}>·</span>B<span style={{ color: Z.inkFaint }}>·</span>B<span style={{ color: Z.inkFaint }}>·</span>Y
         </div>
@@ -124,7 +124,7 @@ const MiniBar = ({ label, pct, color, width = 78 }) =>
       <Mono style={{ fontSize: 9.5, color: Z.inkFaint }}>{label}</Mono>
       <Mono style={{ fontSize: 9.5, color, fontWeight: 700 }}>{pct}%</Mono>
     </div>
-    <Bar glow color={color} h={6} pct={pct} />
+    <Bar pct={pct} color={color} h={6} glow />
   </div>;
 
 
@@ -136,7 +136,7 @@ const LimitRow = ({ d }) => {
         <Mono style={{ fontSize: 10.5, color: Z.inkDim, letterSpacing: '0.04em' }}>{d.label}</Mono>
         <Mono style={{ fontSize: 10, color: c, fontWeight: 600 }}>{d.usedPct}%</Mono>
       </div>
-      <Bar glow color={c} h={5} pct={d.usedPct} />
+      <Bar pct={d.usedPct} color={c} h={5} glow />
       <Mono style={{ fontSize: 9, color: Z.inkFaint, display: 'block', marginTop: 5 }}>reset {d.resetIn} · {d.tokens}</Mono>
     </div>);
 
@@ -150,9 +150,9 @@ const Sparkline = ({ data, color, w = 260, h = 40 }) => {
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   });
   return (
-    <svg height={h} preserveAspectRatio="none" style={{ display: 'block', width: '100%' }} viewBox={`0 0 ${w} ${h}`} width={w}>
-      <polyline fill="none" points={pts.join(' ')} stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
-      <polyline fill={color} opacity="0.08" points={`0,${h} ${pts.join(' ')} ${w},${h}`} stroke="none" />
+    <svg width={w} height={h} style={{ display: 'block', width: '100%' }} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
+      <polyline points={pts.join(' ')} fill="none" stroke={color} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />
+      <polyline points={`0,${h} ${pts.join(' ')} ${w},${h}`} fill={color} opacity="0.08" stroke="none" />
     </svg>);
 
 };
@@ -170,8 +170,8 @@ const LimitsWidget = () => {
         {/* A) interaktivní */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
           <Mono style={{ fontSize: 8, color: Z.inkFaint, letterSpacing: '0.12em', textTransform: 'uppercase', writingMode: 'horizontal-tb', lineHeight: 1.25, textAlign: 'right' }}>inter-<br />aktivní</Mono>
-          <MiniBar color={limitColor(r.usedPct)} label="5h" pct={r.usedPct} width={66} />
-          <MiniBar color={limitColor(w.usedPct)} label="týden" pct={w.usedPct} width={66} />
+          <MiniBar label="5h" pct={r.usedPct} color={limitColor(r.usedPct)} width={66} />
+          <MiniBar label="týden" pct={w.usedPct} color={limitColor(w.usedPct)} width={66} />
         </div>
         {/* divider */}
         <div style={{ width: 1, height: 34, background: Z.lineHi }} />
@@ -186,7 +186,7 @@ const LimitsWidget = () => {
               <Mono style={{ fontSize: 11, color: Z.ink, fontWeight: 700, lineHeight: 1 }}>${sdk.remaining}</Mono>
               <Mono style={{ fontSize: 9, color: Z.inkFaint }}>/${sdk.total}</Mono>
             </div>
-            <Bar glow color={sdkColor} h={6} pct={sdk.usedPct} />
+            <Bar pct={sdk.usedPct} color={sdkColor} h={6} glow />
           </div>
         </div>
         <Icon name="chevron" size={14} style={{ color: Z.inkFaint, transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .18s' }} />
@@ -217,12 +217,12 @@ const LimitsWidget = () => {
             <Mono style={{ fontSize: 26, fontWeight: 700, color: Z.ink }}>${sdk.remaining}</Mono>
             <Mono style={{ fontSize: 12, color: Z.inkDim }}>zbývá z ${sdk.total}</Mono>
           </div>
-          <div style={{ marginTop: 9 }}><Bar glow color={sdkColor} h={6} pct={sdk.usedPct} /></div>
+          <div style={{ marginTop: 9 }}><Bar pct={sdk.usedPct} color={sdkColor} h={6} glow /></div>
           <Mono style={{ fontSize: 9, color: Z.inkFaint, display: 'block', marginTop: 7 }}>spotřebováno ${sdk.used} · běhy agentů čerpají odsud</Mono>
 
           <div style={{ marginTop: 14 }}>
             <Mono style={{ fontSize: 9, color: Z.inkFaint, letterSpacing: '0.12em' }}>TREND 14 DNÍ ($/den)</Mono>
-            <div style={{ marginTop: 6 }}><Sparkline color={sdkColor} data={sdk.trend} /></div>
+            <div style={{ marginTop: 6 }}><Sparkline data={sdk.trend} color={sdkColor} /></div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 14 }}>
@@ -259,18 +259,18 @@ const LANGS = [
   { id: 'en', code: 'EN', label: 'English' },
 ];
 
-const LangSwitch = ({ lang = 'cs', onChange, accent }) => {
+const LangSwitch = ({ lang = 'cs', onChange, accent, compact }) => {
   const [open, setOpen] = useState(false);
   const cur = LANGS.find((l) => l.id === lang) || LANGS[0];
   return (
     <div style={{ position: 'relative' }}>
-      <button onClick={() => setOpen((o) => !o)} style={{
+      <button onClick={() => setOpen((o) => !o)} title="Jazyk rozhraní" style={{
         display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 11px', cursor: 'pointer',
         background: open ? Z.bg0 : 'transparent', border: `1px solid ${open ? accent : Z.line}`, borderRadius: 3,
         color: Z.ink, fontFamily: Z.mono, fontSize: 12, fontWeight: 600, transition: 'all .14s',
-      }} title="Jazyk rozhraní">
+      }}>
         <span style={{ color: accent }}>{cur.code}</span>
-        <span style={{ color: Z.inkDim, fontWeight: 400, fontSize: 11 }}>{cur.label}</span>
+        {!compact && <span style={{ color: Z.inkDim, fontWeight: 400, fontSize: 11 }}>{cur.label}</span>}
         <Icon name="chevron" size={12} style={{ color: Z.inkFaint, transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .14s' }} />
       </button>
       {open && (
@@ -284,13 +284,13 @@ const LangSwitch = ({ lang = 'cs', onChange, accent }) => {
             {LANGS.map((l) => {
               const on = l.id === lang;
               return (
-                <button key={l.id} onClick={() => { onChange(l.id); setOpen(false); }} onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = Z.bg0; }}
-                onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}
-                style={{
+                <button key={l.id} onClick={() => { onChange(l.id); setOpen(false); }} style={{
                   width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 11px', cursor: 'pointer',
                   background: on ? accentDimOf() : 'transparent', border: 'none', borderRadius: 2,
                   color: Z.ink, textAlign: 'left', transition: 'background .12s',
-                }}>
+                }}
+                onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = Z.bg0; }}
+                onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}>
                   <span style={{ fontFamily: Z.mono, fontSize: 12, fontWeight: 600, color: on ? accent : Z.inkDim, width: 22 }}>{l.code}</span>
                   <span style={{ fontSize: 13, color: Z.ink, flex: 1 }}>{l.label}</span>
                   {on && <Icon name="check" size={14} stroke={2} style={{ color: accent }} />}
@@ -309,6 +309,7 @@ const VoiceToggleBtn = ({ onClick, accent }) => {
   return (
     <button
       onClick={onClick}
+      title="Voice Mode (V)"
       onMouseEnter={() => setH(true)}
       onMouseLeave={() => setH(false)}
       style={{
@@ -321,11 +322,10 @@ const VoiceToggleBtn = ({ onClick, accent }) => {
         letterSpacing: '0.06em',
         transition: 'all .16s',
       }}
-      title="Voice Mode (V)"
     >
       {/* mic icon inline */}
-      <svg fill="none" height={14} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24" width={14}>
-        <rect height="12" rx="3" width="6" x="9" y="2" />
+      <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="9" y="2" width="6" height="12" rx="3" />
         <path d="M5 10v2a7 7 0 0 0 14 0v-2" />
         <path d="M12 19v3M8 22h8" />
       </svg>
@@ -342,10 +342,10 @@ const LimitRing = ({ d, short }) => {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
       <div style={{ position: 'relative', width: 30, height: 30, flex: '0 0 auto' }}>
-        <svg height="30" style={{ transform: 'rotate(-90deg)' }} viewBox="0 0 30 30" width="30">
-          <circle cx="15" cy="15" fill="none" r={R} stroke="rgba(255,255,255,0.09)" strokeWidth="3" />
-          <circle cx="15" cy="15" fill="none" r={R} stroke={c} strokeDasharray={C} strokeDashoffset={off}
-            strokeLinecap="round" strokeWidth="3" style={{ transition: 'stroke-dashoffset .4s' }} />
+        <svg width="30" height="30" viewBox="0 0 30 30" style={{ transform: 'rotate(-90deg)' }}>
+          <circle cx="15" cy="15" r={R} fill="none" stroke="rgba(255,255,255,0.09)" strokeWidth="3" />
+          <circle cx="15" cy="15" r={R} fill="none" stroke={c} strokeWidth="3" strokeLinecap="round"
+            strokeDasharray={C} strokeDashoffset={off} style={{ transition: 'stroke-dashoffset .4s' }} />
         </svg>
         <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontFamily: Z.mono, fontSize: 9, fontWeight: 700, color: c }}>{d.usedPct}</span>
       </div>
@@ -358,12 +358,12 @@ const LimitsTopBar = () => {
   const [open, setOpen] = useState(false);
   const r = CLAUDE_LIMITS.rolling, w = CLAUDE_LIMITS.weekly;
   return (
-    <div onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)} style={{ position: 'relative' }}>
-      <div style={{
+    <div style={{ position: 'relative' }} onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+      <div title="Interaktivní limity · Claude" style={{
         display: 'flex', alignItems: 'center', gap: 13, padding: '5px 11px',
         borderRadius: Z.rCtl, border: `1px solid ${open ? Z.lineHi : Z.line}`,
         background: open ? 'rgba(255,255,255,0.03)' : 'transparent', transition: 'all .15s', cursor: 'default',
-      }} title="Interaktivní limity · Claude">
+      }}>
         <LimitRing d={r} short="5h" />
         <span style={{ width: 1, height: 20, background: Z.line }} />
         <LimitRing d={w} short="týd" />
@@ -371,7 +371,9 @@ const LimitsTopBar = () => {
       {open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 10px)', right: 0, width: 300, zIndex: 60,
-          background: Z.panelHi, border: `1px solid ${Z.lineHi}`, borderRadius: Z.rPanel, padding: 16,
+          background: 'linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03) 40%, rgba(16,21,28,0.82))',
+          backdropFilter: 'blur(28px) saturate(180%)', WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+          border: `1px solid ${Z.lineHi}`, borderRadius: Z.rPanel, padding: 16,
           boxShadow: '0 18px 50px rgba(0,0,0,0.5)',
         }}>
           <Mono style={{ fontSize: 10, letterSpacing: '0.14em', color: Z.inkFaint, textTransform: 'uppercase' }}>Interaktivní limity · Claude</Mono>
@@ -392,27 +394,27 @@ const TopBar = ({ accent, nav = 'overview', lang = 'cs', onLang, onVoice, onNewT
   borderBottom: `1px solid ${Z.line}`, background: Z.bg1, position: 'relative', zIndex: 20
 }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-      <ZibbyMark color={Z.inkDim} size={20} />
+      <ZibbyMark size={20} color={Z.inkDim} />
       <Mono style={{ fontSize: 12, color: Z.ink, fontWeight: 600 }}>{NAV_LABEL[nav] || 'Přehled'}</Mono>
     </div>
     {/* command / search bar — ve flow (ne absolutn\u00ed), aby nekolidoval s TASK / ovl\u00e1d\u00e1n\u00edm */}
-    <button style={{
+    <button title="Příkaz nebo skill (⌘K)" style={{
       display: 'flex', alignItems: 'center', gap: 10, flex: '0 1 360px', minWidth: 150,
       marginLeft: 'auto', marginRight: 'auto', padding: '9px 14px',
       background: Z.bg0, border: `1px solid ${Z.line}`, borderRadius: Z.rCtl, color: Z.inkFaint, cursor: 'pointer'
-    }} title="Příkaz nebo skill (⌘K)">
+    }}>
       <Icon name="search" size={14} />
       <span style={{ fontSize: 12.5, color: Z.inkFaint, flex: 1, textAlign: 'left' }}>Příkaz nebo skill…</span>
       <span style={{ fontFamily: Z.mono, fontSize: 10, color: Z.inkFaint, border: `1px solid ${Z.line}`, borderRadius: 4, padding: '1px 6px' }}>⌘K</span>
     </button>
     {onNewTask && (
       <NewTaskBtn
-        accent={accent}
         onClick={onNewTask}
+        accent={accent}
       />
     )}
-    {onVoice && <VoiceToggleBtn accent={accent} onClick={onVoice} />}
-    <LangSwitch accent={accent} lang={lang} onChange={onLang} />
+    {onVoice && <VoiceToggleBtn onClick={onVoice} accent={accent} />}
+    <LangSwitch lang={lang} accent={accent} onChange={onLang} />
     <span style={{ width: 1, height: 28, background: Z.line, margin: '0 3px' }} />
     <LimitsTopBar />
   </header>;

@@ -74,22 +74,22 @@ const ApprovalAfterBoard = () => {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         <div>
           <div style={{ ...T.label, marginBottom: 12 }}>rail · kompakt</div>
-          <ZtApproval a={rohlik} density="rail" />
+          <ZtApproval density="rail" a={rohlik} />
         </div>
         <div>
           <div style={{ ...T.label, marginBottom: 12 }}>rail · nízké riziko = běžný klik</div>
-          <ZtApproval a={push} density="rail" />
+          <ZtApproval density="rail" a={push} />
         </div>
         <ZtNote>stejná anatomie vždy: stav → CO chce → DOPAD číslem → rozhodnutí. Vysoké riziko (platba, mazání) = podržet 0,9 s; omyl jedním klikem nejde.</ZtNote>
       </div>
       <div>
         <div style={{ ...T.label, marginBottom: 12 }}>stránka · plný detail</div>
-        <ZtApproval a={rohlik} density="page" preview={<ZtCartPreview />} />
+        <ZtApproval density="page" a={rohlik} preview={<ZtCartPreview />} />
         <ZtNote style={{ marginTop: 14 }}>náhled přesné akce zůstává — jen uvnitř téže karty, ne jako jiný vzor. „Co se stane po schválení“ nese impactNote, ne extra panel.</ZtNote>
       </div>
       <div>
         <div style={{ ...T.label, marginBottom: 12 }}>voice · čitelné z dálky</div>
-        <ZtApproval a={rohlik} density="voice" />
+        <ZtApproval density="voice" a={rohlik} />
         <ZtNote style={{ marginTop: 14 }}>na hlasové ploše jde nově rozhodnout — větší typografie, stejná karta. Hlasem: „schvaluji rohlik“.</ZtNote>
       </div>
     </div>
@@ -155,14 +155,14 @@ const TokensBoard = () => (
       <div style={{ ...T.label, marginBottom: 14 }}>Tlačítka — 3 varianty × stavy</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', gap: 9, alignItems: 'center', flexWrap: 'wrap' }}>
-          <ZtBtn icon="check" variant="primary">Schválit</ZtBtn>
-          <ZtBtn icon="retry" variant="ghost">Retry</ZtBtn>
-          <ZtBtn icon="x" variant="danger">Zamítnout</ZtBtn>
+          <ZtBtn variant="primary" icon="check">Schválit</ZtBtn>
+          <ZtBtn variant="ghost" icon="retry">Retry</ZtBtn>
+          <ZtBtn variant="danger" icon="x">Zamítnout</ZtBtn>
         </div>
         <div style={{ display: 'flex', gap: 9, alignItems: 'center', flexWrap: 'wrap' }}>
-          <ZtBtn disabled variant="primary">Disabled</ZtBtn>
-          <ZtBtn loading variant="primary">Spouštím…</ZtBtn>
-          <ZtBtn size="sm" variant="ghost">sm ghost</ZtBtn>
+          <ZtBtn variant="primary" disabled>Disabled</ZtBtn>
+          <ZtBtn variant="primary" loading>Spouštím…</ZtBtn>
+          <ZtBtn variant="ghost" size="sm">sm ghost</ZtBtn>
         </div>
         <ZtNote>focus-visible: 2px accent ring vždy (Tab to ukáže) · loading drží label · disabled = 45 % opacity, ne šedý akcent</ZtNote>
       </div>
@@ -170,13 +170,13 @@ const TokensBoard = () => (
       <ZtHold color={ZT.riskPay} label="Podržet pro schválení · 1 248 Kč" />
       <div style={{ ...T.label, margin: '22px 0 12px' }}>Meter — bez glow</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <ZtMeter color={ZT.wait} pct={64} />
-        <ZtMeter color={'rgba(255,255,255,0.28)'} pct={36} />
+        <ZtMeter pct={64} color={ZT.wait} />
+        <ZtMeter pct={36} color={'rgba(255,255,255,0.28)'} />
       </div>
       <div style={{ ...T.label, margin: '22px 0 12px' }}>Panel · klidný vs. živý</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <ZtPanel pad={14} title="Limity"><span style={T.micro}>klidný — bez závorek</span></ZtPanel>
-        <ZtPanel live pad={14} title="Běží"><span style={T.micro}>živý — závorky = podpis</span></ZtPanel>
+        <ZtPanel title="Limity" pad={14}><span style={T.micro}>klidný — bez závorek</span></ZtPanel>
+        <ZtPanel title="Běží" live pad={14}><span style={T.micro}>živý — závorky = podpis</span></ZtPanel>
       </div>
       <ZtNote style={{ marginTop: 14 }}>radius 6/10 · spacing 4px mřížka · elevace 3 úrovně · motion 160/240 ms ease-out, pulz 2 s jen run/wait</ZtNote>
     </div>
@@ -228,17 +228,17 @@ const FlowRow = ({ name, before, after, note, last = false }) => (
 
 const FlowBoard = () => (
   <div style={{ width: '100%', height: '100%', background: ZT.bg, padding: '26px 32px', fontFamily: ZT.sans, color: ZT.ink, overflow: 'hidden' }}>
-    <FlowRow after={['karta kdekoliv (rail · brífink · voice)', 'rozhodnout na místě']}
+    <FlowRow name="Schválení akce"
       before={[{ t: 'všimnout si rail karty' }, { t: 'Otevřít Tasky', cut: true }, { t: 'najít položku ve frontě', cut: true }, { t: 'otevřít detail', cut: true }, { t: 'rozhodnout' }]}
-      name="Schválení akce"
+      after={['karta kdekoliv (rail · brífink · voice)', 'rozhodnout na místě']}
       note="karta vždy nese co / riziko / dopad — detail (diff, košík) je na rozkliknutí, ne podmínka rozhodnutí" />
-    <FlowRow after={['New Task', 'dialog — co dělat', 'auto: kategorizace + agent → spuštěno']}
+    <FlowRow name="Spuštění úlohy"
       before={[{ t: 'New Task' }, { t: 'dialog — co dělat' }, { t: 'kategorizace' }, { t: 'potvrdit přiřazeného agenta', cut: true }, { t: 'Dispatch', cut: true }]}
-      name="Spuštění úlohy"
+      after={['New Task', 'dialog — co dělat', 'auto: kategorizace + agent → spuštěno']}
       note="po vyplnění dialogu jde task do stavu „kategorizace“ (asynchronní, neblokuje UI) — automaticky se zkategorizuje a přiřadí agentovi; jakmile je hotovo, spustí se sám · potvrzovací dialog s agentem a tlačítko Dispatch zmizely" />
-    <FlowRow last after={['brífink řádek s inline akcí', 'hotovo']}
+    <FlowRow name="Ranní účet nočních běhů" last
       before={[{ t: 'brífink řádek' }, { t: 'klik do detailu', cut: true }, { t: 'Runs / Tasky', cut: true }, { t: 'akce (retry · PR · approve)' }]}
-      name="Ranní účet nočních běhů"
+      after={['brífink řádek s inline akcí', 'hotovo']}
       note="hotovo → Otevřít PR · zaparkováno → Retry / Zahodit · approval → Schválit přímo — celý noční účet z jednoho panelu" />
   </div>
 );

@@ -5,12 +5,12 @@ const MODEL_C = { opus: '#b07cff', sonnet: '#56c4d6', haiku: '#7fd98a' };
 const THINK_C = { high: '#f0883e', medium: '#5b8def', low: '#5d6b7a' };
 
 const Pill = ({ children, color = Z.inkDim, solid = false, onClick, title }) =>
-<span onClick={onClick} style={{
+<span onClick={onClick} title={title} style={{
   display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: Z.mono, fontSize: 9.5, fontWeight: 600,
   letterSpacing: '0.02em', padding: '2px 7px', borderRadius: 2, whiteSpace: 'nowrap',
   color: solid ? Z.bg0 : color, background: solid ? color : `${color}1f`, border: `1px solid ${color}55`,
   cursor: onClick ? 'pointer' : 'default'
-}} title={title}>{children}</span>;
+}}>{children}</span>;
 
 
 const ModelBadge = ({ model, onClick }) => <Pill color={MODEL_C[model] || Z.inkDim} onClick={onClick} title="model (override per-run)">{model}</Pill>;
@@ -29,7 +29,7 @@ const PhaseNode = ({ phase, accent, idx, active, isFirst, isLast }) => {
       boxShadow: active ? `0 0 0 1px ${accent}55, 0 0 22px ${accent}33` : 'none'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-        <Avatar accent={accent} dim={accentDimOf(phase.ctx || 'work')} glyph={a.glyph} radius={2} size={30} src={a.avatar} />
+        <Avatar src={a.avatar} glyph={a.glyph} size={30} radius={2} accent={accent} dim={accentDimOf(phase.ctx || 'work')} />
         <div style={{ minWidth: 0 }}>
           <Mono style={{ fontSize: 8.5, color: Z.inkFaint, letterSpacing: '0.1em' }}>FÁZE {idx + 1}</Mono>
           <div style={{ fontFamily: Z.mono, fontSize: 12, fontWeight: 600, color: Z.ink, whiteSpace: 'nowrap' }}>{phase.agent}</div>
@@ -105,13 +105,13 @@ const PhaseChain = ({ pipeline, accent }) => {
   return (
     <div>
     <div style={{ position: 'relative' }}>
-    <div onScroll={checkEdges} ref={scrollRef} style={{ overflowX: 'auto', overflowY: 'hidden', paddingBottom: 2 }}>
+    <div ref={scrollRef} onScroll={checkEdges} style={{ overflowX: 'auto', overflowY: 'hidden', paddingBottom: 2 }}>
       <div style={{ minWidth: 'fit-content' }}>
       {/* loop arc overlay region */}
       {loopPhase &&
             <div style={{ position: 'relative', height: 34 }}>
-          <svg preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible' }} viewBox="0 0 100 34">
-            <path d={`M${x1} 30 L ${x1} 7 L ${x2} 7 L ${x2} 30`} fill="none" stroke={Z.bad} strokeDasharray="3 3" strokeLinejoin="miter" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
+          <svg viewBox="0 0 100 34" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible' }}>
+            <path d={`M${x1} 30 L ${x1} 7 L ${x2} 7 L ${x2} 30`} fill="none" stroke={Z.bad} strokeWidth="1.2" strokeDasharray="3 3" strokeLinejoin="miter" vectorEffect="non-scaling-stroke" />
             <path d={`M${x2} 30 l 2.6 -5 l -5.2 0 z`} fill={Z.bad} />
           </svg>
           <div style={{ position: 'absolute', left: `${(x1 + x2) / 2}%`, top: 0, transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
@@ -125,7 +125,7 @@ const PhaseChain = ({ pipeline, accent }) => {
       <div style={{ display: 'flex', alignItems: 'stretch', gap: 2 }}>
         {phases.map((ph, i) =>
               <React.Fragment key={i}>
-            <PhaseNode accent={accent} active={ph.loop} idx={i} isFirst={i === 0} isLast={i === phases.length - 1} phase={ph} />
+            <PhaseNode phase={ph} accent={accent} idx={i} active={ph.loop} isFirst={i === 0} isLast={i === phases.length - 1} />
             {i < phases.length - 1 && <Edge file={phases[i + 1].consumes} />}
           </React.Fragment>
               )}
@@ -146,7 +146,7 @@ const PhaseChain = ({ pipeline, accent }) => {
       {loopPhase &&
       <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
           <div style={{ flex: '1 1 220px', display: 'flex', alignItems: 'center', gap: 9, padding: '10px 12px', background: 'rgba(57,217,138,0.07)', border: `1px solid ${Z.ok}3a`, borderRadius: 3 }}>
-            <Icon name="check" size={15} stroke={2.2} style={{ color: Z.ok }} />
+            <Icon name="check" size={15} style={{ color: Z.ok }} stroke={2.2} />
             <div>
               <Mono style={{ fontSize: 11, color: Z.ok, fontWeight: 600 }}>kontrola prošla</Mono>
               <Mono style={{ fontSize: 10, color: Z.inkDim, display: 'block', marginTop: 2 }}>→ pokračuje na {nextName}</Mono>
@@ -186,7 +186,7 @@ const PipelineCard = ({ p, accent, selected, onSelect }) => {
     }}>
       {selected && <Corners color={accent} inset={5} />}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <Avatar accent={accent} glyph="flow" radius={2} size={32} src={p.avatar} />
+        <Avatar src={p.avatar} glyph="flow" size={32} radius={2} accent={accent} />
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
           <div style={{ fontFamily: Z.mono, fontSize: 13.5, fontWeight: 700, color: Z.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
           <Pill color={sm.c}><span style={{ width: 5, height: 5, borderRadius: '50%', background: sm.c, display: 'inline-block' }} />{sm.label}</Pill>
@@ -229,7 +229,7 @@ const PipelineRunModal = ({ pipeline, accent, onClose }) => {
     <div onClick={onClose} style={{ position: 'absolute', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(5,7,10,0.72)', backdropFilter: 'blur(3px)', padding: 24 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: 580, maxWidth: '100%', maxHeight: '90%', overflow: 'auto', background: Z.panelHi, border: `1px solid ${Z.lineHi}`, borderRadius: 4, boxShadow: `0 0 0 1px ${accent}33, 0 30px 80px rgba(0,0,0,0.6)` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '18px 20px', borderBottom: `1px solid ${Z.line}` }}>
-          <Avatar accent={accent} dim={accentDimOf(pipeline.ctx)} glyph="flow" radius={2} size={38} src={pipeline.avatar} />
+          <Avatar src={pipeline.avatar} glyph="flow" size={38} radius={2} accent={accent} dim={accentDimOf(pipeline.ctx)} />
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: Z.mono, fontSize: 15, fontWeight: 700, color: Z.ink }}>Spustit · {pipeline.name}</div>
             <div style={{ fontSize: 12, color: Z.inkDim }}>{pipeline.phases.length} fází · víceagentní běh na pozadí</div>
@@ -240,8 +240,8 @@ const PipelineRunModal = ({ pipeline, accent, onClose }) => {
         {!launched ?
         <div style={{ padding: 20 }}>
             <label style={{ fontFamily: Z.mono, fontSize: 10, letterSpacing: '0.14em', color: Z.inkFaint, textTransform: 'uppercase' }}>Zadání</label>
-            <textarea autoFocus onChange={(e) => setPrompt(e.target.value)} placeholder={`Co má pipeline „${pipeline.name}“ udělat…`} style={{ width: '100%', minHeight: 84, marginTop: 8, padding: '12px 14px', resize: 'vertical', background: Z.bg0, border: `1px solid ${Z.line}`, borderRadius: 3, color: Z.ink, fontFamily: Z.sans, fontSize: 13.5, lineHeight: 1.5, outline: 'none', boxSizing: 'border-box' }}
-          value={prompt} />
+            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} autoFocus placeholder={`Co má pipeline „${pipeline.name}“ udělat…`}
+          style={{ width: '100%', minHeight: 84, marginTop: 8, padding: '12px 14px', resize: 'vertical', background: Z.bg0, border: `1px solid ${Z.line}`, borderRadius: 3, color: Z.ink, fontFamily: Z.sans, fontSize: 13.5, lineHeight: 1.5, outline: 'none', boxSizing: 'border-box' }} />
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 16 }}>
               <div>
@@ -339,7 +339,7 @@ const PipelinesBody = ({ accent }) => {
       {/* left: list */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <SectionLabel right={<Mono style={{ fontSize: 10, color: Z.inkFaint }}>{list.length}</Mono>}>Pipeline</SectionLabel>
-        {list.map((p) => <PipelineCard accent={accent} key={p.id} onSelect={setSelId} p={p} selected={p.id === selId} />)}
+        {list.map((p) => <PipelineCard key={p.id} p={p} accent={accent} selected={p.id === selId} onSelect={setSelId} />)}
         {list.length === 0 && <Mono style={{ fontSize: 12, color: Z.inkFaint, padding: 16 }}>Zatím žádné pipeline.</Mono>}
       </div>
 
@@ -348,14 +348,14 @@ const PipelinesBody = ({ accent }) => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           <div style={{ position: 'relative', background: Z.panel, border: `1px solid ${Z.line}`, borderRadius: Z.rPanel, overflow: 'hidden' }}>
             <EntityHero
-              editable accent={accent} desc={sel.desc} fit="contain" glyph="flow"
-              height={220}
-              image={sel.avatar}
-              meta={<Mono style={{ fontSize: 10.5, color: Z.inkDim }}>{sel.phases.length} fází · sekvenční orchestrace</Mono>}
+              image={sel.avatar} glyph="flow" accent={accent} height={220} fit="contain"
               name={sel.name}
-              onRemove={() => setList((prev) => prev.map((x) => x.id === sel.id ? { ...x, avatar: null } : x))}
-              onUpload={(url) => setList((prev) => prev.map((x) => x.id === sel.id ? { ...x, avatar: url } : x))}
+              meta={<Mono style={{ fontSize: 10.5, color: Z.inkDim }}>{sel.phases.length} fází · sekvenční orchestrace</Mono>}
+              desc={sel.desc}
+              editable
               placeholder="Nahraj obrázek orchestrace"
+              onUpload={(url) => setList((prev) => prev.map((x) => x.id === sel.id ? { ...x, avatar: url } : x))}
+              onRemove={() => setList((prev) => prev.map((x) => x.id === sel.id ? { ...x, avatar: null } : x))}
             />
             <div style={{ padding: 20 }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
@@ -364,8 +364,8 @@ const PipelinesBody = ({ accent }) => {
                   <Mono style={{ fontSize: 10, color: Z.inkFaint }}>{sel.file}</Mono>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <GhostBtn accent={accent} icon="edit" onClick={openEdit}>Editovat</GhostBtn>
-                  <GhostBtn accent={accent} icon="link" onClick={openDuplicate}>Duplikovat</GhostBtn>
+                  <GhostBtn icon="edit" accent={accent} onClick={openEdit}>Editovat</GhostBtn>
+                  <GhostBtn icon="link" accent={accent} onClick={openDuplicate}>Duplikovat</GhostBtn>
                   <RunBtn accent={accent} label="Spustit pipeline" onClick={() => setRunP(sel)} />
                 </div>
               </div>
@@ -394,15 +394,15 @@ const PipelinesBody = ({ accent }) => {
           </div>
 
           {/* visual chain */}
-          <HudPanel accent={accent} pad={20} title="zřetězení fází · soubory = předání">
-            <PhaseChain accent={accent} pipeline={sel} />
+          <HudPanel accent={accent} title="zřetězení fází · soubory = předání" pad={20}>
+            <PhaseChain pipeline={sel} accent={accent} />
           </HudPanel>
         </div>
         }
 
       </div>
-      {runP && <PipelineRunModal accent={accent} key={runP.id} onClose={() => setRunP(null)} pipeline={runP} />}
-      {editor && <PipelineGraphEditor accent={accent} key={editor.mode + (editor.pipeline ? editor.pipeline.id || 'dup' : 'new')} mode={editor.mode} onClose={() => setEditor(null)} onSave={savePipeline} pipeline={editor.pipeline} />}
+      {runP && <PipelineRunModal key={runP.id} pipeline={runP} accent={accent} onClose={() => setRunP(null)} />}
+      {editor && <PipelineGraphEditor key={editor.mode + (editor.pipeline ? editor.pipeline.id || 'dup' : 'new')} pipeline={editor.pipeline} mode={editor.mode} accent={accent} onClose={() => setEditor(null)} onSave={savePipeline} />}
     </div>);
 
 };

@@ -11,7 +11,7 @@ const LimitBlock = ({ d }) => {
         <Mono style={{ fontSize: 28, fontWeight: 700, color: c, lineHeight: 1 }}>{d.usedPct}</Mono>
         <Mono style={{ fontSize: 14, fontWeight: 700, color: c }}>%</Mono>
       </div>
-      <div style={{ marginTop: 10 }}><Bar glow color={c} h={7} pct={d.usedPct} /></div>
+      <div style={{ marginTop: 10 }}><Bar pct={d.usedPct} color={c} h={7} glow /></div>
       <Mono style={{ fontSize: 8.5, color: Z.inkFaint, display: 'block', marginTop: 7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>reset {d.resetIn}</Mono>
     </div>
   );
@@ -21,8 +21,8 @@ const LimitBlock = ({ d }) => {
 const LimitsPanel = ({ accent }) => {
   const r = CLAUDE_LIMITS.rolling, w = CLAUDE_LIMITS.weekly;
   return (
-    <HudPanel accent={accent} pad={18} right={<Mono style={{ fontSize: 9, color: Z.inkFaint }}>čerpá tvůj chat</Mono>}
-      title="claude · interaktivní limity">
+    <HudPanel accent={accent} title="claude · interaktivní limity" pad={18}
+      right={<Mono style={{ fontSize: 9, color: Z.inkFaint }}>čerpá tvůj chat</Mono>}>
       <div style={{ display: 'flex', gap: 10 }}>
         <LimitBlock d={r} />
         <LimitBlock d={w} />
@@ -35,14 +35,14 @@ const LimitsPanel = ({ accent }) => {
 const AgentSdkPanel = ({ accent }) => {
   const sdk = AGENT_SDK, sdkC = limitColor(sdk.usedPct);
   return (
-    <HudPanel accent={sdkC} pad={18} right={<Mono style={{ fontSize: 9, color: Z.inkFaint }}>obnova {sdk.renew}</Mono>}
-      title="agent sdk · kredit">
+    <HudPanel accent={sdkC} title="agent sdk · kredit" pad={18}
+      right={<Mono style={{ fontSize: 9, color: Z.inkFaint }}>obnova {sdk.renew}</Mono>}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 10 }}>
         <Icon name="dollar" size={15} style={{ color: sdkC, marginBottom: 2, flex: '0 0 auto' }} />
         <Mono style={{ fontSize: 28, fontWeight: 700, color: sdkC, lineHeight: 1 }}>${sdk.remaining}</Mono>
         <Mono style={{ fontSize: 12, color: Z.inkFaint, fontWeight: 400 }}>/ ${sdk.total}</Mono>
       </div>
-      <Bar glow color={sdkC} h={6} pct={sdk.usedPct} />
+      <Bar pct={sdk.usedPct} color={sdkC} h={6} glow />
       <Mono style={{ fontSize: 9.5, color: Z.inkFaint, display: 'block', marginTop: 8 }}>spotřebováno ${sdk.used} · běhy agentů čerpají odsud</Mono>
     </HudPanel>
   );
@@ -55,12 +55,12 @@ const RightRailContent = ({ accent, onNav }) => (
     <div>
       <ApprovalCard hud />
       <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
-        <GhostBtn accent={Z.warn} icon="bolt" onClick={() => onNav && onNav('tasks')}>Otevřít Tasky</GhostBtn>
+        <GhostBtn icon="bolt" accent={Z.warn} onClick={() => onNav && onNav('tasks')}>Otevřít Tasky</GhostBtn>
       </div>
     </div>
-    <HudPanel accent={accent} pad={18} title="běžící agenti">
-      {RUNNING_AGENTS.map((a) => <AgentRow hud a={a} key={a.id} />)}
-      <div style={{ marginTop: 12 }}><GhostBtn accent={accent} icon="pulse" onClick={() => onNav && onNav('runs')}>Otevřít aktivitu</GhostBtn></div>
+    <HudPanel accent={accent} title="běžící agenti" pad={18}>
+      {RUNNING_AGENTS.map((a) => <AgentRow key={a.id} a={a} hud />)}
+      <div style={{ marginTop: 12 }}><GhostBtn icon="pulse" accent={accent} onClick={() => onNav && onNav('runs')}>Otevřít aktivitu</GhostBtn></div>
     </HudPanel>
   </div>
 );
@@ -86,8 +86,8 @@ const OverviewBody = ({ accent, skills = SKILLS, setSkills, agents = AGENTS, onN
           <HudPanel accent={Z.bad} pad={22} style={{ borderColor: `${Z.bad}66`, boxShadow: `0 0 0 1px ${Z.bad}22, 0 0 26px ${Z.bad}1a` }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
               <div style={{ minWidth: 0 }}>
-                <div onClick={() => setDown(false)} style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }} title="přepnout zpět na NOMINAL">
-                  <Dot pulse color={Z.bad} />
+                <div onClick={() => setDown(false)} title="přepnout zpět na NOMINAL" style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
+                  <Dot color={Z.bad} pulse />
                   <Mono style={{ fontSize: 11, letterSpacing: '0.18em', color: Z.bad, textTransform: 'uppercase' }}>Systém · OFFLINE</Mono>
                   <Mono style={{ fontSize: 10, color: Z.inkFaint, marginLeft: 4 }}>· démon na {SYSTEM.host} neodpovídá</Mono>
                 </div>
@@ -106,9 +106,9 @@ const OverviewBody = ({ accent, skills = SKILLS, setSkills, agents = AGENTS, onN
               }}><Icon name="retry" size={15} stroke={2} /> Restartovat démona</button>
             </div>
             <div style={{ display: 'flex', gap: 36, marginTop: 22, paddingTop: 18, borderTop: `1px solid ${Z.bad}33`, flexWrap: 'wrap', opacity: 0.55 }}>
-              <Stat accent={Z.bad} icon="bolt" label="tasky běží" value="—" />
-              <Stat accent={Z.inkDim} icon="bot" label="agenti" value="—" />
-              <Stat accent={Z.inkDim} icon="flow" label="pipeline" value="—" />
+              <Stat value="—" label="tasky běží" accent={Z.bad} icon="bolt" />
+              <Stat value="—" label="agenti" accent={Z.inkDim} icon="bot" />
+              <Stat value="—" label="pipeline" accent={Z.inkDim} icon="flow" />
             </div>
           </HudPanel>
         ) : (
@@ -116,8 +116,8 @@ const OverviewBody = ({ accent, skills = SKILLS, setSkills, agents = AGENTS, onN
           <HudPanel accent={accent} pad={22}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
               <div>
-                <div onClick={() => setDown(true)} style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }} title="simulovat výpadek démona">
-                  <Dot pulse color={Z.ok} />
+                <div onClick={() => setDown(true)} title="simulovat výpadek démona" style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
+                  <Dot color={Z.ok} pulse />
                   <Mono style={{ fontSize: 11, letterSpacing: '0.18em', color: Z.ok, textTransform: 'uppercase' }}>Systém · NOMINAL</Mono>
                   <Mono style={{ fontSize: 10, color: Z.inkFaint, marginLeft: 4 }}>· démon na {SYSTEM.host}{SYSTEM.awake ? ' · vzhůru' : ''}</Mono>
                 </div>
@@ -127,16 +127,16 @@ const OverviewBody = ({ accent, skills = SKILLS, setSkills, agents = AGENTS, onN
               </div>
             </div>
             <div style={{ display: 'flex', gap: 36, marginTop: 22, paddingTop: 18, borderTop: `1px solid ${Z.line}`, flexWrap: 'wrap' }}>
-              <Stat accent={accent} icon="bolt" label="tasky běží" value={String(tRunning.length).padStart(2, '0')} />
-              <Stat accent={Z.inkDim} icon="bot" label="z toho agenti" value={String(tAgents.length).padStart(2, '0')} />
-              <Stat accent={Z.inkDim} icon="flow" label="z toho pipeline" value={String(tPipes.length).padStart(2, '0')} />
-              {tPending.length > 0 && <Stat accent={Z.warn} icon="pause" label="ke schválení" value={String(tPending.length).padStart(2, '0')} />}
+              <Stat value={String(tRunning.length).padStart(2, '0')} label="tasky běží" accent={accent} icon="bolt" />
+              <Stat value={String(tAgents.length).padStart(2, '0')} label="z toho agenti" accent={Z.inkDim} icon="bot" />
+              <Stat value={String(tPipes.length).padStart(2, '0')} label="z toho pipeline" accent={Z.inkDim} icon="flow" />
+              {tPending.length > 0 && <Stat value={String(tPending.length).padStart(2, '0')} label="ke schválení" accent={Z.warn} icon="pause" />}
             </div>
           </HudPanel>
         )}
 
         {/* morning briefing */}
-        <HudPanel accent={accent} pad={18} title="co se stalo přes noc · ranní brífink">
+        <HudPanel accent={accent} title="co se stalo přes noc · ranní brífink" pad={18}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
             {[
               { c: Z.ok, icon: 'branch', t: 'Build Feature → hotovo', s: 'branch feat/search-filters čeká na review · $11.20 / $25' },

@@ -25,7 +25,7 @@ const SeverityMeter = ({ level, risk, showLabel = false }) => {
   const lvl = level || (RISK[risk] || {}).sev || 'med';
   const sev = SEVERITY[lvl] || SEVERITY.med;
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: showLabel ? 7 : 0, flex: '0 0 auto' }} title={`závažnost: ${sev.label}`}>
+    <span title={`závažnost: ${sev.label}`} style={{ display: 'inline-flex', alignItems: 'center', gap: showLabel ? 7 : 0, flex: '0 0 auto' }}>
       <span style={{ display: 'inline-flex', gap: 2 }}>
         {[1, 2, 3].map((i) => (
           <span key={i} style={{ width: 4, height: 11, borderRadius: 1, background: i <= sev.n ? sev.c : Z.line }} />
@@ -84,7 +84,7 @@ const PreviewShell = ({ icon, label, meta, accent, children }) => (
 );
 
 const CartPreview = ({ p, accent }) => (
-  <PreviewShell accent={accent} icon="cart" label="náhled košíku" meta={p.meta}>
+  <PreviewShell icon="cart" label="náhled košíku" meta={p.meta} accent={accent}>
     <div>
       {p.items.map(([name, price], i) => (
         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '8px 13px', borderBottom: `1px solid ${Z.line}`, fontSize: 12.5 }}>
@@ -103,7 +103,7 @@ const CartPreview = ({ p, accent }) => (
 const DiffPreview = ({ p, accent }) => {
   const lc = { add: { c: '#7fd98a', bg: 'rgba(127,217,138,0.09)', s: '+' }, del: { c: '#ff6b6b', bg: 'rgba(255,107,107,0.09)', s: '−' }, ctx: { c: Z.inkDim, bg: 'transparent', s: ' ' } };
   return (
-    <PreviewShell accent={accent} icon="branch" label={p.file} meta={p.meta}>
+    <PreviewShell icon="branch" label={p.file} meta={p.meta} accent={accent}>
       {p.hunks.map((hk, hi) => (
         <div key={hi}>
           <div style={{ padding: '6px 13px', fontFamily: Z.mono, fontSize: 11, color: '#b07cff', background: 'rgba(176,124,255,0.08)', borderBottom: `1px solid ${Z.line}` }}>{hk.h}</div>
@@ -123,7 +123,7 @@ const DiffPreview = ({ p, accent }) => {
 };
 
 const CommandPreview = ({ p, accent }) => (
-  <PreviewShell accent={RISK.mazani.c} icon="server" label={`spustí se na · ${p.shell}`} meta={p.note}>
+  <PreviewShell icon="server" label={`spustí se na · ${p.shell}`} meta={p.note} accent={RISK.mazani.c}>
     <div style={{ padding: '13px', fontFamily: Z.mono, fontSize: 12.5, lineHeight: 1.6 }}>
       <div style={{ display: 'flex', gap: 8 }}>
         <span style={{ color: RISK.mazani.c, flex: '0 0 auto' }}>$</span>
@@ -145,7 +145,7 @@ const CommandPreview = ({ p, accent }) => (
 );
 
 const MessagePreview = ({ p, accent }) => (
-  <PreviewShell accent={RISK.odeslani.c} icon="arrow" label={`odeslat → ${p.to}`} meta={p.subject}>
+  <PreviewShell icon="arrow" label={`odeslat → ${p.to}`} meta={p.subject} accent={RISK.odeslani.c}>
     <div style={{ padding: '14px 15px' }}>
       <div style={{ fontSize: 13.5, color: Z.ink, lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>{p.body}</div>
     </div>
@@ -154,10 +154,10 @@ const MessagePreview = ({ p, accent }) => (
 
 const renderPreview = (p, accent) => {
   if (!p) return null;
-  if (p.kind === 'cart') return <CartPreview accent={accent} p={p} />;
-  if (p.kind === 'diff') return <DiffPreview accent={accent} p={p} />;
-  if (p.kind === 'command') return <CommandPreview accent={accent} p={p} />;
-  if (p.kind === 'message') return <MessagePreview accent={accent} p={p} />;
+  if (p.kind === 'cart') return <CartPreview p={p} accent={accent} />;
+  if (p.kind === 'diff') return <DiffPreview p={p} accent={accent} />;
+  if (p.kind === 'command') return <CommandPreview p={p} accent={accent} />;
+  if (p.kind === 'message') return <MessagePreview p={p} accent={accent} />;
   return null;
 };
 
@@ -175,7 +175,7 @@ const ApprovalDetail = ({ a, accent, decided, onDecide }) => {
           <Mono style={{ fontSize: 10, letterSpacing: '0.18em', color: dec ? (dec === 'ok' ? Z.ok : Z.inkFaint) : r.c, textTransform: 'uppercase', fontWeight: 700 }}>
             {dec ? (dec === 'ok' ? 'Schváleno' : 'Zamítnuto') : 'Čeká na tebe'}
           </Mono>
-          <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 12 }}><SeverityMeter showLabel risk={a.risk} /><RiskBadge big risk={a.risk} /></span>
+          <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 12 }}><SeverityMeter risk={a.risk} showLabel /><RiskBadge risk={a.risk} big /></span>
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
           <div style={{ width: 46, height: 46, flex: '0 0 auto', borderRadius: Z.rCtl, display: 'grid', placeItems: 'center', background: `${r.c}18`, color: r.c, border: `1px solid ${r.c}44` }}>
@@ -196,7 +196,7 @@ const ApprovalDetail = ({ a, accent, decided, onDecide }) => {
       </HudPanel>
 
       {/* preview of the exact action */}
-      <HudPanel accent={accent} pad={18} title="přesně tohle agent udělá">
+      <HudPanel accent={accent} title="přesně tohle agent udělá" pad={18}>
         {renderPreview(a.preview, accent)}
       </HudPanel>
 
@@ -223,8 +223,8 @@ const ApprovalDetail = ({ a, accent, decided, onDecide }) => {
           <div style={{ display: 'flex', gap: 11, marginTop: 16, alignItems: 'stretch' }}>
             {highRisk
               ? <ZtHold color={r.c} onConfirm={() => onDecide(a.id, 'ok')} style={{ flex: 1.4 }} />
-              : <ZtBtn icon="check" onClick={() => onDecide(a.id, 'ok')} style={{ flex: 1.4, padding: '12px 16px' }} variant="primary">Schválit</ZtBtn>}
-            <ZtBtn icon="x" onClick={() => onDecide(a.id, 'no')} style={{ flex: 1, padding: '12px 16px' }} variant="ghost">Zamítnout</ZtBtn>
+              : <ZtBtn variant="primary" icon="check" onClick={() => onDecide(a.id, 'ok')} style={{ flex: 1.4, padding: '12px 16px' }}>Schválit</ZtBtn>}
+            <ZtBtn variant="ghost" icon="x" onClick={() => onDecide(a.id, 'no')} style={{ flex: 1, padding: '12px 16px' }}>Zamítnout</ZtBtn>
           </div>
         )}
         <Mono style={{ fontSize: 9, color: Z.inkFaint, display: 'block', marginTop: 11, textAlign: 'center' }}>
@@ -294,12 +294,12 @@ const ApprovalsBody = ({ accent }) => {
         {/* left: queue */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
           <SectionLabel right={<Mono style={{ fontSize: 10, color: Z.inkFaint }}>{pendingCount} / {queue.length}</Mono>}>Fronta schválení</SectionLabel>
-          {queue.map((a) => <ApprovalQueueCard a={a} accent={accent} decided={decided} key={a.id} onSelect={setSelId} selected={a.id === selId} />)}
+          {queue.map((a) => <ApprovalQueueCard key={a.id} a={a} accent={accent} selected={a.id === selId} decided={decided} onSelect={setSelId} />)}
         </div>
 
         {/* right: detail */}
         {sel
-          ? <ApprovalDetail a={sel} accent={accent} decided={decided} key={sel.id} onDecide={decide} />
+          ? <ApprovalDetail key={sel.id} a={sel} accent={accent} decided={decided} onDecide={decide} />
           : (
             <HudPanel accent={Z.ok} pad={50}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center' }}>

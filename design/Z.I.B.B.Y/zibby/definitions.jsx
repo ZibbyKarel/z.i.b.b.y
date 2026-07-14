@@ -18,8 +18,8 @@ const DInput = ({ value, onChange, placeholder, mono, accent, multiline, rows = 
   const focus = (e) => e.target.style.borderColor = `${accent}66`;
   const blur  = (e) => e.target.style.borderColor = Z.line;
   return multiline
-    ? <textarea onBlur={blur} onChange={e => onChange(e.target.value)} onFocus={focus} placeholder={placeholder} rows={rows} spellCheck={false} style={base} value={value} />
-    : <input onBlur={blur} onChange={e => onChange(e.target.value)} onFocus={focus} placeholder={placeholder} spellCheck={false} style={base} value={value} />;
+    ? <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows} style={base} onFocus={focus} onBlur={blur} spellCheck={false} />
+    : <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={base} onFocus={focus} onBlur={blur} spellCheck={false} />;
 };
 
 // ── Sidebar list item ─────────────────────────────────────────────────────
@@ -85,15 +85,15 @@ const AgentEditor = ({ item, accent, onSave }) => {
       </div>
 
       {/* YAML frontmatter section */}
-      <HudPanel accent={accent} pad={18} title="yaml frontmatter">
+      <HudPanel accent={accent} title="yaml frontmatter" pad={18}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           <div>
             <DLabel>name</DLabel>
-            <DInput mono accent={accent} onChange={v => set({ id: v })} value={draft.id || ''} />
+            <DInput value={draft.id || ''} onChange={v => set({ id: v })} mono accent={accent} />
           </div>
           <div>
             <DLabel>category</DLabel>
-            <DInput mono accent={accent} onChange={v => set({ category: v })} value={draft.category || ''} />
+            <DInput value={draft.category || ''} onChange={v => set({ category: v })} mono accent={accent} />
           </div>
           <div>
             <DLabel>model</DLabel>
@@ -121,22 +121,22 @@ const AgentEditor = ({ item, accent, onSave }) => {
         </div>
         <div style={{ marginTop: 14 }}>
           <DLabel>tools</DLabel>
-          <DInput mono accent={accent} onChange={v => set({ tools: v.split(',').map(s => s.trim()).filter(Boolean) })} placeholder="read, write, bash…" value={(draft.tools || []).join(', ')} />
+          <DInput value={(draft.tools || []).join(', ')} onChange={v => set({ tools: v.split(',').map(s => s.trim()).filter(Boolean) })} mono placeholder="read, write, bash…" accent={accent} />
         </div>
         <div style={{ marginTop: 14 }}>
           <DLabel>role (systémový prompt — první věta)</DLabel>
-          <DInput accent={accent} onChange={v => set({ role: v })} placeholder="Co agent dělá…" value={draft.role || ''} />
+          <DInput value={draft.role || ''} onChange={v => set({ role: v })} placeholder="Co agent dělá…" accent={accent} />
         </div>
       </HudPanel>
 
       {/* Markdown body */}
-      <HudPanel accent={accent} pad={18} title="markdown body">
+      <HudPanel accent={accent} title="markdown body" pad={18}>
         <DInput
-          mono
-          multiline
-          accent={accent} onChange={v => set({ body: v })}
-          placeholder={`# ${draft.name}\n\n${draft.role}\n\n## Systémový prompt\n…`} rows={16}
           value={draft.body || ''}
+          onChange={v => set({ body: v })}
+          multiline rows={16}
+          mono accent={accent}
+          placeholder={`# ${draft.name}\n\n${draft.role}\n\n## Systémový prompt\n…`}
         />
       </HudPanel>
 
@@ -147,8 +147,8 @@ const AgentEditor = ({ item, accent, onSave }) => {
         )}
         <RunBtn
           accent={dirty ? accent : Z.inkFaint}
-          icon="check"
           label="Uložit agent.md"
+          icon="check"
           onClick={() => dirty && onSave(draft)}
         />
       </div>
@@ -172,11 +172,11 @@ const PipelineEditor = ({ item, accent, onSave }) => {
       </div>
 
       {/* YAML frontmatter */}
-      <HudPanel accent={accent} pad={18} title="yaml frontmatter">
+      <HudPanel accent={accent} title="yaml frontmatter" pad={18}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 14 }}>
           <div>
             <DLabel>name</DLabel>
-            <DInput mono accent={accent} onChange={v => set({ name: v })} value={draft.name || ''} />
+            <DInput value={draft.name || ''} onChange={v => set({ name: v })} mono accent={accent} />
           </div>
           <div>
             <DLabel>strop</DLabel>
@@ -189,7 +189,7 @@ const PipelineEditor = ({ item, accent, onSave }) => {
         </div>
         <div style={{ marginTop: 14 }}>
           <DLabel>popis</DLabel>
-          <DInput accent={accent} onChange={v => set({ desc: v })} placeholder="co pipeline dělá (jedna věta)" value={draft.desc || ''} />
+          <DInput value={draft.desc || ''} onChange={v => set({ desc: v })} placeholder="co pipeline dělá (jedna věta)" accent={accent} />
         </div>
 
         {/* Phase sequence (read-only display) */}
@@ -219,7 +219,7 @@ const PipelineEditor = ({ item, accent, onSave }) => {
       </HudPanel>
 
       {/* Generated markdown preview */}
-      <HudPanel accent={accent} pad={18} title="markdown body (vygenerováno)">
+      <HudPanel accent={accent} title="markdown body (vygenerováno)" pad={18}>
         <div style={{ padding: '12px 14px', background: Z.bg0, border: `1px solid ${Z.line}`, borderRadius: 2, fontFamily: Z.mono, fontSize: 11, color: Z.inkDim, lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
 {`---
 name: ${draft.name || ''}
@@ -241,7 +241,7 @@ Po vyčerpání retry smyčky → park_for_review.`}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, justifyContent: 'flex-end' }}>
         {dirty && <GhostBtn onClick={() => setDraft({ ...item, phases: item.phases.map(p => ({ ...p })) })}>Zahodit změny</GhostBtn>}
-        <RunBtn accent={dirty ? accent : Z.inkFaint} icon="check" label="Uložit pipeline.md" onClick={() => dirty && onSave(draft)} />
+        <RunBtn accent={dirty ? accent : Z.inkFaint} label="Uložit pipeline.md" icon="check" onClick={() => dirty && onSave(draft)} />
       </div>
     </div>
   );
@@ -288,7 +288,7 @@ const DefinitionsBody = ({ accent, agents = AGENTS, pipelines = PIPELINES, onSav
           </div>
           <div style={{ padding: '6px 8px' }}>
             {agentItems.map(item => (
-              <DefItem accent={accent} item={item} key={item.id} onSelect={setSel} selected={sel?.id === item.id && sel?.kind === 'agent'} />
+              <DefItem key={item.id} item={item} selected={sel?.id === item.id && sel?.kind === 'agent'} onSelect={setSel} accent={accent} />
             ))}
           </div>
 
@@ -300,7 +300,7 @@ const DefinitionsBody = ({ accent, agents = AGENTS, pipelines = PIPELINES, onSav
           </div>
           <div style={{ padding: '6px 8px' }}>
             {pipeItems.map(item => (
-              <DefItem accent={accent} item={item} key={item.id} onSelect={setSel} selected={sel?.id === item.id && sel?.kind === 'pipeline'} />
+              <DefItem key={item.id} item={item} selected={sel?.id === item.id && sel?.kind === 'pipeline'} onSelect={setSel} accent={accent} />
             ))}
           </div>
         </div>
@@ -308,8 +308,8 @@ const DefinitionsBody = ({ accent, agents = AGENTS, pipelines = PIPELINES, onSav
         {/* Right: editor */}
         {sel
           ? (sel.kind === 'agent'
-              ? <AgentEditor    accent={accent}    item={sel} key={sel.id + '-agent'} onSave={handleSave} />
-              : <PipelineEditor accent={accent} item={sel} key={sel.id + '-pipeline'} onSave={handleSave} />)
+              ? <AgentEditor    key={sel.id + '-agent'}    item={sel} accent={accent} onSave={handleSave} />
+              : <PipelineEditor key={sel.id + '-pipeline'} item={sel} accent={accent} onSave={handleSave} />)
           : (
             <HudPanel accent={accent} pad={56}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center' }}>
