@@ -300,18 +300,18 @@ const VcMapD = ({ onOpenSys, onOpenCore, dimmed, bottomReserve = 0 }) => {
   const [ref, { w, h }] = useMeasure();
   const leftInset = Math.min(336, Math.max(0, w * 0.32));   // rezerva pro rail běžících úloh
   const rightInset = Math.min(108, Math.max(0, w * 0.1));   // rezerva pro plovoucí dok napravo
-  const cx = w / 2 + (leftInset - rightInset) / 2;
   const usableH = Math.max(220, h - bottomReserve);
 
-  // ── responzivní rozměry — na nízkých plátnech se jádro i uzly zmenší,
-  // aby se eliptická oběžná dráha vešla nad chat dok bez překryvu ──────────
+  // ── jádro v horní třetině obrazovky — poloměry se přizpůsobí prostoru
+  // nahoře i dole kolem tohoto pevného středu ───────────────────────────────
+  const cx = w / 2;
   const nodeD = Math.max(48, Math.min(76, usableH * 0.2));
-  const topPad = nodeD / 2 + 16;                 // odstup horního uzlu od okraje
+  const topPad = nodeD / 2 + 16;                 // odstup horního uzlu od okraje (pod topbarem)
   const bottomExtent = nodeD / 2 + 10 + 44;      // odstup + dvouřádková jmenovka pod spodním uzlem
-  const radiusY = Math.max(84, (usableH - topPad - bottomExtent) / 2);
-  const cy = topPad + radiusY;
+  const cy = Math.max(topPad, usableH / 3);      // jádro v horní třetině dostupné plochy
+  const radiusY = Math.max(84, Math.min(cy - topPad, usableH - cy - bottomExtent));
   const coreSize = Math.max(96, Math.min(264, radiusY * 1.5));
-  const radiusX = Math.max(150, Math.min((w - leftInset - rightInset) / 2 - (nodeD / 2 + 64), 340));
+  const radiusX = Math.max(150, Math.min(cx - leftInset - (nodeD / 2 + 64), (w - rightInset) - cx - (nodeD / 2 + 64), 340));
 
   const nodes = VC_SUBSYSTEMS.map((sys, i) => {
     const a = -Math.PI / 2 + (i * 2 * Math.PI) / VC_SUBSYSTEMS.length;

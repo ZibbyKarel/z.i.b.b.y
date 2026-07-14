@@ -200,7 +200,7 @@ const VcChatDock = ({ dimmed, onFocusChange }) => {
       {/* jedno "liquid glass" tělo — vstup je vždy na stejném místě dole,
           historie se nad ním jen rozbaluje/sbaluje, nic neposkakuje pod kurzorem */}
       <div style={{
-        display: 'flex', flexDirection: 'column',
+        display: 'flex', flexDirection: 'column', position: 'relative',
         borderRadius: 26,
         background: 'linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02) 40%, rgba(16,21,28,0.5))',
         backdropFilter: 'blur(22px) saturate(180%)',
@@ -212,6 +212,20 @@ const VcChatDock = ({ dimmed, onFocusChange }) => {
         transition: 'border-color .25s, box-shadow .3s',
         overflow: 'hidden',
       }}>
+        {msgs.length > 0 && (
+          <button onClick={() => { setMsgs([]); setVal(''); setFiles([]); setMention(null); stickToBottom.current = true; }}
+            title="Nový chat (smazat historii)" style={{
+              position: 'absolute', right: 10, bottom: 58, zIndex: 5,
+              width: 28, height: 28, borderRadius: '50%', display: 'grid', placeItems: 'center',
+              border: `1px solid ${ZT.lineHi}`, cursor: 'pointer', background: 'rgba(16,21,28,0.85)', color: ZT.ink3,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+              transition: 'color .16s, background .16s, border-color .16s',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = ZT.ink; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(16,21,28,0.85)'; e.currentTarget.style.color = ZT.ink3; }}>
+            <Icon name="trash" size={13} />
+          </button>
+        )}
         {/* historie — sbalená pořád scrollovatelná, focus jen zvětší okno */}
         <div
           ref={histRef}

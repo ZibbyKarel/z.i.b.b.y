@@ -259,16 +259,22 @@ const LANGS = [
   { id: 'en', code: 'EN', label: 'English' },
 ];
 
-const LangSwitch = ({ lang = 'cs', onChange, accent, compact }) => {
+const LangSwitch = ({ lang = 'cs', onChange, accent, compact, glassStyle }) => {
   const [open, setOpen] = useState(false);
   const cur = LANGS.find((l) => l.id === lang) || LANGS[0];
+  const btnStyle = glassStyle ? {
+    display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+    color: Z.ink, fontFamily: Z.mono, fontSize: 12, fontWeight: 600, transition: 'all .14s',
+    ...glassStyle,
+    border: open ? `1px solid ${accent}` : glassStyle.border,
+  } : {
+    display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 11px', cursor: 'pointer',
+    background: open ? Z.bg0 : 'transparent', border: `1px solid ${open ? accent : Z.line}`, borderRadius: 3,
+    color: Z.ink, fontFamily: Z.mono, fontSize: 12, fontWeight: 600, transition: 'all .14s',
+  };
   return (
     <div style={{ position: 'relative' }}>
-      <button onClick={() => setOpen((o) => !o)} title="Jazyk rozhraní" style={{
-        display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 11px', cursor: 'pointer',
-        background: open ? Z.bg0 : 'transparent', border: `1px solid ${open ? accent : Z.line}`, borderRadius: 3,
-        color: Z.ink, fontFamily: Z.mono, fontSize: 12, fontWeight: 600, transition: 'all .14s',
-      }}>
+      <button onClick={() => setOpen((o) => !o)} title="Jazyk rozhraní" style={btnStyle}>
         <span style={{ color: accent }}>{cur.code}</span>
         {!compact && <span style={{ color: Z.inkDim, fontWeight: 400, fontSize: 11 }}>{cur.label}</span>}
         <Icon name="chevron" size={12} style={{ color: Z.inkFaint, transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .14s' }} />
@@ -336,11 +342,11 @@ const VoiceToggleBtn = ({ onClick, accent }) => {
 
 // ---- Limity v top baru — dva kruhové progress ringy + hover detail -------
 // Viditelné na KAŽDÉ stránce (jediný domov limitů se přesunul sem).
-const LimitRing = ({ d, short }) => {
+const LimitRing = ({ d, short, style }) => {
   const c = limitColor(d.usedPct);
   const R = 13, C = 2 * Math.PI * R, off = C * (1 - d.usedPct / 100);
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 7, ...style }}>
       <div style={{ position: 'relative', width: 30, height: 30, flex: '0 0 auto' }}>
         <svg width="30" height="30" viewBox="0 0 30 30" style={{ transform: 'rotate(-90deg)' }}>
           <circle cx="15" cy="15" r={R} fill="none" stroke="rgba(255,255,255,0.09)" strokeWidth="3" />
@@ -349,24 +355,30 @@ const LimitRing = ({ d, short }) => {
         </svg>
         <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontFamily: Z.mono, fontSize: 9, fontWeight: 700, color: c }}>{d.usedPct}</span>
       </div>
-      <Mono style={{ fontSize: 9, color: Z.inkFaint, letterSpacing: '0.06em' }}>{short}</Mono>
     </div>
   );
 };
 
-const LimitsTopBar = () => {
+const LimitsTopBar = ({ style, secondRingStyle, glassStyle }) => {
   const [open, setOpen] = useState(false);
   const r = CLAUDE_LIMITS.rolling, w = CLAUDE_LIMITS.weekly;
+  const triggerStyle = glassStyle ? {
+    display: 'flex', alignItems: 'center', gap: 13, cursor: 'default', transition: 'all .15s',
+    ...glassStyle,
+    border: open ? `1px solid ${Z.lineHi}` : glassStyle.border,
+    ...style,
+  } : {
+    display: 'flex', alignItems: 'center', gap: 13, padding: '5px 11px',
+    borderRadius: Z.rCtl, border: `1px solid ${open ? Z.lineHi : Z.line}`,
+    background: open ? 'rgba(255,255,255,0.03)' : 'transparent', transition: 'all .15s', cursor: 'default',
+    ...style,
+  };
   return (
     <div style={{ position: 'relative' }} onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
-      <div title="Interaktivní limity · Claude" style={{
-        display: 'flex', alignItems: 'center', gap: 13, padding: '5px 11px',
-        borderRadius: Z.rCtl, border: `1px solid ${open ? Z.lineHi : Z.line}`,
-        background: open ? 'rgba(255,255,255,0.03)' : 'transparent', transition: 'all .15s', cursor: 'default',
-      }}>
+      <div title="Interaktivní limity · Claude" style={triggerStyle}>
         <LimitRing d={r} short="5h" />
         <span style={{ width: 1, height: 20, background: Z.line }} />
-        <LimitRing d={w} short="týd" />
+        <LimitRing d={w} short="týd" style={secondRingStyle} />
       </div>
       {open && (
         <div style={{

@@ -253,8 +253,6 @@ const VcSubsystemDetail = ({ sys, onClose, onOpenTask, orbMode }) => {
                 </div>
               )}
             </VcBlock>
-
-            <VcNewTask sys={sys} />
           </div>
 
           {/* boční sloupec */}

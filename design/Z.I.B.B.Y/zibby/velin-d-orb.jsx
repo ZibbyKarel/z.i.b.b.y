@@ -48,7 +48,10 @@ function createZOrb(container, opts) {
 
   const renderer = new THREE.WebGLRenderer({ antialias: !!opts.antialias, alpha: true, powerPreference: 'low-power' });
   renderer.setClearColor(0x000000, 0);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  // devicePixelRatio se v některých hostitelských náhledech hlásí < 1 (škálovaný
+  // wrapper), což by jinak vykreslilo canvas v nižším rozlišení, než je jeho CSS
+  // velikost, a orb by vypadal rozmazaně — proto vždy vzorkujeme min. na 2×.
+  renderer.setPixelRatio(Math.min(Math.max(window.devicePixelRatio || 1, 2), 3));
   container.appendChild(renderer.domElement);
   renderer.domElement.style.display = 'block';
   renderer.domElement.style.pointerEvents = 'none';

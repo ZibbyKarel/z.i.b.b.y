@@ -95,7 +95,6 @@ const VcDock = ({ dimmed }) => {
 
   return (
     <div onMouseLeave={scheduleClose} style={{
-      position: 'absolute', right: 24, top: '50%', transform: 'translateY(-50%)', zIndex: 14,
       display: 'flex', alignItems: 'center', gap: 10,
       opacity: dimmed ? 0.3 : 1, filter: dimmed ? 'blur(2.5px)' : 'none',
       pointerEvents: dimmed ? 'none' : 'auto', transition: 'opacity .4s, filter .4s',
@@ -115,4 +114,38 @@ const VcDock = ({ dimmed }) => {
   );
 };
 
-Object.assign(window, { VcDock, VD_DOCK_ITEMS, VD_SETTINGS_ITEM, VD_COMPANIES, VD_COMMANDS, VD_SETTINGS_PANEL_ITEMS, vdDockPanelFor });
+// ── Druhý plovoucí toolbar napravo, nad hlavním dokem — "přidat poznámku" a
+// "spustit úlohu"; stejný sklený styl jako VcDock. ────────────────────────
+const VcNoteToolbarD = ({ dimmed, onAddNote, onRunTask }) => (
+  <div style={{
+    display: 'flex', flexDirection: 'column', gap: 6, padding: '7px', borderRadius: 22,
+    background: 'linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02) 40%, rgba(16,21,28,0.5))',
+    backdropFilter: 'blur(22px) saturate(180%)', WebkitBackdropFilter: 'blur(22px) saturate(180%)',
+    border: '1px solid rgba(255,255,255,0.12)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.13), 0 16px 40px rgba(0,0,0,0.42)',
+    opacity: dimmed ? 0.3 : 1, filter: dimmed ? 'blur(2.5px)' : 'none',
+    pointerEvents: dimmed ? 'none' : 'auto', transition: 'opacity .4s, filter .4s',
+  }}>
+    <button onClick={onRunTask} title="Spustit úlohu" style={{
+      width: 38, height: 38, borderRadius: 12, display: 'grid', placeItems: 'center', cursor: 'pointer',
+      border: '1px solid transparent', background: 'transparent', color: ZT.ink2, transition: 'all .16s',
+    }}>
+      <Icon name="play" size={16} />
+    </button>
+    <button onClick={onAddNote} title="Přidat poznámku" style={{
+      width: 38, height: 38, borderRadius: 12, display: 'grid', placeItems: 'center', cursor: 'pointer',
+      border: '1px solid transparent', background: 'transparent', color: ZT.ink2, transition: 'all .16s',
+    }}>
+      <Icon name="edit" size={17} />
+    </button>
+  </div>
+);
+
+// ── Skupina obou doků napravo — svislý sloupec, celé zarovnané na střed ───
+const VcDockGroup = ({ dimmed, onAddNote, onRunTask }) => (
+  <div style={{ position: 'absolute', right: 24, top: '50%', transform: 'translateY(-50%)', zIndex: 14, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 14 }}>
+    <VcNoteToolbarD dimmed={dimmed} onAddNote={onAddNote} onRunTask={onRunTask} />
+    <VcDock dimmed={dimmed} />
+  </div>
+);
+
+Object.assign(window, { VcDock, VcNoteToolbarD, VcDockGroup, VD_DOCK_ITEMS, VD_SETTINGS_ITEM, VD_COMPANIES, VD_COMMANDS, VD_SETTINGS_PANEL_ITEMS, vdDockPanelFor });

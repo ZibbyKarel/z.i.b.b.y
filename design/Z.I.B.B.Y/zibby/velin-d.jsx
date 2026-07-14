@@ -125,13 +125,43 @@ const VcSettingsModalD = ({ onClose }) => (
   </div>
 );
 
+// ── Spustit úlohu (klik na toolbar napravo) — jediné místo pro zakládání
+// úlohy; vyber subsystém, pak stejný formulář jako dřív v jeho detailu ────
+const VcRunTaskModal = ({ onClose }) => {
+  const [selId, setSelId] = useStateD2(VC_SUBSYSTEMS[0].id);
+  const sel = vcSys(selId);
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '26px 40px' }} onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        width: '100%', maxWidth: 620, maxHeight: '100%', display: 'flex', flexDirection: 'column',
+        background: ZT.surface, border: `1px solid ${sel.hue}44`, borderRadius: ZT.rPanel, overflow: 'auto',
+        boxShadow: `0 0 0 1px ${sel.hue}18, 0 44px 110px rgba(0,0,0,0.66)`, animation: 'vcPop .34s ease both',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '20px 24px', borderBottom: `1px solid ${ZT.line}`, background: `linear-gradient(180deg, ${sel.hue}16, transparent)` }}>
+          <span style={{ width: 40, height: 40, borderRadius: ZT.rCtl, flex: '0 0 auto', display: 'grid', placeItems: 'center', background: `${sel.hue}18`, color: sel.hue }}>
+            <Icon name="play" size={17} />
+          </span>
+          <div style={{ flex: 1 }}>
+            <div style={{ ...T.title, fontSize: 17 }}>Spustit úlohu</div>
+            <div style={{ ...T.bodySm, fontSize: 12, marginTop: 2 }}>Vyber subsystém a zadej práci přirozeným jazykem</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: ZT.ink3, padding: 6, display: 'flex' }}><Icon name="x" size={20} /></button>
+        </div>
+        <div style={{ padding: '18px 24px 22px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <VcNewTask key={selId} sys={sel} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── Status řádek top baru — každá sekce hoverem odhalí jen svůj obsah ─────
 // Plachta "vznikne" ze sekce, na kterou operátor poprvé najel — jen při
 // přechodu zavřeno→otevřeno (roste jako scale z bodu pod sekcí, nikdy se
 // nepřepočítává zpět na "auto" layout, takže po doběhnutí neposkočí);
 // přejíždění mezi sekcemi uvnitř otevřené plachty animaci nespouští, jen
 // přepíná obsah.
-const VcStatusLineD = ({ onOpenSys }) => {
+const VcStatusLineD = ({ onOpenSys, style }) => {
   const [activeKey, setActiveKey] = useStateD2(null);
   const closeTimer = useRefD2(null);
   const wasOpenRef = useRefD2(false);
@@ -181,11 +211,11 @@ const VcStatusLineD = ({ onOpenSys }) => {
 
   return (
     <div style={{ position: 'relative', margin: '0 auto' }} onMouseLeave={scheduleClose}>
-      <div ref={pillRef} onMouseEnter={cancelClose} style={{
+      <div ref={pillRef} onMouseEnter={cancelClose} style={vdGlassStyle({
         display: 'flex', alignItems: 'center', gap: 2, padding: '5px 10px 5px 12px', borderRadius: 999,
-        border: `1px solid ${open ? ZT.lineHi : ZT.line}`, background: open ? 'rgba(255,255,255,0.045)' : 'rgba(255,255,255,0.02)',
         flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', minWidth: 0, cursor: 'default', transition: 'all .15s',
-      }}>
+        ...style,
+      })}>
         <ZtDot state="ok" size={6} />
         <span style={{ fontFamily: ZT.mono, fontSize: 11, color: ZT.ink2, marginRight: 4 }}>{VC_CORE.status} ·</span>
         <span style={{ fontFamily: ZT.mono, fontSize: 11 }}>
@@ -205,30 +235,35 @@ const VcStatusLineD = ({ onOpenSys }) => {
 };
 
 // ── Slim top bar ───────────────────────────────────────────────────────────
+const VD_GLASS = 'linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02) 40%, rgba(16,21,28,0.5))';
+const vdGlassStyle = (extra) => ({
+  background: VD_GLASS, backdropFilter: 'blur(22px) saturate(180%)', WebkitBackdropFilter: 'blur(22px) saturate(180%)',
+  border: '1px solid rgba(255,255,255,0.12)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.13), 0 16px 40px rgba(0,0,0,0.42)',
+  ...extra,
+});
+
+const VD_TOPBAR_H = 40;
 const VcTopBarD = ({ lang, onLang, onSearch, onOpenSys }) => (
-  <header style={{ height: 56, flex: '0 0 56px', display: 'flex', alignItems: 'center', gap: 14, padding: '0 22px', borderBottom: `1px solid ${ZT.line}`, background: 'rgba(11,14,19,0.72)', backdropFilter: 'blur(10px)', position: 'relative', zIndex: 100, overflow: 'visible' }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <img src="uploads/icon.png" alt="ZIBBY" style={{ width: 26, height: 26, objectFit: 'contain' }} />
-      <div style={{ fontFamily: ZT.mono, fontSize: 14, fontWeight: 700, letterSpacing: '0.24em', color: ZT.ink }}>
-        Z<span style={{ color: ZT.ink3 }}>·</span>I<span style={{ color: ZT.ink3 }}>·</span>B<span style={{ color: ZT.ink3 }}>·</span>B<span style={{ color: ZT.ink3 }}>·</span>Y
-      </div>
-      <span style={{ fontFamily: ZT.mono, fontSize: 10, color: ZT.accent, letterSpacing: '0.14em', textTransform: 'uppercase', marginLeft: 4, paddingLeft: 12, borderLeft: `1px solid ${ZT.line}` }}>Velín-D · orby</span>
-    </div>
-    <button onClick={onSearch} title="Hledat napříč ZIBBY (⌘K)" style={{
-      display: 'flex', alignItems: 'center', gap: 9, width: 190, flex: '0 0 auto', padding: '7px 12px',
-      borderRadius: 999, border: `1px solid ${ZT.line}`, background: 'rgba(255,255,255,0.02)', color: ZT.ink3, cursor: 'pointer',
-    }}>
+  <header style={{ height: 56, flex: '0 0 56px', display: 'flex', alignItems: 'center', gap: 10, padding: '0 22px', position: 'relative', zIndex: 100, overflow: 'visible' }}>
+    <VcStatusLineD onOpenSys={onOpenSys} style={{ width: 411, height: VD_TOPBAR_H }} />
+    <button onClick={onSearch} title="Hledat napříč ZIBBY (⌘K)" style={vdGlassStyle({
+      display: 'flex', alignItems: 'center', gap: 9, width: 190, height: VD_TOPBAR_H, flex: '0 0 auto', padding: '0 12px',
+      borderRadius: 999, color: ZT.ink3, cursor: 'pointer',
+    })}>
       <Icon name="search" size={13} />
       <span style={{ fontFamily: ZT.sans, fontSize: 12.5, color: ZT.ink3, flex: 1, textAlign: 'left' }}>Hledat…</span>
       <span style={{ fontFamily: ZT.mono, fontSize: 9, color: ZT.ink3, border: `1px solid ${ZT.line}`, borderRadius: 4, padding: '1px 6px' }}>⌘K</span>
     </button>
-    <VcStatusLineD onOpenSys={onOpenSys} />
-    <a href="ZIBBY Velin-C.html" title="Velín-C (klasické orby)" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '6px 12px', borderRadius: ZT.rCtl, border: `1px solid ${ZT.line}`, color: ZT.ink2, textDecoration: 'none', fontFamily: ZT.mono, fontSize: 11 }}>
+    <LimitsTopBar
+      style={{ width: 119, height: 41 }}
+      secondRingStyle={{ width: 55, height: 25 }}
+      glassStyle={vdGlassStyle({ borderRadius: 999, padding: '0 14px' })}
+    />
+    <a href="ZIBBY Velin-C.html" title="Velín-C (klasické orby)" style={vdGlassStyle({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, width: VD_TOPBAR_H, height: VD_TOPBAR_H, padding: 0, borderRadius: 999, color: ZT.ink2, textDecoration: 'none', fontFamily: ZT.mono, fontSize: 11 })}>
       <Icon name="grid" size={13} />
     </a>
-    <LangSwitch lang={lang} accent={ZT.accent} onChange={onLang} compact />
-    <span style={{ width: 1, height: 26, background: ZT.line }} />
-    <LimitsTopBar />
+    <LangSwitch lang={lang} accent={ZT.accent} onChange={onLang} compact
+      glassStyle={vdGlassStyle({ height: VD_TOPBAR_H, borderRadius: 999, padding: '0 14px' })} />
   </header>
 );
 
@@ -239,6 +274,7 @@ function AppD() {
   const [task, setTask] = useStateD2(null);
   const [taskRect, setTaskRect] = useStateD2(null);
   const [searchOpen, setSearchOpen] = useStateD2(false);
+  const [runTaskOpen, setRunTaskOpen] = useStateD2(false);
 
   const openSys = (id) => { setTask(null); setFocus({ t: 'sys', id }); };
   const openCore = () => { setTask(null); setFocus({ t: 'settings' }); };
@@ -248,13 +284,13 @@ function AppD() {
   useEffectD2(() => {
     const onKey = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setSearchOpen((v) => !v); return; }
-      if (e.key === 'Escape') { if (searchOpen) setSearchOpen(false); else closeAll(); }
+      if (e.key === 'Escape') { if (searchOpen) setSearchOpen(false); else if (runTaskOpen) setRunTaskOpen(false); else closeAll(); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [searchOpen]);
+  }, [searchOpen, runTaskOpen]);
 
-  const overlayed = !!focus || !!task || searchOpen;
+  const overlayed = !!focus || !!task || searchOpen || runTaskOpen;
   const sys = focus && focus.t === 'sys' ? vcSys(focus.id) : null;
 
   return (
@@ -265,10 +301,11 @@ function AppD() {
       <div style={{ position: 'relative', flex: 1, minHeight: 0, zIndex: 1 }}>
         <VcMapD onOpenSys={openSys} onOpenCore={openCore} dimmed={overlayed} bottomReserve={230} />
         <VcTaskRail onOpen={openTask} dimmed={overlayed} />
-        <VcDock dimmed={overlayed} />
+        <VcDockGroup dimmed={overlayed} onAddNote={() => {}} onRunTask={() => setRunTaskOpen(true)} />
         <VcChatDock dimmed={overlayed} />
         {sys && <VcSubsystemDetail sys={sys} onClose={closeAll} onOpenTask={openTask} orbMode />}
         {focus && focus.t === 'settings' && <VcSettingsModalD onClose={closeAll} />}
+        {runTaskOpen && <VcRunTaskModal onClose={() => setRunTaskOpen(false)} />}
         {task && <VcTaskDetail task={task} originRect={taskRect} onClose={closeAll} onOpenSys={openSys} />}
         <VcSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} onOpenSys={openSys} onOpenTask={openTask} />
       </div>
