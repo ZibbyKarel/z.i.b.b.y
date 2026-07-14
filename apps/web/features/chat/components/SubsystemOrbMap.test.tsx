@@ -85,7 +85,6 @@ describe("SubsystemOrbMap", () => {
         onSelectSubsystem={vi.fn()}
         pipelines={[]}
         runs={[]}
-        selectedSubsystemId={null}
         subsystems={allSubsystems()}
         thinking={false}
       />,
@@ -106,7 +105,6 @@ describe("SubsystemOrbMap", () => {
         onSelectSubsystem={onSelectSubsystem}
         pipelines={[]}
         runs={[]}
-        selectedSubsystemId={null}
         subsystems={allSubsystems()}
         thinking={false}
       />,
@@ -126,7 +124,6 @@ describe("SubsystemOrbMap", () => {
         onSelectSubsystem={vi.fn()}
         pipelines={[]}
         runs={[]}
-        selectedSubsystemId={null}
         subsystems={allSubsystems()}
         thinking={false}
       />,
@@ -144,7 +141,6 @@ describe("SubsystemOrbMap", () => {
         onSelectSubsystem={vi.fn()}
         pipelines={[]}
         runs={[]}
-        selectedSubsystemId={null}
         subsystems={allSubsystems({ forge: { state: "running" } })}
         thinking={false}
       />,
@@ -164,7 +160,6 @@ describe("SubsystemOrbMap", () => {
         onSelectSubsystem={vi.fn()}
         pipelines={[]}
         runs={[]}
-        selectedSubsystemId={null}
         subsystems={allSubsystems({
           sentinel: { state: "report" },
           maestro: { state: "waiting" },
@@ -195,7 +190,6 @@ describe("SubsystemOrbMap", () => {
         onSelectSubsystem={vi.fn()}
         pipelines={[]}
         runs={[]}
-        selectedSubsystemId={null}
         subsystems={subsystems}
         thinking={false}
       />,
@@ -217,7 +211,6 @@ describe("SubsystemOrbMap", () => {
         onSelectSubsystem={vi.fn()}
         pipelines={pipelines}
         runs={runs}
-        selectedSubsystemId={null}
         subsystems={allSubsystems()}
         thinking={false}
       />,
@@ -252,7 +245,6 @@ describe("SubsystemOrbMap", () => {
             onSelectSubsystem={vi.fn()}
             pipelines={pipelines}
             runs={runs}
-            selectedSubsystemId={null}
             subsystems={allSubsystems()}
             thinking={false}
           />

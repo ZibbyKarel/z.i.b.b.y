@@ -37,7 +37,6 @@ export interface SubsystemOrbMapProps {
   subsystems: SubsystemWithStatus[];
   runs: readonly RunView[];
   pipelines: readonly Pipeline[];
-  selectedSubsystemId: SubsystemId | null;
   /** Chat streaming flag — feeds the core orb's thinking pulse. */
   thinking: boolean;
   /**
@@ -99,9 +98,9 @@ function toFlareEndpoint(id: EventFlight["from"]): string {
  * the seam's real layout reserves (tasks-panel width, composer band height);
  * omitted, `OrbMap` falls back to its own all-zero default.
  *
- * `selectedSubsystemId` is kept for interface parity with the seam contract, but
- * unused here: phase-1 selection visuals belong to whatever opens on selection
- * (the subsystem drawer), not this map.
+ * There is no selection-ring visual on the node itself — picking a subsystem
+ * only reports the id via `onSelectSubsystem`; whatever opens on selection
+ * (the subsystem drawer) owns showing that it's selected.
  *
  * Task 13b: owns the comet handoff-flares' state end to end (the gap the retired
  * `CosmicScene`'s `emitFlight` used to close). Subscribes to the shared
@@ -120,7 +119,6 @@ export function SubsystemOrbMap({
   subsystems,
   runs,
   pipelines,
-  selectedSubsystemId: _selectedSubsystemId,
   thinking,
   insets,
   onOpenCore,

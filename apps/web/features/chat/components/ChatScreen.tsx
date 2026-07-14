@@ -382,9 +382,10 @@ export function ChatScreen({
   const { runs } = useRunsQuery();
 
   // The subsystem web (Phase 83): the 8 named subsystems + live status, polled by
-  // `useSubsystemsQuery` (Phase 80/82). Selection is local — clicking a node just
-  // toggles its ring for now; Phase 84's drawer will read `selectedSubsystemId` to
-  // render the subsystem's detail alongside the transcript.
+  // `useSubsystemsQuery` (Phase 80/82). Selection is local — clicking a node reports
+  // its id via `onSelectSubsystem`, and the drawer below reads `selectedSubsystemId`
+  // to render the subsystem's detail alongside the transcript. There's no selection
+  // ring on the node itself (Task 13) — the drawer opening IS the selection feedback.
   const { data: subsystems } = useSubsystemsQuery();
   const [selectedSubsystemId, setSelectedSubsystemId] = useState<SubsystemId | null>(null);
   // Task C1: clicking the central orb opens the whole-federation overview dialog
@@ -551,7 +552,6 @@ export function ChatScreen({
         onSelectSubsystem={setSelectedSubsystemId}
         pipelines={pipelineCatalog ?? []}
         runs={runs}
-        selectedSubsystemId={selectedSubsystemId}
         subsystems={subsystems ?? []}
         thinking={stream.streaming || sendMessage.isPending}
       />
