@@ -10,14 +10,7 @@ import type {
   SubsystemId,
   TaskTarget,
 } from "@zibby/contracts";
-import {
-  Container,
-  Icon,
-  SearchBar,
-  Stack,
-  StatusDot,
-  Typography,
-} from "@zibby/design-system";
+import { Button, Container, Stack, Typography } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -44,14 +37,15 @@ import { type AutoSpeakReplyOutcome, useAutoSpeak } from "../hooks/useAutoSpeak"
 import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
 import { useVoiceMode } from "../hooks/useVoiceMode";
 import { useSendChatMessageMutation } from "../mutations/useSendChatMessageMutation";
-import { type ChatMode, MODE_DOT } from "../chatMode";
+import type { ChatMode } from "../chatMode";
 import { ChatDetailDialog, type ChatDetailTarget } from "./ChatDetailDialog";
 import { ChatPalette } from "./ChatPalette";
 import { ChatTaskDetailColumn } from "./ChatTaskDetailColumn";
 import { ChatTasksPanel } from "./ChatTasksPanel";
+import { CHAT_TOOL_DOCK_WIDTH, ChatToolDock } from "./ChatToolDock";
+import { ChatTopBar } from "./ChatTopBar";
 import { ChatTranscript } from "./ChatTranscript";
 import { CoreOverviewDialog } from "./CoreOverviewDialog";
-import { StatusPill } from "./StatusPill";
 import { SubsystemOrbMap } from "./SubsystemOrbMap";
 import { VoiceStatusStrip } from "./VoiceStatusStrip";
 import { VoiceToggleButton } from "./VoiceToggleButton";
@@ -83,7 +77,6 @@ export enum ChatScreenTestId {
   Root = "chat-screen",
   ScrollArea = "chat-screen-scroll",
   Greeting = "chat-screen-greeting",
-  Close = "chat-screen-close",
   NewChat = "chat-screen-new-chat",
   /** The header's derived-mode status dot (Task 13) — the surviving read-out of
    * the retired scene's `data-mode`, now a plain DS `StatusDot`. */
@@ -106,8 +99,6 @@ export interface ChatScreenProps {
   onMessagesChange: Dispatch<SetStateAction<ChatMessageType[]>>;
   /** Start a fresh thread: clears the transcript and mints a new conversation. */
   onNewChat: () => void;
-  /** Leave `/chat` and go back to the dashboard (top-bar close action). */
-  onClose: () => void;
 }
 
 /**
@@ -132,7 +123,6 @@ export function ChatScreen({
   messages,
   onMessagesChange,
   onNewChat,
-  onClose,
 }: ChatScreenProps) {
   const t = useTranslations("chat");
   const now = useNow(MINUTE_MS);
@@ -443,9 +433,6 @@ export function ChatScreen({
                 ? "listening"
                 : "idle";
 
-  const time = new Date(now);
-  const timeStr = `${String(time.getHours()).padStart(2, "0")}:${String(time.getMinutes()).padStart(2, "0")}`;
-
   return (
     <div
       aria-label={t("title")}
@@ -481,62 +468,31 @@ export function ChatScreen({
         }}
       />
 
-      {/* ── Top bar ─────────────────────────────────────────────────── */}
-      <div className="relative z-20 flex shrink-0 items-center justify-between border-b border-border px-[22px] py-[13px]">
-        <Stack align="center" direction="row" gap="100">
-          <Icon name="butlerSign" size="md" tone="accent" />
-          <Typography mono size="sm" tone="accent" tracking="widest" type="note">
-            {t("modeLabel")}
-          </Typography>
-          <StatusDot
-            data-testid={ChatScreenTestId.ModeDot}
-            pulse={MODE_DOT[mode].pulse}
-            size="75"
-            tone={MODE_DOT[mode].tone}
-          />
-        </Stack>
-
-        <Stack align="center" direction="row" gap="200">
-          <StatusPill />
-          <Typography mono size="md" type="subtitle" weight="semibold">
-            {timeStr}
-          </Typography>
-        </Stack>
-
-        <Stack align="center" direction="row" gap="100">
-          {voice.supported && (
-            <VoiceToggleButton active={voice.active} onToggle={handleVoiceToggle} />
-          )}
-          <Container width="220px">
-            <SearchBar
-              ariaLabel={t("palette.openAria")}
-              onClick={openPalette}
-              placeholder={t("palette.placeholder")}
-              shortcut="⌘K"
-            />
-          </Container>
-          {messages.length > 0 && (
-            <button
-              className="flex cursor-pointer items-center gap-[7px] rounded-sm border border-border px-[14px] py-[7px] font-mono text-xs text-foreground-dim transition-colors hover:border-accent hover:text-foreground"
-              data-testid={ChatScreenTestId.NewChat}
-              onClick={onNewChat}
-              type="button"
-            >
-              <Icon name="plus" size="xs" />
-              {t("newChat")}
-            </button>
-          )}
-          <button
-            className="flex cursor-pointer items-center gap-[7px] rounded-sm border border-border px-[14px] py-[7px] font-mono text-xs text-foreground-dim transition-colors hover:border-accent hover:text-foreground"
-            data-testid={ChatScreenTestId.Close}
-            onClick={onClose}
-            type="button"
-          >
-            <Icon name="grid" size="xs" />
-            {t("close")}
-          </button>
-        </Stack>
+      {/* ── Top bar (Task 6) ────────────────────────────────────────────
+          The Velín-D glass chrome: `ChatTopBar` owns its own status pill,
+          search trigger, limits gauge, language switch and clock — no bespoke
+          markup left here. Voice and New-chat moved down to the composer
+          (below); Close was removed entirely (the right tool dock is the
+          navigation now). */}
+      <div className="relative z-20 shrink-0 border-b border-border px-[22px] py-[13px]">
+        <ChatTopBar mode={mode} onOpenPalette={openPalette} />
       </div>
+
+      {/* ── Right tool dock (Task 6) ─────────────────────────────────────
+          A glass island pinned to the right edge, vertically centered,
+          floating above the orb map (`zIndex` above its layers) — the same
+          treatment the left tasks panel gets. `pointer-events-auto` re-enables
+          clicks through the page's ambient pointer-events-none scene. */}
+      <Container
+        pointerEvents="auto"
+        position="absolute"
+        right="24px"
+        style={{ transform: "translateY(-50%)" }}
+        top="50%"
+        zIndex={20}
+      >
+        <ChatToolDock />
+      </Container>
 
       {/* The immersive orb map (Task 13), filling the page — the ellipse of
           subsystem orbs ringing the central conversational core. Sits behind every
@@ -545,9 +501,10 @@ export function ChatScreen({
           protected band. Static phase-1 insets matching the left tasks panel
           (300px, `w-[300px]` below) and the composer band (`~230px`, the
           border-t + max-w-[720px] py-4 bar further down) — a measured-ref
-          refinement is optional follow-up polish, not required for parity. */}
+          refinement is optional follow-up polish, not required for parity. The
+          right inset now reserves the tool dock's width (Task 6) instead of 0. */}
       <SubsystemOrbMap
-        insets={{ left: 300, right: 0, bottom: 230 }}
+        insets={{ left: 300, right: CHAT_TOOL_DOCK_WIDTH, bottom: 230 }}
         onOpenCore={() => setCoreOpen(true)}
         onSelectSubsystem={setSelectedSubsystemId}
         pipelines={pipelineCatalog ?? []}
@@ -687,15 +644,38 @@ export function ChatScreen({
           (`onSubmit`) — same growable input + @mention picker as the task
           launcher, `chrome={false}` (this bar is its own frame already), and
           `showAttach={false}` since the chat message API has no attachment
-          channel yet (Phase 38 plan §5). */}
+          channel yet (Phase 38 plan §5). Task 6: the voice toggle and New-chat
+          (now a trash icon) moved down here from the old top bar — a minimal
+          touch on this dock, not the full redesign (next phase). */}
       <div className="relative z-20 shrink-0 border-t border-border px-5 py-4">
         <div className="mx-auto max-w-[720px]">
-          {/* Voice status strip (Phase 119a) — the listening indicator + live
-              interim transcript, ABOVE the composer, never inside it (Decision 1).
-              Mounted only while voice mode is on. */}
           <Stack align="stretch" direction="col" gap="100">
-            {voice.active && (
-              <VoiceStatusStrip interim={voice.interim} listening={voice.listening} />
+            {(voice.supported || messages.length > 0) && (
+              <Stack align="center" direction="row" gap="150" justify="between">
+                {/* Voice toggle + status strip (Phase 119a) — the listening
+                    indicator + live interim transcript sits beside the toggle,
+                    ABOVE the composer, never inside it (Decision 1). The strip
+                    itself is mounted only while voice mode is on. */}
+                <Stack align="center" direction="row" gap="100">
+                  {voice.supported && (
+                    <VoiceToggleButton active={voice.active} onToggle={handleVoiceToggle} />
+                  )}
+                  {voice.active && (
+                    <VoiceStatusStrip interim={voice.interim} listening={voice.listening} />
+                  )}
+                </Stack>
+                {messages.length > 0 && (
+                  <Button
+                    aria-label={t("newChat")}
+                    data-testid={ChatScreenTestId.NewChat}
+                    icon="trash"
+                    intent="ghost"
+                    onClick={onNewChat}
+                    size="sm"
+                    title={t("newChat")}
+                  />
+                )}
+              </Stack>
             )}
             <CommandLine
               showAttach

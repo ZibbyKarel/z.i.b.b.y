@@ -120,9 +120,13 @@ Client component (`"use client"`):
   inside it; the check sits above the nav-item/notification computation so
   those HUD-only hooks don't fire on `/chat`. The provider stack (in
   particular `ChatProvider`) still mounts around it, so the conversation
-  persists across HUD ⇄ chat navigation. `ChatScreen`'s own top bar (palette,
-  activity panel, new-chat, **Close → `/overview`**) is the chat surface's own
-  chrome and the way back to the HUD, alongside ⌘/Ctrl+J.
+  persists across HUD ⇄ chat navigation. **Task 6 (Velín-D immersive chrome):**
+  `ChatScreen`'s own glass `ChatTopBar` (status pill, ⌘K search, limits gauge,
+  language switch, clock) and the right-edge `ChatToolDock` (icon links into
+  the HUD's pages) are the chat surface's own chrome; the explicit Close button
+  was removed entirely — the tool dock's icons are the way back to the HUD,
+  alongside ⌘/Ctrl+J. New-chat (now a trash-icon control) and the voice toggle
+  moved down into the composer dock, beside `VoiceStatusStrip`.
 
 The Voice UI (JARVIS-style takeover, speech-to-text input, TTS read-back) was
 removed in favor of a chat-first interface (`features/chat`); there is no

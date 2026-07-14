@@ -212,6 +212,8 @@ import {
   StatusDotTestId,
 } from "@zibby/design-system";
 import { ChatScreen, ChatScreenTestId } from "./ChatScreen";
+import { ChatTopBarTestId } from "./ChatTopBar";
+import { ChatToolDockTestId } from "./ChatToolDock";
 import { VoiceToggleButtonTestId } from "./VoiceToggleButton";
 import { CommandLineTestId } from "../../tasks/components/CommandLine/CommandLine";
 import { SubsystemDrawerTestId } from "../../subsystems/components/SubsystemDrawer/SubsystemDrawer";
@@ -220,15 +222,14 @@ import { ChatPaletteTestId } from "./ChatPalette";
 import { SubsystemOrbMapTestId } from "./SubsystemOrbMap";
 
 // The transcript lives in the provider; this harness supplies the lifted state so the
-// component behaves exactly as it does under ChatProvider. `onClose` is spy-able so
-// the Esc-priority / palette-navigate tests can assert it fired (or didn't).
-function ChatScreenHarness({ onClose = () => {} }: { onClose?: () => void }) {
+// component behaves exactly as it does under ChatProvider. Close was removed
+// entirely (Task 6) — there is no `onClose` prop left to wire.
+function ChatScreenHarness() {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   return (
     <ChatScreen
       conversationId="c1"
       messages={messages}
-      onClose={onClose}
       onMessagesChange={setMessages}
       onNewChat={() => setMessages([])}
     />
@@ -303,6 +304,22 @@ describe("ChatScreen", () => {
     await user.click(screen.getByTestId(ChatScreenTestId.NewChat));
     expect(screen.queryByText("Ahoj")).not.toBeInTheDocument();
     expect(screen.getByTestId(ChatScreenTestId.Greeting)).toBeInTheDocument();
+  });
+
+  it("mounts the glass top bar and tool dock, and hosts new-chat + voice in the composer", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ChatScreenHarness />);
+
+    await user.type(screen.getByTestId(CommandLineTestId.Input), "Ahoj");
+    await user.click(screen.getByTestId(CommandLineTestId.Send));
+    expect(screen.getByText("Ahoj")).toBeInTheDocument();
+
+    expect(screen.getByTestId(ChatTopBarTestId.Root)).toBeInTheDocument();
+    expect(screen.getByTestId(ChatToolDockTestId.Root)).toBeInTheDocument();
+    // Close is gone entirely; new-chat (relocated to the composer dock) is present
+    // now that there's a transcript to reset.
+    expect(screen.queryByTestId("chat-screen-close")).toBeNull();
+    expect(screen.getByTestId(ChatScreenTestId.NewChat)).toBeInTheDocument();
   });
 
   describe("orb mode derivation (Phase 14.1)", () => {
@@ -466,9 +483,8 @@ describe("ChatScreen", () => {
     });
 
     it("Esc closes the palette, then does nothing further (no overlay left to close)", async () => {
-      const onClose = vi.fn();
       const user = userEvent.setup();
-      renderWithProviders(<ChatScreenHarness onClose={onClose} />);
+      renderWithProviders(<ChatScreenHarness />);
 
       await user.click(screen.getByTestId(SearchBarTestId.Root));
       expect(screen.getByTestId(ChatPaletteTestId.Root)).toBeInTheDocument();
@@ -476,11 +492,10 @@ describe("ChatScreen", () => {
       // 1st Esc: the palette closes.
       fireKey({ key: "Escape" });
       expect(screen.queryByTestId(ChatPaletteTestId.Root)).not.toBeInTheDocument();
-      expect(onClose).not.toHaveBeenCalled();
 
-      // 2nd Esc: nothing else open — a routed page, so nothing happens.
+      // 2nd Esc: nothing else open — a routed page, so nothing happens (no
+      // Close control left to accidentally trigger; Task 6 removed it).
       fireKey({ key: "Escape" });
-      expect(onClose).not.toHaveBeenCalled();
     });
 
     it("selecting an agent in the palette opens its detail dialog, not composer injection (Phase 58)", async () => {
@@ -505,16 +520,14 @@ describe("ChatScreen", () => {
     });
 
     it("selecting a gate in the palette navigates, without closing the page", async () => {
-      const onClose = vi.fn();
       const user = userEvent.setup();
-      renderWithProviders(<ChatScreenHarness onClose={onClose} />);
+      renderWithProviders(<ChatScreenHarness />);
 
       await user.click(screen.getByTestId(SearchBarTestId.Root));
       await user.type(screen.getByTestId(SearchMenuTestId.Input), "purchase");
       await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-gates-ap1`));
 
       expect(push).toHaveBeenCalledWith("/gates");
-      expect(onClose).not.toHaveBeenCalled();
     });
   });
 

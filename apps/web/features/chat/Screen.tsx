@@ -23,15 +23,8 @@ import { useChatTranscriptQuery } from "./queries/useChatTranscriptQuery";
  * from `/chat` and back, or a background refetch mid-turn).
  */
 export function Screen() {
-  const {
-    conversationId,
-    ensureConversation,
-    setConversationId,
-    messages,
-    setMessages,
-    newChat,
-    close,
-  } = useChat();
+  const { conversationId, ensureConversation, setConversationId, messages, setMessages, newChat } =
+    useChat();
 
   useEffect(() => {
     ensureConversation();
@@ -52,7 +45,6 @@ export function Screen() {
     <ChatScreen
       conversationId={conversationId}
       messages={messages}
-      onClose={close}
       onMessagesChange={setMessages}
       onNewChat={newChat}
     />
