@@ -420,11 +420,24 @@ rtk git add apps/web/features/chat/components/LangSwitch.tsx apps/web/features/c
 **Files:**
 - Modify: `apps/web/features/chat/components/ChatTopBar.tsx`
 - Modify: `apps/web/features/chat/components/ChatTopBar.test.tsx`
-- Modify: `apps/web/features/chat/components/ChatScreen.tsx` (drop the `mode` prop pass — line ~478)
+- Modify: `apps/web/features/chat/components/ChatScreen.tsx` (drop the `mode` prop pass AND its entire now-orphaned derivation chain — see Step 4)
+- Modify: `apps/web/features/chat/components/ChatScreen.test.tsx` (delete the mode-derivation suite — see Step 5)
+- Delete: `apps/web/features/chat/chatMode.ts` (zero importers after this task — see Step 6)
 
 **Interfaces:**
 - Consumes: `StatusPill`, `SearchBar`, `LimitsRings`, `LangSwitch`, `GlassSurface`, `Stack`.
-- Produces: `ChatTopBarProps` loses `mode`; `ChatTopBarTestId` loses `Mode`/`Clock`. The bar renders four glass elements (status/search/limits/lang) — HUD + geometry arrive in Task 5. **This is the reversible removal task** (revert = revert this one commit).
+- Produces: `ChatTopBarProps` loses `mode`; `ChatTopBarTestId` loses `Mode`/`Clock`; `ChatScreenTestId` loses `ModeDot`; the `chatMode` module (`ChatMode`/`MODE_DOT`) is deleted. The bar renders four glass elements (status/search/limits/lang) — HUD + geometry arrive in Task 5. **This is the reversible removal task** (revert = revert this one commit).
+
+> **Removal-scope ground truth (verified on disk; each link's ONLY consumer is the next):**
+> `mode` (ChatScreen.tsx ~415-434) is consumed ONLY by `<ChatTopBar mode={mode}>`; `errorMode` (~412)
+> and `waitingApproval` (~413) feed only `mode`; `WAITING_APPROVAL_STATUSES` (~57) feeds only
+> `waitingApproval`; `lastRun` (~365) feeds only `waitingApproval`, so the
+> `lastRunRef`/`findLastRunRef`/`usePipelineRunQuery` block (~355-365 + fn at ~61-75) is a mode-only
+> feed (its own comment says so — removing it deliberately drops that polling subscription); `lastTool`
+> (~353) feeds only the ternary; `hasDraft` (~349) is read only by the ternary (its setter is passed to
+> the composer solely to drive it — `onDraftChange` is optional on `CommandLine`). Leaving ANY of these
+> makes this commit fail lint (`no-unused-vars`). Line numbers are indicative — match by the quoted
+> code, and re-verify with the Step 4 greps if the file has drifted.
 
 - [ ] **Step 1: Replace the test file**
 
@@ -514,33 +527,147 @@ export function ChatTopBar({ onOpenPalette }: ChatTopBarProps) {
 }
 ```
 
-- [ ] **Step 4: Drop the `mode` prop at the call site**
+- [ ] **Step 4: Drop the `mode` prop AND its whole orphaned derivation chain in `ChatScreen.tsx`**
 
-In `apps/web/features/chat/components/ChatScreen.tsx`, change the `ChatTopBar` render (around line 478):
+All edits below are in `apps/web/features/chat/components/ChatScreen.tsx`. Match by the quoted code (line numbers are indicative).
+
+**4a — the prop pass (~line 478):**
 ```tsx
         <ChatTopBar mode={mode} onOpenPalette={openPalette} />
 ```
-to:
+→
 ```tsx
         <ChatTopBar onOpenPalette={openPalette} />
 ```
-(The `mode` variable stays — it drives other chat state.) Then confirm nothing else references the removed mode dot: run `rtk grep "chat-screen-mode-dot" apps/web` — if a `ChatScreen` test asserts that testid, delete that single assertion (the mode dot is intentionally gone from the bar). Do NOT remove `ChatScreenTestId.ModeDot` if other code still uses it; only drop the top-bar assertion.
 
-- [ ] **Step 5: Run tests to verify pass**
+**4b — the mode ternary + its two feeders (~lines 412-434). Delete this whole block:**
+```tsx
+  const errorMode = stream.error !== null || sendMessage.isError;
+  const waitingApproval = lastRun !== undefined && WAITING_APPROVAL_STATUSES.has(lastRun.status);
+
+  const mode: ChatMode = errorMode
+    ? "error"
+    : waitingApproval
+      ? "waiting-approval"
+      : lastTool?.status === "started" && stream.streaming
+        ? "tool"
+        : stream.streaming && stream.text.length > 0
+          ? "streaming"
+          : sendMessage.isPending || stream.streaming
+            ? "thinking"
+            : // `speaking` (Phase 119b): the turn is done, its voice reply is
+              // playing. Sits below the live-turn states (thinking/streaming/tool
+              // still win while the turn is in flight) and above listening/idle.
+              speakingReply
+              ? "speaking"
+              : // `listening` is driven by REAL mic state while voice mode is on
+                // (Phase 119a); otherwise it falls back to the composer draft.
+                (voice.active && voice.listening) || hasDraft
+                ? "listening"
+                : "idle";
+```
+
+**4c — the mode-only pipeline-run feed (~lines 355-365). Delete the comment + both statements** (this deliberately drops the `usePipelineRunQuery` polling subscription — it existed solely to feed the mode dot, per its own comment):
+```tsx
+  // The most recently dispatched run's id, across the in-flight turn and the
+  // committed transcript (newest first) — always computed so the query below
+  // stays an unconditional hook call (React rules). `usePipelineRunQuery` itself
+  // no-ops on `null` (`enabled: pipelineRunId !== null`), and shares its cache
+  // with `ChatRunCard` (Decision 5, Phase 15.3) — no new polling for a run
+  // already rendered inline in the transcript.
+  const lastRunRef = findLastRunRef([
+    stream.toolEvents,
+    ...[...messages].reverse().map((m) => m.toolEvents),
+  ]);
+  const { data: lastRun } = usePipelineRunQuery(lastRunRef);
+```
+
+**4d — `lastTool` (~line 353). Delete:**
+```tsx
+  const lastTool = stream.toolEvents[stream.toolEvents.length - 1];
+```
+
+**4e — the `hasDraft` state (~lines 346-349). Delete the comment + statement:**
+```tsx
+  // Composer activity is the only new state this phase adds — everything else the
+  // orb needs is already carried by the stream + mutation (see Decision 1, Phase
+  // 14.1 of the phase-14 plan).
+  const [hasDraft, setHasDraft] = useState(false);
+```
+…and its setter pass on the composer (~line 685; `onDraftChange` is optional on `CommandLine`, so dropping the prop is safe). Delete this one line from the `<CommandLine …>` JSX:
+```tsx
+              onDraftChange={setHasDraft}
+```
+
+**4f — `WAITING_APPROVAL_STATUSES` (~lines 55-59). Delete the doc comment + const** (the comment ends `…parked after exhausting retries (\`parked\`). */`):
+```tsx
+const WAITING_APPROVAL_STATUSES = new Set(["awaiting-approval", "parked", "held"]);
+```
+
+**4g — `findLastRunRef` (~lines 61-75). Delete the whole function + its doc comment:**
+```tsx
+function findLastRunRef(toolEventLists: (ChatToolEvent[] | undefined)[]): string | null {
+  for (const events of toolEventLists) {
+    if (!events) continue;
+    for (let i = events.length - 1; i >= 0; i--) {
+      const runRef = events[i]?.runRef;
+      if (runRef) return runRef;
+    }
+  }
+  return null;
+}
+```
+
+**4h — the dead `ChatScreenTestId.ModeDot` member (~lines 81-83). Delete the comment + member** (its only remaining reference is the test suite Step 5 deletes; a dead enum member has no consumer):
+```tsx
+  /** The header's derived-mode status dot (Task 13) — the surviving read-out of
+   * the retired scene's `data-mode`, now a plain DS `StatusDot`. */
+  ModeDot = "chat-screen-mode-dot",
+```
+
+**4i — imports. Three edits:**
+- Delete line ~40: `import type { ChatMode } from "../chatMode";`
+- Line ~27: `import { usePipelineRunQuery, usePipelinesQuery } from "../../pipelines";` → `import { usePipelinesQuery } from "../../pipelines";`
+- Lines ~7-12: remove `ChatToolEvent,` from the `@zibby/contracts` type import (its only use was `findLastRunRef`'s signature), keeping `ChatMessage as ChatMessageType`, `SubsystemId`, `TaskTarget`.
+Do NOT touch `useNow`/`MINUTE_MS` in ChatScreen — they are still used (~line 128).
+
+**4j — verify nothing was missed:** run `rtk grep "errorMode\|waitingApproval\|lastRunRef\|findLastRunRef\|lastRun\b\|lastTool\|hasDraft\|WAITING_APPROVAL_STATUSES\|ChatMode\|ModeDot" apps/web/features/chat/components/ChatScreen.tsx` — expect ZERO matches. If any symbol survives, its consumer was added after this plan was written: STOP and reconcile (keep the symbol and its chain) rather than deleting a live consumer.
+
+- [ ] **Step 5: Delete the mode-derivation suite in `ChatScreen.test.tsx`**
+
+In `apps/web/features/chat/components/ChatScreen.test.tsx`:
+- Delete the **entire** `describe("orb mode derivation (Phase 14.1)", () => { … });` block (~lines 325-428): its 7 tests and the shared `modeDot()` helper all render the mode dot Step 4 removed — every one would throw on `getByTestId(ChatScreenTestId.ModeDot)`. The block starts at:
+```tsx
+  describe("orb mode derivation (Phase 14.1)", () => {
+```
+and ends at the `});` immediately before `describe("subsystem orb map (Task 13, was the WebGL overlay in Phase 95)", …)`.
+- Remove `StatusDotTestId,` from the `@zibby/design-system` import (~line 212) — its only use was the deleted `modeDot()` helper.
+- **Leave the module-level `pipelineRunMock` plumbing** (the `vi.hoisted` block ~196-198, the `vi.mock("../../pipelines", …)` wiring ~201, and the `beforeEach` `mockReset`/`mockReturnValue` ~253-254): it mocks an export that still exists in `../../pipelines`, the reset calls count as uses (not lint-flagged), and other suites share the mock module. Only its in-suite use (`pipelineRunMock.mockReturnValue({ data: { status: "awaiting-approval" } })`, ~line 409) goes — it is inside the deleted describe.
+
+- [ ] **Step 6: Delete the orphaned `chatMode.ts` module**
+
+Verify first: run `rtk grep "chatMode\|MODE_DOT" apps/web --include="*.ts" --include="*.tsx"` (ignore `.next/` artifacts). Expected surviving matches: NONE that import — only `SubsystemDrawer.tsx`'s prose doc-comment mention of `MODE_DOT` (not an import — leave it) and `chatMode.ts` itself. If ANY real import survives, STOP and reconcile (keep the module). Otherwise:
+```bash
+rtk git rm apps/web/features/chat/chatMode.ts
+```
+(No `chatMode.test.ts` exists — verified.)
+
+- [ ] **Step 7: Run tests to verify pass**
 
 Run: `cd apps/web && pnpm exec vitest run --config vitest.components.config.ts features/chat --reporter=basic`
-Expected: PASS (ChatTopBar + any ChatScreen component tests).
+Expected: PASS (ChatTopBar's new tests + the surviving ChatScreen suites — the mode-derivation suite is gone).
 
-- [ ] **Step 6: Gates**
+- [ ] **Step 8: Gates**
 
 Run: `rtk pnpm check:lint && rtk pnpm check:types && pnpm exec tsc -p apps/web --noEmit`
-Expected: clean. (`check:lint` confirms the now-unused `Icon`/`Typography`/`StatusDot`/`useNow`/`ChatMode`/`MODE_DOT` imports and `MINUTE_MS` are gone.)
+Expected: clean — this is the proof the orphan cascade is complete: any leftover `no-unused-vars` (e.g. `lastTool`, `hasDraft`, `WAITING_APPROVAL_STATUSES`) or unresolved `ChatMode` import fails here.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
-rtk git add apps/web/features/chat/components/ChatTopBar.tsx apps/web/features/chat/components/ChatTopBar.test.tsx apps/web/features/chat/components/ChatScreen.tsx && rtk git commit -m "refactor(chat): remove top-bar mode sign + clock (not in Velín-D design)"
+rtk git add apps/web/features/chat && rtk git commit -m "refactor(chat): remove top-bar mode sign + clock and the orphaned mode derivation (not in Velín-D design)"
 ```
+(One commit on purpose — the removal stays reversible as a single revert. `rtk git add apps/web/features/chat` covers the two component files, both test files, and the `chatMode.ts` deletion.)
 
 ---
 
@@ -835,6 +962,7 @@ The dev server on `:3000` is typically already running and is NOT ours to restar
 - **HUD switch:** clicking the grid icon navigates to `/overview` (the classic HUD); hover/focus brightens the icon to accent.
 - **Search:** clicking the searchbox (and `⌘K`) still opens the command palette (unchanged contract).
 - **Status flyout (3a) still works:** hovering a status segment still opens its flyout over the orb map (3b did not regress it).
+- **Sanctioned deltas vs the static prototype — do NOT "correct" these back:** the HUD link's `hover/focus-visible:text-accent` brighten and the searchbox's `hover:border-border-strong hover:text-foreground-dim` are spec-sanctioned interaction additions NOT present in the design HTML (the prototype codes no `:hover` styles at all — it relies on the bare glass look). A hover-state mismatch with the prototype is expected and correct; only the RESTING state must match 1:1.
 Capture one screenshot of the settled `/chat` top bar for the ledger.
 
 - [ ] **Step 4: Fix any live defect, re-run the affected gate, commit**
@@ -852,9 +980,9 @@ Do **not** push and do **not** open a PR. Update `.superpowers/sdd3/progress.md`
 
 ## Self-Review
 
-**1. Spec coverage** — §1 scope (five elements, remove mode+clock) → Tasks 4 (removal) + 5 (five-element restructure). §2 3a end state (only StatusPill inner-border touched) → Task 6, and the Global Constraints forbid other 3a edits. §3 geometry (56px header, 190 search, 40×40 HUD, gap-150, content-driven heights) → Task 5 + Global Constraints (verbatim design values). §4.1 SearchBar `surface` → Task 1; §4.2 Dropdown `compact` → Task 2; §4.3 LangSwitch → Task 3; §4.4 ChatTopBar contract (enum `Root/Search/Hud/Lang`, `onOpenPalette`-only props) → Tasks 4+5; §4.5 HUD switch (`/overview`, grid glyph, glass link) → Task 5; §4.6 StatusPill border removal → Task 6. §5 transparency (single glass, three named fixes) → Tasks 1/3/6 + the Task 8 live checklist. §6 interaction (search trigger unchanged, lang dropdown, HUD link, limits non-change) → Tasks 3/5 + reuse note. §7 i18n table (add `chat.hudSwitchLabel`, remove `chat.modeLabel`, reuse `topbar.langSwitcherLabel`, endonyms inline) → Task 7 (sole catalog task). §8 testing split (jsdom structure vs live pixels) → per-task unit tests + Task 8. §9 removals reversibility → Task 4 (one dedicated commit). §10 acceptance → Task 8 checklist. §11 deviations → carried in Global Constraints + Task 5 Step 4 note (position/overflow omitted) + Task 8 (limits solid popover accepted). No spec section is unassigned.
+**1. Spec coverage** — §1 scope (five elements, remove mode+clock) → Tasks 4 (removal) + 5 (five-element restructure). §2 3a end state (only StatusPill inner-border touched) → Task 6, and the Global Constraints forbid other 3a edits. §3 geometry (56px header, 190 search, 40×40 HUD, gap-150, content-driven heights) → Task 5 + Global Constraints (verbatim design values). §4.1 SearchBar `surface` → Task 1; §4.2 Dropdown `compact` → Task 2; §4.3 LangSwitch (incl. `LangSwitchTestId` removal) → Task 3; §4.4 ChatTopBar contract (enum `Root/Search/Hud/Lang`, `onOpenPalette`-only props, `Stack as="header"` substitution) → Tasks 4+5; §4.5 HUD switch (`/overview`, grid glyph, glass link) → Task 5; §4.6 StatusPill border removal → Task 6. §5 transparency (single glass, three named fixes) → Tasks 1/3/6 + the Task 8 live checklist. §6 interaction (search trigger unchanged, lang dropdown, HUD link, limits non-change) → Tasks 3/5 + reuse note. §7 i18n table (add `chat.hudSwitchLabel`, remove `chat.modeLabel`, reuse `topbar.langSwitcherLabel`, endonyms inline) → Task 7 (sole catalog task). §8 testing split (jsdom structure vs live pixels) → per-task unit tests + Task 8. §9 removals (full orphan cascade: mode derivation chain, mode-derivation test suite, `ChatScreenTestId.ModeDot`, `chatMode.ts` deletion, reversibility) → Task 4 Steps 4-6 (one dedicated commit). §10 acceptance → Task 8 checklist. §11 deviations (gap/heights/limits popover/lang border/hover sanction) → Global Constraints + Task 5 Step 4 note (position/overflow omitted) + Task 8 (limits solid popover accepted; hover states not "corrected" back). No spec section is unassigned.
 
-**2. Placeholder scan** — No "TBD"/"similar to Task N"/"add later". Every code step prints the full file body or the exact old→new edit; every test step has runnable code, the exact command, and the expected result. The two verification-only guards (Task 4 Step 4 `chat-screen-mode-dot` grep, Task 7 Step 1 `modeLabel` grep) name the exact command and the STOP condition, and constrain the change to an assertion/key — not a contract.
+**2. Placeholder scan** — No "TBD"/"similar to Task N"/"add later". Every code step prints the full file body or the exact old→new edit; every test step has runnable code, the exact command, and the expected result. The verification-only guards (Task 4 Step 4j orphan-sweep grep, Task 4 Step 6 `chatMode` importer grep, Task 7 Step 1 `modeLabel` grep) name the exact command, the expected output, and the STOP condition, and constrain the change to the verified scope — not a contract.
 
-**3. Type consistency across tasks** — `SearchBarProps.surface?: "solid" | "transparent"` (Task 1) is consumed exactly as `surface="transparent"` in Task 5. `DropdownSingleProps.compact?: boolean` (Task 2) is consumed as `compact` on the single `Dropdown` in Task 3 (LangSwitch) — `variant="inline"`, `size="sm"`, options `{ value, code, label }` matching the single-select shape. `ChatTopBarTestId` gains `Hud` in Task 5 and loses `Mode`/`Clock` in Task 4; the tests reference only the members that exist at each step (Task 4 tests `Root/Search/Lang` + absent literals; Task 5 adds `Hud`). `ChatTopBarProps` drops `mode` in Task 4 and the call site is updated in the same task — no later task passes `mode`. `STATUS_PILL_DOM_ID`/`StatusPillTestId` (from 3a) are untouched by Task 6 except the root `className` string. `t("hudSwitchLabel")` (Task 5) is backed by the `chat.hudSwitchLabel` key added in Task 7; between them next-intl's missing-key fallback renders the key path and no test asserts the copy. `DropdownTestId.Trigger`/`.Panel` (DS barrel, confirmed exported) are used by the Task 2 and Task 3 tests. `renderWithProviders`/`screen`/`within` all come from `apps/web/test/render.tsx` (which re-exports Testing Library). The i18n parity helper `keys()` is reused verbatim from the existing test.
+**3. Type consistency across tasks** — `SearchBarProps.surface?: "solid" | "transparent"` (Task 1) is consumed exactly as `surface="transparent"` in Task 5. `DropdownSingleProps.compact?: boolean` (Task 2) is consumed as `compact` on the single `Dropdown` in Task 3 (LangSwitch) — `variant="inline"`, `size="sm"`, options `{ value, code, label }` matching the single-select shape. `ChatTopBarTestId` gains `Hud` in Task 5 and loses `Mode`/`Clock` in Task 4; the tests reference only the members that exist at each step (Task 4 tests `Root/Search/Lang` + absent literals; Task 5 adds `Hud`). `ChatTopBarProps` drops `mode` in Task 4 and the call site plus the whole derivation chain, its test suite, `ChatScreenTestId.ModeDot`, and the `chatMode.ts` module are removed in the same task — no later task references `mode`, `ChatMode`, `MODE_DOT`, or `ModeDot`. `STATUS_PILL_DOM_ID`/`StatusPillTestId` (from 3a) are untouched by Task 6 except the root `className` string. `t("hudSwitchLabel")` (Task 5) is backed by the `chat.hudSwitchLabel` key added in Task 7; between them next-intl's missing-key fallback renders the key path and no test asserts the copy. `DropdownTestId.Trigger`/`.Panel` (DS barrel, confirmed exported) are used by the Task 2 and Task 3 tests. `renderWithProviders`/`screen`/`within` all come from `apps/web/test/render.tsx` (which re-exports Testing Library). The i18n parity helper `keys()` is reused verbatim from the existing test.
 </content>

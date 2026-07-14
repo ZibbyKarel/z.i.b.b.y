@@ -162,8 +162,9 @@ cookie mechanics verbatim (`writeLocaleCookie` + `router.refresh()`).
 
 - Endonym labels (`Čeština`/`English`) stay inline data (they read the same in every UI locale — the
   design hardcodes them likewise; no new catalog key).
-- `LangSwitchTestId` enum is retained for continuity; the component's test selects the Dropdown trigger
-  (`DropdownTestId.Trigger`) — the bar-level `ChatTopBarTestId.Lang` still addresses the wrapper.
+- `LangSwitchTestId` is **removed** (verified: self-referenced only — no other source file imports it);
+  the component's test selects the Dropdown trigger (`DropdownTestId.Trigger`) — the bar-level
+  `ChatTopBarTestId.Lang` still addresses the wrapper.
 
 ### 4.4 `ChatTopBar` (`apps/web/features/chat/components/ChatTopBar.tsx` — RESTRUCTURE)
 
@@ -181,8 +182,12 @@ export interface ChatTopBarProps {
 }
 ```
 
-Root becomes a `Container as="header"` (height 56, `position="relative"`, `overflow="visible"`) holding
-one `Stack align="center" direction="row" gap="150"` with **exactly five** children in design order:
+Root becomes the header row itself — `Stack as="header" align="center" direction="row" gap="150"`
+with `style={{ height: "56px" }}` (deliberate substitution for the design's `Container`-style header:
+one node instead of a wrapper + row, since `Stack` carries `as`/`style`; the design's
+`position:relative`/`overflow:visible` are intentionally omitted — non-load-bearing here because the
+status flyout portals to `document.body` and the limits/lang popovers self-contain or portal). It holds
+**exactly five** children in design order:
 status pill (glass), searchbox (glass, `surface="transparent"`, width 190), limits (glass, unchanged),
 HUD switch (glass, new), lang (glass, single-layer). No mode group, no clock, no `useNow`, no `Intl`
 clock formatter.
@@ -315,9 +320,22 @@ as **one dedicated, reversible task** (revert = revert that one commit):
 - `ChatTopBar.tsx`: delete the mode `Stack` (Icon `butlerSign`, `Typography modeLabel`, `StatusDot
   chat-screen-mode-dot`) and the clock `Typography`; drop `useNow`, the `Intl` clock formatter,
   `MINUTE_MS`, the `mode` prop, `ChatMode`/`MODE_DOT` imports, and the `Mode`/`Clock` enum members.
-- `ChatScreen.tsx`: drop `mode={mode}` from the single `<ChatTopBar …>` call (the `mode` variable stays —
-  it drives other chat state). Check `ChatScreenTestId.ModeDot` / any test asserting `chat-screen-mode-dot`
-  and update: the mode dot is intentionally gone from the bar.
+- `ChatScreen.tsx`: drop `mode={mode}` from the single `<ChatTopBar …>` call — **and the whole derivation
+  chain that fed it, which the prop drop orphans** (verified: each link's ONLY consumer is the next):
+  the `mode` ternary + `errorMode` + `waitingApproval`; `WAITING_APPROVAL_STATUSES`; the
+  `lastRunRef`/`findLastRunRef`/`usePipelineRunQuery(lastRunRef)` → `lastRun` block (a mode-only feed —
+  its comment says so; removing it deliberately drops that polling subscription); `lastTool`; the
+  `hasDraft` state + the composer's `onDraftChange={setHasDraft}` pass (`onDraftChange` is optional on
+  `CommandLine`); the `ChatMode` type import, `ChatToolEvent` from the contracts import, and
+  `usePipelineRunQuery` from the pipelines import; and the dead `ChatScreenTestId.ModeDot` enum member.
+  Leaving any of these makes the removal commit fail lint (`no-unused-vars`).
+- `ChatScreen.test.tsx`: delete the **entire** `describe("orb mode derivation (Phase 14.1)", …)` suite
+  (7 tests + the shared `modeDot()` helper — all render the deleted mode dot) and the now-unused
+  `StatusDotTestId` import. The module-level `pipelineRunMock` plumbing stays (it mocks an export that
+  still exists in `../../pipelines`; `mockReset`/`mockReturnValue` calls count as uses — not lint-flagged).
+- `apps/web/features/chat/chatMode.ts` (`ChatMode`/`MODE_DOT`): after the above, it has **zero importers**
+  (verified: `SubsystemDrawer.tsx` mentions `MODE_DOT` only in a prose comment; no test file exists) —
+  **delete the module** in the same task, gated on a fresh grep.
 - `ChatTopBar.test.tsx`: drop the two clock assertions; assert the new element set instead.
 - i18n `chat.modeLabel` removal happens in the **i18n task** (catalog-edit law), not here — the key is
   briefly orphaned in between (harmless).
@@ -353,5 +371,9 @@ as **one dedicated, reversible task** (revert = revert that one commit):
 - **Lang trigger keeps the `Dropdown`'s own 1px control border** inside the glass — the *doubled blur/tint*
   (the actual transparency bug) is eliminated; a hairline control border is not a transparency defect and
   matches the DS control vocabulary. Flagged in the live checklist as acceptable.
+- **Hover/focus states are sanctioned additions, not prototype fidelity bugs** — the design HTML codes no
+  `:hover` styles at all (it relies on the bare glass look); the HUD link's `hover/focus-visible:text-accent`
+  brighten and the searchbox's `hover:border-border-strong hover:text-foreground-dim` are kept
+  deliberately (a11y/affordance). The 1:1 mandate applies to the RESTING state.
 </content>
 </invoke>
