@@ -305,3 +305,55 @@ export type {
   ListProps,
   NavItem,
 } from "./components/List/List";
+
+// ---------------------------------------------------------------------------
+// Immersive orb map (Velín-D) — pure geometry/state helpers, WebGL/DOM
+// primitives, and the composed OrbMap. See immersive/index.ts for the
+// hand-authored barrel this section mirrors.
+// ---------------------------------------------------------------------------
+export { ellipseLayout } from "./immersive/ellipseLayout";
+export type { EllipseInsets, EllipseLayout, OrbPosition } from "./immersive/ellipseLayout";
+
+export { ORB_MOTION, ORB_STATE, ORB_STATE_COLOR } from "./immersive/orbState";
+export type { OrbMotion, OrbState, OrbStateStyle } from "./immersive/orbState";
+
+export { seededRandom } from "./immersive/seededRandom";
+export { canMountWebGL } from "./immersive/canMountWebGL";
+
+export { Orb, OrbTestId } from "./immersive/Orb/Orb";
+export type { OrbMotionOverrides, OrbProps } from "./immersive/Orb/Orb";
+
+export { OrbitField, OrbitFieldTestId } from "./immersive/OrbitField/OrbitField";
+export type { OrbitFieldProps } from "./immersive/OrbitField/OrbitField";
+
+export { OrbNode, OrbNodeTestId } from "./immersive/OrbNode/OrbNode";
+export type { OrbNodeProps } from "./immersive/OrbNode/OrbNode";
+
+export { CoreOrb, CoreOrbTestId } from "./immersive/CoreOrb/CoreOrb";
+export type { CoreOrbProps } from "./immersive/CoreOrb/CoreOrb";
+
+export {
+  ConnectorLayer,
+  ConnectorLayerTestId,
+} from "./immersive/ConnectorLayer/ConnectorLayer";
+export type {
+  ConnectorLayerProps,
+  ConnectorNode,
+} from "./immersive/ConnectorLayer/ConnectorLayer";
+
+export {
+  DEFAULT_DURATION_MS,
+  HandoffFlare,
+  HandoffFlareTestId,
+  RETIRE_BUFFER_MS,
+} from "./immersive/HandoffFlare/HandoffFlare";
+export type { HandoffFlareProps } from "./immersive/HandoffFlare/HandoffFlare";
+export { arcPath } from "./immersive/HandoffFlare/arcPath";
+
+export { OrbMap, OrbMapTestId } from "./immersive/OrbMap/OrbMap";
+export type {
+  OrbMapCore,
+  OrbMapFlare,
+  OrbMapNode,
+  OrbMapProps,
+} from "./immersive/OrbMap/OrbMap";
