@@ -53,11 +53,15 @@ catalogs. They run as a no-commit wave; Task 4's first step commits their output
 - Create: `apps/web/features/chat/statusFlyout.test.ts`
 - Create: `apps/web/features/chat/useStatusFlyout.ts`
 - Create: `apps/web/features/chat/useStatusFlyout.test.tsx`
+- Modify: `libs/design-system/src/index.ts` (export `HoldButtonTestId` — Task 3's test needs it and the barrel currently exports only `HoldButton` + its types)
 
 **Interfaces (produced, consumed by Tasks 2–5):**
 ```ts
 export type FlyoutSection = "working" | "waiting";
 export const CLOSE_GRACE_MS = 200;
+/** Stable DOM id on the pill root — the panel's focus-out check recognizes focus
+ * landing back on the pill without importing from StatusPill (import cycle). */
+export const STATUS_PILL_DOM_ID = "chat-status-pill-root";
 export const WORKING_STATUSES: ReadonlySet<TaskRunStatus>; // running | pending
 export interface FlyoutSectionMeta {
   width: number; dotTone: "run" | "wait"; titleTone: "run" | "warn";
@@ -179,6 +183,14 @@ export type FlyoutSection = "working" | "waiting";
 
 /** Shared close grace: leaving BOTH the pill and the panel for this long closes. */
 export const CLOSE_GRACE_MS = 200;
+
+/**
+ * Stable DOM id on the pill root. The portalled panel's focus-out handler must
+ * recognize focus moving back onto the pill (spec §6.2: "neither the pill nor the
+ * panel"); it lives here — not in StatusPill — so StatusFlyoutPanel can import it
+ * without a StatusPill↔panel import cycle.
+ */
+export const STATUS_PILL_DOM_ID = "chat-status-pill-root";
 
 /**
  * Runs the "Pracují" section lists: actively running plus the spawning `pending`
@@ -306,20 +318,32 @@ export function useStatusFlyout(): UseStatusFlyout {
 }
 ```
 
-- [ ] **Step 5: Run tests to verify pass**
+- [ ] **Step 5: Export `HoldButtonTestId` from the DS barrel**
+
+`libs/design-system/src/index.ts:150` currently exports only the component; Task 3's test
+selects the hold-gated approve via `HoldButtonTestId.Root` (HoldButton doesn't forward
+`data-testid`), and the DS convention is that every component exports its TestId enum.
+Change line 150:
+```ts
+export { HoldButton, HoldButtonTestId } from "./components/HoldButton/HoldButton";
+```
+(The adjacent `export type { HoldButtonProps, HoldButtonSize, HoldButtonTone }` block stays
+as is — `HoldButtonTestId` is an enum, a runtime value, so it belongs in the value export.)
+
+- [ ] **Step 6: Run tests to verify pass**
 
 Run: `pnpm exec vitest run apps/web/features/chat/statusFlyout.test.ts apps/web/features/chat/useStatusFlyout.test.tsx`
 Expected: PASS. (If the `formatRelativeTime` "3 minutes ago" literal differs in the environment's ICU, pin the assertion to the actual `en` output — adjust the expected string, not the function.)
 
-- [ ] **Step 6: Gates**
+- [ ] **Step 7: Gates**
 
 Run: `rtk pnpm check:lint && rtk pnpm check:types && pnpm exec tsc -p apps/web --noEmit`
 Expected: clean.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit (stages BOTH touched trees — the DS barrel edit must not strand)**
 
 ```bash
-rtk git add apps/web/features/chat && rtk git commit -m "feat(chat): status-flyout foundation — section constants + hover state machine"
+rtk git add libs/design-system/src/index.ts apps/web/features/chat && rtk git commit -m "feat(chat): status-flyout foundation — section constants + hover state machine"
 ```
 
 ---
@@ -568,7 +592,7 @@ describe("FlyoutApprovalRow", () => {
   });
 });
 ```
-(`vi.mock("../../approvals", …)` targets the barrel the component imports mutations from; types come from `../../approvals/approval` directly, so the mock doesn't have to re-export them. If `HoldButtonTestId` is not exported from the DS barrel, export it there — the DS convention is every component exports its TestId enum.)
+(`vi.mock("../../approvals", …)` targets the barrel the component imports mutations from; types come from `../../approvals/approval` directly, so the mock doesn't have to re-export them. `HoldButtonTestId` is exported from the DS barrel by Task 1 Step 5 — already committed before this task runs.)
 
 - [ ] **Step 2: Run it to verify it fails**
 
@@ -778,6 +802,7 @@ rtk git add apps/web/features/chat/components && rtk git commit -m "feat(chat): 
 
 ```tsx
 import { describe, expect, it, vi } from "vitest";
+import { LoadErrorTestId } from "../../../components/LoadError/LoadError";
 import type { DashboardApproval } from "../../approvals/approval";
 import type { RunView } from "../../runs/run";
 import { renderWithProviders, screen } from "../../../test/render";
@@ -884,12 +909,12 @@ describe("StatusFlyoutPanel", () => {
   it("shows the error state (never a fake empty) when the runs query fails", () => {
     runsState.isError = true;
     renderWithProviders(<StatusFlyoutPanel section="working" {...panelProps()} />);
-    expect(screen.getByTestId("load-error-root")).toBeInTheDocument();
+    expect(screen.getByTestId(LoadErrorTestId.Root)).toBeInTheDocument();
     runsState.isError = false;
   });
 });
 ```
-(Read `LoadErrorTestId.Root`'s actual value in `apps/web/components/LoadError/LoadError.tsx` and import the enum instead of the `"load-error-root"` literal.)
+(`LoadErrorTestId.Root` is `"load-error"` — imported from `apps/web/components/LoadError/LoadError.tsx`, never a hand-typed literal.)
 
 - [ ] **Step 2: Run it to verify it fails**
 
@@ -910,7 +935,12 @@ import { Collection } from "../../../components/Collection/Collection";
 import { useApprovalsQuery } from "../../approvals";
 import { useRunGlyphMap, useRunsQuery } from "../../runs/queries/useRunsQuery";
 import { runGlyph } from "../../runs/run";
-import { type FlyoutSection, SECTION_META, WORKING_STATUSES } from "../statusFlyout";
+import {
+  type FlyoutSection,
+  SECTION_META,
+  STATUS_PILL_DOM_ID,
+  WORKING_STATUSES,
+} from "../statusFlyout";
 import { FlyoutApprovalRow } from "./FlyoutApprovalRow";
 import { FlyoutWorkRow } from "./FlyoutWorkRow";
 
@@ -1095,11 +1125,18 @@ export function StatusFlyoutPanel({
     }
   };
 
-  // Keyboard analogue of mouse-leave: focus moving somewhere that is neither this
-  // panel nor the pill arms the shared close grace (the pill's trigger focus
-  // handlers cancel it when focus lands back there).
+  // Keyboard analogue of mouse-leave (spec §6.2: close only when focus lands on
+  // something that is neither the PANEL nor the PILL). The panel is a React child
+  // of the pill even though it portals to document.body, so React re-dispatches
+  // these focus events up the component tree — both subtrees must be checked here.
   const onBlur = (e: FocusEvent<HTMLElement>) => {
-    if (e.relatedTarget instanceof Node && rootRef.current?.contains(e.relatedTarget)) return;
+    const next = e.relatedTarget instanceof Element ? e.relatedTarget : null;
+    if (
+      next != null &&
+      (rootRef.current?.contains(next) || next.closest(`#${STATUS_PILL_DOM_ID}`) != null)
+    ) {
+      return;
+    }
     onMouseLeave();
   };
 
@@ -1110,6 +1147,10 @@ export function StatusFlyoutPanel({
       id={STATUS_FLYOUT_PANEL_ID}
       maxHeight="76vh"
       onBlur={onBlur}
+      // Keyboard analogue of pointer-enter: focus arriving in the panel (the pill's
+      // Enter/ArrowDown flow) must cancel the shared close grace, or the 200ms timer
+      // armed by the pill's blur would silently unmount the panel under the user.
+      onFocus={onMouseEnter}
       onKeyDown={onKeyDown}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
@@ -1232,7 +1273,7 @@ import type { FocusEvent, KeyboardEvent, ReactNode } from "react";
 import { Stack, StatusDot, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useSubsystemsQuery } from "../../subsystems/queries/useSubsystemsQuery";
-import { type FlyoutSection } from "../statusFlyout";
+import { type FlyoutSection, STATUS_PILL_DOM_ID } from "../statusFlyout";
 import { useStatusFlyout } from "../useStatusFlyout";
 import { STATUS_FLYOUT_PANEL_ID, StatusFlyoutPanel } from "./StatusFlyoutPanel";
 
@@ -1315,9 +1356,18 @@ export function StatusPill() {
     }
   };
 
-  // Keyboard analogue of mouse-leave: focus left the pill entirely.
+  // Keyboard analogue of mouse-leave (spec §6.2: close only when focus lands on
+  // something that is neither the PILL nor the PANEL). The portalled panel is a
+  // React child of this div, so its focusout re-dispatches here too — focus moving
+  // INTO the panel (the Enter/ArrowDown flow) must NOT arm the close grace.
   const onRootBlur = (e: FocusEvent<HTMLDivElement>) => {
-    if (e.relatedTarget instanceof Node && rootRef.current?.contains(e.relatedTarget)) return;
+    const next = e.relatedTarget instanceof Element ? e.relatedTarget : null;
+    if (
+      next != null &&
+      (rootRef.current?.contains(next) || next.closest(`#${STATUS_FLYOUT_PANEL_ID}`) != null)
+    ) {
+      return;
+    }
     flyout.scheduleClose();
   };
 
@@ -1341,6 +1391,7 @@ export function StatusPill() {
     <div
       className="rounded-full border border-border px-[14px] py-[6px]"
       data-testid={StatusPillTestId.Root}
+      id={STATUS_PILL_DOM_ID}
       onBlur={onRootBlur}
       onMouseEnter={flyout.cancelClose}
       onMouseLeave={flyout.scheduleClose}
@@ -1536,7 +1587,7 @@ The dev server on `:3000` is typically already running and is NOT ours to restar
 - moving the pointer pill → panel does not close; leaving both closes after ~200ms;
 - panel content scrolls within 76vh; widths read ~640 (working) / ~720 (waiting);
 - **approve/reject click-through on a real pending approval if one exists** (check the waiting section; a `platba`/`mazani` one must show the hold-to-approve control) — the row flips to its terminal state and disappears on the next refetch; if no pending approval exists, verify the empty state copy ("žádná akce nečeká · ZIBBY sám neobjedná") and note the gap in the task log;
-- keyboard pass: Tab reaches the working trigger → panel opens on focus → Enter moves focus into the panel → Tab reaches a reject button → Escape closes and returns focus to the trigger without reopening;
+- keyboard pass: Tab reaches the working trigger → panel opens on focus → Enter moves focus into the panel **and the panel stays open well past 200ms** (the close grace must not fire on the keyboard focus-into-panel path — jsdom cannot verify this because the pill test mocks the panel) → Tab reaches a reject button → Escape closes and returns focus to the trigger without reopening;
 - cs ⇄ en switch shows the English section titles.
 Capture one screenshot of the open waiting panel after first paint.
 
@@ -1557,6 +1608,6 @@ Do **not** push and do **not** open a PR. Update `.superpowers/sdd3/progress.md`
 
 **1. Spec coverage** — Placement decision (spec §2, app-local, no DS primitive) → the plan creates files only under `apps/web/features/chat/`. Data flow (§3: `WORKING_STATUSES`, SSE-wired queries, count semantics) → Tasks 1 + 4. Component contracts (§4.1–4.5: every interface/TestId enum) → Tasks 1/2/3/4/5 reproduce them verbatim, including the HoldButton-testid caveat (§4.4) and the trigger ARIA set (§4.5). Visual contract (§5: solid surface tokens, SECTION_META with split dotTone/titleTone, ring-shadow flag, mount-only animation math) → Task 4's implementation carries the exact values and the `Container` style-passthrough channel. Interaction contract (§6.1 timings → Task 1 hook + Task 5 wiring; §6.2 keyboard incl. the suppress-focus-reopen guard → Task 5). i18n table (§7) → Task 6, sole catalog toucher, `approval.*` reused not duplicated. Load states (§8: Collection with `lg={2}`) → Task 4. Testing strategy (§9 jsdom-vs-live split) → unit tests in Tasks 1–5, live checklist in Task 7. Acceptance criteria (§10) map 1:1 onto Task 7's checklist + gates. No spec section is unassigned.
 
-**2. Placeholder scan** — No "TBD"/"similar to"/"add later". Every implementation step contains the complete file body; every test step contains runnable code plus the exact command and expected outcome. The three deliberate adapt-notes (Icon `size` member in Task 2, `LoadErrorTestId` import in Task 4, `userEvent.hover` pointer-event fallback in Task 5) each name the exact file to read and constrain the fix to the test/prop, not the contract.
+**2. Placeholder scan** — No "TBD"/"similar to"/"add later". Every implementation step contains the complete file body; every test step contains runnable code plus the exact command and expected outcome. The two deliberate adapt-notes (Icon `size` member in Task 2, `userEvent.hover` pointer-event fallback in Task 5) each name the exact file to read and constrain the fix to the test/prop, not the contract; `LoadErrorTestId` is imported (value `"load-error"`) directly in Task 4's printed test.
 
-**3. Type consistency across tasks** — `FlyoutSection`/`CLOSE_GRACE_MS`/`SECTION_META`/`WORKING_STATUSES`/`formatRelativeTime(iso, locale, now?)` are declared once in Task 1 and imported by name in Tasks 2–5. `FlyoutWorkRowProps { run: RunView; glyph: IconName }` (Task 2) matches Task 4's `renderItem` call (`glyph={runGlyph(run, glyphById)}`). `FlyoutApprovalRowProps { approval: DashboardApproval }` (Task 3) matches Task 4's waiting `renderItem`. `StatusFlyoutPanelProps`/`STATUS_FLYOUT_PANEL_ID`/`StatusFlyoutTestId` (Task 4) match Task 5's usage (`anchorRect`/`originRect`/`onMouseEnter`/`onMouseLeave`/`onRequestClose`/`section`, `aria-controls={STATUS_FLYOUT_PANEL_ID}`). The mutation call shape `{ params: { id }, body: {} }` is identical in Task 3's implementation, its GATE-BUG test assertion, and the Global Constraints. `SECTION_META.dotTone` feeds `StatusDot` and `.titleTone` feeds `Typography` — never crossed (the DotTone-"wait"/TypographyTone-"warn" split is stated in Task 1's code, the constraints, and the spec). `StatusPillTestId` values are unchanged from the shipped enum. Both `RunView` fixtures (Tasks 2 and 4) are the same complete-base builder; both `DashboardApproval` fixtures (Tasks 3 and 4) carry the full contract field set with no `as` casts.
+**3. Type consistency across tasks** — `FlyoutSection`/`CLOSE_GRACE_MS`/`SECTION_META`/`WORKING_STATUSES`/`STATUS_PILL_DOM_ID`/`formatRelativeTime(iso, locale, now?)` are declared once in Task 1 and imported by name in Tasks 2–5 (`STATUS_PILL_DOM_ID`: set on the pill root in Task 5, checked in the panel's blur handler in Task 4). The `HoldButtonTestId` DS-barrel export is produced by Task 1 Step 5, staged by Task 1 Step 8's `rtk git add libs/design-system/src/index.ts …`, and consumed by Task 3's test — no task after 1 touches `libs/`. `FlyoutWorkRowProps { run: RunView; glyph: IconName }` (Task 2) matches Task 4's `renderItem` call (`glyph={runGlyph(run, glyphById)}`). `FlyoutApprovalRowProps { approval: DashboardApproval }` (Task 3) matches Task 4's waiting `renderItem`. `StatusFlyoutPanelProps`/`STATUS_FLYOUT_PANEL_ID`/`StatusFlyoutTestId` (Task 4) match Task 5's usage (`anchorRect`/`originRect`/`onMouseEnter`/`onMouseLeave`/`onRequestClose`/`section`, `aria-controls={STATUS_FLYOUT_PANEL_ID}`). The mutation call shape `{ params: { id }, body: {} }` is identical in Task 3's implementation, its GATE-BUG test assertion, and the Global Constraints. `SECTION_META.dotTone` feeds `StatusDot` and `.titleTone` feeds `Typography` — never crossed (the DotTone-"wait"/TypographyTone-"warn" split is stated in Task 1's code, the constraints, and the spec). `StatusPillTestId` values are unchanged from the shipped enum. Both `RunView` fixtures (Tasks 2 and 4) are the same complete-base builder; both `DashboardApproval` fixtures (Tasks 3 and 4) carry the full contract field set with no `as` casts.

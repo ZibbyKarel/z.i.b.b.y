@@ -354,7 +354,14 @@ Hover-only is a WCAG violation; the flyout must be fully keyboard-operable.
   trigger already holds focus (Escape pressed on the trigger itself), no focus event will fire
   and an armed flag would wrongly swallow the *next* genuine focus-open.
 - **Focus-out closes.** A `focusout` whose `relatedTarget` is neither the pill nor the panel
-  arms `scheduleClose()` (keyboard analogue of mouse-leave).
+  arms `scheduleClose()` (keyboard analogue of mouse-leave). Both blur handlers check **both**
+  subtrees: the portalled panel is still a React child of the pill, so React re-dispatches
+  panel focus events through the pill's handler — a pill-only check would arm the grace when
+  focus moves *into* the panel. Each side recognizes the other via stable DOM ids
+  (`STATUS_FLYOUT_PANEL_ID` on the panel root, `STATUS_PILL_DOM_ID` on the pill root — the
+  latter lives in `statusFlyout.ts` to avoid a StatusPill↔panel import cycle).
+- **Focus-in cancels.** The panel's `onFocus` is wired to `cancelClose` (the keyboard analogue
+  of pointer-enter), so focus arriving in the panel defuses any pending grace.
 - **Not a focus trap.** This is a hover/richness panel, not a modal — Tab may leave it (which
   triggers focus-out close). No inert background, no scrim (the hover-close + focus-out-close
   pair covers dismissal; a full-viewport click-scrim like `Dropdown`'s is unnecessary for a
