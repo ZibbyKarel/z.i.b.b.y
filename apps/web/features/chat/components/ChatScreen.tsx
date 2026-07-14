@@ -12,7 +12,6 @@ import type {
 } from "@zibby/contracts";
 import {
   Container,
-  type DotTone,
   Icon,
   SearchBar,
   Stack,
@@ -27,15 +26,11 @@ import {
   type SetStateAction,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
 import { useNow } from "../../../hooks/useNow";
 import { MINUTE_MS } from "../../../utils/time";
-import { useAgentsQuery } from "../../agents/queries/useAgentsQuery";
-import { useChainsQuery } from "../../chains";
-import { usePinsQuery } from "../../pins";
 import { usePipelineRunQuery, usePipelinesQuery } from "../../pipelines";
 import { useRunAvatarMap, useRunGlyphMap, useRunsQuery } from "../../runs/queries/useRunsQuery";
 import { runAvatar, runGlyph } from "../../runs/run";
@@ -49,10 +44,7 @@ import { type AutoSpeakReplyOutcome, useAutoSpeak } from "../hooks/useAutoSpeak"
 import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
 import { useVoiceMode } from "../hooks/useVoiceMode";
 import { useSendChatMessageMutation } from "../mutations/useSendChatMessageMutation";
-import { buildConstellation } from "../scene/constellation";
-import { CosmicScene } from "../scene/CosmicScene";
-import { buildDock } from "../scene/dock";
-import type { SceneMode } from "../scene/sceneTypes";
+import { type ChatMode, MODE_DOT } from "../chatMode";
 import { ChatDetailDialog, type ChatDetailTarget } from "./ChatDetailDialog";
 import { ChatPalette } from "./ChatPalette";
 import { ChatTaskDetailColumn } from "./ChatTaskDetailColumn";
@@ -60,24 +52,9 @@ import { ChatTasksPanel } from "./ChatTasksPanel";
 import { ChatTranscript } from "./ChatTranscript";
 import { CoreOverviewDialog } from "./CoreOverviewDialog";
 import { StatusPill } from "./StatusPill";
+import { SubsystemOrbMap } from "./SubsystemOrbMap";
 import { VoiceStatusStrip } from "./VoiceStatusStrip";
 import { VoiceToggleButton } from "./VoiceToggleButton";
-
-/**
- * The header status dot — the same canonical state vocabulary that drives the orb,
- * expressed through the shared {@link StatusDot} primitive instead of a bespoke
- * inline colour. Maps the derived {@link SceneMode} to a dot tone + whether it's live.
- */
-const MODE_DOT: Record<SceneMode, { tone: DotTone; pulse: boolean }> = {
-  idle: { tone: "accent", pulse: false },
-  listening: { tone: "accent", pulse: true },
-  thinking: { tone: "run", pulse: true },
-  streaming: { tone: "run", pulse: true },
-  speaking: { tone: "ok", pulse: true },
-  tool: { tone: "run", pulse: true },
-  "waiting-approval": { tone: "wait", pulse: true },
-  error: { tone: "bad", pulse: false },
-};
 
 /** Statuses that put the orb in `waiting-approval` — a run parked on the
  * operator's decision (Rozhodnutí 5, phase-15 plan): over budget/behind an
@@ -108,6 +85,9 @@ export enum ChatScreenTestId {
   Greeting = "chat-screen-greeting",
   Close = "chat-screen-close",
   NewChat = "chat-screen-new-chat",
+  /** The header's derived-mode status dot (Task 13) — the surviving read-out of
+   * the retired scene's `data-mode`, now a plain DS `StatusDot`. */
+  ModeDot = "chat-screen-mode-dot",
 }
 
 export interface ChatScreenProps {
@@ -133,7 +113,7 @@ export interface ChatScreenProps {
 /**
  * The chat-first conversational surface, rendered by the `/chat` route inside the
  * dashboard shell (nav rail + top bar around it) — a JARVIS-style HUD with an
- * ambient {@link ChatOrb} behind the conversation, a scrollable transcript that
+ * ambient {@link SubsystemOrbMap} behind the conversation, a scrollable transcript that
  * fades into nothing at the top (scroll up to read back to the start), and the
  * text composer pinned at the bottom.
  *
@@ -193,14 +173,8 @@ export function ChatScreen({
   // without re-creating it. Assigned just below, once `voice` exists.
   const voiceActiveRef = useRef(false);
 
-  // Bumped once per finished turn so the scene can fire its completion flash
-  // (Tier 3). Kept separate from the transcript so an empty-but-done turn — a pure
-  // tool dispatch with no text — still flashes.
-  const [completedTick, setCompletedTick] = useState(0);
-
   const appendAssistant = useCallback(
     ({ turnId, text, toolEvents }: CompletedTurn) => {
-      setCompletedTick((t) => t + 1);
       if (!text && toolEvents.length === 0) return;
       setMessages((prev) => [
         ...prev,
@@ -400,30 +374,12 @@ export function ChatScreen({
   ]);
   const { data: lastRun } = usePipelineRunQuery(lastRunRef);
 
-  // The agent/pipeline roster: the operator's pinned agents/pipelines/chains first,
-  // then the imaged tail of the deduped agent catalog — coloured by category. The
-  // WebGL constellation ring is gone (the subsystem web is the centerpiece now); this
-  // survives only to colour the dock chips (`buildDock` resolves a run → its entry).
-  // Only rebuilt when one of its source catalogs changes.
-  const { data: agentCatalog } = useAgentsQuery();
+  // The pipeline catalog — still needed to feed `SubsystemOrbMap`'s active-run
+  // counts (it maps a run's `owner` pipeline to its `ownerSubsystem`).
   const { data: pipelineCatalog } = usePipelinesQuery();
-  const { data: chainCatalog } = useChainsQuery();
-  const { data: pins } = usePinsQuery();
-  const agents = useMemo(
-    () =>
-      buildConstellation({
-        agents: agentCatalog ?? [],
-        pipelines: pipelineCatalog ?? [],
-        chains: chainCatalog ?? [],
-        pins: pins ?? [],
-      }),
-    [agentCatalog, pipelineCatalog, chainCatalog, pins],
-  );
 
-  // The dock (Tier 5) — the running/queued agents & pipelines from the live runs
-  // feed (kept fresh by the shared RunEventsProvider bus), never the full roster.
+  // The running/queued runs feed (kept fresh by the shared RunEventsProvider bus).
   const { runs } = useRunsQuery();
-  const dock = useMemo(() => buildDock(runs, agents), [runs, agents]);
 
   // The subsystem web (Phase 83): the 8 named subsystems + live status, polled by
   // `useSubsystemsQuery` (Phase 80/82). Selection is local — clicking a node just
@@ -465,7 +421,7 @@ export function ChatScreen({
   const errorMode = stream.error !== null || sendMessage.isError;
   const waitingApproval = lastRun !== undefined && WAITING_APPROVAL_STATUSES.has(lastRun.status);
 
-  const mode: SceneMode = errorMode
+  const mode: ChatMode = errorMode
     ? "error"
     : waitingApproval
       ? "waiting-approval"
@@ -495,13 +451,11 @@ export function ChatScreen({
       className="relative flex h-full w-full flex-col overflow-hidden font-sans"
       data-testid={ChatScreenTestId.Root}
     >
-      {/* Task B6: Velín-D's clean radial backdrop, centered at 50% 42% (the
-          app-shell's shared --gradient-scene token is top-anchored at -8% for
-          other pages — this page needs its own center to frame the orb map).
-          Sits behind the WebGL scene, which normally paints over it fully;
-          it shows through only while that scene hasn't mounted yet (no-GPU
-          fallback, or the first frame before the async-imported controller
-          is ready) and at any edge the canvas doesn't cover. */}
+      {/* Task B6: the immersive orb map's clean radial backdrop, centered at
+          50% 42% (the app-shell's shared --gradient-scene token is top-anchored
+          at -8% for other pages — this page needs its own center to frame the
+          orb map). Sits behind `SubsystemOrbMap`; shows through at any edge its
+          DOM layers don't cover. */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 z-0 bg-[image:radial-gradient(ellipse_130%_100%_at_50%_42%,#121a27_0%,var(--color-background)_62%)]"
@@ -533,7 +487,12 @@ export function ChatScreen({
           <Typography mono size="sm" tone="accent" tracking="widest" type="note">
             {t("modeLabel")}
           </Typography>
-          <StatusDot pulse={MODE_DOT[mode].pulse} size="75" tone={MODE_DOT[mode].tone} />
+          <StatusDot
+            data-testid={ChatScreenTestId.ModeDot}
+            pulse={MODE_DOT[mode].pulse}
+            size="75"
+            tone={MODE_DOT[mode].tone}
+          />
         </Stack>
 
         <Stack align="center" direction="row" gap="200">
@@ -578,22 +537,23 @@ export function ChatScreen({
         </Stack>
       </div>
 
-      {/* The living cosmic scene, filling the page — the text-reactive orb (at half
-          scale, so the subsystem web can ring it) and the procedural nebula. Sits
-          behind every interactive surface (its own canvas layers are
-          pointer-events:none); the transcript floats over it in a legibility-
-          protected band. */}
-      <CosmicScene
-        completedTick={completedTick}
-        dock={dock}
-        mode={mode}
+      {/* The immersive orb map (Task 13), filling the page — the ellipse of
+          subsystem orbs ringing the central conversational core. Sits behind every
+          interactive surface (its DOM layers are pointer-events:none apart from
+          the orbs themselves); the transcript floats over it in a legibility-
+          protected band. Static phase-1 insets matching the left tasks panel
+          (300px, `w-[300px]` below) and the composer band (`~230px`, the
+          border-t + max-w-[720px] py-4 bar further down) — a measured-ref
+          refinement is optional follow-up polish, not required for parity. */}
+      <SubsystemOrbMap
+        insets={{ left: 300, right: 0, bottom: 230 }}
         onOpenCore={() => setCoreOpen(true)}
         onSelectSubsystem={setSelectedSubsystemId}
         pipelines={pipelineCatalog ?? []}
         runs={runs}
         selectedSubsystemId={selectedSubsystemId}
-        streamChars={stream.streaming ? stream.text.length : 0}
         subsystems={subsystems ?? []}
+        thinking={stream.streaming || sendMessage.isPending}
       />
 
       {/* ── Main area: scene behind, scrollable conversation over it ─────
@@ -709,16 +669,11 @@ export function ChatScreen({
       </div>
 
       {/* ── Subsystem mini-orbs ──────────────────────────────────────────
-          Phase 95: the 8 subsystems are now REAL WebGL mini-orbs (siblings of the
-          central orb, tinted per subsystem) rendered inside `CosmicScene` above,
-          ringed by a WebGL net that hugs the central orb. Their interactive/a11y
-          surface — hit-targets, labels, badges, selection ring — lives in the
-          `SubsystemOrbsOverlay` that `CosmicScene` renders, positioned from the
-          controller's per-frame projections. The retired SVG `SubsystemWeb` overlay
-          is gone; its `pipelines`/`runs`-driven handoff particles are restored in
-          WebGL by phase 97, fed straight into `CosmicScene` below (same catalogs,
-          same `onRunEvent` mapping — no new query). Selection still opens the
-          drawer below. */}
+          Task 13: the 8 subsystems render as `SubsystemOrbMap` DOM/CSS orb
+          nodes above (ringed around the central core), each an interactive,
+          keyboard-reachable `OrbNode` with its own hit-target, label, and
+          status badge — no WebGL, no per-frame projection math. Selection
+          still opens the drawer below. */}
 
       {/* ── Composer ─────────────────────────────────────────────────
           Phase 38: the unified `CommandLine` launcher in send-delegation mode
@@ -768,11 +723,11 @@ export function ChatScreen({
       )}
 
       {/* ── ZIBBY overview (Task C1) ─────────────────────────────────────
-          Clicking the central orb (via `CosmicScene` → `SubsystemOrbsOverlay`'s
-          center hit-target) opens this whole-federation snapshot. Picking a
-          subsystem row inside it reuses the existing selection state, so it
-          closes the overview and opens the same `SubsystemDrawer` a direct
-          mini-orb click would (Decision D4). */}
+          Clicking the central orb (via `SubsystemOrbMap`'s core hit-target)
+          opens this whole-federation snapshot. Picking a subsystem row inside
+          it reuses the existing selection state, so it closes the overview and
+          opens the same `SubsystemDrawer` a direct mini-orb click would
+          (Decision D4). */}
       <CoreOverviewDialog
         onClose={() => setCoreOpen(false)}
         onSelectSubsystem={(id) => {

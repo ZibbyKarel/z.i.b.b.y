@@ -163,7 +163,7 @@ export type { ProgressRingProps, ProgressRingSize } from "./components/ProgressR
 export { OrbitLoader, OrbitLoaderTestId } from "./components/OrbitLoader/OrbitLoader";
 export type { OrbitLoaderProps, OrbitLoaderSize } from "./components/OrbitLoader/OrbitLoader";
 
-export { StatusDot } from "./components/StatusDot/StatusDot";
+export { StatusDot, StatusDotTestId } from "./components/StatusDot/StatusDot";
 export type { DotTone, StatusDotProps } from "./components/StatusDot/StatusDot";
 
 export { Toggle, ToggleTestId } from "./components/Toggle/Toggle";

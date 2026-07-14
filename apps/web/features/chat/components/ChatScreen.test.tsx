@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { renderWithProviders, screen } from "../../../test/render";
+import { renderWithProviders, screen, within } from "../../../test/render";
 import { installEventSourceMock } from "../../../test/eventSourceMock";
 import {
   installMockSpeechRecognition,
@@ -183,10 +183,8 @@ vi.mock("../../projects/queries/useProjectsQuery", () => ({
   getProjectsQueryKey: () => ["projects"],
 }));
 // The `/settings` voice pick (Phase 119c) — both `ChatScreen` itself and every
-// `ChatMessage`'s read-aloud button read it. Mocked at the same module path
-// `CosmicScene.test.tsx` uses, so it also covers the real (unmocked) `CosmicScene`
-// child this suite renders. `undefined` data = `ttsVoice: null`, matching the
-// suite's existing behaviour before this option existed.
+// `ChatMessage`'s read-aloud button read it. `undefined` data = `ttsVoice: null`,
+// matching the suite's existing behaviour before this option existed.
 vi.mock("../../system", () => ({ useSystemConfigQuery: () => ({ data: undefined }) }));
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -205,14 +203,21 @@ vi.mock("../../pipelines", async (importOriginal) => {
 
 import { useState } from "react";
 import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
-import { EntityHeroTestId, SearchBarTestId, SearchMenuTestId } from "@zibby/design-system";
+import {
+  EntityHeroTestId,
+  OrbMapTestId,
+  OrbNodeTestId,
+  SearchBarTestId,
+  SearchMenuTestId,
+  StatusDotTestId,
+} from "@zibby/design-system";
 import { ChatScreen, ChatScreenTestId } from "./ChatScreen";
 import { VoiceToggleButtonTestId } from "./VoiceToggleButton";
 import { CommandLineTestId } from "../../tasks/components/CommandLine/CommandLine";
-import { CosmicSceneTestId } from "../scene/CosmicScene";
-import { SubsystemOrbsOverlayTestId } from "../scene/SubsystemOrbsOverlay";
+import { SubsystemDrawerTestId } from "../../subsystems/components/SubsystemDrawer/SubsystemDrawer";
 import { ChatDetailDialogTestId } from "./ChatDetailDialog";
 import { ChatPaletteTestId } from "./ChatPalette";
+import { SubsystemOrbMapTestId } from "./SubsystemOrbMap";
 
 // The transcript lives in the provider; this harness supplies the lifted state so the
 // component behaves exactly as it does under ChatProvider. `onClose` is spy-able so
@@ -301,9 +306,20 @@ describe("ChatScreen", () => {
   });
 
   describe("orb mode derivation (Fáze 14.1)", () => {
+    // Task 13: the retired scene's `data-mode` is gone — the derived `ChatMode`
+    // now only surfaces through the header's `StatusDot` (tone + pulse, via the
+    // `MODE_DOT` map in `../chatMode`). Several modes share a tone/pulse pair
+    // (`thinking`/`streaming`/`tool` are all `run`+pulsing), so these assertions
+    // can't distinguish between those modes from the dot alone — each test only
+    // checks that ITS scenario renders the dot state `MODE_DOT` says it should.
+    function modeDot() {
+      return within(screen.getByTestId(ChatScreenTestId.ModeDot)).getByTestId(StatusDotTestId.Dot);
+    }
+
     it("is idle with no activity", () => {
       renderWithProviders(<ChatScreenHarness />);
-      expect(screen.getByTestId(CosmicSceneTestId.Root)).toHaveAttribute("data-mode", "idle");
+      expect(modeDot()).toHaveClass("bg-accent");
+      expect(modeDot()).not.toHaveClass("animate-live");
     });
 
     it("is listening when the composer has a non-empty draft", async () => {
@@ -311,13 +327,15 @@ describe("ChatScreen", () => {
       renderWithProviders(<ChatScreenHarness />);
 
       await user.type(screen.getByTestId(CommandLineTestId.Input), "Ahoj");
-      expect(screen.getByTestId(CosmicSceneTestId.Root)).toHaveAttribute("data-mode", "listening");
+      expect(modeDot()).toHaveClass("bg-accent");
+      expect(modeDot()).toHaveClass("animate-live");
     });
 
     it("is thinking while the send mutation is pending", () => {
       sendState.isPending = true;
       renderWithProviders(<ChatScreenHarness />);
-      expect(screen.getByTestId(CosmicSceneTestId.Root)).toHaveAttribute("data-mode", "thinking");
+      expect(modeDot()).toHaveClass("bg-run");
+      expect(modeDot()).toHaveClass("animate-live");
     });
 
     it("is streaming once tokens are flowing", async () => {
@@ -331,7 +349,8 @@ describe("ChatScreen", () => {
         mock.last().emit({ conversationId: "c1", turnId: "t1", type: "delta", text: "Mám se" });
       });
 
-      expect(screen.getByTestId(CosmicSceneTestId.Root)).toHaveAttribute("data-mode", "streaming");
+      expect(modeDot()).toHaveClass("bg-run");
+      expect(modeDot()).toHaveClass("animate-live");
     });
 
     it("is tool while the last announced tool event is still running", async () => {
@@ -350,7 +369,8 @@ describe("ChatScreen", () => {
         });
       });
 
-      expect(screen.getByTestId(CosmicSceneTestId.Root)).toHaveAttribute("data-mode", "tool");
+      expect(modeDot()).toHaveClass("bg-run");
+      expect(modeDot()).toHaveClass("animate-live");
     });
 
     it("is error when the stream ends the turn with a terminal error frame (Fáze 15.3)", async () => {
@@ -364,7 +384,8 @@ describe("ChatScreen", () => {
         mock.last().emit({ conversationId: "c1", turnId: "t1", type: "error", message: "boom" });
       });
 
-      expect(screen.getByTestId(CosmicSceneTestId.Root)).toHaveAttribute("data-mode", "error");
+      expect(modeDot()).toHaveClass("bg-bad");
+      expect(modeDot()).not.toHaveClass("animate-live");
     });
 
     it("is waiting-approval when the last dispatched run is parked on the operator's decision (Fáze 15.3)", async () => {
@@ -384,42 +405,42 @@ describe("ChatScreen", () => {
         });
       });
 
-      expect(screen.getByTestId(CosmicSceneTestId.Root)).toHaveAttribute("data-mode", "waiting-approval");
+      expect(modeDot()).toHaveClass("bg-warn");
+      expect(modeDot()).toHaveClass("animate-live");
     });
   });
 
-  describe("subsystem mini-orbs overlay (Phase 95, was the SVG web in 83)", () => {
-    it("renders the overlay with all mocked subsystems, over the scene", () => {
+  describe("subsystem orb map (Task 13, was the WebGL overlay in Phase 95)", () => {
+    it("renders the map with all mocked subsystems, over the scene", () => {
       renderWithProviders(<ChatScreenHarness />);
 
-      expect(screen.getByTestId(SubsystemOrbsOverlayTestId.Root)).toBeInTheDocument();
-      expect(screen.getByTestId(`${SubsystemOrbsOverlayTestId.Node}-forge`)).toBeInTheDocument();
-      expect(screen.getByTestId(`${SubsystemOrbsOverlayTestId.Node}-puls`)).toBeInTheDocument();
+      expect(screen.getByTestId(SubsystemOrbMapTestId.Root)).toBeInTheDocument();
+      expect(screen.getByTestId(`${OrbMapTestId.Node}-forge`)).toBeInTheDocument();
+      expect(screen.getByTestId(`${OrbMapTestId.Node}-puls`)).toBeInTheDocument();
     });
 
-    it("clicking a node opens the drawer for that subsystem, and moving selection swaps it", async () => {
+    it("clicking a node opens the drawer for that subsystem, and picking a different node swaps it", async () => {
       const user = userEvent.setup();
       renderWithProviders(<ChatScreenHarness />);
 
-      const forgeNode = screen.getByTestId(`${SubsystemOrbsOverlayTestId.Node}-forge`);
-      expect(forgeNode).toHaveAttribute("aria-pressed", "false");
+      // `SubsystemOrbMap` no longer renders a selection ring on the node itself
+      // (Task 13 — that visual moved to whatever opens on selection): clicking
+      // opens the `SubsystemDrawer` for the picked subsystem.
+      expect(screen.queryByTestId(SubsystemDrawerTestId.Root)).not.toBeInTheDocument();
 
-      await user.click(forgeNode);
-      expect(screen.getByTestId(`${SubsystemOrbsOverlayTestId.Node}-forge`)).toHaveAttribute(
-        "aria-pressed",
-        "true",
+      const forgeButton = within(screen.getByTestId(`${OrbMapTestId.Node}-forge`)).getByTestId(
+        OrbNodeTestId.Root,
       );
+      await user.click(forgeButton);
+      expect(screen.getByTestId(SubsystemDrawerTestId.Root)).toBeInTheDocument();
+      expect(screen.getByTestId(SubsystemDrawerTestId.Name)).toHaveTextContent("Forge");
 
-      // Selecting a different node moves the ring — only one selection at a time.
-      await user.click(screen.getByTestId(`${SubsystemOrbsOverlayTestId.Node}-puls`));
-      expect(screen.getByTestId(`${SubsystemOrbsOverlayTestId.Node}-puls`)).toHaveAttribute(
-        "aria-pressed",
-        "true",
+      // Selecting a different node swaps the drawer's content — only one open at a time.
+      const pulsButton = within(screen.getByTestId(`${OrbMapTestId.Node}-puls`)).getByTestId(
+        OrbNodeTestId.Root,
       );
-      expect(screen.getByTestId(`${SubsystemOrbsOverlayTestId.Node}-forge`)).toHaveAttribute(
-        "aria-pressed",
-        "false",
-      );
+      await user.click(pulsButton);
+      expect(screen.getByTestId(SubsystemDrawerTestId.Name)).toHaveTextContent("Puls");
     });
   });
 

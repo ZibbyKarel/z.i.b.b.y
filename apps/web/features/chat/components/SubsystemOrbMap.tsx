@@ -7,6 +7,7 @@ import {
   type SubsystemWithStatus,
 } from "@zibby/contracts";
 import {
+  type EllipseInsets,
   Icon,
   type IconName,
   OrbMap,
@@ -33,6 +34,14 @@ export interface SubsystemOrbMapProps {
   thinking: boolean;
   /** Optional real hand-off events, passed straight through to `OrbMap`. */
   flares?: OrbMapFlare[];
+  /**
+   * Layout reserves (tasks panel, dock, chat bar), passed straight through to
+   * `OrbMap` — merged over its own all-zero default when omitted. Added by
+   * Task 13 so `ChatScreen` can thread the real seam insets (its 300px left
+   * tasks-panel gutter, the composer band's height) without the orb ellipse
+   * ever computing them itself.
+   */
+  insets?: Partial<EllipseInsets>;
   onOpenCore: () => void;
   onSelectSubsystem: (id: SubsystemId) => void;
 }
@@ -73,10 +82,9 @@ const CORE_ACTIVE_COUNT = 4;
  * onto `OrbMap`'s generic node/core props, in the fixed `SUBSYSTEMS` registry
  * order so the 8-node ring never reflows when the feed order changes.
  *
- * `insets` is intentionally NOT exposed here — `ChatScreen` (Task 13) measures the
- * tasks-panel width and chat-dock height and will thread real insets through the
- * seam once it swaps this component in; until then `OrbMap` falls back to its own
- * all-zero default.
+ * `insets` (Task 13) passes straight through to `OrbMap` — `ChatScreen` supplies
+ * the seam's real layout reserves (tasks-panel width, composer band height);
+ * omitted, `OrbMap` falls back to its own all-zero default.
  *
  * `selectedSubsystemId` is kept for interface parity with the seam contract, but
  * unused here: phase-1 selection visuals belong to whatever opens on selection
@@ -89,6 +97,7 @@ export function SubsystemOrbMap({
   selectedSubsystemId: _selectedSubsystemId,
   thinking,
   flares,
+  insets,
   onOpenCore,
   onSelectSubsystem,
 }: SubsystemOrbMapProps) {
@@ -130,6 +139,7 @@ export function SubsystemOrbMap({
           thinking,
         }}
         flares={flares}
+        insets={insets}
         nodes={nodes}
         onSelectCore={onOpenCore}
         onSelectNode={(id) => onSelectSubsystem(id as SubsystemId)}
