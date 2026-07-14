@@ -571,7 +571,14 @@ export function ChatScreen({
           the composer — lets its `z-30` (`SubsystemDrawer.tsx`) compete
           directly against those siblings and win. */}
       <div className="relative flex min-h-0 flex-1 flex-col">
-        <div className="relative z-10 flex h-full w-full flex-col items-center justify-end">
+        {/* Task 15 fix: this wrapper is `h-full w-full` and paints over the whole
+            SubsystemOrbMap behind it. Without `pointer-events-none` here it swallowed
+            every click outside its own populated regions — orbs and the core became
+            unclickable everywhere except inside the transcript box and the left panel.
+            `pointer-events-none` on the wrapper + `pointer-events-auto` back on the
+            transcript scroll area below (the left panel already does this) restores
+            the passthrough the OrbMap doc comment above assumes. */}
+        <div className="pointer-events-none relative z-10 flex h-full w-full flex-col items-center justify-end">
           {/* ── Left panel: ALL tasks in scope (Phase 57, was running-only in 44) ─
               A `z`-raised fixed-width column pinned to the left, above the scene
               like the top bar / composer. `pointer-events-none` on the gutter so
@@ -585,7 +592,7 @@ export function ChatScreen({
           </div>
 
           <div
-            className="relative z-10 flex h-1/2 w-full max-w-[720px] flex-col overflow-y-auto px-5 py-8"
+            className="pointer-events-auto relative z-10 flex h-1/2 w-full max-w-[720px] flex-col overflow-y-auto px-5 py-8"
             data-testid={ChatScreenTestId.ScrollArea}
             ref={scrollRef}
             style={{

@@ -1,3 +1,4 @@
+"use client";
 import { useEffect, useMemo, useRef } from "react";
 import { ensureImmersiveCss } from "../immersive.css";
 import { arcPath } from "./arcPath";
@@ -69,6 +70,7 @@ export function HandoffFlare({
     <span className="contents" data-testid={HandoffFlareTestId.Root}>
       {/* Launch ring — flares out from the source orb. */}
       <span
+        className="im-anim"
         data-testid={HandoffFlareTestId.Launch}
         style={{
           position: "absolute",
@@ -86,6 +88,7 @@ export function HandoffFlare({
       {/* Comet — a bright core plus two fading echo trails riding the same arc. */}
       {[0, 1, 2].map((i) => (
         <span
+          className="im-anim"
           data-testid={`${HandoffFlareTestId.Comet}-${i}`}
           key={i}
           style={{
@@ -108,6 +111,7 @@ export function HandoffFlare({
       ))}
       {/* Impact burst — core flash + expanding ring at the target orb. */}
       <span
+        className="im-anim"
         data-testid={HandoffFlareTestId.BurstCore}
         style={{
           position: "absolute",
@@ -123,6 +127,7 @@ export function HandoffFlare({
         }}
       />
       <span
+        className="im-anim"
         data-testid={HandoffFlareTestId.BurstRing}
         style={{
           position: "absolute",

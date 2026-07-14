@@ -1,3 +1,4 @@
+"use client";
 import type { KeyboardEvent } from "react";
 import { useCallback, useEffect } from "react";
 import { ensureImmersiveCss } from "../immersive.css";
@@ -87,6 +88,7 @@ export function CoreOrb({
       {/* Expanding heartbeat — cadence rises with activity. */}
       {[0, 1].map((i) => (
         <span
+          className="im-anim"
           data-testid={`${CoreOrbTestId.Ring}-${i}`}
           key={i}
           style={{

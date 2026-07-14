@@ -1,3 +1,4 @@
+"use client";
 import { useEffect } from "react";
 import { ensureImmersiveCss } from "../immersive.css";
 
@@ -57,6 +58,7 @@ export function ConnectorLayer({ center, nodes }: ConnectorLayerProps) {
             <path d={d} fill="none" stroke="rgba(255,255,255,0.09)" strokeWidth="1" />
             {n.live && (
               <path
+                className="im-anim"
                 d={d}
                 fill="none"
                 stroke={n.color}

@@ -1,3 +1,4 @@
+"use client";
 import type { KeyboardEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo } from "react";
 import { ensureImmersiveCss } from "../immersive.css";
@@ -111,6 +112,7 @@ export function OrbNode({
       tabIndex={0}
     >
       <div
+        className="im-anim"
         style={{
           position: "relative",
           width: diameter + 22,
@@ -122,6 +124,7 @@ export function OrbNode({
       >
         {/* Contact shadow — settles the orb into the 3D scene. */}
         <span
+          className="im-anim"
           data-testid={OrbNodeTestId.Shadow}
           style={{
             position: "absolute",
@@ -143,6 +146,7 @@ export function OrbNode({
         <OrbitField baseRadius={diameter / 2 + 13} color={st.color} count={activeCount} seed={nodeId} />
         {/* State halo — color = STATE, not identity. */}
         <span
+          className="im-anim"
           data-testid={OrbNodeTestId.Halo}
           style={{
             position: "absolute",
@@ -162,6 +166,7 @@ export function OrbNode({
         {/* Attention ping — only for states that need the operator's eye. */}
         {showPing && (
           <span
+            className="im-anim"
             data-testid={OrbNodeTestId.Ping}
             style={{
               position: "absolute",

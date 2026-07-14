@@ -1,3 +1,4 @@
+"use client";
 import { useEffect, useRef } from "react";
 import { canMountWebGL } from "../canMountWebGL";
 import type { OrbState } from "../orbState";
