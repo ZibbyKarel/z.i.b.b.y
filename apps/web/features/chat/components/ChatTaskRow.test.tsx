@@ -104,4 +104,41 @@ describe("ChatTaskRow (Phase 100: selects instead of navigating)", () => {
     );
     expect(screen.queryByTestId(ChatTaskRowTestId.Progress)).toBeNull();
   });
+
+  it("carries the tone-tinted border/glow only for a live run, but the matte edge bar always", () => {
+    const live = render(
+      <ChatTaskRow
+        glyph="bot"
+        onSelect={vi.fn()}
+        openAria="Open run: Live task"
+        run={run({ runId: "run_live", title: "Live task", status: "running" })}
+        selected={false}
+        stateLabel="Running"
+      />,
+    );
+    const liveRow = live.getByTestId(ChatTaskRowTestId.Row);
+    // Card's contract: `tone` (+ `living`) is reserved for a genuinely in-flight
+    // run — the toned border class only appears when live.
+    expect(liveRow.className).toContain("border-run/30");
+    // `edge` is unconditional — the 3px left rail is always state-tinted.
+    expect(liveRow.innerHTML).toContain("bg-run");
+    live.unmount();
+
+    const done = render(
+      <ChatTaskRow
+        glyph="bot"
+        onSelect={vi.fn()}
+        openAria="Open run: Done task"
+        run={run({ runId: "run_done", title: "Done task", status: "done" })}
+        selected={false}
+        stateLabel="Done"
+      />,
+    );
+    const doneRow = done.getByTestId(ChatTaskRowTestId.Row);
+    // Not live: no toned border/glow — falls back to the default matte border.
+    expect(doneRow.className).not.toContain("border-ok/30");
+    expect(doneRow.className).toContain("border-border");
+    // The edge bar still reads the state tone even though the card isn't live.
+    expect(doneRow.innerHTML).toContain("bg-ok");
+  });
 });

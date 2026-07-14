@@ -12,6 +12,10 @@ export enum ChatTasksPanelTestId {
   Root = "chat-tasks-panel",
   List = "chat-tasks-panel-list",
   Empty = "chat-tasks-panel-empty",
+  /** The header's localized title — selected by testid rather than asserting the
+   * translated copy itself, since the `chat.tasks.title` string is Task 7's to
+   * change (cs `"Tasky"` → `"Běžící úlohy"`). */
+  Title = "chat-tasks-panel-title",
 }
 
 /**
@@ -81,7 +85,9 @@ export function ChatTasksPanel({ selectedRunId, onSelectRun }: ChatTasksPanelPro
         <Stack align="center" direction="row" gap="100" justify="between">
           <Stack align="center" direction="row" gap="75">
             <StatusDot pulse size="75" tone="run" />
-            <Typography type="label">{t("title")}</Typography>
+            <Typography data-testid={ChatTasksPanelTestId.Title} type="label">
+              {t("title")}
+            </Typography>
           </Stack>
           <Typography mono type="note" variant="secondary">
             {runs.length}

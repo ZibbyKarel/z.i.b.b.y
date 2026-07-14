@@ -64,12 +64,13 @@ export interface ChatTaskRowProps {
  * screen renders its detail inline in a column beside the panel rather than
  * navigating to `/runs` (Phase 100 — mirrors the runs screen's own {@link TaskCard}).
  *
- * The card's left edge bar and border both read the shared {@link runStateTone}
- * (defaulted to `"accent"` — every card carries a tinted state color, live or
- * not), so the state reads at a glance even for a matte, finished task; the
- * glow (`living`) is reserved for a genuinely in-flight run (running /
- * awaiting-approval), consistent with the constellation/dock "glow only when
- * live" rule.
+ * The card's left edge bar always reads the shared {@link runStateTone}
+ * (defaulted to `"accent"` — every card carries a tinted edge, live or not),
+ * so the state reads at a glance even for a matte, finished task. The tinted
+ * border and glow (`tone`/`living`) are reserved for a genuinely in-flight run
+ * (running / awaiting-approval) — per `Card`'s own contract, `tone` is not a
+ * decoration to apply unconditionally, consistent with the constellation/dock
+ * "glow only when live" rule.
  */
 export function ChatTaskRow({
   run,
@@ -104,7 +105,7 @@ export function ChatTaskRow({
       living={live}
       onClick={() => onSelect(run.runId)}
       selected={selected}
-      tone={tone}
+      tone={live ? tone : undefined}
     >
       <Container padding="150">
         <Stack gap="75">

@@ -89,12 +89,11 @@ describe("ChatTasksPanel (Phase 57, selection wiring Phase 100)", () => {
     });
     render(<ChatTasksPanel onSelectRun={vi.fn()} selectedRunId={null} />);
 
-    // Renders whatever `chat.tasks.title` resolves to under the test locale (cs:
-    // "Tasky") — the copy itself is Task 7's to change, this only asserts the key
-    // is read and shown, plus the row count.
-    const root = screen.getByTestId(ChatTasksPanelTestId.Root);
-    expect(root).toHaveTextContent("Tasky");
-    expect(root).toHaveTextContent("2");
+    // Asserted via testid, not the translated copy: `chat.tasks.title`'s copy is
+    // Task 7's to change (cs "Tasky" → "Běžící úlohy"), so this only asserts the
+    // header title renders (whatever it currently says), plus the row count.
+    expect(screen.getByTestId(ChatTasksPanelTestId.Title)).toBeInTheDocument();
+    expect(screen.getByTestId(ChatTasksPanelTestId.Root)).toHaveTextContent("2");
   });
 
   // Phase 108: no global project scope any more — every project's tasks (and
