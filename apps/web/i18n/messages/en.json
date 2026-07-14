@@ -1602,7 +1602,7 @@
   },
   "chat": {
     "title": "Chat with ZIBBY",
-    "modeLabel": "CHAT",
+    "hudSwitchLabel": "Switch to HUD",
     "close": "Close",
     "newChat": "New chat",
     "greetingTitle": "I'm here, sir.",

@@ -1602,7 +1602,7 @@
   },
   "chat": {
     "title": "Chat se ZIBBY",
-    "modeLabel": "CHAT",
+    "hudSwitchLabel": "Přepnout na HUD",
     "close": "Zavřít",
     "newChat": "Nový chat",
     "greetingTitle": "Jsem tu, pane.",

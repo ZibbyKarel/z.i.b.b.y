@@ -19,16 +19,6 @@ export interface ChatTopBarProps {
 }
 
 /**
- * `apps/web/global.d.ts` types next-intl's `AppConfig.Messages` against the real,
- * current `en.json`, so `t()` type-checks every namespace/key literally — an
- * unknown key is a hard `TS2345`, not a soft runtime fallback. `chat.hudSwitchLabel`
- * is added in Task 7 (catalogs are that task's sole job here); until then this local
- * English placeholder stands in, mirroring Task 4's `FLYOUT_COPY` precedent. Task 7
- * should swap this back to `t("hudSwitchLabel")` once the catalog key lands.
- */
-const HUD_SWITCH_LABEL = "Overview";
-
-/**
  * The Velín-D glass top bar — exactly five elements, left→right: the live status
  * pill (+ the phase-3a flyout), the ⌘K searchbox, the Claude limits gauge, a switch
  * back to the HUD UI, and the language selector. A 56px transparent header; every
@@ -68,7 +58,7 @@ export function ChatTopBar({ onOpenPalette }: ChatTopBarProps) {
 
       <GlassSurface data-testid={ChatTopBarTestId.Hud} radius="pill" style={{ height: 40, width: 40 }}>
         <Link
-          aria-label={HUD_SWITCH_LABEL}
+          aria-label={t("hudSwitchLabel")}
           className="flex size-10 items-center justify-center text-foreground-dim outline-none transition-colors hover:text-accent focus-visible:text-accent"
           href="/overview"
         >
