@@ -77,4 +77,31 @@ describe("ChatTaskRow (Phase 100: selects instead of navigating)", () => {
     // for this row; ChatTasksPanel is the only reader of which row is open).
     expect(screen.getByTestId(ChatTaskRowTestId.Row).className).toContain("border-accent");
   });
+
+  it("shows the meta row always and a progress meter only when the run carries pct", () => {
+    const { rerender } = render(
+      <ChatTaskRow
+        glyph="bot"
+        onSelect={vi.fn()}
+        openAria="Open run: Fix login bug"
+        run={run({ runId: "run_a", title: "Fix login bug", pct: 74 })}
+        selected={false}
+        stateLabel="Running"
+      />,
+    );
+    expect(screen.getByTestId(ChatTaskRowTestId.Meta)).toBeInTheDocument();
+    expect(screen.getByTestId(ChatTaskRowTestId.Progress)).toHaveTextContent("74%");
+
+    rerender(
+      <ChatTaskRow
+        glyph="bot"
+        onSelect={vi.fn()}
+        openAria="Open run: Fix login bug"
+        run={run({ runId: "run_a", title: "Fix login bug", pct: null })}
+        selected={false}
+        stateLabel="Running"
+      />,
+    );
+    expect(screen.queryByTestId(ChatTaskRowTestId.Progress)).toBeNull();
+  });
 });

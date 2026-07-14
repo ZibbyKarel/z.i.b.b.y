@@ -1,12 +1,18 @@
+import { useState } from "react";
 import {
   Card,
   Container,
+  type DotTone,
+  Icon,
   type IconName,
   IconTile,
   Progress,
   Stack,
+  type StateTone,
+  StatusDot,
   Typography,
 } from "@zibby/design-system";
+import { compactAgo } from "../../../utils/time";
 import { type RunView, runStateTone, runTitle } from "../../runs/run";
 import { RunStateBadge } from "../../runs/components/RunStateBadge";
 
@@ -14,7 +20,22 @@ export enum ChatTaskRowTestId {
   /** The whole row is a button that selects the run — opening its detail inline,
    * beside the panel (Phase 100). No longer a `/runs?run=<id>` navigation. */
   Row = "chat-task-row",
+  /** The compact state strip: status dot, owner, state badge, relative start. */
+  Meta = "chat-task-row-meta",
+  /** The progress meter — only rendered when the run carries a live `pct`. */
+  Progress = "chat-task-row-progress",
 }
+
+/** `StatusDot` speaks the dot vocabulary (`wait`, not `warn`); map the card's
+ * canonical {@link StateTone} onto it so the meta row's dot always matches the
+ * edge bar/border tone exactly (one state, one color, two vocabularies). */
+const DOT_TONE_BY_STATE: Record<StateTone, DotTone> = {
+  accent: "accent",
+  ok: "ok",
+  warn: "wait",
+  bad: "bad",
+  run: "run",
+};
 
 export interface ChatTaskRowProps {
   run: RunView;
@@ -36,18 +57,19 @@ export interface ChatTaskRowProps {
 }
 
 /**
- * One compact row in the chat's left tasks panel: the routed entity's avatar/glyph,
- * the task-first title, a state chip and — when the run carries a live percentage —
- * a slim progress bar. The whole row is a button that selects the run; the chat
+ * One floating glass card in the chat's left tasks panel: a compact meta strip
+ * (state dot, owner, state badge, relative start), the task-first title, an
+ * "owner · phase" line, and — when the run carries a live percentage — a slim
+ * progress meter. The whole card is a button that selects the run; the chat
  * screen renders its detail inline in a column beside the panel rather than
  * navigating to `/runs` (Phase 100 — mirrors the runs screen's own {@link TaskCard}).
  *
- * Presentation mirrors the runs `TaskCard` but slimmed for the panel: the left edge
- * and glow read the shared {@link runStateTone} (single state map), and the glow is
- * reserved for a genuinely live run (running / awaiting-approval) — consistent with
- * the constellation/dock "glow only when live" rule. A finished or waiting task
- * renders matte (no glow), so the panel lists every task in scope while still
- * surfacing the live set at a glance.
+ * The card's left edge bar and border both read the shared {@link runStateTone}
+ * (defaulted to `"accent"` — every card carries a tinted state color, live or
+ * not), so the state reads at a glance even for a matte, finished task; the
+ * glow (`living`) is reserved for a genuinely in-flight run (running /
+ * awaiting-approval), consistent with the constellation/dock "glow only when
+ * live" rule.
  */
 export function ChatTaskRow({
   run,
@@ -59,11 +81,19 @@ export function ChatTaskRow({
   onSelect,
 }: ChatTaskRowProps) {
   const live = run.status === "running" || run.status === "awaiting-approval";
-  const tone = runStateTone(run.status);
+  // Mandatory default: `runStateTone` reads `undefined` for a neutral status
+  // (scheduled/queued/interrupted) — this card always carries a tone.
+  const tone = runStateTone(run.status) ?? "accent";
   const title = runTitle(run);
   // Only an agent run carries a run-level percentage; a pipeline/goal's progress
   // lives on its stage timeline, so the bar is honestly omitted rather than faked.
   const pct = run.pct ?? null;
+  // A pipeline/goal run names its current stage; an agent run has none, so the
+  // localized state label stands in — the line always has something to say.
+  const phase = run.currentStage ?? stateLabel;
+  // Computed once per mount (not per render) so "started Nm ago" stays purity-safe
+  // without a live-ticking clock this compact row doesn't need.
+  const [renderedAt] = useState(() => Date.now());
 
   return (
     <Card
@@ -74,10 +104,28 @@ export function ChatTaskRow({
       living={live}
       onClick={() => onSelect(run.runId)}
       selected={selected}
-      tone={live ? (run.status === "running" ? "run" : "warn") : undefined}
+      tone={tone}
     >
       <Container padding="150">
         <Stack gap="75">
+          <Stack
+            align="center"
+            data-testid={ChatTaskRowTestId.Meta}
+            direction="row"
+            gap="75"
+            justify="between"
+          >
+            <Stack align="center" direction="row" gap="75">
+              <StatusDot pulse={live} size="75" tone={DOT_TONE_BY_STATE[tone]} />
+              <Typography mono size="2xs" tone={tone} type="note">
+                {run.owner}
+              </Typography>
+              <RunStateBadge canonTitle={run.status} label={stateLabel} status={run.status} />
+            </Stack>
+            <Typography mono size="2xs" type="note" variant="tertiary">
+              {compactAgo(run.startedAt, renderedAt)}
+            </Typography>
+          </Stack>
           <Stack align="center" direction="row" gap="100">
             <IconTile alt="" glow={live} glyph={glyph} shape="circle" size="sm" src={avatar} />
             <Container grow minW0>
@@ -86,15 +134,29 @@ export function ChatTaskRow({
               </Typography>
             </Container>
           </Stack>
-          <Stack align="center" direction="row" gap="100" justify="between">
-            <RunStateBadge canonTitle={run.status} label={stateLabel} status={run.status} />
-            {pct != null && (
+          <Stack align="center" direction="row" gap="75">
+            <Icon name={live ? "pulse" : "run"} size="xs" tone={tone} />
+            <Container grow minW0>
+              <Typography mono truncate size="2xs" type="note" variant="tertiary">
+                {run.owner} · {phase}
+              </Typography>
+            </Container>
+          </Stack>
+          {pct != null && (
+            <Stack
+              align="center"
+              data-testid={ChatTaskRowTestId.Progress}
+              direction="row"
+              gap="100"
+            >
+              <Container grow>
+                <Progress tone={tone} value={pct} />
+              </Container>
               <Typography mono size="2xs" tone={tone} type="note">
                 {pct}%
               </Typography>
-            )}
-          </Stack>
-          {pct != null && <Progress tone={tone ?? "accent"} value={pct} />}
+            </Stack>
+          )}
         </Stack>
       </Container>
     </Card>

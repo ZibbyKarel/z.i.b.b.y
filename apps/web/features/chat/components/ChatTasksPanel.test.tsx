@@ -80,6 +80,23 @@ describe("ChatTasksPanel (Phase 57, selection wiring Phase 100)", () => {
     expect(screen.queryByTestId(ChatTasksPanelTestId.List)).not.toBeInTheDocument();
   });
 
+  it("shows the localized header title and a count of every listed task", () => {
+    runsMock.mockReturnValue({
+      runs: [
+        run({ runId: "run_a", title: "Fix login bug", status: "running" }),
+        run({ runId: "run_b", title: "Draft release notes", status: "done" }),
+      ],
+    });
+    render(<ChatTasksPanel onSelectRun={vi.fn()} selectedRunId={null} />);
+
+    // Renders whatever `chat.tasks.title` resolves to under the test locale (cs:
+    // "Tasky") — the copy itself is Task 7's to change, this only asserts the key
+    // is read and shown, plus the row count.
+    const root = screen.getByTestId(ChatTasksPanelTestId.Root);
+    expect(root).toHaveTextContent("Tasky");
+    expect(root).toHaveTextContent("2");
+  });
+
   // Phase 108: no global project scope any more — every project's tasks (and
   // unattributed ones) show together, simultaneously.
   it("shows tasks from every project at once", () => {

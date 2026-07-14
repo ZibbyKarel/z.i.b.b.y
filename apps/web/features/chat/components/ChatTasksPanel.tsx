@@ -1,6 +1,6 @@
 "use client";
 
-import { Container, Stack, Typography } from "@zibby/design-system";
+import { Container, Stack, StatusDot, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useRunAvatarMap, useRunGlyphMap, useRunsQuery } from "../../runs/queries/useRunsQuery";
@@ -77,7 +77,16 @@ export function ChatTasksPanel({ selectedRunId, onSelectRun }: ChatTasksPanelPro
 
   return (
     <Container data-testid={ChatTasksPanelTestId.Root}>
-      <HudPanel title={t("title")}>
+      <HudPanel>
+        <Stack align="center" direction="row" gap="100" justify="between">
+          <Stack align="center" direction="row" gap="75">
+            <StatusDot pulse size="75" tone="run" />
+            <Typography type="label">{t("title")}</Typography>
+          </Stack>
+          <Typography mono type="note" variant="secondary">
+            {runs.length}
+          </Typography>
+        </Stack>
         {ordered.length === 0 ? (
           <Typography
             mono
