@@ -97,8 +97,8 @@ vi.mock("../mutations/useSendChatMessageMutation", () => ({
   useSendChatMessageMutation: () => ({ mutate, isPending: sendState.isPending }),
 }));
 // CommandLine (child, Phase 38 — the chat composer in send-delegation mode)
-// reads the agent/pipeline catalogs for its @mention picker (Fáze 14.2); the ⌘K
-// palette (Fáze 14.5) reads the same two plus gates/memory — stub every one
+// reads the agent/pipeline catalogs for its @mention picker (Phase 14.2); the ⌘K
+// palette (Phase 14.5) reads the same two plus gates/memory — stub every one
 // (with one fixture each, reused by the 14.5 wiring tests below) so this suite
 // never hits the network.
 vi.mock("../../agents/queries/useAgentsQuery", () => ({
@@ -189,7 +189,7 @@ vi.mock("../../system", () => ({ useSystemConfigQuery: () => ({ data: undefined 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 // `ChatScreen` reads `usePipelineRunQuery` (the same aggregate `ChatRunCard` polls,
-// Rozhodnutí 5, Fáze 15.3) to derive the `waiting-approval` orb mode. Mock only that
+// Decision 5, Phase 15.3) to derive the `waiting-approval` orb mode. Mock only that
 // one export off the barrel — `CommandLine`/`ChatPalette` also import
 // `usePipelinesQuery` from the same barrel (already stubbed above at its own module
 // path), so this keeps the real barrel wiring for everything else.
@@ -305,7 +305,7 @@ describe("ChatScreen", () => {
     expect(screen.getByTestId(ChatScreenTestId.Greeting)).toBeInTheDocument();
   });
 
-  describe("orb mode derivation (Fáze 14.1)", () => {
+  describe("orb mode derivation (Phase 14.1)", () => {
     // Task 13: the retired scene's `data-mode` is gone — the derived `ChatMode`
     // now only surfaces through the header's `StatusDot` (tone + pulse, via the
     // `MODE_DOT` map in `../chatMode`). Several modes share a tone/pulse pair
@@ -373,7 +373,7 @@ describe("ChatScreen", () => {
       expect(modeDot()).toHaveClass("animate-live");
     });
 
-    it("is error when the stream ends the turn with a terminal error frame (Fáze 15.3)", async () => {
+    it("is error when the stream ends the turn with a terminal error frame (Phase 15.3)", async () => {
       const user = userEvent.setup();
       renderWithProviders(<ChatScreenHarness />);
 
@@ -388,7 +388,7 @@ describe("ChatScreen", () => {
       expect(modeDot()).not.toHaveClass("animate-live");
     });
 
-    it("is waiting-approval when the last dispatched run is parked on the operator's decision (Fáze 15.3)", async () => {
+    it("is waiting-approval when the last dispatched run is parked on the operator's decision (Phase 15.3)", async () => {
       pipelineRunMock.mockReturnValue({ data: { status: "awaiting-approval" } });
       const user = userEvent.setup();
       renderWithProviders(<ChatScreenHarness />);
@@ -444,8 +444,8 @@ describe("ChatScreen", () => {
     });
   });
 
-  describe("quick-switcher (Fáze 14.5)", () => {
-    it("⌘K opens the palette, and Esc closes it (Fáze 30)", async () => {
+  describe("quick-switcher (Phase 14.5)", () => {
+    it("⌘K opens the palette, and Esc closes it (Phase 30)", async () => {
       renderWithProviders(<ChatScreenHarness />);
 
       expect(screen.queryByTestId(ChatPaletteTestId.Root)).not.toBeInTheDocument();
@@ -456,7 +456,7 @@ describe("ChatScreen", () => {
       expect(screen.queryByTestId(ChatPaletteTestId.Root)).not.toBeInTheDocument();
     });
 
-    it("Ctrl+K toggles the palette closed on a second press, same as the search bar (Fáze 30)", async () => {
+    it("Ctrl+K toggles the palette closed on a second press, same as the search bar (Phase 30)", async () => {
       renderWithProviders(<ChatScreenHarness />);
 
       fireKey({ key: "k", ctrlKey: true });

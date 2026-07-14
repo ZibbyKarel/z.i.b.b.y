@@ -57,7 +57,7 @@ import { VoiceStatusStrip } from "./VoiceStatusStrip";
 import { VoiceToggleButton } from "./VoiceToggleButton";
 
 /** Statuses that put the orb in `waiting-approval` — a run parked on the
- * operator's decision (Rozhodnutí 5, phase-15 plan): over budget/behind an
+ * operator's decision (Decision 5, phase-15 plan): over budget/behind an
  * approval (`awaiting-approval`/`held`) or parked after exhausting retries
  * (`parked`). */
 const WAITING_APPROVAL_STATUSES = new Set(["awaiting-approval", "parked", "held"]);
@@ -222,7 +222,7 @@ export function ChatScreen({
   });
 
   // A turn is in flight from send (`isPending`) through the streamed reply until
-  // the terminal `done`/`error` (Fáze 14.1). Hoisted above `send`/`voice` (was
+  // the terminal `done`/`error` (Phase 14.1). Hoisted above `send`/`voice` (was
   // derived lower down pre-119d) because turn-taking now needs it as the mic's
   // idle gate.
   const thinking = sendMessage.isPending || stream.streaming;
@@ -240,7 +240,7 @@ export function ChatScreen({
       ...prev,
       { id: `u-${crypto.randomUUID()}`, role: "user", text, at: new Date().toISOString() },
     ]);
-    // The composer owns `target` (the @mention picker, Fáze 14.2) and clears its own
+    // The composer owns `target` (the @mention picker, Phase 14.2) and clears its own
     // selection once this fires — nothing further to reset here.
     sendMessage.mutate({ body: { conversationId, text, ...(target ? { target } : {}) } });
   };
@@ -295,7 +295,7 @@ export function ChatScreen({
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages.length, stream.text, stream.toolEvents.length]);
 
-  // Fáze 14.5: the ⌘K quick-switcher is an overlay ON TOP of the conversation.
+  // Phase 14.5: the ⌘K quick-switcher is an overlay ON TOP of the conversation.
   // Owned here (not by the palette itself) so Esc priority and the search-bar
   // toggle read from one source of truth. (Phase 39 removed the sibling activity
   // panel this used to be mutually exclusive with — the HUD right rail is the
@@ -315,7 +315,7 @@ export function ChatScreen({
   }, []);
   const handlePaletteNavigate = useCallback(
     (href: Route) => {
-      // Gates/memory have nowhere to render inline yet (Rozhodnutí 7's sanctioned
+      // Gates/memory have nowhere to render inline yet (Decision 7's sanctioned
       // fallback) — navigating there leaves `/chat`, same as any other nav-rail jump.
       setPaletteOpen(false);
       router.push(href);
@@ -354,7 +354,7 @@ export function ChatScreen({
   }, [openPalette]);
 
   // Composer activity is the only new state this phase adds — everything else the
-  // orb needs is already carried by the stream + mutation (see Rozhodnutí 1, Fáze
+  // orb needs is already carried by the stream + mutation (see Decision 1, Phase
   // 14.1 of the phase-14 plan).
   const [hasDraft, setHasDraft] = useState(false);
 
@@ -366,7 +366,7 @@ export function ChatScreen({
   // committed transcript (newest first) — always computed so the query below
   // stays an unconditional hook call (React rules). `usePipelineRunQuery` itself
   // no-ops on `null` (`enabled: pipelineRunId !== null`), and shares its cache
-  // with `ChatRunCard` (Rozhodnutí 5, Fáze 15.3) — no new polling for a run
+  // with `ChatRunCard` (Decision 5, Phase 15.3) — no new polling for a run
   // already rendered inline in the transcript.
   const lastRunRef = findLastRunRef([
     stream.toolEvents,
@@ -703,7 +703,7 @@ export function ChatScreen({
         </div>
       </div>
 
-      {/* ── Quick-switcher (Fáze 14.5) ──────────────────────────────────
+      {/* ── Quick-switcher (Phase 14.5) ──────────────────────────────────
           Floats above everything else on the page; mounted only while open
           so its own data hooks don't fire until the operator asks. */}
       {paletteOpen && (
