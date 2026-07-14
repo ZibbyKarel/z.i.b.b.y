@@ -110,7 +110,7 @@ vi.mock("../../pipelines/queries/usePipelinesQuery", () => ({
   getPipelinesQueryKey: () => ["pipelines"],
 }));
 // The Phase 83 subsystem web strip polls the subsystem-federation registry — stub it
-// with a couple of fixtures (one klid, one bezi) so the suite never hits the network
+// with a couple of fixtures (one idle, one running) so the suite never hits the network
 // and the strip has something concrete to assert against.
 vi.mock("../../subsystems/queries/useSubsystemsQuery", () => ({
   useSubsystemsQuery: () => ({
@@ -122,7 +122,7 @@ vi.mock("../../subsystems/queries/useSubsystemsQuery", () => ({
         mandate: "…",
         color: "#f97316",
         heroImage: null,
-        state: "klid",
+        state: "idle",
         tier2Count: 0,
         tier3Count: 0,
       },
@@ -133,7 +133,7 @@ vi.mock("../../subsystems/queries/useSubsystemsQuery", () => ({
         mandate: "…",
         color: "#14b8a6",
         heroImage: null,
-        state: "bezi",
+        state: "running",
         tier2Count: 0,
         tier3Count: 0,
       },

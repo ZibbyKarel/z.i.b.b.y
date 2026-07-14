@@ -54,26 +54,27 @@ export interface SubsystemDrawerProps {
 const SUBSYSTEM_DRAWER_TABS = ["roster", "aktivita", "gates", "artefakty"] as const;
 
 /**
- * Status-dot tone + pulse per subsystem state (design doc vocabulary: klid
- * muted, bezi active, hlaseni a ready Tier-2 report, ceka an urgent Tier-3
- * decision). The DS `StatusDot` tone palette (`DotTone`) has no per-instance
- * color slot, so `bezi` — the design doc's "info/own-color" pairing — reads
- * through the shared `run` tone, the same one every other "actively working"
- * indicator in the app uses (see `ChatScreen`'s `MODE_DOT`). `hlaseni`/`ceka`
- * mirror `SubsystemWeb`'s own per-state read (calm `ok` vs urgent `wait`).
+ * Status-dot tone + pulse per subsystem state (design doc vocabulary: idle
+ * muted, running active, report a ready Tier-2 report, waiting an urgent
+ * Tier-3 decision). The DS `StatusDot` tone palette (`DotTone`) has no
+ * per-instance color slot, so `running` — the design doc's "info/own-color"
+ * pairing — reads through the shared `run` tone, the same one every other
+ * "actively working" indicator in the app uses (see `ChatScreen`'s
+ * `MODE_DOT`). `report`/`waiting` mirror `SubsystemWeb`'s own per-state read
+ * (calm `ok` vs urgent `wait`).
  */
 const STATE_DOT: Record<SubsystemState, { tone: DotTone; pulse: boolean }> = {
-  klid: { tone: "idle", pulse: false },
-  bezi: { tone: "run", pulse: true },
-  hlaseni: { tone: "ok", pulse: false },
-  ceka: { tone: "wait", pulse: true },
+  idle: { tone: "idle", pulse: false },
+  running: { tone: "run", pulse: true },
+  report: { tone: "ok", pulse: false },
+  waiting: { tone: "wait", pulse: true },
 };
 
 /** Count-badge tone for the two states that carry one — mirrors
- * `SubsystemWeb`'s `BADGE_TONE_CLASS` (hlaseni calm ok, ceka urgent warn). */
+ * `SubsystemWeb`'s `BADGE_TONE_CLASS` (report calm ok, waiting urgent warn). */
 const STATE_TAG_TONE: Partial<Record<SubsystemState, TagTone>> = {
-  hlaseni: "ok",
-  ceka: "warn",
+  report: "ok",
+  waiting: "warn",
 };
 
 /**
@@ -181,9 +182,9 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
   const dot = STATE_DOT[subsystem.state];
   const tagTone = STATE_TAG_TONE[subsystem.state];
   const countLabel =
-    subsystem.state === "hlaseni"
+    subsystem.state === "report"
       ? t("tier2Badge", { count: subsystem.tier2Count })
-      : subsystem.state === "ceka"
+      : subsystem.state === "waiting"
         ? t("tier3Badge", { count: subsystem.tier3Count })
         : null;
   const showCount = countLabel !== null && tagTone !== undefined;

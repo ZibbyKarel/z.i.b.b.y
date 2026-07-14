@@ -5,10 +5,10 @@ import { CoreOverviewDialog, CoreOverviewDialogTestId } from "./CoreOverviewDial
 vi.mock("../../subsystems/queries/useSubsystemsQuery", () => ({
   useSubsystemsQuery: () => ({
     data: [
-      { id: "forge", name: "Forge", color: "#5b8def", state: "bezi" },
-      { id: "loom", name: "Loom", color: "#3fcf8e", state: "hlaseni" },
-      { id: "scout", name: "Scout", color: "#f0b429", state: "ceka" },
-      { id: "vault", name: "Vault", color: "#66737f", state: "klid" },
+      { id: "forge", name: "Forge", color: "#5b8def", state: "running" },
+      { id: "loom", name: "Loom", color: "#3fcf8e", state: "report" },
+      { id: "scout", name: "Scout", color: "#f0b429", state: "waiting" },
+      { id: "vault", name: "Vault", color: "#66737f", state: "idle" },
     ],
   }),
 }));

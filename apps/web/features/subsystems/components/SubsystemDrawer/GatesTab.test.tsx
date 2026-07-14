@@ -38,7 +38,7 @@ const subsystem = {
   mandate: forge.mandate,
   color: forge.color,
   heroImage: null,
-  state: "klid" as const,
+  state: "idle" as const,
   tier2Count: 0,
   tier3Count: 0,
 };

@@ -88,16 +88,16 @@ function build(opts: {
 
 describe("SubsystemsService", () => {
   describe("get() — attribution", () => {
-    it("a running run on an owned pipeline reads as bezi", async () => {
+    it("a running run on an owned pipeline reads as running", async () => {
       const { service } = build({
         pipelines: [pipelineFixture("delivery", "forge")],
         runs: [taskRunFixture({ runId: "delivery_1", kind: "pipeline", owner: "delivery", status: "running" })],
       });
       const forge = await service.get("forge");
-      expect(forge).toMatchObject({ state: "bezi", tier2Count: 0, tier3Count: 0 });
+      expect(forge).toMatchObject({ state: "running", tier2Count: 0, tier3Count: 0 });
     });
 
-    it("a running run on an owned chain also reads as bezi", async () => {
+    it("a running run on an owned chain also reads as running", async () => {
       const { service } = build({
         chains: [chainFixture("research-then-build", "scout")],
         runs: [
@@ -110,10 +110,10 @@ describe("SubsystemsService", () => {
         ],
       });
       const scout = await service.get("scout");
-      expect(scout.state).toBe("bezi");
+      expect(scout.state).toBe("running");
     });
 
-    it("a pending pipeline-output approval attributes to the owning subsystem as ceka", async () => {
+    it("a pending pipeline-output approval attributes to the owning subsystem as waiting", async () => {
       const { service } = build({
         pipelines: [pipelineFixture("delivery", "forge")],
         runs: [
@@ -127,7 +127,7 @@ describe("SubsystemsService", () => {
         pendingApprovals: [approvalFixture({ id: "appr-1", runId: "delivery_1", kind: "pipeline-output" })],
       });
       const forge = await service.get("forge");
-      expect(forge).toMatchObject({ state: "ceka", tier3Count: 1 });
+      expect(forge).toMatchObject({ state: "waiting", tier3Count: 1 });
     });
 
     it("a pending pipeline-stage approval (stage-run-id prefix) attributes the same way", async () => {
@@ -146,10 +146,10 @@ describe("SubsystemsService", () => {
         ],
       });
       const forge = await service.get("forge");
-      expect(forge).toMatchObject({ state: "ceka", tier3Count: 1 });
+      expect(forge).toMatchObject({ state: "waiting", tier3Count: 1 });
     });
 
-    it("precedence: ceka wins even while another owned run is running (bezi)", async () => {
+    it("precedence: waiting wins even while another owned run is running", async () => {
       const { service } = build({
         pipelines: [pipelineFixture("delivery", "forge"), pipelineFixture("release", "forge")],
         runs: [
@@ -164,11 +164,11 @@ describe("SubsystemsService", () => {
         pendingApprovals: [approvalFixture({ id: "appr-1", runId: "release_1", kind: "pipeline-output" })],
       });
       const forge = await service.get("forge");
-      expect(forge.state).toBe("ceka");
+      expect(forge.state).toBe("waiting");
       expect(forge.tier3Count).toBe(1);
     });
 
-    it("a completed owned run after lastSeenAt reads as hlaseni with a count", async () => {
+    it("a completed owned run after lastSeenAt reads as report with a count", async () => {
       const { service } = build({
         pipelines: [pipelineFixture("delivery", "forge")],
         runs: [
@@ -182,10 +182,10 @@ describe("SubsystemsService", () => {
         ],
       });
       const forge = await service.get("forge");
-      expect(forge).toMatchObject({ state: "hlaseni", tier2Count: 1 });
+      expect(forge).toMatchObject({ state: "report", tier2Count: 1 });
     });
 
-    it("an errored owned run after lastSeenAt also counts toward hlaseni", async () => {
+    it("an errored owned run after lastSeenAt also counts toward report", async () => {
       const { service } = build({
         pipelines: [pipelineFixture("delivery", "forge")],
         runs: [
@@ -199,7 +199,7 @@ describe("SubsystemsService", () => {
         ],
       });
       const forge = await service.get("forge");
-      expect(forge).toMatchObject({ state: "hlaseni", tier2Count: 1 });
+      expect(forge).toMatchObject({ state: "report", tier2Count: 1 });
     });
 
     it("a completed run BEFORE lastSeenAt does not count", async () => {
@@ -217,13 +217,13 @@ describe("SubsystemsService", () => {
         seenAt: { forge: LATER },
       });
       const forge = await service.get("forge");
-      expect(forge).toMatchObject({ state: "klid", tier2Count: 0 });
+      expect(forge).toMatchObject({ state: "idle", tier2Count: 0 });
     });
 
-    it("with no owned activity a subsystem reads as klid with zero counts", async () => {
+    it("with no owned activity a subsystem reads as idle with zero counts", async () => {
       const { service } = build({});
       const puls = await service.get("puls");
-      expect(puls).toMatchObject({ state: "klid", tier2Count: 0, tier3Count: 0 });
+      expect(puls).toMatchObject({ state: "idle", tier2Count: 0, tier3Count: 0 });
     });
 
     it("throws SubsystemNotFoundError for an id outside the registry", async () => {
@@ -242,7 +242,7 @@ describe("SubsystemsService", () => {
         ],
       });
       const forge = await service.get("forge");
-      expect(forge).toMatchObject({ state: "klid", tier3Count: 0 });
+      expect(forge).toMatchObject({ state: "idle", tier3Count: 0 });
     });
 
     it("a run on an unowned pipeline never surfaces for any subsystem", async () => {
@@ -251,7 +251,7 @@ describe("SubsystemsService", () => {
         runs: [taskRunFixture({ runId: "orphan_1", kind: "pipeline", owner: "orphan", status: "running" })],
       });
       const rows = await service.list();
-      expect(rows.every((r) => r.state === "klid")).toBe(true);
+      expect(rows.every((r) => r.state === "idle")).toBe(true);
     });
 
     it("an agent-kind run never attributes (only pipeline/chain owners exist)", async () => {
@@ -260,12 +260,12 @@ describe("SubsystemsService", () => {
         runs: [taskRunFixture({ runId: "koder_1", kind: "agent", owner: "koder", status: "running" })],
       });
       const forge = await service.get("forge");
-      expect(forge.state).toBe("klid");
+      expect(forge.state).toBe("idle");
     });
   });
 
   describe("markSeen", () => {
-    it("resets tier2Count to 0 and the state falls back to klid once seen", async () => {
+    it("resets tier2Count to 0 and the state falls back to idle once seen", async () => {
       const { service, seenStore } = build({
         pipelines: [pipelineFixture("delivery", "forge")],
         runs: [
@@ -282,10 +282,10 @@ describe("SubsystemsService", () => {
 
       const refreshed = await service.markSeen("forge");
       expect(seenStore.markSeen).toHaveBeenCalledWith("forge");
-      expect(refreshed).toMatchObject({ state: "klid", tier2Count: 0 });
+      expect(refreshed).toMatchObject({ state: "idle", tier2Count: 0 });
     });
 
-    it("falls back to bezi (not klid) when a run is still active after being seen", async () => {
+    it("falls back to running (not idle) when a run is still active after being seen", async () => {
       const { service } = build({
         pipelines: [pipelineFixture("delivery", "forge")],
         runs: [
@@ -300,7 +300,7 @@ describe("SubsystemsService", () => {
         ],
       });
       const refreshed = await service.markSeen("forge");
-      expect(refreshed).toMatchObject({ state: "bezi", tier2Count: 0 });
+      expect(refreshed).toMatchObject({ state: "running", tier2Count: 0 });
     });
 
     it("throws SubsystemNotFoundError for an unknown id", async () => {
@@ -310,7 +310,7 @@ describe("SubsystemsService", () => {
   });
 
   describe("list() — severity ordering", () => {
-    it("sorts ceka first, then hlaseni, then bezi, then klid; registry order is the stable tiebreak", async () => {
+    it("sorts waiting first, then report, then running, then idle; registry order is the stable tiebreak", async () => {
       const { service } = build({
         pipelines: [
           pipelineFixture("p-beacon", "beacon"),
@@ -318,9 +318,9 @@ describe("SubsystemsService", () => {
           pipelineFixture("p-forge", "forge"),
         ],
         runs: [
-          // forge: running → bezi
+          // forge: running → running
           taskRunFixture({ runId: "p-forge_1", kind: "pipeline", owner: "p-forge", status: "running" }),
-          // scout: completed after lastSeenAt → hlaseni
+          // scout: completed after lastSeenAt → report
           taskRunFixture({
             runId: "p-scout_1",
             kind: "pipeline",
@@ -328,7 +328,7 @@ describe("SubsystemsService", () => {
             status: "done",
             startedAt: LATER,
           }),
-          // beacon: awaiting-approval, attributed below → ceka
+          // beacon: awaiting-approval, attributed below → waiting
           taskRunFixture({
             runId: "p-beacon_1",
             kind: "pipeline",
@@ -340,27 +340,27 @@ describe("SubsystemsService", () => {
       });
       const rows = await service.list();
       const ids = rows.map((r) => r.id);
-      const cekaIndex = ids.indexOf("beacon");
-      const hlaseniIndex = ids.indexOf("scout");
-      const beziIndex = ids.indexOf("forge");
-      const klidIndexes = ids
+      const waitingIndex = ids.indexOf("beacon");
+      const reportIndex = ids.indexOf("scout");
+      const runningIndex = ids.indexOf("forge");
+      const idleIndexes = ids
         .map((id, i) => [id, i] as const)
         .filter(([id]) => !["beacon", "scout", "forge"].includes(id))
         .map(([, i]) => i);
 
-      expect(cekaIndex).toBeLessThan(hlaseniIndex);
-      expect(hlaseniIndex).toBeLessThan(beziIndex);
-      expect(Math.max(beziIndex)).toBeLessThan(Math.min(...klidIndexes));
+      expect(waitingIndex).toBeLessThan(reportIndex);
+      expect(reportIndex).toBeLessThan(runningIndex);
+      expect(Math.max(runningIndex)).toBeLessThan(Math.min(...idleIndexes));
 
-      // registry-order tiebreak among the untouched `klid` entries.
-      const klidIds = klidIndexes.map((i) => ids[i]);
-      const registryKlidOrder = SUBSYSTEMS.map((s) => s.id).filter(
+      // registry-order tiebreak among the untouched `idle` entries.
+      const idleIds = idleIndexes.map((i) => ids[i]);
+      const registryIdleOrder = SUBSYSTEMS.map((s) => s.id).filter(
         (id) => !["beacon", "scout", "forge"].includes(id),
       );
-      expect(klidIds).toEqual(registryKlidOrder);
+      expect(idleIds).toEqual(registryIdleOrder);
     });
 
-    it("within ceka, higher tier3Count sorts first", async () => {
+    it("within waiting, higher tier3Count sorts first", async () => {
       const { service } = build({
         pipelines: [pipelineFixture("p-beacon", "beacon"), pipelineFixture("p-sentinel", "sentinel")],
         runs: [
@@ -390,16 +390,16 @@ describe("SubsystemsService", () => {
         ],
       });
       const rows = await service.list();
-      const ids = rows.filter((r) => r.state === "ceka").map((r) => r.id);
+      const ids = rows.filter((r) => r.state === "waiting").map((r) => r.id);
       expect(ids).toEqual(["sentinel", "beacon"]);
     });
 
-    it("all-klid registry stays in registry order (list() still returns all 8)", async () => {
+    it("all-idle registry stays in registry order (list() still returns all 8)", async () => {
       const { service } = build({});
       const rows = await service.list();
       expect(rows).toHaveLength(8);
       expect(rows.map((r) => r.id)).toEqual(SUBSYSTEMS.map((s) => s.id));
-      expect(rows.every((r) => r.state === "klid")).toBe(true);
+      expect(rows.every((r) => r.state === "idle")).toBe(true);
     });
   });
 });

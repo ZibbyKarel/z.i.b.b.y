@@ -113,19 +113,19 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
 ];
 
 /**
- * A subsystem's current activity, as read by the top-level UI. `klid` idle,
- * `bezi` actively working (Tier 1, quiet), `hlaseni` has a Tier-2 report ready,
- * `ceka` needs a Tier-3 decision. Phase 80 always serves `klid` — real
+ * A subsystem's current activity, as read by the top-level UI. `idle` idle,
+ * `running` actively working (Tier 1, quiet), `report` has a Tier-2 report ready,
+ * `waiting` needs a Tier-3 decision. Phase 80 always serves `idle`; real
  * aggregation across running pipelines/goals/approvals lands in phase 82.
  */
-export const SubsystemStateSchema = z.enum(["klid", "bezi", "hlaseni", "ceka"]);
+export const SubsystemStateSchema = z.enum(["idle", "running", "report", "waiting"]);
 export type SubsystemState = z.infer<typeof SubsystemStateSchema>;
 
 /**
  * A subsystem's identity plus its live status: `state` plus how many Tier-2
  * (act-then-report) and Tier-3 (surface-and-wait) items are outstanding. The
  * shape lands in phase 80 so the web query is stable; phase 82 fills in real
- * counts instead of the phase-80 stub `{ state: "klid", tier2Count: 0, tier3Count: 0 }`.
+ * counts instead of the phase-80 stub `{ state: "idle", tier2Count: 0, tier3Count: 0 }`.
  */
 export const SubsystemWithStatusSchema = SubsystemSchema.extend({
   state: SubsystemStateSchema,

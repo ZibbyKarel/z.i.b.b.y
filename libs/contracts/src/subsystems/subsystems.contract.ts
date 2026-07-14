@@ -9,7 +9,7 @@ const c = initContract();
  * The subsystem-federation registry (design doc
  * `docs/superpowers/specs/2026-07-08-subsystem-federation-design.md`): the eight
  * named subsystems plus their live status. Phase 80 is identity + a stub status
- * (`state: "klid"`, zero counts); phase 82 fills in real aggregation.
+ * (`state: "idle"`, zero counts); phase 82 fills in real aggregation.
  */
 export const subsystemsContract = c.router(
   {
@@ -49,7 +49,7 @@ export const subsystemsContract = c.router(
         404: ErrorSchema,
       },
       summary:
-        "Acknowledge a subsystem's Tier-2 reports (opening its drawer) — resets its hlaseni window and returns the refreshed entry",
+        "Acknowledge a subsystem's Tier-2 reports (opening its drawer) — resets its report window and returns the refreshed entry",
     },
   },
   {

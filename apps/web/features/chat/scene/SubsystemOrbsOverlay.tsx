@@ -182,14 +182,14 @@ export function SubsystemOrbsOverlay({
         const selected = selectedId === s.id;
         const stateLabel = t(`state.${s.state}`);
         let ariaLabel = t("nodeAria", { name: s.name, state: stateLabel });
-        if (s.state === "hlaseni" && s.tier2Count > 0) {
+        if (s.state === "report" && s.tier2Count > 0) {
           ariaLabel += ` ${t("tier2Badge", { count: s.tier2Count })}`;
         }
-        if (s.state === "ceka" && s.tier3Count > 0) {
+        if (s.state === "waiting" && s.tier3Count > 0) {
           ariaLabel += ` ${t("tier3Badge", { count: s.tier3Count })}`;
         }
-        const badgeCount = s.state === "hlaseni" ? s.tier2Count : s.state === "ceka" ? s.tier3Count : 0;
-        const badgeTone = s.state === "ceka" ? "bg-warn" : "bg-ok";
+        const badgeCount = s.state === "report" ? s.tier2Count : s.state === "waiting" ? s.tier3Count : 0;
+        const badgeTone = s.state === "waiting" ? "bg-warn" : "bg-ok";
 
         return (
           // The zero-size anchor: the controller sets its transform + --orb-d each
@@ -231,7 +231,7 @@ export function SubsystemOrbsOverlay({
                 else fadeRefs.current.delete(s.id);
               }}
             >
-              {/* Badge (top-right) — hlaseni ⇒ calm ok, ceka ⇒ urgent warn. */}
+              {/* Badge (top-right) — report ⇒ calm ok, waiting ⇒ urgent warn. */}
               {badgeCount > 0 && (
                 <div
                   className={cn(

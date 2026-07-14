@@ -15,7 +15,7 @@ export enum StatusPillTestId {
  * `useSubsystemsQuery` itself (self-contained, same polling posture as the
  * orb overlay and the drawer) rather than taking the roster as a prop, so
  * `ChatScreen` only has to mount it. Segments only render once their count is
- * positive — an all-`klid` roster shows just the nominal label. The rounded
+ * positive — an all-`idle` roster shows just the nominal label. The rounded
  * pill chrome (border/radius/padding) has no `Stack` prop equivalent
  * (`StackProps` omits `className`), so it lives on a plain wrapping `div` —
  * Tailwind classes only, no inline `style`.
@@ -25,9 +25,9 @@ export function StatusPill() {
   const { data } = useSubsystemsQuery();
   const subsystems = data ?? [];
 
-  const working = subsystems.filter((s) => s.state === "bezi").length;
-  const report = subsystems.filter((s) => s.state === "hlaseni").length;
-  const waiting = subsystems.filter((s) => s.state === "ceka").length;
+  const working = subsystems.filter((s) => s.state === "running").length;
+  const report = subsystems.filter((s) => s.state === "report").length;
+  const waiting = subsystems.filter((s) => s.state === "waiting").length;
 
   return (
     <div

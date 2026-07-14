@@ -51,7 +51,7 @@ describe("Subsystems API (e2e)", () => {
       tier2Count: number;
       tier3Count: number;
     }>) {
-      expect(subsystem).toMatchObject({ state: "klid", tier2Count: 0, tier3Count: 0 });
+      expect(subsystem).toMatchObject({ state: "idle", tier2Count: 0, tier3Count: 0 });
     }
   });
 
@@ -70,7 +70,7 @@ describe("Subsystems API (e2e)", () => {
   it("POST /api/subsystems/:id/seen acknowledges and returns the refreshed entry", async () => {
     const res = await request(app.getHttpServer()).post("/api/subsystems/forge/seen").send({});
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ id: "forge", state: "klid", tier2Count: 0, tier3Count: 0 });
+    expect(res.body).toMatchObject({ id: "forge", state: "idle", tier2Count: 0, tier3Count: 0 });
   });
 
   it("POST /api/subsystems/:id/seen 404s on an unknown id", async () => {

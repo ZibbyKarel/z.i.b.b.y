@@ -377,13 +377,13 @@ export function createSceneController(
      * (phase 96: tracks the entry animation, not just the rest slot). The
      * constructor value below is just its allocation, immediately stale. */
     worldPos: THREE.Vector3;
-    /** The per-state target it eases toward; defaults to `klid` until setSubsystems. */
+    /** The per-state target it eases toward; defaults to `idle` until setSubsystems. */
     target: OrbTarget;
     present: boolean;
     /** Task B3 — the RAW subsystem state (not just the derived `target`), so
      * `tick` can tell `connectors` which indices are currently LIVE
-     * (`bezi`/`hlaseni`/`ceka`) for the per-connector alpha pulse. Defaults to
-     * `klid` until `setSubsystems` pushes a real feed. */
+     * (`running`/`report`/`waiting`) for the per-connector alpha pulse. Defaults to
+     * `idle` until `setSubsystems` pushes a real feed. */
     state: SubsystemState;
     /** Phase 117b — a cheap `${color}:${state}` signature of the LAST pushed
      * target, so `setSubsystems` can tell a genuine status/colour change (which
@@ -394,10 +394,10 @@ export function createSceneController(
   }
   /** Task B3 — `connectors.update`'s `liveFlags[i]` gate: a subsystem pulses
    * its connector only while genuinely LIVE, matching the mini-orb's own
-   * livelier `MINI_BASE` targets (`bezi`/`hlaseni`/`ceka`) — `klid` (idle)
+   * livelier `MINI_BASE` targets (`running`/`report`/`waiting`) — `idle`
    * never pulses. */
   function isLiveState(state: SubsystemState): boolean {
-    return state === "bezi" || state === "hlaseni" || state === "ceka";
+    return state === "running" || state === "report" || state === "waiting";
   }
   // Task B2 (Velín-D retune) — the NODE ring is now a wider ELLIPSE
   // (NODE_RING_RADIUS_X horizontal, NODE_RING_RADIUS vertical, unchanged); the
@@ -420,10 +420,10 @@ export function createSceneController(
       id: subsystem.id,
       layer,
       worldPos: new THREE.Vector3(slot.x, CLUSTER_Y + slot.y, 0),
-      target: miniOrbTarget(subsystem.color, "klid"),
+      target: miniOrbTarget(subsystem.color, "idle"),
       present: true,
-      state: "klid",
-      stateKey: `${subsystem.color}:klid`,
+      state: "idle",
+      stateKey: `${subsystem.color}:idle`,
     };
   });
   /** Task B3 — `connectors.update`'s per-connector "is this link live" buffer,

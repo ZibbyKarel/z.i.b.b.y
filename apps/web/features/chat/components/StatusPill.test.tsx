@@ -6,10 +6,10 @@ import { StatusPill, StatusPillTestId } from "./StatusPill";
 vi.mock("../../subsystems/queries/useSubsystemsQuery", () => ({
   useSubsystemsQuery: () => ({
     data: [
-      { id: "a", name: "A", color: "#fff", state: "bezi" },
-      { id: "b", name: "B", color: "#fff", state: "bezi" },
-      { id: "c", name: "C", color: "#fff", state: "hlaseni" },
-      { id: "d", name: "D", color: "#fff", state: "ceka" },
+      { id: "a", name: "A", color: "#fff", state: "running" },
+      { id: "b", name: "B", color: "#fff", state: "running" },
+      { id: "c", name: "C", color: "#fff", state: "report" },
+      { id: "d", name: "D", color: "#fff", state: "waiting" },
     ],
   }),
 }));

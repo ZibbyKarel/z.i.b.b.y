@@ -85,7 +85,7 @@ describe("SUBSYSTEMS registry", () => {
 
 describe("SubsystemWithStatusSchema", () => {
   it("accepts the phase-80 stub status", () => {
-    const withStatus = { ...SUBSYSTEMS[0], state: "klid", tier2Count: 0, tier3Count: 0 };
+    const withStatus = { ...SUBSYSTEMS[0], state: "idle", tier2Count: 0, tier3Count: 0 };
     expect(SubsystemWithStatusSchema.safeParse(withStatus).success).toBe(true);
   });
 
@@ -93,12 +93,12 @@ describe("SubsystemWithStatusSchema", () => {
     const base = { ...SUBSYSTEMS[0], tier2Count: 0, tier3Count: 0 };
     expect(SubsystemWithStatusSchema.safeParse({ ...base, state: "weird" }).success).toBe(false);
     expect(
-      SubsystemWithStatusSchema.safeParse({ ...base, state: "klid", tier2Count: -1 }).success,
+      SubsystemWithStatusSchema.safeParse({ ...base, state: "idle", tier2Count: -1 }).success,
     ).toBe(false);
   });
 
   it("rejects an unknown id shape (404-path case belongs at the route level)", () => {
-    const withStatus = { ...SUBSYSTEMS[0], id: "nope", state: "klid", tier2Count: 0, tier3Count: 0 };
+    const withStatus = { ...SUBSYSTEMS[0], id: "nope", state: "idle", tier2Count: 0, tier3Count: 0 };
     expect(SubsystemWithStatusSchema.safeParse(withStatus).success).toBe(false);
   });
 });

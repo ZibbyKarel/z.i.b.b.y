@@ -1691,10 +1691,10 @@
   "subsystems": {
     "ariaLabel": "ZIBBY subsystem web",
     "state": {
-      "klid": "Idle",
-      "bezi": "Running",
-      "hlaseni": "Report ready",
-      "ceka": "Awaiting decision"
+      "idle": "Idle",
+      "running": "Running",
+      "report": "Report ready",
+      "waiting": "Awaiting decision"
     },
     "nodeAria": "{name}, {state}",
     "tier2Badge": "{count} reports to review",

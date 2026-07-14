@@ -54,29 +54,29 @@ const DOCK: SceneDockItem[] = [
 ];
 
 /** A sample subsystem roster (phase 95): the 8 registry subsystems with a spread of
- * live states so the mini-orbs' per-state look (klid dim, bezi/ceka pulse, ceka
- * louder + warn badge, hlaseni ok badge) is visible at a glance in the story. */
+ * live states so the mini-orbs' per-state look (idle dim, running/waiting pulse, waiting
+ * louder + warn badge, report ok badge) is visible at a glance in the story. */
 const SAMPLE_STATES: Partial<Record<string, { state: SubsystemState; tier2Count?: number; tier3Count?: number }>> = {
-  forge: { state: "bezi" },
-  puls: { state: "bezi" },
-  sentinel: { state: "ceka", tier3Count: 2 },
-  beacon: { state: "hlaseni", tier2Count: 3 },
-  scout: { state: "bezi" },
+  forge: { state: "running" },
+  puls: { state: "running" },
+  sentinel: { state: "waiting", tier3Count: 2 },
+  beacon: { state: "report", tier2Count: 3 },
+  scout: { state: "running" },
 };
 const SUBSYSTEM_ROSTER: SubsystemWithStatus[] = SUBSYSTEMS.map((s) => {
   const override = SAMPLE_STATES[s.id];
   return {
     ...s,
-    state: override?.state ?? "klid",
+    state: override?.state ?? "idle",
     tier2Count: override?.tier2Count ?? 0,
     tier3Count: override?.tier3Count ?? 0,
   };
 });
 
-/** Task C2 (Velín-D retune) — a couple of pipelines tagged to the `bezi` (running)
+/** Task C2 (Velín-D retune) — a couple of pipelines tagged to the `running`
  * subsystems above, so the story exercises B4's per-subsystem orbital task
  * particles ("each light = one processing task") alongside B3's connector live
- * pulse — not just the idle/`klid` octagon. */
+ * pulse — not just the idle octagon. */
 const PIPELINE_ROSTER: Pipeline[] = [
   {
     id: "forge-delivery",
@@ -265,7 +265,7 @@ const meta: Meta<typeof CosmicSceneStory> = {
     streamChars: 0,
     // The full 8-subsystem registry — `clusterGeometry.ts`'s `ellipseSlots` places
     // all 8 on the widened elliptical node ring (task B1) regardless of story; the
-    // roster's live (`bezi`/`hlaseni`/`ceka`) states are what make the center→node
+    // roster's live (`running`/`report`/`waiting`) states are what make the center→node
     // connector pulse (B3) and orbital particles (B4, via `pipelines`/`runs` below)
     // visible rather than a static idle octagon.
     subsystems: SUBSYSTEM_ROSTER,

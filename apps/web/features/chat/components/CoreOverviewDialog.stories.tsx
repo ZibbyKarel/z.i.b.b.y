@@ -19,19 +19,19 @@ import { CoreOverviewDialog, type CoreOverviewDialogProps } from "./CoreOverview
 
 /** One of each live state, spread across the 8 registry subsystems. */
 const SAMPLE_STATES: Record<string, SubsystemState> = {
-  forge: "bezi",
-  puls: "bezi",
-  sentinel: "hlaseni",
-  maestro: "klid",
-  beacon: "ceka",
-  scout: "klid",
-  herald: "klid",
-  loom: "hlaseni",
+  forge: "running",
+  puls: "running",
+  sentinel: "report",
+  maestro: "idle",
+  beacon: "waiting",
+  scout: "idle",
+  herald: "idle",
+  loom: "report",
 };
 
 const ROSTER: SubsystemWithStatus[] = SUBSYSTEMS.map((s) => ({
   ...s,
-  state: SAMPLE_STATES[s.id] ?? "klid",
+  state: SAMPLE_STATES[s.id] ?? "idle",
   tier2Count: 0,
   tier3Count: 0,
 }));

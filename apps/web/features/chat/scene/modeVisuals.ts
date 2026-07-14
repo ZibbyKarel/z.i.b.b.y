@@ -51,8 +51,8 @@ export interface OrbTarget {
  * `rotationSpeed`, `pulseAmp`, `colorToken`/`color` and `rings` are untouched by
  * this task (motion-only retune; geometry/placement/shaders are later tasks).
  * SceneMode → ORB_MOTION mapping used here: `thinking`→thinking, `streaming`/
- * `tool`→working (bezi), `waiting-approval`→await (ceka), `idle`→idle. `speaking`
- * (turn done, orb still "talking") maps to the report/hlaseni target — closest in
+ * `tool`→working (running), `waiting-approval`→await (waiting), `idle`→idle. `speaking`
+ * (turn done, orb still "talking") maps to the report target — closest in
  * spirit to a completed-turn read-out. `listening` and `error` aren't in the
  * Velín-D table; both keep their prior *relative* offset from `idle` (still a
  * notch more awake / still sharp-and-frozen) recomputed against the new idle
@@ -103,7 +103,7 @@ const BASE: Record<SceneMode, OrbTarget> = {
     rings: 1,
   },
   // Tokens arriving: run colour, fastest flow. Energy (below) drives the pulse.
-  // Velín-D working/bezi {amp .15, speed .85, glow .78, breath .75} → pulseSpeed 1/.75.
+  // Velín-D working/running {amp .15, speed .85, glow .78, breath .75} → pulseSpeed 1/.75.
   streaming: {
     colorToken: "run",
     intensity: 1,
@@ -119,7 +119,7 @@ const BASE: Record<SceneMode, OrbTarget> = {
   // done but the orb is still "talking" — with a distinct **ok** hue (visibly
   // different from streaming's run) and a steady speech-cadence pulse, so a spoken
   // reply reads as its own state, not just "still streaming". Not in the Velín-D
-  // table directly; mapped to report/hlaseni {amp .085, speed .42, glow .68,
+  // table directly; mapped to the report {amp .085, speed .42, glow .68,
   // breath .9} — a completed turn being read out is the report state.
   speaking: {
     colorToken: "ok",
@@ -133,7 +133,7 @@ const BASE: Record<SceneMode, OrbTarget> = {
     rings: 0.3,
   },
   // Mid-turn agent dispatch: run (working) hue + a pronounced pulse and rings.
-  // Velín-D groups `tool` with `streaming` under working/bezi (same amp/speed/glow).
+  // Velín-D groups `tool` with `streaming` under working/running (same amp/speed/glow).
   tool: {
     colorToken: "run",
     intensity: 1,
@@ -148,7 +148,7 @@ const BASE: Record<SceneMode, OrbTarget> = {
   // A run parked on the operator's decision: warn (amber) colour, present but calm
   // — a patient, non-urgent cadence (the SLOWEST breath in the table), visibly
   // distinct from error's red.
-  // Velín-D await/ceka {amp .05, speed .16, glow .6, breath 1.35} → pulseSpeed 1/1.35.
+  // Velín-D await/waiting {amp .05, speed .16, glow .6, breath 1.35} → pulseSpeed 1/1.35.
   "waiting-approval": {
     colorToken: "warn",
     intensity: 0.85,
@@ -203,13 +203,13 @@ export function orbTarget(mode: SceneMode, energy: number): OrbTarget {
  * per-state semantics through colour/brightness/pulse (NEVER a flat opacity fade —
  * the phase-93 principle):
  *
- *  - `klid`  — idle: dimmer brightness + glow, static save a barely-there idle breath
+ *  - `idle`  — idle: dimmer brightness + glow, static save a barely-there idle breath
  *              (so it still reads alive, like the central orb, not switched off);
- *  - `bezi`  — working: full brightness, a gentle in-place pulse;
- *  - `hlaseni` — report ready: full brightness, calm (no state pulse) — the report is
+ *  - `running`  — working: full brightness, a gentle in-place pulse;
+ *  - `report` — report ready: full brightness, calm (no state pulse) — the report is
  *              handled, nothing urgent (the overlay's ok-tone badge carries the rest);
- *  - `ceka`  — awaiting a decision: full brightness, a stronger + faster pulse so it
- *              reads louder than `bezi` at a glance (the overlay's warn badge too).
+ *  - `waiting`  — awaiting a decision: full brightness, a stronger + faster pulse so it
+ *              reads louder than `running` at a glance (the overlay's warn badge too).
  *
  * `rings` is always 0 — the halo layer is the central orb's alone. Reduced motion is
  * honoured downstream in {@link OrbLayer.update} (it zeroes the pulse and damps noise/
@@ -218,15 +218,15 @@ export function orbTarget(mode: SceneMode, energy: number): OrbTarget {
 /**
  * Task B1 (Velín-D retune): same amp→noiseAmp/speed→noiseSpeed/glow→glow/
  * breath→`1/breath` pulseSpeed mapping as `BASE` above, using the matching
- * Velín-D entries (`idle/klid`, `working/bezi`, `report/hlaseni`, `await/ceka`).
- * `idle/klid`'s table entry has no `breath` value; it reuses idle's 1.0 (same
+ * Velín-D entries (`idle`, `working/running`, `report`, `await/waiting`).
+ * `idle`'s table entry has no `breath` value; it reuses idle's 1.0 (same
  * calm cadence as the central orb's idle) for consistency with the rest of the
  * ladder. `intensity`/`rotationSpeed`/`pulseAmp` are untouched (not in the table).
  */
 const MINI_BASE: Record<SubsystemState, Omit<OrbTarget, "color">> = {
   // Idle: dim, low glow, near-static — only the shared idle breath keeps it alive.
-  // Velín-D idle/klid {amp .05, speed .18, glow .5} → pulseSpeed 1/1.0 (idle's breath).
-  klid: {
+  // Velín-D idle {amp .05, speed .18, glow .5} → pulseSpeed 1/1.0 (idle's breath).
+  idle: {
     intensity: 0.5,
     noiseAmp: 0.05,
     noiseSpeed: 0.18,
@@ -237,8 +237,8 @@ const MINI_BASE: Record<SubsystemState, Omit<OrbTarget, "color">> = {
     rings: 0,
   },
   // Working: full presence, a gentle breathing pulse.
-  // Velín-D working/bezi {amp .15, speed .85, glow .78, breath .75} → pulseSpeed 1/.75.
-  bezi: {
+  // Velín-D working/running {amp .15, speed .85, glow .78, breath .75} → pulseSpeed 1/.75.
+  running: {
     intensity: 0.95,
     noiseAmp: 0.15,
     noiseSpeed: 0.85,
@@ -249,8 +249,8 @@ const MINI_BASE: Record<SubsystemState, Omit<OrbTarget, "color">> = {
     rings: 0,
   },
   // Report ready: full presence, calm (only the idle breath) — nothing urgent.
-  // Velín-D report/hlaseni {amp .085, speed .42, glow .68, breath .9} → pulseSpeed 1/.9.
-  hlaseni: {
+  // Velín-D report {amp .085, speed .42, glow .68, breath .9} → pulseSpeed 1/.9.
+  report: {
     intensity: 0.95,
     noiseAmp: 0.085,
     noiseSpeed: 0.42,
@@ -262,8 +262,8 @@ const MINI_BASE: Record<SubsystemState, Omit<OrbTarget, "color">> = {
   },
   // Awaiting a decision: full presence, a louder pulse but the SLOWEST breath in
   // the table — a patient, non-urgent cadence (louder ≠ faster).
-  // Velín-D await/ceka {amp .05, speed .16, glow .6, breath 1.35} → pulseSpeed 1/1.35.
-  ceka: {
+  // Velín-D await/waiting {amp .05, speed .16, glow .6, breath 1.35} → pulseSpeed 1/1.35.
+  waiting: {
     intensity: 1,
     noiseAmp: 0.05,
     noiseSpeed: 0.16,

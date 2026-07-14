@@ -8,7 +8,7 @@ import { AktivitaTab, AktivitaTabTestId } from "./AktivitaTab";
 
 const FORGE: SubsystemWithStatus = {
   ...SUBSYSTEMS.find((s) => s.id === "forge")!,
-  state: "klid",
+  state: "idle",
   tier2Count: 0,
   tier3Count: 0,
 };

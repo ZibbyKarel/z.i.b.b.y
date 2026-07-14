@@ -1691,10 +1691,10 @@
   "subsystems": {
     "ariaLabel": "Podsystémová síť ZIBBY",
     "state": {
-      "klid": "V klidu",
-      "bezi": "Běží",
-      "hlaseni": "Hlášení připraveno",
-      "ceka": "Čeká na rozhodnutí"
+      "idle": "V klidu",
+      "running": "Běží",
+      "report": "Hlášení připraveno",
+      "waiting": "Čeká na rozhodnutí"
     },
     "nodeAria": "{name}, {state}",
     "tier2Badge": "{count} hlášení k nahlédnutí",

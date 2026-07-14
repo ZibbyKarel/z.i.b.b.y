@@ -175,10 +175,12 @@ describe("composeSelfKnowledge", () => {
       expect(markdown).toContain("Beacon");
       expect(markdown).toContain("Eskalace incidentů");
       // Static identity only — no live status fields anywhere in the block.
+      // (The enum-token guard for the old Czech state literals was dropped as
+      // vacuous post-rename — the composer consumes `Subsystem`, which has no
+      // `state` field, so the tier2Count/tier3Count assertions above already
+      // enforce this structurally and behaviorally.)
       expect(markdown).not.toContain("tier2Count");
       expect(markdown).not.toContain("tier3Count");
-      expect(markdown).not.toContain("klid");
-      expect(markdown).not.toContain("bezi");
       // Sorted by id: "beacon" before "forge".
       expect(markdown.indexOf("Beacon")).toBeLessThan(markdown.indexOf("Forge"));
       expect(sections.subsystems).toBe(2);

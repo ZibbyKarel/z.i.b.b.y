@@ -112,15 +112,15 @@ function baseInputs(overrides: Partial<SceneInputs> = {}): SceneInputs {
   return { mode: "idle", dock: [], reducedMotion: true, powerSaver: false, ...overrides };
 }
 
-/** The scene's default roster — every registry subsystem present and `klid`,
+/** The scene's default roster — every registry subsystem present and `idle`,
  * matching the mini-orbs' construction-time state (so pushing this list is a
  * no-op that must NOT wake a parked scene). Pass a per-id state override to
- * simulate a genuine status change (e.g. a subsystem going `bezi`). */
-function rosterAllKlid(overrides: Record<string, SceneSubsystem["state"]> = {}): SceneSubsystem[] {
+ * simulate a genuine status change (e.g. a subsystem going `running`). */
+function rosterAllIdle(overrides: Record<string, SceneSubsystem["state"]> = {}): SceneSubsystem[] {
   return SUBSYSTEMS.map((s) => ({
     id: s.id,
     color: s.color,
-    state: overrides[s.id] ?? "klid",
+    state: overrides[s.id] ?? "idle",
     present: true,
   }));
 }
@@ -207,10 +207,10 @@ describe("createSceneController — phase 117b power-saver", () => {
     loop.step(40);
     expect(loop.isScheduled()).toBe(false);
 
-    // A subsystem goes `bezi` (running) — a genuine status change that must ease
+    // A subsystem goes `running` — a genuine status change that must ease
     // in on its own, so it re-arms the frozen loop.
     const first = SUBSYSTEMS[0]!;
-    controller.setSubsystems(rosterAllKlid({ [first.id]: "bezi" }));
+    controller.setSubsystems(rosterAllIdle({ [first.id]: "running" }));
     expect(loop.isScheduled()).toBe(true);
     controller.dispose();
   });
@@ -222,9 +222,9 @@ describe("createSceneController — phase 117b power-saver", () => {
     loop.step(40);
     expect(loop.isScheduled()).toBe(false);
 
-    // Same values as the mini-orbs were built with (all `klid`), just a fresh
+    // Same values as the mini-orbs were built with (all `idle`), just a fresh
     // array — a periodic feed refetch must not defeat the freeze.
-    controller.setSubsystems(rosterAllKlid());
+    controller.setSubsystems(rosterAllIdle());
     expect(loop.isScheduled()).toBe(false);
     controller.dispose();
   });
@@ -237,7 +237,7 @@ describe("createSceneController — phase 117b power-saver", () => {
     expect(loop.isScheduled()).toBe(false);
 
     const first = SUBSYSTEMS[0]!;
-    controller.setSubsystems(rosterAllKlid({ [first.id]: "bezi" }));
+    controller.setSubsystems(rosterAllIdle({ [first.id]: "running" }));
     // A few ~30fps ticks in (well under the ~1s settle window) the loop is still
     // running — it did NOT park after the first tick (which would freeze the
     // mini-orb partway to its new colour).

@@ -45,7 +45,7 @@ function fixture(overrides: Partial<SubsystemWithStatus> = {}): SubsystemWithSta
     mandate: base.mandate,
     color: base.color,
     heroImage: null,
-    state: "klid",
+    state: "idle",
     tier2Count: 0,
     tier3Count: 0,
     ...overrides,
@@ -72,10 +72,10 @@ describe("SubsystemDrawer (Phase 84)", () => {
   });
 
   it.each([
-    ["klid", {}, "V klidu"],
-    ["bezi", {}, "Běží"],
-    ["hlaseni", { tier2Count: 3 }, "Hlášení připraveno"],
-    ["ceka", { tier3Count: 2 }, "Čeká na rozhodnutí"],
+    ["idle", {}, "V klidu"],
+    ["running", {}, "Běží"],
+    ["report", { tier2Count: 3 }, "Hlášení připraveno"],
+    ["waiting", { tier3Count: 2 }, "Čeká na rozhodnutí"],
   ] as const)("renders the header status for state %s", (state, extra, label) => {
     renderWithProviders(
       <SubsystemDrawer onClose={vi.fn()} subsystem={fixture({ state, ...extra })} />,
@@ -84,9 +84,9 @@ describe("SubsystemDrawer (Phase 84)", () => {
     expect(status).toHaveTextContent(label);
   });
 
-  it("shows the Tier-2/Tier-3 count badge only for hlaseni/ceka", () => {
+  it("shows the Tier-2/Tier-3 count badge only for report/waiting", () => {
     renderWithProviders(
-      <SubsystemDrawer onClose={vi.fn()} subsystem={fixture({ state: "hlaseni", tier2Count: 4 })} />,
+      <SubsystemDrawer onClose={vi.fn()} subsystem={fixture({ state: "report", tier2Count: 4 })} />,
     );
     expect(screen.getByTestId(SubsystemDrawerTestId.Status)).toHaveTextContent("4");
   });

@@ -13,14 +13,14 @@ function fixture(overrides: Partial<SubsystemWithStatus> = {}): SubsystemWithSta
     mandate: base.mandate,
     color: base.color,
     heroImage: null,
-    state: "klid",
+    state: "idle",
     tier2Count: 0,
     tier3Count: 0,
     ...overrides,
   };
 }
 
-/** All 8 registry subsystems, each `klid` by default, some overridable by id. */
+/** All 8 registry subsystems, each `idle` by default, some overridable by id. */
 function allSubsystems(overrides: Record<string, Partial<SubsystemWithStatus>> = {}) {
   return SUBSYSTEMS.map((s) =>
     fixture({ id: s.id, name: s.name, color: s.color, ...(overrides[s.id] ?? {}) }),
@@ -45,13 +45,13 @@ describe("SubsystemOrbsOverlay", () => {
 
   it("a node is a focusable button with an accessible name (identity + state)", () => {
     renderWithProviders(
-      <SubsystemOrbsOverlay onSelect={vi.fn()} subsystems={allSubsystems({ forge: { state: "bezi" } })} />,
+      <SubsystemOrbsOverlay onSelect={vi.fn()} subsystems={allSubsystems({ forge: { state: "running" } })} />,
     );
     const node = screen.getByTestId(`${SubsystemOrbsOverlayTestId.Node}-forge`);
     expect(node).toHaveAttribute("role", "button");
     expect(node).toHaveAttribute("tabindex", "0");
     expect(node).toHaveAttribute("aria-label", expect.stringContaining("Forge"));
-    // Default test locale is `cs` — `bezi` renders as "Běží" (the accessible name
+    // Default test locale is `cs` — `running` renders as "Běží" (the accessible name
     // carries the state, not just the identity).
     expect(node).toHaveAttribute("aria-label", expect.stringContaining("Běží"));
   });
@@ -101,14 +101,14 @@ describe("SubsystemOrbsOverlay", () => {
     );
   });
 
-  it("hides the badge at count 0, shows it once a hlaseni/ceka count is positive", () => {
+  it("hides the badge at count 0, shows it once a report/waiting count is positive", () => {
     renderWithProviders(
       <SubsystemOrbsOverlay
         onSelect={vi.fn()}
         subsystems={allSubsystems({
-          forge: { state: "hlaseni", tier2Count: 0 },
-          puls: { state: "hlaseni", tier2Count: 3 },
-          sentinel: { state: "ceka", tier3Count: 2 },
+          forge: { state: "report", tier2Count: 0 },
+          puls: { state: "report", tier2Count: 3 },
+          sentinel: { state: "waiting", tier3Count: 2 },
         })}
       />,
     );
@@ -166,10 +166,10 @@ describe("SubsystemOrbsOverlay", () => {
       <SubsystemOrbsOverlay
         onSelect={vi.fn()}
         subsystems={allSubsystems({
-          forge: { state: "klid" },
-          puls: { state: "bezi" },
-          sentinel: { state: "hlaseni", tier2Count: 1 },
-          maestro: { state: "ceka", tier3Count: 1 },
+          forge: { state: "idle" },
+          puls: { state: "running" },
+          sentinel: { state: "report", tier2Count: 1 },
+          maestro: { state: "waiting", tier3Count: 1 },
         })}
       />,
     );

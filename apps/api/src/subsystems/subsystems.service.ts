@@ -19,15 +19,25 @@ import { SubsystemNotFoundError } from "./subsystems.errors";
  * must never be masked by ambient activity. Distinct from {@link LIST_ORDER_RANK}:
  * this only decides which single `state` wins for one subsystem.
  */
-const STATE_PRECEDENCE: Record<SubsystemState, number> = { ceka: 0, bezi: 1, hlaseni: 2, klid: 3 };
+const STATE_PRECEDENCE: Record<SubsystemState, number> = {
+  waiting: 0,
+  running: 1,
+  report: 2,
+  idle: 3,
+};
 
 /**
- * `list()`'s severity ordering ACROSS subsystems: `ceka` first, then `hlaseni`,
- * then `bezi`, then `klid` — a Tier-2 report outranks quiet ambient Tier-1 work
- * for "what needs a look" purposes, even though `bezi` outranks `hlaseni` in
+ * `list()`'s severity ordering ACROSS subsystems: `waiting` first, then `report`,
+ * then `running`, then `idle` — a Tier-2 report outranks quiet ambient Tier-1 work
+ * for "what needs a look" purposes, even though `running` outranks `report` in
  * {@link STATE_PRECEDENCE} for a single subsystem's headline state.
  */
-const LIST_ORDER_RANK: Record<SubsystemState, number> = { ceka: 0, hlaseni: 1, bezi: 2, klid: 3 };
+const LIST_ORDER_RANK: Record<SubsystemState, number> = {
+  waiting: 0,
+  report: 1,
+  running: 2,
+  idle: 3,
+};
 
 interface Aggregate {
   state: SubsystemState;
@@ -48,9 +58,9 @@ interface OwnedPipelineRun {
  * for pending Tier-3 items) — it duplicates no run/approval semantics, only
  * reads and correlates.
  *
- * Per subsystem, in precedence order `ceka > bezi > hlaseni > klid`:
- * - `bezi`: an owned pipeline/chain has a currently-`running` run.
- * - `ceka` (+ `tier3Count`): pending approvals attributable to an owned
+ * Per subsystem, in precedence order `waiting > running > report > idle`:
+ * - `running`: an owned pipeline/chain has a currently-`running` run.
+ * - `waiting` (+ `tier3Count`): pending approvals attributable to an owned
  *   pipeline's run. Attribution mirrors the web's `approvalForRun` matching
  *   (`apps/web/features/runs/run.ts`) — a `pipeline-output` approval's `runId`
  *   IS the pipeline run id; a `pipeline-stage` approval's `runId` is the STAGE
@@ -59,7 +69,7 @@ interface OwnedPipelineRun {
  *   `task-output`, `jira-issue`, `machine`, `agent-proposal`) has no pipeline to
  *   attribute through and is silently excluded — no data loss, the global
  *   approvals surface still shows it; this is a lens.
- * - `hlaseni` (+ `tier2Count`): owned pipeline/chain runs that went terminal
+ * - `report` (+ `tier2Count`): owned pipeline/chain runs that went terminal
  *   (`done` or `error`) after the subsystem's `lastSeenAt` (`SubsystemSeenStore`).
  *   Neither `PipelineRun` nor `ChainRun` carries its own completion timestamp,
  *   so this uses the best available signal: the backing task's
@@ -69,7 +79,7 @@ interface OwnedPipelineRun {
  *   affecting this shape).
  *
  * Counts are independent of the headline `state` — a subsystem can carry a
- * `tier2Count` while its state reads `ceka` because a Tier-3 item outranks it.
+ * `tier2Count` while its state reads `waiting` because a Tier-3 item outranks it.
  */
 @Injectable()
 export class SubsystemsService {
@@ -82,9 +92,9 @@ export class SubsystemsService {
   ) {}
 
   /**
-   * All eight subsystems with real status, sorted for LISTS/BRIEFINGS: `ceka`
-   * first (by `tier3Count` desc), then `hlaseni` (by `tier2Count` desc), then
-   * `bezi`, then `klid`; registry order is the stable tiebreak ("report
+   * All eight subsystems with real status, sorted for LISTS/BRIEFINGS: `waiting`
+   * first (by `tier3Count` desc), then `report` (by `tier2Count` desc), then
+   * `running`, then `idle`; registry order is the stable tiebreak ("report
    * severity, not recency, drives ordering" — design doc). The web subsystem
    * STRIP does not consume this ordering — it keeps every node at a FIXED
    * position (nodes never move); this sort exists for feeds that read the list
@@ -96,8 +106,8 @@ export class SubsystemsService {
     return [...rows].sort((a, b) => {
       const rankDiff = LIST_ORDER_RANK[a.state] - LIST_ORDER_RANK[b.state];
       if (rankDiff !== 0) return rankDiff;
-      if (a.state === "ceka") return b.tier3Count - a.tier3Count;
-      if (a.state === "hlaseni") return b.tier2Count - a.tier2Count;
+      if (a.state === "waiting") return b.tier3Count - a.tier3Count;
+      if (a.state === "report") return b.tier2Count - a.tier2Count;
       return 0; // Array#sort is stable → registry order survives as the tiebreak.
     });
   }
@@ -111,8 +121,8 @@ export class SubsystemsService {
 
   /**
    * Acknowledge `id`'s Tier-2 reports (the operator opened its drawer) —
-   * resets its `hlaseni` window to now and returns the refreshed entry. Tier-3
-   * (`ceka`) items are untouched: they resolve only through the approvals
+   * resets its `report` window to now and returns the refreshed entry. Tier-3
+   * (`waiting`) items are untouched: they resolve only through the approvals
    * flow, a different acknowledgment model (design doc).
    */
   async markSeen(id: string): Promise<SubsystemWithStatus> {
@@ -152,7 +162,7 @@ export class SubsystemsService {
       ),
     );
 
-    const bezi = new Set<SubsystemId>();
+    const running = new Set<SubsystemId>();
     const tier2Count = new Map<SubsystemId, number>();
     const ownedPipelineRuns: OwnedPipelineRun[] = [];
 
@@ -166,7 +176,7 @@ export class SubsystemsService {
       if (!owner) continue;
       if (run.kind === "pipeline") ownedPipelineRuns.push({ runId: run.runId, owner });
 
-      if (run.status === "running") bezi.add(owner);
+      if (run.status === "running") running.add(owner);
 
       if (run.status === "done" || run.status === "error") {
         const completedAt = completionSignal(run);
@@ -189,10 +199,10 @@ export class SubsystemsService {
       const t3 = tier3Count.get(s.id) ?? 0;
       const t2 = tier2Count.get(s.id) ?? 0;
       const candidates: SubsystemState[] = [
-        ...(t3 > 0 ? (["ceka"] as const) : []),
-        ...(bezi.has(s.id) ? (["bezi"] as const) : []),
-        ...(t2 > 0 ? (["hlaseni"] as const) : []),
-        "klid",
+        ...(t3 > 0 ? (["waiting"] as const) : []),
+        ...(running.has(s.id) ? (["running"] as const) : []),
+        ...(t2 > 0 ? (["report"] as const) : []),
+        "idle",
       ];
       const state = candidates.reduce((best, candidate) =>
         STATE_PRECEDENCE[candidate] < STATE_PRECEDENCE[best] ? candidate : best,
@@ -230,6 +240,6 @@ function withAggregate(
   subsystem: (typeof SUBSYSTEMS)[number],
   aggregates: Map<SubsystemId, Aggregate>,
 ): SubsystemWithStatus {
-  const aggregate = aggregates.get(subsystem.id) ?? { state: "klid", tier2Count: 0, tier3Count: 0 };
+  const aggregate = aggregates.get(subsystem.id) ?? { state: "idle", tier2Count: 0, tier3Count: 0 };
   return { ...subsystem, ...aggregate };
 }

@@ -54,7 +54,7 @@ describe("orbTarget", () => {
     );
   });
 
-  it("streaming/tool land on the same working-ish motion (Velín-D bezi target)", () => {
+  it("streaming/tool land on the same working-ish motion (Velín-D running target)", () => {
     const streaming = orbTarget("streaming", 0);
     const tool = orbTarget("tool", 0);
     expect(tool.noiseAmp).toBeCloseTo(streaming.noiseAmp, 5);
@@ -68,20 +68,20 @@ describe("orbTarget", () => {
 });
 
 describe("miniOrbTarget", () => {
-  it("bezi (working) churns faster than klid (idle) — Velín-D ORB_MOTION.speed", () => {
-    expect(miniOrbTarget("#fff", "bezi").noiseSpeed).toBeGreaterThan(
-      miniOrbTarget("#fff", "klid").noiseSpeed,
+  it("running (working) churns faster than idle — Velín-D ORB_MOTION.speed", () => {
+    expect(miniOrbTarget("#fff", "running").noiseSpeed).toBeGreaterThan(
+      miniOrbTarget("#fff", "idle").noiseSpeed,
     );
   });
 
-  it("ceka (awaiting a decision) breathes slower than klid — longer breath, smaller pulseSpeed", () => {
-    expect(miniOrbTarget("#fff", "ceka").pulseSpeed).toBeLessThan(
-      miniOrbTarget("#fff", "klid").pulseSpeed,
+  it("waiting (awaiting a decision) breathes slower than idle — longer breath, smaller pulseSpeed", () => {
+    expect(miniOrbTarget("#fff", "waiting").pulseSpeed).toBeLessThan(
+      miniOrbTarget("#fff", "idle").pulseSpeed,
     );
   });
 
   it("keeps the mini-orb color override and zero rings for every state", () => {
-    for (const state of ["klid", "bezi", "hlaseni", "ceka"] as const) {
+    for (const state of ["idle", "running", "report", "waiting"] as const) {
       const target = miniOrbTarget("#abcdef", state);
       expect(target.color).toBe("#abcdef");
       expect(target.rings).toBe(0);

@@ -22,9 +22,9 @@ type SeenMap = z.infer<typeof SeenMapSchema>;
 
 /**
  * Phase 82 — durable "last visited" timestamp per subsystem, driving the
- * `hlaseni` (Tier-2 report) window: a run that completed after this timestamp
+ * `report` (Tier-2 report) window: a run that completed after this timestamp
  * counts toward the badge. The operator opening the subsystem's drawer
- * (`markSubsystemSeen`) resets it to now — Tier-3 (`ceka`) items are NOT cleared
+ * (`markSubsystemSeen`) resets it to now — Tier-3 (`waiting`) items are NOT cleared
  * by this; they resolve only through the existing approvals flow (design doc:
  * different acknowledgment models).
  *

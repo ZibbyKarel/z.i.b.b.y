@@ -31,19 +31,19 @@ export interface CoreOverviewDialogProps {
 }
 
 interface StateCounts {
-  bezi: number;
-  hlaseni: number;
-  ceka: number;
-  klid: number;
+  running: number;
+  report: number;
+  waiting: number;
+  idle: number;
 }
 
 /** Pure tally of the roster by live state — feeds the 4 header stats. */
 function countByState(subs: SubsystemWithStatus[]): StateCounts {
   return {
-    bezi: subs.filter((s) => s.state === "bezi").length,
-    hlaseni: subs.filter((s) => s.state === "hlaseni").length,
-    ceka: subs.filter((s) => s.state === "ceka").length,
-    klid: subs.filter((s) => s.state === "klid").length,
+    running: subs.filter((s) => s.state === "running").length,
+    report: subs.filter((s) => s.state === "report").length,
+    waiting: subs.filter((s) => s.state === "waiting").length,
+    idle: subs.filter((s) => s.state === "idle").length,
   };
 }
 
@@ -52,7 +52,7 @@ function countByState(subs: SubsystemWithStatus[]): StateCounts {
  * click the WebGL orb on `/chat` — a snapshot of the whole federation, not one
  * subsystem. Ports the `VcCoreDetailD` prototype's layout onto DS primitives: a
  * butler-mark header with a live `ok` status dot, a one-line derived summary, the
- * 4 state-tally stats (`bezi`/`hlaseni`/`ceka`/`klid`), then a 2-col roster grid.
+ * 4 state-tally stats (`running`/`report`/`waiting`/`idle`), then a 2-col roster grid.
  *
  * The header is fully custom (mark + name + dot + role line + its own close
  * button) rather than `Dialog`'s built-in `title`/`description` header, because
@@ -81,10 +81,10 @@ export function CoreOverviewDialog({ open, onClose, onSelectSubsystem }: CoreOve
 
   const counts = countByState(subsystems);
   const stats: Array<{ key: keyof StateCounts; label: string }> = [
-    { key: "bezi", label: t("statWorking") },
-    { key: "hlaseni", label: t("statReport") },
-    { key: "ceka", label: t("statWaiting") },
-    { key: "klid", label: t("statIdle") },
+    { key: "running", label: t("statWorking") },
+    { key: "report", label: t("statReport") },
+    { key: "waiting", label: t("statWaiting") },
+    { key: "idle", label: t("statIdle") },
   ];
 
   const selectSubsystem = (id: SubsystemId) => {
@@ -122,9 +122,9 @@ export function CoreOverviewDialog({ open, onClose, onSelectSubsystem }: CoreOve
 
           <Typography size="sm" type="text" variant="secondary">
             {t("summary", {
-              report: counts.hlaseni,
-              waiting: counts.ceka,
-              working: counts.bezi,
+              report: counts.report,
+              waiting: counts.waiting,
+              working: counts.running,
             })}
           </Typography>
 

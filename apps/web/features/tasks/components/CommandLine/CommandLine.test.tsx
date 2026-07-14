@@ -43,8 +43,8 @@ vi.mock("../../../pipelines/queries/usePipelinesQuery", () => ({
 vi.mock("../../../subsystems/queries/useSubsystemsQuery", () => ({
   useSubsystemsQuery: () => ({
     data: [
-      { id: "forge", name: "Forge", color: "#f97316", state: "klid", tier2Count: 0, tier3Count: 0 },
-      { id: "puls", name: "Puls", color: "#14b8a6", state: "klid", tier2Count: 0, tier3Count: 0 },
+      { id: "forge", name: "Forge", color: "#f97316", state: "idle", tier2Count: 0, tier3Count: 0 },
+      { id: "puls", name: "Puls", color: "#14b8a6", state: "idle", tier2Count: 0, tier3Count: 0 },
     ],
   }),
 }));
