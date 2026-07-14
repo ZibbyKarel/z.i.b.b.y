@@ -1,8 +1,8 @@
 /**
  * Task A1 — the center-orb overview modal `/chat` will open (later, C1) when the
  * operator clicks the WebGL orb. `CoreOverviewDialog` reads its roster from
- * `useSubsystemsQuery` internally rather than taking it as a prop, so unlike
- * `CosmicScene.stories.tsx` (which feeds a static roster straight through props)
+ * `useSubsystemsQuery` internally rather than taking it as a prop, so unlike a
+ * story that feeds a static roster straight through props,
  * this story seeds a *local* `QueryClient` with a static roster under the same
  * cache key the real hook reads (`getSubsystemsQueryKey`), wrapped in the ts-rest
  * `{ status, body }` envelope `selectApiResponseBody` expects. It deliberately

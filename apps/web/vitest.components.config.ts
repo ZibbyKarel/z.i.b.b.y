@@ -30,8 +30,6 @@ export default defineConfig({
       "features/**/components/**/*.test.{ts,tsx}",
       // Feature-root unit tests (pure view-model/presentation helpers).
       "features/*/*.test.{ts,tsx}",
-      // Feature scene helpers (pure roster/view-model builders for the chat scene).
-      "features/*/scene/**/*.test.{ts,tsx}",
       // Feature hooks (client-side browser-API wrappers).
       "features/*/hooks/**/*.test.{ts,tsx}",
       // Feature context providers (React context + browser persistence).
