@@ -17,7 +17,7 @@ import { SubsystemOrbsOverlay } from "./SubsystemOrbsOverlay";
 import { canMountWebGL } from "./canMountWebGL";
 import type { SceneController } from "./sceneController";
 import type { SceneDockItem, SceneMode, SceneSubsystem } from "./sceneTypes";
-import { activeRunsBySubsystem } from "./subsystemLoad";
+import { activeRunsBySubsystem } from "../subsystemLoad";
 
 export enum CosmicSceneTestId {
   /** The scene root — carries `data-mode` so the derivation tests (and console

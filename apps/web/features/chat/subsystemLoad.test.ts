@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { Pipeline } from "../../../domain";
-import type { RunView } from "../../runs/run";
+import type { Pipeline } from "../../domain";
+import type { RunView } from "../runs/run";
 import { MAX_ORBITERS, activeRunsBySubsystem } from "./subsystemLoad";
 
 function pipeline(overrides: Partial<Pipeline> = {}): Pipeline {

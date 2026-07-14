@@ -12,9 +12,9 @@
  * per run, so the two features can never silently disagree about who owns a run.
  */
 import type { SubsystemId } from "@zibby/contracts";
-import type { Pipeline } from "../../../domain";
-import { resolveEventOwner } from "../../subsystems/components/SubsystemWeb/particle-mapping";
-import type { RunView } from "../../runs/run";
+import type { Pipeline } from "../../domain";
+import { resolveEventOwner } from "../subsystems/components/SubsystemWeb/particle-mapping";
+import type { RunView } from "../runs/run";
 
 /** The bounded pool size `orbitFieldLayer.ts` allocates per subsystem — also the
  * cap `activeRunsBySubsystem` clamps every subsystem's count to, so a flood of

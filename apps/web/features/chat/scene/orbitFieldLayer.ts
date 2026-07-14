@@ -1,7 +1,7 @@
 import { SUBSYSTEMS, type SubsystemId } from "@zibby/contracts";
 import * as THREE from "three";
 import { hashJitter } from "../../subsystems/components/SubsystemWeb/particle-mapping";
-import { MAX_ORBITERS } from "./subsystemLoad";
+import { MAX_ORBITERS } from "../subsystemLoad";
 
 /**
  * Task B4 (Velín-D retune) — the signature per-subsystem orbital task-particles:
