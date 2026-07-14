@@ -17,7 +17,7 @@
 
 Copied from the design spec's *Global constraints* + the repo laws. Every task obeys all of these.
 
-1. **English-only identifiers.** No Czech (and no "velin") in component names, files, variables, enum values, testids, story titles, or commit messages. Czech appears ONLY in i18n catalogs (`apps/web/i18n/messages/cs.json`) and pre-existing Czech display-label maps. The contracts `SubsystemState` enum `klid/bezi/hlaseni/ceka` is renamed to `idle/running/report/waiting`.
+1. **English-only identifiers.** No Czech (and no "velin") in component names, files, variables, enum values, testids, story titles, or commit messages. Czech appears ONLY in i18n catalogs (`apps/web/i18n/messages/cs.json`) and pre-existing Czech display-label maps. The contracts `SubsystemState` enum `klid/bezi/hlaseni/ceka` is renamed to `idle/running/report/waiting`. **Wherever this plan says "port verbatim" from the prototype, verbatim applies to code, math, GLSL, and CSS values only — translate every Czech comment to English (or strip it); no Czech comment may land anywhere under `libs/` or `apps/`.**
 2. **Design file paths keep their names.** `design/Z.I.B.B.Y/…Velin-D…` is external reference material. Nothing under `apps/` or `libs/` may reference "velin".
 3. **Files are the source of truth.** The UI is a view.
 4. **DS is the source of UI primitives.** The immersive bundle lives inside `libs/design-system` — no second design system. Reuse existing tokens; the immersive bundle owns a small documented state-color palette mirroring the DS/ZT tokens.
@@ -139,7 +139,7 @@ Steps:
       "idle",
       ```
       and the comparator branches use `"waiting"` / `"report"`; the default aggregate becomes `{ state: "idle", tier2Count: 0, tier3Count: 0 }`. Rename any local variable named `bezi` to `running` for consistency (English-only identifiers).
-- [ ] Edit the api tests/fixtures (`subsystems.service.test.ts`, `test/subsystems.e2e.test.ts`) — every `state: "klid"` etc. → English. Edit `self-knowledge.composer.test.ts` negative assertions `not.toContain("klid")` / `not.toContain("bezi")` → `not.toContain("klid")` stays valid but ADD/REPLACE with the new values so the intent (generated md carries no raw enum token) still holds: assert `not.toContain("idle")`? No — `idle`/`running` are common English words that legitimately appear; instead assert the composer emits localized labels. Concretely: keep the two existing negative assertions (they still pass — the md won't contain the old Czech tokens) and do not add English-word negatives. Leave a code comment explaining why.
+- [ ] Edit the api tests/fixtures (`subsystems.service.test.ts`, `test/subsystems.e2e.test.ts`) — every `state: "klid"` etc. → English. In `self-knowledge.composer.test.ts`, the two negatives `expect(markdown).not.toContain("klid")` / `not.toContain("bezi")` become vacuous after the rename (those tokens no longer exist anywhere in the codebase). **Delete both lines.** The test's real intent — "static identity only, no live status fields leak into the SUBSYSTEMS block" — is already enforced structurally (the composer consumes `Subsystem`, which has no `state` field) and behaviorally by the adjacent `not.toContain("tier2Count")` / `not.toContain("tier3Count")` assertions, which stay. Do NOT add `not.toContain("idle"/"running"/…)` — those are common English words that legitimately appear in prose. Update the `// Static identity only …` comment to note the enum-token guard was dropped as vacuous post-rename.
 - [ ] Edit `subsystem-seen.store.ts` **comments only** (the `hlaseni`/`ceka` mentions in the docblock) → `report`/`waiting`. No code change (persisted map is `{[id]: timestamp}`).
 - [ ] Edit each web file: re-key every `Record<SubsystemState, …>` map (`STATE_DOT`, `STATE_TAG_TONE`, the `CoreOverviewDialog` summary counts object + its interface fields `bezi/hlaseni/ceka/klid` → `running/report/waiting/idle`) and every `s.state === "…"` comparison and every fixture `state: "…"`. Preserve all Czech display strings and DS tones unchanged — only the keys/literals change. Update docstring/comment mentions of the Czech tokens to English.
 - [ ] Edit the scene files (`sceneController.ts` + tests, `SubsystemOrbsOverlay.tsx` + test, `CosmicScene.stories.tsx`, `modeVisuals.test.ts`) the same way — they are deleted in Task 14 but must compile now.
@@ -157,11 +157,12 @@ Steps:
 
 The pure tally fn (+ its test) must survive the `scene/` deletion. Move it up one level so the adapter (Task 12) imports it from a stable path and Task 14 can delete `scene/` cleanly.
 
-**Parallel-safe:** yes (disjoint from all DS immersive tasks and Task 1; prerequisite for Tasks 12 & 14). Rough size: S (move 2 files, fix 1 relative import).
+**Parallel-safe:** yes (disjoint from all DS immersive tasks and Task 1; prerequisite for Tasks 12 & 14). Rough size: S (move 2 files, fix 3 importers).
 
 **Files:**
 - Create: `apps/web/features/chat/subsystemLoad.ts` (moved from `scene/subsystemLoad.ts`), `apps/web/features/chat/subsystemLoad.test.ts` (moved from `scene/subsystemLoad.test.ts`)
 - Delete: `apps/web/features/chat/scene/subsystemLoad.ts`, `apps/web/features/chat/scene/subsystemLoad.test.ts`
+- Modify: `apps/web/features/chat/scene/CosmicScene.tsx` (imports `activeRunsBySubsystem` from `./subsystemLoad`), `apps/web/features/chat/scene/orbitFieldLayer.ts` (imports `MAX_ORBITERS` from `./subsystemLoad`) — retarget both to the new location so the interim (pre-Task-14) tree stays green
 
 **Interfaces:**
 - Produces: `export function activeRunsBySubsystem(runs, pipelines): Partial<Record<SubsystemId, number>>` and `export const MAX_ORBITERS = 6` at the new path.
@@ -176,11 +177,14 @@ Steps:
       - `import { resolveEventOwner } from "../../subsystems/components/SubsystemWeb/particle-mapping";` → `import { resolveEventOwner } from "../subsystems/components/SubsystemWeb/particle-mapping";`
       - `import type { RunView } from "../../runs/run";` → `import type { RunView } from "../runs/run";`
 - [ ] In the moved `subsystemLoad.test.ts`, fix: `import type { Pipeline } from "../../../domain";` → `"../../domain"`; `import type { RunView } from "../../runs/run";` → `"../runs/run"`; the `./subsystemLoad` import stays.
-- [ ] Confirm no other file imports the old path: `rtk grep -rn "scene/subsystemLoad" apps` → nothing.
+- [ ] Retarget the two remaining scene importers (both die in Task 14, but must compile now):
+      - `apps/web/features/chat/scene/CosmicScene.tsx`: `import { activeRunsBySubsystem } from "./subsystemLoad";` → `from "../subsystemLoad";`
+      - `apps/web/features/chat/scene/orbitFieldLayer.ts`: `import { MAX_ORBITERS } from "./subsystemLoad";` → `from "../subsystemLoad";`
+- [ ] Confirm no other file imports the old path: `rtk grep -rn "scene/subsystemLoad\|\./subsystemLoad" apps/web/features/chat/scene` → nothing (prose mentions in comments are fine; no import statements may remain).
 - [ ] Run checks: `rtk pnpm check:lint && rtk pnpm check:types && rtk pnpm test`.
 - [ ] Commit:
       ```bash
-      rtk git add apps/web/features/chat/subsystemLoad.ts apps/web/features/chat/subsystemLoad.test.ts apps/web/features/chat/scene/subsystemLoad.ts apps/web/features/chat/scene/subsystemLoad.test.ts
+      rtk git add apps/web/features/chat/subsystemLoad.ts apps/web/features/chat/subsystemLoad.test.ts apps/web/features/chat/scene/subsystemLoad.ts apps/web/features/chat/scene/subsystemLoad.test.ts apps/web/features/chat/scene/CosmicScene.tsx apps/web/features/chat/scene/orbitFieldLayer.ts
       rtk git commit -m "refactor(chat): move activeRunsBySubsystem out of scene/ ahead of deletion"
       ```
 
@@ -456,7 +460,7 @@ Steps:
         return { cx, cy, radiusX, radiusY, nodeD, coreSize, positions };
       }
       ```
-      Note: the prototype's inset clamps are `Math.min(336, Math.max(0, w*0.32))` — reproduce exactly. The `clamp(0, insets.left, min(336, w*0.32))` form above is equivalent; if clearer, inline the prototype's `Math.min/Math.max` directly. Match the numbers, not the expression shape.
+      Note: the prototype hardcodes its reserves (`leftInset = Math.min(336, Math.max(0, w*0.32))`) because it has no callers; this DS fn generalizes them into `insets` so the app can pass the real tasks-panel/dock reserves. Implement the insets-based code above exactly as written — the caller's `insets.left`/`insets.right` are clamped into the prototype's `[0, min(336, w*0.32)]` / `[0, min(108, w*0.1)]` envelopes. Do NOT transcribe the prototype's width-only formula literally (it ignores `insets` and would break the cx-offset test).
 - [ ] Run checks: `rtk pnpm check:lint && rtk pnpm check:types && rtk pnpm test`.
 - [ ] Commit:
       ```bash
@@ -470,7 +474,7 @@ Steps:
 
 Port `createZOrb` + `ZOrb3D` (`velin-d-orb.jsx`) into a DS component: displaced-icosahedron wire mesh + glow shell, exponential param easing, breathing, rotation, `prefers-reduced-motion`, full dispose. jsdom-safe via `canMountWebGL`.
 
-**Parallel-safe:** yes, with Tasks 5, 6, 7 (disjoint folders; none touch `index.ts`). Depends on Task 3 (`three` dep + `orbState` + `canMountWebGL`). Rough size: L (shaders + rAF + dispose).
+**Parallel-safe:** yes, with Tasks 5 and 6 (and with 7 once 6 has landed) — disjoint folders; none touch `index.ts`. Depends on Task 3 (`three` dep + `orbState` + `canMountWebGL`). Rough size: L (shaders + rAF + dispose).
 
 **Files:**
 - Create: `libs/design-system/src/immersive/Orb/orbSimplex.ts` (the GLSL snoise string), `libs/design-system/src/immersive/Orb/createOrb.ts` (vanilla-three controller), `libs/design-system/src/immersive/Orb/Orb.tsx`, `libs/design-system/src/immersive/Orb/Orb.test.tsx`, `libs/design-system/src/immersive/Orb/Orb.stories.tsx`
@@ -490,21 +494,249 @@ Port `createZOrb` + `ZOrb3D` (`velin-d-orb.jsx`) into a DS component: displaced-
     ref?: React.Ref<HTMLDivElement>;
   }
   export function Orb(props: OrbProps): JSX.Element;
-  export interface OrbController { setTarget(hex: string, state: OrbState): void; resize(): void; dispose(): void }
+  export interface OrbController { setTarget(hex: string, state: OrbState, overrides?: OrbMotionOverrides): void; resize(): void; dispose(): void }
   export function createOrb(container: HTMLElement, opts: {...}): OrbController;
   ```
 - Consumes: `OrbState`, `ORB_MOTION` (Task 3), `canMountWebGL` (Task 3), `three`.
 
 Steps:
 
-- [ ] Create `Orb/orbSimplex.ts` — export the GLSL snoise source verbatim from `ORB_SIMPLEX` in `velin-d-orb.jsx` as a string constant: `export const ORB_SIMPLEX = \`…\`;` (copy the full `mod289`/`permute`/`taylorInvSqrt`/`snoise` block exactly, unchanged).
-- [ ] Create `Orb/createOrb.ts` — port `createZOrb` verbatim into TS. Signature `createOrb(container: HTMLElement, opts: { hex?: string; state?: OrbState; detail?: number; antialias?: boolean; motionOverrides?: OrbMotionOverrides }): OrbController`. Faithful port of the entire body: `WebGLRenderer({ antialias, alpha: true, powerPreference: "low-power" })`, `setPixelRatio(Math.min(devicePixelRatio, 2))`, transparent clear, `pointer-events:none` + `100%` sized canvas; `PerspectiveCamera(38, 1, 0.1, 100)` at `z = 3.63`; the `uniforms` object (`uTime`/`uAmp`/`uSpeed`/`uColor`/`uGlow`); the wire `ShaderMaterial` (vertexShader = `ORB_SIMPLEX + \`…\``, fragmentShader as in the prototype) on `IcosahedronGeometry(1, detail)`; the glow `ShaderMaterial` (BackSide, AdditiveBlending, fresnel exp 3.2) on `IcosahedronGeometry(1.12, 2)`; the `TAU = 0.2` exponential easing; the 7 s breathing; the reduced-motion freeze of `simT` + rotation; and the `frame(now)` rAF. Apply `motionOverrides` by merging into the `tgt` object in `setTarget` (and initial `tgt`) so Storyground knobs can push amp/speed/glow/breath. **Perf:** keep the prototype's zero-per-frame-alloc shape — mutate `cur`/`uniforms` in place, never allocate in `frame`. **Dispose:** cancel rAF, `renderer.dispose()`, `renderer.forceContextLoss?.()`, dispose both geometries + both materials, remove the canvas from the DOM. Add explicit `.dispose()` on the two `IcosahedronGeometry` and two `ShaderMaterial` (the prototype leaks these — the repo perf contract requires disposing them; keep references and dispose in `dispose()`).
-      Type the `opts` and internal three objects precisely (no `any`); `motionOverrides` merges over `ORB_MOTION[state]`.
+- [ ] Create `Orb/orbSimplex.ts` — the GLSL 3D simplex-noise source (Ashima/IQ snoise), transcribed exactly from `ORB_SIMPLEX` in `velin-d-orb.jsx`:
+      ```ts
+      /** GLSL 3D simplex noise (snoise) — prepended to the wire vertex shader. */
+      export const ORB_SIMPLEX = `
+      vec3 mod289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}
+      vec4 mod289(vec4 x){return x-floor(x*(1.0/289.0))*289.0;}
+      vec4 permute(vec4 x){return mod289(((x*34.0)+1.0)*x);}
+      vec4 taylorInvSqrt(vec4 r){return 1.79284291400159-0.85373472095314*r;}
+      float snoise(vec3 v){
+        const vec2 C=vec2(1.0/6.0,1.0/3.0); const vec4 D=vec4(0.0,0.5,1.0,2.0);
+        vec3 i=floor(v+dot(v,C.yyy)); vec3 x0=v-i+dot(i,C.xxx);
+        vec3 g=step(x0.yzx,x0.xyz); vec3 l=1.0-g;
+        vec3 i1=min(g.xyz,l.zxy); vec3 i2=max(g.xyz,l.zxy);
+        vec3 x1=x0-i1+C.xxx; vec3 x2=x0-i2+C.yyy; vec3 x3=x0-D.yyy;
+        i=mod289(i);
+        vec4 p=permute(permute(permute(i.z+vec4(0.0,i1.z,i2.z,1.0))+i.y+vec4(0.0,i1.y,i2.y,1.0))+i.x+vec4(0.0,i1.x,i2.x,1.0));
+        float n_=0.142857142857; vec3 ns=n_*D.wyz-D.xzx;
+        vec4 j=p-49.0*floor(p*ns.z*ns.z);
+        vec4 x_=floor(j*ns.z); vec4 y_=floor(j-7.0*x_);
+        vec4 x=x_*ns.x+ns.yyyy; vec4 y=y_*ns.x+ns.yyyy; vec4 h=1.0-abs(x)-abs(y);
+        vec4 b0=vec4(x.xy,y.xy); vec4 b1=vec4(x.zw,y.zw);
+        vec4 s0=floor(b0)*2.0+1.0; vec4 s1=floor(b1)*2.0+1.0; vec4 sh=-step(h,vec4(0.0));
+        vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy; vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
+        vec3 p0=vec3(a0.xy,h.x); vec3 p1=vec3(a0.zw,h.y); vec3 p2=vec3(a1.xy,h.z); vec3 p3=vec3(a1.zw,h.w);
+        vec4 norm=taylorInvSqrt(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
+        p0*=norm.x; p1*=norm.y; p2*=norm.z; p3*=norm.w;
+        vec4 m=max(0.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.0); m=m*m;
+        return 42.0*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
+      }`;
+      ```
+- [ ] Create `Orb/createOrb.ts` — the vanilla-three controller, ported from `createZOrb` (Czech comments translated; geometry/material dispose added per the repo perf contract; `motionOverrides` merged over the state's motion target):
+      ```ts
+      import * as THREE from "three";
+      import { ORB_MOTION, type OrbMotion, type OrbState } from "../orbState";
+      import type { OrbMotionOverrides } from "./Orb";
+      import { ORB_SIMPLEX } from "./orbSimplex";
+
+      export interface CreateOrbOptions {
+        hex?: string;
+        state?: OrbState;
+        detail?: number;
+        antialias?: boolean;
+        motionOverrides?: OrbMotionOverrides;
+      }
+
+      export interface OrbController {
+        setTarget(hex: string, state: OrbState, overrides?: OrbMotionOverrides): void;
+        resize(): void;
+        dispose(): void;
+      }
+
+      /**
+       * A single WebGL orb: wireframe icosahedron displaced along its normals by 3D
+       * simplex noise + fresnel alpha, wrapped in a soft additive glow shell. One
+       * instance = one canvas (own renderer/scene/camera/rAF). Color = identity;
+       * motion (amplitude / noise speed / glow / breathing) = state. All parameters
+       * ease exponentially toward their target (~95 % in 0.6 s).
+       */
+      export function createOrb(container: HTMLElement, opts: CreateOrbOptions): OrbController {
+        const detail = opts.detail ?? 3;
+        const reduce =
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        const renderer = new THREE.WebGLRenderer({
+          antialias: Boolean(opts.antialias),
+          alpha: true,
+          powerPreference: "low-power",
+        });
+        renderer.setClearColor(0x000000, 0);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+        renderer.domElement.style.display = "block";
+        renderer.domElement.style.pointerEvents = "none";
+        renderer.domElement.style.width = "100%";
+        renderer.domElement.style.height = "100%";
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+        camera.position.set(0, 0, 3.63); // sphere fills ~80 % of the canvas height
+
+        const grp = new THREE.Group();
+        scene.add(grp);
+
+        const uniforms = {
+          uTime: { value: Math.random() * 40 },
+          uAmp: { value: ORB_MOTION.idle.amp },
+          uSpeed: { value: ORB_MOTION.idle.speed },
+          uColor: { value: new THREE.Color(opts.hex ?? "#5b8def") },
+          uGlow: { value: ORB_MOTION.idle.glow },
+        };
+
+        const wireGeometry = new THREE.IcosahedronGeometry(1, detail);
+        const wireMat = new THREE.ShaderMaterial({
+          uniforms,
+          transparent: true,
+          depthWrite: false,
+          wireframe: true,
+          blending: THREE.NormalBlending,
+          vertexShader:
+            ORB_SIMPLEX +
+            `
+            uniform float uTime; uniform float uAmp; uniform float uSpeed;
+            varying float vFres;
+            void main(){
+              vec3 dir = normalize(position);
+              float t = uTime * uSpeed;
+              float n1 = snoise(dir * 1.7 + vec3(0.0,0.0,t));
+              float n2 = snoise(dir * 3.4 + vec3(t*0.7,0.0,0.0));
+              float disp = (n1*0.72 + n2*0.28) * uAmp;
+              vec3 p = position + normal * disp;
+              vec4 mv = modelViewMatrix * vec4(p,1.0);
+              vec3 N = normalize(normalMatrix * normal);
+              vec3 V = normalize(-mv.xyz);
+              vFres = pow(1.0 - abs(dot(N,V)), 1.8);
+              gl_Position = projectionMatrix * mv;
+            }`,
+          fragmentShader: `
+            uniform vec3 uColor; varying float vFres;
+            void main(){ float a = mix(0.6,0.95,clamp(vFres,0.0,1.0)); gl_FragColor = vec4(uColor,a); }`,
+        });
+        grp.add(new THREE.Mesh(wireGeometry, wireMat));
+
+        const glowGeometry = new THREE.IcosahedronGeometry(1.12, 2);
+        const glowMat = new THREE.ShaderMaterial({
+          uniforms,
+          transparent: true,
+          depthWrite: false,
+          side: THREE.BackSide,
+          blending: THREE.AdditiveBlending,
+          vertexShader: `
+            varying float vFres;
+            void main(){
+              vec4 mv = modelViewMatrix * vec4(position,1.0);
+              vec3 N = normalize(normalMatrix * normal);
+              vec3 V = normalize(-mv.xyz);
+              vFres = pow(1.0 - abs(dot(N,V)), 3.2);
+              gl_Position = projectionMatrix * mv;
+            }`,
+          fragmentShader: `
+            uniform vec3 uColor; uniform float uGlow; varying float vFres;
+            void main(){ gl_FragColor = vec4(uColor, vFres * uGlow); }`,
+        });
+        grp.add(new THREE.Mesh(glowGeometry, glowMat));
+
+        // Live vs target state — both mutated in place (no per-frame allocation).
+        const targetColor = new THREE.Color(opts.hex ?? "#5b8def");
+        const initial: OrbMotion = {
+          ...(ORB_MOTION[opts.state ?? "idle"] ?? ORB_MOTION.idle),
+          ...opts.motionOverrides,
+        };
+        const tgt: OrbMotion = { ...initial };
+        const cur: OrbMotion = { ...initial };
+
+        function setTarget(hex: string, state: OrbState, overrides?: OrbMotionOverrides): void {
+          targetColor.set(hex);
+          const m = ORB_MOTION[state] ?? ORB_MOTION.idle;
+          tgt.amp = overrides?.amp ?? m.amp;
+          tgt.speed = overrides?.speed ?? m.speed;
+          tgt.glow = overrides?.glow ?? m.glow;
+          tgt.breath = overrides?.breath ?? m.breath;
+        }
+
+        const TAU = 0.2; // easing time constant — ~95 % of the way in 0.6 s
+        let last = performance.now();
+        let simT = uniforms.uTime.value;
+        let raf: number | null = null;
+
+        function resize(): void {
+          const w = container.clientWidth || 1;
+          const h = container.clientHeight || 1;
+          renderer.setSize(w, h, false);
+          camera.aspect = w / h;
+          camera.updateProjectionMatrix();
+        }
+        resize();
+
+        function frame(now: number): void {
+          let dt = (now - last) / 1000;
+          last = now;
+          dt = Math.min(dt, 0.05);
+          const k = 1 - Math.exp(-dt / TAU);
+
+          // 7 s breathing sine, 0..1.
+          const breathPhase = (now / 1000) * ((Math.PI * 2) / 7);
+          const breath = Math.sin(breathPhase) * 0.5 + 0.5;
+
+          cur.amp = cur.amp + (tgt.amp - cur.amp) * k;
+          cur.speed = cur.speed + (tgt.speed - cur.speed) * k;
+          cur.glow = cur.glow + (tgt.glow - cur.glow) * k;
+          cur.breath = cur.breath + (tgt.breath - cur.breath) * k;
+
+          uniforms.uColor.value.lerp(targetColor, k);
+          simT += dt * (reduce ? 0 : 1); // reduced motion: freeze noise time
+          uniforms.uTime.value = simT;
+          uniforms.uSpeed.value = cur.speed;
+          uniforms.uAmp.value = cur.amp * (1 + (breath - 0.5) * 0.28 * cur.breath);
+          uniforms.uGlow.value = cur.glow * (0.82 + breath * 0.18);
+
+          const scale = 1 + (breath - 0.5) * 0.03 * cur.breath;
+          grp.scale.setScalar(scale);
+
+          if (!reduce) {
+            grp.rotation.y += dt * 0.16;
+            grp.rotation.x += dt * 0.07;
+            grp.rotation.z = Math.sin((now / 1000) * 0.12) * 0.09;
+          }
+          renderer.render(scene, camera);
+          raf = requestAnimationFrame(frame);
+        }
+        raf = requestAnimationFrame(frame);
+
+        return {
+          setTarget,
+          resize,
+          dispose(): void {
+            if (raf !== null) cancelAnimationFrame(raf);
+            // Repo perf contract: dispose EVERY three.js resource (the prototype
+            // only disposed the renderer — geometries/materials are added here).
+            wireGeometry.dispose();
+            glowGeometry.dispose();
+            wireMat.dispose();
+            glowMat.dispose();
+            renderer.dispose();
+            renderer.forceContextLoss(); // free the GPU context slot now, not at GC
+            renderer.domElement.parentNode?.removeChild(renderer.domElement);
+          },
+        };
+      }
+      ```
+      **Perf:** the `frame` body allocates nothing (all state mutated in place) — keep it that way.
 - [ ] Create `Orb/Orb.tsx` — the React wrapper (React 19 ref-as-prop, no `forwardRef`), ported from `ZOrb3D`:
       ```tsx
       import { useEffect, useRef } from "react";
       import { canMountWebGL } from "../canMountWebGL";
-      import { ORB_MOTION, type OrbState } from "../orbState";
+      import type { OrbState } from "../orbState";
       import { createOrb, type OrbController } from "./createOrb";
 
       export enum OrbTestId {
@@ -563,9 +795,12 @@ Steps:
           // eslint-disable-next-line react-hooks/exhaustive-deps
         }, []);
 
+        // motionOverrides is in the deps so Storybook knobs stay live after mount;
+        // callers should pass a stable/memoized object (or omit it) to avoid
+        // re-running on every render.
         useEffect(() => {
-          apiRef.current?.setTarget(hex, state);
-        }, [hex, state]);
+          apiRef.current?.setTarget(hex, state, motionOverrides);
+        }, [hex, state, motionOverrides]);
 
         return (
           <div
@@ -632,7 +867,7 @@ Steps:
 
 Port `VcOrbitField` + `vcRand` (`velin-d-map.jsx`): a seeded PRNG lays out N dots on inclined orbits; a rAF loop projects them to 2D with depth-driven scale/opacity/blur/z; reduced-motion freezes at t=0.
 
-**Parallel-safe:** yes, with Tasks 4, 6, 7. Depends on Task 3 (bundle exists) only for co-location — no `three`. Rough size: M.
+**Parallel-safe:** yes, with Tasks 4 and 6 (and with 7 once 6 has landed). Depends on Task 3 (bundle exists) only for co-location — no `three`. Rough size: M.
 
 **Files:**
 - Create: `libs/design-system/src/immersive/seededRandom.ts`, `libs/design-system/src/immersive/seededRandom.test.ts`
@@ -701,7 +936,7 @@ Steps:
         });
       });
       ```
-      Then implement `OrbitField.tsx` — port `VcOrbitField` (use `useMemo` for the orbiter descriptors from `seededRandom(seed)`, `useRef<(HTMLSpanElement | null)[]>` for the dots, the rAF projection loop mutating `el.style.transform/opacity/filter/zIndex` in place, `prefers-reduced-motion` freeze at `t=0` with no rAF scheduled). Each dot span carries `data-testid={OrbitFieldTestId.Dot}`. Wrap in a `data-testid={OrbitFieldTestId.Root}` fragment host (`<span>` with `display:contents`) so the Root testid exists. Keep the radial-gradient + glow inline style verbatim. Guard array indexing for `noUncheckedIndexedAccess` (`const el = dots.current[i]; if (!el) continue;`). No per-frame allocation.
+      Then implement `OrbitField.tsx` — port `VcOrbitField` (translate/strip all Czech comments per Global Constraint 1; use `useMemo` for the orbiter descriptors from `seededRandom(seed)`, `useRef<(HTMLSpanElement | null)[]>` for the dots, the rAF projection loop mutating `el.style.transform/opacity/filter/zIndex` in place, `prefers-reduced-motion` freeze at `t=0` with no rAF scheduled). Each dot span carries `data-testid={OrbitFieldTestId.Dot}`. Wrap in a `data-testid={OrbitFieldTestId.Root}` fragment host (`<span>` with `display:contents`) so the Root testid exists. Keep the radial-gradient + glow inline style verbatim. Guard array indexing for `noUncheckedIndexedAccess` (`const el = dots.current[i]; if (!el) continue;`). No per-frame allocation.
 - [ ] Create `OrbitField.stories.tsx` — `Overview` (a few fields at different counts/colors inside sized relative wrappers) + `Playground` (`argTypes`: `count` range 0–6, `color`, `baseRadius`, `seed` text). Meta `title: "Immersive/OrbitField"`.
 - [ ] Run checks; fix.
 - [ ] Commit:
@@ -716,7 +951,7 @@ Steps:
 
 Port `VcConnectors` (`velin-d-map.jsx`): one quadratic bezier center→node (bend 0.08); a base translucent stroke always, plus a colored dashed overlay animated (`vcDash`) when the node is live. Owns the `vcDash` keyframe injection.
 
-**Parallel-safe:** yes, with Tasks 4, 5, 7. Depends on Task 3 (bundle). Rough size: S.
+**Parallel-safe:** yes, with Tasks 4 and 5 (Task 7 depends on this task's `ensureImmersiveCss` — it may only start after this lands). Depends on Task 3 (bundle). Rough size: S.
 
 **Files:**
 - Create: `libs/design-system/src/immersive/immersive.css.ts` (a `<style>`-injection helper for the shared CSS keyframes, injected once), `libs/design-system/src/immersive/ConnectorLayer/ConnectorLayer.tsx`, `ConnectorLayer.test.tsx`, `ConnectorLayer.stories.tsx`
@@ -735,7 +970,7 @@ Port `VcConnectors` (`velin-d-map.jsx`): one quadratic bezier center→node (ben
 Steps:
 
 - [ ] Create `immersive.css.ts` — one idempotent injector porting the union of the prototype's `vc-css-d` keyframes needed by the bundle. Include exactly: `vcSpin`, `vcShadow`, `vcRing`, `vcHalo`, `vcFloat`, `vcDash`, `vcFlareFly`, `vcFlareBurstRing`, `vcFlareBurstCore`, `vcFlareLaunch`, and the `@media (prefers-reduced-motion: reduce) { [class^="im-"], .im-anim { animation: none !important } }` reset. Guard on `typeof document === "undefined"` (SSR/jsdom) and a `data-immersive-css` marker so it injects once. Copy each keyframe body verbatim from `velin-d-map.jsx` (rename the CSS keyframe identifiers can stay `vc*`? No — English-only: rename keyframes to `im*` — `imDash`, `imHalo`, `imRing`, `imShadow`, `imFloat`, `imFlareFly`, `imFlareBurstRing`, `imFlareBurstCore`, `imFlareLaunch`, `imSpin` — and reference those names in every component). Provide a `resetImmersiveCss()` test seam that removes the injected node.
-- [ ] Create `ConnectorLayer.tsx` — port `VcConnectors`. Full-bleed `<svg style={{ position:"absolute", inset:0, width:"100%", height:"100%", pointerEvents:"none", zIndex:1 }} data-testid={ConnectorLayerTestId.Root}>`. Call `ensureImmersiveCss()` in a `useEffect`. For each node compute `mx = (cx + n.x)/2 + (n.y - cy)*0.08`, `my = (cy + n.y)/2 - (n.x - cx)*0.08`, `d = \`M ${cx} ${cy} Q ${mx} ${my} ${n.x} ${n.y}\``. Render the base `<path stroke="rgba(255,255,255,0.09)" strokeWidth="1">` always with `data-testid={\`${ConnectorLayerTestId.Connector}-${n.id}\`}`, and when `n.live` an overlay `<path stroke={n.color} strokeWidth="1.4" strokeOpacity="0.5" strokeDasharray="2 10" strokeLinecap="round" style={{ animation: "imDash 3.2s linear infinite" }}>`. React 19 ref-as-prop if needed (not required here).
+- [ ] Create `ConnectorLayer.tsx` — port `VcConnectors` (translate/strip all Czech comments per Global Constraint 1). Full-bleed `<svg style={{ position:"absolute", inset:0, width:"100%", height:"100%", pointerEvents:"none", zIndex:1 }} data-testid={ConnectorLayerTestId.Root}>`. Call `ensureImmersiveCss()` in a `useEffect`. For each node compute `mx = (cx + n.x)/2 + (n.y - cy)*0.08`, `my = (cy + n.y)/2 - (n.x - cx)*0.08`, `d = \`M ${cx} ${cy} Q ${mx} ${my} ${n.x} ${n.y}\``. Render the base `<path stroke="rgba(255,255,255,0.09)" strokeWidth="1">` always with `data-testid={\`${ConnectorLayerTestId.Connector}-${n.id}\`}`, and when `n.live` an overlay `<path stroke={n.color} strokeWidth="1.4" strokeOpacity="0.5" strokeDasharray="2 10" strokeLinecap="round" style={{ animation: "imDash 3.2s linear infinite" }}>`. React 19 ref-as-prop if needed (not required here).
 - [ ] Create `ConnectorLayer.test.tsx`: renders one base connector per node (`getAllByTestId` with the `Connector-` prefix, or select per id); a `live` node adds the dashed overlay (assert the live node's group has 2 paths — scope with `within` on the connector's parent `<g>` selected by test-id). Assert root has `toHaveAttribute("aria-hidden")` if you mark it decorative (recommended — add `aria-hidden="true"`).
 - [ ] Create `ConnectorLayer.stories.tsx` — `Overview` (a center + a ring of mixed live/idle nodes) + `Playground` (`argTypes` for a couple of node toggles or a `liveCount` number). Meta `title: "Immersive/ConnectorLayer"`.
 - [ ] Run checks; fix.
@@ -751,7 +986,7 @@ Steps:
 
 Port `VcHandoffFlare` + `vcArcPath` (`velin-d-map.jsx`): a launch ring at the source, three comet dots on a CSS `offset-path` arc (bend 0.16), and an impact burst (core + ring) at the target. Fires `onDone` when its lifetime ends.
 
-**Parallel-safe:** yes, with Tasks 4, 5, 6. Depends on Task 6 (`ensureImmersiveCss` for the `imFlare*` keyframes). Rough size: S/M.
+**Parallel-safe:** no — depends on Task 6 (imports `ensureImmersiveCss` / the `imFlare*` keyframes from Task 6's file). After Task 6 lands, parallel-safe with Tasks 4 and 5 only. Rough size: S/M.
 
 **Files:**
 - Create: `libs/design-system/src/immersive/HandoffFlare/arcPath.ts`, `arcPath.test.ts`, `libs/design-system/src/immersive/HandoffFlare/HandoffFlare.tsx`, `HandoffFlare.test.tsx`, `HandoffFlare.stories.tsx`
@@ -775,7 +1010,7 @@ Port `VcHandoffFlare` + `vcArcPath` (`velin-d-map.jsx`): a launch ring at the so
 Steps:
 
 - [ ] TDD `arcPath` — test first, then port `vcArcPath` (default `bend = 0.16`): `mx = (x1+x2)/2 + (y2-y1)*bend`, `my = (y1+y2)/2 - (x2-x1)*bend`, returns `\`M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}\``. Tests: straight horizontal handoff bows off-axis (my ≠ midpoint y); returns a valid `M … Q … ` string; `bend=0` gives the plain midpoint control point.
-- [ ] Create `HandoffFlare.tsx` — port `VcHandoffFlare` with `HANDOFF_COLOR = "#ffe066"` default. `useEffect` calls `ensureImmersiveCss()` and starts a `setTimeout(onDone, durationMs + 200)` (self-retire ~1.5s), cleared on unmount. Wrap parts in a `data-testid={HandoffFlareTestId.Root}` fragment host. Launch ring (`imFlareLaunch .5s`), the three comet dots (`13/10/7` px, `offsetPath: path('${d}')`, `imFlareFly ${durationMs/1000}s cubic-bezier(.3,0,.7,1) ${(i*0.07)}s forwards`) each with `data-testid={\`${HandoffFlareTestId.Comet}-${i}\`}`, the burst core (`imFlareBurstCore`) and burst ring (`imFlareBurstRing`). Copy all inline styles verbatim. `useMemo` the path `d`.
+- [ ] Create `HandoffFlare.tsx` — port `VcHandoffFlare` (translate/strip all Czech comments per Global Constraint 1) with `HANDOFF_COLOR = "#ffe066"` default. `useEffect` calls `ensureImmersiveCss()` and starts a `setTimeout(onDone, durationMs + 200)` (self-retire ~1.5s), cleared on unmount. Wrap parts in a `data-testid={HandoffFlareTestId.Root}` fragment host. Launch ring (`imFlareLaunch .5s`), the three comet dots (`13/10/7` px, `offsetPath: path('${d}')`, `imFlareFly ${durationMs/1000}s cubic-bezier(.3,0,.7,1) ${(i*0.07)}s forwards`) each with `data-testid={\`${HandoffFlareTestId.Comet}-${i}\`}`, the burst core (`imFlareBurstCore`) and burst ring (`imFlareBurstRing`). Copy all inline styles verbatim. `useMemo` the path `d`.
 - [ ] Create `HandoffFlare.test.tsx`: renders launch + 3 comets + burst core + burst ring (`getAllByTestId(Comet-…)` → 3, others present); `onDone` fires after the timer (`vi.useFakeTimers()` + `vi.advanceTimersByTime`); default color applied when `color` omitted (assert an inline style contains `#ffe066` on the launch node selected by test-id).
 - [ ] Create `HandoffFlare.stories.tsx` — `Overview` (a static flare between two fixed points in a sized box) + `Playground` (`argTypes`: `color`, `durationMs`, plus a "Replay" render that remounts with a key on a button click). Meta `title: "Immersive/HandoffFlare"`.
 - [ ] Run checks; fix.
@@ -816,7 +1051,7 @@ Port `VcNodeD` (`velin-d-map.jsx`): an `Orb` (identity `hex`, `detail=1`) with a
 
 Steps:
 
-- [ ] Create `OrbNode.tsx` — port `VcNodeD`. Resolve `const st = ORB_STATE[state]`. Compute `floatCfg` via `useMemo` from `seededRandom(nodeId)` (`dur = (5 + r()*3).toFixed(1)`, `delay = (r()*4).toFixed(1)`). Structure (all inline styles as in the prototype, testids added):
+- [ ] Create `OrbNode.tsx` — port `VcNodeD` (translate/strip all Czech comments per Global Constraint 1). Resolve `const st = ORB_STATE[state]`. Compute `floatCfg` via `useMemo` from `seededRandom(nodeId)` (`dur = (5 + r()*3).toFixed(1)`, `delay = (r()*4).toFixed(1)`). Structure (all inline styles as in the prototype, testids added):
       - Outer clickable `<div data-testid={OrbNodeTestId.Root}>` — render as a `<button>` for a11y (interactive), `onClick`, `aria-label={label}` (a11y checklist: interactive = button, has accessible name). Keep the flex-column layout + cursor.
       - Float wrapper `<div style={{ animation: \`imFloat ${floatCfg.dur}s ease-in-out -${floatCfg.delay}s infinite\`, … }}>`.
       - Contact shadow `<span data-testid={OrbNodeTestId.Shadow}>` (ellipse `D*0.86 × 11`, `${st.color}44` radial, blur 2px, `imShadow 4s` when `st.live` else `none`).
@@ -863,7 +1098,7 @@ Port `VcCoreD` (`velin-d-map.jsx`) minus the demo timer: an `Orb` (`detail=4`, `
 
 Steps:
 
-- [ ] Create `CoreOrb.tsx` — port `VcCoreD`, replacing the internal `responding` `setInterval`/`setTimeout` with the `thinking` prop. `const lvl = Math.min(1, (intensity ?? 0.4) + (thinking ? 0.5 : 0))`. `const A = hex ?? "#5b8def"`, `S = size`. Structure:
+- [ ] Create `CoreOrb.tsx` — port `VcCoreD` (translate/strip all Czech comments per Global Constraint 1), replacing the internal `responding` `setInterval`/`setTimeout` with the `thinking` prop. `const lvl = Math.min(1, (intensity ?? 0.4) + (thinking ? 0.5 : 0))`. `const A = hex ?? "#5b8def"`, `S = size`. Structure:
       - Root interactive `<button data-testid={CoreOrbTestId.Root}>` (`aria-label` "ZIBBY — overview" localizable by caller? keep English default `title`/`aria-label="ZIBBY overview"`; the app can wrap — but a11y name required), `onClick`, grid place-items center, `width/height = S`.
       - Two heartbeat rings `[0,1].map(i => <span data-testid={\`${CoreOrbTestId.Ring}-${i}\`} style={{ …, animation: \`imRing ${(3.6 - lvl*1.4).toFixed(1)}s ease-out ${(i*(1.8 - lvl*0.7)).toFixed(1)}s infinite\` }} />)` (`S*0.72`, `1px solid ${A}`).
       - Soft glow `<span>` (`S*1.5`, `radial-gradient(circle, ${A}${thinking ? "3a" : "20"} 0%, transparent 66%)`, `transition: background .8s`).
@@ -903,7 +1138,7 @@ export enum OrbMapTestId {
 
 Steps:
 
-- [ ] Create `useMeasure.ts` — port `useMeasure` from `velin-d-map.jsx`: `useRef` + `useState({ w: 1200, h: 720 })`, synchronous initial `getBoundingClientRect` read, `ResizeObserver` subscription, cleanup `disconnect()`. Typed `[React.RefObject<HTMLDivElement | null>, { w: number; h: number }]`. Guard `typeof ResizeObserver === "undefined"` (jsdom without polyfill) — skip the observer, keep the default size.
+- [ ] Create `useMeasure.ts` — port `useMeasure` from `velin-d-map.jsx` (translate its Czech comments to English): `useRef` + `useState({ w: 1200, h: 720 })`, synchronous initial `getBoundingClientRect` read, `ResizeObserver` subscription, cleanup `disconnect()`. Typed `[React.RefObject<HTMLDivElement | null>, { w: number; h: number }]`. Guard `typeof ResizeObserver === "undefined"` (jsdom without polyfill) — skip the observer, keep the default size.
 - [ ] Create `useMeasure.test.tsx` — a probe component reads the size; assert it renders with the default `1200×720` under jsdom (no real layout) and does not throw when `ResizeObserver` is absent.
 - [ ] Create `OrbMap.tsx`:
       ```tsx
