@@ -10,6 +10,7 @@ import {
   type EllipseInsets,
   Icon,
   type IconName,
+  ORB_MAP_CORE_ID,
   OrbMap,
   type OrbMapFlare,
   type OrbMapNode,
@@ -17,8 +18,15 @@ import {
   resolveStateToneHex,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Pipeline } from "../../../domain";
+import { onRunEvent } from "../../runs/runEvents";
 import type { RunView } from "../../runs/run";
+import {
+  type EventFlight,
+  appendParticle,
+  flightForEvent,
+} from "../../subsystems/components/SubsystemWeb/particle-mapping";
 import { activeRunsBySubsystem } from "../subsystemLoad";
 
 export enum SubsystemOrbMapTestId {
@@ -32,8 +40,6 @@ export interface SubsystemOrbMapProps {
   selectedSubsystemId: SubsystemId | null;
   /** Chat streaming flag — feeds the core orb's thinking pulse. */
   thinking: boolean;
-  /** Optional real hand-off events, passed straight through to `OrbMap`. */
-  flares?: OrbMapFlare[];
   /**
    * Layout reserves (tasks panel, dock, chat bar), passed straight through to
    * `OrbMap` — merged over its own all-zero default when omitted. Added by
@@ -77,6 +83,13 @@ const CORE_MAX_INTENSITY = 0.7;
  * but the app always renders 4 regardless of active-run count). */
 const CORE_ACTIVE_COUNT = 4;
 
+/** An `EventFlight` endpoint (`SubsystemId | "orb"`) → an `OrbMapFlare`
+ * `fromId`/`toId` — the orb side maps to `OrbMap`'s reserved core id, a real
+ * subsystem endpoint passes through unchanged. */
+function toFlareEndpoint(id: EventFlight["from"]): string {
+  return id === "orb" ? ORB_MAP_CORE_ID : id;
+}
+
 /**
  * The thin domain→DS adapter (Task 12): maps the subsystem roster + active runs
  * onto `OrbMap`'s generic node/core props, in the fixed `SUBSYSTEMS` registry
@@ -89,6 +102,19 @@ const CORE_ACTIVE_COUNT = 4;
  * `selectedSubsystemId` is kept for interface parity with the seam contract, but
  * unused here: phase-1 selection visuals belong to whatever opens on selection
  * (the subsystem drawer), not this map.
+ *
+ * Task 13b: owns the comet handoff-flares' state end to end (the gap the retired
+ * `CosmicScene`'s `emitFlight` used to close). Subscribes to the shared
+ * `RunEventsProvider` bus once and, for every event, runs the SAME pure
+ * `flightForEvent` classifier the old scene's WebGL particles used (real
+ * dispatch/report transitions only — never a timer, never a guess): a
+ * `pipeline-runs` event that resolves to an owning subsystem becomes a flare
+ * from the core to that subsystem (`running`, a dispatch) or from the
+ * subsystem back to the core (`done`/`failed`/`parked`, a report). Flares are
+ * appended and bounded by `particle-mapping.ts`'s own `MAX_PARTICLES` cap (the
+ * SAME "~12, thin the tail" bound the old scene enforced) and pruned via
+ * `OrbMap`'s `onFlareDone` once each comet's lifetime ends — fully internal:
+ * the caller never drives `flares` itself.
  */
 export function SubsystemOrbMap({
   subsystems,
@@ -96,7 +122,6 @@ export function SubsystemOrbMap({
   pipelines,
   selectedSubsystemId: _selectedSubsystemId,
   thinking,
-  flares,
   insets,
   onOpenCore,
   onSelectSubsystem,
@@ -126,6 +151,47 @@ export function SubsystemOrbMap({
     0,
   );
 
+  // Read `runs`/`pipelines` through refs (mirrors the retired `CosmicScene`'s own
+  // pattern) so a query refetch's fresh array reference never tears down and
+  // resubscribes the `onRunEvent` listener below — the shared bus's one
+  // `EventSource` keeps delivering events the whole time regardless.
+  const runsRef = useRef(runs);
+  useEffect(() => {
+    runsRef.current = runs;
+  }, [runs]);
+  const pipelinesRef = useRef(pipelines);
+  useEffect(() => {
+    pipelinesRef.current = pipelines;
+  }, [pipelines]);
+
+  const [flares, setFlares] = useState<OrbMapFlare[]>([]);
+  // Tiebreaker for two events landing in the same millisecond — appended to the
+  // id so they never collide even though `Date.now()` alone might.
+  const flareSeq = useRef(0);
+
+  useEffect(() => {
+    return onRunEvent((event) => {
+      const flight = flightForEvent(event, runsRef.current, pipelinesRef.current);
+      if (!flight) return;
+      flareSeq.current += 1;
+      const color = SUBSYSTEMS.find((s) => s.id === flight.subsystemId)?.color;
+      const id = `flare-${flight.subsystemId}-${event.runId ?? "run"}-${event.status ?? "status"}-${Date.now()}-${flareSeq.current}`;
+      const next: OrbMapFlare = {
+        id,
+        fromId: toFlareEndpoint(flight.from),
+        toId: toFlareEndpoint(flight.to),
+        color,
+      };
+      setFlares((prev) => appendParticle(prev, next));
+    });
+    // Subscribe once — the refs above keep the closure's data fresh without ever
+    // needing to unsubscribe/resubscribe.
+  }, []);
+
+  const handleFlareDone = useCallback((id: string) => {
+    setFlares((prev) => prev.filter((f) => f.id !== id));
+  }, []);
+
   return (
     <div data-testid={SubsystemOrbMapTestId.Root}>
       <OrbMap
@@ -141,6 +207,7 @@ export function SubsystemOrbMap({
         flares={flares}
         insets={insets}
         nodes={nodes}
+        onFlareDone={handleFlareDone}
         onSelectCore={onOpenCore}
         onSelectNode={(id) => onSelectSubsystem(id as SubsystemId)}
       />

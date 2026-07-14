@@ -47,10 +47,20 @@ export interface OrbMapCore {
 export interface OrbMapFlare {
   /** Unique id — the caller drops the flare from `flares` once it retires. */
   id: string;
+  /** A node's `id`, or the reserved {@link ORB_MAP_CORE_ID} for the central core. */
   fromId: string;
+  /** A node's `id`, or the reserved {@link ORB_MAP_CORE_ID} for the central core. */
   toId: string;
   color?: string;
 }
+
+/**
+ * Reserved `fromId`/`toId` value meaning "the central core orb" — lets a flare
+ * represent a dispatch (`core → node`) or a report (`node → core`), not just a
+ * node-to-node handoff. No real node may use this id (the app's node ids come
+ * from a fixed registry that never collides with it).
+ */
+export const ORB_MAP_CORE_ID = "core";
 
 export interface OrbMapProps {
   nodes: OrbMapNode[];
@@ -72,10 +82,11 @@ const DEFAULT_INSETS: EllipseInsets = { left: 0, right: 0, bottom: 0 };
  * Composes the immersive orb map: measures its container, computes the responsive
  * ellipse layout, and renders the {@link ConnectorLayer} beneath a centered
  * {@link CoreOrb} and one {@link OrbNode} per entry in `nodes` — plus any active
- * {@link HandoffFlare}s between node pairs. Sizing-API exception (documented at the
- * bundle level): all computed geometry (positions, ellipse radii, core/node diameters)
- * is inline-styled — DS is exempt from `react/forbid-dom-props`. No per-frame
- * allocation here (children own their own rAF loops).
+ * {@link HandoffFlare}s between node pairs (or a node and the core, via the
+ * reserved {@link ORB_MAP_CORE_ID} endpoint). Sizing-API exception (documented at
+ * the bundle level): all computed geometry (positions, ellipse radii, core/node
+ * diameters) is inline-styled — DS is exempt from `react/forbid-dom-props`. No
+ * per-frame allocation here (children own their own rAF loops).
  *
  * Ported from `VcMapD` (`design/Z.I.B.B.Y/zibby/velin-d-map.jsx`), minus its demo
  * hand-off timer — `flares` is a controlled prop the app drives from real events.
@@ -99,6 +110,7 @@ export function OrbMap({
   const layout = ellipseLayout(w, h, nodes.length, merged);
 
   const posById = new Map<string, OrbPosition>();
+  posById.set(ORB_MAP_CORE_ID, { x: layout.cx, y: layout.cy });
   nodes.forEach((n, i) => {
     const p = layout.positions[i];
     if (p) posById.set(n.id, p);

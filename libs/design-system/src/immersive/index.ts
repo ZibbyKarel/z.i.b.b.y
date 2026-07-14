@@ -60,7 +60,7 @@ export { arcPath } from "./HandoffFlare/arcPath";
 // ---------------------------------------------------------------------------
 // OrbMap — composes the full map
 // ---------------------------------------------------------------------------
-export { OrbMap, OrbMapTestId } from "./OrbMap/OrbMap";
+export { ORB_MAP_CORE_ID, OrbMap, OrbMapTestId } from "./OrbMap/OrbMap";
 export type {
   OrbMapCore,
   OrbMapFlare,

@@ -9,7 +9,7 @@ import {
 } from "../HandoffFlare/HandoffFlare";
 import { OrbNodeTestId } from "../OrbNode/OrbNode";
 import type { OrbState } from "../orbState";
-import { OrbMap, type OrbMapCore, type OrbMapNode, OrbMapTestId } from "./OrbMap";
+import { ORB_MAP_CORE_ID, OrbMap, type OrbMapCore, type OrbMapNode, OrbMapTestId } from "./OrbMap";
 
 // jsdom ships no ResizeObserver — the shared vitest setup already polyfills it, but
 // this test file stays self-sufficient in case it ever runs standalone.
@@ -80,6 +80,17 @@ describe("OrbMap", () => {
       <OrbMap
         core={CORE}
         flares={[{ id: "flare-1", fromId: "atlas", toId: "forge" }]}
+        nodes={buildNodes()}
+      />,
+    );
+    expect(screen.getByTestId(HandoffFlareTestId.Root)).toBeInTheDocument();
+  });
+
+  it("renders a HandoffFlare between a node and the reserved core id", () => {
+    render(
+      <OrbMap
+        core={CORE}
+        flares={[{ id: "flare-core", fromId: ORB_MAP_CORE_ID, toId: "forge" }]}
         nodes={buildNodes()}
       />,
     );

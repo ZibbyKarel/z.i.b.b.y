@@ -350,7 +350,7 @@ export {
 export type { HandoffFlareProps } from "./immersive/HandoffFlare/HandoffFlare";
 export { arcPath } from "./immersive/HandoffFlare/arcPath";
 
-export { OrbMap, OrbMapTestId } from "./immersive/OrbMap/OrbMap";
+export { ORB_MAP_CORE_ID, OrbMap, OrbMapTestId } from "./immersive/OrbMap/OrbMap";
 export type {
   OrbMapCore,
   OrbMapFlare,

@@ -1,11 +1,29 @@
 import { SUBSYSTEMS, type SubsystemWithStatus } from "@zibby/contracts";
-import { CoreOrbTestId, OrbMapTestId, OrbNodeTestId } from "@zibby/design-system";
+import {
+  CoreOrbTestId,
+  DEFAULT_DURATION_MS,
+  HandoffFlareTestId,
+  OrbMapTestId,
+  OrbNodeTestId,
+  OrbitFieldTestId,
+  RETIRE_BUFFER_MS,
+} from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { act } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Pipeline } from "../../../domain";
+import { installEventSourceMock } from "../../../test/eventSourceMock";
+import { RunEventsProvider } from "../../runs/runEvents";
 import type { RunView } from "../../runs/run";
 import { renderWithProviders, screen, within } from "../../../test/render";
 import { SubsystemOrbMap, SubsystemOrbMapTestId } from "./SubsystemOrbMap";
+
+// The provider reads `API_URL` off the env; pin it so its `EventSource` opens
+// (mirrors `ChatScreen.test.tsx`'s own pattern for the same reason).
+vi.mock("../../../state/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../state/api")>();
+  return { ...actual, API_URL: "http://localhost:3333" };
+});
 
 function subsystem(overrides: Partial<SubsystemWithStatus> = {}): SubsystemWithStatus {
   const base = SUBSYSTEMS[0]!;
@@ -205,9 +223,81 @@ describe("SubsystemOrbMap", () => {
       />,
     );
 
-    // OrbitField renders one dot per active task — asserted indirectly is brittle,
-    // so this asserts the map renders without throwing and the node is present;
-    // `subsystemLoad.test.ts` already covers the count derivation itself.
-    expect(screen.getByTestId(`${OrbMapTestId.Node}-forge`)).toBeInTheDocument();
+    // One `OrbitField` dot per active task — the node's own `OrbitField` instance
+    // renders exactly the 2 active runs above as orbiting dots.
+    const wrapper = screen.getByTestId(`${OrbMapTestId.Node}-forge`);
+    expect(within(wrapper).getAllByTestId(OrbitFieldTestId.Dot)).toHaveLength(2);
+  });
+
+  describe("run-event handoff flares (Task 13b)", () => {
+    let mock: ReturnType<typeof installEventSourceMock>;
+
+    beforeEach(() => {
+      mock = installEventSourceMock();
+    });
+
+    afterEach(() => {
+      mock.restore();
+      vi.useRealTimers();
+    });
+
+    /** Mounts `SubsystemOrbMap` under a real `RunEventsProvider` so a mocked SSE
+     * frame reaches the adapter's own `onRunEvent` subscription — exactly the bus
+     * `ChatScreen`'s real tree provides at `apps/web/app/providers.tsx`. */
+    function renderUnderBus(pipelines: Pipeline[], runs: RunView[]) {
+      renderWithProviders(
+        <RunEventsProvider>
+          <SubsystemOrbMap
+            onOpenCore={vi.fn()}
+            onSelectSubsystem={vi.fn()}
+            pipelines={pipelines}
+            runs={runs}
+            selectedSubsystemId={null}
+            subsystems={allSubsystems()}
+            thinking={false}
+          />
+        </RunEventsProvider>,
+      );
+    }
+
+    it("a dispatch run-event (pipeline-runs → running) appends a flare from the core to the owning subsystem", () => {
+      const pipelines = [pipeline({ id: "forge-a", ownerSubsystem: "forge" })];
+      const runs = [run({ runId: "r1", owner: "forge-a", status: "running" })];
+      renderUnderBus(pipelines, runs);
+
+      expect(screen.queryByTestId(HandoffFlareTestId.Root)).toBeNull();
+      act(() => {
+        mock.last().emit({ scope: "pipeline-runs", runId: "r1", status: "running" });
+      });
+      expect(screen.getByTestId(HandoffFlareTestId.Root)).toBeInTheDocument();
+    });
+
+    it("an unattributable run-event (unresolvable owner) fires no flare", () => {
+      renderUnderBus([], []);
+      act(() => {
+        mock.last().emit({ scope: "pipeline-runs", runId: "unknown-run", status: "running" });
+      });
+      expect(screen.queryByTestId(HandoffFlareTestId.Root)).toBeNull();
+    });
+
+    it("onFlareDone prunes the flare once its comet lifetime ends", () => {
+      vi.useFakeTimers();
+      const pipelines = [pipeline({ id: "forge-a", ownerSubsystem: "forge" })];
+      const runs = [run({ runId: "r1", owner: "forge-a", status: "running" })];
+      renderUnderBus(pipelines, runs);
+
+      act(() => {
+        mock.last().emit({ scope: "pipeline-runs", runId: "r1", status: "running" });
+      });
+      expect(screen.getByTestId(HandoffFlareTestId.Root)).toBeInTheDocument();
+
+      // `HandoffFlare`'s own self-retire timer — advancing past it fires `onDone`
+      // → `OrbMap`'s `onFlareDone` → the adapter drops the flare from its own
+      // state.
+      act(() => {
+        vi.advanceTimersByTime(DEFAULT_DURATION_MS + RETIRE_BUFFER_MS);
+      });
+      expect(screen.queryByTestId(HandoffFlareTestId.Root)).toBeNull();
+    });
   });
 });
