@@ -147,7 +147,7 @@ export type {
 export { Button } from "./components/Button/Button";
 export type { ButtonIntent, ButtonProps, ButtonSize } from "./components/Button/Button";
 
-export { HoldButton } from "./components/HoldButton/HoldButton";
+export { HoldButton, HoldButtonTestId } from "./components/HoldButton/HoldButton";
 export type {
   HoldButtonProps,
   HoldButtonSize,
