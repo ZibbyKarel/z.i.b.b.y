@@ -22,12 +22,16 @@ export interface SearchBarProps {
   title?: string;
   onClick?: () => void;
   ref?: Ref<HTMLButtonElement>;
+  /** Chrome fill. "solid" (default) keeps the opaque input look; "transparent"
+   * drops the own background + border so a surrounding GlassSurface shows through. */
+  surface?: "solid" | "transparent";
 }
 
 /**
  * The dashboard command / search bar. A wide, quiet button styled like an input
  * that opens the command palette on click (or via its keyboard shortcut). Sizing
  * is fluid — it fills its container, so callers control the width via layout.
+ * `surface="transparent"` lets it sit inside a glass pill without an opaque fill.
  */
 export function SearchBar({
   placeholder,
@@ -36,13 +40,17 @@ export function SearchBar({
   title,
   onClick,
   ref,
+  surface = "solid",
 }: SearchBarProps) {
   return (
     <button
       aria-label={ariaLabel}
       className={cn(
         "flex items-center gap-2.5 w-full px-3.5 py-2 cursor-pointer",
-        "bg-background border border-border rounded-sm text-foreground-faint",
+        surface === "transparent"
+          ? "bg-transparent border border-transparent"
+          : "bg-background border border-border",
+        "rounded-sm text-foreground-faint",
         "transition-colors",
         "hover:border-border-strong hover:text-foreground-dim",
         focusRing,

@@ -115,6 +115,19 @@ describe("Dropdown", () => {
     expect(trigger).toHaveAttribute("aria-activedescendant", opts[0]!.id);
   });
 
+  it("compact single trigger shows only the code, not the label", () => {
+    render(<Dropdown compact onChange={vi.fn()} options={OPTIONS} value="cs" />);
+    const trigger = screen.getByTestId(DropdownTestId.Trigger);
+    expect(trigger).toHaveTextContent("CZ");
+    expect(trigger).not.toHaveTextContent("Čeština");
+  });
+
+  it("compact trigger still lists full labels in the open menu", async () => {
+    render(<Dropdown compact onChange={vi.fn()} options={OPTIONS} value="cs" />);
+    await userEvent.click(screen.getByTestId(DropdownTestId.Trigger));
+    expect(screen.getByTestId(DropdownTestId.Panel)).toHaveTextContent("English");
+  });
+
   describe("multi mode", () => {
     it("renders the trigger as a combobox with a chip per selected value", () => {
       render(<Dropdown multi onChange={vi.fn()} options={OPTIONS} value={["cs", "en"]} />);

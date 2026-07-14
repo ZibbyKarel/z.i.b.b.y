@@ -43,4 +43,16 @@ describe("SearchBar", () => {
     );
     expect(node).not.toBeNull();
   });
+
+  it("keeps an opaque fill by default", () => {
+    render(<SearchBar ariaLabel="Command" placeholder="Command…" />);
+    expect(screen.getByTestId(SearchBarTestId.Root)).toHaveClass("bg-background");
+  });
+
+  it("drops the opaque fill in the transparent surface so glass shows through", () => {
+    render(<SearchBar ariaLabel="Command" placeholder="Command…" surface="transparent" />);
+    const root = screen.getByTestId(SearchBarTestId.Root);
+    expect(root).toHaveClass("bg-transparent");
+    expect(root).not.toHaveClass("bg-background");
+  });
 });
