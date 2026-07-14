@@ -70,4 +70,9 @@ describe("StatusPill", () => {
     await userEvent.hover(screen.getByTestId(StatusPillTestId.Waiting));
     expect(screen.getByTestId("chat-status-flyout")).toHaveTextContent("waiting");
   });
+
+  it("does not draw its own border (single glass border, no doubling)", () => {
+    renderWithProviders(<StatusPill />);
+    expect(screen.getByTestId(StatusPillTestId.Root)).not.toHaveClass("border-border");
+  });
 });

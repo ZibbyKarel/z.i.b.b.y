@@ -139,7 +139,7 @@ export function StatusPill() {
 
   return (
     <div
-      className="rounded-full border border-border px-[14px] py-[6px]"
+      className="rounded-full px-[14px] py-[6px]"
       data-testid={StatusPillTestId.Root}
       id={STATUS_PILL_DOM_ID}
       onBlur={onRootBlur}
