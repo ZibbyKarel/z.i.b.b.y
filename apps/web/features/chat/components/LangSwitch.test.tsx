@@ -1,23 +1,25 @@
+import { DropdownTestId } from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { renderWithProviders } from "../../../test/render";
+import { renderWithProviders, screen } from "../../../test/render";
 import { LangSwitch } from "./LangSwitch";
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 
 describe("LangSwitch", () => {
-  it("writes the locale cookie and refreshes on change", async () => {
-    const { getByText } = renderWithProviders(<LangSwitch />);
-    await userEvent.click(getByText("English"));
-    expect(document.cookie).toContain("locale=en");
-    expect(refresh).toHaveBeenCalled();
+  it("shows only the current locale code in the compact trigger", () => {
+    renderWithProviders(<LangSwitch />);
+    const trigger = screen.getByTestId(DropdownTestId.Trigger);
+    expect(trigger).toHaveTextContent("CZ");
+    expect(trigger).not.toHaveTextContent("Čeština");
   });
 
-  it("ignores the empty value ButtonGroup emits when the active option is re-clicked", async () => {
-    const { getByText } = renderWithProviders(<LangSwitch />);
-    // Default locale in tests is "cs"; clicking the active option can emit "".
-    await userEvent.click(getByText("Čeština"));
-    expect(document.cookie).not.toContain("locale=;");
+  it("writes the locale cookie and refreshes when a language is picked", async () => {
+    renderWithProviders(<LangSwitch />);
+    await userEvent.click(screen.getByTestId(DropdownTestId.Trigger));
+    await userEvent.click(screen.getByText("English"));
+    expect(document.cookie).toContain("locale=en");
+    expect(refresh).toHaveBeenCalled();
   });
 });

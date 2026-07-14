@@ -1,12 +1,8 @@
 "use client";
 
-import { ButtonGroup, GlassSurface } from "@zibby/design-system";
+import { Dropdown } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-
-export enum LangSwitchTestId {
-  Root = "chat-lang-switch",
-}
 
 type Locale = "cs" | "en";
 
@@ -20,11 +16,14 @@ function writeLocaleCookie(value: Locale) {
   document.cookie = `locale=${value}; path=/; max-age=31536000`;
 }
 
-/** Glass-pill language switch. Reuses the settings locale mechanism exactly:
- * cookie write + router.refresh() so i18n/request.ts re-reads on the next render.
- * ButtonGroup emits "" when the active option is toggled off — guarded, no-op. */
+/**
+ * Compact code-only language switch (Velín-D top bar): a DS `Dropdown` (inline,
+ * size sm, compact — CZ/EN, accent border + chevron on open). No wrapping
+ * GlassSurface — the top bar supplies the single glass layer (the phase-2 double
+ * glass nesting is gone). Locale mechanics unchanged: cookie write + router.refresh()
+ * so i18n/request.ts re-reads on the next render.
+ */
 export function LangSwitch() {
-  // Reuses the shipped top-bar label key — no new catalog entry.
   const t = useTranslations("topbar");
   const locale = useLocale() as Locale;
   const router = useRouter();
@@ -36,16 +35,17 @@ export function LangSwitch() {
   };
 
   return (
-    <GlassSurface data-testid={LangSwitchTestId.Root} radius="pill">
-      <ButtonGroup
-        ariaLabel={t("langSwitcherLabel")}
-        onChange={setLocale}
-        options={[
-          { id: "cs", label: "Čeština" },
-          { id: "en", label: "English" },
-        ]}
-        value={locale}
-      />
-    </GlassSurface>
+    <Dropdown
+      compact
+      aria-label={t("langSwitcherLabel")}
+      onChange={setLocale}
+      options={[
+        { value: "cs", code: "CZ", label: "Čeština" },
+        { value: "en", code: "EN", label: "English" },
+      ]}
+      size="sm"
+      value={locale}
+      variant="inline"
+    />
   );
 }
