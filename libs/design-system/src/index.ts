@@ -357,3 +357,6 @@ export type {
   OrbMapNode,
   OrbMapProps,
 } from "./immersive/OrbMap/OrbMap";
+
+export { GlassSurface, GlassSurfaceTestId } from "./immersive/GlassSurface/GlassSurface";
+export type { GlassSurfaceProps } from "./immersive/GlassSurface/GlassSurface";

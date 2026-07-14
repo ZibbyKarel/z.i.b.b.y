@@ -67,3 +67,9 @@ export type {
   OrbMapNode,
   OrbMapProps,
 } from "./OrbMap/OrbMap";
+
+// ---------------------------------------------------------------------------
+// GlassSurface — Velín-D liquid-glass chrome primitive (no orb-map dependency)
+// ---------------------------------------------------------------------------
+export { GlassSurface, GlassSurfaceTestId } from "./GlassSurface/GlassSurface";
+export type { GlassSurfaceProps } from "./GlassSurface/GlassSurface";
