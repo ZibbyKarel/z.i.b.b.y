@@ -58,7 +58,7 @@ describe("Subsystems API (e2e)", () => {
   it("GET /api/subsystems/:id returns the matching entry", async () => {
     const res = await request(app.getHttpServer()).get("/api/subsystems/forge");
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ id: "forge", name: "Forge", color: "#f97316" });
+    expect(res.body).toMatchObject({ id: "forge", name: "Forge", color: "#5b8def" });
   });
 
   it("GET /api/subsystems/:id 404s on an unknown id", async () => {

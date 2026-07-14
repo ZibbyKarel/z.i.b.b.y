@@ -21,7 +21,7 @@ export const darkTheme: Theme = {
   colorForegroundDim: "#9aa7b4",
   // WCAG AA (>=4.5:1) against all surface levels (colorBackgroundDeep..colorElevated) —
   // see phase 19.2 commit message for computed ratios.
-  colorForegroundFaint: "#7a8793",
+  colorForegroundFaint: "#66737f",
 
   // borders
   colorBorder: "rgba(255,255,255,0.08)",
@@ -56,6 +56,13 @@ export const darkTheme: Theme = {
   shadowCard: "0 6px 22px rgba(0,0,0,0.35)",
   shadowModal: "0 30px 80px rgba(0,0,0,0.6)",
   shadowGlowAccent: "0 0 16px rgba(91,141,239,0.4)",
+
+  // liquid-glass chrome recipe (Velín-D VD_GLASS), consumed by GlassSurface
+  gradientGlass:
+    "linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02) 40%, rgba(16,21,28,0.5))",
+  colorGlassBorder: "rgba(255,255,255,0.12)",
+  shadowGlass: "inset 0 1px 0 rgba(255,255,255,0.13), 0 16px 40px rgba(0,0,0,0.42)",
+  blurGlass: "blur(22px) saturate(180%)",
 
   // fonts
   fontSans: "var(--font-sans, Geist, -apple-system, BlinkMacSystemFont, system-ui, sans-serif)",

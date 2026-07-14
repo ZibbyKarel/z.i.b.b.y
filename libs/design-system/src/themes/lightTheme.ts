@@ -54,6 +54,14 @@ export const lightTheme: Theme = {
   shadowModal: "0 16px 50px rgba(0,0,0,0.2)",
   shadowGlowAccent: "0 0 12px rgba(201,137,10,0.3)",
 
+  // Liquid-glass recipe: the app mounts dark-only, so a light-tuned glass recipe is
+  // out of scope — these mirror darkTheme's values to satisfy the required Theme shape.
+  gradientGlass:
+    "linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02) 40%, rgba(16,21,28,0.5))",
+  colorGlassBorder: "rgba(255,255,255,0.12)",
+  shadowGlass: "inset 0 1px 0 rgba(255,255,255,0.13), 0 16px 40px rgba(0,0,0,0.42)",
+  blurGlass: "blur(22px) saturate(180%)",
+
   // fonts
   fontSans: "var(--font-sans, Geist, -apple-system, BlinkMacSystemFont, system-ui, sans-serif)",
   fontMono: "var(--font-mono, 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace)",

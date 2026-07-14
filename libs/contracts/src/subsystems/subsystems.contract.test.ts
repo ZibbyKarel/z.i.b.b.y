@@ -52,8 +52,8 @@ describe("SUBSYSTEMS registry", () => {
     }
   });
 
-  it("Forge is the established orange #f97316", () => {
-    expect(SUBSYSTEMS.find((s) => s.id === "forge")?.color).toBe("#f97316");
+  it("Forge is the ZT accent blue #5b8def", () => {
+    expect(SUBSYSTEMS.find((s) => s.id === "forge")?.color).toBe("#5b8def");
   });
 
   it("every heroImage points at the phase-90 art under /subsystems/", () => {
