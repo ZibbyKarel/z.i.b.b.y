@@ -28,4 +28,25 @@ describe("i18n catalog parity", () => {
     expect(keys(en)).toContain("chat.close");
     expect(keys(cs)).toContain("chat.close");
   });
+  it("has the status-flyout keys (phase 3a)", () => {
+    for (const key of [
+      "chat.statusPill.flyout.working.title",
+      "chat.statusPill.flyout.working.emptyTitle",
+      "chat.statusPill.flyout.working.emptyBody",
+      "chat.statusPill.flyout.waiting.title",
+      "chat.statusPill.flyout.waiting.emptyTitle",
+      "chat.statusPill.flyout.waiting.emptyBody",
+      "chat.statusPill.flyout.loading",
+      "chat.statusPill.flyout.errorTitle",
+      "chat.statusPill.flyout.errorBody",
+      "chat.statusPill.flyout.retry",
+      // reused by flyout rows — must keep existing:
+      "approval.approve",
+      "approval.reject",
+      "approval.holdToApprove",
+    ]) {
+      expect(keys(en)).toContain(key);
+      expect(keys(cs)).toContain(key);
+    }
+  });
 });

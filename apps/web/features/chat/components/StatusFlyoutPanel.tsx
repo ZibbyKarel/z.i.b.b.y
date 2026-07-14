@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef } from "react";
 import type { FocusEvent, KeyboardEvent } from "react";
+import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { Container, Stack, StatusDot, Typography } from "@zibby/design-system";
 import { Collection } from "../../../components/Collection/Collection";
@@ -25,33 +26,6 @@ export enum StatusFlyoutTestId {
 
 /** Stable DOM id the pill triggers point aria-controls at (and move focus into). */
 export const STATUS_FLYOUT_PANEL_ID = "chat-status-flyout-panel";
-
-/**
- * Placeholder English copy standing in for `t("chat.statusPill.flyout.<key>")` calls.
- * Task 6 owns the i18n catalog entries (`cs.json`/`en.json` under
- * `chat.statusPill.flyout`) — until those keys exist, calling `useTranslations` here
- * is a hard TS2345 typecheck error (the next-intl `AppConfig` augmentation in
- * `global.d.ts` types every message key literally off `en.json`), not just a runtime
- * fallback. The object below mirrors the exact key shape the brief specifies, so
- * Task 6 can add the catalog entries and swap each string literal for `t("<path>")`
- * verbatim with no further design work.
- */
-const FLYOUT_COPY = {
-  working: {
-    title: "Working",
-    emptyTitle: "Nothing running",
-    emptyBody: "No active runs right now.",
-  },
-  waiting: {
-    title: "Waiting for you",
-    emptyTitle: "All clear",
-    emptyBody: "No approvals waiting.",
-  },
-  errorTitle: "Couldn't load",
-  errorBody: "Something went wrong loading this.",
-  retry: "Retry",
-  loading: "Loading…",
-} as const;
 
 export interface StatusFlyoutPanelProps {
   section: FlyoutSection;
@@ -77,6 +51,8 @@ function SectionHeader({
   section: FlyoutSection;
 }) {
   const meta = SECTION_META[section];
+  const t = useTranslations("chat.statusPill.flyout");
+  const title = section === "working" ? t("working.title") : t("waiting.title");
   return (
     <Container
       data-testid={StatusFlyoutTestId.Header}
@@ -87,7 +63,7 @@ function SectionHeader({
         <Stack align="center" direction="row" gap="100">
           <StatusDot pulse tone={meta.dotTone} />
           <Typography id={headerId} size="md" tone={meta.titleTone} type="note" weight="semibold">
-            {FLYOUT_COPY[section].title}
+            {title}
           </Typography>
         </Stack>
         <Typography mono size="xs" type="note" variant="tertiary">
@@ -102,6 +78,7 @@ function WorkingSection({ headerId }: { headerId: string }) {
   const { runs, isPending, isError, refetch } = useRunsQuery();
   const glyphById = useRunGlyphMap();
   const working = runs.filter((r) => WORKING_STATUSES.has(r.status));
+  const t = useTranslations("chat.statusPill.flyout");
   return (
     <>
       <SectionHeader count={working.length} headerId={headerId} section="working" />
@@ -110,15 +87,15 @@ function WorkingSection({ headerId }: { headerId: string }) {
           cols={1}
           empty={{
             glyph: "run",
-            title: FLYOUT_COPY.working.emptyTitle,
-            description: FLYOUT_COPY.working.emptyBody,
+            title: t("working.emptyTitle"),
+            description: t("working.emptyBody"),
           }}
           error={
             isError
               ? {
-                  title: FLYOUT_COPY.errorTitle,
-                  description: FLYOUT_COPY.errorBody,
-                  retryLabel: FLYOUT_COPY.retry,
+                  title: t("errorTitle"),
+                  description: t("errorBody"),
+                  retryLabel: t("retry"),
                   onRetry: () => void refetch(),
                 }
               : undefined
@@ -126,7 +103,7 @@ function WorkingSection({ headerId }: { headerId: string }) {
           gap="100"
           items={working}
           lg={2}
-          loading={isPending ? { label: FLYOUT_COPY.loading } : undefined}
+          loading={isPending ? { label: t("loading") } : undefined}
           renderItem={(run) => (
             <FlyoutWorkRow glyph={runGlyph(run, glyphById)} key={run.runId} run={run} />
           )}
@@ -140,6 +117,7 @@ function WorkingSection({ headerId }: { headerId: string }) {
 function WaitingSection({ headerId }: { headerId: string }) {
   const query = useApprovalsQuery();
   const approvals = query.data ?? [];
+  const t = useTranslations("chat.statusPill.flyout");
   return (
     <>
       <SectionHeader count={approvals.length} headerId={headerId} section="waiting" />
@@ -148,15 +126,15 @@ function WaitingSection({ headerId }: { headerId: string }) {
           cols={1}
           empty={{
             glyph: "ok",
-            title: FLYOUT_COPY.waiting.emptyTitle,
-            description: FLYOUT_COPY.waiting.emptyBody,
+            title: t("waiting.emptyTitle"),
+            description: t("waiting.emptyBody"),
           }}
           error={
             query.isError
               ? {
-                  title: FLYOUT_COPY.errorTitle,
-                  description: FLYOUT_COPY.errorBody,
-                  retryLabel: FLYOUT_COPY.retry,
+                  title: t("errorTitle"),
+                  description: t("errorBody"),
+                  retryLabel: t("retry"),
                   onRetry: () => void query.refetch(),
                 }
               : undefined
@@ -164,7 +142,7 @@ function WaitingSection({ headerId }: { headerId: string }) {
           gap="100"
           items={approvals}
           lg={2}
-          loading={query.isPending ? { label: FLYOUT_COPY.loading } : undefined}
+          loading={query.isPending ? { label: t("loading") } : undefined}
           renderItem={(approval) => <FlyoutApprovalRow approval={approval} key={approval.id} />}
           sm={2}
         />

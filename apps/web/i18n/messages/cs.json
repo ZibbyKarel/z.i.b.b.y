@@ -1688,7 +1688,23 @@
       "nominal": "Nominální",
       "working": "{n} pracují",
       "report": "{n} hlášení",
-      "waiting": "{n} čekají na tebe"
+      "waiting": "{n} čekají na tebe",
+      "flyout": {
+        "working": {
+          "title": "Pracují",
+          "emptyTitle": "Nikdo nepracuje",
+          "emptyBody": "Žádná úloha právě neběží."
+        },
+        "waiting": {
+          "title": "Čeká na tvé rozhodnutí",
+          "emptyTitle": "Nic nečeká",
+          "emptyBody": "žádná akce nečeká · ZIBBY sám neobjedná"
+        },
+        "loading": "Načítám…",
+        "errorTitle": "Nepodařilo se načíst",
+        "errorBody": "Zkus to prosím znovu.",
+        "retry": "Zkusit znovu"
+      }
     }
   },
   "subsystems": {

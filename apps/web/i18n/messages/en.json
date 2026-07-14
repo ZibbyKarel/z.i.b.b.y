@@ -1688,7 +1688,23 @@
       "nominal": "Nominal",
       "working": "{n} working",
       "report": "{n} reporting",
-      "waiting": "{n} waiting"
+      "waiting": "{n} waiting",
+      "flyout": {
+        "working": {
+          "title": "Working",
+          "emptyTitle": "Nothing running",
+          "emptyBody": "No task is running right now."
+        },
+        "waiting": {
+          "title": "Waiting for your decision",
+          "emptyTitle": "Nothing waiting",
+          "emptyBody": "nothing is waiting · ZIBBY never orders on its own"
+        },
+        "loading": "Loading…",
+        "errorTitle": "Couldn't load",
+        "errorBody": "Please try again.",
+        "retry": "Retry"
+      }
     }
   },
   "subsystems": {
