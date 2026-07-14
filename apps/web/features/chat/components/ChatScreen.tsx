@@ -394,12 +394,12 @@ export function ChatScreen({
       />
 
       {/* ── Top bar (Task 6) ────────────────────────────────────────────
-          The Velín-D glass chrome: `ChatTopBar` owns its own status pill,
-          search trigger, limits gauge, language switch and clock — no bespoke
-          markup left here. Voice and New-chat moved down to the composer
-          (below); Close was removed entirely (the right tool dock is the
-          navigation now). */}
-      <div className="relative z-20 shrink-0 px-[22px] py-[13px]">
+          The Velín-D glass chrome: `ChatTopBar` owns its own five elements —
+          status pill, search trigger, limits gauge, HUD switch and language
+          switch — no bespoke markup left here. Voice and New-chat moved down
+          to the composer (below); Close was removed entirely (the right tool
+          dock is the navigation now). */}
+      <div className="relative z-20 shrink-0 px-[22px]">
         <ChatTopBar onOpenPalette={openPalette} />
       </div>
 
