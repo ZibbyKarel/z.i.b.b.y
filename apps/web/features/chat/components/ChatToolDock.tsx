@@ -24,13 +24,7 @@ const DOCK_IDS = ["companies", "projects", "agents", "skills", "commands", "mcp"
  */
 export function ChatToolDock() {
   const t = useTranslations("nav");
-  // `chat.toolDock.label` lands with Task 7's catalog edit (this task may not touch
-  // cs.json/en.json). The typed `t()` overload only accepts keys that exist in the
-  // catalog today, so this call is cast through a loosened signature — next-intl's
-  // runtime falls back to the key path for a missing message rather than throwing
-  // (verified by this file's own test), so the aria-label degrades gracefully until
-  // Task 7 lands the key.
-  const tChat = useTranslations("chat") as (key: string) => string;
+  const tChat = useTranslations("chat");
   const items = DOCK_IDS.map((id) => NAV_ITEMS.find((n) => n.id === id)).filter(
     (n): n is (typeof NAV_ITEMS)[number] => n != null,
   );

@@ -1644,12 +1644,15 @@
       "collapseAria": "Collapse run detail"
     },
     "tasks": {
-      "title": "Tasks",
+      "title": "Running tasks",
       "empty": "No tasks",
       "openAria": "Open run: {title}",
       "detailAriaLabel": "Run detail: {title}",
       "openFull": "Open on Runs page",
       "closeDetail": "Close detail"
+    },
+    "toolDock": {
+      "label": "Tools"
     },
     "palette": {
       "placeholder": "Search agents, pipelines, gates or notes…",
