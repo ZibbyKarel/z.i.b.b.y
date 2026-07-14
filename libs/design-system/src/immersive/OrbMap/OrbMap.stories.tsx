@@ -99,11 +99,11 @@ function PlaygroundStage({ flareFromId, flareToId }: PlaygroundArgs) {
   const triggerFlare = () => {
     const id = `flare-${Date.now()}`;
     setFlares((prev) => [...prev, { id, fromId: flareFromId, toId: flareToId, color: "#ffe066" }]);
-    // The flare's own HandoffFlare instance self-retires visually; this timeout drops
-    // it from the controlled `flares` prop once its animation has finished playing.
-    setTimeout(() => {
-      setFlares((prev) => prev.filter((f) => f.id !== id));
-    }, 1500);
+  };
+
+  // Drops a flare from the controlled `flares` prop once its instance reports it's done.
+  const handleFlareDone = (id: string) => {
+    setFlares((prev) => prev.filter((f) => f.id !== id));
   };
 
   return (
@@ -133,6 +133,7 @@ function PlaygroundStage({ flareFromId, flareToId }: PlaygroundArgs) {
           core={{ ...CORE, thinking }}
           flares={flares}
           nodes={nodes}
+          onFlareDone={handleFlareDone}
           onSelectCore={() => setThinking((t) => !t)}
           onSelectNode={cycleNode}
         />

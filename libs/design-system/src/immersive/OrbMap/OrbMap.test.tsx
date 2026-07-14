@@ -1,8 +1,12 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CoreOrbTestId } from "../CoreOrb/CoreOrb";
-import { HandoffFlareTestId } from "../HandoffFlare/HandoffFlare";
+import {
+  DEFAULT_DURATION_MS,
+  HandoffFlareTestId,
+  RETIRE_BUFFER_MS,
+} from "../HandoffFlare/HandoffFlare";
 import { OrbNodeTestId } from "../OrbNode/OrbNode";
 import type { OrbState } from "../orbState";
 import { OrbMap, type OrbMapCore, type OrbMapNode, OrbMapTestId } from "./OrbMap";
@@ -55,9 +59,8 @@ describe("OrbMap", () => {
     const onSelectNode = vi.fn();
     render(<OrbMap core={CORE} nodes={buildNodes()} onSelectNode={onSelectNode} />);
     const forgeWrapper = screen.getByTestId(`${OrbMapTestId.Node}-forge`);
-    const forgeRoot = forgeWrapper.querySelector(`[data-testid="${OrbNodeTestId.Root}"]`);
-    expect(forgeRoot).not.toBeNull();
-    await user.click(forgeRoot as Element);
+    const forgeRoot = within(forgeWrapper).getByTestId(OrbNodeTestId.Root);
+    await user.click(forgeRoot);
     expect(onSelectNode).toHaveBeenCalledTimes(1);
     expect(onSelectNode).toHaveBeenCalledWith("forge");
   });
@@ -67,9 +70,8 @@ describe("OrbMap", () => {
     const onSelectCore = vi.fn();
     render(<OrbMap core={CORE} nodes={buildNodes()} onSelectCore={onSelectCore} />);
     const coreWrapper = screen.getByTestId(OrbMapTestId.Core);
-    const coreRoot = coreWrapper.querySelector(`[data-testid="${CoreOrbTestId.Root}"]`);
-    expect(coreRoot).not.toBeNull();
-    await user.click(coreRoot as Element);
+    const coreRoot = within(coreWrapper).getByTestId(CoreOrbTestId.Root);
+    await user.click(coreRoot);
     expect(onSelectCore).toHaveBeenCalledTimes(1);
   });
 
@@ -93,5 +95,31 @@ describe("OrbMap", () => {
       />,
     );
     expect(screen.queryByTestId(HandoffFlareTestId.Root)).toBeNull();
+  });
+
+  describe("onFlareDone", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("reports the flare's id once its lifetime ends", () => {
+      const onFlareDone = vi.fn();
+      render(
+        <OrbMap
+          core={CORE}
+          flares={[{ id: "flare-1", fromId: "atlas", toId: "forge" }]}
+          nodes={buildNodes()}
+          onFlareDone={onFlareDone}
+        />,
+      );
+      expect(onFlareDone).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(DEFAULT_DURATION_MS + RETIRE_BUFFER_MS);
+      expect(onFlareDone).toHaveBeenCalledTimes(1);
+      expect(onFlareDone).toHaveBeenCalledWith("flare-1");
+    });
   });
 });

@@ -61,6 +61,8 @@ export interface OrbMapProps {
   flares?: OrbMapFlare[];
   onSelectNode?: (id: string) => void;
   onSelectCore?: () => void;
+  /** Called with a flare's `id` once its lifetime ends, so the caller can drop it from `flares`. */
+  onFlareDone?: (id: string) => void;
   ref?: React.Ref<HTMLDivElement>;
 }
 
@@ -85,6 +87,7 @@ export function OrbMap({
   flares = [],
   onSelectNode,
   onSelectCore,
+  onFlareDone,
   ref,
 }: OrbMapProps) {
   useEffect(() => {
@@ -162,11 +165,21 @@ export function OrbMap({
             </div>
           );
         })}
+        {/* The caller prunes finished flares via `onFlareDone`; without it, entries persist
+            (harmless static end-state, but prune for long-lived maps). */}
         {flares.map((f) => {
           const from = posById.get(f.fromId);
           const to = posById.get(f.toId);
           if (!from || !to) return null;
-          return <HandoffFlare color={f.color} from={from} key={f.id} to={to} />;
+          return (
+            <HandoffFlare
+              color={f.color}
+              from={from}
+              key={f.id}
+              onDone={() => onFlareDone?.(f.id)}
+              to={to}
+            />
+          );
         })}
       </div>
     </div>

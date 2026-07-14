@@ -14,10 +14,10 @@ export enum HandoffFlareTestId {
 const HANDOFF_COLOR = "#ffe066";
 
 /** Default comet flight duration in ms. */
-const DEFAULT_DURATION_MS = 1300;
+export const DEFAULT_DURATION_MS = 1300;
 
 /** Added on top of `durationMs` so the launch/burst tails finish before the instance retires. */
-const RETIRE_BUFFER_MS = 200;
+export const RETIRE_BUFFER_MS = 200;
 
 export interface HandoffFlareProps {
   /** Source point (source orb centre) the comet launches from. */
