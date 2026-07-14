@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import type { FocusEvent, KeyboardEvent, PointerEvent, ReactNode } from "react";
+import type { FocusEvent, KeyboardEvent, MouseEvent, PointerEvent, ReactNode } from "react";
 import { Stack, StatusDot, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useSubsystemsQuery } from "../../subsystems/queries/useSubsystemsQuery";
@@ -107,6 +107,20 @@ export function StatusPill() {
     flyout.scheduleClose();
   };
 
+  // Live-verify regression (task-7-report.md): mouse analogue of onRootBlur
+  // above. The pointer leaving the root div toward the portalled panel is the
+  // normal path (panel's own onMouseEnter cancels it fast), but symmetry with
+  // the onBlur guard hardens the same relatedTarget check here too — leaving
+  // the root only actually arms the close grace when the pointer isn't headed
+  // into the panel.
+  const onRootMouseLeave = (e: MouseEvent<HTMLDivElement>) => {
+    const next = e.relatedTarget instanceof Element ? e.relatedTarget : null;
+    if (next != null && next.closest(`#${STATUS_FLYOUT_PANEL_ID}`) != null) {
+      return;
+    }
+    flyout.scheduleClose();
+  };
+
   const trigger = (section: FlyoutSection, testId: string, label: ReactNode) => (
     <button
       aria-controls={STATUS_FLYOUT_PANEL_ID}
@@ -130,7 +144,7 @@ export function StatusPill() {
       id={STATUS_PILL_DOM_ID}
       onBlur={onRootBlur}
       onMouseEnter={flyout.cancelClose}
-      onMouseLeave={flyout.scheduleClose}
+      onMouseLeave={onRootMouseLeave}
       ref={rootRef}
     >
       <Stack align="center" direction="row" gap="100">

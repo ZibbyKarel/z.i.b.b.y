@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
-import type { FocusEvent, KeyboardEvent } from "react";
+import type { FocusEvent, KeyboardEvent, MouseEvent as ReactMouseEvent } from "react";
 import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { Container, Stack, StatusDot, Typography } from "@zibby/design-system";
@@ -215,6 +215,25 @@ export function StatusFlyoutPanel({
     onMouseLeave();
   };
 
+  // Live-verify regression (task-7-report.md): the panel and the pill's trigger
+  // buttons are DISJOINT DOM subtrees (the panel portals to document.body), so
+  // the browser gives no ordering guarantee between this mouseleave and the
+  // OTHER trigger's pointerenter when the pointer moves straight from the panel
+  // onto it — the close-grace timer can end up armed with nothing left to
+  // cancel it. `relatedTarget` sidesteps the race entirely: it names the
+  // element the pointer is entering as part of THIS SAME event, so — exactly
+  // like `onBlur` above — skip the close outright when it lands back on the pill.
+  const onMouseLeaveGuarded = (e: ReactMouseEvent<HTMLElement>) => {
+    const next = e.relatedTarget instanceof Element ? e.relatedTarget : null;
+    if (
+      next != null &&
+      (rootRef.current?.contains(next) || next.closest(`#${STATUS_PILL_DOM_ID}`) != null)
+    ) {
+      return;
+    }
+    onMouseLeave();
+  };
+
   return createPortal(
     <Container
       aria-labelledby={headerId}
@@ -228,7 +247,7 @@ export function StatusFlyoutPanel({
       onFocus={onMouseEnter}
       onKeyDown={onKeyDown}
       onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
+      onMouseLeave={onMouseLeaveGuarded}
       overflowY="auto"
       position="fixed"
       ref={rootRef}
