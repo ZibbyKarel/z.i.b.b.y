@@ -307,9 +307,9 @@ export type {
 } from "./components/List/List";
 
 // ---------------------------------------------------------------------------
-// Immersive orb map (Velín-D) — pure geometry/state helpers, WebGL/DOM
-// primitives, and the composed OrbMap. See immersive/index.ts for the
-// hand-authored barrel this section mirrors.
+// Immersive orb map — pure geometry/state helpers, WebGL/DOM primitives, and
+// the composed OrbMap. See immersive/index.ts for the hand-authored barrel
+// this section mirrors.
 // ---------------------------------------------------------------------------
 export { ellipseLayout } from "./immersive/ellipseLayout";
 export type { EllipseInsets, EllipseLayout, OrbPosition } from "./immersive/ellipseLayout";
