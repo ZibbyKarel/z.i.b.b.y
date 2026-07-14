@@ -209,7 +209,6 @@ import {
   OrbNodeTestId,
   SearchBarTestId,
   SearchMenuTestId,
-  StatusDotTestId,
 } from "@zibby/design-system";
 import { ChatScreen, ChatScreenTestId } from "./ChatScreen";
 import { ChatTopBarTestId } from "./ChatTopBar";
@@ -320,111 +319,6 @@ describe("ChatScreen", () => {
     // now that there's a transcript to reset.
     expect(screen.queryByTestId("chat-screen-close")).toBeNull();
     expect(screen.getByTestId(ChatScreenTestId.NewChat)).toBeInTheDocument();
-  });
-
-  describe("orb mode derivation (Phase 14.1)", () => {
-    // Task 13: the retired scene's `data-mode` is gone — the derived `ChatMode`
-    // now only surfaces through the header's `StatusDot` (tone + pulse, via the
-    // `MODE_DOT` map in `../chatMode`). Several modes share a tone/pulse pair
-    // (`thinking`/`streaming`/`tool` are all `run`+pulsing), so these assertions
-    // can't distinguish between those modes from the dot alone — each test only
-    // checks that ITS scenario renders the dot state `MODE_DOT` says it should.
-    function modeDot() {
-      return within(screen.getByTestId(ChatScreenTestId.ModeDot)).getByTestId(StatusDotTestId.Dot);
-    }
-
-    it("is idle with no activity", () => {
-      renderWithProviders(<ChatScreenHarness />);
-      expect(modeDot()).toHaveClass("bg-accent");
-      expect(modeDot()).not.toHaveClass("animate-live");
-    });
-
-    it("is listening when the composer has a non-empty draft", async () => {
-      const user = userEvent.setup();
-      renderWithProviders(<ChatScreenHarness />);
-
-      await user.type(screen.getByTestId(CommandLineTestId.Input), "Ahoj");
-      expect(modeDot()).toHaveClass("bg-accent");
-      expect(modeDot()).toHaveClass("animate-live");
-    });
-
-    it("is thinking while the send mutation is pending", () => {
-      sendState.isPending = true;
-      renderWithProviders(<ChatScreenHarness />);
-      expect(modeDot()).toHaveClass("bg-run");
-      expect(modeDot()).toHaveClass("animate-live");
-    });
-
-    it("is streaming once tokens are flowing", async () => {
-      const user = userEvent.setup();
-      renderWithProviders(<ChatScreenHarness />);
-
-      await user.type(screen.getByTestId(CommandLineTestId.Input), "Jak se máš");
-      await user.click(screen.getByTestId(CommandLineTestId.Send));
-
-      act(() => {
-        mock.last().emit({ conversationId: "c1", turnId: "t1", type: "delta", text: "Mám se" });
-      });
-
-      expect(modeDot()).toHaveClass("bg-run");
-      expect(modeDot()).toHaveClass("animate-live");
-    });
-
-    it("is tool while the last announced tool event is still running", async () => {
-      const user = userEvent.setup();
-      renderWithProviders(<ChatScreenHarness />);
-
-      await user.type(screen.getByTestId(CommandLineTestId.Input), "Naplánuj úkol");
-      await user.click(screen.getByTestId(CommandLineTestId.Send));
-
-      act(() => {
-        mock.last().emit({
-          conversationId: "c1",
-          turnId: "t1",
-          type: "tool",
-          tool: { name: "create_task", status: "started" },
-        });
-      });
-
-      expect(modeDot()).toHaveClass("bg-run");
-      expect(modeDot()).toHaveClass("animate-live");
-    });
-
-    it("is error when the stream ends the turn with a terminal error frame (Phase 15.3)", async () => {
-      const user = userEvent.setup();
-      renderWithProviders(<ChatScreenHarness />);
-
-      await user.type(screen.getByTestId(CommandLineTestId.Input), "Jak se máš");
-      await user.click(screen.getByTestId(CommandLineTestId.Send));
-
-      act(() => {
-        mock.last().emit({ conversationId: "c1", turnId: "t1", type: "error", message: "boom" });
-      });
-
-      expect(modeDot()).toHaveClass("bg-bad");
-      expect(modeDot()).not.toHaveClass("animate-live");
-    });
-
-    it("is waiting-approval when the last dispatched run is parked on the operator's decision (Phase 15.3)", async () => {
-      pipelineRunMock.mockReturnValue({ data: { status: "awaiting-approval" } });
-      const user = userEvent.setup();
-      renderWithProviders(<ChatScreenHarness />);
-
-      await user.type(screen.getByTestId(CommandLineTestId.Input), "Naplánuj úkol");
-      await user.click(screen.getByTestId(CommandLineTestId.Send));
-
-      act(() => {
-        mock.last().emit({
-          conversationId: "c1",
-          turnId: "t1",
-          type: "tool",
-          tool: { name: "create_task", status: "ok", runRef: "delivery_1" },
-        });
-      });
-
-      expect(modeDot()).toHaveClass("bg-warn");
-      expect(modeDot()).toHaveClass("animate-live");
-    });
   });
 
   describe("subsystem orb map (Task 13, was the WebGL overlay in Phase 95)", () => {

@@ -4,12 +4,7 @@
    equivalent — sanctioned escape hatch, file-level. */
 "use client";
 
-import type {
-  ChatMessage as ChatMessageType,
-  ChatToolEvent,
-  SubsystemId,
-  TaskTarget,
-} from "@zibby/contracts";
+import type { ChatMessage as ChatMessageType, SubsystemId, TaskTarget } from "@zibby/contracts";
 import { Button, Container, Stack, Typography } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
@@ -24,7 +19,7 @@ import {
 } from "react";
 import { useNow } from "../../../hooks/useNow";
 import { MINUTE_MS } from "../../../utils/time";
-import { usePipelineRunQuery, usePipelinesQuery } from "../../pipelines";
+import { usePipelinesQuery } from "../../pipelines";
 import { useRunAvatarMap, useRunGlyphMap, useRunsQuery } from "../../runs/queries/useRunsQuery";
 import { runAvatar, runGlyph } from "../../runs/run";
 import { useRunActions } from "../../runs/useRunActions";
@@ -37,7 +32,6 @@ import { type AutoSpeakReplyOutcome, useAutoSpeak } from "../hooks/useAutoSpeak"
 import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
 import { useVoiceMode } from "../hooks/useVoiceMode";
 import { useSendChatMessageMutation } from "../mutations/useSendChatMessageMutation";
-import type { ChatMode } from "../chatMode";
 import { ChatDetailDialog, type ChatDetailTarget } from "./ChatDetailDialog";
 import { ChatPalette } from "./ChatPalette";
 import { ChatTaskDetailColumn } from "./ChatTaskDetailColumn";
@@ -50,37 +44,11 @@ import { SubsystemOrbMap } from "./SubsystemOrbMap";
 import { VoiceStatusStrip } from "./VoiceStatusStrip";
 import { VoiceToggleButton } from "./VoiceToggleButton";
 
-/** Statuses that put the orb in `waiting-approval` — a run parked on the
- * operator's decision (Decision 5, phase-15 plan): over budget/behind an
- * approval (`awaiting-approval`/`held`) or parked after exhausting retries
- * (`parked`). */
-const WAITING_APPROVAL_STATUSES = new Set(["awaiting-approval", "parked", "held"]);
-
-/**
- * The most recent tool event carrying a `runRef`, newest first — searched across
- * a list of tool-event arrays in the order given (the caller passes the live
- * stream buffer before the committed transcript so an in-flight turn's dispatch
- * wins over an older one).
- */
-function findLastRunRef(toolEventLists: (ChatToolEvent[] | undefined)[]): string | null {
-  for (const events of toolEventLists) {
-    if (!events) continue;
-    for (let i = events.length - 1; i >= 0; i--) {
-      const runRef = events[i]?.runRef;
-      if (runRef) return runRef;
-    }
-  }
-  return null;
-}
-
 export enum ChatScreenTestId {
   Root = "chat-screen",
   ScrollArea = "chat-screen-scroll",
   Greeting = "chat-screen-greeting",
   NewChat = "chat-screen-new-chat",
-  /** The header's derived-mode status dot (Task 13) — the surviving read-out of
-   * the retired scene's `data-mode`, now a plain DS `StatusDot`. */
-  ModeDot = "chat-screen-mode-dot",
 }
 
 export interface ChatScreenProps {
@@ -343,26 +311,7 @@ export function ChatScreen({
     return () => window.removeEventListener("keydown", handler);
   }, [openPalette]);
 
-  // Composer activity is the only new state this phase adds — everything else the
-  // orb needs is already carried by the stream + mutation (see Decision 1, Phase
-  // 14.1 of the phase-14 plan).
-  const [hasDraft, setHasDraft] = useState(false);
-
   const isEmpty = messages.length === 0 && !stream.streaming;
-
-  const lastTool = stream.toolEvents[stream.toolEvents.length - 1];
-
-  // The most recently dispatched run's id, across the in-flight turn and the
-  // committed transcript (newest first) — always computed so the query below
-  // stays an unconditional hook call (React rules). `usePipelineRunQuery` itself
-  // no-ops on `null` (`enabled: pipelineRunId !== null`), and shares its cache
-  // with `ChatRunCard` (Decision 5, Phase 15.3) — no new polling for a run
-  // already rendered inline in the transcript.
-  const lastRunRef = findLastRunRef([
-    stream.toolEvents,
-    ...[...messages].reverse().map((m) => m.toolEvents),
-  ]);
-  const { data: lastRun } = usePipelineRunQuery(lastRunRef);
 
   // The pipeline catalog — still needed to feed `SubsystemOrbMap`'s active-run
   // counts (it maps a run's `owner` pipeline to its `ownerSubsystem`).
@@ -409,30 +358,6 @@ export function ChatScreen({
     () => setSelectedRunId(null),
   );
 
-  const errorMode = stream.error !== null || sendMessage.isError;
-  const waitingApproval = lastRun !== undefined && WAITING_APPROVAL_STATUSES.has(lastRun.status);
-
-  const mode: ChatMode = errorMode
-    ? "error"
-    : waitingApproval
-      ? "waiting-approval"
-      : lastTool?.status === "started" && stream.streaming
-        ? "tool"
-        : stream.streaming && stream.text.length > 0
-          ? "streaming"
-          : sendMessage.isPending || stream.streaming
-            ? "thinking"
-            : // `speaking` (Phase 119b): the turn is done, its voice reply is
-              // playing. Sits below the live-turn states (thinking/streaming/tool
-              // still win while the turn is in flight) and above listening/idle.
-              speakingReply
-              ? "speaking"
-              : // `listening` is driven by REAL mic state while voice mode is on
-                // (Phase 119a); otherwise it falls back to the composer draft.
-                (voice.active && voice.listening) || hasDraft
-                ? "listening"
-                : "idle";
-
   return (
     <div
       aria-label={t("title")}
@@ -475,7 +400,7 @@ export function ChatScreen({
           (below); Close was removed entirely (the right tool dock is the
           navigation now). */}
       <div className="relative z-20 shrink-0 px-[22px] py-[13px]">
-        <ChatTopBar mode={mode} onOpenPalette={openPalette} />
+        <ChatTopBar onOpenPalette={openPalette} />
       </div>
 
       {/* ── Right tool dock (Task 6) ─────────────────────────────────────
@@ -682,7 +607,6 @@ export function ChatScreen({
               chrome={false}
               disabled={thinking}
               label={t("composer.label")}
-              onDraftChange={setHasDraft}
               onSubmit={send}
               placeholder={t("composer.placeholder")}
             />

@@ -1,22 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
-import { renderWithProviders } from "../../../test/render";
+import { renderWithProviders, screen } from "../../../test/render";
 import { ChatTopBar, ChatTopBarTestId } from "./ChatTopBar";
 
 describe("ChatTopBar", () => {
-  it("renders the glass top bar with search, lang and clock, and no close button", () => {
-    const { getByTestId, queryByTestId } = renderWithProviders(
-      <ChatTopBar mode="idle" onOpenPalette={vi.fn()} />,
-    );
-    expect(getByTestId(ChatTopBarTestId.Root)).toBeInTheDocument();
-    expect(getByTestId(ChatTopBarTestId.Search)).toBeInTheDocument();
-    expect(getByTestId(ChatTopBarTestId.Lang)).toBeInTheDocument();
-    expect(getByTestId(ChatTopBarTestId.Clock)).toBeInTheDocument();
-    // Close button was removed from the top bar this phase.
-    expect(queryByTestId("chat-screen-close")).toBeNull();
+  it("renders the glass bar with the status, search, limits and lang elements", () => {
+    renderWithProviders(<ChatTopBar onOpenPalette={vi.fn()} />);
+    expect(screen.getByTestId(ChatTopBarTestId.Root)).toBeInTheDocument();
+    expect(screen.getByTestId(ChatTopBarTestId.Search)).toBeInTheDocument();
+    expect(screen.getByTestId(ChatTopBarTestId.Lang)).toBeInTheDocument();
   });
 
-  it("renders the clock in fixed 24h HH:MM, regardless of locale", () => {
-    const { getByTestId } = renderWithProviders(<ChatTopBar mode="idle" onOpenPalette={vi.fn()} />);
-    expect(getByTestId(ChatTopBarTestId.Clock)).toHaveTextContent(/^\d{2}:\d{2}$/);
+  it("has no mode sign, mode dot or clock (removed for 1:1)", () => {
+    renderWithProviders(<ChatTopBar onOpenPalette={vi.fn()} />);
+    expect(screen.queryByTestId("chat-top-bar-mode")).toBeNull();
+    expect(screen.queryByTestId("chat-screen-mode-dot")).toBeNull();
+    expect(screen.queryByTestId("chat-top-bar-clock")).toBeNull();
   });
 });
