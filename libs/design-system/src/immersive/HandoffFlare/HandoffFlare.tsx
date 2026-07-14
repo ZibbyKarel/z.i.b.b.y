@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { ensureImmersiveCss } from "../immersive.css";
 import { arcPath } from "./arcPath";
 
@@ -51,10 +51,15 @@ export function HandoffFlare({
     ensureImmersiveCss();
   }, []);
 
+  const onDoneRef = useRef(onDone);
   useEffect(() => {
-    const timer = setTimeout(() => onDone?.(), durationMs + RETIRE_BUFFER_MS);
+    onDoneRef.current = onDone;
+  }, [onDone]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => onDoneRef.current?.(), durationMs + RETIRE_BUFFER_MS);
     return () => clearTimeout(timer);
-  }, [durationMs, onDone]);
+  }, [durationMs]);
 
   const d = useMemo(() => arcPath(from.x, from.y, to.x, to.y), [from.x, from.y, to.x, to.y]);
 

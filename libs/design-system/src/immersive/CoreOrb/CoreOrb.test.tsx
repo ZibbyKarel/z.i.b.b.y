@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetImmersiveCss } from "../immersive.css";
@@ -56,9 +56,9 @@ describe("CoreOrb", () => {
 
   it("brightens the glow while thinking (heartbeat cadence input differs)", () => {
     const { container: idleContainer } = render(<CoreOrb size={200} thinking={false} />);
-    const idleGlow = idleContainer.querySelectorAll("span")[2];
+    const idleGlow = within(idleContainer).getByTestId(CoreOrbTestId.Glow);
     const { container: thinkingContainer } = render(<CoreOrb size={200} thinking={true} />);
-    const thinkingGlow = thinkingContainer.querySelectorAll("span")[2];
-    expect(idleGlow?.style.background).not.toEqual(thinkingGlow?.style.background);
+    const thinkingGlow = within(thinkingContainer).getByTestId(CoreOrbTestId.Glow);
+    expect(idleGlow.style.background).not.toEqual(thinkingGlow.style.background);
   });
 });

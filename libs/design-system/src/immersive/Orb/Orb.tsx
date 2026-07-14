@@ -24,7 +24,7 @@ export interface OrbProps {
   /** IcosahedronGeometry subdivision — nodes use 1, the core 4. */
   detail?: number;
   antialias?: boolean;
-  /** Storybook "vrnění" overrides pushed over the state's motion. */
+  /** Storybook surface-agitation / purr-speed overrides pushed over the state's motion. */
   motionOverrides?: OrbMotionOverrides;
   ref?: React.Ref<HTMLDivElement>;
 }

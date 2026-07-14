@@ -9,6 +9,7 @@ export enum CoreOrbTestId {
   Orb = "core-orb-orb",
   Wordmark = "core-orb-wordmark",
   Ring = "core-orb-ring",
+  Glow = "core-orb-glow",
 }
 
 export interface CoreOrbProps {
@@ -101,6 +102,7 @@ export function CoreOrb({
       ))}
       {/* Soft glow — brightens while thinking. */}
       <span
+        data-testid={CoreOrbTestId.Glow}
         style={{
           position: "absolute",
           width: size * 1.5,
