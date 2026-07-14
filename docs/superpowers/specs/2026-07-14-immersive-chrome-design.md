@@ -204,9 +204,11 @@ All new user-visible chrome is composed from the DS. Glass surfaces are the new
   - **Clock** — `Typography mono` `HH:MM`, `useNow(MINUTE_MS)` (unchanged).
 - **Removed:** the Close button (`chat-screen-close`) — **including its whole prop chain**:
   `ChatScreenProps.onClose` + its destructure, the `ChatScreenTestId.Close` enum member,
-  and `Screen.tsx`'s `onClose={close}` (and the `close` handler if it becomes unused);
-  the `chat.close` i18n key is deleted from both catalogs. Also removed from this bar:
-  the New-chat and Voice-toggle controls (relocated — §5.5).
+  and `Screen.tsx`'s `onClose={close}` (and the `close` handler if it becomes unused).
+  The `chat.close` i18n key **stays** — it has a second live consumer
+  (`CoreOverviewDialog.tsx` `tChat("close")` aria-label); deleting it would regress that
+  dialog. Also removed from this bar: the New-chat and Voice-toggle controls
+  (relocated — §5.5).
 - **TestId enum:** `ChatTopBarTestId { Root = "chat-top-bar", Mode = "chat-top-bar-mode",
   Search = "chat-top-bar-search", Lang = "chat-top-bar-lang", Clock = "chat-top-bar-clock" }`.
   (Mode dot keeps `chat-screen-mode-dot`; status-pill keeps its own `chat-status-pill*` ids.)
@@ -216,6 +218,8 @@ All new user-visible chrome is composed from the DS. Glass surfaces are the new
 - **Geometry:** absolutely positioned `right: 24`, vertically centered
   (`top:50%, translateY(-50%)`), `zIndex ~14`, `pointer-events-auto`. A single
   `GlassSurface radius="panel"` column, `padding 7`, `gap 6`, `flex-direction:column`.
+  Inside the glass, the links sit in a semantic `<nav aria-label={t("chat.toolDock.label")}>`
+  landmark (a bare element, no styles — the aria-label is this key's consumer).
 - **Items** (drawn from `state/config.ts` — do NOT hardcode a parallel list): filter
   `NAV_ITEMS` to the design set in this order, then a `Divider`, then `SETTINGS_ITEM`:
 
@@ -241,8 +245,9 @@ All new user-visible chrome is composed from the DS. Glass surfaces are the new
   `aria-label={t(`nav.${id}`)}`**. Labels reuse the existing `nav.*` namespace verbatim —
   including `nav.settings`, which already exists ("System settings" / "Nastavení systému");
   do not re-add or reword it. Keyboard-focusable; navigates on click (leaves `/chat`).
-- **TestId enum:** `ChatToolDockTestId { Root = "chat-tool-dock", Settings =
-  "chat-tool-dock-settings" }`; each nav link carries `data-testid={`chat-tool-dock-${id}`}`.
+- **TestId enum:** `ChatToolDockTestId { Root = "chat-tool-dock", Nav =
+  "chat-tool-dock-nav", Settings = "chat-tool-dock-settings" }`; each nav link carries
+  `data-testid={`chat-tool-dock-${id}`}`.
 - **Orb-map inset:** `SubsystemOrbMap` `insets.right` moves off `0` to the dock's occupied
   width (dock width + right offset, ≈ `70`) so the map never renders under the dock.
 
@@ -330,10 +335,12 @@ component tasks (they would collide under parallel execution):**
 |---|---|---|---|
 | copy update | `chat.tasks.title` | `Tasky` → `Běžící úlohy` | `Tasks` → `Running tasks` |
 | confirm copy | `chat.statusPill.nominal` | `Nominální` | `Nominal` |
-| add | `chat.toolDock.label` | `Nástroje` | `Tools` |
-| remove | `chat.close` | *(deleted — Close button removed)* | *(deleted)* |
+| add | `chat.toolDock.label` (the tool dock's `<nav>` aria-label) | `Nástroje` | `Tools` |
 
-A cs/en key-parity assertion (test) guards against a one-sided add/remove.
+`chat.close` is **kept** despite the Close button's removal — `CoreOverviewDialog`
+still consumes it (`tChat("close")` aria-label).
+
+A cs/en key-parity assertion (test) guards against a one-sided add.
 
 ---
 

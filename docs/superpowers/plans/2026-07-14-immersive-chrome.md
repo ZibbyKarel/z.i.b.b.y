@@ -340,10 +340,9 @@ export enum ChatTopBarTestId {
 - [ ] **Step 1: Write the failing `LangSwitch` test**
 
 ```tsx
-import { render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { renderWithProviders } from "../../../test/renderWithProviders";
+import { renderWithProviders } from "../../../test/render";
 import { LangSwitch, LangSwitchTestId } from "./LangSwitch";
 
 const refresh = vi.fn();
@@ -437,7 +436,7 @@ Expected: PASS.
 
 ```tsx
 import { describe, expect, it, vi } from "vitest";
-import { renderWithProviders } from "../../../test/renderWithProviders";
+import { renderWithProviders } from "../../../test/render";
 import { ChatTopBar, ChatTopBarTestId } from "./ChatTopBar";
 
 describe("ChatTopBar", () => {
@@ -565,6 +564,7 @@ rtk git add apps/web && rtk git commit -m "feat(chat): glass top bar + language 
 ```ts
 export enum ChatToolDockTestId {
   Root = "chat-tool-dock",
+  Nav = "chat-tool-dock-nav",       // the labelled <nav> landmark inside the glass
   Settings = "chat-tool-dock-settings",
 }
 // each nav link: data-testid={`chat-tool-dock-${id}`}
@@ -575,7 +575,7 @@ export const CHAT_TOOL_DOCK_WIDTH = 70; // px the map's right inset must clear
 
 ```tsx
 import { describe, expect, it } from "vitest";
-import { renderWithProviders } from "../../../test/renderWithProviders";
+import { renderWithProviders } from "../../../test/render";
 import { ChatToolDock, ChatToolDockTestId } from "./ChatToolDock";
 
 describe("ChatToolDock", () => {
@@ -585,6 +585,16 @@ describe("ChatToolDock", () => {
     expect(getByTestId("chat-tool-dock-companies")).toHaveAttribute("href", "/companies");
     expect(getByTestId("chat-tool-dock-agents")).toHaveAttribute("href", "/agents");
     expect(getByTestId(ChatToolDockTestId.Settings)).toHaveAttribute("href", "/settings");
+  });
+
+  it("wraps the links in a labelled navigation landmark", () => {
+    const { getByTestId } = renderWithProviders(<ChatToolDock />);
+    // Select by testid (repo rule); role/ARIA as assertions only. The aria-label reads
+    // chat.toolDock.label (renders as the key path until Task 7 lands the copy —
+    // assert presence, not copy).
+    const nav = getByTestId(ChatToolDockTestId.Nav);
+    expect(nav).toHaveRole("navigation");
+    expect(nav).toHaveAttribute("aria-label");
   });
 });
 ```
@@ -606,6 +616,7 @@ import { NAV_ITEMS, SETTINGS_ITEM } from "../../../state/config";
 
 export enum ChatToolDockTestId {
   Root = "chat-tool-dock",
+  Nav = "chat-tool-dock-nav",
   Settings = "chat-tool-dock-settings",
 }
 
@@ -616,35 +627,39 @@ const DOCK_IDS = ["companies", "projects", "agents", "skills", "commands", "mcp"
 
 export function ChatToolDock() {
   const t = useTranslations("nav");
+  const tChat = useTranslations("chat");
   const items = DOCK_IDS.map((id) => NAV_ITEMS.find((n) => n.id === id)).filter(
     (n): n is (typeof NAV_ITEMS)[number] => n != null,
   );
 
   return (
     <GlassSurface radius="panel" data-testid={ChatToolDockTestId.Root}>
-      <Stack align="center" direction="column" gap="75">
-        {items.map((item) => (
-          <Tooltip key={item.id} content={t(item.id)}>
+      {/* Semantic landmark; bare element, no styles. Consumes chat.toolDock.label. */}
+      <nav aria-label={tChat("toolDock.label")} data-testid={ChatToolDockTestId.Nav}>
+        <Stack align="center" direction="column" gap="75">
+          {items.map((item) => (
+            <Tooltip key={item.id} content={t(item.id)}>
+              <Link
+                aria-label={t(item.id)}
+                data-testid={`chat-tool-dock-${item.id}`}
+                href={item.href}
+              >
+                <Icon name={item.glyph} />
+              </Link>
+            </Tooltip>
+          ))}
+          <Divider />
+          <Tooltip content={t("settings")}>
             <Link
-              aria-label={t(item.id)}
-              data-testid={`chat-tool-dock-${item.id}`}
-              href={item.href}
+              aria-label={t("settings")}
+              data-testid={ChatToolDockTestId.Settings}
+              href={SETTINGS_ITEM.href}
             >
-              <Icon name={item.glyph} />
+              <Icon name={SETTINGS_ITEM.glyph} />
             </Link>
           </Tooltip>
-        ))}
-        <Divider />
-        <Tooltip content={t("settings")}>
-          <Link
-            aria-label={t("settings")}
-            data-testid={ChatToolDockTestId.Settings}
-            href={SETTINGS_ITEM.href}
-          >
-            <Icon name={SETTINGS_ITEM.glyph} />
-          </Link>
-        </Tooltip>
-      </Stack>
+        </Stack>
+      </nav>
     </GlassSurface>
   );
 }
@@ -853,10 +868,12 @@ rtk git add apps/web && rtk git commit -m "feat(chat): wire glass chrome; reloca
 **Interfaces:** none produced; guards copy completeness.
 
 **This is the ONLY task that edits the catalogs** (Tasks 3/4/5 run in parallel and must not
-touch these two files). The full change set: add `chat.toolDock.label`; update
-`chat.tasks.title` copy; confirm `chat.statusPill.nominal`; **remove** `chat.close`
-(the Close button is gone — Task 6). Existing keys `topbar.langSwitcherLabel` and
-`nav.settings` are reused as-is — do not re-add, duplicate, or reword them.
+touch these two files). The full change set: add `chat.toolDock.label` (consumed by the
+`ChatToolDock` `<nav>` aria-label, Task 4); update `chat.tasks.title` copy; confirm
+`chat.statusPill.nominal`. Existing keys `topbar.langSwitcherLabel` and `nav.settings` are
+reused as-is — do not re-add, duplicate, or reword them. **`chat.close` is KEPT** even
+though the Close button is gone — `CoreOverviewDialog.tsx` still consumes it
+(`tChat("close")` aria-label); deleting it would ship a missing-key regression there.
 
 - [ ] **Step 1: Write the failing parity test**
 
@@ -887,9 +904,9 @@ describe("i18n catalog parity", () => {
       expect(keys(cs)).toContain(key);
     }
   });
-  it("dropped the removed Close-button key", () => {
-    expect(keys(en)).not.toContain("chat.close");
-    expect(keys(cs)).not.toContain("chat.close");
+  it("keeps chat.close for its surviving consumer (CoreOverviewDialog)", () => {
+    expect(keys(en)).toContain("chat.close");
+    expect(keys(cs)).toContain("chat.close");
   });
 });
 ```
@@ -902,10 +919,10 @@ Expected: FAIL if any key is one-sided or missing.
 - [ ] **Step 3: Complete both catalogs**
 
 In **both** files, per the spec §7 table:
-- Add `chat.toolDock.label` → `Nástroje` (cs) / `Tools` (en).
+- Add `chat.toolDock.label` → `Nástroje` (cs) / `Tools` (en) — the `ChatToolDock` `<nav>` aria-label consumes it.
 - Update `chat.tasks.title` copy → `Běžící úlohy` (cs, was `Tasky`) / `Running tasks` (en, was `Tasks`).
 - Confirm `chat.statusPill.nominal` → `Nominální` (cs) / `Nominal` (en); repair if it drifted.
-- **Remove** `chat.close` from both (the Close button and its prop chain were deleted in Task 6).
+- **Keep** `chat.close` — the Close button is gone (Task 6) but `CoreOverviewDialog` still reads `tChat("close")` for its dialog-close aria-label. Do not delete it.
 - Do **not** touch `topbar.langSwitcherLabel` or `nav.settings` — reused verbatim.
 Fix any other drift the parity test surfaces.
 
@@ -978,8 +995,8 @@ Do **not** push and do **not** open a PR. Update `.superpowers/sdd2/progress.md`
 
 ## Self-Review
 
-**1. Spec coverage** — Tokens (§4, incl. the `tokens.ts` `Theme` interface + `tokensToCssVars` + `lightTheme.ts` end-to-end story) → Task 1. GlassSurface primitive (§5.1, `"use client"`, no `ensureImmersiveCss` — no keyframes) → Task 2. Top panel with all components incl. counts-only pill, restyled search (real `SearchBar` API: `ariaLabel`+`shortcut`), reused LimitsRings, LangSwitch on `topbar.langSwitcherLabel` with the empty-value guard (§5.2) → Task 3. Close removal incl. the full `onClose` prop chain (§5.2) → Task 6. Right tool dock linking HUD incl. verified `/companies`, `Tooltip content` + default `top` side (no left in `TooltipSide`), explicit `aria-label` per link, existing `nav.settings` reused (§5.3) → Task 4. Left floating cards via `Card edge={tone}` with the `?? "accent"` default + header (§5.4, float animation dropped) → Task 5. Relocated New-chat + Voice (§5.5) → Task 6. Data sources (§6) reused, not invented, throughout. i18n (§7) → ALL catalog edits in Task 7 only (Tasks 3/4/5 reference existing keys), parity + `chat.close` removal guarded by test. Acceptance criteria incl. live `:3000` + LimitsRings double-surface check (§8) → Task 8. No spec section is unassigned.
+**1. Spec coverage** — Tokens (§4, incl. the `tokens.ts` `Theme` interface + `tokensToCssVars` + `lightTheme.ts` end-to-end story) → Task 1. GlassSurface primitive (§5.1, `"use client"`, no `ensureImmersiveCss` — no keyframes) → Task 2. Top panel with all components incl. counts-only pill, restyled search (real `SearchBar` API: `ariaLabel`+`shortcut`), reused LimitsRings, LangSwitch on `topbar.langSwitcherLabel` with the empty-value guard (§5.2) → Task 3. Close removal incl. the full `onClose` prop chain (§5.2) → Task 6. Right tool dock linking HUD incl. verified `/companies`, `Tooltip content` + default `top` side (no left in `TooltipSide`), explicit `aria-label` per link, existing `nav.settings` reused (§5.3) → Task 4. Left floating cards via `Card edge={tone}` with the `?? "accent"` default + header (§5.4, float animation dropped) → Task 5. Relocated New-chat + Voice (§5.5) → Task 6. Data sources (§6) reused, not invented, throughout. i18n (§7) → ALL catalog edits in Task 7 only (Tasks 3/4/5 reference existing keys); parity guarded by test, `chat.close` explicitly KEPT for its surviving consumer (`CoreOverviewDialog`), and every added key has a consumer (`chat.toolDock.label` → the dock's `<nav>` aria-label). Acceptance criteria incl. live `:3000` + LimitsRings double-surface check (§8) → Task 8. No spec section is unassigned.
 
 **2. Placeholder scan** — No "TBD"/"add error handling"/"similar to Task N". Every code step shows code; every test step shows the assertion and the run command with expected output. Task 5's fixture reuses the test file's existing complete `run(overrides)` builder (shown verbatim) — no partial casts, no Czech literals in source. Where a DS prop signature still needs confirming (`StatusDot`/`Typography`/`MODE_DOT` in Task 3), the step says so explicitly; the previously guessed signatures (`SearchBar`, `Tooltip`, `Card edge`, `ButtonGroup`) are now written against the verified real APIs.
 
-**3. Type consistency** — `GlassSurfaceProps.radius` = `"control"|"panel"|"pill"` used consistently in Tasks 2–5. The four `Theme` keys (`gradientGlass`, `colorGlassBorder`, `shadowGlass`, `blurGlass`) are declared in Task 1's interface step and consumed by name in Task 2's CSS vars. `ChatTopBarProps { mode, onOpenPalette }` produced in Task 3, consumed in Task 6. `CHAT_TOOL_DOCK_WIDTH` produced in Task 4, consumed in Task 6's inset change. `runStateTone(status): StateTone | undefined` is stated identically in the Global Constraints, Task 5's Interfaces block, and Task 5's implementation (`?? "accent"`). `ChatTaskRowTestId` has no `Rail` member anywhere (rail = `Card edge`). TestId enum values are unique and stable (`chat-task-row` kept for continuity). i18n keys referenced in Tasks 3–5 (`topbar.langSwitcherLabel`, `nav.*`, `chat.tasks.title`, `chat.toolDock.label`) match exactly the set Task 7 lands/asserts.
+**3. Type consistency** — `GlassSurfaceProps.radius` = `"control"|"panel"|"pill"` used consistently in Tasks 2–5. The four `Theme` keys (`gradientGlass`, `colorGlassBorder`, `shadowGlass`, `blurGlass`) are declared in Task 1's interface step and consumed by name in Task 2's CSS vars. `ChatTopBarProps { mode, onOpenPalette }` produced in Task 3, consumed in Task 6. `CHAT_TOOL_DOCK_WIDTH` produced in Task 4, consumed in Task 6's inset change. `runStateTone(status): StateTone | undefined` is stated identically in the Global Constraints, Task 5's Interfaces block, and Task 5's implementation (`?? "accent"`). `ChatTaskRowTestId` has no `Rail` member anywhere (rail = `Card edge`); `ChatToolDockTestId.Nav` is declared identically in Task 4's Interfaces block, implementation, and test. Test snippets import `renderWithProviders` from the real module (`../../../test/render`) with no unused imports. TestId enum values are unique and stable (`chat-task-row` kept for continuity). i18n keys referenced in Tasks 3–5 (`topbar.langSwitcherLabel`, `nav.*`, `chat.tasks.title`, `chat.toolDock.label`, kept `chat.close`) match exactly the set Task 7 lands/asserts.
