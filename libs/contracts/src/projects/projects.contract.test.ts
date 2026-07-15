@@ -225,6 +225,10 @@ describe("Project.gitRemote (Phase 76)", () => {
     // CVE-2017-1000117 class: leading-dash authority (host/user) — ssh-option injection.
     ["scp-like leading-dash host (ssh-option injection)", "git@-oProxyCommand:evil"],
     ["ssh:// leading-dash user (ssh-option injection)", "ssh://-oProxyCommand@host/x"],
+    // Double-`@` bypass: ssh resolves the host from the LAST `@`, so a
+    // first-`@` authority split would wrongly accept these.
+    ["ssh:// double-@ smuggled dash-host", "ssh://user@evil@-host/x"],
+    ["https:// double-@ smuggled dash-host", "https://user@evil@-host/path"],
   ])("rejects a malicious gitRemote — %s: %s (Task 8)", (_label, gitRemote) => {
     expect(
       ProjectSchema.safeParse({ id: "alpha", name: "Alpha", path: "~/x", gitRemote }).success,

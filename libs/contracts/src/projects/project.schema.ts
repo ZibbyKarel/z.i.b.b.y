@@ -21,8 +21,19 @@ export const ProjectIdSchema = AgentIdSchema;
  * only checks position 0 of the WHOLE string — it misses
  * `git@-oProxyCommand:evil` (the dash lands right after the `@`) and
  * `ssh://-oProxyCommand@host/x` / `ssh://user@-host/x` (the dash lands
- * inside the `ssh://` authority). Applied to `https://` too — cheap, and a
- * legitimate host never starts with `-`, so no existing fixture is affected.
+ * inside the `ssh://` authority). Applied to both `ssh://` and `https://`
+ * authorities (cheap, and a legitimate host never starts with `-`, so no
+ * existing fixture is affected).
+ *
+ * The authority's userinfo/host split is on the LAST `@`, matching how ssh
+ * itself parses `user@host` (verified: `ssh -G 'user@evil@host'` resolves
+ * host=`host`, not `evil@host`) — a naive split on the FIRST `@` lets a
+ * second `@` smuggle a dash-leading host past this check entirely: for
+ * `ssh://user@evil@-host/x` a first-`@` split reads host as `evil@-host`
+ * (doesn't start with `-` → wrongly accepted) while ssh actually connects to
+ * `-host` (a `-`-leading positional arg → option injection). Splitting on
+ * `lastIndexOf("@")` closes that: `userinfo` is everything before the last
+ * `@`, `host[:port]` is everything after it.
  */
 function authorityHasLeadingDash(url: string): boolean {
   let authority: string;
@@ -35,7 +46,7 @@ function authorityHasLeadingDash(url: string): boolean {
     const colonIndex = url.indexOf(":");
     authority = colonIndex === -1 ? url : url.slice(0, colonIndex);
   }
-  const atIndex = authority.indexOf("@");
+  const atIndex = authority.lastIndexOf("@");
   const user = atIndex === -1 ? "" : authority.slice(0, atIndex);
   const hostAndPort = atIndex === -1 ? authority : authority.slice(atIndex + 1);
   const host = hostAndPort.split(":")[0] ?? "";

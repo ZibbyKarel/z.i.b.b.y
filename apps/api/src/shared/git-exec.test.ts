@@ -25,6 +25,12 @@ describe("isValidGitRemote / validateRemote (Task 8 — clone remote allowlist)"
     ["ssh:// leading-dash user (ssh-option injection)", "ssh://-oProxyCommand@host/x"],
     ["ssh:// leading-dash host (ssh-option injection)", "ssh://user@-host/x"],
     ["scp-like leading-dash host, short form", "git@-h:path"],
+    // Double-`@` bypass: a first-`@` authority split reads the dash-leading
+    // segment as part of the userinfo (not the host) and wrongly accepts —
+    // ssh itself resolves the host from the LAST `@`, so these must reject.
+    ["ssh:// double-@ smuggled dash-host", "ssh://user@evil@-host/x"],
+    ["ssh:// double-@ smuggled proxy flag", "ssh://a@b@-oProxyCommand=x/y"],
+    ["https:// double-@ smuggled dash-host", "https://user@evil@-host/path"],
   ];
 
   it.each(malicious)("rejects %s: %s", (_label, url) => {
