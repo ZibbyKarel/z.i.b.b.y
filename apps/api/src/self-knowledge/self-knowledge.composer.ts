@@ -7,6 +7,7 @@ import type {
   SelfKnowledgeSections,
   Subsystem,
 } from "@zibby/contracts";
+import { escapeAutoBoundaryMarkers } from "../shared/text/escape-md-markers";
 import type { ParsedGraphReport } from "./graph-report.parser";
 
 /**
@@ -136,9 +137,9 @@ function renderAgents(agents: Agent[]): string {
     lines.push("_No agents registered yet._");
   } else {
     for (const agent of sorted) {
-      const label =
-        agent.name && agent.name !== agent.id ? `${agent.name} (\`${agent.id}\`)` : `\`${agent.id}\``;
-      const desc = agent.description ? ` — ${agent.description}` : "";
+      const name = agent.name ? escapeAutoBoundaryMarkers(agent.name) : agent.name;
+      const label = name && name !== agent.id ? `${name} (\`${agent.id}\`)` : `\`${agent.id}\``;
+      const desc = agent.description ? ` — ${escapeAutoBoundaryMarkers(agent.description)}` : "";
       lines.push(`- ${label}${desc}`);
     }
   }
@@ -152,11 +153,10 @@ function renderPipelines(pipelines: Pipeline[]): string {
     lines.push("_No pipelines registered yet._");
   } else {
     for (const pipeline of sorted) {
+      const name = pipeline.name ? escapeAutoBoundaryMarkers(pipeline.name) : pipeline.name;
       const label =
-        pipeline.name && pipeline.name !== pipeline.id
-          ? `${pipeline.name} (\`${pipeline.id}\`)`
-          : `\`${pipeline.id}\``;
-      const desc = pipeline.desc ? ` — ${pipeline.desc}` : "";
+        name && name !== pipeline.id ? `${name} (\`${pipeline.id}\`)` : `\`${pipeline.id}\``;
+      const desc = pipeline.desc ? ` — ${escapeAutoBoundaryMarkers(pipeline.desc)}` : "";
       const phaseCount = pipeline.phases.length;
       lines.push(`- ${label}${desc} (${phaseCount} phase${phaseCount === 1 ? "" : "s"})`);
     }
@@ -177,11 +177,10 @@ function renderSubsystems(subsystems: Subsystem[]): string {
     lines.push("_No subsystems registered yet._");
   } else {
     for (const subsystem of sorted) {
+      const name = subsystem.name ? escapeAutoBoundaryMarkers(subsystem.name) : subsystem.name;
       const label =
-        subsystem.name && subsystem.name !== subsystem.id
-          ? `${subsystem.name} (\`${subsystem.id}\`)`
-          : `\`${subsystem.id}\``;
-      lines.push(`- ${label} — ${subsystem.mandate}`);
+        name && name !== subsystem.id ? `${name} (\`${subsystem.id}\`)` : `\`${subsystem.id}\``;
+      lines.push(`- ${label} — ${escapeAutoBoundaryMarkers(subsystem.mandate)}`);
     }
   }
   return lines.join("\n");
@@ -204,7 +203,9 @@ function renderGates(floor: GateRule[], catalog: GlobalGateRule[]): string {
     lines.push("_None._");
   } else {
     for (const rule of [...catalog].sort(ascendingById)) {
-      const label = rule.name ? `${rule.name} (\`${rule.id}\`)` : `\`${rule.id}\``;
+      const label = rule.name
+        ? `${escapeAutoBoundaryMarkers(rule.name)} (\`${rule.id}\`)`
+        : `\`${rule.id}\``;
       lines.push(`- ${label}: ${describeMatch(rule.match)} → **${rule.decision}**`);
     }
   }
@@ -218,7 +219,7 @@ function renderChannels(channelKinds: string[]): string {
   if (sorted.length === 0) {
     lines.push("_No channel adapters registered._");
   } else {
-    for (const kind of sorted) lines.push(`- ${kind}`);
+    for (const kind of sorted) lines.push(`- ${escapeAutoBoundaryMarkers(kind)}`);
   }
   return lines.join("\n");
 }

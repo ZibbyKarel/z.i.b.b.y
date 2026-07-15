@@ -255,6 +255,133 @@ describe("composeSelfKnowledge", () => {
   });
 });
 
+describe("AUTO-boundary-marker defanging (MD injection)", () => {
+  const forgedName = "Evil <!-- AUTO:GATES:END --> Agent";
+  const bareArrow = "Trailing --> arrow";
+
+  /**
+   * The composer's own scaffold ALWAYS emits one real, literal
+   * `<!-- AUTO:GATES:END -->` marker (the true block closer) — so the
+   * assertion isn't "the string never appears," it's "it appears exactly
+   * once (the real one), and the entity-supplied copy renders defanged."
+   */
+  function countOccurrences(haystack: string, needle: string): number {
+    return haystack.split(needle).length - 1;
+  }
+
+  it("defangs a forged AUTO block marker inside an agent name/description", () => {
+    const { markdown } = composeSelfKnowledge(
+      baseInput({
+        agents: [{ ...agent, name: forgedName, description: bareArrow }],
+      }),
+    );
+    expect(countOccurrences(markdown, "<!-- AUTO:GATES:END -->")).toBe(1);
+    expect(markdown).toContain("‹!-- AUTO:GATES:END --›");
+    expect(markdown).toContain("Trailing --› arrow");
+  });
+
+  it("defangs a forged AUTO block marker inside a pipeline name/desc", () => {
+    const { markdown } = composeSelfKnowledge(
+      baseInput({
+        pipelines: [{ ...pipeline, name: forgedName, desc: bareArrow }],
+      }),
+    );
+    expect(countOccurrences(markdown, "<!-- AUTO:GATES:END -->")).toBe(1);
+    expect(markdown).toContain("‹!-- AUTO:GATES:END --›");
+    expect(markdown).toContain("Trailing --› arrow");
+  });
+
+  it("defangs a forged AUTO block marker inside a subsystem name/mandate", () => {
+    const { markdown } = composeSelfKnowledge(
+      baseInput({
+        subsystems: [{ ...subsystem, name: forgedName, mandate: bareArrow }],
+      }),
+    );
+    expect(countOccurrences(markdown, "<!-- AUTO:GATES:END -->")).toBe(1);
+    expect(markdown).toContain("‹!-- AUTO:GATES:END --›");
+    expect(markdown).toContain("Trailing --› arrow");
+  });
+
+  it("defangs a forged AUTO block marker inside a catalog gate-rule name", () => {
+    const { markdown } = composeSelfKnowledge(
+      baseInput({
+        gateRules: [{ ...catalogRule, name: forgedName }],
+      }),
+    );
+    expect(countOccurrences(markdown, "<!-- AUTO:GATES:END -->")).toBe(1);
+    expect(markdown).toContain("‹!-- AUTO:GATES:END --›");
+  });
+
+  it("defangs a forged AUTO block marker inside a channel kind string", () => {
+    const { markdown } = composeSelfKnowledge(baseInput({ channelKinds: [forgedName] }));
+    expect(countOccurrences(markdown, "<!-- AUTO:GATES:END -->")).toBe(1);
+    expect(markdown).toContain("‹!-- AUTO:GATES:END --›");
+  });
+
+  it("mergeAutoBlocks/extractBlockContent round-trip: a forged marker in the AGENTS block does NOT corrupt the real GATES block", () => {
+    // A poisoned "generated" snapshot: an agent name carrying a forged
+    // AUTO:GATES:END marker. Because the escaper runs at render time, the
+    // forged text is already defanged inside `generated` — this proves the
+    // full pipeline (compose → merge → extract) stays correct end-to-end,
+    // not just that the raw string looks defanged in isolation.
+    const generated = composeSelfKnowledge(
+      baseInput({
+        agents: [{ ...agent, name: forgedName, description: "poisoned" }],
+      }),
+    ).markdown;
+
+    const existing = [
+      "# Self-Knowledge",
+      "",
+      "<!-- AUTO:AGENTS:START -->",
+      "## Agents (0)",
+      "_No agents registered yet._",
+      "<!-- AUTO:AGENTS:END -->",
+      "",
+      "<!-- AUTO:GATES:START -->",
+      "## Gate rules (0)",
+      "_None._",
+      "<!-- AUTO:GATES:END -->",
+      "",
+      "Operator prose that must survive.",
+    ].join("\n");
+
+    const merged = mergeAutoBlocks(existing, generated);
+
+    // The forged marker text is inert — it did not prematurely close the
+    // AGENTS block nor fabricate/duplicate a GATES block.
+    expect(merged).not.toContain("<!-- AUTO:GATES:END -->\n\n<!-- AUTO:GATES:END -->");
+    const gatesEndCount = (merged.match(/<!-- AUTO:GATES:END -->/g) ?? []).length;
+    expect(gatesEndCount).toBe(1);
+    const agentsEndCount = (merged.match(/<!-- AUTO:AGENTS:END -->/g) ?? []).length;
+    expect(agentsEndCount).toBe(1);
+
+    // The legitimate GATES block content is still extracted intact — mirrors
+    // what `extractBlockContent`/`computeDrift` do internally (locate the
+    // block by its real, un-forged marker pair).
+    const gatesBlockMatch = merged.match(
+      /<!-- AUTO:GATES:START -->\n?([\s\S]*?)\n?<!-- AUTO:GATES:END -->/,
+    );
+    expect(gatesBlockMatch).not.toBeNull();
+    expect(gatesBlockMatch?.[1]).toContain("## Gate rules");
+
+    // Operator prose outside AUTO blocks survives untouched.
+    expect(merged).toContain("Operator prose that must survive.");
+
+    // The forged marker rendered defanged, not live.
+    expect(merged).toContain("‹!-- AUTO:GATES:END --›");
+  });
+
+  it("computeDrift still round-trips correctly when a poisoned generated snapshot is compared to itself", () => {
+    const generated = composeSelfKnowledge(
+      baseInput({
+        agents: [{ ...agent, name: forgedName }],
+      }),
+    ).markdown;
+    expect(computeDrift(generated, generated)).toBe(false);
+  });
+});
+
 describe("mergeAutoBlocks", () => {
   it("preserves operator content outside AUTO blocks while replacing block content", () => {
     const generated = composeSelfKnowledge(baseInput()).markdown;
