@@ -1705,6 +1705,13 @@
         "errorBody": "Zkus to prosím znovu.",
         "retry": "Zkusit znovu"
       }
+    },
+    "note": {
+      "title": "Nová poznámka",
+      "bodyLabel": "Poznámka",
+      "placeholder": "Napiš poznámku pro ZIBBY…",
+      "save": "Uložit poznámku",
+      "close": "Zavřít"
     }
   },
   "subsystems": {

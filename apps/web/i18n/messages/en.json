@@ -1705,6 +1705,13 @@
         "errorBody": "Please try again.",
         "retry": "Retry"
       }
+    },
+    "note": {
+      "title": "New note",
+      "bodyLabel": "Note",
+      "placeholder": "Write a note for ZIBBY…",
+      "save": "Save note",
+      "close": "Close"
     }
   },
   "subsystems": {
