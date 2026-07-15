@@ -68,8 +68,15 @@ are already fixed or false-positive (report itself flagged 3 render-time-setStat
 ## Global constraints (bind every task)
 
 - **Files are source of truth; PR is the gate** — no auto-merge, no bare push.
-- After every code change: `pnpm check:lint && pnpm check:types && pnpm test` green
-  before commit (typecheck via `tsc -p` direct where rtk masks — see memory).
+- After every code change, green before commit:
+  - `pnpm check:lint`
+  - **Typecheck: `npx tsc -p tsconfig.base.json --noEmit`** (covers apps/api incl. tests +
+    libs) and, for web-touching tasks, also `npx tsc -p apps/web/tsconfig.json --noEmit`.
+    `apps/api/tsconfig.app.json` does NOT exist; rtk `pnpm check:types` can mask errors.
+  - `pnpm api:test` / `pnpm web:test` (or `pnpm test`) for the touched area.
+- **Pre-commit hook:** `check:self-knowledge` can block a commit with non-deterministic
+  "drift detected" (graphify). Fix by `pnpm self-knowledge:generate` then retry — never
+  `--no-verify`.
 - Contract-first: `libs/contracts` changes precede API/web.
 - No `forwardRef`, no `any`, no inline `style` on DOM in `apps/web`.
 - DS is the primitive source; new shared primitives go to `libs/design-system`.
