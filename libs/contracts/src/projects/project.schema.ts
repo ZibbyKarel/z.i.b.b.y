@@ -11,6 +11,38 @@ import { AgentIdSchema } from "../agents/agent.schema";
 export const ProjectIdSchema = AgentIdSchema;
 
 /**
+ * CVE-2017-1000117 class: reject a remote whose user/host authority segment
+ * starts with `-`. Git's ssh transport spawns `ssh` with the host (and, for
+ * scp-like/`ssh://` forms, optionally a user) as a POSITIONAL argument; a
+ * segment starting with `-` is parsed by ssh as an OPTION
+ * (`-oProxyCommand=…`) instead of a host/user, letting an attacker smuggle
+ * arbitrary ssh options through what looks like an ordinary remote. The
+ * top-level `url.startsWith("-")` guard in {@link isValidGitRemote} below
+ * only checks position 0 of the WHOLE string — it misses
+ * `git@-oProxyCommand:evil` (the dash lands right after the `@`) and
+ * `ssh://-oProxyCommand@host/x` / `ssh://user@-host/x` (the dash lands
+ * inside the `ssh://` authority). Applied to `https://` too — cheap, and a
+ * legitimate host never starts with `-`, so no existing fixture is affected.
+ */
+function authorityHasLeadingDash(url: string): boolean {
+  let authority: string;
+  if (/^https:\/\//i.test(url)) {
+    authority = url.slice("https://".length).split(/[/?#]/)[0] ?? "";
+  } else if (/^ssh:\/\//i.test(url)) {
+    authority = url.slice("ssh://".length).split("/")[0] ?? "";
+  } else {
+    // scp-like `user@host:path` — the authority is everything before the first ':'.
+    const colonIndex = url.indexOf(":");
+    authority = colonIndex === -1 ? url : url.slice(0, colonIndex);
+  }
+  const atIndex = authority.indexOf("@");
+  const user = atIndex === -1 ? "" : authority.slice(0, atIndex);
+  const hostAndPort = atIndex === -1 ? authority : authority.slice(atIndex + 1);
+  const host = hostAndPort.split(":")[0] ?? "";
+  return user.startsWith("-") || host.startsWith("-");
+}
+
+/**
  * Task 8 — fail-closed allowlist for a git clone remote. The single
  * source-of-truth predicate shared by the `gitRemote` refinement below AND
  * `apps/api/src/shared/git-exec.ts`'s `validateRemote()` (which re-exports
@@ -27,17 +59,20 @@ export const ProjectIdSchema = AgentIdSchema;
  * leading `-` (argv/option injection, e.g. `--upload-pack=…`), `ext::`
  * (git's arbitrary-command transport — the RCE class this predicate exists
  * to close), `file://` and bare local paths (no implicit local-clone
- * allowance at this layer), and `git://` (unauthenticated/plaintext,
+ * allowance at this layer), `git://` (unauthenticated/plaintext,
  * deliberately excluded — tighten-only, not used by any fixture/operator
- * flow in this codebase).
+ * flow in this codebase), and — via {@link authorityHasLeadingDash} above —
+ * a scp-like/`ssh://` remote whose user or host authority segment starts
+ * with `-` (CVE-2017-1000117 class: an ssh-option injection the whole-string
+ * `-` guard below does not reach).
  */
 export function isValidGitRemote(url: string): boolean {
   if (typeof url !== "string" || url.length === 0) return false;
   if (url.startsWith("-")) return false;
   if (/^ext::/i.test(url)) return false;
-  if (/^https:\/\/\S+$/i.test(url)) return true;
-  if (/^ssh:\/\/\S+$/i.test(url)) return true;
-  if (/^[\w.-]+@[\w.-]+:\S+$/.test(url)) return true;
+  if (/^https:\/\/\S+$/i.test(url)) return !authorityHasLeadingDash(url);
+  if (/^ssh:\/\/\S+$/i.test(url)) return !authorityHasLeadingDash(url);
+  if (/^[\w.-]+@[\w.-]+:\S+$/.test(url)) return !authorityHasLeadingDash(url);
   return false;
 }
 

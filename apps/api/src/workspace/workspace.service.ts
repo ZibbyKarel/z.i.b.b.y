@@ -2,7 +2,12 @@ import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Injectable, Optional } from "@nestjs/common";
 import type { Workspace } from "@zibby/contracts";
-import { GIT_NETWORK_TIMEOUT_MS, GIT_TIMEOUT_MS, exec, isGitRepo } from "../shared/git-exec";
+import {
+  GIT_NETWORK_TIMEOUT_MS,
+  GIT_TIMEOUT_MS,
+  exec,
+  isGitRepo as isGitRepoAt,
+} from "../shared/git-exec";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 
 /** Hard cap on a sanitized branch slug, leaving room under git's ref-name limits. */
@@ -53,9 +58,11 @@ export class WorkspaceService {
   }
 
   /** Is `dir` inside a git work tree? A cheap `rev-parse` probe (no network).
-   * Delegates to the shared {@link isGitRepo} (Task 8 dedup). */
+   * Delegates to the shared {@link isGitRepoAt} (Task 8 dedup); the import is
+   * aliased so this method doesn't shadow its own free-function delegate
+   * (same pattern as `SelfService.isGitRepo`). */
   async isGitRepo(dir: string): Promise<boolean> {
-    return isGitRepo(dir);
+    return isGitRepoAt(dir);
   }
 
   /**

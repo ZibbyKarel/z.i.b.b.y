@@ -222,6 +222,9 @@ describe("Project.gitRemote (Phase 76)", () => {
     ["ext:: transport RCE", 'ext::sh -c "id"'],
     ["bare local path (no scheme)", "/tmp/x"],
     ["git:// unauthenticated (locked reject)", "git://github.com/x"],
+    // CVE-2017-1000117 class: leading-dash authority (host/user) — ssh-option injection.
+    ["scp-like leading-dash host (ssh-option injection)", "git@-oProxyCommand:evil"],
+    ["ssh:// leading-dash user (ssh-option injection)", "ssh://-oProxyCommand@host/x"],
   ])("rejects a malicious gitRemote — %s: %s (Task 8)", (_label, gitRemote) => {
     expect(
       ProjectSchema.safeParse({ id: "alpha", name: "Alpha", path: "~/x", gitRemote }).success,
