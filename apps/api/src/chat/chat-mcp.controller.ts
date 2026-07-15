@@ -1,8 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { Controller, Get, Logger, Post, Req, Res } from "@nestjs/common";
+import { Controller, Get, Logger, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
+import { ChatMcpAuthGuard } from "./chat-mcp-auth.guard";
 import { ChatToolResultRegistry } from "./chat-tool-result.registry";
 import { ChatToolsService } from "./chat-tools.service";
 
@@ -36,6 +37,10 @@ function text(value: string): { content: Array<{ type: "text"; text: string }> }
  *
  * The route carries the `api/` prefix explicitly (this app sets no global prefix — the
  * SSE route is likewise `@Sse("api/chat/stream")`); the toolArgs URL must match it.
+ *
+ * `handle()` (the POST — the only method with a tool surface) is gated by
+ * {@link ChatMcpAuthGuard}: a per-boot bearer token + loopback check. `rejectGet`
+ * carries no tool surface, so it stays unguarded (see `chat-mcp-auth.guard.ts`).
  */
 @Controller()
 export class ChatMcpController {
@@ -47,6 +52,7 @@ export class ChatMcpController {
   ) {}
 
   @Post("api/chat/mcp")
+  @UseGuards(ChatMcpAuthGuard)
   async handle(@Req() req: IncomingMessage, @Res() res: ServerResponse): Promise<void> {
     const conversationId = conversationIdFromUrl(req.url);
     const server = this.buildServer(conversationId);

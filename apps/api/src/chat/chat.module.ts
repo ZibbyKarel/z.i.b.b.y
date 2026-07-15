@@ -6,6 +6,8 @@ import { TasksModule } from "../tasks/tasks.module";
 import { dataDir } from "../shared/data-dir";
 import { ChatController } from "./chat.controller";
 import { ChatEventsService } from "./chat-events.service";
+import { ChatMcpAuthGuard } from "./chat-mcp-auth.guard";
+import { ChatMcpAuthService } from "./chat-mcp-auth.service";
 import { ChatMcpController } from "./chat-mcp.controller";
 import { ChatSessionService } from "./chat-session.service";
 import { ChatToolResultRegistry } from "./chat-tool-result.registry";
@@ -35,6 +37,10 @@ export function resolveChatDir(): string {
     ChatSessionService,
     ChatToolsService,
     ChatToolResultRegistry,
+    // Single source of truth for the per-boot MCP bearer token — injected into both
+    // the guard (verifies) and ChatSessionService (propagates to the spawned CLI).
+    ChatMcpAuthService,
+    ChatMcpAuthGuard,
   ],
   exports: [ChatSessionService, ChatTranscriptStore],
 })

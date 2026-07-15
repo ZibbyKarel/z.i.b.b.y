@@ -1,19 +1,22 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { Injectable, Logger } from "@nestjs/common";
+import { promises as fs } from "node:fs";
+import * as path from "node:path";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import {
   type ChatMessage,
   type ChatToolEvent,
   type SendChatMessageBody,
   type SendChatMessageResult,
 } from "@zibby/contracts";
-import { collisionResistantId } from "../shared/file-storage";
+import { collisionResistantId, ensureDir } from "../shared/file-storage";
 import { SystemConfigStore } from "../system/system-config.store";
-import { buildChatPrompt } from "./chat-persona";
 import { ChatEventsService } from "./chat-events.service";
+import { ChatMcpAuthService } from "./chat-mcp-auth.service";
+import { buildChatPrompt } from "./chat-persona";
 import { type ChatStreamEvent, parseChatStreamLine } from "./chat-stream-parser";
 import { type ChatCreateTaskMeta, ChatToolResultRegistry } from "./chat-tool-result.registry";
 import { describeTarget } from "./chat-tools.service";
-import { ChatTranscriptStore } from "./chat-transcript.store";
+import { CHAT_DIR, ChatTranscriptStore } from "./chat-transcript.store";
 
 /** Minimal shape of the spawned `claude` process — the test seam overrides this. */
 export interface ClaudeProcess {
@@ -74,6 +77,8 @@ export class ChatSessionService {
     private readonly events: ChatEventsService,
     private readonly systemConfig: SystemConfigStore,
     private readonly toolResults: ChatToolResultRegistry,
+    private readonly mcpAuth: ChatMcpAuthService,
+    @Inject(CHAT_DIR) private readonly chatDir: string,
   ) {}
 
   /**
@@ -106,8 +111,10 @@ export class ChatSessionService {
     return { conversationId, turnId };
   }
 
-  /** Build the verified CLI argument vector for one turn. Exposed for the args test. */
-  buildArgs(text: string, sessionId: string | null, conversationId: string): string[] {
+  /** Build the verified CLI argument vector for one turn. Exposed for the args test.
+   * Async since {@link toolArgs} spills the `--mcp-config` (now secret-bearing —
+   * see its docblock) to a file before returning the path. */
+  async buildArgs(text: string, sessionId: string | null, conversationId: string): Promise<string[]> {
     const explicitTarget = this.toolResults.getExplicitTarget(conversationId);
     const persona = buildChatPrompt(this.systemConfig.current().chatPersona);
     // Fáze 14.2: when the operator @mentioned a unit, tell the model plainly — it still
@@ -143,7 +150,7 @@ export class ChatSessionService {
       "dontAsk",
     ];
     if (sessionId) args.push("--resume", sessionId);
-    args.push(...this.toolArgs(conversationId));
+    args.push(...(await this.toolArgs(conversationId)));
     return args;
   }
 
@@ -157,14 +164,36 @@ export class ChatSessionService {
 
   /**
    * MCP tool wiring (`--mcp-config` + `--allowedTools`): point the turn at the
-   * in-process HTTP MCP server (server id `zibby`) and allow its three tools. The CLI
-   * round-trips tool-use against this under the verified chat spawn config.
+   * in-process HTTP MCP server (server id `zibby`), carrying the per-boot bearer
+   * token (see {@link ChatMcpAuthService}) the new {@link ChatMcpAuthGuard} requires,
+   * and allow its six tools. The CLI round-trips tool-use against this under the
+   * verified chat spawn config.
+   *
+   * The token must never land on argv (`ps`-visible to any local user — the exact
+   * bug class T5c/`68de5655` fixed for the runner's `--mcp-config`, which this
+   * service's inline-JSON shape had NOT yet picked up). So the whole config —
+   * including the `Authorization: Bearer …` header — is spilled to a `0600` file
+   * under the chat dir (`resolveChatDir()`, gitignored) and passed as
+   * `--mcp-config <path>`; only the file PATH goes on argv. A fresh, collision-safe
+   * filename per call (mirrors the runner's `buildMcpConfigArgs`, minus a shared
+   * per-run sandbox dir chat doesn't have) — left on disk after the turn (chat has
+   * no per-run cleanup sweep; the file carries no secret usable outside this boot
+   * and sits mode-0600 in a gitignored dir).
    */
-  protected toolArgs(conversationId: string): string[] {
+  protected async toolArgs(conversationId: string): Promise<string[]> {
     const config = {
-      mcpServers: { zibby: { type: "http", url: this.mcpBaseUrl(conversationId) } },
+      mcpServers: {
+        zibby: {
+          type: "http",
+          url: this.mcpBaseUrl(conversationId),
+          headers: { Authorization: `Bearer ${this.mcpAuth.bearerToken}` },
+        },
+      },
     };
-    return ["--mcp-config", JSON.stringify(config), "--allowedTools", "mcp__zibby__*"];
+    await ensureDir(this.chatDir);
+    const file = path.join(this.chatDir, `${collisionResistantId("mcp-config")}.json`);
+    await fs.writeFile(file, JSON.stringify(config), { mode: 0o600 });
+    return ["--mcp-config", file, "--allowedTools", "mcp__zibby__*"];
   }
 
   /** The real spawn; overridden in tests. Isolated stdin, piped stdout/stderr. */
@@ -197,7 +226,7 @@ export class ChatSessionService {
     now: Date = new Date(),
   ): Promise<void> {
     const sessionId = await this.store.getSessionId(conversationId);
-    const proc = this.createProcess(this.buildArgs(text, sessionId, conversationId));
+    const proc = this.createProcess(await this.buildArgs(text, sessionId, conversationId));
 
     let accumulated = "";
     let capturedSession: string | null = null;

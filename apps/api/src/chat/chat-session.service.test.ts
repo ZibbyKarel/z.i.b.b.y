@@ -8,6 +8,7 @@ import type { ChatPersona, ChatToolEvent, TaskTarget } from "@zibby/contracts";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { CHAT_GOVERNOR_PROMPT, CHAT_PERSONAS } from "./chat-persona";
 import { ChatEventsService, type ChatTurnEvent } from "./chat-events.service";
+import { ChatMcpAuthService } from "./chat-mcp-auth.service";
 import { ChatSessionService, type ClaudeProcess, mergeToolEvent } from "./chat-session.service";
 import { ChatToolResultRegistry } from "./chat-tool-result.registry";
 import { ChatTranscriptStore } from "./chat-transcript.store";
@@ -36,8 +37,22 @@ class TestSession extends ChatSessionService {
     private readonly lines: string[],
     persona: ChatPersona = "jarvis",
     toolResults: ChatToolResultRegistry = new ChatToolResultRegistry(),
+    // T9: a fresh in-memory token per TestSession by default (no test depends on a
+    // FIXED value unless it constructs its own ChatMcpAuthService — see the
+    // dedicated "MCP config auth" block below); files spill to the OS tmp dir
+    // (collision-resistant filenames — no cleanup needed for these incidental
+    // writes, mirrors "safe to leave" per task-9-brief.md).
+    mcpAuth: ChatMcpAuthService = new ChatMcpAuthService(),
+    chatDir: string = os.tmpdir(),
   ) {
-    super(store, events, fakeSystemConfigStore({ chatPersona: persona }), toolResults);
+    super(
+      store,
+      events,
+      fakeSystemConfigStore({ chatPersona: persona }),
+      toolResults,
+      mcpAuth,
+      chatDir,
+    );
   }
   protected createProcess(args: string[]): ClaudeProcess {
     this.lastArgs = args;
@@ -113,9 +128,9 @@ describe("ChatSessionService", () => {
       });
     });
 
-  it("builds the verified isolated streaming arg vector", () => {
+  it("builds the verified isolated streaming arg vector", async () => {
     const svc = new TestSession(store, events, []);
-    const args = svc.buildArgs("ahoj", null, "c1");
+    const args = await svc.buildArgs("ahoj", null, "c1");
     expect(args).toContain("--include-partial-messages");
     expect(args).toContain("--model");
     expect(args[args.indexOf("--model") + 1]).toBe("sonnet");
@@ -127,24 +142,27 @@ describe("ChatSessionService", () => {
     expect(args).not.toContain("--resume");
   });
 
-  it("wires the zibby MCP tool server (--mcp-config + --allowedTools), scoped to the conversation", () => {
-    const svc = new TestSession(store, events, []);
-    const args = svc.buildArgs("ahoj", null, "c1");
+  it("wires the zibby MCP tool server (--mcp-config file + --allowedTools), scoped to the conversation", async () => {
+    const svc = new TestSession(store, events, [], "jarvis", new ChatToolResultRegistry(), undefined, dir);
+    const args = await svc.buildArgs("ahoj", null, "c1");
     expect(args[args.indexOf("--allowedTools") + 1]).toBe("mcp__zibby__*");
-    const config = JSON.parse(args[args.indexOf("--mcp-config") + 1] ?? "{}");
+    // T9: the config is now spilled to a file — the argv value is a PATH, not inline JSON.
+    const configPath = args[args.indexOf("--mcp-config") + 1] ?? "";
+    expect(configPath).toMatch(/\.json$/);
+    const config = JSON.parse(await fs.readFile(configPath, "utf8"));
     expect(config.mcpServers.zibby.type).toBe("http");
     expect(config.mcpServers.zibby.url).toMatch(/\/api\/chat\/mcp\?conversationId=c1$/);
   });
 
-  it("adds --resume with the threaded session id", () => {
+  it("adds --resume with the threaded session id", async () => {
     const svc = new TestSession(store, events, []);
-    const args = svc.buildArgs("ahoj", "sess-7", "c1");
+    const args = await svc.buildArgs("ahoj", "sess-7", "c1");
     expect(args[args.indexOf("--resume") + 1]).toBe("sess-7");
   });
 
-  it("appends the selected persona tone, always over the constant governor", () => {
-    const jarvis = new TestSession(store, events, [], "jarvis").buildArgs("ahoj", null, "c1");
-    const concise = new TestSession(store, events, [], "concise").buildArgs("ahoj", null, "c1");
+  it("appends the selected persona tone, always over the constant governor", async () => {
+    const jarvis = await new TestSession(store, events, [], "jarvis").buildArgs("ahoj", null, "c1");
+    const concise = await new TestSession(store, events, [], "concise").buildArgs("ahoj", null, "c1");
 
     const jarvisPrompt = jarvis[jarvis.indexOf("--append-system-prompt") + 1] ?? "";
     const concisePrompt = concise[concise.indexOf("--append-system-prompt") + 1] ?? "";
@@ -376,11 +394,41 @@ describe("ChatSessionService", () => {
       expect(toolResults.getExplicitTarget(result.conversationId)).toBeUndefined();
     });
 
-    it("builds no explicit-target line when nothing was mentioned", () => {
+    it("builds no explicit-target line when nothing was mentioned", async () => {
       const svc = new TestSession(store, events, []);
-      const args = svc.buildArgs("ahoj", null, "c8");
+      const args = await svc.buildArgs("ahoj", null, "c8");
       const prompt = args[args.indexOf("--append-system-prompt") + 1] ?? "";
       expect(prompt).not.toContain("@mention");
+    });
+  });
+
+  describe("MCP config auth (T9 — bearer token off argv)", () => {
+    it("the spilled --mcp-config FILE carries the Authorization: Bearer header", async () => {
+      const mcpAuth = new ChatMcpAuthService();
+      const svc = new TestSession(store, events, [], "jarvis", new ChatToolResultRegistry(), mcpAuth, dir);
+      const args = await svc.buildArgs("ahoj", null, "c9");
+
+      const configPath = args[args.indexOf("--mcp-config") + 1] ?? "";
+      const config = JSON.parse(await fs.readFile(configPath, "utf8"));
+      expect(config.mcpServers.zibby.headers.Authorization).toBe(`Bearer ${mcpAuth.bearerToken}`);
+    });
+
+    it("the raw token never appears literally in the returned argv array", async () => {
+      const mcpAuth = new ChatMcpAuthService();
+      const svc = new TestSession(store, events, [], "jarvis", new ChatToolResultRegistry(), mcpAuth, dir);
+      const args = await svc.buildArgs("ahoj", null, "c10");
+
+      expect(args.some((arg) => arg.includes(mcpAuth.bearerToken))).toBe(false);
+    });
+
+    it("the spilled config file is written mode 0600 (owner-only, secret-bearing)", async () => {
+      const mcpAuth = new ChatMcpAuthService();
+      const svc = new TestSession(store, events, [], "jarvis", new ChatToolResultRegistry(), mcpAuth, dir);
+      const args = await svc.buildArgs("ahoj", null, "c11");
+
+      const configPath = args[args.indexOf("--mcp-config") + 1] ?? "";
+      const stat = await fs.stat(configPath);
+      expect(stat.mode & 0o777).toBe(0o600);
     });
   });
 });
