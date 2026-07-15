@@ -915,6 +915,65 @@ describe("RunnerCore", () => {
     expect(core.get(run.runId).status).toBe("interrupted");
   });
 
+  it("cancel() on a running run kills the whole process GROUP, not just the leader (5a)", async () => {
+    const core = new RunnerCore(dir, strategy);
+    await core.init();
+    const cwd = path.join(dir, "cancel_group_sandbox");
+    // The leader is spawned detached (its own fresh pgid, per start()). It forks a
+    // grandchild WITHOUT `detached`, so the grandchild inherits that same process
+    // group — the shape of a real `claude` session's own subprocesses (an `npm
+    // test`, a `git` invocation, an MCP stdio server it launched).
+    // `sleep 30` deliberately outlasts this test's own poll timeout below, so a
+    // grandchild that's still alive isn't confused with one that merely finished
+    // on its own — only a real group-kill can end it within the poll window.
+    const script =
+      "const { spawn } = require('node:child_process');" +
+      "const gc = spawn('sleep', ['30']);" +
+      "console.log('GCPID ' + gc.pid);" +
+      "setInterval(() => {}, 1000);";
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "cgrp",
+      command: NODE,
+      args: ["-e", script],
+      cwd,
+      extra: { label: "x" },
+    });
+    await waitForStatus(core, run.runId, "running");
+
+    // Read the grandchild's pid off the leader's own stdout log.
+    let gcPid = 0;
+    const printStart = Date.now();
+    while (!gcPid) {
+      const chunk = await core.readLog(run.runId, 0);
+      const match = chunk.content.match(/GCPID (\d+)/);
+      if (match?.[1]) gcPid = Number(match[1]);
+      else if (Date.now() - printStart > 5000) throw new Error("grandchild pid never printed");
+      else await sleep(20);
+    }
+    expect(isProcAlive(gcPid)).toBe(true);
+
+    core.cancel(run.runId);
+    // Regression guard: a deliberate cancel teardown still reconciles the run to
+    // `interrupted`, never `error` — unchanged by moving to killGroup.
+    await waitForStatus(core, run.runId, "interrupted");
+    expect(core.get(run.runId).status).toBe("interrupted");
+
+    // The GRANDCHILD must be dead too — this is what proves the whole process
+    // GROUP was signalled, not merely the leader. Pre-fix `handle.child.kill()`
+    // only SIGTERMs the leader pid; the grandchild (mid `sleep 30`, so it can't
+    // have exited on its own within this window) survives as an orphan and this
+    // assertion times out instead of observing ESRCH.
+    const killStart = Date.now();
+    while (isProcAlive(gcPid)) {
+      if (Date.now() - killStart > 3000) {
+        throw new Error(`grandchild ${gcPid} survived cancel() — process group leaked`);
+      }
+      await sleep(20);
+    }
+    expect(isProcAlive(gcPid)).toBe(false);
+  });
+
   it("resume() respawns a paused-limit run from its stashed spec and it can finish", async () => {
     const epoch = Math.floor(Date.now() / 1000) + 2;
     const core = new RunnerCore(

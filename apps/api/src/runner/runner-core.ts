@@ -548,7 +548,7 @@ export class RunnerCore<R extends BaseRun> {
       // Phase 9, so a run that printed a usage-limit line before the operator killed it
       // is NOT reclassified as `paused-limit` and auto-respawned (the watch-out).
       handle.interrupting = true;
-      handle.child.kill();
+      killGroup(handle.run.pgid ?? handle.run.pid);
     }
     this.logger?.info("run cancelled", { runId, status: handle.run.status });
     return handle.run;
