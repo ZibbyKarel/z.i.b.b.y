@@ -152,4 +152,30 @@ describe("ChannelWatcherService", () => {
     expect((await integrations.get("bad")).lastError).toContain("boom");
     expect((await integrations.get("good")).status).toBe("connected");
   });
+
+  it("T7 — two rapid timer-driven firings run tick() once (TickingWatcherBase guard)", async () => {
+    const watcher = makeWatcher(makeRegistry());
+    let resolveFirst: () => void = () => {};
+    const deferred = new Promise<void>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const tickSpy = vi.spyOn(watcher, "tick").mockImplementation(async () => {
+      await deferred;
+      return [];
+    });
+    // `tick()` itself stays public/unguarded (existing tests above call it directly);
+    // the guard sits only on the timer-driven path — simulate two `setInterval`
+    // firings via the base's protected entry point.
+    const guardedTick = () =>
+      (watcher as unknown as { guardedTick(): Promise<void> }).guardedTick();
+
+    const first = guardedTick();
+    const second = guardedTick();
+    await second; // skipped — resolves without waiting on the first
+    expect(tickSpy).toHaveBeenCalledTimes(1);
+
+    resolveFirst();
+    await first;
+    expect(tickSpy).toHaveBeenCalledTimes(1); // still once — the skipped firing never ran tick()
+  });
 });

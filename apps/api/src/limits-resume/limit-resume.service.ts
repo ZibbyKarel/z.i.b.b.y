@@ -3,6 +3,7 @@ import { AgentRunnerService } from "../agents/agent-runner.service";
 import { LimitsService } from "../limits/limits.service";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
+import { TickingWatcherBase } from "../shared/ticking-watcher-base";
 import { SystemConfigStore } from "../system/system-config.store";
 
 /** A limit-paused run the scan considers, normalized across the two runner kinds. */
@@ -34,11 +35,17 @@ interface PausedEntry {
  * 60s); `0` disables it so tests drive {@link tick} directly with a fake clock.
  */
 @Injectable()
-export class LimitResumeService implements OnModuleInit, OnModuleDestroy {
-  private timer: ReturnType<typeof setInterval> | null = null;
+export class LimitResumeService
+  extends TickingWatcherBase
+  implements OnModuleInit, OnModuleDestroy
+{
   private unsubscribe: (() => void) | null = null;
-  private readonly log: ScopedLogger;
-  /** Run refs being resumed right now, so a restart-then-tick can't double-resume one. */
+  protected readonly log: ScopedLogger;
+  /** Run refs being resumed right now, so a restart-then-tick can't double-resume one.
+   * Complementary to the base's tick-level guard: this is a per-run-id guard (a resume
+   * that outlives a tick boundary), while the base's `running` flag serializes whole
+   * ticks — the two together also close the cross-tick `resumedThisTick`/oldest-first
+   * gap the base guard alone provides (only one `tick()` ever runs at a time now). */
   private readonly inflight = new Set<string>();
 
   constructor(
@@ -48,6 +55,7 @@ export class LimitResumeService implements OnModuleInit, OnModuleDestroy {
     private readonly systemConfig: SystemConfigStore,
     logger: LoggerService,
   ) {
+    super();
     this.log = logger.child(LimitResumeService.name);
   }
 
@@ -57,16 +65,20 @@ export class LimitResumeService implements OnModuleInit, OnModuleDestroy {
     this.unsubscribe = this.systemConfig.onChange(() => this.arm());
   }
 
+  protected tickMs(): number {
+    return this.systemConfig.current().limitResumeTickMs;
+  }
+
+  /** The timer-driven path — goes through the base's skip-if-in-flight guard. */
+  protected async runTick(now?: Date): Promise<void> {
+    await this.tick(now);
+  }
+
   /** (Re-)arm the scan from `systemConfig.limitResumeTickMs`; `0` leaves it disabled. */
-  private arm(): void {
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
-    const tickMs = this.systemConfig.current().limitResumeTickMs;
+  protected override arm(): void {
+    super.arm();
+    const tickMs = this.tickMs();
     if (tickMs > 0) {
-      this.timer = setInterval(() => void this.tick(), tickMs);
-      this.timer.unref?.();
       this.log.info("limit-resume scan started", {
         tickMs,
         max: this.systemConfig.current().limitResumeMax,
@@ -77,7 +89,7 @@ export class LimitResumeService implements OnModuleInit, OnModuleDestroy {
   }
 
   onModuleDestroy(): void {
-    if (this.timer) clearInterval(this.timer);
+    this.stopTimer();
     this.unsubscribe?.();
   }
 

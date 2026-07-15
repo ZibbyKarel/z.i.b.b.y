@@ -206,3 +206,37 @@ describe("SchedulerService — dispatch (Phase 116b: task target)", () => {
     expect(await service.trigger("prompt-automation")).toBe("task_3");
   });
 });
+
+describe("SchedulerService — T7 TickingWatcherBase adoption", () => {
+  it("two rapid timer-driven firings run tick() once (skip-if-in-flight guard)", async () => {
+    const { service } = makeService({ automation: agentFactoryAutomation() });
+    let resolveFirst: () => void = () => {};
+    const deferred = new Promise<void>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const tickSpy = vi.spyOn(service, "tick").mockImplementation(async () => {
+      await deferred;
+      return [];
+    });
+    // `tick()` itself stays public/unguarded (every other test in this file calls
+    // it via `trigger()`/directly); the guard sits only on the timer-driven path.
+    const guardedTick = () =>
+      (service as unknown as { guardedTick(): Promise<void> }).guardedTick();
+
+    const first = guardedTick();
+    const second = guardedTick();
+    await second; // skipped — resolves without waiting on the first
+    expect(tickSpy).toHaveBeenCalledTimes(1);
+
+    resolveFirst();
+    await first;
+    expect(tickSpy).toHaveBeenCalledTimes(1); // still once
+  });
+
+  it("health()'s `running` still means \"timer armed\", unaffected by the in-flight guard", () => {
+    const { service } = makeService({ automation: agentFactoryAutomation() });
+    // No `onModuleInit()` here (systemConfig defaults tickMs to 0 in tests) — the
+    // timer is never armed, so `running` stays false regardless of any in-flight tick.
+    expect(service.health().running).toBe(false);
+  });
+});

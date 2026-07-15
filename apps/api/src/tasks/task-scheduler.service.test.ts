@@ -1530,4 +1530,54 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
     // happen across the tick fire and the racing dispatchPending call.
     expect(agentRunner.start).toHaveBeenCalledTimes(1);
   });
+
+  it("T7 — two overlapping timer-driven ticks: the second is skipped while the first is in flight, so a due task is dispatched exactly once", async () => {
+    // No maxConcurrent here — this regression is about TickingWatcherBase's
+    // skip-if-in-flight guard on the timer-driven path itself (two `setInterval`
+    // firings racing each other), not the T3c project-capacity lock exercised by
+    // the test above. Before the guard, two independently-stale `storage.list()`
+    // snapshots (the exact M-T3c-1 tick-overlap scenario) could each dispatch the
+    // same due task; the guard now makes it structurally impossible for a second
+    // `tick()` to even start while the first is still running.
+    makeService({ id: PROJECT_ID, name: "Proj" });
+    const now = Date.now();
+    const taskA = await storage.create(
+      { text: "scheduled A", title: "A", scheduledAt: now - 1000 },
+      new Date(now).toISOString(),
+      PROJECT_ID,
+    );
+
+    let resolveList: () => void = () => {};
+    const listGate = new Promise<void>((resolve) => {
+      resolveList = resolve;
+    });
+    const listSpy = vi.spyOn(storage, "list").mockImplementation(async () => {
+      await listGate;
+      return [taskA];
+    });
+
+    // Simulate two `setInterval` firings in quick succession via the base's
+    // timer-driven entry point (not two direct `tick()` calls, which is exactly
+    // the call-site distinction T7 closes).
+    const guardedTick = () => (service as unknown as { guardedTick(): Promise<void> }).guardedTick();
+    const first = guardedTick();
+    const second = guardedTick();
+    await second; // the skipped firing returns immediately, without re-entering tick()
+
+    expect(listSpy).toHaveBeenCalledTimes(1); // tick()'s body ran only once so far
+
+    resolveList();
+    await first;
+
+    await vi.waitFor(async () => {
+      expect((await storage.get(taskA.id)).status).toBe("dispatched");
+    });
+    // The regression's own proof: exactly one real dispatch for the one due task,
+    // even though two ticks "fired". (The separately-tracked uncapped-project
+    // double-dispatch gap in `guardExisting`/`atCapacity` — see task-7-scope.md
+    // §"task-scheduler nuance" — is a different call-path race and stays out of
+    // scope for this guard; it isn't exercised here because only one `tick()` body
+    // ever runs concurrently now.)
+    expect(agentRunner.start).toHaveBeenCalledTimes(1);
+  });
 });

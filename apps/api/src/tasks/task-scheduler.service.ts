@@ -43,6 +43,7 @@ import { withPathLock } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { normalizeSummary } from "../shared/text/normalize-summary";
 import { TraceContextService } from "../shared/logging/trace-context.service";
+import { TickingWatcherBase } from "../shared/ticking-watcher-base";
 import { SystemConfigStore } from "../system/system-config.store";
 import { AttachmentStorageService } from "./attachment-storage.service";
 import { ClaudeCliTaskNamer, deriveTitleFallback } from "./claude-cli-task-namer";
@@ -118,10 +119,12 @@ const TERMINAL_CHAIN = new Set<ChainRun["status"]>(["done", "failed"]);
  * test default) disables the loop so tests drive {@link tick} directly.
  */
 @Injectable()
-export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstrap, OnModuleDestroy {
-  private timer: ReturnType<typeof setInterval> | null = null;
+export class TaskSchedulerService
+  extends TickingWatcherBase
+  implements OnModuleInit, OnApplicationBootstrap, OnModuleDestroy
+{
   private readonly unsubscribes: Array<() => void> = [];
-  private readonly log: ScopedLogger;
+  protected readonly log: ScopedLogger;
   /**
    * Task ids the operator has approved to spend past budget (release-once). A
    * released task that has to wait for a concurrency slot re-enters the queue, and
@@ -163,6 +166,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     @Inject(ATTACHMENT_SET_REF_PROVIDER)
     private readonly attachmentRefProviders: AttachmentSetRefProvider[] = [],
   ) {
+    super();
     this.log = logger.child(TaskSchedulerService.name);
   }
 
@@ -204,16 +208,20 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     this.unsubscribes.push(this.systemConfig.onChange(() => this.arm()));
   }
 
+  protected tickMs(): number {
+    return this.systemConfig.current().taskTickMs;
+  }
+
+  /** The timer-driven path — goes through the base's skip-if-in-flight guard. */
+  protected async runTick(now?: Date): Promise<void> {
+    await this.tick(now);
+  }
+
   /** (Re-)arm the heartbeat from `systemConfig.taskTickMs`; `0` leaves it disabled. */
-  private arm(): void {
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
-    const tickMs = this.systemConfig.current().taskTickMs;
+  protected override arm(): void {
+    super.arm();
+    const tickMs = this.tickMs();
     if (tickMs > 0) {
-      this.timer = setInterval(() => void this.tick(), tickMs);
-      this.timer.unref?.();
       this.log.info("task scheduler started", { tickMs });
     } else {
       this.log.debug("task scheduler tick disabled (taskTickMs <= 0)");
@@ -253,7 +261,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
   }
 
   onModuleDestroy(): void {
-    if (this.timer) clearInterval(this.timer);
+    this.stopTimer();
     for (const unsubscribe of this.unsubscribes) unsubscribe();
   }
 

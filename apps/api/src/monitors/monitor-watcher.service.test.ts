@@ -199,4 +199,27 @@ describe("MonitorWatcherService", () => {
     await makeWatcher().tick();
     expect(healthy.poll).not.toHaveBeenCalled();
   });
+
+  it("T7 — two rapid timer-driven firings run tick() once (TickingWatcherBase guard)", async () => {
+    const watcher = makeWatcher();
+    let resolveFirst: () => void = () => {};
+    const deferred = new Promise<void>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const tickSpy = vi.spyOn(watcher, "tick").mockImplementation(async () => {
+      await deferred;
+      return [];
+    });
+    const guardedTick = () =>
+      (watcher as unknown as { guardedTick(): Promise<void> }).guardedTick();
+
+    const first = guardedTick();
+    const second = guardedTick();
+    await second; // skipped — resolves without waiting on the first
+    expect(tickSpy).toHaveBeenCalledTimes(1);
+
+    resolveFirst();
+    await first;
+    expect(tickSpy).toHaveBeenCalledTimes(1); // still once — the skipped firing never ran tick()
+  });
 });

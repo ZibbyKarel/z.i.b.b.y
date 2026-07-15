@@ -118,4 +118,30 @@ describe("LimitResumeService", () => {
     // boundary, burning a cycle toward the cap) rather than waiting forever.
     expect(pipelineRunner.resumeLimitPaused).toHaveBeenCalledWith("p1");
   });
+
+  it("T7 — two rapid timer-driven firings run tick() once (TickingWatcherBase guard)", async () => {
+    const { service } = makeService({
+      pipelinePaused: [{ pipelineRunId: "p1", resumeAt: PAST, limitResumeCycles: 0 }],
+    });
+    let resolveFirst: () => void = () => {};
+    const deferred = new Promise<void>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const tickSpy = vi.spyOn(service, "tick").mockImplementation(async () => {
+      await deferred;
+    });
+    // `tick()` itself stays public/unguarded (every other test above calls it
+    // directly); the guard sits only on the timer-driven path.
+    const guardedTick = () =>
+      (service as unknown as { guardedTick(): Promise<void> }).guardedTick();
+
+    const first = guardedTick();
+    const second = guardedTick();
+    await second; // skipped — resolves without waiting on the first
+    expect(tickSpy).toHaveBeenCalledTimes(1);
+
+    resolveFirst();
+    await first;
+    expect(tickSpy).toHaveBeenCalledTimes(1); // still once
+  });
 });

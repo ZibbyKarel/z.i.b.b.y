@@ -12,6 +12,7 @@ import { IntegrationsStorageService } from "../integrations/integrations.storage
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TraceContextService } from "../shared/logging/trace-context.service";
 import { SystemConfigStore } from "../system/system-config.store";
+import { TickingWatcherBase } from "../shared/ticking-watcher-base";
 import { withRetry } from "../shared/retry";
 import { randomUUID } from "node:crypto";
 import { AdapterRegistry } from "./adapters/adapter-registry";
@@ -43,10 +44,12 @@ export const CHANNEL_TRIAGE_FLOW = Symbol("CHANNEL_TRIAGE_FLOW");
  * own `lastError` and never blocks the others.
  */
 @Injectable()
-export class ChannelWatcherService implements OnModuleInit, OnModuleDestroy {
-  private timer: ReturnType<typeof setInterval> | null = null;
+export class ChannelWatcherService
+  extends TickingWatcherBase
+  implements OnModuleInit, OnModuleDestroy
+{
   private unsubscribe: (() => void) | null = null;
-  private readonly log: ScopedLogger;
+  protected readonly log: ScopedLogger;
 
   constructor(
     private readonly integrations: IntegrationsStorageService,
@@ -60,6 +63,7 @@ export class ChannelWatcherService implements OnModuleInit, OnModuleDestroy {
     private readonly systemConfig: SystemConfigStore,
     @Optional() @Inject(CHANNEL_TRIAGE_FLOW) private readonly flow?: ChannelTriageFlow,
   ) {
+    super();
     this.log = logger.child(ChannelWatcherService.name);
   }
 
@@ -69,16 +73,20 @@ export class ChannelWatcherService implements OnModuleInit, OnModuleDestroy {
     this.unsubscribe = this.systemConfig.onChange(() => this.arm());
   }
 
+  protected tickMs(): number {
+    return this.systemConfig.current().channelTickMs;
+  }
+
+  /** The timer-driven path — goes through the base's skip-if-in-flight guard. */
+  protected async runTick(): Promise<void> {
+    await this.tick();
+  }
+
   /** (Re-)arm the poll loop from `systemConfig.channelTickMs`; `0` leaves it disabled. */
-  private arm(): void {
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
-    const tickMs = this.systemConfig.current().channelTickMs;
+  protected override arm(): void {
+    super.arm();
+    const tickMs = this.tickMs();
     if (tickMs > 0) {
-      this.timer = setInterval(() => void this.tick(), tickMs);
-      this.timer.unref?.();
       this.log.info("channel watcher started", { tickMs });
     } else {
       this.log.debug("channel watcher tick disabled (channelTickMs <= 0)");
@@ -86,7 +94,7 @@ export class ChannelWatcherService implements OnModuleInit, OnModuleDestroy {
   }
 
   onModuleDestroy(): void {
-    if (this.timer) clearInterval(this.timer);
+    this.stopTimer();
     this.unsubscribe?.();
   }
 

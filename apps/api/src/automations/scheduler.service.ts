@@ -10,6 +10,7 @@ import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { GapDetectorService } from "../gaps/gap-detector.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TraceContextService } from "../shared/logging/trace-context.service";
+import { TickingWatcherBase } from "../shared/ticking-watcher-base";
 import { SystemConfigStore } from "../system/system-config.store";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
 import { AutomationsStorageService } from "./automations.storage.service";
@@ -24,13 +25,11 @@ import { matchesCron } from "./cron";
  * via the manual `trigger` path (no event bus yet).
  */
 @Injectable()
-export class SchedulerService implements OnModuleInit, OnModuleDestroy {
-  private timer: ReturnType<typeof setInterval> | null = null;
+export class SchedulerService extends TickingWatcherBase implements OnModuleInit, OnModuleDestroy {
   private unsubscribe: (() => void) | null = null;
   /** Wall-clock of the last tick — the heartbeat the /health probe reads (M8). */
   private lastTickAt: string | null = null;
-  private tickMs = 0;
-  private readonly log: ScopedLogger;
+  protected readonly log: ScopedLogger;
 
   constructor(
     private readonly storage: AutomationsStorageService,
@@ -46,6 +45,7 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     private readonly agentFactory: AgentFactoryService,
     private readonly taskScheduler: TaskSchedulerService,
   ) {
+    super();
     this.log = logger.child(SchedulerService.name);
   }
 
@@ -56,18 +56,20 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     this.unsubscribe = this.systemConfig.onChange(() => this.arm());
   }
 
+  protected tickMs(): number {
+    return this.systemConfig.current().automationTickMs;
+  }
+
+  /** The timer-driven path — goes through the base's skip-if-in-flight guard. */
+  protected async runTick(now?: Date): Promise<void> {
+    await this.tick(now);
+  }
+
   /** (Re-)arm the loop from `systemConfig.automationTickMs`; `0` leaves it disabled. */
-  private arm(): void {
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
-    const tickMs = this.systemConfig.current().automationTickMs;
-    this.tickMs = tickMs;
+  protected override arm(): void {
+    super.arm();
+    const tickMs = this.tickMs();
     if (tickMs > 0) {
-      this.timer = setInterval(() => void this.tick(), tickMs);
-      // Don't keep the event loop alive just for the scheduler.
-      this.timer.unref?.();
       this.log.info("scheduler started", { tickMs });
     } else {
       this.log.debug("scheduler tick disabled (automationTickMs <= 0)");
@@ -75,7 +77,7 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
   }
 
   onModuleDestroy(): void {
-    if (this.timer) clearInterval(this.timer);
+    this.stopTimer();
     this.unsubscribe?.();
   }
 
@@ -85,7 +87,7 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
    * `lastTickAt` is null until the first tick fires.
    */
   health(): { running: boolean; tickMs: number; lastTickAt: string | null } {
-    return { running: this.timer !== null, tickMs: this.tickMs, lastTickAt: this.lastTickAt };
+    return { running: this.isArmed(), tickMs: this.tickMs(), lastTickAt: this.lastTickAt };
   }
 
   /** Evaluate all enabled cron automations against `now`; fire the due ones. */

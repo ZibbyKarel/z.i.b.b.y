@@ -7,6 +7,7 @@ import { IntegrationsStorageService } from "../integrations/integrations.storage
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TraceContextService } from "../shared/logging/trace-context.service";
 import { withRetry } from "../shared/retry";
+import { TickingWatcherBase } from "../shared/ticking-watcher-base";
 import { SystemConfigStore } from "../system/system-config.store";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
 import { type MonitorAdapter, MonitorAdapterRegistry } from "./monitor-adapter";
@@ -26,10 +27,12 @@ import { MonitorEventStore } from "./monitor-event.store";
  * Per-integration try/catch: one failing monitor never blocks the others.
  */
 @Injectable()
-export class MonitorWatcherService implements OnModuleInit, OnModuleDestroy {
-  private timer: ReturnType<typeof setInterval> | null = null;
+export class MonitorWatcherService
+  extends TickingWatcherBase
+  implements OnModuleInit, OnModuleDestroy
+{
   private unsubscribe: (() => void) | null = null;
-  private readonly log: ScopedLogger;
+  protected readonly log: ScopedLogger;
 
   constructor(
     private readonly integrations: IntegrationsStorageService,
@@ -42,6 +45,7 @@ export class MonitorWatcherService implements OnModuleInit, OnModuleDestroy {
     private readonly trace: TraceContextService,
     logger: LoggerService,
   ) {
+    super();
     this.log = logger.child(MonitorWatcherService.name);
   }
 
@@ -50,16 +54,20 @@ export class MonitorWatcherService implements OnModuleInit, OnModuleDestroy {
     this.unsubscribe = this.systemConfig.onChange(() => this.arm());
   }
 
+  protected tickMs(): number {
+    return this.systemConfig.current().monitorTickMs;
+  }
+
+  /** The timer-driven path — goes through the base's skip-if-in-flight guard. */
+  protected async runTick(): Promise<void> {
+    await this.tick();
+  }
+
   /** (Re-)arm the poll loop from `systemConfig.monitorTickMs`; `0` disables. */
-  private arm(): void {
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
-    const tickMs = this.systemConfig.current().monitorTickMs;
+  protected override arm(): void {
+    super.arm();
+    const tickMs = this.tickMs();
     if (tickMs > 0) {
-      this.timer = setInterval(() => void this.tick(), tickMs);
-      this.timer.unref?.();
       this.log.info("monitor watcher started", { tickMs });
     } else {
       this.log.debug("monitor watcher tick disabled (monitorTickMs <= 0)");
@@ -67,7 +75,7 @@ export class MonitorWatcherService implements OnModuleInit, OnModuleDestroy {
   }
 
   onModuleDestroy(): void {
-    if (this.timer) clearInterval(this.timer);
+    this.stopTimer();
     this.unsubscribe?.();
   }
 
