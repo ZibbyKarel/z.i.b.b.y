@@ -183,6 +183,136 @@ describe("claude approval hook — destructive-command gate", () => {
     expect(ctx.summary).toBe("Smazat 3 položek");
   });
 
+  it("gates a path-qualified rm invocation that bypassed the old boundary regex (/bin/rm)", async () => {
+    await preApprove();
+    const res = await runHook(cwd, bashEvent("/bin/rm foo", cwd));
+    const req = await readRequest();
+    expect(req.action).toBe("delete");
+    expect(res.stdout).toContain('"permissionDecision":"allow"');
+  });
+
+  it("gates a backslash-escaped rm invocation that bypassed the old boundary regex (\\rm)", async () => {
+    await preApprove();
+    const res = await runHook(cwd, bashEvent("\\rm foo", cwd));
+    const req = await readRequest();
+    expect(req.action).toBe("delete");
+    expect(res.stdout).toContain('"permissionDecision":"allow"');
+  });
+
+  it("gates a `command`-wrapped rm invocation that bypassed the old boundary regex", async () => {
+    await preApprove();
+    const res = await runHook(cwd, bashEvent("command rm foo", cwd));
+    const req = await readRequest();
+    expect(req.action).toBe("delete");
+    expect(res.stdout).toContain('"permissionDecision":"allow"');
+  });
+
+  it("gates a `busybox`-wrapped rm invocation that bypassed the old boundary regex", async () => {
+    await preApprove();
+    const res = await runHook(cwd, bashEvent("busybox rm foo", cwd));
+    const req = await readRequest();
+    expect(req.action).toBe("delete");
+    expect(res.stdout).toContain('"permissionDecision":"allow"');
+  });
+
+  it("gates `mv` as a move", async () => {
+    await preApprove();
+    const res = await runHook(cwd, bashEvent("mv a b", cwd));
+    const req = await readRequest();
+    expect(req.action).toBe("move");
+    expect(res.stdout).toContain('"permissionDecision":"allow"');
+  });
+
+  it("gates `cp` with two positional args as an overwrite (best-effort — can't know the dest exists)", async () => {
+    await preApprove();
+    const res = await runHook(cwd, bashEvent("cp a b", cwd));
+    const req = await readRequest();
+    expect(req.action).toBe("overwrite");
+    expect(res.stdout).toContain('"permissionDecision":"allow"');
+  });
+
+  it("gates a bare `>` redirect onto a real file as an overwrite", async () => {
+    await preApprove();
+    const res = await runHook(cwd, bashEvent("echo hi > file", cwd));
+    const req = await readRequest();
+    expect(req.action).toBe("overwrite");
+    expect(res.stdout).toContain('"permissionDecision":"allow"');
+  });
+
+  it("gates a `>>` append redirect onto a real file as an overwrite", async () => {
+    await preApprove();
+    await runHook(cwd, bashEvent("echo hi >> file", cwd));
+    const req = await readRequest();
+    expect(req.action).toBe("overwrite");
+  });
+
+  it("gates `dd of=…` as an overwrite", async () => {
+    await preApprove();
+    await runHook(cwd, bashEvent("dd if=/dev/zero of=file", cwd));
+    const req = await readRequest();
+    expect(req.action).toBe("overwrite");
+  });
+
+  it("gates `truncate` as an overwrite", async () => {
+    await preApprove();
+    await runHook(cwd, bashEvent("truncate -s0 file", cwd));
+    const req = await readRequest();
+    expect(req.action).toBe("overwrite");
+  });
+
+  it("gates `sed -i` (in-place edit) as an overwrite", async () => {
+    await preApprove();
+    await runHook(cwd, bashEvent("sed -i s/x/y/ file", cwd));
+    const req = await readRequest();
+    expect(req.action).toBe("overwrite");
+  });
+
+  it("gates a bare `tee` (no -a) as an overwrite (truncate-then-write)", async () => {
+    await preApprove();
+    await runHook(cwd, bashEvent("tee file", cwd));
+    const req = await readRequest();
+    expect(req.action).toBe("overwrite");
+  });
+
+  it("does NOT gate `tee -a` (append, no truncation)", async () => {
+    const res = await runHook(cwd, bashEvent("tee -a file", cwd));
+    expect(res.code).toBe(0);
+    expect(await present(requestFile())).toBe(false);
+  });
+
+  it("gates `install` as an overwrite (can overwrite the destination)", async () => {
+    await preApprove();
+    await runHook(cwd, bashEvent("install src dst", cwd));
+    const req = await readRequest();
+    expect(req.action).toBe("overwrite");
+  });
+
+  it("does NOT gate `echo \"rm -rf\" > note.txt` as a delete — the rm-rf is echo DATA, not a real rm", async () => {
+    await preApprove();
+    const res = await runHook(cwd, bashEvent('echo "rm -rf" > note.txt', cwd));
+    const req = await readRequest();
+    // The quoted "rm -rf" is one data token, never an executed rm — but the bare
+    // `>` redirect right after it is a real file write, so it correctly gates as
+    // an overwrite, never as a false-positive delete.
+    expect(req.action).toBe("overwrite");
+    expect(res.stdout).toContain('"permissionDecision":"allow"');
+  });
+
+  it("does NOT gate `> /dev/null` (a discard, not a real-file overwrite)", async () => {
+    const res = await runHook(cwd, bashEvent("echo hi > /dev/null", cwd));
+    expect(res.code).toBe(0);
+    expect(await present(requestFile())).toBe(false);
+  });
+
+  it("leaves plain reads (`cat`, `ls`) ungated", async () => {
+    const res1 = await runHook(cwd, bashEvent("cat file", cwd));
+    expect(res1.code).toBe(0);
+    expect(await present(requestFile())).toBe(false);
+    const res2 = await runHook(cwd, bashEvent("ls", cwd));
+    expect(res2.code).toBe(0);
+    expect(await present(requestFile())).toBe(false);
+  });
+
   it("gates a `gh api … -X PUT …/merges` REST merge (Fáze 17.1 — previously fail-open)", async () => {
     await preApprove();
     const res = await runHook(cwd, bashEvent("gh api repos/o/r/pulls/1/merges -X PUT", cwd));
@@ -419,6 +549,50 @@ describe("claude approval hook — classify (gh api mutations, Fáze 17.1)", () 
       "gh api repos/o/r --method PATCH -f x=y && gh api repos/o/r/pulls/1/merges -X PUT",
     );
     expect(withMerge?.action).toBe("pr.merge");
+  });
+});
+
+describe("claude approval hook — classify (overwrite/move + rm-family boundary fix)", () => {
+  it("classifies path-qualified, backslash, and wrapped rm invocations as delete", () => {
+    expect(classify("/bin/rm foo")?.action).toBe("delete");
+    expect(classify("/usr/bin/rm -rf x")?.action).toBe("delete");
+    expect(classify("\\rm foo")?.action).toBe("delete");
+    expect(classify("command rm foo")?.action).toBe("delete");
+    expect(classify("busybox rm foo")?.action).toBe("delete");
+  });
+
+  it("classifies mv as move and cp (≥2 positional args) as overwrite", () => {
+    expect(classify("mv a b")?.action).toBe("move");
+    expect(classify("cp a b")?.action).toBe("overwrite");
+    expect(classify("cp -r a b")?.action).toBe("overwrite");
+  });
+
+  it("classifies redirect/tee/dd/truncate/sed -i/install as overwrite", () => {
+    expect(classify("echo hi > file")?.action).toBe("overwrite");
+    expect(classify("echo hi >> file")?.action).toBe("overwrite");
+    expect(classify("dd if=/dev/zero of=file")?.action).toBe("overwrite");
+    expect(classify("truncate -s0 file")?.action).toBe("overwrite");
+    expect(classify("sed -i s/x/y/ file")?.action).toBe("overwrite");
+    expect(classify("tee file")?.action).toBe("overwrite");
+    expect(classify("install src dst")?.action).toBe("overwrite");
+  });
+
+  it("does not gate `tee -a`, a fd-duplication redirect, or a /dev/null discard", () => {
+    expect(classify("tee -a file")).toBeNull();
+    expect(classify("cmd 2>&1")).toBeNull();
+    expect(classify("echo hi > /dev/null")).toBeNull();
+  });
+
+  it("does not falsely gate a quoted 'rm -rf' as delete, but does gate the real redirect after it as overwrite", () => {
+    const c = classify('echo "rm -rf" > note.txt');
+    expect(c?.action).toBe("overwrite");
+    expect(c?.action).not.toBe("delete");
+  });
+
+  it("leaves plain reads ungated", () => {
+    expect(classify("cat file")).toBeNull();
+    expect(classify("ls")).toBeNull();
+    expect(classify("ls -la")).toBeNull();
   });
 });
 

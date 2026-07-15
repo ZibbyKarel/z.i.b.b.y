@@ -8,7 +8,12 @@
 //   1. A Bash command the classifier doesn't recognise → allow immediately (exit 0).
 //   2. A gated command → announce it by writing `intent-request.json` into the
 //      coordination dir, then BLOCK polling for `intent-decision.json`. We gate:
-//        - deletes: the rm family, `find … -delete`, `git clean`;
+//        - deletes: the rm family (matched by token basename, so `/bin/rm`, `\rm`,
+//          `command rm`, `busybox rm` no longer bypass it), `find … -delete`, `git clean`;
+//        - overwrites: bare `>`/`>>` onto a real file (not `/dev/null`), `tee` (no
+//          `-a`), `dd of=…`, `truncate`, `sed -i`, `install`, `cp` with ≥2 positional
+//          args (best-effort — can't statically know the destination exists);
+//        - moves: `mv`;
 //        - git publish: `git push` (→ git.push) and force variants (→ git.force_push);
 //        - PRs: `gh pr create` (→ pr.open) and `gh pr merge` (→ pr.merge);
 //        - mutating `gh api …` calls (Fáze 17.1): PUT/POST/PATCH/DELETE (or a field
@@ -61,10 +66,15 @@ const POLL_MS = 200;
  */
 const DEFAULT_DEADLINE_S = 540;
 
-// File-removal binaries invoked directly. The leading class covers command
-// boundaries (start, separators, subshells, command-substitution) so `$(rm …)`
-// and `` `rm …` `` are caught too, not just a bare `rm` at column 0.
-const RM_FAMILY = /(^|[\s;&|(`])(rm|rmdir|unlink|shred|trash|trash-put)(\s|$)/;
+// File-removal binaries invoked directly. Matched by comparing each shell token's
+// `path.basename()` against this set (see `isDestructive`/`parseTargets`) rather
+// than a boundary-character regex — a regex's leading character class can never
+// anticipate every prefix, and in fact didn't: `/bin/rm foo`, `\rm foo`,
+// `command rm foo`, `busybox rm foo` all evaded the old `RM_FAMILY` regex because
+// none of `/`, `\`, or a wrapper token were in its boundary class. Token/basename
+// matching fixes all four shapes in one change, since `rm` still shows up as its
+// own token (or basename of a path-qualified one) in every case.
+const RM_FAMILY_NAMES = new Set(["rm", "rmdir", "unlink", "shred", "trash", "trash-put"]);
 
 /**
  * Chain-severity rank: when a command chains several gated segments, we announce
@@ -76,6 +86,8 @@ const RM_FAMILY = /(^|[\s;&|(`])(rm|rmdir|unlink|shred|trash|trash-put)(\s|$)/;
  */
 const ACTION_RANK = {
   delete: 0,
+  overwrite: 0,
+  move: 0,
   "git.push": 1,
   "pr.open": 2,
   "gh.api_write": 3,
@@ -110,13 +122,16 @@ const ACTION_META = {
 /**
  * True for shell commands that delete files — one of the families we gate. A
  * denylist is inherently leaky, but it must at least cover the idioms an autonomous
- * tidy/clean agent reaches for: the rm family, `find … -delete` (the `.DS_Store`
- * sweep, no rm token), and `git clean` (removes untracked files).
+ * tidy/clean agent reaches for: the rm family (by token basename — see
+ * `RM_FAMILY_NAMES`), `find … -delete` (the `.DS_Store` sweep, no rm token), and
+ * `git clean` (removes untracked files). `tokens` is the already-tokenized segment
+ * (see `classifySegment`); `segment` is the raw string, still needed for the
+ * `find`/`git clean` regexes below.
  */
-function isDestructive(command) {
-  if (RM_FAMILY.test(command)) return true;
-  if (/\bfind\b[\s\S]*\s-delete(\s|$)/.test(command)) return true;
-  if (/\bgit\s+clean(\s|$)/.test(command)) return true;
+function isDestructive(segment, tokens) {
+  if (tokens.some((t) => RM_FAMILY_NAMES.has(path.basename(t)))) return true;
+  if (/\bfind\b[\s\S]*\s-delete(\s|$)/.test(segment)) return true;
+  if (/\bgit\s+clean(\s|$)/.test(segment)) return true;
   return false;
 }
 
@@ -145,7 +160,7 @@ function parseTargets(command) {
   const targets = [];
   for (const segment of command.split(/&&|\|\||;|\|/)) {
     const tokens = tokenize(segment.trim());
-    if (!/^(rm|rmdir|unlink|shred|trash|trash-put)$/.test(tokens[0] ?? "")) continue;
+    if (!RM_FAMILY_NAMES.has(path.basename(tokens[0] ?? ""))) continue;
     for (const tok of tokens.slice(1)) {
       if (tok && !tok.startsWith("-")) targets.push(tok);
     }
@@ -298,6 +313,54 @@ function classifyGh(tokens) {
   return null;
 }
 
+/**
+ * File-overwrite/rename commands whose destination isn't statically knowable to be
+ * new vs. pre-existing — gated as best-effort (the file's own documented posture),
+ * accepting some false positives over missing a real overwrite. Command identity is
+ * by token basename (`path.basename(tokens[0])`), so a path-qualified invocation
+ * (`/usr/bin/mv a b`) is recognised the same way the rm-family fix recognises
+ * `/bin/rm`. Returns the enrichment kind (`"move"` / `"overwrite"`) or `null`.
+ */
+function classifyFsCommand(tokens) {
+  const cmd = path.basename(tokens[0] ?? "");
+  if (cmd === "mv") return "move";
+  if (cmd === "cp") {
+    // Can't know statically whether the destination already exists; gate any cp
+    // that takes ≥2 positional (non-flag) args, per the file's best-effort posture.
+    const positionals = tokens.slice(1).filter((t) => !t.startsWith("-"));
+    return positionals.length >= 2 ? "overwrite" : null;
+  }
+  if (cmd === "tee") {
+    // `-a`/`--append` doesn't truncate the destination; a bare `tee` does.
+    const appends = tokens.slice(1).some((t) => t === "-a" || t === "--append");
+    return appends ? null : "overwrite";
+  }
+  if (cmd === "dd") return tokens.slice(1).some((t) => /^of=/.test(t)) ? "overwrite" : null;
+  if (cmd === "truncate") return "overwrite";
+  if (cmd === "install") return "overwrite";
+  if (cmd === "sed") return tokens.slice(1).some((t) => /^-i/.test(t)) ? "overwrite" : null;
+  return null;
+}
+
+/**
+ * True for a bare `>`/`>>` shell redirect onto a real file target — the idiom
+ * `tokenize()` can't reliably isolate (the operator can be glued to its target with
+ * no whitespace, e.g. `>file`). Scans the raw segment for a redirect operator,
+ * skipping fd-duplication forms (`2>&1`, `>&2`, `>&-`) and a `/dev/null` discard
+ * target (not a real-file overwrite) — both explicitly required to stay ungated.
+ */
+function classifyRedirectOverwrite(segment) {
+  const re = /\d*(>{1,2})(&[-\d]+)?\s*(\S+)?/g;
+  let m;
+  while ((m = re.exec(segment)) !== null) {
+    if (m[2]) continue; // fd duplication, e.g. `2>&1` — not a file write
+    const target = m[3] ? m[3].replace(/^["']|["']$/g, "") : "";
+    if (!target || target === "/dev/null") continue;
+    return true;
+  }
+  return false;
+}
+
 /** Build the full classification (action + display enrichment) for one action. */
 function enrich(action, { branch, command } = {}) {
   if (action === "delete") {
@@ -316,6 +379,23 @@ function enrich(action, { branch, command } = {}) {
         note: targets.length ? `${targets.length} cílů` : undefined,
         targets,
       },
+    };
+  }
+  if (action === "overwrite" || action === "move") {
+    // Irreversible-external-effect in the same way delete is (§Design), so it
+    // reuses the "mazani" risk type the dashboard already renders correctly —
+    // but keeps its own action id (not "delete") so gate rules and the approval
+    // card can distinguish an overwrite/move from an actual deletion.
+    return {
+      action,
+      riskType: "mazani",
+      summary:
+        action === "move" ? "Přesunout nebo přejmenovat soubor" : "Přepsat soubor",
+      consequence:
+        action === "move"
+          ? "Soubor bude přesunut nebo přejmenován — může skončit mimo sledovaný adresář."
+          : "Cílový soubor bude přepsán nebo zkrácen — původní obsah může být nenávratně ztracen.",
+      preview: { kind: "command", shell: "bash", cmd: command, targets: [] },
     };
   }
   const meta = ACTION_META[action];
@@ -342,7 +422,10 @@ function classifySegment(segment, fullCommand) {
   if (git) return enrich(git.action, { branch: git.branch, command: fullCommand });
   const gh = classifyGh(tokens);
   if (gh) return enrich(gh.action, { command: fullCommand });
-  if (isDestructive(segment)) return enrich("delete", { command: fullCommand });
+  const fsKind = classifyFsCommand(tokens);
+  if (fsKind) return enrich(fsKind, { command: fullCommand });
+  if (isDestructive(segment, tokens)) return enrich("delete", { command: fullCommand });
+  if (classifyRedirectOverwrite(segment)) return enrich("overwrite", { command: fullCommand });
   return null;
 }
 
