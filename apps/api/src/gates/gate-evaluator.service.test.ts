@@ -61,9 +61,9 @@ describe("GateEvaluatorService", () => {
       expect(evaluator.evaluate(rules, { action: "deploy", context: "prod" }).decision).toBe(
         "deny",
       );
-      expect(evaluator.evaluate(rules, { action: "deploy", context: "dev" }).decision).toBe(
-        "allow",
-      );
+      // context: "dev" doesn't satisfy the AND-ed rule, so it doesn't fire — the
+      // bare rule list (no floor) then falls through to the claim-3 default (ask).
+      expect(evaluator.evaluate(rules, { action: "deploy", context: "dev" }).decision).toBe("ask");
     });
 
     it("evaluates threshold operators against metrics", () => {
@@ -77,11 +77,50 @@ describe("GateEvaluatorService", () => {
       const big: IntendedAction = { action: "purchase", metrics: { "purchase.amount": 540 } };
       const small: IntendedAction = { action: "purchase", metrics: { "purchase.amount": 120 } };
       expect(evaluator.evaluate(rules, big).decision).toBe("ask");
-      expect(evaluator.evaluate(rules, small).decision).toBe("allow");
+      // Below the threshold, the rule doesn't fire — the bare rule list (no floor)
+      // then falls through to the claim-3 default (ask), not allow.
+      expect(evaluator.evaluate(rules, small).decision).toBe("ask");
     });
 
-    it("defaults to allow when nothing matches", () => {
-      expect(evaluator.evaluate([], { action: "anything" }).decision).toBe("allow");
+    it("defaults to ask when nothing matches (claim 3 — fail-open regression)", () => {
+      const result = evaluator.evaluate([], { action: "anything" });
+      expect(result.decision).toBe("ask");
+      expect(result.resolve).toEqual({ type: "human" });
+    });
+
+    it("an own rule matching only on tool (no action condition) cannot weaken the locked floor at eval time (claim 1 — runtime bypass regression)", async () => {
+      const floor = await evaluator.floor();
+      const toolOnlyAllow = rule({
+        id: "own-tool-only",
+        match: [{ type: "tool", tool: "gh" }],
+        decision: "allow",
+      });
+      const rules = [toolOnlyAllow, ...floor];
+      // pr.merge is a locked `deny` on the floor; the own rule matches the same
+      // IntendedAction (tool: "gh") on an independent axis but must never win.
+      expect(evaluator.evaluate(rules, { action: "pr.merge", tool: "gh" }).decision).toBe("deny");
+      // purchase is `ask` on the floor.
+      expect(evaluator.evaluate(rules, { action: "purchase", tool: "gh" }).decision).toBe("ask");
+      // An action the floor doesn't cover at all still lets the own rule win.
+      expect(evaluator.evaluate(rules, { action: "tweet", tool: "gh" }).decision).toBe("allow");
+    });
+
+    it("a more specific own rule still wins over a less specific own rule (first-match-wins survives bucketing)", () => {
+      const rules: GateRule[] = [
+        rule({
+          id: "specific",
+          match: [{ type: "action", action: "git.push", branch: "feature/x" }],
+          decision: "allow",
+        }),
+        rule({
+          id: "general",
+          match: [{ type: "action", action: "git.push" }],
+          decision: "deny",
+        }),
+      ];
+      expect(evaluator.evaluate(rules, { action: "git.push", branch: "feature/x" }).ruleId).toBe(
+        "specific",
+      );
     });
 
     it("an action rule with no branch (or `*`) matches any branch; a per-branch rule is exact", () => {
@@ -112,8 +151,10 @@ describe("GateEvaluatorService", () => {
       expect(evaluator.evaluate([mainOnly], { action: "git.push", branch: "main" }).decision).toBe(
         "deny",
       );
+      // mainOnly doesn't match branch: "dev" at all — the bare rule list (no
+      // floor) then falls through to the claim-3 default (ask), not allow.
       expect(evaluator.evaluate([mainOnly], { action: "git.push", branch: "dev" }).decision).toBe(
-        "allow",
+        "ask",
       );
     });
   });
@@ -161,15 +202,50 @@ describe("GateEvaluatorService", () => {
       ]);
       expect(violation).toBeNull();
     });
+
+    it("rejects an agent rule that matches only on tool with no action condition (claim 1 — write-time bypass regression)", async () => {
+      const floor = await evaluator.floor();
+      const violation = evaluator.validateHardenOnly(floor, [
+        { match: [{ type: "tool", tool: "gh" }], decision: "allow" },
+      ]);
+      // A tool-only rule is never provably disjoint from an action-only floor rule
+      // (they constrain independent axes of the same IntendedAction) — it must be
+      // rejected at write time instead of silently accepted and only neutralized at
+      // eval time.
+      expect(violation).not.toBeNull();
+    });
+
+    it("rejects an agent rule that weakens the floor's deploy decision (claim 4)", async () => {
+      const floor = await evaluator.floor();
+      const violation = evaluator.validateHardenOnly(floor, [
+        { match: [{ type: "action", action: "deploy" }], decision: "allow" },
+      ]);
+      expect(violation).not.toBeNull();
+    });
+
+    it("allows an agent rule that hardens deploy (ask → deny)", async () => {
+      const floor = await evaluator.floor();
+      const violation = evaluator.validateHardenOnly(floor, [
+        { match: [{ type: "action", action: "deploy" }], decision: "deny" },
+      ]);
+      expect(violation).toBeNull();
+    });
   });
 
   describe("evaluateForOrchestrator (Fáze 2b — strictest union)", () => {
-    it("defaults to allow when neither the orchestrator nor any catalog agent has a rule", async () => {
+    it("falls through to the locked agent.delegate floor (notify) when neither the orchestrator nor any catalog agent has a rule (claim 3 — agent.delegate keeps its Tier-1 logged-not-asked default via an explicit floor rule, not implicit fail-open)", async () => {
       const result = await evaluator.evaluateForOrchestrator({}, [{}, {}], {
         action: "agent.delegate",
         scope: "cleaner",
       });
-      expect(result.decision).toBe("allow");
+      expect(result.decision).toBe("notify");
+    });
+
+    it("defaults to ask (not allow) when nothing — not even the floor — matches at all (claim 3 — true fail-open regression)", async () => {
+      const result = await evaluator.evaluateForOrchestrator({}, [{}, {}], {
+        action: "some-future-unlisted-action",
+      });
+      expect(result.decision).toBe("ask");
     });
 
     it("picks up a catalog subagent's OWN rule even though the orchestrator has none (mitigates Zjištění 3a)", async () => {

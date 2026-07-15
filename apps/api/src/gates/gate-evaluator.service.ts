@@ -1,6 +1,5 @@
 import { Injectable, Optional } from "@nestjs/common";
 import type {
-  Decision,
   GateEvaluation,
   GateRule,
   GateRuleInput,
@@ -10,10 +9,8 @@ import type {
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
+import { DECISION_RANK } from "./decision-rank";
 import { PolicyStorageService } from "./policy.storage.service";
-
-/** Strength ordering: a higher rank is a stricter decision. */
-const DECISION_RANK: Record<Decision, number> = { allow: 0, notify: 1, ask: 2, deny: 3 };
 
 /** What a runner/controller passes to assemble an agent's effective rule list. */
 export interface AgentPolicyInput {
@@ -27,10 +24,16 @@ export interface AgentPolicyInput {
  * it has no dependency on the agents store (avoiding a module cycle: the runner and
  * the gates controller both depend on this, and the controller loads agents).
  *
- * Precedence: an agent's own rules are evaluated BEFORE the floor, so a *stricter*
- * agent rule wins; {@link validateHardenOnly} guarantees an agent rule can never be
- * *weaker* than a floor rule on the same action — the agent can harden the floor,
- * never unlock it.
+ * Precedence: an agent's own rules and the locked floor rules are evaluated
+ * INDEPENDENTLY (bucketed by {@link GateRule.locked} in {@link matchOnce}, not by
+ * array order), and the STRICTER of the two matching decisions wins — never the
+ * floor's alone, never the agent's alone. This is what makes the floor
+ * *structurally* un-bypassable: it holds even for an own rule that matches on an
+ * axis (`tool`, `scope`, …) the floor rule doesn't share, and even if
+ * {@link validateHardenOnly} never ran (e.g. `agent.gates` written outside
+ * `replaceAgentGates`). {@link validateHardenOnly} additionally rejects an
+ * obviously-weakening own rule at write time (a UX nicety on top of the runtime
+ * guarantee, not the security boundary itself).
  */
 @Injectable()
 export class GateEvaluatorService {
@@ -50,7 +53,10 @@ export class GateEvaluatorService {
     return this.policy.floor();
   }
 
-  /** The effective, ordered rule list for an agent: own rules first, then the floor. */
+  /** The effective rule list for an agent: own rules then the floor. {@link matchOnce}
+   * no longer relies on this order for own-vs-floor precedence (it buckets by
+   * `rule.locked`) — the concatenation order only matters for first-match-wins
+   * WITHIN a bucket. */
   async rulesForAgent(input: AgentPolicyInput): Promise<GateRule[]> {
     const floor = await this.floor();
     const own = this.ownRules(input);
@@ -115,16 +121,41 @@ export class GateEvaluatorService {
     return best;
   }
 
-  /** Pure rule matching — first match wins, no logging/activity side effects (so
+  /**
+   * Pure rule matching, no logging/activity side effects (so
    * {@link evaluateForOrchestrator} can probe several agents' rule sets and log
-   * only the final, strictest result). */
+   * only the final, strictest result).
+   *
+   * Buckets matches by `rule.locked` — own (agent, unlocked) vs floor (system,
+   * locked) — first-match-wins WITHIN each bucket (so a more specific rule still
+   * beats a less specific one on the same side), then returns the STRICTER of the
+   * two bucket winners across own/floor. This is the structural floor guarantee:
+   * it holds independent of array order, independent of match-condition type, and
+   * independent of whether {@link validateHardenOnly} ever ran on this rule set.
+   *
+   * When NEITHER bucket has a match at all (own AND floor both null), the action
+   * is genuinely unknown to every rule set — fail closed to `ask`, not `allow`
+   * (claim 3): an unrecognized action must surface for a human, not silently
+   * proceed. `agent.delegate` (and any other action that should stay Tier-1
+   * logged-not-asked) gets there via an explicit `notify` floor rule, not via this
+   * fallback — see `DEFAULT_FLOOR` in `policy.storage.service.ts`.
+   */
   private matchOnce(rules: GateRule[], action: IntendedAction): GateEvaluation {
+    let own: GateEvaluation | null = null;
+    let floor: GateEvaluation | null = null;
     for (const rule of rules) {
-      if (rule.match.every((cond) => this.matches(cond, action))) {
-        return { decision: rule.decision, ruleId: rule.id, resolve: rule.resolve };
+      if (!rule.match.every((cond) => this.matches(cond, action))) continue;
+      const hit: GateEvaluation = { decision: rule.decision, ruleId: rule.id, resolve: rule.resolve };
+      if (rule.locked) {
+        if (!floor) floor = hit;
+      } else {
+        if (!own) own = hit;
       }
+      if (own && floor) break;
     }
-    return { decision: "allow" };
+    if (!own) return floor ?? { decision: "ask", resolve: { type: "human" } };
+    if (!floor) return own;
+    return DECISION_RANK[floor.decision] >= DECISION_RANK[own.decision] ? floor : own;
   }
 
   /** Debug-log + activity-record one evaluation result (shared by {@link evaluate}
@@ -158,7 +189,7 @@ export class GateEvaluatorService {
       const rule = own[i];
       if (!rule) continue;
       for (const floorRule of floor) {
-        if (!this.sameAction(rule.match, floorRule.match)) continue;
+        if (this.provablyDisjoint(rule.match, floorRule.match)) continue;
         if (DECISION_RANK[rule.decision] < DECISION_RANK[floorRule.decision]) {
           this.log?.warn("policy violation: agent rule weakens the floor", {
             ruleIndex: i,
@@ -209,16 +240,110 @@ export class GateEvaluatorService {
     }
   }
 
-  /** Two match lists target the "same action" if they share an equal action condition. */
-  private sameAction(a: MatchCondition[], b: MatchCondition[]): boolean {
+  /**
+   * Two match-condition lists CONFLICT (may co-fire on the same `IntendedAction`)
+   * unless they are PROVABLY disjoint on at least one axis both sides constrain.
+   * `IntendedAction`'s fields (`action`/`tool`/`scope`/`context`/`branch`/`metrics`)
+   * are independent of each other, so a rule that only constrains one axis (e.g.
+   * `type: "tool"`) says nothing about another (e.g. `action`) — it is never
+   * disjoint from a rule that only constrains that other axis, and the two CAN
+   * co-fire on the same real action. Only when both sides constrain the SAME axis
+   * with non-overlapping values (e.g. `action: "purchase"` vs `action: "tweet"`)
+   * can we prove no `IntendedAction` satisfies both. Deliberately conservative:
+   * when unprovable, we assume conflict (this only makes write-time validation
+   * stricter, never weaker — the eval-time floor in {@link matchOnce} is the actual
+   * security boundary regardless of this function's answer).
+   *
+   * Exception: a rule that carries NO identifying axis at all — only `threshold`
+   * conditions — never counts toward a conflict. A threshold-only rule (e.g. "ask
+   * above purchase.amount > 500") is a legitimate, pre-existing, cross-cutting
+   * pattern (this codebase's own e2e coverage relies on it) that says nothing
+   * about WHICH action it targets; it only actually fires when the real
+   * `IntendedAction` happens to carry that metric, which most floor actions
+   * don't. Treating it as "not disjoint" from every floor rule would 422 a rule
+   * that was never a targeted bypass of a specific floor action — the original
+   * `sameAction` never flagged it either. This does not weaken the runtime
+   * guarantee: `matchOnce` still takes the stricter of own/floor if a threshold
+   * rule and a floor rule both happen to match the same real action.
+   */
+  private provablyDisjoint(a: MatchCondition[], b: MatchCondition[]): boolean {
+    if (!this.hasIdentifyingAxis(a) || !this.hasIdentifyingAxis(b)) return true;
+
     const actionsA = a.filter(
       (c): c is Extract<MatchCondition, { type: "action" }> => c.type === "action",
     );
     const actionsB = b.filter(
       (c): c is Extract<MatchCondition, { type: "action" }> => c.type === "action",
     );
-    return actionsA.some((ca) =>
-      actionsB.some((cb) => ca.action === cb.action && (ca.branch ?? "*") === (cb.branch ?? "*")),
+    if (actionsA.length > 0 && actionsB.length > 0) {
+      const overlap = actionsA.some((ca) =>
+        actionsB.some(
+          (cb) => ca.action === cb.action && this.branchesOverlap(ca.branch, cb.branch),
+        ),
+      );
+      if (!overlap) return true;
+    }
+
+    const toolsA = a.filter((c): c is Extract<MatchCondition, { type: "tool" }> => c.type === "tool");
+    const toolsB = b.filter((c): c is Extract<MatchCondition, { type: "tool" }> => c.type === "tool");
+    if (toolsA.length > 0 && toolsB.length > 0) {
+      const overlap = toolsA.some((ca) => toolsB.some((cb) => ca.tool === cb.tool));
+      if (!overlap) return true;
+    }
+
+    const scopesA = a.filter(
+      (c): c is Extract<MatchCondition, { type: "scope" }> => c.type === "scope",
     );
+    const scopesB = b.filter(
+      (c): c is Extract<MatchCondition, { type: "scope" }> => c.type === "scope",
+    );
+    if (scopesA.length > 0 && scopesB.length > 0) {
+      const overlap = scopesA.some((ca) =>
+        scopesB.some((cb) => this.scopesOverlap(ca.scope, cb.scope)),
+      );
+      if (!overlap) return true;
+    }
+
+    const contextsA = a.filter(
+      (c): c is Extract<MatchCondition, { type: "context" }> => c.type === "context",
+    );
+    const contextsB = b.filter(
+      (c): c is Extract<MatchCondition, { type: "context" }> => c.type === "context",
+    );
+    if (contextsA.length > 0 && contextsB.length > 0) {
+      const overlap = contextsA.some((ca) =>
+        contextsB.some((cb) => ca.context === "*" || cb.context === "*" || ca.context === cb.context),
+      );
+      if (!overlap) return true;
+    }
+
+    // `threshold` axes are never provably disjoint here (numeric ranges aren't
+    // modeled) — conservative: treat as potentially overlapping.
+    return false;
+  }
+
+  /** Does this match set have at least one axis (`action`/`tool`/`scope`/`context`)
+   * that could identify WHICH action it targets? `threshold` doesn't count — see
+   * {@link provablyDisjoint}'s doc comment. */
+  private hasIdentifyingAxis(match: MatchCondition[]): boolean {
+    return match.some((c) => c.type !== "threshold");
+  }
+
+  private branchesOverlap(a: string | undefined, b: string | undefined): boolean {
+    const ab = a ?? "*";
+    const bb = b ?? "*";
+    return ab === "*" || bb === "*" || ab === bb;
+  }
+
+  /** `scope` conditions may be an exact string or a `prefix*` wildcard. */
+  private scopesOverlap(a: string, b: string): boolean {
+    const aPrefix = a.endsWith("*") ? a.slice(0, -1) : null;
+    const bPrefix = b.endsWith("*") ? b.slice(0, -1) : null;
+    if (aPrefix !== null && bPrefix !== null) {
+      return aPrefix.startsWith(bPrefix) || bPrefix.startsWith(aPrefix);
+    }
+    if (aPrefix !== null) return b.startsWith(aPrefix);
+    if (bPrefix !== null) return a.startsWith(bPrefix);
+    return a === b;
   }
 }

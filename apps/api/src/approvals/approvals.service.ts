@@ -1,6 +1,7 @@
 import { Injectable, Optional } from "@nestjs/common";
 import type { Approval, ApprovalRunKind } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
+import { withPathLock } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { ApprovalAlreadyDecidedError } from "./approvals.errors";
 import { ApprovalsStorageService } from "./approvals.storage.service";
@@ -137,15 +138,28 @@ export class ApprovalsService {
     }
   }
 
-  private async decide(id: string, status: "approved" | "rejected"): Promise<Approval> {
-    const approval = await this.storage.get(id);
-    if (approval.status !== "pending") throw new ApprovalAlreadyDecidedError(id);
-    const decided: Approval = { ...approval, status, decidedAt: new Date().toISOString() };
-    void this.activity?.record({
-      kind: status === "approved" ? "approval-approved" : "approval-rejected",
-      summary: `approval ${status}: ${approval.skill} · ${approval.action}`,
-      refs: { approvalId: id, runRef: approval.runId, decision: status, status: approval.kind },
+  /**
+   * TOCTOU guard (Phase 8.2 pattern): a read-check-write on the shared approval
+   * file races another concurrent `decide` on the same id (two operators, or a
+   * double-click) — both could pass the `!== "pending"` check before either
+   * writes, both persist a terminal status, and both routes to the runner
+   * (`approve`/`reject` only call it AFTER `decide` returns). `withPathLock`
+   * serializes calls per `id` (unrelated approvals stay fully concurrent); the
+   * loser re-reads inside the lock after the winner's write and correctly throws
+   * `ApprovalAlreadyDecidedError`, so it never reaches its runner call. Not
+   * reentrant — this is the only call site, and it never re-enters the lock.
+   */
+  private decide(id: string, status: "approved" | "rejected"): Promise<Approval> {
+    return withPathLock(`approval:${id}`, async () => {
+      const approval = await this.storage.get(id);
+      if (approval.status !== "pending") throw new ApprovalAlreadyDecidedError(id);
+      const decided: Approval = { ...approval, status, decidedAt: new Date().toISOString() };
+      void this.activity?.record({
+        kind: status === "approved" ? "approval-approved" : "approval-rejected",
+        summary: `approval ${status}: ${approval.skill} · ${approval.action}`,
+        refs: { approvalId: id, runRef: approval.runId, decision: status, status: approval.kind },
+      });
+      return this.storage.update(decided);
     });
-    return this.storage.update(decided);
   }
 }

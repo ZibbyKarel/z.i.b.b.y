@@ -38,7 +38,8 @@ const paymentDone = (cwd: string) => fileExists(path.join(cwd, "payment-done.txt
 
 /** An INTENT that trips a `purchase.amount > 500` threshold and the floor's `payment` rule. */
 const PAYMENT_INTENT = JSON.stringify({ action: "payment", metrics: { "purchase.amount": 1200 } });
-/** A benign INTENT no rule (nor the floor) matches → evaluates to allow. */
+/** An INTENT no rule (nor the floor) matches at all → evaluates to `ask` (Task 2,
+ * claim 3: the "nothing matched" default is fail-closed, not fail-open). */
 const BENIGN_INTENT = JSON.stringify({ action: "add_to_cart", metrics: { "purchase.amount": 50 } });
 
 describe("Mid-run approval gate (Variant B, e2e)", () => {
@@ -144,14 +145,25 @@ describe("Mid-run approval gate (Variant B, e2e)", () => {
     }
   });
 
-  it("runs to completion when a mid-run intent matches no rule (allow)", async () => {
+  it("pauses mid-run on an intent that matches no rule at all (claim 3 — fail-closed default), then resumes to done on approve", async () => {
     process.env.FAKE_CLAUDE_INTENT = BENIGN_INTENT;
     const { runId, cwd } = await startRun("free", "browse the catalog");
 
-    const final = await until(async () => ((await runStatus(runId)) === "done" ? true : null));
-    expect(final).toBe(true);
-    // The intent was allowed, so the action ran and the run finished cleanly.
+    // Genuinely unmatched (no own rule, no floor rule) now defaults to `ask`, not
+    // `allow` — the run pauses instead of silently completing the gated action.
+    await until(async () => ((await runStatus(runId)) === "awaiting-approval" ? true : null));
     expect(await benignMarker(cwd)).toBe(true);
+    expect(await paymentDone(cwd)).toBe(false);
+
+    const approval = await until(async () => (await pendingFor(runId)) ?? null);
+    expect(approval.action).toBe("add_to_cart");
+
+    await request(app.getHttpServer())
+      .post(`/api/approvals/${approval.id}/approve`)
+      .send({})
+      .expect(200);
+
+    await until(async () => ((await runStatus(runId)) === "done" ? true : null));
     expect(await paymentDone(cwd)).toBe(true);
   });
 

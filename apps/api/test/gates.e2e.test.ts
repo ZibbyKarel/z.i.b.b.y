@@ -43,7 +43,7 @@ describe("Gates API (e2e)", () => {
     expect(res.body.rules.every((r: { locked: boolean }) => r.locked)).toBe(true);
   });
 
-  it("evaluates a threshold rule: gt 500 asks, under allows", async () => {
+  it("evaluates a threshold rule: gt 500 asks (own rule); under, the own rule doesn't fire and the unmatched action falls back to ask (claim 3)", async () => {
     await request(app.getHttpServer())
       .put("/api/agents/shopper/gates")
       .send({
@@ -73,7 +73,9 @@ describe("Gates API (e2e)", () => {
         action: { action: "checkout", metrics: { "purchase.amount": 120 } },
       })
       .expect(200);
-    expect(small.body.decision).toBe("allow");
+    // Under 500 the threshold rule doesn't fire, and "checkout" has no floor rule
+    // either — genuinely unmatched now defaults to `ask` (claim 3), not `allow`.
+    expect(small.body.decision).toBe("ask");
   });
 
   it("refuses to let an agent weaken the locked floor (422)", async () => {
@@ -97,7 +99,7 @@ describe("Gates API (e2e)", () => {
     expect(res.body.inherited.length).toBeGreaterThan(0);
   });
 
-  it("exposes the git-publish floor (git.push ask, pr.merge deny) — pr.open is NOT gated", async () => {
+  it("exposes the git-publish floor (git.push ask, pr.merge deny, pr.open notify — Tier-2, never blocks)", async () => {
     const res = await request(app.getHttpServer()).get("/api/gates/policy").expect(200);
     const byAction = new Map<string, string>(
       res.body.rules.map((r: { match: { action?: string }[]; decision: string }) => [
@@ -107,8 +109,13 @@ describe("Gates API (e2e)", () => {
     );
     expect(byAction.get("git.push")).toBe("ask");
     expect(byAction.get("pr.merge")).toBe("deny");
-    // pr.open is Tier-2 (act-then-report) — opened autonomously, so it is off the floor.
-    expect(byAction.has("pr.open")).toBe(false);
+    // pr.open is Tier-2 (act-then-report) — opened autonomously, never blocks. Task
+    // 2's required claim-3 grep found it relying on the implicit "nothing matched"
+    // fallback, which this task flips from allow to ask — an implicit ask on every
+    // autonomous PR-open would have been a severe regression, so it now has
+    // explicit (logged) floor coverage at `notify` instead, same pattern as
+    // `agent.delegate`/`channel-reply`: on the record, but non-blocking.
+    expect(byAction.get("pr.open")).toBe("notify");
   });
 
   it("exposes the Phase 5.3 channel-reply floor at notify", async () => {

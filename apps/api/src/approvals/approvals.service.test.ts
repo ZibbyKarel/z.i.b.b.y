@@ -78,6 +78,51 @@ describe("ApprovalsService", () => {
     await expect(service.cancelPendingForRun("other-run")).resolves.toBeUndefined();
   });
 
+  it("concurrent approve+reject on the same id: exactly one runner call wins, no split-brain (claim 5 — TOCTOU regression)", async () => {
+    const resume = vi.fn();
+    const cancel = vi.fn();
+    service.register("agent", { resume, cancel });
+    const created = await request();
+
+    const results = await Promise.allSettled([
+      service.approve(created.id),
+      service.reject(created.id),
+    ]);
+    const fulfilled = results.filter((r) => r.status === "fulfilled");
+    const rejectedResults = results.filter((r) => r.status === "rejected");
+
+    // Exactly one of the two concurrent decisions wins; the other must observe the
+    // already-decided state and throw, not silently succeed.
+    expect(fulfilled).toHaveLength(1);
+    expect(rejectedResults).toHaveLength(1);
+    const loser = rejectedResults[0];
+    if (loser?.status === "rejected") {
+      expect(loser.reason).toBeInstanceOf(ApprovalAlreadyDecidedError);
+    }
+
+    // Exactly one runner action total — no double-spawn, no resume-after-reject.
+    expect(resume.mock.calls.length + cancel.mock.calls.length).toBe(1);
+
+    // The persisted state is single, consistent, terminal — not corrupted.
+    const final = await service.get(created.id);
+    expect(["approved", "rejected"]).toContain(final.status);
+  });
+
+  it("two concurrent approve calls on the same id: only the first actually resumes the run", async () => {
+    const resume = vi.fn();
+    const cancel = vi.fn();
+    service.register("agent", { resume, cancel });
+    const created = await request();
+
+    const results = await Promise.allSettled([
+      service.approve(created.id),
+      service.approve(created.id),
+    ]);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter((r) => r.status === "rejected")).toHaveLength(1);
+    expect(resume).toHaveBeenCalledTimes(1);
+  });
+
   it("404s on an unknown id", async () => {
     await expect(service.get("nope")).rejects.toBeInstanceOf(ApprovalNotFoundError);
   });

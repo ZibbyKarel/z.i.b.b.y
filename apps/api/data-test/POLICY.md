@@ -97,12 +97,35 @@ policy:
     decision: ask
     resolve:
       type: human
+  - id: floor-deploy
+    source: system
+    locked: true
+    match:
+      - type: action
+        action: deploy
+    decision: ask
+    resolve:
+      type: human
   - id: floor-channel-reply
     source: system
     locked: true
     match:
       - type: action
         action: channel-reply
+    decision: notify
+  - id: floor-agent.delegate
+    source: system
+    locked: true
+    match:
+      - type: action
+        action: agent.delegate
+    decision: notify
+  - id: floor-pr.open
+    source: system
+    locked: true
+    match:
+      - type: action
+        action: pr.open
     decision: notify
 ---
 
