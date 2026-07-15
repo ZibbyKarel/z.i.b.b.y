@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_INBOUND_CHARS, envelopeInbound, sanitizeInbound } from "./sanitize";
+import { MAX_INBOUND_CHARS, envelopeInbound, sanitizeInbound } from "./untrusted-envelope";
 
 describe("sanitizeInbound", () => {
   it("strips control characters but keeps newlines and tabs", () => {

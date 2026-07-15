@@ -25,7 +25,7 @@ import { AdapterRegistry } from "./adapters/adapter-registry";
 import { ChannelItemStore } from "./channel-item.store";
 import type { ChannelTriageFlow } from "./channel-watcher.service";
 import { JiraIssueFlowService } from "./jira-issue-flow.service";
-import { envelopeInbound } from "./sanitize";
+import { envelopeInbound } from "../shared/text/untrusted-envelope";
 import { TriageService } from "./triage/triage.service";
 
 /** The action a channel reply is gated on (added to the policy floor at `notify`). */

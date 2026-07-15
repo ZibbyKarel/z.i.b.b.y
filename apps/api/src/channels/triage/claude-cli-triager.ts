@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { Injectable } from "@nestjs/common";
 import { type TriageVerdict, TriageVerdictSchema } from "@zibby/contracts";
 import { LoggerService, type ScopedLogger } from "../../shared/logging/logger.service";
-import { envelopeInbound } from "../sanitize";
+import { envelopeInbound } from "../../shared/text/untrusted-envelope";
 import type { TriageInput, TriageRouter } from "./triage-router";
 
 /** How long the headless `claude -p` triager may take before we give up and fall back. */

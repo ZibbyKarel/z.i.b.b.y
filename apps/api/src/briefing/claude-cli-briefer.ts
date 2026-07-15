@@ -3,6 +3,7 @@ import { Injectable } from "@nestjs/common";
 import type { Briefing } from "@zibby/contracts";
 import { z } from "zod";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
+import { envelopeInbound } from "../shared/text/untrusted-envelope";
 
 /** How long the headless `claude -p` briefer may take before we fall back. */
 const BRIEFER_TIMEOUT_MS = 8000;
@@ -25,8 +26,11 @@ const BRIEFER_SYSTEM_PROMPT = [
  * --output-format json`, the SAME `process.env.VITEST` guard so tests never spawn
  * claude, envelope-unwrap + fence-tolerant parse — and validates the result against
  * a strict one-key schema. NEVER blocks: any failure returns `null` and the caller
- * keeps the deterministic headline. It only ever sees the assembled section data
- * (already sanitized/capped upstream), never raw channel text.
+ * keeps the deterministic headline. It sees the assembled section data (already
+ * capped upstream) — `didForYou[].summary` can be an agent run's own log tail,
+ * which can verbatim-echo text the agent processed from an already-enveloped
+ * Tier-1 channel dispatch, so each summary is enveloped (Law 4) before it enters
+ * the prompt rather than assumed trusted.
  */
 @Injectable()
 export class ClaudeCliBriefer {
@@ -62,12 +66,16 @@ export class ClaudeCliBriefer {
     return parsed.data.headline;
   }
 
-  /** Operator-system data only (counts + first lines) — never raw inbound text. */
+  /**
+   * Deterministic section data + first lines. `didForYou[].summary` can trace back
+   * to an agent's own run-log tail (second-order untrusted, see the class doc), so
+   * each summary is enveloped (Law 4) before it enters the prompt.
+   */
   private buildPrompt(b: Briefing, focus?: string): string {
     const sections = {
       counts: b.counts,
       needsYou: b.needsYou.slice(0, 5).map((n) => ({ kind: n.kind, summary: n.summary })),
-      didForYou: b.didForYou.slice(0, 5).map((d) => d.summary),
+      didForYou: b.didForYou.slice(0, 5).map((d) => envelopeInbound(d.summary)),
       watching: b.watching,
     };
     // Operator steering (e.g. "keep it terse", "lead with what needs me"). It's

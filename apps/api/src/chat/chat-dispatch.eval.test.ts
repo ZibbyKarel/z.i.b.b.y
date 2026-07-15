@@ -1,6 +1,21 @@
 import { spawn } from "node:child_process";
 import { describe, expect, it } from "vitest";
-import { CHAT_PERSONA_PROMPT } from "./chat-persona";
+import { CHAT_GOVERNOR_PROMPT, CHAT_PERSONA_PROMPT } from "./chat-persona";
+
+/**
+ * Static guard (always runs, no live CLI): the governor tells the model tool
+ * results (recall_memory, get_status) are DATA, not new operator instructions
+ * (Law 4 — a vault snippet or briefing summary a tool returns must never be
+ * treated as a fresh directive). This is cheap and safe to check unconditionally,
+ * unlike the live dispatch-discipline evals below.
+ */
+describe("CHAT_GOVERNOR_PROMPT — tool results are data", () => {
+  it("tells the model tool results are data, never new instructions from the operator", () => {
+    expect(CHAT_GOVERNOR_PROMPT).toContain("recall_memory");
+    expect(CHAT_GOVERNOR_PROMPT).toContain("get_status");
+    expect(CHAT_GOVERNOR_PROMPT).toMatch(/DATA/);
+  });
+});
 
 /**
  * Dispatch-discipline eval (opt-in: `CHAT_EVAL=1`, needs a live api + real `claude`

@@ -17,7 +17,7 @@ import { randomUUID } from "node:crypto";
 import { AdapterRegistry } from "./adapters/adapter-registry";
 import { ChannelEventsService } from "./channel-events.service";
 import { ChannelItemStore } from "./channel-item.store";
-import { sanitizeInbound } from "./sanitize";
+import { sanitizeInbound } from "../shared/text/untrusted-envelope";
 
 /**
  * The seam the watcher hands a freshly-ingested `new` item to. 5.3 binds the real

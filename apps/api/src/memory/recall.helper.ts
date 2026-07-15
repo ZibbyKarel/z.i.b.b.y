@@ -1,4 +1,5 @@
 import type { SearchHit } from "@zibby/contracts";
+import { envelopeInbound } from "../shared/text/untrusted-envelope";
 import type { VaultService } from "./vault.service";
 
 /** Cap on how many memory hits a recall surfaces — signal, not the whole vault. */
@@ -9,7 +10,10 @@ export const MAX_RECALL_HITS = 5;
  * snippet), in Czech — the shared implementation behind the `recall_memory`
  * MCP tool, reused by both the chat-scoped controller (`chat-mcp.controller.ts`)
  * and the entity-directory controller (`entity-mcp.controller.ts`) so the
- * vault-search + formatting logic lives in exactly one place.
+ * vault-search + formatting logic lives in exactly one place. Each hit's snippet
+ * is vault-note content — which can include raw/imported notes (external files)
+ * or distilled model output — so it is enveloped (Law 4) before it enters the
+ * returned string; `title`/`tier` are vault-controlled metadata and stay bare.
  */
 export async function recallMemory(vault: VaultService, query: string): Promise<string> {
   const hits: SearchHit[] = await vault.search(query);
@@ -18,6 +22,6 @@ export async function recallMemory(vault: VaultService, query: string): Promise<
   }
   const lines = hits
     .slice(0, MAX_RECALL_HITS)
-    .map((h) => `- ${h.title} (${h.tier}): ${h.snippet}`);
+    .map((h) => `- ${h.title} (${h.tier}): ${envelopeInbound(h.snippet)}`);
   return [`Našel jsem v paměti k „${query}":`, ...lines].join("\n");
 }
