@@ -1,7 +1,7 @@
-import { spawn } from "node:child_process";
 import { Injectable } from "@nestjs/common";
 import { type TriageVerdict, TriageVerdictSchema } from "@zibby/contracts";
 import { LoggerService, type ScopedLogger } from "../../shared/logging/logger.service";
+import { spawnClaudeCli } from "../../shared/spawn-claude-cli";
 import { envelopeInbound } from "../../shared/text/untrusted-envelope";
 import type { TriageInput, TriageRouter } from "./triage-router";
 
@@ -86,36 +86,10 @@ export class ClaudeCliTriager implements TriageRouter {
 
   /** Spawn `claude -p … --output-format json --model haiku`; resolve trimmed stdout. */
   protected runClaude(prompt: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const child = spawn(
-        process.env.CLAUDE_BIN ?? "claude",
-        ["-p", prompt, "--output-format", "json", "--model", "haiku"],
-        { stdio: ["ignore", "pipe", "pipe"] },
-      );
-
-      let stdout = "";
-      let stderr = "";
-      const timer = setTimeout(() => {
-        child.kill();
-        reject(new Error(`triager timed out after ${TRIAGE_TIMEOUT_MS}ms`));
-      }, TRIAGE_TIMEOUT_MS);
-      timer.unref?.();
-
-      child.stdout?.on("data", (buf: Buffer) => {
-        stdout += buf.toString("utf8");
-      });
-      child.stderr?.on("data", (buf: Buffer) => {
-        stderr += buf.toString("utf8");
-      });
-      child.on("error", (err) => {
-        clearTimeout(timer);
-        reject(err);
-      });
-      child.on("exit", (code) => {
-        clearTimeout(timer);
-        if (code === 0) resolve(stdout);
-        else reject(new Error(`claude exited ${code}: ${stderr.slice(0, 200)}`));
-      });
+    return spawnClaudeCli({
+      args: ["-p", prompt, "--output-format", "json", "--model", "haiku"],
+      timeoutMs: TRIAGE_TIMEOUT_MS,
+      label: "triager",
     });
   }
 
