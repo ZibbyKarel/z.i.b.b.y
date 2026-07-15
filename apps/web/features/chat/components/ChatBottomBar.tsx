@@ -35,6 +35,9 @@ export interface ChatBottomBarProps {
   /** Mirrors the other floating chat widgets: dims, blurs and disables pointer
    *  events while an overlay (dialog/drawer) is up. */
   dimmed?: boolean;
+  /** Forwarded to {@link ChatDock} — bridges its in-flight streaming state up to
+   *  the host (drives `ChatScreen`'s orb-map pulse). */
+  onStreamingChange?: (streaming: boolean) => void;
 }
 
 interface SlotSpec {
@@ -74,6 +77,7 @@ export function ChatBottomBar({
   onMessagesChange,
   onNewChat,
   dimmed = false,
+  onStreamingChange,
 }: ChatBottomBarProps) {
   const t = useTranslations("chat.bottomBar");
   const [mode, setMode] = useState<BottomBarMode>("chat");
@@ -109,6 +113,7 @@ export function ChatBottomBar({
                     onClose={collapse}
                     onMessagesChange={onMessagesChange}
                     onNewChat={onNewChat}
+                    onStreamingChange={onStreamingChange}
                   />
                 ) : slot.id === "task" ? (
                   <ChatQuickTask onClose={collapse} />

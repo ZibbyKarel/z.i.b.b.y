@@ -1,11 +1,10 @@
 /* eslint-disable react/forbid-dom-props -- A bespoke JARVIS-style HUD surface:
-   scanline/grid overlays, the ambient orb behind the conversation and the
-   transcript's top fade-mask are decorative inline styles with no DS prop
-   equivalent — sanctioned escape hatch, file-level. */
+   scanline/grid overlays and the ambient radial backdrop are decorative inline
+   styles with no DS prop equivalent — sanctioned escape hatch, file-level. */
 "use client";
 
-import type { ChatMessage as ChatMessageType, SubsystemId, TaskTarget } from "@zibby/contracts";
-import { Button, Container, Stack, Typography } from "@zibby/design-system";
+import type { ChatMessage as ChatMessageType, SubsystemId } from "@zibby/contracts";
+import { Container } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -14,7 +13,6 @@ import {
   type SetStateAction,
   useCallback,
   useEffect,
-  useRef,
   useState,
 } from "react";
 import { useNow } from "../../../hooks/useNow";
@@ -25,30 +23,19 @@ import { runAvatar, runGlyph } from "../../runs/run";
 import { useRunActions } from "../../runs/useRunActions";
 import { SubsystemDrawer } from "../../subsystems/components/SubsystemDrawer/SubsystemDrawer";
 import { useSubsystemsQuery } from "../../subsystems/queries/useSubsystemsQuery";
-import { useSystemConfigQuery } from "../../system";
-import { CommandLine } from "../../tasks/components/CommandLine/CommandLine";
-import { useAnyAudioPlaying } from "../hooks/useAudioPlayback";
-import { type AutoSpeakReplyOutcome, useAutoSpeak } from "../hooks/useAutoSpeak";
-import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
-import { useVoiceMode } from "../hooks/useVoiceMode";
-import { useSendChatMessageMutation } from "../mutations/useSendChatMessageMutation";
+import { ChatBottomBar } from "./ChatBottomBar";
 import { ChatDetailDialog, type ChatDetailTarget } from "./ChatDetailDialog";
+import { ChatLiveLog } from "./ChatLiveLog";
 import { ChatPalette } from "./ChatPalette";
 import { ChatTaskDetailColumn } from "./ChatTaskDetailColumn";
 import { ChatTasksPanel } from "./ChatTasksPanel";
 import { ChatToolDock } from "./ChatToolDock";
 import { ChatTopBar } from "./ChatTopBar";
-import { ChatTranscript } from "./ChatTranscript";
 import { CoreOverviewDialog } from "./CoreOverviewDialog";
 import { SubsystemOrbMap } from "./SubsystemOrbMap";
-import { VoiceStatusStrip } from "./VoiceStatusStrip";
-import { VoiceToggleButton } from "./VoiceToggleButton";
 
 export enum ChatScreenTestId {
   Root = "chat-screen",
-  ScrollArea = "chat-screen-scroll",
-  Greeting = "chat-screen-greeting",
-  NewChat = "chat-screen-new-chat",
 }
 
 /** The chat top-bar band height — the orb ellipse is inset by this so its top
@@ -56,16 +43,23 @@ export enum ChatScreenTestId {
  *  over the full-screen map). */
 const CHAT_TOPBAR_INSET = 56;
 
+/** The orb ellipse's bottom inset — reserves room for the Velín-D floating
+ *  chrome anchored to the bottom edge (the bottom-center `ChatBottomBar`, whose
+ *  expanded chat slot is tall, plus the bottom-right `ChatLiveLog`) so the lower
+ *  mini-orbs don't collide with them. Eyeballed for the Velín-D shell; a
+ *  measured-ref refinement (read the bar's real height) is phase-5 polish. */
+const CHAT_BOTTOM_INSET = 320;
+
 export interface ChatScreenProps {
   /**
    * The conversation this thread owns. Minted once by {@link ChatProvider} and
    * preserved across leaving `/chat` and coming back; only "New chat" mints a
-   * fresh one.
+   * fresh one. Flows straight through to {@link ChatBottomBar}'s chat dock.
    */
   conversationId: string | null;
   /**
    * The transcript, owned by {@link ChatProvider} so it survives navigating away
-   * from `/chat` and back.
+   * from `/chat` and back. Flows through to the bottom bar's chat dock.
    */
   messages: ChatMessageType[];
   /** Append/replace transcript turns (lifted setter from the provider). */
@@ -76,20 +70,17 @@ export interface ChatScreenProps {
 
 /**
  * The chat-first conversational surface, rendered by the `/chat` route inside the
- * dashboard shell (nav rail + top bar around it) — a JARVIS-style HUD with an
- * ambient {@link SubsystemOrbMap} behind the conversation, a scrollable transcript that
- * fades into nothing at the top (scroll up to read back to the start), and the
- * text composer pinned at the bottom.
+ * dashboard shell — the Velín-D "velín": a JARVIS-style HUD with an ambient
+ * {@link SubsystemOrbMap} filling the page (an ellipse of subsystem orbs ringing
+ * the central conversational core), the glass {@link ChatTopBar} chrome, a
+ * top-right {@link ChatToolDock}, a bottom-center {@link ChatBottomBar}
+ * (chat / run-a-task / add-a-note composers) and a bottom-right {@link ChatLiveLog}.
  *
- * The conversation lives in {@link ChatProvider}'s client state (passed in via
- * `messages` / `onMessagesChange`) so it survives this component unmounting when
- * the operator navigates away from `/chat`: the operator's turn is appended
- * optimistically on send, and the assistant's turn is appended from the stream's
- * `done` (authoritative text + accumulated tool events). The backend still writes
- * every message to the JSONL transcript — the UI just renders what the stream
- * produced rather than refetching, which is what removed the "history disappears
- * after a reply" flash. Coming back to `/chat` shows the same thread; "New chat" is
- * the only reset.
+ * The conversation itself lives inside the bottom bar's chat dock (see
+ * {@link ChatDock}), which owns the ONLY chat stream: it appends the operator's
+ * turn optimistically on send and the assistant's turn from the stream's `done`.
+ * This screen keeps no stream of its own — the orb-map "thinking" pulse is bridged
+ * up from the dock via `onStreamingChange` (see the `thinking` state below).
  */
 export function ChatScreen({
   conversationId,
@@ -101,189 +92,31 @@ export function ChatScreen({
   const now = useNow(MINUTE_MS);
   const router = useRouter();
 
-  // The lifted setter is a stable useState dispatcher from the provider; alias it so
-  // the append helpers read like the original local-state version.
-  const setMessages = onMessagesChange;
-  const sendMessage = useSendChatMessageMutation();
-
-  // The operator's `/settings` voice pick (Phase 119c) — read here (not inside
-  // `useAutoSpeak`) so the hook's own tests stay free of a QueryClient dependency;
-  // the hook holds it in a ref (see its doc comment) so a config change never
-  // rebuilds the stable `speak`/`cancel` controller.
-  const { data: systemConfig } = useSystemConfigQuery();
-
-  // Turn-taking paused latch (Phase 119d / Decision 7): set when a voice reply is
-  // interrupted (a manual read-aloud took over, an external stop, or a synth
-  // fault) so the mic does NOT auto re-arm — the operator took over; voice mode
-  // stays on but paused (the status strip shows the paused state). Cleared on a
-  // natural completion, on a new operator turn (`send`), and on toggling voice
-  // off — so toggling off/on always recovers.
-  const [voicePaused, setVoicePaused] = useState(false);
-  const handleReplySettled = useCallback((outcome: AutoSpeakReplyOutcome) => {
-    setVoicePaused(outcome === "interrupted");
-  }, []);
-
-  // Voice-reply orchestrator (Phase 119b) — chunked TTS of a finished turn, played
-  // under the single `"voice-mode"` player key. `speakReply`/`cancelReply` are
-  // stable identities (so composing them into the stream's `onComplete` doesn't
-  // re-subscribe); `speakingReply` drives the `speaking` scene mode; `onSettled`
-  // reports the terminal outcome that drives the turn-taking latch above.
-  const {
-    speak: speakReply,
-    cancel: cancelReply,
-    speaking: speakingReply,
-  } = useAutoSpeak({
-    voice: systemConfig?.ttsVoice,
-    onSettled: handleReplySettled,
-  });
-  // The latest voice-mode on/off, read inside the (stable) completion handler
-  // without re-creating it. Assigned just below, once `voice` exists.
-  const voiceActiveRef = useRef(false);
-
-  const appendAssistant = useCallback(
-    ({ turnId, text, toolEvents }: CompletedTurn) => {
-      if (!text && toolEvents.length === 0) return;
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: turnId,
-          role: "assistant",
-          text,
-          at: new Date().toISOString(),
-          ...(toolEvents.length > 0 ? { toolEvents } : {}),
-        },
-      ]);
-    },
-    [setMessages],
-  );
-
-  const appendError = useCallback(
-    (message: string) => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `err-${crypto.randomUUID()}`,
-          role: "assistant",
-          text: message,
-          at: new Date().toISOString(),
-        },
-      ]);
-    },
-    [setMessages],
-  );
-
-  // In voice mode, a finished turn is spoken (Phase 119b) — after the transcript
-  // commit, never before. Stable (deps are all stable), so the stream doesn't
-  // re-subscribe as voice mode toggles; the live `voice.active` is read via the ref.
-  const handleComplete = useCallback(
-    (turn: CompletedTurn) => {
-      appendAssistant(turn);
-      if (voiceActiveRef.current && turn.text) speakReply(turn.text);
-    },
-    [appendAssistant, speakReply],
-  );
-
-  const stream = useChatStream(conversationId, {
-    onComplete: handleComplete,
-    onError: appendError,
-  });
-
-  // A turn is in flight from send (`isPending`) through the streamed reply until
-  // the terminal `done`/`error` (Phase 14.1). Hoisted above `send`/`voice` (was
-  // derived lower down pre-119d) because turn-taking now needs it as the mic's
-  // idle gate.
-  const thinking = sendMessage.isPending || stream.streaming;
-
-  const send = (text: string, target?: TaskTarget) => {
-    if (!conversationId) return;
-    // Barge-in (Decision 6): a new operator message — typed or a spoken final —
-    // stops any voice reply mid-playback.
-    cancelReply();
-    // A new operator turn clears the paused latch: whatever the operator did to
-    // pause the loop (a manual read-aloud), sending resumes the hands-free cycle
-    // once this turn's reply settles.
-    setVoicePaused(false);
-    setMessages((prev) => [
-      ...prev,
-      { id: `u-${crypto.randomUUID()}`, role: "user", text, at: new Date().toISOString() },
-    ]);
-    // The composer owns `target` (the @mention picker, Phase 14.2) and clears its own
-    // selection once this fires — nothing further to reset here.
-    sendMessage.mutate({ body: { conversationId, text, ...(target ? { target } : {}) } });
-  };
-
-  // Whether ANY audio is playing — voice queue OR a manual phase-120 read-aloud.
-  // Guards the echo hazard below.
-  const anyAudioPlaying = useAnyAudioPlaying();
-
-  // Turn-taking gate (Phase 119d / Decision 7): the mic is armed only when idle —
-  // disarmed while a turn is in flight (`thinking`), while the reply is speaking
-  // (`speakingReply` — kept even though `anyAudioPlaying` overlaps it: it also
-  // covers the synth gaps between chunks when nothing is playing yet), while
-  // paused after a manual read-aloud took over mid-reply (`voicePaused`), and
-  // while ANY audio plays (`anyAudioPlaying`) — the ECHO HAZARD: a manual
-  // read-aloud clicked while the mic is idle-armed would otherwise be transcribed
-  // off the speakers and auto-SENT as a chat message (a self-talk loop). That
-  // manual playback suspends the mic only transiently: when it ends, the store
-  // notifies, this clears, and the mic re-arms — no latch involved, since no
-  // voice-reply session was interrupted. A single boolean the mic effect reacts
-  // to; it re-arms on the settle/state transition, never a timer, so the mic
-  // can't catch the tail of the TTS audio.
-  const voiceSuspended = thinking || speakingReply || voicePaused || anyAudioPlaying;
-
-  // Voice mode (Phase 119a) — hands-free STT over the Web Speech API. A finalized
-  // utterance is a chat message: it calls `send` directly, bypassing the composer
-  // (Decision 1). ChatScreen-local, ephemeral state (Decision 2) — leaving `/chat`
-  // unmounts this and stops the mic. The toggle is rendered only when `supported`.
-  const voice = useVoiceMode({ onSend: send, suspended: voiceSuspended });
-
-  // Mirror the live voice-mode flag into the ref the (stable) completion handler
-  // reads, and barge-in (Decision 6): toggling voice mode off stops any in-flight
-  // reply. Written in an effect, never during render (`react-hooks/refs`).
-  // Unmounting is handled inside `useAutoSpeak`'s own cleanup.
-  useEffect(() => {
-    voiceActiveRef.current = voice.active;
-    if (!voice.active) cancelReply();
-  }, [voice.active, cancelReply]);
-
-  // The paused latch is cleared on every toggle (off→on and on→off), so toggling
-  // voice mode off/on always recovers a paused loop to an armed mic — done here in
-  // the click handler rather than the effect above (`set-state-in-effect`), and it
-  // reads cleaner beside the toggle anyway.
-  const handleVoiceToggle = useCallback(() => {
-    setVoicePaused(false);
-    voice.toggle();
-  }, [voice.toggle]);
-
-  // Keep the latest turn in view as messages land and tokens stream in.
-  const scrollRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [messages.length, stream.text, stream.toolEvents.length]);
+  // The orb-map "thinking" pulse. The chat stream lives in the bottom bar's chat
+  // dock now (this screen keeps none of its own — a second `useChatStream` on the
+  // same conversation would open a duplicate EventSource), so the dock reports its
+  // in-flight state up through `onStreamingChange`; its effect cleanup fires
+  // `false` when the dock unmounts, clearing the pulse.
+  const [thinking, setThinking] = useState(false);
 
   // Phase 14.5: the ⌘K quick-switcher is an overlay ON TOP of the conversation.
   // Owned here (not by the palette itself) so Esc priority and the search-bar
-  // toggle read from one source of truth. (Phase 39 removed the sibling activity
-  // panel this used to be mutually exclusive with — the HUD right rail is the
-  // single ambient activity log now.)
+  // toggle read from one source of truth.
   const [paletteOpen, setPaletteOpen] = useState(false);
   const openPalette = useCallback(() => {
     setPaletteOpen((v) => !v);
   }, []);
 
   // A result picked in the palette (agents/pipelines) opens its read-only DETAIL
-  // here in a dialog (Phase 58) instead of being injected into the composer — the
-  // inline `@`-search on `CommandLine` owns adding a target to the input now, so
-  // ⌘K stops duplicating it. `undefined` = no dialog open.
+  // here in a dialog (Phase 58). `undefined` = no dialog open.
   const [detailTarget, setDetailTarget] = useState<ChatDetailTarget | undefined>(undefined);
   const handleDetailSelect = useCallback((detail: ChatDetailTarget) => {
     setDetailTarget(detail);
   }, []);
   const handlePaletteNavigate = useCallback(
     (href: Route) => {
-      // Gates/memory have nowhere to render inline yet (Decision 7's sanctioned
-      // fallback) — navigating there leaves `/chat`, same as any other nav-rail jump.
+      // Gates/memory have nowhere to render inline yet — navigating there leaves
+      // `/chat`, same as any other nav-rail jump.
       setPaletteOpen(false);
       router.push(href);
     },
@@ -306,10 +139,6 @@ export function ChatScreen({
 
   // ⌘K / Ctrl+K opens the quick-switcher — the same toggle the SearchBar's click
   // goes through, so a second press closes it rather than stacking overlays.
-  // Phase 23 dropped this listener because the chat surface used to sit over the
-  // HUD's own global ⌘K search (double-open); now that `/chat` is fullscreen and
-  // bypasses `MainLayout` (phase 27), there is no competing handler on this route,
-  // so re-adding it is safe — no capture-phase suppression needed.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "k") return;
@@ -320,8 +149,6 @@ export function ChatScreen({
     return () => window.removeEventListener("keydown", handler);
   }, [openPalette]);
 
-  const isEmpty = messages.length === 0 && !stream.streaming;
-
   // The pipeline catalog — still needed to feed `SubsystemOrbMap`'s active-run
   // counts (it maps a run's `owner` pipeline to its `ownerSubsystem`).
   const { data: pipelineCatalog } = usePipelinesQuery();
@@ -329,29 +156,24 @@ export function ChatScreen({
   // The running/queued runs feed (kept fresh by the shared RunEventsProvider bus).
   const { runs } = useRunsQuery();
 
-  // The subsystem web (Phase 83): the 8 named subsystems + live status, polled by
-  // `useSubsystemsQuery` (Phase 80/82). Selection is local — clicking a node reports
-  // its id via `onSelectSubsystem`, and the drawer below reads `selectedSubsystemId`
-  // to render the subsystem's detail alongside the transcript. There's no selection
-  // ring on the node itself (Task 13) — the drawer opening IS the selection feedback.
+  // The subsystem web (Phase 83): the 8 named subsystems + live status. Selection is
+  // local — clicking a node reports its id, and the drawer below reads
+  // `selectedSubsystemId` to render the subsystem's detail. There's no selection ring
+  // on the node itself (Task 13) — the drawer opening IS the selection feedback.
   const { data: subsystems } = useSubsystemsQuery();
   const [selectedSubsystemId, setSelectedSubsystemId] = useState<SubsystemId | null>(null);
   // Task C1: clicking the central orb opens the whole-federation overview dialog
-  // (Task A1's `CoreOverviewDialog`) instead of the per-subsystem drawer below.
-  // Picking a subsystem row inside it reuses the EXISTING `setSelectedSubsystemId`
-  // (Decision D4) — it closes the overview and opens the same drawer a direct
-  // mini-orb click would.
+  // (`CoreOverviewDialog`) instead of the per-subsystem drawer below. Picking a
+  // subsystem row inside it reuses the EXISTING `setSelectedSubsystemId` — it closes
+  // the overview and opens the same drawer a direct mini-orb click would.
   const [coreOpen, setCoreOpen] = useState(false);
   // Resolved against the live status list so the drawer always shows fresh
-  // state/counts (Phase 84) — a dangling id (the polled list momentarily
-  // dropping an entry) just renders nothing rather than stale data.
+  // state/counts (Phase 84) — a dangling id just renders nothing rather than stale.
   const selectedSubsystem = subsystems?.find((s) => s.id === selectedSubsystemId) ?? null;
 
   // Phase 100: the left tasks panel's selection — a click opens the run's detail
-  // inline, in a column beside the panel, rather than the old `/runs?run=<id>`
-  // redirect. Re-clicking the already-selected row toggles it off (mirrors the
-  // Phase 92 accordion this replaces). Resolved against the same `runs` feed the
-  // dock reads above — no second fetch.
+  // inline, in a column beside the panel. Re-clicking the already-selected row
+  // toggles it off. Resolved against the same `runs` feed — no second fetch.
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const selectRun = useCallback((runId: string) => {
     setSelectedRunId((cur) => (cur === runId ? null : runId));
@@ -367,17 +189,26 @@ export function ChatScreen({
     () => setSelectedRunId(null),
   );
 
+  // Any overlay (palette / detail dialog / subsystem drawer / run detail / core
+  // overview) dims the floating chrome — the shared `dimmed` contract every Velín-D
+  // widget honours.
+  const overlayOpen =
+    paletteOpen ||
+    detailTarget != null ||
+    selectedSubsystem != null ||
+    selectedRun != null ||
+    coreOpen;
+
   return (
     <div
       aria-label={t("title")}
       className="relative flex h-full w-full flex-col overflow-hidden font-sans"
       data-testid={ChatScreenTestId.Root}
     >
-      {/* Task B6: the immersive orb map's clean radial backdrop, centered at
-          50% 42% (the app-shell's shared --gradient-scene token is top-anchored
-          at -8% for other pages — this page needs its own center to frame the
-          orb map). Sits behind `SubsystemOrbMap`; shows through at any edge its
-          DOM layers don't cover. */}
+      {/* The immersive orb map's clean radial backdrop, centered at 50% 42% (the
+          app-shell's shared --gradient-scene token is top-anchored for other pages
+          — this page needs its own center to frame the orb map). Sits behind
+          `SubsystemOrbMap`; shows through at any edge its DOM layers don't cover. */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 z-0 bg-[image:radial-gradient(ellipse_130%_100%_at_50%_42%,#121a27_0%,var(--color-background)_62%)]"
@@ -402,138 +233,65 @@ export function ChatScreen({
         }}
       />
 
-      {/* ── Top bar (Task 6) ────────────────────────────────────────────
+      {/* ── Top bar ──────────────────────────────────────────────────────
           The Velín-D glass chrome: `ChatTopBar` owns its own five elements —
           status pill, search trigger, limits gauge, HUD switch and language
-          switch — no bespoke markup left here. Voice and New-chat moved down
-          to the composer (below); Close was removed entirely (the right tool
-          dock is the navigation now). */}
+          switch. */}
       <div className="relative z-20 shrink-0 px-[22px]">
         <ChatTopBar onOpenPalette={openPalette} />
       </div>
 
-      {/* ── Right tool dock (Task 6) ─────────────────────────────────────
-          A glass island pinned to the right edge, vertically centered,
-          floating above the orb map (`zIndex` above its layers) — the same
-          treatment the left tasks panel gets. `pointer-events-auto` re-enables
-          clicks through the page's ambient pointer-events-none scene. */}
-      <Container
-        pointerEvents="auto"
-        position="absolute"
-        right="24px"
-        style={{ transform: "translateY(-50%)" }}
-        top="50%"
-        zIndex={20}
-      >
+      {/* ── Top-right tool dock (Velín-D `VcDockGroup`) ───────────────────
+          A glass island pinned to the top-right, just under the top bar
+          (design `right:24 top:68`), floating above the orb map. `pointerEvents`
+          re-enables clicks through the page's ambient pointer-events-none scene. */}
+      <Container pointerEvents="auto" position="absolute" right="24px" top="72px" zIndex={20}>
         <ChatToolDock />
       </Container>
 
-      {/* The immersive orb map (Task 13), filling the page — the ellipse of
-          subsystem orbs ringing the central conversational core. Sits behind every
-          interactive surface (its DOM layers are pointer-events:none apart from
-          the orbs themselves); the transcript floats over it in a legibility-
-          protected band. Static phase-1 insets matching the left tasks panel
-          (300px, `w-[300px]` below) and the composer band (`~230px`, the
-          border-t + max-w-[720px] py-4 bar further down) — a measured-ref
-          refinement is optional follow-up polish, not required for parity. The
-          right inset now reserves the tool dock's width (Task 6) instead of 0. */}
+      {/* The immersive orb map, filling the page. Sits behind every interactive
+          surface (its DOM layers are pointer-events:none apart from the orbs
+          themselves). Insets keep the ellipse clear of the chrome: the top bar
+          (`CHAT_TOPBAR_INSET`) and the bottom floating bar + live log
+          (`CHAT_BOTTOM_INSET`). The `thinking` pulse is bridged up from the bottom
+          bar's chat dock (this screen owns no stream). */}
       <SubsystemOrbMap
-        insets={{ top: CHAT_TOPBAR_INSET, left: 0, right: 0, bottom: 400 }}
+        insets={{ top: CHAT_TOPBAR_INSET, left: 0, right: 0, bottom: CHAT_BOTTOM_INSET }}
         onOpenCore={() => setCoreOpen(true)}
         onSelectSubsystem={setSelectedSubsystemId}
         pipelines={pipelineCatalog ?? []}
         runs={runs}
         subsystems={subsystems ?? []}
-        thinking={stream.streaming || sendMessage.isPending}
+        thinking={thinking}
       />
 
-      {/* ── Main area: scene behind, scrollable conversation over it ─────
-          Phase 99: this outer wrapper deliberately carries NO explicit
-          z-index — only `relative` (a containing block for the drawer below,
-          but not a stacking context of its own). An explicit z here would
-          re-create the exact trap this phase fixes: the inner wrapper right
-          below (kept at `z-10`, unchanged) IS a stacking context, so anything
-          nested inside it is confined below root-level siblings regardless of
-          its own z-index — which is what used to bury the subsystem drawer's
-          close button under `SubsystemOrbsOverlay` and its Add-rule button
-          under the composer (both root-level `z-20`). Rendering the drawer as
-          a child of THIS wrapper instead — still `relative`, so the drawer's
-          `inset-y-0` resolves against the same band, between the top bar and
-          the composer — lets its `z-30` (`SubsystemDrawer.tsx`) compete
-          directly against those siblings and win. */}
+      {/* ── Main area: the left tasks gutter + inline drawers over the scene ─
+          This outer wrapper deliberately carries NO explicit z-index — only
+          `relative` (a containing block for the drawer/detail column below, but
+          not a stacking context of its own), so the drawer's `z-30` competes
+          directly against the root-level chrome siblings and wins (Phase 99). */}
       <div className="relative flex min-h-0 flex-1 flex-col">
-        {/* Task 15 fix: this wrapper is `h-full w-full` and paints over the whole
-            SubsystemOrbMap behind it. Without `pointer-events-none` here it swallowed
-            every click outside its own populated regions — orbs and the core became
-            unclickable everywhere except inside the transcript box and the left panel.
-            `pointer-events-none` on the wrapper + `pointer-events-auto` back on the
-            transcript scroll area below (the left panel already does this) restores
-            the passthrough the OrbMap doc comment above assumes. */}
+        {/* `pointer-events-none` on this wrapper so the scene stays clickable
+            everywhere outside its populated regions (the left panel re-enables
+            pointer events on itself); orbs/core stay reachable through it. */}
         <div className="pointer-events-none relative z-10 flex h-full w-full flex-col items-center justify-end">
-          {/* ── Left panel: ALL tasks in scope (Phase 57, was running-only in 44) ─
-              A `z`-raised fixed-width column pinned to the left, above the scene
-              like the top bar / composer. `pointer-events-none` on the gutter so
-              the scene stays interactive around it (the panel itself re-enables
-              them); hidden below `lg` so it never crowds the centered transcript
-              on a narrow viewport. */}
+          {/* ── Left panel: ALL tasks in scope (Phase 57) ──────────────────
+              A `z`-raised fixed-width column pinned to the left, above the scene.
+              Hidden below `lg` so it never crowds the map on a narrow viewport. */}
           <div className="pointer-events-none absolute inset-y-0 left-0 z-20 hidden w-[300px] flex-col p-4 lg:flex">
             <div className="pointer-events-auto">
               <ChatTasksPanel onSelectRun={selectRun} selectedRunId={selectedRunId} />
             </div>
           </div>
-
-          <div
-            className="pointer-events-auto relative z-10 flex h-1/2 w-full max-w-[720px] flex-col overflow-y-auto px-5 py-8"
-            data-testid={ChatScreenTestId.ScrollArea}
-            ref={scrollRef}
-            style={{
-              // Phase 95: set to half-height so the transcript lives entirely in the
-              // BOTTOM HALF, below the compact top-third subsystem cluster (phase 94's
-              // two-thirds box let a tall thread's dissolving top ghost over the lower
-              // mini-orbs). Still a box pinned to the bottom (right above the composer):
-              // the conversation grows UP from the input — newest turn always at the
-              // bottom — and `mt-auto` keeps a short thread bottom-anchored. The mask
-              // fades the box's top ~40% into nothing so any turn that scrolls up
-              // dissolves before it can reach the cluster's band, while the lower part
-              // stays fully readable. It still scrolls all the way back to the start —
-              // turns near the top just stay ghosted (declarative mask, scroll intact).
-              maskImage: "linear-gradient(to bottom, transparent 0%, #000 40%, #000 100%)",
-              WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, #000 40%, #000 100%)",
-            }}
-          >
-            {/* `mt-auto` pins short conversations to the bottom (first turn sits just
-                above the composer); a tall one overflows and scrolls normally. */}
-            <div className="mt-auto">
-              {isEmpty ? (
-                <Container data-testid={ChatScreenTestId.Greeting}>
-                  <Stack align="center" gap="100">
-                    <Typography align="center" tone="accent" type="subtitle" weight="medium">
-                      {t("greetingTitle")}
-                    </Typography>
-                    <Typography align="center" type="note" variant="tertiary">
-                      {t("greetingHint")}
-                    </Typography>
-                  </Stack>
-                </Container>
-              ) : (
-                <ChatTranscript
-                  liveText={stream.text}
-                  liveToolEvents={stream.toolEvents}
-                  messages={messages}
-                  streaming={stream.streaming}
-                />
-              )}
-            </div>
-          </div>
         </div>
 
-        {/* ── Subsystem drawer (Phase 84; moved out of the inner z-10 wrapper
-            above by Phase 99 — see this outer wrapper's own doc comment) ──
-            An inline panel over the chat, never a page navigation — docked
-            right of the transcript on lg+ (chat stays interactive to its
-            left), a full-width sheet below lg (PROVISIONAL, see the drawer's
-            own doc comment). Selecting a subsystem in the web above swaps
-            this drawer's content rather than opening a second one. */}
+        {/* ── Subsystem drawer (Phase 84) ─────────────────────────────────
+            An inline panel over the chat, never a page navigation — docked right
+            of the map on lg+. Selecting a subsystem in the web above swaps this
+            drawer's content rather than opening a second one. Mounted as a sibling
+            of the inner z-10 wrapper (Phase 99) so its own z-index competes with
+            the root-level chrome rather than being capped by that wrapper's
+            stacking context. */}
         {selectedSubsystem && (
           <SubsystemDrawer
             onClose={() => setSelectedSubsystemId(null)}
@@ -543,12 +301,10 @@ export function ChatScreen({
 
         {/* ── Task detail column (Phase 100) ──────────────────────────────
             A click in `ChatTasksPanel` (the 300px left gutter above) opens the
-            run's detail HERE, immediately to its right, instead of redirecting
-            to `/runs?run=<id>`. Mounted the same way the subsystem drawer is —
-            a sibling of it, outside the inner z-10 wrapper — so its own z-index
-            competes directly with the composer/top bar rather than being capped
-            by that wrapper's stacking context (see the drawer's doc comment
-            above); the two never overlap (opposite sides of the same band). */}
+            run's detail HERE, immediately to its right. Mounted the same way the
+            subsystem drawer is — a sibling, outside the inner z-10 wrapper — so its
+            own z-index competes directly with the chrome; the two never overlap
+            (opposite sides of the same band). */}
         {selectedRun && (
           <ChatTaskDetailColumn
             avatar={runAvatar(selectedRun, runAvatarById)}
@@ -566,66 +322,39 @@ export function ChatScreen({
         )}
       </div>
 
-      {/* ── Subsystem mini-orbs ──────────────────────────────────────────
-          Task 13: the 8 subsystems render as `SubsystemOrbMap` DOM/CSS orb
-          nodes above (ringed around the central core), each an interactive,
-          keyboard-reachable `OrbNode` with its own hit-target, label, and
-          status badge — no WebGL, no per-frame projection math. Selection
-          still opens the drawer below. */}
+      {/* ── Bottom-center bar (Velín-D `VcBottomBar`) ─────────────────────
+          The three floating composers — chat (default), run-a-task, add-a-note —
+          in a bottom-centered row (design `left:50% bottom:26 translateX(-50%)`).
+          The chat dock inside it owns the conversation stream and bridges its
+          `thinking` state back up to the orb-map pulse. */}
+      <Container
+        bottom="26px"
+        left="50%"
+        pointerEvents="auto"
+        position="absolute"
+        style={{ transform: "translateX(-50%)" }}
+        zIndex={30}
+      >
+        <ChatBottomBar
+          conversationId={conversationId}
+          dimmed={overlayOpen}
+          messages={messages}
+          onMessagesChange={onMessagesChange}
+          onNewChat={onNewChat}
+          onStreamingChange={setThinking}
+        />
+      </Container>
 
-      {/* ── Composer ─────────────────────────────────────────────────
-          Phase 38: the unified `CommandLine` launcher in send-delegation mode
-          (`onSubmit`) — same growable input + @mention picker as the task
-          launcher, `chrome={false}` (this bar is its own frame already), and
-          `showAttach={false}` since the chat message API has no attachment
-          channel yet (Phase 38 plan §5). Task 6: the voice toggle and New-chat
-          (now a trash icon) moved down here from the old top bar — a minimal
-          touch on this dock, not the full redesign (next phase). */}
-      <div className="relative z-20 shrink-0 border-t border-border px-5 py-4">
-        <div className="mx-auto max-w-[720px]">
-          <Stack align="stretch" direction="col" gap="100">
-            {(voice.supported || messages.length > 0) && (
-              <Stack align="center" direction="row" gap="150" justify="between">
-                {/* Voice toggle + status strip (Phase 119a) — the listening
-                    indicator + live interim transcript sits beside the toggle,
-                    ABOVE the composer, never inside it (Decision 1). The strip
-                    itself is mounted only while voice mode is on. */}
-                <Stack align="center" direction="row" gap="100">
-                  {voice.supported && (
-                    <VoiceToggleButton active={voice.active} onToggle={handleVoiceToggle} />
-                  )}
-                  {voice.active && (
-                    <VoiceStatusStrip interim={voice.interim} listening={voice.listening} />
-                  )}
-                </Stack>
-                {messages.length > 0 && (
-                  <Button
-                    aria-label={t("newChat")}
-                    data-testid={ChatScreenTestId.NewChat}
-                    icon="trash"
-                    intent="ghost"
-                    onClick={onNewChat}
-                    size="sm"
-                    title={t("newChat")}
-                  />
-                )}
-              </Stack>
-            )}
-            <CommandLine
-              showAttach
-              chrome={false}
-              disabled={thinking}
-              label={t("composer.label")}
-              onSubmit={send}
-              placeholder={t("composer.placeholder")}
-            />
-          </Stack>
-        </div>
-      </div>
+      {/* ── Bottom-right live log (Velín-D `VcLiveLog`) ───────────────────
+          The system activity feed as a collapsible glass widget (design
+          `right:24 bottom:24`), reusing the HUD RightRail's data wiring. */}
+      <Container bottom="24px" pointerEvents="auto" position="absolute" right="24px" zIndex={20}>
+        <ChatLiveLog dimmed={overlayOpen} />
+      </Container>
 
       {/* ── Quick-switcher (Phase 14.5) ──────────────────────────────────
-          Floats above everything else on the page; mounted only while open
-          so its own data hooks don't fire until the operator asks. */}
+          Floats above everything else on the page; mounted only while open so its
+          own data hooks don't fire until the operator asks. */}
       {paletteOpen && (
         <ChatPalette
           onClose={() => setPaletteOpen(false)}
@@ -636,18 +365,16 @@ export function ChatScreen({
 
       {/* ── Result detail (Phase 58) ────────────────────────────────────
           A pick in the ⌘K quick-switcher opens the agent/pipeline's read-only
-          detail here — a viewing dialog, never an edit surface (edits live on the
-          entity's own /agents·/pipelines page). */}
+          detail here — a viewing dialog, never an edit surface. */}
       {detailTarget && (
         <ChatDetailDialog detail={detailTarget} onClose={() => setDetailTarget(undefined)} />
       )}
 
       {/* ── ZIBBY overview (Task C1) ─────────────────────────────────────
-          Clicking the central orb (via `SubsystemOrbMap`'s core hit-target)
-          opens this whole-federation snapshot. Picking a subsystem row inside
-          it reuses the existing selection state, so it closes the overview and
-          opens the same `SubsystemDrawer` a direct mini-orb click would
-          (Decision D4). */}
+          Clicking the central orb opens this whole-federation snapshot. Picking a
+          subsystem row inside it reuses the existing selection state, so it closes
+          the overview and opens the same `SubsystemDrawer` a direct mini-orb click
+          would. */}
       <CoreOverviewDialog
         onClose={() => setCoreOpen(false)}
         onSelectSubsystem={(id) => {

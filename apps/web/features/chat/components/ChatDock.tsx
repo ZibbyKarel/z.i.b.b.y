@@ -42,6 +42,13 @@ export interface ChatDockProps {
   /** Mirrors the other floating chat widgets: dims, blurs and disables pointer
    *  events while an overlay (dialog/drawer) is up. */
   dimmed?: boolean;
+  /** Bridges the dock's in-flight "thinking" state up to the host: after this
+   *  dock owns the ONLY chat stream, `ChatScreen` keeps no `useChatStream` of its
+   *  own, so the orb-map pulse is driven from here. Fired whenever `thinking`
+   *  flips; the effect's cleanup fires `false` so unmounting the dock (the bar
+   *  switches away from chat, or collapses) clears the pulse rather than freezing
+   *  it lit. */
+  onStreamingChange?: (streaming: boolean) => void;
 }
 
 /** Collapsed history max-height — grows while the composer has focus. */
@@ -74,6 +81,7 @@ export function ChatDock({
   onNewChat,
   onClose,
   dimmed = false,
+  onStreamingChange,
 }: ChatDockProps) {
   const t = useTranslations("chat");
   const setMessages = onMessagesChange;
@@ -119,6 +127,15 @@ export function ChatDock({
   // A turn is in flight from send (`isPending`) through the streamed reply until
   // the terminal `done`/`error` — mirrors `ChatScreen`'s own derivation.
   const thinking = sendMessage.isPending || stream.streaming;
+
+  // Bridge the in-flight state up to the host (`ChatScreen`'s orb-map pulse) —
+  // this dock is the single stream owner now, so the pulse can't be derived on
+  // the screen. Cleanup fires `false` so unmounting the dock clears the pulse
+  // instead of leaving it lit.
+  useEffect(() => {
+    onStreamingChange?.(thinking);
+    return () => onStreamingChange?.(false);
+  }, [thinking, onStreamingChange]);
 
   const send = useCallback(
     (text: string, target?: TaskTarget) => {
