@@ -1,6 +1,6 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
-import { ErrorSchema } from "../common.schema";
+import { EmptyBodySchema, ErrorSchema } from "../common.schema";
 import {
   MergeProjectPrBodySchema,
   MergeProjectPrResultSchema,
@@ -49,7 +49,7 @@ export const projectsContract = c.router(
     searchProjects: {
       method: "GET",
       path: "/projects/search",
-      query: z.object({ q: z.string() }),
+      query: z.object({ q: z.string().min(1) }),
       responses: { 200: z.array(ProjectSchema) },
       summary: "Search projects by id, name, desc, path or category",
     },
@@ -132,7 +132,7 @@ export const projectsContract = c.router(
       method: "POST",
       path: "/projects/:id/clone",
       pathParams: z.object({ id: ProjectIdSchema }),
-      body: z.object({}).optional(),
+      body: EmptyBodySchema,
       responses: {
         // 200 on a fresh clone; 409 when this machine already has the project
         // present (at `path` or `cloneRoot`) — re-cloning would be a no-op at

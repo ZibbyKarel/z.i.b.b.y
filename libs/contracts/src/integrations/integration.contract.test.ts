@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { EmptyBodySchema } from "../common.schema";
 import {
   CreateIntegrationSchema,
   CredentialsInputSchema,
@@ -14,6 +15,10 @@ describe("integrationsContract", () => {
     expect(integrationsContract.setCredentials.method).toBe("PUT");
     expect(integrationsContract.testIntegration.path).toBe("/api/integrations/:id/test");
     expect(integrationsContract.updateIntegration.method).toBe("PATCH");
+  });
+
+  it("testIntegration's empty body IS the shared EmptyBodySchema (T11 dedup, finding #37)", () => {
+    expect(integrationsContract.testIntegration.body).toBe(EmptyBodySchema);
   });
 });
 

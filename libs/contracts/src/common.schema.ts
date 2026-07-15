@@ -80,3 +80,32 @@ export const AvatarSchema = z
   .refine((v) => v.startsWith("data:image/") || (v.startsWith("/") && !v.startsWith("//")), {
     message: "avatar must be a data:image/ URI or a root-relative path",
   });
+
+/**
+ * The shared shape of a DELETE response: the deleted entity's `id`, echoed back
+ * so the caller can confirm what was removed (and web mutation hooks read `.id`
+ * for cache invalidation). Reused across every resource's `deleteX` route
+ * instead of each contract hand-rolling its own `{ id: <IdSchema> }` literal —
+ * they were already structurally identical (T11 dedup, finding #9).
+ */
+export const DeleteResponseSchema = z.object({ id: z.string() });
+export type DeleteResponse = z.infer<typeof DeleteResponseSchema>;
+
+/**
+ * The shared "no body, or an empty object" idiom used by every action-style
+ * route that takes no real input (`trigger`, `clone`, `run`, …). ts-rest still
+ * wants a schema on `body` to accept a request with no `Content-Type`/empty
+ * JSON object; this is that schema, reused instead of each contract repeating
+ * the same `z.object({}).optional()` literal (T11 dedup, finding #37).
+ */
+export const EmptyBodySchema = z.object({}).optional();
+
+/**
+ * One run artifact: its name and text content. Shared by every run kind's
+ * artifact endpoint (task runs, pipeline runs, …) — they were already
+ * byte-identical `{ name: z.string(), content: z.string() }` shapes, each
+ * kind's own storage/allowlist layer still enforces which names are valid
+ * (T11 dedup, finding #29).
+ */
+export const RunArtifactSchema = z.object({ name: z.string(), content: z.string() });
+export type RunArtifact = z.infer<typeof RunArtifactSchema>;

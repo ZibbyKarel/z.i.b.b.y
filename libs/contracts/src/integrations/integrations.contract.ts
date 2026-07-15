@@ -1,6 +1,6 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
-import { ErrorSchema } from "../common.schema";
+import { EmptyBodySchema, ErrorSchema } from "../common.schema";
 import {
   CreateIntegrationSchema,
   CredentialsInputSchema,
@@ -77,7 +77,7 @@ export const integrationsContract = c.router(
       method: "POST",
       path: "/integrations/:id/test",
       pathParams: IdParam,
-      body: z.object({}).optional(),
+      body: EmptyBodySchema,
       responses: { 200: TestResultSchema, 404: ErrorSchema, 409: ErrorSchema },
       summary: "Test the connection (stamps status; 409 when no credentials)",
     },

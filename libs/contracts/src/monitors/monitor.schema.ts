@@ -32,7 +32,7 @@ export const MonitorEventSchema = z.object({
   /** One-line, human-readable: "CI red: build.yml #123 failed on main". */
   title: z.string().min(1),
   /** Longer context (workflow, branch, sha, conclusion) — data, never commands. */
-  detail: z.string(),
+  detail: z.string().max(4000),
   /** Deep link to the source (the workflow run page). */
   url: z.string().optional(),
   occurredAt: z.string().datetime(),

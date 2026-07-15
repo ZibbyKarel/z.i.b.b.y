@@ -32,6 +32,11 @@ describe("companiesContract", () => {
     expect(companiesContract.deleteCompany.path).toBe("/api/companies/:id");
     expect(companiesContract.deleteCompany.responses).toHaveProperty("404");
   });
+
+  it("T11 finding #14: search `q` requires at least 1 char (was unbounded z.string())", () => {
+    expect(companiesContract.searchCompanies.query.safeParse({ q: "" }).success).toBe(false);
+    expect(companiesContract.searchCompanies.query.safeParse({ q: "a" }).success).toBe(true);
+  });
 });
 
 describe("company schema", () => {

@@ -9,7 +9,7 @@ import { z } from "zod";
  * -supported) synthesis target (D-0007).
  */
 export const SpeechSynthesizeInputSchema = z.object({
-  text: z.string().min(1),
+  text: z.string().min(1).max(8000),
   voice: z.string().min(1).optional(),
   language: z.string().min(1).default("cs"),
   speed: z.number().positive().optional(),

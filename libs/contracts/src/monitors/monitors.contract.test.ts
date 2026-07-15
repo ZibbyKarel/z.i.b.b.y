@@ -26,6 +26,15 @@ describe("monitor.schema", () => {
     expect(MonitorEventsQuerySchema.safeParse({ projectId: "" }).success).toBe(false);
   });
 
+  it("caps detail at 4000 chars (T11 finding #16): 4000 passes, 4001 rejects", () => {
+    expect(MonitorEventSchema.safeParse({ ...VALID, detail: "x".repeat(4000) }).success).toBe(
+      true,
+    );
+    expect(MonitorEventSchema.safeParse({ ...VALID, detail: "x".repeat(4001) }).success).toBe(
+      false,
+    );
+  });
+
   it("N4b: CiStatus round-trips; state is a closed red/green vocabulary", () => {
     const status = {
       integrationId: "acme-github",

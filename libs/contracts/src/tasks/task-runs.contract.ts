@@ -1,7 +1,7 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { RunLogChunkSchema } from "../agents/agent-run.schema";
-import { ErrorSchema } from "../common.schema";
+import { EmptyBodySchema, ErrorSchema } from "../common.schema";
 import {
   AssignTaskRunProjectSchema,
   ResumeTaskRunSchema,
@@ -88,7 +88,7 @@ export const taskRunsContract = c.router(
       method: "POST",
       path: "/tasks/runs/:runId/stop",
       pathParams: RunIdParam,
-      body: z.object({}).optional(),
+      body: EmptyBodySchema,
       responses: {
         200: TaskRunSchema,
         404: ErrorSchema,

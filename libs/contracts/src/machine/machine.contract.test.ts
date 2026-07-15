@@ -42,6 +42,35 @@ describe("machine.schema (N5a)", () => {
     );
   });
 
+  it("T11 finding #17: folder/find/query/path cap at 2048 chars — 2048 passes, 2049 rejects", () => {
+    expect(
+      MachineActionSchema.safeParse({ ...ACTION, folder: "/x/".repeat(683) }).success, // 2049
+    ).toBe(false);
+    expect(
+      MachineActionSchema.safeParse({ ...ACTION, folder: "/" + "x".repeat(2047) }).success, // 2048
+    ).toBe(true);
+    expect(
+      MachineActionSchema.safeParse({ ...ACTION, find: "x".repeat(2049) }).success,
+    ).toBe(false);
+    expect(
+      MachineActionSchema.safeParse({ ...ACTION, find: "x".repeat(2048) }).success,
+    ).toBe(true);
+    expect(
+      MachineActionSchema.safeParse({ kind: "open-maps", query: "x".repeat(2049) }).success,
+    ).toBe(false);
+    expect(
+      MachineActionSchema.safeParse({ kind: "open-maps", query: "x".repeat(2048) }).success,
+    ).toBe(true);
+    expect(
+      MachineActionSchema.safeParse({ kind: "open-folder", path: "/" + "x".repeat(2048) })
+        .success, // 2049
+    ).toBe(false);
+    expect(
+      MachineActionSchema.safeParse({ kind: "open-folder", path: "/" + "x".repeat(2047) })
+        .success, // 2048
+    ).toBe(true);
+  });
+
   it("the machine approval kind and machine-action activity kind are wired", () => {
     expect(ApprovalRunKindSchema.safeParse("machine").success).toBe(true);
     expect(ActivityKindSchema.safeParse("machine-action").success).toBe(true);

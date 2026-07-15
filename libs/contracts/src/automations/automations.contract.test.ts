@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DeleteResponseSchema, EmptyBodySchema } from "../common.schema";
 import { AutomationSchema, automationsContract } from "../index";
 
 describe("automationsContract", () => {
@@ -6,6 +7,14 @@ describe("automationsContract", () => {
     expect(automationsContract.createAutomation.path).toBe("/api/automations");
     expect(automationsContract.triggerAutomation.path).toBe("/api/automations/:id/trigger");
     expect(automationsContract.updateAutomation.method).toBe("PATCH");
+  });
+
+  it("deleteAutomation's 200 response IS the shared DeleteResponseSchema (T11 dedup, finding #9)", () => {
+    expect(automationsContract.deleteAutomation.responses[200]).toBe(DeleteResponseSchema);
+  });
+
+  it("triggerAutomation's empty body IS the shared EmptyBodySchema (T11 dedup, finding #37)", () => {
+    expect(automationsContract.triggerAutomation.body).toBe(EmptyBodySchema);
   });
 
   it("exposes a search route declared before the `:id` route", () => {

@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { EmptyBodySchema } from "../common.schema";
 import {
   SUBSYSTEMS,
   SubsystemIdSchema,
@@ -32,6 +33,10 @@ describe("subsystemsContract", () => {
     expect(subsystemsContract.markSubsystemSeen.path).toBe("/api/subsystems/:id/seen");
     expect(subsystemsContract.markSubsystemSeen.responses).toHaveProperty("200");
     expect(subsystemsContract.markSubsystemSeen.responses).toHaveProperty("404");
+  });
+
+  it("markSubsystemSeen's empty body IS the shared EmptyBodySchema (T11 dedup, finding #37)", () => {
+    expect(subsystemsContract.markSubsystemSeen.body).toBe(EmptyBodySchema);
   });
 });
 

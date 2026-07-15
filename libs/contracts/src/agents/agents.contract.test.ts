@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DeleteResponseSchema } from "../common.schema";
 import {
   AGENT_ID_REGEX,
   AgentRunSchema,
@@ -50,6 +51,10 @@ describe("agentsContract", () => {
     ]) {
       expect(route.responses).toHaveProperty("404");
     }
+  });
+
+  it("deleteAgent's 200 response IS the shared DeleteResponseSchema (T11 dedup, finding #9)", () => {
+    expect(agentsContract.deleteAgent.responses[200]).toBe(DeleteResponseSchema);
   });
 });
 
@@ -160,5 +165,38 @@ describe("agent schemas", () => {
     if (parsed.success) {
       expect(parsed.data.optionalTools).toBeUndefined();
     }
+  });
+
+  describe("T11 finding #11 — name/description/glyph/category length caps (length only, not enums)", () => {
+    const base = { id: "a", instructions: "i" };
+
+    it("name: 256 passes, 257 rejects", () => {
+      expect(AgentSchema.safeParse({ ...base, name: "x".repeat(256) }).success).toBe(true);
+      expect(AgentSchema.safeParse({ ...base, name: "x".repeat(257) }).success).toBe(false);
+    });
+
+    it("description: 256 passes, 257 rejects", () => {
+      expect(AgentSchema.safeParse({ ...base, description: "x".repeat(256) }).success).toBe(true);
+      expect(AgentSchema.safeParse({ ...base, description: "x".repeat(257) }).success).toBe(
+        false,
+      );
+    });
+
+    it("glyph: 64 passes, 65 rejects — still free-form, not an enum", () => {
+      expect(AgentSchema.safeParse({ ...base, glyph: "x".repeat(64) }).success).toBe(true);
+      expect(AgentSchema.safeParse({ ...base, glyph: "x".repeat(65) }).success).toBe(false);
+      // A brand-new, unshipped glyph value still parses (length-only, not a closed set).
+      expect(AgentSchema.safeParse({ ...base, glyph: "a-glyph-nobody-shipped-yet" }).success).toBe(
+        true,
+      );
+    });
+
+    it("category: 64 passes, 65 rejects — still free-form, not an enum", () => {
+      expect(AgentSchema.safeParse({ ...base, category: "x".repeat(64) }).success).toBe(true);
+      expect(AgentSchema.safeParse({ ...base, category: "x".repeat(65) }).success).toBe(false);
+      expect(
+        AgentSchema.safeParse({ ...base, category: "a-category-nobody-shipped-yet" }).success,
+      ).toBe(true);
+    });
   });
 });

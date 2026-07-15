@@ -10,9 +10,9 @@ import { z } from "zod";
 export const RenameFilesActionSchema = z.object({
   kind: z.literal("rename-files"),
   /** Absolute path to an existing directory the operator named. */
-  folder: z.string().min(1),
+  folder: z.string().min(1).max(2048),
   /** Literal substring to find in file names (basenames only — never paths). */
-  find: z.string().min(1),
+  find: z.string().min(1).max(2048),
   /** Replacement (may be empty = delete the substring from the name). */
   replace: z.string(),
 });
@@ -27,7 +27,7 @@ export type RenameFilesAction = z.infer<typeof RenameFilesActionSchema>;
 export const OpenMapsActionSchema = z.object({
   kind: z.literal("open-maps"),
   /** What to search for — a place, an address, "nearest pharmacy", … */
-  query: z.string().min(1),
+  query: z.string().min(1).max(2048),
 });
 export type OpenMapsAction = z.infer<typeof OpenMapsActionSchema>;
 
@@ -40,7 +40,7 @@ export type OpenMapsAction = z.infer<typeof OpenMapsActionSchema>;
 export const OpenFolderActionSchema = z.object({
   kind: z.literal("open-folder"),
   /** Absolute path to an existing directory the operator named. */
-  path: z.string().min(1),
+  path: z.string().min(1).max(2048),
 });
 export type OpenFolderAction = z.infer<typeof OpenFolderActionSchema>;
 

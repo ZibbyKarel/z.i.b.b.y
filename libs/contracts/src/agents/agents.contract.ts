@@ -1,6 +1,6 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
-import { ErrorSchema } from "../common.schema";
+import { DeleteResponseSchema, ErrorSchema } from "../common.schema";
 import { AgentIdSchema, AgentSchema, CreateAgentSchema, UpdateAgentSchema } from "./agent.schema";
 import { AgentRunSchema } from "./agent-run.schema";
 
@@ -73,7 +73,7 @@ export const agentsContract = c.router(
       path: "/agents/:id",
       pathParams: z.object({ id: AgentIdSchema }),
       responses: {
-        200: z.object({ id: AgentIdSchema }),
+        200: DeleteResponseSchema,
         404: ErrorSchema,
       },
       summary: "Delete an agent",

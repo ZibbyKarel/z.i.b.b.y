@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { AgentIdSchema } from "../agents/agent.schema";
-import { IsoDateTimeSchema, WorkspaceSchema } from "../common.schema";
+import { IsoDateTimeSchema, RunStatusSchema, WorkspaceSchema } from "../common.schema";
 import { PrOutputSchema } from "../tasks/task.schema";
 import { PipelineOutputSchema } from "./pipeline.schema";
 import { StageVerdictSchema } from "./stage-verdict.schema";
@@ -10,16 +10,7 @@ import { StageVerdictSchema } from "./stage-verdict.schema";
  * `awaiting-approval` (a stage paused on an approval — Phase 3, which maps the
  * pipeline to `parked`). Unifies with the shared `RunStatus` in Phase 3-1.
  */
-export const StageRunStatusSchema = z.enum([
-  "running",
-  "done",
-  "error",
-  "interrupted",
-  "awaiting-approval",
-  // Phase 9: the stage child died on a usage limit — a pause, not a failure.
-  // Stashes a spawn spec (restart survival) and auto-resumes when the window resets.
-  "paused-limit",
-]);
+export const StageRunStatusSchema = z.enum(RunStatusSchema.options);
 export type StageRunStatus = z.infer<typeof StageRunStatusSchema>;
 
 /**

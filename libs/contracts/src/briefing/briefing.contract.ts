@@ -1,5 +1,5 @@
 import { initContract } from "@ts-rest/core";
-import { z } from "zod";
+import { EmptyBodySchema } from "../common.schema";
 import { BriefingSchema, GenerateBriefingResultSchema } from "./briefing.schema";
 
 const c = initContract();
@@ -23,7 +23,7 @@ export const briefingContract = c.router(
     generateBriefing: {
       method: "POST",
       path: "/briefing/generate",
-      body: z.object({}).optional(),
+      body: EmptyBodySchema,
       responses: { 201: GenerateBriefingResultSchema },
       summary: "Generate, persist to the vault, and record a briefing",
     },

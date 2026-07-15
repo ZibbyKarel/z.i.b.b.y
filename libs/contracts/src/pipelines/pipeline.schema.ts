@@ -4,6 +4,15 @@ import { AvatarSchema } from "../common.schema";
 import { SubsystemIdSchema } from "../subsystems/subsystem.schema";
 
 /**
+ * A pipeline's `id` — same restrictive filename-safe shape as `AgentIdSchema`
+ * (mirrors `ProjectIdSchema`/`SkillIdSchema`, both `= AgentIdSchema` aliases).
+ * A naming alias only — NOT a branded type (see `docs/plans/entity-id-refactor.md`
+ * for the owning effort on that). Used to label fields that hold a pipeline id
+ * (rather than an agent id) without changing the accepted shape.
+ */
+export const PipelineIdSchema = AgentIdSchema;
+
+/**
  * One rung of the loop's escalation ladder: the model/thinking override applied
  * to a retry attempt (rung n applies to retry n, 1-based; later retries clamp
  * to the last rung). Both fields optional — escalate only what changes.
@@ -68,7 +77,7 @@ export const PipelinePhaseSchema = z.object({
   model: AgentModelSchema.optional(),
   thinking: AgentThinkingSchema.optional(),
   /** Verify phases only: shell commands run with `&&` (override project checks). */
-  commands: z.array(z.string().min(1)).optional(),
+  commands: z.array(z.string().min(1)).max(50).optional(),
   /** Agent phase only: parse a <verdict> from `produces`; non-`pass` takes the back-edge. */
   qualify: z.boolean().optional(),
   loop: PhaseLoopSchema.optional(),

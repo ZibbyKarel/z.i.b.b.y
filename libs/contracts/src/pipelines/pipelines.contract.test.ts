@@ -1,4 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { AgentIdSchema } from "../agents/agent.schema";
+import { RunArtifactSchema, RunStatusSchema } from "../common.schema";
+import { StageRunStatusSchema } from "./pipeline-run.schema";
+import { PipelineIdSchema } from "./pipeline.schema";
+import { PipelineRunArtifactSchema } from "./pipelines.contract";
 import {
   PipelineRunSchema,
   PipelineSchema,
@@ -264,5 +269,46 @@ describe("pipeline run schema", () => {
       stageRuns: [{ phaseId: "review", runId: "release_1.review_1", attempt: 1, status: "done" }],
     });
     expect(legacy.success).toBe(true);
+  });
+});
+
+describe("T11 finding #36 — PipelinePhaseSchema.commands array cap (50, no per-string max)", () => {
+  it("50 commands passes, 51 rejects", () => {
+    expect(
+      PipelineSchema.safeParse({
+        id: "release",
+        phases: [phase("v", { type: "verify", agent: undefined, commands: Array(50).fill("x") })],
+        instructions: "x",
+      }).success,
+    ).toBe(true);
+    expect(
+      PipelineSchema.safeParse({
+        id: "release",
+        phases: [phase("v", { type: "verify", agent: undefined, commands: Array(51).fill("x") })],
+        instructions: "x",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("T11 finding #3 — PipelineIdSchema (naming alias, not branded)", () => {
+  it("is the same schema as AgentIdSchema — an alias, not a distinct branded type", () => {
+    expect(PipelineIdSchema).toBe(AgentIdSchema);
+  });
+});
+
+describe("T11 finding #29 — PipelineRunArtifactSchema is the shared RunArtifactSchema", () => {
+  it("is the shared common.schema export (identity), proving the dedup happened", () => {
+    expect(PipelineRunArtifactSchema).toBe(RunArtifactSchema);
+  });
+});
+
+describe("T11 finding #28 — StageRunStatusSchema derives from RunStatusSchema.options", () => {
+  it("accepts exactly the shared RunStatus values, nothing more", () => {
+    expect(StageRunStatusSchema.options).toEqual(RunStatusSchema.options);
+  });
+
+  it("rejects a task-run-only status (scheduled/parked/held/queued/pending) that isn't a run status", () => {
+    expect(StageRunStatusSchema.safeParse("queued").success).toBe(false);
   });
 });

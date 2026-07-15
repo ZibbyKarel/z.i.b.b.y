@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AgentIdSchema } from "../agents/agent.schema";
+import { PipelineIdSchema } from "../pipelines/pipeline.schema";
 import { SubsystemIdSchema } from "../subsystems/subsystem.schema";
 
 /**
@@ -8,7 +9,7 @@ import { SubsystemIdSchema } from "../subsystems/subsystem.schema";
  * binding field is needed yet; adding one later is additive.
  */
 export const ChainStepSchema = z.object({
-  pipeline: AgentIdSchema,
+  pipeline: PipelineIdSchema,
 });
 export type ChainStep = z.infer<typeof ChainStepSchema>;
 
@@ -44,7 +45,7 @@ export type ChainRunStepStatus = z.infer<typeof ChainRunStepStatusSchema>;
 
 export const ChainRunStepSchema = z.object({
   index: z.number().int().min(0),
-  pipeline: z.string().min(1),
+  pipeline: PipelineIdSchema,
   /** The pipeline run executing this step (absent while pending). */
   runRef: z.string().min(1).optional(),
   /** The artifact record the step delivered (absent until done + delivered). */

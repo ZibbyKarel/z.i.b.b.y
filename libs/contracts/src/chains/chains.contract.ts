@@ -1,6 +1,6 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
-import { ErrorSchema } from "../common.schema";
+import { DeleteResponseSchema, EmptyBodySchema, ErrorSchema } from "../common.schema";
 import { ChainRunSchema, ChainSchema, CreateChainSchema } from "./chain.schema";
 
 const c = initContract();
@@ -35,7 +35,7 @@ export const chainsContract = c.router(
     deleteChain: {
       method: "DELETE",
       path: "/chains/:id",
-      responses: { 200: z.object({ id: z.string() }), 404: ErrorSchema },
+      responses: { 200: DeleteResponseSchema, 404: ErrorSchema },
       summary: "Delete a chain definition (runs and artifacts are untouched)",
     },
   },
@@ -53,7 +53,7 @@ export const chainRunsContract = c.router(
     startChain: {
       method: "POST",
       path: "/chains/:id/run",
-      body: z.object({}).optional(),
+      body: EmptyBodySchema,
       responses: { 201: ChainRunSchema, 404: ErrorSchema, 422: ErrorSchema },
       summary: "Start a chain run (step 0 gets the chain instructions as input)",
     },

@@ -1,6 +1,5 @@
 import { initContract } from "@ts-rest/core";
-import { z } from "zod";
-import { ErrorSchema } from "../common.schema";
+import { EmptyBodySchema, ErrorSchema } from "../common.schema";
 import { SelfStatusSchema, SelfUpdateResultSchema } from "./self.schema";
 
 const c = initContract();
@@ -27,7 +26,7 @@ export const selfContract = c.router(
     updateSelf: {
       method: "POST",
       path: "/self/update",
-      body: z.object({}).optional(),
+      body: EmptyBodySchema,
       responses: {
         200: SelfUpdateResultSchema,
         409: ErrorSchema,

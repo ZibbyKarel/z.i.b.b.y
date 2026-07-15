@@ -5,6 +5,7 @@ import {
   GoalParkedReasonSchema,
 } from "../goals/goal-run.schema";
 import { ChainRunStepSchema } from "../chains/chain.schema";
+import { RunArtifactSchema, RunStatusSchema } from "../common.schema";
 import {
   ParkedDetailSchema,
   PipelineCheckpointSchema,
@@ -29,12 +30,7 @@ export type RunKind = z.infer<typeof RunKindSchema>;
  * type is a flat literal union the web's `FeedStatus` aliases 1:1.
  */
 export const TaskRunStatusSchema = z.enum([
-  "running",
-  "done",
-  "error",
-  "interrupted",
-  "awaiting-approval",
-  "paused-limit",
+  ...RunStatusSchema.options,
   "scheduled",
   "parked",
   "held",
@@ -184,10 +180,7 @@ export type TaskRun = z.infer<typeof TaskRunSchema>;
  * counterpart of the per-kind `PipelineRunArtifact` / `GoalRunArtifact` — the owning
  * runner still enforces its own allowlist server-side, so `name` is a plain string here.
  */
-export const TaskRunArtifactSchema = z.object({
-  name: z.string(),
-  content: z.string(),
-});
+export const TaskRunArtifactSchema = RunArtifactSchema;
 export type TaskRunArtifact = z.infer<typeof TaskRunArtifactSchema>;
 
 /** Body accepted by `resumeTaskRun` — the operator's note for the resumed run. */

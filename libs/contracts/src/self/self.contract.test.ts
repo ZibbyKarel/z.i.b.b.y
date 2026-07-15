@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { EmptyBodySchema } from "../common.schema";
 import { SelfPrSchema, SelfStatusSchema, SelfUpdateResultSchema, selfContract } from "../index";
 
 const okStatus = {
@@ -25,6 +26,10 @@ describe("selfContract", () => {
     expect(selfContract.updateSelf.path).toBe("/api/self/update");
     expect(selfContract.updateSelf.responses).toHaveProperty("200");
     expect(selfContract.updateSelf.responses).toHaveProperty("409");
+  });
+
+  it("updateSelf's empty body IS the shared EmptyBodySchema (T11 dedup, finding #37)", () => {
+    expect(selfContract.updateSelf.body).toBe(EmptyBodySchema);
   });
 });
 

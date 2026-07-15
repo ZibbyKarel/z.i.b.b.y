@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { EmptyBodySchema } from "../common.schema";
 import {
   CreateProjectSchema,
   MergeProjectPrBodySchema,
@@ -30,6 +31,11 @@ describe("projectsContract", () => {
     expect(projectsContract.searchProjects.path).toBe("/api/projects/search");
     const keys = Object.keys(projectsContract);
     expect(keys.indexOf("searchProjects")).toBeLessThan(keys.indexOf("getProject"));
+  });
+
+  it("T11 finding #14: search `q` requires at least 1 char (was unbounded z.string())", () => {
+    expect(projectsContract.searchProjects.query.safeParse({ q: "" }).success).toBe(false);
+    expect(projectsContract.searchProjects.query.safeParse({ q: "a" }).success).toBe(true);
   });
 
   it("updates a project via PATCH /api/projects/:id (404)", () => {
@@ -65,6 +71,10 @@ describe("projectsContract", () => {
     expect(projectsContract.cloneProject.responses).toHaveProperty("404");
     expect(projectsContract.cloneProject.responses).toHaveProperty("409");
     expect(projectsContract.cloneProject.responses).toHaveProperty("422");
+  });
+
+  it("cloneProject's empty body IS the shared EmptyBodySchema (T11 dedup, finding #37)", () => {
+    expect(projectsContract.cloneProject.body).toBe(EmptyBodySchema);
   });
 
   it("exposes the open-PR overview via GET /api/projects/:id/prs (200/404) (Phase 78)", () => {

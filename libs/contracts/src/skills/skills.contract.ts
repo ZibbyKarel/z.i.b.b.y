@@ -29,7 +29,7 @@ export const skillsContract = c.router(
     searchSkills: {
       method: "GET",
       path: "/skills/search",
-      query: z.object({ q: z.string() }),
+      query: z.object({ q: z.string().min(1) }),
       responses: { 200: z.array(SkillSchema) },
       summary: "Search skills by id, name, desc or category",
     },

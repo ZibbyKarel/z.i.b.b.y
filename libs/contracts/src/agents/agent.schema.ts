@@ -43,9 +43,9 @@ export type AgentThinking = z.infer<typeof AgentThinkingSchema>;
  */
 export const AgentSchema = z.object({
   id: AgentIdSchema,
-  name: z.string().min(1).optional(),
-  description: z.string().optional(),
-  glyph: z.string().optional(),
+  name: z.string().min(1).max(256).optional(),
+  description: z.string().max(256).optional(),
+  glyph: z.string().max(64).optional(),
   /** Optional avatar image (data URI or `/avatars/*.png` path) shown in place of the glyph. */
   avatar: AvatarSchema.optional(),
   model: AgentModelSchema.optional(),
@@ -53,7 +53,7 @@ export const AgentSchema = z.object({
   tools: z.array(z.string()).optional(),
   /** The ceiling of tool/MCP ids grantable per-run (see docblock above). */
   optionalTools: z.array(z.string()).optional(),
-  category: z.string().optional(),
+  category: z.string().max(64).optional(),
   /**
    * Approval gate flag. `risk` is a display hint. The `gates` policy engine is the
    * general mechanism; `requires_approval: true` is kept as legacy sugar that

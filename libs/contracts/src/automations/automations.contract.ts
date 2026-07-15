@@ -1,7 +1,7 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { AgentIdSchema } from "../agents/agent.schema";
-import { ErrorSchema } from "../common.schema";
+import { DeleteResponseSchema, EmptyBodySchema, ErrorSchema } from "../common.schema";
 import {
   AutomationSchema,
   CreateAutomationSchema,
@@ -60,14 +60,14 @@ export const automationsContract = c.router(
       method: "DELETE",
       path: "/automations/:id",
       pathParams: IdParam,
-      responses: { 200: z.object({ id: AgentIdSchema }), 404: ErrorSchema, 409: ErrorSchema },
+      responses: { 200: DeleteResponseSchema, 404: ErrorSchema, 409: ErrorSchema },
       summary: "Delete an automation (system automations cannot be deleted)",
     },
     triggerAutomation: {
       method: "POST",
       path: "/automations/:id/trigger",
       pathParams: IdParam,
-      body: z.object({}).optional(),
+      body: EmptyBodySchema,
       responses: { 200: z.object({ runRef: z.string() }), 404: ErrorSchema },
       summary: "Fire an automation now (runs its target, returns a run reference)",
     },

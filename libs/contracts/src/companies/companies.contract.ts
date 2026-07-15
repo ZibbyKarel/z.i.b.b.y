@@ -38,7 +38,7 @@ export const companiesContract = c.router(
     searchCompanies: {
       method: "GET",
       path: "/companies/search",
-      query: z.object({ q: z.string() }),
+      query: z.object({ q: z.string().min(1) }),
       responses: { 200: z.array(CompanySchema) },
       summary: "Search companies by id, name or desc",
     },

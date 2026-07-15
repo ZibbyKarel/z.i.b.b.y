@@ -1,6 +1,6 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
-import { ErrorSchema } from "../common.schema";
+import { DeleteResponseSchema, ErrorSchema } from "../common.schema";
 import {
   CommandIdSchema,
   CommandSchema,
@@ -53,7 +53,7 @@ export const commandsContract = c.router(
       method: "DELETE",
       path: "/commands/:id",
       pathParams: IdParam,
-      responses: { 200: z.object({ id: CommandIdSchema }), 404: ErrorSchema },
+      responses: { 200: DeleteResponseSchema, 404: ErrorSchema },
       summary: "Delete a command",
     },
   },

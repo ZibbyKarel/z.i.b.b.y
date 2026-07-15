@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ChainRunSchema, ChainSchema } from "./chain.schema";
+import { DeleteResponseSchema, EmptyBodySchema } from "../common.schema";
+import { ChainRunSchema, ChainRunStepSchema, ChainSchema, ChainStepSchema } from "./chain.schema";
 import { chainRunsContract, chainsContract } from "./chains.contract";
 
 const CHAIN = {
@@ -46,5 +47,30 @@ describe("chains contracts", () => {
     expect(chainRunsContract.startChain.method).toBe("POST");
     expect(chainRunsContract.startChain.path).toBe("/api/chains/:id/run");
     expect(chainRunsContract.listChainRuns.path).toBe("/api/chains/runs");
+  });
+
+  it("deleteChain's 200 response IS the shared DeleteResponseSchema (T11 dedup, finding #9)", () => {
+    expect(chainsContract.deleteChain.responses[200]).toBe(DeleteResponseSchema);
+  });
+
+  it("startChain's empty body IS the shared EmptyBodySchema (T11 dedup, finding #37)", () => {
+    expect(chainRunsContract.startChain.body).toBe(EmptyBodySchema);
+  });
+});
+
+describe("T11 finding #3 — pipeline id labeling (PipelineIdSchema alias, not branded)", () => {
+  it("ChainStepSchema.pipeline rejects a value that isn't a valid id shape (bare z.string() would have accepted it)", () => {
+    expect(ChainStepSchema.safeParse({ pipeline: "nightly-research" }).success).toBe(true);
+    expect(ChainStepSchema.safeParse({ pipeline: "a/b" }).success).toBe(false);
+    expect(ChainStepSchema.safeParse({ pipeline: "" }).success).toBe(false);
+  });
+
+  it("ChainRunStepSchema.pipeline now rejects a path-separator value that bare z.string().min(1) previously accepted", () => {
+    const base = { index: 0, status: "running" as const };
+    // Previously valid under the old `z.string().min(1)` — now caught by the id shape.
+    expect(ChainRunStepSchema.safeParse({ ...base, pipeline: "a/b" }).success).toBe(false);
+    expect(ChainRunStepSchema.safeParse({ ...base, pipeline: "nightly-research" }).success).toBe(
+      true,
+    );
   });
 });

@@ -1,6 +1,6 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
-import { ErrorSchema } from "../common.schema";
+import { EmptyBodySchema, ErrorSchema } from "../common.schema";
 import { ApprovalSchema } from "./approval.schema";
 
 const c = initContract();
@@ -32,7 +32,7 @@ export const approvalsContract = c.router(
       method: "POST",
       path: "/approvals/:id/approve",
       pathParams: ApprovalIdParam,
-      body: z.object({}).optional(),
+      body: EmptyBodySchema,
       responses: { 200: ApprovalSchema, 404: ErrorSchema, 409: ErrorSchema },
       summary: "Approve a pending approval (resumes the gated run)",
     },
@@ -40,7 +40,7 @@ export const approvalsContract = c.router(
       method: "POST",
       path: "/approvals/:id/reject",
       pathParams: ApprovalIdParam,
-      body: z.object({}).optional(),
+      body: EmptyBodySchema,
       responses: { 200: ApprovalSchema, 404: ErrorSchema, 409: ErrorSchema },
       summary: "Reject a pending approval (terminates the gated run, no action taken)",
     },

@@ -28,7 +28,7 @@ export const TriageVerdictSchema = z
      */
     summary: z.string().max(280).optional(),
     confidence: z.number().min(0).max(1),
-    reason: z.string(),
+    reason: z.string().max(2000),
   })
   .strict();
 export type TriageVerdict = z.infer<typeof TriageVerdictSchema>;
@@ -62,7 +62,7 @@ export const ChannelItemSchema = z.object({
   from: z.string().optional(),
   receivedAt: IsoDateTimeSchema,
   /** Sanitized, length-capped message text (never enters a prompt except enveloped). */
-  text: z.string(),
+  text: z.string().max(4500),
   /** The original, untouched provider payload (kept for the audit record). */
   raw: z.unknown(),
   state: ChannelItemStateSchema,

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { EmptyBodySchema } from "../common.schema";
 import { ApprovalSchema, approvalsContract } from "../index";
 
 describe("approvalsContract", () => {
@@ -8,6 +9,11 @@ describe("approvalsContract", () => {
     expect(approvalsContract.approveApproval.path).toBe("/api/approvals/:id/approve");
     expect(approvalsContract.rejectApproval.path).toBe("/api/approvals/:id/reject");
     expect(approvalsContract.approveApproval.method).toBe("POST");
+  });
+
+  it("approveApproval and rejectApproval's empty bodies ARE the shared EmptyBodySchema (T11 dedup, finding #37)", () => {
+    expect(approvalsContract.approveApproval.body).toBe(EmptyBodySchema);
+    expect(approvalsContract.rejectApproval.body).toBe(EmptyBodySchema);
   });
 });
 

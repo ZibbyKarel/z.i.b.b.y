@@ -1,6 +1,6 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
-import { ErrorSchema } from "../common.schema";
+import { EmptyBodySchema, ErrorSchema } from "../common.schema";
 import { IntegrationIdSchema } from "../integrations/integration.schema";
 import { ChannelItemSchema, ChannelItemStateSchema } from "./channel.schema";
 
@@ -39,7 +39,7 @@ export const channelsContract = c.router(
       method: "POST",
       path: "/channels/items/:id/dismiss",
       pathParams: z.object({ id: z.string().min(1) }),
-      body: z.object({}).optional(),
+      body: EmptyBodySchema,
       responses: { 200: ChannelItemSchema, 404: ErrorSchema },
       summary: "Dismiss a surfaced channel item (operator acknowledged it)",
     },

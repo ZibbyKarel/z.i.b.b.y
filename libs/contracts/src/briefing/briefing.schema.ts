@@ -94,13 +94,13 @@ export const BriefingSchema = z.object({
   engagements: z.array(BriefingEngagementSchema),
   counts: BriefingCountsSchema,
   /** One-line summaries from the past 7 daily vault notes (M3 7-day context). */
-  trend7d: z.array(z.string()).optional(),
+  trend7d: z.array(z.string()).max(50).optional(),
   /** Proposed autonomous rules extracted from 30-day approval patterns (M4). */
-  learnedPatterns: z.array(z.string()).optional(),
+  learnedPatterns: z.array(z.string()).max(50).optional(),
   /** Recurring-manual-work "automate it?" suggestions (M5 GapDetector). */
-  automationGaps: z.array(z.string()).optional(),
+  automationGaps: z.array(z.string()).max(50).optional(),
   /** Weekly "3 app ideas" — interests × trends prototype pitches (M6). */
-  appIdeas: z.array(z.string()).optional(),
+  appIdeas: z.array(z.string()).max(50).optional(),
 });
 export type Briefing = z.infer<typeof BriefingSchema>;
 

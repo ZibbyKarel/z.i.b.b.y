@@ -1,6 +1,6 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
-import { ErrorSchema } from "../common.schema";
+import { EmptyBodySchema, ErrorSchema } from "../common.schema";
 import { SubsystemWithStatusSchema } from "./subsystem.schema";
 
 const c = initContract();
@@ -43,7 +43,7 @@ export const subsystemsContract = c.router(
       path: "/subsystems/:id/seen",
       // Same plain-string pathParams pattern as `getSubsystem` — see its comment.
       pathParams: z.object({ id: z.string() }),
-      body: z.object({}).optional(),
+      body: EmptyBodySchema,
       responses: {
         200: SubsystemWithStatusSchema,
         404: ErrorSchema,

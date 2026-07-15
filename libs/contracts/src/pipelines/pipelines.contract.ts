@@ -1,6 +1,6 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
-import { ErrorSchema } from "../common.schema";
+import { ErrorSchema, RunArtifactSchema } from "../common.schema";
 import { PipelineRunSchema } from "./pipeline-run.schema";
 import { CreatePipelineSchema, PipelineSchema, UpdatePipelineSchema } from "./pipeline.schema";
 
@@ -29,10 +29,7 @@ export const PIPELINE_RUN_ARTIFACTS = [
  * delivery-loop set — it also accepts a name matching the run's own delivered
  * `file` output (see `readArtifact` in `pipeline-runner.service.ts`).
  */
-export const PipelineRunArtifactSchema = z.object({
-  name: z.string(),
-  content: z.string(),
-});
+export const PipelineRunArtifactSchema = RunArtifactSchema;
 export type PipelineRunArtifact = z.infer<typeof PipelineRunArtifactSchema>;
 
 /** CRUD over pipeline definitions (`.pipeline.md` files). Mirrors `agentsContract`. */

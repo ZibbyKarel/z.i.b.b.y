@@ -30,7 +30,7 @@ export type ChatPersona = z.infer<typeof ChatPersonaSchema>;
  * transcript so a dispatch is announced, never invisible (autonomy contract).
  */
 export const ChatToolEventSchema = z.object({
-  name: z.string(),
+  name: z.string().min(1).max(256),
   status: z.enum(["started", "ok", "error"]),
   /** Correlates a `started` event with its later `ok`/`error` counterpart (the
    * `tool_use` block's id) — optional so old JSONL transcripts (no two-phase

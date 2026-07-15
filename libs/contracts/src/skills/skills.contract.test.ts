@@ -15,6 +15,11 @@ describe("skillsContract", () => {
     const keys = Object.keys(skillsContract);
     expect(keys.indexOf("searchSkills")).toBeLessThan(keys.indexOf("getSkill"));
   });
+
+  it("T11 finding #14: search `q` requires at least 1 char (was unbounded z.string())", () => {
+    expect(skillsContract.searchSkills.query.safeParse({ q: "" }).success).toBe(false);
+    expect(skillsContract.searchSkills.query.safeParse({ q: "a" }).success).toBe(true);
+  });
 });
 
 describe("skill schema", () => {

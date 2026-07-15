@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { TaskRunSchema } from "./task-run.schema";
+import { RunArtifactSchema, RunStatusSchema } from "../common.schema";
+import { TaskRunArtifactSchema, TaskRunSchema, TaskRunStatusSchema } from "./task-run.schema";
 
 /** The minimal valid TaskRun — every required (non-optional) field, nothing else. */
 const minimalRun = {
@@ -55,5 +56,26 @@ describe("TaskRunSchema — sessionId (Phase 49)", () => {
   it("round-trips a captured claude session id (enables --resume re-run)", () => {
     const parsed = TaskRunSchema.parse({ ...minimalRun, sessionId: "sess-7" });
     expect(parsed.sessionId).toBe("sess-7");
+  });
+});
+
+describe("T11 finding #28 — TaskRunStatusSchema derives from RunStatusSchema.options", () => {
+  it("includes every shared RunStatus value plus the 5 task-run-only extra states", () => {
+    for (const status of RunStatusSchema.options) {
+      expect(TaskRunStatusSchema.options).toContain(status);
+    }
+    for (const extra of ["scheduled", "parked", "held", "queued", "pending"]) {
+      expect(TaskRunStatusSchema.options).toContain(extra);
+    }
+  });
+
+  it("rejects an unknown status", () => {
+    expect(TaskRunStatusSchema.safeParse("exploded").success).toBe(false);
+  });
+});
+
+describe("T11 finding #29 — TaskRunArtifactSchema is the shared RunArtifactSchema", () => {
+  it("is the shared common.schema export (identity), proving the dedup happened", () => {
+    expect(TaskRunArtifactSchema).toBe(RunArtifactSchema);
   });
 });
