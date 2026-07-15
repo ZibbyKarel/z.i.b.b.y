@@ -1712,6 +1712,13 @@
       "placeholder": "Napiš poznámku pro ZIBBY…",
       "save": "Uložit poznámku",
       "close": "Zavřít"
+    },
+    "task": {
+      "subsystemLabel": "Subsystém",
+      "textLabel": "Úloha",
+      "placeholder": "Zadej práci přirozeným jazykem…",
+      "run": "Spustit úlohu",
+      "close": "Zavřít"
     }
   },
   "subsystems": {

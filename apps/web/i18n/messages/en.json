@@ -1712,6 +1712,13 @@
       "placeholder": "Write a note for ZIBBY…",
       "save": "Save note",
       "close": "Close"
+    },
+    "task": {
+      "subsystemLabel": "Subsystem",
+      "textLabel": "Task",
+      "placeholder": "Describe the work in plain language…",
+      "run": "Run task",
+      "close": "Close"
     }
   },
   "subsystems": {
