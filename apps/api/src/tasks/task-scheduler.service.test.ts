@@ -1032,3 +1032,167 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     });
   });
 });
+
+describe("Task 3b — concurrent terminal handlers must not double-open a PR (finding #7)", () => {
+  let dir: string;
+  let storage: ScheduledTasksStorageService;
+  let agentListener: ((run: AgentRun) => void) | undefined;
+  let service: TaskSchedulerService;
+  let openPrCalls: number;
+
+  const RESET_AT = Date.parse("2026-06-13T04:30:00.000Z");
+
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "task-sched-race-"));
+    storage = new ScheduledTasksStorageService(dir);
+    await storage.onModuleInit();
+    const attachmentStorage = new AttachmentStorageService();
+
+    const agentRunner = {
+      start: vi.fn(async () => agentRun({})),
+      startOrchestrator: vi.fn(async () => agentRun({ agentId: "orchestrator" })),
+      onRunStatus: vi.fn((l: (run: AgentRun) => void) => {
+        agentListener = l;
+        return () => {};
+      }),
+      get: vi.fn(() => agentRun({})),
+      readLog: vi.fn(async () => ({
+        content: "Working…\nPROGRESS 100\nAll checks passed.\n",
+        nextOffset: 0,
+        done: true,
+      })),
+    };
+    const pipelineRunner = {
+      start: vi.fn(async () => pipelineRun({})),
+      onRunStatus: vi.fn(() => () => {}),
+      get: vi.fn(() => pipelineRun({})),
+    };
+    const pipelinesStore = { list: vi.fn(async () => []) };
+    const goalRunner = {
+      start: vi.fn(async () => ({ goalRunId: "goal_1" })),
+      onRunStatus: vi.fn(() => () => {}),
+      get: vi.fn(() => ({ goalRunId: "goal_1", status: "done", iterations: [] })),
+    };
+    const chainRunner = {
+      start: vi.fn(async () => ({ chainRunId: "chain_1", steps: [] })),
+      onRunStatus: vi.fn(() => () => {}),
+      get: vi.fn(() => ({ chainRunId: "chain_1", status: "running", steps: [] })),
+    };
+    const classifier = {
+      classify: vi.fn(async () => ({
+        target: { kind: "agent", id: "writer", name: "Writer" },
+        confidence: 0.9,
+        reason: "match",
+        matchedTerms: [],
+        candidates: [{ kind: "agent", id: "writer", name: "Writer" }],
+      })),
+      classifyWithinSubsystem: vi.fn(async () => {
+        throw new Error("classifyWithinSubsystem should not be called by this describe block");
+      }),
+    };
+    const fakeProjects = {
+      list: async () => [],
+      get: async () => {
+        throw new Error("no project");
+      },
+    };
+    const fakeResolved = { resolveBudget: async (p: { budget?: unknown }) => p.budget };
+    const fakeBudget = {
+      check: vi.fn(async () => ({ ok: true }) as BudgetCheck),
+      countRunning: async () => 0,
+      recordDispatch: async () => {},
+      recordCost: vi.fn(async () => {}),
+    };
+    const fakeApprovals = {
+      register: vi.fn(),
+      requestApproval: async () => ({ id: "appr_1" }),
+      reject: async () => {},
+    };
+    const fakeGates = { floor: async () => [], evaluate: vi.fn(() => ({ decision: "allow" })) };
+    const fakeLimits = {
+      windowExhausted: vi.fn(async () => ({ exhausted: false, resumeAt: null })),
+      resolveResumeAt: vi.fn(async () => RESET_AT),
+    };
+    const activity = { record: vi.fn(async (_input: ActivityInput) => {}) };
+    const systemConfig = fakeSystemConfigStore();
+
+    // The double-open-PR race lives in the guard-read -> handleTerminal -> writeOutcome
+    // sequence. A real `openPr` shells out to git/gh and is far slower than the guard
+    // read either way; widen the window here with an explicit delay so the race is
+    // deterministic under test instead of relying on incidental fs timing.
+    openPrCalls = 0;
+    const taskOutput = {
+      handleTerminal: vi.fn(async () => {
+        openPrCalls += 1;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        return {
+          summary: "PR opened",
+          pr: { url: `https://example.test/pr/${openPrCalls}`, additions: 1, deletions: 0 },
+        };
+      }),
+    };
+
+    service = new TaskSchedulerService(
+      storage,
+      classifier as never,
+      agentRunner as never,
+      pipelineRunner as never,
+      pipelinesStore as never,
+      goalRunner as never,
+      chainRunner as never,
+      fakeLogger as never,
+      fakeTrace as never,
+      activity as never,
+      fakeProjects as never,
+      fakeResolved as never,
+      fakeBudget as never,
+      fakeApprovals as never,
+      fakeGates as never,
+      fakeLimits as never,
+      taskOutput as never,
+      systemConfig,
+      { name: async () => null } as never,
+      attachmentStorage,
+    );
+    service.onModuleInit();
+  });
+
+  afterEach(async () => {
+    service.onModuleDestroy();
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  it("two concurrent terminal handlers for the same task open the PR exactly once", async () => {
+    const result = await service.createTask({
+      text: "ship the fix",
+      title: "Fix",
+      output: { type: "pr" },
+    });
+    if (result.outcome !== "dispatched") throw new Error("expected dispatched");
+    const taskId = result.task.id;
+
+    // Simulate finding #7's two racing terminal-handler entry points: the
+    // `onRunStatus` fast path firing directly, racing a second pass over the same
+    // taskId (e.g. `reconcileOutcome` via the boot sweep or a dispatch-adjacent
+    // reconcile call). Both are fire-and-forget (`void this.writeAgentOutcome(...)`)
+    // from the scheduler's own wiring, so firing the shared listener twice
+    // back-to-back reproduces the same unserialized double-entry into
+    // `writeAgentOutcome` without needing to expose the private method.
+    agentListener?.(agentRun({ status: "done", taskId }));
+    agentListener?.(agentRun({ status: "done", taskId }));
+
+    await vi.waitFor(
+      async () => {
+        const task = await storage.get(taskId);
+        expect(task.outcome?.status).toBe("done");
+      },
+      { timeout: 2000 },
+    );
+    // Let any second, racing write finish settling too before asserting counts.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(openPrCalls).toBe(1);
+    const task = await storage.get(taskId);
+    expect(task.outcome?.pr?.url).toBe("https://example.test/pr/1");
+  });
+});

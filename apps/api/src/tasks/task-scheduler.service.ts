@@ -1123,48 +1123,57 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
 
   private async writeAgentOutcome(taskId: string, run: AgentRun): Promise<void> {
     if (run.status !== "done" && run.status !== "error" && run.status !== "interrupted") return;
-    try {
-      const existing = await this.storage.get(taskId);
-      // Already resolved, or parked at the PR output gate (the gate writes the outcome
-      // on the operator's decision) — don't re-process / re-park.
-      if (existing.outcome || existing.status === "awaiting-output") return;
-      const summary = await this.agentRunSummary(run.runId);
-      // A successful run with a chosen `pr`/`file` output runs its terminal sink first.
-      // A `pr` sink opens the PR immediately (Tier-2, no gate) and hands back the PR
-      // note + structured result to fold into the outcome we write here.
-      let outcomeSummary = summary;
-      let pr: TaskOutcome["pr"];
-      if (run.status === "done") {
-        const delivery = await this.taskOutput.handleTerminal(existing, run, summary);
-        if (delivery?.summary) outcomeSummary = delivery.summary;
-        if (delivery?.pr) pr = delivery.pr;
-      }
-      const status = run.status === "done" ? "done" : "error";
-      const task = await this.storage.writeOutcome(taskId, {
-        status,
-        summary: outcomeSummary,
-        finishedAt: new Date().toISOString(),
-        ...(pr ? { pr } : {}),
-      });
-      this.log.info("task outcome written", { taskId, runRef: run.runId, status: run.status });
-      void this.activity.record({
-        kind: "task-outcome",
-        summary: `task ${status}${outcomeSummary ? `: ${outcomeSummary}` : ""}`,
-        refs: {
-          taskId,
-          runRef: run.runId,
+    // Finding #7 (Critical): the `onRunStatus` fast path and `reconcileOutcome`/
+    // `sweepOutcomes` can both reach this method for the same task before either has
+    // written an outcome. Without serialization, both pass the guard read below and
+    // both call `handleTerminal`, which opens a PR unconditionally — a double-PR side
+    // effect. One lock per call, keyed on the task — NOT hoisted around the sweep
+    // loop in `sweepOutcomes` (that would serialize unrelated tasks against each
+    // other for no reason).
+    await withPathLock(`task:${taskId}`, async () => {
+      try {
+        const existing = await this.storage.get(taskId);
+        // Already resolved, or parked at the PR output gate (the gate writes the outcome
+        // on the operator's decision) — don't re-process / re-park.
+        if (existing.outcome || existing.status === "awaiting-output") return;
+        const summary = await this.agentRunSummary(run.runId);
+        // A successful run with a chosen `pr`/`file` output runs its terminal sink first.
+        // A `pr` sink opens the PR immediately (Tier-2, no gate) and hands back the PR
+        // note + structured result to fold into the outcome we write here.
+        let outcomeSummary = summary;
+        let pr: TaskOutcome["pr"];
+        if (run.status === "done") {
+          const delivery = await this.taskOutput.handleTerminal(existing, run, summary);
+          if (delivery?.summary) outcomeSummary = delivery.summary;
+          if (delivery?.pr) pr = delivery.pr;
+        }
+        const status = run.status === "done" ? "done" : "error";
+        const task = await this.storage.writeOutcome(taskId, {
           status,
-          ...(task.projectId ? { projectId: task.projectId } : {}),
-        },
-      });
-      await this.recordRunCost(task.projectId, taskId, run.runId, "agent", run.costUsd);
-    } catch (error) {
-      // Task record gone or not yet persisted — the reconcile/sweep paths cover it.
-      this.log.debug("task outcome write skipped", {
-        taskId,
-        err: error instanceof Error ? error.message : String(error),
-      });
-    }
+          summary: outcomeSummary,
+          finishedAt: new Date().toISOString(),
+          ...(pr ? { pr } : {}),
+        });
+        this.log.info("task outcome written", { taskId, runRef: run.runId, status: run.status });
+        void this.activity.record({
+          kind: "task-outcome",
+          summary: `task ${status}${outcomeSummary ? `: ${outcomeSummary}` : ""}`,
+          refs: {
+            taskId,
+            runRef: run.runId,
+            status,
+            ...(task.projectId ? { projectId: task.projectId } : {}),
+          },
+        });
+        await this.recordRunCost(task.projectId, taskId, run.runId, "agent", run.costUsd);
+      } catch (error) {
+        // Task record gone or not yet persisted — the reconcile/sweep paths cover it.
+        this.log.debug("task outcome write skipped", {
+          taskId,
+          err: error instanceof Error ? error.message : String(error),
+        });
+      }
+    });
   }
 
   private async writePipelineOutcome(taskId: string, run: PipelineRun): Promise<void> {
@@ -1179,36 +1188,44 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       finishedAt: new Date().toISOString(),
       ...(run.prOutput ? { pr: run.prOutput } : {}),
     };
-    try {
-      const task = await this.storage.writeOutcome(taskId, outcome);
-      this.log.info("task outcome written", {
-        taskId,
-        runRef: run.pipelineRunId,
-        status: run.status,
-      });
-      void this.activity.record({
-        kind: "task-outcome",
-        summary: `task ${outcome.status}: ${outcome.summary}`,
-        refs: {
+    // Finding #7: same `onRunStatus`-fast-path-vs-`reconcileOutcome` race as
+    // `writeAgentOutcome` — see the lock comment there. This writer doesn't open a PR
+    // itself (the pipeline runner already did, before this method ever runs), so the
+    // race here is lower-harm (a duplicate activity line / lost-update on which run's
+    // summary wins), but all four `writeXOutcome` writers lock the same way for
+    // consistency.
+    await withPathLock(`task:${taskId}`, async () => {
+      try {
+        const task = await this.storage.writeOutcome(taskId, outcome);
+        this.log.info("task outcome written", {
           taskId,
           runRef: run.pipelineRunId,
-          status: outcome.status,
-          ...(task.projectId ? { projectId: task.projectId } : {}),
-        },
-      });
-      await this.recordRunCost(
-        task.projectId,
-        taskId,
-        run.pipelineRunId,
-        "pipeline",
-        sumStageCosts(run.stageRuns),
-      );
-    } catch (error) {
-      this.log.debug("task outcome write skipped", {
-        taskId,
-        err: error instanceof Error ? error.message : String(error),
-      });
-    }
+          status: run.status,
+        });
+        void this.activity.record({
+          kind: "task-outcome",
+          summary: `task ${outcome.status}: ${outcome.summary}`,
+          refs: {
+            taskId,
+            runRef: run.pipelineRunId,
+            status: outcome.status,
+            ...(task.projectId ? { projectId: task.projectId } : {}),
+          },
+        });
+        await this.recordRunCost(
+          task.projectId,
+          taskId,
+          run.pipelineRunId,
+          "pipeline",
+          sumStageCosts(run.stageRuns),
+        );
+      } catch (error) {
+        this.log.debug("task outcome write skipped", {
+          taskId,
+          err: error instanceof Error ? error.message : String(error),
+        });
+      }
+    });
   }
 
   private async writeGoalOutcome(taskId: string, run: GoalRun): Promise<void> {
@@ -1219,29 +1236,32 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       summary: `${run.iterations.length} iterations, ${run.status}${verified ? `, verified` : ""}`,
       finishedAt: new Date().toISOString(),
     };
-    try {
-      const task = await this.storage.writeOutcome(taskId, outcome);
-      this.log.info("task outcome written", { taskId, runRef: run.goalRunId, status: run.status });
-      void this.activity.record({
-        kind: "task-outcome",
-        summary: `task ${outcome.status}: ${outcome.summary}`,
-        refs: {
+    // Finding #7 — see the lock comment on `writeAgentOutcome`.
+    await withPathLock(`task:${taskId}`, async () => {
+      try {
+        const task = await this.storage.writeOutcome(taskId, outcome);
+        this.log.info("task outcome written", { taskId, runRef: run.goalRunId, status: run.status });
+        void this.activity.record({
+          kind: "task-outcome",
+          summary: `task ${outcome.status}: ${outcome.summary}`,
+          refs: {
+            taskId,
+            runRef: run.goalRunId,
+            status: outcome.status,
+            ...(task.projectId ? { projectId: task.projectId } : {}),
+          },
+        });
+        // Phase 12: no cost line here — `GoalRunSchema` carries no top-level `costUsd`
+        // (only its per-iteration makers do, tracked by `goal-runner.service.ts`'s own
+        // `recordDispatch`, dispatch-only). Cost lines currently flow only from the
+        // agent/pipeline outcome paths above.
+      } catch (error) {
+        this.log.debug("task outcome write skipped", {
           taskId,
-          runRef: run.goalRunId,
-          status: outcome.status,
-          ...(task.projectId ? { projectId: task.projectId } : {}),
-        },
-      });
-      // Phase 12: no cost line here — `GoalRunSchema` carries no top-level `costUsd`
-      // (only its per-iteration makers do, tracked by `goal-runner.service.ts`'s own
-      // `recordDispatch`, dispatch-only). Cost lines currently flow only from the
-      // agent/pipeline outcome paths above.
-    } catch (error) {
-      this.log.debug("task outcome write skipped", {
-        taskId,
-        err: error instanceof Error ? error.message : String(error),
-      });
-    }
+          err: error instanceof Error ? error.message : String(error),
+        });
+      }
+    });
   }
 
   private async writeChainOutcome(taskId: string, run: ChainRun): Promise<void> {
@@ -1251,32 +1271,35 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       summary: `${run.steps.length} steps, ${run.status}`,
       finishedAt: new Date().toISOString(),
     };
-    try {
-      const task = await this.storage.writeOutcome(taskId, outcome);
-      this.log.info("task outcome written", {
-        taskId,
-        runRef: run.chainRunId,
-        status: run.status,
-      });
-      void this.activity.record({
-        kind: "task-outcome",
-        summary: `task ${outcome.status}: ${outcome.summary}`,
-        refs: {
+    // Finding #7 — see the lock comment on `writeAgentOutcome`.
+    await withPathLock(`task:${taskId}`, async () => {
+      try {
+        const task = await this.storage.writeOutcome(taskId, outcome);
+        this.log.info("task outcome written", {
           taskId,
           runRef: run.chainRunId,
-          status: outcome.status,
-          ...(task.projectId ? { projectId: task.projectId } : {}),
-        },
-      });
-      // Phase 12: no cost line here either — `ChainRunSchema` carries no `costUsd`
-      // (a chain's steps are agent/pipeline runs whose own outcomes already record
-      // their cost individually when THEY reach a terminal state).
-    } catch (error) {
-      this.log.debug("task outcome write skipped", {
-        taskId,
-        err: error instanceof Error ? error.message : String(error),
-      });
-    }
+          status: run.status,
+        });
+        void this.activity.record({
+          kind: "task-outcome",
+          summary: `task ${outcome.status}: ${outcome.summary}`,
+          refs: {
+            taskId,
+            runRef: run.chainRunId,
+            status: outcome.status,
+            ...(task.projectId ? { projectId: task.projectId } : {}),
+          },
+        });
+        // Phase 12: no cost line here either — `ChainRunSchema` carries no `costUsd`
+        // (a chain's steps are agent/pipeline runs whose own outcomes already record
+        // their cost individually when THEY reach a terminal state).
+      } catch (error) {
+        this.log.debug("task outcome write skipped", {
+          taskId,
+          err: error instanceof Error ? error.message : String(error),
+        });
+      }
+    });
   }
 
   /**
