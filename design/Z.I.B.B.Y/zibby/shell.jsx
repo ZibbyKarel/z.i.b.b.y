@@ -426,7 +426,6 @@ const TopBar = ({ accent, nav = 'overview', lang = 'cs', onLang, onVoice, onNewT
       />
     )}
     {onVoice && <VoiceToggleBtn onClick={onVoice} accent={accent} />}
-    <LangSwitch lang={lang} accent={accent} onChange={onLang} />
     <span style={{ width: 1, height: 28, background: Z.line, margin: '0 3px' }} />
     <LimitsTopBar />
   </header>;

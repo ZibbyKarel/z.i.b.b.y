@@ -52,7 +52,6 @@ const VcWorkRow = ({ task, onOpenSys }) => {
 };
 
 const VC_SECTION_META = {
-  work:   { title: 'Pracují',                color: ZT.run,  width: 640 },
   report: { title: 'Hlášení připravena',      color: ZT.ok,   width: 460 },
   wait:   { title: 'Čeká na tvé rozhodnutí',  color: ZT.wait, width: 720 },
 };
@@ -63,14 +62,12 @@ const VcStatusPanelD = ({ section, onOpenSys }) => {
   const entries = Object.entries(VC_SIGNALS).map(([id, sig]) => ({ id, sig, sys: vcSys(id) })).filter((e) => e.sys);
   const needsDecision = entries.filter((e) => e.sig.kind === 'await' || e.sig.kind === 'incident');
   const reports = entries.filter((e) => e.sig.kind === 'report');
-  const count = section === 'wait' ? needsDecision.length : section === 'report' ? reports.length : VC_TASKS.length;
+  const count = section === 'wait' ? needsDecision.length : reports.length;
   let body;
   if (section === 'wait') {
     body = <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>{needsDecision.map((e) => <VcApprovalRow key={e.id} e={e} />)}</div>;
-  } else if (section === 'report') {
-    body = <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{reports.map((e) => <VcApprovalRow key={e.id} e={e} />)}</div>;
   } else {
-    body = <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>{VC_TASKS.map((t) => <VcWorkRow key={t.id} task={t} onOpenSys={onOpenSys} />)}</div>;
+    body = <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{reports.map((e) => <VcApprovalRow key={e.id} e={e} />)}</div>;
   }
   return (
     <div onClick={(e) => e.stopPropagation()} style={{
@@ -125,36 +122,6 @@ const VcSettingsModalD = ({ onClose }) => (
   </div>
 );
 
-// ── Spustit úlohu (klik na toolbar napravo) — jediné místo pro zakládání
-// úlohy; vyber subsystém, pak stejný formulář jako dřív v jeho detailu ────
-const VcRunTaskModal = ({ onClose }) => {
-  const [selId, setSelId] = useStateD2(VC_SUBSYSTEMS[0].id);
-  const sel = vcSys(selId);
-  return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '26px 40px' }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{
-        width: '100%', maxWidth: 620, maxHeight: '100%', display: 'flex', flexDirection: 'column',
-        background: ZT.surface, border: `1px solid ${sel.hue}44`, borderRadius: ZT.rPanel, overflow: 'auto',
-        boxShadow: `0 0 0 1px ${sel.hue}18, 0 44px 110px rgba(0,0,0,0.66)`, animation: 'vcPop .34s ease both',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '20px 24px', borderBottom: `1px solid ${ZT.line}`, background: `linear-gradient(180deg, ${sel.hue}16, transparent)` }}>
-          <span style={{ width: 40, height: 40, borderRadius: ZT.rCtl, flex: '0 0 auto', display: 'grid', placeItems: 'center', background: `${sel.hue}18`, color: sel.hue }}>
-            <Icon name="play" size={17} />
-          </span>
-          <div style={{ flex: 1 }}>
-            <div style={{ ...T.title, fontSize: 17 }}>Spustit úlohu</div>
-            <div style={{ ...T.bodySm, fontSize: 12, marginTop: 2 }}>Vyber subsystém a zadej práci přirozeným jazykem</div>
-          </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: ZT.ink3, padding: 6, display: 'flex' }}><Icon name="x" size={20} /></button>
-        </div>
-        <div style={{ padding: '18px 24px 22px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <VcNewTask key={selId} sys={sel} />
-        </div>
-      </div>
-    </div>
-  );
-};
-
 // ── Status řádek top baru — každá sekce hoverem odhalí jen svůj obsah ─────
 // Plachta "vznikne" ze sekce, na kterou operátor poprvé najel — jen při
 // přechodu zavřeno→otevřeno (roste jako scale z bodu pod sekcí, nikdy se
@@ -167,7 +134,7 @@ const VcStatusLineD = ({ onOpenSys, style }) => {
   const wasOpenRef = useRefD2(false);
   const pillRef = useRefD2(null);
   const wrapRef = useRefD2(null);
-  const secRefs = { work: useRefD2(null), report: useRefD2(null), wait: useRefD2(null) };
+  const secRefs = { report: useRefD2(null), wait: useRefD2(null) };
   const s = VC_CORE.summary;
   const open = !!activeKey;
   const cancelClose = () => clearTimeout(closeTimer.current);
@@ -210,8 +177,8 @@ const VcStatusLineD = ({ onOpenSys, style }) => {
   );
 
   return (
-    <div style={{ position: 'relative', margin: '0 auto' }} onMouseLeave={scheduleClose}>
-      <div ref={pillRef} onMouseEnter={cancelClose} style={vdGlassStyle({
+    <>
+      <div ref={pillRef} onMouseEnter={cancelClose} onMouseLeave={scheduleClose} style={vdGlassStyle({
         display: 'flex', alignItems: 'center', gap: 2, padding: '5px 10px 5px 12px', borderRadius: 999,
         flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', minWidth: 0, cursor: 'default', transition: 'all .15s',
         ...style,
@@ -219,18 +186,19 @@ const VcStatusLineD = ({ onOpenSys, style }) => {
         <ZtDot state="ok" size={6} />
         <span style={{ fontFamily: ZT.mono, fontSize: 11, color: ZT.ink2, marginRight: 4 }}>{VC_CORE.status} ·</span>
         <span style={{ fontFamily: ZT.mono, fontSize: 11 }}>
-          <Section k="work" color={ZT.run}>{s.working} pracují</Section> ·{' '}
           <Section k="report" color={ZT.ok}>{s.report} hlášení</Section> ·{' '}
           <Section k="wait" color={ZT.wait}>{s.await} čekají na tebe</Section>
         </span>
       </div>
-      {open && (
-        <div ref={wrapRef} style={{ position: 'fixed', zIndex: 60 }}
-          onMouseEnter={cancelClose} onMouseLeave={scheduleClose}>
-          <VcStatusPanelD section={activeKey} onOpenSys={onOpenSys} />
-        </div>
-      )}
-    </div>
+      <div style={{ position: 'relative', margin: '0 auto' }} onMouseLeave={scheduleClose}>
+        {open && (
+          <div ref={wrapRef} style={{ position: 'fixed', zIndex: 60 }}
+            onMouseEnter={cancelClose} onMouseLeave={scheduleClose}>
+            <VcStatusPanelD section={activeKey} onOpenSys={onOpenSys} />
+          </div>
+        )}
+      </div>
+    </>
   );
 };
 
@@ -245,7 +213,7 @@ const vdGlassStyle = (extra) => ({
 const VD_TOPBAR_H = 40;
 const VcTopBarD = ({ lang, onLang, onSearch, onOpenSys }) => (
   <header style={{ height: 56, flex: '0 0 56px', display: 'flex', alignItems: 'center', gap: 10, padding: '0 22px', position: 'relative', zIndex: 100, overflow: 'visible' }}>
-    <VcStatusLineD onOpenSys={onOpenSys} style={{ width: 411, height: VD_TOPBAR_H }} />
+    <VcStatusLineD onOpenSys={onOpenSys} style={{ width: 323, height: 38 }} />
     <button onClick={onSearch} title="Hledat napříč ZIBBY (⌘K)" style={vdGlassStyle({
       display: 'flex', alignItems: 'center', gap: 9, width: 190, height: VD_TOPBAR_H, flex: '0 0 auto', padding: '0 12px',
       borderRadius: 999, color: ZT.ink3, cursor: 'pointer',
@@ -262,8 +230,6 @@ const VcTopBarD = ({ lang, onLang, onSearch, onOpenSys }) => (
     <a href="ZIBBY Velin-C.html" title="Velín-C (klasické orby)" style={vdGlassStyle({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, width: VD_TOPBAR_H, height: VD_TOPBAR_H, padding: 0, borderRadius: 999, color: ZT.ink2, textDecoration: 'none', fontFamily: ZT.mono, fontSize: 11 })}>
       <Icon name="grid" size={13} />
     </a>
-    <LangSwitch lang={lang} accent={ZT.accent} onChange={onLang} compact
-      glassStyle={vdGlassStyle({ height: VD_TOPBAR_H, borderRadius: 999, padding: '0 14px' })} />
   </header>
 );
 
@@ -274,7 +240,6 @@ function AppD() {
   const [task, setTask] = useStateD2(null);
   const [taskRect, setTaskRect] = useStateD2(null);
   const [searchOpen, setSearchOpen] = useStateD2(false);
-  const [runTaskOpen, setRunTaskOpen] = useStateD2(false);
 
   const openSys = (id) => { setTask(null); setFocus({ t: 'sys', id }); };
   const openCore = () => { setTask(null); setFocus({ t: 'settings' }); };
@@ -284,13 +249,13 @@ function AppD() {
   useEffectD2(() => {
     const onKey = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setSearchOpen((v) => !v); return; }
-      if (e.key === 'Escape') { if (searchOpen) setSearchOpen(false); else if (runTaskOpen) setRunTaskOpen(false); else closeAll(); }
+      if (e.key === 'Escape') { if (searchOpen) setSearchOpen(false); else closeAll(); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [searchOpen, runTaskOpen]);
+  }, [searchOpen]);
 
-  const overlayed = !!focus || !!task || searchOpen || runTaskOpen;
+  const overlayed = !!focus || !!task || searchOpen;
   const sys = focus && focus.t === 'sys' ? vcSys(focus.id) : null;
 
   return (
@@ -301,11 +266,11 @@ function AppD() {
       <div style={{ position: 'relative', flex: 1, minHeight: 0, zIndex: 1 }}>
         <VcMapD onOpenSys={openSys} onOpenCore={openCore} dimmed={overlayed} bottomReserve={230} />
         <VcTaskRail onOpen={openTask} dimmed={overlayed} />
-        <VcDockGroup dimmed={overlayed} onAddNote={() => {}} onRunTask={() => setRunTaskOpen(true)} />
-        <VcChatDock dimmed={overlayed} />
-        {sys && <VcSubsystemDetail sys={sys} onClose={closeAll} onOpenTask={openTask} orbMode />}
+        <VcDockGroup dimmed={overlayed} />
+        <VcLiveLog dimmed={overlayed} />
+        <VcBottomBar dimmed={overlayed} />
+        {sys && <VcSubsystemDetail key={sys.id} sys={sys} onClose={closeAll} onOpenTask={openTask} orbMode />}
         {focus && focus.t === 'settings' && <VcSettingsModalD onClose={closeAll} />}
-        {runTaskOpen && <VcRunTaskModal onClose={() => setRunTaskOpen(false)} />}
         {task && <VcTaskDetail task={task} originRect={taskRect} onClose={closeAll} onOpenSys={openSys} />}
         <VcSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} onOpenSys={openSys} onOpenTask={openTask} />
       </div>

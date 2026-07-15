@@ -15,7 +15,7 @@ const VC_MENTION_ITEMS = (() => {
   const items = [];
   VC_SUBSYSTEMS.forEach((s) => {
     items.push({ kind: 'subsystem', label: s.name, sub: s.mandate, hue: s.hue, glyph: s.glyph });
-    (s.pipelines || []).forEach((p) => items.push({ kind: 'pipeline', label: p, sub: `pipelina · ${s.name}`, hue: s.hue, glyph: 'flow' }));
+    (s.pipelines || []).forEach((p) => items.push({ kind: 'pipeline', label: p.name, sub: `pipelina · ${s.name}`, hue: s.hue, glyph: 'flow' }));
     (s.crew || []).forEach((c) => {
       const name = typeof c === 'string' ? c : c.name;
       const glyph = typeof c === 'string' ? 'bot' : (c.glyph || 'bot');
@@ -87,7 +87,7 @@ const VC_HANDSFREE_TURNS = [
   { me: 'Dej mi vědět, až Sentinel skončí sken.', zibby: 'Jasně, ozvu se hlasem, jakmile Sentinel dokončí sken závislostí.' },
 ];
 
-const VcChatDock = ({ dimmed, onFocusChange }) => {
+const VcChatDock = ({ onClose, onFocusChange }) => {
   const [msgs, setMsgs] = useStateChat(VC_CHAT_SEED);
   const [val, setVal] = useStateChat('');
   const [focused, setFocused] = useStateChat(false);
@@ -190,17 +190,8 @@ const VcChatDock = ({ dimmed, onFocusChange }) => {
   };
 
   return (
-    <div style={{
-      position: 'absolute', left: '50%', bottom: 26, transform: 'translateX(-50%)',
-      width: 'min(640px, 92%)', zIndex: 12, display: 'flex', flexDirection: 'column', alignItems: 'stretch',
-      opacity: dimmed ? 0.28 : 1, filter: dimmed ? 'blur(2px)' : 'none',
-      pointerEvents: dimmed ? 'none' : 'auto', transition: 'opacity .4s, filter .4s',
-    }}>
-      {mention && <VcMentionMenu query={mention.query} active={mention.active} onPick={pickMention} />}
-      {/* jedno "liquid glass" tělo — vstup je vždy na stejném místě dole,
-          historie se nad ním jen rozbaluje/sbaluje, nic neposkakuje pod kurzorem */}
       <div style={{
-        display: 'flex', flexDirection: 'column', position: 'relative',
+        width: '100%', display: 'flex', flexDirection: 'column', position: 'relative',
         borderRadius: 26,
         background: 'linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02) 40%, rgba(16,21,28,0.5))',
         backdropFilter: 'blur(22px) saturate(180%)',
@@ -210,8 +201,17 @@ const VcChatDock = ({ dimmed, onFocusChange }) => {
           ? `0 0 0 1px ${ZT.accent}30, inset 0 1px 0 rgba(255,255,255,0.16), 0 26px 60px rgba(0,0,0,0.55)`
           : `inset 0 1px 0 rgba(255,255,255,0.13), 0 16px 40px rgba(0,0,0,0.42)`,
         transition: 'border-color .25s, box-shadow .3s',
-        overflow: 'hidden',
       }}>
+        {mention && <VcMentionMenu query={mention.query} active={mention.active} onPick={pickMention} />}
+        {onClose && (
+          <button onClick={onClose} title="Sbalit chat" style={{
+            position: 'absolute', right: 10, top: 10, zIndex: 5,
+            width: 26, height: 26, borderRadius: '50%', display: 'grid', placeItems: 'center',
+            border: `1px solid ${ZT.lineHi}`, cursor: 'pointer', background: 'rgba(16,21,28,0.85)', color: ZT.ink3,
+          }}>
+            <Icon name="x" size={13} />
+          </button>
+        )}
         {msgs.length > 0 && (
           <button onClick={() => { setMsgs([]); setVal(''); setFiles([]); setMention(null); stickToBottom.current = true; }}
             title="Nový chat (smazat historii)" style={{
@@ -303,7 +303,6 @@ const VcChatDock = ({ dimmed, onFocusChange }) => {
           </button>
         </div>
       </div>
-    </div>
   );
 };
 

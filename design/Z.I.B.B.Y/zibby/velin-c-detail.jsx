@@ -107,7 +107,7 @@ const VcNewTask = ({ sys }) => {
     const owner = (typeof sys.crew[0] === 'string') ? sys.crew[0] : sys.crew[0].name;
     const cadLabel = VC_CADENCE.find((c) => c.id === cad).label.toLowerCase();
     const gate = sys.ruleIds && sys.ruleIds.length ? 'gate: čeká na tvé schválení' : 'Tier 2 — provedu a řeknu ti';
-    setAck({ owner, pipeline: sys.pipelines[0], cad: cadLabel, gate, text: t });
+    setAck({ owner, pipeline: sys.pipelines[0].name, cad: cadLabel, gate, text: t });
     setVal('');
   };
   return (
@@ -179,6 +179,27 @@ const VcSubsystemDetail = ({ sys, onClose, onOpenTask, orbMode }) => {
   const sig = VC_SIGNALS[sys.id];
   const extra = VC_DETAIL_EXTRA[sys.id] || { recent: [], artifacts: [] };
   const rules = (sys.ruleIds || []).map((id) => GLOBAL_RULES.find((r) => r.id === id)).filter(Boolean);
+  const [pipelines, setPipelines] = useStateD(sys.pipelines);
+  const [focusId, setFocusId] = useStateD(null);
+  const [draft, setDraft] = useStateD(null); // nová pipelina před uložením
+  const agentNames = vcAgentNames();
+  const focusedSaved = pipelines.find((p) => p.id === focusId) || null;
+  const focused = draft || focusedSaved;
+  const isNewDraft = !!draft;
+  const openPipeline = (id) => { setDraft(null); setFocusId(id); };
+  const openNewPipeline = () => { setDraft({ id: null, name: '', routing: '', phases: [{ agent: agentNames[0] }] }); setFocusId(null); };
+  const closePipeline = () => { setDraft(null); setFocusId(null); };
+  const savePipeline = (p) => {
+    if (isNewDraft) {
+      let id = vcPipeSlug(p.name) || 'pipeline'; if (pipelines.some((x) => x.id === id)) id = id + '-' + Date.now().toString().slice(-4);
+      const final = { ...p, id };
+      setPipelines((prev) => [...prev, final]);
+      setDraft(null); setFocusId(id);
+    } else {
+      setPipelines((prev) => prev.map((x) => x.id === p.id ? p : x));
+    }
+  };
+  const deletePipeline = () => { setPipelines((prev) => prev.filter((x) => x.id !== focusId)); closePipeline(); };
 
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '26px 40px' }}
@@ -219,79 +240,99 @@ const VcSubsystemDetail = ({ sys, onClose, onOpenTask, orbMode }) => {
         </div>
 
         {/* body */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.55fr 1fr', gap: 1, background: ZT.line, overflow: 'auto' }}>
-          {/* hlavní sloupec */}
-          <div style={{ background: ZT.surface, padding: 22, display: 'flex', flexDirection: 'column', gap: 22 }}>
-            {sig && <VcSignal sig={sig} hue={sys.hue} />}
+        <div style={{ display: 'grid', gridTemplateColumns: focused ? '52px 260px minmax(0,1fr)' : '1.55fr 1fr', gap: 1, background: ZT.line, overflow: 'auto' }}>
+          {focused && (
+            <div style={{ background: ZT.surface, padding: '22px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+              <button onClick={closePipeline} title="Zpět na přehled subsystému" style={{ background: 'none', border: `1px solid ${ZT.line}`, borderRadius: ZT.rCtl, color: ZT.ink2, cursor: 'pointer', padding: 8, display: 'flex' }}>
+                <Icon name="chevron" size={14} style={{ transform: 'rotate(180deg)' }} />
+              </button>
+              <span style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', ...T.micro, fontSize: 9.5, letterSpacing: '0.14em', color: ZT.ink3 }}>PŘEHLED SUBSYSTÉMU</span>
+            </div>
+          )}
 
-            <VcBlock title="Co dělá" right={<span style={{ marginLeft: 'auto', ...T.micro, fontSize: 10 }}>{tasks.length ? tasks.length + ' aktivní' : 'v klidu'}</span>}>
-              {tasks.length ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-                  {tasks.map((t) => (
-                    <div key={t.id} onClick={() => onOpenTask(t)} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '11px 13px', borderRadius: ZT.rCtl, background: ZT.bg, border: `1px solid ${ZT.line}`, cursor: 'pointer' }}>
-                      <ZtDot state={t.continuous ? 'run' : 'run'} size={7} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ ...T.bodySm, fontSize: 12.5, color: ZT.ink, fontWeight: 500 }}>{t.title}</div>
-                        <div style={{ ...T.micro, fontSize: 10, marginTop: 2 }}>{t.agent} · {t.phase} · {t.kind}</div>
-                      </div>
-                      {!t.continuous && <span style={{ fontFamily: ZT.mono, fontSize: 11, color: ZT.run, fontWeight: 600 }}>{t.pct}%</span>}
-                      <Icon name="chevron" size={14} style={{ color: ZT.ink3 }} />
+          {/* hlavní sloupec / seznam pipeline při fokusu */}
+          <div style={{ background: ZT.surface, padding: 22, display: 'flex', flexDirection: 'column', gap: 22, overflow: 'auto' }}>
+            {focused ? (
+              <VcPipelineList pipelines={pipelines} hue={sys.hue} tasks={tasks} selectedId={focusId} onSelect={openPipeline} onNew={openNewPipeline} />
+            ) : (
+              <React.Fragment>
+                {sig && <VcSignal sig={sig} hue={sys.hue} />}
+                <VcBlock title="Co dělá" right={<span style={{ marginLeft: 'auto', ...T.micro, fontSize: 10 }}>{tasks.length ? tasks.length + ' aktivní' : 'v klidu'}</span>}>
+                  {tasks.length ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                      {tasks.map((t) => (
+                        <div key={t.id} onClick={() => onOpenTask(t)} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '11px 13px', borderRadius: ZT.rCtl, background: ZT.bg, border: `1px solid ${ZT.line}`, cursor: 'pointer' }}>
+                          <ZtDot state={t.continuous ? 'run' : 'run'} size={7} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ ...T.bodySm, fontSize: 12.5, color: ZT.ink, fontWeight: 500 }}>{t.title}</div>
+                            <div style={{ ...T.micro, fontSize: 10, marginTop: 2 }}>{t.agent} · {t.phase} · {t.kind}</div>
+                          </div>
+                          {!t.continuous && <span style={{ fontFamily: ZT.mono, fontSize: 11, color: ZT.run, fontWeight: 600 }}>{t.pct}%</span>}
+                          <Icon name="chevron" size={14} style={{ color: ZT.ink3 }} />
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              ) : <VcMuted>Právě nemá přiřazenou žádnou aktivní úlohu — poslední práci najdeš níže.</VcMuted>}
-              {extra.recent.length > 0 && (
-                <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <span style={{ ...T.micro, fontSize: 10, marginBottom: 4 }}>NEDÁVNO</span>
-                  {extra.recent.map((r, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 2px' }}>
-                      <ZtDot state={r.state} size={6} />
-                      <span style={{ ...T.bodySm, fontSize: 12, color: ZT.ink2, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title}</span>
-                      <span style={{ ...T.micro, fontSize: 10 }}>{r.note}</span>
+                  ) : <VcMuted>Právě nemá přiřazenou žádnou aktivní úlohu — poslední práci najdeš níže.</VcMuted>}
+                  {extra.recent.length > 0 && (
+                    <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <span style={{ ...T.micro, fontSize: 10, marginBottom: 4 }}>NEDÁVNO</span>
+                      {extra.recent.map((r, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 2px' }}>
+                          <ZtDot state={r.state} size={6} />
+                          <span style={{ ...T.bodySm, fontSize: 12, color: ZT.ink2, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title}</span>
+                          <span style={{ ...T.micro, fontSize: 10 }}>{r.note}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
-            </VcBlock>
+                  )}
+                </VcBlock>
+              </React.Fragment>
+            )}
           </div>
 
-          {/* boční sloupec */}
-          <div style={{ background: ZT.surface, padding: 22, display: 'flex', flexDirection: 'column', gap: 22 }}>
-            <VcBlock title="Posádka" right={<span style={{ marginLeft: 'auto', fontFamily: ZT.mono, fontSize: 11, color: ZT.ink3 }}>{sys.crew.length}</span>}>
-              <VcCrew crew={sys.crew} hue={sys.hue} />
-            </VcBlock>
+          {/* boční sloupec / detail pipeline při fokusu */}
+          <div style={{ background: ZT.surface, padding: 22, display: 'flex', flexDirection: 'column', gap: 22, overflow: 'auto' }}>
+            {focused ? (
+              <VcPipelineDetail pipeline={focused} hue={sys.hue} agentNames={agentNames} activeCount={tasks.filter((t) => t.kind === focused.name).length}
+                isNew={isNewDraft} onChange={isNewDraft ? setDraft : (p) => setPipelines((prev) => prev.map((x) => x.id === p.id ? p : x))}
+                onSave={() => savePipeline(focused)} onDelete={deletePipeline} onCancel={closePipeline} />
+            ) : (
+              <React.Fragment>
+                <VcPipelineList pipelines={pipelines} hue={sys.hue} tasks={tasks} selectedId={null} onSelect={openPipeline} onNew={openNewPipeline} />
 
-            <VcBlock title="Výstupy / artefakty">
-              {extra.artifacts.length ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {extra.artifacts.map((o, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 11px', borderRadius: ZT.rCtl, background: ZT.bg, border: `1px solid ${ZT.line}` }}>
-                      <Icon name={o.icon} size={14} style={{ color: sys.hue, flex: '0 0 auto' }} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontFamily: ZT.mono, fontSize: 11.5, color: ZT.ink }}>{o.label}</div>
-                        <div style={{ ...T.micro, fontSize: 9.5, marginTop: 1 }}>{o.note}</div>
-                      </div>
+                <VcBlock title="Výstupy / artefakty">
+                  {extra.artifacts.length ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {extra.artifacts.map((o, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 11px', borderRadius: ZT.rCtl, background: ZT.bg, border: `1px solid ${ZT.line}` }}>
+                          <Icon name={o.icon} size={14} style={{ color: sys.hue, flex: '0 0 auto' }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontFamily: ZT.mono, fontSize: 11.5, color: ZT.ink }}>{o.label}</div>
+                            <div style={{ ...T.micro, fontSize: 9.5, marginTop: 1 }}>{o.note}</div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              ) : <VcMuted>Zatím bez trvalých artefaktů — {sys.name} pracuje v reálném čase.</VcMuted>}
-            </VcBlock>
+                  ) : <VcMuted>Zatím bez trvalých artefaktů — {sys.name} pracuje v reálném čase.</VcMuted>}
+                </VcBlock>
 
-            <VcBlock title="Pravidla / oprávnění">
-              {rules.length ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {rules.map((r) => (
-                    <div key={r.id} style={{ padding: '9px 11px', borderRadius: ZT.rCtl, background: ZT.bg, border: `1px solid ${ZT.line}` }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Icon name="shield" size={12} style={{ color: r.decision === 'ask' ? ZT.wait : ZT.ink3, flex: '0 0 auto' }} />
-                        <span style={{ ...T.bodySm, fontSize: 12, color: ZT.ink, fontWeight: 500 }}>{r.name}</span>
-                      </div>
-                      <div style={{ ...T.micro, fontSize: 10, marginTop: 4, paddingLeft: 20 }}>{r.decision === 'ask' ? 'vyžaduje tvůj souhlas' : 'jen zaloguje'}</div>
+                <VcBlock title="Pravidla / oprávnění">
+                  {rules.length ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {rules.map((r) => (
+                        <div key={r.id} style={{ padding: '9px 11px', borderRadius: ZT.rCtl, background: ZT.bg, border: `1px solid ${ZT.line}` }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Icon name="shield" size={12} style={{ color: r.decision === 'ask' ? ZT.wait : ZT.ink3, flex: '0 0 auto' }} />
+                            <span style={{ ...T.bodySm, fontSize: 12, color: ZT.ink, fontWeight: 500 }}>{r.name}</span>
+                          </div>
+                          <div style={{ ...T.micro, fontSize: 10, marginTop: 4, paddingLeft: 20 }}>{r.decision === 'ask' ? 'vyžaduje tvůj souhlas' : 'jen zaloguje'}</div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              ) : <VcMuted>Běží v mezích globálních pravidel — žádná zvláštní omezení.</VcMuted>}
-            </VcBlock>
+                  ) : <VcMuted>Běží v mezích globálních pravidel — žádná zvláštní omezení.</VcMuted>}
+                </VcBlock>
+              </React.Fragment>
+            )}
           </div>
         </div>
       </div>

@@ -23,7 +23,12 @@ const VC_SUBSYSTEMS = [
     tagline: 'Architekt → Kodér ⇄ Review → Tester → Dokumentátor',
     state: 'working', active: 2, featured: true,
     crew: ['Architekt', 'Kodér', 'Reviewer', 'Tester', 'Dokumentátor'],
-    pipelines: ['Build Feature', 'Release Train'],
+    pipelines: [
+      { id: 'build-feature', name: 'Build Feature', routing: 'bugfix, feature, refactor → Build Feature',
+        phases: [{ agent: 'Architekt' }, { agent: 'Kodér' }, { agent: 'Tester', loop: { to: 'Kodér', maxRetries: 2 } }, { agent: 'Dokumentátor' }] },
+      { id: 'release-train', name: 'Release Train', routing: 'štítek „release" / milestone hotový → Release Train',
+        phases: [{ agent: 'Dokumentátor' }, { agent: 'Tester' }, { agent: 'Kodér' }] },
+    ],
     ruleIds: ['gr-git-main', 'gr-merge'],
   },
   {
@@ -32,7 +37,8 @@ const VC_SUBSYSTEMS = [
     tagline: 'Reaktivní odpovědi i proaktivní dotazování',
     state: 'idle', active: 0,
     crew: [{ name: 'Vyslanec', glyph: 'link', role: 'formuluje odpovědi a dotazy jménem ZIBBY' }],
-    pipelines: ['Outbound reply'], ruleIds: ['gr-email'],
+    pipelines: [{ id: 'outbound-reply', name: 'Outbound reply', routing: 'zmínka / DM / e-mail vyžadující odpověď → Outbound reply', phases: [{ agent: 'Vyslanec' }] }],
+    ruleIds: ['gr-email'],
   },
   {
     id: 'sentinel', name: 'Sentinel', hue: '#34c9bd', glyph: 'shield',
@@ -40,7 +46,8 @@ const VC_SUBSYSTEMS = [
     tagline: 'CVE závislostí · úniky tajemství',
     state: 'working', active: 1,
     crew: [{ name: 'Strážce', glyph: 'shield', role: 'skenuje závislosti a tajemství' }],
-    pipelines: ['Dependency scan'], ruleIds: ['gr-delete'],
+    pipelines: [{ id: 'dependency-scan', name: 'Dependency scan', routing: 'nová závislost / CVE upozornění → Dependency scan', phases: [{ agent: 'Strážce' }] }],
+    ruleIds: ['gr-delete'],
   },
   {
     id: 'scout', name: 'Scout', hue: '#46cf8b', glyph: 'compass',
@@ -48,7 +55,8 @@ const VC_SUBSYSTEMS = [
     tagline: 'Sbírá zdroje, předává hotový artefakt dál',
     state: 'working', active: 1,
     crew: ['Researcher', 'Architekt'],
-    pipelines: ['Nightly Research'], ruleIds: [],
+    pipelines: [{ id: 'nightly-research', name: 'Nightly Research', routing: 'výzkumný dotaz / „zjisti" → Nightly Research', phases: [{ agent: 'Researcher' }, { agent: 'Architekt' }] }],
+    ruleIds: [],
   },
   {
     id: 'maestro', name: 'Maestro', hue: '#e0a83c', glyph: 'checkpoint',
@@ -56,7 +64,8 @@ const VC_SUBSYSTEMS = [
     tagline: 'Příprava · přehled · operátorem schválené sloučení',
     state: 'await', active: 0,
     crew: ['Dokumentátor', 'Tester', 'Kodér'],
-    pipelines: ['Release Train'], ruleIds: ['gr-merge', 'gr-deploy'],
+    pipelines: [{ id: 'release-train-m', name: 'Release Train', routing: 'milestone dokončen → Release Train', phases: [{ agent: 'Dokumentátor' }, { agent: 'Tester' }, { agent: 'Kodér' }] }],
+    ruleIds: ['gr-merge', 'gr-deploy'],
   },
   {
     id: 'beacon', name: 'Beacon', hue: '#f4785c', glyph: 'warn',
@@ -64,7 +73,8 @@ const VC_SUBSYSTEMS = [
     tagline: 'Vlastní podoba Tier-3 kontraktu surface-and-wait',
     state: 'incident', active: 0,
     crew: [{ name: 'Hlídka', glyph: 'warn', role: 'povyšuje incidenty k tobě a čeká' }],
-    pipelines: ['Escalation'], ruleIds: [],
+    pipelines: [{ id: 'escalation', name: 'Escalation', routing: 'incident Tier-3 / bez automatického řešení → Escalation', phases: [{ agent: 'Hlídka' }] }],
+    ruleIds: [],
   },
   {
     id: 'puls', name: 'Puls', hue: '#f2749e', glyph: 'pulse',
@@ -72,7 +82,8 @@ const VC_SUBSYSTEMS = [
     tagline: 'Sleduje kanály, kalendář a CI/CD',
     state: 'working', active: 1,
     crew: [{ name: 'Snímač', glyph: 'pulse', role: 'nepřetržitě čte kanály a CI' }],
-    pipelines: ['Heartbeat'], ruleIds: [],
+    pipelines: [{ id: 'heartbeat', name: 'Heartbeat', routing: 'nepřetržitá — bez routování, běží stále', phases: [{ agent: 'Snímač' }] }],
+    ruleIds: [],
   },
   {
     id: 'loom', name: 'Loom', hue: '#b07cff', glyph: 'search',
@@ -80,7 +91,8 @@ const VC_SUBSYSTEMS = [
     tagline: 'Nálezy proaktivně předává Forge',
     state: 'report', active: 0,
     crew: ['Reviewer', 'Architekt'],
-    pipelines: ['Codebase watch'], ruleIds: [],
+    pipelines: [{ id: 'codebase-watch', name: 'Codebase watch', routing: 'pravidelný scan architektury → Codebase watch', phases: [{ agent: 'Reviewer' }, { agent: 'Architekt' }] }],
+    ruleIds: [],
   },
 ];
 const vcSys = (id) => VC_SUBSYSTEMS.find((s) => s.id === id);
@@ -184,6 +196,56 @@ const VC_TASKS = [
 ];
 const vcTasksFor = (sysId) => VC_TASKS.filter((t) => t.sys === sysId);
 
+// ── Dokončené úlohy — archiv, přístupný z doku napravo ────────────────────
+const VC_TASKS_DONE = [
+  {
+    id: 'tk-forge-onboarding', sys: 'forge', title: 'feat/onboarding-v2', done: true, finishedAt: 'včera 18:42',
+    kind: 'Build Feature', agent: 'Dokumentátor', pct: 100, phase: 'Hotovo', started: 'včera 16:10',
+    proj: 'auth-svc', risk: null,
+    phases: [
+      { name: 'Architekt', produces: 'design.md', state: 'ok', time: '5 min', cost: 0.15, log: [{ t: '16:10', lvl: 'ok', text: 'design.md hotov' }] },
+      { name: 'Kodér', produces: 'branch feat/*', state: 'ok', time: '22 min', cost: 0.61, log: [{ t: '16:32', lvl: 'ok', text: 'Implementace hotová · +340 −52' }] },
+      { name: 'Tester', produces: 'test-report.md', state: 'ok', time: '11 min', cost: 0.28, log: [{ t: '16:43', lvl: 'ok', text: '64/64 testů zelených' }] },
+      { name: 'Dokumentátor', produces: 'README.md', state: 'ok', time: '4 min', cost: 0.09, log: [{ t: '16:47', lvl: 'ok', text: 'README aktualizováno, CHANGELOG doplněn' }] },
+    ],
+    input: { prompt: 'Přeprac onboarding flow — sjednotit kroky, přidat progress indikátor.', files: ['task.md'] },
+    output: { kind: 'pr', pr: {
+      number: 138, title: 'feat: onboarding v2', branch: 'feat/onboarding-v2', base: 'main',
+      diff: '+340 −52 · 9 souborů', ci: 'ok', ciNote: '64/64 testů zelených',
+      desc: 'Sjednocený onboarding flow s progress indikátorem, sloučeno do main.',
+    } },
+  },
+  {
+    id: 'tk-sentinel-secrets', sys: 'sentinel', title: 'Sken tajemství · home-ops', done: true, finishedAt: 'včera 09:15',
+    kind: 'Dependency scan', agent: 'Strážce', pct: 100, phase: 'Hotovo', started: 'včera 09:02',
+    proj: 'home-ops', risk: null,
+    phases: [
+      { name: 'Sken závislostí', produces: 'cve-report.md', state: 'ok', time: '4 min', cost: 0.07, log: [{ t: '09:06', lvl: 'ok', text: '0 nálezů' }] },
+      { name: 'Sken tajemství', produces: 'secrets-report.md', state: 'ok', time: '5 min', cost: 0.06, log: [{ t: '09:11', lvl: 'ok', text: 'Žádný únik nenalezen' }] },
+    ],
+    input: { prompt: 'Pravidelný sken závislostí a tajemství.', files: [] },
+    output: { kind: 'md', file: 'secrets-report.md', note: 'čisté · 0 nálezů', content:
+      '# Secrets report — home-ops\n\nPrověřeno 46 souborů v diffu za posledních 24 h. Žádný únik tajemství nenalezen.' },
+  },
+  {
+    id: 'tk-maestro-r2026-5', sys: 'maestro', title: 'Release r2026.5', done: true, finishedAt: 'předevčírem 20:03',
+    kind: 'Release Train', agent: 'Dokumentátor', pct: 100, phase: 'Hotovo', started: 'předevčírem 18:00',
+    proj: 'auth-svc', risk: null,
+    phases: [
+      { name: 'Příprava', produces: 'changelog.md', state: 'ok', time: '9 min', cost: 0.11, log: [{ t: '18:09', lvl: 'ok', text: 'Changelog sestaven' }] },
+      { name: 'Přehled', produces: 'release-notes.md', state: 'ok', time: '6 min', cost: 0.08, log: [{ t: '18:15', lvl: 'ok', text: 'Release notes hotové' }] },
+      { name: 'Sloučení', produces: 'main', state: 'ok', time: '2 min', cost: 0.02, log: [{ t: '20:03', lvl: 'ok', text: 'Schváleno operátorem, sloučeno do main' }] },
+    ],
+    input: { prompt: 'Připrav a vydej Release Train r2026.5.', files: [] },
+    output: { kind: 'pr', pr: {
+      number: 137, title: 'release: r2026.5', branch: 'release/r2026.5', base: 'main',
+      diff: '+520 −88 · 12 souborů', ci: 'ok', ciNote: 'smoke zelené',
+      desc: 'Release r2026.5 — schváleno operátorem a sloučeno.',
+    } },
+  },
+];
+const vcTaskDoneRow = (t) => ({ label: t.title, sub: `${vcSys(t.sys).name} · ${t.finishedAt}`, glyph: 'ok', hue: vcSys(t.sys).hue, taskObj: t });
+
 // ── Hlášení / položky čekající v subsystémech (report / await / incident) ─
 const VC_SIGNALS = {
   loom: {
@@ -247,5 +309,5 @@ const VC_CADENCE = [
 ];
 
 Object.assign(window, {
-  VC_STATE, VC_SUBSYSTEMS, vcSys, VC_TASKS, vcTasksFor, VC_SIGNALS, VC_CORE, VC_CADENCE,
+  VC_STATE, VC_SUBSYSTEMS, vcSys, VC_TASKS, vcTasksFor, VC_TASKS_DONE, vcTaskDoneRow, VC_SIGNALS, VC_CORE, VC_CADENCE,
 });

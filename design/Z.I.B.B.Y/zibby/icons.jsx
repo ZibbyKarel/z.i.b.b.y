@@ -51,6 +51,8 @@ const Icon = ({ name, size = 18, stroke = 1.6, style }) => {
     paperclip: <path d="M7.5 13.8l7-7a3.3 3.3 0 0 1 4.7 4.7l-8 8a5 5 0 0 1-7-7L12 4.7" {...p} />,
     building: <><rect x="4" y="3" width="11" height="18" rx="1" {...p} /><path d="M15 9h5v12h-5" {...p} /><path d="M7.5 7h.01M11.5 7h.01M7.5 11h.01M11.5 11h.01M7.5 15h.01M11.5 15h.01" {...p} /></>,
     terminal: <><rect x="3" y="4" width="18" height="16" rx="2" {...p} /><path d="M7 9l3.5 3-3.5 3M13 15h4" {...p} /></>,
+    archive: <><rect x="3" y="4" width="18" height="5" rx="1" {...p} /><path d="M5 9v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9" {...p} /><path d="M10 13h4" {...p} /></>,
+    chat: <><path d="M4 5h16v11H9l-5 4z" {...p} /><path d="M8 9h8M8 12h5" {...p} /></>,
   };
   return <svg viewBox="0 0 24 24" width={size} height={size} style={{ display: 'block', flex: '0 0 auto', ...style }}>{paths[name] || null}</svg>;
 };

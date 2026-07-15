@@ -56,7 +56,7 @@ const VdDockBtn = ({ item, active, onEnter }) => (
   </button>
 );
 
-const VdDockPanel = ({ meta, items }) => (
+const VdDockPanel = ({ meta, items, onPick }) => (
   <div style={{
     width: 280, borderRadius: ZT.rPanel, overflow: 'hidden', animation: 'ztFadeUp .16s ease both',
     background: 'linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02) 40%, rgba(16,21,28,0.6))',
@@ -71,14 +71,20 @@ const VdDockPanel = ({ meta, items }) => (
     <div style={{ display: 'flex', flexDirection: 'column', maxHeight: 300, overflow: 'auto' }}>
       {items.length === 0 && <div style={{ ...T.micro, padding: '14px' }}>Zatím nic k zobrazení.</div>}
       {items.map((it, i) => (
-        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', borderTop: i === 0 ? 'none' : `1px solid ${ZT.line}` }}>
-          <span style={{ width: 24, height: 24, borderRadius: ZT.rCtl, flex: '0 0 auto', display: 'grid', placeItems: 'center', background: `${ZT.accent}18`, color: ZT.accent }}>
+        <div key={i} onClick={() => it.taskObj && onPick && onPick(it.taskObj)} style={{
+          display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', borderTop: i === 0 ? 'none' : `1px solid ${ZT.line}`,
+          cursor: it.taskObj ? 'pointer' : 'default', transition: 'background .12s',
+        }}
+          onMouseEnter={(e) => { if (it.taskObj) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+          <span style={{ width: 24, height: 24, borderRadius: ZT.rCtl, flex: '0 0 auto', display: 'grid', placeItems: 'center', background: `${it.hue || ZT.accent}18`, color: it.hue || ZT.accent }}>
             <Icon name={it.glyph || meta.glyph} size={12} />
           </span>
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontFamily: ZT.sans, fontSize: 12.5, fontWeight: 500, color: ZT.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.label}</div>
             {it.sub && <div style={{ fontFamily: ZT.sans, fontSize: 11, color: ZT.ink3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.sub}</div>}
           </div>
+          {it.taskObj && <Icon name="chevron" size={13} style={{ color: ZT.ink3, flex: '0 0 auto' }} />}
         </div>
       ))}
     </div>
@@ -114,38 +120,12 @@ const VcDock = ({ dimmed }) => {
   );
 };
 
-// ── Druhý plovoucí toolbar napravo, nad hlavním dokem — "přidat poznámku" a
-// "spustit úlohu"; stejný sklený styl jako VcDock. ────────────────────────
-const VcNoteToolbarD = ({ dimmed, onAddNote, onRunTask }) => (
-  <div style={{
-    display: 'flex', flexDirection: 'column', gap: 6, padding: '7px', borderRadius: 22,
-    background: 'linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02) 40%, rgba(16,21,28,0.5))',
-    backdropFilter: 'blur(22px) saturate(180%)', WebkitBackdropFilter: 'blur(22px) saturate(180%)',
-    border: '1px solid rgba(255,255,255,0.12)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.13), 0 16px 40px rgba(0,0,0,0.42)',
-    opacity: dimmed ? 0.3 : 1, filter: dimmed ? 'blur(2.5px)' : 'none',
-    pointerEvents: dimmed ? 'none' : 'auto', transition: 'opacity .4s, filter .4s',
-  }}>
-    <button onClick={onRunTask} title="Spustit úlohu" style={{
-      width: 38, height: 38, borderRadius: 12, display: 'grid', placeItems: 'center', cursor: 'pointer',
-      border: '1px solid transparent', background: 'transparent', color: ZT.ink2, transition: 'all .16s',
-    }}>
-      <Icon name="play" size={16} />
-    </button>
-    <button onClick={onAddNote} title="Přidat poznámku" style={{
-      width: 38, height: 38, borderRadius: 12, display: 'grid', placeItems: 'center', cursor: 'pointer',
-      border: '1px solid transparent', background: 'transparent', color: ZT.ink2, transition: 'all .16s',
-    }}>
-      <Icon name="edit" size={17} />
-    </button>
-  </div>
-);
-
-// ── Skupina obou doků napravo — svislý sloupec, celé zarovnané na střed ───
-const VcDockGroup = ({ dimmed, onAddNote, onRunTask }) => (
-  <div style={{ position: 'absolute', right: 24, top: '50%', transform: 'translateY(-50%)', zIndex: 14, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 14 }}>
-    <VcNoteToolbarD dimmed={dimmed} onAddNote={onAddNote} onRunTask={onRunTask} />
+// ── Dok napravo, přesunutý nahoru pod topbar (uvolněný střed napravo teď
+// patří živému logu — viz velin-d-log.jsx). ───────────────────────────────
+const VcDockGroup = ({ dimmed }) => (
+  <div style={{ position: 'absolute', right: 24, top: 68, zIndex: 14, display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
     <VcDock dimmed={dimmed} />
   </div>
 );
 
-Object.assign(window, { VcDock, VcNoteToolbarD, VcDockGroup, VD_DOCK_ITEMS, VD_SETTINGS_ITEM, VD_COMPANIES, VD_COMMANDS, VD_SETTINGS_PANEL_ITEMS, vdDockPanelFor });
+Object.assign(window, { VcDock, VcDockGroup, VD_DOCK_ITEMS, VD_SETTINGS_ITEM, VD_COMPANIES, VD_COMMANDS, VD_SETTINGS_PANEL_ITEMS, vdDockPanelFor });

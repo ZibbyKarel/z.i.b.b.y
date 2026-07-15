@@ -11,7 +11,7 @@ const vdBuildSearchIndex = () => {
   const items = [];
   VC_SUBSYSTEMS.forEach((s) => {
     items.push({ kind: 'subsystem', label: s.name, sub: s.mandate, glyph: s.glyph, hue: s.hue, sysId: s.id });
-    (s.pipelines || []).forEach((p) => items.push({ kind: 'pipeline', label: p, sub: `pipelina · ${s.name}`, glyph: 'flow', hue: s.hue, sysId: s.id }));
+    (s.pipelines || []).forEach((p) => items.push({ kind: 'pipeline', label: p.name, sub: `pipelina · ${s.name}`, glyph: 'flow', hue: s.hue, sysId: s.id }));
     (s.crew || []).forEach((c) => {
       const name = typeof c === 'string' ? c : c.name;
       const glyph = typeof c === 'string' ? 'bot' : (c.glyph || 'bot');
@@ -20,6 +20,7 @@ const vdBuildSearchIndex = () => {
   });
   VC_PROJECTS.forEach((p) => items.push({ kind: 'project', label: p, sub: 'projekt', glyph: 'doc', hue: ZT.ink3 }));
   VC_TASKS.forEach((t) => items.push({ kind: 'task', label: t.title, sub: `úloha · ${t.kind}`, glyph: 'bolt', hue: ZT.run, taskObj: t }));
+  VC_TASKS_DONE.forEach((t) => items.push({ kind: 'task', label: t.title, sub: `dokončená úloha · ${vcSys(t.sys).name} · ${t.finishedAt}`, glyph: 'ok', hue: ZT.ok, taskObj: t }));
   (window.SKILLS || []).forEach((s) => items.push({ kind: 'skill', label: s.name, sub: s.desc, glyph: s.glyph, hue: ZT.accent }));
   (window.INTEGRATIONS || []).filter((i) => i.kind === 'mcp').forEach((i) => items.push({ kind: 'mcp', label: i.name, sub: i.desc, glyph: i.glyph || 'plug', hue: '#56c4d6' }));
   (window.VAULT_NODES || []).forEach((v) => items.push({ kind: 'memory', label: v.label, sub: (v.body || '').split('\n').filter(Boolean).find((l) => !l.startsWith('#')) || '', glyph: 'brain', hue: '#b07cff' }));

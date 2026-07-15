@@ -29,10 +29,10 @@ const VcTaskCard = ({ task, onOpen, index }) => {
       </div>
       <div style={{ ...T.body, fontSize: 13.5, fontWeight: 500, color: ZT.ink, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.title}</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: task.continuous ? 0 : 10 }}>
-        <Icon name={task.continuous ? 'pulse' : 'run'} size={12} style={{ color: task.continuous ? ZT.ok : ZT.run }} />
-        <span style={{ ...T.micro, fontSize: 10.5 }}>{task.agent} · {task.phase}</span>
+        <Icon name={task.done ? 'ok' : task.continuous ? 'pulse' : 'run'} size={12} style={{ color: task.done || task.continuous ? ZT.ok : ZT.run }} />
+        <span style={{ ...T.micro, fontSize: 10.5 }}>{task.agent} · {task.done ? task.finishedAt : task.phase}</span>
       </div>
-      {!task.continuous && (
+      {!task.continuous && !task.done && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
           <div style={{ flex: 1 }}><ZtMeter pct={task.pct} color={ZT.run} h={4} /></div>
           <span style={{ fontFamily: ZT.mono, fontSize: 10.5, color: ZT.run, fontWeight: 600 }}>{task.pct}%</span>
@@ -50,11 +50,6 @@ const VcTaskRail = ({ onOpen, dimmed }) => (
     opacity: dimmed ? 0.3 : 1, filter: dimmed ? 'blur(2.5px)' : 'none',
     transition: 'opacity .4s, filter .4s', pointerEvents: dimmed ? 'none' : 'auto',
   }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0 2px 2px' }}>
-      <span className="zt-anim" style={{ width: 7, height: 7, borderRadius: '50%', background: ZT.run, boxShadow: `0 0 8px ${ZT.run}`, animation: 'ztLive 2s ease-in-out infinite' }} />
-      <span style={T.label}>Běžící úlohy</span>
-      <span style={{ marginLeft: 'auto', fontFamily: ZT.mono, fontSize: 12, fontWeight: 700, color: ZT.ink2 }}>{VC_TASKS.length}</span>
-    </div>
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, overflow: 'auto', paddingRight: 4, paddingBottom: 4 }}>
       {VC_TASKS.map((t, i) => <VcTaskCard key={t.id} task={t} onOpen={onOpen} index={i} />)}
     </div>
@@ -396,4 +391,4 @@ const VcTaskDetail = ({ task, originRect, onClose, onOpenSys }) => {
   );
 };
 
-Object.assign(window, { VcTaskCard, VcTaskRail, VcTaskDetail, VcPhaseRail });
+Object.assign(window, { VcTaskCard, VcTaskRail, VcTaskDetail, VcPhaseRail, VcTaskInput, VcMdView, VcPrBlock, VcMdOutputBlock, VcExpandOverlay, vcLastRunnable, VC_LOG_C });

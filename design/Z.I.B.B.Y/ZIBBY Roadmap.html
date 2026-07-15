@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ZIBBY — Roadmap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#05070a;height:100%}
+#root{height:100vh}
+a{color:#5b8def}
+a:hover{color:#7aa5f8}
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="zibby/data.jsx"></script>
+<script type="text/babel" src="zibby/icons.jsx"></script>
+<script type="text/babel" src="zibby/shell.jsx"></script>
+<script type="text/babel" src="zibby/frame.jsx"></script>
+</head>
+<body>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 140"><rect width="200" height="140" fill="#0b0e13"/><rect x="30" y="30" width="50" height="80" rx="4" fill="#5b8def"/><rect x="90" y="30" width="50" height="50" rx="4" fill="#3fcf8e"/><rect x="150" y="30" width="20" height="30" rx="4" fill="#f0b429"/></svg></template>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const SYS = {
+  herald:   { name: 'Herald',   hue: '#56c4d6', glyph: 'chat' },
+  forge:    { name: 'Forge',    hue: '#5b8def', glyph: 'code' },
+  maestro:  { name: 'Maestro',  hue: '#f0883e', glyph: 'checkpoint' },
+  loom:     { name: 'Loom',     hue: '#b07cff', glyph: 'brain' },
+  sentinel: { name: 'Sentinel', hue: '#7fd98a', glyph: 'shield' },
+};
+
+// epik = nápad rozpracovaný na tasky. Task.status: todo | in_progress | done
+// blockedBy: [taskId] — task nelze pustit do práce, dokud dependence nejsou done
+const EPICS = [
+  { id: 'e1', title: 'Vícejazyčné odpovědi', sys: SYS.herald,
+    desc: 'Herald odpovídá na support dotazy v jazyce, ve kterém přišly.',
+    tasks: [
+      { id: 't1', name: 'Návrh promptu',       agent: 'spec-skeleton', glyph: 'doc',    status: 'done', pr: 142 },
+      { id: 't2', name: 'Detekce jazyka',      agent: 'ci-doctor',     glyph: 'shield', status: 'done', pr: 145 },
+      { id: 't3', name: 'Lokalizace šablon',   agent: 'pr-prereview',  glyph: 'check',  status: 'in_progress', pr: 149 },
+      { id: 't4', name: 'Rollout za flagem',   agent: 'changelog-gen', glyph: 'doc',    status: 'todo', blockedBy: ['t3'] },
+    ] },
+  { id: 'e2', title: 'Automatický changelog do Slacku', sys: SYS.maestro,
+    desc: 'Po každém release sestaví a pošle shrnutí do #dev-general.',
+    tasks: [
+      { id: 't5', name: 'Sběr merge commitů', agent: 'changelog-gen', glyph: 'doc',   status: 'done', pr: 133 },
+      { id: 't6', name: 'Formát zprávy',      agent: 'standup-gen',   glyph: 'spark', status: 'in_progress' },
+      { id: 't7', name: 'Napojení na Slack',  agent: 'pr-prereview',  glyph: 'check', status: 'todo', blockedBy: ['t6'] },
+      { id: 't8', name: 'Testovací kanál',    agent: 'ci-doctor',     glyph: 'shield',status: 'todo' },
+    ] },
+  { id: 'e3', title: 'Rate-limiting v2', sys: SYS.forge,
+    desc: 'Sliding-window limiter místo pevných oken, per-klíč konfigurace.',
+    tasks: [
+      { id: 't9',  name: 'Spec & rozhraní', agent: 'spec-skeleton', glyph: 'doc',    status: 'done', pr: 151 },
+      { id: 't10', name: 'Implementace',    agent: 'ci-doctor',     glyph: 'shield', status: 'todo', blocked: true, blockedNote: 'čeká na review specifikace' },
+      { id: 't11', name: 'Zátěžové testy',  agent: 'pr-prereview',  glyph: 'check',  status: 'todo', blockedBy: ['t10'] },
+    ] },
+  { id: 'e4', title: 'Cyklické závislosti — auto-detekce', sys: SYS.loom, tasks: [],
+    desc: 'Loom sám navrhne refaktoring, když najde cyklus mezi moduly.' },
+  { id: 'e5', title: 'Sken tajemství při každém PR', sys: SYS.sentinel, tasks: [],
+    desc: 'Spustit sentinel sken jako povinnou CI bránu, ne jen nightly.' },
+  { id: 'e6', title: 'JWT refresh bez výpadku', sys: SYS.forge,
+    desc: 'Dokončeno a nasazeno — refresh token rotace bez re-loginu.',
+    tasks: [
+      { id: 't12', name: 'Návrh rotace',    agent: 'spec-skeleton', glyph: 'doc',    status: 'done', pr: 118 },
+      { id: 't13', name: 'Implementace',    agent: 'ci-doctor',     glyph: 'shield', status: 'done', pr: 121 },
+      { id: 't14', name: 'Migrace klientů', agent: 'pr-prereview',  glyph: 'check',  status: 'done', pr: 124 },
+    ] },
+];
+
+const COLS = [
+  { key: 'todo',        label: 'To Do' },
+  { key: 'in_progress', label: 'In Progress' },
+  { key: 'done',        label: 'Done' },
+];
+
+const epicProgress = (epic) => {
+  const total = epic.tasks.length;
+  const done = epic.tasks.filter(t => t.status === 'done').length;
+  return { total, done };
+};
+const epicStatus = (epic) => {
+  const { total, done } = epicProgress(epic);
+  if (!total) return 'idea';
+  if (done === total) return 'done';
+  if (epic.tasks.some(t => t.blocked)) return 'blocked';
+  if (done > 0 || epic.tasks.some(t => t.status === 'in_progress')) return 'active';
+  return 'todo';
+};
+const EPIC_META = {
+  idea:    { c: Z.inkFaint, label: 'Nápad' },
+  todo:    { c: Z.inkFaint, label: 'Ve frontě' },
+  active:  { c: Z.run,      label: 'Probíhá' },
+  blocked: { c: Z.bad,      label: 'Blokováno' },
+  done:    { c: Z.ok,       label: 'Hotovo' },
+};
+
+const SysTag = ({ sys }) => (
+  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: Z.mono, fontSize: 10.5, fontWeight: 600, color: sys.hue }}>
+    <Icon name={sys.glyph} size={12} /> {sys.name}
+  </span>
+);
+
+const StatusPill = ({ status }) => {
+  const s = EPIC_META[status];
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: Z.mono, fontSize: 9.5, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '3px 9px', borderRadius: 2, color: s.c, background: `${s.c}1a`, border: `1px solid ${s.c}55` }}>
+      <span style={{ width: 5, height: 5, borderRadius: '50%', background: s.c }} /> {s.label}
+    </span>
+  );
+};
+
+// ── Screen 1: Roadmap — vertikální seznam epiků ────────────────────────────
+const EpicRow = ({ epic, onOpen }) => {
+  const st = epicStatus(epic);
+  const { total, done } = epicProgress(epic);
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  return (
+    <div onClick={() => onOpen(epic.id)} style={{
+      display: 'flex', alignItems: 'center', gap: 18, padding: '16px 18px', cursor: 'pointer',
+      background: Z.panel, border: `1px solid ${Z.line}`, borderRadius: Z.rPanel,
+    }}>
+      <div style={{ flex: '0 0 auto', width: 30, height: 30, borderRadius: '50%', display: 'grid', placeItems: 'center', color: epic.sys.hue, border: `1.5px solid ${epic.sys.hue}55`, background: `${epic.sys.hue}14` }}>
+        <Icon name={epic.sys.glyph} size={15} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          <span style={{ fontFamily: Z.sans, fontSize: 15, fontWeight: 600, color: Z.ink, flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{epic.title}</span>
+          <SysTag sys={epic.sys} />
+        </div>
+        <div style={{ fontFamily: Z.sans, fontSize: 12, color: Z.inkDim, marginTop: 4, lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{epic.desc}</div>
+      </div>
+      <div style={{ flex: '0 0 auto', width: 150 }}>
+        {total > 0 ? (
+          <React.Fragment>
+            <Bar pct={pct} color={epic.sys.hue} h={5} />
+            <Mono style={{ fontSize: 10, color: Z.inkFaint, display: 'block', marginTop: 6, textAlign: 'right' }}>{done}/{total} tasků</Mono>
+          </React.Fragment>
+        ) : (
+          <Mono style={{ fontSize: 10, color: Z.inkFaint, fontStyle: 'italic', display: 'block', textAlign: 'right' }}>nerozfázováno</Mono>
+        )}
+      </div>
+      <div style={{ flex: '0 0 auto', width: 108 }}><StatusPill status={st} /></div>
+      <Icon name="arrow" size={15} style={{ color: Z.inkFaint, flex: '0 0 auto' }} />
+    </div>
+  );
+};
+
+const RoadmapScreen = ({ onOpen }) => (
+  <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20 }}>
+      <div>
+        <div style={{ fontFamily: Z.sans, fontSize: 22, fontWeight: 600, color: Z.ink }}>Roadmap</div>
+        <div style={{ fontFamily: Z.sans, fontSize: 13, color: Z.inkDim, marginTop: 4 }}>High-level nápady projektu. Otevřením epiku uvidíš rozpad na tasky.</div>
+      </div>
+      <RunBtn accent={Z.work} label="Nový epik" icon="plus" />
+    </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 980 }}>
+      {EPICS.map(e => <EpicRow key={e.id} epic={e} onOpen={onOpen} />)}
+    </div>
+  </div>
+);
+
+// ── Screen 2: Epic detail — jednoduchý kanban ──────────────────────────────
+const TaskCard = ({ task, allTasks }) => {
+  const isBlocked = task.blocked || (task.blockedBy && task.blockedBy.some(id => allTasks.find(t => t.id === id)?.status !== 'done'));
+  const blockingNames = task.blockedBy ? task.blockedBy.map(id => allTasks.find(t => t.id === id)?.name).filter(Boolean) : [];
+  const accent = task.status === 'done' ? Z.ok : task.status === 'in_progress' ? Z.run : (isBlocked ? Z.bad : Z.inkFaint);
+  return (
+    <div style={{ background: Z.bg1, border: `1px solid ${accent}44`, borderRadius: 6, padding: '11px 13px', display: 'flex', flexDirection: 'column', gap: 7 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+        <Icon name={task.glyph} size={13} style={{ color: accent, flex: '0 0 auto' }} />
+        <Mono style={{ fontSize: 10.5, fontWeight: 700, color: Z.ink }}>{task.agent}</Mono>
+        {isBlocked && <Icon name="lock" size={11} style={{ color: Z.bad, marginLeft: 'auto' }} />}
+      </div>
+      <div style={{ fontFamily: Z.sans, fontSize: 12.5, color: Z.ink, lineHeight: 1.35 }}>{task.name}</div>
+      {isBlocked ? (
+        <Mono style={{ fontSize: 9.5, color: Z.bad }}>
+          {task.blockedNote ? task.blockedNote : `blokováno: ${blockingNames.join(', ')}`}
+        </Mono>
+      ) : task.pr ? (
+        <Mono style={{ fontSize: 9.5, color: Z.inkFaint }}>PR #{task.pr}</Mono>
+      ) : task.status === 'in_progress' ? (
+        <Mono style={{ fontSize: 9.5, color: Z.run }}>běží</Mono>
+      ) : null}
+    </div>
+  );
+};
+
+const EpicDetailScreen = ({ epic, onBack }) => {
+  const { total, done } = epicProgress(epic);
+  const st = epicStatus(epic);
+  return (
+    <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
+      <button onClick={onBack} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: Z.inkDim, fontFamily: Z.mono, fontSize: 11.5, cursor: 'pointer', padding: 0, marginBottom: 18 }}>
+        <Icon name="arrow" size={13} style={{ transform: 'rotate(180deg)' }} /> Roadmap
+      </button>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 22 }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontFamily: Z.sans, fontSize: 22, fontWeight: 600, color: Z.ink }}>{epic.title}</span>
+            <StatusPill status={st} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+            <SysTag sys={epic.sys} />
+            <span style={{ fontFamily: Z.sans, fontSize: 13, color: Z.inkDim }}>{epic.desc}</span>
+          </div>
+        </div>
+        {total > 0 && <Mono style={{ fontSize: 11, color: Z.inkFaint, flex: '0 0 auto' }}>{done}/{total} tasků hotovo</Mono>}
+      </div>
+      {total === 0 ? (
+        <div style={{ border: `1px dashed ${Z.line}`, borderRadius: Z.rPanel, padding: '40px 20px', textAlign: 'center', maxWidth: 640 }}>
+          <Mono style={{ fontSize: 12, color: Z.inkFaint }}>Tento epik ještě nemá rozpad na tasky.</Mono>
+          <div style={{ marginTop: 14 }}><GhostBtn icon="flow">Rozfázovat na tasky</GhostBtn></div>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 280px)', gap: 16 }}>
+          {COLS.map(col => {
+            const items = epic.tasks.filter(t => t.status === col.key);
+            return (
+              <div key={col.key}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <Mono style={{ fontSize: 11, letterSpacing: '0.1em', color: Z.inkFaint, textTransform: 'uppercase' }}>{col.label}</Mono>
+                  <Mono style={{ fontSize: 10, color: Z.inkFaint }}>{items.length}</Mono>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 9, minHeight: 40 }}>
+                  {items.length ? items.map(t => <TaskCard key={t.id} task={t} allTasks={epic.tasks} />) : (
+                    <div style={{ border: `1px dashed ${Z.line}`, borderRadius: 4, padding: '14px 10px', textAlign: 'center' }}>
+                      <Mono style={{ fontSize: 10, color: Z.inkFaint }}>prázdno</Mono>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const App = () => {
+  const [openId, setOpenId] = useState(null);
+  const epic = EPICS.find(e => e.id === openId);
+  return (
+    <Frame>
+      {epic ? <EpicDetailScreen epic={epic} onBack={() => setOpenId(null)} /> : <RoadmapScreen onOpen={setOpenId} />}
+    </Frame>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
