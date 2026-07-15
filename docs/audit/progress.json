@@ -4,57 +4,6 @@
   "status": "completed",
   "batches": [
     {
-      "id": "web-chat-core",
-      "app": "web",
-      "paths": [
-        "apps/web/features/chat (pouze root soubory: ChatContext, Screen, index)",
-        "apps/web/features/chat/hooks",
-        "apps/web/features/chat/mutations",
-        "apps/web/features/chat/queries"
-      ],
-      "status": "done",
-      "assigned_model": "sonnet",
-      "result_file": ".audit/batches/web-chat-core.md",
-      "severity_counts": {
-        "critical": 0,
-        "high": 1,
-        "medium": 4,
-        "low": 3
-      }
-    },
-    {
-      "id": "web-chat-components",
-      "app": "web",
-      "paths": [
-        "apps/web/features/chat/components"
-      ],
-      "status": "done",
-      "assigned_model": "sonnet",
-      "result_file": ".audit/batches/web-chat-components.md",
-      "severity_counts": {
-        "critical": 0,
-        "high": 2,
-        "medium": 5,
-        "low": 4
-      }
-    },
-    {
-      "id": "web-chat-scene",
-      "app": "web",
-      "paths": [
-        "apps/web/features/chat/scene"
-      ],
-      "status": "done",
-      "assigned_model": "opus",
-      "result_file": ".audit/batches/web-chat-scene.md",
-      "severity_counts": {
-        "critical": 0,
-        "high": 2,
-        "medium": 2,
-        "low": 7
-      }
-    },
-    {
       "id": "web-runs-core",
       "app": "web",
       "paths": [
@@ -963,5 +912,6 @@
         "low": 3
       }
     }
-  ]
+  ],
+  "note": "chat-ui batches (web-chat-core/components/scene) dropped 2026-07-15: audited code deleted/reworked after audit date"
 }
