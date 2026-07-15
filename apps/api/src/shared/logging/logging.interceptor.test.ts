@@ -31,6 +31,13 @@ function fakeHandler(result: unknown): CallHandler {
   return { handle: () => of(result) };
 }
 
+/** The metadata object passed to `scoped.info` on its `index`-th call. */
+function infoMeta(scoped: ScopedLogger, index: number): Record<string, unknown> {
+  const call = (scoped.info as ReturnType<typeof vi.fn>).mock.calls[index];
+  if (!call) throw new Error(`expected a scoped.info call at index ${index}`);
+  return call[1] as Record<string, unknown>;
+}
+
 describe("isSkippedBodyRoute", () => {
   it("skips /credentials routes", () => {
     expect(isSkippedBodyRoute("/api/integrations/abc/credentials")).toBe(true);
@@ -95,16 +102,10 @@ describe("LoggingInterceptor", () => {
 
     await firstValueFrom(interceptor.intercept(context, handler));
 
-    const requestMeta = (scoped.info as ReturnType<typeof vi.fn>).mock.calls[0][1] as Record<
-      string,
-      unknown
-    >;
+    const requestMeta = infoMeta(scoped, 0);
     expect(requestMeta.body).toBeUndefined();
 
-    const resultMeta = (scoped.info as ReturnType<typeof vi.fn>).mock.calls[1][1] as Record<
-      string,
-      unknown
-    >;
+    const resultMeta = infoMeta(scoped, 1);
     expect(resultMeta.result).toBeUndefined();
   });
 
@@ -123,10 +124,7 @@ describe("LoggingInterceptor", () => {
 
     await firstValueFrom(interceptor.intercept(context, handler));
 
-    const requestMeta = (scoped.info as ReturnType<typeof vi.fn>).mock.calls[0][1] as Record<
-      string,
-      unknown
-    >;
+    const requestMeta = infoMeta(scoped, 0);
     expect(requestMeta.body).toBeUndefined();
   });
 
@@ -145,15 +143,9 @@ describe("LoggingInterceptor", () => {
 
     await firstValueFrom(interceptor.intercept(context, handler));
 
-    const requestMeta = (scoped.info as ReturnType<typeof vi.fn>).mock.calls[0][1] as Record<
-      string,
-      unknown
-    >;
+    const requestMeta = infoMeta(scoped, 0);
     expect(requestMeta.body).toBeUndefined();
-    const resultMeta = (scoped.info as ReturnType<typeof vi.fn>).mock.calls[1][1] as Record<
-      string,
-      unknown
-    >;
+    const resultMeta = infoMeta(scoped, 1);
     expect(resultMeta.result).toBeUndefined();
   });
 });
