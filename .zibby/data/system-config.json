@@ -9,5 +9,5 @@
   "goalAutoResume": false,
   "chatPersona": "jarvis",
   "powerSaver": false,
-  "ttsVoice": null
+  "ttsVoice": "cs_male_cv26_default"
 }
