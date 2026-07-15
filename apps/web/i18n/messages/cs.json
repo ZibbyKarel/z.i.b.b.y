@@ -1719,6 +1719,11 @@
       "placeholder": "Zadej práci přirozeným jazykem…",
       "run": "Spustit úlohu",
       "close": "Zavřít"
+    },
+    "bottomBar": {
+      "chat": "Chat",
+      "task": "Spustit úlohu",
+      "note": "Přidat poznámku"
     }
   },
   "subsystems": {

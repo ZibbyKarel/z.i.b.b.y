@@ -1719,6 +1719,11 @@
       "placeholder": "Describe the work in plain language…",
       "run": "Run task",
       "close": "Close"
+    },
+    "bottomBar": {
+      "chat": "Chat",
+      "task": "Run a task",
+      "note": "Add a note"
     }
   },
   "subsystems": {
