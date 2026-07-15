@@ -454,7 +454,13 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
           const project = task.projectId
             ? await this.projects.get(task.projectId).catch((): Project | null => null)
             : null;
-          const result = await this.attemptDispatch(task, project, now, { skipBudget: false });
+          // Finding #1 (Task 3c fix): this call was bare — a scheduled task firing on
+          // the heartbeat concurrently with a create/drain/release for the same
+          // project raced the same check→record window findings #8/#9 are about. Same
+          // lock, same fix — matches the `drainQueues` wrap shape.
+          const result = await this.withCapacityLock(task.projectId, () =>
+            this.attemptDispatch(task, project, now, { skipBudget: false }),
+          );
           if (result === "dispatched") fired.push(task.id);
         } catch (err) {
           // M8: a THROWN dispatch error is transient (infra) — retry it with backoff
@@ -536,6 +542,23 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
    * `task:${id}` outcome-writer lock and the global `scheduler:drain` sweep lock. An
    * unscoped task (no `projectId`) never contends on either race, so it runs
    * unlocked — matching `atCapacity`'s own short-circuit for `project == null`.
+   *
+   * Every real spend path for a project is guarded by this SAME key (Task 3c fix —
+   * the set is now complete):
+   *  - `attemptCreate`'s synchronous branch ({@link attemptCreateSync}) — one
+   *    acquisition covers guard+dispatch+record.
+   *  - `attemptCreate`'s background branch — the create-time gate
+   *    ({@link guardCapacity}) is its own (fast) acquisition; the real dispatch is
+   *    {@link dispatchPending}'s self-wrap (below), a second, fresh acquisition.
+   *  - `tick` — each fired scheduled task's {@link attemptDispatch} call.
+   *  - `drainQueues` — each queued task's {@link attemptDispatch} call, nested inside
+   *    the global `scheduler:drain` sweep lock (different key, ordinary nesting).
+   *  - `releaseHeld` — the operator-triggered release's {@link attemptDispatch} call.
+   *  - `recoverPending` (the boot-recovery sweep) — covered "for free" via
+   *    {@link dispatchPending}'s self-wrap; every `void this.dispatchPending(...)`
+   *    call site (there are exactly two: `attemptCreate`'s background branch and
+   *    `recoverPending`) is a fresh acquisition per the file-lock.ts CONTRACT — never
+   *    called from inside an already-held section for the same key.
    */
   private withCapacityLock<T>(projectId: string | undefined, fn: () => Promise<T>): Promise<T> {
     return projectId ? withPathLock(`project-capacity:${projectId}`, fn) : fn();
@@ -587,12 +610,19 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
    * separate `project-capacity` acquisitions:
    *  1. The gate ({@link guardCapacity}) — held/queued still returns fast, exactly as
    *     before. A pass persists the task `pending` and returns immediately.
-   *  2. `dispatchPending`, kicked off as `void this.withCapacityLock(key, () =>
-   *     this.dispatchPending(...))` from THIS (unlocked) continuation — a genuinely
-   *     fresh acquisition, per the file-lock.ts CONTRACT (a call made from INSIDE an
-   *     already-held section would capture the ambient held-set and, once it tried
-   *     to acquire the SAME key after that holder released, would see it as still
-   *     held and run inline, unprotected — silently breaking mutual exclusion).
+   *  2. `dispatchPending`, kicked off as a bare `void this.dispatchPending(...)` from
+   *     THIS (unlocked) continuation. {@link dispatchPending} SELF-WRAPS its own
+   *     critical section in `project-capacity` — a genuinely fresh acquisition, per
+   *     the file-lock.ts CONTRACT (a call made from INSIDE an already-held section
+   *     would capture the ambient held-set and, once it tried to acquire the SAME key
+   *     after that holder released, would see it as still held and run inline,
+   *     unprotected — silently breaking mutual exclusion). This shape (rather than
+   *     wrapping the call HERE) also lets `dispatchPending` title the task — a
+   *     documented ~8s Haiku call — BEFORE taking the lock (Task 3c fix, finding #3):
+   *     titling is capacity-independent, so holding the concurrency slot across that
+   *     network call would serialize concurrent same-project titling for nothing.
+   *     `recoverPending`'s own `void this.dispatchPending(...)` (the boot-recovery
+   *     path) rides the exact same self-wrap "for free" (Task 3c fix, finding #2).
    *
    * Between (1) and (2) a sibling create can race in and ALSO pass its own gate
    * check (neither has dispatched yet, so `atCapacity`/`budget.check` both still read
@@ -651,9 +681,11 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     // task `pending` and run classify+spawn in the background (→ `dispatched`/`failed`/
     // `held`/`queued` — see the CONTRACT note above for why this is a FRESH lock call).
     const task = await this.storage.createPending(taskId, input, projectId, now, explicitTarget);
-    void this.withCapacityLock(projectId, () =>
-      this.dispatchPending(task, project, explicitTarget, titleAuto),
-    );
+    // NOT wrapped here — `dispatchPending` self-wraps its own critical section (see
+    // this method's doc comment, and `dispatchPending`'s own). This is still a FRESH
+    // acquisition per the file-lock.ts CONTRACT: the gate's lock (above) has already
+    // resolved and released by the time this line runs.
+    void this.dispatchPending(task, project, explicitTarget, titleAuto);
     return { outcome: "pending", task };
   }
 
@@ -687,12 +719,24 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
   }
 
   /**
-   * The background dispatch behind a `pending` task (the interactive create path). In
-   * its own trace scope: refine the fallback title (Haiku, off the response path) so
-   * the run and task record share it, then classify + spawn exactly like the
-   * synchronous path. Success flips the task `pending → dispatched`; an empty catalog
-   * or any thrown error flips it `pending → failed` with a visible reason and a
+   * The background dispatch behind a `pending` task — the interactive create path
+   * (a fresh lock acquisition, per {@link attemptCreate}'s doc comment) AND the boot
+   * recovery path ({@link recoverPending}, also a fresh, unlocked call site). In its
+   * own trace scope: refine the fallback title (Haiku, off the response path) so the
+   * run and task record share it, then classify + spawn exactly like the synchronous
+   * path. Success flips the task `pending → dispatched`; an empty catalog or any
+   * thrown error flips it `pending → failed` with a visible reason and a
    * `task-outcome` activity — a described task never silently no-ops (Law 5).
+   *
+   * Task 3c fix (findings #2/#3): SELF-WRAPS the critical section
+   * (`guardExisting → dispatch → recordLedger/markDispatched`) in
+   * `project-capacity:${projectId}` rather than relying on the caller to wrap the
+   * whole call — this covers `recoverPending`'s unguarded loop "for free" (finding
+   * #2) AND lets titling (`namer.name`, a documented ~8s LLM call) run BEFORE the
+   * lock is taken (finding #3): titling is capacity-independent, so holding the
+   * concurrency slot across that network call would only serialize concurrent
+   * same-project titling for no reason — exactly the latency regression the
+   * `background` design exists to avoid.
    */
   private dispatchPending(
     task: ScheduledTask,
@@ -703,13 +747,7 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     return this.trace.run({ traceId: randomUUID() }, async () => {
       const projectId = project?.id;
       try {
-        // Findings #8/#9: re-verify budget + capacity HERE, immediately before the
-        // real dispatch — see attemptCreate's doc comment for why this recheck
-        // (rather than just serializing) is what actually closes the gap. A
-        // sibling create that raced past the create-time gate but loses this
-        // recheck flips `pending → held/queued` instead of also dispatching.
-        const guard = await this.guardExisting(task, project, new Date(), false);
-        if (guard !== "ok") return;
+        // Titling is capacity-independent — do it BEFORE taking the lock (finding #3).
         let title = task.title;
         if (titleAuto) {
           const derived = await this.namer.name(task.text).catch(() => null);
@@ -718,35 +756,44 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
             await this.storage.setTitle(task.id, derived).catch(() => {});
           }
         }
-        const dispatched = await this.dispatch(
-          task.text,
-          task.paths,
-          title,
-          task.id,
-          projectId,
-          explicitTarget,
-          task.output,
-          task.attachmentSetId,
-          task.attachments,
-          task.toolGrants,
-        );
-        if (!dispatched) {
-          await this.failPending(task.id, projectId, "No agents or pipelines available to route to");
-          return;
-        }
-        await this.recordLedger(task.id, projectId, dispatched);
-        const updated = await this.storage.markDispatched(
-          task.id,
-          dispatched.runRef,
-          dispatched.target,
-        );
-        this.recordDispatchedActivity(task.id, projectId, dispatched);
-        this.log.info("task dispatched (background)", {
-          id: task.id,
-          runRef: dispatched.runRef,
-          projectId,
+        await this.withCapacityLock(task.projectId, async () => {
+          // Findings #8/#9: re-verify budget + capacity HERE, immediately before the
+          // real dispatch — see attemptCreate's doc comment for why this recheck
+          // (rather than just serializing) is what actually closes the gap. A
+          // sibling create that raced past the create-time gate but loses this
+          // recheck flips `pending → held/queued` instead of also dispatching.
+          const guard = await this.guardExisting(task, project, new Date(), false);
+          if (guard !== "ok") return;
+          const dispatched = await this.dispatch(
+            task.text,
+            task.paths,
+            title,
+            task.id,
+            projectId,
+            explicitTarget,
+            task.output,
+            task.attachmentSetId,
+            task.attachments,
+            task.toolGrants,
+          );
+          if (!dispatched) {
+            await this.failPending(task.id, projectId, "No agents or pipelines available to route to");
+            return;
+          }
+          await this.recordLedger(task.id, projectId, dispatched);
+          const updated = await this.storage.markDispatched(
+            task.id,
+            dispatched.runRef,
+            dispatched.target,
+          );
+          this.recordDispatchedActivity(task.id, projectId, dispatched);
+          this.log.info("task dispatched (background)", {
+            id: task.id,
+            runRef: dispatched.runRef,
+            projectId,
+          });
+          void this.reconcileOutcome(updated);
         });
-        void this.reconcileOutcome(updated);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         await this.failPending(task.id, projectId, message);

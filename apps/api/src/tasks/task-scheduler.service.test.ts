@@ -1444,4 +1444,90 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
   // and it shares 100% of its guard logic with attemptDispatch's other caller
   // (drainQueues), which the mandatory tests above do exercise indirectly via
   // guardExisting. See task-3c-report.md for the full writeup.
+
+  it("tick heartbeat path (finding #1): tick's dispatch of a due scheduled task racing dispatchPending's dispatch of a pending task, both for a maxConcurrent=1 project, dispatch exactly one and queue the other", async () => {
+    const { fakeBudget } = makeService({
+      id: PROJECT_ID,
+      name: "Proj",
+      budget: { maxConcurrent: 1 },
+    });
+    const project = { id: PROJECT_ID, name: "Proj", budget: { maxConcurrent: 1 } };
+    const now = Date.now();
+
+    // Task A: a due scheduled task for `tick` to fire. `storage.list()` is stubbed
+    // to resolve it WITHOUT a real fs round-trip — the two race participants below
+    // (tick's own attemptDispatch and a direct dispatchPending call) are otherwise
+    // symmetric chains of fast fakes ending in the same `atCapacity`/`countRunning`
+    // check, exactly like the two already-passing "two concurrent creates" tests
+    // above; without stubbing `list()`, tick's one genuine disk read is enough
+    // asymmetric latency to reliably let dispatchPending finish first and never
+    // actually overlap the check, producing a false-negative green.
+    const taskA = await storage.create(
+      { text: "scheduled A", title: "A", scheduledAt: now - 1000 },
+      new Date(now).toISOString(),
+      PROJECT_ID,
+    );
+    vi.spyOn(storage, "list").mockResolvedValue([taskA]);
+
+    // Task B: a `pending` task, persisted directly — mirrors exactly what
+    // `attemptCreate`'s background branch leaves behind right before its own
+    // (unawaited) `dispatchPending` call, isolating the finding to precisely the
+    // two call sites in question (tick vs. dispatchPending) without the create-time
+    // gate's own extra `project-capacity` acquisition in between.
+    const taskB = await storage.createPending(
+      storage.newId(),
+      { text: "do B", title: "B" },
+      PROJECT_ID,
+      now,
+    );
+
+    // Even with `list()` stubbed, `tick`'s preamble (list → project fetch → limit
+    // check) has more hops than a bare `dispatchPending` call, so — deterministically,
+    // not just occasionally — dispatchPending would otherwise always reach its
+    // capacity check first and finish before `tick` ever got there, never actually
+    // overlapping it regardless of the fix under test. `budget.check` is the first
+    // step BOTH paths' `guardExisting` shares: rendezvous there so both reach the
+    // `atCapacity`/`countRunning` read at the same moment, reproducing the exact race
+    // window findings #8/#9 are about. Pre-fix (unlocked) both `check` calls arrive
+    // concurrently and pair up instantly. Post-fix, the lock fully serializes the two
+    // callers — only one is ever in `guardExisting` at a time — so a lone arrival
+    // falls through after a short timeout instead of hanging forever.
+    let arrivals: Array<() => void> = [];
+    fakeBudget.check.mockImplementation(async () => {
+      await new Promise<void>((resolve) => {
+        arrivals.push(resolve);
+        if (arrivals.length >= 2) {
+          const toRelease = arrivals;
+          arrivals = [];
+          for (const release of toRelease) release();
+        } else {
+          setTimeout(resolve, 50);
+        }
+      });
+      return { ok: true } as BudgetCheck;
+    });
+
+    await Promise.all([
+      service.tick(new Date(now)),
+      (
+        service as unknown as {
+          dispatchPending: (
+            task: typeof taskB,
+            project: { id: string; name: string; budget?: Record<string, unknown> } | null,
+            explicitTarget: undefined,
+            titleAuto: boolean,
+          ) => Promise<void>;
+        }
+      ).dispatchPending(taskB, project, undefined, false),
+    ]);
+
+    await vi.waitFor(async () => {
+      const [a, b] = await Promise.all([storage.get(taskA.id), storage.get(taskB.id)]);
+      const statuses = [a.status, b.status].sort();
+      expect(statuses).toEqual(["dispatched", "queued"]);
+    });
+    // The finding's own proof: with a cap of 1, exactly one real dispatch may ever
+    // happen across the tick fire and the racing dispatchPending call.
+    expect(agentRunner.start).toHaveBeenCalledTimes(1);
+  });
 });
