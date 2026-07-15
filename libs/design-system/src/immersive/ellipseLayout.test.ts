@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ellipseLayout } from "./ellipseLayout";
 
-const insets = { left: 0, right: 0, bottom: 0 };
+const insets = { top: 0, left: 0, right: 0, bottom: 0 };
 
 describe("ellipseLayout", () => {
   it("returns one position per node, first at 12 o'clock", () => {
@@ -27,18 +27,25 @@ describe("ellipseLayout", () => {
   });
 
   it("offsets cx right when the left inset (tasks panel) is larger than the right", () => {
-    const l = ellipseLayout(1200, 720, 8, { left: 300, right: 0, bottom: 0 });
+    const l = ellipseLayout(1200, 720, 8, { top: 0, left: 300, right: 0, bottom: 0 });
     expect(l.cx).toBeGreaterThan(1200 / 2);
   });
 
   it("shrinks the usable height by the bottom reserve (chat dock)", () => {
-    const tall = ellipseLayout(1200, 720, 8, { left: 0, right: 0, bottom: 0 });
-    const docked = ellipseLayout(1200, 720, 8, { left: 0, right: 0, bottom: 260 });
+    const tall = ellipseLayout(1200, 720, 8, { top: 0, left: 0, right: 0, bottom: 0 });
+    const docked = ellipseLayout(1200, 720, 8, { top: 0, left: 0, right: 0, bottom: 260 });
     expect(docked.radiusY).toBeLessThan(tall.radiusY);
   });
 
   it("never returns a radiusY below the 84 floor", () => {
-    const l = ellipseLayout(1200, 260, 8, { left: 0, right: 0, bottom: 240 });
+    const l = ellipseLayout(1200, 260, 8, { top: 0, left: 0, right: 0, bottom: 240 });
     expect(l.radiusY).toBeGreaterThanOrEqual(84);
+  });
+
+  it("shifts the ellipse down and shrinks it by the top reserve (chat top bar)", () => {
+    const noTop = ellipseLayout(1200, 720, 8, { top: 0, left: 0, right: 0, bottom: 0 });
+    const withTop = ellipseLayout(1200, 720, 8, { top: 56, left: 0, right: 0, bottom: 0 });
+    expect(withTop.cy).toBeGreaterThan(noTop.cy);
+    expect(withTop.radiusY).toBeLessThanOrEqual(noTop.radiusY);
   });
 });

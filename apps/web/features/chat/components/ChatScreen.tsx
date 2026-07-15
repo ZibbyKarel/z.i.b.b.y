@@ -25,8 +25,8 @@ import { runAvatar, runGlyph } from "../../runs/run";
 import { useRunActions } from "../../runs/useRunActions";
 import { SubsystemDrawer } from "../../subsystems/components/SubsystemDrawer/SubsystemDrawer";
 import { useSubsystemsQuery } from "../../subsystems/queries/useSubsystemsQuery";
-import { CommandLine } from "../../tasks/components/CommandLine/CommandLine";
 import { useSystemConfigQuery } from "../../system";
+import { CommandLine } from "../../tasks/components/CommandLine/CommandLine";
 import { useAnyAudioPlaying } from "../hooks/useAudioPlayback";
 import { type AutoSpeakReplyOutcome, useAutoSpeak } from "../hooks/useAutoSpeak";
 import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
@@ -36,7 +36,7 @@ import { ChatDetailDialog, type ChatDetailTarget } from "./ChatDetailDialog";
 import { ChatPalette } from "./ChatPalette";
 import { ChatTaskDetailColumn } from "./ChatTaskDetailColumn";
 import { ChatTasksPanel } from "./ChatTasksPanel";
-import { CHAT_TOOL_DOCK_WIDTH, ChatToolDock } from "./ChatToolDock";
+import { ChatToolDock } from "./ChatToolDock";
 import { ChatTopBar } from "./ChatTopBar";
 import { ChatTranscript } from "./ChatTranscript";
 import { CoreOverviewDialog } from "./CoreOverviewDialog";
@@ -50,6 +50,11 @@ export enum ChatScreenTestId {
   Greeting = "chat-screen-greeting",
   NewChat = "chat-screen-new-chat",
 }
+
+/** The chat top-bar band height — the orb ellipse is inset by this so its top
+ *  ring clears the bar instead of sitting under it (the bar is a z-20 overlay
+ *  over the full-screen map). */
+const CHAT_TOPBAR_INSET = 56;
 
 export interface ChatScreenProps {
   /**
@@ -123,7 +128,11 @@ export function ChatScreen({
   // stable identities (so composing them into the stream's `onComplete` doesn't
   // re-subscribe); `speakingReply` drives the `speaking` scene mode; `onSettled`
   // reports the terminal outcome that drives the turn-taking latch above.
-  const { speak: speakReply, cancel: cancelReply, speaking: speakingReply } = useAutoSpeak({
+  const {
+    speak: speakReply,
+    cancel: cancelReply,
+    speaking: speakingReply,
+  } = useAutoSpeak({
     voice: systemConfig?.ttsVoice,
     onSettled: handleReplySettled,
   });
@@ -429,7 +438,7 @@ export function ChatScreen({
           refinement is optional follow-up polish, not required for parity. The
           right inset now reserves the tool dock's width (Task 6) instead of 0. */}
       <SubsystemOrbMap
-        insets={{ left: 300, right: CHAT_TOOL_DOCK_WIDTH, bottom: 230 }}
+        insets={{ top: CHAT_TOPBAR_INSET, left: 0, right: 0, bottom: 400 }}
         onOpenCore={() => setCoreOpen(true)}
         onSelectSubsystem={setSelectedSubsystemId}
         pipelines={pipelineCatalog ?? []}

@@ -1,8 +1,12 @@
 "use client";
 
-import { Dropdown } from "@zibby/design-system";
+import { Dropdown, type DropdownProps } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+
+interface LangSwitchProps {
+  size?: DropdownProps["size"];
+}
 
 type Locale = "cs" | "en";
 
@@ -23,7 +27,7 @@ function writeLocaleCookie(value: Locale) {
  * glass nesting is gone). Locale mechanics unchanged: cookie write + router.refresh()
  * so i18n/request.ts re-reads on the next render.
  */
-export function LangSwitch() {
+export function LangSwitch({ size = "sm" }: LangSwitchProps) {
   const t = useTranslations("topbar");
   const locale = useLocale() as Locale;
   const router = useRouter();
@@ -43,7 +47,7 @@ export function LangSwitch() {
         { value: "cs", code: "CZ", label: "Čeština" },
         { value: "en", code: "EN", label: "English" },
       ]}
-      size="sm"
+      size={size}
       value={locale}
       variant="inline"
     />

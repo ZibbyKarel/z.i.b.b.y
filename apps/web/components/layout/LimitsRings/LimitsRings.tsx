@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import type { Limits } from "@zibby/contracts";
 import { Card, Container, Divider, Pressable, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { useLimitsQuery } from "../../../features/limits/queries";
 import { useNow } from "../../../hooks/useNow";
-import { RingWithLabel } from "./RingWithLabel";
 import { PopoverRow } from "./PopoverRow";
+import { RingWithLabel } from "./RingWithLabel";
 
+interface LimitsRingsProps {
+  showTitles?: boolean;
+}
 export { formatResetIn } from "./formatResetIn";
 
 const CLAUDE_LIMITS: Limits = {
@@ -26,7 +29,7 @@ const NOW_TICK_MS = 30_000;
  * weekly) pinned to the top bar on every page, with the detail readout in a
  * hover/focus popover.
  */
-export function LimitsRings() {
+export function LimitsRings({ showTitles }: LimitsRingsProps) {
   const t = useTranslations();
   // Before the first successful poll `data` is undefined; fall back to the
   // static zero-usage config so the rings always render and never flash empty.
@@ -51,6 +54,7 @@ export function LimitsRings() {
             <RingWithLabel
               ariaLabel={t("limits.rollingLabel")}
               shortLabel={t("limits.rollingShort")}
+              showTitle={showTitles}
               window={limits.rolling}
             />
             <Container height="20px">
@@ -59,6 +63,7 @@ export function LimitsRings() {
             <RingWithLabel
               ariaLabel={t("limits.weeklyLabel")}
               shortLabel={t("limits.weeklyShort")}
+              showTitle={showTitles}
               window={limits.weekly}
             />
           </Stack>

@@ -77,7 +77,7 @@ export interface OrbMapProps {
   ref?: React.Ref<HTMLDivElement>;
 }
 
-const DEFAULT_INSETS: EllipseInsets = { left: 0, right: 0, bottom: 0 };
+const DEFAULT_INSETS: EllipseInsets = { top: 0, left: 0, right: 0, bottom: 0 };
 
 /**
  * Composes the immersive orb map: measures its container, computes the responsive

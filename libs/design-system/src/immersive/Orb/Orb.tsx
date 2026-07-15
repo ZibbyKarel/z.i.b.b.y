@@ -67,6 +67,14 @@ export function Orb({
     apiRef.current?.setTarget(hex, state, motionOverrides);
   }, [hex, state, motionOverrides]);
 
+  // Keep the WebGL backing store in sync with the div's pixel size. The create
+  // effect is mount-once, so a later `diameter`/`canvasPx` change would otherwise
+  // leave the low-res canvas CSS-stretched (visible upscaling blur). resize()
+  // re-reads the container size and re-sizes the renderer to match.
+  useEffect(() => {
+    apiRef.current?.resize();
+  }, [canvasPx]);
+
   return (
     <div
       data-testid={OrbTestId.Root}

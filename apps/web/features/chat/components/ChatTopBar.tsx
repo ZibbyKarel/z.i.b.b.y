@@ -1,6 +1,6 @@
 "use client";
 
-import { GlassSurface, Icon, SearchBar, Stack } from "@zibby/design-system";
+import { Container, GlassSurface, Icon, SearchBar, Stack } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { LimitsRings } from "../../../components/layout/LimitsRings/LimitsRings";
@@ -30,45 +30,49 @@ export function ChatTopBar({ onOpenPalette }: ChatTopBarProps) {
   const t = useTranslations("chat");
 
   return (
-    <Stack
-      align="center"
-      as="header"
-      data-testid={ChatTopBarTestId.Root}
-      direction="row"
-      gap="150"
-      style={{ height: "56px" }}
-    >
-      <GlassSurface radius="pill">
-        <StatusPill />
-      </GlassSurface>
+    <Container padding={["150", "200"]}>
+      <Stack
+        align="center"
+        as="header"
+        data-testid={ChatTopBarTestId.Root}
+        direction="row"
+        gap="150"
+        justify="between"
+      >
+        <GlassSurface radius="pill">
+          <StatusPill />
+        </GlassSurface>
 
-      <GlassSurface data-testid={ChatTopBarTestId.Search} radius="pill" style={{ width: 190 }}>
-        <SearchBar
-          ariaLabel={t("palette.placeholder")}
-          onClick={onOpenPalette}
-          placeholder={t("palette.placeholder")}
-          shortcut="⌘K"
-          surface="transparent"
-        />
-      </GlassSurface>
+        <GlassSurface data-testid={ChatTopBarTestId.Search} radius="pill" style={{ width: 190 }}>
+          <SearchBar
+            ariaLabel={t("palette.placeholder")}
+            onClick={onOpenPalette}
+            placeholder={t("palette.placeholder")}
+            shortcut="⌘K"
+            surface="transparent"
+          />
+        </GlassSurface>
 
-      <GlassSurface radius="pill">
-        <LimitsRings />
-      </GlassSurface>
+        <Stack direction="row" gap="150">
+          <GlassSurface radius="pill">
+            <LimitsRings />
+          </GlassSurface>
 
-      <GlassSurface data-testid={ChatTopBarTestId.Hud} radius="pill" style={{ height: 40, width: 40 }}>
-        <Link
-          aria-label={t("hudSwitchLabel")}
-          className="flex size-10 items-center justify-center text-foreground-dim outline-none transition-colors hover:text-accent focus-visible:text-accent"
-          href="/overview"
-        >
-          <Icon name="grid" size="sm" />
-        </Link>
-      </GlassSurface>
+          <GlassSurface data-testid={ChatTopBarTestId.Hud} radius="pill">
+            <Link
+              aria-label={t("hudSwitchLabel")}
+              className="flex size-10 items-center justify-center text-foreground-dim outline-none transition-colors hover:text-accent focus-visible:text-accent"
+              href="/overview"
+            >
+              <Icon name="grid" size="sm" />
+            </Link>
+          </GlassSurface>
 
-      <GlassSurface data-testid={ChatTopBarTestId.Lang} radius="pill">
-        <LangSwitch />
-      </GlassSurface>
-    </Stack>
+          {/* <GlassSurface data-testid={ChatTopBarTestId.Lang} radius="pill"> */}
+          <LangSwitch size="md" />
+          {/* </GlassSurface> */}
+        </Stack>
+      </Stack>
+    </Container>
   );
 }
