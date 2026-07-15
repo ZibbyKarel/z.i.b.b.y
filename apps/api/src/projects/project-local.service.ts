@@ -4,6 +4,7 @@ import { Injectable } from "@nestjs/common";
 import type { Project, ProjectLocalState } from "@zibby/contracts";
 import { MachineConfigStore } from "../machine/machine-config.store";
 import { ensureDir } from "../shared/file-storage";
+import { validateRemote } from "../shared/git-exec";
 import { WorkspaceService } from "../workspace/workspace.service";
 import {
   ProjectAlreadyClonedError,
@@ -66,6 +67,15 @@ export class ProjectLocalService {
    * has no `gitRemote`, and {@link ProjectAlreadyClonedError} (→ 409) when
    * `resolve()` already reports it present — re-cloning would be a no-op at
    * best, a collision at worst. Never touches `project.path` or the registry.
+   *
+   * Task 8 — after those guards and BEFORE `workspace.clone()` ever runs,
+   * `validateRemote()` gates `project.gitRemote` against the shared
+   * fail-closed allowlist (throws `InvalidGitRemoteError` on an
+   * `ext::`/leading-dash/`file://`/bare-path/`git://` value). This is the
+   * ONLY production caller of `WorkspaceService.clone()`, and the layer that
+   * actually receives the operator-authored remote — gating here, not inside
+   * `WorkspaceService.clone()` itself, closes the real exposure without
+   * touching that lower-level primitive's own local-path test contract.
    */
   async clone(project: Project): Promise<ProjectLocalState> {
     if (!project.gitRemote) {
@@ -75,6 +85,7 @@ export class ProjectLocalService {
     if (state.present) {
       throw new ProjectAlreadyClonedError(project.id);
     }
+    validateRemote(project.gitRemote);
 
     const dest = path.join(state.cloneRoot, project.id);
     await ensureDir(state.cloneRoot);

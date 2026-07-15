@@ -1,18 +1,13 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import { Injectable, Optional } from "@nestjs/common";
 import type { SelfPr, SelfStatus, SelfUpdateResult } from "@zibby/contracts";
 import { installRoot } from "../shared/data-dir";
+import {
+  GIT_NETWORK_TIMEOUT_MS,
+  GIT_TIMEOUT_MS,
+  exec,
+  isGitRepo as isGitRepoAt,
+} from "../shared/git-exec";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
-
-const exec = promisify(execFile);
-
-/** Local-only git invocations (no network) — a short timeout bounds a hang. */
-const GIT_TIMEOUT_MS = 10_000;
-
-/** `git fetch`/`git pull` touch the network — a much longer bound, still finite
- * so an unreachable remote fails soft rather than hanging the request. */
-const GIT_NETWORK_TIMEOUT_MS = 60_000;
 
 /** `gh` CLI calls — local process, but network-backed under the hood; bounded
  * generously without hanging the status endpoint on a slow GitHub API. */
@@ -71,10 +66,9 @@ export class SelfService {
     return installRoot();
   }
 
+  /** Delegates to the shared {@link isGitRepoAt} (Task 8 dedup). */
   private async isGitRepo(): Promise<boolean> {
-    return exec("git", ["rev-parse", "--git-dir"], { cwd: this.cwd(), timeout: GIT_TIMEOUT_MS })
-      .then(() => true)
-      .catch(() => false);
+    return isGitRepoAt(this.cwd());
   }
 
   /** `origin`'s default branch (no `origin/` prefix); `"main"` when unknown. */

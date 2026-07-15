@@ -11,6 +11,37 @@ import { AgentIdSchema } from "../agents/agent.schema";
 export const ProjectIdSchema = AgentIdSchema;
 
 /**
+ * Task 8 — fail-closed allowlist for a git clone remote. The single
+ * source-of-truth predicate shared by the `gitRemote` refinement below AND
+ * `apps/api/src/shared/git-exec.ts`'s `validateRemote()` (which re-exports
+ * this same function) — one definition, not two independently-maintained
+ * copies. Lives here (not in `apps/api`) because `libs/contracts` is the
+ * dependency-free base layer apps already import; the reverse (contracts
+ * importing from an app) would invert that direction and there is no module
+ * path for it (no package name / tsconfig alias points from `libs/contracts`
+ * at `apps/api`).
+ *
+ * Accepts only the two legitimate git transports operators actually use
+ * (`https://…`, `ssh://…`) plus the scp-like shorthand (`user@host:path`,
+ * e.g. `git@github.com:acme/alpha.git`). Rejects everything else, notably: a
+ * leading `-` (argv/option injection, e.g. `--upload-pack=…`), `ext::`
+ * (git's arbitrary-command transport — the RCE class this predicate exists
+ * to close), `file://` and bare local paths (no implicit local-clone
+ * allowance at this layer), and `git://` (unauthenticated/plaintext,
+ * deliberately excluded — tighten-only, not used by any fixture/operator
+ * flow in this codebase).
+ */
+export function isValidGitRemote(url: string): boolean {
+  if (typeof url !== "string" || url.length === 0) return false;
+  if (url.startsWith("-")) return false;
+  if (/^ext::/i.test(url)) return false;
+  if (/^https:\/\/\S+$/i.test(url)) return true;
+  if (/^ssh:\/\/\S+$/i.test(url)) return true;
+  if (/^[\w.-]+@[\w.-]+:\S+$/.test(url)) return true;
+  return false;
+}
+
+/**
  * A person associated with a project (team member, client contact, stakeholder).
  *
  * `id` is OPTIONAL (Phase 68 migration decision): a REQUIRED id would make every
@@ -192,12 +223,27 @@ export const ProjectSchema = z.object({
   /**
    * Phase 76 — the canonical clone source for this project (a `https://…` or
    * `git@…` URL), synced in the registry since the clone source is the same on
-   * every machine. Deliberately NOT over-validated (no strict URL schema) —
-   * git accepts many remote forms. Distinct from `path`, which stays the
-   * canonical (but machine-relative) target dir; a per-machine resolution
-   * layer (`ProjectLocalService`) reconciles the two on each machine.
+   * every machine. Distinct from `path`, which stays the canonical (but
+   * machine-relative) target dir; a per-machine resolution layer
+   * (`ProjectLocalService`) reconciles the two on each machine.
+   *
+   * Task 8 — tighten-only: `.refine()`s against {@link isValidGitRemote}, the
+   * same allowlist predicate `apps/api`'s `validateRemote()` enforces at
+   * clone time. This re-enforces the guard on every disk read (storage
+   * re-parses `ProjectSchema` on load, not just on write), catching a
+   * hand-edited-on-disk malicious value before any run tries to clone it. No
+   * previously-valid fixture (`https://…`, `git@host:path`, `ssh://…`) is
+   * affected — only the injection-shaped values (`ext::`, leading `-`,
+   * `file://`, bare paths, `git://`) newly fail.
    */
-  gitRemote: z.string().min(1).optional(),
+  gitRemote: z
+    .string()
+    .min(1)
+    .refine(isValidGitRemote, {
+      message:
+        'gitRemote must be an https://, ssh://, or scp-like ("user@host:path") git URL',
+    })
+    .optional(),
 });
 export type Project = z.infer<typeof ProjectSchema>;
 

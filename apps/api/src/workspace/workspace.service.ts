@@ -1,22 +1,9 @@
-import { execFile } from "node:child_process";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
-import { promisify } from "node:util";
 import { Injectable, Optional } from "@nestjs/common";
 import type { Workspace } from "@zibby/contracts";
+import { GIT_NETWORK_TIMEOUT_MS, GIT_TIMEOUT_MS, exec, isGitRepo } from "../shared/git-exec";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
-
-const exec = promisify(execFile);
-
-/** Git invocations are local-only (no fetch/pull) — a short timeout bounds a hang. */
-const GIT_TIMEOUT_MS = 10_000;
-
-/**
- * `git fetch`/`git clone` touch the network — a much longer bound than the
- * local-only git calls above, but still finite so a dead remote fails the run
- * rather than hanging it indefinitely.
- */
-const GIT_NETWORK_TIMEOUT_MS = 60_000;
 
 /** Hard cap on a sanitized branch slug, leaving room under git's ref-name limits. */
 const SLUG_MAX = 60;
@@ -52,9 +39,10 @@ export function sanitizeBranchSlug(input: string): string {
  * Owns the per-run git worktree (Phase 3.1). A project-targeted run works on its
  * own branch in a worktree under the run dir — never the operator's main checkout —
  * so koder's commits are visible to review/verify and the PR is cut from an
- * isolated branch. Pure `git` over {@link execFile} with explicit `cwd`, no new
- * deps; the branch is never deleted (it may carry the PR — Law: no irreversible
- * deletes), only the worktree is pruned on run delete.
+ * isolated branch. Pure `git` over the shared bounded-`execFile` wrapper
+ * (`../shared/git-exec`) with explicit `cwd`, no new deps; the branch is never
+ * deleted (it may carry the PR — Law: no irreversible deletes), only the
+ * worktree is pruned on run delete.
  */
 @Injectable()
 export class WorkspaceService {
@@ -64,14 +52,10 @@ export class WorkspaceService {
     this.log = logger?.child(WorkspaceService.name);
   }
 
-  /** Is `dir` inside a git work tree? A cheap `rev-parse` probe (no network). */
+  /** Is `dir` inside a git work tree? A cheap `rev-parse` probe (no network).
+   * Delegates to the shared {@link isGitRepo} (Task 8 dedup). */
   async isGitRepo(dir: string): Promise<boolean> {
-    try {
-      await exec("git", ["rev-parse", "--git-dir"], { cwd: dir, timeout: GIT_TIMEOUT_MS });
-      return true;
-    } catch {
-      return false;
-    }
+    return isGitRepo(dir);
   }
 
   /**
@@ -183,10 +167,25 @@ export class WorkspaceService {
    * never touches `project.path`/the registry — the caller decides where `dir`
    * lands (a machine-local `cloneRoot`). Throws {@link WorkspaceSetupError} on
    * failure (caller maps it onto the HTTP response).
+   *
+   * Task 8 — argv/transport hardening, unconditional and defense-in-depth on
+   * top of `ProjectLocalService.clone()`'s upstream `validateRemote()` gate:
+   * `-c protocol.ext.allow=never` defeats git's `ext::` arbitrary-command
+   * transport at the config level regardless of what reaches this call, and
+   * `--` (end-of-options) defeats leading-dash argv/option injection even if
+   * a bad value somehow got this far. Deliberately does NOT add
+   * `-c protocol.file.allow=never` — git's local/file transport also governs
+   * a bare local-path clone, which the `WorkspaceService.clone (Phase 76)`
+   * test below relies on cloning directly (no scheme, no `validateRemote()`
+   * in front of it at that layer); `file://` rejection is handled entirely by
+   * `validateRemote()` upstream, which every production call path goes
+   * through before this method is ever invoked.
    */
   async clone(remote: string, dir: string): Promise<void> {
     try {
-      await exec("git", ["clone", remote, dir], { timeout: GIT_NETWORK_TIMEOUT_MS });
+      await exec("git", ["-c", "protocol.ext.allow=never", "clone", "--", remote, dir], {
+        timeout: GIT_NETWORK_TIMEOUT_MS,
+      });
       this.log?.info("cloned repository", { remote, dir });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

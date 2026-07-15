@@ -6,6 +6,7 @@ import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Project } from "@zibby/contracts";
 import { MachineConfigStore } from "../machine/machine-config.store";
+import { InvalidGitRemoteError } from "../shared/git-exec";
 import { WorkspaceService } from "../workspace/workspace.service";
 import { ProjectLocalService } from "./project-local.service";
 import {
@@ -122,6 +123,20 @@ describe("ProjectLocalService (Phase 76 — per-machine clone resolution)", () =
       await initRepo(p.path);
       await expect(service.clone(p)).rejects.toBeInstanceOf(ProjectAlreadyClonedError);
     });
+
+    it.each([
+      ["ext:: transport RCE", 'ext::sh -c "id"'],
+      ["leading-dash argv injection", "--upload-pack=/bin/sh"],
+    ])(
+      "rejects a malicious gitRemote (%s) with InvalidGitRemoteError, without ever calling workspace.clone (Task 8)",
+      async (_label, gitRemote) => {
+        const p = project({ path: path.join(root, "does-not-exist"), gitRemote });
+        const cloneSpy = vi.spyOn(workspace, "clone");
+
+        await expect(service.clone(p)).rejects.toBeInstanceOf(InvalidGitRemoteError);
+        expect(cloneSpy).not.toHaveBeenCalled();
+      },
+    );
 
     it("runs WorkspaceService.clone into <cloneRoot>/<id> and returns the fresh resolve()", async () => {
       const p = project({

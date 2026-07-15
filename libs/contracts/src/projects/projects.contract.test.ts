@@ -215,6 +215,38 @@ describe("Project.gitRemote (Phase 76)", () => {
     ).toBe(false);
   });
 
+  it.each([
+    ["leading-dash option-injection value", "--upload-pack=/bin/sh"],
+    ["leading-dash proxy flag", "-oProxyCommand=x"],
+    ["file:// local-path exfil", "file:///etc/passwd"],
+    ["ext:: transport RCE", 'ext::sh -c "id"'],
+    ["bare local path (no scheme)", "/tmp/x"],
+    ["git:// unauthenticated (locked reject)", "git://github.com/x"],
+  ])("rejects a malicious gitRemote — %s: %s (Task 8)", (_label, gitRemote) => {
+    expect(
+      ProjectSchema.safeParse({ id: "alpha", name: "Alpha", path: "~/x", gitRemote }).success,
+    ).toBe(false);
+  });
+
+  it("still accepts the https:// and ssh:// forms alongside the scp-like fixture above (Task 8 tighten-only)", () => {
+    expect(
+      ProjectSchema.safeParse({
+        id: "alpha",
+        name: "Alpha",
+        path: "~/x",
+        gitRemote: "https://github.com/acme/alpha.git",
+      }).success,
+    ).toBe(true);
+    expect(
+      ProjectSchema.safeParse({
+        id: "alpha",
+        name: "Alpha",
+        path: "~/x",
+        gitRemote: "ssh://git@github.com/acme/alpha.git",
+      }).success,
+    ).toBe(true);
+  });
+
   it("flows through CreateProjectSchema and UpdateProjectSchema", () => {
     expect(
       CreateProjectSchema.safeParse({
