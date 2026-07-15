@@ -68,9 +68,11 @@ export function ChatTopBar({ onOpenPalette }: ChatTopBarProps) {
             </Link>
           </GlassSurface>
 
-          {/* <GlassSurface data-testid={ChatTopBarTestId.Lang} radius="pill"> */}
-          <LangSwitch size="md" />
-          {/* </GlassSurface> */}
+          {/* Design (topbar 1:1) drops the glass wrapper here; the testid lives on
+              a plain Container so the compact code-only switch stays transparent. */}
+          <Container data-testid={ChatTopBarTestId.Lang}>
+            <LangSwitch size="md" />
+          </Container>
         </Stack>
       </Stack>
     </Container>
