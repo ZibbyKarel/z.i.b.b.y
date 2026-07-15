@@ -208,7 +208,12 @@ export function ChatDock({
           transition: "border-color .25s, box-shadow .3s",
           ...(composerFocused
             ? {
-                borderColor: "var(--color-accent)",
+                // `border` shorthand (not `borderColor` longhand): GlassSurface
+                // already sets `border: 1px solid …` inline, so overriding the
+                // longhand here mixed shorthand+longhand on one node — React warned
+                // ("removing borderColor … border") on focus toggle and when the
+                // bottom bar reuses this GlassSurface node across a slot swap.
+                border: "1px solid var(--color-accent)",
                 boxShadow: "0 0 0 1px var(--color-accent-glow), var(--shadow-glass)",
               }
             : {}),
