@@ -78,6 +78,11 @@ export interface ClaudeRunOptions {
    * `--agents` can blow (`spawn E2BIG`); a file keeps argv small as they grow. The
    * file persists in the sandbox, so an approval→resume that replays the same args
    * still resolves it. Omit it (tests, callers without a sandbox) → inline prompt.
+   *
+   * Reused (same dir) for the `--mcp-config` payload — see
+   * {@link ClaudeRunCommandService.buildMcpConfigArgs} — since MCP config carries
+   * real secrets and must not sit on argv either; both files live in this one
+   * per-run sandbox rather than threading a second dir option.
    */
   systemPromptDir?: string;
   /**
@@ -297,6 +302,12 @@ export const MAX_CATALOG_AGENTS = 16;
 export const SYSTEM_PROMPT_FILE = ".zibby-system-prompt.md";
 
 /**
+ * Filename the assembled `--mcp-config` payload is spilled to inside the run's
+ * sandbox when a `systemPromptDir` is given (see {@link ClaudeRunCommandService.buildMcpConfigArgs}).
+ */
+export const MCP_CONFIG_FILE = ".zibby-mcp-config.json";
+
+/**
  * ZIBBY's operational delivery/orchestration agents — always folded into a curated
  * catalog so the delivery loop can delegate even when the caller passes a narrow set
  * (or none). These are ZIBBY-native roles, distinct from the seeded specialist
@@ -462,8 +473,14 @@ export class ClaudeRunCommandService {
       buildSettings(customHooks),
     ];
     // Connected MCP servers (UI-managed; the repo-root .mcp.json is NOT wired to
-    // runs). Passed as inline JSON so no temp file is needed; omitted when none.
-    if (mcpConfig) args.push("--mcp-config", JSON.stringify(mcpConfig));
+    // runs). The config carries real secrets (env/headers/Bearer token, see
+    // buildMcpConfig) — spilled to a 0600 file under the sandbox dir and passed by
+    // path when one is available, so it stays off argv (ps-visible otherwise);
+    // inline JSON only as a fallback when no sandbox dir is given. Omitted entirely
+    // when no server is enabled.
+    if (mcpConfig) {
+      args.push(...(await this.buildMcpConfigArgs(mcpConfig, opts.systemPromptDir)));
+    }
     // Full-transcript logging: stream every step as JSON (the runner flattens it back
     // to readable log lines). `stream-json` requires `--verbose` in print mode.
     if (opts.streamTranscript) args.push("--output-format", "stream-json", "--verbose");
@@ -498,6 +515,35 @@ export class ClaudeRunCommandService {
     const file = path.join(systemPromptDir, SYSTEM_PROMPT_FILE);
     await fs.writeFile(file, systemPrompt, "utf8");
     return ["--append-system-prompt-file", file];
+  }
+
+  /**
+   * The argv pair carrying the MCP config: `--mcp-config <path>` when a sandbox dir
+   * is given (mirrors {@link buildSystemPromptArgs} exactly), else an inline
+   * `--mcp-config <json>` fallback — unchanged from the prior behaviour, so any
+   * caller/test that never supplies a sandbox dir keeps working as before.
+   *
+   * Unlike the system-prompt file, this payload carries a live credential (server
+   * env vars, auth headers, a Bearer token — see {@link buildMcpConfig}), so the
+   * file is written `{ mode: 0o600 }` — owner-only — a deliberate hardening beyond
+   * the system-prompt precedent, which isn't secret-bearing. The dir is created if
+   * absent — at build time the run's sandbox may not exist yet (the core mkdirs it
+   * on spawn). Reuses the same sandbox dir the system prompt uses (`opts.systemPromptDir`)
+   * rather than a second dir option — both files live in the same per-run sandbox.
+   *
+   * Resume-safety: the file lives in the run's persistent sandbox cwd, so an
+   * approval→resume that respawns with the same persisted `args` array resolves the
+   * same path — no extra persistence work, same guarantee as the system-prompt file.
+   */
+  private async buildMcpConfigArgs(
+    mcpConfig: { mcpServers: Record<string, Record<string, unknown>> },
+    mcpConfigDir?: string,
+  ): Promise<string[]> {
+    if (!mcpConfigDir) return ["--mcp-config", JSON.stringify(mcpConfig)];
+    await fs.mkdir(mcpConfigDir, { recursive: true });
+    const file = path.join(mcpConfigDir, MCP_CONFIG_FILE);
+    await fs.writeFile(file, JSON.stringify(mcpConfig), { mode: 0o600 });
+    return ["--mcp-config", file];
   }
 
   /**

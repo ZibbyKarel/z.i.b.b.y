@@ -14,6 +14,7 @@ import {
   EXECUTION_DIRECTIVE,
   GATE_DEADLINE_S,
   MAX_CATALOG_AGENTS,
+  MCP_CONFIG_FILE,
   OPERATING_CONTRACT,
   SYSTEM_PROMPT_FILE,
 } from "./claude-run-command.service";
@@ -602,6 +603,56 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     const { args } = await svc.buildClaudeCommand({ instructions: "x", task: "t" });
     expect(args).not.toContain("--mcp-config");
     expect(allowedToolsOf(args).some((t) => t.startsWith("mcp__"))).toBe(false);
+  });
+
+  it("spills --mcp-config to a 0600 file under systemPromptDir (off argv, secret included)", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "zibby-mcpconfig-"));
+    try {
+      const stdio: McpServer = {
+        id: "fs",
+        type: "stdio",
+        command: "npx",
+        args: ["-y", "server-fs"],
+        enabled: true,
+        hasCredentials: true,
+      };
+      const http: McpServer = {
+        id: "remote",
+        type: "sse",
+        url: "https://example.com/sse",
+        enabled: true,
+        hasCredentials: true,
+      };
+      const svc = makeService([CODER], [], {
+        mcpServers: [stdio, http],
+        mcpCredentials: { fs: { env: { TOKEN: "s3cr3t" } }, remote: { authToken: "abc" } },
+      });
+      const { args } = await svc.buildClaudeCommand({
+        instructions: "x",
+        task: "t",
+        systemPromptDir: dir,
+      });
+      // The inline JSON flag value is gone; a file path rides argv instead.
+      const file = flagValue(args, "--mcp-config");
+      expect(file).toBe(path.join(dir, MCP_CONFIG_FILE));
+      // …and the file holds the assembled config, including the merged secrets.
+      const written = JSON.parse(await fs.readFile(file as string, "utf8"));
+      expect(written).toEqual({
+        mcpServers: {
+          fs: { type: "stdio", command: "npx", args: ["-y", "server-fs"], env: { TOKEN: "s3cr3t" } },
+          remote: { type: "sse", url: "https://example.com/sse", headers: { Authorization: "Bearer abc" } },
+        },
+      });
+      // Regression (the audit's ps-visibility concern): no argv element carries the
+      // literal secret string once a sandbox dir is used.
+      expect(args.some((a) => a.includes("s3cr3t"))).toBe(false);
+      expect(args.some((a) => a.includes("Bearer abc"))).toBe(false);
+      // Owner-only mode — the file at rest carries a live credential.
+      const mode = (await fs.stat(file as string)).mode & 0o777;
+      expect(mode).toBe(0o600);
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true });
+    }
   });
 
   it("grants each target directory with --add-dir", async () => {
