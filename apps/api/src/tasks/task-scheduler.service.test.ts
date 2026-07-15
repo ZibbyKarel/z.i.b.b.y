@@ -1196,3 +1196,252 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
     expect(task.outcome?.pr?.url).toBe("https://example.test/pr/1");
   });
 });
+
+describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8) and the budget check→record race (#9)", () => {
+  let dir: string;
+  let storage: ScheduledTasksStorageService;
+  let service: TaskSchedulerService;
+  let agentRunner: {
+    start: ReturnType<typeof vi.fn>;
+    startOrchestrator: ReturnType<typeof vi.fn>;
+    onRunStatus: ReturnType<typeof vi.fn>;
+    get: ReturnType<typeof vi.fn>;
+    readLog: ReturnType<typeof vi.fn>;
+  };
+  /** Runs currently "in flight" per the fake `agentRunner` — drives the fake `countRunning`. */
+  let inFlight: number;
+
+  const PROJECT_ID = "proj_1";
+  const RESET_AT = Date.parse("2026-06-13T04:30:00.000Z");
+
+  /**
+   * Builds a scheduler wired to a single project (or none). `agentRunner.start`
+   * marks the run "in flight" the moment it is CALLED (mirroring the real
+   * `AgentRunnerService`: the process is spawned synchronously, before the promise
+   * settles), then resolves one tick later (`setImmediate`) — a real, non-instant
+   * async gap, wide enough that the PRE-FIX (unlocked) code reliably lets two
+   * concurrent creates both read the stale "under cap" snapshot and both dispatch
+   * under `Promise.all`, without needing any manually-controlled deferred/release
+   * choreography in the test itself.
+   */
+  function makeService(project: { id: string; name: string; budget?: Record<string, unknown> } | null): {
+    fakeBudget: {
+      check: ReturnType<typeof vi.fn>;
+      countRunning: ReturnType<typeof vi.fn>;
+      recordDispatch: ReturnType<typeof vi.fn>;
+      recordCost: ReturnType<typeof vi.fn>;
+    };
+    resumeRunner: (taskId: string) => void;
+    onRunStatusListener: () => ((run: AgentRun) => void) | undefined;
+  } {
+    const pipelineRunner = {
+      start: vi.fn(async () => pipelineRun({})),
+      onRunStatus: vi.fn(() => () => {}),
+      get: vi.fn(() => pipelineRun({})),
+    };
+    const pipelinesStore = { list: vi.fn(async () => []) };
+    const goalRunner = {
+      start: vi.fn(async () => ({ goalRunId: "goal_1" })),
+      onRunStatus: vi.fn(() => () => {}),
+      get: vi.fn(() => ({ goalRunId: "goal_1", status: "done", iterations: [] })),
+    };
+    const chainRunner = {
+      start: vi.fn(async () => ({ chainRunId: "chain_1", steps: [] })),
+      onRunStatus: vi.fn(() => () => {}),
+      get: vi.fn(() => ({ chainRunId: "chain_1", status: "running", steps: [] })),
+    };
+    let runId = 0;
+    let onRunStatusListener: ((run: AgentRun) => void) | undefined;
+    agentRunner = {
+      start: vi.fn(async () => {
+        inFlight += 1;
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        runId += 1;
+        return agentRun({ runId: `writer_${runId}` });
+      }),
+      startOrchestrator: vi.fn(async () => agentRun({ agentId: "orchestrator" })),
+      onRunStatus: vi.fn((l: (run: AgentRun) => void) => {
+        onRunStatusListener = l;
+        return () => {};
+      }),
+      get: vi.fn(() => agentRun({})),
+      readLog: vi.fn(async () => ({ content: "", nextOffset: 0, done: true })),
+    };
+    const classifier = {
+      classify: vi.fn(async () => ({
+        target: { kind: "agent", id: "writer", name: "Writer" },
+        confidence: 0.9,
+        reason: "match",
+        matchedTerms: [],
+        candidates: [{ kind: "agent", id: "writer", name: "Writer" }],
+      })),
+      classifyWithinSubsystem: vi.fn(async () => {
+        throw new Error("not exercised by this describe block");
+      }),
+    };
+    const fakeProjects = {
+      list: async () => (project ? [project] : []),
+      get: async () => {
+        if (!project) throw new Error("no project");
+        return project;
+      },
+    };
+    const fakeResolved = { resolveBudget: async (p: { budget?: unknown }) => p.budget };
+    const fakeBudget = {
+      check: vi.fn(async () => ({ ok: true }) as BudgetCheck),
+      countRunning: vi.fn(async () => inFlight),
+      recordDispatch: vi.fn(async () => {}),
+      recordCost: vi.fn(async () => {}),
+    };
+    let registeredRunner: { resume: (taskId: string) => void; cancel: (taskId: string) => void } | undefined;
+    const fakeApprovals = {
+      register: vi.fn((_kind: string, runner: typeof registeredRunner) => {
+        registeredRunner = runner;
+      }),
+      requestApproval: async () => ({ id: "appr_1" }),
+      reject: async () => {},
+    };
+    const fakeGates = { floor: async () => [], evaluate: vi.fn(() => ({ decision: "allow" })) };
+    const fakeLimits = {
+      windowExhausted: vi.fn(async () => ({ exhausted: false, resumeAt: null })),
+      resolveResumeAt: vi.fn(async () => RESET_AT),
+    };
+    const activity = { record: vi.fn(async (_input: ActivityInput) => {}) };
+    const attachmentStorage = new AttachmentStorageService();
+
+    service = new TaskSchedulerService(
+      storage,
+      classifier as never,
+      agentRunner as never,
+      pipelineRunner as never,
+      pipelinesStore as never,
+      goalRunner as never,
+      chainRunner as never,
+      fakeLogger as never,
+      fakeTrace as never,
+      activity as never,
+      fakeProjects as never,
+      fakeResolved as never,
+      fakeBudget as never,
+      fakeApprovals as never,
+      fakeGates as never,
+      fakeLimits as never,
+      { handleTerminal: async () => null } as never,
+      fakeSystemConfigStore(),
+      { name: async () => null } as never,
+      attachmentStorage,
+    );
+    service.onModuleInit();
+    return {
+      fakeBudget,
+      resumeRunner: (taskId: string) => registeredRunner?.resume(taskId),
+      onRunStatusListener: () => onRunStatusListener,
+    };
+  }
+
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "task-sched-capacity-"));
+    storage = new ScheduledTasksStorageService(dir);
+    await storage.onModuleInit();
+    inFlight = 0;
+  });
+
+  afterEach(async () => {
+    service.onModuleDestroy();
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  it("maxConcurrent TOCTOU (#8): two concurrent background creates for a maxConcurrent=1 project dispatch exactly one, queue the other", async () => {
+    makeService({ id: PROJECT_ID, name: "Proj", budget: { maxConcurrent: 1 } });
+
+    const [a, b] = await Promise.all([
+      service.createTask({ text: "do A", title: "A" }, undefined, PROJECT_ID, undefined, true),
+      service.createTask({ text: "do B", title: "B" }, undefined, PROJECT_ID, undefined, true),
+    ]);
+    // The interactive path always returns fast, whichever way the race resolves —
+    // proof neither call blocked on the other's real dispatch.
+    expect(a.outcome).toBe("pending");
+    expect(b.outcome).toBe("pending");
+
+    await vi.waitFor(async () => {
+      const [taskA, taskB] = await Promise.all([storage.get(a.task.id), storage.get(b.task.id)]);
+      const statuses = [taskA.status, taskB.status].sort();
+      expect(statuses).toEqual(["dispatched", "queued"]);
+    });
+    expect(agentRunner.start).toHaveBeenCalledTimes(1);
+  });
+
+  it("maxConcurrent TOCTOU (#8): two concurrent SYNCHRONOUS creates for a maxConcurrent=1 project dispatch exactly one, queue the other", async () => {
+    makeService({ id: PROJECT_ID, name: "Proj", budget: { maxConcurrent: 1 } });
+
+    const [a, b] = await Promise.all([
+      service.createTask({ text: "do A", title: "A" }, undefined, PROJECT_ID),
+      service.createTask({ text: "do B", title: "B" }, undefined, PROJECT_ID),
+    ]);
+    const outcomes = [a.outcome, b.outcome].sort();
+    expect(outcomes).toEqual(["dispatched", "scheduled"]);
+    const scheduled = a.outcome === "scheduled" ? a : b;
+    if (scheduled.outcome !== "scheduled") throw new Error("unreachable");
+    expect(scheduled.task.status).toBe("queued");
+    expect(agentRunner.start).toHaveBeenCalledTimes(1);
+  });
+
+  it("budget check→record race (#9): N concurrent background creates against a daily cap of M dispatch exactly M and record exactly M ledger lines, holding the rest", async () => {
+    const DAILY_CAP = 2;
+    const N = 4;
+    const { fakeBudget } = makeService({
+      id: PROJECT_ID,
+      name: "Proj",
+      // maxConcurrent deliberately HIGHER than the daily cap (and higher than N) so
+      // this test exercises ONLY the ledger race, not the concurrency-slot race
+      // (#8's own test above already covers that).
+      budget: { maxConcurrent: 10 },
+    });
+    let dailyCount = 0;
+    fakeBudget.check.mockImplementation(async (projectId?: string) => {
+      if (projectId === PROJECT_ID && dailyCount >= DAILY_CAP) {
+        return {
+          ok: false,
+          over: "project-daily",
+          detail: `daily run cap reached (${dailyCount}/${DAILY_CAP})`,
+        };
+      }
+      return { ok: true };
+    });
+    fakeBudget.recordDispatch.mockImplementation(async () => {
+      dailyCount += 1;
+    });
+
+    const results = await Promise.all(
+      Array.from({ length: N }, (_, i) =>
+        service.createTask({ text: `do ${i}`, title: `T${i}` }, undefined, PROJECT_ID, undefined, true),
+      ),
+    );
+    for (const r of results) expect(r.outcome).toBe("pending");
+
+    await vi.waitFor(async () => {
+      const tasks = await Promise.all(results.map((r) => storage.get(r.task.id)));
+      const dispatched = tasks.filter((t) => t.status === "dispatched");
+      const held = tasks.filter((t) => t.status === "held");
+      expect(dispatched).toHaveLength(DAILY_CAP);
+      expect(held).toHaveLength(N - DAILY_CAP);
+    });
+    // The Critical finding's own proof: the ledger recorded exactly the cap, never
+    // more — even though N (> the cap) concurrent creates all raced the check.
+    expect(dailyCount).toBe(DAILY_CAP);
+    expect(fakeBudget.recordDispatch).toHaveBeenCalledTimes(DAILY_CAP);
+  });
+
+  // NOTE: an optional 4th test ("releaseHeld vs. drainQueues") was attempted per the
+  // brief's item 3, but was deliberately NOT kept. releaseHeld's path to its own
+  // capacity check is naturally much shorter (one storage.get) than drainQueues' (a
+  // full storage.list scan first), so firing them "concurrently" via fakes never
+  // reliably reproduces the pre-fix race — even artificial one-tick delays on
+  // storage.get did not make the test go RED against the unpatched code, so it would
+  // have shipped as a non-regression-proving (and thus misleading) test. The
+  // releaseHeld code fix itself IS in place (see task-scheduler.service.ts, wrapped in
+  // the same withCapacityLock/guardExisting path exercised by the two tests above),
+  // and it shares 100% of its guard logic with attemptDispatch's other caller
+  // (drainQueues), which the mandatory tests above do exercise indirectly via
+  // guardExisting. See task-3c-report.md for the full writeup.
+});

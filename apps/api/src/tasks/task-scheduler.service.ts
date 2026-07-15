@@ -527,9 +527,80 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
   }
 
   /**
+   * Run `fn` exclusively for `projectId` (findings #8/#9 — the maxConcurrent TOCTOU
+   * and the budget check→record race live in the same code region: `budget.check` →
+   * `atCapacity` → the real `dispatch` → `recordLedger`, unserialized, let two
+   * concurrent creates for the same project both pass the gate and both dispatch,
+   * exceeding `maxConcurrent` and over-recording the ledger past its cap — a Law-3
+   * violation). `project-capacity:${projectId}` is a NEW key, disjoint from the
+   * `task:${id}` outcome-writer lock and the global `scheduler:drain` sweep lock. An
+   * unscoped task (no `projectId`) never contends on either race, so it runs
+   * unlocked — matching `atCapacity`'s own short-circuit for `project == null`.
+   */
+  private withCapacityLock<T>(projectId: string | undefined, fn: () => Promise<T>): Promise<T> {
+    return projectId ? withPathLock(`project-capacity:${projectId}`, fn) : fn();
+  }
+
+  /**
+   * The shared budget+capacity guard: over budget → hold behind approval; at
+   * capacity → queue. Both persist + surface as `outcome: "scheduled"`. Returns
+   * `{ ok: true }` to let the caller proceed to an actual dispatch. Callers run this
+   * INSIDE {@link withCapacityLock} — see {@link attemptCreate}.
+   */
+  private async guardCapacity(
+    taskId: string,
+    input: CreateTaskInputResolved,
+    project: Project | null,
+    projectId: string | undefined,
+    now: number,
+  ): Promise<{ ok: true } | { ok: false; result: CreateTaskResult }> {
+    const check = await this.budget.check(projectId, new Date(now));
+    if (!check.ok) {
+      const task = await this.storage.createHeld(taskId, input, projectId, check.detail, now);
+      const held = await this.holdForApproval(task, project, check.detail, check.metrics);
+      return { ok: false, result: { outcome: "scheduled", task: held } };
+    }
+    if (await this.atCapacity(project)) {
+      const task = await this.storage.createQueued(taskId, input, projectId, now);
+      this.recordQueued(task, project);
+      return { ok: false, result: { outcome: "scheduled", task } };
+    }
+    return { ok: true };
+  }
+
+  /**
    * The immediate-create guard: attribute, budget-check, then either hold, queue, or
    * dispatch — returning the client-facing {@link CreateTaskResult}. A held/queued
    * task surfaces as `outcome: "scheduled"` (a parked task the feed renders by status).
+   *
+   * Findings #8 (High, maxConcurrent TOCTOU) / #9 (Critical, budget check→record
+   * race): the synchronous branch runs its ENTIRE guard+dispatch as one normal
+   * `await`ed call under `project-capacity:${projectId}` ({@link attemptCreateSync}) —
+   * simple, since this branch already blocks the HTTP response on the dispatch, so
+   * serializing it fully against siblings adds no NEW latency cost.
+   *
+   * The background branch (the interactive New Task dialog path — "the gap that
+   * matters", per the audit) can't do the same: the create-time gate must stay FAST
+   * (a sibling create's own gate check must not block behind THIS task's real
+   * dispatch — the classify+Haiku+spawn chain the whole `background` path exists to
+   * get off the response path). So the gate and the real dispatch run as TWO
+   * separate `project-capacity` acquisitions:
+   *  1. The gate ({@link guardCapacity}) — held/queued still returns fast, exactly as
+   *     before. A pass persists the task `pending` and returns immediately.
+   *  2. `dispatchPending`, kicked off as `void this.withCapacityLock(key, () =>
+   *     this.dispatchPending(...))` from THIS (unlocked) continuation — a genuinely
+   *     fresh acquisition, per the file-lock.ts CONTRACT (a call made from INSIDE an
+   *     already-held section would capture the ambient held-set and, once it tried
+   *     to acquire the SAME key after that holder released, would see it as still
+   *     held and run inline, unprotected — silently breaking mutual exclusion).
+   *
+   * Between (1) and (2) a sibling create can race in and ALSO pass its own gate
+   * check (neither has dispatched yet, so `atCapacity`/`budget.check` both still read
+   * "under cap"). `dispatchPending` closes this gap itself: it re-verifies budget +
+   * capacity ({@link guardExisting}) immediately before the real dispatch, now
+   * properly serialized (same lock, FIFO) against every other real dispatch for the
+   * project — a task that loses this recheck flips `pending → held/queued` instead
+   * of also dispatching.
    */
   private async attemptCreate(
     taskId: string,
@@ -546,7 +617,9 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     // Phase 9: the limit guard runs FIRST (decision 4) — an exhausted usage window
     // means nothing can run, so deferring to the window reset is the right shape
     // (not holding for approval or queueing). Fail-open: a stale/headroom reading
-    // falls through to the budget + concurrency guards exactly as before.
+    // falls through to the budget + concurrency guards exactly as before. Not part
+    // of the capacity/budget race (a limit deferral never dispatches), so it stays
+    // outside `project-capacity`.
     const deferral = await this.limitDeferral(now);
     if (deferral) {
       const task = await this.storage.createDeferredLimit(
@@ -560,26 +633,41 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       if (background && titleAuto) this.refineTitle(task.id, input.text);
       return { outcome: "scheduled", task };
     }
-    const check = await this.budget.check(projectId, new Date(now));
-    if (!check.ok) {
-      const task = await this.storage.createHeld(taskId, input, projectId, check.detail, now);
-      const held = await this.holdForApproval(task, project, check.detail, check.metrics);
-      if (background && titleAuto) this.refineTitle(task.id, input.text);
-      return { outcome: "scheduled", task: held };
+
+    if (!background) {
+      return this.withCapacityLock(projectId, () =>
+        this.attemptCreateSync(taskId, input, project, projectId, now, explicitTarget),
+      );
     }
-    if (await this.atCapacity(project)) {
-      const task = await this.storage.createQueued(taskId, input, projectId, now);
-      this.recordQueued(task, project);
-      if (background && titleAuto) this.refineTitle(task.id, input.text);
-      return { outcome: "scheduled", task };
+
+    const gate = await this.withCapacityLock(projectId, () =>
+      this.guardCapacity(taskId, input, project, projectId, now),
+    );
+    if (!gate.ok) {
+      if (titleAuto) this.refineTitle(gate.result.task.id, input.text);
+      return gate.result;
     }
     // The interactive path returns here without blocking on the spawn: persist the
-    // task `pending` and run classify+spawn in the background (→ `dispatched`/`failed`).
-    if (background) {
-      const task = await this.storage.createPending(taskId, input, projectId, now, explicitTarget);
-      void this.dispatchPending(task, project, explicitTarget, titleAuto);
-      return { outcome: "pending", task };
-    }
+    // task `pending` and run classify+spawn in the background (→ `dispatched`/`failed`/
+    // `held`/`queued` — see the CONTRACT note above for why this is a FRESH lock call).
+    const task = await this.storage.createPending(taskId, input, projectId, now, explicitTarget);
+    void this.withCapacityLock(projectId, () =>
+      this.dispatchPending(task, project, explicitTarget, titleAuto),
+    );
+    return { outcome: "pending", task };
+  }
+
+  /** The synchronous-branch body of {@link attemptCreate}, run inside `project-capacity`. */
+  private async attemptCreateSync(
+    taskId: string,
+    input: CreateTaskInputResolved,
+    project: Project | null,
+    projectId: string | undefined,
+    now: number,
+    explicitTarget: TaskTarget | undefined,
+  ): Promise<CreateTaskResult> {
+    const gate = await this.guardCapacity(taskId, input, project, projectId, now);
+    if (!gate.ok) return gate.result;
     const dispatched = await this.dispatch(
       input.text,
       input.paths ?? [],
@@ -615,6 +703,13 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     return this.trace.run({ traceId: randomUUID() }, async () => {
       const projectId = project?.id;
       try {
+        // Findings #8/#9: re-verify budget + capacity HERE, immediately before the
+        // real dispatch — see attemptCreate's doc comment for why this recheck
+        // (rather than just serializing) is what actually closes the gap. A
+        // sibling create that raced past the create-time gate but loses this
+        // recheck flips `pending → held/queued` instead of also dispatching.
+        const guard = await this.guardExisting(task, project, new Date(), false);
+        if (guard !== "ok") return;
         let title = task.title;
         if (titleAuto) {
           const derived = await this.namer.name(task.text).catch(() => null);
@@ -675,6 +770,35 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
   }
 
   /**
+   * Budget+capacity guard for an ALREADY-PERSISTED task — marks it held/queued IN
+   * PLACE (`storage.markHeld`/`markQueued`) rather than creating a new held/queued
+   * record ({@link guardCapacity} does that, for a task not yet persisted). Shared by
+   * {@link attemptDispatch} (the tick/drain/release paths) and `dispatchPending`'s
+   * pre-dispatch recheck (findings #8/#9 — see {@link attemptCreate}'s doc comment).
+   */
+  private async guardExisting(
+    task: ScheduledTask,
+    project: Project | null,
+    at: Date,
+    skipBudget: boolean,
+  ): Promise<"ok" | "held" | "queued"> {
+    if (!skipBudget) {
+      const check = await this.budget.check(task.projectId, at);
+      if (!check.ok) {
+        await this.storage.markHeld(task.id, check.detail);
+        await this.holdForApproval(task, project, check.detail, check.metrics);
+        return "held";
+      }
+    }
+    if (await this.atCapacity(project)) {
+      await this.storage.markQueued(task.id);
+      this.recordQueued(task, project);
+      return "queued";
+    }
+    return "ok";
+  }
+
+  /**
    * The guard for an EXISTING task record (the tick fire path, the queue drain, and
    * the release path). Returns the resulting state. `skipBudget` is the release-once
    * bypass — an operator-approved overage skips the budget check but still honors
@@ -696,19 +820,8 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
       this.recordDeferredLimit(deferred);
       return "deferred";
     }
-    if (!opts.skipBudget) {
-      const check = await this.budget.check(task.projectId, at);
-      if (!check.ok) {
-        await this.storage.markHeld(task.id, check.detail);
-        await this.holdForApproval(task, project, check.detail, check.metrics);
-        return "held";
-      }
-    }
-    if (await this.atCapacity(project)) {
-      await this.storage.markQueued(task.id);
-      this.recordQueued(task, project);
-      return "queued";
-    }
+    const guard = await this.guardExisting(task, project, at, opts.skipBudget);
+    if (guard !== "ok") return guard;
     // Phase 10: a task that already carries a target (e.g. a goal, never classifiable)
     // re-dispatches to it; otherwise classify as before.
     const dispatched = await this.dispatch(
@@ -814,7 +927,13 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
     const project = task.projectId
       ? await this.projects.get(task.projectId).catch((): Project | null => null)
       : null;
-    await this.attemptDispatch(task, project, Date.now(), { skipBudget: true });
+    // Finding #8 (A.2): this call was bare — an operator release racing a concurrent
+    // `drainQueues`/`attemptCreate` for the same project is the same TOCTOU shape as
+    // the cited line, just operator-triggered instead of automatic. Same lock, same
+    // fix.
+    await this.withCapacityLock(task.projectId, () =>
+      this.attemptDispatch(task, project, Date.now(), { skipBudget: true }),
+    );
   }
 
   /**
@@ -846,10 +965,16 @@ export class TaskSchedulerService implements OnModuleInit, OnApplicationBootstra
           // Re-read: a concurrent cancel may have moved it on already.
           const fresh = await this.storage.get(task.id).catch((): ScheduledTask | null => null);
           if (!fresh || fresh.status !== "queued") continue;
+          // Finding #8 (A.2): nest the per-project `project-capacity` lock inside the
+          // global `scheduler:drain` sweep lock — different keys, ordinary nesting —
+          // so a drain's dispatch is serialized against a concurrent `attemptCreate`
+          // or `releaseHeld` for the same project, not just against other drains.
           await this.trace.run({ traceId: randomUUID() }, () =>
-            this.attemptDispatch(fresh, project, Date.now(), {
-              skipBudget: this.budgetApproved.has(fresh.id),
-            }),
+            this.withCapacityLock(projectId, () =>
+              this.attemptDispatch(fresh, project, Date.now(), {
+                skipBudget: this.budgetApproved.has(fresh.id),
+              }),
+            ),
           );
         }
       }
