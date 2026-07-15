@@ -85,7 +85,7 @@ export function createOrb(container: HTMLElement, opts: CreateOrbOptions): OrbCo
       }`,
     fragmentShader: `
       uniform vec3 uColor; varying float vFres;
-      void main(){ float a = mix(0.6,0.95,clamp(vFres,0.0,1.0)); gl_FragColor = vec4(uColor,a); }`,
+      void main(){ float a = mix(0.82,0.97,clamp(vFres,0.0,1.0)); gl_FragColor = vec4(uColor,a); }`,
   });
   grp.add(new THREE.Mesh(wireGeometry, wireMat));
 
