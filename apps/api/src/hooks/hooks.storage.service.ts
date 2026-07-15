@@ -29,11 +29,9 @@ export class HooksStorageService extends EntityFileStore<Hook> {
   }
 
   async create(input: CreateHookInput): Promise<Hook> {
-    const file = this.resolveFile(input.id);
-    if (await this.fileExists(file)) throw new HookConflictError(input.id);
-    const hook = HookSchema.parse({ ...input });
-    await this.writeEntity(hook);
-    return hook;
+    const created = await this.createEntity(input.id, () => HookSchema.parse({ ...input }));
+    if (created === null) throw new HookConflictError(input.id);
+    return created;
   }
 
   async update(id: string, patch: UpdateHookInput): Promise<Hook> {

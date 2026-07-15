@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { type Category, CategorySchema, type CreateCategoryInput } from "@zibby/contracts";
-import { ensureDir, safeJson, writeFileAtomic } from "../file-storage";
+import { ensureDir, safeJson, withPathLock, writeFileAtomic } from "../file-storage";
 
 /** Manifest file holding a category taxonomy, alongside its resource's data files. */
 export const CATEGORY_MANIFEST_FILE = "_categories.json";
@@ -58,22 +58,26 @@ export abstract class CategoryManifestStore {
   }
 
   async create(input: CreateCategoryInput): Promise<Category> {
-    const categories = await this.list();
-    if (categories.some((c) => c.name === input.name)) {
-      throw new CategoryConflictError(input.name);
-    }
-    const category: Category = { name: input.name, glyph: input.glyph };
-    await this.writeAtomic([...categories, category]);
-    return category;
+    return withPathLock(this.file, async () => {
+      const categories = await this.list();
+      if (categories.some((c) => c.name === input.name)) {
+        throw new CategoryConflictError(input.name);
+      }
+      const category: Category = { name: input.name, glyph: input.glyph };
+      await this.writeAtomic([...categories, category]);
+      return category;
+    });
   }
 
   /** Remove a category from the manifest. The caller enforces the "empty" policy. */
   async delete(name: string): Promise<void> {
-    const categories = await this.list();
-    if (!categories.some((c) => c.name === name)) {
-      throw new CategoryNotFoundError(name);
-    }
-    await this.writeAtomic(categories.filter((c) => c.name !== name));
+    return withPathLock(this.file, async () => {
+      const categories = await this.list();
+      if (!categories.some((c) => c.name === name)) {
+        throw new CategoryNotFoundError(name);
+      }
+      await this.writeAtomic(categories.filter((c) => c.name !== name));
+    });
   }
 
   /** Write via a temp file + atomic rename so a crash can't leave a torn manifest. */

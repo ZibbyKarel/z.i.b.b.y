@@ -34,11 +34,9 @@ export class CommandsStorageService extends MarkdownEntityStore<Command> {
   }
 
   async create(input: CreateCommandInput): Promise<Command> {
-    const file = this.resolveFile(input.id);
-    if (await this.fileExists(file)) throw new CommandConflictError(input.id);
-    const command = CommandSchema.parse({ ...input });
-    await this.writeEntity(command);
-    return command;
+    const created = await this.createEntity(input.id, () => CommandSchema.parse({ ...input }));
+    if (created === null) throw new CommandConflictError(input.id);
+    return created;
   }
 
   async update(id: string, patch: UpdateCommandInput): Promise<Command> {

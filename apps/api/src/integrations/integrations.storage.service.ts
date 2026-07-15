@@ -85,11 +85,11 @@ export class IntegrationsStorageService
   }
 
   async create(input: CreateIntegrationInput): Promise<Integration> {
-    const file = this.resolveFile(input.id);
-    if (await this.fileExists(file)) throw new IntegrationConflictError(input.id);
-    const integration = IntegrationSchema.parse({ ...input });
-    await this.writeEntity(integration);
-    return integration;
+    const created = await this.createEntity(input.id, () =>
+      IntegrationSchema.parse({ ...input }),
+    );
+    if (created === null) throw new IntegrationConflictError(input.id);
+    return created;
   }
 
   async update(id: string, patch: UpdateIntegrationInput): Promise<Integration> {

@@ -56,4 +56,85 @@ describe("withPathLock", () => {
     await Promise.all([withPathLock("doc", append("a")), withPathLock("doc", append("b"))]);
     expect(shared).toBe("ab"); // not "b" (lost update)
   });
+
+  describe("reentrancy (Task 3)", () => {
+    // A non-reentrant regression deadlocks (the inner call queues behind the
+    // outer one, which never settles because it's waiting on the inner call) —
+    // a bounded per-test timeout turns that into a clean failure instead of
+    // hanging the whole suite/CI job.
+    it("a nested call on the SAME key runs inline instead of deadlocking", async () => {
+      const log: string[] = [];
+      const result = await withPathLock("k", async () => {
+        log.push("outer:start");
+        const inner = await withPathLock("k", async () => {
+          log.push("inner:run");
+          return "inner-result";
+        });
+        log.push("outer:end");
+        return inner;
+      });
+      expect(result).toBe("inner-result");
+      expect(log).toEqual(["outer:start", "inner:run", "outer:end"]);
+    }, 2000);
+
+    it("nested calls on DIFFERENT keys stay fully concurrent", async () => {
+      const log: string[] = [];
+      await withPathLock("outer-key", async () => {
+        log.push("outer:start");
+        await Promise.all([
+          withPathLock("x", async () => {
+            log.push("x:start");
+            await tick();
+            log.push("x:end");
+          }),
+          withPathLock("y", async () => {
+            log.push("y:start");
+            await tick();
+            log.push("y:end");
+          }),
+        ]);
+        log.push("outer:end");
+      });
+      // x and y both started before either ended — still interleaved, not
+      // serialized against each other just because they're nested.
+      expect(log.slice(1, 3).sort()).toEqual(["x:start", "y:start"]);
+    });
+
+    it("no held-set leakage: an unrelated later call for the same key is not treated as already held", async () => {
+      const log: string[] = [];
+      await withPathLock("shared", async () => {
+        log.push("first:run");
+      });
+      // A fresh, independent async chain (this `it` body, after the first
+      // withPathLock settled) must still queue normally — not run inline as if
+      // it inherited the first call's held-set.
+      await Promise.all([
+        withPathLock("shared", async () => {
+          log.push("second:start");
+          await tick();
+          log.push("second:end");
+        }),
+        withPathLock("shared", async () => {
+          log.push("third:start");
+          await tick();
+          log.push("third:end");
+        }),
+      ]);
+      expect(log).toEqual(["first:run", "second:start", "second:end", "third:start", "third:end"]);
+    });
+
+    it("a 3-level-deep nest on the same key all runs inline", async () => {
+      const log: string[] = [];
+      await withPathLock("deep", async () => {
+        log.push("1");
+        await withPathLock("deep", async () => {
+          log.push("2");
+          await withPathLock("deep", async () => {
+            log.push("3");
+          });
+        });
+      });
+      expect(log).toEqual(["1", "2", "3"]);
+    }, 2000);
+  });
 });

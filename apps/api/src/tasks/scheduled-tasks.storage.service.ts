@@ -34,6 +34,20 @@ export class InvalidScheduledTaskIdError extends Error {
 }
 
 /**
+ * Internal-only signal: a mutator's `updateEntity` callback throws this to abort
+ * the write when the call is already a no-op (an idempotent guard, e.g. "outcome
+ * already set" / "not in a cancellable status") — caught immediately below and the
+ * CURRENT, unwritten value is returned instead of propagating. Keeps the
+ * read-then-decide guard atomic with the write (Task 3) while preserving the exact
+ * "no write on no-op" behavior the unlocked version had.
+ */
+class NoopUpdate extends Error {
+  constructor(public readonly current: ScheduledTask) {
+    super("no-op update — internal control flow, never thrown to a caller");
+  }
+}
+
+/**
  * Durable, file-backed persistence for deferred tasks — one `<id>.json` each.
  * Mirrors {@link AutomationsStorageService}: the base owns the crash-safe write,
  * id guard and tolerant listing; this subclass adds task-shaped create/patch
@@ -163,10 +177,7 @@ export class ScheduledTasksStorageService
    * namer refines it off the response path before the run starts.
    */
   async setTitle(id: string, title: string): Promise<ScheduledTask> {
-    const existing = await this.get(id);
-    const merged: ScheduledTask = { ...existing, title };
-    await this.writeEntity(merged);
-    return merged;
+    return this.updateEntity(id, (existing) => ({ ...existing, title }));
   }
 
   /** Persist a task queued behind a project's concurrency cap (Phase 8.2). */
@@ -219,40 +230,28 @@ export class ScheduledTasksStorageService
    * Deferral is cheap (no spawn, no token), so this is unbounded.
    */
   async markDeferredLimit(id: string, resumeAt: number): Promise<ScheduledTask> {
-    const existing = await this.get(id);
-    const merged: ScheduledTask = {
+    return this.updateEntity(id, (existing) => ({
       ...existing,
       status: "scheduled",
       scheduledAt: resumeAt,
       deferredReason: "limit",
       limitDeferrals: (existing.limitDeferrals ?? 0) + 1,
-    };
-    await this.writeEntity(merged);
-    return merged;
+    }));
   }
 
   /** Move an existing task to `held` with a reason (the tick fire path). */
   async markHeld(id: string, heldReason: string): Promise<ScheduledTask> {
-    const existing = await this.get(id);
-    const merged: ScheduledTask = { ...existing, status: "held", heldReason };
-    await this.writeEntity(merged);
-    return merged;
+    return this.updateEntity(id, (existing) => ({ ...existing, status: "held", heldReason }));
   }
 
   /** Move an existing task to `queued` (the tick / release-at-capacity paths). */
   async markQueued(id: string): Promise<ScheduledTask> {
-    const existing = await this.get(id);
-    const merged: ScheduledTask = { ...existing, status: "queued" };
-    await this.writeEntity(merged);
-    return merged;
+    return this.updateEntity(id, (existing) => ({ ...existing, status: "queued" }));
   }
 
   /** Stamp the `spend-past-cap` approval onto a held task. */
   async setApproval(id: string, approvalId: string): Promise<ScheduledTask> {
-    const existing = await this.get(id);
-    const merged: ScheduledTask = { ...existing, approvalId };
-    await this.writeEntity(merged);
-    return merged;
+    return this.updateEntity(id, (existing) => ({ ...existing, approvalId }));
   }
 
   /**
@@ -261,12 +260,12 @@ export class ScheduledTasksStorageService
    * clears it back to "bez projektu".
    */
   async setProjectId(id: string, projectId: string | null): Promise<ScheduledTask> {
-    const existing = await this.get(id);
-    const merged: ScheduledTask = { ...existing };
-    if (projectId) merged.projectId = projectId;
-    else delete merged.projectId;
-    await this.writeEntity(merged);
-    return merged;
+    return this.updateEntity(id, (existing) => {
+      const merged: ScheduledTask = { ...existing };
+      if (projectId) merged.projectId = projectId;
+      else delete merged.projectId;
+      return merged;
+    });
   }
 
   /**
@@ -311,10 +310,11 @@ export class ScheduledTasksStorageService
     id: string,
     pendingOutput: NonNullable<ScheduledTask["pendingOutput"]>,
   ): Promise<ScheduledTask> {
-    const existing = await this.get(id);
-    const merged: ScheduledTask = { ...existing, status: "awaiting-output", pendingOutput };
-    await this.writeEntity(merged);
-    return merged;
+    return this.updateEntity(id, (existing) => ({
+      ...existing,
+      status: "awaiting-output",
+      pendingOutput,
+    }));
   }
 
   /**
@@ -322,31 +322,40 @@ export class ScheduledTasksStorageService
    * and clear `pendingOutput`. The run's outcome is written separately by the caller.
    */
   async resolveOutput(id: string): Promise<ScheduledTask> {
-    const existing = await this.get(id);
-    const merged: ScheduledTask = { ...existing, status: "dispatched" };
-    delete merged.pendingOutput;
-    await this.writeEntity(merged);
-    return merged;
+    return this.updateEntity(id, (existing) => {
+      const merged: ScheduledTask = { ...existing, status: "dispatched" };
+      delete merged.pendingOutput;
+      return merged;
+    });
   }
 
   /**
    * Write a dispatched run's terminal outcome onto its task — idempotent: the
-   * first write wins (the fast path and the catch-up sweep may both fire).
+   * first write wins (the fast path and the catch-up sweep may both fire). The
+   * "already has an outcome" guard is evaluated atomically with the write (Task 3):
+   * `mutate` aborts via {@link NoopUpdate} rather than writing the same outcome
+   * (or racing a second, different one) back.
    */
   async writeOutcome(id: string, outcome: TaskOutcome): Promise<ScheduledTask> {
-    const existing = await this.get(id);
-    if (existing.outcome) return existing;
-    const merged: ScheduledTask = { ...existing, outcome };
-    await this.writeEntity(merged);
-    return merged;
+    try {
+      return await this.updateEntity(id, (existing) => {
+        if (existing.outcome) throw new NoopUpdate(existing);
+        return { ...existing, outcome };
+      });
+    } catch (error) {
+      if (error instanceof NoopUpdate) return error.current;
+      throw error;
+    }
   }
 
   /** Stamp a task dispatched: record the chosen target and the started run's ref. */
   async markDispatched(id: string, runRef: string, target: TaskTarget): Promise<ScheduledTask> {
-    const existing = await this.get(id);
-    const merged: ScheduledTask = { ...existing, status: "dispatched", runRef, target };
-    await this.writeEntity(merged);
-    return merged;
+    return this.updateEntity(id, (existing) => ({
+      ...existing,
+      status: "dispatched",
+      runRef,
+      target,
+    }));
   }
 
   /**
@@ -358,25 +367,22 @@ export class ScheduledTasksStorageService
    * gate is preserved. The scheduler's global `onRunStatus` handles the rest.
    */
   async reassignRun(id: string, runRef: string): Promise<ScheduledTask> {
-    const existing = await this.get(id);
-    const merged: ScheduledTask = { ...existing, status: "dispatched", runRef };
-    delete merged.outcome;
-    delete merged.error;
-    await this.writeEntity(merged);
-    return merged;
+    return this.updateEntity(id, (existing) => {
+      const merged: ScheduledTask = { ...existing, status: "dispatched", runRef };
+      delete merged.outcome;
+      delete merged.error;
+      return merged;
+    });
   }
 
   /** Stamp a task failed with a short reason (kept for the queue's display). */
   async markFailed(id: string, error: string): Promise<ScheduledTask> {
-    const existing = await this.get(id);
-    const merged: ScheduledTask = {
+    return this.updateEntity(id, (existing) => ({
       ...existing,
       status: "failed",
       error,
       attempts: (existing.attempts ?? 0) + 1,
-    };
-    await this.writeEntity(merged);
-    return merged;
+    }));
   }
 
   /**
@@ -386,29 +392,23 @@ export class ScheduledTasksStorageService
    * attempt cap is reached, so this can never loop unbounded.
    */
   async markRetry(id: string, nextAt: number, error: string): Promise<ScheduledTask> {
-    const existing = await this.get(id);
-    const merged: ScheduledTask = {
+    return this.updateEntity(id, (existing) => ({
       ...existing,
       status: "scheduled",
       scheduledAt: nextAt,
       error,
       attempts: (existing.attempts ?? 0) + 1,
-    };
-    await this.writeEntity(merged);
-    return merged;
+    }));
   }
 
   /** M8: terminal dead-letter — a transient dispatch failure that exhausted its retries. */
   async markDeadLettered(id: string, error: string): Promise<ScheduledTask> {
-    const existing = await this.get(id);
-    const merged: ScheduledTask = {
+    return this.updateEntity(id, (existing) => ({
       ...existing,
       status: "dead-letter",
       error,
       attempts: (existing.attempts ?? 0) + 1,
-    };
-    await this.writeEntity(merged);
-    return merged;
+    }));
   }
 
   /**
@@ -419,11 +419,15 @@ export class ScheduledTasksStorageService
    * truth) — this only flips the record.
    */
   async cancel(id: string): Promise<ScheduledTask> {
-    const existing = await this.get(id);
-    if (!CANCELLABLE.has(existing.status)) return existing;
-    const merged: ScheduledTask = { ...existing, status: "cancelled" };
-    await this.writeEntity(merged);
-    return merged;
+    try {
+      return await this.updateEntity(id, (existing) => {
+        if (!CANCELLABLE.has(existing.status)) throw new NoopUpdate(existing);
+        return { ...existing, status: "cancelled" };
+      });
+    } catch (error) {
+      if (error instanceof NoopUpdate) return error.current;
+      throw error;
+    }
   }
 
   protected idOf(task: ScheduledTask): string {

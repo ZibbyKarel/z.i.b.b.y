@@ -75,10 +75,7 @@ export class MonitorEventStore extends EntityFileStore<MonitorEvent> {
 
   /** Persist a NEW event; an existing id is a dedup hit → returns null. */
   async putNew(event: MonitorEvent): Promise<MonitorEvent | null> {
-    const file = this.resolveFile(event.id);
-    if (await this.fileExists(file)) return null;
-    await this.writeEntity(event);
-    return event;
+    return this.createEntity(event.id, () => event);
   }
 
   /** Patch an event (state/taskId transitions) — read-merge-write. */

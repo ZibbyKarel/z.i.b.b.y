@@ -63,9 +63,8 @@ export class ChainsStorageService extends EntityFileStore<Chain> {
   }
 
   async create(input: CreateChainInput): Promise<Chain> {
-    const file = this.resolveFile(input.id);
-    if (await this.fileExists(file)) throw new ChainConflictError(input.id);
-    await this.writeEntity(input);
-    return input;
+    const created = await this.createEntity(input.id, () => input);
+    if (created === null) throw new ChainConflictError(input.id);
+    return created;
   }
 }

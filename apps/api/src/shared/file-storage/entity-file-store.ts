@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { type ZodType } from "zod";
+import { withPathLock } from "./file-lock";
 import {
   ensureDir,
   fileExists,
@@ -98,11 +99,53 @@ export abstract class EntityFileStore<T> {
     return fileExists(file);
   }
 
-  /** Atomically persist an entity to its id-derived file. */
+  /**
+   * Atomically persist an entity to its id-derived file. Locked on the resolved
+   * file path so a bare `writeEntity` never lands mid-way through, or torn against,
+   * a same-id {@link updateEntity} / {@link createEntity} critical section.
+   */
   protected async writeEntity(entity: T): Promise<void> {
     const file = this.resolveFile(this.idOf(entity));
     await this.ensureDir();
-    await writeFileAtomic(file, this.serialize(entity));
+    await withPathLock(file, () => writeFileAtomic(file, this.serialize(entity)));
+  }
+
+  /**
+   * Atomic get → mutate → write, as ONE critical section keyed by `id`'s resolved
+   * file path. `mutate` may throw to abort without writing (used to make a
+   * read-then-decide guard, e.g. "already decided", atomic with the write). Calls
+   * `writeFileAtomic` directly rather than the public {@link writeEntity} — the
+   * reentrant lock (`file-lock.ts`) is the safety net for CROSS-LAYER nesting
+   * (a caller-level lock re-entering this same key), not a reason to acquire the
+   * same key twice inside the base class's own internals.
+   */
+  protected async updateEntity(id: string, mutate: (current: T) => T): Promise<T> {
+    const file = this.resolveFile(id);
+    return withPathLock(file, async () => {
+      const current = await this.get(id);
+      const next = mutate(current);
+      await this.ensureDir();
+      await writeFileAtomic(file, this.serialize(next));
+      return next;
+    });
+  }
+
+  /**
+   * Atomic create-if-absent: existence check and write as ONE critical section.
+   * Returns null (not a throw) on a duplicate — callers that want silent-skip-on-
+   * duplicate (e.g. `MonitorEventStore.putNew`) use the null directly; callers
+   * that want a 409 (mcp/hooks/commands `create()`) map the null to their own
+   * conflict error.
+   */
+  protected async createEntity(id: string, factory: () => T): Promise<T | null> {
+    const file = this.resolveFile(id);
+    return withPathLock(file, async () => {
+      if (await fileExists(file)) return null;
+      const entity = factory();
+      await this.ensureDir();
+      await writeFileAtomic(file, this.serialize(entity));
+      return entity;
+    });
   }
 
   async get(id: string): Promise<T> {

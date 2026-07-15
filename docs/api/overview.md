@@ -78,7 +78,8 @@ Two smaller modules are not registered at the app root because they're shared su
 ### FileStorage
 
 - `file-storage/file-utils.ts` — `resolveSafeFile`, `writeFileAtomic`, `ensureDir`, `safeJson`.
-- `file-storage/file-lock.ts` — `withPathLock(path, fn)` for a per-file mutex (in-process).
+- `file-storage/file-lock.ts` — `withPathLock(path, fn)` for a per-file mutex (in-process). Reentrant via `AsyncLocalStorage`: a nested call on the same key from the same async chain runs inline instead of deadlocking, so a caller-level lock can safely wrap a store method that locks the same key underneath.
+- `file-storage/entity-file-store.ts` — `EntityFileStore` subclasses get `updateEntity(id, mutate)` (atomic get→mutate→write, keyed on the resolved file path) and `createEntity(id, factory)` (atomic create-if-absent, returns `null` on conflict) on top of the locked `writeEntity`.
 - `data-dir.ts` — `ZIBBY_DATA_DIR` resolution; a lock file prevents a second instance (in-process only — launchd guarantees a single instance via its Label).
 
 ### SSE (Server-Sent Events)

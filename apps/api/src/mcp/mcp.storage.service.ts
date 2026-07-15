@@ -72,11 +72,9 @@ export class McpServersStorageService extends EntityFileStore<McpServer> {
   }
 
   async create(input: CreateMcpServerInput): Promise<McpServer> {
-    const file = this.resolveFile(input.id);
-    if (await this.fileExists(file)) throw new McpServerConflictError(input.id);
-    const server = McpServerSchema.parse({ ...input });
-    await this.writeEntity(server);
-    return server;
+    const created = await this.createEntity(input.id, () => McpServerSchema.parse({ ...input }));
+    if (created === null) throw new McpServerConflictError(input.id);
+    return created;
   }
 
   async update(id: string, patch: UpdateMcpServerInput): Promise<McpServer> {

@@ -142,18 +142,17 @@ export class AutomationsStorageService extends EntityFileStore<Automation> {
   }
 
   async update(id: string, patch: UpdateAutomationInput): Promise<Automation> {
-    const existing = await this.get(id);
-    // System automations allow only a reschedule or an enable/disable toggle —
-    // any change to `target`/`name`/`prompt` etc. is refused.
-    if (existing.system) {
-      const touchesLockedField = Object.entries(patch).some(
-        ([key, value]) => key !== "trigger" && key !== "enabled" && value !== undefined,
-      );
-      if (touchesLockedField) throw new SystemAutomationError(id);
-    }
-    const merged: Automation = { ...existing, ...patch, id: existing.id, system: existing.system };
-    await this.writeEntity(merged);
-    return merged;
+    return this.updateEntity(id, (existing) => {
+      // System automations allow only a reschedule or an enable/disable toggle —
+      // any change to `target`/`name`/`prompt` etc. is refused.
+      if (existing.system) {
+        const touchesLockedField = Object.entries(patch).some(
+          ([key, value]) => key !== "trigger" && key !== "enabled" && value !== undefined,
+        );
+        if (touchesLockedField) throw new SystemAutomationError(id);
+      }
+      return { ...existing, ...patch, id: existing.id, system: existing.system };
+    });
   }
 
   /** Refuse to delete a system automation (it is rescheduling-only). */
@@ -170,10 +169,7 @@ export class AutomationsStorageService extends EntityFileStore<Automation> {
 
   /** Stamp the last-fired time (idempotence + display); separate from user updates. */
   async markFired(id: string, at: string): Promise<Automation> {
-    const existing = await this.get(id);
-    const merged: Automation = { ...existing, lastFiredAt: at };
-    await this.writeEntity(merged);
-    return merged;
+    return this.updateEntity(id, (existing) => ({ ...existing, lastFiredAt: at }));
   }
 
   protected idOf(automation: Automation): string {
