@@ -7,19 +7,25 @@ import {
 import type { Request, Response } from "express";
 import { type Observable, tap } from "rxjs";
 import { LoggerService, type ScopedLogger } from "./logger.service";
-import { safeStringify } from "./serialize";
+import { redact, safeStringify } from "./serialize";
 
 /** Keep a request/response body preview bounded — never log it in full. */
 const BODY_PREVIEW_MAX = 1000;
 
 /**
- * A route whose payloads are pure noise to log: the log-streaming endpoints
- * return potentially huge run-log chunks (and a verbatim echo of them into our
- * own log would be self-defeating). We still log the request line and status —
- * just not the bodies.
+ * Routes whose body/result previews are skipped entirely, never even a
+ * redacted one:
+ * - `/logs` — pure noise: the log-streaming endpoints return potentially huge
+ *   run-log chunks, and echoing them into our own log would be self-defeating.
+ *   We still log the request line and status, just not the bodies.
+ * - `/credentials`, `/secrets` — bodies here are secrets by construction (Slack
+ *   bot token / email password, MCP stdio env + headers, project run secrets).
+ *   {@link redact} already strips known secret-bearing keys from every other
+ *   route's preview; this is belt-and-suspenders for these routes in case a
+ *   secret sits under a key the deny-list doesn't catch.
  */
-function isNoisyBodyRoute(url: string): boolean {
-  return url.includes("/logs");
+export function isSkippedBodyRoute(url: string): boolean {
+  return url.includes("/logs") || url.includes("/credentials") || url.includes("/secrets");
 }
 
 /**
@@ -50,7 +56,7 @@ export class LoggingInterceptor implements NestInterceptor {
     const method = req.method;
     const url = req.originalUrl || req.url;
     const startedAt = Date.now();
-    const skipBody = isNoisyBodyRoute(url);
+    const skipBody = isSkippedBodyRoute(url);
     // Reads are polled hard (run/pipeline progress every few hundred ms); logging
     // each at `info` would bury the signal. State-changing calls are the ones worth
     // seeing by default → `info`; reads drop to `debug` (raise LOG_LEVEL to see them).
@@ -85,5 +91,5 @@ function hasKeys(value: unknown): boolean {
 }
 
 function preview(value: unknown): string {
-  return safeStringify(value, BODY_PREVIEW_MAX);
+  return safeStringify(redact(value), BODY_PREVIEW_MAX);
 }
