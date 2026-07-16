@@ -19,11 +19,21 @@ export interface OrbController {
 
 /**
  * A single WebGL orb: wireframe icosahedron displaced along its normals by 3D
- * simplex noise + fresnel alpha, wrapped in a soft additive glow shell. One
+ * simplex noise, rendered fully opaque (identity color hits the canvas 1:1),
+ * wrapped in a soft additive glow shell for the fresnel falloff. One
  * instance = one canvas (own renderer/scene/camera/rAF). Color = identity;
  * motion (amplitude / noise speed / glow / breathing) = state. All parameters
  * ease exponentially toward their target (~95 % in 0.6 s).
  */
+// THREE.Color's default hex/style parsing decodes sRGB into the linear working
+// space (for lighting math); our raw ShaderMaterials write straight to the
+// canvas with no re-encode step, so that decode alone would render every orb
+// visibly darker than its design hex. NoColorSpace stores the byte ratios
+// as-is so gl_FragColor reproduces the hex 1:1.
+function setRawColor(color: THREE.Color, hex: string): THREE.Color {
+  return color.setStyle(hex, THREE.NoColorSpace);
+}
+
 export function createOrb(container: HTMLElement, opts: CreateOrbOptions): OrbController {
   const detail = opts.detail ?? 3;
   const reduce =
@@ -54,7 +64,7 @@ export function createOrb(container: HTMLElement, opts: CreateOrbOptions): OrbCo
     uTime: { value: Math.random() * 40 },
     uAmp: { value: ORB_MOTION.idle.amp },
     uSpeed: { value: ORB_MOTION.idle.speed },
-    uColor: { value: new THREE.Color(opts.hex ?? "#5b8def") },
+    uColor: { value: setRawColor(new THREE.Color(), opts.hex ?? "#5b8def") },
     uGlow: { value: ORB_MOTION.idle.glow },
   };
 
@@ -69,7 +79,6 @@ export function createOrb(container: HTMLElement, opts: CreateOrbOptions): OrbCo
       ORB_SIMPLEX +
       `
       uniform float uTime; uniform float uAmp; uniform float uSpeed;
-      varying float vFres;
       void main(){
         vec3 dir = normalize(position);
         float t = uTime * uSpeed;
@@ -77,15 +86,14 @@ export function createOrb(container: HTMLElement, opts: CreateOrbOptions): OrbCo
         float n2 = snoise(dir * 3.4 + vec3(t*0.7,0.0,0.0));
         float disp = (n1*0.72 + n2*0.28) * uAmp;
         vec3 p = position + normal * disp;
-        vec4 mv = modelViewMatrix * vec4(p,1.0);
-        vec3 N = normalize(normalMatrix * normal);
-        vec3 V = normalize(-mv.xyz);
-        vFres = pow(1.0 - abs(dot(N,V)), 1.8);
-        gl_Position = projectionMatrix * mv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(p,1.0);
       }`,
+    // Fully opaque so the identity color hits the canvas 1:1 (no fresnel-alpha
+    // mix darkening it against the background) — glow lives in its own additive
+    // shell mesh below instead of being folded into this material's alpha.
     fragmentShader: `
-      uniform vec3 uColor; varying float vFres;
-      void main(){ float a = mix(0.82,0.97,clamp(vFres,0.0,1.0)); gl_FragColor = vec4(uColor,a); }`,
+      uniform vec3 uColor;
+      void main(){ gl_FragColor = vec4(uColor, 1.0); }`,
   });
   grp.add(new THREE.Mesh(wireGeometry, wireMat));
 
@@ -112,7 +120,7 @@ export function createOrb(container: HTMLElement, opts: CreateOrbOptions): OrbCo
   grp.add(new THREE.Mesh(glowGeometry, glowMat));
 
   // Live vs target state — both mutated in place (no per-frame allocation).
-  const targetColor = new THREE.Color(opts.hex ?? "#5b8def");
+  const targetColor = setRawColor(new THREE.Color(), opts.hex ?? "#5b8def");
   const initial: OrbMotion = {
     ...(ORB_MOTION[opts.state ?? "idle"] ?? ORB_MOTION.idle),
     ...opts.motionOverrides,
@@ -121,7 +129,7 @@ export function createOrb(container: HTMLElement, opts: CreateOrbOptions): OrbCo
   const cur: OrbMotion = { ...initial };
 
   function setTarget(hex: string, state: OrbState, overrides?: OrbMotionOverrides): void {
-    targetColor.set(hex);
+    setRawColor(targetColor, hex);
     const m = ORB_MOTION[state] ?? ORB_MOTION.idle;
     tgt.amp = overrides?.amp ?? m.amp;
     tgt.speed = overrides?.speed ?? m.speed;
