@@ -1,13 +1,14 @@
 "use client";
 
 import type { Agent, SubsystemWithStatus } from "@zibby/contracts";
-import { Card, Container, Stack, Typography } from "@zibby/design-system";
+import { Card, Container, type IconName, IconTile, Stack, Typography } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { HudPanel } from "../../../../components/HudPanel/HudPanel";
 import { EmptyState } from "../../../../components/EmptyState/EmptyState";
+import { ModelBadge } from "../../../../components/RuntimeBadges/RuntimeBadges";
 import type { Pipeline } from "../../../../domain";
 import { useAgentsQuery } from "../../../agents";
 import { useChainsQuery } from "../../../chains";
@@ -36,6 +37,9 @@ export enum RosterTabTestId {
    * assert the scale/translate derives correctly from the graph's bbox. */
   PipelineFit = "roster-pipeline-fit",
   ChainCard = "roster-chain-card",
+  /** Phase 124: the "Posádka" (crew) list above the pipeline canvases. */
+  CrewSection = "roster-crew-section",
+  CrewRow = "roster-crew-row",
 }
 
 export interface RosterTabProps {
@@ -102,6 +106,72 @@ export function computeFitTransform(
   const tx = (viewportW - bboxW * scale) / 2 - minX * scale;
   const ty = (viewportH - bboxH * scale) / 2 - minY * scale;
   return { scale, tx, ty };
+}
+
+/**
+ * Phase 124: the subsystem's crew (Posádka) — DERIVED, not stored. `SUBSYSTEMS`
+ * (`libs/contracts/src/subsystems/subsystem.schema.ts`) is an identity-only
+ * registry with no `crew` field, and `Agent` has no `subsystem` field either —
+ * so "who's on the crew" is read off what the subsystem already owns: the
+ * distinct agents referenced by its owned pipelines' `agent` phases, in
+ * first-seen (pipeline order, then phase order) order, so the roster reads in
+ * execution order. `verify` phases carry no agent and are skipped; an id with
+ * no matching entry in `agents` (a stale reference) is skipped too rather than
+ * rendering a ghost row.
+ */
+export function deriveCrew(pipelines: readonly Pipeline[], agents: readonly Agent[]): Agent[] {
+  const seen = new Set<string>();
+  const crew: Agent[] = [];
+  for (const pipeline of pipelines) {
+    for (const phase of pipeline.phases) {
+      if (phase.type !== "agent" || !phase.agent) continue;
+      if (seen.has(phase.agent)) continue;
+      seen.add(phase.agent);
+      const agent = agents.find((a) => a.id === phase.agent);
+      if (agent) crew.push(agent);
+    }
+  }
+  return crew;
+}
+
+interface CrewRowProps {
+  agent: Agent;
+}
+
+/** One crew member — mirrors the design's `VcCrew` row: avatar/glyph tile,
+ * name + role, and the agent's own model as a trailing mono badge. Static (no
+ * click target — v1 is a roster, not navigation to `/agents/[id]`). */
+function CrewRow({ agent }: CrewRowProps) {
+  const name = agent.name ?? agent.id;
+  const role = agent.description ?? agent.category;
+
+  return (
+    <Card bordered background="surface" data-testid={RosterTabTestId.CrewRow} radius="sm">
+      <Container padding="100">
+        <Stack align="center" direction="row" gap="150">
+          <IconTile
+            alt={name}
+            glyph={(agent.glyph as IconName | undefined) ?? "bot"}
+            size="sm"
+            src={agent.avatar}
+          />
+          <Container grow minW0>
+            <Stack gap="25">
+              <Typography truncate size="sm" type="note" weight="medium">
+                {name}
+              </Typography>
+              {role != null && role !== "" && (
+                <Typography truncate size="caption" type="note" variant="tertiary">
+                  {role}
+                </Typography>
+              )}
+            </Stack>
+          </Container>
+          {agent.model && <ModelBadge model={agent.model} />}
+        </Stack>
+      </Container>
+    </Card>
+  );
 }
 
 interface PipelineRosterCanvasProps {
@@ -221,6 +291,7 @@ export function RosterTab({ subsystem }: RosterTabProps) {
 
   const ownedPipelines = pipelines.filter((p) => p.ownerSubsystem === subsystem.id);
   const ownedChains = chains.filter((c) => c.ownerSubsystem === subsystem.id);
+  const crew = deriveCrew(ownedPipelines, agents);
 
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -228,6 +299,15 @@ export function RosterTab({ subsystem }: RosterTabProps) {
 
   return (
     <Stack data-testid={RosterTabTestId.Root} gap="200">
+      {crew.length > 0 && (
+        <Stack data-testid={RosterTabTestId.CrewSection} gap="100">
+          <Typography type="label">{t("crewTitle")}</Typography>
+          {crew.map((agent) => (
+            <CrewRow agent={agent} key={agent.id} />
+          ))}
+        </Stack>
+      )}
+
       {ownedPipelines.length === 0 ? (
         <EmptyState
           actionLabel={tPipelines("addPipeline")}

@@ -1750,6 +1750,7 @@
       }
     },
     "roster": {
+      "crewTitle": "Posádka",
       "emptyTitle": "Zatím žádná pipeline",
       "emptyDescription": "Tenhle podsystém si zatím nevlastní žádnou pipeline. Vytvoř první — rovnou s ním jako vlastníkem."
     },

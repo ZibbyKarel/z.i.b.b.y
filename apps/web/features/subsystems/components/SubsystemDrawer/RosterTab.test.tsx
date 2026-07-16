@@ -8,11 +8,20 @@ import {
   NODE_W,
   phasesToGraph,
 } from "../../../pipelines/components/PipelineDialog/pipeline-graph";
-import { RosterTab, RosterTabTestId, computeFitTransform } from "./RosterTab";
+import { RosterTab, RosterTabTestId, computeFitTransform, deriveCrew } from "./RosterTab";
 
 const AGENTS: Agent[] = [
   { id: "writer", name: "Writer", glyph: "edit", instructions: "write" },
-  { id: "tester", name: "Tester", glyph: "flask", instructions: "test" },
+  {
+    id: "tester",
+    name: "Tester",
+    glyph: "flask",
+    instructions: "test",
+    description: "Runs the test suite",
+    // Deliberately different from any phase-level `model` override below, so a
+    // test can prove the crew badge reads the *agent's* model, not the phase's.
+    model: "haiku",
+  },
 ];
 
 const FORGE: SubsystemWithStatus = {
@@ -228,6 +237,195 @@ describe("RosterTab (Phase 85)", () => {
 
     const { scale } = readTransform(screen.getByTestId(RosterTabTestId.PipelineFit));
     expect(scale).toBe(1);
+  });
+});
+
+describe("RosterTab crew — Posádka (Phase 124)", () => {
+  it("derives crew from owned pipelines' agent phases: dedupes a repeated agent, skips verify phases and stale ids", () => {
+    hooks.pipelines = [
+      pipelineFixture({
+        id: "delivery",
+        name: "Delivery",
+        ownerSubsystem: "forge",
+        phases: [
+          {
+            id: "koder",
+            type: "agent",
+            agent: "writer",
+            consumes: "task.md",
+            produces: "impl.md",
+            model: "sonnet",
+            thinking: "medium",
+          },
+          { id: "verify", type: "verify", commands: ["pnpm test"] },
+          {
+            id: "review",
+            type: "agent",
+            agent: "tester",
+            consumes: "impl.md",
+            produces: "review.md",
+            model: "opus",
+            thinking: "high",
+          },
+          {
+            id: "koder2",
+            type: "agent",
+            agent: "writer",
+            consumes: "review.md",
+            produces: "final.md",
+            model: "sonnet",
+            thinking: "medium",
+          },
+          {
+            id: "ghost",
+            type: "agent",
+            agent: "stale-agent",
+            consumes: "x.md",
+            produces: "y.md",
+            model: "sonnet",
+            thinking: "medium",
+          },
+        ],
+      }),
+    ];
+    hooks.chains = [];
+
+    render(<RosterTab subsystem={FORGE} />);
+
+    const crewSection = screen.getByTestId(RosterTabTestId.CrewSection);
+    expect(within(crewSection).getByText("Posádka")).toBeInTheDocument();
+
+    const rows = within(crewSection).getAllByTestId(RosterTabTestId.CrewRow);
+    // writer + tester only: deduped (writer appears in two phases), the verify
+    // phase carries no agent, and the stale "stale-agent" id has no match.
+    expect(rows).toHaveLength(2);
+    expect(within(rows[0]!).getByText("Writer")).toBeInTheDocument();
+    expect(within(rows[1]!).getByText("Tester")).toBeInTheDocument();
+  });
+
+  it("shows the agent's own model as a badge — not a phase-level override", () => {
+    hooks.pipelines = [
+      pipelineFixture({
+        id: "delivery",
+        name: "Delivery",
+        ownerSubsystem: "forge",
+        phases: [
+          {
+            id: "review",
+            type: "agent",
+            agent: "tester",
+            consumes: "impl.md",
+            produces: "review.md",
+            model: "opus",
+            thinking: "high",
+          },
+        ],
+      }),
+    ];
+    hooks.chains = [];
+
+    render(<RosterTab subsystem={FORGE} />);
+
+    const row = screen.getByTestId(RosterTabTestId.CrewRow);
+    expect(within(row).getByText("Tester")).toBeInTheDocument();
+    expect(within(row).getByText("Runs the test suite")).toBeInTheDocument();
+    // Agent's own model ("haiku"), despite the phase overriding to "opus".
+    expect(within(row).getByText("haiku")).toBeInTheDocument();
+    expect(within(row).queryByText("opus")).toBeNull();
+  });
+
+  it("renders no crew section when there are no owned pipelines", () => {
+    hooks.pipelines = [];
+    hooks.chains = [];
+
+    render(<RosterTab subsystem={FORGE} />);
+
+    expect(screen.queryByTestId(RosterTabTestId.CrewSection)).toBeNull();
+    expect(screen.queryByTestId(RosterTabTestId.CrewRow)).toBeNull();
+  });
+
+  it("renders no crew section when owned pipelines derive zero crew (all-verify phases)", () => {
+    hooks.pipelines = [
+      pipelineFixture({
+        id: "audit",
+        name: "Audit",
+        ownerSubsystem: "forge",
+        phases: [{ id: "verify", type: "verify", commands: ["pnpm test"] }],
+      }),
+    ];
+    hooks.chains = [];
+
+    render(<RosterTab subsystem={FORGE} />);
+
+    expect(screen.queryByTestId(RosterTabTestId.CrewSection)).toBeNull();
+    expect(screen.queryByTestId(RosterTabTestId.CrewRow)).toBeNull();
+  });
+});
+
+describe("deriveCrew (Phase 124)", () => {
+  it("preserves first-seen order: pipeline order, then phase order", () => {
+    const p1 = pipelineFixture({
+      id: "p1",
+      phases: [
+        { id: "a", type: "agent", agent: "tester", consumes: "x", produces: "y", model: "sonnet" },
+      ],
+    });
+    const p2 = pipelineFixture({
+      id: "p2",
+      phases: [
+        { id: "b", type: "agent", agent: "writer", consumes: "x", produces: "y", model: "sonnet" },
+      ],
+    });
+
+    expect(deriveCrew([p1, p2], AGENTS).map((a) => a.id)).toEqual(["tester", "writer"]);
+  });
+
+  it("dedupes an agent referenced by two phases across owned pipelines", () => {
+    const p1 = pipelineFixture({
+      id: "p1",
+      phases: [
+        { id: "a", type: "agent", agent: "writer", consumes: "x", produces: "y", model: "sonnet" },
+      ],
+    });
+    const p2 = pipelineFixture({
+      id: "p2",
+      phases: [
+        { id: "b", type: "agent", agent: "writer", consumes: "x", produces: "y", model: "sonnet" },
+      ],
+    });
+
+    expect(deriveCrew([p1, p2], AGENTS).map((a) => a.id)).toEqual(["writer"]);
+  });
+
+  it("skips verify phases (no agent field to resolve)", () => {
+    const p = pipelineFixture({
+      id: "p1",
+      phases: [{ id: "v", type: "verify", commands: ["pnpm test"] }],
+    });
+
+    expect(deriveCrew([p], AGENTS)).toEqual([]);
+  });
+
+  it("skips a stale agent id with no match in the resolved agents list", () => {
+    const p = pipelineFixture({
+      id: "p1",
+      phases: [
+        {
+          id: "a",
+          type: "agent",
+          agent: "ghost",
+          consumes: "x",
+          produces: "y",
+          model: "sonnet",
+        },
+      ],
+    });
+
+    expect(deriveCrew([p], AGENTS)).toEqual([]);
+  });
+
+  it("returns an empty crew for no owned pipelines", () => {
+    expect(deriveCrew([], AGENTS)).toEqual([]);
   });
 });
 
