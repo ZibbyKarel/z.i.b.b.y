@@ -2,7 +2,6 @@
 
 import { Container, Stack, StatusDot, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useRunAvatarMap, useRunGlyphMap, useRunsQuery } from "../../runs/queries/useRunsQuery";
 import { type FeedStatus, runAvatar, runGlyph, runTitle } from "../../runs/run";
 import { RUN_STATUS_GROUPS } from "../../runs/statusGroups";
@@ -51,7 +50,7 @@ export interface ChatTasksPanelProps {
 }
 
 /**
- * The chat page's left tasks panel: EVERY task across EVERY project (Phase 57,
+ * The chat page's left tasks gutter: EVERY task across EVERY project (Phase 57,
  * generalizing Phase 44's running-only rail; Phase 108 dropped the Phase 24
  * project scope this used to honor), so the chat is a full task view — not
  * just a "what's running now" strip. Ordered so live tasks (running / spawning /
@@ -61,6 +60,13 @@ export interface ChatTasksPanelProps {
  * column beside this panel rather than navigating to `/runs` (Phase 100 — replaces the
  * Phase 92 per-row expand chevron, which is now redundant: the inline detail already
  * covers everything the chevron's per-kind live view showed, plus the full picture).
+ *
+ * Phase 121 (Velín-D `VcTaskRail` alignment): TRANSPARENT gutter, not a boxed panel —
+ * there is no wrapping `HudPanel`/`Card` any more. Each {@link ChatTaskRow} already
+ * renders its own design-close floating glass card (edge tone, living glow, avatar,
+ * meta strip, progress meter); this component only supplies a minimal live-dot +
+ * count header and the scrolling column, so the orb map behind stays visible (and
+ * clickable) through the gutter's own empty space.
  *
  * Reads the STABLE unified runs feed ({@link useRunsQuery}, kept fresh by the shared
  * SSE bus) rather than the chat data-layer. Phase 108: there is no global project
@@ -80,8 +86,12 @@ export function ChatTasksPanel({ selectedRunId, onSelectRun }: ChatTasksPanelPro
   const ordered = [...runs].sort((a, b) => taskRank(a.status) - taskRank(b.status));
 
   return (
-    <Container data-testid={ChatTasksPanelTestId.Root}>
-      <HudPanel>
+    // No fixed `height` here (only the list below caps with `maxHeight`) — this
+    // root sizes to its own content, so the `pointer-events-auto` wrapper `ChatScreen`
+    // mounts it in hugs the header + cards rather than catching clicks over the
+    // gutter's empty track (Phase 121).
+    <Container data-testid={ChatTasksPanelTestId.Root} padding={["0", "100", "0", "0"]}>
+      <Stack gap="150">
         <Stack align="center" direction="row" gap="100" justify="between">
           <Stack align="center" direction="row" gap="75">
             <StatusDot pulse size="75" tone="run" />
@@ -121,7 +131,7 @@ export function ChatTasksPanel({ selectedRunId, onSelectRun }: ChatTasksPanelPro
             </Stack>
           </Container>
         )}
-      </HudPanel>
+      </Stack>
     </Container>
   );
 }
