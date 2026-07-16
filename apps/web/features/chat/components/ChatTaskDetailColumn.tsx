@@ -1,6 +1,15 @@
 "use client";
 
-import { Container, Icon, type IconName, Panel, Pressable, Stack, Typography } from "@zibby/design-system";
+import {
+  Container,
+  Divider,
+  Icon,
+  type IconName,
+  Panel,
+  Pressable,
+  Stack,
+  Typography,
+} from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -36,9 +45,11 @@ export interface ChatTaskDetailColumnProps {
  * selected — replaces the old `/runs?run=<id>` redirect a task-card click used to
  * fire. Reuses {@link RunDetail} verbatim (the same header/hero, approval + PR
  * gate, log stream / stage timeline / chain steps, stop/resume/delete); this
- * component only supplies the surrounding column chrome: a close affordance and,
- * since the column (like the gutter) is hidden below `lg`, a fallback link to the
- * full `/runs` page for a narrower viewport.
+ * component only supplies the surrounding column chrome: a floating close
+ * affordance pinned over the panel (Phase 122 — see `SubsystemDrawer`'s close
+ * button for the same idiom) and, since the column (like the gutter) is hidden
+ * below `lg`, a quiet footer fallback link to the full `/runs` page for a
+ * narrower viewport.
  *
  * Positioned the same way `SubsystemDrawer` is (Phase 84/99) — an outer
  * `pointer-events-none` wrapper pinned to the band between the top bar and the
@@ -73,32 +84,33 @@ export function ChatTaskDetailColumn({
           data-testid={ChatTaskDetailColumnTestId.Panel}
           role="region"
           // Bounded to this wrapper's own band (see `SubsystemDrawer`'s identical
-          // reasoning) with its own scroll — a computed value with no dedicated
-          // `Panel` prop, routed through its `style` passthrough (sanctioned).
-          style={{ maxHeight: "100%", overflowY: "auto" }}
+          // reasoning), but the Panel itself no longer owns the scroll (contrast
+          // with `SubsystemDrawer`, which does) — Phase 122 pins the close button
+          // to the Panel's own top-right corner so it stays put while the body
+          // scrolls under it, which only works if the Panel is the non-scrolling
+          // frame: `overflow: hidden` clips it to `maxHeight`, `position:
+          // relative` makes it the close button's containing block, and the
+          // Container below owns its own `overflowY: auto` scroll region.
+          // Computed values with no dedicated `Panel` prop, routed through its
+          // `style` passthrough (sanctioned).
+          style={{ maxHeight: "100%", overflow: "hidden", position: "relative" }}
         >
-          <Container padding="200">
+          {/* Floating close, pinned over the panel (same idiom as
+          `SubsystemDrawer`'s close button) — a plain DS `Pressable` inside a
+          `Container position="absolute"` pins cleanly here (no raw `<button>`
+          fallback needed), unlike the drawer's hero band which needs the
+          button to sit over an image/gradient. */}
+          <Container position="absolute" right="12px" top="12px" zIndex={10}>
+            <Pressable
+              aria-label={t("closeDetail")}
+              data-testid={ChatTaskDetailColumnTestId.Close}
+              onClick={onClose}
+            >
+              <Icon name="x" size="sm" tone="faint" />
+            </Pressable>
+          </Container>
+          <Container overflowY="auto" padding="200" style={{ height: "100%" }}>
             <Stack gap="200">
-              <Stack align="center" direction="row" gap="100" justify="between">
-                <Pressable
-                  data-testid={ChatTaskDetailColumnTestId.OpenFull}
-                  onClick={() => router.push(`/runs?run=${run.runId}` as Route)}
-                >
-                  <Stack align="center" direction="row" gap="50">
-                    <Icon name="expand" size="xs" tone="faint" />
-                    <Typography mono size="2xs" type="note" variant="tertiary">
-                      {t("openFull")}
-                    </Typography>
-                  </Stack>
-                </Pressable>
-                <Pressable
-                  aria-label={t("closeDetail")}
-                  data-testid={ChatTaskDetailColumnTestId.Close}
-                  onClick={onClose}
-                >
-                  <Icon name="x" size="sm" tone="faint" />
-                </Pressable>
-              </Stack>
               <RunDetail
                 avatar={avatar}
                 deleting={deleting}
@@ -111,6 +123,23 @@ export function ChatTaskDetailColumn({
                 run={run}
                 stopping={stopping}
               />
+              <Divider />
+              {/* Quiet footer escape (Phase 122) — replaces the old top-strip
+              "otevřít celý běh" affordance that stacked a redundant header
+              above RunDetail's own hero. */}
+              <Stack align="center" as="footer" direction="row" justify="center">
+                <Pressable
+                  data-testid={ChatTaskDetailColumnTestId.OpenFull}
+                  onClick={() => router.push(`/runs?run=${run.runId}` as Route)}
+                >
+                  <Stack align="center" direction="row" gap="50">
+                    <Icon name="expand" size="xs" tone="faint" />
+                    <Typography mono size="2xs" type="note" variant="tertiary">
+                      {t("openFull")}
+                    </Typography>
+                  </Stack>
+                </Pressable>
+              </Stack>
             </Stack>
           </Container>
         </Panel>

@@ -51,7 +51,7 @@ function run(overrides: Partial<RunView>): RunView {
   return { ...base, ...overrides };
 }
 
-describe("ChatTaskDetailColumn (Phase 100)", () => {
+describe("ChatTaskDetailColumn (Phase 100, frame Phase 122)", () => {
   it("renders RunDetail for the selected run", () => {
     render(
       <ChatTaskDetailColumn
