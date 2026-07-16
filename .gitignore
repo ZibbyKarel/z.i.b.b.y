@@ -7,6 +7,12 @@ dist/
 out/
 *.tsbuildinfo
 
+# Electron desktop packaging: staged production artifacts + build output
+apps/api/.stage/
+apps/desktop/resources/
+apps/desktop/release/
+apps/desktop/dist/
+
 # graphify knowledge-graph output (regenerated via `graphify update .`, not versioned)
 graphify-out/
 

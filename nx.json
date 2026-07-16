@@ -28,6 +28,7 @@
     "design-system": "libs/design-system",
     "contracts": "libs/contracts",
     "web": "apps/web",
-    "api": "apps/api"
+    "api": "apps/api",
+    "desktop": "apps/desktop"
   }
 }

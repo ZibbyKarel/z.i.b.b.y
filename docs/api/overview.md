@@ -134,10 +134,17 @@ data/
 |                | Dev                       | Production              |
 | -------------- | -------------------------- | ------------------------ |
 | Command        | `pnpm api:dev`             | `pnpm api:start`         |
-| Compiler       | ts-node-dev (hot reload)   | esbuild/tsc (compiled)   |
+| Compiler       | ts-node-dev (hot reload)   | ts-node (no compile step) |
 | Log level      | `debug`                    | `info`                   |
 | Data dir       | `.zibby/data`            | `.zibby/data`          |
 | Test data      | `pnpm api:dev:test`        | —                         |
+
+`pnpm api:build` (`tsc`) additionally produces a real compiled `dist/main.js` —
+not used by `api:start`/the launchd daemon, but the artifact the ZIBBY.app
+desktop package (`apps/desktop`) runs instead of ts-node. `pnpm api:stage`
+wraps it with a production-only, fully-hoisted `node_modules` and a compiled
+`@zibby/contracts` (which otherwise ships raw `.ts` source, unrunnable by
+plain `node`) — see `apps/api/scripts/stage-prod.mjs`.
 
 ## Smoke test
 

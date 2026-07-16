@@ -1,0 +1,22 @@
+{
+  "appId": "com.zibby.desktop",
+  "productName": "ZIBBY",
+  "directories": {
+    "output": "release",
+    "buildResources": "build"
+  },
+  "files": ["dist/**/*", "package.json"],
+  "extraResources": [
+    { "from": "resources/api", "to": "api" },
+    { "from": "resources/web", "to": "web" }
+  ],
+  "mac": {
+    "icon": "build/icon.icns",
+    "category": "public.app-category.developer-tools",
+    "target": ["dmg"],
+    "identity": null
+  },
+  "dmg": {
+    "title": "ZIBBY"
+  }
+}

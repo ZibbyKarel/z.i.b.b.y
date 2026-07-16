@@ -8,6 +8,8 @@ export default [
       "**/node_modules/**",
       "**/.next/**",
       "**/dist/**",
+      "apps/desktop/resources/**",
+      "apps/desktop/release/**",
       "**/storybook-static/**",
       "graphify-out/**",
       "design-ref/**",

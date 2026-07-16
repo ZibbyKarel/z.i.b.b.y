@@ -1,0 +1,15 @@
+{
+  "name": "@zibby/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "stage:resources": "node scripts/stage-resources.mjs",
+    "dist": "electron-builder --mac dmg --config electron-builder.json"
+  },
+  "devDependencies": {
+    "electron": "^34.0.0",
+    "electron-builder": "^25.1.8"
+  }
+}
