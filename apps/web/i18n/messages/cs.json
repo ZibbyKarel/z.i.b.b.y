@@ -1646,6 +1646,8 @@
     "tasks": {
       "title": "Běžící úlohy",
       "empty": "Žádné tasky",
+      "activeEmpty": "Žádné běžící úlohy",
+      "archive": "Archiv",
       "openAria": "Otevřít běh: {title}",
       "detailAriaLabel": "Detail běhu: {title}",
       "openFull": "Otevřít na stránce Běhy",

@@ -1646,6 +1646,8 @@
     "tasks": {
       "title": "Running tasks",
       "empty": "No tasks",
+      "activeEmpty": "No active tasks",
+      "archive": "Archive",
       "openAria": "Open run: {title}",
       "detailAriaLabel": "Run detail: {title}",
       "openFull": "Open on Runs page",

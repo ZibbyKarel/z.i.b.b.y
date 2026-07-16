@@ -1,4 +1,4 @@
-import { renderWithProviders as render, screen } from "../../../test/render";
+import { renderWithProviders as render, screen, within } from "../../../test/render";
 import { fireEvent } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RunView } from "../../runs/run";
@@ -37,7 +37,7 @@ describe("ChatTasksPanel (Phase 57, selection wiring Phase 100)", () => {
     runsMock.mockReset();
   });
 
-  it("lists ALL tasks — not just running — each a selectable row", () => {
+  it("lists active tasks (not finished ones) as selectable rows in the active List", () => {
     runsMock.mockReturnValue({
       runs: [
         run({ runId: "run_a", title: "Fix login bug", status: "running" }),
@@ -47,15 +47,16 @@ describe("ChatTasksPanel (Phase 57, selection wiring Phase 100)", () => {
     });
     render(<ChatTasksPanel onSelectRun={vi.fn()} selectedRunId={null} />);
 
-    const rows = screen.getAllByTestId(ChatTaskRowTestId.Row);
-    // The finished `done` task is history, but this panel is a full task view now.
-    expect(rows).toHaveLength(3);
-    expect(screen.getByText("Fix login bug")).toBeInTheDocument();
-    expect(screen.getByText("Draft release notes")).toBeInTheDocument();
-    expect(screen.getByText("Deploy gate")).toBeInTheDocument();
+    // The finished `done` task is archived — only the two active tasks are rows
+    // in the active `List`.
+    const list = screen.getByTestId(ChatTasksPanelTestId.List);
+    expect(within(list).getAllByTestId(ChatTaskRowTestId.Row)).toHaveLength(2);
+    expect(within(list).getByText("Fix login bug")).toBeInTheDocument();
+    expect(within(list).getByText("Deploy gate")).toBeInTheDocument();
+    expect(within(list).queryByText("Draft release notes")).not.toBeInTheDocument();
   });
 
-  it("orders live tasks (running/awaiting-approval) first, then waiting, then finished", () => {
+  it("orders live tasks (running/awaiting-approval) first, then waiting, within the active list", () => {
     runsMock.mockReturnValue({
       runs: [
         run({ runId: "run_done", title: "Done task", status: "done" }),
@@ -66,10 +67,114 @@ describe("ChatTasksPanel (Phase 57, selection wiring Phase 100)", () => {
     });
     render(<ChatTasksPanel onSelectRun={vi.fn()} selectedRunId={null} />);
 
-    // running + awaiting-approval are live (rank 0), then scheduled (waiting), then done.
-    expect(screen.getByText("Live task")).toBeInTheDocument();
-    const titles = screen.getAllByText(/task$/i).map((el) => el.textContent);
-    expect(titles).toEqual(["Live task", "Gate task", "Scheduled task", "Done task"]);
+    // running + awaiting-approval are live (rank 0), then scheduled (waiting); the
+    // finished `done` task isn't in the active list at all.
+    const list = screen.getByTestId(ChatTasksPanelTestId.List);
+    const titles = within(list)
+      .getAllByText(/task$/i)
+      .map((el) => el.textContent);
+    expect(titles).toEqual(["Live task", "Gate task", "Scheduled task"]);
+  });
+
+  describe("Phase 123: archive of finished tasks", () => {
+    it("moves finished tasks (done/error/interrupted/parked) behind the collapsed Archiv toggle", () => {
+      runsMock.mockReturnValue({
+        runs: [
+          run({ runId: "run_live", title: "Live task", status: "running" }),
+          run({ runId: "run_done", title: "Done task", status: "done" }),
+          run({ runId: "run_err", title: "Errored task", status: "error" }),
+          run({ runId: "run_int", title: "Interrupted task", status: "interrupted" }),
+          run({ runId: "run_parked", title: "Parked task", status: "parked" }),
+        ],
+      });
+      render(<ChatTasksPanel onSelectRun={vi.fn()} selectedRunId={null} />);
+
+      // Header count is active-only.
+      expect(screen.getByTestId(ChatTasksPanelTestId.Root)).toHaveTextContent("1");
+      const list = screen.getByTestId(ChatTasksPanelTestId.List);
+      expect(within(list).getAllByTestId(ChatTaskRowTestId.Row)).toHaveLength(1);
+
+      // Collapsed by default — the toggle shows the archived count, but no archived
+      // rows are rendered yet.
+      const toggle = screen.getByTestId(ChatTasksPanelTestId.ArchiveToggle);
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+      expect(toggle).toHaveTextContent("4");
+      expect(screen.queryByTestId(ChatTasksPanelTestId.ArchiveList)).not.toBeInTheDocument();
+      expect(screen.queryByText("Done task")).not.toBeInTheDocument();
+
+      // Expanding reveals all four archived cards.
+      fireEvent.click(toggle);
+      expect(toggle).toHaveAttribute("aria-expanded", "true");
+      const archiveList = screen.getByTestId(ChatTasksPanelTestId.ArchiveList);
+      expect(within(archiveList).getAllByTestId(ChatTaskRowTestId.Row)).toHaveLength(4);
+      expect(within(archiveList).getByText("Done task")).toBeInTheDocument();
+      expect(within(archiveList).getByText("Errored task")).toBeInTheDocument();
+      expect(within(archiveList).getByText("Interrupted task")).toBeInTheDocument();
+      expect(within(archiveList).getByText("Parked task")).toBeInTheDocument();
+
+      // Collapses back on a second click.
+      fireEvent.click(toggle);
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+      expect(screen.queryByTestId(ChatTasksPanelTestId.ArchiveList)).not.toBeInTheDocument();
+    });
+
+    it("keeps a paused-limit run ACTIVE — it auto-resumes mid-run, so it is not archived", () => {
+      runsMock.mockReturnValue({
+        runs: [run({ runId: "run_pl", title: "Rate-limited task", status: "paused-limit" })],
+      });
+      render(<ChatTasksPanel onSelectRun={vi.fn()} selectedRunId={null} />);
+
+      const list = screen.getByTestId(ChatTasksPanelTestId.List);
+      expect(within(list).getByText("Rate-limited task")).toBeInTheDocument();
+      expect(screen.queryByTestId(ChatTasksPanelTestId.ArchiveToggle)).not.toBeInTheDocument();
+    });
+
+    it("does not render the Archiv toggle when nothing is archived", () => {
+      runsMock.mockReturnValue({
+        runs: [run({ runId: "run_a", title: "Task A", status: "running" })],
+      });
+      render(<ChatTasksPanel onSelectRun={vi.fn()} selectedRunId={null} />);
+
+      expect(screen.queryByTestId(ChatTasksPanelTestId.ArchiveToggle)).not.toBeInTheDocument();
+    });
+
+    it("shows the quiet active-empty hint plus the Archiv toggle when everything is archived", () => {
+      runsMock.mockReturnValue({
+        runs: [run({ runId: "run_done", title: "Done task", status: "done" })],
+      });
+      render(<ChatTasksPanel onSelectRun={vi.fn()} selectedRunId={null} />);
+
+      expect(screen.getByTestId(ChatTasksPanelTestId.ActiveEmpty)).toBeInTheDocument();
+      expect(screen.queryByTestId(ChatTasksPanelTestId.List)).not.toBeInTheDocument();
+      expect(screen.getByTestId(ChatTasksPanelTestId.ArchiveToggle)).toBeInTheDocument();
+      // The overall empty hint only covers "no tasks at all".
+      expect(screen.queryByTestId(ChatTasksPanelTestId.Empty)).not.toBeInTheDocument();
+    });
+
+    it("selection parity: clicking an archived card fires onSelectRun and reads selected identically", () => {
+      const onSelectRun = vi.fn();
+      runsMock.mockReturnValue({
+        runs: [run({ runId: "run_done", title: "Done task", status: "done" })],
+      });
+      const { rerender } = render(
+        <ChatTasksPanel onSelectRun={onSelectRun} selectedRunId={null} />,
+      );
+
+      fireEvent.click(screen.getByTestId(ChatTasksPanelTestId.ArchiveToggle));
+      const archiveList = screen.getByTestId(ChatTasksPanelTestId.ArchiveList);
+      const row = within(archiveList).getByTestId(ChatTaskRowTestId.Row);
+      fireEvent.click(row);
+      expect(onSelectRun).toHaveBeenCalledWith("run_done");
+
+      // `rerender` reconciles the same component instance — the archive stays
+      // expanded (local `archiveOpen` state isn't reset by a prop change), so the
+      // now-selected archived card is visible without clicking the toggle again.
+      rerender(<ChatTasksPanel onSelectRun={onSelectRun} selectedRunId="run_done" />);
+      const selectedRow = within(screen.getByTestId(ChatTasksPanelTestId.ArchiveList)).getByTestId(
+        ChatTaskRowTestId.Row,
+      );
+      expect(selectedRow.className).toContain("border-accent");
+    });
   });
 
   it("shows the quiet empty hint when there are no tasks", () => {
@@ -80,7 +185,7 @@ describe("ChatTasksPanel (Phase 57, selection wiring Phase 100)", () => {
     expect(screen.queryByTestId(ChatTasksPanelTestId.List)).not.toBeInTheDocument();
   });
 
-  it("shows the localized header title and a count of every listed task", () => {
+  it("shows the localized header title and an active-only count", () => {
     runsMock.mockReturnValue({
       runs: [
         run({ runId: "run_a", title: "Fix login bug", status: "running" }),
@@ -91,18 +196,25 @@ describe("ChatTasksPanel (Phase 57, selection wiring Phase 100)", () => {
 
     // Asserted via testid, not the translated copy: `chat.tasks.title`'s copy is
     // Task 7's to change (cs "Tasky" → "Běžící úlohy"), so this only asserts the
-    // header title renders (whatever it currently says), plus the row count.
+    // header title renders (whatever it currently says). The header count is
+    // active-only (Phase 123) — one `running` task, the `done` one archived.
     expect(screen.getByTestId(ChatTasksPanelTestId.Title)).toBeInTheDocument();
-    expect(screen.getByTestId(ChatTasksPanelTestId.Root)).toHaveTextContent("2");
+    const list = screen.getByTestId(ChatTasksPanelTestId.List);
+    expect(within(list).getAllByTestId(ChatTaskRowTestId.Row)).toHaveLength(1);
   });
 
   // Phase 108: no global project scope any more — every project's tasks (and
   // unattributed ones) show together, simultaneously.
-  it("shows tasks from every project at once", () => {
+  it("shows active tasks from every project at once", () => {
     runsMock.mockReturnValue({
       runs: [
         run({ runId: "run_alpha", title: "Alpha task", status: "running", projectId: "alpha" }),
-        run({ runId: "run_beta", title: "Beta task", status: "done", projectId: "beta" }),
+        run({
+          runId: "run_beta",
+          title: "Beta task",
+          status: "awaiting-approval",
+          projectId: "beta",
+        }),
         run({ runId: "run_none", title: "Loose task", status: "running" }),
       ],
     });
