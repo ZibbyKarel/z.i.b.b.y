@@ -12,33 +12,33 @@
 
 ## Status table
 
-| Phase | Title                                    | Status | Plan doc                                           | Commit     |
-| ----- | ---------------------------------------- | ------ | -------------------------------------------------- | ---------- |
-| F0a   | Delete discovery orphan (goals STAYS)    | ✅     | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `c02a68a9` |
-| F0b   | Per-project draft PR mode (prOpenMode)   | ✅     | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `10de4ad3` |
-| F0c   | Proposal source tag on approvals inbox   | ✅     | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `101759d7` |
-| F0d   | Law-3 text amendment (vault north-star)  | ✅     | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `d4c53782` |
-| F1a   | Contract: ownerSubsystem + registry → 10 | ✅     | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `9e45a8e8` |
-| F1b   | Backfill/seed + write 422 + UI selects   | ✅     | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `1037264c` |
-| F1c   | Stored roster (service + RosterTab)      | ✅     | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `7d47af2e` |
-| F2a   | Switchboard emits subsystem verdicts     | ✅     | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | `888dc425` |
-| F2b   | Per-subsystem dispatcher prompt+fallback | ✅     | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | `7ede32e9` |
-| F2c   | Classification trace + activity tagging  | ✅     | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | `40a2ee55` |
-| F3a   | Subsystem gate-rule sets + tier defaults | 🟦     | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | —          |
-| F3b   | Briefing per subsystem (Beacon/Ledger)   | 🟦     | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | —          |
-| F3c   | Approvals/activity filters + get_status  | 🟦     | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | —          |
-| F4a   | Subsystem MOC shelves (record/distill)   | 🟦     | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | —          |
-| F4b   | Retrieval upgrade (tags + link graph)    | 🟦     | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | —          |
-| F4c   | Vault seed + scheduled self-knowledge    | 🟦     | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | —          |
-| F5a   | Sentinel v1 (CVE + secret watch)         | ⬜     | —                                                  | —          |
-| F5b   | Maestro v1 (merge queue, read-side)      | ⬜     | —                                                  | —          |
-| F5c   | Loom v1 (scheduled quality audit)        | ⬜     | —                                                  | —          |
-| F6a   | Herald reply ledger + graduation         | ⬜     | —                                                  | —          |
-| F6b   | Live soak harness (opt-in lane)          | ⬜     | —                                                  | —          |
-| F6c   | Watcher health probes                    | ⬜     | —                                                  | —          |
-| F7a   | Sentry MonitorAdapter                    | ⬜     | —                                                  | —          |
-| F7b   | Merge-queue actions + post-merge loop    | ⬜     | —                                                  | —          |
-| F8    | Hearth + personal domain                 | ⬜     | —                                                  | —          |
+| Phase | Title                                    | Status      | Plan doc                                           | Commit     |
+| ----- | ---------------------------------------- | ----------- | -------------------------------------------------- | ---------- |
+| F0a   | Delete discovery orphan (goals STAYS)    | ✅          | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `c02a68a9` |
+| F0b   | Per-project draft PR mode (prOpenMode)   | ✅          | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `10de4ad3` |
+| F0c   | Proposal source tag on approvals inbox   | ✅          | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `101759d7` |
+| F0d   | Law-3 text amendment (vault north-star)  | ✅          | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `d4c53782` |
+| F1a   | Contract: ownerSubsystem + registry → 10 | ✅          | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `9e45a8e8` |
+| F1b   | Backfill/seed + write 422 + UI selects   | ✅          | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `1037264c` |
+| F1c   | Stored roster (service + RosterTab)      | ✅          | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `7d47af2e` |
+| F2a   | Switchboard emits subsystem verdicts     | ✅          | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | `888dc425` |
+| F2b   | Per-subsystem dispatcher prompt+fallback | ✅          | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | `7ede32e9` |
+| F2c   | Classification trace + activity tagging  | ✅          | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | `40a2ee55` |
+| F3a   | Subsystem gate-rule sets + tier defaults | 🟨 next     | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | —          |
+| F3b   | Briefing per subsystem (Beacon/Ledger)   | 🟦          | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | —          |
+| F3c   | Approvals/activity filters + get_status  | 🟦          | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | —          |
+| F4a   | Subsystem MOC shelves (record/distill)   | 🟦          | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | —          |
+| F4b   | Retrieval upgrade (tags + link graph)    | 🟦          | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | —          |
+| F4c   | Vault seed + scheduled self-knowledge    | 🟦          | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | —          |
+| F5a   | Sentinel v1 (CVE + secret watch)         | 🟦          | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | —          |
+| F5b   | Maestro v1 (merge queue, read-side)      | 🟦          | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | —          |
+| F5c   | Loom v1 (scheduled quality audit)        | 🟦          | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | —          |
+| F6a   | Herald reply ledger + graduation         | 🟦          | [ns2-f6](../plans/ns2-f6-trust-from-record.md)     | —          |
+| F6b   | Live soak harness (opt-in lane)          | 🟦          | [ns2-f6](../plans/ns2-f6-trust-from-record.md)     | —          |
+| F6c   | Watcher health probes                    | 🟦          | [ns2-f6](../plans/ns2-f6-trust-from-record.md)     | —          |
+| F7a   | Sentry MonitorAdapter                    | 🟦          | [ns2-f7](../plans/ns2-f7-monitors-and-actions.md)  | —          |
+| F7b   | Merge-queue actions + post-merge loop    | 🟦          | [ns2-f7](../plans/ns2-f7-monitors-and-actions.md)  | —          |
+| F8    | Hearth + personal domain                 | 🟨 planning | —                                                  | —          |
 
 Legend: ⬜ todo · 🟦 planned (plan reviewed) · 🟨 in progress · ✅ done (tests green,
 committed) · ⛔ parked (reason in Notes).
@@ -70,6 +70,41 @@ committed) · ⛔ parked (reason in Notes).
   payload keeps full set, `monitors` is a documented subset); `IntegrationRow` has
   no click target (no standalone integration detail route);
   `ChainsStorageService.updateOwnerSubsystem` internal-only.
+- **F2 complete (2026-07-17, Sonnet):** api 1808/1822 (14 skipped), web-components
+  1104/1104, contracts 393/393, 3× tsc + check:deps clean. Extra commits:
+  `27cf7511` (progress), `73191980` (2 stale tasks.e2e `candidates` counts 3→4 —
+  F2a's stage-1 subsystem verdict legitimately adds a candidate when catalog agents
+  share an owner). Deviations: glyph `"grid"` not `"orbit"` (not a DS IconName);
+  `TaskSchedulerService` gained required `agentsStore` ctor param;
+  `recordDispatchedActivity` now async+awaited; DS `Tag` used (no `Badge` exists).
+  New surfaces for F3+: `ActivityRefs.ownerSubsystem` (`.strict()` — extend
+  deliberately), `ScheduledTask.classification`/`TaskRun.classification`
+  (`ClassificationTraceSchema`); reference patterns: `ClassificationTracePanel`
+  (RunDetail.tsx), `TaskSchedulerService.ownerSubsystemOf` (guarded best-effort
+  lookup).
+- **F5 planned (2026-07-17, Opus):** `../plans/ns2-f5-empty-chairs.md`, 6 corrections
+  — Sentinel = Dependabot REST (not pnpm audit); Loom = graphify+madge only (NO
+  knip — not installed); Sentinel/Loom ride the automation seam (not
+  MonitorAdapter); Maestro read-side half-exists (`ProjectPrService.listOpen`) —
+  F5b adds ZERO merge code. BINDING: secret findings never contain the matched
+  secret value; sentinel/loom seed `enabled: true`; F5b card defers to F7b if not
+  green first try.
+- **F6 planned (2026-07-17, Opus):** `../plans/ns2-f6-trust-from-record.md`, 7
+  corrections — email can never graduate BY CONSTRUCTION (notify-only returns
+  before any reply branch); graduation promotes only confident naturally-T3
+  verdicts and always routes through `handleTier2` (gate still wins); exactly 5
+  `TickingWatcherBase` watchers (goal loop is NOT one). RULED: `edited` outcome
+  reserved-not-produced; global confidence floor stays; soak = fake-channel opt-in
+  lane only (`skipIf(!ZIBBY_SOAK)` + 0-tests meta-assertion); 5 graduation safety
+  invariants each need a test.
+- **F7 planned (2026-07-17, Opus):** `../plans/ns2-f7-monitors-and-actions.md`, 7
+  corrections — monitor registry seam IS clean (register + 1 enum value) but first
+  monitor-only kind needs a readOnly no-op channel adapter (exhaustive kind switch)
+  - per-kind dispatch-instruction Record (the one watcher edit);
+    `ProjectPrService` NOT exported (post-merge recording lives inside `merge()` via
+    leaf MergeWatchStore); merge response `sha` captured (additive optional). RULED:
+    `POST_MERGE_WINDOW_MIN=120`, post-merge-watch seeds enabled, 5 merge-safety
+    invariants each need a test, Sentry detail = title/culprit/level/count only.
 - **F4 planned (2026-07-17, Opus):** plan at `../plans/ns2-f4-memory-shelves.md`
   with 7 factual corrections — key: shelves are FLAT `knowledge/subsystem-<id>-moc.md`
   notes (vault forbids subdirs; `-moc` suffix auto-indexes as entry point); vault
