@@ -45,6 +45,7 @@ describe("BriefingService", () => {
   let subsystems: { list: ReturnType<typeof vi.fn> };
   let limits: { snapshot: ReturnType<typeof vi.fn> };
   let monitorEvents: { listStatuses: ReturnType<typeof vi.fn> };
+  let selfKnowledge: { check: ReturnType<typeof vi.fn> };
   let service: BriefingService;
 
   const now = new Date("2026-06-12T07:00:00.000Z");
@@ -69,6 +70,8 @@ describe("BriefingService", () => {
     limits = {
       snapshot: vi.fn().mockResolvedValue({ weekly: { usedPct: 0 }, rolling: { usedPct: 0 } }),
     };
+    // NS2 F4c — default fixture: no drift (each test overrides what it exercises).
+    selfKnowledge = { check: vi.fn().mockResolvedValue(false) };
 
     service = new BriefingService(
       approvals as never,
@@ -83,6 +86,7 @@ describe("BriefingService", () => {
       monitorEvents as never,
       subsystems as never,
       limits as never,
+      selfKnowledge as never,
       dir,
       { child: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn() }) } as never,
     );
@@ -195,6 +199,27 @@ describe("BriefingService", () => {
       const briefing = await service.assemble(now);
       expect(briefing.subsystems).toHaveLength(1);
       expect(briefing.subsystems?.[0]?.note).toBeUndefined();
+    });
+  });
+
+  describe("self-knowledge drift (NS2 F4c)", () => {
+    it("omits selfKnowledgeDrift when the check reports no drift", async () => {
+      selfKnowledge.check.mockResolvedValue(false);
+      const briefing = await service.assemble(now);
+      expect(briefing.selfKnowledgeDrift).toBeUndefined();
+    });
+
+    it("surfaces selfKnowledgeDrift: true when the check reports drift", async () => {
+      selfKnowledge.check.mockResolvedValue(true);
+      const briefing = await service.assemble(now);
+      expect(briefing.selfKnowledgeDrift).toBe(true);
+    });
+
+    it("a failed drift check fails open — omits the field, the briefing still assembles", async () => {
+      selfKnowledge.check.mockRejectedValue(new Error("compose failed"));
+      const briefing = await service.assemble(now);
+      expect(briefing.selfKnowledgeDrift).toBeUndefined();
+      expect(briefing.headline).toBe("Nothing needs you.");
     });
   });
 });

@@ -123,6 +123,10 @@ export const BriefingSchema = z.object({
   /** NS2 F3b — per-subsystem grouping lines. Optional and strictly additive: old
    * briefings (and a briefing whose subsystem read failed) omit it entirely. */
   subsystems: z.array(BriefingSubsystemLineSchema).optional(),
+  /** NS2 F4c — true when the self-knowledge vault note has drifted from a fresh
+   * compose (the nightly refresh may have failed). Optional and strictly
+   * additive: absent on every briefing predating this check. */
+  selfKnowledgeDrift: z.boolean().optional(),
 });
 export type Briefing = z.infer<typeof BriefingSchema>;
 

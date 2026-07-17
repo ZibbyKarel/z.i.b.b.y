@@ -7,6 +7,7 @@ import { MemoryModule } from "../memory/memory.module";
 import { MonitorsModule } from "../monitors/monitors.module";
 import { PipelinesModule } from "../pipelines/pipelines.module";
 import { ProjectsModule } from "../projects/projects.module";
+import { SelfKnowledgeModule } from "../self-knowledge/self-knowledge.module";
 import { SubsystemsModule } from "../subsystems/subsystems.module";
 import { ScheduledTasksStorageModule } from "../tasks/scheduled-tasks-storage.module";
 import { BriefingController } from "./briefing.controller";
@@ -35,6 +36,9 @@ import { ClaudeCliBriefer } from "./claude-cli-briefer";
     // subsystems nor limits imports briefing.
     SubsystemsModule,
     LimitsModule,
+    // NS2 F4c — self-knowledge drift check (SelfKnowledgeService). One-directional:
+    // self-knowledge doesn't import briefing.
+    SelfKnowledgeModule,
   ],
   controllers: [BriefingController],
   providers: [ClaudeCliBriefer, BriefingService],

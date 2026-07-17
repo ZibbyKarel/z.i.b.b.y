@@ -44,6 +44,18 @@ function taskAutomation(over: Partial<Automation> = {}): Automation {
   };
 }
 
+function selfKnowledgeAutomation(over: Partial<Automation> = {}): Automation {
+  return {
+    id: "self-knowledge-refresh",
+    name: "Obnova sebeznalosti",
+    trigger: { type: "cron", expr: "30 3 * * *" },
+    target: { type: "self-knowledge" },
+    enabled: true,
+    system: true,
+    ...over,
+  };
+}
+
 /** Build a SchedulerService with every non-exercised dependency stubbed to a
  * no-op — each describe block below only wires the dependency its own case needs. */
 function makeService(opts: {
@@ -51,6 +63,7 @@ function makeService(opts: {
   detect?: ReturnType<typeof vi.fn>;
   pipelineRunner?: { start: ReturnType<typeof vi.fn> };
   taskScheduler?: { createTask: ReturnType<typeof vi.fn> };
+  selfKnowledge?: { check: ReturnType<typeof vi.fn>; write: ReturnType<typeof vi.fn> };
 }): { service: SchedulerService; storage: { markFired: ReturnType<typeof vi.fn> } } {
   const storage = {
     list: async () => [opts.automation],
@@ -74,13 +87,16 @@ function makeService(opts: {
     fakeSystemConfigStore(),
     { detect: opts.detect ?? vi.fn() } as never,
     (opts.taskScheduler ?? { createTask: vi.fn() }) as never,
+    (opts.selfKnowledge ?? { check: vi.fn(async () => false), write: vi.fn() }) as never,
   );
   return { service, storage };
 }
 
 describe("SchedulerService — dispatch (Phase 4b: agent-factory case)", () => {
   it("dispatches the agent-factory target straight to AgentFactoryService.detect and refs the count", async () => {
-    const detect = vi.fn(async () => ({ proposed: ["auto-deploy-staging", "auto-fix-flaky-test"] }));
+    const detect = vi.fn(async () => ({
+      proposed: ["auto-deploy-staging", "auto-fix-flaky-test"],
+    }));
     const { service } = makeService({ automation: agentFactoryAutomation(), detect });
 
     const ref = await service.trigger("agent-factory-nightly");
@@ -121,7 +137,10 @@ describe("SchedulerService — dispatch (Phase 116b: pipeline prompt forwarding)
 
   it("forwards undefined when the automation carries no prompt (no behaviour change)", async () => {
     const start = vi.fn(async () => ({ pipelineRunId: "release_2" }));
-    const { service } = makeService({ automation: pipelineAutomation(), pipelineRunner: { start } });
+    const { service } = makeService({
+      automation: pipelineAutomation(),
+      pipelineRunner: { start },
+    });
 
     await service.trigger("nightly-pipeline");
 
@@ -201,9 +220,52 @@ describe("SchedulerService — dispatch (Phase 116b: task target)", () => {
       outcome: "scheduled" as const,
       task: { id: "task_3" },
     }));
-    const { service } = makeService({ automation: taskAutomation(), taskScheduler: { createTask } });
+    const { service } = makeService({
+      automation: taskAutomation(),
+      taskScheduler: { createTask },
+    });
 
     expect(await service.trigger("prompt-automation")).toBe("task_3");
+  });
+});
+
+describe("SchedulerService — dispatch (F4c: self-knowledge target)", () => {
+  it("calls check() then write(), refs `self-knowledge:refreshed` when drift was found", async () => {
+    const check = vi.fn(async () => true);
+    const write = vi.fn(async () => ({}));
+    const { service } = makeService({
+      automation: selfKnowledgeAutomation(),
+      selfKnowledge: { check, write },
+    });
+
+    const ref = await service.trigger("self-knowledge-refresh");
+
+    expect(check).toHaveBeenCalledTimes(1);
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(ref).toBe("self-knowledge:refreshed");
+  });
+
+  it("refs `self-knowledge:clean` when no drift was found", async () => {
+    const { service } = makeService({
+      automation: selfKnowledgeAutomation(),
+      selfKnowledge: { check: vi.fn(async () => false), write: vi.fn() },
+    });
+
+    expect(await service.trigger("self-knowledge-refresh")).toBe("self-knowledge:clean");
+  });
+
+  it("a throwing self-knowledge service refs `self-knowledge:error`, the tick survives (fail-open)", async () => {
+    const { service } = makeService({
+      automation: selfKnowledgeAutomation(),
+      selfKnowledge: {
+        check: vi.fn(async () => {
+          throw new Error("vault hiccup");
+        }),
+        write: vi.fn(),
+      },
+    });
+
+    await expect(service.trigger("self-knowledge-refresh")).resolves.toBe("self-knowledge:error");
   });
 });
 
@@ -233,7 +295,7 @@ describe("SchedulerService — T7 TickingWatcherBase adoption", () => {
     expect(tickSpy).toHaveBeenCalledTimes(1); // still once
   });
 
-  it("health()'s `running` still means \"timer armed\", unaffected by the in-flight guard", () => {
+  it('health()\'s `running` still means "timer armed", unaffected by the in-flight guard', () => {
     const { service } = makeService({ automation: agentFactoryAutomation() });
     // No `onModuleInit()` here (systemConfig defaults tickMs to 0 in tests) — the
     // timer is never armed, so `running` stays false regardless of any in-flight tick.

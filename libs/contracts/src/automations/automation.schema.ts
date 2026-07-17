@@ -57,6 +57,11 @@ export const TargetSchema = z.discriminatedUnion("type", [
   // could be automated, drafting "automate it?" suggestions into the vault for the
   // briefing. Deterministic; proposes ≠ acts (never creates an automation itself).
   z.object({ type: z.literal("gap-detect") }),
+  // Self-knowledge refresh (F4c): a nightly deterministic re-compose + AUTO-block
+  // merge write of the self-knowledge vault note (agents/pipelines/gate rules/
+  // channels) — not a claude run. The scheduler dispatches it straight to
+  // `SelfKnowledgeService`, same non-runner posture as `briefing`/`memory-distill`.
+  z.object({ type: z.literal("self-knowledge") }),
   // Agent Factory (Phase 4b): scan recurring `orchestrator-fallback` activity for a
   // missing specialist, draft a deterministic candidate agent `.md`, and park it
   // behind an `agent-proposal` approval. Deterministic; proposes ≠ activates (only

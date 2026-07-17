@@ -49,6 +49,9 @@ export interface BriefingInput {
   /** NS2 F3b — per-subsystem lines, gathered by the service (state + tier counts
    * from SubsystemsService, Ledger/Puls notes). Absent when the read failed. */
   subsystems?: BriefingSubsystemLine[];
+  /** NS2 F4c — whether the self-knowledge vault note has drifted from a fresh
+   * compose (gathered via `SelfKnowledgeService.check()`, fail-open to `false`). */
+  selfKnowledgeDrift?: boolean;
 }
 
 /** Activity kinds that count as "ZIBBY did this for you". */
@@ -113,6 +116,7 @@ export function assembleBriefing(input: BriefingInput): Briefing {
       : {}),
     ...(input.appIdeas && input.appIdeas.length > 0 ? { appIdeas: input.appIdeas } : {}),
     ...(input.subsystems && input.subsystems.length > 0 ? { subsystems: input.subsystems } : {}),
+    ...(input.selfKnowledgeDrift ? { selfKnowledgeDrift: true } : {}),
   };
 }
 
@@ -355,14 +359,21 @@ export function renderBriefingMarkdown(briefing: Briefing): string {
     lines.push("");
   }
 
-  if (briefing.subsystems && briefing.subsystems.length > 0) {
+  if ((briefing.subsystems && briefing.subsystems.length > 0) || briefing.selfKnowledgeDrift) {
     lines.push("## Subsystems");
-    for (const s of briefing.subsystems) {
+    for (const s of briefing.subsystems ?? []) {
       const counts: string[] = [];
       if (s.tier3Count > 0) counts.push(`${s.tier3Count} waiting on you`);
       if (s.tier2Count > 0) counts.push(`${s.tier2Count} reported`);
       const detail = [s.state, ...counts, ...(s.note ? [s.note] : [])].join(" · ");
       lines.push(`- **${s.name}** — ${detail}`);
+    }
+    // NS2 F4c: Codex owns the second brain — its drift signal lands in the same
+    // Subsystems section rather than a duplicate `## Memory` heading.
+    if (briefing.selfKnowledgeDrift) {
+      lines.push(
+        "- self-knowledge note drifted from the live catalog (nightly refresh may have failed)",
+      );
     }
     lines.push("");
   }
