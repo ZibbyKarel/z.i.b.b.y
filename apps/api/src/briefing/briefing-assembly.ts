@@ -5,6 +5,7 @@ import type {
   BriefingDidItem,
   BriefingEngagement,
   BriefingNeedsYouItem,
+  BriefingSubsystemLine,
   BriefingWatchItem,
   ChannelItem,
   CiStatus,
@@ -45,6 +46,9 @@ export interface BriefingInput {
   automationGaps?: string[];
   /** Weekly "3 app ideas" — interests × trends prototype pitches (M6). */
   appIdeas?: string[];
+  /** NS2 F3b — per-subsystem lines, gathered by the service (state + tier counts
+   * from SubsystemsService, Ledger/Puls notes). Absent when the read failed. */
+  subsystems?: BriefingSubsystemLine[];
 }
 
 /** Activity kinds that count as "ZIBBY did this for you". */
@@ -108,6 +112,7 @@ export function assembleBriefing(input: BriefingInput): Briefing {
       ? { automationGaps: input.automationGaps }
       : {}),
     ...(input.appIdeas && input.appIdeas.length > 0 ? { appIdeas: input.appIdeas } : {}),
+    ...(input.subsystems && input.subsystems.length > 0 ? { subsystems: input.subsystems } : {}),
   };
 }
 
@@ -217,9 +222,13 @@ function buildNeedsYou(
       ...(s.projectId ? { projectId: s.projectId } : {}),
     }));
   // Newest first so the most recent decision tops the list.
-  return [...fromApprovals, ...fromParked, ...fromParkedGoals, ...fromDeadLetter, ...fromRedCi].sort(
-    (a, b) => b.at.localeCompare(a.at),
-  );
+  return [
+    ...fromApprovals,
+    ...fromParked,
+    ...fromParkedGoals,
+    ...fromDeadLetter,
+    ...fromRedCi,
+  ].sort((a, b) => b.at.localeCompare(a.at));
 }
 
 function buildDidForYou(activity: ActivityEntry[]): BriefingDidItem[] {
@@ -342,6 +351,18 @@ export function renderBriefingMarkdown(briefing: Briefing): string {
       } else {
         lines.push(`- ${w.integrationId}: ${w.newItems ?? 0} new`);
       }
+    }
+    lines.push("");
+  }
+
+  if (briefing.subsystems && briefing.subsystems.length > 0) {
+    lines.push("## Subsystems");
+    for (const s of briefing.subsystems) {
+      const counts: string[] = [];
+      if (s.tier3Count > 0) counts.push(`${s.tier3Count} waiting on you`);
+      if (s.tier2Count > 0) counts.push(`${s.tier2Count} reported`);
+      const detail = [s.state, ...counts, ...(s.note ? [s.note] : [])].join(" · ");
+      lines.push(`- **${s.name}** — ${detail}`);
     }
     lines.push("");
   }

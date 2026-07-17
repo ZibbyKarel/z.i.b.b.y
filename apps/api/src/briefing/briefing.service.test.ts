@@ -32,11 +32,19 @@ function makeVault() {
   };
 }
 
+/** NS2 F3b — a subsystem row fixture in the SubsystemsService.list() shape. */
+function subsystemRow(id: string, name: string, state = "idle", tier2Count = 0, tier3Count = 0) {
+  return { id, name, tagline: "t", mandate: "m", color: "#000000", state, tier2Count, tier3Count };
+}
+
 describe("BriefingService", () => {
   let dir: string;
   let vault: ReturnType<typeof makeVault>;
   let record: ReturnType<typeof vi.fn>;
   let briefer: { headline: ReturnType<typeof vi.fn> };
+  let subsystems: { list: ReturnType<typeof vi.fn> };
+  let limits: { snapshot: ReturnType<typeof vi.fn> };
+  let monitorEvents: { listStatuses: ReturnType<typeof vi.fn> };
   let service: BriefingService;
 
   const now = new Date("2026-06-12T07:00:00.000Z");
@@ -54,7 +62,13 @@ describe("BriefingService", () => {
     const activity = { readSince: vi.fn().mockResolvedValue([]), record };
     const tasks = { list: vi.fn().mockResolvedValue([]) };
     const projects = { list: vi.fn().mockResolvedValue([]) };
-    const monitorEvents = { listStatuses: vi.fn().mockResolvedValue([]) };
+    monitorEvents = { listStatuses: vi.fn().mockResolvedValue([]) };
+    // NS2 F3b — default fixtures: no subsystem rows, no limits reading (each
+    // test overrides what it exercises).
+    subsystems = { list: vi.fn().mockResolvedValue([]) };
+    limits = {
+      snapshot: vi.fn().mockResolvedValue({ weekly: { usedPct: 0 }, rolling: { usedPct: 0 } }),
+    };
 
     service = new BriefingService(
       approvals as never,
@@ -67,6 +81,8 @@ describe("BriefingService", () => {
       tasks as never,
       projects as never,
       monitorEvents as never,
+      subsystems as never,
+      limits as never,
       dir,
       { child: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn() }) } as never,
     );
@@ -112,5 +128,73 @@ describe("BriefingService", () => {
   it("since-cursor defaults to start of today on first assemble", async () => {
     const briefing = await service.assemble(now);
     expect(briefing.since).toBe("2026-06-12T00:00:00.000Z");
+  });
+
+  describe("per-subsystem lines (NS2 F3b)", () => {
+    it("mirrors the gathered subsystem states and tier counts", async () => {
+      subsystems.list.mockResolvedValue([
+        subsystemRow("forge", "Forge", "waiting", 0, 2),
+        subsystemRow("beacon", "Beacon", "waiting", 0, 1),
+        subsystemRow("scout", "Scout", "report", 3, 0),
+      ]);
+      const briefing = await service.assemble(now);
+      expect(briefing.subsystems).toHaveLength(3);
+      expect(briefing.subsystems?.[0]).toMatchObject({
+        subsystem: "forge",
+        name: "Forge",
+        state: "waiting",
+        tier3Count: 2,
+      });
+      expect(briefing.subsystems?.[2]).toMatchObject({ subsystem: "scout", tier2Count: 3 });
+    });
+
+    it("Ledger's note carries the weekly usage window %", async () => {
+      subsystems.list.mockResolvedValue([subsystemRow("ledger", "Ledger")]);
+      limits.snapshot.mockResolvedValue({ weekly: { usedPct: 62 }, rolling: { usedPct: 10 } });
+      const briefing = await service.assemble(now);
+      expect(briefing.subsystems?.[0]?.note).toBe("62 % týdenního okna");
+    });
+
+    it("Puls' note reflects CI health from the gathered statuses", async () => {
+      subsystems.list.mockResolvedValue([subsystemRow("puls", "Puls")]);
+      monitorEvents.listStatuses.mockResolvedValue([
+        {
+          integrationId: "gh",
+          adapterKind: "github-ci",
+          state: "green",
+          sinceAt: now.toISOString(),
+          summary: "ok",
+        },
+      ]);
+      const green = await service.assemble(now);
+      expect(green.subsystems?.[0]?.note).toBe("CI zelené");
+
+      monitorEvents.listStatuses.mockResolvedValue([
+        {
+          integrationId: "gh",
+          adapterKind: "github-ci",
+          state: "red",
+          sinceAt: now.toISOString(),
+          summary: "boom",
+        },
+      ]);
+      const red = await service.assemble(now);
+      expect(red.subsystems?.[0]?.note).toBe("CI červená (1)");
+    });
+
+    it("a failed subsystem read omits the lines but the briefing still assembles", async () => {
+      subsystems.list.mockRejectedValue(new Error("registry down"));
+      const briefing = await service.assemble(now);
+      expect(briefing.subsystems).toBeUndefined();
+      expect(briefing.headline).toBe("Nothing needs you.");
+    });
+
+    it("a failed limits read only drops Ledger's note, not the section", async () => {
+      subsystems.list.mockResolvedValue([subsystemRow("ledger", "Ledger")]);
+      limits.snapshot.mockRejectedValue(new Error("statusline missing"));
+      const briefing = await service.assemble(now);
+      expect(briefing.subsystems).toHaveLength(1);
+      expect(briefing.subsystems?.[0]?.note).toBeUndefined();
+    });
   });
 });

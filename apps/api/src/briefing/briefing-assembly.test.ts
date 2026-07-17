@@ -176,7 +176,14 @@ describe("assembleBriefing", () => {
       checkedAt: "2026-06-12T06:55:00.000Z",
       summary: "build.yml failed on main",
     });
-    const base = { now: NOW, since: SINCE, approvals: [], parkedRuns: [], channelItems: [], activity: [] };
+    const base = {
+      now: NOW,
+      since: SINCE,
+      approvals: [],
+      parkedRuns: [],
+      channelItems: [],
+      activity: [],
+    };
 
     const red = assembleBriefing({ ...base, ciStatuses: [ciStatus("red")] });
     expect(red.needsYou).toEqual([
@@ -286,5 +293,50 @@ describe("renderBriefingMarkdown", () => {
     expect(md).toContain("# Briefing");
     expect(md).toContain("## Needs you");
     expect(md).toContain("## Counts");
+  });
+});
+
+describe("per-subsystem lines (NS2 F3b)", () => {
+  const base = {
+    now: NOW,
+    since: SINCE,
+    approvals: [],
+    parkedRuns: [],
+    channelItems: [],
+    activity: [],
+  };
+  const lines = [
+    {
+      subsystem: "forge" as const,
+      name: "Forge",
+      state: "waiting" as const,
+      tier2Count: 0,
+      tier3Count: 2,
+    },
+    {
+      subsystem: "ledger" as const,
+      name: "Ledger",
+      state: "idle" as const,
+      tier2Count: 0,
+      tier3Count: 0,
+      note: "62 % týdenního okna",
+    },
+  ];
+
+  it("passes the gathered lines through verbatim (present ⇄ absent)", () => {
+    const withLines = assembleBriefing({ ...base, subsystems: lines });
+    expect(withLines.subsystems).toEqual(lines);
+    // Absent (old briefings / failed read) and empty both omit the key entirely —
+    // strictly additive to the pre-F3b shape.
+    expect(assembleBriefing(base).subsystems).toBeUndefined();
+    expect(assembleBriefing({ ...base, subsystems: [] }).subsystems).toBeUndefined();
+  });
+
+  it("renders a ## Subsystems markdown block iff lines are present", () => {
+    const md = renderBriefingMarkdown(assembleBriefing({ ...base, subsystems: lines }));
+    expect(md).toContain("## Subsystems");
+    expect(md).toContain("- **Forge** — waiting · 2 waiting on you");
+    expect(md).toContain("- **Ledger** — idle · 62 % týdenního okna");
+    expect(renderBriefingMarkdown(assembleBriefing(base))).not.toContain("## Subsystems");
   });
 });

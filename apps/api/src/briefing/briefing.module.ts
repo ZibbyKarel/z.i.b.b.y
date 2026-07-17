@@ -2,10 +2,12 @@ import { Module } from "@nestjs/common";
 import { ApprovalsModule } from "../approvals/approvals.module";
 import { ChannelsModule } from "../channels/channels.module";
 import { GoalsModule } from "../goals/goals.module";
+import { LimitsModule } from "../limits/limits.module";
 import { MemoryModule } from "../memory/memory.module";
 import { MonitorsModule } from "../monitors/monitors.module";
 import { PipelinesModule } from "../pipelines/pipelines.module";
 import { ProjectsModule } from "../projects/projects.module";
+import { SubsystemsModule } from "../subsystems/subsystems.module";
 import { ScheduledTasksStorageModule } from "../tasks/scheduled-tasks-storage.module";
 import { BriefingController } from "./briefing.controller";
 import { BriefingService } from "./briefing.service";
@@ -28,6 +30,11 @@ import { ClaudeCliBriefer } from "./claude-cli-briefer";
     MonitorsModule,
     ProjectsModule,
     ScheduledTasksStorageModule,
+    // NS2 F3b — per-subsystem grouping lines (SubsystemsService) + the Ledger
+    // note's weekly window % (LimitsService). Both one-directional: neither
+    // subsystems nor limits imports briefing.
+    SubsystemsModule,
+    LimitsModule,
   ],
   controllers: [BriefingController],
   providers: [ClaudeCliBriefer, BriefingService],

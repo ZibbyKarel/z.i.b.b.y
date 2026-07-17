@@ -348,6 +348,9 @@
     "briefingWatching": "watching {count} channels",
     "briefingPausedLimit": "{count} paused on the limit",
     "briefingEngagement": "{needs} need · {did} done · {queued} queued · {held} held",
+    "briefingSubsystems": "Subsystems",
+    "briefingSubsystemTier3": "{count} waiting on you",
+    "briefingSubsystemTier2": "{count} to report",
     "starterTitle": "start here · build the dashboard",
     "commandBar": {
       "suggestions": {

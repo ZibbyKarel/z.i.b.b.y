@@ -1,15 +1,22 @@
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Inject, Injectable } from "@nestjs/common";
-import type { Briefing } from "@zibby/contracts";
+import type {
+  Briefing,
+  BriefingSubsystemLine,
+  CiStatus,
+  SubsystemWithStatus,
+} from "@zibby/contracts";
 import { ACTIVITY_DIR, ActivityLogService } from "../activity/activity-log.service";
 import { ApprovalsService } from "../approvals/approvals.service";
 import { ChannelItemStore } from "../channels/channel-item.store";
 import { DuplicateNoteError, VaultService } from "../memory/vault.service";
 import { GoalRunnerService } from "../goals/goal-runner.service";
+import { LimitsService } from "../limits/limits.service";
 import { MonitorEventStore } from "../monitors/monitor-event.store";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
+import { SubsystemsService } from "../subsystems/subsystems.service";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
 import { ensureDir, safeJson, writeFileAtomic } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
@@ -22,6 +29,35 @@ const CURSOR_FILE = "last-briefing.json";
 /** Start-of-day ISO for `now` — the since-fallback on first boot / deleted cursor. */
 function startOfDay(now: Date): string {
   return `${now.toISOString().slice(0, 10)}T00:00:00.000Z`;
+}
+
+/**
+ * NS2 F3b — shape the gathered subsystem rows into briefing lines (pure; the
+ * service gathers, `assembleBriefing` formats — mirrors the `ciStatuses` split).
+ * Two mandate-specific notes: Ledger carries the weekly usage window %, Puls
+ * carries CI health from the already-gathered statuses. Beacon needs no note —
+ * its Tier-3 mandate is honored by `tier3Count`.
+ */
+function buildSubsystemLines(
+  rows: SubsystemWithStatus[],
+  ciStatuses: CiStatus[],
+  weeklyPct: number | null,
+): BriefingSubsystemLine[] {
+  const redCi = ciStatuses.filter((s) => s.state === "red").length;
+  return rows.map((s) => {
+    let note: string | undefined;
+    if (s.id === "ledger" && weeklyPct !== null) note = `${weeklyPct} % týdenního okna`;
+    if (s.id === "puls" && ciStatuses.length > 0)
+      note = redCi > 0 ? `CI červená (${redCi})` : "CI zelené";
+    return {
+      subsystem: s.id,
+      name: s.name,
+      state: s.state,
+      tier2Count: s.tier2Count,
+      tier3Count: s.tier3Count,
+      ...(note ? { note } : {}),
+    };
+  });
 }
 
 /**
@@ -48,6 +84,10 @@ export class BriefingService {
     private readonly tasks: ScheduledTasksStorageService,
     private readonly projects: ProjectsStorageService,
     private readonly monitorEvents: MonitorEventStore,
+    // NS2 F3b — per-subsystem grouping lines (state + tier counts) and the
+    // Ledger note's weekly usage window %.
+    private readonly subsystems: SubsystemsService,
+    private readonly limits: LimitsService,
     @Inject(ACTIVITY_DIR) private readonly activityDir: string,
     logger: LoggerService,
   ) {
@@ -57,18 +97,35 @@ export class BriefingService {
   /** Assemble the current briefing from the record — pure, no persistence. */
   async assemble(now: Date = new Date()): Promise<Briefing> {
     const since = await this.readCursor(now);
-    const [approvals, allRuns, allGoalRuns, channelItems, activity, allTasks, projects, ciStatuses] =
-      await Promise.all([
-        this.approvals.list("pending"),
-        this.pipelines.listAll(),
-        this.goals.listAll(),
-        this.channels.list(),
-        this.activity.readSince(since, now),
-        this.tasks.list().catch(() => []),
-        this.projects.list().catch(() => []),
-        // N4b: last known CI health — a red one becomes a needs-you state line.
-        this.monitorEvents.listStatuses().catch(() => []),
-      ]);
+    const [
+      approvals,
+      allRuns,
+      allGoalRuns,
+      channelItems,
+      activity,
+      allTasks,
+      projects,
+      ciStatuses,
+      subsystemRows,
+      weeklyPct,
+    ] = await Promise.all([
+      this.approvals.list("pending"),
+      this.pipelines.listAll(),
+      this.goals.listAll(),
+      this.channels.list(),
+      this.activity.readSince(since, now),
+      this.tasks.list().catch(() => []),
+      this.projects.list().catch(() => []),
+      // N4b: last known CI health — a red one becomes a needs-you state line.
+      this.monitorEvents.listStatuses().catch(() => []),
+      // NS2 F3b — per-subsystem lines. `.catch`-guarded like every other extra:
+      // a failed read drops the section, never the briefing (null ≠ empty list).
+      this.subsystems.list().catch((): SubsystemWithStatus[] | null => null),
+      this.limits
+        .snapshot()
+        .then((l) => l.weekly.usedPct)
+        .catch((): number | null => null),
+    ]);
     // Phase 10: in-flight (running/paused) goals feed "watching"; parked goals "needs you".
     const goalRuns = allGoalRuns.filter(
       (g) => g.status === "running" || g.status === "paused-limit" || g.status === "parked",
@@ -89,6 +146,9 @@ export class BriefingService {
       this.readAutomationGaps(),
       this.readAppIdeas(),
     ]);
+    const subsystems = subsystemRows
+      ? buildSubsystemLines(subsystemRows, ciStatuses, weeklyPct)
+      : undefined;
     return assembleBriefing({
       now,
       since,
@@ -106,6 +166,7 @@ export class BriefingService {
       learnedPatterns,
       automationGaps,
       appIdeas,
+      ...(subsystems ? { subsystems } : {}),
     });
   }
 

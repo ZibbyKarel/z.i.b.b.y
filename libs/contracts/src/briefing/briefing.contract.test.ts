@@ -69,14 +69,55 @@ describe("BriefingSchema", () => {
     expect(BriefingSchema.safeParse(bad).success).toBe(false);
   });
 
+  describe("per-subsystem lines (NS2 F3b — strictly additive)", () => {
+    it("accepts a briefing with subsystem lines (note optional)", () => {
+      const withSubsystems = {
+        ...base,
+        subsystems: [
+          { subsystem: "forge", name: "Forge", state: "waiting", tier2Count: 0, tier3Count: 2 },
+          {
+            subsystem: "ledger",
+            name: "Ledger",
+            state: "idle",
+            tier2Count: 0,
+            tier3Count: 0,
+            note: "62 % týdenního okna",
+          },
+        ],
+      };
+      expect(BriefingSchema.safeParse(withSubsystems).success).toBe(true);
+    });
+
+    it("omitting subsystems entirely still parses (old briefings)", () => {
+      const parsed = BriefingSchema.safeParse(base);
+      expect(parsed.success).toBe(true);
+      expect(parsed.success && parsed.data.subsystems).toBeUndefined();
+    });
+
+    it("rejects an unknown subsystem id or state", () => {
+      const badId = {
+        ...base,
+        subsystems: [{ subsystem: "nope", name: "X", state: "idle", tier2Count: 0, tier3Count: 0 }],
+      };
+      expect(BriefingSchema.safeParse(badId).success).toBe(false);
+      const badState = {
+        ...base,
+        subsystems: [
+          { subsystem: "forge", name: "Forge", state: "sleeping", tier2Count: 0, tier3Count: 0 },
+        ],
+      };
+      expect(BriefingSchema.safeParse(badState).success).toBe(false);
+    });
+  });
+
   describe("T11 finding #12 — trend7d/learnedPatterns/automationGaps/appIdeas cap at 50 entries", () => {
     it("50 entries passes, 51 rejects (array length only — elements stay unbounded)", () => {
-      expect(
-        BriefingSchema.safeParse({ ...base, trend7d: Array(50).fill("x") }).success,
-      ).toBe(true);
-      expect(
-        BriefingSchema.safeParse({ ...base, trend7d: Array(51).fill("x") }).success,
-      ).toBe(false);
+      expect(BriefingSchema.safeParse({ ...base, trend7d: Array(50).fill("x") }).success).toBe(
+        true,
+      );
+      expect(BriefingSchema.safeParse({ ...base, trend7d: Array(51).fill("x") }).success).toBe(
+        false,
+      );
       expect(
         BriefingSchema.safeParse({ ...base, learnedPatterns: Array(50).fill("x") }).success,
       ).toBe(true);

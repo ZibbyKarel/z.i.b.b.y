@@ -348,6 +348,9 @@
     "briefingWatching": "sleduji {count} kanálů",
     "briefingPausedLimit": "{count} pozastaveno na limitu",
     "briefingEngagement": "{needs} čeká · {did} hotovo · {queued} ve frontě · {held} pozdrženo",
+    "briefingSubsystems": "Subsystémy",
+    "briefingSubsystemTier3": "{count} čeká na tebe",
+    "briefingSubsystemTier2": "{count} k reportu",
     "starterTitle": "začni tady · postav dashboard",
     "commandBar": {
       "suggestions": {
