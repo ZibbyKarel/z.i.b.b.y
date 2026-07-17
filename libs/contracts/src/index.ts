@@ -31,8 +31,6 @@ export * from "./artifacts/artifact.schema";
 export * from "./artifacts/artifacts.contract";
 export * from "./chains/chain.schema";
 export * from "./chains/chains.contract";
-export * from "./discovery/proposal.schema";
-export * from "./discovery/discovery.contract";
 export * from "./gates/gate.schema";
 export * from "./gates/gate.contract";
 export * from "./gates/gate-rules.contract";
