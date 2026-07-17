@@ -80,7 +80,9 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     onRunStatus: ReturnType<typeof vi.fn>;
     get: ReturnType<typeof vi.fn>;
   };
-  let chainListener: ((run: { taskId?: string; status: string; steps: unknown[]; chainRunId: string }) => void) | undefined;
+  let chainListener:
+    | ((run: { taskId?: string; status: string; steps: unknown[]; chainRunId: string }) => void)
+    | undefined;
   let classifier: {
     classify: ReturnType<typeof vi.fn>;
     /** Phase 91 — the subsystem-scoped classify seam. */
@@ -97,7 +99,13 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     recordCost: ReturnType<
       typeof vi.fn<
         (
-          entry: { projectId: string; taskId?: string; runRef: string; kind: string; costUsd: number },
+          entry: {
+            projectId: string;
+            taskId?: string;
+            runRef: string;
+            kind: string;
+            costUsd: number;
+          },
           now?: Date,
         ) => Promise<void>
       >
@@ -152,7 +160,11 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         chainListener = l;
         return () => {};
       }),
-      get: vi.fn(() => ({ chainRunId: "research-then-build_1", status: "running", steps: [{}, {}] })),
+      get: vi.fn(() => ({
+        chainRunId: "research-then-build_1",
+        status: "running",
+        steps: [{}, {}],
+      })),
     };
     classifier = {
       classify: vi.fn(async () => ({
@@ -299,7 +311,9 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     it("records an orchestrator-fallback activity when the CLASSIFIER routes to the orchestrator", async () => {
       await service.createTask({ text: "Deploy to Staging!", title: "Deploy" });
 
-      const call = activity.record.mock.calls.find(([entry]) => entry.kind === "orchestrator-fallback");
+      const call = activity.record.mock.calls.find(
+        ([entry]) => entry.kind === "orchestrator-fallback",
+      );
       expect(call).toBeDefined();
       const entry = call?.[0];
       expect(entry?.refs?.normalizedSummary).toBe("deploy to staging");
@@ -423,10 +437,19 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       fakeLogger as never,
       fakeTrace as never,
       activity as never,
-      { list: async () => [], get: async () => { throw new Error("no project"); } } as never,
+      {
+        list: async () => [],
+        get: async () => {
+          throw new Error("no project");
+        },
+      } as never,
       { resolveBudget: async () => undefined } as never,
       fakeBudget as never,
-      { register: vi.fn(), requestApproval: async () => ({ id: "appr_x" }), reject: async () => {} } as never,
+      {
+        register: vi.fn(),
+        requestApproval: async () => ({ id: "appr_x" }),
+        reject: async () => {},
+      } as never,
       fakeGates as never,
       fakeLimits as never,
       { handleTerminal: async () => null } as never,
@@ -436,7 +459,9 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       [refProvider] as never,
     );
 
-    const removed = await svcWithProvider.sweepOrphanAttachmentSets(Date.now() + 25 * 60 * 60 * 1000);
+    const removed = await svcWithProvider.sweepOrphanAttachmentSets(
+      Date.now() + 25 * 60 * 60 * 1000,
+    );
 
     expect(refProvider.referencedSetIds).toHaveBeenCalledTimes(1);
     expect(removed).toBe(1);
@@ -1031,6 +1056,72 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       expect(classifier.classify).not.toHaveBeenCalled();
     });
   });
+
+  describe("F2a — switchboard subsystem verdicts (soft stage-2 in dispatch(), never a hard error)", () => {
+    /** A minimal pipeline definition fixture — only the fields the resolver reads. */
+    function pipelineDef(id: string, name: string, ownerSubsystem = "forge") {
+      return { id, name, ownerSubsystem, desc: "", phases: [] };
+    }
+
+    it("non-empty roster: an undirected subsystem verdict resolves to the owned pipeline and dispatches to it", async () => {
+      pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery")]);
+      classifier.classify.mockResolvedValue({
+        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        confidence: 0.8,
+        reason: "matches forge's mandate",
+        matchedTerms: [],
+        candidates: [],
+      });
+      const result = await service.createTask({ text: "ship the delivery pipeline" });
+      expect(result.outcome).toBe("dispatched");
+      if (result.outcome !== "dispatched") return;
+      // A non-empty roster with exactly one owned pipeline resolves directly — the
+      // scoped classifier is never called (mirrors the explicit-path 1-owned case).
+      expect(classifier.classifyWithinSubsystem).not.toHaveBeenCalled();
+      expect(pipelineRunner.start).toHaveBeenCalledWith(
+        "delivery",
+        result.task.id,
+        undefined,
+        [],
+        undefined,
+        undefined,
+      );
+      expect(result.task.target).toEqual({
+        kind: "pipeline",
+        id: "delivery",
+        name: "Delivery",
+        glyph: "flow",
+        avatar: undefined,
+      });
+    });
+
+    it("empty roster: falls back to the orchestrator (soft — never a 422/thrown error), persists ORCHESTRATOR_TARGET, and records orchestrator-fallback", async () => {
+      pipelinesStore.list.mockResolvedValue([]); // forge owns nothing right now
+      classifier.classify.mockResolvedValue({
+        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        confidence: 0.6,
+        reason: "matches forge's mandate",
+        matchedTerms: [],
+        candidates: [],
+      });
+      const result = await service.createTask({ text: "ship something" });
+      expect(result.outcome).toBe("dispatched");
+      if (result.outcome !== "dispatched") return;
+      expect(classifier.classifyWithinSubsystem).not.toHaveBeenCalled();
+      expect(agentRunner.startOrchestrator).toHaveBeenCalled();
+      expect(pipelineRunner.start).not.toHaveBeenCalled();
+      // The soft fallback persists the honest terminal target — never the raw
+      // subsystem verdict (that would be a lie: the subsystem never ran anything).
+      expect(result.task.target).toEqual({
+        kind: "orchestrator",
+        name: "Orchestrator",
+        glyph: "compass",
+      });
+      expect(activity.record).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: "orchestrator-fallback" }),
+      );
+    });
+  });
 });
 
 describe("Task 3b — concurrent terminal handlers must not double-open a PR (finding #7)", () => {
@@ -1224,7 +1315,9 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
    * under `Promise.all`, without needing any manually-controlled deferred/release
    * choreography in the test itself.
    */
-  function makeService(project: { id: string; name: string; budget?: Record<string, unknown> } | null): {
+  function makeService(
+    project: { id: string; name: string; budget?: Record<string, unknown> } | null,
+  ): {
     fakeBudget: {
       check: ReturnType<typeof vi.fn>;
       countRunning: ReturnType<typeof vi.fn>;
@@ -1293,7 +1386,9 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
       recordDispatch: vi.fn(async () => {}),
       recordCost: vi.fn(async () => {}),
     };
-    let registeredRunner: { resume: (taskId: string) => void; cancel: (taskId: string) => void } | undefined;
+    let registeredRunner:
+      | { resume: (taskId: string) => void; cancel: (taskId: string) => void }
+      | undefined;
     const fakeApprovals = {
       register: vi.fn((_kind: string, runner: typeof registeredRunner) => {
         registeredRunner = runner;
@@ -1414,7 +1509,13 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
 
     const results = await Promise.all(
       Array.from({ length: N }, (_, i) =>
-        service.createTask({ text: `do ${i}`, title: `T${i}` }, undefined, PROJECT_ID, undefined, true),
+        service.createTask(
+          { text: `do ${i}`, title: `T${i}` },
+          undefined,
+          PROJECT_ID,
+          undefined,
+          true,
+        ),
       ),
     );
     for (const r of results) expect(r.outcome).toBe("pending");
@@ -1559,7 +1660,8 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
     // Simulate two `setInterval` firings in quick succession via the base's
     // timer-driven entry point (not two direct `tick()` calls, which is exactly
     // the call-site distinction T7 closes).
-    const guardedTick = () => (service as unknown as { guardedTick(): Promise<void> }).guardedTick();
+    const guardedTick = () =>
+      (service as unknown as { guardedTick(): Promise<void> }).guardedTick();
     const first = guardedTick();
     const second = guardedTick();
     await second; // the skipped firing returns immediately, without re-entering tick()

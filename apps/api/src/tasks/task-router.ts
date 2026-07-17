@@ -1,27 +1,45 @@
-import type { CatalogTaskTarget, ClassifyTaskInput, TaskRouting } from "@zibby/contracts";
+import type {
+  CatalogTaskTarget,
+  ClassifyTaskInput,
+  TaskRouting,
+  TaskTarget,
+} from "@zibby/contracts";
+
+/** A named subsystem as a rankable stage-1 verdict (F2a — see {@link RoutableTarget}). */
+type SubsystemTaskTarget = Extract<TaskTarget, { kind: "subsystem" }>;
 
 /**
  * A routable destination: a {@link CatalogTaskTarget} (a stored agent or
- * pipeline — never the synthetic orchestrator, which is the classifier's
- * terminal fallback, not a ranked candidate) plus the free-text catalog blob
- * (`search`) used to score and describe it (name, id, category, description /
- * pipeline desc + phase agents). The contract response carries only the plain
+ * pipeline) or — as of F2a — a named {@link SubsystemTaskTarget} (a whole
+ * delegation, resolved to a concrete unit by stage-2 downstream). Never the
+ * synthetic orchestrator, which is the classifier's terminal fallback, not a
+ * ranked candidate. Plus the free-text catalog blob (`search`) used to score
+ * and describe it (name, id, category, description / pipeline desc + phase
+ * agents / subsystem mandate). The contract response carries only the plain
  * target, so {@link toTaskTarget} strips the internal `search`.
  */
-export type RoutableTarget = CatalogTaskTarget & {
+export type RoutableTarget = (CatalogTaskTarget | SubsystemTaskTarget) & {
   search: string;
 };
 
-/** Project a routable candidate down to the contract's wire shape (drops `search`). */
-export function toTaskTarget(candidate: RoutableTarget): CatalogTaskTarget {
-  return {
-    kind: candidate.kind,
-    id: candidate.id,
-    name: candidate.name,
-    glyph: candidate.glyph,
-    avatar: candidate.avatar,
-    category: candidate.category,
-  };
+/**
+ * Project a routable candidate down to the contract's wire shape (drops
+ * `search`). A per-kind switch (not a generic `{ kind: candidate.kind, ... }`
+ * return) — each branch's return statement gets a LITERAL `kind`, so the
+ * inferred type stays the properly-distributed union instead of collapsing to
+ * one shape with a unioned `kind` (which stops being assignable once there are
+ * enough branches — the same pitfall documented on the web's `toApiTarget`).
+ */
+export function toTaskTarget(candidate: RoutableTarget): CatalogTaskTarget | SubsystemTaskTarget {
+  const { name, glyph, avatar, category } = candidate;
+  switch (candidate.kind) {
+    case "subsystem":
+      return { kind: "subsystem", id: candidate.id, name, glyph, avatar, category };
+    case "agent":
+      return { kind: "agent", id: candidate.id, name, glyph, avatar, category };
+    case "pipeline":
+      return { kind: "pipeline", id: candidate.id, name, glyph, avatar, category };
+  }
 }
 
 /**

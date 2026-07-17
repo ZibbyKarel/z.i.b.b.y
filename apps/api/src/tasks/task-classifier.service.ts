@@ -6,6 +6,7 @@ import {
   type Pipeline,
   type ProposedGoal,
   type ResolvedPath,
+  SUBSYSTEMS,
   type TaskRouting,
   TaskRoutingSchema,
   type TaskTarget,
@@ -269,7 +270,36 @@ export class TaskClassifierService {
       search: [a.name, a.id, a.category, a.description].filter(Boolean).join(" "),
     }));
 
-    return [...agentTargets, ...this.pipelineCandidates(pipelines)];
+    return [
+      ...agentTargets,
+      ...this.pipelineCandidates(pipelines),
+      ...this.stage1SubsystemCandidates(pipelines),
+    ];
+  }
+
+  /**
+   * F2a — one stage-1 candidate per subsystem that owns ≥1 pipeline (computed
+   * from the listed pipelines' `ownerSubsystem`), so the top-level switchboard
+   * can emit a whole-delegation verdict alongside its agent/pipeline picks.
+   * Subsystems owning nothing yet (codex/ledger, until F4/F5) are excluded —
+   * offering them invites a verdict that immediately unwinds at stage-2's
+   * empty-roster check (wasted tokens, a misleading trace). `search` is the
+   * subsystem's Czech mandate, so the keyword scorer ranks it on mandate-term
+   * overlap for free. Never offered by {@link classifyWithinSubsystem} — a
+   * subsystem never delegates to another subsystem.
+   */
+  private stage1SubsystemCandidates(pipelines: readonly Pipeline[]): RoutableTarget[] {
+    const owning = new Set(pipelines.map((p) => p.ownerSubsystem).filter(Boolean));
+    return SUBSYSTEMS.filter((s) => owning.has(s.id)).map((s) => ({
+      kind: "subsystem",
+      id: s.id,
+      name: s.name,
+      // "orbit" (the design's first choice) isn't a DS IconName — "grid" is the
+      // web's own KIND_FALLBACK_GLYPH default for a subsystem target
+      // (`apps/web/features/tasks/task.ts`), reused here instead of inventing one.
+      glyph: "grid",
+      search: s.mandate,
+    }));
   }
 
   /**
@@ -295,19 +325,17 @@ export class TaskClassifierService {
     if (!TaskRoutingSchema.safeParse(routing).success) return false;
     const target = routing.target;
     // The orchestrator is this service's own terminal rule — a router that picks
-    // it (instead of a catalog entry) is not a usable verdict. A goal (Phase 10), a
-    // chain (Phase 05) and a subsystem (Phase 91) are explicit-only: they never
-    // appear in the routable catalog, so the classifier must never route to one
-    // (the same posture as orchestrator — this is also the scope-guard belt to the
-    // `candidates.some(...)` braces below, which already reject it structurally
-    // since neither `buildCandidates` nor `pipelineCandidates` ever emits a
-    // `kind: "subsystem"` entry).
-    if (
-      target.kind === "orchestrator" ||
-      target.kind === "goal" ||
-      target.kind === "chain" ||
-      target.kind === "subsystem"
-    ) {
+    // it (instead of a catalog entry) is not a usable verdict. A goal (Phase 10)
+    // and a chain (Phase 05) are explicit-only: they never appear in the routable
+    // catalog, so the classifier must never route to one (the same posture as
+    // orchestrator — this is also the scope-guard belt to the `candidates.some(...)`
+    // check below, which already rejects them structurally since neither
+    // `buildCandidates` nor `pipelineCandidates` ever emits a `kind: "goal"`/`"chain"`
+    // entry). F2a: `subsystem` is REMOVED from this rejection list — the top-level
+    // catalog now legitimately offers subsystem candidates (`stage1SubsystemCandidates`),
+    // so a seated subsystem verdict is coherent; `classifyWithinSubsystem`'s own
+    // catalog never emits one, so this widening can't recurse.
+    if (target.kind === "orchestrator" || target.kind === "goal" || target.kind === "chain") {
       return false;
     }
     return candidates.some((c) => c.id === target.id && c.kind === target.kind);

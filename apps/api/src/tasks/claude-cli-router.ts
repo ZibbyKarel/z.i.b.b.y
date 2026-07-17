@@ -16,22 +16,27 @@ const MAX_TASK_CHARS = 4000;
  */
 const ROUTER_SYSTEM_PROMPT = [
   "You are a task router for an agentic OS. Given a task description and a catalog",
-  "of available agents and pipelines, choose the SINGLE best target to handle it.",
+  "of available agents, pipelines and subsystems, choose the SINGLE best target to handle it.",
   "",
   "Reply with ONLY a JSON object, no prose and no code fences:",
-  '{"targetKind":"agent"|"pipeline","targetId":string,"confidence":number,"reason":string,"matchedTerms":string[],"loop":boolean,"objective":string}',
+  '{"targetKind":"agent"|"pipeline"|"subsystem","targetId":string,"confidence":number,"reason":string,"matchedTerms":string[],"loop":boolean,"objective":string}',
   "",
   "- targetId MUST be one of the ids in the catalog — never invent one.",
+  '- A "subsystem" row is a whole delegation, not a specific unit: pick it when the task',
+  "  clearly fits that subsystem's mandate but no single agent/pipeline in the catalog is",
+  "  obviously the best fit — the task is then routed again INSIDE that subsystem to pick",
+  "  the specific pipeline or agent. Prefer a concrete agent/pipeline whenever one matches",
+  "  well; only fall back to a subsystem row for the broader, mandate-level match.",
   "- confidence is your calibrated 0..1 belief the choice is correct.",
   "- reason is one short sentence a human can read.",
   "- matchedTerms are the catalog/task words that justify the choice.",
   '- loop is true ONLY when the task asks to iterate until a condition holds (e.g. "keep going until the tests pass"); otherwise false.',
   "- objective: when loop is true, a one-line statement of the outcome to drive toward; else an empty string.",
-  "- Always still pick an agent/pipeline targetKind+targetId — loop is an annotation on that pick, NOT a new target kind.",
+  "- Always still pick a targetKind+targetId — loop is an annotation on that pick, NOT a new target kind.",
 ].join("\n");
 
 interface RouterVerdict {
-  targetKind: "agent" | "pipeline";
+  targetKind: "agent" | "pipeline" | "subsystem";
   targetId: string;
   confidence: number;
   reason: string;
@@ -142,7 +147,11 @@ export class ClaudeCliRouter implements TaskRouter {
 
     const kind = obj.targetKind;
     const id = obj.targetId;
-    if ((kind !== "agent" && kind !== "pipeline") || typeof id !== "string" || id.length === 0) {
+    if (
+      (kind !== "agent" && kind !== "pipeline" && kind !== "subsystem") ||
+      typeof id !== "string" ||
+      id.length === 0
+    ) {
       return null;
     }
     return {

@@ -24,12 +24,18 @@ function agent(over: Partial<Agent> & { id: string }): Agent {
   } as unknown as Agent;
 }
 
-function pipeline(over: { id: string; name?: string; desc?: string }): Pipeline {
+function pipeline(over: {
+  id: string;
+  name?: string;
+  desc?: string;
+  ownerSubsystem?: string;
+}): Pipeline {
   return {
     id: over.id,
     name: over.name ?? over.id,
     desc: over.desc ?? "",
     phases: [],
+    ownerSubsystem: over.ownerSubsystem,
   } as unknown as Pipeline;
 }
 
@@ -319,7 +325,10 @@ describe("TaskClassifierService — Phase 91 classifyWithinSubsystem (recursive 
       ],
       router: { route: routeSpy },
     });
-    await svc.classifyWithinSubsystem({ text: "ship the auth feature" }, ["delivery", "build-feature"]);
+    await svc.classifyWithinSubsystem({ text: "ship the auth feature" }, [
+      "delivery",
+      "build-feature",
+    ]);
     expect(routeSpy).toHaveBeenCalledTimes(1);
     const candidates = routeSpy.mock.calls[0]?.[1] as { kind: string; id: string }[];
     expect(candidates.map((c) => `${c.kind}:${c.id}`).sort()).toEqual([
@@ -333,14 +342,18 @@ describe("TaskClassifierService — Phase 91 classifyWithinSubsystem (recursive 
       agents: catalogAgents,
       pipelines: [
         pipeline({ id: "delivery", name: "Delivery", desc: "fix or implement a feature or bug" }),
-        pipeline({ id: "build-feature", name: "Build Feature", desc: "spec implementace testy docs" }),
+        pipeline({
+          id: "build-feature",
+          name: "Build Feature",
+          desc: "spec implementace testy docs",
+        }),
       ],
       router: silentRouter, // forces the deterministic keyword leg
     });
-    const r = await svc.classifyWithinSubsystem(
-      { text: "xyzzy zzz no keyword overlap at all" },
-      ["delivery", "build-feature"],
-    );
+    const r = await svc.classifyWithinSubsystem({ text: "xyzzy zzz no keyword overlap at all" }, [
+      "delivery",
+      "build-feature",
+    ]);
     expect(r?.target.kind).toBe("pipeline");
     expect(r?.target).toMatchObject({ kind: "pipeline", id: "delivery" });
   });
@@ -375,5 +388,113 @@ describe("TaskClassifierService — Phase 91 classifyWithinSubsystem (recursive 
     const svc = makeService({ pipelines: [pipeline({ id: "delivery", name: "Delivery" })] });
     const r = await svc.classifyWithinSubsystem({ text: "anything" }, ["gone-now"]);
     expect(r).toBeNull();
+  });
+});
+
+describe("TaskClassifierService — F2a switchboard subsystem verdicts", () => {
+  it("offers a stage-1 subsystem candidate only for subsystems that own ≥1 pipeline — codex/ledger excluded", async () => {
+    const routeSpy = vi.fn(async (_input: unknown, _candidates: unknown) => null);
+    const svc = makeService({
+      pipelines: [
+        pipeline({ id: "delivery", name: "Delivery", ownerSubsystem: "forge" }),
+        pipeline({ id: "watch", name: "Watch", ownerSubsystem: "puls" }),
+      ],
+      router: { route: routeSpy },
+    });
+    await svc.classify({ text: "anything" });
+    const candidates = routeSpy.mock.calls[0]?.[1] as { kind: string; id: string }[];
+    const subsystemIds = candidates
+      .filter((c) => c.kind === "subsystem")
+      .map((c) => c.id)
+      .sort();
+    expect(subsystemIds).toEqual(["forge", "puls"]);
+    expect(subsystemIds).not.toContain("codex");
+    expect(subsystemIds).not.toContain("ledger");
+  });
+
+  it("isCoherent accepts a seated (owning) subsystem verdict from the router", async () => {
+    const routerVerdict: TaskRouting = {
+      target: { kind: "subsystem", id: "forge", name: "Forge" },
+      confidence: 0.9,
+      reason: "matches forge's mandate",
+      matchedTerms: [],
+      candidates: [{ kind: "subsystem", id: "forge", name: "Forge" }],
+      mode: "single",
+      proposedGoal: null,
+      paths: [],
+      toolGrants: [],
+    };
+    const svc = makeService({
+      pipelines: [pipeline({ id: "delivery", name: "Delivery", ownerSubsystem: "forge" })],
+      router: fixedRouter(routerVerdict),
+    });
+    const r = await svc.classify({ text: "build and ship a feature" });
+    expect(r?.target).toEqual({ kind: "subsystem", id: "forge", name: "Forge" });
+  });
+
+  it("isCoherent still rejects orchestrator/goal/chain router verdicts (subsystem widening doesn't loosen these)", async () => {
+    const kinds: TaskRouting["target"][] = [
+      { kind: "orchestrator", name: "Orchestrator" } as TaskRouting["target"],
+      { kind: "goal", id: "nightly-cleanup", name: "Nightly Cleanup" } as TaskRouting["target"],
+      {
+        kind: "chain",
+        id: "research-then-build",
+        name: "Research then Build",
+      } as TaskRouting["target"],
+    ];
+    for (const target of kinds) {
+      const svc = makeService({
+        agents: catalogAgents,
+        pipelines: catalogPipelines,
+        router: fixedRouter({
+          target,
+          confidence: 0.95,
+          reason: "router picked a non-catalog kind",
+          matchedTerms: [],
+          candidates: [{ kind: "agent", id: "coder", name: "Kodér", glyph: "bot" }],
+          mode: "single",
+          proposedGoal: null,
+          paths: [],
+          toolGrants: [],
+        } as unknown as TaskRouting),
+      });
+      const r = await svc.classify({ text: "rename component button" });
+      expect(r?.target.kind).not.toBe(target.kind);
+    }
+  });
+
+  it("isCoherent rejects an UNSEATED subsystem verdict (names a subsystem that owns nothing, so it's never a candidate)", async () => {
+    const routerVerdict: TaskRouting = {
+      target: { kind: "subsystem", id: "codex", name: "Codex" }, // codex owns nothing → never a candidate
+      confidence: 0.95,
+      reason: "router picked codex",
+      matchedTerms: [],
+      candidates: [{ kind: "pipeline", id: "delivery", name: "Delivery" }],
+      mode: "single",
+      proposedGoal: null,
+      paths: [],
+      toolGrants: [],
+    } as unknown as TaskRouting;
+    const svc = makeService({
+      pipelines: [pipeline({ id: "delivery", name: "Delivery", ownerSubsystem: "forge" })],
+      router: fixedRouter(routerVerdict),
+    });
+    const r = await svc.classify({ text: "ship the auth feature" });
+    expect(r?.target.kind).not.toBe("subsystem");
+  });
+
+  it("keyword leg ranks a subsystem candidate top on mandate-term overlap", async () => {
+    const svc = makeService({
+      pipelines: [pipeline({ id: "delivery", name: "Delivery", ownerSubsystem: "forge" })],
+      router: silentRouter, // forces the deterministic keyword leg
+    });
+    // Forge's mandate: "Orchestrace delivery pipeline: Architekt → Kodér ⇄
+    // Code-Review → Tester → Dokumentátor." — several extra mandate-only terms
+    // outweigh the "delivery" pipeline's single-term overlap.
+    const r = await svc.classify({
+      text: "orchestrace delivery pipeline architekt kodér code review tester dokumentátor",
+    });
+    expect(r?.target.kind).toBe("subsystem");
+    expect(r?.target).toMatchObject({ id: "forge" });
   });
 });
