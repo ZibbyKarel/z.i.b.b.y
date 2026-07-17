@@ -24,10 +24,10 @@
 | F2a   | Switchboard emits subsystem verdicts     | ✅      | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | `888dc425` |
 | F2b   | Per-subsystem dispatcher prompt+fallback | ✅      | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | `7ede32e9` |
 | F2c   | Classification trace + activity tagging  | ✅      | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | `40a2ee55` |
-| F3a   | Subsystem gate-rule sets + tier defaults | 🟨 next | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | —          |
-| F3b   | Briefing per subsystem (Beacon/Ledger)   | 🟦      | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | —          |
-| F3c   | Approvals/activity filters + get_status  | 🟦      | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | —          |
-| F4a   | Subsystem MOC shelves (record/distill)   | 🟦      | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | —          |
+| F3a   | Subsystem gate-rule sets + tier defaults | ✅      | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | `77628764` |
+| F3b   | Briefing per subsystem (Beacon/Ledger)   | ✅      | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | `fab17397` |
+| F3c   | Approvals/activity filters + get_status  | ✅      | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | `c9c3dcaa` |
+| F4a   | Subsystem MOC shelves (record/distill)   | 🟨 next | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | —          |
 | F4b   | Retrieval upgrade (tags + link graph)    | 🟦      | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | —          |
 | F4c   | Vault seed + scheduled self-knowledge    | 🟦      | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | —          |
 | F5a   | Sentinel v1 (CVE + secret watch)         | 🟦      | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | —          |
@@ -84,6 +84,26 @@ committed) · ⛔ parked (reason in Notes).
   (`ClassificationTraceSchema`); reference patterns: `ClassificationTracePanel`
   (RunDetail.tsx), `TaskSchedulerService.ownerSubsystemOf` (guarded best-effort
   lookup).
+- **F3 complete (2026-07-17, Fable):** api 1828/1843 (14 skipped + 1 speech
+  concurrency flake, passes isolated), web-components 1113/1113, contracts
+  402/402, 3× tsc + check:deps + check:cycles clean. Deviations: (1) F3a
+  write-time 422 on softer-than-floor catalog rules DROPPED per the plan's
+  sanctioned fallback (GateRulesModule→GatesModule injection would cycle;
+  eval-time strictest-of-buckets is the enforcement boundary —
+  `validateSubsystemRuleHardenOnly` exists on the evaluator for future callers);
+  (2) F3a runner scope proof implemented at the evaluator level
+  (`rulesForAgentInSubsystem` + real catalog store) — runner wiring is a
+  one-line call-site change; (3) `SubsystemsModule` gained
+  `exports: [SubsystemsService]` (needed by briefing + chat); (4) F3c activity
+  filter lives on the **RightRail live log** (`RightRail.tsx` +
+  `RightRailTestId.SubsystemFilter`), NOT the plan's named `ActivitySection.tsx`
+  — that file is the Settings view-mode config and renders no entries; the rail
+  is the actual activity list. New surfaces for F4+: three-bucket gate eval
+  (own → subsystem catalog → floor, strictest wins, `SUBSYSTEM_TIER_DEFAULT`
+  catch-alls, Beacon defaults `ask`); `Briefing.subsystems?`
+  (`BriefingSubsystemLineSchema`) + `## Subsystems` markdown block;
+  `Approval.ownerSubsystem?` stamped only by pipeline/agent runners; chat
+  `get_status` optional `subsystem` arg (MCP enum sourced from `SUBSYSTEMS`).
 - **F5 planned (2026-07-17, Opus):** `../plans/ns2-f5-empty-chairs.md`, 6 corrections
   — Sentinel = Dependabot REST (not pnpm audit); Loom = graphify+madge only (NO
   knip — not installed); Sentinel/Loom ride the automation seam (not
