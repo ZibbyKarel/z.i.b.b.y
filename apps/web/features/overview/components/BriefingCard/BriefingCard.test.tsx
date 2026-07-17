@@ -91,4 +91,34 @@ describe("BriefingCard", () => {
     render(<BriefingCard />);
     expect(screen.queryByTestId(BriefingCardTestId.Engagement)).not.toBeInTheDocument();
   });
+
+  it("renders per-subsystem lines with counts and note (NS2 F3b)", () => {
+    briefingData = {
+      ...calm,
+      subsystems: [
+        { subsystem: "forge", name: "Forge", state: "waiting", tier2Count: 0, tier3Count: 2 },
+        {
+          subsystem: "ledger",
+          name: "Ledger",
+          state: "idle",
+          tier2Count: 0,
+          tier3Count: 0,
+          note: "62 % týdenního okna",
+        },
+      ],
+    };
+    render(<BriefingCard />);
+    const rows = screen.getAllByTestId(BriefingCardTestId.SubsystemLine);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent("Forge");
+    expect(rows[0]).toHaveTextContent("2 čeká na tebe");
+    expect(rows[1]).toHaveTextContent("Ledger");
+    expect(rows[1]).toHaveTextContent("62 % týdenního okna");
+  });
+
+  it("renders no subsystem section when the briefing carries none (old briefings)", () => {
+    briefingData = calm;
+    render(<BriefingCard />);
+    expect(screen.queryByTestId(BriefingCardTestId.SubsystemLine)).not.toBeInTheDocument();
+  });
 });

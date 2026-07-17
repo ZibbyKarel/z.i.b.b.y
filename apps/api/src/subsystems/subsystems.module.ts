@@ -43,5 +43,7 @@ export function resolveSubsystemSeenFile(): string {
     // directory-ensure.
     OwnerBackfillService,
   ],
+  // NS2 F3b — the briefing (and F3c chat) read subsystem status through this.
+  exports: [SubsystemsService],
 })
 export class SubsystemsModule {}

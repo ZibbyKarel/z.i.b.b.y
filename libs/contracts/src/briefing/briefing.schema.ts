@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { IsoDateTimeSchema } from "../common.schema";
 import { ActivityKindSchema, ActivityRefsSchema } from "../activity/activity.schema";
+import { SubsystemIdSchema, SubsystemStateSchema } from "../subsystems/subsystem.schema";
 
 /**
  * One thing that needs the operator (Law 5 "surface and wait"): a pending approval,
@@ -65,6 +66,24 @@ export const BriefingWatchItemSchema = z.object({
 });
 export type BriefingWatchItem = z.infer<typeof BriefingWatchItemSchema>;
 
+/**
+ * NS2 F3b — one subsystem's line in the briefing ("Forge: 2 PRs čekají · Puls:
+ * CI zelené · Ledger: 62 % týdenního okna"): its live state + outstanding Tier-2
+ * (act-then-report) and Tier-3 (surface-and-wait) counts, plus an optional
+ * free-text `note` for the subsystems whose mandate has a scalar headline
+ * (Ledger: the weekly usage window %; Puls: CI health). Beacon needs no special
+ * shape — its mandate (Tier-3 escalation) is honored by its `tier3Count`.
+ */
+export const BriefingSubsystemLineSchema = z.object({
+  subsystem: SubsystemIdSchema,
+  name: z.string().min(1),
+  state: SubsystemStateSchema,
+  tier2Count: z.number().int().nonnegative(),
+  tier3Count: z.number().int().nonnegative(),
+  note: z.string().optional(),
+});
+export type BriefingSubsystemLine = z.infer<typeof BriefingSubsystemLineSchema>;
+
 /** The headline tallies — the deterministic spine the butler-voice headline summarises. */
 export const BriefingCountsSchema = z.object({
   runsFinished: z.number().int().nonnegative(),
@@ -101,6 +120,9 @@ export const BriefingSchema = z.object({
   automationGaps: z.array(z.string()).max(50).optional(),
   /** Weekly "3 app ideas" — interests × trends prototype pitches (M6). */
   appIdeas: z.array(z.string()).max(50).optional(),
+  /** NS2 F3b — per-subsystem grouping lines. Optional and strictly additive: old
+   * briefings (and a briefing whose subsystem read failed) omit it entirely. */
+  subsystems: z.array(BriefingSubsystemLineSchema).optional(),
 });
 export type Briefing = z.infer<typeof BriefingSchema>;
 
