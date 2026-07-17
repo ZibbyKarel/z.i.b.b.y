@@ -13,9 +13,10 @@ export const ApprovalRunKindSchema = z.enum([
   "pipeline-stage",
   "channel",
   "task",
-  // Phase 10.3: a discovery-proposed task awaiting the operator's go-ahead. The
-  // runId is the proposal id; approving it dispatches the task via `createTask`.
-  // *Proposed ≠ dispatched* — discovery only parks; only an approval dispatches.
+  // Phase 10.3 (producer removed in NS2 F0a — discovery module deleted, scanner
+  // retired Phase 116a). Kept for read-compat only: a pre-existing parked
+  // `proposed-task` approval re-parses on read but is now unresolvable (no
+  // handler dispatches it) — a logged no-op if one is ever approved/rejected.
   "proposed-task",
   // A pipeline-level `pr` output sink awaiting sign-off before it opens the PR.
   // The runId is the pipelineRunId itself (no live child — the chain already

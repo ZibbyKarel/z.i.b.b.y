@@ -8,7 +8,6 @@ import { chatContract } from "./chat/chat.contract";
 import { approvalsContract } from "./approvals/approvals.contract";
 import { artifactsContract } from "./artifacts/artifacts.contract";
 import { chainRunsContract, chainsContract } from "./chains/chains.contract";
-import { discoveryContract } from "./discovery/discovery.contract";
 import { gatesContract } from "./gates/gate.contract";
 import { gateRulesContract } from "./gates/gate-rules.contract";
 import { automationsContract } from "./automations/automations.contract";
@@ -69,7 +68,6 @@ export const appContract = c.router({
   artifacts: artifactsContract,
   chains: chainsContract,
   chainRuns: chainRunsContract,
-  discovery: discoveryContract,
   gates: gatesContract,
   gateRules: gateRulesContract,
   memory: memoryContract,
