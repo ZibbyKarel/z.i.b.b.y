@@ -1671,6 +1671,9 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
           action: action.action,
           detail: action.context ?? `Pipeline "${run.pipelineId}", fáze "${rec.phaseId}"`,
           risk: agent.risk ?? "medium",
+          // NS2 F3c — attribute the approval to the EXECUTING unit's owner (the
+          // pipeline, not the phase agent, which may be shared across subsystems).
+          ...(pipeline.ownerSubsystem ? { ownerSubsystem: pipeline.ownerSubsystem } : {}),
         });
         return;
       }

@@ -48,4 +48,24 @@ describe("approval schema", () => {
       ApprovalSchema.safeParse({ ...base, kind: "task", action: "spend-past-cap" }).success,
     ).toBe(true);
   });
+
+  describe("ownerSubsystem (NS2 F3c)", () => {
+    it("accepts a subsystem-tagged approval", () => {
+      const parsed = ApprovalSchema.safeParse({ ...base, ownerSubsystem: "forge" });
+      expect(parsed.success).toBe(true);
+      if (parsed.success) expect(parsed.data.ownerSubsystem).toBe("forge");
+    });
+
+    it("is omissible — every pre-existing approval re-parses untouched", () => {
+      const parsed = ApprovalSchema.safeParse(base);
+      expect(parsed.success).toBe(true);
+      if (parsed.success) expect(parsed.data.ownerSubsystem).toBeUndefined();
+    });
+
+    it("rejects an id outside the closed subsystem enum", () => {
+      expect(ApprovalSchema.safeParse({ ...base, ownerSubsystem: "warp-drive" }).success).toBe(
+        false,
+      );
+    });
+  });
 });

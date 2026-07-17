@@ -10,12 +10,12 @@ of the conversation.
 
 ## Endpoints
 
-| Method | Path | Description |
-| ------ | ---- | ----------- |
-| `POST` | `/api/chat/messages` | Adds the operator's turn and starts the streaming reply. Body `{ conversationId?, text }` → `{ conversationId, turnId }` (returns immediately; tokens arrive over SSE). |
-| `GET`  | `/api/chat/transcript?conversationId=` | Plain read of the conversation transcript (`{ conversationId, sessionId, messages }`). Without `conversationId` → the active thread. |
-| `GET`  | `/api/chat/stream?conversationId=` | **SSE** (raw `@Sse()`, outside ts-rest) — live tokens. Each `data` is a JSON `ChatTurnEvent`. |
-| `POST`/`GET` | `/api/chat/mcp` | In-process **MCP server** (Streamable HTTP) exposing ZIBBY's tools. Called by the spawned `claude` process, not the frontend. |
+| Method       | Path                                   | Description                                                                                                                                                             |
+| ------------ | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST`       | `/api/chat/messages`                   | Adds the operator's turn and starts the streaming reply. Body `{ conversationId?, text }` → `{ conversationId, turnId }` (returns immediately; tokens arrive over SSE). |
+| `GET`        | `/api/chat/transcript?conversationId=` | Plain read of the conversation transcript (`{ conversationId, sessionId, messages }`). Without `conversationId` → the active thread.                                    |
+| `GET`        | `/api/chat/stream?conversationId=`     | **SSE** (raw `@Sse()`, outside ts-rest) — live tokens. Each `data` is a JSON `ChatTurnEvent`.                                                                           |
+| `POST`/`GET` | `/api/chat/mcp`                        | In-process **MCP server** (Streamable HTTP) exposing ZIBBY's tools. Called by the spawned `claude` process, not the frontend.                                           |
 
 ### `ChatTurnEvent` (SSE payload)
 
@@ -62,11 +62,11 @@ An MCP server hosted directly in the API (`@modelcontextprotocol/sdk`,
 Streamable HTTP, stateless), so services are injected — no second process.
 Server id `zibby`:
 
-| Tool | Calls | Effect |
-| ---- | ----- | ------ |
-| `create_task` | `TaskSchedulerService.createTask` | Classifies + dispatches a task. The run's outputs are still guarded by the gate layer. |
-| `recall_memory` | `VaultService.search` | Index-first search over the vault. |
-| `get_status` | `BriefingService.assemble` | A "what's happening" summary (read-only). |
+| Tool            | Calls                                                | Effect                                                                                                                                                                                                                                                                                                                      |
+| --------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `create_task`   | `TaskSchedulerService.createTask`                    | Classifies + dispatches a task. The run's outputs are still guarded by the gate layer.                                                                                                                                                                                                                                      |
+| `recall_memory` | `VaultService.search`                                | Index-first search over the vault.                                                                                                                                                                                                                                                                                          |
+| `get_status`    | `BriefingService.assemble` / `SubsystemsService.get` | A "what's happening" summary (read-only). NS2 F3c: an optional `subsystem` argument (enum sourced from the `SUBSYSTEMS` registry, never hard-coded) narrows the answer to one subsystem — its state, tier counts, and recent owner-tagged activity ("co dělá Forge?"); without it the global briefing summary is unchanged. |
 
 **Dispatch is prompt-governed** (`chat-persona.ts`), not enforced in code — the
 same layer where the old voice bug lived ("how are you" triggering a task). An

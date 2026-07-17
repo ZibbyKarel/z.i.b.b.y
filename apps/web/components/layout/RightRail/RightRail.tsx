@@ -1,7 +1,8 @@
 "use client";
 
-import { Button, Container, Stack, StatusDot, Typography } from "@zibby/design-system";
-import { DEFAULT_ACTIVITY_VIEW } from "@zibby/contracts";
+import { useState } from "react";
+import { Button, ButtonGroup, Container, Stack, StatusDot, Typography } from "@zibby/design-system";
+import { DEFAULT_ACTIVITY_VIEW, SUBSYSTEMS, type SubsystemId } from "@zibby/contracts";
 import { useLocale, useTranslations } from "next-intl";
 import { buildActivityLog } from "../../../features/overview/activityLog";
 import { useActivityFeedInfiniteQuery } from "../../../features/overview/queries";
@@ -13,6 +14,9 @@ export enum RightRailTestId {
   Log = "right-rail-log",
   Line = "right-rail-line",
   LoadOlder = "right-rail-load-older",
+  /** The deselectable per-subsystem filter over `refs.ownerSubsystem` (NS2 F3c);
+   *  only rendered when at least one loaded entry carries the tag. */
+  SubsystemFilter = "right-rail-subsystem-filter",
 }
 
 /** One `> HH:MM  summary` log line. */
@@ -41,13 +45,29 @@ function LogLine({ time, text, muted }: { time: string; text: string; muted?: bo
  * via an infinite query. Which activity groups show as individual lines, collapse
  * into a counted row, or hide entirely is the operator's Settings → Activity config.
  * Approvals and other needs-you items live on the Overview page, not here.
+ *
+ * NS2 F3c: a deselectable subsystem filter narrows the log CLIENT-SIDE over each
+ * entry's `refs.ownerSubsystem` (F2c). Only subsystems with ≥1 tagged entry in
+ * the loaded feed get a button; deselecting shows everything again. Untagged
+ * entries (system-owned records) only appear in the unfiltered view — the filter
+ * is an attribution lens, not a completeness guarantee.
  */
 export function RightRail() {
   const t = useTranslations();
   const locale = useLocale();
   const feed = useActivityFeedInfiniteQuery();
   const { data: view } = useActivityViewQuery();
-  const rows = buildActivityLog(feed.data ?? [], view ?? DEFAULT_ACTIVITY_VIEW);
+  const [subsystemFilter, setSubsystemFilter] = useState<SubsystemId | null>(null);
+
+  const entries = feed.data ?? [];
+  const taggedSubsystems = new Set(
+    entries.map((e) => e.refs.ownerSubsystem).filter((id): id is SubsystemId => id !== undefined),
+  );
+  const filterOptions = SUBSYSTEMS.filter((s) => taggedSubsystems.has(s.id));
+  const filtered = subsystemFilter
+    ? entries.filter((e) => e.refs.ownerSubsystem === subsystemFilter)
+    : entries;
+  const rows = buildActivityLog(filtered, view ?? DEFAULT_ACTIVITY_VIEW);
 
   return (
     <Stack data-testid={RightRailTestId.Root} gap="200">
@@ -57,6 +77,18 @@ export function RightRail() {
           {t("overview.liveLog")}
         </Typography>
       </Stack>
+
+      {filterOptions.length > 0 && (
+        <Container data-testid={RightRailTestId.SubsystemFilter}>
+          <ButtonGroup
+            deselectable
+            ariaLabel={t("overview.liveLogSubsystemFilter")}
+            onChange={(v) => setSubsystemFilter(v ? (v as SubsystemId) : null)}
+            options={filterOptions.map((s) => ({ id: s.id, label: s.name }))}
+            value={subsystemFilter ?? ""}
+          />
+        </Container>
+      )}
 
       {rows.length === 0 ? (
         <Typography mono size="sm" type="note" variant="tertiary">

@@ -1,5 +1,5 @@
 import { Injectable, Optional } from "@nestjs/common";
-import type { Approval, ApprovalRunKind } from "@zibby/contracts";
+import type { Approval, ApprovalRunKind, SubsystemId } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { withPathLock } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
@@ -27,6 +27,13 @@ export interface RequestApprovalInput {
   action: string;
   detail: string;
   risk: Approval["risk"];
+  /**
+   * NS2 F3c — the acting unit's owning subsystem. Only run-path callers supply
+   * it (pipeline-runner from `pipeline.ownerSubsystem`, agent-runner from
+   * `agent.ownerSubsystem`); every other call site omits it — an approval with
+   * no acting unit never invents an owner.
+   */
+  ownerSubsystem?: SubsystemId;
 }
 
 /**
@@ -69,6 +76,7 @@ export class ApprovalsService {
       risk: input.risk,
       status: "pending",
       requestedAt: new Date().toISOString(),
+      ...(input.ownerSubsystem ? { ownerSubsystem: input.ownerSubsystem } : {}),
     };
     this.log?.info("approval requested", {
       id: approval.id,
@@ -85,6 +93,9 @@ export class ApprovalsService {
         runRef: approval.runId,
         action: approval.action,
         status: approval.kind,
+        // Best-effort subsystem attribution (F2c's `refs.ownerSubsystem`) so the
+        // activity log's subsystem lens catches the request line too.
+        ...(approval.ownerSubsystem ? { ownerSubsystem: approval.ownerSubsystem } : {}),
       },
     });
     return this.storage.create(approval);

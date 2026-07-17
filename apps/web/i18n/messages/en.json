@@ -388,8 +388,10 @@
       }
     },
     "allApprovals": "full queue →",
+    "approvalsSubsystemFilter": "Filter approvals by subsystem",
     "liveLog": "Live log",
     "liveLogEmpty": "No activity yet.",
+    "liveLogSubsystemFilter": "Filter activity by subsystem",
     "loadOlder": "Load older",
     "groupedCount": "{count}× {group}"
   },
