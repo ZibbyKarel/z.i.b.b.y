@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
-import type { IndexEntry } from "@zibby/contracts";
+import type { IndexEntry, SubsystemId } from "@zibby/contracts";
 import { tokenize } from "../tasks/keyword-scorer";
+import { subsystemShelfId } from "./subsystem-shelf";
 import { VaultService } from "./vault.service";
 
 /** Fixed id of the operator's mission note — always grounded first when present. */
@@ -26,6 +27,10 @@ export interface GroundingInput {
   task: string;
   projectId?: string;
   matchedTerms?: string[];
+  /** The owning subsystem (F4a) — when present, its knowledge shelf is grounded
+   * right after the self-knowledge note, ahead of term-matched MOCs. Missing
+   * owner or missing shelf note is silently skipped (fail-open). */
+  ownerSubsystem?: SubsystemId;
 }
 
 /**
@@ -100,6 +105,7 @@ export class GroundingService {
 
       await add(NORTH_STAR_ID);
       await add(SELF_KNOWLEDGE_ID);
+      if (input.ownerSubsystem) await add(subsystemShelfId(input.ownerSubsystem));
       const entries = await this.vault.index().catch((): IndexEntry[] => []);
       // M7 isolation: restrict the candidate set to this run's project before
       // term-matching, so a run can never ground on another project's notes.

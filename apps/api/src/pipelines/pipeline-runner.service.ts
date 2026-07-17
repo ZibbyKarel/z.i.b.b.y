@@ -19,6 +19,7 @@ import {
   type RunLogChunk,
   type StageRun,
   type StageVerdict,
+  type SubsystemId,
   type TaskOutput,
   type Workspace,
 } from "@zibby/contracts";
@@ -1564,6 +1565,11 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     if (escalation) {
       this.log.info("applying escalation rung", { phase: phase.id, attempt, ...escalation });
     }
+    // F4a: resolve the pipeline's owning subsystem once per stage so grounding
+    // can attach its knowledge shelf. Fail-open — a missing/renamed pipeline
+    // must never block the stage.
+    const ownerSubsystem = (await this.pipelines.get(run.pipelineId).catch(() => null))
+      ?.ownerSubsystem;
     const { command, args, spawnCwd } = await this.buildStageCommand(
       phase,
       stageCwd,
@@ -1573,6 +1579,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       run.matchedTerms,
       resumeContext,
       delegates,
+      ownerSubsystem,
     );
     // Materialize enabled custom commands into the stage's working tree (worktree
     // for a project run, else the sandbox) so commands resolve; best-effort.
@@ -1802,6 +1809,9 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     /** Curated `--agents` delegation roster (this pipeline's stage agents) — keeps the
      *  whole agent library off argv (spawn E2BIG). */
     delegates?: readonly string[],
+    /** F4a: the pipeline's owning subsystem — forwarded into grounding so the
+     *  stage sees the owner's knowledge shelf. */
+    ownerSubsystem?: SubsystemId,
   ): Promise<{ command: string; args: string[]; spawnCwd?: string }> {
     const spawnCwd = worktreePath ?? project?.path;
     // Verify phases are deterministic shell checks — identical in demo and
@@ -1839,6 +1849,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         task,
         projectId: project?.id,
         matchedTerms,
+        ownerSubsystem,
       });
       // P1-T2: `cwd` is THIS stage's own sandbox folder, a subdirectory of the run
       // root (`path.dirname(cwd)`). The handoff into `consumes` is now a relative

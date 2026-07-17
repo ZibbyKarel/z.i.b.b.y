@@ -2,7 +2,12 @@ import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { GroundingService, SELF_KNOWLEDGE_ID, selectIndexes, visibleToProject } from "./grounding.service";
+import {
+  GroundingService,
+  SELF_KNOWLEDGE_ID,
+  selectIndexes,
+  visibleToProject,
+} from "./grounding.service";
 import { VaultService, ownerProjectOf } from "./vault.service";
 
 /** Build a service over a fresh temp vault seeded by `seed`. */
@@ -261,6 +266,84 @@ describe("GroundingService.compose", () => {
     const block = await made.grounding.compose({ task: "x" });
     expect(block).toContain("North Star");
     expect(block).not.toContain("Self-Knowledge");
+  });
+
+  it("F4a: compose with ownerSubsystem includes the shelf between self-knowledge and term-matched MOCs", async () => {
+    const made = await makeVault(async (vault) => {
+      await vault.createNote({
+        id: "north-star",
+        tier: "memory",
+        title: "North Star",
+        body: "The mission.",
+      });
+      await vault.createNote({
+        id: SELF_KNOWLEDGE_ID,
+        tier: "knowledge",
+        title: "Self-Knowledge",
+        body: "Agents, pipelines, gates, channels.",
+      });
+      await vault.createNote({
+        id: "subsystem-forge-moc",
+        tier: "knowledge",
+        title: "Forge — polička",
+        body: "The delivery forge's shelf.",
+        frontmatter: { subsystem: "forge" },
+      });
+      await vault.createNote({
+        id: "billing-moc",
+        tier: "knowledge",
+        title: "Billing",
+        body: "Invoices.",
+      });
+    });
+    dir = made.dir;
+    const block = await made.grounding.compose({
+      task: "x",
+      matchedTerms: ["billing"],
+      ownerSubsystem: "forge",
+    });
+    const nsAt = block.indexOf("North Star");
+    const skAt = block.indexOf("Self-Knowledge");
+    const shelfAt = block.indexOf("Forge — polička");
+    const billingAt = block.indexOf("Billing");
+    expect(nsAt).toBeGreaterThan(-1);
+    expect(skAt).toBeGreaterThan(nsAt);
+    expect(shelfAt).toBeGreaterThan(skAt);
+    expect(billingAt).toBeGreaterThan(shelfAt);
+  });
+
+  it("F4a: absent shelf note → composed block identical to no ownerSubsystem", async () => {
+    const made = await makeVault(async (vault) => {
+      await vault.createNote({
+        id: "north-star",
+        tier: "memory",
+        title: "North Star",
+        body: "The mission.",
+      });
+      await vault.createNote({
+        id: "billing-moc",
+        tier: "knowledge",
+        title: "Billing",
+        body: "Invoices.",
+      });
+    });
+    dir = made.dir;
+    const withOwner = await made.grounding.compose({
+      task: "x",
+      matchedTerms: ["billing"],
+      ownerSubsystem: "forge",
+    });
+    const withoutOwner = await made.grounding.compose({ task: "x", matchedTerms: ["billing"] });
+    expect(withOwner).toBe(withoutOwner);
+  });
+
+  it("F4a: no ownerSubsystem in the input → unchanged (regression)", async () => {
+    const made = await makeVault(seedFull);
+    dir = made.dir;
+    const block = await made.grounding.compose({ task: "rohlik delivery question" });
+    expect(block).toContain("## Grounding (vault)");
+    expect(block).toContain("North Star");
+    expect(block).not.toContain("polička");
   });
 
   it("never throws on an unreadable vault → ''", async () => {

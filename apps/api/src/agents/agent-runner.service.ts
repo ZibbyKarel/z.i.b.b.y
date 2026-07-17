@@ -328,6 +328,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       task: prompt,
       projectId: resolved?.id,
       matchedTerms,
+      ownerSubsystem: agent.ownerSubsystem,
     });
     const { command, args, catalogAgentIds } = await this.buildCommand(
       agent,

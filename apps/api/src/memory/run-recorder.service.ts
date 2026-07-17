@@ -8,9 +8,12 @@ import {
 } from "@nestjs/common";
 import type { AgentRun, PipelineRun, Project } from "@zibby/contracts";
 import { AgentRunnerService } from "../agents/agent-runner.service";
+import { AgentsStorageService } from "../agents/agents.storage.service";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
+import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { fileExists, writeFileAtomic } from "../shared/file-storage/file-utils";
+import { shelfDailyLink } from "./subsystem-shelf";
 import { VaultService } from "./vault.service";
 
 /** Marker file written into a run's cwd once it has been recorded (at-most-once). */
@@ -47,6 +50,8 @@ export class RunRecorderService implements OnModuleInit, OnApplicationBootstrap,
     private readonly agentRunner: AgentRunnerService,
     private readonly pipelineRunner: PipelineRunnerService,
     private readonly projects: ProjectsStorageService,
+    private readonly agentsStore: AgentsStorageService,
+    private readonly pipelinesStore: PipelinesStorageService,
   ) {}
 
   onModuleInit(): void {
@@ -98,8 +103,12 @@ export class RunRecorderService implements OnModuleInit, OnApplicationBootstrap,
       const projectId = await this.resolveProjectRef(run.project);
       const title = run.title ? ` ${run.title}` : "";
       const link = projectId ? ` · [[${projectId}]]` : "";
+      // F4a: an owned run also links its subsystem's shelf — an unowned run (or a
+      // lookup failure) is silently skipped, never fails the recording.
+      const owner = (await this.agentsStore.get(run.agentId).catch(() => null))?.ownerSubsystem;
+      const shelf = owner ? ` · ${shelfDailyLink(owner)}` : "";
       await this.vault.appendDaily(
-        `run ${run.runId} (${run.agentId})${title} → ${run.status}${link}`,
+        `run ${run.runId} (${run.agentId})${title} → ${run.status}${link}${shelf}`,
       );
     } catch (error) {
       this.logger.warn(`failed to record agent run ${run.runId}: ${String(error)}`);
@@ -112,8 +121,11 @@ export class RunRecorderService implements OnModuleInit, OnApplicationBootstrap,
       const projectId = await this.resolveProjectByPath(run.projectPath);
       const suffix = projectId ? ` · [[${projectId}]]` : "";
       const stages = run.stageRuns.length;
+      const owner = (await this.pipelinesStore.get(run.pipelineId).catch(() => null))
+        ?.ownerSubsystem;
+      const shelf = owner ? ` · ${shelfDailyLink(owner)}` : "";
       await this.vault.appendDaily(
-        `pipeline ${run.pipelineRunId} (${run.pipelineId}) → ${run.status} · ${stages} stages${suffix}`,
+        `pipeline ${run.pipelineRunId} (${run.pipelineId}) → ${run.status} · ${stages} stages${suffix}${shelf}`,
       );
     } catch (error) {
       this.logger.warn(`failed to record pipeline run ${run.pipelineRunId}: ${String(error)}`);
