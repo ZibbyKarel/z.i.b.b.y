@@ -21,7 +21,10 @@ import { ChainsStorageService } from "../chains/chains.storage.service";
 import { GoalRunnerService } from "../goals/goal-runner.service";
 import { GoalRunNotStoppableError } from "../goals/goals.errors";
 import { GoalsStorageService } from "../goals/goals.storage.service";
-import { PipelineRunNotStoppableError, PipelineRunnerService } from "../pipelines/pipeline-runner.service";
+import {
+  PipelineRunNotStoppableError,
+  PipelineRunnerService,
+} from "../pipelines/pipeline-runner.service";
 import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
@@ -417,9 +420,7 @@ function agentRunToView(r: AgentRun, projectNames: ProjectNameMaps): TaskRun {
  */
 export function sumStageCosts(stageRuns: readonly { costUsd?: number }[]): number | undefined {
   const withCost = stageRuns.filter((s) => s.costUsd != null);
-  return withCost.length
-    ? withCost.reduce((sum, s) => sum + (s.costUsd ?? 0), 0)
-    : undefined;
+  return withCost.length ? withCost.reduce((sum, s) => sum + (s.costUsd ?? 0), 0) : undefined;
 }
 
 /**
@@ -438,7 +439,11 @@ function resolveSandboxProjectLabel(
   return projectNames.byPath.get(projectPath) ?? path.basename(projectPath);
 }
 
-function pipelineRunToView(r: PipelineRun, projectNames: ProjectNameMaps, pipeline?: Pipeline): TaskRun {
+function pipelineRunToView(
+  r: PipelineRun,
+  projectNames: ProjectNameMaps,
+  pipeline?: Pipeline,
+): TaskRun {
   // A directed task's per-run override wins; absent that, the pipeline definition's
   // own `outputs:` is the default sink (mirrors the delivery path's own fallback —
   // `run.outputsOverride ?? pipeline.outputs` in PipelineRunnerService.runOutputs).
@@ -563,6 +568,9 @@ function enrichRunWithTask(run: TaskRun, tasksById: ReadonlyMap<string, Schedule
     // Phase 65: carried alongside `attachments` so the detail can build the
     // open-file serve URL (`GET /api/tasks/attachments/:setId/:name`).
     ...(task.attachmentSetId ? { attachmentSetId: task.attachmentSetId } : {}),
+    // F2c: the switchboard's stage-1 classification trace, enriched onto the run
+    // exactly like every other task-sourced field here — read-model-only.
+    ...(task.classification ? { classification: task.classification } : {}),
     // The engagement id lives on the scheduled task; agent/pipeline/goal/chain run
     // views don't carry it themselves, so join it in here (scheduled rows set it
     // directly). This is what lets the feed be filtered by project and the project

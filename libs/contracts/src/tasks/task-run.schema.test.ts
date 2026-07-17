@@ -59,6 +59,32 @@ describe("TaskRunSchema — sessionId (Phase 49)", () => {
   });
 });
 
+describe("TaskRunSchema — classification (F2c)", () => {
+  it("parses a run without a classification; the field stays undefined", () => {
+    const parsed = TaskRunSchema.parse(minimalRun);
+    expect(parsed.classification).toBeUndefined();
+  });
+
+  it("round-trips a classification trace, including the delegated subsystem", () => {
+    const parsed = TaskRunSchema.parse({
+      ...minimalRun,
+      classification: {
+        stage1: { kind: "subsystem", id: "forge", name: "Forge" },
+        confidence: 0.8,
+        reason: "matches forge's mandate",
+        matchedTerms: ["ship"],
+        subsystem: "forge",
+      },
+    });
+    expect(parsed.classification?.subsystem).toBe("forge");
+    expect(parsed.classification?.stage1).toEqual({
+      kind: "subsystem",
+      id: "forge",
+      name: "Forge",
+    });
+  });
+});
+
 describe("T11 finding #28 — TaskRunStatusSchema derives from RunStatusSchema.options", () => {
   it("includes every shared RunStatus value plus the 5 task-run-only extra states", () => {
     for (const status of RunStatusSchema.options) {

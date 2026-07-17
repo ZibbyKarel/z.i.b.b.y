@@ -1,3 +1,4 @@
+import { SUBSYSTEMS } from "@zibby/contracts";
 import {
   Accordion,
   AccordionItem,
@@ -8,6 +9,7 @@ import {
   Divider,
   EntityHero,
   FilePreview,
+  Icon,
   type IconName,
   IconTile,
   Markdown,
@@ -16,6 +18,7 @@ import {
   Pressable,
   SelectField,
   Stack,
+  Tag,
   Typography,
 } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
@@ -30,7 +33,7 @@ import { useApprovalsQuery } from "../../approvals";
 import { RiskBadge } from "../../approvals/components/RiskBadge";
 import { SeverityMeter } from "../../approvals/components/SeverityMeter";
 import { useProjectsQuery } from "../../projects";
-import { useNewTask } from "../../tasks";
+import { toClientTarget, useNewTask } from "../../tasks";
 import { useAssignRunProjectMutation } from "../mutations";
 import { useRunArtifactQuery } from "../queries/useRunArtifactQuery";
 import {
@@ -372,6 +375,65 @@ function RunOutputPanel({ run }: { run: RunView }) {
           )}
           {continueButton}
         </Stack>
+      </Stack>
+    </HudPanel>
+  );
+}
+
+export enum ClassificationTracePanelTestId {
+  Panel = "classification-trace",
+  Confidence = "classification-confidence",
+}
+
+/**
+ * F2c — the switchboard's stage-1 classification trace: a minimal, read-only
+ * "why" strip — `Switchboard → <subsystem> → <unit>` (the middle hop only when
+ * stage-1 delegated to a subsystem; `stage1` itself already names the concrete
+ * unit otherwise) plus the verdict's reason and confidence. Renders nothing
+ * when the run carries no trace — an explicitly-targeted task was never
+ * classified, and a pre-F2c run wrote none.
+ */
+function ClassificationTracePanel({ run }: { run: RunView }) {
+  const t = useTranslations("runs");
+  const classification = run.classification;
+  if (!classification) return null;
+  const stage1 = toClientTarget(classification.stage1);
+  const subsystemName = classification.subsystem
+    ? (SUBSYSTEMS.find((s) => s.id === classification.subsystem)?.name ?? classification.subsystem)
+    : null;
+  // When stage-1 delegated to a subsystem, the dispatched unit is whatever the
+  // run actually resolved to (`processor`); otherwise stage-1's own pick already
+  // IS the unit that ran.
+  const unitName = subsystemName ? (run.processor?.name ?? run.owner) : stage1.name;
+  return (
+    <HudPanel padding="250" title={t("classificationTitle")}>
+      <Stack data-testid={ClassificationTracePanelTestId.Panel} gap="100">
+        <Stack wrap align="center" direction="row" gap="100">
+          <Typography mono size="xs" type="note" variant="secondary">
+            {t("classificationSwitchboard")}
+          </Typography>
+          <Icon name="chevron" size="xs" tone="faint" />
+          {subsystemName && (
+            <>
+              <Typography mono size="xs" type="note" variant="secondary">
+                {subsystemName}
+              </Typography>
+              <Icon name="chevron" size="xs" tone="faint" />
+            </>
+          )}
+          <Stack align="center" direction="row" gap="50">
+            <Icon name={stage1.glyph} size="xs" tone="accent" />
+            <Typography mono size="xs" type="note" weight="semibold">
+              {unitName}
+            </Typography>
+          </Stack>
+        </Stack>
+        <Typography leading="snug" size="sm" type="text" variant="secondary">
+          {classification.reason}
+        </Typography>
+        <Tag data-testid={ClassificationTracePanelTestId.Confidence} size="sm" tone="neutral">
+          {t("classificationConfidence", { pct: Math.round(classification.confidence * 100) })}
+        </Tag>
       </Stack>
     </HudPanel>
   );
@@ -748,6 +810,7 @@ export function RunDetail({
 
         <RunInputSection run={run} />
         <RunOutputPanel run={run} />
+        <ClassificationTracePanel run={run} />
 
         {approval ? (
           <>

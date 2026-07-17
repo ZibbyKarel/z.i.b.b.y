@@ -11,7 +11,7 @@ import {
   PipelineCheckpointSchema,
   StageRunSchema,
 } from "../pipelines/pipeline-run.schema";
-import { AttachmentSchema, PrOutputSchema } from "./task.schema";
+import { AttachmentSchema, ClassificationTraceSchema, PrOutputSchema } from "./task.schema";
 
 /**
  * The kind of processor running a task. `scheduled` is a task that has not been
@@ -98,6 +98,12 @@ export const TaskRunSchema = z.object({
    * absent for runs with no attachments (and every synthetic run literal predating this).
    */
   attachmentSetId: z.string().optional(),
+  /**
+   * F2c — enriched from the task record: the switchboard's stage-1 classification
+   * trace (see {@link ClassificationTraceSchema}). Read-model-only, never
+   * client-written; absent for an explicit target or a pre-F2c run.
+   */
+  classification: ClassificationTraceSchema.optional(),
   /** Enriched from the task record: the written-back run outcome. */
   taskOutcome: z.enum(["done", "error"]).optional(),
   /**

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   AttachmentSchema,
+  ClassificationTraceSchema,
   CreateTaskInputSchema,
   ProposedGoalSchema,
   ResolvedPathSchema,
@@ -280,16 +281,80 @@ describe("ScheduledTask budget statuses (Phase 8)", () => {
   });
 });
 
+describe("ClassificationTraceSchema (F2c)", () => {
+  const base = {
+    id: "task_1",
+    title: "",
+    text: "fix the bug",
+    paths: [],
+    scheduledAt: 1_700_000_000_000,
+    status: "dispatched" as const,
+    createdAt: new Date().toISOString(),
+  };
+
+  it("is omissible on ScheduledTask — an old-shaped record still parses", () => {
+    expect(ScheduledTaskSchema.safeParse(base).success).toBe(true);
+  });
+
+  it("parses on ScheduledTask when stage-1 delegated to a subsystem", () => {
+    const parsed = ScheduledTaskSchema.safeParse({
+      ...base,
+      target: { kind: "pipeline", id: "delivery", name: "Delivery" },
+      classification: {
+        stage1: { kind: "subsystem", id: "forge", name: "Forge" },
+        confidence: 0.8,
+        reason: "matches forge's mandate",
+        matchedTerms: ["ship"],
+        subsystem: "forge",
+      },
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("parses on ScheduledTask when stage-1 already named a concrete unit (no subsystem)", () => {
+    const parsed = ScheduledTaskSchema.safeParse({
+      ...base,
+      target: { kind: "agent", id: "writer", name: "Writer" },
+      classification: {
+        stage1: { kind: "agent", id: "writer", name: "Writer" },
+        confidence: 0.9,
+        reason: "matched",
+        matchedTerms: [],
+      },
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects an out-of-range confidence", () => {
+    expect(
+      ClassificationTraceSchema.safeParse({
+        stage1: { kind: "agent", id: "writer", name: "Writer" },
+        confidence: 1.5,
+        reason: "matched",
+        matchedTerms: [],
+      }).success,
+    ).toBe(false);
+  });
+});
+
 describe("AttachmentSchema (Task attachments — Phase 1)", () => {
   it("round-trips an attachment", () => {
-    const parsed = AttachmentSchema.safeParse({ name: "spec.pdf", size: 1234, mediaType: "application/pdf" });
+    const parsed = AttachmentSchema.safeParse({
+      name: "spec.pdf",
+      size: 1234,
+      mediaType: "application/pdf",
+    });
     expect(parsed.success).toBe(true);
   });
 
   it("defaults task attachments to [] and accepts attachmentSetId", () => {
     const task = ScheduledTaskSchema.parse({
-      id: "t1", text: "do it", scheduledAt: 1, status: "scheduled",
-      createdAt: "2026-07-03T00:00:00.000Z", attachmentSetId: "set_1",
+      id: "t1",
+      text: "do it",
+      scheduledAt: 1,
+      status: "scheduled",
+      createdAt: "2026-07-03T00:00:00.000Z",
+      attachmentSetId: "set_1",
     });
     expect(task.attachments).toEqual([]);
     expect(task.attachmentSetId).toBe("set_1");

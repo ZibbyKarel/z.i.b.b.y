@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import {
   type Attachment,
+  type ClassificationTrace,
   type CreateTaskInput,
   type ScheduledTask,
   ScheduledTaskSchema,
@@ -54,10 +55,7 @@ class NoopUpdate extends Error {
  * helpers the scheduler drives.
  */
 @Injectable()
-export class ScheduledTasksStorageService
-  extends EntityFileStore<ScheduledTask>
- 
-{
+export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask> {
   protected readonly fileExt = ".json";
   protected readonly idRegex = TASK_ID_REGEX;
 
@@ -280,6 +278,8 @@ export class ScheduledTasksStorageService
     target: TaskTarget,
     now: number,
     projectId?: string,
+    /** F2c — the switchboard's stage-1 classification trace (additive, optional). */
+    classification?: ClassificationTrace,
   ): Promise<ScheduledTask> {
     const task: ScheduledTask = {
       id,
@@ -296,6 +296,7 @@ export class ScheduledTasksStorageService
       ...(projectId ? { projectId } : {}),
       ...(input.attachmentSetId ? { attachmentSetId: input.attachmentSetId } : {}),
       ...(input.output ? { output: input.output } : {}),
+      ...(classification ? { classification } : {}),
     };
     await this.writeEntity(task);
     return task;
@@ -349,12 +350,19 @@ export class ScheduledTasksStorageService
   }
 
   /** Stamp a task dispatched: record the chosen target and the started run's ref. */
-  async markDispatched(id: string, runRef: string, target: TaskTarget): Promise<ScheduledTask> {
+  async markDispatched(
+    id: string,
+    runRef: string,
+    target: TaskTarget,
+    /** F2c — the switchboard's stage-1 classification trace (additive, optional). */
+    classification?: ClassificationTrace,
+  ): Promise<ScheduledTask> {
     return this.updateEntity(id, (existing) => ({
       ...existing,
       status: "dispatched",
       runRef,
       target,
+      ...(classification ? { classification } : {}),
     }));
   }
 

@@ -397,6 +397,41 @@ describe("TaskRunsService", () => {
     });
   });
 
+  describe("classification enrichment (F2c)", () => {
+    it("joins the owning task's classification trace onto its run", async () => {
+      const { service, scheduled } = build();
+      scheduled.list.mockResolvedValue([
+        {
+          ...scheduledS,
+          id: "task1",
+          status: "dispatched",
+          classification: {
+            stage1: { kind: "subsystem", id: "forge", name: "Forge" },
+            confidence: 0.8,
+            reason: "matches forge's mandate",
+            matchedTerms: ["ship"],
+            subsystem: "forge",
+          },
+        },
+      ]);
+      const feed = await service.listTaskRuns();
+      const run = feed.find((r) => r.runId === "researcher_1");
+      expect(run?.classification?.subsystem).toBe("forge");
+      expect(run?.classification?.stage1).toEqual({
+        kind: "subsystem",
+        id: "forge",
+        name: "Forge",
+      });
+    });
+
+    it("leaves classification unset when the owning task carries none", async () => {
+      const { service, scheduled } = build();
+      scheduled.list.mockResolvedValue([{ ...scheduledS, id: "task1", status: "dispatched" }]);
+      const feed = await service.listTaskRuns();
+      expect(feed.find((r) => r.runId === "researcher_1")?.classification).toBeUndefined();
+    });
+  });
+
   describe("project display label (regression: was showing the run's own sandbox id)", () => {
     it("resolves a pipeline run's project from its resolved projectPath, not its sandbox cwd", async () => {
       const { service } = build();
