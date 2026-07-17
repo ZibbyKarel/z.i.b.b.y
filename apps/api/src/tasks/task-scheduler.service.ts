@@ -8,6 +8,7 @@ import {
   Optional,
 } from "@nestjs/common";
 import type {
+  Agent,
   AgentRun,
   Attachment,
   ChainRun,
@@ -27,6 +28,7 @@ import { ORCHESTRATOR_TARGET, SUBSYSTEMS } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import type { AttachmentSetRefProvider } from "./attachment-set-ref-provider";
 import { ATTACHMENT_SET_REF_PROVIDER } from "./attachment-set-ref-provider";
+import { AgentsStorageService } from "../agents/agents.storage.service";
 import { AgentRunnerService, type RunAttachments } from "../agents/agent-runner.service";
 import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service";
 import { type BudgetOverMetrics, BudgetService } from "../budget/budget.service";
@@ -140,6 +142,8 @@ export class TaskSchedulerService
     private readonly agentRunner: AgentRunnerService,
     private readonly pipelineRunner: PipelineRunnerService,
     private readonly pipelinesStore: PipelinesStorageService,
+    /** F2b — for {@link resolveSubsystemTargetOrNull}'s owned-roster count (pipelines + agents). */
+    private readonly agentsStore: AgentsStorageService,
     private readonly goalRunner: GoalRunnerService,
     private readonly chainRunner: ChainRunnerService,
     private readonly logger: LoggerService,
@@ -366,18 +370,20 @@ export class TaskSchedulerService
   }
 
   /**
-   * Phase 91 / F2a — resolve a subsystem target to a concrete pipeline target
-   * (the design doc's 0/1/N-owned-pipeline rule):
+   * Phase 91 / F2a / F2b — resolve a subsystem target to a concrete pipeline or
+   * agent target (the design doc's 0/1/N-owned-unit rule, widened in F2b from
+   * pipelines-only to pipelines + owned active agents):
    *  - **0 owned** → `null` — no capability to delegate to.
    *  - **1 owned** → dispatches straight to it; the classifier is never called.
    *  - **2+ owned** → `TaskClassifierService.classifyWithinSubsystem`, restricted
-   *    to just the owned pipelines (never the full catalog, never a fallback to
-   *    the orchestrator — the operator, or the switchboard's stage-1 verdict,
-   *    already named the subsystem).
+   *    to just the subsystem's own roster (never the full catalog, never a
+   *    fallback to the orchestrator here — the operator, or the switchboard's
+   *    stage-1 verdict, already named the subsystem; `classifyWithinSubsystem`'s
+   *    own `SUBSYSTEM_FALLBACK` policy decides what "not confident" resolves to).
    *
-   * The resolved pipeline target IS the run's "via <subsystem>" attribution: any
-   * consumer can already read `Pipeline.ownerSubsystem` (Phase 81) off the
-   * dispatched pipeline id, so this adds no new run-level field.
+   * The resolved target IS the run's "via <subsystem>" attribution: any
+   * consumer can already read `Pipeline.ownerSubsystem`/`Agent.ownerSubsystem`
+   * (Phase 81 / F1a) off the dispatched id, so this adds no new run-level field.
    *
    * Two callers choose differently on `null` — see {@link resolveSubsystemTarget}
    * (the explicit `@mention` path, throws) and {@link dispatch} (the undirected
@@ -388,20 +394,25 @@ export class TaskSchedulerService
     text: string,
     paths: string[],
   ): Promise<TaskTarget | null> {
-    const owned = (await this.pipelinesStore.list().catch((): Pipeline[] => [])).filter(
-      (p) => p.ownerSubsystem === target.id,
-    );
-    if (owned.length === 0) return null;
-    if (owned.length === 1) {
-      return pipelineTaskTarget(owned[0]!);
-    }
-    const routing = await this.classifier.classifyWithinSubsystem(
-      { text, paths },
-      owned.map((p) => p.id),
-    );
+    const [allPipelines, allAgents] = await Promise.all([
+      this.pipelinesStore.list().catch((): Pipeline[] => []),
+      this.agentsStore.listActive().catch((): Agent[] => []),
+    ]);
+    const ownedPipelines = allPipelines.filter((p) => p.ownerSubsystem === target.id);
+    const ownedAgents = allAgents.filter((a) => a.ownerSubsystem === target.id);
+    const totalOwned = ownedPipelines.length + ownedAgents.length;
+    if (totalOwned === 0) return null;
+    // Pipeline-first — mirrors `TaskClassifierService.subsystemCandidates`'
+    // ordering, so a single-owned-unit direct dispatch agrees with what the
+    // scoped classifier would have picked as its own "primary" fallback.
+    const primary = ownedPipelines[0]
+      ? pipelineTaskTarget(ownedPipelines[0])
+      : agentTaskTarget(ownedAgents[0]!);
+    if (totalOwned === 1) return primary;
+    const routing = await this.classifier.classifyWithinSubsystem({ text, paths }, target.id);
     // Defensive only: `classifyWithinSubsystem` returns null solely for an empty
-    // candidate set, which `owned.length > 1` already rules out.
-    return routing?.target ?? pipelineTaskTarget(owned[0]!);
+    // candidate set, which `totalOwned > 1` already rules out.
+    return routing?.target ?? primary;
   }
 
   /**
@@ -1568,6 +1579,21 @@ function subsystemDisplayName(id: SubsystemId): string {
  */
 function pipelineTaskTarget(p: Pipeline): TaskTarget {
   return { kind: "pipeline", id: p.id, name: p.name ?? p.id, glyph: "flow", avatar: p.avatar };
+}
+
+/**
+ * F2b — the agent counterpart of {@link pipelineTaskTarget}: project a stored
+ * agent definition onto the routing-target shape for the 1-owned direct-dispatch
+ * path (a subsystem that owns exactly one agent and no pipeline).
+ */
+function agentTaskTarget(a: Agent): TaskTarget {
+  return {
+    kind: "agent",
+    id: a.id,
+    name: a.name ?? a.id,
+    glyph: a.glyph ?? "bot",
+    avatar: a.avatar,
+  };
 }
 
 /** The activity ref the target contributes (agentId / pipelineId / chainId), if any. */

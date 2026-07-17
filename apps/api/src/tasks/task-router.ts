@@ -50,9 +50,19 @@ export function toTaskTarget(candidate: RoutableTarget): CatalogTaskTarget | Sub
  *
  * Returns `null` when it can't produce a confident, well-formed verdict — the
  * service then falls back to the keyword scorer (which never returns null).
+ *
+ * F2b: an optional `preamble` — extra context injected ahead of the task text
+ * (a subsystem's mandate + owned-unit list, for {@link TaskClassifierService.classifyWithinSubsystem}'s
+ * scoped catalog). The LLM router weaves it into its prompt; the keyword
+ * scorer has no prompt to inject into, so it accepts and ignores it
+ * (signature parity — both implementations of this interface stay swappable).
  */
 export interface TaskRouter {
-  route(input: ClassifyTaskInput, candidates: RoutableTarget[]): Promise<TaskRouting | null>;
+  route(
+    input: ClassifyTaskInput,
+    candidates: RoutableTarget[],
+    preamble?: string,
+  ): Promise<TaskRouting | null>;
 }
 
 /** DI token for the primary {@link TaskRouter} (the LLM router in production). */

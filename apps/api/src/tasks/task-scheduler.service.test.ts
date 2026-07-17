@@ -70,6 +70,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
    *  (`ownerSubsystem` lookup). Empty by default — no test in this file dispatches
    *  a subsystem target; `task-scheduler.subsystem-dispatch.test.ts` covers those. */
   let pipelinesStore: { list: ReturnType<typeof vi.fn> };
+  /** F2b — {@link TaskSchedulerService}'s owned-agents lookup for subsystem resolution. */
+  let agentsStore: { listActive: ReturnType<typeof vi.fn> };
   let goalRunner: {
     start: ReturnType<typeof vi.fn>;
     onRunStatus: ReturnType<typeof vi.fn>;
@@ -149,6 +151,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       get: vi.fn(() => pipelineRun({})),
     };
     pipelinesStore = { list: vi.fn(async () => []) };
+    agentsStore = { listActive: vi.fn(async () => []) };
     goalRunner = {
       start: vi.fn(async () => ({ goalRunId: "goal_1" })),
       onRunStatus: vi.fn(() => () => {}),
@@ -221,6 +224,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       agentRunner as never,
       pipelineRunner as never,
       pipelinesStore as never,
+      agentsStore as never,
       goalRunner as never,
       chainRunner as never,
       fakeLogger as never,
@@ -432,6 +436,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       agentRunner as never,
       pipelineRunner as never,
       pipelinesStore as never,
+      agentsStore as never,
       goalRunner as never,
       chainRunner as never,
       fakeLogger as never,
@@ -979,7 +984,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       expect(classifier.classify).not.toHaveBeenCalled();
       expect(classifier.classifyWithinSubsystem).toHaveBeenCalledWith(
         { text: "spec out the new feature", paths: [] },
-        ["delivery", "build-feature"],
+        "forge",
       );
       expect(pipelineRunner.start).toHaveBeenCalledWith(
         "build-feature",
@@ -1054,6 +1059,81 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         target: { kind: "subsystem", id: "forge", name: "Forge" },
       });
       expect(classifier.classify).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("F2b — owned agents widen the roster (pipelines + active agents)", () => {
+    /** A minimal pipeline definition fixture — only the fields the resolver reads. */
+    function pipelineDef(id: string, name: string) {
+      return { id, name, ownerSubsystem: "forge", desc: "", phases: [] };
+    }
+    /** A minimal agent definition fixture — only the fields the resolver reads. */
+    function agentDef(id: string, name: string) {
+      return { id, name, ownerSubsystem: "forge" };
+    }
+
+    it("1 owned agent, 0 owned pipelines → direct dispatch to the agent, the classifier is NEVER called", async () => {
+      pipelinesStore.list.mockResolvedValue([]);
+      agentsStore.listActive.mockResolvedValue([agentDef("coder", "Coder")]);
+      const result = await service.createTask({
+        text: "fix the bug",
+        title: "Fix",
+        target: { kind: "subsystem", id: "forge", name: "Forge" },
+      });
+      expect(result.outcome).toBe("dispatched");
+      if (result.outcome !== "dispatched") return;
+      expect(classifier.classify).not.toHaveBeenCalled();
+      expect(classifier.classifyWithinSubsystem).not.toHaveBeenCalled();
+      expect(agentRunner.start).toHaveBeenCalledWith(
+        "coder",
+        "fix the bug",
+        "",
+        [],
+        "Fix",
+        result.task.id,
+        [],
+        undefined,
+        undefined,
+        undefined,
+      );
+    });
+
+    it("1 owned pipeline + 1 owned agent (2 units) → classifyWithinSubsystem is invoked, restricted to the owned catalog", async () => {
+      pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery")]);
+      agentsStore.listActive.mockResolvedValue([agentDef("coder", "Coder")]);
+      classifier.classifyWithinSubsystem.mockResolvedValue({
+        target: { kind: "agent", id: "coder", name: "Coder" },
+        confidence: 0.9,
+        reason: "matched",
+        matchedTerms: [],
+        candidates: [],
+        mode: "single",
+        proposedGoal: null,
+        paths: [],
+      });
+      const result = await service.createTask({
+        text: "fix a small bug",
+        title: "Fix",
+        target: { kind: "subsystem", id: "forge", name: "Forge" },
+      });
+      expect(result.outcome).toBe("dispatched");
+      if (result.outcome !== "dispatched") return;
+      expect(classifier.classifyWithinSubsystem).toHaveBeenCalledWith(
+        { text: "fix a small bug", paths: [] },
+        "forge",
+      );
+      expect(agentRunner.start).toHaveBeenCalledWith(
+        "coder",
+        "fix a small bug",
+        "",
+        [],
+        "Fix",
+        result.task.id,
+        [],
+        undefined,
+        undefined,
+        undefined,
+      );
     });
   });
 
@@ -1159,6 +1239,7 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
       get: vi.fn(() => pipelineRun({})),
     };
     const pipelinesStore = { list: vi.fn(async () => []) };
+    const agentsStore = { listActive: vi.fn(async () => []) };
     const goalRunner = {
       start: vi.fn(async () => ({ goalRunId: "goal_1" })),
       onRunStatus: vi.fn(() => () => {}),
@@ -1229,6 +1310,7 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
       agentRunner as never,
       pipelineRunner as never,
       pipelinesStore as never,
+      agentsStore as never,
       goalRunner as never,
       chainRunner as never,
       fakeLogger as never,
@@ -1333,6 +1415,7 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
       get: vi.fn(() => pipelineRun({})),
     };
     const pipelinesStore = { list: vi.fn(async () => []) };
+    const agentsStore = { listActive: vi.fn(async () => []) };
     const goalRunner = {
       start: vi.fn(async () => ({ goalRunId: "goal_1" })),
       onRunStatus: vi.fn(() => () => {}),
@@ -1410,6 +1493,7 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
       agentRunner as never,
       pipelineRunner as never,
       pipelinesStore as never,
+      agentsStore as never,
       goalRunner as never,
       chainRunner as never,
       fakeLogger as never,

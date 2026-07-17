@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import {
+  type Agent,
   type ClassifyTaskInput,
   type MakerRef,
   ORCHESTRATOR_TARGET,
@@ -7,6 +8,7 @@ import {
   type ProposedGoal,
   type ResolvedPath,
   SUBSYSTEMS,
+  type SubsystemId,
   type TaskRouting,
   TaskRoutingSchema,
   type TaskTarget,
@@ -33,6 +35,29 @@ export const ORCHESTRATOR_FALLBACK_THRESHOLD = 0.5;
  * proposal, never an existing goal.
  */
 export const DEFAULT_GOAL_ITERATIONS = 6;
+
+/**
+ * F2b — each subsystem's terminal fallback when {@link TaskClassifierService.classifyWithinSubsystem}'s
+ * stage-2 verdict isn't confident: `"orchestrator"` defers to the global
+ * orchestrator (the subsystem's own units are delivery specialists — a
+ * low-confidence pick is better self-delegated); `"primary"` dispatches to the
+ * subsystem's own first owned unit (registry/file order) instead of escaping
+ * the subsystem the operator/switchboard already named. A typed `Record` over
+ * the closed `SubsystemId` enum is exhaustiveness discipline — a future
+ * subsystem id fails `tsc` here until it's given a policy.
+ */
+export const SUBSYSTEM_FALLBACK: Record<SubsystemId, "orchestrator" | "primary"> = {
+  forge: "orchestrator",
+  scout: "primary",
+  herald: "primary",
+  puls: "primary",
+  sentinel: "primary",
+  maestro: "primary",
+  beacon: "primary",
+  loom: "primary",
+  codex: "orchestrator",
+  ledger: "orchestrator",
+};
 
 /**
  * Classifies a free-text task to a stored agent or pipeline. It builds the
@@ -75,52 +100,93 @@ export class TaskClassifierService {
   }
 
   /**
-   * Phase 91 — classify a task within ONE subsystem's owned pipelines only: the
+   * Phase 91 / F2b — classify a task within ONE subsystem's owned roster: the
    * design doc's "recursive scoped routing", the same {@link route}/{@link isCoherent}
-   * machinery reused with a candidate catalog restricted to the owned pipelines (never
-   * agents, never the full catalog). Called only for the N-owned case (2+ pipelines);
-   * the caller (`TaskSchedulerService`'s subsystem dispatch) resolves 0/1 owned
-   * pipelines itself without a classify round-trip. The terminal fallback for "nothing
-   * matched confidently" is the FIRST owned pipeline (registry/file order) — never the
-   * global orchestrator, because the operator already named the subsystem (scope
-   * guard: `docs/plans/phase-91-subsystem-dispatch.md`). Returns `null` only when
-   * `ownedPipelineIds` resolves to zero live pipelines (defensive — the caller never
-   * invokes this with an empty set).
+   * machinery reused with a candidate catalog restricted to the subsystem's OWN
+   * pipelines + active agents (never the full catalog, never another subsystem).
+   * Called only for the 2+-owned-units case; the caller
+   * (`TaskSchedulerService.resolveSubsystemTargetOrNull`) resolves 0/1 owned
+   * units itself without a classify round-trip.
+   *
+   * The router prompt is steered by a composed `preamble` (the subsystem's
+   * mandate + an "owned units" list) so the LLM leg reasons about the mandate,
+   * not just bare catalog rows. The terminal fallback for "nothing matched
+   * confidently" is {@link SUBSYSTEM_FALLBACK}'s per-subsystem policy — never a
+   * blanket rule, because a subsystem whose own units are delivery specialists
+   * (forge) is better served escaping to the orchestrator than forcing a guess,
+   * while most subsystems are better served staying inside their own mandate.
+   *
+   * Returns `null` only when the subsystem owns zero live pipelines/agents
+   * (defensive — the caller never invokes this with an empty roster).
    */
   async classifyWithinSubsystem(
     input: ClassifyTaskInput,
-    ownedPipelineIds: readonly string[],
+    subsystemId: SubsystemId,
   ): Promise<TaskRouting | null> {
-    const allPipelines = await this.pipelines.list().catch((): Pipeline[] => []);
-    const owned = allPipelines.filter((p) => ownedPipelineIds.includes(p.id));
-    const candidates = this.pipelineCandidates(owned);
+    const [allPipelines, allAgents] = await Promise.all([
+      this.pipelines.list().catch((): Pipeline[] => []),
+      this.agents.listActive().catch((): Agent[] => []),
+    ]);
+    const candidates = this.subsystemCandidates(subsystemId, allPipelines, allAgents);
     const first = candidates[0];
     if (!first) return null;
 
+    const subsystem = SUBSYSTEMS.find((s) => s.id === subsystemId);
+    const displayName = subsystem?.name ?? subsystemId;
+    const policy = SUBSYSTEM_FALLBACK[subsystemId];
+    const fallback =
+      policy === "orchestrator"
+        ? {
+            target: ORCHESTRATOR_TARGET,
+            reason: `No unit matched confidently — ${displayName} defers to the orchestrator.`,
+          }
+        : {
+            target: toTaskTarget(first),
+            reason: `No unit matched confidently — routed to ${displayName}'s primary owned unit.`,
+          };
+
     const base = await this.route(input, candidates, {
-      target: toTaskTarget(first),
-      reason: "No pipeline matched confidently — routed to the subsystem's first pipeline.",
+      fallback,
+      preamble: this.buildSubsystemPreamble(subsystem?.mandate ?? "", candidates),
     });
     return this.enrich(base, input, candidates);
+  }
+
+  /**
+   * F2b — the router preamble for a scoped stage-2 call: the subsystem's Czech
+   * mandate plus a `name — desc` line per owned unit, so the LLM leg reasons
+   * about the mandate rather than bare catalog rows. `search` already carries
+   * the unit's full routable blob (name + id + desc/category, or the pipeline's
+   * phase agents) — reused here rather than re-fetching `desc` separately.
+   */
+  private buildSubsystemPreamble(mandate: string, units: readonly RoutableTarget[]): string {
+    const unitLines = units.map((u) => `- ${u.name} — ${u.search}`).join("\n");
+    return [`SUBSYSTEM MANDATE: ${mandate}`, "OWNED UNITS:", unitLines].join("\n");
   }
 
   /**
    * Resolve the base verdict (the maker pick): the LLM router when coherent, else
    * the keyword scorer, else the terminal fallback (the orchestrator, by default).
    * This is the pre-Phase-11 routing — `mode`/`proposedGoal`/`paths` are overlaid by
-   * {@link enrich}. Phase 91: `fallback` lets a scoped caller ({@link classifyWithinSubsystem})
-   * swap the terminal target/reason without duplicating the router/scorer flow.
+   * {@link enrich}. Phase 91: `opts.fallback` lets a scoped caller
+   * ({@link classifyWithinSubsystem}) swap the terminal target/reason without
+   * duplicating the router/scorer flow. F2b: `opts.preamble` is threaded into the
+   * LLM router only (the keyword scorer has no prompt to inject it into).
    */
   private async route(
     input: ClassifyTaskInput,
     candidates: RoutableTarget[],
-    fallback: { target: TaskTarget; reason: string } = {
+    opts: {
+      fallback?: { target: TaskTarget; reason: string };
+      preamble?: string;
+    } = {},
+  ): Promise<TaskRouting> {
+    const fallbackTarget = opts.fallback ?? {
       target: ORCHESTRATOR_TARGET,
       reason: "No agent or pipeline matched confidently — the orchestrator will handle it.",
-    },
-  ): Promise<TaskRouting> {
+    };
     try {
-      const routed = await this.router.route(input, candidates);
+      const routed = await this.router.route(input, candidates, opts.preamble);
       if (routed && this.isCoherent(routed, candidates)) return routed;
     } catch (err) {
       this.log.warn("router failed, using keyword fallback", { error: (err as Error).message });
@@ -132,14 +198,14 @@ export class TaskClassifierService {
     // Terminal rule: nothing matched confidently.
     this.log.info("no confident match, using terminal fallback", {
       confidence: scored?.confidence ?? 0,
-      fallbackKind: fallback.target.kind,
+      fallbackKind: fallbackTarget.target.kind,
     });
     return {
-      target: fallback.target,
+      target: fallbackTarget.target,
       // Carry the weak score through so the UI still reads this as a low-confidence
       // verdict (steering the user toward the manual picker on the preview path).
       confidence: scored?.confidence ?? 0,
-      reason: fallback.reason,
+      reason: fallbackTarget.reason,
       matchedTerms: scored?.matchedTerms ?? [],
       candidates: candidates.map(toTaskTarget),
       mode: "single",
@@ -256,40 +322,37 @@ export class TaskClassifierService {
     // Phase 4c: only ACTIVE agents are dispatchable — a `status: "proposed"`
     // candidate awaiting its `agent-proposal` approval must never be routed to.
     const [agents, pipelines] = await Promise.all([
-      this.agents.listActive().catch(() => []),
-      this.pipelines.list().catch(() => []),
+      this.agents.listActive().catch((): Agent[] => []),
+      this.pipelines.list().catch((): Pipeline[] => []),
     ]);
 
-    const agentTargets: RoutableTarget[] = agents.map((a) => ({
-      kind: "agent",
-      id: a.id,
-      name: a.name ?? a.id,
-      glyph: a.glyph ?? "bot",
-      avatar: a.avatar,
-      category: a.category,
-      search: [a.name, a.id, a.category, a.description].filter(Boolean).join(" "),
-    }));
-
     return [
-      ...agentTargets,
+      ...this.agentCandidates(agents),
       ...this.pipelineCandidates(pipelines),
-      ...this.stage1SubsystemCandidates(pipelines),
+      ...this.stage1SubsystemCandidates(pipelines, agents),
     ];
   }
 
   /**
-   * F2a — one stage-1 candidate per subsystem that owns ≥1 pipeline (computed
-   * from the listed pipelines' `ownerSubsystem`), so the top-level switchboard
-   * can emit a whole-delegation verdict alongside its agent/pipeline picks.
-   * Subsystems owning nothing yet (codex/ledger, until F4/F5) are excluded —
-   * offering them invites a verdict that immediately unwinds at stage-2's
-   * empty-roster check (wasted tokens, a misleading trace). `search` is the
-   * subsystem's Czech mandate, so the keyword scorer ranks it on mandate-term
-   * overlap for free. Never offered by {@link classifyWithinSubsystem} — a
-   * subsystem never delegates to another subsystem.
+   * F2a/F2b — one stage-1 candidate per subsystem that owns ≥1 pipeline OR ≥1
+   * active agent (computed from the listed pipelines'/agents' `ownerSubsystem`),
+   * so the top-level switchboard can emit a whole-delegation verdict alongside
+   * its agent/pipeline picks. Subsystems owning nothing yet (codex/ledger,
+   * until F4/F5) are excluded — offering them invites a verdict that
+   * immediately unwinds at stage-2's empty-roster check (wasted tokens, a
+   * misleading trace). `search` is the subsystem's Czech mandate, so the
+   * keyword scorer ranks it on mandate-term overlap for free. Never offered by
+   * {@link classifyWithinSubsystem} — a subsystem never delegates to another
+   * subsystem.
    */
-  private stage1SubsystemCandidates(pipelines: readonly Pipeline[]): RoutableTarget[] {
-    const owning = new Set(pipelines.map((p) => p.ownerSubsystem).filter(Boolean));
+  private stage1SubsystemCandidates(
+    pipelines: readonly Pipeline[],
+    agents: readonly Agent[],
+  ): RoutableTarget[] {
+    const owning = new Set([
+      ...pipelines.map((p) => p.ownerSubsystem).filter(Boolean),
+      ...agents.map((a) => a.ownerSubsystem).filter(Boolean),
+    ]);
     return SUBSYSTEMS.filter((s) => owning.has(s.id)).map((s) => ({
       kind: "subsystem",
       id: s.id,
@@ -303,10 +366,49 @@ export class TaskClassifierService {
   }
 
   /**
+   * F2b — the stage-2 catalog for ONE subsystem: its own owned pipelines +
+   * owned ACTIVE agents, built from the exact same projections
+   * ({@link pipelineCandidates}/{@link agentCandidates}) {@link buildCandidates}
+   * uses, so a unit's `search`/`glyph` never drifts between the top-level and
+   * scoped catalogs. Pipelines are listed first — {@link SUBSYSTEM_FALLBACK}'s
+   * `"primary"` policy reads `candidates[0]` as "the subsystem's primary owned
+   * pipeline" (registry/file order), falling back to its first owned agent only
+   * when it owns no pipeline at all.
+   */
+  private subsystemCandidates(
+    subsystemId: SubsystemId,
+    pipelines: readonly Pipeline[],
+    agents: readonly Agent[],
+  ): RoutableTarget[] {
+    const ownedPipelines = pipelines.filter((p) => p.ownerSubsystem === subsystemId);
+    const ownedAgents = agents.filter((a) => a.ownerSubsystem === subsystemId);
+    return [...this.pipelineCandidates(ownedPipelines), ...this.agentCandidates(ownedAgents)];
+  }
+
+  /**
+   * Project stored agents onto the rankable candidate shape — shared by
+   * {@link buildCandidates} (the full catalog, ACTIVE agents only) and
+   * {@link subsystemCandidates} (a pre-filtered, subsystem-owned subset), so
+   * the two never compute an agent candidate's `search`/`glyph` shape
+   * differently.
+   */
+  private agentCandidates(agents: readonly Agent[]): RoutableTarget[] {
+    return agents.map((a) => ({
+      kind: "agent",
+      id: a.id,
+      name: a.name ?? a.id,
+      glyph: a.glyph ?? "bot",
+      avatar: a.avatar,
+      category: a.category,
+      search: [a.name, a.id, a.category, a.description].filter(Boolean).join(" "),
+    }));
+  }
+
+  /**
    * Project stored pipelines onto the rankable candidate shape — shared by
-   * {@link buildCandidates} (the full catalog) and {@link classifyWithinSubsystem}
-   * (a pre-filtered, subsystem-owned subset), so the two never compute a pipeline
-   * candidate's `search`/`glyph` shape differently.
+   * {@link buildCandidates} (the full catalog) and {@link subsystemCandidates}
+   * (a pre-filtered, subsystem-owned subset), so the two never compute a
+   * pipeline candidate's `search`/`glyph` shape differently.
    */
   private pipelineCandidates(pipelines: readonly Pipeline[]): RoutableTarget[] {
     return pipelines.map((p) => ({
