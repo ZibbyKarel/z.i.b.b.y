@@ -53,6 +53,7 @@
     "emptyTitle": "Memory is empty",
     "emptyDescription": "No notes in the vault yet. Notes appear here as runs write to it — or create the first one.",
     "untriaged": "Untriaged",
+    "subsystemBadge": "Subsystem shelf",
     "quickCapture": {
       "trigger": "Quick capture",
       "title": "Quick capture",

@@ -8,6 +8,7 @@ import {
   NoteNotFoundError,
   SimilarNoteError,
   VaultService,
+  ownerSubsystemOf,
 } from "./vault.service";
 
 describe("VaultService write paths", () => {
@@ -155,6 +156,48 @@ describe("VaultService write paths", () => {
     expect(hits.find((h) => h.id === "global-note")?.project).toBeUndefined();
   });
 
+  it("F4b: ownerSubsystemOf reads a valid subsystem, ignores an invalid one, is undefined when absent", async () => {
+    expect(ownerSubsystemOf({ subsystem: "forge" })).toBe("forge");
+    expect(ownerSubsystemOf({ subsystem: "not-a-subsystem" })).toBeUndefined();
+    expect(ownerSubsystemOf({})).toBeUndefined();
+  });
+
+  it("F4b: index() carries tags/aliases/subsystem from a fixture note", async () => {
+    await vault.createNote({
+      id: "subsystem-forge-moc",
+      tier: "knowledge",
+      title: "Forge — polička",
+      body: "Shelf body.",
+      tags: ["subsystem", "forge", "moc"],
+      frontmatter: { subsystem: "forge", aliases: ["kovárna"] },
+    });
+    const index = await vault.index();
+    const entry = index.find((e) => e.id === "subsystem-forge-moc");
+    expect(entry?.subsystem).toBe("forge");
+    expect(entry?.tags).toEqual(["subsystem", "forge", "moc"]);
+    expect(entry?.aliases).toEqual(["kovárna"]);
+  });
+
+  it("F4b: index() omits tags/aliases/subsystem from a note that never set them", async () => {
+    await vault.createNote({ id: "plain-moc", tier: "knowledge", title: "Plain", body: "x" });
+    const entry = (await vault.index()).find((e) => e.id === "plain-moc");
+    expect(entry?.subsystem).toBeUndefined();
+    expect(entry?.tags).toBeUndefined();
+    expect(entry?.aliases).toBeUndefined();
+  });
+
+  it("F4b: graph() node carries subsystem", async () => {
+    await vault.createNote({
+      id: "subsystem-scout-moc",
+      tier: "knowledge",
+      title: "Scout — polička",
+      body: "x",
+      frontmatter: { subsystem: "scout" },
+    });
+    const graph = await vault.graph();
+    expect(graph.nodes.find((n) => n.id === "subsystem-scout-moc")?.subsystem).toBe("scout");
+  });
+
   it("round-trips typed `type`/`tags` through frontmatter (Fáze 3)", async () => {
     const created = await vault.createNote({
       id: "typed-1",
@@ -221,7 +264,13 @@ describe("VaultService write paths", () => {
     });
 
     it("rawNotes(): returns only notes with `raw: true`, shaped like note()", async () => {
-      await vault.createNote({ id: "raw-a", tier: "knowledge", title: "Raw A", body: "a", raw: true });
+      await vault.createNote({
+        id: "raw-a",
+        tier: "knowledge",
+        title: "Raw A",
+        body: "a",
+        raw: true,
+      });
       await vault.createNote({ id: "raw-b", tier: "memory", body: "b", raw: false });
       await vault.createNote({ id: "raw-c", tier: "knowledge", body: "c" });
 

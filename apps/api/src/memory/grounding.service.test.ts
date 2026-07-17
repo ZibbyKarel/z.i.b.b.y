@@ -5,7 +5,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   GroundingService,
   SELF_KNOWLEDGE_ID,
+  scoreEntry,
   selectIndexes,
+  selectLinkedNotes,
   visibleToProject,
 } from "./grounding.service";
 import { VaultService, ownerProjectOf } from "./vault.service";
@@ -40,6 +42,93 @@ describe("selectIndexes", () => {
   it("returns nothing when no term overlaps or terms are empty", () => {
     expect(selectIndexes(["nothing"], entries)).toEqual([]);
     expect(selectIndexes([], entries)).toEqual([]);
+  });
+
+  it("F4b: a tag/alias match outranks an incidental title word", () => {
+    const scored = [
+      // Title has zero term overlap; tags match both wanted terms.
+      {
+        id: "a-moc",
+        title: "Untitled Notes",
+        tier: "knowledge" as const,
+        tags: ["billing", "infra"],
+      },
+      // Title matches one term ("billing"), no curated tags.
+      { id: "b-moc", title: "Billing Overview", tier: "knowledge" as const },
+    ];
+    const picked = selectIndexes(["billing", "infra"], scored);
+    expect(picked.map((e) => e.id)).toEqual(["a-moc", "b-moc"]);
+  });
+});
+
+describe("scoreEntry", () => {
+  it("scores 1 point per term matched in id/title, 2 per term matched in tags/aliases", () => {
+    const wanted = new Set(["billing", "infra"]);
+    expect(scoreEntry({ id: "x", title: "Billing Infra Notes", tier: "knowledge" }, wanted)).toBe(
+      2,
+    );
+    expect(
+      scoreEntry(
+        { id: "x", title: "Untitled", tier: "knowledge", tags: ["billing", "infra"] },
+        wanted,
+      ),
+    ).toBe(4);
+  });
+
+  it("credits both title and curated overlap for the same term", () => {
+    const wanted = new Set(["billing"]);
+    expect(
+      scoreEntry(
+        { id: "billing-moc", title: "Billing", tier: "knowledge", aliases: ["billing"] },
+        wanted,
+      ),
+    ).toBe(3);
+  });
+
+  it("scores 0 when nothing overlaps", () => {
+    expect(scoreEntry({ id: "x", title: "Y", tier: "knowledge" }, new Set(["z"]))).toBe(0);
+  });
+});
+
+describe("selectLinkedNotes (1-hop wikilink expansion)", () => {
+  const note = (id: string, links: string[]): import("@zibby/contracts").Note => ({
+    id,
+    path: `knowledge/${id}.md`,
+    tier: "knowledge",
+    title: id,
+    frontmatter: {},
+    links,
+  });
+
+  it("unions the linked notes of the grounded MOCs, scored and capped at EXPANSION_LIMIT", () => {
+    const visible = [
+      { id: "deploy-runbook", title: "Deploy Runbook", tier: "knowledge" as const },
+      { id: "noise-note", title: "Noise", tier: "knowledge" as const },
+    ];
+    const mocs = [note("forge-moc", ["deploy-runbook", "noise-note"])];
+    const picked = selectLinkedNotes(["deploy"], mocs, visible, new Set(["forge-moc"]));
+    expect(picked).toEqual(["deploy-runbook"]);
+  });
+
+  it("excludes a linked note not present in `visible` (M7 project isolation holds through expansion)", () => {
+    const visible = [{ id: "own-note", title: "Deploy Runbook", tier: "knowledge" as const }];
+    const mocs = [note("forge-moc", ["deploy-runbook", "own-note"])];
+    // "deploy-runbook" is linked but NOT in `visible` (another project's note) — excluded.
+    const picked = selectLinkedNotes(["deploy"], mocs, visible, new Set());
+    expect(picked).toEqual(["own-note"]);
+  });
+
+  it("excludes ids already in alreadySeen", () => {
+    const visible = [{ id: "deploy-runbook", title: "Deploy Runbook", tier: "knowledge" as const }];
+    const mocs = [note("forge-moc", ["deploy-runbook"])];
+    const picked = selectLinkedNotes(["deploy"], mocs, visible, new Set(["deploy-runbook"]));
+    expect(picked).toEqual([]);
+  });
+
+  it("returns nothing when terms is empty", () => {
+    const visible = [{ id: "deploy-runbook", title: "Deploy Runbook", tier: "knowledge" as const }];
+    const mocs = [note("forge-moc", ["deploy-runbook"])];
+    expect(selectLinkedNotes([], mocs, visible, new Set())).toEqual([]);
   });
 });
 
@@ -184,6 +273,97 @@ describe("GroundingService.compose", () => {
     });
     expect(block).toContain("Alpha Roadmap");
     expect(block).not.toContain("Beta Roadmap");
+  });
+
+  it("F4b: 1-hop expansion recovers a linked note that direct MOC selection excluded, respecting M7 isolation", async () => {
+    // Both `visible` (index-first candidate set) and `selectLinkedNotes`'s expansion
+    // set derive from the SAME `vault.index()` entries — only "-moc"/"-index"-suffixed
+    // notes are entry points (`vault.service.ts` `index()`), so the linked target must
+    // be one too, exactly as real subsystem/project MOCs link to one another.
+    const made = await makeVault(async (vault) => {
+      await vault.createNote({
+        id: "north-star",
+        tier: "memory",
+        title: "North Star",
+        body: "Mission.",
+      });
+      // Both score 2 (title matches BOTH terms) — the two direct MOC_LIMIT=2 slots.
+      await vault.createNote({
+        id: "forge-moc",
+        tier: "knowledge",
+        title: "Forge Deploy Hub",
+        body: "The forge deploy pipeline. See [[deploy-runbook-moc]] and [[foreign-linked-moc]].",
+        frontmatter: { project: "acme" },
+      });
+      await vault.createNote({
+        id: "ops-moc",
+        tier: "knowledge",
+        title: "Ops Forge Deploy Notes",
+        body: "Operational notes.",
+        frontmatter: { project: "acme" },
+      });
+      // Scores only 1 (matches "deploy" alone) — outranked by both MOCs above, so direct
+      // top-2 selection excludes it; only reachable via forge-moc's wikilink (expansion).
+      await vault.createNote({
+        id: "deploy-runbook-moc",
+        tier: "knowledge",
+        title: "Deploy Runbook",
+        body: "How to deploy the forge.",
+        frontmatter: { project: "acme" },
+      });
+      // Linked from forge-moc but owned by a different project — filtered out of
+      // `visible` before expansion ever sees it (M7 isolation holds through expansion).
+      await vault.createNote({
+        id: "foreign-linked-moc",
+        tier: "knowledge",
+        title: "Foreign Deploy Notes",
+        body: "Another project's deploy notes.",
+        frontmatter: { project: "beta" },
+      });
+    });
+    dir = made.dir;
+    const block = await made.grounding.compose({
+      task: "x",
+      matchedTerms: ["forge", "deploy"],
+      projectId: "acme",
+    });
+    expect(block).toContain("Forge Deploy Hub");
+    expect(block).toContain("Ops Forge Deploy Notes");
+    // Recovered exclusively via 1-hop expansion — direct selectIndexes ranked it 3rd.
+    expect(block).toContain("Deploy Runbook");
+    expect(block).not.toContain("Foreign Deploy Notes");
+    const headings = block.match(/^### /gm) ?? [];
+    // North Star + forge-moc + ops-moc + the one expanded note.
+    expect(headings.length).toBe(4);
+  });
+
+  it("F4b: composing the same fixture twice yields byte-identical blocks (determinism)", async () => {
+    const made = await makeVault(async (vault) => {
+      await vault.createNote({
+        id: "north-star",
+        tier: "memory",
+        title: "North Star",
+        body: "Mission.",
+      });
+      await vault.createNote({
+        id: "forge-moc",
+        tier: "knowledge",
+        title: "Forge MOC",
+        body: "See [[deploy-runbook-moc]].",
+      });
+      await vault.createNote({
+        id: "deploy-runbook-moc",
+        tier: "knowledge",
+        title: "Deploy Runbook",
+        body: "How to deploy.",
+      });
+    });
+    dir = made.dir;
+    const input = { task: "x", matchedTerms: ["forge", "deploy"] };
+    const first = await made.grounding.compose(input);
+    const second = await made.grounding.compose(input);
+    expect(first).toBe(second);
+    expect(first).toContain("Deploy Runbook");
   });
 
   it("truncates an oversized note body with a marker", async () => {

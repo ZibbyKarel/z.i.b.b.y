@@ -53,6 +53,7 @@
     "emptyTitle": "Paměť je prázdná",
     "emptyDescription": "Ve vaultu zatím nejsou žádné poznámky. Objeví se tu, jak do něj zapisují běhy — nebo vytvoř první.",
     "untriaged": "Netříděno",
+    "subsystemBadge": "Polička subsystému",
     "quickCapture": {
       "trigger": "Rychlý zápis",
       "title": "Rychlý zápis",

@@ -80,6 +80,23 @@ describe("NoteView (Phase 109) — raw-note 'untriaged' badge", () => {
   });
 });
 
+describe("NoteView (F4b) — subsystem shelf badge", () => {
+  beforeEach(() => {
+    onSelect.mockClear();
+    updateNote.mockClear();
+  });
+
+  it("shows the subsystem badge when the note carries an owning subsystem", () => {
+    render(<NoteView note={{ ...note, subsystem: "forge" }} onSelect={onSelect} />);
+    expect(screen.getByTestId(NoteViewTestId.SubsystemBadge)).toHaveTextContent("forge");
+  });
+
+  it("hides the badge when the note has no subsystem", () => {
+    render(<NoteView note={note} onSelect={onSelect} />);
+    expect(screen.queryByTestId(NoteViewTestId.SubsystemBadge)).not.toBeInTheDocument();
+  });
+});
+
 describe("NoteView (N4g) — in-place edit mode", () => {
   beforeEach(() => {
     onSelect.mockClear();
