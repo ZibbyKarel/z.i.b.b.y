@@ -48,7 +48,6 @@ const subsystem: Subsystem = {
   tagline: "Kovárna doručení",
   mandate: "Orchestrace delivery pipeline: Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor.",
   color: "#f97316",
-  heroImage: "/subsystems/forge.jpg",
 };
 
 const catalogRule: GlobalGateRule = {
@@ -163,7 +162,6 @@ describe("composeSelfKnowledge", () => {
         tagline: "Maják v noci",
         mandate: "Eskalace incidentů — vlastní podoba Tier-3 kontraktu surface-and-wait.",
         color: "#f59e0b",
-        heroImage: "/subsystems/beacon.jpg",
       };
       const { markdown, sections } = composeSelfKnowledge(
         baseInput({ subsystems: [beacon, subsystem] }),

@@ -1,20 +1,13 @@
 "use client";
 
-import {
-  SUBSYSTEMS,
-  type SubsystemId,
-  type SubsystemState,
-  type SubsystemWithStatus,
-} from "@zibby/contracts";
+import { SUBSYSTEMS, type SubsystemId, type SubsystemWithStatus } from "@zibby/contracts";
 import {
   type EllipseInsets,
   Icon,
-  type IconName,
   ORB_MAP_CORE_ID,
   OrbMap,
   type OrbMapFlare,
   type OrbMapNode,
-  type OrbState,
   resolveStateToneHex,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
@@ -27,6 +20,7 @@ import {
   appendParticle,
   flightForEvent,
 } from "../../subsystems/components/SubsystemWeb/particle-mapping";
+import { SUBSYSTEM_GLYPH, SUBSYSTEM_ORB_STATE } from "../../subsystems/subsystemVisuals";
 import { activeRunsBySubsystem } from "../subsystemLoad";
 
 export enum SubsystemOrbMapTestId {
@@ -50,27 +44,6 @@ export interface SubsystemOrbMapProps {
   onOpenCore: () => void;
   onSelectSubsystem: (id: SubsystemId) => void;
 }
-
-/** English `SubsystemState` (contracts) → immersive `OrbState` (DS). */
-const STATE_MAP: Record<SubsystemState, OrbState> = {
-  idle: "idle",
-  running: "working",
-  report: "report",
-  waiting: "await",
-};
-
-/** One glyph per subsystem identity — verified present in the DS icon set
- * (`libs/design-system/src/assets/icons`). */
-const ICON_MAP: Record<SubsystemId, IconName> = {
-  forge: "code",
-  herald: "link",
-  sentinel: "shield",
-  scout: "compass",
-  maestro: "checkpoint",
-  beacon: "warn",
-  puls: "pulse",
-  loom: "search",
-};
 
 /** Core heartbeat curve: calm at rest, busier with more active runs, capped so a
  * flood of concurrent work never blows past a readable glow. Mirrors the VcMapD
@@ -136,10 +109,10 @@ export function SubsystemOrbMap({
     return {
       id: sub.id,
       hex: sub.color,
-      state: STATE_MAP[state],
+      state: SUBSYSTEM_ORB_STATE[state],
       label: sub.name,
       statusLabel: t(`state.${state}`),
-      icon: <Icon name={ICON_MAP[sub.id]} size="lg" />,
+      icon: <Icon name={SUBSYSTEM_GLYPH[sub.id]} size="lg" />,
       activeCount: counts[sub.id] ?? 0,
     };
   });

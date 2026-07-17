@@ -2,7 +2,7 @@ import { SUBSYSTEMS, type SubsystemWithStatus } from "@zibby/contracts";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, renderWithProviders, screen } from "../../../../test/render";
-import { SubsystemDrawer, SubsystemDrawerTestId, heroBandStyle } from "./SubsystemDrawer";
+import { SubsystemDrawer, SubsystemDrawerTestId, headerBandStyle } from "./SubsystemDrawer";
 
 const markSeenMutate = vi.fn();
 
@@ -44,7 +44,6 @@ function fixture(overrides: Partial<SubsystemWithStatus> = {}): SubsystemWithSta
     tagline: base.tagline,
     mandate: base.mandate,
     color: base.color,
-    heroImage: null,
     state: "idle",
     tier2Count: 0,
     tier3Count: 0,
@@ -63,12 +62,22 @@ describe("SubsystemDrawer (Phase 84)", () => {
     expect(screen.getByTestId(SubsystemDrawerTestId.Root)).toBeInTheDocument();
     expect(screen.getByTestId(SubsystemDrawerTestId.Panel)).toBeInTheDocument();
     expect(screen.getByTestId(SubsystemDrawerTestId.Name)).toHaveTextContent(SUBSYSTEMS[0]!.name);
-    expect(screen.getByTestId(SubsystemDrawerTestId.Tagline)).toHaveTextContent(
-      SUBSYSTEMS[0]!.tagline,
+    // Velín-D folds the mandate and the epithet onto one line.
+    const mandate = screen.getByTestId(SubsystemDrawerTestId.Mandate);
+    expect(mandate).toHaveTextContent(SUBSYSTEMS[0]!.mandate);
+    expect(mandate).toHaveTextContent(SUBSYSTEMS[0]!.tagline);
+  });
+
+  // The header's identity mark is the orb + the subsystem's own glyph. The DS
+  // `Icon` renders its paths with no name attribute, so WHICH glyph landed
+  // isn't observable here — `subsystemVisuals.test.ts` pins the id→glyph table
+  // itself (the thing that could actually drift); this only pins that the
+  // header renders the mark at all, rather than the old generic `bot` tile.
+  it("renders the identity glyph over the orb", () => {
+    renderWithProviders(
+      <SubsystemDrawer onClose={vi.fn()} subsystem={fixture({ id: "sentinel" })} />,
     );
-    expect(screen.getByTestId(SubsystemDrawerTestId.Mandate)).toHaveTextContent(
-      SUBSYSTEMS[0]!.mandate,
-    );
+    expect(screen.getByTestId(SubsystemDrawerTestId.Glyph).querySelector("svg")).not.toBeNull();
   });
 
   it.each([
@@ -85,10 +94,19 @@ describe("SubsystemDrawer (Phase 84)", () => {
   });
 
   it("shows the Tier-2/Tier-3 count badge only for report/waiting", () => {
-    renderWithProviders(
+    const { unmount } = renderWithProviders(
       <SubsystemDrawer onClose={vi.fn()} subsystem={fixture({ state: "report", tier2Count: 4 })} />,
     );
-    expect(screen.getByTestId(SubsystemDrawerTestId.Status)).toHaveTextContent("4");
+    // Shows the bare numeral (the pill beside it already says the state), but
+    // still announces the full phrase.
+    const count = screen.getByTestId(SubsystemDrawerTestId.Count);
+    expect(count).toHaveTextContent("4");
+    expect(count).toHaveAccessibleName("4 hlášení k nahlédnutí");
+    unmount();
+
+    // idle/running have nothing outstanding to count — the state pill alone.
+    renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />);
+    expect(screen.queryByTestId(SubsystemDrawerTestId.Count)).toBeNull();
   });
 
   it("fires markSubsystemSeen exactly once per open — not again on a re-render with the same subsystem", () => {
@@ -124,13 +142,15 @@ describe("SubsystemDrawer (Phase 84)", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps the decorative hero gradient overlay non-interactive so it can't swallow the close click", () => {
+  it("keeps the glyph overlay non-interactive so it can't swallow a click", () => {
     renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />);
 
-    const hero = screen.getByTestId(SubsystemDrawerTestId.Hero);
-    const overlay = hero.querySelector(".bg-gradient-to-t");
-    expect(overlay).not.toBeNull();
-    expect(overlay).toHaveClass("pointer-events-none");
+    // The glyph sits ON TOP of the orb; it must never eat pointer events.
+    // (The close button no longer needs this guard — Velín-D puts it in the
+    // header's own flex row rather than floating it over the art.)
+    expect(screen.getByTestId(SubsystemDrawerTestId.Glyph)).toHaveStyle({
+      pointerEvents: "none",
+    });
   });
 
   it("closes on Escape", () => {
@@ -157,41 +177,34 @@ describe("SubsystemDrawer (Phase 84)", () => {
     opener.remove();
   });
 
-  describe("hero band (phase 90 art, phase 103 height + webp)", () => {
-    it("falls back to the color glow alone when heroImage is null — no url(...)", () => {
-      renderWithProviders(
-        <SubsystemDrawer onClose={vi.fn()} subsystem={fixture({ heroImage: null })} />,
-      );
-      const hero = screen.getByTestId(SubsystemDrawerTestId.Hero);
+  describe("header band (Velín-D)", () => {
+    it("tints the band with the subsystem's own hue, fading downward", () => {
+      const hero = fixture();
+      renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={hero} />);
 
-      expect(hero.style.backgroundImage).toContain("radial-gradient(");
-      expect(hero.style.backgroundImage).not.toContain("url(");
-      expect(hero.style.minHeight).toBe("224px");
+      const band = screen.getByTestId(SubsystemDrawerTestId.Hero);
+      expect(band.style.backgroundImage).toBe(
+        `linear-gradient(180deg, ${hero.color}18, transparent)`,
+      );
     });
 
-    it("layers the hero portrait (image-set webp+jpg) under the glow when heroImage is set", () => {
-      const heroImage = "/subsystems/forge.jpg";
-      renderWithProviders(
-        <SubsystemDrawer onClose={vi.fn()} subsystem={fixture({ heroImage })} />,
+    it("carries no portrait — the orb is the only identity mark", () => {
+      renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />);
+
+      const band = screen.getByTestId(SubsystemDrawerTestId.Hero);
+      // The phase-90 hero art is gone for good (see `SubsystemSchema`): no
+      // portrait may creep back into the band by any route.
+      expect(band.style.backgroundImage).not.toContain("url(");
+      expect(band.style.backgroundImage).not.toContain("image-set(");
+      expect(band.querySelector("img")).toBeNull();
+      // ...and the old 224px art band with it — this is a compact header row.
+      expect(band.style.minHeight).toBe("");
+    });
+
+    it("builds the band gradient from any subsystem hue", () => {
+      expect(headerBandStyle("#b07cff").backgroundImage).toBe(
+        "linear-gradient(180deg, #b07cff18, transparent)",
       );
-      const hero = screen.getByTestId(SubsystemDrawerTestId.Hero);
-
-      // The taller phase-103 band is observable on the live DOM node in jsdom.
-      expect(hero.style.minHeight).toBe("224px");
-
-      // The `image-set()`/`url(...)` background itself is NOT observable via
-      // `hero.style.backgroundImage`: jsdom's CSSOM (`cssstyle`) only
-      // recognizes plain `url(...)` and gradients inside `background-image`,
-      // so it silently drops the whole declaration once it contains
-      // `image-set(...)` — a jsdom parser gap, not a production bug (real
-      // browsers support `image-set()` with a `url(...)` fallback fine).
-      // Assert the same style object the component renders with directly.
-      const style = heroBandStyle(fixture({ heroImage }).color, heroImage);
-      expect(style.backgroundImage).toContain("radial-gradient(");
-      expect(style.backgroundImage).toContain("image-set(");
-      expect(style.backgroundImage).toContain('url("/subsystems/forge.webp")');
-      expect(style.backgroundImage).toContain('url("/subsystems/forge.jpg")');
-      expect(style.minHeight).toBe(224);
     });
   });
 

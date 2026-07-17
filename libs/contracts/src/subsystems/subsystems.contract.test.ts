@@ -61,25 +61,19 @@ describe("SUBSYSTEMS registry", () => {
     expect(SUBSYSTEMS.find((s) => s.id === "forge")?.color).toBe("#5b8def");
   });
 
-  it("every heroImage points at the phase-90 art under /subsystems/", () => {
+  it("carries no portrait — a subsystem's identity is its color and its orb", () => {
     for (const s of SUBSYSTEMS) {
-      expect(s.heroImage).toBe(`/subsystems/${s.id}.jpg`);
+      expect(s).not.toHaveProperty("heroImage");
     }
   });
 
-  it("every heroImage resolves to a real file under apps/web/public (and its phase-103 webp sibling exists)", () => {
-    for (const s of SUBSYSTEMS) {
-      expect(s.heroImage).not.toBeNull();
-      const relative = s.heroImage!.replace(/^\//, "");
-      const jpgPath = new URL(relative, PUBLIC_DIR);
-      expect(existsSync(jpgPath)).toBe(true);
-
-      // Phase 103: the component derives a WebP sibling from this same jpg
-      // path (extension swap) to serve via `image-set()` — the registry
-      // string itself stays the jpg path, so guard the sibling separately.
-      const webpPath = new URL(relative.replace(/\.jpg$/, ".webp"), PUBLIC_DIR);
-      expect(existsSync(webpPath)).toBe(true);
-    }
+  it("leaves no orphaned hero art behind under apps/web/public", () => {
+    // The inverse of the phase-90/103 guard this replaces: that one pinned the
+    // art into existence, this one pins it OUT. The Velín-D header settles
+    // identity on the live orb, so a portrait reappearing here would be a
+    // second, competing identity mark — and dead weight in the bundle, since
+    // nothing reads it anymore.
+    expect(existsSync(new URL("subsystems/", PUBLIC_DIR))).toBe(false);
   });
 
   it("rejects a malformed color", () => {

@@ -20,10 +20,14 @@ export type SubsystemId = z.infer<typeof SubsystemIdSchema>;
 
 /**
  * A subsystem's identity: its mythic name, a short Czech epithet, its one-line
- * Czech mandate (from the design doc's federation table), a brand color, and an
- * optional hero portrait. `heroImage` is a root-relative path or `null` — the
- * `null` fallback path (color-graded band) stays supported forever; phase 90
- * filled in `/subsystems/*.jpg` art for all eight.
+ * Czech mandate (from the design doc's federation table), and a brand color.
+ *
+ * A subsystem carries NO portrait. Phase 90 gave each one photographic hero art
+ * under `/subsystems/*.jpg`, but the Velín-D design settles identity on the live
+ * orb instead — the same orb on the map and in the detail header, colored by
+ * `color` and moving with the subsystem's state. The art was removed (with its
+ * `heroImage` field) rather than left dark: two competing identity marks read as
+ * two different objects. Recover the files from git history if it ever returns.
  */
 export const SubsystemSchema = z.object({
   id: SubsystemIdSchema,
@@ -31,7 +35,6 @@ export const SubsystemSchema = z.object({
   tagline: z.string().min(1),
   mandate: z.string().min(1),
   color: z.string().regex(/^#[0-9a-f]{6}$/i),
-  heroImage: z.string().nullable(),
 });
 export type Subsystem = z.infer<typeof SubsystemSchema>;
 
@@ -39,9 +42,8 @@ export type Subsystem = z.infer<typeof SubsystemSchema>;
  * The registry — identity only, phase 80. Colors are the ZT palette hues
  * (Velín-D phase 2 alignment): forge `#5b8def`, herald `#56c4d6`, sentinel
  * `#34c9bd`, scout `#46cf8b`, maestro `#e0a83c`, beacon `#f4785c`, puls
- * `#f2749e`, loom `#b07cff`. `heroImage` points at the phase-90 hero art in
- * `apps/web/public/subsystems/` (one visual family, style-locked to
- * `design/Z.I.B.B.Y/uploads/Forge.png`).
+ * `#f2749e`, loom `#b07cff`. Each color is the subsystem's whole visual
+ * identity — it drives the orb body on the map and its header echo.
  */
 export const SUBSYSTEMS: readonly Subsystem[] = [
   {
@@ -51,7 +53,6 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     mandate:
       "Orchestrace delivery pipeline: Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor.",
     color: "#5b8def",
-    heroImage: "/subsystems/forge.jpg",
   },
   {
     id: "puls",
@@ -59,7 +60,6 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     tagline: "Tep systému",
     mandate: "Sledování kanálů, kalendáře a CI/CD na srdečním tepu.",
     color: "#f2749e",
-    heroImage: "/subsystems/puls.jpg",
   },
   {
     id: "sentinel",
@@ -67,7 +67,6 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     tagline: "Strážce hranic",
     mandate: "Bezpečnost vůči externímu prostředí — CVE závislostí, úniky tajemství.",
     color: "#34c9bd",
-    heroImage: "/subsystems/sentinel.jpg",
   },
   {
     id: "maestro",
@@ -75,7 +74,6 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     tagline: "Dirigent vydání",
     mandate: "Releasy — příprava, přehled a operátorem schválené sloučení.",
     color: "#e0a83c",
-    heroImage: "/subsystems/maestro.jpg",
   },
   {
     id: "beacon",
@@ -83,7 +81,6 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     tagline: "Maják v noci",
     mandate: "Eskalace incidentů — vlastní podoba Tier-3 kontraktu surface-and-wait.",
     color: "#f4785c",
-    heroImage: "/subsystems/beacon.jpg",
   },
   {
     id: "scout",
@@ -91,7 +88,6 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     tagline: "Zvěd na cestách",
     mandate: "Výzkumné pipeline, které předávají výsledný artefakt dál.",
     color: "#46cf8b",
-    heroImage: "/subsystems/scout.jpg",
   },
   {
     id: "herald",
@@ -99,7 +95,6 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     tagline: "Hlas navenek",
     mandate: "Mluví za ZIBBY navenek — reaktivní odpovědi i proaktivní dotazování.",
     color: "#56c4d6",
-    heroImage: "/subsystems/herald.jpg",
   },
   {
     id: "loom",
@@ -107,7 +102,6 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     tagline: "Tkadlec kvality",
     mandate: "Proaktivní analýza kvality a architektury codebase, nálezy předává Forge.",
     color: "#b07cff",
-    heroImage: "/subsystems/loom.jpg",
   },
 ];
 

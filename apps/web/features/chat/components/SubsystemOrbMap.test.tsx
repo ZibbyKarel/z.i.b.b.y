@@ -33,7 +33,6 @@ function subsystem(overrides: Partial<SubsystemWithStatus> = {}): SubsystemWithS
     tagline: base.tagline,
     mandate: base.mandate,
     color: base.color,
-    heroImage: null,
     state: "idle",
     tier2Count: 0,
     tier3Count: 0,

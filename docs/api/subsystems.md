@@ -31,21 +31,26 @@ backend/vault/integrations/scheduler). Never touch or reuse it for this resource
 `SUBSYSTEMS` is a checked-in TS constant (not a `.zibby/data` file) — a config
 file, per the design doc's own framing, that both API and web import
 type-safely with zero fs plumbing, since the eight entries are fixed,
-non-user-generated data. Each entry: `{ id, name, tagline, mandate, color,
-heroImage }`. `name` is the mythic name ("Forge"), `tagline` a short Czech
-epithet, `mandate` the one-line Czech mandate from the design doc's federation
-table, `heroImage` a root-relative path or `null`. Phase 90 shipped the art:
-all eight point at `/subsystems/<id>.jpg` (assets in
-`apps/web/public/subsystems/`, one visual family style-locked to
-`design/Z.I.B.B.Y/uploads/Forge.png`); the `null` fallback (color-graded band
-in the drawer header) stays a supported path.
+non-user-generated data. Each entry: `{ id, name, tagline, mandate, color }`.
+`name` is the mythic name ("Forge"), `tagline` a short Czech epithet, `mandate`
+the one-line Czech mandate from the design doc's federation table.
 
-**Colors are PROVISIONAL.** Forge is orange `#f97316`, established by its
-existing hero art (`design/Z.I.B.B.Y/uploads/Forge.png`). The other seven carry
-placeholder hues (puls teal, sentinel red, maestro violet, beacon amber, scout
-green, herald blue, loom indigo) — each swappable by editing one registry line.
-Visual identity for the seven non-Forge subsystems is a deliberately-deferred
-design-doc item; do not treat these as final.
+**A subsystem carries no portrait.** Phase 90 shipped photographic hero art for
+all eight (`heroImage: "/subsystems/<id>.jpg"`, assets under
+`apps/web/public/subsystems/`); the Velín-D alignment removed both the field and
+the files. Identity now rides entirely on `color`, through the live orb — the
+same orb on the chat map and in the drawer header, so clicking a node and
+reading its detail are visibly the same object. Two identity marks (a portrait
+and an orb) read as two different things, so the art went rather than sitting
+dark. `subsystems.contract.test.ts` guards that no orphaned art returns; recover
+the files from git history if the decision is ever revisited.
+
+**Colors are the ZT palette hues** (Velín-D phase-2 alignment): forge `#5b8def`,
+herald `#56c4d6`, sentinel `#34c9bd`, scout `#46cf8b`, maestro `#e0a83c`, beacon
+`#f4785c`, puls `#f2749e`, loom `#b07cff`. Each is swappable by editing one
+registry line, but it is now a subsystem's ENTIRE visual identity — it colors the
+orb body on the map and in the drawer header — so a change is a design decision,
+not a tweak.
 
 ## Status shape (phase-82 real aggregation)
 

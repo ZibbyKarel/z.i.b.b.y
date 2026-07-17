@@ -3,12 +3,11 @@
 import type { SubsystemState, SubsystemWithStatus } from "@zibby/contracts";
 import {
   Container,
-  type DotTone,
   Icon,
-  IconTile,
+  ORB_STATE,
+  Orb,
   Panel,
   Stack,
-  StatusDot,
   Tab,
   TabList,
   TabPanel,
@@ -21,6 +20,7 @@ import { useTranslations } from "next-intl";
 import type { CSSProperties } from "react";
 import { useEffect, useRef } from "react";
 import { useMarkSubsystemSeenMutation } from "../../mutations/useMarkSubsystemSeenMutation";
+import { SUBSYSTEM_GLYPH, SUBSYSTEM_ORB_STATE } from "../../subsystemVisuals";
 import { AktivitaTab } from "./AktivitaTab";
 import { ArtefaktyTab } from "./ArtefaktyTab";
 import { GatesTab } from "./GatesTab";
@@ -31,10 +31,11 @@ export enum SubsystemDrawerTestId {
   Panel = "subsystem-drawer-panel",
   Close = "subsystem-drawer-close",
   Hero = "subsystem-drawer-hero",
+  Glyph = "subsystem-drawer-glyph",
   Name = "subsystem-drawer-name",
-  Tagline = "subsystem-drawer-tagline",
   Mandate = "subsystem-drawer-mandate",
   Status = "subsystem-drawer-status",
+  Count = "subsystem-drawer-count",
 }
 
 export interface SubsystemDrawerProps {
@@ -53,23 +54,6 @@ export interface SubsystemDrawerProps {
 // longer carries any placeholder machinery.
 const SUBSYSTEM_DRAWER_TABS = ["roster", "aktivita", "gates", "artefakty"] as const;
 
-/**
- * Status-dot tone + pulse per subsystem state (design doc vocabulary: idle
- * muted, running active, report a ready Tier-2 report, waiting an urgent
- * Tier-3 decision). The DS `StatusDot` tone palette (`DotTone`) has no
- * per-instance color slot, so `running` — the design doc's "info/own-color"
- * pairing — reads through the shared `run` tone, the same one every other
- * "actively working" indicator in the app uses (see `ChatScreen`'s
- * `MODE_DOT`). `report`/`waiting` mirror `SubsystemWeb`'s own per-state read
- * (calm `ok` vs urgent `wait`).
- */
-const STATE_DOT: Record<SubsystemState, { tone: DotTone; pulse: boolean }> = {
-  idle: { tone: "idle", pulse: false },
-  running: { tone: "run", pulse: true },
-  report: { tone: "ok", pulse: false },
-  waiting: { tone: "wait", pulse: true },
-};
-
 /** Count-badge tone for the two states that carry one — mirrors
  * `SubsystemWeb`'s `BADGE_TONE_CLASS` (report calm ok, waiting urgent warn). */
 const STATE_TAG_TONE: Partial<Record<SubsystemState, TagTone>> = {
@@ -77,51 +61,63 @@ const STATE_TAG_TONE: Partial<Record<SubsystemState, TagTone>> = {
   waiting: "warn",
 };
 
+/** The header orb's sphere diameter, and the box reserved for it. The orb's own
+ * canvas is `diameter / 0.8` so its glow isn't clipped (see the DS `Orb`), hence
+ * the box is larger than the sphere. Numeric px, per the immersive bundle's
+ * documented sizing-API exception for continuous canvas geometry. */
+const HEADER_ORB_DIAMETER = 44;
+const HEADER_ORB_BOX = 48;
+
 /**
- * The drawer's hero band. With `heroImage` set (phase 90 art), the portrait
- * layers under the subsystem-colored glow + the bottom legibility gradient;
- * with `heroImage: null` it falls back to the color-graded band alone — that
- * fallback path stays supported forever as the no-image case.
+ * The header's band. Velín-D (`VcSubsystemDetail`, `velin-c-detail.jsx:213`)
+ * tints the header with the subsystem's own hue fading downward into the panel
+ * — `linear-gradient(180deg, ${hue}18, transparent)` — and nothing more. No
+ * portrait, no radial wash: identity is the orb's job here, and the tint only
+ * has to whisper which subsystem you're in.
  *
- * Not literally the DS `EntityHero` component: `EntityHero`'s own no-image
- * fallback is a fixed accent tint with no per-instance color prop, so it
- * can't express each subsystem's own brand color. This follows EntityHero's
- * IDIOM instead (a band that dissolves into the panel below via a bottom
- * gradient, name/tagline/mandate/status overlaid near the bottom) as a local
- * composite — recorded per the "never leave the DS-or-local decision
- * implicit" rule. `color` is a contract-validated 6-digit hex
- * (`SubsystemSchema`), so appending a 2-digit alpha suffix for the radial
- * glow is safe, well-formed 8-digit hex CSS — a genuinely dynamic per-instance
- * value with no DS prop equivalent, routed through the DS `Panel`'s own
- * `style` passthrough below rather than a raw inline style on a DOM node.
+ * `color` is a contract-validated 6-digit hex (`SubsystemSchema`), so appending
+ * the 2-digit `18` alpha suffix is safe, well-formed 8-digit hex CSS — a
+ * genuinely dynamic per-instance value with no DS prop equivalent, routed
+ * through the DS `Container`'s own `style` passthrough rather than a raw inline
+ * style on a DOM node (CLAUDE.md).
  *
- * Exported (not module-private) so `SubsystemDrawer.test.tsx` can assert the
- * image-branch's `image-set()`/`url(...)` string directly: jsdom's CSSOM
- * (`cssstyle`) doesn't parse `image-set()` and silently drops the whole
- * `background-image` declaration when read back off a rendered DOM node, so
- * the image branch isn't observable via `getByTestId(...).style` the way the
- * gradient-only fallback branch is — see this test file's comment for detail.
+ * Exported so the test can assert the gradient directly.
  */
-export function heroBandStyle(color: string, heroImage: string | null): CSSProperties {
-  const glow = `radial-gradient(130% 160% at 12% -15%, ${color}40 0%, ${color}14 45%, transparent 78%)`;
-  if (!heroImage) return { backgroundImage: glow, minHeight: 224 };
-  // Phase 90: the hero portrait layers UNDER the color glow; the existing
-  // bottom `from-surface` gradient overlay keeps the text legible over it.
-  // Phase 103: raised from 168 to 224 so the portrait reads as a figure
-  // rather than a sliver, and the position nudged down slightly (22% -> 28%)
-  // so more of the subject's face/torso sits inside the taller band. The
-  // registry contract only ever holds the jpg path
-  // (`subsystem.schema.ts`'s `heroImage: "/subsystems/<id>.jpg"`); the
-  // sibling WebP (phase 103's `convert-to-webp.py`) is derived here by
-  // swapping the extension and offered first via `image-set()`, with the jpg
-  // as the fallback source for browsers that don't support WebP.
-  const webpImage = heroImage.replace(/\.jpg$/, ".webp");
+export function headerBandStyle(color: string): CSSProperties {
   return {
-    backgroundImage: `${glow}, image-set(url("${webpImage}") type("image/webp"), url("${heroImage}") type("image/jpeg"))`,
-    backgroundSize: "auto, cover",
-    backgroundPosition: "center, center 28%",
-    backgroundRepeat: "no-repeat",
-    minHeight: 224,
+    backgroundImage: `linear-gradient(180deg, ${color}18, transparent)`,
+    borderBottom: "1px solid var(--color-border)",
+  };
+}
+
+/**
+ * The header's state pill. Velín-D pairs a dot (glowing only while the state is
+ * live) with a mono label, both in the STATE's color, inside a hairline capsule
+ * — `velin-c-detail.jsx:229-232`.
+ *
+ * The color comes from the DS `ORB_STATE` table, the same one the map's
+ * `OrbNode` chrome reads, so the pill and the orb you clicked always agree on
+ * what "working" looks like. Hand-rolled rather than the DS `Tag`: `Tag`'s tones
+ * are a fixed semantic palette with no per-instance color slot, and this has to
+ * track `ORB_STATE` exactly.
+ */
+export function statePillStyle(stateColor: string): CSSProperties {
+  return {
+    borderRadius: 999,
+    border: `1px solid ${stateColor}44`,
+    background: `${stateColor}12`,
+  };
+}
+
+/** The pill's dot — identity-free, STATE-colored, and glowing only while live
+ * (the same `live` flag that drives the map orb's halo pulse). */
+export function stateDotStyle(stateColor: string, live: boolean): CSSProperties {
+  return {
+    width: 6,
+    height: 6,
+    borderRadius: "50%",
+    background: stateColor,
+    boxShadow: live ? `0 0 6px ${stateColor}` : "none",
   };
 }
 
@@ -179,8 +175,20 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
     };
   }, []);
 
-  const dot = STATE_DOT[subsystem.state];
+  // The orb's state and its chrome color come from the SAME tables the map
+  // reads (`subsystemVisuals` → DS `ORB_STATE`), so the header orb and the map
+  // node can't drift apart — see `subsystemVisuals`'s doc comment.
+  const orbState = SUBSYSTEM_ORB_STATE[subsystem.state];
+  const stateStyle = ORB_STATE[orbState];
   const tagTone = STATE_TAG_TONE[subsystem.state];
+  // `countValue` is what the badge SHOWS, `countLabel` what it's ANNOUNCED as —
+  // see the badge's own comment for why those differ.
+  const countValue =
+    subsystem.state === "report"
+      ? subsystem.tier2Count
+      : subsystem.state === "waiting"
+        ? subsystem.tier3Count
+        : null;
   const countLabel =
     subsystem.state === "report"
       ? t("tier2Badge", { count: subsystem.tier2Count })
@@ -219,77 +227,107 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
           tabIndex={-1}
         >
           {/* The DS `Container` (not a raw `div`) so the per-subsystem gradient
-              — see `heroBandStyle`'s doc comment — goes through a DS
+              — see `headerBandStyle`'s doc comment — goes through a DS
               component's own `style` passthrough rather than a raw DOM node. */}
           <Container
             data-testid={SubsystemDrawerTestId.Hero}
-            overflow="hidden"
-            position="relative"
+            padding={["250", "300"]}
             shrink={false}
-            style={heroBandStyle(subsystem.color, subsystem.heroImage)}
+            style={headerBandStyle(subsystem.color)}
           >
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-surface via-surface/55 to-transparent" />
-
-            <button
-              aria-label={t("drawer.close")}
-              className="absolute top-3 right-3 z-[1] grid size-7 cursor-pointer place-items-center rounded-sm border border-border bg-background/70 text-foreground-faint backdrop-blur-sm hover:text-foreground"
-              data-testid={SubsystemDrawerTestId.Close}
-              onClick={onClose}
-              type="button"
-            >
-              <Icon name="x" size="sm" />
-            </button>
-
-            <div className="relative z-[1] flex flex-col gap-2 p-4 pt-5">
-              <Stack align="center" direction="row" gap="100">
-                <IconTile
-                  filled={false}
-                  glyph="bot"
-                  style={{ borderColor: subsystem.color, color: subsystem.color }}
+            <Stack align="center" direction="row" gap="200">
+              {/* The orb, carried over from the map node the operator just
+                  clicked: same identity color, same glyph, same state motion.
+                  That continuity IS the design's core gesture — the header
+                  should read as the thing you clicked, opened up. */}
+              <Container
+                height={`${HEADER_ORB_BOX}px`}
+                position="relative"
+                shrink={false}
+                width={`${HEADER_ORB_BOX}px`}
+              >
+                <Orb
+                  detail={1}
+                  diameter={HEADER_ORB_DIAMETER}
+                  hex={subsystem.color}
+                  state={orbState}
                 />
-                <Stack gap="25">
+                <Container
+                  data-testid={SubsystemDrawerTestId.Glyph}
+                  pointerEvents="none"
+                  position="absolute"
+                  style={{ inset: 0, display: "grid", placeItems: "center", color: "#eef3fb" }}
+                >
+                  <Icon name={SUBSYSTEM_GLYPH[subsystem.id]} size="lg" />
+                </Container>
+              </Container>
+
+              <Container grow minW0>
+                <Stack gap="50">
+                  <Stack align="center" direction="row" gap="150">
+                    <Typography truncate data-testid={SubsystemDrawerTestId.Name} type="title">
+                      {subsystem.name}
+                    </Typography>
+
+                    <Container
+                      data-testid={SubsystemDrawerTestId.Status}
+                      padding={["25", "150"]}
+                      shrink={false}
+                      style={statePillStyle(stateStyle.color)}
+                    >
+                      <Stack align="center" direction="row" gap="75">
+                        <Container
+                          shrink={false}
+                          style={stateDotStyle(stateStyle.color, stateStyle.live)}
+                        />
+                        <Typography nowrap style={{ color: stateStyle.color }} type="micro">
+                          {t(`state.${subsystem.state}`)}
+                        </Typography>
+                      </Stack>
+                    </Container>
+
+                    {/* Not in the Velín-D header, kept deliberately: the pill
+                        says a decision is waiting, only this says how many.
+                        Bare numeral on purpose — the full phrase ("2 čeká na
+                        rozhodnutí") sits right next to a pill already reading
+                        "Čeká na rozhodnutí", and rendering both stutters. The
+                        phrase stays as the accessible name, so a screen reader
+                        still gets the count in words. */}
+                    {showCount && tagTone && (
+                      <Tag
+                        aria-label={countLabel}
+                        data-testid={SubsystemDrawerTestId.Count}
+                        tone={tagTone}
+                      >
+                        {countValue}
+                      </Tag>
+                    )}
+                  </Stack>
+
+                  {/* Velín-D folds mandate and tagline onto one line — the
+                      mandate leads (it's what the subsystem DOES), the epithet
+                      trails. */}
                   <Typography
-                    mono
-                    data-testid={SubsystemDrawerTestId.Name}
-                    size="lg"
-                    type="label"
-                    weight="bold"
-                  >
-                    {subsystem.name}
-                  </Typography>
-                  <Typography
-                    data-testid={SubsystemDrawerTestId.Tagline}
-                    size="xs"
+                    truncate
+                    data-testid={SubsystemDrawerTestId.Mandate}
                     type="note"
                     variant="secondary"
                   >
-                    {subsystem.tagline}
+                    {subsystem.mandate} · {subsystem.tagline}
                   </Typography>
                 </Stack>
-              </Stack>
+              </Container>
 
-              <Typography
-                data-testid={SubsystemDrawerTestId.Mandate}
-                size="sm"
-                type="note"
-                variant="tertiary"
+              <button
+                aria-label={t("drawer.close")}
+                className="flex shrink-0 cursor-pointer p-1 text-foreground-faint hover:text-foreground"
+                data-testid={SubsystemDrawerTestId.Close}
+                onClick={onClose}
+                type="button"
               >
-                {subsystem.mandate}
-              </Typography>
-
-              <Stack
-                align="center"
-                data-testid={SubsystemDrawerTestId.Status}
-                direction="row"
-                gap="75"
-              >
-                <StatusDot pulse={dot.pulse} tone={dot.tone} />
-                <Typography mono size="xs" type="note" variant="secondary">
-                  {t(`state.${subsystem.state}`)}
-                </Typography>
-                {showCount && tagTone && <Tag tone={tagTone}>{countLabel}</Tag>}
-              </Stack>
-            </div>
+                <Icon name="x" size="lg" />
+              </button>
+            </Stack>
           </Container>
 
           <Tabs defaultValue="roster">
