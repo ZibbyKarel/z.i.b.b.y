@@ -12,33 +12,33 @@
 
 ## Status table
 
-| Phase | Title                                    | Status  | Plan doc                                       | Commit |
-| ----- | ---------------------------------------- | ------- | ---------------------------------------------- | ------ |
-| F0a   | Delete discovery orphan (goals STAYS)    | 🟦 next | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)    | —      |
-| F0b   | Per-project draft PR mode (prOpenMode)   | 🟦      | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)    | —      |
-| F0c   | Proposal source tag on approvals inbox   | 🟦      | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)    | —      |
-| F0d   | Law-3 text amendment (vault north-star)  | 🟦      | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)    | —      |
-| F1a   | Contract: ownerSubsystem + registry → 10 | 🟦      | [ns2-f1](../plans/ns2-f1-ownership-is-data.md) | —      |
-| F1b   | Backfill/seed + write 422 + UI selects   | 🟦      | [ns2-f1](../plans/ns2-f1-ownership-is-data.md) | —      |
-| F1c   | Stored roster (service + RosterTab)      | 🟦      | [ns2-f1](../plans/ns2-f1-ownership-is-data.md) | —      |
-| F2a   | Switchboard emits subsystem verdicts     | ⬜      | —                                              | —      |
-| F2b   | Per-subsystem dispatcher prompt+fallback | ⬜      | —                                              | —      |
-| F2c   | Classification trace + activity tagging  | ⬜      | —                                              | —      |
-| F3a   | Subsystem gate-rule sets + tier defaults | ⬜      | —                                              | —      |
-| F3b   | Briefing per subsystem (Beacon/Ledger)   | ⬜      | —                                              | —      |
-| F3c   | Approvals/activity filters + get_status  | ⬜      | —                                              | —      |
-| F4a   | Subsystem MOC shelves (record/distill)   | ⬜      | —                                              | —      |
-| F4b   | Retrieval upgrade (tags + link graph)    | ⬜      | —                                              | —      |
-| F4c   | Vault seed + scheduled self-knowledge    | ⬜      | —                                              | —      |
-| F5a   | Sentinel v1 (CVE + secret watch)         | ⬜      | —                                              | —      |
-| F5b   | Maestro v1 (merge queue, read-side)      | ⬜      | —                                              | —      |
-| F5c   | Loom v1 (scheduled quality audit)        | ⬜      | —                                              | —      |
-| F6a   | Herald reply ledger + graduation         | ⬜      | —                                              | —      |
-| F6b   | Live soak harness (opt-in lane)          | ⬜      | —                                              | —      |
-| F6c   | Watcher health probes                    | ⬜      | —                                              | —      |
-| F7a   | Sentry MonitorAdapter                    | ⬜      | —                                              | —      |
-| F7b   | Merge-queue actions + post-merge loop    | ⬜      | —                                              | —      |
-| F8    | Hearth + personal domain                 | ⬜      | —                                              | —      |
+| Phase | Title                                    | Status  | Plan doc                                           | Commit     |
+| ----- | ---------------------------------------- | ------- | -------------------------------------------------- | ---------- |
+| F0a   | Delete discovery orphan (goals STAYS)    | ✅      | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `c02a68a9` |
+| F0b   | Per-project draft PR mode (prOpenMode)   | ✅      | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `10de4ad3` |
+| F0c   | Proposal source tag on approvals inbox   | ✅      | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `101759d7` |
+| F0d   | Law-3 text amendment (vault north-star)  | ✅      | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `d4c53782` |
+| F1a   | Contract: ownerSubsystem + registry → 10 | 🟨 next | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | —          |
+| F1b   | Backfill/seed + write 422 + UI selects   | 🟦      | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | —          |
+| F1c   | Stored roster (service + RosterTab)      | 🟦      | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | —          |
+| F2a   | Switchboard emits subsystem verdicts     | 🟦      | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | —          |
+| F2b   | Per-subsystem dispatcher prompt+fallback | 🟦      | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | —          |
+| F2c   | Classification trace + activity tagging  | 🟦      | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | —          |
+| F3a   | Subsystem gate-rule sets + tier defaults | 🟦      | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | —          |
+| F3b   | Briefing per subsystem (Beacon/Ledger)   | 🟦      | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | —          |
+| F3c   | Approvals/activity filters + get_status  | 🟦      | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | —          |
+| F4a   | Subsystem MOC shelves (record/distill)   | ⬜      | —                                                  | —          |
+| F4b   | Retrieval upgrade (tags + link graph)    | ⬜      | —                                                  | —          |
+| F4c   | Vault seed + scheduled self-knowledge    | ⬜      | —                                                  | —          |
+| F5a   | Sentinel v1 (CVE + secret watch)         | ⬜      | —                                                  | —          |
+| F5b   | Maestro v1 (merge queue, read-side)      | ⬜      | —                                                  | —          |
+| F5c   | Loom v1 (scheduled quality audit)        | ⬜      | —                                                  | —          |
+| F6a   | Herald reply ledger + graduation         | ⬜      | —                                                  | —          |
+| F6b   | Live soak harness (opt-in lane)          | ⬜      | —                                                  | —          |
+| F6c   | Watcher health probes                    | ⬜      | —                                                  | —          |
+| F7a   | Sentry MonitorAdapter                    | ⬜      | —                                                  | —          |
+| F7b   | Merge-queue actions + post-merge loop    | ⬜      | —                                                  | —          |
+| F8    | Hearth + personal domain                 | ⬜      | —                                                  | —          |
 
 Legend: ⬜ todo · 🟦 planned (plan reviewed) · 🟨 in progress · ✅ done (tests green,
 committed) · ⛔ parked (reason in Notes).
@@ -51,6 +51,16 @@ committed) · ⛔ parked (reason in Notes).
   (`git cherry` = 0) and deleted. Kept as genuinely unmerged:
   `feat/phase-45-qualify`(10), `feat/todo-chat-detail-width`(3), `develop`(2),
   `feat/speakd-tts-integration`(1), `chore/audit-remediation-plans`(1).
+
+## Implementation log
+
+- **F0 complete (2026-07-17, Sonnet):** suites green (api 1764/1764,
+  web-components 1103/1103, 3× tsc). Deviations: `discovery.e2e.test.ts` also
+  deleted (exercised the deleted module); 2 pre-existing ProjectBasicsPanel
+  category tests switched to `getByLabelText` (new select made DropdownTestId
+  ambiguous). Legacy task-output `resolve()` path intentionally ignores
+  `prOpenMode` (no project in scope — commented). Known flake: `runner-core.test.ts`
+  ENOENT under parallel load, passes in isolation.
 
 ## Planning corrections (verified in code — the audit/roadmap were wrong here)
 
