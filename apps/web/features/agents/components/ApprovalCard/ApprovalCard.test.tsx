@@ -67,3 +67,15 @@ describe("ApprovalCard", () => {
     expect(screen.getByText(/Zamítnuto/)).toBeInTheDocument();
   });
 });
+
+describe("ApprovalCard origin chip (NS2 F0c)", () => {
+  it("renders an origin chip when the approval carries a known source", () => {
+    render(<ApprovalCard approval={{ ...approval, source: "agent-factory" }} />);
+    expect(screen.getByTestId("approval-origin-chip")).toHaveTextContent("Agent Factory");
+  });
+
+  it("renders no origin chip when source is absent (older/unenriched approval)", () => {
+    render(<ApprovalCard approval={approval} />);
+    expect(screen.queryByTestId("approval-origin-chip")).not.toBeInTheDocument();
+  });
+});

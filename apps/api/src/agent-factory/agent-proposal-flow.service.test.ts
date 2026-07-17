@@ -87,10 +87,20 @@ describe("AgentProposalFlowService", () => {
       expect(call.action).toBe("agent.propose_new");
 
       const detail = JSON.parse(call.detail);
-      expect(detail.summary).toContain("auto-deploy-staging".replace("auto-deploy-staging", "Deploy Staging Specialist"));
+      expect(detail.summary).toContain(
+        "auto-deploy-staging".replace("auto-deploy-staging", "Deploy Staging Specialist"),
+      );
       expect(detail.preview.kind).toBe("diff");
       expect(detail.preview.file).toBe("auto-deploy-staging.md");
       expect(detail.preview.hunks[0].lines.length).toBeGreaterThan(0);
+    });
+
+    it("tags the parked approval's detail with source: agent-factory (NS2 F0c)", async () => {
+      const { svc, approvals } = makeService({});
+      await svc.propose(CANDIDATE);
+      const call = approvals.requestApproval.mock.calls[0]![0];
+      const detail = JSON.parse(call.detail);
+      expect(detail.source).toBe("agent-factory");
     });
 
     it("evaluates agent.propose_new against the gate floor with the candidate id as scope", async () => {

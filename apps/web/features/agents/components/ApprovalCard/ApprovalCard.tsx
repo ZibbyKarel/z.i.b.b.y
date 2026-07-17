@@ -19,11 +19,18 @@ export interface ApprovalCardProps {
   /**
    * Domain approval; an enriched backend payload may add a semantic `riskType`
    * and carries the contract `kind` (agent/channel/…) the card keys its testid on.
+   * `source` (NS2 F0c) — the proposal's origin (e.g. `"agent-factory"`), packed
+   * into the same `detail` envelope; renders a minimal origin chip when present.
    */
-  approval: Approval & { riskType?: string; kind?: string };
+  approval: Approval & { riskType?: string; kind?: string; source?: string };
   onApprove?: (approval: Approval) => void;
   onReject?: (approval: Approval) => void;
 }
+
+/** Origin (`ApprovalEnrichment.source`) → its i18n label key. Unknown/absent → no chip. */
+const ORIGIN_LABEL_KEY: Record<string, "originAgentFactory"> = {
+  "agent-factory": "originAgentFactory",
+};
 
 /** Domain risk tag (Czech) → DS risk kind. Unknown tags fall back to a chip. */
 const riskKind: Record<string, RiskKind> = {
@@ -52,6 +59,7 @@ export function ApprovalCard({ approval, onApprove, onReject }: ApprovalCardProp
   // simply don't match the map and fall back to the plain chip + button.
   const kind = riskKind[approval.riskType ?? approval.risk];
   const hold = kind !== undefined && highRisk.has(kind);
+  const originLabelKey = approval.source ? ORIGIN_LABEL_KEY[approval.source] : undefined;
 
   return (
     <Card
@@ -81,13 +89,20 @@ export function ApprovalCard({ approval, onApprove, onReject }: ApprovalCardProp
                 {t("waiting")}
               </Typography>
             </Stack>
-            {kind ? (
-              <Tag icon={riskIcon[kind]} tone={kind}>
-                {t(`riskTag.${kind}`)}
-              </Tag>
-            ) : (
-              <Tag tone="neutral">{approval.risk}</Tag>
-            )}
+            <Stack align="center" direction="row" gap="75">
+              {originLabelKey && (
+                <Tag data-testid="approval-origin-chip" tone="neutral">
+                  {t(originLabelKey)}
+                </Tag>
+              )}
+              {kind ? (
+                <Tag icon={riskIcon[kind]} tone={kind}>
+                  {t(`riskTag.${kind}`)}
+                </Tag>
+              ) : (
+                <Tag tone="neutral">{approval.risk}</Tag>
+              )}
+            </Stack>
           </Stack>
 
           <Stack gap="25">
