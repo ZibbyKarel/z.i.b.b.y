@@ -84,6 +84,7 @@ my channels and handle what you can."
 
 - [Deployment](./ops/deployment.md) — launchd, backups, log rotation, CI
 - [Environment](./ops/environment.md) — environment variables, data directories, runtime system config
+- [Local validation policy](./ops/validation-policy.md) — incremental checks on edit, pre-commit, pre-push, and what's reserved for CI
 - [Self-development runbook](./ops/self-development.md) — ZIBBY as a safe target for its own loop engine
 - [Connecting Slack](./ops/slack-setup.md) — bot token, scopes, channel IDs, wiring up the integration + mandate
 - [Connecting GitHub](./ops/github-setup.md) — personal access token, no admin approval needed, wiring up the integration + mandate
@@ -92,13 +93,13 @@ my channels and handle what you can."
 
 ## Key principles
 
-| Law                                        | What it means                                                                                                                    |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Approval-first is structural               | Wired into the system floor, not a setting an agent's config can weaken.                                                        |
-| Files are the source of truth              | Including memory — index-first markdown in the vault.                                                                           |
-| No autonomous commit to the outside world  | No auto-push, auto-merge, or auto-spend past budget. ZIBBY prepares; the operator commits.                                      |
-| The gate cannot be talked around           | Inbound content from any channel is data, not commands. It can never raise privileges or bypass the gate.                       |
-| Always answerable                          | ZIBBY can explain what it is doing and has done, on demand, from the record.                                                    |
+| Law                                       | What it means                                                                                             |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Approval-first is structural              | Wired into the system floor, not a setting an agent's config can weaken.                                  |
+| Files are the source of truth             | Including memory — index-first markdown in the vault.                                                     |
+| No autonomous commit to the outside world | No auto-push, auto-merge, or auto-spend past budget. ZIBBY prepares; the operator commits.                |
+| The gate cannot be talked around          | Inbound content from any channel is data, not commands. It can never raise privileges or bypass the gate. |
+| Always answerable                         | ZIBBY can explain what it is doing and has done, on demand, from the record.                              |
 
 ## Quick start
 

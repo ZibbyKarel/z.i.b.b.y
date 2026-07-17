@@ -13,6 +13,7 @@
     "check:format": "prettier --check .",
     "check:self-knowledge": "pnpm --filter @zibby/api exec ts-node -P tsconfig.json ../../tools/self-knowledge/generate.ts --check",
     "check:types": "tsc -p tsconfig.base.json --noEmit && tsc -p apps/web/tsconfig.json --noEmit",
+    "check:types:incremental": "tsc -p tsconfig.base.json --noEmit --incremental --tsBuildInfoFile .cache/tsc-base.tsbuildinfo && tsc -p apps/web/tsconfig.json --noEmit --incremental --tsBuildInfoFile .cache/tsc-web.tsbuildinfo",
     "check:cycles": "madge --circular apps/web",
     "check:lint": "eslint --fix .",
     "check:deps": "bash tools/check-deps.sh",
@@ -72,6 +73,7 @@
     "eslint-config-next": "^16.2.7",
     "eslint-plugin-react": "^7.37.5",
     "jsdom": "^25.0.1",
+    "lint-staged": "^17.0.8",
     "madge": "^8.0.0",
     "postcss": "^8.4.49",
     "prettier": "^3.8.4",
@@ -79,5 +81,14 @@
     "tailwindcss": "^4.3.0",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,md,css,yml,yaml}": [
+      "prettier --write"
+    ]
   }
 }

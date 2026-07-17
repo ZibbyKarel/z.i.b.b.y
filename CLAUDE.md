@@ -295,17 +295,24 @@ The hook and its file share one name with a `Query`/`Mutation` suffix
 
 ---
 
-## After each code generation
+## After editing a file
 
-Run these three commands in order after generating or modifying any code files:
+Full source of truth: `docs/ops/validation-policy.md`. Short version — validate
+incrementally, not repo-wide, and fix immediately instead of batching:
 
 ```bash
-pnpm check:lint   # ESLint auto-fix (acts as project formatter)
-pnpm check:types  # tsc --noEmit
-pnpm test         # vitest run
+pnpm exec prettier --write <file>   # the file(s) just changed
+pnpm exec eslint --fix <file>       # the file(s) just changed
 ```
 
-Fix all errors before reporting the task as done. Do not skip steps.
+If the file has an obvious related test, run just that test file (scoped to its
+package, e.g. `pnpm exec vitest run <path> --project web`) — not `pnpm test`.
+
+Fix any failure immediately, before editing another file. Never run `pnpm
+check:lint`, `pnpm check:types`, `pnpm test`, or `pnpm web:build` repo-wide as a
+matter of course after a single file edit — those are pre-push/CI-tier checks.
+Run them project-wide only when the task is genuinely about to be handed off
+(e.g. before reporting a larger task fully done, or before a push).
 
 ---
 
@@ -330,6 +337,7 @@ Fix all errors before reporting the task as done. Do not skip steps.
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
 
 Rules:
+
 - For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.

@@ -1,0 +1,46 @@
+#!/bin/sh
+# Local validation policy (docs/ops/validation-policy.md) pre-push tier: a full
+# project typecheck (not diff-scoped — tsc has no such mode, this re-checks the
+# whole graph, just via the same --incremental flags as package.json's
+# `check:types:incremental` script, kept in sync manually, so a cache warmed by
+# pre-commit makes this fast) + tests related to what changed vs. the branch's
+# upstream (that part IS diff-scoped, via `vitest --changed`). Full repo-wide lint
+# and the full test suite stay in CI — this hook deliberately does not re-run them.
+#
+# Validation output runs through `rtk` (~/.claude/RTK.md) when it's on PATH, for
+# cheaper output when an agent is reading this hook's output. tsc is invoked as
+# `rtk tsc` directly (not via `pnpm exec`/`pnpm run`) so rtk's dedicated
+# grouped-error filter actually fires — falls back to `pnpm exec tsc` when rtk
+# isn't installed. `git rev-parse` below is NOT routed through rtk — its output is
+# parsed into $UPSTREAM, and rtk's compacted format isn't guaranteed parseable the
+# same way.
+#
+# Tolerant by design, same as .githooks/pre-commit: never block a push just
+# because the repo isn't `pnpm install`ed yet.
+
+if command -v rtk >/dev/null 2>&1; then
+  RTK="rtk"
+  TSC="rtk tsc"
+else
+  RTK=""
+  TSC="pnpm exec tsc"
+fi
+
+if [ ! -d node_modules ] || [ ! -d apps/api/node_modules ]; then
+  echo "[pre-push] node_modules missing — skipping validation (run pnpm install)."
+  exit 0
+fi
+
+$TSC -p tsconfig.base.json --noEmit --incremental --tsBuildInfoFile .cache/tsc-base.tsbuildinfo \
+  && $TSC -p apps/web/tsconfig.json --noEmit --incremental --tsBuildInfoFile .cache/tsc-web.tsbuildinfo
+TYPES_STATUS=$?
+if [ "$TYPES_STATUS" -ne 0 ]; then
+  exit "$TYPES_STATUS"
+fi
+
+UPSTREAM=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null)
+if [ -z "$UPSTREAM" ]; then
+  UPSTREAM="main"
+fi
+
+$RTK pnpm exec vitest run --changed "$UPSTREAM"

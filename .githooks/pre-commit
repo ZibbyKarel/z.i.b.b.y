@@ -1,18 +1,58 @@
 #!/bin/sh
-# Self-Knowledge drift gate (Fáze 1 — docs/plans/phase-06.md). Refuses a commit
-# whose agents/pipelines/gate-rules/channels drifted from the committed
-# self-knowledge vault note, so the note never silently goes stale.
+# Local validation policy (docs/ops/validation-policy.md) pre-commit tier: format +
+# lint staged files via lint-staged, an incremental typecheck when staged files
+# include TS/TSX, and the Self-Knowledge drift gate (Fáze 1 —
+# docs/plans/phase-06.md), which refuses a commit whose
+# agents/pipelines/gate-rules/channels drifted from the committed self-knowledge
+# vault note. None of these run repo-wide checks (full lint/test/build) — those
+# stay in pre-push and CI. The typecheck here uses the same --incremental flags as
+# package.json's `check:types:incremental` script (kept in sync manually) so a
+# warmed .cache/ (gitignored) makes repeat commits fast.
+#
+# Validation output runs through `rtk` (~/.claude/RTK.md — the operator's
+# token-optimized CLI proxy) when it's on PATH, so an agent reading this hook's
+# output pays fewer tokens. tsc is invoked as `rtk tsc` directly (not via `pnpm
+# exec`/`pnpm run`) because rtk's dedicated grouped-error filter only fires when tsc
+# is the literal command it sees — going through a pnpm wrapper is plain,
+# unfiltered passthrough. Falls back to `pnpm exec tsc` (no filtering, but
+# guaranteed to resolve) when rtk isn't installed. `git diff` calls below are NOT
+# routed through rtk — their output is parsed for control flow (TS_FILES, the
+# staleness loop), and rtk's compacted format isn't guaranteed parseable the same way.
 #
 # Tolerant by design: this hook must never block a commit just because the repo
 # isn't `pnpm install`ed yet (e.g. a fresh clone, or a commit made before the
 # first install) — it skips with a note instead of failing in that case.
 
+if command -v rtk >/dev/null 2>&1; then
+  RTK="rtk"
+  TSC="rtk tsc"
+else
+  RTK=""
+  TSC="pnpm exec tsc"
+fi
+
 if [ ! -d node_modules ] || [ ! -d apps/api/node_modules ]; then
-  echo "[pre-commit] node_modules missing — skipping check:self-knowledge (run pnpm install)."
+  echo "[pre-commit] node_modules missing — skipping validation (run pnpm install)."
   exit 0
 fi
 
-pnpm check:self-knowledge
+$RTK pnpm exec lint-staged
+LINT_STATUS=$?
+if [ "$LINT_STATUS" -ne 0 ]; then
+  exit "$LINT_STATUS"
+fi
+
+TS_FILES=$(git diff --cached --name-only --diff-filter=ACMR -- '*.ts' '*.tsx')
+if [ -n "$TS_FILES" ]; then
+  $TSC -p tsconfig.base.json --noEmit --incremental --tsBuildInfoFile .cache/tsc-base.tsbuildinfo \
+    && $TSC -p apps/web/tsconfig.json --noEmit --incremental --tsBuildInfoFile .cache/tsc-web.tsbuildinfo
+  TYPES_STATUS=$?
+  if [ "$TYPES_STATUS" -ne 0 ]; then
+    exit "$TYPES_STATUS"
+  fi
+fi
+
+$RTK pnpm check:self-knowledge
 CHECK_STATUS=$?
 
 # --- graphify-out staleness warning (Fáze 10 — non-blocking, always exits 0) ---
