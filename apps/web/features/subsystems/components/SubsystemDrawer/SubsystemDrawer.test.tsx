@@ -1,7 +1,8 @@
 import { SUBSYSTEMS, type SubsystemWithStatus } from "@zibby/contracts";
+import { Dialog } from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, renderWithProviders, screen } from "../../../../test/render";
+import { fireEvent, render, renderWithProviders, screen } from "../../../../test/render";
 import {
   PANEL_EXIT_MS,
   SubsystemDrawer,
@@ -9,6 +10,8 @@ import {
   backdropStyle,
   headerBandStyle,
   panelTransitionStyle,
+  stateDotStyle,
+  statePillStyle,
 } from "./SubsystemDrawer";
 
 const markSeenMutate = vi.fn();
@@ -231,6 +234,27 @@ describe("SubsystemDrawer (Phase 84)", () => {
     });
   });
 
+  describe("statePillStyle / stateDotStyle (pure)", () => {
+    it("statePillStyle derives a hairline capsule from the state color", () => {
+      expect(statePillStyle("#7dd3fc")).toEqual({
+        borderRadius: 999,
+        border: "1px solid #7dd3fc44",
+        background: "#7dd3fc12",
+      });
+    });
+
+    it("stateDotStyle glows only when live", () => {
+      expect(stateDotStyle("#7dd3fc", true)).toMatchObject({
+        background: "#7dd3fc",
+        boxShadow: "0 0 6px #7dd3fc",
+      });
+      expect(stateDotStyle("#7dd3fc", false)).toMatchObject({
+        background: "#7dd3fc",
+        boxShadow: "none",
+      });
+    });
+  });
+
   it("defaults to the Roster tab and switches between all four tabs", async () => {
     const user = userEvent.setup();
     renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />);
@@ -354,6 +378,39 @@ describe("SubsystemDrawer (Phase 84)", () => {
       const { unmount } = renderWithProviders(
         <SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />,
       );
+      expect(document.body.style.overflow).toBe("hidden");
+
+      unmount();
+      expect(document.body.style.overflow).toBe("");
+    });
+
+    it("cedes Escape to a nested DS Dialog and keeps scroll locked until the drawer itself closes", () => {
+      // Fake timers, like the drawer's other Escape/close tests in this file:
+      // `requestClose` defers the real `onClose` call behind a `setTimeout`, so
+      // without advancing past it we couldn't observe whether the drawer's own
+      // handler ever fired at all.
+      vi.useFakeTimers();
+      const onClose = vi.fn();
+      const { unmount } = renderWithProviders(
+        <SubsystemDrawer onClose={onClose} subsystem={fixture()} />,
+      );
+      expect(document.body.style.overflow).toBe("hidden");
+
+      const { unmount: unmountDialog } = render(
+        <Dialog open title="Nested">
+          nested
+        </Dialog>,
+      );
+      expect(document.body.style.overflow).toBe("hidden");
+
+      fireEvent.keyDown(document, { key: "Escape" });
+      vi.advanceTimersByTime(PANEL_EXIT_MS);
+      // The nested Dialog is topmost — it should be the one to react to
+      // Escape (a no-op here, since this Dialog has no onClose wired), not the
+      // drawer underneath it.
+      expect(onClose).not.toHaveBeenCalled();
+
+      unmountDialog();
       expect(document.body.style.overflow).toBe("hidden");
 
       unmount();

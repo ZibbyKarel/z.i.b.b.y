@@ -267,9 +267,11 @@ export function ChatScreen({
 
       {/* ── Main area: the left tasks gutter + inline drawers over the scene ─
           This outer wrapper deliberately carries NO explicit z-index — only
-          `relative` (a containing block for the drawer/detail column below, but
-          not a stacking context of its own), so the drawer's `z-30` competes
-          directly against the root-level chrome siblings and wins (Phase 99). */}
+          `relative` (a containing block for the left tasks panel below, via its
+          `absolute` positioning). The subsystem detail modal no longer depends
+          on this wrapper at all as of Phase 125 — it's `position: fixed` with
+          its own z-40, escaping this stacking context entirely (see the mount
+          comment further down). */}
       <div className="relative flex min-h-0 flex-1 flex-col">
         {/* `pointer-events-none` on this wrapper so the scene stays clickable
             everywhere outside its populated regions (the left panel re-enables

@@ -40,6 +40,8 @@ export {
 export { DesignSystemProvider } from "./DesignSystemContext/DesignSystemProvider";
 export type { DesignSystemProviderProps } from "./DesignSystemContext/DesignSystemProvider";
 export { useSpacing, useTokens } from "./DesignSystemContext/hooks";
+export { useOverlayStack } from "./hooks/useOverlayStack";
+export type { OverlayStackHandle } from "./hooks/useOverlayStack";
 
 // ---------------------------------------------------------------------------
 // Primitives

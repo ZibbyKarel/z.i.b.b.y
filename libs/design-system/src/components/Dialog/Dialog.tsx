@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useEffect, useId, useRef } from "react";
 import { cn } from "../../utils/cn";
 import { focusRing } from "../../utils/focus";
+import { useOverlayStack } from "../../hooks/useOverlayStack";
 import { Row } from "../Stack/Stack";
 
 const FOCUSABLE_SELECTOR =
@@ -74,10 +75,12 @@ export function Dialog({
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const descriptionId = useId();
+  const { isTopmost } = useOverlayStack(open);
 
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
+      if (!isTopmost()) return;
       if (e.key === "Escape") {
         onClose?.();
         return;
@@ -106,15 +109,13 @@ export function Dialog({
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [open, onClose]);
+  }, [open, onClose, isTopmost]);
 
   useEffect(() => {
     if (open) {
       const prev = document.activeElement as HTMLElement | null;
       dialogRef.current?.focus();
-      document.body.style.overflow = "hidden";
       return () => {
-        document.body.style.overflow = "";
         // The opener may have unmounted while the dialog was up.
         if (prev?.isConnected) prev.focus();
       };

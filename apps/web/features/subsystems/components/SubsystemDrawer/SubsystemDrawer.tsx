@@ -15,6 +15,7 @@ import {
   Tag,
   type TagTone,
   Typography,
+  useOverlayStack,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import type { CSSProperties } from "react";
@@ -260,11 +261,19 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subsystem.id]);
 
+  // Shares the DS `Dialog`'s overlay stack: `true` because this component IS
+  // the modal for its whole mounted lifetime, including the `"closing"` phase
+  // — the parent doesn't unmount it until `requestClose`'s deferred `onClose`
+  // fires, so scroll must stay locked through the exit animation too, matching
+  // prior behavior.
+  const { isTopmost } = useOverlayStack(true);
+
   // Escape closes; focus moves into the drawer on mount and returns to
   // whatever was focused before it (the clicked/keyboard-activated node in
   // `SubsystemWeb`) on unmount — the same a11y idiom as the DS `Dialog`.
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
+      if (!isTopmost()) return;
       if (event.key === "Escape") {
         requestClose();
         return;
@@ -293,20 +302,13 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [requestClose]);
+  }, [requestClose, isTopmost]);
 
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
     panelRef.current?.focus();
     return () => {
       if (previouslyFocused?.isConnected) previouslyFocused.focus();
-    };
-  }, []);
-
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = "";
     };
   }, []);
 

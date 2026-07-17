@@ -164,4 +164,51 @@ describe("Dialog", () => {
     await userEvent.tab({ shift: true });
     expect(document.activeElement).toBe(okButton);
   });
+
+  it("only the most-recently-opened dialog reacts to Escape when two are open at once", async () => {
+    const onCloseOuter = vi.fn();
+    const onCloseInner = vi.fn();
+    render(
+      <>
+        <Dialog open onClose={onCloseOuter} title="Outer">
+          outer
+        </Dialog>
+        <Dialog open onClose={onCloseInner} title="Inner">
+          inner
+        </Dialog>
+      </>,
+    );
+
+    await userEvent.keyboard("{Escape}");
+
+    expect(onCloseInner).toHaveBeenCalledOnce();
+    expect(onCloseOuter).not.toHaveBeenCalled();
+  });
+
+  it("keeps body scroll locked while an outer dialog is still open after an inner one closes", () => {
+    const { rerender } = render(
+      <>
+        <Dialog open title="Outer">
+          outer
+        </Dialog>
+        <Dialog open title="Inner">
+          inner
+        </Dialog>
+      </>,
+    );
+    expect(document.body.style.overflow).toBe("hidden");
+
+    rerender(
+      <>
+        <Dialog open title="Outer">
+          outer
+        </Dialog>
+        <Dialog open={false} title="Inner">
+          inner
+        </Dialog>
+      </>,
+    );
+
+    expect(document.body.style.overflow).toBe("hidden");
+  });
 });
