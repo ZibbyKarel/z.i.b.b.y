@@ -66,8 +66,12 @@ These are architectural guarantees, not configuration options:
 - Send an email to an external recipient (unless the project explicitly permits it)
 - Merge to a production branch
 - Delete data
-- Any self-modification PR
+- **Merge** a self-modification PR (opening one is the sanctioned autonomous Tier-2 push — see Law 3)
 - Any action on the operator's machine (see _Controlling the Machine_)
+
+A project may open its PRs as drafts (`prOpenMode`: `ready`/`draft`) — that's a
+cosmetic choice about the PR's review state, and never changes the merge gate
+above.
 
 **Approval-first is law, not a setting.**
 
