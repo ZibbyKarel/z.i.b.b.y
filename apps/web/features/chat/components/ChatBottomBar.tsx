@@ -1,7 +1,5 @@
 "use client";
 
-import type { Dispatch, SetStateAction } from "react";
-import { useState } from "react";
 import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
 import {
   Container,
@@ -13,6 +11,8 @@ import {
   Tooltip,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import type { Dispatch, SetStateAction } from "react";
+import { useState } from "react";
 import { ChatDock } from "./ChatDock";
 import { ChatQuickNote } from "./ChatQuickNote";
 import { ChatQuickTask } from "./ChatQuickTask";
@@ -52,8 +52,8 @@ interface SlotSpec {
 }
 
 const SLOTS: SlotSpec[] = [
-  { id: "chat", glyph: "bot", width: "560px", testId: ChatBottomBarTestId.ChatSlot },
   { id: "task", glyph: "play", width: "400px", testId: ChatBottomBarTestId.TaskSlot },
+  { id: "chat", glyph: "bot", width: "560px", testId: ChatBottomBarTestId.ChatSlot },
   { id: "note", glyph: "edit", width: "360px", testId: ChatBottomBarTestId.NoteSlot },
 ];
 
