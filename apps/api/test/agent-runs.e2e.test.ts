@@ -70,16 +70,13 @@ describe("Agent runs API (e2e)", () => {
         ownerSubsystem: "forge",
       })
       .expect(201);
-    // Seed a North Star so grounding has something to inject.
+    // NS2 F4c: `app.init()` above already ran the empty-vault seeder, which
+    // creates its own "north-star" stub — so this fixture updates it (PATCH)
+    // rather than creating it, giving grounding a known body to inject.
     await request(app.getHttpServer())
-      .post("/api/memory/notes")
-      .send({
-        id: "north-star",
-        tier: "memory",
-        title: "North Star",
-        body: "The mission of ZIBBY.",
-      })
-      .expect(201);
+      .patch("/api/memory/notes/north-star")
+      .send({ title: "North Star", body: "The mission of ZIBBY." })
+      .expect(200);
   });
 
   afterAll(async () => {
