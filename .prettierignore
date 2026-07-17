@@ -8,6 +8,12 @@ package-lock.json
 graphify-out
 design-ref
 apps/api/data
+# Generated fixture: `computeDrift()` (self-knowledge.composer.ts) compares its
+# AUTO blocks byte-for-byte (trimmed per-block, not per-line) against a fresh
+# compose — prettier reformatting (blank lines after headings, escaped `*`)
+# reads as drift even though nothing meaningful changed. Regenerate via
+# `pnpm self-knowledge:generate`, never hand-format.
+apps/api/data-test/vault/knowledge/self-knowledge.md
 .zibby/data-test
 .playwright-mcp
 test-results

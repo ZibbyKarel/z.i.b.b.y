@@ -44,6 +44,13 @@ describe("subsystemsContract", () => {
     expect(subsystemsContract.listUnownedEntities.path).toBe("/api/subsystems/unowned");
     expect(subsystemsContract.listUnownedEntities.responses).toHaveProperty("200");
   });
+
+  it("NS2 F1c: exposes GET /api/subsystems/:id/roster with 200 and 404", () => {
+    expect(subsystemsContract.getRoster.method).toBe("GET");
+    expect(subsystemsContract.getRoster.path).toBe("/api/subsystems/:id/roster");
+    expect(subsystemsContract.getRoster.responses).toHaveProperty("200");
+    expect(subsystemsContract.getRoster.responses).toHaveProperty("404");
+  });
 });
 
 describe("SUBSYSTEMS registry", () => {

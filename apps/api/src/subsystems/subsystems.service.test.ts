@@ -519,4 +519,99 @@ describe("SubsystemsService", () => {
       expect(unowned).toHaveLength(4);
     });
   });
+
+  describe("roster() — NS2 F1c", () => {
+    function agentFixture(id: string, ownerSubsystem?: Agent["ownerSubsystem"]): Agent {
+      return {
+        id,
+        name: id,
+        instructions: "x",
+        ...(ownerSubsystem ? { ownerSubsystem } : {}),
+      } as Agent;
+    }
+
+    function slackFixture(id: string, ownerSubsystem?: Integration["ownerSubsystem"]): Integration {
+      return {
+        id,
+        name: id,
+        kind: "slack",
+        projectId: "acme",
+        config: { kind: "slack", channels: [] },
+        enabled: true,
+        status: "disconnected",
+        hasCredentials: false,
+        ...(ownerSubsystem ? { ownerSubsystem } : {}),
+      } as Integration;
+    }
+
+    function githubFixture(
+      id: string,
+      streams: string[],
+      ownerSubsystem?: Integration["ownerSubsystem"],
+    ): Integration {
+      return {
+        id,
+        name: id,
+        kind: "github",
+        projectId: "acme",
+        config: { kind: "github", repo: "zibby/zibby", streams },
+        enabled: true,
+        status: "disconnected",
+        hasCredentials: false,
+        ...(ownerSubsystem ? { ownerSubsystem } : {}),
+      } as Integration;
+    }
+
+    it("exact match: only entities owned by the given subsystem are returned", async () => {
+      const { service } = build({
+        agents: [agentFixture("architekt", "forge"), agentFixture("scribe", "codex")],
+        integrations: [slackFixture("team-slack", "forge"), slackFixture("watch", "puls")],
+      });
+      const forge = await service.roster("forge");
+      expect(forge.agents).toEqual([{ id: "architekt", name: "architekt" }]);
+      expect(forge.integrations).toEqual([{ id: "team-slack", name: "team-slack", kind: "slack" }]);
+    });
+
+    it("is empty for a subsystem that owns nothing (codex/ledger)", async () => {
+      const { service } = build({
+        agents: [agentFixture("architekt", "forge")],
+        integrations: [slackFixture("team-slack", "forge")],
+      });
+      const codex = await service.roster("codex");
+      expect(codex).toEqual({ agents: [], integrations: [], monitors: [] });
+      const ledger = await service.roster("ledger");
+      expect(ledger).toEqual({ agents: [], integrations: [], monitors: [] });
+    });
+
+    it("counts match fixture: multiple owned agents/integrations all come back", async () => {
+      const { service } = build({
+        agents: [agentFixture("architekt", "forge"), agentFixture("koder", "forge")],
+        integrations: [
+          slackFixture("team-slack", "forge"),
+          githubFixture("repo-watch", ["issues", "pulls"], "forge"),
+        ],
+      });
+      const forge = await service.roster("forge");
+      expect(forge.agents).toHaveLength(2);
+      expect(forge.integrations).toHaveLength(2);
+    });
+
+    it("monitors is the subset of owned integrations that are a GitHub integration with a ci stream", async () => {
+      const { service } = build({
+        integrations: [
+          githubFixture("ci-repo", ["issues", "pulls", "ci"], "forge"),
+          githubFixture("no-ci-repo", ["issues", "pulls"], "forge"),
+          slackFixture("team-slack", "forge"),
+        ],
+      });
+      const forge = await service.roster("forge");
+      expect(forge.integrations).toHaveLength(3);
+      expect(forge.monitors).toEqual([{ id: "ci-repo", name: "ci-repo", kind: "github" }]);
+    });
+
+    it("throws SubsystemNotFoundError for an id outside the registry", async () => {
+      const { service } = build({});
+      await expect(service.roster("nope")).rejects.toThrow(SubsystemNotFoundError);
+    });
+  });
 });

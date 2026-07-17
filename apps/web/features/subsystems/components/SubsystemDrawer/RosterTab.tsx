@@ -1,6 +1,6 @@
 "use client";
 
-import type { Agent, SubsystemWithStatus } from "@zibby/contracts";
+import type { Agent, RosterIntegrationRef, SubsystemWithStatus } from "@zibby/contracts";
 import { Card, Container, type IconName, IconTile, Stack, Typography } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
@@ -12,6 +12,7 @@ import { ModelBadge } from "../../../../components/RuntimeBadges/RuntimeBadges";
 import type { Pipeline } from "../../../../domain";
 import { useAgentsQuery } from "../../../agents";
 import { useChainsQuery } from "../../../chains";
+import { useSubsystemRosterQuery } from "../../queries/useSubsystemRosterQuery";
 import { NewPipelineDialog } from "../../../pipelines/components/NewPipelineDialog/NewPipelineDialog";
 import { PipelineCanvas } from "../../../pipelines/components/PipelineDialog/PipelineCanvas";
 import { PipelineDialog } from "../../../pipelines/components/PipelineDialog/PipelineDialog";
@@ -37,9 +38,14 @@ export enum RosterTabTestId {
    * assert the scale/translate derives correctly from the graph's bbox. */
   PipelineFit = "roster-pipeline-fit",
   ChainCard = "roster-chain-card",
-  /** Phase 124: the "Posádka" (crew) list above the pipeline canvases. */
+  /** Phase 124 / NS2 F1c: the "Posádka" (crew) list above the pipeline canvases. */
   CrewSection = "roster-crew-section",
   CrewRow = "roster-crew-row",
+  /** NS2 F1c: owned integrations + their CI-monitor subset. */
+  IntegrationSection = "roster-integration-section",
+  IntegrationRow = "roster-integration-row",
+  MonitorSection = "roster-monitor-section",
+  MonitorRow = "roster-monitor-row",
 }
 
 export interface RosterTabProps {
@@ -108,66 +114,74 @@ export function computeFitTransform(
   return { scale, tx, ty };
 }
 
-/**
- * Phase 124: the subsystem's crew (Posádka) — DERIVED, not stored. `SUBSYSTEMS`
- * (`libs/contracts/src/subsystems/subsystem.schema.ts`) is an identity-only
- * registry with no `crew` field, and `Agent` has no `subsystem` field either —
- * so "who's on the crew" is read off what the subsystem already owns: the
- * distinct agents referenced by its owned pipelines' `agent` phases, in
- * first-seen (pipeline order, then phase order) order, so the roster reads in
- * execution order. `verify` phases carry no agent and are skipped; an id with
- * no matching entry in `agents` (a stale reference) is skipped too rather than
- * rendering a ghost row.
- */
-export function deriveCrew(pipelines: readonly Pipeline[], agents: readonly Agent[]): Agent[] {
-  const seen = new Set<string>();
-  const crew: Agent[] = [];
-  for (const pipeline of pipelines) {
-    for (const phase of pipeline.phases) {
-      if (phase.type !== "agent" || !phase.agent) continue;
-      if (seen.has(phase.agent)) continue;
-      seen.add(phase.agent);
-      const agent = agents.find((a) => a.id === phase.agent);
-      if (agent) crew.push(agent);
-    }
-  }
-  return crew;
-}
-
 interface CrewRowProps {
   agent: Agent;
 }
 
 /** One crew member — mirrors the design's `VcCrew` row: avatar/glyph tile,
- * name + role, and the agent's own model as a trailing mono badge. Static (no
- * click target — v1 is a roster, not navigation to `/agents/[id]`). */
+ * name + role, and the agent's own model as a trailing mono badge. Navigates
+ * to the agent's own detail page (NS2 F1c — the crew is a stored roster now,
+ * not just a read-only derivation, so it's worth a click-through). */
 function CrewRow({ agent }: CrewRowProps) {
   const name = agent.name ?? agent.id;
   const role = agent.description ?? agent.category;
 
   return (
-    <Card bordered background="surface" data-testid={RosterTabTestId.CrewRow} radius="sm">
-      <Container padding="100">
-        <Stack align="center" direction="row" gap="150">
-          <IconTile
-            alt={name}
-            glyph={(agent.glyph as IconName | undefined) ?? "bot"}
-            size="sm"
-            src={agent.avatar}
-          />
-          <Container grow minW0>
-            <Stack gap="25">
-              <Typography truncate size="sm" type="note" weight="medium">
-                {name}
-              </Typography>
-              {role != null && role !== "" && (
-                <Typography truncate size="caption" type="note" variant="tertiary">
-                  {role}
+    <Link href={`/agents/${agent.id}` as Route}>
+      <Card
+        bordered
+        interactive
+        background="surface"
+        data-testid={RosterTabTestId.CrewRow}
+        radius="sm"
+      >
+        <Container padding="100">
+          <Stack align="center" direction="row" gap="150">
+            <IconTile
+              alt={name}
+              glyph={(agent.glyph as IconName | undefined) ?? "bot"}
+              size="sm"
+              src={agent.avatar}
+            />
+            <Container grow minW0>
+              <Stack gap="25">
+                <Typography truncate size="sm" type="note" weight="medium">
+                  {name}
                 </Typography>
-              )}
-            </Stack>
-          </Container>
-          {agent.model && <ModelBadge model={agent.model} />}
+                {role != null && role !== "" && (
+                  <Typography truncate size="caption" type="note" variant="tertiary">
+                    {role}
+                  </Typography>
+                )}
+              </Stack>
+            </Container>
+            {agent.model && <ModelBadge model={agent.model} />}
+          </Stack>
+        </Container>
+      </Card>
+    </Link>
+  );
+}
+
+interface IntegrationRowProps {
+  integration: RosterIntegrationRef;
+  testId: RosterTabTestId.IntegrationRow | RosterTabTestId.MonitorRow;
+}
+
+/** One owned integration (or monitor) — a minimal ref row (id/name/kind only,
+ * per the roster contract's lean payload); no click target — integration
+ * detail lives under its owning project, not a standalone route. */
+function IntegrationRow({ integration, testId }: IntegrationRowProps) {
+  return (
+    <Card bordered background="surface" data-testid={testId} radius="sm">
+      <Container padding="100">
+        <Stack align="center" direction="row" gap="150" justify="between">
+          <Typography truncate size="sm" type="note" weight="medium">
+            {integration.name ?? integration.id}
+          </Typography>
+          <Typography mono size="2xs" type="note" variant="tertiary">
+            {integration.kind}
+          </Typography>
         </Stack>
       </Container>
     </Card>
@@ -267,16 +281,27 @@ function PipelineRosterCanvas({ pipeline, graph, agents, onNodeClick }: Pipeline
 }
 
 /**
- * Roster tab (Phase 85): the subsystem's owned pipelines rendered with the
- * *exact same* node-graph canvas `/pipelines` uses (`PipelineCanvas` +
- * `pipeline-graph.ts`), filtered client-side to `ownerSubsystem === subsystem.id`
- * — zero new graph code, per the design doc ("not a new editor"). Clicking a
- * node opens the pipeline's existing config surface: `PipelineDialog` in edit
- * mode, the same dialog `/pipelines` already ships for creating pipelines (its
- * edit mode moved inline into that page's own detail view, but the dialog
- * itself stayed fully wired — see `PipelineDialog.test.tsx`'s header comment).
- * Owned chains have no graph editor (recon correction in the phase-85 plan),
- * so they're plain cards linking to `/chains/[id]`.
+ * Roster tab (Phase 85, stored roster NS2 F1c): the subsystem's owned
+ * pipelines rendered with the *exact same* node-graph canvas `/pipelines`
+ * uses (`PipelineCanvas` + `pipeline-graph.ts`), filtered client-side to
+ * `ownerSubsystem === subsystem.id` — zero new graph code, per the design doc
+ * ("not a new editor"). Clicking a node opens the pipeline's existing config
+ * surface: `PipelineDialog` in edit mode, the same dialog `/pipelines`
+ * already ships for creating pipelines (its edit mode moved inline into that
+ * page's own detail view, but the dialog itself stayed fully wired — see
+ * `PipelineDialog.test.tsx`'s header comment). Owned chains have no graph
+ * editor (recon correction in the phase-85 plan), so they're plain cards
+ * linking to `/chains/[id]`.
+ *
+ * The crew (Posádka), integrations, and monitors sections read from
+ * `useSubsystemRosterQuery` — the server-stored `ownerSubsystem` tags, NOT a
+ * client-side derivation from pipeline phases (the old `deriveCrew`, removed
+ * in F1c). The roster's agent refs are cross-referenced against the already-
+ * fetched `agents` list (needed anyway for `phasesToGraph`) to hydrate the
+ * crew row's glyph/model/description — keeps the roster wire payload lean
+ * while the rich row rendering is unchanged. `monitors` is the subset of
+ * `integrations` that are a `ci`-stream GitHub integration; the integrations
+ * section below excludes them so a monitor doesn't render twice.
  */
 export function RosterTab({ subsystem }: RosterTabProps) {
   const t = useTranslations("subsystems.roster");
@@ -286,12 +311,18 @@ export function RosterTab({ subsystem }: RosterTabProps) {
   const { data: pipelines = [] } = usePipelinesQuery();
   const { data: chains = [] } = useChainsQuery();
   const { data: agents = [] } = useAgentsQuery();
+  const { data: roster } = useSubsystemRosterQuery(subsystem.id);
   const createPipeline = useCreatePipelineMutation();
   const updatePipeline = useUpdatePipelineMutation();
 
   const ownedPipelines = pipelines.filter((p) => p.ownerSubsystem === subsystem.id);
   const ownedChains = chains.filter((c) => c.ownerSubsystem === subsystem.id);
-  const crew = deriveCrew(ownedPipelines, agents);
+  const crew = (roster?.agents ?? [])
+    .map((ref) => agents.find((a) => a.id === ref.id))
+    .filter((a): a is Agent => a != null);
+  const monitors = roster?.monitors ?? [];
+  const monitorIds = new Set(monitors.map((m) => m.id));
+  const integrations = (roster?.integrations ?? []).filter((i) => !monitorIds.has(i.id));
 
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -304,6 +335,32 @@ export function RosterTab({ subsystem }: RosterTabProps) {
           <Typography type="label">{t("crewTitle")}</Typography>
           {crew.map((agent) => (
             <CrewRow agent={agent} key={agent.id} />
+          ))}
+        </Stack>
+      )}
+
+      {integrations.length > 0 && (
+        <Stack data-testid={RosterTabTestId.IntegrationSection} gap="100">
+          <Typography type="label">{t("integrationsTitle")}</Typography>
+          {integrations.map((integration) => (
+            <IntegrationRow
+              integration={integration}
+              key={integration.id}
+              testId={RosterTabTestId.IntegrationRow}
+            />
+          ))}
+        </Stack>
+      )}
+
+      {monitors.length > 0 && (
+        <Stack data-testid={RosterTabTestId.MonitorSection} gap="100">
+          <Typography type="label">{t("monitorsTitle")}</Typography>
+          {monitors.map((integration) => (
+            <IntegrationRow
+              integration={integration}
+              key={integration.id}
+              testId={RosterTabTestId.MonitorRow}
+            />
           ))}
         </Stack>
       )}
