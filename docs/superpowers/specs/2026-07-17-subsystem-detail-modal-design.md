@@ -67,10 +67,12 @@ just re-centered instead of docked right.
 - Enter: `opacity: 0 → 1`, `transform: scale(0.96) translateY(8px) → scale(1) translateY(0)`
 - Duration/easing: 220ms, `cubic-bezier(0.16, 1, 0.3, 1)` — the prototype's "overshoot-free
   ease-out… no spring/bounce, system is calm, not playful"
-- `box-shadow` reuses the existing `--shadow-modal` token (`0 30px 80px rgba(0,0,0,0.6)`) —
-  close enough to the prototype's one-off `0 24px 60px rgba(0,0,0,0.5)` that a second,
-  near-duplicate shadow value isn't worth introducing. It fades in as part of the same
-  opacity transition, not a separate one.
+- `box-shadow` needs no new styling: `Panel`'s existing `elevated` prop (already used here)
+  already applies its own elevation shadow (`--shadow-elevated`: `0 18px 50px rgba(0,0,0,0.45)`)
+  — close enough to the prototype's one-off `0 24px 60px rgba(0,0,0,0.5)` that a second,
+  near-duplicate shadow value isn't worth introducing. It's a static class on the same element
+  that fades in via opacity, so it "fades in with the panel" automatically — no separate timing
+  needed.
 - The existing per-subsystem header gradient (`headerBandStyle`, already implemented) needs
   no new timing: it's inside the same panel element that fades/scales as one unit, so it never
   appears before the panel does.
