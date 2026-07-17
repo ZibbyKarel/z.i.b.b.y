@@ -1,5 +1,5 @@
 import { fireEvent } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen } from "../../../test/render";
 import type { RunView } from "../../runs/run";
 
@@ -33,7 +33,17 @@ vi.mock("../../runs/components/RunDetail", () => ({
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
-import { ChatTaskDetailColumn, ChatTaskDetailColumnTestId } from "./ChatTaskDetailColumn";
+import {
+  ChatTaskDetailColumn,
+  ChatTaskDetailColumnTestId,
+  PANEL_EXIT_MS,
+  backdropStyle,
+  panelTransitionStyle,
+} from "./ChatTaskDetailColumn";
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 function run(overrides: Partial<RunView>): RunView {
   const base: RunView = {
@@ -71,7 +81,8 @@ describe("ChatTaskDetailColumn (Phase 100, frame Phase 122)", () => {
     expect(screen.getByTestId("run-detail-stub")).toHaveAttribute("data-run-id", "run_a");
   });
 
-  it("the close button fires onClose", () => {
+  it("the close button fires onClose after the exit transition", () => {
+    vi.useFakeTimers();
     const onClose = vi.fn();
     render(
       <ChatTaskDetailColumn
@@ -89,6 +100,9 @@ describe("ChatTaskDetailColumn (Phase 100, frame Phase 122)", () => {
     );
 
     fireEvent.click(screen.getByTestId(ChatTaskDetailColumnTestId.Close));
+    expect(onClose).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(PANEL_EXIT_MS);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -137,5 +151,152 @@ describe("ChatTaskDetailColumn (Phase 100, frame Phase 122)", () => {
     expect(onStop).toHaveBeenCalledTimes(1);
     expect(onDelete).toHaveBeenCalledTimes(1);
     expect(onResume).toHaveBeenCalledTimes(1);
+  });
+
+  describe("modal backdrop and animation (phase 126)", () => {
+    it("renders fully open once mounted (not stuck in the entering state)", () => {
+      render(
+        <ChatTaskDetailColumn
+          deleting={false}
+          glyph="bot"
+          now={Date.now()}
+          onClose={vi.fn()}
+          onDelete={vi.fn()}
+          onResume={vi.fn()}
+          onStop={vi.fn()}
+          resuming={false}
+          run={run({})}
+          stopping={false}
+        />,
+      );
+      const panel = screen.getByTestId(ChatTaskDetailColumnTestId.Panel);
+      expect(panel).toHaveStyle({ opacity: "1", transform: "scale(1) translateY(0)" });
+    });
+
+    it("blurs and dims the backdrop", () => {
+      render(
+        <ChatTaskDetailColumn
+          deleting={false}
+          glyph="bot"
+          now={Date.now()}
+          onClose={vi.fn()}
+          onDelete={vi.fn()}
+          onResume={vi.fn()}
+          onStop={vi.fn()}
+          resuming={false}
+          run={run({})}
+          stopping={false}
+        />,
+      );
+      const backdrop = screen.getByTestId(ChatTaskDetailColumnTestId.Root);
+      expect(backdrop.style.backdropFilter).toBe("blur(14px) saturate(140%)");
+      expect(backdrop.style.background).toBe("rgba(11, 14, 19, 0.55)");
+    });
+
+    it("closes when clicking the backdrop itself, after the exit transition", () => {
+      vi.useFakeTimers();
+      const onClose = vi.fn();
+      render(
+        <ChatTaskDetailColumn
+          deleting={false}
+          glyph="bot"
+          now={Date.now()}
+          onClose={onClose}
+          onDelete={vi.fn()}
+          onResume={vi.fn()}
+          onStop={vi.fn()}
+          resuming={false}
+          run={run({})}
+          stopping={false}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId(ChatTaskDetailColumnTestId.Root));
+      expect(onClose).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(PANEL_EXIT_MS);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not close when clicking inside the panel", () => {
+      vi.useFakeTimers();
+      const onClose = vi.fn();
+      render(
+        <ChatTaskDetailColumn
+          deleting={false}
+          glyph="bot"
+          now={Date.now()}
+          onClose={onClose}
+          onDelete={vi.fn()}
+          onResume={vi.fn()}
+          onStop={vi.fn()}
+          resuming={false}
+          run={run({})}
+          stopping={false}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId(ChatTaskDetailColumnTestId.Panel));
+      vi.advanceTimersByTime(PANEL_EXIT_MS);
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it("collapses to a fade-only transition under prefers-reduced-motion", () => {
+      vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
+      render(
+        <ChatTaskDetailColumn
+          deleting={false}
+          glyph="bot"
+          now={Date.now()}
+          onClose={vi.fn()}
+          onDelete={vi.fn()}
+          onResume={vi.fn()}
+          onStop={vi.fn()}
+          resuming={false}
+          run={run({})}
+          stopping={false}
+        />,
+      );
+
+      const panel = screen.getByTestId(ChatTaskDetailColumnTestId.Panel);
+      expect(panel.style.transform).toBe("");
+      expect(panel.style.transition).toBe("opacity 220ms cubic-bezier(0.16, 1, 0.3, 1)");
+      vi.unstubAllGlobals();
+    });
+  });
+
+  describe("backdropStyle / panelTransitionStyle (pure)", () => {
+    it("backdropStyle fades in 180ms ease-out open, 140ms ease-in closing", () => {
+      expect(backdropStyle("open")).toMatchObject({
+        opacity: 1,
+        transition: "opacity 180ms ease-out",
+      });
+      expect(backdropStyle("closing")).toMatchObject({
+        opacity: 0,
+        transition: "opacity 140ms ease-in",
+      });
+    });
+
+    it("panelTransitionStyle scales+translates+fades open, hides entering/closing", () => {
+      expect(panelTransitionStyle("open", false)).toMatchObject({
+        opacity: 1,
+        transform: "scale(1) translateY(0)",
+        transition:
+          "opacity 220ms cubic-bezier(0.16, 1, 0.3, 1), transform 220ms cubic-bezier(0.16, 1, 0.3, 1)",
+      });
+      expect(panelTransitionStyle("entering", false)).toMatchObject({
+        opacity: 0,
+        transform: "scale(0.96) translateY(8px)",
+      });
+      expect(panelTransitionStyle("closing", false).transition).toBe(
+        "opacity 140ms ease-in, transform 140ms ease-in",
+      );
+    });
+
+    it("drops transform entirely under reduced motion", () => {
+      const style = panelTransitionStyle("open", true);
+      expect(style.transform).toBeUndefined();
+      expect(style.transition).toBe("opacity 220ms cubic-bezier(0.16, 1, 0.3, 1)");
+    });
   });
 });

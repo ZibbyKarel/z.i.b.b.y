@@ -302,12 +302,14 @@ export function ChatScreen({
           />
         )}
 
-        {/* ── Task detail column (Phase 100) ──────────────────────────────
+        {/* ── Task detail modal (Phase 100, frame Phase 122, modal Phase 126) ──
             A click in `ChatTasksPanel` (the 300px left gutter above) opens the
-            run's detail HERE, immediately to its right. Mounted the same way the
-            subsystem drawer is — a sibling, outside the inner z-10 wrapper — so its
-            own z-index competes directly with the chrome; the two never overlap
-            (opposite sides of the same band). */}
+            run's detail as a true modal over the whole Velín canvas — same
+            treatment `SubsystemDrawer` got in Phase 125.
+            `ChatTaskDetailColumn` renders its own `position: fixed` backdrop
+            (z-40), which escapes this wrapper's stacking context on its own, so
+            no special mounting position is needed here. It now covers the left
+            gutter while open, same as the subsystem drawer already does. */}
         {selectedRun && (
           <ChatTaskDetailColumn
             avatar={runAvatar(selectedRun, runAvatarById)}

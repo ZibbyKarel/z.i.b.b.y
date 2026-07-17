@@ -13,6 +13,9 @@ import {
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import type { CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { usePrefersReducedMotion } from "../../../hooks/usePrefersReducedMotion";
 import { RunDetail } from "../../runs/components/RunDetail";
 import { type RunView, runTitle } from "../../runs/run";
 
@@ -21,6 +24,62 @@ export enum ChatTaskDetailColumnTestId {
   Panel = "chat-task-detail-panel",
   Close = "chat-task-detail-close",
   OpenFull = "chat-task-detail-open-full",
+}
+
+/**
+ * The modal's own lifecycle, independent of the `open`/mounted question (the
+ * parent controls mounting via `{selectedRun && <ChatTaskDetailColumn .../>}`
+ * — this only tracks the animation state within that mounted lifetime).
+ * Same idiom as `SubsystemDrawerPhase` (phase 125).
+ */
+export type ChatTaskDetailPhase = "entering" | "open" | "closing";
+
+export const PANEL_ENTER_MS = 220;
+export const PANEL_EXIT_MS = 140;
+export const BACKDROP_ENTER_MS = 180;
+export const BACKDROP_EXIT_MS = 140;
+const PANEL_EASE_ENTER = "cubic-bezier(0.16, 1, 0.3, 1)";
+const MODAL_WIDTH = "800px";
+
+/**
+ * The backdrop's fade — same both directions except duration/easing: 180ms
+ * ease-out opening, 140ms ease-in closing (a plain reverse, no extra blur
+ * ramp — Velín-D design spec, phase 126, identical values to `SubsystemDrawer`).
+ */
+export function backdropStyle(phase: ChatTaskDetailPhase): CSSProperties {
+  const open = phase === "open";
+  const duration = phase === "closing" ? BACKDROP_EXIT_MS : BACKDROP_ENTER_MS;
+  const easing = phase === "closing" ? "ease-in" : "ease-out";
+  return {
+    background: "rgba(11, 14, 19, 0.55)",
+    backdropFilter: "blur(14px) saturate(140%)",
+    opacity: open ? 1 : 0,
+    transition: `opacity ${duration}ms ${easing}`,
+  };
+}
+
+/**
+ * The panel's entrance/exit: fade + scale(0.96→1) + translateY(8px→0), 220ms
+ * overshoot-free ease-out opening, mirrored 140ms ease-in closing. Under
+ * `prefers-reduced-motion` the `transform` half is dropped entirely.
+ */
+export function panelTransitionStyle(
+  phase: ChatTaskDetailPhase,
+  reducedMotion: boolean,
+): CSSProperties {
+  const open = phase === "open";
+  const duration = phase === "closing" ? PANEL_EXIT_MS : PANEL_ENTER_MS;
+  const easing = phase === "closing" ? "ease-in" : PANEL_EASE_ENTER;
+  const properties = reducedMotion ? ["opacity"] : ["opacity", "transform"];
+  return {
+    opacity: open ? 1 : 0,
+    transform: reducedMotion
+      ? undefined
+      : open
+        ? "scale(1) translateY(0)"
+        : "scale(0.96) translateY(8px)",
+    transition: properties.map((property) => `${property} ${duration}ms ${easing}`).join(", "),
+  };
 }
 
 export interface ChatTaskDetailColumnProps {
@@ -40,21 +99,15 @@ export interface ChatTaskDetailColumnProps {
 }
 
 /**
- * The chat screen's inline run detail (Phase 100): a fixed column immediately to
- * the right of the left tasks panel's 300px gutter, mounted only while a run is
- * selected — replaces the old `/runs?run=<id>` redirect a task-card click used to
- * fire. Reuses {@link RunDetail} verbatim (the same header/hero, approval + PR
- * gate, log stream / stage timeline / chain steps, stop/resume/delete); this
- * component only supplies the surrounding column chrome: a floating close
- * affordance pinned over the panel (Phase 122 — see `SubsystemDrawer`'s close
- * button for the same idiom) and, since the column (like the gutter) is hidden
- * below `lg`, a quiet footer fallback link to the full `/runs` page for a
- * narrower viewport.
- *
- * Positioned the same way `SubsystemDrawer` is (Phase 84/99) — an outer
- * `pointer-events-none` wrapper pinned to the band between the top bar and the
- * composer, with a `pointer-events-auto` inner — but on the opposite side (left,
- * right after the gutter) so the two never fight over the same space.
+ * The chat screen's task detail (Phase 100, frame Phase 122, modal Phase 126):
+ * a centered modal over the whole Velín canvas, opened from a row in the left
+ * tasks gutter (`ChatTasksPanel`). Was a docked column immediately right of the
+ * gutter through Phase 122 (no backdrop, gutter stayed interactive beside it);
+ * now the same true-modal treatment `SubsystemDrawer` got in Phase 125 — see
+ * that component and `docs/superpowers/specs/2026-07-17-task-detail-modal-design.md`.
+ * Reuses {@link RunDetail} verbatim as the body; this component only supplies
+ * the surrounding modal chrome (backdrop, entrance/exit animation, floating
+ * close, footer "open full page" escape).
  */
 export function ChatTaskDetailColumn({
   run,
@@ -71,79 +124,122 @@ export function ChatTaskDetailColumn({
 }: ChatTaskDetailColumnProps) {
   const t = useTranslations("chat.tasks");
   const router = useRouter();
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const reducedMotion = usePrefersReducedMotion();
+  const [phase, setPhase] = useState<ChatTaskDetailPhase>("entering");
+  const closingRef = useRef(false);
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Flips "entering" → "open" right after mount — same idiom and same
+  // `react-hooks/set-state-in-effect` justification as `SubsystemDrawer`
+  // (phase 125): a `requestAnimationFrame` deferral would desync from
+  // `renderWithProviders`' synchronous `act()` flush in tests.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPhase("open");
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+    };
+  }, []);
+
+  // Any close trigger (backdrop click, header close button) calls this
+  // instead of `onClose` directly: it plays the exit transition, THEN calls
+  // the real `onClose` prop once it's done.
+  const requestClose = useCallback(() => {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    setPhase("closing");
+    closeTimeoutRef.current = setTimeout(onClose, PANEL_EXIT_MS);
+  }, [onClose]);
+
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    panelRef.current?.focus();
+    return () => {
+      if (previouslyFocused?.isConnected) previouslyFocused.focus();
+    };
+  }, []);
 
   return (
-    <div
-      className="pointer-events-none absolute inset-y-0 left-[316px] right-4 z-20 hidden w-auto flex-col p-4 lg:flex"
+    <Container
+      bottom="0"
       data-testid={ChatTaskDetailColumnTestId.Root}
+      left="0"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) requestClose();
+      }}
+      padding="200"
+      position="fixed"
+      right="0"
+      style={{
+        alignItems: "center",
+        display: "flex",
+        justifyContent: "center",
+        ...backdropStyle(phase),
+      }}
+      top="0"
+      zIndex={40}
     >
-      <div className="pointer-events-auto flex h-full w-full flex-col">
-        <Panel
-          elevated
-          aria-label={t("detailAriaLabel", { title: runTitle(run) })}
-          data-testid={ChatTaskDetailColumnTestId.Panel}
-          role="region"
-          // Bounded to this wrapper's own band (see `SubsystemDrawer`'s identical
-          // reasoning), but the Panel itself no longer owns the scroll (contrast
-          // with `SubsystemDrawer`, which does) — Phase 122 pins the close button
-          // to the Panel's own top-right corner so it stays put while the body
-          // scrolls under it, which only works if the Panel is the non-scrolling
-          // frame: `overflow: hidden` clips it to `maxHeight`, `position:
-          // relative` makes it the close button's containing block, and the
-          // Container below owns its own `overflowY: auto` scroll region.
-          // Computed values with no dedicated `Panel` prop, routed through its
-          // `style` passthrough (sanctioned).
-          style={{ maxHeight: "100%", overflow: "hidden", position: "relative" }}
-        >
-          {/* Floating close, pinned over the panel (same idiom as
-          `SubsystemDrawer`'s close button) — a plain DS `Pressable` inside a
-          `Container position="absolute"` pins cleanly here (no raw `<button>`
-          fallback needed), unlike the drawer's hero band which needs the
-          button to sit over an image/gradient. */}
-          <Container position="absolute" right="12px" top="12px" zIndex={10}>
-            <Pressable
-              aria-label={t("closeDetail")}
-              data-testid={ChatTaskDetailColumnTestId.Close}
-              onClick={onClose}
-            >
-              <Icon name="x" size="sm" tone="faint" />
-            </Pressable>
-          </Container>
-          <Container overflowY="auto" padding="200" style={{ height: "100%" }}>
-            <Stack gap="200">
-              <RunDetail
-                avatar={avatar}
-                deleting={deleting}
-                glyph={glyph}
-                now={now}
-                onDelete={onDelete}
-                onResume={onResume}
-                onStop={onStop}
-                resuming={resuming}
-                run={run}
-                stopping={stopping}
-              />
-              <Divider />
-              {/* Quiet footer escape (Phase 122) — replaces the old top-strip
-              "otevřít celý běh" affordance that stacked a redundant header
-              above RunDetail's own hero. */}
-              <Stack align="center" as="footer" direction="row" justify="center">
-                <Pressable
-                  data-testid={ChatTaskDetailColumnTestId.OpenFull}
-                  onClick={() => router.push(`/runs?run=${run.runId}` as Route)}
-                >
-                  <Stack align="center" direction="row" gap="50">
-                    <Icon name="expand" size="xs" tone="faint" />
-                    <Typography mono size="2xs" type="note" variant="tertiary">
-                      {t("openFull")}
-                    </Typography>
-                  </Stack>
-                </Pressable>
-              </Stack>
+      <Panel
+        elevated
+        aria-label={t("detailAriaLabel", { title: runTitle(run) })}
+        data-testid={ChatTaskDetailColumnTestId.Panel}
+        ref={panelRef}
+        role="region"
+        style={{
+          maxHeight: "100%",
+          maxWidth: "calc(100vw - 32px)",
+          overflow: "hidden",
+          position: "relative",
+          width: MODAL_WIDTH,
+          ...panelTransitionStyle(phase, reducedMotion),
+        }}
+        tabIndex={-1}
+      >
+        <Container position="absolute" right="12px" top="12px" zIndex={10}>
+          <Pressable
+            aria-label={t("closeDetail")}
+            data-testid={ChatTaskDetailColumnTestId.Close}
+            onClick={requestClose}
+          >
+            <Icon name="x" size="sm" tone="faint" />
+          </Pressable>
+        </Container>
+        <Container overflowY="auto" padding="200" style={{ height: "100%" }}>
+          <Stack gap="200">
+            <RunDetail
+              avatar={avatar}
+              deleting={deleting}
+              glyph={glyph}
+              now={now}
+              onDelete={onDelete}
+              onResume={onResume}
+              onStop={onStop}
+              resuming={resuming}
+              run={run}
+              stopping={stopping}
+            />
+            <Divider />
+            <Stack align="center" as="footer" direction="row" justify="center">
+              <Pressable
+                data-testid={ChatTaskDetailColumnTestId.OpenFull}
+                onClick={() => router.push(`/runs?run=${run.runId}` as Route)}
+              >
+                <Stack align="center" direction="row" gap="50">
+                  <Icon name="expand" size="xs" tone="faint" />
+                  <Typography mono size="2xs" type="note" variant="tertiary">
+                    {t("openFull")}
+                  </Typography>
+                </Stack>
+              </Pressable>
             </Stack>
-          </Container>
-        </Panel>
-      </div>
-    </div>
+          </Stack>
+        </Container>
+      </Panel>
+    </Container>
   );
 }
