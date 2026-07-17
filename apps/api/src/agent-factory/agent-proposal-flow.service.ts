@@ -27,6 +27,14 @@ interface FrontmatterPreview {
     meta: string;
     hunks: Array<{ h: string; lines: Array<["add", string]> }>;
   };
+  /**
+   * NS2 F0c — tags this approval's origin for the web feed's origin chip. Only
+   * `AgentProposalFlowService` sets this today (the single approvals inbox has
+   * no other proposal-shaped producer left — discovery was deleted in F0a,
+   * gaps stays vault-only). An older parked record without `source` renders
+   * unchanged (no chip).
+   */
+  source: "agent-factory";
 }
 
 /** Build the enrichment JSON packed into the approval's `detail` (Phase 4d). */
@@ -46,8 +54,11 @@ function buildEnrichment(agent: Agent): FrontmatterPreview {
       kind: "diff",
       file: `${agent.id}.md`,
       meta: "candidate agent (proposed)",
-      hunks: [{ h: "frontmatter", lines: frontmatterLines.map((l) => ["add", l] as ["add", string]) }],
+      hunks: [
+        { h: "frontmatter", lines: frontmatterLines.map((l) => ["add", l] as ["add", string]) },
+      ],
     },
+    source: "agent-factory",
   };
 }
 

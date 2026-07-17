@@ -50,6 +50,14 @@ export interface DiffHunk {
   lines: Array<[kind: "add" | "del" | "ctx", text: string]>;
 }
 
+/**
+ * NS2 F0c — where this approval's proposal-shaped request originated. Packed
+ * into the `detail` envelope (not a contract schema field — the approvals
+ * feed is a single kind-agnostic inbox, not a per-kind screen); an older
+ * parked record without `source` renders unchanged (no origin chip).
+ */
+export type ApprovalSource = "agent-factory";
+
 /** The enrichment we (optionally) find packed into `Approval.detail`. */
 export interface ApprovalEnrichment {
   riskType?: RiskType;
@@ -59,6 +67,7 @@ export interface ApprovalEnrichment {
   consequence?: string;
   via?: string;
   preview?: ApprovalPreview;
+  source?: ApprovalSource;
 }
 
 /** A contract approval plus the parsed enrichment (or a plain-text fallback). */

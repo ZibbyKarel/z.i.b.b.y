@@ -618,7 +618,8 @@
       "deletion": "deletion",
       "push": "push",
       "send": "send"
-    }
+    },
+    "originAgentFactory": "Agent Factory"
   },
   "runModal": {
     "editRaw": "Edit raw SKILL.md",

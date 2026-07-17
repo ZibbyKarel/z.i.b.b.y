@@ -618,7 +618,8 @@
       "deletion": "mazání",
       "push": "push",
       "send": "odeslání"
-    }
+    },
+    "originAgentFactory": "Agent Factory"
   },
   "runModal": {
     "editRaw": "Edit raw SKILL.md",
