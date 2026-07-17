@@ -54,6 +54,8 @@ export interface BriefingInput {
   selfKnowledgeDrift?: boolean;
   /** NS2 F5a — Sentinel's open security findings (CVE/secret), read off its vault note. */
   securityFindings?: string[];
+  /** NS2 F5b — Maestro's per-project merge-queue summary lines. */
+  mergeQueue?: string[];
 }
 
 /** Activity kinds that count as "ZIBBY did this for you". */
@@ -122,6 +124,7 @@ export function assembleBriefing(input: BriefingInput): Briefing {
     ...(input.securityFindings && input.securityFindings.length > 0
       ? { securityFindings: input.securityFindings }
       : {}),
+    ...(input.mergeQueue && input.mergeQueue.length > 0 ? { mergeQueue: input.mergeQueue } : {}),
   };
 }
 
@@ -386,6 +389,12 @@ export function renderBriefingMarkdown(briefing: Briefing): string {
   if (briefing.securityFindings && briefing.securityFindings.length > 0) {
     lines.push("## Security");
     for (const item of briefing.securityFindings) lines.push(`- ${item}`);
+    lines.push("");
+  }
+
+  if (briefing.mergeQueue && briefing.mergeQueue.length > 0) {
+    lines.push("## Merge queue");
+    for (const item of briefing.mergeQueue) lines.push(`- ${item}`);
     lines.push("");
   }
 

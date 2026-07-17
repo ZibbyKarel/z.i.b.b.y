@@ -19,6 +19,7 @@ import { mandateContract } from "./mandate/mandate.contract";
 import { mcpContract } from "./mcp/mcp.contract";
 import { memoryContract } from "./memory/memory.contract";
 import { machineContract } from "./machine/machine.contract";
+import { maestroContract } from "./maestro/maestro.contract";
 import { monitorsContract } from "./monitors/monitors.contract";
 import {
   categoriesContract,
@@ -73,6 +74,7 @@ export const appContract = c.router({
   memory: memoryContract,
   machine: machineContract,
   monitors: monitorsContract,
+  maestro: maestroContract,
   automations: automationsContract,
   integrations: integrationsContract,
   mcpServers: mcpContract,

@@ -13,6 +13,7 @@ import { ChannelItemStore } from "../channels/channel-item.store";
 import { DuplicateNoteError, VaultService } from "../memory/vault.service";
 import { GoalRunnerService } from "../goals/goal-runner.service";
 import { LimitsService } from "../limits/limits.service";
+import { MaestroService } from "../maestro/maestro.service";
 import { MonitorEventStore } from "../monitors/monitor-event.store";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
@@ -96,6 +97,8 @@ export class BriefingService {
     // NS2 F5a — Sentinel's open security findings (CVE/secret), read off its
     // vault note for the briefing's extras array.
     private readonly sentinel: SentinelService,
+    // NS2 F5b — Maestro's merge-queue summary lines for the briefing's extras array.
+    private readonly maestro: MaestroService,
     @Inject(ACTIVITY_DIR) private readonly activityDir: string,
     logger: LoggerService,
   ) {
@@ -152,7 +155,7 @@ export class BriefingService {
     // M8: dead-lettered tasks (dispatch exhausted its retries) are a needs-you decision.
     const deadLetteredTasks = allTasks.filter((t) => t.status === "dead-letter");
     const projectNames = Object.fromEntries(projects.map((p) => [p.id, p.name]));
-    const [trend7d, learnedPatterns, automationGaps, appIdeas, securityFindings] =
+    const [trend7d, learnedPatterns, automationGaps, appIdeas, securityFindings, mergeQueue] =
       await Promise.all([
         this.readTrend7d(now),
         this.readLearnedPatterns(),
@@ -161,6 +164,9 @@ export class BriefingService {
         // NS2 F5a — Sentinel's open findings. `.catch`-guarded like every other
         // extra: a failed read drops the section, never the briefing.
         this.sentinel.readFindings().catch((): string[] => []),
+        // NS2 F5b — Maestro's per-project merge-queue summary lines. Same
+        // fail-open guard: a failed read drops the section, never the briefing.
+        this.maestro.summaryLines().catch((): string[] => []),
       ]);
     const subsystems = subsystemRows
       ? buildSubsystemLines(subsystemRows, ciStatuses, weeklyPct)
@@ -183,6 +189,7 @@ export class BriefingService {
       automationGaps,
       appIdeas,
       securityFindings,
+      mergeQueue,
       ...(subsystems ? { subsystems } : {}),
       ...(selfKnowledgeDrift ? { selfKnowledgeDrift } : {}),
     });

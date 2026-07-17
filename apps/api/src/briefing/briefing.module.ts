@@ -3,6 +3,7 @@ import { ApprovalsModule } from "../approvals/approvals.module";
 import { ChannelsModule } from "../channels/channels.module";
 import { GoalsModule } from "../goals/goals.module";
 import { LimitsModule } from "../limits/limits.module";
+import { MaestroModule } from "../maestro/maestro.module";
 import { MemoryModule } from "../memory/memory.module";
 import { MonitorsModule } from "../monitors/monitors.module";
 import { PipelinesModule } from "../pipelines/pipelines.module";
@@ -43,6 +44,9 @@ import { ClaudeCliBriefer } from "./claude-cli-briefer";
     // NS2 F5a — Sentinel's findings extras array (SentinelService.readFindings).
     // A leaf module (like GapsModule) — one-directional, no cycle.
     SentinelModule,
+    // NS2 F5b — Maestro's merge-queue summary lines (MaestroService.summaryLines).
+    // A leaf module too — one-directional, no cycle.
+    MaestroModule,
   ],
   controllers: [BriefingController],
   providers: [ClaudeCliBriefer, BriefingService],

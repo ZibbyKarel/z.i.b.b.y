@@ -22,6 +22,7 @@ import { HooksModule } from "./hooks/hooks.module";
 import { IntegrationsModule } from "./integrations/integrations.module";
 import { LimitResumeModule } from "./limits-resume/limit-resume.module";
 import { LimitsModule } from "./limits/limits.module";
+import { MaestroModule } from "./maestro/maestro.module";
 import { MandateModule } from "./mandate/mandate.module";
 import { McpModule } from "./mcp/mcp.module";
 import { MemoryModule } from "./memory/memory.module";
@@ -72,6 +73,7 @@ import { TasksModule } from "./tasks/tasks.module";
     ChannelsModule,
     MachineModule,
     MonitorsModule,
+    MaestroModule,
     HealthModule,
     SubsystemsModule,
     SelfModule,
