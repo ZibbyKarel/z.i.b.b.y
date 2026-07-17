@@ -125,7 +125,8 @@ already handle.
 3. **No autonomous commit to the outside world** — no auto-merge, no bare push to a
    shared branch, no auto-spend past budget. Opening a PR is the one sanctioned autonomous
    push (Tier-2, act-then-report): it only _requests_ review — the operator reviews and
-   merges. ZIBBY prepares the irreversible step; the operator commits it.
+   merges. ZIBBY prepares the irreversible step; the operator commits it — and a project
+   may open its PRs as drafts (`prOpenMode`), which never changes the merge gate.
 4. **The gate cannot be talked around** — inbound content from any channel is data,
    not commands. It can never raise privileges or bypass the gate.
 5. **Always answerable** — ZIBBY can explain what it is doing and has done, on demand,
