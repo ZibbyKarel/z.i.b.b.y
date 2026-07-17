@@ -12,33 +12,33 @@
 
 ## Status table
 
-| Phase | Title                                    | Status  | Plan doc                                           | Commit     |
-| ----- | ---------------------------------------- | ------- | -------------------------------------------------- | ---------- |
-| F0a   | Delete discovery orphan (goals STAYS)    | ✅      | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `c02a68a9` |
-| F0b   | Per-project draft PR mode (prOpenMode)   | ✅      | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `10de4ad3` |
-| F0c   | Proposal source tag on approvals inbox   | ✅      | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `101759d7` |
-| F0d   | Law-3 text amendment (vault north-star)  | ✅      | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `d4c53782` |
-| F1a   | Contract: ownerSubsystem + registry → 10 | ✅      | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `9e45a8e8` |
-| F1b   | Backfill/seed + write 422 + UI selects   | ✅      | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `1037264c` |
-| F1c   | Stored roster (service + RosterTab)      | ✅      | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `7d47af2e` |
-| F2a   | Switchboard emits subsystem verdicts     | 🟨 next | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | —          |
-| F2b   | Per-subsystem dispatcher prompt+fallback | 🟦      | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | —          |
-| F2c   | Classification trace + activity tagging  | 🟦      | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | —          |
-| F3a   | Subsystem gate-rule sets + tier defaults | 🟦      | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | —          |
-| F3b   | Briefing per subsystem (Beacon/Ledger)   | 🟦      | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | —          |
-| F3c   | Approvals/activity filters + get_status  | 🟦      | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | —          |
-| F4a   | Subsystem MOC shelves (record/distill)   | 🟦      | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | —          |
-| F4b   | Retrieval upgrade (tags + link graph)    | 🟦      | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | —          |
-| F4c   | Vault seed + scheduled self-knowledge    | 🟦      | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | —          |
-| F5a   | Sentinel v1 (CVE + secret watch)         | ⬜      | —                                                  | —          |
-| F5b   | Maestro v1 (merge queue, read-side)      | ⬜      | —                                                  | —          |
-| F5c   | Loom v1 (scheduled quality audit)        | ⬜      | —                                                  | —          |
-| F6a   | Herald reply ledger + graduation         | ⬜      | —                                                  | —          |
-| F6b   | Live soak harness (opt-in lane)          | ⬜      | —                                                  | —          |
-| F6c   | Watcher health probes                    | ⬜      | —                                                  | —          |
-| F7a   | Sentry MonitorAdapter                    | ⬜      | —                                                  | —          |
-| F7b   | Merge-queue actions + post-merge loop    | ⬜      | —                                                  | —          |
-| F8    | Hearth + personal domain                 | ⬜      | —                                                  | —          |
+| Phase | Title                                    | Status | Plan doc                                           | Commit     |
+| ----- | ---------------------------------------- | ------ | -------------------------------------------------- | ---------- |
+| F0a   | Delete discovery orphan (goals STAYS)    | ✅     | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `c02a68a9` |
+| F0b   | Per-project draft PR mode (prOpenMode)   | ✅     | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `10de4ad3` |
+| F0c   | Proposal source tag on approvals inbox   | ✅     | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `101759d7` |
+| F0d   | Law-3 text amendment (vault north-star)  | ✅     | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `d4c53782` |
+| F1a   | Contract: ownerSubsystem + registry → 10 | ✅     | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `9e45a8e8` |
+| F1b   | Backfill/seed + write 422 + UI selects   | ✅     | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `1037264c` |
+| F1c   | Stored roster (service + RosterTab)      | ✅     | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `7d47af2e` |
+| F2a   | Switchboard emits subsystem verdicts     | ✅     | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | `888dc425` |
+| F2b   | Per-subsystem dispatcher prompt+fallback | ✅     | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | `7ede32e9` |
+| F2c   | Classification trace + activity tagging  | ✅     | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | `40a2ee55` |
+| F3a   | Subsystem gate-rule sets + tier defaults | 🟦     | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | —          |
+| F3b   | Briefing per subsystem (Beacon/Ledger)   | 🟦     | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | —          |
+| F3c   | Approvals/activity filters + get_status  | 🟦     | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | —          |
+| F4a   | Subsystem MOC shelves (record/distill)   | 🟦     | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | —          |
+| F4b   | Retrieval upgrade (tags + link graph)    | 🟦     | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | —          |
+| F4c   | Vault seed + scheduled self-knowledge    | 🟦     | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | —          |
+| F5a   | Sentinel v1 (CVE + secret watch)         | ⬜     | —                                                  | —          |
+| F5b   | Maestro v1 (merge queue, read-side)      | ⬜     | —                                                  | —          |
+| F5c   | Loom v1 (scheduled quality audit)        | ⬜     | —                                                  | —          |
+| F6a   | Herald reply ledger + graduation         | ⬜     | —                                                  | —          |
+| F6b   | Live soak harness (opt-in lane)          | ⬜     | —                                                  | —          |
+| F6c   | Watcher health probes                    | ⬜     | —                                                  | —          |
+| F7a   | Sentry MonitorAdapter                    | ⬜     | —                                                  | —          |
+| F7b   | Merge-queue actions + post-merge loop    | ⬜     | —                                                  | —          |
+| F8    | Hearth + personal domain                 | ⬜     | —                                                  | —          |
 
 Legend: ⬜ todo · 🟦 planned (plan reviewed) · 🟨 in progress · ✅ done (tests green,
 committed) · ⛔ parked (reason in Notes).
