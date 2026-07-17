@@ -27,10 +27,10 @@
 | F3a   | Subsystem gate-rule sets + tier defaults | ✅      | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | `77628764` |
 | F3b   | Briefing per subsystem (Beacon/Ledger)   | ✅      | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | `fab17397` |
 | F3c   | Approvals/activity filters + get_status  | ✅      | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | `c9c3dcaa` |
-| F4a   | Subsystem MOC shelves (record/distill)   | 🟨 next | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | —          |
-| F4b   | Retrieval upgrade (tags + link graph)    | 🟦      | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | —          |
-| F4c   | Vault seed + scheduled self-knowledge    | 🟦      | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | —          |
-| F5a   | Sentinel v1 (CVE + secret watch)         | 🟦      | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | —          |
+| F4a   | Subsystem MOC shelves (record/distill)   | ✅      | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | `e1d12b7b` |
+| F4b   | Retrieval upgrade (tags + link graph)    | ✅      | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | `d3c69968` |
+| F4c   | Vault seed + scheduled self-knowledge    | ✅      | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | `9a78cd2b` |
+| F5a   | Sentinel v1 (CVE + secret watch)         | 🟨 next | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | —          |
 | F5b   | Maestro v1 (merge queue, read-side)      | 🟦      | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | —          |
 | F5c   | Loom v1 (scheduled quality audit)        | 🟦      | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | —          |
 | F6a   | Herald reply ledger + graduation         | 🟦      | [ns2-f6](../plans/ns2-f6-trust-from-record.md)     | —          |
@@ -149,6 +149,37 @@ committed) · ⛔ parked (reason in Notes).
   `#d9694a`; 4 domain-isolation invariants each need a test; F8c briefing edits
   rebase additively onto the post-F7 file (byte-identical-when-empty snapshot
   mandatory).
+- **F4 complete (2026-07-17, Fable):** api 1881/1895 (14 skipped, 0 failures — the 2
+  documented `pipelines.e2e` flakes did not manifest this run), web-components
+  1116/1116, contracts 440/440, 3× tsc + check:deps clean. Three checkpoint commits
+  (F4a `e1d12b7b`, F4b `d3c69968`, F4c `9a78cd2b`) plus one follow-up fix commit
+  (`494b85b3`) discovered only by the mandatory phase-end full-suite run — F4c's
+  new `VaultSeedService` seeds every fresh empty vault (including e2e temp vaults)
+  with a `"north-star"` stub, so `agent-runs.e2e.test.ts`'s own unconditional
+  `POST /api/memory/notes {id:"north-star"}` fixture started 409ing; fixed by
+  switching that fixture to `PATCH /api/memory/notes/north-star`. No other e2e file
+  was affected (checked all 6 other `VAULT_DIR`-using e2e suites for a `north-star`
+  or note-count collision — none exists). Deviations from the plan, both
+  plan-sanctioned: (1) F4b's compose-level 1-hop-expansion test needed
+  `"-moc"`-suffixed fixture note ids with carefully engineered relative scores
+  (`VaultService.index()` only returns entry-point notes when any exist in the
+  vault, so a non-suffixed linked note is invisible to both direct MOC selection
+  and `selectLinkedNotes` — this is documented, not a bug); (2) F4c's briefing
+  drift line rebases onto F3b's already-landed `## Subsystems` section instead of
+  a new `## Memory` heading, exactly per the plan's binding ruling #3 (F3b landed
+  before F4c in this run). New surfaces for F5+: `Briefing.selfKnowledgeDrift?`
+  (boolean, additive, folds into the existing `## Subsystems` render — no new
+  section); `SELF_KNOWLEDGE_AUTOMATION_ID = "self-knowledge-refresh"` system
+  automation (cron `30 3 * * *`, between the 3:00 distill and the 7:00 briefing);
+  `TargetSchema` gained `{type:"self-knowledge"}` (both web exhaustive tables —
+  `TARGET_GLYPH`/`targetKindKey` in `AutomationCard.tsx` — already updated, glyph
+  `brain`); `apps/api/src/memory/vault-seed.content.ts` exports
+  `composeSeedNotes(subsystems)` (pure, 12 notes: `north-star` stub + `zibby-index`
+  root MOC `subsystem: codex` + 10 `subsystem-<id>-moc` shelves) — reuse this if a
+  later phase needs the canonical fresh-install note set; `VaultSeedService` lives
+  in `MemoryModule` only (do not re-register); ten committed
+  `.zibby/data/vault/knowledge/subsystem-<id>-moc.md` shelf files now exist in this
+  repo's own vault with `## Poznatky` sections ready for `updateIndex` writes.
 
 ## Planning corrections (verified in code — the audit/roadmap were wrong here)
 
