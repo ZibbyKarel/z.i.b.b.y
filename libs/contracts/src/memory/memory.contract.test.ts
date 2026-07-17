@@ -3,6 +3,7 @@ import {
   CreateNoteSchema,
   ImportRequestSchema,
   ImportResultSchema,
+  IndexEntrySchema,
   MemoryGraphSchema,
   NoteIdSchema,
   NoteSchema,
@@ -169,6 +170,84 @@ describe("memory schemas", () => {
   });
 });
 
+describe("F4b: subsystem/tags/aliases retrieval fields", () => {
+  it("IndexEntrySchema accepts the new optional subsystem/tags/aliases fields", () => {
+    const parsed = IndexEntrySchema.safeParse({
+      id: "subsystem-forge-moc",
+      title: "Forge — polička",
+      tier: "knowledge",
+      subsystem: "forge",
+      tags: ["subsystem", "forge", "moc"],
+      aliases: ["kovárna"],
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.subsystem).toBe("forge");
+      expect(parsed.data.tags).toEqual(["subsystem", "forge", "moc"]);
+      expect(parsed.data.aliases).toEqual(["kovárna"]);
+    }
+  });
+
+  it("a legacy IndexEntry payload without the new fields still parses", () => {
+    const parsed = IndexEntrySchema.safeParse({
+      id: "zibby-index",
+      title: "Zibby Index",
+      tier: "knowledge",
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.subsystem).toBeUndefined();
+      expect(parsed.data.tags).toBeUndefined();
+      expect(parsed.data.aliases).toBeUndefined();
+    }
+  });
+
+  it("rejects an invalid subsystem id on IndexEntry", () => {
+    expect(
+      IndexEntrySchema.safeParse({
+        id: "x",
+        title: "X",
+        tier: "knowledge",
+        subsystem: "not-a-subsystem",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("NoteSchema accepts and rejects `subsystem` the same way", () => {
+    expect(
+      NoteSchema.safeParse({
+        id: "subsystem-scout-moc",
+        path: "knowledge/subsystem-scout-moc.md",
+        tier: "knowledge",
+        title: "Scout — polička",
+        frontmatter: { subsystem: "scout" },
+        links: [],
+        subsystem: "scout",
+      }).success,
+    ).toBe(true);
+    expect(
+      NoteSchema.safeParse({
+        id: "x",
+        path: "x.md",
+        tier: "knowledge",
+        title: "X",
+        frontmatter: {},
+        links: [],
+        subsystem: "not-a-subsystem",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("MemoryGraphSchema node accepts `subsystem`", () => {
+    const parsed = MemoryGraphSchema.safeParse({
+      nodes: [{ id: "a", label: "A", tier: "knowledge", subsystem: "forge" }],
+      edges: [],
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.nodes[0]?.subsystem).toBe("forge");
+  });
+});
+
 describe("NoteTypeSchema", () => {
   it("accepts exactly the four durable-note kinds", () => {
     for (const type of ["decision", "preference", "fact", "pattern"]) {
@@ -220,9 +299,9 @@ describe("CreateNoteSchema", () => {
   });
 
   it("still validates with an explicit `tier` and no `raw`", () => {
-    expect(
-      CreateNoteSchema.safeParse({ id: "note-1", tier: "memory", body: "x" }).success,
-    ).toBe(true);
+    expect(CreateNoteSchema.safeParse({ id: "note-1", tier: "memory", body: "x" }).success).toBe(
+      true,
+    );
   });
 });
 

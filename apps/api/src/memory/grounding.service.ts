@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import type { IndexEntry, SubsystemId } from "@zibby/contracts";
+import type { IndexEntry, Note, SubsystemId } from "@zibby/contracts";
 import { tokenize } from "../tasks/keyword-scorer";
 import { subsystemShelfId } from "./subsystem-shelf";
 import { VaultService } from "./vault.service";
@@ -21,6 +21,8 @@ const NOTE_BUDGET = 2000;
 const BLOCK_BUDGET = 8000;
 /** How many term-matched MOCs to include beyond the North Star + project note. */
 const MOC_LIMIT = 2;
+/** How many 1-hop wikilink-expanded notes to include beyond the matched MOCs (F4b). */
+const EXPANSION_LIMIT = 2;
 
 /** Inputs for composing a run's grounding block. */
 export interface GroundingInput {
@@ -47,25 +49,72 @@ export function visibleToProject(
 }
 
 /**
- * Score index entries by how many of `terms` appear (as whole tokens) in the
- * entry's id or title, then return the top `MOC_LIMIT`. Pure + deterministic
- * (ties broken by id) so it is unit-testable without a vault. Entries with no
- * overlap are dropped — grounding stays relevant, not exhaustive.
+ * Score one index entry against `wanted` terms: 1 point per term found (as a
+ * whole token) in the entry's id/title, PLUS 2 points per term found in its
+ * curated `tags`/`aliases` — curated frontmatter outweighs an incidental title
+ * word (F4b: "scored above raw substring"). Pure, exported for tests.
+ */
+export function scoreEntry(entry: IndexEntry, wanted: ReadonlySet<string>): number {
+  const titleTokens = new Set([...tokenize(entry.id), ...tokenize(entry.title)]);
+  const curatedTokens = new Set([
+    ...(entry.tags ?? []).flatMap((t) => [...tokenize(t)]),
+    ...(entry.aliases ?? []).flatMap((t) => [...tokenize(t)]),
+  ]);
+  let score = 0;
+  for (const term of wanted) {
+    if (titleTokens.has(term)) score += 1;
+    if (curatedTokens.has(term)) score += 2;
+  }
+  return score;
+}
+
+/**
+ * Score index entries by term overlap ({@link scoreEntry}), then return the top
+ * `MOC_LIMIT`. Pure + deterministic (ties broken by id) so it is unit-testable
+ * without a vault. Entries with no overlap are dropped — grounding stays
+ * relevant, not exhaustive.
  */
 export function selectIndexes(terms: string[], entries: IndexEntry[]): IndexEntry[] {
   const wanted = new Set(terms.map((t) => t.toLowerCase()));
   if (wanted.size === 0) return [];
   return entries
-    .map((entry) => {
-      const tokens = new Set([...tokenize(entry.id), ...tokenize(entry.title)]);
-      let score = 0;
-      for (const term of wanted) if (tokens.has(term)) score++;
-      return { entry, score };
-    })
+    .map((entry) => ({ entry, score: scoreEntry(entry, wanted) }))
     .filter((s) => s.score > 0)
     .sort((a, b) => b.score - a.score || a.entry.id.localeCompare(b.entry.id))
     .slice(0, MOC_LIMIT)
     .map((s) => s.entry);
+}
+
+/**
+ * 1-hop wikilink expansion (F4b, index-first — no vectors): from the notes
+ * already grounded (`mocs` — the shelf + term-matched MOCs actually loaded),
+ * union every note they link to, keep only ids present in `visible` (M7 project
+ * isolation already applied there — a global shelf's links pass through) and not
+ * already in `alreadySeen`, score the survivors the same way `selectIndexes`
+ * does, and return the top `EXPANSION_LIMIT` ids (deterministic, ties broken by
+ * id). Pure — exported for tests.
+ */
+export function selectLinkedNotes(
+  terms: string[],
+  mocs: Note[],
+  visible: IndexEntry[],
+  alreadySeen: ReadonlySet<string>,
+): string[] {
+  const wanted = new Set(terms.map((t) => t.toLowerCase()));
+  if (wanted.size === 0) return [];
+  const visibleById = new Map(visible.map((e) => [e.id, e]));
+  const linked = new Set(mocs.flatMap((m) => m.links));
+  return [...linked]
+    .filter((id) => !alreadySeen.has(id) && visibleById.has(id))
+    .map((id) => {
+      const entry = visibleById.get(id);
+      // Non-null: filtered above by `visibleById.has(id)`.
+      return { id, score: scoreEntry(entry as IndexEntry, wanted) };
+    })
+    .filter((s) => s.score > 0)
+    .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id))
+    .slice(0, EXPANSION_LIMIT)
+    .map((s) => s.id);
 }
 
 /** Truncate `text` to `max` chars, appending a marker line when it was cut. */
@@ -92,25 +141,35 @@ export class GroundingService {
       const sections: Array<{ title: string; body: string }> = [];
       const seen = new Set<string>();
 
-      const add = async (id: string): Promise<void> => {
-        if (seen.has(id)) return;
+      const add = async (id: string): Promise<Note | null> => {
+        if (seen.has(id)) return null;
         try {
           const note = await this.vault.note(id);
           seen.add(id);
           sections.push({ title: note.title, body: note.body ?? "" });
+          return note;
         } catch {
           // Missing note (e.g. no north-star seeded) — skip, never throw.
+          return null;
         }
       };
 
       await add(NORTH_STAR_ID);
       await add(SELF_KNOWLEDGE_ID);
-      if (input.ownerSubsystem) await add(subsystemShelfId(input.ownerSubsystem));
+      const mocs: Note[] = [];
+      const shelf = input.ownerSubsystem ? await add(subsystemShelfId(input.ownerSubsystem)) : null;
+      if (shelf) mocs.push(shelf);
       const entries = await this.vault.index().catch((): IndexEntry[] => []);
       // M7 isolation: restrict the candidate set to this run's project before
       // term-matching, so a run can never ground on another project's notes.
       const visible = visibleToProject(entries, input.projectId);
-      for (const entry of selectIndexes(terms, visible)) await add(entry.id);
+      for (const entry of selectIndexes(terms, visible)) {
+        const moc = await add(entry.id);
+        if (moc) mocs.push(moc);
+      }
+      // F4b: 1-hop wikilink expansion over the notes just grounded, before the
+      // project note (index-first — no vectors, reuses the same scan cache).
+      for (const id of selectLinkedNotes(terms, mocs, visible, seen)) await add(id);
       if (input.projectId) await add(input.projectId);
 
       if (sections.length === 0) return "";

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SubsystemIdSchema } from "../subsystems/subsystem.schema";
 
 /** Vault tiers: curated `memory`, episodic `daily/`, thematic `knowledge/`. */
 export const MemoryTierSchema = z.enum(["memory", "daily", "knowledge"]);
@@ -36,6 +37,8 @@ export const NoteSchema = z.object({
   type: NoteTypeSchema.optional(),
   tags: z.array(z.string()).optional(),
   raw: z.boolean().optional(),
+  /** The owning subsystem (F4a shelves), derived from `subsystem:` frontmatter. */
+  subsystem: SubsystemIdSchema.optional(),
 });
 export type Note = z.infer<typeof NoteSchema>;
 
@@ -50,6 +53,15 @@ export const IndexEntrySchema = z.object({
    * visible to every run; present → only a run in that project may ground on it.
    */
   project: z.string().optional(),
+  /** The owning subsystem (F4a shelves), derived from `subsystem:` frontmatter. */
+  subsystem: SubsystemIdSchema.optional(),
+  /**
+   * Retrieval keywords (F4b index-first scoring) — curated frontmatter, never
+   * embeddings. `tags` are the note's own `tags:` frontmatter; `aliases` are
+   * alternate names a term-match should also credit.
+   */
+  tags: z.array(z.string()).optional(),
+  aliases: z.array(z.string()).optional(),
 });
 export type IndexEntry = z.infer<typeof IndexEntrySchema>;
 
@@ -66,6 +78,8 @@ export const MemoryGraphSchema = z.object({
        * absent for a global note, so older payloads stay valid.
        */
       project: z.string().optional(),
+      /** The owning subsystem (F4a shelves) — same optional/back-compat posture. */
+      subsystem: SubsystemIdSchema.optional(),
     }),
   ),
   edges: z.array(z.object({ from: z.string(), to: z.string() })),

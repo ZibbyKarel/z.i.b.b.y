@@ -10,6 +10,8 @@ import {
   type NoteType,
   NoteTypeSchema,
   type SearchHit,
+  type SubsystemId,
+  SubsystemIdSchema,
   type UpdateNoteInput,
 } from "@zibby/contracts";
 import matter from "gray-matter";
@@ -92,21 +94,33 @@ function tagsOf(frontmatter: Record<string, unknown>): string[] {
 }
 
 /**
- * Parse the optional typed `type`/`tags`/`raw` frontmatter fields back into
- * top-level `Note` fields (Fáze 3 / Fáze 107). Tolerant of malformed/foreign
- * frontmatter — an invalid `type`, non-string-array `tags`, or non-boolean
- * `raw` is simply omitted rather than surfaced.
+ * A frontmatter `aliases` value, filtered down to actual strings (F4b retrieval
+ * keywords — same tolerance posture as {@link tagsOf}).
+ */
+function aliasesOf(frontmatter: Record<string, unknown>): string[] {
+  const raw = frontmatter.aliases;
+  return Array.isArray(raw) ? raw.filter((t): t is string => typeof t === "string") : [];
+}
+
+/**
+ * Parse the optional typed `type`/`tags`/`raw`/`subsystem` frontmatter fields back
+ * into top-level `Note` fields (Fáze 3 / Fáze 107 / F4b). Tolerant of malformed/
+ * foreign frontmatter — an invalid `type`, non-string-array `tags`, non-boolean
+ * `raw`, or invalid `subsystem` is simply omitted rather than surfaced.
  */
 function typedFieldsOf(frontmatter: Record<string, unknown>): {
   type?: NoteType;
   tags?: string[];
   raw?: boolean;
+  subsystem?: SubsystemId;
 } {
-  const out: { type?: NoteType; tags?: string[]; raw?: boolean } = {};
+  const out: { type?: NoteType; tags?: string[]; raw?: boolean; subsystem?: SubsystemId } = {};
   const parsedType = NoteTypeSchema.safeParse(frontmatter.type);
   if (parsedType.success) out.type = parsedType.data;
   if (Array.isArray(frontmatter.tags)) out.tags = tagsOf(frontmatter);
   if (typeof frontmatter.raw === "boolean") out.raw = frontmatter.raw;
+  const subsystem = ownerSubsystemOf(frontmatter);
+  if (subsystem !== undefined) out.subsystem = subsystem;
   return out;
 }
 
@@ -127,6 +141,16 @@ export function ownerProjectOf(frontmatter: Record<string, unknown>): string | u
     return frontmatter.id;
   }
   return undefined;
+}
+
+/**
+ * The subsystem a note belongs to (F4a shelves), or undefined if it carries no
+ * (valid) `subsystem:` frontmatter. Mirrors {@link ownerProjectOf}'s derivation
+ * shape — pure, exported for unit testing.
+ */
+export function ownerSubsystemOf(frontmatter: Record<string, unknown>): SubsystemId | undefined {
+  const parsed = SubsystemIdSchema.safeParse(frontmatter.subsystem);
+  return parsed.success ? parsed.data : undefined;
 }
 
 /**
@@ -187,7 +211,18 @@ export class VaultService implements OnModuleInit {
     const chosen = entryPoints.length > 0 ? entryPoints : notes;
     return chosen.map((n) => {
       const project = ownerProjectOf(n.frontmatter);
-      return { id: n.id, title: n.title, tier: n.tier, ...(project ? { project } : {}) };
+      const subsystem = ownerSubsystemOf(n.frontmatter);
+      const tags = tagsOf(n.frontmatter);
+      const aliases = aliasesOf(n.frontmatter);
+      return {
+        id: n.id,
+        title: n.title,
+        tier: n.tier,
+        ...(project ? { project } : {}),
+        ...(subsystem ? { subsystem } : {}),
+        ...(tags.length > 0 ? { tags } : {}),
+        ...(aliases.length > 0 ? { aliases } : {}),
+      };
     });
   }
 
@@ -213,10 +248,18 @@ export class VaultService implements OnModuleInit {
     const notes = await this.scan();
     const ids = new Set(notes.map((n) => n.id));
     // Nodes carry the note's owning project (Fáze 11 project context) via the same
-    // `ownerProjectOf` derivation the index uses — absent for a global note.
+    // `ownerProjectOf` derivation the index uses — absent for a global note. F4b:
+    // also the owning subsystem, same optional posture.
     const nodes = notes.map((n) => {
       const project = ownerProjectOf(n.frontmatter);
-      return { id: n.id, label: n.title, tier: n.tier, ...(project ? { project } : {}) };
+      const subsystem = ownerSubsystemOf(n.frontmatter);
+      return {
+        id: n.id,
+        label: n.title,
+        tier: n.tier,
+        ...(project ? { project } : {}),
+        ...(subsystem ? { subsystem } : {}),
+      };
     });
     const edges: MemoryGraph["edges"] = [];
     for (const n of notes) {
