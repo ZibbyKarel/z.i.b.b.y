@@ -18,18 +18,18 @@
 | F0b   | Per-project draft PR mode (prOpenMode)   | ✅      | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `10de4ad3` |
 | F0c   | Proposal source tag on approvals inbox   | ✅      | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `101759d7` |
 | F0d   | Law-3 text amendment (vault north-star)  | ✅      | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `d4c53782` |
-| F1a   | Contract: ownerSubsystem + registry → 10 | 🟨 next | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | —          |
-| F1b   | Backfill/seed + write 422 + UI selects   | 🟦      | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | —          |
-| F1c   | Stored roster (service + RosterTab)      | 🟦      | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | —          |
-| F2a   | Switchboard emits subsystem verdicts     | 🟦      | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | —          |
+| F1a   | Contract: ownerSubsystem + registry → 10 | ✅      | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `9e45a8e8` |
+| F1b   | Backfill/seed + write 422 + UI selects   | ✅      | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `1037264c` |
+| F1c   | Stored roster (service + RosterTab)      | ✅      | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `7d47af2e` |
+| F2a   | Switchboard emits subsystem verdicts     | 🟨 next | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | —          |
 | F2b   | Per-subsystem dispatcher prompt+fallback | 🟦      | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | —          |
 | F2c   | Classification trace + activity tagging  | 🟦      | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | —          |
 | F3a   | Subsystem gate-rule sets + tier defaults | 🟦      | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | —          |
 | F3b   | Briefing per subsystem (Beacon/Ledger)   | 🟦      | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | —          |
 | F3c   | Approvals/activity filters + get_status  | 🟦      | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | —          |
-| F4a   | Subsystem MOC shelves (record/distill)   | ⬜      | —                                                  | —          |
-| F4b   | Retrieval upgrade (tags + link graph)    | ⬜      | —                                                  | —          |
-| F4c   | Vault seed + scheduled self-knowledge    | ⬜      | —                                                  | —          |
+| F4a   | Subsystem MOC shelves (record/distill)   | 🟦      | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | —          |
+| F4b   | Retrieval upgrade (tags + link graph)    | 🟦      | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | —          |
+| F4c   | Vault seed + scheduled self-knowledge    | 🟦      | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | —          |
 | F5a   | Sentinel v1 (CVE + secret watch)         | ⬜      | —                                                  | —          |
 | F5b   | Maestro v1 (merge queue, read-side)      | ⬜      | —                                                  | —          |
 | F5c   | Loom v1 (scheduled quality audit)        | ⬜      | —                                                  | —          |
@@ -61,6 +61,22 @@ committed) · ⛔ parked (reason in Notes).
   ambiguous). Legacy task-output `resolve()` path intentionally ignores
   `prOpenMode` (no project in scope — commented). Known flake: `runner-core.test.ts`
   ENOENT under parallel load, passes in isolation.
+- **F1 complete (2026-07-17, Sonnet):** api 1806 tests, web-components 1102/1102,
+  contracts 386/386, 3× tsc + check:deps + check:cycles clean. Full-suite runs show
+  ~1 random concurrency flake per run (different file each time, all pass isolated
+  — pre-existing pattern). Deviations: `ownerSubsystem` field lives on shared
+  `AgentEditBasics` (create AND edit — agent forms have no create/edit split);
+  monitor integrations excluded from the "Integrace" UI section client-side (wire
+  payload keeps full set, `monitors` is a documented subset); `IntegrationRow` has
+  no click target (no standalone integration detail route);
+  `ChainsStorageService.updateOwnerSubsystem` internal-only.
+- **F4 planned (2026-07-17, Opus):** plan at `../plans/ns2-f4-memory-shelves.md`
+  with 7 factual corrections — key: shelves are FLAT `knowledge/subsystem-<id>-moc.md`
+  notes (vault forbids subdirs; `-moc` suffix auto-indexes as entry point); vault
+  seeder must fire ONLY on a zero-note vault (`memory.e2e.test.ts:49` exact-set
+  assertion). BINDING: implement F4 only after F1b/F1c (done) — verify shelf fill
+  against the seeded ownership map; F4c briefing changes strictly additive (F3b
+  owns the briefing restructure).
 
 ## Planning corrections (verified in code — the audit/roadmap were wrong here)
 
@@ -86,3 +102,15 @@ committed) · ⛔ parked (reason in Notes).
   `rtk pnpm typecheck` LIES — call `tsc -p` directly per memory.
 - API e2e baseline: `apps/api` pipelines.e2e has 2 pre-existing failures (env
   leak/demo timeout) — do not chase, do not count against a phase.
+- **F1b 422 ripple:** any test/tool creating an agent or integration MUST now pass
+  `ownerSubsystem` (api e2e suite already fixed wholesale in F1b).
+- **self-knowledge prettier trap:** `apps/api/data-test/vault/knowledge/self-knowledge.md`
+  is in `.prettierignore` (F1c) because lint-staged silently re-prettifies staged
+  `.md` files and breaks `self-knowledge.e2e.test.ts`. Do not remove the ignore.
+- **data-test fixture landmines:** `apps/api/data-test` pipeline ids ≠ real
+  `.zibby/data/pipelines` ids; running CLI generators with `ZIBBY_DATA_DIR` pointed
+  at the shared fixture mutates tracked files (boot backfill + automation seeding)
+  — use a temp copy, then `git status --short apps/api/data-test`.
+- **check:self-knowledge hook flake:** may fail once with a drift report correlated
+  with a stale graphify warning; retry `pnpm self-knowledge:generate` (default env)
+  before assuming real drift.
