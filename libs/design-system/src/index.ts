@@ -127,6 +127,9 @@ export type { CardProps } from "./components/Card/Card";
 export { LivingGlow, LivingGlowTestId } from "./components/LivingGlow/LivingGlow";
 export type { LivingGlowIntensity, LivingGlowProps } from "./components/LivingGlow/LivingGlow";
 
+export { FloatingPanel, FloatingPanelTestId } from "./components/FloatingPanel/FloatingPanel";
+export type { FloatingPanelProps } from "./components/FloatingPanel/FloatingPanel";
+
 export { Dialog, DialogBody } from "./components/Dialog/Dialog";
 export type { DialogProps, DialogWidth } from "./components/Dialog/Dialog";
 

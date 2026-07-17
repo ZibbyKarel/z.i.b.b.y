@@ -162,6 +162,9 @@
   /* Live-state pulse (2s) — the only ambient motion in the quiet control room. */
   --animate-live: zt-live 2s ease-in-out infinite;
   --animate-spinner: zt-spin 0.7s linear infinite;
+  /* Idle "floating on water" drift for otherwise-static cards — amplitude
+   * capped at 3px, translateY only (no opacity/shadow — that's zt-live's job). */
+  --animate-zt-float: ztFloat 7s ease-in-out infinite;
 
   /* Boot / loading screen */
   --animate-orbit-spin: orbit-spin 12s linear infinite;
@@ -244,6 +247,16 @@
 @keyframes zt-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes ztFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
   }
 }
 
