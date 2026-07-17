@@ -76,6 +76,18 @@ describe("RunRecorderService", () => {
     list: vi.fn(async () => []),
   };
 
+  /** Default agent/pipeline storage doubles: no entity found → no owner (unowned run). */
+  const noAgentsStore = {
+    get: vi.fn(async () => {
+      throw new Error("no such agent");
+    }),
+  };
+  const noPipelinesStore = {
+    get: vi.fn(async () => {
+      throw new Error("no such pipeline");
+    }),
+  };
+
   function build(opts: {
     agent: ReturnType<typeof makeRunner<AgentRun>>;
     pipeline: ReturnType<typeof makeRunner<PipelineRun>>;
@@ -83,6 +95,8 @@ describe("RunRecorderService", () => {
     readArtifact?: (id: string, name: string) => Promise<{ name: string; content: string } | null>;
     agentList?: () => AgentRun[];
     pipelineList?: () => PipelineRun[];
+    agentsStore?: { get: (id: string) => Promise<{ ownerSubsystem?: string }> };
+    pipelinesStore?: { get: (id: string) => Promise<{ ownerSubsystem?: string }> };
   }): RunRecorderService {
     const agentRunner = { ...opts.agent, listRunning: opts.agentList ?? (() => []) };
     const pipelineRunner = {
@@ -95,6 +109,8 @@ describe("RunRecorderService", () => {
       agentRunner as never,
       pipelineRunner as never,
       (opts.projects ?? noProjects) as never,
+      (opts.agentsStore ?? noAgentsStore) as never,
+      (opts.pipelinesStore ?? noPipelinesStore) as never,
     );
   }
 
@@ -183,5 +199,63 @@ describe("RunRecorderService", () => {
     // A failed run never reaches the learned-note path.
     expect(readArtifact).not.toHaveBeenCalled();
     await expect(vault.note("learned-delivery_123")).rejects.toThrow();
+  });
+
+  it("F4a: an owned agent run's daily line links its subsystem's shelf", async () => {
+    const agent = makeRunner<AgentRun>();
+    const pipeline = makeRunner<PipelineRun>();
+    const svc = build({
+      agent,
+      pipeline,
+      agentsStore: { get: async () => ({ ownerSubsystem: "forge" }) },
+    });
+    svc.onModuleInit();
+    agent.emit(agentRun());
+    await vi.waitFor(async () => expect(await readDaily()).toContain("coder_123"));
+    const daily = await readDaily();
+    expect(daily).toContain("[[subsystem-forge-moc|forge]]");
+  });
+
+  it("F4a: an unowned agent run's daily line is unchanged (today's exact line)", async () => {
+    const agent = makeRunner<AgentRun>();
+    const pipeline = makeRunner<PipelineRun>();
+    const svc = build({
+      agent,
+      pipeline,
+      agentsStore: { get: async () => ({}) },
+    });
+    svc.onModuleInit();
+    agent.emit(agentRun());
+    await vi.waitFor(async () => expect(await readDaily()).toContain("coder_123"));
+    const daily = await readDaily();
+    expect(daily).toMatch(/run coder_123 \(coder\) fix bug → done/);
+    expect(daily).not.toContain("subsystem-");
+  });
+
+  it("F4a: a storage lookup failure still writes the daily line (fail-open)", async () => {
+    const agent = makeRunner<AgentRun>();
+    const pipeline = makeRunner<PipelineRun>();
+    const svc = build({ agent, pipeline }); // default agentsStore throws on get()
+    svc.onModuleInit();
+    agent.emit(agentRun());
+    await vi.waitFor(async () => expect(await readDaily()).toContain("coder_123"));
+    const daily = await readDaily();
+    expect(daily).toMatch(/run coder_123 \(coder\) fix bug → done/);
+    expect(daily).not.toContain("subsystem-");
+  });
+
+  it("F4a: an owned pipeline run's daily line links its subsystem's shelf", async () => {
+    const agent = makeRunner<AgentRun>();
+    const pipeline = makeRunner<PipelineRun>();
+    const svc = build({
+      agent,
+      pipeline,
+      pipelinesStore: { get: async () => ({ ownerSubsystem: "scout" }) },
+    });
+    svc.onModuleInit();
+    pipeline.emit(pipelineRun());
+    await vi.waitFor(async () => expect(await readDaily()).toContain("delivery_123"));
+    const daily = await readDaily();
+    expect(daily).toContain("[[subsystem-scout-moc|scout]]");
   });
 });

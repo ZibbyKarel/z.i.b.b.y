@@ -4,8 +4,10 @@ import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Note } from "@zibby/contracts";
 import type { AgentRunnerService } from "../agents/agent-runner.service";
+import type { AgentsStorageService } from "../agents/agents.storage.service";
 import type { GoalRunnerService } from "../goals/goal-runner.service";
 import type { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
+import type { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
 import type { ProjectsStorageService } from "../projects/projects.storage.service";
 import type { ChatTranscriptStore } from "../chat/chat-transcript.store";
 import type { ClaudeCliDistiller, Learning, NoteTriage } from "./claude-cli-distiller";
@@ -24,9 +26,7 @@ import { DuplicateNoteError, SimilarNoteError, type VaultService } from "./vault
  * mirroring `VaultService.createNote`'s opt-in dedupe path. `raw` seeds the pool
  * `rawNotes()` returns (Fáze 107 triage candidates).
  */
-function makeVault(
-  opts: { similarTo?: Record<string, string>; raw?: Note[] } = {},
-) {
+function makeVault(opts: { similarTo?: Record<string, string>; raw?: Note[] } = {}) {
   const notes = new Map<
     string,
     { body: string; type?: string; tags?: string[]; frontmatter?: Record<string, unknown> }
@@ -60,7 +60,10 @@ function makeVault(
       return {};
     }),
     updateNote: vi.fn(
-      async (id: string, patch: { title?: string; body?: string; frontmatter?: Record<string, unknown> }) => {
+      async (
+        id: string,
+        patch: { title?: string; body?: string; frontmatter?: Record<string, unknown> },
+      ) => {
         updates.push({ id, patch });
         const existing = notes.get(id) ?? { body: "" };
         if (patch.body !== undefined) existing.body = patch.body;
@@ -91,8 +94,13 @@ function makeService(over: {
   projects?: Partial<ProjectsStorageService>;
   chat?: Partial<ChatTranscriptStore>;
   learnings?: Learning[];
-  triage?: NoteTriage | null | ((note: { id: string; title: string; body: string }) => Promise<NoteTriage | null>);
+  triage?:
+    | NoteTriage
+    | null
+    | ((note: { id: string; title: string; body: string }) => Promise<NoteTriage | null>);
   importer?: Partial<MemoryImportService>;
+  agentsStore?: Partial<AgentsStorageService>;
+  pipelinesStore?: Partial<PipelinesStorageService>;
 }) {
   const triageImpl =
     typeof over.triage === "function" ? over.triage : async () => over.triage ?? null;
@@ -116,7 +124,21 @@ function makeService(over: {
       readTranscript: async () => ({ conversationId: "", sessionId: null, messages: [] }),
       markDistilled: async () => undefined,
     } as unknown as ChatTranscriptStore);
-  const importer = (over.importer ?? { ingestQueue: async () => 0 }) as unknown as MemoryImportService;
+  const importer = (over.importer ?? {
+    ingestQueue: async () => 0,
+  }) as unknown as MemoryImportService;
+  // Default owner-lookup doubles: no entity found → no owner (correction #4 fixtures
+  // opt in via `agentsStore`/`pipelinesStore`).
+  const agentsStore = (over.agentsStore ?? {
+    get: async () => {
+      throw new Error("no such agent");
+    },
+  }) as unknown as AgentsStorageService;
+  const pipelinesStore = (over.pipelinesStore ?? {
+    get: async () => {
+      throw new Error("no such pipeline");
+    },
+  }) as unknown as PipelinesStorageService;
   return new MemoryDistillerService(
     over.vault as unknown as VaultService,
     distiller,
@@ -126,6 +148,8 @@ function makeService(over: {
     projects as ProjectsStorageService,
     chat as ChatTranscriptStore,
     importer,
+    agentsStore,
+    pipelinesStore,
   );
 }
 
@@ -146,7 +170,12 @@ describe("MemoryDistillerService", () => {
     const service = makeService({
       vault,
       learnings: [
-        { title: "pnpm is canonical", body: "Use pnpm, never npm.", type: "preference", tags: ["pnpm"] },
+        {
+          title: "pnpm is canonical",
+          body: "Use pnpm, never npm.",
+          type: "preference",
+          tags: ["pnpm"],
+        },
       ],
       pipelines: {
         listAll: async () => [
@@ -255,7 +284,12 @@ describe("MemoryDistillerService", () => {
     const service = makeService({
       vault,
       learnings: [
-        { title: "operator prefers pnpm", body: "Always pnpm.", type: "preference", tags: ["pnpm"] },
+        {
+          title: "operator prefers pnpm",
+          body: "Always pnpm.",
+          type: "preference",
+          tags: ["pnpm"],
+        },
       ],
       chat: {
         listConversationIds: async () => ["conv-1"],
@@ -265,7 +299,12 @@ describe("MemoryDistillerService", () => {
           sessionId: "s",
           messages: [
             { id: "m1", role: "user", text: "ahoj", at: "2026-06-16T01:00:00.000Z" },
-            { id: "m2", role: "user", text: "vždycky používej pnpm", at: "2026-06-16T02:00:00.000Z" },
+            {
+              id: "m2",
+              role: "user",
+              text: "vždycky používej pnpm",
+              at: "2026-06-16T02:00:00.000Z",
+            },
           ],
         }),
         markDistilled: async (id: string, count: number) => {
@@ -326,7 +365,13 @@ describe("MemoryDistillerService", () => {
       learnings: [{ title: "t", body: "b", type: "fact", tags: [] }],
       pipelines: {
         listAll: async () => [
-          { status: "done", pipelineRunId: "p1", pipelineId: "delivery", cwd: dir, projectPath: "/proj" },
+          {
+            status: "done",
+            pipelineRunId: "p1",
+            pipelineId: "delivery",
+            cwd: dir,
+            projectPath: "/proj",
+          },
         ],
         readArtifact: async () => ({ name: "docs.md", content: "x" }),
       } as unknown as PipelineRunnerService,
@@ -522,6 +567,133 @@ describe("MemoryDistillerService — import ingest front-phase (phase 112)", () 
     expect(importer.ingestQueue).toHaveBeenCalledTimes(1);
     expect(vault.updates).toHaveLength(1);
     expect(vault.updates[0]?.id).toBe("halda-survives");
+  });
+
+  it("F4a: a run owned by a scout-owned pipeline files a digest AND auto-creates scout's shelf", async () => {
+    const pipelineCwd = await fs.mkdtemp(path.join(os.tmpdir(), "distiller-pipeline-"));
+    try {
+      const vault = makeVault();
+      const service = makeService({
+        vault,
+        learnings: [{ title: "t", body: "b", type: "fact", tags: [] }],
+        pipelines: {
+          listAll: async () => [
+            { status: "done", pipelineRunId: "p1", pipelineId: "research", cwd: pipelineCwd },
+          ],
+          readArtifact: async () => null,
+        } as unknown as PipelineRunnerService,
+        pipelinesStore: {
+          get: async () => ({ ownerSubsystem: "scout" }),
+        } as unknown as PipelinesStorageService,
+      });
+
+      const ref = await service.distill(now);
+
+      expect(ref).toBe("memory-distill:1");
+      expect(vault.indexed).toContainEqual({
+        moc: "subsystem-scout-moc",
+        target: "distilled-2026-07-10",
+      });
+    } finally {
+      await fs.rm(pipelineCwd, { recursive: true, force: true });
+    }
+  });
+
+  it("F4a: a mixed batch (scout pipeline + forge agent + unowned goal) links exactly two shelves", async () => {
+    const vault = makeVault();
+    const pipelineCwd = await fs.mkdtemp(path.join(os.tmpdir(), "distiller-pipeline-"));
+    const agentCwd = await fs.mkdtemp(path.join(os.tmpdir(), "distiller-agent-"));
+    const goalCwd = await fs.mkdtemp(path.join(os.tmpdir(), "distiller-goal-"));
+    try {
+      const service = makeService({
+        vault,
+        learnings: [{ title: "t", body: "b", type: "fact", tags: [] }],
+        pipelines: {
+          listAll: async () => [
+            { status: "done", pipelineRunId: "p1", pipelineId: "research", cwd: pipelineCwd },
+          ],
+          readArtifact: async () => null,
+        } as unknown as PipelineRunnerService,
+        agents: {
+          listAll: async () => [
+            { status: "done", runId: "a1", agentId: "coder", cwd: agentCwd, project: "" },
+          ],
+          readLog: async () => ({ content: "" }),
+        } as unknown as AgentRunnerService,
+        goals: {
+          listAll: async () => [
+            {
+              status: "done",
+              goalRunId: "g1",
+              goalId: "explorer",
+              currentIteration: null,
+              iterations: [],
+              startedAt: now.toISOString(),
+              cwd: goalCwd,
+            },
+          ],
+        } as unknown as GoalRunnerService,
+        pipelinesStore: {
+          get: async () => ({ ownerSubsystem: "scout" }),
+        } as unknown as PipelinesStorageService,
+        agentsStore: {
+          get: async () => ({ ownerSubsystem: "forge" }),
+        } as unknown as AgentsStorageService,
+      });
+
+      const ref = await service.distill(now);
+
+      expect(ref).toBe("memory-distill:3");
+      const shelfLinks = vault.indexed.filter((i) => i.moc.startsWith("subsystem-"));
+      expect(shelfLinks).toHaveLength(2);
+      expect(shelfLinks).toContainEqual({
+        moc: "subsystem-scout-moc",
+        target: "distilled-2026-07-10",
+      });
+      expect(shelfLinks).toContainEqual({
+        moc: "subsystem-forge-moc",
+        target: "distilled-2026-07-10",
+      });
+    } finally {
+      await fs.rm(pipelineCwd, { recursive: true, force: true });
+      await fs.rm(agentCwd, { recursive: true, force: true });
+      await fs.rm(goalCwd, { recursive: true, force: true });
+    }
+  });
+
+  it("F4a: a shelf-link write failure is logged but the digest is still filed", async () => {
+    const pipelineCwd = await fs.mkdtemp(path.join(os.tmpdir(), "distiller-pipeline-"));
+    const vault = makeVault();
+    const originalUpdateIndex = vault.updateIndex;
+    vault.updateIndex = vi.fn(async (moc: string, target: string) => {
+      if (moc.startsWith("subsystem-")) throw new Error("shelf write boom");
+      return originalUpdateIndex(moc, target);
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const service = makeService({
+        vault,
+        learnings: [{ title: "t", body: "b", type: "fact", tags: [] }],
+        pipelines: {
+          listAll: async () => [
+            { status: "done", pipelineRunId: "p1", pipelineId: "research", cwd: pipelineCwd },
+          ],
+          readArtifact: async () => null,
+        } as unknown as PipelineRunnerService,
+        pipelinesStore: {
+          get: async () => ({ ownerSubsystem: "scout" }),
+        } as unknown as PipelinesStorageService,
+      });
+
+      const ref = await service.distill(now);
+
+      expect(ref).toBe("memory-distill:1");
+      expect(vault.notes.has("distilled-2026-07-10")).toBe(true);
+      expect(vault.indexed.some((i) => i.moc.startsWith("subsystem-"))).toBe(false);
+    } finally {
+      warn.mockRestore();
+      await fs.rm(pipelineCwd, { recursive: true, force: true });
+    }
   });
 });
 
