@@ -23,7 +23,7 @@ import type {
   TaskOutput,
   TaskTarget,
 } from "@zibby/contracts";
-import { SUBSYSTEMS } from "@zibby/contracts";
+import { ORCHESTRATOR_TARGET, SUBSYSTEMS } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import type { AttachmentSetRefProvider } from "./attachment-set-ref-provider";
 import { ATTACHMENT_SET_REF_PROVIDER } from "./attachment-set-ref-provider";
@@ -366,33 +366,32 @@ export class TaskSchedulerService
   }
 
   /**
-   * Phase 91 — resolve an explicit subsystem target to a concrete pipeline target
-   * (the design doc's 0/1/N-owned-pipeline rule), called once, up front, by
-   * {@link createTask} before any persistence:
-   *  - **0 owned** → rejects immediately ({@link SubsystemEmptyRosterError}, a
-   *    clear Czech validation message) — a mandate without capability shouldn't
-   *    pretend to execute (deliberate v1 floor, not a fallback to the
-   *    orchestrator).
+   * Phase 91 / F2a — resolve a subsystem target to a concrete pipeline target
+   * (the design doc's 0/1/N-owned-pipeline rule):
+   *  - **0 owned** → `null` — no capability to delegate to.
    *  - **1 owned** → dispatches straight to it; the classifier is never called.
    *  - **2+ owned** → `TaskClassifierService.classifyWithinSubsystem`, restricted
    *    to just the owned pipelines (never the full catalog, never a fallback to
-   *    the orchestrator — the operator already named the subsystem).
+   *    the orchestrator — the operator, or the switchboard's stage-1 verdict,
+   *    already named the subsystem).
    *
    * The resolved pipeline target IS the run's "via <subsystem>" attribution: any
    * consumer can already read `Pipeline.ownerSubsystem` (Phase 81) off the
    * dispatched pipeline id, so this adds no new run-level field.
+   *
+   * Two callers choose differently on `null` — see {@link resolveSubsystemTarget}
+   * (the explicit `@mention` path, throws) and {@link dispatch} (the undirected
+   * switchboard path, falls back to {@link ORCHESTRATOR_TARGET}).
    */
-  private async resolveSubsystemTarget(
+  private async resolveSubsystemTargetOrNull(
     target: Extract<TaskTarget, { kind: "subsystem" }>,
     text: string,
     paths: string[],
-  ): Promise<TaskTarget> {
+  ): Promise<TaskTarget | null> {
     const owned = (await this.pipelinesStore.list().catch((): Pipeline[] => [])).filter(
       (p) => p.ownerSubsystem === target.id,
     );
-    if (owned.length === 0) {
-      throw new SubsystemEmptyRosterError(subsystemDisplayName(target.id));
-    }
+    if (owned.length === 0) return null;
     if (owned.length === 1) {
       return pipelineTaskTarget(owned[0]!);
     }
@@ -403,6 +402,24 @@ export class TaskSchedulerService
     // Defensive only: `classifyWithinSubsystem` returns null solely for an empty
     // candidate set, which `owned.length > 1` already rules out.
     return routing?.target ?? pipelineTaskTarget(owned[0]!);
+  }
+
+  /**
+   * The EXPLICIT-target wrapper around {@link resolveSubsystemTargetOrNull}:
+   * called once, up front, by {@link createTask} before any persistence, for an
+   * `@`-mentioned subsystem target. A mandate without capability shouldn't
+   * pretend to execute (deliberate v1 floor) — 0 owned pipelines rejects
+   * immediately with {@link SubsystemEmptyRosterError}, a clear Czech validation
+   * message, rather than silently falling back to the orchestrator.
+   */
+  private async resolveSubsystemTarget(
+    target: Extract<TaskTarget, { kind: "subsystem" }>,
+    text: string,
+    paths: string[],
+  ): Promise<TaskTarget> {
+    const resolved = await this.resolveSubsystemTargetOrNull(target, text, paths);
+    if (!resolved) throw new SubsystemEmptyRosterError(subsystemDisplayName(target.id));
+    return resolved;
   }
 
   /**
@@ -785,7 +802,11 @@ export class TaskSchedulerService
             task.toolGrants,
           );
           if (!dispatched) {
-            await this.failPending(task.id, projectId, "No agents or pipelines available to route to");
+            await this.failPending(
+              task.id,
+              projectId,
+              "No agents or pipelines available to route to",
+            );
             return;
           }
           await this.recordLedger(task.id, projectId, dispatched);
@@ -1081,7 +1102,10 @@ export class TaskSchedulerService
     // Build the run-attachments reference ONCE: an absolute dir (from storage) plus
     // the filenames, or undefined when the task carries no attachment set.
     const runAttachments: RunAttachments | undefined = attachmentSetId
-      ? { dir: this.attachmentStorage.dir(attachmentSetId), names: (attachments ?? []).map((a) => a.name) }
+      ? {
+          dir: this.attachmentStorage.dir(attachmentSetId),
+          names: (attachments ?? []).map((a) => a.name),
+        }
       : undefined;
     let target: TaskTarget;
     let matchedTerms: string[];
@@ -1095,6 +1119,17 @@ export class TaskSchedulerService
       // The classifier's matched terms ride into the run so memory grounding selects
       // the same MOCs the routing keyed on (Phase 4).
       matchedTerms = routing.matchedTerms;
+      // F2a — the switchboard may now emit a whole-subsystem verdict (never the
+      // explicit `@mention` path above, which is already resolved by `createTask`
+      // before `dispatch` is ever called). Soft stage-2: resolve to a concrete
+      // pipeline, or — an empty roster — fall through to the orchestrator exactly
+      // like any other "nothing matched confidently" verdict (the terminal block
+      // below, unchanged, already records `orchestrator-fallback` for a
+      // non-explicit target and starts the orchestrator).
+      if (target.kind === "subsystem") {
+        target =
+          (await this.resolveSubsystemTargetOrNull(target, text, paths)) ?? ORCHESTRATOR_TARGET;
+      }
     }
     if (target.kind === "agent") {
       const run = await this.agentRunner.start(
@@ -1420,7 +1455,11 @@ export class TaskSchedulerService
     await withPathLock(`task:${taskId}`, async () => {
       try {
         const task = await this.storage.writeOutcome(taskId, outcome);
-        this.log.info("task outcome written", { taskId, runRef: run.goalRunId, status: run.status });
+        this.log.info("task outcome written", {
+          taskId,
+          runRef: run.goalRunId,
+          status: run.status,
+        });
         void this.activity.record({
           kind: "task-outcome",
           summary: `task ${outcome.status}: ${outcome.summary}`,
