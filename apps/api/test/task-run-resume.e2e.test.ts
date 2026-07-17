@@ -66,7 +66,12 @@ describe("Task run resume — re-run an errored agent run (e2e)", () => {
 
     await request(app.getHttpServer())
       .post("/api/agents")
-      .send({ id: "resumer", name: "Resumer", instructions: "test agent" })
+      .send({
+        id: "resumer",
+        name: "Resumer",
+        instructions: "test agent",
+        ownerSubsystem: "forge",
+      })
       .expect(201);
   });
 
@@ -90,9 +95,7 @@ describe("Task run resume — re-run an errored agent run (e2e)", () => {
     // A run that emits a session id then fails — the errored terminal we re-run from.
     process.env.FAKE_CLAUDE_SESSION = "sess-e2e-1";
     process.env.FAKE_CLAUDE_FAIL = "1";
-    const started = await app
-      .get(AgentRunnerService)
-      .start("resumer", "do the thing", "", [], "");
+    const started = await app.get(AgentRunnerService).start("resumer", "do the thing", "", [], "");
     const erroredId = started.runId;
 
     // It lands `error` and carries the captured session id.
@@ -142,7 +145,9 @@ describe("Task run resume — re-run an errored agent run (e2e)", () => {
     process.env.FAKE_CLAUDE_SESSION = "sess-e2e-2";
     delete process.env.FAKE_CLAUDE_FAIL;
     delete process.env.FAKE_CLAUDE_DUMP_ARGS_FILE;
-    const started = await app.get(AgentRunnerService).start("resumer", "finish cleanly", "", [], "");
+    const started = await app
+      .get(AgentRunnerService)
+      .start("resumer", "finish cleanly", "", [], "");
 
     // Wait for it to finish `done`, then a resume of a done run is a no-op → 409.
     await until(async () => {

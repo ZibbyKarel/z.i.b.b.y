@@ -1,7 +1,7 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { EmptyBodySchema, ErrorSchema } from "../common.schema";
-import { SubsystemWithStatusSchema } from "./subsystem.schema";
+import { SubsystemWithStatusSchema, UnownedEntitySchema } from "./subsystem.schema";
 
 const c = initContract();
 
@@ -20,6 +20,19 @@ export const subsystemsContract = c.router(
         200: z.array(SubsystemWithStatusSchema),
       },
       summary: "List all eight federation subsystems with their current status",
+    },
+
+    // Declared before `getSubsystem` so `/subsystems/unowned` is matched as its
+    // own route rather than captured by the `/subsystems/:id` param (mirrors
+    // `searchAgents` vs `getAgent` in `agents.contract.ts`).
+    listUnownedEntities: {
+      method: "GET",
+      path: "/subsystems/unowned",
+      responses: {
+        200: z.array(UnownedEntitySchema),
+      },
+      summary:
+        "List stored entities (pipelines/chains/agents/integrations) with no ownerSubsystem (F1b) — [] once the owner-backfill sweep has run",
     },
 
     getSubsystem: {

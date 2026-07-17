@@ -40,6 +40,7 @@ describe("Agents API (e2e)", () => {
     id: "writer",
     description: "Writes things",
     instructions: "Write clearly.",
+    ownerSubsystem: "forge",
   };
 
   it("runs the full happy path: create → get → list → update → delete", async () => {
@@ -51,6 +52,7 @@ describe("Agents API (e2e)", () => {
       name: "writer",
       description: "Writes things",
       instructions: "Write clearly.",
+      ownerSubsystem: "forge",
     });
 
     const got = await request(app.getHttpServer()).get(`${BASE}/writer`);
@@ -88,6 +90,7 @@ describe("Agents API (e2e)", () => {
       tools: ["read", "write"],
       category: "writing",
       instructions: "Polish the prose.",
+      ownerSubsystem: "forge",
     };
     const created = await request(app.getHttpServer()).post(BASE).send(body);
     expect(created.status).toBe(201);
@@ -105,11 +108,17 @@ describe("Agents API (e2e)", () => {
         description: "Writes things",
         category: "prose",
         instructions: "Write.",
+        ownerSubsystem: "forge",
       })
       .expect(201);
     await request(app.getHttpServer())
       .post(BASE)
-      .send({ id: "reviewer", description: "Reviews PRs", instructions: "Review." })
+      .send({
+        id: "reviewer",
+        description: "Reviews PRs",
+        instructions: "Review.",
+        ownerSubsystem: "forge",
+      })
       .expect(201);
 
     const byCategory = await request(app.getHttpServer()).get(`${BASE}/search?q=prose`).expect(200);
@@ -169,5 +178,22 @@ describe("Agents API (e2e)", () => {
     await request(app.getHttpServer()).post(BASE).send(validBody).expect(201);
     const files = await fs.readdir(dir);
     expect(files).toContain("writer.md");
+  });
+
+  it("NS2 F1b: rejects create without ownerSubsystem (422)", async () => {
+    const withoutOwner = {
+      id: "writer",
+      description: "Writes things",
+      instructions: "Write clearly.",
+    };
+    const res = await request(app.getHttpServer()).post(BASE).send(withoutOwner);
+    expect(res.status).toBe(422);
+    expect(res.body.message).toContain("ownerSubsystem");
+  });
+
+  it("NS2 F1b: accepts create with a valid ownerSubsystem (201)", async () => {
+    const res = await request(app.getHttpServer()).post(BASE).send(validBody);
+    expect(res.status).toBe(201);
+    expect(res.body.ownerSubsystem).toBe("forge");
   });
 });

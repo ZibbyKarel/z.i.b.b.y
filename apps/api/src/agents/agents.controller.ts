@@ -10,6 +10,8 @@ const errors = makeErrorMapper("Agent", {
   conflict: [AgentConflictError],
 });
 
+const unprocessable = (message: string) => ({ status: 422 as const, body: { message } });
+
 /**
  * Implements `agentsContract` against the file-backed storage service. Request
  * bodies, query and path params are validated against the contract's Zod schemas
@@ -22,7 +24,15 @@ export class AgentsController {
   @TsRestHandler(agentsContract)
   handler() {
     return tsRestHandler(agentsContract, {
-      createAgent: ({ body }) => errors.created(() => this.storage.create(body)),
+      createAgent: ({ body }) => {
+        // NS2 F1b: every new agent must be attributed to a subsystem — pre-F1
+        // agents are exempt (tagged by the owner-backfill sweep instead), so
+        // this is a create-only guard, not a schema-level requirement.
+        if (!body.ownerSubsystem) {
+          return Promise.resolve(unprocessable("ownerSubsystem is required"));
+        }
+        return errors.created(() => this.storage.create(body));
+      },
 
       listAgents: async () => ({ status: 200, body: await this.storage.list() }),
 

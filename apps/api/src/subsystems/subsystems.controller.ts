@@ -23,8 +23,9 @@ export class SubsystemsController {
     return tsRestHandler(subsystemsContract, {
       getSubsystems: async () => ({ status: 200, body: await this.subsystems.list() }),
 
-      getSubsystem: ({ params: { id } }) =>
-        errors.or404(id, async () => this.subsystems.get(id)),
+      listUnownedEntities: async () => ({ status: 200, body: await this.subsystems.listUnowned() }),
+
+      getSubsystem: ({ params: { id } }) => errors.or404(id, async () => this.subsystems.get(id)),
 
       markSubsystemSeen: ({ params: { id } }) =>
         errors.or404(id, async () => this.subsystems.markSeen(id)),

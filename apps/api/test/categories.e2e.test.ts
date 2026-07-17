@@ -82,7 +82,12 @@ describe("Categories API (e2e)", () => {
     await request(app.getHttpServer()).post(BASE).send({ name: "Busy", glyph: "bot" }).expect(201);
     await request(app.getHttpServer())
       .post("/api/agents")
-      .send({ id: "busy-agent", category: "Busy", instructions: "Do things." })
+      .send({
+        id: "busy-agent",
+        category: "Busy",
+        instructions: "Do things.",
+        ownerSubsystem: "forge",
+      })
       .expect(201);
 
     const blocked = await request(app.getHttpServer()).delete(`${BASE}/Busy`);

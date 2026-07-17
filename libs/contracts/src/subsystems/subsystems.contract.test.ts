@@ -38,6 +38,12 @@ describe("subsystemsContract", () => {
   it("markSubsystemSeen's empty body IS the shared EmptyBodySchema (T11 dedup, finding #37)", () => {
     expect(subsystemsContract.markSubsystemSeen.body).toBe(EmptyBodySchema);
   });
+
+  it("NS2 F1b: exposes GET /api/subsystems/unowned returning 200", () => {
+    expect(subsystemsContract.listUnownedEntities.method).toBe("GET");
+    expect(subsystemsContract.listUnownedEntities.path).toBe("/api/subsystems/unowned");
+    expect(subsystemsContract.listUnownedEntities.responses).toHaveProperty("200");
+  });
 });
 
 describe("SUBSYSTEMS registry", () => {

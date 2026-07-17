@@ -14,9 +14,10 @@ import type {
   CreateIntegrationInput,
   Integration,
   IntegrationKind,
+  SubsystemId,
   UpdateIntegrationInput,
 } from "@zibby/contracts";
-import { IntegrationIdSchema } from "@zibby/contracts";
+import { IntegrationIdSchema, SUBSYSTEMS } from "@zibby/contracts";
 
 /** Testids for the integration form (the screens + tests select via these). */
 export enum IntegrationFormTestId {
@@ -57,6 +58,9 @@ export interface IntegrationFormState {
   setKind: (v: IntegrationKind) => void;
   id: string;
   setId: (v: string) => void;
+  /** NS2 F1: the subsystem that owns this integration (write-required on create). */
+  ownerSubsystem: SubsystemId;
+  setOwnerSubsystem: (v: SubsystemId) => void;
   name: string;
   setName: (v: string) => void;
   enabled: boolean;
@@ -113,6 +117,9 @@ export function useIntegrationFormState(
 ): IntegrationFormState {
   const [kind, setKind] = useState<IntegrationKind>(integration?.kind ?? "slack");
   const [id, setId] = useState(integration?.id ?? "");
+  const [ownerSubsystem, setOwnerSubsystem] = useState<SubsystemId>(
+    integration?.ownerSubsystem ?? "puls",
+  );
   const [name, setName] = useState(integration?.name ?? "");
   const [enabled, setEnabled] = useState(integration?.enabled ?? true);
   const [secret, setSecret] = useState("");
@@ -220,6 +227,8 @@ export function useIntegrationFormState(
     setKind,
     id,
     setId,
+    ownerSubsystem,
+    setOwnerSubsystem,
     name,
     setName,
     enabled,
@@ -267,6 +276,7 @@ export function useIntegrationFormState(
       id: id.trim(),
       kind,
       projectId,
+      ownerSubsystem,
       name: name.trim() || undefined,
       enabled,
       config: buildConfig(),
@@ -344,6 +354,15 @@ export function IntegrationFormFields({
           onChange={(e) => form.setId(e.target.value)}
           placeholder="team-slack"
           value={form.id}
+        />
+      )}
+
+      {!kindLocked && (
+        <SelectField
+          label={t("integrations.ownerSubsystemLabel")}
+          onValueChange={(v) => form.setOwnerSubsystem(v as SubsystemId)}
+          options={SUBSYSTEMS.map((s) => ({ value: s.id, label: s.name }))}
+          value={form.ownerSubsystem}
         />
       )}
 

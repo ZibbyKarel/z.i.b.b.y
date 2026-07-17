@@ -1,9 +1,12 @@
 import { Module } from "@nestjs/common";
+import { AgentsModule } from "../agents/agents.module";
 import { ApprovalsModule } from "../approvals/approvals.module";
 import { ChainsModule } from "../chains/chains.module";
+import { IntegrationsModule } from "../integrations/integrations.module";
 import { dataDir } from "../shared/data-dir";
 import { PipelinesModule } from "../pipelines/pipelines.module";
 import { TasksModule } from "../tasks/tasks.module";
+import { OwnerBackfillService } from "./owner-backfill.service";
 import { SUBSYSTEM_SEEN_FILE, SubsystemSeenStore } from "./subsystem-seen.store";
 import { SubsystemsController } from "./subsystems.controller";
 import { SubsystemsService } from "./subsystems.service";
@@ -22,12 +25,23 @@ export function resolveSubsystemSeenFile(): string {
  * domain logic duplicated.
  */
 @Module({
-  imports: [PipelinesModule, ChainsModule, ApprovalsModule, TasksModule],
+  imports: [
+    PipelinesModule,
+    ChainsModule,
+    ApprovalsModule,
+    TasksModule,
+    AgentsModule,
+    IntegrationsModule,
+  ],
   controllers: [SubsystemsController],
   providers: [
     { provide: SUBSYSTEM_SEEN_FILE, useFactory: resolveSubsystemSeenFile },
     SubsystemSeenStore,
     SubsystemsService,
+    // NS2 F1b: one-shot startup backfill (`OnModuleInit`) — constructor-injects
+    // the four owning stores, so Nest orders its init after each store's own
+    // directory-ensure.
+    OwnerBackfillService,
   ],
 })
 export class SubsystemsModule {}

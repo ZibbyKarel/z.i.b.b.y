@@ -1,5 +1,11 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { AGENT_ID_REGEX, type Chain, ChainSchema, type CreateChainInput } from "@zibby/contracts";
+import {
+  AGENT_ID_REGEX,
+  type Chain,
+  ChainSchema,
+  type CreateChainInput,
+  type SubsystemId,
+} from "@zibby/contracts";
 import { EntityFileStore } from "../shared/file-storage";
 
 export const CHAINS_DIR = "CHAINS_DIR";
@@ -66,5 +72,14 @@ export class ChainsStorageService extends EntityFileStore<Chain> {
     const created = await this.createEntity(input.id, () => input);
     if (created === null) throw new ChainConflictError(input.id);
     return created;
+  }
+
+  /**
+   * NS2 F1b: tag a chain's `ownerSubsystem` — internal-only (chains are CRUD
+   * minus a general update over the contract; this exists solely for
+   * `OwnerBackfillService`'s one-shot startup sweep, not exposed as a route).
+   */
+  async updateOwnerSubsystem(id: string, ownerSubsystem: SubsystemId): Promise<Chain> {
+    return this.updateEntity(id, (current) => ({ ...current, ownerSubsystem }));
   }
 }

@@ -33,7 +33,12 @@ describe("Automations API (e2e)", () => {
 
     await request(app.getHttpServer())
       .post("/api/agents")
-      .send({ id: "briefer", name: "Briefer", instructions: "writes the briefing" })
+      .send({
+        id: "briefer",
+        name: "Briefer",
+        instructions: "writes the briefing",
+        ownerSubsystem: "forge",
+      })
       .expect(201);
   });
 
