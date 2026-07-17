@@ -48,6 +48,7 @@ describe("BriefingService", () => {
   let selfKnowledge: { check: ReturnType<typeof vi.fn> };
   let sentinel: { readFindings: ReturnType<typeof vi.fn> };
   let maestro: { summaryLines: ReturnType<typeof vi.fn> };
+  let loom: { readFindings: ReturnType<typeof vi.fn> };
   let service: BriefingService;
 
   const now = new Date("2026-06-12T07:00:00.000Z");
@@ -80,6 +81,9 @@ describe("BriefingService", () => {
     // NS2 F5b — default fixture: no merge-queue lines (each test overrides what
     // it exercises).
     maestro = { summaryLines: vi.fn().mockResolvedValue([]) };
+    // NS2 F5c — default fixture: no quality findings (each test overrides what
+    // it exercises).
+    loom = { readFindings: vi.fn().mockResolvedValue([]) };
 
     service = new BriefingService(
       approvals as never,
@@ -97,6 +101,7 @@ describe("BriefingService", () => {
       selfKnowledge as never,
       sentinel as never,
       maestro as never,
+      loom as never,
       dir,
       { child: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn() }) } as never,
     );
@@ -271,6 +276,27 @@ describe("BriefingService", () => {
       maestro.summaryLines.mockRejectedValue(new Error("github rate limited"));
       const briefing = await service.assemble(now);
       expect(briefing.mergeQueue).toBeUndefined();
+      expect(briefing.headline).toBe("Nothing needs you.");
+    });
+  });
+
+  describe("quality findings (NS2 F5c)", () => {
+    it("surfaces Loom's new quality findings", async () => {
+      loom.readFindings.mockResolvedValue(["god node: AppShell (degree 40)"]);
+      const briefing = await service.assemble(now);
+      expect(briefing.qualityFindings).toEqual(["god node: AppShell (degree 40)"]);
+    });
+
+    it("omits qualityFindings when there are none", async () => {
+      loom.readFindings.mockResolvedValue([]);
+      const briefing = await service.assemble(now);
+      expect(briefing.qualityFindings).toBeUndefined();
+    });
+
+    it("a failed read fails open — omits the field, the briefing still assembles", async () => {
+      loom.readFindings.mockRejectedValue(new Error("vault hiccup"));
+      const briefing = await service.assemble(now);
+      expect(briefing.qualityFindings).toBeUndefined();
       expect(briefing.headline).toBe("Nothing needs you.");
     });
   });

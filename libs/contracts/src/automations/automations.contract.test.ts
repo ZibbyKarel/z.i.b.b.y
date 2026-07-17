@@ -40,6 +40,21 @@ describe("automation schema — NS2 F5a sentinel-scan target", () => {
   });
 });
 
+describe("automation schema — NS2 F5c loom-audit target", () => {
+  it("accepts a cron→loom-audit automation and round-trips through AutomationSchema", () => {
+    const parsed = AutomationSchema.safeParse({
+      id: "loom-audit",
+      name: "Noční audit kvality",
+      trigger: { type: "cron", expr: "0 2 * * *" },
+      target: { type: "loom-audit" },
+      enabled: true,
+      system: true,
+    });
+    expect(parsed.success).toBe(true);
+    expect(parsed.success && parsed.data.target).toEqual({ type: "loom-audit" });
+  });
+});
+
 describe("automation schema", () => {
   it("accepts a cron→pipeline and an event→agent automation", () => {
     expect(

@@ -8,6 +8,7 @@ import {
   AutomationNotFoundError,
   AutomationsStorageService,
   InvalidAutomationIdError,
+  LOOM_AUDIT_AUTOMATION_ID,
   MEMORY_DISTILL_AUTOMATION_ID,
   SELF_KNOWLEDGE_AUTOMATION_ID,
   SENTINEL_SCAN_AUTOMATION_ID,
@@ -220,5 +221,31 @@ describe("AutomationsStorageService", () => {
       SystemAutomationError,
     );
     expect((await service.get(SENTINEL_SCAN_AUTOMATION_ID)).system).toBe(true);
+  });
+
+  it("F5c: seeds the loom-audit system automation on init, enabled by default", async () => {
+    const seeded = await service.get(LOOM_AUDIT_AUTOMATION_ID);
+    expect(seeded.system).toBe(true);
+    expect(seeded.target).toEqual({ type: "loom-audit" });
+    expect(seeded.trigger).toEqual({ type: "cron", expr: "0 2 * * *" });
+    expect(seeded.enabled).toBe(true);
+  });
+
+  it("F5c: an operator-edited loom-audit schedule survives re-seed", async () => {
+    await service.update(LOOM_AUDIT_AUTOMATION_ID, {
+      trigger: { type: "cron", expr: "0 3 * * *" },
+    });
+    await new AutomationsStorageService(dir).onModuleInit();
+    const healed = await service.get(LOOM_AUDIT_AUTOMATION_ID);
+    expect(healed.system).toBe(true);
+    expect(healed.target).toEqual({ type: "loom-audit" });
+    expect(healed.trigger).toEqual({ type: "cron", expr: "0 3 * * *" });
+  });
+
+  it("F5c: refuses to delete the loom-audit system automation", async () => {
+    await expect(service.delete(LOOM_AUDIT_AUTOMATION_ID)).rejects.toBeInstanceOf(
+      SystemAutomationError,
+    );
+    expect((await service.get(LOOM_AUDIT_AUTOMATION_ID)).system).toBe(true);
   });
 });

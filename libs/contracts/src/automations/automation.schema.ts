@@ -73,6 +73,11 @@ export const TargetSchema = z.discriminatedUnion("type", [
   // Sentinel's shelf); a CRITICAL CVE additionally dispatches a gated fix task
   // through the ordinary scheduler (ends at the PR gate). ref = `sentinel:<count>`.
   z.object({ type: z.literal("sentinel-scan") }),
+  // NS2 F5c — Loom's nightly quality audit: graphify god-node/community deltas +
+  // madge circular-dep check over ZIBBY itself. Deterministic; proposes ≠ acts
+  // (new findings → a vault note + Loom's shelf + briefing; the operator turns a
+  // line into work). knip deferred (not installed). ref = `loom:<count>`.
+  z.object({ type: z.literal("loom-audit") }),
   /**
    * Phase 116b — the "prompt automation" shape: a full task spec that fires through
    * the EXISTING task pipeline (`TaskSchedulerService.createTask`) exactly like the

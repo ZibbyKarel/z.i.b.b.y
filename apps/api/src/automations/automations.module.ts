@@ -3,6 +3,7 @@ import { AgentFactoryModule } from "../agent-factory/agent-factory.module";
 import { AgentsModule } from "../agents/agents.module";
 import { BriefingModule } from "../briefing/briefing.module";
 import { GapsModule } from "../gaps/gaps.module";
+import { LoomModule } from "../loom/loom.module";
 import { MemoryDistillerModule } from "../memory/memory-distiller.module";
 import { PatternsModule } from "../patterns/patterns.module";
 import { PipelinesModule } from "../pipelines/pipelines.module";
@@ -33,7 +34,9 @@ export function resolveAutomationsDir(): string {
  * target can dispatch straight to `SelfKnowledgeService` — no cycle, `SelfKnowledgeModule`
  * only imports Agents/Pipelines/GateRules/Gates/Memory, none of which import this module.
  * NS2 F5a: also imports `SentinelModule` (a leaf, same position as `GapsModule`) so the
- * `sentinel-scan` target can dispatch to `SentinelService.scan`.
+ * `sentinel-scan` target can dispatch to `SentinelService.scan`. NS2 F5c: also imports
+ * `LoomModule` (same leaf position) so the `loom-audit` target can dispatch to
+ * `LoomService.audit`.
  */
 @Module({
   imports: [
@@ -41,6 +44,7 @@ export function resolveAutomationsDir(): string {
     AgentsModule,
     BriefingModule,
     GapsModule,
+    LoomModule,
     MemoryDistillerModule,
     PatternsModule,
     PipelinesModule,

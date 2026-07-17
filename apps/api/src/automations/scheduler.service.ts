@@ -8,6 +8,7 @@ import { MemoryDistillerService } from "../memory/memory-distiller.service";
 import { PatternExtractorService } from "../patterns/pattern-extractor.service";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { GapDetectorService } from "../gaps/gap-detector.service";
+import { LoomService } from "../loom/loom.service";
 import { SelfKnowledgeService } from "../self-knowledge/self-knowledge.service";
 import { SentinelService } from "../sentinel/sentinel.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
@@ -48,6 +49,7 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
     private readonly taskScheduler: TaskSchedulerService,
     private readonly selfKnowledge: SelfKnowledgeService,
     private readonly sentinel: SentinelService,
+    private readonly loom: LoomService,
   ) {
     super();
     this.log = logger.child(SchedulerService.name);
@@ -229,6 +231,12 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
         // + a bounded secret scan, deterministic; ref = `sentinel:<count>`.
         const { findings } = await this.sentinel.scan();
         return `sentinel:${findings.length}`;
+      }
+      case "loom-audit": {
+        // NS2 F5c: nightly system automation — graphify god-node/community deltas
+        // + a madge circular-dep check, deterministic; ref = `loom:<count>`.
+        const { findings } = await this.loom.audit();
+        return `loom:${findings.length}`;
       }
     }
   }

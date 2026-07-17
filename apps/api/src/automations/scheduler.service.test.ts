@@ -68,6 +68,18 @@ function selfKnowledgeAutomation(over: Partial<Automation> = {}): Automation {
   };
 }
 
+function loomAuditAutomation(over: Partial<Automation> = {}): Automation {
+  return {
+    id: "loom-audit",
+    name: "Noční audit kvality",
+    trigger: { type: "cron", expr: "0 2 * * *" },
+    target: { type: "loom-audit" },
+    enabled: true,
+    system: true,
+    ...over,
+  };
+}
+
 /** Build a SchedulerService with every non-exercised dependency stubbed to a
  * no-op — each describe block below only wires the dependency its own case needs. */
 function makeService(opts: {
@@ -77,6 +89,7 @@ function makeService(opts: {
   taskScheduler?: { createTask: ReturnType<typeof vi.fn> };
   selfKnowledge?: { check: ReturnType<typeof vi.fn>; write: ReturnType<typeof vi.fn> };
   sentinel?: { scan: ReturnType<typeof vi.fn> };
+  loom?: { audit: ReturnType<typeof vi.fn> };
 }): { service: SchedulerService; storage: { markFired: ReturnType<typeof vi.fn> } } {
   const storage = {
     list: async () => [opts.automation],
@@ -102,6 +115,7 @@ function makeService(opts: {
     (opts.taskScheduler ?? { createTask: vi.fn() }) as never,
     (opts.selfKnowledge ?? { check: vi.fn(async () => false), write: vi.fn() }) as never,
     (opts.sentinel ?? { scan: vi.fn(async () => ({ findings: [] })) }) as never,
+    (opts.loom ?? { audit: vi.fn(async () => ({ findings: [] })) }) as never,
   );
   return { service, storage };
 }
@@ -297,6 +311,23 @@ describe("SchedulerService — dispatch (NS2 F5a: sentinel-scan target)", () => 
   it("refs a zero count on a green (no-findings) scan", async () => {
     const { service } = makeService({ automation: sentinelScanAutomation() });
     expect(await service.trigger("sentinel-scan")).toBe("sentinel:0");
+  });
+});
+
+describe("SchedulerService — dispatch (NS2 F5c: loom-audit target)", () => {
+  it("dispatches straight to LoomService.audit and refs the finding count", async () => {
+    const audit = vi.fn(async () => ({ findings: [{ kind: "god-node" }, { kind: "cycle" }] }));
+    const { service } = makeService({ automation: loomAuditAutomation(), loom: { audit } });
+
+    const ref = await service.trigger("loom-audit");
+
+    expect(audit).toHaveBeenCalledTimes(1);
+    expect(ref).toBe("loom:2");
+  });
+
+  it("refs a zero count on a green (no-findings) audit", async () => {
+    const { service } = makeService({ automation: loomAuditAutomation() });
+    expect(await service.trigger("loom-audit")).toBe("loom:0");
   });
 });
 

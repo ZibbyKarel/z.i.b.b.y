@@ -56,6 +56,8 @@ export interface BriefingInput {
   securityFindings?: string[];
   /** NS2 F5b — Maestro's per-project merge-queue summary lines. */
   mergeQueue?: string[];
+  /** NS2 F5c — Loom's new code-quality findings (god-nodes, cycles). */
+  qualityFindings?: string[];
 }
 
 /** Activity kinds that count as "ZIBBY did this for you". */
@@ -125,6 +127,9 @@ export function assembleBriefing(input: BriefingInput): Briefing {
       ? { securityFindings: input.securityFindings }
       : {}),
     ...(input.mergeQueue && input.mergeQueue.length > 0 ? { mergeQueue: input.mergeQueue } : {}),
+    ...(input.qualityFindings && input.qualityFindings.length > 0
+      ? { qualityFindings: input.qualityFindings }
+      : {}),
   };
 }
 
@@ -395,6 +400,12 @@ export function renderBriefingMarkdown(briefing: Briefing): string {
   if (briefing.mergeQueue && briefing.mergeQueue.length > 0) {
     lines.push("## Merge queue");
     for (const item of briefing.mergeQueue) lines.push(`- ${item}`);
+    lines.push("");
+  }
+
+  if (briefing.qualityFindings && briefing.qualityFindings.length > 0) {
+    lines.push("## Quality");
+    for (const item of briefing.qualityFindings) lines.push(`- ${item}`);
     lines.push("");
   }
 

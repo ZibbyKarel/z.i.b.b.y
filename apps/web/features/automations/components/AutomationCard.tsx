@@ -43,6 +43,8 @@ const TARGET_GLYPH = {
   "self-knowledge": "brain",
   // NS2 F5a — Sentinel's scheduled security watch: the DS "shield" glyph.
   "sentinel-scan": "shield",
+  // NS2 F5c — Loom's nightly quality audit: the DS "code" glyph.
+  "loom-audit": "code",
 } as const satisfies Record<Exclude<Target["type"], "task">, IconName>;
 
 /** A `task` automation's glyph mirrors its @-mentioned run target (Screen.tsx's
@@ -119,9 +121,11 @@ export function AutomationCard({
           ? t("targetSelfKnowledge")
           : target.type === "sentinel-scan"
             ? t("targetSentinelScan")
-            : target.type === "task"
-              ? (targetName ?? target.target?.name ?? t("targetTask"))
-              : (targetName ?? targetIdOf(target));
+            : target.type === "loom-audit"
+              ? t("targetLoomAudit")
+              : target.type === "task"
+                ? (targetName ?? target.target?.name ?? t("targetTask"))
+                : (targetName ?? targetIdOf(target));
 
   return (
     <Card background="surface" data-testid={AutomationCardTestId.Root}>
@@ -274,7 +278,8 @@ function targetKindKey(
   | "targetGapDetect"
   | "targetAgentFactory"
   | "targetSelfKnowledge"
-  | "targetSentinelScan" {
+  | "targetSentinelScan"
+  | "targetLoomAudit" {
   switch (type) {
     case "agent":
       return "targetAgent";
@@ -296,5 +301,7 @@ function targetKindKey(
       return "targetSelfKnowledge";
     case "sentinel-scan":
       return "targetSentinelScan";
+    case "loom-audit":
+      return "targetLoomAudit";
   }
 }
