@@ -94,6 +94,7 @@ describe("Budget API (e2e)", () => {
       category: "Dev",
       description: "Implements fixes",
       instructions: "Write code.",
+      ownerSubsystem: "forge",
     });
     await request(server())
       .post("/api/projects")

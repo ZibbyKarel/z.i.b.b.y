@@ -99,7 +99,13 @@ describe("Cleaner agent (Variant B, e2e)", () => {
     // No gates: the `delete` floor rule (ask:human) does the gating on its own.
     await request(app.getHttpServer())
       .post("/api/agents")
-      .send({ id: "cleaner", name: "Cleaner", instructions: "tidies directories", risk: "high" })
+      .send({
+        id: "cleaner",
+        name: "Cleaner",
+        instructions: "tidies directories",
+        risk: "high",
+        ownerSubsystem: "forge",
+      })
       .expect(201);
   });
 

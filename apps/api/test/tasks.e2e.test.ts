@@ -111,6 +111,7 @@ describe("Tasks API (e2e)", () => {
       category: "Média",
       description: "Třídí a popisuje média v knihovně",
       instructions: "Spravuj média.",
+      ownerSubsystem: "forge",
     });
     await request(app.getHttpServer()).post("/api/agents").send({
       id: "coder",
@@ -118,6 +119,7 @@ describe("Tasks API (e2e)", () => {
       category: "Vývoj",
       description: "Implementuje funkce podle zadání",
       instructions: "Piš kód.",
+      ownerSubsystem: "forge",
     });
     await request(app.getHttpServer())
       .post("/api/pipelines")
@@ -438,9 +440,7 @@ describe("Tasks API (e2e)", () => {
       const dispatched = await untilTaskStatus(created.body.task.id, "dispatched");
       const runId = dispatched.runRef as string;
 
-      const before = await request(app.getHttpServer())
-        .get(`/api/tasks/runs/${runId}`)
-        .expect(200);
+      const before = await request(app.getHttpServer()).get(`/api/tasks/runs/${runId}`).expect(200);
       expect(before.body.projectId).toBeUndefined();
 
       const assigned = await request(app.getHttpServer())
@@ -452,9 +452,7 @@ describe("Tasks API (e2e)", () => {
       expect(assigned.body.project).toBe("Acme");
 
       // GET reflects the assignment independently of the PATCH response.
-      const after = await request(app.getHttpServer())
-        .get(`/api/tasks/runs/${runId}`)
-        .expect(200);
+      const after = await request(app.getHttpServer()).get(`/api/tasks/runs/${runId}`).expect(200);
       expect(after.body.projectId).toBe("acme");
 
       const cleared = await request(app.getHttpServer())

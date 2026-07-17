@@ -1,8 +1,10 @@
-import type { Approval, Chain, Pipeline, TaskRun } from "@zibby/contracts";
+import type { Agent, Approval, Chain, Integration, Pipeline, TaskRun } from "@zibby/contracts";
 import { SUBSYSTEMS } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
+import type { AgentsStorageService } from "../agents/agents.storage.service";
 import type { ApprovalsService } from "../approvals/approvals.service";
 import type { ChainsStorageService } from "../chains/chains.storage.service";
+import type { IntegrationsStorageService } from "../integrations/integrations.storage.service";
 import type { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
 import type { TaskRunsService } from "../tasks/task-runs.service";
 import { SUBSYSTEM_SEEN_EPOCH, type SubsystemSeenStore } from "./subsystem-seen.store";
@@ -30,7 +32,9 @@ function chainFixture(id: string, ownerSubsystem?: Chain["ownerSubsystem"]): Cha
   } as Chain;
 }
 
-function taskRunFixture(over: Partial<TaskRun> & Pick<TaskRun, "runId" | "kind" | "owner" | "status">): TaskRun {
+function taskRunFixture(
+  over: Partial<TaskRun> & Pick<TaskRun, "runId" | "kind" | "owner" | "status">,
+): TaskRun {
   return {
     pct: null,
     title: "",
@@ -42,7 +46,9 @@ function taskRunFixture(over: Partial<TaskRun> & Pick<TaskRun, "runId" | "kind" 
   };
 }
 
-function approvalFixture(over: Partial<Approval> & Pick<Approval, "id" | "runId" | "kind">): Approval {
+function approvalFixture(
+  over: Partial<Approval> & Pick<Approval, "id" | "runId" | "kind">,
+): Approval {
   return {
     skill: "koder",
     action: "git.push",
@@ -54,18 +60,22 @@ function approvalFixture(over: Partial<Approval> & Pick<Approval, "id" | "runId"
   };
 }
 
-/** Builds a `SubsystemsService` over hand-rolled fakes of its four injected domain services + the seen store. */
+/** Builds a `SubsystemsService` over hand-rolled fakes of its six injected domain services + the seen store. */
 function build(opts: {
   pipelines?: Pipeline[];
   chains?: Chain[];
   runs?: TaskRun[];
   pendingApprovals?: Approval[];
   seenAt?: Record<string, string>;
+  agents?: Agent[];
+  integrations?: Integration[];
 }) {
   const pipelinesStore = { list: vi.fn(async () => opts.pipelines ?? []) };
   const chainsStore = { list: vi.fn(async () => opts.chains ?? []) };
   const taskRuns = { listTaskRuns: vi.fn(async () => opts.runs ?? []) };
   const approvals = { list: vi.fn(async () => opts.pendingApprovals ?? []) };
+  const agentsStore = { list: vi.fn(async () => opts.agents ?? []) };
+  const integrationsStore = { list: vi.fn(async () => opts.integrations ?? []) };
   const seenMap = new Map<string, string>(Object.entries(opts.seenAt ?? {}));
   const seenStore = {
     seenAt: vi.fn(async (id: string) => seenMap.get(id) ?? SUBSYSTEM_SEEN_EPOCH),
@@ -82,8 +92,19 @@ function build(opts: {
     taskRuns as unknown as TaskRunsService,
     approvals as unknown as ApprovalsService,
     seenStore as unknown as SubsystemSeenStore,
+    agentsStore as unknown as AgentsStorageService,
+    integrationsStore as unknown as IntegrationsStorageService,
   );
-  return { service, pipelinesStore, chainsStore, taskRuns, approvals, seenStore };
+  return {
+    service,
+    pipelinesStore,
+    chainsStore,
+    taskRuns,
+    approvals,
+    seenStore,
+    agentsStore,
+    integrationsStore,
+  };
 }
 
 describe("SubsystemsService", () => {
@@ -91,7 +112,14 @@ describe("SubsystemsService", () => {
     it("a running run on an owned pipeline reads as running", async () => {
       const { service } = build({
         pipelines: [pipelineFixture("delivery", "forge")],
-        runs: [taskRunFixture({ runId: "delivery_1", kind: "pipeline", owner: "delivery", status: "running" })],
+        runs: [
+          taskRunFixture({
+            runId: "delivery_1",
+            kind: "pipeline",
+            owner: "delivery",
+            status: "running",
+          }),
+        ],
       });
       const forge = await service.get("forge");
       expect(forge).toMatchObject({ state: "running", tier2Count: 0, tier3Count: 0 });
@@ -124,7 +152,9 @@ describe("SubsystemsService", () => {
             status: "awaiting-approval",
           }),
         ],
-        pendingApprovals: [approvalFixture({ id: "appr-1", runId: "delivery_1", kind: "pipeline-output" })],
+        pendingApprovals: [
+          approvalFixture({ id: "appr-1", runId: "delivery_1", kind: "pipeline-output" }),
+        ],
       });
       const forge = await service.get("forge");
       expect(forge).toMatchObject({ state: "waiting", tier3Count: 1 });
@@ -142,7 +172,11 @@ describe("SubsystemsService", () => {
           }),
         ],
         pendingApprovals: [
-          approvalFixture({ id: "appr-1", runId: "delivery_1.04_koder_p9", kind: "pipeline-stage" }),
+          approvalFixture({
+            id: "appr-1",
+            runId: "delivery_1.04_koder_p9",
+            kind: "pipeline-stage",
+          }),
         ],
       });
       const forge = await service.get("forge");
@@ -153,7 +187,12 @@ describe("SubsystemsService", () => {
       const { service } = build({
         pipelines: [pipelineFixture("delivery", "forge"), pipelineFixture("release", "forge")],
         runs: [
-          taskRunFixture({ runId: "delivery_1", kind: "pipeline", owner: "delivery", status: "running" }),
+          taskRunFixture({
+            runId: "delivery_1",
+            kind: "pipeline",
+            owner: "delivery",
+            status: "running",
+          }),
           taskRunFixture({
             runId: "release_1",
             kind: "pipeline",
@@ -161,7 +200,9 @@ describe("SubsystemsService", () => {
             status: "awaiting-approval",
           }),
         ],
-        pendingApprovals: [approvalFixture({ id: "appr-1", runId: "release_1", kind: "pipeline-output" })],
+        pendingApprovals: [
+          approvalFixture({ id: "appr-1", runId: "release_1", kind: "pipeline-output" }),
+        ],
       });
       const forge = await service.get("forge");
       expect(forge.state).toBe("waiting");
@@ -248,7 +289,14 @@ describe("SubsystemsService", () => {
     it("a run on an unowned pipeline never surfaces for any subsystem", async () => {
       const { service } = build({
         pipelines: [pipelineFixture("orphan")],
-        runs: [taskRunFixture({ runId: "orphan_1", kind: "pipeline", owner: "orphan", status: "running" })],
+        runs: [
+          taskRunFixture({
+            runId: "orphan_1",
+            kind: "pipeline",
+            owner: "orphan",
+            status: "running",
+          }),
+        ],
       });
       const rows = await service.list();
       expect(rows.every((r) => r.state === "idle")).toBe(true);
@@ -257,7 +305,9 @@ describe("SubsystemsService", () => {
     it("an agent-kind run never attributes (only pipeline/chain owners exist)", async () => {
       const { service } = build({
         pipelines: [pipelineFixture("delivery", "forge")],
-        runs: [taskRunFixture({ runId: "koder_1", kind: "agent", owner: "koder", status: "running" })],
+        runs: [
+          taskRunFixture({ runId: "koder_1", kind: "agent", owner: "koder", status: "running" }),
+        ],
       });
       const forge = await service.get("forge");
       expect(forge.state).toBe("idle");
@@ -296,7 +346,12 @@ describe("SubsystemsService", () => {
             status: "done",
             startedAt: LATER,
           }),
-          taskRunFixture({ runId: "delivery_2", kind: "pipeline", owner: "delivery", status: "running" }),
+          taskRunFixture({
+            runId: "delivery_2",
+            kind: "pipeline",
+            owner: "delivery",
+            status: "running",
+          }),
         ],
       });
       const refreshed = await service.markSeen("forge");
@@ -319,7 +374,12 @@ describe("SubsystemsService", () => {
         ],
         runs: [
           // forge: running → running
-          taskRunFixture({ runId: "p-forge_1", kind: "pipeline", owner: "p-forge", status: "running" }),
+          taskRunFixture({
+            runId: "p-forge_1",
+            kind: "pipeline",
+            owner: "p-forge",
+            status: "running",
+          }),
           // scout: completed after lastSeenAt → report
           taskRunFixture({
             runId: "p-scout_1",
@@ -336,7 +396,9 @@ describe("SubsystemsService", () => {
             status: "awaiting-approval",
           }),
         ],
-        pendingApprovals: [approvalFixture({ id: "appr-1", runId: "p-beacon_1", kind: "pipeline-output" })],
+        pendingApprovals: [
+          approvalFixture({ id: "appr-1", runId: "p-beacon_1", kind: "pipeline-output" }),
+        ],
       });
       const rows = await service.list();
       const ids = rows.map((r) => r.id);
@@ -362,7 +424,10 @@ describe("SubsystemsService", () => {
 
     it("within waiting, higher tier3Count sorts first", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("p-beacon", "beacon"), pipelineFixture("p-sentinel", "sentinel")],
+        pipelines: [
+          pipelineFixture("p-beacon", "beacon"),
+          pipelineFixture("p-sentinel", "sentinel"),
+        ],
         runs: [
           taskRunFixture({
             runId: "p-beacon_1",
@@ -394,12 +459,64 @@ describe("SubsystemsService", () => {
       expect(ids).toEqual(["sentinel", "beacon"]);
     });
 
-    it("all-idle registry stays in registry order (list() still returns all 8)", async () => {
+    it("all-idle registry stays in registry order (list() still returns all 10)", async () => {
       const { service } = build({});
       const rows = await service.list();
-      expect(rows).toHaveLength(8);
+      expect(rows).toHaveLength(10);
       expect(rows.map((r) => r.id)).toEqual(SUBSYSTEMS.map((s) => s.id));
       expect(rows.every((r) => r.state === "idle")).toBe(true);
+    });
+  });
+
+  describe("listUnowned() — NS2 F1b", () => {
+    it("returns [] when every pipeline/chain/agent/integration is owned", async () => {
+      const { service } = build({
+        pipelines: [pipelineFixture("delivery", "forge")],
+        chains: [chainFixture("audit-develop", "scout")],
+        agents: [{ id: "architect", ownerSubsystem: "forge", instructions: "x" } as Agent],
+        integrations: [
+          {
+            id: "team-slack",
+            kind: "slack",
+            projectId: "acme",
+            config: { kind: "slack", channels: [] },
+            enabled: true,
+            status: "disconnected",
+            hasCredentials: false,
+            ownerSubsystem: "puls",
+          } as Integration,
+        ],
+      });
+      expect(await service.listUnowned()).toEqual([]);
+    });
+
+    it("lists every unowned pipeline/chain/agent/integration by kind + id", async () => {
+      const { service } = build({
+        pipelines: [pipelineFixture("orphan-pipeline")],
+        chains: [chainFixture("orphan-chain")],
+        agents: [{ id: "orphan-agent", instructions: "x" } as Agent],
+        integrations: [
+          {
+            id: "orphan-integration",
+            kind: "slack",
+            projectId: "acme",
+            config: { kind: "slack", channels: [] },
+            enabled: true,
+            status: "disconnected",
+            hasCredentials: false,
+          } as Integration,
+        ],
+      });
+      const unowned = await service.listUnowned();
+      expect(unowned).toEqual(
+        expect.arrayContaining([
+          { kind: "pipeline", id: "orphan-pipeline" },
+          { kind: "chain", id: "orphan-chain" },
+          { kind: "agent", id: "orphan-agent" },
+          { kind: "integration", id: "orphan-integration" },
+        ]),
+      );
+      expect(unowned).toHaveLength(4);
     });
   });
 });

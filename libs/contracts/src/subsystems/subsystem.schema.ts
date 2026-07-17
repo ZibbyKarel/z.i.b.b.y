@@ -143,3 +143,26 @@ export const SubsystemWithStatusSchema = SubsystemSchema.extend({
   tier3Count: z.number().int().nonnegative(),
 });
 export type SubsystemWithStatus = z.infer<typeof SubsystemWithStatusSchema>;
+
+/**
+ * NS2 F1b — the kind of stored entity that can carry an `ownerSubsystem`.
+ * Pipelines/chains have carried it since Phase 81; agents/integrations gained
+ * it in F1a. There is no standalone monitor entity (a monitor is a ci-stream
+ * GitHub integration), so monitor ownership is covered by `"integration"`.
+ */
+export const OwnableEntityKindSchema = z.enum(["pipeline", "chain", "agent", "integration"]);
+export type OwnableEntityKind = z.infer<typeof OwnableEntityKindSchema>;
+
+/**
+ * One entity the owner-backfill sweep (F1b) could not attribute to a subsystem
+ * — surfaced via `GET /api/subsystems/unowned` rather than folded into the
+ * health read-model (a closed infra enum, not the place for an ownership gap).
+ * Post-backfill this list is `[]` for the seeded fleet; it exists so a NEWLY
+ * created entity that somehow slips past the write-time 422 (or a hand-edited
+ * file) is still discoverable.
+ */
+export const UnownedEntitySchema = z.object({
+  kind: OwnableEntityKindSchema,
+  id: z.string().min(1),
+});
+export type UnownedEntity = z.infer<typeof UnownedEntitySchema>;

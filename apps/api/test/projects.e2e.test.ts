@@ -247,6 +247,7 @@ describe("Projects API (e2e)", () => {
           kind: "jira",
           companyId: "acme",
           config: { kind: "jira", baseUrl: "https://acme.atlassian.net", email: "ops@acme.com" },
+          ownerSubsystem: "puls",
         })
         .expect(201);
 
@@ -268,6 +269,7 @@ describe("Projects API (e2e)", () => {
           kind: "slack",
           projectId: "linked",
           config: { kind: "slack", channels: ["C1"] },
+          ownerSubsystem: "puls",
         })
         .expect(201);
 
@@ -335,6 +337,7 @@ describe("Projects API (e2e)", () => {
           kind: "github",
           projectId: "no-token",
           config: { kind: "github", repo: "acme/app", streams: ["issues", "pulls"] },
+          ownerSubsystem: "puls",
         })
         .expect(201);
 

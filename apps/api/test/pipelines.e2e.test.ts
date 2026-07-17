@@ -787,6 +787,7 @@ describe("Pipeline stage gates (claude mode, e2e)", () => {
         name: "Gated writer",
         instructions: "writes, deletes behind the gate",
         risk: "high",
+        ownerSubsystem: "forge",
         gates: [
           {
             match: [{ type: "action", action: "delete" }],
@@ -995,7 +996,13 @@ describe("PR gate on a git project (claude mode, e2e)", () => {
 
     await request(app.getHttpServer())
       .post("/api/agents")
-      .send({ id: "pr-writer", name: "PR writer", instructions: "opens PRs", risk: "medium" })
+      .send({
+        id: "pr-writer",
+        name: "PR writer",
+        instructions: "opens PRs",
+        risk: "medium",
+        ownerSubsystem: "forge",
+      })
       .expect(201);
     await request(app.getHttpServer())
       .post("/api/projects")

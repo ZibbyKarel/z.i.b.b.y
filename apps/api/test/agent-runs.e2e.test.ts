@@ -63,7 +63,12 @@ describe("Agent runs API (e2e)", () => {
     // Seed the agent we run.
     await request(app.getHttpServer())
       .post("/api/agents")
-      .send({ id: "agent-007", name: "Agent 007", instructions: "test agent" })
+      .send({
+        id: "agent-007",
+        name: "Agent 007",
+        instructions: "test agent",
+        ownerSubsystem: "forge",
+      })
       .expect(201);
     // Seed a North Star so grounding has something to inject.
     await request(app.getHttpServer())
@@ -250,7 +255,7 @@ describe("Agent runs on a git project lands commits on a zibby/* branch (e2e)", 
 
     await request(app.getHttpServer())
       .post("/api/agents")
-      .send({ id: "builder", name: "Builder", instructions: "builds" })
+      .send({ id: "builder", name: "Builder", instructions: "builds", ownerSubsystem: "forge" })
       .expect(201);
     await request(app.getHttpServer())
       .post("/api/projects")
@@ -335,7 +340,12 @@ describe("Agent runs persistence across restart (e2e)", () => {
     const seed = await bootApp();
     await request(seed.getHttpServer())
       .post("/api/agents")
-      .send({ id: "agent-007", name: "Agent 007", instructions: "test agent" })
+      .send({
+        id: "agent-007",
+        name: "Agent 007",
+        instructions: "test agent",
+        ownerSubsystem: "forge",
+      })
       .expect(201);
     await seed.close();
   });

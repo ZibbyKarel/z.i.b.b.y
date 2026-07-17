@@ -57,6 +57,7 @@ describe("Briefing (e2e)", () => {
         name: "Payer",
         instructions: "buys things",
         risk: "high",
+        ownerSubsystem: "forge",
         gates: [
           {
             match: [{ type: "threshold", metric: "purchase.amount", op: "gt", value: 500 }],
@@ -80,6 +81,7 @@ describe("Briefing (e2e)", () => {
         projectId: "acme-app",
         name: "Team",
         config: { kind: "slack", channels: ["C1"] },
+        ownerSubsystem: "puls",
       })
       .expect(201);
     await request(app.getHttpServer())

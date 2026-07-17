@@ -4,11 +4,14 @@ import {
   type SubsystemId,
   type SubsystemState,
   type SubsystemWithStatus,
+  type UnownedEntity,
 } from "@zibby/contracts";
 import type { Approval } from "@zibby/contracts";
 import type { TaskRun } from "@zibby/contracts";
+import { AgentsStorageService } from "../agents/agents.storage.service";
 import { ApprovalsService } from "../approvals/approvals.service";
 import { ChainsStorageService } from "../chains/chains.storage.service";
+import { IntegrationsStorageService } from "../integrations/integrations.storage.service";
 import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
 import { TaskRunsService } from "../tasks/task-runs.service";
 import { SubsystemSeenStore } from "./subsystem-seen.store";
@@ -89,6 +92,8 @@ export class SubsystemsService {
     private readonly taskRuns: TaskRunsService,
     private readonly approvals: ApprovalsService,
     private readonly seen: SubsystemSeenStore,
+    private readonly agents: AgentsStorageService,
+    private readonly integrations: IntegrationsStorageService,
   ) {}
 
   /**
@@ -131,6 +136,33 @@ export class SubsystemsService {
     return this.get(id);
   }
 
+  /**
+   * NS2 F1b — every stored pipeline/chain/agent/integration that still has no
+   * `ownerSubsystem`. A report list, not a health signal (the health read-model
+   * is a closed infra enum — not the place for an ownership gap): the
+   * owner-backfill sweep runs once at boot, so this is `[]` in steady state and
+   * only surfaces a NEWLY unowned entity (a hand-edited file, or a write path
+   * that somehow slipped past the create-time 422).
+   */
+  async listUnowned(): Promise<UnownedEntity[]> {
+    const [pipelines, chains, agents, integrations] = await Promise.all([
+      this.pipelines.list(),
+      this.chains.list(),
+      this.agents.list(),
+      this.integrations.list(),
+    ]);
+    return [
+      ...pipelines
+        .filter((p) => !p.ownerSubsystem)
+        .map((p) => ({ kind: "pipeline" as const, id: p.id })),
+      ...chains.filter((c) => !c.ownerSubsystem).map((c) => ({ kind: "chain" as const, id: c.id })),
+      ...agents.filter((a) => !a.ownerSubsystem).map((a) => ({ kind: "agent" as const, id: a.id })),
+      ...integrations
+        .filter((i) => !i.ownerSubsystem)
+        .map((i) => ({ kind: "integration" as const, id: i.id })),
+    ];
+  }
+
   private find(id: string) {
     const subsystem = SUBSYSTEMS.find((s) => s.id === id);
     if (!subsystem) throw new SubsystemNotFoundError(id);
@@ -157,9 +189,7 @@ export class SubsystemsService {
     for (const c of chains) if (c.ownerSubsystem) chainOwner.set(c.id, c.ownerSubsystem);
 
     const lastSeenById = new Map<SubsystemId, string>(
-      await Promise.all(
-        SUBSYSTEMS.map(async (s) => [s.id, await this.seen.seenAt(s.id)] as const),
-      ),
+      await Promise.all(SUBSYSTEMS.map(async (s) => [s.id, await this.seen.seenAt(s.id)] as const)),
     );
 
     const running = new Set<SubsystemId>();

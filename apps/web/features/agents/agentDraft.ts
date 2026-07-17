@@ -27,5 +27,9 @@ export function newAgentDraft(category?: string): Agent {
     tools: ["read"],
     category,
     instructions: "",
+    // NS2 F1: every agent must have an owning subsystem at create time (the API
+    // 422s a create without one) — "forge" is the default since most hand-built
+    // agents are pipeline crew.
+    ownerSubsystem: "forge",
   };
 }

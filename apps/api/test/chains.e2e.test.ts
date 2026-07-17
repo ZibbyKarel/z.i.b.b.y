@@ -77,6 +77,7 @@ describe("Chains API (e2e)", () => {
       category: "Dev",
       description: "Writes things",
       instructions: "Write.",
+      ownerSubsystem: "forge",
     });
     await request(app.getHttpServer())
       .post("/api/pipelines")

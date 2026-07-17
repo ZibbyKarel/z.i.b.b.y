@@ -84,7 +84,12 @@ describe("Health API (e2e) — claude unavailable", () => {
   it("refuses an agent run start with a 503 (no dead run record)", async () => {
     await request(app.getHttpServer())
       .post("/api/agents")
-      .send({ id: "preflight-probe", name: "Preflight probe", instructions: "noop" })
+      .send({
+        id: "preflight-probe",
+        name: "Preflight probe",
+        instructions: "noop",
+        ownerSubsystem: "forge",
+      })
       .expect(201);
 
     // Start now goes through the service, which throws ClaudeUnavailableError when the

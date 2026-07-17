@@ -98,6 +98,7 @@ describe("Mid-run approval gate (Variant B, e2e)", () => {
         name: "Payer",
         instructions: "buys things",
         risk: "high",
+        ownerSubsystem: "forge",
         gates: [
           {
             match: [{ type: "threshold", metric: "purchase.amount", op: "gt", value: 500 }],
@@ -115,6 +116,7 @@ describe("Mid-run approval gate (Variant B, e2e)", () => {
         id: "denier",
         name: "Denier",
         instructions: "must not pay",
+        ownerSubsystem: "forge",
         gates: [{ match: [{ type: "action", action: "payment" }], decision: "deny" }],
       })
       .expect(201);
@@ -122,7 +124,7 @@ describe("Mid-run approval gate (Variant B, e2e)", () => {
     // No gates: benign actions run unimpeded.
     await request(app.getHttpServer())
       .post("/api/agents")
-      .send({ id: "free", name: "Free", instructions: "browses" })
+      .send({ id: "free", name: "Free", instructions: "browses", ownerSubsystem: "forge" })
       .expect(201);
   });
 
@@ -307,6 +309,7 @@ describe("Mid-run pause is not durable across restart (e2e)", () => {
         id: "payer",
         name: "Payer",
         instructions: "buys things",
+        ownerSubsystem: "forge",
         gates: [
           {
             match: [{ type: "threshold", metric: "purchase.amount", op: "gt", value: 500 }],

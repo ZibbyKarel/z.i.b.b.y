@@ -24,7 +24,12 @@ describe("Gates API (e2e)", () => {
 
     await request(app.getHttpServer())
       .post("/api/agents")
-      .send({ id: "shopper", name: "Shopper", instructions: "buys things" })
+      .send({
+        id: "shopper",
+        name: "Shopper",
+        instructions: "buys things",
+        ownerSubsystem: "forge",
+      })
       .expect(201);
   });
 
