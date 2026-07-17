@@ -10,10 +10,16 @@ import {
   type CreateAgentInput,
   GateRuleInputSchema,
   RiskSchema,
+  SubsystemIdSchema,
   type UpdateAgentInput,
 } from "@zibby/contracts";
 import matter from "gray-matter";
-import { AvatarAssetStore, MarkdownEntityStore, searchByText, writeFileAtomic } from "../shared/file-storage";
+import {
+  AvatarAssetStore,
+  MarkdownEntityStore,
+  searchByText,
+  writeFileAtomic,
+} from "../shared/file-storage";
 import {
   AgentConflictError,
   AgentNotFoundError,
@@ -177,6 +183,8 @@ export class AgentsStorageService extends MarkdownEntityStore<Agent> {
     const gates = GateRuleInputSchema.array().safeParse(data.gates);
     if (gates.success) candidate.gates = gates.data;
     if (data.status === "proposed" || data.status === "active") candidate.status = data.status;
+    if (SubsystemIdSchema.safeParse(data.ownerSubsystem).success)
+      candidate.ownerSubsystem = data.ownerSubsystem;
 
     const result = AgentSchema.safeParse(candidate);
     return result.success ? result.data : null;
@@ -196,6 +204,7 @@ export class AgentsStorageService extends MarkdownEntityStore<Agent> {
     if (agent.risk !== undefined) data.risk = agent.risk;
     if (agent.gates !== undefined) data.gates = agent.gates;
     if (agent.status !== undefined) data.status = agent.status;
+    if (agent.ownerSubsystem !== undefined) data.ownerSubsystem = agent.ownerSubsystem;
     return data;
   }
 

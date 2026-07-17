@@ -1,10 +1,10 @@
 import { z } from "zod";
 
 /**
- * The eight named subsystems of the GAIA-style federation (design doc
- * `docs/superpowers/specs/2026-07-08-subsystem-federation-design.md`). Fixed set —
- * ZIBBY doesn't grow a ninth without a design decision, so this is a closed enum,
- * not a free-form string.
+ * The ten named subsystems of the GAIA-style federation (design doc
+ * `docs/superpowers/specs/2026-07-08-subsystem-federation-design.md`; codex +
+ * ledger seated in NS2 F1a). Fixed set — ZIBBY doesn't grow an eleventh without a
+ * design decision, so this is a closed enum, not a free-form string.
  */
 export const SubsystemIdSchema = z.enum([
   "forge",
@@ -15,6 +15,8 @@ export const SubsystemIdSchema = z.enum([
   "scout",
   "herald",
   "loom",
+  "codex",
+  "ledger",
 ]);
 export type SubsystemId = z.infer<typeof SubsystemIdSchema>;
 
@@ -42,8 +44,9 @@ export type Subsystem = z.infer<typeof SubsystemSchema>;
  * The registry — identity only, phase 80. Colors are the ZT palette hues
  * (Velín-D phase 2 alignment): forge `#5b8def`, herald `#56c4d6`, sentinel
  * `#34c9bd`, scout `#46cf8b`, maestro `#e0a83c`, beacon `#f4785c`, puls
- * `#f2749e`, loom `#b07cff`. Each color is the subsystem's whole visual
- * identity — it drives the orb body on the map and its header echo.
+ * `#f2749e`, loom `#b07cff`, codex `#c56fd4`, ledger `#a9c23e`. Each color is
+ * the subsystem's whole visual identity — it drives the orb body on the map
+ * and its header echo.
  */
 export const SUBSYSTEMS: readonly Subsystem[] = [
   {
@@ -102,6 +105,20 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     tagline: "Tkadlec kvality",
     mandate: "Proaktivní analýza kvality a architektury codebase, nálezy předává Forge.",
     color: "#b07cff",
+  },
+  {
+    id: "codex",
+    name: "Codex",
+    tagline: "Paměť rodu",
+    mandate: "Správa paměti — vault, grounding, noční destilace a poličky znalostí.",
+    color: "#c56fd4",
+  },
+  {
+    id: "ledger",
+    name: "Ledger",
+    tagline: "Správce pokladny",
+    mandate: "Rozpočty a limity — stropy útrat, okna spotřeby, správa token-spend a limit-resume.",
+    color: "#a9c23e",
   },
 ];
 

@@ -41,4 +41,6 @@ export const SUBSYSTEM_GLYPH: Record<SubsystemId, IconName> = {
   beacon: "warn",
   puls: "pulse",
   loom: "search",
+  codex: "brain",
+  ledger: "dollar",
 };

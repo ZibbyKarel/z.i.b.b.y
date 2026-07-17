@@ -167,6 +167,31 @@ describe("agent schemas", () => {
     }
   });
 
+  it("accepts a valid ownerSubsystem (NS2 F1a)", () => {
+    const parsed = AgentSchema.safeParse({ id: "a", instructions: "i", ownerSubsystem: "forge" });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.ownerSubsystem).toBe("forge");
+    }
+  });
+
+  it("rejects an unknown ownerSubsystem", () => {
+    const parsed = AgentSchema.safeParse({
+      id: "a",
+      instructions: "i",
+      ownerSubsystem: "not-a-subsystem",
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("omitting ownerSubsystem still validates (pre-F1 agents)", () => {
+    const parsed = AgentSchema.safeParse({ id: "a", instructions: "i" });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.ownerSubsystem).toBeUndefined();
+    }
+  });
+
   describe("T11 finding #11 — name/description/glyph/category length caps (length only, not enums)", () => {
     const base = { id: "a", instructions: "i" };
 
@@ -177,9 +202,7 @@ describe("agent schemas", () => {
 
     it("description: 512 passes, 513 rejects", () => {
       expect(AgentSchema.safeParse({ ...base, description: "x".repeat(512) }).success).toBe(true);
-      expect(AgentSchema.safeParse({ ...base, description: "x".repeat(513) }).success).toBe(
-        false,
-      );
+      expect(AgentSchema.safeParse({ ...base, description: "x".repeat(513) }).success).toBe(false);
     });
 
     it("glyph: 64 passes, 65 rejects — still free-form, not an enum", () => {

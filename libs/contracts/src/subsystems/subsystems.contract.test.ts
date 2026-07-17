@@ -41,8 +41,22 @@ describe("subsystemsContract", () => {
 });
 
 describe("SUBSYSTEMS registry", () => {
-  it("has exactly 8 entries", () => {
-    expect(SUBSYSTEMS).toHaveLength(8);
+  it("has exactly 10 entries", () => {
+    expect(SUBSYSTEMS).toHaveLength(10);
+  });
+
+  it("contains codex and ledger with non-empty tagline/mandate", () => {
+    for (const id of ["codex", "ledger"] as const) {
+      const subsystem = SUBSYSTEMS.find((s) => s.id === id);
+      expect(subsystem).toBeDefined();
+      expect(subsystem?.tagline.length).toBeGreaterThan(0);
+      expect(subsystem?.mandate.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("has 10 unique colors", () => {
+    const colors = SUBSYSTEMS.map((s) => s.color);
+    expect(new Set(colors).size).toBe(10);
   });
 
   it("has unique ids covering the whole SubsystemIdSchema enum", () => {
@@ -97,7 +111,13 @@ describe("SubsystemWithStatusSchema", () => {
   });
 
   it("rejects an unknown id shape (404-path case belongs at the route level)", () => {
-    const withStatus = { ...SUBSYSTEMS[0], id: "nope", state: "idle", tier2Count: 0, tier3Count: 0 };
+    const withStatus = {
+      ...SUBSYSTEMS[0],
+      id: "nope",
+      state: "idle",
+      tier2Count: 0,
+      tier3Count: 0,
+    };
     expect(SubsystemWithStatusSchema.safeParse(withStatus).success).toBe(false);
   });
 });
