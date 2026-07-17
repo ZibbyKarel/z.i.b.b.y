@@ -1202,6 +1202,77 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       );
     });
   });
+
+  describe("F2c — classification trace persists + activity carries ownerSubsystem", () => {
+    /** A minimal pipeline definition fixture — only the fields the resolver reads. */
+    function pipelineDef(id: string, name: string, ownerSubsystem = "forge") {
+      return { id, name, ownerSubsystem, desc: "", phases: [] };
+    }
+
+    it("an undirected subsystem verdict persists the full two-stage trace: stage1 is the raw subsystem verdict, subsystem is set, and the final target is the resolved concrete pipeline", async () => {
+      pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery")]);
+      classifier.classify.mockResolvedValue({
+        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        confidence: 0.8,
+        reason: "matches forge's mandate",
+        matchedTerms: ["ship"],
+        candidates: [],
+      });
+      const result = await service.createTask({ text: "ship the delivery pipeline" });
+      expect(result.outcome).toBe("dispatched");
+      if (result.outcome !== "dispatched") return;
+      expect(result.task.classification?.stage1).toEqual({
+        kind: "subsystem",
+        id: "forge",
+        name: "Forge",
+      });
+      expect(result.task.classification?.subsystem).toBe("forge");
+      expect(result.task.classification?.confidence).toBe(0.8);
+      expect(result.task.classification?.matchedTerms).toEqual(["ship"]);
+      expect(result.task.target?.kind).toBe("pipeline");
+      expect(activity.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: "task-dispatched",
+          refs: expect.objectContaining({ ownerSubsystem: "forge" }),
+        }),
+      );
+    });
+
+    it("a directly-classified pipeline target (no subsystem delegation) persists a trace with NO subsystem field, and the activity's ownerSubsystem falls back to a guarded store read of the unit's own ownership", async () => {
+      pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery", "forge")]);
+      classifier.classify.mockResolvedValue({
+        target: { kind: "pipeline", id: "delivery", name: "Delivery" },
+        confidence: 0.9,
+        reason: "matched",
+        matchedTerms: ["ship"],
+        candidates: [],
+      });
+      const result = await service.createTask({ text: "ship the delivery pipeline" });
+      expect(result.outcome).toBe("dispatched");
+      if (result.outcome !== "dispatched") return;
+      expect(result.task.classification?.stage1).toEqual({
+        kind: "pipeline",
+        id: "delivery",
+        name: "Delivery",
+      });
+      expect(result.task.classification?.subsystem).toBeUndefined();
+      expect(activity.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          refs: expect.objectContaining({ ownerSubsystem: "forge" }),
+        }),
+      );
+    });
+
+    it("an explicit target (bypasses classify entirely) persists NO classification trace", async () => {
+      const result = await service.createTask({
+        text: "write it",
+        target: { kind: "agent", id: "writer", name: "Writer" },
+      });
+      expect(result.outcome).toBe("dispatched");
+      if (result.outcome !== "dispatched") return;
+      expect(result.task.classification).toBeUndefined();
+    });
+  });
 });
 
 describe("Task 3b — concurrent terminal handlers must not double-open a PR (finding #7)", () => {

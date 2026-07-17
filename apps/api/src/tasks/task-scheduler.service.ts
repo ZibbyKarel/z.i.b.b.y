@@ -12,6 +12,7 @@ import type {
   AgentRun,
   Attachment,
   ChainRun,
+  ClassificationTrace,
   CreateTaskInput,
   CreateTaskResult,
   GoalRun,
@@ -825,8 +826,9 @@ export class TaskSchedulerService
             task.id,
             dispatched.runRef,
             dispatched.target,
+            dispatched.classification,
           );
-          this.recordDispatchedActivity(task.id, projectId, dispatched);
+          await this.recordDispatchedActivity(task.id, projectId, dispatched);
           this.log.info("task dispatched (background)", {
             id: task.id,
             runRef: dispatched.runRef,
@@ -933,10 +935,11 @@ export class TaskSchedulerService
       task.id,
       dispatched.runRef,
       dispatched.target,
+      dispatched.classification,
     );
     this.budgetApproved.delete(task.id);
     void this.reconcileOutcome(updated);
-    this.recordDispatchedActivity(task.id, task.projectId, dispatched);
+    await this.recordDispatchedActivity(task.id, task.projectId, dispatched);
     this.log.info("task dispatched", {
       id: task.id,
       runRef: dispatched.runRef,
@@ -1109,7 +1112,7 @@ export class TaskSchedulerService
      * runner (never trusted blindly — see `AgentRunnerService.launch`).
      */
     toolGrants?: string[],
-  ): Promise<{ runRef: string; target: TaskTarget } | null> {
+  ): Promise<{ runRef: string; target: TaskTarget; classification?: ClassificationTrace } | null> {
     // Build the run-attachments reference ONCE: an absolute dir (from storage) plus
     // the filenames, or undefined when the task carries no attachment set.
     const runAttachments: RunAttachments | undefined = attachmentSetId
@@ -1120,6 +1123,9 @@ export class TaskSchedulerService
       : undefined;
     let target: TaskTarget;
     let matchedTerms: string[];
+    // F2c: the persisted classification trace — only set on the undirected classify
+    // path (an explicit target was never classified, so there is nothing to trace).
+    let classification: ClassificationTrace | undefined;
     if (explicitTarget) {
       target = explicitTarget;
       matchedTerms = [];
@@ -1137,10 +1143,19 @@ export class TaskSchedulerService
       // like any other "nothing matched confidently" verdict (the terminal block
       // below, unchanged, already records `orchestrator-fallback` for a
       // non-explicit target and starts the orchestrator).
+      let subsystem: SubsystemId | undefined;
       if (target.kind === "subsystem") {
+        subsystem = target.id;
         target =
           (await this.resolveSubsystemTargetOrNull(target, text, paths)) ?? ORCHESTRATOR_TARGET;
       }
+      classification = {
+        stage1: routing.target,
+        confidence: routing.confidence,
+        reason: routing.reason,
+        matchedTerms: routing.matchedTerms,
+        ...(subsystem ? { subsystem } : {}),
+      };
     }
     if (target.kind === "agent") {
       const run = await this.agentRunner.start(
@@ -1155,7 +1170,7 @@ export class TaskSchedulerService
         runAttachments,
         toolGrants,
       );
-      return { runRef: run.runId, target };
+      return { runRef: run.runId, target, classification };
     }
     if (target.kind === "pipeline") {
       // Task 8: attachments are intentionally NOT passed to a pipeline target in v1 —
@@ -1168,7 +1183,7 @@ export class TaskSchedulerService
         undefined,
         output,
       );
-      return { runRef: run.pipelineRunId, target };
+      return { runRef: run.pipelineRunId, target, classification };
     }
     if (target.kind === "goal") {
       // Phase 10: route a goal-targeted task through the outer-loop runner. It flows
@@ -1184,14 +1199,14 @@ export class TaskSchedulerService
         matchedTerms,
         runAttachments,
       );
-      return { runRef: run.goalRunId, target };
+      return { runRef: run.goalRunId, target, classification };
     }
     if (target.kind === "chain") {
       // Phase 05: a chain-targeted task dispatches through the chain runner. The
       // chain run carries the taskId so its terminal outcome writes back onto the
       // task exactly like agent/pipeline/goal runs.
       const run = await this.chainRunner.start(target.id, taskId);
-      return { runRef: run.chainRunId, target };
+      return { runRef: run.chainRunId, target, classification };
     }
     // Phase 4a (Agent Factory telemetry): record a fallback ONLY when the
     // classifier itself picked the orchestrator (its terminal "nothing matched
@@ -1218,14 +1233,14 @@ export class TaskSchedulerService
       projectId ?? "",
       runAttachments,
     );
-    return { runRef: run.runId, target };
+    return { runRef: run.runId, target, classification };
   }
 
   /** Persist an immediately-dispatched task + its activity (the create path). */
   private async persistDispatched(
     taskId: string,
     input: CreateTaskInputResolved,
-    dispatched: { runRef: string; target: TaskTarget },
+    dispatched: { runRef: string; target: TaskTarget; classification?: ClassificationTrace },
     projectId: string | undefined,
     now: number,
   ): Promise<ScheduledTask> {
@@ -1237,8 +1252,9 @@ export class TaskSchedulerService
       dispatched.target,
       now,
       projectId,
+      dispatched.classification,
     );
-    this.recordDispatchedActivity(taskId, projectId, dispatched);
+    await this.recordDispatchedActivity(taskId, projectId, dispatched);
     return task;
   }
 
@@ -1261,11 +1277,19 @@ export class TaskSchedulerService
     );
   }
 
-  private recordDispatchedActivity(
+  /**
+   * F2c: async now — awaits the best-effort {@link ownerSubsystemOf} store read
+   * BEFORE calling `activity.record`, so the record call itself still lands
+   * deterministically within the caller's own await chain (matching the old
+   * synchronous-call guarantee) rather than racing off on an unawaited `.then()`.
+   * The write itself stays fire-and-forget (`void this.activity.record(...)`).
+   */
+  private async recordDispatchedActivity(
     taskId: string,
     projectId: string | undefined,
-    dispatched: { runRef: string; target: TaskTarget },
-  ): void {
+    dispatched: { runRef: string; target: TaskTarget; classification?: ClassificationTrace },
+  ): Promise<void> {
+    const ownerSubsystem = await this.ownerSubsystemOf(dispatched);
     void this.activity.record({
       kind: "task-dispatched",
       summary: `dispatched to ${dispatched.target.kind} ${targetIdOf(dispatched.target)}`,
@@ -1275,8 +1299,34 @@ export class TaskSchedulerService
         status: dispatched.target.kind,
         ...(projectId ? { projectId } : {}),
         ...refForTarget(dispatched.target),
+        ...(ownerSubsystem ? { ownerSubsystem } : {}),
       },
     });
+  }
+
+  /**
+   * F2c — best-effort owning subsystem for a dispatched activity entry: the
+   * classification trace's own `subsystem` when stage-1 delegated (cheapest,
+   * already in hand); otherwise a guarded store read of the dispatched unit's
+   * own `ownerSubsystem` (a pipeline/agent target only — nothing else carries
+   * one). Never throws — attribution only (Law 4), so a store failure just
+   * omits the ref rather than blocking the activity record.
+   */
+  private async ownerSubsystemOf(dispatched: {
+    target: TaskTarget;
+    classification?: ClassificationTrace;
+  }): Promise<SubsystemId | undefined> {
+    if (dispatched.classification?.subsystem) return dispatched.classification.subsystem;
+    const { target } = dispatched;
+    if (target.kind === "pipeline") {
+      const pipelines = await this.pipelinesStore.list().catch((): Pipeline[] => []);
+      return pipelines.find((p) => p.id === target.id)?.ownerSubsystem;
+    }
+    if (target.kind === "agent") {
+      const agents = await this.agentsStore.listActive().catch((): Agent[] => []);
+      return agents.find((a) => a.id === target.id)?.ownerSubsystem;
+    }
+    return undefined;
   }
 
   private recordQueued(task: ScheduledTask, project: Project | null): void {

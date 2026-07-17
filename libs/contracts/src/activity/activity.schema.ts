@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { IsoDateTimeSchema } from "../common.schema";
+import { SubsystemIdSchema } from "../subsystems/subsystem.schema";
 
 /**
  * The closed vocabulary of recordable activity (Phase 6.1). One kind per real,
@@ -118,6 +119,13 @@ export const ActivityRefsSchema = z
     normalizedSummary: z.string().optional(),
     /** Comma-joined classifier-matched terms carried alongside `normalizedSummary`. */
     terms: z.string().optional(),
+    /**
+     * F2c: the subsystem that owns the dispatched unit (its `Pipeline`/`Agent`
+     * `ownerSubsystem`), stamped on a dispatch entry when known — best-effort
+     * attribution, not authorization (Law 4). Absent when the target is
+     * unattributed (e.g. the orchestrator fallback) or the store read failed.
+     */
+    ownerSubsystem: SubsystemIdSchema.optional(),
   })
   .strict();
 export type ActivityRefs = z.infer<typeof ActivityRefsSchema>;

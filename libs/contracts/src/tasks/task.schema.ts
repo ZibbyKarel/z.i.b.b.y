@@ -219,6 +219,30 @@ export const TaskRoutingSchema = z.object({
 export type TaskRouting = z.infer<typeof TaskRoutingSchema>;
 
 /**
+ * F2c — the persisted classification trace: the switchboard's STAGE-1 verdict
+ * (the terminal unit that actually ran already lives on `ScheduledTask.target`/
+ * `TaskRun.target`, so this is the "why", not a second target). `subsystem` is
+ * set only when stage-1 delegated to a subsystem (a stage-2 `classifyWithinSubsystem`
+ * call happened); absent when stage-1 already named a concrete agent/pipeline.
+ * Optional/additive on both `ScheduledTask` and `TaskRun` — an old-shaped record
+ * still parses with no trace, and the explicit `@mention` path never writes one
+ * (nothing was actually classified).
+ */
+export const ClassificationTraceSchema = z.object({
+  /** The switchboard's stage-1 pick — may itself be a `{kind:"subsystem"}` verdict. */
+  stage1: TaskTargetSchema,
+  /** 0–1; the stage-1 verdict's confidence. */
+  confidence: z.number().min(0).max(1),
+  /** The stage-1 verdict's one-sentence reason. */
+  reason: z.string(),
+  /** Catalog terms that justified the stage-1 pick. */
+  matchedTerms: z.array(z.string()),
+  /** Set when stage-1 delegated to a subsystem and stage-2 resolved the unit. */
+  subsystem: SubsystemIdSchema.optional(),
+});
+export type ClassificationTrace = z.infer<typeof ClassificationTraceSchema>;
+
+/**
  * What happens to a task's finished work — the operator's per-task choice in the
  * New Task dialog, the directed-task counterpart of a pipeline's `outputs:` block.
  * Like the pipeline sinks it is deterministic and system-owned (no agent, no
@@ -380,6 +404,12 @@ export const ScheduledTaskSchema = z.object({
   approvalId: z.string().optional(),
   /** Set once dispatched: the classifier's chosen target. */
   target: TaskTargetSchema.optional(),
+  /**
+   * F2c — set once dispatched via the undirected classify path: the switchboard's
+   * stage-1 verdict trace (see {@link ClassificationTraceSchema}). Absent for an
+   * explicit target (nothing was classified) and for any pre-F2c record.
+   */
+  classification: ClassificationTraceSchema.optional(),
   /**
    * The operator's chosen terminal output (the dialog selector). Absent = inherit
    * (pipeline → its own `outputs:`, agent/orchestrator → none). Carried so the

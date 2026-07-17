@@ -124,7 +124,7 @@ describe("RunDetail — pipeline header", () => {
     expect(screen.queryByText("zobrazit více")).not.toBeInTheDocument();
   });
 
-  it("shows a collapsed \"Vstup\" section that expands to reveal the full formatted task input", async () => {
+  it('shows a collapsed "Vstup" section that expands to reveal the full formatted task input', async () => {
     renderDetail();
     // Collapsed by default: the accordion summary is there, its content is not.
     const summary = screen.getByRole("button", { name: /Vstup/ });
@@ -135,7 +135,7 @@ describe("RunDetail — pipeline header", () => {
     expect(screen.getByText(LONG_DESC)).toBeInTheDocument();
   });
 
-  it("shows the task's attachments read-only (no remove button) inside the expanded \"Vstup\" section", async () => {
+  it('shows the task\'s attachments read-only (no remove button) inside the expanded "Vstup" section', async () => {
     renderDetail({
       ...pipelineRun,
       attachments: [
@@ -185,7 +185,7 @@ describe("RunDetail — pipeline header", () => {
     expect(screen.getByTestId(FilePreviewTestId.Name)).toBeInTheDocument();
   });
 
-  it("renders no \"Vstup\" section when the run has neither task text nor attachments", () => {
+  it('renders no "Vstup" section when the run has neither task text nor attachments', () => {
     renderDetail({ ...pipelineRun, taskText: undefined });
     expect(screen.queryByRole("button", { name: /Vstup/ })).not.toBeInTheDocument();
   });
@@ -587,6 +587,29 @@ describe("RunDetail — started time is absolute, not relative (Phase 67 item A)
       startedAt: new Date("2026-06-14T10:10:00Z").toISOString(),
     });
     expect(screen.getByText("za 5 m")).toBeInTheDocument();
+  });
+});
+
+describe("RunDetail — classification trace (F2c)", () => {
+  it("renders the switchboard trace, subsystem hop, and confidence when the run carries one", () => {
+    renderDetail({
+      ...pipelineRun,
+      classification: {
+        stage1: { kind: "subsystem", id: "forge", name: "Forge" },
+        confidence: 0.82,
+        reason: "matched keywords: fix, bug",
+        matchedTerms: ["fix", "bug"],
+        subsystem: "forge",
+      },
+    });
+    expect(screen.getByTestId("classification-trace")).toBeInTheDocument();
+    expect(screen.getByText("matched keywords: fix, bug")).toBeInTheDocument();
+    expect(screen.getByTestId("classification-confidence")).toHaveTextContent("82");
+  });
+
+  it("renders nothing when the run carries no classification trace", () => {
+    renderDetail(pipelineRun);
+    expect(screen.queryByTestId("classification-trace")).not.toBeInTheDocument();
   });
 });
 
