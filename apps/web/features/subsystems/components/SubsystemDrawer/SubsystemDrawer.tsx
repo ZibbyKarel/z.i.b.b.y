@@ -27,6 +27,12 @@ import { ArtefaktyTab } from "./ArtefaktyTab";
 import { GatesTab } from "./GatesTab";
 import { RosterTab } from "./RosterTab";
 
+// Same idiom the DS `Dialog` component uses for its own focus trap —
+// duplicated here rather than imported, per the Task 2 design decision to
+// keep this modal independent of `Dialog` (see the phase-125 design spec).
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export enum SubsystemDrawerTestId {
   Root = "subsystem-drawer-root",
   Panel = "subsystem-drawer-panel",
@@ -259,7 +265,31 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
   // `SubsystemWeb`) on unmount — the same a11y idiom as the DS `Dialog`.
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      if (event.key === "Escape") requestClose();
+      if (event.key === "Escape") {
+        requestClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const container = panelRef.current;
+      if (!container) return;
+      const focusable = Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+      const first = focusable.at(0);
+      const last = focusable.at(-1);
+      if (!first || !last) {
+        event.preventDefault();
+        container.focus();
+        return;
+      }
+      const active = document.activeElement;
+      if (event.shiftKey) {
+        if (active === first || active === container) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (active === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
@@ -270,6 +300,13 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
     panelRef.current?.focus();
     return () => {
       if (previouslyFocused?.isConnected) previouslyFocused.focus();
+    };
+  }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
     };
   }, []);
 

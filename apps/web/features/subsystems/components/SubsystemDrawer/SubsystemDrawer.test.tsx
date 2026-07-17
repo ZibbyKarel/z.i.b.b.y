@@ -330,4 +330,34 @@ describe("SubsystemDrawer (Phase 84)", () => {
       expect(style.transition).toBe("opacity 220ms cubic-bezier(0.16, 1, 0.3, 1)");
     });
   });
+
+  describe("focus trap and scroll lock (phase 125)", () => {
+    it("wraps Tab focus from the last focusable element back to the first", () => {
+      renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />);
+
+      screen.getByRole("tab", { name: "Artefakty" }).focus();
+      fireEvent.keyDown(document, { key: "Tab" });
+
+      expect(document.activeElement).toBe(screen.getByTestId(SubsystemDrawerTestId.Close));
+    });
+
+    it("wraps Shift+Tab from the first focusable element back to the last", () => {
+      renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />);
+
+      screen.getByTestId(SubsystemDrawerTestId.Close).focus();
+      fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+
+      expect(document.activeElement).toBe(screen.getByRole("tab", { name: "Artefakty" }));
+    });
+
+    it("locks body scroll while open and restores it on unmount", () => {
+      const { unmount } = renderWithProviders(
+        <SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />,
+      );
+      expect(document.body.style.overflow).toBe("hidden");
+
+      unmount();
+      expect(document.body.style.overflow).toBe("");
+    });
+  });
 });
