@@ -127,16 +127,16 @@ describe("ProjectBasicsPanel category selector (Phase 98)", () => {
     { name: "Ops", glyph: "code" },
   ];
 
-  it("renders no selector when there are no categories", () => {
+  it("renders no category selector when there are no categories", () => {
     render(<ProjectBasicsPanel isNew categories={[]} onSave={vi.fn()} />);
-    expect(screen.queryByTestId(DropdownTestId.Trigger)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Kategorie")).not.toBeInTheDocument();
   });
 
   it("offers a 'no category' option alongside every category", async () => {
     const user = userEvent.setup();
     render(<ProjectBasicsPanel isNew categories={categories} onSave={vi.fn()} />);
 
-    await user.click(screen.getByTestId(DropdownTestId.Trigger));
+    await user.click(screen.getByLabelText("Kategorie"));
     const labels = screen.getAllByTestId(DropdownTestId.Option).map((o) => o.textContent);
     expect(labels).toEqual(["Bez kategorie", "Dev", "Ops"]);
   });
@@ -146,8 +146,10 @@ describe("ProjectBasicsPanel category selector (Phase 98)", () => {
     const user = userEvent.setup();
     render(<ProjectBasicsPanel isNew categories={categories} onSave={onSave} />);
 
-    await user.click(screen.getByTestId(DropdownTestId.Trigger));
-    const opsOption = screen.getAllByTestId(DropdownTestId.Option).find((o) => o.textContent === "Ops");
+    await user.click(screen.getByLabelText("Kategorie"));
+    const opsOption = screen
+      .getAllByTestId(DropdownTestId.Option)
+      .find((o) => o.textContent === "Ops");
     await user.click(opsOption!);
 
     await userEvent.type(screen.getByPlaceholderText("media-vault"), "Alpha");
@@ -168,7 +170,7 @@ describe("ProjectBasicsPanel category selector (Phase 98)", () => {
       />,
     );
 
-    await user.click(screen.getByTestId(DropdownTestId.Trigger));
+    await user.click(screen.getByLabelText("Kategorie"));
     const noneOption = screen
       .getAllByTestId(DropdownTestId.Option)
       .find((o) => o.textContent === "Bez kategorie");
@@ -176,6 +178,57 @@ describe("ProjectBasicsPanel category selector (Phase 98)", () => {
     await userEvent.click(screen.getByTestId("save-basics"));
 
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ category: undefined }));
+  });
+});
+
+describe("ProjectBasicsPanel prOpenMode field (NS2 F0b)", () => {
+  it("renders the selector defaulting to Ready and omits prOpenMode from the saved body", async () => {
+    const onSave = vi.fn();
+    render(<ProjectBasicsPanel isNew categories={[]} onSave={onSave} />);
+
+    expect(screen.getByLabelText("Režim otevírání PR")).toBeInTheDocument();
+    await userEvent.type(screen.getByPlaceholderText("media-vault"), "Alpha");
+    await userEvent.click(screen.getByTestId("save-basics"));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ prOpenMode: undefined }));
+  });
+
+  it("seeds Draft from an existing project and includes it in the saved body", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ProjectBasicsPanel
+        categories={[]}
+        isNew={false}
+        onSave={onSave}
+        project={{
+          id: "alpha",
+          name: "Alpha",
+          path: "~/Projects/alpha",
+          prOpenMode: "draft",
+        }}
+      />,
+    );
+
+    await user.click(screen.getByTestId("save-basics"));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ prOpenMode: "draft" }));
+  });
+
+  it("picking Draft includes prOpenMode: draft in the saved body", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    render(<ProjectBasicsPanel isNew categories={[]} onSave={onSave} />);
+
+    await user.click(screen.getByLabelText("Režim otevírání PR"));
+    const draftOption = screen
+      .getAllByTestId(DropdownTestId.Option)
+      .find((o) => o.textContent === "Koncept");
+    await user.click(draftOption!);
+
+    await userEvent.type(screen.getByPlaceholderText("media-vault"), "Alpha");
+    await userEvent.click(screen.getByTestId("save-basics"));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ prOpenMode: "draft" }));
   });
 });
 

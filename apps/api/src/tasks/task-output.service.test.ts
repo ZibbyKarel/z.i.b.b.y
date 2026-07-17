@@ -145,6 +145,7 @@ describe("TaskOutputService", () => {
       branch: "zibby/run-1-writer",
       title: "did the work",
       body: "did the work",
+      draft: false, // NS2 F0b — no prOpenMode on the seeded project → ready (default)
     });
     expect(approvals.requestApproval).not.toHaveBeenCalled(); // no gate anymore
     expect(delivery).toMatchObject({
@@ -153,6 +154,20 @@ describe("TaskOutputService", () => {
     });
     const stored = await storage.get("task_1");
     expect(stored.status).toBe("dispatched"); // never parks at awaiting-output
+  });
+
+  it("pr threads the project's prOpenMode: draft into openPr (NS2 F0b)", async () => {
+    projects.get.mockResolvedValueOnce({
+      id: "p1",
+      name: "Repo",
+      path: "/repo",
+      prOpenMode: "draft",
+    });
+    const task = await seed({ type: "pr" });
+    await service.handleTerminal(task, run("/wt"), "did the work");
+    expect(workspace.openPr).toHaveBeenCalledWith(
+      expect.objectContaining({ cwd: "/repo", draft: true }),
+    );
   });
 
   it("pr push failure is soft — a note-only delivery, no structured pr", async () => {

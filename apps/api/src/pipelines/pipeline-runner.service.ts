@@ -1421,10 +1421,14 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       });
       return;
     }
+    // NS2 F0b — per-project draft PR mode; a project-less run (no match on
+    // `projectForRun`) stays `"ready"`, same as an absent `prOpenMode`.
+    const project = await this.projectForRun(run).catch((): Project | null => null);
     const result = await this.workspace.openPr({
       cwd: run.workspace.path,
       title: title || run.pipelineId,
       bodyFile,
+      draft: project?.prOpenMode === "draft",
     });
     if (result) {
       const stats = await this.workspace

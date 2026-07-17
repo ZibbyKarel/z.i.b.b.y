@@ -193,6 +193,16 @@ export const ProjectBudgetSchema = z
 export type ProjectBudget = z.infer<typeof ProjectBudgetSchema>;
 
 /**
+ * NS2 F0b — per-project PR-opening mode. `WorkspaceService.openPr` already opens
+ * the PR immediately on every `pr` output sink (Tier-2, no gate); this only
+ * controls whether that PR is opened as a GitHub draft (`gh pr create --draft`)
+ * or ready-for-review. Absent on a `Project` means `"ready"` — never changes the
+ * merge gate, which stays the operator's.
+ */
+export const PrOpenModeSchema = z.enum(["ready", "draft"]);
+export type PrOpenMode = z.infer<typeof PrOpenModeSchema>;
+
+/**
  * A target directory agents and skills can run against — the catalog of run
  * destinations the RunModal offers (instead of a hard-coded list). Projects live
  * in a registry the backend owns (`_projects.json`), not as files on disk, so
@@ -222,6 +232,13 @@ export const ProjectSchema = z.object({
    * `path`), joined with `&&`. Absent → the shared default checks apply.
    */
   checks: z.array(z.string().min(1)).optional(),
+  /**
+   * NS2 F0b — whether this project's `pr` output sink opens a GitHub draft PR
+   * instead of a ready-for-review one. Absent → `"ready"` (today's behavior).
+   * Never gates the PR open itself (still Tier-2, immediate) and never touches
+   * the merge gate.
+   */
+  prOpenMode: PrOpenModeSchema.optional(),
   /** Per-engagement run-count budget + concurrency cap (Phase 8.1). */
   budget: ProjectBudgetSchema.optional(),
   /**
@@ -286,8 +303,7 @@ export const ProjectSchema = z.object({
     .string()
     .min(1)
     .refine(isValidGitRemote, {
-      message:
-        'gitRemote must be an https://, ssh://, or scp-like ("user@host:path") git URL',
+      message: 'gitRemote must be an https://, ssh://, or scp-like ("user@host:path") git URL',
     })
     .optional(),
 });

@@ -135,7 +135,10 @@ export class WorkspaceService {
       return { ref: "HEAD", sha: head.stdout.trim() };
     }
     const ref = `origin/${await this.originDefaultBranch(projectPath)}`;
-    const sha = await exec("git", ["rev-parse", ref], { cwd: projectPath, timeout: GIT_TIMEOUT_MS });
+    const sha = await exec("git", ["rev-parse", ref], {
+      cwd: projectPath,
+      timeout: GIT_TIMEOUT_MS,
+    });
     return { ref, sha: sha.stdout.trim() };
   }
 
@@ -307,6 +310,11 @@ export class WorkspaceService {
    * `cwd`'s current branch. Returns the PR url on success, null on any failure (a
    * failed open surfaces as a soft error, not a crash — the branch work is committed
    * and safe).
+   *
+   * `draft` (NS2 F0b) — the project's `prOpenMode` setting, threaded through as
+   * `gh pr create --draft` when true. Purely cosmetic on the PR's review state;
+   * it never gates the open itself (still immediate, Tier-2) and never touches
+   * the merge gate.
    */
   async openPr(opts: {
     cwd: string;
@@ -315,6 +323,7 @@ export class WorkspaceService {
     /** PR body source: a file (`--body-file`, the pipeline path) or an inline string. */
     bodyFile?: string;
     body?: string;
+    draft?: boolean;
   }): Promise<{ url: string } | null> {
     const marker = await fs.stat(path.join(opts.cwd, ".git")).catch(() => null);
     if (!marker) {
@@ -339,7 +348,16 @@ export class WorkspaceService {
         opts.bodyFile !== undefined ? ["--body-file", opts.bodyFile] : ["--body", opts.body ?? ""];
       const created = await exec(
         "gh",
-        ["pr", "create", "--title", opts.title, ...bodyArgs, "--head", branch],
+        [
+          "pr",
+          "create",
+          ...(opts.draft ? ["--draft"] : []),
+          "--title",
+          opts.title,
+          ...bodyArgs,
+          "--head",
+          branch,
+        ],
         { cwd: opts.cwd, timeout: GIT_TIMEOUT_MS },
       );
       const url = created.stdout.trim().split(/\r?\n/).filter(Boolean).pop() ?? "";

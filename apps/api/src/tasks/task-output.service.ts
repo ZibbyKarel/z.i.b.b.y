@@ -185,6 +185,8 @@ export class TaskOutputService implements OnModuleInit {
       branch: ws.branch,
       title,
       body: summary.trim(),
+      // NS2 F0b — per-project draft PR mode; absent/`"ready"` keeps today's behavior.
+      draft: project?.prOpenMode === "draft",
     });
     if (!result) {
       this.log.warn("pr output push failed (soft) — work is committed on the branch and safe", {
@@ -214,6 +216,10 @@ export class TaskOutputService implements OnModuleInit {
 
       let note: string;
       if (decision === "approved") {
+        // Legacy gated-resolve path (pre-Tier-2-unify parked approval) — no
+        // project available here (only `pendingOutput`'s repoPath/branch survive
+        // the park), so `prOpenMode` can't be resolved; stays `"ready"` (NS2 F0b
+        // out of scope for this path).
         const result = await this.workspace.openPr({
           cwd: po.repoPath,
           branch: po.branch,

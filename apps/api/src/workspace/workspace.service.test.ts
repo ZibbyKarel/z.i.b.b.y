@@ -4,6 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as gitExec from "../shared/git-exec";
 import { WorkspaceService, WorkspaceSetupError, sanitizeBranchSlug } from "./workspace.service";
 
 const exec = promisify(execFile);
@@ -348,5 +349,60 @@ describe("WorkspaceService.clone (Phase 76)", () => {
     await expect(
       svc.clone(path.join(os.tmpdir(), "ws-clone-does-not-exist"), dest),
     ).rejects.toBeInstanceOf(WorkspaceSetupError);
+  });
+});
+
+describe("WorkspaceService.openPr — draft mode (NS2 F0b)", () => {
+  let origin: string;
+  let repo: string;
+  let ghArgs: string[] | null;
+
+  beforeEach(async () => {
+    origin = await fs.mkdtemp(path.join(os.tmpdir(), "ws-openpr-origin-"));
+    repo = await fs.mkdtemp(path.join(os.tmpdir(), "ws-openpr-repo-"));
+    await initBareOrigin(origin);
+    await cloneAndCommit(origin, repo, "initial");
+    ghArgs = null;
+    // Real git calls pass through untouched; only the `gh` invocation is faked
+    // (no network, no actual GitHub PR) so the test can assert the argv it built.
+    vi.spyOn(gitExec, "exec").mockImplementation((async (
+      cmd: string,
+      args: readonly string[],
+      opts: never,
+    ) => {
+      if (cmd === "gh") {
+        ghArgs = [...args];
+        return { stdout: "https://github.com/acme/app/pull/1\n", stderr: "" };
+      }
+      return exec(cmd, args as string[], opts);
+    }) as typeof gitExec.exec);
+  });
+
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await fs.rm(origin, { recursive: true, force: true });
+    await fs.rm(repo, { recursive: true, force: true });
+  });
+
+  it("passes --draft to gh pr create when draft: true", async () => {
+    const svc = new WorkspaceService(fakeLogger as never);
+    const result = await svc.openPr({
+      cwd: repo,
+      branch: "main",
+      title: "t",
+      body: "b",
+      draft: true,
+    });
+    expect(result).toEqual({ url: "https://github.com/acme/app/pull/1" });
+    expect(ghArgs).toContain("--draft");
+  });
+
+  it("omits --draft when draft is false/absent (today's ready-for-review default)", async () => {
+    const svc = new WorkspaceService(fakeLogger as never);
+    await svc.openPr({ cwd: repo, branch: "main", title: "t", body: "b" });
+    expect(ghArgs).not.toContain("--draft");
+
+    await svc.openPr({ cwd: repo, branch: "main", title: "t", body: "b", draft: false });
+    expect(ghArgs).not.toContain("--draft");
   });
 });
