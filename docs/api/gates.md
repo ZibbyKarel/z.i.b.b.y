@@ -34,7 +34,7 @@ An agent's own rules have **higher priority** than the floor (first match wins, 
 rules are listed first). If an own rule would weaken a floor rule for the same
 action → `PolicyViolation` (422).
 
-### 3. The global gate-rule catalog (authoring only, not runtime-resolved)
+### 3. The global gate-rule catalog
 
 ```
 GET    /api/gate-rules           list every catalog rule (ordered, first match wins)
@@ -45,12 +45,11 @@ DELETE /api/gate-rules/:id       remove a catalog rule
 ```
 
 A catalog rule (`GlobalGateRule`) is a `GateRuleInput` plus `id` and an optional
-`name`/`desc`. It also carries an optional `ownerSubsystem` (Phase 87) — pure
-attribution to one of the eight federation subsystems, used only to filter/auto-tag
-the catalog view in a subsystem's Gates tab (the subsystem drawer's "Nastavení &
-Gates" tab). It is **not** a match condition: the evaluation engine described above
-never reads it, so tagging or untagging a rule never changes what it matches or
-decides. Agents and skills can carry a `gateRuleIds: [...]` field that names
+`name`/`desc`. It also carries an optional `ownerSubsystem` (Phase 87 as a
+filter/auto-tag lens; **load-bearing since NS2 F3a**): a tagged rule is loaded by
+the evaluator as a third "subsystem" bucket for every run of a unit that subsystem
+owns — see _Per-subsystem bucket_ below. Untagged rules stay global/unowned and
+never enter any subsystem bucket. Agents and skills can carry a `gateRuleIds: [...]` field that names
 catalog rules by id — but this is **composed on the client** (the web UI reads an
 entity's `gateRuleIds` and renders/edits the referenced catalog rules alongside its
 inline `gates`). The runtime `GateEvaluatorService` does **not** read `gateRuleIds`
@@ -84,12 +83,12 @@ The `match` array is **AND**-ed — every condition must hold.
 
 ### Decision
 
-| Value    | Behavior                                                            |
-| -------- | --------------------------------------------------------------------- |
-| `allow`  | Silent allow, no record                                              |
-| `notify` | Allowed, but recorded to the activity log                            |
-| `ask`    | The run pauses, an `Approval` is created, waits for a decision       |
-| `deny`   | The run is terminated immediately (`interrupted`)                    |
+| Value    | Behavior                                                       |
+| -------- | -------------------------------------------------------------- |
+| `allow`  | Silent allow, no record                                        |
+| `notify` | Allowed, but recorded to the activity log                      |
+| `ask`    | The run pauses, an `Approval` is created, waits for a decision |
+| `deny`   | The run is terminated immediately (`interrupted`)              |
 
 ### Resolve (only for `ask`)
 
@@ -108,22 +107,43 @@ A resolver tree — `ask` without `resolve` is a validation error.
 **File:** `apps/api/src/gates/gate-evaluator.service.ts`
 
 Pure with respect to entities — it reads only the locked floor (via
-`PolicyStorageService`) and whatever rules a caller hands it, so it has no
-dependency on the agents store.
+`PolicyStorageService`), the global gate-rule catalog (NS2 F3a, via
+`GateRulesStorageService`, read-only) and whatever rules a caller hands it, so it
+has no dependency on the agents store.
 
 ### Rule priority
 
 ```
-rulesForAgent(input) = [...ownRules(input), ...floor()]
+rulesForAgent(input)                        = [...ownRules(input), ...floor()]
+rulesForAgentInSubsystem(input, subsystem?) = [...ownRules(input), ...subsystemRules(subsystem), ...floor()]
 ```
 
-`ownRules` come first → first match wins → an agent can harden a rule (its own
-`ask` beats the floor's `notify`), but it cannot weaken one (floor `ask` + own
-`allow` for the same action = `PolicyViolation`).
+Matching buckets the list into own / subsystem / floor (first match wins WITHIN a
+bucket) and the **strictest** bucket winner decides (`deny > ask > notify >
+allow`) — an agent or a subsystem rule can harden the floor, never weaken it.
+`subsystemId` absent degrades to exactly the two-bucket `rulesForAgent` result.
+
+### Per-subsystem bucket (NS2 F3a)
+
+`subsystemRules(id)` = every catalog rule tagged `ownerSubsystem === id`
+(re-sourced `source: "subsystem"`, never locked), plus the subsystem's static
+tier-default catch-all from `SUBSYSTEM_TIER_DEFAULT` (contracts): all `null`
+except `beacon → ask` (its mandate IS Tier-3 surface-and-wait), appended as a
+`{type: "context", context: "*"}` rule. The bucket applies **only** to runs of
+units owned by that subsystem — the acting subsystem derives from the owned unit
+(`agent.ownerSubsystem` for a non-orchestrator agent run,
+`pipeline.ownerSubsystem` for a pipeline stage), never from the task
+classification. Out of scope by decision: `evaluateForOrchestrator` (the
+orchestrator is synthetic/unowned) and the floor-only call sites
+(agent-proposal, task-scheduler budget guard). There is no write-time 422 for a
+weakening subsystem-tagged catalog rule (the evaluator sits downstream of the
+gate-rules module; injecting it back would cycle) — `matchOnce`'s
+strictest-of-buckets makes a weakening rule inert at eval time, which is the
+actual security boundary.
 
 ### Default decision
 
-If no rule matches → `allow` (default, no `ruleId`).
+If no rule in any bucket matches → fail closed to `ask` (`resolve: human`).
 
 ### Evaluation
 
@@ -164,8 +184,9 @@ kontraktu). Pro orchestrátorský běh `evaluateIntent` vyhodnotí akci přes
 `GateEvaluatorService.evaluateForOrchestrator(orchestrator, catalogAgents, action)`:
 zvlášť pro orchestrátora a pro KAŽDÉHO katalogového agenta (vlastní pravidla +
 floor), a vrátí **nejpřísnější** rozhodnutí napříč množinou (`deny > ask > notify
+
 > allow`). Zaloguje/zaznamená se jen výsledné rozhodnutí (ne jedno per agenta).
-Neorchestrátorský běh je beze změny (`rulesForAgent` + `evaluate`, jako dřív).
+Neorchestrátorský běh je beze změny (`rulesForAgent`+`evaluate`, jako dřív).
 
 ## IntendedAction
 

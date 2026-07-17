@@ -39,7 +39,13 @@ export interface GatesTabProps {
  * match/decision/resolve structure, nothing new is stored — see `GatesTab`'s own
  * header comment for why a full sentence-builder AUTHORING UI is deferred.
  */
-function GateRuleSentenceRow({ rule, subsystemName }: { rule: GlobalGateRule; subsystemName: string }) {
+function GateRuleSentenceRow({
+  rule,
+  subsystemName,
+}: {
+  rule: GlobalGateRule;
+  subsystemName: string;
+}) {
   const t = useTranslations("subsystems.gates");
   const tg = useTranslations("gates");
   return (
@@ -192,7 +198,12 @@ function AutopilotSummary() {
  * per-project re-homing of gate rules is an OPEN QUESTION left for the operator
  * (no precedence semantics were ever specified for it). This tab is a filtered LENS
  * over that existing global catalog, exactly the design's own "data lives
- * elsewhere, the tab is a filtered lens" principle.
+ * elsewhere, the tab is a filtered lens" principle. Since NS2 F3a the tag this
+ * tab filters by is LOAD-BEARING, not mere attribution: a rule tagged for this
+ * subsystem is loaded by the gate evaluator as a third bucket (own rules →
+ * subsystem rules → locked floor, strictest wins) for every run of a unit this
+ * subsystem owns — editing here changes what those runs are allowed to do
+ * (tighten-only; the floor still cannot be weakened).
  *
  * Three blocks, top to bottom:
  * 1. Mad-libs sentence rendering of this subsystem's own tagged rules — a plain-

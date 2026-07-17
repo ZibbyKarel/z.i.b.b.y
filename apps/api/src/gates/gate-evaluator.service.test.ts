@@ -3,6 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { GateRule, GateRuleInput, IntendedAction } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.service";
 import { type AgentPolicyInput, GateEvaluatorService } from "./gate-evaluator.service";
 import { PolicyStorageService } from "./policy.storage.service";
 
@@ -268,8 +269,11 @@ describe("GateEvaluatorService", () => {
       };
       // allow (orchestrator) + ask (one catalog agent) → ask wins.
       expect(
-        (await evaluator.evaluateForOrchestrator(orchestrator, [askAgent], { action: "agent.delegate" }))
-          .decision,
+        (
+          await evaluator.evaluateForOrchestrator(orchestrator, [askAgent], {
+            action: "agent.delegate",
+          })
+        ).decision,
       ).toBe("ask");
       // allow + ask + deny → deny wins (the strictest of all three).
       expect(
@@ -301,6 +305,138 @@ describe("GateEvaluatorService", () => {
       };
       await scoped.evaluateForOrchestrator({}, [{}, {}, denyAgent], { action: "agent.delegate" });
       expect(recorded).toHaveLength(1);
+    });
+  });
+
+  describe("subsystem bucket (NS2 F3a — three-bucket evaluation)", () => {
+    let catalogDir: string;
+    let catalog: GateRulesStorageService;
+    let scoped: GateEvaluatorService;
+
+    beforeEach(async () => {
+      catalogDir = await fs.mkdtemp(path.join(os.tmpdir(), "gate-catalog-"));
+      catalog = new GateRulesStorageService(catalogDir);
+      await catalog.onModuleInit();
+      scoped = new GateEvaluatorService(
+        new PolicyStorageService(dir),
+        undefined,
+        undefined,
+        catalog,
+      );
+    });
+    afterEach(async () => {
+      await fs.rm(catalogDir, { recursive: true, force: true });
+    });
+
+    it("subsystem ask + floor notify → ask (subsystem hardens the floor)", async () => {
+      await catalog.create({
+        match: [{ type: "action", action: "channel-reply" }],
+        decision: "ask",
+        resolve: { type: "human" },
+        ownerSubsystem: "herald",
+      });
+      const rules = await scoped.rulesForAgentInSubsystem({}, "herald");
+      // floor-channel-reply is notify; the herald-tagged ask must win (strictest).
+      expect(scoped.evaluate(rules, { action: "channel-reply" }).decision).toBe("ask");
+    });
+
+    it("subsystem notify + floor ask → ask (a subsystem rule can never weaken the floor)", async () => {
+      await catalog.create({
+        match: [{ type: "action", action: "purchase" }],
+        decision: "notify",
+        ownerSubsystem: "forge",
+      });
+      const rules = await scoped.rulesForAgentInSubsystem({}, "forge");
+      // floor-purchase is ask; the weaker forge-tagged notify must NOT win.
+      expect(scoped.evaluate(rules, { action: "purchase" }).decision).toBe("ask");
+    });
+
+    it("no subsystem id → identical to the two-bucket result (regression lock)", async () => {
+      const input: AgentPolicyInput = {
+        gates: [{ match: [{ type: "action", action: "tweet" }], decision: "notify" }],
+      };
+      const twoBucket = await scoped.rulesForAgent(input);
+      const viaSubsystemPath = await scoped.rulesForAgentInSubsystem(input);
+      expect(viaSubsystemPath).toEqual(twoBucket);
+      for (const action of [
+        { action: "tweet" },
+        { action: "purchase" },
+        { action: "pr.merge" },
+        { action: "unknown-action" },
+      ]) {
+        expect(scoped.evaluate(viaSubsystemPath, action)).toEqual(
+          scoped.evaluate(twoBucket, action),
+        );
+      }
+    });
+
+    it("beacon's tier-default catch-all hardens pr.open (floor notify) to ask", async () => {
+      const rules = await scoped.rulesForAgentInSubsystem({}, "beacon");
+      const result = scoped.evaluate(rules, { action: "pr.open" });
+      expect(result.decision).toBe("ask");
+      expect(result.ruleId).toBe("subsystem-default-beacon");
+    });
+
+    it('subsystemRules("forge") returns only forge-tagged rules (and no tier default — forge is null)', async () => {
+      await catalog.create({
+        match: [{ type: "action", action: "deploy" }],
+        decision: "deny",
+        ownerSubsystem: "forge",
+      });
+      await catalog.create({
+        match: [{ type: "action", action: "deploy" }],
+        decision: "deny",
+        ownerSubsystem: "puls",
+      });
+      const rules = await scoped.subsystemRules("forge");
+      expect(rules).toHaveLength(1);
+      expect(rules[0]?.source).toBe("subsystem");
+      expect(rules[0]?.locked).toBe(false);
+      expect(rules[0]?.decision).toBe("deny");
+    });
+
+    it("a forge-tagged rule fires on a forge-owned run and NOT on a puls-owned run (scope proof)", async () => {
+      await catalog.create({
+        match: [{ type: "action", action: "tweet" }],
+        decision: "deny",
+        ownerSubsystem: "forge",
+      });
+      const own: AgentPolicyInput = {
+        gates: [{ match: [{ type: "action", action: "tweet" }], decision: "notify" }],
+      };
+      const forgeRules = await scoped.rulesForAgentInSubsystem(own, "forge");
+      expect(scoped.evaluate(forgeRules, { action: "tweet" }).decision).toBe("deny");
+      const pulsRules = await scoped.rulesForAgentInSubsystem(own, "puls");
+      // puls doesn't load the forge rule; the agent's own notify wins (floor has
+      // no tweet entry, puls has no tier default).
+      expect(scoped.evaluate(pulsRules, { action: "tweet" }).decision).toBe("notify");
+    });
+
+    it("no catalog service injected → empty subsystem bucket, tier default still applies", async () => {
+      const bare = new GateEvaluatorService(new PolicyStorageService(dir));
+      const forgeRules = await bare.subsystemRules("forge");
+      expect(forgeRules).toEqual([]);
+      const beaconRules = await bare.subsystemRules("beacon");
+      expect(beaconRules).toHaveLength(1);
+      expect(beaconRules[0]?.id).toBe("subsystem-default-beacon");
+    });
+
+    it("validateSubsystemRuleHardenOnly rejects a tagged rule weakening the floor, allows hardening", async () => {
+      const floor = await scoped.floor();
+      expect(
+        scoped.validateSubsystemRuleHardenOnly(floor, {
+          match: [{ type: "action", action: "purchase" }],
+          decision: "allow",
+          ownerSubsystem: "forge",
+        }),
+      ).not.toBeNull();
+      expect(
+        scoped.validateSubsystemRuleHardenOnly(floor, {
+          match: [{ type: "action", action: "purchase" }],
+          decision: "deny",
+          ownerSubsystem: "forge",
+        }),
+      ).toBeNull();
     });
   });
 });

@@ -3,11 +3,15 @@ import type {
   GateEvaluation,
   GateRule,
   GateRuleInput,
+  GlobalGateRuleInput,
   IntendedAction,
   MatchCondition,
   PolicyViolation,
+  SubsystemId,
 } from "@zibby/contracts";
+import { SUBSYSTEM_TIER_DEFAULT } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
+import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { DECISION_RANK } from "./decision-rank";
 import { PolicyStorageService } from "./policy.storage.service";
@@ -20,13 +24,16 @@ export interface AgentPolicyInput {
 
 /**
  * The gate policy engine. Pure with respect to entities — it reads only the locked
- * floor (via {@link PolicyStorageService}) and whatever rules a caller hands it, so
- * it has no dependency on the agents store (avoiding a module cycle: the runner and
- * the gates controller both depend on this, and the controller loads agents).
+ * floor (via {@link PolicyStorageService}), the global gate-rule catalog (NS2 F3a,
+ * via {@link GateRulesStorageService}, for the per-subsystem bucket) and whatever
+ * rules a caller hands it, so it has no dependency on the agents store (avoiding a
+ * module cycle: the runner and the gates controller both depend on this, and the
+ * controller loads agents).
  *
- * Precedence: an agent's own rules and the locked floor rules are evaluated
- * INDEPENDENTLY (bucketed by {@link GateRule.locked} in {@link matchOnce}, not by
- * array order), and the STRICTER of the two matching decisions wins — never the
+ * Precedence: an agent's own rules, the acting subsystem's catalog rules (NS2
+ * F3a, present only when the acting unit is subsystem-owned) and the locked floor
+ * rules are evaluated INDEPENDENTLY (bucketed in {@link matchOnce}, not by array
+ * order), and the STRICTEST of the matching bucket decisions wins — never the
  * floor's alone, never the agent's alone. This is what makes the floor
  * *structurally* un-bypassable: it holds even for an own rule that matches on an
  * axis (`tool`, `scope`, …) the floor rule doesn't share, and even if
@@ -45,6 +52,10 @@ export class GateEvaluatorService {
     @Optional() logger?: LoggerService,
     // Optional for the same reason; the global ActivityLogModule supplies it live.
     @Optional() private readonly activity?: ActivityLogService,
+    // NS2 F3a — the global gate-rule catalog, the source of the per-subsystem
+    // bucket. Optional so `new GateEvaluatorService(policy)` keeps working in
+    // unit tests: absence = an always-empty subsystem bucket, never a crash.
+    @Optional() private readonly catalog?: GateRulesStorageService,
   ) {
     this.log = logger?.child(GateEvaluatorService.name);
   }
@@ -61,6 +72,56 @@ export class GateEvaluatorService {
     const floor = await this.floor();
     const own = this.ownRules(input);
     return [...own, ...floor];
+  }
+
+  /**
+   * NS2 F3a — the effective rule list for an agent acting on behalf of a
+   * subsystem-owned unit: own rules, then the owning subsystem's catalog rules,
+   * then the locked floor. `subsystemId` absent (an unowned unit) degrades to
+   * exactly {@link rulesForAgent} — the two-bucket result, unchanged. Order only
+   * matters WITHIN a bucket (first-match-wins); across buckets {@link matchOnce}
+   * takes the strictest, so a subsystem rule can only tighten, never weaken.
+   */
+  async rulesForAgentInSubsystem(
+    input: AgentPolicyInput,
+    subsystemId?: SubsystemId,
+  ): Promise<GateRule[]> {
+    if (!subsystemId) return this.rulesForAgent(input);
+    const [floor, subsystem] = await Promise.all([this.floor(), this.subsystemRules(subsystemId)]);
+    return [...this.ownRules(input), ...subsystem, ...floor];
+  }
+
+  /**
+   * NS2 F3a — the gate-rule bucket of one subsystem: every catalog rule tagged
+   * `ownerSubsystem === id` (re-sourced `"subsystem"`, never locked — the floor
+   * stays the only locked bucket), plus the subsystem's static tier-default
+   * catch-all (`SUBSYSTEM_TIER_DEFAULT`) when it has one. No catalog service
+   * (bare-`new` test path) = an empty catalog, tier default still applies.
+   */
+  async subsystemRules(id: SubsystemId): Promise<GateRule[]> {
+    const all = (await this.catalog?.list().catch((): never[] => [])) ?? [];
+    const rules: GateRule[] = all
+      .filter((r) => r.ownerSubsystem === id)
+      .map((r) => ({
+        id: r.id,
+        source: "subsystem",
+        locked: false,
+        match: r.match,
+        decision: r.decision,
+        resolve: r.resolve,
+      }));
+    const tierDefault = SUBSYSTEM_TIER_DEFAULT[id];
+    if (tierDefault !== null) {
+      rules.push({
+        id: `subsystem-default-${id}`,
+        source: "subsystem",
+        locked: false,
+        match: [{ type: "context", context: "*" }],
+        decision: tierDefault,
+        resolve: tierDefault === "ask" ? { type: "human" } : undefined,
+      });
+    }
+    return rules;
   }
 
   /** An agent's own rules as stored `GateRule`s (with legacy desugar). */
@@ -126,36 +187,55 @@ export class GateEvaluatorService {
    * {@link evaluateForOrchestrator} can probe several agents' rule sets and log
    * only the final, strictest result).
    *
-   * Buckets matches by `rule.locked` — own (agent, unlocked) vs floor (system,
-   * locked) — first-match-wins WITHIN each bucket (so a more specific rule still
-   * beats a less specific one on the same side), then returns the STRICTER of the
-   * two bucket winners across own/floor. This is the structural floor guarantee:
-   * it holds independent of array order, independent of match-condition type, and
-   * independent of whether {@link validateHardenOnly} ever ran on this rule set.
+   * Buckets matches into three sets — own (agent, unlocked), subsystem (NS2 F3a:
+   * catalog rules of the acting unit's owning subsystem, `source: "subsystem"`,
+   * unlocked) and floor (system, locked) — first-match-wins WITHIN each bucket
+   * (so a more specific rule still beats a less specific one on the same side),
+   * then returns the STRICTEST of the bucket winners. A rule list with no
+   * subsystem rules (every call before F3a, and every unowned unit after it)
+   * leaves the subsystem bucket empty, reproducing the two-bucket result exactly.
+   * This is the structural floor guarantee: it holds independent of array order,
+   * independent of match-condition type, and independent of whether
+   * {@link validateHardenOnly} ever ran on this rule set — and it is equally why
+   * a subsystem bucket can only TIGHTEN: max(own, subsystem, floor) ≥ max(own,
+   * floor) for every ranked decision.
    *
-   * When NEITHER bucket has a match at all (own AND floor both null), the action
-   * is genuinely unknown to every rule set — fail closed to `ask`, not `allow`
-   * (claim 3): an unrecognized action must surface for a human, not silently
-   * proceed. `agent.delegate` (and any other action that should stay Tier-1
-   * logged-not-asked) gets there via an explicit `notify` floor rule, not via this
-   * fallback — see `DEFAULT_FLOOR` in `policy.storage.service.ts`.
+   * When NO bucket has a match at all, the action is genuinely unknown to every
+   * rule set — fail closed to `ask`, not `allow` (claim 3): an unrecognized
+   * action must surface for a human, not silently proceed. `agent.delegate` (and
+   * any other action that should stay Tier-1 logged-not-asked) gets there via an
+   * explicit `notify` floor rule, not via this fallback — see `DEFAULT_FLOOR` in
+   * `policy.storage.service.ts`.
    */
   private matchOnce(rules: GateRule[], action: IntendedAction): GateEvaluation {
     let own: GateEvaluation | null = null;
+    let subsystem: GateEvaluation | null = null;
     let floor: GateEvaluation | null = null;
     for (const rule of rules) {
       if (!rule.match.every((cond) => this.matches(cond, action))) continue;
-      const hit: GateEvaluation = { decision: rule.decision, ruleId: rule.id, resolve: rule.resolve };
+      const hit: GateEvaluation = {
+        decision: rule.decision,
+        ruleId: rule.id,
+        resolve: rule.resolve,
+      };
       if (rule.locked) {
         if (!floor) floor = hit;
+      } else if (rule.source === "subsystem") {
+        if (!subsystem) subsystem = hit;
       } else {
         if (!own) own = hit;
       }
-      if (own && floor) break;
+      if (own && subsystem && floor) break;
     }
-    if (!own) return floor ?? { decision: "ask", resolve: { type: "human" } };
-    if (!floor) return own;
-    return DECISION_RANK[floor.decision] >= DECISION_RANK[own.decision] ? floor : own;
+    // Strictest non-null bucket wins; on a tie the LATER bucket (floor last) is
+    // kept via `>=`, preserving the pre-F3a two-bucket tie behavior (floor wins).
+    let best: GateEvaluation | null = null;
+    for (const candidate of [own, subsystem, floor]) {
+      if (!candidate) continue;
+      if (!best || DECISION_RANK[candidate.decision] >= DECISION_RANK[best.decision])
+        best = candidate;
+    }
+    return best ?? { decision: "ask", resolve: { type: "human" } };
   }
 
   /** Debug-log + activity-record one evaluation result (shared by {@link evaluate}
@@ -205,6 +285,22 @@ export class GateEvaluatorService {
       }
     }
     return null;
+  }
+
+  /**
+   * NS2 F3a — write-time harden-only check for a subsystem-tagged CATALOG rule:
+   * the same floor-vs-rule comparison as {@link validateHardenOnly} (reusing
+   * {@link provablyDisjoint} + `DECISION_RANK`), applied to the single rule being
+   * created/updated. A UX nicety like its sibling — {@link matchOnce}'s
+   * strictest-of-buckets is the structural guarantee either way.
+   */
+  validateSubsystemRuleHardenOnly(
+    floor: GateRule[],
+    rule: GlobalGateRuleInput,
+  ): PolicyViolation | null {
+    return this.validateHardenOnly(floor, [
+      { match: rule.match, decision: rule.decision, resolve: rule.resolve },
+    ]);
   }
 
   private matches(cond: MatchCondition, action: IntendedAction): boolean {
@@ -284,8 +380,12 @@ export class GateEvaluatorService {
       if (!overlap) return true;
     }
 
-    const toolsA = a.filter((c): c is Extract<MatchCondition, { type: "tool" }> => c.type === "tool");
-    const toolsB = b.filter((c): c is Extract<MatchCondition, { type: "tool" }> => c.type === "tool");
+    const toolsA = a.filter(
+      (c): c is Extract<MatchCondition, { type: "tool" }> => c.type === "tool",
+    );
+    const toolsB = b.filter(
+      (c): c is Extract<MatchCondition, { type: "tool" }> => c.type === "tool",
+    );
     if (toolsA.length > 0 && toolsB.length > 0) {
       const overlap = toolsA.some((ca) => toolsB.some((cb) => ca.tool === cb.tool));
       if (!overlap) return true;
@@ -312,7 +412,9 @@ export class GateEvaluatorService {
     );
     if (contextsA.length > 0 && contextsB.length > 0) {
       const overlap = contextsA.some((ca) =>
-        contextsB.some((cb) => ca.context === "*" || cb.context === "*" || ca.context === cb.context),
+        contextsB.some(
+          (cb) => ca.context === "*" || cb.context === "*" || ca.context === cb.context,
+        ),
       );
       if (!overlap) return true;
     }

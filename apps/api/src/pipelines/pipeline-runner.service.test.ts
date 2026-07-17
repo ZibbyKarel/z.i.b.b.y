@@ -42,7 +42,11 @@ interface Harness {
   service: PipelineRunnerService;
   core: FakeCore;
   approvals: { register: ReturnType<typeof vi.fn>; requestApproval: ReturnType<typeof vi.fn> };
-  gates: { rulesForAgent: ReturnType<typeof vi.fn>; evaluate: ReturnType<typeof vi.fn> };
+  gates: {
+    rulesForAgent: ReturnType<typeof vi.fn>;
+    rulesForAgentInSubsystem: ReturnType<typeof vi.fn>;
+    evaluate: ReturnType<typeof vi.fn>;
+  };
   runs: Map<string, PipelineRun>;
   registered: Map<string, ResumableRunner>;
   /** Fire the fake core's "bytes appended" signal for one child run id. */
@@ -61,6 +65,9 @@ async function makeHarness(dir: string): Promise<Harness> {
   };
   const gates = {
     rulesForAgent: vi.fn(async () => []),
+    // NS2 F3a — stage intents now assemble rules via the subsystem-aware path
+    // (pipeline.ownerSubsystem picks the bucket; undefined = two-bucket).
+    rulesForAgentInSubsystem: vi.fn(async () => []),
     evaluate: vi.fn(() => ({ decision: "ask", ruleId: "rule-1" })),
   };
   const pipelines = {
@@ -333,9 +340,7 @@ describe("PipelineRunnerService — stage gates & resume", () => {
           pipelineId: "release",
           status: "done",
           currentStage: null,
-          stageRuns: [
-            { phaseId: "build", runId: `${goneId}.build_1`, attempt: 1, status: "done" },
-          ],
+          stageRuns: [{ phaseId: "build", runId: `${goneId}.build_1`, attempt: 1, status: "done" }],
           startedAt: new Date().toISOString(),
           cwd: root,
         }),
@@ -874,7 +879,12 @@ describe("PipelineRunnerService — stage gates & resume", () => {
       verdictFor: (phaseId: string, attempt: number) => string | null,
     ): void {
       (h.service as unknown as { runStage: unknown }).runStage = vi.fn(
-        async (_run: unknown, p: { id: string; produces?: string }, cwd: string, attempt: number) => {
+        async (
+          _run: unknown,
+          p: { id: string; produces?: string },
+          cwd: string,
+          attempt: number,
+        ) => {
           order.push(p.id);
           const verdict = verdictFor(p.id, attempt);
           const tag = verdict ? `\n<verdict>${verdict}</verdict>\n` : "";
@@ -890,9 +900,10 @@ describe("PipelineRunnerService — stage gates & resume", () => {
     }
 
     const drive = (run: PipelineRun, pipeline: unknown) =>
-      (
-        h.service as unknown as { drive(r: PipelineRun, p: unknown): Promise<void> }
-      ).drive(run, pipeline);
+      (h.service as unknown as { drive(r: PipelineRun, p: unknown): Promise<void> }).drive(
+        run,
+        pipeline,
+      );
 
     it("gap loops the work back, then pass advances to the end", async () => {
       const run = h.runs.get(PIPELINE_RUN_ID);
@@ -1417,7 +1428,12 @@ describe("PipelineRunnerService — stage gates & resume", () => {
     function scriptRunStage(write: (phaseId: string, cwd: string) => Promise<void>): string[] {
       const cwds: string[] = [];
       (h.service as unknown as { runStage: unknown }).runStage = vi.fn(
-        async (_run: unknown, p: { id: string; produces?: string }, cwd: string, attempt: number) => {
+        async (
+          _run: unknown,
+          p: { id: string; produces?: string },
+          cwd: string,
+          attempt: number,
+        ) => {
           cwds.push(cwd);
           await write(p.id, cwd);
           return {
@@ -1534,14 +1550,12 @@ describe("PipelineRunnerService — stage gates & resume", () => {
       return (h.service as unknown as { projects: { get: ReturnType<typeof vi.fn> } }).projects;
     }
     function projectLocalDouble() {
-      return (
-        h.service as unknown as { projectLocal: { resolveForRun: ReturnType<typeof vi.fn> } }
-      ).projectLocal;
+      return (h.service as unknown as { projectLocal: { resolveForRun: ReturnType<typeof vi.fn> } })
+        .projectLocal;
     }
     function workspaceDouble() {
-      return (
-        h.service as unknown as { workspace: { createWorktree: ReturnType<typeof vi.fn> } }
-      ).workspace;
+      return (h.service as unknown as { workspace: { createWorktree: ReturnType<typeof vi.fn> } })
+        .workspace;
     }
 
     it("present project: createWorktree gets resolveForRun's resolvedPath, not project.path", async () => {

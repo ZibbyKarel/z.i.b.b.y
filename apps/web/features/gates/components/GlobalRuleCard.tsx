@@ -1,4 +1,4 @@
-import type { GlobalGateRule } from "@zibby/contracts";
+import { type GlobalGateRule, SUBSYSTEMS } from "@zibby/contracts";
 import type { IconName } from "@zibby/design-system";
 import {
   Button,
@@ -11,8 +11,14 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import { SUBSYSTEM_GLYPH } from "../../subsystems/subsystemVisuals";
 import { DECISION_META, MATCHER_ICON } from "../gate";
 import { DecisionBadge, MatcherText, ResolveChips } from "./RuleParts";
+
+export enum GlobalRuleCardTestId {
+  /** The owning-subsystem scope tag (NS2 F3a) — rendered iff `rule.ownerSubsystem` is set. */
+  OwnerTag = "global-rule-card-owner-tag",
+}
 
 /** A catalog rule's consumer (an agent or a skill that links it via `gateRuleIds`). */
 export interface RuleUser {
@@ -70,6 +76,11 @@ export function GlobalRuleCard({
   const meta = DECISION_META[rule.decision];
   const matcherIcon = MATCHER_ICON[rule.match[0]?.type ?? "action"];
   const total = agents.length + skills.length;
+  // NS2 F3a — a tagged rule is load-bearing for its subsystem's runs (a third
+  // evaluation bucket), so the card names its owner scope explicitly.
+  const owner = rule.ownerSubsystem
+    ? SUBSYSTEMS.find((s) => s.id === rule.ownerSubsystem)
+    : undefined;
 
   return (
     // eslint-disable-next-line react/forbid-dom-props
@@ -113,6 +124,14 @@ export function GlobalRuleCard({
               </Container>
 
               <Stack align="center" direction="row" gap="50">
+                {owner && (
+                  <Tag data-testid={GlobalRuleCardTestId.OwnerTag} tone="accent">
+                    <Stack inline align="center" as="span" direction="row" gap="50">
+                      <Icon name={SUBSYSTEM_GLYPH[owner.id]} size="xs" />
+                      {owner.name}
+                    </Stack>
+                  </Tag>
+                )}
                 {total > 0 ? (
                   <Tag tone="accent">
                     <Stack inline align="center" as="span" direction="row" gap="50">

@@ -1623,10 +1623,16 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // agent-less phase here is a malformed signal; the catch denies it.
       if (!phase.agent) throw new Error(`Phase "${rec.phaseId}" carries no agent`);
       const agent = await this.agents.get(phase.agent);
-      const rules = await this.gates.rulesForAgent({
-        gates: agent.gates,
-        requires_approval: agent.requires_approval,
-      });
+      // NS2 F3a — a pipeline stage evaluates with the PIPELINE's owning
+      // subsystem's catalog-rule bucket (the executing unit is the authoritative
+      // actor; the phase agent may be shared across subsystems).
+      const rules = await this.gates.rulesForAgentInSubsystem(
+        {
+          gates: agent.gates,
+          requires_approval: agent.requires_approval,
+        },
+        pipeline.ownerSubsystem,
+      );
       const evaluation = this.gates.evaluate(rules, action);
       this.log.info("evaluating mid-run stage intent", {
         pipelineRunId: run.pipelineRunId,

@@ -14,6 +14,16 @@ const errors = makeErrorMapper("Gate rule", {
  * (the "Pravidla schvalování" page). A thin HTTP wrapper over the storage service;
  * a missing id is a 404 and a reorder that is not a permutation of the catalog is a
  * 422 (the storage layer is the single arbiter of both).
+ *
+ * NS2 F3a — no write-time harden-only 422 for subsystem-tagged rules HERE, by
+ * decision: the evaluator now lives downstream of this module (`GatesModule`
+ * imports `GateRulesModule` to feed the per-subsystem bucket), so injecting
+ * `GateEvaluatorService` into this controller would close a module/import cycle
+ * (gates ⇄ gate-rules — the madge guard rejects it). The guarantee is untouched:
+ * `matchOnce`'s strictest-of-buckets makes a weakening catalog rule inert at eval
+ * time (the floor still wins), which is the actual security boundary — the 422
+ * would only have been a write-time UX nicety (`validateSubsystemRuleHardenOnly`
+ * exists on the evaluator for any future caller that sits above both modules).
  */
 @Controller()
 export class GateRulesController {

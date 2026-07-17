@@ -505,13 +505,22 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       // delegated action (Zjištění 3a). For an orchestrator run, evaluate against the
       // orchestrator's rules PLUS every catalog subagent's own rules and take the
       // strictest decision; a non-orchestrator run is unchanged.
+      // NS2 F3a — a non-orchestrator run evaluates with its owning subsystem's
+      // catalog-rule bucket (the acting subsystem derives from the OWNED UNIT,
+      // `agent.ownerSubsystem`, not from the task classification). The
+      // orchestrator path stays two-bucket: it is synthetic/unowned, and its
+      // strictest-union already probes every catalog agent — a documented F3a
+      // scope boundary, not an oversight.
       const evaluation = isOrchestrator
         ? await this.gates.evaluateForOrchestrator(
             agentInput,
             await this.catalogAgentInputs(rec.catalogAgentIds),
             action,
           )
-        : this.gates.evaluate(await this.gates.rulesForAgent(agentInput), action);
+        : this.gates.evaluate(
+            await this.gates.rulesForAgentInSubsystem(agentInput, agent.ownerSubsystem),
+            action,
+          );
       const decision = evaluation.decision;
       this.log.info("evaluating mid-run intent", {
         agentId: rec.agentId,
