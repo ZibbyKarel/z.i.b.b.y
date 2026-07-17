@@ -131,6 +131,8 @@ export const BriefingSchema = z.object({
   securityFindings: z.array(z.string()).max(50).optional(),
   /** NS2 F5b — Maestro's merge-queue summary lines for the briefing. */
   mergeQueue: z.array(z.string()).max(50).optional(),
+  /** NS2 F5c — Loom's new code-quality findings (god-nodes, cycles) for the briefing. */
+  qualityFindings: z.array(z.string()).max(50).optional(),
 });
 export type Briefing = z.infer<typeof BriefingSchema>;
 

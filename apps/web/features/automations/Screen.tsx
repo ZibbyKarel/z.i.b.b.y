@@ -51,6 +51,7 @@ export function Screen() {
     if (target.type === "memory-distill") return { glyph: "brain" };
     if (target.type === "self-knowledge") return { glyph: "brain" };
     if (target.type === "sentinel-scan") return { glyph: "shield" };
+    if (target.type === "loom-audit") return { glyph: "code" };
     if (target.type === "task") {
       const kind = target.target?.kind;
       const glyph: IconName = kind === "agent" ? "bot" : kind === "pipeline" ? "flow" : "spark";

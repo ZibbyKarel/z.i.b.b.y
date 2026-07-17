@@ -46,6 +46,8 @@ export const MEMORY_DISTILL_AUTOMATION_ID = "memory-distill";
 export const SELF_KNOWLEDGE_AUTOMATION_ID = "self-knowledge-refresh";
 /** Stable id of the weekly Sentinel security-scan system automation (F5a). */
 export const SENTINEL_SCAN_AUTOMATION_ID = "sentinel-scan";
+/** Stable id of the nightly Loom quality-audit system automation (F5c). */
+export const LOOM_AUDIT_AUTOMATION_ID = "loom-audit";
 
 /**
  * System automations ZIBBY owns and seeds on boot. They embody capabilities that
@@ -113,6 +115,16 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
     name: "Bezpečnostní hlídka",
     trigger: { type: "cron", expr: "0 5 * * 1" },
     target: { type: "sentinel-scan" },
+    enabled: true,
+    system: true,
+  },
+  {
+    // NS2 F5c — Loom's nightly quality audit. Seeded `enabled: true` (same
+    // reasoning as Sentinel above): fail-open no-op on a green system.
+    id: LOOM_AUDIT_AUTOMATION_ID,
+    name: "Noční audit kvality",
+    trigger: { type: "cron", expr: "0 2 * * *" },
+    target: { type: "loom-audit" },
     enabled: true,
     system: true,
   },

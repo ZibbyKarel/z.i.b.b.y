@@ -177,6 +177,30 @@ describe("BriefingSchema", () => {
     });
   });
 
+  describe("quality findings (NS2 F5c — strictly additive)", () => {
+    it("accepts qualityFindings", () => {
+      expect(
+        BriefingSchema.safeParse({ ...base, qualityFindings: ["god-node: AppShell (degree 31)"] })
+          .success,
+      ).toBe(true);
+    });
+
+    it("omitting qualityFindings entirely still parses (old briefings)", () => {
+      const parsed = BriefingSchema.safeParse(base);
+      expect(parsed.success).toBe(true);
+      expect(parsed.success && parsed.data.qualityFindings).toBeUndefined();
+    });
+
+    it("caps at 50 entries", () => {
+      expect(
+        BriefingSchema.safeParse({ ...base, qualityFindings: Array(50).fill("x") }).success,
+      ).toBe(true);
+      expect(
+        BriefingSchema.safeParse({ ...base, qualityFindings: Array(51).fill("x") }).success,
+      ).toBe(false);
+    });
+  });
+
   describe("T11 finding #12 — trend7d/learnedPatterns/automationGaps/appIdeas cap at 50 entries", () => {
     it("50 entries passes, 51 rejects (array length only — elements stay unbounded)", () => {
       expect(BriefingSchema.safeParse({ ...base, trend7d: Array(50).fill("x") }).success).toBe(
