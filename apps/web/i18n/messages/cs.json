@@ -1758,6 +1758,8 @@
     },
     "roster": {
       "crewTitle": "Posádka",
+      "integrationsTitle": "Integrace",
+      "monitorsTitle": "Monitory",
       "emptyTitle": "Zatím žádná pipeline",
       "emptyDescription": "Tenhle podsystém si zatím nevlastní žádnou pipeline. Vytvoř první — rovnou s ním jako vlastníkem."
     },

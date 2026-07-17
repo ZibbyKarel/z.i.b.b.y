@@ -1,7 +1,11 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { EmptyBodySchema, ErrorSchema } from "../common.schema";
-import { SubsystemWithStatusSchema, UnownedEntitySchema } from "./subsystem.schema";
+import {
+  SubsystemRosterSchema,
+  SubsystemWithStatusSchema,
+  UnownedEntitySchema,
+} from "./subsystem.schema";
 
 const c = initContract();
 
@@ -63,6 +67,18 @@ export const subsystemsContract = c.router(
       },
       summary:
         "Acknowledge a subsystem's Tier-2 reports (opening its drawer) — resets its report window and returns the refreshed entry",
+    },
+
+    getRoster: {
+      method: "GET",
+      path: "/subsystems/:id/roster",
+      // Same plain-string pathParams pattern as `getSubsystem` — see its comment.
+      pathParams: z.object({ id: z.string() }),
+      responses: {
+        200: SubsystemRosterSchema,
+        404: ErrorSchema,
+      },
+      summary: "NS2 F1c: a subsystem's stored roster — owned agents, integrations, and CI monitors",
     },
   },
   {

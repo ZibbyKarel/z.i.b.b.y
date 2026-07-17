@@ -1758,6 +1758,8 @@
     },
     "roster": {
       "crewTitle": "Crew",
+      "integrationsTitle": "Integrations",
+      "monitorsTitle": "Monitors",
       "emptyTitle": "No pipeline yet",
       "emptyDescription": "This subsystem doesn't own a pipeline yet. Create the first one — with it as owner from the start."
     },

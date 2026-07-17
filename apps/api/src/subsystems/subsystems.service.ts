@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import {
   SUBSYSTEMS,
   type SubsystemId,
+  type SubsystemRoster,
   type SubsystemState,
   type SubsystemWithStatus,
   type UnownedEntity,
@@ -161,6 +162,32 @@ export class SubsystemsService {
         .filter((i) => !i.ownerSubsystem)
         .map((i) => ({ kind: "integration" as const, id: i.id })),
     ];
+  }
+
+  /**
+   * NS2 F1c — the stored roster for `id`: owned agents, owned integrations,
+   * and `monitors` (the subset of owned integrations that are a GitHub
+   * integration with a `ci` stream — there is no standalone monitor entity).
+   * Throws `SubsystemNotFoundError` for an unknown id, same as {@link get}.
+   * Pipelines/chains are deliberately excluded — the roster tab's canvas
+   * already sources those client-side.
+   */
+  async roster(id: string): Promise<SubsystemRoster> {
+    const subsystem = this.find(id);
+    const [agents, integrations] = await Promise.all([
+      this.agents.list(),
+      this.integrations.list(),
+    ]);
+    const ownedAgents = agents.filter((a) => a.ownerSubsystem === subsystem.id);
+    const ownedIntegrations = integrations.filter((i) => i.ownerSubsystem === subsystem.id);
+    const monitors = ownedIntegrations.filter(
+      (i) => i.config.kind === "github" && i.config.streams.includes("ci"),
+    );
+    return {
+      agents: ownedAgents.map((a) => ({ id: a.id, name: a.name })),
+      integrations: ownedIntegrations.map((i) => ({ id: i.id, name: i.name, kind: i.kind })),
+      monitors: monitors.map((i) => ({ id: i.id, name: i.name, kind: i.kind })),
+    };
   }
 
   private find(id: string) {

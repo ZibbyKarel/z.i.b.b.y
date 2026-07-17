@@ -166,3 +166,34 @@ export const UnownedEntitySchema = z.object({
   id: z.string().min(1),
 });
 export type UnownedEntity = z.infer<typeof UnownedEntitySchema>;
+
+/** A minimal ref into an owned agent — enough for the roster's crew row + link. */
+export const RosterAgentRefSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().optional(),
+});
+export type RosterAgentRef = z.infer<typeof RosterAgentRefSchema>;
+
+/** A minimal ref into an owned integration (also used for the `monitors` subset). */
+export const RosterIntegrationRefSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().optional(),
+  kind: z.string().min(1),
+});
+export type RosterIntegrationRef = z.infer<typeof RosterIntegrationRefSchema>;
+
+/**
+ * NS2 F1c — a subsystem's stored roster, read directly off `ownerSubsystem`
+ * tags rather than derived client-side from pipeline phases (the old
+ * `deriveCrew`). `monitors` is a subset of `integrations` (owned GitHub
+ * integrations with a `ci` stream) — there is no standalone monitor entity,
+ * see {@link OwnableEntityKindSchema}'s doc. Pipelines/chains are NOT part of
+ * this shape — the roster tab already sources those client-side (the canvas),
+ * so serving them here would duplicate data.
+ */
+export const SubsystemRosterSchema = z.object({
+  agents: z.array(RosterAgentRefSchema),
+  integrations: z.array(RosterIntegrationRefSchema),
+  monitors: z.array(RosterIntegrationRefSchema),
+});
+export type SubsystemRoster = z.infer<typeof SubsystemRosterSchema>;

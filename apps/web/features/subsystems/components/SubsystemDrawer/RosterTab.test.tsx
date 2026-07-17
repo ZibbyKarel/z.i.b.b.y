@@ -1,14 +1,20 @@
 import { renderWithProviders as render, screen, within } from "../../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { type Agent, type Chain, SUBSYSTEMS, type SubsystemWithStatus } from "@zibby/contracts";
+import {
+  type Agent,
+  type Chain,
+  SUBSYSTEMS,
+  type SubsystemRoster,
+  type SubsystemWithStatus,
+} from "@zibby/contracts";
 import type { Pipeline } from "../../../../domain";
 import {
   NODE_H,
   NODE_W,
   phasesToGraph,
 } from "../../../pipelines/components/PipelineDialog/pipeline-graph";
-import { RosterTab, RosterTabTestId, computeFitTransform, deriveCrew } from "./RosterTab";
+import { RosterTab, RosterTabTestId, computeFitTransform } from "./RosterTab";
 
 const AGENTS: Agent[] = [
   { id: "writer", name: "Writer", glyph: "edit", instructions: "write" },
@@ -96,12 +102,15 @@ function readTransform(el: HTMLElement): { scale: number; tx: number; ty: number
   };
 }
 
+const EMPTY_ROSTER: SubsystemRoster = { agents: [], integrations: [], monitors: [] };
+
 const { hooks } = vi.hoisted(() => ({
   hooks: {
     pipelines: [] as Pipeline[],
     chains: [] as Chain[],
     createPipeline: vi.fn(),
     updatePipeline: vi.fn(),
+    roster: undefined as unknown,
   },
 }));
 
@@ -112,6 +121,9 @@ vi.mock("../../../pipelines", () => ({
 }));
 vi.mock("../../../chains", () => ({ useChainsQuery: () => ({ data: hooks.chains }) }));
 vi.mock("../../../agents", () => ({ useAgentsQuery: () => ({ data: AGENTS }) }));
+vi.mock("../../queries/useSubsystemRosterQuery", () => ({
+  useSubsystemRosterQuery: () => ({ data: hooks.roster }),
+}));
 
 describe("RosterTab (Phase 85)", () => {
   it("filters pipelines and chains to ones owned by the subsystem", () => {
@@ -178,7 +190,9 @@ describe("RosterTab (Phase 85)", () => {
     await user.click(screen.getByRole("button", { name: /Vytvořit pipeline/ }));
 
     expect(hooks.createPipeline).toHaveBeenCalledTimes(1);
-    const [{ body }] = hooks.createPipeline.mock.calls[0] as [{ body: { ownerSubsystem?: string } }];
+    const [{ body }] = hooks.createPipeline.mock.calls[0] as [
+      { body: { ownerSubsystem?: string } },
+    ];
     expect(body.ownerSubsystem).toBe("forge");
   });
 
@@ -240,55 +254,15 @@ describe("RosterTab (Phase 85)", () => {
   });
 });
 
-describe("RosterTab crew — Posádka (Phase 124)", () => {
-  it("derives crew from owned pipelines' agent phases: dedupes a repeated agent, skips verify phases and stale ids", () => {
-    hooks.pipelines = [
-      pipelineFixture({
-        id: "delivery",
-        name: "Delivery",
-        ownerSubsystem: "forge",
-        phases: [
-          {
-            id: "koder",
-            type: "agent",
-            agent: "writer",
-            consumes: "task.md",
-            produces: "impl.md",
-            model: "sonnet",
-            thinking: "medium",
-          },
-          { id: "verify", type: "verify", commands: ["pnpm test"] },
-          {
-            id: "review",
-            type: "agent",
-            agent: "tester",
-            consumes: "impl.md",
-            produces: "review.md",
-            model: "opus",
-            thinking: "high",
-          },
-          {
-            id: "koder2",
-            type: "agent",
-            agent: "writer",
-            consumes: "review.md",
-            produces: "final.md",
-            model: "sonnet",
-            thinking: "medium",
-          },
-          {
-            id: "ghost",
-            type: "agent",
-            agent: "stale-agent",
-            consumes: "x.md",
-            produces: "y.md",
-            model: "sonnet",
-            thinking: "medium",
-          },
-        ],
-      }),
-    ];
+describe("RosterTab crew — stored roster (NS2 F1c)", () => {
+  it("renders the crew from the roster query's agent refs, hydrated against the resolved agents list", () => {
+    hooks.pipelines = [];
     hooks.chains = [];
+    hooks.roster = {
+      agents: [{ id: "writer" }, { id: "tester" }],
+      integrations: [],
+      monitors: [],
+    } satisfies SubsystemRoster;
 
     render(<RosterTab subsystem={FORGE} />);
 
@@ -296,47 +270,63 @@ describe("RosterTab crew — Posádka (Phase 124)", () => {
     expect(within(crewSection).getByText("Posádka")).toBeInTheDocument();
 
     const rows = within(crewSection).getAllByTestId(RosterTabTestId.CrewRow);
-    // writer + tester only: deduped (writer appears in two phases), the verify
-    // phase carries no agent, and the stale "stale-agent" id has no match.
     expect(rows).toHaveLength(2);
     expect(within(rows[0]!).getByText("Writer")).toBeInTheDocument();
     expect(within(rows[1]!).getByText("Tester")).toBeInTheDocument();
   });
 
-  it("shows the agent's own model as a badge — not a phase-level override", () => {
-    hooks.pipelines = [
-      pipelineFixture({
-        id: "delivery",
-        name: "Delivery",
-        ownerSubsystem: "forge",
-        phases: [
-          {
-            id: "review",
-            type: "agent",
-            agent: "tester",
-            consumes: "impl.md",
-            produces: "review.md",
-            model: "opus",
-            thinking: "high",
-          },
-        ],
-      }),
-    ];
+  it("a roster agent ref with no match in the resolved agents list is skipped (stale reference)", () => {
+    hooks.pipelines = [];
     hooks.chains = [];
+    hooks.roster = {
+      agents: [{ id: "writer" }, { id: "ghost" }],
+      integrations: [],
+      monitors: [],
+    } satisfies SubsystemRoster;
+
+    render(<RosterTab subsystem={FORGE} />);
+
+    const rows = screen.getAllByTestId(RosterTabTestId.CrewRow);
+    expect(rows).toHaveLength(1);
+    expect(within(rows[0]!).getByText("Writer")).toBeInTheDocument();
+  });
+
+  it("shows the agent's own model as a badge, hydrated from the resolved agents list", () => {
+    hooks.pipelines = [];
+    hooks.chains = [];
+    hooks.roster = {
+      agents: [{ id: "tester" }],
+      integrations: [],
+      monitors: [],
+    } satisfies SubsystemRoster;
 
     render(<RosterTab subsystem={FORGE} />);
 
     const row = screen.getByTestId(RosterTabTestId.CrewRow);
     expect(within(row).getByText("Tester")).toBeInTheDocument();
     expect(within(row).getByText("Runs the test suite")).toBeInTheDocument();
-    // Agent's own model ("haiku"), despite the phase overriding to "opus".
     expect(within(row).getByText("haiku")).toBeInTheDocument();
-    expect(within(row).queryByText("opus")).toBeNull();
   });
 
-  it("renders no crew section when there are no owned pipelines", () => {
+  it("a crew row navigates to the agent's own detail page", () => {
     hooks.pipelines = [];
     hooks.chains = [];
+    hooks.roster = {
+      agents: [{ id: "writer" }],
+      integrations: [],
+      monitors: [],
+    } satisfies SubsystemRoster;
+
+    render(<RosterTab subsystem={FORGE} />);
+
+    const link = screen.getByRole("link", { name: /Writer/ });
+    expect(link).toHaveAttribute("href", "/agents/writer");
+  });
+
+  it("renders no crew section when the roster's agents list is empty", () => {
+    hooks.pipelines = [];
+    hooks.chains = [];
+    hooks.roster = EMPTY_ROSTER;
 
     render(<RosterTab subsystem={FORGE} />);
 
@@ -344,88 +334,49 @@ describe("RosterTab crew — Posádka (Phase 124)", () => {
     expect(screen.queryByTestId(RosterTabTestId.CrewRow)).toBeNull();
   });
 
-  it("renders no crew section when owned pipelines derive zero crew (all-verify phases)", () => {
-    hooks.pipelines = [
-      pipelineFixture({
-        id: "audit",
-        name: "Audit",
-        ownerSubsystem: "forge",
-        phases: [{ id: "verify", type: "verify", commands: ["pnpm test"] }],
-      }),
-    ];
+  it("renders no crew section while the roster query hasn't resolved yet", () => {
+    hooks.pipelines = [];
     hooks.chains = [];
+    hooks.roster = undefined;
 
     render(<RosterTab subsystem={FORGE} />);
 
     expect(screen.queryByTestId(RosterTabTestId.CrewSection)).toBeNull();
-    expect(screen.queryByTestId(RosterTabTestId.CrewRow)).toBeNull();
   });
 });
 
-describe("deriveCrew (Phase 124)", () => {
-  it("preserves first-seen order: pipeline order, then phase order", () => {
-    const p1 = pipelineFixture({
-      id: "p1",
-      phases: [
-        { id: "a", type: "agent", agent: "tester", consumes: "x", produces: "y", model: "sonnet" },
+describe("RosterTab integrations + monitors (NS2 F1c)", () => {
+  it("renders owned integrations, excluding the ci-monitor subset from the integrations section", () => {
+    hooks.pipelines = [];
+    hooks.chains = [];
+    hooks.roster = {
+      agents: [],
+      integrations: [
+        { id: "team-slack", name: "Team Slack", kind: "slack" },
+        { id: "ci-repo", name: "CI Repo", kind: "github" },
       ],
-    });
-    const p2 = pipelineFixture({
-      id: "p2",
-      phases: [
-        { id: "b", type: "agent", agent: "writer", consumes: "x", produces: "y", model: "sonnet" },
-      ],
-    });
+      monitors: [{ id: "ci-repo", name: "CI Repo", kind: "github" }],
+    } satisfies SubsystemRoster;
 
-    expect(deriveCrew([p1, p2], AGENTS).map((a) => a.id)).toEqual(["tester", "writer"]);
+    render(<RosterTab subsystem={FORGE} />);
+
+    const integrationSection = screen.getByTestId(RosterTabTestId.IntegrationSection);
+    expect(within(integrationSection).getByText("Team Slack")).toBeInTheDocument();
+    expect(within(integrationSection).queryByText("CI Repo")).toBeNull();
+
+    const monitorSection = screen.getByTestId(RosterTabTestId.MonitorSection);
+    expect(within(monitorSection).getByText("CI Repo")).toBeInTheDocument();
   });
 
-  it("dedupes an agent referenced by two phases across owned pipelines", () => {
-    const p1 = pipelineFixture({
-      id: "p1",
-      phases: [
-        { id: "a", type: "agent", agent: "writer", consumes: "x", produces: "y", model: "sonnet" },
-      ],
-    });
-    const p2 = pipelineFixture({
-      id: "p2",
-      phases: [
-        { id: "b", type: "agent", agent: "writer", consumes: "x", produces: "y", model: "sonnet" },
-      ],
-    });
+  it("renders no integrations/monitors sections when the roster owns none", () => {
+    hooks.pipelines = [];
+    hooks.chains = [];
+    hooks.roster = EMPTY_ROSTER;
 
-    expect(deriveCrew([p1, p2], AGENTS).map((a) => a.id)).toEqual(["writer"]);
-  });
+    render(<RosterTab subsystem={FORGE} />);
 
-  it("skips verify phases (no agent field to resolve)", () => {
-    const p = pipelineFixture({
-      id: "p1",
-      phases: [{ id: "v", type: "verify", commands: ["pnpm test"] }],
-    });
-
-    expect(deriveCrew([p], AGENTS)).toEqual([]);
-  });
-
-  it("skips a stale agent id with no match in the resolved agents list", () => {
-    const p = pipelineFixture({
-      id: "p1",
-      phases: [
-        {
-          id: "a",
-          type: "agent",
-          agent: "ghost",
-          consumes: "x",
-          produces: "y",
-          model: "sonnet",
-        },
-      ],
-    });
-
-    expect(deriveCrew([p], AGENTS)).toEqual([]);
-  });
-
-  it("returns an empty crew for no owned pipelines", () => {
-    expect(deriveCrew([], AGENTS)).toEqual([]);
+    expect(screen.queryByTestId(RosterTabTestId.IntegrationSection)).toBeNull();
+    expect(screen.queryByTestId(RosterTabTestId.MonitorSection)).toBeNull();
   });
 });
 

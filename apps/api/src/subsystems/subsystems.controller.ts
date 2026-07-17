@@ -29,6 +29,8 @@ export class SubsystemsController {
 
       markSubsystemSeen: ({ params: { id } }) =>
         errors.or404(id, async () => this.subsystems.markSeen(id)),
+
+      getRoster: ({ params: { id } }) => errors.or404(id, async () => this.subsystems.roster(id)),
     });
   }
 }
