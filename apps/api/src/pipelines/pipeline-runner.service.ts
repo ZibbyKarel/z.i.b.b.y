@@ -323,7 +323,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
           await this.writeAggregate(run);
         }
       } catch (error) {
-        if (!(error instanceof WorkspaceSetupError) && !(error instanceof ProjectLocalUnresolvedError)) {
+        if (
+          !(error instanceof WorkspaceSetupError) &&
+          !(error instanceof ProjectLocalUnresolvedError)
+        ) {
           throw error;
         }
         run.status = "failed";
@@ -710,11 +713,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** Read a stage's log by phase id (the most recent attempt of that phase). */
-  async readStageLog(
-    pipelineRunId: string,
-    phaseId: string,
-    offset: number,
-  ): Promise<RunLogChunk> {
+  async readStageLog(pipelineRunId: string, phaseId: string, offset: number): Promise<RunLogChunk> {
     // Fall back to the on-disk aggregate (like delete/readArtifact/resume): a finished
     // run is evicted from the in-memory registry once it ages past RETENTION_MS, but
     // its aggregate + per-stage logs persist — so the detail view can still tail them.
@@ -869,10 +868,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // second run of the same phase gets its own folder instead of overwriting the
       // first. A synthetic escalation marker also occupies a slot, which leaves a
       // gap in the numbering, never a clash.
-      const stageCwd = path.join(
-        run.cwd,
-        this.stageDirName(run.stageRuns.length + 1, phase.id),
-      );
+      const stageCwd = path.join(run.cwd, this.stageDirName(run.stageRuns.length + 1, phase.id));
       await fs.mkdir(stageCwd, { recursive: true });
       // P1-T3 (Fáze 3): every stage gets the run's shared `context/` folder linked
       // in, relative like the handoff symlink (P1-T2) — pipeline-level inputs are
@@ -880,7 +876,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // creates `context/` unconditionally for every run, so this is unconditional
       // too; a link left dangling has nothing behind it, same as an unused handoff.
       await fs
-        .symlink(path.relative(stageCwd, path.join(run.cwd, "context")), path.join(stageCwd, "context"))
+        .symlink(
+          path.relative(stageCwd, path.join(run.cwd, "context")),
+          path.join(stageCwd, "context"),
+        )
         .catch(() => {});
       await this.placeHandoff(handoffSource, stageCwd, phase);
 
@@ -1008,8 +1007,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // Stage failed, was interrupted, OR a qualify phase returned gap/drift.
       const loop = phase.loop;
       // drift re-plans (Architekt) via driftTo; gap / a real error fix in place (Kodér).
-      const retryTarget =
-        qualifyFail?.verdict === "drift" ? (loop?.driftTo ?? loop?.to) : loop?.to;
+      const retryTarget = qualifyFail?.verdict === "drift" ? (loop?.driftTo ?? loop?.to) : loop?.to;
       if (loop && (retries.get(phase.id) ?? 0) < loop.maxRetries) {
         retries.set(phase.id, (retries.get(phase.id) ?? 0) + 1);
         this.log.warn("pipeline phase failed; retrying", {
@@ -1389,10 +1387,14 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       });
       return;
     }
+    // NS2 F0b — per-project draft PR mode; a project-less run (no match on
+    // `projectForRun`) stays `"ready"`, same as an absent `prOpenMode`.
+    const project = await this.projectForRun(run).catch((): Project | null => null);
     const result = await this.workspace.openPr({
       cwd: run.workspace.path,
       title: title || run.pipelineId,
       bodyFile,
+      draft: project?.prOpenMode === "draft",
     });
     if (result) {
       const stats = await this.workspace
@@ -1803,11 +1805,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // narrower existing grant (just this stage's own sandbox, so the session can
       // still write `produces` back into it) applies when the session spawns
       // elsewhere (worktree/project).
-      const grantDirs = phase.consumes
-        ? [path.dirname(cwd)]
-        : spawnCwd
-          ? [cwd]
-          : undefined;
+      const grantDirs = phase.consumes ? [path.dirname(cwd)] : spawnCwd ? [cwd] : undefined;
       const built = await this.claude.buildClaudeCommand({
         instructions: agent.instructions,
         task,

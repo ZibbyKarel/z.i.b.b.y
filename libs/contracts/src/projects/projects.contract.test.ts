@@ -4,6 +4,7 @@ import {
   CreateProjectSchema,
   MergeProjectPrBodySchema,
   MergeProjectPrResultSchema,
+  PrOpenModeSchema,
   ProjectLocalStateSchema,
   ProjectPersonSchema,
   ProjectPrSchema,
@@ -304,9 +305,9 @@ describe("ResolvedProjectContextSchema (Phase 72)", () => {
   });
 
   it("accepts an absent budget (no budget anywhere, company or project)", () => {
-    expect(
-      ResolvedProjectContextSchema.safeParse({ people: [], integrations: [] }).success,
-    ).toBe(true);
+    expect(ResolvedProjectContextSchema.safeParse({ people: [], integrations: [] }).success).toBe(
+      true,
+    );
   });
 });
 
@@ -401,6 +402,51 @@ describe("project schema", () => {
   });
 });
 
+describe("PrOpenModeSchema / Project.prOpenMode (NS2 F0b)", () => {
+  it("accepts ready and draft", () => {
+    expect(PrOpenModeSchema.safeParse("ready").success).toBe(true);
+    expect(PrOpenModeSchema.safeParse("draft").success).toBe(true);
+  });
+
+  it("rejects an unknown mode (closed vocabulary)", () => {
+    expect(PrOpenModeSchema.safeParse("open").success).toBe(false);
+  });
+
+  it("Project accepts an absent prOpenMode (existing projects keep working)", () => {
+    const parsed = ProjectSchema.parse({ id: "alpha", name: "Alpha", path: "~/x" });
+    expect(parsed.prOpenMode).toBeUndefined();
+  });
+
+  it("Project accepts prOpenMode: draft", () => {
+    const parsed = ProjectSchema.parse({
+      id: "alpha",
+      name: "Alpha",
+      path: "~/x",
+      prOpenMode: "draft",
+    });
+    expect(parsed.prOpenMode).toBe("draft");
+  });
+
+  it("Project rejects an unknown prOpenMode", () => {
+    expect(
+      ProjectSchema.safeParse({ id: "alpha", name: "Alpha", path: "~/x", prOpenMode: "hidden" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("flows through CreateProjectSchema and UpdateProjectSchema", () => {
+    expect(
+      CreateProjectSchema.safeParse({
+        id: "alpha",
+        name: "Alpha",
+        path: "~/x",
+        prOpenMode: "draft",
+      }).success,
+    ).toBe(true);
+    expect(UpdateProjectSchema.safeParse({ prOpenMode: "draft" }).success).toBe(true);
+  });
+});
+
 describe("ProjectPersonSchema (Phase 68 id migration)", () => {
   it("accepts a person without an id (existing on-disk shape keeps validating)", () => {
     const parsed = ProjectPersonSchema.parse({ name: "Jane Doe", role: "CTO" });
@@ -413,8 +459,8 @@ describe("ProjectPersonSchema (Phase 68 id migration)", () => {
   });
 
   it("rejects an empty-string id", () => {
-    expect(
-      ProjectPersonSchema.safeParse({ id: "", name: "Jane Doe", role: "CTO" }).success,
-    ).toBe(false);
+    expect(ProjectPersonSchema.safeParse({ id: "", name: "Jane Doe", role: "CTO" }).success).toBe(
+      false,
+    );
   });
 });

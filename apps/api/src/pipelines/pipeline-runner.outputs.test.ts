@@ -325,6 +325,7 @@ describe("PipelineRunnerService — output sinks", () => {
       cwd: wt,
       title: "Add feature X",
       bodyFile: path.join(run.cwd, "pr-draft.md"),
+      draft: false, // NS2 F0b — unregistered/no prOpenMode project → ready (default)
     });
     // The url + branch line totals are recorded on the run for the detail's PR surface.
     expect(run.prOutput).toEqual({
@@ -403,7 +404,38 @@ describe("PipelineRunnerService — output sinks", () => {
       cwd: wt,
       title: "Add feature X",
       bodyFile: path.join(run.cwd, "pr-draft.md"),
+      draft: false, // NS2 F0b — unregistered/no prOpenMode project → ready (default)
     });
     expect(run.status).toBe("done");
+  });
+
+  it("pr sink: threads the matched project's prOpenMode: draft into openPr (NS2 F0b)", async () => {
+    const pipeline: Pipeline = {
+      id: "delivery",
+      phases: [docPhase],
+      outputs: [{ type: "pr", from: "docs.md" }],
+      instructions: "x",
+    };
+    const wt = path.join(dir, "worktree");
+    await fs.mkdir(wt, { recursive: true });
+    const { service, d } = await makeService(dir, pipeline);
+    // Override the projects double's list() so `projectForRun` matches `run.projectPath`
+    // (= wt below) to a project with prOpenMode: "draft".
+    (service as unknown as { projects: { list: ReturnType<typeof vi.fn> } }).projects.list = vi.fn(
+      async () => [{ id: "p1", name: "Repo", path: wt, prOpenMode: "draft" }],
+    );
+    const run = await seedRun(
+      service,
+      dir,
+      pipeline,
+      { a: { phaseId: "dok", file: "docs.md", content: "# Add feature X\n\nDetails." } },
+      wt,
+    );
+
+    await runOutputs(service, run, pipeline);
+
+    expect(d.workspace.openPr).toHaveBeenCalledWith(
+      expect.objectContaining({ cwd: wt, draft: true }),
+    );
   });
 });

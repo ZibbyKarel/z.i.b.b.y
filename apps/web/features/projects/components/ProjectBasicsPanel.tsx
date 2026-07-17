@@ -3,8 +3,15 @@
 import { type ChangeEvent } from "react";
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, IconTile, SelectField, Stack, TextAreaField, Typography } from "@zibby/design-system";
-import type { Category, Project } from "@zibby/contracts";
+import {
+  Button,
+  IconTile,
+  SelectField,
+  Stack,
+  TextAreaField,
+  Typography,
+} from "@zibby/design-system";
+import type { Category, PrOpenMode, Project } from "@zibby/contracts";
 import { Controller, FormTextInput, useFormControls } from "@zibby/forms";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { toastBus } from "../../../components/Toaster/toastBus";
@@ -40,6 +47,8 @@ export interface ProjectBasicsBody {
   };
   checks?: string[];
   env?: Record<string, string>;
+  /** NS2 F0b — draft-PR mode; omitted when `"ready"` (today's default behavior). */
+  prOpenMode?: PrOpenMode;
 }
 
 export interface ProjectBasicsPanelProps {
@@ -72,6 +81,8 @@ type ProjectEditValues = {
   desc: string;
   category: string;
   gitRemote: string;
+  /** NS2 F0b — draft-PR mode; `"ready"` (default) or `"draft"`. */
+  prOpenMode: PrOpenMode;
   budgetDailyRuns: string;
   budgetWeeklyRuns: string;
   budgetMonthlyRuns: string;
@@ -142,6 +153,7 @@ export function ProjectBasicsPanel({
       desc: project?.desc ?? "",
       category: project?.category ?? categories[0]?.name ?? "",
       gitRemote: project?.gitRemote ?? "",
+      prOpenMode: project?.prOpenMode ?? "ready",
       budgetDailyRuns: project?.budget?.dailyRuns != null ? String(project.budget.dailyRuns) : "",
       budgetWeeklyRuns:
         project?.budget?.weeklyRuns != null ? String(project.budget.weeklyRuns) : "",
@@ -195,6 +207,7 @@ export function ProjectBasicsPanel({
         budget,
         checks: checks.length > 0 ? checks : undefined,
         env: fromRows(envRows),
+        prOpenMode: values.prOpenMode === "draft" ? "draft" : undefined,
       });
     },
   });
@@ -237,6 +250,23 @@ export function ProjectBasicsPanel({
           label={t("fields.gitRemote")}
           name="gitRemote"
           placeholder="git@github.com:org/repo.git"
+        />
+
+        <Controller<ProjectEditValues, "prOpenMode">
+          control={form.control}
+          name="prOpenMode"
+          render={({ field }) => (
+            <SelectField
+              hint={t("fields.prOpenModeHint")}
+              label={t("fields.prOpenMode")}
+              onValueChange={(v) => field.onChange(v === "draft" ? "draft" : "ready")}
+              options={[
+                { value: "ready", label: t("fields.prOpenModeReady") },
+                { value: "draft", label: t("fields.prOpenModeDraft") },
+              ]}
+              value={field.value}
+            />
+          )}
         />
 
         {categories.length > 0 && (
