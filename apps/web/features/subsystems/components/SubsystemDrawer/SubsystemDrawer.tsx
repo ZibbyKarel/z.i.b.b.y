@@ -342,135 +342,135 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
         }}
         tabIndex={-1}
       >
-          {/* The DS `Container` (not a raw `div`) so the per-subsystem gradient
+        {/* The DS `Container` (not a raw `div`) so the per-subsystem gradient
               — see `headerBandStyle`'s doc comment — goes through a DS
               component's own `style` passthrough rather than a raw DOM node. */}
-          <Container
-            data-testid={SubsystemDrawerTestId.Hero}
-            padding={["250", "300"]}
-            shrink={false}
-            style={headerBandStyle(subsystem.color)}
-          >
-            <Stack align="center" direction="row" gap="200">
-              {/* The orb, carried over from the map node the operator just
+        <Container
+          data-testid={SubsystemDrawerTestId.Hero}
+          padding={["250", "300"]}
+          shrink={false}
+          style={headerBandStyle(subsystem.color)}
+        >
+          <Stack align="center" direction="row" gap="200">
+            {/* The orb, carried over from the map node the operator just
                   clicked: same identity color, same glyph, same state motion.
                   That continuity IS the design's core gesture — the header
                   should read as the thing you clicked, opened up. */}
+            <Container
+              height={`${HEADER_ORB_BOX}px`}
+              position="relative"
+              shrink={false}
+              width={`${HEADER_ORB_BOX}px`}
+            >
+              <Orb
+                detail={1}
+                diameter={HEADER_ORB_DIAMETER}
+                hex={subsystem.color}
+                state={orbState}
+              />
               <Container
-                height={`${HEADER_ORB_BOX}px`}
-                position="relative"
-                shrink={false}
-                width={`${HEADER_ORB_BOX}px`}
+                data-testid={SubsystemDrawerTestId.Glyph}
+                pointerEvents="none"
+                position="absolute"
+                style={{ inset: 0, display: "grid", placeItems: "center", color: "#eef3fb" }}
               >
-                <Orb
-                  detail={1}
-                  diameter={HEADER_ORB_DIAMETER}
-                  hex={subsystem.color}
-                  state={orbState}
-                />
-                <Container
-                  data-testid={SubsystemDrawerTestId.Glyph}
-                  pointerEvents="none"
-                  position="absolute"
-                  style={{ inset: 0, display: "grid", placeItems: "center", color: "#eef3fb" }}
-                >
-                  <Icon name={SUBSYSTEM_GLYPH[subsystem.id]} size="lg" />
-                </Container>
+                <Icon name={SUBSYSTEM_GLYPH[subsystem.id]} size="lg" />
               </Container>
+            </Container>
 
-              <Container grow minW0>
-                <Stack gap="50">
-                  <Stack align="center" direction="row" gap="150">
-                    <Typography truncate data-testid={SubsystemDrawerTestId.Name} type="title">
-                      {subsystem.name}
-                    </Typography>
+            <Container grow minW0>
+              <Stack gap="50">
+                <Stack align="center" direction="row" gap="150">
+                  <Typography truncate data-testid={SubsystemDrawerTestId.Name} type="title">
+                    {subsystem.name}
+                  </Typography>
 
-                    <Container
-                      data-testid={SubsystemDrawerTestId.Status}
-                      padding={["25", "150"]}
-                      shrink={false}
-                      style={statePillStyle(stateStyle.color)}
-                    >
-                      <Stack align="center" direction="row" gap="75">
-                        <Container
-                          shrink={false}
-                          style={stateDotStyle(stateStyle.color, stateStyle.live)}
-                        />
-                        <Typography nowrap style={{ color: stateStyle.color }} type="micro">
-                          {t(`state.${subsystem.state}`)}
-                        </Typography>
-                      </Stack>
-                    </Container>
+                  <Container
+                    data-testid={SubsystemDrawerTestId.Status}
+                    padding={["25", "150"]}
+                    shrink={false}
+                    style={statePillStyle(stateStyle.color)}
+                  >
+                    <Stack align="center" direction="row" gap="75">
+                      <Container
+                        shrink={false}
+                        style={stateDotStyle(stateStyle.color, stateStyle.live)}
+                      />
+                      <Typography nowrap style={{ color: stateStyle.color }} type="micro">
+                        {t(`state.${subsystem.state}`)}
+                      </Typography>
+                    </Stack>
+                  </Container>
 
-                    {/* Not in the Velín-D header, kept deliberately: the pill
+                  {/* Not in the Velín-D header, kept deliberately: the pill
                         says a decision is waiting, only this says how many.
                         Bare numeral on purpose — the full phrase ("2 čeká na
                         rozhodnutí") sits right next to a pill already reading
                         "Čeká na rozhodnutí", and rendering both stutters. The
                         phrase stays as the accessible name, so a screen reader
                         still gets the count in words. */}
-                    {showCount && tagTone && (
-                      <Tag
-                        aria-label={countLabel}
-                        data-testid={SubsystemDrawerTestId.Count}
-                        tone={tagTone}
-                      >
-                        {countValue}
-                      </Tag>
-                    )}
-                  </Stack>
+                  {showCount && tagTone && (
+                    <Tag
+                      aria-label={countLabel}
+                      data-testid={SubsystemDrawerTestId.Count}
+                      tone={tagTone}
+                    >
+                      {countValue}
+                    </Tag>
+                  )}
+                </Stack>
 
-                  {/* Velín-D folds mandate and tagline onto one line — the
+                {/* Velín-D folds mandate and tagline onto one line — the
                       mandate leads (it's what the subsystem DOES), the epithet
                       trails. */}
-                  <Typography
-                    truncate
-                    data-testid={SubsystemDrawerTestId.Mandate}
-                    type="note"
-                    variant="secondary"
-                  >
-                    {subsystem.mandate} · {subsystem.tagline}
-                  </Typography>
-                </Stack>
-              </Container>
+                <Typography
+                  truncate
+                  data-testid={SubsystemDrawerTestId.Mandate}
+                  type="note"
+                  variant="secondary"
+                >
+                  {subsystem.mandate} · {subsystem.tagline}
+                </Typography>
+              </Stack>
+            </Container>
 
-              <button
-                aria-label={t("drawer.close")}
-                className="flex shrink-0 cursor-pointer p-1 text-foreground-faint hover:text-foreground"
-                data-testid={SubsystemDrawerTestId.Close}
-                onClick={requestClose}
-                type="button"
-              >
-                <Icon name="x" size="lg" />
-              </button>
-            </Stack>
-          </Container>
+            <button
+              aria-label={t("drawer.close")}
+              className="flex shrink-0 cursor-pointer p-1 text-foreground-faint hover:text-foreground"
+              data-testid={SubsystemDrawerTestId.Close}
+              onClick={requestClose}
+              type="button"
+            >
+              <Icon name="x" size="lg" />
+            </button>
+          </Stack>
+        </Container>
 
-          <Tabs defaultValue="roster">
-            <TabList>
-              {SUBSYSTEM_DRAWER_TABS.map((tab) => (
-                <Tab key={tab} value={tab}>
-                  {t(`drawer.tabs.${tab}`)}
-                </Tab>
-              ))}
-            </TabList>
+        <Tabs defaultValue="roster">
+          <TabList>
             {SUBSYSTEM_DRAWER_TABS.map((tab) => (
-              <TabPanel key={tab} value={tab}>
-                <div className="p-4">
-                  {tab === "roster" ? (
-                    <RosterTab subsystem={subsystem} />
-                  ) : tab === "aktivita" ? (
-                    <AktivitaTab subsystem={subsystem} />
-                  ) : tab === "gates" ? (
-                    <GatesTab subsystem={subsystem} />
-                  ) : (
-                    <ArtefaktyTab subsystem={subsystem} />
-                  )}
-                </div>
-              </TabPanel>
+              <Tab key={tab} value={tab}>
+                {t(`drawer.tabs.${tab}`)}
+              </Tab>
             ))}
-          </Tabs>
-        </Panel>
+          </TabList>
+          {SUBSYSTEM_DRAWER_TABS.map((tab) => (
+            <TabPanel key={tab} value={tab}>
+              <div className="p-4">
+                {tab === "roster" ? (
+                  <RosterTab subsystem={subsystem} />
+                ) : tab === "aktivita" ? (
+                  <AktivitaTab subsystem={subsystem} />
+                ) : tab === "gates" ? (
+                  <GatesTab subsystem={subsystem} />
+                ) : (
+                  <ArtefaktyTab subsystem={subsystem} />
+                )}
+              </div>
+            </TabPanel>
+          ))}
+        </Tabs>
+      </Panel>
     </Container>
   );
 }
