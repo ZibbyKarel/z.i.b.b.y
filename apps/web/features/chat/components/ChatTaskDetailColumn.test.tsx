@@ -1,6 +1,7 @@
 import { fireEvent } from "@testing-library/react";
+import { Dialog } from "@zibby/design-system";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renderWithProviders as render, screen } from "../../../test/render";
+import { render as bareRender, renderWithProviders as render, screen } from "../../../test/render";
 import type { RunView } from "../../runs/run";
 
 // `RunDetail` is a heavy composite (approval gate, log stream, stage timeline,
@@ -297,6 +298,135 @@ describe("ChatTaskDetailColumn (Phase 100, frame Phase 122)", () => {
       const style = panelTransitionStyle("open", true);
       expect(style.transform).toBeUndefined();
       expect(style.transition).toBe("opacity 220ms cubic-bezier(0.16, 1, 0.3, 1)");
+    });
+  });
+
+  describe("focus trap and scroll lock (phase 126)", () => {
+    it("wraps Tab focus from the last focusable element back to the first", () => {
+      render(
+        <ChatTaskDetailColumn
+          deleting={false}
+          glyph="bot"
+          now={Date.now()}
+          onClose={vi.fn()}
+          onDelete={vi.fn()}
+          onResume={vi.fn()}
+          onStop={vi.fn()}
+          resuming={false}
+          run={run({})}
+          stopping={false}
+        />,
+      );
+
+      screen.getByTestId(ChatTaskDetailColumnTestId.OpenFull).focus();
+      fireEvent.keyDown(document, { key: "Tab" });
+
+      expect(document.activeElement).toBe(screen.getByTestId(ChatTaskDetailColumnTestId.Close));
+    });
+
+    it("wraps Shift+Tab from the first focusable element back to the last", () => {
+      render(
+        <ChatTaskDetailColumn
+          deleting={false}
+          glyph="bot"
+          now={Date.now()}
+          onClose={vi.fn()}
+          onDelete={vi.fn()}
+          onResume={vi.fn()}
+          onStop={vi.fn()}
+          resuming={false}
+          run={run({})}
+          stopping={false}
+        />,
+      );
+
+      screen.getByTestId(ChatTaskDetailColumnTestId.Close).focus();
+      fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+
+      expect(document.activeElement).toBe(screen.getByTestId(ChatTaskDetailColumnTestId.OpenFull));
+    });
+
+    it("locks body scroll while open and restores it on unmount", () => {
+      const { unmount } = render(
+        <ChatTaskDetailColumn
+          deleting={false}
+          glyph="bot"
+          now={Date.now()}
+          onClose={vi.fn()}
+          onDelete={vi.fn()}
+          onResume={vi.fn()}
+          onStop={vi.fn()}
+          resuming={false}
+          run={run({})}
+          stopping={false}
+        />,
+      );
+      expect(document.body.style.overflow).toBe("hidden");
+
+      unmount();
+      expect(document.body.style.overflow).toBe("");
+    });
+
+    it("cedes Escape to a nested DS Dialog and keeps scroll locked until this modal itself closes", () => {
+      vi.useFakeTimers();
+      const onClose = vi.fn();
+      const { unmount } = render(
+        <ChatTaskDetailColumn
+          deleting={false}
+          glyph="bot"
+          now={Date.now()}
+          onClose={onClose}
+          onDelete={vi.fn()}
+          onResume={vi.fn()}
+          onStop={vi.fn()}
+          resuming={false}
+          run={run({})}
+          stopping={false}
+        />,
+      );
+      expect(document.body.style.overflow).toBe("hidden");
+
+      const { unmount: unmountDialog } = bareRender(
+        <Dialog open title="Nested">
+          nested
+        </Dialog>,
+      );
+      expect(document.body.style.overflow).toBe("hidden");
+
+      fireEvent.keyDown(document, { key: "Escape" });
+      vi.advanceTimersByTime(PANEL_EXIT_MS);
+      expect(onClose).not.toHaveBeenCalled();
+
+      unmountDialog();
+      expect(document.body.style.overflow).toBe("hidden");
+
+      unmount();
+      expect(document.body.style.overflow).toBe("");
+    });
+
+    it("closes on Escape after the exit transition", () => {
+      vi.useFakeTimers();
+      const onClose = vi.fn();
+      render(
+        <ChatTaskDetailColumn
+          deleting={false}
+          glyph="bot"
+          now={Date.now()}
+          onClose={onClose}
+          onDelete={vi.fn()}
+          onResume={vi.fn()}
+          onStop={vi.fn()}
+          resuming={false}
+          run={run({})}
+          stopping={false}
+        />,
+      );
+
+      fireEvent.keyDown(document, { key: "Escape" });
+      expect(onClose).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(PANEL_EXIT_MS);
+      expect(onClose).toHaveBeenCalledTimes(1);
     });
   });
 });

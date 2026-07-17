@@ -9,6 +9,7 @@ import {
   Pressable,
   Stack,
   Typography,
+  useOverlayStack,
 } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
@@ -18,6 +19,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { usePrefersReducedMotion } from "../../../hooks/usePrefersReducedMotion";
 import { RunDetail } from "../../runs/components/RunDetail";
 import { type RunView, runTitle } from "../../runs/run";
+
+// Same idiom the DS `Dialog` and `SubsystemDrawer` use for their own focus
+// traps — duplicated here rather than imported/shared, matching the
+// established precedent in both of those files.
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export enum ChatTaskDetailColumnTestId {
   Root = "chat-task-detail-column",
@@ -155,6 +162,48 @@ export function ChatTaskDetailColumn({
     setPhase("closing");
     closeTimeoutRef.current = setTimeout(onClose, PANEL_EXIT_MS);
   }, [onClose]);
+
+  // Shares the DS `Dialog`'s overlay stack (the same one `SubsystemDrawer`
+  // uses): `true` for this component's whole mounted lifetime, including the
+  // `"closing"` phase, since the parent doesn't unmount it until
+  // `requestClose`'s deferred `onClose` fires — scroll must stay locked
+  // through the exit animation too.
+  const { isTopmost } = useOverlayStack(true);
+
+  // Escape closes; Tab/Shift+Tab cycles focus within the panel. Both are
+  // no-ops when another overlay (a nested DS `Dialog`, etc.) is topmost.
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (!isTopmost()) return;
+      if (event.key === "Escape") {
+        requestClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const container = panelRef.current;
+      if (!container) return;
+      const focusable = Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+      const first = focusable.at(0);
+      const last = focusable.at(-1);
+      if (!first || !last) {
+        event.preventDefault();
+        container.focus();
+        return;
+      }
+      const active = document.activeElement;
+      if (event.shiftKey) {
+        if (active === first || active === container) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [requestClose, isTopmost]);
 
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
