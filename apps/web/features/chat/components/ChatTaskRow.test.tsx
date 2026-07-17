@@ -1,5 +1,6 @@
 import { fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { FloatingPanelTestId } from "@zibby/design-system";
 import { renderWithProviders as render, screen } from "../../../test/render";
 import type { RunView } from "../../runs/run";
 import { ChatTaskRow, ChatTaskRowTestId } from "./ChatTaskRow";
@@ -140,5 +141,49 @@ describe("ChatTaskRow (Phase 100: selects instead of navigating)", () => {
     expect(doneRow.className).toContain("border-border");
     // The edge bar still reads the state tone even though the card isn't live.
     expect(doneRow.innerHTML).toContain("bg-ok");
+  });
+
+  it("wraps an idle row in FloatingPanel but renders a live row bare", () => {
+    const live = render(
+      <ChatTaskRow
+        glyph="bot"
+        onSelect={vi.fn()}
+        openAria="Open run: Live task"
+        run={run({ runId: "run_live", title: "Live task", status: "running" })}
+        selected={false}
+        stateLabel="Running"
+      />,
+    );
+    expect(live.queryByTestId(FloatingPanelTestId.Root)).not.toBeInTheDocument();
+    live.unmount();
+
+    const idle = render(
+      <ChatTaskRow
+        glyph="bot"
+        onSelect={vi.fn()}
+        openAria="Open run: Done task"
+        run={run({ runId: "run_done", title: "Done task", status: "done" })}
+        selected={false}
+        stateLabel="Done"
+      />,
+    );
+    expect(idle.getByTestId(FloatingPanelTestId.Root)).toBeInTheDocument();
+  });
+
+  it("forwards its stagger index to FloatingPanel", () => {
+    render(
+      <ChatTaskRow
+        glyph="bot"
+        index={5}
+        onSelect={vi.fn()}
+        openAria="Open run: Done task"
+        run={run({ runId: "run_done", title: "Done task", status: "done" })}
+        selected={false}
+        stateLabel="Done"
+      />,
+    );
+    const panel = screen.getByTestId(FloatingPanelTestId.Root);
+    expect(panel.style.animationDuration).toBe("6.7s");
+    expect(panel.style.animationDelay).toBe("-6.5s");
   });
 });

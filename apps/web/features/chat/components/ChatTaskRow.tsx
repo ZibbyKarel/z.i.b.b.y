@@ -3,6 +3,7 @@ import {
   Card,
   Container,
   type DotTone,
+  FloatingPanel,
   Icon,
   type IconName,
   IconTile,
@@ -54,6 +55,9 @@ export interface ChatTaskRowProps {
   /** Selects (or, re-clicking the already-selected row, deselects) this run — the
    * panel resolves the click into the inline detail column beside it. */
   onSelect: (runId: string) => void;
+  /** This row's position in its list — the stagger seed `FloatingPanel` uses so
+   * idle rows don't float in visible unison. Defaults to 0. */
+  index?: number;
 }
 
 /**
@@ -80,6 +84,7 @@ export function ChatTaskRow({
   openAria,
   selected,
   onSelect,
+  index = 0,
 }: ChatTaskRowProps) {
   const live = run.status === "running" || run.status === "awaiting-approval";
   // Mandatory default: `runStateTone` reads `undefined` for a neutral status
@@ -96,7 +101,7 @@ export function ChatTaskRow({
   // without a live-ticking clock this compact row doesn't need.
   const [renderedAt] = useState(() => Date.now());
 
-  return (
+  const card = (
     <Card
       aria-label={openAria}
       as="button"
@@ -162,4 +167,6 @@ export function ChatTaskRow({
       </Container>
     </Card>
   );
+
+  return live ? card : <FloatingPanel index={index}>{card}</FloatingPanel>;
 }
