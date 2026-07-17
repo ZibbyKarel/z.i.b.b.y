@@ -151,9 +151,15 @@ describe("Tasks API (e2e)", () => {
     expect(res.body.target.id).toBe("curator");
     expect(res.body.matchedTerms.length).toBeGreaterThan(0);
     expect(res.body.confidence).toBeGreaterThan(0.4);
-    // Every stored target is offered for manual override (2 agents + 1 pipeline).
-    expect(res.body.candidates).toHaveLength(3);
+    // Every stored target is offered for manual override (2 agents + 1 pipeline),
+    // plus F2a's stage-1 subsystem verdict for "forge" (both agents are forge-owned).
+    expect(res.body.candidates).toHaveLength(4);
     expect(res.body.candidates.some((c: { kind: string }) => c.kind === "pipeline")).toBe(true);
+    expect(
+      res.body.candidates.some(
+        (c: { kind: string; id?: string }) => c.kind === "subsystem" && c.id === "forge",
+      ),
+    ).toBe(true);
   });
 
   it("routes to the orchestrator (low confidence) when nothing matches", async () => {
@@ -165,8 +171,9 @@ describe("Tasks API (e2e)", () => {
     expect(res.body.target.id).toBeUndefined();
     expect(res.body.target.name).toBeTruthy();
     expect(res.body.confidence).toBeLessThan(0.4);
-    // The real catalog is still offered for a manual override.
-    expect(res.body.candidates).toHaveLength(3);
+    // The real catalog is still offered for a manual override, plus the F2a
+    // stage-1 "forge" subsystem verdict (see the test above).
+    expect(res.body.candidates).toHaveLength(4);
   });
 
   it("returns 422 when the catalog is empty", async () => {
