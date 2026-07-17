@@ -46,6 +46,7 @@ describe("BriefingService", () => {
   let limits: { snapshot: ReturnType<typeof vi.fn> };
   let monitorEvents: { listStatuses: ReturnType<typeof vi.fn> };
   let selfKnowledge: { check: ReturnType<typeof vi.fn> };
+  let sentinel: { readFindings: ReturnType<typeof vi.fn> };
   let service: BriefingService;
 
   const now = new Date("2026-06-12T07:00:00.000Z");
@@ -72,6 +73,9 @@ describe("BriefingService", () => {
     };
     // NS2 F4c — default fixture: no drift (each test overrides what it exercises).
     selfKnowledge = { check: vi.fn().mockResolvedValue(false) };
+    // NS2 F5a — default fixture: no security findings (each test overrides what
+    // it exercises).
+    sentinel = { readFindings: vi.fn().mockResolvedValue([]) };
 
     service = new BriefingService(
       approvals as never,
@@ -87,6 +91,7 @@ describe("BriefingService", () => {
       subsystems as never,
       limits as never,
       selfKnowledge as never,
+      sentinel as never,
       dir,
       { child: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn() }) } as never,
     );
@@ -219,6 +224,27 @@ describe("BriefingService", () => {
       selfKnowledge.check.mockRejectedValue(new Error("compose failed"));
       const briefing = await service.assemble(now);
       expect(briefing.selfKnowledgeDrift).toBeUndefined();
+      expect(briefing.headline).toBe("Nothing needs you.");
+    });
+  });
+
+  describe("security findings (NS2 F5a)", () => {
+    it("surfaces Sentinel's open findings", async () => {
+      sentinel.readFindings.mockResolvedValue(["CVE-2026-1234 in lodash"]);
+      const briefing = await service.assemble(now);
+      expect(briefing.securityFindings).toEqual(["CVE-2026-1234 in lodash"]);
+    });
+
+    it("omits securityFindings when there are none", async () => {
+      sentinel.readFindings.mockResolvedValue([]);
+      const briefing = await service.assemble(now);
+      expect(briefing.securityFindings).toBeUndefined();
+    });
+
+    it("a failed read fails open — omits the field, the briefing still assembles", async () => {
+      sentinel.readFindings.mockRejectedValue(new Error("vault hiccup"));
+      const briefing = await service.assemble(now);
+      expect(briefing.securityFindings).toBeUndefined();
       expect(briefing.headline).toBe("Nothing needs you.");
     });
   });

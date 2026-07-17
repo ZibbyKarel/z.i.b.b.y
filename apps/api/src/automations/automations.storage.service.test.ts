@@ -10,6 +10,7 @@ import {
   InvalidAutomationIdError,
   MEMORY_DISTILL_AUTOMATION_ID,
   SELF_KNOWLEDGE_AUTOMATION_ID,
+  SENTINEL_SCAN_AUTOMATION_ID,
   SystemAutomationError,
 } from "./automations.storage.service";
 
@@ -193,5 +194,31 @@ describe("AutomationsStorageService", () => {
       SystemAutomationError,
     );
     expect((await service.get(SELF_KNOWLEDGE_AUTOMATION_ID)).system).toBe(true);
+  });
+
+  it("F5a: seeds the sentinel-scan system automation on init, enabled by default", async () => {
+    const seeded = await service.get(SENTINEL_SCAN_AUTOMATION_ID);
+    expect(seeded.system).toBe(true);
+    expect(seeded.target).toEqual({ type: "sentinel-scan" });
+    expect(seeded.trigger).toEqual({ type: "cron", expr: "0 5 * * 1" });
+    expect(seeded.enabled).toBe(true);
+  });
+
+  it("F5a: an operator-edited sentinel-scan schedule survives re-seed", async () => {
+    await service.update(SENTINEL_SCAN_AUTOMATION_ID, {
+      trigger: { type: "cron", expr: "0 6 * * 1" },
+    });
+    await new AutomationsStorageService(dir).onModuleInit();
+    const healed = await service.get(SENTINEL_SCAN_AUTOMATION_ID);
+    expect(healed.system).toBe(true);
+    expect(healed.target).toEqual({ type: "sentinel-scan" });
+    expect(healed.trigger).toEqual({ type: "cron", expr: "0 6 * * 1" });
+  });
+
+  it("F5a: refuses to delete the sentinel-scan system automation", async () => {
+    await expect(service.delete(SENTINEL_SCAN_AUTOMATION_ID)).rejects.toBeInstanceOf(
+      SystemAutomationError,
+    );
+    expect((await service.get(SENTINEL_SCAN_AUTOMATION_ID)).system).toBe(true);
   });
 });

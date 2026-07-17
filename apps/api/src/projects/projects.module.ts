@@ -75,6 +75,9 @@ export function resolveProjectSecretsDir(): string {
     ProjectSecretsStore,
     StandupService,
     ProjectLocalService,
+    // NS2 F5b — Maestro reuses ProjectPrService.listOpen directly (the merge
+    // queue's read side) rather than re-fetching pulls itself.
+    ProjectPrService,
   ],
 })
 export class ProjectsModule {}

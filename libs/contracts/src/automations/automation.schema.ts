@@ -67,6 +67,12 @@ export const TargetSchema = z.discriminatedUnion("type", [
   // behind an `agent-proposal` approval. Deterministic; proposes ≠ activates (only
   // an approval flips a candidate to `status: active`).
   z.object({ type: z.literal("agent-factory") }),
+  // NS2 F5a — Sentinel's scheduled security watch: per project repo, open
+  // Dependabot alerts (GitHub REST) + a bounded secret-pattern scan over the
+  // local clone. Deterministic; proposes ≠ acts (findings → a vault note +
+  // Sentinel's shelf); a CRITICAL CVE additionally dispatches a gated fix task
+  // through the ordinary scheduler (ends at the PR gate). ref = `sentinel:<count>`.
+  z.object({ type: z.literal("sentinel-scan") }),
   /**
    * Phase 116b — the "prompt automation" shape: a full task spec that fires through
    * the EXISTING task pipeline (`TaskSchedulerService.createTask`) exactly like the

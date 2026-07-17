@@ -17,6 +17,7 @@ import { MonitorEventStore } from "../monitors/monitor-event.store";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { SelfKnowledgeService } from "../self-knowledge/self-knowledge.service";
+import { SentinelService } from "../sentinel/sentinel.service";
 import { SubsystemsService } from "../subsystems/subsystems.service";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
 import { ensureDir, safeJson, writeFileAtomic } from "../shared/file-storage";
@@ -92,6 +93,9 @@ export class BriefingService {
     // NS2 F4c — nightly self-knowledge drift check (true = the vault note has
     // drifted from a fresh compose; the scheduled refresh may have failed).
     private readonly selfKnowledge: SelfKnowledgeService,
+    // NS2 F5a — Sentinel's open security findings (CVE/secret), read off its
+    // vault note for the briefing's extras array.
+    private readonly sentinel: SentinelService,
     @Inject(ACTIVITY_DIR) private readonly activityDir: string,
     logger: LoggerService,
   ) {
@@ -148,12 +152,16 @@ export class BriefingService {
     // M8: dead-lettered tasks (dispatch exhausted its retries) are a needs-you decision.
     const deadLetteredTasks = allTasks.filter((t) => t.status === "dead-letter");
     const projectNames = Object.fromEntries(projects.map((p) => [p.id, p.name]));
-    const [trend7d, learnedPatterns, automationGaps, appIdeas] = await Promise.all([
-      this.readTrend7d(now),
-      this.readLearnedPatterns(),
-      this.readAutomationGaps(),
-      this.readAppIdeas(),
-    ]);
+    const [trend7d, learnedPatterns, automationGaps, appIdeas, securityFindings] =
+      await Promise.all([
+        this.readTrend7d(now),
+        this.readLearnedPatterns(),
+        this.readAutomationGaps(),
+        this.readAppIdeas(),
+        // NS2 F5a — Sentinel's open findings. `.catch`-guarded like every other
+        // extra: a failed read drops the section, never the briefing.
+        this.sentinel.readFindings().catch((): string[] => []),
+      ]);
     const subsystems = subsystemRows
       ? buildSubsystemLines(subsystemRows, ciStatuses, weeklyPct)
       : undefined;
@@ -174,6 +182,7 @@ export class BriefingService {
       learnedPatterns,
       automationGaps,
       appIdeas,
+      securityFindings,
       ...(subsystems ? { subsystems } : {}),
       ...(selfKnowledgeDrift ? { selfKnowledgeDrift } : {}),
     });

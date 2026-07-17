@@ -127,6 +127,8 @@ export const BriefingSchema = z.object({
    * compose (the nightly refresh may have failed). Optional and strictly
    * additive: absent on every briefing predating this check. */
   selfKnowledgeDrift: z.boolean().optional(),
+  /** NS2 F5a — Sentinel's open security findings (CVE/secret) for the briefing. */
+  securityFindings: z.array(z.string()).max(50).optional(),
 });
 export type Briefing = z.infer<typeof BriefingSchema>;
 

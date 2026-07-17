@@ -1,5 +1,11 @@
 import { Injectable, Optional } from "@nestjs/common";
-import type { CredentialsInput, Integration, MergeMethod, Project, ProjectPr } from "@zibby/contracts";
+import type {
+  CredentialsInput,
+  Integration,
+  MergeMethod,
+  Project,
+  ProjectPr,
+} from "@zibby/contracts";
 import { CredentialsStore } from "../integrations/credentials.store";
 import { NoGithubLinkError, PrNotMergeableError } from "./projects.errors";
 import { ProjectsStorageService } from "./projects.storage.service";
@@ -20,6 +26,31 @@ interface GitHubPull {
 /** PAT from the closed credentials union (null if absent) — same shape as the CI monitor. */
 function tokenOf(creds: CredentialsInput): string | null {
   return "token" in creds ? creds.token : null;
+}
+
+/**
+ * NS2 F5a/F5b — the project's effective github integration's repo + stored
+ * token, or `null`. Extracted out of {@link ProjectPrService}'s private
+ * `resolveGithubLink` so `SentinelService` and `MaestroService` reach the
+ * exact same token-resolution seam (company-merged integrations,
+ * `CredentialsStore` read, `tokenOf` narrowing) without duplicating it.
+ * `ProjectPrService` itself delegates to this function below.
+ */
+export async function resolveGithubToken(
+  resolvedProjects: ResolvedProjectService,
+  credentials: CredentialsStore,
+  project: Project,
+): Promise<{ repo: string; token: string } | null> {
+  const integrations = await resolvedProjects.resolveIntegrations(project);
+  const github = integrations.find(
+    (integration): integration is Integration & { config: { kind: "github"; repo: string } } =>
+      integration.config.kind === "github",
+  );
+  if (!github) return null;
+  const creds = await credentials.read(github.id);
+  const token = creds ? tokenOf(creds) : null;
+  if (!token) return null;
+  return { repo: github.config.repo, token };
 }
 
 /** Map one GitHub `pulls` list entry to the wire `ProjectPr` shape; `null` for a malformed entry. */
@@ -67,17 +98,10 @@ export class ProjectPrService {
   }
 
   /** The project's effective github integration's repo + stored token, or `null`. */
-  private async resolveGithubLink(project: Project): Promise<{ repo: string; token: string } | null> {
-    const integrations = await this.resolvedProjects.resolveIntegrations(project);
-    const github = integrations.find(
-      (integration): integration is Integration & { config: { kind: "github"; repo: string } } =>
-        integration.config.kind === "github",
-    );
-    if (!github) return null;
-    const creds = await this.credentials.read(github.id);
-    const token = creds ? tokenOf(creds) : null;
-    if (!token) return null;
-    return { repo: github.config.repo, token };
+  private async resolveGithubLink(
+    project: Project,
+  ): Promise<{ repo: string; token: string } | null> {
+    return resolveGithubToken(this.resolvedProjects, this.credentials, project);
   }
 
   /**
@@ -92,9 +116,12 @@ export class ProjectPrService {
     const link = await this.resolveGithubLink(project);
     if (!link) return [];
 
-    const res = await this.fetchImpl(`${GITHUB_API}/repos/${link.repo}/pulls?state=open&per_page=50`, {
-      headers: { authorization: `Bearer ${link.token}`, accept: "application/vnd.github+json" },
-    });
+    const res = await this.fetchImpl(
+      `${GITHUB_API}/repos/${link.repo}/pulls?state=open&per_page=50`,
+      {
+        headers: { authorization: `Bearer ${link.token}`, accept: "application/vnd.github+json" },
+      },
+    );
     if (res.status === 429 || res.status === 403) {
       throw new Error(`github rate limited (HTTP ${res.status})`);
     }

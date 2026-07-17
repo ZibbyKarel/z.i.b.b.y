@@ -52,6 +52,7 @@ export * from "./health/health.schema";
 export * from "./health/health.contract";
 export * from "./subsystems/subsystem.schema";
 export * from "./subsystems/subsystems.contract";
+export * from "./subsystems/subsystem-findings.schema";
 export * from "./self/self.schema";
 export * from "./self/self.contract";
 export * from "./self-knowledge/self-knowledge.schema";

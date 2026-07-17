@@ -80,6 +80,9 @@ export const ActivityKindSchema = z.enum([
   // Agent Factory's detector groups these by `refs.normalizedSummary` — repeated
   // escapes are the signal a missing specialist agent would resolve.
   "orchestrator-fallback",
+  // NS2 F5a/F5c — a subsystem watcher completed a scheduled scan (Tier-1, silent +
+  // recorded): new findings rode a proposal note; a critical one dispatched a gated task.
+  "subsystem-scan",
 ]);
 export type ActivityKind = z.infer<typeof ActivityKindSchema>;
 

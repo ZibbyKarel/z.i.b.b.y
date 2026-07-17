@@ -7,6 +7,7 @@ import { MemoryDistillerModule } from "../memory/memory-distiller.module";
 import { PatternsModule } from "../patterns/patterns.module";
 import { PipelinesModule } from "../pipelines/pipelines.module";
 import { SelfKnowledgeModule } from "../self-knowledge/self-knowledge.module";
+import { SentinelModule } from "../sentinel/sentinel.module";
 import { dataDir } from "../shared/data-dir";
 import { TasksModule } from "../tasks/tasks.module";
 import { AUTOMATIONS_DIR, AutomationsStorageService } from "./automations.storage.service";
@@ -31,6 +32,8 @@ export function resolveAutomationsDir(): string {
  * wired without one). F4c: also imports `SelfKnowledgeModule` so the `self-knowledge`
  * target can dispatch straight to `SelfKnowledgeService` — no cycle, `SelfKnowledgeModule`
  * only imports Agents/Pipelines/GateRules/Gates/Memory, none of which import this module.
+ * NS2 F5a: also imports `SentinelModule` (a leaf, same position as `GapsModule`) so the
+ * `sentinel-scan` target can dispatch to `SentinelService.scan`.
  */
 @Module({
   imports: [
@@ -42,6 +45,7 @@ export function resolveAutomationsDir(): string {
     PatternsModule,
     PipelinesModule,
     SelfKnowledgeModule,
+    SentinelModule,
     TasksModule,
   ],
   controllers: [AutomationsController],

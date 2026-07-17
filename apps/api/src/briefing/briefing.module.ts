@@ -8,6 +8,7 @@ import { MonitorsModule } from "../monitors/monitors.module";
 import { PipelinesModule } from "../pipelines/pipelines.module";
 import { ProjectsModule } from "../projects/projects.module";
 import { SelfKnowledgeModule } from "../self-knowledge/self-knowledge.module";
+import { SentinelModule } from "../sentinel/sentinel.module";
 import { SubsystemsModule } from "../subsystems/subsystems.module";
 import { ScheduledTasksStorageModule } from "../tasks/scheduled-tasks-storage.module";
 import { BriefingController } from "./briefing.controller";
@@ -39,6 +40,9 @@ import { ClaudeCliBriefer } from "./claude-cli-briefer";
     // NS2 F4c — self-knowledge drift check (SelfKnowledgeService). One-directional:
     // self-knowledge doesn't import briefing.
     SelfKnowledgeModule,
+    // NS2 F5a — Sentinel's findings extras array (SentinelService.readFindings).
+    // A leaf module (like GapsModule) — one-directional, no cycle.
+    SentinelModule,
   ],
   controllers: [BriefingController],
   providers: [ClaudeCliBriefer, BriefingService],
