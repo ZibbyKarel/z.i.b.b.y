@@ -41,11 +41,12 @@
    tasks are subsystem-blind by design (`isCoherent` rejects `kind:"subsystem"`,
    `task-classifier.service.ts:305-311`). Three mandates (Sentinel, Maestro, Loom)
    have **zero backend**.
-2. **PR-gate tier split.** A pipeline `pr` output is approval-gated (Tier-3) while an
-   agent/orchestrator task `pr` output pushes + opens immediately (Tier-2,
-   `task-output.service.ts:29-34`). Two trust postures for the same terminal action.
-   The operator's 2026-07-08 decision (`pr.open` = Tier-2, merge = the gate) must hold
-   everywhere.
+2. **PR-gate tier split.** ~~Pipeline `pr` output approval-gated vs task `pr`
+   immediate.~~ **CORRECTED by F0 planning (2026-07-17):** the code already unified —
+   `PipelineRunnerService.runOutputs` opens the PR immediately with no gate
+   (`pipeline-runner.service.ts:1096-1111`); the park path is legacy-only. What
+   remains is the operator's new requirement: per-project `prOpenMode`
+   (`ready`/`draft`) — see F0b.
 3. **Merge debt.** ~~Several completed branch arcs parked at the PR gate.~~
    **RESOLVED 2026-07-17:** the operator confirmed the arcs were merged into main by
    hand; 20 local branches verified patch-equivalent (`git cherry`) and deleted.
@@ -99,14 +100,12 @@ modules distort every catalog the classifier and the federation will build on.
 - **F0a — Delete the orphans** _(operator decision: delete)._ Remove
   `apps/api/src/discovery` + its contract + `app.contract.ts` entry, and the dead
   `apps/web/features/goals` hooks (goals API stays — the loop engine uses it).
-- **F0b — Unify the PR tier + per-project draft mode.** Pipeline `pr` delivery adopts
-  the same Tier-2 push-and-open-PR posture as `task-output.service.ts:29-34` (per the
-  2026-07-08 `pr.open` decision); delete the pipeline-side approval park for PR
-  outputs (keep legacy park resolvers only while pre-change runs exist). `pr.merge`
-  stays a locked `deny`. **New (operator 2026-07-17):** the project profile gains a
-  `prOpenMode: "ready" | "draft"` setting (contract-first; default `ready` preserves
-  today's behavior) — every PR-opening path (task output, pipeline delivery sink)
-  honors it via `gh pr create --draft`, and the project settings UI exposes it.
+- **F0b — Per-project draft PR mode.** _(Tier unify verified already shipped — see
+  gap 2.)_ The project profile gains `prOpenMode: "ready" | "draft"` (contract-first;
+  default `ready` preserves today's behavior) — both PR-opening paths (task output
+  `task-output.service.ts:183`, pipeline `openPrOutput`) honor it via
+  `gh pr create --draft`, and the project settings UI exposes it. `pr.merge` stays a
+  locked `deny`.
 - **F0c — One proposal inbox.** Collapse agent-factory / gaps proposal flows onto a
   single generic proposals store + approvals surface; the detectors become producers
   into it.
