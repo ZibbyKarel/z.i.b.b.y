@@ -1,8 +1,15 @@
 import { SUBSYSTEMS, type SubsystemWithStatus } from "@zibby/contracts";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, renderWithProviders, screen } from "../../../../test/render";
-import { SubsystemDrawer, SubsystemDrawerTestId, headerBandStyle } from "./SubsystemDrawer";
+import {
+  PANEL_EXIT_MS,
+  SubsystemDrawer,
+  SubsystemDrawerTestId,
+  backdropStyle,
+  headerBandStyle,
+  panelTransitionStyle,
+} from "./SubsystemDrawer";
 
 const markSeenMutate = vi.fn();
 
@@ -54,6 +61,10 @@ function fixture(overrides: Partial<SubsystemWithStatus> = {}): SubsystemWithSta
 describe("SubsystemDrawer (Phase 84)", () => {
   beforeEach(() => {
     markSeenMutate.mockReset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("renders the panel and header identity", () => {
@@ -133,12 +144,20 @@ describe("SubsystemDrawer (Phase 84)", () => {
     expect(markSeenMutate).toHaveBeenLastCalledWith({ params: { id: "puls" }, body: {} });
   });
 
-  it("closes via the header close button", async () => {
+  it("closes via the header close button after the exit transition", () => {
+    // `fireEvent`, not `userEvent`, under fake timers: `userEvent`'s async click
+    // awaits React's async `act()` flush, which never resolves once
+    // `vi.useFakeTimers()` is active in this RTL/React 19 setup — the same
+    // reason every other fake-timer test in this codebase
+    // (`StatusPill.hoverRace.test.tsx`) uses `fireEvent`, not `userEvent`.
+    vi.useFakeTimers();
     const onClose = vi.fn();
-    const user = userEvent.setup();
     renderWithProviders(<SubsystemDrawer onClose={onClose} subsystem={fixture()} />);
 
-    await user.click(screen.getByTestId(SubsystemDrawerTestId.Close));
+    fireEvent.click(screen.getByTestId(SubsystemDrawerTestId.Close));
+    expect(onClose).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(PANEL_EXIT_MS);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -153,11 +172,15 @@ describe("SubsystemDrawer (Phase 84)", () => {
     });
   });
 
-  it("closes on Escape", () => {
+  it("closes on Escape after the exit transition", () => {
+    vi.useFakeTimers();
     const onClose = vi.fn();
     renderWithProviders(<SubsystemDrawer onClose={onClose} subsystem={fixture()} />);
 
     fireEvent.keyDown(document, { key: "Escape" });
+    expect(onClose).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(PANEL_EXIT_MS);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -224,5 +247,87 @@ describe("SubsystemDrawer (Phase 84)", () => {
     expect(screen.getByTestId("artefakty-tab-stub")).toBeInTheDocument();
 
     expect(screen.getAllByRole("tab")).toHaveLength(4);
+  });
+
+  describe("modal backdrop and animation (phase 125)", () => {
+    it("renders fully open once mounted (not stuck in the entering state)", () => {
+      renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />);
+      const panel = screen.getByTestId(SubsystemDrawerTestId.Panel);
+      expect(panel).toHaveStyle({ opacity: "1", transform: "scale(1) translateY(0)" });
+    });
+
+    it("blurs and dims the backdrop", () => {
+      renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />);
+      const backdrop = screen.getByTestId(SubsystemDrawerTestId.Root);
+      expect(backdrop.style.backdropFilter).toBe("blur(14px) saturate(140%)");
+      expect(backdrop.style.background).toBe("rgba(11, 14, 19, 0.55)");
+    });
+
+    it("closes when clicking the backdrop itself", () => {
+      vi.useFakeTimers();
+      const onClose = vi.fn();
+      renderWithProviders(<SubsystemDrawer onClose={onClose} subsystem={fixture()} />);
+
+      fireEvent.click(screen.getByTestId(SubsystemDrawerTestId.Root));
+      expect(onClose).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(PANEL_EXIT_MS);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not close when clicking inside the panel", () => {
+      vi.useFakeTimers();
+      const onClose = vi.fn();
+      renderWithProviders(<SubsystemDrawer onClose={onClose} subsystem={fixture()} />);
+
+      fireEvent.click(screen.getByTestId(SubsystemDrawerTestId.Panel));
+      vi.advanceTimersByTime(PANEL_EXIT_MS);
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it("collapses to a fade-only transition under prefers-reduced-motion", () => {
+      vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
+      renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />);
+
+      const panel = screen.getByTestId(SubsystemDrawerTestId.Panel);
+      expect(panel.style.transform).toBe("");
+      expect(panel.style.transition).toBe("opacity 220ms cubic-bezier(0.16, 1, 0.3, 1)");
+      vi.unstubAllGlobals();
+    });
+  });
+
+  describe("backdropStyle / panelTransitionStyle (pure)", () => {
+    it("backdropStyle fades in 180ms ease-out open, 140ms ease-in closing", () => {
+      expect(backdropStyle("open")).toMatchObject({
+        opacity: 1,
+        transition: "opacity 180ms ease-out",
+      });
+      expect(backdropStyle("closing")).toMatchObject({
+        opacity: 0,
+        transition: "opacity 140ms ease-in",
+      });
+    });
+
+    it("panelTransitionStyle scales+translates+fades open, hides entering/closing", () => {
+      expect(panelTransitionStyle("open", false)).toMatchObject({
+        opacity: 1,
+        transform: "scale(1) translateY(0)",
+        transition:
+          "opacity 220ms cubic-bezier(0.16, 1, 0.3, 1), transform 220ms cubic-bezier(0.16, 1, 0.3, 1)",
+      });
+      expect(panelTransitionStyle("entering", false)).toMatchObject({
+        opacity: 0,
+        transform: "scale(0.96) translateY(8px)",
+      });
+      expect(panelTransitionStyle("closing", false).transition).toBe(
+        "opacity 140ms ease-in, transform 140ms ease-in",
+      );
+    });
+
+    it("drops transform entirely under reduced motion", () => {
+      const style = panelTransitionStyle("open", true);
+      expect(style.transform).toBeUndefined();
+      expect(style.transition).toBe("opacity 220ms cubic-bezier(0.16, 1, 0.3, 1)");
+    });
   });
 });

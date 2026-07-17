@@ -18,7 +18,8 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import type { CSSProperties } from "react";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { usePrefersReducedMotion } from "../../../../hooks/usePrefersReducedMotion";
 import { useMarkSubsystemSeenMutation } from "../../mutations/useMarkSubsystemSeenMutation";
 import { SUBSYSTEM_GLYPH, SUBSYSTEM_ORB_STATE } from "../../subsystemVisuals";
 import { AktivitaTab } from "./AktivitaTab";
@@ -36,6 +37,66 @@ export enum SubsystemDrawerTestId {
   Mandate = "subsystem-drawer-mandate",
   Status = "subsystem-drawer-status",
   Count = "subsystem-drawer-count",
+}
+
+/**
+ * The modal's own lifecycle, independent of the `open`/mounted question (the
+ * parent controls mounting via `{selectedSubsystem && <SubsystemDrawer .../>}`
+ * — this only tracks the animation state within that mounted lifetime).
+ * `"entering"` is the one-frame initial paint (hidden), flipped to `"open"`
+ * by an effect right after mount so the browser has a "from" state to
+ * transition away from rather than painting the open state immediately.
+ */
+export type SubsystemDrawerPhase = "entering" | "open" | "closing";
+
+export const PANEL_ENTER_MS = 220;
+export const PANEL_EXIT_MS = 140;
+export const BACKDROP_ENTER_MS = 180;
+export const BACKDROP_EXIT_MS = 140;
+const PANEL_EASE_ENTER = "cubic-bezier(0.16, 1, 0.3, 1)";
+const MODAL_WIDTH = "800px";
+
+/**
+ * The backdrop's fade — same both directions except duration/easing: 180ms
+ * ease-out opening, 140ms ease-in closing (a plain reverse, no extra blur
+ * ramp — Velín-D design spec, phase 125).
+ */
+export function backdropStyle(phase: SubsystemDrawerPhase): CSSProperties {
+  const open = phase === "open";
+  const duration = phase === "closing" ? BACKDROP_EXIT_MS : BACKDROP_ENTER_MS;
+  const easing = phase === "closing" ? "ease-in" : "ease-out";
+  return {
+    background: "rgba(11, 14, 19, 0.55)",
+    backdropFilter: "blur(14px) saturate(140%)",
+    opacity: open ? 1 : 0,
+    transition: `opacity ${duration}ms ${easing}`,
+  };
+}
+
+/**
+ * The panel's entrance/exit: fade + scale(0.96→1) + translateY(8px→0), 220ms
+ * overshoot-free ease-out opening, mirrored 140ms ease-in closing. Under
+ * `prefers-reduced-motion` the `transform` half is dropped entirely (both the
+ * target value and the transitioned property) — a plain opacity fade, per
+ * the design spec.
+ */
+export function panelTransitionStyle(
+  phase: SubsystemDrawerPhase,
+  reducedMotion: boolean,
+): CSSProperties {
+  const open = phase === "open";
+  const duration = phase === "closing" ? PANEL_EXIT_MS : PANEL_ENTER_MS;
+  const easing = phase === "closing" ? "ease-in" : PANEL_EASE_ENTER;
+  const properties = reducedMotion ? ["opacity"] : ["opacity", "transform"];
+  return {
+    opacity: open ? 1 : 0,
+    transform: reducedMotion
+      ? undefined
+      : open
+        ? "scale(1) translateY(0)"
+        : "scale(0.96) translateY(8px)",
+    transition: properties.map((property) => `${property} ${duration}ms ${easing}`).join(", "),
+  };
 }
 
 export interface SubsystemDrawerProps {
@@ -147,6 +208,43 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
   // subsystem — a genuine "open" of that subsystem's report — must.
   const seenIdRef = useRef<string | null>(null);
 
+  const reducedMotion = usePrefersReducedMotion();
+  const [phase, setPhase] = useState<SubsystemDrawerPhase>("entering");
+  const closingRef = useRef(false);
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Flips "entering" → "open" right after mount, so the browser has a
+  // distinct "from" paint to transition away from instead of rendering the
+  // fully-open state on the very first frame. `react-hooks/set-state-in-effect`
+  // (eslint-plugin-react-hooks v7, React Compiler rules) flags any direct
+  // setState call in an effect body — but that's exactly the CSS-entrance-
+  // transition idiom this needs: a `requestAnimationFrame` deferral (the
+  // rule's usual suggested fix) would leave the panel invisible until a real
+  // animation frame fires, which never happens synchronously in the jsdom test
+  // environment and would desync from `renderWithProviders`' synchronous act()
+  // flush.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPhase("open");
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+    };
+  }, []);
+
+  // Any close trigger (Escape, backdrop click, header close button) calls
+  // this instead of `onClose` directly: it plays the exit transition, THEN
+  // calls the real `onClose` prop once it's done — the parent only unmounts
+  // this component after that.
+  const requestClose = useCallback(() => {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    setPhase("closing");
+    closeTimeoutRef.current = setTimeout(onClose, PANEL_EXIT_MS);
+  }, [onClose]);
+
   useEffect(() => {
     if (seenIdRef.current === subsystem.id) return;
     seenIdRef.current = subsystem.id;
@@ -161,11 +259,11 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
   // `SubsystemWeb`) on unmount — the same a11y idiom as the DS `Dialog`.
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") requestClose();
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [onClose]);
+  }, [requestClose]);
 
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
@@ -198,34 +296,52 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
   const showCount = countLabel !== null && tagTone !== undefined;
 
   return (
-    <div
-      className="pointer-events-none absolute inset-y-0 right-0 z-30 flex w-full flex-col p-4 lg:left-[316px] lg:w-auto"
+    <Container
+      bottom="0"
       data-testid={SubsystemDrawerTestId.Root}
+      left="0"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) requestClose();
+      }}
+      padding="200"
+      position="fixed"
+      right="0"
+      style={{
+        alignItems: "center",
+        display: "flex",
+        justifyContent: "center",
+        ...backdropStyle(phase),
+      }}
+      top="0"
+      zIndex={40}
     >
-      <div className="pointer-events-auto flex h-full w-full flex-col">
-        <Panel
-          elevated
-          aria-label={t("drawer.ariaLabel", { name: subsystem.name })}
-          data-testid={SubsystemDrawerTestId.Panel}
-          ref={panelRef}
-          role="region"
-          // Bounded to the height this root wrapper is actually given (its
-          // `inset-y-0` resolves against `ChatScreen`'s middle band, between
-          // the top bar and the composer — see `ChatScreen.tsx`'s outer/inner
-          // main-area split, Phase 99) with its own scroll — a computed value
-          // with no dedicated `Panel` prop, routed through its `style`
-          // passthrough (sanctioned per CLAUDE.md). `100%` (not a viewport
-          // `calc`) so the cap always matches that band exactly, however tall
-          // the top bar/composer render — the old `calc(100vh - 96px)` guessed
-          // a fixed reserve that was shorter than the actual chrome, so the
-          // panel's bottom (and the GatesTab "Add rule" button at the end of
-          // it) spilled past this wrapper into the composer's band. Still a
-          // v1 simplification that scrolls the whole card as one unit rather
-          // than pinning the tab bar — fine now that every tab (85-88) renders
-          // real, potentially long content.
-          style={{ maxHeight: "100%", overflowY: "auto" }}
-          tabIndex={-1}
-        >
+      <Panel
+        elevated
+        aria-label={t("drawer.ariaLabel", { name: subsystem.name })}
+        data-testid={SubsystemDrawerTestId.Panel}
+        ref={panelRef}
+        role="region"
+        // Sized as a centered modal (phase 125 — was a docked, viewport-minus-
+        // rail-wide panel through phase 99): a fixed width, capped so it never
+        // overflows a narrow viewport, same `calc(100vw - 32px)` pattern the
+        // DS `Dialog` uses. `maxHeight: "100%"` resolves against the backdrop
+        // `Container` above (a `position: fixed` box with `padding="200"`, so
+        // effectively "the viewport minus 16px on every side") with its own
+        // scroll — a computed value with no dedicated `Panel` prop, routed
+        // through its `style` passthrough (sanctioned per CLAUDE.md). Still a
+        // v1 simplification that scrolls the whole card as one unit rather
+        // than pinning the tab bar — fine now that every tab (85-88) renders
+        // real, potentially long content. `panelTransitionStyle` layers the
+        // entrance/exit animation on top of this same style object.
+        style={{
+          maxHeight: "100%",
+          maxWidth: "calc(100vw - 32px)",
+          overflowY: "auto",
+          width: MODAL_WIDTH,
+          ...panelTransitionStyle(phase, reducedMotion),
+        }}
+        tabIndex={-1}
+      >
           {/* The DS `Container` (not a raw `div`) so the per-subsystem gradient
               — see `headerBandStyle`'s doc comment — goes through a DS
               component's own `style` passthrough rather than a raw DOM node. */}
@@ -322,7 +438,7 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
                 aria-label={t("drawer.close")}
                 className="flex shrink-0 cursor-pointer p-1 text-foreground-faint hover:text-foreground"
                 data-testid={SubsystemDrawerTestId.Close}
-                onClick={onClose}
+                onClick={requestClose}
                 type="button"
               >
                 <Icon name="x" size="lg" />
@@ -355,7 +471,6 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
             ))}
           </Tabs>
         </Panel>
-      </div>
-    </div>
+    </Container>
   );
 }

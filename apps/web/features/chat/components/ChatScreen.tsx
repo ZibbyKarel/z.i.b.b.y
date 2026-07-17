@@ -285,13 +285,14 @@ export function ChatScreen({
           </div>
         </div>
 
-        {/* ── Subsystem drawer (Phase 84) ─────────────────────────────────
-            An inline panel over the chat, never a page navigation — docked right
-            of the map on lg+. Selecting a subsystem in the web above swaps this
-            drawer's content rather than opening a second one. Mounted as a sibling
-            of the inner z-10 wrapper (Phase 99) so its own z-index competes with
-            the root-level chrome rather than being capped by that wrapper's
-            stacking context. */}
+        {/* ── Subsystem detail modal (Phase 84, reworked Phase 125) ────────
+            Was a docked-right, no-backdrop panel through Phase 99; now a true
+            modal over the whole Velín canvas — `SubsystemDrawer` renders its
+            own `position: fixed` backdrop (z-40), which escapes this
+            wrapper's stacking context on its own, so no special mounting
+            position is needed here any more. Selecting a subsystem in the web
+            above still swaps this drawer's content rather than opening a
+            second one. */}
         {selectedSubsystem && (
           <SubsystemDrawer
             onClose={() => setSelectedSubsystemId(null)}
