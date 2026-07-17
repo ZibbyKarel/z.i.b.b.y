@@ -154,6 +154,29 @@ describe("BriefingSchema", () => {
     });
   });
 
+  describe("merge queue (NS2 F5b — strictly additive)", () => {
+    it("accepts mergeQueue", () => {
+      expect(
+        BriefingSchema.safeParse({ ...base, mergeQueue: ["acme: 2 ready · 1 blocked"] }).success,
+      ).toBe(true);
+    });
+
+    it("omitting mergeQueue entirely still parses (old briefings)", () => {
+      const parsed = BriefingSchema.safeParse(base);
+      expect(parsed.success).toBe(true);
+      expect(parsed.success && parsed.data.mergeQueue).toBeUndefined();
+    });
+
+    it("caps at 50 entries", () => {
+      expect(BriefingSchema.safeParse({ ...base, mergeQueue: Array(50).fill("x") }).success).toBe(
+        true,
+      );
+      expect(BriefingSchema.safeParse({ ...base, mergeQueue: Array(51).fill("x") }).success).toBe(
+        false,
+      );
+    });
+  });
+
   describe("T11 finding #12 — trend7d/learnedPatterns/automationGaps/appIdeas cap at 50 entries", () => {
     it("50 entries passes, 51 rejects (array length only — elements stay unbounded)", () => {
       expect(BriefingSchema.safeParse({ ...base, trend7d: Array(50).fill("x") }).success).toBe(

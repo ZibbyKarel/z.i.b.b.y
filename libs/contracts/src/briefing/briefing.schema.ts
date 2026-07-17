@@ -129,6 +129,8 @@ export const BriefingSchema = z.object({
   selfKnowledgeDrift: z.boolean().optional(),
   /** NS2 F5a — Sentinel's open security findings (CVE/secret) for the briefing. */
   securityFindings: z.array(z.string()).max(50).optional(),
+  /** NS2 F5b — Maestro's merge-queue summary lines for the briefing. */
+  mergeQueue: z.array(z.string()).max(50).optional(),
 });
 export type Briefing = z.infer<typeof BriefingSchema>;
 

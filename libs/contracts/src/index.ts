@@ -40,6 +40,8 @@ export * from "./machine/machine.schema";
 export * from "./machine/machine.contract";
 export * from "./monitors/monitor.schema";
 export * from "./monitors/monitors.contract";
+export * from "./maestro/maestro.schema";
+export * from "./maestro/maestro.contract";
 export * from "./automations/automation.schema";
 export * from "./automations/automations.contract";
 export * from "./integrations/integration.schema";

@@ -47,6 +47,7 @@ describe("BriefingService", () => {
   let monitorEvents: { listStatuses: ReturnType<typeof vi.fn> };
   let selfKnowledge: { check: ReturnType<typeof vi.fn> };
   let sentinel: { readFindings: ReturnType<typeof vi.fn> };
+  let maestro: { summaryLines: ReturnType<typeof vi.fn> };
   let service: BriefingService;
 
   const now = new Date("2026-06-12T07:00:00.000Z");
@@ -76,6 +77,9 @@ describe("BriefingService", () => {
     // NS2 F5a — default fixture: no security findings (each test overrides what
     // it exercises).
     sentinel = { readFindings: vi.fn().mockResolvedValue([]) };
+    // NS2 F5b — default fixture: no merge-queue lines (each test overrides what
+    // it exercises).
+    maestro = { summaryLines: vi.fn().mockResolvedValue([]) };
 
     service = new BriefingService(
       approvals as never,
@@ -92,6 +96,7 @@ describe("BriefingService", () => {
       limits as never,
       selfKnowledge as never,
       sentinel as never,
+      maestro as never,
       dir,
       { child: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn() }) } as never,
     );
@@ -245,6 +250,27 @@ describe("BriefingService", () => {
       sentinel.readFindings.mockRejectedValue(new Error("vault hiccup"));
       const briefing = await service.assemble(now);
       expect(briefing.securityFindings).toBeUndefined();
+      expect(briefing.headline).toBe("Nothing needs you.");
+    });
+  });
+
+  describe("merge queue (NS2 F5b)", () => {
+    it("surfaces Maestro's per-project summary lines", async () => {
+      maestro.summaryLines.mockResolvedValue(["Acme: 2 ready · 1 blocked"]);
+      const briefing = await service.assemble(now);
+      expect(briefing.mergeQueue).toEqual(["Acme: 2 ready · 1 blocked"]);
+    });
+
+    it("omits mergeQueue when there are no lines", async () => {
+      maestro.summaryLines.mockResolvedValue([]);
+      const briefing = await service.assemble(now);
+      expect(briefing.mergeQueue).toBeUndefined();
+    });
+
+    it("a failed read fails open — omits the field, the briefing still assembles", async () => {
+      maestro.summaryLines.mockRejectedValue(new Error("github rate limited"));
+      const briefing = await service.assemble(now);
+      expect(briefing.mergeQueue).toBeUndefined();
       expect(briefing.headline).toBe("Nothing needs you.");
     });
   });
