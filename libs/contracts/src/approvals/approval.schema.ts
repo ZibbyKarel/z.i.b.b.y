@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { IsoDateTimeSchema, RiskSchema } from "../common.schema";
+import { SubsystemIdSchema } from "../subsystems/subsystem.schema";
 
 /**
  * Which run kind an approval gates — so a decision can be routed to the right
@@ -70,5 +71,15 @@ export const ApprovalSchema = z.object({
   status: ApprovalStatusSchema,
   requestedAt: IsoDateTimeSchema,
   decidedAt: IsoDateTimeSchema.optional(),
+  /**
+   * NS2 F3c — the owning subsystem of the ACTING unit that raised this approval
+   * (the pipeline's / agent's `ownerSubsystem`), stamped at request time by the
+   * run-path callers only. Optional and additive: system-owned gates with no
+   * acting unit (machine, jira-issue, channel, budget-task, agent-proposal)
+   * never invent an owner, and every pre-existing approval re-parses untouched.
+   * Powers the queue's per-subsystem filter — read-only attribution, never
+   * routing (decisions still route by `kind`).
+   */
+  ownerSubsystem: SubsystemIdSchema.optional(),
 });
 export type Approval = z.infer<typeof ApprovalSchema>;

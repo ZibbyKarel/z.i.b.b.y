@@ -388,8 +388,10 @@
       }
     },
     "allApprovals": "celá fronta →",
+    "approvalsSubsystemFilter": "Filtr schválení podle podsystému",
     "liveLog": "Živý log",
     "liveLogEmpty": "Zatím žádná aktivita.",
+    "liveLogSubsystemFilter": "Filtr aktivit podle podsystému",
     "loadOlder": "Načíst starší",
     "groupedCount": "{count}× {group}"
   },

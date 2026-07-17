@@ -127,6 +127,50 @@ describe("ApprovalsService", () => {
     await expect(service.get("nope")).rejects.toBeInstanceOf(ApprovalNotFoundError);
   });
 
+  describe("ownerSubsystem tagging (NS2 F3c)", () => {
+    const makeActivity = () => ({ record: vi.fn().mockResolvedValue(undefined) });
+
+    it("persists the tag and stamps it into the approval-requested activity refs", async () => {
+      const activity = makeActivity();
+      const tagged = new ApprovalsService(storage, undefined, activity as never);
+      const created = await tagged.requestApproval({
+        runId: "pipe-run-1.p0_koder",
+        kind: "pipeline-stage",
+        skill: "Kodér",
+        action: "git.push",
+        detail: "push the fix branch",
+        risk: "medium",
+        ownerSubsystem: "forge",
+      });
+      expect(created.ownerSubsystem).toBe("forge");
+      const persisted = await tagged.get(created.id);
+      expect(persisted.ownerSubsystem).toBe("forge");
+      expect(activity.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: "approval-requested",
+          refs: expect.objectContaining({ ownerSubsystem: "forge" }),
+        }),
+      );
+    });
+
+    it("omits the tag entirely when the caller supplies none — never invents an owner", async () => {
+      const activity = makeActivity();
+      const untagged = new ApprovalsService(storage, undefined, activity as never);
+      const created = await untagged.requestApproval({
+        runId: "machine-1",
+        kind: "machine",
+        skill: "system",
+        action: "rename-files",
+        detail: "rename",
+        risk: "high",
+      });
+      expect(created.ownerSubsystem).toBeUndefined();
+      expect("ownerSubsystem" in created).toBe(false);
+      const refs = activity.record.mock.calls[0]?.[0]?.refs as Record<string, unknown>;
+      expect("ownerSubsystem" in refs).toBe(false);
+    });
+  });
+
   it("persists durably: a fresh service over the same dir sees the approval", async () => {
     const created = await request();
     const fresh = new ApprovalsService(new ApprovalsStorageService(dir));

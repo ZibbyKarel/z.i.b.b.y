@@ -8,17 +8,17 @@ operator's explicit sign-off before continuing. It survives an API restart —
 
 ## Kinds of approval (ApprovalRunKind)
 
-| Kind             | When it is created                                                                                                                                                            |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `agent`          | A gate rule resolved to `ask` mid-run for an agent                                                                                                                             |
-| `pipeline-stage` | A gate inside a pipeline stage resolved to `ask`                                                                                                                                |
-| `pipeline-output`| A pipeline's `pr` output sink is waiting for sign-off before it opens the PR (runId = the pipelineRunId itself; no live child — a system-owned, agent-less gate)               |
-| `task-output`    | A directed task with a chosen `pr` output is waiting to open the PR from the finished agent/orchestrator run's branch (runId = the taskId; the durable `ScheduledTask` record holds the gate state, no live child) |
-| `channel`        | ZIBBY prepared a reply draft to a message (Tier 3)                                                                                                                             |
-| `task`           | A task exceeded its budget cap (`spend-past-cap`)                                                                                                                              |
-| `proposed-task`  | A discovery-proposed task is awaiting the operator's go-ahead (runId = the proposal id; approving dispatches it via `createTask` — *proposed ≠ dispatched*)                    |
-| `jira-issue`     | An outbound Jira-issue create is parked for approval (runId = the create-request id; approving performs the gated POST via the Jira adapter)                                  |
-| `machine`        | An N5a machine action (e.g. renaming files in a named folder) is parked with its dry-run preview (runId = the `MachineActionRecord` id; approving executes the preview exactly once) |
+| Kind              | When it is created                                                                                                                                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `agent`           | A gate rule resolved to `ask` mid-run for an agent                                                                                                                                                                 |
+| `pipeline-stage`  | A gate inside a pipeline stage resolved to `ask`                                                                                                                                                                   |
+| `pipeline-output` | A pipeline's `pr` output sink is waiting for sign-off before it opens the PR (runId = the pipelineRunId itself; no live child — a system-owned, agent-less gate)                                                   |
+| `task-output`     | A directed task with a chosen `pr` output is waiting to open the PR from the finished agent/orchestrator run's branch (runId = the taskId; the durable `ScheduledTask` record holds the gate state, no live child) |
+| `channel`         | ZIBBY prepared a reply draft to a message (Tier 3)                                                                                                                                                                 |
+| `task`            | A task exceeded its budget cap (`spend-past-cap`)                                                                                                                                                                  |
+| `proposed-task`   | A discovery-proposed task is awaiting the operator's go-ahead (runId = the proposal id; approving dispatches it via `createTask` — _proposed ≠ dispatched_)                                                        |
+| `jira-issue`      | An outbound Jira-issue create is parked for approval (runId = the create-request id; approving performs the gated POST via the Jira adapter)                                                                       |
+| `machine`         | An N5a machine action (e.g. renaming files in a named folder) is parked with its dry-run preview (runId = the `MachineActionRecord` id; approving executes the preview exactly once)                               |
 
 ## Lifecycle
 
@@ -45,12 +45,21 @@ interface Approval {
   status: "pending" | "approved" | "rejected";
   requestedAt: string; // ISO datetime
   decidedAt?: string; // ISO datetime
+  ownerSubsystem?: SubsystemId; // NS2 F3c — the acting unit's owning subsystem
 }
 ```
 
 There is no client-settable "how to resolve" field — routing a decision back to
 the paused work is entirely the concern of the runner that registered for that
 `kind` (see `ResumableRunner` below).
+
+`ownerSubsystem` (NS2 F3c) is optional and additive: it is stamped at
+`requestApproval` time by the RUN-PATH callers only — the pipeline runner from
+`pipeline.ownerSubsystem`, the agent runner from `agent.ownerSubsystem` (absent
+for the synthetic orchestrator). The other call sites (machine, jira-issue,
+channel, budget-task, agent-proposal) omit it — a system-owned gate with no
+acting unit never invents an owner. It is pure attribution for the queue's
+per-subsystem filter and the activity lens; decisions still route by `kind`.
 
 ## ApprovalsService
 
@@ -92,7 +101,10 @@ approvalsService.requestApproval({
 ```
 
 Stores JSON at `.zibby/data/approvals/<id>.json` and records an
-`approval-requested` activity entry.
+`approval-requested` activity entry. When the caller supplied `ownerSubsystem`,
+it is persisted on the approval and stamped best-effort into the activity
+entry's `refs.ownerSubsystem` (F2c's field), so the activity log's subsystem
+lens catches the request line too.
 
 ### Runner integration
 
@@ -142,8 +154,8 @@ wherever the thing it gates is already visible:
 
 ## Activity records
 
-| Event                 | When                    |
-| --------------------- | ----------------------- |
-| `approval-requested`  | An approval was created |
-| `approval-approved`   | The operator approved   |
-| `approval-rejected`   | The operator rejected   |
+| Event                | When                    |
+| -------------------- | ----------------------- |
+| `approval-requested` | An approval was created |
+| `approval-approved`  | The operator approved   |
+| `approval-rejected`  | The operator rejected   |

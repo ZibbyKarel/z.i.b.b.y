@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { Controller, Get, Logger, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { SUBSYSTEMS, type SubsystemId } from "@zibby/contracts";
 import { z } from "zod";
 import { ChatMcpAuthGuard } from "./chat-mcp-auth.guard";
 import { ChatToolResultRegistry } from "./chat-tool-result.registry";
@@ -151,10 +152,19 @@ export class ChatMcpController {
         description:
           "Report what's happening right now: pending decisions that need the operator " +
           "and what ZIBBY is watching. Read-only. Use when the operator asks how things " +
-          "are going / what's up.",
-        inputSchema: {},
+          "are going / what's up. With the optional `subsystem` argument, narrow the " +
+          "answer to ONE subsystem — its state, what waits on the operator, and its " +
+          'recent activity. Use it when the operator names a subsystem ("co dělá ' +
+          'Forge?", "jak je na tom Puls?").',
+        inputSchema: {
+          // The id enum is sourced from the SUBSYSTEMS registry — never hard-coded.
+          subsystem: z
+            .enum(SUBSYSTEMS.map((s) => s.id) as [SubsystemId, ...SubsystemId[]])
+            .optional()
+            .describe("Optional subsystem id to narrow the status to (e.g. 'forge')."),
+        },
       },
-      async () => text(await this.tools.getStatus()),
+      async ({ subsystem }) => text(await this.tools.getStatus(subsystem)),
     );
 
     server.registerTool(

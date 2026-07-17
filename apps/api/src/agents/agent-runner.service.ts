@@ -554,6 +554,9 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
           // regardless of the agent's configured default. Losing files is never
           // "medium". (The hook tags these with `action: "delete"`.)
           risk: action.action === "delete" ? "high" : (agent.risk ?? "medium"),
+          // NS2 F3c — attribute the approval to the acting agent's owning
+          // subsystem (absent for the synthetic orchestrator agent: no owner).
+          ...(agent.ownerSubsystem ? { ownerSubsystem: agent.ownerSubsystem } : {}),
         });
         return;
       }
