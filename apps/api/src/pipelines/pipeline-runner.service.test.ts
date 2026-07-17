@@ -42,7 +42,11 @@ interface Harness {
   service: PipelineRunnerService;
   core: FakeCore;
   approvals: { register: ReturnType<typeof vi.fn>; requestApproval: ReturnType<typeof vi.fn> };
-  gates: { rulesForAgent: ReturnType<typeof vi.fn>; evaluate: ReturnType<typeof vi.fn> };
+  gates: {
+    rulesForAgent: ReturnType<typeof vi.fn>;
+    rulesForAgentInSubsystem: ReturnType<typeof vi.fn>;
+    evaluate: ReturnType<typeof vi.fn>;
+  };
   runs: Map<string, PipelineRun>;
   registered: Map<string, ResumableRunner>;
   /** Fire the fake core's "bytes appended" signal for one child run id. */
@@ -61,6 +65,9 @@ async function makeHarness(dir: string): Promise<Harness> {
   };
   const gates = {
     rulesForAgent: vi.fn(async () => []),
+    // NS2 F3a — stage intents now assemble rules via the subsystem-aware path
+    // (pipeline.ownerSubsystem picks the bucket; undefined = two-bucket).
+    rulesForAgentInSubsystem: vi.fn(async () => []),
     evaluate: vi.fn(() => ({ decision: "ask", ruleId: "rule-1" })),
   };
   const pipelines = {

@@ -122,6 +122,17 @@ describe("GateRulesSection — ownerSubsystem filter + auto-tag (Phase 87)", () 
     expect(callArgs.body.ownerSubsystem).toBe("forge");
   });
 
+  // NS2 F3a: a tagged rule is load-bearing (a per-subsystem evaluation bucket),
+  // so the card names its owner scope with a glyph+name Tag.
+  it("renders the owner-subsystem tag exactly on tagged rules (NS2 F3a)", () => {
+    render(<GateRulesSection />);
+    const tags = screen.getAllByTestId("global-rule-card-owner-tag");
+    // forgeRule + pulsRule are tagged; untaggedRule renders no owner tag.
+    expect(tags).toHaveLength(2);
+    expect(tags[0]).toHaveTextContent("Forge");
+    expect(tags[1]).toHaveTextContent("Puls");
+  });
+
   it("preserves an existing tag on edit, even though the edit form has no tag field", async () => {
     render(<GateRulesSection />);
     // Editing the untagged call site's own `forgeRule` (via the plain `/gates`
