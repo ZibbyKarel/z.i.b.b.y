@@ -1,6 +1,7 @@
 import { renderWithProviders as render, screen, within } from "../../../test/render";
 import { fireEvent } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { FloatingPanelTestId } from "@zibby/design-system";
 import type { RunView } from "../../runs/run";
 import { ChatTaskRowTestId } from "./ChatTaskRow";
 import { ChatTasksPanel, ChatTasksPanelTestId } from "./ChatTasksPanel";
@@ -74,6 +75,20 @@ describe("ChatTasksPanel (Phase 57, selection wiring Phase 100)", () => {
       .getAllByText(/task$/i)
       .map((el) => el.textContent);
     expect(titles).toEqual(["Live task", "Gate task", "Scheduled task"]);
+  });
+
+  it("staggers idle rows' float animation by their position in the active list", () => {
+    runsMock.mockReturnValue({
+      runs: [
+        run({ runId: "run_a", title: "Scheduled A", status: "scheduled" }),
+        run({ runId: "run_b", title: "Scheduled B", status: "scheduled" }),
+      ],
+    });
+    render(<ChatTasksPanel onSelectRun={vi.fn()} selectedRunId={null} />);
+
+    const panels = screen.getAllByTestId(FloatingPanelTestId.Root);
+    expect(panels).toHaveLength(2);
+    expect(panels[0]?.style.animationDelay).not.toBe(panels[1]?.style.animationDelay);
   });
 
   describe("Phase 123: archive of finished tasks", () => {

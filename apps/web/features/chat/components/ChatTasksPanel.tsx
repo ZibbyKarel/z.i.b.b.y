@@ -123,10 +123,11 @@ export function ChatTasksPanel({ selectedRunId, onSelectRun }: ChatTasksPanelPro
   // no "live" rank to sort by once a task has settled.
   const archived = runs.filter((r) => isArchived(r.status));
 
-  const renderRow = (r: (typeof runs)[number]) => (
+  const renderRow = (r: (typeof runs)[number], index: number) => (
     <ChatTaskRow
       avatar={runAvatar(r, avatarById)}
       glyph={runGlyph(r, glyphById)}
+      index={index}
       key={r.runId}
       onSelect={onSelectRun}
       openAria={t("openAria", { title: runTitle(r) })}
