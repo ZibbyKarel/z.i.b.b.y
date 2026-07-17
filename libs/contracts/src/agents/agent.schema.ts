@@ -44,7 +44,7 @@ export type AgentThinking = z.infer<typeof AgentThinkingSchema>;
 export const AgentSchema = z.object({
   id: AgentIdSchema,
   name: z.string().min(1).max(256).optional(),
-  description: z.string().max(256).optional(),
+  description: z.string().max(512).optional(),
   glyph: z.string().max(64).optional(),
   /** Optional avatar image (data URI or `/avatars/*.png` path) shown in place of the glyph. */
   avatar: AvatarSchema.optional(),

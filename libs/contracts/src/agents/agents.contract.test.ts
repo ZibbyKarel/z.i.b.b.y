@@ -175,9 +175,9 @@ describe("agent schemas", () => {
       expect(AgentSchema.safeParse({ ...base, name: "x".repeat(257) }).success).toBe(false);
     });
 
-    it("description: 256 passes, 257 rejects", () => {
-      expect(AgentSchema.safeParse({ ...base, description: "x".repeat(256) }).success).toBe(true);
-      expect(AgentSchema.safeParse({ ...base, description: "x".repeat(257) }).success).toBe(
+    it("description: 512 passes, 513 rejects", () => {
+      expect(AgentSchema.safeParse({ ...base, description: "x".repeat(512) }).success).toBe(true);
+      expect(AgentSchema.safeParse({ ...base, description: "x".repeat(513) }).success).toBe(
         false,
       );
     });
