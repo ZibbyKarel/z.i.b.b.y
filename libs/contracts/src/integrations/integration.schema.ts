@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { IsoDateTimeSchema } from "../common.schema";
 import { AGENT_ID_REGEX } from "../agents/agent.schema";
+import { SubsystemIdSchema } from "../subsystems/subsystem.schema";
 
 /**
  * Allowed shape of an integration `id` — the same restrictive pattern agents use
@@ -165,6 +166,15 @@ const IntegrationObjectSchema = z.object({
   lastError: z.string().optional(),
   /** Computed at read time: whether a credentials file exists. Never persisted. */
   hasCredentials: z.boolean().default(false),
+  /**
+   * Optional attribution to a subsystem of the federation (NS2 F1a) — which
+   * subsystem "owns" this integration for the Roster (monitors are derived from
+   * ci-stream GitHub integrations, so this covers monitor ownership too). Absent
+   * is legitimate for pre-F1 integrations (backfilled by the owner-backfill
+   * sweep); write paths (create, and updates that would clear it) require it
+   * once seeded — see `integrations.controller.ts`.
+   */
+  ownerSubsystem: SubsystemIdSchema.optional(),
 });
 
 /**
@@ -190,10 +200,10 @@ const CreateIntegrationObjectSchema = z.object({
   name: z.string().min(1).optional(),
   enabled: z.boolean().optional(),
   config: IntegrationConfigSchema,
+  ownerSubsystem: SubsystemIdSchema.optional(),
 });
-export const CreateIntegrationSchema = CreateIntegrationObjectSchema.superRefine(
-  requireExactlyOneOwner,
-);
+export const CreateIntegrationSchema =
+  CreateIntegrationObjectSchema.superRefine(requireExactlyOneOwner);
 export type CreateIntegrationInput = z.infer<typeof CreateIntegrationObjectSchema>;
 
 /**
