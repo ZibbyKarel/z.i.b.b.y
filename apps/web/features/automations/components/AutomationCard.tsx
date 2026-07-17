@@ -41,6 +41,8 @@ const TARGET_GLYPH = {
   // F4c: no dedicated "eye"/"scan" glyph exists in the DS icon set — "brain" is
   // pre-approved as the fallback (reused from `memory-distill`, same memory domain).
   "self-knowledge": "brain",
+  // NS2 F5a — Sentinel's scheduled security watch: the DS "shield" glyph.
+  "sentinel-scan": "shield",
 } as const satisfies Record<Exclude<Target["type"], "task">, IconName>;
 
 /** A `task` automation's glyph mirrors its @-mentioned run target (Screen.tsx's
@@ -115,9 +117,11 @@ export function AutomationCard({
         ? t("targetMemoryDistill")
         : target.type === "self-knowledge"
           ? t("targetSelfKnowledge")
-          : target.type === "task"
-            ? (targetName ?? target.target?.name ?? t("targetTask"))
-            : (targetName ?? targetIdOf(target));
+          : target.type === "sentinel-scan"
+            ? t("targetSentinelScan")
+            : target.type === "task"
+              ? (targetName ?? target.target?.name ?? t("targetTask"))
+              : (targetName ?? targetIdOf(target));
 
   return (
     <Card background="surface" data-testid={AutomationCardTestId.Root}>
@@ -269,7 +273,8 @@ function targetKindKey(
   | "targetPatternExtract"
   | "targetGapDetect"
   | "targetAgentFactory"
-  | "targetSelfKnowledge" {
+  | "targetSelfKnowledge"
+  | "targetSentinelScan" {
   switch (type) {
     case "agent":
       return "targetAgent";
@@ -289,5 +294,7 @@ function targetKindKey(
       return "targetAgentFactory";
     case "self-knowledge":
       return "targetSelfKnowledge";
+    case "sentinel-scan":
+      return "targetSentinelScan";
   }
 }

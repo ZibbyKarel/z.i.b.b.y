@@ -25,6 +25,21 @@ describe("automationsContract", () => {
   });
 });
 
+describe("automation schema — NS2 F5a sentinel-scan target", () => {
+  it("accepts a cron→sentinel-scan automation and round-trips through AutomationSchema", () => {
+    const parsed = AutomationSchema.safeParse({
+      id: "sentinel-scan",
+      name: "Bezpečnostní hlídka",
+      trigger: { type: "cron", expr: "0 5 * * 1" },
+      target: { type: "sentinel-scan" },
+      enabled: true,
+      system: true,
+    });
+    expect(parsed.success).toBe(true);
+    expect(parsed.success && parsed.data.target).toEqual({ type: "sentinel-scan" });
+  });
+});
+
 describe("automation schema", () => {
   it("accepts a cron→pipeline and an event→agent automation", () => {
     expect(

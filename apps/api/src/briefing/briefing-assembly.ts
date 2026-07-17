@@ -52,6 +52,8 @@ export interface BriefingInput {
   /** NS2 F4c — whether the self-knowledge vault note has drifted from a fresh
    * compose (gathered via `SelfKnowledgeService.check()`, fail-open to `false`). */
   selfKnowledgeDrift?: boolean;
+  /** NS2 F5a — Sentinel's open security findings (CVE/secret), read off its vault note. */
+  securityFindings?: string[];
 }
 
 /** Activity kinds that count as "ZIBBY did this for you". */
@@ -117,6 +119,9 @@ export function assembleBriefing(input: BriefingInput): Briefing {
     ...(input.appIdeas && input.appIdeas.length > 0 ? { appIdeas: input.appIdeas } : {}),
     ...(input.subsystems && input.subsystems.length > 0 ? { subsystems: input.subsystems } : {}),
     ...(input.selfKnowledgeDrift ? { selfKnowledgeDrift: true } : {}),
+    ...(input.securityFindings && input.securityFindings.length > 0
+      ? { securityFindings: input.securityFindings }
+      : {}),
   };
 }
 
@@ -375,6 +380,12 @@ export function renderBriefingMarkdown(briefing: Briefing): string {
         "- self-knowledge note drifted from the live catalog (nightly refresh may have failed)",
       );
     }
+    lines.push("");
+  }
+
+  if (briefing.securityFindings && briefing.securityFindings.length > 0) {
+    lines.push("## Security");
+    for (const item of briefing.securityFindings) lines.push(`- ${item}`);
     lines.push("");
   }
 

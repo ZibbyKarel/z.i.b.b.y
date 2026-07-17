@@ -1512,6 +1512,7 @@
     "targetGapDetect": "Detekce mezer",
     "targetAgentFactory": "Továrna agentů",
     "targetSelfKnowledge": "Obnova sebeznalosti",
+    "targetSentinelScan": "Bezpečnostní hlídka",
     "targetTask": "prompt úkol",
     "systemEditNote": "Systémová automatizace — seedovaná ZIBBYM. Měnit lze jen rozvrh; cíl ani název upravit nelze a smazat ji nejde.",
     "legacyEditNote": "Cíl téhle automatizace pochází z doby před prompt automatizacemi a už ho tu nejde upravit — měnit lze jen rozvrh. Pro změnu toho, co se spouští, ji smaž a vytvoř novou prompt automatizaci.",

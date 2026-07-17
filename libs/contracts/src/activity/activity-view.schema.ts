@@ -69,6 +69,9 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   "integration-retry-exhausted": "integrations",
   // N3: a monitor alert rides the integration that watches the source (same PAT/config).
   "monitor-alert": "integrations",
+  // NS2 F5a/F5c: Sentinel/Loom's scheduled-scan finding — reads with the other
+  // watcher discoveries (monitor-alert) rather than a new group for one kind.
+  "subsystem-scan": "integrations",
   "machine-action": "approvals",
   "briefing-generated": "briefing",
 };

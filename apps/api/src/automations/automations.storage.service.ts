@@ -44,6 +44,8 @@ export class SystemAutomationError extends Error {
 export const MEMORY_DISTILL_AUTOMATION_ID = "memory-distill";
 /** Stable id of the nightly self-knowledge-refresh system automation (F4c). */
 export const SELF_KNOWLEDGE_AUTOMATION_ID = "self-knowledge-refresh";
+/** Stable id of the weekly Sentinel security-scan system automation (F5a). */
+export const SENTINEL_SCAN_AUTOMATION_ID = "sentinel-scan";
 
 /**
  * System automations ZIBBY owns and seeds on boot. They embody capabilities that
@@ -100,6 +102,17 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
     // 3:30 — after the 3:00 distill, before the 7:00 briefing.
     trigger: { type: "cron", expr: "30 3 * * *" },
     target: { type: "self-knowledge" },
+    enabled: true,
+    system: true,
+  },
+  {
+    // NS2 F5a — Sentinel's weekly security watch. Seeded `enabled: true` (charter
+    // duty 6, orchestrator addendum ruling #3): fail-open no-op on a green system,
+    // so waking it by default makes the chair real without risk.
+    id: SENTINEL_SCAN_AUTOMATION_ID,
+    name: "Bezpečnostní hlídka",
+    trigger: { type: "cron", expr: "0 5 * * 1" },
+    target: { type: "sentinel-scan" },
     enabled: true,
     system: true,
   },

@@ -9,6 +9,7 @@ import { PatternExtractorService } from "../patterns/pattern-extractor.service";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { GapDetectorService } from "../gaps/gap-detector.service";
 import { SelfKnowledgeService } from "../self-knowledge/self-knowledge.service";
+import { SentinelService } from "../sentinel/sentinel.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TraceContextService } from "../shared/logging/trace-context.service";
 import { TickingWatcherBase } from "../shared/ticking-watcher-base";
@@ -46,6 +47,7 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
     private readonly agentFactory: AgentFactoryService,
     private readonly taskScheduler: TaskSchedulerService,
     private readonly selfKnowledge: SelfKnowledgeService,
+    private readonly sentinel: SentinelService,
   ) {
     super();
     this.log = logger.child(SchedulerService.name);
@@ -221,6 +223,12 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
           this.log.warn("self-knowledge refresh failed", { error: String(error) });
           return "self-knowledge:error";
         }
+      }
+      case "sentinel-scan": {
+        // NS2 F5a: weekly system automation — dependency CVEs (Dependabot REST)
+        // + a bounded secret scan, deterministic; ref = `sentinel:<count>`.
+        const { findings } = await this.sentinel.scan();
+        return `sentinel:${findings.length}`;
       }
     }
   }

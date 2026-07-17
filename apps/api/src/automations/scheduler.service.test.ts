@@ -44,6 +44,18 @@ function taskAutomation(over: Partial<Automation> = {}): Automation {
   };
 }
 
+function sentinelScanAutomation(over: Partial<Automation> = {}): Automation {
+  return {
+    id: "sentinel-scan",
+    name: "Bezpečnostní hlídka",
+    trigger: { type: "cron", expr: "0 5 * * 1" },
+    target: { type: "sentinel-scan" },
+    enabled: true,
+    system: true,
+    ...over,
+  };
+}
+
 function selfKnowledgeAutomation(over: Partial<Automation> = {}): Automation {
   return {
     id: "self-knowledge-refresh",
@@ -64,6 +76,7 @@ function makeService(opts: {
   pipelineRunner?: { start: ReturnType<typeof vi.fn> };
   taskScheduler?: { createTask: ReturnType<typeof vi.fn> };
   selfKnowledge?: { check: ReturnType<typeof vi.fn>; write: ReturnType<typeof vi.fn> };
+  sentinel?: { scan: ReturnType<typeof vi.fn> };
 }): { service: SchedulerService; storage: { markFired: ReturnType<typeof vi.fn> } } {
   const storage = {
     list: async () => [opts.automation],
@@ -88,6 +101,7 @@ function makeService(opts: {
     { detect: opts.detect ?? vi.fn() } as never,
     (opts.taskScheduler ?? { createTask: vi.fn() }) as never,
     (opts.selfKnowledge ?? { check: vi.fn(async () => false), write: vi.fn() }) as never,
+    (opts.sentinel ?? { scan: vi.fn(async () => ({ findings: [] })) }) as never,
   );
   return { service, storage };
 }
@@ -266,6 +280,23 @@ describe("SchedulerService — dispatch (F4c: self-knowledge target)", () => {
     });
 
     await expect(service.trigger("self-knowledge-refresh")).resolves.toBe("self-knowledge:error");
+  });
+});
+
+describe("SchedulerService — dispatch (NS2 F5a: sentinel-scan target)", () => {
+  it("dispatches straight to SentinelService.scan and refs the finding count", async () => {
+    const scan = vi.fn(async () => ({ findings: [{ kind: "cve" }, { kind: "secret" }] }));
+    const { service } = makeService({ automation: sentinelScanAutomation(), sentinel: { scan } });
+
+    const ref = await service.trigger("sentinel-scan");
+
+    expect(scan).toHaveBeenCalledTimes(1);
+    expect(ref).toBe("sentinel:2");
+  });
+
+  it("refs a zero count on a green (no-findings) scan", async () => {
+    const { service } = makeService({ automation: sentinelScanAutomation() });
+    expect(await service.trigger("sentinel-scan")).toBe("sentinel:0");
   });
 });
 

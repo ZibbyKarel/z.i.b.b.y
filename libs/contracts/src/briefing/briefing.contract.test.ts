@@ -130,6 +130,30 @@ describe("BriefingSchema", () => {
     });
   });
 
+  describe("security findings (NS2 F5a — strictly additive)", () => {
+    it("accepts securityFindings", () => {
+      expect(
+        BriefingSchema.safeParse({ ...base, securityFindings: ["CVE-2026-1234 in lodash"] })
+          .success,
+      ).toBe(true);
+    });
+
+    it("omitting securityFindings entirely still parses (old briefings)", () => {
+      const parsed = BriefingSchema.safeParse(base);
+      expect(parsed.success).toBe(true);
+      expect(parsed.success && parsed.data.securityFindings).toBeUndefined();
+    });
+
+    it("caps at 50 entries", () => {
+      expect(
+        BriefingSchema.safeParse({ ...base, securityFindings: Array(50).fill("x") }).success,
+      ).toBe(true);
+      expect(
+        BriefingSchema.safeParse({ ...base, securityFindings: Array(51).fill("x") }).success,
+      ).toBe(false);
+    });
+  });
+
   describe("T11 finding #12 — trend7d/learnedPatterns/automationGaps/appIdeas cap at 50 entries", () => {
     it("50 entries passes, 51 rejects (array length only — elements stay unbounded)", () => {
       expect(BriefingSchema.safeParse({ ...base, trend7d: Array(50).fill("x") }).success).toBe(
