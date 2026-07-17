@@ -30,10 +30,10 @@
 | F4a   | Subsystem MOC shelves (record/distill)   | ✅      | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | `e1d12b7b` |
 | F4b   | Retrieval upgrade (tags + link graph)    | ✅      | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | `d3c69968` |
 | F4c   | Vault seed + scheduled self-knowledge    | ✅      | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | `9a78cd2b` |
-| F5a   | Sentinel v1 (CVE + secret watch)         | 🟨 next | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | —          |
-| F5b   | Maestro v1 (merge queue, read-side)      | 🟦      | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | —          |
-| F5c   | Loom v1 (scheduled quality audit)        | 🟦      | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | —          |
-| F6a   | Herald reply ledger + graduation         | 🟦      | [ns2-f6](../plans/ns2-f6-trust-from-record.md)     | —          |
+| F5a   | Sentinel v1 (CVE + secret watch)         | ✅      | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | `8bec02a2` |
+| F5b   | Maestro v1 (merge queue, read-side)      | ✅      | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | `a04fabfa` |
+| F5c   | Loom v1 (scheduled quality audit)        | ✅      | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | `a71b83ac` |
+| F6a   | Herald reply ledger + graduation         | 🟨 next | [ns2-f6](../plans/ns2-f6-trust-from-record.md)     | —          |
 | F6b   | Live soak harness (opt-in lane)          | 🟦      | [ns2-f6](../plans/ns2-f6-trust-from-record.md)     | —          |
 | F6c   | Watcher health probes                    | 🟦      | [ns2-f6](../plans/ns2-f6-trust-from-record.md)     | —          |
 | F7a   | Sentry MonitorAdapter                    | 🟦      | [ns2-f7](../plans/ns2-f7-monitors-and-actions.md)  | —          |
@@ -180,6 +180,48 @@ committed) · ⛔ parked (reason in Notes).
   in `MemoryModule` only (do not re-register); ten committed
   `.zibby/data/vault/knowledge/subsystem-<id>-moc.md` shelf files now exist in this
   repo's own vault with `## Poznatky` sections ready for `updateIndex` writes.
+- **F5 complete (2026-07-17, Fable):** three checkpoint commits (F5a `8bec02a2`
+  Sentinel, F5b `a04fabfa` Maestro, F5c `a71b83ac` Loom). Final full-suite run:
+  api 200 files/1940 tests pass (1 pre-existing skip, `goal-loop.e2e.test.ts` +
+  13 other skips), web-components 174 files/1116 tests pass, contracts 36
+  files/432 tests pass, 3× tsc (contracts/api/web) clean, `check:deps` clean.
+  Deviations: (1) F5a — Sentinel rides the automation seam (cron `sentinel-scan`
+  target) per the plan's binding correction, no MonitorAdapter involvement;
+  secret findings carry file:line + rule name only, never the matched value
+  (proven by a dedicated test); (2) F5b — `maestroContract` was registered in
+  `libs/contracts/src/app.contract.ts` (`maestro: maestroContract`) beyond the
+  plan's literal text (which only specified barrel exports), because the web
+  `tsr` client needs it in the aggregate router to reach `GET /api/maestro/queue`
+  at all; zero merge code added, `MergeQueueCard` web UI deferred to F7b per the
+  plan's own escape hatch (not attempted — noted here as the deferral, not a
+  failure); (3) F5c — `LoomService` reuses the EXACT `GRAPH_REPORT_PATH` DI token
+  - `resolveGraphReportPath()` factory from `self-knowledge.module.ts` (safe:
+    NestJS tokens are just strings, independently scoped per module); `exec` is
+    injected as an optional `execImpl` constructor param (same testability
+    convention as Sentinel/Maestro's `fetchImpl`) rather than `vi.mock()`'d; no
+    knip invocation exists anywhere in the service (proven by a dedicated test).
+    Recurring process note (not a functional bug): the `check:self-knowledge`
+    pre-commit hook flagged drift at all three subphase commits; each time,
+    `pnpm self-knowledge:generate` resolved it with no visible diff on the tracked
+    note — matches the existing "check:self-knowledge hook flake" gotcha below,
+    now confirmed to recur reliably rather than being a one-off.
+    **New surfaces for F6+:** `Briefing` extras gained `securityFindings?: string[]`
+    (F5a), `mergeQueue?: string[]` (F5b), `qualityFindings?: string[]` (F5c) — all
+    the same established optional-capped-50-string-array pattern, each with its own
+    `##` markdown section in `renderBriefingMarkdown()`; `SubsystemFindingsStore`
+    (`apps/api/src/subsystems/subsystem-findings.store.ts`) is a shared
+    fingerprint-diff store (`read(key): Promise<Set<string>>` /
+    `write(key, Set<string>): Promise<void>`), keyed by an arbitrary string
+    (`"sentinel"`, `"loom"` in use) — reuse its `read`/`write` pair for any future
+    subsystem's own deterministic-scan-dedup needs rather than rolling a new
+    mechanism; `TargetSchema` gained `{type:"sentinel-scan"}` and
+    `{type:"loom-audit"}` (both web exhaustive tables — `TARGET_GLYPH`/
+    `targetKindKey` in `AutomationCard.tsx`, plus `Screen.tsx`'s `resolveTarget` —
+    already updated; glyphs `shield`/`code`); `GET /api/maestro/queue` is the only
+    new HTTP surface from F5 (Sentinel/Loom are scheduler-only, no controller, not
+    in `app.contract.ts` — deliberate, mirrors `GapDetectorService`'s precedent);
+    `sentinel-scan` (cron `0 3 * * *`) and `loom-audit` (cron `0 2 * * *`) both seed
+    `enabled: true` as system automations in `automations.storage.service.ts`.
 
 ## Planning corrections (verified in code — the audit/roadmap were wrong here)
 
