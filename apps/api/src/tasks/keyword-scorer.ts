@@ -73,7 +73,13 @@ interface Scored {
  */
 @Injectable()
 export class KeywordScorer implements TaskRouter {
-  route(input: ClassifyTaskInput, candidates: RoutableTarget[]): Promise<TaskRouting | null> {
+  /** F2b: `preamble` is accepted for signature parity with {@link TaskRouter} — this
+   *  deterministic leg has no prompt to inject it into, so it's ignored. */
+  route(
+    input: ClassifyTaskInput,
+    candidates: RoutableTarget[],
+    _preamble?: string,
+  ): Promise<TaskRouting | null> {
     return Promise.resolve(this.score(input, candidates));
   }
 

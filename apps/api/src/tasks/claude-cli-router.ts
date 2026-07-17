@@ -67,13 +67,17 @@ export class ClaudeCliRouter implements TaskRouter {
     this.log = logger.child(ClaudeCliRouter.name);
   }
 
-  async route(input: ClassifyTaskInput, candidates: RoutableTarget[]): Promise<TaskRouting | null> {
+  async route(
+    input: ClassifyTaskInput,
+    candidates: RoutableTarget[],
+    preamble?: string,
+  ): Promise<TaskRouting | null> {
     if (process.env.VITEST) return null;
     if (candidates.length === 0) return null;
 
     let raw: string;
     try {
-      raw = await this.runClaude(this.buildPrompt(input, candidates));
+      raw = await this.runClaude(this.buildPrompt(input, candidates, preamble));
     } catch (err) {
       this.log.debug("router CLI call failed", { error: (err as Error).message });
       return null;
@@ -111,14 +115,26 @@ export class ClaudeCliRouter implements TaskRouter {
     };
   }
 
-  /** Serialize the task + catalog into the `-p` user turn. */
-  private buildPrompt(input: ClassifyTaskInput, candidates: RoutableTarget[]): string {
+  /**
+   * Serialize the task + catalog into the `-p` user turn. F2b: an optional
+   * `preamble` (a subsystem's mandate + owned-unit list) is injected between
+   * the frozen system prompt and the task line — extra context for a
+   * stage-2 scoped call, absent for the top-level catalog.
+   */
+  private buildPrompt(
+    input: ClassifyTaskInput,
+    candidates: RoutableTarget[],
+    preamble?: string,
+  ): string {
     const catalog = candidates
       .map((c) => `${c.kind}  ${c.id} | ${c.category ?? "-"} | ${c.search}`)
       .join("\n");
     const paths = input.paths?.length ? `\nPATHS: ${input.paths.join(", ")}` : "";
     const text = input.text.slice(0, MAX_TASK_CHARS);
-    return [ROUTER_SYSTEM_PROMPT, "", `TASK: ${text}${paths}`, "", "CATALOG:", catalog].join("\n");
+    const parts = [ROUTER_SYSTEM_PROMPT];
+    if (preamble) parts.push("", preamble);
+    parts.push("", `TASK: ${text}${paths}`, "", "CATALOG:", catalog);
+    return parts.join("\n");
   }
 
   /**
