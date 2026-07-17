@@ -16,6 +16,7 @@ import { LimitsService } from "../limits/limits.service";
 import { MonitorEventStore } from "../monitors/monitor-event.store";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
+import { SelfKnowledgeService } from "../self-knowledge/self-knowledge.service";
 import { SubsystemsService } from "../subsystems/subsystems.service";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
 import { ensureDir, safeJson, writeFileAtomic } from "../shared/file-storage";
@@ -88,6 +89,9 @@ export class BriefingService {
     // Ledger note's weekly usage window %.
     private readonly subsystems: SubsystemsService,
     private readonly limits: LimitsService,
+    // NS2 F4c — nightly self-knowledge drift check (true = the vault note has
+    // drifted from a fresh compose; the scheduled refresh may have failed).
+    private readonly selfKnowledge: SelfKnowledgeService,
     @Inject(ACTIVITY_DIR) private readonly activityDir: string,
     logger: LoggerService,
   ) {
@@ -108,6 +112,7 @@ export class BriefingService {
       ciStatuses,
       subsystemRows,
       weeklyPct,
+      selfKnowledgeDrift,
     ] = await Promise.all([
       this.approvals.list("pending"),
       this.pipelines.listAll(),
@@ -125,6 +130,9 @@ export class BriefingService {
         .snapshot()
         .then((l) => l.weekly.usedPct)
         .catch((): number | null => null),
+      // NS2 F4c — self-knowledge drift check. Fail-open: a read failure must
+      // never surface a false drift flag, so it collapses to `false`.
+      this.selfKnowledge.check().catch(() => false),
     ]);
     // Phase 10: in-flight (running/paused) goals feed "watching"; parked goals "needs you".
     const goalRuns = allGoalRuns.filter(
@@ -167,6 +175,7 @@ export class BriefingService {
       automationGaps,
       appIdeas,
       ...(subsystems ? { subsystems } : {}),
+      ...(selfKnowledgeDrift ? { selfKnowledgeDrift } : {}),
     });
   }
 

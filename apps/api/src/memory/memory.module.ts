@@ -1,5 +1,8 @@
 import { Module } from "@nestjs/common";
-import { AUTOMATIONS_DIR, AutomationsStorageService } from "../automations/automations.storage.service";
+import {
+  AUTOMATIONS_DIR,
+  AutomationsStorageService,
+} from "../automations/automations.storage.service";
 import { CHAINS_DIR, ChainsStorageService } from "../chains/chains.storage.service";
 import { CommandsModule } from "../commands/commands.module";
 import { CompaniesModule } from "../companies/companies.module";
@@ -18,12 +21,16 @@ import { EntityMcpController } from "./entity-mcp.controller";
 import { GroundingService } from "./grounding.service";
 import { MemoryController } from "./memory.controller";
 import { MemoryImportService } from "./memory-import.service";
+import { VaultSeedService } from "./vault-seed.service";
 import { VAULT_DIR, VaultService } from "./vault.service";
 
 /**
- * Default vault dir, anchored to `apps/api/data/vault`. The dir is committed with
- * seed notes (north-star, a starter MOC); only the episodic `daily/` subdir is
- * gitignored. Real operation points `VAULT_DIR` at the operator's Obsidian vault.
+ * Default vault dir, anchored to `apps/api/data/vault`. This repo's committed
+ * `VAULT_DIR` already carries seed notes (north-star, the root MOC, all ten
+ * subsystem shelves); only the episodic `daily/` subdir is gitignored. Real
+ * operation points `VAULT_DIR` at the operator's Obsidian vault — a genuinely
+ * fresh/empty one is seeded on boot by `VaultSeedService` (F4c), so first-run
+ * grounding is never empty.
  */
 export function resolveVaultDir(): string {
   return process.env.VAULT_DIR ?? dataDir("vault");
@@ -53,6 +60,8 @@ export function resolveVaultDir(): string {
     VaultService,
     MemoryImportService,
     GroundingService,
+    // Fresh-install seeding (F4c) — MemoryModule only, see VaultSeedService's doc.
+    VaultSeedService,
     { provide: PROJECTS_DIR, useFactory: () => process.env.PROJECTS_DIR ?? dataDir("projects") },
     ProjectsStorageService,
     { provide: CHAINS_DIR, useFactory: () => process.env.CHAINS_DIR ?? dataDir("chains") },

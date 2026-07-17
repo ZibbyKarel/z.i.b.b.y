@@ -42,6 +42,8 @@ export class SystemAutomationError extends Error {
 
 /** Stable id of the nightly memory-distillation system automation. */
 export const MEMORY_DISTILL_AUTOMATION_ID = "memory-distill";
+/** Stable id of the nightly self-knowledge-refresh system automation (F4c). */
+export const SELF_KNOWLEDGE_AUTOMATION_ID = "self-knowledge-refresh";
 
 /**
  * System automations ZIBBY owns and seeds on boot. They embody capabilities that
@@ -90,6 +92,15 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
     trigger: { type: "cron", expr: "0 4 * * 1" },
     target: { type: "agent-factory" },
     enabled: false,
+    system: true,
+  },
+  {
+    id: SELF_KNOWLEDGE_AUTOMATION_ID,
+    name: "Obnova sebeznalosti",
+    // 3:30 — after the 3:00 distill, before the 7:00 briefing.
+    trigger: { type: "cron", expr: "30 3 * * *" },
+    target: { type: "self-knowledge" },
+    enabled: true,
     system: true,
   },
 ];

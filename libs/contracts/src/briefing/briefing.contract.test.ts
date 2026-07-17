@@ -110,6 +110,26 @@ describe("BriefingSchema", () => {
     });
   });
 
+  describe("self-knowledge drift (NS2 F4c — strictly additive)", () => {
+    it("accepts selfKnowledgeDrift: true", () => {
+      expect(BriefingSchema.safeParse({ ...base, selfKnowledgeDrift: true }).success).toBe(true);
+    });
+
+    it("accepts selfKnowledgeDrift: false", () => {
+      expect(BriefingSchema.safeParse({ ...base, selfKnowledgeDrift: false }).success).toBe(true);
+    });
+
+    it("omitting selfKnowledgeDrift entirely still parses (old briefings)", () => {
+      const parsed = BriefingSchema.safeParse(base);
+      expect(parsed.success).toBe(true);
+      expect(parsed.success && parsed.data.selfKnowledgeDrift).toBeUndefined();
+    });
+
+    it("rejects a non-boolean selfKnowledgeDrift", () => {
+      expect(BriefingSchema.safeParse({ ...base, selfKnowledgeDrift: "yes" }).success).toBe(false);
+    });
+  });
+
   describe("T11 finding #12 — trend7d/learnedPatterns/automationGaps/appIdeas cap at 50 entries", () => {
     it("50 entries passes, 51 rejects (array length only — elements stay unbounded)", () => {
       expect(BriefingSchema.safeParse({ ...base, trend7d: Array(50).fill("x") }).success).toBe(

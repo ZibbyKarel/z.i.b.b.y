@@ -76,12 +76,33 @@ describe("automation schema", () => {
     ).toBe(true);
   });
 
+  it("F4c: accepts a self-knowledge target and round-trips it", () => {
+    const parsed = AutomationSchema.safeParse({
+      id: "self-knowledge-refresh",
+      trigger: { type: "cron", expr: "30 3 * * *" },
+      target: { type: "self-knowledge" },
+      enabled: true,
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.target).toEqual({ type: "self-knowledge" });
+    }
+  });
+
   it("rejects an unknown trigger or target type", () => {
     expect(
       AutomationSchema.safeParse({
         id: "x",
         trigger: { type: "interval", every: 5 },
         target: { type: "agent", agentId: "a" },
+        enabled: true,
+      }).success,
+    ).toBe(false);
+    expect(
+      AutomationSchema.safeParse({
+        id: "y",
+        trigger: { type: "cron", expr: "0 3 * * *" },
+        target: { type: "nonsense-target" },
         enabled: true,
       }).success,
     ).toBe(false);

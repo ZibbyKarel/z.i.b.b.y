@@ -38,6 +38,9 @@ const TARGET_GLYPH = {
   "pattern-extract": "pulse",
   "gap-detect": "flask",
   "agent-factory": "gear",
+  // F4c: no dedicated "eye"/"scan" glyph exists in the DS icon set — "brain" is
+  // pre-approved as the fallback (reused from `memory-distill`, same memory domain).
+  "self-knowledge": "brain",
 } as const satisfies Record<Exclude<Target["type"], "task">, IconName>;
 
 /** A `task` automation's glyph mirrors its @-mentioned run target (Screen.tsx's
@@ -110,9 +113,11 @@ export function AutomationCard({
       ? t("targetBriefing")
       : target.type === "memory-distill"
         ? t("targetMemoryDistill")
-        : target.type === "task"
-          ? (targetName ?? target.target?.name ?? t("targetTask"))
-          : (targetName ?? targetIdOf(target));
+        : target.type === "self-knowledge"
+          ? t("targetSelfKnowledge")
+          : target.type === "task"
+            ? (targetName ?? target.target?.name ?? t("targetTask"))
+            : (targetName ?? targetIdOf(target));
 
   return (
     <Card background="surface" data-testid={AutomationCardTestId.Root}>
@@ -157,7 +162,10 @@ export function AutomationCard({
             />
             <Icon name="arrow" size="sm" tone="faint" />
             <FlowBox
-              glyph={targetGlyph ?? (target.type === "task" ? taskGlyph(target) : TARGET_GLYPH[target.type])}
+              glyph={
+                targetGlyph ??
+                (target.type === "task" ? taskGlyph(target) : TARGET_GLYPH[target.type])
+              }
               kind={t(targetKindKey(target.type))}
               testid={AutomationCardTestId.Target}
               value={targetText}
@@ -242,7 +250,11 @@ function FlowBox({
 /** Display id for an agent/pipeline target (used when no resolved name is supplied);
  *  every other target type resolves its display text before ever reaching this. */
 function targetIdOf(target: Target): string {
-  return target.type === "agent" ? target.agentId : target.type === "pipeline" ? target.pipelineId : "";
+  return target.type === "agent"
+    ? target.agentId
+    : target.type === "pipeline"
+      ? target.pipelineId
+      : "";
 }
 
 /** i18n key for the target kind label. Exhaustive over the target union. */
@@ -256,7 +268,8 @@ function targetKindKey(
   | "targetMemoryDistill"
   | "targetPatternExtract"
   | "targetGapDetect"
-  | "targetAgentFactory" {
+  | "targetAgentFactory"
+  | "targetSelfKnowledge" {
   switch (type) {
     case "agent":
       return "targetAgent";
@@ -274,5 +287,7 @@ function targetKindKey(
       return "targetGapDetect";
     case "agent-factory":
       return "targetAgentFactory";
+    case "self-knowledge":
+      return "targetSelfKnowledge";
   }
 }

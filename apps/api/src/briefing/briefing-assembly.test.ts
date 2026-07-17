@@ -340,3 +340,58 @@ describe("per-subsystem lines (NS2 F3b)", () => {
     expect(renderBriefingMarkdown(assembleBriefing(base))).not.toContain("## Subsystems");
   });
 });
+
+describe("self-knowledge drift (NS2 F4c)", () => {
+  const base = {
+    now: NOW,
+    since: SINCE,
+    approvals: [],
+    parkedRuns: [],
+    channelItems: [],
+    activity: [],
+  };
+  const lines = [
+    {
+      subsystem: "forge" as const,
+      name: "Forge",
+      state: "waiting" as const,
+      tier2Count: 0,
+      tier3Count: 2,
+    },
+  ];
+
+  it("omits selfKnowledgeDrift when absent or false — strictly additive to today's shape", () => {
+    expect(assembleBriefing(base).selfKnowledgeDrift).toBeUndefined();
+    expect(
+      assembleBriefing({ ...base, selfKnowledgeDrift: false }).selfKnowledgeDrift,
+    ).toBeUndefined();
+  });
+
+  it("surfaces selfKnowledgeDrift: true when the gathered check reports drift", () => {
+    expect(assembleBriefing({ ...base, selfKnowledgeDrift: true }).selfKnowledgeDrift).toBe(true);
+  });
+
+  it("a briefing with no subsystems and no drift renders no ## Subsystems block (today's exact output)", () => {
+    const md = renderBriefingMarkdown(assembleBriefing(base));
+    expect(md).not.toContain("## Subsystems");
+  });
+
+  it("drift alone (no subsystem lines) still opens a ## Subsystems block with just the drift bullet", () => {
+    const md = renderBriefingMarkdown(assembleBriefing({ ...base, selfKnowledgeDrift: true }));
+    expect(md).toContain("## Subsystems");
+    expect(md).toContain(
+      "- self-knowledge note drifted from the live catalog (nightly refresh may have failed)",
+    );
+  });
+
+  it("drift renders inside the same section as subsystem lines — no duplicate heading", () => {
+    const md = renderBriefingMarkdown(
+      assembleBriefing({ ...base, subsystems: lines, selfKnowledgeDrift: true }),
+    );
+    expect(md.match(/^## Subsystems$/gm)).toHaveLength(1);
+    expect(md).toContain("- **Forge** — waiting · 2 waiting on you");
+    expect(md).toContain(
+      "- self-knowledge note drifted from the live catalog (nightly refresh may have failed)",
+    );
+  });
+});

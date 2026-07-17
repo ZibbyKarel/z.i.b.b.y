@@ -6,6 +6,7 @@ import { GapsModule } from "../gaps/gaps.module";
 import { MemoryDistillerModule } from "../memory/memory-distiller.module";
 import { PatternsModule } from "../patterns/patterns.module";
 import { PipelinesModule } from "../pipelines/pipelines.module";
+import { SelfKnowledgeModule } from "../self-knowledge/self-knowledge.module";
 import { dataDir } from "../shared/data-dir";
 import { TasksModule } from "../tasks/tasks.module";
 import { AUTOMATIONS_DIR, AutomationsStorageService } from "./automations.storage.service";
@@ -27,7 +28,9 @@ export function resolveAutomationsDir(): string {
  * target can dispatch through `TaskSchedulerService.createTask` — still no cycle,
  * `TasksModule` doesn't (and must never) import this module back (see
  * `attachment-set-refs.module.ts` for how the reverse reference the sweep needs is
- * wired without one).
+ * wired without one). F4c: also imports `SelfKnowledgeModule` so the `self-knowledge`
+ * target can dispatch straight to `SelfKnowledgeService` — no cycle, `SelfKnowledgeModule`
+ * only imports Agents/Pipelines/GateRules/Gates/Memory, none of which import this module.
  */
 @Module({
   imports: [
@@ -38,6 +41,7 @@ export function resolveAutomationsDir(): string {
     MemoryDistillerModule,
     PatternsModule,
     PipelinesModule,
+    SelfKnowledgeModule,
     TasksModule,
   ],
   controllers: [AutomationsController],

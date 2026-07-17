@@ -8,6 +8,7 @@ import { MemoryDistillerService } from "../memory/memory-distiller.service";
 import { PatternExtractorService } from "../patterns/pattern-extractor.service";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { GapDetectorService } from "../gaps/gap-detector.service";
+import { SelfKnowledgeService } from "../self-knowledge/self-knowledge.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TraceContextService } from "../shared/logging/trace-context.service";
 import { TickingWatcherBase } from "../shared/ticking-watcher-base";
@@ -44,6 +45,7 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
     private readonly systemConfig: SystemConfigStore,
     private readonly agentFactory: AgentFactoryService,
     private readonly taskScheduler: TaskSchedulerService,
+    private readonly selfKnowledge: SelfKnowledgeService,
   ) {
     super();
     this.log = logger.child(SchedulerService.name);
@@ -206,6 +208,19 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
         // "dispatched" (a live run) or "scheduled" (held/queued/limit-deferred) —
         // "pending" is exclusively the interactive dialog's background path.
         return result.outcome === "dispatched" ? result.runRef : result.task.id;
+      }
+      case "self-knowledge": {
+        // F4c nightly system automation: deterministic re-compose + AUTO-block
+        // merge write, not a claude run. Fail-open like memory-distill — a vault
+        // hiccup must never kill the tick.
+        try {
+          const drift = await this.selfKnowledge.check();
+          await this.selfKnowledge.write();
+          return `self-knowledge:${drift ? "refreshed" : "clean"}`;
+        } catch (error) {
+          this.log.warn("self-knowledge refresh failed", { error: String(error) });
+          return "self-knowledge:error";
+        }
       }
     }
   }

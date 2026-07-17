@@ -9,6 +9,7 @@ import {
   AutomationsStorageService,
   InvalidAutomationIdError,
   MEMORY_DISTILL_AUTOMATION_ID,
+  SELF_KNOWLEDGE_AUTOMATION_ID,
   SystemAutomationError,
 } from "./automations.storage.service";
 
@@ -166,5 +167,31 @@ describe("AutomationsStorageService", () => {
     expect(healed.target).toEqual({ type: "memory-distill" });
     // The operator's schedule survives the self-heal.
     expect(healed.trigger).toEqual({ type: "cron", expr: "15 4 * * *" });
+  });
+
+  it("F4c: seeds the self-knowledge-refresh system automation on init", async () => {
+    const seeded = await service.get(SELF_KNOWLEDGE_AUTOMATION_ID);
+    expect(seeded.system).toBe(true);
+    expect(seeded.target).toEqual({ type: "self-knowledge" });
+    expect(seeded.trigger).toEqual({ type: "cron", expr: "30 3 * * *" });
+    expect(seeded.enabled).toBe(true);
+  });
+
+  it("F4c: an operator-edited self-knowledge-refresh schedule survives re-seed", async () => {
+    await service.update(SELF_KNOWLEDGE_AUTOMATION_ID, {
+      trigger: { type: "cron", expr: "45 3 * * *" },
+    });
+    await new AutomationsStorageService(dir).onModuleInit();
+    const healed = await service.get(SELF_KNOWLEDGE_AUTOMATION_ID);
+    expect(healed.system).toBe(true);
+    expect(healed.target).toEqual({ type: "self-knowledge" });
+    expect(healed.trigger).toEqual({ type: "cron", expr: "45 3 * * *" });
+  });
+
+  it("F4c: refuses to delete the self-knowledge-refresh system automation", async () => {
+    await expect(service.delete(SELF_KNOWLEDGE_AUTOMATION_ID)).rejects.toBeInstanceOf(
+      SystemAutomationError,
+    );
+    expect((await service.get(SELF_KNOWLEDGE_AUTOMATION_ID)).system).toBe(true);
   });
 });

@@ -49,6 +49,7 @@ export function Screen() {
       return { name: pipeline?.name ?? target.pipelineId, glyph: "flow" };
     }
     if (target.type === "memory-distill") return { glyph: "brain" };
+    if (target.type === "self-knowledge") return { glyph: "brain" };
     if (target.type === "task") {
       const kind = target.target?.kind;
       const glyph: IconName = kind === "agent" ? "bot" : kind === "pipeline" ? "flow" : "spark";

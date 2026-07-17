@@ -54,6 +54,13 @@ describe("AutomationCard — target rendering", () => {
     renderCard({ target: { type: "memory-distill" }, system: true });
     expect(screen.getByTestId(AutomationCardTestId.Target)).toHaveTextContent("Destilace paměti");
   });
+
+  it("F4c: renders the self-knowledge target with its label + glyph", () => {
+    renderCard({ target: { type: "self-knowledge" }, system: true });
+    expect(screen.getByTestId(AutomationCardTestId.Target)).toHaveTextContent(
+      "Obnova sebeznalosti",
+    );
+  });
 });
 
 describe("AutomationCard — task target (Phase 116e)", () => {
