@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
-import type { CredentialsInput, Integration, MonitorEvent } from "@zibby/contracts";
+import type {
+  CredentialsInput,
+  Integration,
+  MonitorEvent,
+  MonitorEventKind,
+} from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { CredentialsStore } from "../integrations/credentials.store";
 import { IntegrationsStorageService } from "../integrations/integrations.storage.service";
@@ -180,7 +185,7 @@ export class MonitorWatcherService
       const result = await this.scheduler.createTask(
         {
           title: event.title,
-          text: `${event.title}\n\n${event.detail}\n${event.url ? `\nRun: ${event.url}\n` : ""}\nInvestigate the failing CI run and prepare a fix on its own branch. Do not push or merge — the PR is the gate.`,
+          text: `${event.title}\n\n${event.detail}\n${event.url ? `\nRun: ${event.url}\n` : ""}\n${INSTRUCTION[event.kind]}`,
           paths: [],
         },
         Date.now(),
@@ -205,6 +210,19 @@ export class MonitorWatcherService
     }
   }
 }
+
+/**
+ * Per-kind investigation instruction (NS2 F7a, correction 1c) — a CI alert and
+ * a Sentry alert need different framing; a `Record` also makes any future kind
+ * a compile-time reminder to supply text. Everything else about `dispatch` is
+ * unchanged: same tier path, same `createTask`, same act-then-report gate.
+ */
+const INSTRUCTION: Record<MonitorEventKind, string> = {
+  "ci-run-failed":
+    "Investigate the failing CI run and prepare a fix on its own branch. Do not push or merge — the PR is the gate.",
+  "error-unresolved":
+    "Investigate the Sentry error, find the root cause, and prepare a fix on its own branch. Do not push or merge — the PR is the gate.",
+};
 
 /** Parse a non-negative integer env var, falling back to `dflt` on absent/garbage. */
 function intEnv(name: string, dflt: number): number {

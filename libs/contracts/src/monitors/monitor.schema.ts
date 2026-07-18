@@ -3,10 +3,11 @@ import { z } from "zod";
 /**
  * The closed vocabulary of monitor events (N3). A monitor watches STATUS, not
  * conversation — its events are alerts about the world (a red build), never
- * messages to reply to. New kinds (e.g. a Sentry `error-spike`) are added here
- * explicitly, the same growth discipline as the activity kinds.
+ * messages to reply to. New kinds are added here explicitly, the same growth
+ * discipline as the activity kinds. `"error-unresolved"` (NS2 F7a) is Sentry's:
+ * an unresolved issue at or above the integration's configured level.
  */
-export const MonitorEventKindSchema = z.enum(["ci-run-failed"]);
+export const MonitorEventKindSchema = z.enum(["ci-run-failed", "error-unresolved"]);
 export type MonitorEventKind = z.infer<typeof MonitorEventKindSchema>;
 
 /**

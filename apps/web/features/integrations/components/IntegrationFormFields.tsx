@@ -14,10 +14,13 @@ import type {
   CreateIntegrationInput,
   Integration,
   IntegrationKind,
+  SentryConfig,
   SubsystemId,
   UpdateIntegrationInput,
 } from "@zibby/contracts";
 import { IntegrationIdSchema, SUBSYSTEMS } from "@zibby/contracts";
+
+type SentryMinLevel = SentryConfig["minLevel"];
 
 /** Testids for the integration form (the screens + tests select via these). */
 export enum IntegrationFormTestId {
@@ -41,6 +44,10 @@ export enum IntegrationFormTestId {
   GithubUsername = "integration-github-username",
   CalendarId = "integration-calendar-id",
   CalendarLookahead = "integration-calendar-lookahead",
+  SentryOrg = "integration-sentry-org",
+  SentryProject = "integration-sentry-project",
+  SentryBaseUrl = "integration-sentry-base-url",
+  SentryMinLevel = "integration-sentry-min-level",
   Secret = "integration-secret",
   Submit = "integration-submit",
 }
@@ -101,6 +108,14 @@ export interface IntegrationFormState {
   setCalendarId: (v: string) => void;
   lookaheadDays: string;
   setLookaheadDays: (v: string) => void;
+  sentryOrg: string;
+  setSentryOrg: (v: string) => void;
+  sentryProject: string;
+  setSentryProject: (v: string) => void;
+  sentryBaseUrl: string;
+  setSentryBaseUrl: (v: string) => void;
+  sentryMinLevel: SentryMinLevel;
+  setSentryMinLevel: (v: SentryMinLevel) => void;
   /** Contract-side id validation message while the id is still editable. */
   idError: string | null;
   /** Valid for submit (id counts only while it is still editable). */
@@ -129,6 +144,7 @@ export function useIntegrationFormState(
   const jiraCfg = integration?.config.kind === "jira" ? integration.config : undefined;
   const githubCfg = integration?.config.kind === "github" ? integration.config : undefined;
   const calendarCfg = integration?.config.kind === "calendar" ? integration.config : undefined;
+  const sentryCfg = integration?.config.kind === "sentry" ? integration.config : undefined;
 
   const [channels, setChannels] = useState((slackCfg?.channels ?? []).join(", "));
   const [imapHost, setImapHost] = useState(emailCfg?.imapHost ?? "");
@@ -151,6 +167,12 @@ export function useIntegrationFormState(
   const [githubUsername, setGithubUsername] = useState(githubCfg?.username ?? "");
   const [calendarId, setCalendarId] = useState(calendarCfg?.calendarId ?? "");
   const [lookaheadDays, setLookaheadDays] = useState(String(calendarCfg?.lookaheadDays ?? 14));
+  const [sentryOrg, setSentryOrg] = useState(sentryCfg?.org ?? "");
+  const [sentryProject, setSentryProject] = useState(sentryCfg?.project ?? "");
+  const [sentryBaseUrl, setSentryBaseUrl] = useState(sentryCfg?.baseUrl ?? "");
+  const [sentryMinLevel, setSentryMinLevel] = useState<SentryMinLevel>(
+    sentryCfg?.minLevel ?? "error",
+  );
 
   const buildConfig = (): CreateIntegrationInput["config"] => {
     switch (kind) {
@@ -198,6 +220,14 @@ export function useIntegrationFormState(
           calendarId: calendarId.trim() || "primary",
           lookaheadDays: Number(lookaheadDays) || 14,
         };
+      case "sentry":
+        return {
+          kind: "sentry",
+          org: sentryOrg.trim(),
+          project: sentryProject.trim(),
+          ...(sentryBaseUrl.trim() ? { baseUrl: sentryBaseUrl.trim() } : {}),
+          minLevel: sentryMinLevel,
+        };
     }
   };
 
@@ -214,6 +244,8 @@ export function useIntegrationFormState(
         return /^[^/]+\/[^/]+$/.test(repo.trim());
       case "calendar":
         return Number(lookaheadDays) > 0;
+      case "sentry":
+        return sentryOrg.trim().length > 0 && sentryProject.trim().length > 0;
     }
   };
 
@@ -269,6 +301,14 @@ export function useIntegrationFormState(
     setCalendarId,
     lookaheadDays,
     setLookaheadDays,
+    sentryOrg,
+    setSentryOrg,
+    sentryProject,
+    setSentryProject,
+    sentryBaseUrl,
+    setSentryBaseUrl,
+    sentryMinLevel,
+    setSentryMinLevel,
     idError,
     canSave: (idEditable) =>
       (idEditable ? id.trim().length > 0 && idError === null : true) && configReady(),
@@ -316,7 +356,7 @@ export function IntegrationFormFields({
         ? t("integrations.botToken")
         : kind === "calendar"
           ? t("integrations.serviceAccountKey")
-          : t("integrations.apiToken");
+          : t("integrations.apiToken"); // jira, github, sentry all use a bearer/API token
   const secretPlaceholder = hasCredentials
     ? t("integrations.credentialsStored")
     : t("integrations.credentialsNone");
@@ -341,6 +381,7 @@ export function IntegrationFormFields({
             { value: "jira", label: t("integrations.kindJira") },
             { value: "github", label: t("integrations.kindGithub") },
             { value: "calendar", label: t("integrations.kindCalendar") },
+            { value: "sentry", label: t("integrations.kindSentry") },
           ]}
           value={kind}
         />
@@ -518,6 +559,42 @@ export function IntegrationFormFields({
             onChange={(e) => form.setGithubUsername(e.target.value)}
             placeholder="octocat"
             value={form.githubUsername}
+          />
+        </>
+      )}
+
+      {kind === "sentry" && (
+        <>
+          <TextInputField
+            data-testid={IntegrationFormTestId.SentryOrg}
+            hint={t("integrations.sentryOrgHint")}
+            label={t("integrations.sentryOrg")}
+            onChange={(e) => form.setSentryOrg(e.target.value)}
+            value={form.sentryOrg}
+          />
+          <TextInputField
+            data-testid={IntegrationFormTestId.SentryProject}
+            label={t("integrations.sentryProject")}
+            onChange={(e) => form.setSentryProject(e.target.value)}
+            value={form.sentryProject}
+          />
+          <TextInputField
+            data-testid={IntegrationFormTestId.SentryBaseUrl}
+            hint={t("integrations.sentryBaseUrlHint")}
+            label={t("integrations.sentryBaseUrl")}
+            onChange={(e) => form.setSentryBaseUrl(e.target.value)}
+            placeholder="https://sentry.io"
+            value={form.sentryBaseUrl}
+          />
+          <SelectField
+            label={t("integrations.sentryMinLevel")}
+            onValueChange={(v) => form.setSentryMinLevel(v as SentryMinLevel)}
+            options={[
+              { value: "warning", label: t("integrations.sentryLevelWarning") },
+              { value: "error", label: t("integrations.sentryLevelError") },
+              { value: "fatal", label: t("integrations.sentryLevelFatal") },
+            ]}
+            value={form.sentryMinLevel}
           />
         </>
       )}

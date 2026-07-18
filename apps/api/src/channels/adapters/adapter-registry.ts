@@ -7,6 +7,7 @@ import { EmailChannelAdapter } from "./email.adapter";
 import { FakeChannelAdapter } from "./fake.adapter";
 import { GitHubChannelAdapter } from "./github.adapter";
 import { JiraChannelAdapter } from "./jira.adapter";
+import { SentryChannelAdapter } from "./sentry.adapter";
 import { SlackChannelAdapter } from "./slack.adapter";
 
 /**
@@ -24,6 +25,7 @@ export class AdapterRegistry implements ConnectionTester {
   private readonly jira = new JiraChannelAdapter();
   private readonly github = new GitHubChannelAdapter();
   private readonly calendar = new CalendarChannelAdapter();
+  private readonly sentry = new SentryChannelAdapter();
   private readonly fake = new FakeChannelAdapter();
 
   /** Test-only fake-channel seam — on iff the harness set `CHANNEL_FAKE_DIR`. */
@@ -45,6 +47,8 @@ export class AdapterRegistry implements ConnectionTester {
         return this.github;
       case "calendar":
         return this.calendar;
+      case "sentry":
+        return this.sentry;
     }
   }
 

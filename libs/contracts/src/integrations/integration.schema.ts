@@ -16,7 +16,14 @@ export const IntegrationIdSchema = z
   .regex(AGENT_ID_REGEX, "id may only contain letters, numbers, '.', '_' and '-'");
 
 /** Which inbound channel an integration speaks. `kind` is immutable after create. */
-export const IntegrationKindSchema = z.enum(["slack", "email", "jira", "github", "calendar"]);
+export const IntegrationKindSchema = z.enum([
+  "slack",
+  "email",
+  "jira",
+  "github",
+  "calendar",
+  "sentry",
+]);
 export type IntegrationKind = z.infer<typeof IntegrationKindSchema>;
 
 /**
@@ -102,6 +109,26 @@ export const CalendarConfigSchema = z
   .strict();
 export type CalendarConfig = z.infer<typeof CalendarConfigSchema>;
 
+/**
+ * Sentry config (NS2 F7a) — the first monitor-ONLY integration kind. `org` +
+ * `project` are Sentry slugs; the auth token lives in the credentials store
+ * (`token`, like Slack/Jira/GitHub). `baseUrl` overrides the SaaS host for
+ * self-hosted (default https://sentry.io). `minLevel` is the actionability floor:
+ * only issues at or above it become alerts (→ tier path); quieter issues stay in
+ * Sentry's own UI (the adapter's analogue of github-ci emitting only red runs).
+ * `.strict()` — no token-shaped key can leak into the committed entity file.
+ */
+export const SentryConfigSchema = z
+  .object({
+    kind: z.literal("sentry"),
+    org: z.string().min(1),
+    project: z.string().min(1),
+    baseUrl: z.string().url().optional(),
+    minLevel: z.enum(["warning", "error", "fatal"]).default("error"),
+  })
+  .strict();
+export type SentryConfig = z.infer<typeof SentryConfigSchema>;
+
 /** Discriminated on `kind` so config always matches the integration kind. */
 export const IntegrationConfigSchema = z.discriminatedUnion("kind", [
   SlackConfigSchema,
@@ -109,6 +136,7 @@ export const IntegrationConfigSchema = z.discriminatedUnion("kind", [
   JiraConfigSchema,
   GitHubConfigSchema,
   CalendarConfigSchema,
+  SentryConfigSchema,
 ]);
 export type IntegrationConfig = z.infer<typeof IntegrationConfigSchema>;
 

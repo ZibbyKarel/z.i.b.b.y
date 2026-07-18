@@ -22,6 +22,7 @@ const KIND_GLYPH = {
   jira: "checkpoint",
   github: "branch",
   calendar: "clock",
+  sentry: "bolt",
 } as const;
 
 /** Format a sync timestamp as a short, locale-agnostic caption (or a dash). */
@@ -58,7 +59,9 @@ export function IntegrationCard({
           ? (config.projectKey ?? config.baseUrl)
           : config.kind === "github"
             ? config.repo
-            : config.calendarId;
+            : config.kind === "calendar"
+              ? config.calendarId
+              : `${config.org}/${config.project}`;
 
   return (
     <HudCard
