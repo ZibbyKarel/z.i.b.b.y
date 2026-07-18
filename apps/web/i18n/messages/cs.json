@@ -558,6 +558,33 @@
     "deleteTitle": "Smazat integraci?",
     "deleteBody": "Opravdu smazat integraci {name}? Uložené přihlašovací údaje se smažou také. Tuto akci nelze vrátit."
   },
+  "maestro": {
+    "title": "Fronta ke sloučení",
+    "merge": {
+      "hold": "Podržte pro sloučení #{number}",
+      "armed": "Znovu potvrďte sloučení",
+      "done": "Sloučeno",
+      "openInGithub": "Otevřít na GitHubu",
+      "blockedReason": "Kontroly {check}, revize {review}"
+    },
+    "queueState": {
+      "ready": "Připraveno",
+      "blocked": "Blokováno",
+      "stale": "Zastaralé"
+    },
+    "check": {
+      "passing": "prochází",
+      "failing": "selhává",
+      "pending": "čeká",
+      "unknown": "neznámé"
+    },
+    "review": {
+      "approved": "schváleno",
+      "changes_requested": "vyžadovány úpravy",
+      "review_required": "vyžadována revize",
+      "unknown": "neznámé"
+    }
+  },
   "inbox": {
     "title": "Příchozí zprávy",
     "needsApproval": "čeká na schválení",
