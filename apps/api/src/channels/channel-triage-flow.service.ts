@@ -26,6 +26,7 @@ import { AdapterRegistry } from "./adapters/adapter-registry";
 import { ChannelItemStore } from "./channel-item.store";
 import type { ChannelTriageFlow } from "./channel-watcher.service";
 import { JiraIssueFlowService } from "./jira-issue-flow.service";
+import { NOTIFY_ONLY_KINDS } from "./notify-only-kinds";
 import { envelopeInbound } from "../shared/text/untrusted-envelope";
 import { TRIAGE_CONFIDENCE_FLOOR, TriageService } from "./triage/triage.service";
 
@@ -37,14 +38,6 @@ const DECISION_RANK: Record<Decision, number> = { allow: 0, notify: 1, ask: 2, d
 
 /** A default draft when triage produced none (kept generic; never echoes raw text into a prompt). */
 const DEFAULT_DRAFT = "Thanks for reaching out — I'll follow up shortly.";
-
-/**
- * Channel kinds handled notify-only: ZIBBY never dispatches a run or auto-replies for
- * them, it only surfaces a summary for the operator. Email is the first (decision: a
- * mailbox is a firehose — autonomous action on inbound mail burns budget and the gate
- * belongs to the human). Slack/Jira/GitHub keep their act-by-tier behaviour.
- */
-export const NOTIFY_ONLY_KINDS: ReadonlySet<ChannelItem["kind"]> = new Set(["email"]);
 
 /**
  * The tier executor (the heart of 5.3) AND the kind-"channel" {@link ResumableRunner}.
