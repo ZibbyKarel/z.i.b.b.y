@@ -49,6 +49,7 @@ const SUBSYSTEM_GLYPH: Record<SubsystemId, IconName> = {
   loom: "search",
   codex: "brain",
   ledger: "dollar",
+  hearth: "coffee",
 };
 
 /**

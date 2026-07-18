@@ -12,8 +12,12 @@ apps/api/data
 # AUTO blocks byte-for-byte (trimmed per-block, not per-line) against a fresh
 # compose — prettier reformatting (blank lines after headings, escaped `*`)
 # reads as drift even though nothing meaningful changed. Regenerate via
-# `pnpm self-knowledge:generate`, never hand-format.
+# `pnpm self-knowledge:generate`, never hand-format. NS2 F8a — the same trap
+# hits the live vault's own note (the pre-commit hook's `check:self-knowledge`
+# boots against real `.zibby/data`, no `ZIBBY_DATA_DIR` override), so it needs
+# the same ignore.
 apps/api/data-test/vault/knowledge/self-knowledge.md
+.zibby/data/vault/knowledge/self-knowledge.md
 .zibby/data-test
 .playwright-mcp
 test-results

@@ -54,12 +54,12 @@ describe("subsystemsContract", () => {
 });
 
 describe("SUBSYSTEMS registry", () => {
-  it("has exactly 10 entries", () => {
-    expect(SUBSYSTEMS).toHaveLength(10);
+  it("has exactly 11 entries", () => {
+    expect(SUBSYSTEMS).toHaveLength(11);
   });
 
-  it("contains codex and ledger with non-empty tagline/mandate", () => {
-    for (const id of ["codex", "ledger"] as const) {
+  it("contains codex, ledger and hearth with non-empty tagline/mandate", () => {
+    for (const id of ["codex", "ledger", "hearth"] as const) {
       const subsystem = SUBSYSTEMS.find((s) => s.id === id);
       expect(subsystem).toBeDefined();
       expect(subsystem?.tagline.length).toBeGreaterThan(0);
@@ -67,9 +67,14 @@ describe("SUBSYSTEMS registry", () => {
     }
   });
 
-  it("has 10 unique colors", () => {
+  it("has 11 unique colors", () => {
     const colors = SUBSYSTEMS.map((s) => s.color);
-    expect(new Set(colors).size).toBe(10);
+    expect(new Set(colors).size).toBe(11);
+  });
+
+  it("hearth's color matches the shared hex regex", () => {
+    const hearth = SUBSYSTEMS.find((s) => s.id === "hearth");
+    expect(hearth?.color).toMatch(/^#[0-9a-f]{6}$/i);
   });
 
   it("has unique ids covering the whole SubsystemIdSchema enum", () => {

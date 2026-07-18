@@ -1,6 +1,5 @@
 ---
 name: Content Campaign
-desc: 'Postav marketingovou kampaň od průzkumu po hotový, SEO-laděný a redakčně odladěný obsah. Marketing, kampaň, content, launch, go-to-market obsah.'
 phases:
   - id: research
     type: agent
@@ -42,6 +41,10 @@ phases:
       maxRetries: 2
       escalate: true
       then: park
+desc: >-
+  Postav marketingovou kampaň od průzkumu po hotový, SEO-laděný a redakčně
+  odladěný obsah. Marketing, kampaň, content, launch, go-to-market obsah.
+ownerSubsystem: scout
 ---
 
 # Content Campaign

@@ -23,6 +23,7 @@ not vector search: descriptive notes joined by `[[wiki-links]]`.
 - [[subsystem-loom-moc]] — Proaktivní analýza kvality a architektury codebase, nálezy předává Forge.
 - [[subsystem-codex-moc]] — Správa paměti — vault, grounding, noční destilace a poličky znalostí.
 - [[subsystem-ledger-moc]] — Rozpočty a limity — stropy útrat, okna spotřeby, správa token-spend a limit-resume.
+- [[subsystem-hearth-moc]] — Osobní život operátora — rychlé poznámky, denní agenda, osobní poličky a připomínky, oddělené od práce.
 
 ## Projects
 

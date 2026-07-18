@@ -199,6 +199,7 @@ export const SUBSYSTEM_TIER_DEFAULT: Record<SubsystemId, Decision | null> = {
   loom: null,
   codex: null,
   ledger: null,
+  hearth: null,
 };
 
 /** Body accepted by `createGateRule` / `updateGateRule` — the server assigns the `id`. */

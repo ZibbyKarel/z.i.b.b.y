@@ -59,10 +59,10 @@ describe("Subsystems API (e2e)", () => {
     await teardown(app, dir);
   });
 
-  it("GET /api/subsystems lists all 10 in registry order with stub status", async () => {
+  it("GET /api/subsystems lists all 11 in registry order with stub status", async () => {
     const res = await request(app.getHttpServer()).get("/api/subsystems");
     expect(res.status).toBe(200);
-    expect(res.body).toHaveLength(10);
+    expect(res.body).toHaveLength(11);
     expect((res.body as Array<{ id: string }>).map((s) => s.id)).toEqual(
       SUBSYSTEMS.map((s) => s.id),
     );

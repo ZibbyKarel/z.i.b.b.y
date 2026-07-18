@@ -1,6 +1,5 @@
 ---
 name: Research
-desc: 'Hloubkový výzkum tématu z více zdrojů → citovaná syntéza. Research, deep dive, market sizing, due diligence, rešerše, průzkum, co je nového v…'
 phases:
   - id: scan
     type: agent
@@ -35,6 +34,10 @@ phases:
       maxRetries: 2
       escalate: true
       then: park
+desc: >-
+  Hloubkový výzkum tématu z více zdrojů → citovaná syntéza. Research, deep dive,
+  market sizing, due diligence, rešerše, průzkum, co je nového v…
+ownerSubsystem: scout
 ---
 
 # Research

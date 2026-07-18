@@ -459,10 +459,10 @@ describe("SubsystemsService", () => {
       expect(ids).toEqual(["sentinel", "beacon"]);
     });
 
-    it("all-idle registry stays in registry order (list() still returns all 10)", async () => {
+    it("all-idle registry stays in registry order (list() still returns all 11)", async () => {
       const { service } = build({});
       const rows = await service.list();
-      expect(rows).toHaveLength(10);
+      expect(rows).toHaveLength(11);
       expect(rows.map((r) => r.id)).toEqual(SUBSYSTEMS.map((s) => s.id));
       expect(rows.every((r) => r.state === "idle")).toBe(true);
     });

@@ -57,6 +57,7 @@ export const SUBSYSTEM_FALLBACK: Record<SubsystemId, "orchestrator" | "primary">
   loom: "primary",
   codex: "orchestrator",
   ledger: "orchestrator",
+  hearth: "orchestrator",
 };
 
 /**
