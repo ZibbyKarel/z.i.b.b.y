@@ -190,6 +190,7 @@ export class BriefingService {
       qualityFindings,
       staleWatchers,
       mergedRecently,
+      reminders,
     ] = await Promise.all([
       this.readTrend7d(now),
       this.readLearnedPatterns(),
@@ -217,6 +218,9 @@ export class BriefingService {
       // NS2 F7b-2 — merged-work celebration + post-merge CI outcomes. Same
       // fail-open guard: a failed read drops the section, never the briefing.
       this.readMergedRecently().catch((): string[] => []),
+      // NS2 F8c — open personal reminders. Same fail-open guard: a failed read
+      // drops the section, never the briefing (surface-only, Hearth's mandate).
+      this.readReminders().catch((): string[] => []),
     ]);
     const subsystems = subsystemRows
       ? buildSubsystemLines(subsystemRows, ciStatuses, weeklyPct)
@@ -243,6 +247,7 @@ export class BriefingService {
       qualityFindings,
       staleWatchers,
       mergedRecently,
+      reminders,
       ...(subsystems ? { subsystems } : {}),
       ...(selfKnowledgeDrift ? { selfKnowledgeDrift } : {}),
     });
@@ -325,6 +330,29 @@ export class BriefingService {
       return (note.body ?? "")
         .split("\n")
         .filter((l) => l.startsWith("- [ ] ") || l.startsWith("- [x] "))
+        .map((l) => l.replace(/^- \[.\] /, "").trim())
+        .filter(Boolean)
+        .slice(0, 5);
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * NS2 F8c — read open personal reminders from the vault (`personal-reminders`),
+   * parsing the `- [ ] …` / `- [x] …` bullet lines the same way as
+   * {@link readAutomationGaps}, but unchecked (`- [ ]`) bullets sort before
+   * checked (`- [x]`) ones — an already-done reminder should never crowd out an
+   * open one under the 5-line cap. `[]` on error or when the note doesn't exist
+   * yet (the operator or `capture_note` creates it lazily).
+   */
+  private async readReminders(): Promise<string[]> {
+    try {
+      const note = await this.vault.note("personal-reminders");
+      return (note.body ?? "")
+        .split("\n")
+        .filter((l) => l.startsWith("- [ ] ") || l.startsWith("- [x] "))
+        .sort((a, b) => Number(a.startsWith("- [x]")) - Number(b.startsWith("- [x]")))
         .map((l) => l.replace(/^- \[.\] /, "").trim())
         .filter(Boolean)
         .slice(0, 5);

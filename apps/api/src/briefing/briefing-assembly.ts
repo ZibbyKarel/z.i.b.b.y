@@ -63,6 +63,10 @@ export interface BriefingInput {
   staleWatchers?: string[];
   /** NS2 F7b-2 — merged-work celebration + post-merge CI outcomes per project. */
   mergedRecently?: string[];
+  /** NS2 F8c — open personal reminders parsed from the `personal-reminders` vault
+   * note (gathered by the service — `buildPersonalAgenda` derives the agenda
+   * lines here from `channelItems`, so only reminders need to be gathered). */
+  reminders?: string[];
 }
 
 /** Activity kinds that count as "ZIBBY did this for you". */
@@ -78,6 +82,26 @@ const DID_KINDS = new Set<ActivityEntry["kind"]>([
 const DID_LIMIT = 10;
 
 /**
+ * NS2 F8c — today's personal calendar lines: calendar-kind channel items whose
+ * event start (the `[<ISO>]` prefix the calendar adapter writes,
+ * `calendar.adapter.ts:195`) falls on `now`'s date. Fail-open on parse: an
+ * unparseable item is dropped, never throws. Deterministic (sorted by start) —
+ * pure, exported for tests.
+ */
+export function buildPersonalAgenda(channelItems: ChannelItem[], now: Date): string[] {
+  const today = now.toISOString().slice(0, 10);
+  return channelItems
+    .filter((i) => i.kind === "calendar")
+    .map((i) => {
+      const m = /^\[([^\]]+)\]\s*(.*)$/.exec(i.text);
+      return m ? { start: m[1] ?? "", label: m[2] || i.text } : null;
+    })
+    .filter((e): e is { start: string; label: string } => e !== null && e.start.startsWith(today))
+    .sort((a, b) => a.start.localeCompare(b.start))
+    .map((e) => `${e.start.slice(11, 16) || e.start} — ${e.label}`);
+}
+
+/**
  * Assemble a {@link Briefing} from gathered state — a PURE function (no Nest, no
  * I/O), so section selection, sorting, counts and the deterministic headline are
  * all snapshot-testable. "nothing needs you" (empty `needsYou`) is a valid,
@@ -85,6 +109,7 @@ const DID_LIMIT = 10;
  */
 export function assembleBriefing(input: BriefingInput): Briefing {
   const goalRuns = input.goalRuns ?? [];
+  const personalAgenda = buildPersonalAgenda(input.channelItems, input.now);
   const needsYou = buildNeedsYou(
     input.approvals,
     input.parkedRuns,
@@ -141,6 +166,8 @@ export function assembleBriefing(input: BriefingInput): Briefing {
     ...(input.mergedRecently && input.mergedRecently.length > 0
       ? { mergedRecently: input.mergedRecently }
       : {}),
+    ...(personalAgenda.length > 0 ? { personalAgenda } : {}),
+    ...(input.reminders && input.reminders.length > 0 ? { reminders: input.reminders } : {}),
   };
 }
 
@@ -452,5 +479,19 @@ export function renderBriefingMarkdown(briefing: Briefing): string {
     `- ${c.runsFinished} finished · ${c.runsFailed} failed · ${c.parked} parked · ` +
       `${c.approvalsPending} approvals pending · ${c.channelItemsNew} new channel items`,
   );
+
+  // NS2 F8c — Hearth's surface-only personal sections: today's calendar agenda
+  // and open reminders. Strictly additive, absent whenever both are empty;
+  // per the post-F7 handoff note, new sections append after `## Counts`.
+  if (briefing.personalAgenda && briefing.personalAgenda.length > 0) {
+    lines.push("", "## Osobní — dnešní agenda");
+    for (const item of briefing.personalAgenda) lines.push(`- ${item}`);
+  }
+
+  if (briefing.reminders && briefing.reminders.length > 0) {
+    lines.push("", "## Připomínky");
+    for (const item of briefing.reminders) lines.push(`- ${item}`);
+  }
+
   return `${lines.join("\n")}\n`;
 }

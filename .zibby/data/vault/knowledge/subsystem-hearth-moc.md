@@ -10,4 +10,4 @@ poličky a připomínky, držené odděleně od práce.
 
 ## Poznatky
 
-[[zibby-index]] · [[north-star-2]]
+[[zibby-index]] · [[north-star-2]] · [[personal-reminders]]
