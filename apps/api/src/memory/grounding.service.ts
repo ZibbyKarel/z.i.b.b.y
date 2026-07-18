@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import type { IndexEntry, Note, SubsystemId } from "@zibby/contracts";
+import type { IndexEntry, Note, NoteDomain, SubsystemId } from "@zibby/contracts";
 import { tokenize } from "../tasks/keyword-scorer";
 import { subsystemShelfId } from "./subsystem-shelf";
 import { VaultService } from "./vault.service";
@@ -33,6 +33,13 @@ export interface GroundingInput {
    * right after the self-knowledge note, ahead of term-matched MOCs. Missing
    * owner or missing shelf note is silently skipped (fail-open). */
   ownerSubsystem?: SubsystemId;
+  /**
+   * The run's life-domain (F8) — absent means work (the default). A
+   * `"personal"` run additionally grounds the Hearth shelf and is the only
+   * kind of run that may ground a `domain: personal` note (see
+   * {@link visibleInDomain}).
+   */
+  domain?: NoteDomain;
 }
 
 /**
@@ -46,6 +53,21 @@ export function visibleToProject(
   projectId: string | undefined,
 ): IndexEntry[] {
   return entries.filter((e) => !e.project || e.project === projectId);
+}
+
+/**
+ * Domain isolation (F8): a work run (domain absent) never sees a personal
+ * note; a personal run sees personal + global notes (project notes are
+ * already excluded upstream because a personal run carries no projectId).
+ * Personal life and project work never cross-ground — the same wall projects
+ * have between each other. Pure — exported for tests.
+ */
+export function visibleInDomain(
+  entries: IndexEntry[],
+  domain: NoteDomain | undefined,
+): IndexEntry[] {
+  if (domain === "personal") return entries;
+  return entries.filter((e) => e.domain !== "personal");
 }
 
 /**
@@ -159,10 +181,17 @@ export class GroundingService {
       const mocs: Note[] = [];
       const shelf = input.ownerSubsystem ? await add(subsystemShelfId(input.ownerSubsystem)) : null;
       if (shelf) mocs.push(shelf);
+      // F8 — a personal run also grounds the Hearth shelf (fail-open: a missing
+      // shelf note is skipped by `add`'s own catch, same as any other note).
+      if (input.domain === "personal") {
+        const hearthShelf = await add(subsystemShelfId("hearth"));
+        if (hearthShelf) mocs.push(hearthShelf);
+      }
       const entries = await this.vault.index().catch((): IndexEntry[] => []);
       // M7 isolation: restrict the candidate set to this run's project before
       // term-matching, so a run can never ground on another project's notes.
-      const visible = visibleToProject(entries, input.projectId);
+      // F8: then domain isolation — a work run never sees a personal note.
+      const visible = visibleInDomain(visibleToProject(entries, input.projectId), input.domain);
       for (const entry of selectIndexes(terms, visible)) {
         const moc = await add(entry.id);
         if (moc) mocs.push(moc);

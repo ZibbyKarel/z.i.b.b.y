@@ -168,6 +168,24 @@ export class ChatMcpController {
     );
 
     server.registerTool(
+      "capture_note",
+      {
+        description:
+          "File a PRIVATE personal note to the operator's second brain (quick capture — " +
+          "calendar-adjacent notes, reminders, personal thoughts). This NEVER dispatches " +
+          "work and is triaged overnight, like any other quick capture. Use when the " +
+          "operator asks you to remember/note/jot down something personal — NOT for " +
+          "project/work knowledge (use normal memory instead).",
+        inputSchema: {
+          text: z.string().describe("The note's content, in the operator's words."),
+          title: z.string().optional().describe("Optional short title for the note."),
+        },
+      },
+      async ({ text: noteText, title }) =>
+        text(await this.tools.capturePersonalNote({ text: noteText, title })),
+    );
+
+    server.registerTool(
       "machine_rename",
       {
         description:

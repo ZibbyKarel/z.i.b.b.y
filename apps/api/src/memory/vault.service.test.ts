@@ -8,6 +8,7 @@ import {
   NoteNotFoundError,
   SimilarNoteError,
   VaultService,
+  domainOf,
   ownerSubsystemOf,
 } from "./vault.service";
 
@@ -176,6 +177,40 @@ describe("VaultService write paths", () => {
     expect(entry?.subsystem).toBe("forge");
     expect(entry?.tags).toEqual(["subsystem", "forge", "moc"]);
     expect(entry?.aliases).toEqual(["kovárna"]);
+  });
+
+  it("F8: domainOf reads 'personal', rejects any other value, is undefined when absent", async () => {
+    expect(domainOf({ domain: "personal" })).toBe("personal");
+    expect(domainOf({ domain: "work" })).toBeUndefined();
+    expect(domainOf({})).toBeUndefined();
+  });
+
+  it("F8: index()/graph() carry domain: personal from a fixture note, absent otherwise", async () => {
+    await vault.createNote({
+      id: "personal-jot",
+      tier: "knowledge",
+      title: "Personal jot",
+      body: "Private body.",
+      frontmatter: { domain: "personal" },
+    });
+    await vault.createNote({
+      id: "work-note",
+      tier: "knowledge",
+      title: "Work note",
+      body: "Work body.",
+    });
+
+    const index = await vault.index();
+    expect(index.find((e) => e.id === "personal-jot")?.domain).toBe("personal");
+    expect(index.find((e) => e.id === "work-note")?.domain).toBeUndefined();
+
+    const graph = await vault.graph();
+    expect(graph.nodes.find((n) => n.id === "personal-jot")?.domain).toBe("personal");
+    expect(graph.nodes.find((n) => n.id === "work-note")?.domain).toBeUndefined();
+
+    const hits = await vault.search("body");
+    expect(hits.find((h) => h.id === "personal-jot")?.domain).toBe("personal");
+    expect(hits.find((h) => h.id === "work-note")?.domain).toBeUndefined();
   });
 
   it("F4b: index() omits tags/aliases/subsystem from a note that never set them", async () => {

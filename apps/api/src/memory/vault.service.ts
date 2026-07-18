@@ -7,6 +7,8 @@ import {
   type MemoryGraph,
   type MemoryTier,
   type Note,
+  type NoteDomain,
+  NoteDomainSchema,
   type NoteType,
   NoteTypeSchema,
   type SearchHit,
@@ -113,14 +115,23 @@ function typedFieldsOf(frontmatter: Record<string, unknown>): {
   tags?: string[];
   raw?: boolean;
   subsystem?: SubsystemId;
+  domain?: NoteDomain;
 } {
-  const out: { type?: NoteType; tags?: string[]; raw?: boolean; subsystem?: SubsystemId } = {};
+  const out: {
+    type?: NoteType;
+    tags?: string[];
+    raw?: boolean;
+    subsystem?: SubsystemId;
+    domain?: NoteDomain;
+  } = {};
   const parsedType = NoteTypeSchema.safeParse(frontmatter.type);
   if (parsedType.success) out.type = parsedType.data;
   if (Array.isArray(frontmatter.tags)) out.tags = tagsOf(frontmatter);
   if (typeof frontmatter.raw === "boolean") out.raw = frontmatter.raw;
   const subsystem = ownerSubsystemOf(frontmatter);
   if (subsystem !== undefined) out.subsystem = subsystem;
+  const domain = domainOf(frontmatter);
+  if (domain !== undefined) out.domain = domain;
   return out;
 }
 
@@ -150,6 +161,17 @@ export function ownerProjectOf(frontmatter: Record<string, unknown>): string | u
  */
 export function ownerSubsystemOf(frontmatter: Record<string, unknown>): SubsystemId | undefined {
   const parsed = SubsystemIdSchema.safeParse(frontmatter.subsystem);
+  return parsed.success ? parsed.data : undefined;
+}
+
+/**
+ * The life-domain a note belongs to (NS2 F8), or undefined (work — the
+ * default) if it carries no (valid) `domain:` frontmatter. Mirrors
+ * {@link ownerProjectOf}/{@link ownerSubsystemOf}'s derivation shape — pure,
+ * exported for unit testing.
+ */
+export function domainOf(frontmatter: Record<string, unknown>): NoteDomain | undefined {
+  const parsed = NoteDomainSchema.safeParse(frontmatter.domain);
   return parsed.success ? parsed.data : undefined;
 }
 
@@ -212,6 +234,7 @@ export class VaultService implements OnModuleInit {
     return chosen.map((n) => {
       const project = ownerProjectOf(n.frontmatter);
       const subsystem = ownerSubsystemOf(n.frontmatter);
+      const domain = domainOf(n.frontmatter);
       const tags = tagsOf(n.frontmatter);
       const aliases = aliasesOf(n.frontmatter);
       return {
@@ -220,6 +243,7 @@ export class VaultService implements OnModuleInit {
         tier: n.tier,
         ...(project ? { project } : {}),
         ...(subsystem ? { subsystem } : {}),
+        ...(domain ? { domain } : {}),
         ...(tags.length > 0 ? { tags } : {}),
         ...(aliases.length > 0 ? { aliases } : {}),
       };
@@ -253,12 +277,14 @@ export class VaultService implements OnModuleInit {
     const nodes = notes.map((n) => {
       const project = ownerProjectOf(n.frontmatter);
       const subsystem = ownerSubsystemOf(n.frontmatter);
+      const domain = domainOf(n.frontmatter);
       return {
         id: n.id,
         label: n.title,
         tier: n.tier,
         ...(project ? { project } : {}),
         ...(subsystem ? { subsystem } : {}),
+        ...(domain ? { domain } : {}),
       };
     });
     const edges: MemoryGraph["edges"] = [];
@@ -310,12 +336,14 @@ export class VaultService implements OnModuleInit {
         .replace(/\s+/g, " ")
         .trim();
       const project = ownerProjectOf(n.frontmatter);
+      const domain = domainOf(n.frontmatter);
       hits.push({
         id: n.id,
         title: n.title,
         tier: n.tier,
         snippet,
         ...(project ? { project } : {}),
+        ...(domain ? { domain } : {}),
         score: inTitle ? 2 : 1,
       });
     }
@@ -327,6 +355,7 @@ export class VaultService implements OnModuleInit {
         tier: h.tier,
         snippet: h.snippet,
         ...(h.project ? { project: h.project } : {}),
+        ...(h.domain ? { domain: h.domain } : {}),
       }));
   }
 
