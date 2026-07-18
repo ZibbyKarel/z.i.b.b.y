@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ApprovalsModule } from "../approvals/approvals.module";
 import { GateRulesModule } from "../gate-rules/gate-rules.module";
 import { GatesModule } from "../gates/gates.module";
+import { HeraldModule } from "../herald/herald.module";
 import { IntegrationsModule } from "../integrations/integrations.module";
 import { MandateModule } from "../mandate/mandate.module";
 import { ProjectsModule } from "../projects/projects.module";
@@ -43,6 +44,7 @@ export function resolveChannelsDir(): string {
     ApprovalsModule,
     ProjectsModule,
     ResolvedProjectModule,
+    HeraldModule,
   ],
   controllers: [ChannelsController],
   providers: [

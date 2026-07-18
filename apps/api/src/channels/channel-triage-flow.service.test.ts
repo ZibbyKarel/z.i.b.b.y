@@ -53,6 +53,12 @@ describe("ChannelTriageFlowService", () => {
     jiraPropose?: ReturnType<typeof vi.fn>;
     readOnly?: boolean;
     degraded?: boolean;
+    /** NS2 F6a — a stubbed HeraldService (graduation + ledger seam). */
+    herald?: {
+      isGraduated: ReturnType<typeof vi.fn>;
+      recordProposal: ReturnType<typeof vi.fn>;
+      recordDecision: ReturnType<typeof vi.fn>;
+    };
   }) {
     createTask = vi.fn(async () => ({
       outcome: "dispatched",
@@ -88,7 +94,9 @@ describe("ChannelTriageFlowService", () => {
       resolvePeople: async (project: Project) => project.identity?.people ?? [],
     };
     const credentials = { read: async () => ({ token: "xoxb-1" }) };
-    const registry = { resolve: () => ({ send, ...(opts.readOnly ? { readOnly: true as const } : {}) }) };
+    const registry = {
+      resolve: () => ({ send, ...(opts.readOnly ? { readOnly: true as const } : {}) }),
+    };
     const approvals = { register, requestApproval };
     const jiraFlow = opts.jiraPropose ? { propose: opts.jiraPropose } : undefined;
 
@@ -109,6 +117,7 @@ describe("ChannelTriageFlowService", () => {
       fakeLogger as never,
       { record: async () => {} } as never,
       jiraFlow as never,
+      opts.herald as never,
     );
   }
 
@@ -373,6 +382,103 @@ describe("ChannelTriageFlowService", () => {
     expect(send).not.toHaveBeenCalled();
     expect(requestApproval).toHaveBeenCalledTimes(1);
     expect(out.state).toBe("triaged");
+  });
+
+  // ---- NS2 F6a: Herald graduation (the 5 binding safety invariants) ------------
+
+  const makeHerald = (graduated: boolean) => ({
+    isGraduated: vi.fn(async () => graduated),
+    recordProposal: vi.fn(async () => "reply_1"),
+    recordDecision: vi.fn(async () => undefined),
+  });
+
+  it("graduated (team, request) + confident T3 verdict → promoted to Tier-2 auto-send, ledger sent-auto", async () => {
+    const herald = makeHerald(true);
+    const flow = makeFlow({ verdict: scope, herald, decision: "notify" });
+    const out = await flow.handle(item());
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(requestApproval).not.toHaveBeenCalled();
+    expect(out.state).toBe("handled");
+    expect(out.reply?.text).toBe("let me check");
+    // The promotion is audited on the verdict + recorded to the ledger as sent-auto.
+    expect(out.triage?.tier).toBe(2);
+    expect(out.triage?.reason).toContain("graduated");
+    expect(herald.recordProposal).toHaveBeenCalledWith(
+      expect.objectContaining({ tier: 2, outcome: "sent-auto" }),
+    );
+  });
+
+  it("a non-graduated identical verdict parks unchanged", async () => {
+    const herald = makeHerald(false);
+    const flow = makeFlow({ verdict: scope, herald });
+    const out = await flow.handle(item());
+    expect(send).not.toHaveBeenCalled();
+    expect(requestApproval).toHaveBeenCalledTimes(1);
+    expect(out.state).toBe("triaged");
+  });
+
+  it("invariant b: a low-confidence T3 on a graduated channel is NOT promoted (floor stands)", async () => {
+    const lowConf: TriageVerdict = { ...scope, confidence: 0.3 };
+    const herald = makeHerald(true);
+    const flow = makeFlow({ verdict: lowConf, herald });
+    const out = await flow.handle(item());
+    expect(send).not.toHaveBeenCalled();
+    expect(requestApproval).toHaveBeenCalledTimes(1);
+    expect(out.state).toBe("triaged");
+  });
+
+  it("invariant b: forceT3 (draft_only) on a graduated channel is NOT promoted", async () => {
+    const project: Project = {
+      id: "beta",
+      name: "Beta",
+      path: "/work/beta",
+      autonomy_policy: { respond_as: "draft_only" },
+    };
+    const herald = makeHerald(true);
+    // A Tier-2 verdict forced to T3 by policy — graduation must not undo it.
+    const flow = makeFlow({ verdict: question, herald, projects: [project] });
+    const out = await flow.handle(item({ text: "beta question" }));
+    expect(send).not.toHaveBeenCalled();
+    expect(requestApproval).toHaveBeenCalledTimes(1);
+    expect(out.state).toBe("triaged");
+    expect(herald.isGraduated).not.toHaveBeenCalled();
+  });
+
+  it("invariants c+d: a hardened channel-reply=ask on a graduated channel still parks (gate wins)", async () => {
+    const herald = makeHerald(true);
+    const flow = makeFlow({ verdict: scope, herald, decision: "ask" });
+    const out = await flow.handle(item());
+    expect(send).not.toHaveBeenCalled();
+    expect(requestApproval).toHaveBeenCalledTimes(1);
+    expect(out.state).toBe("triaged");
+  });
+
+  it("invariant a: an email item never reaches the promotion path even when 'graduated'", async () => {
+    const herald = makeHerald(true);
+    const flow = makeFlow({ verdict: scope, herald });
+    const out = await flow.handle(item({ kind: "email" }));
+    expect(out.state).toBe("triaged");
+    expect(send).not.toHaveBeenCalled();
+    expect(requestApproval).not.toHaveBeenCalled();
+    expect(herald.isGraduated).not.toHaveBeenCalled();
+    expect(herald.recordProposal).not.toHaveBeenCalled();
+  });
+
+  it("a parked draft records a pending ledger proposal; resume records approved; cancel rejected", async () => {
+    const herald = makeHerald(false);
+    const flow = makeFlow({ verdict: scope, herald });
+    await flow.handle(item());
+    expect(herald.recordProposal).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: "pending", approvalId: "appr_1", tier: 3 }),
+    );
+    await flow.resume("team/C1-100");
+    expect(herald.recordDecision).toHaveBeenCalledWith("C1-100", "team", "request", "approved");
+
+    await store.update(
+      item({ id: "C1-200", state: "triaged", triage: scope, approvalId: "appr_1" }),
+    );
+    await flow.cancel("team/C1-200");
+    expect(herald.recordDecision).toHaveBeenCalledWith("C1-200", "team", "request", "rejected");
   });
 
   it("VIP sender without vip_escalation flag does NOT force Tier 3", async () => {

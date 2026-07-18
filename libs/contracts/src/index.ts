@@ -48,6 +48,7 @@ export * from "./integrations/integration.schema";
 export * from "./integrations/integrations.contract";
 export * from "./channels/channel.schema";
 export * from "./channels/channels.contract";
+export * from "./herald/reply-ledger.schema";
 export * from "./mandate/mandate.schema";
 export * from "./mandate/mandate.contract";
 export * from "./health/health.schema";
