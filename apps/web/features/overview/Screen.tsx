@@ -10,6 +10,7 @@ import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { useAgentsQuery } from "../agents";
 import { useIntegrationsQuery } from "../integrations";
 import { NeedsAttentionPanel } from "../integrations/components/NeedsAttentionPanel";
+import { MergeQueueCard } from "../maestro/components/MergeQueueCard";
 import { usePinToggle } from "../pins";
 import { usePipelinesQuery } from "../pipelines";
 import { ParkedRunsPanel } from "../runs/components/ParkedRunsPanel";
@@ -102,6 +103,10 @@ export function Screen() {
       <ApprovalsPanel />
 
       <ParkedRunsPanel />
+
+      {/* Merge queue (NS2 F7b-1) — every open PR across project repos, with a
+          hold-to-merge control on genuinely ready entries. Hidden when empty. */}
+      <MergeQueueCard />
 
       {/* "Needs your attention" — notify-only items ZIBBY surfaced (inbound mail that
           wants a reply or a decision) as summary cards linking to the original. */}

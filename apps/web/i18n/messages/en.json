@@ -558,6 +558,33 @@
     "deleteTitle": "Delete integration?",
     "deleteBody": "Really delete integration {name}? Stored credentials are deleted too. This cannot be undone."
   },
+  "maestro": {
+    "title": "Merge queue",
+    "merge": {
+      "hold": "Hold to merge #{number}",
+      "armed": "Confirm merge again",
+      "done": "Merged",
+      "openInGithub": "Open in GitHub",
+      "blockedReason": "Checks {check}, review {review}"
+    },
+    "queueState": {
+      "ready": "Ready",
+      "blocked": "Blocked",
+      "stale": "Stale"
+    },
+    "check": {
+      "passing": "passing",
+      "failing": "failing",
+      "pending": "pending",
+      "unknown": "unknown"
+    },
+    "review": {
+      "approved": "approved",
+      "changes_requested": "changes requested",
+      "review_required": "review required",
+      "unknown": "unknown"
+    }
+  },
   "inbox": {
     "title": "Inbox",
     "needsApproval": "needs approval",
