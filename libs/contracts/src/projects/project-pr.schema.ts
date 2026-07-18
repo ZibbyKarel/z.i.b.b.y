@@ -35,5 +35,7 @@ export type MergeProjectPrInput = z.infer<typeof MergeProjectPrBodySchema>;
 export const MergeProjectPrResultSchema = z.object({
   merged: z.boolean(),
   url: z.string().optional(),
+  /** NS2 F7b-2 — the merge commit sha on the base branch, for the post-merge CI watch. */
+  sha: z.string().optional(),
 });
 export type MergeProjectPrResult = z.infer<typeof MergeProjectPrResultSchema>;

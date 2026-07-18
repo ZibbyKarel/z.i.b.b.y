@@ -10,6 +10,7 @@ import {
   InvalidAutomationIdError,
   LOOM_AUDIT_AUTOMATION_ID,
   MEMORY_DISTILL_AUTOMATION_ID,
+  POST_MERGE_WATCH_AUTOMATION_ID,
   SELF_KNOWLEDGE_AUTOMATION_ID,
   SENTINEL_SCAN_AUTOMATION_ID,
   SystemAutomationError,
@@ -247,5 +248,31 @@ describe("AutomationsStorageService", () => {
       SystemAutomationError,
     );
     expect((await service.get(LOOM_AUDIT_AUTOMATION_ID)).system).toBe(true);
+  });
+
+  it("NS2 F7b-2: seeds the post-merge-watch system automation on init, enabled by default", async () => {
+    const seeded = await service.get(POST_MERGE_WATCH_AUTOMATION_ID);
+    expect(seeded.system).toBe(true);
+    expect(seeded.target).toEqual({ type: "post-merge-watch" });
+    expect(seeded.trigger).toEqual({ type: "cron", expr: "*/10 * * * *" });
+    expect(seeded.enabled).toBe(true);
+  });
+
+  it("NS2 F7b-2: an operator-edited post-merge-watch schedule survives re-seed", async () => {
+    await service.update(POST_MERGE_WATCH_AUTOMATION_ID, {
+      trigger: { type: "cron", expr: "*/5 * * * *" },
+    });
+    await new AutomationsStorageService(dir).onModuleInit();
+    const healed = await service.get(POST_MERGE_WATCH_AUTOMATION_ID);
+    expect(healed.system).toBe(true);
+    expect(healed.target).toEqual({ type: "post-merge-watch" });
+    expect(healed.trigger).toEqual({ type: "cron", expr: "*/5 * * * *" });
+  });
+
+  it("NS2 F7b-2: refuses to delete the post-merge-watch system automation", async () => {
+    await expect(service.delete(POST_MERGE_WATCH_AUTOMATION_ID)).rejects.toBeInstanceOf(
+      SystemAutomationError,
+    );
+    expect((await service.get(POST_MERGE_WATCH_AUTOMATION_ID)).system).toBe(true);
   });
 });

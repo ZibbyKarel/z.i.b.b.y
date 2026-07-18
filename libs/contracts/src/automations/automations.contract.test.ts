@@ -55,6 +55,21 @@ describe("automation schema — NS2 F5c loom-audit target", () => {
   });
 });
 
+describe("automation schema — NS2 F7b-2 post-merge-watch target", () => {
+  it("accepts a cron→post-merge-watch automation and round-trips through AutomationSchema", () => {
+    const parsed = AutomationSchema.safeParse({
+      id: "post-merge-watch",
+      name: "Sledování po sloučení",
+      trigger: { type: "cron", expr: "*/10 * * * *" },
+      target: { type: "post-merge-watch" },
+      enabled: true,
+      system: true,
+    });
+    expect(parsed.success).toBe(true);
+    expect(parsed.success && parsed.data.target).toEqual({ type: "post-merge-watch" });
+  });
+});
+
 describe("automation schema", () => {
   it("accepts a cron→pipeline and an event→agent automation", () => {
     expect(

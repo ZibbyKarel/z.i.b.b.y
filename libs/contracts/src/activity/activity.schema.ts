@@ -83,6 +83,12 @@ export const ActivityKindSchema = z.enum([
   // NS2 F5a/F5c — a subsystem watcher completed a scheduled scan (Tier-1, silent +
   // recorded): new findings rode a proposal note; a critical one dispatched a gated task.
   "subsystem-scan",
+  // NS2 F7b-2. An operator-merged PR (through ZIBBY's gated endpoint) — the merge
+  // loop's head; the post-merge watch rides its sha.
+  "merge-completed",
+  // NS2 F7b-2. The merged sha's target-branch CI resolved (green: silent Tier-1;
+  // red: a gated fix task dispatched, riding taskId) or the watch window expired.
+  "post-merge-outcome",
 ]);
 export type ActivityKind = z.infer<typeof ActivityKindSchema>;
 

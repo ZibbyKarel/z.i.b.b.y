@@ -71,6 +71,30 @@ describe("ActivityEntrySchema", () => {
     expect(ActivityEntrySchema.safeParse({ ...base, kind: "made-up" }).success).toBe(false);
   });
 
+  it("accepts an NS2 F7b-2 merge-completed entry", () => {
+    expect(
+      ActivityEntrySchema.safeParse({
+        ...base,
+        kind: "merge-completed",
+        summary: "merged PR #42 (sha abc123)",
+        refs: { projectId: "acme", itemId: "pr-42" },
+      }).success,
+    ).toBe(true);
+    expect(ActivityKindSchema.options).toContain("merge-completed");
+  });
+
+  it("accepts an NS2 F7b-2 post-merge-outcome entry", () => {
+    expect(
+      ActivityEntrySchema.safeParse({
+        ...base,
+        kind: "post-merge-outcome",
+        summary: "post-merge CI red on PR #42 — fix task dispatched",
+        refs: { projectId: "acme", itemId: "pr-42", status: "red", taskId: "task_1" },
+      }).success,
+    ).toBe(true);
+    expect(ActivityKindSchema.options).toContain("post-merge-outcome");
+  });
+
   it("enumerates the whole accountability vocabulary", () => {
     expect(ActivityKindSchema.options).toContain("gate-decision");
     expect(ActivityKindSchema.options).toContain("briefing-generated");

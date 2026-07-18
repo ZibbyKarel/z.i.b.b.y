@@ -225,6 +225,29 @@ describe("BriefingSchema", () => {
     });
   });
 
+  describe("merged recently (NS2 F7b-2 — strictly additive)", () => {
+    it("accepts mergedRecently", () => {
+      expect(
+        BriefingSchema.safeParse({ ...base, mergedRecently: ["acme: merged PR #42"] }).success,
+      ).toBe(true);
+    });
+
+    it("omitting mergedRecently entirely still parses (old briefings)", () => {
+      const parsed = BriefingSchema.safeParse(base);
+      expect(parsed.success).toBe(true);
+      expect(parsed.success && parsed.data.mergedRecently).toBeUndefined();
+    });
+
+    it("caps at 50 entries", () => {
+      expect(
+        BriefingSchema.safeParse({ ...base, mergedRecently: Array(50).fill("x") }).success,
+      ).toBe(true);
+      expect(
+        BriefingSchema.safeParse({ ...base, mergedRecently: Array(51).fill("x") }).success,
+      ).toBe(false);
+    });
+  });
+
   describe("T11 finding #12 — trend7d/learnedPatterns/automationGaps/appIdeas cap at 50 entries", () => {
     it("50 entries passes, 51 rejects (array length only — elements stay unbounded)", () => {
       expect(BriefingSchema.safeParse({ ...base, trend7d: Array(50).fill("x") }).success).toBe(

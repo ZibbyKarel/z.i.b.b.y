@@ -45,6 +45,8 @@ const TARGET_GLYPH = {
   "sentinel-scan": "shield",
   // NS2 F5c — Loom's nightly quality audit: the DS "code" glyph.
   "loom-audit": "code",
+  // NS2 F7b-2 — Maestro's post-merge CI watch: the DS "branch" (git) glyph.
+  "post-merge-watch": "branch",
 } as const satisfies Record<Exclude<Target["type"], "task">, IconName>;
 
 /** A `task` automation's glyph mirrors its @-mentioned run target (Screen.tsx's
@@ -123,9 +125,11 @@ export function AutomationCard({
             ? t("targetSentinelScan")
             : target.type === "loom-audit"
               ? t("targetLoomAudit")
-              : target.type === "task"
-                ? (targetName ?? target.target?.name ?? t("targetTask"))
-                : (targetName ?? targetIdOf(target));
+              : target.type === "post-merge-watch"
+                ? t("targetPostMergeWatch")
+                : target.type === "task"
+                  ? (targetName ?? target.target?.name ?? t("targetTask"))
+                  : (targetName ?? targetIdOf(target));
 
   return (
     <Card background="surface" data-testid={AutomationCardTestId.Root}>
@@ -279,7 +283,8 @@ function targetKindKey(
   | "targetAgentFactory"
   | "targetSelfKnowledge"
   | "targetSentinelScan"
-  | "targetLoomAudit" {
+  | "targetLoomAudit"
+  | "targetPostMergeWatch" {
   switch (type) {
     case "agent":
       return "targetAgent";
@@ -303,5 +308,7 @@ function targetKindKey(
       return "targetSentinelScan";
     case "loom-audit":
       return "targetLoomAudit";
+    case "post-merge-watch":
+      return "targetPostMergeWatch";
   }
 }
