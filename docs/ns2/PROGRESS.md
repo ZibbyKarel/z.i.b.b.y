@@ -12,35 +12,35 @@
 
 ## Status table
 
-| Phase | Title                                    | Status  | Plan doc                                           | Commit     |
-| ----- | ---------------------------------------- | ------- | -------------------------------------------------- | ---------- |
-| F0a   | Delete discovery orphan (goals STAYS)    | ✅      | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `c02a68a9` |
-| F0b   | Per-project draft PR mode (prOpenMode)   | ✅      | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `10de4ad3` |
-| F0c   | Proposal source tag on approvals inbox   | ✅      | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `101759d7` |
-| F0d   | Law-3 text amendment (vault north-star)  | ✅      | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `d4c53782` |
-| F1a   | Contract: ownerSubsystem + registry → 10 | ✅      | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `9e45a8e8` |
-| F1b   | Backfill/seed + write 422 + UI selects   | ✅      | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `1037264c` |
-| F1c   | Stored roster (service + RosterTab)      | ✅      | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `7d47af2e` |
-| F2a   | Switchboard emits subsystem verdicts     | ✅      | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | `888dc425` |
-| F2b   | Per-subsystem dispatcher prompt+fallback | ✅      | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | `7ede32e9` |
-| F2c   | Classification trace + activity tagging  | ✅      | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | `40a2ee55` |
-| F3a   | Subsystem gate-rule sets + tier defaults | ✅      | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | `77628764` |
-| F3b   | Briefing per subsystem (Beacon/Ledger)   | ✅      | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | `fab17397` |
-| F3c   | Approvals/activity filters + get_status  | ✅      | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | `c9c3dcaa` |
-| F4a   | Subsystem MOC shelves (record/distill)   | ✅      | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | `e1d12b7b` |
-| F4b   | Retrieval upgrade (tags + link graph)    | ✅      | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | `d3c69968` |
-| F4c   | Vault seed + scheduled self-knowledge    | ✅      | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | `9a78cd2b` |
-| F5a   | Sentinel v1 (CVE + secret watch)         | ✅      | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | `8bec02a2` |
-| F5b   | Maestro v1 (merge queue, read-side)      | ✅      | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | `a04fabfa` |
-| F5c   | Loom v1 (scheduled quality audit)        | ✅      | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | `a71b83ac` |
-| F6a   | Herald reply ledger + graduation         | ✅      | [ns2-f6](../plans/ns2-f6-trust-from-record.md)     | `a1b756df` |
-| F6b   | Live soak harness (opt-in lane)          | ✅      | [ns2-f6](../plans/ns2-f6-trust-from-record.md)     | `b53904e4` |
-| F6c   | Watcher health probes                    | ✅      | [ns2-f6](../plans/ns2-f6-trust-from-record.md)     | `43eef785` |
-| F7a   | Sentry MonitorAdapter                    | 🟨 next | [ns2-f7](../plans/ns2-f7-monitors-and-actions.md)  | —          |
-| F7b   | Merge-queue actions + post-merge loop    | 🟦      | [ns2-f7](../plans/ns2-f7-monitors-and-actions.md)  | —          |
-| F8a   | Seat Hearth (registry 10 → 11)           | 🟦      | [ns2-f8](../plans/ns2-f8-hearth-personal.md)       | —          |
-| F8b   | Personal domain (marking + capture)      | 🟦      | [ns2-f8](../plans/ns2-f8-hearth-personal.md)       | —          |
-| F8c   | Hearth duties v1 (agenda + reminders)    | 🟦      | [ns2-f8](../plans/ns2-f8-hearth-personal.md)       | —          |
+| Phase | Title                                    | Status  | Plan doc                                           | Commit                 |
+| ----- | ---------------------------------------- | ------- | -------------------------------------------------- | ---------------------- |
+| F0a   | Delete discovery orphan (goals STAYS)    | ✅      | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `c02a68a9`             |
+| F0b   | Per-project draft PR mode (prOpenMode)   | ✅      | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `10de4ad3`             |
+| F0c   | Proposal source tag on approvals inbox   | ✅      | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `101759d7`             |
+| F0d   | Law-3 text amendment (vault north-star)  | ✅      | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `d4c53782`             |
+| F1a   | Contract: ownerSubsystem + registry → 10 | ✅      | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `9e45a8e8`             |
+| F1b   | Backfill/seed + write 422 + UI selects   | ✅      | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `1037264c`             |
+| F1c   | Stored roster (service + RosterTab)      | ✅      | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `7d47af2e`             |
+| F2a   | Switchboard emits subsystem verdicts     | ✅      | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | `888dc425`             |
+| F2b   | Per-subsystem dispatcher prompt+fallback | ✅      | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | `7ede32e9`             |
+| F2c   | Classification trace + activity tagging  | ✅      | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | `40a2ee55`             |
+| F3a   | Subsystem gate-rule sets + tier defaults | ✅      | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | `77628764`             |
+| F3b   | Briefing per subsystem (Beacon/Ledger)   | ✅      | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | `fab17397`             |
+| F3c   | Approvals/activity filters + get_status  | ✅      | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | `c9c3dcaa`             |
+| F4a   | Subsystem MOC shelves (record/distill)   | ✅      | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | `e1d12b7b`             |
+| F4b   | Retrieval upgrade (tags + link graph)    | ✅      | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | `d3c69968`             |
+| F4c   | Vault seed + scheduled self-knowledge    | ✅      | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | `9a78cd2b`             |
+| F5a   | Sentinel v1 (CVE + secret watch)         | ✅      | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | `8bec02a2`             |
+| F5b   | Maestro v1 (merge queue, read-side)      | ✅      | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | `a04fabfa`             |
+| F5c   | Loom v1 (scheduled quality audit)        | ✅      | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | `a71b83ac`             |
+| F6a   | Herald reply ledger + graduation         | ✅      | [ns2-f6](../plans/ns2-f6-trust-from-record.md)     | `a1b756df`             |
+| F6b   | Live soak harness (opt-in lane)          | ✅      | [ns2-f6](../plans/ns2-f6-trust-from-record.md)     | `b53904e4`             |
+| F6c   | Watcher health probes                    | ✅      | [ns2-f6](../plans/ns2-f6-trust-from-record.md)     | `43eef785`             |
+| F7a   | Sentry MonitorAdapter                    | ✅      | [ns2-f7](../plans/ns2-f7-monitors-and-actions.md)  | `3381779f`             |
+| F7b   | Merge-queue actions + post-merge loop    | ✅      | [ns2-f7](../plans/ns2-f7-monitors-and-actions.md)  | `dc8d4e26`, `4a36ed7e` |
+| F8a   | Seat Hearth (registry 10 → 11)           | 🟨 next | [ns2-f8](../plans/ns2-f8-hearth-personal.md)       | —                      |
+| F8b   | Personal domain (marking + capture)      | 🟦      | [ns2-f8](../plans/ns2-f8-hearth-personal.md)       | —                      |
+| F8c   | Hearth duties v1 (agenda + reminders)    | 🟦      | [ns2-f8](../plans/ns2-f8-hearth-personal.md)       | —                      |
 
 Legend: ⬜ todo · 🟦 planned (plan reviewed) · 🟨 in progress · ✅ done (tests green,
 committed) · ⛔ parked (reason in Notes).
@@ -274,6 +274,90 @@ soak`) ran green 3/3 with the graduated-promotion scenario proven against a
   (scenarios.ts / soak-harness.ts pure + report renderer) — extend
   `SOAK_SCENARIOS` for new autonomous behaviors rather than new e2e boots.
 
+- **F7 complete (2026-07-18, Fable):** three checkpoint commits (F7a `3381779f`
+  Sentry MonitorAdapter, F7b-1 `dc8d4e26` merge-queue actions, F7b-2 `4a36ed7e`
+  post-merge loop). Final full-suite run: api 210 files/2043 tests pass (17
+  skipped, 0 failures — the documented `pipelines.e2e` flakes did not manifest
+  this run), web-components 177 files/1130 tests pass, contracts 39 files/466
+  tests pass, 3× tsc (contracts/api/web) clean, `check:deps` clean. All 5
+  merge-safety invariants have dedicated tests: (a)/(b)/(c) in the F7b-1 web
+  suite (queue merge hits only the existing endpoint, one `HoldButton` click
+  never merges, no merge control on a non-`ready` entry); (d) an explicit
+  assertion in `post-merge-watch.service.test.ts`'s red→gated-fix test that
+  scans every `fetchImpl` call for a `PUT` method or a `/merge` URL — none
+  found; (e) `project-pr.service.test.ts`'s "recording failure never fails the
+  merge" test (mocked `MergeWatchStore.putNew` throws, `merge()` still returns
+  `{merged:true, sha}`). Deviations: (1) item 8's optional `mergedRecently`
+  briefing-card web section (`automationGaps`-style) DEFERRED per the plan's
+  own escape hatch — the first full-suite run was NOT green (two fixes needed,
+  below), so per "defer if the suite isn't green first try" this was correctly
+  skipped, not attempted; the activity-feed half of item 8 (new
+  `merge-completed`/`post-merge-outcome` kinds rendering via their summary,
+  both mapped to the `"integrations"` activity group) shipped as planned, no
+  new mutation added; (2) the CI-sidecar-reuse heuristic in
+  `PostMergeWatchService.rollup()` — treat `MonitorEventStore.listStatuses()`
+  as authoritative (skip the GitHub check-runs fetch) only when a matching
+  entry's `checkedAt >= watch.mergedAt` — was a judgment call not spelled out
+  verbatim in the plan's pseudocode, made to satisfy "CI-sidecar reuse" test
+  coverage the plan's own test list requires; (3) discovered by the phase-end
+  full-suite run, not caught by any scoped test: `apps/api/data-test/vault/
+knowledge/self-knowledge.md`'s committed `## Channels` block was stale
+  against `IntegrationKindSchema` (F7a added `"sentry"` as a channel kind, 5→6,
+  nobody regenerated the fixture at F7a's own commit) — fixed with a
+  **corrected fixture-regen recipe** (below); (4) `apps/web/features/
+automations/components/AutomationCard.tsx`'s two exhaustive `Target["type"]`
+  maps (`TARGET_GLYPH`, `targetKindKey`) needed a `"post-merge-watch"` case —
+  the same "exhaustive Record forces classification" guardrail every prior F5–
+  F6 `TargetSchema` addition hit; glyph `branch` (git-domain, no dedicated
+  merge/CI glyph exists in the DS icon set), i18n keys `targetPostMergeWatch`
+  added to both `en.json`/`cs.json` (`"Post-merge watch"` / `"Hlídka po
+sloučení"`).
+  **Corrected fixture-regen recipe (supersedes the plain "temp copy +
+  `pnpm self-knowledge:generate`" gotcha below when `IntegrationKindSchema` or
+  any other self-knowledge input changed):** `generate.ts`'s `AppModule` boot
+  seeds a FULL fresh automation/herald/maestro catalog into whatever
+  `ZIBBY_DATA_DIR` it's pointed at (harmless — `compose()` never reads
+  automations) AND picks up this machine's real `graphify-out/GRAPH_REPORT.md`
+  if one happens to exist locally, embedding a "God nodes"/"Communities"
+  digest into the regenerated note that CI (no `graphify-out`, gitignored)
+  will never reproduce — a phantom drift trap in the opposite direction. Run
+  with **both** `ZIBBY_DATA_DIR=<temp copy>/data-test` **and**
+  `GRAPH_REPORT_PATH=/nonexistent/GRAPH_REPORT.md` (the exact override
+  `self-knowledge.e2e.test.ts` itself applies) so the CODEBASE-SHAPE block
+  renders the same "_graphify-out is missing_" hint locally and in CI; then
+  copy back ONLY `vault/knowledge/self-knowledge.md` from the temp copy —
+  never the seeded `automations/*.json`, `herald/`, `maestro/` dirs, and
+  never the agent/pipeline `.md` files even though they also diff (that diff
+  is pure YAML-serialization normalization — `EntityFileStore` rewrites
+  frontmatter to its canonical form and adds any missing optional field like
+  `ownerSubsystem` on any boot-time read — unrelated to self-knowledge content
+  and out of scope for this fixture fix). Verify with
+  `git status --short apps/api/data-test` showing only the one file, then the
+  scoped `self-knowledge.e2e.test.ts` run.
+  **New surfaces for F8:** `TargetSchema` gained `{type:"post-merge-watch"}`
+  (both web exhaustive tables already updated — reuse this pattern, not a
+  fresh one, for any F8c automation target); `IntegrationKindSchema` gained
+  `"sentry"` (channel-adapter-only, `readOnly: true`, no outbound dispatch);
+  `MergeProjectPrResultSchema.sha?: string` (additive); leaf
+  `libs/contracts/src/maestro/merge-watch.schema.ts`
+  (`MergeWatch`/`MergeWatchState`) and `apps/api/src/maestro/merge-watch.store.ts`
+  (`MergeWatchStore`, `EntityFileStore` subclass, zero imports of its own — safe
+  for any module to import directly); `PostMergeWatchService`
+  (`apps/api/src/maestro/post-merge-watch.service.ts`) polls via the
+  `post-merge-watch` system automation (cron `*/10 * * * *`, `POST_MERGE_WINDOW_MIN
+= 120`), never merges/pushes/deploys — only dispatches a gated fix task on red.
+  **Final post-F7 briefing section order** (`renderBriefingMarkdown()` in
+  `apps/api/src/briefing/briefing-assembly.ts`), for F8c's `personalAgenda` +
+  `reminders` additive edit to rebase onto: `## Needs you` → `## Did for you` →
+  `## Watching` → `## Subsystems` → `## Security` → `## Merge queue` →
+  `## Merged` → `## Quality` → `## Watchers` → `## Gaps I noticed` →
+  `## App ideas` → `## Counts`. All post-`## Needs you`/`## Did for you`
+  sections follow the same additive-optional-capped-array pattern
+  (`?: string[]`, `.max(N)`, conditional spread in `assembleBriefing()`,
+  omitted entirely when empty) — F8c's new sections should follow suit and
+  append after `## Counts` unless there's a specific reason to interleave
+  earlier.
+
 ## Planning corrections (verified in code — the audit/roadmap were wrong here)
 
 - PR tier unify: ALREADY SHIPPED (`pipeline-runner.service.ts:1096-1111`, no gate);
@@ -310,3 +394,14 @@ soak`) ran green 3/3 with the graduated-promotion scenario proven against a
 - **check:self-knowledge hook flake:** may fail once with a drift report correlated
   with a stale graphify warning; retry `pnpm self-knowledge:generate` (default env)
   before assuming real drift.
+- **self-knowledge fixture regen — pin `GRAPH_REPORT_PATH` too (F7):** when a
+  phase's own change is what's driving the drift (e.g. a new `IntegrationKindSchema`
+  member changing the `## Channels` count), the plain "temp copy of
+  `apps/api/data-test` + `pnpm self-knowledge:generate`" recipe embeds this
+  machine's local `graphify-out/GRAPH_REPORT.md` digest into the regenerated note
+  if one happens to exist — CI has none, so that would be a NEW phantom drift.
+  Also set `GRAPH_REPORT_PATH=/nonexistent/GRAPH_REPORT.md` (same override
+  `self-knowledge.e2e.test.ts` applies) before regenerating, and copy back ONLY
+  `vault/knowledge/self-knowledge.md` — never the automation/herald/maestro seed
+  noise or the agent/pipeline `.md` YAML-normalization diffs the same boot also
+  produces. Full recipe + rationale in the F7 implementation-log entry above.
