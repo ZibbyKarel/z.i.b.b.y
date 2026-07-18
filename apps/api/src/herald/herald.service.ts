@@ -3,7 +3,7 @@ import type { IntegrationKind, ReplyLedgerEntry, TriageCategory } from "@zibby/c
 import { TriageCategorySchema } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service";
-import { NOTIFY_ONLY_KINDS } from "../channels/channel-triage-flow.service";
+import { NOTIFY_ONLY_KINDS } from "../channels/notify-only-kinds";
 import { collisionResistantId } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { HeraldGraduationStore } from "./herald-graduation.store";
