@@ -5,6 +5,7 @@ import type {
   Briefing,
   BriefingSubsystemLine,
   CiStatus,
+  MergeWatch,
   SubsystemWithStatus,
   WatcherHealth,
 } from "@zibby/contracts";
@@ -16,6 +17,7 @@ import { GoalRunnerService } from "../goals/goal-runner.service";
 import { LimitsService } from "../limits/limits.service";
 import { LoomService } from "../loom/loom.service";
 import { MaestroService } from "../maestro/maestro.service";
+import { MergeWatchStore } from "../maestro/merge-watch.store";
 import { MonitorEventStore } from "../monitors/monitor-event.store";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
@@ -119,6 +121,9 @@ export class BriefingService {
     // NS2 F6c — stale heartbeat watchers (fail-open: a stale watcher is a
     // briefing line, never a red /health).
     private readonly watchers: WatcherHealthRegistry,
+    // NS2 F7b-2 — merge-watch store, read directly for the briefing's
+    // merged-work celebration + post-merge CI outcome lines.
+    private readonly mergeWatch: MergeWatchStore,
     @Inject(ACTIVITY_DIR) private readonly activityDir: string,
     logger: LoggerService,
   ) {
@@ -184,6 +189,7 @@ export class BriefingService {
       mergeQueue,
       qualityFindings,
       staleWatchers,
+      mergedRecently,
     ] = await Promise.all([
       this.readTrend7d(now),
       this.readLearnedPatterns(),
@@ -208,6 +214,9 @@ export class BriefingService {
             .map(formatStaleWatcher),
         )
         .catch((): string[] => []),
+      // NS2 F7b-2 — merged-work celebration + post-merge CI outcomes. Same
+      // fail-open guard: a failed read drops the section, never the briefing.
+      this.readMergedRecently().catch((): string[] => []),
     ]);
     const subsystems = subsystemRows
       ? buildSubsystemLines(subsystemRows, ciStatuses, weeklyPct)
@@ -233,6 +242,7 @@ export class BriefingService {
       mergeQueue,
       qualityFindings,
       staleWatchers,
+      mergedRecently,
       ...(subsystems ? { subsystems } : {}),
       ...(selfKnowledgeDrift ? { selfKnowledgeDrift } : {}),
     });
@@ -339,6 +349,25 @@ export class BriefingService {
     } catch {
       return [];
     }
+  }
+
+  /**
+   * NS2 F7b-2 — merged-work celebration + post-merge CI outcomes, read directly
+   * off the merge-watch store (`list()` is already newest-mergedAt-first, no
+   * separate service needed). Still-`watching` entries are excluded — nothing
+   * to report until the watch resolves.
+   */
+  private async readMergedRecently(): Promise<string[]> {
+    const watches = await this.mergeWatch.list().catch((): MergeWatch[] => []);
+    return watches
+      .filter((w) => w.state !== "watching")
+      .map((w) => {
+        if (w.state === "green") return `${w.repo}: PR #${w.prNumber} merged, CI green`;
+        if (w.state === "red") {
+          return `${w.repo}: PR #${w.prNumber} merged, CI red — fix task dispatched`;
+        }
+        return `${w.repo}: PR #${w.prNumber} merged, CI didn't confirm in time`;
+      });
   }
 
   /** Read the since-cursor; tolerant — a missing/garbage cursor → start of today. */

@@ -78,6 +78,11 @@ export const TargetSchema = z.discriminatedUnion("type", [
   // (new findings → a vault note + Loom's shelf + briefing; the operator turns a
   // line into work). knip deferred (not installed). ref = `loom:<count>`.
   z.object({ type: z.literal("loom-audit") }),
+  // NS2 F7b-2 — poll pending post-merge CI watches: for each merge ZIBBY performed,
+  // check the merged sha's target-branch CI within a bounded window; on red dispatch
+  // a gated fix task (tier path), on green record success, past deadline expire.
+  // Deterministic; ref = `merge-watch:<resolvedCount>`.
+  z.object({ type: z.literal("post-merge-watch") }),
   /**
    * Phase 116b — the "prompt automation" shape: a full task spec that fires through
    * the EXISTING task pipeline (`TaskSchedulerService.createTask`) exactly like the

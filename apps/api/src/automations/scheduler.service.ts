@@ -10,6 +10,7 @@ import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { GapDetectorService } from "../gaps/gap-detector.service";
 import { WatcherHealthRegistry } from "../health/watcher-health.registry";
 import { LoomService } from "../loom/loom.service";
+import { PostMergeWatchService } from "../maestro/post-merge-watch.service";
 import { SelfKnowledgeService } from "../self-knowledge/self-knowledge.service";
 import { SentinelService } from "../sentinel/sentinel.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
@@ -54,6 +55,7 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
     private readonly selfKnowledge: SelfKnowledgeService,
     private readonly sentinel: SentinelService,
     private readonly loom: LoomService,
+    private readonly postMerge: PostMergeWatchService,
     private readonly watcherHealthRegistry: WatcherHealthRegistry,
   ) {
     super();
@@ -245,6 +247,13 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
         // + a madge circular-dep check, deterministic; ref = `loom:<count>`.
         const { findings } = await this.loom.audit();
         return `loom:${findings.length}`;
+      }
+      case "post-merge-watch": {
+        // NS2 F7b-2: frequent system automation — poll pending post-merge CI
+        // watches (green/red/expired), dispatching a gated fix task on red.
+        // Deterministic; ref = `merge-watch:<resolvedCount>`.
+        const { resolved } = await this.postMerge.poll();
+        return `merge-watch:${resolved}`;
       }
     }
   }

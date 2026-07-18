@@ -42,6 +42,7 @@ export * from "./monitors/monitor.schema";
 export * from "./monitors/monitors.contract";
 export * from "./maestro/maestro.schema";
 export * from "./maestro/maestro.contract";
+export * from "./maestro/merge-watch.schema";
 export * from "./automations/automation.schema";
 export * from "./automations/automations.contract";
 export * from "./integrations/integration.schema";

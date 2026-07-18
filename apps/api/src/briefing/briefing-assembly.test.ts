@@ -423,3 +423,31 @@ describe("stale watchers (NS2 F6c)", () => {
     expect(renderBriefingMarkdown(assembleBriefing(base))).not.toContain("## Watchers");
   });
 });
+
+describe("merged recently (NS2 F7b-2)", () => {
+  const base = {
+    now: NOW,
+    since: SINCE,
+    approvals: [],
+    parkedRuns: [],
+    channelItems: [],
+    activity: [],
+  };
+  const merged = ["acme/app: PR #42 merged, CI green"];
+
+  it("omits mergedRecently when absent or empty — strictly additive to today's shape", () => {
+    expect(assembleBriefing(base).mergedRecently).toBeUndefined();
+    expect(assembleBriefing({ ...base, mergedRecently: [] }).mergedRecently).toBeUndefined();
+  });
+
+  it("surfaces the gathered merged-recently lines", () => {
+    expect(assembleBriefing({ ...base, mergedRecently: merged }).mergedRecently).toEqual(merged);
+  });
+
+  it("renders a ## Merged markdown block iff merged lines are present", () => {
+    const md = renderBriefingMarkdown(assembleBriefing({ ...base, mergedRecently: merged }));
+    expect(md).toContain("## Merged");
+    expect(md).toContain("- acme/app: PR #42 merged, CI green");
+    expect(renderBriefingMarkdown(assembleBriefing(base))).not.toContain("## Merged");
+  });
+});

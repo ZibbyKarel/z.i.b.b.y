@@ -6,12 +6,22 @@ import type {
   Project,
   ProjectPr,
 } from "@zibby/contracts";
+import { ActivityLogService } from "../activity/activity-log.service";
 import { CredentialsStore } from "../integrations/credentials.store";
+import { MergeWatchStore } from "../maestro/merge-watch.store";
 import { NoGithubLinkError, PrNotMergeableError } from "./projects.errors";
 import { ProjectsStorageService } from "./projects.storage.service";
 import { ResolvedProjectService } from "./resolved-project.service";
 
 const GITHUB_API = "https://api.github.com";
+
+/** NS2 F7b-2 — how long a merge is watched for its target-branch CI outcome. */
+const POST_MERGE_WINDOW_MIN = 120;
+
+/** Satisfy `MERGE_WATCH_ID_REGEX` (`merge-watch.store.ts`) — mirrors `sentry.monitor.ts`'s helper. */
+function slug(value: string): string {
+  return value.replace(/[^a-zA-Z0-9._-]/g, "-");
+}
 
 interface GitHubPull {
   number?: number;
@@ -89,6 +99,9 @@ export class ProjectPrService {
     private readonly projects: ProjectsStorageService,
     private readonly resolvedProjects: ResolvedProjectService,
     private readonly credentials: CredentialsStore,
+    // NS2 F7b-2 — the merge-record → post-merge-poll loop's write side.
+    private readonly mergeWatch: MergeWatchStore,
+    private readonly activity: ActivityLogService,
     // Optional so Nest doesn't try to DI-resolve a plain function type —
     // production defaults to the global `fetch`; tests inject a stub (mirrors
     // `JiraIssueFlowService`'s `@Optional() adapter?` seam).
@@ -152,7 +165,7 @@ export class ProjectPrService {
     projectId: string,
     number: number,
     method?: MergeMethod,
-  ): Promise<{ merged: boolean; url?: string }> {
+  ): Promise<{ merged: boolean; url?: string; sha?: string }> {
     const project = await this.projects.get(projectId); // 404 before anything else
     const link = await this.resolveGithubLink(project);
     if (!link) throw new NoGithubLinkError(projectId);
@@ -174,7 +187,57 @@ export class ProjectPrService {
       throw new PrNotMergeableError(projectId, number, detail);
     }
     if (!res.ok) throw new Error(`github merge PR #${number}: HTTP ${res.status}`);
-    const body = (await res.json()) as { merged?: boolean };
-    return { merged: body.merged === true, url: `https://github.com/${link.repo}/pull/${number}` };
+    const body = (await res.json()) as { merged?: boolean; sha?: string };
+    const merged = body.merged === true;
+
+    if (merged) {
+      // NS2 F7b-2 — record the merge + start the post-merge CI watch. Merging
+      // itself is unconditional and un-gated by this: a recording failure must
+      // NEVER surface as a merge failure (the merge already happened on GitHub).
+      await this.recordMerge(projectId, link.repo, number, body.sha).catch(() => {});
+    }
+
+    return {
+      merged,
+      url: `https://github.com/${link.repo}/pull/${number}`,
+      ...(body.sha ? { sha: body.sha } : {}),
+    };
+  }
+
+  /**
+   * NS2 F7b-2 — the merge loop's head: an activity entry (always) and, when the
+   * response carried a sha, a `watching` {@link MergeWatch} for
+   * `PostMergeWatchService` to poll. `prTitle` falls back to the PR number — the
+   * title isn't known at this call site (only `listOpen` reads it).
+   */
+  private async recordMerge(
+    projectId: string,
+    repo: string,
+    number: number,
+    sha: string | undefined,
+  ): Promise<void> {
+    void this.activity.record({
+      kind: "merge-completed",
+      summary: sha
+        ? `Merged PR #${number} in ${repo} (${sha.slice(0, 7)})`
+        : `Merged PR #${number} in ${repo}`,
+      refs: { projectId, itemId: `pr-${number}` },
+    });
+    if (!sha) return; // no sha in the response — nothing to watch
+
+    const mergedAt = new Date();
+    const deadline = new Date(mergedAt.getTime() + POST_MERGE_WINDOW_MIN * 60_000);
+    await this.mergeWatch.putNew({
+      id: `merge-${slug(repo)}-${sha}`,
+      projectId,
+      repo,
+      sha,
+      prNumber: number,
+      prTitle: `PR #${number}`,
+      mergedAt: mergedAt.toISOString(),
+      deadline: deadline.toISOString(),
+      attempts: 0,
+      state: "watching",
+    });
   }
 }

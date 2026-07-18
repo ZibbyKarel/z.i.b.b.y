@@ -5,6 +5,7 @@ import { GoalsModule } from "../goals/goals.module";
 import { LimitsModule } from "../limits/limits.module";
 import { LoomModule } from "../loom/loom.module";
 import { MaestroModule } from "../maestro/maestro.module";
+import { MergeWatchModule } from "../maestro/merge-watch.module";
 import { MemoryModule } from "../memory/memory.module";
 import { MonitorsModule } from "../monitors/monitors.module";
 import { PipelinesModule } from "../pipelines/pipelines.module";
@@ -51,6 +52,9 @@ import { ClaudeCliBriefer } from "./claude-cli-briefer";
     // NS2 F5c — Loom's quality findings (LoomService.readFindings). Same leaf
     // position — one-directional, no cycle.
     LoomModule,
+    // NS2 F7b-2 — the merge loop's recently-merged extras array (MergeWatchStore
+    // read directly, no service needed). A leaf module — one-directional, no cycle.
+    MergeWatchModule,
   ],
   controllers: [BriefingController],
   providers: [ClaudeCliBriefer, BriefingService],

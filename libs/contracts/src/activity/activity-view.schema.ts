@@ -74,6 +74,11 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   "subsystem-scan": "integrations",
   "machine-action": "approvals",
   "briefing-generated": "briefing",
+  // NS2 F7b-2: the merge loop's head + its post-merge CI outcome — read with the
+  // other watcher discoveries (monitor-alert/subsystem-scan) rather than a new
+  // group for two kinds.
+  "merge-completed": "integrations",
+  "post-merge-outcome": "integrations",
 };
 
 /**

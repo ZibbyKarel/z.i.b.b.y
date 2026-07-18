@@ -4,6 +4,7 @@ import { AgentsModule } from "../agents/agents.module";
 import { BriefingModule } from "../briefing/briefing.module";
 import { GapsModule } from "../gaps/gaps.module";
 import { LoomModule } from "../loom/loom.module";
+import { MaestroModule } from "../maestro/maestro.module";
 import { MemoryDistillerModule } from "../memory/memory-distiller.module";
 import { PatternsModule } from "../patterns/patterns.module";
 import { PipelinesModule } from "../pipelines/pipelines.module";
@@ -36,7 +37,10 @@ export function resolveAutomationsDir(): string {
  * NS2 F5a: also imports `SentinelModule` (a leaf, same position as `GapsModule`) so the
  * `sentinel-scan` target can dispatch to `SentinelService.scan`. NS2 F5c: also imports
  * `LoomModule` (same leaf position) so the `loom-audit` target can dispatch to
- * `LoomService.audit`.
+ * `LoomService.audit`. NS2 F7b-2: also imports `MaestroModule` so the
+ * `post-merge-watch` target can dispatch to `PostMergeWatchService.poll` — no
+ * cycle, `MaestroModule` imports Projects/ResolvedProject/Integrations/
+ * MergeWatch/Monitors/Tasks, none of which import this module back.
  */
 @Module({
   imports: [
@@ -45,6 +49,7 @@ export function resolveAutomationsDir(): string {
     BriefingModule,
     GapsModule,
     LoomModule,
+    MaestroModule,
     MemoryDistillerModule,
     PatternsModule,
     PipelinesModule,

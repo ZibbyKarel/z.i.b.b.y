@@ -2,6 +2,7 @@ import { Module, forwardRef } from "@nestjs/common";
 import { dataDir } from "../shared/data-dir";
 import { IntegrationsModule } from "../integrations/integrations.module";
 import { MachineConfigModule } from "../machine/machine-config.module";
+import { MergeWatchModule } from "../maestro/merge-watch.module";
 import { MemoryModule } from "../memory/memory.module";
 import { VAULT_DIR } from "../memory/vault.service";
 import { WorkspaceModule } from "../workspace/workspace.module";
@@ -49,6 +50,9 @@ export function resolveProjectSecretsDir(): string {
     // Phase 76: both leaf modules (no imports of their own) — no cycle risk.
     WorkspaceModule,
     MachineConfigModule,
+    // NS2 F7b-2: leaf module (no imports of its own) — `ProjectPrService.merge`
+    // records a `MergeWatch` on a successful merge. No cycle risk.
+    MergeWatchModule,
   ],
   // ProjectCategoriesController is declared before ProjectsController so its
   // static route (`GET /projects/categories`) registers ahead of `/projects/:id`,

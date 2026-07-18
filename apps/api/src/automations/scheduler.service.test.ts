@@ -80,6 +80,18 @@ function loomAuditAutomation(over: Partial<Automation> = {}): Automation {
   };
 }
 
+function postMergeWatchAutomation(over: Partial<Automation> = {}): Automation {
+  return {
+    id: "post-merge-watch",
+    name: "Sledování po sloučení",
+    trigger: { type: "cron", expr: "*/10 * * * *" },
+    target: { type: "post-merge-watch" },
+    enabled: true,
+    system: true,
+    ...over,
+  };
+}
+
 /** Build a SchedulerService with every non-exercised dependency stubbed to a
  * no-op — each describe block below only wires the dependency its own case needs. */
 function makeService(opts: {
@@ -90,6 +102,7 @@ function makeService(opts: {
   selfKnowledge?: { check: ReturnType<typeof vi.fn>; write: ReturnType<typeof vi.fn> };
   sentinel?: { scan: ReturnType<typeof vi.fn> };
   loom?: { audit: ReturnType<typeof vi.fn> };
+  postMergeWatch?: { poll: ReturnType<typeof vi.fn> };
 }): { service: SchedulerService; storage: { markFired: ReturnType<typeof vi.fn> } } {
   const storage = {
     list: async () => [opts.automation],
@@ -116,6 +129,7 @@ function makeService(opts: {
     (opts.selfKnowledge ?? { check: vi.fn(async () => false), write: vi.fn() }) as never,
     (opts.sentinel ?? { scan: vi.fn(async () => ({ findings: [] })) }) as never,
     (opts.loom ?? { audit: vi.fn(async () => ({ findings: [] })) }) as never,
+    (opts.postMergeWatch ?? { poll: vi.fn(async () => ({ resolved: 0 })) }) as never,
     // F6c watcher-health registry double — registration is exercised in the
     // base/e2e specs, not here.
     { register: () => {} } as never,
@@ -331,6 +345,26 @@ describe("SchedulerService — dispatch (NS2 F5c: loom-audit target)", () => {
   it("refs a zero count on a green (no-findings) audit", async () => {
     const { service } = makeService({ automation: loomAuditAutomation() });
     expect(await service.trigger("loom-audit")).toBe("loom:0");
+  });
+});
+
+describe("SchedulerService — dispatch (NS2 F7b-2: post-merge-watch target)", () => {
+  it("dispatches straight to PostMergeWatchService.poll and refs the resolved count", async () => {
+    const poll = vi.fn(async () => ({ resolved: 2 }));
+    const { service } = makeService({
+      automation: postMergeWatchAutomation(),
+      postMergeWatch: { poll },
+    });
+
+    const ref = await service.trigger("post-merge-watch");
+
+    expect(poll).toHaveBeenCalledTimes(1);
+    expect(ref).toBe("merge-watch:2");
+  });
+
+  it("refs a zero count when nothing resolved", async () => {
+    const { service } = makeService({ automation: postMergeWatchAutomation() });
+    expect(await service.trigger("post-merge-watch")).toBe("merge-watch:0");
   });
 });
 

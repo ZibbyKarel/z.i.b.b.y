@@ -1557,6 +1557,7 @@
     "targetSelfKnowledge": "Self-knowledge refresh",
     "targetSentinelScan": "Security watch",
     "targetLoomAudit": "Quality audit",
+    "targetPostMergeWatch": "Post-merge watch",
     "targetTask": "prompt task",
     "systemEditNote": "System automation — seeded by ZIBBY. Only its schedule can change; the target and name can't be edited and it can't be deleted.",
     "legacyEditNote": "This automation's target predates prompt automations and can no longer be edited here — only its schedule can change. Delete it and create a new prompt automation to change what it runs.",

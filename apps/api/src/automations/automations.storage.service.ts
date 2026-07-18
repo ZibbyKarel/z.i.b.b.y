@@ -48,6 +48,8 @@ export const SELF_KNOWLEDGE_AUTOMATION_ID = "self-knowledge-refresh";
 export const SENTINEL_SCAN_AUTOMATION_ID = "sentinel-scan";
 /** Stable id of the nightly Loom quality-audit system automation (F5c). */
 export const LOOM_AUDIT_AUTOMATION_ID = "loom-audit";
+/** Stable id of the post-merge CI-watch system automation (NS2 F7b-2). */
+export const POST_MERGE_WATCH_AUTOMATION_ID = "post-merge-watch";
 
 /**
  * System automations ZIBBY owns and seeds on boot. They embody capabilities that
@@ -125,6 +127,17 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
     name: "Noční audit kvality",
     trigger: { type: "cron", expr: "0 2 * * *" },
     target: { type: "loom-audit" },
+    enabled: true,
+    system: true,
+  },
+  {
+    // NS2 F7b-2 — the post-merge CI watch. Seeded `enabled: true` (orchestrator
+    // addendum ruling #2): frequent (every 10 min) but bounded by each watch's own
+    // deadline and per-watch try/catch, so a huge backlog degrades gracefully.
+    id: POST_MERGE_WATCH_AUTOMATION_ID,
+    name: "Sledování po sloučení",
+    trigger: { type: "cron", expr: "*/10 * * * *" },
+    target: { type: "post-merge-watch" },
     enabled: true,
     system: true,
   },
