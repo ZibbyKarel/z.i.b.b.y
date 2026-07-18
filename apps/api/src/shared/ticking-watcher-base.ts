@@ -1,3 +1,4 @@
+import type { WatcherHealth, WatcherId } from "@zibby/contracts";
 import type { ScopedLogger } from "./logging/logger.service";
 
 /**
@@ -34,7 +35,14 @@ import type { ScopedLogger } from "./logging/logger.service";
 export abstract class TickingWatcherBase {
   private timer: ReturnType<typeof setInterval> | null = null;
   private running = false;
+  /** Wall-clock of the last TIMER-driven tick start (F6c). Set at the start of
+   * {@link guardedTick} — deliberately NOT in each public `tick()`, so unit tests
+   * driving `tick()` directly never need to fabricate a timestamp; the health
+   * probe cares about the live timer path only. */
+  private lastTickAt: string | null = null;
 
+  /** This watcher's closed-enum id in the `/health` `watchers[]` probe (F6c). */
+  protected abstract readonly watcherId: WatcherId;
   /** This tick's poll interval, read fresh from the operator-owned system config. */
   protected abstract tickMs(): number;
   /** The real tick body — each concrete service forwards this to its own public `tick()`. */
@@ -69,6 +77,31 @@ export abstract class TickingWatcherBase {
   }
 
   /**
+   * This watcher's heartbeat probe (F6c) — pure read, no side effects. Fail-open by
+   * design: `tickMs <= 0` is the intentional test/CI mode (`disabled`, never a
+   * fault); armed-but-never-ticked is `ok` (the timers unref, the first tick is
+   * imminent); only a last tick older than `staleFactor × tickMs` is `stale` — the
+   * genuine "the timer stopped firing" fault. A stale watcher never flips the
+   * overall `/health` status to degraded in v1 — it surfaces as a briefing line
+   * and a settings-HUD indicator instead.
+   */
+  watcherHealth(now = Date.now(), staleFactor = 3): WatcherHealth {
+    const tickMs = this.tickMs();
+    if (tickMs <= 0) return { id: this.watcherId, status: "disabled", tickMs };
+    if (this.lastTickAt === null) {
+      return { id: this.watcherId, status: "ok", tickMs, detail: "armed, not yet ticked" };
+    }
+    const ageMs = Math.max(0, now - Date.parse(this.lastTickAt));
+    return {
+      id: this.watcherId,
+      status: ageMs > staleFactor * tickMs ? "stale" : "ok",
+      tickMs,
+      lastTickAt: this.lastTickAt,
+      ageMs,
+    };
+  }
+
+  /**
    * The timer-driven entry point: skip if a previous tick is still running (logged
    * at debug, never silently swallowed). A throwing tick does NOT kill the timer —
    * the error is logged and `running` is reset in `finally` so the next firing (or a
@@ -81,6 +114,9 @@ export abstract class TickingWatcherBase {
       this.log.debug("tick skipped — previous tick still in flight");
       return;
     }
+    // Stamped at the START (not the end) so a long-running tick counts as alive —
+    // staleness means "the timer stopped firing", not "the tick body is slow".
+    this.lastTickAt = new Date().toISOString();
     this.running = true;
     try {
       await this.runTick();

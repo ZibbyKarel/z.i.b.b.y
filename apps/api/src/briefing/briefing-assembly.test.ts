@@ -395,3 +395,31 @@ describe("self-knowledge drift (NS2 F4c)", () => {
     );
   });
 });
+
+describe("stale watchers (NS2 F6c)", () => {
+  const base = {
+    now: NOW,
+    since: SINCE,
+    approvals: [],
+    parkedRuns: [],
+    channelItems: [],
+    activity: [],
+  };
+  const stale = ["channel watcher stale — last tick 5 m ago (interval 30 s)"];
+
+  it("omits staleWatchers when absent or empty — strictly additive to today's shape", () => {
+    expect(assembleBriefing(base).staleWatchers).toBeUndefined();
+    expect(assembleBriefing({ ...base, staleWatchers: [] }).staleWatchers).toBeUndefined();
+  });
+
+  it("surfaces the gathered stale-watcher lines", () => {
+    expect(assembleBriefing({ ...base, staleWatchers: stale }).staleWatchers).toEqual(stale);
+  });
+
+  it("renders a ## Watchers markdown block iff stale lines are present", () => {
+    const md = renderBriefingMarkdown(assembleBriefing({ ...base, staleWatchers: stale }));
+    expect(md).toContain("## Watchers");
+    expect(md).toContain("- channel watcher stale — last tick 5 m ago (interval 30 s)");
+    expect(renderBriefingMarkdown(assembleBriefing(base))).not.toContain("## Watchers");
+  });
+});

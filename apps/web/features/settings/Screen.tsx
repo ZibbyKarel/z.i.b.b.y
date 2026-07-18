@@ -29,6 +29,7 @@ import { MachineSection } from "./components/MachineSection";
 import { MandateSection } from "./components/MandateSection";
 import { SelfKnowledgeSection } from "./components/SelfKnowledgeSection";
 import { SystemSection } from "./components/SystemSection";
+import { WatcherRows } from "./components/WatcherRows";
 
 type Locale = "cs" | "en";
 
@@ -246,6 +247,12 @@ export function Screen() {
                   tone={isSuccess ? "ok" : undefined}
                   value={isSuccess ? t("online") : t("offline")}
                 />
+                {health?.watchers && health.watchers.length > 0 && (
+                  <>
+                    <Divider />
+                    <WatcherRows watchers={health.watchers} />
+                  </>
+                )}
               </Stack>
             </HudPanel>
           </TabPanel>

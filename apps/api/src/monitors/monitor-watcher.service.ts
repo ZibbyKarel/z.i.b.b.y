@@ -10,6 +10,7 @@ import { withRetry } from "../shared/retry";
 import { TickingWatcherBase } from "../shared/ticking-watcher-base";
 import { SystemConfigStore } from "../system/system-config.store";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
+import { WatcherHealthRegistry } from "../health/watcher-health.registry";
 import { type MonitorAdapter, MonitorAdapterRegistry } from "./monitor-adapter";
 import { MonitorEventStore } from "./monitor-event.store";
 
@@ -33,6 +34,7 @@ export class MonitorWatcherService
 {
   private unsubscribe: (() => void) | null = null;
   protected readonly log: ScopedLogger;
+  protected readonly watcherId = "monitor" as const;
 
   constructor(
     private readonly integrations: IntegrationsStorageService,
@@ -43,6 +45,7 @@ export class MonitorWatcherService
     private readonly activity: ActivityLogService,
     private readonly systemConfig: SystemConfigStore,
     private readonly trace: TraceContextService,
+    private readonly watcherHealthRegistry: WatcherHealthRegistry,
     logger: LoggerService,
   ) {
     super();
@@ -52,6 +55,8 @@ export class MonitorWatcherService
   onModuleInit(): void {
     this.arm();
     this.unsubscribe = this.systemConfig.onChange(() => this.arm());
+    // F6c: self-register the heartbeat probe.
+    this.watcherHealthRegistry.register(() => this.watcherHealth());
   }
 
   protected tickMs(): number {
@@ -115,19 +120,20 @@ export class MonitorWatcherService
     adapter: MonitorAdapter,
   ): Promise<string[]> {
     const cursor = await this.store.readCursor(integration.id, adapter.kind);
-    const { events, cursor: nextCursor, status } = await withRetry(
-      () => adapter.poll(integration, creds, cursor),
-      {
-        retries: intEnv("MONITOR_POLL_RETRIES", 2),
-        baseMs: intEnv("MONITOR_POLL_BACKOFF_MS", 250),
-        onRetry: (attempt, error) =>
-          this.log.debug("monitor poll retry", {
-            id: integration.id,
-            attempt,
-            error: error instanceof Error ? error.message : String(error),
-          }),
-      },
-    );
+    const {
+      events,
+      cursor: nextCursor,
+      status,
+    } = await withRetry(() => adapter.poll(integration, creds, cursor), {
+      retries: intEnv("MONITOR_POLL_RETRIES", 2),
+      baseMs: intEnv("MONITOR_POLL_BACKOFF_MS", 250),
+      onRetry: (attempt, error) =>
+        this.log.debug("monitor poll retry", {
+          id: integration.id,
+          attempt,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+    });
 
     const ingested: string[] = [];
     for (const alert of events) {
