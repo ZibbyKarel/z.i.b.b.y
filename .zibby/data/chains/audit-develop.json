@@ -9,5 +9,6 @@
       "pipeline": "delivery"
     }
   ],
-  "instructions": "Provede hloubkový audit systému a výsledné poznatky předá k implementaci"
+  "instructions": "Provede hloubkový audit systému a výsledné poznatky předá k implementaci",
+  "ownerSubsystem": "scout"
 }

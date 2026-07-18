@@ -4,5 +4,6 @@
   "projectId": "cms4",
   "name": "Shoptet-GitHub-CMS4",
   "enabled": false,
-  "config": { "kind": "github", "repo": "shoptet/cms4", "streams": ["issues", "pulls"] }
+  "config": { "kind": "github", "repo": "shoptet/cms4", "streams": ["issues", "pulls"] },
+  "ownerSubsystem": "puls"
 }

@@ -1,6 +1,5 @@
 ---
 name: Sales Outreach
-desc: 'Od cílového seznamu po hotovou outbound sekvenci: research → konkurence → sekvence → redakce. Sales, outbound, prospecting, cold outreach, oslovení leadů.'
 phases:
   - id: leads
     type: agent
@@ -35,6 +34,11 @@ phases:
       maxRetries: 2
       escalate: true
       then: park
+desc: >-
+  Od cílového seznamu po hotovou outbound sekvenci: research → konkurence →
+  sekvence → redakce. Sales, outbound, prospecting, cold outreach, oslovení
+  leadů.
+ownerSubsystem: scout
 ---
 
 # Sales Outreach

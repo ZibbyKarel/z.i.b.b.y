@@ -1,0 +1,8 @@
+{
+  "id": "post-merge-watch",
+  "name": "Sledování po sloučení",
+  "trigger": { "type": "cron", "expr": "*/10 * * * *" },
+  "target": { "type": "post-merge-watch" },
+  "enabled": true,
+  "system": true
+}

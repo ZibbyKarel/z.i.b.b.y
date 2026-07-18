@@ -1,6 +1,5 @@
 ---
 name: Content Piece
-desc: 'Rychlá linka pro jeden kus obsahu: napiš → SEO → redakce. Článek, blog post, landing copy, jeden příspěvek.'
 phases:
   - id: write
     type: agent
@@ -28,6 +27,10 @@ phases:
       maxRetries: 2
       escalate: true
       then: park
+desc: >-
+  Rychlá linka pro jeden kus obsahu: napiš → SEO → redakce. Článek, blog post,
+  landing copy, jeden příspěvek.
+ownerSubsystem: scout
 ---
 
 # Content Piece

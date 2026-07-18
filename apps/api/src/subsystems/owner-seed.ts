@@ -54,6 +54,16 @@ export function chainOwnerSeed(): SubsystemId {
  * Every integration (including ci-stream GitHub monitors — there is no
  * standalone monitor entity, see module doc) seeds to `puls`.
  *
+ * NS2 F8 — this DELIBERATELY includes the calendar integration. "Puls polls,
+ * Hearth consumes": Puls owns every inbound heartbeat (channel polling,
+ * calendar, CI/CD monitors — north-star-2.md's §The Chairs is explicit), and
+ * Hearth is Tier-3-leaning ("surface, don't act"), not a watcher — giving it
+ * the calendar poller would violate its own charter. Hearth instead owns the
+ * personal vault domain (`domain: personal` notes, quick capture, the
+ * personal agenda/reminders surface) built FROM Puls's calendar reads, not
+ * the poller itself. Do not "fix" this by routing calendar to hearth — see
+ * `docs/plans/ns2-f8-hearth-personal.md`'s FC-1 for the full ruling.
+ *
  * TODO(F-herald): once a reply-capability criterion exists, reply-capable
  * integrations should route to `herald` instead.
  */

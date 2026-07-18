@@ -1,0 +1,8 @@
+{
+  "id": "self-knowledge-refresh",
+  "name": "Obnova sebeznalosti",
+  "trigger": { "type": "cron", "expr": "30 3 * * *" },
+  "target": { "type": "self-knowledge" },
+  "enabled": true,
+  "system": true
+}

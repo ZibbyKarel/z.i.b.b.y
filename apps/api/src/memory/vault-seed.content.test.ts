@@ -7,9 +7,9 @@ import { composeSeedNotes } from "./vault-seed.content";
 const ENTRY_POINT_RE = /(^|[-_ ])(index|moc)$/i;
 
 describe("composeSeedNotes", () => {
-  it("returns exactly 12 notes: North Star + root MOC + one shelf per registry subsystem", () => {
+  it("returns exactly 13 notes: North Star + root MOC + one shelf per registry subsystem", () => {
     const notes = composeSeedNotes(SUBSYSTEMS);
-    expect(notes).toHaveLength(12);
+    expect(notes).toHaveLength(13);
     expect(notes.map((n) => n.id)).toContain("north-star");
     expect(notes.map((n) => n.id)).toContain("zibby-index");
   });

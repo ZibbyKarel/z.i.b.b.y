@@ -1,0 +1,8 @@
+{
+  "id": "sentinel-scan",
+  "name": "Bezpečnostní hlídka",
+  "trigger": { "type": "cron", "expr": "0 5 * * 1" },
+  "target": { "type": "sentinel-scan" },
+  "enabled": true,
+  "system": true
+}

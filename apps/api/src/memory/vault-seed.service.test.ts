@@ -20,7 +20,7 @@ describe("VaultSeedService", () => {
     await new VaultSeedService(vault).onModuleInit();
 
     const { nodes } = await vault.graph();
-    expect(nodes.length).toBe(12);
+    expect(nodes.length).toBe(13);
     expect(nodes.map((n) => n.id)).toContain("north-star");
     expect(nodes.map((n) => n.id)).toContain("zibby-index");
     expect(nodes.map((n) => n.id)).toContain("subsystem-forge-moc");
@@ -66,7 +66,7 @@ describe("VaultSeedService", () => {
     await expect(new VaultSeedService(vault).onModuleInit()).resolves.toBeUndefined();
 
     const { nodes } = await vault.graph();
-    // 12 seeds attempted, the first one fails — 11 land.
-    expect(nodes.length).toBe(11);
+    // 13 seeds attempted, the first one fails — 12 land.
+    expect(nodes.length).toBe(12);
   });
 });

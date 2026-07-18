@@ -1,10 +1,12 @@
 import { z } from "zod";
 
 /**
- * The ten named subsystems of the GAIA-style federation (design doc
+ * The eleven named subsystems of the GAIA-style federation (design doc
  * `docs/superpowers/specs/2026-07-08-subsystem-federation-design.md`; codex +
- * ledger seated in NS2 F1a). Fixed set — ZIBBY doesn't grow an eleventh without a
- * design decision, so this is a closed enum, not a free-form string.
+ * ledger seated in NS2 F1a; hearth seated in NS2 F8a per the operator ruling in
+ * `docs/ns2/DECISIONS.md` — "hearth (personal domain) in F8"). Fixed set — ZIBBY
+ * doesn't grow a twelfth without a design decision, so this is a closed enum,
+ * not a free-form string.
  */
 export const SubsystemIdSchema = z.enum([
   "forge",
@@ -17,6 +19,7 @@ export const SubsystemIdSchema = z.enum([
   "loom",
   "codex",
   "ledger",
+  "hearth",
 ]);
 export type SubsystemId = z.infer<typeof SubsystemIdSchema>;
 
@@ -44,9 +47,9 @@ export type Subsystem = z.infer<typeof SubsystemSchema>;
  * The registry — identity only, phase 80. Colors are the ZT palette hues
  * (Velín-D phase 2 alignment): forge `#5b8def`, herald `#56c4d6`, sentinel
  * `#34c9bd`, scout `#46cf8b`, maestro `#e0a83c`, beacon `#f4785c`, puls
- * `#f2749e`, loom `#b07cff`, codex `#c56fd4`, ledger `#a9c23e`. Each color is
- * the subsystem's whole visual identity — it drives the orb body on the map
- * and its header echo.
+ * `#f2749e`, loom `#b07cff`, codex `#c56fd4`, ledger `#a9c23e`, hearth
+ * `#d9694a`. Each color is the subsystem's whole visual identity — it drives
+ * the orb body on the map and its header echo.
  */
 export const SUBSYSTEMS: readonly Subsystem[] = [
   {
@@ -119,6 +122,14 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
     tagline: "Správce pokladny",
     mandate: "Rozpočty a limity — stropy útrat, okna spotřeby, správa token-spend a limit-resume.",
     color: "#a9c23e",
+  },
+  {
+    id: "hearth",
+    name: "Hearth",
+    tagline: "Krb domova",
+    mandate:
+      "Osobní život operátora — rychlé poznámky, denní agenda, osobní poličky a připomínky, oddělené od práce.",
+    color: "#d9694a",
   },
 ];
 
