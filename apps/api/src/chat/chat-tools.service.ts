@@ -7,11 +7,12 @@ import type {
   SubsystemWithStatus,
   TaskTarget,
 } from "@zibby/contracts";
+import { NoteIdSchema } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { BriefingService } from "../briefing/briefing.service";
 import { MachineActionRejectedError, MachineService } from "../machine/machine.service";
 import { recallMemory as recallMemoryFromVault } from "../memory/recall.helper";
-import { VaultService } from "../memory/vault.service";
+import { DuplicateNoteError, VaultService } from "../memory/vault.service";
 import { SubsystemsService } from "../subsystems/subsystems.service";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
 import type { ChatCreateTaskMeta } from "./chat-tool-result.registry";
@@ -26,6 +27,32 @@ export interface ChatCreateTaskOutcome {
 
 /** Cap on how many "needs you" / "watching" lines the status summary lists. */
 const MAX_STATUS_LINES = 5;
+
+/** F8 — how many `-N` suffixes {@link ChatToolsService.capturePersonalNote} tries
+ * before giving up on an id collision. */
+const MAX_CAPTURE_ID_ATTEMPTS = 5;
+
+/**
+ * F8 — a deterministic personal-note id: a slug of `title` when it yields
+ * usable characters, else a timestamp (`personal-YYYYMMDD-HHmmss`). Always
+ * re-validated against {@link NoteIdSchema} so a pathological title (all
+ * punctuation, empty) can never produce an invalid write-path id. Pure —
+ * exported for tests.
+ */
+export function personalNoteId(title: string | undefined, now: Date = new Date()): string {
+  const stamp = now.toISOString().slice(0, 19).replace(/[-:]/g, "").replace("T", "-");
+  const timestampId = `personal-${stamp}`;
+  if (!title) return timestampId;
+  const slug = title
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+  if (!slug) return timestampId;
+  const candidate = `personal-${slug}`;
+  return NoteIdSchema.safeParse(candidate).success ? candidate : timestampId;
+}
 
 /** Cap on how many recent owner-tagged activity lines the per-subsystem status lists. */
 const MAX_SUBSYSTEM_ACTIVITY_LINES = 3;
@@ -148,6 +175,38 @@ export class ChatToolsService {
       parts.push("Poslední aktivita:", ...owned.map((e) => `- ${e.summary}`));
     }
     return parts.join("\n");
+  }
+
+  /**
+   * F8 — quick capture: file a PRIVATE personal note to the operator's second
+   * brain. Calls `VaultService.createNote` with NO `tier` — the zero-friction
+   * "halda" path (defaults to `knowledge`, forces `raw: true`), so the
+   * existing nightly distiller triages it like any other capture (FC-5, zero
+   * distiller changes). ALWAYS stamps `frontmatter.domain: "personal"`
+   * (domain-isolation invariant (c) — never conditional, never skippable). A
+   * duplicate id retries with a `-N` suffix; any other vault failure — or
+   * exhausting the retry budget — degrades to an apologetic string, never
+   * throws into the MCP transport (fail-open, matching every other propose*
+   * tool here).
+   */
+  async capturePersonalNote(input: { text: string; title?: string }): Promise<string> {
+    const baseId = personalNoteId(input.title);
+    for (let attempt = 0; attempt < MAX_CAPTURE_ID_ATTEMPTS; attempt++) {
+      const id = attempt === 0 ? baseId : `${baseId}-${attempt + 1}`;
+      try {
+        const note = await this.vault.createNote({
+          id,
+          title: input.title ?? "Osobní poznámka",
+          body: input.text,
+          frontmatter: { domain: "personal" },
+        });
+        return `Zapsal jsem osobní poznámku (${note.id}) — v noci ji zařadím.`;
+      } catch (err) {
+        if (err instanceof DuplicateNoteError) continue;
+        return "Omlouvám se, poznámku se mi nepodařilo zapsat.";
+      }
+    }
+    return "Omlouvám se, poznámku se mi nepodařilo zapsat.";
   }
 
   /**

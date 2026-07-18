@@ -17,6 +17,7 @@ const createTask = vi.fn();
 const proposeRename = vi.fn();
 const proposeOpenMaps = vi.fn();
 const proposeOpenFolder = vi.fn();
+const capturePersonalNote = vi.fn<() => Promise<string>>();
 
 /**
  * HTTP e2e for the chat MCP endpoint's NEW auth guard (T9). Same real-listening-port
@@ -42,6 +43,7 @@ describe("POST /api/chat/mcp — ChatMcpAuthGuard", () => {
             proposeRename,
             proposeOpenMaps,
             proposeOpenFolder,
+            capturePersonalNote,
           },
         },
         ChatToolResultRegistry,
@@ -68,6 +70,7 @@ describe("POST /api/chat/mcp — ChatMcpAuthGuard", () => {
     proposeRename.mockReset();
     proposeOpenMaps.mockReset();
     proposeOpenFolder.mockReset();
+    capturePersonalNote.mockReset();
   });
 
   const listToolsBody = {
@@ -120,6 +123,7 @@ describe("POST /api/chat/mcp — ChatMcpAuthGuard", () => {
 
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
+      "capture_note",
       "create_task",
       "get_status",
       "machine_rename",
@@ -132,6 +136,31 @@ describe("POST /api/chat/mcp — ChatMcpAuthGuard", () => {
     const content = (result as { content: Array<{ type: "text"; text: string }> }).content;
     expect(content[0]?.text).toBe("Nic teď nepotřebuje tvou pozornost.");
     expect(getStatus).toHaveBeenCalledTimes(1);
+
+    await client.close();
+  });
+
+  it("F8: capture_note round-trips to ChatToolsService.capturePersonalNote and back", async () => {
+    capturePersonalNote.mockResolvedValue(
+      "Zapsal jsem osobní poznámku (personal-jot) — v noci ji zařadím.",
+    );
+
+    const transport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/api/chat/mcp`), {
+      requestInit: { headers: { Authorization: `Bearer ${auth.bearerToken}` } },
+    });
+    const client = new Client({ name: "chat-mcp-test-client", version: "1.0.0" });
+    await client.connect(transport);
+
+    const result = await client.callTool({
+      name: "capture_note",
+      arguments: { text: "Zubař v úterý v 9", title: "Zubař" },
+    });
+    const content = (result as { content: Array<{ type: "text"; text: string }> }).content;
+    expect(content[0]?.text).toContain("personal-jot");
+    expect(capturePersonalNote).toHaveBeenCalledWith({
+      text: "Zubař v úterý v 9",
+      title: "Zubař",
+    });
 
     await client.close();
   });

@@ -8,6 +8,7 @@ import {
   scoreEntry,
   selectIndexes,
   selectLinkedNotes,
+  visibleInDomain,
   visibleToProject,
 } from "./grounding.service";
 import { VaultService, ownerProjectOf } from "./vault.service";
@@ -161,6 +162,24 @@ describe("visibleToProject (M7 isolation)", () => {
 
   it("an unattributed run sees only global notes", () => {
     expect(visibleToProject(entries, undefined).map((e) => e.id)).toEqual(["global-moc"]);
+  });
+});
+
+describe("visibleInDomain (F8 personal-domain isolation)", () => {
+  const entries = [
+    { id: "work-moc", title: "Work", tier: "knowledge" as const },
+    { id: "personal-jot", title: "Jot", tier: "knowledge" as const, domain: "personal" as const },
+  ];
+
+  it("a work run (domain absent) never sees a personal note", () => {
+    expect(visibleInDomain(entries, undefined).map((e) => e.id)).toEqual(["work-moc"]);
+  });
+
+  it("a personal run sees personal + global/work notes", () => {
+    expect(visibleInDomain(entries, "personal").map((e) => e.id)).toEqual([
+      "work-moc",
+      "personal-jot",
+    ]);
   });
 });
 
@@ -524,6 +543,69 @@ describe("GroundingService.compose", () => {
     expect(block).toContain("## Grounding (vault)");
     expect(block).toContain("North Star");
     expect(block).not.toContain("polička");
+  });
+
+  it("F8: a work compose (domain absent) never grounds a domain: personal note, even on a term match", async () => {
+    const made = await makeVault(async (vault) => {
+      await vault.createNote({
+        id: "north-star",
+        tier: "memory",
+        title: "North Star",
+        body: "The mission.",
+      });
+      await vault.createNote({
+        id: "personal-jot",
+        tier: "knowledge",
+        title: "Osobní poznámka o kávě",
+        body: "Private coffee note.",
+        frontmatter: { domain: "personal" },
+      });
+    });
+    dir = made.dir;
+    const block = await made.grounding.compose({ task: "kávě", matchedTerms: ["kávě"] });
+    expect(block).not.toContain("Osobní poznámka");
+  });
+
+  it("F8: a personal-domain compose sees the personal note and grounds the Hearth shelf", async () => {
+    const made = await makeVault(async (vault) => {
+      await vault.createNote({
+        id: "north-star",
+        tier: "memory",
+        title: "North Star",
+        body: "The mission.",
+      });
+      await vault.createNote({
+        id: "subsystem-hearth-moc",
+        tier: "knowledge",
+        title: "Hearth — polička",
+        body: "Krb domova.",
+        frontmatter: { subsystem: "hearth" },
+      });
+      // `-moc`-suffixed so it is a retrieval entry point alongside the shelf note
+      // above (`vault.index()` restricts to entry points once any exist).
+      await vault.createNote({
+        id: "personal-jot-moc",
+        tier: "knowledge",
+        title: "Osobní poznámka o kávě",
+        body: "Private coffee note.",
+        frontmatter: { domain: "personal" },
+      });
+    });
+    dir = made.dir;
+    const block = await made.grounding.compose({
+      task: "kávě",
+      matchedTerms: ["kávě"],
+      domain: "personal",
+    });
+    expect(block).toContain("Hearth — polička");
+    expect(block).toContain("Osobní poznámka");
+  });
+
+  it("F8: a work run (no domain) is unaffected by an absent Hearth shelf (regression)", async () => {
+    const made = await makeVault(seedFull);
+    dir = made.dir;
+    const block = await made.grounding.compose({ task: "rohlik delivery question" });
+    expect(block).not.toContain("Hearth");
   });
 
   it("never throws on an unreadable vault → ''", async () => {

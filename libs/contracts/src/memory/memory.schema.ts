@@ -6,6 +6,19 @@ export const MemoryTierSchema = z.enum(["memory", "daily", "knowledge"]);
 export type MemoryTier = z.infer<typeof MemoryTierSchema>;
 
 /**
+ * A note's life-domain (NS2 F8) — retrieval/isolation marker, never embeddings.
+ * "personal" marks the operator's private second brain (calendar reads, quick
+ * notes, reminders); the ABSENCE of this field means work — the default, so
+ * every existing note stays work-domain with no migration. Isolated from
+ * project grounding the same way projects are isolated from each other (see
+ * `GroundingService`'s `visibleInDomain`). A `z.literal` rather than an enum
+ * keeps it minimal and honestly single-valued; it widens to `z.enum` later
+ * without breaking parsers.
+ */
+export const NoteDomainSchema = z.literal("personal");
+export type NoteDomain = z.infer<typeof NoteDomainSchema>;
+
+/**
  * The four durable-note kinds (Fáze 3 typed memory). A pure classification of
  * what a note IS, orthogonal to its tier (where it lives): a `decision` can sit
  * in `knowledge/` just as easily as a `fact`. Kept a closed, small enum — free-form
@@ -39,6 +52,8 @@ export const NoteSchema = z.object({
   raw: z.boolean().optional(),
   /** The owning subsystem (F4a shelves), derived from `subsystem:` frontmatter. */
   subsystem: SubsystemIdSchema.optional(),
+  /** Life-domain (F8), derived from `domain:` frontmatter — absent means work. */
+  domain: NoteDomainSchema.optional(),
 });
 export type Note = z.infer<typeof NoteSchema>;
 
@@ -55,6 +70,8 @@ export const IndexEntrySchema = z.object({
   project: z.string().optional(),
   /** The owning subsystem (F4a shelves), derived from `subsystem:` frontmatter. */
   subsystem: SubsystemIdSchema.optional(),
+  /** Life-domain (F8), derived from `domain:` frontmatter — absent means work. */
+  domain: NoteDomainSchema.optional(),
   /**
    * Retrieval keywords (F4b index-first scoring) — curated frontmatter, never
    * embeddings. `tags` are the note's own `tags:` frontmatter; `aliases` are
@@ -80,6 +97,8 @@ export const MemoryGraphSchema = z.object({
       project: z.string().optional(),
       /** The owning subsystem (F4a shelves) — same optional/back-compat posture. */
       subsystem: SubsystemIdSchema.optional(),
+      /** Life-domain (F8) — same optional/back-compat posture. */
+      domain: NoteDomainSchema.optional(),
     }),
   ),
   edges: z.array(z.object({ from: z.string(), to: z.string() })),
@@ -94,6 +113,8 @@ export const SearchHitSchema = z.object({
   snippet: z.string(),
   /** Owning project of the hit note (Fáze 11) — absent for a global note. */
   project: z.string().optional(),
+  /** Life-domain (F8) — same optional/back-compat posture. */
+  domain: NoteDomainSchema.optional(),
 });
 export type SearchHit = z.infer<typeof SearchHitSchema>;
 

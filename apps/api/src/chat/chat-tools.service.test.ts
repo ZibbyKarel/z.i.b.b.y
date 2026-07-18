@@ -6,12 +6,13 @@ import type { MachineService } from "../machine/machine.service";
 import type { VaultService } from "../memory/vault.service";
 import type { SubsystemsService } from "../subsystems/subsystems.service";
 import type { TaskSchedulerService } from "../tasks/task-scheduler.service";
-import { ChatToolsService } from "./chat-tools.service";
+import { ChatToolsService, personalNoteId } from "./chat-tools.service";
 
 /** Build the service with just the methods each tool touches, stubbed. */
 function makeService(overrides: {
   createTask?: TaskSchedulerService["createTask"];
   search?: VaultService["search"];
+  createNote?: VaultService["createNote"];
   assemble?: BriefingService["assemble"];
   propose?: MachineService["propose"];
   subsystemGet?: SubsystemsService["get"];
@@ -20,7 +21,10 @@ function makeService(overrides: {
   const scheduler = {
     createTask: overrides.createTask ?? vi.fn(),
   } as unknown as TaskSchedulerService;
-  const vault = { search: overrides.search ?? vi.fn() } as unknown as VaultService;
+  const vault = {
+    search: overrides.search ?? vi.fn(),
+    createNote: overrides.createNote ?? vi.fn(),
+  } as unknown as VaultService;
   const briefing = { assemble: overrides.assemble ?? vi.fn() } as unknown as BriefingService;
   const machine = { propose: overrides.propose ?? vi.fn() } as unknown as MachineService;
   const subsystems = { get: overrides.subsystemGet ?? vi.fn() } as unknown as SubsystemsService;
@@ -337,5 +341,68 @@ describe("machine tools (N5b) — propose only, never execute", () => {
     const out = await svc.proposeOpenFolder("fotky");
     expect(out).toContain("odmítl");
     expect(out).toContain("absolute path");
+  });
+});
+
+describe("personalNoteId", () => {
+  const now = new Date("2026-07-17T12:34:56.000Z");
+
+  it("slugs a usable title", () => {
+    expect(personalNoteId("Zubař v úterý", now)).toBe("personal-zuba-v-ter");
+  });
+
+  it("falls back to a timestamp id when the title is absent", () => {
+    expect(personalNoteId(undefined, now)).toBe("personal-20260717-123456");
+  });
+
+  it("falls back to a timestamp id when the title slugs to nothing usable", () => {
+    expect(personalNoteId("!!!", now)).toBe("personal-20260717-123456");
+  });
+});
+
+describe("F8: capturePersonalNote — quick capture to the personal domain", () => {
+  it("creates a raw note with frontmatter.domain === 'personal' and no tier", async () => {
+    const createNote = vi.fn().mockResolvedValue({ id: "personal-zuba-v-ter" });
+    const svc = makeService({ createNote });
+    const out = await svc.capturePersonalNote({
+      text: "Zubař v úterý v 9",
+      title: "Zubař v úterý",
+    });
+
+    expect(createNote).toHaveBeenCalledTimes(1);
+    const call = createNote.mock.calls[0]?.[0];
+    expect(call.tier).toBeUndefined();
+    expect(call.frontmatter).toEqual({ domain: "personal" });
+    expect(call.body).toBe("Zubař v úterý v 9");
+    expect(out).toContain("personal-zuba-v-ter");
+  });
+
+  it("retries with a -N suffix on a duplicate id, then succeeds", async () => {
+    const { DuplicateNoteError } = await import("../memory/vault.service");
+    const createNote = vi
+      .fn()
+      .mockRejectedValueOnce(new DuplicateNoteError("personal-jot"))
+      .mockResolvedValueOnce({ id: "personal-jot-2" });
+    const svc = makeService({ createNote });
+    const out = await svc.capturePersonalNote({ text: "x", title: "jot" });
+
+    expect(createNote).toHaveBeenCalledTimes(2);
+    expect(createNote.mock.calls[1]?.[0].id).toBe("personal-jot-2");
+    expect(out).toContain("personal-jot-2");
+  });
+
+  it("degrades to an apology string when the retry budget is exhausted", async () => {
+    const { DuplicateNoteError } = await import("../memory/vault.service");
+    const createNote = vi.fn().mockRejectedValue(new DuplicateNoteError("personal-jot"));
+    const svc = makeService({ createNote });
+    const out = await svc.capturePersonalNote({ text: "x", title: "jot" });
+    expect(out).toContain("Omlouvám se");
+  });
+
+  it("degrades to an apology string on any other vault failure, never throws", async () => {
+    const createNote = vi.fn().mockRejectedValue(new Error("disk full"));
+    const svc = makeService({ createNote });
+    const out = await svc.capturePersonalNote({ text: "x" });
+    expect(out).toContain("Omlouvám se");
   });
 });

@@ -5,6 +5,7 @@ import {
   ImportResultSchema,
   IndexEntrySchema,
   MemoryGraphSchema,
+  NoteDomainSchema,
   NoteIdSchema,
   NoteSchema,
   NoteTypeSchema,
@@ -245,6 +246,90 @@ describe("F4b: subsystem/tags/aliases retrieval fields", () => {
     });
     expect(parsed.success).toBe(true);
     if (parsed.success) expect(parsed.data.nodes[0]?.subsystem).toBe("forge");
+  });
+});
+
+describe("F8: domain (personal-note isolation)", () => {
+  it("NoteDomainSchema accepts only the literal 'personal'", () => {
+    expect(NoteDomainSchema.safeParse("personal").success).toBe(true);
+    expect(NoteDomainSchema.safeParse("work").success).toBe(false);
+    expect(NoteDomainSchema.safeParse(undefined).success).toBe(false);
+  });
+
+  it("IndexEntrySchema accepts an optional domain: personal and rejects domain: work", () => {
+    const personal = IndexEntrySchema.safeParse({
+      id: "personal-note",
+      title: "Personal note",
+      tier: "knowledge",
+      domain: "personal",
+    });
+    expect(personal.success).toBe(true);
+    if (personal.success) expect(personal.data.domain).toBe("personal");
+
+    expect(
+      IndexEntrySchema.safeParse({
+        id: "x",
+        title: "X",
+        tier: "knowledge",
+        domain: "work",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("a legacy IndexEntry payload without `domain` still parses, with domain undefined", () => {
+    const parsed = IndexEntrySchema.safeParse({
+      id: "zibby-index",
+      title: "Zibby Index",
+      tier: "knowledge",
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.domain).toBeUndefined();
+  });
+
+  it("NoteSchema accepts and rejects `domain` the same way", () => {
+    expect(
+      NoteSchema.safeParse({
+        id: "personal-jot",
+        path: "knowledge/personal-jot.md",
+        tier: "knowledge",
+        title: "Jot",
+        frontmatter: { domain: "personal" },
+        links: [],
+        domain: "personal",
+      }).success,
+    ).toBe(true);
+    expect(
+      NoteSchema.safeParse({
+        id: "x",
+        path: "x.md",
+        tier: "knowledge",
+        title: "X",
+        frontmatter: {},
+        links: [],
+        domain: "work",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("MemoryGraphSchema node accepts `domain`", () => {
+    const parsed = MemoryGraphSchema.safeParse({
+      nodes: [{ id: "a", label: "A", tier: "knowledge", domain: "personal" }],
+      edges: [],
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.nodes[0]?.domain).toBe("personal");
+  });
+
+  it("SearchHitSchema accepts `domain`", () => {
+    const parsed = SearchHitSchema.safeParse({
+      id: "personal-jot",
+      title: "Jot",
+      tier: "knowledge",
+      snippet: "…",
+      domain: "personal",
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.domain).toBe("personal");
   });
 });
 
