@@ -31,6 +31,7 @@ const KIND_LABEL_KEY = {
   jira: "integrations.kindJira",
   github: "integrations.kindGithub",
   calendar: "integrations.kindCalendar",
+  sentry: "integrations.kindSentry",
 } as const satisfies Record<Integration["kind"], string>;
 
 /** Ordered (budget field, "projects" namespace label key) pairs shown in the effective panel. */

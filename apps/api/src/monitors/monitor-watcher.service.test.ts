@@ -4,9 +4,11 @@ import * as path from "node:path";
 import type { Integration } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
+import { GithubCiMonitor } from "./github-ci.monitor";
 import { type MonitorAdapter, MonitorAdapterRegistry } from "./monitor-adapter";
 import { MonitorEventStore } from "./monitor-event.store";
 import { MonitorWatcherService } from "./monitor-watcher.service";
+import { SentryMonitor } from "./sentry.monitor";
 
 const fakeLogger = {
   child: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }),
@@ -182,6 +184,101 @@ describe("MonitorWatcherService", () => {
     // Each adapter keeps its own cursor namespace on the same integration.
     expect(await store.readCursor(GH.id, "github-ci")).toBe("C1");
     expect(await store.readCursor(GH.id, "fake-sentry")).toBe("S1");
+  });
+
+  // NS2 F7a — real second monitor, not a fake stand-in: proves the seam holds
+  // for the actual SentryMonitor + GithubCiMonitor pair.
+  it("a Sentry integration ingests an error-unresolved event with the Sentry (not CI) instruction", async () => {
+    const SENTRY: Integration = {
+      id: "acme-sentry",
+      kind: "sentry",
+      projectId: "acme",
+      enabled: true,
+      status: "connected",
+      hasCredentials: true,
+      config: { kind: "sentry", org: "acme", project: "backend", minLevel: "error" },
+    };
+    integrations.list.mockResolvedValue([SENTRY]);
+    credentials.read.mockResolvedValue({ token: "sntrys_x" });
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => [
+        {
+          id: "123",
+          title: "TypeError in checkout",
+          culprit: "checkout()",
+          level: "error",
+          permalink: "https://sentry.io/organizations/acme/issues/123/",
+          firstSeen: "2026-07-02T08:00:00Z",
+          count: "3",
+        },
+      ],
+    })) as unknown as typeof fetch;
+    registry.register(new SentryMonitor(fetchImpl));
+
+    await makeWatcher().tick();
+
+    const stored = await store.get("sentry-acme-backend-123");
+    expect(stored.kind).toBe("error-unresolved");
+    expect(stored.state).toBe("handled");
+    expect(scheduler.createTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: expect.stringContaining("Investigate the Sentry error"),
+      }),
+      expect.any(Number),
+      "acme",
+    );
+    expect(scheduler.createTask).not.toHaveBeenCalledWith(
+      expect.objectContaining({ text: expect.stringContaining("failing CI run") }),
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
+  it("second-adapter-registers-with-zero-ingestion-change: real GithubCiMonitor + SentryMonitor each yield their own event via forIntegration", async () => {
+    const SENTRY: Integration = {
+      id: "acme-sentry",
+      kind: "sentry",
+      projectId: "acme",
+      enabled: true,
+      status: "connected",
+      hasCredentials: true,
+      config: { kind: "sentry", org: "acme", project: "backend", minLevel: "error" },
+    };
+    integrations.list.mockResolvedValue([GH, SENTRY]);
+    credentials.read.mockImplementation(async (id: string) =>
+      id === GH.id ? { token: "ghp_x" } : { token: "sntrys_x" },
+    );
+    const ciFetch = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        workflow_runs: [
+          {
+            id: 1,
+            run_attempt: 1,
+            status: "completed",
+            conclusion: "failure",
+            created_at: "2026-07-02T08:00:00Z",
+            updated_at: "2026-07-02T08:00:00Z",
+          },
+        ],
+      }),
+    })) as unknown as typeof fetch;
+    const sentryFetch = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => [
+        { id: "9", title: "boom", level: "error", firstSeen: "2026-07-02T08:00:00Z" },
+      ],
+    })) as unknown as typeof fetch;
+    registry.register(new GithubCiMonitor(ciFetch));
+    registry.register(new SentryMonitor(sentryFetch));
+
+    const ingested = await makeWatcher().tick();
+
+    expect(ingested.sort()).toEqual(["ci-acme-app-1-1", "sentry-acme-backend-9"].sort());
   });
 
   it("one failing adapter never blocks the others; nothing wants → no poll at all", async () => {

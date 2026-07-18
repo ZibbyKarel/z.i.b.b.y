@@ -7,6 +7,7 @@ import { MonitorAdapterRegistry } from "./monitor-adapter";
 import { MONITOR_EVENTS_DIR, MonitorEventStore } from "./monitor-event.store";
 import { MonitorWatcherService } from "./monitor-watcher.service";
 import { MonitorsController } from "./monitors.controller";
+import { SentryMonitor } from "./sentry.monitor";
 
 /** Default monitor events dir, anchored to the data root. */
 export function resolveMonitorEventsDir(): string {
@@ -31,6 +32,7 @@ export function resolveMonitorEventsDir(): string {
       useFactory: () => {
         const registry = new MonitorAdapterRegistry();
         registry.register(new GithubCiMonitor());
+        registry.register(new SentryMonitor()); // NS2 F7a — the second monitor
         return registry;
       },
     },

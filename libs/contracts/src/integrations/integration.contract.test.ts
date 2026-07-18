@@ -212,4 +212,39 @@ describe("integration schema", () => {
     expect(CredentialsInputSchema.safeParse({ token: "a", password: "b" }).success).toBe(false);
     expect(CredentialsInputSchema.safeParse({ apiKey: "a" }).success).toBe(false);
   });
+
+  // NS2 F7a — the first monitor-only integration kind.
+  it("accepts a sentry integration + token credential", () => {
+    const parsed = IntegrationSchema.safeParse({
+      id: "acme-sentry",
+      kind: "sentry",
+      projectId: "acme-app",
+      config: { kind: "sentry", org: "acme", project: "backend" },
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.config).toMatchObject({ minLevel: "error" });
+    }
+    expect(CredentialsInputSchema.safeParse({ token: "sntrys_x" }).success).toBe(true);
+  });
+
+  it("SentryConfigSchema.strict() rejects a stray token key", () => {
+    expect(
+      IntegrationConfigSchema.safeParse({
+        kind: "sentry",
+        org: "acme",
+        project: "backend",
+        token: "leak",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("sentry minLevel defaults to 'error'", () => {
+    const parsed = IntegrationConfigSchema.parse({
+      kind: "sentry",
+      org: "acme",
+      project: "backend",
+    });
+    expect(parsed).toMatchObject({ minLevel: "error" });
+  });
 });

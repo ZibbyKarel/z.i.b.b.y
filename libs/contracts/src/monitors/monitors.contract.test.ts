@@ -27,12 +27,23 @@ describe("monitor.schema", () => {
   });
 
   it("caps detail at 4000 chars (T11 finding #16): 4000 passes, 4001 rejects", () => {
-    expect(MonitorEventSchema.safeParse({ ...VALID, detail: "x".repeat(4000) }).success).toBe(
-      true,
-    );
+    expect(MonitorEventSchema.safeParse({ ...VALID, detail: "x".repeat(4000) }).success).toBe(true);
     expect(MonitorEventSchema.safeParse({ ...VALID, detail: "x".repeat(4001) }).success).toBe(
       false,
     );
+  });
+
+  // NS2 F7a — Sentry's event kind, the second member of the closed vocabulary.
+  it("error-unresolved parses in MonitorEventKindSchema; a full event round-trips", () => {
+    const sentryEvent = {
+      ...VALID,
+      id: "sentry-acme-backend-123",
+      integrationId: "acme-sentry",
+      kind: "error-unresolved",
+      title: "Sentry: TypeError in checkout",
+      detail: "Project: backend\nLevel: error\nCulprit: checkout()\nCount: 12",
+    };
+    expect(MonitorEventSchema.parse(sentryEvent)).toEqual(sentryEvent);
   });
 
   it("N4b: CiStatus round-trips; state is a closed red/green vocabulary", () => {
