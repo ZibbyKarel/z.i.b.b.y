@@ -6,6 +6,7 @@ import type {
   BriefingSubsystemLine,
   CiStatus,
   SubsystemWithStatus,
+  WatcherHealth,
 } from "@zibby/contracts";
 import { ACTIVITY_DIR, ActivityLogService } from "../activity/activity-log.service";
 import { ApprovalsService } from "../approvals/approvals.service";
@@ -20,6 +21,7 @@ import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { SelfKnowledgeService } from "../self-knowledge/self-knowledge.service";
 import { SentinelService } from "../sentinel/sentinel.service";
+import { WatcherHealthRegistry } from "../health/watcher-health.registry";
 import { SubsystemsService } from "../subsystems/subsystems.service";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
 import { ensureDir, safeJson, writeFileAtomic } from "../shared/file-storage";
@@ -65,6 +67,18 @@ function buildSubsystemLines(
 }
 
 /**
+ * NS2 F6c — one stale watcher as a briefing line (pure). English to match the
+ * record the briefing is assembled from, e.g.
+ * `channel watcher stale — last tick 5 m ago (interval 30 s)`.
+ */
+function formatStaleWatcher(w: WatcherHealth): string {
+  const age =
+    w.ageMs !== undefined ? `last tick ${Math.round(w.ageMs / 60_000)} m ago` : "never ticked";
+  const detail = w.detail ? ` — ${w.detail}` : "";
+  return `${w.id} watcher stale — ${age} (interval ${Math.round(w.tickMs / 1000)} s)${detail}`;
+}
+
+/**
  * The briefing generator (Phase 6.2). {@link assemble} is a PURE read — pending
  * approvals + parked runs + in-flight channel items + activity since the cursor →
  * a {@link Briefing}, zero side effects (the GET endpoint and the card call this).
@@ -102,6 +116,9 @@ export class BriefingService {
     private readonly maestro: MaestroService,
     // NS2 F5c — Loom's quality findings for the briefing's extras array.
     private readonly loom: LoomService,
+    // NS2 F6c — stale heartbeat watchers (fail-open: a stale watcher is a
+    // briefing line, never a red /health).
+    private readonly watchers: WatcherHealthRegistry,
     @Inject(ACTIVITY_DIR) private readonly activityDir: string,
     logger: LoggerService,
   ) {
@@ -166,6 +183,7 @@ export class BriefingService {
       securityFindings,
       mergeQueue,
       qualityFindings,
+      staleWatchers,
     ] = await Promise.all([
       this.readTrend7d(now),
       this.readLearnedPatterns(),
@@ -180,6 +198,16 @@ export class BriefingService {
       // NS2 F5c — Loom's quality findings. Same fail-open guard: a failed read
       // drops the section, never the briefing.
       this.loom.readFindings().catch((): string[] => []),
+      // NS2 F6c — heartbeat watchers currently probing stale. Same fail-open
+      // guard: a failed read drops the section, never the briefing.
+      Promise.resolve()
+        .then(() =>
+          this.watchers
+            .all()
+            .filter((w) => w.status === "stale")
+            .map(formatStaleWatcher),
+        )
+        .catch((): string[] => []),
     ]);
     const subsystems = subsystemRows
       ? buildSubsystemLines(subsystemRows, ciStatuses, weeklyPct)
@@ -204,6 +232,7 @@ export class BriefingService {
       securityFindings,
       mergeQueue,
       qualityFindings,
+      staleWatchers,
       ...(subsystems ? { subsystems } : {}),
       ...(selfKnowledgeDrift ? { selfKnowledgeDrift } : {}),
     });

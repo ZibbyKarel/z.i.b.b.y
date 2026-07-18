@@ -38,6 +38,9 @@ function makeService(over: {
     agentRunner as never,
     pipelineRunner as never,
     fakeSystemConfigStore(),
+    // F6c watcher-health registry double — registration is exercised in the
+    // base/e2e specs, not here.
+    { register: () => {} } as never,
     fakeLogger as never,
   );
   return { service, limits, agentRunner, pipelineRunner };

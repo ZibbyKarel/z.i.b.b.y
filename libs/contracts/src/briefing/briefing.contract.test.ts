@@ -201,6 +201,30 @@ describe("BriefingSchema", () => {
     });
   });
 
+  describe("stale watchers (NS2 F6c — strictly additive)", () => {
+    it("accepts staleWatchers", () => {
+      expect(
+        BriefingSchema.safeParse({ ...base, staleWatchers: ["channel (last tick 5 m ago)"] })
+          .success,
+      ).toBe(true);
+    });
+
+    it("omitting staleWatchers entirely still parses (old briefings)", () => {
+      const parsed = BriefingSchema.safeParse(base);
+      expect(parsed.success).toBe(true);
+      expect(parsed.success && parsed.data.staleWatchers).toBeUndefined();
+    });
+
+    it("caps at 20 entries", () => {
+      expect(
+        BriefingSchema.safeParse({ ...base, staleWatchers: Array(20).fill("x") }).success,
+      ).toBe(true);
+      expect(
+        BriefingSchema.safeParse({ ...base, staleWatchers: Array(21).fill("x") }).success,
+      ).toBe(false);
+    });
+  });
+
   describe("T11 finding #12 — trend7d/learnedPatterns/automationGaps/appIdeas cap at 50 entries", () => {
     it("50 entries passes, 51 rejects (array length only — elements stay unbounded)", () => {
       expect(BriefingSchema.safeParse({ ...base, trend7d: Array(50).fill("x") }).success).toBe(

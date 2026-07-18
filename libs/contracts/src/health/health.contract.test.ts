@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HealthSchema, healthContract } from "../index";
+import { HealthSchema, WatcherHealthSchema, healthContract } from "../index";
 
 describe("healthContract", () => {
   it("exposes a GET /api/health route returning 200", () => {
@@ -22,6 +22,16 @@ describe("health schema", () => {
         { name: "integrations", status: "ok" },
         { name: "scheduler", status: "ok", detail: "last tick 2026-06-17T00:00:00.000Z" },
       ],
+      watchers: [
+        {
+          id: "channel",
+          status: "ok",
+          tickMs: 30000,
+          lastTickAt: new Date().toISOString(),
+          ageMs: 1200,
+        },
+        { id: "scheduler", status: "disabled", tickMs: 0 },
+      ],
     });
     expect(parsed.success).toBe(true);
   });
@@ -33,6 +43,7 @@ describe("health schema", () => {
       timestamp: new Date().toISOString(),
       claude: { ok: false, reason: "missing" },
       subsystems: [{ name: "vault", status: "down", detail: "ENOENT" }],
+      watchers: [],
     });
     expect(parsed.success).toBe(true);
   });
@@ -43,6 +54,7 @@ describe("health schema", () => {
       uptime: 1,
       timestamp: new Date().toISOString(),
       claude: { ok: true },
+      watchers: [],
     };
     expect(
       HealthSchema.safeParse({ ...base, subsystems: [{ name: "db", status: "ok" }] }).success,
@@ -76,6 +88,39 @@ describe("health schema", () => {
     expect(
       HealthSchema.safeParse({ status: "ok", uptime: 1, timestamp: new Date().toISOString() })
         .success,
+    ).toBe(false);
+  });
+
+  it("requires watchers (F6c) — a payload without the array no longer parses", () => {
+    const parsed = HealthSchema.safeParse({
+      status: "ok",
+      uptime: 1,
+      timestamp: new Date().toISOString(),
+      claude: { ok: true },
+      subsystems: [],
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("WatcherHealthSchema parses each status and rejects unknown ids", () => {
+    expect(
+      WatcherHealthSchema.safeParse({
+        id: "task-scheduler",
+        status: "stale",
+        tickMs: 60000,
+        lastTickAt: new Date().toISOString(),
+        ageMs: 200000,
+        detail: "last poll failed: ETIMEDOUT",
+      }).success,
+    ).toBe(true);
+    expect(
+      WatcherHealthSchema.safeParse({ id: "limit-resume", status: "disabled", tickMs: 0 }).success,
+    ).toBe(true);
+    expect(
+      WatcherHealthSchema.safeParse({ id: "goal-loop", status: "ok", tickMs: 1000 }).success,
+    ).toBe(false);
+    expect(
+      WatcherHealthSchema.safeParse({ id: "channel", status: "down", tickMs: 1000 }).success,
     ).toBe(false);
   });
 });

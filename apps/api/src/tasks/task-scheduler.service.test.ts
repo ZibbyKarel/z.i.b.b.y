@@ -244,6 +244,9 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       // slice (the Haiku CLI path never spawns under test).
       { name: async () => null } as never,
       attachmentStorage,
+      // F6c watcher-health registry double — registration is exercised in the
+      // base/e2e specs, not here.
+      { register: () => {} } as never,
     );
     service.onModuleInit();
   });
@@ -461,6 +464,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       systemConfig,
       { name: async () => null } as never,
       attachmentStorage,
+      { register: () => {} } as never,
       [refProvider] as never,
     );
 
@@ -1397,6 +1401,9 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
       systemConfig,
       { name: async () => null } as never,
       attachmentStorage,
+      // F6c watcher-health registry double — registration is exercised in the
+      // base/e2e specs, not here.
+      { register: () => {} } as never,
     );
     service.onModuleInit();
   });
@@ -1580,6 +1587,9 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
       fakeSystemConfigStore(),
       { name: async () => null } as never,
       attachmentStorage,
+      // F6c watcher-health registry double — registration is exercised in the
+      // base/e2e specs, not here.
+      { register: () => {} } as never,
     );
     service.onModuleInit();
     return {

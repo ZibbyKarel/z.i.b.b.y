@@ -58,6 +58,9 @@ export interface BriefingInput {
   mergeQueue?: string[];
   /** NS2 F5c — Loom's new code-quality findings (god-nodes, cycles). */
   qualityFindings?: string[];
+  /** NS2 F6c — heartbeat watchers currently probing stale (formatted lines,
+   * gathered from the WatcherHealthRegistry, fail-open to `[]`). */
+  staleWatchers?: string[];
 }
 
 /** Activity kinds that count as "ZIBBY did this for you". */
@@ -129,6 +132,9 @@ export function assembleBriefing(input: BriefingInput): Briefing {
     ...(input.mergeQueue && input.mergeQueue.length > 0 ? { mergeQueue: input.mergeQueue } : {}),
     ...(input.qualityFindings && input.qualityFindings.length > 0
       ? { qualityFindings: input.qualityFindings }
+      : {}),
+    ...(input.staleWatchers && input.staleWatchers.length > 0
+      ? { staleWatchers: input.staleWatchers }
       : {}),
   };
 }
@@ -406,6 +412,14 @@ export function renderBriefingMarkdown(briefing: Briefing): string {
   if (briefing.qualityFindings && briefing.qualityFindings.length > 0) {
     lines.push("## Quality");
     for (const item of briefing.qualityFindings) lines.push(`- ${item}`);
+    lines.push("");
+  }
+
+  // NS2 F6c: a stale heartbeat watcher is a warning line here — never a red
+  // /health status (fail-open by design).
+  if (briefing.staleWatchers && briefing.staleWatchers.length > 0) {
+    lines.push("## Watchers");
+    for (const item of briefing.staleWatchers) lines.push(`- ${item}`);
     lines.push("");
   }
 

@@ -35,6 +35,7 @@ import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.s
 import { type BudgetOverMetrics, BudgetService } from "../budget/budget.service";
 import { ChainRunnerService } from "../chains/chain-runner.service";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
+import { WatcherHealthRegistry } from "../health/watcher-health.registry";
 import { LimitsService } from "../limits/limits.service";
 import { GoalRunnerService } from "../goals/goal-runner.service";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
@@ -128,6 +129,7 @@ export class TaskSchedulerService
 {
   private readonly unsubscribes: Array<() => void> = [];
   protected readonly log: ScopedLogger;
+  protected readonly watcherId = "task-scheduler" as const;
   /**
    * Task ids the operator has approved to spend past budget (release-once). A
    * released task that has to wait for a concurrency slot re-enters the queue, and
@@ -160,6 +162,8 @@ export class TaskSchedulerService
     private readonly systemConfig: SystemConfigStore,
     private readonly namer: ClaudeCliTaskNamer,
     private readonly attachmentStorage: AttachmentStorageService,
+    /** F6c — the heartbeat probe registry this watcher self-registers into. */
+    private readonly watcherHealthRegistry: WatcherHealthRegistry,
     /**
      * Phase 116b: extra contributors to the sweep's "keep" set — e.g. a `task`-target
      * automation, which references an attachment set without ever becoming a
@@ -211,6 +215,8 @@ export class TaskSchedulerService
     // the test default). Re-arm live when the config changes (no restart needed).
     this.arm();
     this.unsubscribes.push(this.systemConfig.onChange(() => this.arm()));
+    // F6c: self-register the heartbeat probe.
+    this.watcherHealthRegistry.register(() => this.watcherHealth());
   }
 
   protected tickMs(): number {

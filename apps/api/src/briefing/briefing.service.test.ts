@@ -49,6 +49,7 @@ describe("BriefingService", () => {
   let sentinel: { readFindings: ReturnType<typeof vi.fn> };
   let maestro: { summaryLines: ReturnType<typeof vi.fn> };
   let loom: { readFindings: ReturnType<typeof vi.fn> };
+  let watchers: { all: ReturnType<typeof vi.fn> };
   let service: BriefingService;
 
   const now = new Date("2026-06-12T07:00:00.000Z");
@@ -84,6 +85,9 @@ describe("BriefingService", () => {
     // NS2 F5c — default fixture: no quality findings (each test overrides what
     // it exercises).
     loom = { readFindings: vi.fn().mockResolvedValue([]) };
+    // NS2 F6c — default fixture: every watcher healthy (each test overrides
+    // what it exercises).
+    watchers = { all: vi.fn().mockReturnValue([]) };
 
     service = new BriefingService(
       approvals as never,
@@ -102,6 +106,7 @@ describe("BriefingService", () => {
       sentinel as never,
       maestro as never,
       loom as never,
+      watchers as never,
       dir,
       { child: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn() }) } as never,
     );
@@ -297,6 +302,44 @@ describe("BriefingService", () => {
       loom.readFindings.mockRejectedValue(new Error("vault hiccup"));
       const briefing = await service.assemble(now);
       expect(briefing.qualityFindings).toBeUndefined();
+      expect(briefing.headline).toBe("Nothing needs you.");
+    });
+  });
+
+  describe("stale watchers (NS2 F6c)", () => {
+    it("surfaces only the stale watchers as formatted lines", async () => {
+      watchers.all.mockReturnValue([
+        { id: "channel", status: "ok", tickMs: 30000, ageMs: 1000 },
+        {
+          id: "monitor",
+          status: "stale",
+          tickMs: 60000,
+          lastTickAt: "2026-06-12T06:50:00.000Z",
+          ageMs: 600000,
+        },
+        { id: "scheduler", status: "disabled", tickMs: 0 },
+      ]);
+      const briefing = await service.assemble(now);
+      expect(briefing.staleWatchers).toHaveLength(1);
+      expect(briefing.staleWatchers?.[0]).toContain("monitor watcher stale");
+      expect(briefing.staleWatchers?.[0]).toContain("last tick 10 m ago");
+    });
+
+    it("omits staleWatchers when every watcher is ok or disabled", async () => {
+      watchers.all.mockReturnValue([
+        { id: "channel", status: "ok", tickMs: 30000 },
+        { id: "limit-resume", status: "disabled", tickMs: 0 },
+      ]);
+      const briefing = await service.assemble(now);
+      expect(briefing.staleWatchers).toBeUndefined();
+    });
+
+    it("a throwing registry fails open — omits the field, the briefing still assembles", async () => {
+      watchers.all.mockImplementation(() => {
+        throw new Error("registry down");
+      });
+      const briefing = await service.assemble(now);
+      expect(briefing.staleWatchers).toBeUndefined();
       expect(briefing.headline).toBe("Nothing needs you.");
     });
   });

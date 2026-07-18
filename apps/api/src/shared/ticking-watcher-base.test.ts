@@ -6,6 +6,7 @@ import { TickingWatcherBase } from "./ticking-watcher-base";
  * instead of repeating the mechanism in all 5 service spec files. */
 class TestWatcher extends TickingWatcherBase {
   readonly log: ScopedLogger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+  protected readonly watcherId = "channel" as const;
   private ms = 0;
   private body: () => Promise<void> = async () => {};
 
@@ -120,5 +121,53 @@ describe("TickingWatcherBase", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  describe("watcherHealth (F6c)", () => {
+    it("tickMs <= 0 → disabled (the intentional test/CI mode, never a fault)", () => {
+      const watcher = new TestWatcher();
+      watcher.setTickMs(0);
+      expect(watcher.watcherHealth()).toEqual({ id: "channel", status: "disabled", tickMs: 0 });
+    });
+
+    it("armed but never ticked → ok with the 'not yet ticked' detail (fail-open)", () => {
+      const watcher = new TestWatcher();
+      watcher.setTickMs(1000);
+      expect(watcher.watcherHealth()).toEqual({
+        id: "channel",
+        status: "ok",
+        tickMs: 1000,
+        detail: "armed, not yet ticked",
+      });
+    });
+
+    it("a guardedTick stamps lastTickAt and a fresh probe reports ok with ageMs", async () => {
+      const watcher = new TestWatcher();
+      watcher.setTickMs(1000);
+      await watcher.fireGuardedTick();
+      const health = watcher.watcherHealth();
+      expect(health.status).toBe("ok");
+      expect(health.lastTickAt).toBeDefined();
+      expect(health.ageMs).toBeGreaterThanOrEqual(0);
+      expect(health.ageMs).toBeLessThan(3000);
+    });
+
+    it("a last tick older than staleFactor × tickMs probes stale with its age", async () => {
+      const watcher = new TestWatcher();
+      watcher.setTickMs(1000);
+      await watcher.fireGuardedTick();
+      const health = watcher.watcherHealth(Date.now() + 60_000); // 60 s later > 3×1 s
+      expect(health.status).toBe("stale");
+      expect(health.ageMs).toBeGreaterThan(3000);
+      expect(health.lastTickAt).toBeDefined();
+    });
+
+    it("a direct (test-driven) tick does NOT stamp lastTickAt — only the timer path does", async () => {
+      const watcher = new TestWatcher();
+      watcher.setTickMs(1000);
+      // runTick directly — the ungated public-tick path unit tests use.
+      await (watcher as unknown as { runTick(): Promise<void> }).runTick();
+      expect(watcher.watcherHealth().detail).toBe("armed, not yet ticked");
+    });
   });
 });

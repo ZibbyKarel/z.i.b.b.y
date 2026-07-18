@@ -18,6 +18,7 @@ import { EventsModule } from "./events/events.module";
 import { GateRulesModule } from "./gate-rules/gate-rules.module";
 import { GoalsModule } from "./goals/goals.module";
 import { HealthModule } from "./health/health.module";
+import { WatcherHealthModule } from "./health/watcher-health.module";
 import { HooksModule } from "./hooks/hooks.module";
 import { IntegrationsModule } from "./integrations/integrations.module";
 import { LimitResumeModule } from "./limits-resume/limit-resume.module";
@@ -46,6 +47,9 @@ import { TasksModule } from "./tasks/tasks.module";
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     LoggingModule,
+    // F6c: @Global — every TickingWatcherBase watcher self-registers its heartbeat
+    // probe here; listed early (like LoggingModule) so it exists before any watcher.
+    WatcherHealthModule,
     SystemModule,
     PinsModule,
     ActivityLogModule,

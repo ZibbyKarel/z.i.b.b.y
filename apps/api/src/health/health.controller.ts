@@ -3,6 +3,7 @@ import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { healthContract } from "@zibby/contracts";
 import { ClaudePreflightService } from "../runner/claude-preflight.service";
 import { SubsystemHealthService } from "./subsystem-health.service";
+import { WatcherHealthRegistry } from "./watcher-health.registry";
 
 /**
  * Implements `healthContract`. Process liveness needs no I/O — if the process
@@ -16,6 +17,7 @@ export class HealthController {
   constructor(
     private readonly preflight: ClaudePreflightService,
     private readonly subsystems: SubsystemHealthService,
+    private readonly watchers: WatcherHealthRegistry,
   ) {}
 
   @TsRestHandler(healthContract)
@@ -26,6 +28,9 @@ export class HealthController {
           this.preflight.probe(),
           this.subsystems.probeAll(),
         ]);
+        // F6c: `watchers[]` is informational — a stale watcher deliberately does
+        // NOT flip the overall status to degraded in v1 (fail-open; it surfaces
+        // as a briefing line and a settings-HUD indicator instead).
         const degraded = !claude.ok || subsystems.some((s) => s.status !== "ok");
         return {
           status: 200,
@@ -35,6 +40,7 @@ export class HealthController {
             timestamp: new Date().toISOString(),
             claude,
             subsystems,
+            watchers: this.watchers.all(),
           },
         };
       },

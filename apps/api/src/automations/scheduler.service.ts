@@ -8,6 +8,7 @@ import { MemoryDistillerService } from "../memory/memory-distiller.service";
 import { PatternExtractorService } from "../patterns/pattern-extractor.service";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { GapDetectorService } from "../gaps/gap-detector.service";
+import { WatcherHealthRegistry } from "../health/watcher-health.registry";
 import { LoomService } from "../loom/loom.service";
 import { SelfKnowledgeService } from "../self-knowledge/self-knowledge.service";
 import { SentinelService } from "../sentinel/sentinel.service";
@@ -30,9 +31,12 @@ import { matchesCron } from "./cron";
 @Injectable()
 export class SchedulerService extends TickingWatcherBase implements OnModuleInit, OnModuleDestroy {
   private unsubscribe: (() => void) | null = null;
-  /** Wall-clock of the last tick — the heartbeat the /health probe reads (M8). */
-  private lastTickAt: string | null = null;
+  /** Wall-clock of the last tick (any path, incl. test-driven `tick()`) — the M8
+   * subsystem probe's heartbeat. Distinct from the base's timer-path-only F6c
+   * field (which is private up there, so this needed its own name). */
+  private lastTickAtM8: string | null = null;
   protected readonly log: ScopedLogger;
+  protected readonly watcherId = "scheduler" as const;
 
   constructor(
     private readonly storage: AutomationsStorageService,
@@ -50,6 +54,7 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
     private readonly selfKnowledge: SelfKnowledgeService,
     private readonly sentinel: SentinelService,
     private readonly loom: LoomService,
+    private readonly watcherHealthRegistry: WatcherHealthRegistry,
   ) {
     super();
     this.log = logger.child(SchedulerService.name);
@@ -60,6 +65,9 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
     // default — tests drive `tick()` directly). Re-arm live when the config changes.
     this.arm();
     this.unsubscribe = this.systemConfig.onChange(() => this.arm());
+    // F6c: self-register the heartbeat probe (the base's lastTickAt, stamped on the
+    // timer path; the M8 `health()` below keeps its own tick()-stamped field).
+    this.watcherHealthRegistry.register(() => this.watcherHealth());
   }
 
   protected tickMs(): number {
@@ -93,12 +101,12 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
    * `lastTickAt` is null until the first tick fires.
    */
   health(): { running: boolean; tickMs: number; lastTickAt: string | null } {
-    return { running: this.isArmed(), tickMs: this.tickMs(), lastTickAt: this.lastTickAt };
+    return { running: this.isArmed(), tickMs: this.tickMs(), lastTickAt: this.lastTickAtM8 };
   }
 
   /** Evaluate all enabled cron automations against `now`; fire the due ones. */
   async tick(now: Date = new Date()): Promise<string[]> {
-    this.lastTickAt = now.toISOString();
+    this.lastTickAtM8 = now.toISOString();
     const minute = now.toISOString().slice(0, 16);
     const fired: string[] = [];
     for (const automation of await this.storage.list()) {

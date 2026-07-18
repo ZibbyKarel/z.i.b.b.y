@@ -8,6 +8,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AgentRunnerService } from "../src/agents/agent-runner.service";
 import { AppModule } from "../src/app.module";
+import { WatcherHealthRegistry } from "../src/health/watcher-health.registry";
 import { ClaudeUnavailableError } from "../src/runner/claude-preflight.service";
 
 /** Token-free stand-in for the real `claude` CLI (see fixtures/fake-claude.mjs). */
@@ -58,6 +59,36 @@ describe("Health API (e2e) — claude available", () => {
     expect(Number.isNaN(Date.parse(res.body.timestamp))).toBe(false);
     expect(res.body.claude).toMatchObject({ ok: true });
     expect(res.body.claude.version).toContain("fake-claude");
+  });
+
+  it("carries watchers[] with all five heartbeat ids self-registered (F6c)", async () => {
+    const res = await request(app.getHttpServer()).get("/api/health").expect(200);
+    const watchers = res.body.watchers as Array<{ id: string; status: string }>;
+    expect(watchers.map((w) => w.id).sort()).toEqual([
+      "channel",
+      "limit-resume",
+      "monitor",
+      "scheduler",
+      "task-scheduler",
+    ]);
+    for (const w of watchers) expect(["ok", "stale", "disabled"]).toContain(w.status);
+  });
+
+  it("a stale watcher never flips the overall status to degraded (fail-open, F6c)", async () => {
+    // Register an extra, deliberately-stale probe straight into the registry —
+    // the overall status must stay governed by claude + subsystems only.
+    app.get(WatcherHealthRegistry).register(() => ({
+      id: "channel",
+      status: "stale",
+      tickMs: 1000,
+      lastTickAt: "2026-01-01T00:00:00.000Z",
+      ageMs: 999_999,
+    }));
+    const res = await request(app.getHttpServer()).get("/api/health").expect(200);
+    expect((res.body.watchers as Array<{ status: string }>).some((w) => w.status === "stale")).toBe(
+      true,
+    );
+    expect(res.body.status).toBe("ok");
   });
 });
 

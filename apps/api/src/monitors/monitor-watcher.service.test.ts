@@ -33,7 +33,10 @@ const ALERT = {
 };
 
 /** A scriptable adapter — also the "second monitor drops in" seam proof. */
-function fakeAdapter(kind: string, wants: (i: Integration) => boolean): MonitorAdapter & {
+function fakeAdapter(
+  kind: string,
+  wants: (i: Integration) => boolean,
+): MonitorAdapter & {
   poll: ReturnType<typeof vi.fn>;
 } {
   return {
@@ -62,6 +65,9 @@ describe("MonitorWatcherService", () => {
       activity as never,
       fakeSystemConfigStore(),
       fakeTrace as never,
+      // F6c watcher-health registry double — registration is exercised in the
+      // base/e2e specs, not here.
+      { register: () => {} } as never,
       fakeLogger as never,
     );
 

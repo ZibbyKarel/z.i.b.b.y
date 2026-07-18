@@ -1,5 +1,6 @@
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import { AgentRunnerService } from "../agents/agent-runner.service";
+import { WatcherHealthRegistry } from "../health/watcher-health.registry";
 import { LimitsService } from "../limits/limits.service";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
@@ -41,6 +42,7 @@ export class LimitResumeService
 {
   private unsubscribe: (() => void) | null = null;
   protected readonly log: ScopedLogger;
+  protected readonly watcherId = "limit-resume" as const;
   /** Run refs being resumed right now, so a restart-then-tick can't double-resume one.
    * Complementary to the base's tick-level guard: this is a per-run-id guard (a resume
    * that outlives a tick boundary), while the base's `running` flag serializes whole
@@ -53,6 +55,7 @@ export class LimitResumeService
     private readonly agentRunner: AgentRunnerService,
     private readonly pipelineRunner: PipelineRunnerService,
     private readonly systemConfig: SystemConfigStore,
+    private readonly watcherHealthRegistry: WatcherHealthRegistry,
     logger: LoggerService,
   ) {
     super();
@@ -63,6 +66,8 @@ export class LimitResumeService
     // Scan interval from the operator-owned system config; `0` disables (re-arm live).
     this.arm();
     this.unsubscribe = this.systemConfig.onChange(() => this.arm());
+    // F6c: self-register the heartbeat probe.
+    this.watcherHealthRegistry.register(() => this.watcherHealth());
   }
 
   protected tickMs(): number {

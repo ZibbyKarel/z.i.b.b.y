@@ -116,6 +116,9 @@ function makeService(opts: {
     (opts.selfKnowledge ?? { check: vi.fn(async () => false), write: vi.fn() }) as never,
     (opts.sentinel ?? { scan: vi.fn(async () => ({ findings: [] })) }) as never,
     (opts.loom ?? { audit: vi.fn(async () => ({ findings: [] })) }) as never,
+    // F6c watcher-health registry double — registration is exercised in the
+    // base/e2e specs, not here.
+    { register: () => {} } as never,
   );
   return { service, storage };
 }

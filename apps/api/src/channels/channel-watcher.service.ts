@@ -15,6 +15,7 @@ import { SystemConfigStore } from "../system/system-config.store";
 import { TickingWatcherBase } from "../shared/ticking-watcher-base";
 import { withRetry } from "../shared/retry";
 import { randomUUID } from "node:crypto";
+import { WatcherHealthRegistry } from "../health/watcher-health.registry";
 import { AdapterRegistry } from "./adapters/adapter-registry";
 import { ChannelEventsService } from "./channel-events.service";
 import { ChannelItemStore } from "./channel-item.store";
@@ -50,6 +51,11 @@ export class ChannelWatcherService
 {
   private unsubscribe: (() => void) | null = null;
   protected readonly log: ScopedLogger;
+  protected readonly watcherId = "channel" as const;
+  /** F6c: the most recent poll failure this tick round (null = last round clean).
+   * Feeds the health probe's `detail` only — `integrations.markSync` owns the
+   * durable per-integration `lastError`; triage-degraded surfacing is a follow-up. */
+  private lastPollError: string | null = null;
 
   constructor(
     private readonly integrations: IntegrationsStorageService,
@@ -61,6 +67,7 @@ export class ChannelWatcherService
     private readonly trace: TraceContextService,
     private readonly activity: ActivityLogService,
     private readonly systemConfig: SystemConfigStore,
+    private readonly watcherHealthRegistry: WatcherHealthRegistry,
     @Optional() @Inject(CHANNEL_TRIAGE_FLOW) private readonly flow?: ChannelTriageFlow,
   ) {
     super();
@@ -71,6 +78,11 @@ export class ChannelWatcherService
     // Poll interval from the operator-owned system config; `0` disables (re-arm live).
     this.arm();
     this.unsubscribe = this.systemConfig.onChange(() => this.arm());
+    // F6c: self-register the heartbeat probe; `detail` carries the last poll error.
+    this.watcherHealthRegistry.register(() => {
+      const health = this.watcherHealth();
+      return this.lastPollError ? { ...health, detail: this.lastPollError } : health;
+    });
   }
 
   protected tickMs(): number {
@@ -101,6 +113,8 @@ export class ChannelWatcherService
   /** Poll every enabled, credentialled integration once; return the ingested item ids. */
   async tick(): Promise<string[]> {
     const ingested: string[] = [];
+    // F6c: a clean round clears the health probe's detail; any failure below re-stamps it.
+    this.lastPollError = null;
     // Outcome reconciliation first, so a finished Tier-1 task lands on its item.
     await this.flow
       ?.sweepOutcomes()
@@ -120,6 +134,8 @@ export class ChannelWatcherService
           // lastError AND record an activity line so a persistently failing channel is
           // visible in the briefing, never silent (M8 "never fails silently").
           const message = err instanceof Error ? err.message : String(err);
+          // F6c: surface the failure on the watcher's health probe too (last one wins).
+          this.lastPollError = `${integration.id}: ${message}`;
           await this.integrations.markSync(integration.id, { status: "error", lastError: message });
           void this.activity.record({
             kind: "integration-retry-exhausted",

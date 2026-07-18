@@ -43,7 +43,10 @@ describe("ChannelWatcherService", () => {
     credentialsDir = path.join(root, "credentials");
     channelsDir = path.join(root, "channels");
     fakeDir = path.join(root, "fake");
-    integrations = new IntegrationsStorageService(integrationsDir, path.join(root, "integration-state"));
+    integrations = new IntegrationsStorageService(
+      integrationsDir,
+      path.join(root, "integration-state"),
+    );
     credentials = new CredentialsStore(credentialsDir);
     store = new ChannelItemStore(channelsDir);
     events = new ChannelEventsService();
@@ -80,6 +83,9 @@ describe("ChannelWatcherService", () => {
       fakeTrace as never,
       { record: async () => {} } as never,
       fakeSystemConfigStore(),
+      // F6c watcher-health registry double — registration is exercised in the
+      // base/e2e specs, not here.
+      { register: () => {} } as never,
     );
   }
 
