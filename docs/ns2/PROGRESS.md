@@ -33,10 +33,10 @@
 | F5a   | Sentinel v1 (CVE + secret watch)         | ✅      | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | `8bec02a2` |
 | F5b   | Maestro v1 (merge queue, read-side)      | ✅      | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | `a04fabfa` |
 | F5c   | Loom v1 (scheduled quality audit)        | ✅      | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | `a71b83ac` |
-| F6a   | Herald reply ledger + graduation         | 🟨 next | [ns2-f6](../plans/ns2-f6-trust-from-record.md)     | —          |
-| F6b   | Live soak harness (opt-in lane)          | 🟦      | [ns2-f6](../plans/ns2-f6-trust-from-record.md)     | —          |
-| F6c   | Watcher health probes                    | 🟦      | [ns2-f6](../plans/ns2-f6-trust-from-record.md)     | —          |
-| F7a   | Sentry MonitorAdapter                    | 🟦      | [ns2-f7](../plans/ns2-f7-monitors-and-actions.md)  | —          |
+| F6a   | Herald reply ledger + graduation         | ✅      | [ns2-f6](../plans/ns2-f6-trust-from-record.md)     | `a1b756df` |
+| F6b   | Live soak harness (opt-in lane)          | ✅      | [ns2-f6](../plans/ns2-f6-trust-from-record.md)     | `b53904e4` |
+| F6c   | Watcher health probes                    | ✅      | [ns2-f6](../plans/ns2-f6-trust-from-record.md)     | `43eef785` |
+| F7a   | Sentry MonitorAdapter                    | 🟨 next | [ns2-f7](../plans/ns2-f7-monitors-and-actions.md)  | —          |
 | F7b   | Merge-queue actions + post-merge loop    | 🟦      | [ns2-f7](../plans/ns2-f7-monitors-and-actions.md)  | —          |
 | F8a   | Seat Hearth (registry 10 → 11)           | 🟦      | [ns2-f8](../plans/ns2-f8-hearth-personal.md)       | —          |
 | F8b   | Personal domain (marking + capture)      | 🟦      | [ns2-f8](../plans/ns2-f8-hearth-personal.md)       | —          |
@@ -222,6 +222,57 @@ committed) · ⛔ parked (reason in Notes).
     in `app.contract.ts` — deliberate, mirrors `GapDetectorService`'s precedent);
     `sentinel-scan` (cron `0 3 * * *`) and `loom-audit` (cron `0 2 * * *`) both seed
     `enabled: true` as system automations in `automations.storage.service.ts`.
+- **F6 complete (2026-07-18, Fable):** three checkpoint commits (F6a `a1b756df`
+  Herald ledger+graduation, F6b `b53904e4` soak lane, F6c `43eef785` watcher
+  health). Final full-suite run: api 205 files/1994 tests pass (17 skipped — the
+  documented `pipelines.e2e` flakes did not manifest), web-components 1119 pass,
+  contracts 446 pass, 3× tsc (contracts/api/web) clean, `check:deps` +
+  `check:cycles` clean. The opt-in soak (`ZIBBY_SOAK=1 pnpm --filter @zibby/api
+soak`) ran green 3/3 with the graduated-promotion scenario proven against a
+  real AppModule boot; the default lane runs 0 soak tests (meta-guard asserts
+  it). All 5 graduation safety invariants have dedicated tests. Deviations:
+  (1) F6a — `NOTIFY_ONLY_KINDS` extracted to new
+  `apps/api/src/channels/notify-only-kinds.ts`: the plan had Herald import it
+  from `channel-triage-flow.service.ts`, but that value-import completes a
+  `channels ⇄ herald` module cycle that silently breaks SWC decorator metadata —
+  the `@Optional()` HeraldService injected `undefined` in the live app while all
+  unit tests (manual construction) stayed green; found ONLY by the F6b soak
+  (fan-out 2×T2/3×T3 instead of 3×T2/2×T3), fixed by the extraction. Treat this
+  as a standing gotcha: never add a value import from a `channels` module file
+  back into anything that imports the triage flow. (2) F6c —
+  `SchedulerService`'s own M8 `lastTickAt` field renamed `lastTickAtM8` (TS2415:
+  two same-named PRIVATE fields on base+subclass are incompatible); its public
+  `health()` shape is unchanged. (3) F6c — the five watcher ctor signatures
+  gained a required `WatcherHealthRegistry` param (positional test constructors
+  updated in 6 spec files); `BriefingService` likewise. Recurring process note:
+  the `check:self-knowledge` hook flagged drift at every commit again;
+  `pnpm self-knowledge:generate` + retry resolved each. **New surfaces for
+  F7/F8:** `Health.watchers: WatcherHealth[]` (REQUIRED on the wire —
+  `WatcherIdSchema` is the closed 5-id enum `channel|monitor|scheduler|`
+  `task-scheduler|limit-resume`; add F7's Sentry polling under the existing
+  `monitor` watcher, do NOT add an id); `TickingWatcherBase` now has abstract
+  `watcherId` + concrete `watcherHealth(now?, staleFactor=3)` (any new subclass
+  must declare `watcherId` or tsc fails — that is the guardrail);
+  `WatcherHealthRegistry` (`@Global()` WatcherHealthModule, imported once in
+  AppModule): `register(probe: () => WatcherHealth)` at `onModuleInit` +
+  `all(): WatcherHealth[]` (probes try/caught, drop-with-warn); a stale watcher
+  NEVER flips `/health` status (fail-open, v1 contract);
+  `Briefing.staleWatchers?: string[]` (max 20, additive) renders as
+  `## Watchers` after `## Quality`; settings System tab renders
+  `WatcherRows` (`apps/web/features/settings/components/WatcherRows.tsx`,
+  testids `settings-watchers` + `settings-watcher-row-<id>`, i18n
+  `settings.watchers.*` cs+en); Herald: `ReplyLedgerEntry`/`HeraldGraduation`
+  contracts (`libs/contracts/src/herald/reply-ledger.schema.ts`, `edited`
+  outcome RESERVED never produced), `HeraldService`
+  (`recordProposal`/`recordDecision`/`isGraduated`, ResumableRunner kind
+  `herald-graduation`, threshold env `HERALD_GRADUATION_THRESHOLD` default 10),
+  stores under `<data>/herald/` (`ledger/` entity files +
+  `graduations.json`); the triage-flow promotion branch lives in
+  `channel-triage-flow.service.ts` (graduated + confident + naturally-T3 +
+  !forceT3 → re-routed through `handleTier2`, reason suffixed
+  `(graduated: Tier-2 auto-reply)`); soak harness under `apps/api/test/soak/`
+  (scenarios.ts / soak-harness.ts pure + report renderer) — extend
+  `SOAK_SCENARIOS` for new autonomous behaviors rather than new e2e boots.
 
 ## Planning corrections (verified in code — the audit/roadmap were wrong here)
 
