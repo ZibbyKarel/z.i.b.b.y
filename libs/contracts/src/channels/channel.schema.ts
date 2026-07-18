@@ -3,6 +3,10 @@ import { IsoDateTimeSchema } from "../common.schema";
 import { IntegrationIdSchema, IntegrationKindSchema } from "../integrations/integration.schema";
 import { TaskOutcomeSchema } from "../tasks/task.schema";
 
+/** The triage categories — shared by TriageVerdict and the Herald reply ledger (NS2 F6a). */
+export const TriageCategorySchema = z.enum(["bug", "question", "request", "other"]);
+export type TriageCategory = z.infer<typeof TriageCategorySchema>;
+
 /**
  * Triage's verdict on one inbound item — the SHARED schema for 5.2/5.3. It is
  * `.strict()` ON PURPOSE (Law 4): triage runs over untrusted channel text, so the
@@ -16,7 +20,7 @@ export const TriageVerdictSchema = z
   .object({
     actionable: z.boolean(),
     tier: z.union([z.literal(1), z.literal(2), z.literal(3)]),
-    category: z.enum(["bug", "question", "request", "other"]),
+    category: TriageCategorySchema,
     /** Operator-template task text (Tier 1 dispatch); never executed as instructions. */
     suggestedTaskText: z.string().optional(),
     /** Draft reply (Tier 2/3); sent or parked as an approval, never auto-trusted. */

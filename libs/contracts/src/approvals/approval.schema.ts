@@ -43,6 +43,13 @@ export const ApprovalRunKindSchema = z.enum([
   // `status` to `active` (visible immediately — read-through storage), rejecting
   // deletes the candidate file (the approval record remains as the trace).
   "agent-proposal",
+  // NS2 F6a — Herald's evidence-based autonomy graduation: a (channel, category)
+  // that accumulated N consecutive operator-approved (unedited) replies is proposed
+  // for Tier-2 auto-send. The runId is `<integrationId>/<category>`; approving writes
+  // the graduation (future replies of that category on that channel auto-send through
+  // the same gate), rejecting leaves the channel at Tier-3. The graduation decision
+  // is itself Tier-3 — autonomy widens only on an operator's explicit sign-off.
+  "herald-graduation",
 ]);
 export type ApprovalRunKind = z.infer<typeof ApprovalRunKindSchema>;
 
