@@ -248,6 +248,40 @@ describe("BriefingSchema", () => {
     });
   });
 
+  describe("personal agenda + reminders (NS2 F8c — strictly additive)", () => {
+    it("accepts personalAgenda and reminders", () => {
+      expect(
+        BriefingSchema.safeParse({
+          ...base,
+          personalAgenda: ["09:00 — Zubař"],
+          reminders: ["Zavolat do banky"],
+        }).success,
+      ).toBe(true);
+    });
+
+    it("omitting personalAgenda/reminders entirely still parses (old briefings)", () => {
+      const parsed = BriefingSchema.safeParse(base);
+      expect(parsed.success).toBe(true);
+      expect(parsed.success && parsed.data.personalAgenda).toBeUndefined();
+      expect(parsed.success && parsed.data.reminders).toBeUndefined();
+    });
+
+    it("caps personalAgenda and reminders at 50 entries each", () => {
+      expect(
+        BriefingSchema.safeParse({ ...base, personalAgenda: Array(50).fill("x") }).success,
+      ).toBe(true);
+      expect(
+        BriefingSchema.safeParse({ ...base, personalAgenda: Array(51).fill("x") }).success,
+      ).toBe(false);
+      expect(BriefingSchema.safeParse({ ...base, reminders: Array(50).fill("x") }).success).toBe(
+        true,
+      );
+      expect(BriefingSchema.safeParse({ ...base, reminders: Array(51).fill("x") }).success).toBe(
+        false,
+      );
+    });
+  });
+
   describe("T11 finding #12 — trend7d/learnedPatterns/automationGaps/appIdeas cap at 50 entries", () => {
     it("50 entries passes, 51 rejects (array length only — elements stay unbounded)", () => {
       expect(BriefingSchema.safeParse({ ...base, trend7d: Array(50).fill("x") }).success).toBe(

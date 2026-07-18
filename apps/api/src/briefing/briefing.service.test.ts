@@ -29,6 +29,12 @@ function makeVault() {
       daily.push(text);
       return { id: "daily" };
     }),
+    // NS2 F8c — `readReminders` (and the other `readX` helpers) call `vault.note`
+    // directly; defaulting to a rejection keeps every existing test's fail-open
+    // path exercised without each one stubbing it out.
+    note: vi.fn(async (id: string): Promise<{ id: string; body: string }> => {
+      throw new Error(`note "${id}" not found`);
+    }),
   };
 }
 
@@ -51,6 +57,7 @@ describe("BriefingService", () => {
   let loom: { readFindings: ReturnType<typeof vi.fn> };
   let watchers: { all: ReturnType<typeof vi.fn> };
   let mergeWatch: { list: ReturnType<typeof vi.fn> };
+  let channels: { list: ReturnType<typeof vi.fn> };
   let service: BriefingService;
 
   const now = new Date("2026-06-12T07:00:00.000Z");
@@ -64,7 +71,7 @@ describe("BriefingService", () => {
     const approvals = { list: vi.fn().mockResolvedValue([]) };
     const pipelines = { listAll: vi.fn().mockResolvedValue([]) };
     const goals = { listAll: vi.fn().mockResolvedValue([]) };
-    const channels = { list: vi.fn().mockResolvedValue([]) };
+    channels = { list: vi.fn().mockResolvedValue([]) };
     const activity = { readSince: vi.fn().mockResolvedValue([]), record };
     const tasks = { list: vi.fn().mockResolvedValue([]) };
     const projects = { list: vi.fn().mockResolvedValue([]) };
@@ -389,6 +396,51 @@ describe("BriefingService", () => {
       const briefing = await service.assemble(now);
       expect(briefing.mergedRecently).toBeUndefined();
       expect(briefing.headline).toBe("Nothing needs you.");
+    });
+  });
+
+  describe("personal reminders + agenda (NS2 F8c)", () => {
+    it("readReminders parses bullets from the personal-reminders fixture note, unchecked first", async () => {
+      vault.note.mockImplementation(async (id: string) => {
+        if (id === "personal-reminders") {
+          return {
+            id,
+            body: "## Připomínky\n- [x] Zaplatit fakturu\n- [ ] Zavolat do banky\n",
+          };
+        }
+        throw new Error(`note "${id}" not found`);
+      });
+      const briefing = await service.assemble(now);
+      expect(briefing.reminders).toEqual(["Zavolat do banky", "Zaplatit fakturu"]);
+    });
+
+    it("omits reminders when the personal-reminders note is absent — never throws", async () => {
+      const briefing = await service.assemble(now);
+      expect(briefing.reminders).toBeUndefined();
+      expect(briefing.headline).toBe("Nothing needs you.");
+    });
+
+    it("assemble surfaces a fixture calendar event dated `now` as personalAgenda", async () => {
+      channels.list.mockResolvedValue([
+        {
+          id: "cal-1",
+          integrationId: "zibbycalendar",
+          kind: "calendar",
+          externalRef: {},
+          receivedAt: now.toISOString(),
+          text: `[${now.toISOString()}] Zubař`,
+          raw: {},
+          state: "new",
+        },
+      ]);
+      const briefing = await service.assemble(now);
+      expect(briefing.personalAgenda).toEqual(["07:00 — Zubař"]);
+    });
+
+    it("does not throw when there is no calendar integration (empty channel items)", async () => {
+      channels.list.mockResolvedValue([]);
+      const briefing = await service.assemble(now);
+      expect(briefing.personalAgenda).toBeUndefined();
     });
   });
 });

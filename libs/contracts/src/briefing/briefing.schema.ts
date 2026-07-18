@@ -138,6 +138,10 @@ export const BriefingSchema = z.object({
   staleWatchers: z.array(z.string()).max(20).optional(),
   /** NS2 F7b-2 — merged-work celebration + post-merge CI outcomes per project. */
   mergedRecently: z.array(z.string()).max(50).optional(),
+  /** NS2 F8c — today's personal calendar events (from the Puls-owned calendar reads). */
+  personalAgenda: z.array(z.string()).max(50).optional(),
+  /** NS2 F8c — open personal reminders parsed from the `personal-reminders` vault note. */
+  reminders: z.array(z.string()).max(50).optional(),
 });
 export type Briefing = z.infer<typeof BriefingSchema>;
 

@@ -9,6 +9,7 @@ import type {
 import {
   assembleBriefing,
   buildEngagements,
+  buildPersonalAgenda,
   deterministicHeadline,
   renderBriefingMarkdown,
 } from "./briefing-assembly";
@@ -449,5 +450,112 @@ describe("merged recently (NS2 F7b-2)", () => {
     expect(md).toContain("## Merged");
     expect(md).toContain("- acme/app: PR #42 merged, CI green");
     expect(renderBriefingMarkdown(assembleBriefing(base))).not.toContain("## Merged");
+  });
+});
+
+describe("buildPersonalAgenda (NS2 F8c)", () => {
+  it("a calendar item dated today becomes one HH:mm — label line", () => {
+    const items = [
+      channelItem({
+        kind: "calendar",
+        text: "[2026-06-12T09:00:00.000Z] Zubař",
+      }),
+    ];
+    expect(buildPersonalAgenda(items, NOW)).toEqual(["09:00 — Zubař"]);
+  });
+
+  it("a calendar item dated tomorrow is dropped", () => {
+    const items = [
+      channelItem({
+        kind: "calendar",
+        text: "[2026-06-13T09:00:00.000Z] Zubař zítra",
+      }),
+    ];
+    expect(buildPersonalAgenda(items, NOW)).toEqual([]);
+  });
+
+  it("a non-calendar channel item is ignored even if it looks like a calendar line", () => {
+    const items = [
+      channelItem({
+        kind: "slack",
+        text: "[2026-06-12T09:00:00.000Z] not actually a calendar event",
+      }),
+    ];
+    expect(buildPersonalAgenda(items, NOW)).toEqual([]);
+  });
+
+  it("an unparseable calendar item text is dropped, never throws", () => {
+    const items = [channelItem({ kind: "calendar", text: "no brackets here" })];
+    expect(() => buildPersonalAgenda(items, NOW)).not.toThrow();
+    expect(buildPersonalAgenda(items, NOW)).toEqual([]);
+  });
+
+  it("sorts multiple same-day events by start time", () => {
+    const items = [
+      channelItem({ id: "a", kind: "calendar", text: "[2026-06-12T15:00:00.000Z] Odpoledne" }),
+      channelItem({ id: "b", kind: "calendar", text: "[2026-06-12T09:00:00.000Z] Ráno" }),
+    ];
+    expect(buildPersonalAgenda(items, NOW)).toEqual(["09:00 — Ráno", "15:00 — Odpoledne"]);
+  });
+});
+
+describe("personal agenda + reminders (NS2 F8c — strictly additive)", () => {
+  const base = {
+    now: NOW,
+    since: SINCE,
+    approvals: [],
+    parkedRuns: [],
+    channelItems: [],
+    activity: [],
+  };
+  const reminders = ["Zavolat do banky"];
+
+  it("omits personalAgenda/reminders when absent or empty — strictly additive to today's shape", () => {
+    expect(assembleBriefing(base).personalAgenda).toBeUndefined();
+    expect(assembleBriefing({ ...base, reminders: [] }).reminders).toBeUndefined();
+  });
+
+  it("derives personalAgenda from today's calendar channel items", () => {
+    const withAgenda = assembleBriefing({
+      ...base,
+      channelItems: [channelItem({ kind: "calendar", text: "[2026-06-12T09:00:00.000Z] Zubař" })],
+    });
+    expect(withAgenda.personalAgenda).toEqual(["09:00 — Zubař"]);
+  });
+
+  it("surfaces the gathered reminders lines verbatim", () => {
+    expect(assembleBriefing({ ...base, reminders }).reminders).toEqual(reminders);
+  });
+
+  it("renders ## Osobní — dnešní agenda and ## Připomínky blocks iff their arrays are non-empty", () => {
+    const md = renderBriefingMarkdown(
+      assembleBriefing({
+        ...base,
+        channelItems: [channelItem({ kind: "calendar", text: "[2026-06-12T09:00:00.000Z] Zubař" })],
+        reminders,
+      }),
+    );
+    expect(md).toContain("## Osobní — dnešní agenda");
+    expect(md).toContain("- 09:00 — Zubař");
+    expect(md).toContain("## Připomínky");
+    expect(md).toContain("- Zavolat do banky");
+
+    const empty = renderBriefingMarkdown(assembleBriefing(base));
+    expect(empty).not.toContain("## Osobní");
+    expect(empty).not.toContain("## Připomínky");
+  });
+
+  it("a briefing with neither personalAgenda nor reminders renders byte-identical to today (regression)", () => {
+    const md = renderBriefingMarkdown(assembleBriefing(base));
+    expect(md).toBe(
+      "# Briefing\n\n" +
+        "Nothing needs you.\n\n" +
+        "## Needs you\n" +
+        "- Nothing needs you.\n\n" +
+        "## Did for you\n" +
+        "- Nothing recorded in this window.\n\n" +
+        "## Counts\n" +
+        "- 0 finished · 0 failed · 0 parked · 0 approvals pending · 0 new channel items\n",
+    );
   });
 });
