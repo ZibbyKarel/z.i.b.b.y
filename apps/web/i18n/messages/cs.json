@@ -1751,6 +1751,9 @@
     },
     "statusPill": {
       "nominal": "Nominální",
+      "connecting": "Připojuji",
+      "degraded": "Degradováno",
+      "offline": "Offline",
       "working": "{n} pracují",
       "report": "{n} hlášení",
       "waiting": "{n} čekají na tebe",

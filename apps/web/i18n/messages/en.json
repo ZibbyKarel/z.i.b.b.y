@@ -1751,6 +1751,9 @@
     },
     "statusPill": {
       "nominal": "Nominal",
+      "connecting": "Connecting",
+      "degraded": "Degraded",
+      "offline": "Offline",
       "working": "{n} working",
       "report": "{n} reporting",
       "waiting": "{n} waiting",

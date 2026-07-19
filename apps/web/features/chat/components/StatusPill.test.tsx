@@ -1,6 +1,7 @@
 import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { StatusDotTestId } from "@zibby/design-system";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../../../test/render";
 import { StatusPill, StatusPillTestId } from "./StatusPill";
 
@@ -14,6 +15,25 @@ vi.mock("../../subsystems/queries/useSubsystemsQuery", () => ({
     ],
   }),
 }));
+
+// Mutable stub (F8b): each health test overrides the shape mid-suite, then
+// `beforeEach` below resets it to the nominal/online default so the earlier
+// non-health tests (which never touch this) keep exercising the common case.
+interface HealthStub {
+  data: { status: "ok" | "degraded" } | undefined;
+  isFetching: boolean;
+  isFetched: boolean;
+  isSuccess: boolean;
+}
+const health = vi.hoisted(
+  (): HealthStub => ({
+    data: { status: "ok" },
+    isFetching: false,
+    isFetched: true,
+    isSuccess: true,
+  }),
+);
+vi.mock("../../health", () => ({ useHealthQuery: () => health }));
 
 vi.mock("./StatusFlyoutPanel", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./StatusFlyoutPanel")>();
@@ -74,5 +94,54 @@ describe("StatusPill", () => {
   it("does not draw its own border (single glass border, no doubling)", () => {
     renderWithProviders(<StatusPill />);
     expect(screen.getByTestId(StatusPillTestId.Root)).not.toHaveClass("border-border");
+  });
+});
+
+describe("StatusPill health (F8b)", () => {
+  beforeEach(() => {
+    health.data = { status: "ok" };
+    health.isFetching = false;
+    health.isFetched = true;
+    health.isSuccess = true;
+  });
+
+  // `renderWithProviders` mounts the real `cs` catalog (the app default), so
+  // assertions read the Czech strings, not the English source above.
+  it("shows Nominální with no detail line when the API is healthy (unchanged common case)", () => {
+    renderWithProviders(<StatusPill />);
+    expect(screen.getByTestId(StatusPillTestId.Health)).toHaveTextContent("Nominální");
+    expect(screen.getAllByTestId(StatusDotTestId.Dot)[0]).toHaveClass("bg-ok");
+    expect(screen.queryByTestId(StatusPillTestId.HealthDetail)).toBeNull();
+  });
+
+  it("shows a pulsing Připojuji (connecting) state while the first health fetch is in flight", () => {
+    health.isFetching = true;
+    health.isFetched = false;
+    health.isSuccess = false;
+    health.data = undefined;
+    renderWithProviders(<StatusPill />);
+    expect(screen.getByTestId(StatusPillTestId.Health)).toHaveTextContent("Připojuji");
+    // Connecting is a transient in-flight state, not yet a confirmed fault —
+    // no "api unreachable" detail line until the fetch actually settles.
+    expect(screen.queryByTestId(StatusPillTestId.HealthDetail)).toBeNull();
+  });
+
+  it("shows Offline with a detail line when the health poll does not answer", () => {
+    health.isFetching = false;
+    health.isFetched = true;
+    health.isSuccess = false;
+    health.data = undefined;
+    renderWithProviders(<StatusPill />);
+    expect(screen.getByTestId(StatusPillTestId.Health)).toHaveTextContent("Offline");
+    expect(screen.getAllByTestId(StatusDotTestId.Dot)[0]).toHaveClass("bg-bad");
+    expect(screen.getByTestId(StatusPillTestId.HealthDetail)).toHaveTextContent("nedostupné");
+  });
+
+  it("shows Degradováno (degraded) with a detail line when the API answers but reports degraded", () => {
+    health.data = { status: "degraded" };
+    renderWithProviders(<StatusPill />);
+    expect(screen.getByTestId(StatusPillTestId.Health)).toHaveTextContent("Degradováno");
+    expect(screen.getAllByTestId(StatusDotTestId.Dot)[0]).toHaveClass("bg-warn");
+    expect(screen.getByTestId(StatusPillTestId.HealthDetail)).toHaveTextContent("claude cli");
   });
 });

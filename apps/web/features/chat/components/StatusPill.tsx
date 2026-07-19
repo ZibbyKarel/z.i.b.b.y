@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import type { FocusEvent, KeyboardEvent, MouseEvent, PointerEvent, ReactNode } from "react";
 import { Stack, StatusDot, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import { useHealthQuery } from "../../health";
+import { deriveHealthPresentation } from "../../overview/healthPresentation";
 import { useSubsystemsQuery } from "../../subsystems/queries/useSubsystemsQuery";
 import { type FlyoutSection, STATUS_PILL_DOM_ID } from "../statusFlyout";
 import { useStatusFlyout } from "../useStatusFlyout";
@@ -11,6 +13,8 @@ import { STATUS_FLYOUT_PANEL_ID, StatusFlyoutPanel } from "./StatusFlyoutPanel";
 
 export enum StatusPillTestId {
   Root = "chat-status-pill",
+  Health = "chat-status-pill-health",
+  HealthDetail = "chat-status-pill-health-detail",
   Working = "chat-status-pill-working",
   Report = "chat-status-pill-report",
   Waiting = "chat-status-pill-waiting",
@@ -33,9 +37,36 @@ const TRIGGER_CLASS: Record<FlyoutSection, string> = {
  */
 export function StatusPill() {
   const t = useTranslations("chat");
+  const tRoot = useTranslations();
   const { data } = useSubsystemsQuery();
   const subsystems = data ?? [];
   const flyout = useStatusFlyout();
+
+  // Overall system health (F8b): the pill used to hardcode tone="ok" +
+  // "Nominal" regardless of the API's actual readiness, so a degraded backend
+  // was invisible in Chat. Same signals + derivation as `overview/SummaryWidget`
+  // (single source of truth for the tone/dot/pulse), but the LABEL stays pill-
+  // compact ("Degraded", not "System · DEGRADED") — this is a five-element,
+  // 56px-tall bar, not a banner. The detail line only renders when something is
+  // actually wrong (degraded/offline): staying silent in the common nominal case
+  // is the point — quiet competence, not a dashboard.
+  const { data: health, isFetching, isFetched, isSuccess } = useHealthQuery();
+  const isConnecting = isFetching && !isFetched;
+  const isDegraded = health?.status === "degraded";
+  const {
+    dotTone: healthDotTone,
+    pulse: healthPulse,
+    tone: healthTone,
+    detail: healthDetail,
+  } = deriveHealthPresentation({ isConnecting, isOnline: isSuccess, isDegraded });
+  const healthLabelKey = isConnecting
+    ? "statusPill.connecting"
+    : !isSuccess
+      ? "statusPill.offline"
+      : isDegraded
+        ? "statusPill.degraded"
+        : "statusPill.nominal";
+  const showHealthDetail = !isConnecting && healthTone !== "ok";
   const rootRef = useRef<HTMLDivElement>(null);
   const lastTriggerRef = useRef<HTMLButtonElement | null>(null);
   const suppressFocusOpenRef = useRef(false);
@@ -75,9 +106,10 @@ export function StatusPill() {
     openSection(section, e.currentTarget);
   };
 
-  const onTriggerPointerEnter = (section: FlyoutSection) => (e: PointerEvent<HTMLButtonElement>) => {
-    openSection(section, e.currentTarget);
-  };
+  const onTriggerPointerEnter =
+    (section: FlyoutSection) => (e: PointerEvent<HTMLButtonElement>) => {
+      openSection(section, e.currentTarget);
+    };
 
   const onTriggerKeyDown = (section: FlyoutSection) => (e: KeyboardEvent<HTMLButtonElement>) => {
     if (e.key === "Escape") {
@@ -148,10 +180,29 @@ export function StatusPill() {
       ref={rootRef}
     >
       <Stack align="center" direction="row" gap="100">
-        <StatusDot tone="ok" />
-        <Typography mono size="xs" tracking="wide" type="note" variant="secondary">
-          {t("statusPill.nominal")}
+        <StatusDot pulse={healthPulse} tone={healthDotTone} />
+        <Typography
+          mono
+          data-testid={StatusPillTestId.Health}
+          size="xs"
+          tone={healthTone === "ok" ? undefined : healthTone}
+          tracking="wide"
+          type="note"
+          variant="secondary"
+        >
+          {t(healthLabelKey)}
         </Typography>
+        {showHealthDetail && (
+          <Typography
+            mono
+            data-testid={StatusPillTestId.HealthDetail}
+            size="xs"
+            type="note"
+            variant="tertiary"
+          >
+            {tRoot(healthDetail)}
+          </Typography>
+        )}
         {working > 0 &&
           trigger(
             "working",
