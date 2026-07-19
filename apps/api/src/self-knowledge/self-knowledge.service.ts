@@ -1,11 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { promises as fs } from "node:fs";
-import {
-  IntegrationKindSchema,
-  type Note,
-  SUBSYSTEMS,
-  type SelfKnowledge,
-} from "@zibby/contracts";
+import * as path from "node:path";
+import * as prettier from "prettier";
+import { IntegrationKindSchema, type Note, SUBSYSTEMS, type SelfKnowledge } from "@zibby/contracts";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.service";
 import { PolicyStorageService } from "../gates/policy.storage.service";
@@ -64,6 +61,25 @@ export class SelfKnowledgeService {
     @Inject(GRAPH_REPORT_PATH) private readonly graphReportPath: string,
   ) {}
 
+  /**
+   * Run composed markdown through the project's own Prettier config before it's
+   * compared or persisted. `lint-staged`'s pre-commit `prettier --write` reformats
+   * this note like any other tracked Markdown file (blank lines around headings/
+   * HTML comments, escaped bare `*`); without this step `computeDrift` compares
+   * the composer's raw output against that reformatted-on-disk note and reports
+   * false drift on every commit, even with an unchanged catalog. Falls back to the
+   * raw markdown if config resolution or formatting fails (never blocks compose).
+   */
+  private async formatMarkdown(markdown: string): Promise<string> {
+    try {
+      const filepath = path.join(process.cwd(), "self-knowledge.md");
+      const config = await prettier.resolveConfig(filepath);
+      return await prettier.format(markdown, { ...config, filepath, parser: "markdown" });
+    } catch {
+      return markdown;
+    }
+  }
+
   /** Read + parse `GRAPH_REPORT.md`; any failure at all (missing, unreadable, …) → `null`. */
   private async readCodebaseShape(): Promise<ParsedGraphReport | null> {
     try {
@@ -110,10 +126,11 @@ export class SelfKnowledgeService {
   async compose(): Promise<SelfKnowledge> {
     const input = await this.gather();
     const generated = composeSelfKnowledge(input);
+    const markdown = await this.formatMarkdown(generated.markdown);
     const existing = await this.readExistingNote();
-    const drift = existing ? computeDrift(existing.body ?? "", generated.markdown) : true;
+    const drift = existing ? computeDrift(existing.body ?? "", markdown) : true;
     return {
-      markdown: generated.markdown,
+      markdown,
       generatedAt: generated.generatedAt,
       sections: generated.sections,
       drift,

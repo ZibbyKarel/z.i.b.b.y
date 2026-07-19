@@ -1,0 +1,9 @@
+{
+  "id": "session-start-grounding",
+  "name": "Ukotvení na startu session",
+  "desc": "Na začátku session připomene, ať se ZIBBY nejdřív ukotví v North Star a relevantních MOC v paměti, než začne pracovat.",
+  "event": "SessionStart",
+  "command": "echo 'Než začneš: zkontroluj North Star (CLAUDE.md) a relevantní MOC v .zibby/data/vault.' >&2",
+  "timeout": 5,
+  "enabled": false
+}

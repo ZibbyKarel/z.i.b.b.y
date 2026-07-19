@@ -1,0 +1,13 @@
+{
+  "id": "discovery-to-delivery",
+  "name": "Discovery -> Delivery",
+  "steps": [
+    {
+      "pipeline": "product-discovery"
+    },
+    {
+      "pipeline": "delivery"
+    }
+  ],
+  "instructions": "Od tržního signálu přes PRD a technický plán rovnou do implementace: Product Discovery vytvoří spec, Delivery ho postaví."
+}

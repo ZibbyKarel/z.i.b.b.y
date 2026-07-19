@@ -1,0 +1,10 @@
+{
+  "id": "log-file-writes",
+  "name": "Log zápisů do souborů",
+  "desc": "Po každém Write/Edit připíše řádek do audit logu, aby byly změny souborů dohledatelné i mimo git historii.",
+  "event": "PostToolUse",
+  "matcher": "Write|Edit",
+  "command": "jq -r '\"\\(now | todate) \\(.tool_name) \\(.tool_input.file_path // \"\")\"' >> .zibby/data/activity/file-writes.log",
+  "timeout": 5,
+  "enabled": false
+}

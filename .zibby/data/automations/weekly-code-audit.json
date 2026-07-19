@@ -1,0 +1,8 @@
+{
+  "id": "weekly-code-audit",
+  "name": "Týdenní audit kódu",
+  "trigger": { "type": "cron", "expr": "0 6 * * 1" },
+  "target": { "type": "pipeline", "pipelineId": "code-audit" },
+  "prompt": "Projdi změny za poslední týden a zaměř se na bezpečnost a kvalitu kódu.",
+  "enabled": false
+}

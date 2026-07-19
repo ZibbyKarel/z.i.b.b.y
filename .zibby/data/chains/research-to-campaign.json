@@ -1,0 +1,13 @@
+{
+  "id": "research-to-campaign",
+  "name": "Research -> Campaign",
+  "steps": [
+    {
+      "pipeline": "research"
+    },
+    {
+      "pipeline": "content-campaign"
+    }
+  ],
+  "instructions": "Hloubkový průzkum tématu předá citovanou syntézu jako vstup pro marketingovou kampaň od strategie po hotový obsah."
+}

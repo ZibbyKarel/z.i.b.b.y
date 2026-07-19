@@ -1,0 +1,10 @@
+{
+  "id": "pr-merged-followup",
+  "name": "Poznámka po mergi",
+  "trigger": { "type": "event", "events": ["pr.merged"] },
+  "target": {
+    "type": "task",
+    "text": "Zkontroluj právě mergnutý PR a zapiš klíčová rozhodnutí a poučení do paměti (vault), ať se příště nemusí objevovat znovu."
+  },
+  "enabled": false
+}
