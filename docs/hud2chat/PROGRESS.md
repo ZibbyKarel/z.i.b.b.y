@@ -81,3 +81,12 @@ nothing pushed.
   it reuses `findSelectedRun`'s `list[0]` fallback — matches `/runs` behaviour, flagged for the
   operator. Pre-existing console 404 (a stale run artifact) reproduces on `/runs` too — not ours.
   F3 dispatched.
+- **2026-07-19** — F3 landed (`f01c2395`). Eight pages migrated cleanly; `/skills` and
+  `/skills/seo` live-verified (actions in the header, 1400px bound held, back arrow href
+  confirmed `/skills`, not `/chat`). The subagent surfaced two real recipe gaps, now folded
+  into the plan as steps 8 and 9: detail pages carried a manual ghost "Zpět" button that
+  `ImmersivePage`'s backSlot subsumes (removed in all four), and step 8's "move the route
+  from the HUD-chrome test case" assumed a membership that did not exist. **One subagent
+  claim was wrong and worth remembering:** it reported `npx tsc -p libs/design-system` failing
+  with TS6059 as a "pre-existing baseline issue" — re-running it directly shows it clean.
+  Verify tooling claims rather than inheriting them. F4 dispatched.

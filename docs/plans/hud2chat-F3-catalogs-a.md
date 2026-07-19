@@ -32,9 +32,15 @@ For each page:
 7. **Back affordance.** A detail page's back button should return to its **list**, not to
    `/chat` — pass `backHref`. The list page's back button returns to `/chat` (the default).
    This is the one place the four sections differ from settings; get it right.
-8. **Tests.** Update the section's existing tests for the new structure and extend
-   `AppShell.test.tsx` (move each newly-migrated route from the "still HUD chrome" case to a
-   fullscreen-bypass case).
+8. **Redundant back buttons.** *(added after F3)* Detail pages often carry a manual ghost
+   "Zpět" button inside `PageHeader`'s actions — a stand-in for the shell back affordance
+   that did not exist before F0. `ImmersivePage`'s `backSlot` subsumes it: **remove it**,
+   keeping `router` only if something else (e.g. a delete-success redirect) still needs it.
+   Do not ship two back affordances, and do not drop it silently — say so in the report.
+9. **Tests.** Update the section's existing tests for the new structure and extend
+   `AppShell.test.tsx`. *(corrected after F3)* Do **not** assume the route is already in the
+   "still HUD chrome" `it.each` list — most are not, so there is nothing to "move". Check
+   membership first; add a fullscreen-bypass case either way.
 
 ## Scope — eight pages
 
