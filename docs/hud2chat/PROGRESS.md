@@ -22,8 +22,8 @@ nothing pushed.
 | —   | DS typecheck gate repair   | ✅     | b33e8db5 | TS6059 pre-existing on `main`, masked by the rtk filter for the whole arc              |
 | F8c | Dissolve overview module   | ✅     | d6eeab9d | relocation only, nothing deleted; `features/overview/` is now a leaf                   |
 | F8d | Delete `/overview`+`/runs` | 🔩     | —        | in flight — `/runs` becomes a redirect shim, not a 404 (D17)                           |
-| F9  | Chat reachability sweep    | ⬜     | —        |                                                                                        |
-| F10 | Old shell deletion         | ⬜     | —        |                                                                                        |
+| F9  | Chat reachability sweep    | ✅     | 9d1b7224 | audit at `docs/web/chat-reachability.md`; O7 done; one finding: `/gates` (→ O8)        |
+| F10 | Old shell deletion         | 🔩     | —        | in flight — also deletes the `/gates` route per O8                                     |
 
 ## Migration ledger — per route
 
@@ -48,7 +48,7 @@ nothing pushed.
 | `/projects`, `/[id]`, `/new`, `/[id]/integrations/[iid]` | immersive                     | ✅ immersive |
 | `/companies`, `/[id]`, `/new`                            | immersive                     | ✅ immersive |
 | `/memory`                                                | immersive                     | ✅ immersive |
-| `/gates`                                                 | immersive                     | ✅ immersive |
+| `/gates`                                                 | deleted (O8, F10)             | ✅ immersive |
 
 **Every route is now migrated or deleted.** What remains is cleanup: F9 (orphans + O7 dead
 affordances) and F10 (delete the old shell).
@@ -236,3 +236,21 @@ affordances) and F10 (delete the old shell).
   not: placed last, the entry was buried under 17+ vault-note search hits for "briefing", so it
   moved above the memory section. Findable in cs and en; pending state relabels and refuses a
   second POST. **F8 is complete** — every route is migrated or deleted.
+- **2026-07-19** — F9 landed (`9d1b7224`). The arc's central question is now answered on paper:
+  `docs/web/chat-reachability.md` maps every surviving route to how the operator reaches it from
+  `/chat`, and every surface the original gap audit called orphaned is reachable by the same
+  dock → list → row recipe. O7's two dead affordances are gone as whole paths, not no-ops;
+  the topbar is four elements.
+  **The audit found one thing, and it was mine.** `/gates` is reachable by no click at all —
+  Settings and the subsystem drawer render `GateRulesSection` _inline_ without linking to the
+  route, and the palette's gates section is built from _pending_ approvals, so with none pending
+  it is skipped. D15 claimed three paths; I had verified the dock-resolution mechanism and then
+  taken the reachability itself on trust. Corrected in place. The capability was never lost,
+  only the route — and the operator's call (O8) is to delete the route in F10 rather than wire
+  it up, since a third copy of content editable from two places earns nothing.
+  The subagent also corrected _my brief_: I listed the `overview.*` i18n namespace as dead with
+  the page, but four live components still read it — the name is a leftover from F8c's
+  relocation, not evidence the keys died. It left them alone and said so.
+  Two orphans deleted with evidence (`ParkedRunsPanel`, `features/notifications/`); `knip` swept
+  the rest and found only false positives. This commit also carries the e2e specs F8d should
+  have included — my `git add` there scoped to `apps/web apps/api` and missed repo-root `e2e/`.
