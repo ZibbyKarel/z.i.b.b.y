@@ -28,7 +28,7 @@ nothing pushed.
 | Route                                                    | Target                        | State              |
 | -------------------------------------------------------- | ----------------------------- | ------------------ |
 | `/chat`                                                  | native                        | ✅ native          |
-| `/settings`                                              | immersive                     | hud                |
+| `/settings`                                              | immersive                     | ✅ immersive       |
 | `/archiv`                                                | immersive                     | does not exist yet |
 | `/runs`                                                  | deleted (→ `/archiv`)         | hud                |
 | `/overview`                                              | deleted (→ topbar + briefing) | hud                |
@@ -57,3 +57,15 @@ nothing pushed.
   `Spacer grow` sat side by side in the header, so a long title would truncate at half width
   while free space sat in the spacer — Spacer removed. D7–D9 recorded from the F1/F2
   grounding pass. F1 dispatched.
+- **2026-07-19** — F1 landed (`d7d2b106`). **Plan was wrong about a file location:** `HudPanel`
+  is NOT a DS component — it lives in `apps/web/components/HudPanel/` as a domain composite
+  over `Card`. The DS SKILL.md line listing it among DS generic components is stale. D7 was
+  implemented at the real location; no DS component was needed, only a `CardTestId` export.
+  Orchestrator live-verified `/settings` in the browser at 1680px and fixed one visual defect
+  the subagent could not have caught in jsdom: the header band had `radius="panel"`, so a
+  full-bleed band read as a floating card. Added `radius="none"` to `GlassSurface` and
+  stripped the side/top borders so only the bottom hairline survives — this matches the
+  design's Archiv úloh header, which is literally a `borderBottom` rule. jsdom does not
+  reflect longhand `borderTop` set after the `border` shorthand, so that part is verified in
+  the browser, not asserted in the test (noted in the test itself). `?tab=` deep links, live
+  mandate data and 0 console errors confirmed in-browser. F2 dispatched.

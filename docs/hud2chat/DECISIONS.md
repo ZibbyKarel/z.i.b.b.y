@@ -82,3 +82,21 @@ Three status groupings already coexist: `RUN_STATUS_GROUPS` (project tiles),
 the gutter's rule — `ARCHIVED_STATES = {done, error, interrupted, parked}`, with
 `paused-limit` deliberately staying _active_ because it auto-resumes. Do not invent a
 fourth grouping.
+
+**D10 — `HudPanel` is an app composite, not a DS component.** It lives at
+`apps/web/components/HudPanel/HudPanel.tsx`, built from `Card`/`Container`/`Stack`/
+`Typography`, and is not exported from `libs/design-system`. The DS SKILL.md line listing it
+among DS generic components is **stale** — do not trust it. D7's `surface` prop therefore
+landed in `apps/web`, and no new DS component was required.
+
+**D11 — A full-bleed band uses `GlassSurface radius="none"`, not `"panel"`.** Rounded corners
+on an edge-to-edge band read as a floating card. `ImmersiveShell`'s header additionally drops
+its side and top borders so only the bottom hairline survives, matching the design's Archiv
+úloh header (literally a `borderBottom` rule). Caught only by live browser verification —
+jsdom cannot see it, and it does not reflect longhand `borderTop` set after the `border`
+shorthand either, so that assertion lives in the browser, not the test.
+
+**D12 — Migrated pages must re-supply their own content padding.** `MainLayout`'s `<main>`
+used to wrap every page in `padding={["300","350"]}`. `ImmersiveShell`'s body has none by
+design (a master/detail page like the archive wants to touch the edges), so each migrated
+page adds its own padding wrapper. Miss this and panels butt straight against the header.
