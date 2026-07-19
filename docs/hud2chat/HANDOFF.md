@@ -10,12 +10,23 @@ nothing pushed, no PR** (Tier-3: the operator reviews and merges). Do NOT work o
 Read in this order: `ROADMAP.md` (phases + loop) → `DECISIONS.md` (O1–O4 operator calls,
 D1–D13 architecture) → `PROGRESS.md` (live truth, per-route ledger).
 
-**F0–F6 are committed and every catalog/entity route is on the immersive shell.** F6b (the
-D13 `EntityHero` dedup) and F7 (memory + gates) were dispatched in parallel and were in
-flight when this was last written — check `rtk git log --oneline` against PROGRESS's commit
-column to see whether they landed. What remains after them: F8 (overview dissolution per O3,
-delete `/overview` and the `/runs` list), F9 (chat reachability sweep), F10 (delete the old
-shell). **The reusable migration recipe is the 9 numbered steps in
+**THE ARC IS COMPLETE.** Every phase F0 through F10b is committed; the roadmap has no open
+items. `996872fc` is the tip. Nothing is in flight, and there is no next phase to pick up —
+if you are reading this after a crash, the correct action is to **verify, not to continue**:
+`rtk git log --oneline` should show 11 feature commits plus docs commits on top of
+`32ce9b9e`, and the branch should be clean.
+
+The whole HUD chrome is gone (`MainLayout`, `Sidebar`, `RightRail`, `TopBar`), `/overview`,
+`/runs` and `/gates` are deleted or redirect shims, and every surviving route runs on the
+immersive shell with `/chat` as home. The reachability audit — the arc's proof that the goal
+was actually met — is `docs/web/chat-reachability.md`.
+
+Two things deliberately left for the operator, both named rather than silently skipped:
+the `/chat` composer's `autoFocus` means the first Tab lands in the composer rather than the
+skip link (pre-existing, not from this arc), and a broader accessibility audit beyond
+landmarks was ruled out of scope for a regression fix.
+
+**The reusable migration recipe is the 9 numbered steps in
 `docs/plans/hud2chat-F3-catalogs-a.md`** — every later plan references it rather than
 restating it. Do not re-derive it.
 
@@ -70,9 +81,15 @@ explicitly accepted by the operator.
 - Pre-existing flake, not ours: `apps/api/src/runner/runner-core.test.ts`.
 - The shell body is now the scroll container, not the document, so Playwright's
   `fullPage: true` captures only the viewport — scroll the inner container instead.
-- **Verify subagent tooling claims.** F3's subagent reported a TS6059 failure as a
-  "pre-existing baseline issue"; re-running it directly showed it clean. An inherited false
-  excuse would have let a genuinely red typecheck ride for the rest of the arc.
+- **Verify with exit codes, not output text (D20).** F3's subagent reported a TS6059 failure;
+  I re-ran it, saw "TypeScript: No errors found", and wrote the claim up as false. It was not.
+  The `rtk` filter prints success text while passing the non-zero exit code through, so both
+  the subagent and my rebuttal were reading the same lying output. `libs/design-system` was
+  genuinely red for most of the arc (fixed in `b33e8db5`). Always:
+  `npx tsc -p <proj> --noEmit; echo $?` — and trust the number, not the sentence.
+- **Check a subagent's findings separately when it bundles them.** F8d reported two lost
+  capabilities in one breath; one was real (briefing generation had zero callers), one was
+  false (approvals stayed reachable). A bundle is not a unit of truth (D21).
 - Before calling a layout issue a defect, measure it (`clientWidth` vs `scrollWidth`). F5
   nearly "fixed" a deliberately pannable canvas that was working correctly.
 - **Never pipe `grep` into a redirect that overwrites its own input.** `rtk` transparently

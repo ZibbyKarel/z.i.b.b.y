@@ -29,25 +29,29 @@ title + subtitle, then the content frame. Same token set as `/chat`. That is wha
 
 ## Phases
 
-| #   | Phase                      | Surface                                                               | Status      |
-| --- | -------------------------- | --------------------------------------------------------------------- | ----------- |
-| F0  | Immersive shell foundation | DS `ImmersiveShell` + AppShell immersive route mode                   | ✅ e683f0bf |
-| F1  | Settings                   | `/settings` → immersive (operator's named reference case)             | ✅ d7d2b106 |
-| F2  | Archive of tasks           | new `/archiv` master/detail; chat gutter links to it                  | ✅ 711d3883 |
-| F3  | Catalogs A                 | `skills`, `commands`, `mcp`, `hooks` (list + detail)                  | ✅ f01c2395 |
-| F4  | Catalogs B                 | `agents`, `automations` (list + detail)                               | ✅ c4fe68cb |
-| F5  | Orchestration              | `pipelines`, `chains` (list+detail share one Screen via selectedId)   | ✅ 5765336d |
-| F6  | Delivery entities          | `projects` (+ `/new`, integrations detail), `companies`               | ✅ 12b1f113 |
-| F6b | EntityHero dedup (D13)     | resolve header/hero duplication once, across all four consumers       | ✅ 9df0f1e8 |
-| F7  | Memory + gates             | `/memory`, `/gates`                                                   | ✅ 61eb605b |
-| F8a | Briefing as a chat message | contract variant + API + transcript rendering (O6)                    | ✅ 74b4f7f2 |
-| F8b | Status line                | subsystem health from `SummaryWidget` into the topbar pill/flyout     | 🔩          |
-| F8c | Dissolve overview module   | relocate activity/briefing/health out; nothing deleted (D19)          | ✅ d6eeab9d |
-| F8d | Delete `/overview`+`/runs` | repoint links, `/runs` redirect shim (D17), delete the two pages      | 🔩          |
-| F9  | Chat reachability sweep    | every surface reachable from Chat; orphans killed                     | ⬜          |
-| F10 | Old shell deletion         | remove `MainLayout`/`Sidebar`/`RightRail`/`TopBar`, simplify AppShell | ⬜          |
+| #    | Phase                       | Surface                                                               | Status      |
+| ---- | --------------------------- | --------------------------------------------------------------------- | ----------- |
+| F0   | Immersive shell foundation  | DS `ImmersiveShell` + AppShell immersive route mode                   | ✅ e683f0bf |
+| F1   | Settings                    | `/settings` → immersive (operator's named reference case)             | ✅ d7d2b106 |
+| F2   | Archive of tasks            | new `/archiv` master/detail; chat gutter links to it                  | ✅ 711d3883 |
+| F3   | Catalogs A                  | `skills`, `commands`, `mcp`, `hooks` (list + detail)                  | ✅ f01c2395 |
+| F4   | Catalogs B                  | `agents`, `automations` (list + detail)                               | ✅ c4fe68cb |
+| F5   | Orchestration               | `pipelines`, `chains` (list+detail share one Screen via selectedId)   | ✅ 5765336d |
+| F6   | Delivery entities           | `projects` (+ `/new`, integrations detail), `companies`               | ✅ 12b1f113 |
+| F6b  | EntityHero dedup (D13)      | resolve header/hero duplication once, across all four consumers       | ✅ 9df0f1e8 |
+| F7   | Memory + gates              | `/memory`, `/gates`                                                   | ✅ 61eb605b |
+| F8a  | Briefing as a chat message  | contract variant + API + transcript rendering (O6)                    | ✅ 74b4f7f2 |
+| F8b  | Status line                 | subsystem health from `SummaryWidget` into the topbar pill/flyout     | ✅ 4d5b019a |
+| F8c  | Dissolve overview module    | relocate activity/briefing/health out; nothing deleted (D19)          | ✅ d6eeab9d |
+| F8d  | Delete `/overview`+`/runs`  | repoint links, `/runs` redirect shim (D17), delete the two pages      | ✅ 25dfbabd |
+| F8e  | Briefing trigger            | ⌘K action restoring on-demand generation F8d stranded                 | ✅ 469c8a72 |
+| F9   | Chat reachability sweep     | every surface reachable from Chat; orphans killed                     | ✅ 9d1b7224 |
+| F10  | Old shell deletion          | remove `MainLayout`/`Sidebar`/`RightRail`/`TopBar`, simplify AppShell | ✅ adcda915 |
+| F10b | `main` landmark + skip link | restore the a11y landmarks the shell deletion took with it            | ✅ 996872fc |
 
 Legend: ⬜ not started · 🔩 in progress · 🔎 in review · ✅ done · ⛔ blocked
+
+**All phases are done.** The branch is parked at the PR gate for the operator's review.
 
 **Ordering rationale:** F0 must land first (everything depends on the shell). F1 is
 deliberately the operator's own example — it validates the shell on a real page before we

@@ -5,25 +5,27 @@ Live truth. Updated after every phase, immediately.
 **Branch:** `feat/hud-to-chat-migration` (off `main` @ 32ce9b9e) · **Parked at PR gate** —
 nothing pushed.
 
-| #   | Phase                      | Status | Commit   | Notes                                                                                  |
-| --- | -------------------------- | ------ | -------- | -------------------------------------------------------------------------------------- |
-| —   | Grounding + control docs   | ✅     | —        | audit read, design corpus + current chrome grounded, operator decisions O1–O4 captured |
-| F0  | Immersive shell foundation | ✅     | e683f0bf | `ImmersiveShell` (DS) + `ImmersivePage` (app) + `FULLSCREEN_ROUTES`; behaviour-neutral |
-| F1  | Settings                   | ✅     | d7d2b106 | operator's reference case; `radius="none"` + border strip (D11) found by live verify   |
-| F2  | Archive of tasks           | ✅     | 711d3883 | new `/archiv`; `SearchInput` added to DS; gutter reduced to an "Archiv · N" link       |
-| F3  | Catalogs A                 | ✅     | f01c2395 | 8 pages; recipe hardened with steps 8–9                                                |
-| F4  | Catalogs B                 | ✅     | c4fe68cb | 4 pages; D13 recorded (header/hero duplication), deliberately not patched              |
-| F5  | Orchestration              | ✅     | 5765336d | header must key off route id, not selection, or `/pipelines` backHref self-loops       |
-| F6  | Delivery entities          | ✅     | 12b1f113 | 7 routes incl. 685-LOC `ProfileScreen`; first dynamic `backHref`                       |
-| F6b | EntityHero dedup (D13)     | ✅     | 9df0f1e8 | `showIdentity` prop, default `true`; two opt-outs; other two immune via `children`     |
-| F7  | Memory + gates             | ✅     | 61eb605b | `GateRulesSection` seam resolved with D7's `surface` pattern; `/gates` stays off dock  |
-| F8a | Briefing as a chat message | ✅     | 74b4f7f2 | optional `briefing` payload on an assistant turn; no third role; compat proven         |
-| F8b | Status line                | ✅     | 4d5b019a | real health in the pill; subsystem dots + counts deliberately declined                 |
-| —   | DS typecheck gate repair   | ✅     | b33e8db5 | TS6059 pre-existing on `main`, masked by the rtk filter for the whole arc              |
-| F8c | Dissolve overview module   | ✅     | d6eeab9d | relocation only, nothing deleted; `features/overview/` is now a leaf                   |
-| F8d | Delete `/overview`+`/runs` | 🔩     | —        | in flight — `/runs` becomes a redirect shim, not a 404 (D17)                           |
-| F9  | Chat reachability sweep    | ✅     | 9d1b7224 | audit at `docs/web/chat-reachability.md`; O7 done; one finding: `/gates` (→ O8)        |
-| F10 | Old shell deletion         | 🔩     | —        | in flight — also deletes the `/gates` route per O8                                     |
+| #    | Phase                       | Status | Commit   | Notes                                                                                  |
+| ---- | --------------------------- | ------ | -------- | -------------------------------------------------------------------------------------- |
+| —    | Grounding + control docs    | ✅     | —        | audit read, design corpus + current chrome grounded, operator decisions O1–O4 captured |
+| F0   | Immersive shell foundation  | ✅     | e683f0bf | `ImmersiveShell` (DS) + `ImmersivePage` (app) + `FULLSCREEN_ROUTES`; behaviour-neutral |
+| F1   | Settings                    | ✅     | d7d2b106 | operator's reference case; `radius="none"` + border strip (D11) found by live verify   |
+| F2   | Archive of tasks            | ✅     | 711d3883 | new `/archiv`; `SearchInput` added to DS; gutter reduced to an "Archiv · N" link       |
+| F3   | Catalogs A                  | ✅     | f01c2395 | 8 pages; recipe hardened with steps 8–9                                                |
+| F4   | Catalogs B                  | ✅     | c4fe68cb | 4 pages; D13 recorded (header/hero duplication), deliberately not patched              |
+| F5   | Orchestration               | ✅     | 5765336d | header must key off route id, not selection, or `/pipelines` backHref self-loops       |
+| F6   | Delivery entities           | ✅     | 12b1f113 | 7 routes incl. 685-LOC `ProfileScreen`; first dynamic `backHref`                       |
+| F6b  | EntityHero dedup (D13)      | ✅     | 9df0f1e8 | `showIdentity` prop, default `true`; two opt-outs; other two immune via `children`     |
+| F7   | Memory + gates              | ✅     | 61eb605b | `GateRulesSection` seam resolved with D7's `surface` pattern; `/gates` stays off dock  |
+| F8a  | Briefing as a chat message  | ✅     | 74b4f7f2 | optional `briefing` payload on an assistant turn; no third role; compat proven         |
+| F8b  | Status line                 | ✅     | 4d5b019a | real health in the pill; subsystem dots + counts deliberately declined                 |
+| —    | DS typecheck gate repair    | ✅     | b33e8db5 | TS6059 pre-existing on `main`, masked by the rtk filter for the whole arc              |
+| F8c  | Dissolve overview module    | ✅     | d6eeab9d | relocation only, nothing deleted; `features/overview/` is now a leaf                   |
+| F8d  | Delete `/overview`+`/runs`  | ✅     | 25dfbabd | −1761 lines; `/runs` is a redirect shim, not a 404 (D17)                               |
+| F8e  | Briefing trigger            | ✅     | 469c8a72 | ⌘K action restores on-demand generation F8d stranded                                   |
+| F9   | Chat reachability sweep     | ✅     | 9d1b7224 | audit at `docs/web/chat-reachability.md`; O7 done; one finding: `/gates` (→ O8)        |
+| F10  | Old shell deletion          | ✅     | adcda915 | −2145 lines; `AppShell` is one path; `/gates` route deleted (O8); `web:build` green    |
+| F10b | `main` landmark + skip link | ✅     | 996872fc | closes the a11y regression F10 named; measured exactly one `<main>` per route          |
 
 ## Migration ledger — per route
 
@@ -48,10 +50,11 @@ nothing pushed.
 | `/projects`, `/[id]`, `/new`, `/[id]/integrations/[iid]` | immersive                     | ✅ immersive |
 | `/companies`, `/[id]`, `/new`                            | immersive                     | ✅ immersive |
 | `/memory`                                                | immersive                     | ✅ immersive |
-| `/gates`                                                 | deleted (O8, F10)             | ✅ immersive |
+| `/gates`                                                 | deleted (O8, F10)             | ✅ deleted   |
 
-**Every route is now migrated or deleted.** What remains is cleanup: F9 (orphans + O7 dead
-affordances) and F10 (delete the old shell).
+**Every route is migrated or deleted, and the cleanup is done too.** F9 removed the orphans
+and the two O7 affordances, F10 deleted the old shell and the `/gates` route, F10b restored
+the landmark F10 took with it. **The arc is complete** — parked at the PR gate for review.
 
 ## Session log
 
@@ -267,3 +270,26 @@ affordances) and F10 (delete the old shell).
   Every test passed and the build was clean, because neither asserts landmarks. That is an
   accessibility property of the **new** design, not the HUD breakage the operator accepted, so
   it is named in the commit and closed in F10b rather than shipped quietly.
+- **2026-07-19** — F10b landed (`996872fc`) and **the arc is complete**. The `<main>`
+  landmark now lives in the two page shells rather than in each page — `ImmersiveShell`'s
+  body `Container` (which already supported `as`) and `ChatScreen`'s root, which had been a
+  plain `div` — both carrying one id exported from DS as `MAIN_CONTENT_ID`, so the skip
+  link's target is a shared contract instead of a literal repeated in three files.
+  `SkipLink` came back verbatim from `adcda915^`; only its docblock was HUD-specific.
+  **I verified this by measuring rather than by reasoning about the component tree**, which
+  is the only honest way to assert "exactly one landmark per route": `/chat`, `/settings`,
+  `/memory`, `/archiv`, `/agents`, an agent detail page, and one client-side navigation all
+  report exactly 1 `<main>` and 1 skip link, and focusing the link renders it as a visible
+  172×40 box at top-left as the document's first focusable element. Four raw typechecks at
+  exit 0, cycles clean, 1146 + 512 tests green, `web:build` exit 0 over 24 routes.
+  Left alone and named instead of quietly folded in: the chat composer's pre-existing
+  `autoFocus` means the first Tab on `/chat` lands in the composer, not the skip link.
+
+  **Closing the arc.** Eleven phases, every one dispatched to a Sonnet subagent and reviewed
+  here before commit. The two findings that mattered most both came from distrusting a claim
+  rather than from writing code: the `rtk` filter printing "No errors found" while exiting
+  non-zero had masked a genuinely red DS typecheck for most of the arc _and_ had made me
+  wrongly overrule a subagent who reported it correctly (D20); and F9's audit caught my own
+  D15 justification asserting reachability I had taken on trust instead of clicking through
+  (the mechanism was right, the reachability was not). Branch parked at the PR gate —
+  no push, no PR. The operator reviews and merges.
