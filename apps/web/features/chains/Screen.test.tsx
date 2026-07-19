@@ -2,6 +2,8 @@ import { renderWithProviders as render, screen } from "../../test/render";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Chain, ChainRun } from "@zibby/contracts";
+import { ImmersiveShellTestId } from "@zibby/design-system";
+import { ImmersivePageTestId } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { ChainsScreenTestId, Screen } from "./Screen";
 
 const push = vi.fn();
@@ -110,9 +112,7 @@ describe("chains Screen (N4a)", () => {
   });
 
   it("Delete asks in a CONFIRM dialog, then deletes and navigates back to /chains (Phase 18.1)", async () => {
-    hooks.del.mockImplementation((_args, opts?: { onSuccess?: () => void }) =>
-      opts?.onSuccess?.(),
-    );
+    hooks.del.mockImplementation((_args, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.());
     render(<Screen selectedId="research-then-build" />);
     await userEvent.click(screen.getByTestId(ChainsScreenTestId.Delete));
     expect(screen.getByText("Smazat řetězec?")).toBeInTheDocument();
@@ -135,5 +135,27 @@ describe("chains Screen (N4a)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Zrušit" }));
     expect(hooks.del).not.toHaveBeenCalled();
     expect(screen.queryByText("Smazat řetězec?")).not.toBeInTheDocument();
+  });
+
+  // F5 (docs/plans/hud2chat-F5-orchestration.md): one Screen serves both
+  // `/chains` (list) and `/chains/[id]` (detail) — `routeId` (the `selectedId`
+  // prop, absent on the list route) must drive the immersive header's
+  // title/subtitle/actions and, above all, `backHref` — the single most
+  // likely defect: it must never loop the detail route's back button back
+  // to itself.
+  describe("immersive header", () => {
+    it("list route: title is the section name, back goes to /chat, actions offer Add", () => {
+      render(<Screen />);
+      expect(screen.getByTestId(ImmersiveShellTestId.Title)).toHaveTextContent("Řetězce");
+      expect(screen.getByTestId(ImmersivePageTestId.Back)).toHaveAttribute("href", "/chat");
+      expect(screen.getByRole("button", { name: "Nový řetězec" })).toBeInTheDocument();
+    });
+
+    it("detail route: title is the chain's name, back goes to /chains, no Add action", () => {
+      render(<Screen selectedId="research-then-build" />);
+      expect(screen.getByTestId(ImmersiveShellTestId.Title)).toHaveTextContent("Research → Build");
+      expect(screen.getByTestId(ImmersivePageTestId.Back)).toHaveAttribute("href", "/chains");
+      expect(screen.queryByRole("button", { name: "Nový řetězec" })).not.toBeInTheDocument();
+    });
   });
 });

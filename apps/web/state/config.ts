@@ -109,9 +109,11 @@ export const AGENT_TOOLS = ["read", "write", "bash", "git", "web"] as const;
  * own route here as that section adopts the immersive shell: `/chat` (F0),
  * `/settings` (F1), `/archiv` (F2 — the task archive, reached via
  * `ChatTasksPanel`'s own "Archiv" link, not the classic nav rail), `/skills`,
- * `/commands`, `/mcp`, `/hooks` (F3), `/agents`, `/automations` (F4 —
- * `isFullscreenRoute`'s prefix match also covers each section's `/[id]` detail
- * route). F10 collapses this table entirely once the HUD branch is deleted.
+ * `/commands`, `/mcp`, `/hooks` (F3), `/agents`, `/automations` (F4), `/pipelines`,
+ * `/chains` (F5 — both share one `Screen.tsx` for list *and* detail, switching
+ * on the `[id]` route segment; `isFullscreenRoute`'s prefix match also covers
+ * each section's `/[id]` detail route). F10 collapses this table entirely once
+ * the HUD branch is deleted.
  */
 export const FULLSCREEN_ROUTES = [
   "/chat",
@@ -123,6 +125,8 @@ export const FULLSCREEN_ROUTES = [
   "/hooks",
   "/agents",
   "/automations",
+  "/pipelines",
+  "/chains",
 ] as const;
 
 /** Whether `pathname` (or one of its sub-paths) is a fullscreen route. */

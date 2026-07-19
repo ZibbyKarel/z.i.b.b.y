@@ -2,7 +2,8 @@ import { renderWithProviders as render, screen } from "../../test/render";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { Agent, UpdatePipelineInput } from "@zibby/contracts";
-import { EntityHeroTestId } from "@zibby/design-system";
+import { EntityHeroTestId, ImmersiveShellTestId } from "@zibby/design-system";
+import { ImmersivePageTestId } from "../../components/layout/ImmersivePage/ImmersivePage";
 import type { Pipeline } from "../../domain";
 import { Screen } from "./Screen";
 
@@ -91,6 +92,30 @@ describe("pipelines Screen — avatar hero", () => {
   });
 });
 
+// F5 (docs/plans/hud2chat-F5-orchestration.md): one Screen serves both
+// `/pipelines` (list) and `/pipelines/[id]` (detail) — `routeId` (the
+// `selectedId` prop, absent on the list route) must drive the immersive
+// header's title/subtitle/actions and, above all, `backHref` — the single
+// most likely defect: it must never loop the detail route's back button
+// back to itself.
+describe("pipelines Screen — immersive header (F5)", () => {
+  it("list route: title is the section name, back goes to /chat, actions offer Add", () => {
+    hooks.pipelines = { data: [PIPELINE], isPending: false, isError: false, refetch: vi.fn() };
+    render(<Screen />);
+    expect(screen.getByTestId(ImmersiveShellTestId.Title)).toHaveTextContent("Pipelines");
+    expect(screen.getByTestId(ImmersivePageTestId.Back)).toHaveAttribute("href", "/chat");
+    expect(screen.getByRole("button", { name: "Přidat pipeline" })).toBeInTheDocument();
+  });
+
+  it("detail route: title is the pipeline's name, back goes to /pipelines, no Add action", () => {
+    hooks.pipelines = { data: [PIPELINE], isPending: false, isError: false, refetch: vi.fn() };
+    render(<Screen selectedId="build-feature" />);
+    expect(screen.getByTestId(ImmersiveShellTestId.Title)).toHaveTextContent(PIPELINE.name);
+    expect(screen.getByTestId(ImmersivePageTestId.Back)).toHaveAttribute("href", "/pipelines");
+    expect(screen.queryByRole("button", { name: "Přidat pipeline" })).not.toBeInTheDocument();
+  });
+});
+
 describe("pipelines Screen — inline edit", () => {
   it("toggles the detail canvas editable (no dialog), pre-filling one node per phase", async () => {
     hooks.pipelines = { data: [EXISTING], isPending: false, isError: false, refetch: vi.fn() };
@@ -129,8 +154,8 @@ describe("pipelines Screen — inline edit", () => {
   it("Save PATCHes only the changed phases", async () => {
     hooks.pipelines = { data: [EXISTING], isPending: false, isError: false, refetch: vi.fn() };
     hooks.update.mockReset();
-    hooks.update.mockImplementation(
-      (_args: unknown, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.(),
+    hooks.update.mockImplementation((_args: unknown, opts?: { onSuccess?: () => void }) =>
+      opts?.onSuccess?.(),
     );
     render(<Screen selectedId="delivery" />);
 

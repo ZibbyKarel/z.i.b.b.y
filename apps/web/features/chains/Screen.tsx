@@ -10,8 +10,8 @@ import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
+import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { PinButton } from "../pins";
 import { usePipelinesQuery } from "../pipelines";
 import { useNewTask } from "../tasks";
@@ -45,6 +45,14 @@ function runTone(status: ChainRun["status"]): "ok" | "warn" | "bad" | "run" {
  * overnight, then build from the result" — listed as cards (click navigates to
  * `/chains/:id`), with the detail's primary actions top-right and a dialog only
  * for create (the interaction grammar).
+ *
+ * `/chains` and `/chains/[id]` share this one Screen (F5,
+ * docs/plans/hud2chat-F5-orchestration.md): `routeId` (the `[id]` route
+ * segment, absent on the list route) — not `selected`, which always falls
+ * back to `chains[0]` for the master/detail preview even on the plain list
+ * route — drives the immersive header's title, subtitle, actions and
+ * `backHref`. `backHref` must point at `/chains` on the detail route (never
+ * loop back to itself) and at `/chat` on the list route.
  */
 export function Screen({ selectedId: routeId }: ScreenProps) {
   const t = useTranslations("chains");
@@ -83,178 +91,152 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
     />
   );
 
-  const header = (
-    <PageHeader
-      actions={
-        <Button icon="plus" intent="primary" onClick={() => setAdding(true)}>
-          {t("addChain")}
-        </Button>
-      }
-      subtitle={t("countSummary", { count: chains.length })}
-      title={t("title")}
+  // Honest load states (F5 consolidation, mirroring automations/Screen.tsx
+  // from F4): a pending/failed fetch must never read as an empty workspace.
+  const body = chainsQuery.isPending ? (
+    <QueryLoading />
+  ) : chainsQuery.isError ? (
+    <QueryError onRetry={() => void chainsQuery.refetch()} />
+  ) : chains.length === 0 ? (
+    <EmptyState
+      actionLabel={t("addChain")}
+      description={t("emptyDescription")}
+      glyph="link"
+      hint={t("emptyHint")}
+      onAction={() => setAdding(true)}
+      title={t("emptyTitle")}
     />
+  ) : (
+    <Grid center align="start" gap="250" maxWidth="1400px" sidebar="left">
+      <Stack gap="150">
+        {chains.map((chain) => (
+          <ChainCard
+            chain={chain}
+            key={chain.id}
+            onSelect={(id) => router.push(`/chains/${id}`)}
+            selected={chain.id === (selected?.id ?? "")}
+          />
+        ))}
+      </Stack>
+
+      {selected && (
+        <Stack gap="250">
+          <HudPanel padding="250" surface="glass">
+            <Stack gap="200">
+              <Stack wrap align="start" direction="row" gap="200" justify="between">
+                <Container grow minW0>
+                  <Stack gap="100">
+                    <Typography size="3xl" type="title" weight="semibold">
+                      {selected.name ?? selected.id}
+                    </Typography>
+                    {selected.instructions && (
+                      <Typography mono size="caption" type="note" variant="secondary">
+                        {selected.instructions}
+                      </Typography>
+                    )}
+                  </Stack>
+                </Container>
+                <Stack align="center" direction="row" gap="100">
+                  <PinButton id={selected.id} kind="chain" />
+                  <Button
+                    data-testid={ChainsScreenTestId.Delete}
+                    disabled={deleteChain.isPending}
+                    icon="x"
+                    intent="ghost"
+                    onClick={() => setConfirmDeleteId(selected.id)}
+                    size="sm"
+                  >
+                    {t("delete")}
+                  </Button>
+                  <Button
+                    data-testid={ChainsScreenTestId.Run}
+                    icon="play"
+                    intent="primary"
+                    onClick={() =>
+                      openNewTask(undefined, {
+                        kind: "chain",
+                        id: selected.id,
+                        name: selected.name ?? selected.id,
+                        glyph: "link",
+                      })
+                    }
+                  >
+                    {t("runChain")}
+                  </Button>
+                </Stack>
+              </Stack>
+              <StepFlow chain={selected} />
+            </Stack>
+          </HudPanel>
+
+          <HudPanel padding="250" surface="glass" title={t("runsTitle")}>
+            {selectedRuns.length === 0 ? (
+              <Typography mono size="xs" type="note" variant="tertiary">
+                {t("noRuns")}
+              </Typography>
+            ) : (
+              <Stack gap="150">
+                {selectedRuns.map((run) => (
+                  <Stack data-testid={ChainsScreenTestId.RunRow} gap="75" key={run.chainRunId}>
+                    <Stack align="center" direction="row" gap="100" justify="between">
+                      <Typography mono size="xs" type="note" variant="secondary">
+                        {run.chainRunId}
+                      </Typography>
+                      <Tag size="sm" tone={runTone(run.status)}>
+                        {t(`state.${run.status}`)}
+                      </Tag>
+                    </Stack>
+                    <Stack wrap align="center" direction="row" gap="75">
+                      {run.steps.map((step) => (
+                        <Tag
+                          key={`${run.chainRunId}-${step.index}`}
+                          size="sm"
+                          tone={
+                            step.status === "done"
+                              ? "ok"
+                              : step.status === "failed"
+                                ? "bad"
+                                : step.status === "running"
+                                  ? "run"
+                                  : "neutral"
+                          }
+                        >
+                          {`${step.index + 1}. ${step.pipeline}`}
+                        </Tag>
+                      ))}
+                    </Stack>
+                    {run.parkedReason && (
+                      <Typography mono leading="snug" size="2xs" tone="warn" type="note">
+                        {run.parkedReason}
+                      </Typography>
+                    )}
+                  </Stack>
+                ))}
+              </Stack>
+            )}
+          </HudPanel>
+        </Stack>
+      )}
+    </Grid>
   );
 
-  if (chainsQuery.isPending) {
-    return (
-      <PageContainer>
-        <Stack gap="250">
-          {header}
-          <QueryLoading />
-        </Stack>
-        {addModal}
-      </PageContainer>
-    );
-  }
-
-  if (chainsQuery.isError) {
-    return (
-      <PageContainer>
-        <Stack gap="250">
-          {header}
-          <QueryError onRetry={() => void chainsQuery.refetch()} />
-        </Stack>
-        {addModal}
-      </PageContainer>
-    );
-  }
-
-  if (chains.length === 0) {
-    return (
-      <PageContainer>
-        <Stack gap="250">
-          {header}
-          <EmptyState
-            actionLabel={t("addChain")}
-            description={t("emptyDescription")}
-            glyph="link"
-            hint={t("emptyHint")}
-            onAction={() => setAdding(true)}
-            title={t("emptyTitle")}
-          />
-        </Stack>
-        {addModal}
-      </PageContainer>
-    );
-  }
-
   return (
-    <PageContainer>
-      <Stack gap="250">
-        {header}
-        <Grid center align="start" gap="250" maxWidth="1400px" sidebar="left">
-          <Stack gap="150">
-            {chains.map((chain) => (
-              <ChainCard
-                chain={chain}
-                key={chain.id}
-                onSelect={(id) => router.push(`/chains/${id}`)}
-                selected={chain.id === (selected?.id ?? "")}
-              />
-            ))}
-          </Stack>
-
-          {selected && (
-            <Stack gap="250">
-              <HudPanel padding="250">
-                <Stack gap="200">
-                  <Stack wrap align="start" direction="row" gap="200" justify="between">
-                    <Container grow minW0>
-                      <Stack gap="100">
-                        <Typography size="3xl" type="title" weight="semibold">
-                          {selected.name ?? selected.id}
-                        </Typography>
-                        {selected.instructions && (
-                          <Typography mono size="caption" type="note" variant="secondary">
-                            {selected.instructions}
-                          </Typography>
-                        )}
-                      </Stack>
-                    </Container>
-                    <Stack align="center" direction="row" gap="100">
-                      <PinButton id={selected.id} kind="chain" />
-                      <Button
-                        data-testid={ChainsScreenTestId.Delete}
-                        disabled={deleteChain.isPending}
-                        icon="x"
-                        intent="ghost"
-                        onClick={() => setConfirmDeleteId(selected.id)}
-                        size="sm"
-                      >
-                        {t("delete")}
-                      </Button>
-                      <Button
-                        data-testid={ChainsScreenTestId.Run}
-                        icon="play"
-                        intent="primary"
-                        onClick={() =>
-                          openNewTask(undefined, {
-                            kind: "chain",
-                            id: selected.id,
-                            name: selected.name ?? selected.id,
-                            glyph: "link",
-                          })
-                        }
-                      >
-                        {t("runChain")}
-                      </Button>
-                    </Stack>
-                  </Stack>
-                  <StepFlow chain={selected} />
-                </Stack>
-              </HudPanel>
-
-              <HudPanel padding="250" title={t("runsTitle")}>
-                {selectedRuns.length === 0 ? (
-                  <Typography mono size="xs" type="note" variant="tertiary">
-                    {t("noRuns")}
-                  </Typography>
-                ) : (
-                  <Stack gap="150">
-                    {selectedRuns.map((run) => (
-                      <Stack data-testid={ChainsScreenTestId.RunRow} gap="75" key={run.chainRunId}>
-                        <Stack align="center" direction="row" gap="100" justify="between">
-                          <Typography mono size="xs" type="note" variant="secondary">
-                            {run.chainRunId}
-                          </Typography>
-                          <Tag size="sm" tone={runTone(run.status)}>
-                            {t(`state.${run.status}`)}
-                          </Tag>
-                        </Stack>
-                        <Stack wrap align="center" direction="row" gap="75">
-                          {run.steps.map((step) => (
-                            <Tag
-                              key={`${run.chainRunId}-${step.index}`}
-                              size="sm"
-                              tone={
-                                step.status === "done"
-                                  ? "ok"
-                                  : step.status === "failed"
-                                    ? "bad"
-                                    : step.status === "running"
-                                      ? "run"
-                                      : "neutral"
-                              }
-                            >
-                              {`${step.index + 1}. ${step.pipeline}`}
-                            </Tag>
-                          ))}
-                        </Stack>
-                        {run.parkedReason && (
-                          <Typography mono leading="snug" size="2xs" tone="warn" type="note">
-                            {run.parkedReason}
-                          </Typography>
-                        )}
-                      </Stack>
-                    ))}
-                  </Stack>
-                )}
-              </HudPanel>
-            </Stack>
-          )}
-        </Grid>
-        {addModal}
-      </Stack>
+    <ImmersivePage
+      actions={
+        routeId ? undefined : (
+          <Button icon="plus" intent="primary" onClick={() => setAdding(true)}>
+            {t("addChain")}
+          </Button>
+        )
+      }
+      backHref={routeId ? "/chains" : undefined}
+      subtitle={routeId ? selected?.instructions : t("countSummary", { count: chains.length })}
+      title={routeId ? (selected?.name ?? selected?.id ?? routeId) : t("title")}
+    >
+      <Container padding={["300", "350"]}>
+        <PageContainer>{body}</PageContainer>
+      </Container>
+      {addModal}
 
       {confirmDeleteId && (
         <ConfirmDeleteDialog
@@ -277,7 +259,7 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
           title={t("deleteTitle")}
         />
       )}
-    </PageContainer>
+    </ImmersivePage>
   );
 }
 

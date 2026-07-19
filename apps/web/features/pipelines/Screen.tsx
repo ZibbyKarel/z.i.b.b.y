@@ -19,8 +19,8 @@ import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
+import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { toastBus } from "../../components/Toaster/toastBus";
 import { useAgentsQuery } from "../agents";
 import { PinButton } from "../pins";
@@ -54,6 +54,16 @@ export interface ScreenProps {
 /** Read-only canvas: the editing callbacks are never invoked, so they no-op. */
 const noop = () => {};
 
+/**
+ * The `/pipelines` and `/pipelines/[id]` routes share this one Screen (F5,
+ * docs/plans/hud2chat-F5-orchestration.md): `routeId` (the `[id]` route
+ * segment, absent on the list route) drives the immersive header's title,
+ * subtitle, actions and `backHref` — NOT `selected`, which always falls back
+ * to `list[0]` for the master/detail preview even on the plain list route.
+ * Getting `backHref` right for both states is the single most likely defect
+ * here: it must point at `/pipelines` on the detail route (never loop back to
+ * itself) and at `/chat` on the list route.
+ */
 export function Screen({ selectedId: routeId }: ScreenProps) {
   const t = useTranslations();
   const pipelinesQuery = usePipelinesQuery();
@@ -145,287 +155,260 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
     />
   );
 
-  const header = (
-    <PageHeader
-      actions={
-        <Button icon="plus" intent="primary" onClick={() => setAdding(true)}>
-          {t("pipelines.addPipeline")}
-        </Button>
-      }
-      subtitle={t("pipelines.countSummary", { count: list.length })}
-      title={t("pipelines.title")}
+  // Honest load states (F5 consolidation, mirroring automations/Screen.tsx
+  // from F4): a pending/failed fetch must never read as an empty workspace.
+  const body = pipelinesQuery.isPending ? (
+    <QueryLoading />
+  ) : pipelinesQuery.isError ? (
+    <QueryError onRetry={() => void pipelinesQuery.refetch()} />
+  ) : list.length === 0 ? (
+    <EmptyState
+      actionLabel={t("pipelines.addPipeline")}
+      description={t("pipelines.emptyDescription")}
+      glyph="flow"
+      hint={t("pipelines.emptyHint")}
+      onAction={() => setAdding(true)}
+      title={t("pipelines.emptyTitle")}
     />
-  );
-
-  if (pipelinesQuery.isPending) {
-    return (
-      <PageContainer>
-        <Stack gap="250">
-          {header}
-          <QueryLoading />
-        </Stack>
-        {addModal}
-      </PageContainer>
-    );
-  }
-
-  if (pipelinesQuery.isError) {
-    return (
-      <PageContainer>
-        <Stack gap="250">
-          {header}
-          <QueryError onRetry={() => void pipelinesQuery.refetch()} />
-        </Stack>
-        {addModal}
-      </PageContainer>
-    );
-  }
-
-  if (list.length === 0) {
-    return (
-      <PageContainer>
-        <Stack gap="250">
-          {header}
-          <EmptyState
-            actionLabel={t("pipelines.addPipeline")}
-            description={t("pipelines.emptyDescription")}
-            glyph="flow"
-            hint={t("pipelines.emptyHint")}
-            onAction={() => setAdding(true)}
-            title={t("pipelines.emptyTitle")}
+  ) : (
+    <Grid center align="start" gap="250" maxWidth="1400px" sidebar="left">
+      <Stack gap="150">
+        {list.map((p) => (
+          <PipelineCard
+            agents={agents}
+            key={p.id}
+            onSelect={(id: string) => router.push(`/pipelines/${id}`)}
+            pipeline={p}
+            selected={p.id === (selected?.id ?? "")}
           />
-        </Stack>
-        {addModal}
-      </PageContainer>
-    );
-  }
+        ))}
+      </Stack>
 
-  return (
-    <PageContainer>
-      <Stack gap="250">
-        {header}
-        <Grid center align="start" gap="250" maxWidth="1400px" sidebar="left">
-          <Stack gap="150">
-            {list.map((p) => (
-              <PipelineCard
-                agents={agents}
-                key={p.id}
-                onSelect={(id: string) => router.push(`/pipelines/${id}`)}
-                pipeline={p}
-                selected={p.id === (selected?.id ?? "")}
-              />
-            ))}
-          </Stack>
-
-          {selected && (
-            <Stack gap="250">
-              <EntityHero
-                editable
-                desc={editing ? editDesc : selected.desc}
-                fit="contain"
-                glyph="flow"
-                height={220}
-                image={selected.avatar}
-                name={editing ? editName : selected.name}
-                onRemove={() =>
-                  updatePipeline.mutate({ params: { id: selected.id }, body: { avatar: null } })
-                }
-                onUpload={(dataUri) => {
-                  if (dataUri.length > AVATAR_MAX) {
-                    toastBus.emit({ message: t("pipelines.avatarTooLarge") });
-                    return;
-                  }
-                  updatePipeline.mutate({ params: { id: selected.id }, body: { avatar: dataUri } });
-                }}
-                placeholder={t("pipelines.uploadPipelineAvatar")}
-                removeLabel={t("pipelines.removeImage")}
-                uploadLabel={t("pipelines.uploadImage")}
-              />
-              <HudPanel padding="250">
-                <Stack gap="200">
-                  {editing && (
-                    <Stack direction="row" gap="200">
-                      <Container grow minW0>
-                        <TextInputField
-                          label={t("forms.pipeline.nameLabel")}
-                          onChange={(e) => setEditName(e.target.value)}
-                          placeholder={t("forms.pipeline.namePlaceholder")}
-                          value={editName}
-                        />
-                      </Container>
-                      <Container grow minW0>
-                        <TextInputField
-                          label={t("forms.pipeline.descLabel")}
-                          onChange={(e) => setEditDesc(e.target.value)}
-                          placeholder={t("forms.pipeline.descPlaceholder")}
-                          value={editDesc}
-                        />
-                      </Container>
-                    </Stack>
-                  )}
-                  <Stack wrap align="start" direction="row" gap="200" justify="between">
-                    <Container minW0>
-                      <Stack gap="100">
-                        <Stack align="center" direction="row" gap="75">
-                          <Icon name="file" size="xs" tone="faint" />
-                          <Typography mono size="sm" type="note" variant="tertiary">
-                            {selected.file}
-                          </Typography>
-                        </Stack>
-                      </Stack>
-                    </Container>
-                    <Stack align="center" direction="row" gap="100">
-                      <PinButton id={selected.id} kind="pipeline" />
-                      {editing ? (
-                        <>
-                          <Button intent="ghost" onClick={cancelEdit} size="sm">
-                            {t("common.cancel")}
-                          </Button>
-                          <Button
-                            disabled={!canSaveEdit}
-                            icon="check"
-                            intent="primary"
-                            loading={updatePipeline.isPending}
-                            onClick={saveEdit}
-                            size="sm"
-                          >
-                            {t("common.save")}
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button icon="edit" intent="ghost" onClick={startEdit} size="sm">
-                            {t("common.edit")}
-                          </Button>
-                          <Button
-                            disabled={duplicatePipeline.isPending}
-                            icon="link"
-                            intent="ghost"
-                            onClick={() => {
-                              const body = duplicatePipelineBody(
-                                selected,
-                                list.map((p) => p.id),
-                              );
-                              duplicatePipeline.mutate(
-                                { body },
-                                {
-                                  onSuccess: () => router.push(`/pipelines/${body.id}`),
-                                },
-                              );
-                            }}
-                            size="sm"
-                          >
-                            {t("common.duplicate")}
-                          </Button>
-                          <Button
-                            icon="play"
-                            intent="primary"
-                            onClick={() =>
-                              openNewTask(undefined, {
-                                kind: "pipeline",
-                                id: selected.id,
-                                name: selected.name,
-                                glyph: "flow",
-                              })
-                            }
-                          >
-                            {t("pipelines.runPipeline")}
-                          </Button>
-                        </>
-                      )}
+      {selected && (
+        <Stack gap="250">
+          {/* D13 (docs/hud2chat/DECISIONS.md): EntityHero repeats the name/desc
+              the immersive header already shows — known, deliberately deferred
+              to one pass after F6, not patched per-page. */}
+          <EntityHero
+            editable
+            desc={editing ? editDesc : selected.desc}
+            fit="contain"
+            glyph="flow"
+            height={220}
+            image={selected.avatar}
+            name={editing ? editName : selected.name}
+            onRemove={() =>
+              updatePipeline.mutate({ params: { id: selected.id }, body: { avatar: null } })
+            }
+            onUpload={(dataUri) => {
+              if (dataUri.length > AVATAR_MAX) {
+                toastBus.emit({ message: t("pipelines.avatarTooLarge") });
+                return;
+              }
+              updatePipeline.mutate({ params: { id: selected.id }, body: { avatar: dataUri } });
+            }}
+            placeholder={t("pipelines.uploadPipelineAvatar")}
+            removeLabel={t("pipelines.removeImage")}
+            uploadLabel={t("pipelines.uploadImage")}
+          />
+          <HudPanel padding="250" surface="glass">
+            <Stack gap="200">
+              {editing && (
+                <Stack direction="row" gap="200">
+                  <Container grow minW0>
+                    <TextInputField
+                      label={t("forms.pipeline.nameLabel")}
+                      onChange={(e) => setEditName(e.target.value)}
+                      placeholder={t("forms.pipeline.namePlaceholder")}
+                      value={editName}
+                    />
+                  </Container>
+                  <Container grow minW0>
+                    <TextInputField
+                      label={t("forms.pipeline.descLabel")}
+                      onChange={(e) => setEditDesc(e.target.value)}
+                      placeholder={t("forms.pipeline.descPlaceholder")}
+                      value={editDesc}
+                    />
+                  </Container>
+                </Stack>
+              )}
+              <Stack wrap align="start" direction="row" gap="200" justify="between">
+                <Container minW0>
+                  <Stack gap="100">
+                    <Stack align="center" direction="row" gap="75">
+                      <Icon name="file" size="xs" tone="faint" />
+                      <Typography mono size="sm" type="note" variant="tertiary">
+                        {selected.file}
+                      </Typography>
                     </Stack>
                   </Stack>
-                  <Divider />
-                  <Stack align="center" direction="row" gap="100">
-                    <Icon name="branch" size="md" tone="dim" />
-                    <Typography mono size="caption" type="note" variant="secondary">
-                      {t("pipelines.branchNote")}
+                </Container>
+                <Stack align="center" direction="row" gap="100">
+                  <PinButton id={selected.id} kind="pipeline" />
+                  {editing ? (
+                    <>
+                      <Button intent="ghost" onClick={cancelEdit} size="sm">
+                        {t("common.cancel")}
+                      </Button>
+                      <Button
+                        disabled={!canSaveEdit}
+                        icon="check"
+                        intent="primary"
+                        loading={updatePipeline.isPending}
+                        onClick={saveEdit}
+                        size="sm"
+                      >
+                        {t("common.save")}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button icon="edit" intent="ghost" onClick={startEdit} size="sm">
+                        {t("common.edit")}
+                      </Button>
+                      <Button
+                        disabled={duplicatePipeline.isPending}
+                        icon="link"
+                        intent="ghost"
+                        onClick={() => {
+                          const body = duplicatePipelineBody(
+                            selected,
+                            list.map((p) => p.id),
+                          );
+                          duplicatePipeline.mutate(
+                            { body },
+                            {
+                              onSuccess: () => router.push(`/pipelines/${body.id}`),
+                            },
+                          );
+                        }}
+                        size="sm"
+                      >
+                        {t("common.duplicate")}
+                      </Button>
+                      <Button
+                        icon="play"
+                        intent="primary"
+                        onClick={() =>
+                          openNewTask(undefined, {
+                            kind: "pipeline",
+                            id: selected.id,
+                            name: selected.name,
+                            glyph: "flow",
+                          })
+                        }
+                      >
+                        {t("pipelines.runPipeline")}
+                      </Button>
+                    </>
+                  )}
+                </Stack>
+              </Stack>
+              <Divider />
+              <Stack align="center" direction="row" gap="100">
+                <Icon name="branch" size="md" tone="dim" />
+                <Typography mono size="caption" type="note" variant="secondary">
+                  {t("pipelines.branchNote")}
+                </Typography>
+              </Stack>
+            </Stack>
+          </HudPanel>
+
+          <HudPanel
+            action={
+              editing && (
+                <Button
+                  icon="plus"
+                  intent="ghost"
+                  onClick={() => setShowPalette((v) => !v)}
+                  size="sm"
+                >
+                  {t("forms.pipeline.addStep")}
+                </Button>
+              )
+            }
+            padding="250"
+            surface="glass"
+            title={t("pipelines.chainTitle")}
+          >
+            <Container
+              height="460px"
+              overflow="hidden"
+              position="relative"
+              style={{
+                display: "flex",
+                borderRadius: 6,
+                border: "1px solid var(--color-border)",
+              }}
+            >
+              {editing && showPalette && (
+                <AgentPalette
+                  agents={agents}
+                  closeLabel={t("common.close")}
+                  onAdd={(agentId) => addAgentToEdit(agentId)}
+                  onClose={() => setShowPalette(false)}
+                />
+              )}
+              <PipelineCanvas
+                agents={agents}
+                attempts={attempts}
+                graph={editing ? editGraph : detailGraph}
+                onAddAgent={editing ? addAgentToEdit : noop}
+                readOnly={!editing}
+                setGraph={editing ? setEditGraph : noop}
+              />
+            </Container>
+          </HudPanel>
+
+          {selected.outputs.length > 0 && (
+            <HudPanel padding="250" surface="glass" title={t("pipelines.outputsTitle")}>
+              <Stack gap="100">
+                {selected.outputs.map((o, i) => (
+                  <Stack align="center" direction="row" gap="100" key={`${o.type}-${o.from}-${i}`}>
+                    <Icon
+                      name={o.type === "pr" ? "branch" : o.dest === "vault" ? "brain" : "file"}
+                      size="md"
+                      tone="dim"
+                    />
+                    <Typography size="caption" type="note" variant="secondary">
+                      {o.type === "pr"
+                        ? t("pipelines.outputPr", { from: o.from })
+                        : t(
+                            o.dest === "vault"
+                              ? "pipelines.outputFileVault"
+                              : "pipelines.outputFileProject",
+                            { from: o.from, to: o.to },
+                          )}
                     </Typography>
                   </Stack>
-                </Stack>
-              </HudPanel>
-
-              <HudPanel
-                action={
-                  editing && (
-                    <Button
-                      icon="plus"
-                      intent="ghost"
-                      onClick={() => setShowPalette((v) => !v)}
-                      size="sm"
-                    >
-                      {t("forms.pipeline.addStep")}
-                    </Button>
-                  )
-                }
-                padding="250"
-                title={t("pipelines.chainTitle")}
-              >
-                <Container
-                  height="460px"
-                  overflow="hidden"
-                  position="relative"
-                  style={{
-                    display: "flex",
-                    borderRadius: 6,
-                    border: "1px solid var(--color-border)",
-                  }}
-                >
-                  {editing && showPalette && (
-                    <AgentPalette
-                      agents={agents}
-                      closeLabel={t("common.close")}
-                      onAdd={(agentId) => addAgentToEdit(agentId)}
-                      onClose={() => setShowPalette(false)}
-                    />
-                  )}
-                  <PipelineCanvas
-                    agents={agents}
-                    attempts={attempts}
-                    graph={editing ? editGraph : detailGraph}
-                    onAddAgent={editing ? addAgentToEdit : noop}
-                    readOnly={!editing}
-                    setGraph={editing ? setEditGraph : noop}
-                  />
-                </Container>
-              </HudPanel>
-
-              {selected.outputs.length > 0 && (
-                <HudPanel padding="250" title={t("pipelines.outputsTitle")}>
-                  <Stack gap="100">
-                    {selected.outputs.map((o, i) => (
-                      <Stack
-                        align="center"
-                        direction="row"
-                        gap="100"
-                        key={`${o.type}-${o.from}-${i}`}
-                      >
-                        <Icon
-                          name={o.type === "pr" ? "branch" : o.dest === "vault" ? "brain" : "file"}
-                          size="md"
-                          tone="dim"
-                        />
-                        <Typography size="caption" type="note" variant="secondary">
-                          {o.type === "pr"
-                            ? t("pipelines.outputPr", { from: o.from })
-                            : t(
-                                o.dest === "vault"
-                                  ? "pipelines.outputFileVault"
-                                  : "pipelines.outputFileProject",
-                                { from: o.from, to: o.to },
-                              )}
-                        </Typography>
-                      </Stack>
-                    ))}
-                  </Stack>
-                </HudPanel>
-              )}
-            </Stack>
+                ))}
+              </Stack>
+            </HudPanel>
           )}
-        </Grid>
+        </Stack>
+      )}
+    </Grid>
+  );
 
-        {addModal}
-      </Stack>
-    </PageContainer>
+  return (
+    <ImmersivePage
+      actions={
+        routeId ? undefined : (
+          <Button icon="plus" intent="primary" onClick={() => setAdding(true)}>
+            {t("pipelines.addPipeline")}
+          </Button>
+        )
+      }
+      backHref={routeId ? "/pipelines" : undefined}
+      subtitle={routeId ? selected?.file : t("pipelines.countSummary", { count: list.length })}
+      title={routeId ? (selected?.name ?? selected?.id ?? routeId) : t("pipelines.title")}
+    >
+      <Container padding={["300", "350"]}>
+        <PageContainer>{body}</PageContainer>
+      </Container>
+
+      {addModal}
+    </ImmersivePage>
   );
 }
