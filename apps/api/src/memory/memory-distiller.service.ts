@@ -9,7 +9,12 @@ import { ChatTranscriptStore } from "../chat/chat-transcript.store";
 import { fileExists, writeFileAtomic } from "../shared/file-storage/file-utils";
 import { ClaudeCliDistiller, type Learning, type RunDigest } from "./claude-cli-distiller";
 import { MemoryImportService } from "./memory-import.service";
-import { DuplicateNoteError, SimilarNoteError, VaultService, ownerProjectOf } from "./vault.service";
+import {
+  DuplicateNoteError,
+  SimilarNoteError,
+  VaultService,
+  ownerProjectOf,
+} from "./vault.service";
 
 /**
  * Union of unique tags across a batch of learnings (Fáze 3), sorted for a stable
@@ -193,7 +198,13 @@ export class MemoryDistillerService {
         deferred++;
         continue;
       }
-      out.push({ cwd: "", projectId: null, chatId: id, chatCount: summary.count, summary: summary.digest });
+      out.push({
+        cwd: "",
+        projectId: null,
+        chatId: id,
+        chatCount: summary.count,
+        summary: summary.digest,
+      });
     }
 
     // Raw ("halda") notes: idempotency is the note's own `triagedAt` frontmatter
@@ -226,14 +237,11 @@ export class MemoryDistillerService {
   }
 
   private async summarizePipeline(run: PipelineRun, projectId: string | null): Promise<RunDigest> {
-    let excerpt = "";
-    for (const name of ["docs.md", "review.md", "implementation.md"] as const) {
-      const artifact = await this.pipelines.readArtifact(run.pipelineRunId, name).catch(() => null);
-      if (artifact?.content.trim()) {
-        excerpt = artifact.content.slice(0, EXCERPT_LIMIT);
-        break;
-      }
-    }
+    // No fixed artifact-name list: `readLatestArtifact` walks the PIPELINE'S OWN
+    // phases (reverse order) so a non-delivery shape — research, audit, whatever
+    // a future pipeline produces — is distilled too, not just the delivery loop.
+    const artifact = await this.pipelines.readLatestArtifact(run.pipelineRunId).catch(() => null);
+    const excerpt = artifact?.content.slice(0, EXCERPT_LIMIT) ?? "";
     return {
       kind: "pipeline",
       id: run.pipelineRunId,
