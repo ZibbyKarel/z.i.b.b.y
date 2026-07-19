@@ -100,3 +100,14 @@ shorthand either, so that assertion lives in the browser, not the test.
 used to wrap every page in `padding={["300","350"]}`. `ImmersiveShell`'s body has none by
 design (a master/detail page like the archive wants to touch the edges), so each migrated
 page adds its own padding wrapper. Miss this and panels butt straight against the header.
+
+**D13 — The `ImmersivePage` header duplicates `EntityHero`'s name and description on entity
+detail pages. Deferred deliberately to one pass after F6.** Live-verified on
+`/agents/architect`: the thin glass header shows the agent's name, and the hero band
+immediately below repeats the name as a heading plus the full description. The two read as
+distinct bands (thin bar vs. tall image panel), so it is not a doubled toolbar — but the text
+is genuinely duplicated. `EntityHero` is shared by four surfaces (`agents/DetailScreen`,
+`pipelines/Screen`, `runs/RunDetail`, `chat/ChatDetailDialog`), and F5/F6 add more consumers,
+so changing it now means changing it twice. **Do not patch this per page.** After F6, take it
+as one decision with full knowledge of every consumer — the likely shape is suppressing the
+immersive header's own title when a hero follows, or giving the hero a "compact" mode.

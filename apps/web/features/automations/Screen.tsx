@@ -9,8 +9,8 @@ import { useState } from "react";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
+import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
 import { useAgentsQuery } from "../agents/queries";
 import { usePipelinesQuery } from "../pipelines/queries";
@@ -96,8 +96,66 @@ export function Screen() {
   const eventAutomations = automations.filter((a) => a.trigger.type === "event");
   const activeCount = automations.filter((a) => a.enabled).length;
 
-  const header = (
-    <PageHeader
+  // Honest load states (Phase 18.2): a pending/failed automations fetch must never
+  // read as an empty workspace (see Collection's own docstring for the same rule).
+  const body = automationsQuery.isPending ? (
+    <QueryLoading />
+  ) : automationsQuery.isError ? (
+    <QueryError onRetry={() => void automationsQuery.refetch()} />
+  ) : (
+    <Stack gap="250">
+      <Stack align="center" direction="row" gap="100">
+        <Icon name="shield" size="sm" tone="warn" />
+        <Typography mono size="2xs" type="micro" variant="tertiary">
+          {t("autonomyNote")}
+        </Typography>
+      </Stack>
+
+      {automations.length === 0 ? (
+        <EmptyState
+          actionLabel={t("addAutomation")}
+          description={t("emptyDescription")}
+          glyph="clock"
+          onAction={() => setCreating(true)}
+          title={t("emptyTitle")}
+        />
+      ) : (
+        <Stack gap="250">
+          {cronAutomations.length > 0 && (
+            <Container>
+              <SectionLabel>
+                <Stack inline align="center" direction="row" gap="50">
+                  <Icon name="clock" size="sm" tone="accent" /> {t("cronSection")}
+                </Stack>
+              </SectionLabel>
+              <Collection
+                empty={{
+                  description: "",
+                  glyph: "clock",
+                  title: "",
+                }}
+                items={cronAutomations}
+                renderItem={renderCard}
+              />
+            </Container>
+          )}
+          {eventAutomations.length > 0 && (
+            <Container>
+              <SectionLabel>
+                <Stack inline align="center" direction="row" gap="50">
+                  <Icon name="bolt" size="sm" tone="accent" /> {t("eventSection")}
+                </Stack>
+              </SectionLabel>
+              <Stack gap="150">{eventAutomations.map(renderCard)}</Stack>
+            </Container>
+          )}
+        </Stack>
+      )}
+    </Stack>
+  );
+
+  return (
+    <ImmersivePage
       actions={
         <Button icon="plus" intent="primary" onClick={() => setCreating(true)}>
           {t("addAutomation")}
@@ -105,92 +163,12 @@ export function Screen() {
       }
       subtitle={t("summary", { active: activeCount, total: automations.length })}
       title={t("title")}
-    />
-  );
+    >
+      <Container padding={["300", "350"]}>
+        <PageContainer>{body}</PageContainer>
+      </Container>
 
-  const addModal = creating && (
-    <AutomationFormDialog onClose={() => setCreating(false)} onCreate={onCreate} />
-  );
-
-  // Honest load states (Phase 18.2): a pending/failed automations fetch must never
-  // read as an empty workspace (see Collection's own docstring for the same rule).
-  if (automationsQuery.isPending) {
-    return (
-      <PageContainer>
-        <Stack gap="250">
-          {header}
-          <QueryLoading />
-        </Stack>
-        {addModal}
-      </PageContainer>
-    );
-  }
-
-  if (automationsQuery.isError) {
-    return (
-      <PageContainer>
-        <Stack gap="250">
-          {header}
-          <QueryError onRetry={() => void automationsQuery.refetch()} />
-        </Stack>
-        {addModal}
-      </PageContainer>
-    );
-  }
-
-  return (
-    <PageContainer>
-      <Stack gap="250">
-        {header}
-        <Stack align="center" direction="row" gap="100">
-          <Icon name="shield" size="sm" tone="warn" />
-          <Typography mono size="2xs" type="micro" variant="tertiary">
-            {t("autonomyNote")}
-          </Typography>
-        </Stack>
-
-        {automations.length === 0 ? (
-          <EmptyState
-            actionLabel={t("addAutomation")}
-            description={t("emptyDescription")}
-            glyph="clock"
-            onAction={() => setCreating(true)}
-            title={t("emptyTitle")}
-          />
-        ) : (
-          <Stack gap="250">
-            {cronAutomations.length > 0 && (
-              <Container>
-                <SectionLabel>
-                  <Stack inline align="center" direction="row" gap="50">
-                    <Icon name="clock" size="sm" tone="accent" /> {t("cronSection")}
-                  </Stack>
-                </SectionLabel>
-                <Collection
-                  empty={{
-                    description: "",
-                    glyph: "clock",
-                    title: "",
-                  }}
-                  items={cronAutomations}
-                  renderItem={renderCard}
-                />
-              </Container>
-            )}
-            {eventAutomations.length > 0 && (
-              <Container>
-                <SectionLabel>
-                  <Stack inline align="center" direction="row" gap="50">
-                    <Icon name="bolt" size="sm" tone="accent" /> {t("eventSection")}
-                  </Stack>
-                </SectionLabel>
-                <Stack gap="150">{eventAutomations.map(renderCard)}</Stack>
-              </Container>
-            )}
-          </Stack>
-        )}
-      </Stack>
-      {addModal}
-    </PageContainer>
+      {creating && <AutomationFormDialog onClose={() => setCreating(false)} onCreate={onCreate} />}
+    </ImmersivePage>
   );
 }

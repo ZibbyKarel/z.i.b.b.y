@@ -18,8 +18,8 @@ import { CategoryDialog } from "../../components/CategoryDialog/CategoryDialog";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { LoadError } from "../../components/LoadError/LoadError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
+import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
 import { slug } from "../../utils/slug";
 import { usePipelinesQuery } from "../pipelines";
@@ -125,58 +125,60 @@ export function Screen() {
   };
 
   return (
-    <PageContainer>
-      <Stack gap="250">
-        <PageHeader
-          actions={
-            <>
-              <Button icon="plus" intent="ghost" onClick={() => setAddingCategory(true)}>
-                {ta("addCategory")}
-              </Button>
-              <Button icon="plus" intent="primary" onClick={() => setCreating(true)}>
-                {ta("addAgent")}
-              </Button>
-            </>
-          }
-          subtitle={ta("countSummary", { count: list.length })}
-          title={ta("title")}
-        />
-
-        {agentsQuery.isPending ? (
-          <QueryLoading />
-        ) : agentsQuery.isError ? (
-          // Honest status: a failed load must not read as an empty workspace (which would
-          // say "create your first agent" — and could nudge re-creating ones that exist).
-          <LoadError
-            description={ta("loadErrorDescription")}
-            onRetry={() => void agentsQuery.refetch()}
-            retryLabel={ta("retry")}
-            title={ta("loadErrorTitle")}
-          />
-        ) : categories.length === 0 && list.length === 0 ? (
-          <EmptyState
-            actionLabel={ta("addAgent")}
-            description={ta("emptyDescription")}
-            glyph="bot"
-            hint={ta("emptyHint")}
-            onAction={() => setCreating(true)}
-            title={ta("emptyTitle")}
-          />
-        ) : (
-          <>
-            {categories.map((cat) =>
-              renderSection(
-                cat.name,
-                cat.name,
-                (cat.glyph as IconName) ?? "bot",
-                list.filter((a) => a.category === cat.name),
-              ),
+    <ImmersivePage
+      actions={
+        <>
+          <Button icon="plus" intent="ghost" onClick={() => setAddingCategory(true)}>
+            {ta("addCategory")}
+          </Button>
+          <Button icon="plus" intent="primary" onClick={() => setCreating(true)}>
+            {ta("addAgent")}
+          </Button>
+        </>
+      }
+      subtitle={ta("countSummary", { count: list.length })}
+      title={ta("title")}
+    >
+      <Container padding={["300", "350"]}>
+        <PageContainer>
+          <Stack gap="250">
+            {agentsQuery.isPending ? (
+              <QueryLoading />
+            ) : agentsQuery.isError ? (
+              // Honest status: a failed load must not read as an empty workspace (which would
+              // say "create your first agent" — and could nudge re-creating ones that exist).
+              <LoadError
+                description={ta("loadErrorDescription")}
+                onRetry={() => void agentsQuery.refetch()}
+                retryLabel={ta("retry")}
+                title={ta("loadErrorTitle")}
+              />
+            ) : categories.length === 0 && list.length === 0 ? (
+              <EmptyState
+                actionLabel={ta("addAgent")}
+                description={ta("emptyDescription")}
+                glyph="bot"
+                hint={ta("emptyHint")}
+                onAction={() => setCreating(true)}
+                title={ta("emptyTitle")}
+              />
+            ) : (
+              <>
+                {categories.map((cat) =>
+                  renderSection(
+                    cat.name,
+                    cat.name,
+                    (cat.glyph as IconName) ?? "bot",
+                    list.filter((a) => a.category === cat.name),
+                  ),
+                )}
+                {uncategorized.length > 0 &&
+                  renderSection("__uncategorized", ta("uncategorized"), "bot", uncategorized)}
+              </>
             )}
-            {uncategorized.length > 0 &&
-              renderSection("__uncategorized", ta("uncategorized"), "bot", uncategorized)}
-          </>
-        )}
-      </Stack>
+          </Stack>
+        </PageContainer>
+      </Container>
 
       {creating && (
         <NewAgentDialog
@@ -206,6 +208,6 @@ export function Screen() {
           pending={createCategory.isPending}
         />
       )}
-    </PageContainer>
+    </ImmersivePage>
   );
 }

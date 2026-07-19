@@ -122,12 +122,29 @@ describe("AppShell", () => {
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
   });
 
+  // F4 (docs/plans/hud2chat-F4-catalogs-b.md): agents and automations adopt the
+  // immersive shell — `isFullscreenRoute`'s prefix match covers each `/[id]`
+  // detail route too.
+  it.each(["/agents", "/agents/koder", "/automations", "/automations/morning-standup"])(
+    "bypasses MainLayout (no nav rail) fullscreen on %s (F4)",
+    (route) => {
+      pathnameRef.current = route;
+      renderWithProviders(
+        <AppShell>
+          <div>obsah katalogu</div>
+        </AppShell>,
+      );
+      expect(screen.getByText("obsah katalogu")).toBeInTheDocument();
+      expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+    },
+  );
+
   // F0 (docs/plans/hud2chat-F0-immersive-shell.md): the hardcoded `/chat` check
   // became a route table (`FULLSCREEN_ROUTES` / `isFullscreenRoute`). `/settings`
-  // migrated in F1, `/skills`/`/commands`/`/mcp`/`/hooks` in F3 (see the
-  // dedicated tests above); every other route must keep rendering the HUD
-  // chrome exactly as before.
-  it.each(["/overview", "/runs", "/agents", "/pipelines", "/memory"])(
+  // migrated in F1, `/skills`/`/commands`/`/mcp`/`/hooks` in F3, `/agents`/
+  // `/automations` in F4 (see the dedicated tests above); every other route must
+  // keep rendering the HUD chrome exactly as before.
+  it.each(["/overview", "/runs", "/pipelines", "/memory"])(
     "still renders the HUD chrome (nav rail) on %s — unmigrated",
     (route) => {
       pathnameRef.current = route;

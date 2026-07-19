@@ -9,8 +9,8 @@ import type { Automation } from "@zibby/contracts";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
+import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { CommandLine } from "../tasks/components/CommandLine/CommandLine";
 import type { TaskAttachmentSet } from "../tasks/components/TaskAttachments";
 import { type TaskTarget, toClientTarget } from "../tasks";
@@ -83,7 +83,10 @@ function AutomationEditor({ automation }: { automation: Automation }) {
   // the target/name (system: server-owned; legacy: no picker to edit it with) never
   // moves through this path.
   const saveSchedule = () => {
-    updateAutomation.mutate({ params: { id: automation.id }, body: { trigger: form.buildTrigger() } });
+    updateAutomation.mutate({
+      params: { id: automation.id },
+      body: { trigger: form.buildTrigger() },
+    });
   };
 
   // The `task` automation's own save path — CommandLine's send action calls this
@@ -109,89 +112,89 @@ function AutomationEditor({ automation }: { automation: Automation }) {
   };
 
   return (
-    <PageContainer>
-      <Stack gap="250">
-        <PageHeader
-          actions={
-            <>
-              <Button
-                data-testid={AutomationDetailScreenTestId.Run}
-                icon="play"
-                intent="ghost"
-                loading={triggerAutomation.isPending}
-                onClick={() => triggerAutomation.mutate({ params: { id: automation.id }, body: {} })}
-                size="sm"
-              >
-                {t("runNow")}
-              </Button>
-              {!isSystem && (
-                <Button
-                  data-testid={AutomationDetailScreenTestId.Delete}
-                  icon="trash"
-                  intent="danger"
-                  onClick={() => setConfirmDelete(true)}
-                  size="sm"
-                >
-                  {tk("common.delete")}
-                </Button>
-              )}
-              {/* A `task` automation saves via CommandLine's own send action below —
-                  no top-right Save for it. */}
-              {!isTask && (
-                <Button
-                  data-testid={AutomationDetailScreenTestId.Save}
-                  disabled={!form.canSave()}
-                  icon="check"
-                  intent="primary"
-                  loading={updateAutomation.isPending}
-                  onClick={saveSchedule}
-                  size="sm"
-                >
-                  {t("save")}
-                </Button>
-              )}
-              <Button intent="ghost" onClick={() => router.push("/automations")} size="sm">
-                {tk("common.back")}
-              </Button>
-            </>
-          }
-          subtitle={subtitle}
-          title={name}
-        />
-
-        <HudPanel title={t("formEditTitle")}>
-          {isSystem ? (
-            <AutomationFormFields isSystem form={form} />
-          ) : target.type === "task" ? (
-            <Stack gap="200">
-              <TriggerFields form={form} />
-              <CommandLine
-                showAttach
-                chrome={false}
-                disabled={!form.canSave()}
-                initialTarget={target.target ? toClientTarget(target.target) : undefined}
-                initialText={target.text}
-                onSubmit={saveTask}
-                submitLabel={tk("common.save")}
-              />
-            </Stack>
-          ) : (
-            <Stack gap="200">
-              <Card background="background" radius="default">
-                <Container padding="150">
-                  <Stack align="start" direction="row" gap="100">
-                    <Icon name="shield" size="sm" tone="accent" />
-                    <Typography leading="snug" size="caption" type="note" variant="secondary">
-                      {t("legacyEditNote")}
-                    </Typography>
-                  </Stack>
-                </Container>
-              </Card>
-              <TriggerFields form={form} />
-            </Stack>
+    <ImmersivePage
+      actions={
+        <>
+          <Button
+            data-testid={AutomationDetailScreenTestId.Run}
+            icon="play"
+            intent="ghost"
+            loading={triggerAutomation.isPending}
+            onClick={() => triggerAutomation.mutate({ params: { id: automation.id }, body: {} })}
+            size="sm"
+          >
+            {t("runNow")}
+          </Button>
+          {!isSystem && (
+            <Button
+              data-testid={AutomationDetailScreenTestId.Delete}
+              icon="trash"
+              intent="danger"
+              onClick={() => setConfirmDelete(true)}
+              size="sm"
+            >
+              {tk("common.delete")}
+            </Button>
           )}
-        </HudPanel>
-      </Stack>
+          {/* A `task` automation saves via CommandLine's own send action below —
+              no top-right Save for it. */}
+          {!isTask && (
+            <Button
+              data-testid={AutomationDetailScreenTestId.Save}
+              disabled={!form.canSave()}
+              icon="check"
+              intent="primary"
+              loading={updateAutomation.isPending}
+              onClick={saveSchedule}
+              size="sm"
+            >
+              {t("save")}
+            </Button>
+          )}
+        </>
+      }
+      backHref="/automations"
+      subtitle={subtitle}
+      title={name}
+    >
+      <Container padding={["300", "350"]}>
+        <PageContainer>
+          <Stack gap="250">
+            <HudPanel surface="glass" title={t("formEditTitle")}>
+              {isSystem ? (
+                <AutomationFormFields isSystem form={form} />
+              ) : target.type === "task" ? (
+                <Stack gap="200">
+                  <TriggerFields form={form} />
+                  <CommandLine
+                    showAttach
+                    chrome={false}
+                    disabled={!form.canSave()}
+                    initialTarget={target.target ? toClientTarget(target.target) : undefined}
+                    initialText={target.text}
+                    onSubmit={saveTask}
+                    submitLabel={tk("common.save")}
+                  />
+                </Stack>
+              ) : (
+                <Stack gap="200">
+                  <Card background="background" radius="default">
+                    <Container padding="150">
+                      <Stack align="start" direction="row" gap="100">
+                        <Icon name="shield" size="sm" tone="accent" />
+                        <Typography leading="snug" size="caption" type="note" variant="secondary">
+                          {t("legacyEditNote")}
+                        </Typography>
+                      </Stack>
+                    </Container>
+                  </Card>
+                  <TriggerFields form={form} />
+                </Stack>
+              )}
+            </HudPanel>
+          </Stack>
+        </PageContainer>
+      </Container>
 
       {confirmDelete && (
         <ConfirmDeleteDialog
@@ -209,6 +212,6 @@ function AutomationEditor({ automation }: { automation: Automation }) {
           title={t("deleteTitle")}
         />
       )}
-    </PageContainer>
+    </ImmersivePage>
   );
 }

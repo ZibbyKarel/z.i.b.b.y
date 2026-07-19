@@ -17,7 +17,9 @@ export const CHAT_TOOL_DOCK_WIDTH = 70;
 // The design's tool set, in order — a subset of the HUD nav (source of truth).
 // `hooks` joined in F3 (docs/plans/hud2chat-F3-catalogs-a.md): it was one of the
 // two fully orphaned sections (no dock icon, no drawer mention) even though it
-// already had a NAV_ITEMS entry with a `checkpoint` glyph.
+// already had a NAV_ITEMS entry with a `checkpoint` glyph. `automations` joined
+// in F4 (docs/plans/hud2chat-F4-catalogs-b.md) — the audit's other fully
+// orphaned section, already in NAV_ITEMS with a `clock` glyph.
 const DOCK_IDS = [
   "companies",
   "projects",
@@ -26,6 +28,7 @@ const DOCK_IDS = [
   "commands",
   "mcp",
   "hooks",
+  "automations",
   "memory",
 ] as const;
 

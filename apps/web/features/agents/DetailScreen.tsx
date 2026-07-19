@@ -3,7 +3,15 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Button, EntityHero, type IconName, Stack, Tag, Typography } from "@zibby/design-system";
+import {
+  Button,
+  Container,
+  EntityHero,
+  type IconName,
+  Stack,
+  Tag,
+  Typography,
+} from "@zibby/design-system";
 import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import type { Agent, GateRuleInput } from "@zibby/contracts";
 import { AVATAR_MAX } from "@zibby/contracts";
@@ -12,8 +20,8 @@ import { toastBus } from "../../components/Toaster/toastBus";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
+import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { RuleModal } from "../gates/components/RuleModal";
 import { PinButton } from "../pins";
 import { usePipelinesQuery } from "../pipelines";
@@ -101,109 +109,111 @@ function AgentEditor({ agent }: { agent: Agent }) {
   };
 
   return renderForm(
-    <PageContainer>
-      <Stack gap="250">
-        <PageHeader
-          actions={
-            <>
-              <Button
-                data-testid={AgentDetailScreenTestId.Run}
-                icon="play"
-                intent="ghost"
-                onClick={() =>
-                  openNewTask(undefined, {
-                    kind: "agent",
-                    id: agent.id,
-                    name,
-                    glyph: "bot",
-                  })
-                }
-                size="sm"
-              >
-                {t("run")}
-              </Button>
-              <PinButton id={agent.id} kind="agent" />
-              <Button
-                data-testid={AgentDetailScreenTestId.Delete}
-                icon="x"
-                intent="danger"
-                onClick={() => setConfirmDelete(true)}
-                size="sm"
-              >
-                {t("delete")}
-              </Button>
-              <Button
-                data-testid={AgentDetailScreenTestId.Save}
-                disabled={!canSave}
-                icon="check"
-                intent="primary"
-                loading={updateAgent.isPending}
-                onClick={() => void submit()}
-                size="sm"
-              >
-                {t("save")}
-              </Button>
-              <Button intent="ghost" onClick={() => router.push("/agents")} size="sm">
-                {tk("common.back")}
-              </Button>
-            </>
-          }
-          subtitle={agentFile(agent.id)}
-          title={name}
-        />
-
-        <EntityHero
-          editable
-          desc={agent.description}
-          glyph={(agent.glyph as IconName | undefined) ?? "bot"}
-          height={200}
-          image={agent.avatar}
-          name={name}
-          onRemove={() => updateAgent.mutate({ params: { id: agent.id }, body: { avatar: null } })}
-          onUpload={(dataUri) => {
-            if (dataUri.length > AVATAR_MAX) {
-              toastBus.emit({ message: t("avatarTooLarge") });
-              return;
+    <ImmersivePage
+      actions={
+        <>
+          <Button
+            data-testid={AgentDetailScreenTestId.Run}
+            icon="play"
+            intent="ghost"
+            onClick={() =>
+              openNewTask(undefined, {
+                kind: "agent",
+                id: agent.id,
+                name,
+                glyph: "bot",
+              })
             }
-            updateAgent.mutate({ params: { id: agent.id }, body: { avatar: dataUri } });
-          }}
-          placeholder={t("uploadAgentAvatar")}
-          removeLabel={t("removeImage")}
-          uploadLabel={t("uploadImage")}
-        />
+            size="sm"
+          >
+            {t("run")}
+          </Button>
+          <PinButton id={agent.id} kind="agent" />
+          <Button
+            data-testid={AgentDetailScreenTestId.Delete}
+            icon="x"
+            intent="danger"
+            onClick={() => setConfirmDelete(true)}
+            size="sm"
+          >
+            {t("delete")}
+          </Button>
+          <Button
+            data-testid={AgentDetailScreenTestId.Save}
+            disabled={!canSave}
+            icon="check"
+            intent="primary"
+            loading={updateAgent.isPending}
+            onClick={() => void submit()}
+            size="sm"
+          >
+            {t("save")}
+          </Button>
+        </>
+      }
+      backHref="/agents"
+      subtitle={agentFile(agent.id)}
+      title={name}
+    >
+      <Container padding={["300", "350"]}>
+        <PageContainer>
+          <Stack gap="250">
+            <EntityHero
+              editable
+              desc={agent.description}
+              glyph={(agent.glyph as IconName | undefined) ?? "bot"}
+              height={200}
+              image={agent.avatar}
+              name={name}
+              onRemove={() =>
+                updateAgent.mutate({ params: { id: agent.id }, body: { avatar: null } })
+              }
+              onUpload={(dataUri) => {
+                if (dataUri.length > AVATAR_MAX) {
+                  toastBus.emit({ message: t("avatarTooLarge") });
+                  return;
+                }
+                updateAgent.mutate({ params: { id: agent.id }, body: { avatar: dataUri } });
+              }}
+              placeholder={t("uploadAgentAvatar")}
+              removeLabel={t("removeImage")}
+              uploadLabel={t("uploadImage")}
+            />
 
-        <HudPanel title={t("tabBasics")}>
-          <AgentEditBasics categories={categories} control={form.control} />
-        </HudPanel>
+            <HudPanel surface="glass" title={t("tabBasics")}>
+              <AgentEditBasics categories={categories} control={form.control} />
+            </HudPanel>
 
-        <HudPanel title={t("tabRules")}>
-          <AgentRulesSection
-            agentName={watchedName || name}
-            gateRuleIds={watchedGateRuleIds}
-            gates={watchedGates}
-            onAddRule={() => setEditingRule("new")}
-            onDeleteRule={(i) => setGates(watchedGates.filter((_, j) => j !== i))}
-            onEditRule={(i) => setEditingRule(i)}
-            onLinkedChange={(ids) => form.setValue("gateRuleIds", ids, { shouldDirty: true })}
-          />
-        </HudPanel>
+            <HudPanel surface="glass" title={t("tabRules")}>
+              <AgentRulesSection
+                agentName={watchedName || name}
+                gateRuleIds={watchedGateRuleIds}
+                gates={watchedGates}
+                onAddRule={() => setEditingRule("new")}
+                onDeleteRule={(i) => setGates(watchedGates.filter((_, j) => j !== i))}
+                onEditRule={(i) => setEditingRule(i)}
+                onLinkedChange={(ids) => form.setValue("gateRuleIds", ids, { shouldDirty: true })}
+              />
+            </HudPanel>
 
-        <HudPanel title={t("usedInPipelines")}>
-          {usedBy.length === 0 ? (
-            <Typography size="sm" type="note" variant="tertiary">
-              {t("notInPipeline")}
-            </Typography>
-          ) : (
-            <Stack wrap direction="row" gap="100">
-              {usedBy.map((p) => (
-                <Tag key={p.id} tone="accent">
-                  {p.name ?? p.id} · {t("phaseCount", { count: p.phases.length })}
-                </Tag>
-              ))}
-            </Stack>
-          )}
-        </HudPanel>
-      </Stack>
+            <HudPanel surface="glass" title={t("usedInPipelines")}>
+              {usedBy.length === 0 ? (
+                <Typography size="sm" type="note" variant="tertiary">
+                  {t("notInPipeline")}
+                </Typography>
+              ) : (
+                <Stack wrap direction="row" gap="100">
+                  {usedBy.map((p) => (
+                    <Tag key={p.id} tone="accent">
+                      {p.name ?? p.id} · {t("phaseCount", { count: p.phases.length })}
+                    </Tag>
+                  ))}
+                </Stack>
+              )}
+            </HudPanel>
+          </Stack>
+        </PageContainer>
+      </Container>
 
       {confirmDelete && (
         <ConfirmDeleteDialog
@@ -240,6 +250,6 @@ function AgentEditor({ agent }: { agent: Agent }) {
           }
         />
       )}
-    </PageContainer>,
+    </ImmersivePage>,
   );
 }
