@@ -14,8 +14,8 @@ import {
   Typography,
 } from "@zibby/design-system";
 import type { Project } from "@zibby/contracts";
+import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { QueryError } from "../../components/LoadError/QueryError";
@@ -101,51 +101,51 @@ export function Screen() {
   };
 
   return (
-    <PageContainer>
-      <Stack gap="250">
-        <PageHeader
-          actions={
-            <>
-              <Button icon="plus" intent="ghost" onClick={() => setAddingCategory(true)}>
-                {t("addCategory")}
-              </Button>
-              <Button icon="plus" intent="primary" onClick={addProject}>
-                {t("addProject")}
-              </Button>
-            </>
-          }
-          subtitle={t("countSummary", { count: projects.length })}
-          title={t("title")}
-        />
-
-        {projectsQuery.isPending ? (
-          <QueryLoading />
-        ) : projectsQuery.isError ? (
-          <QueryError onRetry={() => void projectsQuery.refetch()} />
-        ) : categories.length === 0 && projects.length === 0 ? (
-          <EmptyState
-            actionLabel={t("addProject")}
-            description={t("emptyDescription")}
-            glyph="code"
-            hint={t("emptyHint")}
-            onAction={addProject}
-            title={t("emptyTitle")}
-          />
-        ) : (
-          <>
-            {categories.map((cat) =>
-              renderSection(
-                cat.name,
-                cat.name,
-                (cat.glyph as IconName) ?? "code",
-                projects.filter((p) => p.category === cat.name),
-              ),
-            )}
-            {uncategorized.length > 0 &&
-              renderSection("__uncategorized", t("uncategorized"), "code", uncategorized)}
-          </>
-        )}
-      </Stack>
+    <ImmersivePage
+      actions={
+        <>
+          <Button icon="plus" intent="ghost" onClick={() => setAddingCategory(true)}>
+            {t("addCategory")}
+          </Button>
+          <Button icon="plus" intent="primary" onClick={addProject}>
+            {t("addProject")}
+          </Button>
+        </>
+      }
+      subtitle={t("countSummary", { count: projects.length })}
+      title={t("title")}
+    >
+      <Container padding={["300", "350"]}>
+        <PageContainer>
+          {projectsQuery.isPending ? (
+            <QueryLoading />
+          ) : projectsQuery.isError ? (
+            <QueryError onRetry={() => void projectsQuery.refetch()} />
+          ) : categories.length === 0 && projects.length === 0 ? (
+            <EmptyState
+              actionLabel={t("addProject")}
+              description={t("emptyDescription")}
+              glyph="code"
+              hint={t("emptyHint")}
+              onAction={addProject}
+              title={t("emptyTitle")}
+            />
+          ) : (
+            <Stack gap="250">
+              {categories.map((cat) =>
+                renderSection(
+                  cat.name,
+                  cat.name,
+                  (cat.glyph as IconName) ?? "code",
+                  projects.filter((p) => p.category === cat.name),
+                ),
+              )}
+              {uncategorized.length > 0 &&
+                renderSection("__uncategorized", t("uncategorized"), "code", uncategorized)}
+            </Stack>
+          )}
+        </PageContainer>
+      </Container>
 
       {addingCategory && (
         <CategoryDialog
@@ -166,6 +166,6 @@ export function Screen() {
           pending={createCategory.isPending}
         />
       )}
-    </PageContainer>
+    </ImmersivePage>
   );
 }

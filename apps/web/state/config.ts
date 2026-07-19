@@ -112,8 +112,10 @@ export const AGENT_TOOLS = ["read", "write", "bash", "git", "web"] as const;
  * `/commands`, `/mcp`, `/hooks` (F3), `/agents`, `/automations` (F4), `/pipelines`,
  * `/chains` (F5 — both share one `Screen.tsx` for list *and* detail, switching
  * on the `[id]` route segment; `isFullscreenRoute`'s prefix match also covers
- * each section's `/[id]` detail route). F10 collapses this table entirely once
- * the HUD branch is deleted.
+ * each section's `/[id]` detail route), `/projects`, `/companies` (F6 — the
+ * prefix match also covers `/projects/new`, the nested `/projects/[id]/
+ * integrations/[integrationId]` and `/companies/new`). F10 collapses this
+ * table entirely once the HUD branch is deleted.
  */
 export const FULLSCREEN_ROUTES = [
   "/chat",
@@ -127,6 +129,8 @@ export const FULLSCREEN_ROUTES = [
   "/automations",
   "/pipelines",
   "/chains",
+  "/projects",
+  "/companies",
 ] as const;
 
 /** Whether `pathname` (or one of its sub-paths) is a fullscreen route. */

@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { DropDownButtonTestId } from "@zibby/design-system";
+import { DropDownButtonTestId, ImmersiveShellTestId } from "@zibby/design-system";
 import type { Company } from "@zibby/contracts";
 import { renderWithProviders as render, screen } from "../../test/render";
+import { ImmersivePageTestId } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { DetailScreen } from "./DetailScreen";
 
 const company: Company = {
@@ -60,6 +61,15 @@ describe("companies DetailScreen", () => {
   it("renders the company name from the query", () => {
     render(<DetailScreen companyId="acme" />);
     expect(screen.getByText("Acme")).toBeInTheDocument();
+  });
+
+  // F6 (docs/plans/hud2chat-F6-delivery-entities.md): create-vs-edit in one
+  // component — title and back target must both be right in either mode (the
+  // same class of bug F5's route-id-vs-selection trap hit).
+  it("existing-company mode: title is the company name, back goes to /companies", () => {
+    render(<DetailScreen companyId="acme" />);
+    expect(screen.getByTestId(ImmersiveShellTestId.Title)).toHaveTextContent("Acme");
+    expect(screen.getByTestId(ImmersivePageTestId.Back)).toHaveAttribute("href", "/companies");
   });
 
   it("shows the person's name from the roster", () => {
@@ -179,6 +189,11 @@ describe("companies DetailScreen", () => {
         }),
         expect.objectContaining({ onSuccess: expect.any(Function) }),
       );
+    });
+
+    it("new-company mode: back goes to /companies (never loops to /companies/new)", () => {
+      render(<DetailScreen />);
+      expect(screen.getByTestId(ImmersivePageTestId.Back)).toHaveAttribute("href", "/companies");
     });
   });
 });

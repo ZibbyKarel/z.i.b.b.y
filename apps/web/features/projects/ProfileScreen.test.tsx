@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import type { Project, ProjectLocalState, ProjectProfile } from "@zibby/contracts";
+import { ImmersiveShellTestId } from "@zibby/design-system";
 import { renderWithProviders as render, screen } from "../../test/render";
+import { ImmersivePageTestId } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { ProfileScreen } from "./ProfileScreen";
 
 const project: Project = {
@@ -51,7 +53,11 @@ let localState: ProjectLocalState | undefined = {
 // `projectId` flips the query into new-project mode; the mock ignores the
 // `enabled` option, so we just return the same project in both modes.
 vi.mock("./queries", () => ({
-  useProjectQuery: () => ({ data: { ...project, ...projectOverride }, isPending: false, isError: false }),
+  useProjectQuery: () => ({
+    data: { ...project, ...projectOverride },
+    isPending: false,
+    isError: false,
+  }),
   useProjectProfileQuery: () => ({ data: profile }),
   useProjectStandupQuery: () => ({ data: null }),
   useProjectLocalStateQuery: () => ({ data: localState }),
@@ -167,6 +173,15 @@ describe("ProfileScreen", () => {
   it("renders the project name from the query", () => {
     render(<ProfileScreen projectId="media-vault" />);
     expect(screen.getByText("media-vault")).toBeInTheDocument();
+  });
+
+  // F6 (docs/plans/hud2chat-F6-delivery-entities.md): the immersive shell's
+  // title is the project name and back always returns to the /projects list,
+  // never to the profile page itself.
+  it("existing-project mode: title is the project name, back goes to /projects", () => {
+    render(<ProfileScreen projectId="media-vault" />);
+    expect(screen.getByTestId(ImmersiveShellTestId.Title)).toHaveTextContent("media-vault");
+    expect(screen.getByTestId(ImmersivePageTestId.Back)).toHaveAttribute("href", "/projects");
   });
 
   it("shows the person's name from the profile", async () => {
@@ -303,6 +318,14 @@ describe("ProfileScreen", () => {
         }),
         expect.objectContaining({ onSuccess: expect.any(Function) }),
       );
+    });
+
+    // F6 (docs/plans/hud2chat-F6-delivery-entities.md): the immersive shell's
+    // back button must return to `/projects` in BOTH modes — this is the
+    // create-vs-edit trap (same class of bug F5's route-id-vs-selection hit).
+    it("new-project mode: back goes to /projects (never loops to /projects/new)", () => {
+      render(<ProfileScreen />);
+      expect(screen.getByTestId(ImmersivePageTestId.Back)).toHaveAttribute("href", "/projects");
     });
 
     describe("pre-linked to a company via ?companyId= (Phase 75)", () => {

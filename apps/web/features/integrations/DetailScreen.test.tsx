@@ -2,6 +2,7 @@ import { renderWithProviders as render, screen } from "../../test/render";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Integration } from "@zibby/contracts";
+import { ImmersivePageTestId } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { DetailScreen, IntegrationDetailScreenTestId } from "./DetailScreen";
 import { IntegrationFormTestId } from "./components/IntegrationFormFields";
 
@@ -63,6 +64,17 @@ describe("integrations DetailScreen (N4h grammar — closes the series)", () => 
     expect(screen.getByTestId(IntegrationFormTestId.Kind)).toHaveTextContent("slack");
   });
 
+  // F6 (docs/plans/hud2chat-F6-delivery-entities.md): the first dynamic
+  // `backHref` in this migration — two levels deep, it must return to ITS
+  // project's integrations tab, not to `/projects` and not to `/chat`.
+  it("the immersive back button returns to its project's integrations tab", () => {
+    render(<DetailScreen integrationId="team-slack" projectId="acme" />);
+    expect(screen.getByTestId(ImmersivePageTestId.Back)).toHaveAttribute(
+      "href",
+      "/projects/acme?tab=integrations",
+    );
+  });
+
   it("Save patches the config; a fresh secret rides the SEPARATE credentials mutation", async () => {
     hooks.update.mockImplementation((_vars, opts?: { onSuccess?: () => void }) =>
       opts?.onSuccess?.(),
@@ -103,9 +115,7 @@ describe("integrations DetailScreen (N4h grammar — closes the series)", () => 
   });
 
   it("Delete asks in a CONFIRM dialog, then deletes and returns to the project's tab", async () => {
-    hooks.del.mockImplementation((_args, opts?: { onSuccess?: () => void }) =>
-      opts?.onSuccess?.(),
-    );
+    hooks.del.mockImplementation((_args, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.());
     render(<DetailScreen integrationId="team-slack" projectId="acme" />);
     await userEvent.click(screen.getByTestId(IntegrationDetailScreenTestId.Delete));
     expect(screen.getByText("Smazat integraci?")).toBeInTheDocument();

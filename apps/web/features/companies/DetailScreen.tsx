@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { ProjectPerson } from "@zibby/contracts";
 import {
   Button,
+  Container,
   DropDownButton,
   Pressable,
   Stack,
@@ -19,13 +20,17 @@ import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/Confir
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
+import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { slug } from "../../utils/slug";
 import { useProjectsQuery } from "../projects";
 import { type CompanyBasicsBody, CompanyBasicsPanel } from "./components/CompanyBasicsPanel";
 import { LinkProjectDialog } from "./components/LinkProjectDialog";
-import { useCreateCompanyMutation, useDeleteCompanyMutation, useUpdateCompanyMutation } from "./mutations";
+import {
+  useCreateCompanyMutation,
+  useDeleteCompanyMutation,
+  useUpdateCompanyMutation,
+} from "./mutations";
 import { useCompanyQuery } from "./queries";
 
 // ---------------------------------------------------------------------------
@@ -176,7 +181,10 @@ export function DetailScreen({ companyId }: CompanyDetailScreenProps) {
 
   function saveTeam() {
     const cleanPeople = effectivePeople.filter((p) => p.name.trim() && p.role.trim());
-    updateCompany.mutate({ params: { id }, body: { people: cleanPeople } }, { onSuccess: () => setPeople(null) });
+    updateCompany.mutate(
+      { params: { id }, body: { people: cleanPeople } },
+      { onSuccess: () => setPeople(null) },
+    );
   }
 
   const teamPanel = (
@@ -193,6 +201,7 @@ export function DetailScreen({ companyId }: CompanyDetailScreenProps) {
           {tk("common.save")}
         </Button>
       }
+      surface="glass"
       title={t("team.title")}
     >
       <Stack gap="150">
@@ -256,15 +265,11 @@ export function DetailScreen({ companyId }: CompanyDetailScreenProps) {
           size="sm"
         />
       }
+      surface="glass"
       title={t("memberProjects.title")}
     >
       {memberProjects.length === 0 ? (
-        <Typography
-          data-testid="member-projects-empty"
-          size="sm"
-          type="note"
-          variant="tertiary"
-        >
+        <Typography data-testid="member-projects-empty" size="sm" type="note" variant="tertiary">
           {t("memberProjects.empty")}
         </Typography>
       ) : (
@@ -280,33 +285,28 @@ export function DetailScreen({ companyId }: CompanyDetailScreenProps) {
   );
 
   return (
-    <PageContainer>
-      <PageHeader
-        actions={
-          <Button intent="ghost" onClick={() => router.push("/companies")} size="sm">
-            {tk("common.back")}
-          </Button>
-        }
-        title={isNew ? t("newCompany") : (company?.name ?? "")}
-      />
+    <ImmersivePage backHref="/companies" title={isNew ? t("newCompany") : (company?.name ?? "")}>
+      <Container padding={["300", "350"]}>
+        <PageContainer>
+          <Stack gap="300">
+            <CompanyBasicsPanel
+              company={company}
+              isNew={isNew}
+              key={company?.id ?? "new"}
+              onDelete={isNew ? undefined : () => setConfirmDelete(true)}
+              onSave={saveBasics}
+              saving={createCompany.isPending || updateCompany.isPending}
+            />
 
-      <Stack gap="300">
-        <CompanyBasicsPanel
-          company={company}
-          isNew={isNew}
-          key={company?.id ?? "new"}
-          onDelete={isNew ? undefined : () => setConfirmDelete(true)}
-          onSave={saveBasics}
-          saving={createCompany.isPending || updateCompany.isPending}
-        />
-
-        {!isNew && company && (
-          <>
-            {teamPanel}
-            {memberProjectsPanel}
-          </>
-        )}
-      </Stack>
+            {!isNew && company && (
+              <>
+                {teamPanel}
+                {memberProjectsPanel}
+              </>
+            )}
+          </Stack>
+        </PageContainer>
+      </Container>
 
       {confirmDelete && company && (
         <ConfirmDeleteDialog
@@ -334,6 +334,6 @@ export function DetailScreen({ companyId }: CompanyDetailScreenProps) {
       {linkingProject && (
         <LinkProjectDialog companyId={id} onClose={() => setLinkingProject(false)} />
       )}
-    </PageContainer>
+    </ImmersivePage>
   );
 }

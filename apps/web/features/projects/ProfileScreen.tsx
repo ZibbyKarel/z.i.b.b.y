@@ -5,6 +5,7 @@ import {
   Alert,
   Button,
   CodeBlock,
+  Container,
   Divider,
   Pressable,
   SelectField,
@@ -26,8 +27,8 @@ import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/Confir
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
+import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { slug } from "../../utils/slug";
 import { useCompaniesQuery } from "../companies";
 import { InboxPanel } from "../integrations/components/InboxPanel";
@@ -36,7 +37,10 @@ import { ProjectCiStatusChip } from "./components/ProjectCiStatusChip";
 import { ProjectCompanyPanel } from "./components/ProjectCompanyPanel";
 import { ProjectIntegrationActivityPanel } from "./components/ProjectIntegrationActivityPanel";
 import { ProjectIntegrationsPanel } from "./components/ProjectIntegrationsPanel";
-import { ProjectPrCountBadge, ProjectPullRequestsPanel } from "./components/ProjectPullRequestsPanel";
+import {
+  ProjectPrCountBadge,
+  ProjectPullRequestsPanel,
+} from "./components/ProjectPullRequestsPanel";
 import { ProjectRunSummary } from "./components/ProjectRunSummary";
 import { ProjectSecretsPanel } from "./components/ProjectSecretsPanel";
 import {
@@ -335,6 +339,7 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
           {tk("common.save")}
         </Button>
       }
+      surface="glass"
       title={t("team.title")}
     >
       <Stack gap="150">
@@ -389,6 +394,7 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
           {tk("common.save")}
         </Button>
       }
+      surface="glass"
       title={t("autonomy.title")}
     >
       <Stack gap="200">
@@ -483,6 +489,7 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
           {tk("common.save")}
         </Button>
       }
+      surface="glass"
       title={t("rhythm.title")}
     >
       <Stack gap="150">
@@ -517,7 +524,7 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
   );
 
   const standupPanel = standupQ.data ? (
-    <HudPanel title={t("standup.title")}>
+    <HudPanel surface="glass" title={t("standup.title")}>
       <Stack gap="75">
         <Typography mono size="xs" type="note" variant="tertiary">
           {standupQ.data.date}
@@ -534,129 +541,136 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
   const localState = localStateQ.data;
   const cloneTarget = localState ? `${localState.cloneRoot}/${id}` : "";
   const showMissingCloneBanner = !isNew && !!localState && !localState.present;
-  const showClonedFromCloneRoot = !isNew && localState?.present && localState.source === "cloneRoot";
+  const showClonedFromCloneRoot =
+    !isNew && localState?.present && localState.source === "cloneRoot";
 
   return (
-    <PageContainer>
-      <PageHeader
-        actions={
-          <>
-            {showClonedFromCloneRoot && (
-              <Tag data-testid="cloned-from-clone-root" tone="neutral">
-                {tp("localState.clonedFromCloneRoot")}
-              </Tag>
-            )}
-            {/* CI health chip (N4b) — state readout, renders nothing without a watched CI */}
-            {!isNew && <ProjectCiStatusChip projectId={id} />}
-            {/* Open-PR count badge (Phase 78) — renders nothing at zero */}
-            {!isNew && <ProjectPrCountBadge projectId={id} />}
-            <Button intent="ghost" onClick={() => router.push("/projects")} size="sm">
-              {tk("common.back")}
-            </Button>
-          </>
-        }
-        subtitle={isNew ? undefined : project?.path}
-        title={isNew ? tp("newProject") : (project?.name ?? "")}
-      />
-
-      {showMissingCloneBanner && (
-        <Alert
-          data-testid="local-state-missing-banner"
-          severity="warn"
-          title={tp("localState.missingTitle")}
-        >
-          <Stack gap="150">
-            <Typography size="sm" type="note">
-              {tp("localState.missingBody", { target: localState?.resolvedPath ?? cloneTarget })}
-            </Typography>
-            {!project?.gitRemote && (
-              <Typography size="xs" type="note" variant="tertiary">
-                {tp("localState.needRemote")}
-              </Typography>
-            )}
-            <Stack align="start" direction="row">
-              <Button
-                data-testid="clone-project"
-                disabled={!project?.gitRemote}
-                icon="branch"
-                intent="primary"
-                loading={cloneProject.isPending}
-                onClick={() => cloneProject.mutate({ params: { id }, body: {} })}
-                size="sm"
-              >
-                {cloneProject.isPending ? tp("localState.cloning") : tp("localState.cloneButton")}
-              </Button>
-            </Stack>
-          </Stack>
-        </Alert>
-      )}
-
-      {isNew ? (
-        <Stack gap="300">
-          {linkCompanyId && (
-            <Tag data-testid="new-project-linked-to" tone="accent">
-              {t("newProjectLinkedTo", { company: linkCompanyName ?? linkCompanyId })}
+    <ImmersivePage
+      actions={
+        <>
+          {showClonedFromCloneRoot && (
+            <Tag data-testid="cloned-from-clone-root" tone="neutral">
+              {tp("localState.clonedFromCloneRoot")}
             </Tag>
           )}
-          {basicsPanel}
-        </Stack>
-      ) : project ? (
-        <Tabs defaultValue={initialTab} onValueChange={setTab}>
-          <TabList>
-            <Tab value="overview">{t("tabs.overview")}</Tab>
-            <Tab value="profile">{t("tabs.profile")}</Tab>
-            <Tab value="secrets">{t("tabs.secrets")}</Tab>
-            <Tab value="integrations">{t("tabs.integrations")}</Tab>
-          </TabList>
+          {/* CI health chip (N4b) — state readout, renders nothing without a watched CI */}
+          {!isNew && <ProjectCiStatusChip projectId={id} />}
+          {/* Open-PR count badge (Phase 78) — renders nothing at zero */}
+          {!isNew && <ProjectPrCountBadge projectId={id} />}
+        </>
+      }
+      backHref="/projects"
+      subtitle={isNew ? undefined : project?.path}
+      title={isNew ? tp("newProject") : (project?.name ?? "")}
+    >
+      <Container padding={["300", "350"]}>
+        <PageContainer>
+          <Stack gap="250">
+            {showMissingCloneBanner && (
+              <Alert
+                data-testid="local-state-missing-banner"
+                severity="warn"
+                title={tp("localState.missingTitle")}
+              >
+                <Stack gap="150">
+                  <Typography size="sm" type="note">
+                    {tp("localState.missingBody", {
+                      target: localState?.resolvedPath ?? cloneTarget,
+                    })}
+                  </Typography>
+                  {!project?.gitRemote && (
+                    <Typography size="xs" type="note" variant="tertiary">
+                      {tp("localState.needRemote")}
+                    </Typography>
+                  )}
+                  <Stack align="start" direction="row">
+                    <Button
+                      data-testid="clone-project"
+                      disabled={!project?.gitRemote}
+                      icon="branch"
+                      intent="primary"
+                      loading={cloneProject.isPending}
+                      onClick={() => cloneProject.mutate({ params: { id }, body: {} })}
+                      size="sm"
+                    >
+                      {cloneProject.isPending
+                        ? tp("localState.cloning")
+                        : tp("localState.cloneButton")}
+                    </Button>
+                  </Stack>
+                </Stack>
+              </Alert>
+            )}
 
-          <TabPanel value="overview">
-            <Stack gap="300">
-              {basicsPanel}
-              <ProjectCompanyPanel companyId={project.companyId} projectId={id} />
-              <ProjectRunSummary projectId={id} />
-              <ProjectPullRequestsPanel projectId={id} />
-            </Stack>
-          </TabPanel>
+            {isNew ? (
+              <Stack gap="300">
+                {linkCompanyId && (
+                  <Tag data-testid="new-project-linked-to" tone="accent">
+                    {t("newProjectLinkedTo", { company: linkCompanyName ?? linkCompanyId })}
+                  </Tag>
+                )}
+                {basicsPanel}
+              </Stack>
+            ) : project ? (
+              <Tabs defaultValue={initialTab} onValueChange={setTab}>
+                <TabList>
+                  <Tab value="overview">{t("tabs.overview")}</Tab>
+                  <Tab value="profile">{t("tabs.profile")}</Tab>
+                  <Tab value="secrets">{t("tabs.secrets")}</Tab>
+                  <Tab value="integrations">{t("tabs.integrations")}</Tab>
+                </TabList>
 
-          <TabPanel value="profile">
-            <Stack gap="300">
-              {teamPanel}
-              <Divider />
-              {autonomyPanel}
-              <Divider />
-              {rhythmPanel}
-              {standupPanel && (
-                <>
-                  <Divider />
-                  {standupPanel}
-                </>
-              )}
-            </Stack>
-          </TabPanel>
+                <TabPanel value="overview">
+                  <Stack gap="300">
+                    {basicsPanel}
+                    <ProjectCompanyPanel companyId={project.companyId} projectId={id} />
+                    <ProjectRunSummary projectId={id} />
+                    <ProjectPullRequestsPanel projectId={id} />
+                  </Stack>
+                </TabPanel>
 
-          <TabPanel value="secrets">
-            <Stack gap="300">
-              <ProjectSecretsPanel
-                hasSecrets={project.hasSecrets}
-                onClear={() => deleteSecrets.mutate({ params: { id } })}
-                onSet={(secrets) => setSecrets.mutate({ params: { id }, body: secrets })}
-                saving={setSecrets.isPending || deleteSecrets.isPending}
-              />
-            </Stack>
-          </TabPanel>
+                <TabPanel value="profile">
+                  <Stack gap="300">
+                    {teamPanel}
+                    <Divider />
+                    {autonomyPanel}
+                    <Divider />
+                    {rhythmPanel}
+                    {standupPanel && (
+                      <>
+                        <Divider />
+                        {standupPanel}
+                      </>
+                    )}
+                  </Stack>
+                </TabPanel>
 
-          <TabPanel value="integrations">
-            <Stack gap="300">
-              {/* Channels owned by this project (one project = one company) */}
-              <ProjectIntegrationsPanel projectId={id} />
-              {/* This project's recent channel items */}
-              <InboxPanel projectId={id} />
-              {/* What the project's integrations processed + outcome */}
-              <ProjectIntegrationActivityPanel projectId={id} />
-            </Stack>
-          </TabPanel>
-        </Tabs>
-      ) : null}
+                <TabPanel value="secrets">
+                  <Stack gap="300">
+                    <ProjectSecretsPanel
+                      hasSecrets={project.hasSecrets}
+                      onClear={() => deleteSecrets.mutate({ params: { id } })}
+                      onSet={(secrets) => setSecrets.mutate({ params: { id }, body: secrets })}
+                      saving={setSecrets.isPending || deleteSecrets.isPending}
+                    />
+                  </Stack>
+                </TabPanel>
+
+                <TabPanel value="integrations">
+                  <Stack gap="300">
+                    {/* Channels owned by this project (one project = one company) */}
+                    <ProjectIntegrationsPanel projectId={id} />
+                    {/* This project's recent channel items */}
+                    <InboxPanel projectId={id} />
+                    {/* What the project's integrations processed + outcome */}
+                    <ProjectIntegrationActivityPanel projectId={id} />
+                  </Stack>
+                </TabPanel>
+              </Tabs>
+            ) : null}
+          </Stack>
+        </PageContainer>
+      </Container>
 
       {confirmDelete && project && (
         <ConfirmDeleteDialog
@@ -680,6 +694,6 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
           title={tp("deleteTitle")}
         />
       )}
-    </PageContainer>
+    </ImmersivePage>
   );
 }
