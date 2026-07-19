@@ -42,6 +42,16 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/tools/docs-sync/stop-hook.mjs\""
+          }
+        ]
+      }
     ]
   }
 }
