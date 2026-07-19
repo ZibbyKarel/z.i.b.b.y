@@ -12,6 +12,8 @@
     "start": "concurrently -n api,web -c green,cyan \"pnpm:api:start\" \"pnpm:web:start\"",
     "check:format": "prettier --check .",
     "check:self-knowledge": "pnpm --filter @zibby/api exec ts-node -P tsconfig.json ../../tools/self-knowledge/generate.ts --check",
+    "check:docs-sync": "node tools/docs-sync/check.mjs --scope=staged",
+    "docs-sync:check": "node tools/docs-sync/check.mjs --scope=worktree",
     "check:types": "tsc -p tsconfig.base.json --noEmit && tsc -p apps/web/tsconfig.json --noEmit",
     "check:types:incremental": "tsc -p tsconfig.base.json --noEmit --incremental --tsBuildInfoFile .cache/tsc-base.tsbuildinfo && tsc -p apps/web/tsconfig.json --noEmit --incremental --tsBuildInfoFile .cache/tsc-web.tsbuildinfo",
     "check:cycles": "madge --circular apps/web",

@@ -8,14 +8,14 @@ would be wrong.
 
 ## Pieces
 
-| Piece         | File                                        | Role                                                                                              |
-| ------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Contract      | `libs/contracts/src/budget/budget.schema.ts` | `GlobalBudget`, `BudgetStatus`, `ProjectBudgetStatus`, `CostWindowUsage` schemas                    |
-| Contract (HTTP) | `libs/contracts/src/budget/budget.contract.ts` | ts-rest router — read-only status + the global config read/write                                  |
-| Config store  | `apps/api/src/budget/budget-config.store.ts` | `BudgetConfigStore` — reads/writes `data/budget.json` (operator-owned, committed, atomic writes)     |
-| Ledger        | `apps/api/src/budget/ledger.store.ts`        | `BudgetLedgerStore` — append-only `<YYYY-MM-DD>.jsonl` ledger; dispatch lines (run counts) + cost lines (Phase 12, dollar sums) |
-| Service       | `apps/api/src/budget/budget.service.ts`      | `BudgetService` — the guard: `check`, `recordDispatch`, `recordCost`, `countRunning`, `status`      |
-| Controller    | `apps/api/src/budget/budget.controller.ts`   | Implements `budgetContract` against `BudgetService` + `BudgetConfigStore`                            |
+| Piece           | File                                           | Role                                                                                                                            |
+| --------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Contract        | `libs/contracts/src/budget/budget.schema.ts`   | `GlobalBudget`, `BudgetStatus`, `ProjectBudgetStatus`, `CostWindowUsage` schemas                                                |
+| Contract (HTTP) | `libs/contracts/src/budget/budget.contract.ts` | ts-rest router — read-only status + the global config read/write                                                                |
+| Config store    | `apps/api/src/budget/budget-config.store.ts`   | `BudgetConfigStore` — reads/writes `data/budget.json` (operator-owned, committed, atomic writes)                                |
+| Ledger          | `apps/api/src/budget/ledger.store.ts`          | `BudgetLedgerStore` — append-only `<YYYY-MM-DD>.jsonl` ledger; dispatch lines (run counts) + cost lines (Phase 12, dollar sums) |
+| Service         | `apps/api/src/budget/budget.service.ts`        | `BudgetService` — the guard: `check`, `recordDispatch`, `recordCost`, `countRunning`, `status`                                  |
+| Controller      | `apps/api/src/budget/budget.controller.ts`     | Implements `budgetContract` against `BudgetService` + `BudgetConfigStore`                                                       |
 
 ## Endpoints (`/api/budget`)
 
@@ -46,17 +46,20 @@ Every dispatch path (agent run, pipeline run, one goal iteration) calls
    `LimitsService` (see `docs/api/limits.md`). If the account's 5h rolling or weekly
    usage is at or above the configured pause percentage, the dispatch is refused
    (`over: "global"`). Any read error here is also refused — fail-closed.
-2. **Per-project run-count caps** — if the resolved project has a `budget` with
-   `dailyRuns`/`weeklyRuns`/`monthlyRuns` set, count how many runs have already been
-   recorded for that project in the matching window (`BudgetLedgerStore.countDaily`/
-   `countWeekly`/`countMonthly`) and refuse if the cap is reached
+2. **Per-project run-count caps** — resolve the project's _effective_ budget via
+   `ResolvedProjectService.resolveBudget(project)` (Phase 70: the project's own
+   `budget` fields merged over its company's defaults, field-level — a
+   company-less project, or one with a dangling `companyId`, resolves to its own
+   raw `budget` unchanged). If the effective budget has `dailyRuns`/`weeklyRuns`/
+   `monthlyRuns` set, count how many runs have already been recorded for that
+   project in the matching window (`BudgetLedgerStore.countDaily`/`countWeekly`/
+   `countMonthly`) and refuse if the cap is reached
    (`over: "project-daily"|"project-weekly"|"project-monthly"`). A ledger read error
    also refuses.
-3. **Per-project dollar caps** (Phase 12) — if the project's `budget` has
-   `dailyCostCapUsd`/`weeklyCostCapUsd`/`monthlyCostCapUsd` set, read that window's
+3. **Per-project dollar caps** (Phase 12) — if the same effective budget has
    cost-line sum + count (`BudgetLedgerStore.sumCostDaily`/`sumCostWeekly`/
    `sumCostMonthly`) and estimate `spentUsd + averageCostPerRun` (average cost per
-   *finished* run in the window; no cost line yet → average is 0, estimate =
+   _finished_ run in the window; no cost line yet → average is 0, estimate =
    spentUsd). Refuse when the estimate exceeds the cap
    (`over: "project-daily-cost"|"project-weekly-cost"|"project-monthly-cost"`,
    carrying `metrics: { costUsd, capUsd }` on the `BudgetCheck`). A ledger read error
@@ -110,9 +113,35 @@ auto-resumed run both start at once when the window resets.
 ### The status readout
 
 `status(now)` is a pure read assembling `GET /budget`'s payload: the global ceiling
-plus `paused` flag, and one row per project with a `budget` set — `daily`/`weekly`/
+plus `paused` flag, and one row per project with an effective budget — resolved the
+same way as `check()`, via `ResolvedProjectService.resolveBudget(project)` (Phase 70:
+company defaults merged under the project's own overrides) — `daily`/`weekly`/
 `monthly` (`{ used, cap? }`), the Phase-12 `dailyCost`/`weeklyCost`/`monthlyCost`
 (`{ spentUsd, capUsd? }` — `spentUsd` always reported, `capUsd` only when the project
 set a dollar cap on that window), `running` (from `countRunning`), `maxConcurrent` (if
-set), and `queued`/`held` task counts. Projects with no `budget` configured don't
-appear in the readout at all.
+set), and `queued`/`held` task counts. Projects that resolve to no budget at all (no
+company defaults, no project override) don't appear in the readout.
+
+### Company-level budget inheritance (Phase 70)
+
+Per-project caps are no longer read directly off `project.budget`. Both `check()`
+(the dispatch-time guard) and `status()` (the readout) call
+`ResolvedProjectService.resolveBudget(project)`, which merges the owning company's
+default budget fields under the project's own `budget` — the project's own fields
+win field-by-field, so a project can override just one cap and still inherit the
+rest from its company. A project with no company (or a `companyId` pointing at a
+deleted company) resolves to its own raw `budget` unchanged, so this is
+behavior-preserving for every engagement that never adopts a company.
+
+### Concurrent dispatch safety (check→record TOCTOU)
+
+Two sibling dispatches for the same project can both pass `check()` before either
+has recorded a run — a naive implementation would let both through even though the
+second should have seen the first's usage. `task-scheduler.service.ts`'s
+`attemptCreateSync`/`dispatchPending` close this gap by wrapping the guard-check +
+real dispatch in a `project-capacity:${projectId}` file lock: the synchronous
+create path runs its whole guard-then-dispatch as one lock-held critical section,
+and the background (interactive New Task) path re-verifies budget and concurrency
+(`guardExisting`) immediately before the real dispatch, now serialized (same lock,
+FIFO) against every other dispatch for the project. A task that loses this recheck
+flips from `pending` to `held`/`queued` instead of also dispatching.

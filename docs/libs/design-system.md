@@ -95,14 +95,15 @@ No `tailwind.config.js` — configuration lives entirely in CSS.
 
 ### Layout primitives
 
-| Component   | Purpose                                                     |
-| ----------- | ------------------------------------------------------------ |
-| `Container` | Wrapper with max-width, padding, overflow, position, grow/shrink |
-| `Stack`     | Flex column/row with gap                                     |
-| `Grid`      | CSS Grid with cols, gap, align                               |
-| `Spacer`    | Flex spacer                                                  |
-| `Surface`   | Layered surface (background tier)                            |
-| `Pressable` | Interactive wrapper (keyboard + mouse)                       |
+| Component       | Purpose                                                                                               |
+| --------------- | ----------------------------------------------------------------------------------------------------- |
+| `Container`     | Wrapper with max-width, padding, overflow, position, grow/shrink                                      |
+| `Stack`         | Flex column/row with gap                                                                              |
+| `Grid`          | CSS Grid with cols, gap, align                                                                        |
+| `Spacer`        | Flex spacer                                                                                           |
+| `Surface`       | Layered surface (background tier)                                                                     |
+| `Pressable`     | Interactive wrapper (keyboard + mouse)                                                                |
+| `FloatingPanel` | Ambient "floating on water" drift for otherwise-idle content (stagger `index`, honors reduced motion) |
 
 ### Typography
 
@@ -111,11 +112,13 @@ monospace.
 
 ### Buttons
 
-| Component     | Purpose                                                      |
-| ------------- | -------------------------------------------------------------- |
-| `Button`      | Primary button (variant: solid/ghost/outline, size: xs–xl)     |
-| `ButtonGroup` | Groups buttons together                                         |
-| `HoldButton`  | Hold-to-confirm button (for destructive actions); a short press arms it and a second press confirms — timing-free a11y alternative to the hold; `size` sm/md (md default, sm matches `Button size="sm"`) |
+| Component        | Purpose                                                                                                                                                                                                  |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Button`         | Primary button (variant: solid/ghost/outline, size: xs–xl)                                                                                                                                               |
+| `ButtonGroup`    | Groups buttons together                                                                                                                                                                                  |
+| `HoldButton`     | Hold-to-confirm button (for destructive actions); a short press arms it and a second press confirms — timing-free a11y alternative to the hold; `size` sm/md (md default, sm matches `Button size="sm"`) |
+| `DropDownButton` | Split button: a primary action segment plus a chevron opening a menu of secondary actions (portaled, keyboard-navigable)                                                                                 |
+| `MenuButton`     | Icon-only kebab (three-dot) trigger opening a menu of action rows — the pure "overflow menu" shape, no mandatory primary segment; reuses `DropDownButton`'s portal/keyboard mechanics                    |
 
 ### Form primitives
 
@@ -150,45 +153,47 @@ a cron string is the app's job (`apps/web/features/automations/schedule.ts`:
 
 ### Feedback
 
-| Component      | Purpose                                        |
-| --------------- | ------------------------------------------------ |
-| `Alert`         | Informational / warning / error banner            |
-| `StatusDot`     | Status indicator (color + optional pulsing)       |
-| `Progress`      | Linear progress bar                               |
-| `ProgressRing`  | Circular progress                                 |
-| `Sparkline`     | Miniature chart                                   |
-| `Stat`          | Number + label + trend                           |
-| `OrbitLoader`   | Loading indicator (orbiting dot + label, sizes sm/md/lg) |
+| Component      | Purpose                                                                                                                                                                                                                                     |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Alert`        | Informational / warning / error banner                                                                                                                                                                                                      |
+| `StatusDot`    | Status indicator (color + optional pulsing)                                                                                                                                                                                                 |
+| `Progress`     | Linear progress bar                                                                                                                                                                                                                         |
+| `ProgressRing` | Circular progress                                                                                                                                                                                                                           |
+| `Sparkline`    | Miniature chart                                                                                                                                                                                                                             |
+| `Stat`         | Number + label + trend                                                                                                                                                                                                                      |
+| `OrbitLoader`  | Loading indicator (orbiting dot + label, sizes sm/md/lg)                                                                                                                                                                                    |
+| `LivingGlow`   | Shared "this is alive and in `tone` state" primitive — an absolutely positioned, animated glow shell tinted by a `StateTone`; the animated half of the living-state contract (the static half is the tone border on `Card`/`Corners`/`Tag`) |
 
 ### Navigation and data
 
-| Component     | Purpose                    |
-| ------------- | ---------------------------- |
-| `Tabs`        | Tab navigation                |
-| `Accordion`   | Collapsible section           |
-| `List`        | Structured list                |
+| Component     | Purpose                                                                                                                                                                                                               |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Tabs`        | Tab navigation                                                                                                                                                                                                        |
+| `Accordion`   | Collapsible section                                                                                                                                                                                                   |
+| `List`        | Structured list                                                                                                                                                                                                       |
 | `Dropdown`    | Dropdown menu (single, or `multi` — checkboxes in the options plus closable chips in the field; `showSelectAll` adds a "select/clear all" row; `size="sm"` gives a compact trigger for dense chrome like the top bar) |
-| `MenuSurface` | Surface for a menu overlay     |
-| `SearchBar`   | Search input                   |
-| `SearchMenu`  | Search with results            |
+| `MenuSurface` | Surface for a menu overlay                                                                                                                                                                                            |
+| `SearchBar`   | Search input                                                                                                                                                                                                          |
+| `SearchMenu`  | Search with results                                                                                                                                                                                                   |
 
 ### Overlays and content
 
-| Component        | Purpose                                          |
-| ----------------- | --------------------------------------------------- |
-| `Dialog`          | Modal dialog (`DialogWidth`: sm/md/lg/xl/full)      |
-| `Panel`           | Drawer/panel                                        |
-| `Card`            | Card with an optional header/footer                |
-| `IconTile`        | Icon in a tile (size, color)                        |
-| `CodeBlock`       | Code block with syntax highlighting                 |
-| `Markdown`        | Read-only Markdown viewer (`@uiw/react-md-editor` under the hood) |
-| `MarkdownEditor`  | Markdown editor + preview                           |
-| `FilePreview`     | Uploaded/attached file preview (name, size, remove) |
-| `Tooltip`         | Hover/focus tooltip                                 |
-| `Tag`             | Colored tag/badge                                   |
-| `Chip`            | Interactive chip (`closable` → an × + `onClose`)    |
-| `Kbd`             | Keyboard shortcut                                   |
-| `Divider`         | Horizontal/vertical divider                         |
+| Component        | Purpose                                                                                                                                                                                                     |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Dialog`         | Modal dialog (`DialogWidth`: sm/md/lg/xl/full)                                                                                                                                                              |
+| `Panel`          | Drawer/panel                                                                                                                                                                                                |
+| `Card`           | Card with an optional header/footer                                                                                                                                                                         |
+| `IconTile`       | Icon in a tile (size, color)                                                                                                                                                                                |
+| `CodeBlock`      | Code block with syntax highlighting                                                                                                                                                                         |
+| `Markdown`       | Read-only Markdown viewer (`@uiw/react-md-editor` under the hood)                                                                                                                                           |
+| `MarkdownEditor` | Markdown editor + preview                                                                                                                                                                                   |
+| `FilePreview`    | Uploaded/attached file preview (name, size, remove)                                                                                                                                                         |
+| `Tooltip`        | Hover/focus tooltip                                                                                                                                                                                         |
+| `Tag`            | Colored tag/badge                                                                                                                                                                                           |
+| `Chip`           | Interactive chip (`closable` → an × + `onClose`)                                                                                                                                                            |
+| `Kbd`            | Keyboard shortcut                                                                                                                                                                                           |
+| `Divider`        | Horizontal/vertical divider                                                                                                                                                                                 |
+| `EntityHero`     | Profile-style hero band for an agent/pipeline/company: avatar image (or glyph fallback) filling a band, with name/meta/desc overlaid at the bottom; optionally `editable` (click/drag-drop upload + remove) |
 
 ### Icon
 

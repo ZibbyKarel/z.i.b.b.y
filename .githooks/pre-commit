@@ -4,7 +4,9 @@
 # include TS/TSX, and the Self-Knowledge drift gate (Fáze 1 —
 # docs/plans/phase-06.md), which refuses a commit whose
 # agents/pipelines/gate-rules/channels drifted from the committed self-knowledge
-# vault note. None of these run repo-wide checks (full lint/test/build) — those
+# vault note, and the docs-sync coverage gate (tools/docs-sync/), which refuses a
+# commit that touches a brand-new apps/api/src module with no docs/api/*.md
+# mapping at all. None of these run repo-wide checks (full lint/test/build) — those
 # stay in pre-push and CI. The typecheck here uses the same --incremental flags as
 # package.json's `check:types:incremental` script (kept in sync manually) so a
 # warmed .cache/ (gitignored) makes repeat commits fast.
@@ -54,6 +56,20 @@ fi
 
 $RTK pnpm check:self-knowledge
 CHECK_STATUS=$?
+
+# --- docs-sync coverage gate (tools/docs-sync/) ---
+# Blocks only when a touched apps/api/src module has no doc-file mapping at
+# all, or its mapped doc file doesn't exist on disk yet — a brand-new
+# subsystem shipped with zero documentation. Does NOT block on a doc simply
+# not being part of *this* commit (that's printed as a warning only — see
+# check.mjs's docstring for why single-commit granularity is too noisy to
+# gate on that). Runs independently of $CHECK_STATUS above so both report.
+$RTK pnpm check:docs-sync
+DOCS_STATUS=$?
+if [ "$DOCS_STATUS" -ne 0 ]; then
+  echo "[pre-commit] docs-sync: new/changed module missing documentation — see messages above."
+  CHECK_STATUS=$DOCS_STATUS
+fi
 
 # --- graphify-out staleness warning (Fáze 10 — non-blocking, always exits 0) ---
 # graphify-out/ is entirely gitignored (never committed — see

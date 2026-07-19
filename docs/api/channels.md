@@ -259,7 +259,8 @@ only the computed `hasCredentials` flag.
 
 ## Sanitization
 
-`sanitizeInbound(text)` from `channels/sanitize.ts`:
+`sanitizeInbound(text)` from `apps/api/src/shared/text/untrusted-envelope.ts`
+(alongside `envelopeInbound()`):
 
 - Strips potentially harmful content (prompt-injection attempts)
 - Truncates length
@@ -271,13 +272,13 @@ only the computed `hasCredentials` flag.
 
 ## Activity records
 
-| Event                       | When                                                    |
-| ---------------------------- | -------------------------------------------------------- |
-| `channel-item`               | A new item was received                                  |
-| `channel-triage`              | An item was classified and its tier decided              |
-| `channel-reply`               | A reply draft was prepared                                |
-| `channel-approval`            | A reply was approved (Tier 3)                             |
-| `channel-ignored`             | An item was deliberately skipped                          |
-| `channel-noted`               | A read-only adapter's item was recorded (no reply surface)|
-| `channel-needs-attention`     | A notify-only item (email) surfaced for the operator      |
-| `integration-retry-exhausted` | An integration's poll failed after exhausting its retries |
+| Event                         | When                                                       |
+| ----------------------------- | ---------------------------------------------------------- |
+| `channel-item`                | A new item was received                                    |
+| `channel-triage`              | An item was classified and its tier decided                |
+| `channel-reply`               | A reply draft was prepared                                 |
+| `channel-approval`            | A reply was approved (Tier 3)                              |
+| `channel-ignored`             | An item was deliberately skipped                           |
+| `channel-noted`               | A read-only adapter's item was recorded (no reply surface) |
+| `channel-needs-attention`     | A notify-only item (email) surfaced for the operator       |
+| `integration-retry-exhausted` | An integration's poll failed after exhausting its retries  |

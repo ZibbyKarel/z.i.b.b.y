@@ -29,6 +29,16 @@ map of old→new (reversible by default).
   - `path` must be an absolute, existing directory — checked at propose time
     (the dry-run) AND again right before execute (the world may have moved);
   - preview is always empty (nothing to preview beyond the existence check).
+- `open-url` `{url}` (N5d) — opens an arbitrary web address in the operator's
+  default browser (`open <url>`). Only opens a browser tab (reversible, risk
+  low), but STILL behind the gate. Guard (fail-closed, `assertHttpUrl` in
+  `machine.service.ts`): the URL's scheme must be `http:` or `https:` — checked
+  at propose time (the dry-run) AND again right before execute — so inbound
+  content can never coax a `file:`/`javascript:` (or any other) scheme through
+  the browser. Unlike `rename-files`/`open-maps`/`open-folder`, there is
+  currently no chat-MCP tool entry point for this action (no `machine_open_url`
+  in `chat-tools.service.ts`) — it can only be proposed via
+  `POST /api/machine/actions` directly.
 
 ## Record lifecycle
 

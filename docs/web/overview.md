@@ -28,6 +28,10 @@ app/
     ├── commands/
     │   ├── page.tsx        Command catalog
     │   └── [id]/page.tsx   Command detail (edit; N4d — same pattern as skills/[id])
+    ├── companies/
+    │   ├── page.tsx        Company portfolio
+    │   ├── new/page.tsx    Create company
+    │   └── [id]/page.tsx   Company detail
     ├── gates/page.tsx      Gate rules
     ├── hooks/[id]/page.tsx Hook detail (edit; N4e — mcp/[id] follows the same pattern)
     ├── mcp/
@@ -193,10 +197,10 @@ unchanged.
 
 ## Fonts
 
-| Variable      | Font                              | Use              |
-| ------------- | ---------------------------------- | ----------------- |
-| `--font-sans` | Geist                               | UI text            |
-| `--font-mono` | JetBrains Mono (400/500/600/700)    | Code, logs, terminal |
+| Variable      | Font                             | Use                  |
+| ------------- | -------------------------------- | -------------------- |
+| `--font-sans` | Geist                            | UI text              |
+| `--font-mono` | JetBrains Mono (400/500/600/700) | Code, logs, terminal |
 
 ## API client (`state/api.ts`)
 
@@ -219,9 +223,10 @@ features/
 ├── chains/         Completion-driven chain primitive (queue + settle)
 ├── chat/           Chat-first interface (replaces the old Voice UI), including
 │                   phase-119 voice mode (STT hook, mic toggle, auto-speak);
-│                   its full-screen WebGL backdrop lives in `chat/scene`
-│                   (see docs/web/chat-cosmic-scene.md)
+│                   its ambient orb-map backdrop is `SubsystemOrbMap`
+│                   (see docs/web/subsystem-orb-map.md)
 ├── commands/       Slash-command catalog
+├── companies/      Company portfolio (client/company records)
 ├── gates/          Gate rule catalog
 ├── goals/          Loop engine — goal definitions + runs (maker ⇄ verifier)
 ├── health/         System health status
@@ -295,9 +300,9 @@ madge.)
 "Feature" is an overloaded term — not every one has its own route:
 
 - **Route features** (have a `Screen.tsx` + a segment under `(dashboard)/`):
-  agents, automations, chains, commands, gates, hooks, mcp, memory, overview,
-  pipelines, projects, runs, settings, skills (`gates` is route-only, with no
-  nav item).
+  agents, automations, chains, commands, companies, gates, hooks, mcp, memory,
+  overview, pipelines, projects, runs, settings, skills (`gates` is
+  route-only, with no nav item).
 - **Shared services** (no `Screen`, consumed by other features / mounted in
   chrome): approvals, chat, goals, health, integrations, limits, notifications,
   pins, research, speech, system, tasks.

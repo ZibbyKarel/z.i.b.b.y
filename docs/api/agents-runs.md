@@ -68,7 +68,7 @@ running → done
 ### Log polling and streaming (unified surface)
 
 ```
-GET  /api/tasks/runs                       unified feed (agent/pipeline/goal/scheduled)
+GET  /api/tasks/runs                       unified feed (agent/pipeline/goal/chain/scheduled)
 GET  /api/tasks/runs/:runId                run detail (status, pct, …)
 GET  /api/tasks/runs/:runId/logs?offset=   log chunk from an offset (bytes)
 GET  /api/tasks/runs/:runId/logs/stream    SSE tail (falls back to the offset-poll above)

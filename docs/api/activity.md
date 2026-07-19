@@ -61,7 +61,6 @@ type ActivityKind =
   | "channel-noted" // a read-only integration's item (no reply surface)
   | "channel-needs-attention" // a notify-only channel item surfaced (email)
   | "briefing-generated"
-  | "research-digest" // a research pass mirrored its result to the vault
   | "integration-retry-exhausted" // a channel poll exhausted its retry budget
   | "monitor-alert" // a CI/CD monitor ingested a red status
   | "machine-action" // an approved machine action executed (or failed)
@@ -156,7 +155,7 @@ format.
 An operator-owned document (twin of `mandate.json`) controls how the activity
 log is rendered in the right rail (the live log). Every **group** of kinds
 (`tasks · runs · pipelines · goals · approvals · channels · integrations ·
-research · briefing`) has a mode: `visible` (each entry shown individually),
+briefing`) has a mode: `visible` (each entry shown individually),
 `grouped` (merged into one row with a count), or `hidden` (left out of the log
 entirely). The kind → group map and defaults live in
 `libs/contracts/src/activity/activity-view.schema.ts` (`ACTIVITY_GROUP_OF`,
