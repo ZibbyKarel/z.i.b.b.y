@@ -443,4 +443,69 @@ describe("BriefingService", () => {
       expect(briefing.personalAgenda).toBeUndefined();
     });
   });
+
+  describe("chat transcript sinks (F8a / O6)", () => {
+    /** A fresh instance carrying its own `transcriptSinks` — the shared `service`
+     *  from the outer `beforeEach` was built with none (proving the default `[]`
+     *  leaves every other test in this file unaffected). */
+    function makeServiceWithSinks(sinks: { announce: ReturnType<typeof vi.fn> }[]) {
+      return new BriefingService(
+        { list: vi.fn().mockResolvedValue([]) } as never,
+        { listAll: vi.fn().mockResolvedValue([]) } as never,
+        { listAll: vi.fn().mockResolvedValue([]) } as never,
+        { list: vi.fn().mockResolvedValue([]) } as never,
+        {
+          readSince: vi.fn().mockResolvedValue([]),
+          record: vi.fn().mockResolvedValue(undefined),
+        } as never,
+        { headline: vi.fn().mockResolvedValue(null) } as never,
+        vault as never,
+        { list: vi.fn().mockResolvedValue([]) } as never,
+        { list: vi.fn().mockResolvedValue([]) } as never,
+        { listStatuses: vi.fn().mockResolvedValue([]) } as never,
+        { list: vi.fn().mockResolvedValue([]) } as never,
+        {
+          snapshot: vi.fn().mockResolvedValue({ weekly: { usedPct: 0 }, rolling: { usedPct: 0 } }),
+        } as never,
+        { check: vi.fn().mockResolvedValue(false) } as never,
+        { readFindings: vi.fn().mockResolvedValue([]) } as never,
+        { summaryLines: vi.fn().mockResolvedValue([]) } as never,
+        { readFindings: vi.fn().mockResolvedValue([]) } as never,
+        { all: vi.fn().mockReturnValue([]) } as never,
+        { list: vi.fn().mockResolvedValue([]) } as never,
+        dir,
+        { child: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn() }) } as never,
+        sinks as never,
+      );
+    }
+
+    it("announces the generated briefing to every registered sink", async () => {
+      const sink = { announce: vi.fn().mockResolvedValue(undefined) };
+      const svc = makeServiceWithSinks([sink]);
+
+      const { briefing } = await svc.generate(now);
+      expect(sink.announce).toHaveBeenCalledTimes(1);
+      expect(sink.announce).toHaveBeenCalledWith(briefing);
+    });
+
+    it("a throwing sink fails open — generate() still resolves and later sinks still run", async () => {
+      const throwing = { announce: vi.fn().mockRejectedValue(new Error("chat unreachable")) };
+      const ok = { announce: vi.fn().mockResolvedValue(undefined) };
+      const svc = makeServiceWithSinks([throwing, ok]);
+
+      const result = await svc.generate(now);
+      expect(result.noteId).toBe("briefing-2026-06-12");
+      expect(throwing.announce).toHaveBeenCalledTimes(1);
+      expect(ok.announce).toHaveBeenCalledTimes(1);
+    });
+
+    it("the default (no DI container) constructor call announces to nothing — pre-existing behaviour is unaffected", async () => {
+      // `service` (outer beforeEach) was built with no trailing sinks argument at
+      // all, exactly like every test above this block — proves the new parameter
+      // is additive, not a breaking change to the existing construction call.
+      await expect(service.generate(now)).resolves.toMatchObject({
+        noteId: "briefing-2026-06-12",
+      });
+    });
+  });
 });

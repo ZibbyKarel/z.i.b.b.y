@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import type {
   Briefing,
   BriefingSubsystemLine,
@@ -29,6 +29,7 @@ import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.s
 import { ensureDir, safeJson, writeFileAtomic } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { assembleBriefing, renderBriefingMarkdown } from "./briefing-assembly";
+import { BRIEFING_TRANSCRIPT_SINK, type BriefingTranscriptSink } from "./briefing-transcript-sink";
 import { ClaudeCliBriefer } from "./claude-cli-briefer";
 
 /** The cursor file that records when the last briefing was generated (decision 11). */
@@ -126,6 +127,16 @@ export class BriefingService {
     private readonly mergeWatch: MergeWatchStore,
     @Inject(ACTIVITY_DIR) private readonly activityDir: string,
     logger: LoggerService,
+    /**
+     * F8a (O6) — announces a freshly generated briefing into the chat transcript
+     * as an assistant turn. Optional and defaulted so every pre-existing
+     * caller/test (constructing this service directly, with no DI container) is
+     * unaffected; see `briefing-transcript-sink.module.ts` for how the chat-side
+     * implementation is wired in without a `BriefingModule` ↔ `ChatModule` cycle.
+     */
+    @Optional()
+    @Inject(BRIEFING_TRANSCRIPT_SINK)
+    private readonly transcriptSinks: BriefingTranscriptSink[] = [],
   ) {
     this.log = logger.child(BriefingService.name);
   }
@@ -279,6 +290,18 @@ export class BriefingService {
       summary: briefing.headline,
       refs: { noteId },
     });
+    // F8a (O6) — the narrowest defensible trigger for a briefing turn entering
+    // chat: GENERATION itself, regardless of who called it (the operator's
+    // "Generate now" button on the briefing card, or the scheduler's morning
+    // automation in `automations/scheduler.service.ts`) — not a chat-side
+    // request, not a new heartbeat/scheduler of its own. Each sink is isolated:
+    // a failure never blocks the vault note / activity record, which remain the
+    // durable outcome of `generate()`.
+    for (const sink of this.transcriptSinks) {
+      await sink.announce(briefing).catch((error: unknown) => {
+        this.log.warn("briefing transcript sink failed", { error: (error as Error).message });
+      });
+    }
     this.log.info("briefing generated", { noteId, needsYou: briefing.needsYou.length });
     return { briefing, noteId };
   }

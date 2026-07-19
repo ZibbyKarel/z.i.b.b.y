@@ -35,15 +35,19 @@ export enum BriefingCardTestId {
 }
 
 /** Contract `SubsystemState` → DS dot tone for the compact subsystem rows. */
-const STATE_DOT_TONE: Record<SubsystemState, DotTone> = {
+export const STATE_DOT_TONE: Record<SubsystemState, DotTone> = {
   idle: "idle",
   running: "run",
   report: "ok",
   waiting: "wait",
 };
 
-/** One compact subsystem row (NS2 F3b): glyph + name + state dot + counts/note. */
-function SubsystemLineRow({ line }: { line: BriefingSubsystemLine }) {
+/**
+ * One compact subsystem row (NS2 F3b): glyph + name + state dot + counts/note.
+ * Exported so `BriefingMessageCard` (F8a, the chat transcript variant) reuses this
+ * row rather than re-implementing it.
+ */
+export function SubsystemLineRow({ line }: { line: BriefingSubsystemLine }) {
   const t = useTranslations();
   const parts: string[] = [];
   if (line.tier3Count > 0)
@@ -75,11 +79,15 @@ function SubsystemLineRow({ line }: { line: BriefingSubsystemLine }) {
   );
 }
 
-/** One "needs you" row: a kind chip + the summary, linking to where it's resolved
- *  (parked runs and approvals both surface on /runs). */
-function NeedsYouRow({ item }: { item: BriefingNeedsYouItem }) {
+/**
+ * One "needs you" row: a kind chip + the summary, linking to where it's resolved.
+ * Parked runs and approvals both surface on the archive of tasks (F8a repoint —
+ * `/runs` is deleted in F8c and `/archiv` replaced it in F2). Exported so
+ * `BriefingMessageCard` (F8a, the chat transcript variant) reuses this row.
+ */
+export function NeedsYouRow({ item }: { item: BriefingNeedsYouItem }) {
   return (
-    <Link data-testid={BriefingCardTestId.NeedsYouItem} href="/runs" style={{ display: "block" }}>
+    <Link data-testid={BriefingCardTestId.NeedsYouItem} href="/archiv" style={{ display: "block" }}>
       <Stack align="center" direction="row" gap="100">
         <Tag tone={item.kind === "approval" ? "warn" : "neutral"}>{item.kind}</Tag>
         <Container grow minW0>

@@ -61,7 +61,7 @@ describe("BriefingCard", () => {
     render(<BriefingCard />);
     const rows = screen.getAllByTestId(BriefingCardTestId.NeedsYouItem);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toHaveAttribute("href", "/runs");
+    expect(rows[0]).toHaveAttribute("href", "/archiv");
     expect(rows[0]).toHaveTextContent("Team Slack wants to channel-reply");
   });
 

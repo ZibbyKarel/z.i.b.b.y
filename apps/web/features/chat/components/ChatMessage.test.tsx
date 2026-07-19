@@ -1,9 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
+import type { Briefing } from "@zibby/contracts";
 import { renderWithProviders, screen } from "../../../test/render";
+import { BriefingMessageCardTestId } from "./BriefingMessageCard";
 import { ChatMessage, ChatMessageTestId } from "./ChatMessage";
 import { TargetIdentityTestId } from "./TargetIdentity";
 import { ChatRunCardTestId } from "./ChatRunCard";
+
+const calmBriefing: Briefing = {
+  generatedAt: "2026-07-19T07:00:00.000Z",
+  since: "2026-07-18T07:00:00.000Z",
+  headline: "Nothing needs you.",
+  nothingNeedsYou: true,
+  needsYou: [],
+  didForYou: [],
+  watching: [],
+  engagements: [],
+  counts: { runsFinished: 0, runsFailed: 0, parked: 0, approvalsPending: 0, channelItemsNew: 0 },
+};
 
 // A tool event carrying `runRef` upgrades the flat row into `ChatRunCard` (Fáze
 // 14.3) — that card is unit-tested on its own; here it's enough to stub its data
@@ -168,6 +182,29 @@ describe("ChatMessage", () => {
     expect(screen.getByTestId(TargetIdentityTestId.Root)).toHaveTextContent("Orchestrator");
   });
 
+  describe("briefing payload (F8a / O6)", () => {
+    it("renders the BriefingMessageCard instead of the markdown bubble when briefing is present", () => {
+      renderWithProviders(
+        <ChatMessage briefing={calmBriefing} role="assistant" text={calmBriefing.headline} />,
+      );
+      expect(screen.getByTestId(BriefingMessageCardTestId.Root)).toBeInTheDocument();
+      expect(screen.queryByTestId(ChatMessageTestId.AssistantBubble)).not.toBeInTheDocument();
+    });
+
+    it("falls through to the plain markdown bubble when briefing is absent", () => {
+      renderWithProviders(<ChatMessage role="assistant" text="Ahoj!" />);
+      expect(screen.getByTestId(ChatMessageTestId.AssistantBubble)).toBeInTheDocument();
+      expect(screen.queryByTestId(BriefingMessageCardTestId.Root)).not.toBeInTheDocument();
+    });
+
+    it("hides the read-aloud control on a briefing turn (structured rows, not prose)", () => {
+      renderWithProviders(
+        <ChatMessage briefing={calmBriefing} role="assistant" text={calmBriefing.headline} />,
+      );
+      expect(screen.queryByTestId(ChatMessageTestId.ReadAloudButton)).not.toBeInTheDocument();
+    });
+  });
+
   it("renders a tool event without an href as plain text (no link)", () => {
     renderWithProviders(
       <ChatMessage
@@ -208,9 +245,11 @@ describe("ChatMessage", () => {
     });
 
     it("synthesizes the message text on click and plays the result on success", async () => {
-      const mutate = vi.fn((_vars, opts?: { onSuccess?: (r: { body: { audioBase64: string } } ) => void }) => {
-        opts?.onSuccess?.({ body: { audioBase64: "d2F2ZQ==" } });
-      });
+      const mutate = vi.fn(
+        (_vars, opts?: { onSuccess?: (r: { body: { audioBase64: string } }) => void }) => {
+          opts?.onSuccess?.({ body: { audioBase64: "d2F2ZQ==" } });
+        },
+      );
       const play = vi.fn();
       synthesizeMock.mockReturnValue({ mutate, isPending: false });
       audioPlaybackMock.mockReturnValue({ isPlaying: false, play, stop: vi.fn() });

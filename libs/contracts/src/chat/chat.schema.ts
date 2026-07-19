@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { BriefingSchema } from "../briefing/briefing.schema";
 import { TaskTargetSchema } from "../tasks/task.schema";
 
 /**
@@ -55,6 +56,17 @@ export const ChatMessageSchema = z.object({
   /** ISO-8601. */
   at: z.string(),
   toolEvents: z.array(ChatToolEventSchema).optional(),
+  /**
+   * F8a (O6) — a butler-briefing payload riding an assistant turn: renders as a
+   * distinguishable structured card (headline, "needs you" rows, subsystem lines,
+   * engagements, counters) instead of markdown prose. `role` stays "assistant" —
+   * this describes WHAT is being said, not a third speaker. Optional and purely
+   * additive: every transcript line persisted before this field existed simply
+   * omits it and still parses unchanged (proven against a real transcript line in
+   * `chat.schema.test.ts` — transcripts are append-only JSONL on disk, so a
+   * schema change that broke an old line would be data loss, not styling).
+   */
+  briefing: BriefingSchema.optional(),
 });
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 

@@ -40,6 +40,7 @@ export function ChatTranscript({
     <Stack data-testid={ChatTranscriptTestId.Root} direction="col" gap="200">
       {messages.map((message) => (
         <ChatMessage
+          briefing={message.briefing}
           key={message.id}
           role={message.role}
           text={message.text}

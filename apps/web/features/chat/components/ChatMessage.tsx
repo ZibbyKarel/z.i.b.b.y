@@ -4,11 +4,12 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button, Card, Container, Icon, Stack, StatusDot, Typography } from "@zibby/design-system";
 import type { DotTone } from "@zibby/design-system";
-import type { ChatMessage as ChatMessageType, ChatToolEvent } from "@zibby/contracts";
+import type { Briefing, ChatMessage as ChatMessageType, ChatToolEvent } from "@zibby/contracts";
 import { MarkdownProse } from "../../../components/MarkdownProse/MarkdownProse";
 import { useSystemConfigQuery } from "../../system";
 import { useAudioPlayback } from "../hooks/useAudioPlayback";
 import { useSynthesizeSpeechMutation } from "../mutations/useSynthesizeSpeechMutation";
+import { BriefingMessageCard } from "./BriefingMessageCard";
 import { ChatRunCard } from "./ChatRunCard";
 import { TargetIdentity } from "./TargetIdentity";
 
@@ -27,6 +28,15 @@ export interface ChatMessageProps {
   role: ChatMessageType["role"];
   text: string;
   toolEvents?: ChatToolEvent[];
+  /**
+   * F8a (O6) — a structured butler-briefing payload riding this (always
+   * `role: "assistant"`) turn. When present it renders as a distinguishable card
+   * ({@link BriefingMessageCard}) INSTEAD of the markdown bubble — `text` still
+   * carries the briefing's headline as a plain-text fallback (unused by this
+   * component when `briefing` is set, but read by anything that only looks at
+   * `.text`, e.g. a future search over the transcript).
+   */
+  briefing?: Briefing;
   /** Marks the assistant turn that is still streaming (shows a live cursor). */
   streaming?: boolean;
 }
@@ -135,7 +145,7 @@ function ReadAloudButton({ text }: { text: string }) {
  * assistant, the plain raised surface for the operator), so nothing repeats
  * per turn.
  */
-export function ChatMessage({ role, text, toolEvents, streaming }: ChatMessageProps) {
+export function ChatMessage({ role, text, toolEvents, briefing, streaming }: ChatMessageProps) {
   const t = useTranslations("chat");
   const isUser = role === "user";
 
@@ -146,38 +156,45 @@ export function ChatMessage({ role, text, toolEvents, streaming }: ChatMessagePr
       direction="col"
       gap="75"
     >
-      <Card
-        background={isUser ? "raised" : "accent"}
-        data-testid={isUser ? ChatMessageTestId.UserBubble : ChatMessageTestId.AssistantBubble}
-        radius="lg"
-      >
-        <Container maxWidth="68ch" padding={["100", "150"]}>
-          {isUser ? (
-            // The operator's own turn is plain text — render it verbatim.
-            <Typography data-testid={ChatMessageTestId.Text} type="text">
-              {text}
-            </Typography>
-          ) : (
-            // ZIBBY's turn is GitHub-flavoured markdown — format it. The live cursor
-            // is a sibling, never part of the markdown string (so a half-typed `**`
-            // can't break the parse).
-            <>
-              <MarkdownProse text={text} />
-              {streaming && (
-                <Typography
-                  aria-label={t("streaming")}
-                  as="span"
-                  data-testid={ChatMessageTestId.StreamingCursor}
-                  type="text"
-                  variant="tertiary"
-                >
-                  {" █"}
-                </Typography>
-              )}
-            </>
-          )}
-        </Container>
-      </Card>
+      {briefing ? (
+        // F8a (O6) — the structured card replaces the markdown bubble entirely
+        // (not a sibling to it): a briefing turn has no prose to format, and the
+        // card is the transcript-native rendering of its rows/counters.
+        <BriefingMessageCard briefing={briefing} />
+      ) : (
+        <Card
+          background={isUser ? "raised" : "accent"}
+          data-testid={isUser ? ChatMessageTestId.UserBubble : ChatMessageTestId.AssistantBubble}
+          radius="lg"
+        >
+          <Container maxWidth="68ch" padding={["100", "150"]}>
+            {isUser ? (
+              // The operator's own turn is plain text — render it verbatim.
+              <Typography data-testid={ChatMessageTestId.Text} type="text">
+                {text}
+              </Typography>
+            ) : (
+              // ZIBBY's turn is GitHub-flavoured markdown — format it. The live cursor
+              // is a sibling, never part of the markdown string (so a half-typed `**`
+              // can't break the parse).
+              <>
+                <MarkdownProse text={text} />
+                {streaming && (
+                  <Typography
+                    aria-label={t("streaming")}
+                    as="span"
+                    data-testid={ChatMessageTestId.StreamingCursor}
+                    type="text"
+                    variant="tertiary"
+                  >
+                    {" █"}
+                  </Typography>
+                )}
+              </>
+            )}
+          </Container>
+        </Card>
+      )}
 
       {toolEvents && toolEvents.length > 0 && (
         <Stack direction="col" gap="50">
@@ -188,8 +205,11 @@ export function ChatMessage({ role, text, toolEvents, streaming }: ChatMessagePr
       )}
 
       {/* Manual read-aloud (Phase 120) — only on a settled assistant turn, never
-          the live-streaming bubble (its text isn't final yet) or a user turn. */}
-      {!isUser && !streaming && text.trim().length > 0 && <ReadAloudButton text={text} />}
+          the live-streaming bubble (its text isn't final yet), a user turn, or a
+          briefing card (structured rows, not prose — nothing sensible to read). */}
+      {!isUser && !streaming && !briefing && text.trim().length > 0 && (
+        <ReadAloudButton text={text} />
+      )}
     </Stack>
   );
 }

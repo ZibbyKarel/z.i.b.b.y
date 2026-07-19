@@ -8,6 +8,7 @@ import { ApprovalsModule } from "./approvals/approvals.module";
 import { ArtifactsModule } from "./artifacts/artifacts.module";
 import { AutomationsModule } from "./automations/automations.module";
 import { BriefingModule } from "./briefing/briefing.module";
+import { BriefingTranscriptSinkModule } from "./briefing/briefing-transcript-sink.module";
 import { BudgetModule } from "./budget/budget.module";
 import { ChainsModule } from "./chains/chains.module";
 import { ChatModule } from "./chat/chat.module";
@@ -92,6 +93,9 @@ import { TasksModule } from "./tasks/tasks.module";
     // Phase 116b: the automation attachment-sweep contributor — see the module doc
     // for why this can't just be TasksModule importing AutomationsModule directly.
     AttachmentSetRefsModule,
+    // F8a (O6): the no-cycle briefing→chat-transcript announcer — see the module
+    // doc for why this can't just be BriefingModule importing ChatModule directly.
+    BriefingTranscriptSinkModule,
   ],
 })
 export class AppModule {}
