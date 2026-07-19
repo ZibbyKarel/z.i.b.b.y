@@ -90,3 +90,14 @@ nothing pushed.
   claim was wrong and worth remembering:** it reported `npx tsc -p libs/design-system` failing
   with TS6059 as a "pre-existing baseline issue" — re-running it directly shows it clean.
   Verify tooling claims rather than inheriting them. F4 dispatched.
+- **2026-07-19** — F4 landed (`c4fe68cb`). The subagent live-verified its own work this time,
+  including an end-to-end automation create→detail→delete and a focus-trap tab cycle inside a
+  dialog on the fullscreen shell (`Dialog` is `position: fixed` with no ancestor containing
+  block, so `ImmersiveShell`'s `overflow: hidden` root does not clip it). Roster crew →
+  `/agents/[id]` cross-surface link confirmed intact. Recorded **D13**: the immersive header
+  duplicates `EntityHero`'s name/description — real, verified on `/agents/architect`, and
+  deliberately NOT patched per page. `EntityHero` is shared by four surfaces and F5/F6 add
+  more, so it becomes one decision after F6. New recipe wrinkle for later phases: a Screen
+  with three early returns (pending/error/success), each wrapping its own
+  `PageContainer`+`PageHeader`, needs consolidating into one `ImmersivePage` with the state as
+  a `body` variable. F5 dispatched.
