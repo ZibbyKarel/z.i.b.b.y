@@ -32,13 +32,14 @@ title + subtitle, then the content frame. Same token set as `/chat`. That is wha
 | #   | Phase                      | Surface                                                               | Status      |
 | --- | -------------------------- | --------------------------------------------------------------------- | ----------- |
 | F0  | Immersive shell foundation | DS `ImmersiveShell` + AppShell immersive route mode                   | ✅ e683f0bf |
-| F1  | Settings                   | `/settings` → immersive (operator's named reference case)             | ⬜          |
-| F2  | Archive of tasks           | new `/archiv` master/detail; chat gutter links to it                  | ⬜          |
-| F3  | Catalogs A                 | `skills`, `commands`, `mcp`, `hooks` (list + detail)                  | ⬜          |
-| F4  | Catalogs B                 | `agents`, `automations` (list + detail)                               | ⬜          |
-| F5  | Orchestration              | `pipelines`, `chains` (list+detail share one Screen via selectedId)   | ⬜          |
-| F6  | Delivery entities          | `projects` (+ `/new`, integrations detail), `companies`               | ⬜          |
-| F7  | Memory + gates             | `/memory`, `/gates`                                                   | ⬜          |
+| F1  | Settings                   | `/settings` → immersive (operator's named reference case)             | ✅ d7d2b106 |
+| F2  | Archive of tasks           | new `/archiv` master/detail; chat gutter links to it                  | ✅ 711d3883 |
+| F3  | Catalogs A                 | `skills`, `commands`, `mcp`, `hooks` (list + detail)                  | ✅ f01c2395 |
+| F4  | Catalogs B                 | `agents`, `automations` (list + detail)                               | ✅ c4fe68cb |
+| F5  | Orchestration              | `pipelines`, `chains` (list+detail share one Screen via selectedId)   | ✅ 5765336d |
+| F6  | Delivery entities          | `projects` (+ `/new`, integrations detail), `companies`               | ✅ 12b1f113 |
+| F6b | EntityHero dedup (D13)     | resolve header/hero duplication once, across all four consumers       | 🔩          |
+| F7  | Memory + gates             | `/memory`, `/gates`                                                   | 🔩          |
 | F8  | Overview dissolution       | status line, limits, briefing-as-chat-message; delete `/overview`     | ⬜          |
 | F9  | Chat reachability sweep    | every surface reachable from Chat; orphans killed                     | ⬜          |
 | F10 | Old shell deletion         | remove `MainLayout`/`Sidebar`/`RightRail`/`TopBar`, simplify AppShell | ⬜          |

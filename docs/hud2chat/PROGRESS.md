@@ -9,13 +9,14 @@ nothing pushed.
 | --- | -------------------------- | ------ | -------- | -------------------------------------------------------------------------------------- |
 | —   | Grounding + control docs   | ✅     | —        | audit read, design corpus + current chrome grounded, operator decisions O1–O4 captured |
 | F0  | Immersive shell foundation | ✅     | e683f0bf | `ImmersiveShell` (DS) + `ImmersivePage` (app) + `FULLSCREEN_ROUTES`; behaviour-neutral |
-| F1  | Settings                   | 🔩     | —        | in flight                                                                              |
-| F2  | Archive of tasks           | ⬜     | —        |                                                                                        |
-| F3  | Catalogs A                 | ⬜     | —        |                                                                                        |
-| F4  | Catalogs B                 | ⬜     | —        |                                                                                        |
-| F5  | Orchestration              | ⬜     | —        |                                                                                        |
-| F6  | Delivery entities          | ⬜     | —        |                                                                                        |
-| F7  | Memory + gates             | ⬜     | —        |                                                                                        |
+| F1  | Settings                   | ✅     | d7d2b106 | operator's reference case; `radius="none"` + border strip (D11) found by live verify   |
+| F2  | Archive of tasks           | ✅     | 711d3883 | new `/archiv`; `SearchInput` added to DS; gutter reduced to an "Archiv · N" link       |
+| F3  | Catalogs A                 | ✅     | f01c2395 | 8 pages; recipe hardened with steps 8–9                                                |
+| F4  | Catalogs B                 | ✅     | c4fe68cb | 4 pages; D13 recorded (header/hero duplication), deliberately not patched              |
+| F5  | Orchestration              | ✅     | 5765336d | header must key off route id, not selection, or `/pipelines` backHref self-loops       |
+| F6  | Delivery entities          | ✅     | 12b1f113 | 7 routes incl. 685-LOC `ProfileScreen`; first dynamic `backHref`                       |
+| F6b | EntityHero dedup (D13)     | 🔩     | —        | in flight — one decision across all four `EntityHero` consumers                        |
+| F7  | Memory + gates             | 🔩     | —        | in flight                                                                              |
 | F8  | Overview dissolution       | ⬜     | —        |                                                                                        |
 | F9  | Chat reachability sweep    | ⬜     | —        |                                                                                        |
 | F10 | Old shell deletion         | ⬜     | —        |                                                                                        |
@@ -32,16 +33,16 @@ nothing pushed.
 | `/archiv`                                                | immersive                     | ✅ immersive |
 | `/runs`                                                  | deleted (→ `/archiv`)         | hud          |
 | `/overview`                                              | deleted (→ topbar + briefing) | hud          |
-| `/skills`, `/skills/[id]`                                | immersive                     | hud          |
-| `/commands`, `/commands/[id]`                            | immersive                     | hud          |
-| `/mcp`, `/mcp/[id]`                                      | immersive                     | hud          |
-| `/hooks`, `/hooks/[id]`                                  | immersive                     | hud          |
-| `/agents`, `/agents/[id]`                                | immersive                     | hud          |
-| `/automations`, `/automations/[id]`                      | immersive                     | hud          |
-| `/pipelines`, `/pipelines/[id]`                          | immersive                     | hud          |
-| `/chains`, `/chains/[id]`                                | immersive                     | hud          |
-| `/projects`, `/[id]`, `/new`, `/[id]/integrations/[iid]` | immersive                     | hud          |
-| `/companies`, `/[id]`, `/new`                            | immersive                     | hud          |
+| `/skills`, `/skills/[id]`                                | immersive                     | ✅ immersive |
+| `/commands`, `/commands/[id]`                            | immersive                     | ✅ immersive |
+| `/mcp`, `/mcp/[id]`                                      | immersive                     | ✅ immersive |
+| `/hooks`, `/hooks/[id]`                                  | immersive                     | ✅ immersive |
+| `/agents`, `/agents/[id]`                                | immersive                     | ✅ immersive |
+| `/automations`, `/automations/[id]`                      | immersive                     | ✅ immersive |
+| `/pipelines`, `/pipelines/[id]`                          | immersive                     | ✅ immersive |
+| `/chains`, `/chains/[id]`                                | immersive                     | ✅ immersive |
+| `/projects`, `/[id]`, `/new`, `/[id]/integrations/[iid]` | immersive                     | ✅ immersive |
+| `/companies`, `/[id]`, `/new`                            | immersive                     | ✅ immersive |
 | `/memory`                                                | immersive                     | hud          |
 | `/gates`                                                 | immersive                     | hud          |
 
@@ -111,3 +112,16 @@ nothing pushed.
   **New live-verification gotcha:** the shell body is now the scroll container, not the
   document, so Playwright's `fullPage: true` screenshot captures only the viewport. Scroll the
   inner container instead. Both lists gained dock icons. F6 dispatched.
+- **2026-07-19** — F6 landed (`12b1f113`), the hardest phase. Seven routes including the
+  685-LOC `ProfileScreen`, whose eight panels were left entirely untouched — only the page
+  frame swapped and its four inline `HudPanel`s took `surface="glass"`. The nested integration
+  detail produced the arc's **first dynamic `backHref`**, resolving to
+  `/projects/<id>?tab=integrations` — better than the plain project route the plan asked for,
+  because it returns the operator to the tab they left from. The highest-risk cross-surface
+  check passed for a reason worth recording: `GatesTab`'s `/projects/:id?tab=profile` deep link
+  still lands on the right tab because `ProfileScreen` reads `?tab=` client-side via
+  `useSearchParams`, which is independent of whether the shell is fullscreen. `/projects/new`
+  and `/companies/new` turned out to share one create-vs-edit component with an `isNew` flag,
+  so F5's route-id-vs-selection trap did not recur. **No route in F6 renders `EntityHero`**, so
+  D13 did not apply here — which means every consumer is now known and the decision is due.
+  F6b (D13) and F7 dispatched in parallel: they share no files.
