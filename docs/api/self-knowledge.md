@@ -66,6 +66,11 @@ treats a wholly-missing note as `drift: true`.
 untouched; a block present in `generated` but missing from `existing` (a
 hand-created note, or a new block from a later phase) is appended at the end.
 
+`SelfKnowledgeService.compose()` runs the composer's raw markdown through the
+project's own Prettier config (`formatMarkdown()`, using `prettier.resolveConfig()`
+and `prettier.format({ parser: "markdown" })`) before computing drift or
+persisting it — see Gotchas.
+
 ## The CLI (`--check` vs generate mode)
 
 Run via root `package.json` scripts:
@@ -130,3 +135,14 @@ intentionally no POST here"). `sections` is a cheap at-a-glance summary
   format is owned by an external tool, so any unrecognized section or
   unmatched line is silently skipped, never thrown — worst case an empty
   digest, never a CLI crash.
+- The composer's raw markdown (`composeSelfKnowledge`) is **not** byte-identical
+  to Prettier's formatting of the same content (Prettier adds blank lines around
+  headings/HTML comments and escapes bare `*`). Since the pre-commit hook runs
+  `lint-staged`'s `prettier --write` on the committed note before
+  `check:self-knowledge` compares it against a fresh compose, an unformatted
+  compose would read as permanent drift on every commit — even with an
+  unchanged catalog. `formatMarkdown()` closes that gap by formatting before
+  comparing, so both sides use identical formatting. It resolves config via
+  `prettier.resolveConfig()` (walks up from cwd to the repo's `.prettierrc.json`)
+  and falls back to the raw markdown if formatting fails for any reason, so a
+  Prettier problem degrades gracefully instead of blocking `compose()`.
