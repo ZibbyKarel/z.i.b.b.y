@@ -41,6 +41,15 @@ export interface EntityHeroProps {
   tag?: ReactNode;
   /** Short description under the name. */
   desc?: string;
+  /**
+   * Whether the default overlay (tag/name/meta/desc) renders at all. Defaults to
+   * `true` — every existing consumer is unchanged. Set `false` when a page's own
+   * header already shows the entity's name/description immediately above the hero
+   * (D13, `docs/hud2chat/DECISIONS.md`) — the hero then renders as a bare image/glyph
+   * band. Has no effect when {@link EntityHeroProps.children} is supplied — the
+   * caller already owns the overlay in that case.
+   */
+  showIdentity?: boolean;
   /** Band height in px. */
   height?: number;
   /** How the image fills the band — `contain` for wide art, `cover` for portraits. */
@@ -86,6 +95,7 @@ export function EntityHero({
   meta,
   tag,
   desc,
+  showIdentity = true,
   height = 190,
   fit = "cover",
   imageBleed = "full",
@@ -206,21 +216,23 @@ export function EntityHero({
           {children}
         </div>
       ) : (
-        <div className="absolute right-5 bottom-3.5 left-5 z-[1]">
-          {tag && <div className="mb-1.5">{tag}</div>}
-          <div
-            className="truncate font-mono text-[22px] font-bold text-foreground drop-shadow-[0_2px_14px_rgba(0,0,0,0.7)]"
-            data-testid={EntityHeroTestId.Name}
-          >
-            {name}
-          </div>
-          {meta && <div className="mt-1.5">{meta}</div>}
-          {desc && (
-            <div className="mt-1 max-w-[62ch] text-[12.5px] leading-snug text-foreground-dim drop-shadow-[0_1px_8px_rgba(0,0,0,0.6)]">
-              {desc}
+        showIdentity && (
+          <div className="absolute right-5 bottom-3.5 left-5 z-[1]">
+            {tag && <div className="mb-1.5">{tag}</div>}
+            <div
+              className="truncate font-mono text-[22px] font-bold text-foreground drop-shadow-[0_2px_14px_rgba(0,0,0,0.7)]"
+              data-testid={EntityHeroTestId.Name}
+            >
+              {name}
             </div>
-          )}
-        </div>
+            {meta && <div className="mt-1.5">{meta}</div>}
+            {desc && (
+              <div className="mt-1 max-w-[62ch] text-[12.5px] leading-snug text-foreground-dim drop-shadow-[0_1px_8px_rgba(0,0,0,0.6)]">
+                {desc}
+              </div>
+            )}
+          </div>
+        )
       )}
     </div>
   );

@@ -158,6 +158,9 @@ function AgentEditor({ agent }: { agent: Agent }) {
       <Container padding={["300", "350"]}>
         <PageContainer>
           <Stack gap="250">
+            {/* D13 (docs/hud2chat/DECISIONS.md, resolved F6b): the ImmersivePage header
+                above already shows the agent's name — showIdentity={false} keeps the hero
+                to a bare image/glyph band instead of repeating it. */}
             <EntityHero
               editable
               desc={agent.description}
@@ -177,6 +180,7 @@ function AgentEditor({ agent }: { agent: Agent }) {
               }}
               placeholder={t("uploadAgentAvatar")}
               removeLabel={t("removeImage")}
+              showIdentity={false}
               uploadLabel={t("uploadImage")}
             />
 

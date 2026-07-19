@@ -186,9 +186,9 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
 
       {selected && (
         <Stack gap="250">
-          {/* D13 (docs/hud2chat/DECISIONS.md): EntityHero repeats the name/desc
-              the immersive header already shows — known, deliberately deferred
-              to one pass after F6, not patched per-page. */}
+          {/* D13 (docs/hud2chat/DECISIONS.md, resolved F6b): the ImmersivePage header
+              above already shows the pipeline/chain's name — showIdentity={false}
+              keeps the hero to a bare image/glyph band instead of repeating it. */}
           <EntityHero
             editable
             desc={editing ? editDesc : selected.desc}
@@ -209,6 +209,7 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
             }}
             placeholder={t("pipelines.uploadPipelineAvatar")}
             removeLabel={t("pipelines.removeImage")}
+            showIdentity={false}
             uploadLabel={t("pipelines.uploadImage")}
           />
           <HudPanel padding="250" surface="glass">

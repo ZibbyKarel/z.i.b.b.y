@@ -44,7 +44,12 @@ export const Overview: Story = {
       </div>
       <div className="flex flex-col gap-2">
         <div className="w-[420px]">
-          <EntityHero fit="contain" glyph="flow" image={PLACEHOLDER_IMAGE} name="Delivery Pipeline" />
+          <EntityHero
+            fit="contain"
+            glyph="flow"
+            image={PLACEHOLDER_IMAGE}
+            name="Delivery Pipeline"
+          />
         </div>
       </div>
       <div className="flex flex-col gap-2">
@@ -71,6 +76,21 @@ export const Overview: Story = {
               <div className="text-sm text-foreground-dim">běží · pipelina · agent delivery</div>
             </div>
           </EntityHero>
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <div className="w-[420px]">
+          {/* F6b (D13, docs/hud2chat/DECISIONS.md): showIdentity={false} — used by
+              agents/pipelines detail pages whose own immersive header already shows
+              the name/description, so the hero becomes a bare image/glyph band. */}
+          <EntityHero
+            editable
+            desc="Plans the delivery loop before a single line of code is written."
+            glyph="compass"
+            image={PLACEHOLDER_IMAGE}
+            name="Architekt"
+            showIdentity={false}
+          />
         </div>
       </div>
     </div>

@@ -72,12 +72,61 @@ describe("EntityHero", () => {
   });
 
   it("shows the whole image right-anchored and scaled to height when imageBleed is band", () => {
-    render(
-      <EntityHero glyph="flow" image="/avatars/delivery.png" imageBleed="band" name="X" />,
-    );
+    render(<EntityHero glyph="flow" image="/avatars/delivery.png" imageBleed="band" name="X" />);
     const img = screen.getByTestId(EntityHeroTestId.Image);
     // Whole image (no crop), right-anchored, height = band height, width from aspect ratio.
-    expect(img).toHaveClass("absolute", "inset-y-0", "right-0", "h-full", "w-auto", "object-contain");
+    expect(img).toHaveClass(
+      "absolute",
+      "inset-y-0",
+      "right-0",
+      "h-full",
+      "w-auto",
+      "object-contain",
+    );
     expect(img).not.toHaveClass("w-full", "w-1/2", "object-cover");
+  });
+
+  describe("showIdentity (D13, docs/hud2chat/DECISIONS.md)", () => {
+    it("renders the name/desc overlay by default (showIdentity omitted)", () => {
+      render(<EntityHero desc="Plans the loop." glyph="compass" name="Architekt" />);
+      expect(screen.getByTestId(EntityHeroTestId.Name)).toHaveTextContent("Architekt");
+      expect(screen.getByText("Plans the loop.")).toBeInTheDocument();
+    });
+
+    it("suppresses the name/desc overlay when showIdentity is false", () => {
+      render(
+        <EntityHero
+          desc="Plans the loop."
+          glyph="compass"
+          image="/avatars/architect.png"
+          name="Architekt"
+          showIdentity={false}
+        />,
+      );
+      // The image/glyph band itself still renders…
+      expect(screen.getByTestId(EntityHeroTestId.Image)).toHaveAttribute(
+        "src",
+        "/avatars/architect.png",
+      );
+      // …but the identity block is gone entirely.
+      expect(screen.queryByTestId(EntityHeroTestId.Name)).toBeNull();
+      expect(screen.queryByText("Plans the loop.")).toBeNull();
+    });
+
+    it("keeps the glyph fallback when showIdentity is false and there is no image", () => {
+      render(<EntityHero glyph="compass" name="Architekt" showIdentity={false} />);
+      expect(screen.getByTestId(EntityHeroTestId.GlyphFallback)).toBeInTheDocument();
+      expect(screen.queryByTestId(EntityHeroTestId.Name)).toBeNull();
+    });
+
+    it("has no effect when children override the overlay", () => {
+      render(
+        <EntityHero glyph="flow" image="/avatars/delivery.png" showIdentity={false}>
+          <div>run header content</div>
+        </EntityHero>,
+      );
+      expect(screen.getByTestId(EntityHeroTestId.Overlay)).toHaveTextContent("run header content");
+      expect(screen.queryByTestId(EntityHeroTestId.Name)).toBeNull();
+    });
   });
 });
