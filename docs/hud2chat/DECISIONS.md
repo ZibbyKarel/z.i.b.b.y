@@ -202,3 +202,23 @@ typecheck reads as a pass. This masked a real pre-existing `libs/design-system` 
 that log entry is corrected in place. Run tooling raw (`rtk proxy npx tsc -p <proj> --noEmit`)
 and check `$?`. Fixed in `b33e8db5`, but the verification habit is the durable part: an
 orchestrator who checks subagents with a lying command is worse than one who does not check.
+
+**O7 — Remove both dead chrome affordances; the topbar goes to four elements (2026-07-19).**
+F8d left the topbar's "switch to HUD" icon and the chat "close" button both pointing at
+`/chat` — the page the operator is already on. The operator's call: delete both. The
+five-element topbar was a deliberate contract from an earlier arc, but it was written when
+there was a HUD to switch _to_; F10 deletes that world entirely, so the icon is definitionally
+meaningless and a control that navigates to the current page is broken rather than minimal.
+The topbar becomes: status pill · ⌘K search · limits · language. Executed in F9, alongside the
+orphan sweep.
+
+**D21 — F8d's "no UI trigger" findings were two claims, not one, and only one was real.**
+Worth recording because the framing nearly cost a capability. The subagent reported that both
+on-demand briefing generation _and_ channel-kind approvals lost their UI trigger with
+`/overview`. Checking each: `useGenerateBriefingMutation` genuinely had **zero callers** — a
+real regression, closed in F8e. Approvals were **fine**: `StatusFlyoutPanel` calls
+`useApprovalsQuery()` unfiltered, so every approval kind is still reachable from the status
+pill, and the e2e workaround the subagent hit was about the deleted `ApprovalsPanel` being a
+convenient test handle, not about operator reachability. Two findings bundled into one sentence
+had different truth values — check each separately, especially when one touches the approval
+path, which is a stated law of this system.
