@@ -24,9 +24,7 @@ import { DuplicateNoteError, SimilarNoteError, type VaultService } from "./vault
  * mirroring `VaultService.createNote`'s opt-in dedupe path. `raw` seeds the pool
  * `rawNotes()` returns (Fáze 107 triage candidates).
  */
-function makeVault(
-  opts: { similarTo?: Record<string, string>; raw?: Note[] } = {},
-) {
+function makeVault(opts: { similarTo?: Record<string, string>; raw?: Note[] } = {}) {
   const notes = new Map<
     string,
     { body: string; type?: string; tags?: string[]; frontmatter?: Record<string, unknown> }
@@ -60,7 +58,10 @@ function makeVault(
       return {};
     }),
     updateNote: vi.fn(
-      async (id: string, patch: { title?: string; body?: string; frontmatter?: Record<string, unknown> }) => {
+      async (
+        id: string,
+        patch: { title?: string; body?: string; frontmatter?: Record<string, unknown> },
+      ) => {
         updates.push({ id, patch });
         const existing = notes.get(id) ?? { body: "" };
         if (patch.body !== undefined) existing.body = patch.body;
@@ -91,7 +92,10 @@ function makeService(over: {
   projects?: Partial<ProjectsStorageService>;
   chat?: Partial<ChatTranscriptStore>;
   learnings?: Learning[];
-  triage?: NoteTriage | null | ((note: { id: string; title: string; body: string }) => Promise<NoteTriage | null>);
+  triage?:
+    | NoteTriage
+    | null
+    | ((note: { id: string; title: string; body: string }) => Promise<NoteTriage | null>);
   importer?: Partial<MemoryImportService>;
 }) {
   const triageImpl =
@@ -116,7 +120,9 @@ function makeService(over: {
       readTranscript: async () => ({ conversationId: "", sessionId: null, messages: [] }),
       markDistilled: async () => undefined,
     } as unknown as ChatTranscriptStore);
-  const importer = (over.importer ?? { ingestQueue: async () => 0 }) as unknown as MemoryImportService;
+  const importer = (over.importer ?? {
+    ingestQueue: async () => 0,
+  }) as unknown as MemoryImportService;
   return new MemoryDistillerService(
     over.vault as unknown as VaultService,
     distiller,
@@ -146,7 +152,12 @@ describe("MemoryDistillerService", () => {
     const service = makeService({
       vault,
       learnings: [
-        { title: "pnpm is canonical", body: "Use pnpm, never npm.", type: "preference", tags: ["pnpm"] },
+        {
+          title: "pnpm is canonical",
+          body: "Use pnpm, never npm.",
+          type: "preference",
+          tags: ["pnpm"],
+        },
       ],
       pipelines: {
         listAll: async () => [
@@ -158,7 +169,7 @@ describe("MemoryDistillerService", () => {
             projectPath: "/proj",
           },
         ],
-        readArtifact: async () => ({ name: "docs.md", content: "Changed X for Y." }),
+        readLatestArtifact: async () => ({ name: "docs.md", content: "Changed X for Y." }),
       } as unknown as PipelineRunnerService,
       projects: {
         list: async () => [{ id: "proj", path: "/proj", name: "Proj" }],
@@ -193,7 +204,7 @@ describe("MemoryDistillerService", () => {
           projectPath: undefined,
         },
       ],
-      readArtifact: async () => ({ name: "docs.md", content: "x" }),
+      readLatestArtifact: async () => ({ name: "docs.md", content: "x" }),
     } as unknown as PipelineRunnerService;
 
     const first = makeService({
@@ -222,7 +233,7 @@ describe("MemoryDistillerService", () => {
         listAll: async () => [
           { status: "running", pipelineRunId: "p1", pipelineId: "delivery", cwd: dir },
         ],
-        readArtifact: async () => null,
+        readLatestArtifact: async () => null,
       } as unknown as PipelineRunnerService,
     });
 
@@ -240,7 +251,7 @@ describe("MemoryDistillerService", () => {
         listAll: async () => [
           { status: "done", pipelineRunId: "p1", pipelineId: "delivery", cwd: dir },
         ],
-        readArtifact: async () => ({ name: "docs.md", content: "x" }),
+        readLatestArtifact: async () => ({ name: "docs.md", content: "x" }),
       } as unknown as PipelineRunnerService,
     });
 
@@ -255,7 +266,12 @@ describe("MemoryDistillerService", () => {
     const service = makeService({
       vault,
       learnings: [
-        { title: "operator prefers pnpm", body: "Always pnpm.", type: "preference", tags: ["pnpm"] },
+        {
+          title: "operator prefers pnpm",
+          body: "Always pnpm.",
+          type: "preference",
+          tags: ["pnpm"],
+        },
       ],
       chat: {
         listConversationIds: async () => ["conv-1"],
@@ -265,7 +281,12 @@ describe("MemoryDistillerService", () => {
           sessionId: "s",
           messages: [
             { id: "m1", role: "user", text: "ahoj", at: "2026-06-16T01:00:00.000Z" },
-            { id: "m2", role: "user", text: "vždycky používej pnpm", at: "2026-06-16T02:00:00.000Z" },
+            {
+              id: "m2",
+              role: "user",
+              text: "vždycky používej pnpm",
+              at: "2026-06-16T02:00:00.000Z",
+            },
           ],
         }),
         markDistilled: async (id: string, count: number) => {
@@ -326,9 +347,15 @@ describe("MemoryDistillerService", () => {
       learnings: [{ title: "t", body: "b", type: "fact", tags: [] }],
       pipelines: {
         listAll: async () => [
-          { status: "done", pipelineRunId: "p1", pipelineId: "delivery", cwd: dir, projectPath: "/proj" },
+          {
+            status: "done",
+            pipelineRunId: "p1",
+            pipelineId: "delivery",
+            cwd: dir,
+            projectPath: "/proj",
+          },
         ],
-        readArtifact: async () => ({ name: "docs.md", content: "x" }),
+        readLatestArtifact: async () => ({ name: "docs.md", content: "x" }),
       } as unknown as PipelineRunnerService,
       projects: {
         list: async () => [{ id: "proj", path: "/proj", name: "Proj" }],

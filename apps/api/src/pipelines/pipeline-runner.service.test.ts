@@ -333,9 +333,7 @@ describe("PipelineRunnerService — stage gates & resume", () => {
           pipelineId: "release",
           status: "done",
           currentStage: null,
-          stageRuns: [
-            { phaseId: "build", runId: `${goneId}.build_1`, attempt: 1, status: "done" },
-          ],
+          stageRuns: [{ phaseId: "build", runId: `${goneId}.build_1`, attempt: 1, status: "done" }],
           startedAt: new Date().toISOString(),
           cwd: root,
         }),
@@ -874,7 +872,12 @@ describe("PipelineRunnerService — stage gates & resume", () => {
       verdictFor: (phaseId: string, attempt: number) => string | null,
     ): void {
       (h.service as unknown as { runStage: unknown }).runStage = vi.fn(
-        async (_run: unknown, p: { id: string; produces?: string }, cwd: string, attempt: number) => {
+        async (
+          _run: unknown,
+          p: { id: string; produces?: string },
+          cwd: string,
+          attempt: number,
+        ) => {
           order.push(p.id);
           const verdict = verdictFor(p.id, attempt);
           const tag = verdict ? `\n<verdict>${verdict}</verdict>\n` : "";
@@ -890,9 +893,10 @@ describe("PipelineRunnerService — stage gates & resume", () => {
     }
 
     const drive = (run: PipelineRun, pipeline: unknown) =>
-      (
-        h.service as unknown as { drive(r: PipelineRun, p: unknown): Promise<void> }
-      ).drive(run, pipeline);
+      (h.service as unknown as { drive(r: PipelineRun, p: unknown): Promise<void> }).drive(
+        run,
+        pipeline,
+      );
 
     it("gap loops the work back, then pass advances to the end", async () => {
       const run = h.runs.get(PIPELINE_RUN_ID);
@@ -1283,6 +1287,100 @@ describe("PipelineRunnerService — stage gates & resume", () => {
         const artifact = await h.service.readArtifact(PIPELINE_RUN_ID, "audit-report.md");
         expect(artifact?.content).toBe("audit findings");
       });
+
+      it("a name outside PIPELINE_RUN_ARTIFACTS and outputs is allowed when it matches a phase's own `produces`", async () => {
+        const run = h.runs.get(PIPELINE_RUN_ID);
+        if (!run) throw new Error("missing run");
+        run.currentStage = null;
+        run.stageRuns = [];
+        (
+          h.service as unknown as { pipelines: { get: ReturnType<typeof vi.fn> } }
+        ).pipelines.get.mockResolvedValue({
+          id: "research",
+          phases: [
+            {
+              id: "synthesize",
+              type: "agent",
+              agent: "writer",
+              consumes: "sources.md",
+              produces: "report.md",
+              model: "sonnet",
+              thinking: "medium",
+            },
+          ],
+          instructions: "research",
+        });
+        await fs.writeFile(path.join(run.cwd, "report.md"), "final synthesis", "utf8");
+        const artifact = await h.service.readArtifact(PIPELINE_RUN_ID, "report.md");
+        expect(artifact?.content).toBe("final synthesis");
+      });
+    });
+
+    describe("readLatestArtifact (no fixed name list — any pipeline shape)", () => {
+      const researchPipeline = {
+        id: "research",
+        phases: [
+          {
+            id: "scan",
+            type: "agent",
+            agent: "writer",
+            consumes: "in.md",
+            produces: "sources.md",
+            model: "sonnet",
+            thinking: "medium",
+          },
+          {
+            id: "synthesize",
+            type: "agent",
+            agent: "writer",
+            consumes: "sources.md",
+            produces: "report.md",
+            model: "sonnet",
+            thinking: "medium",
+          },
+        ],
+        instructions: "research",
+      };
+
+      it("returns the LAST phase's produces content when present, not a hardcoded delivery-loop name", async () => {
+        const run = h.runs.get(PIPELINE_RUN_ID);
+        if (!run) throw new Error("missing run");
+        run.currentStage = null;
+        run.stageRuns = [];
+        (
+          h.service as unknown as { pipelines: { get: ReturnType<typeof vi.fn> } }
+        ).pipelines.get.mockResolvedValue(researchPipeline);
+        await fs.writeFile(path.join(run.cwd, "sources.md"), "raw sources", "utf8");
+        await fs.writeFile(path.join(run.cwd, "report.md"), "final synthesis", "utf8");
+
+        const artifact = await h.service.readLatestArtifact(PIPELINE_RUN_ID);
+        expect(artifact).toEqual({ name: "report.md", content: "final synthesis" });
+      });
+
+      it("falls back to an earlier phase's produces when the last phase never wrote its file", async () => {
+        const run = h.runs.get(PIPELINE_RUN_ID);
+        if (!run) throw new Error("missing run");
+        run.currentStage = null;
+        run.stageRuns = [];
+        (
+          h.service as unknown as { pipelines: { get: ReturnType<typeof vi.fn> } }
+        ).pipelines.get.mockResolvedValue(researchPipeline);
+        // The synthesize phase died before writing report.md — only the earlier
+        // scan artifact exists. The distiller should still get something.
+        await fs.writeFile(path.join(run.cwd, "sources.md"), "raw sources", "utf8");
+
+        const artifact = await h.service.readLatestArtifact(PIPELINE_RUN_ID);
+        expect(artifact).toEqual({ name: "sources.md", content: "raw sources" });
+      });
+
+      it("returns null when the pipeline definition can't be resolved", async () => {
+        (
+          h.service as unknown as { pipelines: { get: ReturnType<typeof vi.fn> } }
+        ).pipelines.get.mockRejectedValueOnce(new Error("gone"));
+
+        const artifact = await h.service.readLatestArtifact(PIPELINE_RUN_ID);
+        expect(artifact).toBeNull();
+      });
     });
   });
 
@@ -1417,7 +1515,12 @@ describe("PipelineRunnerService — stage gates & resume", () => {
     function scriptRunStage(write: (phaseId: string, cwd: string) => Promise<void>): string[] {
       const cwds: string[] = [];
       (h.service as unknown as { runStage: unknown }).runStage = vi.fn(
-        async (_run: unknown, p: { id: string; produces?: string }, cwd: string, attempt: number) => {
+        async (
+          _run: unknown,
+          p: { id: string; produces?: string },
+          cwd: string,
+          attempt: number,
+        ) => {
           cwds.push(cwd);
           await write(p.id, cwd);
           return {
@@ -1534,14 +1637,12 @@ describe("PipelineRunnerService — stage gates & resume", () => {
       return (h.service as unknown as { projects: { get: ReturnType<typeof vi.fn> } }).projects;
     }
     function projectLocalDouble() {
-      return (
-        h.service as unknown as { projectLocal: { resolveForRun: ReturnType<typeof vi.fn> } }
-      ).projectLocal;
+      return (h.service as unknown as { projectLocal: { resolveForRun: ReturnType<typeof vi.fn> } })
+        .projectLocal;
     }
     function workspaceDouble() {
-      return (
-        h.service as unknown as { workspace: { createWorktree: ReturnType<typeof vi.fn> } }
-      ).workspace;
+      return (h.service as unknown as { workspace: { createWorktree: ReturnType<typeof vi.fn> } })
+        .workspace;
     }
 
     it("present project: createWorktree gets resolveForRun's resolvedPath, not project.path", async () => {

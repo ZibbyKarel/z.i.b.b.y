@@ -323,7 +323,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
           await this.writeAggregate(run);
         }
       } catch (error) {
-        if (!(error instanceof WorkspaceSetupError) && !(error instanceof ProjectLocalUnresolvedError)) {
+        if (
+          !(error instanceof WorkspaceSetupError) &&
+          !(error instanceof ProjectLocalUnresolvedError)
+        ) {
           throw error;
         }
         run.status = "failed";
@@ -710,11 +713,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** Read a stage's log by phase id (the most recent attempt of that phase). */
-  async readStageLog(
-    pipelineRunId: string,
-    phaseId: string,
-    offset: number,
-  ): Promise<RunLogChunk> {
+  async readStageLog(pipelineRunId: string, phaseId: string, offset: number): Promise<RunLogChunk> {
     // Fall back to the on-disk aggregate (like delete/readArtifact/resume): a finished
     // run is evicted from the in-memory registry once it ages past RETENTION_MS, but
     // its aggregate + per-stage logs persist — so the detail view can still tail them.
@@ -751,15 +750,18 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Read one whitelisted run artifact (Phase 3.3) by name. `name` must either be on
-   * the global allowlist ({@link PIPELINE_RUN_ARTIFACTS}) or match the run's own
-   * delivered `file` output (a directed task's `outputsOverride`'s `from`, falling
-   * back to the pipeline definition's own `outputs:` — the same fallback
-   * `runOutputs` itself uses — computed by the runner from `phase.produces`, never
-   * request input) — anything else (incl. any traversal attempt) returns null → 404;
-   * there is no generic file browser. The diffstat lives in the run root; every
-   * other artifact is a phase's `produces`, found in its stage sandbox. Returns null
-   * when the run is unknown or the file is absent.
+   * Read one whitelisted run artifact (Phase 3.3) by name. `name` must be on the
+   * global allowlist ({@link PIPELINE_RUN_ARTIFACTS}, the delivery-loop's fixed
+   * names), match the run's own delivered `file` output (a directed task's
+   * `outputsOverride`'s `from`, falling back to the pipeline definition's own
+   * `outputs:`), or name anything any phase of THIS pipeline declares via
+   * `produces` — every agent phase requires one, so this is what lets a
+   * non-delivery pipeline shape (research, audit, …) hand its own artifacts back
+   * out under their own names instead of only the delivery loop's. Anything else
+   * (incl. any traversal attempt) returns null → 404; there is no generic file
+   * browser. The diffstat lives in the run root; every other artifact is a
+   * phase's `produces`, found in its stage sandbox. Returns null when the run is
+   * unknown or the file is absent.
    */
   async readArtifact(
     pipelineRunId: string,
@@ -772,8 +774,13 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     const fileOutputName =
       run?.outputsOverride?.find((o) => o.type === "file")?.from ??
       pipeline?.outputs?.find((o) => o.type === "file")?.from;
+    const producedNames = new Set(
+      pipeline?.phases.map((p) => p.produces).filter((p): p is string => Boolean(p)) ?? [],
+    );
     const isAllowed =
-      (PIPELINE_RUN_ARTIFACTS as readonly string[]).includes(name) || name === fileOutputName;
+      (PIPELINE_RUN_ARTIFACTS as readonly string[]).includes(name) ||
+      name === fileOutputName ||
+      producedNames.has(name);
     if (!isAllowed) return null;
     const allowed = name as PipelineRunArtifact["name"];
     // Candidate dirs: the run root (diffstat.txt) + the phase sandboxes. The
@@ -801,6 +808,32 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       if (!file) continue;
       const content = await fs.readFile(file, "utf8").catch(() => null);
       if (content !== null) return { name: allowed, content };
+    }
+    return null;
+  }
+
+  /**
+   * Read the most meaningful artifact a finished run left behind, without a fixed
+   * name list — the nightly memory distiller's read-side counterpart to every
+   * pipeline shape, not only the delivery loop. Tries each phase's `produces` in
+   * REVERSE order (latest phase first, since that's usually the pipeline's real
+   * deliverable) via {@link readArtifact}, falling through to earlier phases when a
+   * later one is missing or empty. Returns null when the pipeline can't be
+   * resolved or no phase left readable content.
+   */
+  async readLatestArtifact(
+    pipelineRunId: string,
+  ): Promise<{ name: string; content: string } | null> {
+    const run = this.runs.get(pipelineRunId) ?? (await this.readAggregate(pipelineRunId));
+    const pipeline = run ? await this.pipelines.get(run.pipelineId).catch(() => null) : null;
+    if (!pipeline) return null;
+    const names = [...pipeline.phases]
+      .reverse()
+      .map((p) => p.produces)
+      .filter((p): p is string => Boolean(p));
+    for (const name of names) {
+      const artifact = await this.readArtifact(pipelineRunId, name);
+      if (artifact?.content.trim()) return artifact;
     }
     return null;
   }
@@ -869,10 +902,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // second run of the same phase gets its own folder instead of overwriting the
       // first. A synthetic escalation marker also occupies a slot, which leaves a
       // gap in the numbering, never a clash.
-      const stageCwd = path.join(
-        run.cwd,
-        this.stageDirName(run.stageRuns.length + 1, phase.id),
-      );
+      const stageCwd = path.join(run.cwd, this.stageDirName(run.stageRuns.length + 1, phase.id));
       await fs.mkdir(stageCwd, { recursive: true });
       // P1-T3 (Fáze 3): every stage gets the run's shared `context/` folder linked
       // in, relative like the handoff symlink (P1-T2) — pipeline-level inputs are
@@ -880,7 +910,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // creates `context/` unconditionally for every run, so this is unconditional
       // too; a link left dangling has nothing behind it, same as an unused handoff.
       await fs
-        .symlink(path.relative(stageCwd, path.join(run.cwd, "context")), path.join(stageCwd, "context"))
+        .symlink(
+          path.relative(stageCwd, path.join(run.cwd, "context")),
+          path.join(stageCwd, "context"),
+        )
         .catch(() => {});
       await this.placeHandoff(handoffSource, stageCwd, phase);
 
@@ -1008,8 +1041,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // Stage failed, was interrupted, OR a qualify phase returned gap/drift.
       const loop = phase.loop;
       // drift re-plans (Architekt) via driftTo; gap / a real error fix in place (Kodér).
-      const retryTarget =
-        qualifyFail?.verdict === "drift" ? (loop?.driftTo ?? loop?.to) : loop?.to;
+      const retryTarget = qualifyFail?.verdict === "drift" ? (loop?.driftTo ?? loop?.to) : loop?.to;
       if (loop && (retries.get(phase.id) ?? 0) < loop.maxRetries) {
         retries.set(phase.id, (retries.get(phase.id) ?? 0) + 1);
         this.log.warn("pipeline phase failed; retrying", {
@@ -1803,11 +1835,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // narrower existing grant (just this stage's own sandbox, so the session can
       // still write `produces` back into it) applies when the session spawns
       // elsewhere (worktree/project).
-      const grantDirs = phase.consumes
-        ? [path.dirname(cwd)]
-        : spawnCwd
-          ? [cwd]
-          : undefined;
+      const grantDirs = phase.consumes ? [path.dirname(cwd)] : spawnCwd ? [cwd] : undefined;
       const built = await this.claude.buildClaudeCommand({
         instructions: agent.instructions,
         task,
