@@ -25,25 +25,25 @@ nothing pushed.
 `native` = lives inside Chat UI · `immersive` = rewritten full page Chat links to ·
 `hud` = still old chrome · `deleted` = gone.
 
-| Route                                                    | Target                        | State              |
-| -------------------------------------------------------- | ----------------------------- | ------------------ |
-| `/chat`                                                  | native                        | ✅ native          |
-| `/settings`                                              | immersive                     | ✅ immersive       |
-| `/archiv`                                                | immersive                     | does not exist yet |
-| `/runs`                                                  | deleted (→ `/archiv`)         | hud                |
-| `/overview`                                              | deleted (→ topbar + briefing) | hud                |
-| `/skills`, `/skills/[id]`                                | immersive                     | hud                |
-| `/commands`, `/commands/[id]`                            | immersive                     | hud                |
-| `/mcp`, `/mcp/[id]`                                      | immersive                     | hud                |
-| `/hooks`, `/hooks/[id]`                                  | immersive                     | hud                |
-| `/agents`, `/agents/[id]`                                | immersive                     | hud                |
-| `/automations`, `/automations/[id]`                      | immersive                     | hud                |
-| `/pipelines`, `/pipelines/[id]`                          | immersive                     | hud                |
-| `/chains`, `/chains/[id]`                                | immersive                     | hud                |
-| `/projects`, `/[id]`, `/new`, `/[id]/integrations/[iid]` | immersive                     | hud                |
-| `/companies`, `/[id]`, `/new`                            | immersive                     | hud                |
-| `/memory`                                                | immersive                     | hud                |
-| `/gates`                                                 | immersive                     | hud                |
+| Route                                                    | Target                        | State        |
+| -------------------------------------------------------- | ----------------------------- | ------------ |
+| `/chat`                                                  | native                        | ✅ native    |
+| `/settings`                                              | immersive                     | ✅ immersive |
+| `/archiv`                                                | immersive                     | ✅ immersive |
+| `/runs`                                                  | deleted (→ `/archiv`)         | hud          |
+| `/overview`                                              | deleted (→ topbar + briefing) | hud          |
+| `/skills`, `/skills/[id]`                                | immersive                     | hud          |
+| `/commands`, `/commands/[id]`                            | immersive                     | hud          |
+| `/mcp`, `/mcp/[id]`                                      | immersive                     | hud          |
+| `/hooks`, `/hooks/[id]`                                  | immersive                     | hud          |
+| `/agents`, `/agents/[id]`                                | immersive                     | hud          |
+| `/automations`, `/automations/[id]`                      | immersive                     | hud          |
+| `/pipelines`, `/pipelines/[id]`                          | immersive                     | hud          |
+| `/chains`, `/chains/[id]`                                | immersive                     | hud          |
+| `/projects`, `/[id]`, `/new`, `/[id]/integrations/[iid]` | immersive                     | hud          |
+| `/companies`, `/[id]`, `/new`                            | immersive                     | hud          |
+| `/memory`                                                | immersive                     | hud          |
+| `/gates`                                                 | immersive                     | hud          |
 
 ## Session log
 
@@ -69,3 +69,15 @@ nothing pushed.
   reflect longhand `borderTop` set after the `border` shorthand, so that part is verified in
   the browser, not asserted in the test (noted in the test itself). `?tab=` deep links, live
   mandate data and 0 console errors confirmed in-browser. F2 dispatched.
+- **2026-07-19** — F2 landed (`711d3883`). `/archiv` live-verified at 1680px: both grouping
+  modes work, rows carry subsystem colour dots, `RunDetail` renders inline without modal
+  chrome. Orchestrator fixed one polish defect the tests missed: a run with no project
+  rendered a dangling `" · "` in the row subline. Subagent decisions accepted — the subsystem
+  multi-select is a domain composite (needs registry colours + live counts, wrong shape for a
+  generic DS primitive) and `SearchInput` is a genuine new DS primitive, distinct from
+  `SearchBar` (a palette _button_) and `TextInputField` (always labelled). `ChatTasksPanel`'s
+  in-gutter archive section is now just an "Archiv · N" link, per O4. Known deviation from the
+  design: the detail pane auto-selects the newest row instead of showing a placeholder, because
+  it reuses `findSelectedRun`'s `list[0]` fallback — matches `/runs` behaviour, flagged for the
+  operator. Pre-existing console 404 (a stale run artifact) reproduces on `/runs` too — not ours.
+  F3 dispatched.
