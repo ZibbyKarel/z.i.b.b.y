@@ -15,8 +15,8 @@ nothing pushed.
 | F4  | Catalogs B                 | ✅     | c4fe68cb | 4 pages; D13 recorded (header/hero duplication), deliberately not patched              |
 | F5  | Orchestration              | ✅     | 5765336d | header must key off route id, not selection, or `/pipelines` backHref self-loops       |
 | F6  | Delivery entities          | ✅     | 12b1f113 | 7 routes incl. 685-LOC `ProfileScreen`; first dynamic `backHref`                       |
-| F6b | EntityHero dedup (D13)     | 🔩     | —        | in flight — one decision across all four `EntityHero` consumers                        |
-| F7  | Memory + gates             | 🔩     | —        | in flight                                                                              |
+| F6b | EntityHero dedup (D13)     | ✅     | 9df0f1e8 | `showIdentity` prop, default `true`; two opt-outs; other two immune via `children`     |
+| F7  | Memory + gates             | ✅     | 61eb605b | `GateRulesSection` seam resolved with D7's `surface` pattern; `/gates` stays off dock  |
 | F8  | Overview dissolution       | ⬜     | —        |                                                                                        |
 | F9  | Chat reachability sweep    | ⬜     | —        |                                                                                        |
 | F10 | Old shell deletion         | ⬜     | —        |                                                                                        |
@@ -43,8 +43,11 @@ nothing pushed.
 | `/chains`, `/chains/[id]`                                | immersive                     | ✅ immersive |
 | `/projects`, `/[id]`, `/new`, `/[id]/integrations/[iid]` | immersive                     | ✅ immersive |
 | `/companies`, `/[id]`, `/new`                            | immersive                     | ✅ immersive |
-| `/memory`                                                | immersive                     | hud          |
-| `/gates`                                                 | immersive                     | hud          |
+| `/memory`                                                | immersive                     | ✅ immersive |
+| `/gates`                                                 | immersive                     | ✅ immersive |
+
+**Every route except `/runs` and `/overview` is migrated.** Those two are deletions, not
+conversions — they are F8's job, and both carry inbound-link blockers (D16, D17).
 
 ## Session log
 
@@ -125,3 +128,27 @@ nothing pushed.
   so F5's route-id-vs-selection trap did not recur. **No route in F6 renders `EntityHero`**, so
   D13 did not apply here — which means every consumer is now known and the decision is due.
   F6b (D13) and F7 dispatched in parallel: they share no files.
+- **2026-07-19** — F6b (`9df0f1e8`) and F7 (`61eb605b`) landed together; both agents ran in
+  parallel without collision. **All 21 convertible routes are now immersive**; only `/runs`
+  and `/overview` remain, and both are deletions rather than conversions.
+  F6b closed D13 more cheaply than predicted: neither the header-suppression nor the
+  hero-"compact" shape was needed, because `RunDetail` and `ChatDetailDialog` supply their own
+  overlay through `children` and so ignore the new prop entirely — they were structurally
+  immune, not merely untouched. F7's substance was the `GateRulesSection` seam, deferred since
+  F1 precisely so it could be decided once (→ D14), plus a judgement call I verified rather
+  than accepted: `/gates` does **not** join the dock, because it sits in `ROUTE_ONLY_ITEMS`
+  and the dock resolves through `NAV_ITEMS`, so the usual one-line `DOCK_IDS` addition would
+  have silently resolved to `undefined` (→ D15). Memory's three early returns each carried
+  their own header and dialogs; consolidating them also deleted a duplicate "New note" button
+  that shared a `data-testid` with the header's — a latent `getByTestId` ambiguity.
+  Verified independently before committing: both typechecks clean, 648 web-component tests and
+  13 DS tests green.
+- **2026-07-19** — F8 grounded ahead of planning; two operator calls taken (O5, O6) and four
+  decisions recorded (D16, D17 are deletion blockers). The grounding changed the phase's shape
+  twice over: the limits/budget workstream **evaporated** (limits already ship in `ChatTopBar`;
+  budget is per-project data that was never on `/overview`), while the briefing became a
+  contract change — the first time this arc touches `libs/contracts` and `apps/api`. Two
+  deletion traps found that a naive `rm` would have hit: `features/overview/` holds the
+  activity module that **Chat UI's own live log** imports (D16), and the API bakes `/runs?run=`
+  links into persisted chat transcripts, so the route needs a redirect shim rather than a
+  delete (D17).

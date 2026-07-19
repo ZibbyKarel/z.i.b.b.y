@@ -111,3 +111,61 @@ is genuinely duplicated. `EntityHero` is shared by four surfaces (`agents/Detail
 so changing it now means changing it twice. **Do not patch this per page.** After F6, take it
 as one decision with full knowledge of every consumer — the likely shape is suppressing the
 immersive header's own title when a hero follows, or giving the hero a "compact" mode.
+
+**D13 — RESOLVED in F6b (`9df0f1e8`).** `EntityHero` gained `showIdentity?: boolean`,
+defaulting to `true`. `agents/DetailScreen` and `pipelines/Screen` — the only two whose page
+header already carries the identity — pass `false`, leaving the hero a bare image/glyph band.
+The two "do not touch" consumers turned out to be **structurally** immune, not just untouched:
+`RunDetail` and `ChatDetailDialog` supply their own overlay via `children`, which the prop
+does not affect at all. Neither the header-suppression nor the hero-"compact" shape sketched
+above was needed.
+
+**D14 — `GateRulesSection` takes the same additive `surface` prop as `HudPanel` (D7).**
+Decided in F7 with all three consumers visible, which is why every earlier plan forbade
+touching it. It renders its own chrome (two `HudPanel`s plus `SystemFloorPanel`), so the
+choice was fork-vs-thread; threading a `surface` defaulting to `"hud"` keeps the third
+consumer — `GatesTab` inside the Chat UI's subsystem drawer, which is **not** part of this
+migration — pixel-identical, while `/gates` and the Settings tab opt into glass. The prop is
+forwarded to `SystemFloorPanel` so the floor and the catalog beneath it can never disagree.
+
+**D15 — `/gates` stays out of the Chat dock.** Every earlier phase added its section to
+`ChatToolDock`'s `DOCK_IDS` as a one-liner; `gates` is the exception. It lives in
+`ROUTE_ONLY_ITEMS`, not `NAV_ITEMS`, and the dock resolves `DOCK_IDS.map(id =>
+NAV_ITEMS.find(...)).filter(...)` — so a `DOCK_IDS` entry alone would silently resolve to
+`undefined` and vanish. Promoting it would mean a `NAV_ITEMS` entry, i.e. declaring gates a
+primary destination, which it is not: it is reachable from Settings, from ⌘K, and from every
+subsystem drawer. Re-verify this in F9 rather than assuming the sweep will flag it.
+
+## F8 operator calls (2026-07-19)
+
+**O5 — Limits are already done; budget stays with projects.** O3(b) said "limits and budget
+into the topbar/dock", but grounding showed `LimitsRings` is _already_ mounted in
+`ChatTopBar`, and "budget" on `/overview` does not exist — it is per-project data
+(`useBudgetQuery`) living beside project and run cards. The operator's call: treat O3(b) as
+substantially already satisfied, leave budget where it is meaningful, and add **no** new
+global spend aggregation. F8 therefore has no limits/budget workstream.
+
+**O6 — The briefing becomes its own message variant, contract-first.** `ChatRoleSchema` is
+`z.enum(["user","assistant"])` — there is no third role, and the briefing is structured
+(headline, "needs you" rows with links, subsystem lines, engagements, counters). Serialising
+it to plain assistant markdown would have been free but would have flattened those rows into
+prose. The operator chose the contract change: extend `ChatMessage` with a briefing payload
+and render it as a distinguishable card in the transcript, preserving the links. This makes
+F8 the first phase in the arc to touch `libs/contracts` and `apps/api`.
+
+**D16 — `features/overview/` cannot be deleted wholesale; its activity module must be
+relocated first.** `activityLog.ts`, `useActivityFeedInfiniteQuery`, `useActivityQuery` and
+`ActivityFeed/` sit under `features/overview/` but are **not imported by the overview screen
+at all**. Their real consumers are `RightRail`, `features/chat/ChatLiveLog` and
+`ProjectIntegrationActivityPanel` — one of which is Chat UI itself. Deleting the folder with
+the page would break the live log in the destination design. Relocate to `features/activity/`
+as the first step of F8.
+
+**D17 — `/runs` gets a redirect shim, not a hard delete.** `apps/api`'s
+`chat-session.service.ts` bakes `href: /runs?run=<ref>` into the `ChatToolEvent` of every
+`create_task` turn, and those events are **persisted in transcript JSONL**. Deleting the route
+would break links inside chat history already on disk, which no frontend change can rewrite.
+So `/runs` becomes a redirect to `/archiv` preserving `?run=`, the API stops minting `/runs`
+links going forward, and the shim stays until old transcripts age out. The same applies to
+`useTaskSubmit`, which pushes `/runs?run=` after **every** task dispatch app-wide — that one
+is a live code path and gets repointed properly, not shimmed.

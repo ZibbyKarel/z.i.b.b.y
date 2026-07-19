@@ -38,9 +38,11 @@ title + subtitle, then the content frame. Same token set as `/chat`. That is wha
 | F4  | Catalogs B                 | `agents`, `automations` (list + detail)                               | ✅ c4fe68cb |
 | F5  | Orchestration              | `pipelines`, `chains` (list+detail share one Screen via selectedId)   | ✅ 5765336d |
 | F6  | Delivery entities          | `projects` (+ `/new`, integrations detail), `companies`               | ✅ 12b1f113 |
-| F6b | EntityHero dedup (D13)     | resolve header/hero duplication once, across all four consumers       | 🔩          |
-| F7  | Memory + gates             | `/memory`, `/gates`                                                   | 🔩          |
-| F8  | Overview dissolution       | status line, limits, briefing-as-chat-message; delete `/overview`     | ⬜          |
+| F6b | EntityHero dedup (D13)     | resolve header/hero duplication once, across all four consumers       | ✅ 9df0f1e8 |
+| F7  | Memory + gates             | `/memory`, `/gates`                                                   | ✅ 61eb605b |
+| F8a | Briefing as a chat message | contract variant + API + transcript rendering (O6)                    | ⬜          |
+| F8b | Status line                | subsystem health from `SummaryWidget` into the topbar pill/flyout     | ⬜          |
+| F8c | Overview + runs deletion   | relocate activity (D16), repoint links, `/runs` shim (D17), delete    | ⬜          |
 | F9  | Chat reachability sweep    | every surface reachable from Chat; orphans killed                     | ⬜          |
 | F10 | Old shell deletion         | remove `MainLayout`/`Sidebar`/`RightRail`/`TopBar`, simplify AppShell | ⬜          |
 
@@ -52,6 +54,12 @@ scale. F2 is the one genuinely _new_ page and has a literal design reference. F3
 mechanical conversions, easiest→hardest, so the shell hardens before it meets
 `projects/ProfileScreen.tsx` (685 LOC, the biggest single screen). F8–F10 are only safe
 once nothing still needs the old chrome.
+
+**F8 is split three ways and the order is a dependency, not a preference.** The briefing must
+have a home in Chat (F8a) before `/overview` may be deleted (F8c), and F8b touches the same
+`features/chat` topbar files as F8a, so the three run sequentially rather than in parallel.
+F8a is also the only phase in the whole arc that reaches `libs/contracts` and `apps/api`
+(O6) — everything before it was frontend-only.
 
 ## Per-phase loop
 
