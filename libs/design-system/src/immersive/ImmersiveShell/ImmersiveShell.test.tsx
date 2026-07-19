@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { ImmersiveShell, ImmersiveShellTestId } from "./ImmersiveShell";
+import { ImmersiveShell, ImmersiveShellTestId, MAIN_CONTENT_ID } from "./ImmersiveShell";
 
 describe("ImmersiveShell", () => {
   it("renders the title, subtitle and body content", () => {
@@ -91,5 +91,17 @@ describe("ImmersiveShell", () => {
     // GlassSurface applies. It is verified in the browser instead.)
     expect(header.style.borderRadius).toBe("0");
     expect(header.style.flex).toBe("0 0 auto");
+  });
+
+  it("renders the body as the page's main landmark, focusable from the skip link", () => {
+    render(
+      <ImmersiveShell title="Archiv úloh">
+        <div>obsah</div>
+      </ImmersiveShell>,
+    );
+    const body = screen.getByTestId(ImmersiveShellTestId.Body);
+    expect(body).toHaveRole("main");
+    expect(body).toHaveAttribute("id", MAIN_CONTENT_ID);
+    expect(body).toHaveAttribute("tabIndex", "-1");
   });
 });

@@ -14,6 +14,14 @@ export enum ImmersiveShellTestId {
   Body = "immersive-shell-body",
 }
 
+/**
+ * The one `<main>` landmark id in the app (F10b, `docs/plans/hud2chat-F10b-landmarks.md`).
+ * `ImmersiveShell`'s body and `ChatScreen`'s root both render their landmark with this id —
+ * it is the single shared contract `SkipLink`'s `targetId` points at, so it lives here rather
+ * than being duplicated as a private literal in each producer.
+ */
+export const MAIN_CONTENT_ID = "main-content";
+
 export interface ImmersiveShellProps {
   /** Page title, shown in the header band. */
   title: string;
@@ -120,10 +128,13 @@ export function ImmersiveShell({
 
       <Container
         grow
+        as="main"
         data-testid={ImmersiveShellTestId.Body}
+        id={MAIN_CONTENT_ID}
         minHeight="0"
         overflow="auto"
         style={{ position: "relative", zIndex: 10 }}
+        tabIndex={-1}
       >
         {children}
       </Container>

@@ -4,7 +4,7 @@
 "use client";
 
 import type { ChatMessage as ChatMessageType, SubsystemId } from "@zibby/contracts";
-import { Container } from "@zibby/design-system";
+import { Container, MAIN_CONTENT_ID } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -228,10 +228,12 @@ export function ChatScreen({
     coreOpen;
 
   return (
-    <div
+    <main
       aria-label={t("title")}
       className="relative flex h-full w-full flex-col overflow-hidden font-sans"
       data-testid={ChatScreenTestId.Root}
+      id={MAIN_CONTENT_ID}
+      tabIndex={-1}
     >
       {/* The immersive orb map's clean radial backdrop, centered at 50% 42% (the
           app-shell's shared --gradient-scene token is top-anchored for other pages
@@ -418,6 +420,6 @@ export function ChatScreen({
         }}
         open={coreOpen}
       />
-    </div>
+    </main>
   );
 }

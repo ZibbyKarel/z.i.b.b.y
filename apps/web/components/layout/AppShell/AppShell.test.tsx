@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { MAIN_CONTENT_ID } from "@zibby/design-system";
 import { renderWithProviders, screen } from "../../../test/render";
+import { SkipLinkTestId } from "../SkipLink/SkipLink";
 import { AppShell } from "./AppShell";
 
 // F10 (docs/hud2chat/DECISIONS.md, O2): the HUD chrome (`MainLayout`/`Sidebar`/
@@ -26,5 +28,17 @@ describe("AppShell", () => {
       </AppShell>,
     );
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+  });
+
+  it("mounts the skip link once, pointed at the shared main-content id (F10b)", () => {
+    renderWithProviders(
+      <AppShell>
+        <div>obsah stránky</div>
+      </AppShell>,
+    );
+    const link = screen.getByTestId(SkipLinkTestId.Root);
+    expect(link).toHaveRole("link");
+    expect(link).toHaveAccessibleName("Přeskočit na obsah");
+    expect(link).toHaveAttribute("href", `#${MAIN_CONTENT_ID}`);
   });
 });

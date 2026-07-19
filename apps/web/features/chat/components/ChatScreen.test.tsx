@@ -126,6 +126,7 @@ import { useState } from "react";
 import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
 import {
   EntityHeroTestId,
+  MAIN_CONTENT_ID,
   OrbMapTestId,
   OrbNodeTestId,
   SearchBarTestId,
@@ -186,6 +187,15 @@ describe("ChatScreen", () => {
     // live-log mini-widget mounts bottom-right. Both are present.
     expect(screen.getByTestId(ChatBottomBarTestId.Root)).toBeInTheDocument();
     expect(screen.getByTestId(ChatLiveLogTestId.Root)).toBeInTheDocument();
+  });
+
+  it("renders as the page's sole main landmark, focusable from the skip link", () => {
+    renderWithProviders(<ChatScreenHarness />);
+
+    const root = screen.getByTestId(ChatScreenTestId.Root);
+    expect(root).toHaveRole("main");
+    expect(root).toHaveAttribute("id", MAIN_CONTENT_ID);
+    expect(root).toHaveAttribute("tabIndex", "-1");
   });
 
   it("routes the composer through the bottom bar's chat dock — a send appends and dispatches", async () => {

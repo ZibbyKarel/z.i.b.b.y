@@ -91,7 +91,8 @@
     "retry": "Zkusit znovu",
     "mutationError": "Akce se nepovedla — změna se neuložila. Zkus to prosím znovu.",
     "targetProject": "Cílový projekt",
-    "back": "Zpět"
+    "back": "Zpět",
+    "skipToContent": "Přeskočit na obsah"
   },
   "topbar": {
     "commandHint": "Příkaz nebo skill (⌘K)",

@@ -365,5 +365,9 @@ export type { OrbMapCore, OrbMapFlare, OrbMapNode, OrbMapProps } from "./immersi
 export { GlassSurface, GlassSurfaceTestId } from "./immersive/GlassSurface/GlassSurface";
 export type { GlassSurfaceProps } from "./immersive/GlassSurface/GlassSurface";
 
-export { ImmersiveShell, ImmersiveShellTestId } from "./immersive/ImmersiveShell/ImmersiveShell";
+export {
+  ImmersiveShell,
+  ImmersiveShellTestId,
+  MAIN_CONTENT_ID,
+} from "./immersive/ImmersiveShell/ImmersiveShell";
 export type { ImmersiveShellProps } from "./immersive/ImmersiveShell/ImmersiveShell";

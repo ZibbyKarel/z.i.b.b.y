@@ -91,7 +91,8 @@
     "retry": "Try again",
     "mutationError": "That didn't go through — your change wasn't saved. Please try again.",
     "targetProject": "Target project",
-    "back": "Back"
+    "back": "Back",
+    "skipToContent": "Skip to content"
   },
   "topbar": {
     "commandHint": "Command or skill (⌘K)",
