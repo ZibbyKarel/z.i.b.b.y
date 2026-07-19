@@ -85,6 +85,20 @@ describe("AppShell", () => {
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
   });
 
+  // F2 (docs/plans/hud2chat-F2-archive.md): `/archiv` (the task archive) is the
+  // third route to adopt the immersive shell — reached via `ChatTasksPanel`'s own
+  // "Archiv" link, not the classic nav rail, but still fullscreen like /chat.
+  it("bypasses MainLayout (no nav rail) fullscreen on /archiv (F2)", () => {
+    pathnameRef.current = "/archiv";
+    renderWithProviders(
+      <AppShell>
+        <div>obsah archivu</div>
+      </AppShell>,
+    );
+    expect(screen.getByText("obsah archivu")).toBeInTheDocument();
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+  });
+
   // F0 (docs/plans/hud2chat-F0-immersive-shell.md): the hardcoded `/chat` check
   // became a route table (`FULLSCREEN_ROUTES` / `isFullscreenRoute`). `/settings`
   // migrated in F1 (see the dedicated test above); every other route must keep

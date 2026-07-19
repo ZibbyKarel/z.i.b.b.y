@@ -107,10 +107,11 @@ export const AGENT_TOOLS = ["read", "write", "bash", "git", "web"] as const;
  * top bar / right rail) — instead of as a page nested in the HUD chrome (D2,
  * `docs/hud2chat/DECISIONS.md`). Each HUD → Chat UI migration phase appends its
  * own route here as that section adopts the immersive shell: `/chat` (F0),
- * `/settings` (F1). F10 collapses this table entirely once the HUD branch is
- * deleted.
+ * `/settings` (F1), `/archiv` (F2 — the task archive, reached via
+ * `ChatTasksPanel`'s own "Archiv" link, not the classic nav rail). F10
+ * collapses this table entirely once the HUD branch is deleted.
  */
-export const FULLSCREEN_ROUTES = ["/chat", "/settings"] as const;
+export const FULLSCREEN_ROUTES = ["/chat", "/settings", "/archiv"] as const;
 
 /** Whether `pathname` (or one of its sub-paths) is a fullscreen route. */
 export function isFullscreenRoute(pathname: string): boolean {

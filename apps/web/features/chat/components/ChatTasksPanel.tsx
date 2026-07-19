@@ -1,8 +1,10 @@
 "use client";
 
-import { Container, Icon, Pressable, Stack, StatusDot, Typography, cn } from "@zibby/design-system";
-import { useState } from "react";
+import { Container, Icon, Stack, StatusDot, Typography } from "@zibby/design-system";
+import type { Route } from "next";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
+import { isArchived } from "../../runs/archiveStatus";
 import { useRunAvatarMap, useRunGlyphMap, useRunsQuery } from "../../runs/queries/useRunsQuery";
 import { type FeedStatus, runAvatar, runGlyph, runTitle } from "../../runs/run";
 import { RUN_STATUS_GROUPS } from "../../runs/statusGroups";
@@ -19,27 +21,10 @@ export enum ChatTasksPanelTestId {
   /** Quiet "no active tasks" hint shown when the feed has archived tasks but
    * nothing active — distinct from {@link Empty}, which covers "no tasks at all". */
   ActiveEmpty = "chat-tasks-panel-active-empty",
-  /** The "Archiv · N" toggle row below the active list (Phase 123). */
-  ArchiveToggle = "chat-tasks-panel-archive-toggle",
-  /** The scrollable column of archived cards, rendered only while expanded. */
-  ArchiveList = "chat-tasks-panel-archive-list",
-}
-
-/**
- * Statuses that read as settled — finished or otherwise done progressing on
- * their own — and so belong behind the "Archiv" toggle rather than the live
- * gutter (Phase 123). Deliberately NOT the `done`/`error`/`parked` groups of
- * {@link RUN_STATUS_GROUPS} taken wholesale: `paused-limit` sits in that
- * module's `error` bucket (a rate-limit pause reads as a failure for the runs
- * screen's grouping) but is a MID-RUN pause that auto-resumes once the limit
- * clears, so it stays in the active gutter here — the one deliberate
- * exception to "derive from RUN_STATUS_GROUPS".
- */
-const ARCHIVED_STATES = new Set<FeedStatus>(["done", "error", "interrupted", "parked"]);
-
-/** Whether `status` belongs behind the Archiv toggle rather than the active gutter. */
-function isArchived(status: FeedStatus): boolean {
-  return ARCHIVED_STATES.has(status);
+  /** The "Archiv · N" link below the active list, pointing at the `/archiv`
+   * page (F2, operator decision O4 — this used to expand the archived cards
+   * inline; it now points at the full archive page instead). */
+  ArchiveLink = "chat-tasks-panel-archive-link",
 }
 
 /**
@@ -101,8 +86,13 @@ export interface ChatTasksPanelProps {
  *
  * Phase 123: the header's "Běžící úlohy" (running tasks) title is now honest — the
  * gutter shows only {@link isArchived}-false ("active") tasks; finished/settled
- * tasks (`done`/`error`/`interrupted`/`parked`) move behind a collapsed "Archiv"
- * toggle below the active list, expanding into the same scroll region.
+ * tasks (`done`/`error`/`interrupted`/`parked`) count behind an "Archiv" entry
+ * below the active list.
+ *
+ * F2 (`docs/plans/hud2chat-F2-archive.md`, operator decision O4): that entry
+ * used to expand the archived cards inline (Phase 123); it is now a plain link
+ * to the `/archiv` page — the full master/detail archive, grouped and
+ * filterable — so the gutter stays a glance, not a second archive UI.
  */
 export function ChatTasksPanel({ selectedRunId, onSelectRun }: ChatTasksPanelProps) {
   const t = useTranslations("chat.tasks");
@@ -110,18 +100,15 @@ export function ChatTasksPanel({ selectedRunId, onSelectRun }: ChatTasksPanelPro
   const { runs } = useRunsQuery();
   const glyphById = useRunGlyphMap();
   const avatarById = useRunAvatarMap();
-  // Collapsed by default (Phase 123) — the archive is a deliberate look-back,
-  // not part of the at-a-glance gutter.
-  const [archiveOpen, setArchiveOpen] = useState(false);
 
   // Active tasks only, live first then waiting/scheduled — `Array.prototype.sort`
   // is stable, so the feed's own newest-first order is kept within each rank.
   const active = runs
     .filter((r) => !isArchived(r.status))
     .sort((a, b) => taskRank(a.status) - taskRank(b.status));
-  // Archived tasks keep the feed's own (newest-first) order untouched — there is
-  // no "live" rank to sort by once a task has settled.
-  const archived = runs.filter((r) => isArchived(r.status));
+  // Archived tasks no longer render here (F2) — only their count feeds the
+  // "Archiv · N" link out to `/archiv`.
+  const archivedCount = runs.filter((r) => isArchived(r.status)).length;
 
   const renderRow = (r: (typeof runs)[number], index: number) => (
     <ChatTaskRow
@@ -155,7 +142,7 @@ export function ChatTasksPanel({ selectedRunId, onSelectRun }: ChatTasksPanelPro
             {active.length}
           </Typography>
         </Stack>
-        {active.length === 0 && archived.length === 0 ? (
+        {active.length === 0 && archivedCount === 0 ? (
           <Typography
             mono
             data-testid={ChatTasksPanelTestId.Empty}
@@ -166,10 +153,7 @@ export function ChatTasksPanel({ selectedRunId, onSelectRun }: ChatTasksPanelPro
             {t("empty")}
           </Typography>
         ) : (
-          // Active list, the Archiv toggle, and (when expanded) the archived
-          // cards all share ONE scroll region — the archive expanding just adds
-          // rows to this column rather than opening a second scroller, so the
-          // gutter's `maxHeight` band is never exceeded (Phase 123).
+          // Active list, then the Archiv link — one scroll region (Phase 123).
           <Container maxHeight="calc(100vh - 220px)" overflowY="auto">
             <Stack gap="150">
               {active.length > 0 ? (
@@ -187,39 +171,18 @@ export function ChatTasksPanel({ selectedRunId, onSelectRun }: ChatTasksPanelPro
                   {t("activeEmpty")}
                 </Typography>
               )}
-              {archived.length > 0 && (
-                <Stack gap="100">
-                  <Stack grow>
-                    <Pressable
-                      aria-expanded={archiveOpen}
-                      data-testid={ChatTasksPanelTestId.ArchiveToggle}
-                      onClick={() => setArchiveOpen((v) => !v)}
-                    >
-                      <Stack align="center" direction="row" gap="75" justify="between">
-                        <Stack align="center" direction="row" gap="75">
-                          <Icon name="doc" size="xs" tone="faint" />
-                          <Typography mono size="xs" type="note" variant="tertiary">
-                            {t("archive")} · {archived.length}
-                          </Typography>
-                        </Stack>
-                        <Icon
-                          className={cn(
-                            "transition-transform duration-150",
-                            archiveOpen && "rotate-90",
-                          )}
-                          name="chevron"
-                          size="xs"
-                          tone="faint"
-                        />
-                      </Stack>
-                    </Pressable>
-                  </Stack>
-                  {archiveOpen && (
-                    <Stack data-testid={ChatTasksPanelTestId.ArchiveList} gap="100">
-                      {archived.map(renderRow)}
+              {archivedCount > 0 && (
+                <Link data-testid={ChatTasksPanelTestId.ArchiveLink} href={"/archiv" as Route}>
+                  <Stack align="center" direction="row" gap="75" justify="between">
+                    <Stack align="center" direction="row" gap="75">
+                      <Icon name="doc" size="xs" tone="faint" />
+                      <Typography mono size="xs" type="note" variant="tertiary">
+                        {t("archive")} · {archivedCount}
+                      </Typography>
                     </Stack>
-                  )}
-                </Stack>
+                    <Icon name="arrow" size="xs" tone="faint" />
+                  </Stack>
+                </Link>
               )}
             </Stack>
           </Container>

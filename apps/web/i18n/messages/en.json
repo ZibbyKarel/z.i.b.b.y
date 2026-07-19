@@ -1908,5 +1908,31 @@
       "done": "done",
       "failed": "failed"
     }
+  },
+  "archive": {
+    "title": "Task archive",
+    "subtitle": "Everything ZIBBY finished, across every subsystem",
+    "searchPlaceholder": "Search the archive…",
+    "searchAriaLabel": "Search the archive",
+    "group": {
+      "subsystem": "Subsystem",
+      "time": "Time"
+    },
+    "time": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "week": "This week",
+      "older": "Older"
+    },
+    "noSubsystem": "No subsystem",
+    "filter": {
+      "all": "All subsystems",
+      "multiple": "{n} subsystems",
+      "noSubsystem": "No subsystem"
+    },
+    "emptyFilter": "Nothing found.",
+    "emptyTitle": "The archive is still empty",
+    "emptyDescription": "Once ZIBBY finishes something, it will show up here.",
+    "selectHint": "Select a task on the left to see its detail."
   }
 }

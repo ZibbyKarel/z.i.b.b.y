@@ -9,13 +9,12 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { EmptyState } from "../../../../components/EmptyState/EmptyState";
 import { relativeTime } from "../../../../utils/time";
-import { useChainsQuery } from "../../../chains";
-import { usePipelinesQuery } from "../../../pipelines";
 import { useRunGlyphMap, useRunsQuery } from "../../../runs";
 import { ChainStepsPanel } from "../../../runs/components/ChainStepsPanel";
 import { PipelineStageTimeline } from "../../../runs/components/PipelineStageTimeline";
 import { TaskCard } from "../../../runs/components/TaskCard";
 import { type RunView, runGlyph } from "../../../runs/run";
+import { runSubsystemId, useOwnerSubsystemMaps } from "../../useOwnerSubsystem";
 
 export enum AktivitaTabTestId {
   Root = "aktivita-tab-root",
@@ -84,30 +83,20 @@ export function AktivitaTab({ subsystem }: AktivitaTabProps) {
   const tRuns = useTranslations("runs");
   const router = useRouter();
 
-  const { data: pipelines = [] } = usePipelinesQuery();
-  const { data: chains = [] } = useChainsQuery();
   const { runs } = useRunsQuery();
   const glyphById = useRunGlyphMap();
+  const ownerMaps = useOwnerSubsystemMaps();
   // Render-stable "now" for the coarse relative "started" label (Date.now() in
   // render is impure — mirrors the runs Screen's own `now` state).
   const [now] = useState(() => Date.now());
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
 
-  const ownedPipelineIds = new Set(
-    pipelines.filter((p) => p.ownerSubsystem === subsystem.id).map((p) => p.id),
-  );
-  const ownedChainIds = new Set(
-    chains.filter((c) => c.ownerSubsystem === subsystem.id).map((c) => c.id),
-  );
-
   // `runs` is already newest-first (the unified feed's own order — see
   // `useRunsQuery`'s header comment); only filtering + capping happens here.
+  // The join itself (F2) now lives in `useOwnerSubsystemMaps`/`runSubsystemId`,
+  // shared with the `/archiv` page's subsystem grouping.
   const scoped = runs
-    .filter(
-      (r) =>
-        (r.kind === "pipeline" && ownedPipelineIds.has(r.owner)) ||
-        (r.kind === "chain" && ownedChainIds.has(r.owner)),
-    )
+    .filter((r) => runSubsystemId(r, ownerMaps) === subsystem.id)
     .slice(0, MAX_RUNS);
 
   const ago = (n: number, unit: string) =>

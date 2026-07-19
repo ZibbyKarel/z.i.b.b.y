@@ -111,6 +111,9 @@ export type { KbdProps } from "./components/Kbd/Kbd";
 export { SearchBar, SearchBarTestId } from "./components/SearchBar/SearchBar";
 export type { SearchBarProps } from "./components/SearchBar/SearchBar";
 
+export { SearchInput, SearchInputTestId } from "./components/SearchInput/SearchInput";
+export type { SearchInputProps } from "./components/SearchInput/SearchInput";
+
 export { SearchMenu, SearchMenuTestId } from "./components/SearchMenu/SearchMenu";
 export type {
   SearchMenuItem,

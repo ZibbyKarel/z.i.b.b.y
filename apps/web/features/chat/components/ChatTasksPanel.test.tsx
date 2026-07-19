@@ -91,8 +91,8 @@ describe("ChatTasksPanel (Phase 57, selection wiring Phase 100)", () => {
     expect(panels[0]?.style.animationDelay).not.toBe(panels[1]?.style.animationDelay);
   });
 
-  describe("Phase 123: archive of finished tasks", () => {
-    it("moves finished tasks (done/error/interrupted/parked) behind the collapsed Archiv toggle", () => {
+  describe("F2: Archiv link (was Phase 123's collapsed inline toggle)", () => {
+    it("excludes finished tasks (done/error/interrupted/parked) from the active list/count, and links to /archiv with their count", () => {
       runsMock.mockReturnValue({
         runs: [
           run({ runId: "run_live", title: "Live task", status: "running" }),
@@ -109,28 +109,12 @@ describe("ChatTasksPanel (Phase 57, selection wiring Phase 100)", () => {
       const list = screen.getByTestId(ChatTasksPanelTestId.List);
       expect(within(list).getAllByTestId(ChatTaskRowTestId.Row)).toHaveLength(1);
 
-      // Collapsed by default — the toggle shows the archived count, but no archived
-      // rows are rendered yet.
-      const toggle = screen.getByTestId(ChatTasksPanelTestId.ArchiveToggle);
-      expect(toggle).toHaveAttribute("aria-expanded", "false");
-      expect(toggle).toHaveTextContent("4");
-      expect(screen.queryByTestId(ChatTasksPanelTestId.ArchiveList)).not.toBeInTheDocument();
+      // No archived cards render in the gutter at all any more — just a link
+      // out to the full archive page, carrying the count.
       expect(screen.queryByText("Done task")).not.toBeInTheDocument();
-
-      // Expanding reveals all four archived cards.
-      fireEvent.click(toggle);
-      expect(toggle).toHaveAttribute("aria-expanded", "true");
-      const archiveList = screen.getByTestId(ChatTasksPanelTestId.ArchiveList);
-      expect(within(archiveList).getAllByTestId(ChatTaskRowTestId.Row)).toHaveLength(4);
-      expect(within(archiveList).getByText("Done task")).toBeInTheDocument();
-      expect(within(archiveList).getByText("Errored task")).toBeInTheDocument();
-      expect(within(archiveList).getByText("Interrupted task")).toBeInTheDocument();
-      expect(within(archiveList).getByText("Parked task")).toBeInTheDocument();
-
-      // Collapses back on a second click.
-      fireEvent.click(toggle);
-      expect(toggle).toHaveAttribute("aria-expanded", "false");
-      expect(screen.queryByTestId(ChatTasksPanelTestId.ArchiveList)).not.toBeInTheDocument();
+      const link = screen.getByTestId(ChatTasksPanelTestId.ArchiveLink);
+      expect(link).toHaveAttribute("href", "/archiv");
+      expect(link).toHaveTextContent("4");
     });
 
     it("keeps a paused-limit run ACTIVE — it auto-resumes mid-run, so it is not archived", () => {
@@ -141,19 +125,19 @@ describe("ChatTasksPanel (Phase 57, selection wiring Phase 100)", () => {
 
       const list = screen.getByTestId(ChatTasksPanelTestId.List);
       expect(within(list).getByText("Rate-limited task")).toBeInTheDocument();
-      expect(screen.queryByTestId(ChatTasksPanelTestId.ArchiveToggle)).not.toBeInTheDocument();
+      expect(screen.queryByTestId(ChatTasksPanelTestId.ArchiveLink)).not.toBeInTheDocument();
     });
 
-    it("does not render the Archiv toggle when nothing is archived", () => {
+    it("does not render the Archiv link when nothing is archived", () => {
       runsMock.mockReturnValue({
         runs: [run({ runId: "run_a", title: "Task A", status: "running" })],
       });
       render(<ChatTasksPanel onSelectRun={vi.fn()} selectedRunId={null} />);
 
-      expect(screen.queryByTestId(ChatTasksPanelTestId.ArchiveToggle)).not.toBeInTheDocument();
+      expect(screen.queryByTestId(ChatTasksPanelTestId.ArchiveLink)).not.toBeInTheDocument();
     });
 
-    it("shows the quiet active-empty hint plus the Archiv toggle when everything is archived", () => {
+    it("shows the quiet active-empty hint plus the Archiv link when everything is archived", () => {
       runsMock.mockReturnValue({
         runs: [run({ runId: "run_done", title: "Done task", status: "done" })],
       });
@@ -161,34 +145,9 @@ describe("ChatTasksPanel (Phase 57, selection wiring Phase 100)", () => {
 
       expect(screen.getByTestId(ChatTasksPanelTestId.ActiveEmpty)).toBeInTheDocument();
       expect(screen.queryByTestId(ChatTasksPanelTestId.List)).not.toBeInTheDocument();
-      expect(screen.getByTestId(ChatTasksPanelTestId.ArchiveToggle)).toBeInTheDocument();
+      expect(screen.getByTestId(ChatTasksPanelTestId.ArchiveLink)).toBeInTheDocument();
       // The overall empty hint only covers "no tasks at all".
       expect(screen.queryByTestId(ChatTasksPanelTestId.Empty)).not.toBeInTheDocument();
-    });
-
-    it("selection parity: clicking an archived card fires onSelectRun and reads selected identically", () => {
-      const onSelectRun = vi.fn();
-      runsMock.mockReturnValue({
-        runs: [run({ runId: "run_done", title: "Done task", status: "done" })],
-      });
-      const { rerender } = render(
-        <ChatTasksPanel onSelectRun={onSelectRun} selectedRunId={null} />,
-      );
-
-      fireEvent.click(screen.getByTestId(ChatTasksPanelTestId.ArchiveToggle));
-      const archiveList = screen.getByTestId(ChatTasksPanelTestId.ArchiveList);
-      const row = within(archiveList).getByTestId(ChatTaskRowTestId.Row);
-      fireEvent.click(row);
-      expect(onSelectRun).toHaveBeenCalledWith("run_done");
-
-      // `rerender` reconciles the same component instance — the archive stays
-      // expanded (local `archiveOpen` state isn't reset by a prop change), so the
-      // now-selected archived card is visible without clicking the toggle again.
-      rerender(<ChatTasksPanel onSelectRun={onSelectRun} selectedRunId="run_done" />);
-      const selectedRow = within(screen.getByTestId(ChatTasksPanelTestId.ArchiveList)).getByTestId(
-        ChatTaskRowTestId.Row,
-      );
-      expect(selectedRow.className).toContain("border-accent");
     });
   });
 
