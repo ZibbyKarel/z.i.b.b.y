@@ -21,7 +21,7 @@ vi.mock("../mutations/useSendChatMessageMutation", () => ({
 }));
 // `CommandLine` (the chat composer inside `ChatDock`) reads the agent/pipeline
 // catalogs for its `@`-mention picker; the ⌘K palette reads the same two plus
-// gates/memory — stub every one (with one fixture each, reused by the palette
+// memory — stub every one (with one fixture each, reused by the palette
 // wiring tests below) so this suite never hits the network.
 vi.mock("../../agents/queries/useAgentsQuery", () => ({
   useAgentsQuery: () => ({ data: [{ id: "builder", name: "Builder", glyph: "hammer" }] }),
@@ -77,7 +77,7 @@ vi.mock("../../limits/queries/useLimitsQuery", () => ({
 vi.mock("../../tasks/mutations/useUploadTaskAttachmentsMutation", () => ({
   useUploadTaskAttachmentsMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
-// The top bar's status pill + the ⌘K palette's gate results read the approvals feed.
+// The top bar's status pill reads the approvals feed.
 vi.mock("../../approvals/queries/useApprovalsQuery", () => ({
   useApprovalsQuery: () => ({
     data: [
@@ -290,17 +290,6 @@ describe("ChatScreen", () => {
       // Nothing is injected into the composer.
       expect(screen.queryByTestId("command-line-target-chip")).not.toBeInTheDocument();
       expect(screen.getByTestId(CommandLineTestId.Input)).toHaveValue("");
-    });
-
-    it("selecting a gate in the palette navigates, without closing the page", async () => {
-      const user = userEvent.setup();
-      renderWithProviders(<ChatScreenHarness />);
-
-      await user.click(screen.getByTestId(SearchBarTestId.Root));
-      await user.type(screen.getByTestId(SearchMenuTestId.Input), "purchase");
-      await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-gates-ap1`));
-
-      expect(push).toHaveBeenCalledWith("/gates");
     });
   });
 });

@@ -10,7 +10,6 @@ import {
 } from "@zibby/design-system";
 import { useAgentsQuery } from "../../agents";
 import { usePipelinesQuery } from "../../pipelines";
-import { useApprovalsQuery } from "../../approvals";
 import { useMemorySearchQuery } from "../../memory/queries";
 import type { ChatDetailTarget } from "./ChatDetailDialog";
 
@@ -28,11 +27,11 @@ export interface ChatPaletteProps {
    */
   onDetailSelect: (detail: ChatDetailTarget) => void;
   /**
-   * Navigate away to a gate/note and close the whole overlay — the sanctioned
-   * fallback (Fáze 14.5) until the gates/memory screens have a panel-first view
-   * this palette could open in place instead. `/gates` has no per-item deep link
-   * today, and the memory screen selects a note via client state, not a route
-   * (no `/memory?note=` exists) — both items navigate to the screen itself.
+   * Navigate away to a note and close the whole overlay — the sanctioned
+   * fallback (Fáze 14.5) until the memory screen has a panel-first view this
+   * palette could open in place instead. The memory screen selects a note via
+   * client state, not a route (no `/memory?note=` exists), so the item
+   * navigates to the screen itself.
    */
   onNavigate: (href: Route) => void;
   /** Close just the palette (Escape, backdrop click, or after a mention pick). */
@@ -61,8 +60,8 @@ function matchesQuery(query: string, ...fields: Array<string | undefined>): bool
 
 /**
  * The chat's quick-switcher (⌘K) — a centered `SearchMenu` overlaid on top of the
- * conversation (Fáze 14.5), never a navigation away from it except for the two
- * sections that have nowhere else to render yet (gates, memory — see
+ * conversation (Fáze 14.5), never a navigation away from it except for the one
+ * section that has nowhere else to render yet (memory — see
  * {@link ChatPaletteProps.onNavigate}). Picking an agent/pipeline opens its
  * read-only DETAIL in a dialog (Phase 58, see {@link ChatPaletteProps.onDetailSelect})
  * rather than injecting an @mention target into the composer — that inline job now
@@ -86,7 +85,6 @@ export function ChatPalette({
 
   const { data: agents = [], isPending: agentsLoading } = useAgentsQuery();
   const { data: pipelines = [], isPending: pipelinesLoading } = usePipelinesQuery();
-  const { data: approvals = [], isPending: approvalsLoading } = useApprovalsQuery();
   const hasQuery = query.trim().length > 0;
   const { data: memoryHits, isFetching: memoryFetching } = useMemorySearchQuery(query);
 
@@ -107,18 +105,6 @@ export function ChatPalette({
     items: pipelines
       .filter((p) => matchesQuery(query, p.name, p.id))
       .map((p) => ({ id: p.id, title: p.name, glyph: "flow" as IconName })),
-  };
-  const gatesSection: SearchMenuSection = {
-    id: "gates",
-    label: t("sections.gates"),
-    items: approvals
-      .filter((a) => matchesQuery(query, a.skill, a.action, a.text ?? a.detail))
-      .map((a) => ({
-        id: a.id,
-        title: `${a.skill} · ${a.action}`,
-        subtitle: a.text ?? a.detail,
-        glyph: "wait" as IconName,
-      })),
   };
   const memorySection: SearchMenuSection = {
     id: "memory",
@@ -156,8 +142,7 @@ export function ChatPalette({
       : [],
   };
 
-  const loading =
-    agentsLoading || pipelinesLoading || approvalsLoading || (hasQuery && memoryFetching);
+  const loading = agentsLoading || pipelinesLoading || (hasQuery && memoryFetching);
 
   const selectItem = (sectionId: string, itemId: string) => {
     if (sectionId === "agents") {
@@ -174,10 +159,6 @@ export function ChatPalette({
         onDetailSelect({ kind: "pipeline", pipeline });
         onClose();
       }
-      return;
-    }
-    if (sectionId === "gates") {
-      onNavigate("/gates");
       return;
     }
     if (sectionId === "memory") {
@@ -228,13 +209,7 @@ export function ChatPalette({
               onValueChange={setQuery}
               open={menuOpen}
               placeholder={t("placeholder")}
-              sections={[
-                agentSection,
-                pipelineSection,
-                gatesSection,
-                briefingSection,
-                memorySection,
-              ]}
+              sections={[agentSection, pipelineSection, briefingSection, memorySection]}
               value={query}
             />
           </Container>

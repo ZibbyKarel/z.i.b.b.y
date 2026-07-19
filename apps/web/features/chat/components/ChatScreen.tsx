@@ -110,7 +110,7 @@ export function ChatScreen({
   }, []);
   const handlePaletteNavigate = useCallback(
     (href: Route) => {
-      // Gates/memory have nowhere to render inline yet — navigating there leaves
+      // Memory has nowhere to render inline yet — navigating there leaves
       // `/chat`, same as any other nav-rail jump.
       setPaletteOpen(false);
       router.push(href);

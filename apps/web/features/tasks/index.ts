@@ -1,5 +1,4 @@
 export { NewTaskProvider, useNewTask, NEW_TASK_SHORTCUT } from "./TaskContext";
-export { NewTaskButton } from "./components/NewTaskButton";
 export { NewTaskDialog } from "./components/NewTaskDialog";
 export {
   TaskCommandLine,

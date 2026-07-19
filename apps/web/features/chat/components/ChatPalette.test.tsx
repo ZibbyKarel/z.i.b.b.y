@@ -19,25 +19,6 @@ vi.mock("../../pipelines/queries/usePipelinesQuery", () => ({
   usePipelinesQuery: () => ({ data: [{ id: "delivery", name: "Delivery" }], isPending: false }),
   getPipelinesQueryKey: () => ["pipelines"],
 }));
-vi.mock("../../approvals/queries/useApprovalsQuery", () => ({
-  useApprovalsQuery: () => ({
-    data: [
-      {
-        id: "ap1",
-        runId: "r1",
-        kind: "agent",
-        skill: "writer",
-        action: "purchase",
-        detail: "buy the domain",
-        risk: "low",
-        status: "pending",
-        requestedAt: "2026-06-12T07:00:00.000Z",
-      },
-    ],
-    isPending: false,
-  }),
-  getApprovalsQueryKey: () => ["approvals"],
-}));
 vi.mock("../../memory/queries/useMemorySearchQuery", () => ({
   useMemorySearchQuery: (q: string) => ({
     data: q.trim()
@@ -65,7 +46,7 @@ describe("ChatPalette (14.5)", () => {
     expect(screen.queryByTestId(`${SearchMenuTestId.Item}-agents-builder`)).not.toBeInTheDocument();
   });
 
-  it("filters agents, pipelines and gates by the typed query", async () => {
+  it("filters agents and pipelines by the typed query", async () => {
     const user = userEvent.setup();
     renderWithProviders(
       <ChatPalette
@@ -125,24 +106,6 @@ describe("ChatPalette (14.5)", () => {
       kind: "pipeline",
       pipeline: { id: "delivery", name: "Delivery" },
     });
-  });
-
-  it("selecting a gate navigates to /gates", async () => {
-    const onNavigate = vi.fn();
-    const user = userEvent.setup();
-    renderWithProviders(
-      <ChatPalette
-        briefingPending={false}
-        onClose={vi.fn()}
-        onDetailSelect={vi.fn()}
-        onGenerateBriefing={vi.fn()}
-        onNavigate={onNavigate}
-      />,
-    );
-    await user.type(screen.getByTestId(SearchMenuTestId.Input), "purchase");
-    expect(screen.getByTestId(`${SearchMenuTestId.Item}-gates-ap1`)).toBeInTheDocument();
-    await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-gates-ap1`));
-    expect(onNavigate).toHaveBeenCalledWith("/gates");
   });
 
   it("selecting a memory hit navigates to /memory", async () => {

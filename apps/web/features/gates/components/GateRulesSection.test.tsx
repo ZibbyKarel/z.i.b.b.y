@@ -62,8 +62,9 @@ describe("GateRulesSection — delete confirm dialog (Phase 18.1)", () => {
 });
 
 // Phase 87: the `ownerSubsystem` filter prop is the Gates tab's third call site —
-// `/gates` and Settings (both call sites above) never pass it, so this is purely
-// additive behavior gated behind an opt-in prop.
+// Settings (the other call site above; F10 deleted the standalone `/gates` page
+// that used to be the third, O8) never passes it, so this is purely additive
+// behavior gated behind an opt-in prop.
 describe("GateRulesSection — ownerSubsystem filter + auto-tag (Phase 87)", () => {
   const forgeRule: GlobalGateRule = {
     id: "gr-forge",
@@ -135,8 +136,8 @@ describe("GateRulesSection — ownerSubsystem filter + auto-tag (Phase 87)", () 
 
   it("preserves an existing tag on edit, even though the edit form has no tag field", async () => {
     render(<GateRulesSection />);
-    // Editing the untagged call site's own `forgeRule` (via the plain `/gates`
-    // page, no `ownerSubsystem` prop) must not drop its existing tag.
+    // Editing the untagged call site's own `forgeRule` (no `ownerSubsystem`
+    // prop) must not drop its existing tag.
     const editButtons = screen.getAllByRole("button", { name: "Upravit" });
     await userEvent.click(editButtons[0]!);
     await userEvent.click(screen.getByRole("button", { name: "Uložit pravidlo" }));

@@ -38,8 +38,9 @@ export interface GateRulesSectionProps {
    * Restricts the visible catalog to rules tagged for this subsystem, and
    * auto-tags every rule CREATED from this context with it (Phase 87 Gates
    * tab, its third call site). Absent = today's behavior exactly — the full
-   * catalog, no auto-tag — so the `/gates` page and the Settings tab (this
-   * component's first two call sites) are unaffected by this prop's existence.
+   * catalog, no auto-tag — so the Settings tab (this component's other call
+   * site; F10 deleted the standalone `/gates` page, O8) is unaffected by this
+   * prop's existence.
    * Reorder (whose order IS the evaluation order across the WHOLE catalog) is
    * disabled while filtered, same reasoning as the existing decision filter.
    */
@@ -50,8 +51,8 @@ export interface GateRulesSectionProps {
    * {@link SystemFloorPanel}). Defaults to `"hud"`, so the one consumer that
    * must stay pixel-identical — `GatesTab` inside the Chat UI's subsystem
    * drawer (Phase 87, F7 seam) — is unaffected by this prop's existence. The
-   * two migrated pages (`/gates`, F7; the Settings "Pravidla schvalování" tab,
-   * F1) opt in with `surface="glass"`.
+   * Settings "Pravidla schvalování" tab (F1) opts in with `surface="glass"`
+   * (the standalone `/gates` page did too, F7, until F10 deleted it, O8).
    */
   surface?: "hud" | "glass";
 }
@@ -59,8 +60,10 @@ export interface GateRulesSectionProps {
 /**
  * The global gate-rule catalog body — the editable list of approval rules with the
  * locked system floor above it. Content only (no page chrome), so it serves the
- * standalone `/gates` page, the "Pravidla schvalování" tab in Settings, AND (Phase 87)
- * a subsystem's Gates tab via `ownerSubsystem`. Owns its own data + modal state;
+ * "Pravidla schvalování" tab in Settings AND (Phase 87) a subsystem's Gates tab
+ * via `ownerSubsystem` (the standalone `/gates` page was a third consumer until
+ * F10 deleted it, O8 — `GateRulesSection` and `SystemFloorPanel` themselves
+ * stayed). Owns its own data + modal state;
  * `useGateRulesQuery` only fires once this mounts, so the Settings tab loads gate
  * rules lazily (the TabPanel unmounts inactive panels).
  */

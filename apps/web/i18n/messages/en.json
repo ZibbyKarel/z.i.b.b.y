@@ -1718,7 +1718,7 @@
       "label": "Tools"
     },
     "palette": {
-      "placeholder": "Search agents, pipelines, gates or notes…",
+      "placeholder": "Search agents, pipelines or notes…",
       "ariaLabel": "Quick-switch across the system",
       "empty": "Nothing found",
       "openAria": "Open quick switcher",

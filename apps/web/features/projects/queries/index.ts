@@ -7,10 +7,7 @@ export {
   useProjectLocalStateQuery,
 } from "./useProjectLocalStateQuery";
 export { getProjectProfileQueryKey, useProjectProfileQuery } from "./useProjectProfileQuery";
-export {
-  getResolvedProjectQueryKey,
-  useResolvedProjectQuery,
-} from "./useResolvedProjectQuery";
+export { getResolvedProjectQueryKey, useResolvedProjectQuery } from "./useResolvedProjectQuery";
 export { getProjectStandupQueryKey, useProjectStandupQuery } from "./useProjectStandupQuery";
 export {
   getProjectIntegrationActivityQueryKey,
@@ -19,7 +16,6 @@ export {
 } from "./useProjectIntegrationActivityQuery";
 export { getProjectPrsQueryKey, useProjectPrsQuery } from "./useProjectPrsQuery";
 export { getProjectsQueryKey, useProjectsQuery } from "./useProjectsQuery";
-export { getProjectsSearchQueryKey, useProjectsSearchQuery } from "./useProjectsSearchQuery";
 export {
   getProjectCategoriesQueryKey,
   useProjectCategoriesQuery,

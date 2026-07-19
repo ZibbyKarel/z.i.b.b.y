@@ -1718,7 +1718,7 @@
       "label": "Nástroje"
     },
     "palette": {
-      "placeholder": "Hledat agenta, pipeline, gate nebo poznámku…",
+      "placeholder": "Hledat agenta, pipeline nebo poznámku…",
       "ariaLabel": "Rychlé přepínání po systému",
       "empty": "Nic nenalezeno",
       "openAria": "Otevřít rychlé přepínání",
