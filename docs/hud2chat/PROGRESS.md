@@ -18,7 +18,8 @@ nothing pushed.
 | F6b | EntityHero dedup (D13)     | ✅     | 9df0f1e8 | `showIdentity` prop, default `true`; two opt-outs; other two immune via `children`     |
 | F7  | Memory + gates             | ✅     | 61eb605b | `GateRulesSection` seam resolved with D7's `surface` pattern; `/gates` stays off dock  |
 | F8a | Briefing as a chat message | ✅     | 74b4f7f2 | optional `briefing` payload on an assistant turn; no third role; compat proven         |
-| F8b | Status line                | 🔩     | —        | in flight                                                                              |
+| F8b | Status line                | ✅     | 4d5b019a | real health in the pill; subsystem dots + counts deliberately declined                 |
+| —   | DS typecheck gate repair   | ✅     | b33e8db5 | TS6059 pre-existing on `main`, masked by the rtk filter for the whole arc              |
 | F8c | Overview + runs deletion   | ⬜     | —        | blocked on D16 + D18 relocations and the D17 shim                                      |
 | F9  | Chat reachability sweep    | ⬜     | —        |                                                                                        |
 | F10 | Old shell deletion         | ⬜     | —        |                                                                                        |
@@ -90,6 +91,10 @@ conversions — they are F8's job, and both carry inbound-link blockers (D16, D1
 - **2026-07-19** — F3 landed (`f01c2395`). Eight pages migrated cleanly; `/skills` and
   `/skills/seo` live-verified (actions in the header, 1400px bound held, back arrow href
   confirmed `/skills`, not `/chat`). The subagent surfaced two real recipe gaps, now folded
+  **⚠️ CORRECTION (F8b, 2026-07-19): the paragraph below was WRONG — see the F8b entry.** The
+  F3 subagent's TS6059 report was accurate; my "re-ran it directly, it's clean" rebuttal was
+  itself the masked result. The lesson stands but points the other way: verify with exit codes,
+  and do not overrule a subagent on the strength of a command that lies.
   into the plan as steps 8 and 9: detail pages carried a manual ghost "Zpět" button that
   `ImmersivePage`'s backSlot subsumes (removed in all four), and step 8's "move the route
   from the HUD-chrome test case" assumed a membership that did not exist. **One subagent
@@ -173,3 +178,31 @@ conversions — they are F8's job, and both carry inbound-link blockers (D16, D1
   New trap recorded as **D18**: `BriefingMessageCard` imports its row sub-components from
   `BriefingCard`, so `features/overview/` now has a _second_ Chat-UI consumer. F8c must
   relocate before deleting, or it breaks what F8a just built.
+- **2026-07-19** — F8b landed (`4d5b019a`), plus a tooling fix that matters more than the
+  phase (`b33e8db5`). **The subagent caught me being wrong.** It reported
+  `tsc -p libs/design-system` failing with TS6059 — the same claim I had overruled back in F3
+  and written up in this log as a false claim to be wary of. Checking it properly this time,
+  with exit codes: the DS typecheck genuinely fails and has failed since before this branch
+  (`main`'s tsconfig has the same `rootDir: src` + `include: vitest.setup.ts` conflict). The
+  reason nobody saw it is that the filtered command **prints "TypeScript: No errors found"
+  while exiting 2** — the text says clean, the status says broken. Every DS typecheck in this
+  arc was masked, including the ones I ran to check subagents. `apps/web`, `apps/api` and
+  `libs/contracts` re-verified raw and are genuinely clean, so no shipped code was affected;
+  the F3 entry above is corrected in place. `rootDir` was vestigial (no build script, one
+  tsconfig), so dropping it makes the gate pass honestly and cover more files than before.
+  **Standing rule from here: check `$?`, not the words.**
+  On the phase itself: health now reaches the pill through the same
+  `deriveHealthPresentation` the HUD uses, so the two cannot drift. The subagent declined
+  items 2 and 3 with better reasoning than my plan's — it checked and found `health.subsystems`
+  is a _different_ taxonomy from the orb map's domains (so my "already covered" premise was
+  wrong), then left them out anyway on the stronger ground that four permanently-green dots
+  are a bad trade in a 56px bar. It also stated plainly that the flyout hover paths were not
+  live-verifiable because live data is all-idle, rather than claiming a pass.
+- **2026-07-19** — F8c scoped properly and it is **not a folder deletion**. Grepping every
+  external import of `features/overview/` turns up seven consumer files outside the page, and
+  most of them survive: `ChatLiveLog` (activity), `StatusPill` (health, added F8b),
+  `BriefingMessageCard` (briefing rows, added F8a), `ProjectIntegrationActivityPanel`
+  (`ActivityFeed`), `runEvents` (activity + briefing query keys), `useNotifications`
+  (`useBriefingQuery`), and `RightRail` (dies in F10 anyway). The folder is really three shared
+  modules — activity, briefing and health — with a page sitting on top. F8c dissolves the
+  module first, then deletes the page (→ D19).

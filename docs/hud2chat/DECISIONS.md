@@ -180,3 +180,25 @@ Chat-UI consumer beyond the activity module of D16. F8c must relocate these sub-
 the briefing card inside the chat transcript, i.e. the very thing F8a just built. Note the two
 components share `BriefingCardTestId`; they never co-render today (`/overview` vs `/chat`), but
 once `BriefingCard` is gone the enum should move with the rows.
+
+**D19 — `features/overview/` is a shared module with a page on top; F8c dissolves it, it does
+not delete it.** D16 and D18 each found one surviving consumer; a full grep found **seven**
+files outside the folder importing from it, and only `RightRail` (which dies in F10) is
+disposable. The survivors are `chat/ChatLiveLog` (`activityLog`, activity queries),
+`chat/StatusPill` (`healthPresentation`, added in F8b), `chat/BriefingMessageCard` (briefing
+row sub-components, added in F8a), `projects/ProjectIntegrationActivityPanel` (`ActivityFeed`),
+`runs/runEvents` (activity + briefing query keys) and `notifications/useNotifications`
+(`useBriefingQuery`). Three of those are Chat UI itself — the destination design.
+
+So the folder is really three shared modules — **activity**, **briefing** and **health** —
+with `Screen.tsx` and its panels sitting on top. F8c's order is therefore: relocate the three
+modules to their own homes, repoint every import, and only then delete the page and its
+panels. A `git rm -r features/overview` at any point breaks Chat UI.
+
+**D20 — Verify with exit codes, not with output text.** The `rtk` filter prints
+`TypeScript: No errors found` while passing a non-zero exit status through, so a failing
+typecheck reads as a pass. This masked a real pre-existing `libs/design-system` failure
+(TS6059) for the entire arc, and in F3 it led me to overrule a subagent who was right —
+that log entry is corrected in place. Run tooling raw (`rtk proxy npx tsc -p <proj> --noEmit`)
+and check `$?`. Fixed in `b33e8db5`, but the verification habit is the durable part: an
+orchestrator who checks subagents with a lying command is worse than one who does not check.
