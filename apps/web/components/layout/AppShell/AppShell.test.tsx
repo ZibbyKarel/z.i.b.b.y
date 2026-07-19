@@ -71,4 +71,21 @@ describe("AppShell", () => {
     );
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
   });
+
+  // F0 (docs/plans/hud2chat-F0-immersive-shell.md): the hardcoded `/chat` check
+  // became a route table (`FULLSCREEN_ROUTES` / `isFullscreenRoute`), but no
+  // route migrates in this phase — every existing route bar `/chat` must keep
+  // rendering the HUD chrome exactly as before.
+  it.each(["/overview", "/runs", "/agents", "/pipelines", "/settings", "/memory"])(
+    "still renders the HUD chrome (nav rail) on %s — unmigrated in F0",
+    (route) => {
+      pathnameRef.current = route;
+      renderWithProviders(
+        <AppShell>
+          <div>obsah dashboardu</div>
+        </AppShell>,
+      );
+      expect(screen.getByRole("navigation")).toBeInTheDocument();
+    },
+  );
 });

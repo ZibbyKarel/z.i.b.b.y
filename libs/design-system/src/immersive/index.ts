@@ -61,15 +61,16 @@ export { arcPath } from "./HandoffFlare/arcPath";
 // OrbMap — composes the full map
 // ---------------------------------------------------------------------------
 export { ORB_MAP_CORE_ID, OrbMap, OrbMapTestId } from "./OrbMap/OrbMap";
-export type {
-  OrbMapCore,
-  OrbMapFlare,
-  OrbMapNode,
-  OrbMapProps,
-} from "./OrbMap/OrbMap";
+export type { OrbMapCore, OrbMapFlare, OrbMapNode, OrbMapProps } from "./OrbMap/OrbMap";
 
 // ---------------------------------------------------------------------------
 // GlassSurface — Velín-D liquid-glass chrome primitive (no orb-map dependency)
 // ---------------------------------------------------------------------------
 export { GlassSurface, GlassSurfaceTestId } from "./GlassSurface/GlassSurface";
 export type { GlassSurfaceProps } from "./GlassSurface/GlassSurface";
+
+// ---------------------------------------------------------------------------
+// ImmersiveShell — reusable full-page chrome for migrated HUD sections (F0)
+// ---------------------------------------------------------------------------
+export { ImmersiveShell, ImmersiveShellTestId } from "./ImmersiveShell/ImmersiveShell";
+export type { ImmersiveShellProps } from "./ImmersiveShell/ImmersiveShell";

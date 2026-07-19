@@ -7,7 +7,13 @@ import { Container, type NavItem } from "@zibby/design-system";
 import { MainLayout } from "../MainLayout/MainLayout";
 import { LimitsRings } from "../LimitsRings/LimitsRings";
 import { RightRail } from "../RightRail/RightRail";
-import { NAV_ITEMS, type NavId, ROUTE_ONLY_ITEMS, SETTINGS_ITEM } from "../../../state/config";
+import {
+  NAV_ITEMS,
+  type NavId,
+  ROUTE_ONLY_ITEMS,
+  SETTINGS_ITEM,
+  isFullscreenRoute,
+} from "../../../state/config";
 import { CatalogProvider } from "../../../state/store";
 import { NewTaskButton, NewTaskProvider } from "../../../features/tasks";
 import { ChatButton, ChatProvider } from "../../../features/chat";
@@ -39,12 +45,14 @@ function AppShellInner({ children }: { children: ReactNode }) {
   // skipped there.
   const badge = navBadgeCount(useNotifications());
 
-  // Phase 27: `/chat` is a coequal, parallel UI to the HUD — not a screen nested
-  // inside it. Bypass MainLayout entirely (no nav rail / top bar / right rail) and
-  // render the chat surface fullscreen, while staying inside AppShell's provider
-  // stack (ChatProvider survives leaving/returning to `/chat`).
-  const isChat = pathname === "/chat" || pathname.startsWith("/chat/");
-  if (isChat) {
+  // Phase 27 / F0 (D2, docs/hud2chat/DECISIONS.md): fullscreen routes are a
+  // coequal, parallel UI to the HUD — not a screen nested inside it. Bypass
+  // MainLayout entirely (no nav rail / top bar / right rail) and render the
+  // route's own chrome fullscreen, while staying inside AppShell's provider
+  // stack (e.g. ChatProvider survives leaving/returning to `/chat`). `/chat` is
+  // the only member of the table today; later migration phases append their
+  // own routes as they adopt the immersive shell.
+  if (isFullscreenRoute(pathname)) {
     return (
       <Container height="100dvh" overflow="hidden" width="100%">
         {children}

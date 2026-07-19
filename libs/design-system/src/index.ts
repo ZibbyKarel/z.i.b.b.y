@@ -337,14 +337,8 @@ export type { OrbNodeProps } from "./immersive/OrbNode/OrbNode";
 export { CoreOrb, CoreOrbTestId } from "./immersive/CoreOrb/CoreOrb";
 export type { CoreOrbProps } from "./immersive/CoreOrb/CoreOrb";
 
-export {
-  ConnectorLayer,
-  ConnectorLayerTestId,
-} from "./immersive/ConnectorLayer/ConnectorLayer";
-export type {
-  ConnectorLayerProps,
-  ConnectorNode,
-} from "./immersive/ConnectorLayer/ConnectorLayer";
+export { ConnectorLayer, ConnectorLayerTestId } from "./immersive/ConnectorLayer/ConnectorLayer";
+export type { ConnectorLayerProps, ConnectorNode } from "./immersive/ConnectorLayer/ConnectorLayer";
 
 export {
   DEFAULT_DURATION_MS,
@@ -356,12 +350,10 @@ export type { HandoffFlareProps } from "./immersive/HandoffFlare/HandoffFlare";
 export { arcPath } from "./immersive/HandoffFlare/arcPath";
 
 export { ORB_MAP_CORE_ID, OrbMap, OrbMapTestId } from "./immersive/OrbMap/OrbMap";
-export type {
-  OrbMapCore,
-  OrbMapFlare,
-  OrbMapNode,
-  OrbMapProps,
-} from "./immersive/OrbMap/OrbMap";
+export type { OrbMapCore, OrbMapFlare, OrbMapNode, OrbMapProps } from "./immersive/OrbMap/OrbMap";
 
 export { GlassSurface, GlassSurfaceTestId } from "./immersive/GlassSurface/GlassSurface";
 export type { GlassSurfaceProps } from "./immersive/GlassSurface/GlassSurface";
+
+export { ImmersiveShell, ImmersiveShellTestId } from "./immersive/ImmersiveShell/ImmersiveShell";
+export type { ImmersiveShellProps } from "./immersive/ImmersiveShell/ImmersiveShell";

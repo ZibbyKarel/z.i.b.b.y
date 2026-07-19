@@ -57,3 +57,28 @@ are restyled toward `GlassSurface` only where the design calls for it — otherw
 **D6 — Two-outlier warning.** `features/projects/ProfileScreen.tsx` (685 LOC, 8 panels) and
 `features/pipelines/Screen.tsx` (431 LOC, canvas) dominate effort. They are scheduled late
 (F5/F6) on purpose, after the shell has survived a dozen simpler pages.
+
+**D7 — `HudPanel` gains a glass variant instead of being replaced.** Migrated pages need
+the `/chat` glass language, but `GlassSurface` is an untitled styled wrapper while
+`HudPanel` renders title/padding structure that ~40 call sites rely on. Swapping them
+page-by-page would be a rewrite, not a migration. Instead `HudPanel` gets a
+`surface: "hud" | "glass"` prop (default `"hud"`, so nothing changes) and migrated pages
+pass `surface="glass"`. One DS change unlocks every later phase, and F10 can flip the
+default. _Rejected alternative:_ mechanically replacing `HudPanel` with `GlassSurface` —
+impossible without reimplementing the title/padding contract at every call site.
+
+**D8 — Subsystem attribution only exists for pipeline and chain runs.** `TaskRun` has no
+subsystem field; the join is `run.owner` → `Pipeline.ownerSubsystem` / `Chain.ownerSubsystem`
+(this is exactly what `AktivitaTab` does client-side). Agent-kind and goal-kind runs
+therefore have **no** subsystem and will fall into a "bez subsystému" group on the archive
+page. This is a pre-existing data-model fact, not something F2 introduces. Flagged for the
+operator at F2 — the alternative (attributing agent runs to a subsystem) is a contract
+change, out of scope for this arc.
+
+**D9 — The archive page inherits `ChatTasksPanel`'s split rule, not a fourth vocabulary.**
+Three status groupings already coexist: `RUN_STATUS_GROUPS` (project tiles),
+`FILTER_BUCKETS` (runs header segments), and `ARCHIVED_STATES` + `taskRank`
+(`ChatTasksPanel` gutter). The archive page is the gutter's "see all" surface, so it uses
+the gutter's rule — `ARCHIVED_STATES = {done, error, interrupted, parked}`, with
+`paused-limit` deliberately staying _active_ because it auto-resumes. Do not invent a
+fourth grouping.

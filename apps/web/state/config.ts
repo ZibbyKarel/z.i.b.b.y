@@ -101,3 +101,18 @@ export const AGENT_GLYPHS: IconName[] = [
 
 /** Tools an agent can be granted in the editor. */
 export const AGENT_TOOLS = ["read", "write", "bash", "git", "web"] as const;
+
+/**
+ * Routes `AppShell` renders fullscreen — bypassing `MainLayout` (no nav rail /
+ * top bar / right rail) — instead of as a page nested in the HUD chrome (D2,
+ * `docs/hud2chat/DECISIONS.md`). `/chat` is the only member today; each later
+ * HUD → Chat UI migration phase appends its own route here as that section
+ * adopts the immersive shell. F10 collapses this table entirely once the HUD
+ * branch is deleted.
+ */
+export const FULLSCREEN_ROUTES = ["/chat"] as const;
+
+/** Whether `pathname` (or one of its sub-paths) is a fullscreen route. */
+export function isFullscreenRoute(pathname: string): boolean {
+  return FULLSCREEN_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+}
