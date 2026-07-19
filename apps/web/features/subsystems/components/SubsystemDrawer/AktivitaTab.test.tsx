@@ -120,7 +120,12 @@ describe("AktivitaTab (Phase 86)", () => {
       chainFixture({ id: "loom-chain", ownerSubsystem: "loom" }),
     ];
     hooks.runs = [
-      runFixture({ runId: "run-delivery", kind: "pipeline", owner: "delivery", title: "Delivery Run" }),
+      runFixture({
+        runId: "run-delivery",
+        kind: "pipeline",
+        owner: "delivery",
+        title: "Delivery Run",
+      }),
       runFixture({ runId: "run-other", kind: "pipeline", owner: "other", title: "Other Run" }),
       runFixture({
         runId: "run-untagged",
@@ -202,7 +207,7 @@ describe("AktivitaTab (Phase 86)", () => {
 
     fireEvent.click(screen.getByTestId("task-card-run-delivery"));
 
-    expect(push).toHaveBeenCalledWith("/runs?run=run-delivery");
+    expect(push).toHaveBeenCalledWith("/archiv?run=run-delivery");
     expect(screen.queryByTestId("stage-timeline-stub")).toBeNull();
     expect(screen.queryByTestId("chain-steps-stub")).toBeNull();
   });
@@ -214,9 +219,9 @@ describe("AktivitaTab (Phase 86)", () => {
     expect(screen.queryByTestId(AktivitaTabTestId.List)).toBeNull();
   });
 
-  it("links to the global runs page", () => {
+  it("links to the archive (F8d — /runs is deleted; /archiv is the surviving global runs view)", () => {
     render(<AktivitaTab subsystem={FORGE} />);
 
-    expect(screen.getByTestId(AktivitaTabTestId.AllRunsLink)).toHaveAttribute("href", "/runs");
+    expect(screen.getByTestId(AktivitaTabTestId.AllRunsLink)).toHaveAttribute("href", "/archiv");
   });
 });

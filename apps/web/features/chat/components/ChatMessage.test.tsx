@@ -96,12 +96,12 @@ describe("ChatMessage", () => {
         role="assistant"
         text="Hotovo."
         toolEvents={[
-          { name: "create_task", status: "ok", summary: "Spustil jsem úkol.", href: "/runs" },
+          { name: "create_task", status: "ok", summary: "Spustil jsem úkol.", href: "/archiv" },
         ]}
       />,
     );
     const link = screen.getByTestId(ChatMessageTestId.ToolEventLink);
-    expect(link).toHaveAttribute("href", "/runs");
+    expect(link).toHaveAttribute("href", "/archiv");
     expect(screen.getByTestId(ChatMessageTestId.ToolEvent)).toHaveTextContent("Spustil jsem úkol.");
   });
 
@@ -129,7 +129,7 @@ describe("ChatMessage", () => {
             name: "create_task",
             status: "ok",
             summary: "Spustil jsem úkol — pipeline Delivery.",
-            href: "/runs?run=delivery_1",
+            href: "/archiv?run=delivery_1",
             target: { kind: "pipeline", id: "delivery", name: "Delivery", glyph: "flow" },
             runRef: "delivery_1",
             taskId: "task-9",
@@ -142,7 +142,7 @@ describe("ChatMessage", () => {
     expect(screen.getByTestId(ChatRunCardTestId.Root)).toHaveTextContent("Delivery");
     expect(screen.getByTestId(ChatRunCardTestId.Link)).toHaveAttribute(
       "href",
-      "/runs?run=delivery_1",
+      "/archiv?run=delivery_1",
     );
   });
 

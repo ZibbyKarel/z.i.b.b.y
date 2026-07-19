@@ -6,7 +6,13 @@ import { AppShell } from "./AppShell";
 // the HUD's `MainLayout` chrome or (Phase 27) bypass it fullscreen for `/chat`; a
 // mutable ref lets each test simulate a different current route, the same pattern
 // `ChatContext.test.tsx` uses.
-const pathnameRef = { current: "/overview" };
+//
+// F8d: `/overview` is deleted and every real surviving route is already
+// `FULLSCREEN_ROUTES`-immersive — there is no genuine "classic HUD chrome" route
+// left to point this at, so a synthetic, never-registered path stands in for
+// "some ordinary, not-yet-migrated dashboard route" until F10 deletes this
+// branch (and these tests) outright.
+const pathnameRef = { current: "/some-unmigrated-route" };
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: vi.fn(),
@@ -24,7 +30,7 @@ vi.mock("next/navigation", () => ({
 
 describe("AppShell", () => {
   beforeEach(() => {
-    pathnameRef.current = "/overview";
+    pathnameRef.current = "/some-unmigrated-route";
   });
 
   // Smoke test only: AppShell wires routing (usePathname), the catalog provider
@@ -39,7 +45,7 @@ describe("AppShell", () => {
   });
 
   it("renders the HUD chrome (nav rail) on an ordinary dashboard route", () => {
-    pathnameRef.current = "/overview";
+    pathnameRef.current = "/some-unmigrated-route";
     renderWithProviders(
       <AppShell>
         <div>obsah dashboardu</div>
@@ -204,7 +210,13 @@ describe("AppShell", () => {
   // `/automations` in F4, `/pipelines`/`/chains` in F5, `/projects`/`/companies`
   // in F6, `/memory`/`/gates` in F7 (see the dedicated tests above); every other
   // route must keep rendering the HUD chrome exactly as before.
-  it.each(["/overview", "/runs"])(
+  //
+  // F8d: `/overview` and `/runs` — the two routes this test used to exercise —
+  // are both deleted, and every other real route is by now already fullscreen.
+  // No genuine "still classic HUD" route survives to assert against, so these
+  // are synthetic, never-registered paths standing in for "any route not in
+  // `FULLSCREEN_ROUTES`" until F10 deletes the branch (and this test) outright.
+  it.each(["/some-unmigrated-route", "/another-unmigrated-route"])(
     "still renders the HUD chrome (nav rail) on %s — unmigrated",
     (route) => {
       pathnameRef.current = route;

@@ -21,7 +21,7 @@ import { ToolGrantsFieldTestId } from "./ToolGrantsField";
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
-  usePathname: () => "/overview",
+  usePathname: () => "/chat",
   useSearchParams: () => new URLSearchParams(),
 }));
 
@@ -133,7 +133,8 @@ const createTask = vi.fn((vars: CreateVars, opts?: CreateOpts) => {
     });
   } else {
     // The interactive path returns a `pending` task (its run spawns in the
-    // background); the dialog redirects to `/runs` keyed by the task id.
+    // background); the dialog redirects to `/archiv` keyed by the task id
+    // (F8d — `/runs` is deleted).
     opts?.onSuccess?.({
       status: 201,
       body: {
@@ -209,7 +210,11 @@ vi.mock("../../limits/queries/useLimitsQuery", () => ({
   }),
 }));
 
-async function pickMention(user: ReturnType<typeof userEvent.setup>, query: string, itemId: string) {
+async function pickMention(
+  user: ReturnType<typeof userEvent.setup>,
+  query: string,
+  itemId: string,
+) {
   const input = screen.getByTestId(CommandLineTestId.Input);
   // A leading space guarantees the `@` starts a fresh word, and the query is typed
   // straight into the SAME field — Phase 45's inline dropdown, never a separate
@@ -271,7 +276,7 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
     expect(createTask.mock.calls[0]?.[0].body.scheduledAt).toBeFalsy();
     // No output chosen → the field is omitted (inherit), not sent as void.
     expect(createTask.mock.calls[0]?.[0].body.output).toBeUndefined();
-    expect(push).toHaveBeenCalledWith("/runs?run=task_1");
+    expect(push).toHaveBeenCalledWith("/archiv?run=task_1");
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -353,7 +358,7 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
     const taskBody = createTask.mock.calls[0]?.[0].body;
     expect(taskBody?.target?.kind).toBe("goal");
     expect(taskBody?.scheduledAt).toBeFalsy();
-    expect(push).toHaveBeenCalledWith("/runs?run=task_1");
+    expect(push).toHaveBeenCalledWith("/archiv?run=task_1");
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -408,10 +413,7 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
   it("defers a scheduled loop through createTask with a goal target", async () => {
     const user = userEvent.setup();
     render(<NewTaskDialog onClose={() => {}} />);
-    await user.type(
-      screen.getByLabelText(/Zadání/),
-      "keep retrying the deploy until it passes",
-    );
+    await user.type(screen.getByLabelText(/Zadání/), "keep retrying the deploy until it passes");
     expect(await screen.findByText(/Loop · vykonavatel/)).toBeInTheDocument();
 
     await user.click(screen.getByTestId(DropDownButtonTestId.Trigger));
@@ -506,7 +508,7 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
       name: "Delivery",
       glyph: "flow",
     });
-    expect(push).toHaveBeenCalledWith("/runs?run=task_1");
+    expect(push).toHaveBeenCalledWith("/archiv?run=task_1");
     expect(onClose).toHaveBeenCalled();
   });
 

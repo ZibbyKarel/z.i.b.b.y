@@ -89,7 +89,10 @@ export class ChatSessionService {
    * BEFORE the turn starts, so `create_task` can read it as its explicit target and the
    * prompt built in `buildArgs` can tell the model the operator addressed a specific unit.
    */
-  async sendMessage(body: SendChatMessageBody, now: Date = new Date()): Promise<SendChatMessageResult> {
+  async sendMessage(
+    body: SendChatMessageBody,
+    now: Date = new Date(),
+  ): Promise<SendChatMessageResult> {
     const conversationId = await this.store.ensureConversation(body.conversationId, now);
     if (body.target) this.toolResults.setExplicitTarget(conversationId, body.target);
     const userMessage: ChatMessage = {
@@ -114,7 +117,11 @@ export class ChatSessionService {
   /** Build the verified CLI argument vector for one turn. Exposed for the args test.
    * Async since {@link toolArgs} spills the `--mcp-config` (now secret-bearing —
    * see its docblock) to a file before returning the path. */
-  async buildArgs(text: string, sessionId: string | null, conversationId: string): Promise<string[]> {
+  async buildArgs(
+    text: string,
+    sessionId: string | null,
+    conversationId: string,
+  ): Promise<string[]> {
     const explicitTarget = this.toolResults.getExplicitTarget(conversationId);
     const persona = buildChatPrompt(this.systemConfig.current().chatPersona);
     // Fáze 14.2: when the operator @mentioned a unit, tell the model plainly — it still
@@ -249,7 +256,12 @@ export class ChatSessionService {
         // can pair it with the started entry that also carries "".
         ...(callId !== undefined ? { callId } : {}),
         summary: `Spustil jsem úkol — ${describeTarget(result.target)}.`,
-        href: result.runRef ? `/runs?run=${result.runRef}` : "/runs",
+        // F8d (D17): `/archiv` replaced `/runs` as the task archive — stop minting
+        // new `/runs` links. `/runs` itself stays a redirect shim (preserving
+        // `?run=`) so already-persisted transcript JSONL carrying the old href
+        // still lands on the right run; this is the one live call site that used
+        // to mint it, so from here on every NEW event points straight at `/archiv`.
+        href: result.runRef ? `/archiv?run=${result.runRef}` : "/archiv",
         target: result.target,
         ...(result.runRef ? { runRef: result.runRef } : {}),
         taskId: result.taskId,

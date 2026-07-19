@@ -276,7 +276,8 @@ export function ChatTaskDetailColumn({
             <Stack align="center" as="footer" direction="row" justify="center">
               <Pressable
                 data-testid={ChatTaskDetailColumnTestId.OpenFull}
-                onClick={() => router.push(`/runs?run=${run.runId}` as Route)}
+                // F8d: `/runs` is deleted — `/archiv` (F2) is the surviving archive.
+                onClick={() => router.push(`/archiv?run=${run.runId}` as Route)}
               >
                 <Stack align="center" direction="row" gap="50">
                   <Icon name="expand" size="xs" tone="faint" />

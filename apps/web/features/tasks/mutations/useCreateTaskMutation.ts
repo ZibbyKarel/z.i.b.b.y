@@ -8,7 +8,8 @@ import { getScheduledTasksQueryKey } from "../queries/useScheduledTasksQuery";
  * Create a task (`POST /api/tasks`): the interactive path returns an immediate
  * `pending` task (its run spawns in the background), or schedules for a future
  * `scheduledAt`. Refreshes the unified runs feed (so the pending card shows up the
- * moment we redirect to `/runs`), the running-agents list and the scheduled-task queue.
+ * moment we redirect to `/archiv`, F8d — `/runs` is deleted), the running-agents
+ * list and the scheduled-task queue.
  */
 export function useCreateTaskMutation() {
   const qc = useQueryClient();

@@ -25,6 +25,11 @@ export interface ProjectRunSummaryProps {
  *
  * Typed routes can't infer a query-string-carrying template stored in a variable,
  * so each `href` is cast `as Route` (the codebase-wide convention for `<Link>`).
+ *
+ * F8d: `/runs` is deleted — every tile now points at `/archiv` (F2). Pre-existing
+ * F2 limitation, not fixed here: the Archive screen only reads `?run=`, so
+ * `?project=`/`?filter=` land inert (the archive opens unscoped/unfiltered
+ * rather than 404ing).
  */
 export function ProjectRunSummary({ projectId }: ProjectRunSummaryProps) {
   const t = useTranslations("runs");
@@ -36,12 +41,12 @@ export function ProjectRunSummary({ projectId }: ProjectRunSummaryProps) {
       <Stack wrap direction="row" gap="450">
         <Link
           data-testid="project-run-summary-total"
-          href={`/runs?project=${projectId}` as Route}
+          href={`/archiv?project=${projectId}` as Route}
         >
           <Stat icon="pulse" label={t("group.total")} tone="neutral" value={total} />
         </Link>
         {groups.map(({ group: g, count }) => {
-          const href = `/runs?project=${projectId}&filter=${groupFilterParam(g)}` as Route;
+          const href = `/archiv?project=${projectId}&filter=${groupFilterParam(g)}` as Route;
           return (
             <Link data-testid={`project-run-summary-${g.key}`} href={href} key={g.key}>
               <Stat

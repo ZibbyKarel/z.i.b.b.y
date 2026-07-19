@@ -46,7 +46,9 @@ vi.mock("next/navigation", () => ({
     back: vi.fn(),
     forward: vi.fn(),
   }),
-  usePathname: () => "/overview",
+  // F8d: `/overview` is deleted — `/chat` is home now (O2/O3), the deliberate new
+  // default for any component test that doesn't override this mock itself.
+  usePathname: () => "/chat",
   useSearchParams: () => new URLSearchParams(),
   redirect: vi.fn(),
   notFound: vi.fn(),

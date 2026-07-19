@@ -3,12 +3,7 @@ import { useCallback } from "react";
 import type { TaskOutput } from "@zibby/contracts";
 import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
 import { useCreateGoalMutation } from "../../goals";
-import {
-  type LoopFormState,
-  buildCreateGoalBody,
-  canSubmitLoop,
-  makeGoalId,
-} from "../loop";
+import { type LoopFormState, buildCreateGoalBody, canSubmitLoop, makeGoalId } from "../loop";
 import { useCreateTaskMutation } from "../mutations";
 import { type TaskTarget, toApiTarget, whenLabel } from "../task";
 
@@ -61,8 +56,9 @@ export interface UseTaskSubmit {
 /**
  * Owns dispatch: a single task (auto or to an explicit target), or a loop (create the
  * goal, then enter it through a task carrying its goal target so the scheduler's
- * defer/limit/budget machinery owns the run). A dispatched run routes to `/runs`; a
- * scheduled one shows the lingering confirmation, then closes.
+ * defer/limit/budget machinery owns the run). A dispatched run routes to `/archiv`
+ * (F8d — `/runs` is gone); a scheduled one shows the lingering confirmation, then
+ * closes.
  */
 export function useTaskSubmit({
   title,
@@ -90,15 +86,15 @@ export function useTaskSubmit({
       const result = selectApiResponseBody(res) as TaskSubmitResult;
       onLaunched?.(result);
       // A dispatched run opens by its run ref; a `pending` task opens by its task id —
-      // the feed row flips from the pending task to its run in place, and the Runs
+      // the feed row flips from the pending task to its run in place, and the Archive
       // screen keeps the selection because it matches `runId` OR `taskId`.
       if (result.outcome === "dispatched") {
-        router.push(`/runs?run=${encodeURIComponent(result.runRef)}`);
+        router.push(`/archiv?run=${encodeURIComponent(result.runRef)}`);
         onClose();
         return;
       }
       if (result.outcome === "pending") {
-        router.push(`/runs?run=${encodeURIComponent(result.task.id)}`);
+        router.push(`/archiv?run=${encodeURIComponent(result.task.id)}`);
         onClose();
         return;
       }

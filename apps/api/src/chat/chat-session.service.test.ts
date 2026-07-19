@@ -76,9 +76,20 @@ describe("mergeToolEvent", () => {
   });
 
   it("replaces the entry with the matching callId in place, preserving position", () => {
-    const started: ChatToolEvent = { name: "create_task", status: "started", callId: "a", summary: "Spouštím úkol…" };
+    const started: ChatToolEvent = {
+      name: "create_task",
+      status: "started",
+      callId: "a",
+      summary: "Spouštím úkol…",
+    };
     const other: ChatToolEvent = { name: "recall_memory", status: "ok" };
-    const ok: ChatToolEvent = { name: "create_task", status: "ok", callId: "a", summary: "Spustil jsem úkol — pipeline Delivery.", href: "/runs?run=r1" };
+    const ok: ChatToolEvent = {
+      name: "create_task",
+      status: "ok",
+      callId: "a",
+      summary: "Spustil jsem úkol — pipeline Delivery.",
+      href: "/archiv?run=r1",
+    };
 
     const merged = mergeToolEvent([started, other], ok);
 
@@ -143,7 +154,15 @@ describe("ChatSessionService", () => {
   });
 
   it("wires the zibby MCP tool server (--mcp-config file + --allowedTools), scoped to the conversation", async () => {
-    const svc = new TestSession(store, events, [], "jarvis", new ChatToolResultRegistry(), undefined, dir);
+    const svc = new TestSession(
+      store,
+      events,
+      [],
+      "jarvis",
+      new ChatToolResultRegistry(),
+      undefined,
+      dir,
+    );
     const args = await svc.buildArgs("ahoj", null, "c1");
     expect(args[args.indexOf("--allowedTools") + 1]).toBe("mcp__zibby__*");
     // T9: the config is now spilled to a file — the argv value is a PATH, not inline JSON.
@@ -162,7 +181,11 @@ describe("ChatSessionService", () => {
 
   it("appends the selected persona tone, always over the constant governor", async () => {
     const jarvis = await new TestSession(store, events, [], "jarvis").buildArgs("ahoj", null, "c1");
-    const concise = await new TestSession(store, events, [], "concise").buildArgs("ahoj", null, "c1");
+    const concise = await new TestSession(store, events, [], "concise").buildArgs(
+      "ahoj",
+      null,
+      "c1",
+    );
 
     const jarvisPrompt = jarvis[jarvis.indexOf("--append-system-prompt") + 1] ?? "";
     const concisePrompt = concise[concise.indexOf("--append-system-prompt") + 1] ?? "";
@@ -179,14 +202,22 @@ describe("ChatSessionService", () => {
   it("streams deltas, persists the assistant turn and the session id", async () => {
     const svc = new TestSession(store, events, [
       line({ type: "system", subtype: "init", session_id: "sess-1" }),
-      line({ type: "stream_event", event: { type: "content_block_delta", delta: { type: "text_delta", text: "Ahoj" } } }),
-      line({ type: "stream_event", event: { type: "content_block_delta", delta: { type: "text_delta", text: ", pane." } } }),
+      line({
+        type: "stream_event",
+        event: { type: "content_block_delta", delta: { type: "text_delta", text: "Ahoj" } },
+      }),
+      line({
+        type: "stream_event",
+        event: { type: "content_block_delta", delta: { type: "text_delta", text: ", pane." } },
+      }),
       line({ type: "result", is_error: false, result: "Ahoj, pane." }),
     ]);
     const id = await store.ensureConversation("c1");
     await svc.runTurn(id, "turn-1", "ahoj", NOW);
 
-    const deltas = seen.filter((e) => e.type === "delta").map((e) => (e.type === "delta" ? e.text : ""));
+    const deltas = seen
+      .filter((e) => e.type === "delta")
+      .map((e) => (e.type === "delta" ? e.text : ""));
     expect(deltas).toEqual(["Ahoj", ", pane."]);
     expect(seen.at(-1)?.type).toBe("done");
 
@@ -199,11 +230,21 @@ describe("ChatSessionService", () => {
   it("announces a create_task dispatch as started immediately, carrying its callId", async () => {
     const svc = new TestSession(store, events, [
       line({ type: "system", subtype: "init", session_id: "s" }),
-      line({ type: "stream_event", event: { type: "content_block_delta", delta: { type: "text_delta", text: "Jdu na to." } } }),
+      line({
+        type: "stream_event",
+        event: { type: "content_block_delta", delta: { type: "text_delta", text: "Jdu na to." } },
+      }),
       line({
         type: "assistant",
         message: {
-          content: [{ type: "tool_use", id: "toolu_2", name: "mcp__zibby__create_task", input: { text: "postav X" } }],
+          content: [
+            {
+              type: "tool_use",
+              id: "toolu_2",
+              name: "mcp__zibby__create_task",
+              input: { text: "postav X" },
+            },
+          ],
         },
       }),
       line({ type: "result", is_error: false, result: "Jdu na to." }),
@@ -241,7 +282,14 @@ describe("ChatSessionService", () => {
         line({
           type: "assistant",
           message: {
-            content: [{ type: "tool_use", id: "toolu_4", name: "mcp__zibby__create_task", input: { text: "postav X" } }],
+            content: [
+              {
+                type: "tool_use",
+                id: "toolu_4",
+                name: "mcp__zibby__create_task",
+                input: { text: "postav X" },
+              },
+            ],
           },
         }),
         line({ type: "result", is_error: false, result: "Jdu na to." }),
@@ -274,7 +322,7 @@ describe("ChatSessionService", () => {
     const callId = started && started.type === "tool" ? started.tool.callId : undefined;
     expect(callId).toBe("toolu_4");
     expect(ok && ok.type === "tool" && ok.tool.callId).toBe(callId);
-    expect(ok && ok.type === "tool" && ok.tool.href).toBe("/runs?run=delivery_1");
+    expect(ok && ok.type === "tool" && ok.tool.href).toBe("/archiv?run=delivery_1");
     expect(ok && ok.type === "tool" && ok.tool.runRef).toBe("delivery_1");
     expect(ok && ok.type === "tool" && ok.tool.taskId).toBe("task-9");
     expect(ok && ok.type === "tool" && ok.tool.target).toEqual(target);
@@ -298,7 +346,14 @@ describe("ChatSessionService", () => {
         line({
           type: "assistant",
           message: {
-            content: [{ type: "tool_use", id: "toolu_5", name: "mcp__zibby__create_task", input: { text: "postav X" } }],
+            content: [
+              {
+                type: "tool_use",
+                id: "toolu_5",
+                name: "mcp__zibby__create_task",
+                input: { text: "postav X" },
+              },
+            ],
           },
         }),
         line({ type: "result", is_error: false, result: "Jdu na to." }),
@@ -366,7 +421,10 @@ describe("ChatSessionService", () => {
         "jarvis",
         toolResults,
       );
-      const result = await svc.sendMessage({ conversationId: "c6", text: "postav appku", target }, NOW);
+      const result = await svc.sendMessage(
+        { conversationId: "c6", text: "postav appku", target },
+        NOW,
+      );
       // Set synchronously, before the fire-and-forget turn even runs.
       expect(toolResults.getExplicitTarget(result.conversationId)).toEqual(target);
       await settled(result.turnId);
@@ -384,7 +442,10 @@ describe("ChatSessionService", () => {
         "jarvis",
         toolResults,
       );
-      const result = await svc.sendMessage({ conversationId: "c7", text: "postav appku", target }, NOW);
+      const result = await svc.sendMessage(
+        { conversationId: "c7", text: "postav appku", target },
+        NOW,
+      );
       await settled(result.turnId);
 
       const prompt = svc.lastArgs[svc.lastArgs.indexOf("--append-system-prompt") + 1] ?? "";
@@ -405,7 +466,15 @@ describe("ChatSessionService", () => {
   describe("MCP config auth (T9 — bearer token off argv)", () => {
     it("the spilled --mcp-config FILE carries the Authorization: Bearer header", async () => {
       const mcpAuth = new ChatMcpAuthService();
-      const svc = new TestSession(store, events, [], "jarvis", new ChatToolResultRegistry(), mcpAuth, dir);
+      const svc = new TestSession(
+        store,
+        events,
+        [],
+        "jarvis",
+        new ChatToolResultRegistry(),
+        mcpAuth,
+        dir,
+      );
       const args = await svc.buildArgs("ahoj", null, "c9");
 
       const configPath = args[args.indexOf("--mcp-config") + 1] ?? "";
@@ -415,7 +484,15 @@ describe("ChatSessionService", () => {
 
     it("the raw token never appears literally in the returned argv array", async () => {
       const mcpAuth = new ChatMcpAuthService();
-      const svc = new TestSession(store, events, [], "jarvis", new ChatToolResultRegistry(), mcpAuth, dir);
+      const svc = new TestSession(
+        store,
+        events,
+        [],
+        "jarvis",
+        new ChatToolResultRegistry(),
+        mcpAuth,
+        dir,
+      );
       const args = await svc.buildArgs("ahoj", null, "c10");
 
       expect(args.some((arg) => arg.includes(mcpAuth.bearerToken))).toBe(false);
@@ -423,7 +500,15 @@ describe("ChatSessionService", () => {
 
     it("the spilled config file is written mode 0600 (owner-only, secret-bearing)", async () => {
       const mcpAuth = new ChatMcpAuthService();
-      const svc = new TestSession(store, events, [], "jarvis", new ChatToolResultRegistry(), mcpAuth, dir);
+      const svc = new TestSession(
+        store,
+        events,
+        [],
+        "jarvis",
+        new ChatToolResultRegistry(),
+        mcpAuth,
+        dir,
+      );
       const args = await svc.buildArgs("ahoj", null, "c11");
 
       const configPath = args[args.indexOf("--mcp-config") + 1] ?? "";

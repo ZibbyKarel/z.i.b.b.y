@@ -14,7 +14,7 @@ import { TaskCommandLine, TaskCommandLineTestId } from "./TaskCommandLine";
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
-  usePathname: () => "/overview",
+  usePathname: () => "/chat",
   useSearchParams: () => new URLSearchParams(),
 }));
 
@@ -23,7 +23,9 @@ vi.mock("../../../agents/queries/useAgentsQuery", () => ({
   getAgentsQueryKey: () => ["agents"],
 }));
 vi.mock("../../../pipelines/queries/usePipelinesQuery", () => ({
-  usePipelinesQuery: () => ({ data: [{ id: "delivery", name: "Delivery", ownerSubsystem: "forge" }] }),
+  usePipelinesQuery: () => ({
+    data: [{ id: "delivery", name: "Delivery", ownerSubsystem: "forge" }],
+  }),
   getPipelinesQueryKey: () => ["pipelines"],
 }));
 vi.mock("../../../subsystems/queries/useSubsystemsQuery", () => ({

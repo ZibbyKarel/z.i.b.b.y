@@ -107,7 +107,7 @@ describe("ChatTaskDetailColumn (Phase 100, frame Phase 122)", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("the 'open full page' fallback navigates to /runs?run=<id>", () => {
+  it("the 'open full page' fallback navigates to /archiv?run=<id> (F8d — /runs is deleted)", () => {
     render(
       <ChatTaskDetailColumn
         deleting={false}
@@ -124,7 +124,7 @@ describe("ChatTaskDetailColumn (Phase 100, frame Phase 122)", () => {
     );
 
     fireEvent.click(screen.getByTestId(ChatTaskDetailColumnTestId.OpenFull));
-    expect(push).toHaveBeenCalledWith("/runs?run=run_z");
+    expect(push).toHaveBeenCalledWith("/archiv?run=run_z");
   });
 
   it("forwards stop/delete/resume through to RunDetail", () => {

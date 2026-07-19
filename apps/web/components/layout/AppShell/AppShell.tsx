@@ -17,7 +17,6 @@ import {
 import { CatalogProvider } from "../../../state/store";
 import { NewTaskButton, NewTaskProvider } from "../../../features/tasks";
 import { ChatButton, ChatProvider } from "../../../features/chat";
-import { navBadgeCount, useNotifications } from "../../../features/notifications";
 
 const NAV_IDS = new Set<NavId>([
   ...NAV_ITEMS.map((n) => n.id),
@@ -27,23 +26,17 @@ const NAV_IDS = new Set<NavId>([
 
 function pathnameToNavId(pathname: string): NavId {
   const segment = pathname.split("/").filter(Boolean)[0];
-  return segment !== undefined && NAV_IDS.has(segment as NavId) ? (segment as NavId) : "overview";
+  // F8d: "overview" no longer exists as a NavId (`/overview` is deleted, O2/O3).
+  // This classic-HUD branch is already unreachable via normal navigation — every
+  // surviving `NAV_ITEMS` route is `FULLSCREEN_ROUTES`-immersive as of this phase
+  // (F10 formally deletes the branch) — so "projects" is an arbitrary but never-
+  // actually-hit fallback, kept only so the return type stays a valid `NavId`.
+  return segment !== undefined && NAV_IDS.has(segment as NavId) ? (segment as NavId) : "projects";
 }
 
 function AppShellInner({ children }: { children: ReactNode }) {
   const t = useTranslations("nav");
-  const tRoot = useTranslations();
   const pathname = usePathname();
-
-  // Notification discipline (Phase 6.3): the runs nav badge is a pure function of
-  // pending approvals + retries-parked runs — no store, no read/unread state.
-  //
-  // Hooks must run unconditionally on every render of this component instance
-  // (AppShellInner persists across client-side navigation within `(dashboard)`,
-  // it doesn't remount per route) — so `useNotifications` stays above the `/chat`
-  // early return below; only the *derived, non-hook* nav/breadcrumb computation is
-  // skipped there.
-  const badge = navBadgeCount(useNotifications());
 
   // Phase 27 / F0 (D2, docs/hud2chat/DECISIONS.md): fullscreen routes are a
   // coequal, parallel UI to the HUD — not a screen nested inside it. Bypass
@@ -65,9 +58,6 @@ function AppShellInner({ children }: { children: ReactNode }) {
   const navItems: NavItem[] = NAV_ITEMS.map((item) => ({
     ...item,
     label: t(item.id),
-    ...(item.id === "runs" && badge > 0
-      ? { badge, badgeLabel: tRoot("notifications.attention", { count: badge }) }
-      : {}),
   }));
 
   const footerItem: NavItem = {

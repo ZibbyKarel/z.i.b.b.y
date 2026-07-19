@@ -60,13 +60,13 @@ describe("RunParkedPanel", () => {
 });
 
 describe("ParkedRunsPanel", () => {
-  it("lists retries-parked runs with a link into /runs", () => {
+  it("lists retries-parked runs with a link into /archiv (F8d — /runs is deleted; this component itself is now orphaned — no production consumer, see its docblock)", () => {
     render(<ParkedRunsPanel />);
     expect(screen.getByText("zaparkované běhy")).toBeInTheDocument();
     expect(screen.getByText(/fáze review · 3 pokusů vyčerpáno/)).toBeInTheDocument();
     expect(screen.getByRole("link")).toHaveAttribute(
       "href",
-      "/runs?filter=parked&run=delivery_1780000000000",
+      "/archiv?filter=parked&run=delivery_1780000000000",
     );
   });
 });

@@ -5,8 +5,9 @@ import { renderWithProviders, screen } from "../../test/render";
 
 const push = vi.fn();
 // `toggle()` reads the current route to decide whether ⌘J opens `/chat` or leaves
-// it — a mutable ref lets individual tests simulate "already on /chat".
-const pathnameRef = { current: "/overview" };
+// it — a mutable ref lets individual tests simulate "already on /chat". `/archiv`
+// stands in for "somewhere else in the dashboard" (F8d deleted `/overview`).
+const pathnameRef = { current: "/archiv" };
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
   usePathname: () => pathnameRef.current,
@@ -48,7 +49,7 @@ function fireKey(init: KeyboardEventInit) {
 describe("ChatProvider", () => {
   beforeEach(() => {
     push.mockClear();
-    pathnameRef.current = "/overview";
+    pathnameRef.current = "/archiv";
     window.localStorage.clear();
   });
 
@@ -90,7 +91,7 @@ describe("ChatProvider", () => {
     expect(screen.getByTestId("conversation-id")).toHaveTextContent(firstId ?? "");
   });
 
-  it("close() navigates back to /overview", async () => {
+  it("close() navigates to /chat — its own home now that /overview is gone (F8d), an inert no-op push pending a decision on the affordance itself", async () => {
     const user = userEvent.setup();
     renderWithProviders(
       <ChatProvider>
@@ -99,7 +100,7 @@ describe("ChatProvider", () => {
     );
 
     await user.click(screen.getByTestId("close"));
-    expect(push).toHaveBeenCalledWith("/overview");
+    expect(push).toHaveBeenCalledWith("/chat");
   });
 
   it("newChat mints a fresh id and clears the transcript", async () => {
@@ -129,7 +130,7 @@ describe("ChatProvider", () => {
     expect(push).toHaveBeenCalledWith("/chat");
   });
 
-  it("⌘/Ctrl+J navigates back to /overview when already on /chat", () => {
+  it("⌘/Ctrl+J when already on /chat pushes /chat again (inert no-op, F8d)", () => {
     pathnameRef.current = "/chat";
     renderWithProviders(
       <ChatProvider>
@@ -138,7 +139,7 @@ describe("ChatProvider", () => {
     );
 
     fireKey({ key: "j", metaKey: true });
-    expect(push).toHaveBeenCalledWith("/overview");
+    expect(push).toHaveBeenCalledWith("/chat");
   });
 
   it("ignores the key without the modifier", () => {

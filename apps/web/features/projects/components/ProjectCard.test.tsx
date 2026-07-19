@@ -121,17 +121,17 @@ describe("ProjectCard task stats (Phase 52)", () => {
     expect(screen.queryByTestId("project-card-stat-total")).toBeNull();
   });
 
-  it("deep-links each stat into /runs pre-filtered to this project and the bucket's states", () => {
+  it("deep-links each stat into /archiv pre-filtered to this project and the bucket's states (F8d — /runs is deleted; /archiv doesn't yet read these params, a pre-existing F2 gap)", () => {
     feed = [taskRun("alpha", "done")];
     render(<ProjectCard project={project()} />);
 
     expect(screen.getByTestId("project-card-stat-done")).toHaveAttribute(
       "href",
-      "/runs?project=alpha&filter=done",
+      "/archiv?project=alpha&filter=done",
     );
     expect(screen.getByTestId("project-card-stat-waiting")).toHaveAttribute(
       "href",
-      "/runs?project=alpha&filter=queued,scheduled,pending,held,awaiting-approval",
+      "/archiv?project=alpha&filter=queued,scheduled,pending,held,awaiting-approval",
     );
   });
 });

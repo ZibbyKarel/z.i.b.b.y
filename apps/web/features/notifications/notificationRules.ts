@@ -34,18 +34,21 @@ export function selectNotifications(input: NotificationInput): Notification[] {
   const out: Notification[] = [];
 
   for (const a of input.approvals) {
-    out.push({ kind: "approval", id: a.id, label: a.skill ?? a.action ?? a.id, href: "/runs" });
+    // F8d: `/runs` is deleted; `/archiv` (F2) is the surviving run archive.
+    out.push({ kind: "approval", id: a.id, label: a.skill ?? a.action ?? a.id, href: "/archiv" });
   }
 
   for (const r of input.runs) {
     // RunView already collapses retries-parked to `status: "parked"`.
     if (r.status === "parked") {
-      out.push({ kind: "parked", id: r.runId, label: r.title || r.runId, href: "/runs" });
+      out.push({ kind: "parked", id: r.runId, label: r.title || r.runId, href: "/archiv" });
     }
   }
 
   if (input.briefing && !input.briefing.nothingNeedsYou) {
-    out.push({ kind: "briefing", id: "briefing", label: "briefing", href: "/overview" });
+    // F8d: `/overview`'s BriefingCard is deleted; the briefing now renders as a
+    // message card in the chat transcript (O6/F8a).
+    out.push({ kind: "briefing", id: "briefing", label: "briefing", href: "/chat" });
   }
 
   return out;

@@ -3,12 +3,16 @@ import type { IconName, StatTone } from "@zibby/design-system";
 
 /**
  * The eleven run states folded into five operator-facing buckets — the shared
- * vocabulary the project run-summary tiles and their deep-links into `/runs` use.
- * Order reads the lifecycle: live → waiting → done → failed → parked.
+ * vocabulary the project run-summary tiles and their deep-links into `/archiv`
+ * (F8d — `/runs` is deleted) use. Order reads the lifecycle: live → waiting →
+ * done → failed → parked.
  *
  * Every {@link TaskRunStatus} belongs to exactly one bucket (exhaustiveness is
- * asserted in the test), so a bucket's `statuses` — joined by `,` — is a complete
- * `?filter=` deep-link that reproduces the bucket on the runs screen.
+ * asserted in the test), so a bucket's `statuses` — joined by `,` — is a
+ * complete `?filter=` deep-link intended to reproduce the bucket on the runs
+ * screen — though as of F8d, `/archiv` doesn't yet read `?filter=`/`?project=`
+ * (a pre-existing F2 gap; see `ProjectCard`/`ProjectRunSummary`), so today it
+ * lands inert rather than 404ing.
  */
 export type RunStatusGroupKey = "running" | "waiting" | "done" | "error" | "parked";
 

@@ -175,7 +175,7 @@ function HistoryRow({ artifact, now, ago }: HistoryRowProps) {
         <Stack align="center" direction="row" gap="100">
           <Link
             data-testid={ArtefaktyTabTestId.RunLink}
-            href={`/runs?run=${artifact.producedBy.runRef}` as Route}
+            href={`/archiv?run=${artifact.producedBy.runRef}` as Route}
           >
             <Typography mono size="2xs" tone="accent" type="note">
               {t("runLink")}

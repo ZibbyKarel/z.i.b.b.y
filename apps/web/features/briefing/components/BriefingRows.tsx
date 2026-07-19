@@ -74,9 +74,10 @@ export function SubsystemLineRow({ line }: { line: BriefingSubsystemLine }) {
 /**
  * One "needs you" row: a kind chip + the summary, linking to where it's resolved.
  * Parked runs and approvals both surface on the archive of tasks (F8a repoint —
- * `/runs` is deleted in F8c and `/archiv` replaced it in F2). Shared by
- * `overview/BriefingCard` and `chat/BriefingMessageCard` (D18) — relocated here in
- * F8c so neither imports from the other.
+ * `/archiv` replaced `/runs` as the task archive back in F2; `/runs` itself is
+ * deleted in F8d). Shared by `chat/BriefingMessageCard` (D18) — relocated here in
+ * F8c so it and the (now-deleted, F8d) `overview/BriefingCard` didn't import from
+ * each other.
  */
 export function NeedsYouRow({ item }: { item: BriefingNeedsYouItem }) {
   return (

@@ -380,8 +380,9 @@ describe("TaskRunsService", () => {
       const { service, scheduled } = build();
       // The dispatched task that spawned researcher_1 (taskId "task1") carries the
       // engagement id; a dispatched task is folded out of the feed itself but still
-      // enriches its run. This is what makes `/runs?project=` and the project
-      // summary attributable across all run kinds.
+      // enriches its run. This is what makes the project-scoped deep-link (`/archiv?
+      // project=`, F8d — was `/runs?project=`) and the project summary attributable
+      // across all run kinds.
       scheduled.list.mockResolvedValue([
         { ...scheduledS, id: "task1", status: "dispatched", projectId: "acme" },
       ]);

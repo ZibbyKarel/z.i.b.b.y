@@ -3,7 +3,7 @@ import { Container, type NavItem } from "@zibby/design-system";
 import { Sidebar } from "./Sidebar";
 
 const navItems: NavItem[] = [
-  { id: "overview", glyph: "flow", href: "/overview", label: "Přehled" },
+  { id: "home", glyph: "flow", href: "/chat", label: "Přehled" },
   { id: "skills", glyph: "spark", href: "/skills", label: "Skilly" },
   { id: "agents", glyph: "bot", href: "/agents", label: "Agenti", badge: 3 },
   { id: "integrations", glyph: "plug", href: "/integrations", label: "Integrace" },
@@ -32,7 +32,7 @@ const meta: Meta<typeof Sidebar> = {
       </Container>
     ),
   ],
-  args: { navItems, footerItem, activeNav: "overview" },
+  args: { navItems, footerItem, activeNav: "home" },
 };
 export default meta;
 

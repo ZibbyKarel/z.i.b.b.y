@@ -9,9 +9,7 @@ import { MainLayout } from "./MainLayout";
 
 const RAIL_CONTENT_TESTID = "test-rail-content";
 
-const navItems: NavItem[] = [
-  { id: "overview", glyph: "flow", href: "/overview", label: "Přehled" },
-];
+const navItems: NavItem[] = [{ id: "home", glyph: "flow", href: "/chat", label: "Přehled" }];
 
 describe("MainLayout", () => {
   beforeEach(() => {
@@ -21,7 +19,7 @@ describe("MainLayout", () => {
   it("renders the breadcrumb and the page content (smoke)", () => {
     renderWithProviders(
       <CatalogProvider>
-        <MainLayout activeNav="overview" breadcrumb="Moje cesta" navItems={navItems}>
+        <MainLayout activeNav="home" breadcrumb="Moje cesta" navItems={navItems}>
           <div>obsah stránky</div>
         </MainLayout>
       </CatalogProvider>,
@@ -33,7 +31,7 @@ describe("MainLayout", () => {
   it("renders a main landmark holding the page content", () => {
     renderWithProviders(
       <CatalogProvider>
-        <MainLayout activeNav="overview" breadcrumb="Moje cesta" navItems={navItems}>
+        <MainLayout activeNav="home" breadcrumb="Moje cesta" navItems={navItems}>
           <div>obsah stránky</div>
         </MainLayout>
       </CatalogProvider>,
@@ -46,7 +44,7 @@ describe("MainLayout", () => {
   it("puts the skip-link first in tab order, jumping to the main landmark", () => {
     renderWithProviders(
       <CatalogProvider>
-        <MainLayout activeNav="overview" breadcrumb="Moje cesta" navItems={navItems}>
+        <MainLayout activeNav="home" breadcrumb="Moje cesta" navItems={navItems}>
           <div>obsah stránky</div>
         </MainLayout>
       </CatalogProvider>,
@@ -64,7 +62,7 @@ describe("MainLayout", () => {
     renderWithProviders(
       <CatalogProvider>
         <MainLayout
-          activeNav="overview"
+          activeNav="home"
           breadcrumb="Moje cesta"
           navItems={navItems}
           railSlot={<div data-testid={RAIL_CONTENT_TESTID}>rail obsah</div>}
@@ -89,7 +87,7 @@ describe("MainLayout", () => {
   it("does not render the rail toggle when no railSlot is provided", () => {
     renderWithProviders(
       <CatalogProvider>
-        <MainLayout activeNav="overview" breadcrumb="Moje cesta" navItems={navItems}>
+        <MainLayout activeNav="home" breadcrumb="Moje cesta" navItems={navItems}>
           <div>obsah stránky</div>
         </MainLayout>
       </CatalogProvider>,

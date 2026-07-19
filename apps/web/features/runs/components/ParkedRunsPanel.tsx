@@ -10,9 +10,16 @@ import { runTitle } from "../run";
 /**
  * Overview-rail section listing retries-parked pipeline runs (delivery loops
  * that exhausted their retries and wait for an operator note). Reuses the runs
- * feed query and filters client-side; each row links into /runs where the
- * resume-with-note panel lives. Renders nothing while the queue is empty —
- * quiet competence, no empty chrome.
+ * feed query and filters client-side; each row links into /archiv (F8d — /runs
+ * is deleted) where the resume-with-note panel lives. Renders nothing while the
+ * queue is empty — quiet competence, no empty chrome.
+ *
+ * F8d finding: the "Overview-rail" this docblock refers to no longer exists —
+ * `/overview` (and its right rail) is deleted, and a repo-wide grep turns up no
+ * remaining consumer of this component at all. It is now genuinely orphaned,
+ * not (as the F8d brief assumed) still reachable via `/archiv`/chat/the
+ * subsystem drawer. Left in place rather than deleted — this phase's mandate is
+ * `features/runs/` minus `Screen.tsx`, not an orphan sweep — flagged for F9.
  */
 export function ParkedRunsPanel() {
   const t = useTranslations("runs");
@@ -25,7 +32,7 @@ export function ParkedRunsPanel() {
     <HudPanel title={t("parkedQueue")} tone="warn">
       <Stack gap="150">
         {parked.map((run) => (
-          <Link href={`/runs?filter=parked&run=${run.runId}`} key={run.runId}>
+          <Link href={`/archiv?filter=parked&run=${run.runId}`} key={run.runId}>
             <Stack align="center" direction="row" gap="100">
               <Icon name="wait" size="xs" tone="warn" />
               <Stack gap="25">

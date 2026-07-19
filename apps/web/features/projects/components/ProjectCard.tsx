@@ -44,7 +44,15 @@ function BudgetBar({ label, used, cap }: { label: string; used: number; cap?: nu
  * bar, hidden when the project hasn't set a dollar cap on this window (even
  * though `spentUsd` is always present in the status readout).
  */
-function CostBar({ label, spentUsd, capUsd }: { label: string; spentUsd: number; capUsd?: number }) {
+function CostBar({
+  label,
+  spentUsd,
+  capUsd,
+}: {
+  label: string;
+  spentUsd: number;
+  capUsd?: number;
+}) {
   if (capUsd == null) return null;
   const pct = capUsd === 0 ? 100 : Math.min(100, Math.round((spentUsd / capUsd) * 100));
   const readout = `${formatCostUsd(spentUsd)} / ${formatCostUsd(capUsd)}`;
@@ -86,16 +94,21 @@ export function ProjectCard({ project, budget, onOpen }: ProjectCardProps) {
 
   // Per-status task stats (minus the "Celkem" total). Each stat is its own
   // `next/link` — living in the card footer, outside the body's click target, so a
-  // stat click deep-links to /runs and never triggers the card's open-detail nav.
+  // stat click deep-links to /archiv and never triggers the card's open-detail nav.
   // Phase 108: the runs feed has no global scope any more — each href carries the
   // project explicitly via `?project=<id>` (the pre-Phase-24 mechanism), restored
   // as the one way to drill into a single project's runs.
+  //
+  // F8d: `/runs` is deleted — repointed at `/archiv` (F2). Pre-existing F2
+  // limitation, not fixed here: the Archive screen only reads `?run=`, so
+  // `?project=`/`?filter=` land inert (the archive opens unscoped/unfiltered
+  // rather than 404ing).
   const taskStats = (
     <Stack wrap direction="row" gap="200">
       {groups.map(({ group: g, count }) => (
         <Link
           data-testid={`project-card-stat-${g.key}`}
-          href={`/runs?project=${project.id}&filter=${groupFilterParam(g)}` as Route}
+          href={`/archiv?project=${project.id}&filter=${groupFilterParam(g)}` as Route}
           key={g.key}
         >
           <Stat

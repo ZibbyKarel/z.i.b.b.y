@@ -20,8 +20,10 @@ export interface NavConfig {
 }
 
 export const NAV_ITEMS = [
-  { id: "overview", glyph: "grid", href: "/overview" },
-  { id: "runs", glyph: "pulse", href: "/runs" },
+  // F8d: "overview" (`/overview`) and "runs" (`/runs`) are deleted — `/chat` is
+  // home now (O2/O3) and `/archiv` (F2) is the surviving task archive. Neither
+  // carries a nav-rail entry of its own; `/chat` is reached via the sidebar's
+  // `BrandLogo`/⌘J, `/archiv` via `ChatTasksPanel`'s own "Archiv" link.
   { id: "projects", glyph: "code", href: "/projects" },
   { id: "companies", glyph: "branch", href: "/companies" },
   { id: "agents", glyph: "bot", href: "/agents" },
@@ -44,7 +46,9 @@ export const SETTINGS_ITEM = {
 /**
  * Screens that stay routable but carry no sidebar entry: the gate rules live
  * as a Settings sub-section. (Approvals have no screen at all — pending gates
- * are decided inline in the run detail and the Overview rail.)
+ * are decided inline in the run detail; F8d: the Overview rail this used to
+ * also read as is deleted — a run-attached approval is reached via `/chat`'s
+ * inline `RunDetail` now.)
  */
 export const ROUTE_ONLY_ITEMS = [
   { id: "gates", glyph: "checkpoint", href: "/gates" },

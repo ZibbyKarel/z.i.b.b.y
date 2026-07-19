@@ -23,9 +23,12 @@ describe("ChatTopBar", () => {
     expect(screen.getByTestId(ChatTopBarTestId.Lang)).toBeInTheDocument();
   });
 
-  it("points the HUD switch at the overview route", () => {
+  // F8d: `/overview` is deleted and nothing left is "classic HUD" — repointed to
+  // `/chat` rather than left dangling on a 404. Whether the icon itself should go
+  // is an open operator call (see ChatTopBar.tsx's docblock), not decided here.
+  it("points the HUD switch at /chat (no classic HUD destination survives F8d)", () => {
     renderWithProviders(<ChatTopBar onOpenPalette={vi.fn()} />);
     const link = within(screen.getByTestId(ChatTopBarTestId.Hud)).getByRole("link");
-    expect(link).toHaveAttribute("href", "/overview");
+    expect(link).toHaveAttribute("href", "/chat");
   });
 });

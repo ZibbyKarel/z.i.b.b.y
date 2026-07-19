@@ -7,7 +7,7 @@ import { BrandName } from "../../BrandName";
 
 /**
  * Sidebar brand mark: the static z.i.b.b.y wordmark + tagline, always linking to
- * `/overview`.
+ * `/chat` (F8d — `/overview` is deleted; `/chat` is home now, O2/O3).
  *
  * Phase 108: this used to swap to the "active project" scope's own logo/name
  * (Phase 25, on top of Phase 24's app-wide project scope) — that scope is gone.
@@ -18,7 +18,7 @@ export function BrandLogo() {
   const t = useTranslations("sidebar");
 
   return (
-    <Link href={"/overview" as Route}>
+    <Link href={"/chat" as Route}>
       <Container padding={["0", "0", "200", "0"]} textAlign="center">
         <Stack align="center" justify="center">
           {/* De-glowed brand — light is reserved for live states. */}

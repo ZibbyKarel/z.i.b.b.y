@@ -24,7 +24,16 @@ export interface ChatTopBarProps {
  * back to the HUD UI, and the language selector. A 56px transparent header; every
  * element carries its own single GlassSurface (no mode sign, no clock — not in the
  * design). The searchbox uses the transparent surface so the glass shows through;
- * the HUD switch is a 40×40 circular glass link to the classic HUD overview.
+ * the HUD switch is a 40×40 circular glass link — historically to the classic HUD
+ * `/overview`.
+ *
+ * F8d: `/overview` is deleted and every surviving `NAV_ITEMS` route is already
+ * `FULLSCREEN_ROUTES`-immersive (F8a–c) — there is no more "classic HUD" screen
+ * left for this icon to switch to ahead of F10's formal chrome removal. Repointed
+ * to `/chat` (this component's own page) rather than left dangling on a 404;
+ * flagged, not resolved: whether the icon itself should be removed now — dropping
+ * the topbar from five elements to four, a deliberate prior contract this phase
+ * didn't feel entitled to unilaterally break — is an operator call.
  */
 export function ChatTopBar({ onOpenPalette }: ChatTopBarProps) {
   const t = useTranslations("chat");
@@ -62,7 +71,7 @@ export function ChatTopBar({ onOpenPalette }: ChatTopBarProps) {
             <Link
               aria-label={t("hudSwitchLabel")}
               className="flex size-10 items-center justify-center text-foreground-dim outline-none transition-colors hover:text-accent focus-visible:text-accent"
-              href="/overview"
+              href="/chat"
             >
               <Icon name="grid" size="sm" />
             </Link>

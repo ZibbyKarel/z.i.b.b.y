@@ -3,10 +3,10 @@ import { renderWithProviders, screen } from "../../../test/render";
 import { BrandLogo } from "./BrandLogo";
 
 describe("BrandLogo", () => {
-  it("renders the static z.i.b.b.y brand with tagline, linking to /overview", () => {
+  it("renders the static z.i.b.b.y brand with tagline, linking to /chat", () => {
     renderWithProviders(<BrandLogo />);
     expect(screen.getByText("Zestful Intuitive Brainy Butler for You")).toBeInTheDocument();
-    expect(screen.getByRole("link")).toHaveAttribute("href", "/overview");
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/chat");
   });
 
   // Phase 108: the brand no longer swaps to a project's own logo/name — there is

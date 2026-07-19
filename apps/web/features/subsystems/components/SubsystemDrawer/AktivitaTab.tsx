@@ -28,9 +28,9 @@ export interface AktivitaTabProps {
   subsystem: SubsystemWithStatus;
 }
 
-/** Cap the drawer's list — the full, unbounded history lives on `/runs` (design
- * doc: "recent runs … + 'Všechny runy' link to /runs, the global page remains
- * the full view"). */
+/** Cap the drawer's list — the full, unbounded history lives on `/archiv` (F8d —
+ * `/runs` is deleted; design doc: "recent runs … + 'Všechny runy' link to /runs,
+ * the global page remains the full view"). */
 const MAX_RUNS = 20;
 
 /**
@@ -107,13 +107,13 @@ export function AktivitaTab({ subsystem }: AktivitaTabProps) {
       setExpandedRunId((cur) => (cur === run.runId ? null : run.runId));
       return;
     }
-    router.push(`/runs?run=${run.runId}` as Route);
+    router.push(`/archiv?run=${run.runId}` as Route);
   }
 
   return (
     <Stack data-testid={AktivitaTabTestId.Root} gap="150">
       <Stack align="center" direction="row" justify="end">
-        <Link data-testid={AktivitaTabTestId.AllRunsLink} href={"/runs" as Route}>
+        <Link data-testid={AktivitaTabTestId.AllRunsLink} href={"/archiv" as Route}>
           <Stack align="center" direction="row" gap="50">
             <Typography mono size="xs" tone="accent" type="note">
               {t("allRuns")}
