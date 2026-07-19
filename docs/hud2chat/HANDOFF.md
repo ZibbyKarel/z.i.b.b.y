@@ -75,3 +75,9 @@ explicitly accepted by the operator.
   excuse would have let a genuinely red typecheck ride for the rest of the arc.
 - Before calling a layout issue a defect, measure it (`clientWidth` vs `scrollWidth`). F5
   nearly "fixed" a deliberately pannable canvas that was working correctly.
+- **Never pipe `grep` into a redirect that overwrites its own input.** `rtk` transparently
+  rewrites `grep`, so `grep -v X file > file` does not do what plain shell semantics suggest —
+  it corrupted a chat transcript in F8a. Write to a temp file and move it into place.
+- Chat transcripts are append-only JSONL under `.zibby/data/chat/` (gitignored). Any contract
+  change to `ChatMessageSchema` must keep old lines parsing — verify against real lines on
+  disk, never by reasoning. `node -e` over each file is a fast integrity check.

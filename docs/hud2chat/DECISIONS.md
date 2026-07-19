@@ -169,3 +169,14 @@ So `/runs` becomes a redirect to `/archiv` preserving `?run=`, the API stops min
 links going forward, and the shim stays until old transcripts age out. The same applies to
 `useTaskSubmit`, which pushes `/runs?run=` after **every** task dispatch app-wide — that one
 is a live code path and gets repointed properly, not shimmed.
+
+**D18 — `BriefingCard`'s row sub-components must survive F8c's deletion.** F8a's
+`BriefingMessageCard` deliberately reuses `NeedsYouRow`, `SubsystemLineRow` and
+`BriefingCardTestId` by importing them from
+`features/overview/components/BriefingCard/BriefingCard.tsx` rather than re-implementing the
+layout. That is the right call for F8a, but it means `features/overview/` now has a **second**
+Chat-UI consumer beyond the activity module of D16. F8c must relocate these sub-parts (to
+`features/chat/` or a shared home) before deleting the overview folder — a straight `rm` breaks
+the briefing card inside the chat transcript, i.e. the very thing F8a just built. Note the two
+components share `BriefingCardTestId`; they never co-render today (`/overview` vs `/chat`), but
+once `BriefingCard` is gone the enum should move with the rows.

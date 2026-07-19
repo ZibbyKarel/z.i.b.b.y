@@ -17,7 +17,9 @@ nothing pushed.
 | F6  | Delivery entities          | ✅     | 12b1f113 | 7 routes incl. 685-LOC `ProfileScreen`; first dynamic `backHref`                       |
 | F6b | EntityHero dedup (D13)     | ✅     | 9df0f1e8 | `showIdentity` prop, default `true`; two opt-outs; other two immune via `children`     |
 | F7  | Memory + gates             | ✅     | 61eb605b | `GateRulesSection` seam resolved with D7's `surface` pattern; `/gates` stays off dock  |
-| F8  | Overview dissolution       | ⬜     | —        |                                                                                        |
+| F8a | Briefing as a chat message | ✅     | 74b4f7f2 | optional `briefing` payload on an assistant turn; no third role; compat proven         |
+| F8b | Status line                | 🔩     | —        | in flight                                                                              |
+| F8c | Overview + runs deletion   | ⬜     | —        | blocked on D16 + D18 relocations and the D17 shim                                      |
 | F9  | Chat reachability sweep    | ⬜     | —        |                                                                                        |
 | F10 | Old shell deletion         | ⬜     | —        |                                                                                        |
 
@@ -152,3 +154,22 @@ conversions — they are F8's job, and both carry inbound-link blockers (D16, D1
   activity module that **Chat UI's own live log** imports (D16), and the API bakes `/runs?run=`
   links into persisted chat transcripts, so the route needs a redirect shim rather than a
   delete (D17).
+- **2026-07-19** — F8a landed (`74b4f7f2`), the first phase in the arc to touch
+  `libs/contracts` and `apps/api`. The schema change is one optional field reusing the existing
+  `BriefingSchema`, and **no third chat role** — a role is who is speaking, and the briefing is
+  the butler, same as any assistant turn; what differs is what the turn carries. The trigger
+  question was answered narrowly and correctly: `generate()` itself, which both callers (the
+  operator's button and the morning automation) already funnel through, so no scheduler was
+  invented. Sinks are `@Optional()` with a `[]` default, so every test that constructs
+  `BriefingService` directly is unaffected, and each `announce()` is `.catch`-wrapped so a
+  chat-side failure can never cost the vault note or activity record.
+  Verified independently before committing: three typechecks clean, 480 contract / 308 web /
+  163 API tests green, and every on-disk transcript re-parsed.
+  **The subagent self-reported a real incident rather than hiding it:** an `rtk`-rewritten
+  `grep -v … > file` corrupted a local transcript during its own cleanup. It reconstructed the
+  file and I re-verified every JSONL line parses. The data is gitignored, so nothing tracked
+  was ever at risk — but the shell lesson is now in HANDOFF, and the honesty is the reason the
+  incident cost nothing.
+  New trap recorded as **D18**: `BriefingMessageCard` imports its row sub-components from
+  `BriefingCard`, so `features/overview/` now has a _second_ Chat-UI consumer. F8c must
+  relocate before deleting, or it breaks what F8a just built.

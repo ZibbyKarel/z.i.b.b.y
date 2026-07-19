@@ -40,8 +40,8 @@ title + subtitle, then the content frame. Same token set as `/chat`. That is wha
 | F6  | Delivery entities          | `projects` (+ `/new`, integrations detail), `companies`               | ✅ 12b1f113 |
 | F6b | EntityHero dedup (D13)     | resolve header/hero duplication once, across all four consumers       | ✅ 9df0f1e8 |
 | F7  | Memory + gates             | `/memory`, `/gates`                                                   | ✅ 61eb605b |
-| F8a | Briefing as a chat message | contract variant + API + transcript rendering (O6)                    | ⬜          |
-| F8b | Status line                | subsystem health from `SummaryWidget` into the topbar pill/flyout     | ⬜          |
+| F8a | Briefing as a chat message | contract variant + API + transcript rendering (O6)                    | ✅ 74b4f7f2 |
+| F8b | Status line                | subsystem health from `SummaryWidget` into the topbar pill/flyout     | 🔩          |
 | F8c | Overview + runs deletion   | relocate activity (D16), repoint links, `/runs` shim (D17), delete    | ⬜          |
 | F9  | Chat reachability sweep    | every surface reachable from Chat; orphans killed                     | ⬜          |
 | F10 | Old shell deletion         | remove `MainLayout`/`Sidebar`/`RightRail`/`TopBar`, simplify AppShell | ⬜          |
