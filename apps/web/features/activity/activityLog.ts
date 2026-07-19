@@ -26,7 +26,13 @@ export function buildActivityLog(entries: ActivityEntry[], view: ActivityView): 
 
   const flush = () => {
     if (!run) return;
-    rows.push({ type: "group", key: `grp-${run.firstId}`, group: run.group, count: run.count, at: run.at });
+    rows.push({
+      type: "group",
+      key: `grp-${run.firstId}`,
+      group: run.group,
+      count: run.count,
+      at: run.at,
+    });
     run = null;
   };
 

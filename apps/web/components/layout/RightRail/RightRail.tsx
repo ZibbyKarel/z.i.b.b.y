@@ -4,8 +4,8 @@ import { useState } from "react";
 import { Button, ButtonGroup, Container, Stack, StatusDot, Typography } from "@zibby/design-system";
 import { DEFAULT_ACTIVITY_VIEW, SUBSYSTEMS, type SubsystemId } from "@zibby/contracts";
 import { useLocale, useTranslations } from "next-intl";
-import { buildActivityLog } from "../../../features/overview/activityLog";
-import { useActivityFeedInfiniteQuery } from "../../../features/overview/queries";
+import { buildActivityLog } from "../../../features/activity/activityLog";
+import { useActivityFeedInfiniteQuery } from "../../../features/activity/queries";
 import { useActivityViewQuery } from "../../../features/settings/queries";
 import { clockTime } from "../../../utils/time";
 

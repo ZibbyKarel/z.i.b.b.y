@@ -44,7 +44,9 @@ vi.mock("../limits/queries", () => ({ useLimitsQuery: () => ({ data: undefined }
 vi.mock("../pins", () => ({
   usePinToggle: () => ({ pins: [{ kind: "chain", id: "c1" }], toggle: vi.fn() }),
 }));
-vi.mock("../chains", () => ({ useChainsQuery: () => ({ data: [{ id: "c1", name: "My chain" }] }) }));
+vi.mock("../chains", () => ({
+  useChainsQuery: () => ({ data: [{ id: "c1", name: "My chain" }] }),
+}));
 vi.mock("../tasks", () => ({ useNewTask: () => ({ open: vi.fn() }) }));
 // CommandLine (Phase 40 command bar) reads the project registry for its inline
 // per-task picker (`ProjectSelect`) — stub both so mounting it never hits the
@@ -54,11 +56,11 @@ vi.mock("../projects", () => ({
   ProjectSelect: () => null,
 }));
 
-vi.mock("./queries", () => ({
+vi.mock("../briefing/queries", () => ({
   // The mounted BriefingCard reads this; undefined → it renders null (out of scope here).
   useBriefingQuery: () => ({ data: undefined }),
 }));
-vi.mock("./mutations", () => ({
+vi.mock("../briefing/mutations", () => ({
   useGenerateBriefingMutation: () => ({ mutate: vi.fn(), isPending: false, isSuccess: false }),
 }));
 

@@ -2,7 +2,8 @@ import { renderWithProviders as render, screen } from "../../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Briefing } from "@zibby/contracts";
-import { BriefingCard, BriefingCardTestId } from "./BriefingCard";
+import { BriefingCardTestId } from "../../../briefing/components/BriefingRows";
+import { BriefingCard } from "./BriefingCard";
 
 const calm: Briefing = {
   generatedAt: "2026-06-12T07:00:00.000Z",
@@ -39,8 +40,10 @@ const busy: Briefing = {
 const mutate = vi.fn();
 let briefingData: Briefing | undefined = calm;
 
-vi.mock("../../queries", () => ({ useBriefingQuery: () => ({ data: briefingData }) }));
-vi.mock("../../mutations", () => ({
+vi.mock("../../../briefing/queries", () => ({
+  useBriefingQuery: () => ({ data: briefingData }),
+}));
+vi.mock("../../../briefing/mutations", () => ({
   useGenerateBriefingMutation: () => ({ mutate, isPending: false, isSuccess: false }),
 }));
 

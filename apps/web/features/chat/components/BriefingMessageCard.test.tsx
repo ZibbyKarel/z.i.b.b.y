@@ -1,7 +1,7 @@
 import { renderWithProviders as render, screen } from "../../../test/render";
 import { describe, expect, it } from "vitest";
 import type { Briefing } from "@zibby/contracts";
-import { BriefingCardTestId } from "../../overview/components/BriefingCard/BriefingCard";
+import { BriefingCardTestId } from "../../briefing/components/BriefingRows";
 import { BriefingMessageCard, BriefingMessageCardTestId } from "./BriefingMessageCard";
 
 const calm: Briefing = {

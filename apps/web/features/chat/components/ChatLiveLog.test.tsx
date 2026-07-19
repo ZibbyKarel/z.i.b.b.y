@@ -9,7 +9,7 @@ const { mockUseActivityFeedInfiniteQuery, mockUseActivityViewQuery } = vi.hoiste
   mockUseActivityViewQuery: vi.fn(),
 }));
 
-vi.mock("../../overview/queries", () => ({
+vi.mock("../../activity/queries", () => ({
   useActivityFeedInfiniteQuery: mockUseActivityFeedInfiniteQuery,
 }));
 
@@ -25,7 +25,12 @@ function seedEmpty() {
 function seedEntries() {
   mockUseActivityFeedInfiniteQuery.mockReturnValue({
     data: [
-      { id: "act_2", at: "2026-07-15T10:05:00.000Z", kind: "task-created", summary: "second entry" },
+      {
+        id: "act_2",
+        at: "2026-07-15T10:05:00.000Z",
+        kind: "task-created",
+        summary: "second entry",
+      },
       { id: "act_1", at: "2026-07-15T10:00:00.000Z", kind: "task-created", summary: "first entry" },
     ],
   });

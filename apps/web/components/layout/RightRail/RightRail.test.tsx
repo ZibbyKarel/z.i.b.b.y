@@ -7,7 +7,7 @@ import { RightRail, RightRailTestId } from "./RightRail";
 
 let feedData: ActivityEntry[] = [];
 
-vi.mock("../../../features/overview/queries", () => ({
+vi.mock("../../../features/activity/queries", () => ({
   useActivityFeedInfiniteQuery: () => ({
     data: feedData,
     hasNextPage: false,

@@ -21,7 +21,10 @@ const ALL_VISIBLE: ActivityView = {
 describe("buildActivityLog", () => {
   it("passes visible groups through one-per-row", () => {
     const rows = buildActivityLog(
-      [entry("a", "task-created", "2026-06-12T10:00:00.000Z"), entry("b", "run-started", "2026-06-12T09:00:00.000Z")],
+      [
+        entry("a", "task-created", "2026-06-12T10:00:00.000Z"),
+        entry("b", "run-started", "2026-06-12T09:00:00.000Z"),
+      ],
       ALL_VISIBLE,
     );
     expect(rows.map((r) => r.type)).toEqual(["entry", "entry"]);
@@ -30,7 +33,10 @@ describe("buildActivityLog", () => {
   it("drops hidden groups entirely", () => {
     const view: ActivityView = { ...ALL_VISIBLE, runs: "hidden" };
     const rows = buildActivityLog(
-      [entry("a", "task-created", "2026-06-12T10:00:00.000Z"), entry("b", "run-started", "2026-06-12T09:00:00.000Z")],
+      [
+        entry("a", "task-created", "2026-06-12T10:00:00.000Z"),
+        entry("b", "run-started", "2026-06-12T09:00:00.000Z"),
+      ],
       view,
     );
     expect(rows).toHaveLength(1);
@@ -48,7 +54,12 @@ describe("buildActivityLog", () => {
       view,
     );
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ type: "group", group: "channels", count: 3, at: "2026-06-12T10:00:00.000Z" });
+    expect(rows[0]).toMatchObject({
+      type: "group",
+      group: "channels",
+      count: 3,
+      at: "2026-06-12T10:00:00.000Z",
+    });
   });
 
   it("breaks a grouped run when a visible entry interrupts it", () => {

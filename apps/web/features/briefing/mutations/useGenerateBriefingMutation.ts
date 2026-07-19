@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../../state/api";
-import { getActivityQueryKey } from "../queries/useActivityQuery";
+import { getActivityQueryKey } from "../../activity/queries/useActivityQuery";
 import { getBriefingQueryKey } from "../queries/useBriefingQuery";
 
 /**

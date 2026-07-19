@@ -1,7 +1,7 @@
 "use client";
 
 import { useApprovalsQuery } from "../approvals";
-import { useBriefingQuery } from "../overview";
+import { useBriefingQuery } from "../briefing";
 import { useRunsQuery } from "../runs";
 import { type Notification, selectNotifications } from "./notificationRules";
 

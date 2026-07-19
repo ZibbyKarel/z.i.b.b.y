@@ -10,7 +10,11 @@ import { useIntegrationsQuery } from "../integrations";
 import { usePipelinesQuery } from "../pipelines";
 import { useRunsQuery } from "../runs";
 import { useSkillsQuery } from "../skills";
-import { SUBSYSTEM_LABEL, deriveHealthPresentation, subsystemDotTone } from "./healthPresentation";
+import {
+  SUBSYSTEM_LABEL,
+  deriveHealthPresentation,
+  subsystemDotTone,
+} from "../health/healthPresentation";
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 

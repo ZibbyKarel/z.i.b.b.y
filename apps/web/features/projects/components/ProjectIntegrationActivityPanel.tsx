@@ -2,7 +2,7 @@
 import { useTranslations } from "next-intl";
 import { Typography } from "@zibby/design-system";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
-import { ActivityFeed } from "../../overview/components/ActivityFeed/ActivityFeed";
+import { ActivityFeed } from "../../activity/components/ActivityFeed/ActivityFeed";
 import { useProjectIntegrationActivityQuery } from "../queries";
 
 export enum ProjectIntegrationActivityPanelTestId {

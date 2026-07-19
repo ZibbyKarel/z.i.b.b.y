@@ -12,8 +12,8 @@ import {
 } from "@zibby/design-system";
 import { DEFAULT_ACTIVITY_VIEW } from "@zibby/contracts";
 import { useLocale, useTranslations } from "next-intl";
-import { buildActivityLog } from "../../overview/activityLog";
-import { useActivityFeedInfiniteQuery } from "../../overview/queries";
+import { buildActivityLog } from "../../activity/activityLog";
+import { useActivityFeedInfiniteQuery } from "../../activity/queries";
 import { useActivityViewQuery } from "../../settings/queries";
 import { clockTime } from "../../../utils/time";
 
@@ -99,10 +99,7 @@ export function ChatLiveLog({ dimmed = false }: ChatLiveLogProps) {
             overflow: "hidden",
           }}
         >
-          <Container
-            padding="150"
-            style={{ borderBottom: "1px solid var(--color-glass-border)" }}
-          >
+          <Container padding="150" style={{ borderBottom: "1px solid var(--color-glass-border)" }}>
             <Stack align="center" direction="row" gap="100">
               <StatusDot pulse tone="run" />
               <Typography mono size="xs" tone="accent" type="note">

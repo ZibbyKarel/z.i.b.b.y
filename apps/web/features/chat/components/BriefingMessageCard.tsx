@@ -7,7 +7,7 @@ import {
   BriefingCardTestId,
   NeedsYouRow,
   SubsystemLineRow,
-} from "../../overview/components/BriefingCard/BriefingCard";
+} from "../../briefing/components/BriefingRows";
 
 export enum BriefingMessageCardTestId {
   Root = "chat-briefing-message-card",

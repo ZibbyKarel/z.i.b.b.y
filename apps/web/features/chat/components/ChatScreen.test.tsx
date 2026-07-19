@@ -66,7 +66,12 @@ vi.mock("../../subsystems/queries/useSubsystemsQuery", () => ({
 // the network, matching `CommandLine.test.tsx`'s own mocking pattern.
 vi.mock("../../limits/queries/useLimitsQuery", () => ({
   useLimitsQuery: () => ({
-    data: { rolling: { usedPct: 10, resetsAt: null }, weekly: { usedPct: 5, resetsAt: null }, capturedAt: Date.now(), stale: false },
+    data: {
+      rolling: { usedPct: 10, resetsAt: null },
+      weekly: { usedPct: 5, resetsAt: null },
+      capturedAt: Date.now(),
+      stale: false,
+    },
   }),
 }));
 vi.mock("../../tasks/mutations/useUploadTaskAttachmentsMutation", () => ({
@@ -105,7 +110,7 @@ vi.mock("../../projects/queries/useProjectsQuery", () => ({
 vi.mock("../../system", () => ({ useSystemConfigQuery: () => ({ data: undefined }) }));
 // The bottom-right `ChatLiveLog` reuses the HUD RightRail's activity wiring — stub both
 // queries so the widget renders its collapsed toggle without hitting the network.
-vi.mock("../../overview/queries/useActivityFeedInfiniteQuery", () => ({
+vi.mock("../../activity/queries/useActivityFeedInfiniteQuery", () => ({
   useActivityFeedInfiniteQuery: () => ({ data: undefined }),
   getActivityFeedQueryKey: () => ["activity", "feed"],
   prependActivityEntry: vi.fn(),

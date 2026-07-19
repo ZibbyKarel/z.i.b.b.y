@@ -4,4 +4,3 @@ export {
   prependActivityEntry,
   useActivityFeedInfiniteQuery,
 } from "./useActivityFeedInfiniteQuery";
-export { getBriefingQueryKey, useBriefingQuery } from "./useBriefingQuery";

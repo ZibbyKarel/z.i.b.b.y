@@ -5,7 +5,7 @@ import type { FocusEvent, KeyboardEvent, MouseEvent, PointerEvent, ReactNode } f
 import { Stack, StatusDot, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useHealthQuery } from "../../health";
-import { deriveHealthPresentation } from "../../overview/healthPresentation";
+import { deriveHealthPresentation } from "../../health/healthPresentation";
 import { useSubsystemsQuery } from "../../subsystems/queries/useSubsystemsQuery";
 import { type FlyoutSection, STATUS_PILL_DOM_ID } from "../statusFlyout";
 import { useStatusFlyout } from "../useStatusFlyout";
