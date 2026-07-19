@@ -14,8 +14,8 @@ import {
   Typography,
 } from "@zibby/design-system";
 import type { Skill } from "../../domain";
+import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { QueryError } from "../../components/LoadError/QueryError";
@@ -104,51 +104,53 @@ export function Screen() {
   };
 
   return (
-    <PageContainer>
-      <Stack gap="250">
-        <PageHeader
-          actions={
-            <>
-              <Button icon="plus" intent="ghost" onClick={() => setAddingCategory(true)}>
-                {t("addCategory")}
-              </Button>
-              <Button icon="plus" intent="primary" onClick={() => setAdding(true)}>
-                {t("addSkill")}
-              </Button>
-            </>
-          }
-          subtitle={t("countSummary", { count: skills.length })}
-          title={t("title")}
-        />
-
-        {skillsQuery.isPending ? (
-          <QueryLoading />
-        ) : skillsQuery.isError ? (
-          <QueryError onRetry={() => void skillsQuery.refetch()} />
-        ) : categories.length === 0 && skills.length === 0 ? (
-          <EmptyState
-            actionLabel={t("addSkill")}
-            description={t("emptyDescription")}
-            glyph="spark"
-            hint={t("emptyHint")}
-            onAction={() => setAdding(true)}
-            title={t("emptyTitle")}
-          />
-        ) : (
-          <>
-            {categories.map((cat) =>
-              renderSection(
-                cat.name,
-                cat.name,
-                (cat.glyph as IconName) ?? "spark",
-                skills.filter((s) => s.category === cat.name),
-              ),
+    <ImmersivePage
+      actions={
+        <>
+          <Button icon="plus" intent="ghost" onClick={() => setAddingCategory(true)}>
+            {t("addCategory")}
+          </Button>
+          <Button icon="plus" intent="primary" onClick={() => setAdding(true)}>
+            {t("addSkill")}
+          </Button>
+        </>
+      }
+      subtitle={t("countSummary", { count: skills.length })}
+      title={t("title")}
+    >
+      <Container padding={["300", "350"]}>
+        <PageContainer>
+          <Stack gap="250">
+            {skillsQuery.isPending ? (
+              <QueryLoading />
+            ) : skillsQuery.isError ? (
+              <QueryError onRetry={() => void skillsQuery.refetch()} />
+            ) : categories.length === 0 && skills.length === 0 ? (
+              <EmptyState
+                actionLabel={t("addSkill")}
+                description={t("emptyDescription")}
+                glyph="spark"
+                hint={t("emptyHint")}
+                onAction={() => setAdding(true)}
+                title={t("emptyTitle")}
+              />
+            ) : (
+              <>
+                {categories.map((cat) =>
+                  renderSection(
+                    cat.name,
+                    cat.name,
+                    (cat.glyph as IconName) ?? "spark",
+                    skills.filter((s) => s.category === cat.name),
+                  ),
+                )}
+                {uncategorized.length > 0 &&
+                  renderSection("__uncategorized", t("uncategorized"), "spark", uncategorized)}
+              </>
             )}
-            {uncategorized.length > 0 &&
-              renderSection("__uncategorized", t("uncategorized"), "spark", uncategorized)}
-          </>
-        )}
-      </Stack>
+          </Stack>
+        </PageContainer>
+      </Container>
 
       {adding && (
         <AddSkillModal
@@ -203,6 +205,6 @@ export function Screen() {
           pending={createCategory.isPending}
         />
       )}
-    </PageContainer>
+    </ImmersivePage>
   );
 }

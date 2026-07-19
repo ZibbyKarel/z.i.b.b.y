@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Button, Stack } from "@zibby/design-system";
+import { Button, Container, Stack } from "@zibby/design-system";
+import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { Collection } from "../../components/Collection/Collection";
 import { McpServerCard } from "./components/McpServerCard";
 import { type McpServerCreateDraft, McpServerFormDialog } from "./components/McpServerFormDialog";
@@ -41,51 +41,53 @@ export function Screen() {
   };
 
   return (
-    <PageContainer>
-      <Stack gap="250">
-        <PageHeader
-          actions={
-            <Button icon="plus" intent="primary" onClick={() => setCreating(true)}>
-              {t("mcp.addServer")}
-            </Button>
-          }
-          subtitle={t("mcp.countSummary", { count: servers.length })}
-          title={t("mcp.title")}
-        />
-
-        <Collection
-          empty={{
-            glyph: "server",
-            title: t("mcp.emptyTitle"),
-            description: t("mcp.emptyDescription"),
-            actionLabel: t("mcp.addServer"),
-            hint: t("mcp.emptyHint"),
-            onAction: () => setCreating(true),
-          }}
-          error={
-            serversQuery.isError
-              ? {
-                  title: t("common.loadErrorTitle"),
-                  description: t("common.loadErrorDescription"),
-                  retryLabel: t("common.retry"),
-                  onRetry: () => void serversQuery.refetch(),
-                }
-              : undefined
-          }
-          items={servers}
-          loading={serversQuery.isPending ? { label: t("common.loading") } : undefined}
-          renderItem={(s) => (
-            // Grammar (N4e): Configure NAVIGATES to the detail page — no edit dialog.
-            <McpServerCard
-              key={s.id}
-              onConfigure={(server) => router.push(`/mcp/${server.id}`)}
-              server={s}
+    <ImmersivePage
+      actions={
+        <Button icon="plus" intent="primary" onClick={() => setCreating(true)}>
+          {t("mcp.addServer")}
+        </Button>
+      }
+      subtitle={t("mcp.countSummary", { count: servers.length })}
+      title={t("mcp.title")}
+    >
+      <Container padding={["300", "350"]}>
+        <PageContainer>
+          <Stack gap="250">
+            <Collection
+              empty={{
+                glyph: "server",
+                title: t("mcp.emptyTitle"),
+                description: t("mcp.emptyDescription"),
+                actionLabel: t("mcp.addServer"),
+                hint: t("mcp.emptyHint"),
+                onAction: () => setCreating(true),
+              }}
+              error={
+                serversQuery.isError
+                  ? {
+                      title: t("common.loadErrorTitle"),
+                      description: t("common.loadErrorDescription"),
+                      retryLabel: t("common.retry"),
+                      onRetry: () => void serversQuery.refetch(),
+                    }
+                  : undefined
+              }
+              items={servers}
+              loading={serversQuery.isPending ? { label: t("common.loading") } : undefined}
+              renderItem={(s) => (
+                // Grammar (N4e): Configure NAVIGATES to the detail page — no edit dialog.
+                <McpServerCard
+                  key={s.id}
+                  onConfigure={(server) => router.push(`/mcp/${server.id}`)}
+                  server={s}
+                />
+              )}
             />
-          )}
-        />
-      </Stack>
+          </Stack>
+        </PageContainer>
+      </Container>
 
       {creating && <McpServerFormDialog onClose={() => setCreating(false)} onCreate={onCreate} />}
-    </PageContainer>
+    </ImmersivePage>
   );
 }

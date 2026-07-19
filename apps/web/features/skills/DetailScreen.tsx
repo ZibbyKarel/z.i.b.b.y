@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Button, type IconName, Stack } from "@zibby/design-system";
+import { Button, Container, type IconName, Stack } from "@zibby/design-system";
 import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import type { Skill } from "@zibby/contracts";
 import { useFormControls, zodResolver } from "@zibby/forms";
@@ -11,8 +11,8 @@ import { z } from "zod";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
+import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { SkillFormFields, type SkillFormValues } from "./components/SkillFormFields";
 import { useDeleteSkillMutation, useUpdateSkillMutation } from "./mutations";
 import { skillFile, useSkillCategoriesQuery, useSkillQuery } from "./queries";
@@ -91,52 +91,52 @@ function SkillEditor({ skill }: { skill: Skill }) {
   const canSave = form.formState.isValid && !updateSkill.isPending;
 
   return renderForm(
-    <PageContainer>
-      <Stack gap="250">
-        <PageHeader
-          actions={
-            <>
-              <Button
-                data-testid={SkillDetailScreenTestId.Delete}
-                icon="trash"
-                intent="danger"
-                onClick={() => setConfirmDelete(true)}
-                size="sm"
-              >
-                {tk("common.delete")}
-              </Button>
-              <Button
-                data-testid={SkillDetailScreenTestId.Save}
-                disabled={!canSave}
-                icon="check"
-                intent="primary"
-                loading={updateSkill.isPending}
-                onClick={() => void submit()}
-                size="sm"
-              >
-                {tk("common.save")}
-              </Button>
-              <Button intent="ghost" onClick={() => router.push("/skills")} size="sm">
-                {tk("common.back")}
-              </Button>
-            </>
-          }
-          subtitle={skillFile(skill.id)}
-          title={name}
-        />
-
-        <HudPanel title={tf("editTitle")}>
-          <SkillFormFields
-            categories={categories.map((c) => c.name)}
-            glyph={glyph}
-            initialTab="editor"
-            onGlyphChange={setGlyph}
-            setInstructions={(v) =>
-              form.setValue("instructions", v, { shouldDirty: true, shouldValidate: true })
-            }
-          />
-        </HudPanel>
-      </Stack>
+    <ImmersivePage
+      actions={
+        <>
+          <Button
+            data-testid={SkillDetailScreenTestId.Delete}
+            icon="trash"
+            intent="danger"
+            onClick={() => setConfirmDelete(true)}
+            size="sm"
+          >
+            {tk("common.delete")}
+          </Button>
+          <Button
+            data-testid={SkillDetailScreenTestId.Save}
+            disabled={!canSave}
+            icon="check"
+            intent="primary"
+            loading={updateSkill.isPending}
+            onClick={() => void submit()}
+            size="sm"
+          >
+            {tk("common.save")}
+          </Button>
+        </>
+      }
+      backHref="/skills"
+      subtitle={skillFile(skill.id)}
+      title={name}
+    >
+      <Container padding={["300", "350"]}>
+        <PageContainer>
+          <Stack gap="250">
+            <HudPanel surface="glass" title={tf("editTitle")}>
+              <SkillFormFields
+                categories={categories.map((c) => c.name)}
+                glyph={glyph}
+                initialTab="editor"
+                onGlyphChange={setGlyph}
+                setInstructions={(v) =>
+                  form.setValue("instructions", v, { shouldDirty: true, shouldValidate: true })
+                }
+              />
+            </HudPanel>
+          </Stack>
+        </PageContainer>
+      </Container>
 
       {confirmDelete && (
         <ConfirmDeleteDialog
@@ -154,6 +154,6 @@ function SkillEditor({ skill }: { skill: Skill }) {
           title={t("deleteTitle")}
         />
       )}
-    </PageContainer>,
+    </ImmersivePage>,
   );
 }

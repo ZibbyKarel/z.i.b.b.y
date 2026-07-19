@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Button, Grid, Stack } from "@zibby/design-system";
+import { Button, Container, Grid, Stack } from "@zibby/design-system";
+import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
@@ -24,44 +24,46 @@ export function Screen() {
   const [adding, setAdding] = useState(false);
 
   return (
-    <PageContainer>
-      <Stack gap="250">
-        <PageHeader
-          actions={
-            <Button icon="plus" intent="primary" onClick={() => setAdding(true)}>
-              {t("addCommand")}
-            </Button>
-          }
-          subtitle={t("countSummary", { count: commands.length })}
-          title={t("title")}
-        />
-
-        {commandsQuery.isPending ? (
-          <QueryLoading />
-        ) : commandsQuery.isError ? (
-          <QueryError onRetry={() => void commandsQuery.refetch()} />
-        ) : commands.length === 0 ? (
-          <EmptyState
-            actionLabel={t("addCommand")}
-            description={t("emptyDescription")}
-            glyph="bolt"
-            hint={t("emptyHint")}
-            onAction={() => setAdding(true)}
-            title={t("emptyTitle")}
-          />
-        ) : (
-          <Grid cols={1} gap="150" lg={3} sm={2}>
-            {commands.map((c) => (
-              <CommandTile
-                command={c}
-                key={c.id}
-                onSelect={() => router.push(`/commands/${c.id}`)}
-                selectLabel={t("openCommandAria", { name: c.id })}
+    <ImmersivePage
+      actions={
+        <Button icon="plus" intent="primary" onClick={() => setAdding(true)}>
+          {t("addCommand")}
+        </Button>
+      }
+      subtitle={t("countSummary", { count: commands.length })}
+      title={t("title")}
+    >
+      <Container padding={["300", "350"]}>
+        <PageContainer>
+          <Stack gap="250">
+            {commandsQuery.isPending ? (
+              <QueryLoading />
+            ) : commandsQuery.isError ? (
+              <QueryError onRetry={() => void commandsQuery.refetch()} />
+            ) : commands.length === 0 ? (
+              <EmptyState
+                actionLabel={t("addCommand")}
+                description={t("emptyDescription")}
+                glyph="bolt"
+                hint={t("emptyHint")}
+                onAction={() => setAdding(true)}
+                title={t("emptyTitle")}
               />
-            ))}
-          </Grid>
-        )}
-      </Stack>
+            ) : (
+              <Grid cols={1} gap="150" lg={3} sm={2}>
+                {commands.map((c) => (
+                  <CommandTile
+                    command={c}
+                    key={c.id}
+                    onSelect={() => router.push(`/commands/${c.id}`)}
+                    selectLabel={t("openCommandAria", { name: c.id })}
+                  />
+                ))}
+              </Grid>
+            )}
+          </Stack>
+        </PageContainer>
+      </Container>
 
       {adding && (
         <AddCommandModal
@@ -102,6 +104,6 @@ export function Screen() {
           pending={createCommand.isPending}
         />
       )}
-    </PageContainer>
+    </ImmersivePage>
   );
 }

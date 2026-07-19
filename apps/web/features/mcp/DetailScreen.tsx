@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Button, Stack } from "@zibby/design-system";
+import { Button, Container, Stack } from "@zibby/design-system";
 import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import type { McpServer } from "@zibby/contracts";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
+import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { McpServerFormFields, useMcpFormState } from "./components/McpServerFormFields";
 import {
   useDeleteMcpServerMutation,
@@ -62,51 +62,52 @@ function McpServerEditor({ server }: { server: McpServer }) {
       {
         onSuccess: () => {
           const token = form.newAuthToken();
-          if (token) setCredentials.mutate({ params: { id: server.id }, body: { authToken: token } });
+          if (token)
+            setCredentials.mutate({ params: { id: server.id }, body: { authToken: token } });
         },
       },
     );
   };
 
   return (
-    <PageContainer>
-      <Stack gap="250">
-        <PageHeader
-          actions={
-            <>
-              <Button
-                data-testid={McpDetailScreenTestId.Delete}
-                icon="trash"
-                intent="danger"
-                onClick={() => setConfirmDelete(true)}
-                size="sm"
-              >
-                {t("common.delete")}
-              </Button>
-              <Button
-                data-testid={McpDetailScreenTestId.Save}
-                disabled={!form.canSave(false)}
-                icon="check"
-                intent="primary"
-                loading={updateServer.isPending}
-                onClick={save}
-                size="sm"
-              >
-                {t("common.save")}
-              </Button>
-              <Button intent="ghost" onClick={() => router.push("/mcp")} size="sm">
-                {t("common.back")}
-              </Button>
-            </>
-          }
-          subtitle={server.type === "stdio" ? server.command : server.url}
-          title={name}
-        />
-
-        <HudPanel title={t("mcp.detailPanel")}>
-          <McpServerFormFields idLocked form={form} hasCredentials={server.hasCredentials} />
-        </HudPanel>
-      </Stack>
+    <ImmersivePage
+      actions={
+        <>
+          <Button
+            data-testid={McpDetailScreenTestId.Delete}
+            icon="trash"
+            intent="danger"
+            onClick={() => setConfirmDelete(true)}
+            size="sm"
+          >
+            {t("common.delete")}
+          </Button>
+          <Button
+            data-testid={McpDetailScreenTestId.Save}
+            disabled={!form.canSave(false)}
+            icon="check"
+            intent="primary"
+            loading={updateServer.isPending}
+            onClick={save}
+            size="sm"
+          >
+            {t("common.save")}
+          </Button>
+        </>
+      }
+      backHref="/mcp"
+      subtitle={server.type === "stdio" ? server.command : server.url}
+      title={name}
+    >
+      <Container padding={["300", "350"]}>
+        <PageContainer>
+          <Stack gap="250">
+            <HudPanel surface="glass" title={t("mcp.detailPanel")}>
+              <McpServerFormFields idLocked form={form} hasCredentials={server.hasCredentials} />
+            </HudPanel>
+          </Stack>
+        </PageContainer>
+      </Container>
 
       {confirmDelete && (
         <ConfirmDeleteDialog
@@ -124,6 +125,6 @@ function McpServerEditor({ server }: { server: McpServer }) {
           title={t("mcp.deleteTitle")}
         />
       )}
-    </PageContainer>
+    </ImmersivePage>
   );
 }

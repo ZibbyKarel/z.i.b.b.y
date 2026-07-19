@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Button, Stack } from "@zibby/design-system";
+import { Button, Container, Stack } from "@zibby/design-system";
 import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import type { Hook } from "@zibby/contracts";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
+import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { HookFormFields, useHookFormState } from "./components/HookFormFields";
 import { useDeleteHookMutation, useUpdateHookMutation } from "./mutations";
 import { useHookQuery } from "./queries";
@@ -52,46 +52,44 @@ function HookEditor({ hook }: { hook: Hook }) {
   const subtitle = hook.matcher ? `${hook.event} · ${hook.matcher}` : hook.event;
 
   return (
-    <PageContainer>
-      <Stack gap="250">
-        <PageHeader
-          actions={
-            <>
-              <Button
-                data-testid={HookDetailScreenTestId.Delete}
-                icon="trash"
-                intent="danger"
-                onClick={() => setConfirmDelete(true)}
-                size="sm"
-              >
-                {t("common.delete")}
-              </Button>
-              <Button
-                data-testid={HookDetailScreenTestId.Save}
-                disabled={!form.canSave(false)}
-                icon="check"
-                intent="primary"
-                loading={updateHook.isPending}
-                onClick={() =>
-                  updateHook.mutate({ params: { id: hook.id }, body: form.buildPatch() })
-                }
-                size="sm"
-              >
-                {t("common.save")}
-              </Button>
-              <Button intent="ghost" onClick={() => router.push("/hooks")} size="sm">
-                {t("common.back")}
-              </Button>
-            </>
-          }
-          subtitle={subtitle}
-          title={name}
-        />
-
-        <HudPanel title={t("hooks.detailPanel")}>
-          <HookFormFields idLocked form={form} />
-        </HudPanel>
-      </Stack>
+    <ImmersivePage
+      actions={
+        <>
+          <Button
+            data-testid={HookDetailScreenTestId.Delete}
+            icon="trash"
+            intent="danger"
+            onClick={() => setConfirmDelete(true)}
+            size="sm"
+          >
+            {t("common.delete")}
+          </Button>
+          <Button
+            data-testid={HookDetailScreenTestId.Save}
+            disabled={!form.canSave(false)}
+            icon="check"
+            intent="primary"
+            loading={updateHook.isPending}
+            onClick={() => updateHook.mutate({ params: { id: hook.id }, body: form.buildPatch() })}
+            size="sm"
+          >
+            {t("common.save")}
+          </Button>
+        </>
+      }
+      backHref="/hooks"
+      subtitle={subtitle}
+      title={name}
+    >
+      <Container padding={["300", "350"]}>
+        <PageContainer>
+          <Stack gap="250">
+            <HudPanel surface="glass" title={t("hooks.detailPanel")}>
+              <HookFormFields idLocked form={form} />
+            </HudPanel>
+          </Stack>
+        </PageContainer>
+      </Container>
 
       {confirmDelete && (
         <ConfirmDeleteDialog
@@ -109,6 +107,6 @@ function HookEditor({ hook }: { hook: Hook }) {
           title={t("hooks.deleteTitle")}
         />
       )}
-    </PageContainer>
+    </ImmersivePage>
   );
 }

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Button, Stack } from "@zibby/design-system";
+import { Button, Container, Stack } from "@zibby/design-system";
 import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import type { Command } from "@zibby/contracts";
 import { useFormControls, zodResolver } from "@zibby/forms";
@@ -11,8 +11,8 @@ import { z } from "zod";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
+import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { parseTools } from "./components/AddCommandModal/AddCommandModal";
 import { CommandFormFields, type CommandFormValues } from "./components/CommandFormFields";
 import { useDeleteCommandMutation, useUpdateCommandMutation } from "./mutations";
@@ -95,44 +95,44 @@ function CommandEditor({ command }: { command: Command }) {
   const canSave = form.formState.isValid && !updateCommand.isPending;
 
   return renderForm(
-    <PageContainer>
-      <Stack gap="250">
-        <PageHeader
-          actions={
-            <>
-              <Button
-                data-testid={CommandDetailScreenTestId.Delete}
-                icon="trash"
-                intent="danger"
-                onClick={() => setConfirmDelete(true)}
-                size="sm"
-              >
-                {tk("common.delete")}
-              </Button>
-              <Button
-                data-testid={CommandDetailScreenTestId.Save}
-                disabled={!canSave}
-                icon="check"
-                intent="primary"
-                loading={updateCommand.isPending}
-                onClick={() => void submit()}
-                size="sm"
-              >
-                {tk("common.save")}
-              </Button>
-              <Button intent="ghost" onClick={() => router.push("/commands")} size="sm">
-                {tk("common.back")}
-              </Button>
-            </>
-          }
-          subtitle={command["argument-hint"]}
-          title={`/${command.id}`}
-        />
-
-        <HudPanel title={tf("editTitle")}>
-          <CommandFormFields idLocked />
-        </HudPanel>
-      </Stack>
+    <ImmersivePage
+      actions={
+        <>
+          <Button
+            data-testid={CommandDetailScreenTestId.Delete}
+            icon="trash"
+            intent="danger"
+            onClick={() => setConfirmDelete(true)}
+            size="sm"
+          >
+            {tk("common.delete")}
+          </Button>
+          <Button
+            data-testid={CommandDetailScreenTestId.Save}
+            disabled={!canSave}
+            icon="check"
+            intent="primary"
+            loading={updateCommand.isPending}
+            onClick={() => void submit()}
+            size="sm"
+          >
+            {tk("common.save")}
+          </Button>
+        </>
+      }
+      backHref="/commands"
+      subtitle={command["argument-hint"]}
+      title={`/${command.id}`}
+    >
+      <Container padding={["300", "350"]}>
+        <PageContainer>
+          <Stack gap="250">
+            <HudPanel surface="glass" title={tf("editTitle")}>
+              <CommandFormFields idLocked />
+            </HudPanel>
+          </Stack>
+        </PageContainer>
+      </Container>
 
       {confirmDelete && (
         <ConfirmDeleteDialog
@@ -150,6 +150,6 @@ function CommandEditor({ command }: { command: Command }) {
           title={t("deleteTitle")}
         />
       )}
-    </PageContainer>,
+    </ImmersivePage>,
   );
 }
