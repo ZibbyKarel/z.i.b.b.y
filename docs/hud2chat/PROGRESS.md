@@ -20,7 +20,8 @@ nothing pushed.
 | F8a | Briefing as a chat message | ✅     | 74b4f7f2 | optional `briefing` payload on an assistant turn; no third role; compat proven         |
 | F8b | Status line                | ✅     | 4d5b019a | real health in the pill; subsystem dots + counts deliberately declined                 |
 | —   | DS typecheck gate repair   | ✅     | b33e8db5 | TS6059 pre-existing on `main`, masked by the rtk filter for the whole arc              |
-| F8c | Overview + runs deletion   | ⬜     | —        | blocked on D16 + D18 relocations and the D17 shim                                      |
+| F8c | Dissolve overview module   | ✅     | d6eeab9d | relocation only, nothing deleted; `features/overview/` is now a leaf                   |
+| F8d | Delete `/overview`+`/runs` | 🔩     | —        | in flight — `/runs` becomes a redirect shim, not a 404 (D17)                           |
 | F9  | Chat reachability sweep    | ⬜     | —        |                                                                                        |
 | F10 | Old shell deletion         | ⬜     | —        |                                                                                        |
 
@@ -206,3 +207,15 @@ conversions — they are F8's job, and both carry inbound-link blockers (D16, D1
   (`useBriefingQuery`), and `RightRail` (dies in F10 anyway). The folder is really three shared
   modules — activity, briefing and health — with a page sitting on top. F8c dissolves the
   module first, then deletes the page (→ D19).
+- **2026-07-19** — F8c landed (`d6eeab9d`). Pure relocation, nothing deleted, `/overview` still
+  fully working — deliberately split from the deletion so a broken chat live log could never be
+  confused with an intended removal. `features/health/` already existed, so `healthPresentation`
+  joined it instead of founding a duplicate domain; `BriefingCard`'s rows became their own
+  module so the page card and the chat card are siblings rather than one importing the other.
+  The subagent found one import the brief's consumer table had missed —
+  `useGenerateBriefingMutation`'s own internal use of `getActivityQueryKey` — by tracing the
+  moved file's imports rather than trusting the list, and updated two `vi.mock` paths beyond
+  the ones named, which would otherwise have silently mocked dead paths and kept passing.
+  Verified raw with exit codes: four typechecks at 0, no cycles, and the **full**
+  `web-components` project green (1240 tests, not a scoped subset). `features/overview/` is now
+  a leaf whose only external reference is its own route page — which is what makes F8d small.

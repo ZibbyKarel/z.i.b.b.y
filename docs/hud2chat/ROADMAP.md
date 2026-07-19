@@ -42,7 +42,8 @@ title + subtitle, then the content frame. Same token set as `/chat`. That is wha
 | F7  | Memory + gates             | `/memory`, `/gates`                                                   | ✅ 61eb605b |
 | F8a | Briefing as a chat message | contract variant + API + transcript rendering (O6)                    | ✅ 74b4f7f2 |
 | F8b | Status line                | subsystem health from `SummaryWidget` into the topbar pill/flyout     | 🔩          |
-| F8c | Overview + runs deletion   | relocate activity (D16), repoint links, `/runs` shim (D17), delete    | ⬜          |
+| F8c | Dissolve overview module   | relocate activity/briefing/health out; nothing deleted (D19)          | ✅ d6eeab9d |
+| F8d | Delete `/overview`+`/runs` | repoint links, `/runs` redirect shim (D17), delete the two pages      | 🔩          |
 | F9  | Chat reachability sweep    | every surface reachable from Chat; orphans killed                     | ⬜          |
 | F10 | Old shell deletion         | remove `MainLayout`/`Sidebar`/`RightRail`/`TopBar`, simplify AppShell | ⬜          |
 
