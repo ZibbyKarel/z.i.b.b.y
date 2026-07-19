@@ -35,8 +35,8 @@ nothing pushed.
 | `/chat`                                                  | native                        | ✅ native    |
 | `/settings`                                              | immersive                     | ✅ immersive |
 | `/archiv`                                                | immersive                     | ✅ immersive |
-| `/runs`                                                  | deleted (→ `/archiv`)         | hud          |
-| `/overview`                                              | deleted (→ topbar + briefing) | hud          |
+| `/runs`                                                  | deleted (→ `/archiv`)         | ✅ redirect  |
+| `/overview`                                              | deleted (→ topbar + briefing) | ✅ deleted   |
 | `/skills`, `/skills/[id]`                                | immersive                     | ✅ immersive |
 | `/commands`, `/commands/[id]`                            | immersive                     | ✅ immersive |
 | `/mcp`, `/mcp/[id]`                                      | immersive                     | ✅ immersive |
@@ -50,8 +50,8 @@ nothing pushed.
 | `/memory`                                                | immersive                     | ✅ immersive |
 | `/gates`                                                 | immersive                     | ✅ immersive |
 
-**Every route except `/runs` and `/overview` is migrated.** Those two are deletions, not
-conversions — they are F8's job, and both carry inbound-link blockers (D16, D17).
+**Every route is now migrated or deleted.** What remains is cleanup: F9 (orphans + O7 dead
+affordances) and F10 (delete the old shell).
 
 ## Session log
 
@@ -219,3 +219,20 @@ conversions — they are F8's job, and both carry inbound-link blockers (D16, D1
   Verified raw with exit codes: four typechecks at 0, no cycles, and the **full**
   `web-components` project green (1240 tests, not a scoped subset). `features/overview/` is now
   a leaf whose only external reference is its own route page — which is what makes F8d small.
+- **2026-07-19** — F8d landed (`25dfbabd`): `/overview` and the `/runs` list deleted, 54 files,
+  **−1761 lines**. `/runs` is a redirect preserving `?run=`, verified live against a real run
+  id; the root now lands on `/chat`. `features/runs/` survives — only its list Screen died.
+  **I did not take the subagent's closing finding at face value, and shouldn't have.** It
+  reported that both on-demand briefing generation and channel-kind approvals lost their UI
+  trigger. Checked separately: the briefing was real (zero callers), the approvals claim was
+  not — `StatusFlyoutPanel` queries approvals unfiltered, so every kind stays reachable, and
+  what the subagent actually hit was the deleted `ApprovalsPanel` being a convenient e2e
+  handle. Two claims with different truth values in one sentence (→ D21). The commit names the
+  briefing gap in its message rather than shipping it quietly.
+- **2026-07-19** — F8e landed (`469c8a72`), closing that gap. The trigger went in the ⌘K palette
+  rather than the dock, on the reasoning that the dock is navigation (every entry resolves to a
+  route) and this is an action with no destination. No briefing UI was built — F8a's server-side
+  append already does the rendering. The subagent caught in live testing what a unit test could
+  not: placed last, the entry was buried under 17+ vault-note search hits for "briefing", so it
+  moved above the memory section. Findable in cs and en; pending state relabels and refuses a
+  second POST. **F8 is complete** — every route is migrated or deleted.
