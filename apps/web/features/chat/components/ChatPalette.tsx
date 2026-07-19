@@ -37,6 +37,19 @@ export interface ChatPaletteProps {
   onNavigate: (href: Route) => void;
   /** Close just the palette (Escape, backdrop click, or after a mention pick). */
   onClose: () => void;
+  /**
+   * Fire an on-demand briefing generation (F8e — restores the capability
+   * `BriefingCard`'s deleted "generate now" control used to own). Unlike every
+   * other section here, this is an ACTION with no destination and no detail
+   * dialog: picking it fires the mutation and closes the palette, and the
+   * briefing itself shows up moments later as a card in the transcript
+   * (F8a) — this component renders none of it.
+   */
+  onGenerateBriefing: () => void;
+  /** Generation is not instant — while pending, the entry reflects that
+   * instead of silently accepting repeat picks (the gap the operator would
+   * otherwise hit: nothing visibly happens, so they fire it again). */
+  briefingPending: boolean;
 }
 
 /** Case-insensitive substring match — mirrors `CommandLine`'s mention-picker filter. */
@@ -55,7 +68,13 @@ function matchesQuery(query: string, ...fields: Array<string | undefined>): bool
  * rather than injecting an @mention target into the composer — that inline job now
  * belongs solely to `CommandLine`'s own `@`-search (Phase 45/51).
  */
-export function ChatPalette({ onDetailSelect, onNavigate, onClose }: ChatPaletteProps) {
+export function ChatPalette({
+  onDetailSelect,
+  onNavigate,
+  onClose,
+  onGenerateBriefing,
+  briefingPending,
+}: ChatPaletteProps) {
   const t = useTranslations("chat.palette");
   const [query, setQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(true);
@@ -111,6 +130,31 @@ export function ChatPalette({ onDetailSelect, onNavigate, onClose }: ChatPalette
       glyph: "brain" as IconName,
     })),
   };
+  // A single-item "section" for the on-demand briefing action (F8e). Extra,
+  // untranslated aliases widen the match beyond the visible title so the
+  // operator finds it typing either language, per the phase brief.
+  const briefingSection: SearchMenuSection = {
+    id: "briefing",
+    label: t("sections.briefing"),
+    items: matchesQuery(
+      query,
+      t("actions.generateBriefing"),
+      "briefing",
+      "report",
+      "přehled",
+      "shrnutí",
+    )
+      ? [
+          {
+            id: "generate",
+            title: briefingPending
+              ? t("actions.generatingBriefing")
+              : t("actions.generateBriefing"),
+            glyph: "spark" as IconName,
+          },
+        ]
+      : [],
+  };
 
   const loading =
     agentsLoading || pipelinesLoading || approvalsLoading || (hasQuery && memoryFetching);
@@ -138,6 +182,14 @@ export function ChatPalette({ onDetailSelect, onNavigate, onClose }: ChatPalette
     }
     if (sectionId === "memory") {
       onNavigate("/memory");
+      return;
+    }
+    if (sectionId === "briefing") {
+      // Already in flight — the item's own label already says so; a repeat
+      // pick is a no-op rather than a second POST.
+      if (briefingPending) return;
+      onGenerateBriefing();
+      onClose();
     }
   };
 
@@ -176,7 +228,13 @@ export function ChatPalette({ onDetailSelect, onNavigate, onClose }: ChatPalette
               onValueChange={setQuery}
               open={menuOpen}
               placeholder={t("placeholder")}
-              sections={[agentSection, pipelineSection, gatesSection, memorySection]}
+              sections={[
+                agentSection,
+                pipelineSection,
+                gatesSection,
+                briefingSection,
+                memorySection,
+              ]}
               value={query}
             />
           </Container>

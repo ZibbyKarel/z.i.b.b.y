@@ -1728,7 +1728,12 @@
         "agents": "Agenti",
         "pipelines": "Pipelines",
         "gates": "Gates",
-        "memory": "Paměť"
+        "memory": "Paměť",
+        "briefing": "Briefing"
+      },
+      "actions": {
+        "generateBriefing": "Vygenerovat briefing",
+        "generatingBriefing": "Generuji briefing…"
       }
     },
     "detail": {

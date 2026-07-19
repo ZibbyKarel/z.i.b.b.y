@@ -40,7 +40,9 @@ vi.mock("../../approvals/queries/useApprovalsQuery", () => ({
 }));
 vi.mock("../../memory/queries/useMemorySearchQuery", () => ({
   useMemorySearchQuery: (q: string) => ({
-    data: q.trim() ? { results: [{ id: "note1", title: "Roadmap", tier: "knowledge", snippet: "…" }] } : undefined,
+    data: q.trim()
+      ? { results: [{ id: "note1", title: "Roadmap", tier: "knowledge", snippet: "…" }] }
+      : undefined,
     isFetching: false,
   }),
   getMemorySearchQueryKey: (q: string) => ["memory", "search", q],
@@ -51,7 +53,13 @@ import { ChatPalette, ChatPaletteTestId } from "./ChatPalette";
 describe("ChatPalette (14.5)", () => {
   it("renders the search input and stays closed to results until a query is typed", () => {
     renderWithProviders(
-      <ChatPalette onClose={vi.fn()} onDetailSelect={vi.fn()} onNavigate={vi.fn()} />,
+      <ChatPalette
+        briefingPending={false}
+        onClose={vi.fn()}
+        onDetailSelect={vi.fn()}
+        onGenerateBriefing={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
     );
     expect(screen.getByTestId(ChatPaletteTestId.Root)).toBeInTheDocument();
     expect(screen.queryByTestId(`${SearchMenuTestId.Item}-agents-builder`)).not.toBeInTheDocument();
@@ -60,12 +68,20 @@ describe("ChatPalette (14.5)", () => {
   it("filters agents, pipelines and gates by the typed query", async () => {
     const user = userEvent.setup();
     renderWithProviders(
-      <ChatPalette onClose={vi.fn()} onDetailSelect={vi.fn()} onNavigate={vi.fn()} />,
+      <ChatPalette
+        briefingPending={false}
+        onClose={vi.fn()}
+        onDetailSelect={vi.fn()}
+        onGenerateBriefing={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
     );
     await user.type(screen.getByTestId(SearchMenuTestId.Input), "Bui");
     expect(screen.getByTestId(`${SearchMenuTestId.Item}-agents-builder`)).toBeInTheDocument();
     expect(screen.queryByTestId(`${SearchMenuTestId.Item}-agents-koder`)).not.toBeInTheDocument();
-    expect(screen.queryByTestId(`${SearchMenuTestId.Item}-pipelines-delivery`)).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId(`${SearchMenuTestId.Item}-pipelines-delivery`),
+    ).not.toBeInTheDocument();
   });
 
   it("selecting an agent hands its full record to onDetailSelect and closes the palette", async () => {
@@ -73,7 +89,13 @@ describe("ChatPalette (14.5)", () => {
     const onClose = vi.fn();
     const user = userEvent.setup();
     renderWithProviders(
-      <ChatPalette onClose={onClose} onDetailSelect={onDetailSelect} onNavigate={vi.fn()} />,
+      <ChatPalette
+        briefingPending={false}
+        onClose={onClose}
+        onDetailSelect={onDetailSelect}
+        onGenerateBriefing={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
     );
     await user.type(screen.getByTestId(SearchMenuTestId.Input), "Bui");
     await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-agents-builder`));
@@ -89,7 +111,13 @@ describe("ChatPalette (14.5)", () => {
     const onDetailSelect = vi.fn();
     const user = userEvent.setup();
     renderWithProviders(
-      <ChatPalette onClose={vi.fn()} onDetailSelect={onDetailSelect} onNavigate={vi.fn()} />,
+      <ChatPalette
+        briefingPending={false}
+        onClose={vi.fn()}
+        onDetailSelect={onDetailSelect}
+        onGenerateBriefing={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
     );
     await user.type(screen.getByTestId(SearchMenuTestId.Input), "Deliv");
     await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-pipelines-delivery`));
@@ -103,7 +131,13 @@ describe("ChatPalette (14.5)", () => {
     const onNavigate = vi.fn();
     const user = userEvent.setup();
     renderWithProviders(
-      <ChatPalette onClose={vi.fn()} onDetailSelect={vi.fn()} onNavigate={onNavigate} />,
+      <ChatPalette
+        briefingPending={false}
+        onClose={vi.fn()}
+        onDetailSelect={vi.fn()}
+        onGenerateBriefing={vi.fn()}
+        onNavigate={onNavigate}
+      />,
     );
     await user.type(screen.getByTestId(SearchMenuTestId.Input), "purchase");
     expect(screen.getByTestId(`${SearchMenuTestId.Item}-gates-ap1`)).toBeInTheDocument();
@@ -115,18 +149,71 @@ describe("ChatPalette (14.5)", () => {
     const onNavigate = vi.fn();
     const user = userEvent.setup();
     renderWithProviders(
-      <ChatPalette onClose={vi.fn()} onDetailSelect={vi.fn()} onNavigate={onNavigate} />,
+      <ChatPalette
+        briefingPending={false}
+        onClose={vi.fn()}
+        onDetailSelect={vi.fn()}
+        onGenerateBriefing={vi.fn()}
+        onNavigate={onNavigate}
+      />,
     );
     await user.type(screen.getByTestId(SearchMenuTestId.Input), "Roadmap");
     await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-memory-note1`));
     expect(onNavigate).toHaveBeenCalledWith("/memory");
   });
 
+  it("selecting the briefing action fires onGenerateBriefing and closes the palette", async () => {
+    const onGenerateBriefing = vi.fn();
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    renderWithProviders(
+      <ChatPalette
+        briefingPending={false}
+        onClose={onClose}
+        onDetailSelect={vi.fn()}
+        onGenerateBriefing={onGenerateBriefing}
+        onNavigate={vi.fn()}
+      />,
+    );
+    await user.type(screen.getByTestId(SearchMenuTestId.Input), "briefing");
+    expect(screen.getByTestId(`${SearchMenuTestId.Item}-briefing-generate`)).toBeInTheDocument();
+    await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-briefing-generate`));
+    expect(onGenerateBriefing).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("is findable by a Czech search term and reflects pending state without re-firing", async () => {
+    const onGenerateBriefing = vi.fn();
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    renderWithProviders(
+      <ChatPalette
+        briefingPending
+        onClose={onClose}
+        onDetailSelect={vi.fn()}
+        onGenerateBriefing={onGenerateBriefing}
+        onNavigate={vi.fn()}
+      />,
+    );
+    await user.type(screen.getByTestId(SearchMenuTestId.Input), "přehled");
+    const item = screen.getByTestId(`${SearchMenuTestId.Item}-briefing-generate`);
+    expect(item).toHaveTextContent("Generuji briefing…");
+    await user.click(item);
+    expect(onGenerateBriefing).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("closes on a backdrop click", async () => {
     const onClose = vi.fn();
     const user = userEvent.setup();
     renderWithProviders(
-      <ChatPalette onClose={onClose} onDetailSelect={vi.fn()} onNavigate={vi.fn()} />,
+      <ChatPalette
+        briefingPending={false}
+        onClose={onClose}
+        onDetailSelect={vi.fn()}
+        onGenerateBriefing={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
     );
     await user.click(screen.getByTestId(ChatPaletteTestId.Backdrop));
     expect(onClose).toHaveBeenCalledTimes(1);

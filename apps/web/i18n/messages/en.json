@@ -1728,7 +1728,12 @@
         "agents": "Agents",
         "pipelines": "Pipelines",
         "gates": "Gates",
-        "memory": "Memory"
+        "memory": "Memory",
+        "briefing": "Briefing"
+      },
+      "actions": {
+        "generateBriefing": "Generate briefing now",
+        "generatingBriefing": "Generating briefing…"
       }
     },
     "detail": {

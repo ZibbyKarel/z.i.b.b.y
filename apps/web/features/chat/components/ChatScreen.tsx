@@ -8,15 +8,10 @@ import { Container } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import {
-  type Dispatch,
-  type SetStateAction,
-  useCallback,
-  useEffect,
-  useState,
-} from "react";
+import { type Dispatch, type SetStateAction, useCallback, useEffect, useState } from "react";
 import { useNow } from "../../../hooks/useNow";
 import { MINUTE_MS } from "../../../utils/time";
+import { useGenerateBriefingMutation } from "../../briefing";
 import { usePipelinesQuery } from "../../pipelines";
 import { useRunAvatarMap, useRunGlyphMap, useRunsQuery } from "../../runs/queries/useRunsQuery";
 import { runAvatar, runGlyph } from "../../runs/run";
@@ -122,6 +117,39 @@ export function ChatScreen({
     },
     [router],
   );
+
+  // F8e: the ⌘K "generate briefing now" trigger — restores the capability
+  // regression F8d named (deleted `/overview`'s `BriefingCard` took its only
+  // caller of `useGenerateBriefingMutation` with it). F8a already made
+  // generation append the briefing to the chat transcript as an assistant turn
+  // SERVER-SIDE (`ChatBriefingSinkService`), but that write lands in the JSONL
+  // file, not in this screen's in-memory `messages` — the transcript is read
+  // once on mount, never refetched on a live mutation (see
+  // `useSendChatMessageMutation`'s docblock on the same constraint for chat
+  // replies). So the success handler mirrors the sink's own shape locally and
+  // appends it here, exactly like `useChatStream` appends streamed replies
+  // in-memory rather than refetching.
+  const generateBriefingMutation = useGenerateBriefingMutation();
+  const triggerBriefing = useCallback(() => {
+    if (generateBriefingMutation.isPending) return;
+    generateBriefingMutation.mutate(
+      { body: {} },
+      {
+        onSuccess: ({ body: { briefing } }) => {
+          onMessagesChange((prev) => [
+            ...prev,
+            {
+              id: `msg_${crypto.randomUUID()}`,
+              role: "assistant",
+              text: briefing.headline,
+              at: briefing.generatedAt,
+              briefing,
+            },
+          ]);
+        },
+      },
+    );
+  }, [generateBriefingMutation, onMessagesChange]);
 
   // Esc priority: the palette sits on top of the conversation itself — a single Esc
   // dismisses it. As a routed page there is nothing left for Esc to close once it's
@@ -362,8 +390,10 @@ export function ChatScreen({
           own data hooks don't fire until the operator asks. */}
       {paletteOpen && (
         <ChatPalette
+          briefingPending={generateBriefingMutation.isPending}
           onClose={() => setPaletteOpen(false)}
           onDetailSelect={handleDetailSelect}
+          onGenerateBriefing={triggerBriefing}
           onNavigate={handlePaletteNavigate}
         />
       )}
