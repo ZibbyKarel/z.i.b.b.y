@@ -222,3 +222,20 @@ pill, and the e2e workaround the subagent hit was about the deleted `ApprovalsPa
 convenient test handle, not about operator reachability. Two findings bundled into one sentence
 had different truth values — check each separately, especially when one touches the approval
 path, which is a stated law of this system.
+
+**D15 — CORRECTED by F9's audit.** The decision to keep `/gates` out of the dock still stands
+(the `ROUTE_ONLY_ITEMS` / `NAV_ITEMS` resolution mechanism was verified correctly and is real).
+But its _justification_ was wrong: I wrote "reachable from Settings, ⌘K and every subsystem
+drawer" without checking that those were **links to the route**. They are not — Settings and the
+drawer render `GateRulesSection` **inline**, and the palette's gates section is built from
+_pending approvals_, so with none pending `SearchMenu` skips the section entirely. Net effect:
+the gate-rules **capability** is reachable two ways, the `/gates` **route** by nothing. I
+verified the mechanism and took the reachability on trust — the exact failure mode D20 warns
+about, one level up.
+
+**O8 — Delete the `/gates` route (2026-07-19).** Given the above, the operator's call: when the
+same content is editable from Settings and from every subsystem drawer, a standalone page is a
+third copy of it. `/gates` is removed in F10 along with the old shell. **`GateRulesSection` and
+`SystemFloorPanel` stay** — they are the two live consumers' shared implementation, exactly as
+`features/runs/` survived the deletion of its list Screen in F8d. Delete the route and
+`features/gates/Screen.tsx`, not the domain.
