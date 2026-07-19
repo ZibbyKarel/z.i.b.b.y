@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { renderWithProviders, screen, within } from "../../../test/render";
+import { renderWithProviders, screen } from "../../../test/render";
 import { ChatTopBar, ChatTopBarTestId } from "./ChatTopBar";
 
 describe("ChatTopBar", () => {
@@ -17,18 +17,13 @@ describe("ChatTopBar", () => {
     expect(screen.queryByTestId("chat-top-bar-clock")).toBeNull();
   });
 
-  it("renders the HUD switch and the language selector", () => {
+  // F9/O7: the topbar used to carry a fifth element, a "switch to HUD" icon,
+  // pointing at `/chat` (its own page) once `/overview` was deleted in F8d —
+  // a control that navigates to the page you're already on. The operator's
+  // call: remove it outright rather than leave a broken affordance.
+  it("has no HUD-switch element — four elements, not five (O7)", () => {
     renderWithProviders(<ChatTopBar onOpenPalette={vi.fn()} />);
-    expect(screen.getByTestId(ChatTopBarTestId.Hud)).toBeInTheDocument();
+    expect(screen.queryByTestId("chat-top-bar-hud")).toBeNull();
     expect(screen.getByTestId(ChatTopBarTestId.Lang)).toBeInTheDocument();
-  });
-
-  // F8d: `/overview` is deleted and nothing left is "classic HUD" — repointed to
-  // `/chat` rather than left dangling on a 404. Whether the icon itself should go
-  // is an open operator call (see ChatTopBar.tsx's docblock), not decided here.
-  it("points the HUD switch at /chat (no classic HUD destination survives F8d)", () => {
-    renderWithProviders(<ChatTopBar onOpenPalette={vi.fn()} />);
-    const link = within(screen.getByTestId(ChatTopBarTestId.Hud)).getByRole("link");
-    expect(link).toHaveAttribute("href", "/chat");
   });
 });

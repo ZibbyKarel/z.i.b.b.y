@@ -4,13 +4,9 @@ import userEvent from "@testing-library/user-event";
 import { renderWithProviders, screen } from "../../test/render";
 
 const push = vi.fn();
-// `toggle()` reads the current route to decide whether ⌘J opens `/chat` or leaves
-// it — a mutable ref lets individual tests simulate "already on /chat". `/archiv`
-// stands in for "somewhere else in the dashboard" (F8d deleted `/overview`).
-const pathnameRef = { current: "/archiv" };
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
-  usePathname: () => pathnameRef.current,
+  usePathname: () => "/archiv",
 }));
 
 import { ChatProvider, useChat } from "./ChatContext";
@@ -19,17 +15,11 @@ import { ChatProvider, useChat } from "./ChatContext";
 // so tests can drive navigation and assert on the (route-agnostic) state that
 // survives it, without needing a real Next.js router or the `/chat` route itself.
 function Harness() {
-  const { conversationId, messages, open, close, toggle, newChat } = useChat();
+  const { conversationId, messages, open, newChat } = useChat();
   return (
     <div>
       <button data-testid="open" onClick={open} type="button">
         open
-      </button>
-      <button data-testid="close" onClick={close} type="button">
-        close
-      </button>
-      <button data-testid="toggle" onClick={toggle} type="button">
-        toggle
       </button>
       <button data-testid="new-chat" onClick={newChat} type="button">
         new chat
@@ -49,7 +39,6 @@ function fireKey(init: KeyboardEventInit) {
 describe("ChatProvider", () => {
   beforeEach(() => {
     push.mockClear();
-    pathnameRef.current = "/archiv";
     window.localStorage.clear();
   });
 
@@ -91,18 +80,6 @@ describe("ChatProvider", () => {
     expect(screen.getByTestId("conversation-id")).toHaveTextContent(firstId ?? "");
   });
 
-  it("close() navigates to /chat — its own home now that /overview is gone (F8d), an inert no-op push pending a decision on the affordance itself", async () => {
-    const user = userEvent.setup();
-    renderWithProviders(
-      <ChatProvider>
-        <Harness />
-      </ChatProvider>,
-    );
-
-    await user.click(screen.getByTestId("close"));
-    expect(push).toHaveBeenCalledWith("/chat");
-  });
-
   it("newChat mints a fresh id and clears the transcript", async () => {
     const user = userEvent.setup();
     renderWithProviders(
@@ -130,8 +107,7 @@ describe("ChatProvider", () => {
     expect(push).toHaveBeenCalledWith("/chat");
   });
 
-  it("⌘/Ctrl+J when already on /chat pushes /chat again (inert no-op, F8d)", () => {
-    pathnameRef.current = "/chat";
+  it("⌘/Ctrl+J always opens /chat, even when already there (F9/O7 — no close/toggle-away affordance)", () => {
     renderWithProviders(
       <ChatProvider>
         <Harness />
@@ -150,18 +126,6 @@ describe("ChatProvider", () => {
     );
     fireKey({ key: "j" });
     expect(push).not.toHaveBeenCalled();
-  });
-
-  it("toggle() via a consumer (the ChatButton path) is equivalent to open()", async () => {
-    const user = userEvent.setup();
-    renderWithProviders(
-      <ChatProvider>
-        <Harness />
-      </ChatProvider>,
-    );
-
-    await user.click(screen.getByTestId("toggle"));
-    expect(push).toHaveBeenCalledWith("/chat");
   });
 
   it("keeps the transcript across the chat surface unmounting and remounting (route navigation)", async () => {

@@ -1,28 +1,40 @@
 import { expect, test } from "@playwright/test";
 
+const API = "http://localhost:3333";
+
 /**
- * Accountability (Phase 6): /overview shows the butler's briefing card and the
- * live activity log. Generating a briefing persists it, flips the card to its ready
- * state, and records a `briefing-generated` activity entry — which surfaces in the
- * overview's right-rail live log (the on-overview activity view; the standalone
- * `ActivityFeed` component now lives on the project detail page).
+ * Accountability (Phase 6, F8a/D19): a generated briefing persists, records a
+ * `briefing-generated` activity entry, and — since F8a (O6) — renders as its own
+ * message variant in the chat transcript (`BriefingMessageCard`), not a page section.
+ *
+ * F8d: `/overview`'s `BriefingCard` (with its own "Generate now" button) is gone, and
+ * `BriefingMessageCard` deliberately has **no live control surface** of its own (its
+ * own docblock: "a past turn is a fixed snapshot of the briefing that was generated,
+ * not a live control surface") — there is currently no UI button anywhere that
+ * triggers an on-demand briefing the way the deleted page's could. This is a gap
+ * this deletion phase surfaces rather than causes (flagged in the F8d report; the
+ * only other caller is the unattended morning automation). Generating here goes
+ * straight at the REST endpoint (`POST /api/briefing/generate`, the same call
+ * `useGenerateBriefingMutation` makes) — chat is deliberately single-thread
+ * (`ChatTranscriptStore`'s own docblock), so a fresh `/chat` load with no
+ * `conversationId` yet resolves to the exact same "active conversation" the
+ * briefing sink (`ChatBriefingSinkService.announce`) just appended to, and the
+ * right-rail activity log doesn't survive to `/chat` at all — `ChatLiveLog`
+ * (`features/chat/components/ChatLiveLog.tsx`) is its F8c replacement.
  */
-test("the overview briefing card generates a briefing and the live log records it", async ({
-  page,
-}) => {
-  await page.goto("/overview");
+test("generating a briefing appends it to the chat transcript", async ({ page }) => {
+  const res = await page.request.post(`${API}/api/briefing/generate`);
+  expect(res.ok()).toBe(true);
+  const {
+    briefing: { headline },
+  } = (await res.json()) as { briefing: { headline: string } };
 
-  // The briefing card renders with a headline (the GET always assembles one).
-  await expect(page.getByTestId("briefing-card")).toBeVisible({ timeout: 20000 });
-  await expect(page.getByTestId("briefing-headline")).toBeVisible();
+  await page.goto("/chat");
 
-  // Generating persists a briefing and flips the card to its ready state.
-  await page.getByTestId("briefing-generate").click();
-  await expect(page.getByTestId("briefing-ready")).toBeVisible({ timeout: 20000 });
-
-  // That generate recorded a `briefing-generated` entry, so the right-rail live log
-  // is non-empty and shows the grouped "Briefing" line.
-  const log = page.getByTestId("right-rail-log");
-  await expect(log).toBeVisible({ timeout: 20000 });
-  await expect(log.getByText("Briefing").first()).toBeVisible({ timeout: 20000 });
+  // `BriefingMessageCardTestId.Root` — the transcript's briefing card variant.
+  await expect(page.getByTestId("chat-briefing-message-card")).toBeVisible({ timeout: 20000 });
+  // `BriefingCardTestId.Headline` — the row sub-component `BriefingMessageCard`
+  // reuses verbatim from `features/briefing/components/BriefingRows` (D18), so the
+  // testid string is unchanged even though the page it renders on is not.
+  await expect(page.getByTestId("briefing-headline")).toHaveText(headline, { timeout: 20000 });
 });

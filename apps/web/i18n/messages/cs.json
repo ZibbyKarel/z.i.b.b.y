@@ -1105,7 +1105,6 @@
       "chain": "řetězec",
       "scheduled": "naplánovaný task"
     },
-    "parkedQueue": "zaparkované běhy",
     "parkedContext": "Zaparkováno — kontext selhání",
     "parkedSummary": "fáze {phase} · {attempts} pokusů vyčerpáno",
     "resumeNote": "Poznámka pro další pokus",
@@ -1665,7 +1664,6 @@
   },
   "chat": {
     "title": "Chat se ZIBBY",
-    "hudSwitchLabel": "Přepnout na HUD",
     "close": "Zavřít",
     "newChat": "Nový chat",
     "greetingTitle": "Jsem tu, pane.",

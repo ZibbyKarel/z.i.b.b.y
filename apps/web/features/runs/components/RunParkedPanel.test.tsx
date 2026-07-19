@@ -3,7 +3,6 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { RunView } from "../run";
 import { RunParkedPanel } from "./RunParkedPanel";
-import { ParkedRunsPanel } from "./ParkedRunsPanel";
 
 const mutate = vi.fn();
 vi.mock("../mutations", () => ({
@@ -29,10 +28,6 @@ const parkedRun: RunView = {
   parked: { phaseId: "review", attempts: 3, failureFile: "/runs/x/review.failure.txt" },
 };
 
-vi.mock("../queries/useRunsQuery", () => ({
-  useRunsQuery: () => ({ runs: [parkedRun] }),
-}));
-
 describe("RunParkedPanel", () => {
   it("shows the failure tail and the parked summary", () => {
     render(<RunParkedPanel run={parkedRun} />);
@@ -56,17 +51,5 @@ describe("RunParkedPanel", () => {
   it("renders nothing without a parked detail", () => {
     render(<RunParkedPanel run={{ ...parkedRun, parked: undefined }} />);
     expect(screen.queryByText("Zaparkováno — kontext selhání")).not.toBeInTheDocument();
-  });
-});
-
-describe("ParkedRunsPanel", () => {
-  it("lists retries-parked runs with a link into /archiv (F8d — /runs is deleted; this component itself is now orphaned — no production consumer, see its docblock)", () => {
-    render(<ParkedRunsPanel />);
-    expect(screen.getByText("zaparkované běhy")).toBeInTheDocument();
-    expect(screen.getByText(/fáze review · 3 pokusů vyčerpáno/)).toBeInTheDocument();
-    expect(screen.getByRole("link")).toHaveAttribute(
-      "href",
-      "/archiv?filter=parked&run=delivery_1780000000000",
-    );
   });
 });

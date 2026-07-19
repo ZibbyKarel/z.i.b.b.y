@@ -1,30 +1,40 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * Throughline: a gated agent's run pauses and surfaces a pending ApprovalCard in
- * the overview approvals queue; approving it shows the approved feedback. This is
- * the identity-core UI: ZIBBY never acts on its own — a human decides.
+ * Throughline: a gated agent's run pauses and surfaces a pending approval; confirming
+ * it resumes the run. This is the identity-core UI: ZIBBY never acts on its own — a
+ * human decides.
+ *
+ * F8d: `/overview`'s standalone approvals queue is gone. The seeded gated AGENT run
+ * (unlike the seeded CHANNEL approval in channels.spec) is a real entry in the
+ * unified runs feed, so it still surfaces in `/chat`'s task gutter (`ChatTasksPanel`) —
+ * opening its row renders the same `RunDetail` (`RunApprovalGate`) the old `/runs`
+ * screen used, just inline beside the panel instead of on its own page (Phase 100).
  */
-test("approve a pending approval from the overview queue", async ({ page }) => {
-  await page.goto("/overview");
+test("confirm a pending approval from the chat task gutter", async ({ page }) => {
+  await page.goto("/chat");
 
-  // The seeded gated run created a pending APPROVAL of kind "agent". The queue is
-  // SHARED with the channel-reply approval (kind "channel", channels.spec), so
-  // target the agent card by its stable kind-scoped testid — never a greedy
-  // `.first()`, which (because the agent card is high-risk and the channel card is
-  // not) used to silently approve the *channel* card and cross-contaminate that
-  // spec. global-setup drains the queue, so there is exactly one agent card.
-  // Cold-worker run startup can exceed the 10s default → headroom.
-  const gatedCard = page.getByTestId("approval-card-agent");
-  const approve = gatedCard.getByRole("button", { name: "Approve" });
-  await expect(approve).toBeVisible({ timeout: 20000 });
+  // The seeded gated run is the only active task owned by "gated-agent" — filter on
+  // that stable owner text rather than a greedy `.first()` (the shared task gutter
+  // can carry other active runs from other specs in the same worker). Testid is
+  // `ChatTaskRowTestId.Row` (`apps/web/features/chat/components/ChatTaskRow.tsx`).
+  const gatedRow = page.getByTestId("chat-task-row").filter({ hasText: "gated-agent" });
+  await expect(gatedRow).toBeVisible({ timeout: 20000 });
+  await gatedRow.click();
 
-  await approve.click();
+  // `ChatTaskDetailColumnTestId.Panel` — the inline detail column's animated panel.
+  const detailPanel = page.getByTestId("chat-task-detail-panel");
+  await expect(detailPanel).toBeVisible({ timeout: 20000 });
 
-  // Assert the DURABLE outcome, not the transient UI: approving resolves the
-  // approval, so it leaves the `status=pending` queue and the card unmounts on the
-  // next refetch. (The inline "Approved" alert is optimistic and disappears with the
-  // card, so it's an inherently racy thing to assert — the queue removal is the real
-  // proof the decision round-tripped and the agent was released to continue.)
-  await expect(gatedCard).toHaveCount(0, { timeout: 20000 });
+  // `RunApprovalGate` (`apps/web/features/runs/components/RunApprovalGate.tsx`) has no
+  // dedicated testid of its own — select its "Confirm" action by accessible name,
+  // scoped to the detail panel so it can't collide with anything else on the page.
+  const confirm = detailPanel.getByRole("button", { name: "Confirm" });
+  await expect(confirm).toBeVisible({ timeout: 20000 });
+  await confirm.click();
+
+  // Assert the DURABLE outcome, not the transient UI: confirming resolves the
+  // approval and resumes the run, so `RunApprovalGate` (gated on `approvalForRun`
+  // finding a still-pending entry) unmounts on the next refetch.
+  await expect(confirm).toHaveCount(0, { timeout: 20000 });
 });

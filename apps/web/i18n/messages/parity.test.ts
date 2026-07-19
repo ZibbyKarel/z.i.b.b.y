@@ -49,10 +49,10 @@ describe("i18n catalog parity", () => {
       expect(keys(cs)).toContain(key);
     }
   });
-  it("has the phase-3b HUD-switch key and drops the removed mode label", () => {
-    expect(keys(en)).toContain("chat.hudSwitchLabel");
-    expect(keys(cs)).toContain("chat.hudSwitchLabel");
+  it("drops the removed mode label and the F9/O7 HUD-switch key", () => {
     expect(keys(en)).not.toContain("chat.modeLabel");
     expect(keys(cs)).not.toContain("chat.modeLabel");
+    expect(keys(en)).not.toContain("chat.hudSwitchLabel");
+    expect(keys(cs)).not.toContain("chat.hudSwitchLabel");
   });
 });

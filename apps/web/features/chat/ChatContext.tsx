@@ -1,7 +1,7 @@
 "use client";
 
 import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   type Dispatch,
   type ReactNode,
@@ -21,16 +21,6 @@ import {
 export const CHAT_SHORTCUT_KEY = "j";
 
 const CHAT_ROUTE = "/chat";
-/**
- * F8d: `/overview` — the dashboard `close()` used to back out to — is deleted, and
- * there is no longer any other "home" for chat to back out to (`/chat` **is** home
- * now, per O2/O3). Repointed to `CHAT_ROUTE` itself rather than left dangling, which
- * makes `close()` (and therefore `toggle()` while already on `/chat`) a no-op
- * navigation. Flagged, not resolved: whether the close/toggle-away affordance should
- * be removed outright now that there's nowhere sensible to go is an operator call
- * this phase didn't make unilaterally — left in place, inert, pending that decision.
- */
-const CHAT_HOME_ROUTE = CHAT_ROUTE;
 
 /** localStorage key the conversation id survives a full page reload under. */
 const CHAT_CONVERSATION_KEY = "zibby.chat.conversationId";
@@ -44,13 +34,6 @@ function readStoredConversationId(): string | null {
 interface ChatStore {
   /** Navigate to `/chat`, minting a conversation if this thread doesn't have one yet. */
   open: () => void;
-  /** Navigate away from `/chat`. F8d: with `/overview` gone and `/chat` now home,
-   *  this resolves to `CHAT_HOME_ROUTE` === `CHAT_ROUTE` — currently an inert
-   *  no-op push, pending an operator decision on whether the affordance itself
-   *  should go. */
-  close: () => void;
-  /** ⌘/Ctrl+J: jump to `/chat` from anywhere, or back out if already there. */
-  toggle: () => void;
   /**
    * The conversation this thread owns. Minted once (lazily, the first time it's
    * needed) and then PRESERVED across navigating away from `/chat` and back, so
@@ -91,7 +74,6 @@ const ChatContext = createContext<ChatStore | null>(null);
  */
 export function ChatProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
   // The conversation owned by the current thread. Lazily initialised from
   // localStorage so a full page reload re-attaches to the same thread (rather than
   // minting a new one and orphaning the on-disk transcript + `--resume` session);
@@ -125,10 +107,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     router.push(CHAT_ROUTE);
   }, [ensureConversation, router]);
 
-  const close = useCallback(() => {
-    router.push(CHAT_HOME_ROUTE);
-  }, [router]);
-
   // "New chat" — drop the transcript and mint a fresh id so the next turn starts a
   // clean `claude` session (no `--resume`). Stays on `/chat`.
   const newChat = useCallback(() => {
@@ -136,33 +114,25 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setConversationId(`conv_${crypto.randomUUID()}`);
   }, []);
 
-  const toggle = useCallback(() => {
-    if (pathname === CHAT_ROUTE) {
-      close();
-    } else {
-      open();
-    }
-  }, [pathname, close, open]);
-
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       // The chord uses a modifier, so it's safe while typing; only intercept the
-      // exact ⌘/Ctrl+J combination (no other modifiers).
+      // exact ⌘/Ctrl+J combination (no other modifiers). `/chat` is home (O2/O3),
+      // so the shortcut always opens it — there is nowhere sensible for it to
+      // "close" back out to, and F9 removed that no-op branch (O7).
       if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;
       if (e.key.toLowerCase() === CHAT_SHORTCUT_KEY) {
         e.preventDefault();
-        toggle();
+        open();
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [toggle]);
+  }, [open]);
 
   const value = useMemo<ChatStore>(
     () => ({
       open,
-      close,
-      toggle,
       conversationId,
       ensureConversation,
       setConversationId,
@@ -170,7 +140,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       setMessages,
       newChat,
     }),
-    [open, close, toggle, conversationId, ensureConversation, messages, newChat],
+    [open, conversationId, ensureConversation, messages, newChat],
   );
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

@@ -1105,7 +1105,6 @@
       "chain": "chain",
       "scheduled": "scheduled task"
     },
-    "parkedQueue": "parked runs",
     "parkedContext": "Parked — failure context",
     "parkedSummary": "phase {phase} · {attempts} attempts exhausted",
     "resumeNote": "Note for the next attempt",
@@ -1665,7 +1664,6 @@
   },
   "chat": {
     "title": "Chat with ZIBBY",
-    "hudSwitchLabel": "Switch to HUD",
     "close": "Close",
     "newChat": "New chat",
     "greetingTitle": "I'm here, sir.",
