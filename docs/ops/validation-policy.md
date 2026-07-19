@@ -81,6 +81,13 @@ Scope: staged files only (typecheck is the one exception — see below).
 - `pnpm check:self-knowledge` — unrelated to code linting; a drift check against a
   small committed fixture, already fast and already part of this hook. Unchanged by
   this policy.
+- `pnpm check:docs-sync` (`tools/docs-sync/`) — blocks a commit that touches an
+  `apps/api/src/<module>` directory with no entry in `tools/docs-sync/manifest.mjs`,
+  or whose mapped `docs/api/*.md` file doesn't exist on disk. Only catches "shipped a
+  brand-new subsystem, zero docs" — it does not require every commit touching an
+  already-documented module to also touch that module's doc (too noisy at
+  single-commit granularity; see docs/README.md's "Self-modification & intelligence"
+  section and `docs/api/self-knowledge.md` for the drift-check family this belongs to).
 - The graphify staleness nudge — informational only, never blocks a commit.
 
 Pre-commit does **not** run the full ESLint pass, the Vitest suite, or a build. If a
@@ -150,6 +157,23 @@ in one pass at the end. The full local sequence CLAUDE.md used to prescribe afte
 every change (`check:lint`, `check:types`, `test` — all repo-wide) is superseded by
 this policy; see CLAUDE.md's "After editing a file" section for the enforced,
 short version of this rule.
+
+### Docs-sync `Stop` hook (`.claude/settings.json`, Claude Code only)
+
+Separate from the git hooks above — this runs at the end of a Claude Code agent
+turn, before there's necessarily even a commit. `tools/docs-sync/stop-hook.mjs`
+re-runs the same coverage check as pre-commit's `check:docs-sync`, but scoped to
+the whole session's uncommitted diff (`--scope=worktree`) and stricter: it also
+flags a module whose source changed this session but whose mapped doc was never
+touched at all (not just "doc file doesn't exist" — pre-commit's narrower bar).
+When it finds something, it blocks the turn from ending and feeds the agent the
+specific list of docs to fix, up to 3 attempts per session (then gives up rather
+than loop forever — see the script's own comments for why there's no built-in
+re-entrancy guard for `Stop` hooks and how the attempt counter substitutes for
+one). The `PostToolUse` "DOCS-HINT" hook in the same settings file is the softer,
+earlier version of this signal — an informational nudge on every `apps/`/`libs/`
+edit, non-blocking; the `Stop` hook is what actually enforces it before the agent
+can call the session done.
 
 ## Performance goals
 

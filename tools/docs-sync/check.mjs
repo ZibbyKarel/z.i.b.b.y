@@ -55,14 +55,27 @@ function git(args) {
 }
 
 function changedFiles(scope) {
+  // `git diff` (staged or against HEAD) never lists untracked files, so a
+  // brand-new module directory that hasn't been `git add`ed yet would
+  // silently pass every check below. `--scope=staged` doesn't need the
+  // untracked list separately — a file has to be staged (tracked in the
+  // index) to show up in `--cached` at all. `--scope=worktree` does, since
+  // it's meant to catch "you created this all session, whether or not
+  // you've staged it yet".
   const diffArgs =
     scope === "staged"
       ? ["diff", "--cached", "--name-only", "--diff-filter=ACMR"]
       : ["diff", "HEAD", "--name-only", "--diff-filter=ACMR"];
-  return git(diffArgs)
+  const tracked = git(diffArgs)
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
+  if (scope !== "worktree") return tracked;
+  const untracked = git(["ls-files", "--others", "--exclude-standard"])
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return [...new Set([...tracked, ...untracked])];
 }
 
 function touchedApiModules(files) {
