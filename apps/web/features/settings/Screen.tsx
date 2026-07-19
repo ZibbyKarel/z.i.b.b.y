@@ -202,7 +202,7 @@ export function Screen() {
               </TabPanel>
 
               <TabPanel value="gates">
-                <GateRulesSection />
+                <GateRulesSection surface="glass" />
               </TabPanel>
 
               <TabPanel value="automations">

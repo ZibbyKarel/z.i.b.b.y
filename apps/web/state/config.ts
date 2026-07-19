@@ -114,8 +114,10 @@ export const AGENT_TOOLS = ["read", "write", "bash", "git", "web"] as const;
  * on the `[id]` route segment; `isFullscreenRoute`'s prefix match also covers
  * each section's `/[id]` detail route), `/projects`, `/companies` (F6 — the
  * prefix match also covers `/projects/new`, the nested `/projects/[id]/
- * integrations/[integrationId]` and `/companies/new`). F10 collapses this
- * table entirely once the HUD branch is deleted.
+ * integrations/[integrationId]` and `/companies/new`), `/memory`, `/gates`
+ * (F7 — the last mechanical conversion phase; `/gates` has no `/[id]` detail
+ * route, so the prefix match only ever matches the bare path). F10 collapses
+ * this table entirely once the HUD branch is deleted.
  */
 export const FULLSCREEN_ROUTES = [
   "/chat",
@@ -131,6 +133,8 @@ export const FULLSCREEN_ROUTES = [
   "/chains",
   "/projects",
   "/companies",
+  "/memory",
+  "/gates",
 ] as const;
 
 /** Whether `pathname` (or one of its sub-paths) is a fullscreen route. */

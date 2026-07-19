@@ -33,6 +33,14 @@ export interface NoteViewProps {
   note: Note | undefined;
   /** Navigate to a linked/backlinked note (index-first traversal). */
   onSelect: (id: string) => void;
+  /**
+   * Visual language passthrough (D7) — forwarded to the panel this component
+   * renders, so it matches its sibling (the knowledge-graph panel) inside the
+   * F7-migrated `/memory` page. Defaults to `"hud"` (this component has one
+   * consumer, `features/memory/Screen.tsx`, so there is no other surface to
+   * preserve).
+   */
+  surface?: "hud" | "glass";
 }
 
 /** A row of clickable wiki-link chips — the index-first navigation affordance. */
@@ -66,7 +74,7 @@ function LinkChips({
  * Markdown editor and Save/Cancel take the header slot. Id and tier stay
  * immutable (there is no move op).
  */
-export function NoteView({ note, onSelect }: NoteViewProps) {
+export function NoteView({ note, onSelect, surface }: NoteViewProps) {
   const t = useTranslations("memory");
   const tk = useTranslations();
   const updateNote = useUpdateNoteMutation();
@@ -126,7 +134,12 @@ export function NoteView({ note, onSelect }: NoteViewProps) {
   ) : undefined;
 
   return (
-    <HudPanel action={action} padding="250" title={note?.title ?? t("noteFallback")}>
+    <HudPanel
+      action={action}
+      padding="250"
+      surface={surface}
+      title={note?.title ?? t("noteFallback")}
+    >
       {note ? (
         editing ? (
           <Stack gap="150">

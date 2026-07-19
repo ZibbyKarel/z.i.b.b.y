@@ -180,13 +180,31 @@ describe("AppShell", () => {
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
   });
 
+  // F7 (docs/plans/hud2chat-F7-memory-gates.md): memory and gates adopt the
+  // immersive shell — the last mechanical conversion phase. `/gates` has no
+  // `/[id]` detail route (unlike the other F3–F6 sections), so only the bare
+  // path is exercised here.
+  it.each(["/memory", "/gates"])(
+    "bypasses MainLayout (no nav rail) fullscreen on %s (F7)",
+    (route) => {
+      pathnameRef.current = route;
+      renderWithProviders(
+        <AppShell>
+          <div>obsah katalogu</div>
+        </AppShell>,
+      );
+      expect(screen.getByText("obsah katalogu")).toBeInTheDocument();
+      expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+    },
+  );
+
   // F0 (docs/plans/hud2chat-F0-immersive-shell.md): the hardcoded `/chat` check
   // became a route table (`FULLSCREEN_ROUTES` / `isFullscreenRoute`). `/settings`
   // migrated in F1, `/skills`/`/commands`/`/mcp`/`/hooks` in F3, `/agents`/
   // `/automations` in F4, `/pipelines`/`/chains` in F5, `/projects`/`/companies`
-  // in F6 (see the dedicated tests above); every other route must keep
-  // rendering the HUD chrome exactly as before.
-  it.each(["/overview", "/runs", "/memory"])(
+  // in F6, `/memory`/`/gates` in F7 (see the dedicated tests above); every other
+  // route must keep rendering the HUD chrome exactly as before.
+  it.each(["/overview", "/runs"])(
     "still renders the HUD chrome (nav rail) on %s — unmigrated",
     (route) => {
       pathnameRef.current = route;

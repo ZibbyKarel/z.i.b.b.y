@@ -44,6 +44,16 @@ export interface GateRulesSectionProps {
    * disabled while filtered, same reasoning as the existing decision filter.
    */
   ownerSubsystem?: SubsystemId;
+  /**
+   * Visual language (D7, docs/hud2chat/DECISIONS.md) — threaded to every
+   * `HudPanel` this component renders (its own two panels plus
+   * {@link SystemFloorPanel}). Defaults to `"hud"`, so the one consumer that
+   * must stay pixel-identical — `GatesTab` inside the Chat UI's subsystem
+   * drawer (Phase 87, F7 seam) — is unaffected by this prop's existence. The
+   * two migrated pages (`/gates`, F7; the Settings "Pravidla schvalování" tab,
+   * F1) opt in with `surface="glass"`.
+   */
+  surface?: "hud" | "glass";
 }
 
 /**
@@ -54,7 +64,7 @@ export interface GateRulesSectionProps {
  * `useGateRulesQuery` only fires once this mounts, so the Settings tab loads gate
  * rules lazily (the TabPanel unmounts inactive panels).
  */
-export function GateRulesSection({ ownerSubsystem }: GateRulesSectionProps = {}) {
+export function GateRulesSection({ ownerSubsystem, surface }: GateRulesSectionProps = {}) {
   const t = useTranslations("gates");
   const tk = useTranslations();
   const rulesQuery = useGateRulesQuery();
@@ -122,7 +132,7 @@ export function GateRulesSection({ ownerSubsystem }: GateRulesSectionProps = {})
   return (
     <Stack gap="250">
       {/* decision filter tabs */}
-      <HudPanel padding="200">
+      <HudPanel padding="200" surface={surface}>
         <Stack wrap align="center" direction="row" gap="100">
           <ButtonGroup
             deselectable
@@ -145,7 +155,7 @@ export function GateRulesSection({ ownerSubsystem }: GateRulesSectionProps = {})
       </HudPanel>
 
       {/* hierarchy note: system floor → this catalog → agent/skill rules */}
-      <HudPanel padding="150">
+      <HudPanel padding="150" surface={surface}>
         <Stack align="center" direction="row" gap="100">
           <Icon name="bolt" size="xs" tone="accent" />
           <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
@@ -156,7 +166,7 @@ export function GateRulesSection({ ownerSubsystem }: GateRulesSectionProps = {})
 
       {/* The locked POLICY.md floor — the structural guarantee, made visible above the
           editable catalog (Law 1: agents can only harden it; Law 4: never talked around). */}
-      <SystemFloorPanel />
+      <SystemFloorPanel surface={surface} />
 
       {rulesQuery.isPending ? (
         <QueryLoading />

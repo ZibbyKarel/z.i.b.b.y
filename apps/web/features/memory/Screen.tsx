@@ -15,10 +15,10 @@ import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
+import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { PageHeader } from "../../components/PageHeader/PageHeader";
 import { ImportDialog } from "./components/ImportDialog";
 import { MemoryGraph } from "./components/MemoryGraph";
 import { NoteEditorDialog } from "./components/NoteEditorDialog";
@@ -73,8 +73,117 @@ export function Screen() {
     </Stack>
   );
 
-  const header = (
-    <PageHeader
+  const quickCapturePanel = quickCapturing && (
+    <HudPanel padding="200" surface="glass" title={t("quickCapture.title")}>
+      <QuickCapture onCaptured={(id) => setSelected(id)} onClose={() => setQuickCapturing(false)} />
+    </HudPanel>
+  );
+
+  const toolbar = (
+    <Stack wrap align="end" direction="row" gap="150" justify="between">
+      <Container grow minW0>
+        <TextInputField
+          data-testid="memory-search-input"
+          label={t("searchLabel")}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t("searchPlaceholder")}
+          value={search}
+        />
+      </Container>
+      {tierChips}
+    </Stack>
+  );
+
+  // Create-only (N4g): editing happens in place on the note panel below.
+  const editorDialog = creating && (
+    <NoteEditorDialog onClose={() => setCreating(false)} onSaved={(id) => setSelected(id)} />
+  );
+
+  const importDialog = importing && <ImportDialog onClose={() => setImporting(false)} />;
+
+  let content: React.ReactNode;
+  if (graphQuery.isPending) {
+    content = (
+      <PageContainer>
+        <QueryLoading />
+      </PageContainer>
+    );
+  } else if (graphQuery.isError) {
+    content = (
+      <PageContainer>
+        <QueryError onRetry={() => void graphQuery.refetch()} />
+      </PageContainer>
+    );
+  } else if (graph && graph.nodes.length === 0) {
+    // The header's own "New note" action (below) is now always mounted — unlike
+    // the pre-ImmersivePage early return, which rendered no header at all here —
+    // so this branch no longer needs its own duplicate CTA button.
+    content = (
+      <PageContainer>
+        <Stack align="center" gap="200">
+          <EmptyState description={t("emptyDescription")} glyph="brain" title={t("emptyTitle")} />
+        </Stack>
+      </PageContainer>
+    );
+  } else {
+    content = (
+      <PageContainer stretch>
+        <Stack gap="250">
+          {toolbar}
+          {quickCapturePanel}
+
+          {search.trim().length > 0 && (
+            <HudPanel padding="200" surface="glass" title={t("searchResults")}>
+              {hits.length > 0 ? (
+                <Stack gap="75">
+                  {hits.map((hit) => (
+                    <Pressable
+                      data-testid={`memory-search-hit-${hit.id}`}
+                      key={hit.id}
+                      onClick={() => setSelected(hit.id)}
+                    >
+                      <Stack gap="25">
+                        <Typography mono size="sm" type="note">
+                          {hit.title} · {hit.tier}
+                        </Typography>
+                        <Typography size="caption" type="note" variant="tertiary">
+                          {hit.snippet}
+                        </Typography>
+                      </Stack>
+                    </Pressable>
+                  ))}
+                </Stack>
+              ) : (
+                <Typography mono size="sm" type="note" variant="secondary">
+                  {t("noResults")}
+                </Typography>
+              )}
+            </HudPanel>
+          )}
+
+          <Grid align="start" gap="250" sidebar="right">
+            <HudPanel padding="200" surface="glass" title={t("knowledgeGraph")}>
+              {filteredGraph ? (
+                <MemoryGraph graph={filteredGraph} onSelect={setSelected} selectedId={selected} />
+              ) : (
+                <Container padding={["500", "0"]}>
+                  <Stack align="center">
+                    <OrbitLoader label={t("loadingGraph")} />
+                  </Stack>
+                </Container>
+              )}
+            </HudPanel>
+
+            {/* Keyed by note so switching notes resets any in-progress edit (N4g). */}
+            <NoteView key={note?.id ?? "none"} note={note} onSelect={setSelected} surface="glass" />
+          </Grid>
+        </Stack>
+      </PageContainer>
+    );
+  }
+
+  return (
+    <ImmersivePage
       actions={
         <Stack align="center" direction="row" gap="100">
           <Button
@@ -107,131 +216,11 @@ export function Screen() {
       }
       subtitle={t("countSummary", { count: graph?.nodes.length ?? 0 })}
       title={t("title")}
-    />
-  );
+    >
+      <Container padding={["300", "350"]}>{content}</Container>
 
-  const quickCapturePanel = quickCapturing && (
-    <HudPanel padding="200" title={t("quickCapture.title")}>
-      <QuickCapture
-        onCaptured={(id) => setSelected(id)}
-        onClose={() => setQuickCapturing(false)}
-      />
-    </HudPanel>
-  );
-
-  const toolbar = (
-    <Stack wrap align="end" direction="row" gap="150" justify="between">
-      <Container grow minW0>
-        <TextInputField
-          data-testid="memory-search-input"
-          label={t("searchLabel")}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t("searchPlaceholder")}
-          value={search}
-        />
-      </Container>
-      {tierChips}
-    </Stack>
-  );
-
-  // Create-only (N4g): editing happens in place on the note panel below.
-  const editorDialog = creating && (
-    <NoteEditorDialog onClose={() => setCreating(false)} onSaved={(id) => setSelected(id)} />
-  );
-
-  const importDialog = importing && <ImportDialog onClose={() => setImporting(false)} />;
-
-  if (graphQuery.isPending) {
-    return (
-      <PageContainer>
-        <QueryLoading />
-        {editorDialog}
-        {importDialog}
-      </PageContainer>
-    );
-  }
-
-  if (graphQuery.isError) {
-    return (
-      <PageContainer>
-        <QueryError onRetry={() => void graphQuery.refetch()} />
-        {editorDialog}
-        {importDialog}
-      </PageContainer>
-    );
-  }
-
-  if (graph && graph.nodes.length === 0) {
-    return (
-      <PageContainer>
-        <Stack align="center" gap="200">
-          <EmptyState description={t("emptyDescription")} glyph="brain" title={t("emptyTitle")} />
-          <Button data-testid="memory-note-new" icon="plus" onClick={() => setCreating(true)}>
-            {t("newNote")}
-          </Button>
-        </Stack>
-        {editorDialog}
-        {importDialog}
-      </PageContainer>
-    );
-  }
-
-  return (
-    <PageContainer stretch>
-      <Stack gap="250">
-        {header}
-        {toolbar}
-        {quickCapturePanel}
-
-        {search.trim().length > 0 && (
-          <HudPanel padding="200" title={t("searchResults")}>
-            {hits.length > 0 ? (
-              <Stack gap="75">
-                {hits.map((hit) => (
-                  <Pressable
-                    data-testid={`memory-search-hit-${hit.id}`}
-                    key={hit.id}
-                    onClick={() => setSelected(hit.id)}
-                  >
-                    <Stack gap="25">
-                      <Typography mono size="sm" type="note">
-                        {hit.title} · {hit.tier}
-                      </Typography>
-                      <Typography size="caption" type="note" variant="tertiary">
-                        {hit.snippet}
-                      </Typography>
-                    </Stack>
-                  </Pressable>
-                ))}
-              </Stack>
-            ) : (
-              <Typography mono size="sm" type="note" variant="secondary">
-                {t("noResults")}
-              </Typography>
-            )}
-          </HudPanel>
-        )}
-
-        <Grid align="start" gap="250" sidebar="right">
-          <HudPanel padding="200" title={t("knowledgeGraph")}>
-            {filteredGraph ? (
-              <MemoryGraph graph={filteredGraph} onSelect={setSelected} selectedId={selected} />
-            ) : (
-              <Container padding={["500", "0"]}>
-                <Stack align="center">
-                  <OrbitLoader label={t("loadingGraph")} />
-                </Stack>
-              </Container>
-            )}
-          </HudPanel>
-
-          {/* Keyed by note so switching notes resets any in-progress edit (N4g). */}
-          <NoteView key={note?.id ?? "none"} note={note} onSelect={setSelected} />
-        </Grid>
-
-        {editorDialog}
-        {importDialog}
-      </Stack>
-    </PageContainer>
+      {editorDialog}
+      {importDialog}
+    </ImmersivePage>
   );
 }
