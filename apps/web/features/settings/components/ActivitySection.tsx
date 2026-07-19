@@ -40,7 +40,7 @@ function ActivityEditor({ view }: { view: ActivityView }) {
   };
 
   return (
-    <HudPanel padding="300" title={t("activity.title")}>
+    <HudPanel padding="300" surface="glass" title={t("activity.title")}>
       <Stack gap="200">
         <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
           {t("activity.hint")}

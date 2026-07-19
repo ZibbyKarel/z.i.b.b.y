@@ -29,19 +29,19 @@ title + subtitle, then the content frame. Same token set as `/chat`. That is wha
 
 ## Phases
 
-| #   | Phase                      | Surface                                                               | Status |
-| --- | -------------------------- | --------------------------------------------------------------------- | ------ |
-| F0  | Immersive shell foundation | DS `ImmersiveShell` + AppShell immersive route mode                   | ⬜     |
-| F1  | Settings                   | `/settings` → immersive (operator's named reference case)             | ⬜     |
-| F2  | Archive of tasks           | new `/archiv` master/detail; chat gutter links to it                  | ⬜     |
-| F3  | Catalogs A                 | `skills`, `commands`, `mcp`, `hooks` (list + detail)                  | ⬜     |
-| F4  | Catalogs B                 | `agents`, `automations` (list + detail)                               | ⬜     |
-| F5  | Orchestration              | `pipelines`, `chains` (list+detail share one Screen via selectedId)   | ⬜     |
-| F6  | Delivery entities          | `projects` (+ `/new`, integrations detail), `companies`               | ⬜     |
-| F7  | Memory + gates             | `/memory`, `/gates`                                                   | ⬜     |
-| F8  | Overview dissolution       | status line, limits, briefing-as-chat-message; delete `/overview`     | ⬜     |
-| F9  | Chat reachability sweep    | every surface reachable from Chat; orphans killed                     | ⬜     |
-| F10 | Old shell deletion         | remove `MainLayout`/`Sidebar`/`RightRail`/`TopBar`, simplify AppShell | ⬜     |
+| #   | Phase                      | Surface                                                               | Status      |
+| --- | -------------------------- | --------------------------------------------------------------------- | ----------- |
+| F0  | Immersive shell foundation | DS `ImmersiveShell` + AppShell immersive route mode                   | ✅ e683f0bf |
+| F1  | Settings                   | `/settings` → immersive (operator's named reference case)             | ⬜          |
+| F2  | Archive of tasks           | new `/archiv` master/detail; chat gutter links to it                  | ⬜          |
+| F3  | Catalogs A                 | `skills`, `commands`, `mcp`, `hooks` (list + detail)                  | ⬜          |
+| F4  | Catalogs B                 | `agents`, `automations` (list + detail)                               | ⬜          |
+| F5  | Orchestration              | `pipelines`, `chains` (list+detail share one Screen via selectedId)   | ⬜          |
+| F6  | Delivery entities          | `projects` (+ `/new`, integrations detail), `companies`               | ⬜          |
+| F7  | Memory + gates             | `/memory`, `/gates`                                                   | ⬜          |
+| F8  | Overview dissolution       | status line, limits, briefing-as-chat-message; delete `/overview`     | ⬜          |
+| F9  | Chat reachability sweep    | every surface reachable from Chat; orphans killed                     | ⬜          |
+| F10 | Old shell deletion         | remove `MainLayout`/`Sidebar`/`RightRail`/`TopBar`, simplify AppShell | ⬜          |
 
 Legend: ⬜ not started · 🔩 in progress · 🔎 in review · ✅ done · ⛔ blocked
 

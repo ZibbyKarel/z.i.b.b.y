@@ -6,7 +6,10 @@ import { Stack, Typography } from "@zibby/design-system";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
-import { useTriggerAutomationMutation, useUpdateAutomationMutation } from "../../automations/mutations";
+import {
+  useTriggerAutomationMutation,
+  useUpdateAutomationMutation,
+} from "../../automations/mutations";
 import { useAutomationsQuery } from "../../automations/queries";
 import { SystemAutomationRow } from "./SystemAutomationRow";
 
@@ -45,7 +48,7 @@ export function AutomationsSection() {
 
   if (automationsQuery.isPending) {
     return (
-      <HudPanel padding="300" title={t("automations.title")}>
+      <HudPanel padding="300" surface="glass" title={t("automations.title")}>
         <QueryLoading />
       </HudPanel>
     );
@@ -53,7 +56,7 @@ export function AutomationsSection() {
 
   if (automationsQuery.isError) {
     return (
-      <HudPanel padding="300" title={t("automations.title")}>
+      <HudPanel padding="300" surface="glass" title={t("automations.title")}>
         <QueryError onRetry={() => void automationsQuery.refetch()} />
       </HudPanel>
     );
@@ -62,7 +65,7 @@ export function AutomationsSection() {
   const systemAutomations = (automationsQuery.data ?? []).filter((a) => a.system);
 
   return (
-    <HudPanel padding="300" title={t("automations.title")}>
+    <HudPanel padding="300" surface="glass" title={t("automations.title")}>
       <Stack gap="200">
         <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
           {t("automations.hint")}

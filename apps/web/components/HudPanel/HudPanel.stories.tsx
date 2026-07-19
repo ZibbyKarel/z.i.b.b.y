@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { Button, Container, Typography } from "@zibby/design-system";
+import { Button, Container, Stack, Typography } from "@zibby/design-system";
 import { HudPanel } from "./HudPanel";
 
 const meta: Meta<typeof HudPanel> = {
@@ -44,5 +44,25 @@ export const WithAction: Story = {
         Živý panel s akcí v titulkovém řádku.
       </Typography>
     </HudPanel>
+  ),
+};
+
+// D7 (docs/hud2chat/DECISIONS.md) — the two `surface` variants side by side:
+// "hud" (today's bordered Card, default) vs "glass" (Velín-D translucent
+// treatment, opt-in per migrated page).
+export const Surfaces: Story = {
+  render: (args) => (
+    <Stack gap="200">
+      <HudPanel {...args} surface="hud" title="hud (výchozí)">
+        <Typography size="md" type="note" variant="secondary">
+          Matný panel s ohraničením — beze změny.
+        </Typography>
+      </HudPanel>
+      <HudPanel {...args} surface="glass" title="glass">
+        <Typography size="md" type="note" variant="secondary">
+          Průsvitný Velín-D povrch pro migrované stránky.
+        </Typography>
+      </HudPanel>
+    </Stack>
   ),
 };

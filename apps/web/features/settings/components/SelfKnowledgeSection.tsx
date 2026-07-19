@@ -35,7 +35,7 @@ export function SelfKnowledgeSection() {
 
   if (query.isPending) {
     return (
-      <HudPanel padding="300" title={t("selfKnowledge.title")}>
+      <HudPanel padding="300" surface="glass" title={t("selfKnowledge.title")}>
         <QueryLoading />
       </HudPanel>
     );
@@ -43,7 +43,7 @@ export function SelfKnowledgeSection() {
 
   if (query.isError || !query.data) {
     return (
-      <HudPanel padding="300" title={t("selfKnowledge.title")}>
+      <HudPanel padding="300" surface="glass" title={t("selfKnowledge.title")}>
         <QueryError onRetry={() => query.refetch()} />
       </HudPanel>
     );
@@ -52,18 +52,14 @@ export function SelfKnowledgeSection() {
   const { markdown, generatedAt, drift, sections } = query.data;
 
   return (
-    <HudPanel padding="300" title={t("selfKnowledge.title")}>
+    <HudPanel padding="300" surface="glass" title={t("selfKnowledge.title")}>
       <Stack gap="200">
         <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
           {t("selfKnowledge.hint")}
         </Typography>
 
         <Stack wrap align="center" direction="row" gap="150">
-          <Chip
-            dot
-            data-testid={SelfKnowledgeSectionTestId.DriftChip}
-            tone={drift ? "wait" : "ok"}
-          >
+          <Chip dot data-testid={SelfKnowledgeSectionTestId.DriftChip} tone={drift ? "wait" : "ok"}>
             {drift ? t("selfKnowledge.drift") : t("selfKnowledge.upToDate")}
           </Chip>
           <Typography

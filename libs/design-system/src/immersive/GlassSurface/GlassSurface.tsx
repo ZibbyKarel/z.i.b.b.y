@@ -7,8 +7,12 @@ export enum GlassSurfaceTestId {
 }
 
 export interface GlassSurfaceProps {
-  /** Corner rounding: control 6px · panel 10px · pill 9999px. Defaults to "panel". */
-  radius?: "control" | "panel" | "pill";
+  /**
+   * Corner rounding: control 6px · panel 10px · pill 9999px · none 0 (for
+   * full-bleed bands that run edge to edge, where rounded corners would read as
+   * a floating card — see `ImmersiveShell`'s header). Defaults to "panel".
+   */
+  radius?: "control" | "panel" | "pill" | "none";
   children?: ReactNode;
   /** Merge passthrough for genuinely dynamic values (position, width). */
   style?: CSSProperties;
@@ -19,6 +23,7 @@ const RADIUS_PX: Record<NonNullable<GlassSurfaceProps["radius"]>, string> = {
   control: "6px",
   panel: "10px",
   pill: "9999px",
+  none: "0",
 };
 
 /**

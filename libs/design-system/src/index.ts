@@ -121,7 +121,14 @@ export type {
 export { Alert } from "./components/Alert/Alert";
 export type { AlertProps, AlertSeverity } from "./components/Alert/Alert";
 
-export { Card, CardActions, CardContent, CardFooter, CardHeader } from "./components/Card/Card";
+export {
+  Card,
+  CardActions,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTestId,
+} from "./components/Card/Card";
 export type { CardProps } from "./components/Card/Card";
 
 export { LivingGlow, LivingGlowTestId } from "./components/LivingGlow/LivingGlow";

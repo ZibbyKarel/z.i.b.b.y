@@ -68,8 +68,19 @@ export function ImmersiveShell({
 
       <GlassSurface
         data-testid={ImmersiveShellTestId.Header}
-        radius="panel"
-        style={{ flex: "0 0 auto", position: "relative", zIndex: 10 }}
+        radius="none"
+        style={{
+          flex: "0 0 auto",
+          position: "relative",
+          zIndex: 10,
+          // A full-bleed band, not a floating card: square corners, and only the
+          // bottom hairline survives (the design's Archiv úloh header is exactly
+          // a `borderBottom` rule). The side/top borders would otherwise sit on
+          // the viewport edges as stray hairlines.
+          borderTop: "none",
+          borderLeft: "none",
+          borderRight: "none",
+        }}
       >
         <Container padding={["200", "300"]}>
           <Stack align="center" as="header" direction="row" gap="200">

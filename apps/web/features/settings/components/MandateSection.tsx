@@ -72,7 +72,7 @@ export function MandateSection() {
   );
 
   return (
-    <HudPanel padding="300" title={t("mandate.title")}>
+    <HudPanel padding="300" surface="glass" title={t("mandate.title")}>
       <Stack gap="200">
         <Stack direction="row" justify="between">
           <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">

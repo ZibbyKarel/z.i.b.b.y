@@ -77,14 +77,19 @@ describe("ImmersiveShell", () => {
     expect(body.style.overflow).toBe("auto");
   });
 
-  it("bands the header in a fixed-height GlassSurface with the panel radius", () => {
+  it("bands the header as a full-bleed GlassSurface, not a floating card", () => {
     render(
       <ImmersiveShell title="Archiv úloh">
         <div>obsah</div>
       </ImmersiveShell>,
     );
     const header = screen.getByTestId(ImmersiveShellTestId.Header);
-    expect(header.style.borderRadius).toBe("10px");
+    // Square corners: the band runs edge to edge, so rounding would read as a
+    // floating card rather than the design's Archiv úloh header rule.
+    // (The matching side/top border removal is not asserted here — jsdom does not
+    // reflect longhand `borderTop`/`borderLeft` set after the `border` shorthand
+    // GlassSurface applies. It is verified in the browser instead.)
+    expect(header.style.borderRadius).toBe("0");
     expect(header.style.flex).toBe("0 0 auto");
   });
 });
