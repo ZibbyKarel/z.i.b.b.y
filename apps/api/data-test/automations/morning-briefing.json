@@ -1,0 +1,8 @@
+{
+  "id": "morning-briefing",
+  "name": "Ranní briefing",
+  "trigger": { "type": "cron", "expr": "0 7 * * *" },
+  "target": { "type": "briefing" },
+  "enabled": true,
+  "system": true
+}

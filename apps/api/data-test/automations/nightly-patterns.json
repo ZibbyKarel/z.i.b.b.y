@@ -1,0 +1,8 @@
+{
+  "id": "nightly-patterns",
+  "name": "Extrakce vzorů",
+  "trigger": { "type": "cron", "expr": "0 23 * * *" },
+  "target": { "type": "pattern-extract" },
+  "enabled": true,
+  "system": true
+}
