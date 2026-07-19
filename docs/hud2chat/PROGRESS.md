@@ -254,3 +254,16 @@ affordances) and F10 (delete the old shell).
   Two orphans deleted with evidence (`ParkedRunsPanel`, `features/notifications/`); `knip` swept
   the rest and found only false positives. This commit also carries the e2e specs F8d should
   have included — my `git add` there scoped to `apps/web apps/api` and missed repo-root `e2e/`.
+- **2026-07-19** — F10 landed (`adcda915`), **−2145 lines**. `MainLayout`, `Sidebar`,
+  `RightRail` and `TopBar` are gone; `AppShell` is a provider stack around a full-height
+  container with no route fork, and `FULLSCREEN_ROUTES` went with the fork it existed to drive.
+  `/gates` deleted per O8 — the route only, the domain stays. Deleting the shell stranded a
+  second wave of components only it mounted (`BrandLogo`, `GlobalSearch`, `LanguageSwitcher`,
+  `NewTaskButton`, four search hooks), exactly as F9 predicted. Tests were deleted rather than
+  weakened where they asserted behaviour that no longer exists. `pnpm web:build` exit 0 — the
+  real gate for a change that removes layouts, and the reason it was in the plan.
+  **I caught one thing the subagent's own green suite did not:** grepping after the deletion,
+  `apps/web` had no `<main>` landmark and no skip link anywhere — `MainLayout` had owned both.
+  Every test passed and the build was clean, because neither asserts landmarks. That is an
+  accessibility property of the **new** design, not the HUD breakage the operator accepted, so
+  it is named in the commit and closed in F10b rather than shipped quietly.
