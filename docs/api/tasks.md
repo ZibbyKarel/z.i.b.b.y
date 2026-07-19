@@ -29,8 +29,8 @@ success | failed | cancelled
 
 ### `pending` — background dispatch (interactive path)
 
-So the New Task dialog doesn't block on the full spawn (Haiku naming + classification
-+ starting the runner can take seconds), the interactive path (`POST /api/tasks` from
+So the New Task dialog doesn't block on the full spawn (Haiku naming, classification,
+and starting the runner can take seconds), the interactive path (`POST /api/tasks` from
 the dialog) runs with `background = true`: the fast guards (limit / budget /
 capacity) run synchronously, then the task is persisted as `pending` and the
 response returns **immediately** as `{ outcome: "pending", task }`. Classification
@@ -140,10 +140,10 @@ setInterval(() => tick(), systemConfig.current().taskTickMs);
 ## Routing and dispatch
 
 | Target         | Dispatcher                                                        |
-| -------------- | ------------------------------------------------------------------ |
-| `agent`        | `AgentRunnerService.startRun(agentId, { prompt, project })`         |
-| `pipeline`     | `PipelineRunnerService.startRun(pipelineId, { prompt, project })`   |
-| `orchestrator` | `AgentRunnerService.startRun(ORCHESTRATOR_ID, { prompt })`          |
+| -------------- | ----------------------------------------------------------------- |
+| `agent`        | `AgentRunnerService.startRun(agentId, { prompt, project })`       |
+| `pipeline`     | `PipelineRunnerService.startRun(pipelineId, { prompt, project })` |
+| `orchestrator` | `AgentRunnerService.startRun(ORCHESTRATOR_ID, { prompt })`        |
 
 After dispatch, `runRef` is written back to the task record.
 
@@ -181,7 +181,7 @@ was deleted). Goal maker/verifier child runs are folded into the feed (not peer
 rows), but stay reachable from the goal's detail view.
 
 ```
-GET    /api/tasks/runs                                       the unified feed (newest-first; agent/pipeline/goal/scheduled)
+GET    /api/tasks/runs                                       the unified feed (newest-first; agent/pipeline/goal/chain/scheduled)
 GET    /api/tasks/runs/:runId                                a single run's detail
 GET    /api/tasks/runs/:runId/logs?offset=                   log chunk from a byte offset
 GET    /api/tasks/runs/:runId/logs/stream                    SSE tail (falls back to the offset-poll above)
@@ -189,8 +189,12 @@ GET    /api/tasks/runs/:runId/stages/:phaseId/logs?offset=    one pipeline stage
 GET    /api/tasks/runs/:runId/stages/:phaseId/logs/stream     SSE tail for a pipeline stage's log
 GET    /api/tasks/runs/:runId/artifacts/:name                a whitelisted artifact (pr-draft.md, verdict.txt, …)
 POST   /api/tasks/runs/:runId/stop                            stop a running run
-POST   /api/tasks/runs/:runId/resume                          resume a parked run (with a note)
+POST   /api/tasks/runs/:runId/resume                          resume a parked pipeline/goal run (with a note), or re-run an
+                                                                errored/interrupted agent run (with `--resume` if a session id
+                                                                was captured, else a fresh run of the same task)
 DELETE /api/tasks/runs/:runId                                  delete a run and its artifacts
+PATCH  /api/tasks/runs/:runId/project                          assign a run into a project, or clear it back to "bez projektu"
+                                                                with a null projectId
 ```
 
 Both `/logs/stream` endpoints live outside the ts-rest contract as raw NestJS `@Sse`
@@ -206,11 +210,11 @@ In the New Task dialog, the operator chooses **what happens to the finished work
 the counterpart to a pipeline's `outputs:` block. It's deterministic and owned by the
 system (no agent, no tokens). `TaskOutput` is a discriminated union:
 
-| `type` | Fields       | What it does                                                                                                                                          |
-| ------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `type` | Fields       | What it does                                                                                                                                            |
+| ------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `pr`   | —            | Opens a PR from the finished run's branch. **Tier-2 (act-then-report): opened immediately, no approval gate** — the north-star's "open a PR for a fix". |
-| `file` | `dest`, `to` | Writes the run's result (a summary) to a file — into the project's worktree (`dest: project`) or as a vault note (`dest: vault`). Tier-1, immediate.  |
-| `void` | —            | Explicitly no output (also suppresses a pipeline-declared `pr`).                                                                                       |
+| `file` | `dest`, `to` | Writes the run's result (a summary) to a file — into the project's worktree (`dest: project`) or as a vault note (`dest: vault`). Tier-1, immediate.    |
+| `void` | —            | Explicitly no output (also suppresses a pipeline-declared `pr`).                                                                                        |
 
 **A missing field means inherit, not void.** For a pipeline target, its own
 `outputs:` apply; for an agent/orchestrator target, nothing is delivered (today's
@@ -278,10 +282,10 @@ ignores them):
 
 ## Activity records
 
-| Event              | When                                        |
-| ------------------ | -------------------------------------------- |
-| `task-created`     | A task was created                            |
-| `task-dispatched`  | A task was handed to a runner                 |
-| `task-queued`      | A task was queued (maxConcurrent)             |
-| `task-held`        | A task was parked for budget approval         |
-| `task-outcome`     | A run finished, outcome written back          |
+| Event             | When                                  |
+| ----------------- | ------------------------------------- |
+| `task-created`    | A task was created                    |
+| `task-dispatched` | A task was handed to a runner         |
+| `task-queued`     | A task was queued (maxConcurrent)     |
+| `task-held`       | A task was parked for budget approval |
+| `task-outcome`    | A run finished, outcome written back  |

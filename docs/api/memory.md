@@ -11,11 +11,11 @@ Overridable via the `VAULT_DIR` env var.
 
 ## Three tiers
 
-| Tier        | Folder             | Purpose                                             |
+| Tier        | Folder             | Purpose                                               |
 | ----------- | ------------------ | ----------------------------------------------------- |
 | `memory`    | `vault/memory/`    | Durable knowledge — facts, decisions, project context |
 | `daily`     | `vault/daily/`     | Daily log — append-only record of what happened       |
-| `knowledge` | `vault/knowledge/` | Thematic notes — deeper-dive documents                 |
+| `knowledge` | `vault/knowledge/` | Thematic notes — deeper-dive documents                |
 
 ## Note format
 
@@ -158,6 +158,50 @@ automations doc for details.
 > memory) has been removed — memory is now collected by the system, not from an
 > agent's own description.
 
+## Bulk import (Phase 112)
+
+**File:** `apps/api/src/memory/memory-import.service.ts` (`MemoryImportService`)
+
+`POST /api/memory/import` (contract: `libs/contracts/src/memory/memory.contract.ts`)
+bulk-imports `.md`/`.txt` files from a server-side folder into a staging queue
+(`import/`, a sibling of the vault dir, never a subdir of it — `VaultService.scan()`
+never walks into it). `stageFrom(sourcePath)` copies every accepted file into the
+queue with a collision-safe name (5 MiB per-file cap; oversized/unsupported/unreadable
+files are skipped and tallied, never silently dropped, never fatal to the walk). A
+separate `ingestQueue()` turns each queued file into a raw ("halda") knowledge note
+(frontmatter title preserved for `.md`, filename-derived otherwise) for the existing
+nightly triage sweep to pick up, then archives the source into
+`import/_imported/<YYYY-MM-DD>/` — idempotent, since an archived file is no longer in
+the queue to re-ingest.
+
+## Entity-directory MCP (`entity-mcp.controller.ts`)
+
+**File:** `apps/api/src/memory/entity-mcp.controller.ts` (`EntityMcpController`)
+
+`POST`/`GET /api/memory/mcp` is a second in-process MCP server (mirrors
+`ChatMcpController`'s stateless-per-request shape) exposing two tools to any run
+granted the seeded `zibby-entities` MCP server row:
+
+- `list_entities {kind, query?}` — structured, on-demand lookup over a named catalog
+  (`skills`, `mcp`, `commands`, `hooks`, `projects`, `companies`, `chains`,
+  `integrations`, `goals`, `automations`), reduced to `{id, name?, description?}` and
+  optionally filtered by a case-insensitive substring. Fail-open per catalog — a
+  storage hiccup logs and returns `[]`.
+- `recall_memory {query}` — the same vault search as the chat MCP's tool (see below).
+
+Unlike the chat MCP, this endpoint is not scoped to a chat conversation and carries
+no `ChatMcpAuthGuard`-style auth of its own.
+
+### Shared recall helper
+
+**File:** `apps/api/src/memory/recall.helper.ts` (`recallMemory`)
+
+The vault-search + formatting logic behind both MCP servers' `recall_memory` tool
+lives in exactly one place: it searches the vault, renders the top few hits (title +
+snippet, Czech), and envelopes each snippet via `envelopeInbound` (Law 4) before it
+enters the returned string, since a hit's snippet can be raw/imported or distilled
+content.
+
 ## Cross-project isolation (M7)
 
 A run in project A must never "reach" project B's memory. The workspace is already
@@ -179,8 +223,8 @@ The fix (purely restrictive, no migration):
 
 ## Error states
 
-| Error                | HTTP | When                                    |
-| --------------------- | ---- | ---------------------------------------- |
-| `NoteNotFoundError`   | 404  | The id doesn't exist in any tier         |
-| `InvalidNoteIdError`  | 422  | The id contains `/`, `..`, or starts with `.` |
-| `DuplicateNoteError`  | 409  | The id already exists (even in a different tier) |
+| Error                | HTTP | When                                             |
+| -------------------- | ---- | ------------------------------------------------ |
+| `NoteNotFoundError`  | 404  | The id doesn't exist in any tier                 |
+| `InvalidNoteIdError` | 422  | The id contains `/`, `..`, or starts with `.`    |
+| `DuplicateNoteError` | 409  | The id already exists (even in a different tier) |

@@ -13,14 +13,14 @@ is idempotent.
 
 ## Pieces
 
-| Piece            | File                                                  | Role                                                                                          |
-| ---------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| Contract         | `libs/contracts/src/briefing/briefing.schema.ts`       | `Briefing`, `BriefingNeedsYouItem`/`BriefingDidItem`/`BriefingWatchItem`/`BriefingEngagement` schemas |
-| Contract (HTTP)  | `libs/contracts/src/briefing/briefing.contract.ts`     | ts-rest router — the pure `GET` and the persisting `POST /generate`                              |
-| Assembly (pure)  | `apps/api/src/briefing/briefing-assembly.ts`           | `assembleBriefing` + `renderBriefingMarkdown` — zero I/O, snapshot-testable                       |
-| Service          | `apps/api/src/briefing/briefing.service.ts`            | `BriefingService` — gathers state, calls assembly, persists the vault note, advances the cursor  |
-| LLM seam         | `apps/api/src/briefing/claude-cli-briefer.ts`          | `ClaudeCliBriefer` — the optional butler-voice headline pass over the assembled sections         |
-| Controller       | `apps/api/src/briefing/briefing.controller.ts`         | Implements `briefingContract` against `BriefingService`                                          |
+| Piece           | File                                               | Role                                                                                                  |
+| --------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Contract        | `libs/contracts/src/briefing/briefing.schema.ts`   | `Briefing`, `BriefingNeedsYouItem`/`BriefingDidItem`/`BriefingWatchItem`/`BriefingEngagement` schemas |
+| Contract (HTTP) | `libs/contracts/src/briefing/briefing.contract.ts` | ts-rest router — the pure `GET` and the persisting `POST /generate`                                   |
+| Assembly (pure) | `apps/api/src/briefing/briefing-assembly.ts`       | `assembleBriefing` + `renderBriefingMarkdown` — zero I/O, snapshot-testable                           |
+| Service         | `apps/api/src/briefing/briefing.service.ts`        | `BriefingService` — gathers state, calls assembly, persists the vault note, advances the cursor       |
+| LLM seam        | `apps/api/src/briefing/claude-cli-briefer.ts`      | `ClaudeCliBriefer` — the optional butler-voice headline pass over the assembled sections              |
+| Controller      | `apps/api/src/briefing/briefing.controller.ts`     | Implements `briefingContract` against `BriefingService`                                               |
 
 ## Endpoints (`/api/briefing`)
 
@@ -46,13 +46,13 @@ of `generate`:
    activity entries since the cursor, queued/held/dead-lettered scheduled tasks,
    project names (for the engagement rollup), last-known CI statuses, plus four vault
    reads — the 7-day trend (first line of each of the last 7 daily notes), learned
-   automation patterns, the research digest headlines, the automation-gap
-   suggestions, and the weekly app ideas. Every vault read is individually
-   fail-soft — a missing or unreadable note degrades to an empty list, never throws.
+   automation patterns, the automation-gap suggestions, and the weekly app ideas.
+   Every vault read is individually fail-soft — a missing or unreadable note
+   degrades to an empty list, never throws.
 3. Hand all of it to `assembleBriefing` (the pure function in
    `briefing-assembly.ts`), which builds four sections:
    - **`needsYou`** — pending approvals, parked pipeline/goal runs, dead-lettered
-     tasks, and red-CI state lines, newest first. A currently-red CI is a *state*
+     tasks, and red-CI state lines, newest first. A currently-red CI is a _state_
      line (present while red, gone once green) rather than a one-time alert — the
      one-time notification is a separate monitor alert (`docs/api/monitors.md`).
    - **`didForYou`** — the last 10 activity entries of kinds that count as "ZIBBY
@@ -64,9 +64,9 @@ of `generate`:
    - **`engagements`** — one row per project with waiting tasks or attributable
      activity, rolling up `needsYou`/`didForYou`/`queued`/`held` counts (Phase 8.2);
      empty for a single-engagement operator, no rollup noise.
-   A deterministic, English headline (`deterministicHeadline`) is always computed as
-   the fallback — "Nothing needs you." when `needsYou` is empty, otherwise a count
-   summary by kind.
+     A deterministic, English headline (`deterministicHeadline`) is always computed as
+     the fallback — "Nothing needs you." when `needsYou` is empty, otherwise a count
+     summary by kind.
 
 ### Generation (`BriefingService.generate`)
 

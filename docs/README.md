@@ -22,6 +22,7 @@ my channels and handle what you can."
 
 - [API overview](./api/overview.md) — NestJS bootstrapping, modules, configuration
 - [Agents & Runs](./api/agents-runs.md) — agent definitions, dispatching runs, `RunnerCore`
+- [Runner](./api/runner.md) — the shared process-spawn engine: process lifecycle, the `claude -p` command builder, mid-run approval-gate wiring
 - [Pipeline orchestration](./api/pipelines.md) — phases, loops, escalation, parking
 - [Goals](./api/goals.md) — the generalized delivery loop (maker ⇄ verifier), self-development's loop engine
 - [Chains](./api/chains.md) — operator-authored pipeline composition
@@ -30,6 +31,9 @@ my channels and handle what you can."
 - [Workspace](./api/workspace.md) — per-run git worktree lifecycle
 - [Artifacts](./api/artifacts.md) — the durable artifact provenance registry
 - [Events](./api/events.md) — the single multiplexed SSE channel for live run/activity updates
+- [Projects](./api/projects.md) — the target-directory registry, per-machine clone resolution, GitHub PR overview/merge, standups
+- [Companies](./api/companies.md) — the super-entity above Project: canonical roster + default budget, merged at read time
+- [Subsystems](./api/subsystems.md) — the GAIA-style federation registry (identity + live status)
 
 **Memory & accountability**
 
@@ -54,6 +58,8 @@ my channels and handle what you can."
 
 - [Gap detection](./api/gaps.md) — noticing recurring manual work worth automating
 - [Pattern extraction](./api/patterns.md) — mining approval history for rule proposals
+- [Agent Factory](./api/agent-factory.md) — proposing missing specialist agents from recurring orchestrator fallbacks
+- [Self-Knowledge](./api/self-knowledge.md) — the drift-checked machine self-description note behind the `check:self-knowledge` gate
 
 **Automations, extensibility & machine**
 
@@ -61,6 +67,7 @@ my channels and handle what you can."
 - [Run extensibility](./api/extensibility.md) — commands, MCP servers, hooks, project env/secrets injected into `claude -p`
 - [Machine](./api/machine.md) — controlling the operator's computer behind the gate (Tier-3 only)
 - [Chat](./api/chat.md) — the chat-first conversational layer
+- [Speech](./api/speech.md) — thin HTTP proxy to the local `speakd` TTS daemon
 
 **Ops-facing subsystems**
 
@@ -88,6 +95,7 @@ my channels and handle what you can."
 - [Self-development runbook](./ops/self-development.md) — ZIBBY as a safe target for its own loop engine
 - [Connecting Slack](./ops/slack-setup.md) — bot token, scopes, channel IDs, wiring up the integration + mandate
 - [Connecting GitHub](./ops/github-setup.md) — personal access token, no admin approval needed, wiring up the integration + mandate
+- [Security posture](./ops/security-posture.md) — accepted risks, why they're acceptable today, and what would change that
 
 ---
 

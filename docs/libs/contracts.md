@@ -18,43 +18,46 @@ All exports are re-exported from `libs/contracts/src/index.ts`.
 
 ## Domains
 
-30 domain folders exist today under `libs/contracts/src/` (every one below,
+35 domain folders exist today under `libs/contracts/src/` (every one below,
 excluding the composite `app.contract.ts` and the shared `common.schema.ts`):
 
-| Folder           | Key schema(s)                                                       | Contract                                    |
-| ---------------- | -------------------------------------------------------------------- | -------------------------------------------- |
-| `agents/`        | `AgentSchema`, `AgentRunSchema`                                       | Agent CRUD + runs                            |
-| `categories/`    | `CategorySchema`                                                      | Agent/skill/project categories               |
-| `skills/`        | `SkillSchema`                                                         | Skill CRUD                                   |
-| `hooks/`         | `HookSchema`                                                          | Hook catalog CRUD                            |
-| `mcp/`           | `McpServerSchema`                                                     | MCP server catalog CRUD                      |
-| `commands/`      | `CommandSchema`                                                       | Slash-command catalog CRUD                   |
-| `projects/`      | `ProjectSchema`                                                       | Projects                                     |
-| `pipelines/`     | `PipelineSchema`, `PipelineRunSchema`, `StageVerdictSchema`           | Pipeline CRUD + runs                         |
-| `goals/`         | `GoalSchema`, `GoalRunSchema`                                         | Loop-engine goal definitions + runs          |
-| `approvals/`     | `ApprovalSchema`                                                      | Approval queue                               |
-| `artifacts/`     | `ArtifactSchema`                                                      | Durable artifact provenance registry         |
-| `chains/`        | `ChainSchema`                                                         | Completion-driven task chains                |
-| `discovery/`     | `ProposalSchema`                                                      | Triaged proposal → task flow                 |
-| `research/`      | research schemas                                                      | Research pipeline output                     |
-| `gates/`         | `GateRuleSchema`, `MatchConditionSchema`, `ResolveSchema` (plus the nested `gate-rules.contract.ts` for the global rule catalog) | Gate rules |
-| `memory/`        | `NoteSchema`, `IndexEntrySchema`, `MemoryGraphSchema`                 | Vault operations                             |
-| `machine/`       | machine-action schemas                                                | Propose-only machine actions + open-maps      |
-| `monitors/`      | `MonitorSchema`                                                       | CI/CD monitor adapters                       |
-| `automations/`   | `AutomationSchema`                                                    | Scheduled automations                        |
-| `integrations/`  | `IntegrationSchema`                                                   | Channel integrations                         |
-| `channels/`      | `ChannelItemSchema`                                                   | Inbound channel items                        |
-| `mandate/`       | `MandateSchema`                                                       | Autonomy scope                               |
-| `health/`        | `HealthStatusSchema`                                                  | System health status                         |
-| `subsystems/`    | `SubsystemSchema`, `SubsystemWithStatusSchema`                        | GAIA-style federation registry (8 named subsystems) + status |
-| `limits/`        | `LimitsSchema`                                                        | Budget and rate limits                       |
-| `system/`        | system-config schemas                                                 | Runtime system config + policy floor         |
-| `pins/`          | `PinSchema`                                                           | Quick-launch pins                            |
-| `tasks/`         | `ScheduledTaskSchema`, `TaskRoutingSchema`, `TaskRunSchema` (`task-run.schema.ts`) | Deferred tasks + the unified run surface (`task-runs.contract.ts`) |
-| `activity/`      | `ActivityEntrySchema`, `ActivityKindSchema`, `ActivityRefsSchema` (plus `activity-view.schema.ts`) | Audit log + view config |
-| `briefing/`      | `BriefingItemSchema`                                                  | Briefing                                     |
-| `budget/`        | `BudgetSchema`                                                        | Spend ledger and caps                        |
-| `chat/`          | chat message/session schemas                                          | Chat-first interface backend                 |
+| Folder            | Key schema(s)                                                                                                                    | Contract                                                                                 |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `agents/`         | `AgentSchema`, `AgentRunSchema`                                                                                                  | Agent CRUD + runs                                                                        |
+| `categories/`     | `CategorySchema`                                                                                                                 | Agent/skill/project categories                                                           |
+| `skills/`         | `SkillSchema`                                                                                                                    | Skill CRUD                                                                               |
+| `hooks/`          | `HookSchema`                                                                                                                     | Hook catalog CRUD                                                                        |
+| `mcp/`            | `McpServerSchema`                                                                                                                | MCP server catalog CRUD                                                                  |
+| `commands/`       | `CommandSchema`                                                                                                                  | Slash-command catalog CRUD                                                               |
+| `projects/`       | `ProjectSchema`                                                                                                                  | Projects                                                                                 |
+| `companies/`      | `CompanySchema`                                                                                                                  | Company registry CRUD — the super-entity above `Project`                                 |
+| `pipelines/`      | `PipelineSchema`, `PipelineRunSchema`, `StageVerdictSchema`                                                                      | Pipeline CRUD + runs                                                                     |
+| `goals/`          | `GoalSchema`, `GoalRunSchema`                                                                                                    | Loop-engine goal definitions + runs                                                      |
+| `approvals/`      | `ApprovalSchema`                                                                                                                 | Approval queue                                                                           |
+| `artifacts/`      | `ArtifactSchema`                                                                                                                 | Durable artifact provenance registry                                                     |
+| `chains/`         | `ChainSchema`                                                                                                                    | Completion-driven task chains                                                            |
+| `discovery/`      | `ProposalSchema`                                                                                                                 | Triaged proposal → task flow                                                             |
+| `gates/`          | `GateRuleSchema`, `MatchConditionSchema`, `ResolveSchema` (plus the nested `gate-rules.contract.ts` for the global rule catalog) | Gate rules                                                                               |
+| `memory/`         | `NoteSchema`, `IndexEntrySchema`, `MemoryGraphSchema`                                                                            | Vault operations                                                                         |
+| `machine/`        | machine-action schemas                                                                                                           | Propose-only machine actions + open-maps                                                 |
+| `monitors/`       | `MonitorSchema`                                                                                                                  | CI/CD monitor adapters                                                                   |
+| `automations/`    | `AutomationSchema`                                                                                                               | Scheduled automations                                                                    |
+| `integrations/`   | `IntegrationSchema`                                                                                                              | Channel integrations                                                                     |
+| `channels/`       | `ChannelItemSchema`                                                                                                              | Inbound channel items                                                                    |
+| `mandate/`        | `MandateSchema`                                                                                                                  | Autonomy scope                                                                           |
+| `health/`         | `HealthStatusSchema`                                                                                                             | System health status                                                                     |
+| `subsystems/`     | `SubsystemSchema`, `SubsystemWithStatusSchema`                                                                                   | GAIA-style federation registry (8 named subsystems) + status                             |
+| `self/`           | `SelfStatusSchema`, `SelfUpdateResultSchema`                                                                                     | The ZIBBY install repo's own freshness + operator-triggered self-update                  |
+| `self-knowledge/` | `SelfKnowledgeSchema`, `SelfKnowledgeSectionsSchema`                                                                             | The machine-generated self-knowledge snapshot (read-only; regeneration is a CLI concern) |
+| `limits/`         | `LimitsSchema`                                                                                                                   | Budget and rate limits                                                                   |
+| `system/`         | system-config schemas                                                                                                            | Runtime system config + policy floor                                                     |
+| `pins/`           | `PinSchema`                                                                                                                      | Quick-launch pins                                                                        |
+| `tasks/`          | `ScheduledTaskSchema`, `TaskRoutingSchema`, `TaskRunSchema` (`task-run.schema.ts`)                                               | Deferred tasks + the unified run surface (`task-runs.contract.ts`)                       |
+| `activity/`       | `ActivityEntrySchema`, `ActivityKindSchema`, `ActivityRefsSchema` (plus `activity-view.schema.ts`)                               | Audit log + view config                                                                  |
+| `briefing/`       | `BriefingItemSchema`                                                                                                             | Briefing                                                                                 |
+| `budget/`         | `BudgetSchema`                                                                                                                   | Spend ledger and caps                                                                    |
+| `chat/`           | chat message/session schemas                                                                                                     | Chat-first interface backend                                                             |
+| `speech/`         | `SpeechSynthesizeInputSchema`, `SpeechVoiceSchema`, `SpeechStatusSchema`                                                         | Thin proxy in front of the local `speakd` TTS daemon                                     |
 
 ## Shared schema (common.schema.ts)
 
@@ -102,18 +105,18 @@ import { AgentSchema, CreateAgentInputSchema } from "./agent.schema";
 const c = initContract();
 
 export const agentsContract = c.router({
-  list: {
+  listAgents: {
     method: "GET",
-    path: "/api/agents",
+    path: "/agents",
     responses: { 200: z.array(AgentSchema) },
   },
-  create: {
+  createAgent: {
     method: "POST",
-    path: "/api/agents",
-    body: CreateAgentInputSchema,
+    path: "/agents",
+    body: CreateAgentSchema,
     responses: {
       201: AgentSchema,
-      422: ErrorSchema,
+      409: ErrorSchema,
     },
   },
   // ...
@@ -131,11 +134,11 @@ export class AgentsController {
   @TsRestHandler(agentsContract)
   async handler() {
     return tsRestHandler(agentsContract, {
-      list: async () => {
+      listAgents: async () => {
         const agents = await this.service.list();
         return { status: 200 as const, body: agents };
       },
-      create: async ({ body }) => {
+      createAgent: async ({ body }) => {
         const agent = await this.service.create(body);
         return { status: 201 as const, body: agent };
       },
@@ -158,7 +161,10 @@ export const apiClient = initTsrReactQuery(appContract, {
 });
 
 // In a hook:
-const { data } = apiClient.agents.list.useQuery(["agents"], {}, { select: selectApiResponseBody });
+const { data } = apiClient.agents.listAgents.useQuery({
+  queryKey: ["agents"],
+  select: selectApiResponseBody,
+});
 ```
 
 ## Validation
@@ -199,6 +205,7 @@ export const appContract = c.router({
   commands: commandsContract,
   projects: projectsContract,
   projectCategories: projectCategoriesContract,
+  companies: companiesContract,
   pipelines: pipelinesContract,
   pipelineRuns: pipelineRunsContract, // now just GET /pipelines/runs (catalog liveness)
   goals: goalsContract,
@@ -207,7 +214,6 @@ export const appContract = c.router({
   chains: chainsContract,
   chainRuns: chainRunsContract,
   discovery: discoveryContract,
-  research: researchContract,
   gates: gatesContract,
   gateRules: gateRulesContract,
   memory: memoryContract,
@@ -220,6 +226,8 @@ export const appContract = c.router({
   mandate: mandateContract,
   health: healthContract,
   subsystems: subsystemsContract,
+  self: selfContract,
+  selfKnowledge: selfKnowledgeContract,
   limits: limitsContract,
   tasks: tasksContract,
   taskRuns: taskRunsContract, // unified run surface: /api/tasks/runs/*
@@ -230,6 +238,7 @@ export const appContract = c.router({
   briefing: briefingContract,
   budget: budgetContract,
   chat: chatContract,
+  speech: speechContract,
   // ... (no goalRunsContract — goal runs live on taskRuns)
 });
 ```

@@ -10,12 +10,12 @@ of the conversation.
 
 ## Endpoints
 
-| Method | Path | Description |
-| ------ | ---- | ----------- |
-| `POST` | `/api/chat/messages` | Adds the operator's turn and starts the streaming reply. Body `{ conversationId?, text }` → `{ conversationId, turnId }` (returns immediately; tokens arrive over SSE). |
-| `GET`  | `/api/chat/transcript?conversationId=` | Plain read of the conversation transcript (`{ conversationId, sessionId, messages }`). Without `conversationId` → the active thread. |
-| `GET`  | `/api/chat/stream?conversationId=` | **SSE** (raw `@Sse()`, outside ts-rest) — live tokens. Each `data` is a JSON `ChatTurnEvent`. |
-| `POST`/`GET` | `/api/chat/mcp` | In-process **MCP server** (Streamable HTTP) exposing ZIBBY's tools. Called by the spawned `claude` process, not the frontend. |
+| Method       | Path                                   | Description                                                                                                                                                                                                                               |
+| ------------ | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST`       | `/api/chat/messages`                   | Adds the operator's turn and starts the streaming reply. Body `{ conversationId?, text }` → `{ conversationId, turnId }` (returns immediately; tokens arrive over SSE).                                                                   |
+| `GET`        | `/api/chat/transcript?conversationId=` | Plain read of the conversation transcript (`{ conversationId, sessionId, messages }`). Without `conversationId` → the active thread.                                                                                                      |
+| `GET`        | `/api/chat/stream?conversationId=`     | **SSE** (raw `@Sse()`, outside ts-rest) — live tokens. Each `data` is a JSON `ChatTurnEvent`.                                                                                                                                             |
+| `POST`/`GET` | `/api/chat/mcp`                        | In-process **MCP server** (Streamable HTTP) exposing ZIBBY's tools. Called by the spawned `claude` process, not the frontend — gated by `ChatMcpAuthGuard` (see below); `GET` is an unguarded 405 (no server-initiated streaming needed). |
 
 ### `ChatTurnEvent` (SSE payload)
 
@@ -62,11 +62,33 @@ An MCP server hosted directly in the API (`@modelcontextprotocol/sdk`,
 Streamable HTTP, stateless), so services are injected — no second process.
 Server id `zibby`:
 
-| Tool | Calls | Effect |
-| ---- | ----- | ------ |
-| `create_task` | `TaskSchedulerService.createTask` | Classifies + dispatches a task. The run's outputs are still guarded by the gate layer. |
-| `recall_memory` | `VaultService.search` | Index-first search over the vault. |
-| `get_status` | `BriefingService.assemble` | A "what's happening" summary (read-only). |
+| Tool             | Calls                                                       | Effect                                                                                                                                         |
+| ---------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `create_task`    | `TaskSchedulerService.createTask`                           | Classifies + dispatches a task. The run's outputs are still guarded by the gate layer.                                                         |
+| `recall_memory`  | `VaultService.search`                                       | Index-first search over the vault.                                                                                                             |
+| `get_status`     | `BriefingService.assemble`                                  | A "what's happening" summary (read-only).                                                                                                      |
+| `machine_rename` | `MachineService` (via `ChatToolsService.proposeRename`)     | PROPOSEs a find/replace rename of files in a named folder — never renames itself; parks a Tier-3 machine approval (see `docs/api/machine.md`). |
+| `open_maps`      | `MachineService` (via `ChatToolsService.proposeOpenMaps`)   | PROPOSEs opening Apple Maps with a search query — still approval-gated even though it only opens a window.                                     |
+| `open_folder`    | `MachineService` (via `ChatToolsService.proposeOpenFolder`) | PROPOSEs opening a named folder in the operator's file manager — still approval-gated.                                                         |
+
+### Auth on `/api/chat/mcp` (`ChatMcpAuthGuard`)
+
+`POST /api/chat/mcp` carries a real tool surface (6 privileged tools) on an
+all-interfaces bind (`main.ts`'s bare `app.listen(port)`), so it's locked down by
+`ChatMcpAuthGuard` (`chat-mcp-auth.guard.ts`, added in `2e3dbf9`) — the first
+NestJS `CanActivate` guard in this codebase. It enforces two checks independently
+(both must pass):
+
+1. `Authorization: Bearer <token>` compared against a per-boot token
+   (`ChatMcpAuthService`) via `crypto.timingSafeEqual` (constant-time — the
+   length-mismatch case is checked first so a wrong-length token 401s instead of
+   throwing).
+2. `req.socket.remoteAddress` must be a loopback address (`127.0.0.1`, `::1`, or
+   the IPv4-mapped `::ffff:127.0.0.1`) — a request-level check scoped to this one
+   route, not a global rebind of the server to loopback-only.
+
+`GET /api/chat/mcp` (`rejectGet`) carries no tool surface, so it stays unguarded —
+it only ever returns a 405.
 
 **Dispatch is prompt-governed** (`chat-persona.ts`), not enforced in code — the
 same layer where the old voice bug lived ("how are you" triggering a task). An
@@ -104,8 +126,8 @@ Chat is a routed dashboard page (`apps/web/app/(dashboard)/chat/page.tsx` →
 fullscreen takeover mounted by `ChatProvider`'s `isOpen` flag; it is now a
 normal page inside the shell, nav rail and top bar included). It keeps the
 JARVIS-style surface (`ChatScreen`, `apps/web/features/chat/`): a
-scanline/grid texture, an ambient orb (the cosmic scene, see
-`docs/web/chat-cosmic-scene.md`) behind the conversation, and a scrollable
+scanline/grid texture, an ambient orb map (`SubsystemOrbMap`, see
+`docs/web/subsystem-orb-map.md`) behind the conversation, and a scrollable
 transcript whose top edge fades out (a mask gradient) — older messages fade,
 but you can still scroll back to the start.
 

@@ -6,20 +6,64 @@ Set in the plist's `EnvironmentVariables` (see `docs/ops/deployment.md`), or in 
 `.env` the API loads. Loaded via `@nestjs/config` (`ConfigModule.forRoot({ isGlobal:
 true })`).
 
-| Variable              | Default                              | Purpose                                                                                                                                       |
-| --------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `PORT`                | `3333`                                | API listen port                                                                                                                                |
-| `LOG_LEVEL`           | `info`                                | `debug` / `info` / `warn` / `error`                                                                                                            |
-| `CORS_ORIGIN`         | `http://localhost:3000`               | Allowed origins (comma-separated for more than one)                                                                                            |
-| `ZIBBY_DATA_DIR`      | `.zibby/data`                       | Single data-root switch — repoints every store at once                                                                                        |
-| `VAULT_DIR`           | `$ZIBBY_DATA_DIR/vault`               | Obsidian vault (second brain)                                                                                                                  |
-| `BUDGET_LEDGER_DIR`   | `$ZIBBY_DATA_DIR/budget-ledger`       | Dispatch ledger (enforcement; gitignored)                                                                                                      |
-| `BUDGET_CONFIG_FILE`  | `$ZIBBY_DATA_DIR/budget.json`         | Operator global pause thresholds (committed)                                                                                                   |
-| `SYSTEM_CONFIG_FILE`  | `$ZIBBY_DATA_DIR/system-config.json`  | Path to the runtime system config file (see below) — a path/test-isolation knob, not a behavioral one                                          |
-| `AGENT_RUNNER_MODE`   | `claude`                              | `claude` = real `claude -p`; `demo` = deterministic stand-in (tests/CI). Belongs in the **untracked** `.env`, not `.env.example` (which sets `demo`) |
-| `CLAUDE_BIN`          | `claude` on `PATH`                    | Path to the `claude` binary — test seam (fake binary in e2e)                                                                                   |
-| `ZIBBY_WORKTREE_ROOT` | `$TMPDIR/zibby-worktrees`             | **Phase 12.7** — root for run worktrees, **outside** the repo/data tree. Deliberately does not derive from `ZIBBY_DATA_DIR`                    |
-| `ZIBBY_BACKUP_DIR`    | _(unset)_                             | rsync destination root for `backup.sh` (backup script only)                                                                                    |
+| Variable                   | Default                              | Purpose                                                                                                                                                             |
+| -------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                     | `3333`                               | API listen port                                                                                                                                                     |
+| `LOG_LEVEL`                | `info`                               | `debug` / `info` / `warn` / `error`                                                                                                                                 |
+| `CORS_ORIGIN`              | `http://localhost:3000`              | Allowed origins (comma-separated for more than one)                                                                                                                 |
+| `ZIBBY_DATA_DIR`           | `.zibby/data`                        | Single data-root switch — repoints every store at once                                                                                                              |
+| `VAULT_DIR`                | `$ZIBBY_DATA_DIR/vault`              | Obsidian vault (second brain)                                                                                                                                       |
+| `BUDGET_LEDGER_DIR`        | `$ZIBBY_DATA_DIR/budget-ledger`      | Dispatch ledger (enforcement; gitignored)                                                                                                                           |
+| `BUDGET_CONFIG_FILE`       | `$ZIBBY_DATA_DIR/budget.json`        | Operator global pause thresholds (committed)                                                                                                                        |
+| `SYSTEM_CONFIG_FILE`       | `$ZIBBY_DATA_DIR/system-config.json` | Path to the runtime system config file (see below) — a path/test-isolation knob, not a behavioral one                                                               |
+| `AGENT_RUNNER_MODE`        | `claude`                             | `claude` = real `claude -p`; `demo` = deterministic stand-in (tests/CI). Belongs in the **untracked** `.env`, not `.env.example` (which sets `demo`)                |
+| `CLAUDE_BIN`               | `claude` on `PATH`                   | Path to the `claude` binary — test seam (fake binary in e2e)                                                                                                        |
+| `ZIBBY_WORKTREE_ROOT`      | `$TMPDIR/zibby-worktrees`            | **Phase 12.7** — root for run worktrees, **outside** the repo/data tree. Deliberately does not derive from `ZIBBY_DATA_DIR`                                         |
+| `ZIBBY_BACKUP_DIR`         | _(unset)_                            | rsync destination root for `backup.sh` (backup script only)                                                                                                         |
+| `LOG_JSON`                 | _(unset)_                            | `1`/`true` = structured JSON log lines (`shared/logging/logger.service.ts`); unset = human-readable                                                                 |
+| `CLAUDE_CONFIG_DIR`        | `~/.claude`                          | Where the `claude` CLI's own config/usage-limit files live — read by the rate-limits reader (`limits/rate-limits.reader.ts`); a test seam for isolating limit reads |
+| `ZIBBY_CHAT_MODEL`         | `sonnet`                             | Model the chat session spawns `claude -p` with (`chat/chat-session.service.ts`)                                                                                     |
+| `ZIBBY_API_BASE`           | `http://localhost:$PORT`             | Base URL the chat session's own MCP client calls back into the API on (`chat/chat-session.service.ts`)                                                              |
+| `ZIBBY_INTENT_DIR`         | `input.cwd` / `process.cwd()`        | Working dir the approval hook (`runner/claude-approval-hook.mjs`) resolves relative paths against — a test seam                                                     |
+| `HEAP_SNAPSHOT_ON_SIGUSR2` | _(unset)_                            | `1` = write a heap snapshot on `SIGUSR2` (`main.ts`), for diagnosing memory growth in the running API process                                                       |
+
+Every entity store built on `EntityFileStore` (agents, pipelines, goals, tasks,
+approvals, artifacts, channels, integrations, projects, companies, skills,
+commands, mcp, hooks, gate-rules, automations, chains, monitors, …) also honors
+its own `<NAME>_DIR` (or `_FILE` for singletons) override, following the same
+pattern as `VAULT_DIR`/`BUDGET_LEDGER_DIR` above — all default to a subpath
+under `ZIBBY_DATA_DIR`. These per-store overrides exist mainly for test
+isolation; there's no need to set them individually in normal operation since
+`ZIBBY_DATA_DIR` repoints all of them at once. Grep `process.env.*_DIR` /
+`process.env.*_FILE` under `apps/api/src/*/**.store.ts` for the exhaustive
+current list.
+
+### Speech (`speakd` daemon)
+
+The `speech` module (`docs/api/speech.md`) talks to an external local
+text-to-speech daemon over HTTP, not an in-process library:
+
+| Variable            | Default                 | Purpose                                             |
+| ------------------- | ----------------------- | --------------------------------------------------- |
+| `SPEAKD_URL`        | `http://127.0.0.1:8899` | Base URL of the `speakd` daemon                     |
+| `SPEAKD_TIMEOUT_MS` | `30000`                 | Request timeout before `SpeakdTimeoutError`         |
+| `SPEAKD_TOKEN`      | _(unset)_               | Bearer token sent to the daemon, if it requires one |
+
+### Test/demo-only variables
+
+Not used in production; seeded by test setup or the demo `AGENT_RUNNER_MODE`
+stage script (`pipelines/demo-stage.mjs`) — listed here so a grep hit doesn't
+look like an undocumented mystery var:
+
+| Variable                                                                                          | Used by                                                                                                                                                                             |
+| ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CHAT_EVAL`                                                                                       | Gates the chat-dispatch eval suite (`chat-dispatch.eval.test.ts`) — skipped unless set                                                                                              |
+| `CHANNEL_FAKE_TEST_FAIL`                                                                          | Fake channel adapter — forces a simulated adapter failure                                                                                                                           |
+| `MONITOR_POLL_RETRIES`                                                                            | Monitor watcher tests — overrides retry count                                                                                                                                       |
+| `ZIBBY_TEST_SECRET`                                                                               | `runner-core.test.ts` — asserts spawned processes inherit the parent env                                                                                                            |
+| `AGENT_DEMO_STEPS` / `AGENT_DEMO_DELAY_MS`                                                        | Demo stage script — synthetic step count/delay for `AGENT_RUNNER_MODE=demo` runs                                                                                                    |
+| `PIPELINE_DEMO_FAIL_PHASES` / `_LIMIT_PHASES` / `_GAP_PHASES` / `_DRIFT_PHASES` / `_EMIT_LEARNED` | Demo stage script — comma-separated phase ids that simulate failure/limit-pause/gap-verdict/drift/learned-note-emission, for exercising pipeline states without a real `claude` run |
+| `PIPELINE_DEMO_STAGE_SCRIPT`                                                                      | Overrides the demo stage script path itself                                                                                                                                         |
 
 The `PATH` used to launch the API **must** include the dir holding `claude` —
 agent and pipeline runs shell out to it.
@@ -54,17 +98,17 @@ Changes to interval and adapter-mode knobs take effect **immediately** (the
 schedulers live-rearm via `SystemConfigStore.onChange`); `goalAutoResume` only
 applies on the next boot.
 
-| Key                   | Default  | Purpose                                                                                                                                                |
-| --------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `taskTickMs`          | `30000`  | Task scheduler heartbeat interval (`0` = disabled; the test default)                                                                                  |
-| `channelTickMs`       | `30000`  | Channel watcher poll interval (`0` = disabled)                                                                                                        |
-| `monitorTickMs`       | `60000`  | Monitor watcher poll interval (`0` = disabled) — CI status alerts (Phase N3)                                                                          |
-| `automationTickMs`    | `0`      | Automation scheduler loop interval (`0` = disabled; the historical default)                                                                           |
-| `limitResumeTickMs`   | `60000`  | Limit-resume daemon scan interval (`0` = disabled)                                                                                                    |
-| `limitResumeMax`      | `3`      | Max resume cycles before a limit-paused run is parked/failed                                                                                          |
-| `goalVerifyTimeoutMs` | `600000` | **Phase 12.3** — wall-clock deadline for a goal's `checks` verifier shell (then `SIGTERM`→`SIGKILL`)                                                  |
+| Key                   | Default  | Purpose                                                                                                                                                  |
+| --------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `taskTickMs`          | `30000`  | Task scheduler heartbeat interval (`0` = disabled; the test default)                                                                                     |
+| `channelTickMs`       | `30000`  | Channel watcher poll interval (`0` = disabled)                                                                                                           |
+| `monitorTickMs`       | `60000`  | Monitor watcher poll interval (`0` = disabled) — CI status alerts (Phase N3)                                                                             |
+| `automationTickMs`    | `0`      | Automation scheduler loop interval (`0` = disabled; the historical default)                                                                              |
+| `limitResumeTickMs`   | `60000`  | Limit-resume daemon scan interval (`0` = disabled)                                                                                                       |
+| `limitResumeMax`      | `3`      | Max resume cycles before a limit-paused run is parked/failed                                                                                             |
+| `goalVerifyTimeoutMs` | `600000` | **Phase 12.3** — wall-clock deadline for a goal's `checks` verifier shell (then `SIGTERM`→`SIGKILL`)                                                     |
 | `goalAutoResume`      | `false`  | **Phase 12.4** — `true` = on boot, auto-re-drive `running`/`paused-limit` goals (the unattended launchd daemon). Default: park `awaiting-resume` (Law 3) |
-| `chatPersona`         | `jarvis` | The chat butler's personality (`jarvis`/`concise`/`formal`) — changes tone only, never the dispatch governor. Read per turn, set in `/settings`      |
+| `chatPersona`         | `jarvis` | The chat butler's personality (`jarvis`/`concise`/`formal`) — changes tone only, never the dispatch governor. Read per turn, set in `/settings`          |
 
 In tests, `vitest.setup.ts` seeds this file (ticks at `0`) via `SYSTEM_CONFIG_FILE`;
 a suite that needs a different knob calls `writeSystemConfig()`
