@@ -101,3 +101,13 @@ nothing pushed.
   with three early returns (pending/error/success), each wrapping its own
   `PageContainer`+`PageHeader`, needs consolidating into one `ImmersivePage` with the state as
   a `body` variable. F5 dispatched.
+- **2026-07-19** — F5 landed (`5765336d`). The sharp catch this phase: with one Screen serving
+  both list and detail, the header must key off the **route id**, not the selected item —
+  `selected` falls back to `list[0]` even on the bare list route, which would have made
+  `backHref` point `/pipelines` at itself. Canvas investigated rather than assumed: it looked
+  clipped at the right edge, but its container is `overflow-x: auto` (1006 visible of 1680
+  scrollable), so it is a deliberately pannable graph, not a fit-to-view regression — and the
+  immersive shell gives it _more_ width than `MainLayout` did, not less.
+  **New live-verification gotcha:** the shell body is now the scroll container, not the
+  document, so Playwright's `fullPage: true` screenshot captures only the viewport. Scroll the
+  inner container instead. Both lists gained dock icons. F6 dispatched.
