@@ -54,9 +54,13 @@ const MAX_SILENT_RESTARTS = 5;
 export function useSpeechRecognition(
   options: UseSpeechRecognitionOptions,
 ): SpeechRecognitionControls {
-  // Resolved once, lazily — window-guarded so it's `false` on the server and
-  // can't mismatch during hydration (the mic toggle mounts client-side only).
-  const [supported] = useState(() => resolveCtor() !== null);
+  // `false` on both the server render AND the client's first (pre-hydration) pass —
+  // a lazy `useState(() => resolveCtor() !== null)` initializer still runs resolveCtor()
+  // during that first client render, flipping true before hydration commits and
+  // mismatching the server-rendered mic toggle (forces the whole chat tree, including
+  // the orb map's WebGL canvases, to be torn down and rebuilt — a visible flicker).
+  // Flipped for real once mounted, in the build effect below.
+  const [supported, setSupported] = useState(false);
   const [listening, setListening] = useState(false);
   const [interim, setInterim] = useState("");
 
@@ -82,6 +86,12 @@ export function useSpeechRecognition(
   useEffect(() => {
     const Ctor = resolveCtor();
     if (!Ctor) return;
+    // Post-hydration flip from the SSR-safe `false` default — see the `supported`
+    // declaration above. `react-hooks/set-state-in-effect` flags this in general,
+    // but a one-time post-mount feature-detection result is exactly this case
+    // (mirrors `SubsystemDrawer`'s justification for the same rule).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSupported(true);
 
     const rec = new Ctor();
     rec.continuous = true;

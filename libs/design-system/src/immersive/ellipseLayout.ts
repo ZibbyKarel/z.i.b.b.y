@@ -43,7 +43,10 @@ export function ellipseLayout(
   const rightInset = clamp(0, insets.right, w * 0.1 > 108 ? 108 : w * 0.1);
   const cx = w / 2 + (leftInset - rightInset) / 2;
   const topInset = clamp(0, insets.top, h * 0.5); // guard: never eat more than half the height
-  const usableH = Math.max(220, h - insets.bottom - topInset);
+  // Keep the ellipse confined to the page's upper half — clear of the topbar (topInset)
+  // without sinking into the lower half, even on tall viewports where the bottom reserve
+  // alone would leave far more than half the height usable.
+  const usableH = Math.max(220, Math.min(h / 2 - topInset, h - insets.bottom - topInset));
 
   const nodeD = clamp(48, usableH * 0.2, 76);
   const topPad = nodeD / 2 + 16;

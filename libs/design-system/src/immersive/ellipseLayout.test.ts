@@ -31,10 +31,15 @@ describe("ellipseLayout", () => {
     expect(l.cx).toBeGreaterThan(1200 / 2);
   });
 
-  it("shrinks the usable height by the bottom reserve (chat dock)", () => {
+  it("shrinks the usable height by the bottom reserve once it eats into the upper half", () => {
     const tall = ellipseLayout(1200, 720, 8, { top: 0, left: 0, right: 0, bottom: 0 });
-    const docked = ellipseLayout(1200, 720, 8, { top: 0, left: 0, right: 0, bottom: 260 });
+    const docked = ellipseLayout(1200, 720, 8, { top: 0, left: 0, right: 0, bottom: 500 });
     expect(docked.radiusY).toBeLessThan(tall.radiusY);
+  });
+
+  it("keeps the ellipse's bottom edge within the page's upper half", () => {
+    const l = ellipseLayout(1200, 900, 8, { top: 56, left: 0, right: 0, bottom: 320 });
+    expect(l.cy + l.radiusY).toBeLessThanOrEqual(900 / 2);
   });
 
   it("never returns a radiusY below the 84 floor", () => {
