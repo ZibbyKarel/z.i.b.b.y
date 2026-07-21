@@ -367,7 +367,17 @@ export function ChatSearch({
         width={open ? "520px" : "230px"}
         zIndex={41}
       >
-        <GlassSurface radius="pill">
+        <GlassSurface
+          radius="pill"
+          style={
+            open
+              ? {
+                  boxShadow:
+                    "0 0 0 2px color-mix(in srgb, var(--color-accent) 40%, transparent), var(--shadow-glass)",
+                }
+              : undefined
+          }
+        >
           <Container
             cursor="text"
             onClick={() => {

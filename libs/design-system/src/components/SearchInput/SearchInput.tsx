@@ -33,11 +33,14 @@ export function SearchInput({ ariaLabel, ref, surface = "solid", ...props }: Sea
   return (
     <div
       className={cn(
-        "flex h-[38px] w-full items-center gap-2.5 rounded-full px-3.5",
+        "flex h-[38px] w-full items-center gap-2.5 rounded-full px-3.5 transition-colors",
         surface === "transparent"
-          ? "border border-transparent bg-transparent"
-          : "border border-border bg-surface",
-        "transition-colors focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/40",
+          ? // No border/ring of its own — a surrounding `GlassSurface` already
+            // draws the one visible boundary; giving this div its own focus
+            // border on top doubled it up (see ChatSearch, which rings the
+            // GlassSurface itself instead when open).
+            "border border-transparent"
+          : "border border-border bg-surface focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/40",
       )}
       data-testid={SearchInputTestId.Root}
     >
