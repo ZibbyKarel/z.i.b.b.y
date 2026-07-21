@@ -100,4 +100,79 @@ const VcSearchModal = ({ open, onClose, onOpenSys, onOpenTask }) => {
   );
 };
 
-Object.assign(window, { VcSearchModal, vdBuildSearchIndex });
+// ── inline topbar search — pill uprostřed, po focusu se roztáhne a otevře plachtu s výsledky ──
+const VdTopSearch = React.forwardRef(({ onOpenSys, onOpenTask, glassStyle }, ref) => {
+  const [q, setQ] = useStateSearch('');
+  const [open, setOpen] = useStateSearch(false);
+  const [focused, setFocused] = useStateSearch(false);
+  const wrapRef = useRefSearch(null);
+  const inputRef = useRefSearch(null);
+  const index = useMemoSearch(() => vdBuildSearchIndex(), []);
+  const expanded = open || focused;
+
+  React.useImperativeHandle(ref, () => ({ focus: () => { setOpen(true); setTimeout(() => inputRef.current && inputRef.current.focus(), 10); } }));
+
+  useEffectSearch(() => {
+    if (!open) return;
+    const onDoc = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') { setOpen(false); inputRef.current && inputRef.current.blur(); } };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
+  }, [open]);
+
+  const results = useMemoSearch(() => {
+    const s = q.trim().toLowerCase();
+    const pool = s ? index.filter((it) => (it.label + ' ' + (it.sub || '')).toLowerCase().includes(s)) : index;
+    return pool.slice(0, 30);
+  }, [q, index]);
+
+  const pick = (it) => {
+    setOpen(false); setQ(''); inputRef.current && inputRef.current.blur();
+    if (it.kind === 'subsystem' || it.kind === 'pipeline' || it.kind === 'agent') { onOpenSys && onOpenSys(it.sysId); return; }
+    if (it.kind === 'task') { onOpenTask && onOpenTask(it.taskObj); return; }
+  };
+
+  return (
+    <>
+      {open && (
+        <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 98, background: 'rgba(6,8,11,0.55)', backdropFilter: 'blur(2px)' }} />
+      )}
+      <div ref={wrapRef} style={{ position: 'relative', zIndex: 99, width: expanded ? 520 : 230, maxWidth: '100%', transition: 'width .32s cubic-bezier(.16,1,.3,1)' }}>
+        <div style={(glassStyle || ((x) => x))({
+          display: 'flex', alignItems: 'center', gap: 9, height: 40, padding: '0 14px', borderRadius: 999,
+          boxShadow: expanded ? `0 0 0 4px ${ZT.accent}17, 0 22px 46px rgba(0,0,0,0.4)` : undefined,
+          transition: 'box-shadow .22s ease',
+        })}>
+          <Icon name="search" size={13} style={{ color: expanded ? ZT.accent : ZT.ink3, flex: '0 0 auto' }} />
+          <input ref={inputRef} value={q} onFocus={() => { setFocused(true); setOpen(true); }} onBlur={() => setFocused(false)}
+            onChange={(e) => { setQ(e.target.value); setOpen(true); }} placeholder="Hledat napříč ZIBBY…"
+            style={{ flex: 1, minWidth: 0, background: 'none', border: 'none', outline: 'none', fontFamily: ZT.sans, fontSize: 12.5, color: ZT.ink }} />
+          {q.length > 0 ? (
+            <button onClick={() => { setQ(''); inputRef.current && inputRef.current.focus(); }} style={{
+              display: 'grid', placeItems: 'center', width: 18, height: 18, borderRadius: '50%', flex: '0 0 auto',
+              background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', color: ZT.ink3,
+            }}><Icon name="x" size={10} /></button>
+          ) : !expanded && (
+            <span style={{ fontFamily: ZT.mono, fontSize: 9, color: ZT.ink3, border: `1px solid ${ZT.line}`, borderRadius: 4, padding: '1px 6px', flex: '0 0 auto' }}>⌘K</span>
+          )}
+        </div>
+        <div style={{
+          position: 'absolute', left: 0, right: 0, top: 'calc(100% + 10px)', transformOrigin: 'top center',
+          opacity: open ? 1 : 0, transform: open ? 'translateY(0) scale(1)' : 'translateY(-8px) scale(.97)',
+          pointerEvents: open ? 'auto' : 'none', transition: 'opacity .2s ease, transform .24s cubic-bezier(.16,1,.3,1)',
+        }}>
+          <div style={{
+            borderRadius: ZT.rPanel, background: ZT.surfaceHi, border: `1px solid ${ZT.lineHi}`,
+            boxShadow: '0 30px 70px rgba(0,0,0,0.55)', maxHeight: 440, overflow: 'auto', padding: '8px',
+          }}>
+            {results.length === 0 && <div style={{ ...T.micro, padding: 18, textAlign: 'center' }}>Nic nenalezeno.</div>}
+            {results.map((it, i) => <VdSearchRow key={it.kind + it.label + i} it={it} active={false} onPick={pick} />)}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+});
+
+Object.assign(window, { VcSearchModal, vdBuildSearchIndex, VdTopSearch });

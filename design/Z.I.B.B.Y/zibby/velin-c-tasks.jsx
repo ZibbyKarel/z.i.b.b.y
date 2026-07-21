@@ -308,7 +308,7 @@ const VcTaskDetail = ({ task, originRect, onClose, onOpenSys }) => {
   };
 
   return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', padding: '28px 40px 28px 344px' }}
+    <div style={{ position: 'absolute', top: 0, left: 344, right: 0, bottom: 0, zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', padding: '28px 40px 28px 0' }}
       onClick={handleClose}>
       <div ref={panelRef} onClick={(e) => e.stopPropagation()} style={{
         width: '100%', maxWidth: 860, maxHeight: '100%', display: 'flex', flexDirection: 'column',

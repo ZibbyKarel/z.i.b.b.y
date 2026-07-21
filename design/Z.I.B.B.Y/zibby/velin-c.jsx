@@ -115,10 +115,10 @@ function AppC() {
       <VcTopBar lang={lang} onLang={setLang} />
       <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
         <VcMap onOpenSys={openSys} onOpenCore={openCore} dimmed={overlayed} />
-        <VcTaskRail onOpen={openTask} dimmed={overlayed} />
+        <VcTaskRail onOpen={openTask} dimmed={!!focus} />
         {sys && <VcSubsystemDetail key={sys.id} sys={sys} onClose={closeAll} onOpenTask={openTask} />}
         {focus && focus.t === 'core' && <VcCoreDetail onClose={closeAll} onOpenSys={openSys} />}
-        {task && <VcTaskDetail task={task} originRect={taskRect} onClose={closeAll} onOpenSys={openSys} />}
+        {task && <VcTaskDetail key={task.id} task={task} originRect={taskRect} onClose={closeAll} onOpenSys={openSys} />}
       </div>
     </div>
   );

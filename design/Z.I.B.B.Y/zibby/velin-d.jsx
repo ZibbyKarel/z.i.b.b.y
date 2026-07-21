@@ -211,25 +211,22 @@ const vdGlassStyle = (extra) => ({
 });
 
 const VD_TOPBAR_H = 40;
-const VcTopBarD = ({ lang, onLang, onSearch, onOpenSys }) => (
-  <header style={{ height: 56, flex: '0 0 56px', display: 'flex', alignItems: 'center', gap: 10, padding: '0 22px', position: 'relative', zIndex: 100, overflow: 'visible' }}>
-    <VcStatusLineD onOpenSys={onOpenSys} style={{ width: 323, height: 38 }} />
-    <button onClick={onSearch} title="Hledat napříč ZIBBY (⌘K)" style={vdGlassStyle({
-      display: 'flex', alignItems: 'center', gap: 9, width: 190, height: VD_TOPBAR_H, flex: '0 0 auto', padding: '0 12px',
-      borderRadius: 999, color: ZT.ink3, cursor: 'pointer',
-    })}>
-      <Icon name="search" size={13} />
-      <span style={{ fontFamily: ZT.sans, fontSize: 12.5, color: ZT.ink3, flex: 1, textAlign: 'left' }}>Hledat…</span>
-      <span style={{ fontFamily: ZT.mono, fontSize: 9, color: ZT.ink3, border: `1px solid ${ZT.line}`, borderRadius: 4, padding: '1px 6px' }}>⌘K</span>
-    </button>
-    <LimitsTopBar
-      style={{ width: 119, height: 41 }}
-      secondRingStyle={{ width: 55, height: 25 }}
-      glassStyle={vdGlassStyle({ borderRadius: 999, padding: '0 14px' })}
-    />
-    <a href="ZIBBY Velin-C.html" title="Velín-C (klasické orby)" style={vdGlassStyle({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, width: VD_TOPBAR_H, height: VD_TOPBAR_H, padding: 0, borderRadius: 999, color: ZT.ink2, textDecoration: 'none', fontFamily: ZT.mono, fontSize: 11 })}>
-      <Icon name="grid" size={13} />
-    </a>
+const VcTopBarD = ({ lang, onLang, onOpenSys, onOpenTask, searchRef }) => (
+  <header style={{ height: 56, flex: '0 0 56px', display: 'grid', gridTemplateColumns: 'auto 1fr auto', alignItems: 'center', gap: 10, padding: '0 22px', position: 'relative', zIndex: 100, overflow: 'visible' }}>
+    <div style={{ position: 'relative' }}><VcStatusLineD onOpenSys={onOpenSys} style={{ width: 323, height: 38 }} /></div>
+    <div style={{ display: 'flex', justifyContent: 'center' }}>
+      <VdTopSearch ref={searchRef} onOpenSys={onOpenSys} onOpenTask={onOpenTask} glassStyle={vdGlassStyle} />
+    </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <LimitsTopBar
+        style={{ width: 119, height: 41 }}
+        secondRingStyle={{ width: 55, height: 25 }}
+        glassStyle={vdGlassStyle({ borderRadius: 999, padding: '0 14px' })}
+      />
+      <a href="ZIBBY Velin-C.html" title="Velín-C (klasické orby)" style={vdGlassStyle({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, width: VD_TOPBAR_H, height: VD_TOPBAR_H, padding: 0, borderRadius: 999, color: ZT.ink2, textDecoration: 'none', fontFamily: ZT.mono, fontSize: 11 })}>
+        <Icon name="grid" size={13} />
+      </a>
+    </div>
   </header>
 );
 
@@ -239,7 +236,7 @@ function AppD() {
   const [focus, setFocus] = useStateD2(null);
   const [task, setTask] = useStateD2(null);
   const [taskRect, setTaskRect] = useStateD2(null);
-  const [searchOpen, setSearchOpen] = useStateD2(false);
+  const searchRef = useRefD2(null);
 
   const openSys = (id) => { setTask(null); setFocus({ t: 'sys', id }); };
   const openCore = () => { setTask(null); setFocus({ t: 'settings' }); };
@@ -248,31 +245,30 @@ function AppD() {
 
   useEffectD2(() => {
     const onKey = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setSearchOpen((v) => !v); return; }
-      if (e.key === 'Escape') { if (searchOpen) setSearchOpen(false); else closeAll(); }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); searchRef.current && searchRef.current.focus(); return; }
+      if (e.key === 'Escape') closeAll();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [searchOpen]);
+  }, []);
 
-  const overlayed = !!focus || !!task || searchOpen;
+  const overlayed = !!focus || !!task;
   const sys = focus && focus.t === 'sys' ? vcSys(focus.id) : null;
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%',
       background: `radial-gradient(ellipse 130% 100% at 50% 42%, #121a27 0%, ${ZT.bg} 62%)`,
       fontFamily: ZT.sans, color: ZT.ink, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      <VcTopBarD lang={lang} onLang={setLang} onSearch={() => setSearchOpen(true)} onOpenSys={openSys} />
+      <VcTopBarD lang={lang} onLang={setLang} onOpenSys={openSys} onOpenTask={openTask} searchRef={searchRef} />
       <div style={{ position: 'relative', flex: 1, minHeight: 0, zIndex: 1 }}>
         <VcMapD onOpenSys={openSys} onOpenCore={openCore} dimmed={overlayed} bottomReserve={230} />
-        <VcTaskRail onOpen={openTask} dimmed={overlayed} />
+        <VcTaskRail onOpen={openTask} dimmed={!!focus} />
         <VcDockGroup dimmed={overlayed} />
         <VcLiveLog dimmed={overlayed} />
         <VcBottomBar dimmed={overlayed} />
         {sys && <VcSubsystemDetail key={sys.id} sys={sys} onClose={closeAll} onOpenTask={openTask} orbMode />}
         {focus && focus.t === 'settings' && <VcSettingsModalD onClose={closeAll} />}
-        {task && <VcTaskDetail task={task} originRect={taskRect} onClose={closeAll} onOpenSys={openSys} />}
-        <VcSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} onOpenSys={openSys} onOpenTask={openTask} />
+        {task && <VcTaskDetail key={task.id} task={task} originRect={taskRect} onClose={closeAll} onOpenSys={openSys} />}
       </div>
     </div>
   );
