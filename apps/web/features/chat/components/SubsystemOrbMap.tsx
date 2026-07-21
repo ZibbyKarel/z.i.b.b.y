@@ -13,8 +13,8 @@ import {
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Pipeline } from "../../../domain";
-import { onRunEvent } from "../../runs/runEvents";
 import type { RunView } from "../../runs/run";
+import { onRunEvent } from "../../runs/runEvents";
 import {
   type EventFlight,
   appendParticle,
@@ -53,7 +53,7 @@ const CORE_INTENSITY_PER_RUN = 0.08;
 const CORE_MAX_INTENSITY = 0.7;
 /** The prototype's fixed core orbit-field dot count (generic in `OrbMapCore`,
  * but the app always renders 4 regardless of active-run count). */
-const CORE_ACTIVE_COUNT = 4;
+const CORE_ACTIVE_COUNT = 0;
 
 /** An `EventFlight` endpoint (`SubsystemId | "orb"`) → an `OrbMapFlare`
  * `fromId`/`toId` — the orb side maps to `OrbMap`'s reserved core id, a real
@@ -99,9 +99,7 @@ export function SubsystemOrbMap({
 }: SubsystemOrbMapProps) {
   const t = useTranslations("subsystems");
 
-  const statusById = new Map<SubsystemId, SubsystemWithStatus>(
-    subsystems.map((s) => [s.id, s]),
-  );
+  const statusById = new Map<SubsystemId, SubsystemWithStatus>(subsystems.map((s) => [s.id, s]));
   const counts = activeRunsBySubsystem(runs, pipelines);
 
   const nodes: OrbMapNode[] = SUBSYSTEMS.map((sub) => {
@@ -117,10 +115,7 @@ export function SubsystemOrbMap({
     };
   });
 
-  const runningCount = Object.values(counts).reduce<number>(
-    (sum, n) => sum + (n ?? 0),
-    0,
-  );
+  const runningCount = Object.values(counts).reduce<number>((sum, n) => sum + (n ?? 0), 0);
 
   // Read `runs`/`pipelines` through refs (mirrors the retired `CosmicScene`'s own
   // pattern) so a query refetch's fresh array reference never tears down and
