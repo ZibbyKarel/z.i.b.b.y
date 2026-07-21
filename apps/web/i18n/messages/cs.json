@@ -1667,8 +1667,6 @@
     "title": "Chat se ZIBBY",
     "close": "Zavřít",
     "newChat": "Nový chat",
-    "greetingTitle": "Jsem tu, pane.",
-    "greetingHint": "O čem si popovídáme?",
     "triggerLabel": "Chat",
     "triggerAria": "Otevřít chat se ZIBBY",
     "triggerTitle": "Chat se ZIBBY",
@@ -1718,17 +1716,24 @@
     "toolDock": {
       "label": "Nástroje"
     },
-    "palette": {
-      "placeholder": "Hledat agenta, pipeline nebo poznámku…",
-      "ariaLabel": "Rychlé přepínání po systému",
+    "search": {
+      "placeholder": "Hledat napříč ZIBBY…",
+      "ariaLabel": "Hledat napříč ZIBBY",
       "empty": "Nic nenalezeno",
-      "openAria": "Otevřít rychlé přepínání",
-      "sections": {
-        "agents": "Agenti",
-        "pipelines": "Pipelines",
-        "gates": "Gates",
+      "clearAria": "Vymazat hledání",
+      "kind": {
+        "agent": "Agent",
+        "pipeline": "Pipeline",
+        "subsystem": "Subsystém",
+        "task": "Úloha",
         "memory": "Paměť",
-        "briefing": "Briefing"
+        "skill": "Skill",
+        "mcp": "MCP server",
+        "project": "Projekt",
+        "command": "Command",
+        "company": "Firma",
+        "setting": "Nastavení",
+        "action": "Akce"
       },
       "actions": {
         "generateBriefing": "Vygenerovat briefing",

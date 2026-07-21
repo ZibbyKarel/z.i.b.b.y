@@ -58,6 +58,11 @@ export interface CommandLineProps {
   /** Hard cap the auto-grow won't exceed. */
   maxRows?: number;
   placeholder?: string;
+  /** Overrides the attach button's glyph — default `"plus"` (today's task
+   *  launcher/automations look). A host with its own attach affordance styling
+   *  (e.g. the chat dock, which uses `"paperclip"`) passes its own {@link IconName}
+   *  instead; omitting this keeps every existing caller's glyph unchanged. */
+  attachIcon?: IconName;
   /** Overrides the input field's visible label — default "Task"/"Zadání". Chat
    *  passes its own "Message" wording so the label reflects what's actually
    *  being composed. */
@@ -357,6 +362,7 @@ export function CommandLine({
   rows = 1,
   maxRows = 10,
   placeholder,
+  attachIcon = "plus",
   label,
   initialText,
   initialTarget,
@@ -920,7 +926,7 @@ export function CommandLine({
               <Button
                 aria-label={t("commandLine.attachAria")}
                 data-testid={CommandLineTestId.Attach}
-                icon="plus"
+                icon={attachIcon}
                 intent="ghost"
                 onClick={openFilePicker}
                 size="sm"
@@ -1030,23 +1036,21 @@ export function CommandLine({
     </Container>
   );
 
-  const belowBox = suggestions &&
-    suggestions.length > 0 &&
-    text.trim().length === 0 && (
-      <Stack wrap direction="row" gap="75">
-        {suggestions.map((suggestion) => (
-          <Button
-            data-testid={CommandLineTestId.Suggestion}
-            intent="ghost"
-            key={suggestion}
-            onClick={() => selectSuggestion(suggestion)}
-            size="sm"
-          >
-            {suggestion}
-          </Button>
-        ))}
-      </Stack>
-    );
+  const belowBox = suggestions && suggestions.length > 0 && text.trim().length === 0 && (
+    <Stack wrap direction="row" gap="75">
+      {suggestions.map((suggestion) => (
+        <Button
+          data-testid={CommandLineTestId.Suggestion}
+          intent="ghost"
+          key={suggestion}
+          onClick={() => selectSuggestion(suggestion)}
+          size="sm"
+        >
+          {suggestion}
+        </Button>
+      ))}
+    </Stack>
+  );
 
   return (
     <Stack data-testid={CommandLineTestId.Root} direction="col" gap="150">

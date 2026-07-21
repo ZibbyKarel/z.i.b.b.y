@@ -2,7 +2,7 @@ import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
-import { renderWithProviders, screen } from "../../../test/render";
+import { renderWithProviders, screen, within } from "../../../test/render";
 import { CommandLineTestId } from "../../tasks/components/CommandLine/CommandLine";
 import { VoiceToggleButtonTestId } from "./VoiceToggleButton";
 import { ChatDock, ChatDockTestId } from "./ChatDock";
@@ -95,12 +95,12 @@ describe("ChatDock", () => {
     expect(screen.getByTestId(CommandLineTestId.Input)).toBeInTheDocument();
   });
 
-  it("shows the greeting empty-state when there are no messages", () => {
+  it("renders no placeholder text in an empty thread's history", () => {
     renderWithProviders(<ChatDockHarness />);
-    expect(screen.getByTestId(ChatDockTestId.Greeting)).toBeInTheDocument();
+    expect(screen.getByTestId(ChatDockTestId.History)).toBeEmptyDOMElement();
   });
 
-  it("renders seeded messages via ChatTranscript instead of the greeting", () => {
+  it("renders seeded messages via ChatTranscript", () => {
     renderWithProviders(
       <ChatDockHarness
         initialMessages={[
@@ -108,21 +108,41 @@ describe("ChatDock", () => {
         ]}
       />,
     );
-    expect(screen.queryByTestId(ChatDockTestId.Greeting)).not.toBeInTheDocument();
     expect(screen.getByText("Ahoj ZIBBY")).toBeInTheDocument();
   });
 
-  it("typing and submitting calls the send mutation with the composed text", async () => {
+  it("attach is present in the composer row", () => {
+    renderWithProviders(<ChatDockHarness />);
+    expect(screen.getByTestId(CommandLineTestId.Attach)).toBeInTheDocument();
+  });
+
+  it("mic is rendered inside the composer row, alongside attach", () => {
+    renderWithProviders(<ChatDockHarness />);
+    const composer = screen.getByTestId(ChatDockTestId.Composer);
+    expect(within(composer).getByTestId(VoiceToggleButtonTestId.Root)).toBeInTheDocument();
+    expect(within(composer).getByTestId(CommandLineTestId.Attach)).toBeInTheDocument();
+  });
+
+  it("send is icon-only (no visible label) and still submits", async () => {
     const user = userEvent.setup();
     renderWithProviders(<ChatDockHarness />);
 
+    const send = screen.getByTestId(ChatDockTestId.Send);
+    expect(send).toHaveAccessibleName(/odeslat/i);
+    expect(send.textContent).toBe("");
+
     await user.type(screen.getByTestId(CommandLineTestId.Input), "Jak se máš");
-    await user.click(screen.getByTestId(CommandLineTestId.Send));
+    await user.click(send);
 
     // Appended optimistically, then dispatched through the same shape ChatScreen's
     // `send` handler posts.
     expect(screen.getByText("Jak se máš")).toBeInTheDocument();
     expect(sendMutate).toHaveBeenCalledWith({ body: { conversationId: "c1", text: "Jak se máš" } });
+  });
+
+  it("send stays disabled until there's a draft", () => {
+    renderWithProviders(<ChatDockHarness />);
+    expect(screen.getByTestId(ChatDockTestId.Send)).toBeDisabled();
   });
 
   it("hides New chat on an empty thread and fires onNewChat once there's a transcript", async () => {
@@ -132,12 +152,13 @@ describe("ChatDock", () => {
     expect(screen.queryByTestId(ChatDockTestId.NewChat)).not.toBeInTheDocument();
 
     await user.type(screen.getByTestId(CommandLineTestId.Input), "Ahoj");
-    await user.click(screen.getByTestId(CommandLineTestId.Send));
+    await user.click(screen.getByTestId(ChatDockTestId.Send));
     expect(screen.getByText("Ahoj")).toBeInTheDocument();
 
+    expect(screen.getByTestId(ChatDockTestId.NewChat)).toBeInTheDocument();
     await user.click(screen.getByTestId(ChatDockTestId.NewChat));
     expect(screen.queryByText("Ahoj")).not.toBeInTheDocument();
-    expect(screen.getByTestId(ChatDockTestId.Greeting)).toBeInTheDocument();
+    expect(screen.queryByTestId(ChatDockTestId.NewChat)).not.toBeInTheDocument();
   });
 
   it("mic toggle calls the voice-mode toggle", async () => {
@@ -148,7 +169,7 @@ describe("ChatDock", () => {
     expect(voiceToggle).toHaveBeenCalledTimes(1);
   });
 
-  it("does not render the mic toggle when STT is unsupported and the thread is empty", () => {
+  it("does not render the mic toggle when STT is unsupported", () => {
     voiceState.supported = false;
     renderWithProviders(<ChatDockHarness />);
     expect(screen.queryByTestId(VoiceToggleButtonTestId.Root)).not.toBeInTheDocument();

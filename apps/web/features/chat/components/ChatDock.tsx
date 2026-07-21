@@ -3,7 +3,7 @@
 import type { Dispatch, FocusEvent, SetStateAction } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatMessage as ChatMessageType, TaskTarget } from "@zibby/contracts";
-import { Button, Container, GlassSurface, Stack, Typography } from "@zibby/design-system";
+import { Button, Container, GlassSurface, Stack } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { CommandLine } from "../../tasks/components/CommandLine/CommandLine";
 import { type CompletedTurn, useChatStream } from "../hooks/useChatStream";
@@ -16,9 +16,8 @@ import { VoiceToggleButton } from "./VoiceToggleButton";
 export enum ChatDockTestId {
   Root = "chat-dock",
   History = "chat-dock-history",
-  Greeting = "chat-dock-greeting",
   Composer = "chat-dock-composer",
-  Mic = "chat-dock-mic",
+  Send = "chat-dock-send",
   NewChat = "chat-dock-new-chat",
   Close = "chat-dock-close",
 }
@@ -54,6 +53,9 @@ export interface ChatDockProps {
 /** Collapsed history max-height — grows while the composer has focus. */
 const HISTORY_COLLAPSED_MAX_HEIGHT = "128px";
 const HISTORY_FOCUSED_MAX_HEIGHT = "min(50vh, 460px)";
+
+/** Composer auto-grows up to this many lines, then scrolls. Change here to retune. */
+const CHAT_COMPOSER_MAX_ROWS = 4;
 
 /**
  * The Velín-D bottom-bar chat dock (`VcChatDock`) — a self-contained
@@ -185,8 +187,6 @@ export function ChatDock({
     }
   }, []);
 
-  const isEmpty = messages.length === 0 && !stream.streaming;
-
   return (
     <Container
       data-testid={ChatDockTestId.Root}
@@ -233,6 +233,20 @@ export function ChatDock({
           </Container>
         )}
 
+        {messages.length > 0 && (
+          <Container bottom="58px" position="absolute" right="10px" zIndex={5}>
+            <Button
+              aria-label={t("newChat")}
+              data-testid={ChatDockTestId.NewChat}
+              icon="trash"
+              intent="ghost"
+              onClick={onNewChat}
+              size="sm"
+              title={t("newChat")}
+            />
+          </Container>
+        )}
+
         <Container
           data-testid={ChatDockTestId.History}
           maxHeight={composerFocused ? HISTORY_FOCUSED_MAX_HEIGHT : HISTORY_COLLAPSED_MAX_HEIGHT}
@@ -249,25 +263,12 @@ export function ChatDock({
             transition: "max-height .38s cubic-bezier(.2,.8,.2,1)",
           }}
         >
-          {isEmpty ? (
-            <Container data-testid={ChatDockTestId.Greeting}>
-              <Stack align="center" gap="100">
-                <Typography align="center" tone="accent" type="subtitle" weight="medium">
-                  {t("greetingTitle")}
-                </Typography>
-                <Typography align="center" type="note" variant="tertiary">
-                  {t("greetingHint")}
-                </Typography>
-              </Stack>
-            </Container>
-          ) : (
-            <ChatTranscript
-              liveText={stream.text}
-              liveToolEvents={stream.toolEvents}
-              messages={messages}
-              streaming={stream.streaming}
-            />
-          )}
+          <ChatTranscript
+            liveText={stream.text}
+            liveToolEvents={stream.toolEvents}
+            messages={messages}
+            streaming={stream.streaming}
+          />
         </Container>
 
         <Container
@@ -283,36 +284,34 @@ export function ChatDock({
           }}
         >
           <Stack align="stretch" direction="col" gap="100">
-            {(voice.supported || messages.length > 0) && (
-              <Stack align="center" data-testid={ChatDockTestId.Mic} direction="row" gap="150" justify="between">
-                <Stack align="center" direction="row" gap="100">
-                  {voice.supported && (
-                    <VoiceToggleButton active={voice.active} onToggle={voice.toggle} />
-                  )}
-                  {voice.active && (
-                    <VoiceStatusStrip interim={voice.interim} listening={voice.listening} />
-                  )}
-                </Stack>
-                {messages.length > 0 && (
-                  <Button
-                    aria-label={t("newChat")}
-                    data-testid={ChatDockTestId.NewChat}
-                    icon="trash"
-                    intent="ghost"
-                    onClick={onNewChat}
-                    size="sm"
-                    title={t("newChat")}
-                  />
-                )}
-              </Stack>
+            {voice.active && (
+              <VoiceStatusStrip interim={voice.interim} listening={voice.listening} />
             )}
             <CommandLine
               showAttach
+              attachIcon="paperclip"
               chrome={false}
               disabled={thinking}
               label={t("composer.label")}
+              leadingActions={
+                voice.supported && (
+                  <VoiceToggleButton active={voice.active} onToggle={voice.toggle} />
+                )
+              }
+              maxRows={CHAT_COMPOSER_MAX_ROWS}
               onSubmit={send}
               placeholder={t("composer.placeholder")}
+              renderTrailing={({ canSubmit, submit }) => (
+                <Button
+                  aria-label={t("composer.send")}
+                  data-testid={ChatDockTestId.Send}
+                  disabled={!canSubmit}
+                  icon="arrow"
+                  intent="primary"
+                  onClick={submit}
+                  size="sm"
+                />
+              )}
             />
           </Stack>
         </Container>

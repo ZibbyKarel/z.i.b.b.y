@@ -105,7 +105,9 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       expect(screen.queryByTestId(SearchMenuTestId.Root)).not.toBeInTheDocument();
       expect(input).toHaveFocus();
 
-      expect(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`)).toBeInTheDocument();
+      expect(
+        screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`),
+      ).toBeInTheDocument();
       expect(
         screen.queryByTestId(`${CommandLineTestId.MentionItem}-pipeline-delivery`),
       ).not.toBeInTheDocument();
@@ -220,7 +222,9 @@ describe("CommandLine (Phase 118d generic composer)", () => {
 
       // "forge" owns the "delivery" pipeline (mocked above) — it's dispatchable,
       // so it belongs in the picker.
-      expect(screen.getByTestId(`${CommandLineTestId.MentionItem}-subsystem-forge`)).toBeInTheDocument();
+      expect(
+        screen.getByTestId(`${CommandLineTestId.MentionItem}-subsystem-forge`),
+      ).toBeInTheDocument();
       // "puls" owns nothing — mentioning it would only ever hit the 0-owned
       // validation reject, so it must never appear, at ANY query (including empty).
       expect(
@@ -577,6 +581,18 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       // The attach (+) and Send controls both live inside the same input container.
       expect(screen.getByTestId(CommandLineTestId.Attach)).toBeInTheDocument();
       expect(screen.getByTestId(CommandLineTestId.Send)).toBeInTheDocument();
+    });
+
+    it("defaults the attach button's glyph to plus", () => {
+      render(<CommandLine onSubmit={vi.fn()} />);
+      const svg = screen.getByTestId(CommandLineTestId.Attach).querySelector("svg");
+      expect(svg?.innerHTML).toContain('d="M12 5v14M5 12h14"');
+    });
+
+    it("renders the attachIcon override instead of the default plus glyph", () => {
+      render(<CommandLine attachIcon="pin" onSubmit={vi.fn()} />);
+      const svg = screen.getByTestId(CommandLineTestId.Attach).querySelector("svg");
+      expect(svg?.innerHTML).not.toContain('d="M12 5v14M5 12h14"');
     });
   });
 });

@@ -43,6 +43,7 @@ import { warn } from "./warn";
 import { arrow } from "./arrow";
 import { butlerSign } from "./butlerSign";
 import { pin } from "./pin";
+import { paperclip } from "./paperclip";
 import { mic } from "./mic";
 import { trash } from "./trash";
 import { expand } from "./expand";
@@ -94,6 +95,7 @@ export const iconNames = [
   "arrow",
   "butlerSign",
   "pin",
+  "paperclip",
   "mic",
   "trash",
   "expand",
@@ -148,6 +150,7 @@ export const paths: Record<IconName, ReactNode> = {
   arrow,
   butlerSign,
   pin,
+  paperclip,
   mic,
   trash,
   expand,

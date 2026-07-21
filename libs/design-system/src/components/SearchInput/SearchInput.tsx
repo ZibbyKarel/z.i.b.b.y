@@ -16,6 +16,10 @@ export interface SearchInputProps extends Omit<
    * icon-prefixed pill, not a labelled form field). */
   ariaLabel: string;
   ref?: Ref<HTMLInputElement>;
+  /** Chrome fill. "solid" (default) keeps the opaque input look; "transparent"
+   * drops the own background + border so a surrounding `GlassSurface` shows
+   * through instead of doubling up (mirrors `SearchBar`'s own `surface` prop). */
+  surface?: "solid" | "transparent";
 }
 
 /**
@@ -25,11 +29,14 @@ export interface SearchInputProps extends Omit<
  * control). Used wherever a page needs an inline free-text filter over an
  * already-loaded list, e.g. the task archive.
  */
-export function SearchInput({ ariaLabel, ref, ...props }: SearchInputProps) {
+export function SearchInput({ ariaLabel, ref, surface = "solid", ...props }: SearchInputProps) {
   return (
     <div
       className={cn(
-        "flex h-[38px] w-full items-center gap-2.5 rounded-full border border-border bg-surface px-3.5",
+        "flex h-[38px] w-full items-center gap-2.5 rounded-full px-3.5",
+        surface === "transparent"
+          ? "border border-transparent bg-transparent"
+          : "border border-border bg-surface",
         "transition-colors focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/40",
       )}
       data-testid={SearchInputTestId.Root}

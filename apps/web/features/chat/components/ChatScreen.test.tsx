@@ -101,10 +101,31 @@ vi.mock("../../memory/queries/useMemorySearchQuery", () => ({
   useMemorySearchQuery: () => ({ data: undefined, isFetching: false }),
   getMemorySearchQueryKey: (q: string) => ["memory", "search", q],
 }));
-// `CommandLine`'s inline project picker (Phase 102/108) reads the project registry.
+// `CommandLine`'s inline project picker (Phase 102/108) reads the project registry;
+// `ChatSearch` (Workstream B) reads the same query for its own project rows.
 vi.mock("../../projects/queries/useProjectsQuery", () => ({
   useProjectsQuery: () => ({ data: [{ id: "alpha", name: "Alpha" }] }),
   getProjectsQueryKey: () => ["projects"],
+}));
+// `ChatSearch`'s broadened index (Workstream B) reads three more catalogs the
+// old palette never touched — stub each with an empty list so the top bar
+// (always mounting `ChatSearch` now, unlike the conditionally-mounted palette)
+// never hits the network.
+vi.mock("../../skills/queries/useSkillsQuery", () => ({
+  useSkillsQuery: () => ({ data: [] }),
+  getSkillsQueryKey: () => ["skills"],
+}));
+vi.mock("../../mcp/queries/useMcpServersQuery", () => ({
+  useMcpServersQuery: () => ({ data: [] }),
+  getMcpServersQueryKey: () => ["mcp", "servers"],
+}));
+vi.mock("../../commands/queries/useCommandsQuery", () => ({
+  useCommandsQuery: () => ({ data: [] }),
+  getCommandsQueryKey: () => ["commands"],
+}));
+vi.mock("../../companies/queries/useCompaniesQuery", () => ({
+  useCompaniesQuery: () => ({ data: [] }),
+  getCompaniesQueryKey: () => ["companies"],
 }));
 // The `/settings` voice pick — read by every `ChatMessage`'s read-aloud button.
 vi.mock("../../system", () => ({ useSystemConfigQuery: () => ({ data: undefined }) }));
@@ -129,18 +150,17 @@ import {
   MAIN_CONTENT_ID,
   OrbMapTestId,
   OrbNodeTestId,
-  SearchBarTestId,
-  SearchMenuTestId,
 } from "@zibby/design-system";
 import { ChatScreen, ChatScreenTestId } from "./ChatScreen";
+import { ChatSearchTestId } from "./ChatSearch";
 import { ChatTopBarTestId } from "./ChatTopBar";
 import { ChatToolDockTestId } from "./ChatToolDock";
 import { ChatBottomBarTestId } from "./ChatBottomBar";
+import { ChatDockTestId } from "./ChatDock";
 import { ChatLiveLogTestId } from "./ChatLiveLog";
 import { CommandLineTestId } from "../../tasks/components/CommandLine/CommandLine";
 import { SubsystemDrawerTestId } from "../../subsystems/components/SubsystemDrawer/SubsystemDrawer";
 import { ChatDetailDialogTestId } from "./ChatDetailDialog";
-import { ChatPaletteTestId } from "./ChatPalette";
 import { SubsystemOrbMapTestId } from "./SubsystemOrbMap";
 
 // The transcript lives in the provider; this harness supplies the lifted state so the
@@ -203,9 +223,11 @@ describe("ChatScreen", () => {
     renderWithProviders(<ChatScreenHarness />);
 
     // The only composer left on the screen is the chat dock's `CommandLine`, mounted
-    // through `ChatBottomBar` (chat slot active by default).
+    // through `ChatBottomBar` (chat slot active by default). `ChatDock` swaps in its
+    // OWN send button via `CommandLine`'s `renderTrailing` slot (pre-existing, F8/hud2chat
+    // era) — the default `CommandLineTestId.Send` never mounts here.
     await user.type(screen.getByTestId(CommandLineTestId.Input), "Jak se máš");
-    await user.click(screen.getByTestId(CommandLineTestId.Send));
+    await user.click(screen.getByTestId(ChatDockTestId.Send));
 
     expect(screen.getByText("Jak se máš")).toBeInTheDocument();
     expect(mutate).toHaveBeenCalledWith({ body: { conversationId: "c1", text: "Jak se máš" } });
@@ -248,52 +270,60 @@ describe("ChatScreen", () => {
     });
   });
 
-  describe("quick-switcher (Phase 14.5)", () => {
-    it("⌘K opens the palette, and Esc closes it (Phase 30)", () => {
-      renderWithProviders(<ChatScreenHarness />);
-
-      expect(screen.queryByTestId(ChatPaletteTestId.Root)).not.toBeInTheDocument();
-      fireKey({ key: "k", metaKey: true });
-      expect(screen.getByTestId(ChatPaletteTestId.Root)).toBeInTheDocument();
-
-      fireKey({ key: "Escape" });
-      expect(screen.queryByTestId(ChatPaletteTestId.Root)).not.toBeInTheDocument();
-    });
-
-    it("Ctrl+K toggles the palette closed on a second press, same as the search bar (Phase 30)", () => {
-      renderWithProviders(<ChatScreenHarness />);
-
-      fireKey({ key: "k", ctrlKey: true });
-      expect(screen.getByTestId(ChatPaletteTestId.Root)).toBeInTheDocument();
-      fireKey({ key: "k", ctrlKey: true });
-      expect(screen.queryByTestId(ChatPaletteTestId.Root)).not.toBeInTheDocument();
-    });
-
-    it("Esc closes the palette, then does nothing further (no overlay left to close)", async () => {
+  describe("top search (Workstream B, replacing the 14.5 quick-switcher)", () => {
+    it("⌘K opens+focuses the inline top search, and Esc closes its panel", async () => {
       const user = userEvent.setup();
       renderWithProviders(<ChatScreenHarness />);
 
-      await user.click(screen.getByTestId(SearchBarTestId.Root));
-      expect(screen.getByTestId(ChatPaletteTestId.Root)).toBeInTheDocument();
+      expect(screen.queryByTestId(ChatSearchTestId.Panel)).not.toBeInTheDocument();
+      // The ⌘K/Ctrl+K OPEN trigger is still a window-level listener in `ChatScreen`
+      // (see the ⌘K `useEffect`) — `fireKey`'s `window.dispatchEvent` reaches it fine.
+      fireKey({ key: "k", metaKey: true });
+      expect(screen.getByTestId(ChatSearchTestId.Panel)).toBeInTheDocument();
+      expect(screen.getByTestId(ChatSearchTestId.Input)).toHaveFocus();
 
-      // 1st Esc: the palette closes.
-      fireKey({ key: "Escape" });
-      expect(screen.queryByTestId(ChatPaletteTestId.Root)).not.toBeInTheDocument();
+      // Esc-to-CLOSE is now owned entirely by `ChatSearch`'s own input `onKeyDown`
+      // (a real React handler on the focused DOM node) — `fireKey`'s window-target
+      // dispatch never bubbles through an element, so it can't reach it. A real
+      // focused-element key press (`user.keyboard`) is required here.
+      await user.keyboard("{Escape}");
+      expect(screen.queryByTestId(ChatSearchTestId.Panel)).not.toBeInTheDocument();
+    });
+
+    it("Ctrl+K also opens it — a second press keeps it open (focus() only ever opens, never toggles)", () => {
+      renderWithProviders(<ChatScreenHarness />);
+
+      fireKey({ key: "k", ctrlKey: true });
+      expect(screen.getByTestId(ChatSearchTestId.Panel)).toBeInTheDocument();
+      fireKey({ key: "k", ctrlKey: true });
+      expect(screen.getByTestId(ChatSearchTestId.Panel)).toBeInTheDocument();
+    });
+
+    it("Esc closes the search, then does nothing further (no overlay left to close)", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatScreenHarness />);
+
+      await user.click(screen.getByTestId(ChatSearchTestId.Input));
+      expect(screen.getByTestId(ChatSearchTestId.Panel)).toBeInTheDocument();
+
+      // 1st Esc: the search panel closes (real focused-element dispatch — see the
+      // note on the ⌘K test above for why `fireKey`'s window-dispatch can't reach it).
+      await user.keyboard("{Escape}");
+      expect(screen.queryByTestId(ChatSearchTestId.Panel)).not.toBeInTheDocument();
 
       // 2nd Esc: nothing else open — a routed page, so nothing happens.
-      fireKey({ key: "Escape" });
+      await user.keyboard("{Escape}");
     });
 
-    it("selecting an agent in the palette opens its detail dialog, not composer injection (Phase 58)", async () => {
+    it("selecting an agent in the search opens its detail dialog, not composer injection (Phase 58)", async () => {
       const user = userEvent.setup();
       renderWithProviders(<ChatScreenHarness />);
 
-      await user.click(screen.getByTestId(SearchBarTestId.Root));
-      await user.type(screen.getByTestId(SearchMenuTestId.Input), "Bui");
-      await user.click(screen.getByTestId(`${SearchMenuTestId.Item}-agents-builder`));
+      await user.click(screen.getByTestId(ChatSearchTestId.Input));
+      await user.click(screen.getByTestId(`${ChatSearchTestId.Item}-agent-builder`));
 
-      // The pick closes the palette and opens the agent's read-only detail dialog.
-      expect(screen.queryByTestId(ChatPaletteTestId.Root)).not.toBeInTheDocument();
+      // The pick closes the search panel and opens the agent's read-only detail dialog.
+      expect(screen.queryByTestId(ChatSearchTestId.Panel)).not.toBeInTheDocument();
       expect(screen.getByTestId(ChatDetailDialogTestId.Root)).toBeInTheDocument();
       expect(screen.getByTestId(EntityHeroTestId.Name)).toHaveTextContent("Builder");
 

@@ -1667,8 +1667,6 @@
     "title": "Chat with ZIBBY",
     "close": "Close",
     "newChat": "New chat",
-    "greetingTitle": "I'm here, sir.",
-    "greetingHint": "What shall we talk about?",
     "triggerLabel": "Chat",
     "triggerAria": "Open chat with ZIBBY",
     "triggerTitle": "Chat with ZIBBY",
@@ -1718,17 +1716,24 @@
     "toolDock": {
       "label": "Tools"
     },
-    "palette": {
-      "placeholder": "Search agents, pipelines or notes…",
-      "ariaLabel": "Quick-switch across the system",
+    "search": {
+      "placeholder": "Search across ZIBBY…",
+      "ariaLabel": "Search across ZIBBY",
       "empty": "Nothing found",
-      "openAria": "Open quick switcher",
-      "sections": {
-        "agents": "Agents",
-        "pipelines": "Pipelines",
-        "gates": "Gates",
+      "clearAria": "Clear search",
+      "kind": {
+        "agent": "Agent",
+        "pipeline": "Pipeline",
+        "subsystem": "Subsystem",
+        "task": "Task",
         "memory": "Memory",
-        "briefing": "Briefing"
+        "skill": "Skill",
+        "mcp": "MCP server",
+        "project": "Project",
+        "command": "Command",
+        "company": "Company",
+        "setting": "Setting",
+        "action": "Action"
       },
       "actions": {
         "generateBriefing": "Generate briefing now",

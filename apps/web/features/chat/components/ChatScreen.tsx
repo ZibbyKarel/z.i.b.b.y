@@ -8,7 +8,14 @@ import { Container, MAIN_CONTENT_ID } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { type Dispatch, type SetStateAction, useCallback, useEffect, useState } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useNow } from "../../../hooks/useNow";
 import { MINUTE_MS } from "../../../utils/time";
 import { useGenerateBriefingMutation } from "../../briefing";
@@ -21,7 +28,7 @@ import { useSubsystemsQuery } from "../../subsystems/queries/useSubsystemsQuery"
 import { ChatBottomBar } from "./ChatBottomBar";
 import { ChatDetailDialog, type ChatDetailTarget } from "./ChatDetailDialog";
 import { ChatLiveLog } from "./ChatLiveLog";
-import { ChatPalette } from "./ChatPalette";
+import type { ChatSearchHandle } from "./ChatSearch";
 import { ChatTaskDetailColumn } from "./ChatTaskDetailColumn";
 import { ChatTasksPanel } from "./ChatTasksPanel";
 import { ChatToolDock } from "./ChatToolDock";
@@ -94,25 +101,20 @@ export function ChatScreen({
   // `false` when the dock unmounts, clearing the pulse.
   const [thinking, setThinking] = useState(false);
 
-  // Phase 14.5: the ⌘K quick-switcher is an overlay ON TOP of the conversation.
-  // Owned here (not by the palette itself) so Esc priority and the search-bar
-  // toggle read from one source of truth.
-  const [paletteOpen, setPaletteOpen] = useState(false);
-  const openPalette = useCallback(() => {
-    setPaletteOpen((v) => !v);
-  }, []);
+  // Workstream B: the ⌘K inline top search (`ChatSearch`) owns its own open/close
+  // state — this screen only needs an imperative handle to open+focus it.
+  const searchRef = useRef<ChatSearchHandle>(null);
 
-  // A result picked in the palette (agents/pipelines) opens its read-only DETAIL
+  // A result picked in the search (agents/pipelines) opens its read-only DETAIL
   // here in a dialog (Phase 58). `undefined` = no dialog open.
   const [detailTarget, setDetailTarget] = useState<ChatDetailTarget | undefined>(undefined);
   const handleDetailSelect = useCallback((detail: ChatDetailTarget) => {
     setDetailTarget(detail);
   }, []);
-  const handlePaletteNavigate = useCallback(
+  const handleSearchNavigate = useCallback(
     (href: Route) => {
-      // Memory has nowhere to render inline yet — navigating there leaves
-      // `/chat`, same as any other nav-rail jump.
-      setPaletteOpen(false);
+      // Memory (and every other navigate-away kind) has nowhere to render inline
+      // yet — navigating there leaves `/chat`, same as any other nav-rail jump.
       router.push(href);
     },
     [router],
@@ -151,31 +153,18 @@ export function ChatScreen({
     );
   }, [generateBriefingMutation, onMessagesChange]);
 
-  // Esc priority: the palette sits on top of the conversation itself — a single Esc
-  // dismisses it. As a routed page there is nothing left for Esc to close once it's
-  // shut (the nav rail / browser back is how the operator leaves `/chat`).
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      if (paletteOpen) {
-        setPaletteOpen(false);
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [paletteOpen]);
-
-  // ⌘K / Ctrl+K opens the quick-switcher — the same toggle the SearchBar's click
-  // goes through, so a second press closes it rather than stacking overlays.
+  // ⌘K / Ctrl+K opens+focuses the inline top search — `ChatSearch` owns its own
+  // Esc-to-close (and outside-click/backdrop-click) handling, so there is no Esc
+  // branch left here for it.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "k") return;
       e.preventDefault();
-      openPalette();
+      searchRef.current?.focus();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [openPalette]);
+  }, []);
 
   // The pipeline catalog — still needed to feed `SubsystemOrbMap`'s active-run
   // counts (it maps a run's `owner` pipeline to its `ownerSubsystem`).
@@ -217,15 +206,12 @@ export function ChatScreen({
     () => setSelectedRunId(null),
   );
 
-  // Any overlay (palette / detail dialog / subsystem drawer / run detail / core
-  // overview) dims the floating chrome — the shared `dimmed` contract every Velín-D
-  // widget honours.
+  // Any overlay (detail dialog / subsystem drawer / run detail / core overview)
+  // dims the floating chrome — the shared `dimmed` contract every Velín-D widget
+  // honours. The search's own panel+backdrop are self-contained (Workstream B)
+  // and don't need to fold into this.
   const overlayOpen =
-    paletteOpen ||
-    detailTarget != null ||
-    selectedSubsystem != null ||
-    selectedRun != null ||
-    coreOpen;
+    detailTarget != null || selectedSubsystem != null || selectedRun != null || coreOpen;
 
   return (
     <main
@@ -268,7 +254,15 @@ export function ChatScreen({
           status pill, search trigger, limits gauge, HUD switch and language
           switch. */}
       <div className="relative z-20 shrink-0 px-[22px]">
-        <ChatTopBar onOpenPalette={openPalette} />
+        <ChatTopBar
+          briefingPending={generateBriefingMutation.isPending}
+          onDetailSelect={handleDetailSelect}
+          onGenerateBriefing={triggerBriefing}
+          onNavigate={handleSearchNavigate}
+          onOpenRun={setSelectedRunId}
+          onSelectSubsystem={setSelectedSubsystemId}
+          searchRef={searchRef}
+        />
       </div>
 
       {/* ── Top-right tool dock (Velín-D `VcDockGroup`) ───────────────────
@@ -387,22 +381,9 @@ export function ChatScreen({
         <ChatLiveLog dimmed={overlayOpen} />
       </Container>
 
-      {/* ── Quick-switcher (Phase 14.5) ──────────────────────────────────
-          Floats above everything else on the page; mounted only while open so its
-          own data hooks don't fire until the operator asks. */}
-      {paletteOpen && (
-        <ChatPalette
-          briefingPending={generateBriefingMutation.isPending}
-          onClose={() => setPaletteOpen(false)}
-          onDetailSelect={handleDetailSelect}
-          onGenerateBriefing={triggerBriefing}
-          onNavigate={handlePaletteNavigate}
-        />
-      )}
-
       {/* ── Result detail (Phase 58) ────────────────────────────────────
-          A pick in the ⌘K quick-switcher opens the agent/pipeline's read-only
-          detail here — a viewing dialog, never an edit surface. */}
+          A pick in the ⌘K top search (Workstream B) opens the agent/pipeline's
+          read-only detail here — a viewing dialog, never an edit surface. */}
       {detailTarget && (
         <ChatDetailDialog detail={detailTarget} onClose={() => setDetailTarget(undefined)} />
       )}
