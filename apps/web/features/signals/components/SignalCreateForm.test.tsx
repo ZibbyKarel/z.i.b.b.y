@@ -1,3 +1,4 @@
+import type { HandoffSignalKind } from "@zibby/contracts";
 import { DropdownTestId } from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -17,6 +18,11 @@ const { hooks } = vi.hoisted(() => ({
       isPending: false,
       isError: false,
     },
+    updateMutation: {
+      mutate: vi.fn(),
+      isPending: false,
+      isError: false,
+    },
   },
 }));
 
@@ -25,6 +31,7 @@ vi.mock("../../subsystems/queries", () => ({
 }));
 vi.mock("../../handoff/mutations", () => ({
   useCreateSignalKindMutation: () => hooks.createMutation,
+  useUpdateSignalKindMutation: () => hooks.updateMutation,
 }));
 
 const SENTINEL = { id: "sentinel", name: "Sentinel" };
@@ -36,6 +43,7 @@ describe("SignalCreateForm (B3b)", () => {
     back.mockClear();
     hooks.subsystems = { data: [SENTINEL, LOOM] };
     hooks.createMutation = { mutate: vi.fn(), isPending: false, isError: false };
+    hooks.updateMutation = { mutate: vi.fn(), isPending: false, isError: false };
   });
 
   it("renders every field", () => {
@@ -119,5 +127,73 @@ describe("SignalCreateForm (B3b)", () => {
     render(<SignalCreateForm />);
     await userEvent.click(screen.getByTestId(SignalCreateFormTestId.Cancel));
     expect(back).toHaveBeenCalled();
+  });
+});
+
+describe("SignalCreateForm — edit mode (B3c)", () => {
+  const CUSTOM_THING: HandoffSignalKind = {
+    id: "custom-thing",
+    from: "loom",
+    label: "Custom Thing",
+    description: "an operator-registered signal",
+    severityBearing: false,
+    status: "pending",
+    system: false,
+  };
+
+  beforeEach(() => {
+    push.mockClear();
+    back.mockClear();
+    hooks.subsystems = { data: [SENTINEL, LOOM] };
+    hooks.createMutation = { mutate: vi.fn(), isPending: false, isError: false };
+    hooks.updateMutation = { mutate: vi.fn(), isPending: false, isError: false };
+  });
+
+  it("prefills every field from initial and shows the fixed id instead of a slug preview", () => {
+    render(<SignalCreateForm initial={CUSTOM_THING} />);
+
+    const producerWrapper = screen.getByTestId(SignalCreateFormTestId.Producer);
+    expect(within(producerWrapper).getByTestId(DropdownTestId.Trigger)).toHaveTextContent("Loom");
+    expect(screen.getByDisplayValue("Custom Thing")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("an operator-registered signal")).toBeInTheDocument();
+    expect(screen.getByTestId(SignalCreateFormTestId.SlugPreview)).toHaveTextContent(
+      "custom-thing",
+    );
+  });
+
+  it("submitting calls the UPDATE mutation with params:{id} + the body, and calls onDone (no forced navigate)", async () => {
+    const emitSpy = vi.spyOn(toastBus, "emit");
+    const onDone = vi.fn();
+    hooks.updateMutation.mutate = vi.fn((_vars, opts) => {
+      opts?.onSuccess?.();
+    });
+    render(<SignalCreateForm initial={CUSTOM_THING} onDone={onDone} />);
+
+    await userEvent.click(screen.getByTestId(SignalCreateFormTestId.Submit));
+
+    expect(hooks.updateMutation.mutate).toHaveBeenCalledWith(
+      {
+        params: { id: "custom-thing" },
+        body: {
+          from: "loom",
+          label: "Custom Thing",
+          description: "an operator-registered signal",
+          severityBearing: false,
+        },
+      },
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    );
+    expect(hooks.createMutation.mutate).not.toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
+    expect(onDone).toHaveBeenCalled();
+    expect(emitSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: "ok" }));
+  });
+
+  it("Cancel in edit mode calls onDone instead of navigating back", async () => {
+    const onDone = vi.fn();
+    render(<SignalCreateForm initial={CUSTOM_THING} onDone={onDone} />);
+    await userEvent.click(screen.getByTestId(SignalCreateFormTestId.Cancel));
+    expect(onDone).toHaveBeenCalled();
+    expect(back).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import type { SubsystemId } from "@zibby/contracts";
+import type { HandoffSignalKind, SubsystemId } from "@zibby/contracts";
 import { Button, Stack, Typography } from "@zibby/design-system";
 import {
   FormSelect,
@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { toastBus } from "../../../components/Toaster/toastBus";
-import { useCreateSignalKindMutation } from "../../handoff/mutations";
+import { useCreateSignalKindMutation, useUpdateSignalKindMutation } from "../../handoff/mutations";
 import { useSubsystemsQuery } from "../../subsystems/queries";
 
 export enum SignalCreateFormTestId {
@@ -42,6 +42,16 @@ export interface SignalCreateFormProps {
   /** Prefills the producer picker — the drawer's "+ nový signál" link-out passes
    * its own `fromSubsystemId` through `/signals/new?from=`. */
   defaultFrom?: string;
+  /**
+   * When present, the form runs in EDIT mode (B3c): all fields prefill from this
+   * kind, submit calls `useUpdateSignalKindMutation` with `params: { id: initial.id }`
+   * instead of creating, and success calls `onDone` instead of navigating. Only ever
+   * passed an operator kind (`!initial.system`) — `SignalDetailScreen` never offers
+   * edit for a built-in.
+   */
+  initial?: HandoffSignalKind;
+  /** EDIT mode's success callback (the detail screen toggles back to read-only). Ignored in create mode. */
+  onDone?: () => void;
 }
 
 /**
@@ -64,35 +74,57 @@ export function previewSlug(label: string): string {
  * §"Slot B → B3"). Mirrors `ProjectBasicsPanel`'s `@zibby/forms` shape
  * (`useFormControls` + `zodResolver` + DS `Form*` field wrappers). On success
  * navigates to `/signals` — the spawned Forge build task surfaces there via the
- * runs-feed invalidation in {@link useCreateSignalKindMutation}. EDIT/DELETE is a
- * separate later slice (B3c); this form only creates.
+ * runs-feed invalidation in {@link useCreateSignalKindMutation}.
+ *
+ * B3c generalizes this same form for EDIT: passing `initial` (an operator kind)
+ * prefills every field, runs {@link useUpdateSignalKindMutation} keyed by
+ * `initial.id` instead of creating, and success calls `onDone` instead of
+ * navigating — `SignalDetailScreen` renders it inline in place of the read
+ * panels. The slug preview is only meaningful pre-creation, so edit mode shows
+ * the fixed `initial.id` instead of the derived `previewSlug`.
  */
-export function SignalCreateForm({ defaultFrom }: SignalCreateFormProps) {
+export function SignalCreateForm({ defaultFrom, initial, onDone }: SignalCreateFormProps) {
   const t = useTranslations("signals");
   const router = useRouter();
   const { data: subsystems = [] } = useSubsystemsQuery();
   const createMutation = useCreateSignalKindMutation();
+  const updateMutation = useUpdateSignalKindMutation();
+  const isEditMode = Boolean(initial);
+  const activeMutation = isEditMode ? updateMutation : createMutation;
 
   const { renderForm, submit, form } = useFormControls<SignalCreateValues>({
     defaultValues: {
-      from: defaultFrom ?? subsystems[0]?.id ?? "",
-      label: "",
-      description: "",
-      severityBearing: false,
+      from: initial?.from ?? defaultFrom ?? subsystems[0]?.id ?? "",
+      label: initial?.label ?? "",
+      description: initial?.description ?? "",
+      severityBearing: initial?.severityBearing ?? false,
     },
     resolver: zodResolver(schema),
     mode: "onChange",
     onSubmit: (values) => {
-      if (createMutation.isPending) return;
-      createMutation.mutate(
-        {
-          body: {
-            from: values.from as SubsystemId,
-            label: values.label.trim(),
-            description: values.description.trim(),
-            severityBearing: values.severityBearing,
+      if (activeMutation.isPending) return;
+      const body = {
+        from: values.from as SubsystemId,
+        label: values.label.trim(),
+        description: values.description.trim(),
+        severityBearing: values.severityBearing,
+      };
+
+      if (initial) {
+        updateMutation.mutate(
+          { params: { id: initial.id }, body },
+          {
+            onSuccess: () => {
+              toastBus.emit({ message: t("create.editSuccessToast"), severity: "ok" });
+              onDone?.();
+            },
           },
-        },
+        );
+        return;
+      }
+
+      createMutation.mutate(
+        { body },
         {
           onSuccess: (result) => {
             toastBus.emit({
@@ -115,7 +147,7 @@ export function SignalCreateForm({ defaultFrom }: SignalCreateFormProps) {
     form.formState.isValid &&
     labelValue.trim().length > 0 &&
     descriptionValue.trim().length > 0 &&
-    !createMutation.isPending;
+    !activeMutation.isPending;
 
   return renderForm(
     <div data-testid={SignalCreateFormTestId.Root}>
@@ -125,7 +157,7 @@ export function SignalCreateForm({ defaultFrom }: SignalCreateFormProps) {
             <Button
               data-testid={SignalCreateFormTestId.Cancel}
               intent="ghost"
-              onClick={() => router.back()}
+              onClick={() => (isEditMode ? onDone?.() : router.back())}
               size="sm"
             >
               {t("create.cancel")}
@@ -133,21 +165,21 @@ export function SignalCreateForm({ defaultFrom }: SignalCreateFormProps) {
             <Button
               data-testid={SignalCreateFormTestId.Submit}
               disabled={!canSubmit}
-              icon="plus"
+              icon={isEditMode ? "check" : "plus"}
               intent="primary"
               onClick={() => void submit()}
               size="sm"
             >
-              {t("create.submit")}
+              {isEditMode ? t("create.editSubmit") : t("create.submit")}
             </Button>
           </Stack>
         }
-        title={t("create.panelTitle")}
+        title={isEditMode ? t("create.editPanelTitle") : t("create.panelTitle")}
       >
         <Stack gap="200">
-          {createMutation.isError && (
+          {activeMutation.isError && (
             <Typography size="sm" tone="bad" type="note">
-              {t("create.error")}
+              {isEditMode ? t("create.editError") : t("create.error")}
             </Typography>
           )}
 
@@ -188,10 +220,10 @@ export function SignalCreateForm({ defaultFrom }: SignalCreateFormProps) {
 
           <Stack gap="75">
             <Typography mono size="sm" type="note" variant="secondary">
-              {t("create.fields.slugPreviewLabel")}
+              {isEditMode ? t("create.idFixedLabel") : t("create.fields.slugPreviewLabel")}
             </Typography>
             <Typography mono data-testid={SignalCreateFormTestId.SlugPreview} size="sm" type="text">
-              {previewSlug(labelValue ?? "")}
+              {isEditMode ? (initial?.id ?? "") : previewSlug(labelValue ?? "")}
             </Typography>
           </Stack>
         </Stack>

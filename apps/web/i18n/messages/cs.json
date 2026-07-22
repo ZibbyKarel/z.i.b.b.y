@@ -1638,15 +1638,25 @@
       "buildTaskTitle": "Build task",
       "buildTaskLink": "Zobrazit task",
       "notFoundTitle": "Signál nenalezen",
-      "notFoundDescription": "Tenhle typ signálu v registru neexistuje — možná byl smazán, nebo je odkaz zastaralý."
+      "notFoundDescription": "Tenhle typ signálu v registru neexistuje — možná byl smazán, nebo je odkaz zastaralý.",
+      "editAction": "Upravit",
+      "deleteAction": "Smazat",
+      "deleteTitle": "Smazat signál?",
+      "deleteBody": "Opravdu smazat signál „{label}“? Tuto akci nelze vrátit.",
+      "deletedToast": "Signál smazán."
     },
     "create": {
       "title": "Nový signál",
       "panelTitle": "Registrace signálu",
+      "editPanelTitle": "Úprava signálu",
       "cancel": "Zrušit",
       "submit": "Vytvořit signál",
+      "editSubmit": "Uložit signál",
       "error": "Vytvoření signálu se nepovedlo — zkuste to prosím znovu.",
+      "editError": "Uložení signálu se nepovedlo — zkuste to prosím znovu.",
       "successToast": "Signál zaregistrován — build task {buildTaskId} běží.",
+      "editSuccessToast": "Signál uložen.",
+      "idFixedLabel": "ID (pevné)",
       "fields": {
         "producer": "Producent",
         "label": "Název",
