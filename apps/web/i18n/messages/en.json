@@ -1752,8 +1752,9 @@
       "title": "ZIBBY overview",
       "openAria": "Open ZIBBY overview",
       "role": "orchestrator · directing {count} subsystems",
-      "summary": "{working} at work, {report} awaiting review, {waiting} waiting on you.",
+      "summary": "{working} at work, {error} in error, {report} awaiting review, {waiting} waiting on you.",
       "statWorking": "working",
+      "statError": "in error",
       "statReport": "reports waiting",
       "statWaiting": "waiting on you",
       "statIdle": "idle",
@@ -1765,6 +1766,7 @@
       "degraded": "Degraded",
       "offline": "Offline",
       "working": "{n} working",
+      "error": "{n} errors",
       "report": "{n} reporting",
       "waiting": "{n} waiting",
       "flyout": {
