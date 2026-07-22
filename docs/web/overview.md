@@ -220,7 +220,6 @@ features/
 ├── agents/         Agent CRUD, run launch
 ├── approvals/      Approval queue
 ├── automations/    Cron/event triggers
-├── chains/         Completion-driven chain primitive (queue + settle)
 ├── chat/           Chat-first interface (replaces the old Voice UI), including
 │                   phase-119 voice mode (STT hook, mic toggle, auto-speak);
 │                   its ambient orb-map backdrop is `SubsystemOrbMap`
@@ -229,6 +228,8 @@ features/
 ├── companies/      Company portfolio (client/company records)
 ├── gates/          Gate rule catalog
 ├── goals/          Loop engine — goal definitions + runs (maker ⇄ verifier)
+├── handoff/        Cross-subsystem handoff rules (inline mad-libs editor in
+│                   the subsystem drawer's "Předávání" tab)
 ├── health/         System health status
 ├── hooks/          Hook catalog
 ├── integrations/   Channel adapters (email, Slack), scoped under a project
@@ -300,7 +301,7 @@ madge.)
 "Feature" is an overloaded term — not every one has its own route:
 
 - **Route features** (have a `Screen.tsx` + a segment under `(dashboard)/`):
-  agents, automations, chains, commands, companies, gates, hooks, mcp, memory,
+  agents, automations, commands, companies, gates, hooks, mcp, memory,
   overview, pipelines, projects, runs, settings, skills (`gates` is
   route-only, with no nav item).
 - **Shared services** (no `Screen`, consumed by other features / mounted in
