@@ -141,3 +141,24 @@ export const WithoutCodes: Story = {
     );
   },
 };
+
+export const WithDescriptions: Story = {
+  render: () => {
+    const [value, setValue] = useState("opus");
+    return (
+      <div className="w-80 p-4">
+        <Dropdown
+          aria-label="Model"
+          onChange={setValue}
+          options={[
+            { value: "opus", label: "opus", description: "Nejschopnější, nejpomalejší" },
+            { value: "sonnet", label: "sonnet", description: "Vyvážený výkon a rychlost" },
+            { value: "haiku", label: "haiku", description: "Nejrychlejší, nejlevnější" },
+          ]}
+          value={value}
+          variant="field"
+        />
+      </div>
+    );
+  },
+};
