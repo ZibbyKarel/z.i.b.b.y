@@ -79,10 +79,10 @@ output-side counterpart of the `verify` phase). A pipeline can have more than
 one (open a PR _and_ write a report). Each sink draws from `from` — a
 relative path some phase `produces`.
 
-| `type` | Fields               | What it does                                                                                                                                                                                                       |
-| ------ | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pr`   | `from`               | Composes a PR from `from` (Markdown `# title` + body) and opens it via `git push && gh pr create`. **Always parks for approval** — the PR is the gate, enforced structurally by the system (Law 3), not by agent config.  |
-| `file` | `from`, `dest`, `to` | Copies `from` to `to` — into the project worktree (`dest: project`, on a `zibby/*` branch) or as a vault note (`dest: vault`, a durable second-brain record for pipelines whose result is information, not code). |
+| `type` | Fields               | What it does                                                                                                                                                                                                             |
+| ------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pr`   | `from`               | Composes a PR from `from` (Markdown `# title` + body) and opens it via `git push && gh pr create`. **Always parks for approval** — the PR is the gate, enforced structurally by the system (Law 3), not by agent config. |
+| `file` | `from`, `dest`, `to` | Copies `from` to `to` — into the project worktree (`dest: project`, on a `zibby/*` branch) or as a vault note (`dest: vault`, a durable second-brain record for pipelines whose result is information, not code).        |
 
 A `pr` sink parks the aggregate with `parkedReason: "output"` (durable across
 a restart — the phase loop has already finished, no live child), writes
@@ -119,10 +119,10 @@ GET /api/artifacts                    list records (newest-first; ?projectId= &p
 GET /api/artifacts/:id                one record
 ```
 
-The registry is the foundation for pipeline chaining (N2b, see
-`docs/api/chains.md`): a downstream pipeline anchors its input on an
-upstream output's record, so a chain survives a restart or the source run
-being evicted from memory.
+The registry backed pipeline chaining (N2b): a downstream pipeline anchored its
+input on an upstream output's record, so a chain survived a restart or the source
+run being evicted from memory. That chains feature has since been retired; the
+provenance registry itself remains for delivery-source answerability.
 
 ### CRUD API
 
@@ -276,8 +276,8 @@ folders, created in `start()`:
   `<sandbox>/context -> ../context` (the same style as the P1-T2 handoff).
   Files are `chmod`ed to `0o444` once written — they're input to the whole
   run, not owned by one phase. The only content today: `context/input.md` —
-  the N2b chain-fed input (chained content from `chain-runner`, formerly
-  `<run>/input.md`); it's the only "pipeline-level input" concept in the
+  the operator/task input (formerly `<run>/input.md`; once also chain-fed, before
+  chains were retired); it's the only "pipeline-level input" concept in the
   code (no other file plays this role), read exactly once, inside the same
   `start()` call that writes it — so older runs have no separate READ path
   that needs backward compatibility.

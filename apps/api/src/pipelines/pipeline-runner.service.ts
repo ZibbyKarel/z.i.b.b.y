@@ -366,7 +366,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       branch: run.workspace?.branch,
     });
 
-    // N2b: materialize the chain/operator input as the first phase's handoff. This
+    // N2b: materialize the operator/task input as the first phase's handoff. This
     // IS the pipeline-level input (P1-T3 investigation: no other file plays that
     // role — `readArtifact`'s allowlist never includes it and no resume path ever
     // re-derives it from disk, so it is read exactly once, right below, within this

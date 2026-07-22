@@ -25,7 +25,6 @@ my channels and handle what you can."
 - [Runner](./api/runner.md) — the shared process-spawn engine: process lifecycle, the `claude -p` command builder, mid-run approval-gate wiring
 - [Pipeline orchestration](./api/pipelines.md) — phases, loops, escalation, parking
 - [Goals](./api/goals.md) — the generalized delivery loop (maker ⇄ verifier), self-development's loop engine
-- [Chains](./api/chains.md) — operator-authored pipeline composition
 - [Task scheduling](./api/tasks.md) — deferred tasks, routing, budget guard
 - [Gate policy engine](./api/gates.md) — the system floor, rules, decisions
 - [Workspace](./api/workspace.md) — per-run git worktree lifecycle

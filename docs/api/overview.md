@@ -116,7 +116,6 @@ data/
 ├── channels/            channel-item JSON state
 ├── goals/               goal definitions + run state
 ├── artifacts/            durable artifact provenance registry
-├── chains/               pipeline-chain definitions
 ├── hooks/                custom Claude Code hook catalog
 ├── mcp-servers/          MCP server catalog (committed config)
 ├── mcp-credentials/      MCP credentials (gitignored)
