@@ -415,6 +415,7 @@ export function renderBriefingMarkdown(briefing: Briefing): string {
     for (const s of briefing.subsystems ?? []) {
       const counts: string[] = [];
       if (s.tier3Count > 0) counts.push(`${s.tier3Count} waiting on you`);
+      if (s.errorCount > 0) counts.push(`${s.errorCount} failed`);
       if (s.tier2Count > 0) counts.push(`${s.tier2Count} reported`);
       const detail = [s.state, ...counts, ...(s.note ? [s.note] : [])].join(" · ");
       lines.push(`- **${s.name}** — ${detail}`);

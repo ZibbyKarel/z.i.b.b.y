@@ -1809,7 +1809,8 @@
       "idle": "V klidu",
       "running": "Běží",
       "report": "Hlášení připraveno",
-      "waiting": "Čeká na rozhodnutí"
+      "waiting": "Čeká na rozhodnutí",
+      "error": "Chyba"
     },
     "nodeAria": "{name}, {state}",
     "tier2Badge": "{count} hlášení k nahlédnutí",

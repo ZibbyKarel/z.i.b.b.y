@@ -36,6 +36,7 @@ function subsystem(overrides: Partial<SubsystemWithStatus> = {}): SubsystemWithS
     state: "idle",
     tier2Count: 0,
     tier3Count: 0,
+    errorCount: 0,
     ...overrides,
   };
 }
@@ -168,14 +169,10 @@ describe("SubsystemOrbMap", () => {
     );
 
     expect(
-      within(screen.getByTestId(`${OrbMapTestId.Node}-sentinel`)).getByTestId(
-        OrbNodeTestId.Status,
-      ),
+      within(screen.getByTestId(`${OrbMapTestId.Node}-sentinel`)).getByTestId(OrbNodeTestId.Status),
     ).toHaveTextContent("Hlášení připraveno");
     expect(
-      within(screen.getByTestId(`${OrbMapTestId.Node}-maestro`)).getByTestId(
-        OrbNodeTestId.Status,
-      ),
+      within(screen.getByTestId(`${OrbMapTestId.Node}-maestro`)).getByTestId(OrbNodeTestId.Status),
     ).toHaveTextContent("Čeká na rozhodnutí");
   });
 

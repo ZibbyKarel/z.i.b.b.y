@@ -312,6 +312,7 @@ describe("per-subsystem lines (NS2 F3b)", () => {
       name: "Forge",
       state: "waiting" as const,
       tier2Count: 0,
+      errorCount: 0,
       tier3Count: 2,
     },
     {
@@ -319,6 +320,7 @@ describe("per-subsystem lines (NS2 F3b)", () => {
       name: "Ledger",
       state: "idle" as const,
       tier2Count: 0,
+      errorCount: 0,
       tier3Count: 0,
       note: "62 % týdenního okna",
     },
@@ -357,6 +359,7 @@ describe("self-knowledge drift (NS2 F4c)", () => {
       name: "Forge",
       state: "waiting" as const,
       tier2Count: 0,
+      errorCount: 0,
       tier3Count: 2,
     },
   ];

@@ -139,19 +139,21 @@ export const SUBSYSTEMS: readonly Subsystem[] = [
  * `waiting` needs a Tier-3 decision. Phase 80 always serves `idle`; real
  * aggregation across running pipelines/goals/approvals lands in phase 82.
  */
-export const SubsystemStateSchema = z.enum(["idle", "running", "report", "waiting"]);
+export const SubsystemStateSchema = z.enum(["idle", "running", "report", "waiting", "error"]);
 export type SubsystemState = z.infer<typeof SubsystemStateSchema>;
 
 /**
  * A subsystem's identity plus its live status: `state` plus how many Tier-2
- * (act-then-report) and Tier-3 (surface-and-wait) items are outstanding. The
- * shape lands in phase 80 so the web query is stable; phase 82 fills in real
- * counts instead of the phase-80 stub `{ state: "idle", tier2Count: 0, tier3Count: 0 }`.
+ * (act-then-report) and Tier-3 (surface-and-wait) items are outstanding, plus
+ * how many owned runs failed. `tier2Count` counts only SUCCESSFUL (`done`)
+ * terminal runs since last seen — a failed run counts toward `errorCount`
+ * instead, never both.
  */
 export const SubsystemWithStatusSchema = SubsystemSchema.extend({
   state: SubsystemStateSchema,
   tier2Count: z.number().int().nonnegative(),
   tier3Count: z.number().int().nonnegative(),
+  errorCount: z.number().int().nonnegative(),
 });
 export type SubsystemWithStatus = z.infer<typeof SubsystemWithStatusSchema>;
 

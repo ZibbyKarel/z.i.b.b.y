@@ -80,6 +80,7 @@ export const BriefingSubsystemLineSchema = z.object({
   state: SubsystemStateSchema,
   tier2Count: z.number().int().nonnegative(),
   tier3Count: z.number().int().nonnegative(),
+  errorCount: z.number().int().nonnegative(),
   note: z.string().optional(),
 });
 export type BriefingSubsystemLine = z.infer<typeof BriefingSubsystemLineSchema>;

@@ -226,7 +226,7 @@ describe("SubsystemsService", () => {
       expect(forge).toMatchObject({ state: "report", tier2Count: 1 });
     });
 
-    it("an errored owned run after lastSeenAt also counts toward report", async () => {
+    it("an errored owned run after lastSeenAt reads as error with its own count, not report", async () => {
       const { service } = build({
         pipelines: [pipelineFixture("delivery", "forge")],
         runs: [
@@ -240,7 +240,80 @@ describe("SubsystemsService", () => {
         ],
       });
       const forge = await service.get("forge");
-      expect(forge).toMatchObject({ state: "report", tier2Count: 1 });
+      expect(forge).toMatchObject({ state: "error", tier2Count: 0, errorCount: 1 });
+    });
+
+    it("a done AND an errored owned run after lastSeenAt both count, error wins the headline state", async () => {
+      const { service } = build({
+        pipelines: [pipelineFixture("delivery", "forge"), pipelineFixture("release", "forge")],
+        runs: [
+          taskRunFixture({
+            runId: "delivery_1",
+            kind: "pipeline",
+            owner: "delivery",
+            status: "done",
+            startedAt: LATER,
+          }),
+          taskRunFixture({
+            runId: "release_1",
+            kind: "pipeline",
+            owner: "release",
+            status: "error",
+            startedAt: LATER,
+          }),
+        ],
+      });
+      const forge = await service.get("forge");
+      expect(forge).toMatchObject({ state: "error", tier2Count: 1, errorCount: 1 });
+    });
+
+    it("precedence: error outranks a still-running owned run", async () => {
+      const { service } = build({
+        pipelines: [pipelineFixture("delivery", "forge"), pipelineFixture("release", "forge")],
+        runs: [
+          taskRunFixture({
+            runId: "delivery_1",
+            kind: "pipeline",
+            owner: "delivery",
+            status: "running",
+          }),
+          taskRunFixture({
+            runId: "release_1",
+            kind: "pipeline",
+            owner: "release",
+            status: "error",
+            startedAt: LATER,
+          }),
+        ],
+      });
+      const forge = await service.get("forge");
+      expect(forge.state).toBe("error");
+    });
+
+    it("precedence: waiting still outranks error", async () => {
+      const { service } = build({
+        pipelines: [pipelineFixture("delivery", "forge"), pipelineFixture("release", "forge")],
+        runs: [
+          taskRunFixture({
+            runId: "delivery_1",
+            kind: "pipeline",
+            owner: "delivery",
+            status: "awaiting-approval",
+          }),
+          taskRunFixture({
+            runId: "release_1",
+            kind: "pipeline",
+            owner: "release",
+            status: "error",
+            startedAt: LATER,
+          }),
+        ],
+        pendingApprovals: [
+          approvalFixture({ id: "appr-1", runId: "delivery_1", kind: "pipeline-output" }),
+        ],
+      });
+      const forge = await service.get("forge");
+      expect(forge.state).toBe("waiting");
     });
 
     it("a completed run BEFORE lastSeenAt does not count", async () => {

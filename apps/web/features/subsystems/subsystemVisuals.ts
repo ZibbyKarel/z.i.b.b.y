@@ -20,14 +20,15 @@ import type { IconName, OrbState } from "@zibby/design-system";
 
 /** English `SubsystemState` (contracts) → immersive `OrbState` (DS).
  *
- * The contract's four states don't cover the DS `incident`/`thinking` orb
- * states — those belong to the core orb and to a subsystem state ZIBBY doesn't
- * model yet, so nothing maps onto them here. */
+ * `error` maps to the DS `incident` state — a failed owned run, distinct from
+ * a successful `report`. `thinking` has no subsystem equivalent; it belongs
+ * to the core orb only. */
 export const SUBSYSTEM_ORB_STATE: Record<SubsystemState, OrbState> = {
   idle: "idle",
   running: "working",
   report: "report",
   waiting: "await",
+  error: "incident",
 };
 
 /** One glyph per subsystem identity — verified present in the DS icon set

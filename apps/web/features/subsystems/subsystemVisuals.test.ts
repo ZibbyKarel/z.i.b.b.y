@@ -29,6 +29,6 @@ describe("subsystemVisuals", () => {
     const live = SubsystemStateSchema.options.filter(
       (state) => ORB_STATE[SUBSYSTEM_ORB_STATE[state]].live,
     );
-    expect(live).toEqual(["running", "report", "waiting"]);
+    expect(live).toEqual(["running", "report", "waiting", "error"]);
   });
 });

@@ -40,6 +40,7 @@ const subsystem = {
   state: "idle" as const,
   tier2Count: 0,
   tier3Count: 0,
+  errorCount: 0,
 };
 
 const allowRule: GlobalGateRule = {
@@ -187,8 +188,18 @@ describe("GatesTab (Phase 87)", () => {
 
   it("lists every policy-bearing project at once — not just one", () => {
     hooks.projects = [
-      { id: "acme", name: "Acme Corp", path: "/repo/acme", autonomy_policy: { can_do_alone: ["reply"] } },
-      { id: "beta", name: "Beta Inc", path: "/repo/beta", autonomy_policy: { always_ask: ["merge"] } },
+      {
+        id: "acme",
+        name: "Acme Corp",
+        path: "/repo/acme",
+        autonomy_policy: { can_do_alone: ["reply"] },
+      },
+      {
+        id: "beta",
+        name: "Beta Inc",
+        path: "/repo/beta",
+        autonomy_policy: { always_ask: ["merge"] },
+      },
     ];
     hooks.rules = { data: [], isPending: false, isError: false, refetch: vi.fn() };
 

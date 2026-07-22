@@ -33,6 +33,7 @@ const ROSTER: SubsystemWithStatus[] = SUBSYSTEMS.map((s) => ({
   ...s,
   state: SAMPLE_STATES[s.id] ?? "idle",
   tier2Count: 0,
+  errorCount: 0,
   tier3Count: 0,
 }));
 

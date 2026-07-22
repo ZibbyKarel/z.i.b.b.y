@@ -57,6 +57,7 @@ function fixture(overrides: Partial<SubsystemWithStatus> = {}): SubsystemWithSta
     state: "idle",
     tier2Count: 0,
     tier3Count: 0,
+    errorCount: 0,
     ...overrides,
   };
 }

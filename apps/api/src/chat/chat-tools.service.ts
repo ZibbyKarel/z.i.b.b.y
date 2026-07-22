@@ -63,6 +63,7 @@ const SUBSYSTEM_STATE_LABEL: Record<SubsystemState, string> = {
   running: "právě pracuje",
   report: "má nové reporty",
   waiting: "čeká na tvé rozhodnutí",
+  error: "má chybu",
 };
 
 /**
