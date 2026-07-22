@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { ConfirmDeleteDialog } from "../../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import { EmptyState } from "../../../components/EmptyState/EmptyState";
+import { useAgentsQuery } from "../../agents/queries";
 import { usePipelinesQuery } from "../../pipelines";
 import { useSubsystemsQuery } from "../../subsystems/queries";
 import {
@@ -55,6 +56,14 @@ export function HandoffRulesSection({
   const tk = useTranslations();
   const { data: subsystems = [] } = useSubsystemsQuery();
   const { data: pipelines = [] } = usePipelinesQuery();
+  const { data: agents = [] } = useAgentsQuery();
+
+  // Subsystem ids that own ≥1 pipeline or ≥1 agent — the server hard-fails
+  // dispatch to a subsystem with an empty roster (`SubsystemEmptyRosterError`
+  // in `resolveSubsystemTarget`), so the target dropdown mirrors that rule.
+  const receiverSubsystemIds: string[] = [
+    ...new Set([...pipelines, ...agents].map((x) => x.ownerSubsystem).filter(Boolean) as string[]),
+  ];
 
   const create = useCreateHandoffRuleMutation();
   const update = useUpdateHandoffRuleMutation();
@@ -93,6 +102,7 @@ export function HandoffRulesSection({
                 onSave={save}
                 pending={create.isPending || update.isPending}
                 pipelines={pipelines}
+                receiverSubsystemIds={receiverSubsystemIds}
                 subsystemName={subsystemName}
                 subsystems={subsystems}
               />
@@ -118,6 +128,7 @@ export function HandoffRulesSection({
           onSave={save}
           pending={create.isPending || update.isPending}
           pipelines={pipelines}
+          receiverSubsystemIds={receiverSubsystemIds}
           subsystemName={subsystemName}
           subsystems={subsystems}
         />

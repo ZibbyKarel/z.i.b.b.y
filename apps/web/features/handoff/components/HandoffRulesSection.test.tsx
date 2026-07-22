@@ -1,7 +1,8 @@
 import type { HandoffRule } from "@zibby/contracts";
+import { DropdownTestId } from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { renderWithProviders as render, screen } from "../../../test/render";
+import { renderWithProviders as render, screen, within } from "../../../test/render";
 import { HandoffRuleEditorTestId } from "./HandoffRuleEditor";
 import { HandoffRuleRowTestId } from "./HandoffRuleRow";
 import { HandoffRulesSection } from "./HandoffRulesSection";
@@ -9,7 +10,8 @@ import { HandoffRulesSection } from "./HandoffRulesSection";
 const { hooks } = vi.hoisted(() => ({
   hooks: {
     subsystems: [] as { id: string; name: string }[],
-    pipelines: [] as { id: string; name: string }[],
+    pipelines: [] as { id: string; name: string; ownerSubsystem?: string }[],
+    agents: [] as { id: string; ownerSubsystem?: string }[],
     create: vi.fn(),
     update: vi.fn(),
     remove: vi.fn(),
@@ -26,6 +28,9 @@ vi.mock("../../subsystems/queries", () => ({
 }));
 vi.mock("../../pipelines", () => ({
   usePipelinesQuery: () => ({ data: hooks.pipelines }),
+}));
+vi.mock("../../agents/queries", () => ({
+  useAgentsQuery: () => ({ data: hooks.agents }),
 }));
 
 const userRule: HandoffRule = {
@@ -55,6 +60,7 @@ describe("HandoffRulesSection (P2)", () => {
       { id: "sentinel", name: "Sentinel" },
     ];
     hooks.pipelines = [{ id: "hotfix", name: "Hotfix" }];
+    hooks.agents = [];
     hooks.create.mockClear();
     hooks.update.mockClear();
     hooks.remove.mockClear();
@@ -97,6 +103,22 @@ describe("HandoffRulesSection (P2)", () => {
     render(<HandoffRulesSection fromSubsystemId="forge" rules={[]} subsystemName="Forge" />);
     await userEvent.click(screen.getByRole("button", { name: "Přidat pravidlo" }));
     expect(screen.getByTestId(HandoffRuleEditorTestId.Root)).toBeInTheDocument();
+  });
+
+  it("computes receiverSubsystemIds from pipelines+agents' ownerSubsystem and keeps a non-receiver subsystem out of the target dropdown", async () => {
+    // "sentinel" owns neither a pipeline nor an agent — only "forge" (via the
+    // pipeline) qualifies as a receiver, mirroring the server's
+    // `resolveSubsystemTarget` roster check.
+    hooks.pipelines = [{ id: "hotfix", name: "Hotfix", ownerSubsystem: "forge" }];
+    hooks.agents = [];
+    render(<HandoffRulesSection fromSubsystemId="forge" rules={[]} subsystemName="Forge" />);
+    await userEvent.click(screen.getByRole("button", { name: "Přidat pravidlo" }));
+
+    const wrapper = screen.getByTestId(HandoffRuleEditorTestId.Target);
+    await userEvent.click(within(wrapper).getByTestId(DropdownTestId.Trigger));
+    const panel = screen.getByTestId(DropdownTestId.Panel);
+    expect(within(panel).queryByText("Sentinel")).not.toBeInTheDocument();
+    expect(within(panel).getByText("Forge")).toBeInTheDocument();
   });
 
   it("toggling a rule fires the update mutation with the full rule minus id", async () => {

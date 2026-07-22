@@ -54,6 +54,11 @@ export interface HandoffRuleEditorProps {
   subsystemName: string;
   subsystems: { id: string; name: string }[];
   pipelines: { id: string; name: string }[];
+  /** Subsystem ids that own ≥1 pipeline or ≥1 agent — mirrors the server's
+   * `resolveSubsystemTarget`, which hard-fails dispatch to an empty-roster
+   * subsystem. Only NEW target selections are constrained to this set; see
+   * `currentTargetSubsystemId` below for the preserve-current guard. */
+  receiverSubsystemIds: string[];
   onCancel: () => void;
   onSave: (input: HandoffRuleInput) => void;
   /** True while the save mutation is in flight. */
@@ -73,6 +78,7 @@ export function HandoffRuleEditor({
   subsystemName,
   subsystems,
   pipelines,
+  receiverSubsystemIds,
   onCancel,
   onSave,
   pending = false,
@@ -113,8 +119,17 @@ export function HandoffRuleEditor({
     ...SEVERITIES.map((s) => ({ value: s, label: t(`severity.${s}`) })),
   ];
 
+  // A subsystem with no pipeline and no agent hard-fails dispatch server-side
+  // (`SubsystemEmptyRosterError` in `resolveSubsystemTarget`) — restrict new
+  // selections to receivers, but never silently drop the currently-stored
+  // target of a rule being edited (stale rule / roster changed since authoring).
+  const currentTargetSubsystemId = initial?.to.kind === "subsystem" ? initial.to.id : undefined;
+  const visibleSubsystems = subsystems.filter(
+    (s) => receiverSubsystemIds.includes(s.id) || s.id === currentTargetSubsystemId,
+  );
+
   const targetOptions: DropdownOption[] = [
-    ...subsystems.map((s) => ({
+    ...visibleSubsystems.map((s) => ({
       value: encodeTarget("subsystem", s.id),
       label: s.name,
       description: t("editor.targetKindSubsystem"),
