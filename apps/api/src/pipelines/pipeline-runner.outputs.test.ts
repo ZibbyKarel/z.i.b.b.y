@@ -35,6 +35,7 @@ interface Doubles {
   };
   vault: { createNote: ReturnType<typeof vi.fn>; updateNote: ReturnType<typeof vi.fn> };
   artifacts: { record: ReturnType<typeof vi.fn> };
+  handoff: { evaluate: ReturnType<typeof vi.fn> };
   registered: Map<string, ResumableRunner>;
 }
 
@@ -62,6 +63,13 @@ async function makeService(
   };
   // N2a: the durable artifact registry — a delivered sink writes one record.
   const artifacts = { record: vi.fn(async () => {}) };
+  // A3: fake HandoffService — a Scout-owned pipeline's delivery also emits a
+  // research-artifact signal (recordArtifact). Resolved lazily via ModuleRef
+  // (not constructor-injected — see pipeline-runner.service.ts's doc comment),
+  // so the double passed to the constructor below is a ModuleRef whose `.get()`
+  // hands back this same fake, letting assertions still read `d.handoff.evaluate`.
+  const handoff = { evaluate: vi.fn(async () => ({ action: "none" })) };
+  const moduleRef = { get: vi.fn(() => handoff) };
   const service = new PipelineRunnerService(
     dir,
     { get: vi.fn(async () => pipeline) } as never,
@@ -89,6 +97,7 @@ async function makeService(
     // ProjectLocalService double (Phase 77): unused here since `projects.get`
     // always resolves null, so the git-worktree/clone-if-missing branch never runs.
     {} as never,
+    moduleRef as never,
   );
   (service as unknown as { core: { init: () => void; shutdown: () => void } }).core = {
     init: vi.fn(),
@@ -96,7 +105,7 @@ async function makeService(
   } as never;
   // Registers the pipeline-output (and pipeline-stage) resumable runners.
   await service.onModuleInit();
-  return { service, d: { pipeline, approvals, workspace, vault, artifacts, registered } };
+  return { service, d: { pipeline, approvals, workspace, vault, artifacts, handoff, registered } };
 }
 
 /** Seed a run aggregate plus the on-disk artifacts its phases "produced". */
@@ -198,6 +207,8 @@ describe("PipelineRunnerService — output sinks", () => {
         producedBy: expect.objectContaining({ runRef: RUN_ID, pipelineId: "audit" }),
       }),
     );
+    // A3: a non-Scout pipeline (no ownerSubsystem) never emits a handoff signal.
+    expect(d.handoff.evaluate).not.toHaveBeenCalled();
   });
 
   it("file sink → vault: a FAILED delivery records no artifact", async () => {
@@ -437,5 +448,67 @@ describe("PipelineRunnerService — output sinks", () => {
     expect(d.workspace.openPr).toHaveBeenCalledWith(
       expect.objectContaining({ cwd: wt, draft: true }),
     );
+  });
+
+  describe("A3 — Scout-owned pipelines hand off a research-artifact signal", () => {
+    it("a Scout-owned pipeline's delivered artifact emits a research-artifact signal", async () => {
+      const pipeline: Pipeline = {
+        id: "scout-brief",
+        ownerSubsystem: "scout",
+        phases: [docPhase],
+        outputs: [{ type: "file", from: "docs.md", dest: "vault", to: "scout-brief-2026" }],
+        instructions: "x",
+      };
+      const { service, d } = await makeService(dir, pipeline);
+      const run = await seedRun(service, dir, pipeline, {
+        a: { phaseId: "dok", file: "docs.md", content: "# Research\n\nFindings." },
+      });
+
+      await runOutputs(service, run, pipeline);
+
+      expect(d.handoff.evaluate).toHaveBeenCalledTimes(1);
+      expect(d.handoff.evaluate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          from: "scout",
+          kind: "research-artifact",
+          fingerprint: `${RUN_ID}_vault-note_docs-md`,
+        }),
+      );
+    });
+
+    it("a non-Scout pipeline (ownerSubsystem unset) never emits a handoff signal", async () => {
+      const pipeline: Pipeline = {
+        id: "audit",
+        phases: [docPhase],
+        outputs: [{ type: "file", from: "docs.md", dest: "vault", to: "audit-note" }],
+        instructions: "x",
+      };
+      const { service, d } = await makeService(dir, pipeline);
+      const run = await seedRun(service, dir, pipeline, {
+        a: { phaseId: "dok", file: "docs.md", content: "body" },
+      });
+
+      await runOutputs(service, run, pipeline);
+
+      expect(d.handoff.evaluate).not.toHaveBeenCalled();
+    });
+
+    it("a non-Scout ownerSubsystem (e.g. forge) never emits a handoff signal either", async () => {
+      const pipeline: Pipeline = {
+        id: "forge-build",
+        ownerSubsystem: "forge",
+        phases: [docPhase],
+        outputs: [{ type: "file", from: "docs.md", dest: "vault", to: "forge-note" }],
+        instructions: "x",
+      };
+      const { service, d } = await makeService(dir, pipeline);
+      const run = await seedRun(service, dir, pipeline, {
+        a: { phaseId: "dok", file: "docs.md", content: "body" },
+      });
+
+      await runOutputs(service, run, pipeline);
+
+      expect(d.handoff.evaluate).not.toHaveBeenCalled();
+    });
   });
 });

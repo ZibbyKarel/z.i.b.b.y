@@ -2,8 +2,9 @@ import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Injectable, Optional } from "@nestjs/common";
-import type { Project } from "@zibby/contracts";
+import type { HandoffSeverity, HandoffSignal, Project } from "@zibby/contracts";
 import { CredentialsStore } from "../integrations/credentials.store";
+import { HandoffService } from "../handoff/handoff.service";
 import { subsystemShelfId } from "../memory/subsystem-shelf";
 import { VaultService } from "../memory/vault.service";
 import { resolveGithubToken } from "../projects/project-pr.service";
@@ -12,7 +13,6 @@ import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ResolvedProjectService } from "../projects/resolved-project.service";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
-import { TaskSchedulerService } from "../tasks/task-scheduler.service";
 import { SubsystemFindingsStore } from "../subsystems/subsystem-findings.store";
 
 const GITHUB_API = "https://api.github.com";
@@ -105,6 +105,19 @@ function sha1(input: string): string {
   return createHash("sha1").update(input).digest("hex").slice(0, 16);
 }
 
+/**
+ * GitHub Dependabot severities → the handoff ladder. Behavior-critical: an
+ * unknown/absent severity falls back to `"low"` (never `"critical"`), so the
+ * seed rule's `minSeverity: "critical"` keeps rejecting it — preserving
+ * today's exact dispatch set (only `severity === "critical"` fires).
+ */
+const SEVERITY_MAP: Record<string, HandoffSeverity> = {
+  low: "low",
+  moderate: "moderate",
+  high: "high",
+  critical: "critical",
+};
+
 /** One human line for the vault note / briefing — never the matched secret text. */
 function toFindingLine(finding: SentinelFinding): string {
   if (finding.kind === "cve") {
@@ -122,12 +135,15 @@ function toFindingLine(finding: SentinelFinding): string {
  * alerts over REST (the token-resolution seam `ProjectPrService` already
  * uses) plus a bounded secret-pattern scan over the local clone. Findings are
  * a vault-note proposal (gap-detector's pattern) filed onto Sentinel's shelf
- * and read back for the briefing; a NEW critical CVE additionally dispatches
- * a gated fix task through the ordinary scheduler — it still ends at the PR
- * gate, same as every other autonomous fix. Fail-open everywhere: a missing
- * github link, a 403/404/429 from Dependabot, or a project with no local
- * clone all read as "nothing to show", never a thrown error out of the
- * scheduler's tick.
+ * and read back for the briefing; every NEW finding is ALSO normalized into a
+ * {@link HandoffSignal} and routed through the {@link HandoffService} rule
+ * engine (A3) — a critical CVE still ends up dispatching a gated fix task
+ * through the ordinary scheduler (it still ends at the PR gate, same as every
+ * other autonomous fix), now because the seed rule's `minSeverity: "critical"`
+ * says so, not a hard-coded `if`; a secret finding matches no seed rule and
+ * never dispatches. Fail-open everywhere: a missing github link, a
+ * 403/404/429 from Dependabot, or a project with no local clone all read as
+ * "nothing to show", never a thrown error out of the scheduler's tick.
  */
 @Injectable()
 export class SentinelService {
@@ -140,7 +156,7 @@ export class SentinelService {
     private readonly credentials: CredentialsStore,
     private readonly projectLocal: ProjectLocalService,
     private readonly vault: VaultService,
-    private readonly taskScheduler: TaskSchedulerService,
+    private readonly handoff: HandoffService,
     private readonly activity: ActivityLogService,
     private readonly findingsStore: SubsystemFindingsStore,
     logger: LoggerService,
@@ -201,29 +217,16 @@ export class SentinelService {
     });
 
     for (const finding of newFindings) {
-      if (finding.kind !== "cve" || finding.severity !== "critical") continue;
       try {
-        await this.taskScheduler.createTask(
-          {
-            title: `Sentinel: kritická zranitelnost ${finding.package ?? finding.repo}`,
-            text: [
-              finding.summary ?? "Kritická CVE nalezena.",
-              "",
-              `Repo: ${finding.repo}`,
-              `Balíček: ${finding.package ?? "?"} (${finding.cveId ?? "CVE"})`,
-              "",
-              "Připrav opravu na vlastní větvi. Nepushuj ani nemerguj — brána je PR.",
-            ].join("\n"),
-            paths: [],
-          },
-          Date.now(),
-          finding.projectId,
-        );
+        // The handoff engine decides tier/dispatch from the rule table — a secret
+        // signal matches no seed rule (`{ action: "none" }`), same as today; a
+        // non-critical CVE is gated out by the seed rule's `minSeverity: "critical"`.
+        await this.handoff.evaluate(this.toSignal(finding));
       } catch (err) {
-        // A leaked secret never dispatches (operator-manual, needs-you text only —
-        // enforced by the `finding.kind !== "cve"` guard above). A failed CVE
-        // dispatch leaves the finding in the note; the next scan retries it.
-        this.log.warn("sentinel: gated task dispatch failed — finding stays for retry", {
+        // Belt-and-suspenders: `evaluate` is itself fail-open and never throws, but
+        // the scan tick must survive regardless. A failed handoff leaves the
+        // finding in the note; the next scan retries it (same fingerprint).
+        this.log.warn("sentinel: handoff evaluate failed — finding stays for retry", {
           fingerprint: finding.fingerprint,
           error: String(err),
         });
@@ -231,6 +234,41 @@ export class SentinelService {
     }
 
     return { findings };
+  }
+
+  /**
+   * Normalize one finding into the handoff engine's signal shape. CVE text is
+   * the exact title/body the old hard-coded dispatch built (Behavior preserved:
+   * only the tier/rule table now decides whether it fires). A secret finding's
+   * body is `toFindingLine` — NEVER the matched secret value.
+   */
+  private toSignal(f: SentinelFinding): HandoffSignal {
+    if (f.kind === "cve") {
+      return {
+        from: "sentinel",
+        kind: "cve",
+        severity: SEVERITY_MAP[f.severity] ?? "low",
+        projectId: f.projectId,
+        title: `Sentinel: kritická zranitelnost ${f.package ?? f.repo}`,
+        body: [
+          f.summary ?? "Kritická CVE nalezena.",
+          "",
+          `Repo: ${f.repo}`,
+          `Balíček: ${f.package ?? "?"} (${f.cveId ?? "CVE"})`,
+          "",
+          "Připrav opravu na vlastní větvi. Nepushuj ani nemerguj — brána je PR.",
+        ].join("\n"),
+        fingerprint: f.fingerprint,
+      };
+    }
+    return {
+      from: "sentinel",
+      kind: "secret",
+      projectId: f.projectId,
+      title: `Sentinel: možný únik tajemství v ${f.projectName}`,
+      body: toFindingLine(f),
+      fingerprint: f.fingerprint,
+    };
   }
 
   /** Read the latest security findings from the vault (for the briefing). */

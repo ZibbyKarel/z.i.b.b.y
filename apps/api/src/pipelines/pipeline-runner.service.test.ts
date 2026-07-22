@@ -139,6 +139,13 @@ async function makeHarness(dir: string): Promise<Harness> {
     // resolves null, so the git-worktree/clone-if-missing branch never runs — see
     // pipeline-runner.project-local.test.ts for its dedicated dispatch coverage.
     { resolveForRun: vi.fn() } as never,
+    // A3: fake ModuleRef — HandoffService is resolved lazily (not constructor-
+    // injected, see pipeline-runner.service.ts's doc comment), so the double here
+    // is a ModuleRef whose `.get()` hands back a fake HandoffService. This
+    // harness's fixture pipeline carries no ownerSubsystem, so recordArtifact
+    // never calls `.get()` at all; see pipeline-runner.outputs.test.ts for the
+    // Scout-owned dispatch coverage.
+    { get: vi.fn(() => ({ evaluate: vi.fn(async () => ({ action: "none" })) })) } as never,
   );
 
   // Swap the real core (which spawns processes) for a scriptable double.

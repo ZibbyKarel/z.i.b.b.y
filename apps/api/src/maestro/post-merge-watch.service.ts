@@ -1,13 +1,13 @@
 import { Injectable, Optional } from "@nestjs/common";
 import type { MergeWatch } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
+import { HandoffService } from "../handoff/handoff.service";
 import { CredentialsStore } from "../integrations/credentials.store";
 import { MonitorEventStore } from "../monitors/monitor-event.store";
 import { resolveGithubToken } from "../projects/project-pr.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ResolvedProjectService } from "../projects/resolved-project.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
-import { TaskSchedulerService } from "../tasks/task-scheduler.service";
 import { MergeWatchStore } from "./merge-watch.store";
 
 const GITHUB_API = "https://api.github.com";
@@ -38,16 +38,18 @@ function rollupCheckState(runs: GitHubCheckRun[]): CiRollup {
  *
  * - past deadline → `expired` (CI never confirmed in time — recorded, no task).
  * - CI passing → `green` (silent Tier-1, celebrated only in the briefing).
- * - CI failing → a gated fix task dispatched through the ordinary scheduler
- *   (Tier-2 act-then-report, ends at the structural PR gate like any other run) —
- *   `red`, `taskId` linked.
+ * - CI failing → a `post-merge-red` signal handed to the {@link HandoffService}
+ *   rule engine (A3) — the seed rule still dispatches a gated fix task through
+ *   the ordinary scheduler (Tier-2 act-then-report, ends at the structural PR
+ *   gate like any other run) — `red`, `taskId` linked when a task dispatched.
  * - CI pending/unknown → `attempts` increments, stays `watching` for the next tick.
  *
  * **This service performs NO merge, push, or deploy call of any kind** — it only
- * reads GitHub check-runs and dispatches a task through `TaskSchedulerService`,
- * exactly the monitor watcher's tier path. Per-watch try/catch: one failing watch
- * never blocks the others, and a failed dispatch leaves the watch `watching` for
- * the next tick (never lost).
+ * reads GitHub check-runs and hands a signal to `HandoffService`, exactly the
+ * monitor watcher's tier path. Per-watch try/catch: one failing watch never
+ * blocks the others, and a signal that doesn't dispatch (`evaluate` is
+ * fail-open — `{ action: "none" }`) leaves the watch `watching` for the next
+ * tick (never lost).
  */
 @Injectable()
 export class PostMergeWatchService {
@@ -60,7 +62,7 @@ export class PostMergeWatchService {
     private readonly resolvedProjects: ResolvedProjectService,
     private readonly credentials: CredentialsStore,
     private readonly monitorEvents: MonitorEventStore,
-    private readonly scheduler: TaskSchedulerService,
+    private readonly handoff: HandoffService,
     private readonly activity: ActivityLogService,
     logger: LoggerService,
     @Optional() fetchImpl?: typeof fetch,
@@ -162,28 +164,37 @@ export class PostMergeWatchService {
     }
   }
 
-  /** Dispatch the gated fix task on a red verdict — the tier path, never a merge/push. */
+  /**
+   * Hand a `post-merge-red` signal to the handoff rule engine on a red verdict
+   * — the tier path, never a merge/push directly. `evaluate` is fail-open: a
+   * dispatch failure (or no matching rule) resolves to `{ action: "none" }`,
+   * not a throw, so the try/catch here is belt-and-suspenders.
+   */
   private async dispatchFix(watch: MergeWatch): Promise<boolean> {
     try {
-      const result = await this.scheduler.createTask(
-        {
-          title: `Post-merge red: #${watch.prNumber}`,
-          text: `The target branch's CI failed after merging PR #${watch.prNumber} (${watch.prTitle}) in ${watch.repo} at sha ${watch.sha}.\n\nInvestigate the failing CI run and prepare a fix on its own branch. Do not push or merge — the PR is the gate.`,
-          paths: [],
-        },
-        Date.now(),
-        watch.projectId,
-      );
-      const taskId = "task" in result ? result.task.id : undefined;
-      await this.store.patch(watch.id, { state: "red", ...(taskId ? { taskId } : {}) });
+      const outcome = await this.handoff.evaluate({
+        from: "maestro",
+        kind: "post-merge-red",
+        projectId: watch.projectId,
+        title: `Post-merge red: #${watch.prNumber}`,
+        body: `The target branch's CI failed after merging PR #${watch.prNumber} (${watch.prTitle}) in ${watch.repo} at sha ${watch.sha}.\n\nInvestigate the failing CI run and prepare a fix on its own branch. Do not push or merge — the PR is the gate.`,
+        fingerprint: `pm-red-${watch.id}`,
+      });
+      if (outcome.action !== "dispatched") {
+        // No rule matched / dispatch failed fail-open — mirror today's "dispatch
+        // failed → stays watching" behavior so the next tick retries.
+        this.log.warn("post-merge handoff did not dispatch — watch stays watching", {
+          id: watch.id,
+          outcome: outcome.action,
+        });
+        return false;
+      }
+      const taskId = outcome.runRef;
+      await this.store.patch(watch.id, { state: "red", taskId });
       void this.activity.record({
         kind: "post-merge-outcome",
         summary: `CI red after merge: PR #${watch.prNumber} in ${watch.repo} — fix task dispatched`,
-        refs: {
-          projectId: watch.projectId,
-          itemId: `pr-${watch.prNumber}`,
-          ...(taskId ? { taskId } : {}),
-        },
+        refs: { projectId: watch.projectId, itemId: `pr-${watch.prNumber}`, taskId },
       });
       return true;
     } catch (err) {
