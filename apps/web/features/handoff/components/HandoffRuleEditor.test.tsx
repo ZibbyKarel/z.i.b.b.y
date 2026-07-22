@@ -10,6 +10,7 @@ const subsystems = [
   { id: "sentinel", name: "Sentinel" },
 ];
 const pipelines = [{ id: "hotfix", name: "Hotfix" }];
+const receiverSubsystemIds = ["forge", "sentinel"];
 
 const existingRule: HandoffRule = {
   id: "hr-1",
@@ -38,6 +39,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
         onCancel={vi.fn()}
         onSave={vi.fn()}
         pipelines={pipelines}
+        receiverSubsystemIds={receiverSubsystemIds}
         subsystemName="Sentinel"
         subsystems={subsystems}
       />,
@@ -53,6 +55,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
         onCancel={vi.fn()}
         onSave={vi.fn()}
         pipelines={[]}
+        receiverSubsystemIds={[]}
         subsystemName="Sentinel"
         subsystems={[]}
       />,
@@ -68,6 +71,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
         onCancel={onCancel}
         onSave={vi.fn()}
         pipelines={pipelines}
+        receiverSubsystemIds={receiverSubsystemIds}
         subsystemName="Sentinel"
         subsystems={subsystems}
       />,
@@ -84,6 +88,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
         onCancel={vi.fn()}
         onSave={onSave}
         pipelines={pipelines}
+        receiverSubsystemIds={receiverSubsystemIds}
         subsystemName="Sentinel"
         subsystems={subsystems}
       />,
@@ -106,6 +111,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
         onCancel={vi.fn()}
         onSave={onSave}
         pipelines={pipelines}
+        receiverSubsystemIds={receiverSubsystemIds}
         subsystemName="Sentinel"
         subsystems={subsystems}
       />,
@@ -123,6 +129,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
         onCancel={vi.fn()}
         onSave={onSave}
         pipelines={pipelines}
+        receiverSubsystemIds={receiverSubsystemIds}
         subsystemName="Sentinel"
         subsystems={subsystems}
       />,
@@ -140,6 +147,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
         onCancel={vi.fn()}
         onSave={onSave}
         pipelines={pipelines}
+        receiverSubsystemIds={receiverSubsystemIds}
         subsystemName="Sentinel"
         subsystems={subsystems}
       />,
@@ -157,6 +165,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
         onCancel={vi.fn()}
         onSave={onSave}
         pipelines={pipelines}
+        receiverSubsystemIds={receiverSubsystemIds}
         subsystemName="Sentinel"
         subsystems={subsystems}
       />,
@@ -176,6 +185,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
         onCancel={vi.fn()}
         onSave={onSave}
         pipelines={pipelines}
+        receiverSubsystemIds={receiverSubsystemIds}
         subsystemName="Sentinel"
         subsystems={subsystems}
       />,
@@ -195,6 +205,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
         onCancel={vi.fn()}
         onSave={onSave}
         pipelines={pipelines}
+        receiverSubsystemIds={receiverSubsystemIds}
         subsystemName="Sentinel"
         subsystems={subsystems}
       />,
@@ -213,6 +224,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
         onCancel={vi.fn()}
         onSave={onSave}
         pipelines={pipelines}
+        receiverSubsystemIds={receiverSubsystemIds}
         subsystemName="Sentinel"
         subsystems={subsystems}
       />,
@@ -225,6 +237,83 @@ describe("HandoffRuleEditor (P2 inline)", () => {
       to: { kind: "subsystem", id: "forge" },
       tier: 2,
       enabled: true,
+    });
+  });
+
+  describe("receiver-scoped target (Slot A)", () => {
+    it("omits a subsystem with no pipeline/agent (not in receiverSubsystemIds) from the target dropdown", async () => {
+      render(
+        <HandoffRuleEditor
+          fromSubsystemId="sentinel"
+          onCancel={vi.fn()}
+          onSave={vi.fn()}
+          pipelines={pipelines}
+          receiverSubsystemIds={["forge"]}
+          subsystemName="Sentinel"
+          subsystems={subsystems}
+        />,
+      );
+      const wrapper = screen.getByTestId(HandoffRuleEditorTestId.Target);
+      await userEvent.click(within(wrapper).getByTestId(DropdownTestId.Trigger));
+      const panel = screen.getByTestId(DropdownTestId.Panel);
+      expect(within(panel).queryByText("Sentinel")).not.toBeInTheDocument();
+      expect(within(panel).getByText("Forge")).toBeInTheDocument();
+    });
+
+    it("includes a subsystem in receiverSubsystemIds in the target dropdown", async () => {
+      render(
+        <HandoffRuleEditor
+          fromSubsystemId="sentinel"
+          onCancel={vi.fn()}
+          onSave={vi.fn()}
+          pipelines={pipelines}
+          receiverSubsystemIds={["forge", "sentinel"]}
+          subsystemName="Sentinel"
+          subsystems={subsystems}
+        />,
+      );
+      const wrapper = screen.getByTestId(HandoffRuleEditorTestId.Target);
+      await userEvent.click(within(wrapper).getByTestId(DropdownTestId.Trigger));
+      const panel = screen.getByTestId(DropdownTestId.Panel);
+      expect(within(panel).getByText("Sentinel")).toBeInTheDocument();
+    });
+
+    it("always shows pipelines in the target dropdown regardless of receiverSubsystemIds", async () => {
+      render(
+        <HandoffRuleEditor
+          fromSubsystemId="sentinel"
+          onCancel={vi.fn()}
+          onSave={vi.fn()}
+          pipelines={pipelines}
+          receiverSubsystemIds={[]}
+          subsystemName="Sentinel"
+          subsystems={subsystems}
+        />,
+      );
+      const wrapper = screen.getByTestId(HandoffRuleEditorTestId.Target);
+      await userEvent.click(within(wrapper).getByTestId(DropdownTestId.Trigger));
+      const panel = screen.getByTestId(DropdownTestId.Panel);
+      expect(within(panel).getByText("Hotfix")).toBeInTheDocument();
+    });
+
+    it("preserves the currently-edited rule's non-receiver target subsystem as a visible, selected option", () => {
+      render(
+        <HandoffRuleEditor
+          fromSubsystemId="sentinel"
+          initial={existingRule}
+          onCancel={vi.fn()}
+          onSave={vi.fn()}
+          pipelines={pipelines}
+          receiverSubsystemIds={[]}
+          subsystemName="Sentinel"
+          subsystems={subsystems}
+        />,
+      );
+      // `existingRule.to` is `{ kind: "subsystem", id: "forge" }` — with an empty
+      // receiver set, "Forge" would otherwise be dropped, silently orphaning the
+      // rule's stored target. The closed trigger already shows the selected label.
+      const wrapper = screen.getByTestId(HandoffRuleEditorTestId.Target);
+      expect(within(wrapper).getByText("Forge")).toBeInTheDocument();
     });
   });
 });
