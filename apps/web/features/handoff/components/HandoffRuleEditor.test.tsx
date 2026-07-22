@@ -1,4 +1,4 @@
-import type { HandoffRule } from "@zibby/contracts";
+import type { HandoffRule, HandoffSignalKind } from "@zibby/contracts";
 import { DropdownTestId } from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -11,6 +11,52 @@ const subsystems = [
 ];
 const pipelines = [{ id: "hotfix", name: "Hotfix" }];
 const receiverSubsystemIds = ["forge", "sentinel"];
+
+const signalKinds: HandoffSignalKind[] = [
+  {
+    id: "cve",
+    from: "sentinel",
+    label: "Vulnerability (CVE)",
+    description: "A vulnerability found in a project dependency.",
+    severityBearing: true,
+    status: "builtin",
+    system: true,
+  },
+  {
+    id: "secret",
+    from: "sentinel",
+    label: "Leaked secret",
+    description: "A secret key or password leaked in code.",
+    severityBearing: true,
+    status: "builtin",
+    system: true,
+  },
+  {
+    id: "post-merge-red",
+    from: "maestro",
+    label: "Red CI after merge",
+    description: "CI failed after a PR was merged.",
+    severityBearing: true,
+    status: "builtin",
+    system: true,
+  },
+  {
+    id: "flaky-op-signal",
+    from: "sentinel",
+    label: "Flaky Op Signal",
+    description: "Operator-authored signal for sentinel.",
+    severityBearing: false,
+    status: "active",
+  },
+  {
+    id: "not-yet-emitted",
+    from: "sentinel",
+    label: "Not Yet Emitted",
+    description: "An operator-authored signal awaiting its producer.",
+    severityBearing: false,
+    status: "pending",
+  },
+];
 
 const existingRule: HandoffRule = {
   id: "hr-1",
@@ -40,6 +86,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
         onSave={vi.fn()}
         pipelines={pipelines}
         receiverSubsystemIds={receiverSubsystemIds}
+        signalKinds={signalKinds}
         subsystemName="Sentinel"
         subsystems={subsystems}
       />,
@@ -56,6 +103,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
         onSave={vi.fn()}
         pipelines={[]}
         receiverSubsystemIds={[]}
+        signalKinds={signalKinds}
         subsystemName="Sentinel"
         subsystems={[]}
       />,
@@ -72,6 +120,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
         onSave={vi.fn()}
         pipelines={pipelines}
         receiverSubsystemIds={receiverSubsystemIds}
+        signalKinds={signalKinds}
         subsystemName="Sentinel"
         subsystems={subsystems}
       />,
@@ -89,6 +138,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
         onSave={onSave}
         pipelines={pipelines}
         receiverSubsystemIds={receiverSubsystemIds}
+        signalKinds={signalKinds}
         subsystemName="Sentinel"
         subsystems={subsystems}
       />,
@@ -112,6 +162,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
         onSave={onSave}
         pipelines={pipelines}
         receiverSubsystemIds={receiverSubsystemIds}
+        signalKinds={signalKinds}
         subsystemName="Sentinel"
         subsystems={subsystems}
       />,
@@ -130,6 +181,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
         onSave={onSave}
         pipelines={pipelines}
         receiverSubsystemIds={receiverSubsystemIds}
+        signalKinds={signalKinds}
         subsystemName="Sentinel"
         subsystems={subsystems}
       />,
@@ -148,6 +200,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
         onSave={onSave}
         pipelines={pipelines}
         receiverSubsystemIds={receiverSubsystemIds}
+        signalKinds={signalKinds}
         subsystemName="Sentinel"
         subsystems={subsystems}
       />,
@@ -166,6 +219,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
         onSave={onSave}
         pipelines={pipelines}
         receiverSubsystemIds={receiverSubsystemIds}
+        signalKinds={signalKinds}
         subsystemName="Sentinel"
         subsystems={subsystems}
       />,
@@ -186,6 +240,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
         onSave={onSave}
         pipelines={pipelines}
         receiverSubsystemIds={receiverSubsystemIds}
+        signalKinds={signalKinds}
         subsystemName="Sentinel"
         subsystems={subsystems}
       />,
@@ -206,6 +261,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
         onSave={onSave}
         pipelines={pipelines}
         receiverSubsystemIds={receiverSubsystemIds}
+        signalKinds={signalKinds}
         subsystemName="Sentinel"
         subsystems={subsystems}
       />,
@@ -225,6 +281,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
         onSave={onSave}
         pipelines={pipelines}
         receiverSubsystemIds={receiverSubsystemIds}
+        signalKinds={signalKinds}
         subsystemName="Sentinel"
         subsystems={subsystems}
       />,
@@ -249,6 +306,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
           onSave={vi.fn()}
           pipelines={pipelines}
           receiverSubsystemIds={["forge"]}
+          signalKinds={signalKinds}
           subsystemName="Sentinel"
           subsystems={subsystems}
         />,
@@ -268,6 +326,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
           onSave={vi.fn()}
           pipelines={pipelines}
           receiverSubsystemIds={["forge", "sentinel"]}
+          signalKinds={signalKinds}
           subsystemName="Sentinel"
           subsystems={subsystems}
         />,
@@ -286,6 +345,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
           onSave={vi.fn()}
           pipelines={pipelines}
           receiverSubsystemIds={[]}
+          signalKinds={signalKinds}
           subsystemName="Sentinel"
           subsystems={subsystems}
         />,
@@ -305,6 +365,7 @@ describe("HandoffRuleEditor (P2 inline)", () => {
           onSave={vi.fn()}
           pipelines={pipelines}
           receiverSubsystemIds={[]}
+          signalKinds={signalKinds}
           subsystemName="Sentinel"
           subsystems={subsystems}
         />,
@@ -314,6 +375,94 @@ describe("HandoffRuleEditor (P2 inline)", () => {
       // rule's stored target. The closed trigger already shows the selected label.
       const wrapper = screen.getByTestId(HandoffRuleEditorTestId.Target);
       expect(within(wrapper).getByText("Forge")).toBeInTheDocument();
+    });
+  });
+
+  describe("registry-driven signal picker (Slot B2)", () => {
+    it("scopes the signal dropdown to kinds whose `from` matches fromSubsystemId, plus '*'", async () => {
+      render(
+        <HandoffRuleEditor
+          fromSubsystemId="sentinel"
+          onCancel={vi.fn()}
+          onSave={vi.fn()}
+          pipelines={pipelines}
+          receiverSubsystemIds={receiverSubsystemIds}
+          signalKinds={signalKinds}
+          subsystemName="Sentinel"
+          subsystems={subsystems}
+        />,
+      );
+      const wrapper = screen.getByTestId(HandoffRuleEditorTestId.SignalKind);
+      await userEvent.click(within(wrapper).getByTestId(DropdownTestId.Trigger));
+      const panel = screen.getByTestId(DropdownTestId.Panel);
+      expect(within(panel).getByText("Jakýkoli signál (∗)")).toBeInTheDocument();
+      expect(within(panel).getByText("Zranitelnost (CVE)")).toBeInTheDocument();
+      expect(within(panel).getByText("Únik tajného klíče")).toBeInTheDocument();
+      expect(within(panel).getByText("Flaky Op Signal")).toBeInTheDocument();
+      // "post-merge-red" is `from: "maestro"` — not sentinel's — so it's absent.
+      expect(within(panel).queryByText("Červené CI po merge")).not.toBeInTheDocument();
+    });
+
+    it("shows a built-in kind's localized t() label", async () => {
+      render(
+        <HandoffRuleEditor
+          fromSubsystemId="sentinel"
+          onCancel={vi.fn()}
+          onSave={vi.fn()}
+          pipelines={pipelines}
+          receiverSubsystemIds={receiverSubsystemIds}
+          signalKinds={signalKinds}
+          subsystemName="Sentinel"
+          subsystems={subsystems}
+        />,
+      );
+      const wrapper = screen.getByTestId(HandoffRuleEditorTestId.SignalKind);
+      await userEvent.click(within(wrapper).getByTestId(DropdownTestId.Trigger));
+      const panel = screen.getByTestId(DropdownTestId.Panel);
+      // "cve" is a built-in — the localized cs label, not its raw `label` field.
+      expect(within(panel).getByText("Zranitelnost (CVE)")).toBeInTheDocument();
+    });
+
+    it("shows an operator kind's stored label verbatim", async () => {
+      render(
+        <HandoffRuleEditor
+          fromSubsystemId="sentinel"
+          onCancel={vi.fn()}
+          onSave={vi.fn()}
+          pipelines={pipelines}
+          receiverSubsystemIds={receiverSubsystemIds}
+          signalKinds={signalKinds}
+          subsystemName="Sentinel"
+          subsystems={subsystems}
+        />,
+      );
+      const wrapper = screen.getByTestId(HandoffRuleEditorTestId.SignalKind);
+      await userEvent.click(within(wrapper).getByTestId(DropdownTestId.Trigger));
+      const panel = screen.getByTestId(DropdownTestId.Panel);
+      expect(within(panel).getByText("Flaky Op Signal")).toBeInTheDocument();
+    });
+
+    it("marks a pending kind with the pending-badge notice instead of its description", async () => {
+      render(
+        <HandoffRuleEditor
+          fromSubsystemId="sentinel"
+          onCancel={vi.fn()}
+          onSave={vi.fn()}
+          pipelines={pipelines}
+          receiverSubsystemIds={receiverSubsystemIds}
+          signalKinds={signalKinds}
+          subsystemName="Sentinel"
+          subsystems={subsystems}
+        />,
+      );
+      const wrapper = screen.getByTestId(HandoffRuleEditorTestId.SignalKind);
+      await userEvent.click(within(wrapper).getByTestId(DropdownTestId.Trigger));
+      const panel = screen.getByTestId(DropdownTestId.Panel);
+      expect(within(panel).getByText("Not Yet Emitted")).toBeInTheDocument();
+      expect(within(panel).getByText("čeká na producenta")).toBeInTheDocument();
+      expect(
+        within(panel).queryByText("An operator-authored signal awaiting its producer."),
+      ).not.toBeInTheDocument();
     });
   });
 });

@@ -14,6 +14,7 @@ import {
   useDeleteHandoffRuleMutation,
   useUpdateHandoffRuleMutation,
 } from "../mutations";
+import { useSignalKindsQuery } from "../queries";
 import { HandoffRuleEditor } from "./HandoffRuleEditor";
 import { HandoffRuleRow } from "./HandoffRuleRow";
 
@@ -57,6 +58,7 @@ export function HandoffRulesSection({
   const { data: subsystems = [] } = useSubsystemsQuery();
   const { data: pipelines = [] } = usePipelinesQuery();
   const { data: agents = [] } = useAgentsQuery();
+  const { data: signalKinds = [] } = useSignalKindsQuery();
 
   // Subsystem ids that own ≥1 pipeline or ≥1 agent — the server hard-fails
   // dispatch to a subsystem with an empty roster (`SubsystemEmptyRosterError`
@@ -103,6 +105,7 @@ export function HandoffRulesSection({
                 pending={create.isPending || update.isPending}
                 pipelines={pipelines}
                 receiverSubsystemIds={receiverSubsystemIds}
+                signalKinds={signalKinds}
                 subsystemName={subsystemName}
                 subsystems={subsystems}
               />
@@ -113,6 +116,7 @@ export function HandoffRulesSection({
                 onEdit={() => setEditing(rule)}
                 onToggle={() => toggle(rule)}
                 rule={rule}
+                signalKinds={signalKinds}
                 subsystemName={subsystemName}
                 targetLabel={resolveTargetLabel(rule.to, subsystems, pipelines)}
               />
@@ -129,6 +133,7 @@ export function HandoffRulesSection({
           pending={create.isPending || update.isPending}
           pipelines={pipelines}
           receiverSubsystemIds={receiverSubsystemIds}
+          signalKinds={signalKinds}
           subsystemName={subsystemName}
           subsystems={subsystems}
         />

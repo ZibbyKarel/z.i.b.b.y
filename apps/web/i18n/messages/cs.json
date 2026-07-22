@@ -1895,7 +1895,8 @@
         "god-node": "Uzel-bůh v grafu",
         "community": "Komunita v grafu",
         "cycle": "Cyklus závislostí",
-        "research-artifact": "Výsledek rešerše"
+        "research-artifact": "Výsledek rešerše",
+        "pendingBadge": "čeká na producenta"
       },
       "signalKindDesc": {
         "cve": "Zranitelnost nalezená v závislosti projektu.",
