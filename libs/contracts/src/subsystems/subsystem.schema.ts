@@ -163,7 +163,7 @@ export type SubsystemWithStatus = z.infer<typeof SubsystemWithStatusSchema>;
  * it in F1a. There is no standalone monitor entity (a monitor is a ci-stream
  * GitHub integration), so monitor ownership is covered by `"integration"`.
  */
-export const OwnableEntityKindSchema = z.enum(["pipeline", "chain", "agent", "integration"]);
+export const OwnableEntityKindSchema = z.enum(["pipeline", "agent", "integration"]);
 export type OwnableEntityKind = z.infer<typeof OwnableEntityKindSchema>;
 
 /**

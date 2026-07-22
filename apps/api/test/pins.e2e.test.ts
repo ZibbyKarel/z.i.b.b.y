@@ -49,7 +49,7 @@ describe("Pins API (e2e)", () => {
 
     const pins = [
       { kind: "agent", id: "researcher" },
-      { kind: "chain", id: "research-then-build" },
+      { kind: "pipeline", id: "research-then-build" },
     ];
     const put = await request(app.getHttpServer()).put("/api/pins").send(pins);
     expect(put.status).toBe(200);

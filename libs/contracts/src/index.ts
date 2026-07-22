@@ -29,8 +29,6 @@ export * from "./approvals/approval.schema";
 export * from "./approvals/approvals.contract";
 export * from "./artifacts/artifact.schema";
 export * from "./artifacts/artifacts.contract";
-export * from "./chains/chain.schema";
-export * from "./chains/chains.contract";
 export * from "./handoff/handoff.schema";
 export * from "./handoff/handoff.contract";
 export * from "./gates/gate.schema";

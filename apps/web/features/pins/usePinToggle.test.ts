@@ -41,12 +41,12 @@ describe("usePinToggle", () => {
   it("toggling a pinned target removes it from the mutated list", () => {
     hooks.pins = [
       { kind: "agent", id: "researcher" },
-      { kind: "chain", id: "research-then-build" },
+      { kind: "pipeline", id: "research-then-build" },
     ];
     const { result } = renderHook(() => usePinToggle());
     result.current.toggle("agent", "researcher");
     expect(hooks.mutate).toHaveBeenCalledWith({
-      body: [{ kind: "chain", id: "research-then-build" }],
+      body: [{ kind: "pipeline", id: "research-then-build" }],
     });
   });
 });

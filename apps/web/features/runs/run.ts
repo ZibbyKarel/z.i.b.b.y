@@ -34,17 +34,14 @@ export type FeedStatus = TaskRunStatus;
  */
 export function findSelectedRun(list: readonly RunView[], selId: string | null): RunView | null {
   return (
-    list.find((r) => r.runId === selId || (selId != null && r.taskId === selId)) ??
-    list[0] ??
-    null
+    list.find((r) => r.runId === selId || (selId != null && r.taskId === selId)) ?? list[0] ?? null
   );
 }
 
 /**
  * Kinds whose run owns a single live process the backend can actually kill (Phase
- * 43 — `stopTaskRun` generalized past agent-only). A chain run orchestrates a
- * sequence of pipeline runs with no process of its own, and a `scheduled` row has
- * no run behind it yet — neither has anything to interrupt.
+ * 43 — `stopTaskRun` generalized past agent-only). A `scheduled` row has no run
+ * behind it yet — nothing to interrupt.
  */
 const STOPPABLE_KINDS = new Set<RunKind>(["agent", "pipeline", "goal"]);
 
@@ -257,7 +254,6 @@ const KIND_GLYPH: Record<RunKind, IconName> = {
   agent: "bot",
   pipeline: "flow",
   goal: "retry",
-  chain: "link",
   scheduled: "clock",
 };
 

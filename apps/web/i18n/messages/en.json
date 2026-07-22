@@ -16,8 +16,7 @@
     "companies": "Companies",
     "mcp": "MCP servers",
     "commands": "Commands",
-    "hooks": "Hooks",
-    "chains": "Chains"
+    "hooks": "Hooks"
   },
   "notifications": {
     "attention": "{count} items need attention"
@@ -201,7 +200,6 @@
           "agent": "agent",
           "pipeline": "pipeline",
           "goal": "goal loop",
-          "chain": "chain",
           "subsystem": "subsystem",
           "orchestrator": "orchestrator",
           "loop": "goal loop",
@@ -1104,7 +1102,6 @@
       "agent": "skill",
       "pipeline": "pipeline",
       "goal": "goal",
-      "chain": "chain",
       "scheduled": "scheduled task"
     },
     "parkedContext": "Parked — failure context",
@@ -1165,15 +1162,6 @@
     "stageRetryAttempt": "attempt {n}/{max}",
     "stageRetryLoopTo": "looped back to {phase}",
     "stageRetryEscalated": "retries exhausted → escalated → parked for morning review",
-    "chainSteps": "Chain steps",
-    "chainNoSteps": "This run has no steps yet.",
-    "chainStep": "step {n}",
-    "chainStepStatus": {
-      "pending": "pending",
-      "running": "running",
-      "done": "done",
-      "failed": "failed"
-    },
     "verdict": {
       "pass": "Approved",
       "gap": "Incomplete",
@@ -1840,7 +1828,7 @@
     "aktivita": {
       "allRuns": "All runs",
       "emptyTitle": "No activity yet",
-      "emptyDescription": "This subsystem hasn't run a pipeline or chain yet. Once it does, runs will show up here."
+      "emptyDescription": "This subsystem hasn't run a pipeline yet. Once it does, runs will show up here."
     },
     "gates": {
       "sentencePrefix": "Before {subject} does",
@@ -1909,45 +1897,7 @@
     "run": "Run",
     "unpinAria": "Unpin {name}",
     "kindAgent": "Agent",
-    "kindPipeline": "Pipeline",
-    "kindChain": "Chain"
-  },
-  "chains": {
-    "title": "Chains",
-    "countSummary": "{count, plural, =0 {no chains} one {# chain} other {# chains}}",
-    "addChain": "New chain",
-    "newTitle": "New chain",
-    "cancel": "Cancel",
-    "create": "Create",
-    "nameLabel": "Name",
-    "nameHint": "ID: {id}",
-    "namePlaceholder": "Research → Build",
-    "instructionsLabel": "Brief for the first step",
-    "instructionsHint": "Text the first pipeline receives as its input handoff.",
-    "instructionsPlaceholder": "Research topic X…",
-    "stepsLabel": "Steps (pipelines in order)",
-    "stepLabel": "Step {n}",
-    "addStep": "Add step",
-    "remove": "Remove",
-    "removeStep": "Remove step {n}",
-    "handoffHint": "Step N+1 receives the artifact step N delivered (vault note / project file) as its input.",
-    "emptyTitle": "No chains yet",
-    "emptyDescription": "A chain links pipelines in sequence — one step's delivered artifact becomes the next step's input.",
-    "emptyHint": "“Research topic X overnight, then build an app from the result.”",
-    "openChain": "Open chain {name}",
-    "stepsSummary": "{count, plural, one {# step} other {# steps}}",
-    "delete": "Delete",
-    "deleteTitle": "Delete the chain?",
-    "deleteBody": "Really delete chain {name}? This cannot be undone.",
-    "runChain": "Run chain",
-    "runsTitle": "Runs",
-    "noRuns": "This chain has not run yet.",
-    "state": {
-      "running": "running",
-      "parked": "parked",
-      "done": "done",
-      "failed": "failed"
-    }
+    "kindPipeline": "Pipeline"
   },
   "archive": {
     "title": "Task archive",

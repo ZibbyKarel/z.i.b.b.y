@@ -450,21 +450,6 @@ describe("RunDetail — worker name links to its detail (Phase 63)", () => {
     logBase: "agents",
   };
 
-  const chainRun: RunView = {
-    runId: "research-then-build_9",
-    kind: "chain",
-    owner: "research-then-build",
-    status: "running",
-    pct: null,
-    title: "",
-    prompt: "krok 1/2",
-    project: "",
-    startedAt: new Date("2026-07-02T08:00:00Z").toISOString(),
-    logBase: null,
-    chainId: "research-then-build",
-    steps: [{ index: 0, pipeline: "nightly-research", status: "pending" }],
-  };
-
   beforeEach(() => {
     push.mockClear();
   });
@@ -479,12 +464,6 @@ describe("RunDetail — worker name links to its detail (Phase 63)", () => {
     renderDetail(); // default pipelineRun: kind "pipeline", owner "delivery"
     await userEvent.click(screen.getByTestId("run-owner-link"));
     expect(push).toHaveBeenCalledWith("/pipelines/delivery");
-  });
-
-  it("keeps a chain run's owner meta cell as plain text — no detail route to link to", () => {
-    renderDetail(chainRun);
-    expect(screen.queryByTestId("run-owner-link")).not.toBeInTheDocument();
-    expect(screen.getByText("research-then-build")).toBeInTheDocument();
   });
 });
 

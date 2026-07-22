@@ -7,7 +7,6 @@ import { budgetContract } from "./budget/budget.contract";
 import { chatContract } from "./chat/chat.contract";
 import { approvalsContract } from "./approvals/approvals.contract";
 import { artifactsContract } from "./artifacts/artifacts.contract";
-import { chainRunsContract, chainsContract } from "./chains/chains.contract";
 import { gatesContract } from "./gates/gate.contract";
 import { gateRulesContract } from "./gates/gate-rules.contract";
 import { automationsContract } from "./automations/automations.contract";
@@ -68,8 +67,6 @@ export const appContract = c.router({
   goals: goalsContract,
   approvals: approvalsContract,
   artifacts: artifactsContract,
-  chains: chainsContract,
-  chainRuns: chainRunsContract,
   handoff: handoffContract,
   gates: gatesContract,
   gateRules: gateRulesContract,

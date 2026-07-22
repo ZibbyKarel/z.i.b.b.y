@@ -59,11 +59,11 @@ export function basename(path: string): string {
 }
 
 /**
- * A destination for a task — an agent, pipeline, goal, chain, a named subsystem
+ * A destination for a task — an agent, pipeline, goal, a named subsystem
  * (Phase 91, explicit-only — never emitted by the top-level classifier), or the
  * orchestrator fallback.
  */
-export type TaskTargetKind = "agent" | "pipeline" | "goal" | "chain" | "subsystem" | "orchestrator";
+export type TaskTargetKind = "agent" | "pipeline" | "goal" | "subsystem" | "orchestrator";
 
 /** A stable key for a target, used to pre-select and dedupe entries in the picker. */
 export function targetKey(target: TaskTarget): string {
@@ -93,8 +93,6 @@ export function toApiTarget(target: TaskTarget) {
       return { kind: "pipeline" as const, id: target.id, name, glyph, category };
     case "goal":
       return { kind: "goal" as const, id: target.id, name, glyph, category };
-    case "chain":
-      return { kind: "chain" as const, id: target.id, name, glyph, category };
     case "subsystem":
       return { kind: "subsystem" as const, id: target.id, name, glyph, category };
   }
@@ -109,14 +107,14 @@ interface TaskTargetDisplay {
 }
 
 /**
- * Mirrors the contract's discriminated union: agents/pipelines/goals/chains carry
+ * Mirrors the contract's discriminated union: agents/pipelines/goals carry
  * the filesystem-safe `id` of their stored definition, a subsystem (Phase 91)
  * carries the closed `SubsystemId` enum, and the orchestrator is synthetic (no
  * stored definition, no id) and exists in the UI purely as a name + glyph.
  *
  * Each `kind` is its OWN intersection member (not one shape with a unioned `kind`
  * property) — `TaskTargetDisplay & (A | B | …)` distributes the intersection over
- * the union, so this evaluates to a properly-discriminated 6-member union, exactly
+ * the union, so this evaluates to a properly-discriminated 5-member union, exactly
  * like the API's zod `discriminatedUnion`. That distribution matters: a single
  * shape with a *unioned* `kind` stops being assignable to the API's distributed
  * union once there are enough branches (see `toApiTarget`'s doc comment) — Phase
@@ -127,7 +125,6 @@ export type TaskTarget = TaskTargetDisplay &
     | { kind: "agent"; id: string }
     | { kind: "pipeline"; id: string }
     | { kind: "goal"; id: string }
-    | { kind: "chain"; id: string }
     | { kind: "subsystem"; id: SubsystemId }
     | { kind: "orchestrator" }
   );
@@ -176,7 +173,6 @@ const KIND_FALLBACK_GLYPH: Record<TaskTargetKind, IconName> = {
   agent: "bot",
   pipeline: "flow",
   goal: "retry",
-  chain: "link",
   subsystem: "grid",
   orchestrator: "compass",
 };
@@ -200,8 +196,6 @@ export function toClientTarget(target: ApiTaskTarget): TaskTarget {
       return { kind: "pipeline", id: target.id, ...display };
     case "goal":
       return { kind: "goal", id: target.id, ...display };
-    case "chain":
-      return { kind: "chain", id: target.id, ...display };
     case "subsystem":
       return { kind: "subsystem", id: target.id, ...display };
   }

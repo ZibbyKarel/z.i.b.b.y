@@ -16,8 +16,7 @@
     "companies": "Firmy",
     "mcp": "MCP servery",
     "commands": "Příkazy",
-    "hooks": "Hooky",
-    "chains": "Řetězce"
+    "hooks": "Hooky"
   },
   "notifications": {
     "attention": "{count} položek vyžaduje pozornost"
@@ -201,7 +200,6 @@
           "agent": "agent",
           "pipeline": "pipeline",
           "goal": "goal loop",
-          "chain": "chain",
           "subsystem": "podsystém",
           "orchestrator": "orchestrátor",
           "loop": "goal loop",
@@ -1104,7 +1102,6 @@
       "agent": "skill",
       "pipeline": "pipeline",
       "goal": "cíl",
-      "chain": "řetězec",
       "scheduled": "naplánovaný task"
     },
     "parkedContext": "Zaparkováno — kontext selhání",
@@ -1165,15 +1162,6 @@
     "stageRetryAttempt": "pokus {n}/{max}",
     "stageRetryLoopTo": "vráceno na {phase}",
     "stageRetryEscalated": "vyčerpány pokusy → eskalace → zaparkováno k ranní review",
-    "chainSteps": "Kroky řetězce",
-    "chainNoSteps": "Tento běh zatím nemá žádné kroky.",
-    "chainStep": "krok {n}",
-    "chainStepStatus": {
-      "pending": "čeká",
-      "running": "běží",
-      "done": "hotovo",
-      "failed": "selhalo"
-    },
     "verdict": {
       "pass": "Schváleno",
       "gap": "Chybí část",
@@ -1840,7 +1828,7 @@
     "aktivita": {
       "allRuns": "Všechny runy",
       "emptyTitle": "Zatím žádná aktivita",
-      "emptyDescription": "Tenhle podsystém ještě nespustil žádnou pipeline ani chain. Jakmile poběží, běhy se objeví tady."
+      "emptyDescription": "Tenhle podsystém ještě nespustil žádnou pipeline. Jakmile poběží, běhy se objeví tady."
     },
     "gates": {
       "sentencePrefix": "Než {subject} udělá",
@@ -1909,45 +1897,7 @@
     "run": "Spustit",
     "unpinAria": "Odepnout {name}",
     "kindAgent": "Agent",
-    "kindPipeline": "Pipeline",
-    "kindChain": "Řetězec"
-  },
-  "chains": {
-    "title": "Řetězce",
-    "countSummary": "{count, plural, =0 {žádný řetězec} one {# řetězec} few {# řetězce} other {# řetězců}}",
-    "addChain": "Nový řetězec",
-    "newTitle": "Nový řetězec",
-    "cancel": "Zrušit",
-    "create": "Vytvořit",
-    "nameLabel": "Název",
-    "nameHint": "ID: {id}",
-    "namePlaceholder": "Research → Build",
-    "instructionsLabel": "Zadání pro první krok",
-    "instructionsHint": "Text, který dostane první pipeline jako vstupní handoff.",
-    "instructionsPlaceholder": "Prozkoumej téma X…",
-    "stepsLabel": "Kroky (pipeline v pořadí)",
-    "stepLabel": "Krok {n}",
-    "addStep": "Přidat krok",
-    "remove": "Odebrat",
-    "removeStep": "Odebrat krok {n}",
-    "handoffHint": "Krok N+1 dostane jako vstup artefakt doručený krokem N (vault poznámka / soubor v projektu).",
-    "emptyTitle": "Zatím žádné řetězce",
-    "emptyDescription": "Řetězec spojí pipeline za sebe — výstupní artefakt jednoho kroku je vstupem dalšího.",
-    "emptyHint": "„Přes noc prozkoumej téma X, pak z výsledku postav aplikaci.“",
-    "openChain": "Otevřít řetězec {name}",
-    "stepsSummary": "{count, plural, one {# krok} few {# kroky} other {# kroků}}",
-    "delete": "Smazat",
-    "deleteTitle": "Smazat řetězec?",
-    "deleteBody": "Opravdu smazat řetězec {name}? Tuto akci nelze vrátit.",
-    "runChain": "Spustit řetězec",
-    "runsTitle": "Běhy",
-    "noRuns": "Tento řetězec zatím neběžel.",
-    "state": {
-      "running": "běží",
-      "parked": "zaparkováno",
-      "done": "hotovo",
-      "failed": "selhalo"
-    }
+    "kindPipeline": "Pipeline"
   },
   "archive": {
     "title": "Archiv úloh",
