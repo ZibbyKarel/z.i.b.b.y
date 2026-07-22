@@ -89,6 +89,13 @@ export const ActivityKindSchema = z.enum([
   // NS2 F7b-2. The merged sha's target-branch CI resolved (green: silent Tier-1;
   // red: a gated fix task dispatched, riding taskId) or the watch window expired.
   "post-merge-outcome",
+  // Handoff A2 (design doc `docs/superpowers/specs/2026-07-22-subsystem-handoff-
+  // design.md`, Part A.2). A Tier-2 `HandoffRule` matched a producer's signal and
+  // dispatched a task to the resolved target — act-then-report, riding `runRef`
+  // (and `ownerSubsystem` when the target is a named subsystem). Tier-1 dispatches
+  // silently (no entry); a Tier-3 match instead rides `approval-requested`
+  // (kind `handoff-proposal`) until the operator decides.
+  "handoff",
 ]);
 export type ActivityKind = z.infer<typeof ActivityKindSchema>;
 
