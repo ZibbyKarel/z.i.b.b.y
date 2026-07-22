@@ -7,7 +7,6 @@ import type { SearchHit, Skill } from "@zibby/contracts";
 import request from "supertest";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { AutomationsStorageService } from "../automations/automations.storage.service";
-import { ChainsStorageService } from "../chains/chains.storage.service";
 import { CommandsStorageService } from "../commands/commands.storage.service";
 import { CompaniesStorageService } from "../companies/companies.storage.service";
 import { GoalsStorageService } from "../goals/goals.storage.service";
@@ -49,7 +48,6 @@ describe("POST /api/memory/mcp", () => {
         { provide: HooksStorageService, useValue: { list: emptyList() } },
         { provide: ProjectsStorageService, useValue: { list: emptyList() } },
         { provide: CompaniesStorageService, useValue: { list: emptyList() } },
-        { provide: ChainsStorageService, useValue: { list: emptyList() } },
         { provide: IntegrationsStorageService, useValue: { list: emptyList() } },
         { provide: GoalsStorageService, useValue: { list: emptyList() } },
         { provide: AutomationsStorageService, useValue: { list: emptyList() } },
@@ -150,7 +148,10 @@ describe("POST /api/memory/mcp", () => {
     ]);
 
     const client = await connectClient();
-    const result = await client.callTool({ name: "recall_memory", arguments: { query: "calendar" } });
+    const result = await client.callTool({
+      name: "recall_memory",
+      arguments: { query: "calendar" },
+    });
     const text = firstTextContent(result);
     expect(text).toContain("Calendar integration");
     expect(text).toContain("service-account auth");

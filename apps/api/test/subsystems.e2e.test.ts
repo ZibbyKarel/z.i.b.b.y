@@ -13,7 +13,6 @@ const ISOLATED_ENV_VARS = [
   "AGENTS_DIR",
   "AGENT_RUNS_DIR",
   "PIPELINES_DIR",
-  "CHAINS_DIR",
   "INTEGRATIONS_DIR",
   "INTEGRATION_STATE_DIR",
   "CREDENTIALS_DIR",
@@ -21,7 +20,7 @@ const ISOLATED_ENV_VARS = [
 
 async function boot(): Promise<{ app: INestApplication; dir: string }> {
   // AppModule seeds several data dirs on init; isolate it so this suite never
-  // touches the real `apps/api/data`. NS2 F1b also isolates pipelines/chains/
+  // touches the real `apps/api/data`. NS2 F1b also isolates pipelines/
   // integrations (previously only agents was isolated) — the shared
   // `data-test/` seed root carries pipeline fixtures with ids the owner-seed
   // rule table doesn't recognize (by design — unrelated to production ids),
@@ -31,7 +30,6 @@ async function boot(): Promise<{ app: INestApplication; dir: string }> {
   process.env.AGENTS_DIR = path.join(dir, "agents");
   process.env.AGENT_RUNS_DIR = path.join(dir, "runs");
   process.env.PIPELINES_DIR = path.join(dir, "pipelines");
-  process.env.CHAINS_DIR = path.join(dir, "chains");
   process.env.INTEGRATIONS_DIR = path.join(dir, "integrations");
   process.env.INTEGRATION_STATE_DIR = path.join(dir, "integration-state");
   process.env.CREDENTIALS_DIR = path.join(dir, "credentials");

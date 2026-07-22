@@ -183,7 +183,7 @@ the queue to re-ingest.
 granted the seeded `zibby-entities` MCP server row:
 
 - `list_entities {kind, query?}` — structured, on-demand lookup over a named catalog
-  (`skills`, `mcp`, `commands`, `hooks`, `projects`, `companies`, `chains`,
+  (`skills`, `mcp`, `commands`, `hooks`, `projects`, `companies`,
   `integrations`, `goals`, `automations`), reduced to `{id, name?, description?}` and
   optionally filtered by a case-insensitive substring. Fail-open per catalog — a
   storage hiccup logs and returns `[]`.

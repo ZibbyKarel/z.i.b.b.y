@@ -429,16 +429,16 @@ export class TaskClassifierService {
     const target = routing.target;
     // The orchestrator is this service's own terminal rule — a router that picks
     // it (instead of a catalog entry) is not a usable verdict. A goal (Phase 10)
-    // and a chain (Phase 05) are explicit-only: they never appear in the routable
-    // catalog, so the classifier must never route to one (the same posture as
-    // orchestrator — this is also the scope-guard belt to the `candidates.some(...)`
-    // check below, which already rejects them structurally since neither
-    // `buildCandidates` nor `pipelineCandidates` ever emits a `kind: "goal"`/`"chain"`
+    // is explicit-only: it never appears in the routable catalog, so the
+    // classifier must never route to one (the same posture as orchestrator —
+    // this is also the scope-guard belt to the `candidates.some(...)` check
+    // below, which already rejects it structurally since neither
+    // `buildCandidates` nor `pipelineCandidates` ever emits a `kind: "goal"`
     // entry). F2a: `subsystem` is REMOVED from this rejection list — the top-level
     // catalog now legitimately offers subsystem candidates (`stage1SubsystemCandidates`),
     // so a seated subsystem verdict is coherent; `classifyWithinSubsystem`'s own
     // catalog never emits one, so this widening can't recurse.
-    if (target.kind === "orchestrator" || target.kind === "goal" || target.kind === "chain") {
+    if (target.kind === "orchestrator" || target.kind === "goal") {
       return false;
     }
     return candidates.some((c) => c.id === target.id && c.kind === target.kind);

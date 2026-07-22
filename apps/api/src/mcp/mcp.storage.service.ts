@@ -62,7 +62,7 @@ export class McpServersStorageService extends EntityFileStore<McpServer> {
       name: "ZIBBY entities",
       desc:
         "Internal entity directory: list_entities over ZIBBY's own catalogs " +
-        "(skills/mcp/commands/hooks/projects/companies/chains/integrations/goals/" +
+        "(skills/mcp/commands/hooks/projects/companies/integrations/goals/" +
         "automations) plus recall_memory over the vault.",
       type: "http",
       url: `http://localhost:${port}/api/memory/mcp`,

@@ -41,16 +41,6 @@ export function pipelineOwnerSeed(pipelineId: string): SubsystemId | undefined {
 }
 
 /**
- * Every chain seeds to `scout` — a chain composes pipelines into a research-to-
- * delivery hand-off (the one seeded chain, `audit-develop`, feeds a scout-owned
- * audit into a forge-owned delivery), and there is no per-chain signal yet to
- * split further.
- */
-export function chainOwnerSeed(): SubsystemId {
-  return "scout";
-}
-
-/**
  * Every integration (including ci-stream GitHub monitors — there is no
  * standalone monitor entity, see module doc) seeds to `puls`.
  *

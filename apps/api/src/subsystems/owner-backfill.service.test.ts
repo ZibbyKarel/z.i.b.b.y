@@ -3,7 +3,6 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { AgentsStorageService } from "../agents/agents.storage.service";
-import { ChainsStorageService } from "../chains/chains.storage.service";
 import { IntegrationsStorageService } from "../integrations/integrations.storage.service";
 import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
 import { OwnerBackfillService } from "./owner-backfill.service";
@@ -11,7 +10,6 @@ import { OwnerBackfillService } from "./owner-backfill.service";
 describe("OwnerBackfillService (NS2 F1b)", () => {
   let root: string;
   let pipelines: PipelinesStorageService;
-  let chains: ChainsStorageService;
   let agents: AgentsStorageService;
   let integrations: IntegrationsStorageService;
   let backfill: OwnerBackfillService;
@@ -19,7 +17,6 @@ describe("OwnerBackfillService (NS2 F1b)", () => {
   beforeEach(async () => {
     root = await fs.mkdtemp(path.join(os.tmpdir(), "owner-backfill-test-"));
     pipelines = new PipelinesStorageService(path.join(root, "pipelines"));
-    chains = new ChainsStorageService(path.join(root, "chains"));
     agents = new AgentsStorageService(path.join(root, "agents"));
     integrations = new IntegrationsStorageService(
       path.join(root, "integrations"),
@@ -27,11 +24,10 @@ describe("OwnerBackfillService (NS2 F1b)", () => {
     );
     await Promise.all([
       pipelines.onModuleInit(),
-      chains.onModuleInit(),
       agents.onModuleInit(),
       integrations.onModuleInit(),
     ]);
-    backfill = new OwnerBackfillService(pipelines, chains, agents, integrations);
+    backfill = new OwnerBackfillService(pipelines, agents, integrations);
   });
 
   afterEach(async () => {
@@ -63,7 +59,7 @@ describe("OwnerBackfillService (NS2 F1b)", () => {
     expect((await agents.get("architect")).ownerSubsystem).toBe("forge");
   });
 
-  it("tags an untagged research-shaped pipeline scout, and a chain scout", async () => {
+  it("tags an untagged research-shaped pipeline scout", async () => {
     await pipelines.create({
       id: "research",
       phases: [
@@ -80,16 +76,10 @@ describe("OwnerBackfillService (NS2 F1b)", () => {
       outputs: [],
       instructions: "do research",
     });
-    await chains.create({
-      id: "audit-develop",
-      steps: [{ pipeline: "code-audit" }],
-      instructions: "audit then develop",
-    });
 
     await backfill.onModuleInit();
 
     expect((await pipelines.get("research")).ownerSubsystem).toBe("scout");
-    expect((await chains.get("audit-develop")).ownerSubsystem).toBe("scout");
   });
 
   it("tags every untagged integration puls", async () => {
