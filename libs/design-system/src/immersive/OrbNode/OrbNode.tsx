@@ -143,7 +143,12 @@ export function OrbNode({
           }}
         />
         {/* Faux-3D orbits of the node's active tasks. */}
-        <OrbitField baseRadius={diameter / 2 + 13} color={st.color} count={activeCount} seed={nodeId} />
+        <OrbitField
+          baseRadius={diameter / 2 + 13}
+          color={st.color}
+          count={activeCount}
+          seed={nodeId}
+        />
         {/* State halo — color = STATE, not identity. */}
         <span
           className="im-anim"
@@ -180,12 +185,16 @@ export function OrbNode({
             }}
           />
         )}
-        {/* WebGL orb + identity color, with the icon overlay. */}
+        {/* WebGL orb + identity color, with the icon overlay. `antialias` (matches
+            `CoreOrb`'s orb) avoids the wireframe shimmer a non-MSAA canvas shows as its
+            noise-displaced edges rotate across the pixel grid frame to frame; `detail={0}`
+            (the base 20-face icosahedron, down from 1's 80) shrinks that per-frame edge
+            count further still. */}
         <div
           data-testid={OrbNodeTestId.Orb}
           style={{ position: "relative", width: diameter, height: diameter, zIndex: 2 }}
         >
-          <Orb detail={1} diameter={diameter} hex={hex} state={state} />
+          <Orb antialias detail={1} diameter={diameter} hex={hex} state={state} />
           <span
             data-testid={OrbNodeTestId.Icon}
             style={{

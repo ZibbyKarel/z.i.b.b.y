@@ -22,7 +22,7 @@ export interface OrbProps {
   hex?: string;
   /** Conversational/subsystem state — selects the {@link ORB_MOTION} target. */
   state?: OrbState;
-  /** IcosahedronGeometry subdivision — nodes use 1, the core 4. */
+  /** IcosahedronGeometry subdivision — nodes use 0 (the base 20-face solid), the core 4. */
   detail?: number;
   antialias?: boolean;
   /** Storybook surface-agitation / purr-speed overrides pushed over the state's motion. */
@@ -51,7 +51,13 @@ export function Orb({
 
   useEffect(() => {
     if (!mountRef.current || !canMountWebGL()) return;
-    apiRef.current = createOrb(mountRef.current, { hex, state, detail, antialias, motionOverrides });
+    apiRef.current = createOrb(mountRef.current, {
+      hex,
+      state,
+      detail,
+      antialias,
+      motionOverrides,
+    });
     return () => {
       apiRef.current?.dispose();
       apiRef.current = null;
