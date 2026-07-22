@@ -37,7 +37,6 @@ function buildNodes(): OrbMapNode[] {
     hex: "#5b8def",
     state: states[i] ?? "idle",
     label: id,
-    statusLabel: states[i] ?? "idle",
     icon: <span>{id}</span>,
     activeCount: i,
   }));
