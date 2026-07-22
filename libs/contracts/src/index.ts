@@ -31,6 +31,8 @@ export * from "./artifacts/artifact.schema";
 export * from "./artifacts/artifacts.contract";
 export * from "./chains/chain.schema";
 export * from "./chains/chains.contract";
+export * from "./handoff/handoff.schema";
+export * from "./handoff/handoff.contract";
 export * from "./gates/gate.schema";
 export * from "./gates/gate.contract";
 export * from "./gates/gate-rules.contract";

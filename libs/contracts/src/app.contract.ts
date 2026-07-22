@@ -11,6 +11,7 @@ import { chainRunsContract, chainsContract } from "./chains/chains.contract";
 import { gatesContract } from "./gates/gate.contract";
 import { gateRulesContract } from "./gates/gate-rules.contract";
 import { automationsContract } from "./automations/automations.contract";
+import { handoffContract } from "./handoff/handoff.contract";
 import { channelsContract } from "./channels/channels.contract";
 import { commandsContract } from "./commands/commands.contract";
 import { companiesContract } from "./companies/companies.contract";
@@ -69,6 +70,7 @@ export const appContract = c.router({
   artifacts: artifactsContract,
   chains: chainsContract,
   chainRuns: chainRunsContract,
+  handoff: handoffContract,
   gates: gatesContract,
   gateRules: gateRulesContract,
   memory: memoryContract,
