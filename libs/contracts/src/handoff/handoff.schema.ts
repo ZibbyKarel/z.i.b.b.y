@@ -122,6 +122,50 @@ export const HandoffRuleInputSchema = HandoffRuleSchema.omit({ id: true });
 export type HandoffRuleInput = z.infer<typeof HandoffRuleInputSchema>;
 
 /**
+ * A signal-kind's lifecycle (design doc
+ * `docs/superpowers/specs/2026-07-22-handoff-signal-registry-and-receiver-filter-design.md`,
+ * Slot B): `"builtin"` — one of the 7 seeded kinds a producer service already
+ * emits; `"pending"` — operator-registered, no producer emits it yet (a Forge
+ * build task exists to implement the emit); `"active"` — a `pending` kind that
+ * has been seen at least once by `HandoffService.evaluate` (B4, auto-activation
+ * — not part of this slice).
+ */
+export const HandoffSignalKindStatusSchema = z.enum(["builtin", "pending", "active"]);
+export type HandoffSignalKindStatus = z.infer<typeof HandoffSignalKindStatusSchema>;
+
+/**
+ * A registered handoff signal kind — the server-side source of truth for what a
+ * `HandoffSignal.kind` string means, who produces it, and whether it carries a
+ * severity (drives whether a rule editor's severity pill is meaningful for it).
+ * Built-in kinds (`system: true`) are the 7 kinds the 4 existing producers
+ * (Sentinel/Maestro/Loom/Scout) already emit — seeded, view-only, non-deletable.
+ * Operator-registered kinds start `status: "pending"` and carry a `buildTaskId`
+ * linking to the Forge build task that will implement the emit.
+ */
+export const HandoffSignalKindSchema = z.object({
+  id: z.string().min(1),
+  from: SubsystemIdSchema,
+  label: z.string().min(1),
+  description: z.string().min(1),
+  severityBearing: z.boolean(),
+  status: HandoffSignalKindStatusSchema,
+  system: z.boolean().optional(),
+  buildTaskId: z.string().optional(),
+});
+export type HandoffSignalKind = z.infer<typeof HandoffSignalKindSchema>;
+
+/** A signal kind as authored by the operator — the server mints `id`, forces
+ *  `status: "pending"`, `system: false`, and sets `buildTaskId` once the build
+ *  task it spawns has an id. */
+export const HandoffSignalKindInputSchema = HandoffSignalKindSchema.omit({
+  id: true,
+  status: true,
+  system: true,
+  buildTaskId: true,
+});
+export type HandoffSignalKindInput = z.infer<typeof HandoffSignalKindInputSchema>;
+
+/**
  * A parked tier-3 handoff, gated behind a `"handoff-proposal"` approval
  * (`../approvals/approval.schema.ts`). The full payload the engine needs to
  * dispatch on approval: which rule fired, the signal that triggered it, and the

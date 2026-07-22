@@ -5,6 +5,8 @@ import {
   HandoffProposalSchema,
   HandoffRuleInputSchema,
   HandoffRuleSchema,
+  HandoffSignalKindInputSchema,
+  HandoffSignalKindSchema,
   HandoffSignalSchema,
   HandoffTargetSchema,
 } from "./handoff.schema";
@@ -167,5 +169,85 @@ describe("HandoffOutcomeSchema", () => {
 
   it("rejects an unknown action", () => {
     expect(HandoffOutcomeSchema.safeParse({ action: "skipped" }).success).toBe(false);
+  });
+});
+
+describe("HandoffSignalKindSchema", () => {
+  const KIND = {
+    id: "cve",
+    from: "sentinel",
+    label: "Vulnerability (CVE)",
+    description: "A vulnerability found in a project dependency.",
+    severityBearing: true,
+    status: "builtin",
+    system: true,
+  } as const;
+
+  it("round-trips a valid built-in signal kind", () => {
+    expect(HandoffSignalKindSchema.parse(KIND)).toEqual(KIND);
+  });
+
+  it("round-trips a minimal operator kind (no system/buildTaskId)", () => {
+    const operator = {
+      id: "dependency-outdated",
+      from: "loom",
+      label: "Dependency outdated",
+      description: "A dependency has fallen behind its latest release.",
+      severityBearing: false,
+      status: "pending",
+    } as const;
+    expect(HandoffSignalKindSchema.parse(operator)).toEqual(operator);
+  });
+
+  it("accepts a buildTaskId", () => {
+    const withTask = { ...KIND, status: "pending" as const, buildTaskId: "task-1" };
+    expect(HandoffSignalKindSchema.parse(withTask).buildTaskId).toBe("task-1");
+  });
+
+  it("rejects an unknown `from` subsystem", () => {
+    expect(HandoffSignalKindSchema.safeParse({ ...KIND, from: "not-a-subsystem" }).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects an unknown status", () => {
+    expect(HandoffSignalKindSchema.safeParse({ ...KIND, status: "unknown" }).success).toBe(false);
+  });
+});
+
+describe("HandoffSignalKindInputSchema", () => {
+  const KIND = {
+    id: "cve",
+    from: "sentinel",
+    label: "Vulnerability (CVE)",
+    description: "A vulnerability found in a project dependency.",
+    severityBearing: true,
+    status: "builtin",
+    system: true,
+    buildTaskId: "task-1",
+  } as const;
+
+  it("strips id/status/system/buildTaskId — parsing a full kind never round-trips them", () => {
+    const parsed = HandoffSignalKindInputSchema.parse(KIND);
+    expect(parsed).not.toHaveProperty("id");
+    expect(parsed).not.toHaveProperty("status");
+    expect(parsed).not.toHaveProperty("system");
+    expect(parsed).not.toHaveProperty("buildTaskId");
+    expect(parsed).toEqual({
+      from: KIND.from,
+      label: KIND.label,
+      description: KIND.description,
+      severityBearing: KIND.severityBearing,
+    });
+  });
+
+  it("accepts a valid input without id/status/system/buildTaskId", () => {
+    const input = {
+      from: "beacon" as const,
+      label: "Ask Forge",
+      description: "Something Beacon wants Forge to know about.",
+      severityBearing: false,
+    };
+    expect(HandoffSignalKindInputSchema.parse(input)).toEqual(input);
   });
 });

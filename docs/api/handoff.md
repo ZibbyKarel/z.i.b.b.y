@@ -32,16 +32,18 @@ deliberate no-dispatch) and replaces the legacy one-off `chains` feature.
 
 ## Pieces
 
-| Piece          | File                                             | Role                                                                                                                                                                                                                                                                                                |
-| -------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Schema         | `libs/contracts/src/handoff/handoff.schema.ts`   | `HandoffSignal`, `HandoffRule`, `HandoffTarget` (kind+id subset of `TaskTarget`'s subsystem/pipeline members), `HandoffProposal`, `HandoffOutcome`, `HandoffSeverity` + `HANDOFF_SEVERITY_ORDER`                                                                                                    |
-| Contract       | `libs/contracts/src/handoff/handoff.contract.ts` | `handoffContract` — `getHandoffRules` (`GET`), `createHandoffRule` (`POST`, 201), `updateHandoffRule` (`PUT /:id`, 200/404), `deleteHandoffRule` (`DELETE /:id`, 200/404/**403**) over `/api/handoff-rules`; `HandoffRuleInputSchema` = `HandoffRuleSchema` minus `id` (the server mints it)        |
-| Rule store     | `apps/api/src/handoff/handoff-rule.store.ts`     | `HandoffRuleStore` + `SYSTEM_HANDOFF_RULES` seed table; single JSON list (`.zibby/data/handoff/rules.json`), reseeds from code on a missing/corrupt file — **code is the source of truth** (the file is gitignored/regenerable). `create`/`update`/`delete` carry the system-rule guard (see below) |
-| Proposal store | `apps/api/src/handoff/handoff-proposal.store.ts` | `HandoffProposalStore` — one `<id>.json` per parked tier-3 payload                                                                                                                                                                                                                                  |
-| Fired store    | `apps/api/src/handoff/handoff-fired.store.ts`    | `HandoffFiredStore` — per-rule fingerprint set for idempotency                                                                                                                                                                                                                                      |
-| Service        | `apps/api/src/handoff/handoff.service.ts`        | `HandoffService.evaluate` + `ResumableRunner` for `handoff-proposal` (resume → dispatch, cancel → drop)                                                                                                                                                                                             |
-| Controller     | `apps/api/src/handoff/handoff.controller.ts`     | implements `handoffContract`                                                                                                                                                                                                                                                                        |
-| Module         | `apps/api/src/handoff/handoff.module.ts`         | imports `ApprovalsModule`, `TasksModule`, `PipelinesModule`; exports `HandoffService` for the A3 producers                                                                                                                                                                                          |
+| Piece           | File                                                | Role                                                                                                                                                                                                                                                                                                |
+| --------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Schema          | `libs/contracts/src/handoff/handoff.schema.ts`      | `HandoffSignal`, `HandoffRule`, `HandoffTarget` (kind+id subset of `TaskTarget`'s subsystem/pipeline members), `HandoffProposal`, `HandoffOutcome`, `HandoffSeverity` + `HANDOFF_SEVERITY_ORDER`                                                                                                    |
+| Contract        | `libs/contracts/src/handoff/handoff.contract.ts`    | `handoffContract` — `getHandoffRules` (`GET`), `createHandoffRule` (`POST`, 201), `updateHandoffRule` (`PUT /:id`, 200/404), `deleteHandoffRule` (`DELETE /:id`, 200/404/**403**) over `/api/handoff-rules`; `HandoffRuleInputSchema` = `HandoffRuleSchema` minus `id` (the server mints it)        |
+| Rule store      | `apps/api/src/handoff/handoff-rule.store.ts`        | `HandoffRuleStore` + `SYSTEM_HANDOFF_RULES` seed table; single JSON list (`.zibby/data/handoff/rules.json`), reseeds from code on a missing/corrupt file — **code is the source of truth** (the file is gitignored/regenerable). `create`/`update`/`delete` carry the system-rule guard (see below) |
+| Proposal store  | `apps/api/src/handoff/handoff-proposal.store.ts`    | `HandoffProposalStore` — one `<id>.json` per parked tier-3 payload                                                                                                                                                                                                                                  |
+| Fired store     | `apps/api/src/handoff/handoff-fired.store.ts`       | `HandoffFiredStore` — per-rule fingerprint set for idempotency                                                                                                                                                                                                                                      |
+| Service         | `apps/api/src/handoff/handoff.service.ts`           | `HandoffService.evaluate` + `ResumableRunner` for `handoff-proposal` (resume → dispatch, cancel → drop)                                                                                                                                                                                             |
+| Signal registry | `apps/api/src/handoff/handoff-signal-kind.store.ts` | `HandoffSignalKindStore` + `SYSTEM_SIGNAL_KINDS` seed (the 7 built-in kinds the producers emit); single JSON list (`.zibby/data/handoff/signal-kinds.json`), same reseed-from-code + system-guard pattern as the rule store (see _Signal-kind registry_ below)                                      |
+| Signal service  | `apps/api/src/handoff/signal-kind.service.ts`       | `SignalKindService` — wraps the registry store; `create` also spawns a Forge build task (via the same `TaskSchedulerService.createTask` the dispatch path uses) and links its id back onto the new kind                                                                                             |
+| Controller      | `apps/api/src/handoff/handoff.controller.ts`        | implements `handoffContract` (rule CRUD **and** signal-kind CRUD)                                                                                                                                                                                                                                   |
+| Module          | `apps/api/src/handoff/handoff.module.ts`            | imports `ApprovalsModule`, `TasksModule`, `PipelinesModule`; exports `HandoffService` (A3 producers) + `SignalKindService` (B4 auto-activation)                                                                                                                                                     |
 
 ## Seed rules (A.3)
 
@@ -74,6 +76,31 @@ never client-set — it is the autonomy floor (Law 1), not an editable field:
 
 The engine (`HandoffService.evaluate`) reads the store's `list()` live, so a
 freshly created enabled rule takes effect on the next signal.
+
+## Signal-kind registry (B1)
+
+A rule's `signalKind` is a free-form string — the engine only string-matches it
+against emitted signals. The **signal-kind registry** makes the known kinds
+first-class data so the operator can see what each subsystem emits and register
+new ones, without changing the free-string contract.
+
+- `HandoffSignalKindSchema` = `{ id, from, label, description, severityBearing,
+status: "builtin" | "pending" | "active", system?, buildTaskId? }`.
+  `HandoffSignalKindInputSchema` omits `id`/`status`/`system`/`buildTaskId` (the
+  server mints the id by slugifying the label and forces `status: "pending"`,
+  `system: false`).
+- CRUD lives on `handoffContract` at `/api/handoff-signal-kinds`
+  (`listSignalKinds` GET, `createSignalKind` POST → `{ signalKind, buildTaskId }`,
+  `updateSignalKind` PATCH, `deleteSignalKind` DELETE). Same system-guard as
+  rules: a built-in (`system: true`) refuses update/delete with a `403`.
+- **Guided create is ZIBBY-native**: `SignalKindService.create` registers the
+  kind, then spawns a **Forge build task** (via the same
+  `TaskSchedulerService.createTask` the dispatch path uses — no new module edge,
+  no DI cycle) describing the emit to implement, and links the returned task id
+  onto the kind as `buildTaskId`. The kind stays `pending` until the producer
+  code lands; B4 flips it to `active` on the first real emission.
+- `severityBearing` reflects whether the producer actually attaches a severity —
+  verified per emit site, only `cve` carries one today.
 
 ## Autonomy floor
 
