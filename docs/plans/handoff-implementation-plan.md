@@ -136,19 +136,26 @@ Branch: `feat/subsystem-handoff`.
 
 ---
 
-### A4 — Web i18n label
+### A4 — Web i18n label — **VERIFIED NO-OP (2026-07-22)**
 
-**Files**
-- `apps/web/i18n/messages/{cs,en}.json` — label + action string for the
-  `handoff-proposal` approval kind, wherever the approvals queue maps kind → label
-  (find the existing `agent-proposal` / `herald-graduation` label keys and mirror them).
-- Any approvals-queue component switch on `kind` that needs a `handoff-proposal` arm.
+The premise here was wrong. The approvals feed is a **kind-agnostic inbox**, not a
+per-kind screen — `apps/web/features/approvals/approval.ts` says so verbatim, and a
+whole-tree grep confirms `ApprovalRunKind` is referenced **nowhere** in web source,
+with **no switch on any approval run-kind** in `ApprovalCard`, `FlyoutApprovalRow`,
+or `RunApprovalGate`. There are no `agent-proposal` / `herald-graduation` label keys
+to mirror — those kinds are also never named in the web.
 
-**Tests**: `apps/web/i18n/messages/parity.test.ts` stays green (both locales carry the key).
+A `handoff-proposal` approval therefore already surfaces with zero web work: the card
+renders the server-provided `action` / `detail` / `risk` / `ownerSubsystem` that
+`HandoffService.propose` already sets (in Czech), and approve/reject already routes to
+`HandoffService.resume` / `.cancel` via the A2 `approvals.register("handoff-proposal", …)`.
+Adding an i18n label would create a **dead key with no consumer** — worse than nothing.
 
-**DoD**: `pnpm exec vitest run apps/web/i18n` green; `pnpm exec tsc -p apps/web` clean.
+Confirmed green anyway: `pnpm exec vitest run apps/web/i18n --project web` (8/8) and
+`pnpm exec tsc -p libs/contracts` clean. A per-kind approval label, if ever wanted,
+belongs with the Part-2 rule-editor UI, not here.
 
-**Commit**: `feat(web): surface handoff-proposal approvals in the queue`
+**Commit**: none — no code change.
 
 ---
 
