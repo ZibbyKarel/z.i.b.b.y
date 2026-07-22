@@ -150,7 +150,42 @@ describe("SubsystemOrbMap", () => {
     );
 
     const wrapper = screen.getByTestId(`${OrbMapTestId.Node}-loom`);
-    expect(within(wrapper).getByTestId(OrbNodeTestId.Root)).toBeInTheDocument();
+    expect(within(wrapper).getByTestId(OrbNodeTestId.Root)).toHaveAccessibleName("Loom, V klidu");
+  });
+
+  it("wires each node's accessible name to name + localized state via subsystems.nodeAria", () => {
+    renderWithProviders(
+      <SubsystemOrbMap
+        onOpenCore={vi.fn()}
+        onSelectSubsystem={vi.fn()}
+        pipelines={[]}
+        runs={[]}
+        subsystems={allSubsystems({ forge: { state: "running" } })}
+        thinking={false}
+      />,
+    );
+
+    const wrapper = screen.getByTestId(`${OrbMapTestId.Node}-forge`);
+    expect(within(wrapper).getByTestId(OrbNodeTestId.Root)).toHaveAccessibleName("Forge, Běží");
+  });
+
+  it("an owned failed run reads as the error state (red incident halo)", () => {
+    renderWithProviders(
+      <SubsystemOrbMap
+        onOpenCore={vi.fn()}
+        onSelectSubsystem={vi.fn()}
+        pipelines={[]}
+        runs={[]}
+        subsystems={allSubsystems({ sentinel: { state: "error", errorCount: 1 } })}
+        thinking={false}
+      />,
+    );
+
+    const wrapper = screen.getByTestId(`${OrbMapTestId.Node}-sentinel`);
+    expect(within(wrapper).getByTestId(OrbNodeTestId.Root)).toHaveAccessibleName("Sentinel, Chyba");
+    expect(within(wrapper).getByTestId(OrbNodeTestId.Halo)).toHaveStyle({
+      border: "1.5px solid #ff6b6b",
+    });
   });
 
   it("derives a node's activeCount from active runs owned by its pipeline", () => {

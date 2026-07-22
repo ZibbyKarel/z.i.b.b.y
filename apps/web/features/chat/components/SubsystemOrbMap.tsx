@@ -109,7 +109,7 @@ export function SubsystemOrbMap({
       hex: sub.color,
       state: SUBSYSTEM_ORB_STATE[state],
       label: sub.name,
-      statusLabel: t(`state.${state}`),
+      ariaLabel: t("nodeAria", { name: sub.name, state: t(`state.${state}`) }),
       icon: <Icon name={SUBSYSTEM_GLYPH[sub.id]} size="lg" />,
       activeCount: counts[sub.id] ?? 0,
     };
