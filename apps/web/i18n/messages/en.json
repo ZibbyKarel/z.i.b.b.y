@@ -1638,15 +1638,25 @@
       "buildTaskTitle": "Build task",
       "buildTaskLink": "View task",
       "notFoundTitle": "Signal not found",
-      "notFoundDescription": "This signal kind doesn't exist in the registry — it may have been deleted, or the link is stale."
+      "notFoundDescription": "This signal kind doesn't exist in the registry — it may have been deleted, or the link is stale.",
+      "editAction": "Edit",
+      "deleteAction": "Delete",
+      "deleteTitle": "Delete signal?",
+      "deleteBody": "Really delete the signal “{label}”? This action cannot be undone.",
+      "deletedToast": "Signal deleted."
     },
     "create": {
       "title": "New signal",
       "panelTitle": "Signal registration",
+      "editPanelTitle": "Edit signal",
       "cancel": "Cancel",
       "submit": "Create signal",
+      "editSubmit": "Save signal",
       "error": "Creating the signal failed — please try again.",
+      "editError": "Saving the signal failed — please try again.",
       "successToast": "Signal registered — build task {buildTaskId} is running.",
+      "editSuccessToast": "Signal saved.",
+      "idFixedLabel": "ID (fixed)",
       "fields": {
         "producer": "Producer",
         "label": "Label",
