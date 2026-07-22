@@ -12,6 +12,7 @@ vi.mock("../../subsystems/queries/useSubsystemsQuery", () => ({
       { id: "b", name: "B", color: "#fff", state: "running" },
       { id: "c", name: "C", color: "#fff", state: "report" },
       { id: "d", name: "D", color: "#fff", state: "waiting" },
+      { id: "e", name: "E", color: "#fff", state: "error" },
     ],
   }),
 }));
@@ -51,6 +52,7 @@ describe("StatusPill", () => {
   it("shows per-state counts derived from the subsystem roster", () => {
     renderWithProviders(<StatusPill />);
     expect(screen.getByTestId(StatusPillTestId.Working)).toHaveTextContent("2");
+    expect(screen.getByTestId(StatusPillTestId.Error)).toHaveTextContent("1");
     expect(screen.getByTestId(StatusPillTestId.Report)).toHaveTextContent("1");
     expect(screen.getByTestId(StatusPillTestId.Waiting)).toHaveTextContent("1");
   });

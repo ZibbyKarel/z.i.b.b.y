@@ -1752,8 +1752,9 @@
       "title": "Přehled ZIBBY",
       "openAria": "Otevřít přehled ZIBBY",
       "role": "orchestrátor · řídím {count} podsystémů",
-      "summary": "{working} v akci, {report} s hlášením, {waiting} čeká na tebe.",
+      "summary": "{working} v akci, {error} v chybě, {report} s hlášením, {waiting} čeká na tebe.",
       "statWorking": "pracují",
+      "statError": "v chybě",
       "statReport": "hlášení čeká",
       "statWaiting": "čekají na tebe",
       "statIdle": "v klidu",
@@ -1765,6 +1766,7 @@
       "degraded": "Degradováno",
       "offline": "Offline",
       "working": "{n} pracují",
+      "error": "{n} chyb",
       "report": "{n} hlášení",
       "waiting": "{n} čekají na tebe",
       "flyout": {

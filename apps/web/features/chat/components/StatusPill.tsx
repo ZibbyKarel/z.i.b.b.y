@@ -16,6 +16,7 @@ export enum StatusPillTestId {
   Health = "chat-status-pill-health",
   HealthDetail = "chat-status-pill-health-detail",
   Working = "chat-status-pill-working",
+  Error = "chat-status-pill-error",
   Report = "chat-status-pill-report",
   Waiting = "chat-status-pill-waiting",
 }
@@ -74,6 +75,7 @@ export function StatusPill() {
   const [originRect, setOriginRect] = useState<DOMRect | null>(null);
 
   const working = subsystems.filter((s) => s.state === "running").length;
+  const error = subsystems.filter((s) => s.state === "error").length;
   const report = subsystems.filter((s) => s.state === "report").length;
   const waiting = subsystems.filter((s) => s.state === "waiting").length;
 
@@ -211,6 +213,18 @@ export function StatusPill() {
               {t("statusPill.working", { n: working })}
             </Typography>,
           )}
+        {error > 0 && (
+          <Typography
+            mono
+            data-testid={StatusPillTestId.Error}
+            size="xs"
+            tone="bad"
+            tracking="wide"
+            type="note"
+          >
+            {t("statusPill.error", { n: error })}
+          </Typography>
+        )}
         {report > 0 && (
           <Typography
             mono

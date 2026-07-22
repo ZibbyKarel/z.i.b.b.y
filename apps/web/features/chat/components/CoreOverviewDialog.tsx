@@ -32,6 +32,7 @@ export interface CoreOverviewDialogProps {
 
 interface StateCounts {
   running: number;
+  error: number;
   report: number;
   waiting: number;
   idle: number;
@@ -41,6 +42,7 @@ interface StateCounts {
 function countByState(subs: SubsystemWithStatus[]): StateCounts {
   return {
     running: subs.filter((s) => s.state === "running").length,
+    error: subs.filter((s) => s.state === "error").length,
     report: subs.filter((s) => s.state === "report").length,
     waiting: subs.filter((s) => s.state === "waiting").length,
     idle: subs.filter((s) => s.state === "idle").length,
@@ -82,6 +84,7 @@ export function CoreOverviewDialog({ open, onClose, onSelectSubsystem }: CoreOve
   const counts = countByState(subsystems);
   const stats: Array<{ key: keyof StateCounts; label: string }> = [
     { key: "running", label: t("statWorking") },
+    { key: "error", label: t("statError") },
     { key: "report", label: t("statReport") },
     { key: "waiting", label: t("statWaiting") },
     { key: "idle", label: t("statIdle") },
@@ -122,13 +125,14 @@ export function CoreOverviewDialog({ open, onClose, onSelectSubsystem }: CoreOve
 
           <Typography size="sm" type="text" variant="secondary">
             {t("summary", {
+              error: counts.error,
               report: counts.report,
               waiting: counts.waiting,
               working: counts.running,
             })}
           </Typography>
 
-          <Grid cols={4} gap="150">
+          <Grid cols={5} gap="150">
             {stats.map(({ key, label }) => (
               <Container data-testid={CoreOverviewDialogTestId.Stat} key={key}>
                 <Stack gap="25">

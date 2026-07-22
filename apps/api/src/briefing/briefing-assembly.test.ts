@@ -342,6 +342,21 @@ describe("per-subsystem lines (NS2 F3b)", () => {
     expect(md).toContain("- **Ledger** — idle · 62 % týdenního okna");
     expect(renderBriefingMarkdown(assembleBriefing(base))).not.toContain("## Subsystems");
   });
+
+  it("renders a subsystem's failed count in the markdown line", () => {
+    const errored = [
+      {
+        subsystem: "sentinel" as const,
+        name: "Sentinel",
+        state: "error" as const,
+        tier2Count: 0,
+        errorCount: 1,
+        tier3Count: 0,
+      },
+    ];
+    const md = renderBriefingMarkdown(assembleBriefing({ ...base, subsystems: errored }));
+    expect(md).toContain("- **Sentinel** — error · 1 failed");
+  });
 });
 
 describe("self-knowledge drift (NS2 F4c)", () => {
