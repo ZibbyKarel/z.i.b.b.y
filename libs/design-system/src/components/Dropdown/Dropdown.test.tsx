@@ -128,6 +128,19 @@ describe("Dropdown", () => {
     expect(screen.getByTestId(DropdownTestId.Panel)).toHaveTextContent("English");
   });
 
+  it("renders an option's description as sub-text when present", async () => {
+    const user = userEvent.setup();
+    const optionsWithDescription = [
+      { value: "cs", label: "Čeština", code: "CZ", description: "Výchozí jazyk" },
+      { value: "en", label: "English", code: "EN" },
+    ];
+    render(<Dropdown onChange={vi.fn()} options={optionsWithDescription} value="cs" />);
+    await user.click(screen.getByTestId(DropdownTestId.Trigger));
+    const opts = screen.getAllByTestId(DropdownTestId.Option);
+    expect(opts[0]).toHaveTextContent("Výchozí jazyk");
+    expect(opts[1]).not.toHaveTextContent("Výchozí jazyk");
+  });
+
   describe("multi mode", () => {
     it("renders the trigger as a combobox with a chip per selected value", () => {
       render(<Dropdown multi onChange={vi.fn()} options={OPTIONS} value={["cs", "en"]} />);
@@ -224,9 +237,7 @@ describe("Dropdown", () => {
         expect(row).toHaveAttribute("aria-selected", "false");
         // It precedes the first option in the DOM.
         const firstOption = screen.getAllByTestId(DropdownTestId.Option)[0]!;
-        expect(row.compareDocumentPosition(firstOption)).toBe(
-          Node.DOCUMENT_POSITION_FOLLOWING,
-        );
+        expect(row.compareDocumentPosition(firstOption)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
       });
 
       it("selects every option when the select-all row is clicked", async () => {
@@ -283,9 +294,7 @@ describe("Dropdown", () => {
       it("toggles all via the keyboard from the leading row", async () => {
         const onChange = vi.fn();
         const user = userEvent.setup();
-        render(
-          <Dropdown multi showSelectAll onChange={onChange} options={OPTIONS} value={[]} />,
-        );
+        render(<Dropdown multi showSelectAll onChange={onChange} options={OPTIONS} value={[]} />);
         const trigger = screen.getByTestId(DropdownTestId.Trigger);
         trigger.focus();
         await user.keyboard("{ArrowDown}"); // open, active = select-all row (index 0)
@@ -311,29 +320,27 @@ describe("Dropdown", () => {
       // simulate a concrete layout: every chip candidate is 80px, the overflow
       // chip is 60px, and the visible row is `rowWidth` px wide.
       const mockLayout = (rowWidth: number) => {
-        vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
-          function (this: HTMLElement) {
-            const width = (this.textContent ?? "").startsWith("+") ? 60 : 80;
-            return {
-              width,
-              height: 24,
-              top: 0,
-              left: 0,
-              right: width,
-              bottom: 24,
-              x: 0,
-              y: 0,
-              toJSON: () => {},
-            } as DOMRect;
-          },
-        );
+        vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+          this: HTMLElement,
+        ) {
+          const width = (this.textContent ?? "").startsWith("+") ? 60 : 80;
+          return {
+            width,
+            height: 24,
+            top: 0,
+            left: 0,
+            right: width,
+            bottom: 24,
+            x: 0,
+            y: 0,
+            toJSON: () => {},
+          } as DOMRect;
+        });
         vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(rowWidth);
       };
 
       it("keeps the trigger to a single row via nowrap classes", () => {
-        render(
-          <Dropdown compact multi onChange={vi.fn()} options={OPTIONS} value={["cs"]} />,
-        );
+        render(<Dropdown compact multi onChange={vi.fn()} options={OPTIONS} value={["cs"]} />);
         const row = screen.getByTestId(DropdownTestId.ChipsRow);
         expect(row.className).toContain("flex-nowrap");
         expect(row.className).not.toContain("flex-wrap");
@@ -342,13 +349,7 @@ describe("Dropdown", () => {
       it("shows every chip with no overflow marker when they all fit", () => {
         mockLayout(1000);
         render(
-          <Dropdown
-            compact
-            multi
-            onChange={vi.fn()}
-            options={MANY}
-            value={["a", "b", "c", "d"]}
-          />,
+          <Dropdown compact multi onChange={vi.fn()} options={MANY} value={["a", "b", "c", "d"]} />,
         );
         expect(screen.getByTestId(`${DropdownTestId.Chip}-a`)).toBeInTheDocument();
         expect(screen.getByTestId(`${DropdownTestId.Chip}-b`)).toBeInTheDocument();
@@ -361,13 +362,7 @@ describe("Dropdown", () => {
         // 80px chips + 6px gap + reserved 60px overflow chip: room for exactly two.
         mockLayout(300);
         render(
-          <Dropdown
-            compact
-            multi
-            onChange={vi.fn()}
-            options={MANY}
-            value={["a", "b", "c", "d"]}
-          />,
+          <Dropdown compact multi onChange={vi.fn()} options={MANY} value={["a", "b", "c", "d"]} />,
         );
         expect(screen.getByTestId(`${DropdownTestId.Chip}-a`)).toBeInTheDocument();
         expect(screen.getByTestId(`${DropdownTestId.Chip}-b`)).toBeInTheDocument();
@@ -379,13 +374,7 @@ describe("Dropdown", () => {
       it("always shows at least one chip even when it alone doesn't fit", () => {
         mockLayout(10);
         render(
-          <Dropdown
-            compact
-            multi
-            onChange={vi.fn()}
-            options={MANY}
-            value={["a", "b", "c", "d"]}
-          />,
+          <Dropdown compact multi onChange={vi.fn()} options={MANY} value={["a", "b", "c", "d"]} />,
         );
         expect(screen.getByTestId(`${DropdownTestId.Chip}-a`)).toBeInTheDocument();
         expect(screen.getByTestId(DropdownTestId.Overflow)).toHaveTextContent("+3");
