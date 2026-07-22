@@ -32,6 +32,9 @@ export const NAV_ITEMS = [
   { id: "skills", glyph: "spark", href: "/skills" },
   { id: "commands", glyph: "bolt", href: "/commands" },
   { id: "hooks", glyph: "checkpoint", href: "/hooks" },
+  // B3a (docs/superpowers/specs/2026-07-22-handoff-signal-registry-and-receiver-filter-design.md):
+  // the handoff signal-kind registry — a config-ish catalog, placed with hooks/mcp.
+  { id: "signals", glyph: "pulse", href: "/signals" },
   { id: "mcp", glyph: "server", href: "/mcp" },
   { id: "memory", glyph: "brain", href: "/memory" },
 ] as const satisfies readonly NavConfig[];

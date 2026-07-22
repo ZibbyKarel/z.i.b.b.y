@@ -23,6 +23,10 @@ export const CHAT_TOOL_DOCK_WIDTH = 70;
 // joined in F5 (docs/plans/hud2chat-F5-orchestration.md): it was missing from
 // Chat entirely per the audit (only reachable via the subsystem drawer's
 // Roster tab).
+// `signals` joined with the B3a handoff signal-kind registry (design doc
+// `docs/superpowers/specs/2026-07-22-handoff-signal-registry-and-receiver-filter-design.md`)
+// — same posture as `hooks`/`automations` above: a config-ish catalog with its
+// own NAV_ITEMS entry that needs a dock icon to actually be reachable.
 const DOCK_IDS = [
   "companies",
   "projects",
@@ -32,6 +36,7 @@ const DOCK_IDS = [
   "commands",
   "mcp",
   "hooks",
+  "signals",
   "automations",
   "memory",
 ] as const;
