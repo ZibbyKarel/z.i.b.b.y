@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HandoffFiredStore } from "./handoff-fired.store";
 import { HandoffProposalStore } from "./handoff-proposal.store";
 import { HandoffRuleStore } from "./handoff-rule.store";
+import { HandoffSignalKindStore } from "./handoff-signal-kind.store";
 import { HandoffService } from "./handoff.service";
 
 const fakeLogger = {
@@ -69,6 +70,7 @@ describe("HandoffService", () => {
   let ruleStore: HandoffRuleStore;
   let proposalStore: HandoffProposalStore;
   let firedStore: HandoffFiredStore;
+  let signalKindStore: HandoffSignalKindStore;
   let scheduler: { createTask: ReturnType<typeof vi.fn> };
   let approvals: {
     register: ReturnType<typeof vi.fn>;
@@ -93,6 +95,12 @@ describe("HandoffService", () => {
 
     proposalStore = new HandoffProposalStore(path.join(dir, "proposals"));
     firedStore = new HandoffFiredStore(path.join(dir, "fired"), fakeLogger as never);
+
+    signalKindStore = new HandoffSignalKindStore(
+      path.join(dir, "signal-kinds.json"),
+      fakeLogger as never,
+    );
+    await signalKindStore.onModuleInit();
 
     scheduler = {
       createTask: vi.fn(
@@ -126,6 +134,7 @@ describe("HandoffService", () => {
       ruleStore,
       proposalStore,
       firedStore,
+      signalKindStore,
       scheduler as never,
       approvals as never,
       activity as never,
@@ -330,5 +339,38 @@ describe("HandoffService", () => {
     scheduler.createTask.mockRejectedValueOnce(new Error("boom"));
     const outcome = await service.evaluate(cveSignal());
     expect(outcome).toEqual({ action: "none" });
+  });
+
+  describe("B4 auto-activation (markSeen)", () => {
+    it("flips a pending operator signal kind to active on its first real emission, even with no matching rule", async () => {
+      const registered = await signalKindStore.create({
+        from: "sentinel",
+        label: "Dependency outdated",
+        description: "A dependency has fallen behind its latest release.",
+        severityBearing: false,
+      });
+      expect(registered.status).toBe("pending");
+
+      const outcome = await service.evaluate({
+        from: "sentinel",
+        kind: registered.id,
+        title: "Dependency outdated",
+        body: "lodash is 3 majors behind",
+        fingerprint: "dep-1",
+      });
+
+      // No rule targets this kind, so evaluate still correctly no-ops on dispatch...
+      expect(outcome).toEqual({ action: "none" });
+      expect(scheduler.createTask).not.toHaveBeenCalled();
+      // ...but the signal kind is now marked active regardless.
+      const kinds = await signalKindStore.list();
+      expect(kinds.find((k) => k.id === registered.id)?.status).toBe("active");
+    });
+
+    it("leaves built-in kinds' status untouched on emission", async () => {
+      await service.evaluate(cveSignal());
+      const kinds = await signalKindStore.list();
+      expect(kinds.find((k) => k.id === "cve")?.status).toBe("builtin");
+    });
   });
 });

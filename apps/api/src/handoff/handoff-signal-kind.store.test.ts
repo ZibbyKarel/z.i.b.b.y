@@ -179,4 +179,70 @@ describe("HandoffSignalKindStore", () => {
       expect(updated.buildTaskId).toBe("task-42");
     });
   });
+
+  describe("markSeen", () => {
+    const USER_INPUT: HandoffSignalKindInput = {
+      from: "beacon",
+      label: "Dependency outdated",
+      description: "A dependency has fallen behind its latest release.",
+      severityBearing: false,
+    };
+
+    it("flips a pending operator kind to active and persists", async () => {
+      const store = new HandoffSignalKindStore(file, fakeLogger as never);
+      await store.onModuleInit();
+      const created = await store.create(USER_INPUT);
+      expect(created.status).toBe("pending");
+
+      await store.markSeen(created.id);
+
+      const kinds = await store.list();
+      expect(kinds.find((k) => k.id === created.id)?.status).toBe("active");
+    });
+
+    it("is a no-op for a builtin kind", async () => {
+      const store = new HandoffSignalKindStore(file, fakeLogger as never);
+      await store.onModuleInit();
+
+      await store.markSeen("cve");
+
+      const kinds = await store.list();
+      expect(kinds.find((k) => k.id === "cve")?.status).toBe("builtin");
+    });
+
+    it("is a no-op for an already-active kind", async () => {
+      const store = new HandoffSignalKindStore(file, fakeLogger as never);
+      await store.onModuleInit();
+      const created = await store.create(USER_INPUT);
+      await store.markSeen(created.id);
+
+      // Second call on an already-active kind must not throw or change anything.
+      await store.markSeen(created.id);
+
+      const kinds = await store.list();
+      expect(kinds.find((k) => k.id === created.id)?.status).toBe("active");
+    });
+
+    it("is a no-op for an unknown id", async () => {
+      const store = new HandoffSignalKindStore(file, fakeLogger as never);
+      await store.onModuleInit();
+
+      await expect(store.markSeen("does-not-exist")).resolves.toBeUndefined();
+
+      const kinds = await store.list();
+      expect(kinds).toHaveLength(7);
+    });
+
+    it("never throws when the file is corrupt (fail-open, mirrors seedSystem's corrupt-file handling)", async () => {
+      const store = new HandoffSignalKindStore(file, fakeLogger as never);
+      await store.onModuleInit();
+      await store.create(USER_INPUT);
+
+      // Corrupt the file after creation — list()'s own fail-open path kicks in
+      // (treats it as empty), so markSeen finds nothing to flip and simply returns.
+      await fs.writeFile(file, "not valid json{{{");
+
+      await expect(store.markSeen("dependency-outdated")).resolves.toBeUndefined();
+    });
+  });
 });

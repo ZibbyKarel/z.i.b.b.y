@@ -98,7 +98,13 @@ status: "builtin" | "pending" | "active", system?, buildTaskId? }`.
   `TaskSchedulerService.createTask` the dispatch path uses — no new module edge,
   no DI cycle) describing the emit to implement, and links the returned task id
   onto the kind as `buildTaskId`. The kind stays `pending` until the producer
-  code lands; B4 flips it to `active` on the first real emission.
+  code lands.
+- **Auto-activation (B4)**: `HandoffService.evaluate` calls
+  `HandoffSignalKindStore.markSeen(signal.kind)` on every emission (before
+  rule-matching — a signal being emitted means its kind is alive regardless of
+  whether any rule routes it). A `pending` operator kind flips to `active` on
+  its first real emission; a no-op for built-in/already-active/unknown kinds.
+  Fail-open — `markSeen` never throws out of a producer's scan tick.
 - `severityBearing` reflects whether the producer actually attaches a severity —
   verified per emit site, only `cve` carries one today.
 

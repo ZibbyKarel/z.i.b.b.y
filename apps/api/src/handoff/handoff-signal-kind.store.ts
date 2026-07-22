@@ -200,6 +200,35 @@ export class HandoffSignalKindStore implements OnModuleInit {
   }
 
   /**
+   * B4 — auto-activation (design doc, Slot B → B4): called from
+   * `HandoffService.evaluate` on every real signal emission. If `kind` matches
+   * an operator-registered row still `status: "pending"`, flip it to `"active"`
+   * and persist — the truthful signal-of-life that a producer has actually
+   * started emitting it. A no-op for a built-in (`status` never `"pending"`),
+   * an already-`"active"` kind, an unknown id, or the `"*"` wildcard (never a
+   * stored id). Fail-open like the rest of the store: any error (including a
+   * write failure) is logged at debug and swallowed — this runs inside a
+   * producer's scan tick via `evaluate` and must never throw.
+   */
+  async markSeen(kind: string): Promise<void> {
+    try {
+      const kinds = await this.list();
+      const index = kinds.findIndex((k) => k.id === kind && k.status === "pending");
+      if (index === -1) return;
+      const existing = kinds[index];
+      if (!existing) return;
+      const next = [...kinds];
+      next[index] = { ...existing, status: "active" };
+      await this.write(next);
+    } catch (error) {
+      this.log.debug("handoff signal kind: markSeen failed — fail-open, no activation", {
+        kind,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
    * Missing file, or one that fails to parse as a valid signal-kind array, is
    * (re)seeded with the built-in defaults. A present, valid file is left
    * untouched — this only ever fires on a fresh/corrupt file, never clobbering

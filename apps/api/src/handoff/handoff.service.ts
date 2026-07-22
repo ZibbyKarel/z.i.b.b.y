@@ -19,6 +19,7 @@ import { TaskSchedulerService } from "../tasks/task-scheduler.service";
 import { HandoffFiredStore } from "./handoff-fired.store";
 import { HandoffProposalStore } from "./handoff-proposal.store";
 import { HandoffRuleStore } from "./handoff-rule.store";
+import { HandoffSignalKindStore } from "./handoff-signal-kind.store";
 
 /**
  * A2 — the handoff evaluation engine (design doc
@@ -39,6 +40,7 @@ export class HandoffService implements OnModuleInit, ResumableRunner {
     private readonly rules: HandoffRuleStore,
     private readonly proposals: HandoffProposalStore,
     private readonly fired: HandoffFiredStore,
+    private readonly signalKinds: HandoffSignalKindStore,
     private readonly taskScheduler: TaskSchedulerService,
     private readonly approvals: ApprovalsService,
     private readonly activity: ActivityLogService,
@@ -55,6 +57,12 @@ export class HandoffService implements OnModuleInit, ResumableRunner {
   /** Evaluate one signal against the rule set. Fail-open — never throws. */
   async evaluate(signal: HandoffSignal): Promise<HandoffOutcome> {
     try {
+      // B4 (design doc, Slot B → B4): a signal being emitted at all means its
+      // kind is alive, regardless of whether any rule ends up routing it — so
+      // this runs before rule-matching, not gated on a match. `markSeen` is
+      // itself fail-open and never throws; awaited here anyway to keep
+      // ordering deterministic for tests.
+      await this.signalKinds.markSeen(signal.kind);
       const rule = await this.matchRule(signal);
       if (!rule) return { action: "none" };
       if (await this.fired.hasFired(rule.id, signal.fingerprint)) {
