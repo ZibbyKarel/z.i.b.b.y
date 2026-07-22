@@ -1,9 +1,12 @@
 import type { HandoffRule, HandoffSignalKind } from "@zibby/contracts";
 import { DropdownTestId } from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen, within } from "../../../test/render";
 import { HandoffRuleEditor, HandoffRuleEditorTestId } from "./HandoffRuleEditor";
+
+const push = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 const subsystems = [
   { id: "forge", name: "Forge" },
@@ -78,6 +81,28 @@ async function pick(testId: string, optionText: string) {
 }
 
 describe("HandoffRuleEditor (P2 inline)", () => {
+  beforeEach(() => {
+    push.mockClear();
+  });
+
+  it('"+ nový signál" NAVIGATES to /signals/new with the drawer\'s from prefilled', async () => {
+    render(
+      <HandoffRuleEditor
+        fromSubsystemId="sentinel"
+        onCancel={vi.fn()}
+        onSave={vi.fn()}
+        pipelines={pipelines}
+        receiverSubsystemIds={receiverSubsystemIds}
+        signalKinds={signalKinds}
+        subsystemName="Sentinel"
+        subsystems={subsystems}
+      />,
+    );
+    expect(screen.getByTestId(HandoffRuleEditorTestId.NewSignal)).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId(HandoffRuleEditorTestId.NewSignal));
+    expect(push).toHaveBeenCalledWith("/signals/new?from=sentinel");
+  });
+
   it("renders the sentence with the subsystem name", () => {
     render(
       <HandoffRuleEditor

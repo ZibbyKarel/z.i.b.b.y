@@ -1639,6 +1639,25 @@
       "buildTaskLink": "View task",
       "notFoundTitle": "Signal not found",
       "notFoundDescription": "This signal kind doesn't exist in the registry — it may have been deleted, or the link is stale."
+    },
+    "create": {
+      "title": "New signal",
+      "panelTitle": "Signal registration",
+      "cancel": "Cancel",
+      "submit": "Create signal",
+      "error": "Creating the signal failed — please try again.",
+      "successToast": "Signal registered — build task {buildTaskId} is running.",
+      "fields": {
+        "producer": "Producer",
+        "label": "Label",
+        "labelPlaceholder": "e.g. Certificate expiring",
+        "description": "Description / when it fires",
+        "descriptionHint": "What the signal means and under what circumstances the producer emits it.",
+        "descriptionPlaceholder": "Describe when this signal occurs…",
+        "severityBearing": "Carries severity",
+        "severityBearingHint": "Enable if the signal carries a severity level (low/moderate/high/critical).",
+        "slugPreviewLabel": "id (approx.)"
+      }
     }
   },
   "mcp": {
@@ -1948,6 +1967,7 @@
           "3": "once I approve"
         },
         "signalKindAria": "Signal kind",
+        "newSignal": "+ new signal",
         "severityAria": "Min. severity",
         "targetAria": "Handoff target",
         "tierAria": "Handoff tier",
