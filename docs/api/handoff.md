@@ -32,16 +32,16 @@ deliberate no-dispatch) and replaces the legacy one-off `chains` feature.
 
 ## Pieces
 
-| Piece          | File                                             | Role                                                                                                                                                                                                                            |
-| -------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Schema         | `libs/contracts/src/handoff/handoff.schema.ts`   | `HandoffSignal`, `HandoffRule`, `HandoffTarget` (kind+id subset of `TaskTarget`'s subsystem/pipeline members), `HandoffProposal`, `HandoffOutcome`, `HandoffSeverity` + `HANDOFF_SEVERITY_ORDER`                                |
-| Contract       | `libs/contracts/src/handoff/handoff.contract.ts` | `handoffContract` — `getHandoffRules` (`GET /api/handoff-rules`); v1 is seeded + read-only, CRUD deferred to the Part-2 rule-editor UI                                                                                          |
-| Rule store     | `apps/api/src/handoff/handoff-rule.store.ts`     | `HandoffRuleStore` + `SYSTEM_HANDOFF_RULES` seed table; single JSON list (`.zibby/data/handoff/rules.json`), reseeds from code on a missing/corrupt file — **code is the source of truth** (the file is gitignored/regenerable) |
-| Proposal store | `apps/api/src/handoff/handoff-proposal.store.ts` | `HandoffProposalStore` — one `<id>.json` per parked tier-3 payload                                                                                                                                                              |
-| Fired store    | `apps/api/src/handoff/handoff-fired.store.ts`    | `HandoffFiredStore` — per-rule fingerprint set for idempotency                                                                                                                                                                  |
-| Service        | `apps/api/src/handoff/handoff.service.ts`        | `HandoffService.evaluate` + `ResumableRunner` for `handoff-proposal` (resume → dispatch, cancel → drop)                                                                                                                         |
-| Controller     | `apps/api/src/handoff/handoff.controller.ts`     | implements `handoffContract`                                                                                                                                                                                                    |
-| Module         | `apps/api/src/handoff/handoff.module.ts`         | imports `ApprovalsModule`, `TasksModule`, `PipelinesModule`; exports `HandoffService` for the A3 producers                                                                                                                      |
+| Piece          | File                                             | Role                                                                                                                                                                                                                                                                                                |
+| -------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Schema         | `libs/contracts/src/handoff/handoff.schema.ts`   | `HandoffSignal`, `HandoffRule`, `HandoffTarget` (kind+id subset of `TaskTarget`'s subsystem/pipeline members), `HandoffProposal`, `HandoffOutcome`, `HandoffSeverity` + `HANDOFF_SEVERITY_ORDER`                                                                                                    |
+| Contract       | `libs/contracts/src/handoff/handoff.contract.ts` | `handoffContract` — `getHandoffRules` (`GET`), `createHandoffRule` (`POST`, 201), `updateHandoffRule` (`PUT /:id`, 200/404), `deleteHandoffRule` (`DELETE /:id`, 200/404/**403**) over `/api/handoff-rules`; `HandoffRuleInputSchema` = `HandoffRuleSchema` minus `id` (the server mints it)        |
+| Rule store     | `apps/api/src/handoff/handoff-rule.store.ts`     | `HandoffRuleStore` + `SYSTEM_HANDOFF_RULES` seed table; single JSON list (`.zibby/data/handoff/rules.json`), reseeds from code on a missing/corrupt file — **code is the source of truth** (the file is gitignored/regenerable). `create`/`update`/`delete` carry the system-rule guard (see below) |
+| Proposal store | `apps/api/src/handoff/handoff-proposal.store.ts` | `HandoffProposalStore` — one `<id>.json` per parked tier-3 payload                                                                                                                                                                                                                                  |
+| Fired store    | `apps/api/src/handoff/handoff-fired.store.ts`    | `HandoffFiredStore` — per-rule fingerprint set for idempotency                                                                                                                                                                                                                                      |
+| Service        | `apps/api/src/handoff/handoff.service.ts`        | `HandoffService.evaluate` + `ResumableRunner` for `handoff-proposal` (resume → dispatch, cancel → drop)                                                                                                                                                                                             |
+| Controller     | `apps/api/src/handoff/handoff.controller.ts`     | implements `handoffContract`                                                                                                                                                                                                                                                                        |
+| Module         | `apps/api/src/handoff/handoff.module.ts`         | imports `ApprovalsModule`, `TasksModule`, `PipelinesModule`; exports `HandoffService` for the A3 producers                                                                                                                                                                                          |
 
 ## Seed rules (A.3)
 
@@ -54,7 +54,26 @@ deliberate no-dispatch) and replaces the legacy one-off `chains` feature.
 
 All are `system: true`. Tiers preserve today's autonomy posture: Sentinel/Maestro
 already auto-dispatched (Tier 2); Loom deliberately wanted operator-in-the-loop
-(Tier 3). The operator retunes them once the Part-2 rule-editor UI ships.
+(Tier 3). The operator retunes them from the subsystem drawer's "Předávání" tab
+(Part-2 rule-editor UI).
+
+## Rule CRUD + the system-rule guard
+
+The operator authors and retunes rules through `createHandoffRule` /
+`updateHandoffRule` / `deleteHandoffRule`. The `system` flag is **server-governed**,
+never client-set — it is the autonomy floor (Law 1), not an editable field:
+
+- **create** always forces `system: false` — an operator-authored rule is never a
+  system rule regardless of the request body.
+- **update** preserves the stored `system` flag verbatim; the input can retune
+  `enabled` / `tier` / `minSeverity` / `to` / `signalKind` but can neither promote a
+  user rule to system nor clear a system rule's flag.
+- **delete** of a `system: true` rule is a `403` — seeded rules can be retuned but
+  never removed (they reseed from code anyway, so deletion is refused loudly rather
+  than silently undone). A missing id is a `404`.
+
+The engine (`HandoffService.evaluate`) reads the store's `list()` live, so a
+freshly created enabled rule takes effect on the next signal.
 
 ## Autonomy floor
 

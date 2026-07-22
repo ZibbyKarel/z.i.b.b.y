@@ -1,10 +1,11 @@
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
-import { type HandoffRule, HandoffRuleSchema } from "@zibby/contracts";
+import { type HandoffRule, type HandoffRuleInput, HandoffRuleSchema } from "@zibby/contracts";
 import { z } from "zod";
-import { ensureDir, safeJson, writeFileAtomic } from "../shared/file-storage";
+import { collisionResistantId, ensureDir, safeJson, writeFileAtomic } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
+import { HandoffRuleNotFoundError, SystemHandoffRuleError } from "./handoff-rule.errors";
 
 /** DI token for the single rules JSON file. */
 export const HANDOFF_RULES_FILE = "HANDOFF_RULES_FILE";
@@ -66,8 +67,13 @@ export const SYSTEM_HANDOFF_RULES: readonly HandoffRule[] = [
  * need one file each, so it's a single list, like `HeraldGraduationStore`'s
  * `graduations.json`. Seeded with {@link SYSTEM_HANDOFF_RULES} on first boot;
  * a missing OR corrupt file re-seeds the defaults (fail-open — never throws).
- * Read + seed only for v1: CRUD is deferred to the Part-2 rule-editor UI, so
- * there is no `create`/`update`/`delete` here on purpose.
+ * P1 — full CRUD has landed (the Part-2 rule-editor UI's backend): `create`
+ * mints an id and always forces `system: false` (an operator rule is never a
+ * system rule regardless of what the input carries); `update` preserves the
+ * stored `system` flag verbatim (a system rule can be retuned but never demoted,
+ * a user rule can never be promoted); `delete` refuses a system rule with
+ * {@link SystemHandoffRuleError}. Seed/fail-open semantics of `list`/`seedSystem`
+ * are untouched.
  */
 @Injectable()
 export class HandoffRuleStore implements OnModuleInit {
@@ -96,10 +102,49 @@ export class HandoffRuleStore implements OnModuleInit {
   }
 
   /**
+   * Append a new operator-authored rule. `system` is ALWAYS forced to `false` here
+   * — an operator create is never a system rule, regardless of what the input carries.
+   */
+  async create(input: HandoffRuleInput): Promise<HandoffRule> {
+    const rules = await this.list();
+    const rule: HandoffRule = { ...input, id: collisionResistantId("hrule"), system: false };
+    await this.write([...rules, rule]);
+    return rule;
+  }
+
+  /**
+   * Replace a rule's editable fields in place (keeps its id). The stored `system`
+   * flag is PRESERVED from the existing rule and can never be changed by the input
+   * — a system rule stays system (retune only), a user rule stays user.
+   */
+  async update(id: string, input: HandoffRuleInput): Promise<HandoffRule> {
+    const rules = await this.list();
+    const index = rules.findIndex((r) => r.id === id);
+    if (index === -1) throw new HandoffRuleNotFoundError(id);
+    const existing = rules[index];
+    if (!existing) throw new HandoffRuleNotFoundError(id);
+    const updated: HandoffRule = { ...input, id, system: existing.system ?? false };
+    const next = [...rules];
+    next[index] = updated;
+    await this.write(next);
+    return updated;
+  }
+
+  /** Remove an operator-authored rule. A system rule throws {@link SystemHandoffRuleError}. */
+  async delete(id: string): Promise<void> {
+    const rules = await this.list();
+    const existing = rules.find((r) => r.id === id);
+    if (!existing) throw new HandoffRuleNotFoundError(id);
+    if (existing.system === true) throw new SystemHandoffRuleError(id);
+    await this.write(rules.filter((r) => r.id !== id));
+  }
+
+  /**
    * Missing file, or one that fails to parse as a valid rule array, is (re)seeded
-   * with the system defaults. A present, valid file is left untouched — v1 has no
-   * write path other than this seed, so "valid" only ever means "still the last
-   * seed" today, but the check is written generically for when Part-2 CRUD lands.
+   * with the system defaults. A present, valid file is left untouched — once
+   * `create`/`update`/`delete` have run, "valid" means "whatever the operator's
+   * CRUD has left on disk", not "still the last seed"; this only ever fires on a
+   * fresh/corrupt file, never clobbering live edits.
    */
   private async seedSystem(): Promise<void> {
     const raw = await fs.readFile(this.file, "utf8").catch(() => null);

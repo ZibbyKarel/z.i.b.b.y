@@ -114,6 +114,13 @@ export const HandoffRuleSchema = z.object({
 });
 export type HandoffRule = z.infer<typeof HandoffRuleSchema>;
 
+/** A handoff rule as authored by the operator — the server mints the `id`. Mirrors
+ *  `GlobalGateRuleInputSchema` vs `GlobalGateRuleSchema`. `system` stays in the shape
+ *  but is server-governed (see the store): a create forces it false, an update can
+ *  never flip it. */
+export const HandoffRuleInputSchema = HandoffRuleSchema.omit({ id: true });
+export type HandoffRuleInput = z.infer<typeof HandoffRuleInputSchema>;
+
 /**
  * A parked tier-3 handoff, gated behind a `"handoff-proposal"` approval
  * (`../approvals/approval.schema.ts`). The full payload the engine needs to
