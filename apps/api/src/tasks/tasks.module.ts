@@ -2,7 +2,6 @@ import { Module } from "@nestjs/common";
 import { AgentsModule } from "../agents/agents.module";
 import { ApprovalsModule } from "../approvals/approvals.module";
 import { BudgetModule } from "../budget/budget.module";
-import { ChainsModule } from "../chains/chains.module";
 import { GatesModule } from "../gates/gates.module";
 import { GoalsModule } from "../goals/goals.module";
 import { LimitsModule } from "../limits/limits.module";
@@ -41,7 +40,6 @@ import { TasksController } from "./tasks.controller";
     AgentsModule,
     PipelinesModule,
     GoalsModule,
-    ChainsModule,
     ProjectsModule,
     ResolvedProjectModule,
     BudgetModule,

@@ -11,7 +11,6 @@ import type {
   Agent,
   AgentRun,
   Attachment,
-  ChainRun,
   ClassificationTrace,
   CreateTaskInput,
   CreateTaskResult,
@@ -33,7 +32,6 @@ import { AgentsStorageService } from "../agents/agents.storage.service";
 import { AgentRunnerService, type RunAttachments } from "../agents/agent-runner.service";
 import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service";
 import { type BudgetOverMetrics, BudgetService } from "../budget/budget.service";
-import { ChainRunnerService } from "../chains/chain-runner.service";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
 import { WatcherHealthRegistry } from "../health/watcher-health.registry";
 import { LimitsService } from "../limits/limits.service";
@@ -102,8 +100,6 @@ const TERMINAL_AGENT = new Set<AgentRun["status"]>(["done", "error", "interrupte
 const TERMINAL_PIPELINE = new Set<PipelineRun["status"]>(["done", "failed"]);
 /** Goal run statuses that free a concurrency slot (Phase 10). */
 const TERMINAL_GOAL = new Set<GoalRun["status"]>(["done", "failed"]);
-/** Chain run statuses that free a concurrency slot (Phase 05). */
-const TERMINAL_CHAIN = new Set<ChainRun["status"]>(["done", "failed"]);
 
 /**
  * The deferred-task daemon. {@link createTask} is the single action behind the New
@@ -148,7 +144,6 @@ export class TaskSchedulerService
     /** F2b — for {@link resolveSubsystemTargetOrNull}'s owned-roster count (pipelines + agents). */
     private readonly agentsStore: AgentsStorageService,
     private readonly goalRunner: GoalRunnerService,
-    private readonly chainRunner: ChainRunnerService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
     private readonly activity: ActivityLogService,
@@ -195,10 +190,6 @@ export class TaskSchedulerService
       this.goalRunner.onRunStatus((run) => {
         if (run.taskId) void this.writeGoalOutcome(run.taskId, run);
         if (TERMINAL_GOAL.has(run.status)) void this.drainQueues();
-      }),
-      this.chainRunner.onRunStatus((run) => {
-        if (run.taskId) void this.writeChainOutcome(run.taskId, run);
-        if (TERMINAL_CHAIN.has(run.status)) void this.drainQueues();
       }),
     );
 
@@ -1207,13 +1198,6 @@ export class TaskSchedulerService
       );
       return { runRef: run.goalRunId, target, classification };
     }
-    if (target.kind === "chain") {
-      // Phase 05: a chain-targeted task dispatches through the chain runner. The
-      // chain run carries the taskId so its terminal outcome writes back onto the
-      // task exactly like agent/pipeline/goal runs.
-      const run = await this.chainRunner.start(target.id, taskId);
-      return { runRef: run.chainRunId, target, classification };
-    }
     // Phase 4a (Agent Factory telemetry): record a fallback ONLY when the
     // classifier itself picked the orchestrator (its terminal "nothing matched
     // confidently" rule) — an explicit `orchestrator` target (a directed override,
@@ -1550,44 +1534,6 @@ export class TaskSchedulerService
     });
   }
 
-  private async writeChainOutcome(taskId: string, run: ChainRun): Promise<void> {
-    if (run.status !== "done" && run.status !== "failed") return;
-    const outcome: TaskOutcome = {
-      status: run.status === "done" ? "done" : "error",
-      summary: `${run.steps.length} steps, ${run.status}`,
-      finishedAt: new Date().toISOString(),
-    };
-    // Finding #7 — see the lock comment on `writeAgentOutcome`.
-    await withPathLock(`task:${taskId}`, async () => {
-      try {
-        const task = await this.storage.writeOutcome(taskId, outcome);
-        this.log.info("task outcome written", {
-          taskId,
-          runRef: run.chainRunId,
-          status: run.status,
-        });
-        void this.activity.record({
-          kind: "task-outcome",
-          summary: `task ${outcome.status}: ${outcome.summary}`,
-          refs: {
-            taskId,
-            runRef: run.chainRunId,
-            status: outcome.status,
-            ...(task.projectId ? { projectId: task.projectId } : {}),
-          },
-        });
-        // Phase 12: no cost line here either — `ChainRunSchema` carries no `costUsd`
-        // (a chain's steps are agent/pipeline runs whose own outcomes already record
-        // their cost individually when THEY reach a terminal state).
-      } catch (error) {
-        this.log.debug("task outcome write skipped", {
-          taskId,
-          err: error instanceof Error ? error.message : String(error),
-        });
-      }
-    });
-  }
-
   /**
    * Best-effort cost-line write for a finished run (Phase 12) — only when both a
    * project and a known price exist; awaited so it lands before the caller's outer
@@ -1652,14 +1598,12 @@ function agentTaskTarget(a: Agent): TaskTarget {
   };
 }
 
-/** The activity ref the target contributes (agentId / pipelineId / chainId), if any. */
+/** The activity ref the target contributes (agentId / pipelineId), if any. */
 function refForTarget(target: TaskTarget): {
   agentId?: string;
   pipelineId?: string;
-  chainId?: string;
 } {
   if (target.kind === "agent") return { agentId: target.id };
   if (target.kind === "pipeline") return { pipelineId: target.id };
-  if (target.kind === "chain") return { chainId: target.id };
   return {};
 }

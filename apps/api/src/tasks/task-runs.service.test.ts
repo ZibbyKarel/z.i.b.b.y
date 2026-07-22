@@ -1,8 +1,6 @@
 import type {
   Agent,
   AgentRun,
-  Chain,
-  ChainRun,
   Goal,
   GoalRun,
   Pipeline,
@@ -13,8 +11,6 @@ import type {
 import { describe, expect, it, vi } from "vitest";
 import type { AgentRunnerService } from "../agents/agent-runner.service";
 import type { AgentsStorageService } from "../agents/agents.storage.service";
-import type { ChainRunnerService } from "../chains/chain-runner.service";
-import type { ChainsStorageService } from "../chains/chains.storage.service";
 import type { GoalRunnerService } from "../goals/goal-runner.service";
 import { GoalRunNotStoppableError } from "../goals/goals.errors";
 import type { GoalsStorageService } from "../goals/goals.storage.service";
@@ -92,19 +88,6 @@ const goalG: GoalRun = {
   cwd: "/tmp/acme",
 };
 
-const chainC: ChainRun = {
-  chainRunId: "research-then-build_5",
-  chainId: "research-then-build",
-  status: "running",
-  currentStep: 0,
-  steps: [
-    { index: 0, pipeline: "research", runRef: "research_1", status: "running" },
-    { index: 1, pipeline: "delivery", status: "pending" },
-  ],
-  startedAt: "2026-06-16T00:04:00.000Z",
-  taskId: "task-chain",
-};
-
 const scheduledS: ScheduledTask = {
   id: "task9",
   title: "later",
@@ -120,7 +103,6 @@ const scheduledS: ScheduledTask = {
 
 const agentDef = { id: "researcher", name: "Researcher" } as Agent;
 const pipelineDef = { id: "delivery", name: "Delivery Pipeline" } as Pipeline;
-const chainDef = { id: "research-then-build", name: "Research then Build" } as Chain;
 // goal definition intentionally absent → processor.name must fall back to the id
 
 function build() {
@@ -159,17 +141,9 @@ function build() {
     resumeParked: vi.fn(async () => goalG),
     delete: vi.fn(async () => {}),
   };
-  const chainRunner = {
-    listAll: vi.fn(async () => [] as ChainRun[]),
-    get: vi.fn((id: string) => {
-      if (id !== chainC.chainRunId) throw new Error("not found");
-      return chainC;
-    }),
-  };
   const agentsStore = { list: vi.fn(async () => [agentDef]) };
   const pipelinesStore = { list: vi.fn(async () => [pipelineDef]) };
   const goalsStore = { list: vi.fn(async () => [] as Goal[]) };
-  const chainsStore = { list: vi.fn(async () => [chainDef]) };
   const projectsStore = { list: vi.fn(async () => [acmeProject]) };
   const scheduled = { list: vi.fn(async () => [scheduledS]) };
 
@@ -177,11 +151,9 @@ function build() {
     agentRunner as unknown as AgentRunnerService,
     pipelineRunner as unknown as PipelineRunnerService,
     goalRunner as unknown as GoalRunnerService,
-    chainRunner as unknown as ChainRunnerService,
     agentsStore as unknown as AgentsStorageService,
     pipelinesStore as unknown as PipelinesStorageService,
     goalsStore as unknown as GoalsStorageService,
-    chainsStore as unknown as ChainsStorageService,
     projectsStore as unknown as ProjectsStorageService,
     scheduled as unknown as ScheduledTasksStorageService,
   );
@@ -190,7 +162,6 @@ function build() {
     agentRunner,
     pipelineRunner,
     goalRunner,
-    chainRunner,
     pipelinesStore,
     projectsStore,
     scheduled,
@@ -266,30 +237,6 @@ describe("TaskRunsService", () => {
       ]);
       const run = await service.getTaskRun(pipeP.pipelineRunId);
       expect(run.outputArtifactName).toBe("audit-report.md");
-    });
-  });
-
-  describe("chain runs in the feed (Phase 05)", () => {
-    it("surfaces a chain run as a first-class feed row with kind chain", async () => {
-      const { service, chainRunner } = build();
-      chainRunner.listAll.mockResolvedValue([chainC]);
-      const feed = await service.listTaskRuns();
-      const row = feed.find((r) => r.runId === chainC.chainRunId);
-      expect(row?.kind).toBe("chain");
-      expect(row?.chainId).toBe("research-then-build");
-      expect(row?.steps).toHaveLength(2);
-      expect(row?.processor).toEqual({
-        kind: "chain",
-        id: "research-then-build",
-        name: "Research then Build",
-      });
-    });
-
-    it("kindOf resolves a chain runId via getTaskRun", async () => {
-      const { service, chainRunner } = build();
-      chainRunner.listAll.mockResolvedValue([chainC]);
-      const row = await service.getTaskRun(chainC.chainRunId);
-      expect(row.kind).toBe("chain");
     });
   });
 
@@ -533,7 +480,7 @@ describe("TaskRunsService", () => {
       expect(artifact).toEqual({ name: "verdict.txt", content: "ok" });
     });
 
-    it("stops an agent, pipeline, or goal run via its own runner; refuses a chain run", async () => {
+    it("stops an agent, pipeline, or goal run via its own runner", async () => {
       const { service, agentRunner, pipelineRunner, goalRunner } = build();
       await service.stop("researcher_1");
       expect(agentRunner.stop).toHaveBeenCalledWith("researcher_1");
@@ -541,10 +488,6 @@ describe("TaskRunsService", () => {
       expect(pipelineRunner.stop).toHaveBeenCalledWith("delivery_3");
       await service.stop("ship-it_4");
       expect(goalRunner.stop).toHaveBeenCalledWith("ship-it_4");
-      // A chain run owns no single live process of its own — no stop.
-      await expect(service.stop("research-then-build_5")).rejects.toBeInstanceOf(
-        TaskRunNotStoppableError,
-      );
     });
 
     it("normalizes a pipeline/goal runner's own 'not stoppable' error to the unified one", async () => {

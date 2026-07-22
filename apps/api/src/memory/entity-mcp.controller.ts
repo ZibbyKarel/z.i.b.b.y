@@ -4,7 +4,6 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 import { AutomationsStorageService } from "../automations/automations.storage.service";
-import { ChainsStorageService } from "../chains/chains.storage.service";
 import { CommandsStorageService } from "../commands/commands.storage.service";
 import { CompaniesStorageService } from "../companies/companies.storage.service";
 import { GoalsStorageService } from "../goals/goals.storage.service";
@@ -26,7 +25,6 @@ const ENTITY_KINDS = [
   "hooks",
   "projects",
   "companies",
-  "chains",
   "integrations",
   "goals",
   "automations",
@@ -89,7 +87,7 @@ function filterByQuery(summaries: EntitySummary[], query: string): EntitySummary
  * {@link StreamableHTTPServerTransport}), but is NOT scoped to a chat
  * conversation: any run granted this server (via the seeded `zibby-entities`
  * `McpServer` row — see `McpServersStorageService.seedSystem`) can look up
- * skills/mcp/commands/hooks/projects/companies/chains/integrations/goals/
+ * skills/mcp/commands/hooks/projects/companies/integrations/goals/
  * automations by kind, and recall prose from the vault — distinct in kind from
  * self-knowledge's always-injected AUTO blocks (decision 4 of the phase-105
  * master plan): structured, on-demand lookup rather than a pushed snapshot.
@@ -111,7 +109,6 @@ export class EntityMcpController {
     private readonly hooks: HooksStorageService,
     private readonly projects: ProjectsStorageService,
     private readonly companies: CompaniesStorageService,
-    private readonly chains: ChainsStorageService,
     private readonly integrations: IntegrationsStorageService,
     private readonly goals: GoalsStorageService,
     private readonly automations: AutomationsStorageService,
@@ -171,7 +168,7 @@ export class EntityMcpController {
       {
         description:
           "List entities from a named ZIBBY catalog (skills, connected mcp servers, " +
-          "slash commands, hooks, projects, companies, pipeline chains, channel " +
+          "slash commands, hooks, projects, companies, channel " +
           "integrations, goals, or automations). Optionally filter by a substring over " +
           "id/name/description. Read-only, structured — use this for a catalog lookup " +
           "instead of recall_memory (which searches prose in the vault).",
@@ -235,8 +232,6 @@ export class EntityMcpController {
         return this.projects.list();
       case "companies":
         return this.companies.list();
-      case "chains":
-        return this.chains.list();
       case "integrations":
         return this.integrations.list();
       case "goals":

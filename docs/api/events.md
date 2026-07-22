@@ -14,11 +14,11 @@ ts-rest models.
 
 ## Pieces
 
-| Piece        | File                                       | Role                                                                                                                                |
-| ------------ | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Controller   | `apps/api/src/events/events.controller.ts` | the `@Sse("api/events")` handler; merges every scope's `Observable<MessageEvent>`                                                   |
-| Module       | `apps/api/src/events/events.module.ts`     | imports `AgentsModule`, `PipelinesModule`, `GoalsModule`, `ChainsModule`, `ChannelsModule` for their exported runner/event services |
-| SSE plumbing | `apps/api/src/shared/sse/sse.ts`           | `fromRunStatus()` (run-status → SSE event), `heartbeats()` (keep-alive ping)                                                        |
+| Piece        | File                                       | Role                                                                                                                |
+| ------------ | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| Controller   | `apps/api/src/events/events.controller.ts` | the `@Sse("api/events")` handler; merges every scope's `Observable<MessageEvent>`                                   |
+| Module       | `apps/api/src/events/events.module.ts`     | imports `AgentsModule`, `PipelinesModule`, `GoalsModule`, `ChannelsModule` for their exported runner/event services |
+| SSE plumbing | `apps/api/src/shared/sse/sse.ts`           | `fromRunStatus()` (run-status → SSE event), `heartbeats()` (keep-alive ping)                                        |
 
 ## Flow
 
@@ -29,9 +29,6 @@ ts-rest models.
 - **`pipeline-runs`** — same shape, over `PipelineRunnerService.onRunStatus`.
 - **`goal-runs`** — same shape, over `GoalRunnerService.onRunStatus` (added for the
   goal loop engine).
-- **`chain-runs`** — same shape, over `ChainRunnerService.onRunStatus` (Phase 104A —
-  unblocks the node→node rim particles, which need a real chain-run-driven scope to
-  ride).
 - **`channel-items`** — over `ChannelEventsService.stream()`, projecting
   `{ itemId, state }`.
 - **`activity`** — over `ActivityEventsService.stream()`, projecting
@@ -39,6 +36,11 @@ ts-rest models.
   needs no explicit import for it).
 - A merged **heartbeat** (`heartbeats()`) so the connection survives idle periods
   through intermediary proxies.
+
+The run-status scopes are exhaustively `agent-runs` / `pipeline-runs` / `goal-runs`.
+(A `chain-runs` scope existed while the `chains` feature did; it was removed with
+that feature — chains are superseded by the handoff rule engine, see
+`docs/api/handoff.md`.)
 
 Every event is tagged with a `scope` field the client switches on. Per the
 controller's own doc comment:

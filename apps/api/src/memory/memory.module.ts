@@ -3,7 +3,6 @@ import {
   AUTOMATIONS_DIR,
   AutomationsStorageService,
 } from "../automations/automations.storage.service";
-import { CHAINS_DIR, ChainsStorageService } from "../chains/chains.storage.service";
 import { CommandsModule } from "../commands/commands.module";
 import { CompaniesModule } from "../companies/companies.module";
 import { GOALS_DIR, GoalsStorageService } from "../goals/goals.storage.service";
@@ -38,11 +37,11 @@ export function resolveVaultDir(): string {
 
 /**
  * Phase 106: `EntityMcpController` (`list_entities` + `recall_memory`) needs
- * read access to ten catalogs. Five have leaf modules with no imports of their
+ * read access to nine catalogs. Five have leaf modules with no imports of their
  * own (`SkillsModule`/`McpModule`/`CommandsModule`/`HooksModule`/`CompaniesModule`)
- * — imported directly below, zero cycle risk. The other five
- * (projects/chains/integrations/goals/automations) all transitively import
- * `MemoryModule` already (`ProjectsModule` directly; `ChainsModule`/`GoalsModule`
+ * — imported directly below, zero cycle risk. The other four
+ * (projects/integrations/goals/automations) all transitively import
+ * `MemoryModule` already (`ProjectsModule` directly; `GoalsModule`
  * via `ProjectsModule`; `IntegrationsModule` via `ProjectsModule` (forwardRef);
  * `AutomationsModule` via `MemoryDistillerModule`, which imports `MemoryModule`
  * directly) — importing THOSE modules here would close a Nest DI cycle. Instead
@@ -64,8 +63,6 @@ export function resolveVaultDir(): string {
     VaultSeedService,
     { provide: PROJECTS_DIR, useFactory: () => process.env.PROJECTS_DIR ?? dataDir("projects") },
     ProjectsStorageService,
-    { provide: CHAINS_DIR, useFactory: () => process.env.CHAINS_DIR ?? dataDir("chains") },
-    ChainsStorageService,
     {
       provide: INTEGRATIONS_DIR,
       useFactory: () => process.env.INTEGRATIONS_DIR ?? dataDir("integrations"),

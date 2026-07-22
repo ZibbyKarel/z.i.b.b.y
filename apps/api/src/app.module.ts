@@ -10,7 +10,6 @@ import { AutomationsModule } from "./automations/automations.module";
 import { BriefingModule } from "./briefing/briefing.module";
 import { BriefingTranscriptSinkModule } from "./briefing/briefing-transcript-sink.module";
 import { BudgetModule } from "./budget/budget.module";
-import { ChainsModule } from "./chains/chains.module";
 import { ChatModule } from "./chat/chat.module";
 import { ChannelsModule } from "./channels/channels.module";
 import { CommandsModule } from "./commands/commands.module";
@@ -64,7 +63,6 @@ import { TasksModule } from "./tasks/tasks.module";
     GoalsModule,
     ApprovalsModule,
     ArtifactsModule,
-    ChainsModule,
     GateRulesModule,
     MemoryModule,
     RunRecorderModule,

@@ -1,18 +1,12 @@
 import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import { AgentsStorageService } from "../agents/agents.storage.service";
-import { ChainsStorageService } from "../chains/chains.storage.service";
 import { IntegrationsStorageService } from "../integrations/integrations.storage.service";
 import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
-import {
-  agentOwnersFromPipelines,
-  chainOwnerSeed,
-  integrationOwnerSeed,
-  pipelineOwnerSeed,
-} from "./owner-seed";
+import { agentOwnersFromPipelines, integrationOwnerSeed, pipelineOwnerSeed } from "./owner-seed";
 
 /**
  * NS2 F1b — one-shot, idempotent startup backfill that tags every pre-F1
- * pipeline / chain / agent / integration with its `ownerSubsystem`, mirroring
+ * pipeline / agent / integration with its `ownerSubsystem`, mirroring
  * the proven `sweepInlineAvatars` sweep pattern (`agents.storage.service.ts`):
  * a per-entity try/catch, atomic writes via each store's own `update`, never
  * fatal to boot. Idempotent by construction — an already-owned entity is
@@ -28,14 +22,12 @@ export class OwnerBackfillService implements OnModuleInit {
 
   constructor(
     private readonly pipelines: PipelinesStorageService,
-    private readonly chains: ChainsStorageService,
     private readonly agents: AgentsStorageService,
     private readonly integrations: IntegrationsStorageService,
   ) {}
 
   async onModuleInit(): Promise<void> {
     await this.backfillPipelines();
-    await this.backfillChains();
     await this.backfillAgents();
     await this.backfillIntegrations();
   }
@@ -48,16 +40,6 @@ export class OwnerBackfillService implements OnModuleInit {
       if (!owner) continue;
       await this.tag("pipeline", pipeline.id, () =>
         this.pipelines.update(pipeline.id, { ownerSubsystem: owner }),
-      );
-    }
-  }
-
-  private async backfillChains(): Promise<void> {
-    const all = await this.chains.list();
-    for (const chain of all) {
-      if (chain.ownerSubsystem) continue;
-      await this.tag("chain", chain.id, () =>
-        this.chains.updateOwnerSubsystem(chain.id, chainOwnerSeed()),
       );
     }
   }

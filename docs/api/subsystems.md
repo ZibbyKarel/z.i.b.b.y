@@ -14,17 +14,17 @@ backend/vault/integrations/scheduler). Never touch or reuse it for this resource
 
 ## Pieces
 
-| Piece      | File                                                    | Role                                                                 |
-| ---------- | -------------------------------------------------------- | --------------------------------------------------------------------- |
-| Schema     | `libs/contracts/src/subsystems/subsystem.schema.ts`       | `SubsystemIdSchema` (8-value enum), `SubsystemSchema`, `SUBSYSTEMS` registry constant, `SubsystemStateSchema`, `SubsystemWithStatusSchema` |
-| Contract   | `libs/contracts/src/subsystems/subsystems.contract.ts`     | `subsystemsContract` — `getSubsystems` (`GET /api/subsystems`), `getSubsystem` (`GET /api/subsystems/:id`, 404 on unknown id), `markSubsystemSeen` (`POST /api/subsystems/:id/seen`, 404 on unknown id) |
-| Errors     | `apps/api/src/subsystems/subsystems.errors.ts`             | `SubsystemNotFoundError`                                              |
-| Seen store | `apps/api/src/subsystems/subsystem-seen.store.ts`           | `SubsystemSeenStore` — `.zibby/data/subsystem-seen.json`, `{ [id]: IsoDateTime }`, missing file/key = epoch, atomic writes |
-| Service    | `apps/api/src/subsystems/subsystems.service.ts`             | `SubsystemsService.list()` / `.get(id)` / `.markSeen(id)` — real aggregation over pipelines/chains/runs/approvals (phase 82) |
-| Controller | `apps/api/src/subsystems/subsystems.controller.ts`          | implements `subsystemsContract` via the shared `makeErrorMapper` 404 pattern |
-| Module     | `apps/api/src/subsystems/subsystems.module.ts`              | imports `PipelinesModule`, `ChainsModule`, `ApprovalsModule`, `TasksModule` (for `TaskRunsService`, now exported from `TasksModule`) — registered in `app.module.ts` |
-| Web query  | `apps/web/features/subsystems/queries/useSubsystemsQuery.ts` | `refetchInterval` ~15s, `select: selectApiResponseBody`, same posture as `useHealthQuery`/`useSelfStatusQuery` |
-| Web mutation | `apps/web/features/subsystems/mutations/useMarkSubsystemSeenMutation.ts` | `makeInvalidatingMutation` over `markSubsystemSeen`, invalidates the subsystems query key — called when the operator opens a subsystem's drawer (phase 84) |
+| Piece        | File                                                                     | Role                                                                                                                                                                                                    |
+| ------------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Schema       | `libs/contracts/src/subsystems/subsystem.schema.ts`                      | `SubsystemIdSchema` (8-value enum), `SubsystemSchema`, `SUBSYSTEMS` registry constant, `SubsystemStateSchema`, `SubsystemWithStatusSchema`                                                              |
+| Contract     | `libs/contracts/src/subsystems/subsystems.contract.ts`                   | `subsystemsContract` — `getSubsystems` (`GET /api/subsystems`), `getSubsystem` (`GET /api/subsystems/:id`, 404 on unknown id), `markSubsystemSeen` (`POST /api/subsystems/:id/seen`, 404 on unknown id) |
+| Errors       | `apps/api/src/subsystems/subsystems.errors.ts`                           | `SubsystemNotFoundError`                                                                                                                                                                                |
+| Seen store   | `apps/api/src/subsystems/subsystem-seen.store.ts`                        | `SubsystemSeenStore` — `.zibby/data/subsystem-seen.json`, `{ [id]: IsoDateTime }`, missing file/key = epoch, atomic writes                                                                              |
+| Service      | `apps/api/src/subsystems/subsystems.service.ts`                          | `SubsystemsService.list()` / `.get(id)` / `.markSeen(id)` — real aggregation over pipelines/runs/approvals (phase 82)                                                                                   |
+| Controller   | `apps/api/src/subsystems/subsystems.controller.ts`                       | implements `subsystemsContract` via the shared `makeErrorMapper` 404 pattern                                                                                                                            |
+| Module       | `apps/api/src/subsystems/subsystems.module.ts`                           | imports `PipelinesModule`, `ApprovalsModule`, `TasksModule` (for `TaskRunsService`, now exported from `TasksModule`) — registered in `app.module.ts`                                                    |
+| Web query    | `apps/web/features/subsystems/queries/useSubsystemsQuery.ts`             | `refetchInterval` ~15s, `select: selectApiResponseBody`, same posture as `useHealthQuery`/`useSelfStatusQuery`                                                                                          |
+| Web mutation | `apps/web/features/subsystems/mutations/useMarkSubsystemSeenMutation.ts` | `makeInvalidatingMutation` over `markSubsystemSeen`, invalidates the subsystems query key — called when the operator opens a subsystem's drawer (phase 84)                                              |
 
 ## The registry
 
@@ -56,12 +56,12 @@ not a tweak.
 
 `SubsystemWithStatusSchema` extends the identity schema with
 `{ state: "klid" | "bezi" | "hlaseni" | "ceka", tier2Count, tier3Count }`.
-`SubsystemsService` computes this per subsystem, read-only over the pipelines/
-chains stores (`ownerSubsystem`, phase 81), the unified task-runs feed
+`SubsystemsService` computes this per subsystem, read-only over the pipelines
+store (`ownerSubsystem`, phase 81), the unified task-runs feed
 (`TaskRunsService.listTaskRuns()`), and `ApprovalsService` — it duplicates no
 run/approval semantics, only reads and correlates:
 
-- **`bezi`** — an owned pipeline/chain has a currently-`running` run.
+- **`bezi`** — an owned pipeline has a currently-`running` run.
 - **`ceka`** (+ `tier3Count`) — pending approvals attributable to an owned
   pipeline's run. Attribution mirrors the web's `approvalForRun`
   (`apps/web/features/runs/run.ts`): a `pipeline-output` approval's `runId` IS
@@ -72,10 +72,10 @@ run/approval semantics, only reads and correlates:
   `machine`, `agent-proposal`) has no pipeline to attribute through and is
   silently excluded — the global approvals surface still shows it; this is a
   lens, not the source of truth.
-- **`hlaseni`** (+ `tier2Count`) — owned pipeline/chain runs that went
+- **`hlaseni`** (+ `tier2Count`) — owned pipeline runs that went
   terminal (`done` or `error`) after the subsystem's `lastSeenAt`
-  (`SubsystemSeenStore`). Neither `PipelineRun` nor `ChainRun` carries its own
-  completion timestamp, so this reads the best available signal: the backing
+  (`SubsystemSeenStore`). `PipelineRun` carries no completion timestamp of its
+  own, so this reads the best available signal: the backing
   task's `taskOutcomeFinishedAt` when the run was dispatched from one, else
   the run's own `startedAt`.
 - **Precedence** when several conditions apply to one subsystem:

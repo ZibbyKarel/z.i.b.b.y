@@ -31,9 +31,9 @@ import { ArtifactsStorageService, artifactRecordId } from "../artifacts/artifact
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
 // A3: type-only — a plain value import here would close a *file-level*
 // require cycle (pipeline-runner.service.ts -> handoff.service.ts ->
-// tasks/task-scheduler.service.ts -> chains/chain-runner.service.ts ->
-// pipeline-runner.service.ts, confirmed via `madge --circular`), independent of
-// and in addition to the module-graph cycle `ModuleRef` already sidesteps. The
+// tasks/task-scheduler.service.ts -> pipeline-runner.service.ts, confirmed via
+// `madge --circular`), independent of and in addition to the module-graph
+// cycle `ModuleRef` already sidesteps. The
 // runtime class reference `moduleRef.get` needs as its token is instead
 // fetched via a lazy `await import(...)` inside `recordArtifact`, deferred
 // until well after the whole module graph has finished loading.
@@ -1391,8 +1391,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // HandoffModule (see pipelines.module.ts's doc comment for why). The
       // class reference itself is fetched via a lazy `await import(...)` too
       // (see the `import type` above) — deferred past module-load time, so it
-      // never re-enters the file-level require cycle through task-scheduler/
-      // chain-runner.
+      // never re-enters the file-level require cycle through task-scheduler.
       const { HandoffService } = await import("../handoff/handoff.service");
       const handoff = this.moduleRef.get<HandoffService>(HandoffService, { strict: false });
       await handoff.evaluate({

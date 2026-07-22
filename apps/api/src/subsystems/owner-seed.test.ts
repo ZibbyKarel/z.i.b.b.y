@@ -1,11 +1,6 @@
 import type { Pipeline } from "@zibby/contracts";
 import { describe, expect, it } from "vitest";
-import {
-  agentOwnersFromPipelines,
-  chainOwnerSeed,
-  integrationOwnerSeed,
-  pipelineOwnerSeed,
-} from "./owner-seed";
+import { agentOwnersFromPipelines, integrationOwnerSeed, pipelineOwnerSeed } from "./owner-seed";
 
 function pipelineFixture(
   id: string,
@@ -37,12 +32,6 @@ describe("owner-seed (NS2 F1b, pure)", () => {
     it("an unmatched pipeline id is undefined, not a guess", () => {
       expect(pipelineOwnerSeed("demo-pipe")).toBeUndefined();
       expect(pipelineOwnerSeed("some-future-pipeline")).toBeUndefined();
-    });
-  });
-
-  describe("chainOwnerSeed", () => {
-    it("every chain seeds to scout", () => {
-      expect(chainOwnerSeed()).toBe("scout");
     });
   });
 

@@ -11,7 +11,6 @@ import type { Approval } from "@zibby/contracts";
 import type { TaskRun } from "@zibby/contracts";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { ApprovalsService } from "../approvals/approvals.service";
-import { ChainsStorageService } from "../chains/chains.storage.service";
 import { IntegrationsStorageService } from "../integrations/integrations.storage.service";
 import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
 import { TaskRunsService } from "../tasks/task-runs.service";
@@ -60,13 +59,13 @@ interface OwnedPipelineRun {
 
 /**
  * Phase 82 — real aggregation, replacing the phase-80 stub. A thin layer over
- * EXISTING domain services (pipelines/chains storage for `ownerSubsystem`
+ * EXISTING domain services (pipelines storage for `ownerSubsystem`
  * attribution, the unified task-runs feed for run state, the approvals service
  * for pending Tier-3 items) — it duplicates no run/approval semantics, only
  * reads and correlates.
  *
  * Per subsystem, in precedence order `waiting > running > report > idle`:
- * - `running`: an owned pipeline/chain has a currently-`running` run.
+ * - `running`: an owned pipeline has a currently-`running` run.
  * - `waiting` (+ `tier3Count`): pending approvals attributable to an owned
  *   pipeline's run. Attribution mirrors the web's `approvalForRun` matching
  *   (`apps/web/features/runs/run.ts`) — a `pipeline-output` approval's `runId`
@@ -76,9 +75,9 @@ interface OwnedPipelineRun {
  *   `task-output`, `jira-issue`, `machine`, `agent-proposal`) has no pipeline to
  *   attribute through and is silently excluded — no data loss, the global
  *   approvals surface still shows it; this is a lens.
- * - `report` (+ `tier2Count`): owned pipeline/chain runs that went terminal
+ * - `report` (+ `tier2Count`): owned pipeline runs that went terminal
  *   (`done` or `error`) after the subsystem's `lastSeenAt` (`SubsystemSeenStore`).
- *   Neither `PipelineRun` nor `ChainRun` carries its own completion timestamp,
+ *   `PipelineRun` carries no completion timestamp of its own,
  *   so this uses the best available signal: the backing task's
  *   `taskOutcomeFinishedAt` when the run was dispatched from one, else the
  *   run's own `startedAt` (close enough for a coarse "since last visit" read —
@@ -92,7 +91,6 @@ interface OwnedPipelineRun {
 export class SubsystemsService {
   constructor(
     private readonly pipelines: PipelinesStorageService,
-    private readonly chains: ChainsStorageService,
     private readonly taskRuns: TaskRunsService,
     private readonly approvals: ApprovalsService,
     private readonly seen: SubsystemSeenStore,
@@ -142,7 +140,7 @@ export class SubsystemsService {
   }
 
   /**
-   * NS2 F1b — every stored pipeline/chain/agent/integration that still has no
+   * NS2 F1b — every stored pipeline/agent/integration that still has no
    * `ownerSubsystem`. A report list, not a health signal (the health read-model
    * is a closed infra enum — not the place for an ownership gap): the
    * owner-backfill sweep runs once at boot, so this is `[]` in steady state and
@@ -150,9 +148,8 @@ export class SubsystemsService {
    * that somehow slipped past the create-time 422).
    */
   async listUnowned(): Promise<UnownedEntity[]> {
-    const [pipelines, chains, agents, integrations] = await Promise.all([
+    const [pipelines, agents, integrations] = await Promise.all([
       this.pipelines.list(),
-      this.chains.list(),
       this.agents.list(),
       this.integrations.list(),
     ]);
@@ -160,7 +157,6 @@ export class SubsystemsService {
       ...pipelines
         .filter((p) => !p.ownerSubsystem)
         .map((p) => ({ kind: "pipeline" as const, id: p.id })),
-      ...chains.filter((c) => !c.ownerSubsystem).map((c) => ({ kind: "chain" as const, id: c.id })),
       ...agents.filter((a) => !a.ownerSubsystem).map((a) => ({ kind: "agent" as const, id: a.id })),
       ...integrations
         .filter((i) => !i.ownerSubsystem)
@@ -173,8 +169,8 @@ export class SubsystemsService {
    * and `monitors` (the subset of owned integrations that are a GitHub
    * integration with a `ci` stream — there is no standalone monitor entity).
    * Throws `SubsystemNotFoundError` for an unknown id, same as {@link get}.
-   * Pipelines/chains are deliberately excluded — the roster tab's canvas
-   * already sources those client-side.
+   * Pipelines are deliberately excluded — the roster tab's canvas already
+   * sources those client-side.
    */
   async roster(id: string): Promise<SubsystemRoster> {
     const subsystem = this.find(id);
@@ -207,17 +203,14 @@ export class SubsystemsService {
    * measurable speed.
    */
   private async aggregateAll(): Promise<Map<SubsystemId, Aggregate>> {
-    const [pipelines, chains, runs, pendingApprovals] = await Promise.all([
+    const [pipelines, runs, pendingApprovals] = await Promise.all([
       this.pipelines.list(),
-      this.chains.list(),
       this.taskRuns.listTaskRuns(),
       this.approvals.list("pending"),
     ]);
 
     const pipelineOwner = new Map<string, SubsystemId>();
     for (const p of pipelines) if (p.ownerSubsystem) pipelineOwner.set(p.id, p.ownerSubsystem);
-    const chainOwner = new Map<string, SubsystemId>();
-    for (const c of chains) if (c.ownerSubsystem) chainOwner.set(c.id, c.ownerSubsystem);
 
     const lastSeenById = new Map<SubsystemId, string>(
       await Promise.all(SUBSYSTEMS.map(async (s) => [s.id, await this.seen.seenAt(s.id)] as const)),
@@ -229,12 +222,7 @@ export class SubsystemsService {
     const ownedPipelineRuns: OwnedPipelineRun[] = [];
 
     for (const run of runs) {
-      const owner =
-        run.kind === "pipeline"
-          ? pipelineOwner.get(run.owner)
-          : run.kind === "chain"
-            ? chainOwner.get(run.owner)
-            : undefined;
+      const owner = run.kind === "pipeline" ? pipelineOwner.get(run.owner) : undefined;
       if (!owner) continue;
       if (run.kind === "pipeline") ownedPipelineRuns.push({ runId: run.runId, owner });
 

@@ -181,7 +181,7 @@ was deleted). Goal maker/verifier child runs are folded into the feed (not peer
 rows), but stay reachable from the goal's detail view.
 
 ```
-GET    /api/tasks/runs                                       the unified feed (newest-first; agent/pipeline/goal/chain/scheduled)
+GET    /api/tasks/runs                                       the unified feed (newest-first; agent/pipeline/goal/scheduled)
 GET    /api/tasks/runs/:runId                                a single run's detail
 GET    /api/tasks/runs/:runId/logs?offset=                   log chunk from a byte offset
 GET    /api/tasks/runs/:runId/logs/stream                    SSE tail (falls back to the offset-poll above)
