@@ -11,13 +11,16 @@ import type {
 } from "@zibby/contracts";
 import { Button, Dropdown, Stack, Typography } from "@zibby/design-system";
 import type { DropdownOption } from "@zibby/design-system";
+import type { Route } from "next";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { signalKindDescription, signalKindLabel } from "../signalKinds";
 
 export enum HandoffRuleEditorTestId {
   Root = "handoff-rule-editor-root",
   SignalKind = "handoff-rule-editor-signal-kind",
+  NewSignal = "handoff-rule-editor-new-signal",
   Severity = "handoff-rule-editor-severity",
   Target = "handoff-rule-editor-target",
   Tier = "handoff-rule-editor-tier",
@@ -89,6 +92,7 @@ export function HandoffRuleEditor({
   pending = false,
 }: HandoffRuleEditorProps) {
   const t = useTranslations("subsystems.handoff");
+  const router = useRouter();
 
   // Scope the registry to this drawer's own producer subsystem — the picker
   // only ever offers signals `fromSubsystemId` can actually emit.
@@ -191,6 +195,16 @@ export function HandoffRuleEditor({
               variant="inline"
             />
           </div>
+
+          <Button
+            data-testid={HandoffRuleEditorTestId.NewSignal}
+            icon="plus"
+            intent="ghost"
+            onClick={() => router.push(`/signals/new?from=${fromSubsystemId}` as Route)}
+            size="sm"
+          >
+            {t("editor.newSignal")}
+          </Button>
 
           <Typography size="sm" type="text" variant="secondary">
             {t("editor.severityPrefix")}

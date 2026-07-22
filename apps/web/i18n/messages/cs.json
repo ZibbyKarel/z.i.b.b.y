@@ -1639,6 +1639,25 @@
       "buildTaskLink": "Zobrazit task",
       "notFoundTitle": "Signál nenalezen",
       "notFoundDescription": "Tenhle typ signálu v registru neexistuje — možná byl smazán, nebo je odkaz zastaralý."
+    },
+    "create": {
+      "title": "Nový signál",
+      "panelTitle": "Registrace signálu",
+      "cancel": "Zrušit",
+      "submit": "Vytvořit signál",
+      "error": "Vytvoření signálu se nepovedlo — zkuste to prosím znovu.",
+      "successToast": "Signál zaregistrován — build task {buildTaskId} běží.",
+      "fields": {
+        "producer": "Producent",
+        "label": "Název",
+        "labelPlaceholder": "např. Prošlý certifikát",
+        "description": "Popis / kdy se spustí",
+        "descriptionHint": "K čemu signál slouží a za jakých okolností ho producent vyprodukuje.",
+        "descriptionPlaceholder": "Popište, kdy tento signál nastane…",
+        "severityBearing": "Nese závažnost",
+        "severityBearingHint": "Zapněte, pokud signál nese úroveň závažnosti (low/moderate/high/critical).",
+        "slugPreviewLabel": "id (přibližně)"
+      }
     }
   },
   "mcp": {
@@ -1948,6 +1967,7 @@
           "3": "až to schválím"
         },
         "signalKindAria": "Druh signálu",
+        "newSignal": "+ nový signál",
         "severityAria": "Minimální závažnost",
         "targetAria": "Cíl předání",
         "tierAria": "Způsob předání",
