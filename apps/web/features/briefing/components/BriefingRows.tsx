@@ -31,6 +31,7 @@ export const STATE_DOT_TONE: Record<SubsystemState, DotTone> = {
   running: "run",
   report: "ok",
   waiting: "wait",
+  error: "bad",
 };
 
 /**

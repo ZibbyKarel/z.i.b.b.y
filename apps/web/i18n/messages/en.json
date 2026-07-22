@@ -1809,7 +1809,8 @@
       "idle": "Idle",
       "running": "Running",
       "report": "Report ready",
-      "waiting": "Awaiting decision"
+      "waiting": "Awaiting decision",
+      "error": "Error"
     },
     "nodeAria": "{name}, {state}",
     "tier2Badge": "{count} reports to review",

@@ -11,6 +11,7 @@ const FORGE: SubsystemWithStatus = {
   state: "idle",
   tier2Count: 0,
   tier3Count: 0,
+  errorCount: 0,
 };
 
 function pipelineFixture(overrides: Partial<Pipeline> = {}): Pipeline {

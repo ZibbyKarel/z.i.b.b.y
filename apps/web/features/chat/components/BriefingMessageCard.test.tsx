@@ -65,7 +65,14 @@ describe("BriefingMessageCard (F8a / O6)", () => {
         briefing={{
           ...calm,
           subsystems: [
-            { subsystem: "forge", name: "Forge", state: "waiting", tier2Count: 0, tier3Count: 2 },
+            {
+              subsystem: "forge",
+              name: "Forge",
+              state: "waiting",
+              tier2Count: 0,
+              errorCount: 0,
+              tier3Count: 2,
+            },
           ],
         }}
       />,

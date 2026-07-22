@@ -25,9 +25,10 @@ import { SubsystemNotFoundError } from "./subsystems.errors";
  */
 const STATE_PRECEDENCE: Record<SubsystemState, number> = {
   waiting: 0,
-  running: 1,
-  report: 2,
-  idle: 3,
+  error: 1,
+  running: 2,
+  report: 3,
+  idle: 4,
 };
 
 /**
@@ -38,15 +39,17 @@ const STATE_PRECEDENCE: Record<SubsystemState, number> = {
  */
 const LIST_ORDER_RANK: Record<SubsystemState, number> = {
   waiting: 0,
-  report: 1,
-  running: 2,
-  idle: 3,
+  error: 1,
+  report: 2,
+  running: 3,
+  idle: 4,
 };
 
 interface Aggregate {
   state: SubsystemState;
   tier2Count: number;
   tier3Count: number;
+  errorCount: number;
 }
 
 /** A pipeline run owned by a subsystem, kept around for the approval-attribution pass. */
@@ -113,6 +116,7 @@ export class SubsystemsService {
       const rankDiff = LIST_ORDER_RANK[a.state] - LIST_ORDER_RANK[b.state];
       if (rankDiff !== 0) return rankDiff;
       if (a.state === "waiting") return b.tier3Count - a.tier3Count;
+      if (a.state === "error") return b.errorCount - a.errorCount;
       if (a.state === "report") return b.tier2Count - a.tier2Count;
       return 0; // Array#sort is stable → registry order survives as the tiebreak.
     });
@@ -221,6 +225,7 @@ export class SubsystemsService {
 
     const running = new Set<SubsystemId>();
     const tier2Count = new Map<SubsystemId, number>();
+    const errorCount = new Map<SubsystemId, number>();
     const ownedPipelineRuns: OwnedPipelineRun[] = [];
 
     for (const run of runs) {
@@ -239,7 +244,8 @@ export class SubsystemsService {
         const completedAt = completionSignal(run);
         const lastSeen = lastSeenById.get(owner);
         if (lastSeen !== undefined && completedAt > lastSeen) {
-          tier2Count.set(owner, (tier2Count.get(owner) ?? 0) + 1);
+          const bucket = run.status === "error" ? errorCount : tier2Count;
+          bucket.set(owner, (bucket.get(owner) ?? 0) + 1);
         }
       }
     }
@@ -255,8 +261,10 @@ export class SubsystemsService {
     for (const s of SUBSYSTEMS) {
       const t3 = tier3Count.get(s.id) ?? 0;
       const t2 = tier2Count.get(s.id) ?? 0;
+      const errs = errorCount.get(s.id) ?? 0;
       const candidates: SubsystemState[] = [
         ...(t3 > 0 ? (["waiting"] as const) : []),
+        ...(errs > 0 ? (["error"] as const) : []),
         ...(running.has(s.id) ? (["running"] as const) : []),
         ...(t2 > 0 ? (["report"] as const) : []),
         "idle",
@@ -264,7 +272,7 @@ export class SubsystemsService {
       const state = candidates.reduce((best, candidate) =>
         STATE_PRECEDENCE[candidate] < STATE_PRECEDENCE[best] ? candidate : best,
       );
-      result.set(s.id, { state, tier2Count: t2, tier3Count: t3 });
+      result.set(s.id, { state, tier2Count: t2, tier3Count: t3, errorCount: errs });
     }
     return result;
   }
@@ -297,6 +305,11 @@ function withAggregate(
   subsystem: (typeof SUBSYSTEMS)[number],
   aggregates: Map<SubsystemId, Aggregate>,
 ): SubsystemWithStatus {
-  const aggregate = aggregates.get(subsystem.id) ?? { state: "idle", tier2Count: 0, tier3Count: 0 };
+  const aggregate = aggregates.get(subsystem.id) ?? {
+    state: "idle",
+    tier2Count: 0,
+    tier3Count: 0,
+    errorCount: 0,
+  };
   return { ...subsystem, ...aggregate };
 }

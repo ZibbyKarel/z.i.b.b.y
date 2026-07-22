@@ -64,6 +64,7 @@ function buildSubsystemLines(
       state: s.state,
       tier2Count: s.tier2Count,
       tier3Count: s.tier3Count,
+      errorCount: s.errorCount,
       ...(note ? { note } : {}),
     };
   });

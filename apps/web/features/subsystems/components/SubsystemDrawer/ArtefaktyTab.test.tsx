@@ -1,4 +1,9 @@
-import { type ArtifactRecord, type Chain, SUBSYSTEMS, type SubsystemWithStatus } from "@zibby/contracts";
+import {
+  type ArtifactRecord,
+  type Chain,
+  SUBSYSTEMS,
+  type SubsystemWithStatus,
+} from "@zibby/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen } from "../../../../test/render";
 import type { Pipeline } from "../../../../domain";
@@ -9,6 +14,7 @@ const FORGE: SubsystemWithStatus = {
   state: "idle",
   tier2Count: 0,
   tier3Count: 0,
+  errorCount: 0,
 };
 
 function pipelineFixture(overrides: Partial<Pipeline> = {}): Pipeline {
@@ -108,7 +114,9 @@ describe("ArtefaktyTab (Phase 88)", () => {
       }),
       pipelineFixture({ id: "downstream", name: "Downstream", ownerSubsystem: "loom" }),
     ];
-    hooks.chains = [chainFixture({ steps: [{ pipeline: "delivery" }, { pipeline: "downstream" }] })];
+    hooks.chains = [
+      chainFixture({ steps: [{ pipeline: "delivery" }, { pipeline: "downstream" }] }),
+    ];
     hooks.artifacts = [];
 
     render(<ArtefaktyTab subsystem={FORGE} />);
@@ -127,7 +135,9 @@ describe("ArtefaktyTab (Phase 88)", () => {
       }),
       pipelineFixture({ id: "downstream", ownerSubsystem: "loom" }),
     ];
-    hooks.chains = [chainFixture({ steps: [{ pipeline: "delivery" }, { pipeline: "downstream" }] })];
+    hooks.chains = [
+      chainFixture({ steps: [{ pipeline: "delivery" }, { pipeline: "downstream" }] }),
+    ];
     hooks.artifacts = [];
 
     render(<ArtefaktyTab subsystem={FORGE} />);
