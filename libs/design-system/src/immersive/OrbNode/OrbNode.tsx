@@ -12,7 +12,6 @@ export enum OrbNodeTestId {
   Orb = "orb-node-orb",
   Icon = "orb-node-icon",
   Label = "orb-node-label",
-  Status = "orb-node-status",
   Halo = "orb-node-halo",
   Ping = "orb-node-ping",
   Shadow = "orb-node-shadow",
@@ -27,8 +26,10 @@ export interface OrbNodeProps {
   state: OrbState;
   /** Subsystem name shown under the orb. */
   label: string;
-  /** Short state label shown under the name (e.g. "working", "awaiting review"). */
-  statusLabel: string;
+  /** Accessible name for the root button — defaults to `label` when omitted.
+   * Lets a caller announce more than what's visually shown (e.g. name + state)
+   * without painting that extra text on the map itself. */
+  ariaLabel?: string;
   /** Icon overlay rendered centered on the orb body. */
   icon: ReactNode;
   /** Number of active tasks — drives the {@link OrbitField} dot count. */
@@ -70,7 +71,7 @@ export function OrbNode({
   hex,
   state,
   label,
-  statusLabel,
+  ariaLabel,
   icon,
   activeCount,
   nodeId,
@@ -96,7 +97,7 @@ export function OrbNode({
 
   return (
     <div
-      aria-label={label}
+      aria-label={ariaLabel ?? label}
       data-testid={OrbNodeTestId.Root}
       onClick={onClick}
       onKeyDown={handleKeyDown}
@@ -143,7 +144,12 @@ export function OrbNode({
           }}
         />
         {/* Faux-3D orbits of the node's active tasks. */}
-        <OrbitField baseRadius={diameter / 2 + 13} color={st.color} count={activeCount} seed={nodeId} />
+        <OrbitField
+          baseRadius={diameter / 2 + 13}
+          color={st.color}
+          count={activeCount}
+          seed={nodeId}
+        />
         {/* State halo — color = STATE, not identity. */}
         <span
           className="im-anim"
@@ -203,7 +209,7 @@ export function OrbNode({
           </span>
         </div>
       </div>
-      {/* Name + status label. */}
+      {/* Name label. */}
       <div
         style={{
           display: "flex",
@@ -225,31 +231,6 @@ export function OrbNode({
           }}
         >
           {label}
-        </span>
-        <span
-          data-testid={OrbNodeTestId.Status}
-          style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}
-        >
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              background: st.color,
-              boxShadow: st.live ? `0 0 6px ${st.color}` : "none",
-            }}
-          />
-          <span
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: 10.5,
-              color: st.color,
-              letterSpacing: "0.02em",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {statusLabel}
-          </span>
         </span>
       </div>
     </div>

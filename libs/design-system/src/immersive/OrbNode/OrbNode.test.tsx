@@ -11,7 +11,7 @@ const NON_PING_STATES: OrbState[] = ["idle", "working", "thinking"];
 const PING_STATES: OrbState[] = ["await", "incident", "report"];
 
 describe("OrbNode", () => {
-  it("renders the label and status text", () => {
+  it("renders the label, with no status text node", () => {
     render(
       <OrbNode
         activeCount={2}
@@ -21,11 +21,41 @@ describe("OrbNode", () => {
         label="Forge"
         nodeId="forge"
         state="working"
-        statusLabel="working"
       />,
     );
     expect(screen.getByTestId(OrbNodeTestId.Label)).toHaveTextContent("Forge");
-    expect(screen.getByTestId(OrbNodeTestId.Status)).toHaveTextContent("working");
+    expect(screen.queryByTestId("orb-node-status")).toBeNull();
+  });
+
+  it("defaults the accessible name to the visible label", () => {
+    render(
+      <OrbNode
+        activeCount={0}
+        diameter={72}
+        hex="#5b8def"
+        icon={<span>icon</span>}
+        label="Forge"
+        nodeId="forge"
+        state="working"
+      />,
+    );
+    expect(screen.getByTestId(OrbNodeTestId.Root)).toHaveAccessibleName("Forge");
+  });
+
+  it("uses ariaLabel over the visible label when supplied", () => {
+    render(
+      <OrbNode
+        activeCount={0}
+        ariaLabel="Forge, Working"
+        diameter={72}
+        hex="#5b8def"
+        icon={<span>icon</span>}
+        label="Forge"
+        nodeId="forge"
+        state="working"
+      />,
+    );
+    expect(screen.getByTestId(OrbNodeTestId.Root)).toHaveAccessibleName("Forge, Working");
   });
 
   it("passes the icon slot the exact node supplied", () => {
@@ -38,7 +68,6 @@ describe("OrbNode", () => {
         label="Scout"
         nodeId="scout"
         state="idle"
-        statusLabel="idle"
       />,
     );
     expect(
@@ -56,7 +85,6 @@ describe("OrbNode", () => {
         label="Atlas"
         nodeId="atlas"
         state="idle"
-        statusLabel="idle"
       />,
     );
     expect(screen.getByTestId(OrbNodeTestId.Halo)).toBeInTheDocument();
@@ -72,7 +100,6 @@ describe("OrbNode", () => {
         label="Sentry"
         nodeId="sentry"
         state={state}
-        statusLabel={state}
       />,
     );
     expect(screen.getByTestId(OrbNodeTestId.Ping)).toBeInTheDocument();
@@ -88,7 +115,6 @@ describe("OrbNode", () => {
         label="Mint"
         nodeId="mint"
         state={state}
-        statusLabel={state}
       />,
     );
     expect(screen.queryByTestId(OrbNodeTestId.Ping)).toBeNull();
@@ -107,7 +133,6 @@ describe("OrbNode", () => {
         nodeId="relay"
         onClick={onClick}
         state="idle"
-        statusLabel="idle"
       />,
     );
     await user.click(screen.getByTestId(OrbNodeTestId.Root));
@@ -127,7 +152,6 @@ describe("OrbNode", () => {
         nodeId="relay"
         onClick={onClick}
         state="idle"
-        statusLabel="idle"
       />,
     );
     const root = screen.getByTestId(OrbNodeTestId.Root);
@@ -147,7 +171,6 @@ describe("OrbNode", () => {
         label="Relay"
         nodeId="relay"
         state="idle"
-        statusLabel="idle"
       />,
     );
     expect(screen.getByTestId(OrbNodeTestId.Root)).toHaveRole("button");

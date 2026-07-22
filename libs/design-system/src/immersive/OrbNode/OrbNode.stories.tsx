@@ -7,7 +7,6 @@ import { OrbNode } from "./OrbNode";
 interface StateSample {
   state: OrbState;
   label: string;
-  statusLabel: string;
   hex: string;
   icon: IconName;
   activeCount: number;
@@ -17,7 +16,6 @@ const SAMPLES: StateSample[] = [
   {
     state: "idle",
     label: "Atlas",
-    statusLabel: "idle",
     hex: "#7aa5f8",
     icon: "compass",
     activeCount: 0,
@@ -25,7 +23,6 @@ const SAMPLES: StateSample[] = [
   {
     state: "working",
     label: "Forge",
-    statusLabel: "working",
     hex: "#f0b429",
     icon: "gear",
     activeCount: 3,
@@ -33,7 +30,6 @@ const SAMPLES: StateSample[] = [
   {
     state: "report",
     label: "Scribe",
-    statusLabel: "report ready",
     hex: "#3fcf8e",
     icon: "doc",
     activeCount: 1,
@@ -41,7 +37,6 @@ const SAMPLES: StateSample[] = [
   {
     state: "await",
     label: "Sentry",
-    statusLabel: "awaiting review",
     hex: "#f43f5e",
     icon: "shield",
     activeCount: 2,
@@ -49,7 +44,6 @@ const SAMPLES: StateSample[] = [
   {
     state: "incident",
     label: "Mint",
-    statusLabel: "incident",
     hex: "#ff6b6b",
     icon: "warn",
     activeCount: 1,
@@ -57,7 +51,6 @@ const SAMPLES: StateSample[] = [
   {
     state: "thinking",
     label: "Relay",
-    statusLabel: "thinking",
     hex: "#5b8def",
     icon: "brain",
     activeCount: 2,
@@ -73,7 +66,6 @@ const meta: Meta<typeof OrbNode> = {
     hex: "#5b8def",
     state: "idle",
     label: "Atlas",
-    statusLabel: "idle",
     activeCount: 2,
     nodeId: "atlas",
   },
@@ -95,7 +87,6 @@ export const Overview: Story = {
             label={sample.label}
             nodeId={sample.state}
             state={sample.state}
-            statusLabel={sample.statusLabel}
           />
         </div>
       ))}
@@ -109,7 +100,6 @@ interface PlaygroundArgs {
   hex: string;
   activeCount: number;
   label: string;
-  statusLabel: string;
   iconName: IconName;
 }
 
@@ -122,7 +112,6 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     hex: { control: "color" },
     activeCount: { control: { type: "range", min: 0, max: 6, step: 1 } },
     label: { control: "text" },
-    statusLabel: { control: "text" },
     iconName: { control: "select", options: iconNames, name: "icon" },
   },
   args: {
@@ -131,10 +120,9 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     hex: "#f0b429",
     activeCount: 3,
     label: "Forge",
-    statusLabel: "working",
     iconName: "gear",
   },
-  render: ({ state, diameter, hex, activeCount, label, statusLabel, iconName }) => (
+  render: ({ state, diameter, hex, activeCount, label, iconName }) => (
     <div className="relative h-48 w-40">
       <OrbNode
         activeCount={activeCount}
@@ -144,7 +132,6 @@ export const Playground: StoryObj<PlaygroundArgs> = {
         label={label}
         nodeId="playground"
         state={state}
-        statusLabel={statusLabel}
       />
     </div>
   ),
