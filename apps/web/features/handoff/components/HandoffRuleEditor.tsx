@@ -104,7 +104,6 @@ export function HandoffRuleEditor({
     ...knownKinds.filter(isKnownSignalKind).map((kind) => ({
       value: kind,
       label: t(`signalKind.${kind}`),
-      code: kind,
       description: t(`signalKindDesc.${kind}`),
     })),
   ];
@@ -118,12 +117,12 @@ export function HandoffRuleEditor({
     ...subsystems.map((s) => ({
       value: encodeTarget("subsystem", s.id),
       label: s.name,
-      code: t("editor.targetKindSubsystem"),
+      description: t("editor.targetKindSubsystem"),
     })),
     ...pipelines.map((p) => ({
       value: encodeTarget("pipeline", p.id),
       label: p.name,
-      code: t("editor.targetKindPipeline"),
+      description: t("editor.targetKindPipeline"),
     })),
   ];
 
