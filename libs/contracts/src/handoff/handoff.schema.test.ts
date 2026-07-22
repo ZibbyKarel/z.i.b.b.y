@@ -3,6 +3,7 @@ import {
   HANDOFF_SEVERITY_ORDER,
   HandoffOutcomeSchema,
   HandoffProposalSchema,
+  HandoffRuleInputSchema,
   HandoffRuleSchema,
   HandoffSignalSchema,
   HandoffTargetSchema,
@@ -111,6 +112,28 @@ describe("HandoffRuleSchema", () => {
 
   it("rejects a tier outside 1|2|3", () => {
     expect(HandoffRuleSchema.safeParse({ ...RULE, tier: 4 }).success).toBe(false);
+  });
+});
+
+describe("HandoffRuleInputSchema", () => {
+  const withoutId = {
+    from: RULE.from,
+    signalKind: RULE.signalKind,
+    minSeverity: RULE.minSeverity,
+    to: RULE.to,
+    tier: RULE.tier,
+    enabled: RULE.enabled,
+    system: RULE.system,
+  };
+
+  it("strips a carried id — parsing a full rule never round-trips the id through the input shape", () => {
+    const parsed = HandoffRuleInputSchema.parse(RULE);
+    expect(parsed).not.toHaveProperty("id");
+    expect(parsed).toEqual(withoutId);
+  });
+
+  it("accepts a valid rule without an id", () => {
+    expect(HandoffRuleInputSchema.parse(withoutId)).toEqual(withoutId);
   });
 });
 
