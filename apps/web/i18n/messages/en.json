@@ -1874,7 +1874,7 @@
       "targetPrefix": "hand off to",
       "tierLabel": "· tier {tier}",
       "systemBadge": "system",
-      "toggleLabel": "Enable/disable rule",
+      "toggleLabel": "Active",
       "edit": "Edit",
       "delete": "Delete",
       "addRule": "Add rule",
@@ -1887,6 +1887,42 @@
         "moderate": "moderate",
         "high": "high",
         "critical": "critical"
+      },
+      "signalKind": {
+        "cve": "Vulnerability (CVE)",
+        "secret": "Leaked secret",
+        "post-merge-red": "Red CI after merge",
+        "god-node": "Graph god-node",
+        "community": "Graph community",
+        "cycle": "Dependency cycle",
+        "research-artifact": "Research artifact"
+      },
+      "signalKindDesc": {
+        "cve": "A vulnerability found in a project dependency.",
+        "secret": "A secret key or password leaked in code.",
+        "post-merge-red": "CI failed after a PR was merged.",
+        "god-node": "A highly connected node in the code graph.",
+        "community": "A newly detected community in the graph.",
+        "cycle": "A cyclic dependency between modules.",
+        "research-artifact": "A completed research artifact."
+      },
+      "editor": {
+        "severityPrefix": "with severity",
+        "anySignal": "Any signal (∗)",
+        "anySeverity": "any",
+        "targetKindSubsystem": "subsystem",
+        "targetKindPipeline": "pipeline",
+        "tierClause": {
+          "1": "automatically",
+          "2": "and tell me",
+          "3": "once I approve"
+        },
+        "signalKindAria": "Signal kind",
+        "severityAria": "Min. severity",
+        "targetAria": "Handoff target",
+        "tierAria": "Handoff tier",
+        "save": "Save rule",
+        "cancel": "Cancel"
       }
     }
   },
@@ -1924,39 +1960,5 @@
     "emptyTitle": "The archive is still empty",
     "emptyDescription": "Once ZIBBY finishes something, it will show up here.",
     "selectHint": "Select a task on the left to see its detail."
-  },
-  "handoff": {
-    "cancel": "Cancel",
-    "saveRule": "Save rule",
-    "editRule": "Edit handoff rule",
-    "newRule": "New handoff rule",
-    "from": "From subsystem",
-    "signalKind": "Signal kind",
-    "signalKindHint": "E.g. cve, secret, post-merge-red — or * for any kind.",
-    "minSeverity": "Min. severity",
-    "minSeverityAny": "— (any)",
-    "minSeverityHint": "Only applies to signals that carry a severity.",
-    "severity": {
-      "low": "low",
-      "moderate": "moderate",
-      "high": "high",
-      "critical": "critical"
-    },
-    "targetKind": "Target",
-    "targetKindSubsystem": "Subsystem",
-    "targetKindPipeline": "Pipeline",
-    "targetId": "Specific target",
-    "tier": "Tier",
-    "tierOption": {
-      "1": "Tier 1",
-      "2": "Tier 2",
-      "3": "Tier 3"
-    },
-    "tierHint": {
-      "1": "Dispatches silently.",
-      "2": "Dispatches and reports.",
-      "3": "Parks and waits for approval."
-    },
-    "enabled": "Enabled"
   }
 }

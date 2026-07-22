@@ -1874,7 +1874,7 @@
       "targetPrefix": "předat",
       "tierLabel": "· tier {tier}",
       "systemBadge": "systémové",
-      "toggleLabel": "Povolit/zakázat pravidlo",
+      "toggleLabel": "Aktivní",
       "edit": "Upravit",
       "delete": "Smazat",
       "addRule": "Přidat pravidlo",
@@ -1887,6 +1887,42 @@
         "moderate": "střední",
         "high": "vysoká",
         "critical": "kritická"
+      },
+      "signalKind": {
+        "cve": "Zranitelnost (CVE)",
+        "secret": "Únik tajného klíče",
+        "post-merge-red": "Červené CI po merge",
+        "god-node": "Uzel-bůh v grafu",
+        "community": "Komunita v grafu",
+        "cycle": "Cyklus závislostí",
+        "research-artifact": "Výsledek rešerše"
+      },
+      "signalKindDesc": {
+        "cve": "Zranitelnost nalezená v závislosti projektu.",
+        "secret": "Tajný klíč nebo heslo uniklé v kódu.",
+        "post-merge-red": "CI selhalo po sloučení PR.",
+        "god-node": "Vysoce propojený uzel v grafu kódu.",
+        "community": "Nově detekovaná komunita v grafu.",
+        "cycle": "Cyklická závislost mezi moduly.",
+        "research-artifact": "Dokončený rešeršní artefakt."
+      },
+      "editor": {
+        "severityPrefix": "se závažností",
+        "anySignal": "Jakýkoli signál (∗)",
+        "anySeverity": "jakoukoli",
+        "targetKindSubsystem": "subsystém",
+        "targetKindPipeline": "pipeline",
+        "tierClause": {
+          "1": "automaticky",
+          "2": "a dá mi vědět",
+          "3": "až to schválím"
+        },
+        "signalKindAria": "Druh signálu",
+        "severityAria": "Minimální závažnost",
+        "targetAria": "Cíl předání",
+        "tierAria": "Způsob předání",
+        "save": "Uložit pravidlo",
+        "cancel": "Zrušit"
       }
     }
   },
@@ -1924,39 +1960,5 @@
     "emptyTitle": "Archiv je zatím prázdný",
     "emptyDescription": "Jakmile ZIBBY něco dokončí, objeví se to tady.",
     "selectHint": "Vyber úlohu vlevo pro zobrazení detailu."
-  },
-  "handoff": {
-    "cancel": "Zrušit",
-    "saveRule": "Uložit pravidlo",
-    "editRule": "Upravit pravidlo předávání",
-    "newRule": "Nové pravidlo předávání",
-    "from": "Z podsystému",
-    "signalKind": "Druh signálu",
-    "signalKindHint": "Např. cve, secret, post-merge-red — nebo * pro libovolný druh.",
-    "minSeverity": "Min. závažnost",
-    "minSeverityAny": "— (libovolná)",
-    "minSeverityHint": "Uplatní se jen u signálů, které závažnost nesou.",
-    "severity": {
-      "low": "nízká",
-      "moderate": "střední",
-      "high": "vysoká",
-      "critical": "kritická"
-    },
-    "targetKind": "Cíl",
-    "targetKindSubsystem": "Subsystém",
-    "targetKindPipeline": "Pipeline",
-    "targetId": "Konkrétní cíl",
-    "tier": "Tier",
-    "tierOption": {
-      "1": "Tier 1",
-      "2": "Tier 2",
-      "3": "Tier 3"
-    },
-    "tierHint": {
-      "1": "Tiše provede.",
-      "2": "Provede a nahlásí.",
-      "3": "Zastaví se a čeká na schválení."
-    },
-    "enabled": "Povoleno"
   }
 }
