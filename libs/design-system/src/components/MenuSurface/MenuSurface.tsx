@@ -57,7 +57,7 @@ export function MenuSurface({
           ? "fixed z-50"
           : cn("absolute top-[calc(100%+6px)] z-50", alignClass[align]),
         "border border-border rounded-md bg-raised shadow-dropdown",
-        scroll ? "max-h-[60vh] overflow-y-auto" : "overflow-hidden",
+        scroll ? "max-h-[60vh] overflow-y-auto overflow-x-hidden" : "overflow-hidden",
       )}
       data-testid={MenuSurfaceTestId.Root}
       {...rest}
