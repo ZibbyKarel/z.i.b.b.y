@@ -26,6 +26,7 @@ import { SUBSYSTEM_GLYPH, SUBSYSTEM_ORB_STATE } from "../../subsystemVisuals";
 import { AktivitaTab } from "./AktivitaTab";
 import { ArtefaktyTab } from "./ArtefaktyTab";
 import { GatesTab } from "./GatesTab";
+import { HandoffTab } from "./HandoffTab";
 import { RosterTab } from "./RosterTab";
 
 // Same idiom the DS `Dialog` component uses for its own focus trap —
@@ -119,8 +120,10 @@ export interface SubsystemDrawerProps {
 // `RosterTab.tsx` / `AktivitaTab.tsx` / `GatesTab.tsx` / `ArtefaktyTab.tsx`,
 // all under this component's own directory. Roster (85), Aktivita (86), Gates
 // (87) and Artefakty (88) have all landed their real content — the drawer no
-// longer carries any placeholder machinery.
-const SUBSYSTEM_DRAWER_TABS = ["roster", "aktivita", "gates", "artefakty"] as const;
+// longer carries any placeholder machinery. P2 (subsystem-handoff design)
+// inserts `handoff` between `gates` and `artefakty` — this subsystem's own
+// outgoing handoff rules (`HandoffTab.tsx`), same filtered-lens shape as `gates`.
+const SUBSYSTEM_DRAWER_TABS = ["roster", "aktivita", "gates", "handoff", "artefakty"] as const;
 
 /** Count-badge tone for the two states that carry one — mirrors
  * `SubsystemWeb`'s `BADGE_TONE_CLASS` (report calm ok, waiting urgent warn). */
@@ -507,6 +510,8 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
                   <AktivitaTab subsystem={subsystem} />
                 ) : tab === "gates" ? (
                   <GatesTab subsystem={subsystem} />
+                ) : tab === "handoff" ? (
+                  <HandoffTab subsystem={subsystem} />
                 ) : (
                   <ArtefaktyTab subsystem={subsystem} />
                 )}
