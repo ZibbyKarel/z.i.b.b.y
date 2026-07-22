@@ -3,7 +3,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type MockInstance, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { installEventSourceMock } from "../../test/eventSourceMock";
 import { getApprovalsQueryKey } from "../approvals/queries/keys";
-import { getChainRunsQueryKey } from "../chains/queries/keys";
 import { getPipelineRunQueryKey } from "../pipelines/queries/keys";
 import { getCiStatusQueryKey } from "../projects/queries/keys";
 
@@ -64,18 +63,18 @@ describe("RunEventsProvider — SSE-driven invalidation (N1)", () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: getApprovalsQueryKey() });
   });
 
-  it("an agent-runs event with a runId invalidates the single-run aggregate too (Fáze 14.4 — the chat run card reads it for agent runs, not just pipeline/chain)", () => {
+  it("an agent-runs event with a runId invalidates the single-run aggregate too (Fáze 14.4 — the chat run card reads it for agent runs, not just pipeline)", () => {
     act(() => {
       mock.last().emit({ scope: "agent-runs", runId: "writer_1", status: "running" });
     });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: getPipelineRunQueryKey("writer_1") });
   });
 
-  it("a pipeline-runs event refreshes the chain runs (a chain advances on step transitions)", () => {
+  it("a pipeline-runs event refreshes the single-run aggregate", () => {
     act(() => {
       mock.last().emit({ scope: "pipeline-runs", runId: "delivery_1", status: "done" });
     });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: getChainRunsQueryKey() });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: getPipelineRunQueryKey("delivery_1") });
   });
 
   // Phase 89: the plain subscribe API the subsystem web's particle layer rides.
@@ -119,7 +118,7 @@ describe("RunEventsProvider — SSE-driven invalidation (N1)", () => {
       act(() => {
         mock.last().emit({ scope: "pipeline-runs", runId: "delivery_1", status: "done" });
       });
-      expect(invalidate).toHaveBeenCalledWith({ queryKey: getChainRunsQueryKey() });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: getPipelineRunQueryKey("delivery_1") });
       unsubscribe();
     });
 

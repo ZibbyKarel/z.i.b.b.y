@@ -13,7 +13,6 @@ import {
 } from "@zibby/design-system";
 import type { TaskTarget } from "@zibby/contracts";
 import { usePipelineRunQuery } from "../../pipelines";
-import { ChainStepsPanel } from "../../runs/components/ChainStepsPanel";
 import { PipelineStageTimeline } from "../../runs/components/PipelineStageTimeline";
 import { RunStateBadge } from "../../runs/components/RunStateBadge";
 import type { RunView } from "../../runs/run";
@@ -64,14 +63,13 @@ function runProgress(run: RunView): string | null {
 }
 
 /**
- * The expanded detail: a chain run folds its steps ({@link ChainStepsPanel}), a
- * pipeline run its stage timeline ({@link PipelineStageTimeline}) — the same
- * components the runs screen itself uses (Fáze 14.3, Rozhodnutí 5), so there is no
- * parallel log/timeline rendering to keep in sync. An agent run has neither and
- * shows no detail (the runs page, not the chat card, is where its log lives).
+ * The expanded detail: a pipeline run shows its stage timeline
+ * ({@link PipelineStageTimeline}) — the same component the runs screen itself
+ * uses (Fáze 14.3, Rozhodnutí 5), so there is no parallel log/timeline
+ * rendering to keep in sync. An agent run has none and shows no detail (the
+ * runs page, not the chat card, is where its log lives).
  */
 function runDetail(run: RunView, runRef: string) {
-  if (run.steps && run.steps.length > 0) return <ChainStepsPanel run={run} />;
   if (run.stageRuns) {
     return (
       <PipelineStageTimeline

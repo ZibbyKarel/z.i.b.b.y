@@ -33,7 +33,6 @@ const { hooks } = vi.hoisted(() => ({
     isPending: false,
     isError: false,
     pipelines: [] as { id: string; ownerSubsystem?: string }[],
-    chains: [] as { id: string; ownerSubsystem?: string }[],
   },
 }));
 const refetch = vi.fn();
@@ -48,7 +47,6 @@ vi.mock("../runs/queries/useRunsQuery", () => ({
   useRunAvatarMap: () => new Map(),
 }));
 vi.mock("../pipelines", () => ({ usePipelinesQuery: () => ({ data: hooks.pipelines }) }));
-vi.mock("../chains", () => ({ useChainsQuery: () => ({ data: hooks.chains }) }));
 
 vi.mock("../runs/mutations", () => ({
   useStopTaskRunMutation: () => ({ mutate: vi.fn(), isPending: false }),
@@ -86,7 +84,6 @@ describe("Archive Screen (F2)", () => {
     hooks.isPending = false;
     hooks.isError = false;
     hooks.pipelines = [{ id: "delivery", ownerSubsystem: "forge" }];
-    hooks.chains = [{ id: "forge-chain", ownerSubsystem: "forge" }];
     refetch.mockClear();
   });
 

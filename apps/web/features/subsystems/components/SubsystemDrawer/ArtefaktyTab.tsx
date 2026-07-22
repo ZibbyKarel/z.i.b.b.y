@@ -1,7 +1,6 @@
 "use client";
 
-import type { ArtifactKind, ArtifactRecord, Chain, SubsystemWithStatus } from "@zibby/contracts";
-import { SUBSYSTEMS } from "@zibby/contracts";
+import type { ArtifactKind, ArtifactRecord, SubsystemWithStatus } from "@zibby/contracts";
 import { Divider, Icon, type IconName, Stack, Typography } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
@@ -9,10 +8,9 @@ import Link from "next/link";
 import { useState } from "react";
 import { EmptyState } from "../../../../components/EmptyState/EmptyState";
 import { HudPanel } from "../../../../components/HudPanel/HudPanel";
-import type { Pipeline, PipelineOutput } from "../../../../domain";
+import type { PipelineOutput } from "../../../../domain";
 import { relativeTime } from "../../../../utils/time";
 import { useArtifactsQuery } from "../../../artifacts";
-import { useChainsQuery } from "../../../chains";
 import { usePipelinesQuery } from "../../../pipelines";
 
 export enum ArtefaktyTabTestId {
@@ -54,44 +52,6 @@ const ARTIFACT_KIND_GLYPH: Record<ArtifactKind, IconName> = {
 function sinkKey(output: PipelineOutput): "sinkPr" | "sinkFileProject" | "sinkFileVault" {
   if (output.type === "pr") return "sinkPr";
   return output.dest === "vault" ? "sinkFileVault" : "sinkFileProject";
-}
-
-/**
- * The pipeline id immediately after `pipelineId` in the first chain that steps
- * through it (N2b linear wiring — "step N+1 implicitly consumes step N's
- * delivered artifact", `ChainStepSchema`'s own doc comment). A pipeline that
- * isn't followed by another step in any chain has no derivable consumer.
- */
-function nextStepPipelineId(chains: readonly Chain[], pipelineId: string): string | undefined {
-  for (const chain of chains) {
-    const idx = chain.steps.findIndex((s) => s.pipeline === pipelineId);
-    if (idx !== -1 && idx + 1 < chain.steps.length) return chain.steps[idx + 1]?.pipeline;
-  }
-  return undefined;
-}
-
-/**
- * The display name of the subsystem that receives one output sink, when the
- * N2 chain wiring names a derivable consumer — `undefined` otherwise (the
- * honest default "→ operátor" is rendered by the caller, not here). A `pr`
- * sink is a gate, not a handoff (`chain-runner.service.ts`: "`pr` is a gate,
- * not a handoff" — the runner only ever binds a chain step's input to a run's
- * non-`pr` artifact), so it never has a derivable consumer even when its
- * pipeline sits inside a chain. `SUBSYSTEMS` is the static federation catalog
- * (id → display name), not a live query — the same source `RosterTab`/
- * `GatesTab` fixtures already treat as ground truth.
- */
-function consumerSubsystemName(
-  output: PipelineOutput,
-  pipelineId: string,
-  chains: readonly Chain[],
-  pipelines: readonly Pipeline[],
-): string | undefined {
-  if (output.type === "pr") return undefined;
-  const nextId = nextStepPipelineId(chains, pipelineId);
-  const nextPipeline = nextId ? pipelines.find((p) => p.id === nextId) : undefined;
-  if (!nextPipeline?.ownerSubsystem) return undefined;
-  return SUBSYSTEMS.find((s) => s.id === nextPipeline.ownerSubsystem)?.name;
 }
 
 interface ProduceRowProps {
@@ -217,7 +177,6 @@ export function ArtefaktyTab({ subsystem }: ArtefaktyTabProps) {
   const [now] = useState(() => Date.now());
 
   const { data: pipelines = [] } = usePipelinesQuery();
-  const { data: chains = [] } = useChainsQuery();
   const { data: artifacts = [] } = useArtifactsQuery();
 
   const ownedPipelines = pipelines.filter((p) => p.ownerSubsystem === subsystem.id);
@@ -232,12 +191,15 @@ export function ArtefaktyTab({ subsystem }: ArtefaktyTabProps) {
     );
   }
 
+  // A pipeline's consumer is no longer derivable (it used to come from N2b
+  // chain wiring) — the honest "→ operátor" default is always rendered until
+  // a non-chain consumer-derivation mechanism exists.
   const produceRows = ownedPipelines.flatMap((pipeline) =>
     pipeline.outputs.map((output) => ({
       key: `${pipeline.id}:${output.type}:${output.from}`,
       pipelineName: pipeline.name,
       output,
-      consumerName: consumerSubsystemName(output, pipeline.id, chains, pipelines),
+      consumerName: undefined as string | undefined,
     })),
   );
 

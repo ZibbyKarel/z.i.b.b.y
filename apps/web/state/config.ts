@@ -28,7 +28,6 @@ export const NAV_ITEMS = [
   { id: "companies", glyph: "branch", href: "/companies" },
   { id: "agents", glyph: "bot", href: "/agents" },
   { id: "pipelines", glyph: "flow", href: "/pipelines" },
-  { id: "chains", glyph: "link", href: "/chains" },
   { id: "automations", glyph: "clock", href: "/automations" },
   { id: "skills", glyph: "spark", href: "/skills" },
   { id: "commands", glyph: "bolt", href: "/commands" },

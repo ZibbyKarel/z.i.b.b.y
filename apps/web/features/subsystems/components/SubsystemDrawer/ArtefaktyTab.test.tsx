@@ -1,9 +1,4 @@
-import {
-  type ArtifactRecord,
-  type Chain,
-  SUBSYSTEMS,
-  type SubsystemWithStatus,
-} from "@zibby/contracts";
+import { type ArtifactRecord, SUBSYSTEMS, type SubsystemWithStatus } from "@zibby/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen } from "../../../../test/render";
 import type { Pipeline } from "../../../../domain";
@@ -41,15 +36,6 @@ function pipelineFixture(overrides: Partial<Pipeline> = {}): Pipeline {
   };
 }
 
-function chainFixture(overrides: Partial<Chain> = {}): Chain {
-  return {
-    id: "forge-chain",
-    name: "Forge Chain",
-    steps: [{ pipeline: "delivery" }],
-    ...overrides,
-  };
-}
-
 function artifactFixture(overrides: Partial<ArtifactRecord> = {}): ArtifactRecord {
   return {
     id: "run-1_pr_report-md",
@@ -65,19 +51,16 @@ function artifactFixture(overrides: Partial<ArtifactRecord> = {}): ArtifactRecor
 const { hooks } = vi.hoisted(() => ({
   hooks: {
     pipelines: [] as Pipeline[],
-    chains: [] as Chain[],
     artifacts: [] as ArtifactRecord[],
   },
 }));
 
 vi.mock("../../../pipelines", () => ({ usePipelinesQuery: () => ({ data: hooks.pipelines }) }));
-vi.mock("../../../chains", () => ({ useChainsQuery: () => ({ data: hooks.chains }) }));
 vi.mock("../../../artifacts", () => ({ useArtifactsQuery: () => ({ data: hooks.artifacts }) }));
 
 describe("ArtefaktyTab (Phase 88)", () => {
   beforeEach(() => {
     hooks.pipelines = [];
-    hooks.chains = [];
     hooks.artifacts = [];
   });
 
@@ -92,7 +75,6 @@ describe("ArtefaktyTab (Phase 88)", () => {
         ],
       }),
     ];
-    hooks.chains = [];
     hooks.artifacts = [];
 
     render(<ArtefaktyTab subsystem={FORGE} />);
@@ -105,49 +87,8 @@ describe("ArtefaktyTab (Phase 88)", () => {
     expect(rows[1]).toHaveTextContent("→ operátor");
   });
 
-  it("derives the receiving subsystem from chain wiring for a file output whose pipeline feeds a next step", () => {
-    hooks.pipelines = [
-      pipelineFixture({
-        id: "delivery",
-        ownerSubsystem: "forge",
-        outputs: [{ type: "file", from: "report.md", dest: "vault", to: "audit-report" }],
-      }),
-      pipelineFixture({ id: "downstream", name: "Downstream", ownerSubsystem: "loom" }),
-    ];
-    hooks.chains = [
-      chainFixture({ steps: [{ pipeline: "delivery" }, { pipeline: "downstream" }] }),
-    ];
-    hooks.artifacts = [];
-
-    render(<ArtefaktyTab subsystem={FORGE} />);
-
-    expect(screen.getByTestId(ArtefaktyTabTestId.ProduceRow)).toHaveTextContent(
-      "předává: " + SUBSYSTEMS.find((s) => s.id === "loom")!.name,
-    );
-  });
-
-  it("a `pr` output never derives a chain consumer, even mid-chain — a PR is a gate, not a handoff", () => {
-    hooks.pipelines = [
-      pipelineFixture({
-        id: "delivery",
-        ownerSubsystem: "forge",
-        outputs: [{ type: "pr", from: "pr-draft.md" }],
-      }),
-      pipelineFixture({ id: "downstream", ownerSubsystem: "loom" }),
-    ];
-    hooks.chains = [
-      chainFixture({ steps: [{ pipeline: "delivery" }, { pipeline: "downstream" }] }),
-    ];
-    hooks.artifacts = [];
-
-    render(<ArtefaktyTab subsystem={FORGE} />);
-
-    expect(screen.getByTestId(ArtefaktyTabTestId.ProduceRow)).toHaveTextContent("→ operátor");
-  });
-
   it("shows an honest single-line note when owned pipelines configure no outputs", () => {
     hooks.pipelines = [pipelineFixture({ id: "delivery", ownerSubsystem: "forge", outputs: [] })];
-    hooks.chains = [];
     hooks.artifacts = [];
 
     render(<ArtefaktyTab subsystem={FORGE} />);
@@ -161,7 +102,6 @@ describe("ArtefaktyTab (Phase 88)", () => {
       pipelineFixture({ id: "delivery", ownerSubsystem: "forge" }),
       pipelineFixture({ id: "other", ownerSubsystem: "loom" }),
     ];
-    hooks.chains = [];
     hooks.artifacts = [
       artifactFixture({ id: "owned-1", producedBy: { runRef: "run-1", pipelineId: "delivery" } }),
       artifactFixture({
@@ -182,7 +122,6 @@ describe("ArtefaktyTab (Phase 88)", () => {
 
   it("a pr artifact's link opens externally with rel=noreferrer", () => {
     hooks.pipelines = [pipelineFixture({ id: "delivery", ownerSubsystem: "forge" })];
-    hooks.chains = [];
     hooks.artifacts = [artifactFixture()];
 
     render(<ArtefaktyTab subsystem={FORGE} />);
@@ -195,7 +134,6 @@ describe("ArtefaktyTab (Phase 88)", () => {
 
   it("shows an honest empty state for the history section when the subsystem owns pipelines but nothing was delivered", () => {
     hooks.pipelines = [pipelineFixture({ id: "delivery", ownerSubsystem: "forge" })];
-    hooks.chains = [];
     hooks.artifacts = [];
 
     render(<ArtefaktyTab subsystem={FORGE} />);
@@ -205,7 +143,6 @@ describe("ArtefaktyTab (Phase 88)", () => {
 
   it("shows a single combined empty state, translated, when the subsystem owns no pipeline at all", () => {
     hooks.pipelines = [];
-    hooks.chains = [];
     hooks.artifacts = [];
 
     render(<ArtefaktyTab subsystem={FORGE} />);

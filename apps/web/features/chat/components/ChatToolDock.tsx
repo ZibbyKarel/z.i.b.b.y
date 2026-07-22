@@ -19,17 +19,15 @@ export const CHAT_TOOL_DOCK_WIDTH = 70;
 // two fully orphaned sections (no dock icon, no drawer mention) even though it
 // already had a NAV_ITEMS entry with a `checkpoint` glyph. `automations` joined
 // in F4 (docs/plans/hud2chat-F4-catalogs-b.md) — the audit's other fully
-// orphaned section, already in NAV_ITEMS with a `clock` glyph. `pipelines` and
-// `chains` joined in F5 (docs/plans/hud2chat-F5-orchestration.md): `/pipelines`
-// was missing from Chat entirely per the audit (only reachable via the
-// subsystem drawer's Roster tab), and `/chains`'s list was unreachable while
-// its detail was not.
+// orphaned section, already in NAV_ITEMS with a `clock` glyph. `pipelines`
+// joined in F5 (docs/plans/hud2chat-F5-orchestration.md): it was missing from
+// Chat entirely per the audit (only reachable via the subsystem drawer's
+// Roster tab).
 const DOCK_IDS = [
   "companies",
   "projects",
   "agents",
   "pipelines",
-  "chains",
   "skills",
   "commands",
   "mcp",
