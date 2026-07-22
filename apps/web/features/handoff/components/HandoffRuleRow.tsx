@@ -4,6 +4,7 @@ import type { HandoffRule } from "@zibby/contracts";
 import { Button, Stack, Tag, Toggle, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
+import { isKnownSignalKind } from "../signalKinds";
 
 export enum HandoffRuleRowTestId {
   Root = "handoff-rule-row-root",
@@ -61,7 +62,11 @@ export function HandoffRuleRow({
             <Typography size="sm" type="text" variant="secondary">
               {t("sentencePrefix", { subject: subsystemName })}
             </Typography>
-            <Pat>{rule.signalKind}</Pat>
+            <Pat>
+              {isKnownSignalKind(rule.signalKind)
+                ? t(`signalKind.${rule.signalKind}`)
+                : rule.signalKind}
+            </Pat>
             {rule.minSeverity && (
               <>
                 <Typography size="sm" type="text" variant="secondary">

@@ -2,6 +2,7 @@ import type { HandoffRule } from "@zibby/contracts";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen } from "../../../test/render";
+import { HandoffRuleEditorTestId } from "./HandoffRuleEditor";
 import { HandoffRuleRowTestId } from "./HandoffRuleRow";
 import { HandoffRulesSection } from "./HandoffRulesSection";
 
@@ -68,8 +69,8 @@ describe("HandoffRulesSection (P2)", () => {
       />,
     );
     expect(screen.getAllByTestId(HandoffRuleRowTestId.Root)).toHaveLength(2);
-    expect(screen.getByText("post-merge-red")).toBeInTheDocument();
-    expect(screen.getByText("cve")).toBeInTheDocument();
+    expect(screen.getByText("Červené CI po merge")).toBeInTheDocument();
+    expect(screen.getByText("Zranitelnost (CVE)")).toBeInTheDocument();
   });
 
   it("shows an empty state when there are no rules", () => {
@@ -92,10 +93,10 @@ describe("HandoffRulesSection (P2)", () => {
     expect(deleteButtons).toHaveLength(1);
   });
 
-  it("opens the modal in create mode from the add button", async () => {
+  it("renders an inline editor in create mode from the add button", async () => {
     render(<HandoffRulesSection fromSubsystemId="forge" rules={[]} subsystemName="Forge" />);
     await userEvent.click(screen.getByRole("button", { name: "Přidat pravidlo" }));
-    expect(screen.getByText("Nové pravidlo předávání")).toBeInTheDocument();
+    expect(screen.getByTestId(HandoffRuleEditorTestId.Root)).toBeInTheDocument();
   });
 
   it("toggling a rule fires the update mutation with the full rule minus id", async () => {

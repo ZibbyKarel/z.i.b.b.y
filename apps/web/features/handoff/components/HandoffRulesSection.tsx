@@ -13,7 +13,7 @@ import {
   useDeleteHandoffRuleMutation,
   useUpdateHandoffRuleMutation,
 } from "../mutations";
-import { HandoffRuleModal } from "./HandoffRuleModal";
+import { HandoffRuleEditor } from "./HandoffRuleEditor";
 import { HandoffRuleRow } from "./HandoffRuleRow";
 
 export enum HandoffRulesSectionTestId {
@@ -40,10 +40,11 @@ function resolveTargetLabel(
 
 /**
  * A subsystem's outgoing handoff rules (P2, mirrors `GateRulesSection`'s shape):
- * a mad-libs sentence row per rule, an "Přidat pravidlo" button, and the
- * create/edit modal. Owns its own mutations + modal/delete-confirm state —
- * `HandoffTab` only supplies the already-filtered `rules` plus the owning
- * subsystem's identity.
+ * a mad-libs sentence row per rule, an "Přidat pravidlo" button, and — in place of
+ * the old modal — an inline editable sentence (`HandoffRuleEditor`) that swaps in
+ * for whichever row is being edited (P2 inline-editor design doc). Owns its own
+ * mutations + edit/delete-confirm state — `HandoffTab` only supplies the
+ * already-filtered `rules` plus the owning subsystem's identity.
  */
 export function HandoffRulesSection({
   rules,
@@ -82,41 +83,54 @@ export function HandoffRulesSection({
         <EmptyState description={t("emptyDescription")} glyph="flow" title={t("emptyTitle")} />
       ) : (
         <Stack gap="100">
-          {rules.map((rule) => (
-            <HandoffRuleRow
-              key={rule.id}
-              onDelete={rule.system ? undefined : () => setDeleting(rule)}
-              onEdit={() => setEditing(rule)}
-              onToggle={() => toggle(rule)}
-              rule={rule}
-              subsystemName={subsystemName}
-              targetLabel={resolveTargetLabel(rule.to, subsystems, pipelines)}
-            />
-          ))}
+          {rules.map((rule) =>
+            editing !== "new" && editing?.id === rule.id ? (
+              <HandoffRuleEditor
+                fromSubsystemId={fromSubsystemId}
+                initial={rule}
+                key={rule.id}
+                onCancel={() => setEditing(null)}
+                onSave={save}
+                pending={create.isPending || update.isPending}
+                pipelines={pipelines}
+                subsystemName={subsystemName}
+                subsystems={subsystems}
+              />
+            ) : (
+              <HandoffRuleRow
+                key={rule.id}
+                onDelete={rule.system ? undefined : () => setDeleting(rule)}
+                onEdit={() => setEditing(rule)}
+                onToggle={() => toggle(rule)}
+                rule={rule}
+                subsystemName={subsystemName}
+                targetLabel={resolveTargetLabel(rule.to, subsystems, pipelines)}
+              />
+            ),
+          )}
         </Stack>
       )}
 
-      <Button
-        block
-        data-testid={HandoffRulesSectionTestId.AddButton}
-        icon="plus"
-        intent="ghost"
-        onClick={() => setEditing("new")}
-      >
-        {t("addRule")}
-      </Button>
-
-      {editing && (
-        <HandoffRuleModal
+      {editing === "new" ? (
+        <HandoffRuleEditor
           fromSubsystemId={fromSubsystemId}
-          initial={editing === "new" ? undefined : editing}
-          onClose={() => setEditing(null)}
+          onCancel={() => setEditing(null)}
           onSave={save}
           pending={create.isPending || update.isPending}
           pipelines={pipelines}
           subsystemName={subsystemName}
           subsystems={subsystems}
         />
+      ) : (
+        <Button
+          block
+          data-testid={HandoffRulesSectionTestId.AddButton}
+          icon="plus"
+          intent="ghost"
+          onClick={() => setEditing("new")}
+        >
+          {t("addRule")}
+        </Button>
       )}
 
       {deleting && (
