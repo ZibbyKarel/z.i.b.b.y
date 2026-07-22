@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import { Inject, Injectable, Optional } from "@nestjs/common";
+import type { HandoffSignal } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
+import { HandoffService } from "../handoff/handoff.service";
 import { GRAPH_REPORT_PATH } from "../self-knowledge/self-knowledge.service";
 import { parseGraphReport } from "../self-knowledge/graph-report.parser";
 import { exec } from "../shared/git-exec";
@@ -79,9 +81,12 @@ type MadgeCircularOutput = string[][];
  * `parseGraphReport`) plus a madge circular-dependency check (scoped to
  * `apps/web`, matching the existing `check:cycles` script — knip is deferred,
  * not installed). Findings are a vault-note proposal (gap-detector's pattern)
- * filed onto Loom's shelf and read back for the briefing. No task dispatch in
- * v1 — Loom's findings are proposals to Forge; turning one into work is an
- * operator decision ("proposes ≠ acts", same posture as gap-detect).
+ * filed onto Loom's shelf and read back for the briefing. A3: every NEW
+ * finding is ALSO normalized into a {@link HandoffSignal} and handed to the
+ * {@link HandoffService} rule engine — the seed `loom-architecture` rule is a
+ * wildcard tier-3 rule, so every finding parks an operator-gated proposal
+ * rather than dispatching. "Proposes ≠ acts" still holds — it now lives in
+ * the rule's tier (data), not in the absence of a dispatch call (code).
  * Fail-open everywhere: a missing report or a failing/absent madge binary
  * both degrade to "that source skipped", never a thrown error out of the
  * scheduler's tick.
@@ -95,6 +100,7 @@ export class LoomService {
     private readonly vault: VaultService,
     private readonly findingsStore: SubsystemFindingsStore,
     private readonly activity: ActivityLogService,
+    private readonly handoff: HandoffService,
     @Inject(GRAPH_REPORT_PATH) private readonly graphReportPath: string,
     logger: LoggerService,
     @Optional() execImpl?: ExecImpl,
@@ -140,7 +146,38 @@ export class LoomService {
       refs: { noteId: NOTE_ID },
     });
 
+    for (const finding of newFindings) {
+      try {
+        // Every finding goes through the rule engine — the wildcard tier-3 seed
+        // rule parks a proposal, never an autonomous dispatch (evaluate is itself
+        // fail-open, but the audit tick must survive regardless).
+        await this.handoff.evaluate(this.toSignal(finding));
+      } catch (err) {
+        this.log.warn("loom: handoff evaluate failed — finding stays for retry", {
+          fingerprint: finding.fingerprint,
+          error: String(err),
+        });
+      }
+    }
+
     return { findings };
+  }
+
+  /** Normalize one finding into the handoff engine's signal shape — no severity, no projectId. */
+  private toSignal(f: LoomFinding): HandoffSignal {
+    const title =
+      f.kind === "god-node"
+        ? `Loom: god node ${f.name}`
+        : f.kind === "community"
+          ? `Loom: oversized community ${f.label}`
+          : "Loom: circular dependency";
+    return {
+      from: "loom",
+      kind: f.kind,
+      title,
+      body: toFindingLine(f),
+      fingerprint: f.fingerprint,
+    };
   }
 
   /** Read the latest quality findings from the vault (for the briefing). */

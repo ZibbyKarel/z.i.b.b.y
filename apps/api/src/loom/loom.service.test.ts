@@ -57,11 +57,16 @@ interface BuildOpts {
   execImpl?: ReturnType<typeof vi.fn>;
   vault?: ReturnType<typeof makeVault>;
   findingsDir?: string;
+  evaluate?: ReturnType<typeof vi.fn>;
 }
 
 async function build(opts: BuildOpts = {}) {
   const vault = opts.vault ?? makeVault();
   const activity = { record: vi.fn(async () => undefined) };
+  // Fake HandoffService — LoomService now emits a signal per new finding (A3);
+  // the seed rule is tier-3, so `evaluate` returning "none"/"proposed" (never
+  // "dispatched" by the real rule table) is the realistic double here.
+  const handoff = { evaluate: opts.evaluate ?? vi.fn(async () => ({ action: "proposed" })) };
   const findingsDir =
     opts.findingsDir ?? (await fs.mkdtemp(path.join(os.tmpdir(), "loom-findings-")));
   const findingsStore = new SubsystemFindingsStore(findingsDir, makeLogger() as never);
@@ -73,11 +78,12 @@ async function build(opts: BuildOpts = {}) {
     vault as never,
     findingsStore,
     activity as never,
+    handoff as never,
     reportPath,
     makeLogger() as never,
     (opts.execImpl ?? NO_CYCLES) as never,
   );
-  return { service, vault, activity, findingsDir, findingsStore };
+  return { service, vault, activity, handoff, findingsDir, findingsStore };
 }
 
 describe("LoomService.audit", () => {
@@ -94,7 +100,7 @@ describe("LoomService.audit", () => {
     const reportPath = path.join(reportDir, "GRAPH_REPORT.md");
     await fs.writeFile(reportPath, SAMPLE_REPORT, "utf8");
 
-    const { service, vault, activity } = await build({ reportPath });
+    const { service, vault, activity, handoff } = await build({ reportPath });
     const { findings } = await service.audit(new Date("2026-07-17T00:00:00.000Z"));
 
     // AppShell (40 edges >= 25) is a god-node finding; Button (3 edges) is not.
@@ -109,6 +115,21 @@ describe("LoomService.audit", () => {
     expect(activity.record).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "subsystem-scan" }),
     );
+    // Every new finding is normalized into a handoff signal — no severity, no
+    // projectId (only Sentinel's CVEs carry severity).
+    expect(handoff.evaluate).toHaveBeenCalledTimes(2);
+    expect(handoff.evaluate).toHaveBeenCalledWith(
+      expect.objectContaining({ from: "loom", kind: "god-node" }),
+    );
+    expect(handoff.evaluate).toHaveBeenCalledWith(
+      expect.objectContaining({ from: "loom", kind: "community" }),
+    );
+    for (const call of handoff.evaluate.mock.calls as unknown as Array<
+      [{ severity?: string; projectId?: string }]
+    >) {
+      expect(call[0].severity).toBeUndefined();
+      expect(call[0].projectId).toBeUndefined();
+    }
   });
 
   it("a stubbed madge cycle is filed as a finding", async () => {
@@ -144,7 +165,7 @@ describe("LoomService.audit", () => {
     await built1.service.audit(new Date());
 
     const built2 = await build({ reportPath, findingsDir, vault: built1.vault });
-    const { vault, activity } = built2;
+    const { vault, activity, handoff } = built2;
     vault.createNote.mockClear();
     vault.updateNote.mockClear();
     vault.updateIndex.mockClear();
@@ -156,6 +177,7 @@ describe("LoomService.audit", () => {
     expect(vault.updateNote).not.toHaveBeenCalled();
     expect(vault.updateIndex).not.toHaveBeenCalled();
     expect(activity.record).not.toHaveBeenCalled();
+    expect(handoff.evaluate).not.toHaveBeenCalled();
   });
 
   it("only the NEW finding since the last snapshot triggers a write; the note lists all current findings", async () => {
@@ -186,6 +208,11 @@ describe("LoomService.audit", () => {
     expect(noteBody).toContain("AppShell");
     expect(noteBody).toContain("LoggerService");
     expect(noteBody).toContain("apps/web/a.ts → apps/web/b.ts");
+    // Only the NEW finding (the cycle) is handed to the rule engine.
+    expect(built2.handoff.evaluate).toHaveBeenCalledTimes(1);
+    expect(built2.handoff.evaluate).toHaveBeenCalledWith(
+      expect.objectContaining({ from: "loom", kind: "cycle" }),
+    );
   });
 
   it("fails open: a missing report skips the graphify source, madge-only findings still filed", async () => {

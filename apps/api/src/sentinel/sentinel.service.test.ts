@@ -63,7 +63,7 @@ interface BuildOpts {
   fetchImpl?: typeof fetch;
   localPath?: string | null;
   vault?: ReturnType<typeof makeVault>;
-  createTask?: ReturnType<typeof vi.fn>;
+  evaluate?: ReturnType<typeof vi.fn>;
   findingsDir?: string;
 }
 
@@ -83,7 +83,9 @@ async function build(opts: BuildOpts) {
         : { present: true, isGitRepo: true, resolvedPath: opts.localPath },
   };
   const vault = opts.vault ?? makeVault();
-  const taskScheduler = { createTask: opts.createTask ?? vi.fn(async () => ({})) };
+  // Fake HandoffService — SentinelService no longer dispatches directly (A3); it
+  // normalizes each finding into a HandoffSignal and hands it to `evaluate`.
+  const handoff = { evaluate: opts.evaluate ?? vi.fn(async () => ({ action: "none" })) };
   const activity = { record: vi.fn(async () => undefined) };
   const findingsDir =
     opts.findingsDir ?? (await fs.mkdtemp(path.join(os.tmpdir(), "sentinel-findings-")));
@@ -95,13 +97,13 @@ async function build(opts: BuildOpts) {
     credentials as never,
     projectLocal as never,
     vault as never,
-    taskScheduler as never,
+    handoff as never,
     activity as never,
     findingsStore,
     makeLogger() as never,
     opts.fetchImpl,
   );
-  return { service, vault, taskScheduler, activity, findingsDir, findingsStore };
+  return { service, vault, handoff, activity, findingsDir, findingsStore };
 }
 
 describe("SentinelService.scan", () => {
@@ -112,11 +114,11 @@ describe("SentinelService.scan", () => {
     tmpRepoDirs = [];
   });
 
-  it("a new CVE finding writes a proposal note onto Sentinel's shelf and records activity", async () => {
+  it("a new CVE finding writes a proposal note onto Sentinel's shelf, records activity, and hands off a cve signal", async () => {
     const fetchImpl = vi.fn(async () =>
       jsonResponse(200, [dependabotAlert({ security_advisory: { severity: "high" } })]),
     ) as unknown as typeof fetch;
-    const { service, vault, activity, taskScheduler } = await build({ fetchImpl });
+    const { service, vault, activity, handoff } = await build({ fetchImpl });
 
     const { findings } = await service.scan(new Date("2026-07-17T00:00:00.000Z"));
 
@@ -130,23 +132,57 @@ describe("SentinelService.scan", () => {
     expect(activity.record).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "subsystem-scan" }),
     );
-    // Not critical — no gated task dispatched.
-    expect(taskScheduler.createTask).not.toHaveBeenCalled();
+    // Every finding is normalized and handed to the rule engine — a high CVE
+    // maps to a non-critical handoff severity (the seed rule then gates it out).
+    expect(handoff.evaluate).toHaveBeenCalledTimes(1);
+    expect(handoff.evaluate).toHaveBeenCalledWith(
+      expect.objectContaining({ from: "sentinel", kind: "cve", severity: "high" }),
+    );
   });
 
-  it("a critical CVE additionally dispatches a gated fix task through the ordinary scheduler", async () => {
+  it("a critical CVE hands off a signal with severity critical and kind cve", async () => {
     const fetchImpl = vi.fn(async () =>
       jsonResponse(200, [dependabotAlert({ security_advisory: { severity: "critical" } })]),
     ) as unknown as typeof fetch;
-    const createTask = vi.fn(async () => ({ outcome: "dispatched" }));
-    const { service, taskScheduler } = await build({ fetchImpl, createTask });
+    const { service, handoff } = await build({ fetchImpl });
 
     await service.scan(new Date());
 
-    expect(taskScheduler.createTask).toHaveBeenCalledTimes(1);
-    const [input] = createTask.mock.calls[0] as unknown as [{ text: string; paths: string[] }];
-    expect(input.paths).toEqual([]);
-    expect(input.text).toContain("PR");
+    expect(handoff.evaluate).toHaveBeenCalledTimes(1);
+    const [signal] = handoff.evaluate.mock.calls[0] as unknown as [
+      { severity: string; kind: string; title: string; body: string },
+    ];
+    expect(signal.kind).toBe("cve");
+    expect(signal.severity).toBe("critical");
+    // Preserves today's exact dispatched-task text.
+    expect(signal.title).toContain("kritická zranitelnost");
+    expect(signal.body).toContain("PR");
+  });
+
+  it("a moderate CVE maps to a non-critical handoff severity", async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse(200, [dependabotAlert({ security_advisory: { severity: "moderate" } })]),
+    ) as unknown as typeof fetch;
+    const { service, handoff } = await build({ fetchImpl });
+
+    await service.scan(new Date());
+
+    expect(handoff.evaluate).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "cve", severity: "moderate" }),
+    );
+  });
+
+  it("an unknown severity maps to the low rung, never critical", async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse(200, [dependabotAlert({ security_advisory: { severity: "unknown" } })]),
+    ) as unknown as typeof fetch;
+    const { service, handoff } = await build({ fetchImpl });
+
+    await service.scan(new Date());
+
+    expect(handoff.evaluate).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "cve", severity: "low" }),
+    );
   });
 
   it("finds an AKIA-shaped secret in a scanned local clone; the finding line never contains the matched text", async () => {
@@ -156,7 +192,7 @@ describe("SentinelService.scan", () => {
     await fs.writeFile(path.join(root, "config.env"), `AWS_KEY=${secret}\n`, "utf8");
 
     const fetchImpl = vi.fn(async () => jsonResponse(200, [])) as unknown as typeof fetch;
-    const { service, vault } = await build({ fetchImpl, localPath: root });
+    const { service, vault, handoff } = await build({ fetchImpl, localPath: root });
 
     const { findings } = await service.scan(new Date());
 
@@ -173,6 +209,18 @@ describe("SentinelService.scan", () => {
     for (const call of vault.createNote.mock.calls as Array<[{ body: string }]>) {
       expect(call[0].body).not.toContain(secret);
     }
+
+    // The secret is still normalized into a handoff signal (kind "secret", no
+    // severity) — it matches no seed rule so it never dispatches — but the
+    // signal itself must NEVER carry the matched secret text.
+    expect(handoff.evaluate).toHaveBeenCalledTimes(1);
+    const [signal] = handoff.evaluate.mock.calls[0] as unknown as [
+      { kind: string; severity?: string; title: string; body: string },
+    ];
+    expect(signal.kind).toBe("secret");
+    expect(signal.severity).toBeUndefined();
+    expect(signal.title).not.toContain(secret);
+    expect(signal.body).not.toContain(secret);
   });
 
   it("a clean directory finds no secrets", async () => {
@@ -194,7 +242,7 @@ describe("SentinelService.scan", () => {
     await built1.service.scan(new Date());
 
     const built2 = await build({ fetchImpl, findingsDir, vault: built1.vault });
-    const { vault, taskScheduler, activity } = built2;
+    const { vault, handoff, activity } = built2;
     vault.createNote.mockClear();
     vault.updateNote.mockClear();
     vault.updateIndex.mockClear();
@@ -206,7 +254,7 @@ describe("SentinelService.scan", () => {
     expect(vault.updateNote).not.toHaveBeenCalled();
     expect(vault.updateIndex).not.toHaveBeenCalled();
     expect(activity.record).not.toHaveBeenCalled();
-    expect(taskScheduler.createTask).not.toHaveBeenCalled();
+    expect(handoff.evaluate).not.toHaveBeenCalled();
   });
 
   it("fails open: a 403 from Dependabot is skipped without throwing", async () => {
@@ -225,14 +273,14 @@ describe("SentinelService.scan", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it("fails open: a throwing gated-task dispatch is logged, the scan still completes", async () => {
+  it("fails open: a throwing handoff evaluate is logged, the scan still completes", async () => {
     const fetchImpl = vi.fn(async () =>
       jsonResponse(200, [dependabotAlert({ security_advisory: { severity: "critical" } })]),
     ) as unknown as typeof fetch;
-    const createTask = vi.fn(async () => {
-      throw new Error("scheduler unavailable");
+    const evaluate = vi.fn(async () => {
+      throw new Error("handoff engine unavailable");
     });
-    const { service } = await build({ fetchImpl, createTask });
+    const { service } = await build({ fetchImpl, evaluate });
 
     const { findings } = await service.scan(new Date());
     expect(findings).toHaveLength(1);

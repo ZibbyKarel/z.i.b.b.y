@@ -28,6 +28,17 @@ export function resolvePipelineRunsDir(): string {
   // AgentsModule exports AgentsStorageService (a stage loads its phase's agent);
   // ClaudeRunModule the `claude -p` command builder; Gates + Approvals back the
   // mid-run stage gate (intent evaluation → parked aggregate → approval card).
+  //
+  // A3: deliberately does NOT import `HandoffModule` — `HandoffModule` already
+  // imports `PipelinesModule` (to resolve a pipeline-target rule's display
+  // name), and `HandoffModule` -> `TasksModule` -> `PipelinesModule` is
+  // already a diamond, so a static edge back here would close a module-file
+  // require cycle that fans out through every module `TasksModule` pulls in
+  // (Goals, Chains, Projects, …) — far more than a single forwardRef can
+  // safely paper over. `PipelineRunnerService` instead resolves `HandoffService`
+  // lazily via `ModuleRef` (see pipeline-runner.service.ts), the same
+  // cross-module-boundary pattern `MemoryController.fireDistillNow` uses to
+  // reach `MemoryDistillerService` without a static edge.
   imports: [
     AgentsModule,
     ArtifactsModule,

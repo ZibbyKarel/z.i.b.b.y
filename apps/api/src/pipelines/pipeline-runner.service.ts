@@ -3,6 +3,7 @@ import { EventEmitter } from "node:events";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
+import { ModuleRef } from "@nestjs/core";
 import {
   type ArtifactKind,
   DEFAULT_VERIFY_CHECKS,
@@ -28,6 +29,15 @@ import { AgentsStorageService } from "../agents/agents.storage.service";
 import { ApprovalsService } from "../approvals/approvals.service";
 import { ArtifactsStorageService, artifactRecordId } from "../artifacts/artifacts.storage.service";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
+// A3: type-only — a plain value import here would close a *file-level*
+// require cycle (pipeline-runner.service.ts -> handoff.service.ts ->
+// tasks/task-scheduler.service.ts -> chains/chain-runner.service.ts ->
+// pipeline-runner.service.ts, confirmed via `madge --circular`), independent of
+// and in addition to the module-graph cycle `ModuleRef` already sidesteps. The
+// runtime class reference `moduleRef.get` needs as its token is instead
+// fetched via a lazy `await import(...)` inside `recordArtifact`, deferred
+// until well after the whole module graph has finished loading.
+import type { HandoffService } from "../handoff/handoff.service";
 import { GroundingService } from "../memory/grounding.service";
 import { DuplicateNoteError, VaultService } from "../memory/vault.service";
 import { ClaudePreflightService } from "../runner/claude-preflight.service";
@@ -149,6 +159,12 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly activity: ActivityLogService,
     private readonly artifacts: ArtifactsStorageService,
     private readonly projectLocal: ProjectLocalService,
+    // A3: HandoffService is resolved lazily via ModuleRef (see recordArtifact),
+    // NOT constructor-injected — PipelinesModule deliberately doesn't import
+    // HandoffModule (that edge would close a module-file require cycle that
+    // fans out through everything TasksModule pulls in). Same cross-boundary
+    // pattern as `MemoryController.fireDistillNow` → `MemoryDistillerService`.
+    private readonly moduleRef: ModuleRef,
   ) {
     this.dir = path.resolve(dir);
     this.log = logger.child(PipelineRunnerService.name);
@@ -1330,6 +1346,11 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
    * by contract — the registry must never fail an (already-green) delivery; a
    * write error is logged and the delivery stands. Stable id ⇒ an idempotent
    * re-delivery replaces its record instead of duplicating it.
+   *
+   * A3: when the owning pipeline is Scout-owned, ALSO hands a `research-artifact`
+   * signal to the handoff rule engine — same best-effort contract, a signal
+   * emission must never fail an already-green delivery. Every non-Scout
+   * pipeline is completely unaffected (gated on `ownerSubsystem === "scout"`).
    */
   private async recordArtifact(
     run: PipelineRun,
@@ -1339,9 +1360,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   ): Promise<void> {
     const project = await this.projectForRun(run).catch((): Project | null => null);
     const projectId = project && project.id !== "unregistered" ? project.id : undefined;
+    const artifactId = artifactRecordId(run.pipelineRunId, kind, from);
     await this.artifacts
       .record({
-        id: artifactRecordId(run.pipelineRunId, kind, from),
+        id: artifactId,
         kind,
         locator,
         from,
@@ -1360,6 +1382,36 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
           err: error instanceof Error ? error.message : String(error),
         });
       });
+
+    const owner = (await this.pipelines.get(run.pipelineId).catch(() => null))?.ownerSubsystem;
+    if (owner !== "scout") return;
+    try {
+      // Resolved lazily via ModuleRef (non-strict — searches the whole app
+      // container), not constructor-injected: PipelinesModule doesn't import
+      // HandoffModule (see pipelines.module.ts's doc comment for why). The
+      // class reference itself is fetched via a lazy `await import(...)` too
+      // (see the `import type` above) — deferred past module-load time, so it
+      // never re-enters the file-level require cycle through task-scheduler/
+      // chain-runner.
+      const { HandoffService } = await import("../handoff/handoff.service");
+      const handoff = this.moduleRef.get<HandoffService>(HandoffService, { strict: false });
+      await handoff.evaluate({
+        from: "scout",
+        kind: "research-artifact",
+        ...(projectId ? { projectId } : {}),
+        title: `Scout: research artifact ${from}`,
+        body: `Delivered ${kind} ${locator}. Build on this research.`,
+        fingerprint: artifactId,
+      });
+    } catch (error) {
+      // `evaluate` is itself fail-open, but a signal emission must NEVER fail an
+      // already-green delivery — same contract as the artifact record above.
+      this.log.warn("scout handoff signal failed (soft) — delivery stands", {
+        pipelineRunId: run.pipelineRunId,
+        from,
+        err: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   /**
