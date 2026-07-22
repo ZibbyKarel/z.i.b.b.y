@@ -217,7 +217,6 @@ export function TaskCommandLine({
     agent: t("commandLine.ack.kind.agent"),
     pipeline: t("commandLine.ack.kind.pipeline"),
     goal: t("commandLine.ack.kind.goal"),
-    chain: t("commandLine.ack.kind.chain"),
     subsystem: t("commandLine.ack.kind.subsystem"),
     orchestrator: t("commandLine.ack.kind.orchestrator"),
   };
@@ -238,7 +237,11 @@ export function TaskCommandLine({
     if (draftTarget) {
       return { text: draftText, kind: ackKindLabel[draftTarget.kind], exec: draftTarget.name };
     }
-    return { text: draftText, kind: t("commandLine.ack.kind.auto"), exec: t("commandLine.ack.execPending") };
+    return {
+      text: draftText,
+      kind: t("commandLine.ack.kind.auto"),
+      exec: t("commandLine.ack.execPending"),
+    };
   }
 
   /** Every submit path (Enter via the generic's onSubmit, the primary run action, or a

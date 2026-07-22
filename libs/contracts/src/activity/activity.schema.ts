@@ -114,9 +114,6 @@ export const ActivityRefsSchema = z
     /** Phase 10: the goal run and goal definition a goal-loop entry is attributed to. */
     goalRunId: z.string().optional(),
     goalId: z.string().optional(),
-    /** N2b: the chain run and chain definition a chain entry is attributed to. */
-    chainRunId: z.string().optional(),
-    chainId: z.string().optional(),
     /** The engagement an entry is attributed to (Phase 8) — grouping, not authz. */
     projectId: z.string().optional(),
     approvalId: z.string().optional(),

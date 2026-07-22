@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /** Co lze připnout na Overview — katalogové entity s vlastní detail stránkou. */
-export const PinKindSchema = z.enum(["agent", "pipeline", "chain"]);
+export const PinKindSchema = z.enum(["agent", "pipeline"]);
 export type PinKind = z.infer<typeof PinKindSchema>;
 
 /** Jedno připnutí: druh entity + její id. Žádné jméno/glyph — ty se dočtou

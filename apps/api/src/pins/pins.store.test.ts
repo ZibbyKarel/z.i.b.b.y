@@ -42,7 +42,7 @@ describe("PinsStore", () => {
     const store = new PinsStore(file);
     await store.write([
       { kind: "agent", id: "researcher" },
-      { kind: "chain", id: "research-then-build" },
+      { kind: "pipeline", id: "research-then-build" },
       { kind: "agent", id: "researcher" },
     ]);
     const pins = await store.read();

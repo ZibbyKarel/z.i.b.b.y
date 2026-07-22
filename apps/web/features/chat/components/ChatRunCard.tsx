@@ -38,21 +38,11 @@ export enum ChatRunCardTestId {
 
 /**
  * Compact progress caption for the collapsed header: a pipeline shows the phase
- * currently executing plus how many of its recorded stage runs are done; a chain
- * shows the position of its first not-yet-done step out of the total. `TaskRun`
- * carries no explicit "current step" index for chains (unlike a pipeline's
- * `currentStage`) — the first step whose status isn't `done` stands in for it, so
- * the caption reads correctly for both a mid-flight run and a finished one (where
- * that search finds nothing and the count falls back to the full length). An
- * agent run (neither stages nor steps) has no progress line — its `RunStateBadge`
- * is the whole story.
+ * currently executing plus how many of its recorded stage runs are done. An
+ * agent run (no stages) has no progress line — its `RunStateBadge` is the
+ * whole story.
  */
 function runProgress(run: RunView): string | null {
-  if (run.steps && run.steps.length > 0) {
-    const activeIndex = run.steps.findIndex((step) => step.status !== "done");
-    const position = activeIndex === -1 ? run.steps.length : activeIndex + 1;
-    return `${position}/${run.steps.length}`;
-  }
   if (run.stageRuns && run.stageRuns.length > 0) {
     const done = run.stageRuns.filter((stage) => stage.status === "done").length;
     return run.currentStage

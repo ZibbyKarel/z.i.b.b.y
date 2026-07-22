@@ -4,7 +4,6 @@ import {
   GoalParkedDetailSchema,
   GoalParkedReasonSchema,
 } from "../goals/goal-run.schema";
-import { ChainRunStepSchema } from "../chains/chain.schema";
 import { RunArtifactSchema, RunStatusSchema } from "../common.schema";
 import {
   ParkedDetailSchema,
@@ -18,7 +17,7 @@ import { AttachmentSchema, ClassificationTraceSchema, PrOutputSchema } from "./t
  * dispatched yet (it has no run behind it — its `runId` is the task id), the other
  * three are the live/finished run kinds.
  */
-export const RunKindSchema = z.enum(["agent", "pipeline", "goal", "chain", "scheduled"]);
+export const RunKindSchema = z.enum(["agent", "pipeline", "goal", "scheduled"]);
 export type RunKind = z.infer<typeof RunKindSchema>;
 
 /**
@@ -50,7 +49,7 @@ export type TaskRunStatus = z.infer<typeof TaskRunStatusSchema>;
  * id when the definition was deleted (mirrors the web `runGlyph` catalog-miss handling).
  */
 export const ProcessorSchema = z.object({
-  kind: z.enum(["agent", "pipeline", "goal", "chain"]),
+  kind: z.enum(["agent", "pipeline", "goal"]),
   id: z.string().min(1),
   name: z.string().min(1),
 });
@@ -166,10 +165,6 @@ export const TaskRunSchema = z.object({
   goalParked: GoalParkedDetailSchema.optional(),
   /** Phase 10 (goal runs): why the goal parked (iterations / budget / limit). */
   goalParkedReason: GoalParkedReasonSchema.optional(),
-  /** Phase 05 (chain runs): the chain definition id, for the detail's step fold. */
-  chainId: z.string().optional(),
-  /** Phase 05 (chain runs): the per-step pipeline runs, folded into the detail. */
-  steps: z.array(ChainRunStepSchema).optional(),
   /**
    * Phase 49 (agent runs): the captured `claude` session id, when the run emitted a
    * `system/init` line. Its presence tells the detail whether a re-run of an

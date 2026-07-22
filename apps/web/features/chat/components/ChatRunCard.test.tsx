@@ -5,7 +5,7 @@ import type { RunView } from "../../runs/run";
 import { ChatRunCard, ChatRunCardTestId } from "./ChatRunCard";
 
 // The card reads the same unified aggregate the runs screen does; stub it so each
-// test controls exactly what shape (agent/pipeline/chain) comes back.
+// test controls exactly what shape (agent/pipeline) comes back.
 const { pipelineRunMock } = vi.hoisted(() => ({
   pipelineRunMock: vi.fn((_runRef: string | null) => ({ data: undefined as RunView | undefined })),
 }));
@@ -85,28 +85,6 @@ describe("ChatRunCard (14.3)", () => {
     await user.click(screen.getByTestId(ChatRunCardTestId.Toggle));
     expect(screen.getByTestId(ChatRunCardTestId.Detail)).toBeInTheDocument();
     expect(screen.getByTestId("stage-timeline")).toHaveTextContent("delivery_1:delivery");
-  });
-
-  it("a chain run (steps, no stageRuns) shows step position progress but no detail on expand — the chain steps panel is gone", async () => {
-    const run: RunView = {
-      ...baseRun,
-      kind: "chain",
-      owner: "",
-      chainId: "research-then-build",
-      steps: [
-        { index: 0, pipeline: "research", runRef: "research_1", status: "done" },
-        { index: 1, pipeline: "build", runRef: "build_1", status: "running" },
-        { index: 2, pipeline: "verify", status: "pending" },
-      ],
-    };
-    pipelineRunMock.mockReturnValue({ data: run });
-    const user = userEvent.setup();
-    render(<ChatRunCard runRef="research-then-build_1" />);
-
-    expect(screen.getByTestId(ChatRunCardTestId.Header)).toHaveTextContent("2/3");
-
-    await user.click(screen.getByTestId(ChatRunCardTestId.Toggle));
-    expect(screen.queryByTestId(ChatRunCardTestId.Detail)).not.toBeInTheDocument();
   });
 
   it("clicking the run link does not expand the card (stopPropagation)", async () => {
