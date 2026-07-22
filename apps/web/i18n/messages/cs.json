@@ -16,7 +16,8 @@
     "companies": "Firmy",
     "mcp": "MCP servery",
     "commands": "Příkazy",
-    "hooks": "Hooky"
+    "hooks": "Hooky",
+    "signals": "Signály"
   },
   "notifications": {
     "attention": "{count} položek vyžaduje pozornost"
@@ -1611,6 +1612,34 @@
     "detailPanel": "Konfigurace hooku",
     "deleteTitle": "Smazat hook?",
     "deleteBody": "Opravdu smazat hook {name}? Tuto akci nelze vrátit."
+  },
+  "signals": {
+    "title": "Signály",
+    "countSummary": "{count, plural, =0 {žádné signály} one {# signál} few {# signály} other {# signálů}} · registr typů handoff signálů podle producenta",
+    "newSignal": "Nový signál",
+    "openSignalAria": "Otevřít signál {label}",
+    "emptyTitle": "Zatím žádné signály",
+    "emptyDescription": "Registr typů handoff signálů je prázdný — vestavěné typy se seedují na serveru, takže tenhle stav by neměl nastat.",
+    "yes": "Ano",
+    "no": "Ne",
+    "status": {
+      "builtin": "vestavěný",
+      "pending": "čeká na producenta",
+      "active": "aktivní"
+    },
+    "detail": {
+      "panelTitle": "Signál",
+      "slug": "ID",
+      "producer": "Producent",
+      "status": "Stav",
+      "severityBearing": "Nese závažnost",
+      "systemNote": "Systémový — vestavěný, needitovatelný",
+      "descriptionTitle": "Popis",
+      "buildTaskTitle": "Build task",
+      "buildTaskLink": "Zobrazit task",
+      "notFoundTitle": "Signál nenalezen",
+      "notFoundDescription": "Tenhle typ signálu v registru neexistuje — možná byl smazán, nebo je odkaz zastaralý."
+    }
   },
   "mcp": {
     "title": "MCP servery",

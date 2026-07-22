@@ -16,7 +16,8 @@
     "companies": "Companies",
     "mcp": "MCP servers",
     "commands": "Commands",
-    "hooks": "Hooks"
+    "hooks": "Hooks",
+    "signals": "Signals"
   },
   "notifications": {
     "attention": "{count} items need attention"
@@ -1611,6 +1612,34 @@
     "detailPanel": "Hook configuration",
     "deleteTitle": "Delete hook?",
     "deleteBody": "Really delete hook {name}? This cannot be undone."
+  },
+  "signals": {
+    "title": "Signals",
+    "countSummary": "{count, plural, =0 {no signals} one {# signal} other {# signals}} · handoff signal-kind registry, grouped by producer",
+    "newSignal": "New signal",
+    "openSignalAria": "Open signal {label}",
+    "emptyTitle": "No signals yet",
+    "emptyDescription": "The handoff signal-kind registry is empty — built-in kinds are seeded server-side, so this state shouldn't happen.",
+    "yes": "Yes",
+    "no": "No",
+    "status": {
+      "builtin": "builtin",
+      "pending": "awaiting producer",
+      "active": "active"
+    },
+    "detail": {
+      "panelTitle": "Signal",
+      "slug": "ID",
+      "producer": "Producer",
+      "status": "Status",
+      "severityBearing": "Carries severity",
+      "systemNote": "System — built-in, not editable",
+      "descriptionTitle": "Description",
+      "buildTaskTitle": "Build task",
+      "buildTaskLink": "View task",
+      "notFoundTitle": "Signal not found",
+      "notFoundDescription": "This signal kind doesn't exist in the registry — it may have been deleted, or the link is stale."
+    }
   },
   "mcp": {
     "title": "MCP servers",
