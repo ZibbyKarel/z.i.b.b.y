@@ -5,7 +5,6 @@ import { type ReactNode, createContext, useContext, useEffect, useState } from "
 import { getRunningAgentsQueryKey } from "../agents/queries/keys";
 import type { ActivityEntry } from "@zibby/contracts";
 import { getApprovalsQueryKey } from "../approvals/queries/keys";
-import { getChainRunsQueryKey } from "../chains/queries/keys";
 import { getBudgetQueryKey, getCiStatusQueryKey } from "../projects/queries/keys";
 import { getActivityQueryKey } from "../activity/queries/useActivityQuery";
 import { prependActivityEntry } from "../activity/queries/useActivityFeedInfiniteQuery";
@@ -25,7 +24,7 @@ import { allTaskRunsKey } from "./queries/keys";
  * {@link onRunEvent} without re-declaring the shape.
  */
 export interface RunStatusEvent {
-  scope: "agent-runs" | "pipeline-runs" | "goal-runs" | "chain-runs" | "channel-items" | "activity";
+  scope: "agent-runs" | "pipeline-runs" | "goal-runs" | "channel-items" | "activity";
   runId?: string;
   status?: string;
   /** Activity-scope only: the recorded kind (drives the briefing refetch). */
@@ -128,8 +127,6 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         // The single-run aggregate (a goal's pipeline maker timeline) is keyed by id.
         void qc.invalidateQueries({ queryKey: getPipelineRunQueryKey(parsed.runId) });
         void qc.invalidateQueries({ queryKey: getBudgetQueryKey() });
-        // A chain advances exactly when a pipeline run transitions (N4a).
-        void qc.invalidateQueries({ queryKey: getChainRunsQueryKey() });
         if (parsed.status === "parked") {
           void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
         }
@@ -141,13 +138,6 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         if (parsed.status === "parked") {
           void qc.invalidateQueries({ queryKey: getBriefingQueryKey() });
         }
-      } else if (parsed.scope === "chain-runs") {
-        // Phase 104A: the chain run's own transition (start/advance/park/finish),
-        // now flowing on its own scope alongside the indirect `pipeline-runs`
-        // signal a step's transition already produces above — invalidate
-        // directly so a chain-level state change (e.g. parked) never waits on
-        // that indirection.
-        void qc.invalidateQueries({ queryKey: getChainRunsQueryKey() });
       } else if (parsed.scope === "channel-items") {
         // Triage filed/transitioned an inbound item — refresh the inbox and the
         // approvals queue (a Tier-3 reply lands as a pending channel approval).

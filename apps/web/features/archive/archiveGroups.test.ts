@@ -30,7 +30,7 @@ function run(overrides: Partial<RunView> = {}): RunView {
 }
 
 function maps(overrides: Partial<OwnerSubsystemMaps> = {}): OwnerSubsystemMaps {
-  return { pipelineSubsystem: new Map(), chainSubsystem: new Map(), ...overrides };
+  return { pipelineSubsystem: new Map(), ...overrides };
 }
 
 describe("matchesArchiveSearch", () => {

@@ -3,7 +3,6 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import {
   type Agent,
-  type Chain,
   SUBSYSTEMS,
   type SubsystemRoster,
   type SubsystemWithStatus,
@@ -62,15 +61,6 @@ function pipelineFixture(overrides: Partial<Pipeline> = {}): Pipeline {
   };
 }
 
-function chainFixture(overrides: Partial<Chain> = {}): Chain {
-  return {
-    id: "research-build",
-    name: "Research → Build",
-    steps: [{ pipeline: "scout" }, { pipeline: "delivery" }],
-    ...overrides,
-  };
-}
-
 /** A wide linear chain (mirrors Loom's real 5-node "Code Audit" pipeline the
  * architect review flagged) — wide enough that `phasesToGraph`'s auto-layout
  * overflows the drawer's narrow panel and exercises the fit-to-view shrink. */
@@ -108,7 +98,6 @@ const EMPTY_ROSTER: SubsystemRoster = { agents: [], integrations: [], monitors: 
 const { hooks } = vi.hoisted(() => ({
   hooks: {
     pipelines: [] as Pipeline[],
-    chains: [] as Chain[],
     createPipeline: vi.fn(),
     updatePipeline: vi.fn(),
     roster: undefined as unknown,
@@ -120,22 +109,17 @@ vi.mock("../../../pipelines", () => ({
   useCreatePipelineMutation: () => ({ mutate: hooks.createPipeline, isPending: false }),
   useUpdatePipelineMutation: () => ({ mutate: hooks.updatePipeline, isPending: false }),
 }));
-vi.mock("../../../chains", () => ({ useChainsQuery: () => ({ data: hooks.chains }) }));
 vi.mock("../../../agents", () => ({ useAgentsQuery: () => ({ data: AGENTS }) }));
 vi.mock("../../queries/useSubsystemRosterQuery", () => ({
   useSubsystemRosterQuery: () => ({ data: hooks.roster }),
 }));
 
 describe("RosterTab (Phase 85)", () => {
-  it("filters pipelines and chains to ones owned by the subsystem", () => {
+  it("filters pipelines to ones owned by the subsystem", () => {
     hooks.pipelines = [
       pipelineFixture({ id: "delivery", name: "Delivery", ownerSubsystem: "forge" }),
       pipelineFixture({ id: "code-audit", name: "Code Audit", ownerSubsystem: "loom" }),
       pipelineFixture({ id: "untagged", name: "Untagged" }),
-    ];
-    hooks.chains = [
-      chainFixture({ id: "forge-chain", name: "Forge Chain", ownerSubsystem: "forge" }),
-      chainFixture({ id: "loom-chain", name: "Loom Chain", ownerSubsystem: "loom" }),
     ];
 
     render(<RosterTab subsystem={FORGE} />);
@@ -143,15 +127,12 @@ describe("RosterTab (Phase 85)", () => {
     expect(screen.getByText("Delivery")).toBeInTheDocument();
     expect(screen.queryByText("Code Audit")).toBeNull();
     expect(screen.queryByText("Untagged")).toBeNull();
-    expect(screen.getByText("Forge Chain")).toBeInTheDocument();
-    expect(screen.queryByText("Loom Chain")).toBeNull();
   });
 
   it("renders a read-only canvas per owned pipeline — no ports, no delete affordances", () => {
     hooks.pipelines = [
       pipelineFixture({ id: "delivery", name: "Delivery", ownerSubsystem: "forge" }),
     ];
-    hooks.chains = [];
 
     render(<RosterTab subsystem={FORGE} />);
 
@@ -164,7 +145,6 @@ describe("RosterTab (Phase 85)", () => {
     hooks.pipelines = [
       pipelineFixture({ id: "delivery", name: "Delivery", ownerSubsystem: "forge" }),
     ];
-    hooks.chains = [];
     const user = userEvent.setup();
 
     render(<RosterTab subsystem={FORGE} />);
@@ -178,7 +158,6 @@ describe("RosterTab (Phase 85)", () => {
 
   it("shows the empty state and pre-fills the create dialog's ownerSubsystem into the create payload", async () => {
     hooks.pipelines = [];
-    hooks.chains = [];
     hooks.createPipeline.mockReset();
     const user = userEvent.setup();
 
@@ -197,20 +176,6 @@ describe("RosterTab (Phase 85)", () => {
     expect(body.ownerSubsystem).toBe("forge");
   });
 
-  it("renders owned chains as cards linking to /chains/[id]", () => {
-    hooks.pipelines = [
-      pipelineFixture({ id: "delivery", name: "Delivery", ownerSubsystem: "forge" }),
-    ];
-    hooks.chains = [
-      chainFixture({ id: "forge-chain", name: "Forge Chain", ownerSubsystem: "forge" }),
-    ];
-
-    render(<RosterTab subsystem={FORGE} />);
-
-    const link = screen.getByRole("link", { name: /Forge Chain/ });
-    expect(link).toHaveAttribute("href", "/chains/forge-chain");
-  });
-
   it("fit-to-view: shrinks a wide chain's canvas transform to less than 1:1 (architect-review fix)", () => {
     hooks.pipelines = [
       pipelineFixture({
@@ -220,7 +185,6 @@ describe("RosterTab (Phase 85)", () => {
         phases: wideChainPhases(5),
       }),
     ];
-    hooks.chains = [];
 
     render(<RosterTab subsystem={FORGE} />);
 
@@ -246,7 +210,6 @@ describe("RosterTab (Phase 85)", () => {
     hooks.pipelines = [
       pipelineFixture({ id: "delivery", name: "Delivery", ownerSubsystem: "forge" }),
     ];
-    hooks.chains = [];
 
     render(<RosterTab subsystem={FORGE} />);
 
@@ -258,7 +221,6 @@ describe("RosterTab (Phase 85)", () => {
 describe("RosterTab crew — stored roster (NS2 F1c)", () => {
   it("renders the crew from the roster query's agent refs, hydrated against the resolved agents list", () => {
     hooks.pipelines = [];
-    hooks.chains = [];
     hooks.roster = {
       agents: [{ id: "writer" }, { id: "tester" }],
       integrations: [],
@@ -278,7 +240,6 @@ describe("RosterTab crew — stored roster (NS2 F1c)", () => {
 
   it("a roster agent ref with no match in the resolved agents list is skipped (stale reference)", () => {
     hooks.pipelines = [];
-    hooks.chains = [];
     hooks.roster = {
       agents: [{ id: "writer" }, { id: "ghost" }],
       integrations: [],
@@ -294,7 +255,6 @@ describe("RosterTab crew — stored roster (NS2 F1c)", () => {
 
   it("shows the agent's own model as a badge, hydrated from the resolved agents list", () => {
     hooks.pipelines = [];
-    hooks.chains = [];
     hooks.roster = {
       agents: [{ id: "tester" }],
       integrations: [],
@@ -311,7 +271,6 @@ describe("RosterTab crew — stored roster (NS2 F1c)", () => {
 
   it("a crew row navigates to the agent's own detail page", () => {
     hooks.pipelines = [];
-    hooks.chains = [];
     hooks.roster = {
       agents: [{ id: "writer" }],
       integrations: [],
@@ -326,7 +285,6 @@ describe("RosterTab crew — stored roster (NS2 F1c)", () => {
 
   it("renders no crew section when the roster's agents list is empty", () => {
     hooks.pipelines = [];
-    hooks.chains = [];
     hooks.roster = EMPTY_ROSTER;
 
     render(<RosterTab subsystem={FORGE} />);
@@ -337,7 +295,6 @@ describe("RosterTab crew — stored roster (NS2 F1c)", () => {
 
   it("renders no crew section while the roster query hasn't resolved yet", () => {
     hooks.pipelines = [];
-    hooks.chains = [];
     hooks.roster = undefined;
 
     render(<RosterTab subsystem={FORGE} />);
@@ -349,7 +306,6 @@ describe("RosterTab crew — stored roster (NS2 F1c)", () => {
 describe("RosterTab integrations + monitors (NS2 F1c)", () => {
   it("renders owned integrations, excluding the ci-monitor subset from the integrations section", () => {
     hooks.pipelines = [];
-    hooks.chains = [];
     hooks.roster = {
       agents: [],
       integrations: [
@@ -371,7 +327,6 @@ describe("RosterTab integrations + monitors (NS2 F1c)", () => {
 
   it("renders no integrations/monitors sections when the roster owns none", () => {
     hooks.pipelines = [];
-    hooks.chains = [];
     hooks.roster = EMPTY_ROSTER;
 
     render(<RosterTab subsystem={FORGE} />);

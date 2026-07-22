@@ -11,7 +11,6 @@ import { EmptyState } from "../../../../components/EmptyState/EmptyState";
 import { ModelBadge } from "../../../../components/RuntimeBadges/RuntimeBadges";
 import type { Pipeline } from "../../../../domain";
 import { useAgentsQuery } from "../../../agents";
-import { useChainsQuery } from "../../../chains";
 import { useSubsystemRosterQuery } from "../../queries/useSubsystemRosterQuery";
 import { NewPipelineDialog } from "../../../pipelines/components/NewPipelineDialog/NewPipelineDialog";
 import { PipelineCanvas } from "../../../pipelines/components/PipelineDialog/PipelineCanvas";
@@ -37,7 +36,6 @@ export enum RosterTabTestId {
   /** The fit-to-view transform wrapper — tests read its `style.transform` to
    * assert the scale/translate derives correctly from the graph's bbox. */
   PipelineFit = "roster-pipeline-fit",
-  ChainCard = "roster-chain-card",
   /** Phase 124 / NS2 F1c: the "Posádka" (crew) list above the pipeline canvases. */
   CrewSection = "roster-crew-section",
   CrewRow = "roster-crew-row",
@@ -289,9 +287,7 @@ function PipelineRosterCanvas({ pipeline, graph, agents, onNodeClick }: Pipeline
  * surface: `PipelineDialog` in edit mode, the same dialog `/pipelines`
  * already ships for creating pipelines (its edit mode moved inline into that
  * page's own detail view, but the dialog itself stayed fully wired — see
- * `PipelineDialog.test.tsx`'s header comment). Owned chains have no graph
- * editor (recon correction in the phase-85 plan), so they're plain cards
- * linking to `/chains/[id]`.
+ * `PipelineDialog.test.tsx`'s header comment).
  *
  * The crew (Posádka), integrations, and monitors sections read from
  * `useSubsystemRosterQuery` — the server-stored `ownerSubsystem` tags, NOT a
@@ -306,17 +302,14 @@ function PipelineRosterCanvas({ pipeline, graph, agents, onNodeClick }: Pipeline
 export function RosterTab({ subsystem }: RosterTabProps) {
   const t = useTranslations("subsystems.roster");
   const tPipelines = useTranslations("pipelines");
-  const tChains = useTranslations("chains");
 
   const { data: pipelines = [] } = usePipelinesQuery();
-  const { data: chains = [] } = useChainsQuery();
   const { data: agents = [] } = useAgentsQuery();
   const { data: roster } = useSubsystemRosterQuery(subsystem.id);
   const createPipeline = useCreatePipelineMutation();
   const updatePipeline = useUpdatePipelineMutation();
 
   const ownedPipelines = pipelines.filter((p) => p.ownerSubsystem === subsystem.id);
-  const ownedChains = chains.filter((c) => c.ownerSubsystem === subsystem.id);
   const crew = (roster?.agents ?? [])
     .map((ref) => agents.find((a) => a.id === ref.id))
     .filter((a): a is Agent => a != null);
@@ -383,28 +376,6 @@ export function RosterTab({ subsystem }: RosterTabProps) {
               onNodeClick={() => setEditingId(pipeline.id)}
               pipeline={pipeline}
             />
-          ))}
-        </Stack>
-      )}
-
-      {ownedChains.length > 0 && (
-        <Stack gap="150">
-          <Typography type="label">{tChains("title")}</Typography>
-          {ownedChains.map((chain) => (
-            <Link href={`/chains/${chain.id}` as Route} key={chain.id}>
-              <Card interactive data-testid={RosterTabTestId.ChainCard}>
-                <Container padding="150">
-                  <Stack gap="50">
-                    <Typography size="md" type="title" weight="semibold">
-                      {chain.name ?? chain.id}
-                    </Typography>
-                    <Typography mono size="2xs" type="note" variant="tertiary">
-                      {tChains("stepsSummary", { count: chain.steps.length })}
-                    </Typography>
-                  </Stack>
-                </Container>
-              </Card>
-            </Link>
           ))}
         </Stack>
       )}

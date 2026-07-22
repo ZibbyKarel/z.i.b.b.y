@@ -10,7 +10,6 @@ import { useState } from "react";
 import { EmptyState } from "../../../../components/EmptyState/EmptyState";
 import { relativeTime } from "../../../../utils/time";
 import { useRunGlyphMap, useRunsQuery } from "../../../runs";
-import { ChainStepsPanel } from "../../../runs/components/ChainStepsPanel";
 import { PipelineStageTimeline } from "../../../runs/components/PipelineStageTimeline";
 import { TaskCard } from "../../../runs/components/TaskCard";
 import { type RunView, runGlyph } from "../../../runs/run";
@@ -43,14 +42,14 @@ const MAX_RUNS = 20;
 const EXPANDABLE_STATUSES = new Set<RunView["status"]>(["running", "error"]);
 
 /**
- * Recent runs scoped to THIS subsystem's owned pipelines/chains (Phase 86,
+ * Recent runs scoped to THIS subsystem's owned pipelines (Phase 86,
  * design doc "Aktivita — recent runs, live log. Reuses today's Runs & Activity
  * page behavior, scoped to this subsystem").
  *
  * Scoped runs endpoint OR client filter (phase-86 plan §1): chose the CLIENT
  * FILTER, not a new `ownerSubsystem` query param on the unified runs endpoint —
  * the unified feed (`useRunsQuery`) already returns `kind`/`owner` per row, and
- * `RosterTab` (phase 85) already fetches the full pipeline/chain catalogs
+ * `RosterTab` (phase 85) already fetches the full pipeline catalog
  * (`ownerSubsystem` included) for the SAME drawer. Filtering those already-
  * fetched, already-cached lists client-side — exactly `RosterTab`'s own
  * `pipelines.filter((p) => p.ownerSubsystem === subsystem.id)` pattern — costs
@@ -59,19 +58,18 @@ const EXPANDABLE_STATUSES = new Set<RunView["status"]>(["running", "error"]);
  * once the unified feed itself gets too large to fetch in full, which it isn't.
  *
  * RECON CORRECTION on the plan's literal "expanding … shows the live log tail
- * via RunLogStream" — ownership only ever attributes through a pipeline or
- * chain (see `SubsystemsService.aggregateAll`, mirrored by the filter below),
- * so every run in scope here is `kind: "pipeline"` or `kind: "chain"`, never
- * `"agent"`. Both those kinds carry `logBase: null` (only an agent run has a
- * single unified log — see `TaskRunSchema`'s doc comment), and
- * `TaskRunsService.getLogs` actively throws `TaskRunNotFoundError` for any
- * other kind. Pointing `RunLogStream` at a pipeline/chain runId would silently
- * poll a permanently-404ing endpoint forever, not show "the live log tail". The
- * inline expand instead reuses the SAME per-kind live views `RunDetail` already
- * renders for these two kinds — `PipelineStageTimeline` (pipeline) /
- * `ChainStepsPanel` (chain), themselves built on the existing SSE-preferring
- * stage-log stream — so this is still "no new transport, no fork", just the
- * existing transport that actually matches the kinds in scope.
+ * via RunLogStream" — ownership only ever attributes through a pipeline (see
+ * `SubsystemsService.aggregateAll`, mirrored by the filter below), so every
+ * run in scope here is `kind: "pipeline"`, never `"agent"`. A pipeline run
+ * carries `logBase: null` (only an agent run has a single unified log — see
+ * `TaskRunSchema`'s doc comment), and `TaskRunsService.getLogs` actively
+ * throws `TaskRunNotFoundError` for any other kind. Pointing `RunLogStream` at
+ * a pipeline runId would silently poll a permanently-404ing endpoint forever,
+ * not show "the live log tail". The inline expand instead reuses the SAME
+ * live view `RunDetail` already renders for this kind — `PipelineStageTimeline`,
+ * itself built on the existing SSE-preferring stage-log stream — so this is
+ * still "no new transport, no fork", just the existing transport that
+ * actually matches the kind in scope.
  *
  * Query hooks mount only while this component itself is mounted — the `TabPanel`
  * hosting it (`SubsystemDrawer.tsx`) unmounts its children whenever another tab
@@ -140,23 +138,18 @@ export function AktivitaTab({ subsystem }: AktivitaTabProps) {
                   startedLabel={relativeTime(run.startedAt, now, ago)}
                   stateLabel={tRuns(`state.${run.status}`)}
                 />
-                {expanded &&
-                  (run.kind === "chain" ? (
-                    <div data-testid={AktivitaTabTestId.Expanded}>
-                      <ChainStepsPanel run={run} />
-                    </div>
-                  ) : (
-                    <div data-testid={AktivitaTabTestId.Expanded}>
-                      <PipelineStageTimeline
-                        currentStage={run.currentStage}
-                        live={run.status === "running"}
-                        owner={run.owner}
-                        parked={run.parked}
-                        pipelineRunId={run.runId}
-                        stageRuns={run.stageRuns}
-                      />
-                    </div>
-                  ))}
+                {expanded && (
+                  <div data-testid={AktivitaTabTestId.Expanded}>
+                    <PipelineStageTimeline
+                      currentStage={run.currentStage}
+                      live={run.status === "running"}
+                      owner={run.owner}
+                      parked={run.parked}
+                      pipelineRunId={run.runId}
+                      stageRuns={run.stageRuns}
+                    />
+                  </div>
+                )}
               </Stack>
             );
           })}

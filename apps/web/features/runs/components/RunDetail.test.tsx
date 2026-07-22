@@ -47,8 +47,6 @@ vi.mock("../queries/useRunArtifactQuery", () => ({
     return { data: enabled && content ? { name, content } : undefined };
   },
 }));
-// ChainStepsPanel fetches the open step's pipeline aggregate; nothing is open by
-// default in these tests, so a stub returning no data is enough.
 vi.mock("../../pipelines", () => ({ usePipelineRunQuery: () => ({ data: undefined }) }));
 // The Phase 24 Part D "Projekt" control reads the project registry and
 // its own assign mutation; an empty registry keeps it a no-op for every test here
@@ -277,46 +275,6 @@ describe("RunDetail — header avatar (Phase 48 → 53: stretched EntityHero bac
     await userEvent.click(screen.getByTestId(`${MenuButtonTestId.Item}-delete`));
     await userEvent.click(screen.getByRole("button", { name: "Smazat" }));
     expect(onDelete).toHaveBeenCalledOnce();
-  });
-});
-
-describe("RunDetail — chain fold (Phase 05)", () => {
-  const chainRun: RunView = {
-    runId: "research-then-build_9",
-    kind: "chain",
-    owner: "research-then-build",
-    status: "running",
-    pct: null,
-    title: "",
-    prompt: "krok 1/2",
-    project: "",
-    startedAt: new Date("2026-07-02T08:00:00Z").toISOString(),
-    logBase: null,
-    chainId: "research-then-build",
-    steps: [
-      { index: 0, pipeline: "nightly-research", runRef: "n_1", status: "running" },
-      { index: 1, pipeline: "build-feature", status: "pending" },
-    ],
-  };
-
-  it("folds the chain's steps (each step is a pipeline run), not a goal/pipeline panel", () => {
-    render(
-      <RunDetail
-        deleting={false}
-        glyph="link"
-        now={Date.parse("2026-07-02T08:05:00Z")}
-        onDelete={() => {}}
-        onStop={() => {}}
-        run={chainRun}
-        stopping={false}
-      />,
-    );
-    expect(screen.getByText("Kroky řetězce")).toBeInTheDocument();
-    // Both steps are rows with their pipeline id.
-    expect(screen.getByText(/krok 1 · nightly-research/)).toBeInTheDocument();
-    expect(screen.getByText(/krok 2 · build-feature/)).toBeInTheDocument();
-    // A chain run never renders the pipeline stage timeline at the top level.
-    expect(screen.queryByTestId("stage-timeline")).not.toBeInTheDocument();
   });
 });
 

@@ -19,9 +19,6 @@ vi.mock("../../runs/components/PipelineStageTimeline", () => ({
     <div data-testid="stage-timeline">{`${p.pipelineRunId}:${p.owner}`}</div>
   ),
 }));
-vi.mock("../../runs/components/ChainStepsPanel", () => ({
-  ChainStepsPanel: (p: { run: RunView }) => <div data-testid="chain-steps">{p.run.runId}</div>,
-}));
 
 const baseRun: RunView = {
   runId: "delivery_1",
@@ -90,7 +87,7 @@ describe("ChatRunCard (14.3)", () => {
     expect(screen.getByTestId("stage-timeline")).toHaveTextContent("delivery_1:delivery");
   });
 
-  it("a chain run shows step position progress and expands into the chain steps panel", async () => {
+  it("a chain run (steps, no stageRuns) shows step position progress but no detail on expand — the chain steps panel is gone", async () => {
     const run: RunView = {
       ...baseRun,
       kind: "chain",
@@ -109,7 +106,7 @@ describe("ChatRunCard (14.3)", () => {
     expect(screen.getByTestId(ChatRunCardTestId.Header)).toHaveTextContent("2/3");
 
     await user.click(screen.getByTestId(ChatRunCardTestId.Toggle));
-    expect(screen.getByTestId("chain-steps")).toHaveTextContent(run.runId);
+    expect(screen.queryByTestId(ChatRunCardTestId.Detail)).not.toBeInTheDocument();
   });
 
   it("clicking the run link does not expand the card (stopPropagation)", async () => {
