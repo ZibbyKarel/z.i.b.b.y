@@ -119,7 +119,13 @@ export function OrbMap({
 
   const connectorNodes: ConnectorNode[] = nodes.map((n, i) => {
     const p = layout.positions[i] ?? { x: layout.cx, y: layout.cy };
-    return { id: n.id, x: p.x, y: p.y, color: ORB_STATE[n.state].color, live: ORB_STATE[n.state].live };
+    return {
+      id: n.id,
+      x: p.x,
+      y: p.y,
+      color: ORB_STATE[n.state].color,
+      live: ORB_STATE[n.state].live,
+    };
   });
 
   return (
@@ -173,7 +179,6 @@ export function OrbMap({
                 nodeId={n.id}
                 onClick={() => onSelectNode?.(n.id)}
                 state={n.state}
-                statusLabel={n.statusLabel}
               />
             </div>
           );

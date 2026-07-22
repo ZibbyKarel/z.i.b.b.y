@@ -134,48 +134,6 @@ describe("SubsystemOrbMap", () => {
     expect(onOpenCore).toHaveBeenCalledTimes(1);
   });
 
-  it("maps a running subsystem to the localized working status label", () => {
-    renderWithProviders(
-      <SubsystemOrbMap
-        onOpenCore={vi.fn()}
-        onSelectSubsystem={vi.fn()}
-        pipelines={[]}
-        runs={[]}
-        subsystems={allSubsystems({ forge: { state: "running" } })}
-        thinking={false}
-      />,
-    );
-
-    const wrapper = screen.getByTestId(`${OrbMapTestId.Node}-forge`);
-    // Default test locale is `cs` (see `renderWithProviders`) — `running` renders
-    // as the `subsystems.state.running` catalog value, reused from
-    // `SubsystemOrbsOverlay`/`SubsystemDrawer` rather than a new key.
-    expect(within(wrapper).getByTestId(OrbNodeTestId.Status)).toHaveTextContent("Běží");
-  });
-
-  it("maps report/waiting subsystems to their localized status labels", () => {
-    renderWithProviders(
-      <SubsystemOrbMap
-        onOpenCore={vi.fn()}
-        onSelectSubsystem={vi.fn()}
-        pipelines={[]}
-        runs={[]}
-        subsystems={allSubsystems({
-          sentinel: { state: "report" },
-          maestro: { state: "waiting" },
-        })}
-        thinking={false}
-      />,
-    );
-
-    expect(
-      within(screen.getByTestId(`${OrbMapTestId.Node}-sentinel`)).getByTestId(OrbNodeTestId.Status),
-    ).toHaveTextContent("Hlášení připraveno");
-    expect(
-      within(screen.getByTestId(`${OrbMapTestId.Node}-maestro`)).getByTestId(OrbNodeTestId.Status),
-    ).toHaveTextContent("Čeká na rozhodnutí");
-  });
-
   it("falls back to idle for a subsystem missing from the roster", () => {
     // Drop `loom` from the roster entirely — the node still renders (fixed
     // registry order) and falls back to `idle`/0 rather than throwing.
@@ -192,7 +150,7 @@ describe("SubsystemOrbMap", () => {
     );
 
     const wrapper = screen.getByTestId(`${OrbMapTestId.Node}-loom`);
-    expect(within(wrapper).getByTestId(OrbNodeTestId.Status)).toHaveTextContent("V klidu");
+    expect(within(wrapper).getByTestId(OrbNodeTestId.Root)).toBeInTheDocument();
   });
 
   it("derives a node's activeCount from active runs owned by its pipeline", () => {
