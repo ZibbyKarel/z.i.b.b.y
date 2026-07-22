@@ -1826,7 +1826,8 @@
         "roster": "Roster",
         "aktivita": "Activity",
         "gates": "Settings & Gates",
-        "artefakty": "Artifacts"
+        "artefakty": "Artifacts",
+        "handoff": "Handoff"
       }
     },
     "roster": {
@@ -1877,6 +1878,28 @@
       "runLink": "View run",
       "emptyTitle": "This subsystem doesn't own a pipeline yet",
       "emptyDescription": "Without a pipeline of its own, this subsystem has nothing to produce and nothing to hand off."
+    },
+    "handoff": {
+      "panelTitle": "Outgoing handoff rules",
+      "sentencePrefix": "When {subject} produces",
+      "severityPrefix": "≥",
+      "targetPrefix": "hand off to",
+      "tierLabel": "· tier {tier}",
+      "systemBadge": "system",
+      "toggleLabel": "Enable/disable rule",
+      "edit": "Edit",
+      "delete": "Delete",
+      "addRule": "Add rule",
+      "emptyTitle": "No outgoing rules yet",
+      "emptyDescription": "This subsystem doesn't have a handoff rule of its own yet. Add the first one below.",
+      "deleteTitle": "Delete handoff rule?",
+      "deleteBody": "Really delete this handoff rule? This action can't be undone.",
+      "severity": {
+        "low": "low",
+        "moderate": "moderate",
+        "high": "high",
+        "critical": "critical"
+      }
     }
   },
   "pins": {
@@ -1951,5 +1974,39 @@
     "emptyTitle": "The archive is still empty",
     "emptyDescription": "Once ZIBBY finishes something, it will show up here.",
     "selectHint": "Select a task on the left to see its detail."
+  },
+  "handoff": {
+    "cancel": "Cancel",
+    "saveRule": "Save rule",
+    "editRule": "Edit handoff rule",
+    "newRule": "New handoff rule",
+    "from": "From subsystem",
+    "signalKind": "Signal kind",
+    "signalKindHint": "E.g. cve, secret, post-merge-red — or * for any kind.",
+    "minSeverity": "Min. severity",
+    "minSeverityAny": "— (any)",
+    "minSeverityHint": "Only applies to signals that carry a severity.",
+    "severity": {
+      "low": "low",
+      "moderate": "moderate",
+      "high": "high",
+      "critical": "critical"
+    },
+    "targetKind": "Target",
+    "targetKindSubsystem": "Subsystem",
+    "targetKindPipeline": "Pipeline",
+    "targetId": "Specific target",
+    "tier": "Tier",
+    "tierOption": {
+      "1": "Tier 1",
+      "2": "Tier 2",
+      "3": "Tier 3"
+    },
+    "tierHint": {
+      "1": "Dispatches silently.",
+      "2": "Dispatches and reports.",
+      "3": "Parks and waits for approval."
+    },
+    "enabled": "Enabled"
   }
 }

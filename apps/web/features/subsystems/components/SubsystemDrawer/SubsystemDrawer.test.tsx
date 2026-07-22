@@ -40,6 +40,11 @@ vi.mock("./GatesTab", () => ({
     <div data-testid="gates-tab-stub">{subsystem.id}</div>
   ),
 }));
+vi.mock("./HandoffTab", () => ({
+  HandoffTab: ({ subsystem }: { subsystem: { id: string } }) => (
+    <div data-testid="handoff-tab-stub">{subsystem.id}</div>
+  ),
+}));
 vi.mock("./ArtefaktyTab", () => ({
   ArtefaktyTab: ({ subsystem }: { subsystem: { id: string } }) => (
     <div data-testid="artefakty-tab-stub">{subsystem.id}</div>
@@ -266,7 +271,7 @@ describe("SubsystemDrawer (Phase 84)", () => {
     });
   });
 
-  it("defaults to the Roster tab and switches between all four tabs", async () => {
+  it("defaults to the Roster tab and switches between all five tabs", async () => {
     const user = userEvent.setup();
     renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />);
 
@@ -278,10 +283,13 @@ describe("SubsystemDrawer (Phase 84)", () => {
     await user.click(screen.getByRole("tab", { name: "Nastavení & Gates" }));
     expect(screen.getByTestId("gates-tab-stub")).toBeInTheDocument();
 
+    await user.click(screen.getByRole("tab", { name: "Předávání" }));
+    expect(screen.getByTestId("handoff-tab-stub")).toBeInTheDocument();
+
     await user.click(screen.getByRole("tab", { name: "Artefakty" }));
     expect(screen.getByTestId("artefakty-tab-stub")).toBeInTheDocument();
 
-    expect(screen.getAllByRole("tab")).toHaveLength(4);
+    expect(screen.getAllByRole("tab")).toHaveLength(5);
   });
 
   describe("modal backdrop and animation (phase 125)", () => {

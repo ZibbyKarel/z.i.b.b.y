@@ -1826,7 +1826,8 @@
         "roster": "Roster",
         "aktivita": "Aktivita",
         "gates": "Nastavení & Gates",
-        "artefakty": "Artefakty"
+        "artefakty": "Artefakty",
+        "handoff": "Předávání"
       }
     },
     "roster": {
@@ -1877,6 +1878,28 @@
       "runLink": "Zobrazit běh",
       "emptyTitle": "Tenhle podsystém si zatím nevlastní žádnou pipeline",
       "emptyDescription": "Bez vlastní pipeline nemá tenhle podsystém co produkovat ani co doručit."
+    },
+    "handoff": {
+      "panelTitle": "Odchozí pravidla předávání",
+      "sentencePrefix": "Když {subject} vyprodukuje",
+      "severityPrefix": "≥",
+      "targetPrefix": "předat",
+      "tierLabel": "· tier {tier}",
+      "systemBadge": "systémové",
+      "toggleLabel": "Povolit/zakázat pravidlo",
+      "edit": "Upravit",
+      "delete": "Smazat",
+      "addRule": "Přidat pravidlo",
+      "emptyTitle": "Zatím žádná odchozí pravidla",
+      "emptyDescription": "Tento subsystém zatím nemá žádné vlastní pravidlo předávání. Přidej první níže.",
+      "deleteTitle": "Smazat pravidlo předávání?",
+      "deleteBody": "Opravdu smazat toto pravidlo předávání? Tuto akci nelze vrátit.",
+      "severity": {
+        "low": "nízká",
+        "moderate": "střední",
+        "high": "vysoká",
+        "critical": "kritická"
+      }
     }
   },
   "pins": {
@@ -1951,5 +1974,39 @@
     "emptyTitle": "Archiv je zatím prázdný",
     "emptyDescription": "Jakmile ZIBBY něco dokončí, objeví se to tady.",
     "selectHint": "Vyber úlohu vlevo pro zobrazení detailu."
+  },
+  "handoff": {
+    "cancel": "Zrušit",
+    "saveRule": "Uložit pravidlo",
+    "editRule": "Upravit pravidlo předávání",
+    "newRule": "Nové pravidlo předávání",
+    "from": "Z podsystému",
+    "signalKind": "Druh signálu",
+    "signalKindHint": "Např. cve, secret, post-merge-red — nebo * pro libovolný druh.",
+    "minSeverity": "Min. závažnost",
+    "minSeverityAny": "— (libovolná)",
+    "minSeverityHint": "Uplatní se jen u signálů, které závažnost nesou.",
+    "severity": {
+      "low": "nízká",
+      "moderate": "střední",
+      "high": "vysoká",
+      "critical": "kritická"
+    },
+    "targetKind": "Cíl",
+    "targetKindSubsystem": "Subsystém",
+    "targetKindPipeline": "Pipeline",
+    "targetId": "Konkrétní cíl",
+    "tier": "Tier",
+    "tierOption": {
+      "1": "Tier 1",
+      "2": "Tier 2",
+      "3": "Tier 3"
+    },
+    "tierHint": {
+      "1": "Tiše provede.",
+      "2": "Provede a nahlásí.",
+      "3": "Zastaví se a čeká na schválení."
+    },
+    "enabled": "Povoleno"
   }
 }
