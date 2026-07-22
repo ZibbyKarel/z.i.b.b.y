@@ -18,7 +18,7 @@ All exports are re-exported from `libs/contracts/src/index.ts`.
 
 ## Domains
 
-35 domain folders exist today under `libs/contracts/src/` (every one below,
+36 domain folders exist today under `libs/contracts/src/` (every one below,
 excluding the composite `app.contract.ts` and the shared `common.schema.ts`):
 
 | Folder            | Key schema(s)                                                                                                                    | Contract                                                                                 |
@@ -47,6 +47,7 @@ excluding the composite `app.contract.ts` and the shared `common.schema.ts`):
 | `mandate/`        | `MandateSchema`                                                                                                                  | Autonomy scope                                                                           |
 | `health/`         | `HealthStatusSchema`                                                                                                             | System health status                                                                     |
 | `subsystems/`     | `SubsystemSchema`, `SubsystemWithStatusSchema`                                                                                   | GAIA-style federation registry (8 named subsystems) + status                             |
+| `handoff/`        | `HandoffRuleSchema`, `HandoffSignalSchema`, `HandoffProposalSchema`                                                              | Cross-subsystem handoff rules (see `docs/api/handoff.md`)                                |
 | `self/`           | `SelfStatusSchema`, `SelfUpdateResultSchema`                                                                                     | The ZIBBY install repo's own freshness + operator-triggered self-update                  |
 | `self-knowledge/` | `SelfKnowledgeSchema`, `SelfKnowledgeSectionsSchema`                                                                             | The machine-generated self-knowledge snapshot (read-only; regeneration is a CLI concern) |
 | `limits/`         | `LimitsSchema`                                                                                                                   | Budget and rate limits                                                                   |

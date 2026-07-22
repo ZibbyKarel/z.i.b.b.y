@@ -50,6 +50,14 @@ export const ApprovalRunKindSchema = z.enum([
   // the same gate), rejecting leaves the channel at Tier-3. The graduation decision
   // is itself Tier-3 — autonomy widens only on an operator's explicit sign-off.
   "herald-graduation",
+  // Cross-subsystem handoff (design doc
+  // `docs/superpowers/specs/2026-07-22-subsystem-handoff-design.md`, Part A): a
+  // tier-3 `HandoffRule` matched a signal but does not auto-dispatch — the runId is
+  // the parked `HandoffProposal` id. Approving dispatches the parked task via the
+  // rule's resolved target (`createTask(..., target)`, exactly the tier-1/2 dispatch
+  // path); rejecting drops the proposal, no task created. Outbound work dispatch
+  // that wasn't already sanctioned by a tier-1/2 rule → always Tier-3.
+  "handoff-proposal",
 ]);
 export type ApprovalRunKind = z.infer<typeof ApprovalRunKindSchema>;
 
