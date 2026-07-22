@@ -453,19 +453,31 @@ export function ChatSearch({
                       >
                         <CardContent padding="75">
                           <Stack align="center" direction="row" gap="75" justify="between">
-                            <Stack grow align="center" direction="row" gap="75">
-                              <IconTile glyph={item.glyph} shape="circle" size="sm" />
-                              <Container grow minW0>
-                                <Typography truncate size="sm" type="text">
-                                  {item.title}
-                                </Typography>
-                                {item.subtitle && (
-                                  <Typography truncate size="xs" type="note" variant="tertiary">
-                                    {item.subtitle}
+                            <Container grow minW0>
+                              <Stack align="center" direction="row" gap="75">
+                                <IconTile glyph={item.glyph} shape="circle" size="sm" />
+                                <Container grow minW0>
+                                  <Typography truncate size="sm" type="text">
+                                    {item.title}
                                   </Typography>
-                                )}
-                              </Container>
-                            </Stack>
+                                  {item.subtitle && (
+                                    <div
+                                      // eslint-disable-next-line react/forbid-dom-props -- 2-line clamp: -webkit-line-clamp has no DS equivalent (see HudCard)
+                                      style={{
+                                        display: "-webkit-box",
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: "vertical",
+                                        overflow: "hidden",
+                                      }}
+                                    >
+                                      <Typography size="xs" type="note" variant="tertiary">
+                                        {item.subtitle}
+                                      </Typography>
+                                    </div>
+                                  )}
+                                </Container>
+                              </Stack>
+                            </Container>
                             <Tag tone="neutral">{t(`kind.${item.kind}`)}</Tag>
                           </Stack>
                         </CardContent>
