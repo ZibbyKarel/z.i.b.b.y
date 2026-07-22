@@ -6,20 +6,21 @@
 
 The artifacts module (N2a) is the concrete storage/API behind that principle:
 one plain-JSON provenance record per delivered output, written by the
-pipeline delivery sinks at the moment they deliver. It is what lets a chain
-(the N2b primitive, see `./chains.md`) bind a downstream pipeline's input to
-an upstream run's output long after that run has been evicted from memory,
-and what makes "where did this file/PR come from?" always answerable
-(root `CLAUDE.md`'s Law 5 — always answerable).
+pipeline delivery sinks at the moment they deliver. It is what makes "where did
+this file/PR come from?" always answerable (root `CLAUDE.md`'s Law 5 — always
+answerable). It also backed the retired chains feature (N2b), which bound a
+downstream pipeline's input to an upstream run's output long after that run had
+been evicted from memory; that consumer is gone, but the provenance registry it
+relied on remains.
 
 ## Pieces
 
-| Piece      | File                                                    | Role                                                                                     |
-| ---------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Schema     | `libs/contracts/src/artifacts/artifact.schema.ts`        | `ArtifactKind` (`vault-note` / `project-file` / `pr`), `ArtifactRecord`, `ArtifactListQuery` |
-| Contract   | `libs/contracts/src/artifacts/artifacts.contract.ts`     | `artifactsContract` — the read-only `/api/artifacts` router                              |
-| Storage    | `apps/api/src/artifacts/artifacts.storage.service.ts`    | `ArtifactsStorageService` — file-backed registry (`EntityFileStore<ArtifactRecord>`)      |
-| Controller | `apps/api/src/artifacts/artifacts.controller.ts`         | Implements the contract; no write endpoint                                                |
+| Piece      | File                                                  | Role                                                                                         |
+| ---------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Schema     | `libs/contracts/src/artifacts/artifact.schema.ts`     | `ArtifactKind` (`vault-note` / `project-file` / `pr`), `ArtifactRecord`, `ArtifactListQuery` |
+| Contract   | `libs/contracts/src/artifacts/artifacts.contract.ts`  | `artifactsContract` — the read-only `/api/artifacts` router                                  |
+| Storage    | `apps/api/src/artifacts/artifacts.storage.service.ts` | `ArtifactsStorageService` — file-backed registry (`EntityFileStore<ArtifactRecord>`)         |
+| Controller | `apps/api/src/artifacts/artifacts.controller.ts`      | Implements the contract; no write endpoint                                                   |
 
 ## The record
 
@@ -61,9 +62,9 @@ handoff name keep distinct records (the kind is part of the id).
    write hiccuped.
 4. `ArtifactsStorageService.listFiltered({ projectId?, pipelineId? })` is the
    read path: newest-first (`compare` sorts by `createdAt` descending),
-   optionally scoped to a project and/or pipeline. The N2 chain runner
-   (`apps/api/src/chains/chain-runner.service.ts`) reads the full unfiltered
-   list to resolve a chain's upstream binding.
+   optionally scoped to a project and/or pipeline. (The retired chains feature
+   read the full unfiltered list to resolve a chain's upstream binding; that
+   consumer is gone, the read path remains.)
 
 ## Endpoints (`/api/artifacts`)
 

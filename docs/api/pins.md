@@ -1,23 +1,23 @@
 # Pins (Overview quick-launch panel)
 
 The **pins** module backs the Overview page's quick-launch panel — a small,
-operator-owned list of pinned agents, pipelines, or chains for one-click access,
+operator-owned list of pinned agents or pipelines for one-click access,
 persisted as a single file (`data/pins.json`), the same architectural slot as
 `SystemConfigStore` (`docs/api/system.md`): one small document, not a collection of
 named entities.
 
 ## Pieces
 
-| Piece    | File                                          | Role                                                                                  |
-| -------- | ----------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Contract | `libs/contracts/src/pins/pin.schema.ts`          | `PinKindSchema` (`agent` \| `pipeline` \| `chain`), `PinSchema` (`{ kind, id }`), `PinsSchema` (array) |
-| Contract | `libs/contracts/src/pins/pins.contract.ts`       | `pinsContract` — `getPins` / `putPins` under `/api/pins`                              |
-| Store    | `apps/api/src/pins/pins.store.ts`                | `PinsStore` — synchronous load at construction, atomic writes, dedupe on write        |
-| Controller | `apps/api/src/pins/pins.controller.ts`         | implements `pinsContract`                                                             |
-| Module   | `apps/api/src/pins/pins.module.ts`               | resolves `PINS_FILE` (`$PINS_FILE` env or `data/pins.json`)                           |
+| Piece      | File                                       | Role                                                                                        |
+| ---------- | ------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| Contract   | `libs/contracts/src/pins/pin.schema.ts`    | `PinKindSchema` (`agent` \| `pipeline`), `PinSchema` (`{ kind, id }`), `PinsSchema` (array) |
+| Contract   | `libs/contracts/src/pins/pins.contract.ts` | `pinsContract` — `getPins` / `putPins` under `/api/pins`                                    |
+| Store      | `apps/api/src/pins/pins.store.ts`          | `PinsStore` — synchronous load at construction, atomic writes, dedupe on write              |
+| Controller | `apps/api/src/pins/pins.controller.ts`     | implements `pinsContract`                                                                   |
+| Module     | `apps/api/src/pins/pins.module.ts`         | resolves `PINS_FILE` (`$PINS_FILE` env or `data/pins.json`)                                 |
 
 A pin carries only `{ kind, id }` — no display name or icon. Those are read live
-from the matching catalog (agents / pipelines / chains) at render time, so renaming
+from the matching catalog (agents / pipelines) at render time, so renaming
 an entity shows up in the panel immediately with no separate sync step.
 
 ## Flow

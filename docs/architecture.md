@@ -18,7 +18,7 @@ z.i.b.b.y/
 
 Package manager: **pnpm** (workspace: protocol, pnpm-lock.yaml v9). Never `npm` or `yarn`.
 
-`apps/api/src` today holds ~38 feature modules (agents, pipelines, goals, chains, tasks,
+`apps/api/src` today holds ~37 feature modules (agents, pipelines, goals, tasks,
 channels, chat, machine, approvals, gates, gate-rules, mandate, budget, limits,
 limits-resume, integrations, credentials via integrations, memory, activity,
 activity-view, automations, monitors, discovery, briefing, artifacts, projects, system,
@@ -70,26 +70,25 @@ its base directory from `resolveDataRoot()` (`apps/api/src/shared/data-dir.ts`),
 defaults to `.zibby/data` and is fully repointed by the `ZIBBY_DATA_DIR` env var (used
 by tests and worktrees to isolate their data root).
 
-| Data                    | Format                       | Location                                                |
-| ------------------------ | --------------------------- | -------------------------------------------------------- |
-| Agent definitions        | Markdown + YAML frontmatter | `.zibby/data/agents/<id>.md`                          |
-| Pipeline definitions     | Markdown + YAML frontmatter | `.zibby/data/pipelines/<id>.pipeline.md`              |
-| Run records (sidecar)    | JSON                        | `.zibby/data/agents/<id>/runs/<runId>/sidecar.json`   |
-| Run logs                 | plaintext                   | `.zibby/data/agents/<id>/runs/<runId>/run.log`        |
-| Approvals                | JSON                        | `.zibby/data/approvals/<id>.json`                     |
-| Automations              | JSON                        | `.zibby/data/automations/<id>.json`                   |
-| Projects                 | JSON                        | `.zibby/data/projects/<id>.json`                      |
-| Scheduled tasks          | JSON                        | `.zibby/data/tasks/<id>.json`                         |
-| Activity log             | JSONL (append-only)         | `.zibby/data/activity/YYYY-MM-DD.jsonl`               |
-| Memory vault             | Markdown + frontmatter      | `.zibby/data/vault/{memory,daily,knowledge}/<id>.md`  |
-| Integrations             | JSON                        | `.zibby/data/integrations/<id>.json`                  |
-| Credentials              | JSON (separate)             | `.zibby/data/credentials/<integrationId>.json`        |
-| Budget ledger            | JSON                        | `.zibby/data/budget-ledger/`                          |
-| Gate floor (POLICY.md)   | Markdown                    | `.zibby/data/gates/POLICY.md`                         |
-| Global gate rules        | JSON                        | `.zibby/data/gate-rules/<id>.json`                    |
-| Goal definitions         | Markdown + YAML frontmatter | `.zibby/data/goals/<id>.goal.md`                      |
-| Chain definitions        | JSON                        | `.zibby/data/chains/<id>.json`                        |
-| Artifact provenance      | JSON                        | `.zibby/data/artifacts/<id>.json`                     |
+| Data                   | Format                      | Location                                             |
+| ---------------------- | --------------------------- | ---------------------------------------------------- |
+| Agent definitions      | Markdown + YAML frontmatter | `.zibby/data/agents/<id>.md`                         |
+| Pipeline definitions   | Markdown + YAML frontmatter | `.zibby/data/pipelines/<id>.pipeline.md`             |
+| Run records (sidecar)  | JSON                        | `.zibby/data/agents/<id>/runs/<runId>/sidecar.json`  |
+| Run logs               | plaintext                   | `.zibby/data/agents/<id>/runs/<runId>/run.log`       |
+| Approvals              | JSON                        | `.zibby/data/approvals/<id>.json`                    |
+| Automations            | JSON                        | `.zibby/data/automations/<id>.json`                  |
+| Projects               | JSON                        | `.zibby/data/projects/<id>.json`                     |
+| Scheduled tasks        | JSON                        | `.zibby/data/tasks/<id>.json`                        |
+| Activity log           | JSONL (append-only)         | `.zibby/data/activity/YYYY-MM-DD.jsonl`              |
+| Memory vault           | Markdown + frontmatter      | `.zibby/data/vault/{memory,daily,knowledge}/<id>.md` |
+| Integrations           | JSON                        | `.zibby/data/integrations/<id>.json`                 |
+| Credentials            | JSON (separate)             | `.zibby/data/credentials/<integrationId>.json`       |
+| Budget ledger          | JSON                        | `.zibby/data/budget-ledger/`                         |
+| Gate floor (POLICY.md) | Markdown                    | `.zibby/data/gates/POLICY.md`                        |
+| Global gate rules      | JSON                        | `.zibby/data/gate-rules/<id>.json`                   |
+| Goal definitions       | Markdown + YAML frontmatter | `.zibby/data/goals/<id>.goal.md`                     |
+| Artifact provenance    | JSON                        | `.zibby/data/artifacts/<id>.json`                    |
 
 ## Running processors (the abstraction)
 
@@ -98,7 +97,6 @@ TaskSchedulerService   ← a scheduled / immediate task
 AgentRunnerService     ← runs a single agent
 PipelineRunnerService  ← orchestrates pipeline phases
 GoalRunnerService      ← maker/verifier iteration loop, built on Agent+PipelineRunner
-ChainRunnerService     ← sequences pipeline runs as steps, built on PipelineRunner
     ↓ agent + pipeline runs
 RunnerCore             ← universal spawn engine
     ↓
@@ -110,10 +108,9 @@ Log file + sidecar JSON
 `RunnerCore` (`apps/api/src/runner/runner-core.ts`) is the central spawn engine — the
 agent runner, skill runner, and pipeline stage runner are thin wrappers around it with
 their own `KindStrategy` (how to build the sidecar record and how to validate it on
-restart). `GoalRunnerService` and `ChainRunnerService` sit one layer above: a goal
-iterates a maker (agent or pipeline) followed by a verifier pipeline; a chain runs a
-fixed sequence of pipelines, handing each step's artifact to the next. Task dispatch can
-route to any of the four processor kinds — `agent`, `pipeline`, `goal`, `chain`.
+restart). `GoalRunnerService` sits one layer above: a goal
+iterates a maker (agent or pipeline) followed by a verifier pipeline. Task dispatch can
+route to any of the three processor kinds — `agent`, `pipeline`, `goal`.
 
 ## The autonomous loop (two modes)
 
@@ -123,13 +120,13 @@ route to any of the four processor kinds — `agent`, `pipeline`, `goal`, `chain
 Operator submits a task (UI / API)
   → TaskSchedulerService.createTask()
   → Classification (TaskClassifierService) → routing target
-  → Dispatch → AgentRunnerService, PipelineRunnerService, GoalRunnerService, or ChainRunnerService
+  → Dispatch → AgentRunnerService, PipelineRunnerService, or GoalRunnerService
   → Gate evaluation (before every intended action)
   → Result written back to the task record
   → Activity log
 ```
 
-An explicit target (operator names a specific agent/pipeline/goal/chain) skips
+An explicit target (operator names a specific agent/pipeline/goal) skips
 classification entirely — naming is a hard override.
 
 ### Autonomous
@@ -171,12 +168,12 @@ The system floor (`POLICY.md`) is locked — an agent can only tighten it, never
 
 ## Testing
 
-| Layer                   | Framework                     | Command          |
-| ----------------------- | ------------------------------ | --------------- |
-| API unit + integration  | Vitest (project: api)          | `pnpm api:test` |
-| Web components          | Vitest (project: web, jsdom)   | `pnpm web:test` |
-| E2E                     | Playwright                     | `pnpm e2e`      |
-| Design system           | Vitest + Storybook             | `pnpm test`     |
+| Layer                  | Framework                    | Command         |
+| ---------------------- | ---------------------------- | --------------- |
+| API unit + integration | Vitest (project: api)        | `pnpm api:test` |
+| Web components         | Vitest (project: web, jsdom) | `pnpm web:test` |
+| E2E                    | Playwright                   | `pnpm e2e`      |
+| Design system          | Vitest + Storybook           | `pnpm test`     |
 
 `pnpm check:types` runs `tsc --noEmit` for `tsconfig.base.json` + `apps/web/tsconfig.json`.
 Note: `rtk pnpm check:types` filters the output and can mask errors — always use direct
