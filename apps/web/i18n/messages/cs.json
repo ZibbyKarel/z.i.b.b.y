@@ -1815,6 +1815,7 @@
     "nodeAria": "{name}, {state}",
     "tier2Badge": "{count} hlášení k nahlédnutí",
     "tier3Badge": "{count} čeká na rozhodnutí",
+    "errorBadge": "{count} chyb",
     "drawer": {
       "ariaLabel": "Detail podsystému {name}",
       "close": "Zavřít detail podsystému",

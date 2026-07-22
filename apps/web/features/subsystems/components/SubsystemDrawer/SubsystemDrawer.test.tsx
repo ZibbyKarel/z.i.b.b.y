@@ -100,6 +100,7 @@ describe("SubsystemDrawer (Phase 84)", () => {
     ["running", {}, "Běží"],
     ["report", { tier2Count: 3 }, "Hlášení připraveno"],
     ["waiting", { tier3Count: 2 }, "Čeká na rozhodnutí"],
+    ["error", { errorCount: 1 }, "Chyba"],
   ] as const)("renders the header status for state %s", (state, extra, label) => {
     renderWithProviders(
       <SubsystemDrawer onClose={vi.fn()} subsystem={fixture({ state, ...extra })} />,
@@ -122,6 +123,15 @@ describe("SubsystemDrawer (Phase 84)", () => {
     // idle/running have nothing outstanding to count — the state pill alone.
     renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />);
     expect(screen.queryByTestId(SubsystemDrawerTestId.Count)).toBeNull();
+  });
+
+  it("shows the error count badge for the error state", () => {
+    renderWithProviders(
+      <SubsystemDrawer onClose={vi.fn()} subsystem={fixture({ state: "error", errorCount: 2 })} />,
+    );
+    const count = screen.getByTestId(SubsystemDrawerTestId.Count);
+    expect(count).toHaveTextContent("2");
+    expect(count).toHaveAccessibleName("2 chyb");
   });
 
   it("fires markSubsystemSeen exactly once per open — not again on a re-render with the same subsystem", () => {

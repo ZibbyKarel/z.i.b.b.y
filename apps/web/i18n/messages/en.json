@@ -1815,6 +1815,7 @@
     "nodeAria": "{name}, {state}",
     "tier2Badge": "{count} reports to review",
     "tier3Badge": "{count} awaiting decision",
+    "errorBadge": "{count} errors",
     "drawer": {
       "ariaLabel": "{name} subsystem detail",
       "close": "Close subsystem detail",

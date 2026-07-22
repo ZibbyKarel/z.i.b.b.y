@@ -127,6 +127,7 @@ const SUBSYSTEM_DRAWER_TABS = ["roster", "aktivita", "gates", "artefakty"] as co
 const STATE_TAG_TONE: Partial<Record<SubsystemState, TagTone>> = {
   report: "ok",
   waiting: "warn",
+  error: "bad",
 };
 
 /** The header orb's sphere diameter, and the box reserved for it. The orb's own
@@ -325,13 +326,17 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
       ? subsystem.tier2Count
       : subsystem.state === "waiting"
         ? subsystem.tier3Count
-        : null;
+        : subsystem.state === "error"
+          ? subsystem.errorCount
+          : null;
   const countLabel =
     subsystem.state === "report"
       ? t("tier2Badge", { count: subsystem.tier2Count })
       : subsystem.state === "waiting"
         ? t("tier3Badge", { count: subsystem.tier3Count })
-        : null;
+        : subsystem.state === "error"
+          ? t("errorBadge", { count: subsystem.errorCount })
+          : null;
   const showCount = countLabel !== null && tagTone !== undefined;
 
   return (
