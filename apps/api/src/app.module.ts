@@ -18,6 +18,7 @@ import { CompaniesModule } from "./companies/companies.module";
 import { EventsModule } from "./events/events.module";
 import { GateRulesModule } from "./gate-rules/gate-rules.module";
 import { GoalsModule } from "./goals/goals.module";
+import { HandoffModule } from "./handoff/handoff.module";
 import { HealthModule } from "./health/health.module";
 import { WatcherHealthModule } from "./health/watcher-health.module";
 import { HooksModule } from "./hooks/hooks.module";
@@ -79,6 +80,7 @@ import { TasksModule } from "./tasks/tasks.module";
     MachineModule,
     MonitorsModule,
     MaestroModule,
+    HandoffModule,
     HealthModule,
     SubsystemsModule,
     SelfModule,

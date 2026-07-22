@@ -79,6 +79,10 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   // group for two kinds.
   "merge-completed": "integrations",
   "post-merge-outcome": "integrations",
+  // Handoff A2: a producer→consumer dispatch report — reads with the other
+  // watcher discoveries (monitor-alert/subsystem-scan/post-merge-outcome) rather
+  // than a new group for one kind.
+  handoff: "integrations",
 };
 
 /**
