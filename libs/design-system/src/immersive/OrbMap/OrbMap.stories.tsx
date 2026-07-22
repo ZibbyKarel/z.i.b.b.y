@@ -33,7 +33,6 @@ function buildNodes(): OrbMapNode[] {
     hex: s.hex,
     state: s.state,
     label: s.label,
-    statusLabel: s.state,
     icon: <Icon name={s.icon} size="lg" />,
     activeCount: s.activeCount,
   }));
@@ -88,7 +87,6 @@ function PlaygroundStage({ flareFromId, flareToId }: PlaygroundArgs) {
           ? {
               ...n,
               state: nextState(n.state),
-              statusLabel: nextState(n.state),
               activeCount: (n.activeCount + 1) % 7,
             }
           : n,

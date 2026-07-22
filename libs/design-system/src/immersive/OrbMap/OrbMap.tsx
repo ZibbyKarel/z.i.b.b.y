@@ -26,8 +26,9 @@ export interface OrbMapNode {
   state: OrbState;
   /** Name shown under the orb. */
   label: string;
-  /** Localized status text shown under the name (e.g. "working"). */
-  statusLabel: string;
+  /** Accessible name for the node — forwarded straight to `OrbNode`'s `ariaLabel`
+   * (defaults to `label` there when omitted). */
+  ariaLabel?: string;
   /** A DS `<Icon/>` instance rendered centered on the orb body. */
   icon: ReactNode;
   /** Number of active tasks — drives the orbit-field dot count. */
@@ -172,6 +173,7 @@ export function OrbMap({
             >
               <OrbNode
                 activeCount={n.activeCount}
+                ariaLabel={n.ariaLabel}
                 diameter={layout.nodeD}
                 hex={n.hex}
                 icon={n.icon}
