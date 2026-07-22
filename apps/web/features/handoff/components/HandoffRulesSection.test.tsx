@@ -1,4 +1,4 @@
-import type { HandoffRule } from "@zibby/contracts";
+import type { HandoffRule, HandoffSignalKind } from "@zibby/contracts";
 import { DropdownTestId } from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -12,6 +12,7 @@ const { hooks } = vi.hoisted(() => ({
     subsystems: [] as { id: string; name: string }[],
     pipelines: [] as { id: string; name: string; ownerSubsystem?: string }[],
     agents: [] as { id: string; ownerSubsystem?: string }[],
+    signalKinds: [] as unknown[],
     create: vi.fn(),
     update: vi.fn(),
     remove: vi.fn(),
@@ -32,6 +33,30 @@ vi.mock("../../pipelines", () => ({
 vi.mock("../../agents/queries", () => ({
   useAgentsQuery: () => ({ data: hooks.agents }),
 }));
+vi.mock("../queries", () => ({
+  useSignalKindsQuery: () => ({ data: hooks.signalKinds }),
+}));
+
+const builtinSignalKinds: HandoffSignalKind[] = [
+  {
+    id: "cve",
+    from: "forge",
+    label: "Vulnerability (CVE)",
+    description: "A vulnerability found in a project dependency.",
+    severityBearing: true,
+    status: "builtin",
+    system: true,
+  },
+  {
+    id: "post-merge-red",
+    from: "forge",
+    label: "Red CI after merge",
+    description: "CI failed after a PR was merged.",
+    severityBearing: true,
+    status: "builtin",
+    system: true,
+  },
+];
 
 const userRule: HandoffRule = {
   id: "hr-1",
@@ -61,6 +86,7 @@ describe("HandoffRulesSection (P2)", () => {
     ];
     hooks.pipelines = [{ id: "hotfix", name: "Hotfix" }];
     hooks.agents = [];
+    hooks.signalKinds = builtinSignalKinds;
     hooks.create.mockClear();
     hooks.update.mockClear();
     hooks.remove.mockClear();
@@ -77,6 +103,48 @@ describe("HandoffRulesSection (P2)", () => {
     expect(screen.getAllByTestId(HandoffRuleRowTestId.Root)).toHaveLength(2);
     expect(screen.getByText("Červené CI po merge")).toBeInTheDocument();
     expect(screen.getByText("Zranitelnost (CVE)")).toBeInTheDocument();
+  });
+
+  it("renders an operator-registered signal kind's stored label verbatim", () => {
+    hooks.signalKinds = [
+      ...builtinSignalKinds,
+      {
+        id: "custom-signal",
+        from: "forge",
+        label: "Custom Signal",
+        description: "An operator-registered kind.",
+        severityBearing: false,
+        status: "active",
+      } satisfies HandoffSignalKind,
+    ];
+    const operatorRule: HandoffRule = {
+      id: "hr-op",
+      from: "forge",
+      signalKind: "custom-signal",
+      to: { kind: "subsystem", id: "sentinel" },
+      tier: 2,
+      enabled: true,
+    };
+    render(
+      <HandoffRulesSection fromSubsystemId="forge" rules={[operatorRule]} subsystemName="Forge" />,
+    );
+    expect(screen.getByText("Custom Signal")).toBeInTheDocument();
+  });
+
+  it("falls back to the raw signal kind when it isn't in the registry", () => {
+    hooks.signalKinds = [];
+    const staleRule: HandoffRule = {
+      id: "hr-stale",
+      from: "forge",
+      signalKind: "removed-signal",
+      to: { kind: "subsystem", id: "sentinel" },
+      tier: 2,
+      enabled: true,
+    };
+    render(
+      <HandoffRulesSection fromSubsystemId="forge" rules={[staleRule]} subsystemName="Forge" />,
+    );
+    expect(screen.getByText("removed-signal")).toBeInTheDocument();
   });
 
   it("shows an empty state when there are no rules", () => {

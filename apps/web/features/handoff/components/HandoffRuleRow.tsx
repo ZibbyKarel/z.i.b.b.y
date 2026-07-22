@@ -1,10 +1,10 @@
 "use client";
 
-import type { HandoffRule } from "@zibby/contracts";
+import type { HandoffRule, HandoffSignalKind } from "@zibby/contracts";
 import { Button, Stack, Tag, Toggle, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
-import { isKnownSignalKind } from "../signalKinds";
+import { signalKindLabel } from "../signalKinds";
 
 export enum HandoffRuleRowTestId {
   Root = "handoff-rule-row-root",
@@ -15,6 +15,9 @@ export enum HandoffRuleRowTestId {
 
 export interface HandoffRuleRowProps {
   rule: HandoffRule;
+  /** The full signal-kind registry — used to resolve `rule.signalKind`'s display
+   * label (built-in → localized `t()`, operator → stored `label`). */
+  signalKinds: HandoffSignalKind[];
   /** This drawer's own subsystem name — the mad-libs sentence's subject. */
   subsystemName: string;
   /** Resolved display name of `rule.to` (subsystem or pipeline name, id fallback). */
@@ -46,6 +49,7 @@ function Pat({ children }: { children: string }) {
  */
 export function HandoffRuleRow({
   rule,
+  signalKinds,
   subsystemName,
   targetLabel,
   onToggle,
@@ -53,6 +57,11 @@ export function HandoffRuleRow({
   onDelete,
 }: HandoffRuleRowProps) {
   const t = useTranslations("subsystems.handoff");
+
+  // Registry lookup by id — falls back to the raw stored kind when the rule's
+  // signal kind isn't (or is no longer) in the registry (stale/unknown).
+  const matchedKind = signalKinds.find((sk) => sk.id === rule.signalKind);
+  const signalKindText = matchedKind ? signalKindLabel(matchedKind, t) : rule.signalKind;
 
   return (
     <div data-testid={HandoffRuleRowTestId.Root}>
@@ -62,11 +71,7 @@ export function HandoffRuleRow({
             <Typography size="sm" type="text" variant="secondary">
               {t("sentencePrefix", { subject: subsystemName })}
             </Typography>
-            <Pat>
-              {isKnownSignalKind(rule.signalKind)
-                ? t(`signalKind.${rule.signalKind}`)
-                : rule.signalKind}
-            </Pat>
+            <Pat>{signalKindText}</Pat>
             {rule.minSeverity && (
               <>
                 <Typography size="sm" type="text" variant="secondary">

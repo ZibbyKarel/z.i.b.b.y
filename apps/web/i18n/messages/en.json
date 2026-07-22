@@ -1895,7 +1895,8 @@
         "god-node": "Graph god-node",
         "community": "Graph community",
         "cycle": "Dependency cycle",
-        "research-artifact": "Research artifact"
+        "research-artifact": "Research artifact",
+        "pendingBadge": "awaiting producer"
       },
       "signalKindDesc": {
         "cve": "A vulnerability found in a project dependency.",

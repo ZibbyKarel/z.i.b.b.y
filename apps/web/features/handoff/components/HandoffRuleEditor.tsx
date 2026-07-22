@@ -5,6 +5,7 @@ import type {
   HandoffRule,
   HandoffRuleInput,
   HandoffSeverity,
+  HandoffSignalKind,
   HandoffTarget,
   SubsystemId,
 } from "@zibby/contracts";
@@ -12,7 +13,7 @@ import { Button, Dropdown, Stack, Typography } from "@zibby/design-system";
 import type { DropdownOption } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
-import { isKnownSignalKind, signalKindsFor } from "../signalKinds";
+import { signalKindDescription, signalKindLabel } from "../signalKinds";
 
 export enum HandoffRuleEditorTestId {
   Root = "handoff-rule-editor-root",
@@ -52,6 +53,9 @@ export interface HandoffRuleEditorProps {
   /** The drawer's own subsystem — `from` is fixed to it, never editable here. */
   fromSubsystemId: SubsystemId;
   subsystemName: string;
+  /** The full signal-kind registry (built-ins + operator-registered) — scoped to
+   * `fromSubsystemId` internally for the signal picker (Slot B2). */
+  signalKinds: HandoffSignalKind[];
   subsystems: { id: string; name: string }[];
   pipelines: { id: string; name: string }[];
   /** Subsystem ids that own ≥1 pipeline or ≥1 agent — mirrors the server's
@@ -76,6 +80,7 @@ export function HandoffRuleEditor({
   initial,
   fromSubsystemId,
   subsystemName,
+  signalKinds,
   subsystems,
   pipelines,
   receiverSubsystemIds,
@@ -85,8 +90,10 @@ export function HandoffRuleEditor({
 }: HandoffRuleEditorProps) {
   const t = useTranslations("subsystems.handoff");
 
-  const knownKinds = signalKindsFor(fromSubsystemId);
-  const defaultSignalKind = initial?.signalKind ?? knownKinds[0] ?? "*";
+  // Scope the registry to this drawer's own producer subsystem — the picker
+  // only ever offers signals `fromSubsystemId` can actually emit.
+  const producerKinds = signalKinds.filter((sk) => sk.from === fromSubsystemId);
+  const defaultSignalKind = initial?.signalKind ?? producerKinds[0]?.id ?? "*";
   const defaultTarget = initial
     ? encodeTarget(initial.to.kind, initial.to.id)
     : subsystems[0]
@@ -104,13 +111,14 @@ export function HandoffRuleEditor({
 
   const signalKindOptions: DropdownOption[] = [
     { value: "*", label: t("editor.anySignal") },
-    // `knownKinds` is `readonly string[]` (the catalog accepts any subsystem id) —
-    // narrow to the literal `SignalKind` union so the `t()` template-literal keys
-    // below type-check against the message catalog.
-    ...knownKinds.filter(isKnownSignalKind).map((kind) => ({
-      value: kind,
-      label: t(`signalKind.${kind}`),
-      description: t(`signalKindDesc.${kind}`),
+    ...producerKinds.map((sk) => ({
+      value: sk.id,
+      label: signalKindLabel(sk, t),
+      // A `pending` kind (registered but not yet emitted by its producer) is
+      // marked in the picker instead of showing its normal description — the
+      // only DS `DropdownOption` field available for this is `description`.
+      description:
+        sk.status === "pending" ? t("signalKind.pendingBadge") : signalKindDescription(sk, t),
     })),
   ];
 
