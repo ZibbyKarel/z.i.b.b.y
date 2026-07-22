@@ -352,6 +352,7 @@
     "briefingEngagement": "{needs} čeká · {did} hotovo · {queued} ve frontě · {held} pozdrženo",
     "briefingSubsystems": "Subsystémy",
     "briefingSubsystemTier3": "{count} čeká na tebe",
+    "briefingSubsystemError": "{count} selhalo",
     "briefingSubsystemTier2": "{count} k reportu",
     "starterTitle": "začni tady · postav dashboard",
     "commandBar": {

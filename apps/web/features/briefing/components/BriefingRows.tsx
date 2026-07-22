@@ -45,6 +45,8 @@ export function SubsystemLineRow({ line }: { line: BriefingSubsystemLine }) {
   const parts: string[] = [];
   if (line.tier3Count > 0)
     parts.push(t("overview.briefingSubsystemTier3", { count: line.tier3Count }));
+  if (line.errorCount > 0)
+    parts.push(t("overview.briefingSubsystemError", { count: line.errorCount }));
   if (line.tier2Count > 0)
     parts.push(t("overview.briefingSubsystemTier2", { count: line.tier2Count }));
   if (line.note) parts.push(line.note);
@@ -57,7 +59,11 @@ export function SubsystemLineRow({ line }: { line: BriefingSubsystemLine }) {
       justify="between"
     >
       <Stack align="center" direction="row" gap="75">
-        <StatusDot pulse={line.state === "waiting"} size="75" tone={STATE_DOT_TONE[line.state]} />
+        <StatusDot
+          pulse={line.state === "waiting" || line.state === "error"}
+          size="75"
+          tone={STATE_DOT_TONE[line.state]}
+        />
         <Icon name={SUBSYSTEM_GLYPH[line.subsystem]} size="xs" tone="faint" />
         <Typography mono size="xs" type="note" variant="secondary">
           {line.name}

@@ -352,6 +352,7 @@
     "briefingEngagement": "{needs} need · {did} done · {queued} queued · {held} held",
     "briefingSubsystems": "Subsystems",
     "briefingSubsystemTier3": "{count} waiting on you",
+    "briefingSubsystemError": "{count} failed",
     "briefingSubsystemTier2": "{count} to report",
     "starterTitle": "start here · build the dashboard",
     "commandBar": {

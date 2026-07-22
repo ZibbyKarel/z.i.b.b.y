@@ -82,6 +82,29 @@ describe("BriefingMessageCard (F8a / O6)", () => {
     expect(rows[0]).toHaveTextContent("Forge");
   });
 
+  it("renders a distinct failed-count line for a subsystem's errorCount", () => {
+    render(
+      <BriefingMessageCard
+        briefing={{
+          ...calm,
+          subsystems: [
+            {
+              subsystem: "sentinel",
+              name: "Sentinel",
+              state: "error",
+              tier2Count: 0,
+              tier3Count: 0,
+              errorCount: 1,
+            },
+          ],
+        }}
+      />,
+    );
+    const rows = screen.getAllByTestId(BriefingCardTestId.SubsystemLine);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent("1 selhalo");
+  });
+
   it("never renders a 'Generate now' control — a past turn is a fixed snapshot", () => {
     render(<BriefingMessageCard briefing={busy} />);
     expect(screen.queryByTestId(BriefingCardTestId.Generate)).not.toBeInTheDocument();
