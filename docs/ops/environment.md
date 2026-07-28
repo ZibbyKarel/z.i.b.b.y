@@ -98,18 +98,19 @@ Changes to interval and adapter-mode knobs take effect **immediately** (the
 schedulers live-rearm via `SystemConfigStore.onChange`); `goalAutoResume` only
 applies on the next boot.
 
-| Key                   | Default  | Purpose                                                                                                                                                  |
-| --------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `taskTickMs`          | `30000`  | Task scheduler heartbeat interval (`0` = disabled; the test default)                                                                                     |
-| `channelTickMs`       | `30000`  | Channel watcher poll interval (`0` = disabled)                                                                                                           |
-| `monitorTickMs`       | `60000`  | Monitor watcher poll interval (`0` = disabled) — CI status alerts (Phase N3)                                                                             |
-| `automationTickMs`    | `0`      | Automation scheduler loop interval (`0` = disabled; the historical default)                                                                              |
-| `limitResumeTickMs`   | `60000`  | Limit-resume daemon scan interval (`0` = disabled)                                                                                                       |
-| `limitResumeMax`      | `3`      | Max resume cycles before a limit-paused run is parked/failed                                                                                             |
-| `goalVerifyTimeoutMs` | `600000` | **Phase 12.3** — wall-clock deadline for a goal's `checks` verifier shell (then `SIGTERM`→`SIGKILL`)                                                     |
-| `goalAutoResume`      | `false`  | **Phase 12.4** — `true` = on boot, auto-re-drive `running`/`paused-limit` goals (the unattended launchd daemon). Default: park `awaiting-resume` (Law 3) |
-| `chatPersona`         | `jarvis` | The chat butler's personality (`jarvis`/`concise`/`formal`) — changes tone only, never the dispatch governor. Read per turn, set in `/settings`          |
-| `maxConcurrentRuns`   | `null`   | **Phase 125c** — system-wide ceiling on concurrently running tasks. `null` = uncapped (pre-125c behaviour). Over the cap → the existing `queued` status  |
+| Key                   | Default  | Purpose                                                                                                                                                                                                                    |
+| --------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `taskTickMs`          | `30000`  | Task scheduler heartbeat interval (`0` = disabled; the test default)                                                                                                                                                       |
+| `channelTickMs`       | `30000`  | Channel watcher poll interval (`0` = disabled)                                                                                                                                                                             |
+| `monitorTickMs`       | `60000`  | Monitor watcher poll interval (`0` = disabled) — CI status alerts (Phase N3)                                                                                                                                               |
+| `automationTickMs`    | `0`      | Automation scheduler loop interval (`0` = disabled; the historical default)                                                                                                                                                |
+| `limitResumeTickMs`   | `60000`  | Limit-resume daemon scan interval (`0` = disabled)                                                                                                                                                                         |
+| `limitResumeMax`      | `3`      | Max resume cycles before a limit-paused run is parked/failed                                                                                                                                                               |
+| `goalVerifyTimeoutMs` | `600000` | **Phase 12.3** — wall-clock deadline for a goal's `checks` verifier shell (then `SIGTERM`→`SIGKILL`)                                                                                                                       |
+| `goalAutoResume`      | `false`  | **Phase 12.4** — `true` = on boot, auto-re-drive `running`/`paused-limit` goals (the unattended launchd daemon). Default: park `awaiting-resume` (Law 3)                                                                   |
+| `chatPersona`         | `jarvis` | The chat butler's personality (`jarvis`/`concise`/`formal`) — changes tone only, never the dispatch governor. Read per turn, set in `/settings`                                                                            |
+| `maxConcurrentRuns`   | `null`   | **Phase 125c** — system-wide ceiling on concurrently running tasks. `null` = uncapped (pre-125c behaviour). Over the cap → the existing `queued` status                                                                    |
+| `roadmapTickMs`       | `60000`  | **Phase 125h** — roadmap auto-sync + gate-poll heartbeat (`0` = disabled). Re-syncs `autoSync: true` projects; polls `awaiting-merge` items' PR state for every project regardless of `autoSync` (the release-signal poll) |
 
 In tests, `vitest.setup.ts` seeds this file (ticks at `0`) via `SYSTEM_CONFIG_FILE`;
 a suite that needs a different knob calls `writeSystemConfig()`

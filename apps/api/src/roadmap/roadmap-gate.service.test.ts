@@ -53,6 +53,7 @@ describe("RoadmapGateService", () => {
   let taskRuns: { resume: ReturnType<typeof vi.fn> };
   let projectPr: { isMerged: ReturnType<typeof vi.fn>; getPr: ReturnType<typeof vi.fn> };
   let activity: { record: ReturnType<typeof vi.fn> };
+  let decomposition: { dispatch: ReturnType<typeof vi.fn> };
 
   const makeGate = () =>
     new RoadmapGateService(
@@ -63,6 +64,7 @@ describe("RoadmapGateService", () => {
       taskRuns as never,
       projectPr as never,
       activity as never,
+      decomposition as never,
       fakeLogger as never,
     );
 
@@ -83,6 +85,7 @@ describe("RoadmapGateService", () => {
     taskRuns = { resume: vi.fn(async () => ({ runId: "run-2" })) };
     projectPr = { isMerged: vi.fn(async () => false), getPr: vi.fn(async () => null) };
     activity = { record: vi.fn(async () => {}) };
+    decomposition = { dispatch: vi.fn(async (_projectId: string, epic: RoadmapItem) => epic) };
   });
 
   afterEach(async () => {
@@ -184,6 +187,65 @@ describe("RoadmapGateService", () => {
     });
   });
 
+  describe("play on an epic (125g)", () => {
+    it("with children — enqueues every todo child via playBulk, epic itself is untouched", async () => {
+      await store.put(item({ id: "epic-1", level: "epic", name: "Epic" }));
+      await store.put(item({ id: "child-a", level: "task", parentId: "epic-1" }));
+      await store.put(item({ id: "child-b", level: "task", parentId: "epic-1" }));
+      const gate = makeGate();
+
+      const played = await gate.play("acme", "epic-1");
+
+      expect(played.level).toBe("epic");
+      expect(played.lifecycle).toBe("todo"); // an epic's own lifecycle never moves
+      expect(decomposition.dispatch).not.toHaveBeenCalled();
+      const a = await store.get("acme", "child-a");
+      const b = await store.get("acme", "child-b");
+      expect(a.lifecycle).toBe("running");
+      expect(b.lifecycle).toBe("running");
+    });
+
+    it("with children but none todo — a no-op, never 409s", async () => {
+      await store.put(item({ id: "epic-1", level: "epic", name: "Epic" }));
+      await store.put(
+        item({ id: "child-a", level: "task", parentId: "epic-1", lifecycle: "done" }),
+      );
+      const gate = makeGate();
+
+      const played = await gate.play("acme", "epic-1");
+
+      expect(played.lifecycle).toBe("todo");
+      expect(taskScheduler.createTask).not.toHaveBeenCalled();
+      expect(decomposition.dispatch).not.toHaveBeenCalled();
+    });
+
+    it("childless — dispatches a decomposition run instead of a normal task", async () => {
+      await store.put(item({ id: "epic-1", level: "epic", name: "Epic" }));
+      const gate = makeGate();
+
+      await gate.play("acme", "epic-1");
+
+      expect(decomposition.dispatch).toHaveBeenCalledTimes(1);
+      expect(decomposition.dispatch.mock.calls[0]![0]).toBe("acme");
+      expect(decomposition.dispatch.mock.calls[0]![1]).toMatchObject({ id: "epic-1" });
+      // Never the ordinary release() path — no plain task for the epic itself.
+      expect(taskScheduler.createTask).not.toHaveBeenCalled();
+    });
+
+    it("playing the same epic again after it gains children takes the enqueue-children branch", async () => {
+      await store.put(item({ id: "epic-1", level: "epic", name: "Epic" }));
+      const gate = makeGate();
+      await gate.play("acme", "epic-1"); // childless — decomposes (mocked, no real children created)
+      await store.put(item({ id: "child-a", level: "task", parentId: "epic-1" }));
+
+      await gate.play("acme", "epic-1");
+
+      expect(decomposition.dispatch).toHaveBeenCalledTimes(1); // not called a second time
+      const a = await store.get("acme", "child-a");
+      expect(a.lifecycle).toBe("running");
+    });
+  });
+
   describe("playBulk", () => {
     it("enqueues every todo item in array order (FIFO) and releases the unblocked ones", async () => {
       await store.put(item({ id: "a" }));
@@ -196,6 +258,19 @@ describe("RoadmapGateService", () => {
       // Only a/b were touched (todo); both released since nothing blocks them.
       expect(released.map((i) => i.id).sort()).toEqual(["a", "b"]);
       expect(taskScheduler.createTask).toHaveBeenCalledTimes(2);
+    });
+
+    it("skips an epic id even if it is (nonsensically) included in the payload", async () => {
+      await store.put(item({ id: "epic-1", level: "epic", name: "Epic" }));
+      await store.put(item({ id: "task-a" }));
+      const gate = makeGate();
+
+      const released = await gate.playBulk("acme", ["epic-1", "task-a"]);
+
+      expect(released.map((i) => i.id)).toEqual(["task-a"]);
+      const epic = await store.get("acme", "epic-1");
+      expect(epic.lifecycle).toBe("todo");
+      expect(taskScheduler.createTask).toHaveBeenCalledTimes(1);
     });
 
     it("FIFO drain order matches enqueuedAt order even when one item is blocked", async () => {

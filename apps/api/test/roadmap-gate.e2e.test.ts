@@ -61,6 +61,20 @@ describe("Roadmap gate API (e2e)", () => {
       instructions: "Dělej něco úplně jiného.",
       ownerSubsystem: "forge",
     });
+
+    // 125g — the decomposition dispatch's explicit target must resolve to a real
+    // agent record (`AgentRunnerService.start` 404s on an unknown id otherwise).
+    await request(app.getHttpServer())
+      .post("/api/agents")
+      .send({
+        id: "roadmap-decomposer",
+        name: "Roadmap Decomposer",
+        category: "Roadmap",
+        description: "Decomposes a childless epic into a JSON list of child tasks.",
+        instructions: "Respond with an empty JSON array: []",
+        ownerSubsystem: "forge",
+      })
+      .expect(201);
   });
 
   afterAll(async () => {
@@ -77,6 +91,14 @@ describe("Roadmap gate API (e2e)", () => {
     const res = await request(app.getHttpServer())
       .post(`/api/projects/${projectId}/roadmap/items`)
       .send({ level: "task", name: "Rollout za flagem", description: "desc", ...over })
+      .expect(201);
+    return res.body.id as string;
+  }
+
+  async function createEpic(over: Record<string, unknown> = {}): Promise<string> {
+    const res = await request(app.getHttpServer())
+      .post(`/api/projects/${projectId}/roadmap/items`)
+      .send({ level: "epic", name: "Epic", description: "desc", ...over })
       .expect(201);
     return res.body.id as string;
   }
@@ -163,5 +185,44 @@ describe("Roadmap gate API (e2e)", () => {
     await request(app.getHttpServer())
       .post(`/api/projects/${projectId}/roadmap/items/${itemId}/resume`)
       .expect(409);
+  });
+
+  describe("play on an epic (125g)", () => {
+    it("with children — enqueues the todo children instead of the epic itself", async () => {
+      const epicId = await createEpic({ name: "Epic with children" });
+      const childId = await createItem({ name: "Child", parentId: epicId });
+
+      const res = await request(app.getHttpServer())
+        .post(`/api/projects/${projectId}/roadmap/items/${epicId}/play`)
+        .expect(200);
+
+      expect(res.body.level).toBe("epic");
+      expect(res.body.lifecycle).toBe("todo"); // an epic's own lifecycle never moves
+      expect(res.body.runs).toHaveLength(0);
+
+      const child = await request(app.getHttpServer())
+        .get(`/api/projects/${projectId}/roadmap/items/${childId}`)
+        .expect(200);
+      expect(child.body.lifecycle).toBe("running");
+    });
+
+    it("childless — dispatches a decomposition run to the explicit roadmap-decomposer agent", async () => {
+      const epicId = await createEpic({ name: "Childless epic" });
+
+      const res = await request(app.getHttpServer())
+        .post(`/api/projects/${projectId}/roadmap/items/${epicId}/play`)
+        .expect(200);
+
+      expect(res.body.lifecycle).toBe("todo");
+      expect(res.body.runs).toHaveLength(1);
+      expect(res.body.runs[0].taskId).toBeTruthy();
+      expect(res.body.runs[0].outcome).toBe("running");
+
+      // Pressing play again while the decomposition run is in flight 409s — the
+      // only in-flight guard an epic has, since its own lifecycle never gates it.
+      await request(app.getHttpServer())
+        .post(`/api/projects/${projectId}/roadmap/items/${epicId}/play`)
+        .expect(409);
+    });
   });
 });

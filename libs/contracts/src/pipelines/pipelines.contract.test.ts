@@ -165,9 +165,9 @@ describe("pipeline schema", () => {
     });
     expect(result.success).toBe(false);
     if (!result.success)
-      expect(result.error.issues.some((i) => i.message === "qualify is for agent phases only")).toBe(
-        true,
-      );
+      expect(
+        result.error.issues.some((i) => i.message === "qualify is for agent phases only"),
+      ).toBe(true);
   });
 
   it("rejects a qualify phase with no loop", () => {
@@ -226,9 +226,9 @@ describe("pipeline schema", () => {
     });
     expect(result.success).toBe(false);
     if (!result.success)
-      expect(
-        result.error.issues.some((i) => i.message.includes('loop.driftTo "ghost"')),
-      ).toBe(true);
+      expect(result.error.issues.some((i) => i.message.includes('loop.driftTo "ghost"'))).toBe(
+        true,
+      );
   });
 });
 
@@ -260,7 +260,13 @@ describe("pipeline run schema", () => {
     const withVerdict = PipelineRunSchema.safeParse({
       ...base,
       stageRuns: [
-        { phaseId: "review", runId: "release_1.review_1", attempt: 1, status: "done", verdict: "gap" },
+        {
+          phaseId: "review",
+          runId: "release_1.review_1",
+          attempt: 1,
+          status: "done",
+          verdict: "gap",
+        },
       ],
     });
     expect(withVerdict.success).toBe(true);

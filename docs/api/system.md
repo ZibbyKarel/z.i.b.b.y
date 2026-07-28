@@ -50,13 +50,15 @@ system-config section — link there rather than duplicating the table here.
      The scheduler reads it at use time (never caches it in a field), which
      is what makes a save apply to the very next dispatch. Enforcement lives
      in `TaskSchedulerService` — see [tasks.md](./tasks.md).
-   - `roadmapTickMs` (Phase 125h) drives the roadmap tick: it re-syncs every
-     project whose per-project `_config.json` sets `autoSync: true`, and
-     reconciles running / `awaiting-merge` roadmap items. That reconcile is
-     the **poll** half of the roadmap's two release signals — it catches a PR
-     merged directly on GitHub, where the eager `recordMerge` hook never fires.
-     Like the other `*TickMs` knobs it re-arms live via `onChange()`. See
-     [roadmap.md](./roadmap.md).
+   - `roadmapTickMs` (Phase 125h) is `RoadmapTickService`'s heartbeat —
+     `60_000` by default, `0` disables, re-arms live via `onChange()` like the
+     other `*TickMs` knobs. Each tick re-syncs every project whose roadmap
+     config has `autoSync: true`, then drives
+     `RoadmapGateService.reconcileRunning`/`reconcileAwaitingMerge` for every
+     project with a roadmap (independent of `autoSync` — this is the **poll**
+     half of the roadmap's two release signals, the one that catches a PR
+     merged directly on GitHub, where the eager `recordMerge` hook never
+     fires). See [roadmap.md](./roadmap.md).
 4. `GET /system/config` / `PUT /system/config` are the only two endpoints;
    `putConfig` replaces the entire document (not a partial patch).
 

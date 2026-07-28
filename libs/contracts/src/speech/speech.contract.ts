@@ -57,7 +57,8 @@ export const speechContract = c.router(
       responses: {
         200: SpeechStatusSchema,
       },
-      summary: "speakd daemon status — always 200; reachable:false when the daemon can't be reached",
+      summary:
+        "speakd daemon status — always 200; reachable:false when the daemon can't be reached",
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },

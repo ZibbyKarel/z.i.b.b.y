@@ -49,12 +49,10 @@ describe("machine.schema (N5a)", () => {
     expect(
       MachineActionSchema.safeParse({ ...ACTION, folder: "/" + "x".repeat(2047) }).success, // 2048
     ).toBe(true);
-    expect(
-      MachineActionSchema.safeParse({ ...ACTION, find: "x".repeat(2049) }).success,
-    ).toBe(false);
-    expect(
-      MachineActionSchema.safeParse({ ...ACTION, find: "x".repeat(2048) }).success,
-    ).toBe(true);
+    expect(MachineActionSchema.safeParse({ ...ACTION, find: "x".repeat(2049) }).success).toBe(
+      false,
+    );
+    expect(MachineActionSchema.safeParse({ ...ACTION, find: "x".repeat(2048) }).success).toBe(true);
     expect(
       MachineActionSchema.safeParse({ kind: "open-maps", query: "x".repeat(2049) }).success,
     ).toBe(false);
@@ -62,12 +60,10 @@ describe("machine.schema (N5a)", () => {
       MachineActionSchema.safeParse({ kind: "open-maps", query: "x".repeat(2048) }).success,
     ).toBe(true);
     expect(
-      MachineActionSchema.safeParse({ kind: "open-folder", path: "/" + "x".repeat(2048) })
-        .success, // 2049
+      MachineActionSchema.safeParse({ kind: "open-folder", path: "/" + "x".repeat(2048) }).success, // 2049
     ).toBe(false);
     expect(
-      MachineActionSchema.safeParse({ kind: "open-folder", path: "/" + "x".repeat(2047) })
-        .success, // 2048
+      MachineActionSchema.safeParse({ kind: "open-folder", path: "/" + "x".repeat(2047) }).success, // 2048
     ).toBe(true);
   });
 
@@ -109,9 +105,7 @@ describe("MachineConfigSchema (Phase 76)", () => {
 
   it("rejects an empty cloneRoot and an unknown key (strict)", () => {
     expect(MachineConfigSchema.safeParse({ cloneRoot: "" }).success).toBe(false);
-    expect(
-      MachineConfigSchema.safeParse({ cloneRoot: "/x", extra: "nope" }).success,
-    ).toBe(false);
+    expect(MachineConfigSchema.safeParse({ cloneRoot: "/x", extra: "nope" }).success).toBe(false);
   });
 
   it("UpdateMachineConfigSchema accepts a partial (empty) patch", () => {

@@ -71,6 +71,7 @@ export * from "./roadmap/roadmap-item.schema";
 export * from "./roadmap/roadmap-readiness";
 export * from "./roadmap/roadmap-sync.schema";
 export * from "./roadmap/roadmap-play.schema";
+export * from "./roadmap/decomposition-artifact.schema";
 export * from "./roadmap/level-mapping.schema";
 export * from "./roadmap/roadmap.contract";
 export * from "./tasks/task.schema";

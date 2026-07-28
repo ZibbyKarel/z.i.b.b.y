@@ -46,9 +46,7 @@ describe("TriageVerdictSchema (Law 4: closed)", () => {
   });
 
   it("caps reason at 2000 chars (T11 finding #6): 2000 passes, 2001 rejects", () => {
-    expect(TriageVerdictSchema.safeParse({ ...base, reason: "x".repeat(2000) }).success).toBe(
-      true,
-    );
+    expect(TriageVerdictSchema.safeParse({ ...base, reason: "x".repeat(2000) }).success).toBe(true);
     expect(TriageVerdictSchema.safeParse({ ...base, reason: "x".repeat(2001) }).success).toBe(
       false,
     );
@@ -72,11 +70,7 @@ describe("ChannelItemSchema", () => {
   });
 
   it("caps text at 4500 chars (T11 finding #8, headroom above MAX_INBOUND_CHARS=4000): 4500 passes, 4501 rejects", () => {
-    expect(ChannelItemSchema.safeParse({ ...minimal, text: "x".repeat(4500) }).success).toBe(
-      true,
-    );
-    expect(ChannelItemSchema.safeParse({ ...minimal, text: "x".repeat(4501) }).success).toBe(
-      false,
-    );
+    expect(ChannelItemSchema.safeParse({ ...minimal, text: "x".repeat(4500) }).success).toBe(true);
+    expect(ChannelItemSchema.safeParse({ ...minimal, text: "x".repeat(4501) }).success).toBe(false);
   });
 });

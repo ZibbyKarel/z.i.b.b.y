@@ -117,8 +117,7 @@ export const projectsContract = c.router(
       path: "/projects/:id/resolved",
       pathParams: z.object({ id: ProjectIdSchema }),
       responses: { 200: ResolvedProjectContextSchema, 404: ErrorSchema },
-      summary:
-        "Get a project's EFFECTIVE (company-merged) people/budget/integrations (Phase 72)",
+      summary: "Get a project's EFFECTIVE (company-merged) people/budget/integrations (Phase 72)",
     },
     getProjectLocalState: {
       method: "GET",

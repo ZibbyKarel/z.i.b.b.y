@@ -26,9 +26,7 @@ describe("SelfKnowledgeSection", () => {
     queryResult = { data: SNAPSHOT, isPending: false, isError: false, refetch: vi.fn() };
     render(<SelfKnowledgeSection />);
     expect(screen.getByTestId(SelfKnowledgeSectionTestId.Markdown)).toHaveTextContent("koder");
-    expect(screen.getByTestId(SelfKnowledgeSectionTestId.DriftChip)).toHaveTextContent(
-      "Aktuální",
-    );
+    expect(screen.getByTestId(SelfKnowledgeSectionTestId.DriftChip)).toHaveTextContent("Aktuální");
   });
 
   it("shows a drift chip when the note has drifted", () => {
