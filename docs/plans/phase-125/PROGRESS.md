@@ -21,10 +21,10 @@
 | Sub-phase | Scope                                                                                            | State                     |
 | --------- | ------------------------------------------------------------------------------------------------ | ------------------------- |
 | 125a-api  | Contracts + per-project store + level-mapping store/endpoints + `docs/api/roadmap.md`             | ✅ landed, reviewed, green |
-| 125a-web  | `/settings?tab=tasks` level-mapping table                                                          | 🟨 agent running           |
+| 125a-web  | `/settings?tab=tasks` level-mapping table                                                          | ✅ landed, screenshotted   |
 | 125c      | `maxConcurrentRuns` + `countRunningGlobal()` + `capacityStatus()` + `?tab=runtime` control          | ✅ landed, reviewed, green |
-| 125b      | `RoadmapSourceService` (Jira + GitHub), `adfToMarkdown`, attachments, upsert, sync endpoint         | 🟨 agent running           |
-| 125d      | Roadmap tab, read-only: epic list, 4-column board, card, detail dialog                             | ⬜ not started             |
+| 125b      | `RoadmapSourceService` (Jira + GitHub), `adfToMarkdown`, attachments, upsert, sync endpoint         | ✅ landed, reviewed, green |
+| 125d      | Roadmap tab, read-only: epic list, 4-column board, card, detail dialog                             | 🟨 agent running           |
 | 125e      | Play + `RoadmapGateService`: gate, FIFO drain, task creation, merge hook + PR poll                  | ⬜ not started             |
 | 125f      | Manual epic/task creation + dependency editing                                                     | ⬜ not started             |
 | 125g      | Epic decomposition run + artifact contract + deterministic ingest                                  | ⬜ not started             |
@@ -52,18 +52,19 @@ round; both defect sets were real.
 
 **Wave 2 is running:** 125b (import/sync) and 125a-web (settings table), disjoint file sets.
 
-## ⚠️ Uncommitted work in the tree (if you are resuming)
+## Open item: `briefing.spec.ts`
 
-**125b is mid-flight and its work is NOT committed.** `git status` should show new
-`apps/api/src/roadmap/{adf-to-markdown,merge-depends-on,roadmap-source.service}.ts`,
-a new `libs/contracts/src/roadmap/roadmap-sync.schema.ts`, and edits to
-`roadmap-item.schema.ts` (a new `syncNotes` field), `roadmap.contract.ts`,
-`roadmap.controller.ts`, `roadmap.module.ts`.
+The only red CI check. `e2e/briefing.spec.ts` — `chat-briefing-message-card` never
+appears after `POST /api/briefing/generate`. Ruled out so far: the testid and the
+`ChatMessage` render path both still exist; `ChatBriefingSinkService`'s unit tests pass;
+nothing on this branch touches briefing, chat or the transcript sink. Reported on PR #65.
 
-It was deliberately left uncommitted because `pnpm exec tsc -p libs/contracts/tsconfig.json`
-**does not pass** mid-edit (`syncNotes` is non-optional in the schema but optional at one
-call site), and pushing a broken typecheck to the open PR would read as a regression.
-Finish or discard that work before the next commit — do not assume the tree is clean.
+**Next step if you pick this up:** reproduce it WITHOUT the playwright harness (which
+won't launch here — the config resolves Chromium build 1223, the container has 1194).
+Start the API and `apps/web` with `NEXT_PUBLIC_API_URL=http://localhost:3333`, `curl -X POST
+/api/briefing/generate`, then load `/chat` in `/opt/pw-browsers/chromium` and look for the
+testid. That is exactly what the spec does. Do it only when no agent is mid-edit in
+`apps/web`, or the dev server recompiles under you and the result is meaningless.
 
 ## Environment notes for a resumed session
 
