@@ -78,7 +78,16 @@ describe("RoadmapCard", () => {
         onSelectDependency={vi.fn()}
       />,
     );
-    expect(screen.getByText(/čeká na PROJ-12 — zdroj ji už nevrací/)).toBeInTheDocument();
+    // The card shows the SHORT form (the long sentence overflowed the column and
+    // clipped mid-word); the full explanation is the badge's hover title, and the
+    // detail dialog spells it out. `title` is asserted too so a future "tidy-up"
+    // can't drop the explanation entirely and leave only an ambiguous "· archiv".
+    const badge = screen.getByText(/čeká na PROJ-12 · archiv/);
+    expect(badge).toBeInTheDocument();
+    expect(badge.closest("[title]")).toHaveAttribute(
+      "title",
+      expect.stringContaining("zdroj nevrací"),
+    );
   });
 
   it("shows a plain waiting badge for a non-archived blocker", () => {

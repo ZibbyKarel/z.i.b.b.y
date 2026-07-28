@@ -179,7 +179,21 @@ export function RoadmapCard({
                     onSelectDependency(blocker.id);
                   }}
                 >
-                  <Chip tone="wait">
+                  {/*
+                   * An archived blocker gets `bad`, not `wait`: it can never reach
+                   * `done`, so this is a dead end needing the Tier-3 override, not an
+                   * ordinary wait. The card carries the SHORT form — the full sentence
+                   * overflowed a board column and clipped mid-word — with the
+                   * explanation on hover and, in full, in the detail dialog.
+                   */}
+                  <Chip
+                    title={
+                      blocker.lifecycle === "archived"
+                        ? t("card.waitingOnArchivedTitle")
+                        : undefined
+                    }
+                    tone={blocker.lifecycle === "archived" ? "bad" : "wait"}
+                  >
                     <Icon aria-hidden name="pause" size="xs" />
                     {blocker.lifecycle === "archived"
                       ? t("card.waitingOnArchived", { name: blocker.name })
