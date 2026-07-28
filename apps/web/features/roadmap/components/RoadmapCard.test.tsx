@@ -113,13 +113,29 @@ describe("RoadmapCard", () => {
     expect(screen.getByTestId(RoadmapCardTestId.Failed)).toHaveTextContent("Selhalo");
   });
 
-  it("renders the play button disabled with an explanatory accessible name", () => {
+  it("enables the play button for a todo item (125e wires it up)", () => {
     render(
       <RoadmapCard
         blockers={[]}
         column="ready"
         dependents={[]}
-        item={item({ id: "t5", name: "Task" })}
+        item={item({ id: "t5", name: "Task", lifecycle: "todo" })}
+        onHoverChange={vi.fn()}
+        onSelect={vi.fn()}
+        onSelectDependency={vi.fn()}
+      />,
+    );
+    const play = screen.getByTestId(RoadmapCardTestId.Play);
+    expect(play).not.toBeDisabled();
+  });
+
+  it("disables the play button once the item is no longer todo (already in flight)", () => {
+    render(
+      <RoadmapCard
+        blockers={[]}
+        column="in-progress"
+        dependents={[]}
+        item={item({ id: "t5b", name: "Task", lifecycle: "running" })}
         onHoverChange={vi.fn()}
         onSelect={vi.fn()}
         onSelectDependency={vi.fn()}
