@@ -5,10 +5,11 @@ from Jira/GitHub or created manually, with a dependency graph that gates when
 a task is safe to dispatch. This doc covers **125a** (the data model, the
 per-project item store, the global level-mapping table, and the CRUD
 endpoints), **125b** (`RoadmapSourceService`'s Jira/GitHub import and the
-manual `POST .../roadmap/sync` route) and **125e** (play, the dependency gate,
-merge signals, lifecycle completion, Tier-3 override, restart/resume). See
-`docs/plans/phase-125-project-roadmap.md` for the full master plan (the UI in
-125d/f, decomposition in 125g).
+manual `POST .../roadmap/sync` route), **125e** (play, the dependency gate,
+merge signals, lifecycle completion, Tier-3 override, restart/resume) and
+**125h** (the auto-sync + gate-poll tick, and the roadmap tab's Sync button/
+auto-sync toggle). See `docs/plans/phase-125-project-roadmap.md` for the full
+master plan (the UI in 125d/f, decomposition in 125g).
 
 ## Pieces
 
@@ -25,6 +26,7 @@ merge signals, lifecycle completion, Tier-3 override, restart/resume). See
 | Provider   | `apps/api/src/roadmap/roadmap-attachment-ref.provider.ts` | `AttachmentSetRefProvider` for the orphan-attachment sweep                                          |
 | Service    | `apps/api/src/roadmap/roadmap-source.service.ts`          | `RoadmapSourceService` (125b) — Jira/GitHub import + upsert                                         |
 | Service    | `apps/api/src/roadmap/roadmap-gate.service.ts`            | `RoadmapGateService` (125e) — play/override/restart/resume, the FIFO drain, release signals         |
+| Service    | `apps/api/src/roadmap/roadmap-tick.service.ts`            | `RoadmapTickService` (125h) — the `roadmapTickMs` heartbeat: auto-sync + gate poll                  |
 | Pure fn    | `apps/api/src/roadmap/adf-to-markdown.ts`                 | `adfToMarkdown()` — Jira ADF `description` → markdown, bounded + never throws                       |
 | Pure fn    | `apps/api/src/roadmap/merge-depends-on.ts`                | `mergeDependsOn()` — the re-sync `dependsOn` ownership-split merge                                  |
 | Pure fn    | `apps/api/src/roadmap/roadmap-task-text.ts`               | `buildRoadmapTaskText()` (125e) — name + description + the roadmap-context footer                   |
@@ -464,9 +466,32 @@ One project's failure never aborts the rest: a throwing sync, a throwing reconci
 a throwing `readConfig` are each caught per project.
 
 **Activity is deliberately quiet.** An entry is recorded only when a sync actually
-imported or archived something, and a no-op tick records nothing — the master plan asks
-for a butler's briefing, not a firehose, and a ticker that logged every pass would bury
-the entries that matter.
+imported or archived something (`roadmap-sync`, `ActivityKindSchema`), and a no-op tick
+records nothing — the master plan asks for a butler's briefing, not a firehose, and a
+ticker that logged every pass would bury the entries that matter. This is on top of, not
+instead of, the two entries `RoadmapGateService` already records on its own the moment a
+poll actually changes an item's lifecycle (`roadmap-item-dispatched` on release,
+`roadmap-item-outcome` on `done`/`failed`) — the tick doesn't duplicate those. A manual
+click of the roadmap tab's Sync button does **not** ride `roadmap-sync` either: that
+route's response already tells the operator the result directly, so logging it too would
+double the same news.
+
+Registers under the health probe's `roadmap` watcher id (`WatcherIdSchema`), same
+`arm()`/`stopTimer()`/`watcherHealth()` shape as every other `TickingWatcherBase`
+subclass, so `/api/health`'s `watchers[]` and the `/settings?tab=system` watcher rows
+report it like the rest.
+
+### The roadmap tab's Sync button + auto-sync toggle (125h UI)
+
+`RoadmapPanel.tsx` renders a small header — present above BOTH the epic list/board and
+the empty state, since Sync is exactly how an empty roadmap gets its first items — with:
+
+- the **auto-sync toggle**, backed by `GET`/`PUT .../roadmap/config` (`useRoadmapConfigQuery`/
+  `useSetRoadmapConfigMutation`) — the same `RoadmapConfig.autoSync` flag the tick reads;
+- the **Sync** button, backed by `POST .../roadmap/sync` (`useSyncRoadmapItemsMutation`,
+  wired here for the first time — the route existed from 125b but no UI called it yet).
+  A toast reports the `{ imported, updated, archived }` summary; the item list itself
+  refreshes via the mutation's own query invalidation.
 
 ## Decomposition (125g)
 

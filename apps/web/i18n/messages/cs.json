@@ -936,6 +936,8 @@
       "monitorTick": "Tick CI monitoringu (ms)",
       "automationTick": "Tick automatizací (ms)",
       "limitResumeTick": "Tick obnovy po limitu (ms)",
+      "roadmapTick": "Tick synchronizace roadmapy (ms)",
+      "roadmapTickHint": "Jak často se roadmapa projektů s auto-syncem znovu importuje a jak často se ověřuje, zda nebyl PR sloučen přímo na GitHubu.",
       "limitResumeMax": "Max. cyklů obnovy po limitu",
       "limitResumeMaxHint": "Kolikrát se běh pozastavený limitem zkusí obnovit, než se zaparkuje/selže.",
       "maxConcurrentRuns": "Max. souběžných běhů (celý systém)",
@@ -2042,6 +2044,11 @@
     "hint": "Vyber epik a uvidíš jeho tasky vpravo.",
     "emptyEpicsTitle": "Zatím žádné epiky",
     "emptyEpicsDescription": "Tento projekt zatím nemá žádnou roadmapu — naimportuj ji ze zdroje, nebo epiky vytvoř ručně.",
+    "sync": {
+      "button": "Synchronizovat",
+      "autoSync": "Automatická synchronizace",
+      "toast": "{imported} naimportováno, {updated} aktualizováno, {archived} archivováno"
+    },
     "epic": {
       "unphased": "nerozfázováno",
       "progress": "{done}/{total} tasků",

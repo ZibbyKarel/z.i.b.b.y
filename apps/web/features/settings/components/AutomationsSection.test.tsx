@@ -64,9 +64,7 @@ describe("AutomationsSection", () => {
 
   it("shows a description resolved from the automation's target type", () => {
     render(<AutomationsSection />);
-    expect(
-      screen.getByTestId(SystemAutomationRowTestId.Description),
-    ).toHaveTextContent(
+    expect(screen.getByTestId(SystemAutomationRowTestId.Description)).toHaveTextContent(
       "Noční průchod dokončenými běhy — levný model vydestiluje trvalé poznatky do vaultu.",
     );
   });

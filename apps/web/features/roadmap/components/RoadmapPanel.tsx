@@ -1,13 +1,15 @@
 "use client";
 
 import type { RoadmapItemLevel } from "@zibby/contracts";
-import { Grid, Stack } from "@zibby/design-system";
+import { Button, Grid, Stack, Toggle, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { EmptyState } from "../../../components/EmptyState/EmptyState";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
-import { useRoadmapItemsQuery } from "../queries";
+import { toastBus } from "../../../components/Toaster/toastBus";
+import { useSetRoadmapConfigMutation, useSyncRoadmapItemsMutation } from "../mutations";
+import { useRoadmapConfigQuery, useRoadmapItemsQuery } from "../queries";
 import { RoadmapBoard } from "./RoadmapBoard";
 import { RoadmapEpicList } from "./RoadmapEpicList";
 import { RoadmapItemDialog } from "./RoadmapItemDialog";
@@ -16,6 +18,74 @@ import { RoadmapItemFormDialog } from "./RoadmapItemFormDialog";
 export enum RoadmapPanelTestId {
   Root = "roadmap-panel",
   Empty = "roadmap-panel-empty",
+  Header = "roadmap-panel-header",
+  Sync = "roadmap-panel-sync",
+  AutoSyncToggle = "roadmap-panel-auto-sync",
+}
+
+/**
+ * The roadmap tab header (125h): the auto-sync toggle + the manual Sync
+ * button, both backed by the 125a/125b routes (`getRoadmapConfig`/
+ * `putRoadmapConfig`/`syncRoadmapItems`) — present above BOTH the empty state
+ * and the epic list/board, since Sync is exactly how an empty roadmap gets its
+ * first items. A toast reports the sync summary; the item list itself
+ * refreshes via the mutation's own query invalidation.
+ */
+function RoadmapSyncHeader({ projectId }: { projectId: string }) {
+  const t = useTranslations("roadmap");
+  const configQuery = useRoadmapConfigQuery(projectId);
+  const setConfig = useSetRoadmapConfigMutation(projectId);
+  const syncMutation = useSyncRoadmapItemsMutation(projectId);
+
+  const autoSync = configQuery.data?.autoSync ?? false;
+
+  const sync = () =>
+    syncMutation.mutate(
+      { params: { projectId }, body: {} },
+      {
+        onSuccess: (result) => {
+          const { imported, updated, archived } = result.body;
+          toastBus.emit({
+            message: t("sync.toast", { imported, updated, archived }),
+            severity: "ok",
+          });
+        },
+      },
+    );
+
+  return (
+    <Stack
+      align="center"
+      data-testid={RoadmapPanelTestId.Header}
+      direction="row"
+      gap="200"
+      justify="end"
+    >
+      <Stack align="center" direction="row" gap="75">
+        <Toggle
+          checked={autoSync}
+          data-testid={RoadmapPanelTestId.AutoSyncToggle}
+          disabled={configQuery.isPending || setConfig.isPending}
+          label={t("sync.autoSync")}
+          onChange={(next) => setConfig.mutate({ params: { projectId }, body: { autoSync: next } })}
+          size="sm"
+        />
+        <Typography size="xs" type="note" variant="secondary">
+          {t("sync.autoSync")}
+        </Typography>
+      </Stack>
+      <Button
+        data-testid={RoadmapPanelTestId.Sync}
+        disabled={syncMutation.isPending}
+        icon="retry"
+        intent="ghost"
+        onClick={sync}
+        size="sm"
+      >
+        {t("sync.button")}
+      </Button>
+    </Stack>
+  );
 }
 
 export interface RoadmapPanelProps {
@@ -53,7 +123,8 @@ export function RoadmapPanel({ projectId }: RoadmapPanelProps) {
 
   if (epics.length === 0) {
     return (
-      <Stack data-testid={RoadmapPanelTestId.Empty}>
+      <Stack data-testid={RoadmapPanelTestId.Empty} gap="200">
+        <RoadmapSyncHeader projectId={projectId} />
         <EmptyState
           actionLabel={t("create.newEpic")}
           description={t("emptyEpicsDescription")}
@@ -79,7 +150,8 @@ export function RoadmapPanel({ projectId }: RoadmapPanelProps) {
   const selectedEpic = epics.find((epic) => epic.id === selectedEpicId) ?? epics[0]!;
 
   return (
-    <Stack data-testid={RoadmapPanelTestId.Root}>
+    <Stack data-testid={RoadmapPanelTestId.Root} gap="200">
+      <RoadmapSyncHeader projectId={projectId} />
       <Grid gap="250" sidebar="left">
         <RoadmapEpicList
           epics={epics}

@@ -10,6 +10,7 @@ import { LoggerService, type ScopedLogger } from "../shared/logging/logger.servi
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
 import { TaskRunsService } from "../tasks/task-runs.service";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
+import { RoadmapDecompositionService } from "./roadmap-decomposition.service";
 import { buildRoadmapTaskText } from "./roadmap-task-text";
 import { RoadmapItemLifecycleError } from "./roadmap.errors";
 import { RoadmapStore } from "./roadmap.store";
@@ -67,6 +68,7 @@ export class RoadmapGateService {
     private readonly taskRuns: TaskRunsService,
     @Inject(forwardRef(() => ProjectPrService)) private readonly projectPr: ProjectPrService,
     private readonly activity: ActivityLogService,
+    private readonly decomposition: RoadmapDecompositionService,
     logger: LoggerService,
   ) {
     this.log = logger.child(RoadmapGateService.name);
@@ -76,9 +78,16 @@ export class RoadmapGateService {
   // Play / override / restart / resume
   // ---------------------------------------------------------------------
 
-  /** Enqueue a `todo` item; 409 (via {@link RoadmapItemLifecycleError}) on any other lifecycle. */
+  /**
+   * Enqueue a `todo` item; 409 (via {@link RoadmapItemLifecycleError}) on any
+   * other lifecycle. An EPIC is routed to {@link playEpic} first — "Play on
+   * an epic" (master plan, 125g) never goes through the ordinary
+   * todo-gated enqueue+drain path below, since an epic's own `lifecycle`
+   * never advances (see `RoadmapDecompositionService`'s class docblock).
+   */
   async play(projectId: string, itemId: string): Promise<RoadmapItem> {
     const item = await this.roadmap.get(projectId, itemId);
+    if (item.level === "epic") return this.playEpic(projectId, item);
     if (item.lifecycle !== "todo") {
       throw new RoadmapItemLifecycleError(
         projectId,
@@ -92,12 +101,38 @@ export class RoadmapGateService {
   }
 
   /**
+   * "Play on an epic" (125g, master plan's decisions table): with children,
+   * enqueue every `todo` child via the EXISTING `playBulk` FIFO path (never
+   * duplicated here); childless, dispatch a decomposition run instead
+   * (`RoadmapDecompositionService.dispatch`). Either way the epic ITSELF is
+   * returned unchanged (its own `lifecycle` is never touched by Play — see
+   * `RoadmapDecompositionService`'s docblock for why), so repeatedly
+   * pressing Play on the same epic — before and after it gains children —
+   * is always a safe, idempotent action rather than a one-shot gate.
+   */
+  private async playEpic(projectId: string, epic: RoadmapItem): Promise<RoadmapItem> {
+    const items = await this.roadmap.list(projectId);
+    const children = items.filter((i) => i.parentId === epic.id);
+    if (children.length > 0) {
+      const todoChildIds = children.filter((c) => c.lifecycle === "todo").map((c) => c.id);
+      if (todoChildIds.length > 0) await this.playBulk(projectId, todoChildIds);
+      return this.roadmap.get(projectId, epic.id);
+    }
+    return this.decomposition.dispatch(projectId, epic);
+  }
+
+  /**
    * Bulk play ("zařadit vše"). Preserves `itemIds`' order for FIFO — each id's
    * `enqueuedAt` is stamped a millisecond apart so array order survives even when
    * every id is processed within the same tick. An id that doesn't resolve to a real
    * item 404s the WHOLE call (a client bug, fail fast); an id that resolves but
    * isn't `todo` is silently skipped (idempotent — a multi-select naturally mixes
    * lifecycles once some cards are already in flight) rather than aborting the batch.
+   * An EPIC id is skipped the same way (125g: an epic is never enqueued/released
+   * through this generic path — it is only ever reached via {@link playEpic}'s
+   * own "has children" branch, which calls this method with TASK ids only; a
+   * bulk-play payload that happens to include an epic id — a multi-select
+   * spanning the epic row — must not fall through to a bogus release() call).
    */
   async playBulk(projectId: string, itemIds: string[]): Promise<RoadmapItem[]> {
     const base = Date.now();
@@ -105,7 +140,7 @@ export class RoadmapGateService {
     for (let i = 0; i < itemIds.length; i += 1) {
       const itemId = itemIds[i]!;
       const item = await this.roadmap.get(projectId, itemId); // 404s on an unknown/unsafe id
-      if (item.lifecycle !== "todo") continue;
+      if (item.level === "epic" || item.lifecycle !== "todo") continue;
       await this.enqueue(projectId, itemId, base + i);
       touched.push(itemId);
     }

@@ -1,5 +1,6 @@
 import * as path from "node:path";
 import { Global, Module } from "@nestjs/common";
+import { AgentsModule } from "../agents/agents.module";
 import { IntegrationsModule } from "../integrations/integrations.module";
 import { ProjectsModule } from "../projects/projects.module";
 import { ResolvedProjectModule } from "../projects/resolved-project.module";
@@ -8,8 +9,10 @@ import { AttachmentStorageService } from "../tasks/attachment-storage.service";
 import { TasksModule } from "../tasks/tasks.module";
 import { LEVEL_MAPPING_FILE, LevelMappingStore } from "./level-mapping.store";
 import { RoadmapController } from "./roadmap.controller";
+import { RoadmapDecompositionService } from "./roadmap-decomposition.service";
 import { RoadmapGateService } from "./roadmap-gate.service";
 import { RoadmapSourceService } from "./roadmap-source.service";
+import { RoadmapTickService } from "./roadmap-tick.service";
 import { ROADMAP_DIR, RoadmapStore } from "./roadmap.store";
 
 /** Default roadmap dir, anchored to `.zibby/data/roadmap`. */
@@ -56,7 +59,14 @@ function resolveLevelMappingFile(): string {
   // for the merge-state poll. See this file's docblock for why `@Global()`
   // replaces a `ProjectsModule -> RoadmapModule` import edge rather than adding
   // one — every import below stays a plain, non-circular edge.
-  imports: [ProjectsModule, ResolvedProjectModule, IntegrationsModule, TasksModule],
+  //
+  // 125g — `RoadmapDecompositionService` additionally needs `AgentRunnerService`
+  // (AgentsModule) to read a decomposition run's own log back (the terminal
+  // artifact never rides `ScheduledTask.outcome.summary` — see the service's
+  // own docblock). AgentsModule is already loaded well before RoadmapModule
+  // (`app.module.ts`) and imports nothing that reaches back here, so this is a
+  // plain, non-circular edge, same as the others in this list.
+  imports: [ProjectsModule, ResolvedProjectModule, IntegrationsModule, TasksModule, AgentsModule],
   controllers: [RoadmapController],
   providers: [
     { provide: ROADMAP_DIR, useFactory: resolveRoadmapDir },
@@ -69,13 +79,23 @@ function resolveLevelMappingFile(): string {
     // and avoids re-plumbing RoadmapSourceService's existing constructor.
     AttachmentStorageService,
     RoadmapSourceService,
+    // 125g — Play on a childless epic (RoadmapGateService.playEpic's other
+    // branch). Declared before RoadmapGateService only because it's a plain
+    // constructor dependency of it; Nest's DI doesn't care about array order.
+    RoadmapDecompositionService,
     RoadmapGateService,
+    // 125h — the auto-sync + gate-poll heartbeat. Its own extra deps
+    // (SystemConfigStore, WatcherHealthRegistry, ActivityLogService) are all
+    // `@Global()` already, so no new import above is needed for it.
+    RoadmapTickService,
   ],
   // RoadmapStore is exported so attachment-set-refs.module.ts can provide
   // RoadmapAttachmentRefProvider (which depends on it) without RoadmapModule
   // importing back into tasks/ — same seam as AutomationsModule/
   // AutomationsStorageService. RoadmapGateService is exported (and, being
   // `@Global()`, needs no importer) so `ProjectPrService` can inject it (125e).
-  exports: [RoadmapStore, RoadmapGateService],
+  // RoadmapDecompositionService is exported too (125g) so a future consumer —
+  // 125h's tick, or anything else — can reach `reconcile()` the same way.
+  exports: [RoadmapStore, RoadmapGateService, RoadmapDecompositionService],
 })
 export class RoadmapModule {}

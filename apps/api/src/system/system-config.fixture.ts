@@ -18,6 +18,9 @@ export const TEST_SYSTEM_CONFIG: SystemConfig = SystemConfigSchema.parse({
   // 125c: uncapped by default (today's behaviour) — a test opts into the global
   // cap via `fakeSystemConfigStore({ maxConcurrentRuns: N })`.
   maxConcurrentRuns: null,
+  // 125h: off by default, same posture as every other tick — a suite drives
+  // `RoadmapTickService.tick()` directly.
+  roadmapTickMs: 0,
 });
 
 /**

@@ -10,6 +10,7 @@ const DEFAULTS: SystemConfig = {
   monitorTickMs: 60000,
   automationTickMs: 0,
   limitResumeTickMs: 60000,
+  roadmapTickMs: 60000,
   limitResumeMax: 3,
   maxConcurrentRuns: null,
   goalVerifyTimeoutMs: 600000,
@@ -60,6 +61,15 @@ describe("SystemSection", () => {
     await userEvent.clear(screen.getByTestId(SystemSectionTestId.TaskTick));
     await userEvent.click(screen.getByTestId(SystemSectionTestId.Save));
     expect(setConfig).toHaveBeenCalledWith({ body: { ...DEFAULTS, taskTickMs: 0 } });
+  });
+
+  it("Save PUTs an edited roadmapTickMs (125h)", async () => {
+    render(<SystemSection />);
+    const field = screen.getByTestId(SystemSectionTestId.RoadmapTick);
+    await userEvent.clear(field);
+    await userEvent.type(field, "90000");
+    await userEvent.click(screen.getByTestId(SystemSectionTestId.Save));
+    expect(setConfig).toHaveBeenCalledWith({ body: { ...DEFAULTS, roadmapTickMs: 90000 } });
   });
 
   describe("maxConcurrentRuns (125c) — nullable knob", () => {

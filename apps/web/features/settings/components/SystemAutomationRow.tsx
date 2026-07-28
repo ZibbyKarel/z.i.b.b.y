@@ -1,6 +1,15 @@
 import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Button, Card, Container, Divider, Icon, Stack, Toggle, Typography } from "@zibby/design-system";
+import {
+  Button,
+  Card,
+  Container,
+  Divider,
+  Icon,
+  Stack,
+  Toggle,
+  Typography,
+} from "@zibby/design-system";
 import type { Automation } from "@zibby/contracts";
 import { nextCronRun, relativeLabel } from "../../automations/schedule";
 import { useCronLabel } from "../../automations/useCronLabel";

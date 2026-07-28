@@ -25,14 +25,15 @@ export const SubsystemHealthSchema = z.object({
 });
 export type SubsystemHealth = z.infer<typeof SubsystemHealthSchema>;
 
-/** The five heartbeat watchers probed for liveness (F6c). Closed enum — a new
- *  watcher is added here on purpose, never a free-form string. */
+/** The heartbeat watchers probed for liveness (F6c; `roadmap` added 125h). Closed
+ *  enum — a new watcher is added here on purpose, never a free-form string. */
 export const WatcherIdSchema = z.enum([
   "channel",
   "monitor",
   "scheduler",
   "task-scheduler",
   "limit-resume",
+  "roadmap",
 ]);
 export type WatcherId = z.infer<typeof WatcherIdSchema>;
 

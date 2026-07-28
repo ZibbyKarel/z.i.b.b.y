@@ -936,6 +936,8 @@
       "monitorTick": "Monitor watcher tick (ms)",
       "automationTick": "Automation scheduler tick (ms)",
       "limitResumeTick": "Limit-resume scan tick (ms)",
+      "roadmapTick": "Roadmap sync tick (ms)",
+      "roadmapTickHint": "How often auto-sync-enabled projects re-import their roadmap, and how often a PR merged directly on GitHub is discovered.",
       "limitResumeMax": "Max limit-resume cycles",
       "limitResumeMaxHint": "How many times a limit-paused run is retried before it is parked/failed.",
       "maxConcurrentRuns": "Max concurrent runs (system-wide)",
@@ -2042,6 +2044,11 @@
     "hint": "Pick an epic to see its tasks on the right.",
     "emptyEpicsTitle": "No epics yet",
     "emptyEpicsDescription": "This project has no roadmap yet — import it from a source, or create epics by hand.",
+    "sync": {
+      "button": "Sync",
+      "autoSync": "Auto-sync",
+      "toast": "{imported} imported, {updated} updated, {archived} archived"
+    },
     "epic": {
       "unphased": "unphased",
       "progress": "{done}/{total} tasks",

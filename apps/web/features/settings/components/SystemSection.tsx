@@ -14,6 +14,7 @@ export enum SystemSectionTestId {
   MonitorTick = "system-monitor-tick",
   AutomationTick = "system-automation-tick",
   LimitResumeTick = "system-limit-resume-tick",
+  RoadmapTick = "system-roadmap-tick",
   LimitResumeMax = "system-limit-resume-max",
   MaxConcurrentRuns = "system-max-concurrent-runs",
   GoalVerifyTimeout = "system-goal-verify-timeout",
@@ -47,6 +48,7 @@ function SystemEditor({ config }: { config: SystemConfig }) {
   const [limitResumeTickMs, setLimitResumeTickMs] = useState<number | null>(
     config.limitResumeTickMs,
   );
+  const [roadmapTickMs, setRoadmapTickMs] = useState<number | null>(config.roadmapTickMs);
   const [limitResumeMax, setLimitResumeMax] = useState<number | null>(config.limitResumeMax);
   const [maxConcurrentRuns, setMaxConcurrentRuns] = useState<number | null>(
     config.maxConcurrentRuns,
@@ -76,6 +78,7 @@ function SystemEditor({ config }: { config: SystemConfig }) {
         monitorTickMs: tick(monitorTickMs),
         automationTickMs: tick(automationTickMs),
         limitResumeTickMs: tick(limitResumeTickMs),
+        roadmapTickMs: tick(roadmapTickMs),
         limitResumeMax: positive(limitResumeMax, 1),
         maxConcurrentRuns: positiveNullable(maxConcurrentRuns, 1),
         goalVerifyTimeoutMs: positive(goalVerifyTimeoutMs, 1),
@@ -143,6 +146,15 @@ function SystemEditor({ config }: { config: SystemConfig }) {
           onValueChange={setLimitResumeTickMs}
           step={1000}
           value={limitResumeTickMs}
+        />
+        <NumberField
+          data-testid={SystemSectionTestId.RoadmapTick}
+          hint={t("runtime.roadmapTickHint")}
+          label={t("runtime.roadmapTick")}
+          min={0}
+          onValueChange={setRoadmapTickMs}
+          step={1000}
+          value={roadmapTickMs}
         />
 
         <Divider />

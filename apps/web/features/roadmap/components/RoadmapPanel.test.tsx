@@ -33,22 +33,83 @@ const { hooks } = vi.hoisted(() => ({
       isError: false,
       refetch: vi.fn(),
     },
+    config: {
+      data: undefined as { autoSync: boolean } | undefined,
+      isPending: false,
+    },
+    setConfig: { mutate: vi.fn(), isPending: false },
+    sync: { mutate: vi.fn(), isPending: false },
+    create: { mutate: vi.fn(), isPending: false, isError: false, error: null as unknown },
+    update: { mutate: vi.fn(), isPending: false, isError: false, error: null as unknown },
+    play: { mutate: vi.fn(), isPending: false },
   },
 }));
 
 vi.mock("../queries", () => ({
   useRoadmapItemsQuery: () => hooks.items,
+  useRoadmapConfigQuery: () => hooks.config,
+}));
+
+// The whole `../mutations` barrel is replaced, so every hook the panel's SUBTREE
+// reaches for has to be here — not just the panel's own two. `RoadmapItemDialog`
+// (dependency editing) and `RoadmapItemFormDialog` (manual create) render inside
+// this panel, so omitting theirs fails at render with "No <hook> export is defined
+// on the mock" rather than anything that points at the real cause.
+vi.mock("../mutations", () => ({
+  useSetRoadmapConfigMutation: () => hooks.setConfig,
+  useSyncRoadmapItemsMutation: () => hooks.sync,
+  useCreateRoadmapItemMutation: () => hooks.create,
+  useUpdateRoadmapItemMutation: () => hooks.update,
+  usePlayRoadmapItemMutation: () => hooks.play,
 }));
 
 describe("RoadmapPanel", () => {
   beforeEach(() => {
     hooks.items = { data: undefined, isPending: false, isError: false, refetch: vi.fn() };
+    hooks.config = { data: { autoSync: false }, isPending: false };
+    hooks.setConfig = { mutate: vi.fn(), isPending: false };
+    hooks.sync = { mutate: vi.fn(), isPending: false };
+    hooks.create = { mutate: vi.fn(), isPending: false, isError: false, error: null };
+    hooks.update = { mutate: vi.fn(), isPending: false, isError: false, error: null };
+    hooks.play = { mutate: vi.fn(), isPending: false };
   });
 
   it("shows the empty state when the project has no epics", () => {
     hooks.items.data = [];
     render(<RoadmapPanel projectId="proj-1" />);
     expect(screen.getByTestId(RoadmapPanelTestId.Empty)).toBeInTheDocument();
+  });
+
+  it("renders the sync header (Sync button + auto-sync toggle) even on the empty state", () => {
+    hooks.items.data = [];
+    render(<RoadmapPanel projectId="proj-1" />);
+    expect(screen.getByTestId(RoadmapPanelTestId.Sync)).toBeInTheDocument();
+    expect(screen.getByTestId(RoadmapPanelTestId.AutoSyncToggle)).toBeInTheDocument();
+  });
+
+  it("clicking Sync calls the sync mutation with the project id", async () => {
+    hooks.items.data = [item({ id: "e1", level: "epic", name: "Epic A", parentId: undefined })];
+    render(<RoadmapPanel projectId="proj-1" />);
+
+    await userEvent.click(screen.getByTestId(RoadmapPanelTestId.Sync));
+
+    expect(hooks.sync.mutate).toHaveBeenCalledWith(
+      { params: { projectId: "proj-1" }, body: {} },
+      expect.anything(),
+    );
+  });
+
+  it("toggling auto-sync calls the config mutation with the next value", async () => {
+    hooks.items.data = [item({ id: "e1", level: "epic", name: "Epic A", parentId: undefined })];
+    hooks.config.data = { autoSync: false };
+    render(<RoadmapPanel projectId="proj-1" />);
+
+    await userEvent.click(screen.getByTestId(RoadmapPanelTestId.AutoSyncToggle));
+
+    expect(hooks.setConfig.mutate).toHaveBeenCalledWith({
+      params: { projectId: "proj-1" },
+      body: { autoSync: true },
+    });
   });
 
   it("renders the first epic's board by default and switches on selection", async () => {

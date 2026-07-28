@@ -63,6 +63,17 @@ export const SystemConfigSchema = z
      * `TaskSchedulerService.atCapacity`.
      */
     maxConcurrentRuns: z.number().int().positive().nullable().default(null),
+    /**
+     * Roadmap auto-sync + gate-poll heartbeat (ms, 125h) — each tick re-syncs
+     * every project whose roadmap config has `autoSync: true`
+     * (`RoadmapSourceService.sync`) and, for every project with a roadmap,
+     * drives `RoadmapGateService.reconcileRunning`/`reconcileAwaitingMerge`
+     * (the poll half of the two release signals — a PR merged directly on
+     * GitHub still releases its dependents even with auto-sync off). `0`
+     * disables. Editable from `/settings?tab=runtime`; read live (never
+     * cached) via `SystemConfigStore.current()`.
+     */
+    roadmapTickMs: z.number().int().min(0).default(60_000),
   })
   .strict();
 export type SystemConfig = z.infer<typeof SystemConfigSchema>;
