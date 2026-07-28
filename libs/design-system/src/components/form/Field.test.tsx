@@ -2,8 +2,16 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { Field, FieldTestId } from "./Field";
 
-const Sample = ({ hint, error }: { hint?: string; error?: string }) => (
-  <Field error={error} hint={hint} label="Název">
+const Sample = ({
+  hint,
+  error,
+  hideLabel,
+}: {
+  hint?: string;
+  error?: string;
+  hideLabel?: boolean;
+}) => (
+  <Field error={error} hideLabel={hideLabel} hint={hint} label="Název">
     {({ id, describedBy, invalid }) => (
       <input
         aria-describedby={describedBy}
@@ -36,5 +44,18 @@ describe("Field", () => {
     const control = screen.getByTestId("control");
     expect(control).toHaveAttribute("aria-invalid", "true");
     expect(control).toHaveAttribute("aria-describedby", error.id);
+  });
+
+  it("hideLabel visually hides the label but keeps it in the DOM, still naming the control", () => {
+    render(<Sample hideLabel />);
+    // The whole point of `hideLabel` over just not rendering a label at all: the
+    // control still has a real accessible name, via a real associated <label>.
+    expect(screen.getByTestId("control")).toHaveAccessibleName("Název");
+    expect(screen.getByTestId(FieldTestId.Label)).toHaveClass("sr-only");
+  });
+
+  it("without hideLabel, the label carries no sr-only class", () => {
+    render(<Sample />);
+    expect(screen.getByTestId(FieldTestId.Label)).not.toHaveClass("sr-only");
   });
 });

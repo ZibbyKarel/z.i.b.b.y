@@ -45,3 +45,22 @@ export const Playground: Story = {
   args: { label: "Název", hint: "Nápověda k poli" },
   render: (args) => <Field {...args}>{sampleInput}</Field>,
 };
+
+/**
+ * `hideLabel` — for a repeated-row editable "table" (there is no DS `Table`; see
+ * `LevelMappingTable`) where a header row already shows the column label once and
+ * every row repeating it would read as N stacked forms. The label stays in the DOM,
+ * still associated via `htmlFor` — the control keeps a real accessible name, it just
+ * doesn't render visibly. Compare the two rows below: identical markup, only the
+ * second one's label is `sr-only`.
+ */
+export const HiddenLabel: Story = {
+  render: () => (
+    <div className="flex flex-col gap-6">
+      <Field label="Externí úroveň">{sampleInput}</Field>
+      <Field hideLabel label="Externí úroveň">
+        {sampleInput}
+      </Field>
+    </div>
+  ),
+};
