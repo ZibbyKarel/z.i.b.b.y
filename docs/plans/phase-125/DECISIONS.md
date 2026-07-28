@@ -99,6 +99,41 @@ formatting pass has to be run manually. Flagged in the PR body so the operator c
 on a machine that has graphify. The alternative — committing a regeneration that silently
 strips a real section — is worse, and would be invisible in review.
 
+## D-007 — `countRunningGlobal()` mirrors `countRunning()` exactly, goal runs and all
+
+**Context.** `BudgetService.countRunning(projectId)` counts the agent-run and pipeline-run
+registries only. **Goal runs are not counted** — even though `TaskSchedulerService` subscribes
+to terminal *goal* runs to trigger `drainQueues()`, so a finishing goal run frees a slot it
+never occupied. That asymmetry is arguably an existing bug.
+
+**Decision.** `countRunningGlobal()` uses the **identical** status predicates and the
+**identical** two registries — agent (`running` / `awaiting-approval` / `paused-limit`) and
+pipeline (`running` / `paused-limit`). Goal runs stay uncounted. Fixing the asymmetry is not
+this phase's job, and a global counter that counted goal runs while the per-project counter did
+not would make the same workload behave differently under the two caps — a bug that only shows
+up under load and is miserable to diagnose. Consistency beats completeness here.
+
+**Cost.** The global cap under-counts when goal runs are in flight. Recorded in `TODO.md` as a
+follow-up so it is not lost.
+
+## D-008 — The global cap forces three changes beyond `atCapacity()`, not one
+
+The plan says "enforced where the project cap already is: `TaskSchedulerService.atCapacity()`".
+That is where the *check* goes, but the check alone ships a broken feature — three call sites
+assume "no project ⇒ no cap":
+
+1. **`atCapacity()`** returns `false` on `project == null` before reading any cap. The global
+   check must run **before** that short-circuit.
+2. **`drainQueues()`** filters `t.status === "queued" && t.projectId`. A task queued by the
+   global cap with no attributed project would be **queued forever, never drained.** The filter
+   must drop `&& t.projectId` and the undefined bucket must be handled.
+3. **`withCapacityLock()`** runs `fn()` **unlocked** when `projectId` is undefined — safe only
+   under today's invariant that an unscoped task contends on nothing. A global cap makes every
+   unscoped dispatch contend on the global count, so it needs a `global-capacity` lock key.
+
+All three are in scope for 125c and each gets a test. Reviewing 125c means checking all three
+landed, not just the one the plan names.
+
 ## D-003 — Recovery/handoff files live in `docs/plans/phase-125/`
 
 `PROGRESS.md` (handoff state), `ROADMAP.md` (execution order), `DECISIONS.md` (this file).
