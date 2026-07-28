@@ -269,5 +269,101 @@ describe("ProjectPrService", () => {
       const service = build({ fetchImpl });
       await expect(service.merge("acme", 42)).rejects.toThrow("HTTP 500");
     });
+
+    it("125e — fires roadmapGate.onMerge on a successful merge", async () => {
+      const fetchImpl = vi.fn(async () =>
+        jsonResponse(200, { merged: true, sha: "abc123" }),
+      ) as unknown as typeof fetch;
+      const onMerge = vi.fn(async () => {});
+      const service = build({ fetchImpl, roadmapGate: { onMerge } });
+
+      await service.merge("acme", 42);
+
+      expect(onMerge).toHaveBeenCalledWith("acme", 42);
+    });
+
+    it("125e — a throwing/rejecting roadmapGate.onMerge never fails the merge (Law 3 posture)", async () => {
+      const fetchImpl = vi.fn(async () =>
+        jsonResponse(200, { merged: true, sha: "abc123" }),
+      ) as unknown as typeof fetch;
+      const onMerge = vi.fn(async () => {
+        throw new Error("roadmap bookkeeping exploded");
+      });
+      const service = build({ fetchImpl, roadmapGate: { onMerge } });
+
+      const result = await service.merge("acme", 42);
+
+      expect(result.merged).toBe(true);
+      expect(onMerge).toHaveBeenCalledWith("acme", 42);
+    });
+
+    it("125e — a merge with no sha still fires roadmapGate.onMerge (the PR number is enough)", async () => {
+      const fetchImpl = vi.fn(async () =>
+        jsonResponse(200, { merged: true }),
+      ) as unknown as typeof fetch;
+      const onMerge = vi.fn(async () => {});
+      const service = build({ fetchImpl, roadmapGate: { onMerge } });
+
+      await service.merge("acme", 42);
+
+      expect(onMerge).toHaveBeenCalledWith("acme", 42);
+    });
+  });
+
+  describe("getPr / isMerged (125e)", () => {
+    it("getPr maps a merged PR", async () => {
+      const fetchImpl = vi.fn(async () =>
+        jsonResponse(200, { number: 42, merged: true, state: "closed" }),
+      ) as unknown as typeof fetch;
+      const service = build({ fetchImpl });
+      await expect(service.getPr("acme", 42)).resolves.toEqual({
+        number: 42,
+        merged: true,
+        state: "closed",
+      });
+    });
+
+    it("getPr returns null on 404 (PR/repo gone)", async () => {
+      const fetchImpl = vi.fn(async () => jsonResponse(404, {})) as unknown as typeof fetch;
+      const service = build({ fetchImpl });
+      await expect(service.getPr("acme", 42)).resolves.toBeNull();
+    });
+
+    it("getPr returns null when there's no github link", async () => {
+      const service = build({ token: null });
+      await expect(service.getPr("acme", 42)).resolves.toBeNull();
+    });
+
+    it("getPr throws on rate limiting (429/403)", async () => {
+      const fetchImpl = vi.fn(async () => jsonResponse(429, {})) as unknown as typeof fetch;
+      const service = build({ fetchImpl });
+      await expect(service.getPr("acme", 42)).rejects.toThrow(/rate limited/);
+    });
+
+    it("getPr throws on a hard non-2xx failure", async () => {
+      const fetchImpl = vi.fn(async () => jsonResponse(500, {})) as unknown as typeof fetch;
+      const service = build({ fetchImpl });
+      await expect(service.getPr("acme", 42)).rejects.toThrow("HTTP 500");
+    });
+
+    it("isMerged is true only when getPr reports merged", async () => {
+      const fetchImpl = vi.fn(async () =>
+        jsonResponse(200, { number: 42, merged: true, state: "closed" }),
+      ) as unknown as typeof fetch;
+      const service = build({ fetchImpl });
+      await expect(service.isMerged("acme", 42)).resolves.toBe(true);
+    });
+
+    it("isMerged is fail-CLOSED: a getPr rejection (rate limit) resolves to false, never throws", async () => {
+      const fetchImpl = vi.fn(async () => jsonResponse(429, {})) as unknown as typeof fetch;
+      const service = build({ fetchImpl });
+      await expect(service.isMerged("acme", 42)).resolves.toBe(false);
+    });
+
+    it("isMerged is fail-CLOSED on a 404 too (gone is not merged)", async () => {
+      const fetchImpl = vi.fn(async () => jsonResponse(404, {})) as unknown as typeof fetch;
+      const service = build({ fetchImpl });
+      await expect(service.isMerged("acme", 42)).resolves.toBe(false);
+    });
   });
 });
