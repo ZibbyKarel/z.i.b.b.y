@@ -4,28 +4,37 @@ The **roadmap** is the per-project delivery backlog — epics + tasks, imported
 from Jira/GitHub or created manually, with a dependency graph that gates when
 a task is safe to dispatch. This doc covers **125a** (the data model, the
 per-project item store, the global level-mapping table, and the CRUD
-endpoints) and **125b** (`RoadmapSourceService`'s Jira/GitHub import and the
-manual `POST .../roadmap/sync` route). See
-`docs/plans/phase-125-project-roadmap.md` for the full master plan (play +
-the dependency gate in 125e, the UI in 125d/f, decomposition in 125g).
+endpoints), **125b** (`RoadmapSourceService`'s Jira/GitHub import and the
+manual `POST .../roadmap/sync` route) and **125e** (play, the dependency gate,
+merge signals, lifecycle completion, Tier-3 override, restart/resume). See
+`docs/plans/phase-125-project-roadmap.md` for the full master plan (the UI in
+125d/f, decomposition in 125g).
 
 ## Pieces
 
-| Piece      | File                                                      | Role                                                                           |
-| ---------- | --------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Contract   | `libs/contracts/src/roadmap/roadmap-item.schema.ts`       | `RoadmapItemSchema`, `Create`/`UpdateRoadmapItemSchema`, `RoadmapConfigSchema` |
-| Contract   | `libs/contracts/src/roadmap/roadmap-readiness.ts`         | Pure `isBlocked()` / `readiness()` helpers (derived board state)               |
-| Contract   | `libs/contracts/src/roadmap/level-mapping.schema.ts`      | `LevelMappingSchema`, `DEFAULT_LEVEL_MAPPING`, `resolveLevel()`                |
-| Contract   | `libs/contracts/src/roadmap/roadmap.contract.ts`          | `roadmapContract` — item CRUD, config, level-mapping, sync, under `/api`       |
-| Contract   | `libs/contracts/src/roadmap/roadmap-sync.schema.ts`       | `RoadmapSyncResultSchema` — the sync endpoint's response                       |
-| Store      | `apps/api/src/roadmap/roadmap.store.ts`                   | `RoadmapStore` — two-level file store + per-project config                     |
-| Store      | `apps/api/src/roadmap/level-mapping.store.ts`             | `LevelMappingStore` — single global JSON document                              |
-| Provider   | `apps/api/src/roadmap/roadmap-attachment-ref.provider.ts` | `AttachmentSetRefProvider` for the orphan-attachment sweep                     |
-| Service    | `apps/api/src/roadmap/roadmap-source.service.ts`          | `RoadmapSourceService` (125b) — Jira/GitHub import + upsert                    |
-| Pure fn    | `apps/api/src/roadmap/adf-to-markdown.ts`                 | `adfToMarkdown()` — Jira ADF `description` → markdown, bounded + never throws  |
-| Pure fn    | `apps/api/src/roadmap/merge-depends-on.ts`                | `mergeDependsOn()` — the re-sync `dependsOn` ownership-split merge             |
-| Controller | `apps/api/src/roadmap/roadmap.controller.ts`              | implements `roadmapContract`                                                   |
-| Module     | `apps/api/src/roadmap/roadmap.module.ts`                  | resolves `ROADMAP_DIR` (`$ROADMAP_DIR` env or `.zibby/data/roadmap`)           |
+| Piece      | File                                                      | Role                                                                                                |
+| ---------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Contract   | `libs/contracts/src/roadmap/roadmap-item.schema.ts`       | `RoadmapItemSchema`, `Create`/`UpdateRoadmapItemSchema`, `RoadmapConfigSchema`                      |
+| Contract   | `libs/contracts/src/roadmap/roadmap-readiness.ts`         | Pure `isBlocked()` / `readiness()` helpers (derived board state)                                    |
+| Contract   | `libs/contracts/src/roadmap/level-mapping.schema.ts`      | `LevelMappingSchema`, `DEFAULT_LEVEL_MAPPING`, `resolveLevel()`                                     |
+| Contract   | `libs/contracts/src/roadmap/roadmap-play.schema.ts`       | `PlayRoadmapItemsSchema` (bulk play body), `OverrideRoadmapItemSchema` (125e)                       |
+| Contract   | `libs/contracts/src/roadmap/roadmap.contract.ts`          | `roadmapContract` — item CRUD, config, level-mapping, sync, play/override/restart/resume, `/api`    |
+| Contract   | `libs/contracts/src/roadmap/roadmap-sync.schema.ts`       | `RoadmapSyncResultSchema` — the sync endpoint's response                                            |
+| Store      | `apps/api/src/roadmap/roadmap.store.ts`                   | `RoadmapStore` — two-level file store + per-project config                                          |
+| Store      | `apps/api/src/roadmap/level-mapping.store.ts`             | `LevelMappingStore` — single global JSON document                                                   |
+| Provider   | `apps/api/src/roadmap/roadmap-attachment-ref.provider.ts` | `AttachmentSetRefProvider` for the orphan-attachment sweep                                          |
+| Service    | `apps/api/src/roadmap/roadmap-source.service.ts`          | `RoadmapSourceService` (125b) — Jira/GitHub import + upsert                                         |
+| Service    | `apps/api/src/roadmap/roadmap-gate.service.ts`            | `RoadmapGateService` (125e) — play/override/restart/resume, the FIFO drain, release signals         |
+| Pure fn    | `apps/api/src/roadmap/adf-to-markdown.ts`                 | `adfToMarkdown()` — Jira ADF `description` → markdown, bounded + never throws                       |
+| Pure fn    | `apps/api/src/roadmap/merge-depends-on.ts`                | `mergeDependsOn()` — the re-sync `dependsOn` ownership-split merge                                  |
+| Pure fn    | `apps/api/src/roadmap/roadmap-task-text.ts`               | `buildRoadmapTaskText()` (125e) — name + description + the roadmap-context footer                   |
+| Controller | `apps/api/src/roadmap/roadmap.controller.ts`              | implements `roadmapContract`                                                                        |
+| Module     | `apps/api/src/roadmap/roadmap.module.ts`                  | resolves `ROADMAP_DIR` (`$ROADMAP_DIR` env or `.zibby/data/roadmap`); `@Global()` (125e, see below) |
+
+`ProjectPrService` (`apps/api/src/projects/project-pr.service.ts`) also grows
+two 125e pieces: `getPr`/`isMerged` (the merge-state poll read) and a
+fire-and-forget `roadmapGate.onMerge(...)` call inside `recordMerge` (the eager
+release signal) — see "Release signals" below.
 
 ## Data model
 
@@ -51,10 +60,19 @@ dependsOn: string[]              // every roadmap item id this item is gated on
 dependsOnFromSource: string[]    // the subset the source owns; re-sync (125b) may rewrite ONLY these
 overrideBlocked?    // Tier-3 "pustit i tak"
 origin?             // "zibby-decomposed" -> the "navrhla ZIBBY" badge (125g); cleared on any operator edit
+output?             // 125e: the gate's terminal output choice for this item's task; absent = { type: "pr" }
 lifecycle           // "todo" | "enqueued" | "running" | "awaiting-merge" | "done" | "failed" | "archived"
+enqueuedAt?         // 125e: stamped by play/playBulk/restart; the gate drains a project's enqueued
+                    // items strictly FIFO by this timestamp, never `updatedAt`
 runs[]              // { taskId, runRef?, prNumber?, prUrl?, artifactPath?, startedAt, finishedAt?, outcome }
 createdAt / updatedAt / syncedAt?
 ```
+
+`output` and `enqueuedAt` are 125e additions to the 125a schema (see
+DECISIONS.md D-005's "routes land per sub-phase" — a schema itself can grow a
+field in the sub-phase that first needs it, same as `runs[]` did). Both are
+operator/gate-owned, `.optional()`, and don't disturb the ownership split
+above (a re-sync never touches either).
 
 `runs[].outcome` is `"running" | "awaiting-merge" | "done" | "failed"` — a
 tight enum distinct from `RunStatusSchema` (which describes an agent/skill/
@@ -267,6 +285,221 @@ integration returns all-zero counts rather than an error, mirroring
 
 Sync is **read-only toward Jira and GitHub** — nothing is ever written back (Law 3),
 and imported issue bodies are data, never instructions (Law 4).
+
+## Play + the dependency gate (125e)
+
+`RoadmapGateService` (`apps/api/src/roadmap/roadmap-gate.service.ts`) is the one
+thing that decides when a roadmap item may become a real `ScheduledTask`. It
+never merges, pushes to a shared branch, or auto-dispatches on its own
+initiative (Law 3) — every dispatch traces back to an operator's play/restart/
+resume/override click, or to a merge that already happened on GitHub.
+
+### Play records intent only
+
+`play(projectId, itemId)` requires `lifecycle === "todo"` (409 —
+`RoadmapItemLifecycleError`, "already in flight" — otherwise) and stamps
+`lifecycle: "enqueued"` + `enqueuedAt: now`. It does **not** create a task. It
+then immediately attempts a **drain** — if the item isn't blocked (or an
+override already applies), it releases right away and the response already
+shows `lifecycle: "running"`; if it's blocked, the response shows
+`"enqueued"` and the item sits in BLOKOVANÉ until a release signal fires.
+
+`playBulk(projectId, itemIds)` ("zařadit vše") stamps every `todo` id's
+`enqueuedAt` a millisecond apart, **in `itemIds`' array order**, so the FIFO
+drain below releases them in exactly the order the operator selected them —
+even when every id lands in the same event-loop tick. An id that doesn't
+resolve to a real item 404s the whole call; an id that resolves but isn't
+`todo` is silently skipped (idempotent — a multi-select naturally mixes
+lifecycles once some cards are already in flight) rather than aborting the
+batch. The response carries only the items actually touched.
+
+### The gate itself
+
+A **drain** (private, triggered by play/playBulk/restart/override/onMerge/
+reconcile\*) lists a project's `enqueued` items, sorts them **FIFO by
+`enqueuedAt`**, and releases every one for which `!isBlocked(item, get)` — the
+pure helper imported from `@zibby/contracts` (`roadmap-readiness.ts`), never
+reimplemented. A drain is locked per project (`withPathLock`, key
+`roadmap-gate:<projectId>`) so two triggers racing (an operator's play and an
+in-flight `onMerge`, say) can never both decide to release the same item.
+
+**Concurrency is deliberately NOT this gate's job** — 125c's system-wide
+`maxConcurrentRuns` cap lives entirely inside `TaskSchedulerService`. The gate
+only ever asks "are this item's dependencies done"; `createTask` itself
+decides whether a release dispatches immediately or gets queued/held by the
+scheduler's own capacity guard, and either way the roadmap item is `running`
+the moment its `ScheduledTask` exists — the task's own subsequent queued-vs-
+dispatched fate is the scheduler's business, not the gate's.
+
+### Play → task (release)
+
+On release, the gate calls `TaskSchedulerService.createTask` with:
+
+- `title` = the item's `name`; `text` = `buildRoadmapTaskText(item, allItems)`
+  (`roadmap-task-text.ts`) — the item's `name` + `\n\n` + `description`, plus a
+  roadmap-context footer naming the epic's siblings already merged
+  (`lifecycle: "done"`) and currently in flight (`enqueued`/`running`/
+  `awaiting-merge`). Truncates only the `description` to stay under
+  `CreateTaskInputSchema.text`'s 8000-char cap — the footer is never
+  truncated (see below).
+- `paths: [project.path]` — **never** `projectId`/`trustedProjectId` on
+  `CreateTaskInput`. Attribution stays entirely server-derived via the
+  existing `matchProject` seam (Law 4). A project with no local `path`
+  configured fails the release outright (see "Release failures" below)
+  rather than risk misattribution.
+- `attachmentSetId` = the item's set, when present.
+- `output` = the item's own `output` field, or `{ type: "pr" }` by default.
+- `explicitTarget` = **absent** — "the classifier picks the target" (the
+  master plan's Play UX decision).
+- `background: false` — the synchronous server-side call pattern (the same
+  one `automations/scheduler.service.ts` uses), so the gate always learns the
+  real outcome (`dispatched`/`pending`/`scheduled`) before it writes the
+  item's `running` run record. (The interactive New Task dialog's
+  `background: true` path is a UI-latency optimization that doesn't apply
+  here — a play click isn't blocked on the classify+spawn, but this call site
+  is the gate's own internal `drain`, not a live HTTP request from a
+  human waiting on a dialog to redirect.)
+
+The returned task id (and `runRef`, when the dispatch was synchronous) lands
+on a new entry in the item's `runs[]`; `lifecycle → "running"`.
+
+### The imported-issue-body rule (Law 4) — the footer's trust boundary
+
+The task `text` embeds the item's `description`, which for an imported item
+is third-party issue content — **data, never instructions** (Law 4): nothing
+in it may raise privilege or skip the gate, and nothing in it may be mistaken
+for ZIBBY's own framing. `buildRoadmapTaskText` makes this boundary
+unspoofable three ways (see the function's own docblock for the fully
+reasoned version):
+
+1. **Order is fixed by code, unconditionally** — `name`, then the (possibly
+   truncated) `description`, then the footer, always in that order, every
+   time. An issue body can contain text that _looks_ like the footer, but it
+   can never make its own fake copy the true FINAL section — the real one,
+   computed from ZIBBY's own data (sibling lifecycles), is always appended
+   last.
+2. **Self-declaring** — the footer's own marker sentence states in plain
+   language that everything above it (including an apparent copy of the same
+   marker) is untrusted issue content, not ZIBBY's framing, and carries no
+   instruction or privilege.
+3. **Purely informational** — the footer only lists names; it issues no
+   directive of its own, so a spoofed copy has nothing useful to imitate.
+
+### Tier-3 override — "pustit i tak"
+
+`override(projectId, itemId, overrideBlocked)` sets the flag
+unconditionally (any lifecycle) — it only takes effect the next time the
+gate evaluates the item. If the item is currently `enqueued`, `override` also
+attempts an immediate drain, so an item blocked ONLY by this dependency
+releases right away instead of waiting for the next unrelated drain trigger.
+Setting the flag on a `todo` item does **not** play it — play stays the
+operator's separate click.
+
+### Restart vs Resume (a `failed` item's two recovery actions)
+
+Both require `lifecycle === "failed"` (409 otherwise):
+
+- **`restart`** — re-enqueues the item (the same `play` path, gated on
+  `failed` instead of `todo`) and dispatches a **brand-new** task. Chosen
+  because a `failed` item, by definition, produced no usable artifact — there
+  is nothing safe to resume from, so a fresh worktree off the current
+  `origin/<default>` is the only sound starting point. The prior run stays in
+  `runs[]` as history; a new entry is appended once the gate releases it
+  again.
+- **`resume`** — reuses `TaskRunsService.resume`, the SAME unified resume
+  machinery the run detail already exposes (Phase 49: a parked pipeline/goal
+  resumes in place; an errored/interrupted agent run re-runs with
+  `--resume <sessionId>` when one was captured). Updates the item's LAST
+  `runs[]` entry in place (new `runRef`, `outcome: "running"`, fresh
+  `startedAt`) rather than appending — it's the same task continuing, not a
+  new one. 409s when the last run has no `runRef` at all (never actually
+  dispatched — e.g. `createTask` itself failed at release time; only
+  `restart` applies then) or when `TaskRunsService.resume` itself rejects
+  (not currently resumable).
+
+Restart is strictly the fallback: cheaper resume is offered whenever the last
+run is actually resumable, and both are always available side by side on a
+`failed` card — which one applies depends on the run's own state, not a
+choice the operator has to reason about up front.
+
+### Lifecycle completion (`running` → `awaiting-merge` / `done` / `failed`)
+
+Driven by `reconcileRunning(projectId)`, which reads the gate-created task's
+own `outcome` back by id (`ScheduledTasksStorageService.get`) rather than a
+hook FROM `TaskSchedulerService` — the latter would need a second circular
+provider edge on top of the one `ProjectPrService` already carries for the
+merge signal (below); reading the task back avoids it entirely. Per-item
+try/catch, so one item's failure never blocks the rest. For each `running`
+item whose task now carries an `outcome`:
+
+- `outcome.status === "error"` → `failed`.
+- `outcome.status === "done"` and `outcome.pr?.url` present → `awaiting-merge`
+  (the PR number is parsed from the url and stored on the run for the merge
+  poll below).
+- `outcome.status === "done"` and the task's `output.type === "file"` → a
+  **document artifact** reaches `done` DIRECTLY, without ever passing through
+  `awaiting-merge` — a document can never be merged and must not wait for a
+  merge that will never come.
+- `outcome.status === "done"` with neither of the above (a `pr` output that
+  never produced one) → **no artifact**, `failed` — never silently `done`.
+
+A periodic call to `reconcileRunning` is **125h's job** (the auto-sync tick);
+this sub-phase ships the fully-tested mechanism, not the ticker.
+
+### Release signals (both, per the master plan — "belt and braces")
+
+1. **Eager** — `ProjectPrService.recordMerge` (the merge loop's head, reached
+   only from the operator-triggered `POST /projects/:id/prs/:number/merge`
+   route) fires `void this.roadmapGate.onMerge(projectId, number).catch(() =>
+{})` in the same spot it already records `merge-completed` + a `MergeWatch`.
+   Deliberately **unawaited** (fire-and-forget — the operator's merge
+   response must never wait on roadmap bookkeeping) and **independently
+   caught** right there — not just relying on `merge()`'s own
+   `.catch(() => {})` around the whole `recordMerge` call, since an unawaited
+   rejection is invisible to that outer catch and would otherwise surface as
+   an unhandled rejection. Either way: **a roadmap bookkeeping failure must
+   NEVER surface as a merge failure** — the merge already happened on GitHub
+   regardless of what happens inside `onMerge`.
+2. **Poll** — `reconcileAwaitingMerge(projectId)` resolves every
+   `awaiting-merge` item's PR state via the new `ProjectPrService.isMerged`
+   (mirrors `listOpen`'s error posture: 404 → not found, 429/403 → throws
+   "github rate limited", no github link → not found) — **fail-CLOSED**:
+   any failure (including a thrown rate-limit) resolves to `false`, so an
+   unreadable PR state never releases a downstream item. This is the
+   opposite posture from `PostMergeWatchService.rollup`'s fail-OPEN
+   `"pending"`, which is watching an ALREADY-merged sha's CI outcome, not
+   gating a fresh dispatch. A periodic call is 125h's job, same as
+   `reconcileRunning`.
+
+Both signals converge on the same private `markDone` → `lifecycle: "done"` →
+drain the project's `enqueued` items (a document artifact reaching `done` via
+`reconcileRunning`, or a PR merging via either signal above, can both unblock
+a sibling immediately).
+
+### The `ProjectPrService` <-> `RoadmapGateService` circular dependency
+
+`ProjectPrService.recordMerge` needs `RoadmapGateService.onMerge`; some of
+`RoadmapGateService`'s own methods need `ProjectPrService.isMerged`/`getPr` —
+a genuine two-way provider dependency between two classes in two different
+modules (`ProjectsModule` and `RoadmapModule`), which also already depend on
+each other for other reasons (`RoadmapGateService` needs
+`ProjectsStorageService`). Rather than have `ProjectsModule` import
+`RoadmapModule` back — which, transitively (`ProjectsModule` is also a
+dependency of `AgentsModule`/`TasksModule`, both imported by `app.module.ts`
+BEFORE `RoadmapModule`), produces a genuine four-file `require()` cycle that
+crashes Nest's module scanner no matter how the individual edges are
+`forwardRef`d (`forwardRef` only defers Nest's OWN read of a wrapped
+reference; it does nothing about the underlying `import` statements Node
+still evaluates eagerly in file order) — **`RoadmapModule` is `@Global()`**:
+its providers are available everywhere once it loads once (from
+`app.module.ts`), with no module needing to add it to its own `imports: []`.
+`project-pr.service.ts` still needs a real `import { RoadmapGateService } from
+"../roadmap/roadmap-gate.service"` for
+`@Inject(forwardRef(() => RoadmapGateService))`, and `roadmap-gate.service.ts`
+symmetrically imports `ProjectPrService` — an ISOLATED two-file cycle (neither
+file's other imports reach back through it), so ordinary `forwardRef` on both
+of those two provider injections resolves it cleanly with no wider blast
+radius. See `roadmap.module.ts`'s own docblock for the full reasoning.
 
 ## Storage — the two-level file store
 
