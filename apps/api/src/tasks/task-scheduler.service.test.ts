@@ -1809,13 +1809,18 @@ describe("125c — system-wide maxConcurrentRuns cap", () => {
    * (`fakeBudget.countRunningGlobal`, set per test) and either a matched project
    * or none (`project: null` → an unattributed task, no project in the catalog to
    * match against). `maxConcurrentRuns` seeds the system config (`null`/omitted
-   * leaves the schema default — uncapped, today's behaviour).
+   * leaves the schema default — uncapped, today's behaviour). `projects` seeds a
+   * MULTI-project catalog (the cross-project race regression) — when given, it
+   * wins over `project`, which stays for the single/no-project shape every other
+   * test in this block uses.
    */
   function makeService(opts: {
     project: { id: string; name: string; budget?: Record<string, unknown> } | null;
     maxConcurrentRuns: number | null;
+    projects?: Array<{ id: string; name: string; budget?: Record<string, unknown> }>;
   }): void {
     const { project } = opts;
+    const catalog = opts.projects ?? (project ? [project] : []);
     const pipelineRunner = {
       start: vi.fn(async () => pipelineRun({})),
       onRunStatus: vi.fn(() => () => {}),
@@ -1848,10 +1853,11 @@ describe("125c — system-wide maxConcurrentRuns cap", () => {
       }),
     };
     const fakeProjects = {
-      list: async () => (project ? [project] : []),
+      list: async () => catalog,
       get: async (id: string) => {
-        if (project && project.id === id) return project;
-        throw new Error("no project");
+        const found = catalog.find((p) => p.id === id);
+        if (!found) throw new Error("no project");
+        return found;
       },
     };
     const fakeResolved = { resolveBudget: async (p: { budget?: unknown }) => p.budget };
@@ -1968,6 +1974,72 @@ describe("125c — system-wide maxConcurrentRuns cap", () => {
 
     const result = await service.createTask({ text: "do the thing", title: "Thing" });
     expect(result.outcome).toBe("dispatched");
+    expect(agentRunner.start).toHaveBeenCalledTimes(1);
+  });
+
+  it("REGRESSION (defect 1): no global cap (null) never serializes unscoped dispatches — 'today's behaviour' stays free", async () => {
+    makeService({ project: null, maxConcurrentRuns: null });
+    // Real, non-instant async gap around the dispatch itself (mirrors the real
+    // AgentRunnerService: the process is spawned, then the promise settles a
+    // tick later) — wide enough that a wrongly-serialized pair would never
+    // overlap, without needing to inspect `withPathLock` internals.
+    let concurrent = 0;
+    let peakConcurrent = 0;
+    agentRunner.start.mockImplementation(async () => {
+      concurrent += 1;
+      peakConcurrent = Math.max(peakConcurrent, concurrent);
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      concurrent -= 1;
+      return agentRun({});
+    });
+
+    await Promise.all([
+      service.createTask({ text: "do A", title: "A" }),
+      service.createTask({ text: "do B", title: "B" }),
+    ]);
+
+    expect(agentRunner.start).toHaveBeenCalledTimes(2);
+    // The regression's own proof: both dispatches were in flight AT THE SAME
+    // TIME. Pre-fix, `withCapacityLock` acquired a fixed `"global-capacity"` key
+    // for every unscoped call regardless of whether a cap was even set, so the
+    // second call's entire dispatch would wait for the first's to fully settle
+    // — `peakConcurrent` would never reach 2.
+    expect(peakConcurrent).toBe(2);
+  });
+
+  it("REGRESSION (defect 2): global cap=1, two concurrent creates for DIFFERENT projects still dispatch exactly one and queue the other", async () => {
+    makeService({
+      project: null,
+      maxConcurrentRuns: 1,
+      projects: [
+        { id: "proj_A", name: "A" },
+        { id: "proj_B", name: "B" },
+      ],
+    });
+    // A real running count, driven by the fake dispatch itself — proves the
+    // SECOND create's capacity check actually observes the FIRST's completed
+    // dispatch, rather than both reading a stale "0 running" snapshot.
+    let running = 0;
+    agentRunner.start.mockImplementation(async () => {
+      running += 1;
+      return agentRun({ runId: `writer_${running}` });
+    });
+    fakeBudget.countRunningGlobal.mockImplementation(async () => running);
+
+    const [a, b] = await Promise.all([
+      service.createTask({ text: "do A", title: "A" }, undefined, "proj_A"),
+      service.createTask({ text: "do B", title: "B" }, undefined, "proj_B"),
+    ]);
+
+    const outcomes = [a.outcome, b.outcome].sort();
+    expect(outcomes).toEqual(["dispatched", "scheduled"]);
+    const scheduled = a.outcome === "scheduled" ? a : b;
+    if (scheduled.outcome !== "scheduled") throw new Error("unreachable");
+    expect(scheduled.task.status).toBe("queued");
+    // The finding's own proof: a per-project lock alone can't see this — two
+    // DIFFERENT projects take two different `project-capacity:*` keys, so
+    // without a shared global acquisition both would pass the gate and both
+    // dispatch, exceeding the cap of 1.
     expect(agentRunner.start).toHaveBeenCalledTimes(1);
   });
 });

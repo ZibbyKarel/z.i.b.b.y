@@ -6,13 +6,19 @@ import { makeErrorMapper } from "../shared/http/error-mapping";
 import { LevelMappingStore } from "./level-mapping.store";
 import {
   InvalidRoadmapItemIdError,
+  InvalidRoadmapProjectIdError,
   RoadmapItemConflictError,
   RoadmapItemNotFoundError,
 } from "./roadmap.errors";
 import { RoadmapStore } from "./roadmap.store";
 
+// CorruptRoadmapItemFileError is deliberately NOT in `missing` — see its
+// docblock. Folding it into the same 404 as "not found" would silently hide
+// real data loss behind an everyday, expected status; left unmapped it
+// surfaces as an unhandled exception (a 500), a loud signal something on
+// disk is actually broken.
 const errors = makeErrorMapper("RoadmapItem", {
-  missing: [RoadmapItemNotFoundError, InvalidRoadmapItemIdError],
+  missing: [RoadmapItemNotFoundError, InvalidRoadmapItemIdError, InvalidRoadmapProjectIdError],
   conflict: [RoadmapItemConflictError],
 });
 
