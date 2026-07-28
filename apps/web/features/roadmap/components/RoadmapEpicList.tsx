@@ -1,7 +1,16 @@
 "use client";
 
 import type { RoadmapItem } from "@zibby/contracts";
-import { Card, Chip, Container, IconTile, Progress, Stack, Typography } from "@zibby/design-system";
+import {
+  Button,
+  Card,
+  Chip,
+  Container,
+  IconTile,
+  Progress,
+  Stack,
+  Typography,
+} from "@zibby/design-system";
 import type { DotTone } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import type { CSSProperties } from "react";
@@ -20,6 +29,7 @@ export enum RoadmapEpicListTestId {
   Progress = "roadmap-epic-progress",
   Unphased = "roadmap-epic-unphased",
   Status = "roadmap-epic-status",
+  CreateEpic = "roadmap-epic-list-create",
 }
 
 export interface RoadmapEpicListProps {
@@ -29,6 +39,8 @@ export interface RoadmapEpicListProps {
   items: RoadmapItem[];
   selectedEpicId: string | undefined;
   onSelect: (epicId: string) => void;
+  /** Opens the "Nový epik" manual-create dialog (125f). */
+  onCreateEpic: () => void;
 }
 
 const STATUS_TONE: Record<EpicStatus, DotTone> = {
@@ -56,8 +68,16 @@ function hueTileStyle(hue: string): CSSProperties {
  * epic id rather than a real `subsystem`), name + truncated description, a
  * progress bar (`done/total tasků`) or the italic-mono `nerozfázováno` when the
  * epic has no children, and a status pill. Selecting a row drives the board.
+ * A trailing "Nový epik" button (125f) opens the manual-create dialog — this
+ * component only ever calls `onCreateEpic`; the parent panel owns the dialog.
  */
-export function RoadmapEpicList({ epics, items, selectedEpicId, onSelect }: RoadmapEpicListProps) {
+export function RoadmapEpicList({
+  epics,
+  items,
+  selectedEpicId,
+  onSelect,
+  onCreateEpic,
+}: RoadmapEpicListProps) {
   const t = useTranslations("roadmap");
 
   const statusLabel: Record<EpicStatus, string> = {
@@ -135,6 +155,15 @@ export function RoadmapEpicList({ epics, items, selectedEpicId, onSelect }: Road
           </Card>
         );
       })}
+      <Button
+        block
+        data-testid={RoadmapEpicListTestId.CreateEpic}
+        icon="plus"
+        intent="ghost"
+        onClick={onCreateEpic}
+      >
+        {t("create.newEpic")}
+      </Button>
     </Stack>
   );
 }

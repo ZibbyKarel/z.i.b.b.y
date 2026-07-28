@@ -2090,7 +2090,25 @@
         "failed": "Selhalo"
       },
       "runPr": "PR #{number}",
-      "runArtifact": "Artefakt: {path}"
+      "runArtifact": "Artefakt: {path}",
+      "dependencySourceOwned": "zdroj",
+      "dependencySourceOwnedHint": "Tuto závislost spravuje synchronizace se zdrojem — nelze ji tady ručně odebrat.",
+      "removeDependency": "Odebrat závislost na {name}",
+      "addDependencyLabel": "Přidat závislost",
+      "addDependencyPlaceholder": "Vyber položku…"
+    },
+    "create": {
+      "newEpic": "Nový epik",
+      "newTask": "Nový task",
+      "epicTitle": "Nový epik",
+      "taskTitle": "Nový task",
+      "nameLabel": "Název",
+      "descriptionLabel": "Popis (markdown)",
+      "dropHint": "Přetáhni sem .md soubor nebo klikni pro výběr",
+      "dropActiveHint": "Pusť .md soubor sem",
+      "dropRejected": "Podporovány jsou jen .md soubory",
+      "dropError": "Soubor se nepodařilo načíst",
+      "error": "Vytvoření se nepodařilo"
     }
   }
 }

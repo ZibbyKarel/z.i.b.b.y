@@ -1,9 +1,20 @@
 import type { RoadmapItem } from "@zibby/contracts";
-import { MarkdownTestId } from "@zibby/design-system";
+import { DropdownTestId, MarkdownTestId } from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
-import { renderWithProviders as render, screen } from "../../../test/render";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderWithProviders as render, screen, within } from "../../../test/render";
 import { RoadmapItemDialog, RoadmapItemDialogTestId } from "./RoadmapItemDialog";
+
+type MutateVars = {
+  params: { projectId: string; itemId: string };
+  body: { dependsOn: string[] };
+};
+
+const updateRoadmapItem = vi.fn<(vars: MutateVars) => void>();
+
+vi.mock("../mutations", () => ({
+  useUpdateRoadmapItemMutation: () => ({ mutate: updateRoadmapItem, isPending: false }),
+}));
 
 function item(partial: Partial<RoadmapItem> & Pick<RoadmapItem, "id">): RoadmapItem {
   return {
@@ -25,6 +36,10 @@ function item(partial: Partial<RoadmapItem> & Pick<RoadmapItem, "id">): RoadmapI
 }
 
 describe("RoadmapItemDialog", () => {
+  beforeEach(() => {
+    updateRoadmapItem.mockClear();
+  });
+
   it("renders the full markdown description, not a truncated preview", () => {
     const long =
       "# Heading\n\nA long **markdown** body with more detail than any card preview would show, " +
@@ -95,5 +110,120 @@ describe("RoadmapItemDialog", () => {
     expect(screen.getByText("Na ničem nečeká")).toBeInTheDocument();
     expect(screen.getByText("Nic neblokuje")).toBeInTheDocument();
     expect(screen.getByText("Zatím žádný běh")).toBeInTheDocument();
+  });
+
+  describe("dependency editing (125f)", () => {
+    it("a source-owned dependency is marked and has no remove button", () => {
+      const blocker = item({ id: "blocker-src", name: "PROJ-9" });
+      const target = item({
+        id: "t4",
+        name: "Target",
+        dependsOn: ["blocker-src"],
+        dependsOnFromSource: ["blocker-src"],
+      });
+      render(
+        <RoadmapItemDialog
+          itemId="t4"
+          items={[target, blocker]}
+          onClose={vi.fn()}
+          onSelectItem={vi.fn()}
+        />,
+      );
+      expect(screen.getByTestId(RoadmapItemDialogTestId.SourceOwnedBadge)).toHaveTextContent(
+        "zdroj",
+      );
+      expect(
+        screen.queryByTestId(`${RoadmapItemDialogTestId.RemoveDependency}-blocker-src`),
+      ).not.toBeInTheDocument();
+    });
+
+    it("removing an operator-owned dependency PATCHes the whole array, keeping source-owned edges", async () => {
+      const opBlocker = item({ id: "blocker-op", name: "Operator-added" });
+      const srcBlocker = item({ id: "blocker-src", name: "Source-owned" });
+      const target = item({
+        id: "t5",
+        name: "Target",
+        dependsOn: ["blocker-src", "blocker-op"],
+        dependsOnFromSource: ["blocker-src"],
+      });
+      render(
+        <RoadmapItemDialog
+          itemId="t5"
+          items={[target, opBlocker, srcBlocker]}
+          onClose={vi.fn()}
+          onSelectItem={vi.fn()}
+        />,
+      );
+
+      // No badge, and a remove button, on the operator-owned one only.
+      expect(screen.queryAllByTestId(RoadmapItemDialogTestId.SourceOwnedBadge)).toHaveLength(1);
+      await userEvent.click(
+        screen.getByTestId(`${RoadmapItemDialogTestId.RemoveDependency}-blocker-op`),
+      );
+
+      expect(updateRoadmapItem).toHaveBeenCalledTimes(1);
+      expect(updateRoadmapItem).toHaveBeenCalledWith({
+        params: { projectId: "proj-1", itemId: "t5" },
+        body: { dependsOn: ["blocker-src"] },
+      });
+    });
+
+    it("adding a dependency PATCHes the whole array — existing edges plus the new one", async () => {
+      const opBlocker = item({ id: "blocker-op", name: "Already depends on this" });
+      const candidate = item({ id: "candidate-1", name: "New dependency" });
+      const target = item({
+        id: "t6",
+        name: "Target",
+        dependsOn: ["blocker-op"],
+        dependsOnFromSource: [],
+      });
+      render(
+        <RoadmapItemDialog
+          itemId="t6"
+          items={[target, opBlocker, candidate]}
+          onClose={vi.fn()}
+          onSelectItem={vi.fn()}
+        />,
+      );
+
+      const picker = within(screen.getByTestId(RoadmapItemDialogTestId.AddDependency));
+      await userEvent.click(picker.getByTestId(DropdownTestId.Trigger));
+      const options = screen.getAllByTestId(DropdownTestId.Option);
+      const targetOption = options.find((o) => o.textContent === "New dependency")!;
+      await userEvent.click(targetOption);
+
+      expect(updateRoadmapItem).toHaveBeenCalledTimes(1);
+      expect(updateRoadmapItem).toHaveBeenCalledWith({
+        params: { projectId: "proj-1", itemId: "t6" },
+        body: { dependsOn: ["blocker-op", "candidate-1"] },
+      });
+    });
+
+    it("excludes itself and its existing dependencies from the add-dependency picker", async () => {
+      const opBlocker = item({ id: "blocker-op", name: "Existing dep" });
+      const other = item({ id: "other-1", name: "Some other item" });
+      const target = item({
+        id: "t7",
+        name: "Self item",
+        dependsOn: ["blocker-op"],
+        dependsOnFromSource: [],
+      });
+      render(
+        <RoadmapItemDialog
+          itemId="t7"
+          items={[target, opBlocker, other]}
+          onClose={vi.fn()}
+          onSelectItem={vi.fn()}
+        />,
+      );
+
+      const picker = within(screen.getByTestId(RoadmapItemDialogTestId.AddDependency));
+      await userEvent.click(picker.getByTestId(DropdownTestId.Trigger));
+      const labels = screen.getAllByTestId(DropdownTestId.Option).map((o) => o.textContent);
+
+      expect(labels).not.toContain("Self item");
+      expect(labels).not.toContain("Existing dep");
+      expect(labels).toContain("Some other item");
+    });
   });
 });

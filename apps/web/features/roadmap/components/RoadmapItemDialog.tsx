@@ -10,10 +10,15 @@ import {
   Icon,
   Markdown,
   Pressable,
+  SelectField,
   Stack,
+  Tag,
+  Tooltip,
   Typography,
 } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
+import { useState } from "react";
+import { useUpdateRoadmapItemMutation } from "../mutations";
 import { blockersOf, buildRoadmapLookup, dependentsOf } from "../roadmap-board";
 
 export enum RoadmapItemDialogTestId {
@@ -22,12 +27,21 @@ export enum RoadmapItemDialogTestId {
   Attachments = "roadmap-item-dialog-attachments",
   Blockers = "roadmap-item-dialog-blockers",
   BlockerRow = "roadmap-item-dialog-blocker",
+  RemoveDependency = "roadmap-item-dialog-remove-dependency",
+  SourceOwnedBadge = "roadmap-item-dialog-source-owned-badge",
+  AddDependency = "roadmap-item-dialog-add-dependency",
   Dependents = "roadmap-item-dialog-dependents",
   DependentRow = "roadmap-item-dialog-dependent",
   SyncNotes = "roadmap-item-dialog-sync-notes",
   Runs = "roadmap-item-dialog-runs",
   RunRow = "roadmap-item-dialog-run",
 }
+
+/** Sentinel for the "add dependency" picker — reset to this right after firing
+ * the mutation, so the trigger always shows the placeholder rather than
+ * "remembering" the last pick (there is nothing to remember: the pick becomes
+ * a chip in the list above, not a persistent selection in this control). */
+const NO_SELECTION = "";
 
 export interface RoadmapItemDialogProps {
   itemId: string;
@@ -46,11 +60,19 @@ const RUN_OUTCOME_TONE: Record<RoadmapRunOutcome, DotTone> = {
 };
 
 /**
- * Read-only detail dialog (125d spec): the full markdown description
- * (`escapeHtml` — an imported issue body is untrusted third-party content, Law
- * 4), attachments, both dependency lists (an archived blocker marked distinctly,
- * same as the card's badge), `syncNotes` when present, and the run history with
- * PR links. Nothing here mutates the item — play/edit land in 125e/125f.
+ * The full markdown description (`escapeHtml` — an imported issue body is
+ * untrusted third-party content, Law 4), attachments, `syncNotes` when
+ * present, and the run history with PR links are read-only (125d). Dependency
+ * editing (125f) lives on the "Čeká na" (blockers) list: an operator-owned
+ * edge (not in `dependsOnFromSource`) gets a remove button; a SOURCE-owned
+ * edge is excluded from removal entirely and marked with a "zdroj" badge
+ * instead — a re-sync may rewrite `dependsOnFromSource` at any time, so the
+ * operator must never be able to silently drop one of those edges here (see
+ * the ownership split on `RoadmapItemSchema`). Adding a new dependency always
+ * PATCHes the WHOLE `dependsOn` array (`dependsOnFromSource` unchanged +
+ * the edited operator-owned subset), never a partial list. The "Blokuje"
+ * (dependents) list stays read-only here — editing it means opening the
+ * OTHER item's own dialog.
  */
 export function RoadmapItemDialog({
   itemId,
@@ -63,11 +85,39 @@ export function RoadmapItemDialog({
   const locale = useLocale();
   const get = buildRoadmapLookup(items);
   const item = get(itemId);
+  // Called unconditionally (before the `!item` early return) so the hook order
+  // never depends on whether `itemId` currently resolves — `item?.projectId`
+  // falls back to `""` in that (never-rendered) case.
+  const updateMut = useUpdateRoadmapItemMutation(item?.projectId ?? "");
+  const [addPick, setAddPick] = useState(NO_SELECTION);
 
   if (!item) return null;
 
   const blockers = blockersOf(item, get);
   const dependents = dependentsOf(item, items);
+  // Every other project item not already depended on — self and existing
+  // edges (source- or operator-owned alike) are excluded, so the picker can
+  // never offer a self-dependency or a duplicate edge.
+  const addableOptions = items
+    .filter((candidate) => candidate.id !== item.id && !item.dependsOn.includes(candidate.id))
+    .map((candidate) => ({ value: candidate.id, label: candidate.name }));
+
+  function addDependency(id: string) {
+    if (!item || id === NO_SELECTION) return;
+    setAddPick(NO_SELECTION);
+    updateMut.mutate({
+      params: { projectId: item.projectId, itemId: item.id },
+      body: { dependsOn: [...item.dependsOn, id] },
+    });
+  }
+
+  function removeDependency(id: string) {
+    if (!item) return;
+    updateMut.mutate({
+      params: { projectId: item.projectId, itemId: item.id },
+      body: { dependsOn: item.dependsOn.filter((depId) => depId !== id) },
+    });
+  }
 
   const runOutcomeLabel: Record<RoadmapRunOutcome, string> = {
     running: t("dialog.runOutcome.running"),
@@ -129,20 +179,53 @@ export function RoadmapItemDialog({
               {t("dialog.noBlockers")}
             </Typography>
           ) : (
-            <Stack wrap direction="row" gap="75">
-              {blockers.map((blocker) => (
-                <Pressable
-                  data-testid={RoadmapItemDialogTestId.BlockerRow}
-                  key={blocker.id}
-                  onClick={() => onSelectItem(blocker.id)}
-                >
-                  <Chip tone="wait">
-                    <Icon aria-hidden name="pause" size="xs" />
-                    {blocker.name}
-                    {blocker.lifecycle === "archived" && ` — ${t("dialog.archivedNote")}`}
-                  </Chip>
-                </Pressable>
-              ))}
+            <Stack wrap align="center" direction="row" gap="75">
+              {blockers.map((blocker) => {
+                const sourceOwned = item.dependsOnFromSource.includes(blocker.id);
+                return (
+                  <Stack align="center" direction="row" gap="50" key={blocker.id}>
+                    <Pressable
+                      data-testid={RoadmapItemDialogTestId.BlockerRow}
+                      onClick={() => onSelectItem(blocker.id)}
+                    >
+                      <Chip tone="wait">
+                        <Icon aria-hidden name="pause" size="xs" />
+                        {blocker.name}
+                        {blocker.lifecycle === "archived" && ` — ${t("dialog.archivedNote")}`}
+                      </Chip>
+                    </Pressable>
+                    {sourceOwned ? (
+                      <Tooltip content={t("dialog.dependencySourceOwnedHint")}>
+                        <Tag data-testid={RoadmapItemDialogTestId.SourceOwnedBadge} size="sm">
+                          {t("dialog.dependencySourceOwned")}
+                        </Tag>
+                      </Tooltip>
+                    ) : (
+                      <Button
+                        aria-label={t("dialog.removeDependency", { name: blocker.name })}
+                        data-testid={`${RoadmapItemDialogTestId.RemoveDependency}-${blocker.id}`}
+                        icon="x"
+                        intent="ghost"
+                        onClick={() => removeDependency(blocker.id)}
+                        size="sm"
+                      />
+                    )}
+                  </Stack>
+                );
+              })}
+            </Stack>
+          )}
+          {addableOptions.length > 0 && (
+            <Stack data-testid={RoadmapItemDialogTestId.AddDependency}>
+              <SelectField
+                label={t("dialog.addDependencyLabel")}
+                onValueChange={addDependency}
+                options={[
+                  { value: NO_SELECTION, label: t("dialog.addDependencyPlaceholder") },
+                  ...addableOptions,
+                ]}
+                value={addPick}
+              />
             </Stack>
           )}
         </Stack>

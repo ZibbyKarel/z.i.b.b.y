@@ -1,7 +1,7 @@
 "use client";
 
 import type { RoadmapItem } from "@zibby/contracts";
-import { Card, Container, Grid, Panel, Stack, Typography } from "@zibby/design-system";
+import { Button, Card, Container, Grid, Panel, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { type CSSProperties, useState } from "react";
 import {
@@ -22,6 +22,7 @@ export enum RoadmapBoardTestId {
   Column = "roadmap-column",
   ColumnBody = "roadmap-column-body",
   ColumnEmpty = "roadmap-column-empty",
+  CreateTask = "roadmap-board-create-task",
 }
 
 export interface RoadmapBoardProps {
@@ -35,6 +36,8 @@ export interface RoadmapBoardProps {
   items: RoadmapItem[];
   /** Open the detail dialog for an item (a card, or a dependency badge on one). */
   onSelectItem: (itemId: string) => void;
+  /** Opens the "Nový task" manual-create dialog (125f), scoped to this epic. */
+  onCreateTask: () => void;
 }
 
 const COLUMN_MAX_HEIGHT = "28rem";
@@ -51,8 +54,11 @@ function hueDotStyle(hue: string): CSSProperties {
  * task board — `BLOKOVANÉ | READY | IN PROGRESS | DONE` (DECISIONS.md D-001),
  * `archived` items filtered off entirely (D-004). Hovering a card highlights its
  * blockers and dependents across every column (local state only, no query).
+ * The header's "Nový task" button (125f) opens the manual-create dialog scoped
+ * to THIS epic — the parent panel owns the dialog and passes the epic's id as
+ * `parentId`, so a task always lands under the epic that's currently selected.
  */
-export function RoadmapBoard({ epic, items, onSelectItem }: RoadmapBoardProps) {
+export function RoadmapBoard({ epic, items, onSelectItem, onCreateTask }: RoadmapBoardProps) {
   const t = useTranslations("roadmap");
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
@@ -76,11 +82,28 @@ export function RoadmapBoard({ epic, items, onSelectItem }: RoadmapBoardProps) {
 
   return (
     <Stack data-testid={RoadmapBoardTestId.Root} gap="200">
-      <Stack align="center" data-testid={RoadmapBoardTestId.Header} direction="row" gap="100">
-        <Container shrink={false} style={hueDotStyle(epicHue(epic.id))} />
-        <Typography mono uppercase size="xs" tracking="wider" type="label">
-          {t("board.header", { name: epic.name })}
-        </Typography>
+      <Stack
+        align="center"
+        data-testid={RoadmapBoardTestId.Header}
+        direction="row"
+        gap="100"
+        justify="between"
+      >
+        <Stack align="center" direction="row" gap="100">
+          <Container shrink={false} style={hueDotStyle(epicHue(epic.id))} />
+          <Typography mono uppercase size="xs" tracking="wider" type="label">
+            {t("board.header", { name: epic.name })}
+          </Typography>
+        </Stack>
+        <Button
+          data-testid={RoadmapBoardTestId.CreateTask}
+          icon="plus"
+          intent="ghost"
+          onClick={onCreateTask}
+          size="sm"
+        >
+          {t("create.newTask")}
+        </Button>
       </Stack>
 
       <Grid cols={4} gap="150">

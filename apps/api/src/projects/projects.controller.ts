@@ -179,8 +179,7 @@ export class ProjectsController {
       // Phase 78 — open-PR overview + explicit operator merge. `[]` (never an
       // error) when the project has no github link; `getProjectPrs` only 404s
       // for an unknown project id.
-      getProjectPrs: ({ params: { id } }) =>
-        errors.or404(id, () => this.projectPrs.listOpen(id)),
+      getProjectPrs: ({ params: { id } }) => errors.or404(id, () => this.projectPrs.listOpen(id)),
 
       mergeProjectPr: async ({ params: { id, number }, body }) => {
         try {

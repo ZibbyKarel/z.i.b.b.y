@@ -38,7 +38,9 @@ describe("RoadmapBoard", () => {
       item({ id: "t-done", name: "Done task", lifecycle: "done" }),
       item({ id: "t-gone", name: "Archived task", lifecycle: "archived" }),
     ];
-    render(<RoadmapBoard epic={epic} items={items} onSelectItem={vi.fn()} />);
+    render(
+      <RoadmapBoard epic={epic} items={items} onCreateTask={vi.fn()} onSelectItem={vi.fn()} />,
+    );
 
     expect(screen.getByText("Blocked task")).toBeInTheDocument();
     expect(screen.getByText("Blocker task")).toBeInTheDocument();
@@ -50,7 +52,9 @@ describe("RoadmapBoard", () => {
 
   it("puts a failed item in READY, marked selhalo — never a column of its own", () => {
     const items = [epic, item({ id: "t-failed", name: "Failed task", lifecycle: "failed" })];
-    render(<RoadmapBoard epic={epic} items={items} onSelectItem={vi.fn()} />);
+    render(
+      <RoadmapBoard epic={epic} items={items} onCreateTask={vi.fn()} onSelectItem={vi.fn()} />,
+    );
 
     const columns = screen.getAllByTestId(RoadmapBoardTestId.Column);
     // Columns render in BOARD_COLUMNS order: blocked, ready, in-progress, done.
@@ -66,7 +70,9 @@ describe("RoadmapBoard", () => {
       item({ id: "t-b", name: "Task B", dependsOn: ["t-a"] }),
       item({ id: "t-c", name: "Task C" }),
     ];
-    render(<RoadmapBoard epic={epic} items={items} onSelectItem={vi.fn()} />);
+    render(
+      <RoadmapBoard epic={epic} items={items} onCreateTask={vi.fn()} onSelectItem={vi.fn()} />,
+    );
 
     const cardFor = (name: string) =>
       screen.getByText(name).closest('[data-testid="roadmap-card"]');
@@ -82,5 +88,19 @@ describe("RoadmapBoard", () => {
 
     await userEvent.unhover(cardB);
     expect(cardA).not.toHaveClass("border-accent");
+  });
+
+  it("the header's Nový task button calls onCreateTask", async () => {
+    const onCreateTask = vi.fn();
+    render(
+      <RoadmapBoard
+        epic={epic}
+        items={[epic]}
+        onCreateTask={onCreateTask}
+        onSelectItem={vi.fn()}
+      />,
+    );
+    await userEvent.click(screen.getByTestId(RoadmapBoardTestId.CreateTask));
+    expect(onCreateTask).toHaveBeenCalledTimes(1);
   });
 });

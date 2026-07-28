@@ -2090,7 +2090,25 @@
         "failed": "Failed"
       },
       "runPr": "PR #{number}",
-      "runArtifact": "Artifact: {path}"
+      "runArtifact": "Artifact: {path}",
+      "dependencySourceOwned": "source",
+      "dependencySourceOwnedHint": "This dependency is managed by the sync — it can't be removed manually here.",
+      "removeDependency": "Remove dependency on {name}",
+      "addDependencyLabel": "Add dependency",
+      "addDependencyPlaceholder": "Pick an item…"
+    },
+    "create": {
+      "newEpic": "New epic",
+      "newTask": "New task",
+      "epicTitle": "New epic",
+      "taskTitle": "New task",
+      "nameLabel": "Name",
+      "descriptionLabel": "Description (markdown)",
+      "dropHint": "Drop a .md file here or click to select",
+      "dropActiveHint": "Drop the .md file here",
+      "dropRejected": "Only .md files are supported",
+      "dropError": "Couldn't read that file",
+      "error": "Couldn't create the item"
     }
   }
 }

@@ -35,6 +35,7 @@ describe("RoadmapEpicList", () => {
       <RoadmapEpicList
         epics={[epic]}
         items={items}
+        onCreateEpic={vi.fn()}
         onSelect={vi.fn()}
         selectedEpicId={undefined}
       />,
@@ -48,6 +49,7 @@ describe("RoadmapEpicList", () => {
       <RoadmapEpicList
         epics={[epic]}
         items={[epic]}
+        onCreateEpic={vi.fn()}
         onSelect={vi.fn()}
         selectedEpicId={undefined}
       />,
@@ -62,6 +64,7 @@ describe("RoadmapEpicList", () => {
       <RoadmapEpicList
         epics={[epic]}
         items={[epic]}
+        onCreateEpic={vi.fn()}
         onSelect={onSelect}
         selectedEpicId={undefined}
       />,
@@ -77,10 +80,27 @@ describe("RoadmapEpicList", () => {
       <RoadmapEpicList
         epics={[epic]}
         items={items}
+        onCreateEpic={vi.fn()}
         onSelect={vi.fn()}
         selectedEpicId={undefined}
       />,
     );
     expect(screen.getByTestId(RoadmapEpicListTestId.Status)).toHaveTextContent("Blokováno");
+  });
+
+  it("the Nový epik button calls onCreateEpic", async () => {
+    const epic = item({ id: "e5", level: "epic", name: "Some epic", parentId: undefined });
+    const onCreateEpic = vi.fn();
+    render(
+      <RoadmapEpicList
+        epics={[epic]}
+        items={[epic]}
+        onCreateEpic={onCreateEpic}
+        onSelect={vi.fn()}
+        selectedEpicId={undefined}
+      />,
+    );
+    await userEvent.click(screen.getByTestId(RoadmapEpicListTestId.CreateEpic));
+    expect(onCreateEpic).toHaveBeenCalledTimes(1);
   });
 });

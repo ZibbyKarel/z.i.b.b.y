@@ -13,7 +13,9 @@ const person = (over: Partial<ProjectPerson> & { name: string }): ProjectPerson 
   ...over,
 });
 
-const integration = (over: Partial<Integration> & Pick<Integration, "id" | "kind">): Integration => ({
+const integration = (
+  over: Partial<Integration> & Pick<Integration, "id" | "kind">,
+): Integration => ({
   name: over.id,
   enabled: true,
   status: "disconnected",
@@ -24,15 +26,15 @@ const integration = (over: Partial<Integration> & Pick<Integration, "id" | "kind
 
 describe("samePerson", () => {
   it("matches by id when both sides have one, even with different names", () => {
-    expect(samePerson(person({ id: "p1", name: "Alice" }), person({ id: "p1", name: "Alicia" }))).toBe(
-      true,
-    );
+    expect(
+      samePerson(person({ id: "p1", name: "Alice" }), person({ id: "p1", name: "Alicia" })),
+    ).toBe(true);
   });
 
   it("does not match different ids even with the same name", () => {
-    expect(samePerson(person({ id: "p1", name: "Alice" }), person({ id: "p2", name: "Alice" }))).toBe(
-      false,
-    );
+    expect(
+      samePerson(person({ id: "p1", name: "Alice" }), person({ id: "p2", name: "Alice" })),
+    ).toBe(false);
   });
 
   it("falls back to case-insensitive name match when either side lacks an id", () => {
@@ -153,9 +155,12 @@ describe("computeResolvedContext", () => {
   };
 
   it("company null (no companyId / dangling): degrades to the project's own raw data (identity)", () => {
-    const result = computeResolvedContext(project, null, [], [
-      integration({ id: "proj-slack", kind: "slack" }),
-    ]);
+    const result = computeResolvedContext(
+      project,
+      null,
+      [],
+      [integration({ id: "proj-slack", kind: "slack" })],
+    );
     expect(result.people).toEqual(project.identity.people);
     expect(result.budget).toEqual(project.budget);
     expect(result.integrations.map((i) => i.id)).toEqual(["proj-slack"]);

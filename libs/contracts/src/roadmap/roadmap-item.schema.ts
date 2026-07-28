@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { IsoDateTimeSchema } from "../common.schema";
 import { ProjectIdSchema } from "../projects/project.schema";
-import { AttachmentSchema } from "../tasks/task.schema";
+import { AttachmentSchema, TaskOutputSchema } from "../tasks/task.schema";
 
 /**
  * Allowed shape of a roadmap item `id`. The id doubles as the on-disk file
@@ -172,7 +172,24 @@ export const RoadmapItemSchema = z.object({
   overrideBlocked: z.boolean().optional(),
   /** Set by the Phase 125g decomposition ingest; cleared on any operator edit. */
   origin: RoadmapOriginSchema.optional(),
+  /**
+   * 125e — the terminal output the gate asks the created task for. Absent =
+   * the plan's default, `{ type: "pr" }`; an operator may set this to
+   * `{ type: "file", ... }` for a research/document item that can never be
+   * merged (see the lifecycle: a `file` output item goes straight to `done`
+   * on a successful run, never `awaiting-merge`). Operator-owned, editable via
+   * `UpdateRoadmapItemSchema`, same ownership class as `overrideBlocked`.
+   */
+  output: TaskOutputSchema.optional(),
   lifecycle: RoadmapItemLifecycleSchema,
+  /**
+   * Stamped by `play`/`playBulk`/`restart` at the moment an item becomes
+   * `enqueued` — the gate drains a project's enqueued items strictly FIFO by
+   * this timestamp (never `updatedAt`, which also moves on unrelated edits
+   * like a re-sync touching `description`). Cleared implicitly once the gate
+   * releases the item (a `running`/later item's ordering no longer matters).
+   */
+  enqueuedAt: IsoDateTimeSchema.optional(),
   runs: z.array(RoadmapItemRunSchema).default([]),
   /**
    * Sync-machinery-owned (125b), NOT part of the source/ZIBBY ownership split
@@ -225,6 +242,8 @@ export const UpdateRoadmapItemSchema = z.object({
   parentId: RoadmapItemIdSchema.nullable().optional(),
   dependsOn: z.array(RoadmapItemIdSchema).optional(),
   overrideBlocked: z.boolean().optional(),
+  /** The gate's terminal output choice for this item's task (125e) — see the field's own docblock. */
+  output: TaskOutputSchema.optional(),
 });
 export type UpdateRoadmapItemInput = z.infer<typeof UpdateRoadmapItemSchema>;
 

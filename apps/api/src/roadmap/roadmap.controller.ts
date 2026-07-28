@@ -5,11 +5,13 @@ import { ProjectNotFoundError } from "../projects/projects.errors";
 import { collisionResistantId } from "../shared/file-storage";
 import { makeErrorMapper } from "../shared/http/error-mapping";
 import { LevelMappingStore } from "./level-mapping.store";
+import { RoadmapGateService } from "./roadmap-gate.service";
 import { RoadmapSourceService } from "./roadmap-source.service";
 import {
   InvalidRoadmapItemIdError,
   InvalidRoadmapProjectIdError,
   RoadmapItemConflictError,
+  RoadmapItemLifecycleError,
   RoadmapItemNotFoundError,
 } from "./roadmap.errors";
 import { RoadmapStore } from "./roadmap.store";
@@ -31,6 +33,28 @@ const errors = makeErrorMapper("RoadmapItem", {
 const projectErrors = makeErrorMapper("Project", { missing: [ProjectNotFoundError] });
 
 const unprocessable = (message: string) => ({ status: 422 as const, body: { message } });
+const conflict = (message: string) => ({ status: 409 as const, body: { message } });
+
+// 125e — play/restart/resume reach `RoadmapGateService`, which can throw either a
+// missing-project error (an item's project record was deleted after the item was
+// created) or a lifecycle-state conflict. Both need mapping alongside the ordinary
+// RoadmapItem 404s already in `errors` above, so each of those three routes passes
+// this as its `or404` `extra`.
+function gateExtra(projectId: string) {
+  return (error: unknown) => {
+    if (error instanceof ProjectNotFoundError) return projectErrors.notFound(projectId);
+    if (error instanceof RoadmapItemLifecycleError) return conflict(error.message);
+    return undefined;
+  };
+}
+
+// `overrideRoadmapItem` never throws `RoadmapItemLifecycleError` (it accepts any
+// lifecycle — see `RoadmapGateService.override`'s docblock) and its contract
+// response union has no 409, so its `extra` maps only the project-missing case.
+function overrideExtra(projectId: string) {
+  return (error: unknown) =>
+    error instanceof ProjectNotFoundError ? projectErrors.notFound(projectId) : undefined;
+}
 
 /**
  * Implements `roadmapContract` against the file-backed stores. Request bodies,
@@ -43,6 +67,7 @@ export class RoadmapController {
     private readonly roadmap: RoadmapStore,
     private readonly levelMapping: LevelMappingStore,
     private readonly roadmapSource: RoadmapSourceService,
+    private readonly roadmapGate: RoadmapGateService,
   ) {}
 
   @TsRestHandler(roadmapContract)
@@ -121,6 +146,35 @@ export class RoadmapController {
           await this.roadmap.delete(projectId, itemId);
           return { id: itemId };
         }),
+
+      playRoadmapItem: ({ params: { projectId, itemId } }) =>
+        errors.or404(itemId, () => this.roadmapGate.play(projectId, itemId), gateExtra(projectId)),
+
+      overrideRoadmapItem: ({ params: { projectId, itemId }, body }) =>
+        errors.or404(
+          itemId,
+          () => this.roadmapGate.override(projectId, itemId, body.overrideBlocked),
+          overrideExtra(projectId),
+        ),
+
+      restartRoadmapItem: ({ params: { projectId, itemId } }) =>
+        errors.or404(
+          itemId,
+          () => this.roadmapGate.restart(projectId, itemId),
+          gateExtra(projectId),
+        ),
+
+      resumeRoadmapItem: ({ params: { projectId, itemId } }) =>
+        errors.or404(
+          itemId,
+          () => this.roadmapGate.resume(projectId, itemId),
+          gateExtra(projectId),
+        ),
+
+      playRoadmapItems: async ({ params: { projectId }, body }) => ({
+        status: 200,
+        body: await this.roadmapGate.playBulk(projectId, body.itemIds),
+      }),
 
       syncRoadmapItems: ({ params: { projectId } }) =>
         projectErrors.or404(projectId, () => this.roadmapSource.sync(projectId)),
