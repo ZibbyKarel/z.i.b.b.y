@@ -313,7 +313,13 @@ describe("BudgetService.recordCost", () => {
   it("appends a cost line via the ledger", async () => {
     const recordCost = vi.fn(async () => {});
     const svc = build({ ledger: { recordCost } });
-    await svc.recordCost({ projectId: "alpha", taskId: "t1", runRef: "r1", kind: "agent", costUsd: 0.4 });
+    await svc.recordCost({
+      projectId: "alpha",
+      taskId: "t1",
+      runRef: "r1",
+      kind: "agent",
+      costUsd: 0.4,
+    });
     expect(recordCost).toHaveBeenCalledWith(
       expect.objectContaining({ projectId: "alpha", runRef: "r1", costUsd: 0.4 }),
       expect.any(Date),
@@ -386,5 +392,94 @@ describe("BudgetService.countRunning", () => {
       agentRuns: [agent({ status: "awaiting-approval" })],
     });
     expect(await svc.countRunning("alpha")).toBe(1);
+  });
+
+  it("counts a paused-limit run as still occupying a slot", async () => {
+    const svc = build({
+      project: project({ maxConcurrent: 1 }),
+      agentRuns: [agent({ status: "paused-limit" })],
+    });
+    expect(await svc.countRunning("alpha")).toBe(1);
+  });
+});
+
+describe("BudgetService.countRunningGlobal (125c)", () => {
+  const agent = (over: Partial<AgentRun>): AgentRun => ({
+    runId: "a1",
+    agentId: "x",
+    status: "running",
+    pct: 0,
+    title: "",
+    prompt: "",
+    project: "alpha",
+    files: [],
+    cwd: "/t",
+    startedAt: new Date().toISOString(),
+    pid: 1,
+    logFile: "/t.log",
+    ...over,
+  });
+  const pipeline = (over: Partial<PipelineRun>): PipelineRun => ({
+    pipelineRunId: "p1",
+    pipelineId: "rel",
+    status: "running",
+    currentStage: null,
+    stageRuns: [],
+    startedAt: new Date().toISOString(),
+    cwd: "/p",
+    projectPath: "/work/alpha",
+    ...over,
+  });
+
+  it("counts across every project — no label filter, unlike countRunning", async () => {
+    const svc = build({
+      agentRuns: [
+        agent({ runId: "a1", project: "alpha" }),
+        agent({ runId: "a2", project: "beta" }),
+      ],
+      pipelineRuns: [pipeline({ pipelineRunId: "p1", projectPath: "/work/gamma" })],
+    });
+    expect(await svc.countRunningGlobal()).toBe(3);
+  });
+
+  it("counts an unattributed run (empty project label) same as any other", async () => {
+    const svc = build({
+      agentRuns: [agent({ project: "" })],
+    });
+    expect(await svc.countRunningGlobal()).toBe(1);
+  });
+
+  it("counts paused-limit agent and pipeline runs — a paused run still owns its slot", async () => {
+    const svc = build({
+      agentRuns: [agent({ status: "paused-limit" })],
+      pipelineRuns: [pipeline({ status: "paused-limit" })],
+    });
+    expect(await svc.countRunningGlobal()).toBe(2);
+  });
+
+  it("counts an awaiting-approval agent run", async () => {
+    const svc = build({ agentRuns: [agent({ status: "awaiting-approval" })] });
+    expect(await svc.countRunningGlobal()).toBe(1);
+  });
+
+  it("ignores terminal agent statuses (done/error/interrupted)", async () => {
+    const svc = build({
+      agentRuns: [
+        agent({ runId: "a1", status: "done" }),
+        agent({ runId: "a2", status: "error" }),
+        agent({ runId: "a3", status: "interrupted" }),
+      ],
+    });
+    expect(await svc.countRunningGlobal()).toBe(0);
+  });
+
+  it("ignores a terminal (failed) pipeline run", async () => {
+    const svc = build({ pipelineRuns: [pipeline({ status: "failed" })] });
+    expect(await svc.countRunningGlobal()).toBe(0);
+  });
+
+  it("zero running anywhere is zero", async () => {
+    const svc = build();
+    expect(await svc.countRunningGlobal()).toBe(0);
   });
 });

@@ -10,12 +10,12 @@ system-config section — link there rather than duplicating the table here.
 
 ## Pieces
 
-| Piece      | File                                             | Role                                                                 |
-| ---------- | -------------------------------------------------- | ----------------------------------------------------------------- |
-| Schema     | `libs/contracts/src/system/system.schema.ts`     | `SystemConfigSchema` (`.strict()`) — every knob has a default       |
-| Contract   | `libs/contracts/src/system/system.contract.ts`   | `systemContract` — `GET`/`PUT /api/system/config`                   |
-| Store      | `apps/api/src/system/system-config.store.ts`     | `SystemConfigStore` — in-memory + file-backed, `@Global`             |
-| Controller | `apps/api/src/system/system.controller.ts`       | Implements the contract                                              |
+| Piece      | File                                           | Role                                                          |
+| ---------- | ---------------------------------------------- | ------------------------------------------------------------- |
+| Schema     | `libs/contracts/src/system/system.schema.ts`   | `SystemConfigSchema` (`.strict()`) — every knob has a default |
+| Contract   | `libs/contracts/src/system/system.contract.ts` | `systemContract` — `GET`/`PUT /api/system/config`             |
+| Store      | `apps/api/src/system/system-config.store.ts`   | `SystemConfigStore` — in-memory + file-backed, `@Global`      |
+| Controller | `apps/api/src/system/system.controller.ts`     | Implements the contract                                       |
 
 ## Flow
 
@@ -39,8 +39,17 @@ system-config section — link there rather than duplicating the table here.
    in-memory copy, and calls every subscriber registered via `onChange()`.
    The schedulers use this to re-arm their interval timers immediately —
    most knobs (tick intervals, `limitResumeMax`, `goalVerifyTimeoutMs`,
-   `chatPersona`) take effect live, with one exception: `goalAutoResume` is
-   only read at boot, so it applies on the *next* start, not immediately.
+   `maxConcurrentRuns`, `chatPersona`) take effect live, with one exception:
+   `goalAutoResume` is only read at boot, so it applies on the _next_ start,
+   not immediately.
+   - `maxConcurrentRuns` (Phase 125c) is the system-wide ceiling on
+     concurrently running tasks — `null`, the default, means uncapped and
+     preserves the pre-125c behaviour exactly. It is nullable rather than
+     optional because `SystemConfigSchema` is `.strict()` and every field
+     needs a default; `null` reads as "no override", mirroring `ttsVoice`.
+     The scheduler reads it at use time (never caches it in a field), which
+     is what makes a save apply to the very next dispatch. Enforcement lives
+     in `TaskSchedulerService` — see [tasks.md](./tasks.md).
 4. `GET /system/config` / `PUT /system/config` are the only two endpoints;
    `putConfig` replaces the entire document (not a partial patch).
 

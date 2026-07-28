@@ -573,9 +573,41 @@ export class TaskSchedulerService
    * concurrent creates for the same project both pass the gate and both dispatch,
    * exceeding `maxConcurrent` and over-recording the ledger past its cap — a Law-3
    * violation). `project-capacity:${projectId}` is a NEW key, disjoint from the
-   * `task:${id}` outcome-writer lock and the global `scheduler:drain` sweep lock. An
-   * unscoped task (no `projectId`) never contends on either race, so it runs
-   * unlocked — matching `atCapacity`'s own short-circuit for `project == null`.
+   * `task:${id}` outcome-writer lock and the global `scheduler:drain` sweep lock.
+   *
+   * 125c (D-008 point 3): the system-wide `maxConcurrentRuns` cap makes EVERY
+   * dispatch — scoped or not — contend on the same global count, not just a
+   * project's own `maxConcurrent`. Two defects a first pass got wrong, both
+   * fixed by the shape below:
+   *
+   *  - A per-project lock alone is not enough: two concurrent dispatches for
+   *    TWO DIFFERENT projects take two different `project-capacity:*` keys —
+   *    no mutual exclusion between them — so both can read the global count
+   *    under the cap and both dispatch, exceeding `maxConcurrentRuns` exactly
+   *    the way the project-scoped TOCTOU this lock exists for. The global
+   *    acquisition must be OUTER, wrapping the (optional) per-project one, so
+   *    every dispatch — any project, or none — is serialized against every
+   *    other one while a global cap is in effect.
+   *  - The global lock must be SKIPPED ENTIRELY when there is no cap
+   *    (`maxConcurrentRuns == null`, the schema default): `null` means "no
+   *    global cap — today's behaviour" per the master plan, and today's
+   *    behaviour is an unscoped dispatch running free, not serialized behind a
+   *    process-wide mutex. Read live via `systemConfig.current()` (never
+   *    cached) — same posture as `capacityStatus`'s own read — so a `/settings`
+   *    save that clears the cap stops contending immediately, not just for the
+   *    next boot.
+   *
+   * INVARIANT — ordering is always global-outer, project-inner: acquire
+   * `global-capacity` (when set) FIRST, then `project-capacity:${projectId}`
+   * (when scoped). A future edit to this method must keep that ONE fixed
+   * ordering rather than acquiring the two keys in different sequences on
+   * different paths — this method is every caller's only entry point to both
+   * locks, so as long as it stays internally consistent, no two chains can
+   * ever hold one of these keys while waiting on the other in opposite order
+   * (the precondition for a lock-order deadlock). Every call site below
+   * already `await`s (never detaches) its `withCapacityLock` call, so neither
+   * key is ever re-entered from inside its own held section (see
+   * `withPathLock`'s reentrancy CONTRACT).
    *
    * Every real spend path for a project is guarded by this SAME key (Task 3c fix —
    * the set is now complete):
@@ -595,7 +627,12 @@ export class TaskSchedulerService
    *    called from inside an already-held section for the same key.
    */
   private withCapacityLock<T>(projectId: string | undefined, fn: () => Promise<T>): Promise<T> {
-    return projectId ? withPathLock(`project-capacity:${projectId}`, fn) : fn();
+    const scoped = projectId ? () => withPathLock(`project-capacity:${projectId}`, fn) : fn;
+    // Read live (never cached) — a `/settings` save that sets or clears the cap
+    // must change whether this contends starting with the very next dispatch.
+    return this.systemConfig.current().maxConcurrentRuns == null
+      ? scoped()
+      : withPathLock("global-capacity", scoped);
   }
 
   /**
@@ -946,17 +983,43 @@ export class TaskSchedulerService
   }
 
   /**
-   * True when the project caps concurrency and is already at its `maxConcurrent`.
-   * Phase 70: reads the EFFECTIVE (company-merged) budget via `ResolvedProjectService`,
-   * not the raw `project.budget` — a company-set `maxConcurrent` now caps every linked
-   * project's concurrency too, unless the project overrides it itself. A company-less
-   * project (or a dangling `companyId`) resolves to its own raw budget, unchanged.
+   * True when dispatch is blocked for `project` — either the system-wide cap
+   * (125c) or that project's own `maxConcurrent`. See {@link capacityStatus} for
+   * the reason breakdown `drainQueues` needs.
    */
   private async atCapacity(project: Project | null): Promise<boolean> {
-    if (project == null) return false;
+    return (await this.capacityStatus(project)) !== "ok";
+  }
+
+  /**
+   * 125c / D-008 point 1: the system-wide `maxConcurrentRuns` cap is checked
+   * FIRST, BEFORE the `project == null` short-circuit below — an unattributed
+   * task must be gated by the global cap exactly like an attributed one, even
+   * though it has no project budget of its own to check. Read live via
+   * `systemConfig.current()` (never cached in a field) so a `/settings` save
+   * applies to the very next dispatch attempt, no restart needed.
+   *
+   * Phase 70: the per-project branch reads the EFFECTIVE (company-merged)
+   * budget via `ResolvedProjectService`, not the raw `project.budget` — a
+   * company-set `maxConcurrent` now caps every linked project's concurrency
+   * too, unless the project overrides it itself. A company-less project (or a
+   * dangling `companyId`) resolves to its own raw budget, unchanged.
+   *
+   * Returns which cap is actually blocking dispatch — `drainQueues` uses this
+   * (rather than the plain boolean {@link atCapacity}) to tell "nothing can
+   * dispatch ANYWHERE right now" (`"global"`, stop draining entirely) from
+   * "this one project's queue is full" (`"project"`, move on to the next
+   * project's queue).
+   */
+  private async capacityStatus(project: Project | null): Promise<"ok" | "project" | "global"> {
+    const globalMax = this.systemConfig.current().maxConcurrentRuns;
+    if (globalMax != null && (await this.budget.countRunningGlobal()) >= globalMax) {
+      return "global";
+    }
+    if (project == null) return "ok";
     const max = (await this.resolved.resolveBudget(project))?.maxConcurrent;
-    if (max == null) return false;
-    return (await this.budget.countRunning(project.id)) >= max;
+    if (max == null) return "ok";
+    return (await this.budget.countRunning(project.id)) >= max ? "project" : "ok";
   }
 
   /** Park a held task behind a `spend-past-cap` approval; returns the stamped task. */
@@ -1028,6 +1091,17 @@ export class TaskSchedulerService
    * dispatch the oldest first while a slot is free. A normal queued task re-runs the
    * full guard (budget first — it can become held if the budget filled meanwhile); a
    * released (budget-approved) task skips only the budget check.
+   *
+   * 125c / D-008 point 2: the `queued` filter used to require `t.projectId`, so a
+   * task queued by the (then nonexistent) global cap with NO attributed project
+   * would sit `queued` forever — nothing ever re-checked it. The filter now keeps
+   * every queued task regardless of attribution, grouped by `projectId`
+   * (`undefined` is its own bucket — every unscoped queued task, project `null`).
+   * `capacityStatus` tells this loop WHY a task can't dispatch: a full per-project
+   * cap (`"project"`) only blocks that one project's bucket, so the loop moves on
+   * to the next; a full global cap (`"global"`) blocks every bucket, so the whole
+   * drain stops right there instead of re-reading the same global count once per
+   * remaining project.
    */
   private drainQueues(): Promise<void> {
     // Serialize all drains: many terminal events fire near-simultaneously, and two
@@ -1036,19 +1110,23 @@ export class TaskSchedulerService
     // drain's markDispatched, so a queued task is dispatched exactly once.
     return withPathLock("scheduler:drain", async () => {
       const queued = (await this.storage.list().catch((): ScheduledTask[] => []))
-        .filter((t) => t.status === "queued" && t.projectId)
+        .filter((t) => t.status === "queued")
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt)); // FIFO
       if (queued.length === 0) return;
-      const byProject = new Map<string, ScheduledTask[]>();
+      const byProject = new Map<string | undefined, ScheduledTask[]>();
       for (const task of queued) {
-        const list = byProject.get(task.projectId as string) ?? [];
+        const list = byProject.get(task.projectId) ?? [];
         list.push(task);
-        byProject.set(task.projectId as string, list);
+        byProject.set(task.projectId, list);
       }
       for (const [projectId, list] of byProject) {
-        const project = await this.projects.get(projectId).catch((): Project | null => null);
+        const project = projectId
+          ? await this.projects.get(projectId).catch((): Project | null => null)
+          : null;
         for (const task of list) {
-          if (await this.atCapacity(project)) break; // no slot free for this project
+          const status = await this.capacityStatus(project);
+          if (status === "global") return; // nothing can dispatch anywhere right now
+          if (status === "project") break; // no slot free for this project
           // Re-read: a concurrent cancel may have moved it on already.
           const fresh = await this.storage.get(task.id).catch((): ScheduledTask | null => null);
           if (!fresh || fresh.status !== "queued") continue;
@@ -1056,6 +1134,8 @@ export class TaskSchedulerService
           // global `scheduler:drain` sweep lock — different keys, ordinary nesting —
           // so a drain's dispatch is serialized against a concurrent `attemptCreate`
           // or `releaseHeld` for the same project, not just against other drains.
+          // 125c: the unscoped bucket (`projectId === undefined`) nests the
+          // `global-capacity` lock the same way — same shape, different key.
           await this.trace.run({ traceId: randomUUID() }, () =>
             this.withCapacityLock(projectId, () =>
               this.attemptDispatch(fresh, project, Date.now(), {

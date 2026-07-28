@@ -11,6 +11,7 @@ const DEFAULTS: SystemConfig = {
   automationTickMs: 0,
   limitResumeTickMs: 60000,
   limitResumeMax: 3,
+  maxConcurrentRuns: null,
   goalVerifyTimeoutMs: 600000,
   goalAutoResume: false,
   chatPersona: "jarvis",
@@ -59,5 +60,41 @@ describe("SystemSection", () => {
     await userEvent.clear(screen.getByTestId(SystemSectionTestId.TaskTick));
     await userEvent.click(screen.getByTestId(SystemSectionTestId.Save));
     expect(setConfig).toHaveBeenCalledWith({ body: { ...DEFAULTS, taskTickMs: 0 } });
+  });
+
+  describe("maxConcurrentRuns (125c) — nullable knob", () => {
+    it("renders empty when the loaded config has no global cap (null)", () => {
+      render(<SystemSection />);
+      expect(screen.getByTestId(SystemSectionTestId.MaxConcurrentRuns)).toHaveValue(null);
+    });
+
+    it("seeds the control from a loaded numeric cap", () => {
+      config = { ...DEFAULTS, maxConcurrentRuns: 4 };
+      render(<SystemSection />);
+      expect(screen.getByTestId(SystemSectionTestId.MaxConcurrentRuns)).toHaveValue(4);
+    });
+
+    it("Save round-trips a set cap unchanged", async () => {
+      config = { ...DEFAULTS, maxConcurrentRuns: 4 };
+      render(<SystemSection />);
+      await userEvent.click(screen.getByTestId(SystemSectionTestId.Save));
+      expect(setConfig).toHaveBeenCalledWith({ body: { ...DEFAULTS, maxConcurrentRuns: 4 } });
+    });
+
+    it("Save PUTs a newly-typed cap", async () => {
+      render(<SystemSection />);
+      const field = screen.getByTestId(SystemSectionTestId.MaxConcurrentRuns);
+      await userEvent.type(field, "8");
+      await userEvent.click(screen.getByTestId(SystemSectionTestId.Save));
+      expect(setConfig).toHaveBeenCalledWith({ body: { ...DEFAULTS, maxConcurrentRuns: 8 } });
+    });
+
+    it("clearing a set cap round-trips as null (no cap), never coerced to the min", async () => {
+      config = { ...DEFAULTS, maxConcurrentRuns: 4 };
+      render(<SystemSection />);
+      await userEvent.clear(screen.getByTestId(SystemSectionTestId.MaxConcurrentRuns));
+      await userEvent.click(screen.getByTestId(SystemSectionTestId.Save));
+      expect(setConfig).toHaveBeenCalledWith({ body: { ...DEFAULTS, maxConcurrentRuns: null } });
+    });
   });
 });

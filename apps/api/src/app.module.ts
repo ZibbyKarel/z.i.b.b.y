@@ -35,6 +35,7 @@ import { PipelinesModule } from "./pipelines/pipelines.module";
 import { ProjectsModule } from "./projects/projects.module";
 import { LoggingModule } from "./shared/logging/logging.module";
 import { PinsModule } from "./pins/pins.module";
+import { RoadmapModule } from "./roadmap/roadmap.module";
 import { SelfModule } from "./self/self.module";
 import { SelfKnowledgeModule } from "./self-knowledge/self-knowledge.module";
 import { SkillsModule } from "./skills/skills.module";
@@ -53,6 +54,7 @@ import { TasksModule } from "./tasks/tasks.module";
     WatcherHealthModule,
     SystemModule,
     PinsModule,
+    RoadmapModule,
     ActivityLogModule,
     ActivityViewModule,
     AgentsModule,

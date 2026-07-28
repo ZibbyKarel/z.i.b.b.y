@@ -54,6 +54,15 @@ export const SystemConfigSchema = z
      * here.
      */
     ttsVoice: z.string().min(1).nullable().default(null),
+    /**
+     * System-wide ceiling on concurrently running tasks (125c) — checked
+     * alongside a project's own `maxConcurrent` (`ProjectBudget`), never
+     * instead of it. `null` (default) means no global cap: today's behaviour,
+     * where only a project's own budget can queue a dispatch. Editable from
+     * `/settings?tab=runtime`; read live (never cached) by
+     * `TaskSchedulerService.atCapacity`.
+     */
+    maxConcurrentRuns: z.number().int().positive().nullable().default(null),
   })
   .strict();
 export type SystemConfig = z.infer<typeof SystemConfigSchema>;

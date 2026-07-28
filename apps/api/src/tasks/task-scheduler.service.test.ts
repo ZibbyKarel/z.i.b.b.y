@@ -1782,3 +1782,192 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
     expect(agentRunner.start).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("125c — system-wide maxConcurrentRuns cap", () => {
+  let dir: string;
+  let storage: ScheduledTasksStorageService;
+  let service: TaskSchedulerService;
+  let agentRunner: {
+    start: ReturnType<typeof vi.fn>;
+    startOrchestrator: ReturnType<typeof vi.fn>;
+    onRunStatus: ReturnType<typeof vi.fn>;
+    get: ReturnType<typeof vi.fn>;
+    readLog: ReturnType<typeof vi.fn>;
+  };
+  let fakeBudget: {
+    check: ReturnType<typeof vi.fn>;
+    countRunning: ReturnType<typeof vi.fn>;
+    countRunningGlobal: ReturnType<typeof vi.fn>;
+    recordDispatch: ReturnType<typeof vi.fn>;
+    recordCost: ReturnType<typeof vi.fn>;
+  };
+
+  const RESET_AT = Date.parse("2026-06-13T04:30:00.000Z");
+
+  /**
+   * Builds a scheduler with a controllable global running count
+   * (`fakeBudget.countRunningGlobal`, set per test) and either a matched project
+   * or none (`project: null` → an unattributed task, no project in the catalog to
+   * match against). `maxConcurrentRuns` seeds the system config (`null`/omitted
+   * leaves the schema default — uncapped, today's behaviour).
+   */
+  function makeService(opts: {
+    project: { id: string; name: string; budget?: Record<string, unknown> } | null;
+    maxConcurrentRuns: number | null;
+  }): void {
+    const { project } = opts;
+    const pipelineRunner = {
+      start: vi.fn(async () => pipelineRun({})),
+      onRunStatus: vi.fn(() => () => {}),
+      get: vi.fn(() => pipelineRun({})),
+    };
+    const pipelinesStore = { list: vi.fn(async () => []) };
+    const agentsStore = { listActive: vi.fn(async () => []) };
+    const goalRunner = {
+      start: vi.fn(async () => ({ goalRunId: "goal_1" })),
+      onRunStatus: vi.fn(() => () => {}),
+      get: vi.fn(() => ({ goalRunId: "goal_1", status: "done", iterations: [] })),
+    };
+    agentRunner = {
+      start: vi.fn(async () => agentRun({})),
+      startOrchestrator: vi.fn(async () => agentRun({ agentId: "orchestrator" })),
+      onRunStatus: vi.fn(() => () => {}),
+      get: vi.fn(() => agentRun({})),
+      readLog: vi.fn(async () => ({ content: "", nextOffset: 0, done: true })),
+    };
+    const classifier = {
+      classify: vi.fn(async () => ({
+        target: { kind: "agent", id: "writer", name: "Writer" },
+        confidence: 0.9,
+        reason: "match",
+        matchedTerms: [],
+        candidates: [{ kind: "agent", id: "writer", name: "Writer" }],
+      })),
+      classifyWithinSubsystem: vi.fn(async () => {
+        throw new Error("not exercised by this describe block");
+      }),
+    };
+    const fakeProjects = {
+      list: async () => (project ? [project] : []),
+      get: async (id: string) => {
+        if (project && project.id === id) return project;
+        throw new Error("no project");
+      },
+    };
+    const fakeResolved = { resolveBudget: async (p: { budget?: unknown }) => p.budget };
+    fakeBudget = {
+      check: vi.fn(async () => ({ ok: true }) as BudgetCheck),
+      countRunning: vi.fn(async () => 0),
+      countRunningGlobal: vi.fn(async () => 0),
+      recordDispatch: vi.fn(async () => {}),
+      recordCost: vi.fn(async () => {}),
+    };
+    const fakeApprovals = {
+      register: vi.fn(),
+      requestApproval: async () => ({ id: "appr_1" }),
+      reject: async () => {},
+    };
+    const fakeGates = { floor: async () => [], evaluate: vi.fn(() => ({ decision: "allow" })) };
+    const fakeLimits = {
+      windowExhausted: vi.fn(async () => ({ exhausted: false, resumeAt: null })),
+      resolveResumeAt: vi.fn(async () => RESET_AT),
+    };
+    const activity = { record: vi.fn(async (_input: ActivityInput) => {}) };
+    const attachmentStorage = new AttachmentStorageService();
+
+    service = new TaskSchedulerService(
+      storage,
+      classifier as never,
+      agentRunner as never,
+      pipelineRunner as never,
+      pipelinesStore as never,
+      agentsStore as never,
+      goalRunner as never,
+      fakeLogger as never,
+      fakeTrace as never,
+      activity as never,
+      fakeProjects as never,
+      fakeResolved as never,
+      fakeBudget as never,
+      fakeApprovals as never,
+      fakeGates as never,
+      fakeLimits as never,
+      { handleTerminal: async () => null } as never,
+      fakeSystemConfigStore({ maxConcurrentRuns: opts.maxConcurrentRuns }),
+      { name: async () => null } as never,
+      attachmentStorage,
+      { register: () => {} } as never,
+    );
+    service.onModuleInit();
+  }
+
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "task-sched-global-cap-"));
+    storage = new ScheduledTasksStorageService(dir);
+    await storage.onModuleInit();
+  });
+
+  afterEach(async () => {
+    service.onModuleDestroy();
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  /** Reach the private queue-drain sweep the way every terminal-run subscription does. */
+  const drain = () => (service as unknown as { drainQueues(): Promise<void> }).drainQueues();
+
+  it("over the global cap: an unattributed synchronous create is queued, never dispatched", async () => {
+    makeService({ project: null, maxConcurrentRuns: 1 });
+    fakeBudget.countRunningGlobal.mockResolvedValue(1); // already at the cap
+
+    const result = await service.createTask({ text: "do the thing", title: "Thing" });
+    expect(result.outcome).toBe("scheduled");
+    if (result.outcome !== "scheduled") return;
+    expect(result.task.status).toBe("queued");
+    expect(result.task.projectId).toBeUndefined();
+    expect(agentRunner.start).not.toHaveBeenCalled();
+  });
+
+  it("over the global cap: an ATTRIBUTED create is queued too — the global cap gates every project, not only unscoped ones", async () => {
+    makeService({ project: { id: "proj_1", name: "Proj" }, maxConcurrentRuns: 1 });
+    fakeBudget.countRunningGlobal.mockResolvedValue(1);
+
+    const result = await service.createTask(
+      { text: "do the thing", title: "Thing" },
+      undefined,
+      "proj_1",
+    );
+    expect(result.outcome).toBe("scheduled");
+    if (result.outcome !== "scheduled") return;
+    expect(result.task.status).toBe("queued");
+    expect(agentRunner.start).not.toHaveBeenCalled();
+  });
+
+  it("a freed global slot: drainQueues() dispatches a queued, UNATTRIBUTED task (the D-008 regression)", async () => {
+    makeService({ project: null, maxConcurrentRuns: 1 });
+    fakeBudget.countRunningGlobal.mockResolvedValue(1);
+    const queued = await service.createTask({ text: "do the thing", title: "Thing" });
+    expect(queued.outcome).toBe("scheduled");
+    if (queued.outcome !== "scheduled") return;
+    expect(queued.task.status).toBe("queued");
+    expect(queued.task.projectId).toBeUndefined();
+
+    // A slot frees up — the global count drops back under the cap. Pre-fix, the
+    // `t.status === "queued" && t.projectId` filter dropped this exact task (no
+    // `projectId`) from the drain scan, so it would sit `queued` forever.
+    fakeBudget.countRunningGlobal.mockResolvedValue(0);
+    await drain();
+
+    const after = await storage.get(queued.task.id);
+    expect(after.status).toBe("dispatched");
+    expect(agentRunner.start).toHaveBeenCalledTimes(1);
+  });
+
+  it("null cap (default): today's behaviour is unchanged even under heavy global usage", async () => {
+    makeService({ project: null, maxConcurrentRuns: null });
+    fakeBudget.countRunningGlobal.mockResolvedValue(1000); // would fail any cap, but there is none
+
+    const result = await service.createTask({ text: "do the thing", title: "Thing" });
+    expect(result.outcome).toBe("dispatched");
+    expect(agentRunner.start).toHaveBeenCalledTimes(1);
+  });
+});

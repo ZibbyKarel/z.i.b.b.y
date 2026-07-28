@@ -15,6 +15,9 @@ export const TEST_SYSTEM_CONFIG: SystemConfig = SystemConfigSchema.parse({
   monitorTickMs: 0,
   automationTickMs: 0,
   limitResumeTickMs: 0,
+  // 125c: uncapped by default (today's behaviour) — a test opts into the global
+  // cap via `fakeSystemConfigStore({ maxConcurrentRuns: N })`.
+  maxConcurrentRuns: null,
 });
 
 /**

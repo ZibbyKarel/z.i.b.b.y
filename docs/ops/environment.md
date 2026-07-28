@@ -109,6 +109,7 @@ applies on the next boot.
 | `goalVerifyTimeoutMs` | `600000` | **Phase 12.3** — wall-clock deadline for a goal's `checks` verifier shell (then `SIGTERM`→`SIGKILL`)                                                     |
 | `goalAutoResume`      | `false`  | **Phase 12.4** — `true` = on boot, auto-re-drive `running`/`paused-limit` goals (the unattended launchd daemon). Default: park `awaiting-resume` (Law 3) |
 | `chatPersona`         | `jarvis` | The chat butler's personality (`jarvis`/`concise`/`formal`) — changes tone only, never the dispatch governor. Read per turn, set in `/settings`          |
+| `maxConcurrentRuns`   | `null`   | **Phase 125c** — system-wide ceiling on concurrently running tasks. `null` = uncapped (pre-125c behaviour). Over the cap → the existing `queued` status  |
 
 In tests, `vitest.setup.ts` seeds this file (ticks at `0`) via `SYSTEM_CONFIG_FILE`;
 a suite that needs a different knob calls `writeSystemConfig()`
