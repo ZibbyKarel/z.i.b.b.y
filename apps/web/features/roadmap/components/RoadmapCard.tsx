@@ -14,6 +14,7 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import { usePlayRoadmapItemMutation } from "../mutations/usePlayRoadmapItemMutation";
 import type { BoardColumn } from "../roadmap-board";
 import { stripMarkdownPreview } from "../roadmap-board";
 
@@ -84,6 +85,7 @@ export function RoadmapCard({
   onSelectDependency,
 }: RoadmapCardProps) {
   const t = useTranslations("roadmap");
+  const playMutation = usePlayRoadmapItemMutation(item.projectId);
 
   const hasExternalLink = Boolean(item.source.externalKey && item.source.url);
   const preview = stripMarkdownPreview(item.description);
@@ -128,11 +130,17 @@ export function RoadmapCard({
             )}
             <Tooltip content={t("card.playInert")}>
               <Button
-                disabled
                 aria-label={t("card.playInert")}
                 data-testid={RoadmapCardTestId.Play}
+                disabled={item.lifecycle !== "todo" || playMutation.isPending}
                 icon="play"
                 intent="ghost"
+                onClick={() =>
+                  playMutation.mutate({
+                    params: { projectId: item.projectId, itemId: item.id },
+                    body: {},
+                  })
+                }
                 size="sm"
               />
             </Tooltip>
