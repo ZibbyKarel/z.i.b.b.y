@@ -48,7 +48,28 @@ export class LevelMappingStore {
     return this.mapping;
   }
 
+  /**
+   * Persist a replacement document — locked on the file path so this can
+   * never interleave with a concurrent {@link ensureLevels} (or another
+   * `write()`). See {@link writeUnlocked} for why the actual write logic
+   * lives in a separate, unlocked method.
+   */
   async write(next: LevelMapping): Promise<LevelMapping> {
+    return withPathLock(this.file, () => this.writeUnlocked(next));
+  }
+
+  /**
+   * The actual validate-and-persist logic, WITHOUT taking the lock itself.
+   * `withPathLock` is reentrant — a nested call for the same key from inside
+   * an already-held section runs inline, unprotected — so `ensureLevels`
+   * cannot just call the public, locked `write()` from inside its own locked
+   * section and get real mutual exclusion out of it: that nested call would
+   * silently skip the lock it looks like it's taking. Splitting the unlocked
+   * body out lets both the public `write()` and `ensureLevels` each acquire
+   * the lock exactly once, at their own outermost call, while still sharing
+   * one implementation.
+   */
+  private async writeUnlocked(next: LevelMapping): Promise<LevelMapping> {
     const validated = LevelMappingSchema.parse(next);
     await ensureDir(this.dir);
     await writeFileAtomic(this.file, `${JSON.stringify(validated, null, 2)}\n`);
@@ -63,9 +84,12 @@ export class LevelMappingStore {
    * entries are left untouched (this only ADDS, never overwrites an
    * operator's choice), and a batch that repeats the same unseen level more
    * than once still appends it exactly once. Matching is case-insensitive,
-   * mirroring `resolveLevel`. Locked on the file path so a concurrent
-   * `write()` (an operator editing the table via the settings page) can never
-   * interleave with an in-flight append.
+   * mirroring `resolveLevel`. Locked on the file path — the SAME key
+   * `write()` locks on — so a concurrent `write()` (an operator replacing the
+   * whole table via the settings page) can never interleave with an
+   * in-flight append and silently clobber it (or vice versa): whichever
+   * caller gets the lock first runs to completion, with `this.mapping`
+   * fully updated, before the other's read-modify-write begins.
    */
   async ensureLevels(kind: LevelMappingKind, externalLevels: string[]): Promise<LevelMapping> {
     return withPathLock(this.file, async () => {
@@ -82,7 +106,9 @@ export class LevelMappingStore {
         additions.push({ kind, externalLevel, target: "task" });
       }
       if (additions.length === 0) return this.mapping;
-      return this.write({ entries: [...this.mapping.entries, ...additions] });
+      // NOT `this.write(...)` — that would re-acquire (reentrantly, and
+      // therefore unprotected) the same lock this section already holds.
+      return this.writeUnlocked({ entries: [...this.mapping.entries, ...additions] });
     });
   }
 }

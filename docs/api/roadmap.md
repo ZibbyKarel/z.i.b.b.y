@@ -139,6 +139,26 @@ the sibling `_config.json`, exactly like `ChannelItemStore` skips
 get-mutate-write critical section under `withPathLock`, keyed by the
 resolved file path.
 
+### Concurrency — who takes which lock
+
+Both stores serialize their read-modify-write windows with `withPathLock`, keyed
+on the resolved file path.
+
+- `RoadmapStore.put` / `update` / `delete` all take the item file's key. `delete`
+  is included deliberately: without it, a `delete` interleaving with an in-flight
+  `update` lets the update's atomic rename land _after_ the unlink and resurrect
+  the item.
+- `LevelMappingStore.write` and `ensureLevels` take the mapping file's key — the
+  **same** key, so an operator saving the table from `/settings?tab=tasks` and a
+  sync tick appending newly-seen levels cannot clobber each other. Both paths
+  read the whole document into memory and write it back, so without shared
+  exclusion whichever landed second would win wholesale.
+- `withPathLock` is **reentrant**: a nested call for a key already held runs
+  inline, _unprotected_. So `ensureLevels` calls a private `writeUnlocked()`
+  rather than the public, locked `write()` — the nested call would otherwise
+  look like it takes the lock while silently skipping it. Any future method that
+  needs to write from inside a held section must do the same.
+
 ## Attachment sweep
 
 `RoadmapAttachmentRefProvider` (`apps/api/src/roadmap/roadmap-attachment-ref.provider.ts`)

@@ -13,7 +13,9 @@ scheduled    ← created with a future scheduledAt
     ↓
   tick()     ← daemon runs once per configured interval
     ↓
-queued       ← project hit maxConcurrent (FIFO, no approval)
+queued       ← project hit maxConcurrent, OR the system-wide maxConcurrentRuns
+                 ceiling is full (FIFO, no approval). A task queued by the
+                 global cap need not belong to any project.
 held         ← spend exceeded the budget cap (waits for approval to release)
 pending      ← interactive path (dialog): accepted, classification + spawn run IN THE BACKGROUND
     ↓

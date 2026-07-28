@@ -190,8 +190,7 @@ export class RoadmapStore implements OnModuleInit {
   }
 
   async writeConfig(projectId: string, config: RoadmapConfig): Promise<RoadmapConfig> {
-    const dir = this.projectDir(projectId);
-    if (dir === null) throw new InvalidRoadmapItemIdError(projectId, "");
+    const dir = this.requireProjectDir(projectId);
     const validated = RoadmapConfigSchema.parse(config);
     await ensureDir(dir);
     await writeFileAtomic(path.join(dir, CONFIG_FILE), JSON.stringify(validated, null, 2));
