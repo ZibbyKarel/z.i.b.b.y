@@ -6,32 +6,40 @@ a task is safe to dispatch. This doc covers **125a** (the data model, the
 per-project item store, the global level-mapping table, and the CRUD
 endpoints), **125b** (`RoadmapSourceService`'s Jira/GitHub import and the
 manual `POST .../roadmap/sync` route), **125e** (play, the dependency gate,
-merge signals, lifecycle completion, Tier-3 override, restart/resume) and
-**125h** (the auto-sync + gate-poll tick, and the roadmap tab's Sync button/
-auto-sync toggle). See `docs/plans/phase-125-project-roadmap.md` for the full
-master plan (the UI in 125d/f, decomposition in 125g).
+merge signals, lifecycle completion, Tier-3 override, restart/resume),
+**125g** (epic decomposition: the artifact contract, the dedicated agent, the
+deterministic ingest) and **125h** (the auto-sync + gate-poll tick, and the
+roadmap tab's Sync button/auto-sync toggle). See
+`docs/plans/phase-125-project-roadmap.md` for the full master plan (the UI in
+125d/f).
 
 ## Pieces
 
-| Piece      | File                                                      | Role                                                                                                |
-| ---------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Contract   | `libs/contracts/src/roadmap/roadmap-item.schema.ts`       | `RoadmapItemSchema`, `Create`/`UpdateRoadmapItemSchema`, `RoadmapConfigSchema`                      |
-| Contract   | `libs/contracts/src/roadmap/roadmap-readiness.ts`         | Pure `isBlocked()` / `readiness()` helpers (derived board state)                                    |
-| Contract   | `libs/contracts/src/roadmap/level-mapping.schema.ts`      | `LevelMappingSchema`, `DEFAULT_LEVEL_MAPPING`, `resolveLevel()`                                     |
-| Contract   | `libs/contracts/src/roadmap/roadmap-play.schema.ts`       | `PlayRoadmapItemsSchema` (bulk play body), `OverrideRoadmapItemSchema` (125e)                       |
-| Contract   | `libs/contracts/src/roadmap/roadmap.contract.ts`          | `roadmapContract` — item CRUD, config, level-mapping, sync, play/override/restart/resume, `/api`    |
-| Contract   | `libs/contracts/src/roadmap/roadmap-sync.schema.ts`       | `RoadmapSyncResultSchema` — the sync endpoint's response                                            |
-| Store      | `apps/api/src/roadmap/roadmap.store.ts`                   | `RoadmapStore` — two-level file store + per-project config                                          |
-| Store      | `apps/api/src/roadmap/level-mapping.store.ts`             | `LevelMappingStore` — single global JSON document                                                   |
-| Provider   | `apps/api/src/roadmap/roadmap-attachment-ref.provider.ts` | `AttachmentSetRefProvider` for the orphan-attachment sweep                                          |
-| Service    | `apps/api/src/roadmap/roadmap-source.service.ts`          | `RoadmapSourceService` (125b) — Jira/GitHub import + upsert                                         |
-| Service    | `apps/api/src/roadmap/roadmap-gate.service.ts`            | `RoadmapGateService` (125e) — play/override/restart/resume, the FIFO drain, release signals         |
-| Service    | `apps/api/src/roadmap/roadmap-tick.service.ts`            | `RoadmapTickService` (125h) — the `roadmapTickMs` heartbeat: auto-sync + gate poll                  |
-| Pure fn    | `apps/api/src/roadmap/adf-to-markdown.ts`                 | `adfToMarkdown()` — Jira ADF `description` → markdown, bounded + never throws                       |
-| Pure fn    | `apps/api/src/roadmap/merge-depends-on.ts`                | `mergeDependsOn()` — the re-sync `dependsOn` ownership-split merge                                  |
-| Pure fn    | `apps/api/src/roadmap/roadmap-task-text.ts`               | `buildRoadmapTaskText()` (125e) — name + description + the roadmap-context footer                   |
-| Controller | `apps/api/src/roadmap/roadmap.controller.ts`              | implements `roadmapContract`                                                                        |
-| Module     | `apps/api/src/roadmap/roadmap.module.ts`                  | resolves `ROADMAP_DIR` (`$ROADMAP_DIR` env or `.zibby/data/roadmap`); `@Global()` (125e, see below) |
+| Piece      | File                                                          | Role                                                                                                |
+| ---------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Contract   | `libs/contracts/src/roadmap/roadmap-item.schema.ts`           | `RoadmapItemSchema`, `Create`/`UpdateRoadmapItemSchema`, `RoadmapConfigSchema`                      |
+| Contract   | `libs/contracts/src/roadmap/roadmap-readiness.ts`             | Pure `isBlocked()` / `readiness()` helpers (derived board state)                                    |
+| Contract   | `libs/contracts/src/roadmap/level-mapping.schema.ts`          | `LevelMappingSchema`, `DEFAULT_LEVEL_MAPPING`, `resolveLevel()`                                     |
+| Contract   | `libs/contracts/src/roadmap/roadmap-play.schema.ts`           | `PlayRoadmapItemsSchema` (bulk play body), `OverrideRoadmapItemSchema` (125e)                       |
+| Contract   | `libs/contracts/src/roadmap/roadmap.contract.ts`              | `roadmapContract` — item CRUD, config, level-mapping, sync, play/override/restart/resume, `/api`    |
+| Contract   | `libs/contracts/src/roadmap/roadmap-sync.schema.ts`           | `RoadmapSyncResultSchema` — the sync endpoint's response                                            |
+| Contract   | `libs/contracts/src/roadmap/decomposition-artifact.schema.ts` | `DecompositionArtifactSchema` (125g) — the decomposition agent's ONLY allowed output shape          |
+| Store      | `apps/api/src/roadmap/roadmap.store.ts`                       | `RoadmapStore` — two-level file store + per-project config                                          |
+| Store      | `apps/api/src/roadmap/level-mapping.store.ts`                 | `LevelMappingStore` — single global JSON document                                                   |
+| Provider   | `apps/api/src/roadmap/roadmap-attachment-ref.provider.ts`     | `AttachmentSetRefProvider` for the orphan-attachment sweep                                          |
+| Service    | `apps/api/src/roadmap/roadmap-source.service.ts`              | `RoadmapSourceService` (125b) — Jira/GitHub import + upsert                                         |
+| Service    | `apps/api/src/roadmap/roadmap-gate.service.ts`                | `RoadmapGateService` (125e) — play/override/restart/resume, the FIFO drain, release signals         |
+| Service    | `apps/api/src/roadmap/roadmap-decomposition.service.ts`       | `RoadmapDecompositionService` (125g) — dispatch + reconcile for Play on a childless epic            |
+| Service    | `apps/api/src/roadmap/roadmap-tick.service.ts`                | `RoadmapTickService` (125h) — the `roadmapTickMs` heartbeat: auto-sync + gate poll                  |
+| Pure fn    | `apps/api/src/roadmap/adf-to-markdown.ts`                     | `adfToMarkdown()` — Jira ADF `description` → markdown, bounded + never throws                       |
+| Pure fn    | `apps/api/src/roadmap/merge-depends-on.ts`                    | `mergeDependsOn()` — the re-sync `dependsOn` ownership-split merge                                  |
+| Pure fn    | `apps/api/src/roadmap/roadmap-task-text.ts`                   | `buildRoadmapTaskText()` (125e) — name + description + the roadmap-context footer                   |
+| Pure fn    | `apps/api/src/roadmap/decomposition-task-text.ts`             | `buildDecompositionTaskText()` (125g) — epic name + description + the Law-4 instructions footer     |
+| Pure fn    | `apps/api/src/roadmap/decomposition-artifact.ts`              | `extractDecompositionArtifact()` (125g) — a run log → a validated artifact, bounded + never throws  |
+| Pure fn    | `apps/api/src/roadmap/decomposition-ingest.ts`                | `ingestDecomposition()` (125g) — a validated artifact → child `RoadmapItem[]`, no I/O               |
+| Agent      | `.zibby/data/agents/roadmap-decomposer.md`                    | The dedicated, explicitly-routed decomposition agent (125g)                                         |
+| Controller | `apps/api/src/roadmap/roadmap.controller.ts`                  | implements `roadmapContract`                                                                        |
+| Module     | `apps/api/src/roadmap/roadmap.module.ts`                      | resolves `ROADMAP_DIR` (`$ROADMAP_DIR` env or `.zibby/data/roadmap`); `@Global()` (125e, see below) |
 
 `ProjectPrService` (`apps/api/src/projects/project-pr.service.ts`) also grows
 two 125e pieces: `getPr`/`isMerged` (the merge-state poll read) and a
