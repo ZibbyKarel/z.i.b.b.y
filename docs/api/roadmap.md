@@ -217,9 +217,14 @@ The project-id error is deliberately its own class rather than reusing
 `RoadmapItem "…" not found` sends whoever is debugging a failed sync looking
 for a missing item that was never the problem.
 
-`CorruptRoadmapItemFileError` is left out of the mapper on purpose. Folding it
-into the same 404 as "not found" would hide real on-disk data loss behind an
-everyday, expected status; unmapped it surfaces as a 500, which is the honest
-signal that something is broken rather than merely absent. Note `list()` stays
-tolerant regardless — it skips unparseable files so one bad item can never take
-down a whole project's board.
+`CorruptRoadmapItemFileError` is raised by **`get()`** — a file that reads and
+parses as JSON but fails `RoadmapItemSchema` — and is left out of the mapper on
+purpose. Folding it into the same 404 as "not found" would hide real on-disk
+data loss behind an everyday, expected status; unmapped it surfaces as a 500,
+the honest signal that something is broken rather than merely absent.
+
+`list()` is deliberately the opposite: it **skips** the very same corrupt file
+`get()` rejects on, so one bad item can never take down a whole project's board.
+The asymmetry is intentional — asking for one item by id should tell you the
+truth about it, while rendering a board should degrade rather than fail. Both
+halves are covered by tests in `roadmap.store.test.ts`.

@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { DEFAULT_LEVEL_MAPPING } from "@zibby/contracts";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LevelMappingStore } from "./level-mapping.store";
 
 describe("LevelMappingStore", () => {
@@ -87,6 +87,62 @@ describe("LevelMappingStore", () => {
       expect(result).toEqual(before);
       // No file was ever written — read() still comes from the seed default.
       await expect(fs.access(file)).rejects.toThrow();
+    });
+
+    it("waits for an in-flight write() and builds on its result — no lost entries (regression)", async () => {
+      const store = new LevelMappingStore(file);
+      const order: string[] = [];
+
+      // Gate the RENAME half of `write()`'s `writeFileAtomic` (tmp write, then
+      // rename-into-place) — the exact window in which an unlocked `ensureLevels`
+      // used to read a stale `this.mapping`, compute its addition off it, and
+      // then have its own later write clobber (or be clobbered by) `write()`'s.
+      let releaseGate: () => void = () => {};
+      const gate = new Promise<void>((resolve) => {
+        releaseGate = resolve;
+      });
+      const { promises: realFs } = await vi.importActual<typeof import("node:fs")>("node:fs");
+      const renameSpy = vi.spyOn(fs, "rename").mockImplementationOnce(async (from, to) => {
+        order.push("write:writing");
+        await gate;
+        const result = await realFs.rename(from as string, to as string);
+        order.push("write:written");
+        return result;
+      });
+
+      // An operator's full-table save (a sync tick could just as easily
+      // discover a new level while this is still in flight).
+      const written = store.write({
+        entries: [{ kind: "github", externalLevel: "Feature", target: "task" }],
+      });
+
+      // Let write() actually reach the mocked rename before racing ensureLevels() in.
+      await new Promise((resolve) => setImmediate(resolve));
+
+      // The sync tick's append, dispatched WHILE the operator's save is still
+      // in-flight — must queue behind it (same lock key), not read/write a
+      // stale snapshot.
+      const ensured = store.ensureLevels("jira", ["Spike"]).then((result) => {
+        order.push("ensureLevels:written");
+        return result;
+      });
+
+      releaseGate();
+      const [writtenResult, ensuredResult] = await Promise.all([written, ensured]);
+      renameSpy.mockRestore();
+
+      // ensureLevels only ran AFTER write() fully landed — never interleaved.
+      expect(order).toEqual(["write:writing", "write:written", "ensureLevels:written"]);
+
+      // ensureLevels built on the JUST-persisted table, not a stale in-memory
+      // snapshot — its own addition survives alongside the operator's save,
+      // consistently in both memory and on disk.
+      expect(ensuredResult.entries).toEqual([
+        ...writtenResult.entries,
+        { kind: "jira", externalLevel: "Spike", target: "task" },
+      ]);
+      expect(await store.read()).toEqual(ensuredResult);
+      expect(JSON.parse(await fs.readFile(file, "utf8"))).toEqual(ensuredResult);
     });
   });
 });
