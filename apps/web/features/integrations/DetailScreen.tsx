@@ -12,6 +12,7 @@ import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
+import { IntegrationAutonomyPanel } from "./components/IntegrationAutonomyPanel";
 import { IntegrationFormFields, useIntegrationFormState } from "./components/IntegrationFormFields";
 import {
   useDeleteIntegrationMutation,
@@ -163,6 +164,8 @@ function IntegrationEditor({
                 hasCredentials={integration.hasCredentials}
               />
             </HudPanel>
+
+            <IntegrationAutonomyPanel integrationId={integration.id} />
           </Stack>
         </PageContainer>
       </Container>

@@ -69,7 +69,8 @@ describe.skipIf(!SOAK)("Autonomous-loop soak (opt-in, fake channels)", () => {
       .post("/api/projects")
       .send({ id: "acme-app", name: "Acme", path: root })
       .expect(201);
-    // The three scripted integrations (F1b: ownerSubsystem is required at create).
+    // The three scripted integrations (owned by the project; subsystem membership
+    // is derived — puls listens, herald replies where mandate.reply is on).
     await http()
       .post("/api/integrations")
       .send({
@@ -78,7 +79,6 @@ describe.skipIf(!SOAK)("Autonomous-loop soak (opt-in, fake channels)", () => {
         projectId: "acme-app",
         name: "Team",
         config: { kind: "slack", channels: ["C1"] },
-        ownerSubsystem: "puls",
       })
       .expect(201);
     await http().put("/api/integrations/team/credentials").send({ token: "xoxb-1" }).expect(200);
@@ -90,7 +90,6 @@ describe.skipIf(!SOAK)("Autonomous-loop soak (opt-in, fake channels)", () => {
         projectId: "acme-app",
         name: "Announcements",
         config: { kind: "slack", channels: ["C2"] },
-        ownerSubsystem: "herald",
       })
       .expect(201);
     await http()
@@ -104,7 +103,6 @@ describe.skipIf(!SOAK)("Autonomous-loop soak (opt-in, fake channels)", () => {
         kind: "email",
         projectId: "acme-app",
         name: "Support Mail",
-        ownerSubsystem: "puls",
         config: {
           kind: "email",
           imapHost: "imap.x",

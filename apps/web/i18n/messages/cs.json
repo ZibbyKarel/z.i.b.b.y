@@ -504,7 +504,6 @@
     "lastSync": "Poslední synchronizace",
     "channelCount": "{count, plural, one {# kanál} few {# kanály} other {# kanálů}}",
     "kindLabel": "Typ",
-    "ownerSubsystemLabel": "Vlastnící subsystém",
     "kindSlack": "Slack",
     "kindEmail": "E-mail",
     "kindJira": "Jira",
@@ -556,6 +555,10 @@
     "enabledLabel": "Aktivní",
     "create": "Vytvořit",
     "detailPanel": "Konfigurace integrace",
+    "autonomyPanel": "Autonomie",
+    "autonomyHint": "Puls tenhle kanál sleduje vždy. Tady určíš, co smí ZIBBY dělat sám: dispatch = jednat podle příchozích zpráv (Tier 1), odpověď = sám odepsat (Tier 2, jménem Heralda). Bez nastavení platí výchozí hodnoty ze Settings → Mandate.",
+    "autonomyDispatch": "Dispatch (jednat)",
+    "autonomyReply": "Odpověď (Herald)",
     "deleteTitle": "Smazat integraci?",
     "deleteBody": "Opravdu smazat integraci {name}? Uložené přihlašovací údaje se smažou také. Tuto akci nelze vrátit."
   },

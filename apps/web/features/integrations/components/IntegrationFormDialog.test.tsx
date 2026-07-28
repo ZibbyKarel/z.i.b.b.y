@@ -27,7 +27,6 @@ describe("IntegrationFormDialog", () => {
       id: "team-slack",
       kind: "slack",
       projectId: "acme-app",
-      ownerSubsystem: "puls",
       name: "Team Slack",
       enabled: true,
       config: { kind: "slack", channels: ["C1", "C2", "C3"] },
@@ -42,8 +41,7 @@ describe("IntegrationFormDialog", () => {
     render(<IntegrationFormDialog onClose={vi.fn()} onCreate={onSubmit} projectId="acme-app" />);
 
     // Open the kind dropdown and pick the email option (cs catalog → "E-mail").
-    // NS2 F1b added a second dropdown (owning subsystem) to the create form —
-    // the kind selector is always the first `dropdown-trigger` in DOM order.
+    // The kind selector is the only `dropdown-trigger` before a kind is picked.
     await userEvent.click(screen.getAllByTestId("dropdown-trigger")[0]!);
     await userEvent.click(screen.getByText("E-mail"));
 
@@ -69,8 +67,7 @@ describe("IntegrationFormDialog", () => {
     const onSubmit = vi.fn();
     render(<IntegrationFormDialog onClose={vi.fn()} onCreate={onSubmit} projectId="acme-app" />);
 
-    // NS2 F1b added a second dropdown (owning subsystem) to the create form —
-    // the kind selector is always the first `dropdown-trigger` in DOM order.
+    // The kind selector is the only `dropdown-trigger` before a kind is picked.
     await userEvent.click(screen.getAllByTestId("dropdown-trigger")[0]!);
     await userEvent.click(screen.getByText("Jira"));
 
@@ -101,8 +98,7 @@ describe("IntegrationFormDialog", () => {
     const onSubmit = vi.fn();
     render(<IntegrationFormDialog onClose={vi.fn()} onCreate={onSubmit} projectId="acme-app" />);
 
-    // NS2 F1b added a second dropdown (owning subsystem) to the create form —
-    // the kind selector is always the first `dropdown-trigger` in DOM order.
+    // The kind selector is the only `dropdown-trigger` before a kind is picked.
     await userEvent.click(screen.getAllByTestId("dropdown-trigger")[0]!);
     await userEvent.click(screen.getByText("GitHub"));
 
@@ -127,8 +123,7 @@ describe("IntegrationFormDialog", () => {
     const onSubmit = vi.fn();
     render(<IntegrationFormDialog onClose={vi.fn()} onCreate={onSubmit} projectId="acme-app" />);
 
-    // NS2 F1b added a second dropdown (owning subsystem) to the create form —
-    // the kind selector is always the first `dropdown-trigger` in DOM order.
+    // The kind selector is the only `dropdown-trigger` before a kind is picked.
     await userEvent.click(screen.getAllByTestId("dropdown-trigger")[0]!);
     await userEvent.click(screen.getByText("Kalendář"));
 
@@ -151,8 +146,7 @@ describe("IntegrationFormDialog", () => {
     const onSubmit = vi.fn();
     render(<IntegrationFormDialog onClose={vi.fn()} onCreate={onSubmit} projectId="acme-app" />);
 
-    // NS2 F1b added a second dropdown (owning subsystem) to the create form —
-    // the kind selector is always the first `dropdown-trigger` in DOM order.
+    // The kind selector is the only `dropdown-trigger` before a kind is picked.
     await userEvent.click(screen.getAllByTestId("dropdown-trigger")[0]!);
     await userEvent.click(screen.getByText("GitHub"));
 

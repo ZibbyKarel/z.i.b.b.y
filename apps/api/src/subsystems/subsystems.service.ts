@@ -12,6 +12,7 @@ import type { TaskRun } from "@zibby/contracts";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { ApprovalsService } from "../approvals/approvals.service";
 import { IntegrationsStorageService } from "../integrations/integrations.storage.service";
+import { MandateStorageService } from "../mandate/mandate.storage.service";
 import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
 import { TaskRunsService } from "../tasks/task-runs.service";
 import { SubsystemSeenStore } from "./subsystem-seen.store";
@@ -96,6 +97,7 @@ export class SubsystemsService {
     private readonly seen: SubsystemSeenStore,
     private readonly agents: AgentsStorageService,
     private readonly integrations: IntegrationsStorageService,
+    private readonly mandate: MandateStorageService,
   ) {}
 
   /**
@@ -140,52 +142,54 @@ export class SubsystemsService {
   }
 
   /**
-   * NS2 F1b — every stored pipeline/agent/integration that still has no
-   * `ownerSubsystem`. A report list, not a health signal (the health read-model
-   * is a closed infra enum — not the place for an ownership gap): the
-   * owner-backfill sweep runs once at boot, so this is `[]` in steady state and
-   * only surfaces a NEWLY unowned entity (a hand-edited file, or a write path
-   * that somehow slipped past the create-time 422).
+   * NS2 F1b — every stored pipeline/agent that still has no `ownerSubsystem`. A
+   * report list, not a health signal (the health read-model is a closed infra
+   * enum — not the place for an ownership gap): the owner-backfill sweep runs
+   * once at boot, so this is `[]` in steady state and only surfaces a NEWLY
+   * unowned entity (a hand-edited file). Integrations are excluded — their
+   * membership is derived, not stored, so there is no ownership gap to report.
    */
   async listUnowned(): Promise<UnownedEntity[]> {
-    const [pipelines, agents, integrations] = await Promise.all([
-      this.pipelines.list(),
-      this.agents.list(),
-      this.integrations.list(),
-    ]);
+    const [pipelines, agents] = await Promise.all([this.pipelines.list(), this.agents.list()]);
     return [
       ...pipelines
         .filter((p) => !p.ownerSubsystem)
         .map((p) => ({ kind: "pipeline" as const, id: p.id })),
       ...agents.filter((a) => !a.ownerSubsystem).map((a) => ({ kind: "agent" as const, id: a.id })),
-      ...integrations
-        .filter((i) => !i.ownerSubsystem)
-        .map((i) => ({ kind: "integration" as const, id: i.id })),
     ];
   }
 
   /**
-   * NS2 F1c — the stored roster for `id`: owned agents, owned integrations,
-   * and `monitors` (the subset of owned integrations that are a GitHub
-   * integration with a `ci` stream — there is no standalone monitor entity).
-   * Throws `SubsystemNotFoundError` for an unknown id, same as {@link get}.
-   * Pipelines are deliberately excluded — the roster tab's canvas already
-   * sources those client-side.
+   * The roster for `id`: owned agents (stored `ownerSubsystem`) plus a DERIVED
+   * integration set. Integrations carry no owner tag — puls (the heartbeat
+   * watcher) sees every integration, herald (the outward voice) sees the
+   * reply-enabled ones (`mandate.reply`, per-channel override over the default),
+   * every other subsystem sees none. `monitors` is the subset of that set that
+   * are GitHub integrations with a `ci` stream — there is no standalone monitor
+   * entity. Throws `SubsystemNotFoundError` for an unknown id, same as
+   * {@link get}. Pipelines are deliberately excluded — the roster tab's canvas
+   * already sources those client-side.
    */
   async roster(id: string): Promise<SubsystemRoster> {
     const subsystem = this.find(id);
-    const [agents, integrations] = await Promise.all([
+    const [agents, integrations, mandate] = await Promise.all([
       this.agents.list(),
       this.integrations.list(),
+      this.mandate.read(),
     ]);
     const ownedAgents = agents.filter((a) => a.ownerSubsystem === subsystem.id);
-    const ownedIntegrations = integrations.filter((i) => i.ownerSubsystem === subsystem.id);
-    const monitors = ownedIntegrations.filter(
+    const rosterIntegrations =
+      subsystem.id === "puls"
+        ? integrations
+        : subsystem.id === "herald"
+          ? integrations.filter((i) => mandate.channels[i.id]?.reply ?? mandate.defaults.reply)
+          : [];
+    const monitors = rosterIntegrations.filter(
       (i) => i.config.kind === "github" && i.config.streams.includes("ci"),
     );
     return {
       agents: ownedAgents.map((a) => ({ id: a.id, name: a.name })),
-      integrations: ownedIntegrations.map((i) => ({ id: i.id, name: i.name, kind: i.kind })),
+      integrations: rosterIntegrations.map((i) => ({ id: i.id, name: i.name, kind: i.kind })),
       monitors: monitors.map((i) => ({ id: i.id, name: i.name, kind: i.kind })),
     };
   }

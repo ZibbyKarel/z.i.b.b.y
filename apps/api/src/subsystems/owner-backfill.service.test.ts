@@ -3,7 +3,6 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { AgentsStorageService } from "../agents/agents.storage.service";
-import { IntegrationsStorageService } from "../integrations/integrations.storage.service";
 import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
 import { OwnerBackfillService } from "./owner-backfill.service";
 
@@ -11,23 +10,14 @@ describe("OwnerBackfillService (NS2 F1b)", () => {
   let root: string;
   let pipelines: PipelinesStorageService;
   let agents: AgentsStorageService;
-  let integrations: IntegrationsStorageService;
   let backfill: OwnerBackfillService;
 
   beforeEach(async () => {
     root = await fs.mkdtemp(path.join(os.tmpdir(), "owner-backfill-test-"));
     pipelines = new PipelinesStorageService(path.join(root, "pipelines"));
     agents = new AgentsStorageService(path.join(root, "agents"));
-    integrations = new IntegrationsStorageService(
-      path.join(root, "integrations"),
-      path.join(root, "integration-state"),
-    );
-    await Promise.all([
-      pipelines.onModuleInit(),
-      agents.onModuleInit(),
-      integrations.onModuleInit(),
-    ]);
-    backfill = new OwnerBackfillService(pipelines, agents, integrations);
+    await Promise.all([pipelines.onModuleInit(), agents.onModuleInit()]);
+    backfill = new OwnerBackfillService(pipelines, agents);
   });
 
   afterEach(async () => {
@@ -82,19 +72,6 @@ describe("OwnerBackfillService (NS2 F1b)", () => {
     expect((await pipelines.get("research")).ownerSubsystem).toBe("scout");
   });
 
-  it("tags every untagged integration puls", async () => {
-    await integrations.create({
-      id: "team-slack",
-      kind: "slack",
-      projectId: "acme",
-      config: { kind: "slack", channels: [] },
-    });
-
-    await backfill.onModuleInit();
-
-    expect((await integrations.get("team-slack")).ownerSubsystem).toBe("puls");
-  });
-
   it("skips an already-owned entity (idempotent — never overwrites an existing owner)", async () => {
     await pipelines.create({
       id: "delivery",
@@ -110,19 +87,19 @@ describe("OwnerBackfillService (NS2 F1b)", () => {
   });
 
   it("running onModuleInit twice is a no-op the second time (idempotent)", async () => {
-    await integrations.create({
-      id: "team-slack",
-      kind: "slack",
-      projectId: "acme",
-      config: { kind: "slack", channels: [] },
+    await pipelines.create({
+      id: "delivery",
+      phases: [{ id: "a", type: "verify" }],
+      outputs: [],
+      instructions: "x",
     });
 
     await backfill.onModuleInit();
-    const firstPass = await integrations.get("team-slack");
+    const firstPass = await pipelines.get("delivery");
     await backfill.onModuleInit();
-    const secondPass = await integrations.get("team-slack");
+    const secondPass = await pipelines.get("delivery");
 
-    expect(firstPass.ownerSubsystem).toBe("puls");
+    expect(firstPass.ownerSubsystem).toBe("forge");
     expect(secondPass).toEqual(firstPass);
   });
 

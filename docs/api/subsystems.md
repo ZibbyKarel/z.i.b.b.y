@@ -14,17 +14,17 @@ backend/vault/integrations/scheduler). Never touch or reuse it for this resource
 
 ## Pieces
 
-| Piece        | File                                                                     | Role                                                                                                                                                                                                    |
-| ------------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Schema       | `libs/contracts/src/subsystems/subsystem.schema.ts`                      | `SubsystemIdSchema` (8-value enum), `SubsystemSchema`, `SUBSYSTEMS` registry constant, `SubsystemStateSchema`, `SubsystemWithStatusSchema`                                                              |
-| Contract     | `libs/contracts/src/subsystems/subsystems.contract.ts`                   | `subsystemsContract` — `getSubsystems` (`GET /api/subsystems`), `getSubsystem` (`GET /api/subsystems/:id`, 404 on unknown id), `markSubsystemSeen` (`POST /api/subsystems/:id/seen`, 404 on unknown id) |
-| Errors       | `apps/api/src/subsystems/subsystems.errors.ts`                           | `SubsystemNotFoundError`                                                                                                                                                                                |
-| Seen store   | `apps/api/src/subsystems/subsystem-seen.store.ts`                        | `SubsystemSeenStore` — `.zibby/data/subsystem-seen.json`, `{ [id]: IsoDateTime }`, missing file/key = epoch, atomic writes                                                                              |
-| Service      | `apps/api/src/subsystems/subsystems.service.ts`                          | `SubsystemsService.list()` / `.get(id)` / `.markSeen(id)` — real aggregation over pipelines/runs/approvals (phase 82)                                                                                   |
-| Controller   | `apps/api/src/subsystems/subsystems.controller.ts`                       | implements `subsystemsContract` via the shared `makeErrorMapper` 404 pattern                                                                                                                            |
-| Module       | `apps/api/src/subsystems/subsystems.module.ts`                           | imports `PipelinesModule`, `ApprovalsModule`, `TasksModule` (for `TaskRunsService`, now exported from `TasksModule`) — registered in `app.module.ts`                                                    |
-| Web query    | `apps/web/features/subsystems/queries/useSubsystemsQuery.ts`             | `refetchInterval` ~15s, `select: selectApiResponseBody`, same posture as `useHealthQuery`/`useSelfStatusQuery`                                                                                          |
-| Web mutation | `apps/web/features/subsystems/mutations/useMarkSubsystemSeenMutation.ts` | `makeInvalidatingMutation` over `markSubsystemSeen`, invalidates the subsystems query key — called when the operator opens a subsystem's drawer (phase 84)                                              |
+| Piece        | File                                                                     | Role                                                                                                                                                                                                                                    |
+| ------------ | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Schema       | `libs/contracts/src/subsystems/subsystem.schema.ts`                      | `SubsystemIdSchema` (8-value enum), `SubsystemSchema`, `SUBSYSTEMS` registry constant, `SubsystemStateSchema`, `SubsystemWithStatusSchema`                                                                                              |
+| Contract     | `libs/contracts/src/subsystems/subsystems.contract.ts`                   | `subsystemsContract` — `getSubsystems` (`GET /api/subsystems`), `getSubsystem` (`GET /api/subsystems/:id`, 404 on unknown id), `markSubsystemSeen` (`POST /api/subsystems/:id/seen`, 404 on unknown id)                                 |
+| Errors       | `apps/api/src/subsystems/subsystems.errors.ts`                           | `SubsystemNotFoundError`                                                                                                                                                                                                                |
+| Seen store   | `apps/api/src/subsystems/subsystem-seen.store.ts`                        | `SubsystemSeenStore` — `.zibby/data/subsystem-seen.json`, `{ [id]: IsoDateTime }`, missing file/key = epoch, atomic writes                                                                                                              |
+| Service      | `apps/api/src/subsystems/subsystems.service.ts`                          | `SubsystemsService.list()` / `.get(id)` / `.markSeen(id)` — real aggregation over pipelines/runs/approvals (phase 82)                                                                                                                   |
+| Controller   | `apps/api/src/subsystems/subsystems.controller.ts`                       | implements `subsystemsContract` via the shared `makeErrorMapper` 404 pattern                                                                                                                                                            |
+| Module       | `apps/api/src/subsystems/subsystems.module.ts`                           | imports `PipelinesModule`, `ApprovalsModule`, `TasksModule` (for `TaskRunsService`), `AgentsModule`, `IntegrationsModule`, and `MandateModule` (the roster's derived integration set reads the mandate) — registered in `app.module.ts` |
+| Web query    | `apps/web/features/subsystems/queries/useSubsystemsQuery.ts`             | `refetchInterval` ~15s, `select: selectApiResponseBody`, same posture as `useHealthQuery`/`useSelfStatusQuery`                                                                                                                          |
+| Web mutation | `apps/web/features/subsystems/mutations/useMarkSubsystemSeenMutation.ts` | `makeInvalidatingMutation` over `markSubsystemSeen`, invalidates the subsystems query key — called when the operator opens a subsystem's drawer (phase 84)                                                                              |
 
 ## The registry
 
@@ -82,6 +82,24 @@ run/approval semantics, only reads and correlates:
   `ceka > bezi > hlaseni > klid` — waiting-on-you is never masked by ambient
   activity. Counts are independent of the headline state (a subsystem can
   carry a `tier2Count` while its state reads `ceka`).
+
+## Roster (`GET /api/subsystems/:id/roster`)
+
+A subsystem's `{ agents, integrations, monitors }`, served by
+`SubsystemsService.roster(id)`. `agents` is filtered off the stored
+`ownerSubsystem` tag. `integrations` is **derived, not stored** — integrations
+carry no owner tag:
+
+- **puls** lists EVERY integration (the heartbeat watcher listens to all).
+- **herald** lists the reply-enabled ones
+  (`mandate.channels[id].reply ?? mandate.defaults.reply`) — the same set
+  herald replies through.
+- every other subsystem lists none.
+
+`monitors` is the subset of that set that are GitHub integrations with a `ci`
+stream (there is no standalone monitor entity). `listUnowned()`
+(`GET /api/subsystems/unowned`) reports only unowned pipelines/agents — never
+integrations, whose membership is derived and so can never be "missing".
 
 ## Seen-state (`SubsystemSeenStore`)
 

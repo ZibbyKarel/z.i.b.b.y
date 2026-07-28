@@ -56,12 +56,6 @@ export class IntegrationsController {
         if (body.kind !== body.config.kind) {
           return Promise.resolve(unprocessable("config kind must match the integration kind"));
         }
-        // NS2 F1b: every new integration must be attributed to a subsystem —
-        // pre-F1 integrations are exempt (tagged by the owner-backfill sweep
-        // instead), so this is a create-only guard, not a schema-level one.
-        if (!body.ownerSubsystem) {
-          return Promise.resolve(unprocessable("ownerSubsystem is required"));
-        }
         return errors.created(
           async () => {
             // Phase 70: a company-owned integration (`body.companyId` set instead) isn't

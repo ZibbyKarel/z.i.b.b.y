@@ -16,7 +16,6 @@ const SLACK = {
   projectId: "acme-app",
   name: "Team Slack",
   config: { kind: "slack", channels: ["C123"] },
-  ownerSubsystem: "puls",
 };
 
 describe("Integrations API (e2e)", () => {
@@ -108,7 +107,6 @@ describe("Integrations API (e2e)", () => {
           smtpPort: 1,
           user: "u",
         },
-        ownerSubsystem: "puls",
       })
       .expect(422);
   });
@@ -121,7 +119,6 @@ describe("Integrations API (e2e)", () => {
         kind: "slack",
         projectId: "nope-not-a-project",
         config: { kind: "slack", channels: [] },
-        ownerSubsystem: "puls",
       })
       .expect(422);
   });
@@ -141,7 +138,6 @@ describe("Integrations API (e2e)", () => {
           smtpPort: 465,
           user: "me@x.dev",
         },
-        ownerSubsystem: "puls",
       })
       .expect(201);
 
@@ -184,7 +180,6 @@ describe("Integrations API (e2e)", () => {
         kind: "jira",
         companyId: "acme-hq",
         config: { kind: "jira", baseUrl: "https://acme.atlassian.net", email: "hq@acme.dev" },
-        ownerSubsystem: "puls",
       })
       .expect(201);
     await request(app.getHttpServer())
@@ -194,7 +189,6 @@ describe("Integrations API (e2e)", () => {
         kind: "slack",
         projectId: "acme-branch",
         config: { kind: "slack", channels: ["C1"] },
-        ownerSubsystem: "puls",
       })
       .expect(201);
 
@@ -214,7 +208,6 @@ describe("Integrations API (e2e)", () => {
         kind: "slack",
         companyId: "acme-hq",
         config: { kind: "slack", channels: ["C-hq"] },
-        ownerSubsystem: "puls",
       })
       .expect(201);
     const overridden = await request(app.getHttpServer())
@@ -269,7 +262,6 @@ describe("Integrations API (e2e)", () => {
         kind: "slack",
         projectId: "acme-app",
         config: { kind: "slack", channels: [] },
-        ownerSubsystem: "puls",
       })
       .expect(201);
     await request(app.getHttpServer()).post("/api/integrations/no-creds/test").send({}).expect(409);
@@ -304,7 +296,7 @@ describe("Integrations API (e2e)", () => {
       .expect(200);
   });
 
-  it("NS2 F1b: rejects create without ownerSubsystem (422)", async () => {
+  it("creates without any subsystem attribution (membership is derived, not stored)", async () => {
     const res = await request(app.getHttpServer())
       .post("/api/integrations")
       .send({
@@ -314,8 +306,8 @@ describe("Integrations API (e2e)", () => {
         name: "No Owner",
         config: { kind: "slack", channels: ["C123"] },
       });
-    expect(res.status).toBe(422);
-    expect(res.body.message).toContain("ownerSubsystem");
+    expect(res.status).toBe(201);
+    expect(res.body).not.toHaveProperty("ownerSubsystem");
   });
 
   it("delete cascades the credentials file", async () => {

@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { AgentsModule } from "../agents/agents.module";
 import { ApprovalsModule } from "../approvals/approvals.module";
 import { IntegrationsModule } from "../integrations/integrations.module";
+import { MandateModule } from "../mandate/mandate.module";
 import { dataDir } from "../shared/data-dir";
 import { PipelinesModule } from "../pipelines/pipelines.module";
 import { TasksModule } from "../tasks/tasks.module";
@@ -24,7 +25,14 @@ export function resolveSubsystemSeenFile(): string {
  * domain logic duplicated.
  */
 @Module({
-  imports: [PipelinesModule, ApprovalsModule, TasksModule, AgentsModule, IntegrationsModule],
+  imports: [
+    PipelinesModule,
+    ApprovalsModule,
+    TasksModule,
+    AgentsModule,
+    IntegrationsModule,
+    MandateModule,
+  ],
   controllers: [SubsystemsController],
   providers: [
     { provide: SUBSYSTEM_SEEN_FILE, useFactory: resolveSubsystemSeenFile },

@@ -158,12 +158,13 @@ export const SubsystemWithStatusSchema = SubsystemSchema.extend({
 export type SubsystemWithStatus = z.infer<typeof SubsystemWithStatusSchema>;
 
 /**
- * NS2 F1b — the kind of stored entity that can carry an `ownerSubsystem`.
- * Pipelines/chains have carried it since Phase 81; agents/integrations gained
- * it in F1a. There is no standalone monitor entity (a monitor is a ci-stream
- * GitHub integration), so monitor ownership is covered by `"integration"`.
+ * The kind of stored entity that can carry an `ownerSubsystem`. Pipelines/chains
+ * have carried it since Phase 81; agents gained it in NS2 F1a. Integrations do
+ * NOT carry it: an integration's federation membership is DERIVED, not stored —
+ * puls listens to every integration, herald replies through the reply-enabled
+ * ones (per the mandate). See {@link SubsystemRosterSchema}.
  */
-export const OwnableEntityKindSchema = z.enum(["pipeline", "agent", "integration"]);
+export const OwnableEntityKindSchema = z.enum(["pipeline", "agent"]);
 export type OwnableEntityKind = z.infer<typeof OwnableEntityKindSchema>;
 
 /**
@@ -196,13 +197,13 @@ export const RosterIntegrationRefSchema = z.object({
 export type RosterIntegrationRef = z.infer<typeof RosterIntegrationRefSchema>;
 
 /**
- * NS2 F1c — a subsystem's stored roster, read directly off `ownerSubsystem`
- * tags rather than derived client-side from pipeline phases (the old
- * `deriveCrew`). `monitors` is a subset of `integrations` (owned GitHub
- * integrations with a `ci` stream) — there is no standalone monitor entity,
- * see {@link OwnableEntityKindSchema}'s doc. Pipelines/chains are NOT part of
- * this shape — the roster tab already sources those client-side (the canvas),
- * so serving them here would duplicate data.
+ * A subsystem's roster. `agents` is read off stored `ownerSubsystem` tags.
+ * `integrations` is DERIVED, not stored: puls (the heartbeat watcher) lists
+ * every integration; herald (the outward voice) lists the reply-enabled ones
+ * (`mandate.reply`); every other subsystem lists none. `monitors` is the subset
+ * of that subsystem's `integrations` that are GitHub integrations with a `ci`
+ * stream — there is no standalone monitor entity. Pipelines/chains are NOT part
+ * of this shape — the roster tab already sources those client-side (the canvas).
  */
 export const SubsystemRosterSchema = z.object({
   agents: z.array(RosterAgentRefSchema),

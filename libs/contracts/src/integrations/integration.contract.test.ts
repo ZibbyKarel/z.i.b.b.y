@@ -130,43 +130,14 @@ describe("integration schema", () => {
     ).toBe(true);
   });
 
-  it("accepts a valid ownerSubsystem (NS2 F1a)", () => {
-    const parsed = IntegrationSchema.safeParse({
-      id: "x",
-      kind: "slack",
-      projectId: "acme-app",
-      config: { kind: "slack", channels: [] },
-      ownerSubsystem: "puls",
-    });
-    expect(parsed.success).toBe(true);
-    if (parsed.success) {
-      expect(parsed.data.ownerSubsystem).toBe("puls");
-    }
-  });
-
-  it("rejects an unknown ownerSubsystem", () => {
-    expect(
-      IntegrationSchema.safeParse({
-        id: "x",
-        kind: "slack",
-        projectId: "acme-app",
-        config: { kind: "slack", channels: [] },
-        ownerSubsystem: "not-a-subsystem",
-      }).success,
-    ).toBe(false);
-  });
-
-  it("omitting ownerSubsystem still validates (pre-F1 integrations)", () => {
-    const parsed = IntegrationSchema.safeParse({
+  it("does not carry an ownerSubsystem (membership is derived, not stored)", () => {
+    const parsed = IntegrationSchema.parse({
       id: "x",
       kind: "slack",
       projectId: "acme-app",
       config: { kind: "slack", channels: [] },
     });
-    expect(parsed.success).toBe(true);
-    if (parsed.success) {
-      expect(parsed.data.ownerSubsystem).toBeUndefined();
-    }
+    expect("ownerSubsystem" in parsed).toBe(false);
   });
 
   it("rejects a config whose kind disagrees with the integration kind", () => {

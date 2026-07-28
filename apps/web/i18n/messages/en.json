@@ -504,7 +504,6 @@
     "lastSync": "Last sync",
     "channelCount": "{count, plural, one {# channel} other {# channels}}",
     "kindLabel": "Kind",
-    "ownerSubsystemLabel": "Owning subsystem",
     "kindSlack": "Slack",
     "kindEmail": "Email",
     "kindJira": "Jira",
@@ -556,6 +555,10 @@
     "enabledLabel": "Enabled",
     "create": "Create",
     "detailPanel": "Integration configuration",
+    "autonomyPanel": "Autonomy",
+    "autonomyHint": "Puls always watches this channel. Set what ZIBBY may do on its own: dispatch = act on inbound messages (Tier 1), reply = send replies itself (Tier 2, as Herald). With nothing set here, the Settings → Mandate defaults apply.",
+    "autonomyDispatch": "Dispatch (act)",
+    "autonomyReply": "Reply (Herald)",
     "deleteTitle": "Delete integration?",
     "deleteBody": "Really delete integration {name}? Stored credentials are deleted too. This cannot be undone."
   },

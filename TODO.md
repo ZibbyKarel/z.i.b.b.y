@@ -1,7 +1,2 @@
-<!-- - [ ] na stránce /projects/cms4?tab=integrations
-  - karty "schválit" vidím jen na overview. Musíme přidat nějakou sekci na stránku /automations kde uvidím schvalování,
-    které pochází z automatizací a nikoliv s behů tasků. Podobně jako dnes vidím schvalování v záložce /runs pro tasky
-  - na kartě schválení, potřebuji mít odkaz na původní zdroj (Github link/Email link/Slack zpráva)
-  - řádky v sekci "Příchozí zprávy" musí zobrazit dialog, kde uvidím kartu, kde danou zprávu můžu schválit
-
-- [ ] Ikona projektu cms4 se nepřenesla na druhý počítač. Pokud nastavím proejktu ikonu a systém aktualizuji na novém počítači měl bych ji také vidět -->
+- implmentovat učící se mechanismus z CR u PR. Use Case: pokud uděláme PR a někdo tam napíše commenty, tak je opravíme ale musíme někde uchovávat kolikrát se co commentovalo. Pokud se to bude vícekrát opakovat tak bychom to v následujících otevřených PR neměli opakovat.
+- detekce cyklů v roadmap závislostech (`dependsOn`). Deterministický DFS nad grafem roadmap itemů projektu — spustit při importu/re-syncu a při ručním přidání hrany. Item v cyklu se nesmí nikdy automaticky dispatchnout (zůstane blokovaný) a musí být v UI viditelně označený, aby operátor cyklus rozsekl. Záměrně odloženo z první verze Roadmapy.

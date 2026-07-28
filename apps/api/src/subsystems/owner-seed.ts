@@ -7,11 +7,10 @@ import type { Pipeline, SubsystemId } from "@zibby/contracts";
  * the mapping is exercised directly in `owner-seed.test.ts` without a temp dir.
  *
  * Roadmap premise corrections baked in (see `docs/plans/ns2-f1-ownership-is-data.md`):
- * - There is no standalone monitor entity — a monitor is a ci-stream GitHub
- *   `Integration`, so integration ownership covers monitor ownership for free.
- * - The puls/herald split is NOT derivable at seed time (no stored
- *   reply-capability field yet) — every integration seeds to `puls`, herald
- *   split deferred (`TODO(F-herald)`).
+ * - Integrations are NOT seeded here: an integration's federation membership is
+ *   DERIVED, not stored (puls listens to every integration, herald replies
+ *   through the reply-enabled ones — see `SubsystemsService.roster`). Monitors
+ *   (ci-stream GitHub integrations) fall out of that same derivation for free.
  * - codex/ledger own no dispatchable entities yet (memory + budget are
  *   services, not stored entities carrying an owner tag) — neither function
  *   below ever returns them.
@@ -38,27 +37,6 @@ const PIPELINE_OWNER_BY_ID: Readonly<Record<string, SubsystemId>> = {
 /** Seed owner for a pipeline id, or `undefined` when the id isn't in the rule table. */
 export function pipelineOwnerSeed(pipelineId: string): SubsystemId | undefined {
   return PIPELINE_OWNER_BY_ID[pipelineId];
-}
-
-/**
- * Every integration (including ci-stream GitHub monitors — there is no
- * standalone monitor entity, see module doc) seeds to `puls`.
- *
- * NS2 F8 — this DELIBERATELY includes the calendar integration. "Puls polls,
- * Hearth consumes": Puls owns every inbound heartbeat (channel polling,
- * calendar, CI/CD monitors — north-star-2.md's §The Chairs is explicit), and
- * Hearth is Tier-3-leaning ("surface, don't act"), not a watcher — giving it
- * the calendar poller would violate its own charter. Hearth instead owns the
- * personal vault domain (`domain: personal` notes, quick capture, the
- * personal agenda/reminders surface) built FROM Puls's calendar reads, not
- * the poller itself. Do not "fix" this by routing calendar to hearth — see
- * `docs/plans/ns2-f8-hearth-personal.md`'s FC-1 for the full ruling.
- *
- * TODO(F-herald): once a reply-capability criterion exists, reply-capable
- * integrations should route to `herald` instead.
- */
-export function integrationOwnerSeed(): SubsystemId {
-  return "puls";
 }
 
 /**

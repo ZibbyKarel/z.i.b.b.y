@@ -1,9 +1,1 @@
-{
-  "id": "zibbycalendar",
-  "kind": "calendar",
-  "projectId": "zibby-self",
-  "name": "Google Calendar",
-  "enabled": true,
-  "config": { "kind": "calendar", "calendarId": "primary", "lookaheadDays": 14 },
-  "ownerSubsystem": "puls"
-}
+{"id":"zibbycalendar","kind":"calendar","projectId":"zibby-self","name":"Google Calendar","enabled":true,"config":{"kind":"calendar","calendarId":"primary","lookaheadDays":14},"ownerSubsystem":"puls"}

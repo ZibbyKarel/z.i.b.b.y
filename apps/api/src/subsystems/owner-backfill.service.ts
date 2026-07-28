@@ -1,16 +1,18 @@
 import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import { AgentsStorageService } from "../agents/agents.storage.service";
-import { IntegrationsStorageService } from "../integrations/integrations.storage.service";
 import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
-import { agentOwnersFromPipelines, integrationOwnerSeed, pipelineOwnerSeed } from "./owner-seed";
+import { agentOwnersFromPipelines, pipelineOwnerSeed } from "./owner-seed";
 
 /**
  * NS2 F1b — one-shot, idempotent startup backfill that tags every pre-F1
- * pipeline / agent / integration with its `ownerSubsystem`, mirroring
- * the proven `sweepInlineAvatars` sweep pattern (`agents.storage.service.ts`):
- * a per-entity try/catch, atomic writes via each store's own `update`, never
+ * pipeline / agent with its `ownerSubsystem`, mirroring the proven
+ * `sweepInlineAvatars` sweep pattern (`agents.storage.service.ts`): a
+ * per-entity try/catch, atomic writes via each store's own `update`, never
  * fatal to boot. Idempotent by construction — an already-owned entity is
  * skipped, so re-running on every boot is a no-op once the fleet is tagged.
+ *
+ * Integrations are NOT backfilled: their federation membership is derived, not
+ * stored (see `SubsystemsService.roster`).
  *
  * Runs after each injected store's own directory-ensure: constructor injection
  * gives Nest the dependency edges it needs to run THIS service's
@@ -23,13 +25,11 @@ export class OwnerBackfillService implements OnModuleInit {
   constructor(
     private readonly pipelines: PipelinesStorageService,
     private readonly agents: AgentsStorageService,
-    private readonly integrations: IntegrationsStorageService,
   ) {}
 
   async onModuleInit(): Promise<void> {
     await this.backfillPipelines();
     await this.backfillAgents();
-    await this.backfillIntegrations();
   }
 
   private async backfillPipelines(): Promise<void> {
@@ -56,16 +56,6 @@ export class OwnerBackfillService implements OnModuleInit {
       if (!owner) continue;
       await this.tag("agent", agent.id, () =>
         this.agents.update(agent.id, { ownerSubsystem: owner }),
-      );
-    }
-  }
-
-  private async backfillIntegrations(): Promise<void> {
-    const all = await this.integrations.list();
-    for (const integration of all) {
-      if (integration.ownerSubsystem) continue;
-      await this.tag("integration", integration.id, () =>
-        this.integrations.update(integration.id, { ownerSubsystem: integrationOwnerSeed() }),
       );
     }
   }

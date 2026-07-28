@@ -1,9 +1,10 @@
-import type { Agent, Approval, Integration, Pipeline, TaskRun } from "@zibby/contracts";
-import { SUBSYSTEMS } from "@zibby/contracts";
+import type { Agent, Approval, Integration, Mandate, Pipeline, TaskRun } from "@zibby/contracts";
+import { DEFAULT_MANDATE, SUBSYSTEMS } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
 import type { AgentsStorageService } from "../agents/agents.storage.service";
 import type { ApprovalsService } from "../approvals/approvals.service";
 import type { IntegrationsStorageService } from "../integrations/integrations.storage.service";
+import type { MandateStorageService } from "../mandate/mandate.storage.service";
 import type { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
 import type { TaskRunsService } from "../tasks/task-runs.service";
 import { SUBSYSTEM_SEEN_EPOCH, type SubsystemSeenStore } from "./subsystem-seen.store";
@@ -59,12 +60,14 @@ function build(opts: {
   seenAt?: Record<string, string>;
   agents?: Agent[];
   integrations?: Integration[];
+  mandate?: Mandate;
 }) {
   const pipelinesStore = { list: vi.fn(async () => opts.pipelines ?? []) };
   const taskRuns = { listTaskRuns: vi.fn(async () => opts.runs ?? []) };
   const approvals = { list: vi.fn(async () => opts.pendingApprovals ?? []) };
   const agentsStore = { list: vi.fn(async () => opts.agents ?? []) };
   const integrationsStore = { list: vi.fn(async () => opts.integrations ?? []) };
+  const mandateStore = { read: vi.fn(async () => opts.mandate ?? DEFAULT_MANDATE) };
   const seenMap = new Map<string, string>(Object.entries(opts.seenAt ?? {}));
   const seenStore = {
     seenAt: vi.fn(async (id: string) => seenMap.get(id) ?? SUBSYSTEM_SEEN_EPOCH),
@@ -82,6 +85,7 @@ function build(opts: {
     seenStore as unknown as SubsystemSeenStore,
     agentsStore as unknown as AgentsStorageService,
     integrationsStore as unknown as IntegrationsStorageService,
+    mandateStore as unknown as MandateStorageService,
   );
   return {
     service,
@@ -91,6 +95,7 @@ function build(opts: {
     seenStore,
     agentsStore,
     integrationsStore,
+    mandateStore,
   };
 }
 
@@ -513,10 +518,12 @@ describe("SubsystemsService", () => {
   });
 
   describe("listUnowned() — NS2 F1b", () => {
-    it("returns [] when every pipeline/agent/integration is owned", async () => {
+    it("returns [] when every pipeline/agent is owned (integrations are never reported)", async () => {
       const { service } = build({
         pipelines: [pipelineFixture("delivery", "forge")],
         agents: [{ id: "architect", ownerSubsystem: "forge", instructions: "x" } as Agent],
+        // An integration with no owner tag is NOT an ownership gap — membership is
+        // derived, so it never appears in the unowned report.
         integrations: [
           {
             id: "team-slack",
@@ -526,14 +533,13 @@ describe("SubsystemsService", () => {
             enabled: true,
             status: "disconnected",
             hasCredentials: false,
-            ownerSubsystem: "puls",
           } as Integration,
         ],
       });
       expect(await service.listUnowned()).toEqual([]);
     });
 
-    it("lists every unowned pipeline/agent/integration by kind + id", async () => {
+    it("lists every unowned pipeline/agent by kind + id (never an integration)", async () => {
       const { service } = build({
         pipelines: [pipelineFixture("orphan-pipeline")],
         agents: [{ id: "orphan-agent", instructions: "x" } as Agent],
@@ -554,14 +560,13 @@ describe("SubsystemsService", () => {
         expect.arrayContaining([
           { kind: "pipeline", id: "orphan-pipeline" },
           { kind: "agent", id: "orphan-agent" },
-          { kind: "integration", id: "orphan-integration" },
         ]),
       );
-      expect(unowned).toHaveLength(3);
+      expect(unowned).toHaveLength(2);
     });
   });
 
-  describe("roster() — NS2 F1c", () => {
+  describe("roster()", () => {
     function agentFixture(id: string, ownerSubsystem?: Agent["ownerSubsystem"]): Agent {
       return {
         id,
@@ -571,7 +576,7 @@ describe("SubsystemsService", () => {
       } as Agent;
     }
 
-    function slackFixture(id: string, ownerSubsystem?: Integration["ownerSubsystem"]): Integration {
+    function slackFixture(id: string): Integration {
       return {
         id,
         name: id,
@@ -581,15 +586,10 @@ describe("SubsystemsService", () => {
         enabled: true,
         status: "disconnected",
         hasCredentials: false,
-        ...(ownerSubsystem ? { ownerSubsystem } : {}),
       } as Integration;
     }
 
-    function githubFixture(
-      id: string,
-      streams: string[],
-      ownerSubsystem?: Integration["ownerSubsystem"],
-    ): Integration {
+    function githubFixture(id: string, streams: string[]): Integration {
       return {
         id,
         name: id,
@@ -599,24 +599,57 @@ describe("SubsystemsService", () => {
         enabled: true,
         status: "disconnected",
         hasCredentials: false,
-        ...(ownerSubsystem ? { ownerSubsystem } : {}),
       } as Integration;
     }
 
-    it("exact match: only entities owned by the given subsystem are returned", async () => {
+    it("agents are filtered by ownerSubsystem; a non-puls/herald subsystem sees no integrations", async () => {
       const { service } = build({
         agents: [agentFixture("architekt", "forge"), agentFixture("scribe", "codex")],
-        integrations: [slackFixture("team-slack", "forge"), slackFixture("watch", "puls")],
+        integrations: [slackFixture("team-slack"), slackFixture("watch")],
       });
       const forge = await service.roster("forge");
       expect(forge.agents).toEqual([{ id: "architekt", name: "architekt" }]);
-      expect(forge.integrations).toEqual([{ id: "team-slack", name: "team-slack", kind: "slack" }]);
+      expect(forge.integrations).toEqual([]);
+      expect(forge.monitors).toEqual([]);
+    });
+
+    it("puls sees EVERY integration (the heartbeat watcher listens to all)", async () => {
+      const { service } = build({
+        integrations: [slackFixture("team-slack"), slackFixture("watch")],
+      });
+      const puls = await service.roster("puls");
+      expect(puls.integrations).toEqual([
+        { id: "team-slack", name: "team-slack", kind: "slack" },
+        { id: "watch", name: "watch", kind: "slack" },
+      ]);
+    });
+
+    it("herald sees only the reply-enabled integrations (mandate.reply)", async () => {
+      const mandate: Mandate = {
+        defaults: { dispatch: true, reply: false },
+        channels: { "team-slack": { reply: true } },
+      };
+      const { service } = build({
+        integrations: [slackFixture("team-slack"), slackFixture("silent")],
+        mandate,
+      });
+      const herald = await service.roster("herald");
+      expect(herald.integrations).toEqual([
+        { id: "team-slack", name: "team-slack", kind: "slack" },
+      ]);
+    });
+
+    it("herald falls back to the default reply flag when a channel has no override", async () => {
+      const mandate: Mandate = { defaults: { dispatch: true, reply: true }, channels: {} };
+      const { service } = build({ integrations: [slackFixture("team-slack")], mandate });
+      const herald = await service.roster("herald");
+      expect(herald.integrations).toHaveLength(1);
     });
 
     it("is empty for a subsystem that owns nothing (codex/ledger)", async () => {
       const { service } = build({
         agents: [agentFixture("architekt", "forge")],
-        integrations: [slackFixture("team-slack", "forge")],
+        integrations: [slackFixture("team-slack")],
       });
       const codex = await service.roster("codex");
       expect(codex).toEqual({ agents: [], integrations: [], monitors: [] });
@@ -624,30 +657,17 @@ describe("SubsystemsService", () => {
       expect(ledger).toEqual({ agents: [], integrations: [], monitors: [] });
     });
 
-    it("counts match fixture: multiple owned agents/integrations all come back", async () => {
-      const { service } = build({
-        agents: [agentFixture("architekt", "forge"), agentFixture("koder", "forge")],
-        integrations: [
-          slackFixture("team-slack", "forge"),
-          githubFixture("repo-watch", ["issues", "pulls"], "forge"),
-        ],
-      });
-      const forge = await service.roster("forge");
-      expect(forge.agents).toHaveLength(2);
-      expect(forge.integrations).toHaveLength(2);
-    });
-
-    it("monitors is the subset of owned integrations that are a GitHub integration with a ci stream", async () => {
+    it("monitors is the subset of the subsystem's integrations that are a GitHub integration with a ci stream", async () => {
       const { service } = build({
         integrations: [
-          githubFixture("ci-repo", ["issues", "pulls", "ci"], "forge"),
-          githubFixture("no-ci-repo", ["issues", "pulls"], "forge"),
-          slackFixture("team-slack", "forge"),
+          githubFixture("ci-repo", ["issues", "pulls", "ci"]),
+          githubFixture("no-ci-repo", ["issues", "pulls"]),
+          slackFixture("team-slack"),
         ],
       });
-      const forge = await service.roster("forge");
-      expect(forge.integrations).toHaveLength(3);
-      expect(forge.monitors).toEqual([{ id: "ci-repo", name: "ci-repo", kind: "github" }]);
+      const puls = await service.roster("puls");
+      expect(puls.integrations).toHaveLength(3);
+      expect(puls.monitors).toEqual([{ id: "ci-repo", name: "ci-repo", kind: "github" }]);
     });
 
     it("throws SubsystemNotFoundError for an id outside the registry", async () => {

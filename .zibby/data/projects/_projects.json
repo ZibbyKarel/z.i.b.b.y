@@ -23,6 +23,13 @@
     "category": "Internal"
   },
   {
+    "id": "shoptet-partner-cli",
+    "name": "Shoptet Partner CLI",
+    "category": "Shoptet",
+    "logo": "assets/shoptet-partner-cli.jpg",
+    "gitRemote": "git@github.com:shoptet/partner-cli.git"
+  },
+  {
     "id": "test-project",
     "name": "Test Project",
     "path": "~/Workspace/test",

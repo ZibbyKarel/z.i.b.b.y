@@ -6,17 +6,27 @@ Jira, GitHub, Google Calendar. Each integration belongs to exactly one project
 HTTP, but the connection itself is exercised by the channel adapters
 documented in `docs/api/channels.md`, not by this module.
 
+**Subsystem membership is derived, not stored.** An integration's only owner is
+its project — it carries no `ownerSubsystem` field. Which federation subsystem
+"has" it follows from what it does: **puls** (the heartbeat watcher) lists every
+integration; **herald** (the outward voice) lists the ones with `mandate.reply`
+on. Both fall out of `SubsystemsService.roster()` over the integration list ×
+the mandate — see `docs/api/subsystems.md`. The per-integration autonomy levers
+(`dispatch` / `reply`) live in the mandate (`docs/api/mandate` behaviour, edited
+either in Settings → Mandate or on the integration detail page), never on the
+integration entity.
+
 ## Pieces
 
-| Piece               | File                                                       | Role                                                                       |
-| ------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------- |
-| Schema              | `libs/contracts/src/integrations/integration.schema.ts`   | `IntegrationSchema`, the per-kind `*ConfigSchema` discriminated union, `CredentialsInputSchema`, `TestResultSchema` |
-| Contract            | `libs/contracts/src/integrations/integrations.contract.ts` | `integrationsContract` — CRUD + credentials sub-resource + connection test |
-| Storage             | `apps/api/src/integrations/integrations.storage.service.ts` | `IntegrationsStorageService` — one `<id>.json` per integration            |
-| Credentials store   | `apps/api/src/integrations/credentials.store.ts`           | `CredentialsStore` — one gitignored `<id>.json` per integration, write-only over HTTP |
-| Credential kind rule | `apps/api/src/integrations/credential-kind.ts`             | `credentialMatchesKind` — which credential shape a kind expects            |
-| Connection tester   | `apps/api/src/integrations/connection-tester.ts`           | `ConnectionTester` seam, bound to the channels `AdapterRegistry`           |
-| Controller          | `apps/api/src/integrations/integrations.controller.ts`     | Implements the contract                                                    |
+| Piece                | File                                                        | Role                                                                                                                |
+| -------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Schema               | `libs/contracts/src/integrations/integration.schema.ts`     | `IntegrationSchema`, the per-kind `*ConfigSchema` discriminated union, `CredentialsInputSchema`, `TestResultSchema` |
+| Contract             | `libs/contracts/src/integrations/integrations.contract.ts`  | `integrationsContract` — CRUD + credentials sub-resource + connection test                                          |
+| Storage              | `apps/api/src/integrations/integrations.storage.service.ts` | `IntegrationsStorageService` — one `<id>.json` per integration                                                      |
+| Credentials store    | `apps/api/src/integrations/credentials.store.ts`            | `CredentialsStore` — one gitignored `<id>.json` per integration, write-only over HTTP                               |
+| Credential kind rule | `apps/api/src/integrations/credential-kind.ts`              | `credentialMatchesKind` — which credential shape a kind expects                                                     |
+| Connection tester    | `apps/api/src/integrations/connection-tester.ts`            | `ConnectionTester` seam, bound to the channels `AdapterRegistry`                                                    |
+| Controller           | `apps/api/src/integrations/integrations.controller.ts`      | Implements the contract                                                                                             |
 
 ## The credential model
 
@@ -41,7 +51,7 @@ live in a separate, gitignored place instead:
 integration's `kind` expects:
 
 ```ts
-credentialMatchesKind(kind, creds) // kind === "email" ? "password" in creds : "token" in creds
+credentialMatchesKind(kind, creds); // kind === "email" ? "password" in creds : "token" in creds
 ```
 
 Email authenticates with a `password`; Slack, Jira, GitHub, and Calendar all
