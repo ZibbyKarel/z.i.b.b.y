@@ -1,7 +1,14 @@
 "use client";
 
 import type { LevelMappingKind, LevelMappingTarget } from "@zibby/contracts";
-import { Button, SelectField, Stack, TextInputField } from "@zibby/design-system";
+import {
+  Button,
+  Container,
+  Dropdown,
+  Stack,
+  TextInputField,
+  Typography,
+} from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 
 /** One editable row: the raw external level plus what it resolves to. */
@@ -21,12 +28,18 @@ export interface LevelMappingTableProps {
 
 const TARGETS: LevelMappingTarget[] = ["epic", "task", "ignore"];
 
+/** Width of the trailing remove-button column — keeps the header row's spacer
+ * lined up with the `Button size="sm"` it sits above. */
+const REMOVE_COLUMN_WIDTH = "30px";
+
 /** Test-id suffixes, indexed per row: `level-mapping-<kind>-<part>-<i>` (`-add` has no index). */
 export enum LevelMappingTableTestId {
   Level = "level",
   Target = "target",
   Remove = "remove",
   Add = "add",
+  HeaderLevel = "header-level",
+  HeaderTarget = "header-target",
 }
 
 /**
@@ -35,6 +48,14 @@ export enum LevelMappingTableTestId {
  * no DS `Table`. A trailing ghost "+" row appends a blank entry defaulted to `task`
  * (mirrors the sync's own `ensureLevels` default), so a first-time external level looks
  * exactly like what the sync would have appended.
+ *
+ * The column labels ("Externí úroveň" / "Cíl") render ONCE as a header row instead of
+ * repeating on every row (six rows used to read as six stacked forms). Each row's own
+ * control keeps a real, accessible name — the text input via `TextInputField`'s
+ * `hideLabel` (a visually-hidden, still-associated `<label>`), the target picker via a
+ * bare `Dropdown` + `aria-label` (the same "non-labelable control names itself
+ * directly" pattern `SelectField`'s own multi-select branch uses) — so nothing here
+ * regresses to an unlabeled control, only to a non-repeating one.
  */
 export function LevelMappingTable({ kind, rows, onChange }: LevelMappingTableProps) {
   const t = useTranslations("settings.tasks");
@@ -53,23 +74,50 @@ export function LevelMappingTable({ kind, rows, onChange }: LevelMappingTablePro
 
   return (
     <Stack gap="100">
+      {rows.length > 0 && (
+        <Stack aria-hidden align="center" direction="row" gap="100">
+          <Container grow minW0>
+            <Typography
+              data-testid={`level-mapping-${kind}-${LevelMappingTableTestId.HeaderLevel}`}
+              type="label"
+            >
+              {t("level")}
+            </Typography>
+          </Container>
+          <Container grow minW0>
+            <Typography
+              data-testid={`level-mapping-${kind}-${LevelMappingTableTestId.HeaderTarget}`}
+              type="label"
+            >
+              {t("target.label")}
+            </Typography>
+          </Container>
+          <Container shrink={false} width={REMOVE_COLUMN_WIDTH} />
+        </Stack>
+      )}
       {rows.map((row, i) => (
-        <Stack align="end" direction="row" gap="100" key={i}>
-          <TextInputField
-            data-testid={`level-mapping-${kind}-${LevelMappingTableTestId.Level}-${i}`}
-            label={t("level")}
-            onChange={(e) => setRow(i, { externalLevel: e.target.value })}
-            placeholder={t("levelPlaceholder")}
-            value={row.externalLevel}
-          />
-          <div data-testid={`level-mapping-${kind}-${LevelMappingTableTestId.Target}-${i}`}>
-            <SelectField
-              label={t("target.label")}
-              onValueChange={(value) => setRow(i, { target: value })}
-              options={targetOptions}
-              value={row.target}
+        <Stack align="center" direction="row" gap="100" key={i}>
+          <Container grow minW0>
+            <TextInputField
+              hideLabel
+              data-testid={`level-mapping-${kind}-${LevelMappingTableTestId.Level}-${i}`}
+              label={t("level")}
+              onChange={(e) => setRow(i, { externalLevel: e.target.value })}
+              placeholder={t("levelPlaceholder")}
+              value={row.externalLevel}
             />
-          </div>
+          </Container>
+          <Container grow minW0>
+            <div data-testid={`level-mapping-${kind}-${LevelMappingTableTestId.Target}-${i}`}>
+              <Dropdown<LevelMappingTarget>
+                aria-label={t("target.label")}
+                onChange={(target) => setRow(i, { target })}
+                options={targetOptions}
+                value={row.target}
+                variant="field"
+              />
+            </div>
+          </Container>
           <Button
             aria-label={t("remove")}
             data-testid={`level-mapping-${kind}-${LevelMappingTableTestId.Remove}-${i}`}

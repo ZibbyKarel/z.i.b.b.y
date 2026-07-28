@@ -1,5 +1,6 @@
 import { type ReactNode, type Ref, useId } from "react";
 import { focusRing } from "../../utils/focus";
+import { cn } from "../../utils/cn";
 import { Stack } from "../Stack/Stack";
 
 export enum FieldTestId {
@@ -40,6 +41,15 @@ export interface FieldProps {
   /** When present, replaces the hint and marks the control invalid. */
   error?: string;
   layout?: FieldLayout;
+  /**
+   * Visually hide the label (`sr-only`) while keeping the real, associated
+   * `<label htmlFor>` in the DOM — the control still has a proper accessible
+   * name, it just doesn't repeat visibly. For repeated rows of the same field
+   * in a hand-rolled table (there is no DS `Table` — see `KeyValueEditor`/
+   * `LevelMappingTable`), where a header row already shows the label once and
+   * six stacked "forms" would otherwise read like six stacked labels.
+   */
+  hideLabel?: boolean;
   /** Render the control, wired with the ids/aria handed down. */
   children: (control: FieldControl) => ReactNode;
   ref?: Ref<HTMLElement>;
@@ -68,6 +78,7 @@ export function Field({
   hint,
   error,
   layout = "column",
+  hideLabel = false,
   children,
   ref,
 }: FieldProps) {
@@ -83,7 +94,12 @@ export function Field({
   });
 
   const labelText = (
-    <label className={labelClass} data-testid={FieldTestId.Label} htmlFor={id} id={labelId}>
+    <label
+      className={cn(labelClass, hideLabel && "sr-only")}
+      data-testid={FieldTestId.Label}
+      htmlFor={id}
+      id={labelId}
+    >
       {label}
     </label>
   );

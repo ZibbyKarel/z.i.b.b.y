@@ -1405,7 +1405,8 @@
         "overview": "Overview",
         "profile": "Profile",
         "secrets": "Secrets",
-        "integrations": "Integrations"
+        "integrations": "Integrations",
+        "roadmap": "Roadmap"
       },
       "basics": {
         "title": "Project",
@@ -2036,5 +2037,60 @@
     "emptyTitle": "The archive is still empty",
     "emptyDescription": "Once ZIBBY finishes something, it will show up here.",
     "selectHint": "Select a task on the left to see its detail."
+  },
+  "roadmap": {
+    "hint": "Pick an epic to see its tasks on the right.",
+    "emptyEpicsTitle": "No epics yet",
+    "emptyEpicsDescription": "This project has no roadmap yet — import it from a source, or create epics by hand.",
+    "epic": {
+      "unphased": "unphased",
+      "progress": "{done}/{total} tasks",
+      "status": {
+        "idea": "Idea",
+        "todo": "Queued",
+        "active": "Active",
+        "blocked": "Blocked",
+        "done": "Done"
+      }
+    },
+    "board": {
+      "header": "{name} — task board",
+      "columns": {
+        "blocked": "Blocked",
+        "ready": "Ready",
+        "inProgress": "In Progress",
+        "done": "Done"
+      },
+      "empty": "empty"
+    },
+    "card": {
+      "playInert": "Play isn't wired up yet — coming soon.",
+      "failed": "Failed",
+      "waitingOn": "waiting on {name}",
+      "waitingOnArchived": "waiting on {name} — its source no longer returns it",
+      "blocks": "blocks {count}",
+      "openDetail": "Show detail: {name}"
+    },
+    "dialog": {
+      "description": "Description",
+      "attachments": "Attachments",
+      "noAttachments": "No attachments",
+      "blockers": "Waiting on",
+      "noBlockers": "Not waiting on anything",
+      "dependents": "Blocks",
+      "noDependents": "Doesn't block anything",
+      "archivedNote": "its source no longer returns it",
+      "syncNotes": "Sync notes",
+      "runs": "Run history",
+      "noRuns": "No runs yet",
+      "runOutcome": {
+        "running": "Running",
+        "awaiting-merge": "Awaiting merge",
+        "done": "Done",
+        "failed": "Failed"
+      },
+      "runPr": "PR #{number}",
+      "runArtifact": "Artifact: {path}"
+    }
   }
 }
