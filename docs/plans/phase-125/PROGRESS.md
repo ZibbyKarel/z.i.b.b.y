@@ -10,7 +10,7 @@
   [`recon/scheduler-pr-integrations.md`](./recon/scheduler-pr-integrations.md),
   [`recon/web-ds-patterns.md`](./recon/web-ds-patterns.md)
 
-**Last updated:** wave 1 complete and pushed; wave 2 (125b + 125a-web) dispatched
+**Last updated:** 125d + 125f landed; 125e mid-flight (gate service committed, tests/doc pending)
 
 **PR: https://github.com/ZibbyKarel/z.i.b.b.y/pull/65** — one big PR, commits accumulate into it.
 
@@ -24,9 +24,9 @@
 | 125a-web  | `/settings?tab=tasks` level-mapping table                                                          | ✅ landed, screenshotted   |
 | 125c      | `maxConcurrentRuns` + `countRunningGlobal()` + `capacityStatus()` + `?tab=runtime` control          | ✅ landed, reviewed, green |
 | 125b      | `RoadmapSourceService` (Jira + GitHub), `adfToMarkdown`, attachments, upsert, sync endpoint         | ✅ landed, reviewed, green |
-| 125d      | Roadmap tab, read-only: epic list, 4-column board, card, detail dialog                             | 🟨 agent running           |
-| 125e      | Play + `RoadmapGateService`: gate, FIFO drain, task creation, merge hook + PR poll                  | ⬜ not started             |
-| 125f      | Manual epic/task creation + dependency editing                                                     | ⬜ not started             |
+| 125d      | Roadmap tab, read-only: epic list, 4-column board, card, detail dialog                             | ✅ landed, reviewed, green |
+| 125e      | Play + `RoadmapGateService`: gate, FIFO drain, task creation, merge hook + PR poll                  | 🟨 gate + merge hook in; tests/doc pending |
+| 125f      | Manual epic/task creation + dependency editing                                                     | ✅ landed, reviewed, green |
 | 125g      | Epic decomposition run + artifact contract + deterministic ingest                                  | ⬜ not started             |
 | 125h      | Auto-sync tick + activity/briefing integration                                                     | ⬜ not started             |
 | —         | Full-repo `check:lint` / `check:types` / `test`, screenshots, PR                                    | ⬜ not started             |
@@ -80,9 +80,27 @@ testid. That is exactly what the spec does. Do it only when no agent is mid-edit
 
 ## Next action
 
-1. Review wave 2 when both agents report; commit and push.
-2. Then **wave 3**: 125d (the roadmap board UI) — it needs 125b's data shape to be settled.
-   Remember `docs/api/roadmap.md`'s archived-blocker requirement when reviewing the card.
+1. Review 125e when it reports — its gate tests and `docs/api/roadmap.md` are the
+   outstanding pieces. Check hardest: that a `failed` blocker never releases a dependent,
+   FIFO drain order, and that a throwing gate cannot break `recordMerge`.
+2. Then **wave 5**: 125g (epic decomposition) + 125h (auto-sync tick), independent leaves.
+3. Then repo-wide `check:lint` / `check:types` / `test`, board screenshots, PR body refresh.
+
+## Traps already paid for (do not rediscover)
+
+- **Screenshots need `NEXT_PUBLIC_API_URL=http://localhost:3333`** on `apps/web`. It lives
+  only in `.env.example`; playwright injects it explicitly. Without it every query fails and
+  the UI renders its error state — which looks exactly like a broken feature.
+- **Chromium**: launch with `executablePath: "/opt/pw-browsers/chromium"`. The pinned
+  playwright wants build 1223, the container has 1194, so the harness itself won't start.
+- **Never screenshot or typecheck-judge while a subagent is mid-edit** — a partial tree gave
+  one false "the feature is broken" diagnosis already.
+- **`tsc` clean does not mean committable.** A half-wired Nest module typechecks fine and
+  fails at runtime with "Nest cannot create the TasksModule instance". Gate a checkpoint
+  commit on the roadmap e2e too, not just `tsc`.
+- **The docs-sync Stop hook reads the WORKTREE diff.** Committing a doc on its own *removes*
+  it from that diff and the hook still complains; commit the doc together with the source it
+  documents, or commit the source so the worktree is clean.
 
 ## Commit log (this branch)
 
