@@ -2,9 +2,11 @@ import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import type { RoadmapItem } from "@zibby/contracts";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  CorruptRoadmapItemFileError,
   InvalidRoadmapItemIdError,
+  InvalidRoadmapProjectIdError,
   RoadmapItemConflictError,
   RoadmapItemNotFoundError,
 } from "./roadmap.errors";
@@ -80,6 +82,64 @@ describe("RoadmapStore", () => {
     await expect(store.delete("proj-1", "item-1")).rejects.toBeInstanceOf(RoadmapItemNotFoundError);
   });
 
+  it("get() throws CorruptRoadmapItemFileError (not NotFound) for a file that parses as JSON but fails the schema", async () => {
+    await store.put(item());
+    await fs.writeFile(path.join(dir, "proj-1", "item-1.json"), JSON.stringify({ not: "an item" }));
+    await expect(store.get("proj-1", "item-1")).rejects.toBeInstanceOf(CorruptRoadmapItemFileError);
+  });
+
+  it("list() still tolerates (skips) the same corrupt file get() rejects on", async () => {
+    await store.put(item({ id: "a" }));
+    await store.put(item({ id: "b" }));
+    await fs.writeFile(path.join(dir, "proj-1", "b.json"), JSON.stringify({ not: "an item" }));
+    const items = await store.list("proj-1");
+    expect(items.map((i) => i.id)).toEqual(["a"]);
+  });
+
+  it("delete() is locked — cannot interleave with an in-flight update()'s writeFileAtomic and resurrect the item", async () => {
+    await store.put(item());
+
+    // Gate the RENAME half of `update()`'s `writeFileAtomic` (tmp write, then
+    // rename-into-place) — the exact window in which an unlocked `delete()`
+    // could unlink the CURRENT file while update() is paused, only for
+    // update()'s resumed rename to recreate it moments later: a genuine
+    // resurrection of a "deleted" item, not merely a stray error.
+    let releaseGate: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      releaseGate = resolve;
+    });
+    const { promises: realFs } = await vi.importActual<typeof import("node:fs")>("node:fs");
+    const renameSpy = vi.spyOn(fs, "rename").mockImplementationOnce(async (from, to) => {
+      await gate;
+      return realFs.rename(from as string, to as string);
+    });
+
+    // Kick off update(); it writes its tmp file, then blocks mid-flight
+    // (inside its OWN held lock) on the mocked rename.
+    const updated = store.update("proj-1", "item-1", (current) => ({
+      ...current,
+      lifecycle: "enqueued",
+    }));
+
+    // Let update() actually reach the mocked rename before racing delete() in.
+    await new Promise((resolve) => setImmediate(resolve));
+
+    // If delete() were unlocked (the bug), it would unlink the file RIGHT NOW
+    // — then update()'s resumed rename would recreate it, resurrecting a
+    // "deleted" item. Locked, this call must queue behind update()'s held
+    // lock instead, running only after update() (and its rename) fully lands.
+    const deleted = store.delete("proj-1", "item-1");
+
+    releaseGate();
+    await updated;
+    await deleted;
+    renameSpy.mockRestore();
+
+    // Deterministic final state: update() persisted fully, THEN delete() ran
+    // — never resurrected.
+    await expect(store.get("proj-1", "item-1")).rejects.toBeInstanceOf(RoadmapItemNotFoundError);
+  });
+
   it("list() returns every item in a project, sorted by createdAt, tolerating a corrupt file", async () => {
     await store.put(item({ id: "a", createdAt: "2026-07-28T02:00:00.000Z" }));
     await store.put(item({ id: "b", createdAt: "2026-07-28T01:00:00.000Z" }));
@@ -124,33 +184,44 @@ describe("RoadmapStore", () => {
   });
 
   describe("path-traversal rejection", () => {
-    it("refuses an unsafe projectId (../) on put/get/list/config", async () => {
+    it("refuses an unsafe projectId (../) on put/get/list/config with InvalidRoadmapProjectIdError — never the item-id error", async () => {
       await expect(store.put(item({ projectId: "../escape" }))).rejects.toBeInstanceOf(
-        InvalidRoadmapItemIdError,
+        InvalidRoadmapProjectIdError,
       );
       await expect(store.get("../escape", "item-1")).rejects.toBeInstanceOf(
-        InvalidRoadmapItemIdError,
+        InvalidRoadmapProjectIdError,
       );
-      await expect(store.list("../escape")).rejects.toBeInstanceOf(InvalidRoadmapItemIdError);
-      await expect(store.readConfig("../escape")).rejects.toBeInstanceOf(InvalidRoadmapItemIdError);
+      await expect(store.list("../escape")).rejects.toBeInstanceOf(InvalidRoadmapProjectIdError);
+      await expect(store.readConfig("../escape")).rejects.toBeInstanceOf(
+        InvalidRoadmapProjectIdError,
+      );
+      await expect(store.writeConfig("../escape", { autoSync: true })).rejects.toBeInstanceOf(
+        InvalidRoadmapProjectIdError,
+      );
+      await expect(store.delete("../escape", "item-1")).rejects.toBeInstanceOf(
+        InvalidRoadmapProjectIdError,
+      );
     });
 
-    it("refuses an absolute-path projectId", async () => {
+    it("refuses an absolute-path projectId with InvalidRoadmapProjectIdError", async () => {
       await expect(store.put(item({ projectId: "/etc/passwd" }))).rejects.toBeInstanceOf(
-        InvalidRoadmapItemIdError,
+        InvalidRoadmapProjectIdError,
       );
     });
 
-    it("refuses an unsafe itemId (../) under a valid project", async () => {
+    it("refuses an unsafe itemId (../) under a valid project with InvalidRoadmapItemIdError — never the project-id error", async () => {
       await expect(store.put(item({ id: "../../escape" }))).rejects.toBeInstanceOf(
         InvalidRoadmapItemIdError,
       );
       await expect(store.get("proj-1", "../../escape")).rejects.toBeInstanceOf(
         InvalidRoadmapItemIdError,
       );
+      await expect(store.delete("proj-1", "../../escape")).rejects.toBeInstanceOf(
+        InvalidRoadmapItemIdError,
+      );
     });
 
-    it("refuses an absolute-path itemId", async () => {
+    it("refuses an absolute-path itemId with InvalidRoadmapItemIdError", async () => {
       await expect(store.put(item({ id: "/etc/passwd" }))).rejects.toBeInstanceOf(
         InvalidRoadmapItemIdError,
       );
