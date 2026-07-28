@@ -54,4 +54,40 @@ describe("roadmapContract", () => {
     expect(roadmapContract.createRoadmapItem.path.endsWith("/items")).toBe(true);
     expect(roadmapContract.getRoadmapItem.path.endsWith("/items/:itemId")).toBe(true);
   });
+
+  it("exposes the play/override/restart/resume item actions (125e)", () => {
+    expect(roadmapContract.playRoadmapItem.method).toBe("POST");
+    expect(roadmapContract.playRoadmapItem.path).toBe(
+      "/api/projects/:projectId/roadmap/items/:itemId/play",
+    );
+    expect(roadmapContract.playRoadmapItem.responses).toHaveProperty("200");
+    expect(roadmapContract.playRoadmapItem.responses).toHaveProperty("404");
+    expect(roadmapContract.playRoadmapItem.responses).toHaveProperty("409");
+
+    expect(roadmapContract.overrideRoadmapItem.method).toBe("POST");
+    expect(roadmapContract.overrideRoadmapItem.path).toBe(
+      "/api/projects/:projectId/roadmap/items/:itemId/override",
+    );
+    expect(roadmapContract.overrideRoadmapItem.responses).toHaveProperty("200");
+    expect(roadmapContract.overrideRoadmapItem.responses).not.toHaveProperty("409");
+
+    expect(roadmapContract.restartRoadmapItem.method).toBe("POST");
+    expect(roadmapContract.restartRoadmapItem.path).toBe(
+      "/api/projects/:projectId/roadmap/items/:itemId/restart",
+    );
+    expect(roadmapContract.restartRoadmapItem.responses).toHaveProperty("409");
+
+    expect(roadmapContract.resumeRoadmapItem.method).toBe("POST");
+    expect(roadmapContract.resumeRoadmapItem.path).toBe(
+      "/api/projects/:projectId/roadmap/items/:itemId/resume",
+    );
+    expect(roadmapContract.resumeRoadmapItem.responses).toHaveProperty("409");
+  });
+
+  it("exposes the bulk play route, project-scoped (not nested under :itemId)", () => {
+    expect(roadmapContract.playRoadmapItems.method).toBe("POST");
+    expect(roadmapContract.playRoadmapItems.path).toBe("/api/projects/:projectId/roadmap/play");
+    expect(roadmapContract.playRoadmapItems.responses).toHaveProperty("200");
+    expect(roadmapContract.playRoadmapItems.responses).not.toHaveProperty("409");
+  });
 });
