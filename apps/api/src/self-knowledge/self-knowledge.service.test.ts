@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import * as prettier from "prettier";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.service";
@@ -31,10 +32,18 @@ async function makeService(
   const vault = new VaultService(path.join(dir, "vault"));
   await vault.onModuleInit();
 
-  const resolvedGraphReportPath = graphReportPath ?? path.join(dir, "graphify-out", "GRAPH_REPORT.md");
+  const resolvedGraphReportPath =
+    graphReportPath ?? path.join(dir, "graphify-out", "GRAPH_REPORT.md");
   return {
     dir,
-    service: new SelfKnowledgeService(agents, pipelines, gateRules, policy, vault, resolvedGraphReportPath),
+    service: new SelfKnowledgeService(
+      agents,
+      pipelines,
+      gateRules,
+      policy,
+      vault,
+      resolvedGraphReportPath,
+    ),
   };
 }
 
@@ -76,6 +85,12 @@ describe("SelfKnowledgeService", () => {
       await service.write();
       const result = await service.compose();
       expect(result.drift).toBe(false);
+    });
+
+    it("is Prettier-idempotent: composed markdown already matches its own Prettier formatting", async () => {
+      const result = await service.compose();
+      const reformatted = await prettier.format(result.markdown, { parser: "markdown" });
+      expect(result.markdown).toBe(reformatted);
     });
 
     it("picks up a new agent added directly to disk (hot-reload — Zjištění 2)", async () => {
@@ -164,7 +179,11 @@ describe("SelfKnowledgeService", () => {
       // `service` (from the outer beforeEach) already points at a graphReportPath
       // that does not exist — see makeService()'s default.
       const result = await service.compose();
-      expect(result.sections.codebaseShape).toEqual({ present: false, godNodes: 0, communities: 0 });
+      expect(result.sections.codebaseShape).toEqual({
+        present: false,
+        godNodes: 0,
+        communities: 0,
+      });
       expect(result.markdown).toContain("graphify-out is missing");
     });
 
@@ -194,7 +213,11 @@ describe("SelfKnowledgeService", () => {
       const { dir: withBadPathDir, service: withBadPath } = await makeService(notAFilePath);
       const result = await withBadPath.compose();
 
-      expect(result.sections.codebaseShape).toEqual({ present: false, godNodes: 0, communities: 0 });
+      expect(result.sections.codebaseShape).toEqual({
+        present: false,
+        godNodes: 0,
+        communities: 0,
+      });
       expect(result.markdown).toContain("graphify-out is missing");
 
       await fs.rm(notAFilePath, { recursive: true, force: true });

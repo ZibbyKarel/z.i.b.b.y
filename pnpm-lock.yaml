@@ -162,6 +162,9 @@ importers:
       nodemailer:
         specifier: ^9.0.1
         version: 9.0.3
+      prettier:
+        specifier: ^3.8.4
+        version: 3.8.4
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
