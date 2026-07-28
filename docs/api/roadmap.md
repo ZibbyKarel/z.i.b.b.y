@@ -72,6 +72,17 @@ There is no `blocked` field on the schema. `roadmap-readiness.ts` exports:
   never unblocks a dependent since `isBlocked` tests `lifecycle !== "done"`).
   `archived` is not a board column at all; the future board filters it out.
 
+**Watch out — an archived blocker never clears.** `isBlocked` tests
+`lifecycle !== "done"`, and `archived` is not `done`, so every dependent of an
+item the source stopped returning stays blocked indefinitely. That is the right
+fail-closed behaviour (an item whose source issue vanished has demonstrably not
+shipped, and silently unblocking on it is how the wrong-order failure this phase
+exists to prevent gets back in), but it is a trap if the board just renders
+"čeká na X" with no hint that X is gone: the operator sees a card waiting on
+something that will never arrive. **The board (125d) must mark an archived
+blocker distinctly on the dependency badge**, so the only escape — the Tier-3
+`overrideBlocked` — is a visible choice rather than a guess.
+
 ### Ownership split on re-sync (125b enforces this; 125a's schema reserves the shape for it)
 
 The **source** owns `name`, `description`, `externalLevel`, `attachments`,
