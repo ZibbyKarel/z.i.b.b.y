@@ -2,11 +2,12 @@
 
 The **roadmap** is the per-project delivery backlog — epics + tasks, imported
 from Jira/GitHub or created manually, with a dependency graph that gates when
-a task is safe to dispatch. This doc covers **125a**: the data model, the
-per-project item store, the global level-mapping table, and the endpoints
-that land in this sub-phase. See `docs/plans/phase-125-project-roadmap.md`
-for the full master plan (import/sync in 125b, play + the dependency gate in
-125e, the UI in 125d/f, decomposition in 125g).
+a task is safe to dispatch. This doc covers **125a** (the data model, the
+per-project item store, the global level-mapping table, and the CRUD
+endpoints) and **125b** (`RoadmapSourceService`'s Jira/GitHub import and the
+manual `POST .../roadmap/sync` route). See
+`docs/plans/phase-125-project-roadmap.md` for the full master plan (play +
+the dependency gate in 125e, the UI in 125d/f, decomposition in 125g).
 
 ## Pieces
 
@@ -15,10 +16,14 @@ for the full master plan (import/sync in 125b, play + the dependency gate in
 | Contract   | `libs/contracts/src/roadmap/roadmap-item.schema.ts`       | `RoadmapItemSchema`, `Create`/`UpdateRoadmapItemSchema`, `RoadmapConfigSchema` |
 | Contract   | `libs/contracts/src/roadmap/roadmap-readiness.ts`         | Pure `isBlocked()` / `readiness()` helpers (derived board state)               |
 | Contract   | `libs/contracts/src/roadmap/level-mapping.schema.ts`      | `LevelMappingSchema`, `DEFAULT_LEVEL_MAPPING`, `resolveLevel()`                |
-| Contract   | `libs/contracts/src/roadmap/roadmap.contract.ts`          | `roadmapContract` — item CRUD, config, level-mapping, under `/api`             |
+| Contract   | `libs/contracts/src/roadmap/roadmap.contract.ts`          | `roadmapContract` — item CRUD, config, level-mapping, sync, under `/api`       |
+| Contract   | `libs/contracts/src/roadmap/roadmap-sync.schema.ts`       | `RoadmapSyncResultSchema` — the sync endpoint's response                       |
 | Store      | `apps/api/src/roadmap/roadmap.store.ts`                   | `RoadmapStore` — two-level file store + per-project config                     |
 | Store      | `apps/api/src/roadmap/level-mapping.store.ts`             | `LevelMappingStore` — single global JSON document                              |
 | Provider   | `apps/api/src/roadmap/roadmap-attachment-ref.provider.ts` | `AttachmentSetRefProvider` for the orphan-attachment sweep                     |
+| Service    | `apps/api/src/roadmap/roadmap-source.service.ts`          | `RoadmapSourceService` (125b) — Jira/GitHub import + upsert                    |
+| Pure fn    | `apps/api/src/roadmap/adf-to-markdown.ts`                 | `adfToMarkdown()` — Jira ADF `description` → markdown, bounded + never throws  |
+| Pure fn    | `apps/api/src/roadmap/merge-depends-on.ts`                | `mergeDependsOn()` — the re-sync `dependsOn` ownership-split merge             |
 | Controller | `apps/api/src/roadmap/roadmap.controller.ts`              | implements `roadmapContract`                                                   |
 | Module     | `apps/api/src/roadmap/roadmap.module.ts`                  | resolves `ROADMAP_DIR` (`$ROADMAP_DIR` env or `.zibby/data/roadmap`)           |
 
@@ -135,7 +140,10 @@ It deliberately does **not** reuse `ChannelAdapter.poll`: the channel adapters f
 a message-shaped subset (`JiraChannelAdapter` doesn't even request `description`),
 while the import needs full fields, links and attachments. It also deliberately
 **backfills** — the channel adapters seed their cursor to "now" and ingest nothing on
-a first poll, which would leave a fresh roadmap empty.
+a first poll, which would leave a fresh roadmap empty. Both fetchers paginate
+(Jira via `startAt`/`total`, GitHub via `page`), each capped at `MAX_PAGES` (20 pages
+of 100) so a full backfill still terminates deterministically against a very large
+project/repo.
 
 ### Jira
 
@@ -154,16 +162,41 @@ a first poll, which would leave a fresh roadmap empty.
   this issue **blocks** the other and must **not** become a dependency. Only the
   "blocked by" phrase creates an edge, whichever side carries it. Inverting this
   would gate the wrong item, which is precisely the failure this phase exists to
-  prevent, so it is tested from both directions.
-- Sub-tasks flatten to `task` and inherit the parent's epic as `parentId`.
+  prevent, so it is tested from both directions
+  (`roadmap-source.service.test.ts`'s Jira fixture).
+- Hierarchy (`parentId`) is resolved by walking `fields.parent` up to the nearest
+  ancestor whose level-mapping target is `"epic"` (`resolveEpicParent`), capped at 25
+  hops against a malformed/cyclic chain. One walk covers BOTH the classic "Sub-task
+  flattens to `task`, inherits the parent's epic" case (the immediate parent is a
+  Story, which itself has an epic parent) and a team-managed Story/Task that names
+  its epic directly via `parent` (one hop) — deliberately NOT keyed off
+  `issuetype.hierarchyLevel`, so the operator-editable level-mapping table stays the
+  single source of truth for what counts as an epic. A parent outside the current
+  sync's batch (not returned by the same search) leaves the item unparented rather
+  than erroring.
 
 ### GitHub
 
 `GET /repos/{repo}/issues?state=all` — entries carrying `pull_request` are dropped,
-because that endpoint returns PRs too — plus `GET /repos/{repo}/milestones`
-(Milestone → epic, Issue → task). Bodies are already markdown. Edges are parsed from
-`Depends on #N` / `Blocked by #N`; native sub-issues are best-effort and a 404/410
-from an older API is tolerated, not an error.
+because that endpoint returns PRs too — plus `GET /repos/{repo}/milestones?state=all`
+(Milestone → epic, Issue → task; a milestone's own `parentId` is unset, an issue's
+`parentId` is its milestone's item, when it has one). Bodies are already markdown, no
+flattening needed. Edges come from two sources, unioned:
+
+- `Depends on #N` / `Blocked by #N` parsed from the body — case-insensitive, and
+  tolerant of a list on one line (`Blocked by #12, #14 and #16`) via a phrase-then-
+  numbers regex that only reads `#N`s actually named by the phrase, not every
+  issue-number mentioned in the prose.
+- Best-effort native sub-issues (`GET /issues/{n}/sub_issues`, a newer GitHub
+  hierarchy API): a parent issue depends on each of its declared native sub-issues —
+  the same "not really done until its children are" relationship Jira's flattened
+  sub-tasks carry implicitly. A 404/410 (an older API without the endpoint) — or any
+  other failure — degrades to "no native sub-issues" rather than erroring; this is a
+  best-effort ENRICHMENT, not a fetch the sync depends on.
+
+GitHub issues expose attachments only as inline markdown links in the body, with no
+listing/download endpoint the way Jira's `fields.attachment` is a structured array —
+downloading GitHub attachments is out of scope for this sub-phase.
 
 ### Level mapping
 
@@ -182,6 +215,16 @@ a note instead of failing the whole sync.
 `syncNotes` is a field on the item, **not** text appended to `description` — the
 description is source-owned and a re-sync overwrites it, so a note parked there would
 vanish on the next tick.
+
+**Re-download avoidance rule.** A within-cap attachment list is only (re)downloaded
+when it differs from what's already stored: both lists are reduced to a
+`name:size` signature (sorted, joined), and an unchanged signature reuses the
+existing `attachmentSetId`/`attachments` as-is — no bytes are re-fetched just because
+a sync ran again. A changed signature (an attachment added, removed, or resized)
+downloads the WHOLE within-cap set fresh and gets a new `attachmentSetId`; the old
+set is simply no longer referenced (not eagerly deleted) and ages out through the
+existing 24h orphan-attachment sweep once nothing points at it, same as everywhere
+else that sweep applies.
 
 ### Upsert and the ownership split
 
@@ -202,7 +245,18 @@ buried in the upsert's read-modify-write.
 
 Source status Done/closed → `lifecycle: "done"`. An item the source stops returning →
 `lifecycle: "archived"`, **never deleted** (and note the archived-blocker consequence
-above). An archived item that reappears in the source returns to `todo`.
+above). An archived item that reappears in the source returns to `todo`. These are
+the only two lifecycle transitions the sync ever makes — a lifecycle a later
+sub-phase (125e) has since advanced (`enqueued`/`running`/`awaiting-merge`/`failed`)
+passes straight through untouched whenever neither transition applies.
+
+An item whose level-mapping `target` resolves to `"ignore"` is parsed but never
+turned into a roadmap item (counted in `skipped`), and is deliberately excluded from
+the "seen this sync" set too — so a PREVIOUSLY imported item whose external level
+later gets remapped to `"ignore"` archives on its next sync, exactly as if the source
+had stopped returning it. A source-level failure (network, rate limit, a malformed
+response) is caught per source and recorded as a `notes` entry keyed by the
+integration's id rather than aborting the other configured source's sync.
 
 ### The endpoint
 
@@ -304,15 +358,20 @@ Per-project (`/api/projects/:projectId/roadmap/...`):
   missing).
 - `GET|PUT /projects/:projectId/roadmap/config` — the per-project
   `{ autoSync }` toggle.
+- `POST /projects/:projectId/roadmap/sync` (125b) — pulls the project's
+  resolved Jira/GitHub integrations and upserts their items via
+  `RoadmapSourceService`; returns `RoadmapSyncResultSchema`
+  (`{ imported, updated, archived, skipped, notes[] }`). No integration
+  configured → an all-zero summary, not an error; only an unresolvable
+  `projectId` 404s. See "Import & sync (125b)" above.
 
 Global:
 
 - `GET|PUT /roadmap/level-mapping` — the external-level → epic/task/ignore
   table shown at `/settings?tab=tasks` (UI lands in a later sub-phase).
 
-Routes not yet implemented (later sub-phases, same `roadmapContract` file):
-`POST /projects/:projectId/roadmap/sync` (125b), a `play` action per item
-(125e).
+Routes not yet implemented (a later sub-phase, same `roadmapContract` file):
+a `play` action per item (125e).
 
 ### Error mapping
 
