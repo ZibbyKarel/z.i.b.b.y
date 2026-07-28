@@ -10,7 +10,9 @@
   [`recon/scheduler-pr-integrations.md`](./recon/scheduler-pr-integrations.md),
   [`recon/web-ds-patterns.md`](./recon/web-ds-patterns.md)
 
-**Last updated:** wave 1 reviewed; 125c accepted, 125a in final rework
+**Last updated:** wave 1 complete and pushed; wave 2 (125b + 125a-web) dispatched
+
+**PR: https://github.com/ZibbyKarel/z.i.b.b.y/pull/65** — one big PR, commits accumulate into it.
 
 ---
 
@@ -18,10 +20,10 @@
 
 | Sub-phase | Scope                                                                                            | State                     |
 | --------- | ------------------------------------------------------------------------------------------------ | ------------------------- |
-| 125a-api  | Contracts + per-project store + level-mapping store/endpoints + `docs/api/roadmap.md`             | 🟧 rework (delete lock)    |
-| 125a-web  | `/settings?tab=tasks` level-mapping table                                                          | ⬜ next — unblocked        |
+| 125a-api  | Contracts + per-project store + level-mapping store/endpoints + `docs/api/roadmap.md`             | ✅ landed, reviewed, green |
+| 125a-web  | `/settings?tab=tasks` level-mapping table                                                          | 🟨 agent running           |
 | 125c      | `maxConcurrentRuns` + `countRunningGlobal()` + `capacityStatus()` + `?tab=runtime` control          | ✅ landed, reviewed, green |
-| 125b      | `RoadmapSourceService` (Jira + GitHub), `adfToMarkdown`, attachments, upsert, sync endpoint         | ⬜ next                    |
+| 125b      | `RoadmapSourceService` (Jira + GitHub), `adfToMarkdown`, attachments, upsert, sync endpoint         | 🟨 agent running           |
 | 125d      | Roadmap tab, read-only: epic list, 4-column board, card, detail dialog                             | ⬜ not started             |
 | 125e      | Play + `RoadmapGateService`: gate, FIFO drain, task creation, merge hook + PR poll                  | ⬜ not started             |
 | 125f      | Manual epic/task creation + dependency editing                                                     | ⬜ not started             |
@@ -33,16 +35,22 @@ Legend: ⬜ not started · 🟨 in progress · 🟧 in review / rework · ✅ la
 
 ## Where I am
 
-Wave 1 is written and reviewed. **125c is accepted** — the review caught that the first cut
-both regressed the default config (it serialized unscoped dispatch behind a global mutex even
-with no cap configured) and left the common race open (two different projects took different
-lock keys and both passed the global check). The fix nests global-outer/project-inner and only
-takes the global lock when a cap exists; regression tests were verified to go red against the
-buggy shape. 89 tests green.
+**Wave 1 is complete, reviewed, committed and pushed.** Both sub-phases went through a rework
+round; both defect sets were real.
 
-**125a** is in its last rework pass — the level-mapping lock split, the project-id error type
-and the corrupt-file decision are all committed; only `RoadmapStore.delete`'s missing path lock
-is outstanding.
+- **125c** — the first cut regressed the default config (it serialized unscoped dispatch behind
+  a global mutex even with no cap configured) *and* left the common race open (two different
+  projects took different lock keys and both passed the global check). Fixed by nesting
+  global-outer/project-inner and only taking the global lock when a cap exists. Regression
+  tests verified to go red against the buggy shape first.
+- **125a-api** — level-mapping `write()` documented a lock guarantee it did not provide;
+  `delete()` skipped the lock its siblings took (an interleaved `update()` could resurrect a
+  deleted item); a bad *project* id surfaced as a missing *item*; `CorruptRoadmapItemFileError`
+  was declared and never thrown. All four fixed, each with a test confirmed to fail pre-fix.
+- **Drive-by:** the `self-knowledge` CI job was red on `main` and is now fixed — see D-006's
+  amendment. The gate checks `apps/api/data-test`, not the live data root.
+
+**Wave 2 is running:** 125b (import/sync) and 125a-web (settings table), disjoint file sets.
 
 ## Environment notes for a resumed session
 
@@ -58,9 +66,9 @@ is outstanding.
 
 ## Next action
 
-1. Land 125a's `delete` lock, commit, mark 125a-api ✅.
-2. Dispatch **wave 2**: 125b (import/sync) and 125a-web (`/settings?tab=tasks`) in parallel —
-   disjoint files, both unblocked now that the contract exists.
+1. Review wave 2 when both agents report; commit and push.
+2. Then **wave 3**: 125d (the roadmap board UI) — it needs 125b's data shape to be settled.
+   Remember `docs/api/roadmap.md`'s archived-blocker requirement when reviewing the card.
 
 ## Commit log (this branch)
 
@@ -73,3 +81,7 @@ is outstanding.
 | `9d00523` | wave-1 code snapshot (labelled under-rework) + budget/tasks/system docs  |
 | `8422394` | archived-blocker trap documented as a 125d requirement                    |
 | `80f7305` | roadmap store lock discipline + `queued` state-diagram fix                |
+| `72f9402` | handoff refresh — 125c accepted                                          |
+| `49eccab` | endpoint error-mapping docs                                              |
+| `2e6efc6` | **fix:** regenerate the self-knowledge fixture note — unblocks CI on main |
+| `f5fb796` | roadmap store lock / corruption / id-safety tests (29 green)             |
