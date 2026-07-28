@@ -156,12 +156,32 @@ Before every dispatch (immediate or from the scheduler):
 
 ## Concurrency guard
 
-Every project has a `maxConcurrent` (how many runs may be active at once):
+Two ceilings apply. Every project has a `maxConcurrent` (how many of its runs may be
+active at once), and the runtime system config has a system-wide `maxConcurrentRuns`
+(Phase 125c; `null` = uncapped, the historical behaviour).
 
-1. `countRunning(projectId)` — counts the project's active agent + pipeline runs
-2. At the limit → the task moves to the **queued** state (no approval needed)
-3. On every terminal run → `drainQueues()` — moves the oldest queued task of each
-   project into dispatch
+1. `capacityStatus(project)` resolves which ceiling is blocking, returning
+   `"ok" | "project" | "global"`. The **global** cap is checked first — before the
+   `project == null` short-circuit — so an unattributed task is gated exactly like an
+   attributed one, even though it has no project budget to check. It reads the knob
+   live via `systemConfig.current()`, so a `/settings` save applies to the very next
+   dispatch attempt.
+2. `countRunning(projectId)` / `countRunningGlobal()` — the two counters behind those
+   ceilings (see [budget.md](./budget.md)).
+3. At either limit → the task moves to the **queued** state (no approval needed). There
+   is no separate status or queue for the global cap.
+4. On every terminal run → `drainQueues()` — moves the oldest queued task of each
+   project into dispatch. Queued tasks are grouped by `projectId`, with **`undefined`
+   as its own bucket** so a task queued by the global cap without an attributed
+   project is still drained. A `"project"` result skips to the next project's bucket;
+   a `"global"` result stops the whole drain, since nothing can dispatch anywhere.
+
+`withCapacityLock` serializes the read-then-dispatch window so two concurrent creates
+can't both pass the gate. When a global cap is configured it wraps the per-project
+lock — **always global-outer, project-inner**, so there is no lock-order inversion and
+every dispatch contends on the global count exactly once. With `maxConcurrentRuns:
+null` no global lock is taken at all and the behaviour is exactly as it was before
+125c.
 
 `budgetApproved: Set<string>` in memory — task ids that were released past the cap;
 a drain skips the budget check for these once, then removes them from the set.

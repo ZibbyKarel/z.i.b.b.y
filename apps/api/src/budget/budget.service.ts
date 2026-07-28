@@ -273,6 +273,37 @@ export class BudgetService {
     return n;
   }
 
+  /**
+   * Top-level runs currently consuming a concurrency slot SYSTEM-WIDE (125c) —
+   * the same two registries and the same status predicates as {@link countRunning},
+   * just without the project resolution or label filter: agent runs (running /
+   * awaiting-approval / paused-limit) and pipeline runs (running / paused-limit),
+   * across every project AND every unattributed run.
+   *
+   * D-007: goal runs stay uncounted here too, deliberately — a global counter
+   * that diverged from the per-project one (e.g. by counting goal runs the
+   * project counter ignores) would make the identical workload behave
+   * differently under the two caps, a bug that only shows up under load and is
+   * miserable to diagnose. Consistency with `countRunning` beats completeness;
+   * the resulting under-count while goal runs are in flight is a tracked
+   * follow-up, not a bug to fix here.
+   */
+  async countRunningGlobal(): Promise<number> {
+    let n = 0;
+    for (const run of this.agentRunner.listRunning()) {
+      const active =
+        run.status === "running" ||
+        run.status === "awaiting-approval" ||
+        run.status === "paused-limit";
+      if (active) n += 1;
+    }
+    for (const run of this.pipelineRunner.list()) {
+      const active = run.status === "running" || run.status === "paused-limit";
+      if (active) n += 1;
+    }
+    return n;
+  }
+
   /** The full budget readout — pure read from ledger + limits + runners + task store. */
   async status(now: Date = new Date()): Promise<BudgetStatus> {
     const config = await this.config.read().catch((): GlobalBudget => ({}));

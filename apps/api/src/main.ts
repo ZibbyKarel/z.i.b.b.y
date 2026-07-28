@@ -17,6 +17,7 @@ import {
   memoryContract,
   pipelineRunsContract,
   pipelinesContract,
+  roadmapContract,
   selfKnowledgeContract,
   skillsContract,
   tasksContract,
@@ -43,6 +44,7 @@ const apiContract = initContract().router({
   selfKnowledge: selfKnowledgeContract,
   limits: limitsContract,
   tasks: tasksContract,
+  roadmap: roadmapContract,
 });
 
 async function bootstrap(): Promise<void> {

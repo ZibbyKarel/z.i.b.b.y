@@ -938,6 +938,8 @@
       "limitResumeTick": "Limit-resume scan tick (ms)",
       "limitResumeMax": "Max limit-resume cycles",
       "limitResumeMaxHint": "How many times a limit-paused run is retried before it is parked/failed.",
+      "maxConcurrentRuns": "Max concurrent runs (system-wide)",
+      "maxConcurrentRunsHint": "Ceiling on runs across every project at once. Empty = no global cap (a project's own concurrency limit still applies).",
       "goalVerifyTimeout": "Goal verifier timeout (ms)",
       "goalVerifyTimeoutHint": "Wall-clock deadline for a goal verifier shell, then SIGTERM→SIGKILL.",
       "goalAutoResume": "Auto-resume goals on boot",

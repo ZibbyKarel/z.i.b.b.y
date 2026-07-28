@@ -18,7 +18,7 @@ All exports are re-exported from `libs/contracts/src/index.ts`.
 
 ## Domains
 
-36 domain folders exist today under `libs/contracts/src/` (every one below,
+37 domain folders exist today under `libs/contracts/src/` (every one below,
 excluding the composite `app.contract.ts` and the shared `common.schema.ts`):
 
 | Folder            | Key schema(s)                                                                                                                    | Contract                                                                                 |
@@ -53,6 +53,7 @@ excluding the composite `app.contract.ts` and the shared `common.schema.ts`):
 | `limits/`         | `LimitsSchema`                                                                                                                   | Budget and rate limits                                                                   |
 | `system/`         | system-config schemas                                                                                                            | Runtime system config + policy floor                                                     |
 | `pins/`           | `PinSchema`                                                                                                                      | Quick-launch pins                                                                        |
+| `roadmap/`        | `RoadmapItemSchema`, `LevelMappingSchema`                                                                                        | Per-project delivery roadmap (Phase 125) + the global level-mapping table                |
 | `tasks/`          | `ScheduledTaskSchema`, `TaskRoutingSchema`, `TaskRunSchema` (`task-run.schema.ts`)                                               | Deferred tasks + the unified run surface (`task-runs.contract.ts`)                       |
 | `activity/`       | `ActivityEntrySchema`, `ActivityKindSchema`, `ActivityRefsSchema` (plus `activity-view.schema.ts`)                               | Audit log + view config                                                                  |
 | `briefing/`       | `BriefingItemSchema`                                                                                                             | Briefing                                                                                 |

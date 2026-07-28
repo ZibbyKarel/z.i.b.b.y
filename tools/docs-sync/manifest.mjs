@@ -48,6 +48,7 @@ export const API_MODULE_DOC_MAP = {
   pins: "docs/api/pins.md",
   pipelines: "docs/api/pipelines.md",
   projects: "docs/api/projects.md",
+  roadmap: "docs/api/roadmap.md",
   runner: "docs/api/runner.md",
   "self-knowledge": "docs/api/self-knowledge.md",
   self: "docs/api/self.md",

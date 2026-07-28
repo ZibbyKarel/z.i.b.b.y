@@ -110,6 +110,19 @@ never counted separately (no double-counting). A run `paused-limit` on the usage
 window still holds its slot — releasing it early would let a queued task and the
 auto-resumed run both start at once when the window resets.
 
+`countRunningGlobal()` (Phase 125c) is the system-wide counterpart, backing the
+`maxConcurrentRuns` ceiling in the runtime system config. It applies the **identical**
+status predicates over the **identical** two registries, minus the project resolution
+and label filters — so it counts every active run across all projects plus the
+unattributed ones.
+
+Goal runs are counted by **neither** function. That is deliberate: the scheduler does
+treat a terminal goal run as slot-freeing (it triggers `drainQueues()`), so the
+counters under-report while goal runs are in flight. Making only the global counter
+count them would let the same workload behave differently under the two caps — a
+divergence that only appears under load. Consistency was chosen over completeness;
+closing the gap in both counters at once is tracked in `TODO.md`.
+
 ### The status readout
 
 `status(now)` is a pure read assembling `GET /budget`'s payload: the global ceiling
