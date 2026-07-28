@@ -55,6 +55,15 @@ macOS and CI's Linux locale, causing phantom drift.
 
 ## Drift detection
 
+`SelfKnowledgeService.compose()` runs the composer's raw markdown through the
+project's own Prettier config (`formatMarkdown`) before comparing or persisting
+it — `lint-staged`'s pre-commit `prettier --write` reformats the committed note
+like any other tracked Markdown file (blank lines around headings/HTML comments,
+escaped bare `*`), so comparing the composer's unformatted output against that
+reformatted-on-disk note reported phantom drift on every commit, same class of
+bug as the `localeCompare` one above. Falls back to the raw markdown if config
+resolution or formatting fails — this step never blocks compose.
+
 `computeDrift(existing, generated)` (pure, in the composer) compares every
 AUTO block **except META** between the vault note's current body and a fresh
 compose: a byte-for-byte content mismatch (after `.trim()`), or a block
