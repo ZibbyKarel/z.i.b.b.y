@@ -982,7 +982,8 @@
     "subnav": {
       "ariaLabel": "Settings sections",
       "general": "General",
-      "gates": "Approval rules"
+      "gates": "Approval rules",
+      "tasks": "Tasks"
     },
     "activity": {
       "title": "Activity",
@@ -1002,6 +1003,26 @@
         "integrations": "Integrations",
         "briefing": "Briefing"
       }
+    },
+    "tasks": {
+      "title": "Level mapping",
+      "hint": "An external level the sync sees for the first time appends itself to the table with the target \"task\".",
+      "kind": {
+        "jira": "Jira",
+        "github": "GitHub"
+      },
+      "level": "External level",
+      "levelPlaceholder": "e.g. Story",
+      "target": {
+        "label": "Target",
+        "epic": "Epic",
+        "task": "Task",
+        "ignore": "Ignore"
+      },
+      "add": "Add level",
+      "remove": "Remove level",
+      "emptyTitle": "No mapping yet",
+      "emptyDesc": "No mapping for this source yet. Add the first row by hand, or wait for it to show up on sync."
     }
   },
   "runs": {

@@ -982,7 +982,8 @@
     "subnav": {
       "ariaLabel": "Sekce nastavení",
       "general": "Obecné",
-      "gates": "Pravidla schvalování"
+      "gates": "Pravidla schvalování",
+      "tasks": "Tasky"
     },
     "activity": {
       "title": "Aktivita",
@@ -1002,6 +1003,26 @@
         "integrations": "Integrace",
         "briefing": "Briefing"
       }
+    },
+    "tasks": {
+      "title": "Mapování úrovní",
+      "hint": "Externí úroveň, kterou sync poprvé uvidí, se sama přidá do tabulky s cílem „task“.",
+      "kind": {
+        "jira": "Jira",
+        "github": "GitHub"
+      },
+      "level": "Externí úroveň",
+      "levelPlaceholder": "např. Story",
+      "target": {
+        "label": "Cíl",
+        "epic": "Epic",
+        "task": "Task",
+        "ignore": "Ignorovat"
+      },
+      "add": "Přidat úroveň",
+      "remove": "Odebrat úroveň",
+      "emptyTitle": "Žádné mapování",
+      "emptyDesc": "Zatím žádné mapování pro tento zdroj. Přidej první řádek ručně, nebo počkej, až se objeví při syncu."
     }
   },
   "runs": {

@@ -22,6 +22,7 @@ import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePa
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { useHealthQuery } from "../health";
 import { GateRulesSection } from "../gates/components/GateRulesSection";
+import { LevelMappingSection } from "../roadmap/components/LevelMappingSection";
 import { ActivitySection } from "./components/ActivitySection";
 import { AutomationsSection } from "./components/AutomationsSection";
 import { ChatSection } from "./components/ChatSection";
@@ -95,6 +96,7 @@ function InfoRow({ label, value, tone }: { label: string; value: string; tone?: 
 const SETTINGS_TABS = [
   "preferences",
   "gates",
+  "tasks",
   "automations",
   "chat",
   "activity",
@@ -157,6 +159,7 @@ export function Screen() {
               <TabList>
                 <Tab value="preferences">{t("preferences")}</Tab>
                 <Tab value="gates">{t("subnav.gates")}</Tab>
+                <Tab value="tasks">{t("subnav.tasks")}</Tab>
                 <Tab value="automations">{t("automations.title")}</Tab>
                 <Tab value="chat">{t("chat.title")}</Tab>
                 <Tab value="activity">{t("activity.title")}</Tab>
@@ -203,6 +206,10 @@ export function Screen() {
 
               <TabPanel value="gates">
                 <GateRulesSection surface="glass" />
+              </TabPanel>
+
+              <TabPanel value="tasks">
+                <LevelMappingSection surface="glass" />
               </TabPanel>
 
               <TabPanel value="automations">
