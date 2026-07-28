@@ -14,6 +14,8 @@ export interface TextInputFieldProps extends Omit<
   labelHint?: ReactNode;
   hint?: string;
   error?: string;
+  /** See {@link import("../Field").FieldProps.hideLabel}. */
+  hideLabel?: boolean;
   ref?: Ref<HTMLInputElement>;
 }
 
@@ -23,11 +25,12 @@ export function TextInputField({
   labelHint,
   hint,
   error,
+  hideLabel,
   ref,
   ...props
 }: TextInputFieldProps) {
   return (
-    <Field error={error} hint={hint} label={label} labelHint={labelHint}>
+    <Field error={error} hideLabel={hideLabel} hint={hint} label={label} labelHint={labelHint}>
       {({ id, describedBy, invalid }) => (
         <input
           aria-describedby={describedBy}

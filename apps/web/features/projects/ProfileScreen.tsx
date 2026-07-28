@@ -32,6 +32,7 @@ import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { slug } from "../../utils/slug";
 import { useCompaniesQuery } from "../companies";
 import { InboxPanel } from "../integrations/components/InboxPanel";
+import { RoadmapPanel } from "../roadmap/components/RoadmapPanel";
 import { type ProjectBasicsBody, ProjectBasicsPanel } from "./components/ProjectBasicsPanel";
 import { ProjectCiStatusChip } from "./components/ProjectCiStatusChip";
 import { ProjectCompanyPanel } from "./components/ProjectCompanyPanel";
@@ -100,7 +101,7 @@ function actionOptions(current: string[]): { value: string; label: string }[] {
 // Tabs — each is a directly addressable `?tab=` URL
 // ---------------------------------------------------------------------------
 
-const PROJECT_TABS = ["overview", "profile", "secrets", "integrations"] as const;
+const PROJECT_TABS = ["overview", "profile", "secrets", "integrations", "roadmap"] as const;
 type ProjectTab = (typeof PROJECT_TABS)[number];
 
 function asProjectTab(value: string | null): ProjectTab {
@@ -618,6 +619,7 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
                   <Tab value="profile">{t("tabs.profile")}</Tab>
                   <Tab value="secrets">{t("tabs.secrets")}</Tab>
                   <Tab value="integrations">{t("tabs.integrations")}</Tab>
+                  <Tab value="roadmap">{t("tabs.roadmap")}</Tab>
                 </TabList>
 
                 <TabPanel value="overview">
@@ -665,6 +667,10 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
                     {/* What the project's integrations processed + outcome */}
                     <ProjectIntegrationActivityPanel projectId={id} />
                   </Stack>
+                </TabPanel>
+
+                <TabPanel value="roadmap">
+                  <RoadmapPanel projectId={id} />
                 </TabPanel>
               </Tabs>
             ) : null}

@@ -1405,7 +1405,8 @@
         "overview": "Přehled",
         "profile": "Profil",
         "secrets": "Tajemství",
-        "integrations": "Integrace"
+        "integrations": "Integrace",
+        "roadmap": "Roadmap"
       },
       "basics": {
         "title": "Projekt",
@@ -2036,5 +2037,60 @@
     "emptyTitle": "Archiv je zatím prázdný",
     "emptyDescription": "Jakmile ZIBBY něco dokončí, objeví se to tady.",
     "selectHint": "Vyber úlohu vlevo pro zobrazení detailu."
+  },
+  "roadmap": {
+    "hint": "Vyber epik a uvidíš jeho tasky vpravo.",
+    "emptyEpicsTitle": "Zatím žádné epiky",
+    "emptyEpicsDescription": "Tento projekt zatím nemá žádnou roadmapu — naimportuj ji ze zdroje, nebo epiky vytvoř ručně.",
+    "epic": {
+      "unphased": "nerozfázováno",
+      "progress": "{done}/{total} tasků",
+      "status": {
+        "idea": "Nápad",
+        "todo": "Ve frontě",
+        "active": "Probíhá",
+        "blocked": "Blokováno",
+        "done": "Hotovo"
+      }
+    },
+    "board": {
+      "header": "{name} — task board",
+      "columns": {
+        "blocked": "Blokované",
+        "ready": "Ready",
+        "inProgress": "In Progress",
+        "done": "Done"
+      },
+      "empty": "prázdno"
+    },
+    "card": {
+      "playInert": "Spuštění zatím nefunguje — přijde příště.",
+      "failed": "Selhalo",
+      "waitingOn": "čeká na {name}",
+      "waitingOnArchived": "čeká na {name} — zdroj ji už nevrací",
+      "blocks": "blokuje {count}",
+      "openDetail": "Zobrazit detail: {name}"
+    },
+    "dialog": {
+      "description": "Popis",
+      "attachments": "Přílohy",
+      "noAttachments": "Žádné přílohy",
+      "blockers": "Čeká na",
+      "noBlockers": "Na ničem nečeká",
+      "dependents": "Blokuje",
+      "noDependents": "Nic neblokuje",
+      "archivedNote": "zdroj ji už nevrací",
+      "syncNotes": "Poznámky ze synchronizace",
+      "runs": "Historie běhů",
+      "noRuns": "Zatím žádný běh",
+      "runOutcome": {
+        "running": "Běží",
+        "awaiting-merge": "Čeká na merge",
+        "done": "Hotovo",
+        "failed": "Selhalo"
+      },
+      "runPr": "PR #{number}",
+      "runArtifact": "Artefakt: {path}"
+    }
   }
 }
