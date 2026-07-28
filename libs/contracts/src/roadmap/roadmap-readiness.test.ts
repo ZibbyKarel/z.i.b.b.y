@@ -16,6 +16,9 @@ function item(overrides: Partial<RoadmapItem> & { id: string }): RoadmapItem {
     dependsOnFromSource: [],
     lifecycle: "todo",
     runs: [],
+    // `.default([])` in the schema makes this optional on INPUT but guaranteed on
+    // OUTPUT, and this helper returns the output type — see docs/api/roadmap.md.
+    syncNotes: [],
     createdAt: NOW,
     updatedAt: NOW,
     ...overrides,

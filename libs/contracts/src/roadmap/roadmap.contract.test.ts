@@ -27,6 +27,13 @@ describe("roadmapContract", () => {
     expect(roadmapContract.deleteRoadmapItem.responses[200]).toBeDefined();
   });
 
+  it("exposes the manual sync route", () => {
+    expect(roadmapContract.syncRoadmapItems.method).toBe("POST");
+    expect(roadmapContract.syncRoadmapItems.path).toBe("/api/projects/:projectId/roadmap/sync");
+    expect(roadmapContract.syncRoadmapItems.responses).toHaveProperty("200");
+    expect(roadmapContract.syncRoadmapItems.responses).toHaveProperty("404");
+  });
+
   it("exposes the per-project config routes", () => {
     expect(roadmapContract.getRoadmapConfig.method).toBe("GET");
     expect(roadmapContract.getRoadmapConfig.path).toBe("/api/projects/:projectId/roadmap/config");
