@@ -138,6 +138,33 @@ rate-limit error, injectable `fetchImpl` for tests).
   documented as never called from any scheduler/monitor/autonomous runner —
   Law "Never: Auto-merge". 422 with no link, 409 when GitHub reports
   not-mergeable.
+- `getPr(projectId, number)` / `isMerged(projectId, number)` (phase 125e) — one PR's
+  live state, for the roadmap gate's merge poll. `getPr` mirrors `listOpen`'s error
+  posture exactly (404 → `null`, 429/403 → rate-limit error, other non-2xx → throws).
+  `isMerged` wraps it **fail-closed**: unknown, gone, unlinked or rate-limited all
+  read as `false`. That is the opposite of `PostMergeWatchService.rollup`'s fail-open
+  `"pending"`, and deliberately so — the watcher is reporting CI on an _already
+  merged_ sha, whereas this answers "may a dependent roadmap item dispatch now?"
+  A gate that guessed "merged" on an unreadable response would release work onto a
+  base that does not yet contain its dependency, which is the exact failure phase 125
+  exists to prevent.
+
+### The roadmap gate's eager release signal (125e)
+
+`recordMerge` fires `roadmapGate.onMerge(projectId, number)` — an item `awaiting-merge`
+on that PR becomes `done` and its project's enqueued items drain.
+
+It is **unawaited and independently `.catch`ed**. Both halves matter: unawaited so the
+operator's merge response never waits on roadmap bookkeeping, and separately caught
+because an unawaited rejection is invisible to the caller's own `.catch(() => {})` and
+would surface as an unhandled rejection. **A roadmap bookkeeping failure must never
+present as a merge failure** — by that point the merge has already happened on GitHub,
+so reporting it as failed would be a lie the operator might act on.
+
+`ProjectPrService` ↔ `RoadmapGateService` is a genuine provider cycle (RoadmapModule
+already needs `ProjectsStorageService`), resolved with `forwardRef` on both the module
+registrations and the constructor injection — the same shape as the existing
+`ResolvedProjectModule` ↔ `IntegrationsModule` ↔ `ProjectsModule` triangle.
 
 ## Vault mirror (`ProjectVaultService`)
 
