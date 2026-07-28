@@ -14,6 +14,18 @@ if (!("ResizeObserver" in globalThis)) {
   globalThis.ResizeObserver = ResizeObserver as unknown as typeof globalThis.ResizeObserver;
 }
 
+// jsdom ships no IntersectionObserver; the `/archiv` page's lazy-load sentinel
+// (and any future scroll-triggered loader) references it on mount.
+if (!("IntersectionObserver" in globalThis)) {
+  class IntersectionObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  globalThis.IntersectionObserver =
+    IntersectionObserver as unknown as typeof globalThis.IntersectionObserver;
+}
+
 // Node 25 exposes an experimental global `localStorage` that throws without a
 // `--localstorage-file`, shadowing jsdom's working Storage. Install a minimal
 // in-memory Storage so client preferences (e.g. caffeinate) are testable.

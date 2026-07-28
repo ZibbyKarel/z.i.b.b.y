@@ -3,6 +3,10 @@ import { z } from "zod";
 import { RunLogChunkSchema } from "../agents/agent-run.schema";
 import { EmptyBodySchema, ErrorSchema } from "../common.schema";
 import {
+  ArchiveCountsQuerySchema,
+  ArchiveCountsSchema,
+  ArchivePageQuerySchema,
+  ArchivePageSchema,
   AssignTaskRunProjectSchema,
   ResumeTaskRunSchema,
   TaskRunArtifactSchema,
@@ -125,6 +129,26 @@ export const taskRunsContract = c.router(
         404: ErrorSchema,
       },
       summary: "Delete a run and all its artifacts",
+    },
+
+    listArchivedTaskRuns: {
+      method: "GET",
+      path: "/tasks/runs/archive",
+      query: ArchivePageQuerySchema,
+      responses: {
+        200: ArchivePageSchema,
+      },
+      summary: "Cursor-paginated, search/subsystem-filtered archive (newest-first)",
+    },
+
+    getArchivedTaskRunCounts: {
+      method: "GET",
+      path: "/tasks/runs/archive/counts",
+      query: ArchiveCountsQuerySchema,
+      responses: {
+        200: ArchiveCountsSchema,
+      },
+      summary: "Per-subsystem archive counts (search-scoped) + the unsearched total",
     },
 
     assignTaskRunProject: {

@@ -2000,16 +2000,6 @@
     "subtitle": "Vše, co ZIBBY dokončil napříč subsystémy",
     "searchPlaceholder": "Hledat v archivu…",
     "searchAriaLabel": "Hledat v archivu",
-    "group": {
-      "subsystem": "Subsystém",
-      "time": "Čas"
-    },
-    "time": {
-      "today": "Dnes",
-      "yesterday": "Včera",
-      "week": "Tento týden",
-      "older": "Starší"
-    },
     "noSubsystem": "Bez subsystému",
     "filter": {
       "all": "Všechny subsystémy",

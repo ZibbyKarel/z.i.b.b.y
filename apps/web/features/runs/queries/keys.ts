@@ -12,3 +12,13 @@
  * mutations and the SSE channel invalidate exactly what the feed reads.
  */
 export const allTaskRunsKey = ["taskRuns", "all"] as const;
+
+/**
+ * Shared root of every task-run query key — `allTaskRunsKey` above AND the
+ * `/archiv` page's paginated `["taskRuns", "archive", ...]` queries
+ * (`apps/web/features/archive/queries`). `invalidateQueries` prefix-matches by
+ * default, so invalidating THIS key (never used as a `useQuery`/`useInfiniteQuery`
+ * key itself) refreshes both feeds together wherever a run transitions — the same
+ * mutation/SSE call sites that used to invalidate `allTaskRunsKey` alone.
+ */
+export const taskRunsRootKey = ["taskRuns"] as const;

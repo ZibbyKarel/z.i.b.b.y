@@ -2000,16 +2000,6 @@
     "subtitle": "Everything ZIBBY finished, across every subsystem",
     "searchPlaceholder": "Search the archive…",
     "searchAriaLabel": "Search the archive",
-    "group": {
-      "subsystem": "Subsystem",
-      "time": "Time"
-    },
-    "time": {
-      "today": "Today",
-      "yesterday": "Yesterday",
-      "week": "This week",
-      "older": "Older"
-    },
     "noSubsystem": "No subsystem",
     "filter": {
       "all": "All subsystems",

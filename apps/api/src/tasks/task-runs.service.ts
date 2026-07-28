@@ -2,6 +2,8 @@ import * as path from "node:path";
 import { Injectable } from "@nestjs/common";
 import {
   type AgentRun,
+  type ArchiveCounts,
+  type ArchivePage,
   type GoalRun,
   ORCHESTRATOR_ID,
   type Pipeline,
@@ -24,6 +26,7 @@ import {
 } from "../pipelines/pipeline-runner.service";
 import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
+import { archiveSubsystemId, isArchived, matchesArchiveSearch } from "./archive";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
 
 /** The unified run could not be resolved across any runner store (memory or disk). */
@@ -107,6 +110,61 @@ export class TaskRunsService {
     return runs
       .filter((r) => !childRunIds.has(r.runId))
       .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+  }
+
+  /**
+   * The `/archiv` page's feed: keyset (cursor) pagination over the WHOLE archived
+   * history (D9's `ARCHIVED_STATES`), newest-first, with server-side search
+   * (`matchesArchiveSearch`) and subsystem filtering (`archiveSubsystemId`) — so a
+   * search or subsystem selection reaches every archived run, not just whatever page
+   * the frontend has already loaded. `before` is the opaque `<startedAt>|<runId>`
+   * cursor of the previous page's oldest run; entries strictly older than it are
+   * returned (the `runId` tiebreak makes the order a total order so a same-`startedAt`
+   * burst never drops or repeats a run across the page boundary).
+   */
+  async listArchivedTaskRuns(opts: {
+    search?: string;
+    subsystems?: readonly string[];
+    before?: string;
+    limit?: number;
+  }): Promise<ArchivePage> {
+    const { runs, childRunIds, pipelineDefsById } = await this.collect();
+    const subsystemSet = opts.subsystems?.length ? new Set(opts.subsystems) : null;
+    const limit = Math.min(Math.max(opts.limit ?? 40, 1), 100);
+    const cursor = opts.before;
+
+    const matched = runs
+      .filter((r) => !childRunIds.has(r.runId))
+      .filter((r) => isArchived(r.status))
+      .filter((r) => matchesArchiveSearch(r, opts.search ?? ""))
+      .filter((r) => !subsystemSet || subsystemSet.has(archiveSubsystemId(r, pipelineDefsById)))
+      .sort(byNewestRun);
+
+    const remaining = cursor ? matched.filter((r) => archiveSortKey(r) < cursor) : matched;
+    const collected = remaining.slice(0, limit + 1);
+    const hasMore = collected.length > limit;
+    const items = collected.slice(0, limit);
+    const oldest = items[items.length - 1];
+    const nextCursor = hasMore && oldest ? archiveSortKey(oldest) : null;
+    return { items, nextCursor };
+  }
+
+  /**
+   * Per-subsystem archive counts (search-scoped, computed BEFORE any subsystem
+   * selection — so picking one subsystem in the UI doesn't zero out every other
+   * option's count) plus the unsearched total, for the archive page's subsystem
+   * filter and its "archive is genuinely empty" check.
+   */
+  async getArchiveCounts(opts: { search?: string }): Promise<ArchiveCounts> {
+    const { runs, childRunIds, pipelineDefsById } = await this.collect();
+    const archived = runs.filter((r) => !childRunIds.has(r.runId) && isArchived(r.status));
+    const counts: Record<string, number> = {};
+    for (const r of archived) {
+      if (!matchesArchiveSearch(r, opts.search ?? "")) continue;
+      const id = archiveSubsystemId(r, pipelineDefsById);
+      counts[id] = (counts[id] ?? 0) + 1;
+    }
+    return { counts, total: archived.length };
   }
 
   /**
@@ -263,9 +321,14 @@ export class TaskRunsService {
   /**
    * The full unfolded set of run views (every agent/pipeline/goal run + still-waiting
    * scheduled task), with processor + task enrichment attached, plus the set of goal
-   * child run ids the feed folds out.
+   * child run ids the feed folds out, and the pipeline-definition lookup the archive
+   * endpoints join through for subsystem attribution ({@link archiveSubsystemId}).
    */
-  private async collect(): Promise<{ runs: TaskRun[]; childRunIds: Set<string> }> {
+  private async collect(): Promise<{
+    runs: TaskRun[];
+    childRunIds: Set<string>;
+    pipelineDefsById: ReadonlyMap<string, Pipeline>;
+  }> {
     const [agents, pipelines, goals, scheduled, agentDefs, pipelineDefs, goalDefs, projects] =
       await Promise.all([
         this.agentRunner.listAll(),
@@ -327,7 +390,7 @@ export class TaskRunsService {
       ),
       ...scheduled.flatMap((t) => scheduledTaskToView(t) ?? []),
     ];
-    return { runs, childRunIds };
+    return { runs, childRunIds, pipelineDefsById };
   }
 
   /** Attach the processor metadata for an agent/pipeline/goal run view. */
@@ -354,6 +417,18 @@ function processorFor(kind: RunKind, owner: string, names: NameMaps): Processor 
     return { kind, id: owner, name: names[kind].get(owner) ?? owner };
   }
   return undefined;
+}
+
+/** Total-order sort key for a run in the archive feed — `startedAt` first (chronological),
+ * `runId` as a tiebreak so a same-`startedAt` burst never collides across a cursor page
+ * boundary. Lexicographic comparison works directly since `startedAt` is ISO 8601. */
+function archiveSortKey(run: TaskRun): string {
+  return `${run.startedAt}|${run.runId}`;
+}
+
+/** Newest-first comparator for the archive feed, by {@link archiveSortKey}. */
+function byNewestRun(a: TaskRun, b: TaskRun): number {
+  return archiveSortKey(b).localeCompare(archiveSortKey(a));
 }
 
 // ── Pure converters (ported from apps/web/features/runs/run.ts) ──────────────

@@ -24,6 +24,21 @@ export class TaskRunsController {
     return tsRestHandler(taskRunsContract, {
       listTaskRuns: async () => ({ status: 200, body: await this.runs.listTaskRuns() }),
 
+      listArchivedTaskRuns: async ({ query: { search, subsystems, before, limit } }) => ({
+        status: 200,
+        body: await this.runs.listArchivedTaskRuns({
+          search,
+          subsystems: subsystems ? subsystems.split(",").filter(Boolean) : undefined,
+          before,
+          limit,
+        }),
+      }),
+
+      getArchivedTaskRunCounts: async ({ query: { search } }) => ({
+        status: 200,
+        body: await this.runs.getArchiveCounts({ search }),
+      }),
+
       getTaskRun: async ({ params: { runId } }) => {
         try {
           return { status: 200, body: await this.runs.getTaskRun(runId) };

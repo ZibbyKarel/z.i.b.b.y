@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../../state/api";
-import { allTaskRunsKey } from "../queries/useRunsQuery";
+import { taskRunsRootKey } from "../queries/keys";
 
 /**
  * Resume a run via `POST /api/tasks/runs/:runId/resume`; refreshes the feed on
@@ -12,6 +12,6 @@ import { allTaskRunsKey } from "../queries/useRunsQuery";
 export function useResumeTaskRunMutation() {
   const qc = useQueryClient();
   return apiClient.taskRuns.resumeTaskRun.useMutation({
-    onSuccess: () => qc.invalidateQueries({ queryKey: allTaskRunsKey }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: taskRunsRootKey }),
   });
 }

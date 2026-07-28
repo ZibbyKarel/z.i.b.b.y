@@ -182,6 +182,9 @@ rows), but stay reachable from the goal's detail view.
 
 ```
 GET    /api/tasks/runs                                       the unified feed (newest-first; agent/pipeline/goal/scheduled)
+GET    /api/tasks/runs/archive                                the `/archiv` page's feed: cursor-paginated, search/subsystem-
+                                                                filtered, archived-only (below)
+GET    /api/tasks/runs/archive/counts                          per-subsystem archive counts (search-scoped) + the unsearched total
 GET    /api/tasks/runs/:runId                                a single run's detail
 GET    /api/tasks/runs/:runId/logs?offset=                   log chunk from a byte offset
 GET    /api/tasks/runs/:runId/logs/stream                    SSE tail (falls back to the offset-poll above)
@@ -203,6 +206,36 @@ routes (ts-rest doesn't model event streams) — the concrete implementation of 
 dispatches to the owning runner. The only per-kind run endpoints left are the catalog
 liveness routes `GET /api/agents/running` and `GET /api/pipelines/runs` (badges/counts
 in the catalog) — see [agents-runs.md](./agents-runs.md) and [pipelines.md](./pipelines.md).
+
+### The archive feed (`/api/tasks/runs/archive`)
+
+The `/archiv` page's flat, lazy-loaded list: every archived run (`done` / `error` /
+`interrupted` / `parked` — NOT `paused-limit`, a mid-run pause), newest-first, with
+search and subsystem filtering both running server-side so they reach every archived
+run rather than only whatever page the frontend has already loaded. Built on the same
+in-memory merge `GET /api/tasks/runs` uses (`TaskRunsService.collect()`) — there is no
+separate archive store.
+
+```
+GET /api/tasks/runs/archive?search=&subsystems=&before=&limit=
+  search       free text, matched against a run's display title and project
+  subsystems   comma-separated subsystem ids, or "none" for runs with no subsystem
+               attribution (an agent/goal run, or a pipeline whose owner isn't
+               tagged) — omitted/empty means "all subsystems"
+  before       opaque `<startedAt>|<runId>` cursor from the previous page's
+               `nextCursor` — keyset pagination, not offset-based
+  limit        clamped to [1, 100], default 40
+
+  → { items: TaskRun[], nextCursor: string | null }   nextCursor is null once exhausted
+
+GET /api/tasks/runs/archive/counts?search=
+  → { counts: Record<string, number>, total: number }
+    counts: per-subsystem-id (or "none") count among archived + search-matched runs,
+            computed BEFORE any subsystem selection (picking one subsystem in the UI
+            must not zero out every other option's count)
+    total:  every archived run, ignoring search entirely — feeds the page's
+            "archive is genuinely empty" vs. "this filter matched nothing" distinction
+```
 
 ## Task output (`output`)
 

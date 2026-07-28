@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../../state/api";
-import { allTaskRunsKey } from "../queries/useRunsQuery";
+import { taskRunsRootKey } from "../queries/keys";
 
 /**
  * Assign (or clear, with `projectId: null`) a run's project
@@ -11,6 +11,6 @@ import { allTaskRunsKey } from "../queries/useRunsQuery";
 export function useAssignRunProjectMutation() {
   const qc = useQueryClient();
   return apiClient.taskRuns.assignTaskRunProject.useMutation({
-    onSuccess: () => qc.invalidateQueries({ queryKey: allTaskRunsKey }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: taskRunsRootKey }),
   });
 }

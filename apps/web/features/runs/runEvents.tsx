@@ -13,7 +13,7 @@ import { getChannelItemsQueryKey } from "../integrations/queries/useChannelItems
 import { getPipelineRunQueryKey } from "../pipelines/queries/keys";
 import { getScheduledTasksQueryKey } from "../tasks/queries/useScheduledTasksQuery";
 import { API_URL } from "../../state/api";
-import { allTaskRunsKey } from "./queries/keys";
+import { taskRunsRootKey } from "./queries/keys";
 
 /**
  * Payload mirror of the API's events (see apps/api/src/shared/sse/sse.ts and the
@@ -108,7 +108,7 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
       });
       if (parsed.scope === "agent-runs") {
         void qc.invalidateQueries({ queryKey: getRunningAgentsQueryKey() });
-        void qc.invalidateQueries({ queryKey: allTaskRunsKey });
+        void qc.invalidateQueries({ queryKey: taskRunsRootKey });
         // A run starting/ending changes a project's running count + may drain the
         // queue (held → dispatched), so the budget readout must refresh too.
         void qc.invalidateQueries({ queryKey: getBudgetQueryKey() });
@@ -123,7 +123,7 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
           void qc.invalidateQueries({ queryKey: getPipelineRunQueryKey(parsed.runId) });
         }
       } else if (parsed.scope === "pipeline-runs" && parsed.runId) {
-        void qc.invalidateQueries({ queryKey: allTaskRunsKey });
+        void qc.invalidateQueries({ queryKey: taskRunsRootKey });
         // The single-run aggregate (a goal's pipeline maker timeline) is keyed by id.
         void qc.invalidateQueries({ queryKey: getPipelineRunQueryKey(parsed.runId) });
         void qc.invalidateQueries({ queryKey: getBudgetQueryKey() });
@@ -133,7 +133,7 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
       } else if (parsed.scope === "goal-runs") {
         // Phase 10: a goal transition refreshes the feed; a parked goal is a Tier-3
         // decision, so refresh the approvals/briefing surfaces it rides too.
-        void qc.invalidateQueries({ queryKey: allTaskRunsKey });
+        void qc.invalidateQueries({ queryKey: taskRunsRootKey });
         void qc.invalidateQueries({ queryKey: getBudgetQueryKey() });
         if (parsed.status === "parked") {
           void qc.invalidateQueries({ queryKey: getBriefingQueryKey() });

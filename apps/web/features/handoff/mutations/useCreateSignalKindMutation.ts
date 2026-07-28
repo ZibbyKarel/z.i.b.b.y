@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../../state/api";
 import { getRunningAgentsQueryKey } from "../../agents/queries/keys";
-import { allTaskRunsKey } from "../../runs/queries/keys";
+import { taskRunsRootKey } from "../../runs/queries/keys";
 import { getScheduledTasksQueryKey } from "../../tasks/queries/useScheduledTasksQuery";
 import { getSignalKindsQueryKey } from "../queries/useSignalKindsQuery";
 
@@ -19,7 +19,7 @@ export function useCreateSignalKindMutation() {
   return apiClient.handoff.createSignalKind.useMutation({
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: getSignalKindsQueryKey() });
-      void qc.invalidateQueries({ queryKey: allTaskRunsKey });
+      void qc.invalidateQueries({ queryKey: taskRunsRootKey });
       void qc.invalidateQueries({ queryKey: getRunningAgentsQueryKey() });
       void qc.invalidateQueries({ queryKey: getScheduledTasksQueryKey() });
     },

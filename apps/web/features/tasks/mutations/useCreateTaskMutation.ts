@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../../state/api";
 import { getRunningAgentsQueryKey } from "../../agents/queries/keys";
-import { allTaskRunsKey } from "../../runs/queries/keys";
+import { taskRunsRootKey } from "../../runs/queries/keys";
 import { getScheduledTasksQueryKey } from "../queries/useScheduledTasksQuery";
 
 /**
@@ -15,7 +15,7 @@ export function useCreateTaskMutation() {
   const qc = useQueryClient();
   return apiClient.tasks.createTask.useMutation({
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: allTaskRunsKey });
+      qc.invalidateQueries({ queryKey: taskRunsRootKey });
       qc.invalidateQueries({ queryKey: getRunningAgentsQueryKey() });
       qc.invalidateQueries({ queryKey: getScheduledTasksQueryKey() });
     },

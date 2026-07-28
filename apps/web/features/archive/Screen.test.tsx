@@ -1,5 +1,4 @@
-import { fireEvent } from "@testing-library/react";
-import { ButtonGroupTestId } from "@zibby/design-system";
+import { fireEvent, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen, within } from "../../test/render";
 import type { RunView } from "../runs/run";
@@ -8,17 +7,16 @@ import { Screen } from "./Screen";
 
 /**
  * F2 (`docs/plans/hud2chat-F2-archive.md`): the `/archiv` page's own Screen-level
- * wiring — grouping mode, search, the subsystem multi-select, `?run=` deep-link
- * selection, and the honest empty states. `ArchiveRow`/`ArchiveSubsystemFilter`
+ * wiring — search, the subsystem multi-select, `?run=` deep-link selection, and the
+ * honest empty states. Search/subsystem filtering and pagination all run server-side
+ * now (`TaskRunsService.listArchivedTaskRuns`/`getArchiveCounts`), so this suite mocks
+ * `./queries` and asserts the WIRING (the debounced search value and the subsystem
+ * selection reach the query hooks; rows render whatever the (mocked) hook returns) —
+ * the actual filter/sort/cursor logic is unit-tested in
+ * `apps/api/src/tasks/task-runs.service.test.ts`. `ArchiveRow`/`ArchiveSubsystemFilter`
  * are exercised for real (each already has its own focused unit suite); only
- * `RunDetail` — a heavy, already-tested composite — is stubbed, mirroring the
- * runs `Screen.test.tsx`'s own `vi.mock("./components/RunDetail", …)`.
- *
- * A group's heading renders as one text node (`{heading} · {count}`) and every
- * row's subline also reads `{subsystem} · {project}` — both can contain the
- * same substring (e.g. "Forge"), so assertions below match on the full run
- * TITLE (always a distinct, single-expression text node) rather than on
- * fragments of the heading/subline, to avoid ambiguous-match false negatives.
+ * `RunDetail` — a heavy, already-tested composite — is stubbed, mirroring the runs
+ * `Screen.test.tsx`'s own `vi.mock("./components/RunDetail", …)`.
  */
 const { searchParams } = vi.hoisted(() => ({
   searchParams: { value: new URLSearchParams() },
@@ -29,20 +27,48 @@ vi.mock("next/navigation", () => ({
 
 const { hooks } = vi.hoisted(() => ({
   hooks: {
-    runs: [] as RunView[],
-    isPending: false,
-    isError: false,
+    items: [] as RunView[],
+    itemsPending: false,
+    itemsError: false,
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    counts: {} as Record<string, number>,
+    total: 0,
+    countsPending: false,
+    countsError: false,
     pipelines: [] as { id: string; ownerSubsystem?: string }[],
   },
 }));
-const refetch = vi.fn();
+const refetchItems = vi.fn();
+const refetchCounts = vi.fn();
+const fetchNextPage = vi.fn();
+const archiveRunsArgs = vi.fn();
+const archiveCountsArgs = vi.fn();
+
+vi.mock("./queries", () => ({
+  useArchiveRunsInfiniteQuery: (args: unknown) => {
+    archiveRunsArgs(args);
+    return {
+      data: hooks.items,
+      isPending: hooks.itemsPending,
+      isError: hooks.itemsError,
+      refetch: refetchItems,
+      fetchNextPage,
+      hasNextPage: hooks.hasNextPage,
+      isFetchingNextPage: hooks.isFetchingNextPage,
+    };
+  },
+  useArchiveCountsQuery: (search: string) => {
+    archiveCountsArgs(search);
+    return {
+      data: { counts: hooks.counts, total: hooks.total },
+      isPending: hooks.countsPending,
+      isError: hooks.countsError,
+      refetch: refetchCounts,
+    };
+  },
+}));
 vi.mock("../runs/queries/useRunsQuery", () => ({
-  useRunsQuery: () => ({
-    runs: hooks.runs,
-    isPending: hooks.isPending,
-    isError: hooks.isError,
-    refetch,
-  }),
   useRunGlyphMap: () => new Map(),
   useRunAvatarMap: () => new Map(),
 }));
@@ -80,89 +106,58 @@ function run(overrides: Partial<RunView> = {}): RunView {
 describe("Archive Screen (F2)", () => {
   beforeEach(() => {
     searchParams.value = new URLSearchParams();
-    hooks.runs = [];
-    hooks.isPending = false;
-    hooks.isError = false;
+    hooks.items = [];
+    hooks.itemsPending = false;
+    hooks.itemsError = false;
+    hooks.hasNextPage = false;
+    hooks.isFetchingNextPage = false;
+    hooks.counts = {};
+    hooks.total = 0;
+    hooks.countsPending = false;
+    hooks.countsError = false;
     hooks.pipelines = [{ id: "delivery", ownerSubsystem: "forge" }];
-    refetch.mockClear();
+    refetchItems.mockClear();
+    refetchCounts.mockClear();
+    fetchNextPage.mockClear();
+    archiveRunsArgs.mockClear();
+    archiveCountsArgs.mockClear();
   });
 
-  it("groups archived runs by subsystem by default, with agent/goal runs under 'Bez subsystému'", () => {
-    hooks.runs = [
-      run({ runId: "run-forge", owner: "delivery", status: "done", title: "Forge task" }),
-      run({
-        runId: "run-agent",
-        kind: "agent",
-        owner: "writer",
-        status: "done",
-        title: "Agent task",
-      }),
+  it("renders the (server-sorted) items flat, with no group headings", () => {
+    hooks.items = [
+      run({ runId: "run-a", title: "Ship the release" }),
+      run({ runId: "run-b", kind: "agent", owner: "writer", title: "Agent task" }),
     ];
-    render(<Screen />);
-
-    expect(screen.getByText("Forge task")).toBeInTheDocument();
-    expect(screen.getByText("Agent task")).toBeInTheDocument();
-    // The "bez subsystému" bucket is explicit, never hidden (D8) — its heading
-    // (and the agent row's own subline) both surface the same label.
-    expect(screen.getAllByText(/Bez subsystému/).length).toBeGreaterThan(0);
-  });
-
-  it("excludes paused-limit runs (D9 — a mid-run pause, not an archived state)", () => {
-    hooks.runs = [
-      run({ runId: "run-done", status: "done", title: "Finished task" }),
-      run({ runId: "run-paused", status: "paused-limit", title: "Still-running task" }),
-    ];
-    render(<Screen />);
-
-    expect(screen.getByText("Finished task")).toBeInTheDocument();
-    expect(screen.queryByText("Still-running task")).not.toBeInTheDocument();
-  });
-
-  it("switches to time-bucket grouping via the group-mode toggle", () => {
-    hooks.runs = [
-      run({ runId: "run-today", title: "Forge task", startedAt: new Date().toISOString() }),
-    ];
-    render(<Screen />);
-
-    expect(screen.queryByText(/Dnes/)).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByTestId(`${ButtonGroupTestId.Option}-time`));
-
-    expect(screen.getAllByText(/Dnes/).length).toBeGreaterThan(0);
-    expect(screen.getByText("Forge task")).toBeInTheDocument();
-  });
-
-  it("filters the list by free-text search over title and project", () => {
-    hooks.runs = [
-      run({ runId: "run-a", title: "Ship the release", project: "billing-svc" }),
-      run({ runId: "run-b", title: "Rotate secrets", project: "auth-svc" }),
-    ];
+    hooks.total = 2;
     render(<Screen />);
 
     expect(screen.getByText("Ship the release")).toBeInTheDocument();
-    expect(screen.getByText("Rotate secrets")).toBeInTheDocument();
+    expect(screen.getByText("Agent task")).toBeInTheDocument();
+  });
+
+  it("debounces the search box before it reaches the server query", async () => {
+    hooks.items = [run({ runId: "run-a", title: "Ship the release" })];
+    hooks.total = 1;
+    render(<Screen />);
+    archiveRunsArgs.mockClear();
 
     fireEvent.change(screen.getByLabelText("Hledat v archivu"), {
       target: { value: "billing" },
     });
+    expect(archiveRunsArgs).not.toHaveBeenCalledWith(
+      expect.objectContaining({ search: "billing" }),
+    );
 
-    expect(screen.getByText("Ship the release")).toBeInTheDocument();
-    expect(screen.queryByText("Rotate secrets")).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(archiveRunsArgs).toHaveBeenCalledWith(expect.objectContaining({ search: "billing" })),
+    );
   });
 
-  it("filters the list via the subsystem multi-select", () => {
-    hooks.pipelines = [
-      { id: "delivery", ownerSubsystem: "forge" },
-      { id: "other", ownerSubsystem: "loom" },
-    ];
-    hooks.runs = [
-      run({ runId: "run-forge", owner: "delivery", title: "Forge task" }),
-      run({ runId: "run-loom", owner: "other", title: "Loom task" }),
-    ];
+  it("passes the subsystem multi-select's selection through to the server query", () => {
+    hooks.items = [run({ runId: "run-a", title: "Forge task" })];
+    hooks.total = 1;
+    hooks.counts = { forge: 1 };
     render(<Screen />);
-
-    expect(screen.getByText("Forge task")).toBeInTheDocument();
-    expect(screen.getByText("Loom task")).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId(ArchiveSubsystemFilterTestId.Trigger));
     const options = screen.getAllByTestId(ArchiveSubsystemFilterTestId.Option);
@@ -170,67 +165,67 @@ describe("Archive Screen (F2)", () => {
     expect(forgeOption).toBeDefined();
     fireEvent.click(within(forgeOption!).getByText("Forge"));
 
-    expect(screen.getByText("Forge task")).toBeInTheDocument();
-    expect(screen.queryByText("Loom task")).not.toBeInTheDocument();
+    expect(archiveRunsArgs).toHaveBeenLastCalledWith(
+      expect.objectContaining({ subsystems: ["forge"] }),
+    );
   });
 
   it("selects the run named by ?run= and renders its detail", () => {
     searchParams.value = new URLSearchParams("run=run-b");
-    hooks.runs = [
+    hooks.items = [
       run({ runId: "run-a", title: "Ship the release" }),
       run({ runId: "run-b", title: "Rotate secrets" }),
     ];
+    hooks.total = 2;
     render(<Screen />);
 
     expect(screen.getByTestId("run-detail-run-b")).toBeInTheDocument();
   });
 
   it("clicking a row selects it and swaps the detail pane", () => {
-    hooks.runs = [
+    hooks.items = [
       run({ runId: "run-a", title: "Ship the release" }),
       run({ runId: "run-b", title: "Rotate secrets" }),
     ];
+    hooks.total = 2;
     render(<Screen />);
 
     expect(screen.getByTestId("run-detail-run-a")).toBeInTheDocument();
-
     fireEvent.click(screen.getByText("Rotate secrets"));
-
     expect(screen.getByTestId("run-detail-run-b")).toBeInTheDocument();
     expect(screen.queryByTestId("run-detail-run-a")).not.toBeInTheDocument();
   });
 
   it("shows the select hint (no run selected) when the archive is empty", () => {
-    hooks.runs = [];
+    hooks.items = [];
+    hooks.total = 0;
     render(<Screen />);
 
     expect(screen.getByText("Archiv je zatím prázdný")).toBeInTheDocument();
     expect(screen.getByText("Vyber úlohu vlevo pro zobrazení detailu.")).toBeInTheDocument();
   });
 
-  it("shows the filtered-empty message when search matches nothing, without an empty-archive message", () => {
-    hooks.runs = [run({ runId: "run-a", title: "Ship the release" })];
+  it("shows the filtered-empty message when the current filter matches nothing, without an empty-archive message", () => {
+    hooks.items = [];
+    hooks.total = 3; // the archive itself isn't empty — just this search/filter combo
     render(<Screen />);
-
-    fireEvent.change(screen.getByLabelText("Hledat v archivu"), {
-      target: { value: "nothing-matches-this" },
-    });
 
     expect(screen.getByText("Nic nenalezeno.")).toBeInTheDocument();
     expect(screen.queryByText("Archiv je zatím prázdný")).not.toBeInTheDocument();
   });
 
-  it("shows the loading state while the feed is pending", () => {
-    hooks.isPending = true;
+  it("shows the loading state while either query is pending", () => {
+    hooks.itemsPending = true;
     render(<Screen />);
     expect(screen.getByText("Načítání…")).toBeInTheDocument();
   });
 
-  it("shows the error state (with retry) when the feed fails", () => {
-    hooks.isError = true;
+  it("shows the error state (with retry) when either query fails", () => {
+    hooks.itemsError = true;
     render(<Screen />);
     expect(screen.getByText("Nepodařilo se načíst")).toBeInTheDocument();
     fireEvent.click(screen.getByText("Zkusit znovu"));
-    expect(refetch).toHaveBeenCalled();
+    expect(refetchItems).toHaveBeenCalled();
+    expect(refetchCounts).toHaveBeenCalled();
   });
 });

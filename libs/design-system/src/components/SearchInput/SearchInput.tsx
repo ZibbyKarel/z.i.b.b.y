@@ -24,10 +24,11 @@ export interface SearchInputProps extends Omit<
 
 /**
  * A compact, icon-prefixed live-filter input with no visible label — the
- * "type to filter this list" sibling of `TextInputField` (always labelled) and
+ * "type to filter" sibling of `TextInputField` (always labelled) and
  * `SearchBar` (a button that opens the command palette, not an editable
- * control). Used wherever a page needs an inline free-text filter over an
- * already-loaded list, e.g. the task archive.
+ * control). Used wherever a page needs an inline free-text search box, whether
+ * it filters an already-loaded list or (like the task archive) drives a
+ * server-side search.
  */
 export function SearchInput({ ariaLabel, ref, surface = "solid", ...props }: SearchInputProps) {
   return (

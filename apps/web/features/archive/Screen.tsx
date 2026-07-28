@@ -1,39 +1,35 @@
 "use client";
 
 import { SUBSYSTEMS } from "@zibby/contracts";
-import { ButtonGroup, Container, SearchInput, Stack, Typography } from "@zibby/design-system";
+import { Container, SearchInput, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { formatDuration } from "../../utils/time";
-import { isArchived } from "../runs/archiveStatus";
 import { RunDetail } from "../runs/components/RunDetail";
-import { useRunAvatarMap, useRunGlyphMap, useRunsQuery } from "../runs/queries/useRunsQuery";
+import { useRunAvatarMap, useRunGlyphMap } from "../runs/queries/useRunsQuery";
 import { type RunView, findSelectedRun, runAvatar, runGlyph } from "../runs/run";
 import { useRunActions } from "../runs/useRunActions";
 import { useOwnerSubsystemMaps } from "../subsystems/useOwnerSubsystem";
 import {
-  type ArchiveGroupMode,
   type ArchiveSubsystemFilterId,
   NO_SUBSYSTEM,
-  type TimeBucket,
   archiveSubsystemFilterId,
-  computeSubsystemCounts,
-  filterArchiveRuns,
-  groupArchiveRuns,
 } from "./archiveGroups";
 import { ArchiveRow } from "./components/ArchiveRow";
 import { ArchiveSubsystemFilter } from "./components/ArchiveSubsystemFilter";
+import { useArchiveCountsQuery, useArchiveRunsInfiniteQuery } from "./queries";
 
-/** A group's display name + dot colour — resolved here (not in the pure
+const SEARCH_DEBOUNCE_MS = 300;
+
+/** A run's display name + dot colour — resolved here (not in the pure
  * `archiveGroups` module) since it needs both `t()` and the `SUBSYSTEMS`
- * registry. Shared by the rail's group headers and every row's subline, which
- * always shows `{subsystem} · {project}` regardless of the active grouping
- * mode (design: `ArRow`). */
+ * registry. Shown in every row's subline (`{subsystem} · {project}`). */
 function subsystemDisplay(
   id: ArchiveSubsystemFilterId,
   t: ReturnType<typeof useTranslations<"archive">>,
@@ -55,39 +51,17 @@ function durationLabel(run: RunView): string {
  * finished task (D9's `ARCHIVED_STATES`) across every subsystem, in one
  * design-literal master/detail page (`design/Z.I.B.B.Y/ZIBBY Archiv úloh.html`).
  *
- * Reuses, never refetches: `useRunsQuery()` is the SAME unified feed `ChatTasksPanel`
- * and the runs `Screen` read; the archive split (`isArchived`), the subsystem join
- * (`useOwnerSubsystemMaps`/`archiveSubsystemFilterId`), `RunDetail`, `useRunActions`,
- * and `findSelectedRun` are all shared modules/components, not copies.
+ * A flat list, newest → oldest, lazy-loaded as the operator scrolls
+ * (`useArchiveRunsInfiniteQuery`) — search and the subsystem filter both run
+ * server-side (`TaskRunsService.listArchivedTaskRuns`/`getArchiveCounts`), so they
+ * reach every archived run, not just whatever page has already loaded.
  *
  * D12: `ImmersiveShell`'s body has no padding, and this page deliberately keeps it
  * that way — a master/detail split should touch the viewport edges — so padding is
  * supplied per-pane below instead of on the page root.
  */
-/** Translated label per {@link TimeBucket} — built from literal `t()` calls, not
- * a dynamic template key: `ArchiveGroup.id` is plain `string`, and next-intl's
- * typed `Messages` (see `apps/web/global.d.ts`) rejects an open `` `time.${string}` ``
- * template against its literal-key union, so the lookup has to be a static
- * record instead of `t(\`time.${id}\`)`. */
-function timeBucketLabels(
-  t: ReturnType<typeof useTranslations<"archive">>,
-): Record<TimeBucket, string> {
-  return {
-    today: t("time.today"),
-    yesterday: t("time.yesterday"),
-    week: t("time.week"),
-    older: t("time.older"),
-  };
-}
-
 export function Screen() {
   const t = useTranslations("archive");
-  const {
-    runs: allRuns,
-    isPending: runsPending,
-    isError: runsError,
-    refetch: refetchRuns,
-  } = useRunsQuery();
   const glyphById = useRunGlyphMap();
   const avatarById = useRunAvatarMap();
   const ownerMaps = useOwnerSubsystemMaps();
@@ -95,23 +69,53 @@ export function Screen() {
 
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
-  const [groupMode, setGroupMode] = useState<ArchiveGroupMode>("subsystem");
+  const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
   const [subsystemFilter, setSubsystemFilter] = useState<ArchiveSubsystemFilterId[]>([]);
   const [selId, setSelId] = useState<string | null>(searchParams.get("run"));
+
+  const {
+    data: items = [],
+    isPending: itemsPending,
+    isError: itemsError,
+    refetch: refetchItems,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useArchiveRunsInfiniteQuery({ search: debouncedQuery, subsystems: subsystemFilter });
+  const {
+    data: archiveCounts,
+    isPending: countsPending,
+    isError: countsError,
+    refetch: refetchCounts,
+  } = useArchiveCountsQuery(debouncedQuery);
 
   const { stop, stopping, resume, resuming, remove, deleting } = useRunActions(
     (runId) => setSelId(runId),
     () => setSelId(null),
   );
 
-  const archivedTotal = allRuns.filter((r) => isArchived(r.status)).length;
-  const filtered = filterArchiveRuns(allRuns, query, subsystemFilter, ownerMaps);
-  const counts = computeSubsystemCounts(allRuns, query, ownerMaps);
-  const groups = groupArchiveRuns(groupMode, filtered, ownerMaps, now);
-  const selected = findSelectedRun(filtered, selId);
-  const timeLabels = timeBucketLabels(t);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node || !hasNextPage) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !isFetchingNextPage) void fetchNextPage();
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
-  if (runsPending) {
+  const archivedTotal = archiveCounts?.total ?? 0;
+  const counts = (archiveCounts?.counts ?? {}) as Partial<Record<ArchiveSubsystemFilterId, number>>;
+  const selected = findSelectedRun(items, selId);
+
+  const isPending = itemsPending || countsPending;
+  const isError = itemsError || countsError;
+
+  if (isPending) {
     return (
       <ImmersivePage subtitle={t("subtitle")} title={t("title")}>
         <QueryLoading />
@@ -119,16 +123,34 @@ export function Screen() {
     );
   }
 
-  if (runsError) {
+  if (isError) {
     return (
       <ImmersivePage subtitle={t("subtitle")} title={t("title")}>
-        <QueryError onRetry={() => void refetchRuns()} />
+        <QueryError
+          onRetry={() => {
+            void refetchItems();
+            void refetchCounts();
+          }}
+        />
       </ImmersivePage>
     );
   }
 
   return (
-    <ImmersivePage subtitle={t("subtitle")} title={t("title")}>
+    <ImmersivePage
+      actions={
+        <Container shrink={false} width="280px">
+          <SearchInput
+            ariaLabel={t("searchAriaLabel")}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t("searchPlaceholder")}
+            value={query}
+          />
+        </Container>
+      }
+      subtitle={t("subtitle")}
+      title={t("title")}
+    >
       <Stack direction="row" style={{ height: "100%" }}>
         <Container
           height="100%"
@@ -138,29 +160,12 @@ export function Screen() {
           width="340px"
         >
           <Container padding="150" style={{ borderBottom: "1px solid var(--color-border)" }}>
-            <Stack gap="100">
-              <SearchInput
-                ariaLabel={t("searchAriaLabel")}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={t("searchPlaceholder")}
-                value={query}
-              />
-              <ArchiveSubsystemFilter
-                counts={counts}
-                onChange={setSubsystemFilter}
-                selected={subsystemFilter}
-                total={archivedTotal}
-              />
-              <ButtonGroup
-                ariaLabel={t("title")}
-                onChange={(id) => setGroupMode(id === "time" ? "time" : "subsystem")}
-                options={[
-                  { id: "subsystem", label: t("group.subsystem") },
-                  { id: "time", label: t("group.time") },
-                ]}
-                value={groupMode}
-              />
-            </Stack>
+            <ArchiveSubsystemFilter
+              counts={counts}
+              onChange={setSubsystemFilter}
+              selected={subsystemFilter}
+              total={archivedTotal}
+            />
           </Container>
 
           <Container padding="150">
@@ -173,49 +178,28 @@ export function Screen() {
                   {t("emptyDescription")}
                 </Typography>
               </Stack>
-            ) : groups.length === 0 ? (
+            ) : items.length === 0 ? (
               <Typography mono size="xs" type="note" variant="tertiary">
                 {t("emptyFilter")}
               </Typography>
             ) : (
-              <Stack gap="200">
-                {groups.map((group) => {
-                  const heading =
-                    groupMode === "subsystem"
-                      ? subsystemDisplay(group.id as ArchiveSubsystemFilterId, t).name
-                      : timeLabels[group.id as TimeBucket];
+              <Stack gap="50">
+                {items.map((run) => {
+                  const subsystemId = archiveSubsystemFilterId(run, ownerMaps);
+                  const display = subsystemDisplay(subsystemId, t);
                   return (
-                    <Stack gap="75" key={group.id}>
-                      <Typography
-                        mono
-                        uppercase
-                        size="2xs"
-                        tracking="wide"
-                        type="note"
-                        variant="tertiary"
-                      >
-                        {heading} · {group.items.length}
-                      </Typography>
-                      <Stack gap="50">
-                        {group.items.map((run) => {
-                          const subsystemId = archiveSubsystemFilterId(run, ownerMaps);
-                          const display = subsystemDisplay(subsystemId, t);
-                          return (
-                            <ArchiveRow
-                              active={selected?.runId === run.runId}
-                              durationLabel={durationLabel(run)}
-                              key={run.runId}
-                              onSelect={setSelId}
-                              run={run}
-                              subsystemColor={display.color}
-                              subsystemName={display.name}
-                            />
-                          );
-                        })}
-                      </Stack>
-                    </Stack>
+                    <ArchiveRow
+                      active={selected?.runId === run.runId}
+                      durationLabel={durationLabel(run)}
+                      key={run.runId}
+                      onSelect={setSelId}
+                      run={run}
+                      subsystemColor={display.color}
+                      subsystemName={display.name}
+                    />
                   );
                 })}
+                <div ref={sentinelRef} />
               </Stack>
             )}
           </Container>

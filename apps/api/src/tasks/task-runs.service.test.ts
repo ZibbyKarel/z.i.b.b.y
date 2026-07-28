@@ -8,6 +8,7 @@ import type {
   Project,
   ScheduledTask,
 } from "@zibby/contracts";
+import { NO_SUBSYSTEM } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
 import type { AgentRunnerService } from "../agents/agent-runner.service";
 import type { AgentsStorageService } from "../agents/agents.storage.service";
@@ -511,6 +512,135 @@ describe("TaskRunsService", () => {
       const { service, pipelineRunner } = build();
       await service.delete("delivery_3");
       expect(pipelineRunner.delete).toHaveBeenCalledWith("delivery_3");
+    });
+  });
+
+  describe("listArchivedTaskRuns / getArchiveCounts (the /archiv page's server-side feed)", () => {
+    const doneA: AgentRun = {
+      ...agentA,
+      runId: "a_done_1",
+      status: "done",
+      startedAt: "2026-06-10T00:00:00.000Z",
+      title: "Ship the release",
+      project: "billing-svc",
+    };
+    const errorA: AgentRun = {
+      ...agentA,
+      runId: "a_error_2",
+      status: "error",
+      startedAt: "2026-06-11T00:00:00.000Z",
+      title: "Rotate secrets",
+      project: "auth-svc",
+    };
+    const interruptedA: AgentRun = {
+      ...agentA,
+      runId: "a_interrupted_3",
+      status: "interrupted",
+      startedAt: "2026-06-12T00:00:00.000Z",
+      title: "Cancelled task",
+      project: "checkout-svc",
+    };
+    // A mid-run pause, not an archived state (D9) — must never surface here.
+    const pausedA: AgentRun = {
+      ...agentA,
+      runId: "a_paused_4",
+      status: "paused-limit",
+      startedAt: "2026-06-13T00:00:00.000Z",
+    };
+    const runningA: AgentRun = {
+      ...agentA,
+      runId: "a_running_5",
+      status: "running",
+      startedAt: "2026-06-14T00:00:00.000Z",
+    };
+
+    const forgePipelineDef = {
+      id: "forge-deploy",
+      name: "Forge Deploy",
+      ownerSubsystem: "forge",
+    } as Pipeline;
+    const forgeRun: PipelineRun = {
+      ...pipeP,
+      pipelineRunId: "forge_1",
+      pipelineId: "forge-deploy",
+      status: "done",
+      startedAt: "2026-06-15T00:00:00.000Z",
+    };
+
+    it("returns only archived statuses, newest-first (excludes paused-limit and running)", async () => {
+      const { service, agentRunner } = build();
+      agentRunner.listAll.mockResolvedValue([doneA, errorA, interruptedA, pausedA, runningA]);
+      const page = await service.listArchivedTaskRuns({});
+      expect(page.items.map((r) => r.runId)).toEqual(["a_interrupted_3", "a_error_2", "a_done_1"]);
+    });
+
+    it("paginates with a cursor, one item at a time, until exhausted", async () => {
+      const { service, agentRunner } = build();
+      agentRunner.listAll.mockResolvedValue([doneA, errorA, interruptedA]);
+
+      const page1 = await service.listArchivedTaskRuns({ limit: 1 });
+      expect(page1.items.map((r) => r.runId)).toEqual(["a_interrupted_3"]);
+      expect(page1.nextCursor).not.toBeNull();
+
+      const page2 = await service.listArchivedTaskRuns({ limit: 1, before: page1.nextCursor! });
+      expect(page2.items.map((r) => r.runId)).toEqual(["a_error_2"]);
+      expect(page2.nextCursor).not.toBeNull();
+
+      const page3 = await service.listArchivedTaskRuns({ limit: 1, before: page2.nextCursor! });
+      expect(page3.items.map((r) => r.runId)).toEqual(["a_done_1"]);
+      expect(page3.nextCursor).toBeNull();
+    });
+
+    it("searches every archived run's title, not just an already-loaded page", async () => {
+      const { service, agentRunner } = build();
+      agentRunner.listAll.mockResolvedValue([doneA, errorA, interruptedA]);
+      const page = await service.listArchivedTaskRuns({ search: "rotate" });
+      expect(page.items.map((r) => r.runId)).toEqual(["a_error_2"]);
+    });
+
+    it("searches the run's project too", async () => {
+      const { service, agentRunner } = build();
+      agentRunner.listAll.mockResolvedValue([doneA, errorA, interruptedA]);
+      const page = await service.listArchivedTaskRuns({ search: "billing" });
+      expect(page.items.map((r) => r.runId)).toEqual(["a_done_1"]);
+    });
+
+    it("filters by subsystem — a pipeline run's ownerSubsystem, or the explicit 'none' bucket", async () => {
+      const { service, agentRunner, pipelineRunner, pipelinesStore } = build();
+      agentRunner.listAll.mockResolvedValue([doneA]);
+      pipelineRunner.listAll.mockResolvedValue([forgeRun]);
+      pipelinesStore.list.mockResolvedValue([forgePipelineDef]);
+
+      const forgeOnly = await service.listArchivedTaskRuns({ subsystems: ["forge"] });
+      expect(forgeOnly.items.map((r) => r.runId)).toEqual(["forge_1"]);
+
+      const noneOnly = await service.listArchivedTaskRuns({ subsystems: [NO_SUBSYSTEM] });
+      expect(noneOnly.items.map((r) => r.runId)).toEqual(["a_done_1"]);
+
+      const both = await service.listArchivedTaskRuns({});
+      expect(both.items.map((r) => r.runId).sort()).toEqual(["a_done_1", "forge_1"]);
+    });
+
+    it("counts archived runs per subsystem (search-scoped) plus the unsearched total", async () => {
+      const { service, agentRunner, pipelineRunner, pipelinesStore } = build();
+      agentRunner.listAll.mockResolvedValue([doneA, runningA]);
+      pipelineRunner.listAll.mockResolvedValue([forgeRun]);
+      pipelinesStore.list.mockResolvedValue([forgePipelineDef]);
+
+      const counts = await service.getArchiveCounts({});
+      expect(counts.total).toBe(2);
+      expect(counts.counts).toEqual({ forge: 1, [NO_SUBSYSTEM]: 1 });
+    });
+
+    it("counts stay search-scoped while total ignores search entirely", async () => {
+      const { service, agentRunner, pipelineRunner, pipelinesStore } = build();
+      agentRunner.listAll.mockResolvedValue([doneA]);
+      pipelineRunner.listAll.mockResolvedValue([forgeRun]);
+      pipelinesStore.list.mockResolvedValue([forgePipelineDef]);
+
+      const counts = await service.getArchiveCounts({ search: "nothing-matches-this" });
+      expect(counts.counts).toEqual({});
+      expect(counts.total).toBe(2);
     });
   });
 });

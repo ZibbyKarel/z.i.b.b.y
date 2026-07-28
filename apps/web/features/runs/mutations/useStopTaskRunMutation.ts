@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../../state/api";
-import { allTaskRunsKey } from "../queries/useRunsQuery";
+import { taskRunsRootKey } from "../queries/keys";
 
 /**
  * Stop a running task run — agent, pipeline, or goal (Phase 43 generalized the
@@ -11,6 +11,6 @@ import { allTaskRunsKey } from "../queries/useRunsQuery";
 export function useStopTaskRunMutation() {
   const qc = useQueryClient();
   return apiClient.taskRuns.stopTaskRun.useMutation({
-    onSuccess: () => qc.invalidateQueries({ queryKey: allTaskRunsKey }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: taskRunsRootKey }),
   });
 }
