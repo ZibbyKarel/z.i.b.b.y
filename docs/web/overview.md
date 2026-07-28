@@ -242,6 +242,9 @@ features/
 ├── pipelines/      Pipeline editor + history
 ├── projects/       Project portfolio
 ├── research/       Research pipeline surfacing
+├── roadmap/        Per-project delivery backlog (phase 125) — the global
+│                   external-level mapping table at `/settings?tab=tasks`;
+│                   the project board lands on `/projects/<id>?tab=roadmap`
 ├── runs/           Run history + log viewer, plus the shared SSE hooks
 │                   (`runEvents`, `useRunLogStream`)
 ├── settings/       Workspace settings
