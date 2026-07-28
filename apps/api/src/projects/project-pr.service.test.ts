@@ -46,6 +46,7 @@ function build(opts: {
   fetchImpl?: typeof fetch;
   mergeWatch?: { putNew: (watch: MergeWatch) => Promise<MergeWatch | null> };
   activity?: { record: (input: unknown) => Promise<void> };
+  roadmapGate?: { onMerge: (projectId: string, prNumber: number) => Promise<void> };
 }) {
   const projects = opts.projects ?? { [PROJECT.id]: PROJECT };
   const integrations = opts.integrations ?? [GITHUB_INTEGRATION];
@@ -63,12 +64,14 @@ function build(opts: {
   };
   const mergeWatch = opts.mergeWatch ?? { putNew: async () => null };
   const activity = opts.activity ?? { record: async () => {} };
+  const roadmapGate = opts.roadmapGate ?? { onMerge: async () => {} };
   return new ProjectPrService(
     projectsStore as never,
     resolvedProjects as never,
     credentials as never,
     mergeWatch as never,
     activity as never,
+    roadmapGate as never,
     opts.fetchImpl,
   );
 }

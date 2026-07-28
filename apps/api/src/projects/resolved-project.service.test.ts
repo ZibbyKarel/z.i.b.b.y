@@ -9,7 +9,9 @@ const project = (over: Partial<Project> & Pick<Project, "id">): Project => ({
   ...over,
 });
 
-const integration = (over: Partial<Integration> & Pick<Integration, "id" | "kind">): Integration => ({
+const integration = (
+  over: Partial<Integration> & Pick<Integration, "id" | "kind">,
+): Integration => ({
   name: over.id,
   enabled: true,
   status: "disconnected",

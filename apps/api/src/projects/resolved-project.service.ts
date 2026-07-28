@@ -90,7 +90,12 @@ export class ResolvedProjectService {
    */
   private async findCompany(
     companyId: string | undefined,
-  ): Promise<{ id: string; name: string; people?: ProjectPerson[]; budget?: ProjectBudget } | null> {
+  ): Promise<{
+    id: string;
+    name: string;
+    people?: ProjectPerson[];
+    budget?: ProjectBudget;
+  } | null> {
     if (!companyId) return null;
     return this.companies.get(companyId).catch(() => null);
   }

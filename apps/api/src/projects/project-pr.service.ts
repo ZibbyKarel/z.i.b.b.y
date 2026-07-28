@@ -1,4 +1,4 @@
-import { Injectable, Optional } from "@nestjs/common";
+import { Inject, Injectable, Optional, forwardRef } from "@nestjs/common";
 import type {
   CredentialsInput,
   Integration,
@@ -9,6 +9,14 @@ import type {
 import { ActivityLogService } from "../activity/activity-log.service";
 import { CredentialsStore } from "../integrations/credentials.store";
 import { MergeWatchStore } from "../maestro/merge-watch.store";
+// 125e — the roadmap gate's eager merge signal (see `recordMerge` below). This
+// closes a genuine circular provider dependency with `RoadmapGateService`
+// (RoadmapModule already depends on ProjectsModule for `ProjectsStorageService`
+// and the classes reach into each other), resolved with `forwardRef` on both the
+// module registration (`projects.module.ts` <-> `roadmap.module.ts`) and this
+// constructor injection, exactly like the pre-existing `ResolvedProjectModule` <->
+// `IntegrationsModule` <-> `ProjectsModule` triangle.
+import { RoadmapGateService } from "../roadmap/roadmap-gate.service";
 import { NoGithubLinkError, PrNotMergeableError } from "./projects.errors";
 import { ProjectsStorageService } from "./projects.storage.service";
 import { ResolvedProjectService } from "./resolved-project.service";
@@ -102,6 +110,8 @@ export class ProjectPrService {
     // NS2 F7b-2 — the merge-record → post-merge-poll loop's write side.
     private readonly mergeWatch: MergeWatchStore,
     private readonly activity: ActivityLogService,
+    // 125e — see the import comment above for why this needs `forwardRef`.
+    @Inject(forwardRef(() => RoadmapGateService)) private readonly roadmapGate: RoadmapGateService,
     // Optional so Nest doesn't try to DI-resolve a plain function type —
     // production defaults to the global `fetch`; tests inject a stub (mirrors
     // `JiraIssueFlowService`'s `@Optional() adapter?` seam).
@@ -148,6 +158,51 @@ export class ProjectPrService {
       if (pr) prs.push(pr);
     }
     return prs;
+  }
+
+  /**
+   * One PR's minimal live state (`GET /repos/{repo}/pulls/{number}`) — the roadmap
+   * gate's merge-state poll (125e), reading every `awaiting-merge` item's PR. Mirrors
+   * `listOpen`'s error posture exactly: 404 → `null` (PR/repo gone), 429/403 → throws
+   * "github rate limited", any other non-2xx → throws, no github link → `null`.
+   */
+  async getPr(
+    projectId: string,
+    number: number,
+  ): Promise<{ number: number; merged: boolean; state: "open" | "closed" } | null> {
+    const project = await this.projects.get(projectId); // 404 before anything else
+    const link = await this.resolveGithubLink(project);
+    if (!link) return null;
+
+    const res = await this.fetchImpl(`${GITHUB_API}/repos/${link.repo}/pulls/${number}`, {
+      headers: { authorization: `Bearer ${link.token}`, accept: "application/vnd.github+json" },
+    });
+    if (res.status === 404) return null;
+    if (res.status === 429 || res.status === 403) {
+      throw new Error(`github rate limited (HTTP ${res.status})`);
+    }
+    if (!res.ok) throw new Error(`github pull #${number}: HTTP ${res.status}`);
+    const body = (await res.json()) as { number?: number; merged?: boolean; state?: string };
+    return {
+      number: body.number ?? number,
+      merged: body.merged === true,
+      state: body.state === "closed" ? "closed" : "open",
+    };
+  }
+
+  /**
+   * Fail-CLOSED: unknown/gone/no-link/rate-limited → `false`. A dependency GATE must
+   * never release a downstream roadmap item on an unreadable PR state — the opposite
+   * of `PostMergeWatchService.rollup`'s fail-open `"pending"`, which is watching an
+   * ALREADY-merged sha's CI outcome, not gating a fresh dispatch.
+   */
+  async isMerged(projectId: string, number: number): Promise<boolean> {
+    try {
+      const pr = await this.getPr(projectId, number);
+      return pr?.merged === true;
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -223,6 +278,16 @@ export class ProjectPrService {
         : `Merged PR #${number} in ${repo}`,
       refs: { projectId, itemId: `pr-${number}` },
     });
+    // 125e — the roadmap gate's EAGER release signal: an item `awaiting-merge` on
+    // this exact PR becomes `done` and its project's enqueued items drain.
+    // Deliberately UNAWAITED (fire-and-forget, per the master plan's "Release
+    // signals") — the operator's merge response must never wait on roadmap
+    // bookkeeping — and independently `.catch`ed here (not just relying on this
+    // method's own caller wrapping it in `.catch(() => {})`): an unawaited rejection
+    // is invisible to that outer catch and would otherwise surface as an unhandled
+    // rejection. Either way, a roadmap bookkeeping failure must NEVER surface as a
+    // merge failure — the merge already happened on GitHub.
+    void this.roadmapGate.onMerge(projectId, number).catch(() => {});
     if (!sha) return; // no sha in the response — nothing to watch
 
     const mergedAt = new Date();

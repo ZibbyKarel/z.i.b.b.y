@@ -71,3 +71,22 @@ export class CorruptRoadmapItemFileError extends Error {
     this.name = "CorruptRoadmapItemFileError";
   }
 }
+
+/**
+ * Raised by {@link RoadmapGateService}'s play/override/restart/resume actions when
+ * an item's CURRENT `lifecycle` doesn't permit the requested action (e.g. `play` on
+ * anything but `todo`, `restart`/`resume` on anything but `failed`, `resume` with no
+ * resumable run on its last run record). Mapped to 409 in the controller — distinct
+ * from {@link RoadmapItemConflictError} (409 on a duplicate CREATE), because this is
+ * a state-machine violation, not an id collision.
+ */
+export class RoadmapItemLifecycleError extends Error {
+  constructor(
+    public readonly projectId: string,
+    public readonly itemId: string,
+    reason: string,
+  ) {
+    super(`Roadmap item "${itemId}" (project "${projectId}") ${reason}`);
+    this.name = "RoadmapItemLifecycleError";
+  }
+}

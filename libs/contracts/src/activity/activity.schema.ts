@@ -96,6 +96,15 @@ export const ActivityKindSchema = z.enum([
   // silently (no entry); a Tier-3 match instead rides `approval-requested`
   // (kind `handoff-proposal`) until the operator decides.
   "handoff",
+  // Phase 125e (roadmap gate, Tier-1 — silent + recorded). The gate released an
+  // enqueued item — its dependencies were satisfied (or overridden) — and created
+  // its task, riding `taskId`.
+  "roadmap-item-dispatched",
+  // Phase 125e. A roadmap item reached a terminal outcome the gate itself decided
+  // (not a lifecycle a later sub-phase's UI sets): `done` (merge, or a document
+  // artifact's successful run) or `failed` (no artifact / an errored run), riding
+  // `status`.
+  "roadmap-item-outcome",
 ]);
 export type ActivityKind = z.infer<typeof ActivityKindSchema>;
 

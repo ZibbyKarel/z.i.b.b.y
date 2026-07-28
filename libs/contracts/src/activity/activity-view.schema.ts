@@ -83,6 +83,11 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   // watcher discoveries (monitor-alert/subsystem-scan/post-merge-outcome) rather
   // than a new group for one kind.
   handoff: "integrations",
+  // Phase 125e: the roadmap gate's own dispatch/outcome entries — reads with the
+  // other task-lifecycle entries (task-dispatched/task-outcome) rather than a new
+  // group for two kinds.
+  "roadmap-item-dispatched": "tasks",
+  "roadmap-item-outcome": "tasks",
 };
 
 /**
