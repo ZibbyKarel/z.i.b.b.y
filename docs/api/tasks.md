@@ -78,23 +78,66 @@ background dispatch" above).
 
 **File:** `apps/api/src/tasks/task-classifier.service.ts`
 
-The classifier finds the best target for the task's text:
+The classifier finds the best target for the task's text, in up to two stages:
 
-1. Loads every agent and pipeline (their `description` field)
-2. Keyword scoring — counts word overlap between the task text and each description
+1. **Stage 1 — the switchboard.** Loads every active agent, every pipeline, and one
+   coarse `subsystem` candidate per subsystem that owns ≥1 pipeline or agent
+   (`ownerSubsystem`) — `stage1SubsystemCandidates`. A subsystem candidate's `search`
+   is its Czech mandate, so mandate-term overlap ranks it in the keyword-scorer leg
+   too. Owned agents/pipelines are still ALSO listed individually at stage 1 — a
+   subsystem candidate is additive, not a replacement, so the router can pick either
+   the whole subsystem or one of its specific units.
+2. Keyword scoring — counts word overlap between the task text and each candidate's
+   `search` blob (an LLM router runs first in production; the keyword scorer is the
+   deterministic fallback; `isCoherent` rejects an orchestrator/goal pick, but a
+   seated `subsystem` pick is coherent)
 3. Returns a `TaskRouting`:
    ```typescript
    {
-     target: "agent" | "pipeline" | "orchestrator"
-     id?: string        // agent or pipeline id (the orchestrator has none)
+     target: "agent" | "pipeline" | "subsystem" | "orchestrator"
+     id?: string        // agent/pipeline/subsystem id (the orchestrator has none)
      confidence: number // 0–1
      reason: string     // why this target
    }
    ```
 4. If the catalog is empty → `EmptyCatalogError` → HTTP 422
 
-The operator can also call `POST /api/tasks/classify` to test classification without
-creating a task.
+`POST /api/tasks/classify` returns this **raw stage-1 verdict** — a `subsystem`
+target is NOT resolved further by this endpoint, so previewing a task shows the
+switchboard's coarse pick as-is.
+
+### Stage 2 — inside a subsystem (`classifyWithinSubsystem`)
+
+When an actual task dispatch (not the preview endpoint) lands on a `kind: "subsystem"`
+target — either the switchboard's own stage-1 pick, or an operator's explicit
+`@`-mention — `TaskSchedulerService` resolves it to a concrete unit before starting a
+run, via `resolveSubsystemTargetOrNull` / `resolveSubsystemTarget`:
+
+- **0 owned units** (no pipeline or active agent with that `ownerSubsystem`) — the
+  undirected switchboard path falls back to the orchestrator (soft, like any other
+  low-confidence verdict); the explicit `@mention` path instead throws
+  `SubsystemEmptyRosterError` (a clear Czech message) → HTTP 422 — a mandate without
+  capability shouldn't pretend to execute.
+- **1 owned unit** → dispatches straight to it (pipeline before agent); the scoped
+  classifier is never called.
+- **2+ owned units** → `classifyWithinSubsystem(input, subsystemId)` — the same
+  router/keyword-scorer machinery reused with the catalog restricted to that
+  subsystem's own pipelines + active agents (never another subsystem), and the LLM
+  router prompt gets an extra `preamble` (the subsystem's mandate + an "owned units"
+  list) so it reasons about the mandate, not bare catalog rows. A low-confidence
+  stage-2 verdict resolves per `SUBSYSTEM_FALLBACK[subsystemId]`: `"orchestrator"`
+  (defer to the global orchestrator — e.g. forge, whose own units are delivery
+  specialists) or `"primary"` (stay inside the subsystem, dispatch its first owned
+  unit) — a typed `Record` over the closed `SubsystemId` enum, so a new subsystem id
+  fails `tsc` until it's given a policy.
+
+The resolved target IS the run's "via `<subsystem>`" attribution — any consumer can
+already read `Pipeline.ownerSubsystem` / `Agent.ownerSubsystem` off the dispatched id,
+so no extra run-level field is needed for that. The stage-1 verdict itself (target,
+confidence, reason, matchedTerms, and — when it named a subsystem — the subsystem id)
+is separately persisted as the task's `ClassificationTrace` and enriched onto the run
+(`TaskRun.classification`, read-only) so `RunDetail` can show "why this was routed
+here."
 
 ## Budget guard
 
@@ -139,11 +182,12 @@ setInterval(() => tick(), systemConfig.current().taskTickMs);
 
 ## Routing and dispatch
 
-| Target         | Dispatcher                                                        |
-| -------------- | ----------------------------------------------------------------- |
-| `agent`        | `AgentRunnerService.startRun(agentId, { prompt, project })`       |
-| `pipeline`     | `PipelineRunnerService.startRun(pipelineId, { prompt, project })` |
-| `orchestrator` | `AgentRunnerService.startRun(ORCHESTRATOR_ID, { prompt })`        |
+| Target         | Dispatcher                                                                                                                                    |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `agent`        | `AgentRunnerService.startRun(agentId, { prompt, project })`                                                                                   |
+| `pipeline`     | `PipelineRunnerService.startRun(pipelineId, { prompt, project })`                                                                             |
+| `subsystem`    | Resolved to a concrete `agent`/`pipeline` target first (stage 2, see above), then dispatched like any other — never reaches a runner directly |
+| `orchestrator` | `AgentRunnerService.startRun(ORCHESTRATOR_ID, { prompt })`                                                                                    |
 
 After dispatch, `runRef` is written back to the task record.
 
