@@ -28,6 +28,7 @@ test("open a pipeline, see its phase chain, and run it via the task composer", a
   await dialog.getByLabel("Task", { exact: true }).fill("run the demo pipe");
   await dialog.getByRole("button", { name: "Run", exact: true }).click();
 
-  // Dispatched → navigated to the run.
-  await expect(page).toHaveURL(/\/runs\?run=/);
+  // Dispatched → navigated to the run. `/runs` was deleted in F8d and now only
+  // redirects; `/archiv` (F2) is the task archive the composer lands on.
+  await expect(page).toHaveURL(/\/archiv\?run=/);
 });

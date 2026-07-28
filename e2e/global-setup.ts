@@ -110,6 +110,13 @@ export default async function globalSetup(): Promise<void> {
         instructions: "needs approval",
         requires_approval: true,
         risk: "high",
+        // `POST /api/agents` rejects a create without `ownerSubsystem` (422 —
+        // `agents.controller.ts`). Omitting it here made this call fail
+        // silently (the `.catch` below swallows it), so `gated-agent` never
+        // existed and the task dispatched at it below failed with
+        // `Agent "gated-agent" not found` — surfacing only much later as
+        // `approval.spec.ts` never finding its chat-task row.
+        ownerSubsystem: "forge",
       },
     })
     .catch(() => {});
