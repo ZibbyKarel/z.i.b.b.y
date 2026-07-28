@@ -198,3 +198,28 @@ Global:
 Routes not yet implemented (later sub-phases, same `roadmapContract` file):
 `POST /projects/:projectId/roadmap/sync` (125b), a `play` action per item
 (125e).
+
+### Error mapping
+
+`roadmap.errors.ts` declares four errors; `makeErrorMapper("RoadmapItem", …)`
+maps three of them:
+
+| Error                          | Status | Why                                                          |
+| ------------------------------ | ------ | ------------------------------------------------------------ |
+| `RoadmapItemNotFoundError`     | 404    | no file for that `(projectId, itemId)`                       |
+| `InvalidRoadmapItemIdError`    | 404    | the item id is unsafe as a file name (traversal, separators) |
+| `InvalidRoadmapProjectIdError` | 404    | the **project** id is unsafe as a directory name             |
+| `RoadmapItemConflictError`     | 409    | create hit an existing `(projectId, id)`                     |
+| `CorruptRoadmapItemFileError`  | 500    | **deliberately unmapped** — see below                        |
+
+The project-id error is deliberately its own class rather than reusing
+`InvalidRoadmapItemIdError`: a malformed project id reported as
+`RoadmapItem "…" not found` sends whoever is debugging a failed sync looking
+for a missing item that was never the problem.
+
+`CorruptRoadmapItemFileError` is left out of the mapper on purpose. Folding it
+into the same 404 as "not found" would hide real on-disk data loss behind an
+everyday, expected status; unmapped it surfaces as a 500, which is the honest
+signal that something is broken rather than merely absent. Note `list()` stays
+tolerant regardless — it skips unparseable files so one bad item can never take
+down a whole project's board.
