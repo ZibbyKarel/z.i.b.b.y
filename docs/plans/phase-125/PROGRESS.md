@@ -10,7 +10,7 @@
   [`recon/scheduler-pr-integrations.md`](./recon/scheduler-pr-integrations.md),
   [`recon/web-ds-patterns.md`](./recon/web-ds-patterns.md)
 
-**Last updated:** 125d + 125f landed; 125e mid-flight (gate service committed, tests/doc pending)
+**Last updated:** 125a–125f all landed; final wave 125g + 125h dispatched
 
 **PR: https://github.com/ZibbyKarel/z.i.b.b.y/pull/65** — one big PR, commits accumulate into it.
 
@@ -25,10 +25,10 @@
 | 125c      | `maxConcurrentRuns` + `countRunningGlobal()` + `capacityStatus()` + `?tab=runtime` control          | ✅ landed, reviewed, green |
 | 125b      | `RoadmapSourceService` (Jira + GitHub), `adfToMarkdown`, attachments, upsert, sync endpoint         | ✅ landed, reviewed, green |
 | 125d      | Roadmap tab, read-only: epic list, 4-column board, card, detail dialog                             | ✅ landed, reviewed, green |
-| 125e      | Play + `RoadmapGateService`: gate, FIFO drain, task creation, merge hook + PR poll                  | 🟨 gate + merge hook in; tests/doc pending |
+| 125e      | Play + `RoadmapGateService`: gate, FIFO drain, task creation, merge hook + PR poll                  | ✅ landed, reviewed, green |
 | 125f      | Manual epic/task creation + dependency editing                                                     | ✅ landed, reviewed, green |
-| 125g      | Epic decomposition run + artifact contract + deterministic ingest                                  | ⬜ not started             |
-| 125h      | Auto-sync tick + activity/briefing integration                                                     | ⬜ not started             |
+| 125g      | Epic decomposition run + artifact contract + deterministic ingest                                  | 🟨 agent running           |
+| 125h      | Auto-sync tick + activity/briefing integration                                                     | 🟨 agent running           |
 | —         | Full-repo `check:lint` / `check:types` / `test`, screenshots, PR                                    | ⬜ not started             |
 
 Legend: ⬜ not started · 🟨 in progress · 🟧 in review / rework · ✅ landed (committed)
