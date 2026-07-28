@@ -446,6 +446,49 @@ item whose task now carries an `outcome`:
 A periodic call to `reconcileRunning` is **125h's job** (the auto-sync tick);
 this sub-phase ships the fully-tested mechanism, not the ticker.
 
+## The auto-sync tick (125h) — `RoadmapTickService`
+
+Driven by `roadmapTickMs` (`SystemConfigSchema`, see [system.md](./system.md)), re-armed
+live like every other `*TickMs`. Each tick:
+
+1. re-syncs every project whose per-project `_config.json` sets `autoSync: true`
+   (projects that never opted in are skipped, but still polled — see below);
+2. drives `reconcileRunning` + `reconcileAwaitingMerge`.
+
+Step 2 is the **poll half** of the two release signals, and it runs regardless of
+`autoSync`. It is what catches a PR **merged directly on GitHub**, where the eager
+`recordMerge` hook never fires at all — without it the gate silently stalls for any
+operator who merges outside ZIBBY.
+
+One project's failure never aborts the rest: a throwing sync, a throwing reconcile, and
+a throwing `readConfig` are each caught per project.
+
+**Activity is deliberately quiet.** An entry is recorded only when a sync actually
+imported or archived something, and a no-op tick records nothing — the master plan asks
+for a butler's briefing, not a firehose, and a ticker that logged every pass would bury
+the entries that matter.
+
+## Decomposition (125g)
+
+Play on a **childless epic** dispatches a decomposition run to a dedicated agent, routed
+explicitly (never classified). Its terminal output is a structured artifact —
+`DecompositionArtifactSchema`, an array (max 200) of
+`{ name, description, dependsOn: number[] }`, where `dependsOn` holds **ordinals**
+(0-based indices into the same array), because the agent cannot know ids that have not
+been minted yet.
+
+`ingestDecomposition(artifact, epic, now)` is a pure function turning that into
+`RoadmapItem[]` — minting ids, resolving ordinals to real ids, setting `parentId` to the
+epic, `origin: "zibby-decomposed"` and `lifecycle: "todo"`. **It never touches disk**;
+the caller persists. That separation is the point: the decomposition agent never writes
+a roadmap file, so "artifact → write" stays a single auditable path.
+
+The artifact is **agent-produced, therefore untrusted**, and ordinal resolution is as
+strict as the schema validation before it: an out-of-range ordinal, a self-reference, and
+a duplicate within one entry are each dropped — one bad edge, not the whole item, and
+never a throw. Ingested items are inert: `todo`, never auto-played, badged "navrhla
+ZIBBY" until an operator edit clears `origin` (Law 3 — play stays the operator's click).
+
 ### Release signals (both, per the master plan — "belt and braces")
 
 1. **Eager** — `ProjectPrService.recordMerge` (the merge loop's head, reached
