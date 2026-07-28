@@ -3,7 +3,7 @@ import { DropdownTestId } from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toastBus } from "../../../components/Toaster/toastBus";
-import { renderWithProviders as render, screen, within } from "../../../test/render";
+import { renderWithProviders as render, screen, waitFor, within } from "../../../test/render";
 import { SignalCreateForm, SignalCreateFormTestId, previewSlug } from "./SignalCreateForm";
 
 const push = vi.fn();
@@ -106,16 +106,22 @@ describe("SignalCreateForm (B3b)", () => {
     );
     await userEvent.click(screen.getByTestId(SignalCreateFormTestId.Submit));
 
-    expect(hooks.createMutation.mutate).toHaveBeenCalledWith(
-      {
-        body: {
-          from: "sentinel",
-          label: "Cert expired",
-          description: "Fires when a TLS cert is about to expire.",
-          severityBearing: false,
+    // `handleSubmit` validates asynchronously (zodResolver), so the mutation is
+    // called a tick or more AFTER the click promise settles — asserting straight
+    // after `click` is a race that only loses under load (it did, on CI, with
+    // "Number of calls: 0" while passing every local run).
+    await waitFor(() =>
+      expect(hooks.createMutation.mutate).toHaveBeenCalledWith(
+        {
+          body: {
+            from: "sentinel",
+            label: "Cert expired",
+            description: "Fires when a TLS cert is about to expire.",
+            severityBearing: false,
+          },
         },
-      },
-      expect.objectContaining({ onSuccess: expect.any(Function) }),
+        expect.objectContaining({ onSuccess: expect.any(Function) }),
+      ),
     );
     expect(push).toHaveBeenCalledWith("/signals");
     expect(emitSpy).toHaveBeenCalledWith(
@@ -171,17 +177,21 @@ describe("SignalCreateForm — edit mode (B3c)", () => {
 
     await userEvent.click(screen.getByTestId(SignalCreateFormTestId.Submit));
 
-    expect(hooks.updateMutation.mutate).toHaveBeenCalledWith(
-      {
-        params: { id: "custom-thing" },
-        body: {
-          from: "loom",
-          label: "Custom Thing",
-          description: "an operator-registered signal",
-          severityBearing: false,
+    // Async `handleSubmit` — see the create-mode test above. This is the one that
+    // actually flaked on CI.
+    await waitFor(() =>
+      expect(hooks.updateMutation.mutate).toHaveBeenCalledWith(
+        {
+          params: { id: "custom-thing" },
+          body: {
+            from: "loom",
+            label: "Custom Thing",
+            description: "an operator-registered signal",
+            severityBearing: false,
+          },
         },
-      },
-      expect.objectContaining({ onSuccess: expect.any(Function) }),
+        expect.objectContaining({ onSuccess: expect.any(Function) }),
+      ),
     );
     expect(hooks.createMutation.mutate).not.toHaveBeenCalled();
     expect(push).not.toHaveBeenCalled();
