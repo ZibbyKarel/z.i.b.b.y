@@ -69,6 +69,7 @@ export * from "./pins/pin.schema";
 export * from "./pins/pins.contract";
 export * from "./roadmap/roadmap-item.schema";
 export * from "./roadmap/roadmap-readiness";
+export * from "./roadmap/roadmap-sync.schema";
 export * from "./roadmap/level-mapping.schema";
 export * from "./roadmap/roadmap.contract";
 export * from "./tasks/task.schema";

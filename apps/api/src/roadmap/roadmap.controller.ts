@@ -1,9 +1,11 @@
 import { Controller } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { type RoadmapItem, RoadmapItemSchema, roadmapContract } from "@zibby/contracts";
+import { ProjectNotFoundError } from "../projects/projects.errors";
 import { collisionResistantId } from "../shared/file-storage";
 import { makeErrorMapper } from "../shared/http/error-mapping";
 import { LevelMappingStore } from "./level-mapping.store";
+import { RoadmapSourceService } from "./roadmap-source.service";
 import {
   InvalidRoadmapItemIdError,
   InvalidRoadmapProjectIdError,
@@ -22,6 +24,12 @@ const errors = makeErrorMapper("RoadmapItem", {
   conflict: [RoadmapItemConflictError],
 });
 
+// 125b — syncRoadmapItems 404s only when the PROJECT id itself doesn't
+// resolve (RoadmapSourceService.sync's `this.projects.get` throws this before
+// anything else); a project with no Jira/GitHub integration is handled inside
+// the service itself (an all-zero summary, never an error).
+const projectErrors = makeErrorMapper("Project", { missing: [ProjectNotFoundError] });
+
 const unprocessable = (message: string) => ({ status: 422 as const, body: { message } });
 
 /**
@@ -34,6 +42,7 @@ export class RoadmapController {
   constructor(
     private readonly roadmap: RoadmapStore,
     private readonly levelMapping: LevelMappingStore,
+    private readonly roadmapSource: RoadmapSourceService,
   ) {}
 
   @TsRestHandler(roadmapContract)
@@ -77,6 +86,7 @@ export class RoadmapController {
           overrideBlocked: body.overrideBlocked,
           lifecycle: "todo",
           runs: [],
+          syncNotes: [],
           createdAt: now,
           updatedAt: now,
         };
@@ -111,6 +121,9 @@ export class RoadmapController {
           await this.roadmap.delete(projectId, itemId);
           return { id: itemId };
         }),
+
+      syncRoadmapItems: ({ params: { projectId } }) =>
+        projectErrors.or404(projectId, () => this.roadmapSource.sync(projectId)),
 
       getRoadmapConfig: async ({ params: { projectId } }) => ({
         status: 200,

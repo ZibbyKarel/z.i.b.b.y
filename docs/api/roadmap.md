@@ -122,6 +122,98 @@ entries untouched) so the table populates itself from reality.
 a missing **or** corrupt file — a garbled mapping table must never block a
 sync tick or the settings page.
 
+## Import & sync (125b)
+
+`RoadmapSourceService` pulls items from the project's **effective** integrations —
+resolved through `ResolvedProjectService.resolveIntegrations(project)`, never a raw
+`integrations.list().filter(...)`, so a company-level Jira/GitHub integration is
+visible to its projects. Credentials come from `CredentialsStore` and are never
+logged. `fetchImpl` is injectable (`@Optional()`), so the fetchers are testable
+without network.
+
+It deliberately does **not** reuse `ChannelAdapter.poll`: the channel adapters fetch
+a message-shaped subset (`JiraChannelAdapter` doesn't even request `description`),
+while the import needs full fields, links and attachments. It also deliberately
+**backfills** — the channel adapters seed their cursor to "now" and ingest nothing on
+a first poll, which would leave a fresh roadmap empty.
+
+### Jira
+
+`POST /rest/api/3/search`, requesting
+`summary,description,issuetype,parent,issuelinks,attachment,status`.
+
+- `description` arrives as **ADF JSON, not text** — `adf-to-markdown.ts` flattens it
+  (paragraphs, headings, lists, code blocks, links, inline marks). It is bounded by
+  an explicit depth cap and degrades unknown nodes to their text content; it never
+  throws, including on `null`, a bare string, or absurdly deep input.
+- **Edge direction is the sharp edge here.** A link exposes its direction by which of
+  `inwardIssue` / `outwardIssue` is present, each paired with its own phrase
+  (`type.inward` / `type.outward`) describing _this_ issue's relationship to the
+  referenced one. For the stock "Blocks" type that is
+  `{ inward: "is blocked by", outward: "blocks" }` — so an `outwardIssue` entry means
+  this issue **blocks** the other and must **not** become a dependency. Only the
+  "blocked by" phrase creates an edge, whichever side carries it. Inverting this
+  would gate the wrong item, which is precisely the failure this phase exists to
+  prevent, so it is tested from both directions.
+- Sub-tasks flatten to `task` and inherit the parent's epic as `parentId`.
+
+### GitHub
+
+`GET /repos/{repo}/issues?state=all` — entries carrying `pull_request` are dropped,
+because that endpoint returns PRs too — plus `GET /repos/{repo}/milestones`
+(Milestone → epic, Issue → task). Bodies are already markdown. Edges are parsed from
+`Depends on #N` / `Blocked by #N`; native sub-issues are best-effort and a 404/410
+from an older API is tolerated, not an error.
+
+### Level mapping
+
+Each item's level goes through `resolveLevel(mapping, kind, externalLevel)`, and every
+level seen in a fetch is fed to `LevelMappingStore.ensureLevels` so unseen levels
+append themselves as `task`. A level whose target is `"ignore"` is parsed but never
+becomes an item — it counts toward the summary's `skipped`.
+
+### Attachments
+
+Bytes are downloaded into a new set via `AttachmentStorageService`. Caps are **25 MB
+per file and 10 files per item**; anything over is skipped and recorded on the item's
+`syncNotes` rather than silently dropped. A download failure skips that one file with
+a note instead of failing the whole sync.
+
+`syncNotes` is a field on the item, **not** text appended to `description` — the
+description is source-owned and a re-sync overwrites it, so a note parked there would
+vanish on the next tick.
+
+### Upsert and the ownership split
+
+Keyed by `(integrationId, externalId)` through `roadmapItemIdForSource`, so re-import
+is idempotent and one issue never becomes two items.
+
+A re-sync writes only `name`, `description`, `externalLevel`, `attachments`,
+`source.url`, `parentId`, `dependsOnFromSource`, `syncNotes` and `syncedAt`. It never
+touches `lifecycle`, `runs`, `overrideBlocked`, `origin` — or any manual `dependsOn`
+edge.
+
+That last one is subtle enough to live in its own pure, separately-tested function,
+`mergeDependsOn(current, oldFromSource, newFromSource)`: `dependsOn` is the union of
+source-declared and operator-added edges, so a re-sync must drop source edges the
+source removed, pick up newly-declared ones, and leave every manual edge alone. It is
+the one place a bug silently loses an operator's dependency, which is why it is not
+buried in the upsert's read-modify-write.
+
+Source status Done/closed → `lifecycle: "done"`. An item the source stops returning →
+`lifecycle: "archived"`, **never deleted** (and note the archived-blocker consequence
+above). An archived item that reappears in the source returns to `todo`.
+
+### The endpoint
+
+`POST /projects/:projectId/roadmap/sync` → `RoadmapSyncResultSchema`:
+`{ imported, updated, archived, skipped, notes[] }`. A project with **no** Jira/GitHub
+integration returns all-zero counts rather than an error, mirroring
+`ProjectPrService.listOpen`'s "no link is not an error" posture.
+
+Sync is **read-only toward Jira and GitHub** — nothing is ever written back (Law 3),
+and imported issue bodies are data, never instructions (Law 4).
+
 ## Storage — the two-level file store
 
 `RoadmapStore` is modeled directly on `ChannelItemStore`

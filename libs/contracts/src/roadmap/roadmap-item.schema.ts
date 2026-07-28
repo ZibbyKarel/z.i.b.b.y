@@ -174,6 +174,17 @@ export const RoadmapItemSchema = z.object({
   origin: RoadmapOriginSchema.optional(),
   lifecycle: RoadmapItemLifecycleSchema,
   runs: z.array(RoadmapItemRunSchema).default([]),
+  /**
+   * Sync-machinery-owned (125b), NOT part of the source/ZIBBY ownership split
+   * above: short diagnostic notes about the most recent sync — today, only
+   * "attachment X skipped (exceeds the size/count cap)". Recomputed WHOLESALE
+   * on every sync (never merged with a prior value) and never operator-
+   * editable; empty once nothing was skipped. Kept on the item (rather than
+   * only in the sync endpoint's response) because a cap can silently keep
+   * biting on every re-sync — the note needs to be visible on the card/detail
+   * dialog later (125d), not just in a one-off API response nobody reads twice.
+   */
+  syncNotes: z.array(z.string()).default([]),
   createdAt: IsoDateTimeSchema,
   updatedAt: IsoDateTimeSchema,
   /** Last time a sync tick (125b) wrote this item from its source. Absent for manual items. */

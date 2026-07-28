@@ -26,6 +26,7 @@ const item = (overrides: Partial<RoadmapItem> = {}): RoadmapItem => ({
   dependsOnFromSource: [],
   lifecycle: "todo",
   runs: [],
+  syncNotes: [],
   createdAt: NOW,
   updatedAt: NOW,
   ...overrides,

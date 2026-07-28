@@ -11,20 +11,33 @@ import { AppModule } from "../src/app.module";
 describe("Roadmap API (e2e)", () => {
   let app: INestApplication;
   let dir: string;
+  let projectsDir: string;
 
   beforeAll(async () => {
     dir = await fs.mkdtemp(path.join(os.tmpdir(), "roadmap-e2e-"));
+    projectsDir = await fs.mkdtemp(path.join(os.tmpdir(), "roadmap-e2e-projects-"));
     process.env.ROADMAP_DIR = dir;
+    process.env.PROJECTS_DIR = projectsDir;
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
     await app.init();
+
+    // The sync route (125b) needs a REAL project (it resolves the project's
+    // integrations) — the CRUD routes above don't, so this is seeded only
+    // for the sync tests below.
+    await request(app.getHttpServer())
+      .post("/api/projects")
+      .send({ id: "no-integrations-project", name: "No Integrations" })
+      .expect(201);
   });
 
   afterAll(async () => {
     await app.close();
     await fs.rm(dir, { recursive: true, force: true });
+    await fs.rm(projectsDir, { recursive: true, force: true });
     delete process.env.ROADMAP_DIR;
+    delete process.env.PROJECTS_DIR;
   });
 
   it("starts empty, then create -> get -> list -> patch -> delete", async () => {
@@ -121,6 +134,19 @@ describe("Roadmap API (e2e)", () => {
       .get("/api/projects/other-project/roadmap/config")
       .expect(200);
     expect(reread.body).toEqual({ autoSync: true });
+  });
+
+  it("POST sync on a project with no Jira/GitHub integration returns an all-zero summary, not an error", async () => {
+    const synced = await request(app.getHttpServer())
+      .post("/api/projects/no-integrations-project/roadmap/sync")
+      .expect(200);
+    expect(synced.body).toEqual({ imported: 0, updated: 0, archived: 0, skipped: 0, notes: [] });
+  });
+
+  it("POST sync 404s for a project id that doesn't resolve to a real project", async () => {
+    await request(app.getHttpServer())
+      .post("/api/projects/nonexistent-project/roadmap/sync")
+      .expect(404);
   });
 
   it("GET level-mapping returns the seed, and PUT round-trips a replacement", async () => {
