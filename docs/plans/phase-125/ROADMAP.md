@@ -34,6 +34,20 @@ Every sub-phase must land with:
 5. Prettier + ESLint clean on every touched file; scoped vitest green.
 6. A commit on the feature branch (`feat(roadmap): …`) — never batched with another sub-phase.
 
+### Repo gates that bite this phase specifically
+
+- **`tools/docs-sync`** (blocking, pre-commit): a brand-new `apps/api/src/roadmap` module
+  needs a row in `tools/docs-sync/manifest.mjs`' `API_MODULE_DOC_MAP` **and** the doc file
+  must exist. → 125a creates `docs/api/roadmap.md` and the manifest row in the same commit.
+- **`pnpm check:self-knowledge`** — generated markdown must stay in sync; regenerate at the
+  final validation gate if the generator picks the new module up.
+- **`pnpm check:cycles`** (`madge --circular apps/web`) — the roadmap feature must not
+  import back from `features/projects` in a way that closes a cycle.
+- Vitest projects are split: `contracts`, `api`, `web` (i18n catalog checks only),
+  `web-components` (jsdom, scoped to `apps/web/components/**`). A new component test under
+  `apps/web/features/**` is **not** picked up by any project — put component tests where the
+  configured project actually collects them, or wire the feature dir in deliberately.
+
 ## Hard invariants (rejected at review if violated)
 
 - `blocked` is **derived**, never persisted.
