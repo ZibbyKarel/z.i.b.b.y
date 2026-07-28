@@ -2074,9 +2074,10 @@
       "playInert": "Play isn't wired up yet — coming soon.",
       "failed": "Failed",
       "waitingOn": "waiting on {name}",
-      "waitingOnArchived": "waiting on {name} — its source no longer returns it",
+      "waitingOnArchived": "waiting on {name} · archived",
       "blocks": "blocks {count}",
-      "openDetail": "Show detail: {name}"
+      "openDetail": "Show detail: {name}",
+      "waitingOnArchivedTitle": "Its blocker is no longer returned by the source — without the manual override this will never unblock."
     },
     "dialog": {
       "description": "Description",

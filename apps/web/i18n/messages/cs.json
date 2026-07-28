@@ -2074,9 +2074,10 @@
       "playInert": "Spuštění zatím nefunguje — přijde příště.",
       "failed": "Selhalo",
       "waitingOn": "čeká na {name}",
-      "waitingOnArchived": "čeká na {name} — zdroj ji už nevrací",
+      "waitingOnArchived": "čeká na {name} · archiv",
       "blocks": "blokuje {count}",
-      "openDetail": "Zobrazit detail: {name}"
+      "openDetail": "Zobrazit detail: {name}",
+      "waitingOnArchivedTitle": "Blokující položku už zdroj nevrací — bez ručního přepsání se tato nikdy neodblokuje."
     },
     "dialog": {
       "description": "Popis",
