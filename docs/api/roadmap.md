@@ -139,6 +139,20 @@ the sibling `_config.json`, exactly like `ChannelItemStore` skips
 get-mutate-write critical section under `withPathLock`, keyed by the
 resolved file path.
 
+### Watch out: `.default([])` splits a schema's input and output types
+
+`RoadmapItemSchema` uses `.default([])` on `attachments`, `dependsOn` and
+`dependsOnFromSource`. That makes the field **optional on the way in and
+guaranteed on the way out** — `z.input<typeof RoadmapItemSchema>` has
+`string[] | undefined` where `z.infer` (the output) has `string[]`.
+
+Mixing the two produces the confusing `TS2719: Two different types with this name
+exist, but they are unrelated` — the two `RoadmapItem`s differ only in the
+optionality of a defaulted field. A fixture helper that builds an item literal is
+building an **input**; type it as such, or give it every defaulted field
+explicitly. Adding a new `.default()` field to the schema will surface this at
+every literal that omits it.
+
 ### Running the API against this module locally
 
 `ROADMAP_DIR` defaults to `dataDir("roadmap")`, i.e. it follows `ZIBBY_DATA_DIR`.
