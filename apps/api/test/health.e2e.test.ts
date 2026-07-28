@@ -61,13 +61,17 @@ describe("Health API (e2e) — claude available", () => {
     expect(res.body.claude.version).toContain("fake-claude");
   });
 
-  it("carries watchers[] with all five heartbeat ids self-registered (F6c)", async () => {
+  it("carries watchers[] with every heartbeat id self-registered (F6c)", async () => {
     const res = await request(app.getHttpServer()).get("/api/health").expect(200);
     const watchers = res.body.watchers as Array<{ id: string; status: string }>;
+    // Exhaustive on purpose: a new ticker that forgets to self-register is invisible
+    // to /api/health, so this list is meant to be updated deliberately when one is
+    // added — `roadmap` (phase 125h) is the auto-sync + gate-poll tick.
     expect(watchers.map((w) => w.id).sort()).toEqual([
       "channel",
       "limit-resume",
       "monitor",
+      "roadmap",
       "scheduler",
       "task-scheduler",
     ]);
