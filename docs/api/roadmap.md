@@ -139,6 +139,15 @@ the sibling `_config.json`, exactly like `ChannelItemStore` skips
 get-mutate-write critical section under `withPathLock`, keyed by the
 resolved file path.
 
+### Running the API against this module locally
+
+`ROADMAP_DIR` defaults to `dataDir("roadmap")`, i.e. it follows `ZIBBY_DATA_DIR`.
+Booting the API with `ZIBBY_DATA_DIR` pointed at a **committed** fixture root
+(`apps/api/data-test`) is not read-only: the app seeds `automations/*.json` and
+reserializes the fixture agents/pipelines as YAML on write. Use a throwaway root
+(`ZIBBY_DATA_DIR=.zibby/data-test`) when you just want a server to poke at, and
+check `git status` afterwards — otherwise fixture churn ends up in your diff.
+
 ### Concurrency — who takes which lock
 
 Both stores serialize their read-modify-write windows with `withPathLock`, keyed

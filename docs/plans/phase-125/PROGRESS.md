@@ -52,6 +52,19 @@ round; both defect sets were real.
 
 **Wave 2 is running:** 125b (import/sync) and 125a-web (settings table), disjoint file sets.
 
+## ⚠️ Uncommitted work in the tree (if you are resuming)
+
+**125b is mid-flight and its work is NOT committed.** `git status` should show new
+`apps/api/src/roadmap/{adf-to-markdown,merge-depends-on,roadmap-source.service}.ts`,
+a new `libs/contracts/src/roadmap/roadmap-sync.schema.ts`, and edits to
+`roadmap-item.schema.ts` (a new `syncNotes` field), `roadmap.contract.ts`,
+`roadmap.controller.ts`, `roadmap.module.ts`.
+
+It was deliberately left uncommitted because `pnpm exec tsc -p libs/contracts/tsconfig.json`
+**does not pass** mid-edit (`syncNotes` is non-optional in the schema but optional at one
+call site), and pushing a broken typecheck to the open PR would read as a regression.
+Finish or discard that work before the next commit — do not assume the tree is clean.
+
 ## Environment notes for a resumed session
 
 - `pnpm install` is required — the container starts with no `node_modules`.
