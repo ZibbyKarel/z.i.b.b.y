@@ -597,19 +597,32 @@ Per-project (`/api/projects/:projectId/roadmap/...`):
   (`{ imported, updated, archived, skipped, notes[] }`). No integration
   configured → an all-zero summary, not an error; only an unresolvable
   `projectId` 404s. See "Import & sync (125b)" above.
+- `POST /projects/:projectId/roadmap/items/:itemId/play` (125e) — enqueue a
+  `todo` item; the gate releases it immediately if unblocked. 404 unknown
+  item; 409 if the item isn't `todo` ("already in flight").
+- `POST /projects/:projectId/roadmap/items/:itemId/override` (125e) —
+  Tier-3 "pustit i tak"; body `{ overrideBlocked: boolean }`. Always 200s
+  (no lifecycle restriction) — see "Tier-3 override" above.
+- `POST /projects/:projectId/roadmap/items/:itemId/restart` (125e) —
+  dispatch a brand-new task for a `failed` item. 409 outside `failed`.
+- `POST /projects/:projectId/roadmap/items/:itemId/resume` (125e) — resume
+  a `failed` item's last run in place (`TaskRunsService.resume`). 409
+  outside `failed`, or when the last run has no resumable `runRef`.
+- `POST /projects/:projectId/roadmap/play` (125e) — bulk play ("zařadit
+  vše"); body `{ itemIds: string[] }` → the items actually moved to
+  `enqueued` (non-`todo` ids are silently skipped, never a partial-batch
+  error). See "Play records intent only" above.
 
 Global:
 
 - `GET|PUT /roadmap/level-mapping` — the external-level → epic/task/ignore
   table shown at `/settings?tab=tasks` (UI lands in a later sub-phase).
 
-Routes not yet implemented (a later sub-phase, same `roadmapContract` file):
-a `play` action per item (125e).
-
 ### Error mapping
 
-`roadmap.errors.ts` declares four errors; `makeErrorMapper("RoadmapItem", …)`
-maps three of them:
+`roadmap.errors.ts` declares five errors; `makeErrorMapper("RoadmapItem", …)`
+maps three of them, plus a per-route `extra` callback (125e) for the two the
+generic mapper doesn't cover:
 
 | Error                          | Status | Why                                                          |
 | ------------------------------ | ------ | ------------------------------------------------------------ |
@@ -617,7 +630,14 @@ maps three of them:
 | `InvalidRoadmapItemIdError`    | 404    | the item id is unsafe as a file name (traversal, separators) |
 | `InvalidRoadmapProjectIdError` | 404    | the **project** id is unsafe as a directory name             |
 | `RoadmapItemConflictError`     | 409    | create hit an existing `(projectId, id)`                     |
+| `RoadmapItemLifecycleError`    | 409    | a play/restart/resume state-machine violation (125e)         |
 | `CorruptRoadmapItemFileError`  | 500    | **deliberately unmapped** — see below                        |
+
+The play/restart/resume routes also map a bare `ProjectNotFoundError` from
+`RoadmapGateService` (the item's project record was deleted after the item
+was created) to 404 — `overrideRoadmapItem`'s `extra` maps only that case,
+since `override` never throws `RoadmapItemLifecycleError` and its contract
+response union carries no 409.
 
 The project-id error is deliberately its own class rather than reusing
 `InvalidRoadmapItemIdError`: a malformed project id reported as
