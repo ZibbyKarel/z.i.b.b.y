@@ -162,9 +162,20 @@ present as a merge failure** — by that point the merge has already happened on
 so reporting it as failed would be a lie the operator might act on.
 
 `ProjectPrService` ↔ `RoadmapGateService` is a genuine provider cycle (RoadmapModule
-already needs `ProjectsStorageService`), resolved with `forwardRef` on both the module
-registrations and the constructor injection — the same shape as the existing
-`ResolvedProjectModule` ↔ `IntegrationsModule` ↔ `ProjectsModule` triangle.
+already needs `ProjectsStorageService`). It is resolved with `forwardRef` on the two
+**constructor injections only** — `ProjectsModule` does **not** import `RoadmapModule`;
+`RoadmapModule` is `@Global()` instead.
+
+That is deliberate and worth not "tidying up". Adding a `ProjectsModule → RoadmapModule`
+import edge closes a **four-file** `require()` cycle (`agents → projects → roadmap →
+tasks → agents`), and `forwardRef` cannot help there: it defers _NestJS's_ read of a
+module reference at DI-resolution time, but Node still evaluates the underlying `import`
+statements eagerly in file order. With four files in the ring, `agents.module.ts` is only
+partially loaded when `tasks.module.ts` reads it, and the boot dies on an `undefined`
+import rather than anything `forwardRef` can defer. The existing
+`ResolvedProjectModule` ↔ `IntegrationsModule` ↔ `ProjectsModule` triangle works because
+none of its members reaches back through a fourth file. See
+`docs/plans/phase-125/DECISIONS.md` D-009.
 
 ## Vault mirror (`ProjectVaultService`)
 

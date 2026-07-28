@@ -165,3 +165,44 @@ landed, not just the one the plan names.
 
 `PROGRESS.md` (handoff state), `ROADMAP.md` (execution order), `DECISIONS.md` (this file).
 Committed with every wave so a limit-outage can resume from `git log` + `PROGRESS.md` alone.
+
+## D-009 — `RoadmapModule` is `@Global()`, not a `forwardRef`d import into `ProjectsModule`
+
+**Context.** 125e needs `ProjectPrService.recordMerge` (in `ProjectsModule`) to call
+`RoadmapGateService.onMerge` (in `RoadmapModule`), and `RoadmapGateService` needs
+`ProjectsStorageService` (already why `RoadmapModule` imports `ProjectsModule`). The
+obvious fix — have `ProjectsModule` import `RoadmapModule` back, `forwardRef`d on both
+sides, exactly like the existing `ResolvedProjectModule`/`IntegrationsModule`/
+`ProjectsModule` triangle — crashes NestJS's module scanner at boot
+(`"The module at index [0] of the TasksModule imports array is undefined"`).
+
+**Why the obvious fix doesn't work here.** `RoadmapModule` also imports `TasksModule`
+(for `TaskSchedulerService`/`ScheduledTasksStorageService`/`TaskRunsService`), and
+`TasksModule` imports `AgentsModule`, which is imported by `app.module.ts` BEFORE
+`RoadmapModule`. Adding `ProjectsModule -> RoadmapModule` closes a FOUR-file `require()`
+cycle: `agents.module.ts -> projects.module.ts -> roadmap.module.ts -> tasks.module.ts ->
+agents.module.ts`. `forwardRef` only defers NestJS's own read of a wrapped module
+reference at DI-resolution time — it does nothing about the underlying `import`
+statements, which Node still evaluates eagerly, in file order, the moment each file is
+first required. With four files in the cycle, `agents.module.ts` ends up partially
+loaded (its own `export class AgentsModule` not yet reached) at the exact moment
+`tasks.module.ts` tries to read it — an `undefined` import, not a `forwardRef`-fixable
+TDZ. The existing three-module triangle never had this problem because none of its
+members transitively reach back through a FOURTH file that itself reaches back to the
+first.
+
+**Decision.** `RoadmapModule` is `@Global()`. Its providers (`RoadmapStore`,
+`RoadmapGateService`) become available everywhere once the module loads once (from
+`app.module.ts`), so `ProjectsModule` needs no import edge to `RoadmapModule` at all —
+the four-file cycle above is never created. `project-pr.service.ts` still needs a real
+(non-type-only) `import { RoadmapGateService } from "../roadmap/roadmap-gate.service"`
+for `@Inject(forwardRef(() => RoadmapGateService))`, and `roadmap-gate.service.ts`
+symmetrically imports `ProjectPrService` — but this is an ISOLATED two-file cycle
+(neither file's other imports reach back through it), so ordinary `forwardRef` on both
+of those two provider injections resolves it cleanly, verified by booting the full
+`AppModule` in `apps/api/test/roadmap.e2e.test.ts` and `roadmap-gate.e2e.test.ts`.
+
+**Cost.** `RoadmapModule`'s providers are now injectable from anywhere without an
+explicit import — slightly less locality than the rest of the codebase's module graph,
+which favors explicit imports everywhere else. Flagged here so a later sub-phase
+doesn't "clean this up" back into the four-file cycle without reading this entry first.
