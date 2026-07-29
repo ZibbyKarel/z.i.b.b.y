@@ -326,6 +326,68 @@ material — added later — is what gets cut, never a learned rule.
 project with no rules yet, or a global note not yet rendered, composes exactly
 as before.
 
-Not yet built (later tasks): the `record` call that turns a `DistilledObservation`
-into a rule occurrence, the controller/route exposing `listGrounded`/
-`promoteToGlobal`, and the `review-learn` automation target kind.
+## `ReviewRuleFlowService` (`review-rule-flow.service.ts`)
+
+The Tier-3 approval that stands between a distilled rule and ZIBBY's behaviour.
+Registers itself with `ApprovalsService` under the `review-rule` kind; the
+approval's `runId` is `` `${projectId}/${ruleId}` `` (round-trips through
+`reviewRuleRunId` / `parseReviewRuleRunId`, which reject an id with no slash or
+an empty segment).
+
+- `propose(projectId, rule)` — parks the approval, packing the rule sentence,
+  the rationale and every occurrence's excerpt + comment URL into `detail` as
+  the enrichment JSON the approvals feed renders.
+- `resume(runId)` — the operator approved: `setStatus(…, "active")`, then
+  re-render that project's rules note so the rule starts grounding.
+- `cancel(runId)` — the operator rejected: `setStatus(…, "retired")`, no
+  render. A retired rule keeps absorbing occurrences (so it stays deduped
+  against) but is never proposed again.
+
+Two deliberate choices worth knowing:
+
+- **No gate evaluation.** Unlike `AgentProposalFlowService`, this flow never
+  consults `GateEvaluatorService`. There is no floor rule for "learn a rule",
+  and a no-match evaluation defaults to `allow` — which would silently activate
+  a rule distilled from text an outsider wrote in a PR comment (Law 4). Parking
+  unconditionally is strictly stronger and needs no `POLICY.md` change.
+- **`cancel` swallows its own failure.** `ResumableRunner` declares
+  `cancel(runId): void` and `ApprovalsService` calls it _unawaited_
+  (`approvals.service.ts:134`), while `resume` _is_ awaited (`:122`). `cancel`
+  therefore catches and logs a failing store write itself, so a rejected
+  retirement can never surface as an unhandled rejection.
+
+## `ReviewLearningService` (`review-learning.service.ts`)
+
+The nightly pass, wired into DI by `ReviewLearningModule`. `learn(now?)` walks
+every project and, per project: resolves the GitHub link (skip if none), reads
+the stored cursor, fetches new review comments, distils them against that
+project's known slugs, files each observation as an occurrence via
+`store.record`, and calls `flow.propose` for every rule `record` promotes —
+i.e. every rule that just reached its second occurrence. Returns
+`{ observations, proposed }`.
+
+Fail-open per project: one unreachable repo or one bad credential never stops
+the others.
+
+Cursor discipline — the cursor advances only when the pass both saw a complete
+window and got something out of it:
+
+- **Nothing distilled** → cursor held. Costs one replayed batch, loses nothing;
+  the store's `commentId` dedup makes the replay free of double-counting.
+- **`failedEndpoints` non-empty** → cursor held, logged at warn. A failed
+  endpoint means comments in that window were never observed at all; advancing
+  past a window ZIBBY never saw would lose them permanently. Occurrences that
+  _did_ arrive this pass are still recorded.
+- Otherwise the cursor moves to the newest comment timestamp in the batch.
+
+`selfLogin` is deliberately left unpassed to `fetchNew`. ZIBBY opens its PRs
+with the operator's own GitHub token, so ZIBBY's author identity _is_ the
+operator's login — passing it would filter out the operator's own review
+comments, precisely the feedback this feature exists to learn from.
+
+Every occurrence's `excerpt` is capped at `EXCERPT_LIMIT = 400` chars: enough to
+judge the rule, never the whole thread.
+
+Not yet built (later tasks): the controller/route exposing `listGrounded` /
+`promoteToGlobal`, and the `review-learn` automation target kind that triggers
+`learn()` on a schedule.

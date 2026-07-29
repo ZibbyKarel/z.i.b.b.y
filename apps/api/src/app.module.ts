@@ -33,6 +33,7 @@ import { MachineModule } from "./machine/machine.module";
 import { MonitorsModule } from "./monitors/monitors.module";
 import { PipelinesModule } from "./pipelines/pipelines.module";
 import { ProjectsModule } from "./projects/projects.module";
+import { ReviewLearningModule } from "./review-learning/review-learning.module";
 import { LoggingModule } from "./shared/logging/logging.module";
 import { PinsModule } from "./pins/pins.module";
 import { RoadmapModule } from "./roadmap/roadmap.module";
@@ -80,6 +81,7 @@ import { TasksModule } from "./tasks/tasks.module";
     MachineModule,
     MonitorsModule,
     MaestroModule,
+    ReviewLearningModule,
     HandoffModule,
     HealthModule,
     SubsystemsModule,
