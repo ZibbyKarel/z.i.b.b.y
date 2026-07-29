@@ -3,7 +3,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { ReviewRuleOccurrence } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { ReviewRulesStore } from "./review-rules.store";
+import { InvalidReviewScopeKeyError } from "./review-rules.errors";
+import { GLOBAL_SCOPE_KEY, ReviewRulesStore } from "./review-rules.store";
 
 const NOW = new Date("2026-07-29T10:00:00.000Z");
 
@@ -120,5 +121,106 @@ describe("ReviewRulesStore", () => {
   it("reads a corrupt file as empty instead of throwing", async () => {
     await fs.writeFile(path.join(dir, "acme.json"), "{ not json", "utf8");
     expect(await store.list("acme")).toEqual([]);
+  });
+
+  it("rejects a scope key that could escape the store directory", async () => {
+    await expect(store.list("../evil")).rejects.toThrow(InvalidReviewScopeKeyError);
+    await expect(
+      store.record("../evil", { ...INPUT, occurrence: occurrence("rc-1") }, NOW),
+    ).rejects.toThrow(InvalidReviewScopeKeyError);
+    await expect(store.setCursor("../evil", NOW.toISOString())).rejects.toThrow(
+      InvalidReviewScopeKeyError,
+    );
+
+    // Nothing should have been written outside the store's own directory.
+    await expect(fs.access(path.join(path.dirname(dir), "evil.json"))).rejects.toThrow();
+  });
+
+  it("keeps valid rules when one rule in the scope file is schema-invalid", async () => {
+    const goodA = {
+      id: "good-a",
+      scope: "project",
+      rule: "Do the good thing A.",
+      status: "observed",
+      occurrences: [occurrence("g-1")],
+      createdAt: NOW.toISOString(),
+      updatedAt: NOW.toISOString(),
+    };
+    const goodB = {
+      id: "good-b",
+      scope: "project",
+      rule: "Do the good thing B.",
+      status: "proposed",
+      occurrences: [occurrence("g-2"), occurrence("g-3")],
+      createdAt: NOW.toISOString(),
+      updatedAt: NOW.toISOString(),
+    };
+    // Schema-invalid: not a recognized status.
+    const bad = {
+      id: "bad-rule",
+      scope: "project",
+      rule: "Broken.",
+      status: "not-a-real-status",
+      occurrences: [occurrence("g-4")],
+      createdAt: NOW.toISOString(),
+      updatedAt: NOW.toISOString(),
+    };
+    await fs.writeFile(
+      path.join(dir, "acme.json"),
+      JSON.stringify({ rules: [goodA, bad, goodB] }),
+      "utf8",
+    );
+
+    const rules = await store.list("acme");
+    expect(rules.map((r) => r.id).sort()).toEqual(["good-a", "good-b"]);
+
+    // Any write triggered afterwards must not silently drop the surviving rules.
+    await store.record(
+      "acme",
+      { slug: "third-rule", rule: "New rule.", occurrence: occurrence("g-5") },
+      NOW,
+    );
+    const onDisk = JSON.parse(await fs.readFile(path.join(dir, "acme.json"), "utf8")) as {
+      rules: { id: string }[];
+    };
+    expect(onDisk.rules.map((r) => r.id).sort()).toEqual(["good-a", "good-b", "third-rule"]);
+  });
+
+  it("reinforces an already-promoted global rule via record() instead of forking a project duplicate", async () => {
+    await store.record("acme", { ...INPUT, occurrence: occurrence("rc-1") }, NOW);
+    await store.record("acme", { ...INPUT, occurrence: occurrence("rc-2") }, NOW);
+    await store.setStatus("acme", INPUT.slug, "active", "ap-1");
+    await store.promoteToGlobal("acme", INPUT.slug);
+
+    const result = await store.record("acme", { ...INPUT, occurrence: occurrence("rc-3") }, NOW);
+
+    expect(result).toBeNull();
+    expect(await store.list("acme")).toEqual([]);
+    const globalRules = await store.list(GLOBAL_SCOPE_KEY);
+    expect(globalRules).toHaveLength(1);
+    expect(globalRules[0]?.occurrences).toHaveLength(3);
+  });
+
+  it("does not let a commentId collision on another global rule block a legitimate new occurrence", async () => {
+    // Promote INPUT to global with occurrence "shared-1".
+    await store.record("acme", { ...INPUT, occurrence: occurrence("shared-1") }, NOW);
+    await store.record("acme", { ...INPUT, occurrence: occurrence("rc-2") }, NOW);
+    await store.setStatus("acme", INPUT.slug, "active", "ap-1");
+    await store.promoteToGlobal("acme", INPUT.slug);
+
+    // Promote a second, unrelated rule to global too.
+    const OTHER = { slug: "no-any", rule: "Nepoužívej any." };
+    await store.record("acme", { ...OTHER, occurrence: occurrence("b-1") }, NOW);
+    await store.record("acme", { ...OTHER, occurrence: occurrence("b-2") }, NOW);
+    await store.setStatus("acme", OTHER.slug, "active", "ap-2");
+    await store.promoteToGlobal("acme", OTHER.slug);
+
+    // A genuinely new occurrence on the second rule reuses a commentId ("shared-1")
+    // that already exists on the FIRST rule. It must still be recorded.
+    await store.record("acme", { ...OTHER, occurrence: occurrence("shared-1") }, NOW);
+
+    const globalRules = await store.list(GLOBAL_SCOPE_KEY);
+    const other = globalRules.find((r) => r.id === OTHER.slug);
+    expect(other?.occurrences).toHaveLength(3);
   });
 });
