@@ -235,7 +235,7 @@ dropped)` — a small standalone function so it's testable without the
 ## `ReviewRulesVaultService` (`review-rules.vault.service.ts`)
 
 Renders `listGrounded`'s `active` rules into the vault notes `GroundingService`
-will eventually load unconditionally (Task 7) — the artifact this whole learning
+loads unconditionally (Task 7 — see below) — the artifact this whole learning
 loop exists to produce. Two note ids, exported from
 `apps/api/src/memory/review-rules-note.ts` (deliberately in `memory/`, next to
 `subsystem-shelf.ts`, so `GroundingService` can ground them without the memory
@@ -294,7 +294,28 @@ char budget) — kept rules are the most recently `updatedAt`, not an arbitrary
 truncating. An empty rule list still produces an explicit note (`Zatím žádné
 schválené pravidlo z review.`), not a missing file.
 
+## Grounding the rules notes (Task 7)
+
+**File:** `apps/api/src/memory/grounding.service.ts` (`GroundingService.compose`)
+
+Two unconditional `add()` calls, alongside the North Star and self-knowledge
+notes — learned rules are grounded regardless of term match, because a rule
+exists precisely because the operator already had to say it twice:
+
+- `add(GLOBAL_REVIEW_RULES_ID)` right after the self-knowledge note, gated only
+  by F8: `input.domain !== "personal"` (a personal run stays out of work
+  memory, so it never sees the cross-project review-rules note).
+- `add(reviewRulesIdFor(input.projectId))` immediately after the existing
+  `if (input.projectId) await add(input.projectId)` project-note line — so a
+  project's learned rules ground alongside its project note, and M7 isolation
+  holds for free: a run in project A can never resolve project B's
+  `<projectId>-review-rules` note, because the id itself is keyed off the
+  _current_ run's `projectId`.
+
+`add()` fails open on a missing note (`NoteNotFoundError` swallowed), so a
+project with no rules yet, or a global note not yet rendered, composes exactly
+as before.
+
 Not yet built (later tasks): the `record` call that turns a `DistilledObservation`
 into a rule occurrence, the controller/route exposing `listGrounded`/
-`promoteToGlobal`, the `review-learn` automation target kind, and
-`GroundingService` actually loading these two notes into a run.
+`promoteToGlobal`, and the `review-learn` automation target kind.

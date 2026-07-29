@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import type { IndexEntry, Note, NoteDomain, SubsystemId } from "@zibby/contracts";
 import { tokenize } from "../tasks/keyword-scorer";
+import { GLOBAL_REVIEW_RULES_ID, reviewRulesIdFor } from "./review-rules-note";
 import { subsystemShelfId } from "./subsystem-shelf";
 import { VaultService } from "./vault.service";
 
@@ -178,6 +179,11 @@ export class GroundingService {
 
       await add(NORTH_STAR_ID);
       await add(SELF_KNOWLEDGE_ID);
+      // Learned review rules are grounded UNCONDITIONALLY, not term-matched: a rule
+      // exists precisely because the operator already had to say it twice, so it
+      // must reach the run whether or not the task text happens to mention it. F8:
+      // a personal run stays out of work memory.
+      if (input.domain !== "personal") await add(GLOBAL_REVIEW_RULES_ID);
       const mocs: Note[] = [];
       const shelf = input.ownerSubsystem ? await add(subsystemShelfId(input.ownerSubsystem)) : null;
       if (shelf) mocs.push(shelf);
@@ -200,6 +206,7 @@ export class GroundingService {
       // project note (index-first — no vectors, reuses the same scan cache).
       for (const id of selectLinkedNotes(terms, mocs, visible, seen)) await add(id);
       if (input.projectId) await add(input.projectId);
+      if (input.projectId) await add(reviewRulesIdFor(input.projectId));
 
       if (sections.length === 0) return "";
       return this.render(sections);
