@@ -394,6 +394,13 @@ comments, precisely the feedback this feature exists to learn from.
 Every occurrence's `excerpt` is capped at `EXCERPT_LIMIT = 400` chars: enough to
 judge the rule, never the whole thread.
 
+One caveat on the return value: `observations` counts what the distiller
+produced, not what was actually filed. An observation whose `commentId` is not
+in the batch, or one the store dedups against an occurrence it already has,
+still counts — so a replayed window (see the cursor rules above) reports more
+than it stored. Only logged today, but the `review-learn` automation target
+reports this number.
+
 Not yet built (later tasks): the controller/route exposing `listGrounded` /
 `promoteToGlobal`, and the `review-learn` automation target kind that triggers
 `learn()` on a schedule.
