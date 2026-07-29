@@ -349,7 +349,6 @@ export type DistillOutcome =
  */
 export async function distillChunks(
   chunks: FetchedComment[][],
-  known: Array<{ id: string; rule: string }>,
   runCli: (chunk: FetchedComment[]) => Promise<string>,
   log: ScopedLogger,
 ): Promise<DistillOutcome> {
@@ -419,7 +418,8 @@ export class ReviewCommentDistiller {
     const chunks = chunkForArgvBudget(comments, known);
     return distillChunks(
       chunks,
-      known,
+      // `known` rides into every prompt through this closure, not through a
+      // `distillChunks` parameter — the loop itself has no use for it.
       (chunk) =>
         spawnClaudeCli({
           args: [

@@ -275,7 +275,7 @@ dropped)` — a small standalone function so it's testable without the
   `MAX_PROMPT_BYTES` = 96 000 **bytes** (UTF-8, not characters — the prompt
   carries Czech and whatever an outsider wrote), and one CLI call is made per
   chunk, merging the observations and reporting `incomplete` if any chunk
-  failed. That loop lives in `distillChunks(chunks, known, runCli, log)`, a
+  failed. That loop lives in `distillChunks(chunks, runCli, log)`, a
   standalone function rather than inline in `distill` — `distill`'s own
   `VITEST` guard short-circuits before the loop, so as a method body the merge
   that decides whether the caller's cursor advances could not be reached by any

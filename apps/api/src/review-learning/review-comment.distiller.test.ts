@@ -405,7 +405,7 @@ describe("distillChunks", () => {
     });
     const { log } = fakeLog();
 
-    const result = await distillChunks(chunks, [], runCli, log);
+    const result = await distillChunks(chunks, runCli, log);
 
     expect(result.status).toBe("incomplete");
     expect(result.status === "incomplete" && result.reason).toBe("cli-failed");
@@ -424,7 +424,7 @@ describe("distillChunks", () => {
     });
     const { log } = fakeLog();
 
-    const result = await distillChunks(chunks, [], runCli, log);
+    const result = await distillChunks(chunks, runCli, log);
 
     expect(result.status).toBe("incomplete");
     expect(result.status === "incomplete" && result.reason).toBe("unusable-reply");
@@ -445,7 +445,7 @@ describe("distillChunks", () => {
     });
     const { log } = fakeLog();
 
-    const result = await distillChunks(chunks, [], runCli, log);
+    const result = await distillChunks(chunks, runCli, log);
 
     expect(result.status).toBe("ok");
     expect(result.observations).toEqual([
@@ -462,7 +462,7 @@ describe("distillChunks", () => {
     });
     const { log } = fakeLog();
 
-    const result = await distillChunks(chunks, [], runCli, log);
+    const result = await distillChunks(chunks, runCli, log);
 
     expect(result.status).toBe("incomplete");
     expect(result.status === "incomplete" && result.reason).toBe("cli-failed");
@@ -475,7 +475,7 @@ describe("distillChunks", () => {
     });
     const { log, warn, debug } = fakeLog();
 
-    await distillChunks(chunks, [], runCli, log);
+    await distillChunks(chunks, runCli, log);
 
     expect(warn).toHaveBeenCalledWith(
       "review distiller CLI call failed — cursor will be held",
@@ -500,7 +500,7 @@ describe("distillChunks", () => {
     });
     const { log } = fakeLog();
 
-    const result = await distillChunks(chunks, [], runCli, log);
+    const result = await distillChunks(chunks, runCli, log);
 
     expect(result.observations).toEqual([
       { commentId: "rc-1", slug: "slug-rc-1", rule: "y", scopeHint: "project" },
