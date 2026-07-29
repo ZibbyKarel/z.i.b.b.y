@@ -111,30 +111,36 @@ to the next pass via the cursor). `commentId` is namespaced by source —
 `rc-`/`ic-`/`rv-` — matching `ReviewRuleOccurrence`'s `commentId` convention,
 because the three endpoints mint ids from separate sequences that can collide.
 
-Comments are dropped in three cases: the PR isn't one `ZibbyPrLocator.numbersFor`
-returned (never learn from someone else's PR), the author is ZIBBY's own login
-(never learn from ZIBBY's own reply — compared case-insensitively with a
-trailing GitHub App `[bot]` suffix stripped from both sides, since GitHub can
-render the same bot login either way), or the body is empty after trimming or
-the timestamp doesn't parse (a malformed `created_at`/`submitted_at` drops that
-one comment rather than throwing and discarding the whole pass).
-`prNumberFromApiUrl` (module-private) is deliberately separate from the
-locator's `prNumberFromUrl` — GitHub comment payloads point at the **API** PR
-url shape (`/pulls/<n>` for inline comments, `/issues/<n>` for conversation
-comments — on a PR, the issue number IS the PR number), not the html shape the
-locator parses.
+A single comment is dropped in four cases: the PR isn't one
+`ZibbyPrLocator.numbersFor` returned (never learn from someone else's PR), the
+author is ZIBBY's own login (never learn from ZIBBY's own reply — compared
+case-insensitively with a trailing GitHub App `[bot]` suffix stripped from
+both sides, since GitHub can render the same bot login either way), the body
+is empty after trimming, or the timestamp doesn't parse (a malformed
+`created_at`/`submitted_at` drops that one comment rather than throwing and
+discarding the whole pass — `toISOString()` on an invalid `Date` raises
+`RangeError`). `prNumberFromApiUrl` (module-private) is deliberately separate
+from the locator's `prNumberFromUrl` — GitHub comment payloads point at the
+**API** PR url shape (`/pulls/<n>` for inline comments, `/issues/<n>` for
+conversation comments — on a PR, the issue number IS the PR number), not the
+html shape the locator parses.
 
-Fetching is fail-soft per endpoint: one endpoint erroring (non-2xx, a thrown
-fetch, or a payload element that isn't a parseable object) is logged at `warn`
-(this runs unattended — a persistent failure must be loud, not buried at
-`debug`) and treated as empty, so the other two endpoints still yield their
-comments in the same pass. The failure is not silently swallowed: the
-endpoint's identifier (`"pulls/comments"`, `"issues/comments"`, or
-`"pulls/<n>/reviews"`) lands in `failedEndpoints`, so the caller can tell an
-endpoint that errored apart from one that legitimately had nothing new — and
-must not advance its ingest cursor past a window it never actually saw. The
-constructor takes an optional `fetchImpl` (`@Optional()`, defaults to global
-`fetch`) purely so tests can inject a stub without touching the network.
+`failedEndpoints` means something specific: **"this endpoint's window is
+incomplete, do not advance a cursor past it"** — not "something here was
+imperfect." Only two things set it: a non-2xx response, or the fetch itself
+throwing; both are logged at `warn` (this runs unattended — a persistent
+failure must be loud, not buried at `debug`) with the endpoint's identifier
+(`"pulls/comments"`, `"issues/comments"`, or `"pulls/<n>/reviews"`), and the
+rest of the batch still lands from the other endpoints. A payload that isn't
+an array, or an individual element in it that isn't a parseable object (a
+stray `null`, for instance), is a _different_ case: it is warned about (with
+the dropped-element count) but does **not** add to `failedEndpoints`. That
+distinction is deliberate — a malformed element is permanently malformed, so
+treating it the same as an endpoint failure would wedge that endpoint's
+cursor forever on one bad comment on every future pass. Losing that one
+comment is the lesser failure. The constructor takes an optional `fetchImpl`
+(`@Optional()`, defaults to global `fetch`) purely so tests can inject a stub
+without touching the network.
 
 Not yet built (later tasks): the `record` call that turns a `FetchedComment`
 into a rule occurrence, the controller/route exposing `listGrounded`/
