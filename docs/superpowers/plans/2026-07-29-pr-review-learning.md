@@ -73,8 +73,9 @@
 - Create: `libs/contracts/src/review-learning/index.ts`
 - Create: `libs/contracts/src/review-learning/review-rule.schema.test.ts`
 - Modify: `libs/contracts/src/approvals/approval.schema.ts` (`ApprovalRunKindSchema`)
-- Modify: `libs/contracts/src/automations/automation.schema.ts` (`TargetSchema`)
 - Modify: `libs/contracts/src/index.ts`
+
+**Sequencing note (learned during execution):** the `TargetSchema` entry for `review-learn` does **not** land here. The pre-commit hook typechecks the whole program, and widening `TargetSchema` breaks exhaustiveness in `apps/api/src/automations/scheduler.service.ts` and `apps/web/features/automations/components/AutomationCard.tsx` — so the repo's own history lands every automation target together with its dispatch and its card rendering in one commit. That whole set is Task 10. `ApprovalRunKindSchema` has no exhaustive consumer and is safe to widen alone.
 
 **Interfaces:**
 
@@ -88,7 +89,6 @@ Create `libs/contracts/src/review-learning/review-rule.schema.test.ts`:
 ```ts
 import { describe, expect, it } from "vitest";
 import { ApprovalRunKindSchema } from "../approvals/approval.schema";
-import { TargetSchema } from "../automations/automation.schema";
 import { ReviewRuleSchema, ReviewRulesFileSchema } from "./review-rule.schema";
 
 const OCCURRENCE = {
@@ -147,10 +147,6 @@ describe("ReviewRulesFileSchema", () => {
 describe("enum extensions", () => {
   it("accepts the review-rule approval kind", () => {
     expect(ApprovalRunKindSchema.safeParse("review-rule").success).toBe(true);
-  });
-
-  it("accepts the review-learn automation target", () => {
-    expect(TargetSchema.safeParse({ type: "review-learn" }).success).toBe(true);
   });
 });
 ```
@@ -233,7 +229,7 @@ Create `libs/contracts/src/review-learning/index.ts`:
 export * from "./review-rule.schema";
 ```
 
-- [ ] **Step 4: Extend the two enums**
+- [ ] **Step 4: Extend the approval-kind enum**
 
 In `libs/contracts/src/approvals/approval.schema.ts`, add as the last entry of `ApprovalRunKindSchema` (before the closing `]`):
 
@@ -244,15 +240,6 @@ In `libs/contracts/src/approvals/approval.schema.ts`, add as the last entry of `
   // project), rejecting retires it (never proposed again, still deduped against).
   // Inbound PR text may never widen ZIBBY's behaviour by itself → always Tier-3.
   "review-rule",
-```
-
-In `libs/contracts/src/automations/automation.schema.ts`, add as the last entry of `TargetSchema` (before the closing `]`):
-
-```ts
-  // PR review learning v1: nightly ingest of review comments on PRs ZIBBY opened,
-  // distilled into candidate rules; a rule's 2nd occurrence parks a `review-rule`
-  // approval. Proposes ≠ activates. ref = `review-rules:<new observations>`.
-  z.object({ type: z.literal("review-learn") }),
 ```
 
 In `libs/contracts/src/index.ts`, add next to the other domain barrels:
@@ -273,10 +260,10 @@ Expected: PASS
 - [ ] **Step 6: Format, lint, commit**
 
 ```bash
-pnpm exec prettier --write libs/contracts/src/review-learning libs/contracts/src/approvals/approval.schema.ts libs/contracts/src/automations/automation.schema.ts libs/contracts/src/index.ts
-pnpm exec eslint --fix libs/contracts/src/review-learning libs/contracts/src/approvals/approval.schema.ts libs/contracts/src/automations/automation.schema.ts libs/contracts/src/index.ts
+pnpm exec prettier --write libs/contracts/src/review-learning libs/contracts/src/approvals/approval.schema.ts libs/contracts/src/index.ts
+pnpm exec eslint --fix libs/contracts/src/review-learning libs/contracts/src/approvals/approval.schema.ts libs/contracts/src/index.ts
 git add libs/contracts/src
-git commit -m "feat(contracts): ReviewRule schema + review-rule approval and review-learn automation kinds"
+git commit -m "feat(contracts): ReviewRule schema + review-rule approval kind"
 ```
 
 ---
@@ -2518,18 +2505,55 @@ git commit -m "feat(review-learning): nightly pass wiring fetch, distil, store a
 
 ---
 
-### Task 10: Schedule it — automation seed + scheduler dispatch
+### Task 10: Schedule it — target kind, dispatch, seed, card
 
 **Files:**
 
+- Modify: `libs/contracts/src/automations/automation.schema.ts` (`TargetSchema`)
+- Modify: `libs/contracts/src/review-learning/review-rule.schema.test.ts`
 - Modify: `apps/api/src/automations/automations.storage.service.ts`
 - Modify: `apps/api/src/automations/scheduler.service.ts`
 - Modify: `apps/api/src/automations/scheduler.service.test.ts`
+- Modify: `apps/web/features/automations/components/AutomationCard.tsx`
+- Modify: `apps/web/i18n/messages/cs.json`, `apps/web/i18n/messages/en.json`
+
+**This task lands as ONE commit.** The pre-commit hook typechecks the whole program, so a `TargetSchema` entry without its dispatch case and its card rendering does not compile — every prior automation target (`loom-audit`, `sentinel-scan`, `post-merge-watch`) shipped exactly this set together.
 
 **Interfaces:**
 
 - Consumes: `ReviewLearningService.learn` (Task 9)
-- Produces: the `review-learn` dispatch case, ref `review-rules:<observations>`
+- Produces: the `review-learn` target kind + dispatch case, ref `review-rules:<observations>`
+
+- [ ] **Step 0: Widen `TargetSchema` and cover it**
+
+In `libs/contracts/src/automations/automation.schema.ts`, add as the last entry of `TargetSchema` (before the closing `]`):
+
+```ts
+  // PR review learning v1: nightly ingest of review comments on PRs ZIBBY opened,
+  // distilled into candidate rules; a rule's 2nd occurrence parks a `review-rule`
+  // approval. Proposes ≠ activates. ref = `review-rules:<new observations>`.
+  z.object({ type: z.literal("review-learn") }),
+```
+
+In `libs/contracts/src/review-learning/review-rule.schema.test.ts`, add to the existing `describe("enum extensions", …)` block (and import `TargetSchema` from `../automations/automation.schema`):
+
+```ts
+it("accepts the review-learn automation target", () => {
+  expect(TargetSchema.safeParse({ type: "review-learn" }).success).toBe(true);
+});
+```
+
+- [ ] **Step 0b: Render the new target in the automations card**
+
+`apps/web/features/automations/components/AutomationCard.tsx` has three exhaustive sites that stop compiling the moment `TargetSchema` widens. Add to each, matching the surrounding style:
+
+1. the glyph map (`satisfies Record<Exclude<Target["type"], "task">, IconName>`) — `"review-learn": "brain"`, with a one-line comment saying why (learning/memory domain, same glyph family as `memory-distill`/`self-knowledge`)
+2. the label ternary chain — `: target.type === "review-learn" ? t("targetReviewLearn")`
+3. the label-key `switch` — `case "review-learn": return "targetReviewLearn";`
+
+Add the key `"targetReviewLearn"` to both `apps/web/i18n/messages/cs.json` (`"Učení z review"`) and `apps/web/i18n/messages/en.json` (`"Review learning"`), in the same object as `targetLoomAudit`.
+
+Verify the web catalogs stay in sync: `pnpm exec vitest run --project web`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -2600,14 +2624,16 @@ pnpm exec tsc -p libs/contracts/tsconfig.lib.json --noEmit
 
 Expected: PASS. Two pre-existing `apps/api` pipelines e2e failures (env leak / demo timeout) are known and unrelated — do not chase them. Call `tsc` directly; `rtk pnpm typecheck` under-reports.
 
-- [ ] **Step 7: Format, lint, commit**
+- [ ] **Step 7: Format, lint, commit — everything in ONE commit**
 
 ```bash
-pnpm exec prettier --write apps/api/src/automations
-pnpm exec eslint --fix apps/api/src/automations
-git add apps/api/src/automations
+pnpm exec prettier --write libs/contracts/src apps/api/src/automations apps/web/features/automations apps/web/i18n/messages
+pnpm exec eslint --fix libs/contracts/src/automations apps/api/src/automations apps/web/features/automations
+git add libs/contracts/src apps/api/src/automations apps/web/features/automations apps/web/i18n/messages
 git commit -m "feat(automations): nightly review-learn system automation"
 ```
+
+The whole-program typecheck in the pre-commit hook is the check that this set is complete — if it fails, a consumer of `TargetSchema` is still unhandled.
 
 - [ ] **Step 8: Continue to Task 11**
 
