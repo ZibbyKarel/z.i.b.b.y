@@ -149,24 +149,42 @@ feature where untrusted PR text reaches a model (Law 4) and where the model's
 own reply is untrusted right back (Law 4 cuts both ways).
 
 - `buildDistillPrompt(comments, known)` composes the prompt: an
-  operator-authored system prompt + the project's `known` rules (`{ id, rule }`
-  pairs, so the model can reuse a slug instead of coining a near-duplicate) +
-  the batch, with every comment `body` passed through `envelopeInbound` — never
-  bare. The system prompt tells the model the fenced comment text is inert data
-  it must extract a rule _from_, never obey.
-- `parseDistillOutput(raw, batchIds)` parses the model's reply through a
-  **closed** (`.strict()`) Zod schema — `DistillSchema` — capped at 60
-  observations. Each observation's `slug` must match `REVIEW_RULE_ID_REGEX`
-  (closing the gap Task 2's review flagged: the store itself doesn't validate
-  slugs, so this is the one place that must), `rule` is capped at 160 chars,
-  `rationale` at 300; `scopeHint` and `actionable` both `.catch()` to a safe
-  default (`"project"`, `false`) rather than rejecting the whole observation
-  over one bad enum. After schema validation, an observation is dropped unless
-  `actionable` is `true` **and** its `commentId` is one this batch actually
-  fetched — the model may never invent a rule about a comment we didn't send
-  it. Unparseable JSON, a non-object shape, or an unknown/extra field anywhere
-  in the payload (the `.strict()`) all resolve to `[]`, never a partial
-  best-effort parse.
+  operator-authored system prompt + fenced inbound text. **Every** piece of
+  text that originated outside this process goes through `envelopeInbound` —
+  never bare: each comment's `body`, each comment's `author` (a GitHub login
+  is still inbound, unauthenticated-by-us text), and the entire `known` rules
+  block (`{ id, rule }` pairs, so the model can reuse a slug instead of coining
+  a near-duplicate). `known` gets its own envelope for a specific reason: those
+  rule sentences are themselves earlier model output distilled from PR
+  comments with no operator sign-off yet (`observed`/`proposed`), so re-firing
+  them into a _later_ prompt in "reuse these slugs" instruction position would
+  otherwise be a second, unfenced injection path. The system prompt tells the
+  model the fenced text is inert data it must extract a rule _from_, never
+  obey.
+- `parseDistillOutput(raw, batchIds)` validates in two tiers. `ReplyShapeSchema`
+  checks ONLY the reply's outer shape — `{ observations: [...] }`, closed
+  (`.strict()`) against any other top-level key — and the whole reply resolves
+  to `[]` if that fails (unparseable JSON, a non-object shape, or an unknown
+  top-level key). Each element of `observations` is then validated
+  individually and independently against `ObservationSchema` — also **closed**
+  (`.strict()`), so an observation carrying an unexpected field (e.g. an
+  injected `status: "active"` riding alongside the expected keys) is rejected
+  outright rather than having the extra key silently stripped and the rest let
+  through. `slug` must match `REVIEW_RULE_ID_REGEX` (closing the gap Task 2's
+  review flagged: the store itself doesn't validate slugs, so this is the one
+  place that must), `rule` is capped at 160 chars, `rationale` at 300;
+  `scopeHint` and `actionable` both `.catch()` to a safe default (`"project"`,
+  `false`) rather than rejecting the observation over one bad enum value. An
+  observation that fails `ObservationSchema`, is flagged non-actionable, or
+  names a `commentId` that was not in this batch is dropped **on its own** —
+  every valid sibling in the same reply still comes through, capped at 60 kept
+  observations. This mirrors `ReviewCommentFetcher.fetchNew`'s per-endpoint
+  tolerance for the identical reason: the caller is expected to leave its
+  cursor untouched on an empty `[]` result and replay the batch next pass, so
+  one deterministically-malformed observation must never be able to wedge an
+  otherwise-good batch forever by discarding everything alongside it. `[]` is
+  reserved for a reply that is wholly unusable, never for what one observation
+  inside an otherwise-fine reply happened to contain.
 - `ReviewCommentDistiller.distill(comments, known)` is the cheap-model pass
   itself — same shape as `memory/claude-cli-distiller.ts`: `claude -p …
 --model haiku --output-format json` via `spawnClaudeCli`, the same

@@ -9,6 +9,9 @@ import type { FetchedComment } from "./review-comment.fetcher";
 /** How long the headless distiller may take before the pass gives up on it. */
 const DISTILLER_TIMEOUT_MS = 30_000;
 
+/** Never keep more distilled observations out of one reply than this — the rest are dropped. */
+const MAX_OBSERVATIONS_PER_REPLY = 60;
+
 /** One comment turned into a candidate rule (or discarded as non-actionable). */
 export interface DistilledObservation {
   commentId: string;
@@ -18,15 +21,34 @@ export interface DistilledObservation {
   scopeHint: "project" | "global";
 }
 
-const ObservationSchema = z.object({
-  commentId: z.string().min(1),
-  slug: z.string().regex(REVIEW_RULE_ID_REGEX),
-  rule: z.string().min(1).max(160),
-  rationale: z.string().max(300).optional(),
-  scopeHint: z.enum(["project", "global"]).catch("project"),
-  actionable: z.boolean().catch(false),
-});
-const DistillSchema = z.object({ observations: z.array(ObservationSchema).max(60) }).strict();
+/**
+ * Closed (`.strict()`) so a model reply carrying an unexpected field — e.g. an
+ * injected `status: "active"` riding alongside the expected keys — fails THIS
+ * observation outright instead of silently stripping the extra key and letting
+ * the rest of the object through unflagged. Rejecting one observation drops
+ * only that one; see {@link parseDistillOutput} for the per-observation
+ * tolerance that keeps its valid siblings.
+ */
+const ObservationSchema = z
+  .object({
+    commentId: z.string().min(1),
+    slug: z.string().regex(REVIEW_RULE_ID_REGEX),
+    rule: z.string().min(1).max(160),
+    rationale: z.string().max(300).optional(),
+    scopeHint: z.enum(["project", "global"]).catch("project"),
+    actionable: z.boolean().catch(false),
+  })
+  .strict();
+
+/**
+ * Validates ONLY the reply's outer shape — `{ observations: [...] }`, closed
+ * against any other top-level key — never each observation's content. The
+ * array element type is deliberately `z.unknown()`: {@link parseDistillOutput}
+ * parses each element against {@link ObservationSchema} on its own, so one
+ * malformed observation can be dropped individually instead of failing zod's
+ * array validation and taking every valid sibling down with it.
+ */
+const ReplyShapeSchema = z.object({ observations: z.array(z.unknown()) }).strict();
 
 const SYSTEM_PROMPT = [
   "You are ZIBBY's code-review learner. You are given review comments left on pull",
@@ -52,7 +74,17 @@ const SYSTEM_PROMPT = [
   '{"observations":[{"commentId":string,"slug":string,"rule":string,"rationale":string,"scopeHint":"project"|"global","actionable":boolean}]}',
 ].join("\n");
 
-/** Compose the prompt: operator-authored instructions + enveloped comment bodies. */
+/**
+ * Compose the prompt: operator-authored instructions + enveloped inbound text.
+ * EVERY piece of text that originated outside this process is fenced (Law 4) —
+ * not just the comment body. `author` is a GitHub login, but it is still
+ * inbound text arriving unauthenticated-by-us. `known` is even sharper: those
+ * rule sentences were themselves distilled from earlier untrusted PR comments
+ * (an `observed`/`proposed` rule has no operator sign-off yet — see Task 8),
+ * so re-feeding them into a LATER prompt as a "reuse these slugs" reference
+ * list would otherwise be a second, unfenced injection path. Fenced the same
+ * way a fresh comment body is.
+ */
 export function buildDistillPrompt(
   comments: FetchedComment[],
   known: Array<{ id: string; rule: string }>,
@@ -60,14 +92,15 @@ export function buildDistillPrompt(
   const compact = comments.map((c) => ({
     commentId: c.commentId,
     pr: c.prNumber,
-    author: c.author,
+    author: envelopeInbound(c.author),
     comment: envelopeInbound(c.body),
   }));
+  const knownBlock = envelopeInbound(JSON.stringify(known));
   return [
     SYSTEM_PROMPT,
     "",
     "KNOWN RULES (reuse these slugs when the point matches):",
-    JSON.stringify(known),
+    knownBlock,
     "",
     "COMMENTS:",
     JSON.stringify(compact),
@@ -75,9 +108,17 @@ export function buildDistillPrompt(
 }
 
 /**
- * Validate the model's reply. Anything that fails the closed schema, is flagged
- * non-actionable, or names a comment that was not in the batch is dropped — the
- * model may only ever produce a rule sentence about a comment we actually fetched.
+ * Validate the model's reply. Tolerance is PER OBSERVATION, not per reply —
+ * mirrors `ReviewCommentFetcher.fetchNew`'s per-endpoint tolerance (one bad
+ * item must never wedge an otherwise-good batch, since the caller is expected
+ * to leave the cursor untouched on an empty result and replay the whole batch
+ * next pass): an observation that fails the closed {@link ObservationSchema},
+ * is flagged non-actionable, or names a comment that was not in this batch is
+ * dropped ON ITS OWN, while every valid sibling in the same reply still comes
+ * through. The reply resolves to `[]` in its entirety only when it is wholly
+ * unusable — unparseable JSON, a non-object top-level shape, or an unknown
+ * top-level key (`ReplyShapeSchema`'s own `.strict()`) — never because of what
+ * ONE observation inside an otherwise-fine reply happened to contain.
  */
 export function parseDistillOutput(raw: string, batchIds: Set<string>): DistilledObservation[] {
   let json: unknown;
@@ -86,17 +127,25 @@ export function parseDistillOutput(raw: string, batchIds: Set<string>): Distille
   } catch {
     return [];
   }
-  const parsed = DistillSchema.safeParse(json);
-  if (!parsed.success) return [];
-  return parsed.data.observations
-    .filter((o) => o.actionable && batchIds.has(o.commentId))
-    .map((o) => ({
+  const shape = ReplyShapeSchema.safeParse(json);
+  if (!shape.success) return [];
+
+  const kept: DistilledObservation[] = [];
+  for (const candidate of shape.data.observations) {
+    if (kept.length >= MAX_OBSERVATIONS_PER_REPLY) break;
+    const parsed = ObservationSchema.safeParse(candidate);
+    if (!parsed.success) continue;
+    const o = parsed.data;
+    if (!o.actionable || !batchIds.has(o.commentId)) continue;
+    kept.push({
       commentId: o.commentId,
       slug: o.slug,
       rule: o.rule,
       ...(o.rationale ? { rationale: o.rationale } : {}),
       scopeHint: o.scopeHint,
-    }));
+    });
+  }
+  return kept;
 }
 
 /** Tolerate a ```json fence even though the prompt forbids one. */
