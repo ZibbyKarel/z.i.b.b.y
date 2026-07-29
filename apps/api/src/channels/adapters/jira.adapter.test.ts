@@ -72,6 +72,14 @@ describe("JiraChannelAdapter", () => {
     expect(decodeURIComponent(url).replace(/\+/g, " ")).toContain("updated >=");
   });
 
+  it("polls the /search/jql endpoint, not the removed /rest/api/3/search", async () => {
+    const fetchImpl = jsonFetch({ issues: [] });
+    const adapter = new JiraChannelAdapter(fetchImpl);
+    await adapter.poll(jira, { token: "tok" }, undefined);
+    const url = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls[0]![0] as string;
+    expect(new URL(url).pathname).toBe("/rest/api/3/search/jql");
+  });
+
   it("surfaces a 429 rather than swallowing it", async () => {
     const adapter = new JiraChannelAdapter(jsonFetch({}, 429));
     await expect(adapter.poll(jira, { token: "tok" }, undefined)).rejects.toThrow(/rate limited/);

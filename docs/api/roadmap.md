@@ -169,14 +169,19 @@ a message-shaped subset (`JiraChannelAdapter` doesn't even request `description`
 while the import needs full fields, links and attachments. It also deliberately
 **backfills** — the channel adapters seed their cursor to "now" and ingest nothing on
 a first poll, which would leave a fresh roadmap empty. Both fetchers paginate
-(Jira via `startAt`/`total`, GitHub via `page`), each capped at `MAX_PAGES` (20 pages
-of 100) so a full backfill still terminates deterministically against a very large
-project/repo.
+(Jira via the `nextPageToken` cursor, GitHub via `page`), each capped at `MAX_PAGES`
+(20 pages of 100) so a full backfill still terminates deterministically against a very
+large project/repo.
 
 ### Jira
 
-`POST /rest/api/3/search`, requesting
+`GET /rest/api/3/search/jql`, requesting
 `summary,description,issuetype,parent,issuelinks,attachment,status`.
+
+> Atlassian **removed** the legacy `/rest/api/3/search` (May 2025, CHANGE-2046); it now
+> answers `410 Gone`, so every sync against it silently imported nothing. The
+> replacement `/search/jql` paginates by an opaque `nextPageToken` cursor and returns
+> **no** `total` — a page is the last when it reports `isLast` or omits `nextPageToken`.
 
 - **Scope is "mine" by default.** A custom `config.jql` is used VERBATIM (the operator
   already declared the exact set they want — never augmented). Otherwise the clause is

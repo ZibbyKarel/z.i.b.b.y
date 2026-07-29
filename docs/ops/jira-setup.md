@@ -6,8 +6,9 @@ behind this (adapter, polling loop, triage tiers), see `docs/api/channels.md`
 and `docs/api/integrations.md`.
 
 **How it connects:** ZIBBY polls the Jira Cloud REST API
-(`GET /rest/api/3/search`) on a heartbeat with a JQL clause narrowed to issues
-updated since the last poll — there's no webhook to register. Auth is HTTP
+(`GET /rest/api/3/search/jql` — the replacement for the legacy `/rest/api/3/search`,
+which Atlassian removed in May 2025) on a heartbeat with a JQL clause narrowed to
+issues updated since the last poll — there's no webhook to register. Auth is HTTP
 Basic with your Atlassian account email and an API token (`base64(email:token)`),
 the same scheme Jira Cloud uses for any REST API client.
 
@@ -116,11 +117,11 @@ until the operator opts it into auto-reply. Check **Settings → Mandate** (or
 
 ## Troubleshooting
 
-| Symptom                                    | Likely cause                                                        |
-| -------------------------------------------- | ------------------------------------------------------------------------ |
-| Test fails with `no jira api token configured` | Credentials were never `PUT` — repeat step 3                          |
-| Test fails with `HTTP 401`                 | Token is invalid, revoked, or `email` doesn't match the token's account |
-| Test fails with `HTTP 403`/`404` on poll   | Account lacks access to the project, or wrong `baseUrl`                |
-| Test succeeds but no items appear          | Wrong `projectKey`/`jql`, or `channelTickMs` is `0` (polling paused)   |
-| Rate limited (`HTTP 429`)                  | Surfaces as `status: error`, retries on the next tick                  |
-| Comments never get posted automatically    | Expected until `mandate.reply` is enabled for this channel             |
+| Symptom                                        | Likely cause                                                            |
+| ---------------------------------------------- | ----------------------------------------------------------------------- |
+| Test fails with `no jira api token configured` | Credentials were never `PUT` — repeat step 3                            |
+| Test fails with `HTTP 401`                     | Token is invalid, revoked, or `email` doesn't match the token's account |
+| Test fails with `HTTP 403`/`404` on poll       | Account lacks access to the project, or wrong `baseUrl`                 |
+| Test succeeds but no items appear              | Wrong `projectKey`/`jql`, or `channelTickMs` is `0` (polling paused)    |
+| Rate limited (`HTTP 429`)                      | Surfaces as `status: error`, retries on the next tick                   |
+| Comments never get posted automatically        | Expected until `mandate.reply` is enabled for this channel              |
