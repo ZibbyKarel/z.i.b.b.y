@@ -158,42 +158,79 @@ own reply is untrusted right back (Law 4 cuts both ways).
   rule sentences are themselves earlier model output distilled from PR
   comments with no operator sign-off yet (`observed`/`proposed`), so re-firing
   them into a _later_ prompt in "reuse these slugs" instruction position would
-  otherwise be a second, unfenced injection path. The system prompt tells the
-  model the fenced text is inert data it must extract a rule _from_, never
-  obey.
-- `parseDistillOutput(raw, batchIds)` validates in two tiers. `ReplyShapeSchema`
-  checks ONLY the reply's outer shape — `{ observations: [...] }`, closed
-  (`.strict()`) against any other top-level key — and the whole reply resolves
-  to `[]` if that fails (unparseable JSON, a non-object shape, or an unknown
-  top-level key). Each element of `observations` is then validated
-  individually and independently against `ObservationSchema` — also **closed**
-  (`.strict()`), so an observation carrying an unexpected field (e.g. an
-  injected `status: "active"` riding alongside the expected keys) is rejected
-  outright rather than having the extra key silently stripped and the rest let
-  through. `slug` must match `REVIEW_RULE_ID_REGEX` (closing the gap Task 2's
-  review flagged: the store itself doesn't validate slugs, so this is the one
-  place that must), `rule` is capped at 160 chars, `rationale` at 300;
-  `scopeHint` and `actionable` both `.catch()` to a safe default (`"project"`,
-  `false`) rather than rejecting the observation over one bad enum value. An
+  otherwise be a second, unfenced injection path. The system prompt draws a
+  deliberate line between the THREE fenced surfaces: the comment `body` is the
+  only one the model extracts a rule _from_; the `author` and `known` fences
+  are labelled REFERENCE data — untrusted, fenced, but there to be **matched
+  against** (that is how slug reuse works, called out as "the MOST IMPORTANT
+  part" of the job), never treated as something to extract a rule out of.
+  Getting this distinction wrong would have been silent and severe: slug reuse
+  is what lets a comment ever reach a second occurrence, which is what makes a
+  rule `proposed` in the first place — without it the feature would propose
+  nothing and look like it does nothing.
+- `parseDistillOutput(raw, batchIds)` validates in two tiers and returns a
+  `DistillParseResult` (`{ observations, dropped }`), not a bare array.
+  `ReplyShapeSchema` checks ONLY the reply's outer shape — `{ observations:
+[...] }`, closed (`.strict()`) against any other top-level key, with the
+  array itself bounded at `MAX_OBSERVATIONS_IN_REPLY` (500) — and the whole
+  reply resolves to `{ observations: [], dropped: 0 }` if any of that fails
+  (unparseable JSON, a non-object shape, an unknown top-level key, or an
+  observations array too long to plausibly come from a ≤60-comment batch).
+  That length bound is independent of, and checked before, the per-element
+  parsing below — without it, per-element tolerance means a model-controlled
+  array of arbitrary length gets `safeParse`d element by element in full
+  before the keep-cap ever kicks in.
+
+  Each element of `observations` is then validated individually and
+  independently against `ObservationSchema` — also **closed** (`.strict()`),
+  so an observation carrying an unexpected field (e.g. an injected `status:
+"active"` riding alongside the expected keys) is rejected outright rather
+  than having the extra key silently stripped and the rest let through.
+  `slug` must match `REVIEW_RULE_ID_REGEX` (closing the gap Task 2's review
+  flagged: the store itself doesn't validate slugs, so this is the one place
+  that must), `rule` is capped at 160 chars, `rationale` at 300; `scopeHint`
+  and `actionable` both `.catch()` to a safe default (`"project"`, `false`)
+  rather than rejecting the observation over one bad enum value. An
   observation that fails `ObservationSchema`, is flagged non-actionable, or
   names a `commentId` that was not in this batch is dropped **on its own** —
   every valid sibling in the same reply still comes through, capped at 60 kept
-  observations. This mirrors `ReviewCommentFetcher.fetchNew`'s per-endpoint
-  tolerance for the identical reason: the caller is expected to leave its
-  cursor untouched on an empty `[]` result and replay the batch next pass, so
-  one deterministically-malformed observation must never be able to wedge an
-  otherwise-good batch forever by discarding everything alongside it. `[]` is
-  reserved for a reply that is wholly unusable, never for what one observation
-  inside an otherwise-fine reply happened to contain.
+  observations (`MAX_OBSERVATIONS_PER_REPLY`). This mirrors
+  `ReviewCommentFetcher.fetchNew`'s per-**element** tolerance within one
+  endpoint's payload (a malformed array element there is warned about and
+  skipped without failing the whole endpoint) for the identical reason: the
+  caller is expected to leave its cursor untouched on an empty result and
+  replay the batch next pass, so one deterministically-malformed observation
+  must never be able to wedge an otherwise-good batch forever by discarding
+  everything alongside it. `{ observations: [], dropped: 0 }` is reserved for
+  a reply that is wholly unusable, never for what one observation inside an
+  otherwise-fine reply happened to contain.
+
+  `dropped` counts ONLY observations that failed `ObservationSchema` —
+  malformed shape, or an unexpected field like the injected `status: "active"`
+  case above. It deliberately does NOT count an observation that parsed
+  cleanly but was filtered as non-actionable or as naming a `commentId`
+  outside the batch — those are routine outcomes of a normal reply, not the
+  security-relevant event the count exists to surface. `logDroppedObservations(log,
+dropped)` — a small standalone function so it's testable without the
+  `VITEST`-gated CLI path — emits one `warn` when `dropped > 0`, mirroring the
+  fetcher's own "dropped malformed comment payload elements" warn: an
+  observation that would once have failed loudly enough to empty the whole
+  reply now vanishes silently under per-element tolerance unless something
+  logs it.
+
 - `ReviewCommentDistiller.distill(comments, known)` is the cheap-model pass
   itself — same shape as `memory/claude-cli-distiller.ts`: `claude -p …
 --model haiku --output-format json` via `spawnClaudeCli`, the same
   `process.env.VITEST` guard so tests never spawn a real CLI, a 30s timeout.
-  **Never throws and never blocks** — a CLI failure, a timeout, or a schema
-  rejection all resolve to `[]`, and the caller is expected to leave its cursor
-  untouched on an empty result so the batch replays next pass. `distill` never
-  sets anything to `active`; it only ever proposes an observation for a later
-  step to `record`.
+  **Never throws and never blocks** — a CLI failure, a timeout, or an
+  outer-shape rejection (unparseable JSON, non-object, unknown top-level key,
+  or an oversized `observations` array) all resolve to `[]`, and the caller is
+  expected to leave its cursor untouched on an empty result so the batch
+  replays next pass. A per-observation rejection does NOT resolve the whole
+  call to `[]` — see the two-tier validation above; it calls
+  `logDroppedObservations` and still returns every valid sibling. `distill`
+  never sets anything to `active`; it only ever proposes an observation for a
+  later step to `record`.
 
 Not yet built (later tasks): the `record` call that turns a `DistilledObservation`
 into a rule occurrence, the controller/route exposing `listGrounded`/
