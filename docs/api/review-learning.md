@@ -33,11 +33,16 @@ via the `REVIEW_RULES_DIR` token: `<projectId>.json` per project, plus a single
 key is resolved to its file via `resolveSafeFile` (same guard `RoadmapStore` uses
 for a caller-supplied id turned into a filename) — an unsafe key (e.g. containing
 `../`) throws `InvalidReviewScopeKeyError` instead of silently reading or writing
-outside the store's directory. Parsing is tolerant **per rule**: each rule in the
-`rules` array is validated individually against `ReviewRuleSchema`, and a single
-malformed rule is dropped without discarding its siblings (mirrors
-`GateRulesStorageService.list()`); only a file that isn't even parseable/shaped
-JSON falls back to `{ rules: [] }` wholesale. Writes are atomic, mirroring
+outside the store's directory. Parsing is tolerant **per field**, not per file:
+each rule in the `rules` array is validated individually against
+`ReviewRuleSchema`, and `cursor` is validated on its own against
+`IsoDateTimeSchema` (the same schema `ReviewRulesFileSchema` uses for it) — a
+single malformed rule, or a malformed cursor, is dropped without discarding
+anything else in the same file (mirrors `GateRulesStorageService.list()`); only
+a file that isn't even parseable/shaped JSON falls back to `{ rules: [] }`
+wholesale. A dropped cursor makes the next ingest pass replay from the default
+window (the safe direction) rather than silently handing a garbage value to
+the GitHub `since` query parameter downstream. Writes are atomic, mirroring
 `GateRulesStorageService` (`gate-rules/gate-rules.storage.service.ts`).
 
 Lifecycle rules enforced in one place so "when does a comment become a proposal"

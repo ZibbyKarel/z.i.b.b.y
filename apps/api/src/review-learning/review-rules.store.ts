@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Inject, Injectable } from "@nestjs/common";
 import {
+  IsoDateTimeSchema,
   type ReviewRule,
   type ReviewRuleOccurrence,
   ReviewRuleSchema,
@@ -220,6 +221,16 @@ function hasComment(rule: ReviewRule, commentId: string): boolean {
   return rule.occurrences.some((o) => o.commentId === commentId);
 }
 
+/**
+ * Validate `cursor` on its own (via `IsoDateTimeSchema`, the same schema
+ * `ReviewRulesFileSchema` uses for it) rather than as part of the whole file —
+ * a malformed cursor is dropped, never taking the rules in the same file down
+ * with it. A dropped cursor makes the next ingest pass replay from the default
+ * window, which is the safe direction; the cursor also flows straight into a
+ * GitHub `since` query parameter downstream, so silently keeping a garbage
+ * value would turn into a broken fetch, not just a cosmetic issue.
+ */
 function cursorOf(obj: Record<string, unknown>): { cursor?: string } {
-  return typeof obj.cursor === "string" && obj.cursor.length > 0 ? { cursor: obj.cursor } : {};
+  const result = IsoDateTimeSchema.safeParse(obj.cursor);
+  return result.success ? { cursor: result.data } : {};
 }
