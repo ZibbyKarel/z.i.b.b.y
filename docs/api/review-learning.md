@@ -201,9 +201,13 @@ own reply is untrusted right back (Law 4 cuts both ways).
   flagged: the store itself doesn't validate slugs, so this is the one place
   that must), `rule` is capped at 160 chars, `rationale` at 300; `scopeHint`
   and `actionable` both `.catch()` to a safe default (`"project"`, `false`)
-  rather than rejecting the observation over one bad enum value. An
-  observation that fails `ObservationSchema`, is flagged non-actionable, or
-  names a `commentId` that was not in this batch is dropped **on its own** —
+  rather than rejecting the observation over one bad enum value. `batchIds` is
+  the id set of the **chunk the reply answers**, not of the whole pass (see
+  _Argv budget_ below): a comment in one chunk must not be able to name a
+  `commentId` from another, or an occurrence gets filed against a comment that
+  model never saw. An observation that fails `ObservationSchema`, is flagged
+  non-actionable, or names a `commentId` that was not in its own chunk is
+  dropped **on its own** —
   every valid sibling in the same reply still comes through, capped at 60 kept
   observations (`MAX_OBSERVATIONS_PER_REPLY`). This mirrors
   `ReviewCommentFetcher.fetchNew`'s per-**element** tolerance within one
@@ -269,9 +273,16 @@ dropped)` — a small standalone function so it's testable without the
   already — the agent catalog had to move to `--append-system-prompt-file`).
   `chunkForArgvBudget(comments, known)` splits a batch so no prompt exceeds
   `MAX_PROMPT_BYTES` = 96 000 **bytes** (UTF-8, not characters — the prompt
-  carries Czech and whatever an outsider wrote), and `distill` makes one CLI
-  call per chunk, merging the observations and reporting `incomplete` if any
-  chunk failed. `sanitizeInbound`'s existing `MAX_INBOUND_CHARS` = 4000 cap on
+  carries Czech and whatever an outsider wrote), and one CLI call is made per
+  chunk, merging the observations and reporting `incomplete` if any chunk
+  failed. That loop lives in `distillChunks(chunks, known, runCli, log)`, a
+  standalone function rather than inline in `distill` — `distill`'s own
+  `VITEST` guard short-circuits before the loop, so as a method body the merge
+  that decides whether the caller's cursor advances could not be reached by any
+  test. Taking `runCli` as a parameter lets a test drive the loop with a fake
+  CLI: `distill` passes the real `spawnClaudeCli` call, a test passes a stub
+  that fails for one chunk and succeeds for the others. `reason` is
+  first-failure-wins (`incomplete ??=`). `sanitizeInbound`'s existing `MAX_INBOUND_CHARS` = 4000 cap on
   every enveloped value means one comment can never exceed the budget alone, so
   a chunk always makes progress. Chunking rather than a file/stdin hand-off is
   deliberate: `spawnClaudeCli` spawns with `stdio: ["ignore", …]`, has no
