@@ -232,7 +232,62 @@ dropped)` — a small standalone function so it's testable without the
   never sets anything to `active`; it only ever proposes an observation for a
   later step to `record`.
 
+## `ReviewRulesVaultService` (`review-rules.vault.service.ts`)
+
+Renders `listGrounded`'s `active` rules into the vault notes `GroundingService`
+will eventually load unconditionally (Task 7) — the artifact this whole learning
+loop exists to produce. Two note ids, exported from
+`apps/api/src/memory/review-rules-note.ts` (deliberately in `memory/`, next to
+`subsystem-shelf.ts`, so `GroundingService` can ground them without the memory
+module importing the review-learning module):
+
+- `GLOBAL_REVIEW_RULES_ID` = `"review-rules"` — the cross-project note
+  (`<vault>/review-rules.md`), grounded into every run.
+- `reviewRulesIdFor(projectId)` = `` `projects/${projectId}-review-rules` `` —
+  one project's note (`<vault>/projects/<projectId>-review-rules.md`), grounded
+  only into that project's runs.
+
+`render(projectId)` reads `ReviewRulesStore.listGrounded(projectId).project` and
+rewrites that project's note; `renderGlobal()` reads
+`ReviewRulesStore.list(GLOBAL_SCOPE_KEY)` filtered to `status === "active"` and
+rewrites the cross-project note. Both are fire-and-forget mirrors — a write
+failure is logged at `warn` and never thrown (the `ProjectVaultService`
+posture: rules are reinforcing context, not something a run should ever block
+on).
+
+Three things this renderer is deliberately strict about:
+
+- **Only `active` rules are ever rendered.** `observed`/`proposed`/`retired`
+  never reach a note — `listGrounded` already filters to `active`, and
+  `renderGlobal` re-applies the same filter explicitly. A `proposed` rule
+  showing up in a prompt would mean inbound PR text changed ZIBBY's behaviour
+  without an operator approval — the Law-4 violation this whole feature exists
+  to prevent.
+- **M7 project isolation.** `render(projectId)` resolves the note path via
+  `resolveSafeFile(projectsDir, projectId, "-review-rules.md", AGENT_ID_REGEX)`
+  (the same guard `RoadmapStore`/`ReviewRulesStore` use for a caller-supplied id
+  turned into a filename) — a traversal-shaped `projectId` is refused and
+  logged rather than writing outside `projects/`, and the note's frontmatter
+  carries an explicit `project: <id>` tag so grounding's isolation filter can
+  never conflate one project's rules with another's or with the global note.
+- **Untrusted rule text stays inert.** `rule.rule`/`rule.rationale` are model
+  output distilled from attacker-controllable PR comments, and this note is
+  prepended verbatim into every future run's prompt. Every rendered value goes
+  through `sanitizeInline` (collapses `\r`/`\n` to a single space) before being
+  written — without an embedded newline, a hostile value can never start a
+  _new_ line of its own, so it can never fake a markdown heading, a ` ``` `
+  fence, or a YAML/frontmatter `---` delimiter (all of which require being
+  alone at the start of a line to take effect). It survives only as inert
+  inline text on the one `- ` bullet line it was given.
+
+Rendering is capped at `MAX_RENDERED_RULES` = 25 (the grounding block has a
+char budget) — kept rules are the most recently `updatedAt`, not an arbitrary
+25; the note says explicitly how many were dropped
+(`_Dalších <n> pravidel se do rozpočtu promptu nevešlo._`) rather than silently
+truncating. An empty rule list still produces an explicit note (`Zatím žádné
+schválené pravidlo z review.`), not a missing file.
+
 Not yet built (later tasks): the `record` call that turns a `DistilledObservation`
 into a rule occurrence, the controller/route exposing `listGrounded`/
-`promoteToGlobal`, the `review-learn` automation target kind, and grounding the
-active rules into runs.
+`promoteToGlobal`, the `review-learn` automation target kind, and
+`GroundingService` actually loading these two notes into a run.
