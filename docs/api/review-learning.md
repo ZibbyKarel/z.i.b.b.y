@@ -242,7 +242,8 @@ loop exists to produce. Two note ids, exported from
 module importing the review-learning module):
 
 - `GLOBAL_REVIEW_RULES_ID` = `"review-rules"` — the cross-project note
-  (`<vault>/review-rules.md`), grounded into every run.
+  (`<vault>/review-rules.md`), grounded into every work run (F8: not a
+  `domain: "personal"` run — see Task 7 below).
 - `reviewRulesIdFor(projectId)` = `` `${projectId}-review-rules` `` — one
   project's note, written to disk at
   `<vault>/projects/<projectId>-review-rules.md` but looked up by
@@ -298,19 +299,28 @@ schválené pravidlo z review.`), not a missing file.
 
 **File:** `apps/api/src/memory/grounding.service.ts` (`GroundingService.compose`)
 
-Two unconditional `add()` calls, alongside the North Star and self-knowledge
-notes — learned rules are grounded regardless of term match, because a rule
-exists precisely because the operator already had to say it twice:
+Two `add()` calls, grouped together right after the North Star and
+self-knowledge notes and ahead of the subsystem shelf / term-matched MOCs /
+1-hop wikilink expansion — never term-matched, because a rule exists
+precisely because the operator already had to say it twice:
 
-- `add(GLOBAL_REVIEW_RULES_ID)` right after the self-knowledge note, gated only
-  by F8: `input.domain !== "personal"` (a personal run stays out of work
-  memory, so it never sees the cross-project review-rules note).
-- `add(reviewRulesIdFor(input.projectId))` immediately after the existing
-  `if (input.projectId) await add(input.projectId)` project-note line — so a
-  project's learned rules ground alongside its project note, and M7 isolation
-  holds for free: a run in project A can never resolve project B's
+- `add(GLOBAL_REVIEW_RULES_ID)`, gated by F8: `input.domain !== "personal"` (a
+  personal run stays out of work memory, so it never sees the cross-project
+  review-rules note).
+- `add(reviewRulesIdFor(input.projectId))`, gated only by `input.projectId`
+  being present — no domain guard (deliberate: it mirrors the pre-existing
+  `if (input.projectId) await add(input.projectId)` project-note line further
+  down, which has never been domain-gated either). M7 isolation holds for
+  free: a run in project A can never resolve project B's
   `<projectId>-review-rules` note, because the id itself is keyed off the
   _current_ run's `projectId`.
+
+Both sit ahead of the subsystem shelf and MOC/expansion sections on purpose:
+`render`'s whole-block truncation (`BLOCK_BUDGET = 8000`) drops the block's
+_tail_, and operator-approved learned rules are bounded
+(`MAX_RENDERED_RULES = 25`) and high-value, while MOC matches and wikilink
+expansion are speculative. When the char budget binds, the speculative
+material — added later — is what gets cut, never a learned rule.
 
 `add()` fails open on a missing note (`NoteNotFoundError` swallowed), so a
 project with no rules yet, or a global note not yet rendered, composes exactly

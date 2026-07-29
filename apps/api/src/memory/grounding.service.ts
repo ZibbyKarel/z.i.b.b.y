@@ -184,6 +184,18 @@ export class GroundingService {
       // must reach the run whether or not the task text happens to mention it. F8:
       // a personal run stays out of work memory.
       if (input.domain !== "personal") await add(GLOBAL_REVIEW_RULES_ID);
+      // Grouped with the global rules note, ahead of the subsystem shelf and the
+      // term-matched/1-hop-expanded MOCs — not where the brief's other project-scoped
+      // add (`add(input.projectId)` below) sits. Operator-approved learned rules are
+      // high-value and bounded (`MAX_RENDERED_RULES`); MOC matches and wikilink
+      // expansion are speculative context. `render`'s whole-block truncation drops
+      // the tail, so when the char budget binds, the speculative material — added
+      // later in this function — is what should be cut, never a learned rule.
+      // No F8 domain guard here (unlike the global note above): this mirrors
+      // `add(input.projectId)`'s own established scoping below, which has never
+      // been domain-gated either — a project's learned rules follow the same rule
+      // as the project note itself. A deliberate choice, not an oversight.
+      if (input.projectId) await add(reviewRulesIdFor(input.projectId));
       const mocs: Note[] = [];
       const shelf = input.ownerSubsystem ? await add(subsystemShelfId(input.ownerSubsystem)) : null;
       if (shelf) mocs.push(shelf);
@@ -206,7 +218,6 @@ export class GroundingService {
       // project note (index-first — no vectors, reuses the same scan cache).
       for (const id of selectLinkedNotes(terms, mocs, visible, seen)) await add(id);
       if (input.projectId) await add(input.projectId);
-      if (input.projectId) await add(reviewRulesIdFor(input.projectId));
 
       if (sections.length === 0) return "";
       return this.render(sections);
