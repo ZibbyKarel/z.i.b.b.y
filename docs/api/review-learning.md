@@ -101,6 +101,11 @@ feedback:
   `MAX_REVIEW_PRS` = 20; this endpoint has **no** `since` parameter, so results
   are filtered against the cursor locally instead)
 
+All three calls ask for `per_page=100`. On the two repo-wide ones that is only a
+round-trip saving, but on `/pulls/{n}/reviews` it is correctness: with no `since`
+to narrow the window, GitHub's default 30-item page would make the 31st-and-older
+review body on a long-lived PR permanently unreadable rather than merely deferred.
+
 `fetchNew(input)` takes `{ projectId, repo, token, selfLogin?, cursor? }` and
 returns a `FetchNewResult` — `{ comments, failedEndpoints }`. `comments` is
 `FetchedComment[]` (`{ commentId, prNumber, prUrl, commentUrl, author, at,

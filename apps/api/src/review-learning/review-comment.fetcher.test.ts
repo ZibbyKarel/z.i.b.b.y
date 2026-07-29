@@ -80,6 +80,18 @@ describe("ReviewCommentFetcher", () => {
     expect(comments[0]?.prUrl).toBe("https://github.com/acme/app/pull/7");
   });
 
+  it("asks every endpoint for a full 100-item page, reviews included", async () => {
+    const { fetcher, fetchImpl } = makeFetcher([]);
+
+    await fetcher.fetchNew(BASE);
+
+    const urls = fetchImpl.mock.calls.map((call) => String(call[0]));
+    expect(urls).toHaveLength(3);
+    // `/pulls/{n}/reviews` has no `since`, so GitHub's default 30-item page
+    // would make the 31st-and-older review body permanently unreachable.
+    for (const url of urls) expect(url).toContain("per_page=100");
+  });
+
   it("keeps only comments on PRs ZIBBY opened", async () => {
     const { fetcher } = makeFetcher(
       [
