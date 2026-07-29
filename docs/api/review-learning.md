@@ -70,6 +70,23 @@ has exactly one implementation:
 - `cursor(projectId)` / `setCursor(projectId, cursor)` round-trip the per-project
   ingest watermark.
 
+## `ZibbyPrLocator` (`zibby-pr.locator.ts`)
+
+Answers "which PRs did ZIBBY itself open for this project" — `numbersFor(projectId)`
+returns deduped PR numbers, newest first. Read-only and local (no network, no
+GitHub call): it unions the two places the system already records a PR ZIBBY
+opened, rather than guessing from a GitHub author login (the operator's own token
+opens both ZIBBY's PRs and the operator's own, so the login can't disambiguate):
+
+- the artifact registry (`ArtifactsStorageService.listFiltered({ projectId })`),
+  `kind === "pr"` records written by a pipeline's terminal PR sink
+- directed tasks (`ScheduledTasksStorageService.list()`) whose `outcome.pr.url` was
+  written back by the task scheduler
+
+`prNumberFromUrl` is exported standalone: it matches a GitHub **html** PR url
+(`.../pull/<n>`), not the API shape (`.../pulls/<n>`) — the only shape either
+source stores.
+
 Not yet built (later tasks): the ingest pass that reads GitHub review comments and
 calls `record`, the controller/route exposing `listGrounded`/`promoteToGlobal`, the
 `review-learn` automation target kind, and grounding the active rules into runs.
