@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import { ZibbyPrLocator, prNumberFromUrl } from "./zibby-pr.locator";
 
 function makeLocator(
-  artifacts: Array<{ kind: string; locator: string }>,
+  artifacts: Array<{ kind: string; locator: string; projectId: string }>,
   tasks: Array<{ projectId?: string; outcome?: { pr?: { url: string } } }>,
 ) {
   return new ZibbyPrLocator(
-    { listFiltered: async () => artifacts } as never,
+    {
+      listFiltered: async (query: { projectId?: string }) =>
+        artifacts.filter((artifact) => artifact.projectId === query.projectId),
+    } as never,
     { list: async () => tasks } as never,
   );
 }
@@ -26,9 +29,11 @@ describe("ZibbyPrLocator", () => {
   it("unions pr artifacts and task outcomes, newest first, deduped", async () => {
     const locator = makeLocator(
       [
-        { kind: "pr", locator: "https://github.com/acme/app/pull/7" },
-        { kind: "vault-note", locator: "knowledge/x" },
-        { kind: "pr", locator: "https://github.com/acme/app/pull/9" },
+        { kind: "pr", locator: "https://github.com/acme/app/pull/7", projectId: "acme" },
+        // Same-project artifact with a URL that would ALSO parse as PR #999 if it were
+        // counted — the only reason it must be excluded is `kind !== "pr"`, not the URL.
+        { kind: "vault-note", locator: "https://github.com/acme/app/pull/999", projectId: "acme" },
+        { kind: "pr", locator: "https://github.com/acme/app/pull/9", projectId: "acme" },
       ],
       [
         { projectId: "acme", outcome: { pr: { url: "https://github.com/acme/app/pull/9" } } },
@@ -43,5 +48,22 @@ describe("ZibbyPrLocator", () => {
 
   it("returns an empty list when the project produced no PR", async () => {
     expect(await makeLocator([], []).numbersFor("acme")).toEqual([]);
+  });
+
+  it("scopes the artifact lookup to the requested project", async () => {
+    let receivedQuery: unknown;
+    const locator = new ZibbyPrLocator(
+      {
+        listFiltered: async (query: unknown) => {
+          receivedQuery = query;
+          return [];
+        },
+      } as never,
+      { list: async () => [] } as never,
+    );
+
+    await locator.numbersFor("acme");
+
+    expect(receivedQuery).toEqual({ projectId: "acme" });
   });
 });
