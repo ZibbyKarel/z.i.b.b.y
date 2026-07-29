@@ -85,6 +85,12 @@ interface AgentFactoryTarget {
   // scans recurring orchestrator-fallback activity, drafts a candidate agent
 }
 
+interface ReviewLearnTarget {
+  type: "review-learn";
+  // ingests review comments on the PRs ZIBBY opened, distils them into candidate
+  // rules; a rule's 2nd occurrence parks a `review-rule` approval. Proposes ≠ activates.
+}
+
 interface PromptAutomationTarget {
   type: "task";
   text: string; // the typed prompt — forwarded as the task's free-text
@@ -153,8 +159,9 @@ when the config changes.
    - `pattern-extract` → `PatternExtractorService.extract()`
    - `gap-detect` → `GapDetectorService.detect()`
    - `agent-factory` → `AgentFactoryService.detect()`
+   - `review-learn` → `ReviewLearningService.learn()`, ref `review-rules:<observations>`
    - `task` → `TaskSchedulerService.createTask({ text, target, attachmentSetId,
-     output, toolGrants }, now, undefined, target, background: false)` (Phase 116b)
+output, toolGrants }, now, undefined, target, background: false)` (Phase 116b)
 4. Updates `lastFiredAt = now` (idempotence — a double fire within the same
    minute is safe).
 5. Logs the fire; missed triggers are skipped, not caught up.
@@ -196,15 +203,16 @@ agent. Such automations have `system: true`:
   page.
 
 Definitions live in the `SYSTEM_AUTOMATIONS` constant
-(`apps/api/src/automations/automations.storage.service.ts`). Today it seeds five:
+(`apps/api/src/automations/automations.storage.service.ts`). Today it seeds six:
 
-| id (data file)     | target.type       | default schedule    | enabled |
-| ------------------- | ------------------- | ---------------------- | ------- |
-| `morning-briefing`  | `briefing`        | `0 7 * * *`          | yes     |
-| `memory-distill`    | `memory-distill`  | `0 3 * * *`          | yes     |
-| `nightly-patterns`  | `pattern-extract` | `0 23 * * *`         | yes     |
-| `gap-detect`        | `gap-detect`      | `0 23 * * *`         | no      |
-| `agent-factory`     | `agent-factory`   | `0 4 * * 1`          | no      |
+| id (data file)     | target.type       | default schedule | enabled |
+| ------------------ | ----------------- | ---------------- | ------- |
+| `morning-briefing` | `briefing`        | `0 7 * * *`      | yes     |
+| `memory-distill`   | `memory-distill`  | `0 3 * * *`      | yes     |
+| `nightly-patterns` | `pattern-extract` | `0 23 * * *`     | yes     |
+| `gap-detect`       | `gap-detect`      | `0 23 * * *`     | no      |
+| `agent-factory`    | `agent-factory`   | `0 4 * * 1`      | no      |
+| `review-learn`     | `review-learn`    | `15 3 * * *`     | no      |
 
 ### Memory distillation (`memory-distill`)
 
@@ -227,6 +235,25 @@ way grounding writes context _in_).
 4. Marks processed runs (only after writing — at-least-once, a duplicate line
    beats a lost learning). `distill()` **never throws** — a scheduler tick must
    not break on it.
+
+### Review learning (`review-learn`)
+
+Default cron `15 3 * * *` — after the 3:00 distill, before the 3:30
+self-knowledge refresh. **Off by default**: it costs GitHub calls and a model
+pass per project, so the operator turns it on per engagement (the
+`gap-detect`/`agent-factory` posture).
+
+`ReviewLearningService.learn()` (`apps/api/src/review-learning/`, see
+[review-learning.md](./review-learning.md)) walks every project, fetches new
+code-review comments on the PRs ZIBBY opened, distils them into candidate rules,
+files each as an occurrence, and parks a Tier-3 `review-rule` approval for every
+rule that just reached its **second** occurrence. Fail-open per project; returns
+`{ observations, proposed }` and the tick's ref is `review-rules:<observations>`.
+
+The point worth holding onto: this automation **proposes, it never activates**.
+A PR comment is text an outsider wrote (Law 4), so nothing it says can change how
+ZIBBY behaves until the operator approves the parked approval. That is what makes
+running it unattended safe.
 
 ## Autonomy boundary
 

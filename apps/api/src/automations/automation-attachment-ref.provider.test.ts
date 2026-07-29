@@ -18,7 +18,13 @@ describe("AutomationAttachmentRefProvider", () => {
     const automations: Automation[] = [
       taskAutomation({ id: "a", target: { type: "task", text: "x", attachmentSetId: "set_1" } }),
       taskAutomation({ id: "b", target: { type: "task", text: "y" } }), // no attachments
-      { id: "c", trigger: { type: "cron", expr: "0 3 * * *" }, target: { type: "briefing" }, enabled: true, system: true },
+      {
+        id: "c",
+        trigger: { type: "cron", expr: "0 3 * * *" },
+        target: { type: "briefing" },
+        enabled: true,
+        system: true,
+      },
       taskAutomation({ id: "d", target: { type: "task", text: "z", attachmentSetId: "set_2" } }),
     ];
     const provider = new AutomationAttachmentRefProvider({
@@ -31,7 +37,13 @@ describe("AutomationAttachmentRefProvider", () => {
   it("returns an empty list when no automation is a task target with attachments", async () => {
     const provider = new AutomationAttachmentRefProvider({
       list: async () => [
-        { id: "x", trigger: { type: "cron", expr: "0 3 * * *" }, target: { type: "memory-distill" }, enabled: true, system: true },
+        {
+          id: "x",
+          trigger: { type: "cron", expr: "0 3 * * *" },
+          target: { type: "memory-distill" },
+          enabled: true,
+          system: true,
+        },
       ],
     } as never);
 

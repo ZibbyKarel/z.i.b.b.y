@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ApprovalRunKindSchema } from "../approvals/approval.schema";
+import { TargetSchema } from "../automations/automation.schema";
 import { ReviewRuleSchema, ReviewRulesFileSchema } from "./review-rule.schema";
 
 const OCCURRENCE = {
@@ -58,5 +59,9 @@ describe("ReviewRulesFileSchema", () => {
 describe("enum extensions", () => {
   it("accepts the review-rule approval kind", () => {
     expect(ApprovalRunKindSchema.safeParse("review-rule").success).toBe(true);
+  });
+
+  it("accepts the review-learn automation target", () => {
+    expect(TargetSchema.safeParse({ type: "review-learn" }).success).toBe(true);
   });
 });

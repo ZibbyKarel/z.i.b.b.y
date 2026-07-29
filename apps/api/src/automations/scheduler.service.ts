@@ -11,6 +11,7 @@ import { GapDetectorService } from "../gaps/gap-detector.service";
 import { WatcherHealthRegistry } from "../health/watcher-health.registry";
 import { LoomService } from "../loom/loom.service";
 import { PostMergeWatchService } from "../maestro/post-merge-watch.service";
+import { ReviewLearningService } from "../review-learning/review-learning.service";
 import { SelfKnowledgeService } from "../self-knowledge/self-knowledge.service";
 import { SentinelService } from "../sentinel/sentinel.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
@@ -57,6 +58,7 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
     private readonly loom: LoomService,
     private readonly postMerge: PostMergeWatchService,
     private readonly watcherHealthRegistry: WatcherHealthRegistry,
+    private readonly reviewLearning: ReviewLearningService,
   ) {
     super();
     this.log = logger.child(SchedulerService.name);
@@ -254,6 +256,13 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
         // Deterministic; ref = `merge-watch:<resolvedCount>`.
         const { resolved } = await this.postMerge.poll();
         return `merge-watch:${resolved}`;
+      }
+      case "review-learn": {
+        // PR review learning v1: ingest new review comments on ZIBBY's own PRs,
+        // distil them into candidate rules, park an approval for any rule that just
+        // hit its 2nd occurrence. Proposes ≠ activates; ref = `review-rules:<count>`.
+        const { observations } = await this.reviewLearning.learn();
+        return `review-rules:${observations}`;
       }
     }
   }

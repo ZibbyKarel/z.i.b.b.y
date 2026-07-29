@@ -94,7 +94,12 @@ describe("automations DetailScreen (N4f grammar)", () => {
     hooks.update.mockClear();
     hooks.del.mockClear();
     hooks.trigger.mockClear();
-    hooks.automation = { data: legacyAutomation, isPending: false, isError: false, refetch: vi.fn() };
+    hooks.automation = {
+      data: legacyAutomation,
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    };
   });
 
   describe("legacy (non-task, non-system) target — schedule-only fallback", () => {
@@ -115,9 +120,7 @@ describe("automations DetailScreen (N4f grammar)", () => {
   });
 
   it("Delete asks in a CONFIRM dialog, then deletes and navigates back to /automations", async () => {
-    hooks.del.mockImplementation((_args, opts?: { onSuccess?: () => void }) =>
-      opts?.onSuccess?.(),
-    );
+    hooks.del.mockImplementation((_args, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.());
     render(<DetailScreen automationId="on-file" />);
     await userEvent.click(screen.getByTestId(AutomationDetailScreenTestId.Delete));
     expect(screen.getByText("Smazat automatizaci?")).toBeInTheDocument();

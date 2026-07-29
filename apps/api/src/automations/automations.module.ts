@@ -8,6 +8,7 @@ import { MaestroModule } from "../maestro/maestro.module";
 import { MemoryDistillerModule } from "../memory/memory-distiller.module";
 import { PatternsModule } from "../patterns/patterns.module";
 import { PipelinesModule } from "../pipelines/pipelines.module";
+import { ReviewLearningModule } from "../review-learning/review-learning.module";
 import { SelfKnowledgeModule } from "../self-knowledge/self-knowledge.module";
 import { SentinelModule } from "../sentinel/sentinel.module";
 import { dataDir } from "../shared/data-dir";
@@ -40,7 +41,13 @@ export function resolveAutomationsDir(): string {
  * `LoomService.audit`. NS2 F7b-2: also imports `MaestroModule` so the
  * `post-merge-watch` target can dispatch to `PostMergeWatchService.poll` — no
  * cycle, `MaestroModule` imports Projects/ResolvedProject/Integrations/
- * MergeWatch/Monitors/Tasks, none of which import this module back.
+ * MergeWatch/Monitors/Tasks, none of which import this module back. PR review
+ * learning v1: also imports `ReviewLearningModule` so the `review-learn` target
+ * can dispatch to `ReviewLearningService.learn` — no cycle, `ReviewLearningModule`
+ * imports Projects/ResolvedProject/Integrations/Artifacts/ScheduledTasksStorage/
+ * Approvals, none of which import this module back (verified transitively —
+ * only `attachment-set-refs.module.ts` and `health.module.ts` import
+ * `AutomationsModule`, and neither sits on this chain).
  */
 @Module({
   imports: [
@@ -53,6 +60,7 @@ export function resolveAutomationsDir(): string {
     MemoryDistillerModule,
     PatternsModule,
     PipelinesModule,
+    ReviewLearningModule,
     SelfKnowledgeModule,
     SentinelModule,
     TasksModule,
