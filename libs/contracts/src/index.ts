@@ -74,6 +74,7 @@ export * from "./roadmap/roadmap-play.schema";
 export * from "./roadmap/decomposition-artifact.schema";
 export * from "./roadmap/level-mapping.schema";
 export * from "./roadmap/roadmap.contract";
+export * from "./review-learning";
 export * from "./tasks/task.schema";
 export * from "./tasks/tasks.contract";
 export * from "./tasks/task-run.schema";

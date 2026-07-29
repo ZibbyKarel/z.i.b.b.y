@@ -58,6 +58,12 @@ export const ApprovalRunKindSchema = z.enum([
   // path); rejecting drops the proposal, no task created. Outbound work dispatch
   // that wasn't already sanctioned by a tier-1/2 rule → always Tier-3.
   "handoff-proposal",
+  // PR review learning v1: a rule distilled from review comments that has now been
+  // seen TWICE on ZIBBY's own PRs. The runId is `<projectId>/<ruleId>`; approving
+  // flips it to `active` (from then on it is grounded into every run of that
+  // project), rejecting retires it (never proposed again, still deduped against).
+  // Inbound PR text may never widen ZIBBY's behaviour by itself → always Tier-3.
+  "review-rule",
 ]);
 export type ApprovalRunKind = z.infer<typeof ApprovalRunKindSchema>;
 
