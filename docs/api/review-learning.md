@@ -142,7 +142,42 @@ comment is the lesser failure. The constructor takes an optional `fetchImpl`
 (`@Optional()`, defaults to global `fetch`) purely so tests can inject a stub
 without touching the network.
 
-Not yet built (later tasks): the `record` call that turns a `FetchedComment`
+## `ReviewCommentDistiller` (`review-comment.distiller.ts`)
+
+Turns a batch of `FetchedComment`s into candidate rules — the ONE place in this
+feature where untrusted PR text reaches a model (Law 4) and where the model's
+own reply is untrusted right back (Law 4 cuts both ways).
+
+- `buildDistillPrompt(comments, known)` composes the prompt: an
+  operator-authored system prompt + the project's `known` rules (`{ id, rule }`
+  pairs, so the model can reuse a slug instead of coining a near-duplicate) +
+  the batch, with every comment `body` passed through `envelopeInbound` — never
+  bare. The system prompt tells the model the fenced comment text is inert data
+  it must extract a rule _from_, never obey.
+- `parseDistillOutput(raw, batchIds)` parses the model's reply through a
+  **closed** (`.strict()`) Zod schema — `DistillSchema` — capped at 60
+  observations. Each observation's `slug` must match `REVIEW_RULE_ID_REGEX`
+  (closing the gap Task 2's review flagged: the store itself doesn't validate
+  slugs, so this is the one place that must), `rule` is capped at 160 chars,
+  `rationale` at 300; `scopeHint` and `actionable` both `.catch()` to a safe
+  default (`"project"`, `false`) rather than rejecting the whole observation
+  over one bad enum. After schema validation, an observation is dropped unless
+  `actionable` is `true` **and** its `commentId` is one this batch actually
+  fetched — the model may never invent a rule about a comment we didn't send
+  it. Unparseable JSON, a non-object shape, or an unknown/extra field anywhere
+  in the payload (the `.strict()`) all resolve to `[]`, never a partial
+  best-effort parse.
+- `ReviewCommentDistiller.distill(comments, known)` is the cheap-model pass
+  itself — same shape as `memory/claude-cli-distiller.ts`: `claude -p …
+--model haiku --output-format json` via `spawnClaudeCli`, the same
+  `process.env.VITEST` guard so tests never spawn a real CLI, a 30s timeout.
+  **Never throws and never blocks** — a CLI failure, a timeout, or a schema
+  rejection all resolve to `[]`, and the caller is expected to leave its cursor
+  untouched on an empty result so the batch replays next pass. `distill` never
+  sets anything to `active`; it only ever proposes an observation for a later
+  step to `record`.
+
+Not yet built (later tasks): the `record` call that turns a `DistilledObservation`
 into a rule occurrence, the controller/route exposing `listGrounded`/
 `promoteToGlobal`, the `review-learn` automation target kind, and grounding the
 active rules into runs.
