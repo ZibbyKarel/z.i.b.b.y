@@ -42,6 +42,14 @@ See also [[zibby-north-star]], [[project-xy]].
 - Must be unique across every tier
 - Validated by `resolveSafeFile` (path-traversal protection)
 
+A note nested in a subfolder (e.g. `vault/projects/<id>.md`) still gets a bare
+basename id — `VaultService.scan()` derives it via `path.basename(file, ".md")`,
+never the path relative to the vault root, so `VaultService.note(id)` only ever
+matches a plain basename. `ProjectVaultService` (`vault/projects/<id>.md`, id
+`<id>`) and `apps/api/src/memory/review-rules-note.ts`'s
+`reviewRulesIdFor(projectId)` (`vault/projects/<id>-review-rules.md`, id
+`<id>-review-rules`, no `projects/` prefix) both follow this rule.
+
 ## VaultService
 
 **File:** `apps/api/src/memory/vault.service.ts`

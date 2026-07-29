@@ -44,10 +44,15 @@ export class ReviewRulesVaultService {
       }
 
       const { project } = await this.store.listGrounded(projectId);
+      // Defense-in-depth (mirrors `renderGlobal`'s re-filter below): never trust
+      // an injected dependency's contract alone for the one guarantee — only
+      // `active` rules ever reach a note — that keeps unapproved PR-derived
+      // text (Law 4) out of every future prompt.
+      const active = project.filter((r) => r.status === "active");
       await ensureDir(this.projectsDir);
       await writeFileAtomic(
         file,
-        serialize(project, {
+        serialize(active, {
           title: `Naučená review pravidla — ${projectId}`,
           // M7: explicit ownership, so grounding's isolation filter can never leak
           // one project's rules into another project's run.

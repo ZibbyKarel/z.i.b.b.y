@@ -243,8 +243,13 @@ module importing the review-learning module):
 
 - `GLOBAL_REVIEW_RULES_ID` = `"review-rules"` — the cross-project note
   (`<vault>/review-rules.md`), grounded into every run.
-- `reviewRulesIdFor(projectId)` = `` `projects/${projectId}-review-rules` `` —
-  one project's note (`<vault>/projects/<projectId>-review-rules.md`), grounded
+- `reviewRulesIdFor(projectId)` = `` `${projectId}-review-rules` `` — one
+  project's note, written to disk at
+  `<vault>/projects/<projectId>-review-rules.md` but looked up by
+  `VaultService.note()` as the bare basename `<projectId>-review-rules` (no
+  `projects/` prefix — `VaultService.scan()` derives every note's id via
+  `path.basename(file, ".md")`, same as `ProjectVaultService`'s own
+  `vault/projects/<id>.md` note, which is looked up as plain `<id>`), grounded
   only into that project's runs.
 
 `render(projectId)` reads `ReviewRulesStore.listGrounded(projectId).project` and
@@ -258,11 +263,13 @@ on).
 Three things this renderer is deliberately strict about:
 
 - **Only `active` rules are ever rendered.** `observed`/`proposed`/`retired`
-  never reach a note — `listGrounded` already filters to `active`, and
-  `renderGlobal` re-applies the same filter explicitly. A `proposed` rule
-  showing up in a prompt would mean inbound PR text changed ZIBBY's behaviour
-  without an operator approval — the Law-4 violation this whole feature exists
-  to prevent.
+  never reach a note — `listGrounded` already filters to `active`, and both
+  `render` and `renderGlobal` re-apply the same `status === "active"` filter
+  explicitly rather than trusting the store's contract alone (defense in
+  depth — a regression in either place must not silently ship). A `proposed`
+  rule showing up in a prompt would mean inbound PR text changed ZIBBY's
+  behaviour without an operator approval — the Law-4 violation this whole
+  feature exists to prevent.
 - **M7 project isolation.** `render(projectId)` resolves the note path via
   `resolveSafeFile(projectsDir, projectId, "-review-rules.md", AGENT_ID_REGEX)`
   (the same guard `RoadmapStore`/`ReviewRulesStore` use for a caller-supplied id

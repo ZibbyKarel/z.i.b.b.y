@@ -4,6 +4,8 @@ import * as path from "node:path";
 import type { ReviewRule } from "@zibby/contracts";
 import matter from "gray-matter";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { GLOBAL_REVIEW_RULES_ID, reviewRulesIdFor } from "../memory/review-rules-note";
+import { VaultService } from "../memory/vault.service";
 import { MAX_RENDERED_RULES, ReviewRulesVaultService } from "./review-rules.vault.service";
 
 function rule(id: string, over: Partial<ReviewRule> = {}): ReviewRule {
@@ -143,5 +145,70 @@ describe("ReviewRulesVaultService", () => {
     await expect(
       fs.readFile(path.join(vaultDir, "projects", `${escapee}-review-rules.md`), "utf8"),
     ).rejects.toThrow();
+  });
+
+  it("reviewRulesIdFor(projectId) actually resolves through VaultService, not just fs.readFile", async () => {
+    // `fs.readFile` on the known disk path proves the FILE exists — it says
+    // nothing about whether the id the id-helper hands to Task 7's
+    // `GroundingService` can find it. `VaultService.scan()` derives every
+    // note's id as `path.basename(file, ".md")`, so a helper returning a
+    // path-shaped id (e.g. with a `projects/` prefix) would write a real file
+    // that `VaultService.note()` can never look up — a silent grounding
+    // failure `GroundingService.add()` swallows without an error anywhere.
+    await makeService({ project: [rule("no-any")], global: [] }).render("acme");
+
+    const vault = new VaultService(vaultDir);
+    const note = await vault.note(reviewRulesIdFor("acme"));
+    expect(note.body).toContain("Pravidlo no-any.");
+    expect(note.frontmatter.project).toBe("acme");
+  });
+
+  it("GLOBAL_REVIEW_RULES_ID also resolves through VaultService", async () => {
+    await makeService({
+      project: [],
+      global: [rule("no-any", { scope: "global" })],
+    }).renderGlobal();
+
+    const vault = new VaultService(vaultDir);
+    const note = await vault.note(GLOBAL_REVIEW_RULES_ID);
+    expect(note.body).toContain("Pravidlo no-any.");
+  });
+
+  it("render() renders only the active rules out of a mixed-status batch, by identity", async () => {
+    // The store contract (`listGrounded`) is supposed to hand back only
+    // `active` rules already, but `render` must not blindly trust that —
+    // feed it every status directly and assert it still keeps only the
+    // active one. A `proposed`/`observed`/`retired` rule reaching the note
+    // would mean unapproved, attacker-influenced PR text changed a future
+    // run's behaviour (Law 4).
+    const mixed = [
+      rule("keep-active", { status: "active" }),
+      rule("drop-proposed", { status: "proposed" }),
+      rule("drop-observed", { status: "observed" }),
+      rule("drop-retired", { status: "retired" }),
+    ];
+    await makeService({ project: mixed, global: [] }).render("acme");
+
+    const body = await fs.readFile(path.join(vaultDir, "projects", "acme-review-rules.md"), "utf8");
+    expect(body).toContain("Pravidlo keep-active.");
+    expect(body).not.toContain("Pravidlo drop-proposed.");
+    expect(body).not.toContain("Pravidlo drop-observed.");
+    expect(body).not.toContain("Pravidlo drop-retired.");
+  });
+
+  it("renderGlobal() renders only the active rules out of a mixed-status batch, by identity", async () => {
+    const mixed = [
+      rule("keep-active", { status: "active", scope: "global" }),
+      rule("drop-proposed", { status: "proposed", scope: "global" }),
+      rule("drop-observed", { status: "observed", scope: "global" }),
+      rule("drop-retired", { status: "retired", scope: "global" }),
+    ];
+    await makeService({ project: [], global: mixed }).renderGlobal();
+
+    const body = await fs.readFile(path.join(vaultDir, "review-rules.md"), "utf8");
+    expect(body).toContain("Pravidlo keep-active.");
+    expect(body).not.toContain("Pravidlo drop-proposed.");
+    expect(body).not.toContain("Pravidlo drop-observed.");
+    expect(body).not.toContain("Pravidlo drop-retired.");
   });
 });
