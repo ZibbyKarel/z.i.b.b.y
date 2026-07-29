@@ -18,18 +18,19 @@ function fetchStub(routes: Route[]) {
 function makeLogger() {
   const warn = vi.fn();
   const debug = vi.fn();
+  const info = vi.fn();
   const logger = {
-    child: () => ({ info: vi.fn(), warn, debug, error: vi.fn() }),
+    child: () => ({ info, warn, debug, error: vi.fn() }),
   };
-  return { logger, warn, debug };
+  return { logger, warn, debug, info };
 }
 
 function makeFetcher(routes: Route[], numbers: number[] = [7]) {
-  const { logger, warn, debug } = makeLogger();
+  const { logger, warn, debug, info } = makeLogger();
   const locator = { numbersFor: vi.fn(async () => numbers) };
   const fetchImpl = fetchStub(routes);
   const fetcher = new ReviewCommentFetcher(locator as never, logger as never, fetchImpl as never);
-  return { fetcher, fetchImpl, warn, debug };
+  return { fetcher, fetchImpl, warn, debug, info };
 }
 
 /** Ascending, unique, non-wrapping minute timestamps — avoids the `i % 60` collision trap. */
@@ -78,6 +79,21 @@ describe("ReviewCommentFetcher", () => {
     expect(comments.map((c) => c.commentId)).toEqual(["rc-111", "ic-222", "rv-333"]);
     expect(comments[0]?.prNumber).toBe(7);
     expect(comments[0]?.prUrl).toBe("https://github.com/acme/app/pull/7");
+  });
+
+  it("says so, and calls nothing, when ZIBBY has opened no PRs for the project", async () => {
+    const { fetcher, fetchImpl, info } = makeFetcher([], []);
+
+    const result = await fetcher.fetchNew(BASE);
+
+    expect(result).toEqual({ comments: [], failedEndpoints: [] });
+    expect(fetchImpl).not.toHaveBeenCalled();
+    // Without this line the case is indistinguishable from a healthy "no new
+    // comments" pass — the likeliest reason the feature looks dead on a first run.
+    expect(info).toHaveBeenCalledWith(
+      "no ZIBBY-opened PRs for this project — no review comments to read",
+      { projectId: "acme", repo: "acme/app" },
+    );
   });
 
   it("asks every endpoint for a full 100-item page, reviews included", async () => {

@@ -94,13 +94,44 @@ export class ReviewRuleFlowService implements OnModuleInit, ResumableRunner {
       this.log.warn("review-rule resume skipped (malformed runId)", { runId });
       return;
     }
-    const rule = await this.store.setStatus(parsed.projectId, parsed.ruleId, "active");
+    const approvalRef = await this.approvalRefFor(runId);
+    const rule = await this.store.setStatus(parsed.projectId, parsed.ruleId, "active", approvalRef);
     if (!rule) {
       this.log.warn("review-rule resume skipped (unknown rule)", parsed);
       return;
     }
     await this.vault.render(parsed.projectId);
-    this.log.info("review rule approved and grounded", parsed);
+    this.log.info("review rule approved and grounded", { ...parsed, approvalRef });
+  }
+
+  /**
+   * The id of the approval that carried this decision — `ReviewRule.approvalRef`'s
+   * forensic link back from an `active` rule to the operator decision that
+   * activated it. `ResumableRunner.resume` is handed only the `runId`, so the id
+   * is recovered by looking the decision up by `runId`, the same way
+   * `ApprovalsService.cancelPendingForRun` finds a run's approvals. `ApprovalsService.approve`
+   * marks the approval `approved` BEFORE routing to `resume`, so the decided
+   * record is already on disk by the time this runs.
+   *
+   * A rule reaches this flow at most once (it is proposed on its second
+   * occurrence and a retired rule is never re-proposed), so one match is the
+   * normal case; the newest wins if a historical duplicate exists. Best-effort
+   * by design — a lookup failure logs and leaves `approvalRef` unset rather than
+   * blocking an activation the operator already approved.
+   */
+  private async approvalRefFor(runId: string): Promise<string | undefined> {
+    try {
+      const decided = (await this.approvals.list("approved"))
+        .filter((a) => a.kind === "review-rule" && a.runId === runId)
+        .sort((a, b) => a.requestedAt.localeCompare(b.requestedAt));
+      return decided.at(-1)?.id;
+    } catch (err) {
+      this.log.warn("review-rule approval lookup failed — activating without an approvalRef", {
+        runId,
+        error: String(err),
+      });
+      return undefined;
+    }
   }
 
   /**

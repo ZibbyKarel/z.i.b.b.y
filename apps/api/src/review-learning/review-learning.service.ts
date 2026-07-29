@@ -26,9 +26,10 @@ type GithubLinkResolver = (
  * reached its second occurrence.
  *
  * Fail-open per project (one bad repo never stops the others) and replay-safe: the
- * cursor advances only after a distillation actually produced something AND every
- * fetch endpoint succeeded, and the store refuses to count the same `commentId`
- * twice.
+ * cursor advances only when the distiller actually RAN over the whole window AND
+ * every fetch endpoint succeeded, and the store refuses to count the same
+ * `commentId` twice. "Ran and found nothing actionable" is a complete pass and
+ * advances; "failed, timed out, or never ran" is not and holds.
  */
 @Injectable()
 export class ReviewLearningService {
@@ -77,7 +78,17 @@ export class ReviewLearningService {
     now: Date,
   ): Promise<{ observations: number; proposed: number }> {
     const link = await this.resolveLink(this.resolvedProjects, this.credentials, project);
-    if (!link) return { observations: 0, proposed: 0 };
+    if (!link) {
+      // Ordinary — most projects have no GitHub link at all — but it is also the
+      // first thing an operator needs to rule out when a pass reports 0/0, so it
+      // must not be completely silent. `debug`, and named, so `LOG_LEVEL=debug`
+      // answers "why did nothing happen for this project?" without putting a line
+      // per link-less project into every night's log.
+      this.log.debug("project has no GitHub link — review learning skipped", {
+        projectId: project.id,
+      });
+      return { observations: 0, proposed: 0 };
+    }
 
     const cursor = await this.store.cursor(project.id);
     // `selfLogin` is deliberately left unpassed: ZIBBY opens its PRs with the
@@ -94,20 +105,32 @@ export class ReviewLearningService {
 
     const known = (await this.store.list(project.id)).map((r) => ({ id: r.id, rule: r.rule }));
     const distilled = await this.distiller.distill(comments, known);
-    if (distilled.length === 0) {
-      // Either nothing was actionable or the distiller failed. Leaving the cursor
-      // untouched costs one replayed batch and never loses a comment; the store's
-      // commentId dedup makes the replay free of double-counting.
-      this.log.debug("no observations distilled — cursor held", {
+    if (distilled.status === "incomplete") {
+      // The distiller failed or never ran, so this window was never actually
+      // examined — held, exactly like a failed fetch endpoint below. Costs one
+      // replayed batch and loses nothing; the store's commentId dedup makes the
+      // replay free of double-counting.
+      this.log.warn("review distillation incomplete — cursor held", {
+        projectId: project.id,
+        reason: distilled.reason,
+        comments: comments.length,
+      });
+    } else if (distilled.observations.length === 0) {
+      // The OTHER zero-observation case, and the reason this branch exists: the
+      // distiller ran, read the window, and found nothing worth learning from
+      // (`LGTM`, `thanks`, `done`). That is a complete answer, not a failure —
+      // holding the cursor here would re-fetch and re-distil the same comments
+      // every night forever and strand every later comment behind
+      // MAX_COMMENTS_PER_PASS's oldest-first cap.
+      this.log.debug("nothing actionable in this window — cursor may advance", {
         projectId: project.id,
         comments: comments.length,
       });
-      return { observations: 0, proposed: 0 };
     }
 
     const byId = new Map(comments.map((c) => [c.commentId, c]));
     let proposed = 0;
-    for (const observation of distilled) {
+    for (const observation of distilled.observations) {
       const source = byId.get(observation.commentId);
       if (!source) continue;
       const promoted = await this.store.record(
@@ -138,18 +161,21 @@ export class ReviewLearningService {
     // window we never actually observed would permanently lose whatever landed
     // there, so the cursor is held (the whole window replays next pass; the
     // store's commentId dedup keeps that replay free of double-counting) while
-    // still keeping every occurrence that DID arrive this pass.
+    // still keeping every occurrence that DID arrive this pass. Independent of,
+    // and checked separately from, the distiller's own outcome above: a complete
+    // distillation over an incomplete fetch window still must not advance.
     if (failedEndpoints.length > 0) {
       this.log.warn("review comment fetch had failed endpoints — cursor held", {
         projectId: project.id,
         failedEndpoints,
       });
-      return { observations: distilled.length, proposed };
     }
 
-    const newest = comments.reduce((max, c) => (c.at > max ? c.at : max), comments[0]?.at ?? "");
-    if (newest) await this.store.setCursor(project.id, newest);
+    if (distilled.status === "ok" && failedEndpoints.length === 0) {
+      const newest = comments.reduce((max, c) => (c.at > max ? c.at : max), comments[0]?.at ?? "");
+      if (newest) await this.store.setCursor(project.id, newest);
+    }
 
-    return { observations: distilled.length, proposed };
+    return { observations: distilled.observations.length, proposed };
   }
 }

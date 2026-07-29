@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import type { FetchedComment } from "./review-comment.fetcher";
 import {
+  MAX_PROMPT_BYTES,
   ReviewCommentDistiller,
   buildDistillPrompt,
+  chunkForArgvBudget,
   logDroppedObservations,
   parseDistillOutput,
 } from "./review-comment.distiller";
@@ -251,6 +253,102 @@ describe("parseDistillOutput", () => {
   });
 });
 
+describe("parseDistillOutput — usable", () => {
+  const known = new Set(["rc-111"]);
+
+  it("marks a reply that parsed but carried nothing actionable as USABLE", () => {
+    // The wedge this flag exists to prevent: a window of pure `LGTM`/`thanks`
+    // yields zero observations from a distiller that worked perfectly. If that
+    // were reported the same way a CLI failure is, the caller would hold its
+    // cursor on it forever.
+    const out = parseDistillOutput(JSON.stringify({ observations: [] }), known);
+
+    expect(out.observations).toEqual([]);
+    expect(out.usable).toBe(true);
+  });
+
+  it("marks a reply whose only observation was malformed as USABLE (per-element tolerance)", () => {
+    const out = parseDistillOutput(
+      JSON.stringify({
+        observations: [{ commentId: "rc-111", slug: "Not A Slug", rule: "y", actionable: true }],
+      }),
+      known,
+    );
+
+    expect(out.dropped).toBe(1);
+    expect(out.usable).toBe(true);
+  });
+
+  it("marks a wholly unusable reply as NOT usable", () => {
+    expect(parseDistillOutput("not json", known).usable).toBe(false);
+    expect(parseDistillOutput(JSON.stringify({ nope: 1 }), known).usable).toBe(false);
+    expect(parseDistillOutput(JSON.stringify([1, 2]), known).usable).toBe(false);
+    const overlong = Array.from({ length: 501 }, () => ({
+      commentId: "rc-111",
+      slug: "x",
+      rule: "y",
+      actionable: true,
+    }));
+    expect(parseDistillOutput(JSON.stringify({ observations: overlong }), known).usable).toBe(
+      false,
+    );
+  });
+});
+
+describe("chunkForArgvBudget", () => {
+  function bulky(i: number): FetchedComment {
+    // `sanitizeInbound` hard-caps every enveloped value at MAX_INBOUND_CHARS
+    // (4000), so this is as large as one comment can ever get in a prompt.
+    return { ...COMMENT, commentId: `rc-${i}`, body: "x".repeat(6000) };
+  }
+
+  it("keeps a normal batch in one chunk", () => {
+    const comments = Array.from({ length: 60 }, (_, i) => ({
+      ...COMMENT,
+      commentId: `rc-${i}`,
+    }));
+
+    expect(chunkForArgvBudget(comments, [])).toHaveLength(1);
+  });
+
+  it("splits a worst-case batch so no prompt exceeds the per-argument budget", () => {
+    const comments = Array.from({ length: 60 }, (_, i) => bulky(i));
+
+    const chunks = chunkForArgvBudget(comments, []);
+
+    // The regression this guards: one argv entry over Linux's 128 KiB
+    // MAX_ARG_STRLEN is a spawn error, not a truncation.
+    expect(chunks.length).toBeGreaterThan(1);
+    for (const chunk of chunks) {
+      expect(Buffer.byteLength(buildDistillPrompt(chunk, []), "utf8")).toBeLessThanOrEqual(
+        MAX_PROMPT_BYTES,
+      );
+    }
+  });
+
+  it("loses no comment and preserves order across chunks", () => {
+    const comments = Array.from({ length: 60 }, (_, i) => bulky(i));
+
+    const flattened = chunkForArgvBudget(comments, []).flat();
+
+    expect(flattened.map((c) => c.commentId)).toEqual(comments.map((c) => c.commentId));
+  });
+
+  it("always makes progress — a single comment is never split into an empty chunk", () => {
+    // Budget far below even one comment: the loop must still emit that comment
+    // rather than spin or drop it. `sanitizeInbound`'s own 4000-char cap is what
+    // makes an over-budget single comment impossible in practice.
+    const chunks = chunkForArgvBudget([bulky(1), bulky(2)], [], 10);
+
+    expect(chunks).toHaveLength(2);
+    expect(chunks.flat()).toHaveLength(2);
+  });
+
+  it("returns no chunks for an empty batch", () => {
+    expect(chunkForArgvBudget([], [])).toEqual([]);
+  });
+});
+
 describe("logDroppedObservations", () => {
   it("warns, with the count, when observations were dropped as malformed", () => {
     const warn = vi.fn();
@@ -275,13 +373,19 @@ describe("logDroppedObservations", () => {
 });
 
 describe("ReviewCommentDistiller", () => {
-  it("never spawns claude under vitest", async () => {
+  it("never spawns claude under vitest, and reports that it did NOT run", async () => {
     const logger = {
       child: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() }),
     };
     const distiller = new ReviewCommentDistiller(logger as never);
 
-    expect(await distiller.distill([COMMENT], [])).toEqual([]);
+    // The guard must report `incomplete`, not `ok` — a test-suite short-circuit
+    // is "did not run", and the caller must never advance a cursor over it.
+    expect(await distiller.distill([COMMENT], [])).toEqual({
+      status: "incomplete",
+      observations: [],
+      reason: "not-run",
+    });
     expect(spawnClaudeCli).not.toHaveBeenCalled();
   });
 });
