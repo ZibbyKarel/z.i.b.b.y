@@ -1,6 +1,7 @@
 import type { ReviewRule } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
 import { ReviewLearningController } from "./review-learning.controller";
+import { InvalidReviewScopeKeyError } from "./review-rules.errors";
 import { GLOBAL_SCOPE_KEY } from "./review-rules.store";
 
 const RULE: ReviewRule = {
@@ -39,6 +40,27 @@ describe("ReviewLearningController", () => {
 
     expect(res).toEqual({ status: 200, body: [RULE] });
     expect(store.list).toHaveBeenCalledWith("acme");
+  });
+
+  // Important 1: `store.list` throws `InvalidReviewScopeKeyError` for a scope key
+  // that fails `resolveSafeFile`'s regex (e.g. path traversal) — before this fix
+  // that propagated as an unmodelled 500 through `AllExceptionsFilter`, even
+  // though the contract's `strictStatusCodes: true` says that can't happen.
+  it("404s an unsafe scope instead of leaking a 500, and reads nothing else", async () => {
+    const store = {
+      list: vi.fn(async () => {
+        throw new InvalidReviewScopeKeyError("../x");
+      }),
+      promoteToGlobal: vi.fn(async () => null),
+    };
+    const vault = { render: vi.fn(async () => {}), renderGlobal: vi.fn(async () => {}) };
+    const controller = new ReviewLearningController(store as never, vault as never);
+
+    const res = await controller.list({ query: { scope: "../x" } } as never);
+
+    expect(res.status).toBe(404);
+    expect(store.list).toHaveBeenCalledTimes(1);
+    expect(store.promoteToGlobal).not.toHaveBeenCalled();
   });
 
   it("promotes an active rule and re-renders both notes", async () => {

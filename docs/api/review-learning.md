@@ -419,6 +419,17 @@ the nightly pass and reach `active` only through a `review-rule` approval, so no
 client can mint one, reword one, or activate one. Promotion is the single
 capability the nightly pass structurally cannot reach on its own.
 
+`list` 404s only a scope key that fails `resolveSafeFile`'s regex before it can
+even be turned into a path (`store.list` throws `InvalidReviewScopeKeyError`) —
+e.g. a `../../etc/passwd`-shaped `scope`. A valid-but-unknown scope (no file on
+disk yet for that project) is **not** an error: `ReviewRulesStore.read` treats a
+missing file as `{ rules: [] }`, so that case stays `200 []`. Without this
+mapping the thrown error reached `AllExceptionsFilter` as a plain `Error` (not an
+`HttpException`) and surfaced as an unmodelled `500` — a status
+`strictStatusCodes: true` says can't happen — logged at `error` level on every
+probe, which is exactly the free error-log-flood a malicious `scope` query
+could exploit.
+
 `promote` refuses in three cases and returns the same `404` for all of them —
 the contract has no status that distinguishes them, and a client should not be
 able to tell "not active" from "does not exist":
@@ -437,3 +448,12 @@ On success the rule moves out of the project file and into the global one, so
 Re-rendering only one would leave the other claiming a rule it no longer holds.
 
 v1 ships no web page for this; it is the API a later panel will call.
+
+Coverage is split deliberately: `review-learning.controller.test.ts` unit-tests
+`list`/`promote` directly (business logic, Law 4, M7), while
+`apps/api/test/review-learning.e2e.test.ts` boots the real `AppModule` and drives
+both routes over HTTP through supertest — the only suite that actually exercises
+`handler()`'s `tsRestHandler` route map and the module's `controllers`
+registration, both invisible to the unit tests. It isolates a temp
+`REVIEW_RULES_DIR`/`VAULT_DIR` per file and asserts on the rendered vault note
+contents on disk, not just the HTTP response.

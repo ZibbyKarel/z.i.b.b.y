@@ -17,7 +17,7 @@ export const reviewLearningContract = c.router(
       method: "GET",
       path: "/review-rules",
       query: z.object({ scope: z.string().min(1) }),
-      responses: { 200: z.array(ReviewRuleSchema) },
+      responses: { 200: z.array(ReviewRuleSchema), 404: ErrorSchema },
       summary: "Rules in one scope (a project id, or `_global`)",
     },
     promoteReviewRule: {
