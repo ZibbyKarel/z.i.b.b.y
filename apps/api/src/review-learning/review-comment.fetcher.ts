@@ -134,8 +134,12 @@ export class ReviewCommentFetcher {
 
     for (const number of numbers.slice(0, MAX_REVIEW_PRS)) {
       const endpoint = `pulls/${number}/reviews`;
+      // `per_page=100` for the same reason the two repo-wide calls above carry it:
+      // GitHub's default page is 30, and this endpoint has no `since` to narrow
+      // the window, so on a long-lived PR the 31st-and-older review body would
+      // never be readable — permanently invisible, not merely deferred.
       const { items, failed } = await this.get(
-        `${GITHUB_API}/repos/${input.repo}/pulls/${number}/reviews`,
+        `${GITHUB_API}/repos/${input.repo}/pulls/${number}/reviews?per_page=100`,
         input.token,
         endpoint,
       );
