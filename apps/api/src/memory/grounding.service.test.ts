@@ -643,11 +643,19 @@ describe("review rules grounding", () => {
     });
   };
 
+  // The global note's title ("Naučená review pravidla") is a strict PREFIX of
+  // the project note's title ("Naučená review pravidla — acme"), so asserting
+  // on the title alone can't tell which note actually landed — the project
+  // note's presence alone would satisfy it. Assert on the global note's BODY
+  // text instead, which appears in no other note.
+  const GLOBAL_RULES_BODY =
+    "Tato pravidla vznikla z opakovaných review komentářů a operátor je schválil.";
+
   it("grounds the global and project rules notes for a project run", async () => {
     const made = await makeVault(seedRules);
     dir = made.dir;
     const block = await made.grounding.compose({ task: "cokoliv", projectId: "acme" });
-    expect(block).toContain("Naučená review pravidla");
+    expect(block).toContain(GLOBAL_RULES_BODY);
     expect(block).toContain("Primitivy ber z libs/design-system.");
   });
 
@@ -662,13 +670,22 @@ describe("review rules grounding", () => {
     const made = await makeVault(seedRules);
     dir = made.dir;
     const block = await made.grounding.compose({ task: "cokoliv", domain: "personal" });
-    expect(block).not.toContain("Naučená review pravidla");
+    expect(block).not.toContain(GLOBAL_RULES_BODY);
   });
 
-  it("composes normally when neither rules note exists", async () => {
-    const made = await makeVault(async () => {});
+  it("composes normally when neither project's rules note exists, without dropping other content", async () => {
+    const made = await makeVault(async (vault) => {
+      await vault.createNote({
+        id: "north-star",
+        tier: "memory",
+        title: "North Star",
+        body: "The mission.",
+      });
+    });
     dir = made.dir;
     const block = await made.grounding.compose({ task: "cokoliv", projectId: "empty" });
-    expect(typeof block).toBe("string");
+    expect(block).toContain("North Star");
+    expect(block).not.toContain(GLOBAL_RULES_BODY);
+    expect(block).not.toContain("Primitivy ber z libs/design-system.");
   });
 });
