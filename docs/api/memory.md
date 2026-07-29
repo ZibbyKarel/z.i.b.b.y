@@ -130,18 +130,26 @@ ZIBBY navigates the vault through indexes — instead of scanning every file.
 
 Called at the start of every run (fail-open — a vault outage never blocks a run):
 
-1. Loads the North Star note (`zibby-north-star`, or the first MOC in `memory/`)
-2. Loads the self-knowledge note, then the learned review-rules notes — never
-   term-matched, ahead of the shelf/MOC/expansion sections so a char-budget
-   truncation cuts speculative context first, never a learned rule: the
-   cross-project note (`GLOBAL_REVIEW_RULES_ID`, skipped for a
-   `domain: "personal"` run) and, when the run carries a `projectId`, that
-   project's note (`reviewRulesIdFor(projectId)`); see
-   `docs/api/review-learning.md`
-3. Loads relevant indexes (searches index titles for the query)
-4. Loads a handful of recent notes from `daily/`
-5. When the run carries a `projectId`, loads that project's own note
-6. Returns the combined markdown context → passed to the agent as `--append-system-prompt`
+1. Loads the North Star note (`NORTH_STAR_ID` — `north-star`; absent is fine,
+   `add` skips any note it can't read)
+2. Loads the self-knowledge note (`SELF_KNOWLEDGE_ID` — `self-knowledge`)
+3. Loads the learned review-rules notes — never term-matched, and deliberately
+   ahead of the shelf/MOC/expansion sections so a char-budget truncation cuts
+   speculative context first, never a learned rule: the cross-project note
+   (`GLOBAL_REVIEW_RULES_ID`, skipped for a `domain: "personal"` run) and, when
+   the run carries a `projectId`, that project's note
+   (`reviewRulesIdFor(projectId)`); see `docs/api/review-learning.md`
+4. Loads the owning subsystem's knowledge shelf (F4a) when `ownerSubsystem` is
+   set, plus the Hearth shelf for a `domain: "personal"` run (F8)
+5. Loads up to `MOC_LIMIT` term-matched indexes, narrowed first by M7 project
+   isolation and F8 domain isolation, then up to `EXPANSION_LIMIT` notes reached
+   by 1-hop wikilink expansion from what is already grounded (F4b)
+6. When the run carries a `projectId`, loads that project's own note
+7. Returns the combined markdown context → passed to the agent as `--append-system-prompt`
+
+Budgets: each note's body is truncated at `NOTE_BUDGET` (2000 chars) and the whole
+block at `BLOCK_BUDGET` (8000) — both cut the tail, which is why the order above is
+load-bearing.
 
 ## RunRecorderModule
 
