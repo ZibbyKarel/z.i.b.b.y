@@ -223,4 +223,25 @@ describe("ReviewRulesStore", () => {
     const other = globalRules.find((r) => r.id === OTHER.slug);
     expect(other?.occurrences).toHaveLength(3);
   });
+
+  it("drops a schema-invalid cursor without losing the rules in the same file", async () => {
+    const goodA = {
+      id: "good-a",
+      scope: "project",
+      rule: "Do the good thing A.",
+      status: "observed",
+      occurrences: [occurrence("g-1")],
+      createdAt: NOW.toISOString(),
+      updatedAt: NOW.toISOString(),
+    };
+    await fs.writeFile(
+      path.join(dir, "acme.json"),
+      JSON.stringify({ rules: [goodA], cursor: "not-a-date" }),
+      "utf8",
+    );
+
+    expect(await store.cursor("acme")).toBeUndefined();
+    const rules = await store.list("acme");
+    expect(rules.map((r) => r.id)).toEqual(["good-a"]);
+  });
 });
