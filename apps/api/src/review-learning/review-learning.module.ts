@@ -9,6 +9,7 @@ import { dataDir } from "../shared/data-dir";
 import { ScheduledTasksStorageModule } from "../tasks/scheduled-tasks-storage.module";
 import { ReviewCommentDistiller } from "./review-comment.distiller";
 import { ReviewCommentFetcher } from "./review-comment.fetcher";
+import { ReviewLearningController } from "./review-learning.controller";
 import { ReviewRuleFlowService } from "./review-rule-flow.service";
 import { REVIEW_RULES_DIR, ReviewRulesStore } from "./review-rules.store";
 import { ReviewRulesVaultService } from "./review-rules.vault.service";
@@ -44,6 +45,7 @@ export function resolveReviewRulesDir(): string {
     ScheduledTasksStorageModule,
     ApprovalsModule,
   ],
+  controllers: [ReviewLearningController],
   providers: [
     { provide: REVIEW_RULES_DIR, useFactory: resolveReviewRulesDir },
     { provide: VAULT_DIR, useFactory: () => process.env.VAULT_DIR ?? dataDir("vault") },
@@ -58,9 +60,10 @@ export function resolveReviewRulesDir(): string {
   exports: [
     ReviewLearningService,
     // Not consumed by ReviewLearningService itself (rendering on approval belongs
-    // to ReviewRuleFlowService.resume, which already has it) — exported for the
-    // review-learning controller (Task 11's promote-to-global endpoint) that
-    // lands in a later task. Do not delete this export as unused.
+    // to ReviewRuleFlowService.resume, which already has it) — exported for
+    // `ReviewLearningController`'s promote-to-global endpoint (Task 11), which
+    // re-renders both notes after moving a rule between scopes. Do not delete
+    // this export as unused.
     ReviewRulesVaultService,
   ],
 })

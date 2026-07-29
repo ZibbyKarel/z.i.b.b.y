@@ -401,6 +401,39 @@ still counts — so a replayed window (see the cursor rules above) reports more
 than it stored. Only logged today, but the `review-learn` automation target
 reports this number.
 
-Not yet built (later tasks): the controller/route exposing `listGrounded` /
-`promoteToGlobal`, and the `review-learn` automation target kind that triggers
-`learn()` on a schedule.
+## Scheduling it (`review-learn`)
+
+`learn()` is triggered by the `review-learn` system automation — seeded
+disabled, default cron `15 3 * * *`. See
+[automations.md](./automations.md#review-learning-review-learn).
+
+## API (`review-learning.controller.ts`)
+
+```
+GET  /api/review-rules?scope=<projectId|_global>   rules in one scope
+POST /api/review-rules/:projectId/:ruleId/promote  widen an active project rule to global
+```
+
+There is deliberately **no create, edit or delete route**. Rules are born from
+the nightly pass and reach `active` only through a `review-rule` approval, so no
+client can mint one, reword one, or activate one. Promotion is the single
+capability the nightly pass structurally cannot reach on its own.
+
+`promote` refuses in three cases and returns the same `404` for all of them —
+the contract has no status that distinguishes them, and a client should not be
+able to tell "not active" from "does not exist":
+
+- the `projectId` fails `AGENT_ID_REGEX`, or is `GLOBAL_SCOPE_KEY` (M7: the path
+  parameter is caller-supplied, and the store's own scope-key regex is
+  deliberately looser because it must also accept `_global`, so this route would
+  otherwise be able to target the global file directly);
+- the rule does not exist in that scope;
+- the rule is not yet `active`. This check lives in the controller because
+  `ReviewRulesStore.promoteToGlobal` does **not** gate on status — it moves
+  whatever id it is handed. Law 4 lives here.
+
+On success the rule moves out of the project file and into the global one, so
+**both** vault notes are re-rendered — `render(projectId)` and `renderGlobal()`.
+Re-rendering only one would leave the other claiming a rule it no longer holds.
+
+v1 ships no web page for this; it is the API a later panel will call.
