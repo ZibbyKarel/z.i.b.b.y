@@ -9,7 +9,6 @@ import { ReviewCommentDistiller } from "./review-comment.distiller";
 import { ReviewCommentFetcher } from "./review-comment.fetcher";
 import { ReviewRuleFlowService } from "./review-rule-flow.service";
 import { ReviewRulesStore } from "./review-rules.store";
-import { ReviewRulesVaultService } from "./review-rules.vault.service";
 
 /** Excerpt kept on an occurrence — enough to judge the rule, not the whole thread. */
 const EXCERPT_LIMIT = 400;
@@ -44,7 +43,6 @@ export class ReviewLearningService {
     private readonly distiller: ReviewCommentDistiller,
     private readonly store: ReviewRulesStore,
     private readonly flow: ReviewRuleFlowService,
-    private readonly vault: ReviewRulesVaultService,
     logger: LoggerService,
     @Optional() resolveLink?: GithubLinkResolver,
   ) {

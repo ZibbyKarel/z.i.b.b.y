@@ -48,6 +48,8 @@ describe("ReviewLearningService", () => {
     }>;
     projects?: Project[];
     token?: { repo: string; token: string } | null;
+    /** Makes `resolveLink` throw for this one project id, to prove `learn()` fails open. */
+    rejectProjectId?: string;
   }) {
     const logger = {
       child: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() }),
@@ -60,7 +62,6 @@ describe("ReviewLearningService", () => {
     };
     const distiller = { distill: vi.fn(async () => opts.observations) };
     const flow = { propose: vi.fn(async (_projectId: string, _rule: unknown) => {}) };
-    const vault = { render: vi.fn(async () => {}), renderGlobal: vi.fn(async () => {}) };
     const service = new ReviewLearningService(
       { list: async () => opts.projects ?? [project] } as never,
       { resolveIntegrations: async () => [] } as never,
@@ -69,11 +70,15 @@ describe("ReviewLearningService", () => {
       distiller as never,
       store,
       flow as never,
-      vault as never,
       logger as never,
-      async () => (opts.token === undefined ? { repo: "acme/app", token: "ghp_x" } : opts.token),
+      async (_resolved: unknown, _credentials: unknown, forProject: Project) => {
+        if (opts.rejectProjectId && forProject.id === opts.rejectProjectId) {
+          throw new Error(`resolveLink boom: ${forProject.id}`);
+        }
+        return opts.token === undefined ? { repo: "acme/app", token: "ghp_x" } : opts.token;
+      },
     );
-    return { service, fetcher, distiller, flow, vault };
+    return { service, fetcher, distiller, flow };
   }
 
   it("files an observation and advances the cursor to the newest comment", async () => {
@@ -121,6 +126,10 @@ describe("ReviewLearningService", () => {
     expect(result.proposed).toBe(1);
     expect(flow.propose).toHaveBeenCalledTimes(1);
     expect(flow.propose.mock.calls[0]?.[0]).toBe("acme");
+    // Law 4 keystone: a rule distilled from an outsider's PR comment stops at
+    // "proposed" — it never becomes "active" on its own. Only the operator's
+    // approval (ReviewRuleFlowService.resume, exercised elsewhere) can do that.
+    expect((await store.list("acme"))[0]?.status).toBe("proposed");
   });
 
   it("does not advance the cursor when the distiller returns nothing for a non-empty batch", async () => {
@@ -173,10 +182,36 @@ describe("ReviewLearningService", () => {
         },
       ],
       projects: [{ id: "broken", name: "Broken" } as Project, project],
+      rejectProjectId: "broken",
     });
 
     const result = await service.learn(NOW);
 
-    expect(result.observations).toBeGreaterThanOrEqual(1);
+    // The first project's resolveLink actually rejects; only the second project
+    // ("acme") is expected to have gone through end to end.
+    expect(result.observations).toBe(1);
+    expect((await store.list("acme")).length).toBeGreaterThan(0);
+    expect(await store.list("broken")).toHaveLength(0);
+  });
+
+  it("caps a stored occurrence's excerpt at EXCERPT_LIMIT and keeps it a prefix of the body", async () => {
+    const longBody = "x".repeat(450);
+    const { service } = makeService({
+      comments: [comment({ body: longBody })],
+      observations: [
+        {
+          commentId: "rc-1",
+          slug: "no-local-primitives",
+          rule: "Ber primitivy z DS.",
+          scopeHint: "project",
+        },
+      ],
+    });
+
+    await service.learn(NOW);
+
+    const excerpt = (await store.list("acme"))[0]?.occurrences[0]?.excerpt;
+    expect(excerpt).toHaveLength(400);
+    expect(longBody.startsWith(excerpt ?? "")).toBe(true);
   });
 });

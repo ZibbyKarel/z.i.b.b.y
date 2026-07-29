@@ -55,6 +55,13 @@ export function resolveReviewRulesDir(): string {
     ReviewRuleFlowService,
     ReviewLearningService,
   ],
-  exports: [ReviewLearningService, ReviewRulesVaultService],
+  exports: [
+    ReviewLearningService,
+    // Not consumed by ReviewLearningService itself (rendering on approval belongs
+    // to ReviewRuleFlowService.resume, which already has it) — exported for the
+    // review-learning controller (Task 11's promote-to-global endpoint) that
+    // lands in a later task. Do not delete this export as unused.
+    ReviewRulesVaultService,
+  ],
 })
 export class ReviewLearningModule {}
