@@ -29,21 +29,31 @@ Defined in `libs/contracts/src/review-learning/review-rule.schema.ts`:
 
 File-backed persistence, one JSON file per scope key under the directory injected
 via the `REVIEW_RULES_DIR` token: `<projectId>.json` per project, plus a single
-`_global.json` (key `GLOBAL_SCOPE_KEY`) for rules promoted to every run. Tolerant
-parse (a corrupt file reads as empty, never throws) and atomic writes, mirroring
+`_global.json` (key `GLOBAL_SCOPE_KEY`) for rules promoted to every run. A scope
+key is resolved to its file via `resolveSafeFile` (same guard `RoadmapStore` uses
+for a caller-supplied id turned into a filename) — an unsafe key (e.g. containing
+`../`) throws `InvalidReviewScopeKeyError` instead of silently reading or writing
+outside the store's directory. Parsing is tolerant **per rule**: each rule in the
+`rules` array is validated individually against `ReviewRuleSchema`, and a single
+malformed rule is dropped without discarding its siblings (mirrors
+`GateRulesStorageService.list()`); only a file that isn't even parseable/shaped
+JSON falls back to `{ rules: [] }` wholesale. Writes are atomic, mirroring
 `GateRulesStorageService` (`gate-rules/gate-rules.storage.service.ts`).
 
 Lifecycle rules enforced in one place so "when does a comment become a proposal"
 has exactly one implementation:
 
 - `record(projectId, input, now)` files one distilled comment. An occurrence is
-  counted **at most once** per rule, deduped by `commentId` — replaying the same
-  comment is a no-op. A rule starts `observed` on its first occurrence; on its
-  **second** distinct occurrence it flips to `proposed` and `record` returns the
-  rule (the caller parks exactly one Tier-3 `review-rule` approval per rule, never
-  one per comment) — every other call returns `null`. A `retired` rule keeps
+  counted **at most once per rule**, deduped by `commentId` **against that rule's
+  own occurrences only** — replaying the same comment on the same rule is a
+  no-op, but the same `commentId` colliding with a different rule can never block
+  a genuinely new occurrence. A rule starts `observed` on its first occurrence; on
+  its **second** distinct occurrence it flips to `proposed` and `record` returns
+  the rule (the caller parks exactly one Tier-3 `review-rule` approval per rule,
+  never one per comment) — every other call returns `null`. A `retired` rule keeps
   absorbing occurrences (so re-litigating a retired rule is visible) but is never
-  re-proposed.
+  re-proposed. A rule already promoted to global is reinforced in `_global.json`
+  in place, never forked into a project-scoped duplicate under the same slug.
 - `setStatus(scopeKey, ruleId, status, approvalRef?)` moves a rule through its
   lifecycle; only an explicit operator approval can reach `active` (Law 4 — PR
   text is data, never instructions).

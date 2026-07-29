@@ -4,10 +4,11 @@ import { Inject, Injectable } from "@nestjs/common";
 import {
   type ReviewRule,
   type ReviewRuleOccurrence,
+  ReviewRuleSchema,
   type ReviewRuleStatus,
-  ReviewRulesFileSchema,
 } from "@zibby/contracts";
-import { ensureDir, safeJson, writeFileAtomic } from "../shared/file-storage";
+import { ensureDir, resolveSafeFile, safeJson, writeFileAtomic } from "../shared/file-storage";
+import { InvalidReviewScopeKeyError } from "./review-rules.errors";
 
 /** DI token carrying the absolute path of the directory holding the per-project files. */
 export const REVIEW_RULES_DIR = "REVIEW_RULES_DIR";
@@ -17,6 +18,15 @@ export const REVIEW_RULES_DIR = "REVIEW_RULES_DIR";
  * collide with a project id (project ids are kebab slugs).
  */
 export const GLOBAL_SCOPE_KEY = "_global";
+
+/**
+ * Filename-safe scope key: a project id, or {@link GLOBAL_SCOPE_KEY}. Deliberately
+ * permits a leading underscore (unlike the stricter kebab {@link import("@zibby/contracts").REVIEW_RULE_ID_REGEX})
+ * so `_global` itself validates, while still rejecting path separators and a
+ * leading `.` (so `..` can never even reach the `resolveSafeFile` containment
+ * check as a valid-looking id).
+ */
+const SCOPE_KEY_REGEX = /^[a-zA-Z0-9_](?:[a-zA-Z0-9._-]*[a-zA-Z0-9_])?$/;
 
 /** Occurrences needed before a rule is worth the operator's attention. */
 const PROPOSE_AT = 2;
@@ -73,17 +83,17 @@ export class ReviewRulesStore {
     const stamp = now.toISOString();
 
     // A promoted rule lives in the global file; reinforce it there, don't fork a
-    // project-scoped duplicate under the same slug.
+    // project-scoped duplicate under the same slug. Dedup is scoped to THIS
+    // rule's own occurrences — a commentId that happens to appear on some other
+    // rule in the same file must never block a genuinely new occurrence here.
     const inGlobal = globals.rules.find((r) => r.id === input.slug);
     if (inGlobal) {
-      if (hasComment(globals.rules, input.occurrence.commentId)) return null;
+      if (hasComment(inGlobal, input.occurrence.commentId)) return null;
       inGlobal.occurrences.push(input.occurrence);
       inGlobal.updatedAt = stamp;
       await this.write(GLOBAL_SCOPE_KEY, globals);
       return null;
     }
-
-    if (hasComment(file.rules, input.occurrence.commentId)) return null;
 
     const existing = file.rules.find((r) => r.id === input.slug);
     if (!existing) {
@@ -100,6 +110,8 @@ export class ReviewRulesStore {
       await this.write(projectId, file);
       return null;
     }
+
+    if (hasComment(existing, input.occurrence.commentId)) return null;
 
     existing.occurrences.push(input.occurrence);
     existing.updatedAt = stamp;
@@ -154,13 +166,28 @@ export class ReviewRulesStore {
     await this.write(projectId, file);
   }
 
+  /**
+   * Tolerant per-item parse: a single malformed rule is dropped, never fatal to
+   * the other rules in the same file (mirrors `GateRulesStorageService.list()`).
+   * Whole-file tolerance (falling back to `{ rules: [] }`) is reserved for when
+   * the file can't even be parsed as JSON, or isn't shaped like `{ rules, cursor? }`
+   * at all — never for "one of N rules happens to be invalid", since the next
+   * write would otherwise silently discard every other still-valid rule.
+   */
   private async read(scopeKey: string): Promise<{ rules: ReviewRule[]; cursor?: string }> {
     const raw = await fs.readFile(this.fileOf(scopeKey), "utf8").catch(() => null);
     if (raw === null) return { rules: [] };
-    const parsed = ReviewRulesFileSchema.safeParse(safeJson(raw));
-    return parsed.success
-      ? { rules: [...parsed.data.rules], ...cursorOf(parsed.data) }
-      : { rules: [] };
+    const parsed = safeJson(raw);
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed))
+      return { rules: [] };
+    const obj = parsed as Record<string, unknown>;
+    const rawRules = Array.isArray(obj.rules) ? obj.rules : [];
+    const rules: ReviewRule[] = [];
+    for (const item of rawRules) {
+      const result = ReviewRuleSchema.safeParse(item);
+      if (result.success) rules.push(result.data);
+    }
+    return { rules, ...cursorOf(obj) };
   }
 
   private async write(
@@ -171,16 +198,28 @@ export class ReviewRulesStore {
     await writeFileAtomic(this.fileOf(scopeKey), JSON.stringify(file, null, 2));
   }
 
+  /**
+   * Map a scope key to `<dir>/<scopeKey>.json`, rejecting anything that could
+   * escape `dir` (e.g. a `projectId` containing `../`) instead of silently
+   * writing/reading outside it — mirrors `RoadmapStore`'s use of
+   * `resolveSafeFile`, the established precedent for a caller-supplied id
+   * turned directly into a filename in this codebase.
+   */
   private fileOf(scopeKey: string): string {
-    return path.join(this.dir, `${scopeKey}.json`);
+    const file = resolveSafeFile(this.dir, scopeKey, ".json", SCOPE_KEY_REGEX);
+    if (!file) throw new InvalidReviewScopeKeyError(scopeKey);
+    return file;
   }
 }
 
-/** Has any rule in this scope already absorbed this comment? Keeps counts honest on replay. */
-function hasComment(rules: ReviewRule[], commentId: string): boolean {
-  return rules.some((r) => r.occurrences.some((o) => o.commentId === commentId));
+/** Has this ONE rule already absorbed this comment? Scoped per-rule so a commentId
+ * that happens to collide on some other rule in the same file can never block a
+ * genuinely new occurrence on this one — dedup keeps counts honest per rule, not
+ * per file. */
+function hasComment(rule: ReviewRule, commentId: string): boolean {
+  return rule.occurrences.some((o) => o.commentId === commentId);
 }
 
-function cursorOf(file: { cursor?: string }): { cursor?: string } {
-  return file.cursor ? { cursor: file.cursor } : {};
+function cursorOf(obj: Record<string, unknown>): { cursor?: string } {
+  return typeof obj.cursor === "string" && obj.cursor.length > 0 ? { cursor: obj.cursor } : {};
 }
