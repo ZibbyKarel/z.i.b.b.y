@@ -92,6 +92,18 @@ function postMergeWatchAutomation(over: Partial<Automation> = {}): Automation {
   };
 }
 
+function reviewLearnAutomation(over: Partial<Automation> = {}): Automation {
+  return {
+    id: "review-learn",
+    name: "Učení z review",
+    trigger: { type: "cron", expr: "15 3 * * *" },
+    target: { type: "review-learn" },
+    enabled: true,
+    system: true,
+    ...over,
+  };
+}
+
 /** Build a SchedulerService with every non-exercised dependency stubbed to a
  * no-op — each describe block below only wires the dependency its own case needs. */
 function makeService(opts: {
@@ -103,6 +115,7 @@ function makeService(opts: {
   sentinel?: { scan: ReturnType<typeof vi.fn> };
   loom?: { audit: ReturnType<typeof vi.fn> };
   postMergeWatch?: { poll: ReturnType<typeof vi.fn> };
+  reviewLearning?: { learn: ReturnType<typeof vi.fn> };
 }): { service: SchedulerService; storage: { markFired: ReturnType<typeof vi.fn> } } {
   const storage = {
     list: async () => [opts.automation],
@@ -133,6 +146,9 @@ function makeService(opts: {
     // F6c watcher-health registry double — registration is exercised in the
     // base/e2e specs, not here.
     { register: () => {} } as never,
+    (opts.reviewLearning ?? {
+      learn: vi.fn(async () => ({ observations: 0, proposed: 0 })),
+    }) as never,
   );
   return { service, storage };
 }
@@ -365,6 +381,26 @@ describe("SchedulerService — dispatch (NS2 F7b-2: post-merge-watch target)", (
   it("refs a zero count when nothing resolved", async () => {
     const { service } = makeService({ automation: postMergeWatchAutomation() });
     expect(await service.trigger("post-merge-watch")).toBe("merge-watch:0");
+  });
+});
+
+describe("SchedulerService — dispatch (PR review learning v1: review-learn target)", () => {
+  it("dispatches the review-learn system automation to the review learner", async () => {
+    const learn = vi.fn(async () => ({ observations: 3, proposed: 1 }));
+    const { service } = makeService({
+      automation: reviewLearnAutomation(),
+      reviewLearning: { learn },
+    });
+
+    const ref = await service.trigger("review-learn");
+
+    expect(learn).toHaveBeenCalledTimes(1);
+    expect(ref).toBe("review-rules:3");
+  });
+
+  it("refs a zero count when nothing new was observed", async () => {
+    const { service } = makeService({ automation: reviewLearnAutomation() });
+    expect(await service.trigger("review-learn")).toBe("review-rules:0");
   });
 });
 

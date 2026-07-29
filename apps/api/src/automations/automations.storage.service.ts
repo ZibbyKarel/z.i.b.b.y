@@ -50,6 +50,8 @@ export const SENTINEL_SCAN_AUTOMATION_ID = "sentinel-scan";
 export const LOOM_AUDIT_AUTOMATION_ID = "loom-audit";
 /** Stable id of the post-merge CI-watch system automation (NS2 F7b-2). */
 export const POST_MERGE_WATCH_AUTOMATION_ID = "post-merge-watch";
+/** Stable id of the nightly PR-review-learning system automation (v1). */
+export const REVIEW_LEARN_AUTOMATION_ID = "review-learn";
 
 /**
  * System automations ZIBBY owns and seeds on boot. They embody capabilities that
@@ -89,6 +91,17 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
     name: "Návrhy na automatizaci",
     trigger: { type: "cron", expr: "0 23 * * *" },
     target: { type: "gap-detect" },
+    enabled: false,
+    system: true,
+  },
+  {
+    id: REVIEW_LEARN_AUTOMATION_ID,
+    name: "Učení z review",
+    // 3:15 — after the 3:00 distill, before the 3:30 self-knowledge refresh.
+    trigger: { type: "cron", expr: "15 3 * * *" },
+    target: { type: "review-learn" },
+    // Off by default: it costs GitHub calls and a model pass per project, so the
+    // operator turns it on per engagement (the gap-detect/agent-factory posture).
     enabled: false,
     system: true,
   },
