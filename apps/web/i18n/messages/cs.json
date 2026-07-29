@@ -532,7 +532,7 @@
     "githubStreamIssues": "Sledovat issues",
     "githubStreamPulls": "Sledovat pull requesty",
     "githubUsername": "Tvůj GitHub username",
-    "githubUsernameHint": "Stahovat jen issues/PR, kde jsi zmíněný nebo na tebe přiřazené — nech prázdné pro stažení celého repozitáře",
+    "githubUsernameHint": "Omezí synchronizaci na issues/PR přiřazené tomuto uživateli",
     "calendarId": "ID kalendáře",
     "calendarIdHint": "Kalendář ke sledování; 'primary' nebo adresa kalendáře sdíleného se service accountem",
     "calendarLookahead": "Výhled (dny)",
@@ -2045,9 +2045,14 @@
     "emptyEpicsTitle": "Zatím žádné epiky",
     "emptyEpicsDescription": "Tento projekt zatím nemá žádnou roadmapu — naimportuj ji ze zdroje, nebo epiky vytvoř ručně.",
     "sync": {
-      "button": "Synchronizovat",
+      "button": "Synchronizovat vše",
       "autoSync": "Automatická synchronizace",
-      "toast": "{imported} naimportováno, {updated} aktualizováno, {archived} archivováno"
+      "toast": "{imported} naimportováno, {updated} aktualizováno, {archived} archivováno",
+      "sourceMenuAria": "Vybrat zdroj",
+      "source": {
+        "jira": "Jira",
+        "github": "GitHub"
+      }
     },
     "epic": {
       "unphased": "nerozfázováno",

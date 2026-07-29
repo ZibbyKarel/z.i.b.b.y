@@ -287,18 +287,30 @@ export class RoadmapSourceService {
    * controller). Jira and GitHub sync independently: a hard failure in one
    * (network, rate limit, a malformed response) is recorded as a note rather
    * than aborting the other source's sync.
+   *
+   * `source` (source-picker split button) narrows which source runs:
+   * `undefined` syncs both (today's behaviour), `"jira"`/`"github"` syncs
+   * only that one. A project missing the REQUESTED source's integration still
+   * returns an all-zero summary, same posture as the "no integration at all"
+   * case — never an error.
    */
-  async sync(projectId: string): Promise<RoadmapSyncResult> {
+  async sync(projectId: string, source?: "jira" | "github"): Promise<RoadmapSyncResult> {
     const project: Project = await this.projects.get(projectId); // 404 before anything else
     const integrations = await this.resolvedProjects.resolveIntegrations(project);
-    const jira = integrations.find(
-      (integration): integration is Integration & { config: JiraConfig } =>
-        integration.config.kind === "jira",
-    );
-    const github = integrations.find(
-      (integration): integration is Integration & { config: GitHubConfig } =>
-        integration.config.kind === "github",
-    );
+    const jira =
+      source === "github"
+        ? undefined
+        : integrations.find(
+            (integration): integration is Integration & { config: JiraConfig } =>
+              integration.config.kind === "jira",
+          );
+    const github =
+      source === "jira"
+        ? undefined
+        : integrations.find(
+            (integration): integration is Integration & { config: GitHubConfig } =>
+              integration.config.kind === "github",
+          );
 
     const summary: RoadmapSyncResult = {
       imported: 0,
@@ -343,12 +355,24 @@ export class RoadmapSourceService {
     if (!token) return; // no credentials configured for this integration — nothing to sync
 
     const authHeader = `Basic ${Buffer.from(`${integration.config.email}:${token}`).toString("base64")}`;
-    const rawIssues = await this.fetchAllJiraIssues(
+    const primaryIssues = await this.fetchAllJiraIssues(
       integration.config.baseUrl,
       integration.config.jql,
       integration.config.projectKey,
       authHeader,
     );
+    // Custom jql means the operator already declared the exact set they want
+    // — augmenting it with ancestor epics would second-guess that. Only the
+    // default "mine" clause gets epic-preservation.
+    const hasCustomJql = Boolean(integration.config.jql);
+    const ownedKeys = new Set(
+      primaryIssues
+        .map((issue) => issue.key)
+        .filter((key): key is string => typeof key === "string"),
+    );
+    const rawIssues = hasCustomJql
+      ? primaryIssues
+      : await this.expandWithAncestorEpics(integration.config.baseUrl, authHeader, primaryIssues);
 
     const byKey = new Map<string, JiraSearchIssue>();
     for (const issue of rawIssues) {
@@ -376,9 +400,22 @@ export class RoadmapSourceService {
     for (const issue of rawIssues) {
       if (!issue.key) continue;
       const target = levelOf.get(issue.key) ?? "task";
-      if (!isRoadmapLevel(target)) {
-        summary.skipped += 1;
-        continue;
+      const isOwned = ownedKeys.has(issue.key);
+      if (isOwned) {
+        if (!isRoadmapLevel(target)) {
+          summary.skipped += 1;
+          continue;
+        }
+      } else {
+        // A supplementary ancestor pulled in only to preserve epic-grouping
+        // (see `expandWithAncestorEpics`) — imported ONLY when it resolves to
+        // an epic. An ancestor that resolves to `"task"` (e.g. an
+        // intermediate story in a multi-hop chain) is silently dropped here:
+        // importing it would put someone else's story on my board. It also
+        // must NOT count toward `summary.skipped` (that counter is reserved
+        // for level-mapping `"ignore"`, a different reason) or join `seen`
+        // (so `archiveMissing` never has to reason about it).
+        if (target !== "epic") continue;
       }
       seen.add(issue.key);
 
@@ -423,6 +460,13 @@ export class RoadmapSourceService {
    * changed since some prior point, so every sync re-requests everything the
    * configured `jql`/`projectKey` matches (paginated via `startAt`, capped at
    * `MAX_PAGES` so a runaway result set still terminates).
+   *
+   * A custom `jql` is used VERBATIM — the operator already declared the
+   * exact set they want. Otherwise the default scope is "mine"
+   * (`assignee = currentUser()`), narrowed by `projectKey` when configured.
+   * This is also reused (with an explicit `jql` and no `projectKey`) for the
+   * `key in (...)` supplementary ancestor-epic fetch in
+   * `expandWithAncestorEpics`.
    */
   private async fetchAllJiraIssues(
     baseUrl: string,
@@ -430,7 +474,11 @@ export class RoadmapSourceService {
     projectKey: string | undefined,
     authHeader: string,
   ): Promise<JiraSearchIssue[]> {
-    const clause = jql ?? (projectKey ? `project = ${projectKey}` : "order by created ASC");
+    const clause =
+      jql ??
+      (projectKey
+        ? `project = ${projectKey} AND assignee = currentUser() ORDER BY created ASC`
+        : `assignee = currentUser() ORDER BY created ASC`);
     const out: JiraSearchIssue[] = [];
     let startAt = 0;
     for (let page = 0; page < MAX_PAGES; page += 1) {
@@ -459,6 +507,62 @@ export class RoadmapSourceService {
     return out;
   }
 
+  /**
+   * Epic-preservation for the default "mine" scope: `assignee = currentUser()`
+   * returns my tasks/stories but not their parent epics (epics are rarely
+   * assigned to me), so `resolveEpicParent` would find no parent within the
+   * primary batch alone and every owned issue would render unparented. This
+   * walks the owned issues' `fields.parent.key` chain, collecting ancestor
+   * keys not already in the batch, and does bounded supplementary
+   * `key in (<keys>)` fetches (reusing `fetchAllJiraIssues`) until no new
+   * ancestor key appears — each pass can surface a NEW ancestor's own parent
+   * (the classic multi-hop task -> story -> epic chain), so the loop repeats
+   * rather than doing a single pass. Capped at 5 iterations so a malformed or
+   * unexpectedly deep chain still terminates. Skips a pass entirely when
+   * there's nothing missing (an empty key set is never sent to Jira).
+   *
+   * Returns the union batch; it is the CALLER's job (`syncJira`) to decide
+   * which of these newly-added ancestors actually get imported (only those
+   * that resolve to `"epic"` — see the ownedKeys/level check there).
+   */
+  private async expandWithAncestorEpics(
+    baseUrl: string,
+    authHeader: string,
+    issues: JiraSearchIssue[],
+  ): Promise<JiraSearchIssue[]> {
+    const batch = [...issues];
+    const byKey = new Map<string, JiraSearchIssue>();
+    for (const issue of batch) {
+      if (issue.key) byKey.set(issue.key, issue);
+    }
+
+    for (let iteration = 0; iteration < 5; iteration += 1) {
+      const missingKeys = new Set<string>();
+      for (const issue of batch) {
+        const parentKey = issue.fields?.parent?.key;
+        if (parentKey && !byKey.has(parentKey)) missingKeys.add(parentKey);
+      }
+      if (missingKeys.size === 0) break; // nothing to fetch this pass
+
+      const fetched = await this.fetchAllJiraIssues(
+        baseUrl,
+        `key in (${[...missingKeys].join(",")}) ORDER BY created ASC`,
+        undefined,
+        authHeader,
+      );
+      let addedNew = false;
+      for (const issue of fetched) {
+        if (issue.key && !byKey.has(issue.key)) {
+          byKey.set(issue.key, issue);
+          batch.push(issue);
+          addedNew = true;
+        }
+      }
+      if (!addedNew) break; // the fetch didn't surface anything new — stop
+    }
+    return batch;
+  }
+
   // --- GitHub ------------------------------------------------------------------
 
   private async syncGithub(
@@ -471,12 +575,27 @@ export class RoadmapSourceService {
 
     const headers = { authorization: `Bearer ${token}`, accept: "application/vnd.github+json" };
     const repo = integration.config.repo;
+    const username = integration.config.username;
 
-    const milestones = await this.fetchAllGithubMilestones(repo, headers);
-    const rawIssues = await this.fetchAllGithubIssues(repo, headers);
-    // The issues endpoint returns PRs too, distinguished only by `pull_request`.
+    const rawIssues = await this.fetchAllGithubIssues(repo, username, headers);
+    // The Search API returns PRs too, distinguished only by `pull_request`.
     const issues = rawIssues.filter(
       (issue) => issue.pull_request === undefined && issue.number !== undefined,
+    );
+
+    // Milestones (epics) are scoped to only those that parent >=1 of MY
+    // imported issues — collect the referenced numbers from `issues` (not
+    // the full repo) before fetching milestones at all.
+    const referencedMilestoneNumbers = new Set<number>();
+    for (const issue of issues) {
+      if (issue.milestone?.number !== undefined) {
+        referencedMilestoneNumbers.add(issue.milestone.number);
+      }
+    }
+    const allMilestones = await this.fetchAllGithubMilestones(repo, headers);
+    const milestones = allMilestones.filter(
+      (milestone) =>
+        milestone.number !== undefined && referencedMilestoneNumbers.has(milestone.number),
     );
 
     await this.levelMapping.ensureLevels("github", ["Milestone", "Issue"]);
@@ -485,6 +604,12 @@ export class RoadmapSourceService {
     const issueTarget = resolveLevel(mapping, "github", "Issue") ?? "task";
 
     const seen = new Set<string>();
+
+    // Milestones NOT referenced by any of my issues are entirely out of
+    // scope — never upserted, never added to `seen`, so `archiveMissing`
+    // prunes a previously-imported milestone that no longer parents anything
+    // of mine.
+    summary.skipped += allMilestones.length - milestones.length;
 
     if (isRoadmapLevel(milestoneTarget)) {
       for (const milestone of milestones) {
@@ -560,25 +685,36 @@ export class RoadmapSourceService {
     await this.archiveMissing(projectId, integration.id, seen, summary);
   }
 
-  /** Full backfill (`state=all`), paginated — see `fetchAllJiraIssues`'s docblock for why. */
+  /**
+   * "Mine" backfill via the Search API (`GET /search/issues?q=repo:<repo>
+   * assignee:<username>`), full backfill paginated — see `fetchAllJiraIssues`'s
+   * docblock for why the roadmap import always re-requests everything rather
+   * than using a cursor. Deliberately spans ALL states — unlike
+   * `GitHubChannelAdapter.searchMineOrMentioned`'s `is:open`, the roadmap
+   * tracks done/closed items too, so no `is:` qualifier is added. Response
+   * shape is `{ items: GitHubIssue[] }`, items in the same shape as the
+   * plain issues endpoint (PRs distinguished via `pull_request`, same as
+   * today).
+   */
   private async fetchAllGithubIssues(
     repo: string,
+    username: string,
     headers: Record<string, string>,
   ): Promise<GitHubIssue[]> {
     const out: GitHubIssue[] = [];
     for (let page = 1; page <= MAX_PAGES; page += 1) {
       const params = new URLSearchParams({
-        state: "all",
+        q: `repo:${repo} assignee:${username}`,
         per_page: String(PAGE_SIZE),
         page: String(page),
       });
-      const res = await this.fetchImpl(`${GITHUB_API}/repos/${repo}/issues?${params}`, { headers });
+      const res = await this.fetchImpl(`${GITHUB_API}/search/issues?${params}`, { headers });
       if (res.status === 429 || res.status === 403) {
         throw new Error(`github rate limited (HTTP ${res.status})`);
       }
       if (!res.ok) throw new Error(`github issues: HTTP ${res.status}`);
-      const body = (await res.json()) as unknown;
-      const issues = Array.isArray(body) ? (body as GitHubIssue[]) : [];
+      const body = (await res.json()) as { items?: GitHubIssue[] };
+      const issues = body.items ?? [];
       out.push(...issues);
       if (issues.length < PAGE_SIZE) break;
     }

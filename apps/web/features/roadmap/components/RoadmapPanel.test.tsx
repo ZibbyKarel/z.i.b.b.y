@@ -1,4 +1,5 @@
 import type { RoadmapItem } from "@zibby/contracts";
+import { DropDownButtonTestId } from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen } from "../../../test/render";
@@ -80,21 +81,47 @@ describe("RoadmapPanel", () => {
     expect(screen.getByTestId(RoadmapPanelTestId.Empty)).toBeInTheDocument();
   });
 
-  it("renders the sync header (Sync button + auto-sync toggle) even on the empty state", () => {
+  it("renders the sync header (Sync split button + auto-sync toggle) even on the empty state", () => {
     hooks.items.data = [];
     render(<RoadmapPanel projectId="proj-1" />);
-    expect(screen.getByTestId(RoadmapPanelTestId.Sync)).toBeInTheDocument();
+    expect(screen.getByTestId(DropDownButtonTestId.Primary)).toBeInTheDocument();
     expect(screen.getByTestId(RoadmapPanelTestId.AutoSyncToggle)).toBeInTheDocument();
   });
 
-  it("clicking Sync calls the sync mutation with the project id", async () => {
+  it("clicking the primary Sync action calls the sync mutation for every source", async () => {
     hooks.items.data = [item({ id: "e1", level: "epic", name: "Epic A", parentId: undefined })];
     render(<RoadmapPanel projectId="proj-1" />);
 
-    await userEvent.click(screen.getByTestId(RoadmapPanelTestId.Sync));
+    await userEvent.click(screen.getByTestId(DropDownButtonTestId.Primary));
 
     expect(hooks.sync.mutate).toHaveBeenCalledWith(
       { params: { projectId: "proj-1" }, body: {} },
+      expect.anything(),
+    );
+  });
+
+  it("picking Jira from the source menu syncs only Jira", async () => {
+    hooks.items.data = [item({ id: "e1", level: "epic", name: "Epic A", parentId: undefined })];
+    render(<RoadmapPanel projectId="proj-1" />);
+
+    await userEvent.click(screen.getByTestId(DropDownButtonTestId.Trigger));
+    await userEvent.click(screen.getByTestId(`${DropDownButtonTestId.Item}-jira`));
+
+    expect(hooks.sync.mutate).toHaveBeenCalledWith(
+      { params: { projectId: "proj-1" }, body: { source: "jira" } },
+      expect.anything(),
+    );
+  });
+
+  it("picking GitHub from the source menu syncs only GitHub", async () => {
+    hooks.items.data = [item({ id: "e1", level: "epic", name: "Epic A", parentId: undefined })];
+    render(<RoadmapPanel projectId="proj-1" />);
+
+    await userEvent.click(screen.getByTestId(DropDownButtonTestId.Trigger));
+    await userEvent.click(screen.getByTestId(`${DropDownButtonTestId.Item}-github`));
+
+    expect(hooks.sync.mutate).toHaveBeenCalledWith(
+      { params: { projectId: "proj-1" }, body: { source: "github" } },
       expect.anything(),
     );
   });

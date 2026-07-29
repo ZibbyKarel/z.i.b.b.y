@@ -204,7 +204,7 @@ export function useIntegrationFormState(
           kind: "github",
           repo: repo.trim(),
           streams,
-          ...(githubUsername.trim() ? { username: githubUsername.trim() } : {}),
+          username: githubUsername.trim(),
         };
       }
       case "calendar":
@@ -234,7 +234,7 @@ export function useIntegrationFormState(
       case "jira":
         return baseUrl.trim().length > 0 && jiraEmail.trim().length > 0;
       case "github":
-        return /^[^/]+\/[^/]+$/.test(repo.trim());
+        return /^[^/]+\/[^/]+$/.test(repo.trim()) && githubUsername.trim().length > 0;
       case "calendar":
         return Number(lookaheadDays) > 0;
       case "sentry":

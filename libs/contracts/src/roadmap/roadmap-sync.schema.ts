@@ -30,3 +30,16 @@ export const RoadmapSyncResultSchema = z.object({
   notes: z.array(RoadmapSyncItemNoteSchema).default([]),
 });
 export type RoadmapSyncResult = z.infer<typeof RoadmapSyncResultSchema>;
+
+/**
+ * Body for `POST /projects/:projectId/roadmap/sync` (source-picker split
+ * button). Absent `source` syncs every configured source (Jira + GitHub), same
+ * as today's behaviour; `"jira"` or `"github"` syncs only that one source.
+ * `.strict()` — no stray keys.
+ */
+export const SyncRoadmapItemsSchema = z
+  .object({
+    source: z.enum(["jira", "github"]).optional(),
+  })
+  .strict();
+export type SyncRoadmapItems = z.infer<typeof SyncRoadmapItemsSchema>;

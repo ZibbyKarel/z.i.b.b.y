@@ -1,7 +1,13 @@
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { Attachment, CredentialsInput, Integration, Project } from "@zibby/contracts";
+import type {
+  Attachment,
+  CredentialsInput,
+  Integration,
+  JiraConfig,
+  Project,
+} from "@zibby/contracts";
 import { roadmapItemIdForSource } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ProjectNotFoundError } from "../projects/projects.errors";
@@ -196,7 +202,7 @@ const GITHUB_INTEGRATION: Integration = {
   enabled: true,
   status: "connected",
   hasCredentials: true,
-  config: { kind: "github", repo: "acme/app", streams: ["issues", "pulls"] },
+  config: { kind: "github", repo: "acme/app", streams: ["issues", "pulls"], username: "octocat" },
 };
 
 const githubMilestonesFull = [
@@ -254,8 +260,8 @@ function githubFetch(state: { issues: unknown[]; milestones: unknown[] }): typeo
     if (u.includes("/milestones")) {
       return jsonResponse(state.milestones);
     }
-    if (u.includes("/issues")) {
-      return jsonResponse(state.issues);
+    if (u.includes("/search/issues")) {
+      return jsonResponse({ items: state.issues });
     }
     throw new Error(`unhandled github fetch: ${u}`);
   }) as unknown as typeof fetch;
@@ -445,6 +451,169 @@ describe("RoadmapSourceService", () => {
       const items = await roadmap.list(PROJECT.id);
       expect(items.map((item) => item.id)).toContain(subtaskId); // never deleted
     });
+
+    it("builds a currentUser()-scoped clause, narrowed by projectKey when configured", async () => {
+      const capturedJql: string[] = [];
+      const fetchImpl = (async (url: string | URL) => {
+        const u = new URL(String(url));
+        capturedJql.push(u.searchParams.get("jql") ?? "");
+        return jsonResponse({ issues: [], total: 0 });
+      }) as unknown as typeof fetch;
+
+      const { service } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [JIRA_INTEGRATION], // has projectKey: "PROJ"
+        fetchImpl,
+      });
+      await service.sync(PROJECT.id);
+      expect(capturedJql).toEqual([
+        "project = PROJ AND assignee = currentUser() ORDER BY created ASC",
+      ]);
+    });
+
+    it("builds a bare currentUser()-scoped clause when no projectKey is configured", async () => {
+      const configWithoutProjectKey: JiraConfig = { ...(JIRA_INTEGRATION.config as JiraConfig) };
+      delete configWithoutProjectKey.projectKey;
+      const integration: Integration = { ...JIRA_INTEGRATION, config: configWithoutProjectKey };
+
+      const capturedJql: string[] = [];
+      const fetchImpl = (async (url: string | URL) => {
+        const u = new URL(String(url));
+        capturedJql.push(u.searchParams.get("jql") ?? "");
+        return jsonResponse({ issues: [], total: 0 });
+      }) as unknown as typeof fetch;
+
+      const { service } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [integration],
+        fetchImpl,
+      });
+      await service.sync(PROJECT.id);
+      expect(capturedJql).toEqual(["assignee = currentUser() ORDER BY created ASC"]);
+    });
+
+    it("a custom jql wins verbatim and is never augmented with a supplementary ancestor fetch", async () => {
+      const customJql = "project = PROJ AND status != Done";
+      const integration: Integration = {
+        ...JIRA_INTEGRATION,
+        config: { ...(JIRA_INTEGRATION.config as JiraConfig), jql: customJql },
+      };
+
+      let searchCalls = 0;
+      const fetchImpl = (async (url: string | URL) => {
+        const u = new URL(String(url));
+        if (u.pathname.endsWith("/rest/api/3/search")) {
+          searchCalls += 1;
+          expect(u.searchParams.get("jql")).toBe(customJql);
+          // PROJ-2's parent (PROJ-1) is never returned. With a custom jql
+          // this must NOT trigger a supplementary "key in (...)" fetch — the
+          // operator already declared the exact set they want.
+          return jsonResponse({ issues: [jiraIssuesFull[1]], total: 1 });
+        }
+        throw new Error(`unhandled jira fetch: ${String(url)}`);
+      }) as unknown as typeof fetch;
+
+      const { service, roadmap } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [integration],
+        fetchImpl,
+      });
+
+      const result = await service.sync(PROJECT.id);
+      expect(searchCalls).toBe(1); // no supplementary fetch
+      expect(result.imported).toBe(1);
+
+      const storyAId = roadmapItemIdForSource(JIRA_INTEGRATION.id, "PROJ-2");
+      const storyA = await roadmap.get(PROJECT.id, storyAId);
+      expect(storyA.parentId).toBeUndefined(); // epic outside the batch, never fetched
+    });
+
+    it("preserves epic-grouping via a bounded, multi-hop supplementary fetch — importing only ancestors that resolve to epic", async () => {
+      const ownedTask = {
+        key: "OWN-1",
+        fields: {
+          summary: "My owned task",
+          description: adfParagraph("task body"),
+          issuetype: { name: "Task" },
+          parent: { key: "OWN-STORY" },
+          status: { name: "To Do", statusCategory: { key: "new" } },
+        },
+      };
+      // An intermediate ancestor whose OWN issuetype resolves to "task", not
+      // "epic" — must be fetched (to walk the chain) but never imported.
+      const ancestorStory = {
+        key: "OWN-STORY",
+        fields: {
+          summary: "Intermediate story (not mine)",
+          description: adfParagraph("story body"),
+          issuetype: { name: "Story" },
+          parent: { key: "OWN-EPIC" },
+          status: { name: "To Do", statusCategory: { key: "new" } },
+        },
+      };
+      const ancestorEpic = {
+        key: "OWN-EPIC",
+        fields: {
+          summary: "Owning epic (not mine)",
+          description: adfParagraph("epic body"),
+          issuetype: { name: "Epic" },
+          status: { name: "To Do", statusCategory: { key: "new" } },
+        },
+      };
+      const supplemental: Record<string, unknown[]> = {
+        "OWN-STORY": [ancestorStory],
+        "OWN-EPIC": [ancestorEpic],
+      };
+
+      const searchQueries: string[] = [];
+      const fetchImpl = (async (url: string | URL) => {
+        const u = new URL(String(url));
+        if (!u.pathname.endsWith("/rest/api/3/search")) {
+          throw new Error(`unhandled jira fetch: ${String(url)}`);
+        }
+        const jql = u.searchParams.get("jql") ?? "";
+        searchQueries.push(jql);
+        if (jql.startsWith("key in (")) {
+          const keys = /key in \(([^)]*)\)/.exec(jql)?.[1]?.split(",") ?? [];
+          const matched = keys.flatMap((key) => supplemental[key] ?? []);
+          return jsonResponse({ issues: matched, total: matched.length });
+        }
+        return jsonResponse({ issues: [ownedTask], total: 1 });
+      }) as unknown as typeof fetch;
+
+      const { service, roadmap } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [JIRA_INTEGRATION],
+        fetchImpl,
+      });
+
+      const result = await service.sync(PROJECT.id);
+      // Owned task + the epic ancestor; the intermediate story ancestor is
+      // walked (to find ITS parent) but never imported.
+      expect(result.imported).toBe(2);
+      // Two supplementary passes: OWN-STORY, then OWN-EPIC (bounded loop,
+      // proves the multi-hop chain is actually walked, not just one pass).
+      expect(searchQueries).toHaveLength(3);
+
+      const items = await roadmap.list(PROJECT.id);
+      expect(items).toHaveLength(2);
+
+      const taskId = roadmapItemIdForSource(JIRA_INTEGRATION.id, "OWN-1");
+      const epicId = roadmapItemIdForSource(JIRA_INTEGRATION.id, "OWN-EPIC");
+      const storyId = roadmapItemIdForSource(JIRA_INTEGRATION.id, "OWN-STORY");
+
+      const task = await roadmap.get(PROJECT.id, taskId);
+      expect(task.parentId).toBe(epicId); // walked past the non-epic intermediate story
+
+      const epic = await roadmap.get(PROJECT.id, epicId);
+      expect(epic.level).toBe("epic");
+
+      await expect(roadmap.get(PROJECT.id, storyId)).rejects.toThrow(); // never imported
+    });
   });
 
   describe("GitHub", () => {
@@ -488,6 +657,201 @@ describe("RoadmapSourceService", () => {
       expect(issue12.lifecycle).toBe("todo");
 
       await expect(roadmap.get(PROJECT.id, prExternalId)).rejects.toThrow();
+    });
+
+    it("queries the Search API scoped to assignee:<username>, spanning all states (no is:open)", async () => {
+      const capturedQueries: string[] = [];
+      const fetchImpl = (async (url: string | URL) => {
+        const u = new URL(String(url));
+        if (u.pathname === "/search/issues") {
+          capturedQueries.push(u.searchParams.get("q") ?? "");
+          return jsonResponse({ items: [] });
+        }
+        if (u.pathname.includes("/milestones")) {
+          return jsonResponse([]);
+        }
+        throw new Error(`unhandled github fetch: ${String(url)}`);
+      }) as unknown as typeof fetch;
+
+      const { service } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [GITHUB_INTEGRATION],
+        fetchImpl,
+      });
+      await service.sync(PROJECT.id);
+
+      expect(capturedQueries).toEqual(["repo:acme/app assignee:octocat"]);
+      // No `is:open` qualifier anywhere — roadmap tracks done/closed items too.
+      expect(capturedQueries[0]).not.toMatch(/is:open/);
+    });
+
+    it("imports only milestones that parent >=1 of my issues; an unreferenced milestone is skipped, not imported", async () => {
+      const referencedMilestone = {
+        number: 1,
+        title: "Referenced",
+        description: "",
+        state: "open",
+        html_url: "https://github.com/acme/app/milestone/1",
+      };
+      const unreferencedMilestone = {
+        number: 2,
+        title: "Unreferenced",
+        description: "",
+        state: "open",
+        html_url: "https://github.com/acme/app/milestone/2",
+      };
+      const myIssue = {
+        number: 10,
+        title: "Mine, parented to milestone 1",
+        body: "",
+        state: "open",
+        html_url: "https://github.com/acme/app/issues/10",
+        milestone: { number: 1 },
+      };
+      const state = {
+        issues: [myIssue],
+        milestones: [referencedMilestone, unreferencedMilestone],
+      };
+      const { service, roadmap } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [GITHUB_INTEGRATION],
+        fetchImpl: githubFetch(state),
+      });
+
+      const result = await service.sync(PROJECT.id);
+      expect(result.imported).toBe(2); // the referenced milestone + my issue
+      expect(result.skipped).toBe(1); // the unreferenced milestone
+
+      const items = await roadmap.list(PROJECT.id);
+      const milestoneExternalIds = items
+        .filter((item) => item.externalLevel === "Milestone")
+        .map((item) => item.source.externalId);
+      expect(milestoneExternalIds).toEqual(["milestone:1"]);
+
+      const unreferencedId = roadmapItemIdForSource(GITHUB_INTEGRATION.id, "milestone:2");
+      await expect(roadmap.get(PROJECT.id, unreferencedId)).rejects.toThrow();
+    });
+
+    it("archives a previously-imported milestone that no longer parents any of my issues", async () => {
+      const milestone1 = {
+        number: 1,
+        title: "Milestone 1",
+        description: "",
+        state: "open",
+        html_url: "https://github.com/acme/app/milestone/1",
+      };
+      const issueOnMilestone1: {
+        number: number;
+        title: string;
+        body: string;
+        state: string;
+        html_url: string;
+        milestone: { number: number } | null;
+      } = {
+        number: 10,
+        title: "Mine",
+        body: "",
+        state: "open",
+        html_url: "https://github.com/acme/app/issues/10",
+        milestone: { number: 1 },
+      };
+      const state: { issues: unknown[]; milestones: unknown[] } = {
+        issues: [issueOnMilestone1],
+        milestones: [milestone1],
+      };
+      const { service, roadmap } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [GITHUB_INTEGRATION],
+        fetchImpl: githubFetch(state),
+      });
+
+      const first = await service.sync(PROJECT.id);
+      expect(first.imported).toBe(2); // milestone 1 + the issue
+      const milestoneId = roadmapItemIdForSource(GITHUB_INTEGRATION.id, "milestone:1");
+      expect((await roadmap.get(PROJECT.id, milestoneId)).lifecycle).toBe("todo");
+
+      // The issue no longer references milestone 1 — it drops out of scope.
+      state.issues = [{ ...issueOnMilestone1, milestone: null }];
+      const second = await service.sync(PROJECT.id);
+      expect(second.archived).toBe(1);
+      expect((await roadmap.get(PROJECT.id, milestoneId)).lifecycle).toBe("archived");
+    });
+  });
+
+  describe("source-selective sync", () => {
+    it('source: "github" runs only GitHub, leaving Jira untouched', async () => {
+      let jiraCalled = false;
+      const fetchImpl = (async (url: string | URL) => {
+        const u = String(url);
+        if (u.includes("/rest/api/3/search")) {
+          jiraCalled = true;
+          throw new Error("jira must not be called when source is github");
+        }
+        if (u.includes("/sub_issues")) return jsonResponse({ message: "Not Found" }, 404);
+        if (u.includes("/milestones")) return jsonResponse(githubMilestonesFull);
+        if (u.includes("/search/issues")) return jsonResponse({ items: githubIssuesFull });
+        throw new Error(`unhandled fetch: ${u}`);
+      }) as unknown as typeof fetch;
+
+      const { service } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [JIRA_INTEGRATION, GITHUB_INTEGRATION],
+        fetchImpl,
+      });
+
+      const result = await service.sync(PROJECT.id, "github");
+      expect(jiraCalled).toBe(false);
+      expect(result.imported).toBe(4); // 1 milestone + 3 mine issues (#99 PR excluded)
+    });
+
+    it('source: "jira" runs only Jira, leaving GitHub untouched', async () => {
+      let githubCalled = false;
+      const fetchImpl = (async (url: string | URL) => {
+        const u = String(url);
+        if (
+          u.includes("/search/issues") ||
+          u.includes("/milestones") ||
+          u.includes("/sub_issues")
+        ) {
+          githubCalled = true;
+          throw new Error("github must not be called when source is jira");
+        }
+        if (u.includes("/rest/api/3/search")) {
+          return jsonResponse({ issues: jiraIssuesFull, total: jiraIssuesFull.length });
+        }
+        if (u.endsWith("/secure/attachment/10001/spec.pdf")) {
+          return new Response(Buffer.from("pdf-bytes"), { status: 200 });
+        }
+        throw new Error(`unhandled fetch: ${u}`);
+      }) as unknown as typeof fetch;
+
+      const { service } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [JIRA_INTEGRATION, GITHUB_INTEGRATION],
+        fetchImpl,
+      });
+
+      const result = await service.sync(PROJECT.id, "jira");
+      expect(githubCalled).toBe(false);
+      expect(result.imported).toBe(4);
+    });
+
+    it('source: "jira" against a project with only a GitHub integration returns an all-zero summary, not an error', async () => {
+      const { service } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [GITHUB_INTEGRATION],
+        fetchImpl: (async () => {
+          throw new Error("must not fetch anything");
+        }) as unknown as typeof fetch,
+      });
+      const result = await service.sync(PROJECT.id, "jira");
+      expect(result).toEqual({ imported: 0, updated: 0, archived: 0, skipped: 0, notes: [] });
     });
   });
 });

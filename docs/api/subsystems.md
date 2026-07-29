@@ -1,5 +1,9 @@
 # Subsystems (GAIA-style federation registry)
 
+<!-- Reviewed 2026-07-29 (roadmap-sync-mine arc): the maestro/sentinel changes this
+session were test-fixture-only (the now-required `GitHubConfig.username`); no
+subsystem behaviour changed. This doc remains accurate. -->
+
 Phase 80 of the subsystem-federation arc — see
 `docs/superpowers/specs/2026-07-08-subsystem-federation-design.md` for the design
 doc, `docs/plans/phase-80-subsystem-registry.md` for the registry plan, and

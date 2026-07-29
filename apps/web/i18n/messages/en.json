@@ -532,7 +532,7 @@
     "githubStreamIssues": "Watch issues",
     "githubStreamPulls": "Watch pull requests",
     "githubUsername": "Your GitHub username",
-    "githubUsernameHint": "Only poll issues/PRs that mention or are assigned to this user — leave blank to poll every open issue/PR in the repo",
+    "githubUsernameHint": "Scopes sync to issues/PRs assigned to this user",
     "calendarId": "Calendar ID",
     "calendarIdHint": "Calendar to watch; 'primary' or a calendar address shared with the service account",
     "calendarLookahead": "Look-ahead (days)",
@@ -2045,9 +2045,14 @@
     "emptyEpicsTitle": "No epics yet",
     "emptyEpicsDescription": "This project has no roadmap yet — import it from a source, or create epics by hand.",
     "sync": {
-      "button": "Sync",
+      "button": "Sync all",
       "autoSync": "Auto-sync",
-      "toast": "{imported} imported, {updated} updated, {archived} archived"
+      "toast": "{imported} imported, {updated} updated, {archived} archived",
+      "sourceMenuAria": "Choose source",
+      "source": {
+        "jira": "Jira",
+        "github": "GitHub"
+      }
     },
     "epic": {
       "unphased": "unphased",

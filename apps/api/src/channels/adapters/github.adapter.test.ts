@@ -7,7 +7,7 @@ const gh: Integration = {
   kind: "github",
   projectId: "acme-app",
   enabled: true,
-  config: { kind: "github", repo: "acme/app", streams: ["issues", "pulls"] },
+  config: { kind: "github", repo: "acme/app", streams: ["issues", "pulls"], username: "octocat" },
   status: "disconnected",
   hasCredentials: true,
 };
@@ -24,22 +24,27 @@ function jsonFetch(body: unknown, status = 200): typeof fetch {
 
 describe("GitHubChannelAdapter", () => {
   it("normalizes issues + PRs with distinct ids and advances the cursor", async () => {
-    const fetchImpl = jsonFetch([
-      {
-        number: 1,
-        title: "Crash on login",
-        body: "stack trace",
-        updated_at: "2026-06-17T09:00:00.000Z",
-        user: { login: "dana" },
-      },
-      {
-        number: 2,
-        title: "Add caching",
-        updated_at: "2026-06-17T10:00:00.000Z",
-        user: { login: "eli" },
-        pull_request: { url: "x" },
-      },
-    ]);
+    // `gh` carries a `username` (required by the contract), so poll() takes the
+    // Search API path — same mentions/assignee query answered identically here,
+    // deduped by issue number down to these 2 items.
+    const fetchImpl = jsonFetch({
+      items: [
+        {
+          number: 1,
+          title: "Crash on login",
+          body: "stack trace",
+          updated_at: "2026-06-17T09:00:00.000Z",
+          user: { login: "dana" },
+        },
+        {
+          number: 2,
+          title: "Add caching",
+          updated_at: "2026-06-17T10:00:00.000Z",
+          user: { login: "eli" },
+          pull_request: { url: "x" },
+        },
+      ],
+    });
     const adapter = new GitHubChannelAdapter(fetchImpl);
     const { items, cursor } = await adapter.poll(gh, { token: "ghp" }, "2026-06-17T08:00:00.000Z");
     expect(items.map((i) => i.id)).toEqual(["gh-acme-app-issue-1", "gh-acme-app-pr-2"]);
@@ -62,38 +67,43 @@ describe("GitHubChannelAdapter", () => {
   it("respects the streams filter (issues only drops PRs)", async () => {
     const issuesOnly: Integration = {
       ...gh,
-      config: { kind: "github", repo: "acme/app", streams: ["issues"] },
+      config: { kind: "github", repo: "acme/app", streams: ["issues"], username: "octocat" },
     };
-    const fetchImpl = jsonFetch([
-      {
-        number: 1,
-        title: "issue",
-        updated_at: "2026-06-17T09:00:00.000Z",
-        user: { login: "dana" },
-      },
-      {
-        number: 2,
-        title: "pr",
-        updated_at: "2026-06-17T10:00:00.000Z",
-        user: { login: "eli" },
-        pull_request: {},
-      },
-    ]);
+    const fetchImpl = jsonFetch({
+      items: [
+        {
+          number: 1,
+          title: "issue",
+          updated_at: "2026-06-17T09:00:00.000Z",
+          user: { login: "dana" },
+        },
+        {
+          number: 2,
+          title: "pr",
+          updated_at: "2026-06-17T10:00:00.000Z",
+          user: { login: "eli" },
+          pull_request: {},
+        },
+      ],
+    });
     const adapter = new GitHubChannelAdapter(fetchImpl);
     const { items } = await adapter.poll(issuesOnly, { token: "ghp" }, "2026-06-17T08:00:00.000Z");
     expect(items.map((i) => i.id)).toEqual(["gh-acme-app-issue-1"]);
   });
 
-  it("passes the cursor as `since` and surfaces a 403/429 rate limit", async () => {
-    const fetchImpl = jsonFetch([]);
+  it("embeds the cursor as `updated:>=` in the search query and surfaces a 403/429 rate limit", async () => {
+    // `gh` now always carries a `username`, so the cursor travels through the Search
+    // API's `updated:>=` query qualifier rather than the listAll endpoint's `since=`
+    // param (that path is unreachable for a validly-typed config).
+    const fetchImpl = jsonFetch({ items: [] });
     const adapter = new GitHubChannelAdapter(fetchImpl);
     await adapter.poll(gh, { token: "ghp" }, "2026-06-17T10:00:00.000Z");
     const url = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls[0]![0] as string;
-    expect(url).toContain("since=2026-06-17T10");
+    expect(decodeURIComponent(url)).toContain("updated:>=2026-06-17T10");
     const limited = new GitHubChannelAdapter(jsonFetch([], 403));
-    await expect(
-      limited.poll(gh, { token: "ghp" }, "2026-06-17T08:00:00.000Z"),
-    ).rejects.toThrow(/rate limited/);
+    await expect(limited.poll(gh, { token: "ghp" }, "2026-06-17T08:00:00.000Z")).rejects.toThrow(
+      /rate limited/,
+    );
   });
 
   it("uses the Search API for mentions+assignee when username is configured", async () => {
@@ -129,7 +139,11 @@ describe("GitHubChannelAdapter", () => {
     }) as unknown as typeof fetch;
 
     const adapter = new GitHubChannelAdapter(fetchImpl);
-    const { items, cursor } = await adapter.poll(mine, { token: "ghp" }, "2026-06-17T08:00:00.000Z");
+    const { items, cursor } = await adapter.poll(
+      mine,
+      { token: "ghp" },
+      "2026-06-17T08:00:00.000Z",
+    );
 
     expect(calls.every((u) => u.includes("/search/issues"))).toBe(true);
     expect(calls.some((u) => u.includes("mentions:karel"))).toBe(true);

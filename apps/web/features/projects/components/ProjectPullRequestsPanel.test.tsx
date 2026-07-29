@@ -16,7 +16,7 @@ const GITHUB_INTEGRATION: Integration = {
   enabled: true,
   status: "connected",
   hasCredentials: true,
-  config: { kind: "github", repo: "acme/app", streams: ["issues", "pulls"] },
+  config: { kind: "github", repo: "acme/app", streams: ["issues", "pulls"], username: "alice" },
 };
 
 const pr = (over: Partial<ProjectPr> = {}): ProjectPr => ({
@@ -120,8 +120,6 @@ describe("ProjectPrCountBadge", () => {
   it("shows the pluralized open-PR count", () => {
     prsData = [pr({ number: 1 }), pr({ number: 2 })];
     render(<ProjectPrCountBadge projectId="acme" />);
-    expect(screen.getByTestId(ProjectPrCountBadgeTestId.Badge)).toHaveTextContent(
-      "2 otevřené PR",
-    );
+    expect(screen.getByTestId(ProjectPrCountBadgeTestId.Badge)).toHaveTextContent("2 otevřené PR");
   });
 });

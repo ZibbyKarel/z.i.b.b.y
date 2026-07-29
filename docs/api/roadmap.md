@@ -178,6 +178,25 @@ project/repo.
 `POST /rest/api/3/search`, requesting
 `summary,description,issuetype,parent,issuelinks,attachment,status`.
 
+- **Scope is "mine" by default.** A custom `config.jql` is used VERBATIM (the operator
+  already declared the exact set they want — never augmented). Otherwise the clause is
+  `assignee = currentUser()`, narrowed by `project = <projectKey> AND …` when a
+  `projectKey` is configured, `ORDER BY created ASC` in both cases.
+- **Epic-preservation.** `assignee = currentUser()` returns my tasks/stories but not
+  their parent epics (epics are rarely assigned to me), so a plain "mine" fetch would
+  leave every owned issue unparented — `resolveEpicParent` finds no ancestor in the
+  batch. `expandWithAncestorEpics` fixes this: after the primary "mine" fetch, it walks
+  the owned issues' `fields.parent.key` chain, collects ancestor keys not already in the
+  batch, and does bounded (cap 5 iterations) supplementary `key in (<keys>) ORDER BY
+created ASC` fetches — repeating because a newly-fetched ancestor can itself have a
+  missing parent (the multi-hop task → story → epic chain) — until no new ancestor key
+  appears. These supplementary issues join `byKey`/`levelOf` so parent resolution works
+  over the union, but are only ever UPSERTED (and added to the "seen" set) when their
+  resolved level is `"epic"` — an ancestor that resolves to `"task"` (an intermediate
+  story) is silently dropped, never imported and never counted in `skipped` (importing
+  it would put someone else's story on the board). Skipped entirely when a custom `jql`
+  is set. Net effect: the board shows my issues plus exactly the epics that contain
+  them.
 - `description` arrives as **ADF JSON, not text** — `adf-to-markdown.ts` flattens it
   (paragraphs, headings, lists, code blocks, links, inline marks). It is bounded by
   an explicit depth cap and degrades unknown nodes to their text content; it never
@@ -205,11 +224,22 @@ project/repo.
 
 ### GitHub
 
-`GET /repos/{repo}/issues?state=all` — entries carrying `pull_request` are dropped,
-because that endpoint returns PRs too — plus `GET /repos/{repo}/milestones?state=all`
-(Milestone → epic, Issue → task; a milestone's own `parentId` is unset, an issue's
-`parentId` is its milestone's item, when it has one). Bodies are already markdown, no
-flattening needed. Edges come from two sources, unioned:
+`GET /search/issues?q=repo:{repo} assignee:{username}` (the `username` on
+`GitHubConfig` is required — scope is always "mine"), paginated via `page`/`per_page=100`
+up to `MAX_PAGES`, spanning **all** states (no `is:open` qualifier — unlike
+`GitHubChannelAdapter.searchMineOrMentioned`'s channel-poll scope, the roadmap tracks
+done/closed items too). Entries carrying `pull_request` are dropped, because the Search
+API returns PRs too.
+
+Milestones (epics) are scoped to **only those that parent ≥1 of my imported issues**:
+my issues are fetched first, their referenced `milestone.number`s collected, then
+`GET /repos/{repo}/milestones?state=all` is fetched and filtered down to just the
+referenced numbers before the existing `milestoneTarget`/`isRoadmapLevel` gating runs.
+A milestone that doesn't parent any of my issues is never upserted and never joins the
+"seen" set — it counts toward the summary's `skipped`, and `archiveMissing` prunes it if
+a prior sync had imported it (Milestone → epic, Issue → task; a milestone's own
+`parentId` is unset, an issue's `parentId` is its milestone's item, when it has one).
+Bodies are already markdown, no flattening needed. Edges come from two sources, unioned:
 
 - `Depends on #N` / `Blocked by #N` parsed from the body — case-insensitive, and
   tolerant of a list on one line (`Blocked by #12, #14 and #16`) via a phrase-then-
@@ -288,10 +318,13 @@ integration's id rather than aborting the other configured source's sync.
 
 ### The endpoint
 
-`POST /projects/:projectId/roadmap/sync` → `RoadmapSyncResultSchema`:
-`{ imported, updated, archived, skipped, notes[] }`. A project with **no** Jira/GitHub
-integration returns all-zero counts rather than an error, mirroring
-`ProjectPrService.listOpen`'s "no link is not an error" posture.
+`POST /projects/:projectId/roadmap/sync`, body `SyncRoadmapItemsSchema` (`{ source? }`,
+`.strict()`) → `RoadmapSyncResultSchema`: `{ imported, updated, archived, skipped,
+notes[] }`. Absent `source` syncs every configured source (today's default); `"jira"`
+or `"github"` (the source-picker split button) restricts `RoadmapSourceService.sync` to
+just that one. A project with **no** Jira/GitHub integration — or missing the
+specifically REQUESTED source's integration — returns all-zero counts rather than an
+error, mirroring `ProjectPrService.listOpen`'s "no link is not an error" posture.
 
 Sync is **read-only toward Jira and GitHub** — nothing is ever written back (Law 3),
 and imported issue bodies are data, never instructions (Law 4).

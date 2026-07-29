@@ -1,7 +1,7 @@
 "use client";
 
 import type { RoadmapItemLevel } from "@zibby/contracts";
-import { Button, Grid, Stack, Toggle, Typography } from "@zibby/design-system";
+import { DropDownButton, Grid, Stack, Toggle, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { EmptyState } from "../../../components/EmptyState/EmptyState";
@@ -19,17 +19,21 @@ export enum RoadmapPanelTestId {
   Root = "roadmap-panel",
   Empty = "roadmap-panel-empty",
   Header = "roadmap-panel-header",
-  Sync = "roadmap-panel-sync",
   AutoSyncToggle = "roadmap-panel-auto-sync",
 }
 
 /**
- * The roadmap tab header (125h): the auto-sync toggle + the manual Sync
- * button, both backed by the 125a/125b routes (`getRoadmapConfig`/
- * `putRoadmapConfig`/`syncRoadmapItems`) — present above BOTH the empty state
- * and the epic list/board, since Sync is exactly how an empty roadmap gets its
- * first items. A toast reports the sync summary; the item list itself
- * refreshes via the mutation's own query invalidation.
+ * The roadmap tab header (125h, source-picker split button per the 2026-07-29
+ * design): the auto-sync toggle + the manual Sync split button, both backed
+ * by the 125a/125b routes (`getRoadmapConfig`/`putRoadmapConfig`/
+ * `syncRoadmapItems`) — present above BOTH the empty state and the epic
+ * list/board, since Sync is exactly how an empty roadmap gets its first
+ * items. The primary segment syncs every configured source; the chevron menu
+ * offers Jira/GitHub individually (both always shown — syncing an
+ * unconfigured source is a harmless all-zero no-op, so no extra integrations
+ * query is needed to decide which to list). A toast reports the sync
+ * summary; the item list itself refreshes via the mutation's own query
+ * invalidation.
  */
 function RoadmapSyncHeader({ projectId }: { projectId: string }) {
   const t = useTranslations("roadmap");
@@ -39,9 +43,9 @@ function RoadmapSyncHeader({ projectId }: { projectId: string }) {
 
   const autoSync = configQuery.data?.autoSync ?? false;
 
-  const sync = () =>
+  const runSync = (source?: "jira" | "github") =>
     syncMutation.mutate(
-      { params: { projectId }, body: {} },
+      { params: { projectId }, body: source ? { source } : {} },
       {
         onSuccess: (result) => {
           const { imported, updated, archived } = result.body;
@@ -74,16 +78,20 @@ function RoadmapSyncHeader({ projectId }: { projectId: string }) {
           {t("sync.autoSync")}
         </Typography>
       </Stack>
-      <Button
-        data-testid={RoadmapPanelTestId.Sync}
+      <DropDownButton
         disabled={syncMutation.isPending}
         icon="retry"
         intent="ghost"
-        onClick={sync}
+        label={t("sync.button")}
+        loading={syncMutation.isPending}
+        menuAriaLabel={t("sync.sourceMenuAria")}
+        menuItems={[
+          { id: "jira", label: t("sync.source.jira"), onSelect: () => runSync("jira") },
+          { id: "github", label: t("sync.source.github"), onSelect: () => runSync("github") },
+        ]}
+        onClick={() => runSync()}
         size="sm"
-      >
-        {t("sync.button")}
-      </Button>
+      />
     </Stack>
   );
 }

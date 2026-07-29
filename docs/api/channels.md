@@ -1,5 +1,9 @@
 # Channels & autonomy
 
+<!-- Reviewed 2026-07-29 (roadmap-sync-mine arc): `GitHubConfig.username` became a
+required field, but the GitHub adapter's behaviour here is unchanged — only its
+test fixtures gained the now-required `username`. This doc remains accurate. -->
+
 ## What channels are
 
 Channels are inbound communication channels ZIBBY watches on a heartbeat.
