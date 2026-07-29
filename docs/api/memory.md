@@ -131,9 +131,14 @@ ZIBBY navigates the vault through indexes — instead of scanning every file.
 Called at the start of every run (fail-open — a vault outage never blocks a run):
 
 1. Loads the North Star note (`zibby-north-star`, or the first MOC in `memory/`)
-2. Loads relevant indexes (searches index titles for the query)
-3. Loads a handful of recent notes from `daily/`
-4. Returns the combined markdown context → passed to the agent as `--append-system-prompt`
+2. Loads the self-knowledge note, then — unconditionally, unless the run's
+   `domain` is `"personal"` — the cross-project learned review-rules note
+   (`GLOBAL_REVIEW_RULES_ID`; see `docs/api/review-learning.md`)
+3. Loads relevant indexes (searches index titles for the query)
+4. Loads a handful of recent notes from `daily/`
+5. When the run carries a `projectId`, loads that project's note and its
+   project-scoped review-rules note (`reviewRulesIdFor(projectId)`)
+6. Returns the combined markdown context → passed to the agent as `--append-system-prompt`
 
 ## RunRecorderModule
 

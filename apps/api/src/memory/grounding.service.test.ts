@@ -11,6 +11,7 @@ import {
   visibleInDomain,
   visibleToProject,
 } from "./grounding.service";
+import { reviewRulesIdFor } from "./review-rules-note";
 import { VaultService, ownerProjectOf } from "./vault.service";
 
 /** Build a service over a fresh temp vault seeded by `seed`. */
@@ -613,5 +614,61 @@ describe("GroundingService.compose", () => {
     const bad = new VaultService(path.join(os.tmpdir(), "does-not-exist-zibby", "vault"));
     const grounding = new GroundingService(bad);
     expect(await grounding.compose({ task: "x" })).toBe("");
+  });
+});
+
+describe("review rules grounding", () => {
+  let dir: string | null = null;
+  afterEach(async () => {
+    if (dir) await fs.rm(dir, { recursive: true, force: true });
+    dir = null;
+  });
+
+  // Seed, using this file's existing helper for writing a note into the temp vault:
+  //   review-rules              (global, no project owner)
+  //   acme-review-rules         (frontmatter project: acme — Task 6's reviewRulesIdFor("acme"))
+  const seedRules = async (vault: VaultService): Promise<void> => {
+    await vault.createNote({
+      id: "review-rules",
+      tier: "memory",
+      title: "Naučená review pravidla",
+      body: "Tato pravidla vznikla z opakovaných review komentářů a operátor je schválil.",
+    });
+    await vault.createNote({
+      id: reviewRulesIdFor("acme"),
+      tier: "knowledge",
+      title: "Naučená review pravidla — acme",
+      body: "Primitivy ber z libs/design-system.",
+      frontmatter: { project: "acme" },
+    });
+  };
+
+  it("grounds the global and project rules notes for a project run", async () => {
+    const made = await makeVault(seedRules);
+    dir = made.dir;
+    const block = await made.grounding.compose({ task: "cokoliv", projectId: "acme" });
+    expect(block).toContain("Naučená review pravidla");
+    expect(block).toContain("Primitivy ber z libs/design-system.");
+  });
+
+  it("never grounds another project's rules note", async () => {
+    const made = await makeVault(seedRules);
+    dir = made.dir;
+    const block = await made.grounding.compose({ task: "cokoliv", projectId: "other" });
+    expect(block).not.toContain("Primitivy ber z libs/design-system.");
+  });
+
+  it("omits the global rules note from a personal run", async () => {
+    const made = await makeVault(seedRules);
+    dir = made.dir;
+    const block = await made.grounding.compose({ task: "cokoliv", domain: "personal" });
+    expect(block).not.toContain("Naučená review pravidla");
+  });
+
+  it("composes normally when neither rules note exists", async () => {
+    const made = await makeVault(async () => {});
+    dir = made.dir;
+    const block = await made.grounding.compose({ task: "cokoliv", projectId: "empty" });
+    expect(typeof block).toBe("string");
   });
 });
