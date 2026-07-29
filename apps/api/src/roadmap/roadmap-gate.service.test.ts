@@ -3,6 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { Project, RoadmapItem, ScheduledTask } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ProjectLocalUnresolvedError } from "../projects/projects.errors";
 import { RoadmapGateService, parsePrNumberFromUrl } from "./roadmap-gate.service";
 import { RoadmapItemLifecycleError } from "./roadmap.errors";
 import { RoadmapStore } from "./roadmap.store";
@@ -48,6 +49,7 @@ describe("RoadmapGateService", () => {
   let dir: string;
   let store: RoadmapStore;
   let projects: { get: ReturnType<typeof vi.fn> };
+  let projectLocal: { resolveForRun: ReturnType<typeof vi.fn> };
   let taskScheduler: { createTask: ReturnType<typeof vi.fn> };
   let scheduledTasks: { get: ReturnType<typeof vi.fn> };
   let taskRuns: { resume: ReturnType<typeof vi.fn> };
@@ -59,6 +61,7 @@ describe("RoadmapGateService", () => {
     new RoadmapGateService(
       store,
       projects as never,
+      projectLocal as never,
       taskScheduler as never,
       scheduledTasks as never,
       taskRuns as never,
@@ -73,6 +76,9 @@ describe("RoadmapGateService", () => {
     store = new RoadmapStore(dir);
     await store.onModuleInit();
     projects = { get: vi.fn(async () => PROJECT) };
+    projectLocal = {
+      resolveForRun: vi.fn(async () => ({ path: PROJECT.path, isGitRepo: true })),
+    };
     taskScheduler = {
       createTask: vi.fn(async () => ({
         outcome: "dispatched",
@@ -107,10 +113,14 @@ describe("RoadmapGateService", () => {
         outcome: "running",
       });
       expect(taskScheduler.createTask).toHaveBeenCalledTimes(1);
-      const [input] = taskScheduler.createTask.mock.calls[0]!;
+      const [input, , trustedProjectId] = taskScheduler.createTask.mock.calls[0]!;
       expect(input.paths).toEqual(["/repos/acme"]);
       expect(input.output).toEqual({ type: "pr" });
       expect(input.text).toContain("Rollout za flagem");
+      // Attribution is server-derived from the item's own `projectId`, not
+      // re-matched over `paths`/`text` — a Phase-98 project with no `path` set
+      // on the registry could never match by path at all.
+      expect(trustedProjectId).toBe("acme");
     });
 
     it("parks a blocked item as enqueued — no task is created", async () => {
@@ -504,6 +514,7 @@ describe("RoadmapGateService", () => {
 
       const updated = await store.get("acme", "item-1");
       expect(updated.lifecycle).toBe("failed");
+      expect(updated.lastFailureReason).toBe("boom");
     });
 
     it("a done run with a pr output but no pr artifact (no artifact) also fails", async () => {
@@ -526,6 +537,9 @@ describe("RoadmapGateService", () => {
 
       const updated = await store.get("acme", "item-1");
       expect(updated.lifecycle).toBe("failed");
+      expect(updated.lastFailureReason).toBe(
+        "Run finished without producing an artifact (no PR or file output).",
+      );
     });
 
     it("still-running (no outcome yet) items are left alone", async () => {
@@ -666,10 +680,12 @@ describe("RoadmapGateService", () => {
 
       expect(played.lifecycle).toBe("failed");
       expect(played.runs).toHaveLength(0);
+      expect(played.lastFailureReason).toBe("no capacity");
     });
 
-    it("a project with no local path fails the release instead of attributing the task incorrectly", async () => {
+    it("a project this machine can't resolve a local clone for fails the release, not the attribution", async () => {
       projects.get.mockResolvedValue({ id: "acme", name: "acme" }); // no `path`
+      projectLocal.resolveForRun.mockRejectedValue(new ProjectLocalUnresolvedError("acme"));
       await store.put(item());
       const gate = makeGate();
 
@@ -677,6 +693,24 @@ describe("RoadmapGateService", () => {
 
       expect(played.lifecycle).toBe("failed");
       expect(taskScheduler.createTask).not.toHaveBeenCalled();
+      expect(played.lastFailureReason).toMatch(/no local clone/);
+    });
+
+    it("a project with no `path` but a cloneRoot-resolved clone releases normally", async () => {
+      projects.get.mockResolvedValue({ id: "acme", name: "acme", gitRemote: "git@x:y.git" }); // no `path`
+      projectLocal.resolveForRun.mockResolvedValue({
+        path: "/clones/acme",
+        isGitRepo: true,
+      });
+      await store.put(item());
+      const gate = makeGate();
+
+      const played = await gate.play("acme", "item-1");
+
+      expect(played.lifecycle).toBe("running");
+      const [input, , trustedProjectId] = taskScheduler.createTask.mock.calls[0]!;
+      expect(input.paths).toEqual(["/clones/acme"]);
+      expect(trustedProjectId).toBe("acme");
     });
   });
 });

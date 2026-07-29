@@ -1,0 +1,29 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-536",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-521",
+  "name": "`shoptet build` command",
+  "description": "Production build command: minification, correct output filenames (fixes the documented mismatch — markup.header.min.html vs the actually-produced markups.header.html), and every scaffolded entry actually gets bundled (fixes the legacy bug where src/orderFinale was silently never bundled because webpack hardcoded ['footer','header','index']).\n\nOutput must be deployable via the existing legacy SFTP/GitHub-App path unchanged.\n\nReference: cli-greenfield.md §2.6, §10.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-536",
+    "externalKey": "CZ3TDR1-536",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-536"
+  },
+  "externalLevel": "Úkol",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-524"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-524"
+  ],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-07-29T13:33:57.464Z",
+  "updatedAt": "2026-07-29T14:01:25.116Z",
+  "syncedAt": "2026-07-29T14:01:25.116Z"
+}

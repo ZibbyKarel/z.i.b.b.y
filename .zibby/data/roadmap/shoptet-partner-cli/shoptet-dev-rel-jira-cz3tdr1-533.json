@@ -1,0 +1,31 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-533",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-521",
+  "name": "dev-engine core: embedded Vite + reverse proxy + header/cookie handling",
+  "description": "Start an embedded Vite server (middleware mode) compiling entry.js + CSS with real HMR. Reverse-proxy the target shop to http://127.0.0.1:PORT (plain HTTP, no TLS) via http-proxy-middleware, with responseInterceptor restricted to text/html only — everything else must stream through untouched (it buffers what it intercepts).\n\nImplement host-header validation middleware (DNS-rebinding protection, adopted from Shopify's host-validation.ts).\n\nHeader/cookie handling, all adopted from the verified Shopify implementation: strip Content-Security-Policy from proxied responses, strip Upgrade-Insecure-Requests from outgoing requests, strip the Domain attribute from Set-Cookie, rewrite Location on redirects to the local origin, leave absolute URLs alone, and special-case cart/checkout/account routes (maintained allowlist with tests, not a one-off regex).\n\nReference: cli-greenfield.md §5.1.1.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-533",
+    "externalKey": "CZ3TDR1-533",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-533"
+  },
+  "externalLevel": "Úkol",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-524",
+    "shoptet-dev-rel-jira-cz3tdr1-527"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-524",
+    "shoptet-dev-rel-jira-cz3tdr1-527"
+  ],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-07-29T13:33:57.462Z",
+  "updatedAt": "2026-07-29T14:01:25.114Z",
+  "syncedAt": "2026-07-29T14:01:25.114Z"
+}

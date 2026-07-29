@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import type { FocusEvent, KeyboardEvent, MouseEvent, PointerEvent, ReactNode } from "react";
 import { Stack, StatusDot, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import { useApprovalsQuery } from "../../approvals";
 import { useHealthQuery } from "../../health";
 import { deriveHealthPresentation } from "../../health/healthPresentation";
 import { useSubsystemsQuery } from "../../subsystems/queries/useSubsystemsQuery";
@@ -77,7 +78,16 @@ export function StatusPill() {
   const working = subsystems.filter((s) => s.state === "running").length;
   const error = subsystems.filter((s) => s.state === "error").length;
   const report = subsystems.filter((s) => s.state === "report").length;
-  const waiting = subsystems.filter((s) => s.state === "waiting").length;
+  // The real global pending-approval count — NOT subsystems in a "waiting"
+  // state. Subsystem `waiting` only covers approvals attributable to an OWNED
+  // PIPELINE run (see `subsystems.service.ts`'s `attributeApproval`); every
+  // other kind (channel, agent, task, herald-graduation, …) has no pipeline to
+  // attribute through and would never flip a subsystem's state, so counting
+  // subsystems here silently hid e.g. Herald's parked Jira/Slack reply drafts —
+  // this trigger is the ONLY entry point into the waiting flyout, so it must
+  // mirror exactly what that flyout (and `useApprovalsQuery`) actually shows.
+  const { data: pendingApprovals } = useApprovalsQuery();
+  const waiting = pendingApprovals?.length ?? 0;
 
   const openSection = (section: FlyoutSection, trigger: HTMLButtonElement) => {
     lastTriggerRef.current = trigger;

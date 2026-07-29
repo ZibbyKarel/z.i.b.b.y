@@ -101,6 +101,29 @@ describe("RoadmapItemDialog", () => {
     expect(onSelectItem).toHaveBeenCalledWith("blocker-1");
   });
 
+  it("shows the failure reason for a failed item that has one", () => {
+    const target = item({
+      id: "t2b",
+      name: "Failed item",
+      lifecycle: "failed",
+      lastFailureReason: "no capacity",
+    });
+    render(
+      <RoadmapItemDialog itemId="t2b" items={[target]} onClose={vi.fn()} onSelectItem={vi.fn()} />,
+    );
+    expect(screen.getByTestId(RoadmapItemDialogTestId.FailureReason)).toHaveTextContent(
+      "no capacity",
+    );
+  });
+
+  it("omits the failure reason section when a failed item doesn't have one", () => {
+    const target = item({ id: "t2c", name: "Failed item, no reason", lifecycle: "failed" });
+    render(
+      <RoadmapItemDialog itemId="t2c" items={[target]} onClose={vi.fn()} onSelectItem={vi.fn()} />,
+    );
+    expect(screen.queryByTestId(RoadmapItemDialogTestId.FailureReason)).not.toBeInTheDocument();
+  });
+
   it("shows the empty-state copy when there are no attachments/blockers/dependents/runs", () => {
     const target = item({ id: "t3", name: "Bare item" });
     render(

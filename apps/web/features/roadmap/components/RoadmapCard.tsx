@@ -7,6 +7,8 @@ import {
   Chip,
   Container,
   Icon,
+  MenuButton,
+  type MenuButtonItem,
   Pressable,
   Stack,
   type StateTone,
@@ -15,6 +17,8 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { usePlayRoadmapItemMutation } from "../mutations/usePlayRoadmapItemMutation";
+import { useResumeRoadmapItemMutation } from "../mutations/useResumeRoadmapItemMutation";
+import { useRestartRoadmapItemMutation } from "../mutations/useRestartRoadmapItemMutation";
 import type { BoardColumn } from "../roadmap-board";
 import { stripMarkdownPreview } from "../roadmap-board";
 
@@ -86,9 +90,44 @@ export function RoadmapCard({
 }: RoadmapCardProps) {
   const t = useTranslations("roadmap");
   const playMutation = usePlayRoadmapItemMutation(item.projectId);
+  const restartMutation = useRestartRoadmapItemMutation(item.projectId);
+  const resumeMutation = useResumeRoadmapItemMutation(item.projectId);
 
   const hasExternalLink = Boolean(item.source.externalKey && item.source.url);
   const preview = stripMarkdownPreview(item.description);
+
+  // A failed item's last run is resumable only when it actually reached a
+  // dispatched task (has a `runRef`) — mirrors the gate's own 409 condition
+  // (`RoadmapGateService.resume`) so we never offer an action the server
+  // would reject.
+  const lastRun = item.runs[item.runs.length - 1];
+  const canResume = Boolean(lastRun?.runRef);
+  const failedActions: MenuButtonItem[] = [
+    {
+      id: "restart",
+      label: t("card.restart"),
+      icon: "retry",
+      onSelect: () =>
+        restartMutation.mutate({
+          params: { projectId: item.projectId, itemId: item.id },
+          body: {},
+        }),
+    },
+    ...(canResume
+      ? [
+          {
+            id: "resume",
+            label: t("card.resume"),
+            icon: "play" as const,
+            onSelect: () =>
+              resumeMutation.mutate({
+                params: { projectId: item.projectId, itemId: item.id },
+                body: {},
+              }),
+          },
+        ]
+      : []),
+  ];
 
   return (
     <Card
@@ -128,22 +167,37 @@ export function RoadmapCard({
                 {item.source.externalKey ?? item.id}
               </Typography>
             )}
-            <Tooltip content={t("card.playInert")}>
-              <Button
-                aria-label={t("card.playInert")}
-                data-testid={RoadmapCardTestId.Play}
-                disabled={item.lifecycle !== "todo" || playMutation.isPending}
-                icon="play"
-                intent="ghost"
-                onClick={() =>
-                  playMutation.mutate({
-                    params: { projectId: item.projectId, itemId: item.id },
-                    body: {},
-                  })
-                }
-                size="sm"
-              />
-            </Tooltip>
+            {item.lifecycle === "failed" ? (
+              <MenuButton ariaLabel={t("card.actionsLabel")} items={failedActions} size="sm" />
+            ) : item.lifecycle === "todo" ? (
+              <Tooltip content={t("card.play")}>
+                <Button
+                  aria-label={t("card.play")}
+                  data-testid={RoadmapCardTestId.Play}
+                  disabled={playMutation.isPending}
+                  icon="play"
+                  intent="ghost"
+                  onClick={() =>
+                    playMutation.mutate({
+                      params: { projectId: item.projectId, itemId: item.id },
+                      body: {},
+                    })
+                  }
+                  size="sm"
+                />
+              </Tooltip>
+            ) : (
+              <Tooltip content={t("card.playInert")}>
+                <Button
+                  disabled
+                  aria-label={t("card.playInert")}
+                  data-testid={RoadmapCardTestId.Play}
+                  icon="play"
+                  intent="ghost"
+                  size="sm"
+                />
+              </Tooltip>
+            )}
           </Stack>
 
           <Pressable

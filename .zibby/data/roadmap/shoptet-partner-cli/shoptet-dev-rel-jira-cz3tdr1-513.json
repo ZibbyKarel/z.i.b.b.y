@@ -15,10 +15,11 @@
   "attachments": [],
   "dependsOn": [],
   "dependsOnFromSource": [],
-  "lifecycle": "todo",
+  "lifecycle": "failed",
+  "enqueuedAt": "2026-07-29T13:04:27.706Z",
   "runs": [],
   "syncNotes": [],
   "createdAt": "2026-07-29T10:56:34.180Z",
-  "updatedAt": "2026-07-29T12:32:52.091Z",
-  "syncedAt": "2026-07-29T12:32:52.091Z"
+  "updatedAt": "2026-07-29T14:01:25.091Z",
+  "syncedAt": "2026-07-29T14:01:25.091Z"
 }

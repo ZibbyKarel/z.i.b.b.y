@@ -88,6 +88,8 @@ lifecycle           // "todo" | "enqueued" | "running" | "awaiting-merge" | "don
 enqueuedAt?         // 125e: stamped by play/playBulk/restart; the gate drains a project's enqueued
                     // items strictly FIFO by this timestamp, never `updatedAt`
 runs[]              // { taskId, runRef?, prNumber?, prUrl?, artifactPath?, startedAt, finishedAt?, outcome }
+lastFailureReason?  // gate-owned: why the most recent attempt landed on `failed` — the task's own
+                    // TaskOutcome.summary, or the release/dispatch error when no task ever existed
 createdAt / updatedAt / syncedAt?
 ```
 
@@ -411,11 +413,22 @@ On release, the gate calls `TaskSchedulerService.createTask` with:
   `awaiting-merge`). Truncates only the `description` to stay under
   `CreateTaskInputSchema.text`'s 8000-char cap — the footer is never
   truncated (see below).
-- `paths: [project.path]` — **never** `projectId`/`trustedProjectId` on
-  `CreateTaskInput`. Attribution stays entirely server-derived via the
-  existing `matchProject` seam (Law 4). A project with no local `path`
-  configured fails the release outright (see "Release failures" below)
-  rather than risk misattribution.
+- `paths: [local.path]`, where `local = ProjectLocalService.resolveForRun(project)`
+  — `project.path` is optional (Phase 98: most projects live at
+  `<cloneRoot>/<project.id>` instead), and `resolveForRun` already knows how to
+  find that clone (or make one from `gitRemote` when it isn't there yet) rather
+  than requiring `path` to be hand-set. Throws `ProjectLocalUnresolvedError`
+  only when NEITHER `path` nor a cloneRoot clone nor a `gitRemote` resolves
+  anything (see "Release failures" below).
+- `trustedProjectId: project.id` — the roadmap item's own `projectId` foreign
+  key, not client-asserted text, so it's exactly the "server-side caller
+  already matched the engagement" carve-out `createTask`'s own docblock names
+  (the same pattern `channel-triage-flow.service.ts`'s tier-1 dispatch uses).
+  `matchProject`'s `paths`/text heuristics are deliberately NOT relied on for
+  attribution here: `matchByPath` only ever matches a project's STORED `path`
+  field, which a Phase-98 project (no hand-set `path`) never has, so path-based
+  attribution would silently fail — or worse, mis-attribute — for exactly the
+  projects this release path most needs to get right.
 - `attachmentSetId` = the item's set, when present.
 - `output` = the item's own `output` field, or `{ type: "pr" }` by default.
 - `explicitTarget` = **absent** — "the classifier picks the target" (the
@@ -431,6 +444,13 @@ On release, the gate calls `TaskSchedulerService.createTask` with:
 
 The returned task id (and `runRef`, when the dispatch was synchronous) lands
 on a new entry in the item's `runs[]`; `lifecycle → "running"`.
+
+If `resolveForRun` or `createTask` itself throws (e.g. `ProjectLocalUnresolvedError`
+— no `path`, no cloneRoot clone, no `gitRemote` to clone from), the item has no
+task/run to speak of — `drain` catches it, flips the item straight to `failed`,
+and stamps `lastFailureReason` from the caught error's own message
+(`markReleaseFailed`) so the operator sees WHY even though `runs[]` never
+grew an entry for this attempt.
 
 ### The imported-issue-body rule (Law 4) — the footer's trust boundary
 
@@ -501,7 +521,8 @@ merge signal (below); reading the task back avoids it entirely. Per-item
 try/catch, so one item's failure never blocks the rest. For each `running`
 item whose task now carries an `outcome`:
 
-- `outcome.status === "error"` → `failed`.
+- `outcome.status === "error"` → `failed`, `lastFailureReason` set from
+  `outcome.summary` (the run's own error message).
 - `outcome.status === "done"` and `outcome.pr?.url` present → `awaiting-merge`
   (the PR number is parsed from the url and stored on the run for the merge
   poll below).

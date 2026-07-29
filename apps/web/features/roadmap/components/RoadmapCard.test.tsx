@@ -1,8 +1,19 @@
 import type { RoadmapItem } from "@zibby/contracts";
+import { MenuButtonTestId } from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen } from "../../../test/render";
 import { RoadmapCard, RoadmapCardTestId } from "./RoadmapCard";
+
+const restartRoadmapItem = vi.fn();
+const resumeRoadmapItem = vi.fn();
+
+vi.mock("../mutations/useRestartRoadmapItemMutation", () => ({
+  useRestartRoadmapItemMutation: () => ({ mutate: restartRoadmapItem, isPending: false }),
+}));
+vi.mock("../mutations/useResumeRoadmapItemMutation", () => ({
+  useResumeRoadmapItemMutation: () => ({ mutate: resumeRoadmapItem, isPending: false }),
+}));
 
 function item(partial: Partial<RoadmapItem> & Pick<RoadmapItem, "id">): RoadmapItem {
   return {
@@ -24,6 +35,11 @@ function item(partial: Partial<RoadmapItem> & Pick<RoadmapItem, "id">): RoadmapI
 }
 
 describe("RoadmapCard", () => {
+  beforeEach(() => {
+    restartRoadmapItem.mockClear();
+    resumeRoadmapItem.mockClear();
+  });
+
   it("links the external key out to source.url when both are present", () => {
     const jiraItem = item({
       id: "t1",
@@ -152,7 +168,94 @@ describe("RoadmapCard", () => {
     );
     const play = screen.getByTestId(RoadmapCardTestId.Play);
     expect(play).toBeDisabled();
-    expect(play).toHaveAccessibleName(/nefunguje/);
+    expect(play).toHaveAccessibleName(/nejde spustit/);
+  });
+
+  it("replaces play with a restart/resume menu once the item has failed", async () => {
+    render(
+      <RoadmapCard
+        blockers={[]}
+        column="ready"
+        dependents={[]}
+        item={item({
+          id: "t5c",
+          name: "Failed task",
+          lifecycle: "failed",
+          runs: [
+            {
+              taskId: "task-1",
+              runRef: "run-1",
+              startedAt: "2026-07-01T00:00:00.000Z",
+              outcome: "failed",
+            },
+          ],
+        })}
+        onHoverChange={vi.fn()}
+        onSelect={vi.fn()}
+        onSelectDependency={vi.fn()}
+      />,
+    );
+    expect(screen.queryByTestId(RoadmapCardTestId.Play)).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId(MenuButtonTestId.Trigger));
+    await userEvent.click(screen.getByTestId(`${MenuButtonTestId.Item}-restart`));
+    expect(restartRoadmapItem).toHaveBeenCalledWith({
+      params: { projectId: "proj-1", itemId: "t5c" },
+      body: {},
+    });
+  });
+
+  it("offers resume only when the last run actually reached a dispatched task", async () => {
+    render(
+      <RoadmapCard
+        blockers={[]}
+        column="ready"
+        dependents={[]}
+        item={item({
+          id: "t5d",
+          name: "Failed task, never dispatched",
+          lifecycle: "failed",
+          runs: [{ taskId: "task-1", startedAt: "2026-07-01T00:00:00.000Z", outcome: "failed" }],
+        })}
+        onHoverChange={vi.fn()}
+        onSelect={vi.fn()}
+        onSelectDependency={vi.fn()}
+      />,
+    );
+    await userEvent.click(screen.getByTestId(MenuButtonTestId.Trigger));
+    expect(screen.queryByTestId(`${MenuButtonTestId.Item}-resume`)).not.toBeInTheDocument();
+  });
+
+  it("resumes a failed item whose last run has a runRef", async () => {
+    render(
+      <RoadmapCard
+        blockers={[]}
+        column="ready"
+        dependents={[]}
+        item={item({
+          id: "t5e",
+          name: "Failed task",
+          lifecycle: "failed",
+          runs: [
+            {
+              taskId: "task-1",
+              runRef: "run-1",
+              startedAt: "2026-07-01T00:00:00.000Z",
+              outcome: "failed",
+            },
+          ],
+        })}
+        onHoverChange={vi.fn()}
+        onSelect={vi.fn()}
+        onSelectDependency={vi.fn()}
+      />,
+    );
+    await userEvent.click(screen.getByTestId(MenuButtonTestId.Trigger));
+    await userEvent.click(screen.getByTestId(`${MenuButtonTestId.Item}-resume`));
+    expect(resumeRoadmapItem).toHaveBeenCalledWith({
+      params: { projectId: "proj-1", itemId: "t5e" },
+      body: {},
+    });
   });
 
   it("opens the detail dialog when the name/description area is clicked", async () => {

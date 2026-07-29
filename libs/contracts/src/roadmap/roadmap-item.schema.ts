@@ -192,6 +192,17 @@ export const RoadmapItemSchema = z.object({
   enqueuedAt: IsoDateTimeSchema.optional(),
   runs: z.array(RoadmapItemRunSchema).default([]),
   /**
+   * Gate-owned (never operator-editable, same class as `lifecycle`): why the
+   * most recent attempt landed on `failed` — either the underlying task's own
+   * `TaskOutcome.summary` (an error's message, or a fixed explanation when a
+   * run finished without an artifact), or the release/dispatch error itself
+   * when the item never even got as far as a task (`createTask` throwing).
+   * One item-level field rather than per-run, since a release failure has no
+   * `runs[]` entry to attach a reason to. Stale once superseded by a later
+   * failure or a successful run; only ever read while `lifecycle === "failed"`.
+   */
+  lastFailureReason: z.string().min(1).optional(),
+  /**
    * Sync-machinery-owned (125b), NOT part of the source/ZIBBY ownership split
    * above: short diagnostic notes about the most recent sync — today, only
    * "attachment X skipped (exceeds the size/count cap)". Recomputed WHOLESALE

@@ -2085,7 +2085,11 @@
       "empty": "empty"
     },
     "card": {
-      "playInert": "Play isn't wired up yet — coming soon.",
+      "play": "Play",
+      "playInert": "Not in a playable state.",
+      "restart": "Restart",
+      "resume": "Resume",
+      "actionsLabel": "Recovery actions",
       "failed": "Failed",
       "waitingOn": "waiting on {name}",
       "waitingOnArchived": "waiting on {name} · archived",
@@ -2103,6 +2107,7 @@
       "noDependents": "Doesn't block anything",
       "archivedNote": "its source no longer returns it",
       "syncNotes": "Sync notes",
+      "failureReason": "Why it failed",
       "runs": "Run history",
       "noRuns": "No runs yet",
       "runOutcome": {

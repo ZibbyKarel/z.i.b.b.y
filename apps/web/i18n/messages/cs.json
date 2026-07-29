@@ -2085,7 +2085,11 @@
       "empty": "prázdno"
     },
     "card": {
-      "playInert": "Spuštění zatím nefunguje — přijde příště.",
+      "play": "Spustit",
+      "playInert": "Teď to nejde spustit.",
+      "restart": "Restartovat",
+      "resume": "Pokračovat",
+      "actionsLabel": "Obnovovací akce",
       "failed": "Selhalo",
       "waitingOn": "čeká na {name}",
       "waitingOnArchived": "čeká na {name} · archiv",
@@ -2103,6 +2107,7 @@
       "noDependents": "Nic neblokuje",
       "archivedNote": "zdroj ji už nevrací",
       "syncNotes": "Poznámky ze synchronizace",
+      "failureReason": "Proč to selhalo",
       "runs": "Historie běhů",
       "noRuns": "Zatím žádný běh",
       "runOutcome": {

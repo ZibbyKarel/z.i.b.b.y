@@ -2,6 +2,7 @@ import { Inject, Injectable, forwardRef } from "@nestjs/common";
 import type { Project, RoadmapItem, RoadmapItemRun } from "@zibby/contracts";
 import { isBlocked } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
+import { ProjectLocalService } from "../projects/project-local.service";
 // 125e — see `project-pr.service.ts`'s import comment for why this needs `forwardRef`.
 import { ProjectPrService } from "../projects/project-pr.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
@@ -78,6 +79,7 @@ export class RoadmapGateService {
   constructor(
     private readonly roadmap: RoadmapStore,
     private readonly projects: ProjectsStorageService,
+    private readonly projectLocal: ProjectLocalService,
     private readonly taskScheduler: TaskSchedulerService,
     private readonly scheduledTasks: ScheduledTasksStorageService,
     private readonly taskRuns: TaskRunsService,
@@ -421,7 +423,12 @@ export class RoadmapGateService {
     if (!task?.outcome) return false; // gone, or still running — nothing to reconcile yet
 
     if (task.outcome.status === "error") {
-      await this.markFailed(projectId, item.id, last);
+      await this.markFailed(
+        projectId,
+        item.id,
+        last,
+        task.outcome.summary || "Run errored with no summary captured.",
+      );
       return false;
     }
 
@@ -437,7 +444,12 @@ export class RoadmapGateService {
     // Expected an artifact (a `pr` output that never produced one, or any other
     // choice) and got neither — no artifact, so the item failed (master plan:
     // "No artifact / errored → failed").
-    await this.markFailed(projectId, item.id, last);
+    await this.markFailed(
+      projectId,
+      item.id,
+      last,
+      "Run finished without producing an artifact (no PR or file output).",
+    );
     return false;
   }
 
@@ -495,28 +507,36 @@ export class RoadmapGateService {
     item: RoadmapItem,
     allItems: RoadmapItem[],
   ): Promise<void> {
-    if (!project.path) {
-      throw new Error(
-        `project "${project.id}" has no local path configured — the gate cannot attribute a task to it`,
-      );
-    }
+    // `project.path` is optional (Phase 98) — most projects live at
+    // `<cloneRoot>/<project.id>` instead, and `resolveForRun` already knows how
+    // to find that (or auto-clone it from `gitRemote` when it isn't there yet).
+    // Throws `ProjectLocalUnresolvedError` only when NEITHER `path` nor a
+    // cloneRoot clone nor a `gitRemote` resolves anything — caught by `drain`'s
+    // per-item try/catch same as any other release failure.
+    const local = await this.projectLocal.resolveForRun(project);
     const text = buildRoadmapTaskText(item, allItems);
     const result = await this.taskScheduler.createTask(
       {
         title: item.name,
         text,
-        paths: [project.path],
+        paths: [local.path],
         ...(item.attachmentSetId ? { attachmentSetId: item.attachmentSetId } : {}),
         output: item.output ?? { type: "pr" },
       },
       Date.now(),
-      // trustedProjectId — NEVER: attribution stays server-derived via `paths`
-      // (Law 4). explicitTarget — NEVER: "the classifier picks the target" (the
-      // master plan's Play UX decision). background — false: the synchronous
+      // trustedProjectId = item.projectId: the roadmap item's own foreign key,
+      // not client-asserted text — exactly the "server-side caller already
+      // matched the engagement" carve-out `createTask`'s own docblock names
+      // (same pattern `channel-triage-flow.service.ts`'s tier-1 dispatch uses).
+      // `paths`-based attribution (`matchProject`) can't be relied on here: it
+      // only ever matches a project's STORED `path` field, which a Phase-98
+      // project like this one legitimately never sets.
+      project.id,
+      // explicitTarget — NEVER: "the classifier picks the target" (the master
+      // plan's Play UX decision). background — false: the synchronous
       // server-side call pattern (`automations/scheduler.service.ts`), so the
       // gate always learns the real outcome (dispatched/pending/scheduled)
       // before it writes the item's `running` run record.
-      undefined,
       undefined,
       false,
     );
@@ -546,14 +566,16 @@ export class RoadmapGateService {
     itemId: string,
     error: unknown,
   ): Promise<void> {
+    const reason = error instanceof Error ? error.message : String(error);
     this.log.warn("roadmap item release failed — marking failed", {
       projectId,
       itemId,
-      error: error instanceof Error ? error.message : String(error),
+      error: reason,
     });
     await this.roadmap.update(projectId, itemId, (current) => ({
       ...current,
       lifecycle: "failed",
+      lastFailureReason: reason,
       updatedAt: new Date().toISOString(),
     }));
     void this.activity.record({
@@ -563,11 +585,17 @@ export class RoadmapGateService {
     });
   }
 
-  private async markFailed(projectId: string, itemId: string, run: RoadmapItemRun): Promise<void> {
+  private async markFailed(
+    projectId: string,
+    itemId: string,
+    run: RoadmapItemRun,
+    reason: string,
+  ): Promise<void> {
     const now = new Date().toISOString();
     await this.roadmap.update(projectId, itemId, (current) => ({
       ...current,
       lifecycle: "failed",
+      lastFailureReason: reason,
       runs: current.runs.map((r) =>
         r.taskId === run.taskId ? { ...r, outcome: "failed" as const, finishedAt: now } : r,
       ),

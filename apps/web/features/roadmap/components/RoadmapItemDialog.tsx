@@ -33,6 +33,7 @@ export enum RoadmapItemDialogTestId {
   Dependents = "roadmap-item-dialog-dependents",
   DependentRow = "roadmap-item-dialog-dependent",
   SyncNotes = "roadmap-item-dialog-sync-notes",
+  FailureReason = "roadmap-item-dialog-failure-reason",
   Runs = "roadmap-item-dialog-runs",
   RunRow = "roadmap-item-dialog-run",
 }
@@ -264,6 +265,15 @@ export function RoadmapItemDialog({
                 </Typography>
               ))}
             </Stack>
+          </Stack>
+        )}
+
+        {item.lifecycle === "failed" && item.lastFailureReason && (
+          <Stack data-testid={RoadmapItemDialogTestId.FailureReason} gap="75">
+            <Typography type="label">{t("dialog.failureReason")}</Typography>
+            <Typography size="sm" tone="bad" type="note">
+              {item.lastFailureReason}
+            </Typography>
           </Stack>
         )}
 

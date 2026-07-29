@@ -17,6 +17,13 @@ vi.mock("../../subsystems/queries/useSubsystemsQuery", () => ({
   }),
 }));
 
+// The waiting count/trigger must come from the real approvals feed, not the
+// subsystem roster above (a "d" subsystem in `waiting` state is deliberately
+// present to prove the two are no longer coupled — see StatusPill.tsx).
+vi.mock("../../approvals", () => ({
+  useApprovalsQuery: () => ({ data: [{ id: "appr_1" }] }),
+}));
+
 // Mutable stub (F8b): each health test overrides the shape mid-suite, then
 // `beforeEach` below resets it to the nominal/online default so the earlier
 // non-health tests (which never touch this) keep exercising the common case.

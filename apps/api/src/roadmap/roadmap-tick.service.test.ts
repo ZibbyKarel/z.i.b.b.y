@@ -262,6 +262,9 @@ describe("RoadmapTickService", () => {
       );
 
       const projects = { get: vi.fn(async () => PROJECT) };
+      const projectLocal = {
+        resolveForRun: vi.fn(async () => ({ path: PROJECT.path, isGitRepo: true })),
+      };
       const taskScheduler = {
         createTask: vi.fn(async () => ({
           outcome: "dispatched",
@@ -278,6 +281,7 @@ describe("RoadmapTickService", () => {
       const realGate = new RoadmapGateService(
         store,
         projects as never,
+        projectLocal as never,
         taskScheduler as never,
         scheduledTasks as never,
         taskRuns as never,
