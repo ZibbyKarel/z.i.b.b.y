@@ -200,12 +200,28 @@ export class ReviewCommentFetcher {
         return { items: [], failed: true };
       }
       const body: unknown = await res.json();
-      if (!Array.isArray(body)) return { items: [], failed: false };
+      if (!Array.isArray(body)) {
+        this.log.warn("review comment payload was not an array — treated as empty", {
+          url,
+          endpoint,
+        });
+        return { items: [], failed: false };
+      }
       // Defensive: a `null`/non-object array element must be filtered, not crash
-      // the field reads in `toComment` (GitHub payloads are never schema-parsed).
+      // the field reads in `toComment` (GitHub payloads are never schema-parsed). A
+      // malformed element is permanently malformed — marking the ENDPOINT failed
+      // over it would wedge the cursor forever on one bad comment, which is worse
+      // than losing that one comment. So this is warned, not `failed: true`.
       const items = body.filter(
         (element): element is RawComment => typeof element === "object" && element !== null,
       );
+      if (items.length < body.length) {
+        this.log.warn("dropped malformed comment payload elements", {
+          url,
+          endpoint,
+          dropped: body.length - items.length,
+        });
+      }
       return { items, failed: false };
     } catch (err) {
       this.log.warn("review comment fetch threw", { url, endpoint, error: String(err) });

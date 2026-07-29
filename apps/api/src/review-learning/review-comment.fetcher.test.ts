@@ -172,6 +172,21 @@ describe("ReviewCommentFetcher", () => {
     expect(comments.map((c) => c.commentId)).toEqual(["rc-111"]);
   });
 
+  it("warns about dropped malformed payload elements without marking the endpoint failed", async () => {
+    const { fetcher, warn } = makeFetcher([
+      { match: /\/pulls\/comments/, body: [null, INLINE, "not-an-object"] },
+    ]);
+
+    const { comments, failedEndpoints } = await fetcher.fetchNew(BASE);
+
+    expect(comments.map((c) => c.commentId)).toEqual(["rc-111"]);
+    expect(failedEndpoints).toEqual([]);
+    expect(warn).toHaveBeenCalledWith(
+      "dropped malformed comment payload elements",
+      expect.objectContaining({ dropped: 2 }),
+    );
+  });
+
   it("sorts ascending by `at` even when the API returns them out of order", async () => {
     const { fetcher } = makeFetcher([
       {
