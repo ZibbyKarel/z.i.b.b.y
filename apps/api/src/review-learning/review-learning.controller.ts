@@ -1,16 +1,21 @@
 import { Controller } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { AGENT_ID_REGEX, type ReviewRule, reviewLearningContract } from "@zibby/contracts";
+import { InvalidReviewScopeKeyError } from "./review-rules.errors";
 import { GLOBAL_SCOPE_KEY, ReviewRulesStore } from "./review-rules.store";
 import { ReviewRulesVaultService } from "./review-rules.vault.service";
 
 type ListRequest = { query: { scope: string } };
 type PromoteRequest = { params: { projectId: string; ruleId: string } };
+type ListResponse =
+  | { status: 200; body: ReviewRule[] }
+  | { status: 404; body: { message: string } };
 type PromoteResponse =
   | { status: 200; body: ReviewRule }
   | { status: 404; body: { message: string } };
 
 const NOT_FOUND = { status: 404 as const, body: { message: "review rule not found" } };
+const INVALID_SCOPE = { status: 404 as const, body: { message: "invalid review rule scope" } };
 
 /**
  * Implements `reviewLearningContract`. `list` is a plain read. `promote` is the
@@ -41,8 +46,21 @@ export class ReviewLearningController {
     });
   }
 
-  async list({ query }: ListRequest) {
-    return { status: 200 as const, body: await this.store.list(query.scope) };
+  async list({ query }: ListRequest): Promise<ListResponse> {
+    try {
+      return { status: 200 as const, body: await this.store.list(query.scope) };
+    } catch (error) {
+      // `store.list` only ever throws `InvalidReviewScopeKeyError` — a scope key
+      // that fails `resolveSafeFile`'s regex before it can be turned into a path
+      // (e.g. `../../etc/passwd`). A valid-but-unknown scope (no file on disk yet)
+      // never throws — `read()` treats a missing file as `{ rules: [] }` — so this
+      // stays `200 []` and only a malformed key ever becomes this 404. Anything
+      // else re-throws to the global filter rather than being folded into "not
+      // found", the same "don't mask an unexpected failure" posture
+      // `RoadmapController` documents for `CorruptRoadmapItemFileError`.
+      if (error instanceof InvalidReviewScopeKeyError) return INVALID_SCOPE;
+      throw error;
+    }
   }
 
   async promote({ params: { projectId, ruleId } }: PromoteRequest): Promise<PromoteResponse> {
