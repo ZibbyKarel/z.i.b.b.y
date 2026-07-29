@@ -1,0 +1,157 @@
+import { describe, expect, it, vi } from "vitest";
+import { ReviewCommentFetcher } from "./review-comment.fetcher";
+
+type Route = { match: RegExp; body: unknown };
+
+/** A dispatching fetch stub: first matching route wins, unmatched → empty array. */
+function fetchStub(routes: Route[]) {
+  return vi.fn(async (input: string | URL) => {
+    const url = String(input);
+    const route = routes.find((r) => r.match.test(url));
+    return new Response(JSON.stringify(route?.body ?? []), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  });
+}
+
+function makeFetcher(routes: Route[], numbers: number[] = [7]) {
+  const logger = {
+    child: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() }),
+  };
+  const locator = { numbersFor: vi.fn(async () => numbers) };
+  const fetchImpl = fetchStub(routes);
+  const fetcher = new ReviewCommentFetcher(locator as never, logger as never, fetchImpl as never);
+  return { fetcher, fetchImpl };
+}
+
+const INLINE = {
+  id: 111,
+  body: "primitivy patří do design systemu",
+  user: { login: "kolega" },
+  created_at: "2026-07-29T09:00:00Z",
+  html_url: "https://github.com/acme/app/pull/7#discussion_r111",
+  pull_request_url: "https://api.github.com/repos/acme/app/pulls/7",
+};
+
+const CONVERSATION = {
+  id: 222,
+  body: "prosím přidej test",
+  user: { login: "kolega" },
+  created_at: "2026-07-29T09:30:00Z",
+  html_url: "https://github.com/acme/app/pull/7#issuecomment-222",
+  issue_url: "https://api.github.com/repos/acme/app/issues/7",
+};
+
+const REVIEW = {
+  id: 333,
+  body: "celkově fajn, ale chybí testy",
+  user: { login: "kolega" },
+  submitted_at: "2026-07-29T09:45:00Z",
+  html_url: "https://github.com/acme/app/pull/7#pullrequestreview-333",
+};
+
+const BASE = { projectId: "acme", repo: "acme/app", token: "ghp_x" };
+
+describe("ReviewCommentFetcher", () => {
+  it("namespaces ids by source and returns comments oldest-first", async () => {
+    const { fetcher } = makeFetcher([
+      { match: /\/pulls\/comments/, body: [INLINE] },
+      { match: /\/issues\/comments/, body: [CONVERSATION] },
+      { match: /\/pulls\/7\/reviews/, body: [REVIEW] },
+    ]);
+
+    const comments = await fetcher.fetchNew(BASE);
+
+    expect(comments.map((c) => c.commentId)).toEqual(["rc-111", "ic-222", "rv-333"]);
+    expect(comments[0]?.prNumber).toBe(7);
+    expect(comments[0]?.prUrl).toBe("https://github.com/acme/app/pull/7");
+  });
+
+  it("keeps only comments on PRs ZIBBY opened", async () => {
+    const { fetcher } = makeFetcher(
+      [
+        {
+          match: /\/pulls\/comments/,
+          body: [
+            INLINE,
+            {
+              ...INLINE,
+              id: 999,
+              pull_request_url: "https://api.github.com/repos/acme/app/pulls/8",
+            },
+          ],
+        },
+      ],
+      [7],
+    );
+
+    const comments = await fetcher.fetchNew(BASE);
+
+    expect(comments.map((c) => c.commentId)).toEqual(["rc-111"]);
+  });
+
+  it("drops comments authored by ZIBBY itself", async () => {
+    const { fetcher } = makeFetcher([
+      { match: /\/pulls\/comments/, body: [{ ...INLINE, user: { login: "zibby-bot" } }] },
+    ]);
+
+    expect(await fetcher.fetchNew({ ...BASE, selfLogin: "zibby-bot" })).toEqual([]);
+  });
+
+  it("passes the cursor as `since` and filters review bodies locally", async () => {
+    const { fetcher, fetchImpl } = makeFetcher([
+      {
+        match: /\/pulls\/7\/reviews/,
+        body: [REVIEW, { ...REVIEW, id: 334, submitted_at: "2026-07-01T00:00:00Z" }],
+      },
+    ]);
+
+    const comments = await fetcher.fetchNew({ ...BASE, cursor: "2026-07-29T09:40:00.000Z" });
+
+    expect(comments.map((c) => c.commentId)).toEqual(["rv-333"]);
+    expect(String(fetchImpl.mock.calls[0]?.[0])).toContain("since=2026-07-29T09%3A40%3A00.000Z");
+  });
+
+  it("skips a review with an empty body", async () => {
+    const { fetcher } = makeFetcher([
+      { match: /\/pulls\/7\/reviews/, body: [{ ...REVIEW, body: "" }] },
+    ]);
+
+    expect(await fetcher.fetchNew(BASE)).toEqual([]);
+  });
+
+  it("returns what it has when an endpoint fails", async () => {
+    const logger = {
+      child: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() }),
+    };
+    const locator = { numbersFor: vi.fn(async () => [7]) };
+    const fetchImpl = vi.fn(async (input: string | URL) => {
+      const url = String(input);
+      if (url.includes("/issues/comments")) return new Response("nope", { status: 500 });
+      if (url.includes("/pulls/comments")) {
+        return new Response(JSON.stringify([INLINE]), { status: 200 });
+      }
+      return new Response("[]", { status: 200 });
+    });
+    const fetcher = new ReviewCommentFetcher(locator as never, logger as never, fetchImpl as never);
+
+    const comments = await fetcher.fetchNew(BASE);
+
+    expect(comments.map((c) => c.commentId)).toEqual(["rc-111"]);
+  });
+
+  it("caps the batch at MAX_COMMENTS_PER_PASS, keeping the oldest", async () => {
+    const many = Array.from({ length: 70 }, (_, i) => ({
+      ...INLINE,
+      id: 1000 + i,
+      created_at: `2026-07-29T09:${String(i % 60).padStart(2, "0")}:00Z`,
+    }));
+    const { fetcher } = makeFetcher([{ match: /\/pulls\/comments/, body: many }]);
+
+    const comments = await fetcher.fetchNew(BASE);
+
+    expect(comments).toHaveLength(60);
+    expect((comments[0]?.at ?? "") <= (comments[59]?.at ?? "")).toBe(true);
+  });
+});

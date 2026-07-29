@@ -87,6 +87,44 @@ opens both ZIBBY's PRs and the operator's own, so the login can't disambiguate):
 (`.../pull/<n>`), not the API shape (`.../pulls/<n>`) — the only shape either
 source stores.
 
-Not yet built (later tasks): the ingest pass that reads GitHub review comments and
-calls `record`, the controller/route exposing `listGrounded`/`promoteToGlobal`, the
-`review-learn` automation target kind, and grounding the active rules into runs.
+## `ReviewCommentFetcher` (`review-comment.fetcher.ts`)
+
+Reads new review comments on the project's ZIBBY-opened PRs from GitHub — the
+three endpoints that between them cover everywhere a human leaves review
+feedback:
+
+- `GET /repos/{repo}/pulls/comments` — inline review comments (one repo-wide
+  call, `since` supported)
+- `GET /repos/{repo}/issues/comments` — PR conversation comments (one repo-wide
+  call, `since` supported)
+- `GET /repos/{repo}/pulls/{n}/reviews` — review bodies (per PR, capped at
+  `MAX_REVIEW_PRS` = 20; this endpoint has **no** `since` parameter, so results
+  are filtered against the cursor locally instead)
+
+`fetchNew(input)` takes `{ projectId, repo, token, selfLogin?, cursor? }` and
+returns `FetchedComment[]` (`{ commentId, prNumber, prUrl, commentUrl, author,
+at, body }`), ascending by `at`, capped at `MAX_COMMENTS_PER_PASS` = 60 (oldest
+kept, remainder carries over to the next pass via the cursor). `commentId` is
+namespaced by source — `rc-`/`ic-`/`rv-` — matching `ReviewRuleOccurrence`'s
+`commentId` convention, because the three endpoints mint ids from separate
+sequences that can collide.
+
+Comments are dropped in three cases: the PR isn't one `ZibbyPrLocator.numbersFor`
+returned (never learn from someone else's PR), the author equals `selfLogin`
+(never learn from ZIBBY's own reply), or the body is empty after trimming.
+`prNumberFromApiUrl` (module-private) is deliberately separate from the
+locator's `prNumberFromUrl` — GitHub comment payloads point at the **API** PR
+url shape (`/pulls/<n>` for inline comments, `/issues/<n>` for conversation
+comments — on a PR, the issue number IS the PR number), not the html shape the
+locator parses.
+
+Fetching is fail-soft per endpoint: one endpoint erroring (non-2xx or a thrown
+fetch) is logged and treated as empty, so the other two endpoints still yield
+their comments in the same pass. The constructor takes an optional `fetchImpl`
+(`@Optional()`, defaults to global `fetch`) purely so tests can inject a stub
+without touching the network.
+
+Not yet built (later tasks): the `record` call that turns a `FetchedComment`
+into a rule occurrence, the controller/route exposing `listGrounded`/
+`promoteToGlobal`, the `review-learn` automation target kind, and grounding the
+active rules into runs.
