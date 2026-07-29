@@ -102,27 +102,39 @@ feedback:
   are filtered against the cursor locally instead)
 
 `fetchNew(input)` takes `{ projectId, repo, token, selfLogin?, cursor? }` and
-returns `FetchedComment[]` (`{ commentId, prNumber, prUrl, commentUrl, author,
-at, body }`), ascending by `at`, capped at `MAX_COMMENTS_PER_PASS` = 60 (oldest
-kept, remainder carries over to the next pass via the cursor). `commentId` is
-namespaced by source — `rc-`/`ic-`/`rv-` — matching `ReviewRuleOccurrence`'s
-`commentId` convention, because the three endpoints mint ids from separate
-sequences that can collide.
+returns a `FetchNewResult` — `{ comments, failedEndpoints }`. `comments` is
+`FetchedComment[]` (`{ commentId, prNumber, prUrl, commentUrl, author, at,
+body }`), ascending by `at`, capped at `MAX_COMMENTS_PER_PASS` = 60 (the true
+oldest 60 across all three endpoints combined, sorted before the cap is
+applied — not just the first 60 fetched off the wire — remainder carries over
+to the next pass via the cursor). `commentId` is namespaced by source —
+`rc-`/`ic-`/`rv-` — matching `ReviewRuleOccurrence`'s `commentId` convention,
+because the three endpoints mint ids from separate sequences that can collide.
 
 Comments are dropped in three cases: the PR isn't one `ZibbyPrLocator.numbersFor`
-returned (never learn from someone else's PR), the author equals `selfLogin`
-(never learn from ZIBBY's own reply), or the body is empty after trimming.
+returned (never learn from someone else's PR), the author is ZIBBY's own login
+(never learn from ZIBBY's own reply — compared case-insensitively with a
+trailing GitHub App `[bot]` suffix stripped from both sides, since GitHub can
+render the same bot login either way), or the body is empty after trimming or
+the timestamp doesn't parse (a malformed `created_at`/`submitted_at` drops that
+one comment rather than throwing and discarding the whole pass).
 `prNumberFromApiUrl` (module-private) is deliberately separate from the
 locator's `prNumberFromUrl` — GitHub comment payloads point at the **API** PR
 url shape (`/pulls/<n>` for inline comments, `/issues/<n>` for conversation
 comments — on a PR, the issue number IS the PR number), not the html shape the
 locator parses.
 
-Fetching is fail-soft per endpoint: one endpoint erroring (non-2xx or a thrown
-fetch) is logged and treated as empty, so the other two endpoints still yield
-their comments in the same pass. The constructor takes an optional `fetchImpl`
-(`@Optional()`, defaults to global `fetch`) purely so tests can inject a stub
-without touching the network.
+Fetching is fail-soft per endpoint: one endpoint erroring (non-2xx, a thrown
+fetch, or a payload element that isn't a parseable object) is logged at `warn`
+(this runs unattended — a persistent failure must be loud, not buried at
+`debug`) and treated as empty, so the other two endpoints still yield their
+comments in the same pass. The failure is not silently swallowed: the
+endpoint's identifier (`"pulls/comments"`, `"issues/comments"`, or
+`"pulls/<n>/reviews"`) lands in `failedEndpoints`, so the caller can tell an
+endpoint that errored apart from one that legitimately had nothing new — and
+must not advance its ingest cursor past a window it never actually saw. The
+constructor takes an optional `fetchImpl` (`@Optional()`, defaults to global
+`fetch`) purely so tests can inject a stub without touching the network.
 
 Not yet built (later tasks): the `record` call that turns a `FetchedComment`
 into a rule occurrence, the controller/route exposing `listGrounded`/

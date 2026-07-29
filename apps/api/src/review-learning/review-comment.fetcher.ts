@@ -17,6 +17,17 @@ function prNumberFromApiUrl(url: string): number | null {
   return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
+/** Lowercased, with a trailing GitHub App `[bot]` suffix stripped, for comparison. */
+function normalizeLogin(login: string): string {
+  return login.toLowerCase().replace(/\[bot\]$/, "");
+}
+
+/** Case- and `[bot]`-suffix-insensitive: a login is ZIBBY's own regardless of how GitHub renders it. */
+function isSelfAuthored(author: string, selfLogin: string | undefined): boolean {
+  if (!selfLogin) return false;
+  return normalizeLogin(author) === normalizeLogin(selfLogin);
+}
+
 /** Never feed more than this many comments to one nightly pass; the rest carry over. */
 export const MAX_COMMENTS_PER_PASS = 60;
 
@@ -43,6 +54,18 @@ export interface FetchNewInput {
   cursor?: string;
 }
 
+export interface FetchNewResult {
+  comments: FetchedComment[];
+  /**
+   * Endpoint identifiers (`"pulls/comments"`, `"issues/comments"`, or
+   * `"pulls/<n>/reviews"`) whose GitHub read failed this pass. A failed endpoint's
+   * comment window is UNKNOWN, not empty — the caller must not advance its cursor
+   * past a window it never actually saw, or a persistently failing endpoint would
+   * silently and permanently skip every comment that would have landed there.
+   */
+  failedEndpoints: string[];
+}
+
 /** Tolerant shapes — GitHub payloads are read defensively, never schema-parsed. */
 interface RawComment {
   id?: number;
@@ -61,8 +84,11 @@ interface RawComment {
  * BODIES have no `since` variant, so they are fetched per PR (bounded by
  * {@link MAX_REVIEW_PRS}) and filtered locally against the cursor.
  *
- * Fail-soft per endpoint: one failing read is logged and skipped, the rest of the
- * batch still lands. The caller decides whether to advance the cursor.
+ * Fail-soft per endpoint: one failing read is logged (at `warn` — this runs
+ * unattended, so a persistent failure must be loud) and skipped, the rest of the
+ * batch still lands. The failure itself is not swallowed: it comes back in
+ * {@link FetchNewResult.failedEndpoints} so the caller can decide whether it is
+ * still safe to advance its cursor.
  */
 @Injectable()
 export class ReviewCommentFetcher {
@@ -78,22 +104,28 @@ export class ReviewCommentFetcher {
     this.log = logger.child(ReviewCommentFetcher.name);
   }
 
-  async fetchNew(input: FetchNewInput): Promise<FetchedComment[]> {
+  async fetchNew(input: FetchNewInput): Promise<FetchNewResult> {
     const numbers = await this.locator.numbersFor(input.projectId);
-    if (numbers.length === 0) return [];
+    if (numbers.length === 0) return { comments: [], failedEndpoints: [] };
     const own = new Set(numbers);
 
     const since = input.cursor
       ? `?since=${encodeURIComponent(input.cursor)}&per_page=100`
       : "?per_page=100";
     const collected: FetchedComment[] = [];
+    const failedEndpoints: string[] = [];
 
-    for (const [pathSuffix, prefix] of [
-      [`/pulls/comments${since}`, "rc"],
-      [`/issues/comments${since}`, "ic"],
+    for (const [pathSuffix, prefix, endpoint] of [
+      [`/pulls/comments${since}`, "rc", "pulls/comments"],
+      [`/issues/comments${since}`, "ic", "issues/comments"],
     ] as const) {
-      const raw = await this.get(`${GITHUB_API}/repos/${input.repo}${pathSuffix}`, input.token);
-      for (const item of raw) {
+      const { items, failed } = await this.get(
+        `${GITHUB_API}/repos/${input.repo}${pathSuffix}`,
+        input.token,
+        endpoint,
+      );
+      if (failed) failedEndpoints.push(endpoint);
+      for (const item of items) {
         const prNumber = prNumberFromApiUrl(item.pull_request_url ?? item.issue_url ?? "");
         const mapped = this.toComment(item, prefix, prNumber, input);
         if (mapped && own.has(mapped.prNumber)) collected.push(mapped);
@@ -101,11 +133,14 @@ export class ReviewCommentFetcher {
     }
 
     for (const number of numbers.slice(0, MAX_REVIEW_PRS)) {
-      const raw = await this.get(
+      const endpoint = `pulls/${number}/reviews`;
+      const { items, failed } = await this.get(
         `${GITHUB_API}/repos/${input.repo}/pulls/${number}/reviews`,
         input.token,
+        endpoint,
       );
-      for (const item of raw) {
+      if (failed) failedEndpoints.push(endpoint);
+      for (const item of items) {
         const mapped = this.toComment(item, "rv", number, input);
         // `/reviews` ignores `since` — apply the cursor here instead.
         if (mapped && (!input.cursor || mapped.at > input.cursor)) collected.push(mapped);
@@ -122,7 +157,7 @@ export class ReviewCommentFetcher {
         kept: MAX_COMMENTS_PER_PASS,
       });
     }
-    return collected.slice(0, MAX_COMMENTS_PER_PASS);
+    return { comments: collected.slice(0, MAX_COMMENTS_PER_PASS), failedEndpoints };
   }
 
   private toComment(
@@ -135,32 +170,46 @@ export class ReviewCommentFetcher {
     const author = item.user?.login;
     const at = item.submitted_at ?? item.created_at;
     if (item.id === undefined || !body || !author || !at || prNumber === null) return null;
-    if (input.selfLogin && author === input.selfLogin) return null;
+    if (isSelfAuthored(author, input.selfLogin)) return null;
+    // A malformed timestamp must drop this one comment, not throw and discard the
+    // whole pass — `toISOString()` on an invalid Date raises `RangeError`.
+    const parsed = new Date(at);
+    if (Number.isNaN(parsed.getTime())) return null;
     return {
       commentId: `${prefix}-${item.id}`,
       prNumber,
       prUrl: `https://github.com/${input.repo}/pull/${prNumber}`,
       commentUrl: item.html_url ?? `https://github.com/${input.repo}/pull/${prNumber}`,
       author,
-      at: new Date(at).toISOString(),
+      at: parsed.toISOString(),
       body,
     };
   }
 
-  private async get(url: string, token: string): Promise<RawComment[]> {
+  private async get(
+    url: string,
+    token: string,
+    endpoint: string,
+  ): Promise<{ items: RawComment[]; failed: boolean }> {
     try {
       const res = await this.fetchImpl(url, {
         headers: { authorization: `Bearer ${token}`, accept: "application/vnd.github+json" },
       });
       if (!res.ok) {
-        this.log.debug("review comment fetch failed", { url, status: res.status });
-        return [];
+        this.log.warn("review comment fetch failed", { url, endpoint, status: res.status });
+        return { items: [], failed: true };
       }
       const body: unknown = await res.json();
-      return Array.isArray(body) ? (body as RawComment[]) : [];
+      if (!Array.isArray(body)) return { items: [], failed: false };
+      // Defensive: a `null`/non-object array element must be filtered, not crash
+      // the field reads in `toComment` (GitHub payloads are never schema-parsed).
+      const items = body.filter(
+        (element): element is RawComment => typeof element === "object" && element !== null,
+      );
+      return { items, failed: false };
     } catch (err) {
-      this.log.debug("review comment fetch threw", { url, error: String(err) });
-      return [];
+      this.log.warn("review comment fetch threw", { url, endpoint, error: String(err) });
+      return { items: [], failed: true };
     }
   }
 }
