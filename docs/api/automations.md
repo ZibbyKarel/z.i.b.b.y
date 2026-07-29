@@ -160,8 +160,7 @@ when the config changes.
    - `gap-detect` → `GapDetectorService.detect()`
    - `agent-factory` → `AgentFactoryService.detect()`
    - `review-learn` → `ReviewLearningService.learn()`, ref `review-rules:<observations>`
-   - `task` → `TaskSchedulerService.createTask({ text, target, attachmentSetId,
-output, toolGrants }, now, undefined, target, background: false)` (Phase 116b)
+   - `task` → `TaskSchedulerService.createTask({ text, target, attachmentSetId, output, toolGrants }, now, undefined, target, background: false)` (Phase 116b)
 4. Updates `lastFiredAt = now` (idempotence — a double fire within the same
    minute is safe).
 5. Logs the fire; missed triggers are skipped, not caught up.
