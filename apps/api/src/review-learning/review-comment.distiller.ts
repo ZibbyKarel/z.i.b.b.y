@@ -334,6 +334,64 @@ export type DistillOutcome =
     };
 
 /**
+ * Owns the `for (const chunk of chunks)` loop: calls `runCli` for each chunk,
+ * parses its reply, and folds the results into one {@link DistillOutcome}.
+ * Exported standalone (mirrors {@link logDroppedObservations}) so a test can
+ * drive it with a fake `runCli` — without spawning `claude` and without
+ * depending on the `VITEST` guard, which short-circuits {@link
+ * ReviewCommentDistiller.distill} before this loop is ever reached.
+ *
+ * `batchIds` for {@link parseDistillOutput} is computed PER CHUNK, not over
+ * the whole pass — a comment body in chunk N must not be able to name a
+ * `commentId` belonging to chunk 1 and have that pass validation; the model
+ * that produced the observation never saw the comment it would resolve
+ * against.
+ */
+export async function distillChunks(
+  chunks: FetchedComment[][],
+  known: Array<{ id: string; rule: string }>,
+  runCli: (chunk: FetchedComment[]) => Promise<string>,
+  log: ScopedLogger,
+): Promise<DistillOutcome> {
+  const observations: DistilledObservation[] = [];
+  let incomplete: DistillIncompleteReason | undefined;
+
+  for (const chunk of chunks) {
+    let raw: string;
+    try {
+      raw = await runCli(chunk);
+    } catch (err) {
+      // `warn`, not `debug`: this runs unattended, and a missing/failing CLI is
+      // an actual malfunction — the same class of event the fetcher warns about,
+      // and the difference between "the feature is quietly broken" and "the
+      // feature had nothing to say". It is also what holds the cursor, so a
+      // silent version of this line makes an un-advancing cursor undiagnosable.
+      log.warn("review distiller CLI call failed — cursor will be held", {
+        error: (err as Error).message,
+        comments: chunk.length,
+      });
+      incomplete ??= "cli-failed";
+      continue;
+    }
+
+    const batchIds = new Set(chunk.map((c) => c.commentId));
+    const result = parseDistillOutput(unwrapCliJson(raw), batchIds);
+    logDroppedObservations(log, result.dropped);
+    if (!result.usable) {
+      log.warn("review distiller reply was unusable — cursor will be held", {
+        comments: chunk.length,
+      });
+      incomplete ??= "unusable-reply";
+    }
+    observations.push(...result.observations);
+  }
+
+  return incomplete
+    ? { status: "incomplete", observations, reason: incomplete }
+    : { status: "ok", observations };
+}
+
+/**
  * The cheap-model pass that turns review comments into candidate rules. Copies
  * {@link ClaudeCliDistiller}'s shape exactly — `--model haiku --output-format json`,
  * the same `VITEST` guard so tests never spawn claude, fence-tolerant parse, strict
@@ -358,14 +416,12 @@ export class ReviewCommentDistiller {
     }
     if (comments.length === 0) return { status: "ok", observations: [] };
 
-    const batchIds = new Set(comments.map((c) => c.commentId));
-    const observations: DistilledObservation[] = [];
-    let incomplete: DistillIncompleteReason | undefined;
-
-    for (const chunk of chunkForArgvBudget(comments, known)) {
-      let raw: string;
-      try {
-        raw = await spawnClaudeCli({
+    const chunks = chunkForArgvBudget(comments, known);
+    return distillChunks(
+      chunks,
+      known,
+      (chunk) =>
+        spawnClaudeCli({
           args: [
             "-p",
             buildDistillPrompt(chunk, known),
@@ -376,35 +432,9 @@ export class ReviewCommentDistiller {
           ],
           timeoutMs: DISTILLER_TIMEOUT_MS,
           label: "review-learner",
-        });
-      } catch (err) {
-        // `warn`, not `debug`: this runs unattended, and a missing/failing CLI is
-        // an actual malfunction — the same class of event the fetcher warns about,
-        // and the difference between "the feature is quietly broken" and "the
-        // feature had nothing to say". It is also what holds the cursor, so a
-        // silent version of this line makes an un-advancing cursor undiagnosable.
-        this.log.warn("review distiller CLI call failed — cursor will be held", {
-          error: (err as Error).message,
-          comments: chunk.length,
-        });
-        incomplete ??= "cli-failed";
-        continue;
-      }
-
-      const result = parseDistillOutput(unwrapCliJson(raw), batchIds);
-      logDroppedObservations(this.log, result.dropped);
-      if (!result.usable) {
-        this.log.warn("review distiller reply was unusable — cursor will be held", {
-          comments: chunk.length,
-        });
-        incomplete ??= "unusable-reply";
-      }
-      observations.push(...result.observations);
-    }
-
-    return incomplete
-      ? { status: "incomplete", observations, reason: incomplete }
-      : { status: "ok", observations };
+        }),
+      this.log,
+    );
   }
 }
 

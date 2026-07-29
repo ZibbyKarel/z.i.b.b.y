@@ -5,6 +5,7 @@ import {
   ReviewCommentDistiller,
   buildDistillPrompt,
   chunkForArgvBudget,
+  distillChunks,
   logDroppedObservations,
   parseDistillOutput,
 } from "./review-comment.distiller";
@@ -369,6 +370,141 @@ describe("logDroppedObservations", () => {
     logDroppedObservations(log, 0);
 
     expect(warn).not.toHaveBeenCalled();
+  });
+});
+
+describe("distillChunks", () => {
+  function commentFor(id: string): FetchedComment {
+    return { ...COMMENT, commentId: id };
+  }
+
+  /** A fake `ScopedLogger` whose `warn`/`debug` calls a test can assert on. */
+  function fakeLog(): {
+    log: ScopedLogger;
+    warn: ReturnType<typeof vi.fn>;
+    debug: ReturnType<typeof vi.fn>;
+  } {
+    const warn = vi.fn();
+    const debug = vi.fn();
+    const log = { warn, debug, info: vi.fn(), error: vi.fn() } as unknown as ScopedLogger;
+    return { log, warn, debug };
+  }
+
+  function usableReply(commentId: string): string {
+    return JSON.stringify({
+      observations: [{ commentId, slug: `slug-${commentId}`, rule: "y", actionable: true }],
+    });
+  }
+
+  it("one chunk fails, two succeed → status incomplete, reason cli-failed, and the good chunks' observations survive", async () => {
+    const chunks = [[commentFor("rc-1")], [commentFor("rc-2")], [commentFor("rc-3")]];
+    const runCli = vi.fn(async (chunk: FetchedComment[]) => {
+      const id = chunk[0]?.commentId;
+      if (id === "rc-1") throw new Error("boom");
+      return usableReply(id ?? "");
+    });
+    const { log } = fakeLog();
+
+    const result = await distillChunks(chunks, [], runCli, log);
+
+    expect(result.status).toBe("incomplete");
+    expect(result.status === "incomplete" && result.reason).toBe("cli-failed");
+    expect(result.observations).toEqual([
+      { commentId: "rc-2", slug: "slug-rc-2", rule: "y", scopeHint: "project" },
+      { commentId: "rc-3", slug: "slug-rc-3", rule: "y", scopeHint: "project" },
+    ]);
+  });
+
+  it("one chunk returns an unusable reply, others fine → status incomplete, reason unusable-reply, siblings' observations kept", async () => {
+    const chunks = [[commentFor("rc-1")], [commentFor("rc-2")], [commentFor("rc-3")]];
+    const runCli = vi.fn(async (chunk: FetchedComment[]) => {
+      const id = chunk[0]?.commentId;
+      if (id === "rc-2") return "not json";
+      return usableReply(id ?? "");
+    });
+    const { log } = fakeLog();
+
+    const result = await distillChunks(chunks, [], runCli, log);
+
+    expect(result.status).toBe("incomplete");
+    expect(result.status === "incomplete" && result.reason).toBe("unusable-reply");
+    expect(result.observations).toEqual([
+      { commentId: "rc-1", slug: "slug-rc-1", rule: "y", scopeHint: "project" },
+      { commentId: "rc-3", slug: "slug-rc-3", rule: "y", scopeHint: "project" },
+    ]);
+  });
+
+  it("every chunk clean → status ok, including the all-clean-but-empty case", async () => {
+    const chunks = [[commentFor("rc-1")], [commentFor("rc-2")]];
+    const runCli = vi.fn(async (chunk: FetchedComment[]) => {
+      const id = chunk[0]?.commentId;
+      // rc-2's chunk replies cleanly but with nothing actionable — usable,
+      // just empty. Must not be conflated with a failure.
+      if (id === "rc-2") return JSON.stringify({ observations: [] });
+      return usableReply(id ?? "");
+    });
+    const { log } = fakeLog();
+
+    const result = await distillChunks(chunks, [], runCli, log);
+
+    expect(result.status).toBe("ok");
+    expect(result.observations).toEqual([
+      { commentId: "rc-1", slug: "slug-rc-1", rule: "y", scopeHint: "project" },
+    ]);
+  });
+
+  it("reason is first-failure-wins — a cli-failed chunk followed by an unusable-reply chunk reports cli-failed", async () => {
+    const chunks = [[commentFor("rc-1")], [commentFor("rc-2")]];
+    const runCli = vi.fn(async (chunk: FetchedComment[]) => {
+      const id = chunk[0]?.commentId;
+      if (id === "rc-1") throw new Error("boom");
+      return "not json"; // unusable-reply
+    });
+    const { log } = fakeLog();
+
+    const result = await distillChunks(chunks, [], runCli, log);
+
+    expect(result.status).toBe("incomplete");
+    expect(result.status === "incomplete" && result.reason).toBe("cli-failed");
+  });
+
+  it("logs the CLI failure at warn, not debug", async () => {
+    const chunks = [[commentFor("rc-1")]];
+    const runCli = vi.fn(async () => {
+      throw new Error("boom");
+    });
+    const { log, warn, debug } = fakeLog();
+
+    await distillChunks(chunks, [], runCli, log);
+
+    expect(warn).toHaveBeenCalledWith(
+      "review distiller CLI call failed — cursor will be held",
+      expect.objectContaining({ error: "boom", comments: 1 }),
+    );
+    expect(debug).not.toHaveBeenCalled();
+  });
+
+  it("computes batchIds PER CHUNK — an observation naming a commentId from a different chunk is dropped, one naming a comment in its own chunk survives", async () => {
+    const chunks = [[commentFor("rc-1")], [commentFor("rc-2")]];
+    const runCli = vi.fn(async (chunk: FetchedComment[]) => {
+      const id = chunk[0]?.commentId;
+      if (id === "rc-1") {
+        // Names a comment in its OWN chunk — must survive.
+        return usableReply("rc-1");
+      }
+      // rc-2's chunk names "rc-1", which belongs to a DIFFERENT chunk — the
+      // model that produced this reply never saw that comment. Must be
+      // dropped. Against a whole-batch `batchIds` set this would incorrectly
+      // pass, since "rc-1" is a valid id somewhere in the overall pass.
+      return usableReply("rc-1");
+    });
+    const { log } = fakeLog();
+
+    const result = await distillChunks(chunks, [], runCli, log);
+
+    expect(result.observations).toEqual([
+      { commentId: "rc-1", slug: "slug-rc-1", rule: "y", scopeHint: "project" },
+    ]);
   });
 });
 
