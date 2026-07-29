@@ -57,36 +57,33 @@ export const SystemConfigSchema = z
     /**
      * System-wide ceiling on concurrently running tasks (125c) — checked
      * alongside a project's own `maxConcurrent` (`ProjectBudget`), never
-     * instead of it. `null` (default) means no global cap: today's behaviour,
-     * where only a project's own budget can queue a dispatch. Editable from
-     * `/settings?tab=runtime`; read live (never cached) by
+     * instead of it. This is THE concurrency knob: "how many things may be
+     * implemented at once". Roadmap auto-pickup deliberately has none of its
+     * own — the gate enqueues and releases everything unblocked, and this cap
+     * is what decides how many of those releases actually run vs. sit
+     * `queued`. A second, roadmap-only cap was tried and removed: two numbers
+     * that both read as "how many at once" are indistinguishable in
+     * `/settings` and can only disagree.
+     *
+     * Defaults to `3` rather than `null`. `null` (uncapped) is still allowed —
+     * clearing the field in `/settings?tab=runtime` restores it — but it is a
+     * poor default now that a single `autoPlay` toggle can release a whole
+     * twenty-task epic at once. Read live (never cached) by
      * `TaskSchedulerService.atCapacity`.
      */
-    maxConcurrentRuns: z.number().int().positive().nullable().default(null),
+    maxConcurrentRuns: z.number().int().positive().nullable().default(3),
     /**
      * Roadmap auto-sync + gate-poll heartbeat (ms, 125h) — each tick re-syncs
      * every project whose roadmap config has `autoSync: true`
      * (`RoadmapSourceService.sync`) and, for every project with a roadmap,
      * drives `RoadmapGateService.reconcileRunning`/`reconcileAwaitingMerge`
      * (the poll half of the two release signals — a PR merged directly on
-     * GitHub still releases its dependents even with auto-sync off). `0`
-     * disables. Editable from `/settings?tab=runtime`; read live (never
-     * cached) via `SystemConfigStore.current()`.
+     * GitHub still releases its dependents even with auto-sync off), then runs
+     * auto-pickup for every project with `autoPlay: true`. `0` disables.
+     * Editable from `/settings?tab=runtime`; read live (never cached) via
+     * `SystemConfigStore.current()`.
      */
     roadmapTickMs: z.number().int().min(0).default(60_000),
-    /**
-     * How many roadmap items may be `running` at once, across every project —
-     * the ceiling `RoadmapGateService.drain` releases up to, for the MANUAL
-     * `play`/`playBulk` path and the auto-pickup tick alike (one gate, one
-     * rule). Deliberately separate from `maxConcurrentRuns` above: that one is
-     * the global ceiling on every run of any kind and defaults to "no cap", so
-     * folding roadmap work into it would let a 20-task epic starve an ad-hoc
-     * task dispatched from chat. Counts `running` ONLY — an `awaiting-merge`
-     * item's run has already finished and consumes nothing, so it frees its
-     * slot immediately rather than holding the roadmap hostage to an unmerged
-     * PR. Editable from `/settings?tab=runtime`; read live (never cached).
-     */
-    maxConcurrentRoadmapRuns: z.number().int().positive().default(3),
   })
   .strict();
 export type SystemConfig = z.infer<typeof SystemConfigSchema>;

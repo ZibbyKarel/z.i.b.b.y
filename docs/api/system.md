@@ -43,13 +43,20 @@ system-config section — link there rather than duplicating the table here.
    `goalAutoResume` is only read at boot, so it applies on the _next_ start,
    not immediately.
    - `maxConcurrentRuns` (Phase 125c) is the system-wide ceiling on
-     concurrently running tasks — `null`, the default, means uncapped and
-     preserves the pre-125c behaviour exactly. It is nullable rather than
-     optional because `SystemConfigSchema` is `.strict()` and every field
-     needs a default; `null` reads as "no override", mirroring `ttsVoice`.
-     The scheduler reads it at use time (never caches it in a field), which
-     is what makes a save apply to the very next dispatch. Enforcement lives
-     in `TaskSchedulerService` — see [tasks.md](./tasks.md).
+     concurrently running tasks — the single answer to "how many things may be
+     implemented at once", covering manually dispatched work, roadmap releases
+     and auto-pickup alike. It defaults to **`3`**; `null` (uncapped, the
+     original 125c default) is still selectable by clearing the field. The
+     default changed when roadmap auto-pickup landed: a roadmap-only cap was
+     built alongside it and then removed, because two knobs that both read as
+     "how many at once" are indistinguishable in `/settings` and can only
+     disagree — so the roadmap gate releases everything unblocked and this cap
+     is what actually throttles. Nullable rather than optional because
+     `SystemConfigSchema` is `.strict()` and every field needs a default;
+     `null` reads as "no override", mirroring `ttsVoice`. The scheduler reads
+     it at use time (never caches it in a field), which is what makes a save
+     apply to the very next dispatch. Enforcement lives in
+     `TaskSchedulerService` — see [tasks.md](./tasks.md).
    - `roadmapTickMs` (Phase 125h) is `RoadmapTickService`'s heartbeat —
      `60_000` by default, `0` disables, re-arms live via `onChange()` like the
      other `*TickMs` knobs. Each tick re-syncs every project whose roadmap
@@ -60,15 +67,6 @@ system-config section — link there rather than duplicating the table here.
      merged directly on GitHub, where the eager `recordMerge` hook never
      fires), then runs auto-pickup for every project with `autoPlay: true`.
      See [roadmap.md](./roadmap.md).
-   - `maxConcurrentRoadmapRuns` is the ceiling on roadmap items that may be
-     `running` at once, across every project — `3` by default, read live by
-     `RoadmapGateService.drain` for the manual `play`/`playBulk` path and the
-     auto-pickup tick alike (one gate, one rule). Deliberately separate from
-     `maxConcurrentRuns` above: that one caps runs of every kind and defaults
-     to uncapped, so folding roadmap work into it would let a 20-task epic
-     starve an ad-hoc task dispatched from chat. Counts `running` **only** —
-     an `awaiting-merge` item's run has already finished and frees its slot
-     immediately, so the queue never stalls behind an unmerged PR.
 4. `GET /system/config` / `PUT /system/config` are the only two endpoints;
    `putConfig` replaces the entire document (not a partial patch).
 

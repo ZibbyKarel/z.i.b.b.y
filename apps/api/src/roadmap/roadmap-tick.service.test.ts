@@ -285,7 +285,6 @@ describe("RoadmapTickService", () => {
         activity as never,
         // 125g's decomposition service — unused by this poll-path test.
         {} as never,
-        fakeSystemConfigStore(),
         fakeLogger as never,
       );
 

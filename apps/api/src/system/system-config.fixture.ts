@@ -15,17 +15,14 @@ export const TEST_SYSTEM_CONFIG: SystemConfig = SystemConfigSchema.parse({
   monitorTickMs: 0,
   automationTickMs: 0,
   limitResumeTickMs: 0,
-  // 125c: uncapped by default (today's behaviour) — a test opts into the global
-  // cap via `fakeSystemConfigStore({ maxConcurrentRuns: N })`.
+  // Uncapped in tests, deliberately UNLIKE the production default of 3: a suite
+  // that isn't ABOUT concurrency must not have its dispatches silently queued.
+  // A test that IS about the cap opts in via
+  // `fakeSystemConfigStore({ maxConcurrentRuns: N })`.
   maxConcurrentRuns: null,
   // 125h: off by default, same posture as every other tick — a suite drives
   // `RoadmapTickService.tick()` directly.
   roadmapTickMs: 0,
-  // Effectively uncapped by default, same posture as `maxConcurrentRuns` above:
-  // a gate suite that isn't ABOUT concurrency must not have its releases
-  // silently truncated by the production default of 3. A test that IS about the
-  // cap opts in via `fakeSystemConfigStore({ maxConcurrentRoadmapRuns: N })`.
-  maxConcurrentRoadmapRuns: 1_000,
 });
 
 /**

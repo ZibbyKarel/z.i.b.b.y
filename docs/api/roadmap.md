@@ -10,8 +10,8 @@ merge signals, lifecycle completion, Tier-3 override, restart/resume),
 **125g** (epic decomposition: the artifact contract, the dedicated agent, the
 deterministic ingest) and **125h** (the auto-sync + gate-poll tick, the
 roadmap tab's Sync button, and — layered on top — auto-pickup: the `autoPlay`
-toggle, the `maxConcurrentRoadmapRuns` cap, and the "Automatizace roadmapy"
-panel on the project's Integrations tab). See
+toggle and the "Automatizace roadmapy" panel on the project's Integrations
+tab). See
 `docs/plans/phase-125-project-roadmap.md` for the full master plan (the UI in
 125d/f).
 
@@ -384,27 +384,21 @@ reimplemented. A drain is locked per project (`withPathLock`, key
 `roadmap-gate:<projectId>`) so two triggers racing (an operator's play and an
 in-flight `onMerge`, say) can never both decide to release the same item.
 
-A drain also stops at `systemConfig.maxConcurrentRoadmapRuns` (default `3`):
+**Concurrency is deliberately NOT this gate's job.** A drain releases every
+unblocked item it finds, however many that is. A roadmap-only cap
+(`maxConcurrentRoadmapRuns`) was built and then removed: "how many roadmap
+items may run at once" and 125c's `maxConcurrentRuns` are the same question
+asked twice, and two such numbers in `/settings?tab=runtime` are
+indistinguishable to the operator and can only disagree. The single ceiling is
+`maxConcurrentRuns` (now defaulting to `3` rather than `null`, precisely
+because one `autoPlay` toggle can release a whole twenty-task epic), enforced
+by `TaskSchedulerService.atCapacity` on the tasks these releases create.
 
-```
-slots = maxConcurrentRoadmapRuns - (items with lifecycle "running").length
-```
-
-and it releases at most `slots` items this pass, leaving the rest `enqueued`
-for the next trigger. Deliberately **separate from 125c's `maxConcurrentRuns`**,
-which is the global ceiling on runs of every kind and defaults to "no cap":
-folding roadmap work into it would let a 20-task epic starve an ad-hoc task
-dispatched from chat. It counts `running` **only** — an `awaiting-merge` item's
-run has already finished, so it frees its slot immediately rather than holding
-the whole roadmap hostage to an unmerged PR. The cap is one gate with one rule:
-it applies to the manual `play`/`playBulk` path exactly as it does to the tick's
-auto-pickup, since both funnel through `drain`.
-
-What the cap is _not_: `createTask` still decides whether a released item's task
-dispatches immediately or gets queued/held by `TaskSchedulerService`'s own
-capacity guard, and either way the roadmap item is `running` the moment its
-`ScheduledTask` exists — the task's subsequent queued-vs-dispatched fate is the
-scheduler's business, not the gate's.
+The visible consequence: a released item is `running` the moment its
+`ScheduledTask` exists, even while the scheduler holds that task `queued`. So a
+bulk play of twenty puts twenty cards in IN PROGRESS while three actually
+execute. That is the scheduler's business, not the gate's — the board reflects
+"dispatched", the scheduler decides "started".
 
 ### Play → task (release)
 
@@ -548,9 +542,10 @@ throwing pickup, and a throwing `readConfig` are each caught per project.
 
 For an opted-in project, one pass does two things:
 
-- **`playBulk` every unblocked `todo` task.** Everything eligible is enqueued at
-  once; how many actually _start_ is `maxConcurrentRoadmapRuns`' business (see the
-  gate section above), so the queue is always full and the cap is the only throttle.
+- **`playBulk` every unblocked `todo` task.** Everything eligible is picked up at
+  once — pickup itself is not rationed. How many of those tasks actually _execute_
+  is `maxConcurrentRuns`' business (see the gate section above): the one ceiling,
+  applied downstream by the scheduler.
   Items already `enqueued`/`running`/`awaiting-merge`/`done` are untouched, and so
   are `failed` ones — auto-restarting a failure is how you get a token-burning loop
   on a task that will never pass, so recovery stays the operator's `restart`/`resume`

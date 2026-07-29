@@ -7,7 +7,6 @@ import { ProjectPrService } from "../projects/project-pr.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { withPathLock } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
-import { SystemConfigStore } from "../system/system-config.store";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
 import { TaskRunsService } from "../tasks/task-runs.service";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
@@ -46,15 +45,17 @@ export function parsePrNumberFromUrl(url: string): number | undefined {
  *
  * **The gate.** {@link drain} lists a project's `enqueued` items, sorts them FIFO by
  * `enqueuedAt`, and releases (creates a task for) every one NOT `isBlocked` (imported
- * from `@zibby/contracts`, never reimplemented) until `systemConfig.
- * maxConcurrentRoadmapRuns` slots are full. That cap counts `running` items ONLY
- * (an `awaiting-merge` item's run has already finished — see the field's own
- * docblock) and applies to the manual and auto paths alike: one gate, one rule, so
- * a bulk-play of twenty enqueues twenty and starts three. It is deliberately NOT
- * 125c's `maxConcurrentRuns`, which caps runs of every kind and defaults to no cap
- * at all; `TaskSchedulerService.createTask` still applies that one on top, and
- * still decides whether a release dispatches immediately or gets queued/held —
- * either way the roadmap item is `running` the moment its task exists.
+ * from `@zibby/contracts`, never reimplemented). It asks one question only — "are
+ * this item's dependencies done" — and answers it for as many items as qualify.
+ *
+ * **Concurrency is deliberately NOT this gate's job.** A roadmap-only cap was tried
+ * and removed: "how many roadmap items may run" and 125c's `maxConcurrentRuns` are
+ * the same question asked twice, and two such numbers in `/settings` can only
+ * confuse or disagree. `TaskSchedulerService.createTask` owns it — it decides
+ * whether a release dispatches immediately or gets `queued`/held, and it is what
+ * keeps an `autoPlay` project from starting a whole twenty-task epic at once. Either
+ * way the roadmap item is `running` the moment its task exists; the task's own
+ * queued-vs-dispatched fate is the scheduler's business.
  *
  * **Lifecycle completion** (`running` → `awaiting-merge`/`done`/`failed`) is driven
  * by {@link reconcileRunning}, which reads the gate-created task's own `outcome` —
@@ -83,7 +84,6 @@ export class RoadmapGateService {
     @Inject(forwardRef(() => ProjectPrService)) private readonly projectPr: ProjectPrService,
     private readonly activity: ActivityLogService,
     private readonly decomposition: RoadmapDecompositionService,
-    private readonly systemConfig: SystemConfigStore,
     logger: LoggerService,
   ) {
     this.log = logger.child(RoadmapGateService.name);
@@ -389,13 +389,13 @@ export class RoadmapGateService {
    */
   async reconcileRunning(projectId: string): Promise<void> {
     const items = await this.roadmap.list(projectId);
-    let anyFreed = false;
+    let anyDone = false;
     for (const item of items) {
       if (item.lifecycle !== "running") continue;
       const last = item.runs[item.runs.length - 1];
       if (!last) continue;
       try {
-        if (await this.reconcileOne(projectId, item, last)) anyFreed = true;
+        if (await this.reconcileOne(projectId, item, last)) anyDone = true;
       } catch (error) {
         this.log.warn("roadmap running-item reconcile failed — stays running", {
           projectId,
@@ -404,15 +404,14 @@ export class RoadmapGateService {
         });
       }
     }
-    // Drain on ANY item leaving `running`, not just on `done`: under
-    // `maxConcurrentRoadmapRuns` a move to `awaiting-merge` or `failed` frees a slot
-    // exactly as a `done` does, and skipping the drain there would stall the queue
-    // behind PRs nobody has merged yet.
-    if (anyFreed) await this.drain(projectId);
+    // `done` only: `isBlocked` clears a dependency edge exactly when the blocker
+    // reaches `done`, so a move to `awaiting-merge` or `failed` unblocks nobody and
+    // a drain there would have nothing to release.
+    if (anyDone) await this.drain(projectId);
   }
 
-  /** Returns `true` when the item LEFT `running` — done, failed, or awaiting-merge
-   * alike, since each frees a concurrency slot for the caller's drain. */
+  /** Returns `true` when the item reached `done` — the only transition that can
+   * unblock a dependent, and so the only one worth a drain. */
   private async reconcileOne(
     projectId: string,
     item: RoadmapItem,
@@ -423,13 +422,13 @@ export class RoadmapGateService {
 
     if (task.outcome.status === "error") {
       await this.markFailed(projectId, item.id, last);
-      return true;
+      return false;
     }
 
     const prUrl = task.outcome.pr?.url;
     if (prUrl) {
       await this.markAwaitingMerge(projectId, item.id, last, prUrl);
-      return true;
+      return false;
     }
     if (task.output?.type === "file") {
       await this.markDone(projectId, item.id, last);
@@ -439,7 +438,7 @@ export class RoadmapGateService {
     // choice) and got neither — no artifact, so the item failed (master plan:
     // "No artifact / errored → failed").
     await this.markFailed(projectId, item.id, last);
-    return true;
+    return false;
   }
 
   // ---------------------------------------------------------------------
@@ -461,16 +460,14 @@ export class RoadmapGateService {
   }
 
   /**
-   * Release unblocked `enqueued` items in a project, FIFO by `enqueuedAt`, up to
-   * the free-slot count under `systemConfig.maxConcurrentRoadmapRuns`. Locked per
-   * project (`roadmap-gate:<projectId>`) so two triggers racing (e.g. an operator's
-   * `play` and an in-flight `onMerge`) can never both decide to release the same
-   * item — which is also what makes the slot arithmetic sound, since no other drain
-   * can release into the same slots while this one is counting.
+   * Release every unblocked `enqueued` item in a project, FIFO by `enqueuedAt`.
+   * Locked per project (`roadmap-gate:<projectId>`) so two triggers racing (e.g. an
+   * operator's `play` and an in-flight `onMerge`) can never both decide to release
+   * the same item.
    *
-   * Items over the cap simply stay `enqueued`; every path that frees a slot
-   * ({@link reconcileRunning}) drains again, so the queue keeps moving without a
-   * dedicated retry timer.
+   * No throttle here on purpose — see the class docblock: `TaskSchedulerService`'s
+   * `maxConcurrentRuns` is the one concurrency ceiling, and it applies to the tasks
+   * these releases create.
    */
   private async drain(projectId: string): Promise<void> {
     return withPathLock(`roadmap-gate:${projectId}`, async () => {
@@ -478,22 +475,13 @@ export class RoadmapGateService {
       if (!project) return; // project gone — nothing to dispatch into; items stay enqueued
       const items = await this.roadmap.list(projectId);
       const get = (id: string) => items.find((i) => i.id === id);
-      // `running` only — an `awaiting-merge` item finished its run and holds no slot.
-      let slots =
-        this.systemConfig.current().maxConcurrentRoadmapRuns -
-        items.filter((i) => i.lifecycle === "running").length;
-      if (slots <= 0) return;
       const enqueued = items
         .filter((i) => i.lifecycle === "enqueued")
         .sort((a, b) => (a.enqueuedAt ?? "").localeCompare(b.enqueuedAt ?? ""));
       for (const item of enqueued) {
-        if (slots <= 0) break;
         if (isBlocked(item, get)) continue;
         try {
           await this.release(project, item, items);
-          // Only a release that actually produced a running task takes a slot; the
-          // catch below leaves the item `failed`, with nothing running to account for.
-          slots -= 1;
         } catch (error) {
           await this.markReleaseFailed(projectId, item.id, error);
         }
