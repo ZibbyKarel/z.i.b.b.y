@@ -13,7 +13,7 @@ function githubIntegration(projectId: string, repo: string): Integration {
     enabled: true,
     status: "connected",
     hasCredentials: true,
-    config: { kind: "github", repo, streams: ["issues", "pulls"] },
+    config: { kind: "github", repo, streams: ["issues", "pulls"], username: "octocat" },
   };
 }
 

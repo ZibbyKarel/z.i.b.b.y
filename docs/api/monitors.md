@@ -1,5 +1,9 @@
 # Monitors — CI/CD status alerts (N3)
 
+<!-- Reviewed 2026-07-29 (roadmap-sync-mine arc): the monitors changes this session
+were test-fixture-only (the now-required `GitHubConfig.username`); monitor
+behaviour is unchanged. This doc remains accurate. -->
+
 A monitor watches **the state of the world** (a red build), not a
 conversation — its events are alerts, never messages to reply to. The
 `MonitorAdapter` seam (`apps/api/src/monitors/monitor-adapter.ts`) is

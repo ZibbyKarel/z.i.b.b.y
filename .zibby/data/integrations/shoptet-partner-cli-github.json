@@ -1,1 +1,14 @@
-{"id":"shoptet-partner-cli-github","kind":"github","projectId":"shoptet-partner-cli","name":"Shoptet Partner CLI Github","enabled":true,"config":{"kind":"github","repo":"git@github.com:shoptet/partner-cli.git","streams":["pulls"],"username":"zibbykarel@gmail.com"},"ownerSubsystem":"puls"}
+{
+  "id": "shoptet-partner-cli-github",
+  "kind": "github",
+  "projectId": "shoptet-partner-cli",
+  "name": "Shoptet Partner CLI Github",
+  "enabled": true,
+  "config": {
+    "kind": "github",
+    "repo": "shoptet/partner-cli",
+    "streams": ["pulls"],
+    "username": "ZibbyKarel"
+  },
+  "ownerSubsystem": "puls"
+}

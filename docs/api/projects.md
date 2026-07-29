@@ -1,5 +1,10 @@
 # Projects (the target-directory registry + per-project services)
 
+<!-- Reviewed 2026-07-29 (roadmap-sync-mine arc): the projects change this session
+was test-fixture-only (the now-required `GitHubConfig.username` in
+project-pr.service.test.ts); ProjectPrService behaviour is unchanged. This doc
+remains accurate. -->
+
 The catalog of target directories agents, skills and pipelines run against.
 A project is a **registry entry** (`_projects.json`), not files of its own —
 deleting a project removes only the registry record, never the files it

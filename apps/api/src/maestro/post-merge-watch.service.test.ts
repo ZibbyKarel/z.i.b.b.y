@@ -18,7 +18,7 @@ const GITHUB_INTEGRATION: Integration = {
   enabled: true,
   status: "connected",
   hasCredentials: true,
-  config: { kind: "github", repo: "acme/app", streams: ["issues", "pulls"] },
+  config: { kind: "github", repo: "acme/app", streams: ["issues", "pulls"], username: "octocat" },
 };
 
 const jsonResponse = (status: number, body: unknown) =>

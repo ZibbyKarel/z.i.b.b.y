@@ -70,3 +70,46 @@ describe("IntegrationFormFields — sentry kind", () => {
     expect(screen.getByTestId(IntegrationFormTestId.Submit)).toBeDisabled();
   });
 });
+
+/**
+ * 2026-07-29 design (`source-picker` + "mine" scoping) — `username` is now
+ * required on the GitHub config so sync can scope to `assignee:<username>`.
+ */
+describe("IntegrationFormFields — github kind", () => {
+  async function selectGithub() {
+    await userEvent.click(screen.getAllByTestId("dropdown-trigger")[0]!);
+    await userEvent.click(screen.getByText("GitHub"));
+  }
+
+  it("blocks save until repo and username are both filled in", async () => {
+    render(<IntegrationFormDialog onClose={vi.fn()} onCreate={vi.fn()} projectId="acme-app" />);
+    await selectGithub();
+
+    await userEvent.type(screen.getByTestId("integration-id"), "acme-github");
+    await userEvent.type(screen.getByTestId(IntegrationFormTestId.GithubRepo), "acme/repo");
+    expect(screen.getByTestId(IntegrationFormTestId.Submit)).toBeDisabled();
+
+    await userEvent.type(screen.getByTestId(IntegrationFormTestId.GithubUsername), "octocat");
+    expect(screen.getByTestId(IntegrationFormTestId.Submit)).toBeEnabled();
+  });
+
+  it("buildCreate() always includes username in the GitHubConfig", async () => {
+    const onSubmit = vi.fn();
+    render(<IntegrationFormDialog onClose={vi.fn()} onCreate={onSubmit} projectId="acme-app" />);
+    await selectGithub();
+
+    await userEvent.type(screen.getByTestId("integration-id"), "acme-github");
+    await userEvent.type(screen.getByTestId(IntegrationFormTestId.GithubRepo), "acme/repo");
+    await userEvent.type(screen.getByTestId(IntegrationFormTestId.GithubUsername), "octocat");
+    await userEvent.click(screen.getByTestId(IntegrationFormTestId.Submit));
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    const draft = onSubmit.mock.calls[0]![0];
+    expect(draft.create.config).toEqual({
+      kind: "github",
+      repo: "acme/repo",
+      streams: ["issues", "pulls"],
+      username: "octocat",
+    });
+  });
+});

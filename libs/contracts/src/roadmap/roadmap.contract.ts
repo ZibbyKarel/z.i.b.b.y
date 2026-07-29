@@ -11,7 +11,7 @@ import {
   UpdateRoadmapItemSchema,
 } from "./roadmap-item.schema";
 import { OverrideRoadmapItemSchema, PlayRoadmapItemsSchema } from "./roadmap-play.schema";
-import { RoadmapSyncResultSchema } from "./roadmap-sync.schema";
+import { RoadmapSyncResultSchema, SyncRoadmapItemsSchema } from "./roadmap-sync.schema";
 
 const c = initContract();
 
@@ -179,16 +179,18 @@ export const roadmapContract = c.router(
     // handler returns an all-zero `RoadmapSyncResultSchema`, mirroring
     // `ProjectPrService.listOpen`'s "no link is not an error" posture. 404
     // only for a project id that doesn't resolve to a real project at all.
+    // Optional `source` (source-picker split button): absent syncs every
+    // configured source, `"jira"`/`"github"` syncs only that one.
     syncRoadmapItems: {
       method: "POST",
       path: "/projects/:projectId/roadmap/sync",
       pathParams: z.object({ projectId: ProjectIdSchema }),
-      body: EmptyBodySchema,
+      body: SyncRoadmapItemsSchema,
       responses: {
         200: RoadmapSyncResultSchema,
         404: ErrorSchema,
       },
-      summary: "Pull the project's Jira/GitHub roadmap items and upsert them",
+      summary: "Pull the project's Jira/GitHub roadmap items and upsert them (optional source)",
     },
 
     getRoadmapConfig: {

@@ -22,7 +22,7 @@ const GH: Integration = {
   enabled: true,
   status: "connected",
   hasCredentials: true,
-  config: { kind: "github", repo: "acme/app", streams: ["ci"] },
+  config: { kind: "github", repo: "acme/app", streams: ["ci"], username: "octocat" },
 };
 
 const ALERT = {

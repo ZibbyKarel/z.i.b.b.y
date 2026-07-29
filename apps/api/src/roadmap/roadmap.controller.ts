@@ -176,8 +176,8 @@ export class RoadmapController {
         body: await this.roadmapGate.playBulk(projectId, body.itemIds),
       }),
 
-      syncRoadmapItems: ({ params: { projectId } }) =>
-        projectErrors.or404(projectId, () => this.roadmapSource.sync(projectId)),
+      syncRoadmapItems: ({ params: { projectId }, body }) =>
+        projectErrors.or404(projectId, () => this.roadmapSource.sync(projectId, body.source)),
 
       getRoadmapConfig: async ({ params: { projectId } }) => ({
         status: 200,

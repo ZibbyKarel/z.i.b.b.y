@@ -106,6 +106,7 @@ describe("IntegrationFormDialog", () => {
     await userEvent.type(screen.getByTestId(IntegrationFormTestId.GithubRepo), "acme/zibby");
     // Default is both streams; turn pull requests off so only issues remain.
     await userEvent.click(screen.getByTestId(IntegrationFormTestId.GithubStreamPulls));
+    await userEvent.type(screen.getByTestId(IntegrationFormTestId.GithubUsername), "octocat");
     await userEvent.type(screen.getByTestId(IntegrationFormTestId.Secret), "ghp-token");
     await userEvent.click(screen.getByTestId(IntegrationFormTestId.Submit));
 
@@ -115,6 +116,7 @@ describe("IntegrationFormDialog", () => {
       kind: "github",
       repo: "acme/zibby",
       streams: ["issues"],
+      username: "octocat",
     });
     expect(draft.secret).toBe("ghp-token");
   });
