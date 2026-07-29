@@ -15,14 +15,26 @@ function fetchStub(routes: Route[]) {
   });
 }
 
-function makeFetcher(routes: Route[], numbers: number[] = [7]) {
+function makeLogger() {
+  const warn = vi.fn();
+  const debug = vi.fn();
   const logger = {
-    child: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() }),
+    child: () => ({ info: vi.fn(), warn, debug, error: vi.fn() }),
   };
+  return { logger, warn, debug };
+}
+
+function makeFetcher(routes: Route[], numbers: number[] = [7]) {
+  const { logger, warn, debug } = makeLogger();
   const locator = { numbersFor: vi.fn(async () => numbers) };
   const fetchImpl = fetchStub(routes);
   const fetcher = new ReviewCommentFetcher(locator as never, logger as never, fetchImpl as never);
-  return { fetcher, fetchImpl };
+  return { fetcher, fetchImpl, warn, debug };
+}
+
+/** Ascending, unique, non-wrapping minute timestamps — avoids the `i % 60` collision trap. */
+function atMinutes(i: number): string {
+  return new Date(Date.parse("2026-07-29T09:00:00.000Z") + i * 60_000).toISOString();
 }
 
 const INLINE = {
@@ -61,7 +73,7 @@ describe("ReviewCommentFetcher", () => {
       { match: /\/pulls\/7\/reviews/, body: [REVIEW] },
     ]);
 
-    const comments = await fetcher.fetchNew(BASE);
+    const { comments } = await fetcher.fetchNew(BASE);
 
     expect(comments.map((c) => c.commentId)).toEqual(["rc-111", "ic-222", "rv-333"]);
     expect(comments[0]?.prNumber).toBe(7);
@@ -86,7 +98,7 @@ describe("ReviewCommentFetcher", () => {
       [7],
     );
 
-    const comments = await fetcher.fetchNew(BASE);
+    const { comments } = await fetcher.fetchNew(BASE);
 
     expect(comments.map((c) => c.commentId)).toEqual(["rc-111"]);
   });
@@ -96,7 +108,24 @@ describe("ReviewCommentFetcher", () => {
       { match: /\/pulls\/comments/, body: [{ ...INLINE, user: { login: "zibby-bot" } }] },
     ]);
 
-    expect(await fetcher.fetchNew({ ...BASE, selfLogin: "zibby-bot" })).toEqual([]);
+    const { comments } = await fetcher.fetchNew({ ...BASE, selfLogin: "zibby-bot" });
+    expect(comments).toEqual([]);
+  });
+
+  it("drops ZIBBY's own comments regardless of login case or a trailing [bot] suffix", async () => {
+    const { fetcher } = makeFetcher([
+      {
+        match: /\/pulls\/comments/,
+        body: [
+          { ...INLINE, id: 1, user: { login: "Zibby-Bot" } },
+          { ...INLINE, id: 2, user: { login: "zibby-bot[bot]" } },
+          { ...INLINE, id: 3, user: { login: "ZIBBY-BOT[BOT]" } },
+        ],
+      },
+    ]);
+
+    const { comments } = await fetcher.fetchNew({ ...BASE, selfLogin: "zibby-bot" });
+    expect(comments).toEqual([]);
   });
 
   it("passes the cursor as `since` and filters review bodies locally", async () => {
@@ -107,7 +136,7 @@ describe("ReviewCommentFetcher", () => {
       },
     ]);
 
-    const comments = await fetcher.fetchNew({ ...BASE, cursor: "2026-07-29T09:40:00.000Z" });
+    const { comments } = await fetcher.fetchNew({ ...BASE, cursor: "2026-07-29T09:40:00.000Z" });
 
     expect(comments.map((c) => c.commentId)).toEqual(["rv-333"]);
     expect(String(fetchImpl.mock.calls[0]?.[0])).toContain("since=2026-07-29T09%3A40%3A00.000Z");
@@ -118,13 +147,50 @@ describe("ReviewCommentFetcher", () => {
       { match: /\/pulls\/7\/reviews/, body: [{ ...REVIEW, body: "" }] },
     ]);
 
-    expect(await fetcher.fetchNew(BASE)).toEqual([]);
+    const { comments } = await fetcher.fetchNew(BASE);
+    expect(comments).toEqual([]);
   });
 
-  it("returns what it has when an endpoint fails", async () => {
-    const logger = {
-      child: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() }),
-    };
+  it("drops a comment with a malformed timestamp instead of failing the whole pass", async () => {
+    const { fetcher } = makeFetcher([
+      {
+        match: /\/pulls\/comments/,
+        body: [{ ...INLINE, id: 500, created_at: "not-a-real-date" }, INLINE],
+      },
+    ]);
+
+    const { comments } = await fetcher.fetchNew(BASE);
+
+    expect(comments.map((c) => c.commentId)).toEqual(["rc-111"]);
+  });
+
+  it("skips a null element in a raw comments array instead of throwing", async () => {
+    const { fetcher } = makeFetcher([{ match: /\/pulls\/comments/, body: [null, INLINE] }]);
+
+    const { comments } = await fetcher.fetchNew(BASE);
+
+    expect(comments.map((c) => c.commentId)).toEqual(["rc-111"]);
+  });
+
+  it("sorts ascending by `at` even when the API returns them out of order", async () => {
+    const { fetcher } = makeFetcher([
+      {
+        match: /\/pulls\/comments/,
+        body: [
+          { ...INLINE, id: 3, created_at: atMinutes(30) },
+          { ...INLINE, id: 1, created_at: atMinutes(0) },
+          { ...INLINE, id: 2, created_at: atMinutes(15) },
+        ],
+      },
+    ]);
+
+    const { comments } = await fetcher.fetchNew(BASE);
+
+    expect(comments.map((c) => c.commentId)).toEqual(["rc-1", "rc-2", "rc-3"]);
+  });
+
+  it("returns what it has, and reports which endpoint failed, when one endpoint errors", async () => {
+    const { logger, warn, debug } = makeLogger();
     const locator = { numbersFor: vi.fn(async () => [7]) };
     const fetchImpl = vi.fn(async (input: string | URL) => {
       const url = String(input);
@@ -136,22 +202,29 @@ describe("ReviewCommentFetcher", () => {
     });
     const fetcher = new ReviewCommentFetcher(locator as never, logger as never, fetchImpl as never);
 
-    const comments = await fetcher.fetchNew(BASE);
+    const { comments, failedEndpoints } = await fetcher.fetchNew(BASE);
 
     expect(comments.map((c) => c.commentId)).toEqual(["rc-111"]);
+    expect(failedEndpoints).toEqual(["issues/comments"]);
+    expect(warn).toHaveBeenCalled();
+    expect(debug).not.toHaveBeenCalled();
   });
 
-  it("caps the batch at MAX_COMMENTS_PER_PASS, keeping the oldest", async () => {
+  it("caps the batch at MAX_COMMENTS_PER_PASS, keeping the TRUE oldest 60 (not just the first 60 fetched)", async () => {
     const many = Array.from({ length: 70 }, (_, i) => ({
       ...INLINE,
       id: 1000 + i,
-      created_at: `2026-07-29T09:${String(i % 60).padStart(2, "0")}:00Z`,
+      created_at: atMinutes(i),
     }));
-    const { fetcher } = makeFetcher([{ match: /\/pulls\/comments/, body: many }]);
+    // Fetched newest-first: a naive "keep the first N fetched" cap would keep the
+    // WRONG 60 (the newest ones) instead of the true oldest 60.
+    const { fetcher } = makeFetcher([{ match: /\/pulls\/comments/, body: [...many].reverse() }]);
 
-    const comments = await fetcher.fetchNew(BASE);
+    const { comments } = await fetcher.fetchNew(BASE);
 
     expect(comments).toHaveLength(60);
-    expect((comments[0]?.at ?? "") <= (comments[59]?.at ?? "")).toBe(true);
+    expect(comments.map((c) => c.commentId)).toEqual(
+      many.slice(0, 60).map((item) => `rc-${item.id}`),
+    );
   });
 });
