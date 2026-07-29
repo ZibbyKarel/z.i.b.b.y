@@ -110,12 +110,7 @@ export function buildDistillPrompt(
   comments: FetchedComment[],
   known: Array<{ id: string; rule: string }>,
 ): string {
-  const compact = comments.map((c) => ({
-    commentId: c.commentId,
-    pr: c.prNumber,
-    author: envelopeInbound(c.author),
-    comment: envelopeInbound(c.body),
-  }));
+  const compact = comments.map(compactComment);
   const knownBlock = envelopeInbound(JSON.stringify(known));
   return [
     SYSTEM_PROMPT,
@@ -126,6 +121,79 @@ export function buildDistillPrompt(
     "COMMENTS:",
     JSON.stringify(compact),
   ].join("\n");
+}
+
+/** One comment as it appears in the prompt's COMMENTS array — both inbound fields enveloped (Law 4). */
+function compactComment(c: FetchedComment) {
+  return {
+    commentId: c.commentId,
+    pr: c.prNumber,
+    author: envelopeInbound(c.author),
+    comment: envelopeInbound(c.body),
+  };
+}
+
+/**
+ * Largest prompt, in UTF-8 BYTES, that may ride in a single `claude -p <prompt>`
+ * argv entry. Linux caps ONE argument at `MAX_ARG_STRLEN` = 128 KiB (131072 B)
+ * regardless of how much total `ARG_MAX` is free — darwin has no per-argument cap
+ * but only 1 MB in total — and this repo has already been bitten once by an
+ * oversized argv (the agent catalog, which had to move to
+ * `--append-system-prompt-file`; see `agents/agent-runner.service.ts`). This
+ * budget leaves ample room for the flags that ride alongside the prompt.
+ *
+ * Bytes, not characters: the prompt carries Czech and whatever an outsider wrote
+ * in a PR comment, and a `length` check would undercount every non-ASCII byte.
+ */
+export const MAX_PROMPT_BYTES = 96_000;
+
+/**
+ * Split a batch so no single prompt exceeds {@link MAX_PROMPT_BYTES}. A worst-case
+ * pass is 60 comments (`MAX_COMMENTS_PER_PASS`), each contributing a body and an
+ * author envelope; `sanitizeInbound` already hard-caps EVERY enveloped value at
+ * `MAX_INBOUND_CHARS` (4000), so one comment can never exceed the budget on its
+ * own and a chunk always makes progress — but 60 of them can, and did, blow past
+ * a Linux per-argument limit.
+ *
+ * Chunking rather than a file/stdin hand-off is deliberate: `spawnClaudeCli`
+ * spawns with `stdio: ["ignore", …]` and has no file-based prompt path, and it is
+ * shared by five other callers, so giving it one would mean changing the single
+ * code path that talks to the real CLI — a path the `VITEST` guard means no test
+ * can ever exercise. Chunking stays inside this file, is directly testable, and
+ * keeps the guarantee `MAX_COMMENTS_PER_PASS`'s carry-over depends on: no comment
+ * is ever silently dropped. Cost is one extra cheap-model call per chunk, and only
+ * for a batch that would otherwise have failed to spawn at all.
+ */
+export function chunkForArgvBudget(
+  comments: FetchedComment[],
+  known: Array<{ id: string; rule: string }>,
+  maxBytes: number = MAX_PROMPT_BYTES,
+): FetchedComment[][] {
+  // Everything in the prompt that is not a comment: the system prompt and the
+  // enveloped known-rules block. Charged once per chunk, since every chunk
+  // repeats it.
+  const overhead = utf8Bytes(buildDistillPrompt([], known));
+  const chunks: FetchedComment[][] = [];
+  let current: FetchedComment[] = [];
+  let size = overhead;
+
+  for (const comment of comments) {
+    // `+1` for the comma JSON.stringify puts between array elements.
+    const cost = utf8Bytes(JSON.stringify(compactComment(comment))) + 1;
+    if (current.length > 0 && size + cost > maxBytes) {
+      chunks.push(current);
+      current = [];
+      size = overhead;
+    }
+    current.push(comment);
+    size += cost;
+  }
+  if (current.length > 0) chunks.push(current);
+  return chunks;
+}
+
+function utf8Bytes(text: string): number {
+  return Buffer.byteLength(text, "utf8");
 }
 
 /**
@@ -140,6 +208,22 @@ export function buildDistillPrompt(
 export interface DistillParseResult {
   observations: DistilledObservation[];
   dropped: number;
+  /**
+   * `false` only when the reply was WHOLLY unusable — unparseable JSON, a
+   * non-object top-level shape, an unknown top-level key, or an `observations`
+   * array too long to plausibly come from a ≤60-comment batch. It is emphatically
+   * NOT the same as a usable reply that simply carried nothing worth keeping (a
+   * batch of `LGTM`/`thanks` comments): that one is `usable: true` with an empty
+   * `observations`.
+   *
+   * The distinction is load-bearing for the caller's cursor. Both cases produce
+   * zero observations, and collapsing them means a repo whose comment window is
+   * genuinely all non-actionable holds its cursor forever — re-fetching, re-paying
+   * for, and re-distilling the same comments every night while every genuinely
+   * actionable comment created after them stays permanently out of reach behind
+   * `MAX_COMMENTS_PER_PASS`'s oldest-first cap.
+   */
+  usable: boolean;
 }
 
 /**
@@ -164,10 +248,10 @@ export function parseDistillOutput(raw: string, batchIds: Set<string>): DistillP
   try {
     json = JSON.parse(stripFence(raw));
   } catch {
-    return { observations: [], dropped: 0 };
+    return { observations: [], dropped: 0, usable: false };
   }
   const shape = ReplyShapeSchema.safeParse(json);
-  if (!shape.success) return { observations: [], dropped: 0 };
+  if (!shape.success) return { observations: [], dropped: 0, usable: false };
 
   const kept: DistilledObservation[] = [];
   let dropped = 0;
@@ -188,7 +272,7 @@ export function parseDistillOutput(raw: string, batchIds: Set<string>): DistillP
       scopeHint: o.scopeHint,
     });
   }
-  return { observations: kept, dropped };
+  return { observations: kept, dropped, usable: true };
 }
 
 /**
@@ -213,12 +297,49 @@ function stripFence(raw: string): string {
   return fenced?.[1] ?? trimmed;
 }
 
+/** Why a {@link DistillOutcome} is `"incomplete"` — i.e. why the caller must hold its cursor. */
+export type DistillIncompleteReason =
+  /** The `VITEST` guard short-circuited the call: the distiller never ran at all. */
+  | "not-run"
+  /** `spawnClaudeCli` rejected — missing binary, non-zero exit, or the 30s timeout. */
+  | "cli-failed"
+  /** The CLI answered, but the reply was wholly unusable (see {@link DistillParseResult.usable}). */
+  | "unusable-reply";
+
+/**
+ * What one {@link ReviewCommentDistiller.distill} call actually did. The point of
+ * the discriminant is the ONE distinction the previous bare `DistilledObservation[]`
+ * return could not express: an empty array meant "ran cleanly, nothing here was
+ * actionable" AND "never ran / failed" alike, and the caller had to assume the
+ * pessimistic reading and hold its cursor. That made a window of purely
+ * non-actionable comments (`LGTM`, `thanks`, `done`) permanently unadvanceable —
+ * re-fetched and re-distilled every night forever, with every actionable comment
+ * created after them stranded behind `MAX_COMMENTS_PER_PASS`'s oldest-first cap.
+ *
+ * - `"ok"` — every distiller call in this pass completed and returned a usable
+ *   reply. `observations` may still be empty; that is a real answer, and the
+ *   caller's cursor MAY advance (subject to its own, independent `failedEndpoints`
+ *   rule).
+ * - `"incomplete"` — at least one call failed or did not run, so part of this
+ *   window was never actually examined. The caller holds its cursor and the batch
+ *   replays next pass. `observations` still carries whatever DID come back, so a
+ *   partial pass keeps what it learned (the same posture `failedEndpoints` takes).
+ */
+export type DistillOutcome =
+  | { status: "ok"; observations: DistilledObservation[] }
+  | {
+      status: "incomplete";
+      observations: DistilledObservation[];
+      reason: DistillIncompleteReason;
+    };
+
 /**
  * The cheap-model pass that turns review comments into candidate rules. Copies
  * {@link ClaudeCliDistiller}'s shape exactly — `--model haiku --output-format json`,
  * the same `VITEST` guard so tests never spawn claude, fence-tolerant parse, strict
- * schema — and NEVER blocks: any failure returns `[]` and the caller leaves the
- * cursor where it was, so the batch replays next pass.
+ * schema — and NEVER blocks: every failure resolves to a `"incomplete"`
+ * {@link DistillOutcome} and the caller leaves the cursor where it was, so the batch
+ * replays next pass.
  */
 @Injectable()
 export class ReviewCommentDistiller {
@@ -231,35 +352,59 @@ export class ReviewCommentDistiller {
   async distill(
     comments: FetchedComment[],
     known: Array<{ id: string; rule: string }>,
-  ): Promise<DistilledObservation[]> {
-    if (process.env.VITEST) return [];
-    if (comments.length === 0) return [];
+  ): Promise<DistillOutcome> {
+    if (process.env.VITEST) {
+      return { status: "incomplete", observations: [], reason: "not-run" };
+    }
+    if (comments.length === 0) return { status: "ok", observations: [] };
 
-    let raw: string;
-    try {
-      raw = await spawnClaudeCli({
-        args: [
-          "-p",
-          buildDistillPrompt(comments, known),
-          "--model",
-          "haiku",
-          "--output-format",
-          "json",
-        ],
-        timeoutMs: DISTILLER_TIMEOUT_MS,
-        label: "review-learner",
-      });
-    } catch (err) {
-      this.log.debug("review distiller CLI call failed", { error: (err as Error).message });
-      return [];
+    const batchIds = new Set(comments.map((c) => c.commentId));
+    const observations: DistilledObservation[] = [];
+    let incomplete: DistillIncompleteReason | undefined;
+
+    for (const chunk of chunkForArgvBudget(comments, known)) {
+      let raw: string;
+      try {
+        raw = await spawnClaudeCli({
+          args: [
+            "-p",
+            buildDistillPrompt(chunk, known),
+            "--model",
+            "haiku",
+            "--output-format",
+            "json",
+          ],
+          timeoutMs: DISTILLER_TIMEOUT_MS,
+          label: "review-learner",
+        });
+      } catch (err) {
+        // `warn`, not `debug`: this runs unattended, and a missing/failing CLI is
+        // an actual malfunction — the same class of event the fetcher warns about,
+        // and the difference between "the feature is quietly broken" and "the
+        // feature had nothing to say". It is also what holds the cursor, so a
+        // silent version of this line makes an un-advancing cursor undiagnosable.
+        this.log.warn("review distiller CLI call failed — cursor will be held", {
+          error: (err as Error).message,
+          comments: chunk.length,
+        });
+        incomplete ??= "cli-failed";
+        continue;
+      }
+
+      const result = parseDistillOutput(unwrapCliJson(raw), batchIds);
+      logDroppedObservations(this.log, result.dropped);
+      if (!result.usable) {
+        this.log.warn("review distiller reply was unusable — cursor will be held", {
+          comments: chunk.length,
+        });
+        incomplete ??= "unusable-reply";
+      }
+      observations.push(...result.observations);
     }
 
-    const result = parseDistillOutput(
-      unwrapCliJson(raw),
-      new Set(comments.map((c) => c.commentId)),
-    );
-    logDroppedObservations(this.log, result.dropped);
-    return result.observations;
+    return incomplete
+      ? { status: "incomplete", observations, reason: incomplete }
+      : { status: "ok", observations };
   }
 }
 

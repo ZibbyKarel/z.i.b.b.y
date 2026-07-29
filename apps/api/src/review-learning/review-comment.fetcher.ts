@@ -106,7 +106,18 @@ export class ReviewCommentFetcher {
 
   async fetchNew(input: FetchNewInput): Promise<FetchNewResult> {
     const numbers = await this.locator.numbersFor(input.projectId);
-    if (numbers.length === 0) return { comments: [], failedEndpoints: [] };
+    if (numbers.length === 0) {
+      // Ordinary on a project ZIBBY has never opened a PR for — but it is also
+      // the single likeliest reason this feature looks dead on a first real run,
+      // and it is otherwise indistinguishable from a healthy "no new comments"
+      // pass. `info`, because it only fires for a project that IS linked to
+      // GitHub, so it can never flood a log the way a per-project skip would.
+      this.log.info("no ZIBBY-opened PRs for this project — no review comments to read", {
+        projectId: input.projectId,
+        repo: input.repo,
+      });
+      return { comments: [], failedEndpoints: [] };
+    }
     const own = new Set(numbers);
 
     const since = input.cursor

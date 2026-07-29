@@ -3,6 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { Project } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { DistillIncompleteReason, DistillOutcome } from "./review-comment.distiller";
 import type { FetchedComment } from "./review-comment.fetcher";
 import { ReviewLearningService } from "./review-learning.service";
 import { ReviewRulesStore } from "./review-rules.store";
@@ -46,21 +47,29 @@ describe("ReviewLearningService", () => {
       rule: string;
       scopeHint: "project" | "global";
     }>;
+    /**
+     * Absent → the distiller RAN cleanly (`status: "ok"`). Set it to make the
+     * distiller report that it failed or never ran — the distinction the cursor
+     * rules turn on.
+     */
+    distillFailed?: DistillIncompleteReason;
     projects?: Project[];
     token?: { repo: string; token: string } | null;
     /** Makes `resolveLink` throw for this one project id, to prove `learn()` fails open. */
     rejectProjectId?: string;
   }) {
-    const logger = {
-      child: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() }),
-    };
+    const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() };
+    const logger = { child: () => log };
     const fetcher = {
       fetchNew: vi.fn(async () => ({
         comments: opts.comments,
         failedEndpoints: opts.failedEndpoints ?? [],
       })),
     };
-    const distiller = { distill: vi.fn(async () => opts.observations) };
+    const outcome: DistillOutcome = opts.distillFailed
+      ? { status: "incomplete", observations: opts.observations, reason: opts.distillFailed }
+      : { status: "ok", observations: opts.observations };
+    const distiller = { distill: vi.fn(async () => outcome) };
     const flow = { propose: vi.fn(async (_projectId: string, _rule: unknown) => {}) };
     const service = new ReviewLearningService(
       { list: async () => opts.projects ?? [project] } as never,
@@ -78,7 +87,7 @@ describe("ReviewLearningService", () => {
         return opts.token === undefined ? { repo: "acme/app", token: "ghp_x" } : opts.token;
       },
     );
-    return { service, fetcher, distiller, flow };
+    return { service, fetcher, distiller, flow, log };
   }
 
   it("files an observation and advances the cursor to the newest comment", async () => {
@@ -132,8 +141,68 @@ describe("ReviewLearningService", () => {
     expect((await store.list("acme"))[0]?.status).toBe("proposed");
   });
 
-  it("does not advance the cursor when the distiller returns nothing for a non-empty batch", async () => {
-    const { service } = makeService({ comments: [comment()], observations: [] });
+  // The two branches below are the same observable outcome — zero observations
+  // out of a non-empty batch — and they MUST move the cursor differently. See
+  // `DistillOutcome`: conflating them is what wedged the cursor permanently on a
+  // repo whose comments are all `LGTM`/`thanks`, since `fetchNew` always keeps the
+  // OLDEST MAX_COMMENTS_PER_PASS and so every later, genuinely actionable comment
+  // stayed unreachable forever.
+  it("ADVANCES the cursor when the distiller ran cleanly and found nothing actionable", async () => {
+    const { service } = makeService({
+      comments: [comment(), comment({ commentId: "rc-2", at: "2026-07-29T10:00:00.000Z" })],
+      observations: [],
+    });
+
+    await service.learn(NOW);
+
+    expect(await store.cursor("acme")).toBe("2026-07-29T10:00:00.000Z");
+  });
+
+  it("HOLDS the cursor when the distiller failed rather than finding nothing", async () => {
+    const { service, log } = makeService({
+      comments: [comment(), comment({ commentId: "rc-2", at: "2026-07-29T10:00:00.000Z" })],
+      observations: [],
+      distillFailed: "cli-failed",
+    });
+
+    await service.learn(NOW);
+
+    expect(await store.cursor("acme")).toBeUndefined();
+    expect(log.warn).toHaveBeenCalledWith(
+      "review distillation incomplete — cursor held",
+      expect.objectContaining({ projectId: "acme", reason: "cli-failed" }),
+    );
+  });
+
+  it("holds the cursor but keeps the observations a partial distillation did return", async () => {
+    const { service } = makeService({
+      comments: [comment()],
+      observations: [
+        {
+          commentId: "rc-1",
+          slug: "no-local-primitives",
+          rule: "Ber primitivy z DS.",
+          scopeHint: "project",
+        },
+      ],
+      distillFailed: "unusable-reply",
+    });
+
+    const result = await service.learn(NOW);
+
+    expect(result.observations).toBe(1);
+    expect((await store.list("acme"))[0]?.status).toBe("observed");
+    expect(await store.cursor("acme")).toBeUndefined();
+  });
+
+  it("holds the cursor on a failed endpoint even when the distiller ran cleanly", async () => {
+    // The two cursor rules are independent: a complete distillation over an
+    // INCOMPLETE fetch window still must not advance.
+    const { service } = makeService({
+      comments: [comment()],
+      failedEndpoints: ["issues/comments"],
+      observations: [],
+    });
 
     await service.learn(NOW);
 
@@ -161,13 +230,22 @@ describe("ReviewLearningService", () => {
     expect((await store.list("acme"))[0]?.status).toBe("observed");
   });
 
-  it("skips a project with no GitHub link", async () => {
-    const { service, fetcher } = makeService({ comments: [], observations: [], token: null });
+  it("skips a project with no GitHub link, and says so", async () => {
+    const { service, fetcher, log } = makeService({
+      comments: [],
+      observations: [],
+      token: null,
+    });
 
     const result = await service.learn(NOW);
 
     expect(result).toEqual({ observations: 0, proposed: 0 });
     expect(fetcher.fetchNew).not.toHaveBeenCalled();
+    // Otherwise this is indistinguishable from a healthy "no new comments" pass
+    // — the same `review-rules:0` automation ref, and nothing in the log at all.
+    expect(log.debug).toHaveBeenCalledWith("project has no GitHub link — review learning skipped", {
+      projectId: "acme",
+    });
   });
 
   it("keeps going when one project throws", async () => {

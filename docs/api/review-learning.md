@@ -106,6 +106,12 @@ round-trip saving, but on `/pulls/{n}/reviews` it is correctness: with no `since
 to narrow the window, GitHub's default 30-item page would make the 31st-and-older
 review body on a long-lived PR permanently unreadable rather than merely deferred.
 
+A project with no ZIBBY-opened PRs short-circuits before any GitHub call and is
+logged at `info` (not `debug`): it only fires for a project that IS linked to
+GitHub, so it can't flood the log, and it is the single likeliest reason the
+feature looks dead on a first real run — otherwise indistinguishable from a
+healthy "no new comments" pass.
+
 `fetchNew(input)` takes `{ projectId, repo, token, selfLogin?, cursor? }` and
 returns a `FetchNewResult` — `{ comments, failedEndpoints }`. `comments` is
 `FetchedComment[]` (`{ commentId, prNumber, prUrl, commentUrl, author, at,
@@ -174,13 +180,13 @@ own reply is untrusted right back (Law 4 cuts both ways).
   rule `proposed` in the first place — without it the feature would propose
   nothing and look like it does nothing.
 - `parseDistillOutput(raw, batchIds)` validates in two tiers and returns a
-  `DistillParseResult` (`{ observations, dropped }`), not a bare array.
+  `DistillParseResult` (`{ observations, dropped, usable }`), not a bare array.
   `ReplyShapeSchema` checks ONLY the reply's outer shape — `{ observations:
 [...] }`, closed (`.strict()`) against any other top-level key, with the
   array itself bounded at `MAX_OBSERVATIONS_IN_REPLY` (500) — and the whole
-  reply resolves to `{ observations: [], dropped: 0 }` if any of that fails
-  (unparseable JSON, a non-object shape, an unknown top-level key, or an
-  observations array too long to plausibly come from a ≤60-comment batch).
+  reply resolves to `{ observations: [], dropped: 0, usable: false }` if any of
+  that fails (unparseable JSON, a non-object shape, an unknown top-level key, or
+  an observations array too long to plausibly come from a ≤60-comment batch).
   That length bound is independent of, and checked before, the per-element
   parsing below — without it, per-element tolerance means a model-controlled
   array of arbitrary length gets `safeParse`d element by element in full
@@ -210,6 +216,14 @@ own reply is untrusted right back (Law 4 cuts both ways).
   a reply that is wholly unusable, never for what one observation inside an
   otherwise-fine reply happened to contain.
 
+  `usable` is `false` for exactly that wholly-unusable case and `true`
+  otherwise — including for a reply that parsed perfectly and simply carried
+  nothing actionable (an `LGTM`/`thanks`/`done` window), which is `{
+observations: [], dropped: 0, usable: true }`. Both produce zero
+  observations, and telling them apart is what lets the caller advance its
+  cursor over a genuinely non-actionable window instead of holding it forever
+  (see `ReviewLearningService`'s cursor discipline below).
+
   `dropped` counts ONLY observations that failed `ObservationSchema` —
   malformed shape, or an unexpected field like the injected `status: "active"`
   case above. It deliberately does NOT count an observation that parsed
@@ -227,15 +241,45 @@ dropped)` — a small standalone function so it's testable without the
   itself — same shape as `memory/claude-cli-distiller.ts`: `claude -p …
 --model haiku --output-format json` via `spawnClaudeCli`, the same
   `process.env.VITEST` guard so tests never spawn a real CLI, a 30s timeout.
-  **Never throws and never blocks** — a CLI failure, a timeout, or an
-  outer-shape rejection (unparseable JSON, non-object, unknown top-level key,
-  or an oversized `observations` array) all resolve to `[]`, and the caller is
-  expected to leave its cursor untouched on an empty result so the batch
-  replays next pass. A per-observation rejection does NOT resolve the whole
-  call to `[]` — see the two-tier validation above; it calls
-  `logDroppedObservations` and still returns every valid sibling. `distill`
-  never sets anything to `active`; it only ever proposes an observation for a
-  later step to `record`.
+  **Never throws and never blocks.** It returns a discriminated `DistillOutcome`,
+  not a bare array, because "the model ran and found nothing actionable" and
+  "the distiller failed or never ran" are the same empty result and must move
+  the caller's cursor differently:
+
+  - `{ status: "ok", observations }` — every call completed and returned a
+    usable reply. `observations` may be empty; that is a real answer and the
+    cursor MAY advance.
+  - `{ status: "incomplete", observations, reason }` — at least one call
+    failed, with `reason` one of `"not-run"` (the `VITEST` guard),
+    `"cli-failed"` (missing binary, non-zero exit, or the 30s timeout — logged
+    at `warn`, matching the fetcher, because an unattended malfunction must be
+    loud) or `"unusable-reply"` (an outer-shape rejection: unparseable JSON,
+    non-object, unknown top-level key, or an oversized `observations` array).
+    The cursor is held and the batch replays next pass; `observations` still
+    carries whatever DID come back, the same posture `failedEndpoints` takes.
+
+  A per-observation rejection is neither — see the two-tier validation above; it
+  calls `logDroppedObservations` and still returns every valid sibling under
+  `status: "ok"`. `distill` never sets anything to `active`; it only ever
+  proposes an observation for a later step to `record`.
+
+- **Argv budget.** The whole prompt rides in one `claude -p <prompt>` argv
+  entry, and Linux caps a single argument at `MAX_ARG_STRLEN` = 128 KiB no
+  matter how much total `ARG_MAX` is free (this repo has been bitten once
+  already — the agent catalog had to move to `--append-system-prompt-file`).
+  `chunkForArgvBudget(comments, known)` splits a batch so no prompt exceeds
+  `MAX_PROMPT_BYTES` = 96 000 **bytes** (UTF-8, not characters — the prompt
+  carries Czech and whatever an outsider wrote), and `distill` makes one CLI
+  call per chunk, merging the observations and reporting `incomplete` if any
+  chunk failed. `sanitizeInbound`'s existing `MAX_INBOUND_CHARS` = 4000 cap on
+  every enveloped value means one comment can never exceed the budget alone, so
+  a chunk always makes progress. Chunking rather than a file/stdin hand-off is
+  deliberate: `spawnClaudeCli` spawns with `stdio: ["ignore", …]`, has no
+  file-based prompt path, and is shared by five other callers — giving it one
+  would change the single code path that talks to the real CLI, which the
+  `VITEST` guard means no test can exercise. Chunking stays local, is directly
+  testable, and keeps the guarantee `MAX_COMMENTS_PER_PASS`'s carry-over relies
+  on: no comment is ever silently dropped.
 
 ## `ReviewRulesVaultService` (`review-rules.vault.service.ts`)
 
@@ -342,8 +386,15 @@ an empty segment).
 - `propose(projectId, rule)` — parks the approval, packing the rule sentence,
   the rationale and every occurrence's excerpt + comment URL into `detail` as
   the enrichment JSON the approvals feed renders.
-- `resume(runId)` — the operator approved: `setStatus(…, "active")`, then
-  re-render that project's rules note so the rule starts grounding.
+- `resume(runId)` — the operator approved: `setStatus(…, "active", approvalRef)`,
+  then re-render that project's rules note so the rule starts grounding.
+  `ResumableRunner.resume` is handed only the `runId`, so the `approvalRef` — the
+  rule's forensic link back to the decision that activated it — is recovered by
+  looking the decision up by `runId` among the `approved` approvals (the same
+  by-`runId` lookup `ApprovalsService.cancelPendingForRun` does; `approve`
+  persists the `approved` status _before_ routing to `resume`, so the record is
+  already there). Best-effort: a failed lookup logs at `warn` and activates
+  without the ref rather than blocking a decision the operator already made.
 - `cancel(runId)` — the operator rejected: `setStatus(…, "retired")`, no
   render. A retired rule keeps absorbing occurrences (so it stays deduped
   against) but is never proposed again.
@@ -364,7 +415,10 @@ Two deliberate choices worth knowing:
 ## `ReviewLearningService` (`review-learning.service.ts`)
 
 The nightly pass, wired into DI by `ReviewLearningModule`. `learn(now?)` walks
-every project and, per project: resolves the GitHub link (skip if none), reads
+every project and, per project: resolves the GitHub link (skip if none — logged
+at `debug` with the project id, because that skip is otherwise indistinguishable
+from a healthy "no new comments" pass and produces the identical
+`review-rules:0` automation ref), reads
 the stored cursor, fetches new review comments, distils them against that
 project's known slugs, files each observation as an occurrence via
 `store.record`, and calls `flow.propose` for every rule `record` promotes —
@@ -380,16 +434,27 @@ belong to `ReviewRuleFlowService.resume`, i.e. to the operator's approval.
 for the review-learning controller that lands in a later task, not for this
 service.
 
-Cursor discipline — the cursor advances only when the pass both saw a complete
-window and got something out of it:
+Cursor discipline — the cursor advances only when the pass saw a complete window
+_and_ actually examined it. The two rules below are independent and both must
+pass:
 
-- **Nothing distilled** → cursor held. Costs one replayed batch, loses nothing;
-  the store's `commentId` dedup makes the replay free of double-counting.
+- **`distill` returned `status: "incomplete"`** → cursor held, logged at warn
+  with the `reason`. The distiller failed, timed out, or never ran, so part of
+  the window was never examined. Costs one replayed batch, loses nothing; the
+  store's `commentId` dedup makes the replay free of double-counting.
+  Observations that _did_ come back are still recorded.
 - **`failedEndpoints` non-empty** → cursor held, logged at warn. A failed
   endpoint means comments in that window were never observed at all; advancing
   past a window ZIBBY never saw would lose them permanently. Occurrences that
   _did_ arrive this pass are still recorded.
-- Otherwise the cursor moves to the newest comment timestamp in the batch.
+- Otherwise the cursor moves to the newest comment timestamp in the batch —
+  **including when the distiller ran cleanly and produced zero observations.**
+  That case is a complete answer, not a failure, and it used to be conflated
+  with the two above. Holding on it wedged the cursor permanently for a repo
+  whose comments are all `LGTM`/`thanks`/`done`: the same batch was re-fetched
+  and re-distilled (and re-paid for) every night, and because `fetchNew` always
+  keeps the OLDEST `MAX_COMMENTS_PER_PASS`, every genuinely actionable comment
+  created after those was unreachable **forever**.
 
 `selfLogin` is deliberately left unpassed to `fetchNew`. ZIBBY opens its PRs
 with the operator's own GitHub token, so ZIBBY's author identity _is_ the

@@ -1,4 +1,4 @@
-import type { ReviewRule } from "@zibby/contracts";
+import type { Approval, ReviewRule } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
 import type { RequestApprovalInput } from "../approvals/approvals.service";
 import {
@@ -35,12 +35,28 @@ const RULE: ReviewRule = {
   updatedAt: "2026-07-29T09:30:00.000Z",
 };
 
-function makeFlow(rule: ReviewRule | null = RULE) {
+function approval(over: Partial<Approval> = {}): Approval {
+  return {
+    id: "ap-1",
+    runId: "acme/no-local-primitives",
+    kind: "review-rule",
+    skill: "review-learning",
+    action: "review.rule_adopt",
+    detail: "{}",
+    risk: "low",
+    status: "approved",
+    requestedAt: "2026-07-29T10:00:00.000Z",
+    ...over,
+  };
+}
+
+function makeFlow(rule: ReviewRule | null = RULE, approved: Approval[] = [approval()]) {
   const approvals = {
     register: vi.fn(),
     requestApproval: vi.fn<(input: RequestApprovalInput) => Promise<{ id: string }>>(async () => ({
       id: "ap-1",
     })),
+    list: vi.fn(async () => approved),
   };
   const store = {
     setStatus: vi.fn(async () => rule),
@@ -90,13 +106,41 @@ describe("ReviewRuleFlowService", () => {
     expect(JSON.stringify(detail)).toContain("pull/9");
   });
 
-  it("approve activates the rule and re-renders the project note", async () => {
+  it("approve activates the rule, stamps the approving approval, and re-renders the project note", async () => {
     const { flow, store, vault } = makeFlow();
 
     await flow.resume("acme/no-local-primitives");
 
-    expect(store.setStatus).toHaveBeenCalledWith("acme", "no-local-primitives", "active");
+    // `ReviewRule.approvalRef` is the forensic link back to the decision that
+    // activated the rule — it must carry the real approval id, not `undefined`.
+    expect(store.setStatus).toHaveBeenCalledWith("acme", "no-local-primitives", "active", "ap-1");
     expect(vault.render).toHaveBeenCalledWith("acme");
+  });
+
+  it("ignores an approved approval belonging to another rule or another kind", async () => {
+    const { flow, store } = makeFlow(RULE, [
+      approval({ id: "ap-other-run", runId: "acme/some-other-rule" }),
+      approval({ id: "ap-other-kind", kind: "agent-proposal" }),
+      approval({ id: "ap-2", requestedAt: "2026-07-29T11:00:00.000Z" }),
+    ]);
+
+    await flow.resume("acme/no-local-primitives");
+
+    expect(store.setStatus).toHaveBeenCalledWith("acme", "no-local-primitives", "active", "ap-2");
+  });
+
+  it("still activates when the approval lookup fails, just without an approvalRef", async () => {
+    const { flow, store, approvals } = makeFlow();
+    approvals.list.mockRejectedValueOnce(new Error("approvals unreadable"));
+
+    await flow.resume("acme/no-local-primitives");
+
+    expect(store.setStatus).toHaveBeenCalledWith(
+      "acme",
+      "no-local-primitives",
+      "active",
+      undefined,
+    );
   });
 
   it("reject retires the rule and does not render", async () => {
