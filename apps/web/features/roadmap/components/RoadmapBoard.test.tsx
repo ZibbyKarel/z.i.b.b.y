@@ -39,7 +39,13 @@ describe("RoadmapBoard", () => {
       item({ id: "t-gone", name: "Archived task", lifecycle: "archived" }),
     ];
     render(
-      <RoadmapBoard epic={epic} items={items} onCreateTask={vi.fn()} onSelectItem={vi.fn()} />,
+      <RoadmapBoard
+        epic={epic}
+        items={items}
+        onCreateTask={vi.fn()}
+        onSelectEpic={vi.fn()}
+        onSelectItem={vi.fn()}
+      />,
     );
 
     expect(screen.getByText("Blocked task")).toBeInTheDocument();
@@ -53,7 +59,13 @@ describe("RoadmapBoard", () => {
   it("puts a failed item in READY, marked selhalo — never a column of its own", () => {
     const items = [epic, item({ id: "t-failed", name: "Failed task", lifecycle: "failed" })];
     render(
-      <RoadmapBoard epic={epic} items={items} onCreateTask={vi.fn()} onSelectItem={vi.fn()} />,
+      <RoadmapBoard
+        epic={epic}
+        items={items}
+        onCreateTask={vi.fn()}
+        onSelectEpic={vi.fn()}
+        onSelectItem={vi.fn()}
+      />,
     );
 
     const columns = screen.getAllByTestId(RoadmapBoardTestId.Column);
@@ -71,7 +83,13 @@ describe("RoadmapBoard", () => {
       item({ id: "t-c", name: "Task C" }),
     ];
     render(
-      <RoadmapBoard epic={epic} items={items} onCreateTask={vi.fn()} onSelectItem={vi.fn()} />,
+      <RoadmapBoard
+        epic={epic}
+        items={items}
+        onCreateTask={vi.fn()}
+        onSelectEpic={vi.fn()}
+        onSelectItem={vi.fn()}
+      />,
     );
 
     const cardFor = (name: string) =>
@@ -97,6 +115,7 @@ describe("RoadmapBoard", () => {
         epic={epic}
         items={[epic]}
         onCreateTask={onCreateTask}
+        onSelectEpic={vi.fn()}
         onSelectItem={vi.fn()}
       />,
     );

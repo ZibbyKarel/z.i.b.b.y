@@ -5,6 +5,8 @@ import {
   AGENT_ID_REGEX,
   ROADMAP_ITEM_ID_REGEX,
   type RoadmapConfig,
+  type RoadmapConfigInput,
+  type RoadmapConfigPatch,
   RoadmapConfigSchema,
   type RoadmapItem,
   RoadmapItemSchema,
@@ -180,7 +182,7 @@ export class RoadmapStore implements OnModuleInit {
     });
   }
 
-  /** Read the per-project config (the auto-sync toggle) — defaults when absent/corrupt. */
+  /** Read the per-project config (the automation toggles) — defaults when absent/corrupt. */
   async readConfig(projectId: string): Promise<RoadmapConfig> {
     const dir = this.requireProjectDir(projectId);
     const raw = await fs.readFile(path.join(dir, CONFIG_FILE), "utf8").catch(() => null);
@@ -189,12 +191,42 @@ export class RoadmapStore implements OnModuleInit {
     return parsed.success ? parsed.data : RoadmapConfigSchema.parse({});
   }
 
-  async writeConfig(projectId: string, config: RoadmapConfig): Promise<RoadmapConfig> {
+  /**
+   * Full REPLACE — every field the caller omits is reset to its schema default.
+   * Takes the schema's INPUT type on purpose, so "replace with just this field,
+   * defaults for the rest" is expressible; callers that mean "change one toggle,
+   * leave the others alone" want {@link updateConfig} instead.
+   */
+  async writeConfig(projectId: string, config: RoadmapConfigInput): Promise<RoadmapConfig> {
     const dir = this.requireProjectDir(projectId);
     const validated = RoadmapConfigSchema.parse(config);
     await ensureDir(dir);
     await writeFileAtomic(path.join(dir, CONFIG_FILE), JSON.stringify(validated, null, 2));
     return validated;
+  }
+
+  /**
+   * Patch — merge `patch` over the stored config, as one critical section keyed
+   * by the config file (the same read-modify-write posture {@link update} uses
+   * for an item). This is what the PUT route runs on: with more than one toggle
+   * in the config, a full replace would silently reset every toggle the client
+   * didn't happen to send, so flipping auto-sync would quietly switch auto-play
+   * back off.
+   */
+  async updateConfig(projectId: string, patch: RoadmapConfigPatch): Promise<RoadmapConfig> {
+    const dir = this.requireProjectDir(projectId);
+    const file = path.join(dir, CONFIG_FILE);
+    return withPathLock(file, async () => {
+      const current = await this.readConfig(projectId);
+      // Explicit `undefined`s are dropped rather than spread: an `undefined`
+      // would win over the stored value and then be re-defaulted by the parse
+      // below — the toggle would read as "reset", not "left alone".
+      const set = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined));
+      const next = RoadmapConfigSchema.parse({ ...current, ...set });
+      await ensureDir(dir);
+      await writeFileAtomic(file, JSON.stringify(next, null, 2));
+      return next;
+    });
   }
 
   /** The project ids that have a roadmap directory under the root (used by the attachment sweep). */

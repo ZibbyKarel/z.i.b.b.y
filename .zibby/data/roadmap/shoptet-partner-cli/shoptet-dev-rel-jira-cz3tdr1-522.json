@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-522",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-518",
+  "name": "Survey comparable platforms and verify reference architectures",
+  "description": "Research how Shopify, BigCommerce, WordPress, Atlassian Forge, Cloudflare, and Vercel solve the same dev-loop / deploy / isolation problems as the Shoptet Partner CLI. Verify Shopify's implementation at the source level (Shopify/cli, theme dev, App Blocks, ScriptTag deprecation schedule) and verify cms4/SOFA (g4) internals — placement schema, addon runtime status, token system, auth model.\n\nOutput: shopify-partner-dx-research.md (source-level, per-claim confidence tags) and the verified cms4/SOFA findings referenced throughout cli-greenfield.md.\n\nStatus: already completed.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-522",
+    "externalKey": "CZ3TDR1-522",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-522"
+  },
+  "externalLevel": "Úkol",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-07-29T10:56:34.186Z",
+  "updatedAt": "2026-07-29T10:57:40.138Z",
+  "syncedAt": "2026-07-29T10:57:40.138Z"
+}

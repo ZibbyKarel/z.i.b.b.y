@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-527",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-519",
+  "name": "Feasibility spike: prove the dev-loop mechanism on a real shop",
+  "description": "Gate deliverable, not shippable product code. On a real shop, prove: HTML interception (text/html only), marker-anchored byte-splice injection, same-origin dev-asset serving, session survival across cookies/redirects/session-sensitive routes (cart/checkout/account), and correct detection/reporting of which version is being rendered.\n\nRecord real response headers, cookie flags, redirect chains, and any bot/WAF behavior encountered — this becomes the first fixture corpus for §12.\n\nThe Phase 2 (MVP dev-loop) design is not committed until this passes. If it fails, scope changes here, cheaply, rather than after Phase 2 is built.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-527",
+    "externalKey": "CZ3TDR1-527",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-527"
+  },
+  "externalLevel": "Úkol",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-07-29T10:57:40.143Z",
+  "updatedAt": "2026-07-29T10:57:40.143Z",
+  "syncedAt": "2026-07-29T10:57:40.143Z"
+}

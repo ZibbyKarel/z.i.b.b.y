@@ -1,0 +1,24 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-513",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "name": "ApiPartner page from PHP to React",
+  "description": "",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-513",
+    "externalKey": "CZ3TDR1-513",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-513"
+  },
+  "externalLevel": "Úkol",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-07-29T10:56:34.180Z",
+  "updatedAt": "2026-07-29T10:57:40.130Z",
+  "syncedAt": "2026-07-29T10:57:40.130Z"
+}

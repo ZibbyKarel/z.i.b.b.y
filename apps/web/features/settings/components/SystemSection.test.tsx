@@ -13,6 +13,7 @@ const DEFAULTS: SystemConfig = {
   roadmapTickMs: 60000,
   limitResumeMax: 3,
   maxConcurrentRuns: null,
+  maxConcurrentRoadmapRuns: 3,
   goalVerifyTimeoutMs: 600000,
   goalAutoResume: false,
   chatPersona: "jarvis",
@@ -70,6 +71,33 @@ describe("SystemSection", () => {
     await userEvent.type(field, "90000");
     await userEvent.click(screen.getByTestId(SystemSectionTestId.Save));
     expect(setConfig).toHaveBeenCalledWith({ body: { ...DEFAULTS, roadmapTickMs: 90000 } });
+  });
+
+  describe("maxConcurrentRoadmapRuns — the roadmap concurrency cap", () => {
+    it("seeds the control from the loaded config", () => {
+      render(<SystemSection />);
+      expect(screen.getByTestId(SystemSectionTestId.MaxConcurrentRoadmapRuns)).toHaveValue(3);
+    });
+
+    it("Save PUTs an edited cap", async () => {
+      render(<SystemSection />);
+      const field = screen.getByTestId(SystemSectionTestId.MaxConcurrentRoadmapRuns);
+      await userEvent.clear(field);
+      await userEvent.type(field, "5");
+      await userEvent.click(screen.getByTestId(SystemSectionTestId.Save));
+      expect(setConfig).toHaveBeenCalledWith({
+        body: { ...DEFAULTS, maxConcurrentRoadmapRuns: 5 },
+      });
+    });
+
+    it("clearing it coerces to 1, never 0 — this knob is not nullable", async () => {
+      render(<SystemSection />);
+      await userEvent.clear(screen.getByTestId(SystemSectionTestId.MaxConcurrentRoadmapRuns));
+      await userEvent.click(screen.getByTestId(SystemSectionTestId.Save));
+      expect(setConfig).toHaveBeenCalledWith({
+        body: { ...DEFAULTS, maxConcurrentRoadmapRuns: 1 },
+      });
+    });
   });
 
   describe("maxConcurrentRuns (125c) — nullable knob", () => {

@@ -248,11 +248,44 @@ export const UpdateRoadmapItemSchema = z.object({
 export type UpdateRoadmapItemInput = z.infer<typeof UpdateRoadmapItemSchema>;
 
 /**
- * Per-project roadmap config (`<projectId>/_config.json`): the auto-sync
- * toggle next to the tab's Sync button. `autoSync` defaults to `false` — a
- * fresh project's roadmap doesn't start polling third-party issues on its own.
+ * Per-project roadmap config (`<projectId>/_config.json`): the two automation
+ * toggles, both surfaced on the project's Integrations tab ("Automatizace
+ * roadmapy"). Independent of each other — `autoPlay` without `autoSync` simply
+ * works through whatever the operator synced by hand.
+ *
+ * Both default to `false`: a fresh project's roadmap neither polls third-party
+ * issues nor dispatches work on its own until the operator opts in per project.
+ * That opt-in is what licenses the tick to dispatch at all — see
+ * `RoadmapGateService`'s docblock for the full provenance rule.
  */
 export const RoadmapConfigSchema = z.object({
   autoSync: z.boolean().default(false),
+  /**
+   * Auto-pickup (`RoadmapTickService`): every tick, enqueue every unblocked
+   * `todo` TASK and dispatch a decomposition for every childless epic that has
+   * never been decomposed. How many of those actually start at once is capped
+   * by `systemConfig.maxConcurrentRoadmapRuns`, not here.
+   */
+  autoPlay: z.boolean().default(false),
 });
 export type RoadmapConfig = z.infer<typeof RoadmapConfigSchema>;
+/** Pre-defaults shape — what a full-replace writer may hand in (see `RoadmapStore.writeConfig`). */
+export type RoadmapConfigInput = z.input<typeof RoadmapConfigSchema>;
+
+/**
+ * The PATCH shape `PUT /roadmap/config` accepts: an omitted toggle means
+ * "leave it alone", so a control that only knows about one toggle can never
+ * reset the other (see the route's comment in `roadmap.contract.ts`).
+ *
+ * Spelled out rather than derived as `RoadmapConfigSchema.partial()` — under
+ * Zod 4 an optional field whose inner type carries a `.default()` STILL
+ * materialises that default for a missing key, so `.partial()` would hand the
+ * handler `{ autoSync: true, autoPlay: false }` for a body of
+ * `{ autoSync: true }` and clobber the very toggle it was meant to preserve.
+ * The defaults belong to {@link RoadmapConfigSchema} (the stored shape); a
+ * patch has no defaults at all, by construction.
+ */
+export const RoadmapConfigPatchSchema = z
+  .object({ autoSync: z.boolean(), autoPlay: z.boolean() })
+  .partial();
+export type RoadmapConfigPatch = z.infer<typeof RoadmapConfigPatchSchema>;

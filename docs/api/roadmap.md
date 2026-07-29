@@ -8,8 +8,10 @@ endpoints), **125b** (`RoadmapSourceService`'s Jira/GitHub import and the
 manual `POST .../roadmap/sync` route), **125e** (play, the dependency gate,
 merge signals, lifecycle completion, Tier-3 override, restart/resume),
 **125g** (epic decomposition: the artifact contract, the dedicated agent, the
-deterministic ingest) and **125h** (the auto-sync + gate-poll tick, and the
-roadmap tab's Sync button/auto-sync toggle). See
+deterministic ingest) and **125h** (the auto-sync + gate-poll tick, the
+roadmap tab's Sync button, and — layered on top — auto-pickup: the `autoPlay`
+toggle, the `maxConcurrentRoadmapRuns` cap, and the "Automatizace roadmapy"
+panel on the project's Integrations tab). See
 `docs/plans/phase-125-project-roadmap.md` for the full master plan (the UI in
 125d/f).
 
@@ -49,9 +51,20 @@ release signal) — see "Release signals" below.
 ## Data model
 
 One file per item: `.zibby/data/roadmap/<projectId>/<itemId>.json`. A sibling
-`<projectId>/_config.json` holds the project's roadmap config (today: just
-the `autoSync` toggle — the toggle next to the future Sync button). A global
-`_level-mapping.json` sits at the roadmap root (not per-project).
+`<projectId>/_config.json` holds the project's roadmap config — the two
+automation toggles `autoSync` (pull issues on the tick) and `autoPlay`
+(dispatch unblocked work on the tick), both `false` until the operator opts
+in, and independent of each other. A global `_level-mapping.json` sits at the
+roadmap root (not per-project).
+
+`PUT .../roadmap/config` is a **patch**, not a replace: an omitted toggle is
+left alone (`RoadmapStore.updateConfig`, a locked read-modify-write). The body
+schema is `RoadmapConfigPatchSchema` and it deliberately is NOT
+`RoadmapConfigSchema.partial()` — under Zod 4 an optional field whose inner
+type carries a `.default()` still materialises that default for a missing key,
+so `.partial()` would turn `{ autoSync: true }` into
+`{ autoSync: true, autoPlay: false }` and reset the toggle the client never
+mentioned. Covered end-to-end in `roadmap.e2e.test.ts`.
 
 `RoadmapItemSchema` (full shape lands in 125a; several fields are written
 only by later sub-phases — see DECISIONS.md D-005):
@@ -371,13 +384,27 @@ reimplemented. A drain is locked per project (`withPathLock`, key
 `roadmap-gate:<projectId>`) so two triggers racing (an operator's play and an
 in-flight `onMerge`, say) can never both decide to release the same item.
 
-**Concurrency is deliberately NOT this gate's job** — 125c's system-wide
-`maxConcurrentRuns` cap lives entirely inside `TaskSchedulerService`. The gate
-only ever asks "are this item's dependencies done"; `createTask` itself
-decides whether a release dispatches immediately or gets queued/held by the
-scheduler's own capacity guard, and either way the roadmap item is `running`
-the moment its `ScheduledTask` exists — the task's own subsequent queued-vs-
-dispatched fate is the scheduler's business, not the gate's.
+A drain also stops at `systemConfig.maxConcurrentRoadmapRuns` (default `3`):
+
+```
+slots = maxConcurrentRoadmapRuns - (items with lifecycle "running").length
+```
+
+and it releases at most `slots` items this pass, leaving the rest `enqueued`
+for the next trigger. Deliberately **separate from 125c's `maxConcurrentRuns`**,
+which is the global ceiling on runs of every kind and defaults to "no cap":
+folding roadmap work into it would let a 20-task epic starve an ad-hoc task
+dispatched from chat. It counts `running` **only** — an `awaiting-merge` item's
+run has already finished, so it frees its slot immediately rather than holding
+the whole roadmap hostage to an unmerged PR. The cap is one gate with one rule:
+it applies to the manual `play`/`playBulk` path exactly as it does to the tick's
+auto-pickup, since both funnel through `drain`.
+
+What the cap is _not_: `createTask` still decides whether a released item's task
+dispatches immediately or gets queued/held by `TaskSchedulerService`'s own
+capacity guard, and either way the roadmap item is `running` the moment its
+`ScheduledTask` exists — the task's subsequent queued-vs-dispatched fate is the
+scheduler's business, not the gate's.
 
 ### Play → task (release)
 
@@ -501,15 +528,47 @@ live like every other `*TickMs`. Each tick:
 
 1. re-syncs every project whose per-project `_config.json` sets `autoSync: true`
    (projects that never opted in are skipped, but still polled — see below);
-2. drives `reconcileRunning` + `reconcileAwaitingMerge`.
+2. drives `reconcileRunning` + `reconcileAwaitingMerge`;
+3. runs `RoadmapGateService.autoPickup` for every project whose `_config.json`
+   sets `autoPlay: true`.
 
 Step 2 is the **poll half** of the two release signals, and it runs regardless of
 `autoSync`. It is what catches a PR **merged directly on GitHub**, where the eager
 `recordMerge` hook never fires at all — without it the gate silently stalls for any
 operator who merges outside ZIBBY.
 
-One project's failure never aborts the rest: a throwing sync, a throwing reconcile, and
-a throwing `readConfig` are each caught per project.
+Step 3 is **last on purpose**: sync has just imported whatever is new, and both
+reconcile passes have just freed the slots of everything that finished, so pickup
+sees the most current picture the tick can offer.
+
+One project's failure never aborts the rest: a throwing sync, a throwing reconcile, a
+throwing pickup, and a throwing `readConfig` are each caught per project.
+
+### Auto-pickup (`autoPlay`) — `RoadmapGateService.autoPickup`
+
+For an opted-in project, one pass does two things:
+
+- **`playBulk` every unblocked `todo` task.** Everything eligible is enqueued at
+  once; how many actually _start_ is `maxConcurrentRoadmapRuns`' business (see the
+  gate section above), so the queue is always full and the cap is the only throttle.
+  Items already `enqueued`/`running`/`awaiting-merge`/`done` are untouched, and so
+  are `failed` ones — auto-restarting a failure is how you get a token-burning loop
+  on a task that will never pass, so recovery stays the operator's `restart`/`resume`
+  call.
+- **Dispatch a decomposition for every childless epic that has never been
+  decomposed.** "Never" is `epic.runs.length === 0`, deliberately stricter than the
+  `hasRunningDecomposition` check `playEpic` uses: a decomposition that failed, or
+  that produced no children, must not be retried every 60 seconds forever. The
+  childless test itself (`items.some(i => i.parentId === epic.id)`, archived children
+  included) matches `playEpic`'s exactly, so the manual and automatic entry points
+  can never disagree about what "empty epic" means. One epic's failure is logged and
+  the pass continues.
+
+**Autonomy contract.** `autoPlay` is standing per-project consent, and what it
+licenses is Tier-1/Tier-2 work only: the dispatched task runs on its own branch and
+may open a PR (Tier-2, act-then-report). The merge gate is untouched — nothing here
+merges, pushes to a shared branch, or deploys, and the operator still reviews every
+opened PR.
 
 **Activity is deliberately quiet.** An entry is recorded only when a sync actually
 imported or archived something (`roadmap-sync`, `ActivityKindSchema`), and a no-op tick
@@ -527,17 +586,27 @@ Registers under the health probe's `roadmap` watcher id (`WatcherIdSchema`), sam
 subclass, so `/api/health`'s `watchers[]` and the `/settings?tab=system` watcher rows
 report it like the rest.
 
-### The roadmap tab's Sync button + auto-sync toggle (125h UI)
+### Where the UI lives
 
-`RoadmapPanel.tsx` renders a small header — present above BOTH the epic list/board and
-the empty state, since Sync is exactly how an empty roadmap gets its first items — with:
+The two surfaces are split by what they _are_, not by what they touch:
 
-- the **auto-sync toggle**, backed by `GET`/`PUT .../roadmap/config` (`useRoadmapConfigQuery`/
-  `useSetRoadmapConfigMutation`) — the same `RoadmapConfig.autoSync` flag the tick reads;
-- the **Sync** button, backed by `POST .../roadmap/sync` (`useSyncRoadmapItemsMutation`,
-  wired here for the first time — the route existed from 125b but no UI called it yet).
-  A toast reports the `{ imported, updated, archived }` summary; the item list itself
-  refreshes via the mutation's own query invalidation.
+- **Roadmap tab** — `RoadmapPanel.tsx` renders a small header above BOTH the epic
+  list/board and the empty state (Sync is exactly how an empty roadmap gets its first
+  items) holding only the **Sync split button**, backed by `POST .../roadmap/sync`
+  (`useSyncRoadmapItemsMutation`): the primary action syncs every configured source,
+  the dropdown syncs one. A toast reports the `{ imported, updated, archived }`
+  summary; the item list refreshes via the mutation's own query invalidation. This is
+  an _action_, so it sits with the work.
+- **Integrations tab** — `RoadmapAutomationPanel.tsx` ("Automatizace roadmapy"), a
+  `HudPanel` holding both standing-consent toggles, `autoSync` and `autoPlay`, backed
+  by `useRoadmapConfigQuery`/`useSetRoadmapConfigMutation`. These are _settings about
+  what ZIBBY may do with the connected sources unattended_, so they belong next to the
+  sources themselves. Each toggle sends a one-key patch body — which is precisely why
+  the PUT had to become a merge (see "Data model").
+
+The board header's epic name is a `Pressable` that opens that epic's detail dialog —
+selecting an epic in the list only re-points the board, so without this there was no
+way to read or edit the epic itself.
 
 ## Decomposition (125g)
 
@@ -807,7 +876,8 @@ Per-project (`/api/projects/:projectId/roadmap/...`):
 - `DELETE /projects/:projectId/roadmap/items/:itemId` — delete (404 if
   missing).
 - `GET|PUT /projects/:projectId/roadmap/config` — the per-project
-  `{ autoSync }` toggle.
+  `{ autoSync, autoPlay }` automation toggles. The PUT is a **patch** (omitted
+  toggle = leave it alone), not a replace.
 - `POST /projects/:projectId/roadmap/sync` (125b) — pulls the project's
   resolved Jira/GitHub integrations and upserts their items via
   `RoadmapSourceService`; returns `RoadmapSyncResultSchema`

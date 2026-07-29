@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-523",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-518",
+  "name": "Author the consolidated greenfield blueprint document",
+  "description": "Write cli-greenfield.md — merge prior DX proposal / tech-stack / VS-Code notes with the verified research into one self-contained design document defining the MVP (init/validate/dev/build parity with shoptet-bender), the end-game (ownership boundary + host-owned runtime, two independent axes), the technical stack, the architecture, and the phased implementation plan (Phase 0-7).\n\nStatus: already completed.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-523",
+    "externalKey": "CZ3TDR1-523",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-523"
+  },
+  "externalLevel": "Úkol",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-07-29T10:56:34.186Z",
+  "updatedAt": "2026-07-29T10:57:40.139Z",
+  "syncedAt": "2026-07-29T10:57:40.139Z"
+}

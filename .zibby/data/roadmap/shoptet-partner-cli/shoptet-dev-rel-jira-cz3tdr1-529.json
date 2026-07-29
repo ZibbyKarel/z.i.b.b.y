@@ -1,0 +1,31 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-529",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-520",
+  "name": "`shoptet init` command",
+  "description": "Scaffolder: addon vs theme, one target generation (g3/g4) + one target template number, extend/clean mode, development-shop URL. Writes the committed shoptet.config.json (identity, generation, template, dev-shop, mode, createdWith) and shoptet.lock (resolved knowledge-bundle digest), creates gitignored .shoptet/, and appends the .gitignore entry (never overwrites an existing one).\n\nDrops only editor-agnostic configs: thin .stylelintrc / flat eslint.config.js extending the shared packages, plus .editorconfig — no .vscode/, no .idea/. Pins @shoptet/datalayer and generates shoptet-env.d.ts.\n\nEvery prompt needs a non-interactive flag equivalent (--name, --generation, --template, --dev-shop, --slots, --mode, --yes) per the agent-ready contract in §9.\n\nReference: cli-greenfield.md §5.7, §9, §10.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-529",
+    "externalKey": "CZ3TDR1-529",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-529"
+  },
+  "externalLevel": "Úkol",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-525",
+    "shoptet-dev-rel-jira-cz3tdr1-528"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-525",
+    "shoptet-dev-rel-jira-cz3tdr1-528"
+  ],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-07-29T10:56:34.188Z",
+  "updatedAt": "2026-07-29T10:57:40.144Z",
+  "syncedAt": "2026-07-29T10:57:40.144Z"
+}

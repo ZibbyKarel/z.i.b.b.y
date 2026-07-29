@@ -1,0 +1,30 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-521",
+  "projectId": "shoptet-partner-cli",
+  "level": "epic",
+  "name": "[Shoptet CLI Greenfield] Phase 2 — The MVP: Dev Loop &amp; Build",
+  "description": "Part of the \"Shoptet Partner CLI — Greenfield Rebuild\" initiative (label: shoptet-cli-greenfield).\n\nThis is the MVP milestone: init + validate + dev + build gives partners exactly what they can do today with shoptet-bender + the boilerplate, in one tool, without the legacy footguns. Zero platform dependency, zero auth. Deploy stays on the legacy SFTP / GitHub-App path until Phase 6.\n\nScope per cli-greenfield.md §13 Phase 2 / §5.1.1:\n\n- dev-engine core: embedded Vite (middleware mode) + reverse proxy (http-proxy-middleware) + host-header validation + header/cookie handling\n- dev-engine injection & feedback: marker-anchored byte-splice injection, SSE hot reload, error overlay, rendered-version assertion, non-blocking production-shop warning\n- shoptet dev command wiring + queryable state API (§5.5)\n- shoptet build — production build, correct output names, fixes legacy bundling bug §2.6\n- Dev-loop test suite: fixture corpus, proxy header fixtures, Playwright e2e (§12)\n\nDepends on the Phase 0 feasibility spike passing.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-521",
+    "externalKey": "CZ3TDR1-521",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-521"
+  },
+  "externalLevel": "Epic",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-519",
+    "shoptet-dev-rel-jira-cz3tdr1-520"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-519",
+    "shoptet-dev-rel-jira-cz3tdr1-520"
+  ],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-07-29T10:56:34.185Z",
+  "updatedAt": "2026-07-29T10:57:40.137Z",
+  "syncedAt": "2026-07-29T10:57:40.137Z"
+}

@@ -7,6 +7,7 @@ import { ProjectPrService } from "../projects/project-pr.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { withPathLock } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
+import { SystemConfigStore } from "../system/system-config.store";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
 import { TaskRunsService } from "../tasks/task-runs.service";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
@@ -29,6 +30,15 @@ export function parsePrNumberFromUrl(url: string): number | undefined {
  * ("The dependency problem", "Lifecycle", "Play → task") and `docs/api/roadmap.md`
  * for the full picture; this docblock covers only this service's own shape.
  *
+ * **Where a dispatch may come from.** Two provenances, and only two: an operator's
+ * `play`/`playBulk`/`restart`/`resume` click, or {@link autoPickup} on a project
+ * that has explicitly opted in via `RoadmapConfig.autoPlay` (off by default, set
+ * per project on the Integrations tab). The opt-in IS the operator's consent —
+ * standing instead of per-item. Neither provenance reaches past the merge gate:
+ * this service only ever creates a task on its own branch and waits, so Law 3
+ * ("no autonomous commit to the outside world") holds unchanged — nothing here
+ * merges, pushes to a shared branch, or deploys.
+ *
  * **Play records intent only.** `play`/`playBulk`/`restart` stamp `lifecycle:
  * "enqueued"` + `enqueuedAt` and immediately attempt a {@link drain} — they never
  * create a task themselves. `override` sets the Tier-3 `overrideBlocked` flag and,
@@ -36,10 +46,14 @@ export function parsePrNumberFromUrl(url: string): number | undefined {
  *
  * **The gate.** {@link drain} lists a project's `enqueued` items, sorts them FIFO by
  * `enqueuedAt`, and releases (creates a task for) every one NOT `isBlocked` (imported
- * from `@zibby/contracts`, never reimplemented). Concurrency is the scheduler's job
- * (125c's `maxConcurrentRuns`) — this service only ever asks "are this item's
- * dependencies done", never "is there capacity"; `TaskSchedulerService.createTask`
- * itself decides whether a release dispatches immediately or gets queued/held, and
+ * from `@zibby/contracts`, never reimplemented) until `systemConfig.
+ * maxConcurrentRoadmapRuns` slots are full. That cap counts `running` items ONLY
+ * (an `awaiting-merge` item's run has already finished — see the field's own
+ * docblock) and applies to the manual and auto paths alike: one gate, one rule, so
+ * a bulk-play of twenty enqueues twenty and starts three. It is deliberately NOT
+ * 125c's `maxConcurrentRuns`, which caps runs of every kind and defaults to no cap
+ * at all; `TaskSchedulerService.createTask` still applies that one on top, and
+ * still decides whether a release dispatches immediately or gets queued/held —
  * either way the roadmap item is `running` the moment its task exists.
  *
  * **Lifecycle completion** (`running` → `awaiting-merge`/`done`/`failed`) is driven
@@ -69,6 +83,7 @@ export class RoadmapGateService {
     @Inject(forwardRef(() => ProjectPrService)) private readonly projectPr: ProjectPrService,
     private readonly activity: ActivityLogService,
     private readonly decomposition: RoadmapDecompositionService,
+    private readonly systemConfig: SystemConfigStore,
     logger: LoggerService,
   ) {
     this.log = logger.child(RoadmapGateService.name);
@@ -246,6 +261,64 @@ export class RoadmapGateService {
   }
 
   // ---------------------------------------------------------------------
+  // Auto-pickup
+  // ---------------------------------------------------------------------
+
+  /**
+   * The standing-consent counterpart of `play` — what `RoadmapTickService` calls
+   * each tick for a project whose `RoadmapConfig.autoPlay` is on. The caller owns
+   * that check; this method assumes consent and only decides WHAT is eligible.
+   *
+   * Two passes, tasks before epics — existing ready work is always preferred over
+   * generating more of it:
+   *
+   * 1. Every unblocked `todo` TASK goes through the ordinary {@link playBulk}
+   *    (never a second dispatch path): it enqueues them all and drains, so the
+   *    cap — not this method — decides how many actually start. Blocked items are
+   *    left alone rather than enqueued: they would sit `enqueued` until their
+   *    dependency lands anyway, and a later tick picks them up the moment it
+   *    clears, so the extra state buys nothing.
+   * 2. Every childless epic that has NEVER been decomposed gets a decomposition
+   *    run. "Never" is the whole guard — `runs.length === 0`, deliberately
+   *    stricter than `hasRunningDecomposition`'s in-flight check that
+   *    `playEpic` relies on. An epic whose decomposition FAILED, or whose run
+   *    finished `done` without yielding a single child, must not be retried by a
+   *    timer: at 60s a tick that is exactly a token-burning loop. It stays for the
+   *    operator's own Play, which is unchanged and still the natural retry — the
+   *    same reason a `failed` task is never auto-restarted here.
+   *
+   * Never throws: a decomposition that rejects (e.g. a race that armed a run
+   * between the list and the dispatch) is logged and skipped, so one bad epic
+   * cannot cost the project its whole pass.
+   */
+  async autoPickup(projectId: string): Promise<void> {
+    const items = await this.roadmap.list(projectId);
+    const get = (id: string) => items.find((i) => i.id === id);
+
+    const todoTaskIds = items
+      .filter((i) => i.level !== "epic" && i.lifecycle === "todo" && !isBlocked(i, get))
+      .map((i) => i.id);
+    if (todoTaskIds.length > 0) await this.playBulk(projectId, todoTaskIds);
+
+    for (const epic of items) {
+      if (epic.level !== "epic" || epic.lifecycle === "archived") continue;
+      if (epic.runs.length > 0) continue;
+      // Matches `playEpic`'s own childless test exactly — every child counts,
+      // archived included — so the two entry points can never disagree.
+      if (items.some((i) => i.parentId === epic.id)) continue;
+      try {
+        await this.decomposition.dispatch(projectId, epic);
+      } catch (error) {
+        this.log.warn("roadmap auto-decomposition failed for one epic — others unaffected", {
+          projectId,
+          itemId: epic.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------
   // Release signals
   // ---------------------------------------------------------------------
 
@@ -316,13 +389,13 @@ export class RoadmapGateService {
    */
   async reconcileRunning(projectId: string): Promise<void> {
     const items = await this.roadmap.list(projectId);
-    let anyDone = false;
+    let anyFreed = false;
     for (const item of items) {
       if (item.lifecycle !== "running") continue;
       const last = item.runs[item.runs.length - 1];
       if (!last) continue;
       try {
-        if (await this.reconcileOne(projectId, item, last)) anyDone = true;
+        if (await this.reconcileOne(projectId, item, last)) anyFreed = true;
       } catch (error) {
         this.log.warn("roadmap running-item reconcile failed — stays running", {
           projectId,
@@ -331,10 +404,15 @@ export class RoadmapGateService {
         });
       }
     }
-    if (anyDone) await this.drain(projectId);
+    // Drain on ANY item leaving `running`, not just on `done`: under
+    // `maxConcurrentRoadmapRuns` a move to `awaiting-merge` or `failed` frees a slot
+    // exactly as a `done` does, and skipping the drain there would stall the queue
+    // behind PRs nobody has merged yet.
+    if (anyFreed) await this.drain(projectId);
   }
 
-  /** Returns `true` when the item reached `done` (so the caller knows to drain). */
+  /** Returns `true` when the item LEFT `running` — done, failed, or awaiting-merge
+   * alike, since each frees a concurrency slot for the caller's drain. */
   private async reconcileOne(
     projectId: string,
     item: RoadmapItem,
@@ -345,13 +423,13 @@ export class RoadmapGateService {
 
     if (task.outcome.status === "error") {
       await this.markFailed(projectId, item.id, last);
-      return false;
+      return true;
     }
 
     const prUrl = task.outcome.pr?.url;
     if (prUrl) {
       await this.markAwaitingMerge(projectId, item.id, last, prUrl);
-      return false;
+      return true;
     }
     if (task.output?.type === "file") {
       await this.markDone(projectId, item.id, last);
@@ -361,7 +439,7 @@ export class RoadmapGateService {
     // choice) and got neither — no artifact, so the item failed (master plan:
     // "No artifact / errored → failed").
     await this.markFailed(projectId, item.id, last);
-    return false;
+    return true;
   }
 
   // ---------------------------------------------------------------------
@@ -383,10 +461,16 @@ export class RoadmapGateService {
   }
 
   /**
-   * Release every unblocked `enqueued` item in a project, FIFO by `enqueuedAt`.
-   * Locked per project (`roadmap-gate:<projectId>`) so two triggers racing (e.g. an
-   * operator's `play` and an in-flight `onMerge`) can never both decide to release
-   * the same item.
+   * Release unblocked `enqueued` items in a project, FIFO by `enqueuedAt`, up to
+   * the free-slot count under `systemConfig.maxConcurrentRoadmapRuns`. Locked per
+   * project (`roadmap-gate:<projectId>`) so two triggers racing (e.g. an operator's
+   * `play` and an in-flight `onMerge`) can never both decide to release the same
+   * item — which is also what makes the slot arithmetic sound, since no other drain
+   * can release into the same slots while this one is counting.
+   *
+   * Items over the cap simply stay `enqueued`; every path that frees a slot
+   * ({@link reconcileRunning}) drains again, so the queue keeps moving without a
+   * dedicated retry timer.
    */
   private async drain(projectId: string): Promise<void> {
     return withPathLock(`roadmap-gate:${projectId}`, async () => {
@@ -394,13 +478,22 @@ export class RoadmapGateService {
       if (!project) return; // project gone — nothing to dispatch into; items stay enqueued
       const items = await this.roadmap.list(projectId);
       const get = (id: string) => items.find((i) => i.id === id);
+      // `running` only — an `awaiting-merge` item finished its run and holds no slot.
+      let slots =
+        this.systemConfig.current().maxConcurrentRoadmapRuns -
+        items.filter((i) => i.lifecycle === "running").length;
+      if (slots <= 0) return;
       const enqueued = items
         .filter((i) => i.lifecycle === "enqueued")
         .sort((a, b) => (a.enqueuedAt ?? "").localeCompare(b.enqueuedAt ?? ""));
       for (const item of enqueued) {
+        if (slots <= 0) break;
         if (isBlocked(item, get)) continue;
         try {
           await this.release(project, item, items);
+          // Only a release that actually produced a running task takes a slot; the
+          // catch below leaves the item `failed`, with nothing running to account for.
+          slots -= 1;
         } catch (error) {
           await this.markReleaseFailed(projectId, item.id, error);
         }

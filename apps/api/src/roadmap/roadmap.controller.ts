@@ -186,7 +186,8 @@ export class RoadmapController {
 
       putRoadmapConfig: async ({ params: { projectId }, body }) => ({
         status: 200,
-        body: await this.roadmap.writeConfig(projectId, body),
+        // Patch, not replace — see the route's own comment in the contract.
+        body: await this.roadmap.updateConfig(projectId, body),
       }),
 
       getLevelMapping: async () => ({

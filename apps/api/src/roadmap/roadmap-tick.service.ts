@@ -23,13 +23,19 @@ import { RoadmapStore } from "./roadmap.store";
  *    "Release signals"): an operator who merges a PR straight on GitHub, with
  *    periodic re-import switched off, must still see its dependents released —
  *    the poll is a gate-lifecycle concern, not an import concern.
+ * 3. **Auto-pickup** — if the project's `RoadmapConfig.autoPlay` is `true`,
+ *    `RoadmapGateService.autoPickup` enqueues its unblocked `todo` tasks and
+ *    decomposes its never-decomposed childless epics. Skipped entirely for a
+ *    project with the toggle off. Runs LAST so it sees the freshly imported items
+ *    and the slots the reconcile passes just freed.
  *
- * **Law 3** — this tick only ever syncs (read-only toward Jira/GitHub),
- * reconciles already-dispatched tasks' own recorded outcome, and polls an
- * already-open PR's merge state. It never merges, pushes, or dispatches on its
- * own initiative; every dispatch it can trigger (via a poll releasing an
- * `enqueued` dependent) traces back to an operator's earlier `play`/`playBulk`
- * click, per `RoadmapGateService`'s own contract.
+ * **Law 3** — this tick syncs (read-only toward Jira/GitHub), reconciles
+ * already-dispatched tasks' own recorded outcome, polls an already-open PR's merge
+ * state, and — for a project that opted in — dispatches implementation work onto
+ * its own branch. It never merges, never pushes to a shared branch, never deploys:
+ * the PR is where it stops, exactly as when the operator clicks Play. A dispatch
+ * here is a Tier-1/2 act with the operator's standing consent (the per-project
+ * `autoPlay` toggle), not an autonomous commit to the outside world.
  *
  * Per-project AND per-step try/catch: one project's sync failure never skips
  * its own reconcile pass, and one project's total failure never blocks another
@@ -121,6 +127,24 @@ export class RoadmapTickService
         error: error instanceof Error ? error.message : String(error),
       });
     });
+    // LAST on purpose: sync has just imported whatever is new, and both reconcile
+    // passes have just freed the slots of everything that finished — so pickup
+    // sees the most current picture this tick can offer.
+    await this.autoPlayOne(projectId);
+  }
+
+  /** Auto-pickup via `RoadmapGateService.autoPickup`, but only when the project opted in. */
+  private async autoPlayOne(projectId: string): Promise<void> {
+    const config = await this.roadmap.readConfig(projectId);
+    if (!config.autoPlay) return;
+    try {
+      await this.gate.autoPickup(projectId);
+    } catch (error) {
+      this.log.warn("roadmap auto-pickup failed for one project", {
+        projectId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   /** Re-import via `RoadmapSourceService.sync`, but only when the project opted in. */

@@ -1,0 +1,29 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-528",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-520",
+  "name": "Shared lint packages + @shoptet/datalayer knowledge pack",
+  "description": "Ship @shoptet/stylelint-config and @shoptet/eslint-config: Layer-1 selector-risk rules (selector-max-combinators/type/universal/specificity, selector-no-qualifying-type, a custom postcss-selector-parser rule for `*` / `* &gt;` and positional patterns) plus the load-order rule (no-load-order-globals).\n\nIntegrate @shoptet/datalayer (already on npm): scaffold the ambient shoptet-env.d.ts typing window.dataLayer, wire tsc --noEmit typecheck, and the data-driven ESLint rule reading the published JSON Schema (flags reads of fields absent from the schema, unguarded optional-branch access, wrong-pageType reads).\n\nReference: cli-greenfield.md §8.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-528",
+    "externalKey": "CZ3TDR1-528",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-528"
+  },
+  "externalLevel": "Úkol",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-524"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-524"
+  ],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-07-29T10:56:34.187Z",
+  "updatedAt": "2026-07-29T10:57:40.143Z",
+  "syncedAt": "2026-07-29T10:57:40.143Z"
+}

@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen } from "../../../test/render";
 import { RoadmapPanel, RoadmapPanelTestId } from "./RoadmapPanel";
+import { RoadmapBoardTestId } from "./RoadmapBoard";
 import { RoadmapCardTestId } from "./RoadmapCard";
 import { RoadmapItemDialogTestId } from "./RoadmapItemDialog";
 
@@ -81,11 +82,10 @@ describe("RoadmapPanel", () => {
     expect(screen.getByTestId(RoadmapPanelTestId.Empty)).toBeInTheDocument();
   });
 
-  it("renders the sync header (Sync split button + auto-sync toggle) even on the empty state", () => {
+  it("renders the Sync split button even on the empty state", () => {
     hooks.items.data = [];
     render(<RoadmapPanel projectId="proj-1" />);
     expect(screen.getByTestId(DropDownButtonTestId.Primary)).toBeInTheDocument();
-    expect(screen.getByTestId(RoadmapPanelTestId.AutoSyncToggle)).toBeInTheDocument();
   });
 
   it("clicking the primary Sync action calls the sync mutation for every source", async () => {
@@ -126,17 +126,30 @@ describe("RoadmapPanel", () => {
     );
   });
 
-  it("toggling auto-sync calls the config mutation with the next value", async () => {
-    hooks.items.data = [item({ id: "e1", level: "epic", name: "Epic A", parentId: undefined })];
-    hooks.config.data = { autoSync: false };
+  // The auto-sync/auto-play toggles moved to `RoadmapAutomationPanel` on the
+  // Integrations tab — their behaviour is covered by that component's own suite.
+
+  it("clicking the board header's epic name opens the EPIC's detail dialog", async () => {
+    // Descriptions, not names: the epic's name also renders in the epic list and
+    // the board header, so only body text unique to the epic proves the dialog
+    // opened on the EPIC rather than on one of its tasks.
+    const epicA = item({
+      id: "e1",
+      level: "epic",
+      name: "Epic A",
+      description: "Popis epicu A",
+      parentId: undefined,
+    });
+    const taskInA = item({ id: "t1", parentId: "e1", description: "Popis tasku" });
+    hooks.items.data = [epicA, taskInA];
     render(<RoadmapPanel projectId="proj-1" />);
 
-    await userEvent.click(screen.getByTestId(RoadmapPanelTestId.AutoSyncToggle));
+    await userEvent.click(screen.getByTestId(RoadmapBoardTestId.EpicDetail));
 
-    expect(hooks.setConfig.mutate).toHaveBeenCalledWith({
-      params: { projectId: "proj-1" },
-      body: { autoSync: true },
-    });
+    expect(screen.getByTestId(RoadmapItemDialogTestId.Root)).toBeInTheDocument();
+    expect(screen.getByTestId(RoadmapItemDialogTestId.Description)).toHaveTextContent(
+      "Popis epicu A",
+    );
   });
 
   it("renders the first epic's board by default and switches on selection", async () => {

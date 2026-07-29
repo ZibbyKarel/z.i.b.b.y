@@ -1,0 +1,29 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-531",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-520",
+  "name": "`shoptet refresh` + `shoptet update` / autoupdate",
+  "description": "shoptet refresh: atomically refreshes project-pinned platform knowledge (npm-published packs only in the MVP) as one versioned bundle, never N independent fetches. Supports --check (dry-run), --frozen (CI: resolve nothing, use the lockfile digest exactly, fail if unavailable), --json. Writes the lockfile. Implements the CLI-bundle compatibility contract from §9 (bundleVersion/schemaVersion/minCliVersion/generation/template/digest). Never triggered automatically by any other command.\n\nshoptet update + shoptet config autoupdate on|off|status: upgrades the CLI itself via the package manager it was installed with. Automatic, once a day, on by default; skipped in CI, project-local installs, and for major versions (reminder only). SHOPTET_NO_AUTOUPDATE=1 env override. Copied from the Shopify CLI 4.0 shape.\n\nReference: cli-greenfield.md §9.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-531",
+    "externalKey": "CZ3TDR1-531",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-531"
+  },
+  "externalLevel": "Úkol",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-525"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-525"
+  ],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-07-29T10:56:34.188Z",
+  "updatedAt": "2026-07-29T10:57:40.145Z",
+  "syncedAt": "2026-07-29T10:57:40.145Z"
+}

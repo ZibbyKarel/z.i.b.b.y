@@ -1,15 +1,15 @@
 "use client";
 
 import type { RoadmapItemLevel } from "@zibby/contracts";
-import { DropDownButton, Grid, Stack, Toggle, Typography } from "@zibby/design-system";
+import { DropDownButton, Grid, Stack } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { EmptyState } from "../../../components/EmptyState/EmptyState";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { toastBus } from "../../../components/Toaster/toastBus";
-import { useSetRoadmapConfigMutation, useSyncRoadmapItemsMutation } from "../mutations";
-import { useRoadmapConfigQuery, useRoadmapItemsQuery } from "../queries";
+import { useSyncRoadmapItemsMutation } from "../mutations";
+import { useRoadmapItemsQuery } from "../queries";
 import { RoadmapBoard } from "./RoadmapBoard";
 import { RoadmapEpicList } from "./RoadmapEpicList";
 import { RoadmapItemDialog } from "./RoadmapItemDialog";
@@ -19,29 +19,27 @@ export enum RoadmapPanelTestId {
   Root = "roadmap-panel",
   Empty = "roadmap-panel-empty",
   Header = "roadmap-panel-header",
-  AutoSyncToggle = "roadmap-panel-auto-sync",
 }
 
 /**
  * The roadmap tab header (125h, source-picker split button per the 2026-07-29
- * design): the auto-sync toggle + the manual Sync split button, both backed
- * by the 125a/125b routes (`getRoadmapConfig`/`putRoadmapConfig`/
- * `syncRoadmapItems`) — present above BOTH the empty state and the epic
- * list/board, since Sync is exactly how an empty roadmap gets its first
- * items. The primary segment syncs every configured source; the chevron menu
- * offers Jira/GitHub individually (both always shown — syncing an
- * unconfigured source is a harmless all-zero no-op, so no extra integrations
- * query is needed to decide which to list). A toast reports the sync
- * summary; the item list itself refreshes via the mutation's own query
- * invalidation.
+ * design): the manual Sync split button, backed by the 125b `syncRoadmapItems`
+ * route — present above BOTH the empty state and the epic list/board, since
+ * Sync is exactly how an empty roadmap gets its first items. The primary
+ * segment syncs every configured source; the chevron menu offers Jira/GitHub
+ * individually (both always shown — syncing an unconfigured source is a
+ * harmless all-zero no-op, so no extra integrations query is needed to decide
+ * which to list). A toast reports the sync summary; the item list itself
+ * refreshes via the mutation's own query invalidation.
+ *
+ * The auto-sync/auto-play toggles used to sit here and now live in
+ * `RoadmapAutomationPanel` on the Integrations tab: Sync stays because its
+ * result lands on this very board, while a standing automation setting has
+ * nothing to show here.
  */
 function RoadmapSyncHeader({ projectId }: { projectId: string }) {
   const t = useTranslations("roadmap");
-  const configQuery = useRoadmapConfigQuery(projectId);
-  const setConfig = useSetRoadmapConfigMutation(projectId);
   const syncMutation = useSyncRoadmapItemsMutation(projectId);
-
-  const autoSync = configQuery.data?.autoSync ?? false;
 
   const runSync = (source?: "jira" | "github") =>
     syncMutation.mutate(
@@ -65,19 +63,6 @@ function RoadmapSyncHeader({ projectId }: { projectId: string }) {
       gap="200"
       justify="end"
     >
-      <Stack align="center" direction="row" gap="75">
-        <Toggle
-          checked={autoSync}
-          data-testid={RoadmapPanelTestId.AutoSyncToggle}
-          disabled={configQuery.isPending || setConfig.isPending}
-          label={t("sync.autoSync")}
-          onChange={(next) => setConfig.mutate({ params: { projectId }, body: { autoSync: next } })}
-          size="sm"
-        />
-        <Typography size="xs" type="note" variant="secondary">
-          {t("sync.autoSync")}
-        </Typography>
-      </Stack>
       <DropDownButton
         disabled={syncMutation.isPending}
         icon="retry"
@@ -172,6 +157,7 @@ export function RoadmapPanel({ projectId }: RoadmapPanelProps) {
           epic={selectedEpic}
           items={items}
           onCreateTask={() => setCreateTarget({ level: "task", parentId: selectedEpic.id })}
+          onSelectEpic={() => setDetailItemId(selectedEpic.id)}
           onSelectItem={setDetailItemId}
         />
       </Grid>

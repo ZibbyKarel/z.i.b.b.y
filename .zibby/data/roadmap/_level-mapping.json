@@ -1,0 +1,49 @@
+{
+  "entries": [
+    {
+      "kind": "jira",
+      "externalLevel": "Epic",
+      "target": "epic"
+    },
+    {
+      "kind": "jira",
+      "externalLevel": "Story",
+      "target": "task"
+    },
+    {
+      "kind": "jira",
+      "externalLevel": "Task",
+      "target": "task"
+    },
+    {
+      "kind": "jira",
+      "externalLevel": "Bug",
+      "target": "task"
+    },
+    {
+      "kind": "jira",
+      "externalLevel": "Sub-task",
+      "target": "task"
+    },
+    {
+      "kind": "jira",
+      "externalLevel": "Initiative",
+      "target": "ignore"
+    },
+    {
+      "kind": "github",
+      "externalLevel": "Milestone",
+      "target": "epic"
+    },
+    {
+      "kind": "github",
+      "externalLevel": "Issue",
+      "target": "task"
+    },
+    {
+      "kind": "jira",
+      "externalLevel": "Úkol",
+      "target": "task"
+    }
+  ]
+}

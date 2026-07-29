@@ -74,6 +74,19 @@ export const SystemConfigSchema = z
      * cached) via `SystemConfigStore.current()`.
      */
     roadmapTickMs: z.number().int().min(0).default(60_000),
+    /**
+     * How many roadmap items may be `running` at once, across every project —
+     * the ceiling `RoadmapGateService.drain` releases up to, for the MANUAL
+     * `play`/`playBulk` path and the auto-pickup tick alike (one gate, one
+     * rule). Deliberately separate from `maxConcurrentRuns` above: that one is
+     * the global ceiling on every run of any kind and defaults to "no cap", so
+     * folding roadmap work into it would let a 20-task epic starve an ad-hoc
+     * task dispatched from chat. Counts `running` ONLY — an `awaiting-merge`
+     * item's run has already finished and consumes nothing, so it frees its
+     * slot immediately rather than holding the roadmap hostage to an unmerged
+     * PR. Editable from `/settings?tab=runtime`; read live (never cached).
+     */
+    maxConcurrentRoadmapRuns: z.number().int().positive().default(3),
   })
   .strict();
 export type SystemConfig = z.infer<typeof SystemConfigSchema>;

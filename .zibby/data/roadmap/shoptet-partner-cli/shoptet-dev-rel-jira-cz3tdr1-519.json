@@ -1,0 +1,24 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-519",
+  "projectId": "shoptet-partner-cli",
+  "level": "epic",
+  "name": "[Shoptet CLI Greenfield] Phase 0 — Spine &amp; Feasibility Gate",
+  "description": "Part of the \"Shoptet Partner CLI — Greenfield Rebuild\" initiative (label: shoptet-cli-greenfield).\n\nFoundational work every later command depends on, plus the feasibility spike that gates the MVP design. Nothing here ships to partners directly.\n\nScope per cli-greenfield.md §13 Phase 0:\n\n- Monorepo (pnpm + Turborepo + Stricli + tsdown) and package boundaries (§5.5)\n- --json envelope, structured errors, exit codes, message catalog (§9)\n- Three-scope config resolver: machine / project / derived (§5.7)\n- Strict SemVer + Changesets + npm provenance (§4)\n- Testing harness + CI matrix (§12)\n- Feasibility spike on a real shop proving the proxy/injection/session mechanism works (§5.1.1, §13)\n\nThe MVP design (Phase 2) is not committed until the feasibility spike passes.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-519",
+    "externalKey": "CZ3TDR1-519",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-519"
+  },
+  "externalLevel": "Epic",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-07-29T10:56:34.183Z",
+  "updatedAt": "2026-07-29T10:57:40.134Z",
+  "syncedAt": "2026-07-29T10:57:40.134Z"
+}

@@ -21,6 +21,7 @@ describe("RoadmapTickService", () => {
   let gate: {
     reconcileRunning: ReturnType<typeof vi.fn>;
     reconcileAwaitingMerge: ReturnType<typeof vi.fn>;
+    autoPickup: ReturnType<typeof vi.fn>;
   };
   let activity: { record: ReturnType<typeof vi.fn> };
 
@@ -43,6 +44,7 @@ describe("RoadmapTickService", () => {
     gate = {
       reconcileRunning: vi.fn(async () => {}),
       reconcileAwaitingMerge: vi.fn(async () => {}),
+      autoPickup: vi.fn(async () => {}),
     };
     activity = { record: vi.fn(async () => {}) };
   });
@@ -69,6 +71,60 @@ describe("RoadmapTickService", () => {
     await tick.tick();
 
     expect(source.sync).toHaveBeenCalledWith("acme");
+  });
+
+  it("skips auto-pickup for a project with autoPlay: false — the default", async () => {
+    await store.writeConfig("acme", { autoSync: true });
+    const tick = makeTick();
+
+    await tick.tick();
+
+    expect(gate.autoPickup).not.toHaveBeenCalled();
+  });
+
+  it("picks up work for a project with autoPlay: true, independently of autoSync", async () => {
+    await store.writeConfig("acme", { autoSync: false, autoPlay: true });
+    const tick = makeTick();
+
+    await tick.tick();
+
+    expect(source.sync).not.toHaveBeenCalled();
+    expect(gate.autoPickup).toHaveBeenCalledWith("acme");
+  });
+
+  it("picks up LAST — after the sync and both reconcile passes have run", async () => {
+    await store.writeConfig("acme", { autoSync: true, autoPlay: true });
+    const order: string[] = [];
+    source.sync.mockImplementation(async () => {
+      order.push("sync");
+      return { ...ZERO_SUMMARY };
+    });
+    gate.reconcileRunning.mockImplementation(async () => void order.push("reconcileRunning"));
+    gate.reconcileAwaitingMerge.mockImplementation(
+      async () => void order.push("reconcileAwaitingMerge"),
+    );
+    gate.autoPickup.mockImplementation(async () => void order.push("autoPickup"));
+    const tick = makeTick();
+
+    await tick.tick();
+
+    // Pickup must see the freshly imported items and the slots the reconcile
+    // passes just freed — anything earlier works off a stale picture.
+    expect(order).toEqual(["sync", "reconcileRunning", "reconcileAwaitingMerge", "autoPickup"]);
+  });
+
+  it("one project's auto-pickup failure never blocks another project's tick", async () => {
+    await store.writeConfig("broken", { autoPlay: true });
+    await store.writeConfig("fine", { autoPlay: true });
+    gate.autoPickup.mockImplementation(async (projectId: string) => {
+      if (projectId === "broken") throw new Error("boom");
+    });
+    const tick = makeTick();
+
+    await tick.tick();
+
+    expect(gate.autoPickup).toHaveBeenCalledWith("broken");
+    expect(gate.autoPickup).toHaveBeenCalledWith("fine");
   });
 
   it("one project's sync failure never blocks another project's tick", async () => {
@@ -113,7 +169,7 @@ describe("RoadmapTickService", () => {
       .spyOn(store, "readConfig")
       .mockImplementation(async (projectId: string) => {
         if (projectId === "broken") throw new Error("unreadable");
-        return { autoSync: true };
+        return { autoSync: true, autoPlay: false };
       });
     await fs.mkdir(path.join(dir, "broken"), { recursive: true });
     const tick = makeTick();
@@ -229,6 +285,7 @@ describe("RoadmapTickService", () => {
         activity as never,
         // 125g's decomposition service — unused by this poll-path test.
         {} as never,
+        fakeSystemConfigStore(),
         fakeLogger as never,
       );
 

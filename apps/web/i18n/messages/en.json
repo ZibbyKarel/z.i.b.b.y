@@ -942,6 +942,8 @@
       "limitResumeMaxHint": "How many times a limit-paused run is retried before it is parked/failed.",
       "maxConcurrentRuns": "Max concurrent runs (system-wide)",
       "maxConcurrentRunsHint": "Ceiling on runs across every project at once. Empty = no global cap (a project's own concurrency limit still applies).",
+      "maxConcurrentRoadmapRuns": "Roadmap items implemented at once",
+      "maxConcurrentRoadmapRunsHint": "How many roadmap items may be implemented simultaneously — manual Play and auto-pickup alike. The rest wait in the queue and start as each one finishes. An item awaiting merge holds no slot.",
       "goalVerifyTimeout": "Goal verifier timeout (ms)",
       "goalVerifyTimeoutHint": "Wall-clock deadline for a goal verifier shell, then SIGTERM→SIGKILL.",
       "goalAutoResume": "Auto-resume goals on boot",
@@ -2054,6 +2056,14 @@
         "github": "GitHub"
       }
     },
+    "automation": {
+      "title": "Roadmap automation",
+      "hint": "What ZIBBY may do on its own for this project. Both are off until you turn them on.",
+      "autoSync": "Auto-sync",
+      "autoSyncHint": "Periodically pulls new Jira and GitHub issues into the roadmap. Starts nothing — it only adds what appeared.",
+      "autoPlay": "Auto-implement",
+      "autoPlayHint": "Unblocked items start on their own, and a childless epic decomposes itself. ZIBBY opens a PR and stops — the merge stays yours. How many run at once is set in Settings → Runtime."
+    },
     "epic": {
       "unphased": "unphased",
       "progress": "{done}/{total} tasks",
@@ -2067,6 +2077,7 @@
     },
     "board": {
       "header": "{name} — task board",
+      "openEpicDetail": "Open epic detail",
       "columns": {
         "blocked": "Blocked",
         "ready": "Ready",

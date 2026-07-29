@@ -942,6 +942,8 @@
       "limitResumeMaxHint": "Kolikrát se běh pozastavený limitem zkusí obnovit, než se zaparkuje/selže.",
       "maxConcurrentRuns": "Max. souběžných běhů (celý systém)",
       "maxConcurrentRunsHint": "Strop běhů napříč všemi projekty najednou. Prázdné = žádný globální strop (vlastní limit souběžnosti projektu platí dál).",
+      "maxConcurrentRoadmapRuns": "Počet souběžně implementovaných úloh",
+      "maxConcurrentRoadmapRunsHint": "Kolik položek roadmapy se smí implementovat najednou — ruční Play i automatický pickup. Zbytek čeká ve frontě a rozjede se, jakmile některá doběhne. Úloha čekající na merge slot nedrží.",
       "goalVerifyTimeout": "Timeout verifikátoru cíle (ms)",
       "goalVerifyTimeoutHint": "Wall-clock deadline pro shell verifikátoru cíle, pak SIGTERM→SIGKILL.",
       "goalAutoResume": "Auto-resume cílů při startu",
@@ -2054,6 +2056,14 @@
         "github": "GitHub"
       }
     },
+    "automation": {
+      "title": "Automatizace roadmapy",
+      "hint": "Co smí ZIBBY u tohohle projektu dělat sám. Obojí je vypnuté, dokud to nezapneš.",
+      "autoSync": "Automatická synchronizace",
+      "autoSyncHint": "Pravidelně natahuje nová issues z Jiry a GitHubu do roadmapy. Nic nespouští — jen doplňuje, co přibylo.",
+      "autoPlay": "Automatická implementace",
+      "autoPlayHint": "Nezablokované úlohy se rozjedou samy a epik bez potomků se sám rozfázuje. ZIBBY otevře PR a zastaví se — merge zůstává na tobě. Kolik úloh běží najednou, řídí Nastavení → Běhové parametry."
+    },
     "epic": {
       "unphased": "nerozfázováno",
       "progress": "{done}/{total} tasků",
@@ -2067,6 +2077,7 @@
     },
     "board": {
       "header": "{name} — task board",
+      "openEpicDetail": "Otevřít detail epicu",
       "columns": {
         "blocked": "Blokované",
         "ready": "Ready",

@@ -58,7 +58,17 @@ system-config section — link there rather than duplicating the table here.
      project with a roadmap (independent of `autoSync` — this is the **poll**
      half of the roadmap's two release signals, the one that catches a PR
      merged directly on GitHub, where the eager `recordMerge` hook never
-     fires). See [roadmap.md](./roadmap.md).
+     fires), then runs auto-pickup for every project with `autoPlay: true`.
+     See [roadmap.md](./roadmap.md).
+   - `maxConcurrentRoadmapRuns` is the ceiling on roadmap items that may be
+     `running` at once, across every project — `3` by default, read live by
+     `RoadmapGateService.drain` for the manual `play`/`playBulk` path and the
+     auto-pickup tick alike (one gate, one rule). Deliberately separate from
+     `maxConcurrentRuns` above: that one caps runs of every kind and defaults
+     to uncapped, so folding roadmap work into it would let a 20-task epic
+     starve an ad-hoc task dispatched from chat. Counts `running` **only** —
+     an `awaiting-merge` item's run has already finished and frees its slot
+     immediately, so the queue never stalls behind an unmerged PR.
 4. `GET /system/config` / `PUT /system/config` are the only two endpoints;
    `putConfig` replaces the entire document (not a partial patch).
 

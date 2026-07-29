@@ -1,0 +1,33 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-535",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-521",
+  "name": "`shoptet dev` command",
+  "description": "Wire dev-engine (proxy, injection, HMR, overlay, version assertion, production warning) into the CLI as the shoptet dev command. Expose a queryable state API from dev-engine (rendered-version assertion, snapshot diffs, build state) so a future MCP server or VS Code extension can be a thin client over the same internals instead of a parallel implementation.\n\nNo drift warnings (need a clean reference shop, Phase 4/5) and no telemetry (Phase 7) in this command yet.\n\nReference: cli-greenfield.md §5.5, §9.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-535",
+    "externalKey": "CZ3TDR1-535",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-535"
+  },
+  "externalLevel": "Úkol",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-529",
+    "shoptet-dev-rel-jira-cz3tdr1-533",
+    "shoptet-dev-rel-jira-cz3tdr1-534"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-529",
+    "shoptet-dev-rel-jira-cz3tdr1-533",
+    "shoptet-dev-rel-jira-cz3tdr1-534"
+  ],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-07-29T10:56:34.190Z",
+  "updatedAt": "2026-07-29T10:57:40.147Z",
+  "syncedAt": "2026-07-29T10:57:40.147Z"
+}

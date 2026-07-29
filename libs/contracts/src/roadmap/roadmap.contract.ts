@@ -5,6 +5,7 @@ import { ProjectIdSchema } from "../projects/project.schema";
 import { LevelMappingSchema } from "./level-mapping.schema";
 import {
   CreateRoadmapItemSchema,
+  RoadmapConfigPatchSchema,
   RoadmapConfigSchema,
   RoadmapItemIdSchema,
   RoadmapItemSchema,
@@ -207,11 +208,18 @@ export const roadmapContract = c.router(
       method: "PUT",
       path: "/projects/:projectId/roadmap/config",
       pathParams: z.object({ projectId: ProjectIdSchema }),
-      body: RoadmapConfigSchema,
+      // A PATCH on purpose — the body is merged over the stored config, not a
+      // replacement. With more than one toggle in there, a replace would reset
+      // every toggle the client didn't send, so flipping auto-sync from a
+      // control that only knows about auto-sync would silently switch auto-play
+      // back off. Omitted field = "leave it alone". (Not
+      // `RoadmapConfigSchema.partial()` — see that schema's sibling for why
+      // that would reintroduce exactly the clobber it looks like it prevents.)
+      body: RoadmapConfigPatchSchema,
       responses: {
         200: RoadmapConfigSchema,
       },
-      summary: "Replace a project's roadmap config",
+      summary: "Update a project's roadmap config (partial merge)",
     },
 
     getLevelMapping: {

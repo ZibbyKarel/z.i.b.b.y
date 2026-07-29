@@ -32,6 +32,7 @@ import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { slug } from "../../utils/slug";
 import { useCompaniesQuery } from "../companies";
 import { InboxPanel } from "../integrations/components/InboxPanel";
+import { RoadmapAutomationPanel } from "../roadmap/components/RoadmapAutomationPanel";
 import { RoadmapPanel } from "../roadmap/components/RoadmapPanel";
 import { type ProjectBasicsBody, ProjectBasicsPanel } from "./components/ProjectBasicsPanel";
 import { ProjectCiStatusChip } from "./components/ProjectCiStatusChip";
@@ -662,6 +663,8 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
                   <Stack gap="300">
                     {/* Channels owned by this project (one project = one company) */}
                     <ProjectIntegrationsPanel projectId={id} />
+                    {/* What ZIBBY may do with those sources unattended */}
+                    <RoadmapAutomationPanel projectId={id} />
                     {/* This project's recent channel items */}
                     <InboxPanel projectId={id} />
                     {/* What the project's integrations processed + outcome */}

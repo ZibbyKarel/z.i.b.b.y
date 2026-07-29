@@ -1,0 +1,31 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-526",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-519",
+  "name": "Testing harness &amp; CI matrix",
+  "description": "Set up the testing harness per §12: fixture layout for recorded shop HTML/headers, golden-envelope tests for every --json success/error shape, a test asserting --describe matches Stricli's own parameter definitions (parity test), and a CI matrix across macOS + Linux + Windows on supported Node majors.\n\nThis is Phase-0 spine work, not a later chore — the hardest-to-test component (proxy + injection) is on the MVP critical path.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-526",
+    "externalKey": "CZ3TDR1-526",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-526"
+  },
+  "externalLevel": "Úkol",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-524",
+    "shoptet-dev-rel-jira-cz3tdr1-525"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-524",
+    "shoptet-dev-rel-jira-cz3tdr1-525"
+  ],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-07-29T10:57:40.142Z",
+  "updatedAt": "2026-07-29T10:57:40.142Z",
+  "syncedAt": "2026-07-29T10:57:40.142Z"
+}

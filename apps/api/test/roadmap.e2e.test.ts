@@ -118,27 +118,46 @@ describe("Roadmap API (e2e)", () => {
       .expect(422);
   });
 
-  it("round-trips the per-project roadmap config (autoSync toggle)", async () => {
+  it("round-trips the per-project roadmap config (both automation toggles)", async () => {
     const initial = await request(app.getHttpServer())
       .get("/api/projects/other-project/roadmap/config")
       .expect(200);
-    expect(initial.body).toEqual({ autoSync: false });
+    expect(initial.body).toEqual({ autoSync: false, autoPlay: false });
 
     const updated = await request(app.getHttpServer())
       .put("/api/projects/other-project/roadmap/config")
       .send({ autoSync: true })
       .expect(200);
-    expect(updated.body).toEqual({ autoSync: true });
+    expect(updated.body).toEqual({ autoSync: true, autoPlay: false });
 
     const reread = await request(app.getHttpServer())
       .get("/api/projects/other-project/roadmap/config")
       .expect(200);
-    expect(reread.body).toEqual({ autoSync: true });
+    expect(reread.body).toEqual({ autoSync: true, autoPlay: false });
+  });
+
+  it("PUT config MERGES — patching one toggle never resets the other", async () => {
+    await request(app.getHttpServer())
+      .put("/api/projects/merge-project/roadmap/config")
+      .send({ autoPlay: true })
+      .expect(200);
+
+    // The regression: a replacing PUT would default `autoPlay` back to false
+    // here, silently switching auto-implement off on an auto-sync flip.
+    const merged = await request(app.getHttpServer())
+      .put("/api/projects/merge-project/roadmap/config")
+      .send({ autoSync: true })
+      .expect(200);
+    expect(merged.body).toEqual({ autoSync: true, autoPlay: true });
   });
 
   it("POST sync on a project with no Jira/GitHub integration returns an all-zero summary, not an error", async () => {
+    // `.send({})` — "sync every configured source". The route's body became a
+    // real schema with the source-picker split button, so a body-less POST is
+    // now a 400 at validation and never reaches the handler.
     const synced = await request(app.getHttpServer())
       .post("/api/projects/no-integrations-project/roadmap/sync")
+      .send({})
       .expect(200);
     expect(synced.body).toEqual({ imported: 0, updated: 0, archived: 0, skipped: 0, notes: [] });
   });
@@ -146,6 +165,7 @@ describe("Roadmap API (e2e)", () => {
   it("POST sync 404s for a project id that doesn't resolve to a real project", async () => {
     await request(app.getHttpServer())
       .post("/api/projects/nonexistent-project/roadmap/sync")
+      .send({})
       .expect(404);
   });
 

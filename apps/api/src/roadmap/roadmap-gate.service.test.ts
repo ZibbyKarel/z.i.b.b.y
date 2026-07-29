@@ -3,6 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { Project, RoadmapItem, ScheduledTask } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { RoadmapGateService, parsePrNumberFromUrl } from "./roadmap-gate.service";
 import { RoadmapItemLifecycleError } from "./roadmap.errors";
 import { RoadmapStore } from "./roadmap.store";
@@ -55,7 +56,10 @@ describe("RoadmapGateService", () => {
   let activity: { record: ReturnType<typeof vi.fn> };
   let decomposition: { dispatch: ReturnType<typeof vi.fn> };
 
-  const makeGate = () =>
+  /** Defaults to the fixture's effectively-uncapped config, so a test that isn't
+   * about concurrency never has its releases silently truncated; a cap test passes
+   * `fakeSystemConfigStore({ maxConcurrentRoadmapRuns: N })`. */
+  const makeGate = (systemConfig = fakeSystemConfigStore()) =>
     new RoadmapGateService(
       store,
       projects as never,
@@ -65,6 +69,7 @@ describe("RoadmapGateService", () => {
       projectPr as never,
       activity as never,
       decomposition as never,
+      systemConfig,
       fakeLogger as never,
     );
 
@@ -292,6 +297,202 @@ describe("RoadmapGateService", () => {
 
       // Bulk-play order is preserved even though "first" sorts alphabetically ahead.
       expect(order).toEqual(["Second", "First"]);
+    });
+  });
+
+  describe("maxConcurrentRoadmapRuns — the concurrency cap", () => {
+    const capped = (n: number) => makeGate(fakeSystemConfigStore({ maxConcurrentRoadmapRuns: n }));
+
+    it("releases only up to the cap; the rest stay enqueued rather than failing", async () => {
+      await store.put(item({ id: "a", name: "A" }));
+      await store.put(item({ id: "b", name: "B" }));
+      await store.put(item({ id: "c", name: "C" }));
+
+      await capped(2).playBulk("acme", ["a", "b", "c"]);
+
+      expect(taskScheduler.createTask).toHaveBeenCalledTimes(2);
+      expect((await store.get("acme", "a")).lifecycle).toBe("running");
+      expect((await store.get("acme", "b")).lifecycle).toBe("running");
+      expect((await store.get("acme", "c")).lifecycle).toBe("enqueued");
+    });
+
+    it("applies to the MANUAL path too — a play into a full gate parks instead of dispatching", async () => {
+      await store.put(
+        item({
+          id: "busy",
+          lifecycle: "running",
+          runs: [{ taskId: "task-0", startedAt: NOW, outcome: "running" }],
+        }),
+      );
+      await store.put(item({ id: "item-1" }));
+
+      const played = await capped(1).play("acme", "item-1");
+
+      expect(played.lifecycle).toBe("enqueued");
+      expect(taskScheduler.createTask).not.toHaveBeenCalled();
+    });
+
+    it("an awaiting-merge item holds NO slot — its run already finished", async () => {
+      await store.put(
+        item({
+          id: "in-review",
+          lifecycle: "awaiting-merge",
+          runs: [
+            {
+              taskId: "task-0",
+              startedAt: NOW,
+              outcome: "awaiting-merge",
+              prUrl: "https://github.com/acme/app/pull/7",
+              prNumber: 7,
+            },
+          ],
+        }),
+      );
+      await store.put(item({ id: "item-1" }));
+
+      // Cap of 1 with one item awaiting merge: it releases, because an unmerged
+      // PR must never be able to freeze the roadmap.
+      const played = await capped(1).play("acme", "item-1");
+
+      expect(played.lifecycle).toBe("running");
+    });
+
+    it("a run reaching awaiting-merge frees its slot and the next enqueued item starts", async () => {
+      await store.put(
+        item({
+          id: "a",
+          name: "A",
+          lifecycle: "running",
+          runs: [{ taskId: "task-a", startedAt: NOW, outcome: "running" }],
+        }),
+      );
+      await store.put(item({ id: "b", name: "B", lifecycle: "enqueued", enqueuedAt: NOW }));
+      scheduledTasks.get.mockResolvedValue(
+        task({
+          id: "task-a",
+          output: { type: "pr" },
+          outcome: {
+            status: "done",
+            summary: "PR opened",
+            finishedAt: NOW,
+            pr: { url: "https://github.com/acme/app/pull/9", additions: 1, deletions: 0 },
+          },
+        }),
+      );
+
+      await capped(1).reconcileRunning("acme");
+
+      // The regression this guards: draining only on `done` would leave "b"
+      // enqueued behind a PR nobody has merged yet.
+      expect((await store.get("acme", "a")).lifecycle).toBe("awaiting-merge");
+      expect((await store.get("acme", "b")).lifecycle).toBe("running");
+    });
+
+    it("a failed run also frees its slot", async () => {
+      await store.put(
+        item({
+          id: "a",
+          name: "A",
+          lifecycle: "running",
+          runs: [{ taskId: "task-a", startedAt: NOW, outcome: "running" }],
+        }),
+      );
+      await store.put(item({ id: "b", name: "B", lifecycle: "enqueued", enqueuedAt: NOW }));
+      scheduledTasks.get.mockResolvedValue(
+        task({ id: "task-a", outcome: { status: "error", summary: "boom", finishedAt: NOW } }),
+      );
+
+      await capped(1).reconcileRunning("acme");
+
+      expect((await store.get("acme", "a")).lifecycle).toBe("failed");
+      expect((await store.get("acme", "b")).lifecycle).toBe("running");
+    });
+  });
+
+  describe("autoPickup", () => {
+    it("enqueues every unblocked todo task and leaves blocked ones untouched", async () => {
+      await store.put(item({ id: "ready", name: "Ready" }));
+      await store.put(item({ id: "blocker", name: "Blocker" }));
+      await store.put(item({ id: "blocked", name: "Blocked", dependsOn: ["blocker"] }));
+      const gate = makeGate();
+
+      await gate.autoPickup("acme");
+
+      expect((await store.get("acme", "ready")).lifecycle).toBe("running");
+      expect((await store.get("acme", "blocker")).lifecycle).toBe("running");
+      // Not even enqueued — a later tick picks it up once its blocker lands.
+      expect((await store.get("acme", "blocked")).lifecycle).toBe("todo");
+    });
+
+    it("leaves an item that is already in flight alone", async () => {
+      await store.put(item({ id: "a", lifecycle: "running" }));
+      await store.put(item({ id: "b", lifecycle: "failed" }));
+      await store.put(item({ id: "c", lifecycle: "done" }));
+      const gate = makeGate();
+
+      await gate.autoPickup("acme");
+
+      // Notably `failed` is NOT auto-restarted — that stays the operator's call.
+      expect(taskScheduler.createTask).not.toHaveBeenCalled();
+      expect((await store.get("acme", "b")).lifecycle).toBe("failed");
+    });
+
+    it("decomposes a childless epic that has never been decomposed", async () => {
+      await store.put(item({ id: "epic-1", level: "epic", name: "Epic" }));
+      const gate = makeGate();
+
+      await gate.autoPickup("acme");
+
+      expect(decomposition.dispatch).toHaveBeenCalledTimes(1);
+      expect(decomposition.dispatch.mock.calls[0]![1]).toMatchObject({ id: "epic-1" });
+    });
+
+    it("never re-decomposes an epic whose decomposition already ran — a timer must not loop", async () => {
+      // `failed` is the dangerous one: retried every tick it is a token-burning
+      // loop, so the guard is "has any run at all", not "has a running run".
+      await store.put(
+        item({
+          id: "epic-failed",
+          level: "epic",
+          name: "Failed epic",
+          runs: [{ taskId: "task-d", startedAt: NOW, outcome: "failed" }],
+        }),
+      );
+      await store.put(
+        item({
+          id: "epic-done",
+          level: "epic",
+          name: "Done epic",
+          runs: [{ taskId: "task-e", startedAt: NOW, outcome: "done" }],
+        }),
+      );
+      const gate = makeGate();
+
+      await gate.autoPickup("acme");
+
+      expect(decomposition.dispatch).not.toHaveBeenCalled();
+    });
+
+    it("skips an epic that already has children, and an archived one", async () => {
+      await store.put(item({ id: "epic-1", level: "epic", name: "Epic" }));
+      await store.put(item({ id: "child", parentId: "epic-1", lifecycle: "done" }));
+      await store.put(item({ id: "epic-old", level: "epic", name: "Old", lifecycle: "archived" }));
+      const gate = makeGate();
+
+      await gate.autoPickup("acme");
+
+      expect(decomposition.dispatch).not.toHaveBeenCalled();
+    });
+
+    it("one epic's decomposition failure never costs the project the rest of its pass", async () => {
+      await store.put(item({ id: "epic-a", level: "epic", name: "A" }));
+      await store.put(item({ id: "epic-b", level: "epic", name: "B" }));
+      decomposition.dispatch.mockRejectedValueOnce(new Error("already in flight"));
+      const gate = makeGate();
+
+      await expect(gate.autoPickup("acme")).resolves.toBeUndefined();
+
+      expect(decomposition.dispatch).toHaveBeenCalledTimes(2);
     });
   });
 

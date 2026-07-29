@@ -1,0 +1,29 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-525",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-519",
+  "name": "Core CLI infrastructure (envelope, errors, config resolver)",
+  "description": "Build cli/src/lib/output.ts: the --json envelope (ok/schemaVersion/error/meta), structured errors, exit codes, and the message catalog (keys from the first string, default en, cs shipped; codes stay English forever).\n\nBuild cli/src/lib/config.ts: the three-scope config resolver per §5.7 — machine config (env-paths dir, mode 0600), committed project config (shoptet.config.json + shoptet.lock), gitignored derived cache (.shoptet/) — with precedence flags > env > project config > machine config > defaults. This is needed by auto-update immediately and by every later command, so it cannot be retrofitted.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-525",
+    "externalKey": "CZ3TDR1-525",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-525"
+  },
+  "externalLevel": "Úkol",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-524"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-524"
+  ],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-07-29T10:57:40.141Z",
+  "updatedAt": "2026-07-29T10:57:40.141Z",
+  "syncedAt": "2026-07-29T10:57:40.141Z"
+}

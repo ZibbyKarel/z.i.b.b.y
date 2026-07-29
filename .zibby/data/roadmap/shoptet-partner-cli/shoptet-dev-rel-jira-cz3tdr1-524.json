@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-524",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-519",
+  "name": "Monorepo &amp; CLI skeleton",
+  "description": "Set up pnpm workspaces + Turborepo + Stricli + tsdown. Establish the package layout per cli-greenfield.md §5.5: packages/cli, packages/dev-engine, packages/manifest, packages/validator, packages/create, packages/stylelint-config, packages/eslint-config, packages/test-fixtures, apps/deploy-service (placeholder only, not implemented yet).\n\nSet up Changesets + strict SemVer discipline + npm provenance (OIDC) per §4 — a prerequisite for auto-update being safe later.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-524",
+    "externalKey": "CZ3TDR1-524",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-524"
+  },
+  "externalLevel": "Úkol",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-07-29T10:57:40.140Z",
+  "updatedAt": "2026-07-29T10:57:40.140Z",
+  "syncedAt": "2026-07-29T10:57:40.140Z"
+}

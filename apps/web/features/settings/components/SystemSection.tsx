@@ -17,6 +17,7 @@ export enum SystemSectionTestId {
   RoadmapTick = "system-roadmap-tick",
   LimitResumeMax = "system-limit-resume-max",
   MaxConcurrentRuns = "system-max-concurrent-runs",
+  MaxConcurrentRoadmapRuns = "system-max-concurrent-roadmap-runs",
   GoalVerifyTimeout = "system-goal-verify-timeout",
   GoalAutoResume = "system-goal-auto-resume",
   Save = "system-save",
@@ -53,6 +54,9 @@ function SystemEditor({ config }: { config: SystemConfig }) {
   const [maxConcurrentRuns, setMaxConcurrentRuns] = useState<number | null>(
     config.maxConcurrentRuns,
   );
+  const [maxConcurrentRoadmapRuns, setMaxConcurrentRoadmapRuns] = useState<number | null>(
+    config.maxConcurrentRoadmapRuns,
+  );
   const [goalVerifyTimeoutMs, setGoalVerifyTimeoutMs] = useState<number | null>(
     config.goalVerifyTimeoutMs,
   );
@@ -81,6 +85,7 @@ function SystemEditor({ config }: { config: SystemConfig }) {
         roadmapTickMs: tick(roadmapTickMs),
         limitResumeMax: positive(limitResumeMax, 1),
         maxConcurrentRuns: positiveNullable(maxConcurrentRuns, 1),
+        maxConcurrentRoadmapRuns: positive(maxConcurrentRoadmapRuns, 1),
         goalVerifyTimeoutMs: positive(goalVerifyTimeoutMs, 1),
         goalAutoResume,
         // Not edited here — passed through so a runtime save can't reset the operator's
@@ -174,6 +179,14 @@ function SystemEditor({ config }: { config: SystemConfig }) {
           min={1}
           onValueChange={setMaxConcurrentRuns}
           value={maxConcurrentRuns}
+        />
+        <NumberField
+          data-testid={SystemSectionTestId.MaxConcurrentRoadmapRuns}
+          hint={t("runtime.maxConcurrentRoadmapRunsHint")}
+          label={t("runtime.maxConcurrentRoadmapRuns")}
+          min={1}
+          onValueChange={setMaxConcurrentRoadmapRuns}
+          value={maxConcurrentRoadmapRuns}
         />
         <NumberField
           data-testid={SystemSectionTestId.GoalVerifyTimeout}
