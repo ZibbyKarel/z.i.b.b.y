@@ -369,6 +369,12 @@ i.e. every rule that just reached its second occurrence. Returns
 Fail-open per project: one unreachable repo or one bad credential never stops
 the others.
 
+The pass never renders a vault note and never makes a rule `active` — both
+belong to `ReviewRuleFlowService.resume`, i.e. to the operator's approval.
+`ReviewLearningModule` does provide and export `ReviewRulesVaultService`, but
+for the review-learning controller that lands in a later task, not for this
+service.
+
 Cursor discipline — the cursor advances only when the pass both saw a complete
 window and got something out of it:
 
