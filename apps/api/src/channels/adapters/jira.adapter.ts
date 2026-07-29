@@ -83,7 +83,11 @@ export class JiraChannelAdapter implements ChannelAdapter {
       maxResults: "50",
       fields: "summary,updated,reporter,description",
     });
-    const res = await this.fetchImpl(`${baseUrl}/rest/api/3/search?${params}`, {
+    // `/search/jql` — the legacy `/rest/api/3/search` was removed by Atlassian
+    // (May 2025, CHANGE-2046) and answers 410 Gone; the `issues`/`errorMessages`
+    // response shape is unchanged and one page of 50 is enough for a heartbeat
+    // poll narrowed by `updated >=`, so no cursor pagination is needed here.
+    const res = await this.fetchImpl(`${baseUrl}/rest/api/3/search/jql?${params}`, {
       headers: { authorization: this.authHeader(creds, email), accept: "application/json" },
     });
     if (res.status === 429)

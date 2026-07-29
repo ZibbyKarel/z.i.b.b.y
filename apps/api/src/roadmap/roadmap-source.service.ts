@@ -109,7 +109,10 @@ interface JiraSearchIssue {
 }
 interface JiraSearchResponse {
   issues?: JiraSearchIssue[];
-  total?: number;
+  /** Cursor pagination (`/search/jql`): the token for the NEXT page, absent on the last. */
+  nextPageToken?: string;
+  /** True on the final page. The `/search/jql` endpoint returns NO `total`. */
+  isLast?: boolean;
   errorMessages?: string[];
 }
 
@@ -467,6 +470,13 @@ export class RoadmapSourceService {
    * This is also reused (with an explicit `jql` and no `projectKey`) for the
    * `key in (...)` supplementary ancestor-epic fetch in
    * `expandWithAncestorEpics`.
+   *
+   * Endpoint: `/rest/api/3/search/jql`. The legacy `/rest/api/3/search` was
+   * REMOVED by Atlassian (May 2025, CHANGE-2046) and now answers 410 Gone, so
+   * every sync against it silently failed — this is the replacement. It
+   * paginates by an opaque `nextPageToken` cursor (NOT `startAt`/`maxResults`
+   * offsets) and returns NO `total`: a page is the last one when it says
+   * `isLast` or omits `nextPageToken`.
    */
   private async fetchAllJiraIssues(
     baseUrl: string,
@@ -480,15 +490,15 @@ export class RoadmapSourceService {
         ? `project = ${projectKey} AND assignee = currentUser() ORDER BY created ASC`
         : `assignee = currentUser() ORDER BY created ASC`);
     const out: JiraSearchIssue[] = [];
-    let startAt = 0;
+    let nextPageToken: string | undefined;
     for (let page = 0; page < MAX_PAGES; page += 1) {
       const params = new URLSearchParams({
         jql: clause,
-        startAt: String(startAt),
         maxResults: String(PAGE_SIZE),
         fields: "summary,description,issuetype,parent,issuelinks,attachment,status",
       });
-      const res = await this.fetchImpl(`${baseUrl}/rest/api/3/search?${params}`, {
+      if (nextPageToken) params.set("nextPageToken", nextPageToken);
+      const res = await this.fetchImpl(`${baseUrl}/rest/api/3/search/jql?${params}`, {
         headers: { authorization: authHeader, accept: "application/json" },
       });
       if (res.status === 429) {
@@ -500,9 +510,8 @@ export class RoadmapSourceService {
       }
       const issues = body.issues ?? [];
       out.push(...issues);
-      const total = typeof body.total === "number" ? body.total : startAt + issues.length;
-      startAt += issues.length;
-      if (issues.length === 0 || startAt >= total) break;
+      if (issues.length === 0 || body.isLast || !body.nextPageToken) break;
+      nextPageToken = body.nextPageToken;
     }
     return out;
   }

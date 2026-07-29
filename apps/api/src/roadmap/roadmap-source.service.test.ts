@@ -494,6 +494,48 @@ describe("RoadmapSourceService", () => {
       expect(capturedJql).toEqual(["assignee = currentUser() ORDER BY created ASC"]);
     });
 
+    it("hits /rest/api/3/search/jql and paginates by nextPageToken (not the removed /search + startAt)", async () => {
+      // Regression: the legacy /rest/api/3/search was removed by Atlassian and
+      // answers 410 Gone, so every Jira sync silently imported nothing. The
+      // replacement /search/jql paginates by an opaque cursor and returns no
+      // `total` — the last page is the one that omits nextPageToken.
+      const epic = (key: string) => ({
+        key,
+        fields: {
+          summary: `Epic ${key}`,
+          description: adfParagraph("body"),
+          issuetype: { name: "Epic" },
+          status: { name: "To Do", statusCategory: { key: "new" } },
+        },
+      });
+      const paths: string[] = [];
+      const tokens: (string | null)[] = [];
+      const fetchImpl = (async (url: string | URL) => {
+        const u = new URL(String(url));
+        paths.push(u.pathname);
+        const token = u.searchParams.get("nextPageToken");
+        tokens.push(token);
+        if (!token) {
+          return jsonResponse({ issues: [epic("PROJ-10")], nextPageToken: "cursor-2" });
+        }
+        return jsonResponse({ issues: [epic("PROJ-11")], isLast: true });
+      }) as unknown as typeof fetch;
+
+      const { service, roadmap } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [JIRA_INTEGRATION],
+        fetchImpl,
+      });
+
+      const result = await service.sync(PROJECT.id);
+      expect(paths).toEqual(["/rest/api/3/search/jql", "/rest/api/3/search/jql"]);
+      expect(tokens).toEqual([null, "cursor-2"]); // page 2 carried the cursor
+      expect(result.imported).toBe(2); // both pages landed
+      const items = await roadmap.list(PROJECT.id);
+      expect(items.map((item) => item.source.externalId).sort()).toEqual(["PROJ-10", "PROJ-11"]);
+    });
+
     it("a custom jql wins verbatim and is never augmented with a supplementary ancestor fetch", async () => {
       const customJql = "project = PROJ AND status != Done";
       const integration: Integration = {
@@ -504,7 +546,7 @@ describe("RoadmapSourceService", () => {
       let searchCalls = 0;
       const fetchImpl = (async (url: string | URL) => {
         const u = new URL(String(url));
-        if (u.pathname.endsWith("/rest/api/3/search")) {
+        if (u.pathname.endsWith("/rest/api/3/search/jql")) {
           searchCalls += 1;
           expect(u.searchParams.get("jql")).toBe(customJql);
           // PROJ-2's parent (PROJ-1) is never returned. With a custom jql
@@ -571,7 +613,7 @@ describe("RoadmapSourceService", () => {
       const searchQueries: string[] = [];
       const fetchImpl = (async (url: string | URL) => {
         const u = new URL(String(url));
-        if (!u.pathname.endsWith("/rest/api/3/search")) {
+        if (!u.pathname.endsWith("/rest/api/3/search/jql")) {
           throw new Error(`unhandled jira fetch: ${String(url)}`);
         }
         const jql = u.searchParams.get("jql") ?? "";
