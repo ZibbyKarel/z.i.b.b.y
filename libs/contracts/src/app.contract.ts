@@ -36,6 +36,7 @@ import { pipelineRunsContract, pipelinesContract } from "./pipelines/pipelines.c
 import { goalsContract } from "./goals/goals.contract";
 import { pinsContract } from "./pins/pins.contract";
 import { projectsContract } from "./projects/projects.contract";
+import { reviewLearningContract } from "./review-learning/review-learning.contract";
 import { roadmapContract } from "./roadmap/roadmap.contract";
 import { skillsContract } from "./skills/skills.contract";
 import { speechContract } from "./speech/speech.contract";
@@ -68,6 +69,7 @@ export const appContract = c.router({
   goals: goalsContract,
   approvals: approvalsContract,
   artifacts: artifactsContract,
+  reviewLearning: reviewLearningContract,
   handoff: handoffContract,
   gates: gatesContract,
   gateRules: gateRulesContract,
