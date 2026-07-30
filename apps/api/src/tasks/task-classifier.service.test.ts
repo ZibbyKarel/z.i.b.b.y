@@ -1,4 +1,10 @@
-import type { Agent, Pipeline, Project, TaskRouting } from "@zibby/contracts";
+import {
+  type Agent,
+  type Pipeline,
+  type Project,
+  ROADMAP_DECOMPOSER_AGENT_ID,
+  type TaskRouting,
+} from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
 import type { AgentsStorageService } from "../agents/agents.storage.service";
 import type { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
@@ -348,7 +354,12 @@ describe("TaskClassifierService — Phase 91 / F2b classifyWithinSubsystem (recu
     expect(r?.target).toMatchObject({ kind: "pipeline", id: "watch-a" });
   });
 
-  it("low-confidence fallback for an 'orchestrator'-policy subsystem (forge) escapes to the orchestrator — SUBSYSTEM_FALLBACK is per-subsystem, not a blanket rule", async () => {
+  it("an unsure FORGE lands on its primary owned pipeline, never on the global orchestrator", async () => {
+    // Flipped from `"orchestrator"`: escaping forge produced a run with no
+    // PR-shaped output, which the roadmap gate then killed as "no artifact".
+    // `"primary"` = candidates[0] = the first owned PIPELINE (pipelines are
+    // listed before agents in `subsystemCandidates` precisely so this reads as
+    // "the subsystem's primary pipeline").
     const svc = makeService({
       pipelines: [
         pipeline({
@@ -370,7 +381,27 @@ describe("TaskClassifierService — Phase 91 / F2b classifyWithinSubsystem (recu
       { text: "xyzzy zzz no keyword overlap at all" },
       "forge",
     );
-    expect(r?.target.kind).toBe("orchestrator");
+    expect(r?.target).toMatchObject({ kind: "pipeline", id: "delivery" });
+    expect(r?.target.kind).not.toBe("orchestrator");
+  });
+
+  it("an unsure forge that owns ONLY agents falls back to its first owned agent", async () => {
+    // `"primary"` is `candidates[0]`, which is the first owned pipeline when
+    // there is one and the first owned agent otherwise — so a pipeline-less
+    // forge still stays inside forge rather than escaping.
+    const svc = makeService({
+      agents: [
+        agent({ id: "fullstack-developer", name: "Fullstack", ownerSubsystem: "forge" }),
+        agent({ id: "code-reviewer", name: "Reviewer", ownerSubsystem: "forge" }),
+      ],
+      pipelines: [],
+      router: silentRouter,
+    });
+    const r = await svc.classifyWithinSubsystem(
+      { text: "xyzzy zzz no keyword overlap at all" },
+      "forge",
+    );
+    expect(r?.target).toMatchObject({ kind: "agent", id: "fullstack-developer" });
   });
 
   it("a confident router pick among the owned pipelines wins", async () => {
@@ -519,5 +550,192 @@ describe("TaskClassifierService — F2a switchboard subsystem verdicts", () => {
     });
     expect(r?.target.kind).toBe("subsystem");
     expect(r?.target).toMatchObject({ id: "forge" });
+  });
+});
+
+describe("TaskClassifierService — classifySubsystem (stage 1 only)", () => {
+  const forgePipeline = pipeline({ id: "delivery", name: "Delivery", ownerSubsystem: "forge" });
+  const scoutPipeline = pipeline({
+    id: "research",
+    name: "Research",
+    desc: "rešerše zdrojů, průzkum trhu, research a syntéza",
+    ownerSubsystem: "scout",
+  });
+
+  it("only ever returns a subsystem — a concrete agent/pipeline is never offered", async () => {
+    const svc = makeService({
+      agents: catalogAgents,
+      pipelines: [forgePipeline, ...catalogPipelines],
+      router: silentRouter,
+    });
+    // Text that the FULL catalog would route straight to the `coder` agent.
+    const r = await svc.classifySubsystem({ text: "rename the Button component" });
+    expect(r?.target.kind).toBe("subsystem");
+  });
+
+  it("every candidate is SEATED, so the verdict can never trip SubsystemEmptyRosterError", async () => {
+    const svc = makeService({ pipelines: [forgePipeline], router: silentRouter });
+    // `codex`/`puls`/… own nothing, so they are not candidates at all — the only
+    // possible verdict is the one subsystem that does own something.
+    const r = await svc.classifySubsystem({ text: "xyzzy zzz nothing matches" });
+    expect(r?.target).toMatchObject({ kind: "subsystem", id: "forge" });
+  });
+
+  it("can still pick a non-preferred subsystem when the text actually matches it", async () => {
+    const svc = makeService({
+      pipelines: [forgePipeline, scoutPipeline],
+      router: silentRouter,
+    });
+    // NB: a stage-1 subsystem candidate's `search` blob is the subsystem's own
+    // MANDATE (`stage1SubsystemCandidates`) — its owned pipelines' descriptions
+    // play no part here. So the overlap that moves this verdict has to be with
+    // scout's mandate ("Výzkumné pipeline, které předávají výsledný artefakt
+    // dál."), not with the `research` pipeline's desc.
+    const r = await svc.classifySubsystem(
+      { text: "výzkumné pipeline, které předávají výsledný artefakt dál" },
+      "forge",
+    );
+    expect(r?.target).toMatchObject({ kind: "subsystem", id: "scout" });
+  });
+
+  it("falls back to the caller's preferred subsystem when nothing matches confidently", async () => {
+    const svc = makeService({
+      pipelines: [scoutPipeline, forgePipeline], // scout first — order must not decide it
+      router: silentRouter,
+    });
+    const r = await svc.classifySubsystem({ text: "xyzzy zzz qqq no overlap" }, "forge");
+    expect(r?.target).toMatchObject({ kind: "subsystem", id: "forge" });
+    expect(r?.reason).toContain("Forge");
+  });
+
+  it("ignores a preferred subsystem that isn't seated, using the first seated one instead", async () => {
+    const svc = makeService({ pipelines: [scoutPipeline], router: silentRouter });
+    const r = await svc.classifySubsystem({ text: "xyzzy zzz qqq" }, "codex"); // codex owns nothing
+    expect(r?.target).toMatchObject({ kind: "subsystem", id: "scout" });
+  });
+
+  it("returns null when NO subsystem is seated — the caller releases undirected", async () => {
+    const svc = makeService({
+      agents: catalogAgents, // no ownerSubsystem anywhere
+      pipelines: catalogPipelines,
+      router: silentRouter,
+    });
+    expect(await svc.classifySubsystem({ text: "ship the auth feature" })).toBeNull();
+  });
+
+  it("rejects a router verdict that names a concrete unit instead of a subsystem", async () => {
+    const svc = makeService({
+      pipelines: [forgePipeline],
+      router: fixedRouter({
+        target: { kind: "pipeline", id: "delivery", name: "Delivery" },
+        confidence: 0.99,
+        reason: "router skipped the subsystem layer",
+        matchedTerms: [],
+        candidates: [],
+        mode: "single",
+        proposedGoal: null,
+        paths: [],
+        toolGrants: [],
+      } as unknown as TaskRouting),
+    });
+    const r = await svc.classifySubsystem({ text: "ship the auth feature" }, "forge");
+    // Not in the (subsystem-only) catalog → incoherent → the seated fallback.
+    expect(r?.target).toMatchObject({ kind: "subsystem", id: "forge" });
+  });
+
+  it("does not synthesize a goal even on loop-cued text (no enrich on this path)", async () => {
+    const svc = makeService({ pipelines: [forgePipeline], router: silentRouter });
+    const r = await svc.classifySubsystem({
+      text: "fix the failing test and keep going until it's green",
+    });
+    expect(r?.proposedGoal).toBeNull();
+    expect(r?.mode).toBe("single");
+  });
+});
+
+describe("TaskClassifierService — explicit-only agents are never routable", () => {
+  /** The roadmap decomposer as it actually reads on disk (name/category/description). */
+  const decomposer = agent({
+    id: ROADMAP_DECOMPOSER_AGENT_ID,
+    name: "Roadmap Decomposer",
+    category: "Roadmap",
+    description:
+      "Explicitly dispatched by ZIBBY's roadmap gate when Play is pressed on a childless epic. Turns one epic's name and description into a flat JSON list of concrete child tasks with dependsOn ordinals.",
+  });
+
+  /**
+   * The regression: an ORDINARY roadmap task carries the gate's own
+   * "ZIBBY ROADMAP CONTEXT" footer (epic/roadmap wording), which used to make
+   * the decomposer out-score every real delivery target — the run then answered
+   * `[]`, produced no artifact, and the item died `failed`.
+   */
+  const roadmapTaskText = [
+    "Monorepo & CLI skeleton",
+    "Set up pnpm workspaces + Turborepo. Establish the package layout.",
+    "--- ZIBBY ROADMAP CONTEXT (system-generated by the roadmap gate when this task was queued).",
+    "Epic: Phase 0 — Spine & Feasibility Gate",
+    "Already merged in this epic: none",
+    "Currently in flight in this epic: none",
+  ].join("\n");
+
+  it("never routes a roadmap-shaped task to the decomposer, even on the keyword leg", async () => {
+    const svc = makeService({
+      agents: [...catalogAgents, decomposer],
+      pipelines: catalogPipelines,
+      router: silentRouter, // deterministic leg — the one the decomposer used to win
+    });
+    const r = await svc.classify({ text: roadmapTaskText });
+    expect(r?.target).not.toMatchObject({ id: ROADMAP_DECOMPOSER_AGENT_ID });
+    expect(r?.candidates).not.toContainEqual(
+      expect.objectContaining({ id: ROADMAP_DECOMPOSER_AGENT_ID }),
+    );
+  });
+
+  it("drops it from the catalog even when the LLM router names it outright (isCoherent)", async () => {
+    const svc = makeService({
+      agents: [...catalogAgents, decomposer],
+      pipelines: catalogPipelines,
+      router: fixedRouter({
+        target: {
+          kind: "agent",
+          id: ROADMAP_DECOMPOSER_AGENT_ID,
+          name: "Roadmap Decomposer",
+          glyph: "flow",
+        },
+        confidence: 0.99,
+        reason: "router picked the decomposer",
+        matchedTerms: [],
+        candidates: [],
+        mode: "single",
+        proposedGoal: null,
+        paths: [],
+        toolGrants: [],
+      } as unknown as TaskRouting),
+    });
+    const r = await svc.classify({ text: roadmapTaskText });
+    // Not a candidate → the verdict is incoherent → falls through to the real catalog.
+    expect(r?.target).not.toMatchObject({ id: ROADMAP_DECOMPOSER_AGENT_ID });
+  });
+
+  it("is excluded from a SCOPED subsystem catalog too, if it is ever given an owner", async () => {
+    const svc = makeService({
+      agents: [
+        { ...decomposer, ownerSubsystem: "forge" } as Agent,
+        agent({ id: "coder", name: "Kodér", description: "implements", ownerSubsystem: "forge" }),
+      ],
+      pipelines: [],
+      router: silentRouter,
+    });
+    const r = await svc.classifyWithinSubsystem({ text: roadmapTaskText }, "forge");
+    expect(r?.target).not.toMatchObject({ id: ROADMAP_DECOMPOSER_AGENT_ID });
+    expect(r?.candidates).not.toContainEqual(
+      expect.objectContaining({ id: ROADMAP_DECOMPOSER_AGENT_ID }),
+    );
+  });
+
+  it("still leaves an ordinary agent catalog untouched (the filter is id-scoped, not a blanket drop)", async () => {
+    const svc = makeService({ agents: catalogAgents, pipelines: catalogPipelines });
+    const r = await svc.classify({ text: "rename the Button component" });
+    expect(r?.target).toMatchObject({ kind: "agent", id: "coder" });
   });
 });

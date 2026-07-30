@@ -2,7 +2,7 @@ import type { RoadmapItem } from "@zibby/contracts";
 import { DropDownButtonTestId } from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { renderWithProviders as render, screen } from "../../../test/render";
+import { renderWithProviders as render, screen, within } from "../../../test/render";
 import { RoadmapPanel, RoadmapPanelTestId } from "./RoadmapPanel";
 import { RoadmapBoardTestId } from "./RoadmapBoard";
 import { RoadmapCardTestId } from "./RoadmapCard";
@@ -26,6 +26,17 @@ function item(partial: Partial<RoadmapItem> & Pick<RoadmapItem, "id">): RoadmapI
     ...partial,
   };
 }
+
+// `?item=<id>` is what makes the panel deep-linkable (the landing half of the
+// run -> issue link), so this test file needs to drive the query string. Overrides
+// the global next/navigation stub in vitest.setup.tsx, whose `useSearchParams` is
+// always empty; `search.current` is reset per test in `beforeEach`.
+const { search } = vi.hoisted(() => ({ search: { current: "" } }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => "/projects/proj-1",
+  useSearchParams: () => new URLSearchParams(search.current),
+}));
 
 const { hooks } = vi.hoisted(() => ({
   hooks: {
@@ -67,6 +78,7 @@ vi.mock("../mutations", () => ({
 
 describe("RoadmapPanel", () => {
   beforeEach(() => {
+    search.current = "";
     hooks.items = { data: undefined, isPending: false, isError: false, refetch: vi.fn() };
     hooks.config = { data: { autoSync: false }, isPending: false };
     hooks.setConfig = { mutate: vi.fn(), isPending: false };
@@ -179,5 +191,60 @@ describe("RoadmapPanel", () => {
 
     await userEvent.click(screen.getByTestId(RoadmapCardTestId.Open));
     expect(screen.getByTestId(RoadmapItemDialogTestId.Root)).toBeInTheDocument();
+  });
+
+  describe("?item= deep link (the run -> issue landing)", () => {
+    const epicA = item({ id: "e1", level: "epic", name: "Epic A", parentId: undefined });
+    const epicB = item({ id: "e2", level: "epic", name: "Epic B", parentId: undefined });
+    const taskInB = item({
+      id: "t2",
+      parentId: "e2",
+      name: "Task in B",
+      description: "Popis tasku v B",
+    });
+
+    it("opens that item's dialog on mount", () => {
+      search.current = "tab=roadmap&item=t2";
+      hooks.items.data = [epicA, epicB, taskInB];
+      render(<RoadmapPanel projectId="proj-1" />);
+
+      expect(screen.getByTestId(RoadmapItemDialogTestId.Root)).toBeInTheDocument();
+      expect(screen.getByTestId(RoadmapItemDialogTestId.Description)).toHaveTextContent(
+        "Popis tasku v B",
+      );
+    });
+
+    it("also switches the board to the epic that owns it, not just the first epic", () => {
+      search.current = "item=t2";
+      hooks.items.data = [epicA, epicB, taskInB, item({ id: "t1", parentId: "e1", name: "In A" })];
+      render(<RoadmapPanel projectId="proj-1" />);
+
+      // Scoped to the board: the open dialog also renders the item's name, so an
+      // unscoped query would match twice.
+      const board = within(screen.getByTestId(RoadmapBoardTestId.Root));
+      expect(board.getByText("Task in B")).toBeInTheDocument();
+      expect(board.queryByText("In A")).not.toBeInTheDocument();
+    });
+
+    it("keeps that epic's board after the dialog is closed (no snap back to the first epic)", async () => {
+      search.current = "item=t2";
+      hooks.items.data = [epicA, epicB, taskInB, item({ id: "t1", parentId: "e1", name: "In A" })];
+      render(<RoadmapPanel projectId="proj-1" />);
+
+      await userEvent.keyboard("{Escape}");
+
+      expect(screen.queryByTestId(RoadmapItemDialogTestId.Root)).not.toBeInTheDocument();
+      expect(screen.getByText("Task in B")).toBeInTheDocument();
+      expect(screen.queryByText("In A")).not.toBeInTheDocument();
+    });
+
+    it("ignores an id that isn't in this project's roadmap", () => {
+      search.current = "item=nope";
+      hooks.items.data = [epicA, item({ id: "t1", parentId: "e1", name: "In A" })];
+      render(<RoadmapPanel projectId="proj-1" />);
+
+      expect(screen.queryByTestId(RoadmapItemDialogTestId.Root)).not.toBeInTheDocument();
+      expect(screen.getByText("In A")).toBeInTheDocument();
+    });
   });
 });

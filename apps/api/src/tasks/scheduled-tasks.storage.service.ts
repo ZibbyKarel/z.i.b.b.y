@@ -178,6 +178,49 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
     return this.updateEntity(id, (existing) => ({ ...existing, title }));
   }
 
+  /**
+   * Patch the roadmap back-reference in place — the reverse of
+   * `RoadmapItem.runs[].taskId`, so a run can name the issue it solves. Called
+   * by `RoadmapGateService.release()` right after `createTask` returns.
+   *
+   * A patch (rather than a 7th positional arg on `createTask`) keeps the
+   * scheduler's already-wide signature alone and, more importantly, keeps this
+   * a one-way write FROM the roadmap module — the gate's own docblock refuses a
+   * hook in the other direction because it would close a second circular
+   * provider edge. Server-written only: `roadmapItemId` is provenance, never
+   * accepted from a client (Law 4).
+   */
+  async setRoadmapRef(
+    id: string,
+    roadmapItemId: string,
+    roadmapItemLabel: string,
+  ): Promise<ScheduledTask> {
+    return this.updateEntity(id, (existing) => ({
+      ...existing,
+      roadmapItemId,
+      roadmapItemLabel,
+    }));
+  }
+
+  /**
+   * Patch the stage-1 classification trace in place.
+   *
+   * `markDispatched` already writes the trace for the UNDIRECTED classify path,
+   * but a caller that classified the task ITSELF and then dispatched it with an
+   * `explicitTarget` (the roadmap gate's subsystem-first release) never reaches
+   * that branch — `TaskSchedulerService.dispatch` only builds a trace when it
+   * did the classifying. Without this the run detail's classification panel goes
+   * blank for exactly the runs whose routing is most worth explaining.
+   *
+   * Safe to call after dispatch: `markDispatched` merges its own trace only when
+   * it HAS one (`...(classification ? … : {})`), so it never clears this one, and
+   * for a synchronous (`background: false`) create — which every roadmap release
+   * is — it has already run by the time the caller gets its task id back.
+   */
+  async setClassification(id: string, classification: ClassificationTrace): Promise<ScheduledTask> {
+    return this.updateEntity(id, (existing) => ({ ...existing, classification }));
+  }
+
   /** Persist a task queued behind a project's concurrency cap (Phase 8.2). */
   async createQueued(
     id: string,

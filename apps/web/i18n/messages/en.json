@@ -1082,6 +1082,7 @@
     "metaAgent": "agent",
     "metaKind": "type",
     "metaTask": "task",
+    "metaRoadmapItem": "issue",
     "showMore": "show more",
     "showLess": "show less",
     "producedOutputTitle": "Task output",
@@ -2118,6 +2119,7 @@
         "failed": "Failed"
       },
       "runPr": "PR #{number}",
+      "openRun": "Open run",
       "runArtifact": "Artifact: {path}",
       "dependencySourceOwned": "source",
       "dependencySourceOwnedHint": "This dependency is managed by the sync — it can't be removed manually here.",

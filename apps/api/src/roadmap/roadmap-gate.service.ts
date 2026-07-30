@@ -1,5 +1,11 @@
 import { Inject, Injectable, forwardRef } from "@nestjs/common";
-import type { Project, RoadmapItem, RoadmapItemRun } from "@zibby/contracts";
+import type {
+  Project,
+  RoadmapItem,
+  RoadmapItemRun,
+  SubsystemId,
+  TaskRouting,
+} from "@zibby/contracts";
 import { isBlocked } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { ProjectLocalService } from "../projects/project-local.service";
@@ -9,12 +15,29 @@ import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { withPathLock } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
+import { TaskClassifierService } from "../tasks/task-classifier.service";
 import { TaskRunsService } from "../tasks/task-runs.service";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
+import { writeRoadmapBackRef } from "./roadmap-back-ref";
 import { RoadmapDecompositionService } from "./roadmap-decomposition.service";
 import { buildRoadmapTaskText } from "./roadmap-task-text";
 import { RoadmapItemLifecycleError } from "./roadmap.errors";
 import { RoadmapStore } from "./roadmap.store";
+
+/**
+ * The subsystem a roadmap release falls back to when the switchboard can't tell
+ * whose domain an item belongs to. Forge, because a roadmap item is by
+ * construction delivery work on a code project — and because forge is the only
+ * subsystem that owns both a delivery pipeline and specialist agents, so it is
+ * the one that can actually make the "small change vs. full pipeline" call.
+ *
+ * Only a FALLBACK: `TaskClassifierService.classifySubsystem` still gets to pick
+ * any seated subsystem, so a research- or content-shaped item can legitimately
+ * route to scout. If a project ever needs a different default, this is the value
+ * to promote to a `RoadmapConfig` field — not a reason to widen it speculatively
+ * now.
+ */
+export const DEFAULT_ROADMAP_SUBSYSTEM: SubsystemId = "forge";
 
 /** Parse a PR number out of a GitHub PR url (`.../pull/123`); `undefined` if it doesn't match. */
 export function parsePrNumberFromUrl(url: string): number | undefined {
@@ -81,6 +104,8 @@ export class RoadmapGateService {
     private readonly projects: ProjectsStorageService,
     private readonly projectLocal: ProjectLocalService,
     private readonly taskScheduler: TaskSchedulerService,
+    /** The stage-1 "whose domain is this?" call for a release — see {@link classifySubsystem}. */
+    private readonly classifier: TaskClassifierService,
     private readonly scheduledTasks: ScheduledTasksStorageService,
     private readonly taskRuns: TaskRunsService,
     @Inject(forwardRef(() => ProjectPrService)) private readonly projectPr: ProjectPrService,
@@ -515,6 +540,7 @@ export class RoadmapGateService {
     // per-item try/catch same as any other release failure.
     const local = await this.projectLocal.resolveForRun(project);
     const text = buildRoadmapTaskText(item, allItems);
+    const routing = await this.classifySubsystem(text, local.path);
     const result = await this.taskScheduler.createTask(
       {
         title: item.name,
@@ -532,14 +558,22 @@ export class RoadmapGateService {
       // only ever matches a project's STORED `path` field, which a Phase-98
       // project like this one legitimately never sets.
       project.id,
-      // explicitTarget — NEVER: "the classifier picks the target" (the master
-      // plan's Play UX decision). background — false: the synchronous
+      // explicitTarget = the SUBSYSTEM this item belongs to (see
+      // `classifySubsystem` below), or `undefined` when no subsystem is seated
+      // — in which case this falls back to the old undirected full-catalog
+      // classify rather than failing. background — false: the synchronous
       // server-side call pattern (`automations/scheduler.service.ts`), so the
       // gate always learns the real outcome (dispatched/pending/scheduled)
       // before it writes the item's `running` run record.
-      undefined,
+      routing?.target,
       false,
     );
+    // The reverse edge (task -> item), so the run detail can link back to the
+    // issue without scanning every project's roadmap. Best-effort on purpose:
+    // the release itself already happened and the FORWARD edge below is the
+    // authoritative one — a failed back-ref must never fail a dispatch.
+    await writeRoadmapBackRef(this.scheduledTasks, this.log, result.task.id, item);
+    await this.writeClassificationTrace(result.task.id, routing);
     const now = new Date().toISOString();
     const run: RoadmapItemRun = {
       taskId: result.task.id,
@@ -558,6 +592,80 @@ export class RoadmapGateService {
       summary: `Roadmap item dispatched: ${item.name}`,
       refs: { projectId: item.projectId, itemId: item.id, taskId: result.task.id },
     });
+  }
+
+  /**
+   * Ask the ONE question a gate release should ask the switchboard — "whose
+   * domain is this?" — and let that subsystem pick its own unit
+   * (`TaskSchedulerService.resolveSubsystemTarget` →
+   * `TaskClassifierService.classifyWithinSubsystem`). This is the North-Star-2
+   * Subsystem Charter applied to the roadmap: *"The global classifier only picks
+   * the subsystem; the subsystem picks the unit."*
+   *
+   * It replaces the previous `explicitTarget: undefined` ("the classifier picks
+   * the target", the original Phase-125 Play UX decision, which predates the F2
+   * federation work). The practical difference: a narrow roadmap item can now
+   * land on a single owned agent — forge's `fullstack-developer`, say — instead
+   * of paying for Architekt → Kodér ⇄ Review → Tester → Dokumentátor, because
+   * that pipeline-vs-agent call is made INSIDE forge with forge's mandate and
+   * `EFFORT_RULE` in the prompt.
+   *
+   * {@link DEFAULT_ROADMAP_SUBSYSTEM} is nominated as the not-confident
+   * fallback: a roadmap item is by construction delivery work on a code project.
+   *
+   * Never throws and never blocks a release. A classifier failure, or a
+   * federation with no seated subsystem at all, returns `null` — the caller then
+   * dispatches with no explicit target, i.e. exactly the old undirected
+   * behaviour. Failing a release because the ROUTING lookup fell over would be a
+   * strictly worse outcome than routing it the old way.
+   */
+  private async classifySubsystem(text: string, projectPath: string): Promise<TaskRouting | null> {
+    try {
+      const routing = await this.classifier.classifySubsystem(
+        { text, paths: [projectPath] },
+        DEFAULT_ROADMAP_SUBSYSTEM,
+      );
+      // Belt to `classifySubsystem`'s own braces: its catalog is subsystem-only
+      // and seated-only by construction, so this can't fire — but a non-subsystem
+      // target reaching `createTask` as an explicit target would bypass the whole
+      // subsystem layer silently, which is worth one cheap check.
+      if (routing && routing.target.kind !== "subsystem") return null;
+      return routing;
+    } catch (error) {
+      this.log.warn("roadmap subsystem classify failed — releasing undirected instead", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Persist the stage-1 verdict onto the task so the run detail can still answer
+   * "why did this land here". `TaskSchedulerService.dispatch` only builds a trace
+   * when IT did the classifying, and this release hands it an explicit target —
+   * so without this write the classification panel would go blank for exactly the
+   * runs whose routing is most worth explaining. Best-effort, same posture as the
+   * back-ref: a missing trace costs an explanation, never a dispatch.
+   */
+  private async writeClassificationTrace(
+    taskId: string,
+    routing: TaskRouting | null,
+  ): Promise<void> {
+    if (!routing || routing.target.kind !== "subsystem") return;
+    try {
+      await this.scheduledTasks.setClassification(taskId, {
+        stage1: routing.target,
+        confidence: routing.confidence,
+        reason: routing.reason,
+        matchedTerms: routing.matchedTerms,
+        subsystem: routing.target.id,
+      });
+    } catch (error) {
+      this.log.warn("roadmap classification trace write failed (non-fatal)", {
+        taskId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   /** A release itself failed (e.g. `createTask` threw) — no task/run to record. */

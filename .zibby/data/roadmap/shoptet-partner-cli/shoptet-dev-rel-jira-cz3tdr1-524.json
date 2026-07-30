@@ -17,11 +17,19 @@
   "dependsOn": [],
   "dependsOnFromSource": [],
   "lifecycle": "failed",
-  "enqueuedAt": "2026-07-29T13:33:12.948Z",
-  "runs": [],
-  "lastFailureReason": "project \"shoptet-partner-cli\" has no local path configured — the gate cannot attribute a task to it",
+  "enqueuedAt": "2026-07-29T14:12:51.980Z",
+  "runs": [
+    {
+      "taskId": "task_1785334372051_b3582c",
+      "runRef": "roadmap-decomposer_1785334381859_17567",
+      "startedAt": "2026-07-29T14:13:03.659Z",
+      "finishedAt": "2026-07-29T14:14:50.718Z",
+      "outcome": "failed"
+    }
+  ],
+  "lastFailureReason": "Run finished without producing an artifact (no PR or file output).",
   "syncNotes": [],
   "createdAt": "2026-07-29T10:57:40.140Z",
-  "updatedAt": "2026-07-29T14:01:25.107Z",
-  "syncedAt": "2026-07-29T14:01:25.107Z"
+  "updatedAt": "2026-07-30T05:10:53.006Z",
+  "syncedAt": "2026-07-30T05:10:53.006Z"
 }

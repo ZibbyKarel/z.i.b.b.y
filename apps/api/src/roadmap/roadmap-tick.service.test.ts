@@ -273,8 +273,16 @@ describe("RoadmapTickService", () => {
           task: task(),
         })),
       };
-      const scheduledTasks = { get: vi.fn(async () => task()) };
+      const scheduledTasks = {
+        get: vi.fn(async () => task()),
+        setRoadmapRef: vi.fn(async () => task()),
+        setClassification: vi.fn(async () => task()),
+      };
       const taskRuns = { resume: vi.fn() };
+      // The release's stage-1 "whose domain is this?" call. `null` = no seated
+      // subsystem, so the release stays undirected — this test is about the merge
+      // poll releasing a dependent, not about routing.
+      const classifier = { classifySubsystem: vi.fn(async () => null) };
       // The operator merged straight on GitHub — the poll (not the eager
       // recordMerge hook) is what has to discover this.
       const projectPr = { isMerged: vi.fn(async () => true), getPr: vi.fn() };
@@ -283,6 +291,7 @@ describe("RoadmapTickService", () => {
         projects as never,
         projectLocal as never,
         taskScheduler as never,
+        classifier as never,
         scheduledTasks as never,
         taskRuns as never,
         projectPr as never,

@@ -632,6 +632,23 @@ export function RunDetail({
   } else if (projects.length > 0) {
     metaItems.push(<AssignProjectControl key="project" runId={run.runId} />);
   }
+  // The roadmap issue this run was released for. Needs BOTH ids: the item id
+  // addresses the dialog, the project id addresses the page that hosts the
+  // roadmap tab (a roadmap is always project-scoped, so a run carrying one
+  // without the other has nowhere to navigate to).
+  if (run.roadmapItemId && run.projectId) {
+    const { roadmapItemId, projectId } = run;
+    metaItems.push(
+      <MetaCell
+        key="roadmapItem"
+        label={t("metaRoadmapItem")}
+        onClick={() => router.push(`/projects/${projectId}?tab=roadmap&item=${roadmapItemId}`)}
+        testId="run-roadmap-item-link"
+        tone="accent"
+        value={run.roadmapItemLabel ?? roadmapItemId}
+      />,
+    );
+  }
   metaItems.push(
     <MetaCell
       key="started"

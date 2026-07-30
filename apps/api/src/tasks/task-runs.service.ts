@@ -602,6 +602,14 @@ function enrichRunWithTask(run: TaskRun, tasksById: ReadonlyMap<string, Schedule
     // detail summarise its runs. Runs with no owning task (e.g. a self-dev goal)
     // simply keep no projectId and fall outside every project filter.
     ...(task.projectId ? { projectId: task.projectId } : {}),
+    // The roadmap issue this run was released for (the reverse of
+    // `RoadmapItem.runs[].taskId`, written by the gate). Paired with `projectId`
+    // above it is the whole address the detail needs to link back to the issue —
+    // no roadmap-store read here, which would close a module cycle (the roadmap
+    // module already depends on tasks). The label rides along so a deleted or
+    // renamed item still renders as what it was at release time.
+    ...(task.roadmapItemId ? { roadmapItemId: task.roadmapItemId } : {}),
+    ...(task.roadmapItemLabel ? { roadmapItemLabel: task.roadmapItemLabel } : {}),
   };
 }
 
@@ -661,6 +669,11 @@ function scheduledTaskToView(t: ScheduledTask): TaskRun | null {
     logBase: null,
     ...(processor ? { processor } : {}),
     projectId: t.projectId,
+    // A roadmap release that got queued/held (rather than dispatching straight
+    // away) is still the issue's run — it must carry the back-ref too, or the
+    // link would blink out exactly while the operator is waiting on a slot.
+    roadmapItemId: t.roadmapItemId,
+    roadmapItemLabel: t.roadmapItemLabel,
     heldReason: t.heldReason,
     approvalId: t.approvalId,
     deferredLimit: t.deferredReason === "limit",

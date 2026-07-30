@@ -69,7 +69,13 @@ Body: {
 
 There is no client-supplied `projectId` field — project attribution is always
 derived server-side by `matchProject` (deterministic, no tokens), never asserted by
-the caller (Law 4).
+the caller (Law 4). The same rule keeps **`roadmapItemId`/`roadmapItemLabel`** off
+this input: they are provenance too, written onto the persisted `ScheduledTask` by
+`RoadmapGateService.release()` (see
+[roadmap.md](./roadmap.md#the-issue--run-link-both-directions)) and enriched onto
+`TaskRun` in `enrichRunWithTask`, so a run detail can link back to the issue it
+solves. A client-settable "this task belongs to issue X" would be forgeable
+provenance.
 
 `scheduledAt` absent or in the past → `createTask` runs classification + dispatch
 immediately. From the dialog (`background = true`), dispatch happens in the
@@ -82,7 +88,8 @@ background dispatch" above).
 
 The classifier finds the best target for the task's text, in up to two stages:
 
-1. **Stage 1 — the switchboard.** Loads every active agent, every pipeline, and one
+1. **Stage 1 — the switchboard.** Loads every active agent (minus the explicit-only
+   ones — see below), every pipeline, and one
    coarse `subsystem` candidate per subsystem that owns ≥1 pipeline or agent
    (`ownerSubsystem`) — `stage1SubsystemCandidates`. A subsystem candidate's `search`
    is its Czech mandate, so mandate-term overlap ranks it in the keyword-scorer leg
@@ -108,6 +115,61 @@ The classifier finds the best target for the task's text, in up to two stages:
 target is NOT resolved further by this endpoint, so previewing a task shows the
 switchboard's coarse pick as-is.
 
+### Explicit-only agents (never in the catalog)
+
+`EXPLICIT_ONLY_AGENT_IDS` (`libs/contracts/src/tasks/task.schema.ts`) lists agents the
+classifier must **never** pick out of free text. They are real, stored, dispatchable
+agents — the only sanctioned way in is a caller supplying an `explicitTarget`, i.e. the
+house rule "an explicit target skips the classifier", read from the other side.
+
+The filter lives in `TaskClassifierService.agentCandidates` — the single projection shared
+by `buildCandidates` (stage 1) and `subsystemCandidates` (stage 2) — so neither the
+top-level switchboard nor a scoped subsystem pass can reach one, even if such an agent is
+later given an `ownerSubsystem`. Because the id is then absent from `candidates`,
+`isCoherent` also rejects an LLM verdict that names it outright.
+
+Current members:
+
+| Agent id             | Explicit dispatcher                                 | Why                                                                      |
+| -------------------- | --------------------------------------------------- | ------------------------------------------------------------------------ |
+| `roadmap-decomposer` | `RoadmapDecompositionService.dispatch` (Phase 125g) | Answers only with a decomposition artifact — any other task yields `[]`. |
+
+This is a **structural** guarantee on purpose. Before it existed, the promise lived only as
+a sentence in the decomposer's own system prompt, and an ordinary roadmap task — whose text
+the roadmap gate itself stamps with an epic/roadmap-heavy "ZIBBY ROADMAP CONTEXT" footer —
+out-scored every real delivery target, ran the decomposer, got `[]` back, produced no
+artifact, and died `failed`. See [roadmap.md](./roadmap.md#the-artifact).
+
+### Stage 1 only — `classifySubsystem` (subsystem-first callers)
+
+A caller that wants the switchboard to answer **only** "whose domain is this?" — and
+to let the subsystem pick its own unit — calls `classifySubsystem(input, preferred?)`
+instead of `classify`. `RoadmapGateService.release()` is the first such caller (see
+[roadmap.md](./roadmap.md#subsystem-first-release)). It is the North-Star-2 Subsystem
+Charter read literally: _"The global classifier only picks the subsystem; the subsystem
+picks the unit."_
+
+Three differences from `classify` that carry weight:
+
+- **The catalog is subsystem-only** — concrete agents/pipelines are never offered, so
+  the verdict cannot skip the subsystem layer. A router verdict naming a concrete unit
+  fails `isCoherent` (it isn't in this catalog) and falls through.
+- **Every candidate is SEATED by construction.** `stage1SubsystemCandidates` only emits
+  subsystems owning ≥1 pipeline or active agent, so the returned target can never trip
+  `SubsystemEmptyRosterError` downstream — the one real hazard of routing this way,
+  since 7 of the 11 subsystems own nothing today.
+- **No `enrich`** — no loop synthesis, no tool-grant proposal. Those belong to the
+  interactive composer; a gate release wants the bare verdict.
+
+`preferred` is the caller's domain default, used only when nothing matches confidently
+and only if that subsystem is actually seated (otherwise the first seated candidate
+wins). Returns `null` only when NO subsystem is seated at all — which a caller must
+read as "don't direct this task", not as a failure.
+
+⚠️ A stage-1 subsystem candidate's `search` blob is the subsystem's **mandate**, not its
+owned units' descriptions. Keyword-leg overlap is therefore against mandate wording
+(and the mandates are Czech).
+
 ### Stage 2 — inside a subsystem (`classifyWithinSubsystem`)
 
 When an actual task dispatch (not the preview endpoint) lands on a `kind: "subsystem"`
@@ -126,12 +188,33 @@ run, via `resolveSubsystemTargetOrNull` / `resolveSubsystemTarget`:
   router/keyword-scorer machinery reused with the catalog restricted to that
   subsystem's own pipelines + active agents (never another subsystem), and the LLM
   router prompt gets an extra `preamble` (the subsystem's mandate + an "owned units"
-  list) so it reasons about the mandate, not bare catalog rows. A low-confidence
-  stage-2 verdict resolves per `SUBSYSTEM_FALLBACK[subsystemId]`: `"orchestrator"`
-  (defer to the global orchestrator — e.g. forge, whose own units are delivery
-  specialists) or `"primary"` (stay inside the subsystem, dispatch its first owned
-  unit) — a typed `Record` over the closed `SubsystemId` enum, so a new subsystem id
-  fails `tsc` until it's given a policy.
+  list + `EFFORT_RULE`) so it reasons about the mandate, not bare catalog rows. A
+  low-confidence stage-2 verdict resolves per `SUBSYSTEM_FALLBACK[subsystemId]`:
+  `"orchestrator"` (defer to the global orchestrator) or `"primary"` (stay inside the
+  subsystem, dispatch its first owned unit) — a typed `Record` over the closed
+  `SubsystemId` enum, so a new subsystem id fails `tsc` until it's given a policy.
+
+**This is where "a small change shouldn't run the whole pipeline" is decided.** Forge
+is the only subsystem that owns both a pipeline (`delivery`) and specialist agents
+(`architect`, `fullstack-developer`, `code-reviewer`, `test-automator`,
+`documentation-engineer`), so it is the only one where stage 2 is a real
+pipeline-vs-agent call. Nothing else in the routing chain has any notion of how BIG a
+change is, so `EFFORT_RULE` (`task-classifier.service.ts`) is appended to the
+preamble: a narrow single-surface change goes to one owned agent; a pipeline is
+reserved for multi-surface work or work that genuinely needs design + review + tests +
+docs. It is prose in the preamble rather than a contract field on purpose — the
+preamble is already the one place per-subsystem routing policy lives. Promote it to
+data (a `routingHint` on the subsystem) only if the prompt proves too blunt.
+
+**`SUBSYSTEM_FALLBACK.forge` is `"primary"`, not `"orchestrator"`.** It used to be
+`"orchestrator"`, on the reasoning that forge's units are delivery _specialists_ so an
+unsure pick was better self-delegated. That is wrong for the work forge actually
+receives: escaping to the global orchestrator yields a session with no PR-shaped
+output, and `RoadmapGateService.reconcileRunning` then kills the item as _"Run finished
+without producing an artifact"_ — the very failure the fallback was meant to avoid.
+`"primary"` makes "unsure" mean "run `delivery`" (pipelines are listed first in
+`subsystemCandidates`, so `candidates[0]` **is** forge's pipeline) — the safe direction
+for delivery, at the cost of being the expensive one.
 
 The resolved target IS the run's "via `<subsystem>`" attribution — any consumer can
 already read `Pipeline.ownerSubsystem` / `Agent.ownerSubsystem` off the dispatched id,

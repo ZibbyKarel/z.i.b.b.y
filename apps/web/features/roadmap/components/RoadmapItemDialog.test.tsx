@@ -16,6 +16,11 @@ vi.mock("../mutations", () => ({
   useUpdateRoadmapItemMutation: () => ({ mutate: updateRoadmapItem, isPending: false }),
 }));
 
+// The "open run" affordance navigates — a local router mock (overriding the global
+// next/navigation stub in vitest.setup.tsx) so the exact path can be asserted.
+const push = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+
 function item(partial: Partial<RoadmapItem> & Pick<RoadmapItem, "id">): RoadmapItem {
   return {
     projectId: "proj-1",
@@ -247,6 +252,86 @@ describe("RoadmapItemDialog", () => {
       expect(labels).not.toContain("Self item");
       expect(labels).not.toContain("Existing dep");
       expect(labels).toContain("Some other item");
+    });
+  });
+
+  describe("open run (the issue -> run half of the link)", () => {
+    beforeEach(() => {
+      push.mockClear();
+    });
+
+    it("opens a dispatched run by its runRef", async () => {
+      const target = item({
+        id: "t8",
+        runs: [
+          {
+            taskId: "task-1",
+            runRef: "delivery_42",
+            startedAt: "2026-07-01T00:00:00.000Z",
+            outcome: "running",
+          },
+        ],
+      });
+      render(
+        <RoadmapItemDialog itemId="t8" items={[target]} onClose={vi.fn()} onSelectItem={vi.fn()} />,
+      );
+
+      await userEvent.click(screen.getByTestId(RoadmapItemDialogTestId.OpenRun));
+
+      expect(push).toHaveBeenCalledWith("/archiv?run=delivery_42");
+    });
+
+    it("falls back to the taskId when the release never dispatched (queued/held — no runRef)", async () => {
+      const target = item({
+        id: "t9",
+        runs: [{ taskId: "task-7", startedAt: "2026-07-01T00:00:00.000Z", outcome: "running" }],
+      });
+      render(
+        <RoadmapItemDialog itemId="t9" items={[target]} onClose={vi.fn()} onSelectItem={vi.fn()} />,
+      );
+
+      await userEvent.click(screen.getByTestId(RoadmapItemDialogTestId.OpenRun));
+
+      expect(push).toHaveBeenCalledWith("/archiv?run=task-7");
+    });
+
+    it("keeps the PR link alongside it rather than replacing it", () => {
+      const target = item({
+        id: "t10",
+        runs: [
+          {
+            taskId: "task-2",
+            runRef: "delivery_43",
+            startedAt: "2026-07-01T00:00:00.000Z",
+            outcome: "awaiting-merge",
+            prUrl: "https://github.com/acme/repo/pull/7",
+            prNumber: 7,
+          },
+        ],
+      });
+      render(
+        <RoadmapItemDialog
+          itemId="t10"
+          items={[target]}
+          onClose={vi.fn()}
+          onSelectItem={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByTestId(RoadmapItemDialogTestId.OpenRun)).toBeInTheDocument();
+      expect(screen.getByText("PR #7")).toBeInTheDocument();
+    });
+
+    it("offers no affordance for an item that has never run", () => {
+      render(
+        <RoadmapItemDialog
+          itemId="t11"
+          items={[item({ id: "t11" })]}
+          onClose={vi.fn()}
+          onSelectItem={vi.fn()}
+        />,
+      );
+      expect(screen.queryByTestId(RoadmapItemDialogTestId.OpenRun)).not.toBeInTheDocument();
     });
   });
 });

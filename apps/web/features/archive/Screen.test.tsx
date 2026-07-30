@@ -86,6 +86,20 @@ vi.mock("../tasks", () => ({
 vi.mock("../runs/components/RunDetail", () => ({
   RunDetail: ({ run }: { run: RunView }) => <div data-testid={`run-detail-${run.runId}`} />,
 }));
+// The single-run fallback for a `?run=` this (settled-only) feed doesn't contain —
+// e.g. the roadmap item dialog linking an issue to a run still in flight.
+// `directRunFor` records the id it was asked for, so a test can assert the query is
+// GATED OFF when the feed resolved the selection itself.
+const { directRun } = vi.hoisted(() => ({
+  directRun: { value: undefined as RunView | undefined },
+}));
+const directRunFor = vi.fn();
+vi.mock("../runs/queries/useTaskRunQuery", () => ({
+  useTaskRunQuery: (runId: string | null) => {
+    directRunFor(runId);
+    return { data: runId === null ? undefined : directRun.value };
+  },
+}));
 
 function run(overrides: Partial<RunView> = {}): RunView {
   return {
@@ -121,6 +135,8 @@ describe("Archive Screen (F2)", () => {
     fetchNextPage.mockClear();
     archiveRunsArgs.mockClear();
     archiveCountsArgs.mockClear();
+    directRun.value = undefined;
+    directRunFor.mockClear();
   });
 
   it("renders the (server-sorted) items flat, with no group headings", () => {
@@ -180,6 +196,42 @@ describe("Archive Screen (F2)", () => {
     render(<Screen />);
 
     expect(screen.getByTestId("run-detail-run-b")).toBeInTheDocument();
+    // Resolved from the feed — the single-run fallback stays gated off.
+    expect(directRunFor).toHaveBeenCalledWith(null);
+  });
+
+  describe("?run= for a run this (settled-only) feed doesn't contain", () => {
+    it("resolves it directly instead of silently selecting the newest archived row", () => {
+      searchParams.value = new URLSearchParams("run=live_1");
+      hooks.items = [run({ runId: "run-a", title: "Ship the release" })];
+      hooks.total = 1;
+      directRun.value = run({ runId: "live_1", status: "running", title: "In flight" });
+      render(<Screen />);
+
+      expect(screen.getByTestId("run-detail-live_1")).toBeInTheDocument();
+      expect(screen.queryByTestId("run-detail-run-a")).not.toBeInTheDocument();
+      expect(directRunFor).toHaveBeenCalledWith("live_1");
+    });
+
+    it("matches on taskId too, so a queued release's link resolves from the feed", () => {
+      searchParams.value = new URLSearchParams("run=task-7");
+      hooks.items = [run({ runId: "run-a", taskId: "task-7", title: "Ship the release" })];
+      hooks.total = 1;
+      render(<Screen />);
+
+      expect(screen.getByTestId("run-detail-run-a")).toBeInTheDocument();
+      expect(directRunFor).toHaveBeenCalledWith(null);
+    });
+
+    it("shows no detail at all when the id resolves nowhere (never the wrong run)", () => {
+      searchParams.value = new URLSearchParams("run=gone");
+      hooks.items = [run({ runId: "run-a", title: "Ship the release" })];
+      hooks.total = 1;
+      render(<Screen />);
+
+      expect(screen.queryByTestId("run-detail-run-a")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("run-detail-gone")).not.toBeInTheDocument();
+    });
   });
 
   it("clicking a row selects it and swaps the detail pane", () => {

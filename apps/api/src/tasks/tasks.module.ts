@@ -68,6 +68,10 @@ import { TasksController } from "./tasks.controller";
   exports: [
     TaskSchedulerService,
     TaskRunsService,
+    // Exported so `RoadmapGateService` can ask the ONE question the switchboard
+    // should ask for a gate release — "whose domain is this?" — via
+    // `classifySubsystem`, and let the subsystem pick its own unit.
+    TaskClassifierService,
     AttachmentStorageService,
     ScheduledTasksStorageModule,
   ],

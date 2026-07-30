@@ -135,6 +135,16 @@ export const TaskRunSchema = z.object({
   parked: ParkedDetailSchema.optional(),
   /** The engagement a task is attributed to (Phase 8) — drives the queued caption. */
   projectId: z.string().optional(),
+  /**
+   * Enriched from the task record: the roadmap item (issue) this run was
+   * released for, and its snapshotted human label. Together with `projectId`
+   * they form the full address the run detail needs to link back to the issue
+   * (`/projects/:projectId?tab=roadmap&item=:roadmapItemId`) — no extra query,
+   * and no run-read reaching into the roadmap store. Absent on every run that
+   * didn't come from the roadmap. Read-model only, never client-written.
+   */
+  roadmapItemId: z.string().optional(),
+  roadmapItemLabel: z.string().optional(),
   /** Held tasks: why the budget guard parked it. */
   heldReason: z.string().optional(),
   /** Held tasks: the spend-past-cap approval gating the override. */

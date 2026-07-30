@@ -567,3 +567,39 @@ describe("RunDetail — project meta cell links to project detail (Phase 67 item
     expect(screen.getByText("Projekt")).toBeInTheDocument();
   });
 });
+
+describe("RunDetail — roadmap issue meta cell (the run -> issue half of the link)", () => {
+  beforeEach(() => {
+    push.mockClear();
+  });
+
+  it("links to the owning issue's dialog on the project's roadmap tab", async () => {
+    renderDetail({
+      ...pipelineRun,
+      projectId: "alpha",
+      roadmapItemId: "alpha-jira-cz3tdr1-524",
+      roadmapItemLabel: "CZ3TDR1-524",
+    });
+    await userEvent.click(screen.getByTestId("run-roadmap-item-link"));
+    expect(push).toHaveBeenCalledWith("/projects/alpha?tab=roadmap&item=alpha-jira-cz3tdr1-524");
+  });
+
+  it("falls back to the raw item id when no label was snapshotted", () => {
+    renderDetail({
+      ...pipelineRun,
+      projectId: "alpha",
+      roadmapItemId: "alpha-jira-cz3tdr1-524",
+    });
+    expect(screen.getByTestId("run-roadmap-item-link")).toHaveTextContent("alpha-jira-cz3tdr1-524");
+  });
+
+  it("renders nothing for a run that didn't come from a roadmap", () => {
+    renderDetail({ ...pipelineRun, projectId: "alpha" });
+    expect(screen.queryByTestId("run-roadmap-item-link")).not.toBeInTheDocument();
+  });
+
+  it("renders nothing without a projectId — there would be no roadmap page to open", () => {
+    renderDetail({ ...pipelineRun, roadmapItemId: "alpha-jira-cz3tdr1-524" });
+    expect(screen.queryByTestId("run-roadmap-item-link")).not.toBeInTheDocument();
+  });
+});

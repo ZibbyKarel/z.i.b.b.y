@@ -12,6 +12,7 @@ import {
   type TaskRouting,
   TaskRoutingSchema,
   type TaskTarget,
+  isExplicitOnlyAgent,
 } from "@zibby/contracts";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
@@ -37,6 +38,30 @@ export const ORCHESTRATOR_FALLBACK_THRESHOLD = 0.5;
 export const DEFAULT_GOAL_ITERATIONS = 6;
 
 /**
+ * The size/effort rule appended to every scoped stage-2 router preamble
+ * ({@link TaskClassifierService.buildSubsystemPreamble}).
+ *
+ * Neither the router's system prompt nor the keyword scorer has any notion of
+ * how big a change is, so before this the pipeline-vs-agent choice rested
+ * entirely on an LLM reading two descriptions with no stated policy. A
+ * subsystem that owns both a heavyweight pipeline and specialist agents (today:
+ * only forge — `delivery` plus five agents) needs the policy spelled out, or
+ * every trivial change pays for Architekt → Kodér ⇄ Review → Tester →
+ * Dokumentátor.
+ *
+ * Kept as prose in the preamble rather than as a new contract field on purpose:
+ * this is the cheapest honest version, and the preamble is already the one place
+ * per-subsystem routing policy lives. Promote it to data (a `routingHint` on the
+ * subsystem) only if the prompt proves too blunt in practice.
+ */
+export const EFFORT_RULE =
+  "ROUTING RULE: match the unit to the SIZE of the work. A narrow, " +
+  "single-surface change — one file, one component, a rename, a copy fix, a " +
+  "small bug — goes to a single owned AGENT. Reserve an owned PIPELINE for " +
+  "multi-surface work, or work that genuinely needs design, review, tests and " +
+  "docs to be safe. Do not run a full delivery pipeline for a one-line change.";
+
+/**
  * F2b — each subsystem's terminal fallback when {@link TaskClassifierService.classifyWithinSubsystem}'s
  * stage-2 verdict isn't confident: `"orchestrator"` defers to the global
  * orchestrator (the subsystem's own units are delivery specialists — a
@@ -47,7 +72,17 @@ export const DEFAULT_GOAL_ITERATIONS = 6;
  * subsystem id fails `tsc` here until it's given a policy.
  */
 export const SUBSYSTEM_FALLBACK: Record<SubsystemId, "orchestrator" | "primary"> = {
-  forge: "orchestrator",
+  // Was `"orchestrator"` on the reasoning that forge's units are delivery
+  // SPECIALISTS, so an unsure pick is better self-delegated. That reasoning is
+  // wrong for the work forge actually receives: a delivery item on a code
+  // project. Escaping to the global orchestrator produces a session with no
+  // PR-shaped output, and `RoadmapGateService.reconcileRunning` then kills the
+  // item as "Run finished without producing an artifact" — the exact death this
+  // fallback was supposed to avoid. `"primary"` makes "unsure" mean "run the
+  // delivery pipeline" (pipelines are listed first in `subsystemCandidates`, so
+  // `candidates[0]` IS forge's `delivery`), which is the safe direction for
+  // delivery even though it is the expensive one.
+  forge: "primary",
   scout: "primary",
   herald: "primary",
   puls: "primary",
@@ -159,10 +194,63 @@ export class TaskClassifierService {
    * about the mandate rather than bare catalog rows. `search` already carries
    * the unit's full routable blob (name + id + desc/category, or the pipeline's
    * phase agents) — reused here rather than re-fetching `desc` separately.
+   *
+   * {@link EFFORT_RULE} is appended because this preamble is the ONE place a
+   * per-subsystem routing policy legitimately lives: nothing else in the
+   * pipeline-vs-agent decision has any notion of how BIG a change is, so
+   * without it the choice is the LLM's unguided reading of two descriptions.
    */
   private buildSubsystemPreamble(mandate: string, units: readonly RoutableTarget[]): string {
     const unitLines = units.map((u) => `- ${u.name} — ${u.search}`).join("\n");
-    return [`SUBSYSTEM MANDATE: ${mandate}`, "OWNED UNITS:", unitLines].join("\n");
+    return [`SUBSYSTEM MANDATE: ${mandate}`, "OWNED UNITS:", unitLines, EFFORT_RULE].join("\n");
+  }
+
+  /**
+   * Classify a task to a SUBSYSTEM and nothing else — the switchboard reduced to
+   * the one question the North-Star-2 Subsystem Charter says it should ask:
+   * "whose domain is this?". The subsystem then picks its own unit
+   * ({@link classifyWithinSubsystem}, reached via
+   * `TaskSchedulerService.resolveSubsystemTarget`), so a small change can land
+   * on a single owned agent instead of a whole delivery pipeline.
+   *
+   * Used by `RoadmapGateService.release()`. It differs from {@link classify}
+   * in three ways that matter:
+   *
+   *  - **The catalog is subsystem-only.** Concrete agents/pipelines are never
+   *    offered, so the verdict can't skip the subsystem layer.
+   *  - **Every candidate is SEATED by construction.**
+   *    {@link stage1SubsystemCandidates} only emits subsystems owning ≥1
+   *    pipeline or active agent, so the returned target can never trip
+   *    `SubsystemEmptyRosterError` downstream — the one real hazard of routing
+   *    this way (7 of the 11 subsystems own nothing today).
+   *  - **No {@link enrich}.** Loop synthesis and tool-grant proposals belong to
+   *    the interactive composer; a gate release needs the bare verdict (target +
+   *    confidence + reason + matchedTerms) and nothing else.
+   *
+   * `preferred` names the subsystem to fall back to when nothing matches
+   * confidently — the caller's own domain default (the roadmap gate nominates
+   * forge: a roadmap item is by construction delivery work). It is honoured only
+   * if that subsystem is actually seated; otherwise the first seated candidate
+   * wins. Returns `null` only when NO subsystem is seated at all, which the
+   * caller must read as "don't direct this task" rather than as a failure.
+   */
+  async classifySubsystem(
+    input: ClassifyTaskInput,
+    preferred?: SubsystemId,
+  ): Promise<TaskRouting | null> {
+    const [pipelines, agents] = await Promise.all([
+      this.pipelines.list().catch((): Pipeline[] => []),
+      this.agents.listActive().catch((): Agent[] => []),
+    ]);
+    const candidates = this.stage1SubsystemCandidates(pipelines, agents);
+    const fallbackCandidate = candidates.find((c) => c.id === preferred) ?? candidates[0];
+    if (!fallbackCandidate) return null;
+    return this.route(input, candidates, {
+      fallback: {
+        target: toTaskTarget(fallbackCandidate),
+        reason: `No subsystem matched confidently — defaulting to ${fallbackCandidate.name}.`,
+      },
+    });
   }
 
   /**
@@ -392,17 +480,26 @@ export class TaskClassifierService {
    * {@link subsystemCandidates} (a pre-filtered, subsystem-owned subset), so
    * the two never compute an agent candidate's `search`/`glyph` shape
    * differently.
+   *
+   * {@link isExplicitOnlyAgent} agents are dropped HERE — the one projection
+   * both catalogs share, so neither the top-level switchboard nor a scoped
+   * subsystem pass can ever route to one. See `EXPLICIT_ONLY_AGENT_IDS`' own
+   * docblock for the failure this closes (the roadmap decomposer winning
+   * ordinary roadmap tasks on its own footer's wording); the agents themselves
+   * stay fully dispatchable via an `explicitTarget`, which is the only way in.
    */
   private agentCandidates(agents: readonly Agent[]): RoutableTarget[] {
-    return agents.map((a) => ({
-      kind: "agent",
-      id: a.id,
-      name: a.name ?? a.id,
-      glyph: a.glyph ?? "bot",
-      avatar: a.avatar,
-      category: a.category,
-      search: [a.name, a.id, a.category, a.description].filter(Boolean).join(" "),
-    }));
+    return agents
+      .filter((a) => !isExplicitOnlyAgent(a.id))
+      .map((a) => ({
+        kind: "agent",
+        id: a.id,
+        name: a.name ?? a.id,
+        glyph: a.glyph ?? "bot",
+        avatar: a.avatar,
+        category: a.category,
+        search: [a.name, a.id, a.category, a.description].filter(Boolean).join(" "),
+      }));
   }
 
   /**

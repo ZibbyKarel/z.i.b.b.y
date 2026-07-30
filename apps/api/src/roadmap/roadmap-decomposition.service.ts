@@ -1,5 +1,10 @@
 import { Injectable } from "@nestjs/common";
-import type { RoadmapItem, RoadmapItemRun, TaskTarget } from "@zibby/contracts";
+import {
+  ROADMAP_DECOMPOSER_AGENT_ID,
+  type RoadmapItem,
+  type RoadmapItemRun,
+  type TaskTarget,
+} from "@zibby/contracts";
 import { AgentRunnerService } from "../agents/agent-runner.service";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
@@ -7,6 +12,7 @@ import { withPathLock } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
+import { writeRoadmapBackRef } from "./roadmap-back-ref";
 import { extractDecompositionArtifact } from "./decomposition-artifact";
 import { ingestDecomposition } from "./decomposition-ingest";
 import { buildDecompositionTaskText } from "./decomposition-task-text";
@@ -15,15 +21,17 @@ import { RoadmapStore } from "./roadmap.store";
 
 /**
  * The dedicated agent Play-on-a-childless-epic dispatches to. Routed
- * EXPLICITLY (`explicitTarget`, below) — never classified into: the house
- * rule is "an explicit target skips the classifier", and this is the one
- * caller in the codebase that always supplies one for this id. See the
- * agent's own definition (`.zibby/data/agents/roadmap-decomposer.md`) for why
- * it is also excluded from the classifier's catalog by construction (its
- * instructions bail to `[]` on anything that doesn't look like this flow).
+ * EXPLICITLY (`explicitTarget`, below) — never classified into: the house rule
+ * is "an explicit target skips the classifier", and this is the one caller in
+ * the codebase that always supplies one for this id.
+ *
+ * That exclusion is STRUCTURAL, not a matter of trusting the agent's own
+ * instructions to bail to `[]`: the id is a member of
+ * `EXPLICIT_ONLY_AGENT_IDS`, which `TaskClassifierService.agentCandidates`
+ * filters out of every catalog it builds. See that constant's docblock in
+ * `libs/contracts/src/tasks/task.schema.ts` for the incident that made the
+ * prompt-level promise insufficient.
  */
-export const ROADMAP_DECOMPOSER_AGENT_ID = "roadmap-decomposer";
-
 const DECOMPOSITION_AGENT_TARGET: TaskTarget = {
   kind: "agent",
   id: ROADMAP_DECOMPOSER_AGENT_ID,
@@ -134,6 +142,9 @@ export class RoadmapDecompositionService {
       // outcome before writing the epic's run record.
       false,
     );
+    // Same reverse edge an ordinary release writes (`RoadmapGateService.release`)
+    // — an epic is a roadmap item too, so its decomposition run links back to it.
+    await writeRoadmapBackRef(this.scheduledTasks, this.log, result.task.id, epic);
     const now = new Date().toISOString();
     const run: RoadmapItemRun = {
       taskId: result.task.id,

@@ -71,7 +71,10 @@ describe("RoadmapDecompositionService", () => {
   let store: RoadmapStore;
   let projects: { get: ReturnType<typeof vi.fn> };
   let taskScheduler: { createTask: ReturnType<typeof vi.fn> };
-  let scheduledTasks: { get: ReturnType<typeof vi.fn> };
+  let scheduledTasks: {
+    get: ReturnType<typeof vi.fn>;
+    setRoadmapRef: ReturnType<typeof vi.fn>;
+  };
   let agentRunner: { readLog: ReturnType<typeof vi.fn> };
   let activity: { record: ReturnType<typeof vi.fn> };
 
@@ -99,7 +102,10 @@ describe("RoadmapDecompositionService", () => {
         task: task({ id: "task-1" }),
       })),
     };
-    scheduledTasks = { get: vi.fn(async () => task()) };
+    scheduledTasks = {
+      get: vi.fn(async () => task()),
+      setRoadmapRef: vi.fn(async () => task()),
+    };
     agentRunner = { readLog: vi.fn(async () => ({ content: "", nextOffset: 0, done: true })) };
     activity = { record: vi.fn(async () => {}) };
   });

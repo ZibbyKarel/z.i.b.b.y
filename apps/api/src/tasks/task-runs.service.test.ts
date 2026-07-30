@@ -381,6 +381,49 @@ describe("TaskRunsService", () => {
     });
   });
 
+  describe("roadmap back-ref enrichment (issue <-> run link)", () => {
+    it("joins the owning task's roadmap item id + label onto its run", async () => {
+      const { service, scheduled } = build();
+      scheduled.list.mockResolvedValue([
+        {
+          ...scheduledS,
+          id: "task1",
+          status: "dispatched",
+          roadmapItemId: "acme-jira-cz3tdr1-524",
+          roadmapItemLabel: "CZ3TDR1-524",
+        },
+      ]);
+      const feed = await service.listTaskRuns();
+      const run = feed.find((r) => r.runId === "researcher_1");
+      expect(run?.roadmapItemId).toBe("acme-jira-cz3tdr1-524");
+      expect(run?.roadmapItemLabel).toBe("CZ3TDR1-524");
+    });
+
+    it("leaves both unset for a run whose task didn't come from a roadmap", async () => {
+      const { service, scheduled } = build();
+      scheduled.list.mockResolvedValue([{ ...scheduledS, id: "task1", status: "dispatched" }]);
+      const run = (await service.listTaskRuns()).find((r) => r.runId === "researcher_1");
+      expect(run?.roadmapItemId).toBeUndefined();
+      expect(run?.roadmapItemLabel).toBeUndefined();
+    });
+
+    it("carries the back-ref on a still-QUEUED release too (the link must not blink out)", async () => {
+      const { service, scheduled } = build();
+      scheduled.list.mockResolvedValue([
+        {
+          ...scheduledS,
+          id: "queued-task",
+          status: "queued",
+          roadmapItemId: "acme-jira-cz3tdr1-524",
+          roadmapItemLabel: "CZ3TDR1-524",
+        },
+      ]);
+      const run = (await service.listTaskRuns()).find((r) => r.runId === "queued-task");
+      expect(run?.roadmapItemId).toBe("acme-jira-cz3tdr1-524");
+      expect(run?.roadmapItemLabel).toBe("CZ3TDR1-524");
+    });
+  });
+
   describe("project display label (regression: was showing the run's own sandbox id)", () => {
     it("resolves a pipeline run's project from its resolved projectPath, not its sandbox cwd", async () => {
       const { service } = build();

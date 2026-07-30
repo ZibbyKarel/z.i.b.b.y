@@ -12,6 +12,7 @@ import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { formatDuration } from "../../utils/time";
 import { RunDetail } from "../runs/components/RunDetail";
+import { useTaskRunQuery } from "../runs/queries/useTaskRunQuery";
 import { useRunAvatarMap, useRunGlyphMap } from "../runs/queries/useRunsQuery";
 import { type RunView, findSelectedRun, runAvatar, runGlyph } from "../runs/run";
 import { useRunActions } from "../runs/useRunActions";
@@ -110,7 +111,15 @@ export function Screen() {
 
   const archivedTotal = archiveCounts?.total ?? 0;
   const counts = (archiveCounts?.counts ?? {}) as Partial<Record<ArchiveSubsystemFilterId, number>>;
-  const selected = findSelectedRun(items, selId);
+  // This feed only holds SETTLED runs, but `?run=` links arrive from places that
+  // don't know that — the roadmap item dialog's "open run" points at an issue's
+  // run while it is usually still in flight. `findSelectedRun` falls back to
+  // `list[0]` on a miss, so detect the miss explicitly and resolve that id
+  // directly instead of confidently showing the wrong (newest) run.
+  const listed = findSelectedRun(items, selId);
+  const listedMatchesSel = selId == null || listed?.runId === selId || listed?.taskId === selId;
+  const directRun = useTaskRunQuery(listedMatchesSel ? null : selId);
+  const selected = listedMatchesSel ? listed : (directRun.data ?? null);
 
   const isPending = itemsPending || countsPending;
   const isError = itemsError || countsError;

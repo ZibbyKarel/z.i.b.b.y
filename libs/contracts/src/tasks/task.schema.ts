@@ -117,6 +117,37 @@ export const ORCHESTRATOR_TARGET = {
 } as const satisfies TaskTarget;
 
 /**
+ * The roadmap decomposer's agent id (Phase 125g). Lives here, beside
+ * {@link ORCHESTRATOR_ID}, rather than in the API's own roadmap module because
+ * the classifier has to know it too — and importing it from there would close a
+ * runtime cycle (classifier -> decomposition -> scheduler -> classifier).
+ */
+export const ROADMAP_DECOMPOSER_AGENT_ID = "roadmap-decomposer";
+
+/**
+ * Agents that are EXPLICIT-TARGET ONLY: real, stored, dispatchable agents that
+ * the CLASSIFIER must never pick out of free text. The only sanctioned way in is
+ * a caller supplying an `explicitTarget` (the house rule "an explicit target
+ * skips the classifier", read from the other side).
+ *
+ * `roadmap-decomposer` is the first member, and the reason the list exists.
+ * Both its own definition and `RoadmapDecompositionService` promise "never
+ * classified into" — but that promise lived ONLY as a sentence in the agent's
+ * system prompt, never as a filter. So an ordinary roadmap task, whose text the
+ * gate itself stamps with a "ZIBBY ROADMAP CONTEXT" footer full of
+ * epic/roadmap wording, could out-score every real delivery target and route
+ * here; the agent then correctly answered `[]` (not an epic to decompose), the
+ * run produced no PR and no file, and the item died as "Run finished without
+ * producing an artifact". The guarantee has to be structural, not a prompt.
+ */
+export const EXPLICIT_ONLY_AGENT_IDS: readonly string[] = [ROADMAP_DECOMPOSER_AGENT_ID];
+
+/** True when `id` names an {@link EXPLICIT_ONLY_AGENT_IDS} agent. */
+export function isExplicitOnlyAgent(id: string): boolean {
+  return EXPLICIT_ONLY_AGENT_IDS.includes(id);
+}
+
+/**
  * Request body for the classifier: the free-text task plus any file/folder paths
  * the client already detected (strong routing hints — a `/media/…` path nudges
  * toward the media curator).
@@ -373,6 +404,34 @@ export const ScheduledTaskSchema = z.object({
    * more.
    */
   projectId: z.string().optional(),
+  /**
+   * The roadmap item (issue) this task was released for — the REVERSE of
+   * `RoadmapItem.runs[].taskId`, so a run can name the issue it solves without
+   * scanning every project's roadmap. Written server-side by
+   * `RoadmapGateService.release()` immediately after the task is created;
+   * absent on every task that didn't come from the roadmap (the overwhelming
+   * majority) and on every task released before this field existed.
+   *
+   * Deliberately NOT part of `CreateTaskInput`: this is provenance, the same
+   * class as {@link projectId}, and provenance is server-derived, never
+   * client-asserted (Law 4). A forgeable "this task belongs to issue X" would
+   * let inbound content attach itself to work it has no relation to.
+   *
+   * Keyed on the TASK id rather than the run id on purpose — `runs[].runRef` is
+   * only written when the release actually dispatched (a `queued`/`held`/
+   * `pending` release has none, and nothing backfills it), while `taskId` is
+   * always present on both sides.
+   */
+  roadmapItemId: z.string().optional(),
+  /**
+   * Human label for {@link roadmapItemId}, snapshotted at release time: the
+   * item's external key when it has one (`CZ3TDR1-524`), else its name. Stored
+   * rather than resolved so the run stays self-describing — the archive can
+   * still say what a run came from after the item is renamed or deleted, and no
+   * run-read has to reach into the roadmap store (which would close a module
+   * cycle: the roadmap module already depends on tasks).
+   */
+  roadmapItemLabel: z.string().max(512).optional(),
   /** Set on `held`: why the budget guard parked it (e.g. "project-daily cap reached"). */
   heldReason: z.string().optional(),
   /**

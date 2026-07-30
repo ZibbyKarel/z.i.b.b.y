@@ -51,7 +51,12 @@ describe("RoadmapGateService", () => {
   let projects: { get: ReturnType<typeof vi.fn> };
   let projectLocal: { resolveForRun: ReturnType<typeof vi.fn> };
   let taskScheduler: { createTask: ReturnType<typeof vi.fn> };
-  let scheduledTasks: { get: ReturnType<typeof vi.fn> };
+  let classifier: { classifySubsystem: ReturnType<typeof vi.fn> };
+  let scheduledTasks: {
+    get: ReturnType<typeof vi.fn>;
+    setRoadmapRef: ReturnType<typeof vi.fn>;
+    setClassification: ReturnType<typeof vi.fn>;
+  };
   let taskRuns: { resume: ReturnType<typeof vi.fn> };
   let projectPr: { isMerged: ReturnType<typeof vi.fn>; getPr: ReturnType<typeof vi.fn> };
   let activity: { record: ReturnType<typeof vi.fn> };
@@ -63,6 +68,7 @@ describe("RoadmapGateService", () => {
       projects as never,
       projectLocal as never,
       taskScheduler as never,
+      classifier as never,
       scheduledTasks as never,
       taskRuns as never,
       projectPr as never,
@@ -87,7 +93,25 @@ describe("RoadmapGateService", () => {
         task: task({ id: "task-1" }),
       })),
     };
-    scheduledTasks = { get: vi.fn(async () => task()) };
+    // Seated-subsystem verdict, the shape `classifySubsystem` guarantees.
+    classifier = {
+      classifySubsystem: vi.fn(async () => ({
+        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        confidence: 0.81,
+        reason: "matches forge's mandate",
+        matchedTerms: ["rollout"],
+        candidates: [],
+        mode: "single",
+        proposedGoal: null,
+        paths: [],
+        toolGrants: [],
+      })),
+    };
+    scheduledTasks = {
+      get: vi.fn(async () => task()),
+      setRoadmapRef: vi.fn(async () => task()),
+      setClassification: vi.fn(async () => task()),
+    };
     taskRuns = { resume: vi.fn(async () => ({ runId: "run-2" })) };
     projectPr = { isMerged: vi.fn(async () => false), getPr: vi.fn(async () => null) };
     activity = { record: vi.fn(async () => {}) };
@@ -121,6 +145,143 @@ describe("RoadmapGateService", () => {
       // re-matched over `paths`/`text` — a Phase-98 project with no `path` set
       // on the registry could never match by path at all.
       expect(trustedProjectId).toBe("acme");
+    });
+
+    it("releases to the item's SUBSYSTEM, letting that subsystem pick its own unit", async () => {
+      await store.put(item());
+      const gate = makeGate();
+
+      await gate.play("acme", "item-1");
+
+      // Stage 1 saw the task text + the resolved project path, and was nominated
+      // forge as its not-confident fallback.
+      expect(classifier.classifySubsystem).toHaveBeenCalledTimes(1);
+      const [input, preferred] = classifier.classifySubsystem.mock.calls[0]!;
+      expect(input.text).toContain("Rollout za flagem");
+      expect(input.paths).toEqual(["/repos/acme"]);
+      expect(preferred).toBe("forge");
+
+      // ...and the verdict rode into createTask as the EXPLICIT target, so the
+      // subsystem — not the full catalog — resolves the concrete unit.
+      const [, , , explicitTarget] = taskScheduler.createTask.mock.calls[0]!;
+      expect(explicitTarget).toMatchObject({ kind: "subsystem", id: "forge" });
+    });
+
+    it("persists the stage-1 trace so the run detail can still say why it landed there", async () => {
+      await store.put(item());
+      const gate = makeGate();
+
+      await gate.play("acme", "item-1");
+
+      expect(scheduledTasks.setClassification).toHaveBeenCalledWith("task-1", {
+        stage1: { kind: "subsystem", id: "forge", name: "Forge" },
+        confidence: 0.81,
+        reason: "matches forge's mandate",
+        matchedTerms: ["rollout"],
+        subsystem: "forge",
+      });
+    });
+
+    it("releases UNDIRECTED when no subsystem is seated (never fails the release)", async () => {
+      classifier.classifySubsystem.mockResolvedValue(null);
+      await store.put(item());
+      const gate = makeGate();
+
+      const played = await gate.play("acme", "item-1");
+
+      expect(played.lifecycle).toBe("running");
+      const [, , , explicitTarget] = taskScheduler.createTask.mock.calls[0]!;
+      expect(explicitTarget).toBeUndefined();
+      expect(scheduledTasks.setClassification).not.toHaveBeenCalled();
+    });
+
+    it("releases UNDIRECTED when the classifier itself throws", async () => {
+      classifier.classifySubsystem.mockRejectedValue(new Error("router exploded"));
+      await store.put(item());
+      const gate = makeGate();
+
+      const played = await gate.play("acme", "item-1");
+
+      expect(played.lifecycle).toBe("running");
+      expect(taskScheduler.createTask).toHaveBeenCalledTimes(1);
+      const [, , , explicitTarget] = taskScheduler.createTask.mock.calls[0]!;
+      expect(explicitTarget).toBeUndefined();
+    });
+
+    it("refuses a non-subsystem verdict rather than bypassing the subsystem layer", async () => {
+      classifier.classifySubsystem.mockResolvedValue({
+        target: { kind: "agent", id: "fullstack-developer", name: "Fullstack" },
+        confidence: 0.9,
+        reason: "picked an agent outright",
+        matchedTerms: [],
+        candidates: [],
+        mode: "single",
+        proposedGoal: null,
+        paths: [],
+        toolGrants: [],
+      });
+      await store.put(item());
+      const gate = makeGate();
+
+      await gate.play("acme", "item-1");
+
+      const [, , , explicitTarget] = taskScheduler.createTask.mock.calls[0]!;
+      expect(explicitTarget).toBeUndefined();
+      expect(scheduledTasks.setClassification).not.toHaveBeenCalled();
+    });
+
+    it("a failing trace write never fails the release", async () => {
+      scheduledTasks.setClassification.mockRejectedValue(new Error("disk full"));
+      await store.put(item());
+      const gate = makeGate();
+
+      const played = await gate.play("acme", "item-1");
+
+      expect(played.lifecycle).toBe("running");
+      expect(played.runs[0]).toMatchObject({ taskId: "task-1", outcome: "running" });
+    });
+
+    it("writes the reverse edge onto the task — a manual item labels itself by name", async () => {
+      await store.put(item());
+      const gate = makeGate();
+
+      await gate.play("acme", "item-1");
+
+      expect(scheduledTasks.setRoadmapRef).toHaveBeenCalledWith(
+        "task-1",
+        "item-1",
+        "Rollout za flagem",
+      );
+    });
+
+    it("labels an imported item by its external key (stable, and what the operator recognises)", async () => {
+      await store.put(
+        item({
+          source: {
+            kind: "jira",
+            integrationId: "acme-jira",
+            externalId: "CZ3TDR1-524",
+            externalKey: "CZ3TDR1-524",
+          },
+        }),
+      );
+      const gate = makeGate();
+
+      await gate.play("acme", "item-1");
+
+      expect(scheduledTasks.setRoadmapRef).toHaveBeenCalledWith("task-1", "item-1", "CZ3TDR1-524");
+    });
+
+    it("a failing back-ref write never fails the release (it is a convenience index)", async () => {
+      scheduledTasks.setRoadmapRef.mockRejectedValue(new Error("disk full"));
+      await store.put(item());
+      const gate = makeGate();
+
+      const played = await gate.play("acme", "item-1");
+
+      // The forward edge is the authoritative one and still landed.
+      expect(played.lifecycle).toBe("running");
+      expect(played.runs[0]).toMatchObject({ taskId: "task-1", outcome: "running" });
     });
 
     it("parks a blocked item as enqueued — no task is created", async () => {

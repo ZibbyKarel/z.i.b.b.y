@@ -16,6 +16,7 @@ import {
   Tooltip,
   Typography,
 } from "@zibby/design-system";
+import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { useUpdateRoadmapItemMutation } from "../mutations";
@@ -36,6 +37,7 @@ export enum RoadmapItemDialogTestId {
   FailureReason = "roadmap-item-dialog-failure-reason",
   Runs = "roadmap-item-dialog-runs",
   RunRow = "roadmap-item-dialog-run",
+  OpenRun = "roadmap-item-dialog-open-run",
 }
 
 /** Sentinel for the "add dependency" picker — reset to this right after firing
@@ -84,6 +86,7 @@ export function RoadmapItemDialog({
   const t = useTranslations("roadmap");
   const tk = useTranslations();
   const locale = useLocale();
+  const router = useRouter();
   const get = buildRoadmapLookup(items);
   const item = get(itemId);
   // Called unconditionally (before the `!item` early return) so the hook order
@@ -302,17 +305,31 @@ export function RoadmapItemDialog({
                       {formatRunTime(run)}
                     </Typography>
                   </Stack>
-                  {run.prUrl && run.prNumber ? (
-                    <a href={run.prUrl} rel="noopener noreferrer" target="_blank">
-                      <Typography size="sm" tone="accent" type="text">
-                        {t("dialog.runPr", { number: run.prNumber })}
+                  <Stack align="center" direction="row" gap="100">
+                    {run.prUrl && run.prNumber ? (
+                      <a href={run.prUrl} rel="noopener noreferrer" target="_blank">
+                        <Typography size="sm" tone="accent" type="text">
+                          {t("dialog.runPr", { number: run.prNumber })}
+                        </Typography>
+                      </a>
+                    ) : run.artifactPath ? (
+                      <Typography mono size="xs" type="note" variant="secondary">
+                        {t("dialog.runArtifact", { path: run.artifactPath })}
                       </Typography>
-                    </a>
-                  ) : run.artifactPath ? (
-                    <Typography mono size="xs" type="note" variant="secondary">
-                      {t("dialog.runArtifact", { path: run.artifactPath })}
-                    </Typography>
-                  ) : null}
+                    ) : null}
+                    {/* The other half of the issue <-> run link (`RunDetail`'s own
+                        "issue" meta cell is the way back). `runRef` when the release
+                        actually dispatched, else `taskId` — the archive resolves
+                        either, and `taskId` is the only key always present. */}
+                    <Pressable
+                      data-testid={RoadmapItemDialogTestId.OpenRun}
+                      onClick={() => router.push(`/archiv?run=${run.runRef ?? run.taskId}`)}
+                    >
+                      <Typography size="sm" tone="accent" type="text">
+                        {t("dialog.openRun")}
+                      </Typography>
+                    </Pressable>
+                  </Stack>
                 </Stack>
               ))}
             </Stack>

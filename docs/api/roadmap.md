@@ -431,8 +431,12 @@ On release, the gate calls `TaskSchedulerService.createTask` with:
   projects this release path most needs to get right.
 - `attachmentSetId` = the item's set, when present.
 - `output` = the item's own `output` field, or `{ type: "pr" }` by default.
-- `explicitTarget` = **absent** — "the classifier picks the target" (the
-  master plan's Play UX decision).
+- `explicitTarget` = **the item's SUBSYSTEM** (`{ kind: "subsystem", id }`),
+  resolved by `RoadmapGateService.classifySubsystem` →
+  `TaskClassifierService.classifySubsystem`. See "Subsystem-first release" below.
+  It used to be **absent** ("the classifier picks the target", the original
+  Phase-125 Play UX decision) — that predates the F2 federation work and is what
+  changed.
 - `background: false` — the synchronous server-side call pattern (the same
   one `automations/scheduler.service.ts` uses), so the gate always learns the
   real outcome (`dispatched`/`pending`/`scheduled`) before it writes the
@@ -444,6 +448,106 @@ On release, the gate calls `TaskSchedulerService.createTask` with:
 
 The returned task id (and `runRef`, when the dispatch was synchronous) lands
 on a new entry in the item's `runs[]`; `lifecycle → "running"`.
+
+#### Subsystem-first release
+
+The release asks the switchboard **one** question — "whose domain is this?" — and hands
+the answer to `createTask` as the `explicitTarget`. The subsystem then picks its own
+unit (`resolveSubsystemTarget` → `classifyWithinSubsystem`, see
+[tasks.md](./tasks.md#stage-1-only--classifysubsystem-subsystem-first-callers)).
+
+```
+release()
+  └─ classifySubsystem(text, projectPath)          # RoadmapGateService, private
+       └─ TaskClassifierService.classifySubsystem(input, DEFAULT_ROADMAP_SUBSYSTEM)
+            → { kind: "subsystem", id }            # seated by construction
+  └─ createTask(…, explicitTarget: that subsystem)
+       └─ resolveSubsystemTarget → classifyWithinSubsystem   # forge picks delivery OR one agent
+  └─ setRoadmapRef(taskId, item)                   # the reverse edge
+  └─ setClassification(taskId, stage-1 trace)      # so RunDetail can still say "why here"
+```
+
+**Why it changed.** The original Phase-125 decision was `explicitTarget: undefined` —
+"the classifier picks the target". That predates the F2 federation work, and it meant a
+roadmap item was ranked against the FULL catalog of every agent + pipeline. Two
+consequences, both observed: the `roadmap-decomposer` won ordinary roadmap tasks on the
+gate's own footer wording (see [The artifact](#the-artifact)), and every item that did
+route to delivery paid for Architekt → Kodér ⇄ Review → Tester → Dokumentátor whether
+it needed all five phases or not. Routing to the subsystem instead lets forge make the
+pipeline-vs-agent call with its own mandate and `EFFORT_RULE` in the prompt.
+
+**`DEFAULT_ROADMAP_SUBSYSTEM` = `forge`** — the not-confident fallback only. A roadmap
+item is by construction delivery work on a code project, and forge is the only
+subsystem owning both a pipeline and specialist agents. `classifySubsystem` may still
+pick any other seated subsystem when the text genuinely matches its mandate (a
+research-shaped item → scout). If a project ever needs a different default, this is the
+constant to promote to a `RoadmapConfig` field.
+
+**It can never fail a release.** Three fallbacks, all landing on "release undirected"
+(i.e. exactly the old behaviour) rather than on a failed item:
+
+| situation                             | result                               |
+| ------------------------------------- | ------------------------------------ |
+| no subsystem seated at all            | `null` → `explicitTarget` undefined  |
+| the classifier throws                 | logged → `explicitTarget` undefined  |
+| the verdict isn't `kind: "subsystem"` | refused → `explicitTarget` undefined |
+
+The last is a belt-and-braces check: `classifySubsystem`'s catalog makes it impossible,
+but a concrete target arriving as an `explicitTarget` would silently bypass the whole
+subsystem layer, which is worth one cheap `if`.
+
+**The trace is written by hand here.** `TaskSchedulerService.dispatch` only builds a
+`ClassificationTrace` when IT did the classifying — and this release hands it an
+explicit target — so the gate persists its own stage-1 verdict via
+`ScheduledTasksStorageService.setClassification`. Without it, `RunDetail`'s
+classification panel would go blank for exactly the runs whose routing is most worth
+explaining. Best-effort: a missing trace costs an explanation, never a dispatch.
+
+#### The issue ↔ run link (both directions)
+
+`runs[].taskId` is the **forward** edge (issue → task) and the authoritative one.
+The **reverse** edge is written onto the task record right after `createTask`
+returns — `ScheduledTasksStorageService.setRoadmapRef(taskId, item.id, label)`,
+via the shared `writeRoadmapBackRef` helper (`apps/api/src/roadmap/roadmap-back-ref.ts`),
+which `RoadmapDecompositionService.dispatch` uses for a childless epic too:
+
+| field                      | on                     | meaning                                                                     |
+| -------------------------- | ---------------------- | --------------------------------------------------------------------------- |
+| `roadmapItemId`            | `ScheduledTask`        | the item this task was released for                                         |
+| `roadmapItemLabel`         | `ScheduledTask`        | snapshot of `source.externalKey` (`CZ3TDR1-524`), else the item's `name`    |
+| `roadmapItemId` / `…Label` | `TaskRun` (read model) | enriched from the task record in `enrichRunWithTask` — never client-written |
+
+Four decisions worth keeping:
+
+- **Keyed on `taskId`, not `runRef`.** `runs[].runRef` is only written when the
+  release actually dispatched — a `queued`/`held`/`pending` release has none, and
+  nothing backfills it. `taskId` is always present on both sides.
+- **Written from the roadmap side, never hooked from the scheduler.** The gate's
+  own class docblock refuses a scheduler→roadmap hook because it would close a
+  second circular provider edge (on top of the one `ProjectPrService` carries);
+  a one-way write from here needs no new edge.
+- **Best-effort.** A failed back-ref logs and moves on: the release already
+  happened, the forward edge is authoritative, and the worst case is a run detail
+  with no issue link. It must never turn into a failed dispatch.
+- **The label is stored, not resolved.** So a run stays self-describing after the
+  item is renamed or deleted, and no run-read has to reach into `RoadmapStore` —
+  which would be the same module cycle again.
+
+Not on `CreateTaskInput`: `roadmapItemId` is provenance, the same class as
+`projectId`, and provenance is server-derived, never client-asserted (Law 4).
+
+**In the UI**, the two halves are:
+
+- `RunDetail`'s `issue` meta cell (testid `run-roadmap-item-link`) →
+  `/projects/:projectId?tab=roadmap&item=:roadmapItemId`. Needs both ids: a
+  roadmap is always project-scoped. `RoadmapPanel` seeds its dialog from `?item=`
+  and also switches the board to the epic that owns the item.
+- The item dialog's run rows (testid `roadmap-item-dialog-open-run`) →
+  `/archiv?run=<runRef ?? taskId>`, alongside (not instead of) the PR link.
+  Because `/archiv`'s feed is settled-only while an issue's run is usually still
+  in flight, that screen resolves a `?run=` its feed doesn't contain via
+  `useTaskRunQuery` (`GET /tasks/runs/:runId`) rather than falling back to the
+  newest archived row.
 
 If `resolveForRun` or `createTask` itself throws (e.g. `ProjectLocalUnresolvedError`
 — no `path`, no cloneRoot clone, no `gitRemote` to clone from), the item has no
@@ -657,6 +761,17 @@ agent — dispatched with an **explicit** `TaskTarget` (`{ kind: "agent", id:
 skips the classifier", and `RoadmapDecompositionService.dispatch` is the one caller that
 always supplies it for this id. Its instructions (the agent's own body) also defensively
 bail to an empty artifact if it is ever somehow invoked outside this flow.
+
+"Never classified into" is enforced **structurally**, not by trusting that bail-out: the id
+is a member of `EXPLICIT_ONLY_AGENT_IDS` (`libs/contracts/src/tasks/task.schema.ts`), which
+`TaskClassifierService.agentCandidates` filters out of every catalog it builds — see
+[tasks.md](./tasks.md#explicit-only-agents-never-in-the-catalog). This was a real defect,
+not a hypothetical: an ORDINARY roadmap task carries the gate's own "ZIBBY ROADMAP CONTEXT"
+footer (`buildRoadmapTaskText`), which is dense with epic/roadmap wording, so the decomposer
+out-scored every real delivery target on the keyword leg. The run then correctly answered
+`[]` (not an epic to decompose), produced neither a PR nor a file, and `reconcileRunning`
+marked the item `failed` with _"Run finished without producing an artifact (no PR or file
+output)."_ — the item never reached a delivery pipeline at all.
 
 Its terminal output is a structured artifact — `DecompositionArtifactSchema`
 (`libs/contracts/src/roadmap/decomposition-artifact.schema.ts`), an array (max 200) of

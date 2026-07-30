@@ -2,6 +2,7 @@
 
 import type { RoadmapItemLevel } from "@zibby/contracts";
 import { DropDownButton, Grid, Stack } from "@zibby/design-system";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { EmptyState } from "../../../components/EmptyState/EmptyState";
@@ -100,8 +101,13 @@ type CreateTarget = { level: RoadmapItemLevel; parentId?: string };
 export function RoadmapPanel({ projectId }: RoadmapPanelProps) {
   const t = useTranslations("roadmap");
   const itemsQuery = useRoadmapItemsQuery(projectId);
+  // `?item=<id>` opens that item's dialog on mount — the landing half of the
+  // run -> issue link (`RunDetail`'s "issue" meta cell). Seeded as initial state
+  // rather than applied in an effect so it survives the query's pending pass
+  // without a flash, and so the operator's own later clicks simply win.
+  const searchParams = useSearchParams();
+  const [detailItemId, setDetailItemId] = useState<string | null>(() => searchParams.get("item"));
   const [selectedEpicId, setSelectedEpicId] = useState<string | undefined>(undefined);
-  const [detailItemId, setDetailItemId] = useState<string | null>(null);
   const [createTarget, setCreateTarget] = useState<CreateTarget | null>(null);
 
   if (itemsQuery.isError) {
@@ -140,7 +146,15 @@ export function RoadmapPanel({ projectId }: RoadmapPanelProps) {
     );
   }
 
-  const selectedEpic = epics.find((epic) => epic.id === selectedEpicId) ?? epics[0]!;
+  // A deep-linked item also decides which epic's board is showing, so the page
+  // behind the dialog is about the right epic rather than whichever one happens
+  // to be first. Derived (not an effect) so it needs no second render pass, and
+  // an explicit `selectedEpicId` — the operator clicking the epic list — always
+  // wins over it.
+  const deepLinked = detailItemId ? items.find((item) => item.id === detailItemId) : undefined;
+  const deepLinkedEpicId = deepLinked?.level === "epic" ? deepLinked.id : deepLinked?.parentId;
+  const selectedEpic =
+    epics.find((epic) => epic.id === (selectedEpicId ?? deepLinkedEpicId)) ?? epics[0]!;
 
   return (
     <Stack data-testid={RoadmapPanelTestId.Root} gap="200">
@@ -166,7 +180,12 @@ export function RoadmapPanel({ projectId }: RoadmapPanelProps) {
         <RoadmapItemDialog
           itemId={detailItemId}
           items={items}
-          onClose={() => setDetailItemId(null)}
+          onClose={() => {
+            // Pin the epic that was showing BEFORE dropping the deep link, or the
+            // board would snap back to `epics[0]` the moment the dialog closes.
+            setSelectedEpicId(selectedEpic.id);
+            setDetailItemId(null);
+          }}
           onSelectItem={setDetailItemId}
         />
       )}
