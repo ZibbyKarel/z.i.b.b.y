@@ -96,6 +96,10 @@ export function PipelineDialog({
         phases,
         // Delivery sinks aren't edited here — configured in the .pipeline.md `outputs:`.
         outputs: [],
+        // NS2 F9's ladder rung isn't authored in this dialog either (same reason
+        // as `outputs`), so a dialog-created pipeline starts on the middle rung —
+        // the contract's own default — and is graded in the `.pipeline.md`.
+        complexity: "standard",
         ...(defaultOwnerSubsystem ? { ownerSubsystem: defaultOwnerSubsystem } : {}),
       });
       return;
@@ -181,12 +185,16 @@ export function PipelineDialog({
             value={desc}
           />
           <Button
-            aria-label={fullscreen ? t("forms.pipeline.exitFullscreen") : t("forms.pipeline.enterFullscreen")}
+            aria-label={
+              fullscreen ? t("forms.pipeline.exitFullscreen") : t("forms.pipeline.enterFullscreen")
+            }
             icon={fullscreen ? "collapse" : "expand"}
             intent="ghost"
             onClick={() => setFullscreen((v) => !v)}
             size="sm"
-            title={fullscreen ? t("forms.pipeline.exitFullscreen") : t("forms.pipeline.enterFullscreen")}
+            title={
+              fullscreen ? t("forms.pipeline.exitFullscreen") : t("forms.pipeline.enterFullscreen")
+            }
           />
         </Stack>
 

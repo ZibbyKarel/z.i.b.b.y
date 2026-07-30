@@ -120,6 +120,30 @@ export const PipelineOutputSchema = z.discriminatedUnion("type", [
 ]);
 export type PipelineOutput = z.infer<typeof PipelineOutputSchema>;
 
+/**
+ * NS2 F9 — a pipeline's rung on its owning subsystem's complexity ladder. The
+ * order of this enum IS the ladder, cheapest first: `light` (2–3 phases, cheap
+ * models — narrow work that still wants a second pair of eyes), `standard` (3–4
+ * phases — ordinary work with review and verification), `deep` (4–6 phases with
+ * loops and escalation — multi-surface work, or work that genuinely needs
+ * design + review + tests + docs).
+ *
+ * The rung below `light` is not a pipeline at all: a single owned agent, for
+ * single-surface work like a rename or a copy fix.
+ */
+export const PipelineComplexitySchema = z.enum(["light", "standard", "deep"]);
+export type PipelineComplexity = z.infer<typeof PipelineComplexitySchema>;
+
+/**
+ * The ladder as an ordered tuple — the canonical cheapest-first sort key, so no
+ * consumer re-derives an ordering from the enum's declaration order by hand.
+ */
+export const PIPELINE_COMPLEXITY_ORDER: readonly PipelineComplexity[] = [
+  "light",
+  "standard",
+  "deep",
+];
+
 /** The plain object form — `update` derives from this (a refined schema can't `.omit`). */
 const PipelineObject = z.object({
   id: AgentIdSchema,
@@ -132,11 +156,34 @@ const PipelineObject = z.object({
   outputs: z.array(PipelineOutputSchema).default([]),
   instructions: z.string().min(1),
   /**
-   * Optional attribution to a subsystem of the federation (Phase 81) — which of
-   * the eight subsystems "owns" this pipeline for Roster (phase 85). Absent is a
-   * legitimate state: not every pipeline has a subsystem owner yet.
+   * Attribution to a subsystem of the federation (Phase 81) — which subsystem
+   * "owns" this pipeline for the Roster (phase 85) and, since NS2 F9, whether it
+   * is reachable at all: the switchboard routes only to subsystems, and a
+   * subsystem offers only its own owned units, so an unowned pipeline is
+   * structurally unroutable.
+   *
+   * Still `.optional()` here ON PURPOSE, even though F9's invariant is "no free
+   * units". The entity store's listing is tolerant (a file that fails schema
+   * validation is skipped, never fatal — `entity-file-store.ts`), so making this
+   * required would turn a hand-edited file that lost its owner into a SILENT
+   * disappearance instead of a reportable one. Keeping it optional is what lets
+   * `GET /api/subsystems/unowned` stay a working diagnostic. Enforcement lives on
+   * the write path instead — `pipelines.controller.ts` 422s without it, mirroring
+   * `agents.controller.ts`.
    */
   ownerSubsystem: SubsystemIdSchema.optional(),
+  /**
+   * NS2 F9 — the pipeline's rung on its subsystem's complexity ladder, ordered
+   * cheapest/shortest → most expensive/deepest. Stage-2 scoped routing
+   * (`TaskClassifierService.classifyWithinSubsystem`) grades a task onto a rung:
+   * a single owned agent below `light`, then `light` → `standard` → `deep`.
+   *
+   * Data rather than file order because `SUBSYSTEM_FALLBACK`'s `"primary"` policy
+   * resolves a low-confidence verdict by reading `candidates[0]`, and file order
+   * would silently change that the first time a directory listing reorders.
+   * Defaulted so every pipeline written before F9 still parses.
+   */
+  complexity: PipelineComplexitySchema.default("standard"),
 });
 
 /** Shared phase/loop validation (used by the full schema; storage re-validates updates). */

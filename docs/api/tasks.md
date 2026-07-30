@@ -88,14 +88,30 @@ background dispatch" above).
 
 The classifier finds the best target for the task's text, in up to two stages:
 
-1. **Stage 1 — the switchboard.** Loads every active agent (minus the explicit-only
-   ones — see below), every pipeline, and one
-   coarse `subsystem` candidate per subsystem that owns ≥1 pipeline or agent
-   (`ownerSubsystem`) — `stage1SubsystemCandidates`. A subsystem candidate's `search`
-   is its Czech mandate, so mandate-term overlap ranks it in the keyword-scorer leg
-   too. Owned agents/pipelines are still ALSO listed individually at stage 1 — a
-   subsystem candidate is additive, not a replacement, so the router can pick either
-   the whole subsystem or one of its specific units.
+1. **Stage 1 — the switchboard. SUBSYSTEMS ONLY (NS2 F9).** The catalog is exactly
+   one coarse `subsystem` candidate per subsystem that owns ≥1 pipeline or active
+   agent (`ownerSubsystem`) — `stage1SubsystemCandidates`, and nothing else. A
+   subsystem candidate's `search` is its Czech mandate, so mandate-term overlap
+   ranks it in the keyword-scorer leg too.
+
+   Stage 1 asks exactly one question: **"whose domain is this?"** Concrete agents
+   and pipelines are no longer offered here.
+
+   > **Changed in F9.** Stage 1 used to list every active agent and every pipeline
+   > _alongside_ the subsystem candidates, and let one ranking pass choose between
+   > them. That asked the router to compare units at two different levels of
+   > abstraction — `code-reviewer` (an agent) against `Forge` (the subsystem that
+   > owns that very agent). They are not peers: one contains the other, so
+   > whichever won was arbitrary, and the two winners produced materially
+   > different runs. A direct agent/pipeline pick also skipped the size policy
+   > entirely, since `EFFORT_RULE` only ever reaches the scoped stage-2 preamble —
+   > which is how a one-line fix could draw the full five-phase `delivery`
+   > pipeline with nothing asking whether the hammer fit.
+   >
+   > The knock-on effect is the enforcement behind F9's "no free units": an agent
+   > or pipeline with **no `ownerSubsystem` is unroutable by construction**,
+   > because no catalog contains it and the classifier can emit nothing else.
+
 2. Keyword scoring — counts word overlap between the task text and each candidate's
    `search` blob (an LLM router runs first in production; the keyword scorer is the
    deterministic fallback; `isCoherent` rejects an orchestrator/goal pick, but a
@@ -103,6 +119,8 @@ The classifier finds the best target for the task's text, in up to two stages:
 3. Returns a `TaskRouting`:
    ```typescript
    {
+     // stage 1 emits only "subsystem" | "orchestrator" since F9;
+     // "agent" / "pipeline" come from the scoped stage-2 pass or an explicit target
      target: "agent" | "pipeline" | "subsystem" | "orchestrator"
      id?: string        // agent/pipeline/subsystem id (the orchestrator has none)
      confidence: number // 0–1
@@ -188,23 +206,32 @@ run, via `resolveSubsystemTargetOrNull` / `resolveSubsystemTarget`:
   router/keyword-scorer machinery reused with the catalog restricted to that
   subsystem's own pipelines + active agents (never another subsystem), and the LLM
   router prompt gets an extra `preamble` (the subsystem's mandate + an "owned units"
-  list + `EFFORT_RULE`) so it reasons about the mandate, not bare catalog rows. A
-  low-confidence stage-2 verdict resolves per `SUBSYSTEM_FALLBACK[subsystemId]`:
-  `"orchestrator"` (defer to the global orchestrator) or `"primary"` (stay inside the
-  subsystem, dispatch its first owned unit) — a typed `Record` over the closed
-  `SubsystemId` enum, so a new subsystem id fails `tsc` until it's given a policy.
+  list, each line labelled with its ladder rung, + `EFFORT_RULE`) so it reasons about
+  the mandate, not bare catalog rows. A low-confidence stage-2 verdict resolves per
+  `SUBSYSTEM_FALLBACK[subsystemId]`: `"orchestrator"` (defer to the global
+  orchestrator) or `"primary"` (stay inside the subsystem, dispatch its **cheapest
+  owned pipeline**) — a typed `Record` over the closed `SubsystemId` enum, so a new
+  subsystem id fails `tsc` until it's given a policy.
 
-**This is where "a small change shouldn't run the whole pipeline" is decided.** Forge
-is the only subsystem that owns both a pipeline (`delivery`) and specialist agents
-(`architect`, `fullstack-developer`, `code-reviewer`, `test-automator`,
-`documentation-engineer`), so it is the only one where stage 2 is a real
-pipeline-vs-agent call. Nothing else in the routing chain has any notion of how BIG a
-change is, so `EFFORT_RULE` (`task-classifier.service.ts`) is appended to the
-preamble: a narrow single-surface change goes to one owned agent; a pipeline is
-reserved for multi-surface work or work that genuinely needs design + review + tests +
-docs. It is prose in the preamble rather than a contract field on purpose — the
-preamble is already the one place per-subsystem routing policy lives. Promote it to
-data (a `routingHint` on the subsystem) only if the prompt proves too blunt.
+**This is where "a small change shouldn't run the whole pipeline" is decided** — and
+since NS2 F9 it is the ONLY place a concrete unit is chosen, for every subsystem
+rather than just forge. Every seated subsystem now owns specialist agents plus a
+graded set of pipelines, so `EFFORT_RULE` (`task-classifier.service.ts`) describes a
+**four-rung ladder** instead of a binary agent-vs-pipeline rule:
+
+1. a single owned **agent** — narrow, single-surface: one file, a rename, a copy fix,
+   a small bug, a lookup, a single reply
+2. a **`light`** pipeline — still narrow, but wants a second pair of eyes or a check
+3. a **`standard`** pipeline — ordinary work needing review and verification
+4. a **`deep`** pipeline — multi-surface, or genuinely needs design + review + tests +
+   docs
+
+The rule says "prefer the cheapest rung that can do it safely", and the scoped catalog
+is ordered cheapest-first (agents, then pipelines by `complexity`) so the list itself
+reinforces it. The wording stays prose in the preamble rather than a contract field —
+the preamble is already the one place per-subsystem routing policy lives — but the
+_ordering_ it describes is data (`PIPELINE_COMPLEXITY_ORDER`, see
+[pipelines.md](./pipelines.md)).
 
 **`SUBSYSTEM_FALLBACK.forge` is `"primary"`, not `"orchestrator"`.** It used to be
 `"orchestrator"`, on the reasoning that forge's units are delivery _specialists_ so an
@@ -212,9 +239,22 @@ unsure pick was better self-delegated. That is wrong for the work forge actually
 receives: escaping to the global orchestrator yields a session with no PR-shaped
 output, and `RoadmapGateService.reconcileRunning` then kills the item as _"Run finished
 without producing an artifact"_ — the very failure the fallback was meant to avoid.
-`"primary"` makes "unsure" mean "run `delivery`" (pipelines are listed first in
-`subsystemCandidates`, so `candidates[0]` **is** forge's pipeline) — the safe direction
-for delivery, at the cost of being the expensive one.
+`"primary"` makes "unsure" mean "run a pipeline", which is the safe direction.
+
+> **What `"primary"` resolves to changed in F9.** It used to read `candidates[0]`,
+> which — with pipelines sorted first — was forge's `delivery`, the most _expensive_
+> unit it owns. Now that the catalog is ordered cheapest-first, `candidates[0]` is an
+> agent, which is precisely the wrong answer for an unsure verdict (a bare agent is
+> what produced the artifact-less runs above). So the fallback stops reading list
+> order at all and names its unit explicitly via `cheapestPipeline()`: the lowest
+> _pipeline_ rung. Same safety, a fraction of the cost — and the fallback is no longer
+> coupled to catalog ordering, which is what made it safe to reorder the catalog for
+> the router's benefit.
+
+`codex` and `hearth` became `"primary"` in F9 (each now owns a `light` pipeline).
+`beacon` and `ledger` are `"orchestrator"` but the value is **inert**: they own no
+dispatchable units by design, so they are never seated at stage 1 and stage 2 is
+unreachable for them.
 
 The resolved target IS the run's "via `<subsystem>`" attribution — any consumer can
 already read `Pipeline.ownerSubsystem` / `Agent.ownerSubsystem` off the dispatched id,

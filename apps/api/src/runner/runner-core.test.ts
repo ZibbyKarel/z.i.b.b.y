@@ -826,6 +826,29 @@ describe("RunnerCore", () => {
     }
   }
 
+  /**
+   * Poll until the `<runId>.pending.json` resume spec is actually ON DISK. The
+   * spec is written asynchronously AFTER the status flips to `paused-limit`, so a
+   * restart test that only waits on in-memory state races the write: a fresh core
+   * that sees a paused-limit sidecar with no pending spec correctly reconciles the
+   * run to `interrupted`, which under suite-wide load made
+   * "survives a restart (init)" fail intermittently.
+   */
+  async function waitForPendingSpec(runId: string, timeoutMs = 5000): Promise<void> {
+    const start = Date.now();
+    for (;;) {
+      const exists = await fs
+        .access(path.join(dir, `${runId}.pending.json`))
+        .then(() => true)
+        .catch(() => false);
+      if (exists) return;
+      if (Date.now() - start > timeoutMs) {
+        throw new Error(`pending spec never written for ${runId}`);
+      }
+      await sleep(20);
+    }
+  }
+
   it("classifies a child that dies on a usage limit as paused-limit with resumeAt + a pending spec", async () => {
     const epoch = Math.floor(Date.now() / 1000) + 3600;
     // resolveResumeAt echoes the detected reset (else a fallback) — the priority chain.
@@ -1029,6 +1052,9 @@ describe("RunnerCore", () => {
     });
     await waitForStatus(core, run.runId, "paused-limit");
     await waitForResumeAt(core, run.runId);
+    // The pending spec is what makes the restart resumable rather than
+    // interrupted, and it is written async — wait for the FILE, not just memory.
+    await waitForPendingSpec(run.runId);
 
     // A fresh core over the same dir rebuilds the registry from disk.
     const core2 = new RunnerCore(
@@ -1120,7 +1146,14 @@ describe("RunnerCore", () => {
   });
 
   it("captures a result event delivered as the last line WITHOUT a trailing newline", async () => {
-    const core = new RunnerCore(dir, strategy, undefined, undefined, undefined, formatClaudeStreamLine);
+    const core = new RunnerCore(
+      dir,
+      strategy,
+      undefined,
+      undefined,
+      undefined,
+      formatClaudeStreamLine,
+    );
     await core.init();
     const cwd = path.join(dir, "cost_noeol");
     // Write the result line with NO trailing newline, then exit 0 → it lands in

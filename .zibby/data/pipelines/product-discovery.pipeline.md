@@ -33,6 +33,7 @@ desc: >-
   Od tržního signálu k product specu připravenému pro Delivery: trh → uživatel →
   PRD → technický plán. Produkt, discovery, PRD, spec, nová feature od nuly.
 ownerSubsystem: scout
+complexity: deep
 ---
 
 # Product Discovery

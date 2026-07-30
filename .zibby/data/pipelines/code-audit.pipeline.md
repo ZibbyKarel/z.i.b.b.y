@@ -46,6 +46,7 @@ desc: >-
   → souhrnná zpráva s prioritami. Audit, security review, code review,
   accessibility, performance, prohlídka kódu.
 ownerSubsystem: loom
+complexity: deep
 ---
 
 # Code Audit

@@ -1,9 +1,12 @@
 import {
   type Agent,
   type Pipeline,
+  type PipelineComplexity,
   type Project,
   ROADMAP_DECOMPOSER_AGENT_ID,
+  type SubsystemId,
   type TaskRouting,
+  type TaskTarget,
 } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
 import type { AgentsStorageService } from "../agents/agents.storage.service";
@@ -36,6 +39,8 @@ function pipeline(over: {
   name?: string;
   desc?: string;
   ownerSubsystem?: string;
+  /** NS2 F9 — the ladder rung. Mirrors the schema default so pre-F9 fixtures read the same. */
+  complexity?: PipelineComplexity;
 }): Pipeline {
   return {
     id: over.id,
@@ -43,6 +48,7 @@ function pipeline(over: {
     desc: over.desc ?? "",
     phases: [],
     ownerSubsystem: over.ownerSubsystem,
+    complexity: over.complexity ?? "standard",
   } as unknown as Pipeline;
 }
 
@@ -54,6 +60,41 @@ const silentRouter: TaskRouter = {
 /** A router that returns a fixed verdict (used to exercise the loop annotation). */
 function fixedRouter(routing: TaskRouting): TaskRouter {
   return { route: () => Promise.resolve(routing) };
+}
+
+/**
+ * `kind:id` labels for a target list, so a catalog assertion reads as one line.
+ * The synthetic orchestrator carries no `id`, hence the narrowing.
+ */
+function labels(targets: readonly TaskTarget[] | undefined): string[] {
+  return (targets ?? []).map((t) => ("id" in t ? `${t.kind}:${t.id}` : t.kind));
+}
+
+/**
+ * NS2 F9 — the shape of a coherent STAGE-1 verdict: the switchboard's catalog is
+ * subsystem-only, so the only thing the LLM leg can legitimately name is a
+ * seated subsystem. Used wherever a test needs a deterministic stage-1 pick
+ * (the keyword leg scores a subsystem candidate against its Czech MANDATE, which
+ * rarely overlaps an English task sentence, so it otherwise lands on the
+ * terminal orchestrator fallback).
+ */
+function subsystemVerdict(
+  id: SubsystemId,
+  name: string,
+  over: Partial<TaskRouting> = {},
+): TaskRouting {
+  return {
+    target: { kind: "subsystem", id, name },
+    confidence: 0.9,
+    reason: `matches ${name}'s mandate`,
+    matchedTerms: [],
+    candidates: [{ kind: "subsystem", id, name }],
+    mode: "single",
+    proposedGoal: null,
+    paths: [],
+    toolGrants: [],
+    ...over,
+  } as unknown as TaskRouting;
 }
 
 function makeService(opts: {
@@ -90,12 +131,19 @@ function makeService(opts: {
   );
 }
 
-// A small catalog: a coder agent + a delivery pipeline (the maker a loop iterates).
+// A small catalog: a coder agent + two pipelines on forge's ladder (the maker a
+// loop iterates). NS2 F9 — every unit carries an `ownerSubsystem`: stage 1 emits
+// only subsystems, and a subsystem is SEATED only by the units it owns, so an
+// unowned fixture would leave the stage-1 catalog empty and `classify()` would
+// return `null` (the controller's 422). `delivery` is the cheaper rung here so
+// both the subsystem branch (cheapest owned pipeline) and the orchestrator
+// branch (prefers a "deliver"-shaped id) of `resolveMaker` name the same maker.
 const catalogAgents = [
   agent({
     id: "coder",
     name: "Kodér",
     description: "Implementuje podle design.md rename component button",
+    ownerSubsystem: "forge",
   }),
 ];
 const catalogPipelines = [
@@ -103,11 +151,15 @@ const catalogPipelines = [
     id: "delivery",
     name: "Delivery",
     desc: "fix or implement a feature or bug; deliver, failing test, opravit, rozbitý test",
+    ownerSubsystem: "forge",
+    complexity: "standard",
   }),
   pipeline({
     id: "build-feature",
     name: "Build Feature",
     desc: "Spec implementace testy docs feature",
+    ownerSubsystem: "forge",
+    complexity: "deep",
   }),
 ];
 
@@ -124,19 +176,45 @@ describe("TaskClassifierService — Phase 11 loop synthesis", () => {
     expect(r?.target.kind).not.toBe("goal");
   });
 
-  it("keeps a one-shot edit as mode:single (agent)", async () => {
-    const svc = makeService({ agents: catalogAgents, pipelines: catalogPipelines });
-    const r = await svc.classify({ text: "rename the Button component" });
-    expect(r?.mode).toBe("single");
-    expect(r?.proposedGoal).toBeNull();
-    expect(r?.target.kind).toBe("agent");
+  // Pre-F9 this asserted `target.kind === "agent"` straight off `classify()`.
+  // Stage 1 is subsystem-only now, so the SAME intent — a one-shot edit stays
+  // `mode: "single"` and lands on a single owned AGENT — is asserted across the
+  // two hops production actually takes (`TaskSchedulerService.resolveSubsystemTarget`).
+  it("keeps a one-shot edit as mode:single, and stage 2 lands it on a single agent", async () => {
+    const stage1 = await makeService({
+      agents: catalogAgents,
+      pipelines: catalogPipelines,
+      router: fixedRouter(subsystemVerdict("forge", "Forge")),
+    }).classify({ text: "rename the Button component" });
+    expect(stage1?.mode).toBe("single");
+    expect(stage1?.proposedGoal).toBeNull();
+    expect(stage1?.target).toMatchObject({ kind: "subsystem", id: "forge" });
+
+    const stage2 = await makeService({
+      agents: catalogAgents,
+      pipelines: catalogPipelines,
+    }).classifyWithinSubsystem({ text: "rename the Button component" }, "forge");
+    expect(stage2?.mode).toBe("single");
+    expect(stage2?.target).toMatchObject({ kind: "agent", id: "coder" });
   });
 
-  it("routes a feature build to a pipeline (single)", async () => {
-    const svc = makeService({ agents: catalogAgents, pipelines: catalogPipelines });
-    const r = await svc.classify({ text: "ship the auth feature" });
-    expect(r?.mode).toBe("single");
-    expect(r?.target.kind).toBe("pipeline");
+  // Same rewrite as above, for the pipeline-sized end of the ladder: the
+  // switchboard names the domain, the subsystem grades the work onto a pipeline.
+  it("routes a feature build to a subsystem at stage 1 and to a pipeline at stage 2 (single)", async () => {
+    const stage1 = await makeService({
+      agents: catalogAgents,
+      pipelines: catalogPipelines,
+      router: fixedRouter(subsystemVerdict("forge", "Forge")),
+    }).classify({ text: "ship the auth feature" });
+    expect(stage1?.mode).toBe("single");
+    expect(stage1?.target).toMatchObject({ kind: "subsystem", id: "forge" });
+
+    const stage2 = await makeService({
+      agents: catalogAgents,
+      pipelines: catalogPipelines,
+    }).classifyWithinSubsystem({ text: "spec implementace testy docs feature" }, "forge");
+    expect(stage2?.mode).toBe("single");
+    expect(stage2?.target).toMatchObject({ kind: "pipeline", id: "build-feature" });
   });
 
   it("flips to loop on the cue even with the LLM router disabled (keyword leg)", async () => {
@@ -150,26 +228,37 @@ describe("TaskClassifierService — Phase 11 loop synthesis", () => {
     expect(r?.proposedGoal?.maker.kind).toBe("pipeline");
   });
 
+  // Pre-F9 the router named the `coder` AGENT and the maker was that agent. A
+  // bare agent is no longer a coherent stage-1 verdict, so the annotation now
+  // rides on a subsystem pick — and `resolveMaker`'s NS2 F9 `subsystem` branch
+  // resolves it to that subsystem's cheapest owned pipeline (the stage-1 catalog
+  // holds no pipelines to scan, so it reads the store). Same intent: the
+  // router's `loop` annotation is honoured with no text cue at all.
   it("honors the router's loop annotation even without a text cue", async () => {
-    const routerVerdict: TaskRouting = {
-      target: { kind: "agent", id: "coder", name: "Kodér", glyph: "bot" },
-      confidence: 0.9,
-      reason: "router said loop",
-      matchedTerms: [],
-      candidates: [{ kind: "agent", id: "coder", name: "Kodér", glyph: "bot" }],
-      mode: "loop",
-      proposedGoal: null,
-      paths: [],
-      toolGrants: [],
-    };
     const svc = makeService({
       agents: catalogAgents,
       pipelines: catalogPipelines,
-      router: fixedRouter(routerVerdict),
+      router: fixedRouter(subsystemVerdict("forge", "Forge", { mode: "loop" })),
     });
     const r = await svc.classify({ text: "make the dashboard nicer" });
     expect(r?.mode).toBe("loop");
-    expect(r?.proposedGoal?.maker).toEqual({ kind: "agent", id: "coder" });
+    expect(r?.target).toMatchObject({ kind: "subsystem", id: "forge" });
+    expect(r?.proposedGoal?.maker).toEqual({ kind: "pipeline", id: "delivery" });
+  });
+
+  // The other half of that branch: a looped SUBSYSTEM verdict for a subsystem
+  // that owns no pipeline at all can't be iterated, so it degrades honestly to
+  // `single` rather than minting an agent maker a goal runner can't drive.
+  it("does not synthesize a maker for a looped subsystem verdict when that subsystem owns no pipeline", async () => {
+    const svc = makeService({
+      agents: [agent({ id: "watcher", name: "Watcher", ownerSubsystem: "puls" })],
+      pipelines: catalogPipelines,
+      router: fixedRouter(subsystemVerdict("puls", "Puls", { mode: "loop" })),
+    });
+    const r = await svc.classify({ text: "watch the heartbeat" });
+    expect(r?.target).toMatchObject({ kind: "subsystem", id: "puls" });
+    expect(r?.mode).toBe("single");
+    expect(r?.proposedGoal).toBeNull();
   });
 
   it("returns null when the catalog is empty (unchanged)", async () => {
@@ -189,8 +278,12 @@ describe("TaskClassifierService — Phase 11 loop synthesis", () => {
 
   it("does NOT synthesize a maker when the orchestrator is picked and no pipeline exists", async () => {
     // Only an agent in the catalog + nonsense text → low confidence → orchestrator.
+    // The agent still needs an owner: it is what SEATS forge, and an empty
+    // stage-1 catalog would make `classify()` return null instead of routing.
     const svc = makeService({
-      agents: [agent({ id: "coder", name: "Kodér", description: "implements" })],
+      agents: [
+        agent({ id: "coder", name: "Kodér", description: "implements", ownerSubsystem: "forge" }),
+      ],
       pipelines: [],
     });
     const r = await svc.classify({ text: "xyzzy zzz keep retrying" });
@@ -202,7 +295,9 @@ describe("TaskClassifierService — Phase 11 loop synthesis", () => {
 
   it("synthesizes a pipeline maker for an orchestrator pick when a pipeline is available", async () => {
     const svc = makeService({
-      agents: [agent({ id: "coder", name: "Kodér", description: "implements" })],
+      agents: [
+        agent({ id: "coder", name: "Kodér", description: "implements", ownerSubsystem: "forge" }),
+      ],
       pipelines: catalogPipelines,
     });
     const r = await svc.classify({ text: "xyzzy zzz keep retrying" });
@@ -214,25 +309,37 @@ describe("TaskClassifierService — Phase 11 loop synthesis", () => {
 
 describe("TaskClassifierService — Phase 4c (Agent Factory: proposed agents are not dispatchable)", () => {
   it("never routes to a status: proposed agent — it's excluded from the candidate catalog entirely", async () => {
+    // NS2 F9 sharpens this: since the stage-1 catalog is built from the
+    // OWNERSHIP of active units, a proposed agent must not even SEAT its
+    // subsystem — so `maestro` (owned solely by the proposed agent) never
+    // becomes a candidate, and the task can't reach it by delegation either.
     const svc = makeService({
       agents: [
-        agent({ id: "coder", name: "Kodér", description: "implements" }),
+        agent({ id: "coder", name: "Kodér", description: "implements", ownerSubsystem: "forge" }),
         agent({
           id: "auto-deploy-staging",
           name: "Deploy Staging Specialist",
           description: "deploy to staging",
           status: "proposed",
+          ownerSubsystem: "maestro",
         }),
       ],
       pipelines: [],
     });
     const r = await svc.classify({ text: "deploy to staging" });
-    // The only candidate is `coder` (no keyword overlap with "deploy to staging"),
-    // so this falls to the orchestrator — never to the excluded proposed agent.
+    // Only forge is seated (by the ACTIVE `coder`), and forge's Czech mandate has
+    // no overlap with "deploy to staging", so this falls to the orchestrator —
+    // never to the excluded proposed agent, and never to maestro.
     expect(r?.target.kind).toBe("orchestrator");
+    expect(labels(r?.candidates)).toEqual(["subsystem:forge"]);
   });
 });
 
+// NS2 F9 moved the agent-shaped assertions here onto the SCOPED stage-2 call.
+// A grant proposal only exists for an `agent` target, and stage 1 can no longer
+// emit one — so `classifyWithinSubsystem` is the only path that reaches it. The
+// intent is unchanged: the proposal is drawn from the routed agent's own
+// `optionalTools` and from nowhere else.
 describe("TaskClassifierService — Phase 108 toolGrants proposal", () => {
   it("proposes only ids drawn from the routed agent's optionalTools — never invents one", async () => {
     const svc = makeService({
@@ -242,11 +349,15 @@ describe("TaskClassifierService — Phase 108 toolGrants proposal", () => {
           name: "Kodér",
           description: "implements recall memory tasks for the project",
           optionalTools: ["recall_memory", "list_entities"],
+          ownerSubsystem: "forge",
         }),
       ],
       pipelines: [],
     });
-    const r = await svc.classify({ text: "recall memory about the project before you start" });
+    const r = await svc.classifyWithinSubsystem(
+      { text: "recall memory about the project before you start" },
+      "forge",
+    );
     expect(r?.target).toEqual({ kind: "agent", id: "coder", name: "Kodér", glyph: "bot" });
     expect(r?.toolGrants).toEqual(["recall_memory"]);
     // Never anything outside the agent's own optionalTools.
@@ -255,20 +366,34 @@ describe("TaskClassifierService — Phase 108 toolGrants proposal", () => {
 
   it("proposes [] when the routed agent's optionalTools is empty or absent", async () => {
     const svc = makeService({ agents: catalogAgents, pipelines: catalogPipelines });
-    const r = await svc.classify({ text: "rename the Button component" });
+    const r = await svc.classifyWithinSubsystem({ text: "rename the Button component" }, "forge");
     expect(r?.target.kind).toBe("agent");
     expect(r?.toolGrants).toEqual([]);
   });
 
-  it("proposes [] for a non-agent target (pipeline/orchestrator) — no agent def to read optionalTools off", async () => {
+  it("proposes [] for a non-agent target (subsystem/pipeline/orchestrator) — no agent def to read optionalTools off", async () => {
     const svc = makeService({ agents: catalogAgents, pipelines: catalogPipelines });
-    const pipelineRun = await svc.classify({ text: "ship the auth feature" });
-    expect(pipelineRun?.target.kind).toBe("pipeline");
-    expect(pipelineRun?.toolGrants).toEqual([]);
+
+    // Stage 1's only two possible kinds, both non-agent by construction.
+    const subsystemRun = await makeService({
+      agents: catalogAgents,
+      pipelines: catalogPipelines,
+      router: fixedRouter(subsystemVerdict("forge", "Forge")),
+    }).classify({ text: "ship the auth feature" });
+    expect(subsystemRun?.target.kind).toBe("subsystem");
+    expect(subsystemRun?.toolGrants).toEqual([]);
 
     const orchestratorRun = await svc.classify({ text: "xyzzy zzz keep retrying" });
     expect(orchestratorRun?.target.kind).toBe("orchestrator");
     expect(orchestratorRun?.toolGrants).toEqual([]);
+
+    // And a stage-2 pipeline pick, the other kind that has no agent definition.
+    const pipelineRun = await svc.classifyWithinSubsystem(
+      { text: "spec implementace testy docs feature" },
+      "forge",
+    );
+    expect(pipelineRun?.target.kind).toBe("pipeline");
+    expect(pipelineRun?.toolGrants).toEqual([]);
   });
 });
 
@@ -328,20 +453,34 @@ describe("TaskClassifierService — Phase 91 / F2b classifyWithinSubsystem (recu
     ]);
   });
 
-  it("low-confidence fallback lands on the FIRST owned pipeline (registry order) for a 'primary'-policy subsystem — never the orchestrator", async () => {
+  // NS2 F9 rewrote what `"primary"` RESOLVES to (the policy — "unsure ⇒ run a
+  // pipeline" — is unchanged): pre-F9 it read `candidates[0]`, which was the
+  // first owned pipeline only because pipelines happened to sort before agents,
+  // making the answer hostage to registry order. It now names the CHEAPEST owned
+  // pipeline explicitly via `cheapestPipeline`. The fixtures below are ordered
+  // deep-first on purpose, so registry order and the ladder disagree.
+  it("low-confidence fallback lands on the CHEAPEST owned pipeline — not candidates[0], not the deepest", async () => {
     const svc = makeService({
+      agents: [
+        // Cheapest CANDIDATE overall (agents sort first since F9) — and exactly
+        // the wrong answer for an unsure verdict: a bare agent keeps no review or
+        // verification in the path.
+        agent({ id: "search-specialist", name: "Search Specialist", ownerSubsystem: "scout" }),
+      ],
       pipelines: [
         pipeline({
-          id: "watch-a",
-          name: "Watch A",
+          id: "product-discovery",
+          name: "Product Discovery",
           desc: "fix or implement a feature or bug",
           ownerSubsystem: "scout",
+          complexity: "deep",
         }),
         pipeline({
-          id: "watch-b",
-          name: "Watch B",
+          id: "quick-lookup",
+          name: "Quick Lookup",
           desc: "spec implementace testy docs",
           ownerSubsystem: "scout",
+          complexity: "light",
         }),
       ],
       router: silentRouter, // forces the deterministic keyword leg
@@ -351,28 +490,53 @@ describe("TaskClassifierService — Phase 91 / F2b classifyWithinSubsystem (recu
       "scout",
     );
     expect(r?.target.kind).toBe("pipeline");
-    expect(r?.target).toMatchObject({ kind: "pipeline", id: "watch-a" });
+    expect(r?.target).toMatchObject({ kind: "pipeline", id: "quick-lookup" });
   });
 
-  it("an unsure FORGE lands on its primary owned pipeline, never on the global orchestrator", async () => {
+  it("orders the scoped catalog cheapest-rung-first: agents, then light → standard → deep", async () => {
+    const routeSpy = vi.fn(async (_input: unknown, _candidates: unknown) => null);
+    const svc = makeService({
+      agents: [
+        agent({ id: "search-specialist", name: "Search Specialist", ownerSubsystem: "scout" }),
+      ],
+      pipelines: [
+        pipeline({ id: "deep-one", ownerSubsystem: "scout", complexity: "deep" }),
+        pipeline({ id: "light-one", ownerSubsystem: "scout", complexity: "light" }),
+        pipeline({ id: "standard-one", ownerSubsystem: "scout", complexity: "standard" }),
+      ],
+      router: { route: routeSpy },
+    });
+    await svc.classifyWithinSubsystem({ text: "anything" }, "scout");
+    const candidates = routeSpy.mock.calls[0]?.[1] as { kind: string; id: string }[];
+    expect(candidates.map((c) => `${c.kind}:${c.id}`)).toEqual([
+      "agent:search-specialist",
+      "pipeline:light-one",
+      "pipeline:standard-one",
+      "pipeline:deep-one",
+    ]);
+  });
+
+  it("an unsure FORGE lands on its cheapest owned pipeline, never on the global orchestrator", async () => {
     // Flipped from `"orchestrator"`: escaping forge produced a run with no
     // PR-shaped output, which the roadmap gate then killed as "no artifact".
-    // `"primary"` = candidates[0] = the first owned PIPELINE (pipelines are
-    // listed before agents in `subsystemCandidates` precisely so this reads as
-    // "the subsystem's primary pipeline").
+    // Pre-F9 `"primary"` resolved to forge's `delivery` — the most EXPENSIVE unit
+    // it owns — purely because that was the only pipeline in the list. Same
+    // safety now, at the cheapest rung that still carries review + verification.
     const svc = makeService({
       pipelines: [
         pipeline({
-          id: "delivery",
-          name: "Delivery",
+          id: "patch",
+          name: "Patch",
           desc: "fix or implement a feature or bug",
           ownerSubsystem: "forge",
+          complexity: "standard",
         }),
         pipeline({
-          id: "build-feature",
-          name: "Build Feature",
+          id: "delivery",
+          name: "Delivery",
           desc: "spec implementace testy docs",
           ownerSubsystem: "forge",
+          complexity: "deep",
         }),
       ],
       router: silentRouter,
@@ -381,14 +545,15 @@ describe("TaskClassifierService — Phase 91 / F2b classifyWithinSubsystem (recu
       { text: "xyzzy zzz no keyword overlap at all" },
       "forge",
     );
-    expect(r?.target).toMatchObject({ kind: "pipeline", id: "delivery" });
+    expect(r?.target).toMatchObject({ kind: "pipeline", id: "patch" });
     expect(r?.target.kind).not.toBe("orchestrator");
+    expect(r?.reason).toContain("cheapest owned pipeline");
   });
 
   it("an unsure forge that owns ONLY agents falls back to its first owned agent", async () => {
-    // `"primary"` is `candidates[0]`, which is the first owned pipeline when
-    // there is one and the first owned agent otherwise — so a pipeline-less
-    // forge still stays inside forge rather than escaping.
+    // `cheapestPipeline` has no pipeline to name, so it degrades to
+    // `candidates[0]` — the first owned agent — and a pipeline-less forge still
+    // stays inside forge rather than escaping to the global orchestrator.
     const svc = makeService({
       agents: [
         agent({ id: "fullstack-developer", name: "Fullstack", ownerSubsystem: "forge" }),
@@ -447,6 +612,35 @@ describe("TaskClassifierService — Phase 91 / F2b classifyWithinSubsystem (recu
     const preamble = routeSpy.mock.calls[0]?.[2] as string;
     // Forge's mandate (subsystem.schema.ts) — the preamble carries it verbatim.
     expect(preamble).toContain("Orchestrace delivery pipeline");
+  });
+
+  // NS2 F9 — `EFFORT_RULE` became a four-rung ladder description, which is only
+  // usable if each unit line says which rung it is. An agent IS rung 1, so it is
+  // labelled rather than left blank (blank would read as "unknown", not "cheapest").
+  it("labels every unit line in the preamble with its ladder rung", async () => {
+    const routeSpy = vi.fn(
+      async (_input: unknown, _candidates: unknown, _preamble?: string) => null,
+    );
+    const svc = makeService({
+      agents: [agent({ id: "coder", name: "Kodér", ownerSubsystem: "forge" })],
+      pipelines: [
+        pipeline({
+          id: "quick-fix",
+          name: "Quick Fix",
+          ownerSubsystem: "forge",
+          complexity: "light",
+        }),
+        pipeline({ id: "delivery", name: "Delivery", ownerSubsystem: "forge", complexity: "deep" }),
+      ],
+      router: { route: routeSpy },
+    });
+    await svc.classifyWithinSubsystem({ text: "ship it" }, "forge");
+    const preamble = routeSpy.mock.calls[0]?.[2] as string;
+    expect(preamble).toContain("- [single agent] Kodér");
+    expect(preamble).toContain("- [light pipeline] Quick Fix");
+    expect(preamble).toContain("- [deep pipeline] Delivery");
+    // The rule the labels bind to.
+    expect(preamble).toContain("prefer the CHEAPEST rung");
   });
 });
 
@@ -513,7 +707,13 @@ describe("TaskClassifierService — F2a switchboard subsystem verdicts", () => {
         } as unknown as TaskRouting),
       });
       const r = await svc.classify({ text: "rename component button" });
-      expect(r?.target.kind).not.toBe(target.kind);
+      // A goal is never routable at all. The orchestrator IS reachable — but only
+      // as this service's OWN terminal rule, never as the router's verdict — so
+      // for both kinds the check that the verdict was discarded is that none of
+      // the router's own payload survived.
+      expect(r?.target.kind).not.toBe("goal");
+      expect(r?.reason).not.toBe("router picked a non-catalog kind");
+      expect(r?.confidence).not.toBe(0.95);
     }
   });
 
@@ -550,6 +750,90 @@ describe("TaskClassifierService — F2a switchboard subsystem verdicts", () => {
     });
     expect(r?.target.kind).toBe("subsystem");
     expect(r?.target).toMatchObject({ id: "forge" });
+  });
+});
+
+/**
+ * NS2 F9's two structural invariants, asserted directly rather than as a
+ * side-effect of some other behaviour — these are the bugs the arc exists to
+ * prevent from coming back.
+ */
+describe("TaskClassifierService — NS2 F9 stage 1 is subsystem-only", () => {
+  it("never returns a bare agent or pipeline target for free text — only subsystem or orchestrator", async () => {
+    const svc = makeService({ agents: catalogAgents, pipelines: catalogPipelines });
+    // A spread of texts that pre-F9 each landed on a concrete unit: an
+    // agent-shaped rename, a pipeline-shaped feature build, a loop cue, and
+    // nonsense (the terminal fallback).
+    for (const text of [
+      "rename the Button component",
+      "ship the auth feature",
+      "spec implementace testy docs feature",
+      "fix the failing test and keep going until it's green",
+      "xyzzy zzz nothing matches at all",
+    ]) {
+      const r = await svc.classify({ text });
+      expect(r).not.toBeNull();
+      expect(["subsystem", "orchestrator"]).toContain(r?.target.kind);
+      // …and the offered catalog itself holds nothing else, so a manual override
+      // from this verdict can't skip the subsystem layer either.
+      expect(labels(r?.candidates)).toEqual(["subsystem:forge"]);
+    }
+  });
+
+  it("never offers a concrete unit even when the router names one outright (isCoherent rejects it structurally)", async () => {
+    for (const target of [
+      { kind: "agent", id: "coder", name: "Kodér", glyph: "bot" },
+      { kind: "pipeline", id: "delivery", name: "Delivery", glyph: "flow" },
+    ] as TaskTarget[]) {
+      const svc = makeService({
+        agents: catalogAgents,
+        pipelines: catalogPipelines,
+        router: fixedRouter({
+          ...subsystemVerdict("forge", "Forge"),
+          target,
+          confidence: 0.99,
+        } as TaskRouting),
+      });
+      const r = await svc.classify({ text: "rename the Button component" });
+      expect(r?.target.kind).not.toBe(target.kind);
+      expect(["subsystem", "orchestrator"]).toContain(r?.target.kind);
+    }
+  });
+
+  it("an agent or pipeline with NO ownerSubsystem is unroutable: it seats no subsystem and classify() cannot reach it", async () => {
+    const svc = makeService({
+      agents: [agent({ id: "free-agent", name: "Free Agent", description: "implements anything" })],
+      pipelines: [pipeline({ id: "free-pipe", name: "Free Pipe", desc: "does anything" })],
+      router: silentRouter,
+    });
+    // Nothing owns anything → no subsystem is seated → the stage-1 catalog is
+    // empty → `classify()` returns null (the controller's 422). This IS F9's
+    // "no free units" enforcement: nothing has to reject an unowned unit,
+    // because no path reaches it.
+    expect(await svc.classify({ text: "implements anything" })).toBeNull();
+    expect(await svc.classifySubsystem({ text: "does anything" })).toBeNull();
+  });
+
+  it("an unowned unit stays unreachable even when an OWNED sibling seats a subsystem", async () => {
+    const routeSpy = vi.fn(async (_input: unknown, _candidates: unknown) => null);
+    const svc = makeService({
+      agents: [
+        agent({ id: "coder", name: "Kodér", ownerSubsystem: "forge" }),
+        agent({ id: "free-agent", name: "Free Agent", description: "rename component button" }),
+      ],
+      pipelines: [
+        pipeline({ id: "free-pipe", name: "Free Pipe", desc: "rename component button" }),
+      ],
+      router: { route: routeSpy },
+    });
+    const r = await svc.classify({ text: "rename component button" });
+    expect(labels(r?.candidates)).toEqual(["subsystem:forge"]);
+    // Not even offered to the LLM leg.
+    const offered = routeSpy.mock.calls[0]?.[1] as { kind: string; id: string }[];
+    expect(offered.map((c) => c.id)).toEqual(["forge"]);
+    // And forge's own scoped catalog excludes it too — ownership is the only way in.
+    const scoped = await svc.classifyWithinSubsystem({ text: "rename component button" }, "forge");
+    expect(labels(scoped?.candidates)).toEqual(["agent:coder"]);
   });
 });
 
@@ -616,8 +900,9 @@ describe("TaskClassifierService — classifySubsystem (stage 1 only)", () => {
 
   it("returns null when NO subsystem is seated — the caller releases undirected", async () => {
     const svc = makeService({
-      agents: catalogAgents, // no ownerSubsystem anywhere
-      pipelines: catalogPipelines,
+      // Deliberately unowned (NS2 F9's "free units") — nothing seats a subsystem.
+      agents: [agent({ id: "coder", name: "Kodér", description: "implements" })],
+      pipelines: [pipeline({ id: "delivery", name: "Delivery", desc: "deliver a feature" })],
       router: silentRouter,
     });
     expect(await svc.classifySubsystem({ text: "ship the auth feature" })).toBeNull();
@@ -734,8 +1019,14 @@ describe("TaskClassifierService — explicit-only agents are never routable", ()
   });
 
   it("still leaves an ordinary agent catalog untouched (the filter is id-scoped, not a blanket drop)", async () => {
-    const svc = makeService({ agents: catalogAgents, pipelines: catalogPipelines });
-    const r = await svc.classify({ text: "rename the Button component" });
+    // Asserted on the scoped stage-2 catalog since NS2 F9: that is the only
+    // catalog agents appear in at all, so it is the only place the id-scoped
+    // filter could over-reach.
+    const svc = makeService({
+      agents: [...catalogAgents, { ...decomposer, ownerSubsystem: "forge" } as Agent],
+      pipelines: catalogPipelines,
+    });
+    const r = await svc.classifyWithinSubsystem({ text: "rename the Button component" }, "forge");
     expect(r?.target).toMatchObject({ kind: "agent", id: "coder" });
   });
 });

@@ -92,6 +92,7 @@ describe("Qualify loop (e2e)", () => {
           phase("z"),
         ],
         instructions: "a → review (qualify) → z",
+        ownerSubsystem: "forge",
       })
       .expect(201);
 
@@ -120,9 +121,9 @@ describe("Qualify loop (e2e)", () => {
     const view = await request(app.getHttpServer())
       .get(`/api/tasks/runs/${pipelineRunId}`)
       .expect(200);
-    const viewReviews = (view.body.stageRuns as Array<{ phaseId: string; verdict?: string }>).filter(
-      (s) => s.phaseId === "review",
-    );
+    const viewReviews = (
+      view.body.stageRuns as Array<{ phaseId: string; verdict?: string }>
+    ).filter((s) => s.phaseId === "review");
     expect(viewReviews.map((s) => s.verdict)).toEqual(["gap", "pass"]);
 
     // Each grading was recorded on the accountability ledger.

@@ -19,8 +19,31 @@ vi.mock("../../runs/queries/useRunsQuery", () => ({
   useRunGlyphMap: () => new Map(),
 }));
 
+// The "waiting" trigger segment renders only when the global PENDING-APPROVAL
+// count is non-zero — not when a subsystem reports a `waiting` state (see
+// `StatusPill.tsx`' own comment on `waiting`). One pending approval is therefore
+// the precondition for this whole test: without it there is no second trigger to
+// race against. The row shape mirrors `ChatScreen.test.tsx`, because this suite
+// renders the REAL `StatusFlyoutPanel`, which draws a `FlyoutApprovalRow`.
 vi.mock("../../approvals", () => ({
-  useApprovalsQuery: () => ({ data: [], isPending: false, isError: false, refetch: vi.fn() }),
+  useApprovalsQuery: () => ({
+    data: [
+      {
+        id: "ap1",
+        runId: "r1",
+        kind: "agent",
+        skill: "writer",
+        action: "purchase",
+        detail: "buy the domain",
+        risk: "low",
+        status: "pending",
+        requestedAt: "2026-06-12T07:00:00.000Z",
+      },
+    ],
+    isPending: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
   useApproveMutation: () => ({ mutate: vi.fn(), isPending: false }),
   useRejectMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));

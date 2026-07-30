@@ -69,13 +69,16 @@ export default async function globalSetup(): Promise<void> {
     })
     .catch(() => {});
 
-  // A two-phase pipeline to open + run.
+  // A two-phase pipeline to open + run. NS2 F9: `POST /api/pipelines` 422s
+  // without an `ownerSubsystem` (an unowned pipeline is structurally unroutable),
+  // so the fixture has to name one.
   await ctx
     .post("/api/pipelines", {
       data: {
         id: "demo-pipe",
         name: "Demo Pipe",
         instructions: "demo pipeline",
+        ownerSubsystem: "forge",
         phases: [
           {
             id: "a",

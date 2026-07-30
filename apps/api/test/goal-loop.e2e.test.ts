@@ -151,7 +151,12 @@ describe.skip("Goal loop API (e2e, demo maker)", () => {
       .expect(201);
     await request(app.getHttpServer())
       .post("/api/pipelines")
-      .send({ id: "delivery", phases: [agentPhase("build")], instructions: "build it" })
+      .send({
+        id: "delivery",
+        phases: [agentPhase("build")],
+        instructions: "build it",
+        ownerSubsystem: "forge",
+      })
       .expect(201);
   });
 
@@ -425,6 +430,7 @@ describe.skip("Goal loop API (e2e, demo maker)", () => {
         id: "vpipe",
         phases: [agentPhase("build"), { id: "v", type: "verify" }],
         instructions: "build then verify",
+        ownerSubsystem: "forge",
       })
       .expect(201);
     await request(app.getHttpServer())

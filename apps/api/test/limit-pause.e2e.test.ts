@@ -127,6 +127,7 @@ describe("Usage-limit pause / auto-resume (e2e)", () => {
         id: "limitpipe",
         phases: [phase("a"), phase("koder"), phase("c")],
         instructions: "ship",
+        ownerSubsystem: "forge",
       })
       .expect(201);
 
@@ -268,7 +269,12 @@ describe("Usage-limit pause survives a restart (e2e)", () => {
     try {
       await request(app1.getHttpServer())
         .post("/api/pipelines")
-        .send({ id: "boundarypipe", phases: [phase("a"), phase("b")], instructions: "ship" })
+        .send({
+          id: "boundarypipe",
+          phases: [phase("a"), phase("b")],
+          instructions: "ship",
+          ownerSubsystem: "forge",
+        })
         .expect(201);
       const start = await app1
         .get(PipelineRunnerService)

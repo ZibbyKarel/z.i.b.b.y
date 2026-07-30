@@ -40,6 +40,7 @@ describe("OwnerBackfillService (NS2 F1b)", () => {
       ],
       outputs: [],
       instructions: "do delivery",
+      complexity: "standard",
     });
     await agents.create({ id: "architect", instructions: "plan the work" });
 
@@ -65,6 +66,7 @@ describe("OwnerBackfillService (NS2 F1b)", () => {
       ],
       outputs: [],
       instructions: "do research",
+      complexity: "standard",
     });
 
     await backfill.onModuleInit();
@@ -79,6 +81,7 @@ describe("OwnerBackfillService (NS2 F1b)", () => {
       outputs: [],
       instructions: "x",
       ownerSubsystem: "loom", // deliberately NOT what the seed table would pick
+      complexity: "standard",
     });
 
     await backfill.onModuleInit();
@@ -92,6 +95,7 @@ describe("OwnerBackfillService (NS2 F1b)", () => {
       phases: [{ id: "a", type: "verify" }],
       outputs: [],
       instructions: "x",
+      complexity: "standard",
     });
 
     await backfill.onModuleInit();
@@ -119,6 +123,7 @@ describe("OwnerBackfillService (NS2 F1b)", () => {
       ],
       outputs: [],
       instructions: "x",
+      complexity: "standard",
     });
 
     await expect(backfill.onModuleInit()).resolves.toBeUndefined();
@@ -138,6 +143,7 @@ describe("OwnerBackfillService (NS2 F1b)", () => {
       phases: [{ id: "a", type: "verify" }],
       outputs: [],
       instructions: "x",
+      complexity: "standard",
     });
 
     await expect(backfill.onModuleInit()).resolves.toBeUndefined();

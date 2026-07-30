@@ -20,6 +20,8 @@ function pipelineFixture(id: string, ownerSubsystem?: Pipeline["ownerSubsystem"]
     phases: [{ id: "p0", type: "verify" }],
     outputs: [],
     instructions: "do the thing",
+    // NS2 F9 — schema-defaulted, so non-optional on a parsed entity.
+    complexity: "standard",
     ...(ownerSubsystem ? { ownerSubsystem } : {}),
   } as Pipeline;
 }

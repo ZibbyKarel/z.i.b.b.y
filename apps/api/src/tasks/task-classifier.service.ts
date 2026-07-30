@@ -4,6 +4,7 @@ import {
   type ClassifyTaskInput,
   type MakerRef,
   ORCHESTRATOR_TARGET,
+  PIPELINE_COMPLEXITY_ORDER,
   type Pipeline,
   type ProposedGoal,
   type ResolvedPath,
@@ -38,28 +39,35 @@ export const ORCHESTRATOR_FALLBACK_THRESHOLD = 0.5;
 export const DEFAULT_GOAL_ITERATIONS = 6;
 
 /**
- * The size/effort rule appended to every scoped stage-2 router preamble
+ * The complexity-ladder rule appended to every scoped stage-2 router preamble
  * ({@link TaskClassifierService.buildSubsystemPreamble}).
  *
  * Neither the router's system prompt nor the keyword scorer has any notion of
- * how big a change is, so before this the pipeline-vs-agent choice rested
- * entirely on an LLM reading two descriptions with no stated policy. A
- * subsystem that owns both a heavyweight pipeline and specialist agents (today:
- * only forge — `delivery` plus five agents) needs the policy spelled out, or
- * every trivial change pays for Architekt → Kodér ⇄ Review → Tester →
- * Dokumentátor.
+ * how big a change is, so without a stated policy the unit choice rests entirely
+ * on an LLM reading a few descriptions. Every subsystem now owns both specialist
+ * agents and a graded set of pipelines, so the policy has to name the rungs.
+ *
+ * NS2 F9 turned this from a binary (agent vs. pipeline) into the four-rung
+ * ladder the `complexity` field carries, because "pipeline" stopped being one
+ * thing the moment a subsystem owned a `light` and a `deep` one.
  *
  * Kept as prose in the preamble rather than as a new contract field on purpose:
- * this is the cheapest honest version, and the preamble is already the one place
- * per-subsystem routing policy lives. Promote it to data (a `routingHint` on the
- * subsystem) only if the prompt proves too blunt in practice.
+ * the preamble is already the one place per-subsystem routing policy lives, and
+ * the ordering it describes IS data (`PIPELINE_COMPLEXITY_ORDER`) — only the
+ * wording is prose.
  */
 export const EFFORT_RULE =
-  "ROUTING RULE: match the unit to the SIZE of the work. A narrow, " +
-  "single-surface change — one file, one component, a rename, a copy fix, a " +
-  "small bug — goes to a single owned AGENT. Reserve an owned PIPELINE for " +
-  "multi-surface work, or work that genuinely needs design, review, tests and " +
-  "docs to be safe. Do not run a full delivery pipeline for a one-line change.";
+  "ROUTING RULE: match the unit to the SIZE of the work, and prefer the " +
+  "CHEAPEST rung that can do it safely. The rungs, cheapest first: " +
+  "(1) a single owned AGENT — a narrow, single-surface change: one file, one " +
+  "component, a rename, a copy fix, a small bug, a lookup, a single reply. " +
+  "(2) a LIGHT pipeline — still narrow, but it wants a second pair of eyes or a " +
+  "deterministic check. " +
+  "(3) a STANDARD pipeline — ordinary work needing review and verification. " +
+  "(4) a DEEP pipeline — multi-surface work, or work that genuinely needs " +
+  "design, review, tests and docs to be safe. " +
+  "Each unit below is labelled with its rung. Do not run a deep pipeline for a " +
+  "one-line change; do not hand multi-surface work to a lone agent.";
 
 /**
  * F2b — each subsystem's terminal fallback when {@link TaskClassifierService.classifyWithinSubsystem}'s
@@ -72,27 +80,36 @@ export const EFFORT_RULE =
  * subsystem id fails `tsc` here until it's given a policy.
  */
 export const SUBSYSTEM_FALLBACK: Record<SubsystemId, "orchestrator" | "primary"> = {
-  // Was `"orchestrator"` on the reasoning that forge's units are delivery
-  // SPECIALISTS, so an unsure pick is better self-delegated. That reasoning is
-  // wrong for the work forge actually receives: a delivery item on a code
-  // project. Escaping to the global orchestrator produces a session with no
-  // PR-shaped output, and `RoadmapGateService.reconcileRunning` then kills the
+  // `forge` was once `"orchestrator"` on the reasoning that its units are
+  // delivery SPECIALISTS, so an unsure pick is better self-delegated. That
+  // reasoning is wrong for the work forge actually receives: a delivery item on
+  // a code project. Escaping to the global orchestrator produces a session with
+  // no PR-shaped output, and `RoadmapGateService.reconcileRunning` then kills the
   // item as "Run finished without producing an artifact" — the exact death this
-  // fallback was supposed to avoid. `"primary"` makes "unsure" mean "run the
-  // delivery pipeline" (pipelines are listed first in `subsystemCandidates`, so
-  // `candidates[0]` IS forge's `delivery`), which is the safe direction for
-  // delivery even though it is the expensive one.
+  // fallback was supposed to avoid. `"primary"` makes "unsure" mean "run a
+  // pipeline", which is the safe direction.
+  //
+  // NS2 F9 changed what `"primary"` RESOLVES to, not the policy: it used to read
+  // `candidates[0]` (pipelines sorted first, so forge's `delivery` — the most
+  // EXPENSIVE unit it owns), and now resolves via `cheapestPipeline` to the
+  // lowest pipeline rung. Same safety, a fraction of the cost.
   forge: "primary",
   scout: "primary",
   herald: "primary",
   puls: "primary",
   sentinel: "primary",
   maestro: "primary",
-  beacon: "primary",
   loom: "primary",
-  codex: "orchestrator",
+  // Crewed by F9, so these no longer defer: each owns a `light` pipeline.
+  codex: "primary",
+  hearth: "primary",
+  // Own no dispatchable units by design and are therefore never seated in the
+  // stage-1 catalog, so stage 2 is unreachable for them and this value is inert.
+  // `beacon` IS the Tier-3 surface-and-wait contract rather than a work-doer;
+  // `ledger` is a budget/limits service. Kept as `"orchestrator"` so that if
+  // either is ever crewed, the safe default applies until it gets a real policy.
+  beacon: "orchestrator",
   ledger: "orchestrator",
-  hearth: "orchestrator",
 };
 
 /**
@@ -170,6 +187,9 @@ export class TaskClassifierService {
     const subsystem = SUBSYSTEMS.find((s) => s.id === subsystemId);
     const displayName = subsystem?.name ?? subsystemId;
     const policy = SUBSYSTEM_FALLBACK[subsystemId];
+    // F9: `first` is now the cheapest AGENT (ladder order), which is the wrong
+    // answer for an unsure verdict — see `cheapestPipeline`.
+    const primary = this.cheapestPipeline(candidates) ?? first;
     const fallback =
       policy === "orchestrator"
         ? {
@@ -177,8 +197,8 @@ export class TaskClassifierService {
             reason: `No unit matched confidently — ${displayName} defers to the orchestrator.`,
           }
         : {
-            target: toTaskTarget(first),
-            reason: `No unit matched confidently — routed to ${displayName}'s primary owned unit.`,
+            target: toTaskTarget(primary),
+            reason: `No unit matched confidently — routed to ${displayName}'s cheapest owned pipeline.`,
           };
 
     const base = await this.route(input, candidates, {
@@ -201,7 +221,16 @@ export class TaskClassifierService {
    * without it the choice is the LLM's unguided reading of two descriptions.
    */
   private buildSubsystemPreamble(mandate: string, units: readonly RoutableTarget[]): string {
-    const unitLines = units.map((u) => `- ${u.name} — ${u.search}`).join("\n");
+    // F9: each line carries its ladder rung, so EFFORT_RULE's "(1) agent …
+    // (4) deep pipeline" wording has something concrete to bind to. An agent has
+    // no `complexity` — it IS rung 1, so it is labelled as such rather than left
+    // blank, which would read as "unknown" instead of "cheapest".
+    const unitLines = units
+      .map((u) => {
+        const rung = u.kind === "pipeline" ? `${u.complexity} pipeline` : "single agent";
+        return `- [${rung}] ${u.name} — ${u.search}`;
+      })
+      .join("\n");
     return [`SUBSYSTEM MANDATE: ${mandate}`, "OWNED UNITS:", unitLines, EFFORT_RULE].join("\n");
   }
 
@@ -319,7 +348,7 @@ export class TaskClassifierService {
     candidates: RoutableTarget[],
   ): Promise<TaskRouting> {
     const looped = base.mode === "loop" || detectLoopCue(input.text);
-    const proposedGoal = looped ? this.synthesizeGoal(base.target, input, candidates) : null;
+    const proposedGoal = looped ? await this.synthesizeGoal(base.target, input, candidates) : null;
     const paths = await this.resolvePaths(input.paths ?? []);
     const toolGrants = await this.proposeToolGrants(base.target, input.text);
     return { ...base, mode: proposedGoal ? "loop" : "single", proposedGoal, paths, toolGrants };
@@ -365,12 +394,12 @@ export class TaskClassifierService {
    * iterate), so the caller falls back to `mode: "single"` rather than minting a
    * bogus maker.
    */
-  private synthesizeGoal(
+  private async synthesizeGoal(
     target: TaskTarget,
     input: ClassifyTaskInput,
     candidates: RoutableTarget[],
-  ): ProposedGoal | null {
-    const maker = this.resolveMaker(target, candidates);
+  ): Promise<ProposedGoal | null> {
+    const maker = await this.resolveMaker(target, candidates);
     if (!maker) return null;
     return {
       objective: input.text,
@@ -382,16 +411,47 @@ export class TaskClassifierService {
   }
 
   /**
-   * A loop needs a concrete agent/pipeline maker. A routed agent/pipeline target is
-   * used directly; an orchestrator pick (no stored id) falls back to a pipeline from
-   * the catalog — the maker the delivery loop would iterate — preferring one whose
-   * id/name reads as "delivery". No pipeline → `null` (no loop).
+   * A loop needs a CONCRETE agent/pipeline maker — a subsystem can't be iterated.
+   *
+   * A routed agent/pipeline target is used directly (still reachable via an
+   * explicit target, and from `classifyWithinSubsystem`'s enriched stage-2
+   * verdict). NS2 F9 added the `subsystem` branch: stage 1 now emits nothing but
+   * subsystem and orchestrator picks, and the stage-1 catalog holds no pipelines
+   * to scan, so a looped task would otherwise have silently lost its goal
+   * proposal and degraded to `mode: "single"`. Resolve it the same way stage 2
+   * would: the subsystem's cheapest owned pipeline.
+   *
+   * An orchestrator pick keeps the pre-F9 behaviour — any pipeline from the
+   * catalog, preferring one that reads as "delivery" — but since F9's stage-1
+   * catalog carries no pipelines, that path now reads the store directly.
+   * No pipeline anywhere → `null` (no loop).
    */
-  private resolveMaker(target: TaskTarget, candidates: RoutableTarget[]): MakerRef | null {
+  private async resolveMaker(
+    target: TaskTarget,
+    candidates: RoutableTarget[],
+  ): Promise<MakerRef | null> {
     if (target.kind === "agent" || target.kind === "pipeline") {
       return { kind: target.kind, id: target.id };
     }
-    const pipelines = candidates.filter((c) => c.kind === "pipeline");
+
+    // Stage 2 hands over a catalog that already holds the right pipelines (its
+    // candidates ARE one subsystem's owned units); stage 1's holds none, so read
+    // the store rather than silently degrade to no loop.
+    const inCatalog = candidates.filter((c) => c.kind === "pipeline");
+    const stored =
+      inCatalog.length > 0 ? null : await this.pipelines.list().catch((): Pipeline[] => []);
+
+    if (target.kind === "subsystem") {
+      // `pipelineCandidates` sorts cheapest-first, so [0] is the cheapest rung.
+      const owned =
+        stored === null
+          ? inCatalog
+          : this.pipelineCandidates(stored.filter((p) => p.ownerSubsystem === target.id));
+      const cheapest = owned[0];
+      return cheapest ? { kind: "pipeline", id: cheapest.id } : null;
+    }
+
+    const pipelines = stored === null ? inCatalog : this.pipelineCandidates(stored);
     const preferred = pipelines.find((p) => /deliver/i.test(`${p.id} ${p.name}`)) ?? pipelines[0];
     return preferred ? { kind: "pipeline", id: preferred.id } : null;
   }
@@ -406,20 +466,40 @@ export class TaskClassifierService {
     });
   }
 
-  /** Build the rankable candidate catalog from both stores (tolerant of listing failures). */
+  /**
+   * Build the stage-1 candidate catalog — SUBSYSTEMS ONLY (NS2 F9).
+   *
+   * Before F9 this returned agents + pipelines + subsystems in one flat list and
+   * let a single ranking pass choose between them. That asked the router to
+   * compare units at two different levels of abstraction: `code-reviewer` (an
+   * agent) against `Forge` (the subsystem that owns that very agent). They are
+   * not peers — one CONTAINS the other — so whichever won was arbitrary, and the
+   * two winners produced materially different runs. A direct agent pick also
+   * skipped {@link EFFORT_RULE} entirely, since the size policy only ever
+   * reaches the scoped stage-2 preamble; that is how a one-line fix could draw
+   * the full five-phase `delivery` pipeline with nothing asking whether the
+   * hammer fit.
+   *
+   * Stage 1 now asks exactly one question — "whose domain is this?" — which is
+   * what `classifySubsystem`'s docblock has said the switchboard should ask
+   * since the North-Star-2 Subsystem Charter. The unit choice belongs to the
+   * subsystem that owns the units ({@link classifyWithinSubsystem}), where the
+   * ladder is described and the roster is small enough to rank well.
+   *
+   * A consequence worth naming: an agent or pipeline with no `ownerSubsystem` is
+   * now structurally unroutable — no subsystem lists it, and the classifier can
+   * emit nothing else. That is the enforcement behind F9's "no free units", and
+   * it is why the create paths 422 without an owner.
+   */
   private async buildCandidates(): Promise<RoutableTarget[]> {
     // Phase 4c: only ACTIVE agents are dispatchable — a `status: "proposed"`
-    // candidate awaiting its `agent-proposal` approval must never be routed to.
+    // candidate awaiting its `agent-proposal` approval must never seat a subsystem.
     const [agents, pipelines] = await Promise.all([
       this.agents.listActive().catch((): Agent[] => []),
       this.pipelines.list().catch((): Pipeline[] => []),
     ]);
 
-    return [
-      ...this.agentCandidates(agents),
-      ...this.pipelineCandidates(pipelines),
-      ...this.stage1SubsystemCandidates(pipelines, agents),
-    ];
+    return this.stage1SubsystemCandidates(pipelines, agents);
   }
 
   /**
@@ -455,14 +535,17 @@ export class TaskClassifierService {
   }
 
   /**
-   * F2b — the stage-2 catalog for ONE subsystem: its own owned pipelines +
-   * owned ACTIVE agents, built from the exact same projections
-   * ({@link pipelineCandidates}/{@link agentCandidates}) {@link buildCandidates}
-   * uses, so a unit's `search`/`glyph` never drifts between the top-level and
-   * scoped catalogs. Pipelines are listed first — {@link SUBSYSTEM_FALLBACK}'s
-   * `"primary"` policy reads `candidates[0]` as "the subsystem's primary owned
-   * pipeline" (registry/file order), falling back to its first owned agent only
-   * when it owns no pipeline at all.
+   * F2b — the stage-2 catalog for ONE subsystem: its owned ACTIVE agents + its
+   * owned pipelines, in LADDER ORDER (cheapest rung first): agents, then
+   * `light` → `standard` → `deep` pipelines.
+   *
+   * NS2 F9 reversed the old ordering. Pipelines used to be listed first purely
+   * so {@link SUBSYSTEM_FALLBACK}'s `"primary"` policy could read `candidates[0]`
+   * as "the primary owned pipeline". That coupling is gone — the fallback now
+   * names its unit explicitly via {@link cheapestPipeline} — which frees the
+   * catalog to be ordered the way the router should READ it: cheapest first, so
+   * the list itself reinforces {@link EFFORT_RULE}'s "prefer the cheapest rung
+   * that can do it safely".
    */
   private subsystemCandidates(
     subsystemId: SubsystemId,
@@ -471,7 +554,30 @@ export class TaskClassifierService {
   ): RoutableTarget[] {
     const ownedPipelines = pipelines.filter((p) => p.ownerSubsystem === subsystemId);
     const ownedAgents = agents.filter((a) => a.ownerSubsystem === subsystemId);
-    return [...this.pipelineCandidates(ownedPipelines), ...this.agentCandidates(ownedAgents)];
+    return [...this.agentCandidates(ownedAgents), ...this.pipelineCandidates(ownedPipelines)];
+  }
+
+  /**
+   * The subsystem's cheapest owned PIPELINE — the `"primary"` fallback unit for
+   * a low-confidence stage-2 verdict.
+   *
+   * Deliberately a pipeline and not simply `candidates[0]` (which is now an
+   * agent, since F9 orders the scoped catalog cheapest-first). "Unsure" is
+   * exactly the state in which a bare agent is the wrong answer: the reason
+   * {@link SUBSYSTEM_FALLBACK} exists at all is that forge tasks escaping to the
+   * global orchestrator produced sessions with no PR-shaped output, which
+   * `RoadmapGateService.reconcileRunning` then killed as "Run finished without
+   * producing an artifact". A pipeline keeps review and verification in the
+   * path; picking the CHEAPEST one keeps the old behaviour's safety without its
+   * cost (pre-F9 this resolved to forge's `delivery` — the most expensive unit
+   * it owns — simply because that was the only pipeline in the list).
+   *
+   * Falls back to the first candidate of any kind when the subsystem owns no
+   * pipeline at all (codex/hearth today own a single light one; a future
+   * agents-only subsystem would land here).
+   */
+  private cheapestPipeline(candidates: readonly RoutableTarget[]): RoutableTarget | undefined {
+    return candidates.find((c) => c.kind === "pipeline") ?? candidates[0];
   }
 
   /**
@@ -503,21 +609,33 @@ export class TaskClassifierService {
   }
 
   /**
-   * Project stored pipelines onto the rankable candidate shape — shared by
-   * {@link buildCandidates} (the full catalog) and {@link subsystemCandidates}
-   * (a pre-filtered, subsystem-owned subset), so the two never compute a
-   * pipeline candidate's `search`/`glyph` shape differently.
+   * Project stored pipelines onto the rankable candidate shape, sorted onto the
+   * complexity ladder (cheapest rung first). Used only by
+   * {@link subsystemCandidates} since F9 made stage 1 subsystem-only, but kept as
+   * its own projection so a pipeline candidate's `search`/`glyph` shape is
+   * computed in exactly one place.
+   *
+   * `complexity` rides along so {@link buildSubsystemPreamble} can label each
+   * unit with its rung and {@link cheapestPipeline} can resolve the fallback
+   * without re-reading the stored entities.
    */
   private pipelineCandidates(pipelines: readonly Pipeline[]): RoutableTarget[] {
-    return pipelines.map((p) => ({
-      kind: "pipeline",
-      id: p.id,
-      name: p.name ?? p.id,
-      glyph: "flow",
-      avatar: p.avatar,
-      // A pipeline's desc carries most of the routable signal; the phase agents add a few terms.
-      search: [p.name, p.id, p.desc, ...p.phases.map((ph) => ph.agent)].filter(Boolean).join(" "),
-    }));
+    return pipelines
+      .map((p) => ({
+        kind: "pipeline" as const,
+        id: p.id,
+        name: p.name ?? p.id,
+        glyph: "flow",
+        avatar: p.avatar,
+        complexity: p.complexity,
+        // A pipeline's desc carries most of the routable signal; the phase agents add a few terms.
+        search: [p.name, p.id, p.desc, ...p.phases.map((ph) => ph.agent)].filter(Boolean).join(" "),
+      }))
+      .sort(
+        (a, b) =>
+          PIPELINE_COMPLEXITY_ORDER.indexOf(a.complexity) -
+          PIPELINE_COMPLEXITY_ORDER.indexOf(b.complexity),
+      );
   }
 
   /** A verdict is usable only if it parses and names a target that's actually in the catalog. */
@@ -538,6 +656,11 @@ export class TaskClassifierService {
     if (target.kind === "orchestrator" || target.kind === "goal") {
       return false;
     }
+    // NS2 F9: an `agent`/`pipeline` verdict is now rejected STRUCTURALLY at stage 1
+    // by the check below — `buildCandidates` emits subsystems only, so no concrete
+    // unit can match. No explicit rejection is added for them, because the same
+    // check is what ACCEPTS them on the scoped stage-2 path, where the catalog is
+    // one subsystem's owned units. The catalog decides; the kind never has to.
     return candidates.some((c) => c.id === target.id && c.kind === target.kind);
   }
 }

@@ -336,7 +336,12 @@ describe("Projects API (e2e)", () => {
           id: "no-token-github",
           kind: "github",
           projectId: "no-token",
-          config: { kind: "github", repo: "acme/app", streams: ["issues", "pulls"] },
+          config: {
+            kind: "github",
+            repo: "acme/app",
+            streams: ["issues", "pulls"],
+            username: "octocat",
+          },
           ownerSubsystem: "puls",
         })
         .expect(201);

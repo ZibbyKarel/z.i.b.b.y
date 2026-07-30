@@ -53,5 +53,11 @@ export function duplicatePipelineBody(
     })),
     // Carry the delivery sinks (PR / file outputs) into the copy unchanged.
     outputs: pipeline.outputs,
+    // NS2 F9: both of these MUST ride along. `POST /api/pipelines` 422s without
+    // an `ownerSubsystem` (an unowned pipeline is structurally unroutable), and
+    // `complexity` is schema-defaulted — omitting it would silently reset a
+    // `light`/`deep` copy to `"standard"`.
+    ...(pipeline.ownerSubsystem ? { ownerSubsystem: pipeline.ownerSubsystem } : {}),
+    complexity: pipeline.complexity ?? "standard",
   };
 }

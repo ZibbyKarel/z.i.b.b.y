@@ -158,6 +158,12 @@ function runOutputs(
   );
 }
 
+/**
+ * NS2 F9 note for every `Pipeline` literal below: `complexity` is schema-DEFAULTED,
+ * so it is non-optional on a parsed entity and each fixture states it explicitly
+ * (`"standard"` — the same rung the default would give). Output sinks don't read
+ * the rung; it is here purely because these literals are typed `Pipeline`.
+ */
 const docPhase = {
   id: "dok",
   type: "agent" as const,
@@ -183,6 +189,7 @@ describe("PipelineRunnerService — output sinks", () => {
       phases: [docPhase],
       outputs: [{ type: "file", from: "docs.md", dest: "vault", to: "audit-2026-06-16" }],
       instructions: "x",
+      complexity: "standard",
     };
     const { service, d } = await makeService(dir, pipeline);
     const run = await seedRun(service, dir, pipeline, {
@@ -217,6 +224,7 @@ describe("PipelineRunnerService — output sinks", () => {
       phases: [docPhase],
       outputs: [{ type: "file", from: "docs.md", dest: "vault", to: "audit-note" }],
       instructions: "x",
+      complexity: "standard",
     };
     const { service, d } = await makeService(dir, pipeline);
     d.vault.createNote.mockRejectedValueOnce(new Error("vault down"));
@@ -237,6 +245,7 @@ describe("PipelineRunnerService — output sinks", () => {
       phases: [docPhase],
       outputs: [{ type: "file", from: "docs.md", dest: "vault", to: "audit-note" }],
       instructions: "x",
+      complexity: "standard",
     };
     const { service, d } = await makeService(dir, pipeline);
     d.vault.createNote.mockRejectedValueOnce(new DuplicateNoteError("audit-note"));
@@ -256,6 +265,7 @@ describe("PipelineRunnerService — output sinks", () => {
       phases: [docPhase],
       outputs: [{ type: "file", from: "docs.md", dest: "project", to: "reports/out.md" }],
       instructions: "x",
+      complexity: "standard",
     };
     const wt = path.join(dir, "worktree");
     await fs.mkdir(wt, { recursive: true });
@@ -282,6 +292,7 @@ describe("PipelineRunnerService — output sinks", () => {
       phases: [docPhase],
       outputs: [{ type: "file", from: "docs.md", dest: "project", to: "reports/out.md" }],
       instructions: "x",
+      complexity: "standard",
     };
     const wt = path.join(dir, "worktree");
     await fs.mkdir(wt, { recursive: true });
@@ -313,6 +324,7 @@ describe("PipelineRunnerService — output sinks", () => {
       phases: [docPhase],
       outputs: [{ type: "pr", from: "docs.md" }],
       instructions: "x",
+      complexity: "standard",
     };
     const wt = path.join(dir, "worktree");
     await fs.mkdir(wt, { recursive: true });
@@ -362,6 +374,7 @@ describe("PipelineRunnerService — output sinks", () => {
       phases: [docPhase],
       outputs: [{ type: "file", from: "docs.md", dest: "vault", to: "audit-note" }],
       instructions: "x",
+      complexity: "standard",
     };
     const { service, d } = await makeService(dir, pipeline);
     const run = await seedRun(service, dir, pipeline, {
@@ -391,6 +404,7 @@ describe("PipelineRunnerService — output sinks", () => {
       phases: [docPhase],
       outputs: [{ type: "pr", from: "docs.md" }],
       instructions: "x",
+      complexity: "standard",
     };
     const wt = path.join(dir, "worktree");
     await fs.mkdir(wt, { recursive: true });
@@ -426,6 +440,7 @@ describe("PipelineRunnerService — output sinks", () => {
       phases: [docPhase],
       outputs: [{ type: "pr", from: "docs.md" }],
       instructions: "x",
+      complexity: "standard",
     };
     const wt = path.join(dir, "worktree");
     await fs.mkdir(wt, { recursive: true });
@@ -458,6 +473,7 @@ describe("PipelineRunnerService — output sinks", () => {
         phases: [docPhase],
         outputs: [{ type: "file", from: "docs.md", dest: "vault", to: "scout-brief-2026" }],
         instructions: "x",
+        complexity: "standard",
       };
       const { service, d } = await makeService(dir, pipeline);
       const run = await seedRun(service, dir, pipeline, {
@@ -482,6 +498,7 @@ describe("PipelineRunnerService — output sinks", () => {
         phases: [docPhase],
         outputs: [{ type: "file", from: "docs.md", dest: "vault", to: "audit-note" }],
         instructions: "x",
+        complexity: "standard",
       };
       const { service, d } = await makeService(dir, pipeline);
       const run = await seedRun(service, dir, pipeline, {
@@ -500,6 +517,7 @@ describe("PipelineRunnerService — output sinks", () => {
         phases: [docPhase],
         outputs: [{ type: "file", from: "docs.md", dest: "vault", to: "forge-note" }],
         instructions: "x",
+        complexity: "standard",
       };
       const { service, d } = await makeService(dir, pipeline);
       const run = await seedRun(service, dir, pipeline, {

@@ -5,6 +5,8 @@ import { StageRunStatusSchema } from "./pipeline-run.schema";
 import { PipelineIdSchema } from "./pipeline.schema";
 import { PipelineRunArtifactSchema } from "./pipelines.contract";
 import {
+  PIPELINE_COMPLEXITY_ORDER,
+  PipelineComplexitySchema,
   PipelineRunSchema,
   PipelineSchema,
   pipelineRunsContract,
@@ -316,5 +318,58 @@ describe("T11 finding #28 — StageRunStatusSchema derives from RunStatusSchema.
 
   it("rejects a task-run-only status (scheduled/parked/held/queued/pending) that isn't a run status", () => {
     expect(StageRunStatusSchema.safeParse("queued").success).toBe(false);
+  });
+});
+
+/**
+ * NS2 F9 — the ladder. Two exports describe it: the enum (what parses) and
+ * `PIPELINE_COMPLEXITY_ORDER` (the canonical cheapest-first sort key that
+ * `TaskClassifierService.pipelineCandidates` sorts by). Nothing structurally ties
+ * them together, so a rung added to one and not the other would sort by
+ * `indexOf(...) === -1` — silently ordering the new rung FIRST, i.e. cheapest.
+ * These assertions are that tie.
+ */
+describe("NS2 F9 — the pipeline complexity ladder", () => {
+  it("PIPELINE_COMPLEXITY_ORDER lists exactly the enum's rungs, cheapest first", () => {
+    expect(PipelineComplexitySchema.options).toEqual(["light", "standard", "deep"]);
+    // Same members…
+    expect([...PIPELINE_COMPLEXITY_ORDER].sort()).toEqual(
+      [...PipelineComplexitySchema.options].sort(),
+    );
+    // …and every rung is actually indexable (no -1 from a drifted name).
+    for (const rung of PipelineComplexitySchema.options) {
+      expect(PIPELINE_COMPLEXITY_ORDER.indexOf(rung)).toBeGreaterThanOrEqual(0);
+    }
+    // The ORDER is the ladder: cheapest → deepest, not alphabetical.
+    expect(PIPELINE_COMPLEXITY_ORDER).toEqual(["light", "standard", "deep"]);
+  });
+
+  it("defaults a pipeline with no stated rung to the middle one, so pre-F9 files parse", () => {
+    const parsed = PipelineSchema.parse({
+      id: "release",
+      phases: [phase("a")],
+      instructions: "ship it",
+    });
+    expect(parsed.complexity).toBe("standard");
+  });
+
+  it("carries a stated rung through unchanged, and rejects one off the ladder", () => {
+    for (const complexity of PipelineComplexitySchema.options) {
+      const parsed = PipelineSchema.parse({
+        id: "release",
+        phases: [phase("a")],
+        instructions: "ship it",
+        complexity,
+      });
+      expect(parsed.complexity).toBe(complexity);
+    }
+    expect(
+      PipelineSchema.safeParse({
+        id: "release",
+        phases: [phase("a")],
+        instructions: "ship it",
+        complexity: "gigantic",
+      }).success,
+    ).toBe(false);
   });
 });

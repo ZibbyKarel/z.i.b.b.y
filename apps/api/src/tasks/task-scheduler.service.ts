@@ -24,6 +24,7 @@ import type {
   TaskOutput,
   TaskTarget,
 } from "@zibby/contracts";
+import { PIPELINE_COMPLEXITY_ORDER } from "@zibby/contracts";
 import { ORCHESTRATOR_TARGET, SUBSYSTEMS } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import type { AttachmentSetRefProvider } from "./attachment-set-ref-provider";
@@ -400,11 +401,25 @@ export class TaskSchedulerService
     const ownedAgents = allAgents.filter((a) => a.ownerSubsystem === target.id);
     const totalOwned = ownedPipelines.length + ownedAgents.length;
     if (totalOwned === 0) return null;
-    // Pipeline-first — mirrors `TaskClassifierService.subsystemCandidates`'
-    // ordering, so a single-owned-unit direct dispatch agrees with what the
-    // scoped classifier would have picked as its own "primary" fallback.
-    const primary = ownedPipelines[0]
-      ? pipelineTaskTarget(ownedPipelines[0])
+    // Cheapest PIPELINE first, else the sole agent — deliberately the same rule as
+    // `TaskClassifierService.cheapestPipeline`, so a direct dispatch agrees with
+    // what the scoped classifier would have chosen as its `"primary"` fallback.
+    //
+    // NS2 F9 note: this used to be plain `ownedPipelines[0]` and a comment claiming
+    // it mirrored `subsystemCandidates`' pipelines-first ordering. F9 reversed that
+    // ordering (agents first, then pipelines by rung) AND moved the fallback off
+    // list order onto the ladder, which left this reading FILE order — so a
+    // subsystem whose directory happens to list a `deep` pipeline before its
+    // `light` one would dispatch the expensive rung here while the classifier
+    // picked the cheap one. Sorting by the ladder restores the agreement the
+    // comment only claimed.
+    const cheapestPipeline = [...ownedPipelines].sort(
+      (a, b) =>
+        PIPELINE_COMPLEXITY_ORDER.indexOf(a.complexity) -
+        PIPELINE_COMPLEXITY_ORDER.indexOf(b.complexity),
+    )[0];
+    const primary = cheapestPipeline
+      ? pipelineTaskTarget(cheapestPipeline)
       : agentTaskTarget(ownedAgents[0]!);
     if (totalOwned === 1) return primary;
     const routing = await this.classifier.classifyWithinSubsystem({ text, paths }, target.id);

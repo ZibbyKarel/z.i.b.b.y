@@ -17,21 +17,28 @@ import type { Pipeline, SubsystemId } from "@zibby/contracts";
  */
 
 /**
- * Explicit, commented rule table for pipeline ownership by id. `delivery` is the
- * one delivery-role pipeline → `forge`; the research-shaped pipelines (deep
- * research, product discovery, the two content pipelines, sales outreach, and
- * the code-audit pipeline) all hand a finished artifact onward → `scout`.
- * Anything not listed here (e.g. `demo-pipe`) is intentionally unmatched —
- * `undefined`, not a guess.
+ * Explicit, commented rule table for pipeline ownership by id. Anything not
+ * listed here is intentionally unmatched — `undefined`, not a guess.
+ *
+ * NS2 F9 corrected two entries that had drifted from the stored files:
+ * - `code-audit` → `loom`, not `scout`. F5c ("Loom v1 — scheduled quality
+ *   audit") moved the stored pipeline and left this table behind; the stored
+ *   file always wins at runtime, so the drift was latent, not active.
+ * - the outward-facing pipelines (`content-piece`, `content-campaign`,
+ *   `sales-outreach`) → `herald`, not `scout`. Scout's mandate is "výzkumné
+ *   pipeline, které předávají výsledný artefakt dál"; herald's is "mluví za
+ *   ZIBBY navenek". Content and outreach are outward voice, not research — they
+ *   sat under scout only because scout was one of the three seated subsystems
+ *   before F9 crewed the rest of the federation.
  */
 const PIPELINE_OWNER_BY_ID: Readonly<Record<string, SubsystemId>> = {
   delivery: "forge",
   research: "scout",
   "product-discovery": "scout",
-  "content-campaign": "scout",
-  "content-piece": "scout",
-  "sales-outreach": "scout",
-  "code-audit": "scout",
+  "content-campaign": "herald",
+  "content-piece": "herald",
+  "sales-outreach": "herald",
+  "code-audit": "loom",
 };
 
 /** Seed owner for a pipeline id, or `undefined` when the id isn't in the rule table. */

@@ -1,4 +1,10 @@
-import type { Agent, AgentModel, AgentThinking, SubsystemId } from "@zibby/contracts";
+import type {
+  Agent,
+  AgentModel,
+  AgentThinking,
+  PipelineComplexity,
+  SubsystemId,
+} from "@zibby/contracts";
 import type { IconName } from "@zibby/design-system";
 import type { MessageKey } from "./i18n/keys";
 
@@ -102,6 +108,18 @@ export interface Pipeline {
    * Absent is a legitimate state: not every pipeline has an owner yet.
    */
   ownerSubsystem?: SubsystemId;
+  /**
+   * NS2 F9 — the pipeline's rung on its owning subsystem's complexity ladder.
+   * Carried (not rendered) so a client-side duplicate preserves the rung instead
+   * of silently resetting it to the contract's `"standard"` default; the rung is
+   * authored in the `.pipeline.md`, like `outputs`.
+   *
+   * Optional HERE while non-optional on the contract entity: the query mapper
+   * always supplies it, so `undefined` only ever means "a locally constructed
+   * pipeline that predates the ladder" (the mock store, a test fixture) — and
+   * that must not be a compile error in a display-only model.
+   */
+  complexity?: PipelineComplexity;
 }
 
 export type IntegrationStatus = "connected" | "disconnected" | "error";

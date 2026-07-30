@@ -52,6 +52,7 @@ desc: >-
   rozbitý test, failing test.
 avatar: assets/delivery.png
 ownerSubsystem: forge
+complexity: deep
 ---
 
 # Delivery

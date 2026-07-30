@@ -44,7 +44,8 @@ phases:
 desc: >-
   Postav marketingovou kampaň od průzkumu po hotový, SEO-laděný a redakčně
   odladěný obsah. Marketing, kampaň, content, launch, go-to-market obsah.
-ownerSubsystem: scout
+ownerSubsystem: herald
+complexity: deep
 ---
 
 # Content Campaign

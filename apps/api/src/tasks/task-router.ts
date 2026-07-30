@@ -1,6 +1,7 @@
 import type {
   CatalogTaskTarget,
   ClassifyTaskInput,
+  PipelineComplexity,
   TaskRouting,
   TaskTarget,
 } from "@zibby/contracts";
@@ -20,6 +21,13 @@ type SubsystemTaskTarget = Extract<TaskTarget, { kind: "subsystem" }>;
  */
 export type RoutableTarget = (CatalogTaskTarget | SubsystemTaskTarget) & {
   search: string;
+  /**
+   * NS2 F9 — the candidate's rung on its subsystem's complexity ladder, present
+   * only on `kind: "pipeline"` candidates. Agents are the rung BELOW `light` and
+   * carry no value; subsystem candidates (stage 1) have no rung at all, because
+   * the ladder is a within-subsystem ordering.
+   */
+  complexity?: PipelineComplexity;
 };
 
 /**

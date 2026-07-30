@@ -12,35 +12,45 @@
 
 ## Status table
 
-| Phase | Title                                    | Status | Plan doc                                           | Commit                 |
-| ----- | ---------------------------------------- | ------ | -------------------------------------------------- | ---------------------- |
-| F0a   | Delete discovery orphan (goals STAYS)    | ✅     | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `c02a68a9`             |
-| F0b   | Per-project draft PR mode (prOpenMode)   | ✅     | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `10de4ad3`             |
-| F0c   | Proposal source tag on approvals inbox   | ✅     | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `101759d7`             |
-| F0d   | Law-3 text amendment (vault north-star)  | ✅     | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)        | `d4c53782`             |
-| F1a   | Contract: ownerSubsystem + registry → 10 | ✅     | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `9e45a8e8`             |
-| F1b   | Backfill/seed + write 422 + UI selects   | ✅     | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `1037264c`             |
-| F1c   | Stored roster (service + RosterTab)      | ✅     | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)     | `7d47af2e`             |
-| F2a   | Switchboard emits subsystem verdicts     | ✅     | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | `888dc425`             |
-| F2b   | Per-subsystem dispatcher prompt+fallback | ✅     | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | `7ede32e9`             |
-| F2c   | Classification trace + activity tagging  | ✅     | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)    | `40a2ee55`             |
-| F3a   | Subsystem gate-rule sets + tier defaults | ✅     | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | `77628764`             |
-| F3b   | Briefing per subsystem (Beacon/Ledger)   | ✅     | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | `fab17397`             |
-| F3c   | Approvals/activity filters + get_status  | ✅     | [ns2-f3](../plans/ns2-f3-policy-accountability.md) | `c9c3dcaa`             |
-| F4a   | Subsystem MOC shelves (record/distill)   | ✅     | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | `e1d12b7b`             |
-| F4b   | Retrieval upgrade (tags + link graph)    | ✅     | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | `d3c69968`             |
-| F4c   | Vault seed + scheduled self-knowledge    | ✅     | [ns2-f4](../plans/ns2-f4-memory-shelves.md)        | `9a78cd2b`             |
-| F5a   | Sentinel v1 (CVE + secret watch)         | ✅     | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | `8bec02a2`             |
-| F5b   | Maestro v1 (merge queue, read-side)      | ✅     | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | `a04fabfa`             |
-| F5c   | Loom v1 (scheduled quality audit)        | ✅     | [ns2-f5](../plans/ns2-f5-empty-chairs.md)          | `a71b83ac`             |
-| F6a   | Herald reply ledger + graduation         | ✅     | [ns2-f6](../plans/ns2-f6-trust-from-record.md)     | `a1b756df`             |
-| F6b   | Live soak harness (opt-in lane)          | ✅     | [ns2-f6](../plans/ns2-f6-trust-from-record.md)     | `b53904e4`             |
-| F6c   | Watcher health probes                    | ✅     | [ns2-f6](../plans/ns2-f6-trust-from-record.md)     | `43eef785`             |
-| F7a   | Sentry MonitorAdapter                    | ✅     | [ns2-f7](../plans/ns2-f7-monitors-and-actions.md)  | `3381779f`             |
-| F7b   | Merge-queue actions + post-merge loop    | ✅     | [ns2-f7](../plans/ns2-f7-monitors-and-actions.md)  | `dc8d4e26`, `4a36ed7e` |
-| F8a   | Seat Hearth (registry 10 → 11)           | ✅     | [ns2-f8](../plans/ns2-f8-hearth-personal.md)       | `f0c60968`             |
-| F8b   | Personal domain (marking + capture)      | ✅     | [ns2-f8](../plans/ns2-f8-hearth-personal.md)       | `eeb0aaab`             |
-| F8c   | Hearth duties v1 (agenda + reminders)    | ✅     | [ns2-f8](../plans/ns2-f8-hearth-personal.md)       | `c3c4a680`             |
+| Phase | Title                                    | Status | Plan doc                                             | Commit                 |
+| ----- | ---------------------------------------- | ------ | ---------------------------------------------------- | ---------------------- |
+| F0a   | Delete discovery orphan (goals STAYS)    | ✅     | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)          | `c02a68a9`             |
+| F0b   | Per-project draft PR mode (prOpenMode)   | ✅     | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)          | `10de4ad3`             |
+| F0c   | Proposal source tag on approvals inbox   | ✅     | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)          | `101759d7`             |
+| F0d   | Law-3 text amendment (vault north-star)  | ✅     | [ns2-f0](../plans/ns2-f0-land-the-fleet.md)          | `d4c53782`             |
+| F1a   | Contract: ownerSubsystem + registry → 10 | ✅     | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)       | `9e45a8e8`             |
+| F1b   | Backfill/seed + write 422 + UI selects   | ✅     | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)       | `1037264c`             |
+| F1c   | Stored roster (service + RosterTab)      | ✅     | [ns2-f1](../plans/ns2-f1-ownership-is-data.md)       | `7d47af2e`             |
+| F2a   | Switchboard emits subsystem verdicts     | ✅     | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)      | `888dc425`             |
+| F2b   | Per-subsystem dispatcher prompt+fallback | ✅     | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)      | `7ede32e9`             |
+| F2c   | Classification trace + activity tagging  | ✅     | [ns2-f2](../plans/ns2-f2-two-stage-dispatch.md)      | `40a2ee55`             |
+| F3a   | Subsystem gate-rule sets + tier defaults | ✅     | [ns2-f3](../plans/ns2-f3-policy-accountability.md)   | `77628764`             |
+| F3b   | Briefing per subsystem (Beacon/Ledger)   | ✅     | [ns2-f3](../plans/ns2-f3-policy-accountability.md)   | `fab17397`             |
+| F3c   | Approvals/activity filters + get_status  | ✅     | [ns2-f3](../plans/ns2-f3-policy-accountability.md)   | `c9c3dcaa`             |
+| F4a   | Subsystem MOC shelves (record/distill)   | ✅     | [ns2-f4](../plans/ns2-f4-memory-shelves.md)          | `e1d12b7b`             |
+| F4b   | Retrieval upgrade (tags + link graph)    | ✅     | [ns2-f4](../plans/ns2-f4-memory-shelves.md)          | `d3c69968`             |
+| F4c   | Vault seed + scheduled self-knowledge    | ✅     | [ns2-f4](../plans/ns2-f4-memory-shelves.md)          | `9a78cd2b`             |
+| F5a   | Sentinel v1 (CVE + secret watch)         | ✅     | [ns2-f5](../plans/ns2-f5-empty-chairs.md)            | `8bec02a2`             |
+| F5b   | Maestro v1 (merge queue, read-side)      | ✅     | [ns2-f5](../plans/ns2-f5-empty-chairs.md)            | `a04fabfa`             |
+| F5c   | Loom v1 (scheduled quality audit)        | ✅     | [ns2-f5](../plans/ns2-f5-empty-chairs.md)            | `a71b83ac`             |
+| F6a   | Herald reply ledger + graduation         | ✅     | [ns2-f6](../plans/ns2-f6-trust-from-record.md)       | `a1b756df`             |
+| F6b   | Live soak harness (opt-in lane)          | ✅     | [ns2-f6](../plans/ns2-f6-trust-from-record.md)       | `b53904e4`             |
+| F6c   | Watcher health probes                    | ✅     | [ns2-f6](../plans/ns2-f6-trust-from-record.md)       | `43eef785`             |
+| F7a   | Sentry MonitorAdapter                    | ✅     | [ns2-f7](../plans/ns2-f7-monitors-and-actions.md)    | `3381779f`             |
+| F7b   | Merge-queue actions + post-merge loop    | ✅     | [ns2-f7](../plans/ns2-f7-monitors-and-actions.md)    | `dc8d4e26`, `4a36ed7e` |
+| F8a   | Seat Hearth (registry 10 → 11)           | ✅     | [ns2-f8](../plans/ns2-f8-hearth-personal.md)         | `f0c60968`             |
+| F8b   | Personal domain (marking + capture)      | ✅     | [ns2-f8](../plans/ns2-f8-hearth-personal.md)         | `eeb0aaab`             |
+| F8c   | Hearth duties v1 (agenda + reminders)    | ✅     | [ns2-f8](../plans/ns2-f8-hearth-personal.md)         | `c3c4a680`             |
+| F9a   | Contract: complexity rung + pipeline 422 | ✅     | [ns2-f9](../plans/ns2-f9-subsystem-only-dispatch.md) | _uncommitted_          |
+| F9b   | Prune fleet 61→38, every survivor owned  | ✅     | [ns2-f9](../plans/ns2-f9-subsystem-only-dispatch.md) | _uncommitted_          |
+| F9c   | Crew thin subsystems (+11 upstream, +1)  | ✅     | [ns2-f9](../plans/ns2-f9-subsystem-only-dispatch.md) | _uncommitted_          |
+| F9d   | Complexity ladder per subsystem (+12)    | ✅     | [ns2-f9](../plans/ns2-f9-subsystem-only-dispatch.md) | _uncommitted_          |
+| F9e   | Switchboard subsystem-only               | ✅     | [ns2-f9](../plans/ns2-f9-subsystem-only-dispatch.md) | _uncommitted_          |
+| F9f   | Test repair + validation                 | ✅     | [ns2-f9](../plans/ns2-f9-subsystem-only-dispatch.md) | _uncommitted_          |
+| F9g   | Plan doc + progress log                  | ✅     | [ns2-f9](../plans/ns2-f9-subsystem-only-dispatch.md) | _uncommitted_          |
+
+> **F9 is on branch `ns2-f9-subsystem-only-dispatch`, not committed.** The operator
+> asked for the work, not for a commit — commit hashes land when they do.
 
 Legend: ⬜ todo · 🟦 planned (plan reviewed) · 🟨 in progress · ✅ done (tests green,
 committed) · ⛔ parked (reason in Notes).
@@ -418,6 +428,60 @@ sloučení"`).
   - **Roadmap status:** F0–F8 are now ALL ✅ on `north-star-2`. The whole NS2
     federation roadmap is implemented and green, awaiting the operator's PR
     review — no further phases planned.
+
+- **F9 complete (2026-07-30, Opus + Sonnet subagents):** all four vitest projects
+  green — api **237 files / 2514 tests** (17 skipped), web-components **187 / 1274**,
+  contracts **45 / 553**, web **5 / 28**; `tsc -p tsconfig.base.json` and
+  `tsc -p apps/web/tsconfig.json` clean; `check:lint` 0 errors (29 pre-existing
+  warnings); `check:deps` and `check:cycles` clean; `check:self-knowledge` reports no
+  drift. Fleet: **50 agents / 19 pipelines, zero unowned**; nine seated subsystems
+  each carry a crew plus a cheapest-first ladder; beacon + ledger unseated by design.
+
+  **Plan corrections made during implementation** (the plan was wrong, the code is
+  right):
+  - `ownerSubsystem` was NOT made required in the schemas as planned. The entity
+    store's listing is deliberately tolerant, so a required field would turn a file
+    that lost its owner into a _silent disappearance_ rather than something
+    `/unowned` can report, and would break `OwnerBackfillService`'s ability to read
+    the very files it heals. Enforcement is the write-path 422 on both create
+    endpoints plus the structural fact that an unowned unit is unroutable.
+  - `SUBSYSTEM_FALLBACK`'s `"primary"` policy stopped reading `candidates[0]`. F9
+    reordered the scoped catalog cheapest-first, which makes `candidates[0]` an
+    _agent_ — the wrong answer for an unsure verdict. It now resolves via
+    `cheapestPipeline()` to the lowest pipeline rung.
+
+  **Real bugs found and fixed on the way** (each was silent, none had a test):
+  - `PipelinesStorageService` did not round-trip `complexity`. Because the schema
+    defaults the field, the missing copy did not fail — every pipeline read as
+    `"standard"` and the whole ladder collapsed to a constant. Now read in
+    `fromFrontmatter`, always written in `toFrontmatter`, with a round-trip test.
+  - `useDuplicatePipelineMutation` sent no `ownerSubsystem`, so every "duplicate
+    pipeline" click would have 422'd against the new controller guard.
+  - `TaskSchedulerService.resolveSubsystemTarget` picked `ownedPipelines[0]` — FILE
+    order — while claiming in a comment to mirror the classifier. A subsystem whose
+    directory listed `deep` before `light` would have dispatched the expensive rung
+    where the classifier picked the cheap one. Now sorts by the ladder.
+  - `seed.mjs` was a live-data footgun: it overwrote the real `architect.md`
+    (stripping `ownerSubsystem` + `avatar`), clobbered the curated
+    `_categories.json`, and — worst — silently replaced the operator's real
+    `projects/_projects.json` registry with five demo projects on every `pnpm seed`.
+    Seeded agent renamed `demo-architect`; manifests now write only when absent;
+    every seeded entity carries an owner and a rung.
+  - `owner-seed.ts`'s `PIPELINE_OWNER_BY_ID` had drifted from the stored files:
+    `code-audit` said `scout` but F5c had moved it to `loom`. Corrected, and the
+    outward-facing pipelines moved `scout → herald` to match the mandates.
+
+  **Found, verified, deliberately NOT fixed (out of scope, reported):**
+  - `delivery.pipeline.md` declares no `outputs:` — its PR sink arrives per-run as
+    `outputsOverride` from the task's chosen `TaskOutput`, so a delivery run started
+    without one produces no PR. Not a dispatch concern; one-line follow-up.
+  - `seed.mjs`'s `seedRunsAndApprovals()` still `rm -rf`s `agents/runs/`,
+    `skills/runs/` and `approvals/` — against the live dir that destroys real run
+    history and pending approvals. Pre-existing and load-bearing for demo-run
+    determinism, so left alone; the remaining destructive path in that script.
+  - The 11 upstream-sourced agents carry the "Prompt Defense Baseline" block; only
+    `architect` among the 38 incumbents does. The new ones are _more_ hardened, not
+    inconsistent in a harmful direction — but the real gap is the 37 without it.
 
 ## Planning corrections (verified in code — the audit/roadmap were wrong here)
 

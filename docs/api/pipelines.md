@@ -11,6 +11,8 @@ A pipeline is a Markdown file with YAML frontmatter at
 id: delivery-loop
 name: Delivery Loop
 desc: "Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor"
+ownerSubsystem: forge # required on create (422 without it) — see below
+complexity: deep # the ladder rung: light | standard | deep
 phases:
   - id: architekt
     type: agent
@@ -68,6 +70,48 @@ outputs: # what happens to the finished work (delivery sinks)
 
 The body of the `.md` file is the instructions for the whole pipeline
 (context hint).
+
+### Ownership (`ownerSubsystem`) and the ladder rung (`complexity`)
+
+Since NS2 F9 these two fields decide whether a pipeline is reachable at all.
+
+`ownerSubsystem` names the subsystem that owns this pipeline. It is **required on
+create** — `POST /api/pipelines` returns **422 `"ownerSubsystem is required"`**
+without it, mirroring the same guard on `POST /api/agents`. The field is still
+`.optional()` in the schema on purpose: the entity store's listing is tolerant (a
+file failing validation is skipped, never fatal), so a required field would turn a
+hand-edited file that lost its owner into a _silent disappearance_ from the catalog
+instead of something `GET /api/subsystems/unowned` can report.
+
+The real enforcement is structural rather than schema-level: the task classifier's
+stage 1 routes **only to subsystems**, and a subsystem offers only the units it
+owns — so an unowned pipeline is unroutable by construction. Nothing has to reject
+it; no path reaches it. See `docs/api/tasks.md` → _Classification_.
+
+`complexity` places the pipeline on its subsystem's **complexity ladder**, ordered
+cheapest first:
+
+| rung            | shape                         | when                                                     |
+| --------------- | ----------------------------- | -------------------------------------------------------- |
+| _(no pipeline)_ | a single owned agent          | single-surface: one file, a rename, a copy fix, a lookup |
+| `light`         | 2–3 phases, cheap models      | narrow, but wants a second pair of eyes or a check       |
+| `standard`      | 3–4 phases                    | ordinary work with review + verification                 |
+| `deep`          | 4–6 phases, loops, escalation | multi-surface, or needs design + review + tests + docs   |
+
+It defaults to `"standard"`, so every pipeline written before F9 parses unchanged.
+`PIPELINE_COMPLEXITY_ORDER` (exported beside `PipelineComplexitySchema`) is the
+canonical cheapest-first sort key — consumers use it rather than re-deriving an
+order from the enum's declaration order.
+
+The rung is data rather than file order because the stage-2 routing fallback
+resolves a low-confidence verdict to the subsystem's **cheapest owned pipeline**;
+file order would silently change that meaning the first time a directory listing
+reordered.
+
+> Note: `complexity` is round-tripped explicitly by `PipelinesStorageService`
+> (`fromFrontmatter` reads it, `toFrontmatter` always writes it). Because the
+> schema defaults the field, a missing copy would not fail — every pipeline would
+> just read as `"standard"` and the ladder would collapse to a constant.
 
 ### Outputs (`outputs`) — delivery sinks
 
@@ -128,11 +172,14 @@ provenance registry itself remains for delivery-source answerability.
 
 ```
 GET    /api/pipelines           list every pipeline
-POST   /api/pipelines           create a pipeline
+POST   /api/pipelines           create a pipeline   (422 without ownerSubsystem)
 GET    /api/pipelines/:id       pipeline detail
 PUT    /api/pipelines/:id       update a pipeline
 DELETE /api/pipelines/:id       delete a pipeline
 ```
+
+`POST` returns **422** for a body with no `ownerSubsystem` (NS2 F9) as well as for
+a dangling loop target; `409` on an id conflict; `404` for a missing/unsafe id.
 
 ## Starting a pipeline run
 

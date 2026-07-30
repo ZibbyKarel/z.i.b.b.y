@@ -31,6 +31,8 @@ const pipeline: Pipeline = {
   ],
   outputs: [],
   instructions: "Deliver working code.",
+  // NS2 F9 — schema-defaulted, so non-optional on a parsed entity.
+  complexity: "standard",
 };
 
 const floorRule: GateRule = {
@@ -46,7 +48,8 @@ const subsystem: Subsystem = {
   id: "forge",
   name: "Forge",
   tagline: "Kovárna doručení",
-  mandate: "Orchestrace delivery pipeline: Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor.",
+  mandate:
+    "Orchestrace delivery pipeline: Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor.",
   color: "#f97316",
 };
 
@@ -58,7 +61,9 @@ const catalogRule: GlobalGateRule = {
   resolve: { type: "human" },
 };
 
-function baseInput(overrides: Partial<SelfKnowledgeComposerInput> = {}): SelfKnowledgeComposerInput {
+function baseInput(
+  overrides: Partial<SelfKnowledgeComposerInput> = {},
+): SelfKnowledgeComposerInput {
   return {
     agents: [agent],
     pipelines: [pipeline],
@@ -420,7 +425,9 @@ describe("mergeAutoBlocks", () => {
 
     const merged = mergeAutoBlocks(existing, generated);
 
-    expect(merged).toContain("Operator note: don't touch the deploy pipeline without asking me first.");
+    expect(merged).toContain(
+      "Operator note: don't touch the deploy pipeline without asking me first.",
+    );
     expect(merged).toContain("More operator prose at the very end.");
     // The stale AUTO content is gone, replaced by the freshly generated content.
     expect(merged).not.toContain("No agents registered yet");
@@ -502,7 +509,9 @@ describe("computeDrift", () => {
   it("reacts to a codebaseShape change (absent vs. present)", () => {
     const a = composeSelfKnowledge(baseInput()).markdown;
     const b = composeSelfKnowledge(
-      baseInput({ codebaseShape: { godNodes: [{ name: "Stack()", degree: 144 }], communities: [] } }),
+      baseInput({
+        codebaseShape: { godNodes: [{ name: "Stack()", degree: 144 }], communities: [] },
+      }),
     ).markdown;
     expect(computeDrift(a, b)).toBe(true);
   });

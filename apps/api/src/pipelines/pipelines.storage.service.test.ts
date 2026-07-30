@@ -21,11 +21,18 @@ const phase = (id: string, extra: Record<string, unknown> = {}) => ({
   thinking: "medium" as const,
   ...extra,
 });
+/**
+ * NS2 F9 — `complexity` is schema-DEFAULTED, so it is non-optional on a parsed
+ * entity and every create body below states it. `"standard"` here is the same
+ * rung the default would produce; the ladder round-trip has its own describe
+ * block at the bottom of this file.
+ */
 const sample = {
   id: "release",
   phases: [phase("a"), phase("b")],
   instructions: "ship it",
   outputs: [],
+  complexity: "standard" as const,
 };
 const fileFor = (dir: string, id: string) => path.join(dir, `${id}.pipeline.md`);
 
@@ -94,6 +101,7 @@ describe("PipelinesStorageService", () => {
         },
       ],
       outputs: [],
+      complexity: "standard",
     });
     expect(created.avatar).toBe("/avatars/orchestrator.png");
     const read = await service.get("with-avatar");
@@ -101,7 +109,11 @@ describe("PipelinesStorageService", () => {
   });
 
   it("clears the avatar when patched with avatar: null", async () => {
-    const created = await service.create({ ...sample, id: "avatar-clear", avatar: "/avatars/x.png" });
+    const created = await service.create({
+      ...sample,
+      id: "avatar-clear",
+      avatar: "/avatars/x.png",
+    });
     expect(created.avatar).toBe("/avatars/x.png");
 
     const updated = await service.update(created.id, { avatar: null });
@@ -149,7 +161,11 @@ describe("PipelinesStorageService", () => {
     const dataUri = "data:image/png;base64,aGVsbG8gd29ybGQ="; // "hello world"
 
     it("externalizes an uploaded data-URI avatar to an asset file, not inline in the .md", async () => {
-      const created = await service.create({ ...sample, id: "with-uploaded-avatar", avatar: dataUri });
+      const created = await service.create({
+        ...sample,
+        id: "with-uploaded-avatar",
+        avatar: dataUri,
+      });
       expect(created.avatar).toBe(dataUri);
 
       const raw = await fs.readFile(fileFor(dir, "with-uploaded-avatar"), "utf8");
@@ -157,9 +173,7 @@ describe("PipelinesStorageService", () => {
       const parsed = matter(raw);
       expect(parsed.data.avatar).toBe("assets/with-uploaded-avatar.png");
 
-      const assetBytes = await fs.readFile(
-        path.join(dir, "assets", "with-uploaded-avatar.png"),
-      );
+      const assetBytes = await fs.readFile(path.join(dir, "assets", "with-uploaded-avatar.png"));
       expect(assetBytes.toString("utf8")).toBe("hello world");
 
       const read = await service.get("with-uploaded-avatar");
@@ -167,16 +181,22 @@ describe("PipelinesStorageService", () => {
     });
 
     it("stores a bundled /avatars/*.png avatar verbatim, writing no asset file", async () => {
-      await service.create({ ...sample, id: "bundled-avatar", avatar: "/avatars/orchestrator.png" });
+      await service.create({
+        ...sample,
+        id: "bundled-avatar",
+        avatar: "/avatars/orchestrator.png",
+      });
       const parsed = matter(await fs.readFile(fileFor(dir, "bundled-avatar"), "utf8"));
       expect(parsed.data.avatar).toBe("/avatars/orchestrator.png");
-      await expect(
-        fs.access(path.join(dir, "assets", "bundled-avatar.png")),
-      ).rejects.toBeTruthy();
+      await expect(fs.access(path.join(dir, "assets", "bundled-avatar.png"))).rejects.toBeTruthy();
     });
 
     it("removes the asset file when an uploaded avatar is cleared", async () => {
-      const created = await service.create({ ...sample, id: "avatar-asset-clear", avatar: dataUri });
+      const created = await service.create({
+        ...sample,
+        id: "avatar-asset-clear",
+        avatar: dataUri,
+      });
       const assetFile = path.join(dir, "assets", "avatar-asset-clear.png");
       await expect(fs.access(assetFile)).resolves.toBeUndefined();
 
@@ -186,7 +206,11 @@ describe("PipelinesStorageService", () => {
     });
 
     it("removes the asset file on delete", async () => {
-      const created = await service.create({ ...sample, id: "avatar-asset-delete", avatar: dataUri });
+      const created = await service.create({
+        ...sample,
+        id: "avatar-asset-delete",
+        avatar: dataUri,
+      });
       const assetFile = path.join(dir, "assets", "avatar-asset-delete.png");
       await expect(fs.access(assetFile)).resolves.toBeUndefined();
 
@@ -247,6 +271,7 @@ describe("PipelinesStorageService", () => {
         ],
         instructions: "y",
         outputs: [],
+        complexity: "standard",
       }),
     ).rejects.toBeInstanceOf(InvalidPipelineError);
   });
@@ -268,10 +293,87 @@ describe("PipelinesStorageService", () => {
     expect(list.map((p) => p.id)).toEqual(["release"]);
   });
 
+  /**
+   * NS2 F9 regression — the `complexity` rung must survive a full disk
+   * round-trip. This caught a real bug: the field is schema-DEFAULTED, so a
+   * missing copy in `fromFrontmatter` is completely silent — every pipeline reads
+   * back as `"standard"` regardless of what its file says, and the cheapest-first
+   * ordering that `subsystemCandidates` / `cheapestPipeline` depend on collapses
+   * to a constant instead of failing loudly. Same trap on the write side: because
+   * the field is never `undefined` on a parsed entity, `toFrontmatter` must write
+   * it UNCONDITIONALLY, or an `update()` silently strips the rung from disk.
+   */
+  describe("complexity ladder round-trip (NS2 F9)", () => {
+    it("writes each rung to frontmatter and reads the same rung back", async () => {
+      for (const complexity of ["light", "standard", "deep"] as const) {
+        const id = `rung-${complexity}`;
+        const created = await service.create({ ...sample, id, complexity });
+        expect(created.complexity).toBe(complexity);
+
+        // On disk, verbatim — not inferred from file order or phase count.
+        const parsed = matter(await fs.readFile(fileFor(dir, id), "utf8"));
+        expect(parsed.data.complexity).toBe(complexity);
+
+        // And back through the parser, which is where a missing copy would hide.
+        expect((await service.get(id)).complexity).toBe(complexity);
+        expect((await service.list()).find((p) => p.id === id)?.complexity).toBe(complexity);
+      }
+    });
+
+    it("an update() that never mentions complexity does not strip the rung", async () => {
+      const created = await service.create({ ...sample, id: "keep-rung", complexity: "light" });
+      expect(created.complexity).toBe("light");
+
+      const updated = await service.update(created.id, { desc: "an unrelated change" });
+      expect(updated.complexity).toBe("light");
+      expect((await service.get(created.id)).complexity).toBe("light");
+      const parsed = matter(await fs.readFile(fileFor(dir, "keep-rung"), "utf8"));
+      expect(parsed.data.complexity).toBe("light");
+    });
+
+    it("an update() can move a pipeline up and down the ladder", async () => {
+      await service.create({ ...sample, id: "regrade", complexity: "light" });
+      expect((await service.update("regrade", { complexity: "deep" })).complexity).toBe("deep");
+      expect((await service.get("regrade")).complexity).toBe("deep");
+      expect((await service.update("regrade", { complexity: "light" })).complexity).toBe("light");
+      expect((await service.get("regrade")).complexity).toBe("light");
+    });
+
+    it("a pre-F9 file with no complexity in frontmatter reads as the default rung", async () => {
+      await fs.writeFile(
+        fileFor(dir, "pre-f9"),
+        matter.stringify("Legacy body.\n", { name: "pre-f9", phases: [phase("a")] }),
+        "utf8",
+      );
+      expect((await service.get("pre-f9")).complexity).toBe("standard");
+    });
+
+    it("an unparseable rung is rejected rather than silently defaulted", async () => {
+      await fs.writeFile(
+        fileFor(dir, "bad-rung"),
+        matter.stringify("Body.\n", {
+          name: "bad-rung",
+          phases: [phase("a")],
+          complexity: "gigantic",
+        }),
+        "utf8",
+      );
+      // Tolerant listing: an invalid file is SKIPPED, never fatal — and never
+      // laundered into `"standard"`, which is what a permissive parse would do.
+      expect((await service.list()).map((p) => p.id)).not.toContain("bad-rung");
+    });
+  });
+
   it("refuses unsafe ids (path traversal)", async () => {
     for (const id of ["../evil", "a/b", ".."]) {
       await expect(
-        service.create({ id, phases: [phase("a")], instructions: "i", outputs: [] }),
+        service.create({
+          id,
+          phases: [phase("a")],
+          instructions: "i",
+          outputs: [],
+          complexity: "standard",
+        }),
       ).rejects.toBeInstanceOf(InvalidPipelineIdError);
     }
   });

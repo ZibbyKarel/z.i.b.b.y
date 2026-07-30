@@ -8,9 +8,10 @@ Phase 80 of the subsystem-federation arc — see
 `docs/superpowers/specs/2026-07-08-subsystem-federation-design.md` for the design
 doc, `docs/plans/phase-80-subsystem-registry.md` for the registry plan, and
 `docs/plans/phase-82-subsystem-status-aggregation.md` for the live-status plan.
-The eight named subsystems (Forge, Puls, Sentinel, Maestro, Beacon, Scout, Herald,
-Loom) are a real, typed registry: identity (phase 80) + real aggregated status
-(phase 82). No UI yet (phase 83+).
+The **eleven** named subsystems (Forge, Puls, Sentinel, Maestro, Beacon, Scout,
+Herald, Loom, plus Codex + Ledger seated in NS2 F1a and Hearth in F8a) are a real,
+typed registry: identity (phase 80) + real aggregated status (phase 82). No UI yet
+(phase 83+).
 
 **Not to be confused with** `apps/api/src/health/subsystem-health.service.ts` —
 an unrelated, pre-existing concept (M8 health-liveness aggregation of
@@ -20,7 +21,7 @@ backend/vault/integrations/scheduler). Never touch or reuse it for this resource
 
 | Piece        | File                                                                     | Role                                                                                                                                                                                                                                    |
 | ------------ | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Schema       | `libs/contracts/src/subsystems/subsystem.schema.ts`                      | `SubsystemIdSchema` (8-value enum), `SubsystemSchema`, `SUBSYSTEMS` registry constant, `SubsystemStateSchema`, `SubsystemWithStatusSchema`                                                                                              |
+| Schema       | `libs/contracts/src/subsystems/subsystem.schema.ts`                      | `SubsystemIdSchema` (11-value enum), `SubsystemSchema`, `SUBSYSTEMS` registry constant, `SubsystemStateSchema`, `SubsystemWithStatusSchema`                                                                                             |
 | Contract     | `libs/contracts/src/subsystems/subsystems.contract.ts`                   | `subsystemsContract` — `getSubsystems` (`GET /api/subsystems`), `getSubsystem` (`GET /api/subsystems/:id`, 404 on unknown id), `markSubsystemSeen` (`POST /api/subsystems/:id/seen`, 404 on unknown id)                                 |
 | Errors       | `apps/api/src/subsystems/subsystems.errors.ts`                           | `SubsystemNotFoundError`                                                                                                                                                                                                                |
 | Seen store   | `apps/api/src/subsystems/subsystem-seen.store.ts`                        | `SubsystemSeenStore` — `.zibby/data/subsystem-seen.json`, `{ [id]: IsoDateTime }`, missing file/key = epoch, atomic writes                                                                                                              |
@@ -34,7 +35,7 @@ backend/vault/integrations/scheduler). Never touch or reuse it for this resource
 
 `SUBSYSTEMS` is a checked-in TS constant (not a `.zibby/data` file) — a config
 file, per the design doc's own framing, that both API and web import
-type-safely with zero fs plumbing, since the eight entries are fixed,
+type-safely with zero fs plumbing, since the eleven entries are fixed,
 non-user-generated data. Each entry: `{ id, name, tagline, mandate, color }`.
 `name` is the mythic name ("Forge"), `tagline` a short Czech epithet, `mandate`
 the one-line Czech mandate from the design doc's federation table.
@@ -86,6 +87,32 @@ run/approval semantics, only reads and correlates:
   `ceka > bezi > hlaseni > klid` — waiting-on-you is never masked by ambient
   activity. Counts are independent of the headline state (a subsystem can
   carry a `tier2Count` while its state reads `ceka`).
+
+## Ownership is load-bearing (NS2 F9)
+
+Before F9, `ownerSubsystem` was attribution: it decided what the Roster listed and
+nothing else. It now decides **whether a unit can be dispatched at all.**
+
+The task classifier's stage 1 routes only to subsystems ("whose domain is this?"),
+and a subsystem's stage-2 catalog offers only units it owns. So an agent or
+pipeline with no owner is **unroutable by construction** — no catalog contains it
+and the classifier can emit nothing else. Ownership stopped being metadata and
+became the wiring.
+
+Two consequences worth knowing:
+
+- **Both create endpoints 422 without an owner** (`POST /api/agents`,
+  `POST /api/pipelines`). The field stays `.optional()` in the schemas so that a
+  file which somehow lost its owner is still _readable_ and therefore reportable
+  via `GET /api/subsystems/unowned` — a required field would make it vanish
+  silently from a tolerant listing instead.
+- **Only seated subsystems appear in the stage-1 catalog.** A subsystem owning
+  zero pipelines and zero active agents is excluded, because offering it invites a
+  verdict that immediately unwinds at stage 2's empty-roster check. **beacon** and
+  **ledger** are unseated _by design_ — beacon IS the Tier-3 surface-and-wait
+  contract rather than a work-doer, and ledger is a budget/limits service — so no
+  free-text task is ever "for beacon". The other nine each carry a crew and a
+  complexity ladder (see `docs/api/pipelines.md` → _the ladder rung_).
 
 ## Roster (`GET /api/subsystems/:id/roster`)
 

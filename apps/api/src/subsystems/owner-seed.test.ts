@@ -16,21 +16,32 @@ describe("owner-seed (NS2 F1b, pure)", () => {
       expect(pipelineOwnerSeed("delivery")).toBe("forge");
     });
 
-    it("every research-shaped pipeline (incl. code-audit) seeds to scout", () => {
-      for (const id of [
-        "research",
-        "product-discovery",
-        "content-campaign",
-        "content-piece",
-        "sales-outreach",
-        "code-audit",
-      ]) {
+    it("every research-shaped pipeline seeds to scout", () => {
+      for (const id of ["research", "product-discovery"]) {
         expect(pipelineOwnerSeed(id)).toBe("scout");
       }
     });
 
+    // NS2 F9: content and outreach are OUTWARD VOICE (herald's mandate), not
+    // research. They sat under scout only because scout was one of the three
+    // seated subsystems before F9 crewed the rest of the federation.
+    it("every outward-facing pipeline seeds to herald, not scout", () => {
+      for (const id of ["content-piece", "content-campaign", "sales-outreach"]) {
+        expect(pipelineOwnerSeed(id)).toBe("herald");
+      }
+    });
+
+    // NS2 F9: F5c ("Loom v1 — scheduled quality audit") moved the stored
+    // pipeline and left the seed table behind. The stored file always wins at
+    // runtime, so the drift was latent rather than active — this pins it.
+    it("code-audit seeds to loom (codebase quality), not scout", () => {
+      expect(pipelineOwnerSeed("code-audit")).toBe("loom");
+    });
+
     it("an unmatched pipeline id is undefined, not a guess", () => {
-      expect(pipelineOwnerSeed("demo-pipe")).toBeUndefined();
+      // Synthetic ids on purpose (NS2 F9): this assertion must not depend on
+      // which pipelines happen to exist on disk.
+      expect(pipelineOwnerSeed("not-a-stored-pipeline")).toBeUndefined();
       expect(pipelineOwnerSeed("some-future-pipeline")).toBeUndefined();
     });
   });

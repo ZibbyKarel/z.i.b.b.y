@@ -21,6 +21,8 @@ const invalid = (error: unknown) =>
     ? ({ status: 422, body: { message: error.message } } as const)
     : undefined;
 
+const unprocessable = (message: string) => ({ status: 422 as const, body: { message } });
+
 /**
  * Implements `pipelinesContract` against the file-backed storage service. A
  * dangling loop target (caught by the schema/storage) maps to a 422; conflicts to
@@ -33,7 +35,17 @@ export class PipelinesController {
   @TsRestHandler(pipelinesContract)
   handler() {
     return tsRestHandler(pipelinesContract, {
-      createPipeline: ({ body }) => errors.created(() => this.storage.create(body), invalid),
+      createPipeline: ({ body }) => {
+        // NS2 F9: the mirror of `agents.controller.ts`' create guard. Since F9 the
+        // switchboard routes only to subsystems, and a subsystem offers only its
+        // own owned units — so a pipeline created without an owner would be
+        // permanently unroutable. Create-only, like the agent guard: pre-F9
+        // pipelines are tagged by the owner-backfill sweep, not rejected on read.
+        if (!body.ownerSubsystem) {
+          return Promise.resolve(unprocessable("ownerSubsystem is required"));
+        }
+        return errors.created(() => this.storage.create(body), invalid);
+      },
 
       listPipelines: async () => ({ status: 200, body: await this.storage.list() }),
 

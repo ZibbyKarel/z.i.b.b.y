@@ -32,6 +32,12 @@ is operator-owned and untouched by a merge. Block order = render order:
    comparison (it differs every run by design, not a meaningful signal).
 2. **AGENTS** — every agent, sorted by id: `name (\`id\`) — desc`.
 3. **PIPELINES** — every pipeline, sorted by id, with its phase count.
+   Reviewed 2026-07-30 (NS2 F9): the phase count is still the only rendered
+   field — `renderPipelines` reads `pipeline.phases.length` and nothing else, so
+   F9's `complexity` rung is deliberately **not** in this block. It is a
+   within-subsystem routing input (`EFFORT_RULE`), not part of ZIBBY's
+   self-description, and rendering it would add a drift trigger for a value the
+   note never uses.
 4. **SUBSYSTEMS** — static subsystem identity only (name + mandate) from
    `@zibby/contracts`' `SUBSYSTEMS` — **never** live state/tier2Count/tier3Count
    (phase-105 decision 3: baking live status in would make drift read "changed"

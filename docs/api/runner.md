@@ -196,6 +196,17 @@ spawn spec (so restart survival + respawn work exactly like an approval
 pause), and emits the paused status. `resume()` treats `paused-limit` the
 same as a stashed-spec approval pause — it always respawns fresh, never the
 Variant-B "release a blocked child" branch (the child is already dead).
+
+> **The spec's disk write is not synchronous with the status flip.** The status
+> becomes `paused-limit` before `<runId>.pending.json` has necessarily landed. That
+> ordering matters to anything that judges resumability from disk: a fresh core
+> reading a `paused-limit` sidecar with no spec beside it correctly reconciles the
+> run to `interrupted` (per the reconciliation rules above). Production is fine —
+> nothing restarts inside that window — but a test that restarts a core after only
+> observing in-memory state races the write and will flake under load. Wait for the
+> **file**, not the status. (`runner-core.test.ts`'s `waitForPendingSpec` does
+> exactly this; it was a real intermittent failure, not a hypothetical.)
+
 `markResumeCycle`/`failLimit`/`discardPausedLimit` support the owner-side
 retry-cap and re-drive logic (agent runs have no parked terminal state, so a
 flapped-out limit pause fails to `error` with a readable reason).

@@ -39,6 +39,30 @@ async function writeFile(p, contents) {
   await fs.writeFile(p, contents, "utf8");
 }
 
+/**
+ * Writes a JSON manifest ONLY when it doesn't exist yet; returns whether it wrote.
+ *
+ * Used for the operator-curated manifests (`_categories.json`, `_projects.json`).
+ * Those are live data the operator edits in the app — a taxonomy and a project
+ * registry — not demo fixtures. Since `DATA` defaults to the real `.zibby/data`,
+ * an unconditional write meant a bare `pnpm seed` silently replaced the curated
+ * manifests with this script's demo ones (the live agent taxonomy is 9 English
+ * categories; this script's demo set is 8 Czech ones). Skip-when-present is
+ * preferred over "write the current set verbatim": a hard-coded copy of live
+ * operator data in a demo seeder would go stale on the next curation pass, and
+ * would still overwrite whatever the operator changed since. A fresh/sandbox dir
+ * still gets a self-consistent manifest for the demo entities this script writes.
+ */
+async function writeJsonIfAbsent(p, value) {
+  try {
+    await fs.access(p);
+    return false;
+  } catch {
+    await writeFile(p, JSON.stringify(value, null, 2));
+    return true;
+  }
+}
+
 /** matter.stringify with a leading blank line + trailing newline (matches the API serializers). */
 const md = (body, data) => matter.stringify(`\n${body.trim()}\n`, data);
 
@@ -223,7 +247,7 @@ async function seedSkills() {
     if (s.gateRuleIds) fm.gateRuleIds = s.gateRuleIds;
     await writeFile(dir("skills", `${s.id}.md`), md(skillBody(s), fm));
   }
-  // Skill categories manifest.
+  // Skill categories manifest — only when absent (see `writeJsonIfAbsent`).
   const CATS = [
     ["Vývoj", "code"],
     ["Review & CI", "check"],
@@ -233,8 +257,8 @@ async function seedSkills() {
     ["Systém & NAS", "server"],
     ["Psaní & dokumenty", "doc"],
   ].map(([name, glyph]) => ({ name, glyph }));
-  await writeFile(dir("skills", "_categories.json"), JSON.stringify(CATS, null, 2));
-  return SKILLS.length;
+  const cats = await writeJsonIfAbsent(dir("skills", "_categories.json"), CATS);
+  return { count: SKILLS.length, cats };
 }
 
 // ---------------------------------------------------------------- agents ----
@@ -277,16 +301,35 @@ plan and wait; carry it out.
 - After the deletion runs, report what was removed.`;
 
 // Contract Agent: full shape incl. category + gates (GateRuleInput[]).
+//
+// `owner` → the required `ownerSubsystem` (NS2 F9). The task switchboard routes ONLY
+// to subsystems and a subsystem offers only its own owned units, so an unowned agent
+// is permanently unroutable dead weight — every agent this script writes carries one.
+// The mapping follows each demo agent's evident role against the federation mandates
+// (`libs/contracts/src/subsystems/subsystem.schema.ts`):
+//   forge   — the delivery loop itself (Architekt → Kodér ⇄ Code-Review → Tester →
+//             Dokumentátor), so demo-architect / coder / reviewer / tester / doc, plus
+//             agent-007 (the token-free fixture that exercises that same machinery).
+//   scout   — researcher: gathers sources and hands the artifact on.
+//   codex   — chronicler: journal + weekly distillation of notes = memory upkeep.
+//   hearth  — the personal domain: curator (media library), steward (shopping and
+//             household stock), cleaner (housekeeping a directory on the machine).
 const AGENTS = [
   {
-    id: "architect",
-    name: "Architekt",
+    // Renamed from `architect`: the live fleet has a REAL, first-class forge agent at
+    // `.zibby/data/agents/architect.md` (with its own avatar and English category), and
+    // a bare `pnpm seed` writes into that same live dir — so the old id made every
+    // re-seed silently strip the real agent's `ownerSubsystem`/`avatar` and rename it.
+    // `demo-architect` cannot collide with anything in the fleet.
+    id: "demo-architect",
+    name: "Architekt (demo)",
     glyph: "compass",
     role: "Navrhne řešení a rozepíše plán do design.md",
     model: "opus",
     thinking: "high",
     tools: ["read", "web", "write"],
     category: "Vývoj",
+    owner: "forge",
   },
   {
     id: "coder",
@@ -297,6 +340,7 @@ const AGENTS = [
     thinking: "medium",
     tools: ["read", "write", "bash", "git"],
     category: "Vývoj",
+    owner: "forge",
     approval: true,
     risk: "medium",
     gates: [
@@ -313,6 +357,7 @@ const AGENTS = [
     thinking: "medium",
     tools: ["read", "bash", "git"],
     category: "Kvalita",
+    owner: "forge",
     gates: [{ match: [{ type: "tool", tool: "bash" }], decision: "allow" }],
   },
   {
@@ -324,6 +369,7 @@ const AGENTS = [
     thinking: "high",
     tools: ["read", "git"],
     category: "Kvalita",
+    owner: "forge",
     gateRuleIds: ["gr-push-main", "gr-merge"],
     gates: [
       {
@@ -342,6 +388,7 @@ const AGENTS = [
     thinking: "medium",
     tools: ["read", "web", "write"],
     category: "Výzkum",
+    owner: "scout",
   },
   {
     id: "doc",
@@ -352,6 +399,7 @@ const AGENTS = [
     thinking: "low",
     tools: ["read", "write"],
     category: "Dokumentace",
+    owner: "forge",
   },
   {
     id: "curator",
@@ -362,6 +410,7 @@ const AGENTS = [
     thinking: "low",
     tools: ["read", "write", "web"],
     category: "Média",
+    owner: "hearth",
   },
   {
     id: "steward",
@@ -372,6 +421,7 @@ const AGENTS = [
     thinking: "medium",
     tools: ["read", "write", "web"],
     category: "Domácnost",
+    owner: "hearth",
     gateRuleIds: ["gr-big-purchase"],
   },
   {
@@ -383,6 +433,7 @@ const AGENTS = [
     thinking: "low",
     tools: ["read", "write"],
     category: "Psaní",
+    owner: "codex",
   },
   // Cleaner — the reference tidy-up agent. Deletes through the approval gate, so its
   // body deliberately tells it to RUN the delete (not ask in chat): the platform
@@ -398,6 +449,7 @@ const AGENTS = [
     thinking: "medium",
     tools: ["read", "write", "bash"],
     category: "Údržba",
+    owner: "hearth",
     approval: true,
     risk: "high",
     body: CLEANER_BODY,
@@ -426,6 +478,8 @@ async function seedAgents() {
       thinking: a.thinking,
       tools: a.tools,
       category: a.category,
+      // Required by the F9 invariant — no free agents (see the AGENTS docblock).
+      ownerSubsystem: a.owner,
     };
     if (a.approval) fm.requires_approval = true;
     if (a.risk) fm.risk = a.risk;
@@ -443,6 +497,8 @@ async function seedAgents() {
     model: "haiku",
     thinking: "low",
     tools: ["write"],
+    // Owned by forge: it exercises the delivery machinery end to end.
+    ownerSubsystem: "forge",
   };
   await writeFile(
     dir("agents", "agent-007.md"),
@@ -452,7 +508,11 @@ async function seedAgents() {
     ),
   );
 
-  // Agent categories manifest.
+  // Agent categories manifest — only when absent. The live fleet's manifest is the
+  // operator-curated 9-category English taxonomy (F9 just re-curated it: `Data & AI`
+  // out, `Roadmap` in); this demo set is the 8 Czech categories the demo agents above
+  // actually use. Writing it unconditionally clobbered the curated one on every
+  // re-seed. See `writeJsonIfAbsent` for why skip beats "copy the live set verbatim".
   const CATS = [
     ["Vývoj", "code"],
     ["Kvalita", "shield"],
@@ -463,22 +523,34 @@ async function seedAgents() {
     ["Psaní", "doc"],
     ["Údržba", "server"],
   ].map(([name, glyph]) => ({ name, glyph }));
-  await writeFile(dir("agents", "_categories.json"), JSON.stringify(CATS, null, 2));
-  return AGENTS.length + 1;
+  const cats = await writeJsonIfAbsent(dir("agents", "_categories.json"), CATS);
+  return { count: AGENTS.length + 1, cats };
 }
 
 // ------------------------------------------------------------- pipelines ----
 // Contract phase.agent = agent id (design uses display name); phases need ids;
 // loop.then must be an existing phase id or "fail" (design's "park_for_review" → "fail").
+//
+// `owner` → `ownerSubsystem`, `complexity` → the F9 ladder rung. Both are mandatory
+// here for the same reason as on an agent: the switchboard routes only to subsystems
+// and grades within one, so an unowned or ungraded pipeline is unroutable. Rungs are
+// graded by phase count and cost per `PipelineComplexitySchema` — `light` (2–3 cheap
+// phases), `standard` (3–4 with review + verification), `deep` (4–6 with loops and
+// escalation). Every `phases[].agent` below is an agent THIS script also seeds; a
+// phase agent may belong to another subsystem than the pipeline's owner (ownership
+// governs dispatch and the roster, not which agents a chain composes).
 const PIPELINES = [
   {
     id: "build-feature",
     name: "Build Feature",
     desc: "Spec → implementace → testy → docs, se zpětnou smyčkou u Testera.",
+    owner: "forge",
+    // 4 phases, design → code → tests → docs, with an escalating tester back-edge.
+    complexity: "deep",
     phases: [
       {
         id: "architect",
-        agent: "architect",
+        agent: "demo-architect",
         consumes: "task.md",
         produces: "design.md",
         model: "opus",
@@ -515,6 +587,9 @@ const PIPELINES = [
     id: "nightly-research",
     name: "Nightly Research",
     desc: "Researcher nasbírá zdroje, Architekt je zsyntetizuje do poznámky.",
+    owner: "scout",
+    // 2 phases, no loop — the cheapest rung that is still a pipeline.
+    complexity: "light",
     phases: [
       {
         id: "researcher",
@@ -526,7 +601,7 @@ const PIPELINES = [
       },
       {
         id: "architect",
-        agent: "architect",
+        agent: "demo-architect",
         consumes: "sources.md",
         produces: "knowledge.md",
         model: "opus",
@@ -538,6 +613,10 @@ const PIPELINES = [
     id: "pr-guard",
     name: "PR Guard",
     desc: "Reviewer projde diff a připraví push k tvému schválení.",
+    owner: "forge",
+    // A single review phase — below the ladder's floor in spirit, `light` in practice
+    // (the enum has no rung under `light`; the rung below it is a bare agent).
+    complexity: "light",
     phases: [
       {
         id: "reviewer",
@@ -553,6 +632,9 @@ const PIPELINES = [
     id: "media-tidy",
     name: "Media tidy",
     desc: "Stáhne a srovná média na Holly.",
+    owner: "hearth",
+    // 2 phases, both sonnet/low — cheap household tidy-up.
+    complexity: "light",
     phases: [
       {
         id: "researcher",
@@ -576,7 +658,13 @@ const PIPELINES = [
 
 async function seedPipelines() {
   for (const p of PIPELINES) {
-    const fm = { name: p.name, phases: p.phases, desc: p.desc };
+    const fm = {
+      name: p.name,
+      phases: p.phases,
+      desc: p.desc,
+      ownerSubsystem: p.owner,
+      complexity: p.complexity,
+    };
     const body = `# ${p.name}\n\n${p.desc}\n\n## Fáze\n${p.phases.map((ph, i) => `${i + 1}. **${ph.agent}** — \`${ph.consumes}\` → \`${ph.produces}\``).join("\n")}`;
     await writeFile(dir("pipelines", `${p.id}.pipeline.md`), md(body, fm));
   }
@@ -625,15 +713,19 @@ const PROJECTS = [
 ];
 
 async function seedProjects() {
-  await writeFile(dir("projects", "_projects.json"), JSON.stringify(PROJECTS, null, 2));
+  // Both manifests are single files holding the WHOLE registry/taxonomy, so an
+  // unconditional write is a wholesale replacement of the operator's real projects —
+  // same data-loss shape as the agent taxonomy. Seed them only into a dir that has
+  // none yet.
+  const written = await writeJsonIfAbsent(dir("projects", "_projects.json"), PROJECTS);
   // Project categories manifest (default taxonomy: Vývoj / Média & domácnost / Ostatní).
   const CATS = [
     ["Vývoj", "code"],
     ["Média & domácnost", "film"],
     ["Ostatní", "grid"],
   ].map(([name, glyph]) => ({ name, glyph }));
-  await writeFile(dir("projects", "_categories.json"), JSON.stringify(CATS, null, 2));
-  return PROJECTS.length;
+  const cats = await writeJsonIfAbsent(dir("projects", "_categories.json"), CATS);
+  return { count: written ? PROJECTS.length : 0, cats };
 }
 
 // ----------------------------------------------------------- automations ----
@@ -1160,10 +1252,13 @@ async function main() {
   const notes = await seedVault();
   const { approvals, runs } = await seedRunsAndApprovals();
 
+  const cats = (written) => (written ? "categories written" : "categories left as they were");
   console.log("ZIBBY velín — demo data seeded into", DATA);
-  console.log(`  skills        ${skills} + 7 categories`);
-  console.log(`  agents        ${agents} (incl. agent-007) + 7 categories`);
-  console.log(`  projects      ${projects} + 3 categories`);
+  console.log(`  skills        ${skills.count} · ${cats(skills.cats)}`);
+  console.log(`  agents        ${agents.count} (incl. agent-007) · ${cats(agents.cats)}`);
+  console.log(
+    `  projects      ${projects.count ? projects.count : "registry left as it was"} · ${cats(projects.cats)}`,
+  );
   console.log(`  pipelines     ${pipelines}`);
   console.log(`  goals         ${goals}`);
   console.log(`  automations   ${automations}`);
