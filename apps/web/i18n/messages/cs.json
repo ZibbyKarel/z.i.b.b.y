@@ -129,7 +129,10 @@
     "preview": {
       "single": "ZIBBY to předá: {target}",
       "loopSummary": "Loop · vykonavatel {maker} · ověření: kontroly projektu · až {n} iterací",
-      "lowConfidence": "nízká jistota"
+      "lowConfidence": "nízká jistota",
+      "ambiguous": "nerozhodnuto",
+      "ambiguousBetween": "{first}, nebo {second}? Zkontroluj cíl, nebo vyber ručně.",
+      "ambiguousWeak": "Nic sem jasně nepasuje — potvrď cíl, nebo vyber ručně."
     },
     "edit": {
       "label": "Upravit"

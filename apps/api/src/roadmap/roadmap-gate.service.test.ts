@@ -61,6 +61,14 @@ describe("RoadmapGateService", () => {
   let projectPr: { isMerged: ReturnType<typeof vi.fn>; getPr: ReturnType<typeof vi.fn> };
   let activity: { record: ReturnType<typeof vi.fn> };
   let decomposition: { dispatch: ReturnType<typeof vi.fn> };
+  // NS2 F10 — the Tier-3 routing park's two collaborators.
+  let proposals: {
+    create: ReturnType<typeof vi.fn>;
+    get: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
+    list: ReturnType<typeof vi.fn>;
+  };
+  let approvals: { requestApproval: ReturnType<typeof vi.fn> };
 
   const makeGate = () =>
     new RoadmapGateService(
@@ -74,6 +82,8 @@ describe("RoadmapGateService", () => {
       projectPr as never,
       activity as never,
       decomposition as never,
+      proposals as never,
+      approvals as never,
       fakeLogger as never,
     );
 
@@ -105,6 +115,9 @@ describe("RoadmapGateService", () => {
         proposedGoal: null,
         paths: [],
         toolGrants: [],
+        runnerUp: null,
+        // NS2 F10 — decisive by default; the park tests flip this per case.
+        ambiguous: false,
       })),
     };
     scheduledTasks = {
@@ -116,6 +129,16 @@ describe("RoadmapGateService", () => {
     projectPr = { isMerged: vi.fn(async () => false), getPr: vi.fn(async () => null) };
     activity = { record: vi.fn(async () => {}) };
     decomposition = { dispatch: vi.fn(async (_projectId: string, epic: RoadmapItem) => epic) };
+    proposals = {
+      create: vi.fn(async () => {}),
+      get: vi.fn(async () => {
+        throw new Error("no proposal");
+      }),
+      delete: vi.fn(async () => {}),
+      // Nothing parked by default, so `drain`'s idempotency guard holds nothing back.
+      list: vi.fn(async () => []),
+    };
+    approvals = { requestApproval: vi.fn(async () => ({ id: "approval-1" })) };
   });
 
   afterEach(async () => {
@@ -872,6 +895,211 @@ describe("RoadmapGateService", () => {
       const [input, , trustedProjectId] = taskScheduler.createTask.mock.calls[0]!;
       expect(input.paths).toEqual(["/clones/acme"]);
       expect(trustedProjectId).toBe("acme");
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // NS2 F10 — the Tier-3 routing park
+  // -----------------------------------------------------------------------
+
+  describe("ambiguous stage-1 verdict (NS2 F10)", () => {
+    /** Make the switchboard report a coin flip between forge and codex. */
+    function makeAmbiguous() {
+      classifier.classifySubsystem = vi.fn(async () => ({
+        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        confidence: 0.55,
+        reason: "could be either",
+        matchedTerms: [],
+        candidates: [],
+        mode: "single",
+        proposedGoal: null,
+        paths: [],
+        toolGrants: [],
+        runnerUp: {
+          target: { kind: "subsystem", id: "codex", name: "Codex" },
+          confidence: 0.5,
+          reason: "also plausible",
+        },
+        ambiguous: true,
+      }));
+    }
+
+    it("parks instead of dispatching — no task is created", async () => {
+      makeAmbiguous();
+      await store.put(item());
+      const gate = makeGate();
+
+      await gate.play("acme", "item-1");
+
+      expect(taskScheduler.createTask).not.toHaveBeenCalled();
+      expect(proposals.create).toHaveBeenCalledTimes(1);
+      expect(approvals.requestApproval).toHaveBeenCalledTimes(1);
+      const [approval] = approvals.requestApproval.mock.calls[0]!;
+      expect(approval.kind).toBe("routing-proposal");
+      // The operator must see the actual choice, not just the winner.
+      expect(approval.detail).toContain("Forge");
+      expect(approval.detail).toContain("Codex");
+      // The approval's runId IS the parked proposal's id (no live child to pause).
+      const [proposal] = proposals.create.mock.calls[0]!;
+      expect(approval.runId).toBe(proposal.id);
+      expect(proposal).toMatchObject({
+        projectId: "acme",
+        itemId: "item-1",
+        pick: { kind: "subsystem", id: "forge" },
+      });
+    });
+
+    it("leaves the item `enqueued` and appends NO run record", async () => {
+      makeAmbiguous();
+      await store.put(item());
+      const gate = makeGate();
+
+      const played = await gate.play("acme", "item-1");
+
+      // `running` without a task is the trap: `reconcileRunning` would kill the item as
+      // "Run finished without producing an artifact". `enqueued` is the honest state —
+      // in flight, blocked on the operator rather than on a dependency.
+      expect(played.lifecycle).toBe("enqueued");
+      expect(played.runs).toHaveLength(0);
+    });
+
+    it("does not re-park on a later drain tick (one open question per item)", async () => {
+      makeAmbiguous();
+      await store.put(item());
+      const gate = makeGate();
+
+      await gate.play("acme", "item-1");
+      // The parked question is now on disk, so the guard has something to find.
+      const [proposal] = proposals.create.mock.calls[0]!;
+      proposals.list = vi.fn(async () => [proposal]);
+      // An `autoPlay` project's heartbeat: this re-enqueues every unblocked `todo`
+      // item AND drains, which is exactly the path that would otherwise stack a fresh
+      // approval every tick.
+      await gate.autoPickup("acme");
+
+      expect(proposals.create).toHaveBeenCalledTimes(1);
+      expect(approvals.requestApproval).toHaveBeenCalledTimes(1);
+      expect(taskScheduler.createTask).not.toHaveBeenCalled();
+    });
+
+    it("fails OPEN when the proposal store is unreadable — a broken store never wedges releases", async () => {
+      // Synchronous throw, the shape `.catch()` alone would miss: the guard must
+      // degrade to today's guess-and-dispatch, not stall every drain.
+      proposals.list = vi.fn(() => {
+        throw new Error("proposals dir gone");
+      });
+      await store.put(item());
+      const gate = makeGate();
+
+      const played = await gate.play("acme", "item-1");
+
+      expect(played.lifecycle).toBe("running");
+      expect(taskScheduler.createTask).toHaveBeenCalledTimes(1);
+    });
+
+    it("a DECISIVE verdict still dispatches (the park is not the new default)", async () => {
+      await store.put(item());
+      const gate = makeGate();
+
+      const played = await gate.play("acme", "item-1");
+
+      expect(played.lifecycle).toBe("running");
+      expect(taskScheduler.createTask).toHaveBeenCalledTimes(1);
+      expect(proposals.create).not.toHaveBeenCalled();
+      expect(approvals.requestApproval).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("releaseRouted (NS2 F10 — an approved routing decision)", () => {
+    const APPROVED = { kind: "subsystem" as const, id: "codex" as const, name: "Codex" };
+
+    it("releases a parked (`enqueued`) item to the approved target, skipping classification", async () => {
+      await store.put(item({ lifecycle: "enqueued" }));
+      const gate = makeGate();
+
+      await gate.releaseRouted("acme", "item-1", APPROVED);
+
+      // The question was already answered by a human — re-asking could disagree with
+      // the decision being honoured.
+      expect(classifier.classifySubsystem).not.toHaveBeenCalled();
+      expect(taskScheduler.createTask).toHaveBeenCalledTimes(1);
+      const [, , , explicitTarget] = taskScheduler.createTask.mock.calls[0]!;
+      expect(explicitTarget).toEqual(APPROVED);
+      const after = await store.get("acme", "item-1");
+      expect(after.lifecycle).toBe("running");
+      expect(after.runs).toHaveLength(1);
+    });
+
+    it("is a no-op when the item is no longer parked (a double approval, or a manual Play)", async () => {
+      await store.put(item({ lifecycle: "running" }));
+      const gate = makeGate();
+
+      await gate.releaseRouted("acme", "item-1", APPROVED);
+
+      expect(taskScheduler.createTask).not.toHaveBeenCalled();
+    });
+
+    it("is a no-op when the project is gone", async () => {
+      projects.get = vi.fn(async () => {
+        throw new Error("no such project");
+      });
+      await store.put(item({ lifecycle: "enqueued" }));
+      const gate = makeGate();
+
+      await gate.releaseRouted("acme", "item-1", APPROVED);
+
+      expect(taskScheduler.createTask).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("cancelRouting (NS2 F10 — a rejected routing decision)", () => {
+    const PARKED = {
+      id: "routing_1",
+      projectId: "acme",
+      itemId: "item-1",
+      text: "t",
+      projectPath: "/repos/acme",
+      pick: { kind: "subsystem" as const, id: "forge" as const, name: "Forge" },
+      confidence: 0.55,
+      reason: "could be either",
+      runnerUp: null,
+      createdAt: NOW,
+    };
+
+    it("drops the proposal and returns the item to the operator as `todo`", async () => {
+      proposals.get = vi.fn(async () => PARKED);
+      await store.put(item({ lifecycle: "enqueued" }));
+      const gate = makeGate();
+
+      await gate.cancelRouting("routing_1");
+
+      expect(proposals.delete).toHaveBeenCalledWith("routing_1");
+      // `todo`, not `enqueued`: with the proposal gone the idempotency guard no longer
+      // holds the item back, so leaving it enqueued would re-park it on the next drain.
+      const after = await store.get("acme", "item-1");
+      expect(after.lifecycle).toBe("todo");
+      expect(taskScheduler.createTask).not.toHaveBeenCalled();
+    });
+
+    it("does not drag an item that has already moved on backwards", async () => {
+      proposals.get = vi.fn(async () => PARKED);
+      // A manual Play landed between the park and the rejection.
+      await store.put(item({ lifecycle: "running" }));
+      const gate = makeGate();
+
+      await gate.cancelRouting("routing_1");
+
+      expect((await store.get("acme", "item-1")).lifecycle).toBe("running");
+    });
+
+    it("still drops the proposal when its payload is unreadable", async () => {
+      await store.put(item({ lifecycle: "enqueued" }));
+      const gate = makeGate();
+
+      // `proposals.get` rejects by default in this suite's beforeEach.
+      await gate.cancelRouting("routing_gone");
+
+      expect(proposals.delete).toHaveBeenCalledWith("routing_gone");
     });
   });
 });

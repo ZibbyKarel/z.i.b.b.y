@@ -15,7 +15,7 @@ export interface PlanPreviewProps {
  */
 export function PlanPreview({ routing }: PlanPreviewProps) {
   const t = useTranslations("tasks.preview");
-  const { mode, target, proposedGoal, reason, confidence } = routing;
+  const { mode, target, proposedGoal, reason, confidence, ambiguous, runnerUp } = routing;
 
   if (mode === "loop" && proposedGoal) {
     const makerName =
@@ -51,15 +51,38 @@ export function PlanPreview({ routing }: PlanPreviewProps) {
             <Typography mono size="sm" type="note" weight="bold">
               {t("single", { target: target.name })}
             </Typography>
-            {isLowConfidence(confidence) && (
+            {/* NS2 F10 — `ambiguous` REPLACES the low-confidence tag rather than
+                stacking with it: it is the same doubt stated more precisely (the
+                classifier weighed two options and couldn't separate them), and two
+                warn tags side by side would read as two separate problems. */}
+            {ambiguous ? (
               <Tag size="sm" tone="warn">
-                {t("lowConfidence")}
+                {t("ambiguous")}
               </Tag>
+            ) : (
+              isLowConfidence(confidence) && (
+                <Tag size="sm" tone="warn">
+                  {t("lowConfidence")}
+                </Tag>
+              )
             )}
           </Stack>
           <Typography size="sm" type="note" variant="secondary">
             {reason}
           </Typography>
+          {/* The actionable half of the doubt: name the runner-up so the operator can
+              act on the real choice, and point at the manual picker. Two phrasings,
+              because "these two are tied" and "nothing fits" are different questions. */}
+          {ambiguous && (
+            <Typography size="sm" type="note" variant="secondary">
+              {runnerUp
+                ? t("ambiguousBetween", {
+                    first: target.name,
+                    second: runnerUp.target.name,
+                  })
+                : t("ambiguousWeak")}
+            </Typography>
+          )}
         </Container>
       </Stack>
     </Container>

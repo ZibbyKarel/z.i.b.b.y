@@ -158,6 +158,21 @@ export interface TaskRouting {
    * (possibly empty) per the API's `.default([])`.
    */
   toolGrants?: string[];
+  /**
+   * NS2 F10: the classifier judged its top two picks too close to separate (or the
+   * winner too weak to act on). `target` is still the best available pick — this only
+   * says the choice deserves a human glance, which on THIS surface it already gets:
+   * the preview renders the doubt and the manual picker sits beside it. Optional for
+   * the same reason as `toolGrants` (older fixtures/hand-built previews still type-check).
+   */
+  ambiguous?: boolean;
+  /**
+   * NS2 F10: the runner-up that made the verdict ambiguous, so the preview can name
+   * the actual choice ("Forge, or Codex?") instead of only flagging unease. `null`
+   * when the router named no alternative — then the doubt is "nothing fits", not "these
+   * two are tied", and the copy differs accordingly.
+   */
+  runnerUp?: { target: TaskTarget; confidence: number; reason: string } | null;
 }
 
 /**
@@ -213,6 +228,16 @@ export function toClientRouting(body: ApiTaskRouting): TaskRouting {
     proposedGoal: body.proposedGoal,
     paths: body.paths,
     toolGrants: body.toolGrants ?? [],
+    ambiguous: body.ambiguous ?? false,
+    // The runner-up's target is narrowed the same way the winner's is, so the preview
+    // can render its `name`/`glyph` from one shape.
+    runnerUp: body.runnerUp
+      ? {
+          target: toClientTarget(body.runnerUp.target),
+          confidence: body.runnerUp.confidence,
+          reason: body.runnerUp.reason,
+        }
+      : null,
   };
 }
 

@@ -64,6 +64,10 @@ describe("toClientRouting (Phase 11 fields)", () => {
     proposedGoal: null,
     paths: [],
     toolGrants: [],
+    // NS2 F10 — schema-defaulted, so non-optional on a PARSED routing (this fixture
+    // stands in for one). The ambiguous case gets its own test below.
+    runnerUp: null,
+    ambiguous: false,
   };
 
   it("carries mode / proposedGoal / paths through to the client shape", () => {

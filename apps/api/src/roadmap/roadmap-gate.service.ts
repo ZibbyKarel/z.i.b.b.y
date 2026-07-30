@@ -3,16 +3,19 @@ import type {
   Project,
   RoadmapItem,
   RoadmapItemRun,
+  RoutingProposal,
   SubsystemId,
   TaskRouting,
+  TaskTarget,
 } from "@zibby/contracts";
-import { isBlocked } from "@zibby/contracts";
+import { SUBSYSTEMS, isBlocked } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
+import { ApprovalsService } from "../approvals/approvals.service";
 import { ProjectLocalService } from "../projects/project-local.service";
 // 125e — see `project-pr.service.ts`'s import comment for why this needs `forwardRef`.
 import { ProjectPrService } from "../projects/project-pr.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
-import { withPathLock } from "../shared/file-storage";
+import { collisionResistantId, withPathLock } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
 import { TaskClassifierService } from "../tasks/task-classifier.service";
@@ -23,6 +26,7 @@ import { RoadmapDecompositionService } from "./roadmap-decomposition.service";
 import { buildRoadmapTaskText } from "./roadmap-task-text";
 import { RoadmapItemLifecycleError } from "./roadmap.errors";
 import { RoadmapStore } from "./roadmap.store";
+import { RoutingProposalStore } from "./routing-proposal.store";
 
 /**
  * The subsystem a roadmap release falls back to when the switchboard can't tell
@@ -111,6 +115,10 @@ export class RoadmapGateService {
     @Inject(forwardRef(() => ProjectPrService)) private readonly projectPr: ProjectPrService,
     private readonly activity: ActivityLogService,
     private readonly decomposition: RoadmapDecompositionService,
+    /** NS2 F10 — the parked Tier-3 routing questions (see {@link parkForRouting}). */
+    private readonly proposals: RoutingProposalStore,
+    /** NS2 F10 — the gate a parked routing question waits behind. */
+    private readonly approvals: ApprovalsService,
     logger: LoggerService,
   ) {
     this.log = logger.child(RoadmapGateService.name);
@@ -515,8 +523,18 @@ export class RoadmapGateService {
       const enqueued = items
         .filter((i) => i.lifecycle === "enqueued")
         .sort((a, b) => (a.enqueuedAt ?? "").localeCompare(b.enqueuedAt ?? ""));
+      // NS2 F10 — one parked routing question per item, by construction. Without
+      // this the park would loop: `autoPickup` re-enqueues every unblocked item on
+      // each tick, so an `autoPlay` project would stack a fresh approval per tick for
+      // the same undecidable item. Checked HERE rather than by flipping the item's
+      // lifecycle out of `enqueued`, because that flip would only move the loop —
+      // `autoPickup` picks `todo` items up again — while also churning a file write
+      // per tick. Staying `enqueued` is the honest state anyway: the item IS in
+      // flight, waiting on the operator.
+      const parked = await this.pendingRoutingItemIds(projectId);
       for (const item of enqueued) {
         if (isBlocked(item, get)) continue;
+        if (parked.has(item.id)) continue;
         try {
           await this.release(project, item, items);
         } catch (error) {
@@ -526,11 +544,56 @@ export class RoadmapGateService {
     });
   }
 
-  /** Create the item's task (Play → task) and flip it to `running`. */
+  /**
+   * NS2 F10 — release an item to a routing target the OPERATOR has just approved
+   * (`RoutingProposalService.resume`), bypassing stage-1 classification entirely: the
+   * question the classifier couldn't answer has now been answered by a human, so
+   * asking it again would be both wasteful and capable of disagreeing with the
+   * decision being honoured.
+   *
+   * Takes the same per-project gate lock as {@link drain} (a fresh acquisition — the
+   * approval decision arrives on its own call stack, never inside a drain), so an
+   * approval landing while a drain is in flight can't double-release the item.
+   * Re-reads the item under that lock and refuses anything not still `enqueued`, which
+   * is the state {@link parkForRouting} leaves it in — a second approval, or an item
+   * that has moved on since, is then a no-op instead of a duplicate task.
+   */
+  async releaseRouted(projectId: string, itemId: string, target: TaskTarget): Promise<void> {
+    return withPathLock(`roadmap-gate:${projectId}`, async () => {
+      const project = await this.projects.get(projectId).catch((): Project | null => null);
+      if (!project) return;
+      const items = await this.roadmap.list(projectId);
+      const item = items.find((i) => i.id === itemId);
+      if (!item || item.lifecycle !== "enqueued") {
+        this.log.info("routing approval: item is no longer parked — skipping release", {
+          projectId,
+          itemId,
+          lifecycle: item?.lifecycle ?? "missing",
+        });
+        return;
+      }
+      try {
+        await this.release(project, item, items, target);
+      } catch (error) {
+        await this.markReleaseFailed(projectId, itemId, error);
+      }
+    });
+  }
+
+  /**
+   * Create the item's task (Play → task) and flip it to `running`.
+   *
+   * NS2 F10 — `approvedTarget` is the operator-approved stage-1 target from
+   * {@link releaseRouted}; when present, classification is skipped and this target is
+   * used verbatim. When absent (the ordinary drain path) stage 1 runs as before, and
+   * an AMBIGUOUS verdict diverts to {@link parkForRouting} instead of dispatching —
+   * this method then returns without creating a task and without touching `runs[]`.
+   */
   private async release(
     project: Project,
     item: RoadmapItem,
     allItems: RoadmapItem[],
+    approvedTarget?: TaskTarget,
   ): Promise<void> {
     // `project.path` is optional (Phase 98) — most projects live at
     // `<cloneRoot>/<project.id>` instead, and `resolveForRun` already knows how
@@ -540,7 +603,17 @@ export class RoadmapGateService {
     // per-item try/catch same as any other release failure.
     const local = await this.projectLocal.resolveForRun(project);
     const text = buildRoadmapTaskText(item, allItems);
-    const routing = await this.classifySubsystem(text, local.path);
+    const routing = approvedTarget ? null : await this.classifySubsystem(text, local.path);
+    // NS2 F10 — the Tier-3 exit. An ambiguous stage-1 verdict means the switchboard
+    // weighed two subsystems and couldn't separate them; on this path nobody is
+    // watching a preview, and guessing wrong costs an entire wrong subsystem's run.
+    // So park and ask. Returning HERE (before `createTask`) is load-bearing: the item
+    // must never reach `lifecycle: "running"` without a task, or `reconcileRunning`
+    // kills it as "Run finished without producing an artifact".
+    if (routing?.ambiguous) {
+      await this.parkForRouting(item, text, local.path, routing);
+      return;
+    }
     const result = await this.taskScheduler.createTask(
       {
         title: item.name,
@@ -565,7 +638,11 @@ export class RoadmapGateService {
       // server-side call pattern (`automations/scheduler.service.ts`), so the
       // gate always learns the real outcome (dispatched/pending/scheduled)
       // before it writes the item's `running` run record.
-      routing?.target,
+      //
+      // NS2 F10: `approvedTarget` (an operator's answer to a parked routing
+      // question) takes precedence — it IS the explicit target, and an explicit
+      // target is a hard override by contract.
+      approvedTarget ?? routing?.target,
       false,
     );
     // The reverse edge (task -> item), so the run detail can link back to the
@@ -591,6 +668,128 @@ export class RoadmapGateService {
       kind: "roadmap-item-dispatched",
       summary: `Roadmap item dispatched: ${item.name}`,
       refs: { projectId: item.projectId, itemId: item.id, taskId: result.task.id },
+    });
+  }
+
+  /**
+   * NS2 F10 — the Tier-3 park: persist the routing question and hand the operator one
+   * clear decision instead of guessing which subsystem owns the item.
+   *
+   * **The item's lifecycle is left alone (`enqueued`).** Idempotency comes from
+   * {@link pendingRoutingItemIds}, which {@link drain} consults before releasing — not
+   * from moving the item out of the enqueued set. Moving it would not actually stop
+   * the loop: `autoPickup` re-enqueues every unblocked `todo` item on each tick, so a
+   * `todo` flip would re-park the same item every tick AND churn a write each time.
+   * Staying `enqueued` also reads honestly on the board — the item is in flight,
+   * blocked on the operator rather than on a dependency.
+   *
+   * Adding a dedicated `awaiting-routing` lifecycle would say it more precisely, at
+   * the cost of rippling through `roadmapReadiness`, the board's columns and their
+   * i18n; that is the follow-up if the enqueued reading proves confusing, not a
+   * reason to hold this.
+   */
+  private async parkForRouting(
+    item: RoadmapItem,
+    text: string,
+    projectPath: string,
+    routing: TaskRouting,
+  ): Promise<void> {
+    const proposal: RoutingProposal = {
+      id: collisionResistantId("routing"),
+      projectId: item.projectId,
+      itemId: item.id,
+      text,
+      projectPath,
+      pick: routing.target,
+      confidence: routing.confidence,
+      reason: routing.reason,
+      runnerUp: routing.runnerUp,
+      createdAt: new Date().toISOString(),
+    };
+    await this.proposals.create(proposal);
+    await this.approvals.requestApproval({
+      runId: proposal.id,
+      kind: "routing-proposal",
+      skill: "switchboard",
+      action: "route",
+      // Both candidates, because the whole reason this is parked is that the two
+      // were inseparable — showing only the winner would hide the actual question.
+      detail: routingQuestion(item.name, routing),
+      risk: "medium",
+      ...(routing.target.kind === "subsystem" ? { ownerSubsystem: routing.target.id } : {}),
+    });
+    this.log.info("roadmap release parked for a routing decision", {
+      projectId: item.projectId,
+      itemId: item.id,
+      proposalId: proposal.id,
+      pick: routing.target.kind === "subsystem" ? routing.target.id : routing.target.kind,
+      confidence: routing.confidence,
+    });
+    void this.activity.record({
+      kind: "approval-requested",
+      summary: `Routing needs you: ${routingQuestion(item.name, routing)}`,
+      refs: { projectId: item.projectId, itemId: item.id },
+    });
+  }
+
+  /**
+   * NS2 F10 — the item ids in a project that already have a parked routing question,
+   * so {@link drain} can skip them instead of re-asking. A scan of a directory that
+   * holds one file per OPEN question (each is deleted on approve or reject), read once
+   * per drain rather than per item — the same "check before you fire again" shape as
+   * `HandoffFiredStore.hasFired`. Fail-open: an unreadable store yields an empty set,
+   * so a broken proposals dir degrades to today's guess-and-dispatch rather than
+   * wedging every release.
+   */
+  private async pendingRoutingItemIds(projectId: string): Promise<Set<string>> {
+    // try/catch, not `.catch()`: a store that throws SYNCHRONOUSLY never produces a
+    // promise to attach a handler to, so `.catch()` alone would let the failure escape
+    // and wedge the whole drain — the opposite of the fail-open this promises.
+    try {
+      const all = await this.proposals.list();
+      return new Set(all.filter((p) => p.projectId === projectId).map((p) => p.itemId));
+    } catch (error) {
+      this.log.warn("routing-proposal scan failed — releasing without the park guard", {
+        projectId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return new Set();
+    }
+  }
+
+  /**
+   * NS2 F10 — the reject side of a parked routing question: drop the proposal and put
+   * the item back to `todo`.
+   *
+   * `todo` (rather than leaving it `enqueued`) is what makes "no, I'll handle the
+   * routing" stick: an enqueued item is exactly what the next drain would pick up, and
+   * with the proposal now gone the idempotency guard would no longer hold it back — so
+   * it would be re-classified and re-parked. Returning it to `todo` hands it to the
+   * operator, whose re-entry is Play with the subsystem named explicitly (a hard
+   * override that skips the classifier entirely).
+   *
+   * Reads the proposal BEFORE deleting it, since the item it points at is the only way
+   * back to that lifecycle write. Never throws — the approval decision is already
+   * recorded by the time this runs.
+   */
+  async cancelRouting(proposalId: string): Promise<void> {
+    const proposal = await this.proposals.get(proposalId).catch((): RoutingProposal | null => null);
+    if (proposal) {
+      const now = new Date().toISOString();
+      await this.roadmap
+        .update(proposal.projectId, proposal.itemId, (current) => ({
+          ...current,
+          // Only un-enqueue an item still waiting on this question; one that has moved
+          // on (a manual Play landed first) must not be dragged backwards.
+          ...(current.lifecycle === "enqueued" ? { lifecycle: "todo" as const } : {}),
+          updatedAt: now,
+        }))
+        .catch(() => null);
+    }
+    await this.proposals.delete(proposalId).catch(() => {});
+    this.log.info("routing proposal rejected — item left with the operator", {
+      proposalId,
+      itemId: proposal?.itemId,
     });
   }
 
@@ -765,4 +964,27 @@ export class RoadmapGateService {
       refs: { projectId, itemId, status: "done", taskId: run.taskId },
     });
   }
+}
+
+/** A routing target's operator-facing name — a subsystem's registry name, else its kind. */
+function targetLabel(target: TaskTarget): string {
+  if (target.kind === "subsystem") {
+    return SUBSYSTEMS.find((s) => s.id === target.id)?.name ?? target.id;
+  }
+  return "id" in target ? target.id : target.kind;
+}
+
+/**
+ * NS2 F10 — the one-line question an operator reads in the approvals queue. Names
+ * BOTH candidates when there is a runner-up ("Forge, or Codex?") and falls back to
+ * the weak-winner phrasing when the router named no alternative — the two are
+ * genuinely different questions, and a single generic string would flatten the more
+ * actionable one.
+ */
+function routingQuestion(itemName: string, routing: TaskRouting): string {
+  const pick = targetLabel(routing.target);
+  if (!routing.runnerUp) {
+    return `"${itemName}" — no subsystem clearly owns this (best guess ${pick}). Release to ${pick}?`;
+  }
+  return `"${itemName}" — ${pick} or ${targetLabel(routing.runnerUp.target)}? Release to ${pick}?`;
 }

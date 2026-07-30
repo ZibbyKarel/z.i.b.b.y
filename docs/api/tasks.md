@@ -125,9 +125,50 @@ The classifier finds the best target for the task's text, in up to two stages:
      id?: string        // agent/pipeline/subsystem id (the orchestrator has none)
      confidence: number // 0–1
      reason: string     // why this target
+     runnerUp: { target, confidence, reason } | null  // NS2 F10
+     ambiguous: boolean                               // NS2 F10
    }
    ```
 4. If the catalog is empty → `EmptyCatalogError` → HTTP 422
+
+### An outage and a coin flip are different failures (NS2 F10)
+
+`route()` returns a `RouteResult` — `{ kind: "routed" | "ambiguous", routing }` — because
+the two ways routing can fail want opposite handling. Both carry a usable `routing`, so a
+caller that doesn't care reads `.routing` and behaves exactly as before.
+
+| What happened                                                                       | Kind        | Keyword scorer | Outcome                               |
+| ----------------------------------------------------------------------------------- | ----------- | -------------- | ------------------------------------- |
+| Router answered decisively                                                          | `routed`    | skipped        | dispatch                              |
+| Router unusable — CLI missing, 8s timeout, unparseable, unknown id, no `confidence` | `routed`    | **consulted**  | dispatch (scorer, then terminal rule) |
+| Router answered, but its top two are inseparable                                    | `ambiguous` | **skipped**    | caller's tier decision                |
+
+The keyword scorer is strictly an **availability net**. A dead subprocess must never
+become an operator question — so that path always resolves, and a terminal fallback is
+never flagged `ambiguous`. Conversely, an ambiguous verdict never consults the scorer: a
+term-overlap guess is not a tie-breaker for a model's own admitted doubt, just a
+differently-shaped guess that would silently out-rank it.
+
+**The signal is a margin, not a threshold.** `isAmbiguous(routing)` (pure, exported) is
+true when `confidence - runnerUp.confidence < ROUTER_AMBIGUOUS_MARGIN` (0.15), or when
+`confidence < ROUTER_CONFIDENCE_FLOOR` (0.35) — the latter catching a reply that names no
+alternative at all. Absolute `confidence` is Haiku's own self-assessment
+(`claude-cli-router.ts` asks for its "calibrated 0..1 belief") and is not calibrated: it
+collapses onto 0.9/0.95, so an absolute gate either never fires or fires arbitrarily. Both
+numbers in a margin come from one completion and share that bias, so their difference stays
+informative.
+
+Relatedly, a reply with **no usable `confidence` is now rejected outright** rather than
+defaulted to `0.5`. The old default was harmless only while nothing read the number; once a
+threshold does, a mid-scale default turns a parse gap into a routing decision.
+
+**Who acts on `ambiguous`** — the asymmetry is about what a wrong pick costs:
+
+| Caller                                                 | On ambiguous                                                                                                                 |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `classify()` — the interactive preview                 | Carries the flag to the wire. The preview + manual picker _is_ the intervention; no gate.                                    |
+| `classifyWithinSubsystem()` — stage 2                  | **Strips it and guesses.** Bounded cost: one `cheapestPipeline` run inside a named subsystem.                                |
+| `classifySubsystem()` — the autonomous roadmap release | **Exposes it.** A wrong pick is a whole wrong subsystem and nobody sees a preview → Tier-3 park (see `docs/api/roadmap.md`). |
 
 `POST /api/tasks/classify` returns this **raw stage-1 verdict** — a `subsystem`
 target is NOT resolved further by this endpoint, so previewing a task shows the

@@ -8,17 +8,33 @@ operator's explicit sign-off before continuing. It survives an API restart —
 
 ## Kinds of approval (ApprovalRunKind)
 
-| Kind              | When it is created                                                                                                                                                                                                 |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `agent`           | A gate rule resolved to `ask` mid-run for an agent                                                                                                                                                                 |
-| `pipeline-stage`  | A gate inside a pipeline stage resolved to `ask`                                                                                                                                                                   |
-| `pipeline-output` | A pipeline's `pr` output sink is waiting for sign-off before it opens the PR (runId = the pipelineRunId itself; no live child — a system-owned, agent-less gate)                                                   |
-| `task-output`     | A directed task with a chosen `pr` output is waiting to open the PR from the finished agent/orchestrator run's branch (runId = the taskId; the durable `ScheduledTask` record holds the gate state, no live child) |
-| `channel`         | ZIBBY prepared a reply draft to a message (Tier 3)                                                                                                                                                                 |
-| `task`            | A task exceeded its budget cap (`spend-past-cap`)                                                                                                                                                                  |
-| `proposed-task`   | A discovery-proposed task is awaiting the operator's go-ahead (runId = the proposal id; approving dispatches it via `createTask` — _proposed ≠ dispatched_)                                                        |
-| `jira-issue`      | An outbound Jira-issue create is parked for approval (runId = the create-request id; approving performs the gated POST via the Jira adapter)                                                                       |
-| `machine`         | An N5a machine action (e.g. renaming files in a named folder) is parked with its dry-run preview (runId = the `MachineActionRecord` id; approving executes the preview exactly once)                               |
+| Kind               | When it is created                                                                                                                                                                                                                                                                        |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `agent`            | A gate rule resolved to `ask` mid-run for an agent                                                                                                                                                                                                                                        |
+| `pipeline-stage`   | A gate inside a pipeline stage resolved to `ask`                                                                                                                                                                                                                                          |
+| `pipeline-output`  | A pipeline's `pr` output sink is waiting for sign-off before it opens the PR (runId = the pipelineRunId itself; no live child — a system-owned, agent-less gate)                                                                                                                          |
+| `task-output`      | A directed task with a chosen `pr` output is waiting to open the PR from the finished agent/orchestrator run's branch (runId = the taskId; the durable `ScheduledTask` record holds the gate state, no live child)                                                                        |
+| `channel`          | ZIBBY prepared a reply draft to a message (Tier 3)                                                                                                                                                                                                                                        |
+| `task`             | A task exceeded its budget cap (`spend-past-cap`)                                                                                                                                                                                                                                         |
+| `proposed-task`    | A discovery-proposed task is awaiting the operator's go-ahead (runId = the proposal id; approving dispatches it via `createTask` — _proposed ≠ dispatched_)                                                                                                                               |
+| `jira-issue`       | An outbound Jira-issue create is parked for approval (runId = the create-request id; approving performs the gated POST via the Jira adapter)                                                                                                                                              |
+| `machine`          | An N5a machine action (e.g. renaming files in a named folder) is parked with its dry-run preview (runId = the `MachineActionRecord` id; approving executes the preview exactly once)                                                                                                      |
+| `routing-proposal` | NS2 F10 — the switchboard couldn't tell whose domain an autonomously-released roadmap item belongs to (runId = the parked `RoutingProposal` id; approving releases the item to the parked `pick` as an explicit target, rejecting returns it to the operator). See `docs/api/roadmap.md`. |
+
+> This table predates several kinds (`agent-proposal`, `herald-graduation`,
+> `handoff-proposal`, `review-rule`); `ApprovalRunKindSchema` in
+> `libs/contracts/src/approvals/approval.schema.ts` is the complete list.
+
+### Approvals are binary — there is no pick-one-of-N
+
+Every kind resolves through `approve` / `reject`; `ApprovalsService` has no
+multiple-choice primitive. (`gates/gate.schema.ts`'s `DecisionSchema` does contain an
+`"ask"`, but that is a policy evaluator's verdict, not a decision surface.) A kind that
+_wants_ to ask "which of these?" must therefore narrow itself to one yes/no and carry the
+alternatives as information — `routing-proposal` names both candidate subsystems in its
+`detail` string while approving only ever means "release to the winner". Rejecting is the
+escape hatch back to the operator, whose own re-entry (an explicit target) is a hard
+override.
 
 ## Lifecycle
 

@@ -9,6 +9,28 @@ availability net; the Tier-3 question is added on a different signal than the on
 that exists today.** The two halves of the ruling are separable, and only the
 second one is a real gap — see _Why not delete the scorer_ below.
 
+> **Status: implemented (2026-07-30), all six tasks in one pass.** The living
+> reference is now the code plus `docs/api/tasks.md`, `docs/api/roadmap.md` and
+> `docs/api/approvals.md`. Four things came out differently from this plan; each is
+> recorded here so the plan doesn't contradict the code:
+>
+> 1. **The parked item stays `enqueued`, guarded by a store scan** — not flipped to
+>    `todo` as T5 proposed. The flip does not actually stop the re-park loop:
+>    `autoPickup` re-enqueues every unblocked `todo` item on each tick, so an
+>    `autoPlay` project would have stacked a fresh approval per tick (caught by the
+>    test written for exactly that claim). `drain` now consults
+>    `pendingRoutingItemIds` before releasing.
+> 2. **No new activity kind.** `orchestrator-fallback` already exists and is recorded
+>    by `TaskSchedulerService` — where it feeds the Agent Factory's recurring-gap
+>    scan. A second entry from the classifier would double-count into that telemetry,
+>    so the terminal fallback got `log.warn` and nothing more.
+> 3. **`RoutingProposalService` is its own `ResumableRunner`**, not methods on the
+>    gate: `RoadmapGateService.resume(projectId, itemId)` already exists and means
+>    something else entirely.
+> 4. **The proposals dir is a SIBLING of `roadmap/`**, not a child.
+>    `RoadmapStore.projectIds()` treats every subdirectory of its root as a project
+>    id, so nesting it there would have produced a phantom project.
+
 ## Why
 
 Four defects, all in `apps/api/src/tasks/`.

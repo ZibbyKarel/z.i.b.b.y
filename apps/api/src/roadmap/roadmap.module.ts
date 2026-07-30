@@ -1,6 +1,7 @@
 import * as path from "node:path";
 import { Global, Module } from "@nestjs/common";
 import { AgentsModule } from "../agents/agents.module";
+import { ApprovalsModule } from "../approvals/approvals.module";
 import { IntegrationsModule } from "../integrations/integrations.module";
 import { ProjectsModule } from "../projects/projects.module";
 import { ResolvedProjectModule } from "../projects/resolved-project.module";
@@ -14,10 +15,25 @@ import { RoadmapGateService } from "./roadmap-gate.service";
 import { RoadmapSourceService } from "./roadmap-source.service";
 import { RoadmapTickService } from "./roadmap-tick.service";
 import { ROADMAP_DIR, RoadmapStore } from "./roadmap.store";
+import { ROUTING_PROPOSALS_DIR, RoutingProposalStore } from "./routing-proposal.store";
+import { RoutingProposalService } from "./routing-proposal.service";
 
 /** Default roadmap dir, anchored to `.zibby/data/roadmap`. */
 export function resolveRoadmapDir(): string {
   return process.env.ROADMAP_DIR ?? dataDir("roadmap");
+}
+
+/**
+ * NS2 F10 — parked Tier-3 routing questions.
+ *
+ * A SIBLING of the roadmap dir, deliberately not a child of it:
+ * `RoadmapStore.projectIds()` treats every subdirectory of its root as a project id,
+ * so a proposals dir nested under `roadmap/` would surface as a phantom project in
+ * every project-wide sweep. (`_level-mapping.json` gets away with living there
+ * because it is a FILE, and that listing filters on `isDirectory()`.)
+ */
+export function resolveRoutingProposalsDir(): string {
+  return process.env.ROUTING_PROPOSALS_DIR ?? dataDir("routing-proposals");
 }
 
 /** The global level-mapping document lives alongside the per-project item dirs. */
@@ -66,7 +82,20 @@ function resolveLevelMappingFile(): string {
   // own docblock). AgentsModule is already loaded well before RoadmapModule
   // (`app.module.ts`) and imports nothing that reaches back here, so this is a
   // plain, non-circular edge, same as the others in this list.
-  imports: [ProjectsModule, ResolvedProjectModule, IntegrationsModule, TasksModule, AgentsModule],
+  //
+  // NS2 F10 — `RoadmapGateService` parks an ambiguous stage-1 verdict behind a
+  // `routing-proposal` approval, so it needs `ApprovalsService` (ApprovalsModule).
+  // A plain, non-circular edge: ApprovalsModule imports nothing at all, and by
+  // design never imports a runner module — runners register themselves with it at
+  // startup instead (`RoutingProposalService.onModuleInit`).
+  imports: [
+    ProjectsModule,
+    ResolvedProjectModule,
+    IntegrationsModule,
+    TasksModule,
+    AgentsModule,
+    ApprovalsModule,
+  ],
   controllers: [RoadmapController],
   providers: [
     { provide: ROADMAP_DIR, useFactory: resolveRoadmapDir },
@@ -83,7 +112,13 @@ function resolveLevelMappingFile(): string {
     // branch). Declared before RoadmapGateService only because it's a plain
     // constructor dependency of it; Nest's DI doesn't care about array order.
     RoadmapDecompositionService,
+    // NS2 F10 — the parked-routing store is a plain constructor dependency of the
+    // gate; `RoutingProposalService` is the `ResumableRunner` seam that resolves an
+    // approved/rejected one (it depends on the gate, never the reverse).
+    { provide: ROUTING_PROPOSALS_DIR, useFactory: resolveRoutingProposalsDir },
+    RoutingProposalStore,
     RoadmapGateService,
+    RoutingProposalService,
     // 125h — the auto-sync + gate-poll heartbeat. Its own extra deps
     // (SystemConfigStore, WatcherHealthRegistry, ActivityLogService) are all
     // `@Global()` already, so no new import above is needed for it.

@@ -32,6 +32,73 @@ import { type RoutableTarget, TASK_ROUTER, type TaskRouter, toTaskTarget } from 
 export const ORCHESTRATOR_FALLBACK_THRESHOLD = 0.5;
 
 /**
+ * NS2 F10 — how close the LLM router's top two picks may be before the verdict is
+ * treated as a coin flip rather than a decision.
+ *
+ * Deliberately a MARGIN and not an absolute threshold on `confidence`. The number
+ * the router reports is the model's own self-assessment (`claude-cli-router.ts`
+ * asks Haiku for its "calibrated 0..1 belief"), and a small model's absolute
+ * self-confidence is not calibrated — it collapses onto 0.9/0.95 for almost
+ * everything, so an absolute floor either never fires or fires arbitrarily. Both
+ * numbers here come out of ONE completion and therefore carry the same bias, so
+ * their difference stays informative where neither absolute value is.
+ *
+ * Tune from observation, not from first principles: land the interactive surface
+ * first ({@link TaskRouting.ambiguous} on the classify preview), watch how often
+ * real traffic reads as a coin flip, then move this. That ordering is what keeps
+ * the autonomous park from becoming a notification firehose.
+ */
+export const ROUTER_AMBIGUOUS_MARGIN = 0.15;
+
+/**
+ * NS2 F10 — the absolute confidence below which a verdict is ambiguous no matter
+ * what it says about alternatives. Catches the reply that names no runner-up at all
+ * (so there is no margin to compute) while still admitting it doesn't know. Set low
+ * on purpose: it is the "the model explicitly gave up" case, not a second general
+ * threshold — the margin above is the primary signal.
+ */
+export const ROUTER_CONFIDENCE_FLOOR = 0.35;
+
+/**
+ * NS2 F10 — is this verdict too weak to act on unattended?
+ *
+ * Pure and exported so it can be truth-tabled without a router, a catalog or a Nest
+ * container. Says nothing about what to DO: a caller with a human in the loop (the
+ * interactive classify preview) surfaces the doubt and lets the operator pick, while
+ * an autonomous caller (the roadmap gate) treats it as the Tier-3 trigger. The
+ * verdict's `target` is still the best available pick either way — ambiguity is
+ * advice, never an absence of an answer.
+ */
+export function isAmbiguous(routing: TaskRouting): boolean {
+  if (routing.confidence < ROUTER_CONFIDENCE_FLOOR) return true;
+  const { runnerUp } = routing;
+  if (!runnerUp) return false;
+  return routing.confidence - runnerUp.confidence < ROUTER_AMBIGUOUS_MARGIN;
+}
+
+/**
+ * NS2 F10 — the outcome of {@link TaskClassifierService.route}, which now
+ * distinguishes the two ways routing can go wrong instead of collapsing them:
+ *
+ *  - `"routed"` — a usable verdict. Either the LLM router answered decisively, or
+ *    it was UNAVAILABLE (CLI missing, timeout, non-JSON, an id outside the catalog,
+ *    no usable confidence) and the deterministic keyword scorer answered instead,
+ *    or the terminal fallback rule fired. This is an availability path and it always
+ *    produces an answer — a dead subprocess must never become an operator question.
+ *  - `"ambiguous"` — the router DID answer and its answer is a coin flip
+ *    ({@link isAmbiguous}). That is a judgment call, not an outage, so the keyword
+ *    scorer is deliberately not consulted: a term-overlap guess must never overwrite
+ *    a model's own "these two are equally plausible".
+ *
+ * `routing` is populated in both cases, so every existing call site can keep
+ * dispatching it unchanged and only callers that care about the distinction read
+ * `kind`.
+ */
+export type RouteResult =
+  | { kind: "routed"; routing: TaskRouting }
+  | { kind: "ambiguous"; routing: TaskRouting };
+
+/**
  * Phase 11: the iteration fuse a synthesized loop proposes by default. The operator
  * can edit it in the dialog's "Edit" disclosure before submit; it only ever caps a
  * proposal, never an existing goal.
@@ -125,6 +192,16 @@ export const SUBSYSTEM_FALLBACK: Record<SubsystemId, "orchestrator" | "primary">
  * rule routes the task to the orchestrator (`kind: "orchestrator"`), which has
  * every agent as a delegatable subagent and can also do the task directly.
  *
+ * NS2 F10 splits the two ways that can go wrong, which used to collapse into one
+ * path (see {@link RouteResult}). The keyword scorer is now strictly an
+ * AVAILABILITY net — it answers when the router is unusable, and that answer always
+ * resolves, because an 8s timeout or a missing binary must never wake the operator.
+ * A router that DID answer but couldn't separate its top two is a different thing
+ * entirely: {@link isAmbiguous} flags it, the scorer is skipped, and each caller
+ * decides its own tier — the interactive preview surfaces the doubt, stage 2 keeps
+ * guessing (bounded cost), and the autonomous roadmap release parks it for the
+ * operator.
+ *
  * Returns `null` only when the catalog is genuinely empty (the controller maps
  * that to 422); every other failure is absorbed into the fallbacks, so the
  * endpoint never hard-fails.
@@ -148,8 +225,12 @@ export class TaskClassifierService {
     const candidates = await this.buildCandidates();
     if (candidates.length === 0) return null;
 
+    // NS2 F10: the interactive path CARRIES ambiguity to the wire rather than acting
+    // on it — the classify preview already has a human in front of it and a manual
+    // picker beside it, so "I'm torn between these two" is the whole intervention
+    // needed. No gate, no park; `enrich`'s spread preserves the flag.
     const base = await this.route(input, candidates);
-    return this.enrich(base, input, candidates);
+    return this.enrich(base.routing, input, candidates);
   }
 
   /**
@@ -205,7 +286,14 @@ export class TaskClassifierService {
       fallback,
       preamble: this.buildSubsystemPreamble(subsystem?.mandate ?? "", candidates),
     });
-    return this.enrich(base, input, candidates);
+    // NS2 F10 — stage 2 deliberately does NOT ask. The asymmetry is about what a
+    // wrong pick costs: at stage 1 it is a whole wrong subsystem, here it is one run
+    // of `cheapestPipeline` inside a subsystem the operator (or stage 1) already
+    // named. That is a bounded, recoverable cost, and stopping to ask about it would
+    // put a decision in front of the operator for every narrow ticket. So the flag is
+    // stripped rather than forwarded — a stage-2 verdict never reads as "unresolved"
+    // downstream, because it always is resolved.
+    return this.enrich({ ...base.routing, ambiguous: false }, input, candidates);
   }
 
   /**
@@ -274,12 +362,18 @@ export class TaskClassifierService {
     const candidates = this.stage1SubsystemCandidates(pipelines, agents);
     const fallbackCandidate = candidates.find((c) => c.id === preferred) ?? candidates[0];
     if (!fallbackCandidate) return null;
-    return this.route(input, candidates, {
+    // NS2 F10 — ambiguity is EXPOSED here, unlike at stage 2: the caller
+    // (`RoadmapGateService`) is autonomous, so nobody sees a preview and a wrong pick
+    // costs the whole wrong subsystem. It rides on the verdict's own
+    // `TaskRouting.ambiguous` rather than a wider return type, so no signature
+    // changes and the flag travels with the data that justifies it (`runnerUp`).
+    const result = await this.route(input, candidates, {
       fallback: {
         target: toTaskTarget(fallbackCandidate),
         reason: `No subsystem matched confidently — defaulting to ${fallbackCandidate.name}.`,
       },
     });
+    return result.routing;
   }
 
   /**
@@ -298,39 +392,73 @@ export class TaskClassifierService {
       fallback?: { target: TaskTarget; reason: string };
       preamble?: string;
     } = {},
-  ): Promise<TaskRouting> {
+  ): Promise<RouteResult> {
     const fallbackTarget = opts.fallback ?? {
       target: ORCHESTRATOR_TARGET,
       reason: "No agent or pipeline matched confidently — the orchestrator will handle it.",
     };
     try {
       const routed = await this.router.route(input, candidates, opts.preamble);
-      if (routed && this.isCoherent(routed, candidates)) return routed;
+      if (routed && this.isCoherent(routed, candidates)) {
+        // NS2 F10 — the fork that splits an OUTAGE from a JUDGMENT call. Reaching
+        // here means the router answered coherently, so the keyword scorer must not
+        // run: if the model's own top two are a coin flip, a term-overlap guess is
+        // not a tie-breaker, it is a differently-shaped guess that would silently
+        // out-rank the model's admitted doubt.
+        if (isAmbiguous(routed)) {
+          this.log.info("router verdict is a coin flip — reporting ambiguous", {
+            target: `${routed.target.kind}:${"id" in routed.target ? routed.target.id : "-"}`,
+            confidence: routed.confidence,
+            runnerUpConfidence: routed.runnerUp?.confidence ?? null,
+          });
+          return { kind: "ambiguous", routing: { ...routed, ambiguous: true } };
+        }
+        return { kind: "routed", routing: routed };
+      }
     } catch (err) {
       this.log.warn("router failed, using keyword fallback", { error: (err as Error).message });
     }
 
+    // Availability path: the router was unusable (missing/timed-out CLI, unparseable
+    // reply, an id outside the catalog, no usable confidence). The deterministic
+    // scorer answers so a dead subprocess never turns into an operator question.
     const scored = this.fallback.score(input, candidates);
-    if (scored && scored.confidence >= ORCHESTRATOR_FALLBACK_THRESHOLD) return scored;
+    if (scored && scored.confidence >= ORCHESTRATOR_FALLBACK_THRESHOLD) {
+      return { kind: "routed", routing: scored };
+    }
 
-    // Terminal rule: nothing matched confidently.
-    this.log.info("no confident match, using terminal fallback", {
+    // Terminal rule: nothing matched confidently. `warn`, not `info` (NS2 F10) — this
+    // is the weakest answer the classifier can give and it is worth seeing in a log
+    // scan. No activity record is written HERE on purpose: `TaskSchedulerService`
+    // already records `orchestrator-fallback` for a fallback verdict it dispatches,
+    // and that telemetry feeds the Agent Factory's recurring-gap scan — a second
+    // entry from this layer would double-count every fallback into it.
+    this.log.warn("no confident match, using terminal fallback", {
       confidence: scored?.confidence ?? 0,
       fallbackKind: fallbackTarget.target.kind,
     });
     return {
-      target: fallbackTarget.target,
-      // Carry the weak score through so the UI still reads this as a low-confidence
-      // verdict (steering the user toward the manual picker on the preview path).
-      confidence: scored?.confidence ?? 0,
-      reason: fallbackTarget.reason,
-      matchedTerms: scored?.matchedTerms ?? [],
-      candidates: candidates.map(toTaskTarget),
-      mode: "single",
-      proposedGoal: null,
-      paths: [],
-      // Phase 108: no grant proposal at the terminal-fallback rule — enrich() overlays it.
-      toolGrants: [],
+      kind: "routed",
+      routing: {
+        target: fallbackTarget.target,
+        // Carry the weak score through so the UI still reads this as a low-confidence
+        // verdict (steering the user toward the manual picker on the preview path).
+        confidence: scored?.confidence ?? 0,
+        reason: fallbackTarget.reason,
+        matchedTerms: scored?.matchedTerms ?? [],
+        candidates: candidates.map(toTaskTarget),
+        mode: "single",
+        proposedGoal: null,
+        paths: [],
+        // Phase 108: no grant proposal at the terminal-fallback rule — enrich() overlays it.
+        toolGrants: [],
+        // NS2 F10: a terminal fallback is not "ambiguous" — ambiguity means the
+        // router weighed two real options and couldn't separate them. This is the
+        // degraded-availability answer, which by contract always resolves rather
+        // than asking. Flagging it would park every CLI outage.
+        runnerUp: null,
+        ambiguous: false,
+      },
     };
   }
 

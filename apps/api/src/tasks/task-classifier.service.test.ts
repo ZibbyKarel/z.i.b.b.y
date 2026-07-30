@@ -14,7 +14,13 @@ import type { PipelinesStorageService } from "../pipelines/pipelines.storage.ser
 import type { ProjectsStorageService } from "../projects/projects.storage.service";
 import type { LoggerService } from "../shared/logging/logger.service";
 import { KeywordScorer } from "./keyword-scorer";
-import { DEFAULT_GOAL_ITERATIONS, TaskClassifierService } from "./task-classifier.service";
+import {
+  DEFAULT_GOAL_ITERATIONS,
+  ROUTER_AMBIGUOUS_MARGIN,
+  ROUTER_CONFIDENCE_FLOOR,
+  TaskClassifierService,
+  isAmbiguous,
+} from "./task-classifier.service";
 import type { TaskRouter } from "./task-router";
 
 const fakeLogger = {
@@ -580,6 +586,8 @@ describe("TaskClassifierService — Phase 91 / F2b classifyWithinSubsystem (recu
       proposedGoal: null,
       paths: [],
       toolGrants: [],
+      runnerUp: null,
+      ambiguous: false,
     };
     const svc = makeService({
       pipelines: [
@@ -676,6 +684,8 @@ describe("TaskClassifierService — F2a switchboard subsystem verdicts", () => {
       proposedGoal: null,
       paths: [],
       toolGrants: [],
+      runnerUp: null,
+      ambiguous: false,
     };
     const svc = makeService({
       pipelines: [pipeline({ id: "delivery", name: "Delivery", ownerSubsystem: "forge" })],
@@ -1028,5 +1038,147 @@ describe("TaskClassifierService — explicit-only agents are never routable", ()
     });
     const r = await svc.classifyWithinSubsystem({ text: "rename the Button component" }, "forge");
     expect(r?.target).toMatchObject({ kind: "agent", id: "coder" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// NS2 F10 — ambiguity as a first-class verdict
+// ---------------------------------------------------------------------------
+
+describe("isAmbiguous (NS2 F10)", () => {
+  /** A verdict at a given confidence, optionally with a runner-up at another. */
+  function verdict(confidence: number, runnerUpConfidence?: number): TaskRouting {
+    return subsystemVerdict("forge", "Forge", {
+      confidence,
+      runnerUp:
+        runnerUpConfidence === undefined
+          ? null
+          : {
+              target: { kind: "subsystem", id: "codex", name: "Codex" },
+              confidence: runnerUpConfidence,
+              reason: "also plausible",
+            },
+    });
+  }
+
+  it("is decisive when the winner clears the runner-up by more than the margin", () => {
+    // 0.90 - 0.60 = 0.30 > 0.15
+    expect(isAmbiguous(verdict(0.9, 0.6))).toBe(false);
+  });
+
+  it("is ambiguous when the top two sit inside the margin", () => {
+    // 0.90 - 0.80 = 0.10 < 0.15
+    expect(isAmbiguous(verdict(0.9, 0.8))).toBe(true);
+  });
+
+  it("treats a margin exactly AT the threshold as decisive (the bound is exclusive)", () => {
+    // 0.90 - 0.75 = 0.15, and the check is `< MARGIN` — pinned so a future tweak to
+    // the constant can't silently flip the boundary case.
+    expect(ROUTER_AMBIGUOUS_MARGIN).toBe(0.15);
+    expect(isAmbiguous(verdict(0.9, 0.75))).toBe(false);
+  });
+
+  it("is decisive with no runner-up at all, as long as the winner clears the floor", () => {
+    // Nothing to compare against → only the floor can fire, and 0.5 > 0.35.
+    expect(isAmbiguous(verdict(0.5))).toBe(false);
+  });
+
+  it("is ambiguous below the confidence floor even with no runner-up named", () => {
+    // The "model gave up" case: no alternative, so no margin — the floor is the
+    // only signal left.
+    expect(ROUTER_CONFIDENCE_FLOOR).toBe(0.35);
+    expect(isAmbiguous(verdict(0.2))).toBe(true);
+  });
+
+  it("is ambiguous below the floor even when the runner-up is far behind", () => {
+    // A wide margin must not rescue a verdict the model itself rates as a guess:
+    // 0.30 - 0.05 = 0.25 clears the margin, but 0.30 < 0.35 floor.
+    expect(isAmbiguous(verdict(0.3, 0.05))).toBe(true);
+  });
+});
+
+describe("route(): an outage and a coin flip are different things (NS2 F10)", () => {
+  /** A router whose verdict's top two are inseparable. */
+  const coinFlipRouter = fixedRouter(
+    subsystemVerdict("forge", "Forge", {
+      confidence: 0.55,
+      runnerUp: {
+        target: { kind: "subsystem", id: "puls", name: "Puls" },
+        confidence: 0.5,
+        reason: "monitors CI too",
+      },
+    }),
+  );
+
+  /** Stage 1 needs both subsystems seated for either to be a legal candidate. */
+  const twoSeatedSubsystems = {
+    agents: [agent({ id: "coder", name: "Kodér", ownerSubsystem: "forge" })],
+    pipelines: [pipeline({ id: "watch", name: "Watch", ownerSubsystem: "puls" })],
+  };
+
+  it("flags an ambiguous router verdict and still returns its best pick", async () => {
+    const svc = makeService({ ...twoSeatedSubsystems, router: coinFlipRouter });
+    const r = await svc.classify({ text: "something about CI and code" });
+    expect(r?.ambiguous).toBe(true);
+    // Ambiguity is advice, never an absence of an answer.
+    expect(r?.target).toMatchObject({ kind: "subsystem", id: "forge" });
+    expect(r?.runnerUp?.target).toMatchObject({ kind: "subsystem", id: "puls" });
+  });
+
+  it("does NOT consult the keyword scorer for an ambiguous verdict", async () => {
+    const svc = makeService({ ...twoSeatedSubsystems, router: coinFlipRouter });
+    // The scorer is constructed inside makeService; spy on the instance the service
+    // actually holds so the assertion is about the real collaboration.
+    const scorer = (svc as unknown as { fallback: KeywordScorer }).fallback;
+    const score = vi.spyOn(scorer, "score");
+    await svc.classify({ text: "something about CI and code" });
+    // A term-overlap guess must never out-rank the model's admitted doubt.
+    expect(score).not.toHaveBeenCalled();
+  });
+
+  it("DOES consult the keyword scorer when the router throws (an outage, not a judgment)", async () => {
+    const explodingRouter: TaskRouter = {
+      route: () => Promise.reject(new Error("claude CLI not found")),
+    };
+    const svc = makeService({ ...twoSeatedSubsystems, router: explodingRouter });
+    const scorer = (svc as unknown as { fallback: KeywordScorer }).fallback;
+    const score = vi.spyOn(scorer, "score");
+    const r = await svc.classify({ text: "something about CI and code" });
+    expect(score).toHaveBeenCalled();
+    // An outage always resolves — a dead subprocess must never become a question.
+    expect(r?.ambiguous).toBe(false);
+  });
+
+  it("never marks the terminal fallback ambiguous (an outage would otherwise park)", async () => {
+    // `silentRouter` + a task with no mandate overlap ⇒ the scorer scores ~0.22,
+    // below ORCHESTRATOR_FALLBACK_THRESHOLD ⇒ terminal rule.
+    const svc = makeService({ ...twoSeatedSubsystems, router: silentRouter });
+    const r = await svc.classify({ text: "xyzzy zzz no keyword overlap at all" });
+    expect(r?.ambiguous).toBe(false);
+    expect(r?.runnerUp).toBeNull();
+  });
+
+  it("stage 2 strips ambiguity — it guesses rather than asking (bounded cost)", async () => {
+    // The same coin-flip shape, but scoped to one subsystem's own roster: a wrong
+    // pick here costs one cheap run, so the flag must not travel downstream.
+    const stage2CoinFlip = fixedRouter({
+      ...subsystemVerdict("forge", "Forge"),
+      target: { kind: "pipeline", id: "delivery", name: "Delivery" },
+      candidates: [{ kind: "pipeline", id: "delivery", name: "Delivery" }],
+      confidence: 0.5,
+      runnerUp: {
+        target: { kind: "pipeline", id: "build-feature", name: "Build Feature" },
+        confidence: 0.48,
+        reason: "also plausible",
+      },
+    } as unknown as TaskRouting);
+    const svc = makeService({
+      agents: catalogAgents,
+      pipelines: catalogPipelines,
+      router: stage2CoinFlip,
+    });
+    const r = await svc.classifyWithinSubsystem({ text: "implement the feature" }, "forge");
+    expect(r?.target).toMatchObject({ kind: "pipeline", id: "delivery" });
+    expect(r?.ambiguous).toBe(false);
   });
 });

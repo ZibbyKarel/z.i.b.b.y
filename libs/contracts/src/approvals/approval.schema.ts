@@ -64,6 +64,17 @@ export const ApprovalRunKindSchema = z.enum([
   // project), rejecting retires it (never proposed again, still deduped against).
   // Inbound PR text may never widen ZIBBY's behaviour by itself → always Tier-3.
   "review-rule",
+  // NS2 F10 — the switchboard could not tell whose domain an autonomously-released
+  // roadmap item belongs to (its top two subsystem picks were too close to separate,
+  // or the winner too weak), so instead of guessing it parked a `RoutingProposal`.
+  // The runId is that proposal's id — no live child; the item itself is put back to
+  // `todo` so the gate's drain stops re-attempting it. Approving releases the item to
+  // the parked `pick` as an explicit target; rejecting drops the proposal and leaves
+  // the item in the operator's hands (Play again, naming the subsystem — an explicit
+  // target is a hard override). Guessing a whole subsystem wrong is the single most
+  // expensive routing mistake available, so "unsure" here is Tier-3 rather than a
+  // silent default.
+  "routing-proposal",
 ]);
 export type ApprovalRunKind = z.infer<typeof ApprovalRunKindSchema>;
 

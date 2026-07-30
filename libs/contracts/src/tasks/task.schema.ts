@@ -201,6 +201,28 @@ export const ResolvedPathSchema = z.object({
 export type ResolvedPath = z.infer<typeof ResolvedPathSchema>;
 
 /**
+ * NS2 F10 — the router's SECOND-best pick, carried alongside the winner.
+ *
+ * Exists because the routing signal we actually trust is the MARGIN between the
+ * model's top two, not its absolute self-reported `confidence`: both numbers come
+ * out of one completion and therefore share that model's calibration bias, so
+ * their difference survives even where neither absolute value means much. A
+ * relative "A vs B" is also the judgment an LLM makes well, unlike "how sure am I
+ * on a 0..1 scale". See `TaskClassifierService.isAmbiguous`.
+ *
+ * `null` when the router named no alternative (or when the verdict came from the
+ * deterministic keyword scorer, which does not report one).
+ */
+export const RoutingAlternativeSchema = z.object({
+  target: TaskTargetSchema,
+  /** 0–1, on the same scale as the winner's — only their difference is read. */
+  confidence: z.number().min(0).max(1),
+  /** One short human sentence for why this was the runner-up. */
+  reason: z.string(),
+});
+export type RoutingAlternative = z.infer<typeof RoutingAlternativeSchema>;
+
+/**
  * The router verdict the approval gate renders: the chosen target, a 0–1
  * confidence, a short human reason, the catalog terms that matched, and the full
  * candidate list so the user can override the destination.
@@ -209,6 +231,10 @@ export type ResolvedPath = z.infer<typeof ResolvedPathSchema>;
  * parses, defaults applied): `mode` (`single` vs a synthesized `loop`),
  * `proposedGoal` (the loop's editable goal proposal, `null` for single mode), and
  * `paths` (each detected path resolved to a project or `null`).
+ *
+ * NS2 F10 adds two more, same additive/defaulted posture: `runnerUp` (the
+ * second-best pick) and `ambiguous` (the classifier's verdict that the top two are
+ * too close to act on unattended).
  */
 export const TaskRoutingSchema = z.object({
   target: TaskTargetSchema,
@@ -233,6 +259,17 @@ export const TaskRoutingSchema = z.object({
    * `[]` so an old-shaped response still parses.
    */
   toolGrants: z.array(z.string()).default([]),
+  /** NS2 F10: the router's second-best pick, or `null` when it named none. */
+  runnerUp: RoutingAlternativeSchema.nullable().default(null),
+  /**
+   * NS2 F10: the top two are too close (or the winner too weak) to act on
+   * unattended — `TaskClassifierService.isAmbiguous`. Advisory: the verdict's
+   * `target` is still the best available pick, so a caller that has a human in the
+   * loop (the interactive preview) simply surfaces the doubt, while an autonomous
+   * caller (the roadmap gate) treats it as the Tier-3 "surface and wait" trigger.
+   * Defaults to `false` so an old-shaped response still parses.
+   */
+  ambiguous: z.boolean().default(false),
 });
 export type TaskRouting = z.infer<typeof TaskRoutingSchema>;
 

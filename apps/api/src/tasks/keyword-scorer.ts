@@ -131,6 +131,15 @@ export class KeywordScorer implements TaskRouter {
       paths: [],
       // Phase 108: the scorer proposes no tool grant — enrich() overlays it.
       toolGrants: [],
+      // NS2 F10: this leg reports no alternative and never claims ambiguity.
+      // `scored[1]` exists above, but its "confidence" would be a second reading of
+      // the same term-count curve, not an independent opinion — and the margin
+      // signal is only meaningful between two judgments from one model. A scorer
+      // verdict is already gated by ORCHESTRATOR_FALLBACK_THRESHOLD; adding a
+      // second, differently-calibrated gate on top would double-penalise the
+      // infra-failure path, which is the one path that must always produce an answer.
+      runnerUp: null,
+      ambiguous: false,
     };
   }
 }

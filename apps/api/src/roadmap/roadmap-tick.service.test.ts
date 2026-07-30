@@ -298,6 +298,12 @@ describe("RoadmapTickService", () => {
         activity as never,
         // 125g's decomposition service — unused by this poll-path test.
         {} as never,
+        // NS2 F10's routing-proposal store + approvals gate. Nothing ever PARKS here
+        // (this test's `classifySubsystem` returns null, so there is no verdict to be
+        // ambiguous about), but `drain` still scans the store for already-parked items
+        // before releasing — so the store needs a real `list`, not a bare `{}`.
+        { list: async () => [] } as never,
+        {} as never,
         fakeLogger as never,
       );
 

@@ -503,6 +503,49 @@ explicit target — so the gate persists its own stage-1 verdict via
 classification panel would go blank for exactly the runs whose routing is most worth
 explaining. Best-effort: a missing trace costs an explanation, never a dispatch.
 
+#### Ambiguous routing → Tier-3 park (NS2 F10)
+
+The table above covers a classifier that **fails**. A different case is a classifier that
+_answers_ but can't separate its top two subsystems (`TaskRouting.ambiguous` — see
+[tasks.md](./tasks.md#an-outage-and-a-coin-flip-are-different-failures-ns2-f10)). Guessing
+here is the most expensive routing mistake available — a whole wrong subsystem's run — and
+on this path nobody is watching a preview. So the release **parks and asks** instead:
+
+```
+release()
+  └─ classifySubsystem(...) → { ambiguous: true, target: pick, runnerUp }
+  └─ parkForRouting(item, text, projectPath, routing)      # and RETURN — no createTask
+       ├─ RoutingProposalStore.create(proposal)            # data/routing-proposals/<id>.json
+       └─ requestApproval({ kind: "routing-proposal", runId: proposal.id, detail: "Forge or Codex?" })
+```
+
+Returning before `createTask` is load-bearing: the item must never reach
+`lifecycle: "running"` without a task, or `reconcileRunning` kills it as
+_"Run finished without producing an artifact"_.
+
+**The item stays `enqueued`.** Idempotency comes from `pendingRoutingItemIds`, which
+`drain` consults before releasing — not from moving the item out of the enqueued set.
+Moving it wouldn't work: `autoPickup` re-enqueues every unblocked `todo` item on each
+tick, so a `todo` flip would re-park the same item every tick _and_ churn a write each
+time. `enqueued` also reads honestly on the board — in flight, blocked on the operator
+rather than on a dependency. (A dedicated `awaiting-routing` lifecycle would say it more
+precisely; that's the follow-up if the `enqueued` reading proves confusing, at the cost of
+rippling through `roadmapReadiness`, the board columns and their i18n.)
+
+Resolution is `RoutingProposalService` — a separate `ResumableRunner` rather than methods
+on the gate, because `RoadmapGateService.resume(projectId, itemId)` already means
+"resume a failed item's last run" and two senses of `resume` on one class is a trap:
+
+| Decision    | What happens                                                                                                                                                                                                                                                                                   |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **approve** | `gate.releaseRouted(projectId, itemId, pick)` — releases with the operator-sanctioned target, skipping classification entirely (re-asking could disagree with the decision being honoured), then deletes the payload. A release failure leaves the payload for a retry.                        |
+| **reject**  | `gate.cancelRouting(proposalId)` — deletes the payload and returns the item to `todo`. It must leave the enqueued set: with the proposal gone the idempotency guard no longer holds it, so an `enqueued` item would simply be re-parked. Re-entry is Play with the subsystem named explicitly. |
+
+`releaseRouted` re-reads the item under the same `roadmap-gate:<projectId>` lock and
+refuses anything not still `enqueued`, so a double approval — or an item that moved on
+meanwhile — is a no-op rather than a duplicate task. The proposal scan is **fail-open**: an
+unreadable store logs and degrades to guess-and-dispatch rather than wedging every release.
+
 #### The issue ↔ run link (both directions)
 
 `runs[].taskId` is the **forward** edge (issue → task) and the authoritative one.

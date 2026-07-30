@@ -129,7 +129,10 @@
     "preview": {
       "single": "ZIBBY will hand this to {target}",
       "loopSummary": "Loop · maker {maker} · verifier: project checks · up to {n} iterations",
-      "lowConfidence": "low confidence"
+      "lowConfidence": "low confidence",
+      "ambiguous": "too close to call",
+      "ambiguousBetween": "{first}, or {second}? Check the target, or pick manually.",
+      "ambiguousWeak": "Nothing clearly fits — confirm the target, or pick manually."
     },
     "edit": {
       "label": "Edit"

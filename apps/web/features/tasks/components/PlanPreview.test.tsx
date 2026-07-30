@@ -48,4 +48,42 @@ describe("PlanPreview", () => {
     render(<PlanPreview routing={{ ...SINGLE, confidence: 0.2 }} />);
     expect(screen.getByText(/nízká jistota/)).toBeInTheDocument();
   });
+
+  // NS2 F10 — the interactive surface for an ambiguous verdict. No gate here: the
+  // preview + manual picker IS the operator's intervention on this screen.
+  describe("ambiguous verdict (NS2 F10)", () => {
+    const AMBIGUOUS: TaskRouting = {
+      ...SINGLE,
+      confidence: 0.55,
+      ambiguous: true,
+      runnerUp: {
+        target: { kind: "agent", id: "reviewer", name: "Reviewer", glyph: "bot" },
+        confidence: 0.5,
+        reason: "also plausible",
+      },
+    };
+
+    it("names BOTH candidates so the operator sees the real choice", () => {
+      render(<PlanPreview routing={AMBIGUOUS} />);
+      expect(screen.getByText(/nerozhodnuto/)).toBeInTheDocument();
+      expect(screen.getByText(/Kodér, nebo Reviewer\?/)).toBeInTheDocument();
+    });
+
+    it("still shows the best available pick — ambiguity is advice, not a missing answer", () => {
+      render(<PlanPreview routing={AMBIGUOUS} />);
+      expect(screen.getByText(/ZIBBY to předá/)).toBeInTheDocument();
+    });
+
+    it("uses the nothing-fits phrasing when no runner-up was named", () => {
+      render(<PlanPreview routing={{ ...AMBIGUOUS, runnerUp: null }} />);
+      expect(screen.getByText(/Nic sem jasně nepasuje/)).toBeInTheDocument();
+    });
+
+    it("replaces the low-confidence tag rather than stacking a second warning", () => {
+      // Both conditions true at once: `ambiguous` and a confidence inside the low band.
+      render(<PlanPreview routing={{ ...AMBIGUOUS, confidence: 0.2 }} />);
+      expect(screen.getByText(/nerozhodnuto/)).toBeInTheDocument();
+      expect(screen.queryByText(/nízká jistota/)).not.toBeInTheDocument();
+    });
+  });
 });
