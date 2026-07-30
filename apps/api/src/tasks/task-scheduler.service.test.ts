@@ -875,7 +875,17 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
   describe("Phase 91 — subsystem dispatch (0/1/N owned pipelines)", () => {
     /** A minimal pipeline definition fixture — only the fields the resolver reads. */
     function pipelineDef(id: string, name: string) {
-      return { id, name, ownerSubsystem: "forge", desc: "", phases: [] };
+      // `outputs` mirrors `PipelineSchema`'s `default([])` and declares a `pr` sink —
+      // the resolver reads it to decide which units may serve a task that must open a
+      // PR, and a fixture omitting it reached the resolver as `undefined`.
+      return {
+        id,
+        name,
+        ownerSubsystem: "forge",
+        desc: "",
+        phases: [],
+        outputs: [{ type: "pr", from: "out.md" }],
+      };
     }
 
     it("1 owned pipeline → direct dispatch, the classifier is NEVER called", async () => {
@@ -1015,7 +1025,17 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
   describe("F2b — owned agents widen the roster (pipelines + active agents)", () => {
     /** A minimal pipeline definition fixture — only the fields the resolver reads. */
     function pipelineDef(id: string, name: string) {
-      return { id, name, ownerSubsystem: "forge", desc: "", phases: [] };
+      // `outputs` mirrors `PipelineSchema`'s `default([])` and declares a `pr` sink —
+      // the resolver reads it to decide which units may serve a task that must open a
+      // PR, and a fixture omitting it reached the resolver as `undefined`.
+      return {
+        id,
+        name,
+        ownerSubsystem: "forge",
+        desc: "",
+        phases: [],
+        outputs: [{ type: "pr", from: "out.md" }],
+      };
     }
     /** A minimal agent definition fixture — only the fields the resolver reads. */
     function agentDef(id: string, name: string) {
@@ -1087,10 +1107,221 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     });
   });
 
+  /**
+   * The scheduler half of the required-PR-sink invariant. It mirrors
+   * `TaskClassifierService.constrainByOutput` on purpose: a direct dispatch and the
+   * scoped classifier must agree on what is even eligible, or a roadmap item that has
+   * to open a PR could still resolve to an agent that cannot open one — the misroute
+   * that put a pnpm/Turborepo monorepo skeleton on `documentation-engineer`.
+   */
+  describe("a required PR sink makes subsystem resolution a pipeline-only sizing choice", () => {
+    function pipelineDef(id: string, name: string, deliversPr = true, complexity = "standard") {
+      return {
+        id,
+        name,
+        ownerSubsystem: "forge",
+        desc: "",
+        phases: [],
+        complexity,
+        outputs: deliversPr ? [{ type: "pr", from: "out.md" }] : [],
+      };
+    }
+    function agentDef(id: string, name: string) {
+      return { id, name, ownerSubsystem: "forge" };
+    }
+
+    it("resolves to the sole PR-capable pipeline WITHOUT classifying, even though the roster has 2 units", async () => {
+      // One agent + one PR pipeline is 2 owned units, so the old rule would classify.
+      // The constraint leaves exactly one eligible unit, so there is nothing to ask.
+      pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery")]);
+      agentsStore.listActive.mockResolvedValue([agentDef("documentation-engineer", "Docs")]);
+      const result = await service.createTask({
+        text: "Monorepo & CLI skeleton — set up pnpm workspaces + Turborepo",
+        title: "Skeleton",
+        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        output: { type: "pr" },
+      });
+      expect(result.outcome).toBe("dispatched");
+      expect(classifier.classifyWithinSubsystem).not.toHaveBeenCalled();
+      expect(agentRunner.start).not.toHaveBeenCalled();
+      expect(pipelineRunner.start).toHaveBeenCalledWith(
+        "delivery",
+        expect.any(String),
+        undefined,
+        [],
+        undefined,
+        { type: "pr" },
+      );
+    });
+
+    it("passes the sink into classifyWithinSubsystem when 2+ units stay eligible", async () => {
+      pipelinesStore.list.mockResolvedValue([
+        pipelineDef("quick-fix", "Quick Fix", true, "light"),
+        pipelineDef("delivery", "Delivery", true, "deep"),
+      ]);
+      agentsStore.listActive.mockResolvedValue([agentDef("documentation-engineer", "Docs")]);
+      classifier.classifyWithinSubsystem.mockResolvedValue({
+        target: { kind: "pipeline", id: "delivery", name: "Delivery" },
+        confidence: 0.9,
+        reason: "multi-surface scaffolding",
+        matchedTerms: [],
+        candidates: [],
+        mode: "single",
+        proposedGoal: null,
+        paths: [],
+      });
+      await service.createTask({
+        text: "prove the dev-loop mechanism on a real shop",
+        title: "Spike",
+        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        output: { type: "pr" },
+      });
+      expect(classifier.classifyWithinSubsystem).toHaveBeenCalledWith(
+        {
+          text: "prove the dev-loop mechanism on a real shop",
+          paths: [],
+          output: { type: "pr" },
+        },
+        "forge",
+      );
+    });
+
+    it("ignores a pipeline that declares no PR sink when picking the fallback unit", async () => {
+      // `notes` is the CHEAPEST rung, so the unconstrained rule would name it. It
+      // declares no `pr` output, so it is not eligible and `delivery` is the answer.
+      pipelinesStore.list.mockResolvedValue([
+        pipelineDef("notes", "Notes", false, "light"),
+        pipelineDef("delivery", "Delivery", true, "deep"),
+      ]);
+      agentsStore.listActive.mockResolvedValue([]);
+      await service.createTask({
+        text: "implement it",
+        title: "Impl",
+        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        output: { type: "pr" },
+      });
+      expect(classifier.classifyWithinSubsystem).not.toHaveBeenCalled();
+      expect(pipelineRunner.start).toHaveBeenCalledWith(
+        "delivery",
+        expect.any(String),
+        undefined,
+        [],
+        undefined,
+        { type: "pr" },
+      );
+    });
+
+    it("routes stage 2 on routingText, never on the framed text the run receives", async () => {
+      // The roadmap gate's `text` carries a trust-boundary footer for the ACTOR; stage 2
+      // must rank the item's own words instead, or the framing lands back in the haystack.
+      pipelinesStore.list.mockResolvedValue([
+        pipelineDef("quick-fix", "Quick Fix", true, "light"),
+        pipelineDef("delivery", "Delivery", true, "deep"),
+      ]);
+      agentsStore.listActive.mockResolvedValue([]);
+      classifier.classifyWithinSubsystem.mockResolvedValue({
+        target: { kind: "pipeline", id: "delivery", name: "Delivery" },
+        confidence: 0.9,
+        reason: "deep",
+        matchedTerms: [],
+        candidates: [],
+        mode: "single",
+        proposedGoal: null,
+        paths: [],
+      });
+      await service.createTask({
+        text: "Monorepo skeleton\n\n---\nZIBBY ROADMAP CONTEXT (system-generated …)\nEpic: Phase 0",
+        routingText: "Monorepo skeleton",
+        title: "Skeleton",
+        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        output: { type: "pr" },
+      });
+      expect(classifier.classifyWithinSubsystem).toHaveBeenCalledWith(
+        { text: "Monorepo skeleton", paths: [], output: { type: "pr" } },
+        "forge",
+      );
+    });
+
+    it("persists the stage-2 rationale on the trace, including the leg and the constraint", async () => {
+      // The half of the trace that used to be discarded: `resolveSubsystemTargetOrNull`
+      // returned `routing?.target ?? primary`, so the decision that picks the RUNNING
+      // unit left no record — which is what made the original misroute undiagnosable.
+      pipelinesStore.list.mockResolvedValue([
+        pipelineDef("quick-fix", "Quick Fix", true, "light"),
+        pipelineDef("delivery", "Delivery", true, "deep"),
+      ]);
+      agentsStore.listActive.mockResolvedValue([agentDef("documentation-engineer", "Docs")]);
+      classifier.classify.mockResolvedValue({
+        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        confidence: 0.8,
+        reason: "delivery work",
+        matchedTerms: ["code"],
+        candidates: [],
+        mode: "single",
+        proposedGoal: null,
+        paths: [],
+        leg: "router",
+      });
+      classifier.classifyWithinSubsystem.mockResolvedValue({
+        target: { kind: "pipeline", id: "delivery", name: "Delivery" },
+        confidence: 0.86,
+        reason: "multi-surface scaffolding",
+        matchedTerms: [],
+        candidates: [
+          { kind: "pipeline", id: "quick-fix", name: "Quick Fix" },
+          { kind: "pipeline", id: "delivery", name: "Delivery" },
+        ],
+        mode: "single",
+        proposedGoal: null,
+        paths: [],
+        leg: "scorer",
+      });
+      const result = await service.createTask({
+        text: "set up the monorepo skeleton",
+        title: "Skeleton",
+        output: { type: "pr" },
+      });
+      expect(result.outcome).toBe("dispatched");
+      if (result.outcome !== "dispatched") return;
+      expect(result.task.classification).toMatchObject({
+        subsystem: "forge",
+        leg: "router",
+        stage2: {
+          target: { kind: "pipeline", id: "delivery" },
+          confidence: 0.86,
+          reason: "multi-surface scaffolding",
+          leg: "scorer",
+          rankedCandidates: 2,
+          constrainedBy: "pr-output",
+        },
+      });
+    });
+
+    it("without a PR sink the agent is still reachable — the constraint is what changes the outcome", async () => {
+      pipelinesStore.list.mockResolvedValue([]);
+      agentsStore.listActive.mockResolvedValue([agentDef("documentation-engineer", "Docs")]);
+      const result = await service.createTask({
+        text: "write the API guide",
+        title: "Docs",
+        target: { kind: "subsystem", id: "forge", name: "Forge" },
+      });
+      expect(result.outcome).toBe("dispatched");
+      expect(agentRunner.start).toHaveBeenCalled();
+    });
+  });
+
   describe("F2a — switchboard subsystem verdicts (soft stage-2 in dispatch(), never a hard error)", () => {
     /** A minimal pipeline definition fixture — only the fields the resolver reads. */
     function pipelineDef(id: string, name: string, ownerSubsystem = "forge") {
-      return { id, name, ownerSubsystem, desc: "", phases: [] };
+      // See the `pipelineDef` above on why `outputs` has to be present.
+      return {
+        id,
+        name,
+        ownerSubsystem,
+        desc: "",
+        phases: [],
+        outputs: [{ type: "pr", from: "out.md" }],
+      };
     }
 
     it("non-empty roster: an undirected subsystem verdict resolves to the owned pipeline and dispatches to it", async () => {
@@ -1156,7 +1387,15 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
   describe("F2c — classification trace persists + activity carries ownerSubsystem", () => {
     /** A minimal pipeline definition fixture — only the fields the resolver reads. */
     function pipelineDef(id: string, name: string, ownerSubsystem = "forge") {
-      return { id, name, ownerSubsystem, desc: "", phases: [] };
+      // See the `pipelineDef` above on why `outputs` has to be present.
+      return {
+        id,
+        name,
+        ownerSubsystem,
+        desc: "",
+        phases: [],
+        outputs: [{ type: "pr", from: "out.md" }],
+      };
     }
 
     it("an undirected subsystem verdict persists the full two-stage trace: stage1 is the raw subsystem verdict, subsystem is set, and the final target is the resolved concrete pipeline", async () => {

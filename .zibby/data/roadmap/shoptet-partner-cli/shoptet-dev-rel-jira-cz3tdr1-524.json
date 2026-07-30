@@ -17,7 +17,7 @@
   "dependsOn": [],
   "dependsOnFromSource": [],
   "lifecycle": "failed",
-  "enqueuedAt": "2026-07-29T14:12:51.980Z",
+  "enqueuedAt": "2026-07-30T09:38:24.640Z",
   "runs": [
     {
       "taskId": "task_1785334372051_b3582c",
@@ -25,11 +25,18 @@
       "startedAt": "2026-07-29T14:13:03.659Z",
       "finishedAt": "2026-07-29T14:14:50.718Z",
       "outcome": "failed"
+    },
+    {
+      "taskId": "task_1785404320727_b04b6e",
+      "runRef": "documentation-engineer_1785404321011_55989",
+      "startedAt": "2026-07-30T09:38:42.853Z",
+      "outcome": "failed",
+      "finishedAt": "2026-07-30T09:40:59.440Z"
     }
   ],
-  "lastFailureReason": "Run finished without producing an artifact (no PR or file output).",
+  "lastFailureReason": "─── ended (error_during_execution)",
   "syncNotes": [],
   "createdAt": "2026-07-29T10:57:40.140Z",
-  "updatedAt": "2026-07-30T05:10:53.006Z",
+  "updatedAt": "2026-07-30T09:40:59.440Z",
   "syncedAt": "2026-07-30T05:10:53.006Z"
 }

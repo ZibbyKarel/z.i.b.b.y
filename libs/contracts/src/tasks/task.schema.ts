@@ -148,6 +148,42 @@ export function isExplicitOnlyAgent(id: string): boolean {
 }
 
 /**
+ * What happens to a task's finished work — the operator's per-task choice in the
+ * New Task dialog, the directed-task counterpart of a pipeline's `outputs:` block.
+ * Like the pipeline sinks it is deterministic and system-owned (no agent, no
+ * tokens); unlike them a task has no named `from` artifact, so the source is
+ * implicit: a `pr` pushes the run's worktree branch, a `file` writes the run's
+ * summary to the chosen destination.
+ *
+ *  - `pr`   — open a PR from the run's branch. Tier-2 (act-then-report): opened
+ *             immediately when the run finishes, no approval gate. The url + line
+ *             totals land on the outcome's {@link PrOutputSchema}.
+ *  - `file` — write the result to a path in the project worktree (`dest: project`)
+ *             or as a vault note (`dest: vault`). Tier-1, runs immediately.
+ *  - `void` — explicitly produce no output (suppresses even a pipeline's own
+ *             declared `pr` output for this run).
+ *
+ * ABSENT on a task (the field is `optional`) means *inherit*, NOT void: a
+ * pipeline-routed task falls back to the pipeline's declared `outputs:`, an
+ * agent/orchestrator task to today's behaviour (no terminal delivery). "Didn't
+ * choose" and "chose void" are two distinct states.
+ *
+ * Declared HERE — above {@link ClassifyTaskInputSchema} rather than beside the
+ * task entity — because the required sink is also a ROUTING CONSTRAINT, not only a
+ * post-run action: see that schema's `output` field.
+ */
+export const TaskOutputSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("pr") }),
+  z.object({
+    type: z.literal("file"),
+    dest: z.enum(["project", "vault"]),
+    to: z.string().min(1),
+  }),
+  z.object({ type: z.literal("void") }),
+]);
+export type TaskOutput = z.infer<typeof TaskOutputSchema>;
+
+/**
  * Request body for the classifier: the free-text task plus any file/folder paths
  * the client already detected (strong routing hints — a `/media/…` path nudges
  * toward the media curator).
@@ -155,6 +191,26 @@ export function isExplicitOnlyAgent(id: string): boolean {
 export const ClassifyTaskInputSchema = z.object({
   text: z.string().min(1).max(8000),
   paths: z.array(z.string()).max(64).optional(),
+  /**
+   * The sink the finished work MUST land in, when the caller already knows it —
+   * and therefore a hard constraint on which units may be ranked at all, not a
+   * hint. `{ type: "pr" }` means "this task has to end in a PR-shaped code
+   * change", which only a subsystem's PR-capable pipeline can honour; see
+   * `TaskClassifierService.prCapablePipelines`.
+   *
+   * The motivating failure: a JIRA-imported roadmap item is by construction
+   * "implement this → PR", the roadmap gate already stamps `output: {type:"pr"}`
+   * on the task it queues — and stage-2 routing then ranked the whole forge
+   * roster anyway and picked `documentation-engineer`, an agent with no Bash that
+   * cannot run a build, a test or a commit. The strongest available signal for
+   * "this is implementation work" was being computed and then dropped on the
+   * floor before routing. Carrying it here is what makes capability structural
+   * rather than something an LLM leg is asked to infer from prose.
+   *
+   * Absent means unconstrained (the operator hasn't chosen a sink, or the task
+   * genuinely has none) — NOT `void`, exactly as on {@link TaskOutputSchema}.
+   */
+  output: TaskOutputSchema.optional(),
 });
 export type ClassifyTaskInput = z.infer<typeof ClassifyTaskInputSchema>;
 
@@ -213,6 +269,10 @@ export type ResolvedPath = z.infer<typeof ResolvedPathSchema>;
  * `null` when the router named no alternative (or when the verdict came from the
  * deterministic keyword scorer, which does not report one).
  */
+/** Which leg of the classifier produced a verdict — see {@link TaskRoutingSchema.leg}. */
+export const RoutingLegSchema = z.enum(["router", "scorer", "fallback"]);
+export type RoutingLeg = z.infer<typeof RoutingLegSchema>;
+
 export const RoutingAlternativeSchema = z.object({
   target: TaskTargetSchema,
   /** 0–1, on the same scale as the winner's — only their difference is read. */
@@ -270,6 +330,27 @@ export const TaskRoutingSchema = z.object({
    * Defaults to `false` so an old-shaped response still parses.
    */
   ambiguous: z.boolean().default(false),
+  /**
+   * WHICH LEG produced this verdict — the observability field.
+   *
+   *  - `router`   — the `claude -p` LLM categorizer answered coherently.
+   *  - `scorer`   — the router was UNUSABLE (missing CLI, timeout, unparseable
+   *                 reply, an id outside the catalog) and the deterministic
+   *                 {@link KeywordScorer} answered instead.
+   *  - `fallback` — neither leg matched confidently; the terminal rule fired.
+   *
+   * Exists because a silent degradation to the scorer is invisible in the record
+   * and reads exactly like a real decision. Two roadmap items both landed on
+   * `documentation-engineer` with an identical `confidence: 0.55` and
+   * `reason: "Matched catalog terms: code"` — a number only the scorer's curve can
+   * produce (`0.42 + 0.13×1` for one matched term and a tie) — but nothing said so,
+   * and diagnosing it meant reverse-engineering that arithmetic by hand. Recording
+   * the leg turns that archaeology into a field read.
+   *
+   * Optional rather than defaulted: absent means "an old record that predates this
+   * field", which is honestly different from any of the three legs.
+   */
+  leg: RoutingLegSchema.optional(),
 });
 export type TaskRouting = z.infer<typeof TaskRoutingSchema>;
 
@@ -294,40 +375,42 @@ export const ClassificationTraceSchema = z.object({
   matchedTerms: z.array(z.string()),
   /** Set when stage-1 delegated to a subsystem and stage-2 resolved the unit. */
   subsystem: SubsystemIdSchema.optional(),
+  /** Which leg produced the stage-1 verdict — see {@link TaskRoutingSchema.leg}. */
+  leg: RoutingLegSchema.optional(),
+  /**
+   * The STAGE-2 verdict — how the subsystem named at `stage1` chose the unit that
+   * actually ran. Present only when a stage-2 pass happened (`subsystem` set AND
+   * the subsystem owned 2+ units; a 0/1-owned roster resolves without classifying).
+   *
+   * Without this the record answered "which subsystem, and why" but was silent on
+   * the decision that picks the thing that runs — `resolveSubsystemTargetOrNull`
+   * used to return `routing?.target ?? primary`, discarding the reason, the
+   * confidence and the leg. That is the half of the trace whose absence made a
+   * misroute undiagnosable from the files.
+   */
+  stage2: z
+    .object({
+      /** The unit stage 2 picked (also on `ScheduledTask.target` — here with its "why"). */
+      target: TaskTargetSchema,
+      confidence: z.number().min(0).max(1),
+      reason: z.string(),
+      leg: RoutingLegSchema.optional(),
+      /**
+       * How many candidates stage 2 actually ranked, AFTER any constraint filter.
+       * A `1` here says the choice was forced by the constraint rather than won on
+       * merit — the difference between "the router picked delivery" and "delivery
+       * was the only PR-capable pipeline forge owns".
+       */
+      rankedCandidates: z.number().int().min(0),
+      /**
+       * Set when a required sink narrowed the stage-2 catalog — the audit trail for
+       * {@link ClassifyTaskInputSchema.output} having been enforced structurally.
+       */
+      constrainedBy: z.enum(["pr-output"]).optional(),
+    })
+    .optional(),
 });
 export type ClassificationTrace = z.infer<typeof ClassificationTraceSchema>;
-
-/**
- * What happens to a task's finished work — the operator's per-task choice in the
- * New Task dialog, the directed-task counterpart of a pipeline's `outputs:` block.
- * Like the pipeline sinks it is deterministic and system-owned (no agent, no
- * tokens); unlike them a task has no named `from` artifact, so the source is
- * implicit: a `pr` pushes the run's worktree branch, a `file` writes the run's
- * summary to the chosen destination.
- *
- *  - `pr`   — open a PR from the run's branch. Tier-2 (act-then-report): opened
- *             immediately when the run finishes, no approval gate. The url + line
- *             totals land on the outcome's {@link PrOutputSchema}.
- *  - `file` — write the result to a path in the project worktree (`dest: project`)
- *             or as a vault note (`dest: vault`). Tier-1, runs immediately.
- *  - `void` — explicitly produce no output (suppresses even a pipeline's own
- *             declared `pr` output for this run).
- *
- * ABSENT on a task (the field is `optional`) means *inherit*, NOT void: a
- * pipeline-routed task falls back to the pipeline's declared `outputs:`, an
- * agent/orchestrator task to today's behaviour (no terminal delivery). "Didn't
- * choose" and "chose void" are two distinct states.
- */
-export const TaskOutputSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("pr") }),
-  z.object({
-    type: z.literal("file"),
-    dest: z.enum(["project", "vault"]),
-    to: z.string().min(1),
-  }),
-  z.object({ type: z.literal("void") }),
-]);
-export type TaskOutput = z.infer<typeof TaskOutputSchema>;
 
 /**
  * The three delayed-start presets the New Task dialog offers. The wire format is
@@ -545,6 +628,22 @@ export type ScheduledTask = z.infer<typeof ScheduledTaskSchema>;
 export const CreateTaskInputSchema = z.object({
   title: z.string().max(200).optional(),
   text: z.string().min(1).max(8000),
+  /**
+   * The text to ROUTE on, when it differs from the text to RUN on. Absent (the
+   * ordinary case) → `text` is used for both.
+   *
+   * Exists for exactly one shape of caller: one that wraps the operator's/issue's own
+   * words in system framing an ACTOR needs but a RANKER must not see. The roadmap gate
+   * is that caller — it appends a trust-boundary footer (`buildRoadmapTaskText`) whose
+   * prose about instructions and generated content overlaps agent descriptions far more
+   * than it overlaps any real task, and that footer measurably decided a misroute. It
+   * therefore sets this to the item's bare name + description
+   * (`buildRoadmapRoutingText`) while `text` keeps the framing.
+   *
+   * Routing-only by contract: nothing dispatches, logs or displays this — the run
+   * always sees `text`.
+   */
+  routingText: z.string().min(1).max(8000).optional(),
   paths: z.array(z.string()).max(64).optional(),
   /** Phase: reference a previously-uploaded attachment set (POST /tasks/attachments). */
   attachmentSetId: z.string().optional(),

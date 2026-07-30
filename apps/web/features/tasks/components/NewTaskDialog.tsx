@@ -1,5 +1,13 @@
 "use client";
-import { Button, Container, Dialog, IconTile, Stack, TextInputField, Typography } from "@zibby/design-system";
+import {
+  Button,
+  Container,
+  Dialog,
+  IconTile,
+  Stack,
+  TextInputField,
+  Typography,
+} from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { useProjectsQuery } from "../../projects";
@@ -89,7 +97,17 @@ export function NewTaskDialog({
     return [...new Set(all)];
   }, [text, selectedProject]);
 
-  const { activeRouting, loop, patchLoop } = useTaskClassification({ text, paths, initialTarget });
+  // Declared BEFORE the classify so the chosen sink can constrain it: a `pr` output
+  // admits only PR-capable pipelines, so the picker must never offer a unit the
+  // dispatch would then refuse (`ClassifyTaskInput.output`).
+  const output = useTaskOutput();
+
+  const { activeRouting, loop, patchLoop } = useTaskClassification({
+    text,
+    paths,
+    initialTarget,
+    output: output.output,
+  });
 
   // An explicit `@`-mention pick always wins over the live classify verdict. Computed
   // directly here rather than through the hook's `chosenKey`/`allTargets` (which stays
@@ -122,7 +140,6 @@ export function NewTaskDialog({
     setCheckedGrants(proposedGrants);
   }
 
-  const output = useTaskOutput();
   // A chosen `file` output needs a filename — else CommandLine's run control stays
   // disabled, so the selection can't be silently dropped on submit.
   const outputReady = isLoop || output.outputReady;

@@ -58,6 +58,12 @@ import { sumStageCosts } from "./task-runs.service";
 /** A create input with its attachment set resolved once (Task 6 — resolve, then thread). */
 type CreateTaskInputResolved = CreateTaskInput & { attachments: Attachment[] };
 
+/** See {@link TaskSchedulerService.resolveSubsystemTargetOrNull}. */
+interface SubsystemResolution {
+  target: TaskTarget;
+  stage2?: NonNullable<ClassificationTrace["stage2"]>;
+}
+
 /** Thrown when there is nothing to route to (empty catalog) → the controller maps it to 422. */
 export class EmptyCatalogError extends Error {
   constructor() {
@@ -323,9 +329,18 @@ export class TaskSchedulerService
     // target HERE — before either persistence path below (scheduled or immediate)
     // — so a 0-owned rejection is a clean validation error, never a task record
     // that later fails on dispatch. See `resolveSubsystemTarget`.
+    // `routingText` when the caller supplied one: stage 2 runs HERE, so it must read the
+    // same footer-free text stage 1 was given, or the framing the roadmap gate appends
+    // for the actor lands right back in the ranker's haystack (see
+    // `CreateTaskInput.routingText`).
     const target =
       rawTarget?.kind === "subsystem"
-        ? await this.resolveSubsystemTarget(rawTarget, input.text, input.paths ?? [])
+        ? await this.resolveSubsystemTarget(
+            rawTarget,
+            input.routingText ?? input.text,
+            input.paths ?? [],
+            input.output,
+          )
         : rawTarget;
     const project = trustedProjectId
       ? await this.projects.get(trustedProjectId).catch((): Project | null => null)
@@ -388,11 +403,29 @@ export class TaskSchedulerService
    * (the explicit `@mention` path, throws) and {@link dispatch} (the undirected
    * switchboard path, falls back to {@link ORCHESTRATOR_TARGET}).
    */
+  /**
+   * The outcome of resolving a subsystem verdict to the unit that actually runs:
+   * the `target`, plus the stage-2 rationale for the persisted trace.
+   *
+   * `stage2` is absent only when the classifier returned nothing usable and the
+   * fallback unit was taken — there is no verdict to describe in that case. The
+   * pairing exists because the previous shape returned the target alone, so the
+   * decision that picks the running unit left no record at all.
+   */
   private async resolveSubsystemTargetOrNull(
     target: Extract<TaskTarget, { kind: "subsystem" }>,
     text: string,
     paths: string[],
-  ): Promise<TaskTarget | null> {
+    /**
+     * The task's required sink, when it has one. A `pr` sink makes this resolution a
+     * SIZING choice over the subsystem's PR-capable pipelines instead of a free pick
+     * over its whole roster — mirroring `TaskClassifierService.constrainByOutput`, so
+     * a direct dispatch and the scoped classifier agree on what is even eligible.
+     * Without it a roadmap item that must open a PR could resolve to an agent that
+     * cannot open one.
+     */
+    output?: TaskOutput,
+  ): Promise<SubsystemResolution | null> {
     const [allPipelines, allAgents] = await Promise.all([
       this.pipelinesStore.list().catch((): Pipeline[] => []),
       this.agentsStore.listActive().catch((): Agent[] => []),
@@ -401,6 +434,21 @@ export class TaskSchedulerService
     const ownedAgents = allAgents.filter((a) => a.ownerSubsystem === target.id);
     const totalOwned = ownedPipelines.length + ownedAgents.length;
     if (totalOwned === 0) return null;
+    // Same rule, same reason as the classifier's own filter: a task that must end in a
+    // PR is eligible only for pipelines that DECLARE a `pr` sink — never a lone agent.
+    // Falls back to the full roster (and warns) when the subsystem owns no such
+    // pipeline, because "route it somewhere and let the run fail" is strictly worse
+    // than routing it the old way and saying so.
+    const prCapable = ownedPipelines.filter((p) => p.outputs.some((o) => o.type === "pr"));
+    const prConstrained = output?.type === "pr" && prCapable.length > 0;
+    if (output?.type === "pr" && prCapable.length === 0) {
+      this.log.warn("task requires a PR but the subsystem owns no PR-capable pipeline", {
+        subsystem: target.id,
+        ownedUnits: totalOwned,
+      });
+    }
+    const eligiblePipelines = prConstrained ? prCapable : ownedPipelines;
+    const eligibleCount = prConstrained ? prCapable.length : totalOwned;
     // Cheapest PIPELINE first, else the sole agent — deliberately the same rule as
     // `TaskClassifierService.cheapestPipeline`, so a direct dispatch agrees with
     // what the scoped classifier would have chosen as its `"primary"` fallback.
@@ -413,7 +461,7 @@ export class TaskSchedulerService
     // `light` one would dispatch the expensive rung here while the classifier
     // picked the cheap one. Sorting by the ladder restores the agreement the
     // comment only claimed.
-    const cheapestPipeline = [...ownedPipelines].sort(
+    const cheapestPipeline = [...eligiblePipelines].sort(
       (a, b) =>
         PIPELINE_COMPLEXITY_ORDER.indexOf(a.complexity) -
         PIPELINE_COMPLEXITY_ORDER.indexOf(b.complexity),
@@ -421,11 +469,64 @@ export class TaskSchedulerService
     const primary = cheapestPipeline
       ? pipelineTaskTarget(cheapestPipeline)
       : agentTaskTarget(ownedAgents[0]!);
-    if (totalOwned === 1) return primary;
-    const routing = await this.classifier.classifyWithinSubsystem({ text, paths }, target.id);
+    // One eligible unit → it IS the answer; classifying a single-entry catalog would
+    // spend a round-trip to be told what the constraint already decided.
+    if (eligibleCount === 1) {
+      this.log.info("stage-2 resolved without classifying — one eligible unit", {
+        subsystem: target.id,
+        target: `${primary.kind}:${primary.id}`,
+        ...(prConstrained ? { constrainedBy: "pr-output" } : {}),
+      });
+      return {
+        target: primary,
+        stage2: {
+          target: primary,
+          // Not a judgment: the constraint (or the roster) left one option, so calling
+          // this a high-confidence "decision" would overstate what happened.
+          confidence: 1,
+          reason: prConstrained
+            ? "Only one owned unit can deliver a PR — no ranking was needed."
+            : "The subsystem owns a single dispatchable unit — no ranking was needed.",
+          rankedCandidates: 1,
+          ...(prConstrained ? { constrainedBy: "pr-output" as const } : {}),
+        },
+      };
+    }
+    const routing = await this.classifier.classifyWithinSubsystem(
+      { text, paths, ...(output ? { output } : {}) },
+      target.id,
+    );
+    // Stage 2 is the decision that picks the thing that actually RUNS, and its
+    // rationale used to be dropped here (`routing?.target ?? primary`) — which is why
+    // diagnosing a misroute meant reverse-engineering the confidence curve by hand
+    // instead of reading a record. Logged with the leg that produced it, so a silent
+    // degradation to the keyword scorer is visible rather than indistinguishable from
+    // a real decision.
+    if (routing) {
+      this.log.info("stage-2 verdict", {
+        subsystem: target.id,
+        target: `${routing.target.kind}:${"id" in routing.target ? routing.target.id : "-"}`,
+        confidence: routing.confidence,
+        reason: routing.reason,
+        leg: routing.leg ?? "unknown",
+        rankedCandidates: routing.candidates.length,
+        ...(prConstrained ? { constrainedBy: "pr-output" } : {}),
+      });
+    }
     // Defensive only: `classifyWithinSubsystem` returns null solely for an empty
-    // candidate set, which `totalOwned > 1` already rules out.
-    return routing?.target ?? primary;
+    // candidate set, which `eligibleCount > 1` already rules out.
+    if (!routing) return { target: primary };
+    return {
+      target: routing.target,
+      stage2: {
+        target: routing.target,
+        confidence: routing.confidence,
+        reason: routing.reason,
+        rankedCandidates: routing.candidates.length,
+        ...(routing.leg ? { leg: routing.leg } : {}),
+        ...(prConstrained ? { constrainedBy: "pr-output" as const } : {}),
+      },
+    };
   }
 
   /**
@@ -440,10 +541,11 @@ export class TaskSchedulerService
     target: Extract<TaskTarget, { kind: "subsystem" }>,
     text: string,
     paths: string[],
+    output?: TaskOutput,
   ): Promise<TaskTarget> {
-    const resolved = await this.resolveSubsystemTargetOrNull(target, text, paths);
+    const resolved = await this.resolveSubsystemTargetOrNull(target, text, paths, output);
     if (!resolved) throw new SubsystemEmptyRosterError(subsystemDisplayName(target.id));
-    return resolved;
+    return resolved.target;
   }
 
   /**
@@ -1222,7 +1324,14 @@ export class TaskSchedulerService
       target = explicitTarget;
       matchedTerms = [];
     } else {
-      const routing = await this.classifier.classify({ text, paths });
+      // `output` rides into the classify so the required sink constrains stage 2 the
+      // same way it does on the explicit/roadmap path (`createTask`) — one rule, both
+      // entry points.
+      const routing = await this.classifier.classify({
+        text,
+        paths,
+        ...(output ? { output } : {}),
+      });
       if (!routing) return null;
       target = routing.target;
       // The classifier's matched terms ride into the run so memory grounding selects
@@ -1236,10 +1345,12 @@ export class TaskSchedulerService
       // below, unchanged, already records `orchestrator-fallback` for a
       // non-explicit target and starts the orchestrator).
       let subsystem: SubsystemId | undefined;
+      let stage2: ClassificationTrace["stage2"];
       if (target.kind === "subsystem") {
         subsystem = target.id;
-        target =
-          (await this.resolveSubsystemTargetOrNull(target, text, paths)) ?? ORCHESTRATOR_TARGET;
+        const resolved = await this.resolveSubsystemTargetOrNull(target, text, paths, output);
+        target = resolved?.target ?? ORCHESTRATOR_TARGET;
+        stage2 = resolved?.stage2;
       }
       classification = {
         stage1: routing.target,
@@ -1247,6 +1358,8 @@ export class TaskSchedulerService
         reason: routing.reason,
         matchedTerms: routing.matchedTerms,
         ...(subsystem ? { subsystem } : {}),
+        ...(routing.leg ? { leg: routing.leg } : {}),
+        ...(stage2 ? { stage2 } : {}),
       };
     }
     if (target.kind === "agent") {

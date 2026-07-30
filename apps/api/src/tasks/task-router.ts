@@ -28,6 +28,23 @@ export type RoutableTarget = (CatalogTaskTarget | SubsystemTaskTarget) & {
    * the ladder is a within-subsystem ordering.
    */
   complexity?: PipelineComplexity;
+  /**
+   * Can this candidate carry work to a PR-shaped code change on its own?
+   *
+   * True only for a pipeline that DECLARES a `pr` sink in its `outputs:` block —
+   * the unit's own statement that it ends in an opened PR, which is a stronger and
+   * far more stable signal than inspecting the tool lists of the agents in its
+   * phases. Read by `TaskClassifierService.constrainByOutput` to enforce
+   * `ClassifyTaskInput.output` structurally.
+   *
+   * Deliberately absent (falsy) on every AGENT candidate, and that is the whole
+   * point rather than an omission: a task that must produce a PR is never routed to
+   * a lone agent. The rung that looks like "one implementer agent" already exists as
+   * a pipeline — forge's `quick-fix` (light: a single `fullstack-developer` phase
+   * plus a declared `pr` output) — so the invariant costs no expressiveness while
+   * keeping review, verification and a real sink in the path.
+   */
+  deliversPr?: boolean;
 };
 
 /**

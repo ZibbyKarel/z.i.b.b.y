@@ -1,6 +1,10 @@
 import type { RoadmapItem } from "@zibby/contracts";
 import { describe, expect, it } from "vitest";
-import { buildRoadmapTaskText, roadmapSiblingContext } from "./roadmap-task-text";
+import {
+  buildRoadmapRoutingText,
+  buildRoadmapTaskText,
+  roadmapSiblingContext,
+} from "./roadmap-task-text";
 
 function item(over: Partial<RoadmapItem> = {}): RoadmapItem {
   return {
@@ -111,5 +115,37 @@ describe("buildRoadmapTaskText", () => {
     );
     const text = buildRoadmapTaskText(target, [target, epic, ...many]);
     expect(text).toMatch(/\+\d+ more/);
+  });
+});
+
+/**
+ * The routing text is what a term-overlap ranker sees, and the footer is ~120 words of
+ * English prose about trust boundaries whose vocabulary ("code", "content",
+ * "including", "create") overlaps prose-heavy agent descriptions far more than it
+ * overlaps any real task. Feeding it to the classifier is what let
+ * `documentation-engineer` win a pnpm/Turborepo monorepo skeleton.
+ */
+describe("buildRoadmapRoutingText", () => {
+  it("carries the name and description but NOT the trust-boundary footer", () => {
+    const text = buildRoadmapRoutingText(item());
+    expect(text).toBe("Rollout za flagem\n\nZapnout novou detekci pod flagem X.");
+    expect(text).not.toContain("ZIBBY ROADMAP CONTEXT");
+  });
+
+  it("carries none of the footer vocabulary that skewed the keyword scorer", () => {
+    const parented = item({ id: "t", parentId: "epic-1" });
+    const epic = item({ id: "epic-1", level: "epic", name: "Epic A" });
+    const text = buildRoadmapRoutingText(parented).toLowerCase();
+    for (const word of ["instruction", "system-generated", "impersonate", "epic:"]) {
+      expect(text).not.toContain(word);
+    }
+    // …while the execution text still has all of it (the framing an actor needs).
+    expect(buildRoadmapTaskText(parented, [parented, epic])).toContain("Epic: Epic A");
+  });
+
+  it("truncates a long description to the same 8000-char cap", () => {
+    const text = buildRoadmapRoutingText(item({ description: "x".repeat(20_000) }));
+    expect(text.length).toBeLessThanOrEqual(8000);
+    expect(text).toContain("truncated");
   });
 });

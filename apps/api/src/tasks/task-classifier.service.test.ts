@@ -47,12 +47,23 @@ function pipeline(over: {
   ownerSubsystem?: string;
   /** NS2 F9 — the ladder rung. Mirrors the schema default so pre-F9 fixtures read the same. */
   complexity?: PipelineComplexity;
+  /**
+   * Does this fixture DECLARE a `pr` sink? Defaults to true because the units that
+   * matter to routing are the delivery ones, and a fixture that silently declared no
+   * sink would be filtered out of every `output: {type:"pr"}` case for a reason the
+   * test never states. Pass `false` to exercise the constraint dropping a pipeline.
+   */
+  deliversPr?: boolean;
 }): Pipeline {
   return {
     id: over.id,
     name: over.name ?? over.id,
     desc: over.desc ?? "",
     phases: [],
+    // Mirrors `PipelineSchema`'s `outputs: …default([])` — a hand-built fixture that
+    // omitted it used to reach the classifier as `undefined` and crash the candidate
+    // projection, which the `as unknown as Pipeline` cast hid from tsc.
+    outputs: over.deliversPr === false ? [] : [{ type: "pr", from: "out.md" }],
     ownerSubsystem: over.ownerSubsystem,
     complexity: over.complexity ?? "standard",
   } as unknown as Pipeline;
@@ -1180,5 +1191,160 @@ describe("route(): an outage and a coin flip are different things (NS2 F10)", ()
     const r = await svc.classifyWithinSubsystem({ text: "implement the feature" }, "forge");
     expect(r?.target).toMatchObject({ kind: "pipeline", id: "delivery" });
     expect(r?.ambiguous).toBe(false);
+  });
+});
+
+/**
+ * The regression suite for the misroute that motivated
+ * {@link ClassifyTaskInput.output}: two JIRA-imported roadmap items — a pnpm/Turborepo
+ * monorepo skeleton and a feasibility spike — both landed on
+ * `documentation-engineer`, a forge-owned agent with no Bash, so no build, no test and
+ * no commit. Each task carried `output: {type:"pr"}` from the roadmap gate and that
+ * signal was computed and then dropped before routing.
+ */
+describe("TaskClassifierService — a required PR sink constrains the stage-2 catalog", () => {
+  /** The real agent's real catalog blob — this is what out-ranked the pipelines. */
+  const docEngineer = agent({
+    id: "documentation-engineer",
+    name: "documentation-engineer",
+    category: "Developer Experience",
+    description:
+      "Use this agent when you need to create, architect, or overhaul comprehensive " +
+      "documentation systems including API docs, tutorials, guides, and " +
+      "developer-friendly content that keeps pace with code changes.",
+    ownerSubsystem: "forge",
+  });
+  const coder = agent({
+    id: "fullstack-developer",
+    name: "fullstack-developer",
+    description: "Implement features end to end",
+    ownerSubsystem: "forge",
+  });
+  const forgePipelines = [
+    pipeline({
+      id: "quick-fix",
+      name: "Quick Fix",
+      desc: "Nejlevnější kódová cesta pro drobnou změnu na jedné ploše: přejmenování",
+      ownerSubsystem: "forge",
+      complexity: "light",
+    }),
+    pipeline({
+      id: "delivery",
+      name: "Delivery",
+      desc: "Postav, oprav nebo implementuj feature; build, implement, deliver, package",
+      ownerSubsystem: "forge",
+      complexity: "deep",
+    }),
+  ];
+  /** CZ3TDR1-524's own words, minus the roadmap footer (see `buildRoadmapRoutingText`). */
+  const skeletonTask =
+    "Monorepo & CLI skeleton\n\nSet up pnpm workspaces + Turborepo + Stricli + tsdown. " +
+    "Establish the package layout: packages/cli, packages/dev-engine, packages/create, " +
+    "packages/eslint-config, packages/test-fixtures. Set up Changesets + strict SemVer " +
+    "discipline + npm provenance (OIDC).";
+
+  it("routes to a pipeline and offers no agent at all when the sink is a PR", async () => {
+    const svc = makeService({ agents: [docEngineer, coder], pipelines: forgePipelines });
+    const r = await svc.classifyWithinSubsystem(
+      { text: skeletonTask, output: { type: "pr" } },
+      "forge",
+    );
+    expect(r?.target.kind).toBe("pipeline");
+    expect(r?.candidates.map((c) => c.id).sort()).toEqual(["delivery", "quick-fix"]);
+    expect(r?.candidates.some((c) => c.kind === "agent")).toBe(false);
+  });
+
+  it("is the CONSTRAINT that removes the agent — unconstrained, the same roster still offers it", async () => {
+    const svc = makeService({ agents: [docEngineer, coder], pipelines: forgePipelines });
+    const r = await svc.classifyWithinSubsystem({ text: skeletonTask }, "forge");
+    expect(r?.candidates.map((c) => c.id)).toContain("documentation-engineer");
+  });
+
+  it("drops a pipeline that declares no pr sink", async () => {
+    const svc = makeService({
+      agents: [coder],
+      pipelines: [
+        ...forgePipelines,
+        pipeline({
+          id: "code-audit",
+          name: "Code Audit",
+          desc: "Audit only, writes a vault note",
+          ownerSubsystem: "forge",
+          complexity: "light",
+          deliversPr: false,
+        }),
+      ],
+    });
+    const r = await svc.classifyWithinSubsystem(
+      { text: skeletonTask, output: { type: "pr" } },
+      "forge",
+    );
+    expect(r?.candidates.map((c) => c.id)).not.toContain("code-audit");
+  });
+
+  it("keeps the full roster rather than failing when the subsystem owns no PR-capable pipeline", async () => {
+    const svc = makeService({
+      agents: [docEngineer],
+      pipelines: [
+        pipeline({
+          id: "notes",
+          name: "Notes",
+          desc: "writes a vault note",
+          ownerSubsystem: "forge",
+          complexity: "light",
+          deliversPr: false,
+        }),
+      ],
+    });
+    const r = await svc.classifyWithinSubsystem(
+      { text: skeletonTask, output: { type: "pr" } },
+      "forge",
+    );
+    expect(r).not.toBeNull();
+    expect(r?.candidates.map((c) => c.id).sort()).toEqual(["documentation-engineer", "notes"]);
+  });
+
+  it("a file sink constrains nothing — a vault note is something any unit can produce", async () => {
+    const svc = makeService({ agents: [docEngineer, coder], pipelines: forgePipelines });
+    const r = await svc.classifyWithinSubsystem(
+      { text: skeletonTask, output: { type: "file", dest: "vault", to: "note.md" } },
+      "forge",
+    );
+    expect(r?.candidates.map((c) => c.id)).toContain("documentation-engineer");
+  });
+
+  it("records the leg that produced the verdict, so a scorer answer can't pass for a router decision", async () => {
+    const scorerLeg = makeService({ agents: [coder], pipelines: forgePipelines });
+    const scored = await scorerLeg.classifyWithinSubsystem(
+      { text: "build and implement the feature package", output: { type: "pr" } },
+      "forge",
+    );
+    expect(scored?.leg).toBe("scorer");
+
+    const routerLeg = makeService({
+      agents: [coder],
+      pipelines: forgePipelines,
+      router: fixedRouter({
+        target: { kind: "pipeline", id: "delivery", name: "Delivery" },
+        // `candidates` must be non-empty for `TaskRoutingSchema` to parse, and the
+        // target must sit in the passed catalog — otherwise `isCoherent` rejects the
+        // verdict and the scorer answers, which is exactly what this asserts against.
+        candidates: [{ kind: "pipeline", id: "delivery", name: "Delivery" }],
+        confidence: 0.9,
+        reason: "multi-surface scaffolding",
+        matchedTerms: [],
+        mode: "single",
+        proposedGoal: null,
+        paths: [],
+        toolGrants: [],
+        runnerUp: null,
+        ambiguous: false,
+      } as unknown as TaskRouting),
+    });
+    const routed = await routerLeg.classifyWithinSubsystem(
+      { text: skeletonTask, output: { type: "pr" } },
+      "forge",
+    );
+    expect(routed?.leg).toBe("router");
   });
 });

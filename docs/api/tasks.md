@@ -52,7 +52,12 @@ semantics.
 POST /api/tasks
 Body: {
   title?: string             # optional short name
-  text: string                # the task description (the classifier reads this)
+  text: string                # the task description (what the RUN receives)
+  routingText?: string        # the text to ROUTE on, when it differs from `text`.
+                              # Absent (the ordinary case) → `text` is used for both.
+                              # For a caller that wraps the operator's/issue's own words
+                              # in framing an ACTOR needs but a RANKER must not see —
+                              # today only the roadmap gate. See "Routing text" below.
   paths?: string[]            # files / directories (max 64)
   attachmentSetId?: string    # a previously-uploaded attachment set (POST /api/tasks/attachments)
   scheduledAt?: number         # epoch ms; absent or in the past → immediate dispatch
@@ -81,6 +86,37 @@ provenance.
 immediately. From the dialog (`background = true`), dispatch happens in the
 background and the endpoint returns `pending` right away (see "`pending` —
 background dispatch" above).
+
+### Routing text — what a ranker sees vs. what a run sees
+
+`routingText` splits the two readings of a task that had always been the same string.
+It is **routing-only by contract**: nothing dispatches, logs or displays it, and the
+run always receives `text`.
+
+It exists because the roadmap gate appends a trust-boundary footer to every imported
+issue (`buildRoadmapTaskText`, see
+[roadmap.md](./roadmap.md#the-footer-must-not-reach-the-ranker)) — ~120 words of
+English prose about system-generated framing, instructions and untrusted content. That
+is the right thing to show an agent about to _act_ on the item, and the wrong thing to
+feed a term-overlap ranker: its vocabulary (`code`, `content`, `including`, `create`)
+overlaps prose-heavy agent descriptions far more than it overlaps any real task, so the
+footer competes with the item's own words.
+
+It measurably decided a misroute. Two JIRA-imported items — a pnpm/Turborepo monorepo
+skeleton and a feasibility spike — were both ranked onto `documentation-engineer`,
+whose catalog blob ("…create, architect, or overhaul comprehensive documentation
+systems … keeps pace with code changes") shares exactly those terms with the footer.
+The gate now sets `routingText` to the item's bare name + description
+(`buildRoadmapRoutingText`) while `text` keeps the framing.
+
+⚠️ It has to be honoured at **both** stages. Stage 1 runs in the gate, but stage 2 runs
+later inside `createTask` (`resolveSubsystemTarget`), which reads
+`input.routingText ?? input.text` — stripping the footer only for stage 1 would have
+left it in the haystack of the pass that actually picks the running unit.
+
+This is the same failure class as
+[explicit-only agents](#explicit-only-agents-never-in-the-catalog), closed at the
+source rather than one agent id at a time.
 
 ## Classification (TaskClassifierService)
 
@@ -199,6 +235,12 @@ the roadmap gate itself stamps with an epic/roadmap-heavy "ZIBBY ROADMAP CONTEXT
 out-scored every real delivery target, ran the decomposer, got `[]` back, produced no
 artifact, and died `failed`. See [roadmap.md](./roadmap.md#the-artifact).
 
+That footer went on to win a second misroute the same way, for a non-listed agent
+(`documentation-engineer`), which is why the fix moved upstream: routing now reads the
+item's own words via [`routingText`](#routing-text--what-a-ranker-sees-vs-what-a-run-sees)
+rather than the framed text. This list stays as the per-agent backstop for agents whose
+_own_ description is the hazard.
+
 ### Stage 1 only — `classifySubsystem` (subsystem-first callers)
 
 A caller that wants the switchboard to answer **only** "whose domain is this?" — and
@@ -254,6 +296,59 @@ run, via `resolveSubsystemTargetOrNull` / `resolveSubsystemTarget`:
   owned pipeline**) — a typed `Record` over the closed `SubsystemId` enum, so a new
   subsystem id fails `tsc` until it's given a policy.
 
+Both counts above are counts of **eligible** units, not owned ones — the required-sink
+constraint below is applied first, so a roster of one agent + one PR pipeline is a
+1-eligible resolution (no classify round-trip) rather than a 2-owned ranking.
+
+#### A required `pr` sink is a hard constraint, not a hint
+
+`ClassifyTaskInput.output` carries the sink the finished work **must** land in, and
+`constrainByOutput` applies it to the stage-2 catalog **before any ranking happens**:
+
+| `output`               | Stage-2 catalog                                           |
+| ---------------------- | --------------------------------------------------------- |
+| `{ type: "pr" }`       | **only pipelines that declare a `pr` sink** in `outputs:` |
+| `{ type: "file" }`     | unchanged — any unit can write a note                     |
+| `{ type: "void" }`     | unchanged                                                 |
+| absent (unconstrained) | unchanged — the full owned roster                         |
+
+Filtering the candidate list, rather than adding a sentence to the preamble, is the
+whole point: no leg can then pick an ineligible unit — not the LLM router, not the
+keyword scorer, not the terminal fallback. A prompt rule is only as good as the model
+reading it, and the model reading stage 2 is Haiku over a dozen similar-sounding rows.
+It is the same posture as Law 1 (approval-first is wired into the floor, not into an
+agent's config), applied to capability.
+
+**Every agent is dropped, and that is deliberate rather than an omission.** A task that
+must produce a PR is never routed to a lone agent. The rung that looks like "one
+implementer agent" already exists as a pipeline — forge's `quick-fix` (`light`: a single
+`fullstack-developer` phase plus a declared `pr` output) — so the invariant costs no
+expressiveness while keeping review, verification and a real sink in the path. The
+motivating misroute landed on `documentation-engineer`, an agent whose tool list has no
+`Bash`: no build, no test, no commit, so the `pr` sink was an unsatisfiable contract.
+
+Two consequences worth naming:
+
+- **The preamble swaps rules.** A constrained catalog gets `PR_SIZING_RULE` instead of
+  `EFFORT_RULE`, because the latter's rung (1) is "a single owned AGENT" — misleading
+  wording once no agents remain, and the rung-1 pull is what invited a small model to
+  hand a narrow-sounding ticket to one agent. The question becomes purely _how big is
+  this_, over three pipelines instead of a dozen mixed units, with a bounded worst case:
+  pick `patch` where `delivery` was warranted and the work still lands as a PR.
+- **It overrides `SUBSYSTEM_FALLBACK`'s `"orchestrator"` policy.** Escaping to the
+  orchestrator would break the very invariant the constraint holds (no PR-shaped
+  output → `reconcileRunning` kills the item), so a constrained fallback always names
+  the cheapest eligible pipeline.
+
+If a subsystem owns **no** PR-capable pipeline, the filter keeps the full roster and
+`warn`s instead of emptying the catalog: that is a roster gap for the operator to fix,
+and routing it the old way while saying so beats routing it nowhere. Only forge, hearth
+and codex own a PR pipeline today.
+
+`TaskSchedulerService.resolveSubsystemTargetOrNull` mirrors this rule for the direct
+(non-classifying) resolution paths, so a 1-eligible dispatch and the scoped classifier
+never disagree about what counts as eligible.
+
 **This is where "a small change shouldn't run the whole pipeline" is decided** — and
 since NS2 F9 it is the ONLY place a concrete unit is chosen, for every subsystem
 rather than just forge. Every seated subsystem now owns specialist agents plus a
@@ -299,11 +394,46 @@ unreachable for them.
 
 The resolved target IS the run's "via `<subsystem>`" attribution — any consumer can
 already read `Pipeline.ownerSubsystem` / `Agent.ownerSubsystem` off the dispatched id,
-so no extra run-level field is needed for that. The stage-1 verdict itself (target,
-confidence, reason, matchedTerms, and — when it named a subsystem — the subsystem id)
-is separately persisted as the task's `ClassificationTrace` and enriched onto the run
+so no extra run-level field is needed for that. The verdict itself is separately
+persisted as the task's `ClassificationTrace` and enriched onto the run
 (`TaskRun.classification`, read-only) so `RunDetail` can show "why this was routed
 here."
+
+### The trace records BOTH stages, and which leg answered
+
+`ClassificationTrace` carries the stage-1 verdict (target, confidence, reason,
+matchedTerms, and — when it named a subsystem — the subsystem id) plus:
+
+| Field                      | Meaning                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------ |
+| `leg`                      | `router` \| `scorer` \| `fallback` — which leg produced the stage-1 verdict    |
+| `stage2.target`            | the unit stage 2 picked (also on `ScheduledTask.target` — here with its "why") |
+| `stage2.confidence/reason` | the stage-2 rationale                                                          |
+| `stage2.leg`               | which leg answered stage 2                                                     |
+| `stage2.rankedCandidates`  | how many candidates were ranked **after** the constraint filter                |
+| `stage2.constrainedBy`     | `pr-output` when a required sink narrowed the catalog                          |
+
+`leg` exists because a silent degradation to the keyword scorer is invisible in the
+record and reads exactly like a real decision. In the motivating misroute both items
+carried an identical `confidence: 0.55` and `reason: "Matched catalog terms: code"` — a
+number only the scorer's curve can produce (`0.42 + 0.13×1` for one matched term and a
+tie with the runner-up) — but nothing said so, and diagnosing it meant reverse-engineering
+that arithmetic by hand. `route()` now also `warn`s when the router was unusable.
+
+`rankedCandidates: 1` is the honest distinction between _"the router picked delivery"_ and
+_"delivery was the only PR-capable pipeline forge owns"_.
+
+`stage2` was previously discarded outright: `resolveSubsystemTargetOrNull` returned
+`routing?.target ?? primary`, dropping the reason, the confidence and the leg of the
+decision that picks the thing that actually runs. It is absent only when no usable
+verdict existed and the fallback unit was taken.
+
+⚠️ **Gap.** `stage2` is persisted on the undirected classify path (`dispatch` builds the
+trace). On the explicit-target path — which includes the roadmap release, since the gate
+hands `createTask` a resolved subsystem — the trace is written by
+`RoadmapGateService.writeClassificationTrace` from the stage-1 verdict only, so `stage2`
+is logged (`"stage-2 verdict"`, with target/confidence/reason/leg/rankedCandidates) but
+not yet on the record. Closing it means one writer owning the whole trace.
 
 ## Budget guard
 

@@ -137,6 +137,39 @@ export const EFFORT_RULE =
   "one-line change; do not hand multi-surface work to a lone agent.";
 
 /**
+ * The stage-2 preamble rule that REPLACES {@link EFFORT_RULE} when the task carries
+ * a required `pr` sink ({@link ClassifyTaskInput.output}).
+ *
+ * The catalog has already been filtered to PR-capable pipelines by
+ * {@link TaskClassifierService.constrainByOutput}, so the remaining question is not
+ * "which unit" but "how big is this" — and the prompt should say exactly that.
+ * {@link EFFORT_RULE}'s wording would be actively misleading here: its rung (1) is
+ * "a single owned AGENT", and there are no agents left to pick.
+ *
+ * That rung-1 pull is what produced the failure this exists to close. Every
+ * JIRA-imported roadmap item is "implement this → PR", yet `EFFORT_RULE` invited a
+ * small model to read a narrow-sounding ticket and hand it to one agent; nothing in
+ * the pipeline-vs-agent decision knew that a PR was mandatory, so the cheapest rung
+ * always looked admissible. Sizing among three pipelines is also a far easier
+ * question than ranking fourteen mixed units, and its worst case is bounded: pick
+ * `patch` where `delivery` was warranted and the work still lands as a PR.
+ */
+export const PR_SIZING_RULE =
+  "ROUTING RULE: this task MUST end in a pull request, so every unit below is a " +
+  "pipeline that opens one. Do NOT ask which kind of unit fits — ask only how BIG " +
+  "the change is, and pick the CHEAPEST rung that can do it safely. The rungs, " +
+  "cheapest first: " +
+  "(1) a LIGHT pipeline — one narrow surface: a rename, a copy or constant change, " +
+  "a small obvious bug, one file. " +
+  "(2) a STANDARD pipeline — ordinary work needing review and green checks, but no " +
+  "architecture or docs: one refactor, one new endpoint, one component. " +
+  "(3) a DEEP pipeline — multi-surface work, new scaffolding or tooling, anything " +
+  "that genuinely needs design, review, tests and docs to be safe. " +
+  "Each unit below is labelled with its rung. Setting up a project skeleton, a " +
+  "build/release toolchain, or proving out a mechanism end-to-end is DEEP work — " +
+  "do not size it as a light fix because the description sounds tidy.";
+
+/**
  * F2b — each subsystem's terminal fallback when {@link TaskClassifierService.classifyWithinSubsystem}'s
  * stage-2 verdict isn't confident: `"orchestrator"` defers to the global
  * orchestrator (the subsystem's own units are delivery specialists — a
@@ -261,7 +294,10 @@ export class TaskClassifierService {
       this.pipelines.list().catch((): Pipeline[] => []),
       this.agents.listActive().catch((): Agent[] => []),
     ]);
-    const candidates = this.subsystemCandidates(subsystemId, allPipelines, allAgents);
+    const owned = this.subsystemCandidates(subsystemId, allPipelines, allAgents);
+    // The required-sink constraint is applied BEFORE any ranking, so neither the LLM
+    // leg nor the keyword scorer is ever offered a unit that cannot honour it.
+    const { candidates, constrainedBy } = this.constrainByOutput(owned, input.output, subsystemId);
     const first = candidates[0];
     if (!first) return null;
 
@@ -271,8 +307,13 @@ export class TaskClassifierService {
     // F9: `first` is now the cheapest AGENT (ladder order), which is the wrong
     // answer for an unsure verdict — see `cheapestPipeline`.
     const primary = this.cheapestPipeline(candidates) ?? first;
+    // A `pr`-constrained catalog holds nothing but PR-capable pipelines, so escaping
+    // to the orchestrator would break the very invariant the constraint exists to
+    // hold (the orchestrator produces no PR-shaped output — the failure
+    // `SUBSYSTEM_FALLBACK.forge`'s own comment documents). The constraint therefore
+    // overrides a subsystem's `"orchestrator"` policy rather than negotiating with it.
     const fallback =
-      policy === "orchestrator"
+      policy === "orchestrator" && !constrainedBy
         ? {
             target: ORCHESTRATOR_TARGET,
             reason: `No unit matched confidently — ${displayName} defers to the orchestrator.`,
@@ -284,7 +325,11 @@ export class TaskClassifierService {
 
     const base = await this.route(input, candidates, {
       fallback,
-      preamble: this.buildSubsystemPreamble(subsystem?.mandate ?? "", candidates),
+      preamble: this.buildSubsystemPreamble(
+        subsystem?.mandate ?? "",
+        candidates,
+        Boolean(constrainedBy),
+      ),
     });
     // NS2 F10 — stage 2 deliberately does NOT ask. The asymmetry is about what a
     // wrong pick costs: at stage 1 it is a whole wrong subsystem, here it is one run
@@ -308,7 +353,57 @@ export class TaskClassifierService {
    * pipeline-vs-agent decision has any notion of how BIG a change is, so
    * without it the choice is the LLM's unguided reading of two descriptions.
    */
-  private buildSubsystemPreamble(mandate: string, units: readonly RoutableTarget[]): string {
+  /**
+   * Apply {@link ClassifyTaskInput.output} as a HARD constraint on the stage-2
+   * catalog — the structural half of the fix, and the reason this is a filter over
+   * candidates rather than another sentence in a prompt.
+   *
+   * A `pr` sink keeps only PR-capable pipelines ({@link RoutableTarget.deliversPr}).
+   * Everything else — every agent, and any pipeline that declares no `pr` output —
+   * is removed before ranking, so no leg can pick it: not the LLM router, not the
+   * keyword scorer, not the terminal fallback. Approval-first is wired into the
+   * floor and not into an agent's config (Law 1); capability is enforced the same
+   * way, because a prompt rule is only as good as the model reading it, and the
+   * model reading stage 2 is Haiku over a dozen similar-sounding rows.
+   *
+   * `file`/`void` sinks constrain nothing: a vault note or an explicitly empty
+   * result is something any unit can produce, so those keep the full roster.
+   *
+   * **Never empties the catalog.** A subsystem that owns no PR-capable pipeline
+   * yields the unfiltered roster plus a `warn`, because a subsystem that cannot
+   * honour the sink is a roster gap for the operator to fix — degrading to "route it
+   * somewhere and let the run fail" is strictly worse than routing it the old way
+   * and saying so in the log. Only forge, hearth and codex own a PR pipeline today,
+   * so this branch is reachable in practice.
+   */
+  private constrainByOutput(
+    candidates: readonly RoutableTarget[],
+    output: ClassifyTaskInput["output"],
+    subsystemId: SubsystemId,
+  ): { candidates: RoutableTarget[]; constrainedBy?: "pr-output" } {
+    if (output?.type !== "pr") return { candidates: [...candidates] };
+    const prCapable = candidates.filter((c) => c.kind === "pipeline" && c.deliversPr);
+    if (prCapable.length === 0) {
+      this.log.warn("task requires a PR but the subsystem owns no PR-capable pipeline", {
+        subsystem: subsystemId,
+        ownedUnits: candidates.length,
+      });
+      return { candidates: [...candidates] };
+    }
+    this.log.info("stage-2 catalog constrained to PR-capable pipelines", {
+      subsystem: subsystemId,
+      from: candidates.length,
+      to: prCapable.length,
+      units: prCapable.map((c) => c.id),
+    });
+    return { candidates: prCapable, constrainedBy: "pr-output" };
+  }
+
+  private buildSubsystemPreamble(
+    mandate: string,
+    units: readonly RoutableTarget[],
+    prConstrained = false,
+  ): string {
     // F9: each line carries its ladder rung, so EFFORT_RULE's "(1) agent …
     // (4) deep pipeline" wording has something concrete to bind to. An agent has
     // no `complexity` — it IS rung 1, so it is labelled as such rather than left
@@ -319,7 +414,12 @@ export class TaskClassifierService {
         return `- [${rung}] ${u.name} — ${u.search}`;
       })
       .join("\n");
-    return [`SUBSYSTEM MANDATE: ${mandate}`, "OWNED UNITS:", unitLines, EFFORT_RULE].join("\n");
+    // A pr-constrained catalog is a SIZING question over pipelines, so it gets
+    // `PR_SIZING_RULE` instead — `EFFORT_RULE`'s rung (1) is "a single owned AGENT",
+    // which no longer exists in the list and would only pull toward a unit that
+    // cannot honour the sink.
+    const rule = prConstrained ? PR_SIZING_RULE : EFFORT_RULE;
+    return [`SUBSYSTEM MANDATE: ${mandate}`, "OWNED UNITS:", unitLines, rule].join("\n");
   }
 
   /**
@@ -411,9 +511,9 @@ export class TaskClassifierService {
             confidence: routed.confidence,
             runnerUpConfidence: routed.runnerUp?.confidence ?? null,
           });
-          return { kind: "ambiguous", routing: { ...routed, ambiguous: true } };
+          return { kind: "ambiguous", routing: { ...routed, ambiguous: true, leg: "router" } };
         }
-        return { kind: "routed", routing: routed };
+        return { kind: "routed", routing: { ...routed, leg: "router" } };
       }
     } catch (err) {
       this.log.warn("router failed, using keyword fallback", { error: (err as Error).message });
@@ -424,7 +524,15 @@ export class TaskClassifierService {
     // scorer answers so a dead subprocess never turns into an operator question.
     const scored = this.fallback.score(input, candidates);
     if (scored && scored.confidence >= ORCHESTRATOR_FALLBACK_THRESHOLD) {
-      return { kind: "routed", routing: scored };
+      // `warn`, not `info`: reaching here means the LLM leg was unusable, which used
+      // to be invisible downstream — a scorer verdict reads exactly like a real
+      // decision once it is persisted. See `TaskRouting.leg`.
+      this.log.warn("router unusable — keyword scorer answered", {
+        target: `${scored.target.kind}:${"id" in scored.target ? scored.target.id : "-"}`,
+        confidence: scored.confidence,
+        matchedTerms: scored.matchedTerms,
+      });
+      return { kind: "routed", routing: { ...scored, leg: "scorer" } };
     }
 
     // Terminal rule: nothing matched confidently. `warn`, not `info` (NS2 F10) — this
@@ -458,6 +566,7 @@ export class TaskClassifierService {
         // than asking. Flagging it would park every CLI outage.
         runnerUp: null,
         ambiguous: false,
+        leg: "fallback",
       },
     };
   }
@@ -756,6 +865,9 @@ export class TaskClassifierService {
         glyph: "flow",
         avatar: p.avatar,
         complexity: p.complexity,
+        // The pipeline's own declaration that it ends in an opened PR — see
+        // `RoutableTarget.deliversPr`.
+        deliversPr: p.outputs.some((o) => o.type === "pr"),
         // A pipeline's desc carries most of the routable signal; the phase agents add a few terms.
         search: [p.name, p.id, p.desc, ...p.phases.map((ph) => ph.agent)].filter(Boolean).join(" "),
       }))

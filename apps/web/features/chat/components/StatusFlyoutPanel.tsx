@@ -27,6 +27,9 @@ export enum StatusFlyoutTestId {
 /** Stable DOM id the pill triggers point aria-controls at (and move focus into). */
 export const STATUS_FLYOUT_PANEL_ID = "chat-status-flyout-panel";
 
+/** Minimum breathing room kept between the panel and the viewport edge. */
+const PANEL_VIEWPORT_GAP = 16;
+
 export interface StatusFlyoutPanelProps {
   section: FlyoutSection;
   /** Pill root rect — the panel is centered under the PILL, not the segment. */
@@ -170,14 +173,31 @@ export function StatusFlyoutPanel({
   const headerId = useId();
   const rootRef = useRef<HTMLElement>(null);
   const meta = SECTION_META[section];
-  const left = anchorRect ? Math.round(anchorRect.left + anchorRect.width / 2 - meta.width / 2) : 0;
+  // Centered under the pill by default, but clamped to the viewport — the pill sits
+  // at the LEFT edge of the top bar, so a naive center would push wide panels (the
+  // 720px waiting section) mostly off-screen. Mirrors CommandLine's mention-panel clamp.
+  const viewportWidth = typeof window !== "undefined" ? window.innerWidth : meta.width;
+  const left = anchorRect
+    ? Math.round(
+        Math.max(
+          PANEL_VIEWPORT_GAP,
+          Math.min(
+            anchorRect.left + anchorRect.width / 2 - meta.width / 2,
+            viewportWidth - meta.width - PANEL_VIEWPORT_GAP,
+          ),
+        ),
+      )
+    : 0;
   const top = anchorRect ? Math.round(anchorRect.bottom + 10) : 0;
 
   useEffect(() => {
     const el = rootRef.current;
     if (el == null) return;
     const originXPct = originRect
-      ? Math.min(100, Math.max(0, ((originRect.left + originRect.width / 2 - left) / meta.width) * 100))
+      ? Math.min(
+          100,
+          Math.max(0, ((originRect.left + originRect.width / 2 - left) / meta.width) * 100),
+        )
       : 50;
     el.style.transformOrigin = `${originXPct}% 0%`;
     el.style.transition = "none";

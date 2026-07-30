@@ -46,6 +46,9 @@ phases:
     produces: docs.md
     model: sonnet
     thinking: low
+outputs:
+  - type: pr
+    from: docs.md
 desc: >-
   Postav, oprav nebo implementuj feature či bug v projektu — build, fix,
   implement a feature or bug; deliver, postavit, opravit, implementovat, dodat,

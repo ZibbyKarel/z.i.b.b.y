@@ -5,6 +5,7 @@ import type {
   RoadmapItemRun,
   RoutingProposal,
   SubsystemId,
+  TaskOutput,
   TaskRouting,
   TaskTarget,
 } from "@zibby/contracts";
@@ -23,7 +24,7 @@ import { TaskRunsService } from "../tasks/task-runs.service";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
 import { writeRoadmapBackRef } from "./roadmap-back-ref";
 import { RoadmapDecompositionService } from "./roadmap-decomposition.service";
-import { buildRoadmapTaskText } from "./roadmap-task-text";
+import { buildRoadmapRoutingText, buildRoadmapTaskText } from "./roadmap-task-text";
 import { RoadmapItemLifecycleError } from "./roadmap.errors";
 import { RoadmapStore } from "./roadmap.store";
 import { RoutingProposalStore } from "./routing-proposal.store";
@@ -603,7 +604,18 @@ export class RoadmapGateService {
     // per-item try/catch same as any other release failure.
     const local = await this.projectLocal.resolveForRun(project);
     const text = buildRoadmapTaskText(item, allItems);
-    const routing = approvedTarget ? null : await this.classifySubsystem(text, local.path);
+    // The item's own words, footer-free. Used for BOTH routing stages: stage 1 here and
+    // stage 2 inside `createTask` (via `CreateTaskInput.routingText`), so the framing
+    // `text` carries for the actor never reaches a ranker.
+    const routingText = buildRoadmapRoutingText(item);
+    // The sink this release REQUIRES — the same value stamped on the task below, but
+    // needed BEFORE routing, because it constrains which units are eligible at all
+    // (`ClassifyTaskInput.output`). A roadmap item defaults to a PR: an imported issue
+    // is by construction "implement this → PR".
+    const output = item.output ?? { type: "pr" as const };
+    const routing = approvedTarget
+      ? null
+      : await this.classifySubsystem(routingText, local.path, output);
     // NS2 F10 — the Tier-3 exit. An ambiguous stage-1 verdict means the switchboard
     // weighed two subsystems and couldn't separate them; on this path nobody is
     // watching a preview, and guessing wrong costs an entire wrong subsystem's run.
@@ -618,9 +630,10 @@ export class RoadmapGateService {
       {
         title: item.name,
         text,
+        routingText,
         paths: [local.path],
         ...(item.attachmentSetId ? { attachmentSetId: item.attachmentSetId } : {}),
-        output: item.output ?? { type: "pr" },
+        output,
       },
       Date.now(),
       // trustedProjectId = item.projectId: the roadmap item's own foreign key,
@@ -818,10 +831,14 @@ export class RoadmapGateService {
    * behaviour. Failing a release because the ROUTING lookup fell over would be a
    * strictly worse outcome than routing it the old way.
    */
-  private async classifySubsystem(text: string, projectPath: string): Promise<TaskRouting | null> {
+  private async classifySubsystem(
+    text: string,
+    projectPath: string,
+    output: TaskOutput,
+  ): Promise<TaskRouting | null> {
     try {
       const routing = await this.classifier.classifySubsystem(
-        { text, paths: [projectPath] },
+        { text, paths: [projectPath], output },
         DEFAULT_ROADMAP_SUBSYSTEM,
       );
       // Belt to `classifySubsystem`'s own braces: its catalog is subsystem-only

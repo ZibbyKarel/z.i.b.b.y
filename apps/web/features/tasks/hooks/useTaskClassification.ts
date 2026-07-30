@@ -1,11 +1,8 @@
+import type { TaskOutput } from "@zibby/contracts";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
-import {
-  INITIAL_LOOP_STATE,
-  type LoopFormState,
-  proposedGoalToLoopState,
-} from "../loop";
+import { INITIAL_LOOP_STATE, type LoopFormState, proposedGoalToLoopState } from "../loop";
 import { useClassifyTaskMutation } from "../mutations";
 import { type TaskRouting, type TaskTarget, targetKey, toClientRouting } from "../task";
 
@@ -17,6 +14,14 @@ export interface UseTaskClassificationArgs {
   paths: string[];
   /** A pre-selected destination ("Run pipeline") — always present in the picker. */
   initialTarget?: TaskTarget;
+  /**
+   * The operator's chosen terminal sink, forwarded to the classifier because it
+   * CONSTRAINS which units are eligible (a `pr` sink admits only PR-capable
+   * pipelines — see `ClassifyTaskInput.output`). Without it the preview would rank a
+   * roster the dispatch then refuses, so the picker would offer targets that cannot
+   * run — the preview and the dispatch must never drift.
+   */
+  output?: TaskOutput;
 }
 
 export interface UseTaskClassification {
@@ -46,6 +51,7 @@ export function useTaskClassification({
   text,
   paths,
   initialTarget,
+  output,
 }: UseTaskClassificationArgs): UseTaskClassification {
   const t = useTranslations("tasks");
   const { mutate: classify } = useClassifyTaskMutation();
@@ -59,9 +65,7 @@ export function useTaskClassification({
    * classifier decide). Seeded from `initialTarget` so "Run pipeline" pre-selects the
    * pipeline; the operator can switch it to another candidate or back to auto.
    */
-  const [chosenKey, setChosenKey] = useState<string>(
-    initialTarget ? targetKey(initialTarget) : "",
-  );
+  const [chosenKey, setChosenKey] = useState<string>(initialTarget ? targetKey(initialTarget) : "");
 
   // Gate the preview on a long-enough query so a stale verdict never lingers after
   // the field is cleared (no setState-in-effect needed to reset it).
@@ -71,10 +75,10 @@ export function useTaskClassification({
   // The side-effect-free verdict (the backend never starts a run here).
   const runClassify = useCallback(() => {
     classify(
-      { body: { text, paths } },
+      { body: { text, paths, ...(output ? { output } : {}) } },
       { onSuccess: (res) => setRouting(toClientRouting(selectApiResponseBody(res))) },
     );
-  }, [classify, text, paths]);
+  }, [classify, text, paths, output]);
 
   // ── Live classify preview ───────────────────────────────────────────────
   // Runs even with a pre-selected target: it populates the alternatives the picker
