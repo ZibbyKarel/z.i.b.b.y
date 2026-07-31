@@ -57,11 +57,15 @@ Vybrán region [1]: #root — pokud je špatně, spusť znovu s --region <n>.
 spec.json zapsán → .design-match/karta-epicu/spec.json
 ```
 
-Read that inventory as a warning as much as a menu: `rankCandidates` breaks
-ties on **area**, so on a full-bleed mockup the largest and least useful
-element wins by construction — here four nested full-viewport wrappers ahead
-of anything worth matching. `--region <n>` is what saves it, and picking it is
-the operator's job, not the tool's.
+Read that inventory as a warning as much as a menu. `rankCandidates` scores a
+candidate first by how many of the **description's** terms hit its tag, classes
+and text, and only then breaks ties on **area** — so the description is a real
+input, not a label: it decides the order, and the same mockup under a different
+description can hand you a different `[1]`. When nothing in the description
+hits (or everything ties), area decides, and on a full-bleed mockup the largest
+and least useful element wins by construction — here four nested full-viewport
+wrappers ahead of anything worth matching. `--region <n>` is what saves it, and
+picking it is the operator's job, not the tool's.
 
 Only the top 5 candidates are cropped (`r1.png`…`r5.png`), and a candidate that
 does not lie on the full-page screenshot gets **no crop at all** — the
@@ -193,8 +197,11 @@ things read that stored history rather than just the round that just ran:
   is ever refused outright, so a driver gets four `POKRAČUJ` rounds before the
   ceiling bites, not five;
 - a thrash guard — once two consecutive rounds both produced a pixel
-  percentage, a drop of less than 20% relative to the previous round parks the
-  run rather than let small edits chase diminishing returns forever.
+  percentage **and the earlier of the two was above 0%**, a drop of less than
+  20% relative to the previous round parks the run rather than let small edits
+  chase diminishing returns forever. The `> 0` precondition matters: a round
+  following a 0% round is never parked for thrash, because "no relative
+  improvement on zero" is arithmetic, not evidence of thrashing.
 
 A round is **done** only when the pixel diff is under 0.5% **and** the largest
 contiguous differing region is at most 4×4 px — a tiny total percentage with
@@ -224,8 +231,11 @@ trust the exit code over the report; that caveat is gone because the defect is.
 ## When a run fails
 
 Everything below exits **3** and prints exactly one `[design-match]` line, no
-stack. The rule about what such a run leaves on disk is stated once in
-`cli.mjs` and applied at every refusal path:
+stack. That is the contract for every _refusal_ — a failure the tool
+anticipated. It is not a guarantee about every exit 3: a crash the tool did not
+anticipate still surfaces as a raw stack, and there is one known today (see
+`ZIBBY Redesign Canvas` under "Known limits"). The rule about what a refusal
+leaves on disk is stated once in `cli.mjs` and applied at every refusal path:
 
 > design-match never deletes what it **saw**, and never writes what it
 > **concluded** — and it names only files it actually wrote.
@@ -235,15 +245,16 @@ renderings of what the browser really put on screen, and they are the evidence
 the refusal is telling you to go and look at. `spec.json`, `report.md` and
 `rounds.json` assert conclusions and are never written on a failing path.
 
-| Refusal                                                            | What it leaves, and what it points you at                                                                                                                                                                           |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| root outside cwd / at or above `$HOME`                             | no artifact directory — it fires before the browser launches. (The CDN cache and the rewritten `.design-match-cached-*.html` beside the mockup are written first, so those do exist.) Copy the mockup into the repo |
-| CDN resource that cannot be downloaded                             | nothing — `design-match: nelze stáhnout <url> (HTTP nnn). Bez cache se mockup nevykreslí.`                                                                                                                          |
-| `--region <n>` out of range                                        | names the crops **that exist**; when `cropFitsPage` skipped all of them it says so and sends you to the inventory's selectors and dimensions instead of naming a file it never wrote                                |
-| region rendered nothing (below)                                    | names `design.png` and the **chosen** region's crop, when that crop exists                                                                                                                                          |
-| `spec.json` missing / older version / blank                        | nothing new — re-run `measure` for the slug                                                                                                                                                                         |
-| `--strict-wrappers` disagrees with `spec.json`                     | nothing new — re-run `measure`, or drop/add the flag on `compare`                                                                                                                                                   |
-| `--route` without `--selector`, or a selector that matches nothing | nothing — the message names the selector and the page                                                                                                                                                               |
+| Refusal                                                            | What it leaves, and what it points you at                                                                                                                                                                                                        |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| root outside cwd / at or above `$HOME`                             | no **per-slug** artifact directory — it fires before the browser launches. `ensureCdnCache` runs first, so `.design-match/.cdn-cache/` and the rewritten `.design-match-cached-*.html` beside the mockup do exist. Copy the mockup into the repo |
+| CDN resource that cannot be downloaded (HTTP error)                | no per-slug directory, but `.design-match/.cdn-cache/` exists and earlier URLs of the same run are already cached — `design-match: nelze stáhnout <url> (HTTP nnn). Bez cache se mockup nevykreslí.`                                             |
+| CDN resource that downloads 0 bytes                                | same — `design-match: stažení <url> vrátilo prázdný obsah (0 bajtů). Bez obsahu se mockup nevykreslí.` A 200 with an empty body is a failure, not a cache hit                                                                                    |
+| `--region <n>` out of range                                        | names the crops **that exist**; when `cropFitsPage` skipped all of them it says so and sends you to the inventory's selectors and dimensions instead of naming a file it never wrote                                                             |
+| region rendered nothing (below)                                    | names `design.png` and the **chosen** region's crop, when that crop exists                                                                                                                                                                       |
+| `spec.json` missing / older version / blank                        | nothing new — re-run `measure` for the slug                                                                                                                                                                                                      |
+| `--strict-wrappers` disagrees with `spec.json`                     | nothing new — re-run `measure`, or drop/add the flag on `compare`                                                                                                                                                                                |
+| `--route` without `--selector`, or a selector that matches nothing | nothing — the message names the selector and the page                                                                                                                                                                                            |
 
 A failed `compare` additionally **marks the previous `report.md` stale** rather
 than leaving a passing verdict lying next to a failed run. The retraction is
@@ -354,9 +365,21 @@ Two limits that remain:
   here, not something to count on elsewhere. The preflight compares the
   declared stack, not what actually rasterised, so it cannot catch this.
 
-The passing message (`font stack shodný v první rodině: …`) never reaches an
-artifact — only a failing preflight becomes the round's reason. Silence from
-this layer means it passed.
+Neither passing message reaches an artifact — only a failing preflight becomes
+the round's reason — so silence from this layer covers **two** different facts,
+and they are not equally reassuring:
+
+- `font stack shodný v první rodině: …` — the two primary families really were
+  compared and really did agree.
+- `font stack se nepodařilo zjistit ani na jedné straně — preflight nic
+neověřil, porovnání pokračuje bez něj` — both stacks came back empty, so the
+  layer verified nothing and said so rather than claiming a match over no
+  evidence. The source expects this to be unreachable in a browser
+  (`getComputedStyle` always yields a family), but the branch exists precisely
+  so that "nothing to compare" can never render as "compared and equal".
+
+Silence therefore means "the preflight did not object", not "the fonts were
+verified".
 
 ## CDN cache (measure)
 
@@ -423,22 +446,22 @@ itself (see CDN cache above). `measure` alone writes only `spec.json`,
 a `compare` round, and `app.png` only on a round that got past both the
 skeleton gate and the font preflight to reach the pixel layer:
 
-| File                  | Read it when                                                                                                                                                                                                                                                                                                                                                                        |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `report.md`           | first, always — verdict (the same `OUTCOME` label the exit code comes from), round counter, settle caveat, round history, masked regions, and a list of the files `writeArtifacts` produced **this round** (not `rounds.json`, `design.png`, `app.png`, or the crops). A refused later run prepends a `> **NEPLATNÉ:**` retraction rather than leaving this verdict looking current |
-| `skeleton.md`         | the gate is red — this names the structural difference                                                                                                                                                                                                                                                                                                                              |
-| `values.md`           | skeleton is green and a value delta needs tuning — see the four states below                                                                                                                                                                                                                                                                                                        |
-| `tokens.md`           | reviewing DS token growth before approving a new one — a **design-side inventory** computed once at `measure` time, of every tokenisable design value (one row per distinct `prop`/value pair), each shown as either the existing theme token it maps onto or a proposed new one — not a design-vs-app delta                                                                        |
-| `components.md`       | justifying why a new component was created instead of reusing one — today always just its `# Volba komponent` heading; the tool never auto-populates it (see note below)                                                                                                                                                                                                            |
-| `spec.json`           | the measured spec `measure` wrote — what every `compare` round is checked against. Top-level: `settled`, `selector`, `skeleton`, `tokenMappings`, `strictWrappers`, `version`; values hang off each skeleton node, there is no `spec.values`                                                                                                                                        |
-| `rounds.json`         | the accumulated round history driving the loop/thrash decisions                                                                                                                                                                                                                                                                                                                     |
-| `round-N.json`        | one round's raw verdict (skeleton pass/fail, pixel %, reason, `settled`)                                                                                                                                                                                                                                                                                                            |
-| `round-N-diff.png`    | the pixel diff mask **composited over the app screenshot** — not a bare mask; alone, a diff mask is marks floating on transparency                                                                                                                                                                                                                                                  |
-| `design.png`          | the design screenshot `measure` shot once, of the chosen element                                                                                                                                                                                                                                                                                                                    |
-| `app.png`             | the app screenshot from the most recent `compare` round that reached the pixel layer                                                                                                                                                                                                                                                                                                |
-| `r1.png`, `r2.png`, … | the numbered region preview crops `measure` printed — top 5, and only those that lie on the page image — for picking `--region <n>` with the image in hand                                                                                                                                                                                                                          |
+| File                  | Read it when                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `report.md`           | first, always — verdict (the same `OUTCOME` label the exit code comes from), round counter, settle caveat, round history, masked regions, and a "Doprovodné soubory" list — `skeleton.md`, `values.md`, `tokens.md`, `components.md`, `spec.json`, and one `round-N.json` **per round in the accumulated history** (plus `round-N-diff.png` for each round that produced one). It is not a list of what this round wrote: `spec.json` came from `measure` and is only rewritten here, and it names neither itself nor `rounds.json`, `design.png`, `app.png` or the crops. A refused later run prepends a `> **NEPLATNÉ:**` retraction rather than leaving this verdict looking current |
+| `skeleton.md`         | the gate is red — this names the structural difference                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `values.md`           | skeleton is green and a value delta needs tuning — see the three states below                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `tokens.md`           | reviewing DS token growth before approving a new one — a **design-side inventory** computed once at `measure` time, of every tokenisable design value (one row per distinct `prop`/value pair), each shown as either the existing theme token it maps onto or a proposed new one — not a design-vs-app delta                                                                                                                                                                                                                                                                                                                                                                            |
+| `components.md`       | justifying why a new component was created instead of reusing one — today always just its `# Volba komponent` heading; the tool never auto-populates it (see note below)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `spec.json`           | the measured spec `measure` wrote — what every `compare` round is checked against. Top-level: `settled`, `selector`, `skeleton`, `tokenMappings`, `strictWrappers`, `version`; values hang off each skeleton node, there is no `spec.values`                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `rounds.json`         | the accumulated round history driving the loop/thrash decisions                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `round-N.json`        | one round's raw verdict (skeleton pass/fail, pixel %, reason, `settled`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `round-N-diff.png`    | the pixel diff mask **composited over the app screenshot** — not a bare mask; alone, a diff mask is marks floating on transparency                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `design.png`          | the design screenshot `measure` shot once, of the chosen element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `app.png`             | the app screenshot from the most recent `compare` round that reached the pixel layer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `r1.png`, `r2.png`, … | the numbered region preview crops `measure` printed — top 5, and only those that lie on the page image — for picking `--region <n>` with the image in hand                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
-### `values.md`'s four states
+### `values.md`'s three states
 
 The distinction the whole branch exists to keep: "no differences" and "not
 measured" must never render the same. `renderValues` (`report.mjs`) produces
@@ -500,10 +523,16 @@ against `design/Z.I.B.B.Y/` with Storybook and `pnpm web:dev` up. Earlier
 revisions of this section described blockers that no longer exist; what follows
 is what is true now.
 
-### The corpus: 11 of 11 measurable
+### The corpus: 11 of 11 measurable — under one description
 
 Every mockup in `design/Z.I.B.B.Y/` measures to a real spec, from a cold cache
-(`.design-match/.cdn-cache` deleted first), default `--region 1`, exit 0:
+(`.design-match/.cdn-cache` deleted first), default `--region 1`, exit 0. Every
+row below was measured with the **same description, `"karta"`** — that is the
+input that produced this table, and the table is not reproducible without it:
+
+```bash
+node tools/design-match/cli.mjs measure "design/Z.I.B.B.Y/<mockup>.html" "karta"
+```
 
 | Mockup                         | Nodes | Token mappings | Winning selector                             | `settled` |
 | ------------------------------ | ----- | -------------- | -------------------------------------------- | --------- |
@@ -518,6 +547,16 @@ Every mockup in `design/Z.I.B.B.Y/` measures to a real spec, from a cold cache
 | ZIBBY Velin-B                  | 267   | 154            | `… > div > div`                              | true      |
 | ZIBBY Velin-D                  | 124   | 86             | `#root`                                      | true      |
 | ZIBBY Velin                    | 82    | 97             | `#root`                                      | true      |
+
+**Which region wins is a function of `(mockup, description)`, not of the mockup
+alone.** `rankCandidates` scores each candidate by how many description terms
+hit its tag, classes and text, and only _then_ breaks ties on area. Change the
+description and a row's selector, node count and mapping count can all change —
+that is the flag working as designed, and it is why the description is worth
+choosing rather than typing. But it means "11 of 11" is a claim about this
+description. Under a description that hits nothing at all, one of these eleven
+does not merely rank differently — it crashes (see `ZIBBY Redesign Canvas`
+below).
 
 Measuring is not matching: a spec is only the design side. But "the tool cannot
 read this repo's own designs" — which this section used to say, at 2 of 11 — is
@@ -544,23 +583,67 @@ identical hash, and every other mockup is stable the same way.
 
 ### `rankCandidates` breaks ties on area
 
-Unchanged, and it is the limit an operator meets on every full-bleed mockup: the
-largest element wins, so `#root` and its nested wrappers take the top slots
-ahead of anything worth matching (see the inventory in "Running it"). The
-numbered inventory plus `--region <n>` is the mitigation, and choosing is the
-operator's job.
+Unchanged, and it is the limit an operator meets on every full-bleed mockup:
+**once the description ties them** — which it does whenever the wrappers carry
+no class or text the description names — the largest element wins, so `#root`
+and its nested wrappers take the top slots ahead of anything worth matching
+(see the inventory in "Running it"). The numbered inventory plus `--region <n>`
+is the mitigation, and choosing is the operator's job.
 
-### `ZIBBY Redesign Canvas` measures, but with no region previews at all
+### `ZIBBY Redesign Canvas`: previews depend on the description, and one description crashes it
 
 It is a pan/zoom canvas: its cards sit inside a transformed, `overflow: hidden`
 container, so their boxes are reported at `y ≈ 1173` and 4256 px wide while the
-document itself never grows past 1440×900. Every ranked candidate is therefore
-off the page image, `cropFitsPage` skips all of them, and the operator gets a
-numbered list with no pictures — `bez náhledu — region leží mimo snímek
-stránky` on every row. Choose by selector and dimensions instead. The chosen
-region's own `design.png` is unaffected (it is a `locator.screenshot()`, which
-scrolls the element into view), which is why the mockup still measures to a real
-28-node spec.
+document itself never grows past 1440×900.
+
+Under `"karta"` — the description the table above was measured with — all five
+ranked candidates are off the page image, `cropFitsPage` skips every one, and
+the operator gets a numbered list with no pictures:
+
+```
+  [1] div.design-canvas > div > div:nth-child(3) 4256×1103 @ (0,1173)   ▸ bez náhledu — region leží mimo snímek stránky
+  [2] div.design-canvas > div > div:nth-child(3) > div:nth-child(2) 2908×1010 @ (0,1266)   ▸ bez náhledu — region leží mimo snímek stránky
+  …
+Vybrán region [1]: div.design-canvas > div > div:nth-child(3) — pokud je špatně, spusť znovu s --region <n>.
+```
+
+That is a property of the description, not of the mockup. Under `"canvas"` the
+top candidate is the pan/zoom viewport element itself, which _is_ on the page
+image and _does_ get a crop:
+
+```
+  [1] div.design-canvas         1440×900 @ (0,0)   ▸ r1.png
+```
+
+The viewport element is always on the page image; it is simply not always
+inside the top-5 slice. When every row says `bez náhledu`, choose by selector
+and dimensions.
+
+**Under a description that hits nothing, the documented default invocation
+crashes.** With `"qqzz"`, region `[1]` is `div.design-canvas > div >
+div:nth-child(1)` — 16256×18608 at `(-6000,-6000)` — and `locator.screenshot()`
+cannot photograph it:
+
+```
+Vybrán region [1]: div.design-canvas > div > div:nth-child(1) — pokud je špatně, spusť znovu s --region <n>.
+locator.screenshot: Protocol error (Page.captureScreenshot): Unable to capture screenshot
+    at shootElement (…/tools/design-match/shoot.mjs:468:18)
+EXIT=3
+```
+
+That is a **raw Playwright stack with no `design-match:` prefix**, exit 3, and
+an artifact directory that was created and left empty — the one path in this
+document that does not honour the one-clean-line contract everything under
+"When a run fails" describes. It is a tool defect, recorded here because it is
+true today, not because it is intended. Two consequences for the operator:
+
+- `locator.screenshot()` scrolling the element into view is **not** a guarantee
+  that an oversized region can be captured. It holds for regions the browser
+  can actually photograph, which is why this mockup measures to a real 28-node
+  spec under `"karta"` — and not for the 16256×18608 candidate.
+- If the inventory's top candidate has absurd dimensions, pass `--region <n>`
+  rather than accepting the default. The inventory is printed before the
+  screenshot is attempted, so the numbers are there to be read first.
 
 It is also the one mockup of eleven that measures `settled: false`: a `fetch` on
 its 404 branch never reads or cancels the response body, so the request never
