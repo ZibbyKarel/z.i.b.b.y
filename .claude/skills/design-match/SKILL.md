@@ -10,9 +10,11 @@ description: >
 # design-match
 
 Spec: `docs/superpowers/specs/2026-07-31-design-match-design.md`. CLI:
-`tools/design-match/cli.mjs`; spec format `DESIGN_MATCH_VERSION = 1.3.0` — a
-`spec.json` measured by a different format version is refused rather than
-compared (see Exit codes).
+`tools/design-match/cli.mjs`; spec format `DESIGN_MATCH_VERSION = 1.4.0`
+(`version.mjs`) — a `spec.json` measured by a different format version is
+refused rather than compared (see Exit codes). 1.4.0 added `settled` to
+`spec.json`, so every spec measured before it is refused with a re-measure
+message; re-running `measure` for the slug is the whole fix.
 
 ## The rule this skill exists to enforce
 
@@ -42,34 +44,82 @@ node tools/design-match/cli.mjs measure "design/Z.I.B.B.Y/ZIBBY Roadmap.html" "k
 ```
 
 This prints a numbered inventory (best text/class match first) with a preview
-crop per candidate, e.g.:
+crop per candidate. Verbatim output of the command above, 2026-07-31:
 
 ```
 Inventura regionů (1440×900):
-  [1] div.epic-card                  360×140   @ (24,96)   ▸ r1.png
-  [2] div.board > div.column         480×640  @ (400,80)  ▸ r2.png
-Vybrán region [1]: div.epic-card — pokud je špatně, spusť znovu s --region <n>.
+  [1] #root                     1440×900 @ (0,0)   ▸ r1.png
+  [2] #root > div               1440×900 @ (0,0)   ▸ r2.png
+  [3] #root > div > div         1440×900 @ (0,0)   ▸ r3.png
+  [4] #root > div > div > div   1440×900 @ (0,0)   ▸ r4.png
+  [5] #root > div > div > div > div  1376×933 @ (32,28)   ▸ bez náhledu — region leží mimo snímek stránky
+Vybrán region [1]: #root — pokud je špatně, spusť znovu s --region <n>.
+spec.json zapsán → .design-match/karta-epicu/spec.json
 ```
 
-Only the top 5 candidates are printed and cropped (`r1.png`…`r5.png`), but
-`--region` accepts any index in the full ranked list — a valid `--region`
-beyond 5 has no preview crop to check it against. Open the crop, and if `[1]`
-is the wrong region, rerun with `--region 2` (1-based). `measure` writes
-`design.png` (the cropped shot) and `spec.json` for whichever region wins.
+Read that inventory as a warning as much as a menu: `rankCandidates` breaks
+ties on **area**, so on a full-bleed mockup the largest and least useful
+element wins by construction — here four nested full-viewport wrappers ahead
+of anything worth matching. `--region <n>` is what saves it, and picking it is
+the operator's job, not the tool's.
+
+Only the top 5 candidates are cropped (`r1.png`…`r5.png`), and a candidate that
+does not lie on the full-page screenshot gets **no crop at all** — the
+inventory says `bez náhledu — region leží mimo snímek stránky` rather than
+naming a file that was never written (`[5]` above). `--region` accepts any
+index in the full ranked list (59 candidates for this mockup), so a valid
+`--region` beyond 5 has no preview to check it against either. Open the crop,
+and if `[1]` is the wrong region, rerun with `--region 2` (1-based). `measure`
+writes `design.png` (the shot of the chosen element) and `spec.json` for
+whichever region wins.
 
 ```bash
 # F5 — one compare round against a real DS story (confirmed against the running
-# Storybook's index: DesignSystem/Card → designsystem-card--overview)
+# Storybook's index: DesignSystem/Card → designsystem-card--overview). No
+# --selector needed: a story mounts at #storybook-root.
 node tools/design-match/cli.mjs compare --slug karta-epicu --story designsystem-card--overview
 
 # …or against a real route (apps/web/app/(dashboard)/agents/page.tsx), dev
-# server must already be up
-node tools/design-match/cli.mjs compare --slug karta-epicu --route /agents
+# server must already be up. `--route` REQUIRES --selector — see Flags.
+node tools/design-match/cli.mjs compare --slug karta-epicu --route /agents --selector "body > div"
 ```
 
 `--slug` defaults to a slugified `description` on `measure` (`"karta epicu"` →
 `karta-epicu`); `compare` has no description to slugify from, so it always
 requires `--slug` explicitly.
+
+### Where the mockup is served from
+
+`measure` does **not** open the mockup over `file://` any more. It stands up a
+read-only `node:http` server on an ephemeral `127.0.0.1` port
+(`withStaticServer` in `shoot.mjs`) with exactly **two mounts** — `/` serving
+the mockup's own directory (so its sibling `zibby/*.jsx` resolve) and
+`/__design-match-cdn` serving the shared CDN cache (`CDN_CACHE_URL_PREFIX` in
+`cdn-cache.mjs`) — and tears it down in a `finally`. `file://` was never a
+bytes problem: Chromium blocks the XHR Babel uses for
+`<script type="text/babel" src="…jsx">` there, and cannot satisfy a
+`crossorigin` fetch, so seven of this repo's eleven mockups rendered an empty
+`#root`. Over `http://127.0.0.1` both causes disappear.
+
+Dropping `file://` also drops its isolation, so there is a floor:
+`assertServableRoot` refuses to serve a root that is not inside the current
+working directory, and refuses `$HOME` or any ancestor of it — on realpaths,
+so a symlink out of the tree does not sneak past. Measuring a mockup that sits
+outside the repo hits it before a socket is opened:
+
+```
+$ node tools/design-match/cli.mjs measure /tmp/dm-probe/x.html "karta"
+[design-match] design-match: adresář mockupu (/private/tmp/dm-probe) leží mimo aktuální
+pracovní adresář (/Users/zibby/Workspace/z.i.b.b.y) — design-match servíruje jen adresáře
+uvnitř něj. Spusť measure z adresáře, který mockup obsahuje, nebo mockup do něj zkopíruj.
+EXIT=3
+```
+
+That message is the only guidance you get, and the remedy in it is the one to
+take: **copy the mockup into the repo** (`design/…`) and measure it there. The
+other remedy it names — running `measure` from a directory containing the
+mockup — only works if that directory can also hold `.design-match/`, which is
+cwd-relative.
 
 ## Flags
 
@@ -84,14 +134,46 @@ requires `--slug` explicitly.
 
 `compare --slug <slug>`:
 
-| Flag                | Default                                        | Effect                                                                                                                                                                                                                                                                |
-| ------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--story <id>`      | —                                              | Storybook story id (one of `--story`/`--route` is required)                                                                                                                                                                                                           |
-| `--route <path>`    | —                                              | app route; needs the dev server running (one of `--story`/`--route` is required)                                                                                                                                                                                      |
-| `--selector <css>`  | the selector `measure` recorded in `spec.json` | override which element in the scene gets shot/compared                                                                                                                                                                                                                |
-| `--mask <css>`      | none, repeatable                               | region(s) masked out of the pixel diff — see `references/scene-recipes.md`                                                                                                                                                                                            |
-| `--strict-wrappers` | off                                            | must match what `measure` stamped into `spec.json` for this slug — a mismatch refuses with exit 3, not a silent compare; there is no override, only either dropping/adding the flag on `compare` to match the spec, or re-running `measure` with the setting you want |
-| `--reset`           | off                                            | discard `rounds.json` history, start a fresh attempt                                                                                                                                                                                                                  |
+| Flag                        | Default                                               | Effect                                                                                                                                                                                                                                                                |
+| --------------------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--story <id>`              | —                                                     | Storybook story id (one of `--story`/`--route` is required)                                                                                                                                                                                                           |
+| `--route <path>`            | —                                                     | app route; needs the dev server running (one of `--story`/`--route` is required)                                                                                                                                                                                      |
+| `--selector <css>`          | `--story`: `#storybook-root`; `--route`: **required** | which element in the scene gets extracted, shot and compared. The design's own selector from `spec.json` is **never** inherited — see below                                                                                                                           |
+| `--mask <css>`              | none, repeatable                                      | region(s) masked out of the pixel diff — see `references/scene-recipes.md`                                                                                                                                                                                            |
+| `--strict-wrappers`         | off                                                   | must match what `measure` stamped into `spec.json` for this slug — a mismatch refuses with exit 3, not a silent compare; there is no override, only either dropping/adding the flag on `compare` to match the spec, or re-running `measure` with the setting you want |
+| `--reset`                   | off                                                   | discard `rounds.json` history, start a fresh attempt                                                                                                                                                                                                                  |
+| `--app-base <origin>`       | `http://localhost:3000`                               | origin `--route` is joined onto                                                                                                                                                                                                                                       |
+| `--storybook-base <origin>` | `http://localhost:6006`                               | origin `--story`'s `/iframe.html?id=…&viewMode=story` is built on                                                                                                                                                                                                     |
+
+### `--selector` on `compare`
+
+`spec.json` records the winning **design** selector (`#root`, `#dock`,
+`svg.circuit-svg`, `div.row:nth-child(3)`). `compare` used to fall back to it,
+and that was the tool's worst default: those selectors are generic enough to
+match _something_ in a real app while naming an entirely unrelated node, and a
+compare that quietly measures the wrong node is worse than one that refuses. It
+is no longer consulted at all, and no fallback chain leads back to it.
+
+The two scenes then differ because the evidence about them differs
+(`resolveScene`, `shoot.mjs`):
+
+- **`--story` defaults to `#storybook-root`** — Storybook's own mount contract,
+  not an inference about anyone's markup, so the documented `compare --story`
+  works with no `--selector` at all.
+- **`--route` refuses without one.** Next's App Router mounts straight into
+  `<body>`; there is nothing correct to default to, so it says so and names what
+  to pass, at exit 3:
+
+  ```
+  [design-match] design-match: --route vyžaduje i --selector — v implementaci neexistuje
+  uzel, který by šlo bezpečně uhodnout, a selector z designu (spec.json) se nedědí: buď
+  v aplikaci není, nebo tam náhodou sedí na úplně jiný prvek. Otevři route v prohlížeči
+  a předej selector kořene porovnávané části.
+  ```
+
+Open the route in a browser and pass the root of the part being matched. A
+selector that matches nothing in the scene is one clean line naming the
+selector and the page — never a stack (see Exit codes).
 
 ## The loop
 
