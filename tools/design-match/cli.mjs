@@ -11,8 +11,12 @@ import { collectRegions, cropRegions, formatInventory, rankCandidates } from "./
 import { decideNext, evaluateRound } from "./loop.mjs";
 import { normalizeSkeleton } from "./normalize.mjs";
 import { diffPngs } from "./pixels.mjs";
+import { fontPreflight } from "./preflight.mjs";
 import { writeArtifacts } from "./report.mjs";
 import { resolveScene, shootScene } from "./shoot.mjs";
+import { TOKEN_PROPS, mapValue, parseThemeTokens, proposeTokenName } from "./tokens.mjs";
+
+const DEFAULT_THEME_PATH = "libs/design-system/src/theme/globals.css";
 
 const ARTIFACT_ROOT = ".design-match";
 const ROUNDS_FILE = "rounds.json";
@@ -70,6 +74,9 @@ export function parseArgs(argv) {
     } else if (arg === "--region") {
       flags.region = takeFlagValue(rest, i, "--region");
       i += 1;
+    } else if (arg === "--theme") {
+      flags.theme = takeFlagValue(rest, i, "--theme");
+      i += 1;
     } else {
       positional.push(arg);
     }
@@ -97,6 +104,7 @@ export function parseArgs(argv) {
     strictWrappers: flags.strictWrappers,
     region: flags.region !== undefined ? Number(flags.region) : 1,
     reset: flags.reset,
+    theme: flags.theme ?? DEFAULT_THEME_PATH,
   };
 }
 
@@ -132,6 +140,59 @@ export function stripImages(round) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructured only to exclude them from `rest`
   const { appImage, maskImage, ...rest } = round;
   return rest;
+}
+
+/** The leaf role at the end of a raw-DOM values path, with any `[n]` index stripped. */
+function leafRole(valuesPath) {
+  return valuesPath
+    .split("/")
+    .at(-1)
+    .replace(/\[\d+\]$/, "");
+}
+
+/**
+ * Every tokenisable value on the app, mapped against the design's theme —
+ * `tokens.md`'s only source. Deduplicated by `prop` + `value` (the same colour
+ * on forty nodes is one row, not forty) and sorted by `prop` then `value` so
+ * two runs of the same design produce a diff-stable table.
+ */
+export function buildTokenMappings(values, tokens) {
+  const byKey = new Map();
+  for (const [valuesPath, props] of Object.entries(values)) {
+    for (const prop of TOKEN_PROPS) {
+      if (!(prop in props)) continue;
+      const value = props[prop];
+      const key = `${prop}::${value}`;
+      if (byKey.has(key)) continue;
+      const mapping = mapValue(value, tokens);
+      if (mapping.kind === "new") {
+        mapping.proposedName = proposeTokenName(leafRole(valuesPath), prop);
+      }
+      byKey.set(key, { value, prop, path: valuesPath, mapping });
+    }
+  }
+  return [...byKey.values()].sort((a, b) => {
+    if (a.prop !== b.prop) return a.prop < b.prop ? -1 : 1;
+    return a.value < b.value ? -1 : 1;
+  });
+}
+
+/**
+ * Every distinct font family referenced across the tree, in first-seen order —
+ * `fontPreflight`'s input. It does its own quote-stripping and case-folding, so
+ * this stays a plain split+trim+dedupe.
+ */
+export function collectFontStacks(values) {
+  const families = new Set();
+  for (const props of Object.values(values)) {
+    const stack = props.fontFamily;
+    if (!stack) continue;
+    for (const family of stack.split(",")) {
+      const trimmed = family.trim();
+      if (trimmed) families.add(trimmed);
+    }
+  }
+  return [...families];
 }
 
 /**
@@ -208,16 +269,27 @@ export function isDeliberateError(error) {
  * than as inline expressions inside the browser-driven `runCompare` that no
  * test could ever reach.
  */
-export function buildCompareOutcome({ result, spec, slug, masks, history }) {
-  const roundVerdict = evaluateRound(result);
+export function buildCompareOutcome({ result, spec, slug, masks, history, fontPreflight }) {
+  // A font mismatch makes every pixel delta a lie — the numbers move but the
+  // cause is not in the code — so it overrides whatever `evaluateRound` would
+  // have said, and forces `pixels: null` even if a caller (or a future bug)
+  // handed us pixels anyway. The preflight message becomes the round's whole
+  // reason, so it reaches report.md and round-N.json instead of being swallowed.
+  const preflightFailed = Boolean(fontPreflight && !fontPreflight.ok);
+  const effectiveResult = preflightFailed ? { ...result, pixels: null } : result;
+  const roundVerdict = preflightFailed
+    ? { status: "continue", reason: fontPreflight.message }
+    : evaluateRound(effectiveResult);
   // Only this invocation's round carries image buffers — replayed history
   // rounds (read back from rounds.json) never do, they were stripped before
   // being persisted.
   const currentRound = {
-    percent: result.pixels ? result.pixels.percent : null,
-    skeletonPass: result.skeleton.pass,
+    percent: effectiveResult.pixels ? effectiveResult.pixels.percent : null,
+    skeletonPass: effectiveResult.skeleton.pass,
     reason: roundVerdict.reason,
-    ...(result.pixels ? { appImage: result.appImage, maskImage: result.pixels.diffBuffer } : {}),
+    ...(effectiveResult.pixels
+      ? { appImage: effectiveResult.appImage, maskImage: effectiveResult.pixels.diffBuffer }
+      : {}),
   };
   const roundRecord = stripImages(currentRound);
   const fullHistory = [...history, roundRecord];
@@ -233,7 +305,7 @@ export function buildCompareOutcome({ result, spec, slug, masks, history }) {
     masks,
     skeletonFindings: result.skeleton.findings,
     values: result.values ?? [],
-    tokenMappings: [],
+    tokenMappings: spec.tokenMappings ?? [],
     componentDecisions: [],
   };
 
@@ -315,6 +387,20 @@ async function runMeasure(cmd) {
     };
   });
 
+  // Token mapping is commentary on the spec, not the point of `measure` — a
+  // theme file that can't be read must not fail the run, only leave the
+  // mapping list empty and say why.
+  let tokenMappings = [];
+  try {
+    const themeCss = await fs.readFile(cmd.theme, "utf8");
+    tokenMappings = buildTokenMappings(spec.values, parseThemeTokens(themeCss));
+  } catch (error) {
+    console.warn(
+      `design-match: nelze načíst theme soubor "${cmd.theme}" — mapování tokenů zůstává prázdné (${error.message})`,
+    );
+  }
+  spec.tokenMappings = tokenMappings;
+
   await fs.writeFile(path.join(dir, "spec.json"), JSON.stringify(spec, null, 2), "utf8");
   console.log(`spec.json zapsán → ${path.join(dir, "spec.json")}`);
 }
@@ -333,10 +419,24 @@ async function runCompare(cmd) {
     const skeleton = compareSkeletons(spec.skeleton, appSkeleton);
     if (!skeleton.pass) return { skeleton, values: null, pixels: null };
 
-    const values = compareValues(spec.values, await extractValues(page, scene.selector));
+    const appValues = await extractValues(page, scene.selector);
+    const values = compareValues(spec.values, appValues);
+
+    // A font mismatch makes every later pixel delta a lie — the numbers move
+    // but the cause is not in the code — so the pixel comparison is skipped
+    // entirely rather than measuring a difference whose cause is wrong.
+    const preflight = fontPreflight(collectFontStacks(spec.values), collectFontStacks(appValues));
+    if (!preflight.ok) return { skeleton, values, pixels: null, fontPreflight: preflight };
+
     const appImage = await shootScene(page, scene, path.join(dir, "app.png"));
     const designPng = await fs.readFile(path.join(dir, "design.png"));
-    return { skeleton, values, pixels: diffPngs(designPng, appImage), appImage };
+    return {
+      skeleton,
+      values,
+      pixels: diffPngs(designPng, appImage),
+      appImage,
+      fontPreflight: preflight,
+    };
   });
 
   const { payload, fullHistory, verdict } = buildCompareOutcome({
@@ -345,6 +445,7 @@ async function runCompare(cmd) {
     slug: cmd.slug,
     masks: scene.masks,
     history,
+    fontPreflight: result.fontPreflight,
   });
 
   await fs.writeFile(path.join(dir, ROUNDS_FILE), JSON.stringify(fullHistory, null, 2), "utf8");

@@ -21,6 +21,13 @@ const PROP_PREFIX = {
   letterSpacing: "tracking",
 };
 
+/**
+ * `VALUE_PROPS` (extract.mjs) covers ~40 properties for the values comparison;
+ * only the ones `PROP_PREFIX` knows a token family for are worth reporting in
+ * `tokens.md` — a `display: flex` row would never be covered by a token.
+ */
+export const TOKEN_PROPS = Object.keys(PROP_PREFIX);
+
 /** Strips /* ... *\/ comments (including multi-line) before any declaration matching. */
 function stripComments(css) {
   return css.replace(/\/\*[\s\S]*?\*\//g, "");

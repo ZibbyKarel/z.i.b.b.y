@@ -4,6 +4,8 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   buildCompareOutcome,
+  buildTokenMappings,
+  collectFontStacks,
   combineVerdict,
   describeOutcome,
   historyFromRaw,
@@ -15,6 +17,7 @@ import {
   selectExitCode,
   stripImages,
 } from "./cli.mjs";
+import { parseThemeTokens } from "./tokens.mjs";
 
 describe("parseArgs", () => {
   it("parses the measure form", () => {
@@ -69,6 +72,17 @@ describe("parseArgs", () => {
     expect(parseArgs(["compare", "--slug", "s", "--reset"]).reset).toBe(true);
   });
 
+  it("defaults --theme to the DS globals.css and parses an explicit override", () => {
+    expect(parseArgs(["measure", "d.html", "x"]).theme).toBe(
+      "libs/design-system/src/theme/globals.css",
+    );
+    expect(parseArgs(["measure", "d.html", "x", "--theme", "custom.css"]).theme).toBe("custom.css");
+  });
+
+  it("throws naming the flag when --theme is the last argument", () => {
+    expect(() => parseArgs(["measure", "d.html", "x", "--theme"])).toThrow(/--theme/);
+  });
+
   it("throws naming the flag when a value-taking flag has no value (--mask last)", () => {
     expect(() => parseArgs(["compare", "--slug", "s", "--mask"])).toThrow(/--mask/);
   });
@@ -96,6 +110,84 @@ describe("resolveRegionIndex", () => {
   it("throws naming the valid range when the region is out of bounds", () => {
     expect(() => resolveRegionIndex(0, 5)).toThrow(/1.*5|5.*1/);
     expect(() => resolveRegionIndex(6, 5)).toThrow(/1.*5|5.*1/);
+  });
+});
+
+describe("buildTokenMappings", () => {
+  const CSS = `
+@theme {
+  --zt-bg-base: #0b0e13;
+  --zt-space-3: 12px;
+}
+`;
+  const tokens = parseThemeTokens(CSS);
+
+  it("maps an exact match with no proposed name", () => {
+    const values = { form: { color: "rgb(11, 14, 19)" } };
+    const mappings = buildTokenMappings(values, tokens);
+    expect(mappings).toEqual([
+      {
+        value: "rgb(11, 14, 19)",
+        prop: "color",
+        path: "form",
+        mapping: { kind: "exact", token: "--zt-bg-base" },
+      },
+    ]);
+    expect(mappings[0].mapping).not.toHaveProperty("proposedName");
+  });
+
+  it("proposes a name from the leaf role (index stripped) and the prop for an unmatched value", () => {
+    const values = { "form/card[0]/heading[1]": { fontSize: "22px" } };
+    const mappings = buildTokenMappings(values, tokens);
+    expect(mappings).toHaveLength(1);
+    expect(mappings[0].mapping.kind).toBe("new");
+    expect(mappings[0].mapping.proposedName).toBe("--zt-text-heading");
+  });
+
+  it("collapses the same prop+value on two paths into one entry", () => {
+    const values = {
+      "form/card[0]": { gap: "12px" },
+      "form/card[1]": { gap: "12px" },
+    };
+    expect(buildTokenMappings(values, tokens)).toHaveLength(1);
+  });
+
+  it("ignores a prop outside TOKEN_PROPS", () => {
+    const values = { form: { display: "flex" } };
+    expect(buildTokenMappings(values, tokens)).toEqual([]);
+  });
+
+  it("sorts entries by prop then value for a stable table", () => {
+    const values = {
+      form: { gap: "12px", color: "rgb(11, 14, 19)" },
+      "form/card[0]": { color: "rgb(1, 2, 3)" },
+    };
+    const mappings = buildTokenMappings(values, tokens);
+    expect(mappings.map((m) => `${m.prop}:${m.value}`)).toEqual([
+      "color:rgb(1, 2, 3)",
+      "color:rgb(11, 14, 19)",
+      "gap:12px",
+    ]);
+  });
+});
+
+describe("collectFontStacks", () => {
+  it("splits a single stack into its distinct families", () => {
+    const values = { form: { fontFamily: '"Geist", "Helvetica Neue", sans-serif' } };
+    expect(collectFontStacks(values)).toEqual(['"Geist"', '"Helvetica Neue"', "sans-serif"]);
+  });
+
+  it("dedupes families shared across two nodes' stacks", () => {
+    const values = {
+      form: { fontFamily: "Geist, sans-serif" },
+      "form/action[0]": { fontFamily: "Geist, sans-serif" },
+    };
+    expect(collectFontStacks(values)).toEqual(["Geist", "sans-serif"]);
+  });
+
+  it("skips a node with no fontFamily rather than throwing", () => {
+    const values = { form: {}, "form/action[0]": { fontFamily: "Geist" } };
+    expect(collectFontStacks(values)).toEqual(["Geist"]);
   });
 });
 
@@ -277,6 +369,85 @@ describe("buildCompareOutcome", () => {
     expect(payload.rounds[0]).toBe(priorRound);
     expect(fullHistory[0]).toBe(priorRound);
     expect(fullHistory).toHaveLength(2);
+  });
+
+  it("carries the spec's tokenMappings through, defaulting to [] when absent (a pre-task-12b spec.json)", () => {
+    const result = { skeleton: skeletonFail, values: null, pixels: null };
+    const withMappings = buildCompareOutcome({
+      result,
+      spec: { selector: "#x", tokenMappings: [{ value: "12px", prop: "gap" }] },
+      slug: "epic-card",
+      masks: [],
+      history: [],
+    });
+    expect(withMappings.payload.tokenMappings).toEqual([{ value: "12px", prop: "gap" }]);
+
+    const withoutMappings = buildCompareOutcome({
+      result,
+      spec: { selector: "#x" },
+      slug: "epic-card",
+      masks: [],
+      history: [],
+    });
+    expect(withoutMappings.payload.tokenMappings).toEqual([]);
+  });
+
+  it("a passing font preflight leaves the round exactly as evaluateRound would produce it", () => {
+    const appImage = Buffer.from("app");
+    const maskImage = Buffer.from("mask");
+    const result = {
+      skeleton: skeletonPass,
+      values: [],
+      pixels: { percent: 0.3, largestRegion: { w: 2, h: 2 }, diffBuffer: maskImage },
+      appImage,
+    };
+    const withPreflight = buildCompareOutcome({
+      result,
+      spec: { selector: "#x" },
+      slug: "epic-card",
+      masks: [],
+      history: [],
+      fontPreflight: { ok: true, message: "font stack shodný: Geist" },
+    });
+    const withoutPreflight = buildCompareOutcome({
+      result,
+      spec: { selector: "#x" },
+      slug: "epic-card",
+      masks: [],
+      history: [],
+    });
+    expect(withPreflight.payload.rounds.at(-1)).toEqual(withoutPreflight.payload.rounds.at(-1));
+    expect(withPreflight.verdict).toEqual(withoutPreflight.verdict);
+  });
+
+  it("a failing font preflight forces pixels: null and puts the font message in the round's reason, even if pixels were computed", () => {
+    const appImage = Buffer.from("app");
+    const maskImage = Buffer.from("mask");
+    const result = {
+      skeleton: skeletonPass,
+      values: [],
+      pixels: { percent: 12, largestRegion: { w: 40, h: 40 }, diffBuffer: maskImage },
+      appImage,
+    };
+    const message =
+      "font stack se liší — design: [Geist], implementace: [Inter]. Sjednoť je dřív, než se začne porovnávat.";
+    const { payload, roundRecord, verdict } = buildCompareOutcome({
+      result,
+      spec: { selector: "#x" },
+      slug: "epic-card",
+      masks: [],
+      history: [],
+      fontPreflight: { ok: false, message },
+    });
+
+    const currentRound = payload.rounds.at(-1);
+    expect(currentRound.percent).toBeNull();
+    expect(currentRound.reason).toBe(message);
+    expect(currentRound.skeletonPass).toBe(true);
+    expect(currentRound).not.toHaveProperty("appImage");
+    expect(currentRound).not.toHaveProperty("maskImage");
+    expect(roundRecord).not.toHaveProperty("appImage");
+    expect(verdict.status).not.toBe("done");
   });
 });
 

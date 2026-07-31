@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapValue, parseThemeTokens, proposeTokenName } from "./tokens.mjs";
+import { TOKEN_PROPS, mapValue, parseThemeTokens, proposeTokenName } from "./tokens.mjs";
 
 const CSS = `
 @theme {
@@ -38,6 +38,15 @@ describe("mapValue", () => {
   it("measures length distance in px", () => {
     const mapping = mapValue("18px", tokens);
     expect(mapping).toMatchObject({ kind: "new", nearest: "--zt-space-3", distance: 6 });
+  });
+});
+
+describe("TOKEN_PROPS", () => {
+  it("lists exactly the properties PROP_PREFIX maps, not the wider VALUE_PROPS set", () => {
+    expect(TOKEN_PROPS).toEqual(
+      expect.arrayContaining(["color", "backgroundColor", "gap", "fontSize"]),
+    );
+    expect(TOKEN_PROPS).not.toContain("display");
   });
 });
 
