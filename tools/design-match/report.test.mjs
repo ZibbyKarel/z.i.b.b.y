@@ -450,4 +450,97 @@ describe("writeArtifacts", () => {
       ].sort(),
     );
   });
+
+  it(
+    "renders everything to memory before touching disk, so a render failure leaves nothing " +
+      "written (fix round 2, Important 1)",
+    async () => {
+      const attempt = writeArtifacts(dir, {
+        slug: "roadmap",
+        skeletonFindings: [],
+        values: [],
+        tokenMappings: [],
+        componentDecisions: [],
+        // renderReport does `masks.length` — it renders LAST of the five markdown
+        // strings, so under the pre-fix ordering every other .md (and any
+        // round-N.json) would already have been scheduled for writing by the
+        // time this throws. Post-fix, every render happens before any write is
+        // scheduled, so this must leave the directory completely empty.
+        masks: null,
+        verdict: { stop: true, status: "done", reason: "ok" },
+        rounds: [],
+      });
+
+      await expect(attempt).rejects.toThrow();
+
+      const entries = await fs.readdir(dir);
+      expect(entries).toEqual([]);
+    },
+  );
+
+  it(
+    "collects a write failure without stopping the others, writes every other file, and " +
+      "rejects naming the failed one (fix round 2, Important 2)",
+    async () => {
+      // A directory named report.md makes writeFile fail with EISDIR for that
+      // one entry while every sibling write can still succeed normally.
+      await fs.mkdir(path.join(dir, "report.md"));
+      const app = png(4, 4, () => [0, 0, 0, 255]);
+      const mask = png(4, 4, () => [255, 0, 0, 255]);
+
+      const attempt = writeArtifacts(dir, {
+        slug: "roadmap",
+        skeletonFindings: [],
+        values: [],
+        tokenMappings: [],
+        componentDecisions: [],
+        masks: [],
+        verdict: { stop: true, status: "done", reason: "ok" },
+        rounds: [
+          { percent: 0.3, skeletonPass: true, reason: "kolo 1", appImage: app, maskImage: mask },
+        ],
+      });
+
+      await expect(attempt).rejects.toThrow(/report\.md/);
+
+      const entries = await fs.readdir(dir);
+      expect(entries).toContain("skeleton.md");
+      expect(entries).toContain("values.md");
+      expect(entries).toContain("tokens.md");
+      expect(entries).toContain("components.md");
+      expect(entries).toContain("round-1.json");
+      expect(entries).toContain("round-1-diff.png");
+    },
+  );
+
+  it("names both a compositing failure and a write failure in the same error when they co-occur", async () => {
+    await fs.mkdir(path.join(dir, "report.md"));
+    const badApp = png(4, 4, () => [0, 0, 0, 255]);
+    const badMask = png(6, 4, () => [255, 0, 0, 255]);
+
+    const attempt = writeArtifacts(dir, {
+      slug: "roadmap",
+      skeletonFindings: [],
+      values: [],
+      tokenMappings: [],
+      componentDecisions: [],
+      masks: [],
+      verdict: { stop: true, status: "continue", reason: "diff obrázek chybí" },
+      rounds: [
+        {
+          percent: 4,
+          skeletonPass: true,
+          reason: "kolo 1",
+          appImage: badApp,
+          maskImage: badMask,
+        },
+      ],
+    });
+
+    await expect(attempt).rejects.toThrow();
+    await attempt.catch((error) => {
+      expect(error.message).toContain("round-1.json");
+      expect(error.message).toContain("report.md");
+    });
+  });
 });

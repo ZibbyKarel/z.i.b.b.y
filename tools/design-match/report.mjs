@@ -153,19 +153,30 @@ export function compositeDiff(appPngBuffer, maskPngBuffer) {
  * cannot truncate the rest of the record. A round whose composite fails still
  * gets its round-N.json (carrying the reason as `diffImageError`) and is named
  * in report.md — the artifacts are always the complete, self-explaining set
- * this module exists to produce. Only after everything is written does this
- * function reject, naming the affected round(s); the error is never swallowed,
- * it is just not allowed to cut the record short first.
+ * this module exists to produce.
+ *
+ * fix round 2: two more paths could still cut that record short, both closed
+ * the same way — loudly, without destroying what could be built. (1) Every
+ * markdown string is rendered to a local BEFORE any file is scheduled for
+ * writing; a malformed payload that makes a renderer throw is now a clean
+ * no-op, nothing on disk, rather than a partial set (report.md, rendered
+ * last, was worst placed of all under the old ordering). (2) Writes are
+ * awaited with `Promise.allSettled`, not `Promise.all` — a filesystem error
+ * on one file no longer risks the caller observing the others before they've
+ * actually landed, and no longer erases a compositing failure's message (the
+ * old `Promise.all` rejected with whichever error hit first, discarding the
+ * other). Only after every write has settled does this function reject,
+ * naming every round that failed to composite AND every file that failed to
+ * write — never swallowed, just never allowed to cut the record short first.
  */
 export async function writeArtifacts(dir, payload) {
-  await fs.mkdir(dir, { recursive: true });
-
   // One pass per round: destructure the image buffers out (this is what keeps
   // them out of round-N.json — jsonSafe is exactly what gets stringified) and,
   // where both are present, attempt the composite right there so appImage and
   // maskImage are used in the same scope they're bound in. One round's failure
   // is caught and carried as `diffImageError` rather than thrown — it must not
-  // stop the rounds after it from being attempted or written.
+  // stop the rounds after it from being attempted or written. Nothing here
+  // touches the filesystem.
   const compositions = [];
   const roundsForRender = payload.rounds.map((round) => {
     const { appImage, maskImage, ...jsonSafe } = round;
@@ -184,55 +195,70 @@ export async function writeArtifacts(dir, payload) {
   });
 
   const siblingFiles = ["skeleton.md", "values.md", "tokens.md", "components.md"];
-  const writes = [
-    fs.writeFile(path.join(dir, "skeleton.md"), renderSkeleton(payload.skeletonFindings), "utf8"),
-    fs.writeFile(path.join(dir, "values.md"), renderValues(payload.values), "utf8"),
-    fs.writeFile(path.join(dir, "tokens.md"), renderTokens(payload.tokenMappings), "utf8"),
-    fs.writeFile(
-      path.join(dir, "components.md"),
-      renderComponents(payload.componentDecisions),
-      "utf8",
-    ),
-  ];
-
-  if (payload.spec !== undefined) {
-    siblingFiles.push("spec.json");
-    writes.push(
-      fs.writeFile(path.join(dir, "spec.json"), JSON.stringify(payload.spec, null, 2), "utf8"),
-    );
-  }
-
-  roundsForRender.forEach((round, index) => {
-    const roundJsonName = `round-${index + 1}.json`;
-    siblingFiles.push(roundJsonName);
-    writes.push(
-      fs.writeFile(path.join(dir, roundJsonName), JSON.stringify(round, null, 2), "utf8"),
-    );
+  if (payload.spec !== undefined) siblingFiles.push("spec.json");
+  roundsForRender.forEach((_round, index) => {
+    siblingFiles.push(`round-${index + 1}.json`);
     const composition = compositions[index];
+    if (composition.attempted && composition.ok) siblingFiles.push(`round-${index + 1}-diff.png`);
+  });
+
+  // Render every markdown string now, still entirely in memory. If any of
+  // these throws (a malformed payload), it happens here — before `fs.mkdir`,
+  // before a single `fs.writeFile` call exists — so the directory is left
+  // exactly as it was found.
+  const textFiles = [
+    { name: "skeleton.md", content: renderSkeleton(payload.skeletonFindings) },
+    { name: "values.md", content: renderValues(payload.values) },
+    { name: "tokens.md", content: renderTokens(payload.tokenMappings) },
+    { name: "components.md", content: renderComponents(payload.componentDecisions) },
+    {
+      name: "report.md",
+      content: renderReport({ ...payload, rounds: roundsForRender, siblingFiles }),
+    },
+  ];
+  if (payload.spec !== undefined) {
+    textFiles.push({ name: "spec.json", content: JSON.stringify(payload.spec, null, 2) });
+  }
+  roundsForRender.forEach((round, index) => {
+    textFiles.push({ name: `round-${index + 1}.json`, content: JSON.stringify(round, null, 2) });
+  });
+
+  await fs.mkdir(dir, { recursive: true });
+
+  const writeTasks = textFiles.map((file) => ({
+    name: file.name,
+    promise: fs.writeFile(path.join(dir, file.name), file.content, "utf8"),
+  }));
+  compositions.forEach((composition, index) => {
     if (composition.attempted && composition.ok) {
       const diffPngName = `round-${index + 1}-diff.png`;
-      siblingFiles.push(diffPngName);
-      writes.push(fs.writeFile(path.join(dir, diffPngName), composition.buffer));
+      writeTasks.push({
+        name: diffPngName,
+        promise: fs.writeFile(path.join(dir, diffPngName), composition.buffer),
+      });
     }
   });
 
-  writes.push(
-    fs.writeFile(
-      path.join(dir, "report.md"),
-      renderReport({ ...payload, rounds: roundsForRender, siblingFiles }),
-      "utf8",
-    ),
-  );
-
-  await Promise.all(writes);
+  const settled = await Promise.allSettled(writeTasks.map((task) => task.promise));
+  const writeFailures = settled
+    .map((result, index) => (result.status === "rejected" ? writeTasks[index].name : null))
+    .filter((name) => name !== null);
 
   const failedRounds = compositions
     .map((composition, index) => (composition.attempted && !composition.ok ? index + 1 : null))
     .filter((roundNumber) => roundNumber !== null);
-  if (failedRounds.length > 0) {
-    const roundFiles = failedRounds.map((n) => `round-${n}.json`).join(", ");
-    throw new Error(
-      `design-match: diff obrázek se nepodařilo sestavit pro kolo ${failedRounds.join(", ")} — viz report.md a ${roundFiles}`,
-    );
+
+  if (failedRounds.length > 0 || writeFailures.length > 0) {
+    const parts = [];
+    if (failedRounds.length > 0) {
+      const roundFiles = failedRounds.map((n) => `round-${n}.json`).join(", ");
+      parts.push(
+        `diff obrázek se nepodařilo sestavit pro kolo ${failedRounds.join(", ")} — viz report.md a ${roundFiles}`,
+      );
+    }
+    if (writeFailures.length > 0) {
+      parts.push(`zápis selhal pro: ${writeFailures.join(", ")}`);
+    }
+    throw new Error(`design-match: ${parts.join("; ")}`);
   }
 }
