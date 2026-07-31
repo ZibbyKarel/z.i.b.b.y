@@ -299,33 +299,59 @@ touches pixels (`checkFontPreflight` in `cli.mjs`, backed by
 round **parks immediately** — not `continue` — because a font mismatch makes
 every pixel delta a lie, and no further round can fix it without an edit.
 
+**It compares the first resolved family only** — case-folded, after
+normalisation. The rest of the stack is not compared at all, not even at a
+lower severity: `collectFontStacks` dedupes families into a `Set` in
+DOM-traversal order across the whole tree, so the tail's _order_ is a property
+of the walk rather than of anyone's CSS, and reporting a difference computed
+from it would be the tool making a claim it cannot back. Nothing is lost by
+that: `fontFamily` is in the measured whitelist, so `compareValues` still
+compares the full declared stack node by node, and any delta there keeps the
+round at `POKRAČUJ`. A fallback-order difference is therefore a value delta
+naming the node it happened on — it no longer parks the run and no longer
+suppresses the pixel layer.
+
+A genuine mismatch — a different **primary** family — still parks, with pixels
+suppressed and no `app.png`, because with different fonts every pixel delta is
+a lie:
+
+```
+PARK — font stack se liší v první vykreslované rodině — design: Comic Sans MS,
+implementace: Geist (celé stacky — design: [Comic Sans MS, cursive], implementace:
+[Geist, system-ui, -apple-system, system-ui, sans-serif]). Sjednoť je dřív, než se začne
+porovnávat.
+EXIT=2
+```
+
 `preflight.mjs` normalises `next/font/google`'s generated family names
 (`__Geist_<hash>`) back to the human name before comparing, and drops the
 synthetic `_Fallback` variant entirely (Next's own metric-matched substitute —
 the design side has nothing to compare it against). This normalisation matters
 for `--route` (against `apps/web`, where `next/font/google` is in play). For
-`--story` it is a **no-op, now measured rather than assumed**: Storybook boots
-the DS theme CSS directly, not `next/font`, so a story computes the plain
-family name — `getComputedStyle(document.body).fontFamily` on
+`--story` it is a **no-op, measured rather than assumed**: Storybook boots the
+DS theme CSS directly, not `next/font`, so a story computes the plain family
+name — `getComputedStyle(document.body).fontFamily` on
 `designsystem-card--overview` and `dashboard-hudcard--default` both read
-`Geist, system-ui, -apple-system, "system-ui", sans-serif`, with no `__Geist_<hash>`
-anywhere. A real `compare --story` round confirmed the same stack reaching
-`fontPreflight` as the implementation side. Nothing to normalise, and nothing
-left open.
+`Geist, system-ui, -apple-system, "system-ui", sans-serif`, with no
+`__Geist_<hash>` anywhere. Nothing to normalise, and nothing left open.
 
-Two things the same observation exposed, which do bite:
+Two limits that remain:
 
-- The preflight compares the **whole stack, in order**, as one joined string.
-  A design side of `Geist, -apple-system, system-ui, sans-serif` and an app
-  side of `Geist, system-ui, -apple-system, sans-serif` are the same fonts in
-  a different fallback order — the preflight calls that a mismatch and parks
-  the round (exit 2) even though the primary family is identical. Read the
-  message before believing the park.
+- **Scope.** `design[0]` is the first family of the first font-declaring node in
+  DOM order — in practice the root's primary family, not every family the tree
+  uses. A heading font that differs while the body font matches passes here.
+  That is deliberate, not a hole: the value layer catches it per node and keeps
+  the round going; the preflight only answers the coarse question of whether the
+  comparison is worth running at all.
 - Storybook loads no `@font-face` for Geist at all (`document.fonts` holds only
   Storybook's own faces). `Geist` resolving at all depends on it being
   installed as a **system** font on the machine — true on the dev Mac used
   here, not something to count on elsewhere. The preflight compares the
   declared stack, not what actually rasterised, so it cannot catch this.
+
+The passing message (`font stack shodný v první rodině: …`) never reaches an
+artifact — only a failing preflight becomes the round's reason. Silence from
+this layer means it passed.
 
 ## CDN cache (measure)
 
@@ -392,20 +418,59 @@ itself (see CDN cache above). `measure` alone writes only `spec.json`,
 a `compare` round, and `app.png` only on a round that got past both the
 skeleton gate and the font preflight to reach the pixel layer:
 
-| File                  | Read it when                                                                                                                                                                                                                                                                                                                                                                                                                |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `report.md`           | first, always — verdict, round history, masked regions, and a list of the files `writeArtifacts` produced **this round** (not `rounds.json`, `design.png`, `app.png`, or the crops)                                                                                                                                                                                                                                         |
-| `skeleton.md`         | the gate is red — this names the structural difference                                                                                                                                                                                                                                                                                                                                                                      |
-| `values.md`           | skeleton is green and a value delta needs tuning. Reads `Sedí — žádné hodnotové rozdíly.` when values were actually compared and clean, or `Neměřeno — skeleton gate neprošel…` when the skeleton gate failed and the value layer never ran at all — the two are distinct states, never conflated. Same address space as `skeleton.md` either way: one DOM walk produces both, so a path names the same node in either file |
-| `tokens.md`           | reviewing DS token growth before approving a new one — a **design-side inventory** computed once at `measure` time, of every tokenisable design value (one row per distinct `prop`/value pair), each shown as either the existing theme token it maps onto or a proposed new one — not a design-vs-app delta                                                                                                                |
-| `components.md`       | justifying why a new component was created instead of reusing one — today always just its `# Volba komponent` heading; the tool never auto-populates it (see note below)                                                                                                                                                                                                                                                    |
-| `spec.json`           | the raw measured spec `measure` wrote — what every `compare` round is checked against                                                                                                                                                                                                                                                                                                                                       |
-| `rounds.json`         | the accumulated round history driving the loop/thrash decisions                                                                                                                                                                                                                                                                                                                                                             |
-| `round-N.json`        | one round's raw verdict (skeleton pass/fail, pixel %, reason)                                                                                                                                                                                                                                                                                                                                                               |
-| `round-N-diff.png`    | the pixel diff mask **composited over the app screenshot** — not a bare mask; alone, a diff mask is marks floating on transparency                                                                                                                                                                                                                                                                                          |
-| `design.png`          | the cropped design screenshot `measure` shot once                                                                                                                                                                                                                                                                                                                                                                           |
-| `app.png`             | the app screenshot from the most recent `compare` round that reached the pixel layer                                                                                                                                                                                                                                                                                                                                        |
-| `r1.png`, `r2.png`, … | the numbered region preview crops `measure` printed (top 5 only), for picking `--region <n>` with the image in hand                                                                                                                                                                                                                                                                                                         |
+| File                  | Read it when                                                                                                                                                                                                                                                                                                                                                                        |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `report.md`           | first, always — verdict (the same `OUTCOME` label the exit code comes from), round counter, settle caveat, round history, masked regions, and a list of the files `writeArtifacts` produced **this round** (not `rounds.json`, `design.png`, `app.png`, or the crops). A refused later run prepends a `> **NEPLATNÉ:**` retraction rather than leaving this verdict looking current |
+| `skeleton.md`         | the gate is red — this names the structural difference                                                                                                                                                                                                                                                                                                                              |
+| `values.md`           | skeleton is green and a value delta needs tuning — see the four states below                                                                                                                                                                                                                                                                                                        |
+| `tokens.md`           | reviewing DS token growth before approving a new one — a **design-side inventory** computed once at `measure` time, of every tokenisable design value (one row per distinct `prop`/value pair), each shown as either the existing theme token it maps onto or a proposed new one — not a design-vs-app delta                                                                        |
+| `components.md`       | justifying why a new component was created instead of reusing one — today always just its `# Volba komponent` heading; the tool never auto-populates it (see note below)                                                                                                                                                                                                            |
+| `spec.json`           | the measured spec `measure` wrote — what every `compare` round is checked against. Top-level: `settled`, `selector`, `skeleton`, `tokenMappings`, `strictWrappers`, `version`; values hang off each skeleton node, there is no `spec.values`                                                                                                                                        |
+| `rounds.json`         | the accumulated round history driving the loop/thrash decisions                                                                                                                                                                                                                                                                                                                     |
+| `round-N.json`        | one round's raw verdict (skeleton pass/fail, pixel %, reason, `settled`)                                                                                                                                                                                                                                                                                                            |
+| `round-N-diff.png`    | the pixel diff mask **composited over the app screenshot** — not a bare mask; alone, a diff mask is marks floating on transparency                                                                                                                                                                                                                                                  |
+| `design.png`          | the design screenshot `measure` shot once, of the chosen element                                                                                                                                                                                                                                                                                                                    |
+| `app.png`             | the app screenshot from the most recent `compare` round that reached the pixel layer                                                                                                                                                                                                                                                                                                |
+| `r1.png`, `r2.png`, … | the numbered region preview crops `measure` printed — top 5, and only those that lie on the page image — for picking `--region <n>` with the image in hand                                                                                                                                                                                                                          |
+
+### `values.md`'s four states
+
+The distinction the whole branch exists to keep: "no differences" and "not
+measured" must never render the same. `renderValues` (`report.mjs`) has exactly
+four operator-visible outputs:
+
+1. **`Neměřeno — skeleton gate neprošel…`** — the gate was red, `compareValues`
+   never ran, nothing about the values is known. This is the state an operator
+   meets first, and the one worth reading carefully: it is _not_ a pass.
+2. **`Sedí — žádné hodnotové rozdíly.`** — the values really were compared and
+   really were clean.
+3. **a delta list**, grouped by skeleton path, one bullet per property.
+4. and, on top of (2) and (3), the **wrapper-coverage caveat** —
+   `> Měřeny jsou uzly, které zůstaly ve skeletonu…` — present whenever wrapper
+   collapsing was on (the default), absent under `--strict-wrappers`. It names
+   what the value layer did _not_ look at: a collapsed pass-through wrapper
+   takes its own measured values with it.
+
+All four use `skeleton.md`'s address space — one DOM walk produces both, so a
+path names the same node in either file.
+
+### `settled`
+
+`gotoSettled` waits for `load` (fatal) and then for `networkidle` (bounded at
+10 s, non-fatal). A page that never goes idle is still measured — that is what
+makes `apps/web`'s permanent SSE stream and one of the mockups usable at all —
+but the fact is recorded rather than swallowed: `settled` lands on the round in
+`rounds.json`/`round-N.json`, on `spec.json` for the design side, and as a
+caveat block under `report.md`'s headline naming which side and which rounds.
+
+```
+> **Pozor na ustálení stránky:** implementace se neustálila (networkidle) v kole 1
+> — snímek je z rozpracovaného načítání, takže procenta níž jsou orientační.
+```
+
+A **missing** `settled` is a third state and renders as neither — a round or a
+spec written before the field existed knows nothing about its settle, and
+unknown must not be laundered into "settled".
 
 `components.md` is always just its `# Volba komponent` heading —
 `buildCompareOutcome` hardcodes `componentDecisions: []` (`cli.mjs`) and

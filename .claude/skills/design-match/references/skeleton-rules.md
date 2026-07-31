@@ -12,6 +12,15 @@ only applies when collecting **children**; the region root itself is always
 snapped, unconditionally — a `--selector` that happens to point at a hidden
 root produces a one-node skeleton, not an error.
 
+**The depth cap is silent in the skeleton.** A node at level 6 is recorded with
+`children: []` whether it is a genuine leaf or has a whole subtree beneath it,
+and `spec.json` cannot tell you which — so a short skeleton on a deep mockup is
+"not looked at", not "not there". `extractRaw` does mark the cut with a
+`truncated` flag, but that flag exists for one consumer only, the emptiness
+guard in `measure` (`SKILL.md`, _A spec that measured nothing_), and
+`normalizeSkeleton` drops it rather than persisting it. Everything below the cut
+is outside the gate, the value layer and the token inventory alike.
+
 ## Wrapper collapsing (default ON)
 
 A node collapses into its parent when **all** of:
