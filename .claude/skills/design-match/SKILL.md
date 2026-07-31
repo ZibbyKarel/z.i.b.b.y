@@ -486,74 +486,86 @@ its own.
 - **Masked regions** are always listed in `report.md`. A masked region is
   unverified area — never mask silently.
 
-## Known limits (from the first real run, 2026-07-31)
+## Known limits (measured 2026-07-31, on the tree that carries this file)
 
-Everything below was **observed**, not predicted, on the first end-to-end run of
-the real CLI against `design/Z.I.B.B.Y/` and a running Storybook. The blockers
-are listed first because two of them stop the run before it starts.
+Everything below was **observed**, not predicted, by running the real CLI
+against `design/Z.I.B.B.Y/` with Storybook and `pnpm web:dev` up. Earlier
+revisions of this section described blockers that no longer exist; what follows
+is what is true now.
 
-### `measure` cannot currently read any mockup in `design/Z.I.B.B.Y/`
+### The corpus: 11 of 11 measurable
 
-All **11** mockups there open with `<link rel="preconnect" href="https://fonts.googleapis.com" />`.
-`ensureCdnCache` treats every `href="http(s)://…"` as a downloadable resource,
-and a bare origin answers **HTTP 404** — so the run aborts before the browser
-launches:
+Every mockup in `design/Z.I.B.B.Y/` measures to a real spec, from a cold cache
+(`.design-match/.cdn-cache` deleted first), default `--region 1`, exit 0:
 
-```
-[design-match] design-match: nelze stáhnout https://fonts.googleapis.com (HTTP 404). Bez cache se mockup nevykreslí.
-```
+| Mockup                         | Nodes | Token mappings | Winning selector                             | `settled` |
+| ------------------------------ | ----- | -------------- | -------------------------------------------- | --------- |
+| ZIBBY Archiv úloh              | 41    | 69             | `#root`                                      | true      |
+| ZIBBY Design Audit             | 13    | 27             | `section:nth-child(6)`                       | true      |
+| ZIBBY Implementace - Changelog | 11    | 47             | `… > div.row:nth-child(3)`                   | true      |
+| ZIBBY Loading Screen           | 15    | 13             | `svg.circuit-svg`                            | true      |
+| ZIBBY Orb                      | 2     | 13             | `#stage`                                     | true      |
+| ZIBBY Pravidla schvalování     | 15    | 63             | `#root`                                      | true      |
+| ZIBBY Redesign Canvas          | 28    | 48             | `div.design-canvas > div > div:nth-child(3)` | **false** |
+| ZIBBY Roadmap                  | 10    | 24             | `#root`                                      | true      |
+| ZIBBY Velin-B                  | 267   | 154            | `… > div > div`                              | true      |
+| ZIBBY Velin-D                  | 124   | 86             | `#root`                                      | true      |
+| ZIBBY Velin                    | 82    | 97             | `#root`                                      | true      |
 
-A `preconnect`/`dns-prefetch` hint names a connection, not a file; nothing
-skips it. **This includes the `measure` example in "Running it" above** —
-`"design/Z.I.B.B.Y/ZIBBY Roadmap.html"` fails exactly this way. The one good
-news is the shape of the failure: ~0.3 s, exit 3, a single `[design-match]`
-line, no stack.
+Measuring is not matching: a spec is only the design side. But "the tool cannot
+read this repo's own designs" — which this section used to say, at 2 of 11 — is
+no longer true of anything here.
 
-### 7 of the 11 mockups render nothing, and `measure` calls it a success
+### Two mockups do not shoot the same `design.png` twice
 
-The mockups load their components as `<script type="text/babel" src="zibby/*.jsx">`.
-Babel fetches those over XHR, and Chromium refuses XHR on `file://` — so
-`#root` stays empty. Independently, the CDN rewrite keeps the original
-`crossorigin="anonymous"` attribute on the React/Babel `<script>` tags, which
-`file://` also cannot satisfy, so those never load from the cache either.
+`shootElement` captures both sides with `animations: "disabled"`, which freezes
+**CSS** animations and transitions. Its reach stops there. Motion driven by
+script lands on a wall-clock-dependent frame regardless, so the option makes
+both sides frozen the _same_ way; it does not make either side reproducible.
 
-Neither failure is detected. `measure` exits **0** and writes a confident
-`spec.json` holding a one-node skeleton of an empty `#root`. Confirmed on all
-seven: Roadmap, Velin, Velin-B, Velin-D, Archiv úloh, Pravidla schvalování,
-Redesign Canvas.
+- **`ZIBBY Orb`** — a three.js render loop. Three consecutive `measure` runs of
+  the default region (`#stage`, which contains the canvas) produced three
+  different `design.png` hashes.
+- **`ZIBBY Loading Screen`** — a `setTimeout` progress simulation rather than a
+  CSS animation. Intermittent: task 17 measured five runs and got three
+  identical hashes plus two others, with a residual diff of **0.01 %** (largest
+  differing region 36×24 px); three runs here were byte-identical.
 
-**The tell is the inventory.** A real mockup prints several candidates; a
-mockup that did not render prints exactly one, and it is the mount point at
-full viewport size:
+That residual is the scale of the problem — it is not "the tool is
+non-deterministic". A control run of `ZIBBY Roadmap` three times produced one
+identical hash, and every other mockup is stable the same way.
 
-```
-Inventura regionů (1440×900):
-  [1] #root                     1440×900 @ (0,0)   ▸ r1.png
-```
+### `rankCandidates` breaks ties on area
 
-If you see that, stop — do not compare against the spec. Open `r1.png`; it
-will be blank.
+Unchanged, and it is the limit an operator meets on every full-bleed mockup: the
+largest element wins, so `#root` and its nested wrappers take the top slots
+ahead of anything worth matching (see the inventory in "Running it"). The
+numbered inventory plus `--region <n>` is the mitigation, and choosing is the
+operator's job.
 
-### A candidate below the fold crashes the inventory
+### `ZIBBY Redesign Canvas` measures, but with no region previews at all
 
-`cropRegions` screenshots with `clip` against the **viewport**, not the full
-page, so any ranked candidate whose origin sits below `y = 900` throws a raw
-Playwright error — `Clipped area is either empty or outside the resulting image`
-— with a full stack rather than a `design-match:` line. Exit is still 3.
-Observed on the two long-document mockups, `ZIBBY Design Audit.html` and
-`ZIBBY Implementace - Changelog.html`. A region merely _taller_ than the
-viewport is fine (`svg.circuit-svg` at 1440×1440 cropped without complaint) —
-it is the origin being off-screen that breaks.
+It is a pan/zoom canvas: its cards sit inside a transformed, `overflow: hidden`
+container, so their boxes are reported at `y ≈ 1173` and 4256 px wide while the
+document itself never grows past 1440×900. Every ranked candidate is therefore
+off the page image, `cropFitsPage` skips all of them, and the operator gets a
+numbered list with no pictures — `bez náhledu — region leží mimo snímek
+stránky` on every row. Choose by selector and dimensions instead. The chosen
+region's own `design.png` is unaffected (it is a `locator.screenshot()`, which
+scrolls the element into view), which is why the mockup still measures to a real
+28-node spec.
 
-Net: **2 of 11 mockups (`ZIBBY Orb.html`, `ZIBBY Loading Screen.html`) are
-measurable today**, and only after the `preconnect` blocker is worked around.
+It is also the one mockup of eleven that measures `settled: false`: a `fetch` on
+its 404 branch never reads or cancels the response body, so the request never
+finishes and the page can never go idle. That is recorded in `spec.json` and
+surfaced in `report.md`, not swallowed.
 
-### three.js mockups: confirmed, with a correction
+### three.js mockups: measure the chrome, not the canvas
 
-`ZIBBY Orb.html` behaves as expected — three.js appends `renderer.domElement`
-at runtime, so the `<canvas>` never appears in the source but does appear in
-the inventory as a full-viewport candidate, ranked `[2]`, whose skeleton is a
-single node with no children:
+`ZIBBY Orb.html` behaves as expected — three.js appends `renderer.domElement` at
+runtime, so the `<canvas>` never appears in the source but does appear in the
+inventory as a full-viewport candidate, ranked `[2]`, whose skeleton is a single
+node with no children:
 
 ```
   [1] #stage                    1440×900 @ (0,0)   ▸ r1.png
@@ -561,48 +573,57 @@ single node with no children:
   [3] #dock                       482×90 @ (479,780)   ▸ r3.png
 ```
 
-Measure the chrome, not the canvas: `--region 3` (`#dock`) yields a real
-19-node skeleton with 51 measured properties per node and 59 token mappings.
-`ZIBBY Velin-D.html` also uses three.js, but that is not what stops it — it
-never renders at all (previous limit), so its canvas is moot.
+`--region 3` (`#dock`) yields a real 19-node skeleton, 51 measured properties
+per node and 59 token mappings (24 exact, 35 proposed new) — re-confirmed on
+this tree. A one-node `<canvas>` spec is a legitimate measurement, not an empty
+one, which is exactly why the emptiness guard tests for content rather than for
+node count.
 
-### `compare` defaults `--selector` to the design's own selector
+### A design and an app screenshot of different pixel sizes is exit 3, not a verdict
 
-`spec.json` records the winning **design** selector (`#dock`), and `compare`
-reuses it against the app scene, where it almost never exists. The resulting
-error is thrown inside `page.evaluate`, so Playwright prefixes the message and
-the clean-error path no longer recognises it as ours — the operator gets a raw
-stack, no artifacts, exit 3:
+The skeleton gate compares every node's box **relative to its parent**, and the
+root's own relative box is `1×1` by construction — so the absolute size of the
+comparison root is never gated. Two structurally identical trees of different
+size therefore pass the gate, pass the preflight, and then reach `diffPngs`,
+which refuses to diff mismatched buffers:
 
 ```
-page.evaluate: Error: design-match: selector not found: #dock
+[design-match] design-match: rozměry se liší — design 800×240, app 640×54
+EXIT=3
 ```
 
-Pass `--selector` explicitly on essentially every `compare`.
+Observed on a deliberate probe. It is `CHYBA`, not `POKRAČUJ` — no artifacts
+for that round, and the previous `report.md` gets the stale marker — even though
+a size difference is a perfectly ordinary implementation difference. Size the
+scene (or pick a `--selector` whose element matches the design region's
+dimensions) before reading that message as a tool fault.
 
-### `report.md`'s headline reads PARK on rounds that are still running
+### `compareValues` compares `fontFamily` as an exact string
 
-`renderReport` has only two headline states, `HOTOVO` and `PARK`, so a
-perfectly normal continuing round writes `**Výsledek:** PARK — pokračuje` while
-the console prints `POKRAČUJ` and the process exits **1**. `report.md` is the
-file this skill tells you to read first, and on that one line it disagrees with
-the exit code. **Trust the exit code**; read `report.md` for the round history
-and the reason, not for the verdict.
+Since the preflight narrowed to the first family, a differing fallback **order**
+is a value delta on every node — which is the right layer for it, but it means a
+run cannot reach `HOTOVO` until the implementation's declared stack matches the
+design's. Against Storybook, whose order genuinely differs from these mockups',
+that is a standing blocker. Recorded as open in `references/computed-props.md`.
+
+### `components.md` is never populated
+
+`buildCompareOutcome` hardcodes `componentDecisions: []`. Recording _why_ a new
+component was justified is a manual step for whoever drives the loop.
 
 ### What was verified working
 
-Worth stating, since the failures above are loud: the loop and gate machinery
-itself behaved exactly as documented. Exit codes 0/1/2/3 all matched their
-table entry, including four distinct error paths (bad command, missing
-`spec.json`, missing scene, out-of-range `--region`), each a single clean
-`[design-match]` line. The skeleton gate correctly named a genuine structural
-difference (`layout mód: flex-column vs block`) in `skeleton.md`; `values.md`
-correctly rendered `Neměřeno` on that red-gate round and a real delta list on a
-green-gate one; `app.png` was correctly absent when the pixel layer was
-skipped; `--strict-wrappers` was stamped into `spec.json`, refused a
-disagreeing `compare` with exit 3, and reached `values.md`'s collapsed-wrapper
-disclosure (present without the flag, absent with it). `.design-match/` and the
-`.design-match-cached-*` mockup copies both stayed out of `git status`.
+Worth stating alongside the limits: the loop and gate machinery behaves as
+documented. All four exit codes matched their table entry across the acceptance
+run, including every refusal path in "When a run fails", each a single clean
+`[design-match]` line with no stack. The skeleton gate named genuine structural
+differences (`počet potomků: 1 vs 0`, a `šířka` ratio) in `skeleton.md`;
+`values.md` rendered `Neměřeno` on those red-gate rounds; a green-gate round
+against a differing primary font parked at exit 2 with `app.png` correctly
+absent; `--strict-wrappers` was stamped into `spec.json` and refused a
+disagreeing `compare`; a refused `compare` retracted the previous `report.md`
+while preserving it. `.design-match/` and the `.design-match-cached-*` mockup
+copies both stayed out of `git status`.
 
 ## References
 
