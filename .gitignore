@@ -28,6 +28,12 @@ graphify-out/
 # Regenerated per run and often large; the durable output is the committed code.
 .design-match/
 
+# design-match's CDN-rewritten mockup copy, written beside the original design
+# file (not under .design-match/, because URLs inside it are rewritten relative
+# to that file's own directory) — machine-generated and overwritten every
+# `measure`, never cleaned up otherwise.
+.design-match-cached-*
+
 # Local agent storage (apps/api data dirs: live/dev + test, selected by ZIBBY_DATA_DIR)
 .zibby/data-test/
 .zibby/data/**/runs

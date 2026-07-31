@@ -119,6 +119,31 @@ describe("renderValues", () => {
       expect(renderValues([])).toContain("--strict-wrappers");
     });
   });
+
+  // Defect 1 (task 14b): on a red-skeleton round, compareValues is never
+  // called — `null` means that, `[]` means it ran and found nothing. Before
+  // this fix, `buildCompareOutcome` laundered null into [] and this file
+  // rendered both identically as "Sedí — žádné hodnotové rozdíly", a positive
+  // false claim rather than mere silence.
+  describe("not compared (skeleton gate failed)", () => {
+    it("renders differently from the genuine no-deltas case", () => {
+      const notCompared = renderValues(null);
+      const noDeltas = renderValues([]);
+      expect(notCompared).not.toEqual(noDeltas);
+      expect(notCompared).not.toContain("Sedí");
+      expect(noDeltas).toContain("Sedí");
+    });
+
+    it("says why, pointing at the skeleton gate", () => {
+      const out = renderValues(null);
+      expect(out).toContain("Neměřeno");
+      expect(out).toMatch(/skeleton/i);
+    });
+
+    it("omits the wrapper-coverage note — nothing was measured for any reason", () => {
+      expect(renderValues(null, { wrappersCollapsed: true })).not.toContain("--strict-wrappers");
+    });
+  });
 });
 
 describe("renderTokens", () => {
@@ -328,6 +353,22 @@ describe("writeArtifacts", () => {
     expect(await fs.readFile(path.join(dir, "values.md"), "utf8")).not.toContain(
       "--strict-wrappers",
     );
+  });
+
+  it("writes values.md as not-measured, not sedí, when the skeleton gate failed (payload.values is null)", async () => {
+    await writeArtifacts(dir, {
+      slug: "roadmap",
+      skeletonFindings: [{ path: "form", kind: "layout-mode", message: "grid vs flex-column" }],
+      values: null,
+      tokenMappings: [],
+      componentDecisions: [],
+      masks: [],
+      verdict: { stop: true, status: "parked", reason: "skeleton gate neprošel" },
+      rounds: [{ percent: null, skeletonPass: false, reason: "skeleton mismatch" }],
+    });
+    const valuesMd = await fs.readFile(path.join(dir, "values.md"), "utf8");
+    expect(valuesMd).toContain("Neměřeno");
+    expect(valuesMd).not.toContain("Sedí");
   });
 
   it("writes exactly the expected file set, including a diff png only for rounds that carry buffers", async () => {

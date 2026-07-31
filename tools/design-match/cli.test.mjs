@@ -6,6 +6,7 @@ import {
   buildCompareOutcome,
   buildTokenMappings,
   checkFontPreflight,
+  checkStrictWrappersMatch,
   collectFontStacks,
   combineVerdict,
   describeOutcome,
@@ -457,7 +458,10 @@ describe("buildCompareOutcome", () => {
     findings: [{ path: "form", kind: "layout-mode", message: "grid vs flex-column" }],
   };
 
-  it("a skeleton-gated result forwards values as [] (never null) and carries no image buffers", () => {
+  it("a skeleton-gated result forwards values as null (never []) so values.md can tell 'not compared' from 'no deltas', and carries no image buffers", () => {
+    // Defect 1 (task 14b): `?? []` used to launder a never-run comparison into
+    // the same empty array a genuine all-match result produces — renderValues
+    // could not tell them apart. null must survive all the way to the payload.
     const result = { skeleton: skeletonFail, values: null, pixels: null };
     const { payload, roundRecord } = buildCompareOutcome({
       result,
@@ -467,7 +471,7 @@ describe("buildCompareOutcome", () => {
       history: [],
     });
 
-    expect(payload.values).toEqual([]);
+    expect(payload.values).toBeNull();
     const currentRound = payload.rounds.at(-1);
     expect(currentRound).not.toHaveProperty("appImage");
     expect(currentRound).not.toHaveProperty("maskImage");
@@ -687,5 +691,36 @@ describe("readSpec", () => {
     const spec = { selector: "#x", skeleton: {}, tokenMappings: [] };
     await fs.writeFile(path.join(dir, "spec.json"), JSON.stringify(spec), "utf8");
     await expect(readSpec(dir, "no-version-slug")).rejects.toThrow(/measure/);
+  });
+});
+
+describe("checkStrictWrappersMatch", () => {
+  // Defect 2 (task 14b): measure and compare each normalise a tree with their
+  // own --strict-wrappers flag. If they disagree, one tree is collapsed and
+  // the other isn't, and the skeleton gate reports findings that are pure
+  // artifacts of the mismatch — not of the implementation. Same precedent as
+  // readSpec's version check just above: refuse outright rather than cope.
+
+  it("does not throw when compare's flag matches what measure stamped into spec.json", () => {
+    expect(() => checkStrictWrappersMatch({ strictWrappers: true }, true)).not.toThrow();
+    expect(() => checkStrictWrappersMatch({ strictWrappers: false }, false)).not.toThrow();
+  });
+
+  it("throws naming --strict-wrappers when compare requests it but measure did not", () => {
+    expect(() => checkStrictWrappersMatch({ strictWrappers: false }, true)).toThrow(
+      /--strict-wrappers/,
+    );
+  });
+
+  it("throws the same way in the other direction (measure had it, compare does not)", () => {
+    expect(() => checkStrictWrappersMatch({ strictWrappers: true }, false)).toThrow(
+      /--strict-wrappers/,
+    );
+  });
+
+  it("throws a design-match:-prefixed, deliberate error (not a raw crash)", () => {
+    expect(() => checkStrictWrappersMatch({ strictWrappers: true }, false)).toThrow(
+      /^design-match:/,
+    );
   });
 });

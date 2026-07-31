@@ -399,7 +399,12 @@ export function buildCompareOutcome({
     verdict,
     masks,
     skeletonFindings: result.skeleton.findings,
-    values: result.values ?? [],
+    // Defect 1 (task 14b): `result.values` is `null` exactly when the skeleton
+    // gate failed and compareValues never ran (see runCompare) — that must
+    // reach `renderValues` as `null`, not get laundered into `[]` here. `[]`
+    // is the genuine "compared, no deltas" result; the two are not the same
+    // fact and must not collapse into the same payload value.
+    values: result.values,
     tokenMappings: spec.tokenMappings ?? [],
     componentDecisions: [],
     // values.md needs this to say which nodes the run never measured: with
@@ -452,6 +457,28 @@ export async function readSpec(dir, slug) {
     );
   }
   return spec;
+}
+
+/**
+ * `--strict-wrappers` changes whether pass-through wrappers are collapsed out
+ * of the skeleton. `measure` stamps the flag it ran with into `spec.json`;
+ * this refuses outright when `compare`'s own flag disagrees with it, rather
+ * than silently comparing a collapsed design tree against an uncollapsed app
+ * tree (or vice versa) — that mismatch produces skeleton findings that are
+ * pure artifacts of the flag disagreement, not of the implementation.
+ *
+ * Same shape as `readSpec`'s version check just above: a fact the caller could
+ * get silently wrong is treated as a hard stop, not a value to cope with. A
+ * spec.json old enough to predate this field never reaches here — `readSpec`
+ * already refused it for a version mismatch first.
+ */
+export function checkStrictWrappersMatch(spec, requestedStrictWrappers) {
+  const measured = Boolean(spec.strictWrappers);
+  const requested = Boolean(requestedStrictWrappers);
+  if (measured === requested) return;
+  throw new Error(
+    `design-match: --strict-wrappers se neshoduje s measure (measure běžel ${measured ? "s" : "bez"} --strict-wrappers, compare žádá ${requested ? "s" : "bez"}) — spusť znovu measure se stejným příznakem jako compare, nebo příznak u compare uprav tak, aby seděl.`,
+  );
 }
 
 async function runMeasure(cmd) {
@@ -518,6 +545,12 @@ async function runMeasure(cmd) {
     themeCss !== undefined
       ? buildTokenMappings(flattenValues(spec.skeleton), parseThemeTokens(themeCss))
       : [];
+  // Stamped so a later `compare` can be refused (checkStrictWrappersMatch) if
+  // its own --strict-wrappers disagrees with the flag this measure actually
+  // ran with — a mismatch would otherwise collapse one side's tree and not
+  // the other, and the gate would report findings that are artifacts of that
+  // disagreement rather than of the implementation.
+  spec.strictWrappers = cmd.strictWrappers;
   // Stamped so a later `readSpec` can tell a cache from an older measurement
   // format apart from a current one, instead of comparing it and reporting a
   // confident, wrong structural finding.
@@ -530,6 +563,7 @@ async function runMeasure(cmd) {
 async function runCompare(cmd) {
   const dir = path.join(ARTIFACT_ROOT, cmd.slug);
   const spec = await readSpec(dir, cmd.slug);
+  checkStrictWrappersMatch(spec, cmd.strictWrappers);
   const scene = resolveScene({ ...cmd, selector: cmd.selector ?? spec.selector });
   const history = await loadHistory(dir, cmd.reset);
 

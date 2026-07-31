@@ -38,7 +38,25 @@ const WRAPPER_COVERAGE_NOTE =
 // `wrappersCollapsed` defaults to true because collapsing is the tool's own
 // default: a caller that forgets to say gets the coverage caveat rather than
 // silent, false reassurance.
+//
+// fix round (task 14b), Defect 1: `deltas === null` and `deltas.length === 0`
+// used to render identically — both produced "Sedí — žádné hodnotové rozdíly.".
+// `null` means compareValues never ran at all (the skeleton gate failed first,
+// see cli.mjs's runCompare); `[]` means it ran and genuinely found nothing.
+// The first is "not measured", the second is "matches", and this is the exact
+// silence-vs-silence collision the comment above already names — except this
+// one is worse, because the current output isn't silent, it is a positive
+// false claim. The two must stay distinguishable at the type level (null vs.
+// array), not by a caller remembering to pass a separate flag.
 export function renderValues(deltas, { wrappersCollapsed = true } = {}) {
+  if (deltas === null) {
+    return [
+      "# Hodnoty",
+      "",
+      "Neměřeno — skeleton gate neprošel, hodnoty se vůbec neporovnávaly. Oprav strukturu podle skeleton.md a spusť compare znovu.",
+      "",
+    ].join("\n");
+  }
   const note = wrappersCollapsed ? [WRAPPER_COVERAGE_NOTE, ""] : [];
   if (deltas.length === 0) {
     return ["# Hodnoty", "", ...note, "Sedí — žádné hodnotové rozdíly.", ""].join("\n");
