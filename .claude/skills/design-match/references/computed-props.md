@@ -21,7 +21,11 @@ subset `tokens.md` actually reports mappings for) only covers `color`,
 `paddingLeft`, `borderRadius`, `boxShadow`, `fontSize`, `lineHeight`,
 `letterSpacing` — a `display: flex` delta, for instance, is a real value
 comparison in `values.md` but will never produce a `tokens.md` row, because
-there is no token family for it.
+there is no token family for it. `tokens.md` itself is a **design-side
+inventory**, built once from `spec.skeleton` at `measure` time against the
+app's theme CSS — not a design-vs-app delta the way `values.md` is, so it
+lists every un-tokenised design value whether or not the current
+implementation actually differs.
 
 ## Adding a property
 
