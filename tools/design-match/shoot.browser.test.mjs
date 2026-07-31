@@ -6,7 +6,7 @@ import { PNG } from "pngjs";
 import { afterEach, describe, expect, it } from "vitest";
 import { DEVICE_SCALE_FACTOR, VIEWPORT, withPage } from "./browser.mjs";
 import { diffPngs } from "./pixels.mjs";
-import { shootScene, staticUrl, withStaticServer } from "./shoot.mjs";
+import { gotoSettled, shootScene, staticUrl, withStaticServer } from "./shoot.mjs";
 
 const fixture = pathToFileURL(
   path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "basic.html"),
@@ -29,6 +29,21 @@ async function makeTmpDir() {
   return dir;
 }
 
+/**
+ * D7 (task 15): `shootScene` used to `page.goto(scene.url)` itself, on a page
+ * `runCompare` had already navigated and settled — a second full load per round,
+ * with the settle wait paid twice and any state established during extraction
+ * thrown away. It no longer navigates: the caller settles the page (gotoSettled)
+ * and shootScene only shoots it. These tests navigate the same way runCompare
+ * does, which is also what keeps them honest about the two sides of a comparison
+ * settling identically.
+ */
+const shoot = (scene, outPath) =>
+  withPage(async (page) => {
+    await gotoSettled(page, scene.url);
+    return shootScene(page, scene, outPath);
+  });
+
 describe("shootScene", () => {
   it("screenshots the scene's selector, not the whole page — dimensions match the element's box × DEVICE_SCALE_FACTOR", async () => {
     const outDir = await makeTmpDir();
@@ -36,6 +51,7 @@ describe("shootScene", () => {
     const scene = { mode: "route", url: fixture, selector: ".card", masks: [] };
 
     const { buffer, box } = await withPage(async (page) => {
+      await gotoSettled(page, scene.url);
       const buffer = await shootScene(page, scene, outPath);
       const box = await page.locator(".card").boundingBox();
       return { buffer, box };
@@ -56,7 +72,7 @@ describe("shootScene", () => {
     const outPath = path.join(outDir, "shot.png");
     const scene = { mode: "route", url: fixture, selector: ".card", masks: [] };
 
-    const buffer = await withPage((page) => shootScene(page, scene, outPath));
+    const buffer = await shoot(scene, outPath);
 
     const onDisk = await fs.readFile(outPath);
     expect(onDisk.equals(buffer)).toBe(true);
@@ -70,8 +86,8 @@ describe("shootScene", () => {
     const unmaskedScene = { mode: "route", url: fixture, selector: ".card", masks: [] };
     const maskedScene = { mode: "mask", url: fixture, selector: ".card", masks: [".row"] };
 
-    const unmaskedBuffer = await withPage((page) => shootScene(page, unmaskedScene, unmaskedPath));
-    const maskedBuffer = await withPage((page) => shootScene(page, maskedScene, maskedPath));
+    const unmaskedBuffer = await shoot(unmaskedScene, unmaskedPath);
+    const maskedBuffer = await shoot(maskedScene, maskedPath);
 
     const verdict = diffPngs(unmaskedBuffer, maskedBuffer);
     expect(verdict.percent).toBeGreaterThan(0);
@@ -90,9 +106,7 @@ describe("shootScene", () => {
       masks: [".does-not-exist"],
     };
 
-    await expect(withPage((page) => shootScene(page, scene, outPath))).rejects.toThrow(
-      /\.does-not-exist/,
-    );
+    await expect(shoot(scene, outPath)).rejects.toThrow(/\.does-not-exist/);
   });
 
   // Fix round 1, Important 2: target.screenshot() crops to scene.selector, so a
@@ -110,9 +124,7 @@ describe("shootScene", () => {
       masks: [".form .row:nth-child(2)"],
     };
 
-    await expect(withPage((page) => shootScene(page, scene, outPath))).rejects.toThrow(
-      /\.form \.row:nth-child\(2\)/,
-    );
+    await expect(shoot(scene, outPath)).rejects.toThrow(/\.form \.row:nth-child\(2\)/);
   });
 
   // Fix round 1, Important 3: without `animations: "disabled"`, a continuous
@@ -125,10 +137,53 @@ describe("shootScene", () => {
     const secondPath = path.join(outDir, "second.png");
     const scene = { mode: "route", url: animatedFixture, selector: ".viewport", masks: [] };
 
-    const firstBuffer = await withPage((page) => shootScene(page, scene, firstPath));
-    const secondBuffer = await withPage((page) => shootScene(page, scene, secondPath));
+    const firstBuffer = await shoot(scene, firstPath);
+    const secondBuffer = await shoot(scene, secondPath);
 
     expect(firstBuffer.equals(secondBuffer)).toBe(true);
+  });
+});
+
+/**
+ * D7's other half (deferred here from task 16): `ZIBBY Redesign Canvas.html`
+ * renders perfectly and then never goes idle, because a `fetch` on its 404
+ * branch never reads or cancels the response body. Under `waitUntil: networkidle`
+ * that is a 30-second wait ending in a failure, for a page that was ready in
+ * milliseconds — the eleventh mockup, and the last one that could not be
+ * measured. The settle is `load` plus a BOUNDED, non-fatal idle wait, and it is
+ * one function so `measure` and `compare` cannot settle differently.
+ */
+describe("gotoSettled", () => {
+  const fixturesDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures");
+  const neverIdleFixture = path.join(fixturesDir, "never-idle.html");
+
+  it("returns a rendered page even though the network never goes idle", async () => {
+    const result = await withStaticServer({ "/": fixturesDir }, (origin) =>
+      withPage(async (page) => {
+        const settled = await gotoSettled(page, staticUrl(origin, fixturesDir, neverIdleFixture), {
+          idleTimeoutMs: 1500,
+        });
+        const children = await page.evaluate(() => document.getElementById("root").children.length);
+        return { settled, children };
+      }),
+    );
+
+    // Rendered — so measuring it is legitimate, and refusing it was the defect.
+    expect(result.children).toBe(1);
+    // And the tool knows it did not settle, rather than pretending it did.
+    expect(result.settled.settled).toBe(false);
+  });
+
+  it("reports a page that does settle as settled", async () => {
+    const settled = await withStaticServer({ "/": fixturesDir }, (origin) =>
+      withPage((page) =>
+        gotoSettled(
+          page,
+          staticUrl(origin, fixturesDir, path.join(fixturesDir, "xhr-loaded.html")),
+        ),
+      ),
+    );
+    expect(settled.settled).toBe(true);
   });
 });
 

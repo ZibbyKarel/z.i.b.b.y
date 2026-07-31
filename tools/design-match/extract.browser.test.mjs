@@ -10,6 +10,40 @@ const fixture = pathToFileURL(
   path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "basic.html"),
 ).href;
 
+/**
+ * D5 (task 15), the half that made the other half unreadable. `extractRaw` did
+ * raise a properly formed `design-match: selector not found: …` — but from
+ * INSIDE `page.evaluate`, so Playwright re-wrapped it as
+ * `page.evaluate: Error: design-match: …`. `isDeliberateError` tests
+ * `message.startsWith("design-match:")`, which is then false, so the operator
+ * got a full Playwright stack and `compare` wrote no artifacts at all. A
+ * selector that matches nothing is the single most likely operator error in the
+ * whole tool; it has to be one clean line.
+ */
+describe("extractRaw's missing-selector failure", () => {
+  it("throws a design-match:-prefixed error that survives the page.evaluate boundary", async () => {
+    const error = await withPage(async (page) => {
+      await page.goto(fixture);
+      return extractRaw(page, "#nothing-matches-this").catch((caught) => caught);
+    });
+
+    expect(error).toBeInstanceOf(Error);
+    // The prefix must be at position 0. Raised inside page.evaluate it is not.
+    expect(error.message.startsWith("design-match:")).toBe(true);
+    expect(error.message).not.toContain("page.evaluate");
+  });
+
+  it("names the selector and the page it failed on", async () => {
+    const error = await withPage(async (page) => {
+      await page.goto(fixture);
+      return extractRaw(page, "#nothing-matches-this").catch((caught) => caught);
+    });
+
+    expect(error.message).toContain("#nothing-matches-this");
+    expect(error.message).toContain("basic.html");
+  });
+});
+
 describe("extractors against real Chromium", () => {
   it("extracts a skeleton whose form is a 2-column grid with four rows", async () => {
     const skeleton = await withPage(async (page) => {

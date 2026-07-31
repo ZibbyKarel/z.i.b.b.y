@@ -12,16 +12,52 @@ export function storybookUrl(storyId, base = STORYBOOK_BASE) {
 }
 
 /**
+ * Storybook renders every story into this node. It is a Storybook contract, not
+ * a guess about the implementation's markup, which is why it can be a default at
+ * all — see `resolveScene`.
+ */
+export const STORYBOOK_ROOT_SELECTOR = "#storybook-root";
+
+/**
  * Scene selection follows the spec's C → A → B preference: an isolated story
  * where the unit can stand alone, a seeded route where page composition is the
  * thing under test, masking only where state cannot be made deterministic.
+ *
+ * D5 (task 15), part 1: `compare` used to fall back to the DESIGN's selector
+ * (`spec.selector`) when `--selector` was omitted. That selector is whatever won
+ * the design inventory — `#dock`, `#root`, `svg.circuit-svg` — and it is not
+ * merely useless on the implementation side, it is dangerous: `#root` and
+ * `div.row:nth-child(3)` are generic enough to match SOMETHING in a real app
+ * while naming an entirely unrelated node, and a `compare` that quietly measures
+ * the wrong node is worse than one that refuses. So the design's selector is
+ * never inherited, and no fallback chain leads back to it.
+ *
+ * The two scenes are then treated differently because the evidence differs. A
+ * story always mounts into `#storybook-root` — that is Storybook's own contract,
+ * true of every story in this repo's 187 and not an inference about anyone's
+ * markup — so it is a safe default. A route has no equivalent: Next's App Router
+ * mounts straight into `<body>`, and comparing a design region against the whole
+ * body is meaningless. There is nothing correct to default to, so it refuses and
+ * says what to pass.
  */
 export function resolveScene(options) {
   const masks = options.masks ?? [];
   if (options.story) {
-    return { mode: "story", url: storybookUrl(options.story), selector: options.selector, masks };
+    return {
+      mode: "story",
+      url: storybookUrl(options.story),
+      selector: options.selector ?? STORYBOOK_ROOT_SELECTOR,
+      masks,
+    };
   }
   if (options.route) {
+    if (!options.selector) {
+      throw new Error(
+        "design-match: --route vyžaduje i --selector — v implementaci neexistuje uzel, který by šlo bezpečně uhodnout, " +
+          "a selector z designu (spec.json) se nedědí: buď v aplikaci není, nebo tam náhodou sedí na úplně jiný prvek. " +
+          "Otevři route v prohlížeči a předej selector kořene porovnávané části.",
+      );
+    }
     // A route typed without a leading slash (`--route roadmap`) must not fuse
     // straight onto appBase into a malformed, silently-never-resolving URL
     // (`http://localhost:3000roadmap`) — normalise to exactly one separator.
@@ -275,6 +311,90 @@ export async function withStaticServer(mounts, fn) {
   }
 }
 
+/**
+ * How long the settle is willing to wait for the network to go quiet AFTER the
+ * page has loaded. It is a bound on an optimisation, not on correctness: what
+ * makes a page measurable is `load`, and idleness only buys late-arriving
+ * resources. 10 s is comfortably more than a locally-served mockup or a local
+ * Storybook needs, and a third of the 30 s a page that can never go idle used to
+ * burn before failing outright.
+ */
+export const SETTLE_IDLE_TIMEOUT_MS = 10_000;
+
+/**
+ * A navigation that times out is not a crash — it is a page that never loaded,
+ * and the operator needs the one-line treatment, not a Playwright stack. Only
+ * the timeout is translated; any other navigation failure is a real fault and
+ * keeps its stack.
+ */
+export function translateNavigationError(url, error) {
+  if (error instanceof Error && error.name === "TimeoutError") {
+    return new Error(
+      `design-match: stránku se nepodařilo načíst (událost load nenastala) — ${url}. ` +
+        `Ověř, že adresa odpovídá (u --route běží dev server? u --story běží Storybook?) a že se stránka otevře v prohlížeči. ` +
+        `Pozn.: na požadavek, který nikdy neskončí — fetch s nepřečtenou odpovědí (větev pro 404) nebo polling — se už nečeká fatálně.`,
+    );
+  }
+  return error;
+}
+
+function warnUnsettled(url, idleTimeoutMs) {
+  console.warn(
+    `design-match: stránka se do ${idleTimeoutMs} ms neustálila (networkidle) — ${url}. ` +
+      `Měří se to, co bylo v tu chvíli vykresleno. Nejčastější příčina je požadavek, který nikdy neskončí: ` +
+      `fetch, jehož odpověď se nikdy nepřečte (např. větev pro 404), nebo pravidelný polling.`,
+  );
+}
+
+/**
+ * The ONE settle both sides of a comparison use — `measure` on the design and
+ * `compare` on the implementation. That it is one function is the point: two
+ * sides that settle differently produce a pixel delta whose cause is the tool,
+ * not the code, and that is exactly why task 16 refused to change one side's
+ * semantics on its own.
+ *
+ * `load` is what decides whether the page can be measured; `networkidle` is a
+ * best-effort extra that gives late resources time to arrive. Waiting for idle
+ * FATALLY was D7's other half: `ZIBBY Redesign Canvas.html` renders in
+ * milliseconds and then never goes idle, because a `fetch` on its 404 branch
+ * never reads or cancels the response body — Chromium holds that body stream
+ * open forever, the request never finishes, and the page can never be idle
+ * again. It was the eleventh mockup, failing at 30 s for a reason that had
+ * nothing to do with whether it rendered.
+ *
+ * So idleness is bounded and non-fatal — and, because the tool must not make a
+ * claim it cannot back, an unsettled page SAYS SO on stderr and reports
+ * `settled: false` rather than quietly passing itself off as a settled one.
+ */
+export async function gotoSettled(page, url, options = {}) {
+  const idleTimeoutMs = options.idleTimeoutMs ?? SETTLE_IDLE_TIMEOUT_MS;
+  const onUnsettled = options.onUnsettled ?? warnUnsettled;
+  try {
+    await page.goto(url, { waitUntil: "load" });
+  } catch (error) {
+    throw translateNavigationError(url, error);
+  }
+  let settled = true;
+  try {
+    await page.waitForLoadState("networkidle", { timeout: idleTimeoutMs });
+  } catch (error) {
+    // Only the timeout is tolerated. A closed page, a crashed browser or any
+    // other failure is a real fault and must not be swallowed as "not settled".
+    if (!(error instanceof Error && error.name === "TimeoutError")) throw error;
+    settled = false;
+    onUnsettled(url, idleTimeoutMs);
+  }
+  // `page.evaluate(() => document.fonts.ready)` doesn't throw, but a FontFaceSet
+  // isn't a plain object — Playwright silently coerces the returned value to `{}`
+  // crossing the protocol boundary, discarding the wait's actual effect. Awaiting
+  // inside the page and returning nothing gets the wait without the pointless
+  // (and misleading) serialization.
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+  });
+  return { settled };
+}
+
 function boxesIntersect(a, b) {
   return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
 }
@@ -304,21 +424,16 @@ async function resolveMaskLocators(page, masks, targetBox) {
   return locators;
 }
 
+/**
+ * Shoots a page the CALLER has already navigated and settled — it does not
+ * navigate itself. D7 (task 15): it used to `page.goto(scene.url)` on a page
+ * `runCompare` had loaded moments earlier, so every round paid two full loads
+ * and two settle waits, and any state the extraction had established was thrown
+ * away between measuring the structure and photographing it. The two are now
+ * guaranteed to be the same render of the same page, which is what a pixel
+ * comparison against the extracted skeleton was always assuming.
+ */
 export async function shootScene(page, scene, outPath) {
-  // `networkidle` is a discouraged Playwright wait strategy in general — an SPA
-  // that keeps polling in the background never goes idle — but it's low risk
-  // against a local Storybook or Next dev server. Worth reconsidering if the
-  // CLI ever points this at a route with ongoing background polling.
-  await page.goto(scene.url, { waitUntil: "networkidle" });
-  // `document.fonts.ready` resolves to a FontFaceSet, which Playwright then has
-  // to serialize back across the protocol boundary. A FontFaceSet isn't a plain
-  // object, so evaluate doesn't throw — it silently coerces the result to `{}`,
-  // discarding the value while still paying the serialization cost. Awaiting the
-  // promise inside the page and returning nothing gets the actual effect (wait
-  // for fonts) without the pointless round trip.
-  await page.evaluate(async () => {
-    await document.fonts.ready;
-  });
   const target = page.locator(scene.selector).first();
   await target.waitFor({ state: "visible" });
   const targetBox = await target.boundingBox();

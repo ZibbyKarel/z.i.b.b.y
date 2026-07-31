@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { PNG } from "pngjs";
+import { MAX_ROUNDS, classifyVerdict, describeOutcome } from "./loop.mjs";
 
 const bullet = (line) => `- ${line}`;
 
@@ -120,15 +121,37 @@ export function renderComponents(decisions) {
 }
 
 export function renderReport({ slug, rounds, verdict, masks, siblingFiles = [] }) {
-  // The headline is the last round's RoundVerdict.status, not decideNext's `stop`
-  // flag: `stop` only means "the loop halted", which is equally true whether it
-  // halted because the match succeeded or because it gave up. Filing a genuine
-  // match as PARK would invert the one line operators read first.
+  // D4 (task 15): this used to be a two-state ternary — done or PARK — with no
+  // `continue` branch at all, so the normal "keep going" round wrote
+  // `Výsledek: PARK` while the process exited 1 and the console said POKRAČUJ.
+  // report.md is the file SKILL.md tells the operator to read FIRST, so a driver
+  // following the documentation abandoned the loop on round 1 of every run.
+  //
+  // The label is now looked up from `loop.mjs`'s OUTCOME table — literally the
+  // same object `selectExitCode` indexes — so the rendered verdict and the exit
+  // code cannot disagree without one of them being undefined. There is no second
+  // list of strings to keep in step, which is the only version of this fix that
+  // stays fixed.
+  const outcome = describeOutcome(verdict);
   const lines = [
     `# design-match — ${slug}`,
     "",
-    `**Výsledek:** ${verdict.status === "done" ? "HOTOVO" : "PARK"} — ${verdict.reason}`,
+    `**Výsledek:** ${outcome.label} — ${verdict.reason}`,
     "",
+    // The round counter is on rounds ALREADY RUN. `decideNext` checks
+    // `rounds.length >= MAX_ROUNDS` after the round has produced its result, so
+    // round MAX_ROUNDS runs fully and writes its artifacts before parking — the
+    // ceiling is not a refusal to run the last round, and a driver sees at most
+    // MAX_ROUNDS - 1 POKRAČUJ rounds. Verified against loop.mjs, not copied from
+    // an earlier description of it, which was wrong.
+    `Kolo ${rounds.length} z ${MAX_ROUNDS}. ${outcome.nextStep}`,
+    "",
+    ...(classifyVerdict(verdict) === "continue"
+      ? [
+          `Kolo ${MAX_ROUNDS} ještě proběhne celé a zapíše artefakty, teprve pak se běh zaparkuje — POKRAČUJ tedy může přijít nejvýš v ${MAX_ROUNDS - 1} kolech.`,
+          "",
+        ]
+      : []),
     "## Kola",
     "",
   ];

@@ -26,6 +26,31 @@ const normalise = (families) => families.map(normaliseFontEntry).filter(Boolean)
 /**
  * Stops the loop in F1 rather than in round five. A font mismatch makes every
  * later pixel delta a lie: the numbers move, but the cause is not in the code.
+ *
+ * D6 (task 15): this used to join the WHOLE stack and string-compare it, so two
+ * scenes with identical fonts in a different fallback order parked the run — and
+ * a park here suppresses the pixel layer entirely, leaving the loop with no
+ * progress signal for the rest of its five rounds. What decides a pixel is the
+ * FIRST family the browser can resolve; the tail is what it would have used had
+ * that failed, and it is never reached when the primary resolves on both sides.
+ *
+ * The rest of the stack is deliberately not compared AT ALL — not even at a
+ * lower severity. Two reasons, and the second is the one that settles it:
+ *
+ * 1. `collectFontStacks` (cli.mjs) dedupes families into a Set in DOM-traversal
+ *    order across the whole tree, so the tail's ORDER is a property of the walk,
+ *    not of anyone's CSS. Reporting a difference computed from it would be the
+ *    tool making a claim it cannot back — the one thing this branch forbids.
+ * 2. Nothing is lost by dropping it. `fontFamily` is in `VALUE_PROPS`, so
+ *    `compareValues` already compares the full declared stack string node by
+ *    node, paired in lockstep, and any delta there keeps the round at "continue"
+ *    — a real font difference is still reported, by the layer that can name the
+ *    node it happened on. The preflight's job is only the coarse question the
+ *    value layer cannot answer in time: is this comparison worth running at all.
+ *
+ * A genuine mismatch — a different primary family — still parks with pixels
+ * suppressed. This narrows what counts as a mismatch; it does not remove the
+ * check.
  */
 export function fontPreflight(designFonts, appFonts) {
   const design = normalise(designFonts);
@@ -33,12 +58,20 @@ export function fontPreflight(designFonts, appFonts) {
   // CSS font-family names are case-insensitive; comparing case-sensitively
   // would report "geist" vs "Geist" as a mismatch and stop a run that should
   // have proceeded. The messages below keep each side's original casing.
-  const fold = (families) => families.map((f) => f.toLowerCase()).join(", ");
-  if (fold(design) === fold(app)) {
-    return { ok: true, message: `font stack shodný: ${design.join(", ")}` };
+  const fold = (family) => (family === undefined ? "" : family.toLowerCase());
+  const show = (family) => (family === undefined ? "žádná" : family);
+  const [designPrimary] = design;
+  const [appPrimary] = app;
+  if (fold(designPrimary) === fold(appPrimary)) {
+    return {
+      ok: true,
+      // Scoped on purpose: "shodný" without this qualifier would read as a claim
+      // about the whole stack, which is not what was compared.
+      message: `font stack shodný v první rodině: ${show(designPrimary)} (porovnává se jen první vykreslovaná rodina; zbytek fallbacku řeší hodnotová vrstva)`,
+    };
   }
   return {
     ok: false,
-    message: `font stack se liší — design: [${design.join(", ")}], implementace: [${app.join(", ")}]. Sjednoť je dřív, než se začne porovnávat.`,
+    message: `font stack se liší v první vykreslované rodině — design: ${show(designPrimary)}, implementace: ${show(appPrimary)} (celé stacky — design: [${design.join(", ")}], implementace: [${app.join(", ")}]). Sjednoť je dřív, než se začne porovnávat.`,
   };
 }

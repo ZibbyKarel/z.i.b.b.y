@@ -66,7 +66,22 @@ export const VALUE_PROPS = [
  * address space every later layer names nodes in.
  */
 export async function extractRaw(page, selector, depth = 6, props = VALUE_PROPS) {
-  return page.evaluate(
+  // The result is discriminated rather than thrown from inside the page, and
+  // that is the whole point (D5, task 15). A throw raised inside
+  // `page.evaluate` comes back as `page.evaluate: Error: design-match: …` —
+  // Playwright prefixes it — so `isDeliberateError`'s
+  // `message.startsWith("design-match:")` is false and cli.mjs's `logFailure`
+  // dumps a full stack instead of one clean line. On `compare` that also meant
+  // no artifacts were written at all.
+  //
+  // The same trap as task 16's `networkidle` timeout, solved the same way: the
+  // failure is turned into a `design-match:` Error on the NODE side. Doing it
+  // by returning a discriminated value (rather than probing with a second
+  // `page.evaluate` first) keeps it to one round trip and leaves no window in
+  // which the element could appear or vanish between the check and the walk.
+  // Any future in-page failure must be reported the same way — a bare `throw`
+  // inside this callback loses its classification silently.
+  const result = await page.evaluate(
     ({ selector, depth, props }) => {
       const visible = (el) => {
         const style = getComputedStyle(el);
@@ -112,9 +127,17 @@ export async function extractRaw(page, selector, depth = 6, props = VALUE_PROPS)
       };
 
       const root = document.querySelector(selector);
-      if (!root) throw new Error(`design-match: selector not found: ${selector}`);
-      return snap(root, 0);
+      if (!root) return { found: false };
+      return { found: true, node: snap(root, 0) };
     },
     { selector, depth, props },
   );
+  if (!result.found) {
+    throw new Error(
+      `design-match: selector "${selector}" neodpovídá žádnému prvku na stránce ${page.url()} — ` +
+        `měřená scéna ten uzel nemá. Otevři stránku v prohlížeči, najdi odpovídající element a předej ho přes --selector; ` +
+        `selector z designu (spec.json) v implementaci zpravidla neexistuje.`,
+    );
+  }
+  return result.node;
 }

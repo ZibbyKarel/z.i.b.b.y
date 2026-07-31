@@ -8,13 +8,14 @@ import { compareSkeletons } from "./compare-skeleton.mjs";
 import { compareValues } from "./compare-values.mjs";
 import { extractRaw } from "./extract.mjs";
 import { collectRegions, cropRegions, formatInventory, rankCandidates } from "./inventory.mjs";
-import { decideNext, evaluateRound } from "./loop.mjs";
+import { decideNext, describeOutcome, evaluateRound, selectExitCode } from "./loop.mjs";
 import { childPath, normalizeSkeleton, rootPath } from "./normalize.mjs";
 import { diffPngs } from "./pixels.mjs";
 import { fontPreflight } from "./preflight.mjs";
 import { writeArtifacts } from "./report.mjs";
 import {
   assertServableRoot,
+  gotoSettled,
   resolveScene,
   shootScene,
   staticUrl,
@@ -84,6 +85,14 @@ export function parseArgs(argv) {
     } else if (arg === "--theme") {
       flags.theme = takeFlagValue(rest, i, "--theme");
       i += 1;
+    } else if (arg === "--app-base") {
+      // `resolveScene` has always accepted an `appBase` override; nothing ever
+      // reached it from argv, so a `--route` scene was hardcoded to
+      // http://localhost:3000. Plumbing it is what makes an end-to-end `compare`
+      // testable at the process boundary at all (compare.browser.test.mjs),
+      // which is where D4, D5 and D7 are actually observable.
+      flags.appBase = takeFlagValue(rest, i, "--app-base");
+      i += 1;
     } else {
       positional.push(arg);
     }
@@ -106,6 +115,7 @@ export function parseArgs(argv) {
     slug: flags.slug ?? (description ? slugify(description) : undefined),
     story: flags.story,
     route: flags.route,
+    appBase: flags.appBase,
     selector: flags.selector,
     masks: flags.masks,
     strictWrappers: flags.strictWrappers,
@@ -115,11 +125,39 @@ export function parseArgs(argv) {
   };
 }
 
+/**
+ * The artifact rule, stated once and applied at every refusal path in this file
+ * (D8, task 15; task 16 M6):
+ *
+ *   design-match never deletes what it SAW, and never writes what it CONCLUDED.
+ *
+ * `design.png` and `r1..rN.png` are correct renderings of what the browser
+ * actually put on screen. On a refusal they are not litter — they are the
+ * evidence the refusal is telling the operator to go and look at, and deleting
+ * them would leave a message ("open it and check it renders") with nothing to
+ * open. `spec.json` is the opposite: it asserts a conclusion, so it is never
+ * written on a failing path.
+ *
+ * The inconsistency worth removing was never that the pngs survive; it is that
+ * the messages did not admit they were there, so they read as debris. Every
+ * refusal that happens after something was rendered now names the file.
+ */
+function artifactHint(artifactDir, files) {
+  if (!artifactDir) return "";
+  return ` Soubory z tohoto běhu zůstaly na disku: ${files.map((f) => `${path.join(artifactDir, f)}`).join(", ")}.`;
+}
+
 /** 1-based `--region` → 0-based index, validated against the actual candidate count. */
-export function resolveRegionIndex(region, candidateCount) {
+export function resolveRegionIndex(region, candidateCount, artifactDir) {
   if (!(region >= 1 && region <= candidateCount)) {
+    const cropCount = Math.min(candidateCount, 5);
     throw new Error(
-      `design-match: region ${region} neexistuje — platný rozsah je 1–${candidateCount}`,
+      `design-match: region ${region} neexistuje — platný rozsah je 1–${candidateCount}.` +
+        artifactHint(
+          artifactDir,
+          Array.from({ length: cropCount }, (_unused, index) => `r${index + 1}.png`),
+        ) +
+        (artifactDir ? " Vyber podle nich a spusť measure znovu s --region <n>." : ""),
     );
   }
   return region - 1;
@@ -299,43 +337,13 @@ export function combineVerdict(roundVerdict, next) {
 }
 
 /**
- * One exit code cannot express four outcomes, so the driving agent gets four —
- * looked up here from a single table so the exit code and the console label
- * (`describeOutcome`) can never drift apart as two separately maintained
- * copies of the same branch:
- *   0 — done: a match was found, stop calling compare.
- *   1 — continue: no match yet, but the loop has not given up — run compare again.
- *   2 — parked: decideNext stopped the loop (thrash, skeleton gate, round ceiling)
- *       without ever reaching done — stop calling compare and escalate to a human.
- *   3 — error: compare (or measure) itself failed — a bad invocation, a missing
- *       spec.json, a browser that wouldn't launch, a failed write. This must
- *       never collapse into 1 ("continue") — the driving agent has to be able
- *       to tell "make another round" from "the tool itself is broken", or it
- *       loops forever against a dead tool.
- * Published for the driving agent in Task 14.
+ * The outcome table moved to loop.mjs (D4, task 17) so `report.mjs` reads the
+ * SAME table the exit code comes from — it used to keep its own two-state list
+ * of headline strings and printed PARK on rounds that were continuing.
+ * Re-exported here because this module is where the CLI's published surface
+ * lives; it is a re-export, not a second copy.
  */
-const OUTCOME = {
-  done: { code: 0, label: "HOTOVO" },
-  continue: { code: 1, label: "POKRAČUJ" },
-  parked: { code: 2, label: "PARK" },
-  error: { code: 3, label: "CHYBA" },
-};
-
-function classifyVerdict(verdict) {
-  if (verdict.status === "error") return "error";
-  if (verdict.status === "done") return "done";
-  if (verdict.stop) return "parked";
-  return "continue";
-}
-
-export function selectExitCode(verdict) {
-  return OUTCOME[classifyVerdict(verdict)].code;
-}
-
-/** Same table as `selectExitCode`, plus the console label — one home for both. */
-export function describeOutcome(verdict) {
-  return OUTCOME[classifyVerdict(verdict)];
-}
+export { describeOutcome, selectExitCode } from "./loop.mjs";
 
 /**
  * Elements that ARE content rather than containers for it. A `<canvas>` with
@@ -403,12 +411,16 @@ function carriesContent(raw) {
   return raw.children.some(carriesContent);
 }
 
-export function assertRegionRendered(raw, selector) {
+export function assertRegionRendered(raw, selector, artifactDir) {
   if (carriesContent(raw)) return;
   throw new Error(
     `design-match: region "${selector}" nic neobsahuje — v celém podstromu není text ani žádný obsahový prvek, takže spec by popisoval prázdno. ` +
       `Pravděpodobné příčiny: stránka se nevykreslila, skripty se nenačetly, nebo selector míří na prázdný kontejner. ` +
-      `Otevři mockup v prohlížeči a ověř, že se vykreslí, případně zvol jiný region přes --region <n>.`,
+      `Otevři mockup v prohlížeči a ověř, že se vykreslí, případně zvol jiný region přes --region <n>.` +
+      // D8: the run has already photographed exactly what the message is asking
+      // the operator to go and look at. Naming the file is what makes the
+      // leftover png evidence rather than debris.
+      artifactHint(artifactDir, ["design.png", "r1.png"]),
   );
 }
 
@@ -644,23 +656,11 @@ export function planMeasureMounts(localHtmlPath, cacheDir) {
 }
 
 /**
- * A navigation that times out is not a crash — it is a mockup that never
- * settles, and the operator needs the one-line treatment, not a Playwright
- * stack. `ZIBBY Redesign Canvas.html` is the live example: it drops a 404
- * response body, so the request never finishes and `networkidle` can never
- * fire. Only the timeout is translated; any other navigation failure is a real
- * fault and keeps its stack.
+ * Moved to shoot.mjs (D7, task 17), beside `gotoSettled` — the function that
+ * does the navigating owns the translation of its failure. Re-exported here
+ * because this module is the CLI's published surface.
  */
-export function translateNavigationError(url, error) {
-  if (error instanceof Error && error.name === "TimeoutError") {
-    return new Error(
-      `design-match: mockup se neustálil (waitUntil: networkidle) — ${url}. ` +
-        `Nejčastější příčina je požadavek, který nikdy neskončí: fetch, jehož odpověď se nikdy nepřečte (např. větev pro 404), nebo pravidelný polling. ` +
-        `Otevři mockup v prohlížeči a zkontroluj záložku Network.`,
-    );
-  }
-  return error;
-}
+export { translateNavigationError } from "./shoot.mjs";
 
 async function runMeasure(cmd) {
   const dir = path.join(ARTIFACT_ROOT, cmd.slug);
@@ -676,25 +676,16 @@ async function runMeasure(cmd) {
   const spec = await withStaticServer(mounts, (origin) =>
     withPage(async (page) => {
       const url = staticUrl(origin, mockupDir, htmlPath);
-      try {
-        await page.goto(url, { waitUntil: "networkidle" });
-      } catch (error) {
-        throw translateNavigationError(url, error);
-      }
-      // `page.evaluate(() => document.fonts.ready)` doesn't throw, but a
-      // FontFaceSet isn't a plain object — Playwright silently coerces the
-      // returned value to `{}` crossing the protocol boundary, discarding the
-      // wait's actual effect. Awaiting inside the page and returning nothing
-      // gets the wait without the pointless (and misleading) serialization.
-      await page.evaluate(async () => {
-        await document.fonts.ready;
-      });
+      // The same settle `compare` uses on the implementation — one function, so
+      // the two sides of a comparison can never drift apart on how long they
+      // waited or what they waited for.
+      await gotoSettled(page, url);
       const ranked = rankCandidates(await collectRegions(page), cmd.description);
       await fs.mkdir(dir, { recursive: true });
-      await cropRegions(page, ranked, dir);
-      console.log(formatInventory(ranked));
+      const crops = await cropRegions(page, ranked, dir);
+      console.log(formatInventory(ranked, 5, crops));
 
-      const regionIndex = resolveRegionIndex(cmd.region, ranked.length);
+      const regionIndex = resolveRegionIndex(cmd.region, ranked.length, dir);
       const chosen = ranked[regionIndex];
       console.log(
         `Vybrán region [${cmd.region}]: ${chosen.selector} — pokud je špatně, spusť znovu s --region <n>.`,
@@ -708,7 +699,7 @@ async function runMeasure(cmd) {
       const raw = await extractRaw(page, chosen.selector);
       // Before anything is written: a region with neither structure nor
       // content is a failed measurement, not a result.
-      assertRegionRendered(raw, chosen.selector);
+      assertRegionRendered(raw, chosen.selector, dir);
       return {
         selector: chosen.selector,
         // One extraction, one tree: the skeleton carries the values, so there is
@@ -758,11 +749,19 @@ async function runCompare(cmd) {
   const dir = path.join(ARTIFACT_ROOT, cmd.slug);
   const spec = await readSpec(dir, cmd.slug);
   checkStrictWrappersMatch(spec, cmd.strictWrappers);
-  const scene = resolveScene({ ...cmd, selector: cmd.selector ?? spec.selector });
+  // `cmd` is passed through whole, deliberately: there used to be a
+  // `selector: cmd.selector ?? spec.selector` here, and inheriting the DESIGN's
+  // selector is D5. `resolveScene` owns every selector default now — see its
+  // comment for why a story gets one and a route does not.
+  const scene = resolveScene(cmd);
   const history = await loadHistory(dir, cmd.reset);
 
   const result = await withPage(async (page) => {
-    await page.goto(scene.url, { waitUntil: "networkidle" });
+    // Navigated and settled exactly once per round, by the same function
+    // `measure` used on the design. `shootScene` no longer re-navigates (D7), so
+    // the skeleton extracted below and the screenshot taken further down are the
+    // same render of the same page.
+    await gotoSettled(page, scene.url);
     const appSkeleton = normalizeSkeleton(await extractRaw(page, scene.selector), {
       strictWrappers: cmd.strictWrappers,
     });

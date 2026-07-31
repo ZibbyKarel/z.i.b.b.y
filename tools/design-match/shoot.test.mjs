@@ -84,6 +84,26 @@ describe("resolveScene", () => {
     expect(() => resolveScene({ selector: "main" })).toThrow(/--story|--route/);
   });
 
+  // D5 (task 15), part 1. `compare` used to default `--selector` to the DESIGN's
+  // selector, read out of spec.json — `#dock`, `#root`, `div.row:nth-child(3)`.
+  // Those either match nothing in the implementation (a crash on the documented
+  // first invocation) or, worse, match COINCIDENTALLY: `#root` exists in plenty
+  // of apps and names something entirely unrelated there. A compare that quietly
+  // measures the wrong node is worse than one that refuses, so the design's
+  // selector is never inherited. Where a real contract exists it is used; where
+  // none does, the tool refuses.
+  it("defaults a story scene to Storybook's own mount node", () => {
+    expect(resolveScene({ story: "ds-card--default" }).selector).toBe("#storybook-root");
+  });
+
+  it("lets an explicit --selector win over the story default", () => {
+    expect(resolveScene({ story: "ds-card--default", selector: ".card" }).selector).toBe(".card");
+  });
+
+  it("refuses a route scene with no --selector rather than guessing a node", () => {
+    expect(() => resolveScene({ route: "/roadmap" })).toThrow(/--selector/);
+  });
+
   // Pinning the brief's asymmetry: a story scene's masks are still recorded and
   // will still be applied by shootScene, but the mode stays "story" rather than
   // flipping to "mask" the way a route's masks do. This is documented behaviour,

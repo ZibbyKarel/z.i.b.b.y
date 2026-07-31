@@ -19,6 +19,10 @@ const tallFixture = pathToFileURL(
   path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "tall.html"),
 ).href;
 
+const offPageFixture = pathToFileURL(
+  path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "offpage.html"),
+).href;
+
 let tmpDirs = [];
 
 afterEach(async () => {
@@ -192,6 +196,34 @@ describe("cropRegions", () => {
     // otherwise read a byte from the middle of a neighbouring pixel.
     const middle = Math.floor(png.height / 2) * (png.width * 4) + Math.floor(png.width / 2) * 4;
     expect([png.data[middle], png.data[middle + 1], png.data[middle + 2]]).toEqual([255, 0, 255]);
+  });
+
+  // D7's second cause, found only once the settle stopped failing first: with
+  // the page finally rendering, `ZIBBY Redesign Canvas.html` reached cropRegions
+  // and threw the same raw "Clipped area is either empty or outside the
+  // resulting image" — this time because its pan/zoom canvas puts real elements
+  // at y≈1200 in a document that never grows past 900. One un-croppable
+  // thumbnail must not kill the whole measure, and it must not be faked either.
+  it("skips a region that is not on the page image, and still crops its on-page sibling", async () => {
+    const outDir = await makeTmpDir();
+    const { written, boxes } = await withPage(async (page) => {
+      await page.goto(offPageFixture);
+      const all = await collectRegions(page);
+      const regions = [
+        all.find((r) => r.classes.includes("off-page")),
+        all.find((r) => r.classes.includes("on-page")),
+      ];
+      const written = await cropRegions(page, regions, outDir);
+      return { written, boxes: regions.map((r) => r.box) };
+    });
+
+    // The fixture is the real shape: a visible element sitting far outside the
+    // document the screenshot covers.
+    expect(boxes[0].y).toBeGreaterThan(1000);
+    expect(written[0]).toBe(null);
+    expect(written[1]).toBe(path.join(outDir, "r2.png"));
+    // No r1.png was invented for the region that has no preview.
+    expect((await fs.readdir(outDir)).sort()).toEqual(["r2.png"]);
   });
 
   it("pairs each PNG with its own region — dimensions match box × DEVICE_SCALE_FACTOR", async () => {

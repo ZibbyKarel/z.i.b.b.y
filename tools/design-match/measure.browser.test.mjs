@@ -93,6 +93,67 @@ describe("measure, end to end through the CLI", () => {
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  // D8 (task 15), and the rule stated at every refusal path in runMeasure:
+  // design-match never deletes what it SAW, and never writes what it CONCLUDED.
+  // An out-of-range --region has already produced the crops; they are correct
+  // renderings and they are exactly what the operator needs in order to pick a
+  // valid region, so they stay — and the message names them. What must not exist
+  // is spec.json, the file that asserts a conclusion.
+  it("keeps the crops an out-of-range --region already produced, and names them", async () => {
+    const dir = await makeWorkspace({
+      "mockup.html": `<!doctype html><html><body><div id="root" style="width:400px;height:300px"><h2>karta</h2></div></body></html>`,
+    });
+
+    const failure = await run(
+      "node",
+      [
+        CLI,
+        "measure",
+        "mockup.html",
+        "karta",
+        "--slug",
+        "oob",
+        "--theme",
+        "theme.css",
+        "--region",
+        "999",
+      ],
+      { cwd: dir },
+    ).catch((error) => error);
+
+    expect(failure.code).toBe(3);
+    expect(failure.stderr).toContain("design-match:");
+    expect(failure.stderr).not.toContain("at ");
+    // The evidence is on disk …
+    const artifactDir = path.join(dir, ".design-match", "oob");
+    await expect(fs.readFile(path.join(artifactDir, "r1.png"))).resolves.toBeInstanceOf(Buffer);
+    // … the message says so …
+    expect(failure.stderr).toContain("r1.png");
+    // … and no conclusion was written.
+    await expect(fs.readFile(path.join(artifactDir, "spec.json"), "utf8")).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+  });
+
+  // D7's other half, at the process boundary: a mockup that renders and then
+  // never goes idle (an unread 404 response body — `ZIBBY Redesign Canvas.html`
+  // in miniature) used to burn 30 s and fail. It must measure.
+  it("measures a mockup whose network never goes idle", async () => {
+    const dir = await makeWorkspace({
+      "never-idle.html": await fs.readFile(path.join(FIXTURES, "never-idle.html"), "utf8"),
+    });
+
+    const result = await measure(dir, "never-idle.html", "restless");
+
+    const spec = JSON.parse(
+      await fs.readFile(path.join(dir, ".design-match", "restless", "spec.json"), "utf8"),
+    );
+    expect(spec.selector).toBe("#root");
+    // Measured, but not silently: the tool says the page never settled rather
+    // than passing an unsettled render off as a settled one.
+    expect(result.stderr).toContain("neustálila");
+  });
+
   // Fix round 2, N2. `carriesContent`'s handling of the truncation flag was
   // pinned over hand-built objects, but nothing pinned that `extractRaw` emits
   // the flag at all — setting it to a constant `false` left every test green

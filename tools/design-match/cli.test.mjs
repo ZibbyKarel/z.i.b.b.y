@@ -119,6 +119,20 @@ describe("resolveRegionIndex", () => {
     expect(() => resolveRegionIndex(0, 5)).toThrow(/1.*5|5.*1/);
     expect(() => resolveRegionIndex(6, 5)).toThrow(/1.*5|5.*1/);
   });
+
+  // D8 (task 15/task 16 M6). The crops are already on disk by the time this
+  // fires, and the reviewer's accepted judgment is that they are EVIDENCE, not
+  // litter — they are correct renderings of what the browser actually saw, and
+  // they are precisely what tells the operator which region to ask for. The rule
+  // is therefore "keep them and say they are there", uniformly: a refusal that
+  // leaves artifacts behind must name them, or they read as debris from a failed
+  // run.
+  it("points the operator at the crops the run already wrote", () => {
+    expect(() => resolveRegionIndex(999, 12, ".design-match/karta")).toThrow(/r1\.png/);
+    expect(() => resolveRegionIndex(999, 12, ".design-match/karta")).toThrow(
+      /\.design-match\/karta/,
+    );
+  });
 });
 
 describe("buildTokenMappings", () => {
@@ -313,10 +327,24 @@ describe("checkFontPreflight", () => {
       "form/action[0]": { fontFamily: "Geist, sans-serif" },
     };
     const app = { form: { fontFamily: "Geist, sans-serif" } };
-    expect(checkFontPreflight(design, app)).toEqual({
-      ok: true,
-      message: "font stack shodný: Geist, sans-serif",
-    });
+    const result = checkFontPreflight(design, app);
+    expect(result.ok).toBe(true);
+    expect(result.message).toContain("Geist");
+  });
+
+  // The dedupe is observable in the failure message, which prints each side's
+  // whole collected stack: "Geist" must appear once, not once per node that
+  // declares it. (The passing message names only the primary family since D6, so
+  // this is where the collection is visible.)
+  it("lists each collected family once, however many nodes declare it", () => {
+    const design = {
+      form: { fontFamily: "Geist, sans-serif" },
+      "form/action[0]": { fontFamily: "Geist, sans-serif" },
+    };
+    const app = { form: { fontFamily: "Inter, sans-serif" } };
+    const result = checkFontPreflight(design, app);
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain("[Geist, sans-serif]");
   });
 
   it("fails and names both stacks when the app's fonts differ from the design's", () => {
@@ -427,20 +455,28 @@ describe("selectExitCode", () => {
 });
 
 describe("describeOutcome", () => {
+  // `nextStep` joined the table in task 17 (D4) so report.md's headline can name
+  // the driver's next move from the same source as the exit code. Matched, not
+  // spelled out, because its wording is report copy — the pin here is that the
+  // code/label pairing is identical to selectExitCode's and that every outcome
+  // carries a next step at all.
   it("pairs each status with the same exit code selectExitCode returns, plus a console label", () => {
-    expect(describeOutcome({ status: "done", stop: false })).toEqual({
+    expect(describeOutcome({ status: "done", stop: false })).toMatchObject({
       code: 0,
       label: "HOTOVO",
     });
-    expect(describeOutcome({ status: "continue", stop: false })).toEqual({
+    expect(describeOutcome({ status: "continue", stop: false })).toMatchObject({
       code: 1,
       label: "POKRAČUJ",
     });
-    expect(describeOutcome({ status: "continue", stop: true })).toEqual({
+    expect(describeOutcome({ status: "continue", stop: true })).toMatchObject({
       code: 2,
       label: "PARK",
     });
-    expect(describeOutcome({ status: "error" })).toEqual({ code: 3, label: "CHYBA" });
+    expect(describeOutcome({ status: "error" })).toMatchObject({ code: 3, label: "CHYBA" });
+    for (const status of ["done", "continue", "parked", "error"]) {
+      expect(describeOutcome({ status }).nextStep).toBeTypeOf("string");
+    }
   });
 });
 
@@ -791,6 +827,19 @@ describe("assertRegionRendered", () => {
     expect(() => assertRegionRendered(raw(), "#root")).toThrow(/nevykreslila|skripty|prázdn/i);
   });
 
+  // D8, the same rule as resolveRegionIndex above: the refusal says "open the
+  // mockup and check it renders", and the run has ALREADY photographed exactly
+  // that. Naming the file turns the leftover png from litter into the evidence
+  // the message is asking the operator to go and find.
+  it("points the operator at the render the run already wrote", () => {
+    expect(() => assertRegionRendered(raw(), "#root", ".design-match/karta")).toThrow(
+      /design\.png/,
+    );
+    expect(() => assertRegionRendered(raw(), "#root", ".design-match/karta")).toThrow(
+      /\.design-match\/karta/,
+    );
+  });
+
   // Superseded by M3 (fix round 1): having children is no longer enough on its
   // own — the children have to carry something. See the subtree suite below.
   it("accepts a region whose child carries content", () => {
@@ -998,11 +1047,15 @@ describe("translateNavigationError", () => {
     const translated = translateNavigationError("http://127.0.0.1:1/x.html", timeout());
     expect(isDeliberateError(translated)).toBe(true);
     expect(translated.message).toContain("http://127.0.0.1:1/x.html");
-    expect(translated.message).toMatch(/networkidle/);
+    // D7 (task 17): the fatal wait is now `load`, not `networkidle` — a page
+    // that renders and then never goes idle is measured, not failed.
+    expect(translated.message).toMatch(/load/);
   });
 
   it("names the cause an operator can act on", () => {
-    expect(translateNavigationError("http://x/y", timeout()).message).toMatch(/fetch|polling/);
+    expect(translateNavigationError("http://x/y", timeout()).message).toMatch(
+      /dev server|Storybook/,
+    );
   });
 
   // A navigation that fails any other way is a real fault and keeps its stack —

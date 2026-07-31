@@ -29,27 +29,58 @@ describe("rewriteToCache", () => {
 });
 
 describe("fontPreflight", () => {
-  it("passes when both sides resolve the same families", () => {
-    expect(fontPreflight(["Geist", "JetBrains Mono"], ["Geist", "JetBrains Mono"])).toEqual({
-      ok: true,
-      message: "font stack shodný: Geist, JetBrains Mono",
-    });
+  it("passes when both sides resolve the same primary family", () => {
+    const result = fontPreflight(["Geist", "JetBrains Mono"], ["Geist", "JetBrains Mono"]);
+    expect(result.ok).toBe(true);
+    expect(result.message).toContain("Geist");
   });
 
-  it("fails and names both stacks when they differ", () => {
+  // D6 (task 15). The preflight used to join the WHOLE stack and string-compare
+  // it, so these two — the exact pair observed on a real green-gate round —
+  // parked the run at exit 2 with the pixel layer suppressed, leaving the loop
+  // no progress signal at all. Nothing about what the browser renders was at
+  // risk: it renders with the first family it can resolve, and that is
+  // identical.
+  it("passes when the primary family matches and only the fallback order differs", () => {
+    const result = fontPreflight(
+      ["Geist", "-apple-system", "system-ui", "sans-serif"],
+      ["Geist", "system-ui", "-apple-system", "sans-serif"],
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  // The narrowing must be stated, not silently assumed: a reader of report.md
+  // must not take "font stack shodný" as a claim about the whole stack, because
+  // the rest of it is not compared — and, per task 15, is not stable ground to
+  // compare on (collectFontStacks dedupes in DOM-traversal order, not CSS order).
+  it("says that only the primary family was compared, so the pass is not overclaimed", () => {
+    const result = fontPreflight(["Geist", "Arial"], ["Geist", "Helvetica"]);
+    expect(result.ok).toBe(true);
+    expect(result.message).toContain("první");
+  });
+
+  it("fails and names both stacks when the primary family differs", () => {
     const result = fontPreflight(["Geist"], ["Inter"]);
     expect(result.ok).toBe(false);
     expect(result.message).toContain("Geist");
     expect(result.message).toContain("Inter");
   });
 
+  // A primary family present on one side and absent on the other is a genuine
+  // mismatch, and must read as one rather than printing "undefined".
+  it("fails when one side has no font family at all, without printing undefined", () => {
+    const result = fontPreflight(["Geist"], []);
+    expect(result.ok).toBe(false);
+    expect(result.message).not.toContain("undefined");
+    expect(fontPreflight([], []).ok).toBe(true);
+  });
+
   it("passes when the families match but differ only in case", () => {
     // CSS font-family names are case-insensitive; a false mismatch here stops
     // a run that should have proceeded.
-    expect(fontPreflight(["geist", "JetBrains mono"], ["Geist", "jetbrains Mono"])).toEqual({
-      ok: true,
-      message: "font stack shodný: geist, JetBrains mono",
-    });
+    const result = fontPreflight(["geist", "JetBrains mono"], ["Geist", "jetbrains Mono"]);
+    expect(result.ok).toBe(true);
+    expect(result.message).toContain("geist");
   });
 
   it("normalises next/font/google's generated names against the design's plain family name", () => {
@@ -57,15 +88,12 @@ describe("fontPreflight", () => {
     // `__Geist_<hash>` / `__Geist_Fallback_<hash>` rather than `Geist`. The
     // metric-matched fallback is synthetic and has no design-side
     // counterpart, so it must be dropped rather than compared.
-    expect(
-      fontPreflight(
-        ["Geist", "sans-serif"],
-        ["__Geist_e8ce7c", "__Geist_Fallback_e8ce7c", "sans-serif"],
-      ),
-    ).toEqual({
-      ok: true,
-      message: "font stack shodný: Geist, sans-serif",
-    });
+    const result = fontPreflight(
+      ["Geist", "sans-serif"],
+      ["__Geist_e8ce7c", "__Geist_Fallback_e8ce7c", "sans-serif"],
+    );
+    expect(result.ok).toBe(true);
+    expect(result.message).toContain("Geist");
   });
 
   it("still fails a genuine mismatch after generated-name normalisation, proving the check isn't defanged", () => {

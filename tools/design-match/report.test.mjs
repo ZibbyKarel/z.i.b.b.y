@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { PNG } from "pngjs";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { MAX_ROUNDS, describeOutcome } from "./loop.mjs";
 import {
   compositeDiff,
   renderComponents,
@@ -221,6 +222,72 @@ describe("renderReport", () => {
     expect(out).toContain("**Výsledek:** PARK — strop 5 kol vyčerpán");
     expect(out).toContain("## Maskované regiony");
     expect(out).toContain("`form/input[2]`");
+  });
+
+  // D4 (task 15): a round that exits 1 — the normal "keep going" case — used to
+  // write `Výsledek: PARK` into the one file SKILL.md tells the operator to read
+  // first. The rendered verdict contradicted the exit code the driving agent was
+  // acting on, so a driver following the documentation abandoned the loop on
+  // round 1 of every run.
+  it("renders POKRAČUJ, not PARK, for a round that is still continuing", () => {
+    const out = renderReport({
+      slug: "roadmap",
+      rounds: [{ percent: 8, skeletonPass: false, reason: "skeleton gate neprošel" }],
+      verdict: { stop: false, status: "continue", reason: "pokračuje" },
+      masks: [],
+    });
+    expect(out).toContain("**Výsledek:** POKRAČUJ — pokračuje");
+    expect(out).not.toContain("PARK");
+  });
+
+  // The headline must be looked up from the same table the exit code comes from,
+  // not from a second list of strings that can drift. Driven over every outcome
+  // the CLI can produce.
+  it("labels the headline with exactly describeOutcome's label, for every outcome", () => {
+    const verdicts = [
+      { stop: false, status: "done", reason: "hotovo" },
+      { stop: false, status: "continue", reason: "pokračuje" },
+      { stop: true, status: "continue", reason: "strop kol vyčerpán" },
+      { stop: true, status: "parked", reason: "font stack se liší" },
+      { stop: true, status: "error", reason: "spec.json chybí" },
+    ];
+    for (const verdict of verdicts) {
+      const out = renderReport({ slug: "s", rounds: [{ percent: null }], verdict, masks: [] });
+      expect(out).toContain(`**Výsledek:** ${describeOutcome(verdict).label} — ${verdict.reason}`);
+    }
+  });
+
+  // A continuing round has to say what the driver does next, and where it sits
+  // against the ceiling. Round MAX_ROUNDS runs fully and writes its artifacts
+  // before parking, so POKRAČUJ can only ever be seen on MAX_ROUNDS - 1 rounds.
+  it("tells a continuing driver to re-invoke, and names the round against MAX_ROUNDS", () => {
+    const out = renderReport({
+      slug: "roadmap",
+      rounds: [{ percent: 8 }, { percent: 5 }, { percent: 3 }],
+      verdict: { stop: false, status: "continue", reason: "pokračuje" },
+      masks: [],
+    });
+    expect(out).toContain(`Kolo 3 z ${MAX_ROUNDS}`);
+    expect(out).toContain("compare");
+    expect(out).toContain(`${MAX_ROUNDS - 1}`);
+  });
+
+  it("tells a parked driver to stop calling compare, and a done one that it is finished", () => {
+    const parked = renderReport({
+      slug: "roadmap",
+      rounds: [{ percent: 8 }],
+      verdict: { stop: true, status: "parked", reason: "font stack se liší" },
+      masks: [],
+    });
+    expect(parked).toContain("Přestaň volat");
+    const done = renderReport({
+      slug: "roadmap",
+      rounds: [{ percent: 0.1 }],
+      verdict: { stop: false, status: "done", reason: "diff 0.1 %" },
+      masks: [],
+    });
+    expect(done).toContain("Přestaň volat");
+    expect(done).not.toContain("Uprav implementaci");
   });
 
   it("omits the masks section entirely when there are none", () => {

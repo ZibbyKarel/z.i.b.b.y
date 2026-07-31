@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <title>never idle</title>
+  </head>
+  <body>
+    <div id="root" style="width: 400px; height: 300px; font-family: Geist, Arial, sans-serif">
+      <h2>obsah, který se vykreslil</h2>
+    </div>
+    <script>
+      // `ZIBBY Redesign Canvas.html` in miniature. `redesign/design-canvas.jsx`
+      // does `fetch('./' + STATE_FILE).then(r => r.ok ? r.json() : null)`; on the
+      // 404 branch the response body is never read and never cancelled, so
+      // Chromium keeps the body stream open, the request never reaches
+      // `requestfinished`, and `networkidle` can never fire again for the life of
+      // the page — even though the page itself rendered perfectly.
+      fetch("./design-match-missing-state.json").then((response) =>
+        response.ok ? response.json() : null,
+      );
+    </script>
+  </body>
+</html>
