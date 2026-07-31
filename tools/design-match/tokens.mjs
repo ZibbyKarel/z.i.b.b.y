@@ -22,9 +22,11 @@ const PROP_PREFIX = {
 };
 
 /**
- * `VALUE_PROPS` (extract.mjs) covers ~40 properties for the values comparison;
- * only the ones `PROP_PREFIX` knows a token family for are worth reporting in
- * `tokens.md` — a `display: flex` row would never be covered by a token.
+ * `VALUE_PROPS` (extract.mjs) is the whole measured whitelist for the values
+ * comparison; only the ones `PROP_PREFIX` knows a token family for are worth
+ * reporting in `tokens.md` — a `display: flex` row would never be covered by a
+ * token. Naming the constant rather than restating its length on purpose: the
+ * number that used to stand here (D11, task 19) was wrong by eleven.
  */
 export const TOKEN_PROPS = Object.keys(PROP_PREFIX);
 

@@ -4,7 +4,15 @@
  * scope — hence the arguments-in, JSON-out shape.
  */
 
-/** Deliberately narrow: ~40 properties that carry visual meaning, not all ~340. */
+/**
+ * Deliberately narrow: the properties listed here are the ones that carry visual
+ * meaning, not all ~340 a computed style exposes.
+ *
+ * D11 (task 19): this used to say "~40 properties" while the array held 51 — a
+ * count restated in prose goes stale the moment a property is added, and two
+ * independent reviewers had to count it by hand to find that out. The list's
+ * length is `VALUE_PROPS.length`; nothing else should ever claim to know it.
+ */
 export const VALUE_PROPS = [
   "display",
   "position",
