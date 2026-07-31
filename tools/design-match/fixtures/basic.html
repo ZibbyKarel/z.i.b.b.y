@@ -39,6 +39,32 @@
         background: #0b0e13;
         border: 1px solid #26303f;
       }
+      /*
+       * Isolated section: proves the numeric `order` conversion end to end.
+       * DOM order is A, B, C but CSS order puts them B, C, A.
+       */
+      .order-row {
+        display: flex;
+        flex-direction: row;
+      }
+      .order-row > [data-order-id="a"] {
+        order: 3;
+      }
+      .order-row > [data-order-id="b"] {
+        order: 1;
+      }
+      .order-row > [data-order-id="c"] {
+        order: 2;
+      }
+      /*
+       * Isolated section: a genuine 2-level pass-through wrapper chain, each
+       * div with no padding/border/margin of its own so it occupies exactly
+       * its parent's box — real geometry driving `isCollapsibleWrapper`.
+       */
+      .wrapper-outer,
+      .wrapper-inner {
+        display: block;
+      }
     </style>
   </head>
   <body>
@@ -49,6 +75,20 @@
         <div class="row"><label>Firma</label><input type="text" /></div>
         <div class="row"><label>Role</label><input type="text" /></div>
       </form>
+    </div>
+
+    <div class="order-row" data-region="order-test">
+      <label data-order-id="a">Alpha</label>
+      <input data-order-id="b" type="text" />
+      <button data-order-id="c" type="button">Gamma</button>
+    </div>
+
+    <div class="wrapper-root" data-region="wrapper-test">
+      <div class="wrapper-outer">
+        <div class="wrapper-inner">
+          <span>Leaf</span>
+        </div>
+      </div>
     </div>
   </body>
 </html>
