@@ -154,6 +154,53 @@ describe("renderReport", () => {
     });
     expect(out).not.toContain("Maskované regiony");
   });
+
+  it("names a round's diff-image failure inline in its bullet (fix round 1, Important 1)", () => {
+    const out = renderReport({
+      slug: "roadmap",
+      rounds: [
+        { percent: 4, skeletonPass: true, reason: "kolo 1" },
+        {
+          percent: 0.3,
+          skeletonPass: true,
+          reason: "kolo 2",
+          diffImageError: "design-match: rozměry se liší — app 4×4, maska 6×4",
+        },
+      ],
+      verdict: { stop: true, status: "continue", reason: "diff obrázek chybí pro kolo 2" },
+      masks: [],
+    });
+    expect(out).toContain("kolo 2");
+    expect(out).toContain("diff obrázek chybí");
+    expect(out).toContain("app 4×4, maska 6×4");
+    // round 1 has no diffImageError, so its bullet must not carry the note
+    expect(out.split("\n").find((line) => line.includes("kolo 1"))).not.toContain(
+      "diff obrázek chybí",
+    );
+  });
+
+  it("lists only the sibling files actually supplied, under their own section (fix round 1, Minor 2)", () => {
+    const withFiles = renderReport({
+      slug: "roadmap",
+      rounds: [],
+      verdict: { stop: true, status: "done", reason: "ok" },
+      masks: [],
+      siblingFiles: ["skeleton.md", "values.md", "round-1.json"],
+    });
+    expect(withFiles).toContain("## Doprovodné soubory");
+    expect(withFiles).toContain("`skeleton.md`");
+    expect(withFiles).toContain("`values.md`");
+    expect(withFiles).toContain("`round-1.json`");
+    expect(withFiles).not.toContain("spec.json");
+
+    const withoutFiles = renderReport({
+      slug: "roadmap",
+      rounds: [],
+      verdict: { stop: true, status: "done", reason: "ok" },
+      masks: [],
+    });
+    expect(withoutFiles).not.toContain("Doprovodné soubory");
+  });
 });
 
 describe("compositeDiff", () => {
@@ -193,6 +240,19 @@ describe("compositeDiff", () => {
     const app = png(10, 10, () => [0, 0, 0, 255]);
     const mask = png(12, 10, () => [0, 0, 0, 255]);
     expect(() => compositeDiff(app, mask)).toThrow(/10×10.*12×10/);
+  });
+
+  it("blends a partial-alpha mask pixel arithmetically, not just short-circuiting on 0/255 (Minor 1)", () => {
+    // app channel 0, mask channel 255, alpha 128 -> a = 128/255, so
+    // mask*a + app*(1-a) = 255*(128/255) + 0 = 128 exactly: a clean value that
+    // only comes out right if the interpolation itself is correct.
+    const app = png(2, 2, () => [0, 0, 0, 255]);
+    const mask = png(2, 2, () => [255, 255, 255, 128]);
+    const out = compositeDiff(app, mask);
+    const outPng = PNG.sync.read(out);
+    expect([outPng.data[0], outPng.data[1], outPng.data[2], outPng.data[3]]).toEqual([
+      128, 128, 128, 255,
+    ]);
   });
 });
 
@@ -265,5 +325,129 @@ describe("writeArtifacts", () => {
     expect(entries).not.toContain("spec.json");
     expect(entries).not.toContain("round-1-diff.png");
     expect(entries).toContain("round-1.json");
+  });
+
+  it("lists its own sibling files in report.md, excluding files this run never wrote", async () => {
+    const app = png(4, 4, () => [0, 0, 0, 255]);
+    const mask = png(4, 4, () => [255, 0, 0, 255]);
+    await writeArtifacts(dir, {
+      slug: "roadmap",
+      skeletonFindings: [],
+      values: [],
+      tokenMappings: [],
+      componentDecisions: [],
+      masks: [],
+      verdict: { stop: true, status: "done", reason: "ok" },
+      rounds: [
+        { percent: 0.3, skeletonPass: true, reason: "kolo 1", appImage: app, maskImage: mask },
+      ],
+    });
+
+    const report = await fs.readFile(path.join(dir, "report.md"), "utf8");
+    expect(report).toContain("`skeleton.md`");
+    expect(report).toContain("`values.md`");
+    expect(report).toContain("`tokens.md`");
+    expect(report).toContain("`components.md`");
+    expect(report).toContain("`round-1.json`");
+    expect(report).toContain("`round-1-diff.png`");
+    expect(report).not.toContain("spec.json");
+  });
+
+  it(
+    "collects one round's composite failure without stopping the others, writes the complete " +
+      "file set with the failure named in it, then rejects naming the affected round " +
+      "(fix round 1, Important 1)",
+    async () => {
+      const goodApp = png(4, 4, () => [0, 0, 0, 255]);
+      const goodMask = png(4, 4, () => [255, 0, 0, 255]);
+      const badApp = png(4, 4, () => [0, 0, 0, 255]);
+      const badMask = png(6, 4, () => [255, 0, 0, 255]);
+
+      const attempt = writeArtifacts(dir, {
+        slug: "roadmap",
+        skeletonFindings: [],
+        values: [],
+        tokenMappings: [],
+        componentDecisions: [],
+        masks: [],
+        verdict: { stop: true, status: "continue", reason: "diff obrázek chybí pro kolo 2" },
+        rounds: [
+          {
+            percent: 0.3,
+            skeletonPass: true,
+            reason: "kolo 1",
+            appImage: goodApp,
+            maskImage: goodMask,
+          },
+          {
+            percent: 4,
+            skeletonPass: true,
+            reason: "kolo 2",
+            appImage: badApp,
+            maskImage: badMask,
+          },
+        ],
+      });
+
+      await expect(attempt).rejects.toThrow(/kolo 2|round 2|2/);
+
+      const entries = (await fs.readdir(dir)).sort();
+      expect(entries).toEqual(
+        [
+          "skeleton.md",
+          "values.md",
+          "tokens.md",
+          "components.md",
+          "report.md",
+          "round-1.json",
+          "round-1-diff.png",
+          "round-2.json",
+        ].sort(),
+      );
+      expect(entries).not.toContain("round-2-diff.png");
+
+      const round2 = JSON.parse(await fs.readFile(path.join(dir, "round-2.json"), "utf8"));
+      expect(round2.diffImageError).toMatch(/4×4.*6×4/);
+
+      const report = await fs.readFile(path.join(dir, "report.md"), "utf8");
+      expect(report).toContain("kolo 2");
+      expect(report).toMatch(/diff obrázek/i);
+      expect(report).toContain("4×4");
+      expect(report).toContain("6×4");
+    },
+  );
+
+  it("the all-good path still writes exactly the file set it wrote before, and does not throw", async () => {
+    const app = png(4, 4, () => [0, 0, 0, 255]);
+    const mask = png(4, 4, () => [255, 0, 0, 255]);
+    await expect(
+      writeArtifacts(dir, {
+        slug: "roadmap",
+        skeletonFindings: [],
+        values: [],
+        tokenMappings: [],
+        componentDecisions: [],
+        masks: [],
+        verdict: { stop: true, status: "done", reason: "ok" },
+        rounds: [
+          { percent: 4, skeletonPass: true, reason: "kolo 1" },
+          { percent: 0.3, skeletonPass: true, reason: "kolo 2", appImage: app, maskImage: mask },
+        ],
+      }),
+    ).resolves.toBeUndefined();
+
+    const entries = (await fs.readdir(dir)).sort();
+    expect(entries).toEqual(
+      [
+        "skeleton.md",
+        "values.md",
+        "tokens.md",
+        "components.md",
+        "report.md",
+        "round-1.json",
+        "round-2.json",
+        "round-2-diff.png",
+      ].sort(),
+    );
   });
 });

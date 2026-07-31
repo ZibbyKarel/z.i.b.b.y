@@ -74,7 +74,7 @@ export function renderComponents(decisions) {
   return lines.join("\n");
 }
 
-export function renderReport({ slug, rounds, verdict, masks }) {
+export function renderReport({ slug, rounds, verdict, masks, siblingFiles = [] }) {
   // The headline is the last round's RoundVerdict.status, not decideNext's `stop`
   // flag: `stop` only means "the loop halted", which is equally true whether it
   // halted because the match succeeded or because it gave up. Filing a genuine
@@ -89,15 +89,25 @@ export function renderReport({ slug, rounds, verdict, masks }) {
   ];
   rounds.forEach((round, index) => {
     const percent = round.percent === null ? "—" : `${round.percent} %`;
+    // A round whose diff image failed to composite (fix round 1, Important 1)
+    // names the failure right in its own bullet — report.md alone must tell a
+    // reader that the image is missing and why, not just leave a gap.
+    const diffNote = round.diffImageError ? ` — diff obrázek chybí: ${round.diffImageError}` : "";
     lines.push(
       bullet(
-        `kolo ${index + 1}: skeleton ${round.skeletonPass ? "✓" : "✗"}, diff ${percent} — ${round.reason}`,
+        `kolo ${index + 1}: skeleton ${round.skeletonPass ? "✓" : "✗"}, diff ${percent} — ${round.reason}${diffNote}`,
       ),
     );
   });
   if (masks.length > 0) {
     lines.push("", "## Maskované regiony (nezkontrolovaná plocha)", "");
     for (const mask of masks) lines.push(bullet(`\`${mask}\``));
+  }
+  // fix round 1, Minor 2: report.md is the entry point to the run, so it must
+  // itself point at every other file this run actually wrote.
+  if (siblingFiles.length > 0) {
+    lines.push("", "## Doprovodné soubory", "");
+    for (const file of siblingFiles) lines.push(bullet(`\`${file}\``));
   }
   return lines.join("\n") + "\n";
 }
@@ -136,10 +146,44 @@ export function compositeDiff(appPngBuffer, maskPngBuffer) {
  * and one round-N.json per entry in `payload.rounds`. Writes conditionally:
  * spec.json only when `payload.spec` is present (its absence must not throw),
  * and round-N-diff.png only for a round that carries both `appImage` and
- * `maskImage` — a round without pixel buffers writes no diff file, silently.
+ * `maskImage` AND whose composite succeeded.
+ *
+ * fix round 1, Important 1: compositing happens for every eligible round
+ * BEFORE any file is written, so one round's mismatched image dimensions
+ * cannot truncate the rest of the record. A round whose composite fails still
+ * gets its round-N.json (carrying the reason as `diffImageError`) and is named
+ * in report.md — the artifacts are always the complete, self-explaining set
+ * this module exists to produce. Only after everything is written does this
+ * function reject, naming the affected round(s); the error is never swallowed,
+ * it is just not allowed to cut the record short first.
  */
 export async function writeArtifacts(dir, payload) {
   await fs.mkdir(dir, { recursive: true });
+
+  // One pass per round: destructure the image buffers out (this is what keeps
+  // them out of round-N.json — jsonSafe is exactly what gets stringified) and,
+  // where both are present, attempt the composite right there so appImage and
+  // maskImage are used in the same scope they're bound in. One round's failure
+  // is caught and carried as `diffImageError` rather than thrown — it must not
+  // stop the rounds after it from being attempted or written.
+  const compositions = [];
+  const roundsForRender = payload.rounds.map((round) => {
+    const { appImage, maskImage, ...jsonSafe } = round;
+    if (!appImage || !maskImage) {
+      compositions.push({ attempted: false });
+      return jsonSafe;
+    }
+    try {
+      compositions.push({ attempted: true, ok: true, buffer: compositeDiff(appImage, maskImage) });
+      return jsonSafe;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      compositions.push({ attempted: true, ok: false, message });
+      return { ...jsonSafe, diffImageError: message };
+    }
+  });
+
+  const siblingFiles = ["skeleton.md", "values.md", "tokens.md", "components.md"];
   const writes = [
     fs.writeFile(path.join(dir, "skeleton.md"), renderSkeleton(payload.skeletonFindings), "utf8"),
     fs.writeFile(path.join(dir, "values.md"), renderValues(payload.values), "utf8"),
@@ -149,30 +193,46 @@ export async function writeArtifacts(dir, payload) {
       renderComponents(payload.componentDecisions),
       "utf8",
     ),
-    fs.writeFile(path.join(dir, "report.md"), renderReport(payload), "utf8"),
   ];
+
   if (payload.spec !== undefined) {
+    siblingFiles.push("spec.json");
     writes.push(
       fs.writeFile(path.join(dir, "spec.json"), JSON.stringify(payload.spec, null, 2), "utf8"),
     );
   }
-  payload.rounds.forEach((round, index) => {
-    const { appImage, maskImage, ...jsonSafe } = round;
+
+  roundsForRender.forEach((round, index) => {
+    const roundJsonName = `round-${index + 1}.json`;
+    siblingFiles.push(roundJsonName);
     writes.push(
-      fs.writeFile(
-        path.join(dir, `round-${index + 1}.json`),
-        JSON.stringify(jsonSafe, null, 2),
-        "utf8",
-      ),
+      fs.writeFile(path.join(dir, roundJsonName), JSON.stringify(round, null, 2), "utf8"),
     );
-    if (appImage && maskImage) {
-      writes.push(
-        fs.writeFile(
-          path.join(dir, `round-${index + 1}-diff.png`),
-          compositeDiff(appImage, maskImage),
-        ),
-      );
+    const composition = compositions[index];
+    if (composition.attempted && composition.ok) {
+      const diffPngName = `round-${index + 1}-diff.png`;
+      siblingFiles.push(diffPngName);
+      writes.push(fs.writeFile(path.join(dir, diffPngName), composition.buffer));
     }
   });
+
+  writes.push(
+    fs.writeFile(
+      path.join(dir, "report.md"),
+      renderReport({ ...payload, rounds: roundsForRender, siblingFiles }),
+      "utf8",
+    ),
+  );
+
   await Promise.all(writes);
+
+  const failedRounds = compositions
+    .map((composition, index) => (composition.attempted && !composition.ok ? index + 1 : null))
+    .filter((roundNumber) => roundNumber !== null);
+  if (failedRounds.length > 0) {
+    const roundFiles = failedRounds.map((n) => `round-${n}.json`).join(", ");
+    throw new Error(
+      `design-match: diff obrázek se nepodařilo sestavit pro kolo ${failedRounds.join(", ")} — viz report.md a ${roundFiles}`,
+    );
+  }
 }
