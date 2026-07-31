@@ -1,4 +1,5 @@
 import net from "node:net";
+import { realpathSync } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -151,6 +152,67 @@ describe("assertServableRoot", () => {
     expect(() => assertServableRoot(path.parse(os.homedir()).root, "adresář mockupu")).toThrow(
       /design-match:/,
     );
+  });
+
+  // The floor has to decide on the path that gets mounted, and `withStaticServer`
+  // mounts the realpath. A lexical check passes this and then serves $HOME —
+  // and `ln -s ~/Downloads/mockups design/incoming` is the natural workaround
+  // for the "inside cwd" rule this same function imposes, so the bypass is the
+  // path of least resistance rather than an exotic one.
+  it("refuses a symlink inside the cwd that points at the home directory", async () => {
+    const inside = path.join(process.cwd(), `.design-match-symlink-test-${process.pid}`);
+    await fs.symlink(os.homedir(), inside, "dir");
+    try {
+      // The refusal names the *resolved* home directory, not the link — which
+      // is the proof that resolution happened at all. The lexical path sits
+      // inside cwd and would have sailed straight through.
+      expect(() => assertServableRoot(inside, "adresář mockupu")).toThrow(/^design-match:/);
+      expect(() => assertServableRoot(inside, "adresář mockupu")).toThrow(
+        realpathSync(os.homedir()),
+      );
+      expect(() => assertServableRoot(inside, "adresář mockupu")).not.toThrow(inside);
+    } finally {
+      await fs.rm(inside, { force: true });
+    }
+  });
+
+  it("refuses a symlink inside the cwd that points outside it", async () => {
+    const target = await makeTmpDir();
+    const inside = path.join(process.cwd(), `.design-match-symlink-out-${process.pid}`);
+    await fs.symlink(target, inside, "dir");
+    try {
+      expect(() => assertServableRoot(inside, "adresář mockupu")).toThrow(
+        /design-match:.*mimo aktuální pracovní adresář/,
+      );
+    } finally {
+      await fs.rm(inside, { force: true });
+    }
+  });
+
+  // The other half of resolving: both operands get the same treatment, so a cwd
+  // reached through a symlink (`/tmp` really is `/private/tmp` on macOS) is not
+  // refused for disagreeing with itself.
+  it("accepts a root under a cwd that is itself reached through a symlink", async () => {
+    const real = await makeTmpDir();
+    await fs.mkdir(path.join(real, "mockups"));
+    const link = path.join(process.cwd(), `.design-match-symlink-cwd-${process.pid}`);
+    await fs.symlink(real, link, "dir");
+    try {
+      expect(assertServableRoot(path.join(link, "mockups"), "adresář mockupu", link)).toBe(
+        path.join(real, "mockups"),
+      );
+    } finally {
+      await fs.rm(link, { force: true });
+    }
+  });
+
+  // A root that does not exist cannot be a symlink to anywhere, so it keeps its
+  // lexical form and reaches `withStaticServer`, whose "cannot open" message
+  // names the real problem. Resolving must not turn that into a confusing
+  // containment complaint.
+  it("passes a non-existent directory through on its lexical path", () => {
+    const missing = path.join(process.cwd(), "tools", "design-match", "no-such-dir");
+    expect(assertServableRoot(missing, "test")).toBe(missing);
   });
 });
 

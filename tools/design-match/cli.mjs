@@ -632,6 +632,13 @@ export function planMeasureMounts(localHtmlPath, cacheDir) {
   const cacheRoot = assertServableRoot(cacheDir, "adresář cdn cache");
   return {
     mockupDir,
+    // Rebuilt from the checked root rather than passed through. The floor now
+    // returns a realpath, and `staticUrl` derives the url from `path.relative`
+    // — handing it the original path while the mount is the resolved one would
+    // produce a `../..` url the moment any component of the path is a symlink.
+    // The html is by construction a direct child of its own dirname, so this
+    // needs no further filesystem access.
+    htmlPath: path.join(mockupDir, path.basename(localHtmlPath)),
     mounts: { "/": mockupDir, [CDN_CACHE_URL_PREFIX]: cacheRoot },
   };
 }
@@ -664,11 +671,11 @@ async function runMeasure(cmd) {
   // `<script type="text/babel" src="zibby/*.jsx">`, and cannot satisfy a
   // `crossorigin` fetch either — so seven of the eleven real mockups rendered
   // an empty `#root`. The bytes were never the problem; the scheme was.
-  const { mockupDir, mounts } = planMeasureMounts(localHtmlPath, cacheDir);
+  const { mockupDir, htmlPath, mounts } = planMeasureMounts(localHtmlPath, cacheDir);
 
   const spec = await withStaticServer(mounts, (origin) =>
     withPage(async (page) => {
-      const url = staticUrl(origin, mockupDir, localHtmlPath);
+      const url = staticUrl(origin, mockupDir, htmlPath);
       try {
         await page.goto(url, { waitUntil: "networkidle" });
       } catch (error) {

@@ -697,6 +697,22 @@ describe("readSpec", () => {
     await expect(readSpec(dir, "no-version-slug")).rejects.toThrow(/measure/);
   });
 
+  // Fix round 2, N3: `assertSpecMeasured` was only ever tested in isolation, so
+  // deleting the call from readSpec left the whole suite green — and this is the
+  // seam that matters, because the blank specs already on disk are well-formed
+  // current-version documents that only readSpec stands between and `compare`.
+  it("refuses a blank spec.json on read, not only through the predicate in isolation", async () => {
+    const spec = {
+      selector: "#root",
+      skeleton: { tag: "div", role: "group", children: [] },
+      tokenMappings: [],
+      version: DESIGN_MATCH_VERSION,
+    };
+    await fs.writeFile(path.join(dir, "spec.json"), JSON.stringify(spec), "utf8");
+    await expect(readSpec(dir, "blank-slug")).rejects.toThrow(/^design-match:.*prázdný region/);
+    await expect(readSpec(dir, "blank-slug")).rejects.toThrow("blank-slug");
+  });
+
   // Fix round 1, M2 (the cheap half): round-trips a real spec.json carrying
   // strictWrappers through the actual disk read, not just the pure predicate
   // in isolation — covers the "readSpec's output is what checkStrictWrappersMatch
@@ -927,6 +943,45 @@ describe("planMeasureMounts", () => {
     const outside = path.join(os.homedir(), "Downloads", "mockup.html");
     expect(() => planMeasureMounts(outside, cacheDir)).toThrow(/^design-match:/);
     expect(() => planMeasureMounts(outside, cacheDir)).toThrow(/mimo aktuální pracovní adresář/);
+  });
+
+  // Fix round 2, N1. The floor is only worth what the server actually mounts,
+  // and the server mounts the realpath. A symlinked mockup directory is the
+  // documented workaround for the rule above, so it is the likeliest way in.
+  it("refuses a mockup reached through a symlink that leaves the working directory", async () => {
+    const link = path.join(process.cwd(), `.design-match-plan-symlink-${process.pid}`);
+    await fs.symlink(os.homedir(), link, "dir");
+    try {
+      expect(() => planMeasureMounts(path.join(link, "mockup.html"), cacheDir)).toThrow(
+        /^design-match:/,
+      );
+    } finally {
+      await fs.rm(link, { force: true });
+    }
+  });
+
+  // Resolving the root moves it, so the html path has to move with it — left
+  // alone, `staticUrl` would build its url with `path.relative` across two
+  // different spellings of the same directory and emit a `../..` url.
+  it("returns an html path spelled the same way as the root it checked", async () => {
+    // Only observable through a symlink: without one, the resolved and
+    // unresolved spellings are the same string and passing the original through
+    // would look correct. Here they differ, and `staticUrl` — which builds its
+    // url with `path.relative(root, file)` — would emit a `../..` url.
+    const real = path.join(process.cwd(), "tools", "design-match", `.tmp-real-${process.pid}`);
+    const link = path.join(process.cwd(), "tools", "design-match", `.tmp-link-${process.pid}`);
+    await fs.mkdir(real, { recursive: true });
+    await fs.symlink(real, link, "dir");
+    try {
+      const { mockupDir, htmlPath } = planMeasureMounts(path.join(link, "x.html"), cacheDir);
+
+      expect(mockupDir).toBe(real);
+      expect(htmlPath).toBe(path.join(real, "x.html"));
+      expect(path.relative(mockupDir, htmlPath)).toBe("x.html");
+    } finally {
+      await fs.rm(link, { force: true });
+      await fs.rm(real, { recursive: true, force: true });
+    }
   });
 });
 

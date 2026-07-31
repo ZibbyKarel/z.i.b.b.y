@@ -92,4 +92,36 @@ describe("measure, end to end through the CLI", () => {
       fs.readFile(path.join(dir, ".design-match", "blank", "spec.json"), "utf8"),
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
+
+  // Fix round 2, N2. `carriesContent`'s handling of the truncation flag was
+  // pinned over hand-built objects, but nothing pinned that `extractRaw` emits
+  // the flag at all — setting it to a constant `false` left every test green
+  // while ZIBBY Roadmap.html exited 3 with a false "region nic neobsahuje".
+  // That is the exact regression this rule already caused once, so the pin has
+  // to be on the producer, and the only place the flag is observable is the
+  // outcome: `normalizeSkeleton` deliberately never copies it into spec.json.
+  //
+  // The fixture is the roadmap's shape in miniature: layout wrappers with no
+  // text of their own, nested past extractRaw's depth cap of 6, with every
+  // piece of content below the cut.
+  it("measures a mockup whose only content sits below the extraction depth cap", async () => {
+    const depth = 9;
+    const inner = Array.from({ length: depth }).reduce(
+      (acc) => `<div class="layer">${acc}</div>`,
+      `<h2>obsah pod řezem</h2>`,
+    );
+    const dir = await makeWorkspace({
+      "deep.html": `<!doctype html><html><body><div id="root" style="width:400px;height:300px">${inner}</div></body></html>`,
+    });
+
+    await measure(dir, "deep.html", "deep");
+
+    // The assertion is that it did NOT refuse. The stored skeleton is cut off
+    // at the cap and so genuinely looks blank — which is the point: the tool
+    // must not condemn a subtree it never looked at.
+    const spec = JSON.parse(
+      await fs.readFile(path.join(dir, ".design-match", "deep", "spec.json"), "utf8"),
+    );
+    expect(spec.selector).toBe("#root");
+  });
 });

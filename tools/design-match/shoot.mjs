@@ -1,4 +1,5 @@
 import http from "node:http";
+import { realpathSync } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -58,16 +59,38 @@ const contains = (dir, candidate) =>
  *
  * The second test is not implied by the first. A run whose cwd is `$HOME` (or
  * `/`) would satisfy containment while serving everything the operator owns.
+ *
+ * Every comparison happens on realpaths, because `withStaticServer` mounts the
+ * realpath — deciding on the lexical path would be checking a different
+ * directory than the one served. A symlink inside cwd pointing at `$HOME`
+ * passes a lexical "inside cwd" and then serves `~/.ssh`. That is not a
+ * hypothetical: `ln -s ~/Downloads/mockups design/incoming` is the natural
+ * response to the very rule this function imposes, so the floor is likeliest to
+ * be bypassed by someone following its own advice.
+ *
+ * Both sides get resolved, not just the root — comparing a resolved path
+ * against an unresolved one is its own false-refusal bug, and `/tmp` really is
+ * a symlink to `/private/tmp` on macOS. A path that cannot be resolved keeps
+ * its lexical form: a directory that does not exist cannot be a symlink to
+ * anywhere, and `withStaticServer` already turns that into a clear message.
  */
+const realpathOr = (candidate) => {
+  try {
+    return realpathSync(candidate);
+  } catch {
+    return candidate;
+  }
+};
+
 export function assertServableRoot(root, label, cwd = process.cwd()) {
-  const resolved = path.resolve(root);
-  const workingDir = path.resolve(cwd);
+  const resolved = realpathOr(path.resolve(root));
+  const workingDir = realpathOr(path.resolve(cwd));
   if (!contains(workingDir, resolved)) {
     throw new Error(
       `design-match: ${label} (${resolved}) leží mimo aktuální pracovní adresář (${workingDir}) — design-match servíruje jen adresáře uvnitř něj. Spusť measure z adresáře, který mockup obsahuje, nebo mockup do něj zkopíruj.`,
     );
   }
-  const home = path.resolve(os.homedir());
+  const home = realpathOr(path.resolve(os.homedir()));
   if (contains(resolved, home)) {
     throw new Error(
       `design-match: ${label} (${resolved}) by zpřístupnil celý domovský adresář (${home}) — to design-match nikdy neudělá. Spusť measure z konkrétního projektu, ne z ${home} ani z kořene disku.`,
