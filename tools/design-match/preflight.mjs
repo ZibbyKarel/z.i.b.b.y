@@ -95,6 +95,7 @@ export function fontPreflight(designFonts, appFonts) {
   }
   return {
     ok: false,
+    summary: `font stack se liší v první vykreslované rodině — design: ${show(designPrimary)}, implementace: ${show(appPrimary)}`,
     message: `font stack se liší v první vykreslované rodině — design: ${show(designPrimary)}, implementace: ${show(appPrimary)} (celé stacky — design: [${design.join(", ")}], implementace: [${app.join(", ")}]). Sjednoť je dřív, než se začne porovnávat.`,
   };
 }
@@ -140,10 +141,19 @@ export function sizePreflight(design, app) {
       message: `rozměry snímků sedí: ${design.width}×${design.height} px`,
     };
   }
+  const summary = `snímky mají různé rozměry — design ${design.width}×${design.height} px, implementace ${app.width}×${app.height} px`;
   return {
     ok: false,
+    // Fix round 1, Minor 4. A failing preflight's `message` becomes the round's
+    // reason AND the report's headline verdict, which is pre-existing and right —
+    // those two are the operator's answer to "what happened". The `## Preflighty`
+    // section is a different question ("what did each check say"), so printing
+    // the whole paragraph a third time was D12 adding noise rather than a fact.
+    // `summary` is the bare finding without the remedy prose; `describePreflights`
+    // prefers it, everything else keeps the full message.
+    summary,
     message:
-      `snímky mají různé rozměry — design ${design.width}×${design.height} px, implementace ${app.width}×${app.height} px (rozměry obrázků, tedy CSS px × DPR). ` +
+      `${summary} (rozměry obrázků, tedy CSS px × DPR). ` +
       `Nad různě velkými plátny není pixelový rozdíl definovaný, takže se pixelová vrstva přeskakuje — oba snímky ale zůstávají na disku a jsou tím nálezem. ` +
       `Sjednoť velikost scény (jiný --selector, nebo uprav implementaci); konkrétní rozdíl v šířce a výšce pojmenovaný u uzlu najdeš ve values.md.`,
   };

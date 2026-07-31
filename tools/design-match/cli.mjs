@@ -398,7 +398,11 @@ export function describePreflights({ skeleton, fontPreflight: font, sizePrefligh
     const result = results[key];
     if (result) {
       if (!result.ok) blocked ??= "porovnání se zastavilo na předchozím preflightu (písma)";
-      return { name, ok: result.ok, message: result.message };
+      // Fix round 1, Minor 4: a failing preflight's full message is already the
+      // round's reason and the report's verdict headline. This section answers
+      // "what did each check say", so it takes the bare finding (`summary`) when
+      // the preflight offers one and does not repeat the remedy a third time.
+      return { name, ok: result.ok, message: result.summary ?? result.message };
     }
     return { name, ok: null, message: `neproběhl — ${blocked ?? "běh se zastavil dřív"}` };
   });

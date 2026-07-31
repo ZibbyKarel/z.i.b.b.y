@@ -66,6 +66,16 @@ describe("fontPreflight", () => {
     expect(result.message).toContain("Inter");
   });
 
+  // Fix round 1, Minor 4 — the same short/long split `sizePreflight` has, so the
+  // "## Preflighty" section treats both preflights identically.
+  it("carries a summary that is the finding alone, without the whole-stack detail", () => {
+    const result = fontPreflight(["Geist", "Arial"], ["Inter", "Arial"]);
+    expect(result.summary).toContain("Geist");
+    expect(result.summary).toContain("Inter");
+    expect(result.summary).not.toContain("Sjednoť");
+    expect(result.message.startsWith(result.summary)).toBe(true);
+  });
+
   // A primary family present on one side and absent on the other is a genuine
   // mismatch, and must read as one rather than printing "undefined".
   it("fails when one side has no font family at all, without printing undefined", () => {
@@ -158,5 +168,30 @@ describe("sizePreflight", () => {
   it("sends the operator to the value layer instead of restating the difference in CSS pixels", () => {
     const result = sizePreflight({ width: 800, height: 240 }, { width: 640, height: 54 });
     expect(result.message).toContain("values.md");
+  });
+
+  /*
+   * Fix round 1, Minor 4. A failing preflight's `message` is printed twice
+   * already — as the round's reason and as report.md's verdict headline — so the
+   * "## Preflighty" section takes `summary`: the same finding, without the
+   * remedy paragraph repeated a third time.
+   */
+  it("carries a summary that is the finding alone, without the remedy prose", () => {
+    const result = sizePreflight({ width: 800, height: 240 }, { width: 640, height: 54 });
+    expect(result.summary).toContain("800×240");
+    expect(result.summary).toContain("640×54");
+    expect(result.summary).not.toContain("values.md");
+    expect(result.summary).not.toContain("Sjednoť");
+    // The short form is a prefix of the long one, so the two can never disagree
+    // about what the sizes were.
+    expect(result.message.startsWith(result.summary)).toBe(true);
+  });
+
+  // A passing preflight has no remedy to strip, so there is nothing to shorten
+  // and no second string to keep in sync.
+  it("offers no summary when it passes, so the section prints what it verified", () => {
+    expect(sizePreflight({ width: 800, height: 600 }, { width: 800, height: 600 }).summary).toBe(
+      undefined,
+    );
   });
 });

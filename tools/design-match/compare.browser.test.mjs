@@ -92,6 +92,15 @@ const page = (body, fontStack = "Geist, Arial, sans-serif", size = "width:400px;
 
 const CARD = `<h2 style="margin:0;color:#eaeaea">karta</h2>`;
 
+/**
+ * Same node as `CARD`, sized as a fraction of its parent instead of by content.
+ * The skeleton gate compares every box RELATIVE to its parent, so a percentage
+ * child keeps its ratios (0.5 × 0.5) whatever the root's absolute size is —
+ * which is what lets a fixture change the root's size by orders of magnitude and
+ * still reach the layers past the gate.
+ */
+const SIZED_CARD = `<h2 style="margin:0;width:50%;height:50%;color:#eaeaea">karta</h2>`;
+
 const measure = (cwd, file, slug) =>
   run("node", [CLI, "measure", file, "karta", "--slug", slug, "--theme", "theme.css"], { cwd });
 
@@ -408,6 +417,14 @@ describe("compare, end to end through the CLI", () => {
     const report = await fs.readFile(path.join(artifactDir, "report.md"), "utf8");
     expect(report).toContain("800×600");
     expect(report).toContain("1000×600");
+    // Fix round 1, Minor 4: the remedy paragraph belongs to the verdict headline
+    // and the round's reason — two places, both answering "what happened". The
+    // "## Preflighty" line answers "what did each check say" and takes the short
+    // form, so the paragraph must not appear a third time.
+    expect(report.match(/Sjednoť velikost scény/g)).toHaveLength(2);
+    expect(report).toContain(
+      "rozměry snímků: snímky mají různé rozměry — design 800×600 px, implementace 1000×600 px\n",
+    );
     // The gate really did pass — this is not a skeleton failure wearing a
     // different label.
     const skeleton = await fs.readFile(path.join(artifactDir, "skeleton.md"), "utf8");
@@ -420,6 +437,58 @@ describe("compare, end to end through the CLI", () => {
     await expect(fs.readFile(path.join(artifactDir, "round-1.json"), "utf8")).resolves.toContain(
       "rozměry",
     );
+  });
+
+  /*
+   * D9 (task 19), the `compare` half. `shootElement` is the single funnel both
+   * commands shoot through, but only `measure` passes its own context — the
+   * `selector`, the box and the remedy — and only `measure` had a test. Fix round
+   * 1, Important 2: deleting the whole context object from `shootScene`'s call
+   * left both suites green, so `compare`'s half of the fix was held by a code
+   * reading alone. This is the round that reaches `shootScene`: the gate passes
+   * (percentage child, unchanged ratios) and the fonts match, so the run gets all
+   * the way to photographing a scene Chromium will not photograph.
+   *
+   * The remedy differs from `measure`'s on purpose and that is what this pins:
+   * there is no region inventory on `compare`, so pointing at `--region <n>`
+   * would name a flag the command does not have.
+   */
+  it("refuses a scene the browser cannot photograph with one design-match: line, no stack", async () => {
+    const dir = await makeWorkspace({
+      "design.html": page(SIZED_CARD),
+      "impl.html": page(
+        SIZED_CARD,
+        "Geist, Arial, sans-serif",
+        "width:16256px;height:18608px;transform:translate(-6000px,-6000px)",
+      ),
+    });
+    await measure(dir, "design.html", "s");
+    const server = await startCountingServer(dir);
+
+    const result = await compare(dir, [
+      "--slug",
+      "s",
+      "--route",
+      "/impl.html",
+      "--app-base",
+      server.origin,
+      "--selector",
+      "#root",
+    ]);
+
+    expect(result.code).toBe(3);
+    // The whole contract for a refusal: one prefixed line and no stack. Without
+    // the translation this arrives as `locator.screenshot: Protocol error …`,
+    // which `isDeliberateError` does not recognise.
+    expect(result.stderr).toContain("design-match: region");
+    expect(result.stderr).not.toContain("locator.screenshot");
+    expect(result.stderr).not.toContain("    at ");
+    // Named concretely enough to act on: which element, and how big it was.
+    expect(result.stderr).toContain('"#root"');
+    expect(result.stderr).toContain("16256×18608");
+    // …and the remedy is compare's own, not measure's --region inventory.
+    expect(result.stderr).toContain("--selector");
+    expect(result.stderr).not.toContain("--region");
   });
 
   /*

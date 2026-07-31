@@ -866,6 +866,35 @@ describe("describePreflights", () => {
     expect(entries[1].message).not.toMatch(/skeleton/i);
     expect(entries[1].message).toMatch(/písm|font/i);
   });
+
+  /*
+   * Fix round 1, Minor 4. A failing preflight's full message reaches report.md
+   * twice already — as the round's reason and as the verdict headline. This
+   * section answers a different question, so it takes the bare finding when the
+   * preflight offers one, and falls back to `message` when it does not (every
+   * passing result, and any round recorded before `summary` existed).
+   */
+  it("prefers a failing preflight's summary, so the remedy is not printed a third time", () => {
+    const entries = describePreflights({
+      skeleton: skeletonPass,
+      fontPreflight: { ok: true, message: "font stack shodný v první rodině: Geist" },
+      sizePreflight: {
+        ok: false,
+        summary: "snímky mají různé rozměry — design 800×600 px, implementace 1000×600 px",
+        message: "snímky mají různé rozměry — design 800×600 px … Sjednoť velikost scény …",
+      },
+    });
+    expect(entries[1].message).toContain("1000×600");
+    expect(entries[1].message).not.toContain("Sjednoť");
+  });
+
+  it("falls back to the message when a failing preflight carries no summary", () => {
+    const entries = describePreflights({
+      skeleton: skeletonPass,
+      fontPreflight: { ok: false, message: "font stack se liší v první vykreslované rodině" },
+    });
+    expect(entries[0].message).toContain("font stack se liší");
+  });
 });
 
 describe("loadHistory", () => {

@@ -245,17 +245,17 @@ renderings of what the browser really put on screen, and they are the evidence
 the refusal is telling you to go and look at. `spec.json`, `report.md` and
 `rounds.json` assert conclusions and are never written on a failing path.
 
-| Refusal                                                            | What it leaves, and what it points you at                                                                                                                                                                                                        |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| root outside cwd / at or above `$HOME`                             | no **per-slug** artifact directory — it fires before the browser launches. `ensureCdnCache` runs first, so `.design-match/.cdn-cache/` and the rewritten `.design-match-cached-*.html` beside the mockup do exist. Copy the mockup into the repo |
-| CDN resource that cannot be downloaded (HTTP error)                | no per-slug directory, but `.design-match/.cdn-cache/` exists and earlier URLs of the same run are already cached — `design-match: nelze stáhnout <url> (HTTP nnn). Bez cache se mockup nevykreslí.`                                             |
-| CDN resource that downloads 0 bytes                                | same — `design-match: stažení <url> vrátilo prázdný obsah (0 bajtů). Bez obsahu se mockup nevykreslí.` A 200 with an empty body is a failure, not a cache hit                                                                                    |
-| `--region <n>` out of range                                        | names the crops **that exist**; when `cropFitsPage` skipped all of them it says so and sends you to the inventory's selectors and dimensions instead of naming a file it never wrote                                                             |
-| region the browser refuses to photograph                           | the message names the region, its box, and the same crop-or-inventory tail the out-of-range row uses. The per-slug directory exists and is **empty** — same as an out-of-range `--region`                                                        |
-| region rendered nothing (below)                                    | names `design.png` and the **chosen** region's crop, when that crop exists                                                                                                                                                                       |
-| `spec.json` missing / older version / blank                        | nothing new — re-run `measure` for the slug                                                                                                                                                                                                      |
-| `--strict-wrappers` disagrees with `spec.json`                     | nothing new — re-run `measure`, or drop/add the flag on `compare`                                                                                                                                                                                |
-| `--route` without `--selector`, or a selector that matches nothing | nothing — the message names the selector and the page                                                                                                                                                                                            |
+| Refusal                                                            | What it leaves, and what it points you at                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| root outside cwd / at or above `$HOME`                             | no **per-slug** artifact directory — it fires before the browser launches. `ensureCdnCache` runs first, so `.design-match/.cdn-cache/` and the rewritten `.design-match-cached-*.html` beside the mockup do exist. Copy the mockup into the repo                                                                                                                                  |
+| CDN resource that cannot be downloaded (HTTP error)                | no per-slug directory, but `.design-match/.cdn-cache/` exists and earlier URLs of the same run are already cached — `design-match: nelze stáhnout <url> (HTTP nnn). Bez cache se mockup nevykreslí.`                                                                                                                                                                              |
+| CDN resource that downloads 0 bytes                                | same — `design-match: stažení <url> vrátilo prázdný obsah (0 bajtů). Bez obsahu se mockup nevykreslí.` A 200 with an empty body is a failure, not a cache hit                                                                                                                                                                                                                     |
+| `--region <n>` out of range                                        | names the crops **that exist**; when `cropFitsPage` skipped all of them it says so and sends you to the inventory's selectors and dimensions instead of naming a file it never wrote                                                                                                                                                                                              |
+| region the browser refuses to photograph                           | the message names the region, its box and a remedy. On `measure` the tail is the same crop-or-inventory sentence the out-of-range row uses and the per-slug directory is left **empty** — same as an out-of-range `--region`; on `compare` the tail is "pick a smaller scene element with `--selector`" and the directory keeps whatever `measure` already put there, nothing new |
+| region rendered nothing (below)                                    | names `design.png` and the **chosen** region's crop, when that crop exists                                                                                                                                                                                                                                                                                                        |
+| `spec.json` missing / older version / blank                        | nothing new — re-run `measure` for the slug                                                                                                                                                                                                                                                                                                                                       |
+| `--strict-wrappers` disagrees with `spec.json`                     | nothing new — re-run `measure`, or drop/add the flag on `compare`                                                                                                                                                                                                                                                                                                                 |
+| `--route` without `--selector`, or a selector that matches nothing | nothing — the message names the selector and the page                                                                                                                                                                                                                                                                                                                             |
 
 A failed `compare` additionally **marks the previous `report.md` stale** rather
 than leaving a passing verdict lying next to a failed run. The retraction is
@@ -317,9 +317,6 @@ share one shape — on a failure the pixel layer is skipped entirely and the rou
 **parks immediately**, not `continue`, because the difference makes every pixel
 delta meaningless and no further round can fix it without an edit. The font
 check runs first and wins if both fail. The rest of this section is the font one.
-
-On a font mismatch the pixel layer is skipped and the round parks, because a
-font mismatch makes every pixel delta a lie.
 
 **It compares the first resolved family only** — case-folded, after
 normalisation. The rest of the stack is not compared at all, not even at a
@@ -662,8 +659,12 @@ the operator:
   the page image.** This mockup's `"karta"` region is off the page image — every
   inventory row says `bez náhledu` — and still captures in full, an 8512×2206
   `design.png`. So the refusal is raised by catching the browser's own answer,
-  not by predicting one from `cropFitsPage`; a predictive guard would have
-  refused all eleven `"karta"` runs above.
+  not by predicting one from `cropFitsPage`. Three of the eleven `"karta"` rows
+  above choose a region `cropFitsPage` rejects — `ZIBBY Loading Screen`
+  (`svg.circuit-svg`, 1440×1440 @ (0,0)), `ZIBBY Redesign Canvas` (4256×1103 @
+  (0,1173)) and `ZIBBY Velin-B` (824×2337 @ (250,88)) — and all three measure to
+  a real spec at exit 0, so a predictive guard would have refused three healthy
+  mockups.
 - If the inventory's top candidate has absurd dimensions, pass `--region <n>`
   rather than accepting the default. The inventory is printed before the
   screenshot is attempted, so the numbers are there to be read first.

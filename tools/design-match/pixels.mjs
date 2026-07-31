@@ -49,16 +49,39 @@ function largestDifferingRegion(diff, width, height) {
   return best;
 }
 
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+// A png is: the 8-byte signature, then a chunk (4-byte length, 4-byte type,
+// payload). The first chunk is required by the format to be IHDR, whose payload
+// opens with width and height as big-endian uint32s.
+const IHDR_TYPE_AT = 12;
+const WIDTH_AT = 16;
+const HEIGHT_AT = 20;
+const HEADER_BYTES = HEIGHT_AT + 4;
+
 /**
  * A png's dimensions, read from the buffer itself rather than derived from a DOM
  * box — `sizePreflight` (preflight.mjs) compares what was actually captured, and
  * device-pixel ratio, transforms and border-box rounding all sit between a
- * `getBoundingClientRect` and the image Playwright produced. This module already
- * owns png decoding, so the decoding stays in one place.
+ * `getBoundingClientRect` and the image Playwright produced.
+ *
+ * Fix round 1, Minor 3: this used to call `PNG.sync.read`, which inflates every
+ * scanline — so a clean round decoded both images once for the size check and
+ * again inside `diffPngs`. Reading the IHDR is not a shortcut around the format;
+ * those 24 bytes are exactly where a png declares its size. Anything that is not
+ * a well-formed png header falls through to `PNG.sync.read`, which keeps this
+ * function's failure behaviour identical to what it was — the fast path only
+ * ever runs on input the slow path would have agreed with.
  */
 export function pngSize(buffer) {
-  const { width, height } = PNG.sync.read(buffer);
-  return { width, height };
+  const hasPngHeader =
+    buffer.length >= HEADER_BYTES &&
+    buffer.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE) &&
+    buffer.toString("latin1", IHDR_TYPE_AT, IHDR_TYPE_AT + 4) === "IHDR";
+  if (!hasPngHeader) {
+    const { width, height } = PNG.sync.read(buffer);
+    return { width, height };
+  }
+  return { width: buffer.readUInt32BE(WIDTH_AT), height: buffer.readUInt32BE(HEIGHT_AT) };
 }
 
 export function diffPngs(designBuf, appBuf, options = {}) {
