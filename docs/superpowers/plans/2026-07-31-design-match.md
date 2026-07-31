@@ -452,8 +452,18 @@ rtk git commit -m "feat(design-match): skeleton normaliser with wrapper collapsi
   - `compareSkeletons(design: SkelNode, app: SkelNode, options?: { sizeTolerance?: number }): SkeletonVerdict`
   - `SkeletonVerdict = { pass: boolean, findings: Finding[] }`
   - `Finding = { path: string, kind: "layout-mode" | "columns" | "child-count" | "child-order" | "size" | "role", expected: string|number, actual: string|number, message: string }`
-  - `path` is a slash-joined role trail, e.g. `form/row[1]/input`.
+  - `path` is a slash-joined role trail. The root is bare, every descendant carries its
+    index: `form/row[1]/input[0]`.
   - `sizeTolerance` defaults to `0.02` (2 % of the parent box).
+  - `kind: "role"` fires for the **root pair only** — sibling role differences are already
+    reported as `child-order`, so a per-node role check would duplicate every one of them.
+    Without the root check, a design `form` reimplemented as a `section` passes the gate,
+    which is precisely the "wrong component reused" failure this skill exists to catch.
+  - **Known limitation:** a `child-order` finding stops descent into _all_ children of that
+    node, including ones still correctly paired at the same index. A structural bug deeper
+    inside such a child is not reported in that round. This is deliberate — structure is
+    fixed outermost-first and the loop re-measures — but Task 14's SKILL.md must say so,
+    so a human never reads a short finding list as "nothing else is wrong".
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -639,6 +649,17 @@ function walk(design, app, path, tolerance, findings) {
 export function compareSkeletons(design, app, options = {}) {
   const tolerance = options.sizeTolerance ?? DEFAULT_SIZE_TOLERANCE;
   const findings = [];
+  // Root roles only: sibling roles are covered by child-order above. A wrong root element
+  // does not stop descent — the rest of the structural report is still worth reading.
+  if (design.role !== app.role) {
+    findings.push({
+      path: design.role,
+      kind: "role",
+      expected: design.role,
+      actual: app.role,
+      message: `role kořene: ${design.role} vs ${app.role}`,
+    });
+  }
   walk(design, app, design.role, tolerance, findings);
   return { pass: findings.length === 0, findings };
 }
@@ -3027,8 +3048,17 @@ being positioned by a different engine, so descending only produces noise.
 
 Derived from tag first (`form`, `label`, `input`, `button`→`action`, …), then
 `role`/`data-role`, then class-name hints (`row`, `column`, `card`), then
-`text`/`group`. Roles make the finding paths readable — `form/row[1]/input` —
+`text`/`group`. Roles make the finding paths readable — `form/row[1]/input[0]` —
 and make child-order comparison meaningful across different class conventions.
+
+The roots' own roles are compared directly (`kind: "role"`); sibling roles are
+compared as a sequence, folded into `child-order`. So a design `form` rebuilt as a
+`section` is caught even when everything inside it is right.
+
+**A child-order or child-count mismatch stops the walk at that node**, including
+descent into children that are still correctly paired. Fix structure outermost-first
+and re-run — a short finding list after such a mismatch does not mean nothing else
+is wrong, only that nothing deeper was looked at.
 
 ## Relative geometry
 
