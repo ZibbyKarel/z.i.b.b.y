@@ -15,6 +15,7 @@ import { fontPreflight } from "./preflight.mjs";
 import { writeArtifacts } from "./report.mjs";
 import { resolveScene, shootScene } from "./shoot.mjs";
 import { TOKEN_PROPS, mapValue, parseThemeTokens, proposeTokenName } from "./tokens.mjs";
+import { DESIGN_MATCH_VERSION } from "./version.mjs";
 
 const DEFAULT_THEME_PATH = "libs/design-system/src/theme/globals.css";
 
@@ -406,7 +407,18 @@ export async function readSpec(dir, slug) {
     }
     throw error;
   }
-  return JSON.parse(raw);
+  const spec = JSON.parse(raw);
+  // A spec.json written by an older design-match can be silently missing fields
+  // the current comparison logic assumes exist (matchRole, most recently) —
+  // comparing it anyway produces a confident, wrong structural finding instead
+  // of the honest "this cache is stale" it actually is. Any mismatch, including
+  // a spec.json old enough to have no version field at all, is unusable as-is.
+  if (spec.version !== DESIGN_MATCH_VERSION) {
+    throw new Error(
+      `design-match: spec.json pro slug "${slug}" pochází ze starší verze design-match (${spec.version ?? "neznámá"}, aktuální je ${DESIGN_MATCH_VERSION}) — spusť znovu measure pro tento slug.`,
+    );
+  }
+  return spec;
 }
 
 async function runMeasure(cmd) {
@@ -470,6 +482,10 @@ async function runMeasure(cmd) {
   }
   spec.tokenMappings =
     themeCss !== undefined ? buildTokenMappings(spec.values, parseThemeTokens(themeCss)) : [];
+  // Stamped so a later `readSpec` can tell a cache from an older measurement
+  // format apart from a current one, instead of comparing it and reporting a
+  // confident, wrong structural finding.
+  spec.version = DESIGN_MATCH_VERSION;
 
   await fs.writeFile(path.join(dir, "spec.json"), JSON.stringify(spec, null, 2), "utf8");
   console.log(`spec.json zapsán → ${path.join(dir, "spec.json")}`);

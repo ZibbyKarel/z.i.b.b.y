@@ -212,4 +212,57 @@ describe("compareSkeletons", () => {
       );
     });
   });
+
+  describe("size check includes position, not just w/h", () => {
+    it("flags two equal-sized siblings swapped in position, even though matchRole and w/h all agree", () => {
+      const design = leaf({
+        role: "row",
+        children: [
+          leaf({ role: "cell", rel: { w: 0.5, h: 1, x: 0, y: 0 } }),
+          leaf({ role: "cell", rel: { w: 0.5, h: 1, x: 0.5, y: 0 } }),
+        ],
+      });
+      const app = leaf({
+        role: "row",
+        children: [
+          leaf({ role: "cell", rel: { w: 0.5, h: 1, x: 0.5, y: 0 } }),
+          leaf({ role: "cell", rel: { w: 0.5, h: 1, x: 0, y: 0 } }),
+        ],
+      });
+      const verdict = compareSkeletons(design, app);
+      expect(verdict.pass).toBe(false);
+      expect(verdict.findings.some((f) => f.kind === "size" && f.path === "row/cell[0]")).toBe(
+        true,
+      );
+    });
+
+    it("ignores a sub-tolerance position difference the same way it already does for size", () => {
+      const design = leaf({
+        role: "card",
+        children: [leaf({ rel: { w: 0.5, h: 1, x: 0.1, y: 0.2 } })],
+      });
+      const app = leaf({
+        role: "card",
+        children: [leaf({ rel: { w: 0.5, h: 1, x: 0.109, y: 0.2 } })],
+      });
+      expect(compareSkeletons(design, app).pass).toBe(true);
+    });
+
+    it("names the x/y axis correctly in the message, rather than calling a position delta a width/height delta", () => {
+      const design = leaf({
+        role: "card",
+        children: [leaf({ role: "row", rel: { w: 1, h: 1, x: 0, y: 0 } })],
+      });
+      const app = leaf({
+        role: "card",
+        children: [leaf({ role: "row", rel: { w: 1, h: 1, x: 0.5, y: 0 } })],
+      });
+      const verdict = compareSkeletons(design, app);
+      const finding = verdict.findings.find((f) => f.kind === "size" && f.path === "card/row[0]");
+      expect(finding).toBeDefined();
+      expect(finding.message).not.toContain("šířka");
+      expect(finding.message).not.toContain("výška");
+      expect(finding.message).toContain("pozice X");
+    });
+  });
 });

@@ -180,5 +180,11 @@ describe("normalizeSkeleton", () => {
       expect(card.matchRole).toBe(panel.matchRole);
       expect(card.matchRole).toBe("node");
     });
+
+    it("prefers an explicit role attribute over data-role when a node carries both", () => {
+      const both = normalizeSkeleton(node({ attrs: { role: "dialog", "data-role": "widget" } }));
+      expect(both.role).toBe("dialog");
+      expect(both.matchRole).toBe("dialog");
+    });
   });
 });

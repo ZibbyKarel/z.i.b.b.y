@@ -89,6 +89,23 @@ describe("extractors against real Chromium", () => {
     expect(valuePaths).toEqual(["group", "group/widget[0]", "group/widget[0]/leaf-node[0]"]);
   });
 
+  it("prefers role over data-role in extractValues' roleOf, matching normalizeSkeleton's own precedence", async () => {
+    const html = `<!doctype html><html><body>
+      <div data-region="both-test" role="dialog" data-role="widget"></div>
+    </body></html>`;
+
+    const { skeletonRole, valuePath } = await withPage(async (page) => {
+      await page.setContent(html);
+      const raw = await extractRaw(page, '[data-region="both-test"]');
+      const skeleton = normalizeSkeleton(raw);
+      const values = await extractValues(page, '[data-region="both-test"]');
+      return { skeletonRole: skeleton.role, valuePath: Object.keys(values)[0] };
+    });
+
+    expect(skeletonRole).toBe("dialog");
+    expect(valuePath).toBe("dialog");
+  });
+
   it("collapses a real 2-level pass-through wrapper chain measured by real geometry, and strictWrappers preserves it", async () => {
     const raw = await withPage(async (page) => {
       await page.goto(fixture);

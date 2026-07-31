@@ -19,6 +19,7 @@ import {
   stripImages,
 } from "./cli.mjs";
 import { parseThemeTokens } from "./tokens.mjs";
+import { DESIGN_MATCH_VERSION } from "./version.mjs";
 
 describe("parseArgs", () => {
   it("parses the measure form", () => {
@@ -589,7 +590,7 @@ describe("readSpec", () => {
   });
 
   it("reads and parses a previously written spec.json", async () => {
-    const spec = { selector: "#x", skeleton: {}, values: {} };
+    const spec = { selector: "#x", skeleton: {}, values: {}, version: DESIGN_MATCH_VERSION };
     await fs.writeFile(path.join(dir, "spec.json"), JSON.stringify(spec), "utf8");
     expect(await readSpec(dir, "some-slug")).toEqual(spec);
   });
@@ -597,5 +598,21 @@ describe("readSpec", () => {
   it("throws a clear message naming measure when spec.json is missing (not a raw ENOENT)", async () => {
     await expect(readSpec(dir, "missing-slug")).rejects.toThrow(/measure/);
     await expect(readSpec(dir, "missing-slug")).rejects.toThrow(/missing-slug/);
+  });
+
+  it("throws a clear message naming measure when spec.json predates the current DESIGN_MATCH_VERSION", async () => {
+    // A spec.json written by an older design-match — matchRole didn't exist yet — must not
+    // be silently compared as if it had it: that produces a confident, wrong structural
+    // finding ("role kořene: undefined vs node") instead of an honest "re-run measure".
+    const spec = { selector: "#x", skeleton: {}, values: {}, version: "0.0.1" };
+    await fs.writeFile(path.join(dir, "spec.json"), JSON.stringify(spec), "utf8");
+    await expect(readSpec(dir, "stale-slug")).rejects.toThrow(/measure/);
+    await expect(readSpec(dir, "stale-slug")).rejects.toThrow("stale-slug");
+  });
+
+  it("throws the same way when spec.json has no version field at all (pre-versioning format)", async () => {
+    const spec = { selector: "#x", skeleton: {}, values: {} };
+    await fs.writeFile(path.join(dir, "spec.json"), JSON.stringify(spec), "utf8");
+    await expect(readSpec(dir, "no-version-slug")).rejects.toThrow(/measure/);
   });
 });

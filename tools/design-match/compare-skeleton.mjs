@@ -7,6 +7,12 @@
 
 const DEFAULT_SIZE_TOLERANCE = 0.02;
 
+// Position, not just size: two equal-sized siblings swapped in place are a
+// real structural difference (a reordering) that role/child-order comparison
+// alone cannot see once matchRole collapses both to the same generic value —
+// rel.x/rel.y are what catches it.
+const AXIS_LABEL = { w: "šířka", h: "výška", x: "pozice X", y: "pozice Y" };
+
 function childPath(parentPath, child, index) {
   return `${parentPath}/${child.role}[${index}]`;
 }
@@ -62,7 +68,7 @@ function walk(design, app, path, tolerance, findings) {
   design.children.forEach((designChild, index) => {
     const appChild = app.children[index];
     const here = childPath(path, designChild, index);
-    for (const axis of ["w", "h"]) {
+    for (const axis of ["w", "h", "x", "y"]) {
       const delta = Math.abs(designChild.rel[axis] - appChild.rel[axis]);
       if (delta > tolerance) {
         findings.push({
@@ -70,7 +76,7 @@ function walk(design, app, path, tolerance, findings) {
           kind: "size",
           expected: designChild.rel[axis],
           actual: appChild.rel[axis],
-          message: `${axis === "w" ? "šířka" : "výška"} ${designChild.rel[axis]} rodiče v designu, ${appChild.rel[axis]} v implementaci`,
+          message: `${AXIS_LABEL[axis]} ${designChild.rel[axis]} rodiče v designu, ${appChild.rel[axis]} v implementaci`,
         });
       }
     }
