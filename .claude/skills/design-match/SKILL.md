@@ -201,7 +201,9 @@ dodge the ceiling.
 
 ## Exit codes
 
-One exit code cannot express four outcomes, so there are four (`cli.mjs:311-316`):
+One exit code cannot express four outcomes, so there are four. They come from a
+single table — `OUTCOME` in `loop.mjs` — which `report.md`'s headline is looked
+up from as well, so the file and the exit code cannot disagree:
 
 | Code | Label      | Meaning                                                                                                                                                                                                                                                                                                   | What the driver does next                                                                           |
 | ---- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
@@ -209,6 +211,85 @@ One exit code cannot express four outcomes, so there are four (`cli.mjs:311-316`
 | 1    | `POKRAČUJ` | no match yet, the loop hasn't given up                                                                                                                                                                                                                                                                    | edit the implementation, call `compare` again                                                       |
 | 2    | `PARK`     | the loop stopped without reaching done — thrash, 2 skeleton failures, the round ceiling, or a font mismatch                                                                                                                                                                                               | stop calling `compare`, surface it to the operator                                                  |
 | 3    | `CHYBA`    | `compare`/`measure` itself failed — a bad invocation, a missing `spec.json`, a `spec.json` from an older `design-match` format or measured with a different `--strict-wrappers` setting (both refuse rather than compare — re-run `measure` for the slug), a browser that wouldn't launch, a failed write | fix the invocation/environment first — reading this as "continue" loops forever against a dead tool |
+
+`report.md`'s headline is now that same label — a continuing round writes
+`**Výsledek:** POKRAČUJ`, not `PARK`. Earlier revisions of this file told you to
+trust the exit code over the report; that caveat is gone because the defect is.
+
+## When a run fails
+
+Everything below exits **3** and prints exactly one `[design-match]` line, no
+stack. The rule about what such a run leaves on disk is stated once in
+`cli.mjs` and applied at every refusal path:
+
+> design-match never deletes what it **saw**, and never writes what it
+> **concluded** — and it names only files it actually wrote.
+
+So `design.png` and the `rN.png` crops survive a refusal: they are correct
+renderings of what the browser really put on screen, and they are the evidence
+the refusal is telling you to go and look at. `spec.json`, `report.md` and
+`rounds.json` assert conclusions and are never written on a failing path.
+
+| Refusal                                                            | What it leaves, and what it points you at                                                                                                                                            |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| root outside cwd / at or above `$HOME`                             | nothing — it fires before the browser launches. Copy the mockup into the repo                                                                                                        |
+| CDN resource that cannot be downloaded                             | nothing — `design-match: nelze stáhnout <url> (HTTP nnn). Bez cache se mockup nevykreslí.`                                                                                           |
+| `--region <n>` out of range                                        | names the crops **that exist**; when `cropFitsPage` skipped all of them it says so and sends you to the inventory's selectors and dimensions instead of naming a file it never wrote |
+| region rendered nothing (below)                                    | names `design.png` and the **chosen** region's crop, when that crop exists                                                                                                           |
+| `spec.json` missing / older version / blank                        | nothing new — re-run `measure` for the slug                                                                                                                                          |
+| `--strict-wrappers` disagrees with `spec.json`                     | nothing new — re-run `measure`, or drop/add the flag on `compare`                                                                                                                    |
+| `--route` without `--selector`, or a selector that matches nothing | nothing — the message names the selector and the page                                                                                                                                |
+
+A failed `compare` additionally **marks the previous `report.md` stale** rather
+than leaving a passing verdict lying next to a failed run. The retraction is
+prepended, the earlier round's record is preserved underneath it, and repeated
+failures do not stack a second marker:
+
+```
+> **NEPLATNÉ:** tenhle report popisuje starší kolo. Následující `compare` skončil chybou
+(hláška je ve výstupu terminálu, ne tady), takže verdikt níž na aktuální stav neodpovídá —
+oprav příčinu a spusť `compare` znovu.
+```
+
+Only `compare` does this: a failed `measure` says nothing about whether an
+earlier comparison held.
+
+### A spec that measured nothing is a failure, not a result
+
+`measure` refuses to write a spec whose chosen region is an **empty
+container** — no visible children, no own text anywhere in the extracted
+subtree, and a tag that is not content in itself (`assertRegionRendered`,
+`cli.mjs`). This is the guard against the branch's worst failure: a mockup that
+rendered nothing, measured as a confident one-node spec at exit 0, with every
+layer downstream then comparing against a description of nothing.
+
+```
+[design-match] design-match: region "#root" nic neobsahuje — v celém podstromu není text
+ani žádný obsahový prvek, takže spec by popisoval prázdno. Pravděpodobné příčiny: stránka
+se nevykreslila, skripty se nenačetly, nebo selector míří na prázdný kontejner. Otevři
+mockup v prohlížeči a ověř, že se vykreslí, případně zvol jiný region přes --region <n>.
+Soubory z tohoto běhu zůstaly na disku: .design-match/x/design.png, .design-match/x/r1.png.
+EXIT=3
+```
+
+The three causes it names are the three to check, in that order. No `spec.json`
+is written.
+
+Two things the guard deliberately does **not** do. It does not require a
+minimum node count, and it does not look at the region's size — a one-node spec
+is the correct result for a leaf `<canvas>`, `<img>` or `<button>`, and a
+full-viewport region is correct for a full-bleed mockup. And it treats a
+subtree cut off by `extractRaw`'s depth cap of 6 as **unknown, not empty**
+(`truncated`, `extract.mjs`): without that, `ZIBBY Roadmap.html` — this file's
+own worked example, whose first text sits at DOM depth 13 — was falsely
+refused. A subtree that was not looked at must not condemn.
+
+The same question is asked of a `spec.json` already on disk
+(`assertSpecMeasured`), because the blank specs written before the guard existed
+are well-formed documents that the version check alone cannot catch. There it
+is **root-only**: a stored skeleton does not carry the depth-cap flag, so a
+childless node deeper in the tree is unknowable from the file, while a childless
+root is decidable.
 
 ## Font preflight
 
@@ -251,11 +332,23 @@ Two things the same observation exposed, which do bite:
 Mockups pull React, Babel, three.js off a CDN — without network they render
 nothing, and an empty screenshot looks like valid input. Before shooting
 `design.png`, `measure` runs the mockup through `ensureCdnCache`
-(`cdn-cache.mjs`): every quoted `src="http(s)://…"` / `href="http(s)://…"` HTML
-attribute is downloaded once into `.design-match/.cdn-cache/` (keyed by a hash
-of the URL, typed by the response's real `content-type` rather than the URL's
-extension — Chromium enforces MIME on `file://` stylesheets), and the mockup's
-HTML is rewritten to point at the local copy.
+(`cdn-cache.mjs`): every remote URL a tag genuinely asks the browser to fetch
+is downloaded once into `.design-match/.cdn-cache/` (keyed by a hash of the
+URL, typed by the response's real `content-type` rather than the URL's
+extension, so an extension-less Google Fonts `css2?family=…` is still cached as
+`.css`), and the mockup's HTML is rewritten to point at the local copy under
+`/__design-match-cdn`.
+
+**What counts as a fetch is decided per tag, not per attribute.** A `src` on
+any tag, and an `href` on anything that is not `<a>`/`<area>`/`<base>`, is a
+resource. On `<link>` it is a resource only when `rel` names one — a positive
+allow-list (`stylesheet`, `preload`, `modulepreload`, `prefetch`, `icon`,
+`apple-touch-icon`, `apple-touch-startup-image`, `mask-icon`, `manifest`). This
+is why every mockup in `design/Z.I.B.B.Y/` can be measured at all: they all open
+with `<link rel="preconnect" href="https://fonts.googleapis.com" />`, a bare
+origin that answers 404, and a blunt attribute scan aborted the whole run on it.
+An allow-list fails towards "not cached, fetched live"; an ignore-list fails
+towards "blocked", and would need updating every time HTML gains a hint.
 
 What it does **not** catch:
 
@@ -263,11 +356,13 @@ What it does **not** catch:
   file still `@font-face`s the actual font binary off `fonts.gstatic.com` —
   that URL is never discovered or cached, so an "offline" run still reaches
   the network for it.
-- **Anything that isn't a double-quoted `src=`/`href=` attribute.** The
-  rewrite only matches `/\b(src|href)="(https?:\/\/[^"]+)"/g` — a
-  single-quoted attribute, a CSS `@import`/`url()` inside an inline `<style>`
-  block, or a resource fetched by a `<script>` at runtime are all invisible to
-  it and still hit the network.
+- **Anything that isn't an HTML attribute on a tag.** A CSS `@import`/`url()`
+  inside an inline `<style>` block, or a resource fetched by a `<script>` at
+  runtime, is invisible to the rewrite and still hits the network. (Quoting
+  style is _not_ a limit any more: single-quoted and unquoted attribute values
+  are parsed the same as double-quoted ones, and collection and rewriting are
+  driven by the same tag walk, so a URL cannot be cached without being
+  rewritten.)
 - **No staleness or invalidation.** The cache key is the URL alone — no TTL,
   ETag, or content hash — so a changed remote resource is served stale forever
   once cached.
@@ -275,7 +370,8 @@ What it does **not** catch:
 
 A mockup that silently depends on something outside this list produces a run
 that looks clean and measures the wrong thing — exactly the failure this
-skill exists to prevent.
+skill exists to prevent. The emptiness guard above is the backstop, and it only
+fires when the page renders _nothing_; a page that renders short still measures.
 
 The rewritten mockup itself is **not** written under `.design-match/` — it
 lands beside the original design file, as
@@ -283,7 +379,9 @@ lands beside the original design file, as
 `design/Z.I.B.B.Y/.design-match-cached-ZIBBY Roadmap.html`). It is covered by
 `.gitignore:35` (`.design-match-cached-*`), so it's safe to leave uncommitted,
 but nothing ever deletes it — it is only overwritten the next time `measure`
-runs against that same mockup file.
+runs against that same mockup file. It is not openable on its own any more
+either: the cache URLs in it are root-absolute against the mount prefix, so it
+only resolves when this tool serves it.
 
 ## Reading the artifacts
 
