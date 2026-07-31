@@ -22,6 +22,7 @@ import {
   isAmbiguous,
 } from "./task-classifier.service";
 import type { TaskRouter } from "./task-router";
+import { taskTargetId } from "./task-target";
 
 const fakeLogger = {
   child: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }),
@@ -1250,14 +1251,14 @@ describe("TaskClassifierService — a required PR sink constrains the stage-2 ca
       "forge",
     );
     expect(r?.target.kind).toBe("pipeline");
-    expect(r?.candidates.map((c) => c.id).sort()).toEqual(["delivery", "quick-fix"]);
+    expect(r?.candidates.map((c) => taskTargetId(c)).sort()).toEqual(["delivery", "quick-fix"]);
     expect(r?.candidates.some((c) => c.kind === "agent")).toBe(false);
   });
 
   it("is the CONSTRAINT that removes the agent — unconstrained, the same roster still offers it", async () => {
     const svc = makeService({ agents: [docEngineer, coder], pipelines: forgePipelines });
     const r = await svc.classifyWithinSubsystem({ text: skeletonTask }, "forge");
-    expect(r?.candidates.map((c) => c.id)).toContain("documentation-engineer");
+    expect(r?.candidates.map((c) => taskTargetId(c))).toContain("documentation-engineer");
   });
 
   it("drops a pipeline that declares no pr sink", async () => {
@@ -1279,7 +1280,7 @@ describe("TaskClassifierService — a required PR sink constrains the stage-2 ca
       { text: skeletonTask, output: { type: "pr" } },
       "forge",
     );
-    expect(r?.candidates.map((c) => c.id)).not.toContain("code-audit");
+    expect(r?.candidates.map((c) => taskTargetId(c))).not.toContain("code-audit");
   });
 
   it("keeps the full roster rather than failing when the subsystem owns no PR-capable pipeline", async () => {
@@ -1301,7 +1302,10 @@ describe("TaskClassifierService — a required PR sink constrains the stage-2 ca
       "forge",
     );
     expect(r).not.toBeNull();
-    expect(r?.candidates.map((c) => c.id).sort()).toEqual(["documentation-engineer", "notes"]);
+    expect(r?.candidates.map((c) => taskTargetId(c)).sort()).toEqual([
+      "documentation-engineer",
+      "notes",
+    ]);
   });
 
   it("a file sink constrains nothing — a vault note is something any unit can produce", async () => {
@@ -1310,7 +1314,7 @@ describe("TaskClassifierService — a required PR sink constrains the stage-2 ca
       { text: skeletonTask, output: { type: "file", dest: "vault", to: "note.md" } },
       "forge",
     );
-    expect(r?.candidates.map((c) => c.id)).toContain("documentation-engineer");
+    expect(r?.candidates.map((c) => taskTargetId(c))).toContain("documentation-engineer");
   });
 
   it("records the leg that produced the verdict, so a scorer answer can't pass for a router decision", async () => {

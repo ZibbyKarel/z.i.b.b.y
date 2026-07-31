@@ -5,7 +5,6 @@ import {
   type ArchiveCounts,
   type ArchivePage,
   type GoalRun,
-  ORCHESTRATOR_ID,
   type Pipeline,
   type PipelineRun,
   type Processor,
@@ -28,6 +27,7 @@ import { PipelinesStorageService } from "../pipelines/pipelines.storage.service"
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { archiveSubsystemId, isArchived, matchesArchiveSearch } from "./archive";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
+import { taskTargetId } from "./task-target";
 
 /** The unified run could not be resolved across any runner store (memory or disk). */
 export class TaskRunNotFoundError extends Error {
@@ -629,7 +629,7 @@ function resolveProjectDisplay(run: TaskRun, projectNames: ProjectNameMaps): Tas
 /** Owner id a routed target reads as: the stored definition id, or the orchestrator id. */
 function targetOwner(target: TaskTarget | undefined): string {
   if (!target) return "";
-  return target.kind === "orchestrator" ? ORCHESTRATOR_ID : target.id;
+  return taskTargetId(target);
 }
 
 /** A processor for a scheduled task's chosen target, when it references a stored definition. */

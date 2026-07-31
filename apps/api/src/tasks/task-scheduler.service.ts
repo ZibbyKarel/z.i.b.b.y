@@ -54,6 +54,7 @@ import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service"
 import { TaskClassifierService } from "./task-classifier.service";
 import { TaskOutputService } from "./task-output.service";
 import { sumStageCosts } from "./task-runs.service";
+import { taskTargetId } from "./task-target";
 
 /** A create input with its attachment set resolved once (Task 6 — resolve, then thread). */
 type CreateTaskInputResolved = CreateTaskInput & { attachments: Attachment[] };
@@ -474,7 +475,7 @@ export class TaskSchedulerService
     if (eligibleCount === 1) {
       this.log.info("stage-2 resolved without classifying — one eligible unit", {
         subsystem: target.id,
-        target: `${primary.kind}:${primary.id}`,
+        target: `${primary.kind}:${taskTargetId(primary)}`,
         ...(prConstrained ? { constrainedBy: "pr-output" } : {}),
       });
       return {
