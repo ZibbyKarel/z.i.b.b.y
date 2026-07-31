@@ -457,6 +457,12 @@ export async function shootScene(page, scene, outPath) {
  * was frozen — on `ZIBBY Loading Screen` and `ZIBBY Orb`, exactly where it
  * matters. Without it, any CSS transition or animation (a hover state, a mount
  * fade-in, a spinner) is caught at whatever frame the shot lands on.
+ *
+ * Its reach stops at CSS. Motion driven by script — a three.js render loop, a
+ * `setTimeout` progress simulation — lands on a wall-clock-dependent frame
+ * regardless, so those two mockups stay non-deterministic between runs (a
+ * measured ~0.01 % on `ZIBBY Loading Screen`). This option makes both sides
+ * frozen the SAME way; it does not make either side reproducible.
  */
 export function shootElement(locator, outPath, mask = []) {
   return locator.screenshot({ path: outPath, mask, animations: "disabled" });
