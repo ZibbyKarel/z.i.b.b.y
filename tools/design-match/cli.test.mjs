@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   assertRegionRendered,
+  assertSpecMeasured,
   buildCompareOutcome,
   buildTokenMappings,
   checkFontPreflight,
@@ -16,10 +17,12 @@ import {
   isDeliberateError,
   loadHistory,
   parseArgs,
+  planMeasureMounts,
   readSpec,
   resolveRegionIndex,
   selectExitCode,
   stripImages,
+  translateNavigationError,
 } from "./cli.mjs";
 import { parseThemeTokens } from "./tokens.mjs";
 import { DESIGN_MATCH_VERSION } from "./version.mjs";
@@ -772,8 +775,12 @@ describe("assertRegionRendered", () => {
     expect(() => assertRegionRendered(raw(), "#root")).toThrow(/nevykreslila|skripty|prázdn/i);
   });
 
-  it("accepts a region with children", () => {
-    expect(() => assertRegionRendered(raw({ children: [raw()] }), "#root")).not.toThrow();
+  // Superseded by M3 (fix round 1): having children is no longer enough on its
+  // own — the children have to carry something. See the subtree suite below.
+  it("accepts a region whose child carries content", () => {
+    expect(() =>
+      assertRegionRendered(raw({ children: [raw({ tag: "span", text: "ahoj" })] }), "#root"),
+    ).not.toThrow();
   });
 
   it("accepts a childless region that carries its own text", () => {
@@ -790,5 +797,163 @@ describe("assertRegionRendered", () => {
     for (const tag of ["canvas", "img", "svg", "video", "iframe", "input"]) {
       expect(() => assertRegionRendered(raw({ tag }), tag)).not.toThrow();
     }
+  });
+});
+
+/**
+ * Fix round 1, M3: the guard used to inspect only the measured node, so a page
+ * that rendered a single empty wrapper satisfied it and wrote a two-node spec
+ * describing two nested nothings.
+ */
+describe("assertRegionRendered, over the whole subtree", () => {
+  const raw = (over = {}) => ({ tag: "div", text: "", children: [], ...over });
+
+  it("refuses a root whose only child is itself an empty container", () => {
+    expect(() => assertRegionRendered(raw({ children: [raw()] }), "#root")).toThrow(
+      /^design-match:/,
+    );
+  });
+
+  it("refuses a chain of empty wrappers however deep", () => {
+    const chain = raw({ children: [raw({ children: [raw({ children: [raw()] })] })] });
+    expect(() => assertRegionRendered(chain, "#root")).toThrow(/^design-match:/);
+  });
+
+  it("accepts a tree whose only content sits two levels down", () => {
+    const tree = raw({ children: [raw({ children: [raw({ tag: "span", text: "ahoj" })] })] });
+    expect(() => assertRegionRendered(tree, "#root")).not.toThrow();
+  });
+
+  it("accepts a tree whose only content is a self-content element deep inside", () => {
+    const tree = raw({ children: [raw({ children: [raw({ tag: "canvas" })] })] });
+    expect(() => assertRegionRendered(tree, "#root")).not.toThrow();
+  });
+
+  // Found the expensive way, by re-running the corpus: ZIBBY Roadmap.html's
+  // #root is seven levels of nested layout divs whose first text sits at DOM
+  // depth 13, below extractRaw's cap of 6. A depth-blind subtree rule refused
+  // it — a false refusal on the mockup SKILL.md uses as its worked example.
+  it("accepts a subtree the extraction depth cap cut off, because unknown is not empty", () => {
+    const cut = raw({ children: [raw({ children: [raw({ truncated: true })] })] });
+    expect(() => assertRegionRendered(cut, "#root")).not.toThrow();
+  });
+
+  it("still refuses when the same shape was fully explored", () => {
+    const explored = raw({ children: [raw({ children: [raw({ truncated: false })] })] });
+    expect(() => assertRegionRendered(explored, "#root")).toThrow(/^design-match:/);
+  });
+});
+
+/**
+ * Fix round 1, I1: three blank one-node `#root` specs written before the guard
+ * existed are still well-formed 1.3.0 documents, so the version stamp cannot
+ * see them and `compare` runs against a description of nothing — a confident
+ * SKELETON MISMATCH that is an artifact of the tool, not the implementation.
+ */
+describe("assertSpecMeasured", () => {
+  const node = (over = {}) => ({ role: "group", tag: "div", children: [], ...over });
+
+  it("refuses the blank one-node #root spec the silent failures left behind", () => {
+    expect(() => assertSpecMeasured({ skeleton: node() }, "karta-epicu")).toThrow(/^design-match:/);
+  });
+
+  it("names the slug and tells the operator to re-measure", () => {
+    expect(() => assertSpecMeasured({ skeleton: node() }, "karta-epicu")).toThrow("karta-epicu");
+    expect(() => assertSpecMeasured({ skeleton: node() }, "karta-epicu")).toThrow(/measure/);
+  });
+
+  it("routes through the clean one-line operator path", () => {
+    try {
+      assertSpecMeasured({ skeleton: node() }, "karta-epicu");
+      expect.unreachable("assertSpecMeasured must throw for a blank spec");
+    } catch (error) {
+      expect(isDeliberateError(error)).toBe(true);
+    }
+  });
+
+  // The whole reason this is a content judgement and not a version bump: a bump
+  // is all-or-nothing on the format and would condemn these two alongside the
+  // blank ones. `leaf-loose` and `leaf-strict` on disk are exactly this shape.
+  it("keeps a legitimate one-node <canvas> spec", () => {
+    expect(() =>
+      assertSpecMeasured({ skeleton: node({ tag: "canvas" }) }, "leaf-loose"),
+    ).not.toThrow();
+  });
+
+  it("keeps a leaf that carried its own text, which normalizeSkeleton records as role=text", () => {
+    expect(() => assertSpecMeasured({ skeleton: node({ role: "text" }) }, "label")).not.toThrow();
+  });
+
+  it("keeps a spec whose content sits below the root", () => {
+    const skeleton = node({ children: [node({ children: [node({ role: "text" })] })] });
+    expect(() => assertSpecMeasured({ skeleton }, "orb-dock")).not.toThrow();
+  });
+
+  // Root-only on purpose, and this is the residual it leaves. A stored skeleton
+  // does not carry `extractRaw`'s depth-cap flag, so a childless node deeper in
+  // the tree could equally be a genuine leaf or a subtree that was never looked
+  // at — unknowable from the file, and unknown must not condemn. A childless
+  // ROOT is decidable (the cap bites at level 6, never at level 0), and that is
+  // the shape every one of the silent failures actually left behind.
+  it("keeps a two-node spec it cannot positively call blank, rather than guessing", () => {
+    expect(() =>
+      assertSpecMeasured({ skeleton: node({ children: [node()] }) }, "wrapper"),
+    ).not.toThrow();
+  });
+});
+
+/**
+ * Fix round 1, C1: the served root used to be the common ancestor of the mockup
+ * and the cdn cache — the repository root in the normal case, and the whole home
+ * directory for a mockup that arrived outside the project. The page is
+ * same-origin with everything served and has unrestricted outbound network.
+ */
+describe("planMeasureMounts", () => {
+  const cacheDir = path.join(".design-match", ".cdn-cache");
+
+  it("serves exactly the mockup's own directory and the cdn cache, and nothing above either", () => {
+    const html = path.join(process.cwd(), "design", "Z.I.B.B.Y", ".design-match-cached-x.html");
+    const { mockupDir, mounts } = planMeasureMounts(html, cacheDir);
+
+    expect(mockupDir).toBe(path.join(process.cwd(), "design", "Z.I.B.B.Y"));
+    expect(Object.keys(mounts).sort()).toEqual(["/", "/__design-match-cdn"]);
+    expect(mounts["/"]).toBe(mockupDir);
+    expect(mounts["/__design-match-cdn"]).toBe(path.resolve(cacheDir));
+    // The ancestor that used to be served is not among them.
+    expect(Object.values(mounts)).not.toContain(path.resolve(process.cwd()));
+  });
+
+  it("refuses a mockup that lives outside the current working directory", () => {
+    const outside = path.join(os.homedir(), "Downloads", "mockup.html");
+    expect(() => planMeasureMounts(outside, cacheDir)).toThrow(/^design-match:/);
+    expect(() => planMeasureMounts(outside, cacheDir)).toThrow(/mimo aktuální pracovní adresář/);
+  });
+});
+
+/**
+ * Fix round 1, I3: deferring the networkidle FIX was right, but this diff
+ * created the failure path, and an operator-facing condition gets one clean
+ * line — not a 30-second wait ending in a Playwright stack.
+ */
+describe("translateNavigationError", () => {
+  const timeout = () =>
+    Object.assign(new Error("Timeout 30000ms exceeded."), { name: "TimeoutError" });
+
+  it("turns a navigation timeout into the clean one-line treatment", () => {
+    const translated = translateNavigationError("http://127.0.0.1:1/x.html", timeout());
+    expect(isDeliberateError(translated)).toBe(true);
+    expect(translated.message).toContain("http://127.0.0.1:1/x.html");
+    expect(translated.message).toMatch(/networkidle/);
+  });
+
+  it("names the cause an operator can act on", () => {
+    expect(translateNavigationError("http://x/y", timeout()).message).toMatch(/fetch|polling/);
+  });
+
+  // A navigation that fails any other way is a real fault and keeps its stack —
+  // the same split `isDeliberateError` draws everywhere else in this tool.
+  it("passes any other navigation failure through untouched", () => {
+    const other = new Error("net::ERR_CONNECTION_REFUSED");
+    expect(translateNavigationError("http://x/y", other)).toBe(other);
   });
 });

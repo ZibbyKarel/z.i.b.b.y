@@ -16,7 +16,23 @@ import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-const REMOTE_ATTR = /\b(src|href)="(https?:\/\/[^"]+)"/g;
+/**
+ * The url path the cdn cache is mounted at by the static server (`shoot.mjs`),
+ * and therefore the prefix `rewriteToCache` writes into the html.
+ *
+ * It is deliberately ROOT-ABSOLUTE rather than relative to the mockup. A
+ * relative path (`../../.design-match/.cdn-cache/…`) climbs out of the mockup's
+ * own directory, which forced the server to be rooted at an ancestor of both —
+ * in practice the repository root, and in a cross-tree invocation the operator's
+ * home directory, all of it same-origin to the mockup's own JavaScript. Naming
+ * the cache with a mount prefix instead lets the server expose exactly two
+ * directories and nothing above either of them.
+ *
+ * Cost, stated plainly: the rewritten `.design-match-cached-*.html` can no
+ * longer be opened directly off disk in a browser — it only resolves when
+ * served by this tool. It was never an operator-facing artifact.
+ */
+export const CDN_CACHE_URL_PREFIX = "/__design-match-cdn";
 
 /**
  * The `<link rel>` values that name a resource the browser downloads. This is
@@ -67,6 +83,19 @@ function attributesOf(rawAttrs) {
 
 const isRemote = (value) => typeof value === "string" && /^https?:\/\//.test(value);
 
+/** The remote urls one already-parsed tag actually asks the browser to fetch. */
+function resourceUrlsInTag(tag, attrs) {
+  if (tag === "link") {
+    const rels = (attrs.rel ?? "").toLowerCase().split(/\s+/).filter(Boolean);
+    const names = rels.some((rel) => RESOURCE_LINK_RELS.has(rel));
+    return names && isRemote(attrs.href) ? [attrs.href] : [];
+  }
+  const urls = [];
+  if (isRemote(attrs.src)) urls.push(attrs.src);
+  if (!NAVIGATION_TAGS.has(tag) && isRemote(attrs.href)) urls.push(attrs.href);
+  return urls;
+}
+
 /**
  * Tag-aware on purpose. The old attribute-only scan matched any
  * `src="http…"`/`href="http…"` anywhere in the file, including inside an
@@ -76,25 +105,32 @@ const isRemote = (value) => typeof value === "string" && /^https?:\/\//.test(val
 export function collectRemoteUrls(html) {
   const urls = [];
   for (const [, tagName, rawAttrs] of html.matchAll(TAG_RE)) {
-    const tag = tagName.toLowerCase();
-    const attrs = attributesOf(rawAttrs);
-    if (tag === "link") {
-      const rels = (attrs.rel ?? "").toLowerCase().split(/\s+/).filter(Boolean);
-      if (rels.some((rel) => RESOURCE_LINK_RELS.has(rel)) && isRemote(attrs.href)) {
-        urls.push(attrs.href);
-      }
-      continue;
-    }
-    if (isRemote(attrs.src)) urls.push(attrs.src);
-    if (!NAVIGATION_TAGS.has(tag) && isRemote(attrs.href)) urls.push(attrs.href);
+    urls.push(...resourceUrlsInTag(tagName.toLowerCase(), attributesOf(rawAttrs)));
   }
   return urls;
 }
 
+/**
+ * Driven by the same tag walk as `collectRemoteUrls`, and that symmetry is
+ * load-bearing. While collection was tag-aware and rewriting was a blunt
+ * `src|href="http…"` regex, the two disagreed in both directions: a url written
+ * with an unquoted attribute value was cached but never rewritten (so the run
+ * silently still needed the network), and a url appearing on both a
+ * `<script src>` and an `<a href>` was rewritten inside the anchor — the exact
+ * thing the tag-aware collector exists to avoid. One walk, one answer.
+ */
 export function rewriteToCache(html, manifest) {
-  return html.replace(REMOTE_ATTR, (whole, attr, url) =>
-    manifest[url] ? `${attr}="${manifest[url]}"` : whole,
-  );
+  return html.replace(TAG_RE, (whole, tagName, rawAttrs) => {
+    let rewritten = whole;
+    for (const url of resourceUrlsInTag(tagName.toLowerCase(), attributesOf(rawAttrs))) {
+      const local = manifest[url];
+      // Substituted only within this tag's own text, and only for a url this
+      // tag genuinely fetches — so quoting style is irrelevant and no other
+      // occurrence in the document can be caught by accident.
+      if (local) rewritten = rewritten.split(url).join(local);
+    }
+    return rewritten;
+  });
 }
 
 const cacheHash = (url) => createHash("sha1").update(url).digest("hex").slice(0, 12);
@@ -218,7 +254,10 @@ export async function ensureCdnCache(htmlPath, cacheDir) {
       await writeAtomic(file, buffer);
       downloaded.push(url);
     }
-    manifest[url] = path.relative(path.dirname(htmlPath), file);
+    // Root-absolute against the cache's mount, not relative to the mockup —
+    // see CDN_CACHE_URL_PREFIX for why the server can then serve two narrow
+    // directories instead of their common ancestor.
+    manifest[url] = `${CDN_CACHE_URL_PREFIX}/${path.basename(file)}`;
   }
 
   const localHtmlPath = path.join(

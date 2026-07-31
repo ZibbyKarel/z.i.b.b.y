@@ -152,7 +152,7 @@ describe("withStaticServer, as the browser sees it", () => {
   });
 
   it("renders the XHR-loaded content when the same file is served over http", async () => {
-    const children = await withStaticServer(fixturesDir, (origin) =>
+    const children = await withStaticServer({ "/": fixturesDir }, (origin) =>
       withPage(async (page) => {
         await page.goto(staticUrl(origin, fixturesDir, xhrFixture), { waitUntil: "networkidle" });
         return childCount(page);
@@ -166,7 +166,7 @@ describe("withStaticServer, as the browser sees it", () => {
   // is inert. Stripping it would additionally break the `integrity="sha384-…"`
   // the real mockups carry alongside it.
   it("executes a script that kept its crossorigin attribute", async () => {
-    const loaded = await withStaticServer(fixturesDir, (origin) =>
+    const loaded = await withStaticServer({ "/": fixturesDir }, (origin) =>
       withPage(async (page) => {
         await page.goto(staticUrl(origin, fixturesDir, xhrFixture), { waitUntil: "networkidle" });
         return page.evaluate(() => window.__designMatchDepLoaded === true);

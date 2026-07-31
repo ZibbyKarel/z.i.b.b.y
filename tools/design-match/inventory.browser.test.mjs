@@ -187,7 +187,10 @@ describe("cropRegions", () => {
     });
 
     const png = PNG.sync.read(await fs.readFile(written[0]));
-    const middle = (png.height / 2) * (png.width * 4) + (png.width / 2) * 4;
+    // `Math.floor` on both halves: the RGBA offset is only a pixel boundary
+    // when each term is an integer, and a fixture with an odd dimension would
+    // otherwise read a byte from the middle of a neighbouring pixel.
+    const middle = Math.floor(png.height / 2) * (png.width * 4) + Math.floor(png.width / 2) * 4;
     expect([png.data[middle], png.data[middle + 1], png.data[middle + 2]]).toEqual([255, 0, 255]);
   });
 

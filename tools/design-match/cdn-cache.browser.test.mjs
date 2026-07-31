@@ -1,10 +1,10 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { withPage } from "./browser.mjs";
-import { ensureCdnCache } from "./cdn-cache.mjs";
+import { CDN_CACHE_URL_PREFIX, ensureCdnCache } from "./cdn-cache.mjs";
+import { staticUrl, withStaticServer } from "./shoot.mjs";
 
 // The brief's own flagship fixture: a Google Fonts CSS url with no extension
 // in its path. This is the case the review found the cache could not actually
@@ -53,13 +53,19 @@ describe("ensureCdnCache against real Chromium", () => {
     // The real outcome: does the computed style from the cached stylesheet
     // actually land on the element? A filename assertion would only prove
     // the rename happened, not that the browser accepted the file.
-    const color = await withPage(async (page) => {
-      await page.goto(pathToFileURL(localHtmlPath).href);
-      return page.evaluate(
-        (selector) => getComputedStyle(document.querySelector(selector)).color,
-        '[data-testid="target"]',
-      );
-    });
+    //
+    // Served through the same two mounts `runMeasure` uses, because that is now
+    // the only arrangement in which the rewritten html resolves at all — the
+    // cache is named by its mount prefix, not by a path relative to the mockup.
+    const color = await withStaticServer({ "/": dir, [CDN_CACHE_URL_PREFIX]: cacheDir }, (origin) =>
+      withPage(async (page) => {
+        await page.goto(staticUrl(origin, dir, localHtmlPath));
+        return page.evaluate(
+          (selector) => getComputedStyle(document.querySelector(selector)).color,
+          '[data-testid="target"]',
+        );
+      }),
+    );
 
     expect(color).toBe(TARGET_COLOR);
   });

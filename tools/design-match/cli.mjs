@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { withPage } from "./browser.mjs";
-import { ensureCdnCache } from "./cdn-cache.mjs";
+import { CDN_CACHE_URL_PREFIX, ensureCdnCache } from "./cdn-cache.mjs";
 import { compareSkeletons } from "./compare-skeleton.mjs";
 import { compareValues } from "./compare-values.mjs";
 import { extractRaw } from "./extract.mjs";
@@ -14,7 +14,7 @@ import { diffPngs } from "./pixels.mjs";
 import { fontPreflight } from "./preflight.mjs";
 import { writeArtifacts } from "./report.mjs";
 import {
-  commonAncestorDir,
+  assertServableRoot,
   resolveScene,
   shootScene,
   staticUrl,
@@ -380,17 +380,79 @@ const SELF_CONTENT_TAGS = new Set([
  * legitimate result for a leaf `<canvas>`, an `<img>`, or a `<button>Uložit</button>`,
  * and a full-viewport region is legitimate for a full-bleed mockup.
  *
+ * It looks at the WHOLE tree, not just the root. The first version tested only
+ * the measured node, so a page that rendered a single empty wrapper
+ * (`#root > div` with nothing inside) satisfied it and wrote a two-node spec
+ * describing two nested nothings. The rule generalises without loosening: a
+ * region is a failed measurement when no node anywhere in it carries content.
+ *
+ * "Anywhere" has to respect the extraction depth cap, and this was found the
+ * expensive way: `ZIBBY Roadmap.html`'s `#root` is seven levels of nested
+ * layout `<div>`s whose first text sits at DOM depth 13, well below
+ * `extractRaw`'s cap of 6. A depth-blind version of this rule refused it — a
+ * false refusal on the mockup `SKILL.md` uses as its worked example. A subtree
+ * that was cut off is UNKNOWN, not empty, and unknown must not condemn.
+ *
  * Runs in Node on the value `extractRaw` returned — never inside
  * `page.evaluate`, which would prefix the message and defeat `isDeliberateError`.
  */
+function carriesContent(raw) {
+  if (raw.text.trim().length > 0) return true;
+  if (SELF_CONTENT_TAGS.has(raw.tag)) return true;
+  if (raw.truncated) return true;
+  return raw.children.some(carriesContent);
+}
+
 export function assertRegionRendered(raw, selector) {
-  if (raw.children.length > 0) return;
-  if (raw.text.trim().length > 0) return;
-  if (SELF_CONTENT_TAGS.has(raw.tag)) return;
+  if (carriesContent(raw)) return;
   throw new Error(
-    `design-match: region "${selector}" nic neobsahuje — žádné potomky ani text, takže spec by popisoval prázdno. ` +
+    `design-match: region "${selector}" nic neobsahuje — v celém podstromu není text ani žádný obsahový prvek, takže spec by popisoval prázdno. ` +
       `Pravděpodobné příčiny: stránka se nevykreslila, skripty se nenačetly, nebo selector míří na prázdný kontejner. ` +
       `Otevři mockup v prohlížeči a ověř, že se vykreslí, případně zvol jiný region přes --region <n>.`,
+  );
+}
+
+/**
+ * The same question asked of a `spec.json` already on disk, which is a
+ * different shape: `normalizeSkeleton` drops raw text, folding "leaf with its
+ * own text" into `role === "text"` (`inferRole`). So `role` stands in for the
+ * text test, and `SELF_CONTENT_TAGS` is shared verbatim with the measure-time
+ * guard above. `role === "group"` is exactly `inferRole`'s residue: no semantic
+ * tag, no declared role, no class hint, and no own text.
+ */
+function skeletonCarriesContent(node) {
+  // Deliberately ROOT-ONLY, unlike the measure-time guard. `normalizeSkeleton`
+  // does not carry the depth-cap flag `extractRaw` produces, so a childless
+  // node deeper in a stored skeleton could be a genuine leaf or a truncation —
+  // unknowable from the file. A childless ROOT cannot be a truncation (the cap
+  // bites at level 6, not level 0), so that one case is decidable, and it is
+  // exactly the shape the silent failures left behind.
+  //
+  // Only a positively-identified blank container is refused. A node shaped
+  // unlike anything `normalizeSkeleton` produces is not something this
+  // predicate can judge, and guessing would refuse specs on no evidence.
+  if ((node.children ?? []).length > 0) return true;
+  return node.role !== "group" || SELF_CONTENT_TAGS.has(node.tag);
+}
+
+/**
+ * Specs written before the emptiness guard existed are still valid 1.3.0
+ * documents, and `readSpec`'s version check therefore accepts them — including
+ * the blank one-node `#root` specs the seven silently-failing mockups left
+ * behind. `compare` against one of those reports a confident SKELETON MISMATCH
+ * that is an artifact of the tool, not of the implementation: the same
+ * unbackable claim this guard exists to remove, merely inverted into a false
+ * red.
+ *
+ * A version bump cannot express this. It is all-or-nothing on the format, so it
+ * would condemn the legitimate one-node `<canvas>` specs and every good spec
+ * alongside the blank ones. Judging the content is the only thing that
+ * separates them.
+ */
+export function assertSpecMeasured(spec, slug) {
+  if (skeletonCarriesContent(spec.skeleton)) return;
+  throw new Error(
+    `design-match: spec.json pro slug "${slug}" popisuje prázdný region — vznikl před kontrolou prázdnoty, kdy se nevykreslený mockup uložil jako platný spec. Spusť znovu measure pro tento slug.`,
   );
 }
 
@@ -527,6 +589,9 @@ export async function readSpec(dir, slug) {
       `design-match: spec.json pro slug "${slug}" pochází ze starší verze design-match (${spec.version ?? "neznámá"}, aktuální je ${DESIGN_MATCH_VERSION}) — spusť znovu measure pro tento slug.`,
     );
   }
+  // The version stamp cannot see this: a blank spec is a well-formed 1.3.0
+  // document. See `assertSpecMeasured`.
+  assertSpecMeasured(spec, slug);
   return spec;
 }
 
@@ -552,6 +617,44 @@ export function checkStrictWrappersMatch(spec, requestedStrictWrappers) {
   );
 }
 
+/**
+ * Exactly the two directories a `measure` run needs, each checked against
+ * `assertServableRoot` first — the mockup's own directory (for its sibling
+ * `zibby/*.jsx`) and the shared cdn cache, mounted apart rather than merged
+ * into their common ancestor.
+ *
+ * Extracted from `runMeasure` so the mount set and the safety floor are
+ * directly testable: `runMeasure` is browser-driven and has never had a test,
+ * so anything left inline there is unpinned by construction.
+ */
+export function planMeasureMounts(localHtmlPath, cacheDir) {
+  const mockupDir = assertServableRoot(path.dirname(localHtmlPath), "adresář mockupu");
+  const cacheRoot = assertServableRoot(cacheDir, "adresář cdn cache");
+  return {
+    mockupDir,
+    mounts: { "/": mockupDir, [CDN_CACHE_URL_PREFIX]: cacheRoot },
+  };
+}
+
+/**
+ * A navigation that times out is not a crash — it is a mockup that never
+ * settles, and the operator needs the one-line treatment, not a Playwright
+ * stack. `ZIBBY Redesign Canvas.html` is the live example: it drops a 404
+ * response body, so the request never finishes and `networkidle` can never
+ * fire. Only the timeout is translated; any other navigation failure is a real
+ * fault and keeps its stack.
+ */
+export function translateNavigationError(url, error) {
+  if (error instanceof Error && error.name === "TimeoutError") {
+    return new Error(
+      `design-match: mockup se neustálil (waitUntil: networkidle) — ${url}. ` +
+        `Nejčastější příčina je požadavek, který nikdy neskončí: fetch, jehož odpověď se nikdy nepřečte (např. větev pro 404), nebo pravidelný polling. ` +
+        `Otevři mockup v prohlížeči a zkontroluj záložku Network.`,
+    );
+  }
+  return error;
+}
+
 async function runMeasure(cmd) {
   const dir = path.join(ARTIFACT_ROOT, cmd.slug);
   const cacheDir = path.join(ARTIFACT_ROOT, ".cdn-cache");
@@ -561,15 +664,16 @@ async function runMeasure(cmd) {
   // `<script type="text/babel" src="zibby/*.jsx">`, and cannot satisfy a
   // `crossorigin` fetch either — so seven of the eleven real mockups rendered
   // an empty `#root`. The bytes were never the problem; the scheme was.
-  // The server root is the common ancestor of the rewritten html and the cdn
-  // cache, because the rewritten html points at the cache through a relative
-  // path that climbs out of the mockup's own directory — see
-  // `commonAncestorDir`.
-  const serveRoot = commonAncestorDir([path.dirname(localHtmlPath), cacheDir]);
+  const { mockupDir, mounts } = planMeasureMounts(localHtmlPath, cacheDir);
 
-  const spec = await withStaticServer(serveRoot, (origin) =>
+  const spec = await withStaticServer(mounts, (origin) =>
     withPage(async (page) => {
-      await page.goto(staticUrl(origin, serveRoot, localHtmlPath), { waitUntil: "networkidle" });
+      const url = staticUrl(origin, mockupDir, localHtmlPath);
+      try {
+        await page.goto(url, { waitUntil: "networkidle" });
+      } catch (error) {
+        throw translateNavigationError(url, error);
+      }
       // `page.evaluate(() => document.fonts.ready)` doesn't throw, but a
       // FontFaceSet isn't a plain object — Playwright silently coerces the
       // returned value to `{}` crossing the protocol boundary, discarding the

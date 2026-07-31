@@ -3,7 +3,12 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { collectRemoteUrls, ensureCdnCache } from "./cdn-cache.mjs";
+import {
+  CDN_CACHE_URL_PREFIX,
+  collectRemoteUrls,
+  ensureCdnCache,
+  rewriteToCache,
+} from "./cdn-cache.mjs";
 
 const REACT_URL = "https://unpkg.com/react@18.3.1/umd/react.development.js";
 const cacheFileFor = (cacheDir, url) =>
@@ -97,7 +102,11 @@ describe("ensureCdnCache", () => {
     expect(cached).toBe("window.React = {};");
     const rewritten = await fs.readFile(result.localHtmlPath, "utf8");
     expect(rewritten).not.toContain(REACT_URL);
-    expect(rewritten).toContain(".design-match");
+    // Root-absolute against the cache's own mount, not relative to the mockup:
+    // that is what lets the server expose two narrow directories instead of
+    // their common ancestor.
+    expect(rewritten).toContain(`${CDN_CACHE_URL_PREFIX}/`);
+    expect(rewritten).not.toContain("../");
   });
 
   it("never reaches the network for a mockup whose only remote references are preconnect hints", async () => {
@@ -247,5 +256,46 @@ describe("ensureCdnCache", () => {
     expect(fetchMock).not.toHaveBeenCalled();
 
     readdirSpy.mockRestore();
+  });
+});
+
+/**
+ * M1: collection became tag-aware while rewriting stayed a blunt
+ * `src|href="http…"` regex, so the two could disagree in both directions.
+ * They are now driven by the same walk, and these pin both directions.
+ */
+describe("rewriteToCache", () => {
+  const manifest = { "https://cdn.example.com/react.js": "/__design-match-cdn/abc.js" };
+
+  it("rewrites a url written with an unquoted attribute value", () => {
+    const html = `<script src=https://cdn.example.com/react.js></script>`;
+    expect(rewriteToCache(html, manifest)).toBe(`<script src=/__design-match-cdn/abc.js></script>`);
+  });
+
+  it("collects the same unquoted url it rewrites", () => {
+    expect(collectRemoteUrls(`<script src=https://cdn.example.com/react.js></script>`)).toEqual([
+      "https://cdn.example.com/react.js",
+    ]);
+  });
+
+  // The mirror failure: the same url on a <script src> and an <a href>. The
+  // script puts it in the manifest; a blunt rewrite then mangles the anchor
+  // into a local path, which is exactly what the tag-aware collector exists to
+  // prevent.
+  it("leaves an <a href> alone even when the same url is cached from a <script src>", () => {
+    const html = `<script src="https://cdn.example.com/react.js"></script><a href="https://cdn.example.com/react.js">zdroj</a>`;
+    const rewritten = rewriteToCache(html, manifest);
+    expect(rewritten).toContain(`<script src="/__design-match-cdn/abc.js">`);
+    expect(rewritten).toContain(`<a href="https://cdn.example.com/react.js">zdroj</a>`);
+  });
+
+  it("leaves a preconnect hint untouched", () => {
+    const html = `<link rel="preconnect" href="https://cdn.example.com/react.js" />`;
+    expect(rewriteToCache(html, manifest)).toBe(html);
+  });
+
+  it("leaves a url that only appears inside inline script text untouched", () => {
+    const html = `<script>const u = "https://cdn.example.com/react.js";</script>`;
+    expect(rewriteToCache(html, manifest)).toBe(html);
   });
 });

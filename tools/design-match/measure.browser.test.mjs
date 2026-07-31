@@ -1,0 +1,95 @@
+import { execFile } from "node:child_process";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
+import { afterEach, describe, expect, it } from "vitest";
+
+const run = promisify(execFile);
+const here = path.dirname(fileURLToPath(import.meta.url));
+const CLI = path.join(here, "cli.mjs");
+const FIXTURES = path.join(here, "fixtures");
+
+// M5: `runMeasure` is the one thing on this branch the suite never touched —
+// the review had to verify the server wiring and the emptiness guard by hand,
+// against the real corpus. It is not exported and cannot be, so the seam is the
+// process boundary: run the CLI the way an operator does and read what it left
+// on disk. cwd is a throwaway directory because ARTIFACT_ROOT (`.design-match`)
+// and `assertServableRoot`'s "inside cwd" floor are both cwd-relative.
+let tmpDirs = [];
+
+afterEach(async () => {
+  await Promise.all(tmpDirs.map((dir) => fs.rm(dir, { recursive: true, force: true })));
+  tmpDirs = [];
+});
+
+async function makeWorkspace(files) {
+  const dir = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "design-match-measure-")));
+  tmpDirs.push(dir);
+  // The default --theme points at the DS globals.css relative to cwd, which a
+  // throwaway cwd has no copy of. One real token is enough for the mapping
+  // stage to run; this test is about the measure path, not about tokens.
+  await fs.writeFile(
+    path.join(dir, "theme.css"),
+    "@theme {\n  --color-base: #0b0e13;\n}\n",
+    "utf8",
+  );
+  for (const [name, contents] of Object.entries(files)) {
+    await fs.writeFile(path.join(dir, name), contents, "utf8");
+  }
+  return dir;
+}
+
+const measure = (cwd, file, slug) =>
+  run("node", [CLI, "measure", file, "karta", "--slug", slug, "--theme", "theme.css"], { cwd });
+
+describe("measure, end to end through the CLI", () => {
+  // D2 part 1 in one assertion: this fixture loads its markup through the
+  // synchronous XHR Babel uses, which Chromium refuses over `file://`. If the
+  // http server were not wired into runMeasure, the region would come back
+  // empty and the guard — not the assertion below — would be what failed.
+  it("measures a mockup that only renders when it is served over http", async () => {
+    const dir = await makeWorkspace({
+      "mockup.html": await fs.readFile(path.join(FIXTURES, "xhr-loaded.html"), "utf8"),
+      "xhr-loaded-partial.html": await fs.readFile(
+        path.join(FIXTURES, "xhr-loaded-partial.html"),
+        "utf8",
+      ),
+      "xhr-loaded-dep.js": await fs.readFile(path.join(FIXTURES, "xhr-loaded-dep.js"), "utf8"),
+    });
+
+    await measure(dir, "mockup.html", "wired");
+
+    const spec = JSON.parse(
+      await fs.readFile(path.join(dir, ".design-match", "wired", "spec.json"), "utf8"),
+    );
+    // Skeleton nodes carry no raw text, so the proof has to be structural:
+    // `#root` is empty in the source html — the card and its heading exist only
+    // inside the partial the synchronous XHR fetches.
+    expect(spec.selector).toBe("#root");
+    expect(spec.skeleton.children[0]).toMatchObject({ role: "card" });
+    expect(spec.skeleton.children[0].children[0]).toMatchObject({ tag: "h2", role: "heading" });
+  });
+
+  // D2 part 2, at the only layer where "no spec.json was written" is a fact
+  // rather than a promise: an empty box big enough to be ranked as a candidate,
+  // which is exactly the shape seven mockups silently produced.
+  it("refuses to write a spec for a region that rendered nothing, with one design-match: line", async () => {
+    const dir = await makeWorkspace({
+      "blank.html": `<!doctype html><html><body><div class="shell" style="width:400px;height:300px"></div></body></html>`,
+    });
+
+    const failure = await measure(dir, "blank.html", "blank").catch((error) => error);
+
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure.code).toBe(3);
+    expect(failure.stderr).toContain("design-match: region");
+    // The whole point of `logFailure`: an operator-caused error is one line, not
+    // a stack. A stack here would mean `isDeliberateError` missed the prefix.
+    expect(failure.stderr).not.toContain("at ");
+    await expect(
+      fs.readFile(path.join(dir, ".design-match", "blank", "spec.json"), "utf8"),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+  });
+});

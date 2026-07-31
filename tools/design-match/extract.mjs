@@ -79,6 +79,13 @@ export async function extractRaw(page, selector, depth = 6, props = VALUE_PROPS)
       const snap = (el, level) => {
         const style = getComputedStyle(el);
         const rect = el.getBoundingClientRect();
+        const visibleChildren = [...el.children].filter(visible);
+        // A node cut off by the depth cap reports `children: []`, which is
+        // indistinguishable from a genuine leaf — and "this subtree is empty"
+        // and "this subtree was not looked at" are not the same fact. The
+        // emptiness guard (cli.mjs) has to be able to tell them apart, or it
+        // refuses a mockup whose content simply sits below the cut.
+        const truncated = level >= depth && visibleChildren.length > 0;
         const ownText = [...el.childNodes]
           .filter((n) => n.nodeType === Node.TEXT_NODE)
           .map((n) => n.textContent.trim())
@@ -99,10 +106,8 @@ export async function extractRaw(page, selector, depth = 6, props = VALUE_PROPS)
             alignItems: style.alignItems,
             order: Number(style.order) || 0,
           },
-          children:
-            level >= depth
-              ? []
-              : [...el.children].filter(visible).map((child) => snap(child, level + 1)),
+          truncated,
+          children: level >= depth ? [] : visibleChildren.map((child) => snap(child, level + 1)),
         };
       };
 

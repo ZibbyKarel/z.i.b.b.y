@@ -1,14 +1,44 @@
+import net from "node:net";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
-  commonAncestorDir,
+  assertServableRoot,
+  matchMount,
+  normalizeMounts,
   resolveScene,
   staticUrl,
   storybookUrl,
   withStaticServer,
 } from "./shoot.mjs";
+
+/**
+ * `fetch` normalises the request-target and forbids some headers, so anything
+ * that probes the raw wire — an encoded traversal, a forged `Host` — has to be
+ * written by hand onto a socket. No dependency: `node:net` plus a hand-rolled
+ * request line is the whole thing.
+ */
+function rawRequest(origin, requestTarget, { method = "GET", host } = {}) {
+  const { port } = new URL(origin);
+  return new Promise((resolve, reject) => {
+    const socket = net.connect({ host: "127.0.0.1", port: Number(port) }, () => {
+      socket.write(
+        `${method} ${requestTarget} HTTP/1.1\r\nHost: ${host ?? `127.0.0.1:${port}`}\r\nConnection: close\r\n\r\n`,
+      );
+    });
+    let raw = "";
+    socket.setEncoding("utf8");
+    socket.on("data", (chunk) => {
+      raw += chunk;
+    });
+    socket.on("error", reject);
+    socket.on("close", () => {
+      const [head, ...rest] = raw.split("\r\n\r\n");
+      resolve({ status: Number(head.split(" ")[1]), body: rest.join("\r\n\r\n") });
+    });
+  });
+}
 
 let tmpDirs = [];
 
@@ -76,23 +106,82 @@ describe("resolveScene", () => {
   });
 });
 
-describe("commonAncestorDir", () => {
-  it("returns the deepest directory that contains every path", () => {
-    expect(
-      commonAncestorDir([path.join("/a", "b", "c", "page.html"), path.join("/a", "b", "d")]),
-    ).toBe(path.join("/a", "b"));
+/**
+ * The floor under C1. Dropping `file://` dropped an isolation boundary, so a
+ * served directory is a directory the mockup's own JavaScript can read and, via
+ * its unrestricted outbound network, exfiltrate.
+ */
+describe("assertServableRoot", () => {
+  it("accepts a directory inside the current working directory", () => {
+    const inside = path.join(process.cwd(), "tools", "design-match");
+    expect(assertServableRoot(inside, "test")).toBe(inside);
   });
 
-  it("returns the ancestor itself when one path already contains the other", () => {
-    expect(commonAncestorDir([path.join("/a", "b"), path.join("/a", "b", "c", "d")])).toBe(
-      path.join("/a", "b"),
+  it("accepts the current working directory itself", () => {
+    expect(assertServableRoot(process.cwd(), "test")).toBe(path.resolve(process.cwd()));
+  });
+
+  // The escalation the review found: a mockup that arrived in ~/Downloads while
+  // cwd is this project. Under the old common-ancestor root that served all of
+  // $HOME without a word.
+  it("refuses a directory outside the current working directory", () => {
+    expect(() =>
+      assertServableRoot(path.join(os.homedir(), "Downloads"), "adresář mockupu"),
+    ).toThrow(/design-match:.*mimo aktuální pracovní adresář/);
+  });
+
+  it("names the offending directory and the cwd so the operator can see the mismatch", () => {
+    const outside = path.join(os.homedir(), "Downloads");
+    expect(() => assertServableRoot(outside, "adresář mockupu")).toThrow(outside);
+    expect(() => assertServableRoot(outside, "adresář mockupu")).toThrow(
+      path.resolve(process.cwd()),
     );
   });
 
-  // Serving the filesystem root over http, even read-only on loopback, is not
-  // something this tool should ever do silently.
-  it("refuses when the only shared ancestor is the filesystem root", () => {
-    expect(() => commonAncestorDir(["/alpha/one", "/beta/two"])).toThrow(/design-match:/);
+  // Not implied by the cwd test: a run whose cwd IS $HOME (or /) passes
+  // containment while serving everything the operator owns.
+  it("refuses the home directory even when it is the cwd", () => {
+    const home = os.homedir();
+    expect(() => assertServableRoot(home, "adresář mockupu", home)).toThrow(
+      /design-match:.*domovský adresář/,
+    );
+  });
+
+  it("refuses an ancestor of the home directory", () => {
+    expect(() => assertServableRoot(path.parse(os.homedir()).root, "adresář mockupu")).toThrow(
+      /design-match:/,
+    );
+  });
+});
+
+describe("normalizeMounts / matchMount", () => {
+  const mounts = normalizeMounts({ "/": "/mockup", "/__design-match-cdn": "/cache" });
+
+  it("orders named mounts before the root mount so the root cannot swallow them", () => {
+    expect(mounts.map((m) => m.prefix)).toEqual(["/__design-match-cdn", ""]);
+  });
+
+  it("routes a cache path to the cache directory", () => {
+    expect(matchMount(mounts, "/__design-match-cdn/abc.css")).toEqual({
+      root: "/cache",
+      relative: "abc.css",
+    });
+  });
+
+  it("routes everything else to the mockup directory", () => {
+    expect(matchMount(mounts, "/zibby/data.jsx")).toEqual({
+      root: "/mockup",
+      relative: "zibby/data.jsx",
+    });
+  });
+
+  // The prefix must not match a sibling directory whose name merely starts the
+  // same way — that would silently serve cache files out of the mockup mount.
+  it("does not treat a path that merely starts with the prefix as a mount hit", () => {
+    expect(matchMount(mounts, "/__design-match-cdn-other/x.css")).toEqual({
+      root: "/mockup",
+      relative: "__design-match-cdn-other/x.css",
+    });
   });
 });
 
@@ -112,7 +201,7 @@ describe("withStaticServer", () => {
     const root = await makeTmpDir();
     await fs.writeFile(path.join(root, "page.html"), "<p>ahoj</p>", "utf8");
 
-    const seen = await withStaticServer(root, async (origin) => {
+    const seen = await withStaticServer({ "/": root }, async (origin) => {
       expect(origin).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
       const response = await fetch(`${origin}/page.html`);
       return {
@@ -130,7 +219,7 @@ describe("withStaticServer", () => {
     await fs.mkdir(path.join(root, "Z.I.B.B.Y"), { recursive: true });
     await fs.writeFile(path.join(root, "Z.I.B.B.Y", "ZIBBY Archiv úloh.html"), "ok", "utf8");
 
-    const body = await withStaticServer(root, async (origin) => {
+    const body = await withStaticServer({ "/": root }, async (origin) => {
       const url = staticUrl(origin, root, path.join(root, "Z.I.B.B.Y", "ZIBBY Archiv úloh.html"));
       const response = await fetch(url);
       return response.text();
@@ -141,7 +230,7 @@ describe("withStaticServer", () => {
 
   it("answers 404 for a file that is not there", async () => {
     const root = await makeTmpDir();
-    const status = await withStaticServer(root, async (origin) => {
+    const status = await withStaticServer({ "/": root }, async (origin) => {
       const response = await fetch(`${origin}/missing.html`);
       return response.status;
     });
@@ -158,7 +247,7 @@ describe("withStaticServer", () => {
     const outside = path.join(root, "..", `outside-${path.basename(root)}.txt`);
     await fs.writeFile(outside, "secret", "utf8");
 
-    const seen = await withStaticServer(root, async (origin) => {
+    const seen = await withStaticServer({ "/": root }, async (origin) => {
       const response = await fetch(`${origin}/..%2f${path.basename(outside)}`);
       return { status: response.status, body: await response.text() };
     });
@@ -171,7 +260,7 @@ describe("withStaticServer", () => {
   it("stops listening once the callback resolves", async () => {
     const root = await makeTmpDir();
     await fs.writeFile(path.join(root, "page.html"), "ok", "utf8");
-    const origin = await withStaticServer(root, async (served) => served);
+    const origin = await withStaticServer({ "/": root }, async (served) => served);
 
     await expect(fetch(`${origin}/page.html`)).rejects.toThrow();
   });
@@ -182,12 +271,122 @@ describe("withStaticServer", () => {
     const root = await makeTmpDir();
     let origin;
     await expect(
-      withStaticServer(root, async (served) => {
+      withStaticServer({ "/": root }, async (served) => {
         origin = served;
         throw new Error("design-match: boom");
       }),
     ).rejects.toThrow("design-match: boom");
 
     await expect(fetch(`${origin}/page.html`)).rejects.toThrow();
+  });
+});
+
+describe("withStaticServer — mounts and the controls around them", () => {
+  it("serves a second mount from a directory that is nowhere near the first", async () => {
+    const mockupDir = await makeTmpDir();
+    const cacheDir = await makeTmpDir();
+    await fs.writeFile(path.join(mockupDir, "page.html"), "<p>ahoj</p>", "utf8");
+    await fs.writeFile(path.join(cacheDir, "abc.css"), "body{color:red}", "utf8");
+
+    const seen = await withStaticServer(
+      { "/": mockupDir, "/__design-match-cdn": cacheDir },
+      async (origin) => {
+        const page = await fetch(`${origin}/page.html`);
+        const css = await fetch(`${origin}/__design-match-cdn/abc.css`);
+        return {
+          page: await page.text(),
+          css: await css.text(),
+          cssType: css.headers.get("content-type"),
+        };
+      },
+    );
+
+    expect(seen).toEqual({
+      page: "<p>ahoj</p>",
+      css: "body{color:red}",
+      cssType: "text/css; charset=utf-8",
+    });
+  });
+
+  // I2: this is the check that had no test at all. The pre-filesystem
+  // containment check cannot see a symlink, because the path it inspects is
+  // entirely inside the root — only the post-realpath check can.
+  it("refuses a symlink inside the root that points at a file outside it", async () => {
+    const root = await makeTmpDir();
+    const elsewhere = await makeTmpDir();
+    const secretFile = path.join(elsewhere, "secret.txt");
+    await fs.writeFile(secretFile, "SECRET-VALUE", "utf8");
+    await fs.symlink(secretFile, path.join(root, "link.txt"));
+
+    const seen = await withStaticServer({ "/": root }, async (origin) =>
+      rawRequest(origin, "/link.txt"),
+    );
+
+    expect(seen.status).toBe(403);
+    expect(seen.body).not.toContain("SECRET-VALUE");
+  });
+
+  it("refuses a symlinked directory inside the root that points outside it", async () => {
+    const root = await makeTmpDir();
+    const elsewhere = await makeTmpDir();
+    await fs.writeFile(path.join(elsewhere, "secret.txt"), "SECRET-VALUE", "utf8");
+    await fs.symlink(elsewhere, path.join(root, "linkdir"));
+
+    const seen = await withStaticServer({ "/": root }, async (origin) =>
+      rawRequest(origin, "/linkdir/secret.txt"),
+    );
+
+    expect(seen.status).toBe(403);
+    expect(seen.body).not.toContain("SECRET-VALUE");
+  });
+
+  // I4: without a Host check, the only thing between a page in the operator's
+  // own browser and the served tree is guessing the ephemeral port.
+  it("refuses a request carrying a Host it never advertised", async () => {
+    const root = await makeTmpDir();
+    await fs.writeFile(path.join(root, "ok.txt"), "PLAIN-CONTENT", "utf8");
+
+    const { allowed, forged, byName } = await withStaticServer({ "/": root }, async (origin) => ({
+      allowed: await rawRequest(origin, "/ok.txt"),
+      forged: await rawRequest(origin, "/ok.txt", { host: "evil.example" }),
+      byName: await rawRequest(origin, "/ok.txt", {
+        host: `localhost:${new URL(origin).port}`,
+      }),
+    }));
+
+    expect(allowed.status).toBe(200);
+    expect(byName.status).toBe(200);
+    expect(forged.status).toBe(403);
+    expect(forged.body).not.toContain("PLAIN-CONTENT");
+  });
+
+  // M8: both were correct and both unpinned.
+  it("refuses a method other than GET or HEAD", async () => {
+    const root = await makeTmpDir();
+    await fs.writeFile(path.join(root, "ok.txt"), "ok", "utf8");
+    const status = await withStaticServer({ "/": root }, async (origin) => {
+      const response = await fetch(`${origin}/ok.txt`, { method: "POST" });
+      return response.status;
+    });
+    expect(status).toBe(405);
+  });
+
+  it("answers 404 for a directory rather than listing it", async () => {
+    const root = await makeTmpDir();
+    await fs.mkdir(path.join(root, "sub"));
+    const status = await withStaticServer({ "/": root }, async (origin) => {
+      const response = await fetch(`${origin}/sub`);
+      return response.status;
+    });
+    expect(status).toBe(404);
+  });
+
+  // M4: a missing mount directory is an operator-caused condition, so it gets
+  // the one-line treatment rather than a bare ENOENT stack.
+  it("refuses a mount directory that does not exist with a design-match: line", async () => {
+    const root = await makeTmpDir();
+    await expect(
+      withStaticServer({ "/": path.join(root, "nope") }, async () => undefined),
+    ).rejects.toThrow(/^design-match:/);
   });
 });

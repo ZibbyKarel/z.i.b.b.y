@@ -1,5 +1,6 @@
 import http from "node:http";
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
 export const STORYBOOK_BASE = "http://localhost:6006";
@@ -31,6 +32,15 @@ export function resolveScene(options) {
 }
 
 /**
+ * "`candidate` is `dir` or lives under it", written once because both the
+ * server's containment check and the servable-root floor need it and because
+ * the filesystem root is the case a naive `${dir}${sep}` prefix gets wrong
+ * (`"/" + "/"` is `"//"`, which nothing starts with).
+ */
+const contains = (dir, candidate) =>
+  candidate === dir || candidate.startsWith(dir.endsWith(path.sep) ? dir : `${dir}${path.sep}`);
+
+/**
  * A mockup measured from `file://` is a different document from the one the
  * designer sees. Chromium blocks XHR on `file://`, so `<script type="text/babel"
  * src="…jsx">` never loads its source; `crossorigin` fetches cannot be
@@ -38,28 +48,32 @@ export function resolveScene(options) {
  * confident one-node spec. Serving the same bytes over `http://127.0.0.1`
  * removes both causes at once, because they were never about the bytes.
  *
- * The root is a real directory tree, not a virtual mount, so every relative
- * reference in the rewritten html — a sibling `zibby/*.jsx`, the cdn cache
- * several levels up — resolves at exactly the position it occupies on disk.
- * That is why `runMeasure` roots the server at the common ancestor of the
- * mockup and the cache rather than at the mockup's own directory: anything
- * shallower would leave the cached React/Babel unreachable.
+ * But `file://` was also an isolation boundary, and dropping it drops that too:
+ * the page is same-origin with everything the server exposes, and a mockup is
+ * inbound content with unrestricted outbound network. So the server exposes
+ * exactly the directories a run needs — the mockup's own directory and the cdn
+ * cache, mounted separately — and this function is the floor under that:
+ * whatever root is computed must sit inside the current working directory, and
+ * must never be the operator's home directory or an ancestor of it.
+ *
+ * The second test is not implied by the first. A run whose cwd is `$HOME` (or
+ * `/`) would satisfy containment while serving everything the operator owns.
  */
-export function commonAncestorDir(paths) {
-  const parts = paths.map((candidate) => path.resolve(candidate).split(path.sep));
-  const shared = [];
-  for (let index = 0; index < parts[0].length; index += 1) {
-    const segment = parts[0][index];
-    if (!parts.every((each) => each[index] === segment)) break;
-    shared.push(segment);
-  }
-  const ancestor = shared.join(path.sep) || path.sep;
-  if (ancestor === path.parse(path.resolve(paths[0])).root) {
+export function assertServableRoot(root, label, cwd = process.cwd()) {
+  const resolved = path.resolve(root);
+  const workingDir = path.resolve(cwd);
+  if (!contains(workingDir, resolved)) {
     throw new Error(
-      `design-match: design soubor a cache nemají společný nadřazený adresář kromě kořene disku — spusť measure z adresáře, který obsahuje obojí (${paths.join(", ")})`,
+      `design-match: ${label} (${resolved}) leží mimo aktuální pracovní adresář (${workingDir}) — design-match servíruje jen adresáře uvnitř něj. Spusť measure z adresáře, který mockup obsahuje, nebo mockup do něj zkopíruj.`,
     );
   }
-  return ancestor;
+  const home = path.resolve(os.homedir());
+  if (contains(resolved, home)) {
+    throw new Error(
+      `design-match: ${label} (${resolved}) by zpřístupnil celý domovský adresář (${home}) — to design-match nikdy neudělá. Spusť measure z konkrétního projektu, ne z ${home} ani z kořene disku.`,
+    );
+  }
+  return resolved;
 }
 
 /** The http url a file under `root` is served at — every segment percent-encoded, because mockup names carry spaces and diacritics. */
@@ -104,10 +118,46 @@ function respondText(res, status, body) {
   res.end(body);
 }
 
-const isInside = (root, candidate) =>
-  candidate === root || candidate.startsWith(`${root}${path.sep}`);
+/**
+ * Normalised, longest-prefix-first, so `/__design-match-cdn/x.css` cannot be
+ * swallowed by the `/` mount. The `/` mount becomes the empty prefix, which
+ * sorts last and therefore only matches once every named mount has missed.
+ */
+export function normalizeMounts(mounts) {
+  return Object.entries(mounts)
+    .map(([prefix, root]) => ({
+      prefix: `/${prefix}`.replace(/\/+/g, "/").replace(/\/$/, ""),
+      root,
+    }))
+    .sort((a, b) => b.prefix.length - a.prefix.length);
+}
 
-async function serveFromRoot(root, req, res) {
+/** Which mount serves `pathname`, and the path within it. */
+export function matchMount(mountList, pathname) {
+  for (const { prefix, root } of mountList) {
+    if (prefix === "") return { root, relative: pathname.replace(/^\/+/, "") };
+    if (pathname === prefix) return { root, relative: "" };
+    if (pathname.startsWith(`${prefix}/`)) {
+      return { root, relative: pathname.slice(prefix.length + 1) };
+    }
+  }
+  return undefined;
+}
+
+/**
+ * A `Host` this server did not advertise means the request did not come from
+ * the url we handed the browser — the shape a DNS-rebinding page takes, where
+ * a document on some other origin resolves its own hostname to 127.0.0.1 and
+ * guesses the port. The window is seconds and the port space is wide, but the
+ * check is one comparison and the thing behind it is the operator's project.
+ */
+function hostAllowed(req, port) {
+  const host = req.headers.host;
+  return host === `127.0.0.1:${port}` || host === `localhost:${port}`;
+}
+
+async function serveMounted(mountList, port, req, res) {
+  if (!hostAllowed(req, port)) return respondText(res, 403, "forbidden");
   if (req.method !== "GET" && req.method !== "HEAD") {
     return respondText(res, 405, "method not allowed");
   }
@@ -117,21 +167,25 @@ async function serveFromRoot(root, req, res) {
   } catch {
     return respondText(res, 400, "bad request");
   }
+  const mount = matchMount(mountList, pathname);
+  if (!mount) return respondText(res, 404, "not found");
   // `path.resolve` normalises any `..` the request smuggled in percent-encoded
   // (a literal `..` never survives `new URL`), and the containment check below
   // is what actually decides — it runs before anything touches the filesystem.
-  const target = path.resolve(root, pathname.replace(/^\/+/, ""));
-  if (!isInside(root, target)) return respondText(res, 403, "forbidden");
+  const target = path.resolve(mount.root, mount.relative);
+  if (!contains(mount.root, target)) return respondText(res, 403, "forbidden");
   let real;
+  let stats;
   try {
     // Re-checked after resolving symlinks: a symlink inside the root pointing
-    // out of it would otherwise be a hole in the check above.
+    // out of it would otherwise be a hole in the check above. `stat` shares the
+    // try so a file unlinked between the two calls is a 404, not a 500.
     real = await fs.realpath(target);
+    if (!contains(mount.root, real)) return respondText(res, 403, "forbidden");
+    stats = await fs.stat(real);
   } catch {
     return respondText(res, 404, "not found");
   }
-  if (!isInside(root, real)) return respondText(res, 403, "forbidden");
-  const stats = await fs.stat(real);
   if (stats.isDirectory()) return respondText(res, 404, "not found");
   const body = await fs.readFile(real);
   res.writeHead(200, {
@@ -144,15 +198,35 @@ async function serveFromRoot(root, req, res) {
 
 /**
  * Runs `fn` with a read-only static server on an ephemeral loopback port,
- * rooted at `root`, and shuts it down in a `finally` so neither a thrown error
- * nor a crashed run can leave a listening socket behind. `closeAllConnections`
- * first, because Chromium holds keep-alive sockets open and `close` alone
- * would wait for them forever.
+ * serving `mounts` — a `{ urlPrefix: directory }` map — and nothing else. It
+ * shuts down in a `finally` so neither a thrown error nor a crashed run can
+ * leave a listening socket behind. `closeAllConnections` first, because
+ * Chromium holds keep-alive sockets open and `close` alone would wait for them
+ * forever.
+ *
+ * Mounts rather than one root is the whole point: the two directories a run
+ * needs are in different parts of the tree, and serving their common ancestor
+ * to satisfy that reached the repository root — the operator's home directory
+ * on a cross-tree invocation — all of it same-origin to the mockup's own
+ * JavaScript. Callers are still expected to have run each directory through
+ * `assertServableRoot`.
  */
-export async function withStaticServer(root, fn) {
-  const resolvedRoot = await fs.realpath(path.resolve(root));
+export async function withStaticServer(mounts, fn) {
+  const mountList = [];
+  for (const { prefix, root } of normalizeMounts(mounts)) {
+    let resolved;
+    try {
+      resolved = await fs.realpath(path.resolve(root));
+    } catch (error) {
+      throw new Error(
+        `design-match: adresář k servírování "${root}" nelze otevřít (${error.code ?? error.message})`,
+      );
+    }
+    mountList.push({ prefix, root: resolved });
+  }
+  let port;
   const server = http.createServer((req, res) => {
-    serveFromRoot(resolvedRoot, req, res).catch(() => {
+    serveMounted(mountList, port, req, res).catch(() => {
       if (res.headersSent) res.end();
       else respondText(res, 500, "internal error");
     });
@@ -167,7 +241,7 @@ export async function withStaticServer(root, fn) {
   });
   try {
     const address = server.address();
-    const port = typeof address === "object" && address !== null ? address.port : undefined;
+    port = typeof address === "object" && address !== null ? address.port : undefined;
     if (port === undefined) {
       throw new Error("design-match: lokální server se nepodařilo navázat na port");
     }
