@@ -40,6 +40,29 @@ export const taskRunsContract = c.router(
       summary: "The unified task feed (per-kind runs + waiting tasks, merged), newest first",
     },
 
+    // Literal `/tasks/runs/archive*` routes MUST stay above `getTaskRun`'s
+    // `/tasks/runs/:runId`: @ts-rest/nest registers routes in key order and Express
+    // matches first-wins, so a parameterised sibling declared earlier swallows them.
+    listArchivedTaskRuns: {
+      method: "GET",
+      path: "/tasks/runs/archive",
+      query: ArchivePageQuerySchema,
+      responses: {
+        200: ArchivePageSchema,
+      },
+      summary: "Cursor-paginated, search/subsystem-filtered archive (newest-first)",
+    },
+
+    getArchivedTaskRunCounts: {
+      method: "GET",
+      path: "/tasks/runs/archive/counts",
+      query: ArchiveCountsQuerySchema,
+      responses: {
+        200: ArchiveCountsSchema,
+      },
+      summary: "Per-subsystem archive counts (search-scoped) + the unsearched total",
+    },
+
     getTaskRun: {
       method: "GET",
       path: "/tasks/runs/:runId",
@@ -129,26 +152,6 @@ export const taskRunsContract = c.router(
         404: ErrorSchema,
       },
       summary: "Delete a run and all its artifacts",
-    },
-
-    listArchivedTaskRuns: {
-      method: "GET",
-      path: "/tasks/runs/archive",
-      query: ArchivePageQuerySchema,
-      responses: {
-        200: ArchivePageSchema,
-      },
-      summary: "Cursor-paginated, search/subsystem-filtered archive (newest-first)",
-    },
-
-    getArchivedTaskRunCounts: {
-      method: "GET",
-      path: "/tasks/runs/archive/counts",
-      query: ArchiveCountsQuerySchema,
-      responses: {
-        200: ArchiveCountsSchema,
-      },
-      summary: "Per-subsystem archive counts (search-scoped) + the unsearched total",
     },
 
     assignTaskRunProject: {

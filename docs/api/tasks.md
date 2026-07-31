@@ -560,6 +560,16 @@ PATCH  /api/tasks/runs/:runId/project                          assign a run into
                                                                 with a null projectId
 ```
 
+**The order above is load-bearing, not cosmetic.** `@ts-rest/nest` registers Express
+routes in the order the contract object declares them, and Express matches first-wins —
+so every literal `/tasks/runs/<word>` route MUST be declared before `getTaskRun`'s
+`/tasks/runs/:runId`, or the parameterised route swallows it and the literal path
+resolves as a run id. This is not hypothetical: the two `/archive` routes sat _after_
+`:runId` in `task-runs.contract.ts` and `GET /api/tasks/runs/archive` returned
+`404 Task run "archive" not found` in production, which is what broke the `/archiv`
+page (phase 126e). `/archive/counts` survived only because its extra path segment
+cannot match a single-param route. Keep the contract's key order matching this table.
+
 Both `/logs/stream` endpoints live outside the ts-rest contract as raw NestJS `@Sse`
 routes (ts-rest doesn't model event streams) — the concrete implementation of the
 "SSE for live streams, polling for state" DNA rule. The resolver looks up `runId` and

@@ -280,4 +280,22 @@ describe("Archive Screen (F2)", () => {
     expect(refetchItems).toHaveBeenCalled();
     expect(refetchCounts).toHaveBeenCalled();
   });
+
+  /**
+   * Phase 126e: pins the exact symptom the real `/archiv` bug produced — the items
+   * query 404ing (the `/tasks/runs/archive` route-collision fixed in
+   * `task-runs.contract.ts`) while the counts query succeeds. `isError` is
+   * `itemsError || countsError` (`Screen.tsx`), so a counts-only success still
+   * renders the full-page `QueryError`, not a partial page. This is exactly what
+   * every OTHER archive test's API-client mocks hid: they never exercised the real
+   * route, so a green suite here meant nothing about the live 404.
+   */
+  it("renders QueryError when only the items query fails and counts succeeds (the real bug's shape)", () => {
+    hooks.itemsError = true;
+    hooks.countsError = false;
+    hooks.counts = { forge: 3 };
+    hooks.total = 3;
+    render(<Screen />);
+    expect(screen.getByText("Nepodařilo se načíst")).toBeInTheDocument();
+  });
 });
