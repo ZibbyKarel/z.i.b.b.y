@@ -692,6 +692,26 @@ describe("readSpec", () => {
     await fs.writeFile(path.join(dir, "spec.json"), JSON.stringify(spec), "utf8");
     await expect(readSpec(dir, "no-version-slug")).rejects.toThrow(/measure/);
   });
+
+  // Fix round 1, M2 (the cheap half): round-trips a real spec.json carrying
+  // strictWrappers through the actual disk read, not just the pure predicate
+  // in isolation — covers the "readSpec's output is what checkStrictWrappersMatch
+  // actually receives" seam. The write half (does runMeasure actually stamp the
+  // field) stays uncovered; narrowing that seam needs runMeasure's stamping
+  // pulled into a pure function, which is out of scope for this fix round.
+  it("round-trips a spec measured with --strict-wrappers through readSpec into checkStrictWrappersMatch", async () => {
+    const spec = {
+      selector: "#x",
+      skeleton: {},
+      tokenMappings: [],
+      version: DESIGN_MATCH_VERSION,
+      strictWrappers: true,
+    };
+    await fs.writeFile(path.join(dir, "spec.json"), JSON.stringify(spec), "utf8");
+    const read = await readSpec(dir, "strict-slug");
+    expect(() => checkStrictWrappersMatch(read, true)).not.toThrow();
+    expect(() => checkStrictWrappersMatch(read, false)).toThrow(/--strict-wrappers/);
+  });
 });
 
 describe("checkStrictWrappersMatch", () => {

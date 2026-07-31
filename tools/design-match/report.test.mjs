@@ -144,6 +144,17 @@ describe("renderValues", () => {
       expect(renderValues(null, { wrappersCollapsed: true })).not.toContain("--strict-wrappers");
     });
   });
+
+  // Fix round 1, M1: the removed `?? []` in cli.mjs used to absorb `undefined`
+  // the same way it absorbed `null` — a caller-contract violation (a payload
+  // missing the `values` key entirely) must not fall through and get rendered
+  // as "not measured" (that names the skeleton gate as the cause, which may
+  // not even be true for whatever produced the malformed payload); it must
+  // fail loudly, the same clean one-line way every other usage error in this
+  // tool does.
+  it("throws a design-match:-prefixed error for undefined (a payload missing `values` entirely), never renders it", () => {
+    expect(() => renderValues(undefined)).toThrow(/^design-match:/);
+  });
 });
 
 describe("renderTokens", () => {

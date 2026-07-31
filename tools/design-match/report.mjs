@@ -48,7 +48,20 @@ const WRAPPER_COVERAGE_NOTE =
 // one is worse, because the current output isn't silent, it is a positive
 // false claim. The two must stay distinguishable at the type level (null vs.
 // array), not by a caller remembering to pass a separate flag.
+//
+// fix round 1, M1: `undefined` (a payload that omits `values` entirely, not
+// one that deliberately set it to `null`) is neither of the two legitimate
+// states above — it is a caller contract violation. Rendering it as "not
+// measured" would name the skeleton gate as the cause of something that might
+// not even involve the gate, which is the exact false-claim failure this task
+// exists to close. It throws instead, the same clean `design-match:`-prefixed
+// one-liner every other usage error in this tool gets — never `?? []` again.
 export function renderValues(deltas, { wrappersCollapsed = true } = {}) {
+  if (deltas === undefined) {
+    throw new Error(
+      "design-match: renderValues dostal payload bez pole `values` — musí být buď `null` (skeleton gate neprošel), nebo pole delt (i prázdné).",
+    );
+  }
   if (deltas === null) {
     return [
       "# Hodnoty",

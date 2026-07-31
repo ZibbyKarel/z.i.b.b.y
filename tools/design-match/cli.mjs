@@ -345,11 +345,19 @@ export function isDeliberateError(error) {
 
 /**
  * Everything between "I have a round result" and "here is the object
- * `writeArtifacts` receives" — Ruling 1 (`values` must never be forwarded as
- * `null`) and Ruling 3 (image buffers only on the round actually shot this
- * invocation) both live here now, as pure, directly testable branches, rather
- * than as inline expressions inside the browser-driven `runCompare` that no
- * test could ever reach.
+ * `writeArtifacts` receives" lives here now, as pure, directly testable
+ * branches, rather than as inline expressions inside the browser-driven
+ * `runCompare` that no test could ever reach.
+ *
+ * Ruling 1 is SUPERSEDED by task 14b (Defect 1) — it used to require `values`
+ * never be forwarded as `null`; that was the bug. `values` MUST now be
+ * forwarded as `null` when the skeleton gate short-circuited the comparison
+ * (see `runCompare`, the sole producer of `values: null`) — `renderValues`
+ * depends on that to render the honest "not measured" state rather than a
+ * false "matches". `[]` stays reserved for "compared, no deltas". If a future
+ * change here restores `?? []`, it is reverting a fix, not applying one.
+ * Ruling 3 (image buffers only on the round actually shot this invocation)
+ * stands unchanged.
  */
 export function buildCompareOutcome({
   result,
@@ -573,6 +581,12 @@ async function runCompare(cmd) {
       strictWrappers: cmd.strictWrappers,
     });
     const skeleton = compareSkeletons(spec.skeleton, appSkeleton);
+    // The sole producer of `values: null` — `renderValues` (report.mjs) hardcodes
+    // the skeleton gate as the cause of "not measured". Any future short-circuit
+    // added before `compareValues` runs (the font preflight below deliberately
+    // does not: it forwards the real `values` array) must carry its own reason
+    // rather than reuse this sentinel, or values.md will confidently name the
+    // wrong cause.
     if (!skeleton.pass) return { skeleton, values: null, pixels: null };
 
     // Same two trees the gate just compared — no second extraction, so no
