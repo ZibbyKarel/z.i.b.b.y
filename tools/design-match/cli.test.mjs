@@ -9,6 +9,7 @@ import {
   buildTokenMappings,
   checkFontPreflight,
   checkStrictWrappersMatch,
+  chooseRegionHint,
   collectFontStacks,
   combineVerdict,
   describeOutcome,
@@ -22,6 +23,7 @@ import {
   resolveRegionIndex,
   selectExitCode,
   stripImages,
+  translateCaptureError,
   translateNavigationError,
 } from "./cli.mjs";
 import { parseThemeTokens } from "./tokens.mjs";
@@ -1175,5 +1177,115 @@ describe("translateNavigationError", () => {
   it("passes any other navigation failure through untouched", () => {
     const other = new Error("net::ERR_CONNECTION_REFUSED");
     expect(translateNavigationError("http://x/y", other)).toBe(other);
+  });
+});
+
+/**
+ * D9 (task 19). The THIRD escape of `isDeliberateError` on this branch: a region
+ * Chromium cannot photograph rejects `locator.screenshot` with
+ * `locator.screenshot: Protocol error (Page.captureScreenshot): Unable to
+ * capture screenshot`, which does not start with `design-match:`, so `logFailure`
+ * dumped the whole Playwright stack — on the invocation SKILL.md documents as the
+ * default.
+ *
+ * Same shape as `translateNavigationError` directly above, deliberately: only the
+ * one recognisable failure is translated, everything else keeps its stack.
+ */
+describe("translateCaptureError", () => {
+  const refusal = () =>
+    new Error(
+      "locator.screenshot: Protocol error (Page.captureScreenshot): Unable to capture screenshot\nCall log:\n  - taking element screenshot",
+    );
+
+  it("turns Chromium's capture refusal into one clean design-match: line naming the region and its box", () => {
+    const translated = translateCaptureError(refusal(), {
+      selector: "div.design-canvas > div > div:nth-child(1)",
+      box: { x: -6000, y: -6000, w: 16256, h: 18608 },
+      remedy: " Vyber jiný region.",
+    });
+
+    expect(isDeliberateError(translated)).toBe(true);
+    expect(translated.message).toContain("div.design-canvas > div > div:nth-child(1)");
+    expect(translated.message).toContain("16256×18608");
+    expect(translated.message).toContain("(-6000,-6000)");
+    expect(translated.message).toContain("Vyber jiný region.");
+    // The Playwright text is what defeated the prefix check; it must not be
+    // smuggled back into the line that replaces it.
+    expect(translated.message).not.toContain("Call log");
+  });
+
+  // The two callers shoot different things and have different remedies —
+  // `measure` picks another `--region`, `compare` points `--selector` somewhere
+  // smaller — so the remedy is supplied, not guessed.
+  it("carries the caller's own remedy rather than inventing one", () => {
+    const translated = translateCaptureError(refusal(), {
+      selector: "#root",
+      box: { x: 0, y: 0, w: 20000, h: 20000 },
+      remedy: " Zvol přes --selector menší prvek scény.",
+    });
+    expect(translated.message).toContain("--selector");
+    expect(translated.message).not.toContain("--region");
+  });
+
+  // A box is the caller's context, not this function's — a caller that has none
+  // (a `boundingBox()` that came back null) must still get the clean line rather
+  // than "undefined×undefined".
+  it("still refuses cleanly when the caller has no box to name", () => {
+    const translated = translateCaptureError(refusal(), {
+      selector: "#root",
+      remedy: " Zkus jiný.",
+    });
+    expect(isDeliberateError(translated)).toBe(true);
+    expect(translated.message).not.toContain("undefined");
+    expect(translated.message).not.toContain("NaN");
+  });
+
+  // Every other screenshot failure — a detached element, a closed page, a
+  // crashed browser — is a real fault whose stack is the diagnostic.
+  it("passes any other screenshot failure through untouched", () => {
+    const other = new Error("locator.screenshot: Timeout 30000ms exceeded.");
+    expect(translateCaptureError(other, { selector: "#root" })).toBe(other);
+    const notAnError = "not even an Error instance";
+    expect(translateCaptureError(notAnError, { selector: "#root" })).toBe(notAnError);
+  });
+});
+
+/**
+ * D9's second half: the refusal must leave behind, and name, what task 17's rule
+ * says it leaves behind — and there must be ONE composition of that sentence, not
+ * a second one that drifts. `resolveRegionIndex` and the capture refusal both end
+ * "here are the crops, pick another region"; this is that shared tail.
+ */
+describe("chooseRegionHint", () => {
+  it("names the crops that exist and sends the operator back to them", () => {
+    const hint = chooseRegionHint([".design-match/x/r1.png", null, ".design-match/x/r3.png"]);
+    expect(hint).toContain("r1.png");
+    expect(hint).toContain("r3.png");
+    expect(hint).toContain("--region");
+    // A crop `cropFitsPage` skipped was never written; naming it would be the
+    // tool claiming evidence it does not have (task 17's own finding).
+    expect(hint).not.toContain("r2.png");
+  });
+
+  it("sends the operator to the inventory's selectors and dimensions when no crop survived", () => {
+    const hint = chooseRegionHint([null, null]);
+    expect(hint).not.toContain(".png");
+    expect(hint).toMatch(/inventu/i);
+    expect(hint).toContain("--region");
+  });
+
+  // The tail resolveRegionIndex prints must BE this function's output, not a
+  // paraphrase of it — that is the whole reason it was extracted.
+  it("is the same sentence an out-of-range --region already prints", () => {
+    const crops = [".design-match/x/r1.png"];
+    const message = (() => {
+      try {
+        resolveRegionIndex(9, 3, crops);
+        return "";
+      } catch (error) {
+        return error.message;
+      }
+    })();
+    expect(message).toContain(chooseRegionHint(crops));
   });
 });

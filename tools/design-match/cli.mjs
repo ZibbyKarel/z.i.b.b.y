@@ -170,19 +170,35 @@ function artifactHint(files) {
 }
 
 /**
+ * The "now pick a different one" tail of every `measure` refusal that leaves the
+ * operator standing in front of the inventory. `crops` is `cropRegions`' return
+ * value — one entry per candidate, the written path or `null` — so it names the
+ * previews by fact rather than by arithmetic, and says so honestly when
+ * `cropFitsPage` skipped every one.
+ *
+ * D9 (task 19) gave it a second caller and so a reason to exist as a function:
+ * the capture refusal ends in exactly this situation, and a second, separately
+ * worded copy of it is precisely the drift this branch keeps finding. The one
+ * that matters is the empty branch — on `ZIBBY Redesign Canvas` under a
+ * description that hits nothing, no crop survives, and a message that named
+ * `r1..r5.png` there would be pointing at an empty directory.
+ */
+export function chooseRegionHint(crops = []) {
+  const written = crops.filter((crop) => crop !== null && crop !== undefined);
+  return written.length > 0
+    ? artifactHint(written) + " Vyber podle nich a spusť measure znovu s --region <n>."
+    : " Žádný náhled se z tohoto běhu nezachoval, takže vybírej podle selectorů a rozměrů v inventuře výše a spusť measure znovu s --region <n>.";
+}
+
+/**
  * 1-based `--region` → 0-based index, validated against the actual candidate
- * count. `crops` is `cropRegions`' return value — one entry per candidate, the
- * written path or `null` — so this names the previews by fact rather than by
- * arithmetic, and the crop limit stops being duplicated here (M2).
+ * count. The crop limit stops being duplicated here (M2).
  */
 export function resolveRegionIndex(region, candidateCount, crops = []) {
   if (!(region >= 1 && region <= candidateCount)) {
-    const written = crops.filter((crop) => crop !== null && crop !== undefined);
     throw new Error(
       `design-match: region ${region} neexistuje — platný rozsah je 1–${candidateCount}.` +
-        (written.length > 0
-          ? artifactHint(written) + " Vyber podle nich a spusť measure znovu s --region <n>."
-          : " Žádný náhled se z tohoto běhu nezachoval, takže vybírej podle selectorů a rozměrů v inventuře výše a spusť measure znovu s --region <n>."),
+        chooseRegionHint(crops),
     );
   }
   return region - 1;
@@ -702,8 +718,12 @@ export function planMeasureMounts(localHtmlPath, cacheDir) {
  * Moved to shoot.mjs (D7, task 17), beside `gotoSettled` — the function that
  * does the navigating owns the translation of its failure. Re-exported here
  * because this module is the CLI's published surface.
+ *
+ * `translateCaptureError` (D9, task 19) is the same rule applied to the other
+ * Playwright call this tool makes: the function that does the capturing owns the
+ * translation of its failure, and it lives beside `shootElement`.
  */
-export { translateNavigationError } from "./shoot.mjs";
+export { translateCaptureError, translateNavigationError } from "./shoot.mjs";
 
 async function runMeasure(cmd) {
   const dir = path.join(ARTIFACT_ROOT, cmd.slug);
@@ -737,7 +757,17 @@ async function runMeasure(cmd) {
       // design.png is written here and nowhere else — `compare` reads it every
       // round. Through the same `shootElement` the implementation goes through,
       // so neither side can be captured under settings the other wasn't (I4).
-      await shootElement(page.locator(chosen.selector).first(), path.join(dir, "design.png"));
+      //
+      // D9 (task 19): the context is what turns Chromium's capture refusal into
+      // one clean line instead of a raw Playwright stack. The remedy is the SAME
+      // sentence an out-of-range `--region` prints, because the operator is in
+      // the same position — standing in front of the inventory that was printed
+      // four lines ago, needing to pick a different row.
+      await shootElement(page.locator(chosen.selector).first(), path.join(dir, "design.png"), [], {
+        selector: chosen.selector,
+        box: chosen.box,
+        remedy: chooseRegionHint(crops),
+      });
       const raw = await extractRaw(page, chosen.selector);
       // Before anything is written: a region with neither structure nor
       // content is a failed measurement, not a result.

@@ -443,7 +443,64 @@ export async function shootScene(page, scene, outPath) {
   await target.waitFor({ state: "visible" });
   const targetBox = await target.boundingBox();
   const mask = await resolveMaskLocators(page, scene.masks, targetBox);
-  return shootElement(target, outPath, mask);
+  return shootElement(target, outPath, mask, {
+    selector: scene.selector,
+    // `boundingBox()` speaks width/height; the inventory and `translateCaptureError`
+    // speak w/h. Converted here rather than teaching the message two shapes.
+    box: targetBox
+      ? { x: targetBox.x, y: targetBox.y, w: targetBox.width, h: targetBox.height }
+      : undefined,
+    // The compare side has no region picker to fall back on — the scene's root is
+    // whatever `--selector` (or the `--story` default) named, so that is the one
+    // thing the operator can change.
+    remedy: " Zvol přes --selector menší prvek scény.",
+  });
+}
+
+/**
+ * Chromium refuses to photograph an area past its own capture limit and rejects
+ * with `Protocol error (Page.captureScreenshot): Unable to capture screenshot`.
+ * That message does not start with `design-match:`, so `isDeliberateError`
+ * (cli.mjs) called it a crash and `logFailure` printed the whole Playwright stack
+ * — the THIRD time on this branch a throw escaped that check by being prefixed by
+ * Playwright (`extract.mjs`'s in-page throw and `cli.mjs`'s emptiness guard record
+ * the previous two), and the first to land on the invocation SKILL.md documents as
+ * the default. D9, task 19.
+ *
+ * Translated on the NODE side, where the rejection is already an ordinary
+ * `Promise` rejection — no prefix to escape. Same shape as
+ * `translateNavigationError` above, and the same discipline: ONLY the one
+ * recognisable refusal is translated. A detached element, a closed page, a crashed
+ * browser or a timeout is a real fault whose stack is the diagnostic, and passing
+ * it through untouched is what keeps this from becoming a swallow-everything
+ * catch.
+ *
+ * Deliberately NOT a predictive guard, and specifically not `cropFitsPage`'s
+ * (inventory.mjs). That predicate answers "does this box lie on the full-page
+ * screenshot", which is the right question for a `clip`-based thumbnail and the
+ * WRONG one here: `ZIBBY Redesign Canvas`'s winning region under `"karta"` is
+ * 4256×1103 at (0,1173) — off the page image by that definition, refused a crop —
+ * and `locator.screenshot` photographs it in full, producing the 8512×2206
+ * `design.png` the published corpus table is measured from. Refusing it would be a
+ * confident claim the tool cannot back, which is the one thing this branch forbids.
+ * What actually decides is Chromium's capture limit, and the browser is the only
+ * thing that knows where it is — so the tool asks it rather than guessing.
+ *
+ * `remedy` is the caller's, not this function's: `measure` has an inventory and
+ * `--region`, `compare` has `--selector`, and inventing one sentence for both
+ * would send half of its readers somewhere that does not exist.
+ */
+const UNCAPTURABLE_MESSAGE = "Unable to capture screenshot";
+
+export function translateCaptureError(error, { selector, box, remedy = "" } = {}) {
+  if (!(error instanceof Error) || !error.message.includes(UNCAPTURABLE_MESSAGE)) return error;
+  const size = box
+    ? ` o rozměrech ${Math.round(box.w)}×${Math.round(box.h)} px na pozici (${Math.round(box.x)},${Math.round(box.y)})`
+    : "";
+  return new Error(
+    `design-match: region "${selector}" se nepodařilo vyfotit — prohlížeč odmítl snímek plochy${size}. ` +
+      `Tak velký výřez je nad limitem snímkování v prohlížeči; není to chyba mockupu a menší výřez projde.${remedy}`,
+  );
 }
 
 /**
@@ -463,7 +520,15 @@ export async function shootScene(page, scene, outPath) {
  * regardless, so those two mockups stay non-deterministic between runs (a
  * measured ~0.01 % on `ZIBBY Loading Screen`). This option makes both sides
  * frozen the SAME way; it does not make either side reproducible.
+ *
+ * Being the one capture site is also why the D9 translation lives here: both
+ * sides get it from one `try`, and `path` is written by Playwright only on
+ * success, so a refused capture leaves no half-written png to name.
  */
-export function shootElement(locator, outPath, mask = []) {
-  return locator.screenshot({ path: outPath, mask, animations: "disabled" });
+export async function shootElement(locator, outPath, mask = [], context = {}) {
+  try {
+    return await locator.screenshot({ path: outPath, mask, animations: "disabled" });
+  } catch (error) {
+    throw translateCaptureError(error, context);
+  }
 }

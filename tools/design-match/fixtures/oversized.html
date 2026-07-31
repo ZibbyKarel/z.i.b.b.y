@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <title>oversized region</title>
+    <style>
+      body {
+        margin: 0;
+        background: #101418;
+      }
+      /*
+       * `ZIBBY Redesign Canvas.html` under a description that hits nothing, in
+       * miniature. Same pan/zoom shape as `offpage.html` — a transformed,
+       * clipped child the document never grows to contain — but with the box the
+       * real mockup reports for its outermost canvas layer: 16256×18608 at
+       * (-6000,-6000). Both fixtures are off the page image; only this one is
+       * also too large for Chromium to photograph, which is exactly the
+       * distinction task 19 had to draw. `offpage.html` measures fine at region
+       * 1; this one cannot be captured at all.
+       *
+       * The two smaller regions below are not decoration: they are what makes
+       * "choose a different --region" a true remedy on this fixture, and they get
+       * real `rN.png` crops, so the refusal has evidence to name.
+       */
+      .viewport {
+        position: relative;
+        width: 1000px;
+        height: 200px;
+        overflow: hidden;
+      }
+      .huge {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 16256px;
+        height: 18608px;
+        background: #ff00ff;
+        transform: translate(-6000px, -6000px);
+      }
+      .small {
+        width: 300px;
+        height: 120px;
+        background: #00ff00;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="viewport"><div class="huge">karta</div></div>
+    <div class="small">karta</div>
+  </body>
+</html>

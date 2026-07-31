@@ -182,6 +182,91 @@ describe("measure, end to end through the CLI", () => {
   });
 
   /*
+   * D9 (task 19), reproduced from the crash task 18 had to document as
+   * true-today: `measure "ZIBBY Redesign Canvas.html" "qqzz"` chose a
+   * 16256×18608 region, `locator.screenshot` rejected with a Playwright
+   * `Protocol error (Page.captureScreenshot)`, and because that message does not
+   * start with `design-match:` the operator got the whole stack at exit 3 — from
+   * the invocation SKILL.md documents as the default.
+   *
+   * The fixture is that region's box exactly. Two things make this test the
+   * mutation control rather than the unit test above: it goes through the real
+   * `locator.screenshot`, so it fails if the translation is not wired into the
+   * path `runMeasure` actually walks; and it asserts the absence of a stack,
+   * which is the whole defect.
+   */
+  it("refuses a region the browser cannot photograph with one design-match: line, no stack", async () => {
+    const dir = await makeWorkspace({
+      "oversized.html": await fs.readFile(path.join(FIXTURES, "oversized.html"), "utf8"),
+    });
+
+    const failure = await measure(dir, "oversized.html", "huge").catch((error) => error);
+
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure.code).toBe(3);
+    expect(failure.stderr).toContain("design-match:");
+    // The defect itself: a Playwright-prefixed message defeats isDeliberateError
+    // and logFailure prints the stack.
+    expect(failure.stderr).not.toContain("at ");
+    expect(failure.stderr).not.toContain("Protocol error");
+    // Named by fact: the region, and the box the operator saw in the inventory
+    // two lines earlier.
+    expect(failure.stderr).toContain("div.huge");
+    expect(failure.stderr).toContain("16256×18608");
+    // Task 17's artifact rule, applied here rather than as a third variant: the
+    // crops that were taken survive and are named; nothing that asserts a
+    // conclusion is written.
+    const artifactDir = path.join(dir, ".design-match", "huge");
+    const onDisk = await fs.readdir(artifactDir);
+    for (const name of onDisk.filter((file) => /^r\d+\.png$/.test(file))) {
+      expect(failure.stderr).toContain(name);
+    }
+    expect(onDisk).not.toContain("spec.json");
+    // `locator.screenshot` writes its file only on success, so naming design.png
+    // here would be naming a file that does not exist.
+    expect(onDisk).not.toContain("design.png");
+    expect(failure.stderr).not.toContain("design.png");
+  });
+
+  /*
+   * The other half of D9's first decision, and the reason the guard is NOT
+   * `cropFitsPage`: this region is off the page image by exactly the definition
+   * `cropFitsPage` uses — it gets no crop, and the inventory says so — and the
+   * browser photographs it perfectly well. A predictive guard built on
+   * `cropFitsPage` would refuse it, which is a claim the tool cannot back.
+   */
+  it("still measures a region that is off the page image but capturable", async () => {
+    const dir = await makeWorkspace({
+      "offpage.html": await fs.readFile(path.join(FIXTURES, "offpage.html"), "utf8"),
+    });
+
+    const result = await run(
+      "node",
+      [
+        CLI,
+        "measure",
+        "offpage.html",
+        "karta",
+        "--slug",
+        "offpage",
+        "--theme",
+        "theme.css",
+        "--region",
+        "2",
+      ],
+      { cwd: dir },
+    );
+
+    // Region 2 is the off-page one, and the inventory says it has no preview —
+    // `cropFitsPage` refused it a thumbnail. It measures anyway.
+    expect(result.stdout).toContain("bez náhledu");
+    const artifactDir = path.join(dir, ".design-match", "offpage");
+    const spec = JSON.parse(await fs.readFile(path.join(artifactDir, "spec.json"), "utf8"));
+    expect(spec.selector).toBe("div.off-page");
+    await expect(fs.readFile(path.join(artifactDir, "design.png"))).resolves.toBeInstanceOf(Buffer);
+  });
+
+  /*
    * Fix round 1, I4. `shootScene` shoots the implementation with
    * `animations: "disabled"`; `design.png` was shot without it, so the two sides
    * of every comparison were captured under different settings and the tool

@@ -38,7 +38,14 @@
     </style>
   </head>
   <body>
-    <div class="viewport"><div class="off-page"></div></div>
+    <!--
+      The text is inline rather than in a child element on purpose: it is below
+      MIN_SIDE so it adds no candidate, the ranking is unchanged, and `.off-page`
+      becomes a region the emptiness guard accepts. That makes this fixture prove
+      the other half of task 19's D9 decision — a region off the page image is
+      still capturable, so `cropFitsPage` is not the capturability predicate.
+    -->
+    <div class="viewport"><div class="off-page">karta</div></div>
     <div class="on-page"></div>
   </body>
 </html>
