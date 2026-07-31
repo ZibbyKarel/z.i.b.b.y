@@ -13,7 +13,7 @@ import { decideNext, describeOutcome, evaluateRound, selectExitCode } from "./lo
 import { childPath, normalizeSkeleton, rootPath } from "./normalize.mjs";
 import { diffPngs, pngSize } from "./pixels.mjs";
 import { fontPreflight, sizePreflight } from "./preflight.mjs";
-import { writeArtifacts } from "./report.mjs";
+import { artifactWriteFailure, writeArtifacts } from "./report.mjs";
 import {
   assertServableRoot,
   gotoSettled,
@@ -1001,9 +1001,13 @@ function logFailure(error) {
  * operator's screen.
  */
 const STALE_REPORT_MARKER = "> **NEPLATNÉ:**";
+const INCOMPLETE_REPORT_MARKER = "> **NEÚPLNÉ:**";
+const ANY_REPORT_MARKER = [STALE_REPORT_MARKER, INCOMPLETE_REPORT_MARKER];
+
+const alreadyMarked = (report) => ANY_REPORT_MARKER.some((marker) => report.startsWith(marker));
 
 export function markStaleReportText(report) {
-  if (report.startsWith(STALE_REPORT_MARKER)) return null;
+  if (alreadyMarked(report)) return null;
   return (
     `${STALE_REPORT_MARKER} tenhle report popisuje starší kolo. Následující \`compare\` skončil chybou ` +
     `(hláška je ve výstupu terminálu, ne tady), takže verdikt níž na aktuální stav neodpovídá — ` +
@@ -1011,10 +1015,52 @@ export function markStaleReportText(report) {
   );
 }
 
-async function markStaleReport(dir) {
+/**
+ * I2. The other half of the same rule: the report below IS this round's, so
+ * retracting it would be the false claim. What failed is the set of files beside
+ * it, and that is what this says — verdict stands, artifacts incomplete, here is
+ * exactly which ones. Without it the exit code (3) and the headline (`HOTOVO`)
+ * simply contradict each other with nothing on the page to explain why.
+ */
+export function markIncompleteReportText(report, missing) {
+  if (alreadyMarked(report)) return null;
+  const named = missing.length > 0 ? ` Chybí nebo jsou zastaralé: ${missing.join(", ")}.` : "";
+  return (
+    `${INCOMPLETE_REPORT_MARKER} verdikt níž platí — popisuje kolo, které právě proběhlo. ` +
+    `Běh ale skončil chybou při zápisu artefaktů (hláška je ve výstupu terminálu, ne tady), ` +
+    `takže sada souborů vedle není úplná.${named} ` +
+    `Než se na ně spolehneš, oprav příčinu a spusť \`compare\` znovu.\n\n${report}`
+  );
+}
+
+/**
+ * Which of the two sentences a failed `compare` earns is decided by the ERROR,
+ * not by where in `runCompare` we think we were — the ordering would otherwise
+ * be knowledge that has to be kept true in two places at once, and I2 is exactly
+ * what happens when two places each hold a reasonable half of it.
+ *
+ * `report.md` among the write failures looks like a partial write and is not:
+ * that file on disk was never replaced, so it does describe an older round and
+ * the retraction is right after all.
+ *
+ * Pure and exported so both branches are testable without a filesystem that has
+ * to be persuaded to fail in a particular way.
+ */
+export function annotateReportText(report, error) {
+  const partial = artifactWriteFailure(error);
+  if (partial === null || partial.writeFailures.includes("report.md")) {
+    return markStaleReportText(report);
+  }
+  return markIncompleteReportText(report, [
+    ...partial.writeFailures,
+    ...partial.failedRounds.map((round) => `round-${round}-diff.png`),
+  ]);
+}
+
+async function annotateFailedReport(dir, error) {
   const reportPath = path.join(dir, "report.md");
   try {
-    const marked = markStaleReportText(await fs.readFile(reportPath, "utf8"));
+    const marked = annotateReportText(await fs.readFile(reportPath, "utf8"), error);
     if (marked !== null) await fs.writeFile(reportPath, marked, "utf8");
   } catch {
     // No previous report, or it cannot be rewritten. Nothing to retract, and
@@ -1038,7 +1084,8 @@ async function main(argv) {
     logFailure(error);
     // Only `compare` produces a verdict, so only `compare` can invalidate one.
     // A failed `measure` says nothing about whether an earlier comparison held.
-    if (cmd.command === "compare") await markStaleReport(path.join(ARTIFACT_ROOT, cmd.slug));
+    if (cmd.command === "compare")
+      await annotateFailedReport(path.join(ARTIFACT_ROOT, cmd.slug), error);
     process.exitCode = selectExitCode({ status: "error" });
   }
 }

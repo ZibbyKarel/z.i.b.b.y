@@ -482,6 +482,49 @@ describe("compare, end to end through the CLI", () => {
   });
 
   /*
+   * I2 (task 20). Two tasks that were each right alone. `writeArtifacts` (fix
+   * round 2) writes everything it can and THEN throws, so one bad file cannot
+   * cut the record short. `markStaleReport` (task 16, M3) assumes any failing
+   * `compare` means the report.md on disk predates the invocation. Together they
+   * retracted the freshly written report of the round that had just run, with a
+   * sentence saying it describes an older one — a claim the tool cannot back.
+   */
+  it("does not retract the round it just ran when only a sibling artifact failed to write", async () => {
+    const dir = await makeWorkspace({ "design.html": page(CARD), "impl.html": page(CARD) });
+    await measure(dir, "design.html", "s");
+    const server = await startCountingServer(dir);
+
+    // A directory where skeleton.md belongs: writeFile fails with EISDIR for
+    // that one entry while every sibling — report.md included — lands normally.
+    // This is the review's own reproduction, and the only shape of failure that
+    // reaches the seam.
+    await fs.mkdir(path.join(dir, ".design-match", "s", "skeleton.md"), { recursive: true });
+
+    const failure = await compare(dir, [
+      "--slug",
+      "s",
+      "--route",
+      "/impl.html",
+      "--app-base",
+      server.origin,
+      "--selector",
+      "#root",
+    ]);
+
+    expect(failure.code).toBe(3);
+    expect(failure.stderr).toContain("skeleton.md");
+
+    const report = await fs.readFile(path.join(dir, ".design-match", "s", "report.md"), "utf8");
+    // The verdict below the marker is this round's own, and it stands.
+    expect(report).toContain("**Výsledek:**");
+    expect(report).not.toContain("NEPLATNÉ");
+    // What IS true gets its own sentence, naming what is missing — otherwise the
+    // exit code and the headline simply disagree with nothing to explain them.
+    expect(report).toContain("NEÚPLNÉ");
+    expect(report).toContain("skeleton.md");
+  });
+
+  /*
    * D10 (task 19). The skeleton gate CANNOT catch this: `relativeTo` returns
    * `{w:1,h:1,x:0,y:0}` for the root by construction, so the root's absolute size
    * is never compared and two structurally identical trees of different size pass

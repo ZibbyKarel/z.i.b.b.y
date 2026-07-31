@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  annotateReportText,
   assertRegionRendered,
   assertSpecMeasured,
   buildCompareOutcome,
@@ -25,6 +26,7 @@ import {
   selectExitCode,
   stripImages,
 } from "./cli.mjs";
+import { writeArtifacts } from "./report.mjs";
 import { parseThemeTokens } from "./tokens.mjs";
 import { DESIGN_MATCH_VERSION } from "./version.mjs";
 
@@ -1317,5 +1319,80 @@ describe("chooseRegionHint", () => {
       }
     })();
     expect(message).toContain(chooseRegionHint(crops));
+  });
+});
+
+/**
+ * I2. The end-to-end control is in `compare.browser.test.mjs` — this is the
+ * branch that control cannot reach: if `report.md` itself is unwritable, the
+ * marker cannot be written to it either, so the choice is only observable here.
+ * The errors are produced by a real `writeArtifacts` against a real directory,
+ * because the fact the choice reads is attached by that function and by nothing
+ * else — a hand-built error would test a shape rather than the contract.
+ */
+describe("annotateReportText", () => {
+  let dir;
+
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "design-match-annotate-"));
+  });
+
+  afterEach(async () => {
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  const payload = {
+    slug: "s",
+    skeletonFindings: [],
+    values: [],
+    tokenMappings: [],
+    componentDecisions: [],
+    masks: [],
+    verdict: { stop: true, status: "done", reason: "shoda" },
+    rounds: [{ percent: 0, skeletonPass: true, reason: "kolo 1" }],
+  };
+
+  // A directory where a file belongs: EISDIR for that one entry, every sibling
+  // writes normally. Same technique report.test.mjs uses.
+  const failWriting = async (name) => {
+    await fs.mkdir(path.join(dir, name), { recursive: true });
+    return writeArtifacts(dir, payload).then(
+      () => {
+        throw new Error(`writeArtifacts unexpectedly succeeded with ${name} unwritable`);
+      },
+      (error) => error,
+    );
+  };
+
+  const REPORT = "# design-match — s\n**Výsledek:** HOTOVO — diff 0 %\n";
+
+  it("keeps the round's own verdict standing when a sibling artifact failed to write", async () => {
+    const marked = annotateReportText(REPORT, await failWriting("skeleton.md"));
+    expect(marked).toContain("NEÚPLNÉ");
+    expect(marked).not.toContain("NEPLATNÉ");
+    expect(marked).toContain("skeleton.md");
+    expect(marked).toContain("**Výsledek:**");
+  });
+
+  it("retracts after all when report.md itself is the file that could not be written", async () => {
+    const marked = annotateReportText(REPORT, await failWriting("report.md"));
+    // The file on disk was never replaced, so it really does describe an older
+    // round — the one case where the retraction is the true sentence.
+    expect(marked).toContain("NEPLATNÉ");
+    expect(marked).not.toContain("NEÚPLNÉ");
+  });
+
+  it("retracts for any failure that never reached the artifact write", () => {
+    const marked = annotateReportText(REPORT, new Error("design-match: region nic neobsahuje"));
+    expect(marked).toContain("NEPLATNÉ");
+  });
+
+  it("does not stack a second marker of either kind onto an already-marked report", async () => {
+    const partial = await failWriting("skeleton.md");
+    const once = annotateReportText(REPORT, partial);
+    expect(annotateReportText(once, partial)).toBeNull();
+    // Across kinds too: a partial write followed by an outright failure must not
+    // bury the first caveat under a second one.
+    expect(annotateReportText(once, new Error("design-match: cokoliv"))).toBeNull();
   });
 });

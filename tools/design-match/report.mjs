@@ -386,6 +386,36 @@ export async function writeArtifacts(dir, payload) {
     if (writeFailures.length > 0) {
       parts.push(`zápis selhal pro: ${writeFailures.join(", ")}`);
     }
-    throw new DesignMatchError(`design-match: ${parts.join("; ")}`);
+    throw incomplete(new DesignMatchError(`design-match: ${parts.join("; ")}`), {
+      writeFailures,
+      failedRounds,
+    });
   }
+}
+
+/**
+ * I2 (task 20). `writeArtifacts` throwing does NOT mean nothing was written —
+ * that is the whole point of the `allSettled` above. The caller has to be able
+ * to tell "the round never got as far as its artifacts" from "the round ran and
+ * some of its artifacts are missing", because the two deserve opposite sentences
+ * on the report the operator reads first.
+ *
+ * Carried on the error rather than returned, because the throw is the only thing
+ * that crosses the boundary. A Symbol, and non-enumerable, so it never shows up
+ * in the inspected output of a crash that happens to ride past it.
+ */
+const ARTIFACT_WRITE = Symbol("design-match.artifactWrite");
+
+const incomplete = (error, detail) =>
+  Object.defineProperty(error, ARTIFACT_WRITE, { value: detail, configurable: true });
+
+/**
+ * `null` when the failure was raised before `writeArtifacts` reached the disk —
+ * which is also what a caller sees for every failure that never went through
+ * this module at all. Otherwise the two lists, which together name every file
+ * the round should have produced and did not.
+ */
+export function artifactWriteFailure(error) {
+  if (!(error instanceof Error)) return null;
+  return error[ARTIFACT_WRITE] ?? null;
 }

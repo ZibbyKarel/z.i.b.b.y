@@ -271,6 +271,23 @@ oprav příčinu a spusť `compare` znovu.
 Only `compare` does this: a failed `measure` says nothing about whether an
 earlier comparison held.
 
+There is one failure where that retraction would itself be untrue. If the round
+ran to completion and only the **artifact write** failed part-way — a full disk,
+a permission, an `EISDIR` — then the `report.md` on disk is this round's own,
+freshly rendered, and its verdict stands. It gets the other marker instead,
+naming what is missing beside it:
+
+```
+> **NEÚPLNÉ:** verdikt níž platí — popisuje kolo, které právě proběhlo. Běh ale skončil
+chybou při zápisu artefaktů (hláška je ve výstupu terminálu, ne tady), takže sada souborů
+vedle není úplná. Chybí nebo jsou zastaralé: skeleton.md. Než se na ně spolehneš, oprav
+příčinu a spusť `compare` znovu.
+```
+
+If `report.md` itself is one of the files that could not be written, the file on
+disk was never replaced — so it does describe an older round, and it gets
+`NEPLATNÉ` after all.
+
 ### A spec that measured nothing is a failure, not a result
 
 `measure` refuses to write a spec whose chosen region is an **empty
