@@ -12,7 +12,7 @@
         background: #0b0e13;
         color: #c9d4e8;
       }
-      .panel {
+      .surface-card {
         width: 400px;
         padding: 24px;
         background: #11151d;
@@ -23,16 +23,16 @@
         flex-direction: column;
         gap: 12px;
       }
-      .row {
+      .field-row {
         display: flex;
         flex-direction: column;
         gap: 8px;
       }
-      .row > label {
+      .field-row > label {
         width: 100%;
         font-size: 14px;
       }
-      .row > input {
+      .field-row > input {
         height: 32px;
         background: #0b0e13;
         border: 1px solid #26303f;
@@ -40,12 +40,12 @@
     </style>
   </head>
   <body>
-    <div class="panel" data-region="card" data-role="card">
+    <div class="surface-card" data-region="card">
       <form class="fields">
-        <div class="row"><label>Jméno</label><input type="text" /></div>
-        <div class="row"><label>E-mail</label><input type="email" /></div>
-        <div class="row"><label>Firma</label><input type="text" /></div>
-        <div class="row"><label>Role</label><input type="text" /></div>
+        <div class="field-row"><label>Jméno</label><input type="text" /></div>
+        <div class="field-row"><label>E-mail</label><input type="email" /></div>
+        <div class="field-row"><label>Firma</label><input type="text" /></div>
+        <div class="field-row"><label>Role</label><input type="text" /></div>
       </form>
     </div>
   </body>

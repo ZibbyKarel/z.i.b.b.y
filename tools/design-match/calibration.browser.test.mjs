@@ -13,6 +13,12 @@ const fixture = (name) => pathToFileURL(path.join(dir, "fixtures", name)).href;
 // withPage launches and closes a fresh Chromium per call. Each fixture is only ever
 // measured once per layer — memoised by name — so three tests share five browser
 // launches instead of paying for one per skeletonOf/shotOf call site.
+//
+// The cache stores the in-flight promise, including a rejection: a Chromium launch
+// failure in one test replays into every later test that shares the same fixture
+// name, presenting one flake as several correlated failures. Accepted here — inputs
+// are deterministic local fixtures, so a retry would not help — but worth knowing if
+// two "unrelated" tests ever fail together.
 const skeletonCache = new Map();
 const shotCache = new Map();
 
@@ -56,10 +62,14 @@ describe("calibration", () => {
     const verdict = diffPngs(await shotOf("basic.html"), await shotOf("calibration-good.html"));
     // Certifies the loop's own done-threshold (DONE_PERCENT) is reachable...
     expect(verdict.percent).toBeLessThan(0.5);
-    // ...but the two fixtures differ only in class/data-role names and render
-    // identically, so the honest bound is exact zero — 0.49% drift would pass
-    // the line above and still be invisible to this calibration.
+    // ...but the two fixtures differ only in class names and render identically, so
+    // the honest bound is exact zero — 0.49% drift would pass the line above and
+    // still be invisible to this calibration. `percent` alone isn't proof of that:
+    // pixels.mjs rounds it to two decimals, so up to nine differing pixels at this
+    // resolution would still read as 0. `largestRegion` is the unrounded oracle —
+    // diffPngs only sets it to {0,0} when the differing-pixel count is truly zero.
     expect(verdict.percent).toBe(0);
+    expect(verdict.largestRegion).toEqual({ w: 0, h: 0 });
   });
 
   it("REJECTS a grid form rebuilt as a stacked flex column", async () => {
@@ -77,7 +87,7 @@ describe("calibration", () => {
       (f) => f.kind === "layout-mode" && f.path === "card/form[0]",
     );
     expect(formFinding).toBeDefined();
-    expect(formFinding?.message).toContain("grid");
-    expect(formFinding?.message).toContain("flex-column");
+    expect(formFinding.message).toContain("grid");
+    expect(formFinding.message).toContain("flex-column");
   });
 });
