@@ -82,7 +82,20 @@ export async function collectRegions(page) {
           tag,
           classes: [...el.classList],
           text: (el.textContent ?? "").trim().slice(0, 120),
-          box: { x: rect.x, y: rect.y, w: rect.width, h: rect.height },
+          // Document coordinates, not viewport coordinates. `cropRegions`
+          // screenshots with `fullPage: true`, whose `clip` is resolved
+          // against the full document — so the two must be the same space or
+          // every crop below the fold would be off by the scroll offset. The
+          // page is never scrolled at collection time, so these terms are
+          // currently zero; they are written down anyway so the coordinate
+          // space is a stated property of this box rather than an accident of
+          // when it happens to be measured.
+          box: {
+            x: rect.x + window.scrollX,
+            y: rect.y + window.scrollY,
+            w: rect.width,
+            h: rect.height,
+          },
         });
       }
       return out;
@@ -106,6 +119,13 @@ export async function cropRegions(page, regions, outDir, limit = 5) {
     const file = path.join(outDir, `r${index + 1}.png`);
     await page.screenshot({
       path: file,
+      // Without `fullPage`, `clip` is resolved against the 900px-tall viewport,
+      // so any candidate whose box starts below the fold threw a raw
+      // Playwright "Clipped area is either empty or outside the resulting
+      // image" — which killed every long-document mockup. With it, `clip` is
+      // resolved against the full document, the same space `collectRegions`
+      // reports boxes in.
+      fullPage: true,
       clip: { x: region.box.x, y: region.box.y, width: region.box.w, height: region.box.h },
     });
     written.push(file);

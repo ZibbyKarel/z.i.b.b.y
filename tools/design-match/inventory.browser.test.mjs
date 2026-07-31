@@ -15,6 +15,10 @@ const repeatedFixture = pathToFileURL(
   path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "repeated.html"),
 ).href;
 
+const tallFixture = pathToFileURL(
+  path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "tall.html"),
+).href;
+
 let tmpDirs = [];
 
 afterEach(async () => {
@@ -149,6 +153,42 @@ describe("cropRegions", () => {
     });
 
     expect((await fs.readdir(outDir)).sort()).toEqual(["notes.txt", "r1.png"]);
+  });
+
+  // D3 (task 15): `page.screenshot({ clip })` without `fullPage: true` resolves
+  // the clip against the viewport, so a candidate whose box starts below 900px
+  // threw a raw Playwright stack — killing both long-document mockups outright.
+  it("crops a candidate that sits entirely below the fold", async () => {
+    const outDir = await makeTmpDir();
+    const { written, region } = await withPage(async (page) => {
+      await page.goto(tallFixture);
+      const regions = await collectRegions(page);
+      const region = regions.find((r) => r.classes.includes("below-fold"));
+      const written = await cropRegions(page, [region], outDir);
+      return { written, region };
+    });
+
+    expect(region.box.y).toBeGreaterThan(900);
+    const png = PNG.sync.read(await fs.readFile(written[0]));
+    expect(png.width).toBe(Math.round(region.box.w * DEVICE_SCALE_FACTOR));
+    expect(png.height).toBe(Math.round(region.box.h * DEVICE_SCALE_FACTOR));
+  });
+
+  // The crash was the cheap half. The expensive half is cropping the WRONG
+  // rectangle: a preview that lies is worse than a preview that fails. The
+  // fixture's below-fold box is flat #ff00ff and nothing else on the page is,
+  // so one pixel out of the middle settles which rectangle was taken.
+  it("crops the rectangle the region actually names, not the same-sized one at the top of the page", async () => {
+    const outDir = await makeTmpDir();
+    const written = await withPage(async (page) => {
+      await page.goto(tallFixture);
+      const regions = await collectRegions(page);
+      return cropRegions(page, [regions.find((r) => r.classes.includes("below-fold"))], outDir);
+    });
+
+    const png = PNG.sync.read(await fs.readFile(written[0]));
+    const middle = (png.height / 2) * (png.width * 4) + (png.width / 2) * 4;
+    expect([png.data[middle], png.data[middle + 1], png.data[middle + 2]]).toEqual([255, 0, 255]);
   });
 
   it("pairs each PNG with its own region — dimensions match box × DEVICE_SCALE_FACTOR", async () => {

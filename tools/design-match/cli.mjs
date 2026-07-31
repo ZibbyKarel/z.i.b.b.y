@@ -13,7 +13,13 @@ import { childPath, normalizeSkeleton, rootPath } from "./normalize.mjs";
 import { diffPngs } from "./pixels.mjs";
 import { fontPreflight } from "./preflight.mjs";
 import { writeArtifacts } from "./report.mjs";
-import { resolveScene, shootScene } from "./shoot.mjs";
+import {
+  commonAncestorDir,
+  resolveScene,
+  shootScene,
+  staticUrl,
+  withStaticServer,
+} from "./shoot.mjs";
 import { TOKEN_PROPS, mapValue, parseThemeTokens, proposeTokenName } from "./tokens.mjs";
 import { DESIGN_MATCH_VERSION } from "./version.mjs";
 
@@ -332,6 +338,63 @@ export function describeOutcome(verdict) {
 }
 
 /**
+ * Elements that ARE content rather than containers for it. A `<canvas>` with
+ * no children and no text is a complete, legitimate measurement — task 15's
+ * `--region 2` on ZIBBY Orb.html measured exactly that — so the emptiness
+ * guard below must never refuse one.
+ */
+const SELF_CONTENT_TAGS = new Set([
+  "canvas",
+  "img",
+  "picture",
+  "svg",
+  "video",
+  "audio",
+  "iframe",
+  "object",
+  "embed",
+  "input",
+  "textarea",
+  "select",
+  "progress",
+  "meter",
+  "hr",
+]);
+
+/**
+ * The guard against the worst failure this branch has produced: a mockup that
+ * rendered nothing, measured as a confident one-node spec, written at exit 0,
+ * with every layer downstream then comparing against a description of nothing.
+ *
+ * The threshold is deliberately narrow — the measured region is refused only
+ * when it is an EMPTY CONTAINER: no visible children, no own text, and a tag
+ * that is not content in itself. The asymmetry decides where to put it. A
+ * false refusal costs one operator one confused minute and is trivially
+ * disproved by opening the crop; a false pass is silent and poisons the
+ * skeleton gate, the value layer, the token mapping and every later round. So
+ * the rule refuses everything that carries no structure AND no content —
+ * against which no comparison could mean anything anyway — and nothing else.
+ *
+ * Note what it deliberately does NOT do: it does not require a minimum node
+ * count, and it does not look at the region's size. A one-node spec is a
+ * legitimate result for a leaf `<canvas>`, an `<img>`, or a `<button>Uložit</button>`,
+ * and a full-viewport region is legitimate for a full-bleed mockup.
+ *
+ * Runs in Node on the value `extractRaw` returned — never inside
+ * `page.evaluate`, which would prefix the message and defeat `isDeliberateError`.
+ */
+export function assertRegionRendered(raw, selector) {
+  if (raw.children.length > 0) return;
+  if (raw.text.trim().length > 0) return;
+  if (SELF_CONTENT_TAGS.has(raw.tag)) return;
+  throw new Error(
+    `design-match: region "${selector}" nic neobsahuje — žádné potomky ani text, takže spec by popisoval prázdno. ` +
+      `Pravděpodobné příčiny: stránka se nevykreslila, skripty se nenačetly, nebo selector míří na prázdný kontejner. ` +
+      `Otevři mockup v prohlížeči a ověř, že se vykreslí, případně zvol jiný region přes --region <n>.`,
+  );
+}
+
+/**
  * Our own thrown errors are already one clean Czech sentence prefixed
  * `design-match:` (every module in this tool follows the same convention) —
  * logging just that line is the right amount of detail for an operator.
@@ -491,46 +554,58 @@ export function checkStrictWrappersMatch(spec, requestedStrictWrappers) {
 
 async function runMeasure(cmd) {
   const dir = path.join(ARTIFACT_ROOT, cmd.slug);
-  const { localHtmlPath } = await ensureCdnCache(
-    cmd.design,
-    path.join(ARTIFACT_ROOT, ".cdn-cache"),
+  const cacheDir = path.join(ARTIFACT_ROOT, ".cdn-cache");
+  const { localHtmlPath } = await ensureCdnCache(cmd.design, cacheDir);
+
+  // Over `file://` Chromium blocks the XHR Babel uses to load
+  // `<script type="text/babel" src="zibby/*.jsx">`, and cannot satisfy a
+  // `crossorigin` fetch either — so seven of the eleven real mockups rendered
+  // an empty `#root`. The bytes were never the problem; the scheme was.
+  // The server root is the common ancestor of the rewritten html and the cdn
+  // cache, because the rewritten html points at the cache through a relative
+  // path that climbs out of the mockup's own directory — see
+  // `commonAncestorDir`.
+  const serveRoot = commonAncestorDir([path.dirname(localHtmlPath), cacheDir]);
+
+  const spec = await withStaticServer(serveRoot, (origin) =>
+    withPage(async (page) => {
+      await page.goto(staticUrl(origin, serveRoot, localHtmlPath), { waitUntil: "networkidle" });
+      // `page.evaluate(() => document.fonts.ready)` doesn't throw, but a
+      // FontFaceSet isn't a plain object — Playwright silently coerces the
+      // returned value to `{}` crossing the protocol boundary, discarding the
+      // wait's actual effect. Awaiting inside the page and returning nothing
+      // gets the wait without the pointless (and misleading) serialization.
+      await page.evaluate(async () => {
+        await document.fonts.ready;
+      });
+      const ranked = rankCandidates(await collectRegions(page), cmd.description);
+      await fs.mkdir(dir, { recursive: true });
+      await cropRegions(page, ranked, dir);
+      console.log(formatInventory(ranked));
+
+      const regionIndex = resolveRegionIndex(cmd.region, ranked.length);
+      const chosen = ranked[regionIndex];
+      console.log(
+        `Vybrán region [${cmd.region}]: ${chosen.selector} — pokud je špatně, spusť znovu s --region <n>.`,
+      );
+
+      // design.png is written here and nowhere else — `compare` reads it every round.
+      await page
+        .locator(chosen.selector)
+        .first()
+        .screenshot({ path: path.join(dir, "design.png") });
+      const raw = await extractRaw(page, chosen.selector);
+      // Before anything is written: a region with neither structure nor
+      // content is a failed measurement, not a result.
+      assertRegionRendered(raw, chosen.selector);
+      return {
+        selector: chosen.selector,
+        // One extraction, one tree: the skeleton carries the values, so there is
+        // no separate `spec.values` to fall out of step with it.
+        skeleton: normalizeSkeleton(raw, { strictWrappers: cmd.strictWrappers }),
+      };
+    }),
   );
-
-  const spec = await withPage(async (page) => {
-    await page.goto(pathToFileURL(localHtmlPath).href, { waitUntil: "networkidle" });
-    // `page.evaluate(() => document.fonts.ready)` doesn't throw, but a
-    // FontFaceSet isn't a plain object — Playwright silently coerces the
-    // returned value to `{}` crossing the protocol boundary, discarding the
-    // wait's actual effect. Awaiting inside the page and returning nothing
-    // gets the wait without the pointless (and misleading) serialization.
-    await page.evaluate(async () => {
-      await document.fonts.ready;
-    });
-    const ranked = rankCandidates(await collectRegions(page), cmd.description);
-    await fs.mkdir(dir, { recursive: true });
-    await cropRegions(page, ranked, dir);
-    console.log(formatInventory(ranked));
-
-    const regionIndex = resolveRegionIndex(cmd.region, ranked.length);
-    const chosen = ranked[regionIndex];
-    console.log(
-      `Vybrán region [${cmd.region}]: ${chosen.selector} — pokud je špatně, spusť znovu s --region <n>.`,
-    );
-
-    // design.png is written here and nowhere else — `compare` reads it every round.
-    await page
-      .locator(chosen.selector)
-      .first()
-      .screenshot({ path: path.join(dir, "design.png") });
-    return {
-      selector: chosen.selector,
-      // One extraction, one tree: the skeleton carries the values, so there is
-      // no separate `spec.values` to fall out of step with it.
-      skeleton: normalizeSkeleton(await extractRaw(page, chosen.selector), {
-        strictWrappers: cmd.strictWrappers,
-      }),
-    };
-  });
 
   // Token mapping is commentary on the spec, not the point of `measure` — a
   // theme file that can't be read must not fail the run, only leave the

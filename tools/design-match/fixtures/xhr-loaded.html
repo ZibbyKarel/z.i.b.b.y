@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <!--
+      A miniature of what every real mockup in design/ does: components are
+      pulled in as `<script type="text/babel" src="zibby/*.jsx">`, which Babel
+      standalone fetches over a synchronous XHR. Chromium refuses that on
+      `file://` ("Access to XMLHttpRequest … blocked by CORS policy"), so the
+      page renders nothing — and nothing measured as a confident one-node spec
+      at exit 0. Served over `http://127.0.0.1`, the same bytes render.
+
+      The `crossorigin="anonymous"` on the script tag is the second half of the
+      same defect and is deliberately left in place: the real mockups carry it
+      on their React/Babel tags, and the question of whether the cache rewrite
+      must strip it is settled here rather than by argument.
+    -->
+    <script src="./xhr-loaded-dep.js" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      try {
+        const request = new XMLHttpRequest();
+        request.open("GET", "./xhr-loaded-partial.html", false);
+        request.send(null);
+        document.getElementById("root").innerHTML = request.responseText;
+      } catch {
+        // Left empty on purpose: this is the failure the tool used to measure
+        // as a valid result, so the page must still load rather than crash.
+      }
+    </script>
+  </body>
+</html>

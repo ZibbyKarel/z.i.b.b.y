@@ -18,8 +18,77 @@ import path from "node:path";
 
 const REMOTE_ATTR = /\b(src|href)="(https?:\/\/[^"]+)"/g;
 
+/**
+ * The `<link rel>` values that name a resource the browser downloads. This is
+ * a positive ALLOW-list, not an ignore-list of `preconnect`/`dns-prefetch`,
+ * and the asymmetry of the two failure modes is why:
+ *
+ * - a relation wrongly on this list is fetched, and a bare origin 404s, which
+ *   aborts the entire run at exit 3 before the browser even launches;
+ * - a relation wrongly *off* it is simply not cached, so the page fetches it
+ *   live — and if that fetch fails offline, the page renders short and the
+ *   emptiness guard in `cli.mjs` refuses to write a spec for it.
+ *
+ * The set of relations that name a resource is small and closed; the set that
+ * does not (`preconnect`, `dns-prefetch`, `canonical`, `alternate`, `author`,
+ * `license`, `me`, `next`, `prev`, …) is open-ended and still growing. An
+ * ignore-list would therefore have to be updated every time the HTML spec
+ * gains a hint, and would fail towards the blocking mode until it was.
+ */
+const RESOURCE_LINK_RELS = new Set([
+  "stylesheet",
+  "preload",
+  "modulepreload",
+  "prefetch",
+  "icon",
+  "apple-touch-icon",
+  "apple-touch-startup-image",
+  "mask-icon",
+  "manifest",
+]);
+
+/**
+ * `href` on these tags never names a subresource: it is a navigation target
+ * (`a`, `area`), a document-relative base (`base`), or — on `link` — only a
+ * resource for the relations named above, which is handled separately.
+ */
+const NAVIGATION_TAGS = new Set(["a", "area", "base"]);
+
+const TAG_RE = /<([a-zA-Z][a-zA-Z0-9-]*)((?:"[^"]*"|'[^']*'|[^>"'])*)>/g;
+const ATTR_RE = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/g;
+
+function attributesOf(rawAttrs) {
+  const attrs = {};
+  for (const [, name, doubleQuoted, singleQuoted, bare] of rawAttrs.matchAll(ATTR_RE)) {
+    attrs[name.toLowerCase()] = doubleQuoted ?? singleQuoted ?? bare ?? "";
+  }
+  return attrs;
+}
+
+const isRemote = (value) => typeof value === "string" && /^https?:\/\//.test(value);
+
+/**
+ * Tag-aware on purpose. The old attribute-only scan matched any
+ * `src="http…"`/`href="http…"` anywhere in the file, including inside an
+ * inline `<script>`'s own string literals and inside `<a>` tags — neither of
+ * which the browser ever fetches as a subresource.
+ */
 export function collectRemoteUrls(html) {
-  return [...html.matchAll(REMOTE_ATTR)].map((m) => m[2]);
+  const urls = [];
+  for (const [, tagName, rawAttrs] of html.matchAll(TAG_RE)) {
+    const tag = tagName.toLowerCase();
+    const attrs = attributesOf(rawAttrs);
+    if (tag === "link") {
+      const rels = (attrs.rel ?? "").toLowerCase().split(/\s+/).filter(Boolean);
+      if (rels.some((rel) => RESOURCE_LINK_RELS.has(rel)) && isRemote(attrs.href)) {
+        urls.push(attrs.href);
+      }
+      continue;
+    }
+    if (isRemote(attrs.src)) urls.push(attrs.src);
+    if (!NAVIGATION_TAGS.has(tag) && isRemote(attrs.href)) urls.push(attrs.href);
+  }
+  return urls;
 }
 
 export function rewriteToCache(html, manifest) {

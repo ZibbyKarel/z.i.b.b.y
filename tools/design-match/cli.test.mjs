@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  assertRegionRendered,
   buildCompareOutcome,
   buildTokenMappings,
   checkFontPreflight,
@@ -742,5 +743,52 @@ describe("checkStrictWrappersMatch", () => {
     expect(() => checkStrictWrappersMatch({ strictWrappers: true }, false)).toThrow(
       /^design-match:/,
     );
+  });
+});
+
+/**
+ * D2 part 2 (task 15): seven of the eleven real mockups rendered nothing and
+ * `measure` wrote a confident one-node spec at exit 0. Serving over http fixes
+ * the causes we know about; this refuses to write a spec for the ones we don't.
+ */
+describe("assertRegionRendered", () => {
+  const raw = (over = {}) => ({ tag: "div", text: "", children: [], ...over });
+
+  it("refuses an empty container — no children, no text, nothing that is content in itself", () => {
+    expect(() => assertRegionRendered(raw(), "#root")).toThrow(/^design-match:/);
+  });
+
+  it("routes through the clean one-line operator path rather than dumping a stack", () => {
+    try {
+      assertRegionRendered(raw(), "#root");
+      expect.unreachable("assertRegionRendered must throw for an empty container");
+    } catch (error) {
+      expect(isDeliberateError(error)).toBe(true);
+    }
+  });
+
+  it("names the selector and the three likely causes", () => {
+    expect(() => assertRegionRendered(raw(), "#root")).toThrow(/#root/);
+    expect(() => assertRegionRendered(raw(), "#root")).toThrow(/nevykreslila|skripty|prázdn/i);
+  });
+
+  it("accepts a region with children", () => {
+    expect(() => assertRegionRendered(raw({ children: [raw()] }), "#root")).not.toThrow();
+  });
+
+  it("accepts a childless region that carries its own text", () => {
+    expect(() =>
+      assertRegionRendered(raw({ tag: "button", text: "Uložit" }), "button.primary"),
+    ).not.toThrow();
+  });
+
+  // The case to think hardest about: task 15's `--region 2` on ZIBBY Orb.html
+  // legitimately measured the three.js `<canvas>` — one node, no children, no
+  // text, filling the whole viewport. A threshold that refused this would
+  // reject a measurement that was actually correct.
+  it("accepts a childless, textless element that is itself content", () => {
+    for (const tag of ["canvas", "img", "svg", "video", "iframe", "input"]) {
+      expect(() => assertRegionRendered(raw({ tag }), tag)).not.toThrow();
+    }
   });
 });

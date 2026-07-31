@@ -6,7 +6,7 @@ import { PNG } from "pngjs";
 import { afterEach, describe, expect, it } from "vitest";
 import { DEVICE_SCALE_FACTOR, VIEWPORT, withPage } from "./browser.mjs";
 import { diffPngs } from "./pixels.mjs";
-import { shootScene } from "./shoot.mjs";
+import { shootScene, staticUrl, withStaticServer } from "./shoot.mjs";
 
 const fixture = pathToFileURL(
   path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "basic.html"),
@@ -129,5 +129,49 @@ describe("shootScene", () => {
     const secondBuffer = await withPage((page) => shootScene(page, scene, secondPath));
 
     expect(firstBuffer.equals(secondBuffer)).toBe(true);
+  });
+});
+
+/**
+ * D2 part 1 (task 15): seven of the eleven real mockups rendered nothing under
+ * `file://` and `measure` wrote a confident one-node spec at exit 0. The bytes
+ * were never the problem — the scheme was.
+ */
+describe("withStaticServer, as the browser sees it", () => {
+  const fixturesDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures");
+  const xhrFixture = path.join(fixturesDir, "xhr-loaded.html");
+
+  const childCount = (page) => page.evaluate(() => document.getElementById("root").children.length);
+
+  it("renders nothing over file:// — the failure the whole fix exists to remove", async () => {
+    const children = await withPage(async (page) => {
+      await page.goto(pathToFileURL(xhrFixture).href, { waitUntil: "load" });
+      return childCount(page);
+    });
+    expect(children).toBe(0);
+  });
+
+  it("renders the XHR-loaded content when the same file is served over http", async () => {
+    const children = await withStaticServer(fixturesDir, (origin) =>
+      withPage(async (page) => {
+        await page.goto(staticUrl(origin, fixturesDir, xhrFixture), { waitUntil: "networkidle" });
+        return childCount(page);
+      }),
+    );
+    expect(children).toBe(1);
+  });
+
+  // The evidence behind the decision NOT to strip `crossorigin="anonymous"` in
+  // the cache rewrite: over http the request is same-origin, so the attribute
+  // is inert. Stripping it would additionally break the `integrity="sha384-…"`
+  // the real mockups carry alongside it.
+  it("executes a script that kept its crossorigin attribute", async () => {
+    const loaded = await withStaticServer(fixturesDir, (origin) =>
+      withPage(async (page) => {
+        await page.goto(staticUrl(origin, fixturesDir, xhrFixture), { waitUntil: "networkidle" });
+        return page.evaluate(() => window.__designMatchDepLoaded === true);
+      }),
+    );
+    expect(loaded).toBe(true);
   });
 });

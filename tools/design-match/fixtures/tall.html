@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: monospace;
+        background: #0b0e13;
+        color: #c9d4e8;
+      }
+      /*
+       * A document deliberately taller than the 1440×900 viewport, so a ranked
+       * candidate can sit entirely below the fold. `page.screenshot({ clip })`
+       * without `fullPage: true` resolves the clip against the VIEWPORT, so
+       * such a candidate used to throw "Clipped area is either empty or
+       * outside the resulting image" with a raw Playwright stack.
+       */
+      .above-fold {
+        width: 300px;
+        height: 200px;
+        background: #1188ff;
+      }
+      .spacer {
+        height: 1400px;
+      }
+      /*
+       * Flat, single-colour and opaque, so a test can read one pixel out of the
+       * crop and prove the rectangle that was cropped is THIS box — a fix that
+       * crops the wrong rectangle is worse than the crash it replaced.
+       */
+      .below-fold {
+        width: 300px;
+        height: 200px;
+        background: #ff00ff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="above-fold" data-region="above"></div>
+    <div class="spacer"></div>
+    <div class="below-fold" data-region="below"></div>
+  </body>
+</html>
