@@ -88,6 +88,38 @@ describe("RoadmapEpicList", () => {
     expect(screen.getByTestId(RoadmapEpicListTestId.Status)).toHaveTextContent("Blokováno");
   });
 
+  it("marks the selected row aria-pressed, so the toggle is discoverable (D1)", () => {
+    const epic = item({ id: "e6", level: "epic", name: "Selected epic", parentId: undefined });
+    render(
+      <RoadmapEpicList
+        epics={[epic]}
+        items={[epic]}
+        onCreateEpic={vi.fn()}
+        onSelect={vi.fn()}
+        selectedEpicId="e6"
+      />,
+    );
+    const row = screen.getByTestId(`${RoadmapEpicListTestId.Row}-e6`);
+    expect(row).toHaveAttribute("aria-pressed", "true");
+    expect(row).toHaveAttribute("title", "Zrušit filtr kliknutím znovu");
+  });
+
+  it("marks an unselected row aria-pressed=false, with no deselect title", () => {
+    const epic = item({ id: "e7", level: "epic", name: "Unselected epic", parentId: undefined });
+    render(
+      <RoadmapEpicList
+        epics={[epic]}
+        items={[epic]}
+        onCreateEpic={vi.fn()}
+        onSelect={vi.fn()}
+        selectedEpicId={undefined}
+      />,
+    );
+    const row = screen.getByTestId(`${RoadmapEpicListTestId.Row}-e7`);
+    expect(row).toHaveAttribute("aria-pressed", "false");
+    expect(row).not.toHaveAttribute("title");
+  });
+
   it("the Nový epik button calls onCreateEpic", async () => {
     const epic = item({ id: "e5", level: "epic", name: "Some epic", parentId: undefined });
     const onCreateEpic = vi.fn();

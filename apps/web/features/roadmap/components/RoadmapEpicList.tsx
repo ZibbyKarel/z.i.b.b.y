@@ -102,12 +102,14 @@ export function RoadmapEpicList({
         const selected = epic.id === selectedEpicId;
         return (
           <Card
+            aria-pressed={selected}
             as="button"
             data-testid={`${RoadmapEpicListTestId.Row}-${epic.id}`}
             interactive={!selected}
             key={epic.id}
             onClick={() => onSelect(epic.id)}
             selected={selected}
+            title={selected ? t("epic.deselectHint") : undefined}
           >
             <Container padding="150">
               <Stack gap="100">

@@ -2070,6 +2070,7 @@
     "epic": {
       "unphased": "nerozfázováno",
       "progress": "{done}/{total} tasků",
+      "deselectHint": "Zrušit filtr kliknutím znovu",
       "status": {
         "idea": "Nápad",
         "todo": "Ve frontě",
@@ -2080,6 +2081,8 @@
     },
     "board": {
       "header": "{name} — task board",
+      "allTasks": "Všechny tasky",
+      "allTasksCount": "Všechny tasky ({count})",
       "openEpicDetail": "Otevřít detail epicu",
       "columns": {
         "blocked": "Blokované",

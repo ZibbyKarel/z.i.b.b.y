@@ -156,6 +156,9 @@ describe("RoadmapPanel", () => {
     hooks.items.data = [epicA, taskInA];
     render(<RoadmapPanel projectId="proj-1" />);
 
+    // Initial render is all-tasks mode (126c) — select the epic first, which
+    // is the only mode the header's epic-name affordance exists in.
+    await userEvent.click(screen.getByTestId("roadmap-epic-row-e1"));
     await userEvent.click(screen.getByTestId(RoadmapBoardTestId.EpicDetail));
 
     expect(screen.getByTestId(RoadmapItemDialogTestId.Root)).toBeInTheDocument();
@@ -164,7 +167,7 @@ describe("RoadmapPanel", () => {
     );
   });
 
-  it("renders the first epic's board by default and switches on selection", async () => {
+  it("shows every task on initial render — a card from a NON-FIRST epic is visible (126c)", () => {
     const epicA = item({ id: "e1", level: "epic", name: "Epic A", parentId: undefined });
     const epicB = item({ id: "e2", level: "epic", name: "Epic B", parentId: undefined });
     hooks.items.data = [
@@ -175,12 +178,31 @@ describe("RoadmapPanel", () => {
     ];
     render(<RoadmapPanel projectId="proj-1" />);
 
+    // Task in B belongs to the SECOND epic — before 126c this silently never
+    // rendered on first load, because the board collapsed to `epics[0]`.
     expect(screen.getByText("Task in A")).toBeInTheDocument();
-    expect(screen.queryByText("Task in B")).not.toBeInTheDocument();
+    expect(screen.getByText("Task in B")).toBeInTheDocument();
+  });
+
+  it("clicking an epic row filters the board; clicking it again restores all tasks", async () => {
+    const epicA = item({ id: "e1", level: "epic", name: "Epic A", parentId: undefined });
+    const epicB = item({ id: "e2", level: "epic", name: "Epic B", parentId: undefined });
+    hooks.items.data = [
+      epicA,
+      epicB,
+      item({ id: "t1", parentId: "e1", name: "Task in A" }),
+      item({ id: "t2", parentId: "e2", name: "Task in B" }),
+    ];
+    render(<RoadmapPanel projectId="proj-1" />);
 
     await userEvent.click(screen.getByTestId("roadmap-epic-row-e2"));
     expect(screen.getByText("Task in B")).toBeInTheDocument();
     expect(screen.queryByText("Task in A")).not.toBeInTheDocument();
+
+    // Re-clicking the ALREADY-selected row deselects it (D1) — back to all tasks.
+    await userEvent.click(screen.getByTestId("roadmap-epic-row-e2"));
+    expect(screen.getByText("Task in A")).toBeInTheDocument();
+    expect(screen.getByText("Task in B")).toBeInTheDocument();
   });
 
   it("opens the detail dialog when a card is clicked", async () => {
@@ -214,7 +236,7 @@ describe("RoadmapPanel", () => {
       );
     });
 
-    it("also switches the board to the epic that owns it, not just the first epic", () => {
+    it("does NOT filter the board to the deep-linked item's epic (126c: stays all-tasks)", () => {
       search.current = "item=t2";
       hooks.items.data = [epicA, epicB, taskInB, item({ id: "t1", parentId: "e1", name: "In A" })];
       render(<RoadmapPanel projectId="proj-1" />);
@@ -223,10 +245,12 @@ describe("RoadmapPanel", () => {
       // unscoped query would match twice.
       const board = within(screen.getByTestId(RoadmapBoardTestId.Root));
       expect(board.getByText("Task in B")).toBeInTheDocument();
-      expect(board.queryByText("In A")).not.toBeInTheDocument();
+      // Both epics' tasks are visible — the deep link no longer forces a
+      // selection, it just opens the dialog on top of the all-tasks board.
+      expect(board.getByText("In A")).toBeInTheDocument();
     });
 
-    it("keeps that epic's board after the dialog is closed (no snap back to the first epic)", async () => {
+    it("stays in all-tasks mode after the dialog is closed", async () => {
       search.current = "item=t2";
       hooks.items.data = [epicA, epicB, taskInB, item({ id: "t1", parentId: "e1", name: "In A" })];
       render(<RoadmapPanel projectId="proj-1" />);
@@ -235,7 +259,7 @@ describe("RoadmapPanel", () => {
 
       expect(screen.queryByTestId(RoadmapItemDialogTestId.Root)).not.toBeInTheDocument();
       expect(screen.getByText("Task in B")).toBeInTheDocument();
-      expect(screen.queryByText("In A")).not.toBeInTheDocument();
+      expect(screen.getByText("In A")).toBeInTheDocument();
     });
 
     it("ignores an id that isn't in this project's roadmap", () => {

@@ -2070,6 +2070,7 @@
     "epic": {
       "unphased": "unphased",
       "progress": "{done}/{total} tasks",
+      "deselectHint": "Click again to clear the filter",
       "status": {
         "idea": "Idea",
         "todo": "Queued",
@@ -2080,6 +2081,8 @@
     },
     "board": {
       "header": "{name} — task board",
+      "allTasks": "All tasks",
+      "allTasksCount": "All tasks ({count})",
       "openEpicDetail": "Open epic detail",
       "columns": {
         "blocked": "Blocked",

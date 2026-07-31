@@ -16,6 +16,7 @@ import { type CSSProperties, useState } from "react";
 import {
   BOARD_COLUMNS,
   type BoardColumn,
+  allTasks,
   blockersOf,
   buildRoadmapLookup,
   dependentsOf,
@@ -36,12 +37,17 @@ export enum RoadmapBoardTestId {
 }
 
 export interface RoadmapBoardProps {
-  epic: RoadmapItem;
   /**
-   * The whole project's items — the board only ever renders `epic`'s own
-   * children, but dependency resolution (`readiness`/`blockersOf`/
-   * `dependentsOf`) spans the whole project since an edge can in principle
-   * cross epics.
+   * The selected epic to filter the board to. `undefined` (126c) means "no
+   * epic selected" — the board falls back to {@link allTasks}, every
+   * task-level item in the project, bucketed into the same four columns.
+   */
+  epic?: RoadmapItem;
+  /**
+   * The whole project's items — the board renders either `epic`'s own
+   * children or, when `epic` is undefined, every task in the project. Either
+   * way, dependency resolution (`readiness`/`blockersOf`/`dependentsOf`) spans
+   * the whole project since an edge can in principle cross epics.
    */
   items: RoadmapItem[];
   /** Open the detail dialog for an item (a card, or a dependency badge on one). */
@@ -58,6 +64,10 @@ export interface RoadmapBoardProps {
 }
 
 const COLUMN_MAX_HEIGHT = "28rem";
+
+/** The header dot's colour in all-tasks mode (no epic to hash) — the same
+ * neutral fallback `ArchiveRow` uses for a subsystem-less row. */
+const NEUTRAL_DOT_HUE = "var(--color-foreground-faint)";
 
 /** Small solid hue dot — mirrors `SubsystemDrawer`'s `stateDotStyle` precedent
  * (a `Container` + computed inline style is the sanctioned passthrough for a
@@ -86,7 +96,7 @@ export function RoadmapBoard({
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const get = buildRoadmapLookup(items);
-  const children = epicChildren(items, epic.id);
+  const children = epic ? epicChildren(items, epic.id) : allTasks(items);
   const groups = groupByColumn(children, get);
 
   const hovered = hoveredId ? get(hoveredId) : undefined;
@@ -112,20 +122,36 @@ export function RoadmapBoard({
         gap="100"
         justify="between"
       >
-        <Pressable
-          aria-label={t("board.openEpicDetail")}
-          data-testid={RoadmapBoardTestId.EpicDetail}
-          onClick={onSelectEpic}
-        >
+        {epic ? (
+          <Pressable
+            aria-label={t("board.openEpicDetail")}
+            data-testid={RoadmapBoardTestId.EpicDetail}
+            onClick={onSelectEpic}
+          >
+            <Stack align="center" direction="row" gap="100">
+              <Container shrink={false} style={hueDotStyle(epicHue(epic.id))} />
+              <Typography mono uppercase size="xs" tracking="wider" type="label">
+                {t("board.header", { name: epic.name })}
+              </Typography>
+            </Stack>
+          </Pressable>
+        ) : (
           <Stack align="center" direction="row" gap="100">
-            <Container shrink={false} style={hueDotStyle(epicHue(epic.id))} />
+            <Container shrink={false} style={hueDotStyle(NEUTRAL_DOT_HUE)} />
             <Typography mono uppercase size="xs" tracking="wider" type="label">
-              {t("board.header", { name: epic.name })}
+              {t("board.allTasks")}
             </Typography>
           </Stack>
-        </Pressable>
+        )}
+        {/* A task is always created UNDER an epic — `RoadmapItemFormDialog` has no
+            epic picker and passes the selected epic straight through as `parentId`.
+            In all-tasks mode there is no selected epic, so the button has no parent
+            to hand over; enabled, it would open a dialog whose submit can only
+            produce a parentless task. Disabled with a hint is the honest state until
+            an epic picker exists (126c follow-up). */}
         <Button
           data-testid={RoadmapBoardTestId.CreateTask}
+          disabled={!epic}
           icon="plus"
           intent="ghost"
           onClick={onCreateTask}
@@ -179,6 +205,10 @@ export function RoadmapBoard({
                         blockers={blockersOf(item, get)}
                         column={column}
                         dependents={dependentsOf(item, items)}
+                        // Only all-tasks mode needs the attribution chip (D2) —
+                        // every card is already the selected epic's own child
+                        // in filtered mode, so the chip would be redundant.
+                        epic={epic ? undefined : get(item.parentId ?? "")}
                         highlighted={highlightedIds.has(item.id)}
                         item={item}
                         key={item.id}

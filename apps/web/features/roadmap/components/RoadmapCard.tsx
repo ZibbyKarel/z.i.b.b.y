@@ -16,11 +16,12 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import type { CSSProperties } from "react";
 import { usePlayRoadmapItemMutation } from "../mutations/usePlayRoadmapItemMutation";
 import { useResumeRoadmapItemMutation } from "../mutations/useResumeRoadmapItemMutation";
 import { useRestartRoadmapItemMutation } from "../mutations/useRestartRoadmapItemMutation";
 import type { BoardColumn } from "../roadmap-board";
-import { stripMarkdownPreview } from "../roadmap-board";
+import { epicHue, stripMarkdownPreview } from "../roadmap-board";
 
 export enum RoadmapCardTestId {
   Root = "roadmap-card",
@@ -29,6 +30,7 @@ export enum RoadmapCardTestId {
   Play = "roadmap-card-play",
   Open = "roadmap-card-open",
   Failed = "roadmap-card-failed",
+  Epic = "roadmap-card-epic",
   Blocker = "roadmap-card-blocker",
   Dependents = "roadmap-card-dependents",
 }
@@ -38,6 +40,13 @@ export interface RoadmapCardProps {
   /** This item's readiness column — drives the edge tone (a `failed` item still
    * carries a distinct red edge on top of it; see {@link edgeToneFor}). */
   column: BoardColumn;
+  /**
+   * This item's own epic, passed only in all-tasks mode (126c/D2) — renders an
+   * epic-attribution chip so two identically-named tasks from different epics
+   * stay distinguishable. `undefined` in epic-filtered mode, where every card
+   * already belongs to the same epic and the chip would be redundant.
+   */
+  epic?: RoadmapItem;
   /** Resolved `dependsOn` targets, in order (see `blockersOf`). */
   blockers: RoadmapItem[];
   /** Every project item that depends on this one (see `dependentsOf`). */
@@ -78,9 +87,21 @@ function edgeToneFor(column: BoardColumn, item: RoadmapItem): StateTone {
  * name/description area is its own `Pressable` instead, so "click the card"
  * still opens the dialog everywhere except the parts that do something else.
  */
+/** Tints the epic-attribution chip (D2) with the epic's hue — the same value
+ * used for its dot in the rail and the board header — via the DS `Chip`'s
+ * `style` passthrough, since tone is a fixed enum with no per-epic slot. */
+function epicChipStyle(hue: string): CSSProperties {
+  return {
+    color: hue,
+    borderColor: hue,
+    backgroundColor: `color-mix(in srgb, ${hue} 14%, transparent)`,
+  };
+}
+
 export function RoadmapCard({
   item,
   column,
+  epic,
   blockers,
   dependents,
   highlighted = false,
@@ -199,6 +220,16 @@ export function RoadmapCard({
               </Tooltip>
             )}
           </Stack>
+
+          {epic && (
+            <Chip
+              data-testid={RoadmapCardTestId.Epic}
+              style={epicChipStyle(epicHue(epic.id))}
+              tone="idle"
+            >
+              {epic.name}
+            </Chip>
+          )}
 
           <Pressable
             aria-label={t("card.openDetail", { name: item.name })}

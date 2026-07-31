@@ -146,15 +146,13 @@ export function RoadmapPanel({ projectId }: RoadmapPanelProps) {
     );
   }
 
-  // A deep-linked item also decides which epic's board is showing, so the page
-  // behind the dialog is about the right epic rather than whichever one happens
-  // to be first. Derived (not an effect) so it needs no second render pass, and
-  // an explicit `selectedEpicId` — the operator clicking the epic list — always
-  // wins over it.
-  const deepLinked = detailItemId ? items.find((item) => item.id === detailItemId) : undefined;
-  const deepLinkedEpicId = deepLinked?.level === "epic" ? deepLinked.id : deepLinked?.parentId;
-  const selectedEpic =
-    epics.find((epic) => epic.id === (selectedEpicId ?? deepLinkedEpicId)) ?? epics[0]!;
+  // `selectedEpicId` is the ONLY thing that decides which board mode is
+  // showing (126c) — `undefined` means "no epic selected", which the board
+  // reads as all-tasks mode. A `?item=` deep link only opens the dialog; it no
+  // longer forces an epic selection, so the board stays in all-tasks mode
+  // (which always contains the deep-linked task) unless the operator has
+  // explicitly clicked an epic row.
+  const selectedEpic = epics.find((epic) => epic.id === selectedEpicId);
 
   return (
     <Stack data-testid={RoadmapPanelTestId.Root} gap="200">
@@ -164,14 +162,18 @@ export function RoadmapPanel({ projectId }: RoadmapPanelProps) {
           epics={epics}
           items={items}
           onCreateEpic={() => setCreateTarget({ level: "epic" })}
-          onSelect={setSelectedEpicId}
-          selectedEpicId={selectedEpic.id}
+          onSelect={(epicId) =>
+            setSelectedEpicId((current) => (current === epicId ? undefined : epicId))
+          }
+          selectedEpicId={selectedEpicId}
         />
         <RoadmapBoard
           epic={selectedEpic}
           items={items}
-          onCreateTask={() => setCreateTarget({ level: "task", parentId: selectedEpic.id })}
-          onSelectEpic={() => setDetailItemId(selectedEpic.id)}
+          onCreateTask={() => setCreateTarget({ level: "task", parentId: selectedEpic?.id })}
+          onSelectEpic={() => {
+            if (selectedEpic) setDetailItemId(selectedEpic.id);
+          }}
           onSelectItem={setDetailItemId}
         />
       </Grid>
@@ -180,12 +182,7 @@ export function RoadmapPanel({ projectId }: RoadmapPanelProps) {
         <RoadmapItemDialog
           itemId={detailItemId}
           items={items}
-          onClose={() => {
-            // Pin the epic that was showing BEFORE dropping the deep link, or the
-            // board would snap back to `epics[0]` the moment the dialog closes.
-            setSelectedEpicId(selectedEpic.id);
-            setDetailItemId(null);
-          }}
+          onClose={() => setDetailItemId(null)}
           onSelectItem={setDetailItemId}
         />
       )}

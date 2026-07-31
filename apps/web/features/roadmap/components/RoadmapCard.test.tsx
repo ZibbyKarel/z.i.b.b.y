@@ -329,4 +329,36 @@ describe("RoadmapCard", () => {
     );
     expect(screen.getByText("blokuje 2")).toBeInTheDocument();
   });
+
+  it("renders the epic chip when `epic` is passed (126c/D2 all-tasks mode)", () => {
+    const epic = item({ id: "epic-1", level: "epic", name: "Rate limiting" });
+    render(
+      <RoadmapCard
+        blockers={[]}
+        column="ready"
+        dependents={[]}
+        epic={epic}
+        item={item({ id: "t10", name: "Task" })}
+        onHoverChange={vi.fn()}
+        onSelect={vi.fn()}
+        onSelectDependency={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId(RoadmapCardTestId.Epic)).toHaveTextContent("Rate limiting");
+  });
+
+  it("has no epic chip when `epic` is not passed (epic-filtered mode)", () => {
+    render(
+      <RoadmapCard
+        blockers={[]}
+        column="ready"
+        dependents={[]}
+        item={item({ id: "t11", name: "Task" })}
+        onHoverChange={vi.fn()}
+        onSelect={vi.fn()}
+        onSelectDependency={vi.fn()}
+      />,
+    );
+    expect(screen.queryByTestId(RoadmapCardTestId.Epic)).not.toBeInTheDocument();
+  });
 });

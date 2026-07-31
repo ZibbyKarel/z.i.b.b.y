@@ -122,4 +122,80 @@ describe("RoadmapBoard", () => {
     await userEvent.click(screen.getByTestId(RoadmapBoardTestId.CreateTask));
     expect(onCreateTask).toHaveBeenCalledTimes(1);
   });
+
+  describe("all-tasks mode (126c, `epic` undefined)", () => {
+    const epicB = item({ id: "epic-2", level: "epic", name: "Other epic", parentId: undefined });
+
+    it("shows cards from two different epics", () => {
+      const items = [
+        epic,
+        epicB,
+        item({ id: "t-a", name: "Task in epic 1", parentId: "epic-1" }),
+        item({ id: "t-b", name: "Task in epic 2", parentId: "epic-2" }),
+      ];
+      render(
+        <RoadmapBoard
+          items={items}
+          onCreateTask={vi.fn()}
+          onSelectEpic={vi.fn()}
+          onSelectItem={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText("Task in epic 1")).toBeInTheDocument();
+      expect(screen.getByText("Task in epic 2")).toBeInTheDocument();
+    });
+
+    it("renders the all-tasks label, not an epic name, in the header", () => {
+      const items = [epic, item({ id: "t-a", name: "Task A" })];
+      render(
+        <RoadmapBoard
+          items={items}
+          onCreateTask={vi.fn()}
+          onSelectEpic={vi.fn()}
+          onSelectItem={vi.fn()}
+        />,
+      );
+
+      const header = screen.getByTestId(RoadmapBoardTestId.Header);
+      expect(within(header).getByText("Všechny tasky")).toBeInTheDocument();
+      expect(screen.queryByTestId(RoadmapBoardTestId.EpicDetail)).not.toBeInTheDocument();
+    });
+
+    it("disables Nový task — there is no epic to create the task under", () => {
+      const items = [epic, item({ id: "t-a", name: "Task A" })];
+      render(
+        <RoadmapBoard
+          items={items}
+          onCreateTask={vi.fn()}
+          onSelectEpic={vi.fn()}
+          onSelectItem={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByTestId(RoadmapBoardTestId.CreateTask)).toBeDisabled();
+    });
+  });
+
+  it("with epic set, only that epic's cards are present", () => {
+    const otherEpic = item({ id: "epic-2", level: "epic", name: "Other", parentId: undefined });
+    const items = [
+      epic,
+      otherEpic,
+      item({ id: "t-a", name: "Task in epic 1", parentId: "epic-1" }),
+      item({ id: "t-b", name: "Task in epic 2", parentId: "epic-2" }),
+    ];
+    render(
+      <RoadmapBoard
+        epic={epic}
+        items={items}
+        onCreateTask={vi.fn()}
+        onSelectEpic={vi.fn()}
+        onSelectItem={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Task in epic 1")).toBeInTheDocument();
+    expect(screen.queryByText("Task in epic 2")).not.toBeInTheDocument();
+  });
 });

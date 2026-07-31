@@ -15,6 +15,17 @@ export function epicChildren(items: RoadmapItem[], epicId: string): RoadmapItem[
   return items.filter((item) => item.level === "task" && item.parentId === epicId);
 }
 
+/**
+ * Every task-level item in the project, in board order — the unfiltered board
+ * shown until an epic is selected (126c). Mirrors `epicChildren`'s own
+ * ordering exactly (a plain `filter`, so insertion order is preserved as-is):
+ * deliberately NOT re-sorted by epic, so a card's column position never shifts
+ * between all-tasks and epic-filtered mode.
+ */
+export function allTasks(items: RoadmapItem[]): RoadmapItem[] {
+  return items.filter((item) => item.level === "task");
+}
+
 export interface EpicProgress {
   done: number;
   total: number;

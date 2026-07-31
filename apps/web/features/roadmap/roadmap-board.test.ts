@@ -2,9 +2,11 @@ import type { RoadmapItem } from "@zibby/contracts";
 import { describe, expect, it } from "vitest";
 import {
   BOARD_COLUMNS,
+  allTasks,
   blockersOf,
   buildRoadmapLookup,
   dependentsOf,
+  epicChildren,
   epicHue,
   epicProgress,
   epicStatus,
@@ -36,6 +38,28 @@ describe("buildRoadmapLookup", () => {
     const get = buildRoadmapLookup([item({ id: "a" }), item({ id: "b" })]);
     expect(get("a")?.id).toBe("a");
     expect(get("missing")).toBeUndefined();
+  });
+});
+
+describe("allTasks", () => {
+  it("returns every task-level item and no epics", () => {
+    const items = [
+      item({ id: "e1", level: "epic" }),
+      item({ id: "t1", parentId: "e1" }),
+      item({ id: "e2", level: "epic" }),
+      item({ id: "t2", parentId: "e2" }),
+    ];
+    expect(allTasks(items).map((i) => i.id)).toEqual(["t1", "t2"]);
+  });
+
+  it("orders identically to epicChildren for a single-epic fixture", () => {
+    const items = [
+      item({ id: "e1", level: "epic" }),
+      item({ id: "t3", parentId: "e1" }),
+      item({ id: "t1", parentId: "e1" }),
+      item({ id: "t2", parentId: "e1" }),
+    ];
+    expect(allTasks(items).map((i) => i.id)).toEqual(epicChildren(items, "e1").map((i) => i.id));
   });
 });
 
