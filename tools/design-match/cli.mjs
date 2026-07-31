@@ -151,10 +151,45 @@ function leafRole(valuesPath) {
 }
 
 /**
- * Every tokenisable value on the app, mapped against the design's theme —
- * `tokens.md`'s only source. Deduplicated by `prop` + `value` (the same colour
- * on forty nodes is one row, not forty) and sorted by `prop` then `value` so
- * two runs of the same design produce a diff-stable table.
+ * Which existing-theme name family (the CSS custom-property prefix Tailwind
+ * v4's `@theme` block declares under) each `TOKEN_PROPS` prop is allowed to
+ * match against. This is NOT `PROP_PREFIX` — that names the *new* `--zt-`
+ * token this module proposes; this is the *real* theme's own naming,
+ * required so `mapValue`'s plain nearest-distance ranking never picks a
+ * same-length token from the wrong family (a `--text-sm` at 12px is not a
+ * candidate for a `gap: 12px`, no matter how close the number).
+ *
+ * Confirmed against `libs/design-system/src/theme/globals.css`: --color-,
+ * --text-, --radius-, --shadow-, --tracking-, --spacing- all exist there.
+ * There is no --leading-* family — so `lineHeight` always filters down to an
+ * empty candidate list. That is the correct, honest outcome (an empty list is
+ * passed straight through, never a fallback to the unfiltered list), not a
+ * bug to special-case around.
+ */
+const PROP_THEME_FAMILY = {
+  color: "--color-",
+  backgroundColor: "--color-",
+  borderColor: "--color-",
+  gap: "--spacing-",
+  rowGap: "--spacing-",
+  columnGap: "--spacing-",
+  paddingTop: "--spacing-",
+  paddingLeft: "--spacing-",
+  borderRadius: "--radius-",
+  boxShadow: "--shadow-",
+  fontSize: "--text-",
+  lineHeight: "--leading-",
+  letterSpacing: "--tracking-",
+};
+
+/**
+ * Every tokenisable value measured off the **design** mockup (`spec.values`,
+ * from `runMeasure`), mapped against the **app's** design-system theme
+ * (parsed from the CSS `--theme` points at) — this is what fills
+ * `tokens.md`: which of the design's values already have a home in the app's
+ * palette, and which need a new one. Deduplicated by `prop` + `value` (the
+ * same colour on forty nodes is one row, not forty) and sorted by `prop`
+ * then `value` so two runs of the same design produce a diff-stable table.
  */
 export function buildTokenMappings(values, tokens) {
   const byKey = new Map();
@@ -164,11 +199,14 @@ export function buildTokenMappings(values, tokens) {
       const value = props[prop];
       const key = `${prop}::${value}`;
       if (byKey.has(key)) continue;
-      const mapping = mapValue(value, tokens);
-      if (mapping.kind === "new") {
-        mapping.proposedName = proposeTokenName(leafRole(valuesPath), prop);
-      }
-      byKey.set(key, { value, prop, path: valuesPath, mapping });
+      const family = PROP_THEME_FAMILY[prop];
+      const familyTokens = tokens.filter((token) => token.name.startsWith(family));
+      const mapping = mapValue(value, familyTokens);
+      const finalMapping =
+        mapping.kind === "new"
+          ? { ...mapping, proposedName: proposeTokenName(leafRole(valuesPath), prop) }
+          : mapping;
+      byKey.set(key, { value, prop, path: valuesPath, mapping: finalMapping });
     }
   }
   return [...byKey.values()].sort((a, b) => {
@@ -196,6 +234,18 @@ export function collectFontStacks(values) {
 }
 
 /**
+ * The exact `(designValues, appValues) → preflight result` step `runCompare`
+ * runs once the skeleton gate passes. Pulled out of `runCompare` (which is
+ * browser-driven and untestable here) so a test can prove `fontPreflight`
+ * receives the arrays `collectFontStacks` produces — not the raw values maps,
+ * not a raw `font-family` string — which is exactly the mistake the brief
+ * warned about and nothing closed off before this.
+ */
+export function checkFontPreflight(designValues, appValues) {
+  return fontPreflight(collectFontStacks(designValues), collectFontStacks(appValues));
+}
+
+/**
  * `renderReport` keys HOTOVO/PARK off the final round's own `RoundVerdict.status`
  * (evaluateRound), not off `decideNext`'s `stop` flag — `stop` only means the loop
  * halted, which is equally true whether it halted because the match succeeded or
@@ -206,6 +256,15 @@ export function collectFontStacks(values) {
 export function combineVerdict(roundVerdict, next) {
   if (roundVerdict.status === "done") {
     return { status: "done", stop: false, reason: roundVerdict.reason };
+  }
+  // "parked" is a round that has already decided to stop for a reason
+  // decideNext has no way to know about (e.g. a font mismatch: decideNext
+  // only reasons about the history of pixel percentages). Like "done", its
+  // own reason wins outright — consulting `next` at all would let a
+  // percentage-shaped answer ("pokračuje") paper over a cause no further
+  // round can fix.
+  if (roundVerdict.status === "parked") {
+    return { status: "parked", stop: true, reason: roundVerdict.reason };
   }
   return { status: roundVerdict.status, stop: next.stop, reason: next.reason };
 }
@@ -277,8 +336,13 @@ export function buildCompareOutcome({ result, spec, slug, masks, history, fontPr
   // reason, so it reaches report.md and round-N.json instead of being swallowed.
   const preflightFailed = Boolean(fontPreflight && !fontPreflight.ok);
   const effectiveResult = preflightFailed ? { ...result, pixels: null } : result;
+  // "parked", not "continue": a font mismatch is not fixed by another round —
+  // the pixel layer stays suppressed, `percent` stays `null` forever, and
+  // `decideNext`'s thrash/progress logic can only ever see "no signal". This
+  // hands the operator one clear decision instead of burning all five rounds
+  // against a condition no code edit can change.
   const roundVerdict = preflightFailed
-    ? { status: "continue", reason: fontPreflight.message }
+    ? { status: "parked", reason: fontPreflight.message }
     : evaluateRound(effectiveResult);
   // Only this invocation's round carries image buffers — replayed history
   // rounds (read back from rounds.json) never do, they were stripped before
@@ -389,17 +453,23 @@ async function runMeasure(cmd) {
 
   // Token mapping is commentary on the spec, not the point of `measure` — a
   // theme file that can't be read must not fail the run, only leave the
-  // mapping list empty and say why.
-  let tokenMappings = [];
+  // mapping list empty and say why. The `try` wraps only the read itself: a
+  // genuine bug in parseThemeTokens/buildTokenMappings must surface as
+  // itself, not get reported as "the theme file couldn't be read".
+  let themeCss;
   try {
-    const themeCss = await fs.readFile(cmd.theme, "utf8");
-    tokenMappings = buildTokenMappings(spec.values, parseThemeTokens(themeCss));
+    themeCss = await fs.readFile(cmd.theme, "utf8");
   } catch (error) {
+    // --theme defaults to a cwd-relative path, so running measure from
+    // anywhere but the repo root would otherwise degrade silently — name the
+    // resolved absolute path so the operator can see what was actually
+    // looked for.
     console.warn(
-      `design-match: nelze načíst theme soubor "${cmd.theme}" — mapování tokenů zůstává prázdné (${error.message})`,
+      `design-match: nelze načíst theme soubor "${path.resolve(cmd.theme)}" — mapování tokenů zůstává prázdné (${error.message})`,
     );
   }
-  spec.tokenMappings = tokenMappings;
+  spec.tokenMappings =
+    themeCss !== undefined ? buildTokenMappings(spec.values, parseThemeTokens(themeCss)) : [];
 
   await fs.writeFile(path.join(dir, "spec.json"), JSON.stringify(spec, null, 2), "utf8");
   console.log(`spec.json zapsán → ${path.join(dir, "spec.json")}`);
@@ -425,7 +495,7 @@ async function runCompare(cmd) {
     // A font mismatch makes every later pixel delta a lie — the numbers move
     // but the cause is not in the code — so the pixel comparison is skipped
     // entirely rather than measuring a difference whose cause is wrong.
-    const preflight = fontPreflight(collectFontStacks(spec.values), collectFontStacks(appValues));
+    const preflight = checkFontPreflight(spec.values, appValues);
     if (!preflight.ok) return { skeleton, values, pixels: null, fontPreflight: preflight };
 
     const appImage = await shootScene(page, scene, path.join(dir, "app.png"));

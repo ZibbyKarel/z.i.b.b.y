@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   buildCompareOutcome,
   buildTokenMappings,
+  checkFontPreflight,
   collectFontStacks,
   combineVerdict,
   describeOutcome,
@@ -114,10 +115,15 @@ describe("resolveRegionIndex", () => {
 });
 
 describe("buildTokenMappings", () => {
+  // Realistic theme-name families (matching libs/design-system/src/theme/globals.css's
+  // own naming), not the --zt- role prefix PROP_PREFIX proposes new tokens
+  // under — --spacing-3 and --text-sm are deliberately the same length so a
+  // family mix-up is concretely reachable in these fixtures, not theoretical.
   const CSS = `
 @theme {
-  --zt-bg-base: #0b0e13;
-  --zt-space-3: 12px;
+  --color-base: #0b0e13;
+  --spacing-3: 12px;
+  --text-sm: 12px;
 }
 `;
   const tokens = parseThemeTokens(CSS);
@@ -130,17 +136,62 @@ describe("buildTokenMappings", () => {
         value: "rgb(11, 14, 19)",
         prop: "color",
         path: "form",
-        mapping: { kind: "exact", token: "--zt-bg-base" },
+        mapping: { kind: "exact", token: "--color-base" },
       },
     ]);
     expect(mappings[0].mapping).not.toHaveProperty("proposedName");
   });
 
-  it("proposes a name from the leaf role (index stripped) and the prop for an unmatched value", () => {
+  it("does not answer a fontSize with a same-length spacing token — family filtering", () => {
+    // --spacing-3 is also 12px; without filtering by the prop's own theme
+    // family, mapValue's plain nearest-distance ranking picks it for a
+    // fontSize just as readily as for a gap.
+    const values = { form: { fontSize: "12px" } };
+    expect(buildTokenMappings(values, tokens)).toEqual([
+      {
+        value: "12px",
+        prop: "fontSize",
+        path: "form",
+        mapping: { kind: "exact", token: "--text-sm" },
+      },
+    ]);
+  });
+
+  it("does not answer a gap with a same-length text token — family filtering", () => {
+    const values = { form: { gap: "12px" } };
+    expect(buildTokenMappings(values, tokens)).toEqual([
+      {
+        value: "12px",
+        prop: "gap",
+        path: "form",
+        mapping: { kind: "exact", token: "--spacing-3" },
+      },
+    ]);
+  });
+
+  it("passes an empty family-filtered candidate list straight through rather than falling back to the full token list", () => {
+    // lineHeight has no theme-name family at all in the real theme (no
+    // --leading-* tokens exist) — every lineHeight value must come back
+    // `new` with no nearest, never matched against a token from another
+    // family just because the filtered list happened to be empty.
+    const values = { form: { lineHeight: "12px" } };
+    expect(buildTokenMappings(values, tokens)).toEqual([
+      {
+        value: "12px",
+        prop: "lineHeight",
+        path: "form",
+        mapping: { kind: "new", nearest: null, distance: null, proposedName: "--zt-leading-form" },
+      },
+    ]);
+  });
+
+  it("proposes a name from the leaf role (index stripped) and the prop for an unmatched value, naming a same-family nearest token", () => {
     const values = { "form/card[0]/heading[1]": { fontSize: "22px" } };
     const mappings = buildTokenMappings(values, tokens);
     expect(mappings).toHaveLength(1);
     expect(mappings[0].mapping.kind).toBe("new");
+    // Must be the text token, never the spacing one — that was the bug.
+    expect(mappings[0].mapping.nearest).toBe("--text-sm");
     expect(mappings[0].mapping.proposedName).toBe("--zt-text-heading");
   });
 
@@ -188,6 +239,34 @@ describe("collectFontStacks", () => {
   it("skips a node with no fontFamily rather than throwing", () => {
     const values = { form: {}, "form/action[0]": { fontFamily: "Geist" } };
     expect(collectFontStacks(values)).toEqual(["Geist"]);
+  });
+});
+
+describe("checkFontPreflight", () => {
+  // The exact (designValues, appValues) → preflight-result step runCompare
+  // calls after the skeleton gate passes. Extracted and tested directly so a
+  // regression that passes raw values (or a raw font-family string) instead
+  // of the arrays `collectFontStacks` produces fails a test, not just a
+  // reviewer's reading.
+  it("collects and dedupes each side's font stacks across multiple nodes before comparing", () => {
+    const design = {
+      form: { fontFamily: "Geist, sans-serif" },
+      "form/action[0]": { fontFamily: "Geist, sans-serif" },
+    };
+    const app = { form: { fontFamily: "Geist, sans-serif" } };
+    expect(checkFontPreflight(design, app)).toEqual({
+      ok: true,
+      message: "font stack shodný: Geist, sans-serif",
+    });
+  });
+
+  it("fails and names both stacks when the app's fonts differ from the design's", () => {
+    const design = { form: { fontFamily: "Geist, sans-serif" } };
+    const app = { form: { fontFamily: "Inter, sans-serif" } };
+    const result = checkFontPreflight(design, app);
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain("Geist");
+    expect(result.message).toContain("Inter");
   });
 });
 
@@ -250,6 +329,21 @@ describe("combineVerdict", () => {
       status: "continue",
       stop: true,
       reason: "strop 5 kol vyčerpán",
+    });
+  });
+
+  it("keeps a parked round's own reason and forces stop, ignoring decideNext entirely", () => {
+    // decideNext reasons about the history of percentages; it has no way to
+    // know the fonts differ, so a round that already carries its own reason
+    // must not have it discarded in favour of decideNext's (e.g. "pokračuje",
+    // which would be actively misleading here — nothing about a font
+    // mismatch is fixed by another round).
+    const roundVerdict = { status: "parked", reason: "font stack se liší — design: [Geist]" };
+    const next = { stop: false, reason: "pokračuje" };
+    expect(combineVerdict(roundVerdict, next)).toEqual({
+      status: "parked",
+      stop: true,
+      reason: "font stack se liší — design: [Geist]",
     });
   });
 });
@@ -392,7 +486,7 @@ describe("buildCompareOutcome", () => {
     expect(withoutMappings.payload.tokenMappings).toEqual([]);
   });
 
-  it("a passing font preflight leaves the round exactly as evaluateRound would produce it", () => {
+  it("a passing font preflight leaves the round as a normal done verdict — percent, images and exit code all present", () => {
     const appImage = Buffer.from("app");
     const maskImage = Buffer.from("mask");
     const result = {
@@ -401,7 +495,7 @@ describe("buildCompareOutcome", () => {
       pixels: { percent: 0.3, largestRegion: { w: 2, h: 2 }, diffBuffer: maskImage },
       appImage,
     };
-    const withPreflight = buildCompareOutcome({
+    const { payload, verdict } = buildCompareOutcome({
       result,
       spec: { selector: "#x" },
       slug: "epic-card",
@@ -409,18 +503,17 @@ describe("buildCompareOutcome", () => {
       history: [],
       fontPreflight: { ok: true, message: "font stack shodný: Geist" },
     });
-    const withoutPreflight = buildCompareOutcome({
-      result,
-      spec: { selector: "#x" },
-      slug: "epic-card",
-      masks: [],
-      history: [],
-    });
-    expect(withPreflight.payload.rounds.at(-1)).toEqual(withoutPreflight.payload.rounds.at(-1));
-    expect(withPreflight.verdict).toEqual(withoutPreflight.verdict);
+
+    const currentRound = payload.rounds.at(-1);
+    expect(currentRound.percent).toBe(0.3);
+    expect(currentRound.skeletonPass).toBe(true);
+    expect(currentRound.appImage).toBe(appImage);
+    expect(currentRound.maskImage).toBe(maskImage);
+    expect(verdict.status).toBe("done");
+    expect(selectExitCode(verdict)).toBe(0);
   });
 
-  it("a failing font preflight forces pixels: null and puts the font message in the round's reason, even if pixels were computed", () => {
+  it("a failing font preflight parks the run — no pixels, the font message as the round's and the verdict's reason, exit code 2", () => {
     const appImage = Buffer.from("app");
     const maskImage = Buffer.from("mask");
     const result = {
@@ -447,7 +540,12 @@ describe("buildCompareOutcome", () => {
     expect(currentRound).not.toHaveProperty("appImage");
     expect(currentRound).not.toHaveProperty("maskImage");
     expect(roundRecord).not.toHaveProperty("appImage");
-    expect(verdict.status).not.toBe("done");
+    // A font mismatch tells the Task-14 driver to stop and hand this to the
+    // operator — not "continue" (nothing about it is fixed by another round,
+    // since percent stays null forever) and not silently "done".
+    expect(verdict.status).toBe("parked");
+    expect(verdict.reason).toBe(message);
+    expect(selectExitCode(verdict)).toBe(2);
   });
 });
 

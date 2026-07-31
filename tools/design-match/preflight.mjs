@@ -1,4 +1,27 @@
-const normalise = (families) => families.map((f) => f.replace(/["']/g, "").trim()).filter(Boolean);
+// `next/font/google` never emits the plain family name a design mockup does —
+// it emits a generated `__<name>_<hash>` (and, for the metric-matched
+// fallback, `__<name>_Fallback_<hash>`). The shape is anchored (leading
+// double underscore, trailing hex run) so it can only fire on the generated
+// form, never on a family name that merely happens to contain an underscore.
+const GENERATED_FONT_RE = /^__(.+)_[0-9a-f]+$/;
+
+/**
+ * Strips quotes/whitespace, then — only for the `next/font/google` generated
+ * shape — recovers the plain family name. The synthetic `_Fallback` variant
+ * has no counterpart on the design side (it's Next's own metric-matched
+ * substitute, not a font either side actually renders in), so it is dropped
+ * entirely rather than compared: keeping it would guarantee a mismatch no
+ * code change can fix.
+ */
+function normaliseFontEntry(raw) {
+  const trimmed = raw.replace(/["']/g, "").trim();
+  const generated = GENERATED_FONT_RE.exec(trimmed);
+  if (!generated) return trimmed;
+  const name = generated[1];
+  return name.endsWith("_Fallback") ? null : name;
+}
+
+const normalise = (families) => families.map(normaliseFontEntry).filter(Boolean);
 
 /**
  * Stops the loop in F1 rather than in round five. A font mismatch makes every

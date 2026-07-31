@@ -43,10 +43,24 @@ describe("mapValue", () => {
 
 describe("TOKEN_PROPS", () => {
   it("lists exactly the properties PROP_PREFIX maps, not the wider VALUE_PROPS set", () => {
-    expect(TOKEN_PROPS).toEqual(
-      expect.arrayContaining(["color", "backgroundColor", "gap", "fontSize"]),
-    );
-    expect(TOKEN_PROPS).not.toContain("display");
+    // Asserts the full array, not arrayContaining — arrayContaining passes
+    // for any superset, which would let an accidental VALUE_PROPS entry
+    // (e.g. "display") sneak back in unnoticed.
+    expect(TOKEN_PROPS).toEqual([
+      "color",
+      "backgroundColor",
+      "borderColor",
+      "gap",
+      "rowGap",
+      "columnGap",
+      "paddingTop",
+      "paddingLeft",
+      "borderRadius",
+      "boxShadow",
+      "fontSize",
+      "lineHeight",
+      "letterSpacing",
+    ]);
   });
 });
 

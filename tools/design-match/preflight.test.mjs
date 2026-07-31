@@ -51,4 +51,27 @@ describe("fontPreflight", () => {
       message: "font stack shodný: geist, JetBrains mono",
     });
   });
+
+  it("normalises next/font/google's generated names against the design's plain family name", () => {
+    // apps/web loads fonts through next/font/google, which computes
+    // `__Geist_<hash>` / `__Geist_Fallback_<hash>` rather than `Geist`. The
+    // metric-matched fallback is synthetic and has no design-side
+    // counterpart, so it must be dropped rather than compared.
+    expect(
+      fontPreflight(
+        ["Geist", "sans-serif"],
+        ["__Geist_e8ce7c", "__Geist_Fallback_e8ce7c", "sans-serif"],
+      ),
+    ).toEqual({
+      ok: true,
+      message: "font stack shodný: Geist, sans-serif",
+    });
+  });
+
+  it("still fails a genuine mismatch after generated-name normalisation, proving the check isn't defanged", () => {
+    const result = fontPreflight(["Geist"], ["__Inter_abc123"]);
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain("Geist");
+    expect(result.message).toContain("Inter");
+  });
 });
