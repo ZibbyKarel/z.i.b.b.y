@@ -1,5 +1,7 @@
 # Channels & autonomy
 
+<!-- Reviewed 2026-07-31 (phase 126a): the GitHub adapter's ingest scope changed —
+see "GitHub adapter" below. `poll()` also gained an optional fourth argument. -->
 <!-- Reviewed 2026-07-29 (roadmap-sync-mine arc): `GitHubConfig.username` became a
 required field, but the GitHub adapter's behaviour here is unchanged — only its
 test fixtures gained the now-required `username`. This doc remains accurate. -->
@@ -27,9 +29,14 @@ timer whenever the value changes.
 `sweepOutcomes()` runs first (see below), then for each enabled integration with
 credentials:
 
-1. `adapter.poll(integration, credentials, cursor)` → new items, retried with
+1. `adapter.poll(integration, credentials, cursor, ctx?)` → new items, retried with
    exponential backoff (`withRetry`; `CHANNEL_POLL_RETRIES` default 2,
-   `CHANNEL_POLL_BACKOFF_MS` default 250 ms) before the poll is considered failed
+   `CHANNEL_POLL_BACKOFF_MS` default 250 ms) before the poll is considered failed.
+   `ctx` is a per-poll context the **watcher** resolves and adapters read only if
+   they need it — today only the GitHub adapter does, for the set of PR numbers
+   ZIBBY itself opened (see below). It is optional by design: an adapter that does
+   not care about it is unchanged, and a failure to resolve it must degrade the
+   poll's scope, never fail the poll.
 2. Sanitize inbound text (`sanitizeInbound`)
 3. Persist new items into `ChannelItemStore` (state `new`)
 4. Advance the cursor (offset of the last processed item) — **after**
@@ -97,11 +104,36 @@ Maps `integration.type` to a concrete adapter implementation.
 
 ### GitHub adapter
 
-- Poll: `/repos/{owner}/{name}/issues?since=cursor` (issues + PRs; `pull_request`
-  distinguishes them), filtered by `streams`
+**What gets ingested — and what deliberately doesn't.** On a repo the operator works
+on professionally, "everything touching me" is far too much: the inbox filled with
+threads the operator was never addressed in. Since phase 126a the adapter ingests the
+union of exactly two sets, and nothing else:
+
+1. **Threads that explicitly @-mention the operator** — one search,
+   `q=repo:{repo} is:open mentions:{username}`, incremental via the cursor.
+2. **PRs ZIBBY itself opened** — read directly by number.
+
+`assignee:{username}` was **removed**. It was the leak: it pulled in anything assigned
+to the operator regardless of who opened it or whether they were addressed. Note that
+`RoadmapSourceService` still uses `assignee:` on purpose — roadmap sync's question
+genuinely _is_ "my work items". Do not "fix" it to match this adapter; they answer
+different questions.
+
+Set 2 does **not** use `author:{username}`. ZIBBY opens PRs with the operator's
+credentials, so `author:` cannot tell a ZIBBY PR from one the operator opened by hand.
+The authoritative answer is ZIBBY's own record — `ZibbyPrLocator.numbersFor(projectId)`,
+which unions the artifact registry (kind `pr`) with directed tasks' `outcome.pr.url`,
+and which `ReviewCommentFetcher` already uses for precisely this purpose. The watcher
+resolves it and passes it in via `poll()`'s `ctx` (above); the adapter never reaches
+for storage itself.
+
 - Cursor = the most recent `updated_at`; id = `gh-<repo>-<issue|pr>-<n>`,
   `externalRef.messageId` = the number
+- Both sets are deduped by issue number, then filtered by `streams`
 - Send: a comment (`/repos/{repo}/issues/{n}/comments`)
+- `listAll()` (`/repos/{owner}/{name}/issues?since=cursor`, no scoping) survives only
+  for a config with no `username` — which `GitHubConfigSchema` no longer permits. It is
+  unreachable in practice; left in place rather than deleted as a drive-by.
 
 ### Google Calendar adapter
 

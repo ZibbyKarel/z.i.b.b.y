@@ -5,6 +5,7 @@ import {
   type OnModuleInit,
   Optional,
 } from "@nestjs/common";
+import { ModuleRef } from "@nestjs/core";
 import type { ChannelItem, CredentialsInput, Integration } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { CredentialsStore } from "../integrations/credentials.store";
@@ -16,6 +17,8 @@ import { TickingWatcherBase } from "../shared/ticking-watcher-base";
 import { withRetry } from "../shared/retry";
 import { randomUUID } from "node:crypto";
 import { WatcherHealthRegistry } from "../health/watcher-health.registry";
+import type { PollContext } from "./adapters/adapter";
+import { MAX_ZIBBY_PR_READS } from "./adapters/adapter";
 import { AdapterRegistry } from "./adapters/adapter-registry";
 import { ChannelEventsService } from "./channel-events.service";
 import { ChannelItemStore } from "./channel-item.store";
@@ -68,6 +71,7 @@ export class ChannelWatcherService
     private readonly activity: ActivityLogService,
     private readonly systemConfig: SystemConfigStore,
     private readonly watcherHealthRegistry: WatcherHealthRegistry,
+    private readonly moduleRef: ModuleRef,
     @Optional() @Inject(CHANNEL_TRIAGE_FLOW) private readonly flow?: ChannelTriageFlow,
   ) {
     super();
@@ -152,14 +156,75 @@ export class ChannelWatcherService
     return ingested;
   }
 
+  /**
+   * ZIBBY's own open PR numbers for a github integration's project (phase-126a,
+   * condition (a) of the operator's ask) — resolved through `ZibbyPrLocator`
+   * (`review-learning/zibby-pr.locator.ts`), the exact seam `ReviewCommentFetcher`
+   * already uses to answer "is this ZIBBY's PR" (D6 in
+   * `docs/plans/phase-126a-github-question-scope.md`). `ChannelsModule`
+   * deliberately does NOT import `ReviewLearningModule` to get a constructor
+   * injection: that module drags in `ArtifactsModule` + `ScheduledTasksStorageModule`,
+   * and D8 rules out widening this module's import graph for one bookkeeping
+   * lookup — the DI cycle this codebase has already been bitten by lives in
+   * exactly that class of cross-module import. Instead it's resolved lazily via
+   * `ModuleRef` (`strict: false` searches the WHOLE app container, not just this
+   * module's own imports, so no export/import wiring is needed at all) — the
+   * same escape hatch `PipelineRunnerService` uses to reach `HandoffService`
+   * from a module that doesn't import `HandoffModule`, never `forwardRef`. The
+   * class reference itself is fetched via a lazy `await import(...)` too, so
+   * this file never eagerly `require`s the review-learning module chain at
+   * load time (mirrors the `import type` + lazy-value-import split
+   * `pipeline-runner.service.ts` uses for the same reason).
+   *
+   * Fail-open: ANY failure here — the locator throws, the provider isn't up
+   * yet, the project genuinely has no PRs — returns an empty array rather than
+   * propagating. A bookkeeping miss must never stop channel ingestion; the
+   * mentions search alone still carries the poll.
+   */
+  private async zibbyPrNumbersFor(projectId: string): Promise<readonly number[]> {
+    try {
+      const { ZibbyPrLocator } = await import("../review-learning/zibby-pr.locator");
+      const locator = this.moduleRef.get(ZibbyPrLocator, { strict: false });
+      const numbers = await locator.numbersFor(projectId);
+      // The adapter turns each number into its own `GET /repos/{repo}/issues/{n}`,
+      // so an unbounded set would mean an unbounded poll. Capping HERE rather than
+      // in the adapter is deliberate: this class has the scoped logger, and a
+      // dropped number is exactly the kind of silent coverage loss that must be
+      // visible in the record rather than printed to stderr from a `new`-built
+      // adapter with no trace context.
+      if (numbers.length > MAX_ZIBBY_PR_READS) {
+        this.log.warn("zibby PR set capped for this poll", {
+          projectId,
+          cap: MAX_ZIBBY_PR_READS,
+          dropped: numbers.length - MAX_ZIBBY_PR_READS,
+        });
+        return numbers.slice(0, MAX_ZIBBY_PR_READS);
+      }
+      return numbers;
+    } catch (err) {
+      this.log.debug("zibby PR lookup failed (fail-open, mentions-only this poll)", {
+        projectId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return [];
+    }
+  }
+
   private async pollOne(integration: Integration, creds: CredentialsInput): Promise<string[]> {
     const adapter = this.registry.resolve(integration.kind);
     const cursor = await this.store.readCursor(integration.id);
+    // Only a github integration owned by a project (never a company — the locator
+    // keys on projectId) gets the ZIBBY-PR half of the union; every other kind
+    // (and a company-owned github integration) polls with no ctx at all.
+    const ctx: PollContext | undefined =
+      integration.kind === "github" && integration.projectId
+        ? { zibbyPrNumbers: await this.zibbyPrNumbersFor(integration.projectId) }
+        : undefined;
     // M8: retry a transient poll failure with exponential backoff before giving up.
     // Only the network read retries; item persistence below is idempotent (dedup-by-id)
     // and stays outside the retry. Exhaustion rethrows to tick's catch (the DLQ boundary).
     const { items, cursor: nextCursor } = await withRetry(
-      () => adapter.poll(integration, creds, cursor),
+      () => adapter.poll(integration, creds, cursor, ctx),
       {
         retries: intEnv("CHANNEL_POLL_RETRIES", 2),
         baseMs: intEnv("CHANNEL_POLL_BACKOFF_MS", 250),

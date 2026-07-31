@@ -32,6 +32,32 @@ export interface PollResult {
 }
 
 /**
+ * Per-poll context the watcher resolves and hands to `poll()` (phase-126a).
+ * Optional on every field, and the parameter itself is optional on `poll()` — an
+ * adapter with no use for any of this (slack, email, jira, calendar, sentry)
+ * compiles and behaves exactly as before.
+ */
+export interface PollContext {
+  /**
+   * PR/issue numbers ZIBBY itself opened for this integration's project, already
+   * capped at {@link MAX_ZIBBY_PR_READS} by the watcher.
+   */
+  readonly zibbyPrNumbers?: readonly number[];
+}
+
+/**
+ * Ceiling on `PollContext.zibbyPrNumbers` (phase 126a). Reading one ZIBBY PR is one
+ * GitHub request, so an unbounded list would fan a single poll out into an unbounded
+ * burst. The set is normally tiny — the open PRs ZIBBY has for one project.
+ *
+ * The cap is applied by `ChannelWatcherService`, not by the adapter: the watcher owns
+ * the scoped logger, and dropped coverage has to be visible in the record rather than
+ * printed to stderr from an adapter built with plain `new` and no trace context. It
+ * lives here, on the seam both sides share, so the two cannot drift apart.
+ */
+export const MAX_ZIBBY_PR_READS = 20;
+
+/**
  * The channel seam — one implementation per kind (Slack now, email in 5.4), plus a
  * kind-agnostic fake for the e2e suite. In production selection is always by
  * `integration.kind`; the FakeChannelAdapter is substituted for every kind ONLY in the
@@ -45,11 +71,16 @@ export interface ChannelAdapter {
   readonly readOnly?: true;
   /** Probe credentials (Slack `auth.test`, IMAP login). Pure check, no side effects. */
   test(integration: Integration, creds: CredentialsInput): Promise<TestResult>;
-  /** Fetch messages newer than `cursor`; return them + the advanced cursor. */
+  /**
+   * Fetch messages newer than `cursor`; return them + the advanced cursor.
+   * `ctx` is watcher-resolved, per-poll data an adapter may not need — see
+   * {@link PollContext}.
+   */
   poll(
     integration: Integration,
     creds: CredentialsInput,
     cursor: string | undefined,
+    ctx?: PollContext,
   ): Promise<PollResult>;
   /**
    * Send a reply to an item. Takes the whole item (not just its `externalRef`) so

@@ -1,11 +1,14 @@
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { CreateIntegrationInput } from "@zibby/contracts";
+import type { ModuleRef } from "@nestjs/core";
+import type { CreateIntegrationInput, Integration } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CredentialsStore } from "../integrations/credentials.store";
 import { IntegrationsStorageService } from "../integrations/integrations.storage.service";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
+import type { ChannelAdapter, PollContext, PollResult } from "./adapters/adapter";
+import { MAX_ZIBBY_PR_READS } from "./adapters/adapter";
 import { AdapterRegistry } from "./adapters/adapter-registry";
 import { ChannelEventsService } from "./channel-events.service";
 import { ChannelItemStore } from "./channel-item.store";
@@ -25,6 +28,42 @@ const slack = (id: string): CreateIntegrationInput => ({
   projectId: "acme-app",
   config: { kind: "slack", channels: ["C1"] },
 });
+
+const github = (id: string): CreateIntegrationInput => ({
+  id,
+  kind: "github",
+  projectId: "acme-app",
+  config: { kind: "github", repo: "acme/app", streams: ["issues", "pulls"], username: "karel" },
+});
+
+/** A fake `ModuleRef.get` — the escape hatch `zibbyPrNumbersFor` resolves
+ * `ZibbyPrLocator` through. `locator` absent simulates the provider not being
+ * reachable (e.g. `ChannelsModule` alone, no `ReviewLearningModule` up) by throwing,
+ * exercising the fail-open path. */
+function fakeModuleRef(locator?: { numbersFor: (projectId: string) => Promise<number[]> }) {
+  return {
+    get: () => {
+      if (!locator) throw new Error("ZibbyPrLocator not reachable in this test");
+      return locator;
+    },
+  } as unknown as ModuleRef;
+}
+
+/** A registry whose `resolve` returns a spy adapter recording every `poll()` call
+ * (including the `ctx` argument) instead of doing real work — used to assert what
+ * `pollOne` hands the adapter, independent of any adapter's own poll behaviour. */
+function spyRegistry(calls: Array<{ integrationId: string; ctx: PollContext | undefined }>) {
+  const adapter: ChannelAdapter = {
+    kind: "fake",
+    test: async () => ({ ok: true, detail: "spy" }),
+    poll: (integration: Integration, _creds, _cursor, ctx): Promise<PollResult> => {
+      calls.push({ integrationId: integration.id, ctx });
+      return Promise.resolve({ items: [], cursor: undefined });
+    },
+    send: async () => {},
+  };
+  return { resolve: () => adapter } as unknown as AdapterRegistry;
+}
 
 describe("ChannelWatcherService", () => {
   let root: string;
@@ -72,7 +111,7 @@ describe("ChannelWatcherService", () => {
     );
   }
 
-  function makeWatcher(registry: AdapterRegistry) {
+  function makeWatcher(registry: AdapterRegistry, moduleRef: ModuleRef = fakeModuleRef()) {
     return new ChannelWatcherService(
       integrations,
       credentials,
@@ -86,6 +125,7 @@ describe("ChannelWatcherService", () => {
       // F6c watcher-health registry double — registration is exercised in the
       // base/e2e specs, not here.
       { register: () => {} } as never,
+      moduleRef,
     );
   }
 
@@ -183,5 +223,54 @@ describe("ChannelWatcherService", () => {
     resolveFirst();
     await first;
     expect(tickSpy).toHaveBeenCalledTimes(1); // still once — the skipped firing never ran tick()
+  });
+
+  it("passes zibbyPrNumbers to a github integration's poll, but not a slack integration's (phase-126a)", async () => {
+    await integrations.create(github("gh"));
+    await credentials.write("gh", { token: "ghp" });
+    await integrations.create(slack("team"));
+    await credentials.write("team", { token: "xoxb-1" });
+
+    const calls: Array<{ integrationId: string; ctx: PollContext | undefined }> = [];
+    const moduleRef = fakeModuleRef({ numbersFor: async () => [7, 9] });
+    const watcher = makeWatcher(spyRegistry(calls), moduleRef);
+
+    await watcher.tick();
+
+    expect(calls.find((c) => c.integrationId === "gh")?.ctx).toEqual({ zibbyPrNumbers: [7, 9] });
+    expect(calls.find((c) => c.integrationId === "team")?.ctx).toBeUndefined();
+  });
+
+  it("fails open when ZibbyPrLocator throws — the poll still runs, with an empty PR-number set", async () => {
+    await integrations.create(github("gh"));
+    await credentials.write("gh", { token: "ghp" });
+
+    const calls: Array<{ integrationId: string; ctx: PollContext | undefined }> = [];
+    // No locator registered — fakeModuleRef()'s `.get` throws, exercising the
+    // fail-open path in `zibbyPrNumbersFor`.
+    const watcher = makeWatcher(spyRegistry(calls), fakeModuleRef());
+
+    const ids = await watcher.tick();
+
+    expect(ids).toEqual([]); // no crash, no exhausted-retry error
+    expect(calls[0]?.ctx).toEqual({ zibbyPrNumbers: [] });
+    expect((await integrations.get("gh")).status).toBe("connected");
+  });
+
+  it("caps the PR-number set — the adapter turns each number into its own request", async () => {
+    await integrations.create(github("gh"));
+    await credentials.write("gh", { token: "ghp" });
+
+    const overCap = Array.from({ length: MAX_ZIBBY_PR_READS + 5 }, (_, i) => i + 1);
+    const calls: Array<{ integrationId: string; ctx: PollContext | undefined }> = [];
+    const watcher = makeWatcher(
+      spyRegistry(calls),
+      fakeModuleRef({ numbersFor: async () => overCap }),
+    );
+
+    await watcher.tick();
+
+    expect(calls[0]?.ctx?.zibbyPrNumbers).toHaveLength(MAX_ZIBBY_PR_READS);
+    expect(calls[0]?.ctx?.zibbyPrNumbers).toEqual(overCap.slice(0, MAX_ZIBBY_PR_READS));
   });
 });

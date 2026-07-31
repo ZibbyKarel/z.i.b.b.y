@@ -106,7 +106,7 @@ describe("GitHubChannelAdapter", () => {
     );
   });
 
-  it("uses the Search API for mentions+assignee when username is configured", async () => {
+  it("uses the Search API for mentions ONLY when username is configured — no assignee query (phase-126a)", async () => {
     const mine: Integration = {
       ...gh,
       config: { kind: "github", repo: "acme/app", streams: ["issues", "pulls"], username: "karel" },
@@ -114,24 +114,14 @@ describe("GitHubChannelAdapter", () => {
     const calls: string[] = [];
     const fetchImpl = vi.fn(async (url: string) => {
       calls.push(decodeURIComponent(url));
-      const items = url.includes("mentions")
-        ? [
-            {
-              number: 1,
-              title: "mentioned",
-              updated_at: "2026-06-17T09:00:00.000Z",
-              user: { login: "dana" },
-            },
-          ]
-        : [
-            {
-              number: 2,
-              title: "assigned",
-              updated_at: "2026-06-17T10:00:00.000Z",
-              user: { login: "eli" },
-              pull_request: {},
-            },
-          ];
+      const items = [
+        {
+          number: 1,
+          title: "mentioned",
+          updated_at: "2026-06-17T09:00:00.000Z",
+          user: { login: "dana" },
+        },
+      ];
       return new Response(JSON.stringify({ items }), {
         status: 200,
         headers: { "content-type": "application/json" },
@@ -145,11 +135,117 @@ describe("GitHubChannelAdapter", () => {
       "2026-06-17T08:00:00.000Z",
     );
 
-    expect(calls.every((u) => u.includes("/search/issues"))).toBe(true);
-    expect(calls.some((u) => u.includes("mentions:karel"))).toBe(true);
-    expect(calls.some((u) => u.includes("assignee:karel"))).toBe(true);
-    expect(items.map((i) => i.id)).toEqual(["gh-acme-app-issue-1", "gh-acme-app-pr-2"]);
-    expect(cursor).toBe("2026-06-17T10:00:00.000Z");
+    // Only one search is issued (the old two-query union is gone).
+    expect(calls.length).toBe(1);
+    expect(calls[0]).toContain("/search/issues");
+    expect(calls[0]).toContain("mentions:karel");
+    expect(calls[0]).not.toContain("assignee");
+    expect(items.map((i) => i.id)).toEqual(["gh-acme-app-issue-1"]);
+    expect(cursor).toBe("2026-06-17T09:00:00.000Z");
+  });
+
+  describe("ZIBBY-opened PRs (ctx.zibbyPrNumbers, phase-126a)", () => {
+    /** Mentions search returns nothing by default; only the direct issue reads matter here. */
+    function fetchImplFor(
+      issuesByNumber: Record<number, { updated_at: string; state?: string; title?: string } | 404>,
+    ): typeof fetch {
+      return vi.fn(async (url: string) => {
+        if (url.includes("/search/issues")) {
+          return new Response(JSON.stringify({ items: [] }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        }
+        const match = /\/issues\/(\d+)$/.exec(url);
+        const number = match ? Number(match[1]) : NaN;
+        const entry = issuesByNumber[number];
+        if (entry === 404 || entry === undefined) {
+          return new Response("not found", { status: 404 });
+        }
+        return new Response(JSON.stringify({ number, state: "open", pull_request: {}, ...entry }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }) as unknown as typeof fetch;
+    }
+
+    it("fetches each number in ctx.zibbyPrNumbers via GET /repos/{repo}/issues/{n}", async () => {
+      const fetchImpl = fetchImplFor({
+        7: { updated_at: "2026-06-17T09:00:00.000Z" },
+        9: { updated_at: "2026-06-17T10:00:00.000Z" },
+      });
+      const adapter = new GitHubChannelAdapter(fetchImpl);
+      const { items } = await adapter.poll(gh, { token: "ghp" }, "2026-06-17T08:00:00.000Z", {
+        zibbyPrNumbers: [7, 9],
+      });
+      const calls = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls.map(
+        (c) => c[0] as string,
+      );
+      expect(calls).toContain("https://api.github.com/repos/acme/app/issues/7");
+      expect(calls).toContain("https://api.github.com/repos/acme/app/issues/9");
+      expect(items.map((i) => i.id).sort()).toEqual(["gh-acme-app-pr-7", "gh-acme-app-pr-9"]);
+    });
+
+    it("does not ingest a ZIBBY PR whose updated_at is older than the cursor", async () => {
+      const fetchImpl = fetchImplFor({ 7: { updated_at: "2026-06-17T07:00:00.000Z" } });
+      const adapter = new GitHubChannelAdapter(fetchImpl);
+      const { items } = await adapter.poll(gh, { token: "ghp" }, "2026-06-17T08:00:00.000Z", {
+        zibbyPrNumbers: [7],
+      });
+      expect(items).toEqual([]);
+    });
+
+    it("ingests a ZIBBY PR that also appears in the mentions search exactly once (dedupe by number)", async () => {
+      const fetchImpl = vi.fn(async (url: string) => {
+        if (url.includes("/search/issues")) {
+          return new Response(
+            JSON.stringify({
+              items: [{ number: 7, title: "dup", updated_at: "2026-06-17T09:00:00.000Z" }],
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          );
+        }
+        return new Response(
+          JSON.stringify({ number: 7, state: "open", updated_at: "2026-06-17T09:00:00.000Z" }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }) as unknown as typeof fetch;
+      const adapter = new GitHubChannelAdapter(fetchImpl);
+      const { items } = await adapter.poll(gh, { token: "ghp" }, "2026-06-17T08:00:00.000Z", {
+        zibbyPrNumbers: [7],
+      });
+      expect(items.map((i) => i.id)).toEqual(["gh-acme-app-issue-7"]);
+    });
+
+    it("a 404 on one ZIBBY PR number does not fail the poll — the rest still ingest", async () => {
+      const fetchImpl = fetchImplFor({
+        7: 404,
+        9: { updated_at: "2026-06-17T10:00:00.000Z" },
+      });
+      const adapter = new GitHubChannelAdapter(fetchImpl);
+      const { items } = await adapter.poll(gh, { token: "ghp" }, "2026-06-17T08:00:00.000Z", {
+        zibbyPrNumbers: [7, 9],
+      });
+      expect(items.map((i) => i.id)).toEqual(["gh-acme-app-pr-9"]);
+    });
+
+    it("a closed ZIBBY PR is not ingested (kept consistent with the mentions search's is:open)", async () => {
+      const fetchImpl = fetchImplFor({
+        7: { updated_at: "2026-06-17T10:00:00.000Z", state: "closed" },
+      });
+      const adapter = new GitHubChannelAdapter(fetchImpl);
+      const { items } = await adapter.poll(gh, { token: "ghp" }, "2026-06-17T08:00:00.000Z", {
+        zibbyPrNumbers: [7],
+      });
+      expect(items).toEqual([]);
+    });
+
+    it("ctx omitted entirely behaves as mentions-only, no crash (pins the optionality)", async () => {
+      const fetchImpl = jsonFetch({ items: [] });
+      const adapter = new GitHubChannelAdapter(fetchImpl);
+      const { items } = await adapter.poll(gh, { token: "ghp" }, "2026-06-17T08:00:00.000Z");
+      expect(items).toEqual([]);
+    });
   });
 
   it("test maps /user to a TestResult", async () => {
