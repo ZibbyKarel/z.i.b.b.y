@@ -1,3 +1,5 @@
+- [ ] v projektu shoptet-partner-cli se stahují všechny možné otázky. Měly by se stahovat opět jen ty, které se týkají PR, která otevřel ZIBBY a nebo těch, kde jsem výslovně menchnutý
+
 - [ ] kartičky integrací v detailu projektu budou mít ikonky služeb třetích stran ted Jira integrace -> ikonka JIRA systému, Github integrace -> ikonka GitHub atp.... zobrazíme místo glyphu v levo nahoře
 
 - [ ] roadmap v detailu projektu - pokud nevyberu žádný epic, vidím všechny tasky v kanban boardu. Kliknutí na epic je filtruje

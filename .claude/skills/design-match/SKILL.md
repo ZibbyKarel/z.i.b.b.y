@@ -10,7 +10,7 @@ description: >
 # design-match
 
 Spec: `docs/superpowers/specs/2026-07-31-design-match-design.md`. CLI:
-`tools/design-match/cli.mjs`; spec format `DESIGN_MATCH_VERSION = 1.5.0`
+`.claude/skills/design-match/scripts/cli.mjs`; spec format `DESIGN_MATCH_VERSION = 1.5.0`
 (`version.mjs`) — a `spec.json` measured by a different format version is
 refused rather than compared (see Exit codes). 1.5.0 made `tokenMappings`
 distinguish "the theme was read and needs nothing new" (`[]`) from "the theme
@@ -43,7 +43,7 @@ below before you call it in an actual retry cycle.
 
 ```bash
 # F1 + F2 — cache the mockup's CDN assets, inventory its regions, measure one
-node tools/design-match/cli.mjs measure "design/Z.I.B.B.Y/ZIBBY Roadmap.html" "karta epicu"
+node .claude/skills/design-match/scripts/cli.mjs measure "design/Z.I.B.B.Y/ZIBBY Roadmap.html" "karta epicu"
 ```
 
 This prints a numbered inventory (best text/class match first) with a preview
@@ -84,11 +84,11 @@ whichever region wins.
 # F5 — one compare round against a real DS story (confirmed against the running
 # Storybook's index: DesignSystem/Card → designsystem-card--overview). No
 # --selector needed: a story mounts at #storybook-root.
-node tools/design-match/cli.mjs compare --slug karta-epicu --story designsystem-card--overview
+node .claude/skills/design-match/scripts/cli.mjs compare --slug karta-epicu --story designsystem-card--overview
 
 # …or against a real route (apps/web/app/(dashboard)/agents/page.tsx), dev
 # server must already be up. `--route` REQUIRES --selector — see Flags.
-node tools/design-match/cli.mjs compare --slug karta-epicu --route /agents --selector "body > div"
+node .claude/skills/design-match/scripts/cli.mjs compare --slug karta-epicu --route /agents --selector "body > div"
 ```
 
 `--slug` defaults to a slugified `description` on `measure` (`"karta epicu"` →
@@ -120,7 +120,7 @@ so a symlink out of the tree does not sneak past. Measuring a mockup that sits
 outside the repo hits it before a socket is opened:
 
 ```
-$ node tools/design-match/cli.mjs measure /tmp/dm-probe/x.html "karta"
+$ node .claude/skills/design-match/scripts/cli.mjs measure /tmp/dm-probe/x.html "karta"
 [design-match] design-match: adresář mockupu (/private/tmp/dm-probe) leží mimo aktuální
 pracovní adresář (/Users/zibby/Workspace/z.i.b.b.y) — design-match servíruje jen adresáře
 uvnitř něj. Spusť measure z adresáře, který mockup obsahuje, nebo mockup do něj zkopíruj.
@@ -562,7 +562,7 @@ row below was measured with the **same description, `"karta"`** — that is the
 input that produced this table, and the table is not reproducible without it:
 
 ```bash
-node tools/design-match/cli.mjs measure "design/Z.I.B.B.Y/<mockup>.html" "karta"
+node .claude/skills/design-match/scripts/cli.mjs measure "design/Z.I.B.B.Y/<mockup>.html" "karta"
 ```
 
 | Mockup                         | Nodes | Token mappings | Winning selector                             | `settled` |

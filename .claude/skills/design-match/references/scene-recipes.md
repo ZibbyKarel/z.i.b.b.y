@@ -27,7 +27,7 @@ Storybook's own `/index.json`: `DesignSystem/Card`'s `Overview` export resolves
 to the id `designsystem-card--overview`.
 
 ```bash
-node tools/design-match/cli.mjs compare --slug karta-epicu --story designsystem-card--overview
+node .claude/skills/design-match/scripts/cli.mjs compare --slug karta-epicu --story designsystem-card--overview
 ```
 
 The engine hits `/iframe.html?id=…&viewMode=story`, so no Storybook chrome is in
@@ -46,7 +46,7 @@ onto the app base (`--app-base <origin>`, default `http://localhost:3000`).
 Confirmed real: `apps/web/app/(dashboard)/agents/page.tsx` exists.
 
 ```bash
-node tools/design-match/cli.mjs compare --slug karta-epicu --route /agents --selector "body > div"
+node .claude/skills/design-match/scripts/cli.mjs compare --slug karta-epicu --route /agents --selector "body > div"
 ```
 
 `--selector` is not optional here — see below.
@@ -94,7 +94,7 @@ přes --selector; selector z designu (spec.json) v implementaci zpravidla neexis
 ## `--mask <selector>` (repeatable)
 
 ```bash
-node tools/design-match/cli.mjs compare --slug karta-epicu --route /agents \
+node .claude/skills/design-match/scripts/cli.mjs compare --slug karta-epicu --route /agents \
   --selector "body > div" \
   --mask "[data-testid=last-active]"   # illustrative: stand-in for a live/relative-time field
 ```

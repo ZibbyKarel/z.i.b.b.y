@@ -2,7 +2,7 @@
 
 `getComputedStyle` exposes ~340 properties. Measuring all of them buries the real
 delta in noise (every inherited default shows up as a "difference" the moment one
-node's structure shifts). The whitelist in `tools/design-match/extract.mjs`
+node's structure shifts). The whitelist in `.claude/skills/design-match/scripts/extract.mjs`
 (`VALUE_PROPS`) is deliberately narrow — **51 properties**, confirmed by counting
 the array — across six groups:
 

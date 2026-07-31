@@ -40,7 +40,7 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:browser": "vitest run --config tools/design-match/vitest.browser.config.ts",
+    "test:browser": "vitest run --config .claude/skills/design-match/scripts/vitest.browser.config.ts",
     "storybook": "storybook dev -p 6006 -c libs/design-system/.storybook",
     "e2e": "playwright test",
     "e2e:report": "playwright show-report"
