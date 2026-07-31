@@ -88,6 +88,11 @@ node tools/design-match/cli.mjs compare --slug karta-epicu --route /agents --sel
 `karta-epicu`); `compare` has no description to slugify from, so it always
 requires `--slug` explicitly.
 
+Those two `compare` calls are **alternatives, not a sequence**: history
+accumulates per slug, so running both against `karta-epicu` back to back is two
+rounds, and two red skeleton gates park the run (exit 2) by design. Use a
+separate `--slug` per scene, or `--reset`.
+
 ### Where the mockup is served from
 
 `measure` does **not** open the mockup over `file://` any more. It stands up a
@@ -230,15 +235,15 @@ renderings of what the browser really put on screen, and they are the evidence
 the refusal is telling you to go and look at. `spec.json`, `report.md` and
 `rounds.json` assert conclusions and are never written on a failing path.
 
-| Refusal                                                            | What it leaves, and what it points you at                                                                                                                                            |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| root outside cwd / at or above `$HOME`                             | nothing — it fires before the browser launches. Copy the mockup into the repo                                                                                                        |
-| CDN resource that cannot be downloaded                             | nothing — `design-match: nelze stáhnout <url> (HTTP nnn). Bez cache se mockup nevykreslí.`                                                                                           |
-| `--region <n>` out of range                                        | names the crops **that exist**; when `cropFitsPage` skipped all of them it says so and sends you to the inventory's selectors and dimensions instead of naming a file it never wrote |
-| region rendered nothing (below)                                    | names `design.png` and the **chosen** region's crop, when that crop exists                                                                                                           |
-| `spec.json` missing / older version / blank                        | nothing new — re-run `measure` for the slug                                                                                                                                          |
-| `--strict-wrappers` disagrees with `spec.json`                     | nothing new — re-run `measure`, or drop/add the flag on `compare`                                                                                                                    |
-| `--route` without `--selector`, or a selector that matches nothing | nothing — the message names the selector and the page                                                                                                                                |
+| Refusal                                                            | What it leaves, and what it points you at                                                                                                                                                                           |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| root outside cwd / at or above `$HOME`                             | no artifact directory — it fires before the browser launches. (The CDN cache and the rewritten `.design-match-cached-*.html` beside the mockup are written first, so those do exist.) Copy the mockup into the repo |
+| CDN resource that cannot be downloaded                             | nothing — `design-match: nelze stáhnout <url> (HTTP nnn). Bez cache se mockup nevykreslí.`                                                                                                                          |
+| `--region <n>` out of range                                        | names the crops **that exist**; when `cropFitsPage` skipped all of them it says so and sends you to the inventory's selectors and dimensions instead of naming a file it never wrote                                |
+| region rendered nothing (below)                                    | names `design.png` and the **chosen** region's crop, when that crop exists                                                                                                                                          |
+| `spec.json` missing / older version / blank                        | nothing new — re-run `measure` for the slug                                                                                                                                                                         |
+| `--strict-wrappers` disagrees with `spec.json`                     | nothing new — re-run `measure`, or drop/add the flag on `compare`                                                                                                                                                   |
+| `--route` without `--selector`, or a selector that matches nothing | nothing — the message names the selector and the page                                                                                                                                                               |
 
 A failed `compare` additionally **marks the previous `report.md` stale** rather
 than leaving a passing verdict lying next to a failed run. The retraction is
@@ -436,8 +441,8 @@ skeleton gate and the font preflight to reach the pixel layer:
 ### `values.md`'s four states
 
 The distinction the whole branch exists to keep: "no differences" and "not
-measured" must never render the same. `renderValues` (`report.mjs`) has exactly
-four operator-visible outputs:
+measured" must never render the same. `renderValues` (`report.mjs`) produces
+three verdicts, and a fourth thing rides on two of them:
 
 1. **`Neměřeno — skeleton gate neprošel…`** — the gate was red, `compareValues`
    never ran, nothing about the values is known. This is the state an operator
@@ -445,14 +450,15 @@ four operator-visible outputs:
 2. **`Sedí — žádné hodnotové rozdíly.`** — the values really were compared and
    really were clean.
 3. **a delta list**, grouped by skeleton path, one bullet per property.
-4. and, on top of (2) and (3), the **wrapper-coverage caveat** —
+4. on (2) and (3) only, the **wrapper-coverage caveat** —
    `> Měřeny jsou uzly, které zůstaly ve skeletonu…` — present whenever wrapper
    collapsing was on (the default), absent under `--strict-wrappers`. It names
    what the value layer did _not_ look at: a collapsed pass-through wrapper
-   takes its own measured values with it.
+   takes its own measured values with it. It never appears on (1), where nothing
+   was measured at all.
 
-All four use `skeleton.md`'s address space — one DOM walk produces both, so a
-path names the same node in either file.
+All of them use `skeleton.md`'s address space — one DOM walk produces both, so
+a path names the same node in either file.
 
 ### `settled`
 
@@ -472,12 +478,13 @@ A **missing** `settled` is a third state and renders as neither — a round or a
 spec written before the field existed knows nothing about its settle, and
 unknown must not be laundered into "settled".
 
-`components.md` is always just its `# Volba komponent` heading —
-`buildCompareOutcome` hardcodes `componentDecisions: []` (`cli.mjs`) and
-nothing populates it. Recording _why_ a new component was justified (which
-existing DS candidates were tried, why each was rejected) is currently a
-manual step for whoever drives the loop, not something `compare` derives on
-its own.
+### `components.md`
+
+Always just its `# Volba komponent` heading — `buildCompareOutcome` hardcodes
+`componentDecisions: []` (`cli.mjs`) and nothing populates it. Recording _why_ a
+new component was justified (which existing DS candidates were tried, why each
+was rejected) is currently a manual step for whoever drives the loop, not
+something `compare` derives on its own.
 
 ## Gates
 
@@ -605,11 +612,6 @@ is a value delta on every node — which is the right layer for it, but it means
 run cannot reach `HOTOVO` until the implementation's declared stack matches the
 design's. Against Storybook, whose order genuinely differs from these mockups',
 that is a standing blocker. Recorded as open in `references/computed-props.md`.
-
-### `components.md` is never populated
-
-`buildCompareOutcome` hardcodes `componentDecisions: []`. Recording _why_ a new
-component was justified is a manual step for whoever drives the loop.
 
 ### What was verified working
 
