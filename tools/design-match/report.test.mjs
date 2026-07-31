@@ -176,6 +176,47 @@ describe("renderTokens", () => {
     expect(out).toContain("| `#0a0a0a` | `--zt-fg-1` | — | 0 |");
     expect(out).toContain("| `#123456` | **nový** `--zt-fg-hero` | `--zt-fg-2` | 4.2 |");
   });
+
+  /*
+   * I4 (task 20). The same `null` vs `[]` collision task 14b closed in
+   * `values.md`, in the one artifact nobody re-examined. `measure --theme
+   * /nope.css` warned on stderr, stamped `[]`, exited 0 — and the `tokens.md` a
+   * later `compare` rendered was byte-identical to a design with nothing
+   * tokenisable in it. SKILL.md lists new tokens as an approval gate, so an
+   * empty table reads as "no new tokens needed": a positive claim the run has no
+   * evidence for, made from the one place the stderr warning cannot reach.
+   */
+  describe("theme never read", () => {
+    it("renders differently from a theme that was read and yielded nothing", () => {
+      const notMeasured = renderTokens(null, { themeError: "/x/globals.css: ENOENT" });
+      const nothingToMap = renderTokens([]);
+      expect(notMeasured).not.toEqual(nothingToMap);
+    });
+
+    it("says it was not measured, and names the file and the reason", () => {
+      const out = renderTokens(null, { themeError: "/x/globals.css: ENOENT: no such file" });
+      expect(out).toContain("Neměřeno");
+      expect(out).toContain("/x/globals.css");
+      expect(out).toContain("ENOENT");
+      // No table at all — an empty one is exactly what must stop being printed.
+      expect(out).not.toContain("| hodnota |");
+    });
+
+    it("still refuses to imply a result when the reason did not survive", () => {
+      // A spec that recorded `null` without a reason is degraded, not evidence
+      // that the theme was fine. "Not measured" is still the honest headline.
+      const out = renderTokens(null);
+      expect(out).toContain("Neměřeno");
+      expect(out).not.toContain("undefined");
+    });
+  });
+
+  // The same contract as `renderValues`: `undefined` is neither state. Since
+  // `readSpec` refuses any spec.json whose version is not the current one, a
+  // missing key cannot be an old spec — only a malformed payload.
+  it("throws a design-match:-prefixed error for undefined, never renders it", () => {
+    expect(() => renderTokens(undefined)).toThrow(/^design-match:/);
+  });
 });
 
 describe("renderComponents", () => {

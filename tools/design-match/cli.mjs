@@ -118,6 +118,18 @@ export function parseArgs(argv) {
   if (command === "compare" && !flags.slug) {
     throw new DesignMatchError("design-match: compare vyžaduje --slug <slug>");
   }
+  // I3 (task 20). `--selector` names a node in the IMPLEMENTATION, and only
+  // `resolveScene`/`runCompare` read it — `runMeasure` never has. Accepting it
+  // on `measure` meant taking the operator's region choice and discarding it
+  // without a word. Refused rather than wired up: the design side already has
+  // `--region`, which picks from the inventory the run just printed, and a
+  // second way to say the same thing is a way for the two to disagree.
+  if (command === "measure" && flags.selector !== undefined) {
+    throw new DesignMatchError(
+      "design-match: measure nezná --selector — region designu se vybírá z inventury, kterou měření vypíše, přes --region <n>. " +
+        "--selector patří na compare, kde míří na implementaci.",
+    );
+  }
 
   return {
     command,
@@ -682,7 +694,12 @@ export function buildCompareOutcome({
     // own settle can only reach report.md through spec.json. `undefined` for a
     // spec measured before the flag existed, which renders as neither fact.
     designSettled: spec.settled,
-    tokenMappings: spec.tokenMappings ?? [],
+    // I4 (task 20): the same laundering Defect 1 removed one line above, in the
+    // artifact nobody re-examined. `null` means `measure` never read the theme
+    // file; `?? []` turned that into "the theme was read and the design needs
+    // nothing new", which is what SKILL.md's approval gate reads as a pass.
+    tokenMappings: spec.tokenMappings,
+    themeError: spec.themeError,
     componentDecisions: [],
     // values.md needs this to say which nodes the run never measured: with
     // collapsing on, a pass-through wrapper's values went with the wrapper.
@@ -850,6 +867,7 @@ async function runMeasure(cmd) {
   // genuine bug in parseThemeTokens/buildTokenMappings must surface as
   // itself, not get reported as "the theme file couldn't be read".
   let themeCss;
+  let themeError;
   try {
     themeCss = await fs.readFile(cmd.theme, "utf8");
   } catch (error) {
@@ -857,14 +875,21 @@ async function runMeasure(cmd) {
     // anywhere but the repo root would otherwise degrade silently — name the
     // resolved absolute path so the operator can see what was actually
     // looked for.
+    themeError = `${path.resolve(cmd.theme)}: ${error.message}`;
     console.warn(
-      `design-match: nelze načíst theme soubor "${path.resolve(cmd.theme)}" — mapování tokenů zůstává prázdné (${error.message})`,
+      `design-match: nelze načíst theme soubor "${path.resolve(cmd.theme)}" — mapování tokenů se neprovede (${error.message})`,
     );
   }
+  // I4 (task 20). `null`, not `[]`: the stderr warning above belongs to THIS
+  // command and is gone by the time anyone opens the artifacts a later
+  // `compare` writes. Unless the fact travels in spec.json, `tokens.md` renders
+  // an empty table that reads as "no new tokens needed" — a conclusion this run
+  // has no evidence for. See `renderTokens` for the three states.
   spec.tokenMappings =
     themeCss !== undefined
       ? buildTokenMappings(flattenValues(spec.skeleton), parseThemeTokens(themeCss))
-      : [];
+      : null;
+  if (themeError !== undefined) spec.themeError = themeError;
   // Stamped so a later `compare` can be refused (checkStrictWrappersMatch) if
   // its own --strict-wrappers disagrees with the flag this measure actually
   // ran with — a mismatch would otherwise collapse one side's tree and not

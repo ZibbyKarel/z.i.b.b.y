@@ -71,6 +71,26 @@ describe("parseArgs", () => {
     expect(cmd.storybookBase).toBeUndefined();
   });
 
+  /*
+   * I3 (task 20), Q2's ruling: refuse it, do not wire it. `parseArgs` accepted
+   * `--selector` for both commands; only `resolveScene`/`runCompare` ever read
+   * it, so on `measure` it was taken and silently ignored — the operator's own
+   * region choice discarded without a word, which is this branch's defect class
+   * stated in one flag. SKILL.md's `measure` table never listed it, so the
+   * documentation was already right and only the parser was wrong.
+   */
+  it("refuses --selector on measure instead of accepting and ignoring it", () => {
+    const attempt = () => parseArgs(["measure", "design/x.html", "karta", "--selector", "#root"]);
+    expect(attempt).toThrow(/design-match:/);
+    // The remedy has to be the flag that actually does this job on `measure`,
+    // otherwise the refusal is correct and useless.
+    expect(attempt).toThrow(/--region/);
+  });
+
+  it("still accepts --selector on compare, where it is the implementation's", () => {
+    expect(parseArgs(["compare", "--slug", "s", "--selector", "#root"]).selector).toBe("#root");
+  });
+
   it("derives the slug from the description when not given", () => {
     expect(parseArgs(["measure", "design/x.html", "Karta Epicu"]).slug).toBe("karta-epicu");
   });
@@ -680,25 +700,34 @@ describe("buildCompareOutcome", () => {
     expect(fullHistory).toHaveLength(2);
   });
 
-  it("carries the spec's tokenMappings through, defaulting to [] when absent (a pre-task-12b spec.json)", () => {
+  /*
+   * I4 (task 20). This used to assert the `?? []` default, on the premise that
+   * an absent `tokenMappings` meant a pre-task-12b spec.json. `readSpec` refuses
+   * any spec whose version is not the current one, so that spec can no longer
+   * reach here — and the default was absorbing the state that CAN: `null`, the
+   * theme file `measure` could not read. Passing that through as `[]` is
+   * `renderTokens` printing an empty table, which SKILL.md's approval gate reads
+   * as "no new tokens needed".
+   */
+  it("carries each of the spec's three tokenMappings states through unchanged", () => {
     const result = { skeleton: skeletonFail, values: null, pixels: null };
-    const withMappings = buildCompareOutcome({
-      result,
-      spec: { selector: "#x", tokenMappings: [{ value: "12px", prop: "gap" }] },
-      slug: "epic-card",
-      masks: [],
-      history: [],
-    });
-    expect(withMappings.payload.tokenMappings).toEqual([{ value: "12px", prop: "gap" }]);
+    const outcomeFor = (spec) =>
+      buildCompareOutcome({ result, spec, slug: "epic-card", masks: [], history: [] }).payload;
 
-    const withoutMappings = buildCompareOutcome({
-      result,
-      spec: { selector: "#x" },
-      slug: "epic-card",
-      masks: [],
-      history: [],
+    expect(
+      outcomeFor({ selector: "#x", tokenMappings: [{ value: "12px", prop: "gap" }] }).tokenMappings,
+    ).toEqual([{ value: "12px", prop: "gap" }]);
+    expect(outcomeFor({ selector: "#x", tokenMappings: [] }).tokenMappings).toEqual([]);
+
+    const unread = outcomeFor({
+      selector: "#x",
+      tokenMappings: null,
+      themeError: "/x/globals.css: ENOENT",
     });
-    expect(withoutMappings.payload.tokenMappings).toEqual([]);
+    expect(unread.tokenMappings).toBeNull();
+    // The reason travels with it — otherwise tokens.md can say "not measured"
+    // but not why, and the operator is back to guessing.
+    expect(unread.themeError).toBe("/x/globals.css: ENOENT");
   });
 
   it("a passing font preflight leaves the round as a normal done verdict — percent, images and exit code all present", () => {

@@ -90,7 +90,40 @@ export function renderValues(deltas, { wrappersCollapsed = true } = {}) {
   return lines.join("\n");
 }
 
-export function renderTokens(mappings) {
+/**
+ * I4 (task 20). The third artifact with the same three states `renderValues`
+ * already distinguishes, and the last one where they were still collapsed:
+ *
+ *   `undefined` — the payload has no `tokenMappings` key. Not a state of the
+ *                 measurement, a malformed payload; `readSpec` rejects any
+ *                 spec.json that is not the current version, so it cannot be an
+ *                 old spec arriving here. Throws, like `renderValues`.
+ *   `null`      — the theme file was never read, so nothing was mapped and
+ *                 nothing CAN be concluded about tokens.
+ *   `[]`        — the theme was read and the design needs no token beyond it.
+ *
+ * `null` used to be `[]`, and `[]` renders as an empty table — which SKILL.md
+ * tells the operator to read as "no new tokens needed", an approval gate passed.
+ * The only record that the theme was never opened was a stderr line from a
+ * different command, long gone by the time anyone reads the artifact.
+ */
+export function renderTokens(mappings, { themeError } = {}) {
+  if (mappings === undefined) {
+    throw new DesignMatchError(
+      "design-match: renderTokens dostal payload bez pole `tokenMappings` — musí být buď `null` (theme soubor se nepodařilo načíst), nebo pole mapování (i prázdné).",
+    );
+  }
+  if (mappings === null) {
+    // The reason is `measure`'s to record; if a spec carries the `null` without
+    // it, the headline is still the honest one — we just cannot say why.
+    const because = themeError === undefined ? "" : ` (${themeError})`;
+    return [
+      "# Mapování tokenů",
+      "",
+      `Neměřeno — theme soubor se při \`measure\` nepodařilo načíst${because}, takže se hodnoty proti tokenům vůbec nemapovaly. Tohle NENÍ "žádné nové tokeny nejsou potřeba": spusť \`measure\` znovu se správnou cestou v \`--theme\`.`,
+      "",
+    ].join("\n");
+  }
   const lines = [
     "# Mapování tokenů",
     "",
@@ -336,7 +369,10 @@ export async function writeArtifacts(dir, payload) {
       name: "values.md",
       content: renderValues(payload.values, { wrappersCollapsed: !payload.strictWrappers }),
     },
-    { name: "tokens.md", content: renderTokens(payload.tokenMappings) },
+    {
+      name: "tokens.md",
+      content: renderTokens(payload.tokenMappings, { themeError: payload.themeError }),
+    },
     { name: "components.md", content: renderComponents(payload.componentDecisions) },
     {
       name: "report.md",

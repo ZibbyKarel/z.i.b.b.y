@@ -482,6 +482,60 @@ describe("compare, end to end through the CLI", () => {
   });
 
   /*
+   * I4 (task 20). The whole point is that the stderr warning belongs to a
+   * DIFFERENT command and is long gone by the time anyone opens the artifacts,
+   * so the only control that proves anything runs both commands and reads the
+   * file. `[]` and `null` produced a byte-identical empty table before this.
+   */
+  it("says in tokens.md that the theme was never read, rather than printing an empty table", async () => {
+    const dir = await makeWorkspace({ "design.html": page(CARD), "impl.html": page(CARD) });
+    const measured = await run(
+      "node",
+      [CLI, "measure", "design.html", "karta", "--slug", "s", "--theme", "nope.css"],
+      { cwd: dir },
+    );
+    // Not a reason to fail the measurement — token mapping is commentary.
+    expect(measured.stderr).toContain("nope.css");
+    const server = await startCountingServer(dir);
+
+    await compare(dir, [
+      "--slug",
+      "s",
+      "--route",
+      "/impl.html",
+      "--app-base",
+      server.origin,
+      "--selector",
+      "#root",
+    ]);
+
+    const tokens = await fs.readFile(path.join(dir, ".design-match", "s", "tokens.md"), "utf8");
+    expect(tokens).toContain("Neměřeno");
+    expect(tokens).toContain("nope.css");
+    // The empty table is the false claim: SKILL.md tells the operator to read it
+    // as the new-token approval gate having nothing in it.
+    expect(tokens).not.toContain("| hodnota |");
+
+    // And the honest case still renders the table it always did.
+    const ok = await makeWorkspace({ "design.html": page(CARD), "impl.html": page(CARD) });
+    await measure(ok, "design.html", "s");
+    const okServer = await startCountingServer(ok);
+    await compare(ok, [
+      "--slug",
+      "s",
+      "--route",
+      "/impl.html",
+      "--app-base",
+      okServer.origin,
+      "--selector",
+      "#root",
+    ]);
+    const okTokens = await fs.readFile(path.join(ok, ".design-match", "s", "tokens.md"), "utf8");
+    expect(okTokens).toContain("| hodnota |");
+    expect(okTokens).not.toContain("Neměřeno");
+  });
+
+  /*
    * I2 (task 20). Two tasks that were each right alone. `writeArtifacts` (fix
    * round 2) writes everything it can and THEN throws, so one bad file cannot
    * cut the record short. `markStaleReport` (task 16, M3) assumes any failing
