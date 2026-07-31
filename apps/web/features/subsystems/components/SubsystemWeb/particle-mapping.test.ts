@@ -1,3 +1,4 @@
+import type { Agent } from "@zibby/contracts";
 import { describe, expect, it } from "vitest";
 import type { Pipeline } from "../../../../domain";
 import type { RunView } from "../../../runs/run";
@@ -24,6 +25,15 @@ function pipeline(overrides: Partial<Pipeline> = {}): Pipeline {
   };
 }
 
+function agent(overrides: Partial<Agent> = {}): Agent {
+  return {
+    id: "koder",
+    name: "Kodér",
+    instructions: "x",
+    ...overrides,
+  } as Agent;
+}
+
 function run(overrides: Partial<RunView> = {}): RunView {
   return {
     runId: "delivery_1",
@@ -43,16 +53,32 @@ describe("resolveEventOwner", () => {
       { scope: "pipeline-runs", runId: "delivery_1" },
       [run()],
       [pipeline({ ownerSubsystem: "forge" })],
+      [],
     );
     expect(owner).toBe("forge");
   });
 
-  it("returns undefined for any scope besides pipeline-runs (no ownerSubsystem path)", () => {
-    for (const scope of ["agent-runs", "goal-runs", "channel-items", "activity"] as const) {
+  it("returns undefined for a scope with no ownerSubsystem path (goal-runs, channel-items, activity)", () => {
+    for (const scope of ["goal-runs", "channel-items", "activity"] as const) {
       expect(
-        resolveEventOwner({ scope, runId: "delivery_1" }, [run()], [pipeline({ ownerSubsystem: "forge" })]),
+        resolveEventOwner(
+          { scope, runId: "delivery_1" },
+          [run()],
+          [pipeline({ ownerSubsystem: "forge" })],
+          [],
+        ),
       ).toBeUndefined();
     }
+  });
+
+  it("a goal-runs event never resolves an owner, even when the id happens to match an owned run (D16)", () => {
+    const owner = resolveEventOwner(
+      { scope: "goal-runs", runId: "delivery_1" },
+      [run()],
+      [pipeline({ ownerSubsystem: "forge" })],
+      [],
+    );
+    expect(owner).toBeUndefined();
   });
 
   it("returns undefined when the run isn't (yet) in the runs cache — the honest race", () => {
@@ -60,26 +86,58 @@ describe("resolveEventOwner", () => {
       { scope: "pipeline-runs", runId: "brand-new_1" },
       [run()],
       [pipeline({ ownerSubsystem: "forge" })],
+      [],
     );
     expect(owner).toBeUndefined();
   });
 
   it("returns undefined when the pipeline has no ownerSubsystem tag", () => {
-    const owner = resolveEventOwner({ scope: "pipeline-runs", runId: "delivery_1" }, [run()], [pipeline()]);
+    const owner = resolveEventOwner(
+      { scope: "pipeline-runs", runId: "delivery_1" },
+      [run()],
+      [pipeline()],
+      [],
+    );
     expect(owner).toBeUndefined();
   });
 
   it("returns undefined when runId is missing", () => {
     expect(
-      resolveEventOwner({ scope: "pipeline-runs" }, [run()], [pipeline({ ownerSubsystem: "forge" })]),
+      resolveEventOwner(
+        { scope: "pipeline-runs" },
+        [run()],
+        [pipeline({ ownerSubsystem: "forge" })],
+        [],
+      ),
     ).toBeUndefined();
   });
 
-  it("only matches a run of kind 'pipeline' (an agent run sharing an id never attributes)", () => {
+  it("resolves an agent-kind run symmetrically, against the agent's ownerSubsystem", () => {
     const owner = resolveEventOwner(
-      { scope: "pipeline-runs", runId: "delivery_1" },
-      [run({ kind: "agent" })],
-      [pipeline({ ownerSubsystem: "forge" })],
+      { scope: "pipeline-runs", runId: "koder_1" },
+      [run({ runId: "koder_1", kind: "agent", owner: "koder" })],
+      [],
+      [agent({ ownerSubsystem: "forge" })],
+    );
+    expect(owner).toBe("forge");
+  });
+
+  it("resolves a REAL agent-runs SSE event to the owning agent's ownerSubsystem", () => {
+    const owner = resolveEventOwner(
+      { scope: "agent-runs", runId: "koder_1" },
+      [run({ runId: "koder_1", kind: "agent", owner: "koder" })],
+      [],
+      [agent({ ownerSubsystem: "forge" })],
+    );
+    expect(owner).toBe("forge");
+  });
+
+  it("returns undefined when the owning agent has no ownerSubsystem tag", () => {
+    const owner = resolveEventOwner(
+      { scope: "pipeline-runs", runId: "koder_1" },
+      [run({ runId: "koder_1", kind: "agent", owner: "koder" })],
+      [],
+      [agent()],
     );
     expect(owner).toBeUndefined();
   });
@@ -94,36 +152,90 @@ describe("flightForEvent", () => {
       { scope: "pipeline-runs", runId: "delivery_1", status: "running" },
       runs,
       pipelines,
+      [],
     );
     expect(flight).toEqual({ from: "orb", to: "forge", subsystemId: "forge" });
   });
 
   it.each(["done", "failed", "parked"])("'%s' → report, node to center", (status) => {
-    const flight = flightForEvent({ scope: "pipeline-runs", runId: "delivery_1", status }, runs, pipelines);
+    const flight = flightForEvent(
+      { scope: "pipeline-runs", runId: "delivery_1", status },
+      runs,
+      pipelines,
+      [],
+    );
     expect(flight).toEqual({ from: "forge", to: "orb", subsystemId: "forge" });
   });
 
-  it.each(["paused-limit", "interrupted"])("'%s' produces no flight (not a start or a report)", (status) => {
-    const flight = flightForEvent({ scope: "pipeline-runs", runId: "delivery_1", status }, runs, pipelines);
-    expect(flight).toBeUndefined();
-  });
+  it.each(["paused-limit", "interrupted"])(
+    "'%s' produces no flight (not a start or a report)",
+    (status) => {
+      const flight = flightForEvent(
+        { scope: "pipeline-runs", runId: "delivery_1", status },
+        runs,
+        pipelines,
+        [],
+      );
+      expect(flight).toBeUndefined();
+    },
+  );
 
   it("an unattributable owner produces no flight regardless of status", () => {
     const flight = flightForEvent(
       { scope: "pipeline-runs", runId: "unknown_1", status: "running" },
       runs,
       pipelines,
+      [],
     );
     expect(flight).toBeUndefined();
   });
 
-  it("a scope with no owner path (agent-runs) never produces a flight", () => {
+  it("a scope with no owner path (goal-runs) never produces a flight", () => {
     const flight = flightForEvent(
-      { scope: "agent-runs", runId: "writer_1", status: "running" },
+      { scope: "goal-runs", runId: "writer_1", status: "running" },
       runs,
       pipelines,
+      [],
     );
     expect(flight).toBeUndefined();
+  });
+
+  describe("agent-runs — comms travel both directions for agent-kind runs too", () => {
+    const agentRuns = [run({ runId: "koder_1", kind: "agent", owner: "koder" })];
+    const agentCatalog = [agent({ ownerSubsystem: "forge" })];
+
+    it("'running' → dispatch, center to node", () => {
+      const flight = flightForEvent(
+        { scope: "agent-runs", runId: "koder_1", status: "running" },
+        agentRuns,
+        [],
+        agentCatalog,
+      );
+      expect(flight).toEqual({ from: "orb", to: "forge", subsystemId: "forge" });
+    });
+
+    it.each(["done", "error", "awaiting-approval"])("'%s' → report, node to center", (status) => {
+      const flight = flightForEvent(
+        { scope: "agent-runs", runId: "koder_1", status },
+        agentRuns,
+        [],
+        agentCatalog,
+      );
+      expect(flight).toEqual({ from: "forge", to: "orb", subsystemId: "forge" });
+    });
+
+    it.each(["paused-limit", "interrupted"])(
+      "'%s' produces no flight (not a start or a report)",
+      (status) => {
+        const flight = flightForEvent(
+          { scope: "agent-runs", runId: "koder_1", status },
+          agentRuns,
+          [],
+          agentCatalog,
+        );
+        expect(flight).toBeUndefined();
+      },
+    );
   });
 });
 

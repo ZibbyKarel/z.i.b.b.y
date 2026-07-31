@@ -1,6 +1,11 @@
 "use client";
 
-import { SUBSYSTEMS, type SubsystemId, type SubsystemWithStatus } from "@zibby/contracts";
+import {
+  type Agent,
+  SUBSYSTEMS,
+  type SubsystemId,
+  type SubsystemWithStatus,
+} from "@zibby/contracts";
 import {
   type EllipseInsets,
   Icon,
@@ -31,6 +36,13 @@ export interface SubsystemOrbMapProps {
   subsystems: SubsystemWithStatus[];
   runs: readonly RunView[];
   pipelines: readonly Pipeline[];
+  /**
+   * The agent catalog — Phase 126g: an agent-kind run attributes to its
+   * `Agent.ownerSubsystem` the same way a pipeline-kind run already attributes
+   * to `Pipeline.ownerSubsystem`, both for `activeRunsBySubsystem`'s orbit-field
+   * dot count and for `flightForEvent`'s handoff-flare classification.
+   */
+  agents: readonly Agent[];
   /** Chat streaming flag — feeds the core orb's thinking pulse. */
   thinking: boolean;
   /**
@@ -92,6 +104,7 @@ export function SubsystemOrbMap({
   subsystems,
   runs,
   pipelines,
+  agents,
   thinking,
   insets,
   onOpenCore,
@@ -100,7 +113,7 @@ export function SubsystemOrbMap({
   const t = useTranslations("subsystems");
 
   const statusById = new Map<SubsystemId, SubsystemWithStatus>(subsystems.map((s) => [s.id, s]));
-  const counts = activeRunsBySubsystem(runs, pipelines);
+  const counts = activeRunsBySubsystem(runs, pipelines, agents);
 
   const nodes: OrbMapNode[] = SUBSYSTEMS.map((sub) => {
     const state = statusById.get(sub.id)?.state ?? "idle";
@@ -117,10 +130,11 @@ export function SubsystemOrbMap({
 
   const runningCount = Object.values(counts).reduce<number>((sum, n) => sum + (n ?? 0), 0);
 
-  // Read `runs`/`pipelines` through refs (mirrors the retired `CosmicScene`'s own
-  // pattern) so a query refetch's fresh array reference never tears down and
-  // resubscribes the `onRunEvent` listener below — the shared bus's one
-  // `EventSource` keeps delivering events the whole time regardless.
+  // Read `runs`/`pipelines`/`agents` through refs (mirrors the retired
+  // `CosmicScene`'s own pattern) so a query refetch's fresh array reference
+  // never tears down and resubscribes the `onRunEvent` listener below — the
+  // shared bus's one `EventSource` keeps delivering events the whole time
+  // regardless.
   const runsRef = useRef(runs);
   useEffect(() => {
     runsRef.current = runs;
@@ -129,6 +143,10 @@ export function SubsystemOrbMap({
   useEffect(() => {
     pipelinesRef.current = pipelines;
   }, [pipelines]);
+  const agentsRef = useRef(agents);
+  useEffect(() => {
+    agentsRef.current = agents;
+  }, [agents]);
 
   const [flares, setFlares] = useState<OrbMapFlare[]>([]);
   // Tiebreaker for two events landing in the same millisecond — appended to the
@@ -137,7 +155,12 @@ export function SubsystemOrbMap({
 
   useEffect(() => {
     return onRunEvent((event) => {
-      const flight = flightForEvent(event, runsRef.current, pipelinesRef.current);
+      const flight = flightForEvent(
+        event,
+        runsRef.current,
+        pipelinesRef.current,
+        agentsRef.current,
+      );
       if (!flight) return;
       flareSeq.current += 1;
       const color = SUBSYSTEMS.find((s) => s.id === flight.subsystemId)?.color;

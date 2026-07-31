@@ -25,7 +25,7 @@ backend/vault/integrations/scheduler). Never touch or reuse it for this resource
 | Contract     | `libs/contracts/src/subsystems/subsystems.contract.ts`                   | `subsystemsContract` — `getSubsystems` (`GET /api/subsystems`), `getSubsystem` (`GET /api/subsystems/:id`, 404 on unknown id), `markSubsystemSeen` (`POST /api/subsystems/:id/seen`, 404 on unknown id)                                 |
 | Errors       | `apps/api/src/subsystems/subsystems.errors.ts`                           | `SubsystemNotFoundError`                                                                                                                                                                                                                |
 | Seen store   | `apps/api/src/subsystems/subsystem-seen.store.ts`                        | `SubsystemSeenStore` — `.zibby/data/subsystem-seen.json`, `{ [id]: IsoDateTime }`, missing file/key = epoch, atomic writes                                                                                                              |
-| Service      | `apps/api/src/subsystems/subsystems.service.ts`                          | `SubsystemsService.list()` / `.get(id)` / `.markSeen(id)` — real aggregation over pipelines/runs/approvals (phase 82)                                                                                                                   |
+| Service      | `apps/api/src/subsystems/subsystems.service.ts`                          | `SubsystemsService.list()` / `.get(id)` / `.markSeen(id)` — real aggregation over pipelines/agents/runs/approvals (phase 82; agents added in 126g)                                                                                      |
 | Controller   | `apps/api/src/subsystems/subsystems.controller.ts`                       | implements `subsystemsContract` via the shared `makeErrorMapper` 404 pattern                                                                                                                                                            |
 | Module       | `apps/api/src/subsystems/subsystems.module.ts`                           | imports `PipelinesModule`, `ApprovalsModule`, `TasksModule` (for `TaskRunsService`), `AgentsModule`, `IntegrationsModule`, and `MandateModule` (the roster's derived integration set reads the mandate) — registered in `app.module.ts` |
 | Web query    | `apps/web/features/subsystems/queries/useSubsystemsQuery.ts`             | `refetchInterval` ~15s, `select: selectApiResponseBody`, same posture as `useHealthQuery`/`useSelfStatusQuery`                                                                                                                          |
@@ -60,33 +60,42 @@ not a tweak.
 ## Status shape (phase-82 real aggregation)
 
 `SubsystemWithStatusSchema` extends the identity schema with
-`{ state: "klid" | "bezi" | "hlaseni" | "ceka", tier2Count, tier3Count }`.
-`SubsystemsService` computes this per subsystem, read-only over the pipelines
-store (`ownerSubsystem`, phase 81), the unified task-runs feed
-(`TaskRunsService.listTaskRuns()`), and `ApprovalsService` — it duplicates no
-run/approval semantics, only reads and correlates:
+`{ state, tier2Count, tier3Count, errorCount }`, where `SubsystemStateSchema` is
+`"idle" | "running" | "report" | "waiting" | "error"`. `SubsystemsService`
+computes this per subsystem, read-only over the pipelines store
+(`ownerSubsystem`, phase 81), the **agents** store (same field — phase 126g), the
+unified task-runs feed (`TaskRunsService.listTaskRuns()`), and `ApprovalsService`
+— it duplicates no run/approval semantics, only reads and correlates:
 
-- **`bezi`** — an owned pipeline has a currently-`running` run.
-- **`ceka`** (+ `tier3Count`) — pending approvals attributable to an owned
-  pipeline's run. Attribution mirrors the web's `approvalForRun`
-  (`apps/web/features/runs/run.ts`): a `pipeline-output` approval's `runId` IS
-  the pipeline run id (exact match); a `pipeline-stage` approval's `runId` is
-  the STAGE run id, prefixed with the pipeline run id
-  (`${pipelineRunId}.${phaseId}_…`, prefix match). Every other approval kind
-  (`agent`, `channel`, `task`, `proposed-task`, `task-output`, `jira-issue`,
-  `machine`, `agent-proposal`) has no pipeline to attribute through and is
-  silently excluded — the global approvals surface still shows it; this is a
-  lens, not the source of truth.
-- **`hlaseni`** (+ `tier2Count`) — owned pipeline runs that went
-  terminal (`done` or `error`) after the subsystem's `lastSeenAt`
-  (`SubsystemSeenStore`). `PipelineRun` carries no completion timestamp of its
-  own, so this reads the best available signal: the backing
-  task's `taskOutcomeFinishedAt` when the run was dispatched from one, else
-  the run's own `startedAt`.
+- **`running`** — an owned pipeline **or an owned agent** has a currently-`running`
+  run. Agent-kind runs were excluded until phase 126g, which is why a subsystem
+  could look idle while its agent was mid-run; roughly half of dispatched runs are
+  agent-kind, so this was the common case, not an edge one.
+- **`waiting`** (+ `tier3Count`) — pending approvals attributable to an owned
+  **pipeline** run. This half stays pipeline-only: attribution mirrors the web's
+  `approvalForRun` (`apps/web/features/runs/run.ts`), whose two matchable kinds
+  (`pipeline-output`, `pipeline-stage`) are both pipeline-shaped — a
+  `pipeline-output` approval's `runId` IS the pipeline run id (exact match); a
+  `pipeline-stage` approval's `runId` is the STAGE run id, prefixed with the
+  pipeline run id (`${pipelineRunId}.${phaseId}_…`, prefix match). Every other
+  approval kind (`agent`, `channel`, `task`, `proposed-task`, `task-output`,
+  `jira-issue`, `machine`, `agent-proposal`) has no pipeline to attribute through
+  and is silently excluded — the global approvals surface still shows it; this is
+  a lens, not the source of truth.
+- **`report`** (+ `tier2Count`) / **`error`** (+ `errorCount`) — owned pipeline
+  **or agent** runs that went terminal after the subsystem's `lastSeenAt`
+  (`SubsystemSeenStore`), split by outcome: `done` counts toward `tier2Count`,
+  `error` toward `errorCount`, never both. `PipelineRun` carries no completion
+  timestamp of its own, so this reads the best available signal: the backing
+  task's `taskOutcomeFinishedAt` when the run was dispatched from one, else the
+  run's own `startedAt`.
+- **Not attributed:** goal-kind runs (no `ownerSubsystem` concept exists on any
+  goal schema — phase-126g D16) and `scheduled`-kind rows, which are tasks that
+  have not dispatched into a run yet.
 - **Precedence** when several conditions apply to one subsystem:
-  `ceka > bezi > hlaseni > klid` — waiting-on-you is never masked by ambient
-  activity. Counts are independent of the headline state (a subsystem can
-  carry a `tier2Count` while its state reads `ceka`).
+  `waiting > error > running > report > idle` — waiting-on-you is never masked by
+  ambient activity. Counts are independent of the headline state (a subsystem can
+  carry a `tier2Count` while its state reads `waiting`).
 
 ## Ownership is load-bearing (NS2 F9)
 

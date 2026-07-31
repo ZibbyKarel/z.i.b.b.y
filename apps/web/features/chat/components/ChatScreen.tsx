@@ -18,6 +18,7 @@ import {
 } from "react";
 import { useNow } from "../../../hooks/useNow";
 import { MINUTE_MS } from "../../../utils/time";
+import { useAgentsQuery } from "../../agents";
 import { useGenerateBriefingMutation } from "../../briefing";
 import { usePipelinesQuery } from "../../pipelines";
 import { useRunAvatarMap, useRunGlyphMap, useRunsQuery } from "../../runs/queries/useRunsQuery";
@@ -169,6 +170,10 @@ export function ChatScreen({
   // The pipeline catalog — still needed to feed `SubsystemOrbMap`'s active-run
   // counts (it maps a run's `owner` pipeline to its `ownerSubsystem`).
   const { data: pipelineCatalog } = usePipelinesQuery();
+  // The agent catalog — Phase 126g: an agent-kind run's `owner` is its agent id,
+  // resolved against `Agent.ownerSubsystem` the same way a pipeline-kind run's
+  // `owner` is resolved against `Pipeline.ownerSubsystem` above.
+  const { data: agentCatalog } = useAgentsQuery();
 
   // The running/queued runs feed (kept fresh by the shared RunEventsProvider bus).
   const { runs } = useRunsQuery();
@@ -280,6 +285,7 @@ export function ChatScreen({
           (`CHAT_BOTTOM_INSET`). The `thinking` pulse is bridged up from the bottom
           bar's chat dock (this screen owns no stream). */}
       <SubsystemOrbMap
+        agents={agentCatalog ?? []}
         insets={{ top: CHAT_TOPBAR_INSET, left: 0, right: 0, bottom: CHAT_BOTTOM_INSET }}
         onOpenCore={() => setCoreOpen(true)}
         onSelectSubsystem={setSelectedSubsystemId}

@@ -353,15 +353,83 @@ describe("SubsystemsService", () => {
       expect(rows.every((r) => r.state === "idle")).toBe(true);
     });
 
-    it("an agent-kind run never attributes (only pipeline owners exist)", async () => {
+    it("an agent-kind run whose agent has no ownerSubsystem never attributes", async () => {
       const { service } = build({
         pipelines: [pipelineFixture("delivery", "forge")],
+        agents: [{ id: "koder", instructions: "x" } as Agent],
         runs: [
           taskRunFixture({ runId: "koder_1", kind: "agent", owner: "koder", status: "running" }),
         ],
       });
       const forge = await service.get("forge");
       expect(forge.state).toBe("idle");
+    });
+
+    it("a goal-kind run never attributes (D16 — goal runs are deliberately unattributed)", async () => {
+      const { service } = build({
+        pipelines: [pipelineFixture("delivery", "forge")],
+        agents: [{ id: "koder", ownerSubsystem: "forge", instructions: "x" } as Agent],
+        runs: [
+          taskRunFixture({ runId: "goal_1", kind: "goal", owner: "koder", status: "running" }),
+        ],
+      });
+      const forge = await service.get("forge");
+      expect(forge.state).toBe("idle");
+    });
+  });
+
+  describe("agent-run attribution", () => {
+    it("a running agent-kind run whose agent has ownerSubsystem: forge puts forge in a running state", async () => {
+      const { service } = build({
+        agents: [{ id: "koder", ownerSubsystem: "forge", instructions: "x" } as Agent],
+        runs: [
+          taskRunFixture({ runId: "koder_1", kind: "agent", owner: "koder", status: "running" }),
+        ],
+      });
+      const forge = await service.get("forge");
+      expect(forge).toMatchObject({ state: "running", tier2Count: 0, tier3Count: 0 });
+    });
+
+    it("a completed owned agent run after lastSeenAt reads as report with a count", async () => {
+      const { service } = build({
+        agents: [{ id: "koder", ownerSubsystem: "forge", instructions: "x" } as Agent],
+        runs: [
+          taskRunFixture({
+            runId: "koder_1",
+            kind: "agent",
+            owner: "koder",
+            status: "done",
+            startedAt: LATER,
+          }),
+        ],
+      });
+      const forge = await service.get("forge");
+      expect(forge).toMatchObject({ state: "report", tier2Count: 1 });
+    });
+
+    it("agent and pipeline runs owned by the same subsystem both count", async () => {
+      const { service } = build({
+        pipelines: [pipelineFixture("delivery", "forge")],
+        agents: [{ id: "koder", ownerSubsystem: "forge", instructions: "x" } as Agent],
+        runs: [
+          taskRunFixture({
+            runId: "delivery_1",
+            kind: "pipeline",
+            owner: "delivery",
+            status: "done",
+            startedAt: LATER,
+          }),
+          taskRunFixture({
+            runId: "koder_1",
+            kind: "agent",
+            owner: "koder",
+            status: "done",
+            startedAt: LATER,
+          }),
+        ],
+      });
+      const forge = await service.get("forge");
+      expect(forge).toMatchObject({ state: "report", tier2Count: 2 });
     });
   });
 

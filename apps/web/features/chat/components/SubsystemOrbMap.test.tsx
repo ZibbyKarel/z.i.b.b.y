@@ -1,4 +1,4 @@
-import { SUBSYSTEMS, type SubsystemWithStatus } from "@zibby/contracts";
+import { type Agent, SUBSYSTEMS, type SubsystemWithStatus } from "@zibby/contracts";
 import {
   CoreOrbTestId,
   DEFAULT_DURATION_MS,
@@ -81,6 +81,7 @@ describe("SubsystemOrbMap", () => {
   it("renders the root and all 8 registry nodes", () => {
     renderWithProviders(
       <SubsystemOrbMap
+        agents={[]}
         onOpenCore={vi.fn()}
         onSelectSubsystem={vi.fn()}
         pipelines={[]}
@@ -101,6 +102,7 @@ describe("SubsystemOrbMap", () => {
     const onSelectSubsystem = vi.fn();
     renderWithProviders(
       <SubsystemOrbMap
+        agents={[]}
         onOpenCore={vi.fn()}
         onSelectSubsystem={onSelectSubsystem}
         pipelines={[]}
@@ -120,6 +122,7 @@ describe("SubsystemOrbMap", () => {
     const onOpenCore = vi.fn();
     renderWithProviders(
       <SubsystemOrbMap
+        agents={[]}
         onOpenCore={onOpenCore}
         onSelectSubsystem={vi.fn()}
         pipelines={[]}
@@ -140,6 +143,7 @@ describe("SubsystemOrbMap", () => {
     const subsystems = allSubsystems().filter((s) => s.id !== "loom");
     renderWithProviders(
       <SubsystemOrbMap
+        agents={[]}
         onOpenCore={vi.fn()}
         onSelectSubsystem={vi.fn()}
         pipelines={[]}
@@ -156,6 +160,7 @@ describe("SubsystemOrbMap", () => {
   it("wires each node's accessible name to name + localized state via subsystems.nodeAria", () => {
     renderWithProviders(
       <SubsystemOrbMap
+        agents={[]}
         onOpenCore={vi.fn()}
         onSelectSubsystem={vi.fn()}
         pipelines={[]}
@@ -172,6 +177,7 @@ describe("SubsystemOrbMap", () => {
   it("an owned failed run reads as the error state (red incident halo)", () => {
     renderWithProviders(
       <SubsystemOrbMap
+        agents={[]}
         onOpenCore={vi.fn()}
         onSelectSubsystem={vi.fn()}
         pipelines={[]}
@@ -196,6 +202,7 @@ describe("SubsystemOrbMap", () => {
     ];
     renderWithProviders(
       <SubsystemOrbMap
+        agents={[]}
         onOpenCore={vi.fn()}
         onSelectSubsystem={vi.fn()}
         pipelines={pipelines}
@@ -209,6 +216,27 @@ describe("SubsystemOrbMap", () => {
     // renders exactly the 2 active runs above as orbiting dots.
     const wrapper = screen.getByTestId(`${OrbMapTestId.Node}-forge`);
     expect(within(wrapper).getAllByTestId(OrbitFieldTestId.Dot)).toHaveLength(2);
+  });
+
+  it("an agent-kind running run whose agent has ownerSubsystem renders one OrbitField dot", () => {
+    const agents = [
+      { id: "koder", name: "Kodér", instructions: "x", ownerSubsystem: "forge" } as Agent,
+    ];
+    const runs = [run({ runId: "r1", kind: "agent", owner: "koder", status: "running" })];
+    renderWithProviders(
+      <SubsystemOrbMap
+        agents={agents}
+        onOpenCore={vi.fn()}
+        onSelectSubsystem={vi.fn()}
+        pipelines={[]}
+        runs={runs}
+        subsystems={allSubsystems()}
+        thinking={false}
+      />,
+    );
+
+    const wrapper = screen.getByTestId(`${OrbMapTestId.Node}-forge`);
+    expect(within(wrapper).getAllByTestId(OrbitFieldTestId.Dot)).toHaveLength(1);
   });
 
   describe("run-event handoff flares (Task 13b)", () => {
@@ -230,6 +258,7 @@ describe("SubsystemOrbMap", () => {
       renderWithProviders(
         <RunEventsProvider>
           <SubsystemOrbMap
+            agents={[]}
             onOpenCore={vi.fn()}
             onSelectSubsystem={vi.fn()}
             pipelines={pipelines}

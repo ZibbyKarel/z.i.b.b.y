@@ -66,7 +66,8 @@ interface OwnedPipelineRun {
  * reads and correlates.
  *
  * Per subsystem, in precedence order `waiting > running > report > idle`:
- * - `running`: an owned pipeline has a currently-`running` run.
+ * - `running`: an owned pipeline OR an owned agent (Phase 126g — `Agent.ownerSubsystem`,
+ *   the same field the roster already reads) has a currently-`running` run.
  * - `waiting` (+ `tier3Count`): pending approvals attributable to an owned
  *   pipeline's run. Attribution mirrors the web's `approvalForRun` matching
  *   (`apps/web/features/runs/run.ts`) — a `pipeline-output` approval's `runId`
@@ -76,7 +77,7 @@ interface OwnedPipelineRun {
  *   `task-output`, `jira-issue`, `machine`, `agent-proposal`) has no pipeline to
  *   attribute through and is silently excluded — no data loss, the global
  *   approvals surface still shows it; this is a lens.
- * - `report` (+ `tier2Count`): owned pipeline runs that went terminal
+ * - `report` (+ `tier2Count`): owned pipeline OR agent runs that went terminal
  *   (`done` or `error`) after the subsystem's `lastSeenAt` (`SubsystemSeenStore`).
  *   `PipelineRun` carries no completion timestamp of its own,
  *   so this uses the best available signal: the backing task's
@@ -84,6 +85,10 @@ interface OwnedPipelineRun {
  *   run's own `startedAt` (close enough for a coarse "since last visit" read —
  *   phase 82 scope; a run's own finish time can be added later without
  *   affecting this shape).
+ *
+ * Goal-kind (and not-yet-dispatched `scheduled`-kind) runs are deliberately left
+ * unattributed (D16, `docs/plans/phase-126g-subsystem-orb-agent-runs.md`) — no
+ * `ownerSubsystem` concept exists anywhere on the goal schemas.
  *
  * Counts are independent of the headline `state` — a subsystem can carry a
  * `tier2Count` while its state reads `waiting` because a Tier-3 item outranks it.
@@ -207,14 +212,18 @@ export class SubsystemsService {
    * measurable speed.
    */
   private async aggregateAll(): Promise<Map<SubsystemId, Aggregate>> {
-    const [pipelines, runs, pendingApprovals] = await Promise.all([
+    const [pipelines, runs, pendingApprovals, agents] = await Promise.all([
       this.pipelines.list(),
       this.taskRuns.listTaskRuns(),
       this.approvals.list("pending"),
+      this.agents.list(),
     ]);
 
     const pipelineOwner = new Map<string, SubsystemId>();
     for (const p of pipelines) if (p.ownerSubsystem) pipelineOwner.set(p.id, p.ownerSubsystem);
+
+    const agentOwner = new Map<string, SubsystemId>();
+    for (const a of agents) if (a.ownerSubsystem) agentOwner.set(a.id, a.ownerSubsystem);
 
     const lastSeenById = new Map<SubsystemId, string>(
       await Promise.all(SUBSYSTEMS.map(async (s) => [s.id, await this.seen.seenAt(s.id)] as const)),
@@ -226,7 +235,12 @@ export class SubsystemsService {
     const ownedPipelineRuns: OwnedPipelineRun[] = [];
 
     for (const run of runs) {
-      const owner = run.kind === "pipeline" ? pipelineOwner.get(run.owner) : undefined;
+      const owner =
+        run.kind === "pipeline"
+          ? pipelineOwner.get(run.owner)
+          : run.kind === "agent"
+            ? agentOwner.get(run.owner)
+            : undefined;
       if (!owner) continue;
       if (run.kind === "pipeline") ownedPipelineRuns.push({ runId: run.runId, owner });
 
