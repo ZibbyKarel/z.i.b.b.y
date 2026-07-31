@@ -150,19 +150,97 @@ export function combineVerdict(roundVerdict, next) {
 }
 
 /**
- * One exit code cannot express three outcomes, so the driving agent gets three:
+ * One exit code cannot express four outcomes, so the driving agent gets four —
+ * looked up here from a single table so the exit code and the console label
+ * (`describeOutcome`) can never drift apart as two separately maintained
+ * copies of the same branch:
  *   0 — done: a match was found, stop calling compare.
  *   1 — continue: no match yet, but the loop has not given up — run compare again.
  *   2 — parked: decideNext stopped the loop (thrash, skeleton gate, round ceiling)
  *       without ever reaching done — stop calling compare and escalate to a human.
+ *   3 — error: compare (or measure) itself failed — a bad invocation, a missing
+ *       spec.json, a browser that wouldn't launch, a failed write. This must
+ *       never collapse into 1 ("continue") — the driving agent has to be able
+ *       to tell "make another round" from "the tool itself is broken", or it
+ *       loops forever against a dead tool.
+ * Published for the driving agent in Task 14.
  */
-export function selectExitCode(verdict) {
-  if (verdict.status === "done") return 0;
-  if (verdict.stop) return 2;
-  return 1;
+const OUTCOME = {
+  done: { code: 0, label: "HOTOVO" },
+  continue: { code: 1, label: "POKRAČUJ" },
+  parked: { code: 2, label: "PARK" },
+  error: { code: 3, label: "CHYBA" },
+};
+
+function classifyVerdict(verdict) {
+  if (verdict.status === "error") return "error";
+  if (verdict.status === "done") return "done";
+  if (verdict.stop) return "parked";
+  return "continue";
 }
 
-async function loadHistory(dir, reset) {
+export function selectExitCode(verdict) {
+  return OUTCOME[classifyVerdict(verdict)].code;
+}
+
+/** Same table as `selectExitCode`, plus the console label — one home for both. */
+export function describeOutcome(verdict) {
+  return OUTCOME[classifyVerdict(verdict)];
+}
+
+/**
+ * Our own thrown errors are already one clean Czech sentence prefixed
+ * `design-match:` (every module in this tool follows the same convention) —
+ * logging just that line is the right amount of detail for an operator.
+ * Anything else — a browser that failed to launch, an unexpected fs error, an
+ * actual bug — needs its stack to be diagnosable, so it must be logged in full
+ * rather than reduced to `.message`.
+ */
+export function isDeliberateError(error) {
+  return error instanceof Error && error.message.startsWith("design-match:");
+}
+
+/**
+ * Everything between "I have a round result" and "here is the object
+ * `writeArtifacts` receives" — Ruling 1 (`values` must never be forwarded as
+ * `null`) and Ruling 3 (image buffers only on the round actually shot this
+ * invocation) both live here now, as pure, directly testable branches, rather
+ * than as inline expressions inside the browser-driven `runCompare` that no
+ * test could ever reach.
+ */
+export function buildCompareOutcome({ result, spec, slug, masks, history }) {
+  const roundVerdict = evaluateRound(result);
+  // Only this invocation's round carries image buffers — replayed history
+  // rounds (read back from rounds.json) never do, they were stripped before
+  // being persisted.
+  const currentRound = {
+    percent: result.pixels ? result.pixels.percent : null,
+    skeletonPass: result.skeleton.pass,
+    reason: roundVerdict.reason,
+    ...(result.pixels ? { appImage: result.appImage, maskImage: result.pixels.diffBuffer } : {}),
+  };
+  const roundRecord = stripImages(currentRound);
+  const fullHistory = [...history, roundRecord];
+
+  const next = decideNext([], fullHistory);
+  const verdict = combineVerdict(roundVerdict, next);
+
+  const payload = {
+    slug,
+    spec,
+    rounds: [...history, currentRound],
+    verdict,
+    masks,
+    skeletonFindings: result.skeleton.findings,
+    values: result.values ?? [],
+    tokenMappings: [],
+    componentDecisions: [],
+  };
+
+  return { payload, roundRecord, fullHistory, verdict };
+}
+
+export async function loadHistory(dir, reset) {
   if (reset) return [];
   let raw;
   try {
@@ -171,6 +249,28 @@ async function loadHistory(dir, reset) {
     return [];
   }
   return historyFromRaw(raw);
+}
+
+/**
+ * Every other error in this file is a clear Czech sentence naming what to do
+ * — but `compare` run before any `measure` for the slug used to surface a raw
+ * Node `ENOENT`, the single most likely first-run mistake. Only the missing-
+ * file case is translated; any other read failure (permissions, a corrupt
+ * file's JSON.parse failure) keeps propagating as-is.
+ */
+export async function readSpec(dir, slug) {
+  let raw;
+  try {
+    raw = await fs.readFile(path.join(dir, "spec.json"), "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      throw new Error(
+        `design-match: spec.json pro slug "${slug}" neexistuje — nejprve spusť measure pro tento slug.`,
+      );
+    }
+    throw error;
+  }
+  return JSON.parse(raw);
 }
 
 async function runMeasure(cmd) {
@@ -221,7 +321,7 @@ async function runMeasure(cmd) {
 
 async function runCompare(cmd) {
   const dir = path.join(ARTIFACT_ROOT, cmd.slug);
-  const spec = JSON.parse(await fs.readFile(path.join(dir, "spec.json"), "utf8"));
+  const spec = await readSpec(dir, cmd.slug);
   const scene = resolveScene({ ...cmd, selector: cmd.selector ?? spec.selector });
   const history = await loadHistory(dir, cmd.reset);
 
@@ -239,47 +339,51 @@ async function runCompare(cmd) {
     return { skeleton, values, pixels: diffPngs(designPng, appImage), appImage };
   });
 
-  const roundVerdict = evaluateRound(result);
-  // Only this invocation's round carries image buffers — replayed history
-  // rounds (read back from rounds.json) never do, they were stripped before
-  // being persisted.
-  const currentRound = {
-    percent: result.pixels ? result.pixels.percent : null,
-    skeletonPass: result.skeleton.pass,
-    reason: roundVerdict.reason,
-    ...(result.pixels ? { appImage: result.appImage, maskImage: result.pixels.diffBuffer } : {}),
-  };
-  const currentRoundCore = stripImages(currentRound);
-  const fullHistory = [...history, currentRoundCore];
-
-  const next = decideNext([], fullHistory);
-  const verdict = combineVerdict(roundVerdict, next);
-
-  await fs.writeFile(path.join(dir, ROUNDS_FILE), JSON.stringify(fullHistory, null, 2), "utf8");
-
-  await writeArtifacts(dir, {
-    slug: cmd.slug,
+  const { payload, fullHistory, verdict } = buildCompareOutcome({
+    result,
     spec,
-    rounds: [...history, currentRound],
-    verdict,
+    slug: cmd.slug,
     masks: scene.masks,
-    skeletonFindings: result.skeleton.findings,
-    values: result.values ?? [],
-    tokenMappings: [],
-    componentDecisions: [],
+    history,
   });
 
-  const label = verdict.status === "done" ? "HOTOVO" : verdict.stop ? "PARK" : "POKRAČUJ";
-  console.log(`${label} — ${verdict.reason}`);
-  process.exitCode = selectExitCode(verdict);
+  await fs.writeFile(path.join(dir, ROUNDS_FILE), JSON.stringify(fullHistory, null, 2), "utf8");
+  await writeArtifacts(dir, payload);
+
+  const outcome = describeOutcome(verdict);
+  console.log(`${outcome.label} — ${verdict.reason}`);
+  process.exitCode = outcome.code;
+}
+
+function logFailure(error) {
+  if (isDeliberateError(error)) {
+    console.error(`[design-match] ${error.message}`);
+  } else {
+    // Not one of our own thrown usage errors — a real crash, which needs its
+    // stack to be diagnosable rather than being reduced to `.message`.
+    console.error(error);
+  }
+}
+
+async function main(argv) {
+  let cmd;
+  try {
+    cmd = parseArgs(argv);
+  } catch (error) {
+    logFailure(error);
+    process.exitCode = selectExitCode({ status: "error" });
+    return;
+  }
+  try {
+    const run = cmd.command === "measure" ? runMeasure : runCompare;
+    await run(cmd);
+  } catch (error) {
+    logFailure(error);
+    process.exitCode = selectExitCode({ status: "error" });
+  }
 }
 
 const isEntrypoint = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isEntrypoint) {
-  const cmd = parseArgs(process.argv.slice(2));
-  const run = cmd.command === "measure" ? runMeasure : runCompare;
-  run(cmd).catch((error) => {
-    console.error(`[design-match] ${error.message}`);
-    process.exitCode = 1;
-  });
+  main(process.argv.slice(2));
 }

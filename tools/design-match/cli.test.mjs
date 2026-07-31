@@ -1,8 +1,16 @@
-import { describe, expect, it } from "vitest";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  buildCompareOutcome,
   combineVerdict,
+  describeOutcome,
   historyFromRaw,
+  isDeliberateError,
+  loadHistory,
   parseArgs,
+  readSpec,
   resolveRegionIndex,
   selectExitCode,
   stripImages,
@@ -117,7 +125,13 @@ describe("stripImages", () => {
       appImage: Buffer.from("app"),
       maskImage: Buffer.from("mask"),
     };
-    expect(stripImages(round)).toEqual({ percent: 1.2, skeletonPass: true, reason: "ok" });
+    const stripped = stripImages(round);
+    expect(stripped).toEqual({ percent: 1.2, skeletonPass: true, reason: "ok" });
+    // toEqual treats a key set to `undefined` as absent, so it would pass an
+    // implementation that sets `appImage: undefined` instead of actually
+    // removing the key. Assert the keys are genuinely gone.
+    expect(stripped).not.toHaveProperty("appImage");
+    expect(stripped).not.toHaveProperty("maskImage");
   });
 
   it("is a no-op when there are no image buffers", () => {
@@ -159,5 +173,160 @@ describe("selectExitCode", () => {
 
   it("is 2 when parked (stopped without a done verdict)", () => {
     expect(selectExitCode({ status: "continue", stop: true, reason: "x" })).toBe(2);
+  });
+
+  it("is 3 on error, regardless of stop — never collapses into 1 (continue)", () => {
+    expect(selectExitCode({ status: "error", stop: false })).toBe(3);
+    expect(selectExitCode({ status: "error", stop: true })).toBe(3);
+  });
+});
+
+describe("describeOutcome", () => {
+  it("pairs each status with the same exit code selectExitCode returns, plus a console label", () => {
+    expect(describeOutcome({ status: "done", stop: false })).toEqual({
+      code: 0,
+      label: "HOTOVO",
+    });
+    expect(describeOutcome({ status: "continue", stop: false })).toEqual({
+      code: 1,
+      label: "POKRAČUJ",
+    });
+    expect(describeOutcome({ status: "continue", stop: true })).toEqual({
+      code: 2,
+      label: "PARK",
+    });
+    expect(describeOutcome({ status: "error" })).toEqual({ code: 3, label: "CHYBA" });
+  });
+});
+
+describe("isDeliberateError", () => {
+  it("recognizes our own design-match: prefixed errors", () => {
+    expect(isDeliberateError(new Error("design-match: compare vyžaduje --slug <slug>"))).toBe(true);
+  });
+
+  it("treats anything else as an unexpected crash needing its stack", () => {
+    expect(isDeliberateError(new TypeError("Cannot read properties of undefined"))).toBe(false);
+    expect(isDeliberateError("not even an Error instance")).toBe(false);
+  });
+});
+
+describe("buildCompareOutcome", () => {
+  const skeletonPass = { pass: true, findings: [] };
+  const skeletonFail = {
+    pass: false,
+    findings: [{ path: "form", kind: "layout-mode", message: "grid vs flex-column" }],
+  };
+
+  it("a skeleton-gated result forwards values as [] (never null) and carries no image buffers", () => {
+    const result = { skeleton: skeletonFail, values: null, pixels: null };
+    const { payload, roundRecord } = buildCompareOutcome({
+      result,
+      spec: { selector: "#x" },
+      slug: "epic-card",
+      masks: [],
+      history: [],
+    });
+
+    expect(payload.values).toEqual([]);
+    const currentRound = payload.rounds.at(-1);
+    expect(currentRound).not.toHaveProperty("appImage");
+    expect(currentRound).not.toHaveProperty("maskImage");
+    expect(roundRecord).not.toHaveProperty("appImage");
+    expect(roundRecord).not.toHaveProperty("maskImage");
+  });
+
+  it("an ungated result carries the real values array and both image buffers on the current round only", () => {
+    const appImage = Buffer.from("app");
+    const maskImage = Buffer.from("mask");
+    const values = [{ path: "form", prop: "gap", expected: "16px", actual: "12px", message: "x" }];
+    const result = {
+      skeleton: skeletonPass,
+      values,
+      pixels: { percent: 0.3, largestRegion: { w: 2, h: 2 }, diffBuffer: maskImage },
+      appImage,
+    };
+    const { payload, roundRecord, fullHistory } = buildCompareOutcome({
+      result,
+      spec: { selector: "#x" },
+      slug: "epic-card",
+      masks: [],
+      history: [],
+    });
+
+    expect(payload.values).toBe(values);
+    const currentRound = payload.rounds.at(-1);
+    expect(currentRound.appImage).toBe(appImage);
+    expect(currentRound.maskImage).toBe(maskImage);
+    // The persisted/replayed shape never carries the buffers.
+    expect(roundRecord).not.toHaveProperty("appImage");
+    expect(roundRecord).not.toHaveProperty("maskImage");
+    expect(fullHistory.at(-1)).toBe(roundRecord);
+  });
+
+  it("replays prior history untouched and appends only the current round", () => {
+    const priorRound = { percent: 8, skeletonPass: true, reason: "diff 8 %" };
+    const result = { skeleton: skeletonFail, values: null, pixels: null };
+    const { payload, fullHistory } = buildCompareOutcome({
+      result,
+      spec: { selector: "#x" },
+      slug: "epic-card",
+      masks: [],
+      history: [priorRound],
+    });
+
+    expect(payload.rounds[0]).toBe(priorRound);
+    expect(fullHistory[0]).toBe(priorRound);
+    expect(fullHistory).toHaveLength(2);
+  });
+});
+
+describe("loadHistory", () => {
+  let dir;
+
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "design-match-cli-history-"));
+  });
+
+  afterEach(async () => {
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  it("starts empty when rounds.json does not exist yet", async () => {
+    expect(await loadHistory(dir, false)).toEqual([]);
+  });
+
+  it("reads back a previously persisted history", async () => {
+    const rounds = [{ percent: 4, skeletonPass: true, reason: "x" }];
+    await fs.writeFile(path.join(dir, "rounds.json"), JSON.stringify(rounds), "utf8");
+    expect(await loadHistory(dir, false)).toEqual(rounds);
+  });
+
+  it("--reset discards a previously persisted history without even reading it", async () => {
+    const rounds = [{ percent: 4, skeletonPass: true, reason: "x" }];
+    await fs.writeFile(path.join(dir, "rounds.json"), JSON.stringify(rounds), "utf8");
+    expect(await loadHistory(dir, true)).toEqual([]);
+  });
+});
+
+describe("readSpec", () => {
+  let dir;
+
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "design-match-cli-spec-"));
+  });
+
+  afterEach(async () => {
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  it("reads and parses a previously written spec.json", async () => {
+    const spec = { selector: "#x", skeleton: {}, values: {} };
+    await fs.writeFile(path.join(dir, "spec.json"), JSON.stringify(spec), "utf8");
+    expect(await readSpec(dir, "some-slug")).toEqual(spec);
+  });
+
+  it("throws a clear message naming measure when spec.json is missing (not a raw ENOENT)", async () => {
+    await expect(readSpec(dir, "missing-slug")).rejects.toThrow(/measure/);
+    await expect(readSpec(dir, "missing-slug")).rejects.toThrow(/missing-slug/);
   });
 });
