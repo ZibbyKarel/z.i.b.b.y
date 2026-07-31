@@ -139,10 +139,30 @@ every pixel delta a lie, and no further round can fix it without an edit.
 `preflight.mjs` normalises `next/font/google`'s generated family names
 (`__Geist_<hash>`) back to the human name before comparing, and drops the
 synthetic `_Fallback` variant entirely (Next's own metric-matched substitute —
-the design side has nothing to compare it against). **This normalisation is
-verified only for `--route`** (against `apps/web`, where `next/font/google` is
-actually in play) — it is unverified for `--story` (Storybook). Say so plainly
-to whoever hits it first; if Task 15's dry run settles it, update this section.
+the design side has nothing to compare it against). This normalisation matters
+for `--route` (against `apps/web`, where `next/font/google` is in play). For
+`--story` it is a **no-op, now measured rather than assumed**: Storybook boots
+the DS theme CSS directly, not `next/font`, so a story computes the plain
+family name — `getComputedStyle(document.body).fontFamily` on
+`designsystem-card--overview` and `dashboard-hudcard--default` both read
+`Geist, system-ui, -apple-system, "system-ui", sans-serif`, with no `__Geist_<hash>`
+anywhere. A real `compare --story` round confirmed the same stack reaching
+`fontPreflight` as the implementation side. Nothing to normalise, and nothing
+left open.
+
+Two things the same observation exposed, which do bite:
+
+- The preflight compares the **whole stack, in order**, as one joined string.
+  A design side of `Geist, -apple-system, system-ui, sans-serif` and an app
+  side of `Geist, system-ui, -apple-system, sans-serif` are the same fonts in
+  a different fallback order — the preflight calls that a mismatch and parks
+  the round (exit 2) even though the primary family is identical. Read the
+  message before believing the park.
+- Storybook loads no `@font-face` for Geist at all (`document.fonts` holds only
+  Storybook's own faces). `Geist` resolving at all depends on it being
+  installed as a **system** font on the machine — true on the dev Mac used
+  here, not something to count on elsewhere. The preflight compares the
+  declared stack, not what actually rasterised, so it cannot catch this.
 
 ## CDN cache (measure)
 
@@ -220,6 +240,124 @@ its own.
   `libs/design-system`.
 - **Masked regions** are always listed in `report.md`. A masked region is
   unverified area — never mask silently.
+
+## Known limits (from the first real run, 2026-07-31)
+
+Everything below was **observed**, not predicted, on the first end-to-end run of
+the real CLI against `design/Z.I.B.B.Y/` and a running Storybook. The blockers
+are listed first because two of them stop the run before it starts.
+
+### `measure` cannot currently read any mockup in `design/Z.I.B.B.Y/`
+
+All **11** mockups there open with `<link rel="preconnect" href="https://fonts.googleapis.com" />`.
+`ensureCdnCache` treats every `href="http(s)://…"` as a downloadable resource,
+and a bare origin answers **HTTP 404** — so the run aborts before the browser
+launches:
+
+```
+[design-match] design-match: nelze stáhnout https://fonts.googleapis.com (HTTP 404). Bez cache se mockup nevykreslí.
+```
+
+A `preconnect`/`dns-prefetch` hint names a connection, not a file; nothing
+skips it. **This includes the `measure` example in "Running it" above** —
+`"design/Z.I.B.B.Y/ZIBBY Roadmap.html"` fails exactly this way. The one good
+news is the shape of the failure: ~0.3 s, exit 3, a single `[design-match]`
+line, no stack.
+
+### 7 of the 11 mockups render nothing, and `measure` calls it a success
+
+The mockups load their components as `<script type="text/babel" src="zibby/*.jsx">`.
+Babel fetches those over XHR, and Chromium refuses XHR on `file://` — so
+`#root` stays empty. Independently, the CDN rewrite keeps the original
+`crossorigin="anonymous"` attribute on the React/Babel `<script>` tags, which
+`file://` also cannot satisfy, so those never load from the cache either.
+
+Neither failure is detected. `measure` exits **0** and writes a confident
+`spec.json` holding a one-node skeleton of an empty `#root`. Confirmed on all
+seven: Roadmap, Velin, Velin-B, Velin-D, Archiv úloh, Pravidla schvalování,
+Redesign Canvas.
+
+**The tell is the inventory.** A real mockup prints several candidates; a
+mockup that did not render prints exactly one, and it is the mount point at
+full viewport size:
+
+```
+Inventura regionů (1440×900):
+  [1] #root                     1440×900 @ (0,0)   ▸ r1.png
+```
+
+If you see that, stop — do not compare against the spec. Open `r1.png`; it
+will be blank.
+
+### A candidate below the fold crashes the inventory
+
+`cropRegions` screenshots with `clip` against the **viewport**, not the full
+page, so any ranked candidate whose origin sits below `y = 900` throws a raw
+Playwright error — `Clipped area is either empty or outside the resulting image`
+— with a full stack rather than a `design-match:` line. Exit is still 3.
+Observed on the two long-document mockups, `ZIBBY Design Audit.html` and
+`ZIBBY Implementace - Changelog.html`. A region merely _taller_ than the
+viewport is fine (`svg.circuit-svg` at 1440×1440 cropped without complaint) —
+it is the origin being off-screen that breaks.
+
+Net: **2 of 11 mockups (`ZIBBY Orb.html`, `ZIBBY Loading Screen.html`) are
+measurable today**, and only after the `preconnect` blocker is worked around.
+
+### three.js mockups: confirmed, with a correction
+
+`ZIBBY Orb.html` behaves as expected — three.js appends `renderer.domElement`
+at runtime, so the `<canvas>` never appears in the source but does appear in
+the inventory as a full-viewport candidate, ranked `[2]`, whose skeleton is a
+single node with no children:
+
+```
+  [1] #stage                    1440×900 @ (0,0)   ▸ r1.png
+  [2] canvas                    1440×900 @ (0,0)   ▸ r2.png
+  [3] #dock                       482×90 @ (479,780)   ▸ r3.png
+```
+
+Measure the chrome, not the canvas: `--region 3` (`#dock`) yields a real
+19-node skeleton with 51 measured properties per node and 59 token mappings.
+`ZIBBY Velin-D.html` also uses three.js, but that is not what stops it — it
+never renders at all (previous limit), so its canvas is moot.
+
+### `compare` defaults `--selector` to the design's own selector
+
+`spec.json` records the winning **design** selector (`#dock`), and `compare`
+reuses it against the app scene, where it almost never exists. The resulting
+error is thrown inside `page.evaluate`, so Playwright prefixes the message and
+the clean-error path no longer recognises it as ours — the operator gets a raw
+stack, no artifacts, exit 3:
+
+```
+page.evaluate: Error: design-match: selector not found: #dock
+```
+
+Pass `--selector` explicitly on essentially every `compare`.
+
+### `report.md`'s headline reads PARK on rounds that are still running
+
+`renderReport` has only two headline states, `HOTOVO` and `PARK`, so a
+perfectly normal continuing round writes `**Výsledek:** PARK — pokračuje` while
+the console prints `POKRAČUJ` and the process exits **1**. `report.md` is the
+file this skill tells you to read first, and on that one line it disagrees with
+the exit code. **Trust the exit code**; read `report.md` for the round history
+and the reason, not for the verdict.
+
+### What was verified working
+
+Worth stating, since the failures above are loud: the loop and gate machinery
+itself behaved exactly as documented. Exit codes 0/1/2/3 all matched their
+table entry, including four distinct error paths (bad command, missing
+`spec.json`, missing scene, out-of-range `--region`), each a single clean
+`[design-match]` line. The skeleton gate correctly named a genuine structural
+difference (`layout mód: flex-column vs block`) in `skeleton.md`; `values.md`
+correctly rendered `Neměřeno` on that red-gate round and a real delta list on a
+green-gate one; `app.png` was correctly absent when the pixel layer was
+skipped; `--strict-wrappers` was stamped into `spec.json`, refused a
+disagreeing `compare` with exit 3, and reached `values.md`'s collapsed-wrapper
+disclosure (present without the flag, absent with it). `.design-match/` and the
+`.design-match-cached-*` mockup copies both stayed out of `git status`.
 
 ## References
 
