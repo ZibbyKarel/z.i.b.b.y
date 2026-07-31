@@ -1,6 +1,6 @@
 import { useTranslations } from "next-intl";
 import { Button, Stack, StatusDot, Tag, Toggle, Typography } from "@zibby/design-system";
-import type { Integration } from "@zibby/contracts";
+import type { Integration, IntegrationKind } from "@zibby/contracts";
 import { HudCard } from "../../../components/HudCard/HudCard";
 import { INTEGRATION_STATUS } from "../integrationStatus";
 
@@ -24,6 +24,32 @@ const KIND_GLYPH = {
   calendar: "clock",
   sentry: "bolt",
 } as const;
+
+/**
+ * Per-kind brand mark, preferred over {@link KIND_GLYPH} on the card's leading
+ * tile (`IconTile` falls back to the glyph automatically on a missing key or a
+ * failed image load). `slack` has no entry — Simple Icons pulled the mark from
+ * its registry after a trademark request, see `tools/brand-logos/README.md` —
+ * so it always renders its `plug` glyph. `email` has no entry either: the kind
+ * is generic IMAP/SMTP, not Gmail, so it keeps its `server` glyph too.
+ */
+const KIND_LOGO: Partial<Record<IntegrationKind, string>> = {
+  github: "/logos/github.svg",
+  jira: "/logos/jira.svg",
+  calendar: "/logos/calendar.svg",
+  sentry: "/logos/sentry.svg",
+};
+
+/** Full (root-namespace) i18n key for each fixed `Integration.kind` value — used as the
+ * brand tile's alt text, since the tile is the card's only service indicator. */
+const KIND_LABEL_KEY = {
+  slack: "integrations.kindSlack",
+  email: "integrations.kindEmail",
+  jira: "integrations.kindJira",
+  github: "integrations.kindGithub",
+  calendar: "integrations.kindCalendar",
+  sentry: "integrations.kindSentry",
+} as const satisfies Record<IntegrationKind, string>;
 
 /** Format a sync timestamp as a short, locale-agnostic caption (or a dash). */
 function lastSyncCaption(iso: string | undefined): string {
@@ -130,6 +156,8 @@ export function IntegrationCard({
       }
       description={detail}
       glyph={KIND_GLYPH[integration.kind]}
+      logoAlt={t(KIND_LABEL_KEY[integration.kind])}
+      logoSrc={KIND_LOGO[integration.kind]}
       title={name}
     />
   );
