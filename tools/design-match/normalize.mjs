@@ -77,6 +77,14 @@ function relativeTo(box, parentBox) {
   };
 }
 
+/** Resolves a chain of consecutive collapsible wrappers down to the surviving node. */
+function resolveThroughWrappers(child, parentBox, options) {
+  while (!options.strictWrappers && isCollapsibleWrapper(child, parentBox)) {
+    child = child.children[0];
+  }
+  return child;
+}
+
 function build(raw, parentBox, options) {
   const children = [...raw.children].sort((a, b) => a.layout.order - b.layout.order);
   return {
@@ -90,12 +98,9 @@ function build(raw, parentBox, options) {
       align: raw.layout.alignItems,
     },
     rel: relativeTo(raw.box, parentBox),
-    children: children.flatMap((child) => {
-      if (!options.strictWrappers && isCollapsibleWrapper(child, raw.box)) {
-        return build(child.children[0], raw.box, options);
-      }
-      return build(child, raw.box, options);
-    }),
+    children: children.map((child) =>
+      build(resolveThroughWrappers(child, raw.box, options), raw.box, options),
+    ),
   };
 }
 

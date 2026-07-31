@@ -69,6 +69,61 @@ describe("normalizeSkeleton", () => {
     expect(root.children[0].children[0].tag).toBe("label");
   });
 
+  it("collapses a chain of 3 consecutive collapsible wrappers down to the surviving ancestor", () => {
+    const innermostLabel = node({ tag: "label", box: { x: 0, y: 0, w: 400, h: 200 } });
+    const wrapperC = node({
+      tag: "div",
+      box: { x: 0, y: 0, w: 400, h: 200 },
+      children: [innermostLabel],
+    });
+    const wrapperB = node({
+      tag: "div",
+      box: { x: 0, y: 0, w: 400, h: 200 },
+      children: [wrapperC],
+    });
+    const wrapperA = node({
+      tag: "div",
+      box: { x: 0, y: 0, w: 400, h: 200 },
+      children: [wrapperB],
+    });
+    const root = normalizeSkeleton(
+      node({ box: { x: 0, y: 0, w: 400, h: 200 }, children: [wrapperA] }),
+    );
+    // All three wrappers collapse — the label is promoted directly onto root.
+    expect(root.children).toHaveLength(1);
+    expect(root.children[0].tag).toBe("label");
+    expect(root.children[0].children).toHaveLength(0);
+    // rel must be computed against the surviving ancestor (root's box), not any removed wrapper.
+    expect(root.children[0].rel).toEqual({ w: 1, h: 1, x: 0, y: 0 });
+  });
+
+  it("keeps a whole chain of wrappers intact when strictWrappers is on", () => {
+    const innermostLabel = node({ tag: "label", box: { x: 0, y: 0, w: 400, h: 200 } });
+    const wrapperC = node({
+      tag: "div",
+      box: { x: 0, y: 0, w: 400, h: 200 },
+      children: [innermostLabel],
+    });
+    const wrapperB = node({
+      tag: "div",
+      box: { x: 0, y: 0, w: 400, h: 200 },
+      children: [wrapperC],
+    });
+    const wrapperA = node({
+      tag: "div",
+      box: { x: 0, y: 0, w: 400, h: 200 },
+      children: [wrapperB],
+    });
+    const root = normalizeSkeleton(
+      node({ box: { x: 0, y: 0, w: 400, h: 200 }, children: [wrapperA] }),
+      { strictWrappers: true },
+    );
+    expect(root.children[0].tag).toBe("div");
+    expect(root.children[0].children[0].tag).toBe("div");
+    expect(root.children[0].children[0].children[0].tag).toBe("div");
+    expect(root.children[0].children[0].children[0].children[0].tag).toBe("label");
+  });
+
   it("infers roles from tag and attributes", () => {
     const form = normalizeSkeleton(
       node({
