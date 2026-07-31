@@ -31,9 +31,11 @@ unmeasured this way.
 
 **When to turn it off:** `--strict-wrappers`. Use it if a run shows that the extra
 wrappers themselves are what is going wrong — for example a wrapper introducing a
-stacking context or clipping. `measure` and `compare` must use the same setting
-for a given slug, or the two trees collapse differently and the gate compares
-trees that were never meant to line up.
+stacking context or clipping. `measure` stamps the flag it ran with into
+`spec.json`; a `compare` whose own `--strict-wrappers` disagrees is refused with
+exit 3 before anything is compared, never silently — there is no override, so
+switching the setting means either dropping/adding the flag on `compare` to
+match the spec, or re-running `measure` with the setting you actually want.
 
 ## Layout mode
 

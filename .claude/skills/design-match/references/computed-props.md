@@ -23,9 +23,11 @@ subset `tokens.md` actually reports mappings for) only covers `color`,
 comparison in `values.md` but will never produce a `tokens.md` row, because
 there is no token family for it. `tokens.md` itself is a **design-side
 inventory**, built once from `spec.skeleton` at `measure` time against the
-app's theme CSS — not a design-vs-app delta the way `values.md` is, so it
-lists every un-tokenised design value whether or not the current
-implementation actually differs.
+app's theme CSS — not a design-vs-app delta the way `values.md` is. It lists
+every tokenisable design value (one row per distinct `prop`/value pair,
+including ones that map exactly onto an existing token), not only the
+unmatched ones — reviewing it means checking which rows already have a home
+and which propose a new token, not scanning for "differences".
 
 ## Adding a property
 
