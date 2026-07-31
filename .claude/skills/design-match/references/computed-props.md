@@ -34,7 +34,7 @@ and which propose a new token, not scanning for "differences".
 `compareValues` compares every whitelisted property by strict string equality,
 and `fontFamily` is the one where that has a standing cost. The font preflight
 deliberately compares only the **first resolved family** and leaves the rest of
-the stack to this layer (see `SKILL.md`, _Font preflight_) — which is the right
+the stack to this layer (see `SKILL.md`, _Preflights_) — which is the right
 home for it, because a delta here names the node it occurred on. But a declared
 fallback order that differs from the design's is then a value delta on every
 node, and any value delta keeps the round at `POKRAČUJ`. Against Storybook,

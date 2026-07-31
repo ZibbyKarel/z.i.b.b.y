@@ -221,7 +221,7 @@ up from as well, so the file and the exit code cannot disagree:
 | ---- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | 0    | `HOTOVO`   | a match was found                                                                                                                                                                                                                                                                                         | stop calling `compare`                                                                              |
 | 1    | `POKRAČUJ` | no match yet, the loop hasn't given up                                                                                                                                                                                                                                                                    | edit the implementation, call `compare` again                                                       |
-| 2    | `PARK`     | the loop stopped without reaching done — thrash, 2 skeleton failures, the round ceiling, or a font mismatch                                                                                                                                                                                               | stop calling `compare`, surface it to the operator                                                  |
+| 2    | `PARK`     | the loop stopped without reaching done — thrash, 2 skeleton failures, the round ceiling, or a failing preflight (font mismatch, screenshots of different sizes)                                                                                                                                           | stop calling `compare`, surface it to the operator                                                  |
 | 3    | `CHYBA`    | `compare`/`measure` itself failed — a bad invocation, a missing `spec.json`, a `spec.json` from an older `design-match` format or measured with a different `--strict-wrappers` setting (both refuse rather than compare — re-run `measure` for the slug), a browser that wouldn't launch, a failed write | fix the invocation/environment first — reading this as "continue" loops forever against a dead tool |
 
 `report.md`'s headline is now that same label — a continuing round writes
@@ -233,9 +233,9 @@ trust the exit code over the report; that caveat is gone because the defect is.
 Everything below exits **3** and prints exactly one `[design-match]` line, no
 stack. That is the contract for every _refusal_ — a failure the tool
 anticipated. It is not a guarantee about every exit 3: a crash the tool did not
-anticipate still surfaces as a raw stack, and there is one known today (see
-`ZIBBY Redesign Canvas` under "Known limits"). The rule about what a refusal
-leaves on disk is stated once in `cli.mjs` and applied at every refusal path:
+anticipate still surfaces as a raw stack, by design — that is what tells you it
+is a crash and not a refusal. The rule about what a refusal leaves on disk is
+stated once in `cli.mjs` and applied at every refusal path:
 
 > design-match never deletes what it **saw**, and never writes what it
 > **concluded** — and it names only files it actually wrote.
@@ -251,6 +251,7 @@ the refusal is telling you to go and look at. `spec.json`, `report.md` and
 | CDN resource that cannot be downloaded (HTTP error)                | no per-slug directory, but `.design-match/.cdn-cache/` exists and earlier URLs of the same run are already cached — `design-match: nelze stáhnout <url> (HTTP nnn). Bez cache se mockup nevykreslí.`                                             |
 | CDN resource that downloads 0 bytes                                | same — `design-match: stažení <url> vrátilo prázdný obsah (0 bajtů). Bez obsahu se mockup nevykreslí.` A 200 with an empty body is a failure, not a cache hit                                                                                    |
 | `--region <n>` out of range                                        | names the crops **that exist**; when `cropFitsPage` skipped all of them it says so and sends you to the inventory's selectors and dimensions instead of naming a file it never wrote                                                             |
+| region the browser refuses to photograph                           | the message names the region, its box, and the same crop-or-inventory tail the out-of-range row uses. The per-slug directory exists and is **empty** — same as an out-of-range `--region`                                                        |
 | region rendered nothing (below)                                    | names `design.png` and the **chosen** region's crop, when that crop exists                                                                                                                                                                       |
 | `spec.json` missing / older version / blank                        | nothing new — re-run `measure` for the slug                                                                                                                                                                                                      |
 | `--strict-wrappers` disagrees with `spec.json`                     | nothing new — re-run `measure`, or drop/add the flag on `compare`                                                                                                                                                                                |
@@ -307,13 +308,18 @@ is **root-only**: a stored skeleton does not carry the depth-cap flag, so a
 childless node deeper in the tree is unknowable from the file, while a childless
 root is decidable.
 
-## Font preflight
+## Preflights
 
-Once the skeleton gate passes, `compare` runs a font check before it ever
-touches pixels (`checkFontPreflight` in `cli.mjs`, backed by
-`preflight.mjs`). On a mismatch the pixel layer is skipped entirely and the
-round **parks immediately** — not `continue` — because a font mismatch makes
-every pixel delta a lie, and no further round can fix it without an edit.
+Once the skeleton gate passes, `compare` runs two checks before it reads a
+single pixel, both in `preflight.mjs`: **fonts** (`checkFontPreflight`), and
+**screenshot size** (`checkSizePreflight`, described under "Known limits"). They
+share one shape — on a failure the pixel layer is skipped entirely and the round
+**parks immediately**, not `continue`, because the difference makes every pixel
+delta meaningless and no further round can fix it without an edit. The font
+check runs first and wins if both fail. The rest of this section is the font one.
+
+On a font mismatch the pixel layer is skipped and the round parks, because a
+font mismatch makes every pixel delta a lie.
 
 **It compares the first resolved family only** — case-folded, after
 normalisation. The rest of the stack is not compared at all, not even at a
@@ -365,9 +371,11 @@ Two limits that remain:
   here, not something to count on elsewhere. The preflight compares the
   declared stack, not what actually rasterised, so it cannot catch this.
 
-Neither passing message reaches an artifact — only a failing preflight becomes
-the round's reason — so silence from this layer covers **two** different facts,
-and they are not equally reassuring:
+Every preflight outcome — passing or failing — is recorded on the round and
+rendered in `report.md` under `## Preflighty`, one line per preflight per round.
+The console is untouched: a clean run still prints one line. The reason is that
+silence would cover **three** different facts, and they are not equally
+reassuring:
 
 - `font stack shodný v první rodině: …` — the two primary families really were
   compared and really did agree.
@@ -377,9 +385,14 @@ neověřil, porovnání pokračuje bez něj` — both stacks came back empty, so
   evidence. The source expects this to be unreachable in a browser
   (`getComputedStyle` always yields a family), but the branch exists precisely
   so that "nothing to compare" can never render as "compared and equal".
+- `neproběhl — skeleton gate neprošel, k porovnání se běh nedostal` — the round
+  never reached this layer at all. A failing gate returns before either
+  screenshot is taken, so both preflights say this together; a failing font
+  preflight makes the size one say it alone.
 
-Silence therefore means "the preflight did not object", not "the fonts were
-verified".
+A round measured before this field existed renders no `## Preflighty` section at
+all — that is the fourth state, and it is left blank rather than guessed at, the
+same rule `settled` follows.
 
 ## CDN cache (measure)
 
@@ -555,8 +568,8 @@ description and a row's selector, node count and mapping count can all change �
 that is the flag working as designed, and it is why the description is worth
 choosing rather than typing. But it means "11 of 11" is a claim about this
 description. Under a description that hits nothing at all, one of these eleven
-does not merely rank differently — it crashes (see `ZIBBY Redesign Canvas`
-below).
+ranks a region the browser cannot photograph into `[1]` and refuses the default
+invocation — a refusal, not a measurement (see `ZIBBY Redesign Canvas` below).
 
 Measuring is not matching: a spec is only the design side. But "the tool cannot
 read this repo's own designs" — which this section used to say, at 2 of 11 — is
@@ -590,7 +603,7 @@ and its nested wrappers take the top slots ahead of anything worth matching
 (see the inventory in "Running it"). The numbered inventory plus `--region <n>`
 is the mitigation, and choosing is the operator's job.
 
-### `ZIBBY Redesign Canvas`: previews depend on the description, and one description crashes it
+### `ZIBBY Redesign Canvas`: previews depend on the description, and one description is refused
 
 It is a pan/zoom canvas: its cards sit inside a transformed, `overflow: hidden`
 container, so their boxes are reported at `y ≈ 1173` and 4256 px wide while the
@@ -619,28 +632,38 @@ The viewport element is always on the page image; it is simply not always
 inside the top-5 slice. When every row says `bez náhledu`, choose by selector
 and dimensions.
 
-**Under a description that hits nothing, the documented default invocation
-crashes.** With `"qqzz"`, region `[1]` is `div.design-canvas > div >
-div:nth-child(1)` — 16256×18608 at `(-6000,-6000)` — and `locator.screenshot()`
-cannot photograph it:
+**Under a description that hits nothing, the documented default invocation is
+refused.** With `"qqzz"`, region `[1]` is `div.design-canvas > div >
+div:nth-child(1)` — 16256×18608 at `(-6000,-6000)` — and Chromium will not
+photograph it. Verbatim, re-run on this tree:
 
 ```
 Vybrán region [1]: div.design-canvas > div > div:nth-child(1) — pokud je špatně, spusť znovu s --region <n>.
-locator.screenshot: Protocol error (Page.captureScreenshot): Unable to capture screenshot
-    at shootElement (…/tools/design-match/shoot.mjs:468:18)
+[design-match] design-match: region "div.design-canvas > div > div:nth-child(1)" se nepodařilo
+vyfotit — prohlížeč odmítl snímek plochy o rozměrech 16256×18608 px na pozici (-6000,-6000).
+Tak velký výřez je nad limitem snímkování v prohlížeči; není to chyba mockupu a menší výřez
+projde. Žádný náhled se z tohoto běhu nezachoval, takže vybírej podle selectorů a rozměrů
+v inventuře výše a spusť measure znovu s --region <n>.
 EXIT=3
 ```
 
-That is a **raw Playwright stack with no `design-match:` prefix**, exit 3, and
-an artifact directory that was created and left empty — the one path in this
-document that does not honour the one-clean-line contract everything under
-"When a run fails" describes. It is a tool defect, recorded here because it is
-true today, not because it is intended. Two consequences for the operator:
+One `[design-match]` line, no stack, and a per-slug directory that exists and is
+empty — the same shape an out-of-range `--region` already has, and the tail
+sentence is literally the same one, shared (`chooseRegionHint`) so the two
+cannot drift apart. It is a **refusal**, not a crash: Chromium's capture limit
+is an environment fact, not a defect in the mockup.
 
-- `locator.screenshot()` scrolling the element into view is **not** a guarantee
-  that an oversized region can be captured. It holds for regions the browser
-  can actually photograph, which is why this mockup measures to a real 28-node
-  spec under `"karta"` — and not for the 16256×18608 candidate.
+The refusal is not the end of the run, and the message does not pretend it is:
+regions `[2]`–`[5]` on that same inventory are genuinely selectable, and
+`--region 2` under `"qqzz"` measures to a spec and exits 0. Two consequences for
+the operator:
+
+- **Whether a region is capturable is not the same question as whether it fits
+  the page image.** This mockup's `"karta"` region is off the page image — every
+  inventory row says `bez náhledu` — and still captures in full, an 8512×2206
+  `design.png`. So the refusal is raised by catching the browser's own answer,
+  not by predicting one from `cropFitsPage`; a predictive guard would have
+  refused all eleven `"karta"` runs above.
 - If the inventory's top candidate has absurd dimensions, pass `--region <n>`
   rather than accepting the default. The inventory is printed before the
   screenshot is attempted, so the numbers are there to be read first.
@@ -669,24 +692,38 @@ this tree. A one-node `<canvas>` spec is a legitimate measurement, not an empty
 one, which is exactly why the emptiness guard tests for content rather than for
 node count.
 
-### A design and an app screenshot of different pixel sizes is exit 3, not a verdict
+### A design and an app screenshot of different pixel sizes parks the round
 
 The skeleton gate compares every node's box **relative to its parent**, and the
 root's own relative box is `1×1` by construction — so the absolute size of the
-comparison root is never gated. Two structurally identical trees of different
-size therefore pass the gate, pass the preflight, and then reach `diffPngs`,
-which refuses to diff mismatched buffers:
+comparison root is never gated, and two structurally identical trees of different
+size pass it. `sizePreflight` catches that at the pixel layer, beside the font
+check, and it behaves the same way: it reports, suppresses the pixel comparison,
+and does not crash. Verbatim, on a deliberate probe (a 400 px design root against
+a 500 px implementation root):
 
 ```
-[design-match] design-match: rozměry se liší — design 800×240, app 640×54
-EXIT=3
+PARK — snímky mají různé rozměry — design 800×600 px, implementace 1000×600 px
+(rozměry obrázků, tedy CSS px × DPR). Nad různě velkými plátny není pixelový rozdíl
+definovaný, takže se pixelová vrstva přeskakuje — oba snímky ale zůstávají na disku
+a jsou tím nálezem. Sjednoť velikost scény (jiný --selector, nebo uprav implementaci);
+konkrétní rozdíl v šířce a výšce pojmenovaný u uzlu najdeš ve values.md.
+EXIT=2
 ```
 
-Observed on a deliberate probe. It is `CHYBA`, not `POKRAČUJ` — no artifacts
-for that round, and the previous `report.md` gets the stale marker — even though
-a size difference is a perfectly ordinary implementation difference. Size the
-scene (or pick a `--selector` whose element matches the design region's
-dimensions) before reading that message as a tool fault.
+`PARK`, and the round writes its full artifact set: `skeleton.md` says the
+structure matches, `values.md` names `width 400px vs 500px` on the node, and
+`design.png` and `app.png` — the two images whose sizes differ, i.e. the whole
+content of the finding — are on disk. The message deliberately does **not**
+restate the per-node difference: the preflight reports the _captured images'_
+dimensions in device pixels (CSS px × DPR = 2), the value layer reports the
+element's in CSS pixels, and pointing at `values.md` is how one fact stays one
+fact instead of becoming two vocabularies for it.
+
+`diffPngs` keeps its own size check as a last-resort invariant, but nothing in
+normal operation reaches it any more. If you ever see `rozměry se liší — design
+… , app …` on exit 3, a caller skipped the preflight and the stack is the
+diagnostic.
 
 ### `compareValues` compares `fontFamily` as an exact string
 
