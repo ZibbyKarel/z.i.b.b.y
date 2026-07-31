@@ -85,6 +85,30 @@ describe("decideNext", () => {
     expect(result.reason).toContain("thrash");
   });
 
+  /*
+   * I5 (task 20), the fourth surviving mutant: deleting `previous.percent > 0`
+   * from `decideNext` left all 329 tests green, and it is NOT an equivalent
+   * mutant — the divisor becomes 0, the drop becomes -Infinity, and the round
+   * parks for "thrash" on the strength of arithmetic rather than evidence.
+   *
+   * The state is reachable, which is the whole reason the guard is there:
+   * `percent` is rounded to two decimals, so a handful of differing pixels on a
+   * large image rounds to 0 while `largestRegion` is still over 4×4 — a round
+   * that continues at 0 % — and the next round regressing gives the division.
+   * SKILL.md states the precondition in as many words.
+   */
+  it("never parks for thrash on a round following a 0 % one — that division is arithmetic, not evidence", () => {
+    expect(
+      decideNext(
+        [],
+        [
+          { percent: 0, skeletonPass: true },
+          { percent: 0.3, skeletonPass: true },
+        ],
+      ),
+    ).toEqual({ stop: false, reason: "pokračuje" });
+  });
+
   it("continues while the diff is still falling fast", () => {
     expect(
       decideNext(
