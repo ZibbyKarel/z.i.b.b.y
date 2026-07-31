@@ -1,6 +1,16 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+/**
+ * Známá omezení (deliberately out of scope for this file):
+ *
+ * 1. The `1440×900` in `formatInventory`'s header is hardcoded rather than derived
+ *    from `VIEWPORT` (browser.mjs) — wiring it would make this pure module import
+ *    `@playwright/test`.
+ * 2. `rankCandidates` matches plain substrings with no word boundary, so a
+ *    description containing "for" hits a region whose haystack contains "form".
+ */
+
 const MIN_SIDE = 24;
 
 /** Accent-insensitive lowercase, so "Jméno" matches "jmeno" and "jméno". */
@@ -19,13 +29,38 @@ export function rankCandidates(regions, description) {
 export async function collectRegions(page) {
   return page.evaluate(
     ({ minSide }) => {
+      const segmentFor = (node) => {
+        if (node.id) return `#${CSS.escape(node.id)}`;
+        const tag = node.tagName.toLowerCase();
+        const classes = [...node.classList];
+        let segment =
+          classes.length > 0 ? `${tag}.${classes.map((c) => CSS.escape(c)).join(".")}` : tag;
+        const parent = node.parentElement;
+        if (parent) {
+          const matching = [...parent.children].filter((c) => c.matches(segment));
+          if (matching.length > 1) {
+            const index = [...parent.children].indexOf(node) + 1;
+            segment = `${segment}:nth-child(${index})`;
+          }
+        }
+        return segment;
+      };
+      // Climb from the element toward <body>, joining segments with " > ", and stop
+      // as soon as the accumulated chain resolves to exactly one element. The climb
+      // always includes the direct child of <body>, and that segment's nth-child
+      // disambiguation (against its true siblings) is unique by construction, so the
+      // worst case still terminates in a selector that matches exactly one element.
       const cssPath = (el) => {
-        if (el.id) return `#${el.id}`;
-        const classes = [...el.classList];
-        if (classes.length > 0) return `.${classes.join(".")}`;
-        const parent = el.parentElement;
-        const index = parent ? [...parent.children].indexOf(el) + 1 : 1;
-        return `${el.tagName.toLowerCase()}:nth-child(${index})`;
+        const segments = [];
+        let node = el;
+        for (;;) {
+          segments.unshift(segmentFor(node));
+          const chain = segments.join(" > ");
+          if (document.querySelectorAll(chain).length === 1) return chain;
+          const parent = node.parentElement;
+          if (!parent || parent.tagName.toLowerCase() === "body") return chain;
+          node = parent;
+        }
       };
       const out = [];
       for (const el of document.querySelectorAll("*")) {
@@ -49,8 +84,16 @@ export async function collectRegions(page) {
   );
 }
 
+const CROP_FILE_RE = /^r\d+\.png$/;
+
 export async function cropRegions(page, regions, outDir, limit = 5) {
   await fs.mkdir(outDir, { recursive: true });
+  const existing = await fs.readdir(outDir);
+  await Promise.all(
+    existing
+      .filter((name) => CROP_FILE_RE.test(name))
+      .map((name) => fs.unlink(path.join(outDir, name))),
+  );
   const written = [];
   for (const [index, region] of regions.slice(0, limit).entries()) {
     const file = path.join(outDir, `r${index + 1}.png`);
