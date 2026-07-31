@@ -12,6 +12,10 @@ const fixture = pathToFileURL(
   path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "basic.html"),
 ).href;
 
+const animatedFixture = pathToFileURL(
+  path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "animated.html"),
+).href;
+
 let tmpDirs = [];
 
 afterEach(async () => {
@@ -71,5 +75,59 @@ describe("shootScene", () => {
 
     const verdict = diffPngs(unmaskedBuffer, maskedBuffer);
     expect(verdict.percent).toBeGreaterThan(0);
+  });
+
+  // Fix round 1, Important 1: a mask selector matching nothing used to be a
+  // silent no-op — Playwright draws nothing and raises nothing. The region the
+  // operator believed was masked shipped fully unmasked into the comparison.
+  it("rejects when a mask selector matches no element, naming the selector", async () => {
+    const outDir = await makeTmpDir();
+    const outPath = path.join(outDir, "shot.png");
+    const scene = {
+      mode: "mask",
+      url: fixture,
+      selector: ".card",
+      masks: [".does-not-exist"],
+    };
+
+    await expect(withPage((page) => shootScene(page, scene, outPath))).rejects.toThrow(
+      /\.does-not-exist/,
+    );
+  });
+
+  // Fix round 1, Important 2: target.screenshot() crops to scene.selector, so a
+  // mask locator resolving entirely outside that box masks nothing in the
+  // output — equally silent as Important 1. Built from the existing basic.html
+  // fixture without touching it: shoot one .row and mask a sibling .row: the
+  // grid layout puts them side by side, so they never intersect.
+  it("rejects when a mask lies entirely outside the shot region, naming the selector", async () => {
+    const outDir = await makeTmpDir();
+    const outPath = path.join(outDir, "shot.png");
+    const scene = {
+      mode: "mask",
+      url: fixture,
+      selector: ".form .row:nth-child(1)",
+      masks: [".form .row:nth-child(2)"],
+    };
+
+    await expect(withPage((page) => shootScene(page, scene, outPath))).rejects.toThrow(
+      /\.form \.row:nth-child\(2\)/,
+    );
+  });
+
+  // Fix round 1, Important 3: without `animations: "disabled"`, a continuous
+  // CSS animation can be caught mid-frame, and two shots of the same scene can
+  // land on different frames — a pixel delta naming no real cause. Proven
+  // behaviourally: the same scene shot twice must be byte-identical.
+  it("shoots a continuously animated scene byte-identically twice in a row", async () => {
+    const outDir = await makeTmpDir();
+    const firstPath = path.join(outDir, "first.png");
+    const secondPath = path.join(outDir, "second.png");
+    const scene = { mode: "route", url: animatedFixture, selector: ".viewport", masks: [] };
+
+    const firstBuffer = await withPage((page) => shootScene(page, scene, firstPath));
+    const secondBuffer = await withPage((page) => shootScene(page, scene, secondPath));
+
+    expect(firstBuffer.equals(secondBuffer)).toBe(true);
   });
 });

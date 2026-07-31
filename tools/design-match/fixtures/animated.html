@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #0b0e13;
+      }
+      /*
+       * Isolated fixture: proves shootScene's `animations: "disabled"` fix.
+       * `.viewport` is a fixed-size, overflow-hidden crop window; `.stripes`
+       * is a wider striped gradient that slides continuously underneath it.
+       * The crop window's own box never moves, so a plain "did the box move"
+       * check would miss this — the pixels visible *inside* a stationary crop
+       * change every frame, which is exactly what a real CSS transition or
+       * mount animation looks like to a screenshot taken mid-flight.
+       */
+      .viewport {
+        width: 200px;
+        height: 100px;
+        overflow: hidden;
+        position: relative;
+      }
+      .stripes {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 500px;
+        height: 100px;
+        background: repeating-linear-gradient(90deg, #ff2d55 0 23px, #2d7dff 23px 46px);
+        animation: slide 5s linear infinite;
+      }
+      @keyframes slide {
+        from {
+          transform: translateX(0);
+        }
+        to {
+          transform: translateX(-300px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="viewport" data-region="viewport">
+      <div class="stripes"></div>
+    </div>
+  </body>
+</html>

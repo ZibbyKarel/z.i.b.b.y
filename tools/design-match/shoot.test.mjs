@@ -44,4 +44,12 @@ describe("resolveScene", () => {
     expect(scene.mode).toBe("story");
     expect(scene.masks).toEqual([".relative-time"]);
   });
+
+  // Fix round 1, Minor: a route typed without a leading slash used to concatenate
+  // straight onto appBase with no separator (`http://localhost:3000roadmap`) —
+  // no error, just a URL that will never resolve. Normalise to one leading slash.
+  it("normalises a route given without a leading slash so it doesn't collide with appBase", () => {
+    const scene = resolveScene({ route: "roadmap", selector: "main" });
+    expect(scene.url).toBe("http://localhost:3000/roadmap");
+  });
 });
