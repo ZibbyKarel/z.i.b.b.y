@@ -239,7 +239,22 @@ describe("normalizeSkeleton", () => {
     expect(root.children[0].tag).toBe("label");
   });
 
-  it("keeps the wrapper when strictWrappers is on", () => {
+  it("collapses a chain of nested wrappers, not just the outermost one", () => {
+    const inner = node({
+      box: { x: 0, y: 0, w: 400, h: 200 },
+      children: [node({ tag: "label", box: { x: 100, y: 50, w: 200, h: 100 } })],
+    });
+    const middle = node({ box: { x: 0, y: 0, w: 400, h: 200 }, children: [inner] });
+    const root = normalizeSkeleton(
+      node({ box: { x: 0, y: 0, w: 400, h: 200 }, children: [middle] }),
+    );
+    expect(root.children).toHaveLength(1);
+    expect(root.children[0].tag).toBe("label");
+    // rel is measured against the SURVIVING ancestor, not a removed wrapper
+    expect(root.children[0].rel).toEqual({ w: 0.5, h: 0.5, x: 0.25, y: 0.25 });
+  });
+
+  it("keeps the whole wrapper chain when strictWrappers is on", () => {
     const wrapper = node({
       box: { x: 0, y: 0, w: 400, h: 200 },
       children: [node({ tag: "label", box: { x: 0, y: 0, w: 400, h: 200 } })],
@@ -371,6 +386,19 @@ function relativeTo(box, parentBox) {
   };
 }
 
+/**
+ * Walk down through EVERY consecutive collapsible wrapper, not just the first.
+ * Real markup nests wrapper divs several deep; stopping after one level leaves
+ * phantom nodes in the tree and the comparator reports a mismatch that is not real.
+ */
+function resolveThroughWrappers(child, parentBox, options) {
+  let current = child;
+  while (!options.strictWrappers && isCollapsibleWrapper(current, parentBox)) {
+    current = current.children[0];
+  }
+  return current;
+}
+
 function build(raw, parentBox, options) {
   const children = [...raw.children].sort((a, b) => a.layout.order - b.layout.order);
   return {
@@ -384,12 +412,9 @@ function build(raw, parentBox, options) {
       align: raw.layout.alignItems,
     },
     rel: relativeTo(raw.box, parentBox),
-    children: children.flatMap((child) => {
-      if (!options.strictWrappers && isCollapsibleWrapper(child, raw.box)) {
-        return build(child.children[0], raw.box, options);
-      }
-      return build(child, raw.box, options);
-    }),
+    children: children.map((child) =>
+      build(resolveThroughWrappers(child, raw.box, options), raw.box, options),
+    ),
   };
 }
 
