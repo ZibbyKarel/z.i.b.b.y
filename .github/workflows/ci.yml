@@ -44,7 +44,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      # vitest run — all 5 workspace projects (design-system, contracts, api, web, web-components).
+      # vitest run — all 7 workspace projects (design-system, forms, contracts, api, web,
+      # web-components, design-match). design-match's own browser project is not among them; see below.
       - run: pnpm run test
       # design-match's browser-driven tests live outside vitest.workspace.ts (Step 0 of
       # task 4) so the fast suite above stays browser-free; Chromium isn't installed yet.
