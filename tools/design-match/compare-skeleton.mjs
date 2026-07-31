@@ -79,6 +79,17 @@ function walk(design, app, path, tolerance, findings) {
 export function compareSkeletons(design, app, options = {}) {
   const tolerance = options.sizeTolerance ?? DEFAULT_SIZE_TOLERANCE;
   const findings = [];
+
+  if (design.role !== app.role) {
+    findings.push({
+      path: design.role,
+      kind: "role",
+      expected: design.role,
+      actual: app.role,
+      message: `role kořene: ${design.role} vs ${app.role}`,
+    });
+  }
+
   walk(design, app, design.role, tolerance, findings);
   return { pass: findings.length === 0, findings };
 }

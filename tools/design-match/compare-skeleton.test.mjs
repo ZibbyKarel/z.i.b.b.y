@@ -83,4 +83,39 @@ describe("compareSkeletons", () => {
     expect(verdict.findings).toHaveLength(1);
     expect(verdict.findings[0].kind).toBe("child-count");
   });
+
+  it("flags a root whose own role differs from the design, even with identical structure otherwise", () => {
+    const design = leaf({
+      role: "form",
+      children: [leaf({ role: "label" }), leaf({ role: "input" })],
+    });
+    const app = leaf({
+      role: "group",
+      children: [leaf({ role: "label" }), leaf({ role: "input" })],
+    });
+    const verdict = compareSkeletons(design, app);
+    expect(verdict.pass).toBe(false);
+    expect(verdict.findings).toHaveLength(1);
+    expect(verdict.findings[0]).toMatchObject({
+      path: "form",
+      kind: "role",
+      expected: "form",
+      actual: "group",
+    });
+  });
+
+  it("does not stop descent when the root role mismatches, so deeper findings still surface", () => {
+    const design = leaf({
+      role: "form",
+      children: [leaf({ role: "row", children: [leaf(), leaf()] })],
+    });
+    const app = leaf({
+      role: "group",
+      children: [leaf({ role: "row", children: [leaf()] })],
+    });
+    const verdict = compareSkeletons(design, app);
+    expect(verdict.pass).toBe(false);
+    expect(verdict.findings.some((f) => f.kind === "role" && f.path === "form")).toBe(true);
+    expect(verdict.findings.some((f) => f.kind === "child-count")).toBe(true);
+  });
 });
