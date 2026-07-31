@@ -20,6 +20,7 @@
 - **New tokens are named semantically** by role (`--zt-fg-secondary`), never by hex (`--zt-fg-c9d4e8`).
 - **Artifacts:** `.design-match/` at repo root, gitignored.
 - **No network in unit tests.** CDN assets are cached to `.design-match/.cdn-cache/` before any test that needs them; fixtures used by tests are fully self-contained.
+- **Browser tests live in their own vitest project** (operator decision, 2026-07-31, overriding the original single-project design). Tests that launch real Chromium are named `*.browser.test.mjs` and run under `tools/design-match/vitest.browser.config.ts`, which is **not** registered in `vitest.workspace.ts` — so repo-wide `pnpm test` and the default CI test step stay browser-free. They run via `pnpm test:browser`, wired as its own CI step so coverage is not lost. The unit project must `exclude` the browser glob, or every browser test would run twice.
 - **Package manager is pnpm.** Never `npm` or `yarn`.
 - **Wrapper normalisation default:** a node with no own box _and_ no layout mode collapses into its parent. Overridable with `--strict-wrappers`. (Left open in the spec; this is the chosen default and it is a documented knob, not a hidden behaviour.)
 
@@ -27,24 +28,25 @@
 
 ## File Structure
 
-| File                                      | Responsibility                                                                     |
-| ----------------------------------------- | ---------------------------------------------------------------------------------- |
-| `tools/design-match/cli.mjs`              | argv parsing, phase orchestration, exit codes. Thin.                               |
-| `tools/design-match/skeleton.mjs`         | `extractSkeleton` — serialisable in-page function producing the structural tree.   |
-| `tools/design-match/normalize.mjs`        | `normalizeSkeleton` — wrapper collapsing, relative geometry, role inference. Pure. |
-| `tools/design-match/compare-skeleton.mjs` | `compareSkeletons` → structured findings. Pure.                                    |
-| `tools/design-match/measure.mjs`          | `extractValues` — in-page computed-style extraction over the whitelist.            |
-| `tools/design-match/compare-values.mjs`   | `compareValues` → per-node value deltas. Pure.                                     |
-| `tools/design-match/tokens.mjs`           | Parse DS tokens, map measured values, propose semantic names. Pure.                |
-| `tools/design-match/browser.mjs`          | Chromium launch, design load, font preflight.                                      |
-| `tools/design-match/cdn-cache.mjs`        | Download + rewrite CDN `<script>`/`<link>` refs.                                   |
-| `tools/design-match/inventory.mjs`        | F1 candidate regions + preview crops.                                              |
-| `tools/design-match/pixels.mjs`           | pixelmatch wrapper → diff %, diff PNG, contiguous-region scan.                     |
-| `tools/design-match/shoot.mjs`            | App screenshot: Storybook story / seeded route / masked.                           |
-| `tools/design-match/report.mjs`           | Writes `skeleton.md`, `tokens.md`, `components.md`, `report.md`, `round-*.json`.   |
-| `tools/design-match/vitest.config.ts`     | 7th vitest project, node env.                                                      |
-| `tools/design-match/fixtures/basic.html`  | Self-contained fixture: grid form + card. No network.                              |
-| `.claude/skills/design-match/SKILL.md`    | Operator-facing skill: when to use, how to invoke, how to read the artifacts.      |
+| File                                          | Responsibility                                                                                 |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `tools/design-match/cli.mjs`                  | argv parsing, phase orchestration, exit codes. Thin.                                           |
+| `tools/design-match/skeleton.mjs`             | `extractSkeleton` — serialisable in-page function producing the structural tree.               |
+| `tools/design-match/normalize.mjs`            | `normalizeSkeleton` — wrapper collapsing, relative geometry, role inference. Pure.             |
+| `tools/design-match/compare-skeleton.mjs`     | `compareSkeletons` → structured findings. Pure.                                                |
+| `tools/design-match/measure.mjs`              | `extractValues` — in-page computed-style extraction over the whitelist.                        |
+| `tools/design-match/compare-values.mjs`       | `compareValues` → per-node value deltas. Pure.                                                 |
+| `tools/design-match/tokens.mjs`               | Parse DS tokens, map measured values, propose semantic names. Pure.                            |
+| `tools/design-match/browser.mjs`              | Chromium launch, design load, font preflight.                                                  |
+| `tools/design-match/cdn-cache.mjs`            | Download + rewrite CDN `<script>`/`<link>` refs.                                               |
+| `tools/design-match/inventory.mjs`            | F1 candidate regions + preview crops.                                                          |
+| `tools/design-match/pixels.mjs`               | pixelmatch wrapper → diff %, diff PNG, contiguous-region scan.                                 |
+| `tools/design-match/shoot.mjs`                | App screenshot: Storybook story / seeded route / masked.                                       |
+| `tools/design-match/report.mjs`               | Writes `skeleton.md`, `tokens.md`, `components.md`, `report.md`, `round-*.json`.               |
+| `tools/design-match/vitest.config.ts`         | 7th vitest project, node env. Unit tests only — excludes the browser glob.                     |
+| `tools/design-match/vitest.browser.config.ts` | Browser project: `*.browser.test.mjs`, real Chromium, long timeout. NOT in the workspace list. |
+| `tools/design-match/fixtures/basic.html`      | Self-contained fixture: grid form + card. No network.                                          |
+| `.claude/skills/design-match/SKILL.md`        | Operator-facing skill: when to use, how to invoke, how to read the artifacts.                  |
 
 ---
 
@@ -641,7 +643,11 @@ rtk git commit -m "feat(design-match): blocking skeleton comparator"
 - Create: `tools/design-match/fixtures/basic.html`
 - Create: `tools/design-match/extract.mjs`
 - Create: `tools/design-match/browser.mjs`
-- Test: `tools/design-match/extract.test.mjs`
+- Create: `tools/design-match/vitest.browser.config.ts`
+- Modify: `tools/design-match/vitest.config.ts` (add the browser `exclude`)
+- Modify: `package.json` (add `test:browser`)
+- Modify: `.github/workflows/ci.yml` (add the browser test step)
+- Test: `tools/design-match/extract.browser.test.mjs`
 
 **Interfaces:**
 
@@ -649,6 +655,60 @@ rtk git commit -m "feat(design-match): blocking skeleton comparator"
 - Produces:
   - `browser.mjs`: `withPage(fn: (page) => Promise<T>): Promise<T>` — launches Chromium at 1440×900 DPR 2, always closes.
   - `extract.mjs`: `extractRaw(page, selector, depth?): Promise<RawNode>` returning the shape Task 2 consumes; plus `VALUE_PROPS: string[]` and `extractValues(page, selector, props?, depth?): Promise<Record<string, Record<string,string>>>` keyed by node path.
+
+- [ ] **Step 0: Split browser tests into their own vitest project**
+
+This task introduces the first test that launches real Chromium. Operator decision
+(2026-07-31): browser tests must not run inside the default fast suite.
+
+Create `tools/design-match/vitest.browser.config.ts`:
+
+```ts
+import { defineConfig } from "vitest/config";
+
+/**
+ * Browser-driven tests, deliberately OUTSIDE `vitest.workspace.ts`: repo-wide
+ * `pnpm test` and the default CI test step must stay browser-free. These run via
+ * `pnpm test:browser`, which CI invokes as its own step so the coverage is not lost.
+ */
+export default defineConfig({
+  test: {
+    name: "design-match-browser",
+    root: __dirname,
+    environment: "node",
+    include: ["**/*.browser.test.mjs"],
+    testTimeout: 60_000,
+    hookTimeout: 60_000,
+  },
+});
+```
+
+In `tools/design-match/vitest.config.ts`, add the exclude next to `include` —
+without it every browser test runs twice:
+
+```ts
+    include: ["**/*.test.mjs"],
+    exclude: ["**/*.browser.test.mjs"],
+```
+
+In root `package.json`, add next to the existing `test` script:
+
+```json
+    "test:browser": "vitest run --config tools/design-match/vitest.browser.config.ts",
+```
+
+In `.github/workflows/ci.yml`, add a step immediately after the existing
+`pnpm run test` step (match the surrounding step style — read the file first):
+
+```yaml
+- name: Browser-driven design-match tests
+  run: pnpm run test:browser
+```
+
+The CI job must have Chromium available. If the workflow does not already
+install Playwright browsers, add `pnpm exec playwright install --with-deps chromium`
+as the step before it. Check the workflow before assuming either way, and say
+which you found in your report.
 
 - [ ] **Step 1: Create the fixture**
 
@@ -713,7 +773,7 @@ Create `tools/design-match/fixtures/basic.html` — fully self-contained, no net
 
 - [ ] **Step 2: Write the failing test**
 
-Create `tools/design-match/extract.test.mjs`:
+Create `tools/design-match/extract.browser.test.mjs`:
 
 ```js
 import path from "node:path";
@@ -757,7 +817,7 @@ describe("extractors against real Chromium", () => {
 
 - [ ] **Step 3: Run and watch it fail**
 
-Run: `pnpm exec vitest run --project design-match extract`
+Run: `pnpm exec vitest run --config tools/design-match/vitest.browser.config.ts extract`
 Expected: FAIL — cannot resolve `./browser.mjs`.
 
 - [ ] **Step 4: Implement the browser helper**
@@ -970,13 +1030,13 @@ export async function extractValues(page, selector, props = VALUE_PROPS, depth =
 
 - [ ] **Step 6: Run and watch it pass**
 
-Run: `pnpm exec vitest run --project design-match extract`
+Run: `pnpm exec vitest run --config tools/design-match/vitest.browser.config.ts extract`
 Expected: PASS, 2 tests. If Chromium is missing: `pnpm exec playwright install chromium`.
 
 - [ ] **Step 7: Format and commit**
 
 ```bash
-pnpm exec prettier --write tools/design-match/browser.mjs tools/design-match/extract.mjs tools/design-match/extract.test.mjs
+pnpm exec prettier --write tools/design-match/browser.mjs tools/design-match/extract.mjs tools/design-match/extract.browser.test.mjs
 rtk git add tools/design-match
 rtk git commit -m "feat(design-match): in-page skeleton and value extractors"
 ```
@@ -1649,7 +1709,8 @@ rtk git commit -m "feat(design-match): CDN cache and font preflight"
 **Files:**
 
 - Create: `tools/design-match/inventory.mjs`
-- Test: `tools/design-match/inventory.test.mjs`
+- Test: `tools/design-match/inventory.test.mjs` (pure — `rankCandidates`)
+- Test: `tools/design-match/inventory.browser.test.mjs` (Chromium — `collectRegions`)
 
 **Interfaces:**
 
@@ -1662,18 +1723,14 @@ rtk git commit -m "feat(design-match): CDN cache and font preflight"
 
 - [ ] **Step 1: Write the failing tests**
 
+Two files — the pure ranking tests and the Chromium-driven collection test are
+separate projects now (see Global Constraints).
+
 Create `tools/design-match/inventory.test.mjs`:
 
 ```js
-import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
-import { withPage } from "./browser.mjs";
-import { collectRegions, rankCandidates } from "./inventory.mjs";
-
-const fixture = pathToFileURL(
-  path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "basic.html"),
-).href;
+import { rankCandidates } from "./inventory.mjs";
 
 describe("rankCandidates", () => {
   const regions = [
@@ -1712,6 +1769,20 @@ describe("rankCandidates", () => {
     expect(rankCandidates(regions, "naprosto nesouvisející")[0].selector).toBe(".card");
   });
 });
+```
+
+Create `tools/design-match/inventory.browser.test.mjs`:
+
+```js
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { describe, expect, it } from "vitest";
+import { withPage } from "./browser.mjs";
+import { collectRegions } from "./inventory.mjs";
+
+const fixture = pathToFileURL(
+  path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "basic.html"),
+).href;
 
 describe("collectRegions", () => {
   it("excludes html/body and anything under 24×24", async () => {
@@ -1728,8 +1799,10 @@ describe("collectRegions", () => {
 
 - [ ] **Step 2: Run and watch it fail**
 
-Run: `pnpm exec vitest run --project design-match inventory`
-Expected: FAIL — cannot resolve `./inventory.mjs`.
+Run both:
+`pnpm exec vitest run --project design-match inventory`
+`pnpm exec vitest run --config tools/design-match/vitest.browser.config.ts inventory`
+Expected: FAIL in both — cannot resolve `./inventory.mjs`.
 
 - [ ] **Step 3: Implement**
 
@@ -1816,13 +1889,14 @@ export function formatInventory(regions, limit = 5) {
 
 - [ ] **Step 4: Run and watch it pass**
 
-Run: `pnpm exec vitest run --project design-match inventory`
-Expected: PASS, 4 tests.
+Run both:
+`pnpm exec vitest run --project design-match inventory` — PASS, 3 tests
+`pnpm exec vitest run --config tools/design-match/vitest.browser.config.ts inventory` — PASS, 1 test
 
 - [ ] **Step 5: Format and commit**
 
 ```bash
-pnpm exec prettier --write tools/design-match/inventory.mjs tools/design-match/inventory.test.mjs
+pnpm exec prettier --write tools/design-match/inventory.mjs tools/design-match/inventory.test.mjs tools/design-match/inventory.browser.test.mjs
 rtk git add tools/design-match
 rtk git commit -m "feat(design-match): region inventory and preview crops"
 ```
@@ -2544,8 +2618,9 @@ Expected: PASS, 5 tests.
 
 - [ ] **Step 5: Run the whole project suite**
 
-Run: `pnpm exec vitest run --project design-match`
-Expected: PASS, all tests from Tasks 1–12.
+Run both:
+`pnpm exec vitest run --project design-match` — all unit tests from Tasks 1–12
+`pnpm exec vitest run --config tools/design-match/vitest.browser.config.ts` — all browser tests
 
 - [ ] **Step 6: Format and commit**
 
@@ -2563,7 +2638,7 @@ rtk git commit -m "feat(design-match): CLI wiring for measure and compare"
 
 - Create: `tools/design-match/fixtures/calibration-good.html`
 - Create: `tools/design-match/fixtures/calibration-bad.html`
-- Test: `tools/design-match/calibration.test.mjs`
+- Test: `tools/design-match/calibration.browser.test.mjs`
 
 **Interfaces:**
 
@@ -2692,7 +2767,7 @@ Create `tools/design-match/fixtures/calibration-bad.html` — the exact failure 
 
 - [ ] **Step 3: Write the failing test**
 
-Create `tools/design-match/calibration.test.mjs`:
+Create `tools/design-match/calibration.browser.test.mjs`:
 
 ```js
 import path from "node:path";
@@ -2749,13 +2824,13 @@ describe("calibration", () => {
 
 - [ ] **Step 4: Run and watch it fail, then pass**
 
-Run: `pnpm exec vitest run --project design-match calibration`
+Run: `pnpm exec vitest run --config tools/design-match/vitest.browser.config.ts calibration`
 Expected: the first run fails only if the fixtures are missing; once both fixtures exist, PASS, 3 tests. If test 3 passes the gate (i.e. `pass === true`), the gate is too loose — tighten `sizeTolerance` or the layout-mode check before proceeding. **A gate that accepts everything is worse than no gate.**
 
 - [ ] **Step 5: Commit**
 
 ```bash
-pnpm exec prettier --write tools/design-match/calibration.test.mjs
+pnpm exec prettier --write tools/design-match/calibration.browser.test.mjs
 rtk git add tools/design-match
 rtk git commit -m "test(design-match): calibrate the gate both directions"
 ```
@@ -3000,7 +3075,8 @@ rtk git commit -m "docs(design-match): record first real-run limits"
 Run each and confirm before claiming done:
 
 ```bash
-pnpm exec vitest run --project design-match     # all design-match tests green
+pnpm exec vitest run --project design-match                                    # unit tests green
+pnpm run test:browser                                                          # browser tests green
 pnpm exec prettier --check tools/design-match .claude/skills/design-match
 pnpm exec eslint tools/design-match
 ```
