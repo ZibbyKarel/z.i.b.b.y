@@ -77,6 +77,8 @@
     "jsdom": "^25.0.1",
     "lint-staged": "^17.0.8",
     "madge": "^8.0.0",
+    "pixelmatch": "^6.0.0",
+    "pngjs": "^7.0.0",
     "postcss": "^8.4.49",
     "prettier": "^3.8.4",
     "storybook": "^8.4.7",

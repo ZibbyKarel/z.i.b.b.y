@@ -24,6 +24,10 @@ graphify-out/
 # and machine-scoped; committing it just creates conflicts for everyone else.
 .cache/
 
+# design-match artifacts — measured specs, screenshots, diffs, round history.
+# Regenerated per run and often large; the durable output is the committed code.
+.design-match/
+
 # Local agent storage (apps/api data dirs: live/dev + test, selected by ZIBBY_DATA_DIR)
 .zibby/data-test/
 .zibby/data/**/runs
