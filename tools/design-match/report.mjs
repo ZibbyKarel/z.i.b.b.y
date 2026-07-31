@@ -140,8 +140,28 @@ export function renderTokens(mappings, { themeError } = {}) {
   return lines.join("\n") + "\n";
 }
 
+/**
+ * Task 20 re-review. This is not I4's defect — there is one state here, not two
+ * collapsing into one rendering — but I4's argument holds unchanged: a fact kept
+ * somewhere other than the artifact is gone by the time anyone opens the
+ * artifact. `buildCompareOutcome` hardcodes `componentDecisions: []` and nothing
+ * populates it, so an empty file said "the component-choice layer ran and
+ * recorded no decisions" in exactly the words it would use for "this layer does
+ * not exist". SKILL.md's `components.md` section is honest about it; this file
+ * now carries the same sentence, in the same words, rather than a second
+ * phrasing that could drift away from it.
+ */
 export function renderComponents(decisions) {
   const lines = ["# Volba komponent", ""];
+  if (decisions.length === 0) {
+    lines.push(
+      "Tenhle soubor `compare` nikdy nevyplňuje — `componentDecisions` je natvrdo prázdné a nic do něj nezapisuje. Prázdno tady tedy neznamená, že volba komponent proběhla a nic nenašla.",
+      "",
+      "Zaznamenat, _proč_ byla nová komponenta oprávněná (které existující DS kandidáty jsi zkusil a proč jsi každý zamítl), je zatím ruční krok toho, kdo smyčku řídí — `compare` si to sám neodvodí.",
+      "",
+    );
+    return lines.join("\n");
+  }
   for (const d of decisions) {
     lines.push(`## \`${d.path}\` → ${d.chosen}`, "");
     if (d.rejected.length === 0) {

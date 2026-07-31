@@ -220,9 +220,28 @@ describe("renderTokens", () => {
 });
 
 describe("renderComponents", () => {
-  it("renders no decisions as an empty body under the heading", () => {
+  /*
+   * Task 20 re-review. Not I4's defect — there is one state here, not two
+   * collapsing — but I4's argument applies verbatim: a warning kept somewhere
+   * else is gone by the time anyone opens the file. `buildCompareOutcome`
+   * hardcodes `componentDecisions: []` and nothing populates it, so a bare
+   * heading was the tool rendering "the component-choice layer ran and decided
+   * nothing" identically to "this layer does not exist". SKILL.md says so
+   * honestly; the artifact did not.
+   */
+  it("says in the file that the tool never populates it, rather than rendering a bare heading", () => {
     const out = renderComponents([]);
-    expect(out.trim()).toBe("# Volba komponent");
+    expect(out).toContain("# Volba komponent");
+    expect(out.trim()).not.toBe("# Volba komponent");
+    // The two facts SKILL.md states: nothing populates this, and recording the
+    // justification is a manual step for whoever drives the loop.
+    expect(out).toMatch(/nepopulu|nevyplň|nedopl/i);
+    expect(out).toMatch(/ručn|manuál/i);
+  });
+
+  it("says nothing of the sort once there are decisions to render", () => {
+    const out = renderComponents([{ path: "a", chosen: "Button", rejected: [] }]);
+    expect(out).not.toMatch(/ručn|manuál/i);
   });
 
   it("renders a decision with rejected candidates and one without any", () => {

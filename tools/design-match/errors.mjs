@@ -46,6 +46,24 @@
  * reads that annotation, so forgetting it costs detail in the message and cannot
  * cost the operator a stack. Instance eight belongs in `PLAYWRIGHT_FAILURES`
  * below — never at a fifth call site.
+ *
+ * ## The cost of recognising globally, accepted knowingly
+ *
+ * Recognition reads the failure and not who caused it, so a failure the TOOL
+ * caused now gets the operator's remedy. A selector this tool generated itself
+ * (`collectRegions`' `nth-child` chains) that the browser will not parse, or a
+ * `net::` error against `withStaticServer`'s own origin during `measure`, reads
+ * as "check your selector" / "is the dev server running?" — advice that does not
+ * apply, over a bug in here. Before, both produced a stack, which at least
+ * pointed at the tool.
+ *
+ * This is the ruling's inherent price and it is the right trade: those two are
+ * hypothetical and reachable only through a defect, while the four instances the
+ * boundary closes were all reproducible from a plain operator typo. It is a known
+ * trade, not an oversight — if a plausible tool-caused failure ever starts
+ * landing on operators, the fix is a `matches` narrow enough to exclude it (the
+ * origin is knowable: `withStaticServer` owns its own), not a retreat to
+ * per-call translation.
  */
 
 /**
