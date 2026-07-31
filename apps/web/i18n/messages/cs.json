@@ -2099,11 +2099,12 @@
       "resume": "Pokračovat",
       "actionsLabel": "Obnovovací akce",
       "failed": "Selhalo",
-      "waitingOn": "čeká na {name}",
-      "waitingOnArchived": "čeká na {name} · archiv",
+      "blockedOne": "čeká",
+      "blockedMany": "blokován ({count})",
+      "blockedTooltipTitle": "Čeká na:",
+      "blockedArchivedMarker": "{name} (archivováno)",
       "blocks": "blokuje {count}",
-      "openDetail": "Zobrazit detail: {name}",
-      "waitingOnArchivedTitle": "Blokující položku už zdroj nevrací — bez ručního přepsání se tato nikdy neodblokuje."
+      "openDetail": "Zobrazit detail: {name}"
     },
     "dialog": {
       "description": "Popis",

@@ -1,8 +1,8 @@
 import type { RoadmapItem } from "@zibby/contracts";
-import { MenuButtonTestId } from "@zibby/design-system";
+import { ChipTestId, MenuButtonTestId } from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { renderWithProviders as render, screen } from "../../../test/render";
+import { renderWithProviders as render, screen, within } from "../../../test/render";
 import { RoadmapCard, RoadmapCardTestId } from "./RoadmapCard";
 
 const restartRoadmapItem = vi.fn();
@@ -81,32 +81,32 @@ describe("RoadmapCard", () => {
     expect(screen.getByTestId(RoadmapCardTestId.ExternalKey)).toHaveTextContent("manual-1");
   });
 
-  it("marks an archived blocker's badge distinctly, so it never reads as an ordinary wait", () => {
-    const blocker = item({ id: "blocker-1", name: "PROJ-12", lifecycle: "archived" });
+  it("collapses several blockers into exactly one badge, not one chip per blocker (the regression)", () => {
+    const blockers = [
+      item({ id: "blocker-a", name: "A" }),
+      item({ id: "blocker-b", name: "B" }),
+      item({ id: "blocker-c", name: "C" }),
+    ];
     render(
       <RoadmapCard
-        blockers={[blocker]}
+        blockers={blockers}
         column="blocked"
         dependents={[]}
-        item={item({ id: "t2", name: "Blocked task", dependsOn: ["blocker-1"] })}
+        item={item({
+          id: "t2b",
+          name: "Blocked by three",
+          dependsOn: ["blocker-a", "blocker-b", "blocker-c"],
+        })}
         onHoverChange={vi.fn()}
         onSelect={vi.fn()}
         onSelectDependency={vi.fn()}
       />,
     );
-    // The card shows the SHORT form (the long sentence overflowed the column and
-    // clipped mid-word); the full explanation is the badge's hover title, and the
-    // detail dialog spells it out. `title` is asserted too so a future "tidy-up"
-    // can't drop the explanation entirely and leave only an ambiguous "· archiv".
-    const badge = screen.getByText(/čeká na PROJ-12 · archiv/);
-    expect(badge).toBeInTheDocument();
-    expect(badge.closest("[title]")).toHaveAttribute(
-      "title",
-      expect.stringContaining("zdroj nevrací"),
-    );
+    expect(screen.getAllByTestId(RoadmapCardTestId.Blocker)).toHaveLength(1);
+    expect(screen.getByText("blokován (3)")).toBeInTheDocument();
   });
 
-  it("shows a plain waiting badge for a non-archived blocker", () => {
+  it("shows čeká with no count for exactly one blocker", () => {
     const blocker = item({ id: "blocker-2", name: "PROJ-9" });
     render(
       <RoadmapCard
@@ -119,7 +119,86 @@ describe("RoadmapCard", () => {
         onSelectDependency={vi.fn()}
       />,
     );
-    expect(screen.getByText("čeká na PROJ-9")).toBeInTheDocument();
+    expect(screen.getByText("čeká")).toBeInTheDocument();
+  });
+
+  it("tones the blocked badge bad when any blocker is archived — a dead end, not an ordinary wait", () => {
+    const archived = item({ id: "blocker-arch", name: "PROJ-1", lifecycle: "archived" });
+    const live = item({ id: "blocker-live", name: "PROJ-2" });
+    render(
+      <RoadmapCard
+        blockers={[archived, live]}
+        column="blocked"
+        dependents={[]}
+        item={item({
+          id: "t2c",
+          name: "Blocked mixed",
+          dependsOn: ["blocker-arch", "blocker-live"],
+        })}
+        onHoverChange={vi.fn()}
+        onSelect={vi.fn()}
+        onSelectDependency={vi.fn()}
+      />,
+    );
+    const chip = within(screen.getByTestId(RoadmapCardTestId.Blocker)).getByTestId(ChipTestId.Root);
+    expect(chip.className).toContain("text-bad");
+  });
+
+  it("tones the blocked badge wait when every blocker is still live", () => {
+    const live = item({ id: "blocker-live2", name: "PROJ-3" });
+    render(
+      <RoadmapCard
+        blockers={[live]}
+        column="blocked"
+        dependents={[]}
+        item={item({ id: "t2d", name: "Blocked live", dependsOn: ["blocker-live2"] })}
+        onHoverChange={vi.fn()}
+        onSelect={vi.fn()}
+        onSelectDependency={vi.fn()}
+      />,
+    );
+    const chip = within(screen.getByTestId(RoadmapCardTestId.Blocker)).getByTestId(ChipTestId.Root);
+    expect(chip.className).toContain("text-warn");
+  });
+
+  it("the tooltip lists every blocker's title, marking the archived one", async () => {
+    const archived = item({ id: "blocker-arch2", name: "Archived issue", lifecycle: "archived" });
+    const live = item({ id: "blocker-live3", name: "Live issue" });
+    render(
+      <RoadmapCard
+        blockers={[archived, live]}
+        column="blocked"
+        dependents={[]}
+        item={item({
+          id: "t2e",
+          name: "Blocked",
+          dependsOn: ["blocker-arch2", "blocker-live3"],
+        })}
+        onHoverChange={vi.fn()}
+        onSelect={vi.fn()}
+        onSelectDependency={vi.fn()}
+      />,
+    );
+    await userEvent.hover(screen.getByTestId(RoadmapCardTestId.Blocker));
+    const tooltip = screen.getByTestId(RoadmapCardTestId.BlockerTooltip);
+    expect(tooltip).toHaveTextContent("Archived issue (archivováno)");
+    expect(tooltip).toHaveTextContent("Live issue");
+  });
+
+  it("shows no blocked badge at all when there are no blockers", () => {
+    const dependent = item({ id: "dep-only", name: "Dependent" });
+    render(
+      <RoadmapCard
+        blockers={[]}
+        column="ready"
+        dependents={[dependent]}
+        item={item({ id: "t2f", name: "Not blocked" })}
+        onHoverChange={vi.fn()}
+        onSelect={vi.fn()}
+        onSelectDependency={vi.fn()}
+      />,
+    );
+    expect(screen.queryByTestId(RoadmapCardTestId.Blocker)).not.toBeInTheDocument();
   });
 
   it("shows the selhalo state for a failed item", () => {
@@ -275,7 +354,7 @@ describe("RoadmapCard", () => {
     expect(onSelect).toHaveBeenCalledTimes(1);
   });
 
-  it("clicking a blocker badge selects the blocker, not this card", async () => {
+  it("clicking the blocked badge opens this card's own detail, not a blocker's (per-blocker click-through lives in the dialog)", async () => {
     const onSelect = vi.fn();
     const onSelectDependency = vi.fn();
     const blocker = item({ id: "blocker-3", name: "PROJ-3" });
@@ -291,8 +370,8 @@ describe("RoadmapCard", () => {
       />,
     );
     await userEvent.click(screen.getByTestId(RoadmapCardTestId.Blocker));
-    expect(onSelectDependency).toHaveBeenCalledWith("blocker-3");
-    expect(onSelect).not.toHaveBeenCalled();
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelectDependency).not.toHaveBeenCalled();
   });
 
   it("shows a single-dependent badge as clickable, selecting that dependent", async () => {

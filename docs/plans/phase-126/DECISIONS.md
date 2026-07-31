@@ -134,6 +134,20 @@ Titles are data. Only the wrapper strings are i18n keys.
 UI already uses it everywhere. A near-duplicate primitive for one label would be a DS change
 smuggled in under a UI fix.
 
+### D18 — rich tooltip content renders as inline elements, not a DS change
+
+This is the **first** call site in the repo to pass a node rather than a string to `Tooltip`
+(every other one passes `t(...)` or a plain string). `Tooltip` renders its bubble as a
+`<span>`, while `Stack` and `Typography type="label|note"` all default to `<div>` — so the
+obvious composition puts block elements inside an inline one.
+
+Fixed at the call site with `as="span"` on the `Stack` and both `Typography` nodes, **not** by
+changing `Tooltip`'s bubble to a `<div>`. Widening a DS primitive's DOM contract to serve one
+consumer is the sort of change that belongs in a DS commit with its own design-match run, not
+smuggled into a roadmap UI fix — the same reasoning as D13. Nothing visibly breaks either way
+(React inserts via DOM APIs, so no parser auto-correction, and the bubble is hover-only so
+hydration never sees it), but the next rich tooltip will copy this one.
+
 ---
 
 ## 126g — subsystem orb attribution

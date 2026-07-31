@@ -32,6 +32,7 @@ export enum RoadmapCardTestId {
   Failed = "roadmap-card-failed",
   Epic = "roadmap-card-epic",
   Blocker = "roadmap-card-blocker",
+  BlockerTooltip = "roadmap-card-blocker-tooltip",
   Dependents = "roadmap-card-dependents",
 }
 
@@ -255,37 +256,63 @@ export function RoadmapCard({
 
           {(blockers.length > 0 || dependents.length > 0) && (
             <Stack wrap align="center" direction="row" gap="75">
-              {blockers.map((blocker) => (
-                <Pressable
-                  data-testid={RoadmapCardTestId.Blocker}
-                  key={blocker.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelectDependency(blocker.id);
-                  }}
+              {/*
+               * One badge, not one chip per blocker (126f) — a task blocked by five
+               * issues used to grow five chips and stop being scannable. Tone `bad`
+               * when ANY blocker is archived (mirrors `edgeToneFor`'s own rule: an
+               * archived blocker can never reach `done`, a dead end needing the
+               * Tier-3 override, not an ordinary wait), else `wait`. The label spends
+               * the operator's two words on count instead of picking one arbitrarily
+               * (D11): singular "čeká", plural "blokován (N)". Titles are data, so the
+               * tooltip is composed here from `blockers`, not a translated blob (D12).
+               * Click opens THIS card's own detail dialog — per-blocker click-through
+               * already lives in `RoadmapItemDialog`.
+               */}
+              {blockers.length > 0 && (
+                <Tooltip
+                  content={
+                    /* `as="span"` throughout: `Tooltip` renders its bubble as a
+                       `<span>`, and both `Stack` and `Typography type="label|note"`
+                       default to `<div>` — a block element inside an inline one is
+                       invalid HTML. React inserts via DOM APIs so nothing visibly
+                       breaks today, but this is the first rich-node tooltip in the
+                       repo and the next one should copy something valid. */
+                    <Stack as="span" data-testid={RoadmapCardTestId.BlockerTooltip} gap="25">
+                      <Typography as="span" size="xs" type="label">
+                        {t("card.blockedTooltipTitle")}
+                      </Typography>
+                      {blockers.map((blocker) => (
+                        <Typography as="span" key={blocker.id} size="xs" type="note">
+                          {blocker.lifecycle === "archived"
+                            ? t("card.blockedArchivedMarker", { name: blocker.name })
+                            : blocker.name}
+                        </Typography>
+                      ))}
+                    </Stack>
+                  }
                 >
-                  {/*
-                   * An archived blocker gets `bad`, not `wait`: it can never reach
-                   * `done`, so this is a dead end needing the Tier-3 override, not an
-                   * ordinary wait. The card carries the SHORT form — the full sentence
-                   * overflowed a board column and clipped mid-word — with the
-                   * explanation on hover and, in full, in the detail dialog.
-                   */}
-                  <Chip
-                    title={
-                      blocker.lifecycle === "archived"
-                        ? t("card.waitingOnArchivedTitle")
-                        : undefined
-                    }
-                    tone={blocker.lifecycle === "archived" ? "bad" : "wait"}
+                  <Pressable
+                    data-testid={RoadmapCardTestId.Blocker}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelect();
+                    }}
                   >
-                    <Icon aria-hidden name="pause" size="xs" />
-                    {blocker.lifecycle === "archived"
-                      ? t("card.waitingOnArchived", { name: blocker.name })
-                      : t("card.waitingOn", { name: blocker.name })}
-                  </Chip>
-                </Pressable>
-              ))}
+                    <Chip
+                      tone={
+                        blockers.some((blocker) => blocker.lifecycle === "archived")
+                          ? "bad"
+                          : "wait"
+                      }
+                    >
+                      <Icon aria-hidden name="pause" size="xs" />
+                      {blockers.length === 1
+                        ? t("card.blockedOne")
+                        : t("card.blockedMany", { count: blockers.length })}
+                    </Chip>
+                  </Pressable>
+                </Tooltip>
+              )}
               {dependents.length > 0 &&
                 (dependents.length === 1 ? (
                   <Pressable

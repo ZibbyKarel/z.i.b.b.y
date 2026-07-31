@@ -2099,11 +2099,12 @@
       "resume": "Resume",
       "actionsLabel": "Recovery actions",
       "failed": "Failed",
-      "waitingOn": "waiting on {name}",
-      "waitingOnArchived": "waiting on {name} · archived",
+      "blockedOne": "waiting",
+      "blockedMany": "blocked ({count})",
+      "blockedTooltipTitle": "Waiting on:",
+      "blockedArchivedMarker": "{name} (archived)",
       "blocks": "blocks {count}",
-      "openDetail": "Show detail: {name}",
-      "waitingOnArchivedTitle": "Its blocker is no longer returned by the source — without the manual override this will never unblock."
+      "openDetail": "Show detail: {name}"
     },
     "dialog": {
       "description": "Description",
