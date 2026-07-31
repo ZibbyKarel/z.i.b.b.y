@@ -45,14 +45,18 @@ describe("renderSkeleton", () => {
 });
 
 describe("renderValues", () => {
-  it("reports no deltas as sedí, but still explains the path space", () => {
+  // The stale-warning guard: values.md and skeleton.md now report one address
+  // space, so any surviving text telling a reader the two are unrelated would
+  // make them distrust paths that are finally trustworthy.
+  const PATH_SPACE_WARNING = /adresní prostor|extractValues/;
+
+  it("reports no deltas as sedí, with no path-space warning left over", () => {
     const out = renderValues([]);
     expect(out).toContain("Sedí");
-    expect(out).toContain("extractValues");
-    expect(out).toContain("skeleton.md");
+    expect(out).not.toMatch(PATH_SPACE_WARNING);
   });
 
-  it("groups deltas by path and carries the same path-space note", () => {
+  it("groups deltas by path, still with no path-space warning", () => {
     const out = renderValues([
       {
         path: "card/row[0]",
@@ -75,7 +79,7 @@ describe("renderValues", () => {
     expect(out).toContain("**color** — color red vs blue");
     expect(out).toContain("`form`");
     expect(out).toContain("**width** — width 100 vs 80");
-    expect(out).toContain("extractValues");
+    expect(out).not.toMatch(PATH_SPACE_WARNING);
   });
 });
 

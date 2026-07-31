@@ -9,6 +9,7 @@ import {
   collectFontStacks,
   combineVerdict,
   describeOutcome,
+  flattenValues,
   historyFromRaw,
   isDeliberateError,
   loadHistory,
@@ -220,6 +221,58 @@ describe("buildTokenMappings", () => {
       "color:rgb(11, 14, 19)",
       "gap:12px",
     ]);
+  });
+});
+
+describe("flattenValues", () => {
+  // The bridge between the one skeleton walk and Task 12b's two consumers,
+  // which both want a flat `path → props` map. The paths it produces must be
+  // the skeleton's own — the same ones skeleton.md and values.md report — so
+  // `--zt-text-heading` is named after the node a reader can actually find.
+  const node = (over = {}) => ({ role: "group", values: {}, children: [], ...over });
+
+  it("keys every node by its skeleton path, root first", () => {
+    const skeleton = node({
+      role: "card",
+      values: { gap: "24px" },
+      children: [
+        node({
+          role: "form",
+          values: { gap: "12px" },
+          children: [node({ role: "input", values: { color: "red" } })],
+        }),
+      ],
+    });
+    expect(flattenValues(skeleton)).toEqual({
+      card: { gap: "24px" },
+      "card/form[0]": { gap: "12px" },
+      "card/form[0]/input[0]": { color: "red" },
+    });
+  });
+
+  it("indexes siblings sharing a role so they never collapse onto one key", () => {
+    const skeleton = node({
+      role: "form",
+      children: [
+        node({ role: "row", values: { gap: "1px" } }),
+        node({ role: "row", values: { gap: "2px" } }),
+      ],
+    });
+    expect(flattenValues(skeleton)).toEqual({
+      form: {},
+      "form/row[0]": { gap: "1px" },
+      "form/row[1]": { gap: "2px" },
+    });
+  });
+
+  it("feeds buildTokenMappings a leaf role it can name a token after", () => {
+    const skeleton = node({
+      role: "form",
+      children: [node({ role: "heading", values: { fontSize: "22px" } })],
+    });
+    const mappings = buildTokenMappings(flattenValues(skeleton), parseThemeTokens("@theme {}"));
+    expect(mappings).toHaveLength(1);
+    expect(mappings[0].mapping.proposedName).toBe("--zt-text-heading");
   });
 });
 

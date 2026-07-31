@@ -2,7 +2,9 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { withPage } from "./browser.mjs";
+import { flattenValues } from "./cli.mjs";
 import { compareSkeletons } from "./compare-skeleton.mjs";
+import { compareValues } from "./compare-values.mjs";
 import { extractRaw } from "./extract.mjs";
 import { normalizeSkeleton } from "./normalize.mjs";
 import { diffPngs } from "./pixels.mjs";
@@ -89,5 +91,29 @@ describe("calibration", () => {
     expect(formFinding).toBeDefined();
     expect(formFinding.message).toContain("grid");
     expect(formFinding.message).toContain("flex-column");
+  });
+
+  it("compares VALUES on the same nodes the gate passed — nothing reported missing", async () => {
+    // The test whose absence let the Critical ship. Two fixtures that render
+    // byte-identically but share no class name at all: the gate passes (test 1),
+    // and before Task 13c the value layer then reported EVERY node as
+    // `__missing__`, because it walked the DOM a second time and keyed its paths
+    // off class-derived roles. "Passing structure, everything missing" is a
+    // falsehood handed to the coding agent — worse than saying nothing.
+    const design = await skeletonOf("basic.html");
+    const app = await skeletonOf("calibration-good.html");
+
+    // The rename is load-bearing: the two sides really do infer different
+    // readable roles, so a per-tree path lookup would still not line up. Only
+    // the lockstep walk makes them agree.
+    expect(design.role).toBe("card");
+    expect(app.role).toBe("group");
+    expect(Object.keys(flattenValues(design))).not.toEqual(Object.keys(flattenValues(app)));
+
+    const deltas = compareValues(design, app);
+    expect(deltas.filter((d) => d.prop === "__missing__")).toEqual([]);
+    // Stronger, and the honest bound: the two fixtures differ only in class
+    // names and render identically, so there is no value difference at all.
+    expect(deltas).toEqual([]);
   });
 });

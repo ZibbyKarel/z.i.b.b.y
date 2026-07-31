@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { normalizeSkeleton } from "./normalize.mjs";
+import { childPath, normalizeSkeleton, rootPath } from "./normalize.mjs";
 
 const node = (over = {}) => ({
   tag: "div",
   classes: [],
   attrs: {},
   text: "",
+  values: {},
   box: { x: 0, y: 0, w: 100, h: 100 },
   layout: {
     display: "block",
@@ -150,6 +151,55 @@ describe("normalizeSkeleton", () => {
       }),
     );
     expect(root.children.map((c) => c.tag)).toEqual(["a", "b"]);
+  });
+
+  describe("values", () => {
+    it("carries the extracted values onto the normalised node", () => {
+      const root = normalizeSkeleton(
+        node({
+          values: { gap: "12px" },
+          children: [node({ tag: "label", values: { color: "red" } })],
+        }),
+      );
+      expect(root.values).toEqual({ gap: "12px" });
+      expect(root.children[0].values).toEqual({ color: "red" });
+    });
+
+    it("drops a collapsed wrapper's values along with the wrapper", () => {
+      // The documented trade: wrapper collapsing already discards the wrapper's
+      // structure, and now discards its values too — a pass-through wrapper
+      // carrying a background colour stops being measured at all.
+      const wrapper = node({
+        values: { backgroundColor: "rgb(9, 9, 9)" },
+        box: { x: 0, y: 0, w: 400, h: 200 },
+        children: [
+          node({ tag: "label", values: { color: "red" }, box: { x: 0, y: 0, w: 400, h: 200 } }),
+        ],
+      });
+      const root = normalizeSkeleton(
+        node({ box: { x: 0, y: 0, w: 400, h: 200 }, children: [wrapper] }),
+      );
+      expect(root.children).toHaveLength(1);
+      expect(root.children[0].values).toEqual({ color: "red" });
+    });
+
+    it("defaults to an empty map for a raw node that carries no values", () => {
+      const withoutValues = node();
+      delete withoutValues.values;
+      expect(normalizeSkeleton(withoutValues).values).toEqual({});
+    });
+  });
+
+  describe("path convention", () => {
+    // Single-sourced here so compare-skeleton.mjs and compare-values.mjs cannot
+    // drift into two address spaces again — that drift was the whole defect.
+    it("names the root by its readable role and a child by role[index]", () => {
+      const root = normalizeSkeleton(
+        node({ classes: ["card"], children: [node({ tag: "form" })] }),
+      );
+      expect(rootPath(root)).toBe("card");
+      expect(childPath(rootPath(root), root.children[0], 0)).toBe("card/form[0]");
+    });
   });
 
   describe("matchRole", () => {

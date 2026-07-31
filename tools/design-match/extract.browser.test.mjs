@@ -2,7 +2,8 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { withPage } from "./browser.mjs";
-import { extractRaw, extractValues } from "./extract.mjs";
+import { flattenValues } from "./cli.mjs";
+import { extractRaw } from "./extract.mjs";
 import { normalizeSkeleton } from "./normalize.mjs";
 
 const fixture = pathToFileURL(
@@ -24,15 +25,31 @@ describe("extractors against real Chromium", () => {
     expect(form.children[0].children.map((c) => c.role)).toEqual(["label", "input"]);
   });
 
-  it("extracts computed values including the exact background", async () => {
-    const values = await withPage(async (page) => {
+  it("extracts computed values onto the same nodes as the skeleton, in one walk", async () => {
+    const skeleton = await withPage(async (page) => {
       await page.goto(fixture);
-      return extractValues(page, '[data-region="card"]');
+      return normalizeSkeleton(await extractRaw(page, '[data-region="card"]'));
     });
 
-    expect(values.card.backgroundColor).toBe("rgb(17, 21, 29)");
-    expect(values.card.paddingTop).toBe("24px");
-    expect(values["card/form[0]"].gap).toBe("12px");
+    expect(skeleton.values.backgroundColor).toBe("rgb(17, 21, 29)");
+    expect(skeleton.values.paddingTop).toBe("24px");
+    expect(skeleton.children[0].values.gap).toBe("12px");
+
+    // ...and the flat map the token/font consumers read is keyed by the
+    // skeleton's own paths, not by a second walk's.
+    const flat = flattenValues(skeleton);
+    expect(flat["card/form[0]"].gap).toBe("12px");
+    expect(Object.keys(flat)[0]).toBe("card");
+  });
+
+  it("honours a narrowed props list rather than always snapshotting all VALUE_PROPS", async () => {
+    const raw = await withPage(async (page) => {
+      await page.goto(fixture);
+      return extractRaw(page, '[data-region="card"]', 6, ["backgroundColor"]);
+    });
+
+    expect(raw.values).toEqual({ backgroundColor: "rgb(17, 21, 29)" });
+    expect(raw.children[0].values).toEqual({ backgroundColor: "rgba(0, 0, 0, 0)" });
   });
 
   it("extracts numeric CSS order and normalizeSkeleton sorts children by it", async () => {
@@ -54,12 +71,14 @@ describe("extractors against real Chromium", () => {
     expect(ordered.children.map((c) => c.tag)).toEqual(["input", "button", "label"]);
   });
 
-  it("derives roles from data-role the same way in extractValues' path-building roleOf as normalizeSkeleton does, so skeleton and value paths agree", async () => {
+  it("derives roles from data-role, and the value paths are those same roles", async () => {
     // Inline content, not a fixture file: basic/repeated/animated.html are frozen,
     // and none of them exercises data-role. This pins Task 13's real finding —
-    // extract.mjs had its own role derivation that read `role` but never
+    // extract.mjs used to own a second role derivation that read `role` but never
     // `data-role`, so a fixture declaring data-role got skeleton-layer role
-    // parity while its value-layer paths silently diverged.
+    // parity while its value-layer paths silently diverged. There is only one
+    // derivation now, so the two cannot disagree by construction; this keeps the
+    // behaviour itself pinned.
     // The inner div gets an explicit width so its box differs from its parent's —
     // otherwise normalizeSkeleton's wrapper-collapsing would swallow it (it has
     // exactly one child and would otherwise share its parent's exact box),
@@ -70,40 +89,35 @@ describe("extractors against real Chromium", () => {
       </div>
     </body></html>`;
 
-    const { skeletonRoles, valuePaths } = await withPage(async (page) => {
+    const skeleton = await withPage(async (page) => {
       await page.setContent(html);
-      const raw = await extractRaw(page, '[data-region="widget-test"]');
-      const skeleton = normalizeSkeleton(raw);
-      const values = await extractValues(page, '[data-region="widget-test"]');
-      return {
-        skeletonRoles: [
-          skeleton.role,
-          skeleton.children[0].role,
-          skeleton.children[0].children[0].role,
-        ],
-        valuePaths: Object.keys(values),
-      };
+      return normalizeSkeleton(await extractRaw(page, '[data-region="widget-test"]'));
     });
 
-    expect(skeletonRoles).toEqual(["group", "widget", "leaf-node"]);
-    expect(valuePaths).toEqual(["group", "group/widget[0]", "group/widget[0]/leaf-node[0]"]);
+    expect([
+      skeleton.role,
+      skeleton.children[0].role,
+      skeleton.children[0].children[0].role,
+    ]).toEqual(["group", "widget", "leaf-node"]);
+    expect(Object.keys(flattenValues(skeleton))).toEqual([
+      "group",
+      "group/widget[0]",
+      "group/widget[0]/leaf-node[0]",
+    ]);
   });
 
-  it("prefers role over data-role in extractValues' roleOf, matching normalizeSkeleton's own precedence", async () => {
+  it("prefers role over data-role when a node carries both", async () => {
     const html = `<!doctype html><html><body>
       <div data-region="both-test" role="dialog" data-role="widget"></div>
     </body></html>`;
 
-    const { skeletonRole, valuePath } = await withPage(async (page) => {
+    const skeleton = await withPage(async (page) => {
       await page.setContent(html);
-      const raw = await extractRaw(page, '[data-region="both-test"]');
-      const skeleton = normalizeSkeleton(raw);
-      const values = await extractValues(page, '[data-region="both-test"]');
-      return { skeletonRole: skeleton.role, valuePath: Object.keys(values)[0] };
+      return normalizeSkeleton(await extractRaw(page, '[data-region="both-test"]'));
     });
 
-    expect(skeletonRole).toBe("dialog");
-    expect(valuePath).toBe("dialog");
+    expect(skeleton.role).toBe("dialog");
+    expect(Object.keys(flattenValues(skeleton))).toEqual(["dialog"]);
   });
 
   it("collapses a real 2-level pass-through wrapper chain measured by real geometry, and strictWrappers preserves it", async () => {

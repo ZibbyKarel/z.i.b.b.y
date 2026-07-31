@@ -1,7 +1,11 @@
 /**
  * Turns a raw DOM snapshot into the structural fingerprint the skeleton gate
  * compares. Everything here is pure so it can be unit-tested without a browser —
- * the browser's only job is to hand us `box` and `layout` numbers.
+ * the browser's only job is to hand us `box`, `layout` and `values` numbers.
+ *
+ * The normalised tree is the tool's ONE address space: the skeleton gate, the
+ * value layer and the token mapping all name nodes by the paths `rootPath` and
+ * `childPath` build here. Nothing walks the raw DOM a second time.
  */
 
 const ROLE_BY_TAG = {
@@ -109,12 +113,26 @@ function resolveThroughWrappers(child, parentBox, options) {
   return child;
 }
 
+/**
+ * A collapsed wrapper takes its `values` with it. Wrapper collapsing already
+ * makes that trade for structure — the whole point is to forgive a React
+ * implementation an extra pass-through `<div>` the design mockup does not have
+ * — and carrying the wrapper's values onto the surviving child instead would
+ * be worse: it would compare a node's computed style against a different
+ * element's. The cost is real and worth naming: a pass-through wrapper that
+ * carries, say, a `background-color` stops being measured at all. Run with
+ * `--strict-wrappers` when that matters.
+ */
 function build(raw, parentBox, options) {
   const children = [...raw.children].sort((a, b) => a.layout.order - b.layout.order);
   return {
     role: inferRole(raw),
     matchRole: inferMatchRole(raw),
     tag: raw.tag,
+    // `?? {}` keeps a node well-formed for the pure tests and for any raw
+    // snapshot taken before values were extracted — never a `values: undefined`
+    // that would throw one layer down.
+    values: raw.values ?? {},
     layout: {
       mode: layoutMode(raw.layout),
       direction: raw.layout.flexDirection,
@@ -131,4 +149,24 @@ function build(raw, parentBox, options) {
 
 export function normalizeSkeleton(raw, options = {}) {
   return build(raw, null, { strictWrappers: false, ...options });
+}
+
+/**
+ * The path convention, defined once. `compare-skeleton.mjs` and
+ * `compare-values.mjs` both address nodes through these two functions, so
+ * `skeleton.md` and `values.md` cannot drift into naming the same element two
+ * different things — which is exactly what they used to do.
+ *
+ * The readable `role` names a node, not the class-independent `matchRole`: a
+ * path is for a human to find the node with, and `card/form[0]/row[1]` is
+ * findable in a way `node/form[0]/node[1]` is not. Only the gate's *comparison*
+ * is class-independent; a path is always built from the design side, so the two
+ * sides can never disagree about it.
+ */
+export function rootPath(node) {
+  return node.role;
+}
+
+export function childPath(parentPath, child, index) {
+  return `${parentPath}/${child.role}[${index}]`;
 }

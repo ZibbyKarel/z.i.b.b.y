@@ -12,7 +12,7 @@
         background: #0b0e13;
         color: #c9d4e8;
       }
-      .surface-card {
+      .panel-surface {
         width: 400px;
         padding: 24px;
         background: #11151d;
@@ -23,17 +23,17 @@
         grid-template-columns: 1fr 1fr;
         gap: 12px;
       }
-      .field-row {
+      .field-line {
         display: flex;
         flex-direction: row;
         align-items: center;
         gap: 8px;
       }
-      .field-row > label {
+      .field-line > label {
         width: 96px;
         font-size: 14px;
       }
-      .field-row > input {
+      .field-line > input {
         flex: 1;
         height: 32px;
         background: #0b0e13;
@@ -42,12 +42,12 @@
     </style>
   </head>
   <body>
-    <div class="surface-card" data-region="card">
+    <div class="panel-surface" data-region="card">
       <form class="fields">
-        <div class="field-row"><label>Jméno</label><input type="text" /></div>
-        <div class="field-row"><label>E-mail</label><input type="email" /></div>
-        <div class="field-row"><label>Firma</label><input type="text" /></div>
-        <div class="field-row"><label>Role</label><input type="text" /></div>
+        <div class="field-line"><label>Jméno</label><input type="text" /></div>
+        <div class="field-line"><label>E-mail</label><input type="email" /></div>
+        <div class="field-line"><label>Firma</label><input type="text" /></div>
+        <div class="field-line"><label>Role</label><input type="text" /></div>
       </form>
     </div>
   </body>

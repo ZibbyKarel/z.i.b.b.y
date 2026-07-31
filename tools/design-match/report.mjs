@@ -19,17 +19,13 @@ export function renderSkeleton(findings) {
   return lines.join("\n");
 }
 
-// extractValues keys come from the raw DOM walk, compareSkeletons' findings.path
-// from the normalised tree (collapsed wrappers, children re-sorted by CSS `order`).
-// The same element can carry two different paths — the two address spaces are
-// never joined, so the note below is load-bearing, not decoration.
-const VALUES_PATH_NOTE =
-  "> Cesty v této tabulce pocházejí ze syrového DOM průchodu (`extractValues`) — nejde o stejný adresní prostor jako `skeleton.md`, který je odvozen z normalizovaného stromu (sbalené průchozí obaly, potomci přeřazení podle CSS `order`). Stejný element tak může mít jinde jinou cestu; nic tyto dvě sady cest nespojuje.";
-
+// The paths here are the skeleton's own — one walk, one address space — so
+// `values.md` and `skeleton.md` name the same node the same way. There used to
+// be a note warning the reader that they did not; it is gone because it is no
+// longer true, and a stale warning would make trustworthy paths look suspect.
 export function renderValues(deltas) {
-  if (deltas.length === 0)
-    return `# Hodnoty\n\n${VALUES_PATH_NOTE}\n\nSedí — žádné hodnotové rozdíly.\n`;
-  const lines = ["# Hodnoty", "", VALUES_PATH_NOTE, ""];
+  if (deltas.length === 0) return "# Hodnoty\n\nSedí — žádné hodnotové rozdíly.\n";
+  const lines = ["# Hodnoty", ""];
   const byPath = new Map();
   for (const delta of deltas) {
     if (!byPath.has(delta.path)) byPath.set(delta.path, []);

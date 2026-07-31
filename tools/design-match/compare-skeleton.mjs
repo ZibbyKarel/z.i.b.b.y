@@ -5,6 +5,8 @@
  * stop rather than proceed to pixels.
  */
 
+import { childPath, rootPath } from "./normalize.mjs";
+
 const DEFAULT_SIZE_TOLERANCE = 0.02;
 
 // Position, not just size: two equal-sized siblings swapped in place are a
@@ -12,10 +14,6 @@ const DEFAULT_SIZE_TOLERANCE = 0.02;
 // alone cannot see once matchRole collapses both to the same generic value —
 // rel.x/rel.y are what catches it.
 const AXIS_LABEL = { w: "šířka", h: "výška", x: "pozice X", y: "pozice Y" };
-
-function childPath(parentPath, child, index) {
-  return `${parentPath}/${child.role}[${index}]`;
-}
 
 function walk(design, app, path, tolerance, findings) {
   if (design.layout.mode !== app.layout.mode) {
@@ -91,7 +89,7 @@ export function compareSkeletons(design, app, options = {}) {
   // Same matchRole-not-role rule as the child-order check below, for the root.
   if (design.matchRole !== app.matchRole) {
     findings.push({
-      path: design.role,
+      path: rootPath(design),
       kind: "role",
       expected: design.matchRole,
       actual: app.matchRole,
@@ -99,6 +97,6 @@ export function compareSkeletons(design, app, options = {}) {
     });
   }
 
-  walk(design, app, design.role, tolerance, findings);
+  walk(design, app, rootPath(design), tolerance, findings);
   return { pass: findings.length === 0, findings };
 }

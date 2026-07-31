@@ -6,10 +6,10 @@ import { withPage } from "./browser.mjs";
 import { ensureCdnCache } from "./cdn-cache.mjs";
 import { compareSkeletons } from "./compare-skeleton.mjs";
 import { compareValues } from "./compare-values.mjs";
-import { extractRaw, extractValues } from "./extract.mjs";
+import { extractRaw } from "./extract.mjs";
 import { collectRegions, cropRegions, formatInventory, rankCandidates } from "./inventory.mjs";
 import { decideNext, evaluateRound } from "./loop.mjs";
-import { normalizeSkeleton } from "./normalize.mjs";
+import { childPath, normalizeSkeleton, rootPath } from "./normalize.mjs";
 import { diffPngs } from "./pixels.mjs";
 import { fontPreflight } from "./preflight.mjs";
 import { writeArtifacts } from "./report.mjs";
@@ -143,7 +143,29 @@ export function stripImages(round) {
   return rest;
 }
 
-/** The leaf role at the end of a raw-DOM values path, with any `[n]` index stripped. */
+/**
+ * The skeleton flattened to the `path → props` map Task 12b's two consumers
+ * (`buildTokenMappings`, `collectFontStacks`) were written against. Values live
+ * on the skeleton nodes now — there is no second walk producing a flat map —
+ * but "every node's values, keyed by path" is still the right input for two
+ * functions that only ever collect across the whole tree and never pair two
+ * trees against each other. Pairing is `compareValues`' job, and it does it in
+ * lockstep on the trees themselves, which is why nothing here can go missing.
+ *
+ * The keys are the skeleton's own paths, so a `--zt-text-heading` proposed in
+ * `tokens.md` names a node the reader can find in `skeleton.md`.
+ */
+export function flattenValues(skeleton) {
+  const flat = {};
+  const walk = (node, nodePath) => {
+    flat[nodePath] = node.values;
+    node.children.forEach((child, index) => walk(child, childPath(nodePath, child, index)));
+  };
+  walk(skeleton, rootPath(skeleton));
+  return flat;
+}
+
+/** The leaf role at the end of a values path, with any `[n]` index stripped. */
 function leafRole(valuesPath) {
   return valuesPath
     .split("/")
@@ -184,8 +206,8 @@ const PROP_THEME_FAMILY = {
 };
 
 /**
- * Every tokenisable value measured off the **design** mockup (`spec.values`,
- * from `runMeasure`), mapped against the **app's** design-system theme
+ * Every tokenisable value measured off the **design** mockup
+ * (`flattenValues(spec.skeleton)`, from `runMeasure`), mapped against the **app's** design-system theme
  * (parsed from the CSS `--theme` points at) — this is what fills
  * `tokens.md`: which of the design's values already have a home in the app's
  * palette, and which need a new one. Deduplicated by `prop` + `value` (the
@@ -456,10 +478,11 @@ async function runMeasure(cmd) {
       .screenshot({ path: path.join(dir, "design.png") });
     return {
       selector: chosen.selector,
+      // One extraction, one tree: the skeleton carries the values, so there is
+      // no separate `spec.values` to fall out of step with it.
       skeleton: normalizeSkeleton(await extractRaw(page, chosen.selector), {
         strictWrappers: cmd.strictWrappers,
       }),
-      values: await extractValues(page, chosen.selector),
     };
   });
 
@@ -481,7 +504,9 @@ async function runMeasure(cmd) {
     );
   }
   spec.tokenMappings =
-    themeCss !== undefined ? buildTokenMappings(spec.values, parseThemeTokens(themeCss)) : [];
+    themeCss !== undefined
+      ? buildTokenMappings(flattenValues(spec.skeleton), parseThemeTokens(themeCss))
+      : [];
   // Stamped so a later `readSpec` can tell a cache from an older measurement
   // format apart from a current one, instead of comparing it and reporting a
   // confident, wrong structural finding.
@@ -505,13 +530,14 @@ async function runCompare(cmd) {
     const skeleton = compareSkeletons(spec.skeleton, appSkeleton);
     if (!skeleton.pass) return { skeleton, values: null, pixels: null };
 
-    const appValues = await extractValues(page, scene.selector);
-    const values = compareValues(spec.values, appValues);
+    // Same two trees the gate just compared — no second extraction, so no
+    // second address space to disagree with it.
+    const values = compareValues(spec.skeleton, appSkeleton);
 
     // A font mismatch makes every later pixel delta a lie — the numbers move
     // but the cause is not in the code — so the pixel comparison is skipped
     // entirely rather than measuring a difference whose cause is wrong.
-    const preflight = checkFontPreflight(spec.values, appValues);
+    const preflight = checkFontPreflight(flattenValues(spec.skeleton), flattenValues(appSkeleton));
     if (!preflight.ok) return { skeleton, values, pixels: null, fontPreflight: preflight };
 
     const appImage = await shootScene(page, scene, path.join(dir, "app.png"));
