@@ -19,13 +19,31 @@ export function renderSkeleton(findings) {
   return lines.join("\n");
 }
 
+// What the value layer did NOT look at. Wrapper collapsing drops a pass-through
+// wrapper's values along with the wrapper, so those nodes are never measured —
+// and a pass-through wrapper is exactly the kind of node that carries a
+// background colour. "No differences" and "not measured" are both silence in a
+// report, and they must not read the same; masked regions are already always
+// listed in report.md for the same reason. Stated as scope, not as a warning:
+// collapsing is a deliberate trade that stops the gate crying wolf over one
+// extra <div>, and --strict-wrappers is there when the trade is wrong.
+const WRAPPER_COVERAGE_NOTE =
+  "> Měřeny jsou uzly, které zůstaly ve skeletonu. Průchozí obaly, které normalizace sbalila, měřené nejsou — spusť s `--strict-wrappers`, pokud potřebuješ i je.";
+
 // The paths here are the skeleton's own — one walk, one address space — so
 // `values.md` and `skeleton.md` name the same node the same way. There used to
 // be a note warning the reader that they did not; it is gone because it is no
 // longer true, and a stale warning would make trustworthy paths look suspect.
-export function renderValues(deltas) {
-  if (deltas.length === 0) return "# Hodnoty\n\nSedí — žádné hodnotové rozdíly.\n";
-  const lines = ["# Hodnoty", ""];
+//
+// `wrappersCollapsed` defaults to true because collapsing is the tool's own
+// default: a caller that forgets to say gets the coverage caveat rather than
+// silent, false reassurance.
+export function renderValues(deltas, { wrappersCollapsed = true } = {}) {
+  const note = wrappersCollapsed ? [WRAPPER_COVERAGE_NOTE, ""] : [];
+  if (deltas.length === 0) {
+    return ["# Hodnoty", "", ...note, "Sedí — žádné hodnotové rozdíly.", ""].join("\n");
+  }
+  const lines = ["# Hodnoty", "", ...note];
   const byPath = new Map();
   for (const delta of deltas) {
     if (!byPath.has(delta.path)) byPath.set(delta.path, []);
@@ -204,7 +222,10 @@ export async function writeArtifacts(dir, payload) {
   // exactly as it was found.
   const textFiles = [
     { name: "skeleton.md", content: renderSkeleton(payload.skeletonFindings) },
-    { name: "values.md", content: renderValues(payload.values) },
+    {
+      name: "values.md",
+      content: renderValues(payload.values, { wrappersCollapsed: !payload.strictWrappers }),
+    },
     { name: "tokens.md", content: renderTokens(payload.tokenMappings) },
     { name: "components.md", content: renderComponents(payload.componentDecisions) },
     {

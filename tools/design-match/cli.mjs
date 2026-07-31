@@ -351,7 +351,15 @@ export function isDeliberateError(error) {
  * than as inline expressions inside the browser-driven `runCompare` that no
  * test could ever reach.
  */
-export function buildCompareOutcome({ result, spec, slug, masks, history, fontPreflight }) {
+export function buildCompareOutcome({
+  result,
+  spec,
+  slug,
+  masks,
+  history,
+  fontPreflight,
+  strictWrappers = false,
+}) {
   // A font mismatch makes every pixel delta a lie — the numbers move but the
   // cause is not in the code — so it overrides whatever `evaluateRound` would
   // have said, and forces `pixels: null` even if a caller (or a future bug)
@@ -394,6 +402,9 @@ export function buildCompareOutcome({ result, spec, slug, masks, history, fontPr
     values: result.values ?? [],
     tokenMappings: spec.tokenMappings ?? [],
     componentDecisions: [],
+    // values.md needs this to say which nodes the run never measured: with
+    // collapsing on, a pass-through wrapper's values went with the wrapper.
+    strictWrappers,
   };
 
   return { payload, roundRecord, fullHistory, verdict };
@@ -558,6 +569,7 @@ async function runCompare(cmd) {
     masks: scene.masks,
     history,
     fontPreflight: result.fontPreflight,
+    strictWrappers: cmd.strictWrappers,
   });
 
   await fs.writeFile(path.join(dir, ROUNDS_FILE), JSON.stringify(fullHistory, null, 2), "utf8");

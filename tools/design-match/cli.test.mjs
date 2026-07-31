@@ -475,6 +475,26 @@ describe("buildCompareOutcome", () => {
     expect(roundRecord).not.toHaveProperty("maskImage");
   });
 
+  it("forwards strictWrappers so values.md can name what the run did not measure", () => {
+    // renderValues needs to know whether wrapper collapsing was in effect —
+    // a collapsed wrapper is unmeasured area, and the artifact has to say so.
+    const base = {
+      result: { skeleton: skeletonFail, values: null, pixels: null },
+      spec: { selector: "#x" },
+      slug: "epic-card",
+      masks: [],
+      history: [],
+    };
+    expect(buildCompareOutcome({ ...base, strictWrappers: true }).payload.strictWrappers).toBe(
+      true,
+    );
+    expect(buildCompareOutcome({ ...base, strictWrappers: false }).payload.strictWrappers).toBe(
+      false,
+    );
+    // Absent means the default — collapsing on, so the note gets shown.
+    expect(buildCompareOutcome(base).payload.strictWrappers).toBe(false);
+  });
+
   it("an ungated result carries the real values array and both image buffers on the current round only", () => {
     const appImage = Buffer.from("app");
     const maskImage = Buffer.from("mask");
@@ -643,7 +663,7 @@ describe("readSpec", () => {
   });
 
   it("reads and parses a previously written spec.json", async () => {
-    const spec = { selector: "#x", skeleton: {}, values: {}, version: DESIGN_MATCH_VERSION };
+    const spec = { selector: "#x", skeleton: {}, tokenMappings: [], version: DESIGN_MATCH_VERSION };
     await fs.writeFile(path.join(dir, "spec.json"), JSON.stringify(spec), "utf8");
     expect(await readSpec(dir, "some-slug")).toEqual(spec);
   });
@@ -657,14 +677,14 @@ describe("readSpec", () => {
     // A spec.json written by an older design-match — matchRole didn't exist yet — must not
     // be silently compared as if it had it: that produces a confident, wrong structural
     // finding ("role kořene: undefined vs node") instead of an honest "re-run measure".
-    const spec = { selector: "#x", skeleton: {}, values: {}, version: "0.0.1" };
+    const spec = { selector: "#x", skeleton: {}, tokenMappings: [], version: "0.0.1" };
     await fs.writeFile(path.join(dir, "spec.json"), JSON.stringify(spec), "utf8");
     await expect(readSpec(dir, "stale-slug")).rejects.toThrow(/measure/);
     await expect(readSpec(dir, "stale-slug")).rejects.toThrow("stale-slug");
   });
 
   it("throws the same way when spec.json has no version field at all (pre-versioning format)", async () => {
-    const spec = { selector: "#x", skeleton: {}, values: {} };
+    const spec = { selector: "#x", skeleton: {}, tokenMappings: [] };
     await fs.writeFile(path.join(dir, "spec.json"), JSON.stringify(spec), "utf8");
     await expect(readSpec(dir, "no-version-slug")).rejects.toThrow(/measure/);
   });

@@ -76,4 +76,19 @@ describe("compareValues", () => {
       compareValues(node({ role: "card", children: [node()] }), node({ role: "card" })),
     ).toThrow(/skeleton/);
   });
+
+  it("throws that as a real crash, not one of the tool's deliberate usage errors", () => {
+    // cli.mjs's `isDeliberateError` treats a `design-match:`-prefixed message as
+    // a clean operator-facing usage error and logs one line with no stack. This
+    // error means "this was supposed to be impossible" — the stack IS the
+    // diagnostic, so it must deliberately break the prefix convention.
+    let thrown;
+    try {
+      compareValues(node({ role: "card", children: [node()] }), node({ role: "card" }));
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(Error);
+    expect(thrown.message.startsWith("design-match:")).toBe(false);
+  });
 });

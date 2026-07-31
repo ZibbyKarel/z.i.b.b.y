@@ -81,6 +81,44 @@ describe("renderValues", () => {
     expect(out).toContain("**width** — width 100 vs 80");
     expect(out).not.toMatch(PATH_SPACE_WARNING);
   });
+
+  // Silence that means "verified" and silence that means "never looked" must not
+  // render identically — the same line this tool already holds for masked
+  // regions, which report.md always lists as unchecked area. A collapsed
+  // pass-through wrapper is not measured at all, and a wrapper is exactly the
+  // kind of node that carries a background colour.
+  describe("collapsed-wrapper coverage note", () => {
+    const deltas = [
+      { path: "card", prop: "gap", expected: "16px", actual: "12px", message: "gap 16 vs 12" },
+    ];
+
+    it("names the unmeasured area even when there are NO differences to report", () => {
+      // The case where a reader is most likely to read "Sedí" as "everything was
+      // checked" — so this is the case the note matters most in.
+      const out = renderValues([], { wrappersCollapsed: true });
+      expect(out).toContain("Sedí");
+      expect(out).toContain("Průchozí obaly");
+      expect(out).toContain("měřené nejsou");
+      expect(out).toContain("--strict-wrappers");
+    });
+
+    it("names the unmeasured area alongside real deltas too", () => {
+      const out = renderValues(deltas, { wrappersCollapsed: true });
+      expect(out).toContain("**gap** — gap 16 vs 12");
+      expect(out).toContain("--strict-wrappers");
+    });
+
+    it("omits the note under --strict-wrappers, where nothing was collapsed", () => {
+      expect(renderValues([], { wrappersCollapsed: false })).not.toContain("--strict-wrappers");
+      expect(renderValues(deltas, { wrappersCollapsed: false })).not.toContain("--strict-wrappers");
+    });
+
+    it("defaults to showing the note, matching the tool's default of collapsing", () => {
+      // Erring toward naming unmeasured area is the safe direction: a caller
+      // that forgets to say gets the caveat, not silent false reassurance.
+      expect(renderValues([])).toContain("--strict-wrappers");
+    });
+  });
 });
 
 describe("renderTokens", () => {
@@ -269,6 +307,27 @@ describe("writeArtifacts", () => {
 
   afterEach(async () => {
     await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  it("carries the run's strictWrappers setting into values.md's coverage note", async () => {
+    const payload = {
+      slug: "roadmap",
+      skeletonFindings: [],
+      values: [],
+      tokenMappings: [],
+      componentDecisions: [],
+      masks: [],
+      verdict: { stop: true, status: "done", reason: "ok" },
+      rounds: [{ percent: 0, skeletonPass: true, reason: "kolo 1" }],
+    };
+
+    await writeArtifacts(dir, { ...payload, strictWrappers: false });
+    expect(await fs.readFile(path.join(dir, "values.md"), "utf8")).toContain("--strict-wrappers");
+
+    await writeArtifacts(dir, { ...payload, strictWrappers: true });
+    expect(await fs.readFile(path.join(dir, "values.md"), "utf8")).not.toContain(
+      "--strict-wrappers",
+    );
   });
 
   it("writes exactly the expected file set, including a diff png only for rounds that carry buffers", async () => {
