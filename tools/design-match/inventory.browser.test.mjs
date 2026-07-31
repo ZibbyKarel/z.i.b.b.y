@@ -11,6 +11,10 @@ const fixture = pathToFileURL(
   path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "basic.html"),
 ).href;
 
+const repeatedFixture = pathToFileURL(
+  path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "repeated.html"),
+).href;
+
 let tmpDirs = [];
 
 afterEach(async () => {
@@ -64,6 +68,31 @@ describe("collectRegions", () => {
     const rowSelectors = regions.filter((r) => r.classes.includes("row")).map((r) => r.selector);
     expect(rowSelectors).toHaveLength(4);
     expect(new Set(rowSelectors).size).toBe(4);
+  });
+
+  // Structurally identical, non-sibling widget subtrees (fixtures/repeated.html):
+  // per-level :nth-child never fires (each instance is unique among its own
+  // siblings), so an unanchored chain built from the top-level instance can
+  // still match the nested lookalike's descendants too.
+  it("gives every region a selector that resolves to exactly one element, even with a structurally identical non-sibling subtree", async () => {
+    const counts = await withPage(async (page) => {
+      await page.goto(repeatedFixture);
+      const regions = await collectRegions(page);
+      return page.evaluate(
+        (selectors) => selectors.map((selector) => document.querySelectorAll(selector).length),
+        regions.map((r) => r.selector),
+      );
+    });
+    expect(counts.every((n) => n === 1)).toBe(true);
+  });
+
+  it("never produces duplicate selectors, even with a structurally identical non-sibling subtree", async () => {
+    const regions = await withPage(async (page) => {
+      await page.goto(repeatedFixture);
+      return collectRegions(page);
+    });
+    const selectors = regions.map((r) => r.selector);
+    expect(new Set(selectors).size).toBe(selectors.length);
   });
 });
 

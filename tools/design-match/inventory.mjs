@@ -46,10 +46,16 @@ export async function collectRegions(page) {
         return segment;
       };
       // Climb from the element toward <body>, joining segments with " > ", and stop
-      // as soon as the accumulated chain resolves to exactly one element. The climb
-      // always includes the direct child of <body>, and that segment's nth-child
-      // disambiguation (against its true siblings) is unique by construction, so the
-      // worst case still terminates in a selector that matches exactly one element.
+      // as soon as the accumulated chain resolves to exactly one element. Per-level
+      // nth-child only disambiguates a node from its own true siblings — it does NOT
+      // anchor the chain to a fixed root, so an unanchored chain can still match a
+      // structurally identical (but unrelated) fragment elsewhere in the document,
+      // e.g. the same component markup nested again inside a different, non-sibling
+      // subtree. If the climb reaches a direct child of <body> without the chain
+      // having resolved to a unique match, anchor it by prefixing `body > `: every
+      // level below already carries `:nth-child(k)` wherever it was ambiguous among
+      // its own siblings, so the anchored chain is a single, fully determined path
+      // from one fixed root and is therefore guaranteed unique.
       const cssPath = (el) => {
         const segments = [];
         let node = el;
@@ -58,7 +64,8 @@ export async function collectRegions(page) {
           const chain = segments.join(" > ");
           if (document.querySelectorAll(chain).length === 1) return chain;
           const parent = node.parentElement;
-          if (!parent || parent.tagName.toLowerCase() === "body") return chain;
+          if (parent && parent.tagName.toLowerCase() === "body") return `body > ${chain}`;
+          if (!parent) return chain;
           node = parent;
         }
       };
