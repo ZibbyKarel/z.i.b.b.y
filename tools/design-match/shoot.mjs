@@ -12,9 +12,14 @@ export function storybookUrl(storyId, base = STORYBOOK_BASE) {
 }
 
 /**
- * Storybook renders every story into this node. It is a Storybook contract, not
- * a guess about the implementation's markup, which is why it can be a default at
- * all — see `resolveScene`.
+ * Storybook renders every story into this node — it is builder-vite's own
+ * `iframe.html` template, not a guess about the implementation's markup, which
+ * is why it can be a default at all. See `resolveScene`.
+ *
+ * (Fix round 1, M5: this repo's index has 187 ENTRIES — 184 stories and 3 docs
+ * pages. The distinction does not change the default: `storybookUrl` always
+ * forces `viewMode=story`, so a docs entry renders into `#storybook-root` too,
+ * verified live across all 187.)
  */
 export const STORYBOOK_ROOT_SELECTOR = "#storybook-root";
 
@@ -45,7 +50,7 @@ export function resolveScene(options) {
   if (options.story) {
     return {
       mode: "story",
-      url: storybookUrl(options.story),
+      url: storybookUrl(options.story, options.storybookBase ?? STORYBOOK_BASE),
       selector: options.selector ?? STORYBOOK_ROOT_SELECTOR,
       masks,
     };
@@ -438,13 +443,21 @@ export async function shootScene(page, scene, outPath) {
   await target.waitFor({ state: "visible" });
   const targetBox = await target.boundingBox();
   const mask = await resolveMaskLocators(page, scene.masks, targetBox);
-  return target.screenshot({
-    path: outPath,
-    mask,
-    // Without this, any CSS transition or animation (a hover/focus state, a
-    // mount fade-in, a spinner) can be caught mid-frame, and the two sides of
-    // a comparison land on different frames — a pixel delta naming no real
-    // cause.
-    animations: "disabled",
-  });
+  return shootElement(target, outPath, mask);
+}
+
+/**
+ * The ONE screenshot both sides of a comparison go through — `measure` for
+ * `design.png` and `shootScene` for `app.png` — for the same reason `gotoSettled`
+ * is one function: a capture setting applied to one side and not the other is a
+ * pixel delta the TOOL creates and then attributes to the implementation.
+ *
+ * Fix round 1, I4: `animations: "disabled"` lived only on the `shootScene` side,
+ * so the design could be photographed mid-transition while the implementation
+ * was frozen — on `ZIBBY Loading Screen` and `ZIBBY Orb`, exactly where it
+ * matters. Without it, any CSS transition or animation (a hover state, a mount
+ * fade-in, a spinner) is caught at whatever frame the shot lands on.
+ */
+export function shootElement(locator, outPath, mask = []) {
+  return locator.screenshot({ path: outPath, mask, animations: "disabled" });
 }

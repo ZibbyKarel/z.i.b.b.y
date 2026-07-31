@@ -72,7 +72,22 @@ describe("fontPreflight", () => {
     const result = fontPreflight(["Geist"], []);
     expect(result.ok).toBe(false);
     expect(result.message).not.toContain("undefined");
-    expect(fontPreflight([], []).ok).toBe(true);
+  });
+
+  /*
+   * Fix round 1, M4. Two empty stacks used to satisfy the equality check and
+   * report "font stack shodný v první rodině: žádná" — a MATCH claimed over no
+   * evidence whatsoever, which is the branch's one forbidden move, and the
+   * suite pinned it. It stays a pass (there is nothing to suppress, and
+   * `getComputedStyle` always yields a family so a browser cannot reach it),
+   * but it must say that nothing was verified rather than that something
+   * agreed.
+   */
+  it("does not claim a match when neither side declared a font at all", () => {
+    const result = fontPreflight([], []);
+    expect(result.ok).toBe(true);
+    expect(result.message).not.toContain("shodn");
+    expect(result.message).toMatch(/neověři|nezjist/i);
   });
 
   it("passes when the families match but differ only in case", () => {

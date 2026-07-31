@@ -38,6 +38,36 @@ describe("parseArgs", () => {
     });
   });
 
+  /*
+   * Fix round 1, M7. `--app-base` was plumbed in task 17 so a `--route` compare
+   * could be driven end to end against a fixture server; `--storybook-base` was
+   * not, which left D5's headline decision — a story with no `--selector`
+   * defaulting to `#storybook-root` — with no test above the level of
+   * `resolveScene`'s own unit test. Both origins are overridable now, so both
+   * scene modes are reachable at the process boundary.
+   */
+  it("accepts an override for each scene's origin", () => {
+    const cmd = parseArgs([
+      "compare",
+      "--slug",
+      "s",
+      "--app-base",
+      "http://127.0.0.1:4001",
+      "--storybook-base",
+      "http://127.0.0.1:4002",
+    ]);
+    expect(cmd).toMatchObject({
+      appBase: "http://127.0.0.1:4001",
+      storybookBase: "http://127.0.0.1:4002",
+    });
+  });
+
+  it("leaves both origins undefined when neither is given, so the defaults apply", () => {
+    const cmd = parseArgs(["compare", "--slug", "s"]);
+    expect(cmd.appBase).toBeUndefined();
+    expect(cmd.storybookBase).toBeUndefined();
+  });
+
   it("derives the slug from the description when not given", () => {
     expect(parseArgs(["measure", "design/x.html", "Karta Epicu"]).slug).toBe("karta-epicu");
   });
@@ -128,10 +158,37 @@ describe("resolveRegionIndex", () => {
   // leaves artifacts behind must name them, or they read as debris from a failed
   // run.
   it("points the operator at the crops the run already wrote", () => {
-    expect(() => resolveRegionIndex(999, 12, ".design-match/karta")).toThrow(/r1\.png/);
-    expect(() => resolveRegionIndex(999, 12, ".design-match/karta")).toThrow(
-      /\.design-match\/karta/,
-    );
+    const crops = [".design-match/karta/r1.png", ".design-match/karta/r2.png"];
+    expect(() => resolveRegionIndex(999, 12, crops)).toThrow(/r1\.png/);
+    expect(() => resolveRegionIndex(999, 12, crops)).toThrow(/\.design-match\/karta/);
+  });
+
+  /*
+   * Fix round 1, I1. The file list used to be built from a COUNT
+   * (`Math.min(candidateCount, 5)`), which was true only while every candidate
+   * was guaranteed to produce a crop. `cropFitsPage` ended that guarantee in the
+   * same commit: on `ZIBBY Redesign Canvas` the inventory printed "bez náhledu"
+   * five times and this refusal, two lines below it, told the operator to choose
+   * by looking at five files that do not exist. Naming evidence that isn't there
+   * is the same unbackable claim as leaving evidence unnamed — D8 inverted.
+   */
+  it("names only the crops that were actually written, never a skipped one", () => {
+    const crops = [null, ".design-match/karta/r2.png", null, ".design-match/karta/r4.png", null];
+    const throwing = () => resolveRegionIndex(999, 12, crops);
+    expect(throwing).toThrow(/r2\.png/);
+    expect(throwing).toThrow(/r4\.png/);
+    expect(throwing).not.toThrow(/r1\.png/);
+    expect(throwing).not.toThrow(/r3\.png/);
+    expect(throwing).not.toThrow(/r5\.png/);
+  });
+
+  it("says there is nothing to look at rather than naming files when no crop was written", () => {
+    const throwing = () => resolveRegionIndex(999, 12, [null, null]);
+    expect(throwing).toThrow(/1.*12|12.*1/);
+    // Not a single png named — and the operator is told what to choose by
+    // instead, since the inventory above is now the only evidence there is.
+    expect(throwing).not.toThrow(/\.png/);
+    expect(throwing).toThrow(/inventu/i);
   });
 });
 
@@ -539,6 +596,43 @@ describe("buildCompareOutcome", () => {
     expect(buildCompareOutcome(base).payload.strictWrappers).toBe(false);
   });
 
+  /*
+   * Fix round 1, I3: the flag has to reach the PERSISTED round record, not only
+   * the rendered report — `rounds.json` is what a later invocation replays, and
+   * a round whose page never settled must still say so when it is read back
+   * three rounds later.
+   */
+  it("records on the round whether the page had settled when it was photographed", () => {
+    const base = {
+      result: { skeleton: skeletonFail, values: null, pixels: null },
+      spec: { selector: "#x" },
+      slug: "epic-card",
+      masks: [],
+      history: [],
+    };
+    expect(buildCompareOutcome({ ...base, settled: false }).roundRecord.settled).toBe(false);
+    expect(buildCompareOutcome({ ...base, settled: true }).roundRecord.settled).toBe(true);
+    // Not supplied is UNKNOWN, and unknown must not be rendered as either fact.
+    expect(buildCompareOutcome(base).roundRecord).not.toHaveProperty("settled");
+  });
+
+  it("forwards the design's own settle from spec.json so the report can name it", () => {
+    const base = {
+      result: { skeleton: skeletonFail, values: null, pixels: null },
+      slug: "epic-card",
+      masks: [],
+      history: [],
+    };
+    expect(
+      buildCompareOutcome({ ...base, spec: { selector: "#x", settled: false } }).payload
+        .designSettled,
+    ).toBe(false);
+    // A spec measured before the flag existed knows nothing about its settle.
+    expect(buildCompareOutcome({ ...base, spec: { selector: "#x" } }).payload.designSettled).toBe(
+      undefined,
+    );
+  });
+
   it("an ungated result carries the real values array and both image buffers on the current round only", () => {
     const appImage = Buffer.from("app");
     const maskImage = Buffer.from("mask");
@@ -838,6 +932,24 @@ describe("assertRegionRendered", () => {
     expect(() => assertRegionRendered(raw(), "#root", ".design-match/karta")).toThrow(
       /\.design-match\/karta/,
     );
+  });
+
+  /*
+   * Fix round 1, I2 — the same defect as I1, latent instead of shipping. The
+   * message hardcoded `r1.png`, which `cropFitsPage` can now legitimately have
+   * skipped. It also named region 1's crop rather than the crop of the region
+   * actually being refused, which was never the evidence the message meant.
+   */
+  it("names the CHOSEN region's crop, not region 1's", () => {
+    expect(() =>
+      assertRegionRendered(raw(), "#root", ".design-match/karta", ".design-match/karta/r3.png"),
+    ).toThrow(/r3\.png/);
+  });
+
+  it("names design.png alone when the chosen region has no crop on disk", () => {
+    const throwing = () => assertRegionRendered(raw(), "#root", ".design-match/karta", null);
+    expect(throwing).toThrow(/design\.png/);
+    expect(throwing).not.toThrow(/r\d+\.png/);
   });
 
   // Superseded by M3 (fix round 1): having children is no longer enough on its

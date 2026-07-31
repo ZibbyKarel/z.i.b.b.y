@@ -51,6 +51,17 @@ const normalise = (families) => families.map(normaliseFontEntry).filter(Boolean)
  * A genuine mismatch — a different primary family — still parks with pixels
  * suppressed. This narrows what counts as a mismatch; it does not remove the
  * check.
+ *
+ * Scope, stated because it is narrower than "the page's font" sounds (fix round
+ * 1, M1): `collectFontStacks` walks the whole tree, so `design[0]` is the first
+ * family of the first font-DECLARING node in DOM order — the root's primary
+ * family in practice, not every family the tree uses. A heading font that
+ * differs while the body font matches therefore passes here. That is deliberate
+ * and it is not a hole in the verdict: `evaluateRound` returns "continue" on any
+ * value delta before it ever looks at pixels, and `compareValues` compares
+ * `fontFamily` per node — so such a difference still keeps the round going, it
+ * simply no longer suppresses the pixel layer that gives the loop its progress
+ * signal.
  */
 export function fontPreflight(designFonts, appFonts) {
   const design = normalise(designFonts);
@@ -62,6 +73,18 @@ export function fontPreflight(designFonts, appFonts) {
   const show = (family) => (family === undefined ? "žádná" : family);
   const [designPrimary] = design;
   const [appPrimary] = app;
+  // Fix round 1, M4: two empty stacks satisfy the equality below and used to
+  // report "font stack shodný v první rodině: žádná" — a match claimed over no
+  // evidence at all. It stays a pass, because there is nothing to suppress and
+  // no browser can reach it (`getComputedStyle` always yields a family), but it
+  // must not pass itself off as a verified agreement.
+  if (design.length === 0 && app.length === 0) {
+    return {
+      ok: true,
+      message:
+        "font stack se nepodařilo zjistit ani na jedné straně — preflight nic neověřil, porovnání pokračuje bez něj",
+    };
+  }
   if (fold(designPrimary) === fold(appPrimary)) {
     return {
       ok: true,

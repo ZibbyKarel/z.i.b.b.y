@@ -135,6 +135,74 @@ describe("measure, end to end through the CLI", () => {
     });
   });
 
+  /*
+   * Fix round 1, I1, reproduced from the review's own repro on `ZIBBY Redesign
+   * Canvas`: the refusal built its file list from a COUNT, so once `cropFitsPage`
+   * could skip a crop it named files that were never written — five "bez
+   * náhledu" lines and, two lines below them, "choose by looking at r1..r5.png"
+   * over an empty directory.
+   *
+   * The assertion is the invariant rather than a fixture-specific string: the
+   * message names exactly the crops that exist on disk, no more and no fewer.
+   */
+  it("names exactly the crops that exist on disk, never one cropFitsPage skipped", async () => {
+    const dir = await makeWorkspace({
+      "offpage.html": await fs.readFile(path.join(FIXTURES, "offpage.html"), "utf8"),
+    });
+
+    const failure = await run(
+      "node",
+      [
+        CLI,
+        "measure",
+        "offpage.html",
+        "karta",
+        "--slug",
+        "off",
+        "--theme",
+        "theme.css",
+        "--region",
+        "999",
+      ],
+      { cwd: dir },
+    ).catch((error) => error);
+
+    expect(failure.code).toBe(3);
+    const artifactDir = path.join(dir, ".design-match", "off");
+    const onDisk = (await fs.readdir(artifactDir)).filter((name) => /^r\d+\.png$/.test(name));
+    // The fixture exists to make this true — without a skipped crop the test
+    // would pass against the defect it is pinning.
+    expect(failure.stdout).toContain("bez náhledu");
+    for (const name of onDisk) expect(failure.stderr).toContain(name);
+    for (let index = 1; index <= 5; index += 1) {
+      const name = `r${index}.png`;
+      if (onDisk.includes(name)) continue;
+      expect(failure.stderr).not.toContain(name);
+    }
+  });
+
+  /*
+   * Fix round 1, I4. `shootScene` shoots the implementation with
+   * `animations: "disabled"`; `design.png` was shot without it, so the two sides
+   * of every comparison were captured under different settings and the tool
+   * manufactured a pixel delta it then attributed to the implementation. Mirrors
+   * the existing `shootScene` byte-equality test, one layer up.
+   */
+  it("shoots design.png byte-identically on two runs of a continuously animated mockup", async () => {
+    const dir = await makeWorkspace({
+      "animated-card.html": await fs.readFile(path.join(FIXTURES, "animated-card.html"), "utf8"),
+    });
+
+    await measure(dir, "animated-card.html", "anim-a");
+    await measure(dir, "animated-card.html", "anim-b");
+
+    const [first, second] = await Promise.all([
+      fs.readFile(path.join(dir, ".design-match", "anim-a", "design.png")),
+      fs.readFile(path.join(dir, ".design-match", "anim-b", "design.png")),
+    ]);
+    expect(first.equals(second)).toBe(true);
+  });
+
   // D7's other half, at the process boundary: a mockup that renders and then
   // never goes idle (an unread 404 response body — `ZIBBY Redesign Canvas.html`
   // in miniature) used to burn 30 s and fail. It must measure.
@@ -152,6 +220,24 @@ describe("measure, end to end through the CLI", () => {
     // Measured, but not silently: the tool says the page never settled rather
     // than passing an unsettled render off as a settled one.
     expect(result.stderr).toContain("neustálila");
+    // Fix round 1, I3: stderr is ephemeral, and the design is measured once,
+    // rounds before any comparison reads it. The fact has to travel in the
+    // artifact, or every later `compare` states a pixel delta against a
+    // design.png nobody knows was photographed mid-load.
+    expect(spec.settled).toBe(false);
+  });
+
+  it("records in spec.json that a page which did settle, settled", async () => {
+    const dir = await makeWorkspace({
+      "mockup.html": `<!doctype html><html><body><div id="root" style="width:400px;height:300px"><h2>karta</h2></div></body></html>`,
+    });
+
+    await measure(dir, "mockup.html", "calm");
+
+    const spec = JSON.parse(
+      await fs.readFile(path.join(dir, ".design-match", "calm", "spec.json"), "utf8"),
+    );
+    expect(spec.settled).toBe(true);
   });
 
   // Fix round 2, N2. `carriesContent`'s handling of the truncation flag was

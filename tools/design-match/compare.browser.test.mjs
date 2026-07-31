@@ -106,10 +106,12 @@ describe("compare, end to end through the CLI", () => {
   // file SKILL.md tells the operator to read first — while the console said
   // POKRAČUJ. The assertion is the agreement between the two, not the wording.
   //
-  // D7 rides along on the same run: the implementation page must be fetched
-  // exactly ONCE. shootScene used to `page.goto` it a second time, after
-  // runCompare had already loaded and settled it.
-  it("writes a report.md whose verdict matches the exit code, having loaded the page once", async () => {
+  // Fix round 1, M6: this test used to carry a request-count assertion and a
+  // name that promised the D7 pin. It cannot pin D7 — its round fails the
+  // skeleton gate and returns before `shootScene` is ever reached, which is
+  // exactly how the d7a mutant survived. The D7 pin has one home, the round that
+  // actually reaches `shootScene`, and this test now claims only what it checks.
+  it("writes a report.md whose verdict matches the exit code", async () => {
     const dir = await makeWorkspace({
       "design.html": page(CARD),
       // One extra child: the skeleton gate fails, which is the ordinary
@@ -136,7 +138,6 @@ describe("compare, end to end through the CLI", () => {
     expect(report).toContain("**Výsledek:** POKRAČUJ");
     expect(report).not.toContain("PARK");
     expect(report).toContain("Kolo 1 z 5");
-    expect(server.counts.get("/impl.html")).toBe(1);
   });
 
   // D5 part 1: `compare` used to inherit the DESIGN's selector when --selector
@@ -230,5 +231,150 @@ describe("compare, end to end through the CLI", () => {
     // above returns before shootScene is called and cannot see it — which is
     // exactly the mistake the mutation run caught.
     expect(server.counts.get("/impl.html")).toBe(1);
+  });
+
+  /*
+   * Fix round 1, I3. By this task's own headline finding, every `--route`
+   * compare against this repo's web app runs unsettled — the run-events SSE
+   * stream is a request that by construction never finishes. A report that
+   * states a pixel percentage with no record that the page was still loading is
+   * the tool making a claim it cannot back, and a `console.warn` on stderr does
+   * not survive to the file the driver reads.
+   */
+  it("records in report.md that the page was photographed before it settled", async () => {
+    const dir = await makeWorkspace({
+      "design.html": page(CARD),
+      // Identical to the design in every way a comparison can see, plus the
+      // second of the two causes `warnUnsettled` names: a poll that keeps the
+      // connection count above zero forever, so `networkidle` can never fire.
+      // (This is `apps/web`'s real shape — the run-events SSE stream — rather
+      // than `never-idle.html`'s unread-404-body, which depends on how the
+      // serving side ends the response.) The run must complete anyway, and say
+      // that it did so mid-load.
+      "impl.html": page(CARD).replace(
+        "</body>",
+        `<script>setInterval(() => { fetch("./design-match-poll.json"); }, 100);</script></body>`,
+      ),
+    });
+    await measure(dir, "design.html", "s");
+    const server = await startCountingServer(dir);
+
+    const result = await compare(dir, [
+      "--slug",
+      "s",
+      "--route",
+      "/impl.html",
+      "--app-base",
+      server.origin,
+      "--selector",
+      "#root",
+    ]);
+
+    expect(result.stderr).toContain("neustálila");
+    const report = await fs.readFile(path.join(dir, ".design-match", "s", "report.md"), "utf8");
+    expect(report).toContain("neustálila");
+    const round = JSON.parse(
+      await fs.readFile(path.join(dir, ".design-match", "s", "round-1.json"), "utf8"),
+    );
+    expect(round.settled).toBe(false);
+  });
+
+  it("says nothing about settling in a report whose page settled normally", async () => {
+    const dir = await makeWorkspace({ "design.html": page(CARD), "impl.html": page(CARD) });
+    await measure(dir, "design.html", "s");
+    const server = await startCountingServer(dir);
+
+    await compare(dir, [
+      "--slug",
+      "s",
+      "--route",
+      "/impl.html",
+      "--app-base",
+      server.origin,
+      "--selector",
+      "#root",
+    ]);
+
+    const report = await fs.readFile(path.join(dir, ".design-match", "s", "report.md"), "utf8");
+    expect(report).not.toContain("neustálila");
+  });
+
+  /*
+   * Fix round 1, M7. D5's headline decision — a story with no `--selector`
+   * mounts at `#storybook-root` — had no test above `resolveScene`'s unit test,
+   * because only the route origin was overridable. `--storybook-base` makes the
+   * story path reachable here: this fixture answers on `/iframe.html` exactly as
+   * Storybook does, and the run only gets as far as a verdict if the default
+   * selector resolved.
+   */
+  it("compares a story with no --selector at all, mounting at #storybook-root", async () => {
+    const dir = await makeWorkspace({
+      "design.html": page(CARD),
+      "iframe.html": `<!doctype html><html lang="cs"><head><meta charset="utf-8" /></head><body style="margin:0">
+<div id="storybook-root" style="width:400px;height:300px;background:#101418;font-family:Geist, Arial, sans-serif">${CARD}</div>
+</body></html>`,
+    });
+    await measure(dir, "design.html", "s");
+    const server = await startCountingServer(dir);
+
+    const result = await compare(dir, [
+      "--slug",
+      "s",
+      "--story",
+      "ds-card--default",
+      "--storybook-base",
+      server.origin,
+    ]);
+
+    // Whatever the verdict, it is a verdict: the run reached the comparison
+    // rather than refusing for want of a selector or crashing on a missing node.
+    expect([0, 1, 2]).toContain(result.code);
+    expect(result.stderr).not.toContain("--selector");
+    // Against THIS server, not whatever happens to be listening on :6006.
+    expect(server.counts.get("/iframe.html")).toBe(1);
+    await expect(
+      fs.readFile(path.join(dir, ".design-match", "s", "report.md"), "utf8"),
+    ).resolves.toContain("**Výsledek:**");
+  });
+
+  /*
+   * Fix round 1, M3. D8's rule covered writing conclusions but said nothing
+   * about ones already on disk, and SKILL.md tells the operator to read
+   * report.md FIRST, always — the exact premise D4 was fixed on. A refused
+   * round used to leave the previous round's POKRAČUJ standing as though it
+   * were the answer to the invocation that just failed.
+   */
+  it("marks the previous report.md as superseded when the next round refuses", async () => {
+    const dir = await makeWorkspace({ "design.html": page(CARD), "impl.html": page(CARD) });
+    await measure(dir, "design.html", "s");
+    const server = await startCountingServer(dir);
+    const args = ["--slug", "s", "--route", "/impl.html", "--app-base", server.origin];
+
+    await compare(dir, [...args, "--selector", "#root"]);
+    const reportPath = path.join(dir, ".design-match", "s", "report.md");
+    expect(await fs.readFile(reportPath, "utf8")).toContain("**Výsledek:**");
+
+    const failure = await compare(dir, [...args, "--selector", "#nothing-matches-this"]);
+
+    expect(failure.code).toBe(3);
+    const stale = await fs.readFile(reportPath, "utf8");
+    expect(stale).toContain("NEPLATNÉ");
+    // The retraction adds a caveat; it must not fabricate a new verdict, and it
+    // must not destroy the record of the round that really did run.
+    expect(stale).toContain("**Výsledek:**");
+  });
+
+  it("does not stack a second retraction onto an already-superseded report", async () => {
+    const dir = await makeWorkspace({ "design.html": page(CARD), "impl.html": page(CARD) });
+    await measure(dir, "design.html", "s");
+    const server = await startCountingServer(dir);
+    const args = ["--slug", "s", "--route", "/impl.html", "--app-base", server.origin];
+
+    await compare(dir, [...args, "--selector", "#root"]);
+    await compare(dir, [...args, "--selector", "#nothing-matches-this"]);
+    await compare(dir, [...args, "--selector", "#nothing-matches-this"]);
+
+    const stale = await fs.readFile(path.join(dir, ".design-match", "s", "report.md"), "utf8");
+    expect(stale.match(/NEPLATNÉ/g)).toHaveLength(1);
   });
 });

@@ -17,6 +17,7 @@ import {
   assertServableRoot,
   gotoSettled,
   resolveScene,
+  shootElement,
   shootScene,
   staticUrl,
   withStaticServer,
@@ -93,6 +94,13 @@ export function parseArgs(argv) {
       // which is where D4, D5 and D7 are actually observable.
       flags.appBase = takeFlagValue(rest, i, "--app-base");
       i += 1;
+    } else if (arg === "--storybook-base") {
+      // Fix round 1, M7: `--app-base` made the route scene testable at the
+      // process boundary and left the story scene with no counterpart, so D5's
+      // headline decision — a story with no --selector mounting at
+      // #storybook-root — had no end-to-end test at all. Symmetric plumbing.
+      flags.storybookBase = takeFlagValue(rest, i, "--storybook-base");
+      i += 1;
     } else {
       positional.push(arg);
     }
@@ -116,6 +124,7 @@ export function parseArgs(argv) {
     story: flags.story,
     route: flags.route,
     appBase: flags.appBase,
+    storybookBase: flags.storybookBase,
     selector: flags.selector,
     masks: flags.masks,
     strictWrappers: flags.strictWrappers,
@@ -141,23 +150,39 @@ export function parseArgs(argv) {
  * The inconsistency worth removing was never that the pngs survive; it is that
  * the messages did not admit they were there, so they read as debris. Every
  * refusal that happens after something was rendered now names the file.
+ *
+ * Fix round 1 adds the two clauses the rule was missing, both of them the same
+ * principle pointed the other way:
+ *
+ *   …and it names only files it actually wrote, never a count of files it might
+ *   have written — and it never leaves a conclusion standing that it has just
+ *   contradicted (see `markStaleReport`).
+ *
+ * `cropFitsPage` (task 17) made "one crop per candidate" false, so a message
+ * built from `Math.min(candidateCount, 5)` claimed evidence that does not exist
+ * — on `ZIBBY Redesign Canvas` it named five crops two lines below an inventory
+ * saying all five had no preview. Naming absent evidence and leaving present
+ * evidence unnamed are the same defect.
  */
-function artifactHint(artifactDir, files) {
-  if (!artifactDir) return "";
-  return ` Soubory z tohoto běhu zůstaly na disku: ${files.map((f) => `${path.join(artifactDir, f)}`).join(", ")}.`;
+function artifactHint(files) {
+  if (files.length === 0) return "";
+  return ` Soubory z tohoto běhu zůstaly na disku: ${files.join(", ")}.`;
 }
 
-/** 1-based `--region` → 0-based index, validated against the actual candidate count. */
-export function resolveRegionIndex(region, candidateCount, artifactDir) {
+/**
+ * 1-based `--region` → 0-based index, validated against the actual candidate
+ * count. `crops` is `cropRegions`' return value — one entry per candidate, the
+ * written path or `null` — so this names the previews by fact rather than by
+ * arithmetic, and the crop limit stops being duplicated here (M2).
+ */
+export function resolveRegionIndex(region, candidateCount, crops = []) {
   if (!(region >= 1 && region <= candidateCount)) {
-    const cropCount = Math.min(candidateCount, 5);
+    const written = crops.filter((crop) => crop !== null && crop !== undefined);
     throw new Error(
       `design-match: region ${region} neexistuje — platný rozsah je 1–${candidateCount}.` +
-        artifactHint(
-          artifactDir,
-          Array.from({ length: cropCount }, (_unused, index) => `r${index + 1}.png`),
-        ) +
-        (artifactDir ? " Vyber podle nich a spusť measure znovu s --region <n>." : ""),
+        (written.length > 0
+          ? artifactHint(written) + " Vyber podle nich a spusť measure znovu s --region <n>."
+          : " Žádný náhled se z tohoto běhu nezachoval, takže vybírej podle selectorů a rozměrů v inventuře výše a spusť measure znovu s --region <n>."),
     );
   }
   return region - 1;
@@ -411,7 +436,7 @@ function carriesContent(raw) {
   return raw.children.some(carriesContent);
 }
 
-export function assertRegionRendered(raw, selector, artifactDir) {
+export function assertRegionRendered(raw, selector, artifactDir, cropFile = null) {
   if (carriesContent(raw)) return;
   throw new Error(
     `design-match: region "${selector}" nic neobsahuje — v celém podstromu není text ani žádný obsahový prvek, takže spec by popisoval prázdno. ` +
@@ -420,7 +445,16 @@ export function assertRegionRendered(raw, selector, artifactDir) {
       // D8: the run has already photographed exactly what the message is asking
       // the operator to go and look at. Naming the file is what makes the
       // leftover png evidence rather than debris.
-      artifactHint(artifactDir, ["design.png", "r1.png"]),
+      //
+      // Fix round 1, I2: `design.png` is always written before this guard, so
+      // naming it is a fact. `r1.png` was hardcoded — wrong twice over, since
+      // `cropFitsPage` may have skipped it and since region 1 is not the region
+      // being refused. The CHOSEN region's crop is the relevant evidence, and it
+      // is named only when it exists.
+      artifactHint([
+        ...(artifactDir ? [path.join(artifactDir, "design.png")] : []),
+        ...(cropFile ? [cropFile] : []),
+      ]),
   );
 }
 
@@ -504,6 +538,7 @@ export function buildCompareOutcome({
   history,
   fontPreflight,
   strictWrappers = false,
+  settled,
 }) {
   // A font mismatch makes every pixel delta a lie — the numbers move but the
   // cause is not in the code — so it overrides whatever `evaluateRound` would
@@ -527,6 +562,10 @@ export function buildCompareOutcome({
     percent: effectiveResult.pixels ? effectiveResult.pixels.percent : null,
     skeletonPass: effectiveResult.skeleton.pass,
     reason: roundVerdict.reason,
+    // Fix round 1, I3. Spread conditionally: absent is a THIRD state, meaning
+    // "this round predates the flag", and a round replayed from an older
+    // rounds.json must not be rendered as though it had been observed to settle.
+    ...(settled === undefined ? {} : { settled }),
     ...(effectiveResult.pixels
       ? { appImage: effectiveResult.appImage, maskImage: effectiveResult.pixels.diffBuffer }
       : {}),
@@ -550,6 +589,10 @@ export function buildCompareOutcome({
     // is the genuine "compared, no deltas" result; the two are not the same
     // fact and must not collapse into the same payload value.
     values: result.values,
+    // The design was measured once, rounds ago, by a different command — so its
+    // own settle can only reach report.md through spec.json. `undefined` for a
+    // spec measured before the flag existed, which renders as neither fact.
+    designSettled: spec.settled,
     tokenMappings: spec.tokenMappings ?? [],
     componentDecisions: [],
     // values.md needs this to say which nodes the run never measured: with
@@ -679,28 +722,28 @@ async function runMeasure(cmd) {
       // The same settle `compare` uses on the implementation — one function, so
       // the two sides of a comparison can never drift apart on how long they
       // waited or what they waited for.
-      await gotoSettled(page, url);
+      const { settled } = await gotoSettled(page, url);
       const ranked = rankCandidates(await collectRegions(page), cmd.description);
       await fs.mkdir(dir, { recursive: true });
       const crops = await cropRegions(page, ranked, dir);
       console.log(formatInventory(ranked, 5, crops));
 
-      const regionIndex = resolveRegionIndex(cmd.region, ranked.length, dir);
+      const regionIndex = resolveRegionIndex(cmd.region, ranked.length, crops);
       const chosen = ranked[regionIndex];
       console.log(
         `Vybrán region [${cmd.region}]: ${chosen.selector} — pokud je špatně, spusť znovu s --region <n>.`,
       );
 
-      // design.png is written here and nowhere else — `compare` reads it every round.
-      await page
-        .locator(chosen.selector)
-        .first()
-        .screenshot({ path: path.join(dir, "design.png") });
+      // design.png is written here and nowhere else — `compare` reads it every
+      // round. Through the same `shootElement` the implementation goes through,
+      // so neither side can be captured under settings the other wasn't (I4).
+      await shootElement(page.locator(chosen.selector).first(), path.join(dir, "design.png"));
       const raw = await extractRaw(page, chosen.selector);
       // Before anything is written: a region with neither structure nor
       // content is a failed measurement, not a result.
-      assertRegionRendered(raw, chosen.selector, dir);
+      assertRegionRendered(raw, chosen.selector, dir, crops[regionIndex] ?? null);
       return {
+        settled,
         selector: chosen.selector,
         // One extraction, one tree: the skeleton carries the values, so there is
         // no separate `spec.values` to fall out of step with it.
@@ -761,7 +804,7 @@ async function runCompare(cmd) {
     // `measure` used on the design. `shootScene` no longer re-navigates (D7), so
     // the skeleton extracted below and the screenshot taken further down are the
     // same render of the same page.
-    await gotoSettled(page, scene.url);
+    const { settled } = await gotoSettled(page, scene.url);
     const appSkeleton = normalizeSkeleton(await extractRaw(page, scene.selector), {
       strictWrappers: cmd.strictWrappers,
     });
@@ -772,7 +815,7 @@ async function runCompare(cmd) {
     // does not: it forwards the real `values` array) must carry its own reason
     // rather than reuse this sentinel, or values.md will confidently name the
     // wrong cause.
-    if (!skeleton.pass) return { skeleton, values: null, pixels: null };
+    if (!skeleton.pass) return { settled, skeleton, values: null, pixels: null };
 
     // Same two trees the gate just compared — no second extraction, so no
     // second address space to disagree with it.
@@ -782,11 +825,12 @@ async function runCompare(cmd) {
     // but the cause is not in the code — so the pixel comparison is skipped
     // entirely rather than measuring a difference whose cause is wrong.
     const preflight = checkFontPreflight(flattenValues(spec.skeleton), flattenValues(appSkeleton));
-    if (!preflight.ok) return { skeleton, values, pixels: null, fontPreflight: preflight };
+    if (!preflight.ok) return { settled, skeleton, values, pixels: null, fontPreflight: preflight };
 
     const appImage = await shootScene(page, scene, path.join(dir, "app.png"));
     const designPng = await fs.readFile(path.join(dir, "design.png"));
     return {
+      settled,
       skeleton,
       values,
       pixels: diffPngs(designPng, appImage),
@@ -803,6 +847,7 @@ async function runCompare(cmd) {
     history,
     fontPreflight: result.fontPreflight,
     strictWrappers: cmd.strictWrappers,
+    settled: result.settled,
   });
 
   await fs.writeFile(path.join(dir, ROUNDS_FILE), JSON.stringify(fullHistory, null, 2), "utf8");
@@ -823,6 +868,44 @@ function logFailure(error) {
   }
 }
 
+/**
+ * Fix round 1, M3, and the artifact rule's second new clause: design-match never
+ * leaves a conclusion standing that it has just contradicted.
+ *
+ * D8 covered which files a failing run may WRITE, and said nothing about the
+ * ones already on disk. SKILL.md tells the operator to read `report.md` first,
+ * always — the exact premise D4 was fixed on — so a refused round left the
+ * previous round's `POKRAČUJ` reading like the answer to the invocation that had
+ * just failed. The retraction is a caveat, not a verdict: the record of the
+ * round that really did run is preserved underneath it, and the marker is
+ * checked for first so repeated failures do not stack.
+ *
+ * Best-effort by construction. This runs while an error is already being
+ * reported, and a second failure here must not replace the first one on the
+ * operator's screen.
+ */
+const STALE_REPORT_MARKER = "> **NEPLATNÉ:**";
+
+export function markStaleReportText(report) {
+  if (report.startsWith(STALE_REPORT_MARKER)) return null;
+  return (
+    `${STALE_REPORT_MARKER} tenhle report popisuje starší kolo. Následující \`compare\` skončil chybou ` +
+    `(hláška je ve výstupu terminálu, ne tady), takže verdikt níž na aktuální stav neodpovídá — ` +
+    `oprav příčinu a spusť \`compare\` znovu.\n\n${report}`
+  );
+}
+
+async function markStaleReport(dir) {
+  const reportPath = path.join(dir, "report.md");
+  try {
+    const marked = markStaleReportText(await fs.readFile(reportPath, "utf8"));
+    if (marked !== null) await fs.writeFile(reportPath, marked, "utf8");
+  } catch {
+    // No previous report, or it cannot be rewritten. Nothing to retract, and
+    // nothing worth displacing the real error with.
+  }
+}
+
 async function main(argv) {
   let cmd;
   try {
@@ -837,6 +920,9 @@ async function main(argv) {
     await run(cmd);
   } catch (error) {
     logFailure(error);
+    // Only `compare` produces a verdict, so only `compare` can invalidate one.
+    // A failed `measure` says nothing about whether an earlier comparison held.
+    if (cmd.command === "compare") await markStaleReport(path.join(ARTIFACT_ROOT, cmd.slug));
     process.exitCode = selectExitCode({ status: "error" });
   }
 }

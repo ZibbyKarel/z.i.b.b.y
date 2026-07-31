@@ -125,6 +125,13 @@ describe("resolveScene", () => {
     const scene = resolveScene({ route: "roadmap", selector: "main" });
     expect(scene.url).toBe("http://localhost:3000/roadmap");
   });
+
+  // Fix round 1, M7: the route origin was overridable and the story origin was
+  // not, so only one of the two scene modes could be exercised end to end.
+  it("honours a storybook origin override, so a story scene is testable too", () => {
+    const scene = resolveScene({ story: "ds-card--default", storybookBase: "http://127.0.0.1:41" });
+    expect(scene.url).toBe("http://127.0.0.1:41/iframe.html?id=ds-card--default&viewMode=story");
+  });
 });
 
 /**

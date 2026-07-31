@@ -272,6 +272,95 @@ describe("renderReport", () => {
     expect(out).toContain(`${MAX_ROUNDS - 1}`);
   });
 
+  /*
+   * Fix round 1, I3. `gotoSettled` returns `{ settled }` and warns on stderr,
+   * and both call sites threw the flag away — so the only trace that a page had
+   * been photographed mid-load lived in an ephemeral console line. report.md is
+   * the artifact the driver and the operator actually read, and by this task's
+   * own headline finding EVERY `--route` compare against this repo's web app
+   * runs unsettled: a pixel percentage stated with no record that the page had
+   * not finished loading is exactly the confident-claim-it-cannot-back failure
+   * the whole branch exists to remove. Files are the source of truth.
+   */
+  it("marks the round whose page was still loading when it was photographed", () => {
+    const out = renderReport({
+      slug: "roadmap",
+      rounds: [{ percent: 4, skeletonPass: true, reason: "diff 4 %", settled: false }],
+      verdict: { stop: false, status: "continue", reason: "pokračuje" },
+      masks: [],
+    });
+    expect(out).toContain("neustálila");
+  });
+
+  it("says nothing about settling for a round that was settled", () => {
+    const out = renderReport({
+      slug: "roadmap",
+      rounds: [{ percent: 4, skeletonPass: true, reason: "diff 4 %", settled: true }],
+      verdict: { stop: false, status: "continue", reason: "pokračuje" },
+      masks: [],
+    });
+    expect(out).not.toContain("neustálila");
+  });
+
+  // A round replayed from a rounds.json written before the flag existed carries
+  // no `settled` at all. Unknown is not the same fact as settled, and it is not
+  // the same fact as unsettled either — so it claims neither.
+  it("claims nothing about a round that predates the flag", () => {
+    const out = renderReport({
+      slug: "roadmap",
+      rounds: [{ percent: 4, skeletonPass: true, reason: "diff 4 %" }],
+      verdict: { stop: false, status: "continue", reason: "pokračuje" },
+      masks: [],
+    });
+    expect(out).not.toContain("neustálila");
+  });
+
+  // The design side is measured once, rounds earlier, by a different command —
+  // so its own settle has to travel in spec.json and be surfaced here, or a
+  // report can state a pixel delta against a design.png nobody knows was shot
+  // mid-load.
+  it("says when design.png itself was shot on a page that never settled", () => {
+    const out = renderReport({
+      slug: "roadmap",
+      rounds: [{ percent: 4, skeletonPass: true, reason: "diff 4 %", settled: true }],
+      verdict: { stop: false, status: "continue", reason: "pokračuje" },
+      masks: [],
+      designSettled: false,
+    });
+    expect(out).toContain("design.png");
+    expect(out).toContain("neustálila");
+  });
+
+  it("says nothing about the design's settle when it settled, or when it is unknown", () => {
+    const base = {
+      slug: "roadmap",
+      rounds: [{ percent: 4, skeletonPass: true, reason: "diff 4 %", settled: true }],
+      verdict: { stop: false, status: "continue", reason: "pokračuje" },
+      masks: [],
+    };
+    expect(renderReport({ ...base, designSettled: true })).not.toContain("design.png");
+    expect(renderReport(base)).not.toContain("design.png");
+  });
+
+  /*
+   * Fix round 1, M8. History is replayed and appended, so a driver that keeps
+   * calling `compare` past the ceiling produces `rounds.length > MAX_ROUNDS` and
+   * the counter read "Kolo 6 z 5" — a sentence that describes nothing. The
+   * verdict is correctly PARK either way; only the counter was nonsense.
+   */
+  it("does not read 'Kolo 6 z 5' once the driver has run past the ceiling", () => {
+    const rounds = Array.from({ length: MAX_ROUNDS + 1 }, () => ({ percent: 8 }));
+    const out = renderReport({
+      slug: "roadmap",
+      rounds,
+      verdict: { stop: true, status: "continue", reason: "strop kol vyčerpán" },
+      masks: [],
+    });
+    expect(out).not.toContain(`Kolo ${MAX_ROUNDS + 1} z ${MAX_ROUNDS}`);
+    expect(out).toContain(`${MAX_ROUNDS + 1}`);
+    expect(out).toContain(`${MAX_ROUNDS}`);
+  });
+
   it("tells a parked driver to stop calling compare, and a done one that it is finished", () => {
     const parked = renderReport({
       slug: "roadmap",

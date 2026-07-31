@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <title>animovaná karta</title>
+    <style>
+      /*
+       * Fix round 1, I4: the same trap as `animated.html`, but shaped so it can
+       * go through `measure` rather than only through `shootScene`. `measure`
+       * refuses a region that carries no content, so this one has real text —
+       * and the moving stripes sit BEHIND everything (fixed, z-index -1) with
+       * every element above them transparent, so whichever region the inventory
+       * ranks first, its screenshot still changes every frame. That is what
+       * makes the missing `animations: "disabled"` on design.png observable at
+       * all: a plain "did the box move" check would see nothing.
+       */
+      body {
+        margin: 0;
+        background: #0b0e13;
+      }
+      .stripes {
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        background: repeating-linear-gradient(90deg, #ff2d55 0 23px, #2d7dff 23px 46px);
+        animation: slide 5s linear infinite;
+      }
+      @keyframes slide {
+        from {
+          transform: translateX(0);
+        }
+        to {
+          transform: translateX(-300px);
+        }
+      }
+      #root {
+        width: 320px;
+        height: 180px;
+        padding: 16px;
+        font-family: Geist, Arial, sans-serif;
+        color: #ffffff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stripes"></div>
+    <div id="root"><h2>karta</h2></div>
+  </body>
+</html>

@@ -120,7 +120,38 @@ export function renderComponents(decisions) {
   return lines.join("\n");
 }
 
-export function renderReport({ slug, rounds, verdict, masks, siblingFiles = [] }) {
+/**
+ * Fix round 1, I3. `gotoSettled` bounds the `networkidle` wait and warns on
+ * stderr when it expires — but stderr is gone the moment the terminal scrolls,
+ * and report.md is what the driver and the operator actually read. A page
+ * photographed mid-load is not a reason to refuse (D7 is the whole argument for
+ * that), but it IS a caveat on every number in this file, so it has to be in it.
+ *
+ * `undefined` is a third state and renders as neither: a round replayed from a
+ * rounds.json written before the flag existed, or a spec.json from before it was
+ * stamped, knows nothing about its settle. Unknown must not be laundered into
+ * "settled" — that is the same collapse `values: null` vs `[]` exists to prevent.
+ */
+function settleCaveat(rounds, designSettled) {
+  const unsettledRounds = rounds
+    .map((round, index) => (round.settled === false ? index + 1 : null))
+    .filter((index) => index !== null);
+  if (unsettledRounds.length === 0 && designSettled !== false) return [];
+  const parts = [];
+  if (designSettled === false) {
+    parts.push(
+      "`design.png` byl pořízen na stránce, která se neustálila (networkidle) — měřený design je stav v tu chvíli vykreslený. Přeměř `measure`, pokud se mockup dokresluje.",
+    );
+  }
+  if (unsettledRounds.length > 0) {
+    parts.push(
+      `implementace se neustálila (networkidle) v ${unsettledRounds.length === 1 ? "kole" : "kolech"} ${unsettledRounds.join(", ")} — snímek je z rozpracovaného načítání, takže procenta níž jsou orientační.`,
+    );
+  }
+  return ["> **Pozor na ustálení stránky:** " + parts.join(" Dále: "), ""];
+}
+
+export function renderReport({ slug, rounds, verdict, masks, siblingFiles = [], designSettled }) {
   // D4 (task 15): this used to be a two-state ternary — done or PARK — with no
   // `continue` branch at all, so the normal "keep going" round wrote
   // `Výsledek: PARK` while the process exited 1 and the console said POKRAČUJ.
@@ -144,8 +175,14 @@ export function renderReport({ slug, rounds, verdict, masks, siblingFiles = [] }
     // ceiling is not a refusal to run the last round, and a driver sees at most
     // MAX_ROUNDS - 1 POKRAČUJ rounds. Verified against loop.mjs, not copied from
     // an earlier description of it, which was wrong.
-    `Kolo ${rounds.length} z ${MAX_ROUNDS}. ${outcome.nextStep}`,
+    // Fix round 1, M8: history is replayed and appended, so a driver that keeps
+    // calling `compare` past the ceiling produced "Kolo 6 z 5" — a sentence that
+    // describes nothing. Past the ceiling the ceiling is the fact worth stating.
+    rounds.length <= MAX_ROUNDS
+      ? `Kolo ${rounds.length} z ${MAX_ROUNDS}. ${outcome.nextStep}`
+      : `Kolo ${rounds.length}, strop ${MAX_ROUNDS} kol už je překročen. ${outcome.nextStep}`,
     "",
+    ...settleCaveat(rounds, designSettled),
     ...(classifyVerdict(verdict) === "continue"
       ? [
           `Kolo ${MAX_ROUNDS} ještě proběhne celé a zapíše artefakty, teprve pak se běh zaparkuje — POKRAČUJ tedy může přijít nejvýš v ${MAX_ROUNDS - 1} kolech.`,
