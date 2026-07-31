@@ -140,7 +140,11 @@ export async function extractValues(page, selector, props = VALUE_PROPS, depth =
       const roleOf = (el) => {
         const byTag = ROLE_BY_TAG[el.tagName.toLowerCase()];
         if (byTag) return byTag;
-        if (el.getAttribute("role")) return el.getAttribute("role");
+        // `role` and `data-role` are both an author's explicit declaration, unlike
+        // a class name — kept in agreement with normalize.mjs's inferRole so
+        // skeleton paths and value paths never disagree about a node's role.
+        const declared = el.getAttribute("role") || el.getAttribute("data-role");
+        if (declared) return declared;
         const hint = [...el.classList].join(" ").toLowerCase();
         if (/\brow\b/.test(hint)) return "row";
         if (/\bcol(umn)?\b/.test(hint)) return "column";

@@ -1,14 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { compareSkeletons } from "./compare-skeleton.mjs";
 
-const leaf = (over = {}) => ({
-  role: "text",
-  tag: "span",
-  layout: { mode: "block", direction: "row", columns: 0, wrap: "nowrap", align: "normal" },
-  rel: { w: 1, h: 1, x: 0, y: 0 },
-  children: [],
-  ...over,
-});
+// matchRole defaults to whatever role this call sets, so every pre-existing test
+// below — written before matchRole existed — keeps comparing "role" values as it
+// always did. Tests that care about the role/matchRole split override matchRole
+// explicitly.
+const leaf = (over = {}) => {
+  const role = over.role ?? "text";
+  return {
+    role,
+    matchRole: role,
+    tag: "span",
+    layout: { mode: "block", direction: "row", columns: 0, wrap: "nowrap", align: "normal" },
+    rel: { w: 1, h: 1, x: 0, y: 0 },
+    children: [],
+    ...over,
+  };
+};
 
 describe("compareSkeletons", () => {
   it("passes for identical trees", () => {
@@ -117,5 +125,91 @@ describe("compareSkeletons", () => {
     expect(verdict.pass).toBe(false);
     expect(verdict.findings.some((f) => f.kind === "role" && f.path === "form")).toBe(true);
     expect(verdict.findings.some((f) => f.kind === "child-count")).toBe(true);
+  });
+
+  describe("matchRole vs role", () => {
+    it("passes a root whose readable role differs only by naming convention, when matchRole agrees", () => {
+      // e.g. a design's <div class="card"> rebuilt as <div class="panel"> — both
+      // are plain divs with no tag mapping and no explicit role, so matchRole
+      // collapses both to "node" even though role diverges to "card"/"group".
+      const design = leaf({ role: "card", matchRole: "node" });
+      const app = leaf({ role: "panel", matchRole: "node" });
+      expect(compareSkeletons(design, app)).toEqual({ pass: true, findings: [] });
+    });
+
+    it("flags a root role mismatch using matchRole in expected/actual/message, not the readable role", () => {
+      const design = leaf({ role: "form", matchRole: "form" });
+      const app = leaf({ role: "form-shaped-div", matchRole: "node" });
+      const verdict = compareSkeletons(design, app);
+      expect(verdict.pass).toBe(false);
+      expect(verdict.findings).toHaveLength(1);
+      expect(verdict.findings[0]).toMatchObject({
+        path: "form", // childPath/root path still uses the readable role
+        kind: "role",
+        expected: "form",
+        actual: "node",
+        message: "role kořene: form vs node",
+      });
+    });
+
+    it("does not flag child-order when children's roles differ only by class-name convention", () => {
+      const design = leaf({
+        role: "form",
+        matchRole: "form",
+        children: [
+          leaf({ role: "card", matchRole: "node" }),
+          leaf({ role: "row", matchRole: "node" }),
+        ],
+      });
+      const app = leaf({
+        role: "form",
+        matchRole: "form",
+        children: [
+          leaf({ role: "panel", matchRole: "node" }),
+          leaf({ role: "group", matchRole: "node" }),
+        ],
+      });
+      expect(compareSkeletons(design, app)).toEqual({ pass: true, findings: [] });
+    });
+
+    it("still catches a design <label>/<input> pair rebuilt in the opposite order — both tags carry a real matchRole", () => {
+      const design = leaf({
+        role: "form",
+        matchRole: "form",
+        children: [
+          leaf({ role: "label", matchRole: "label" }),
+          leaf({ role: "input", matchRole: "input" }),
+        ],
+      });
+      const app = leaf({
+        role: "form",
+        matchRole: "form",
+        children: [
+          leaf({ role: "input", matchRole: "input" }),
+          leaf({ role: "label", matchRole: "label" }),
+        ],
+      });
+      const verdict = compareSkeletons(design, app);
+      expect(verdict.pass).toBe(false);
+      const finding = verdict.findings.find((f) => f.kind === "child-order");
+      expect(finding).toMatchObject({ expected: "label,input", actual: "input,label" });
+    });
+
+    it("keeps childPath built from the readable role even when matchRole is the generic 'node' value", () => {
+      const design = leaf({
+        role: "card",
+        matchRole: "node",
+        children: [leaf({ role: "row", matchRole: "node", rel: { w: 0.48, h: 1, x: 0, y: 0 } })],
+      });
+      const app = leaf({
+        role: "card",
+        matchRole: "node",
+        children: [leaf({ role: "row", matchRole: "node", rel: { w: 1, h: 1, x: 0, y: 0 } })],
+      });
+      const verdict = compareSkeletons(design, app);
+      expect(verdict.findings.some((f) => f.kind === "size" && f.path === "card/row[0]")).toBe(
+        true,
+      );
+    });
   });
 });

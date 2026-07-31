@@ -54,6 +54,41 @@ describe("extractors against real Chromium", () => {
     expect(ordered.children.map((c) => c.tag)).toEqual(["input", "button", "label"]);
   });
 
+  it("derives roles from data-role the same way in extractValues' path-building roleOf as normalizeSkeleton does, so skeleton and value paths agree", async () => {
+    // Inline content, not a fixture file: basic/repeated/animated.html are frozen,
+    // and none of them exercises data-role. This pins Task 13's real finding —
+    // extract.mjs had its own role derivation that read `role` but never
+    // `data-role`, so a fixture declaring data-role got skeleton-layer role
+    // parity while its value-layer paths silently diverged.
+    // The inner div gets an explicit width so its box differs from its parent's —
+    // otherwise normalizeSkeleton's wrapper-collapsing would swallow it (it has
+    // exactly one child and would otherwise share its parent's exact box),
+    // which is a real behaviour of the tool but not what this test is pinning.
+    const html = `<!doctype html><html><body>
+      <div data-region="widget-test">
+        <div data-role="widget" style="width: 50px"><span data-role="leaf-node">Leaf</span></div>
+      </div>
+    </body></html>`;
+
+    const { skeletonRoles, valuePaths } = await withPage(async (page) => {
+      await page.setContent(html);
+      const raw = await extractRaw(page, '[data-region="widget-test"]');
+      const skeleton = normalizeSkeleton(raw);
+      const values = await extractValues(page, '[data-region="widget-test"]');
+      return {
+        skeletonRoles: [
+          skeleton.role,
+          skeleton.children[0].role,
+          skeleton.children[0].children[0].role,
+        ],
+        valuePaths: Object.keys(values),
+      };
+    });
+
+    expect(skeletonRoles).toEqual(["group", "widget", "leaf-node"]);
+    expect(valuePaths).toEqual(["group", "group/widget[0]", "group/widget[0]/leaf-node[0]"]);
+  });
+
   it("collapses a real 2-level pass-through wrapper chain measured by real geometry, and strictWrappers preserves it", async () => {
     const raw = await withPage(async (page) => {
       await page.goto(fixture);

@@ -40,16 +40,40 @@ function columnCount(gridTemplateColumns) {
   return gridTemplateColumns.trim().split(/\s+/).length;
 }
 
+/**
+ * `role` and `data-role` are both an author's explicit, first-class declaration
+ * of what a node is — unlike a class name, which is a naming convention. Treat
+ * them alike, with `role` winning if a node somehow carries both.
+ */
+function declaredRole(raw) {
+  return raw.attrs.role || raw.attrs["data-role"] || null;
+}
+
 function inferRole(raw) {
   const byTag = ROLE_BY_TAG[raw.tag];
   if (byTag) return byTag;
-  if (raw.attrs.role) return raw.attrs.role;
-  const hint = [...raw.classes, raw.attrs["data-role"] ?? ""].join(" ").toLowerCase();
+  const declared = declaredRole(raw);
+  if (declared) return declared;
+  const hint = raw.classes.join(" ").toLowerCase();
   if (/\brow\b/.test(hint)) return "row";
   if (/\bcol(umn)?\b/.test(hint)) return "column";
   if (/\bcard\b/.test(hint)) return "card";
   if (raw.text && raw.children.length === 0) return "text";
   return "group";
+}
+
+/**
+ * The structural-comparison counterpart to `inferRole`. Only a tag or an
+ * explicit author declaration is a real semantic commitment — a class name is
+ * a naming convention, not structure, so it plays no part here. Anything left
+ * over collapses to the neutral `"node"`.
+ */
+function inferMatchRole(raw) {
+  const byTag = ROLE_BY_TAG[raw.tag];
+  if (byTag) return byTag;
+  const declared = declaredRole(raw);
+  if (declared) return declared;
+  return "node";
 }
 
 /** A wrapper is a node that neither lays anything out nor occupies its own area. */
@@ -89,6 +113,7 @@ function build(raw, parentBox, options) {
   const children = [...raw.children].sort((a, b) => a.layout.order - b.layout.order);
   return {
     role: inferRole(raw),
+    matchRole: inferMatchRole(raw),
     tag: raw.tag,
     layout: {
       mode: layoutMode(raw.layout),

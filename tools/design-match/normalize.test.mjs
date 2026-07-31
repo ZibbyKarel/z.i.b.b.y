@@ -151,4 +151,34 @@ describe("normalizeSkeleton", () => {
     );
     expect(root.children.map((c) => c.tag)).toEqual(["a", "b"]);
   });
+
+  describe("matchRole", () => {
+    it("keeps class-name hints out of matchRole, falling back to the neutral 'node'", () => {
+      const row = normalizeSkeleton(node({ classes: ["flex-row"] }));
+      expect(row.role).toBe("row");
+      expect(row.matchRole).toBe("node");
+    });
+
+    it("agrees with role when the role comes from the tag", () => {
+      const form = normalizeSkeleton(node({ tag: "form" }));
+      expect(form.role).toBe("form");
+      expect(form.matchRole).toBe("form");
+    });
+
+    it("treats data-role as a first-class role source for both role and matchRole", () => {
+      const widget = normalizeSkeleton(node({ attrs: { "data-role": "widget" } }));
+      expect(widget.role).toBe("widget");
+      expect(widget.matchRole).toBe("widget");
+    });
+
+    it("assigns two class-name synonyms the same matchRole even though their readable role differs", () => {
+      const card = normalizeSkeleton(node({ classes: ["card"] }));
+      const panel = normalizeSkeleton(node({ classes: ["panel"] }));
+      expect(card.role).toBe("card");
+      expect(panel.role).toBe("group");
+      expect(card.role).not.toBe(panel.role);
+      expect(card.matchRole).toBe(panel.matchRole);
+      expect(card.matchRole).toBe("node");
+    });
+  });
 });

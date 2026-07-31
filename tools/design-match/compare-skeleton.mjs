@@ -44,8 +44,10 @@ function walk(design, app, path, tolerance, findings) {
     return; // pairing children is meaningless once the counts differ
   }
 
-  const designRoles = design.children.map((c) => c.role).join(",");
-  const appRoles = app.children.map((c) => c.role).join(",");
+  // matchRole, not role: a class name is a naming convention, not a structural
+  // commitment, so only tag- or author-declared roles decide the gate here.
+  const designRoles = design.children.map((c) => c.matchRole).join(",");
+  const appRoles = app.children.map((c) => c.matchRole).join(",");
   if (designRoles !== appRoles) {
     findings.push({
       path,
@@ -80,13 +82,14 @@ export function compareSkeletons(design, app, options = {}) {
   const tolerance = options.sizeTolerance ?? DEFAULT_SIZE_TOLERANCE;
   const findings = [];
 
-  if (design.role !== app.role) {
+  // Same matchRole-not-role rule as the child-order check below, for the root.
+  if (design.matchRole !== app.matchRole) {
     findings.push({
       path: design.role,
       kind: "role",
-      expected: design.role,
-      actual: app.role,
-      message: `role kořene: ${design.role} vs ${app.role}`,
+      expected: design.matchRole,
+      actual: app.matchRole,
+      message: `role kořene: ${design.matchRole} vs ${app.matchRole}`,
     });
   }
 
