@@ -204,6 +204,24 @@ export function renderReport({ slug, rounds, verdict, masks, siblingFiles = [], 
       ),
     );
   });
+  // D12 (task 19). The preflights used to say nothing when they passed, so
+  // silence from that layer covered three different facts — verified and equal,
+  // verified nothing, and never reached. Masked regions are already always
+  // listed for exactly this reason ("a masked region is unverified area — never
+  // mask silently"); an unrecorded check is the same kind of gap.
+  //
+  // A round with no `preflights` at all is a THIRD state — it was written before
+  // the field existed — and renders as neither, the same rule `settled` follows.
+  const preflightLines = rounds.flatMap((round, index) =>
+    Array.isArray(round.preflights)
+      ? round.preflights.map((preflight) =>
+          bullet(`kolo ${index + 1} — ${preflight.name}: ${preflight.message}`),
+        )
+      : [],
+  );
+  if (preflightLines.length > 0) {
+    lines.push("", "## Preflighty", "", ...preflightLines);
+  }
   if (masks.length > 0) {
     lines.push("", "## Maskované regiony (nezkontrolovaná plocha)", "");
     for (const mask of masks) lines.push(bullet(`\`${mask}\``));

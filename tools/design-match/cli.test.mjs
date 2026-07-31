@@ -13,6 +13,7 @@ import {
   collectFontStacks,
   combineVerdict,
   describeOutcome,
+  describePreflights,
   flattenValues,
   historyFromRaw,
   isDeliberateError,
@@ -760,6 +761,110 @@ describe("buildCompareOutcome", () => {
     expect(verdict.status).toBe("parked");
     expect(verdict.reason).toBe(message);
     expect(selectExitCode(verdict)).toBe(2);
+  });
+
+  /*
+   * D10 (task 19). A size mismatch used to be an exit-3 crash out of `diffPngs`,
+   * thrown before any artifact was written. It is the same kind of fact as a font
+   * mismatch — the pixel comparison is not merely misleading, it is undefined —
+   * so it takes the same route: parked, pixels suppressed, the preflight's message
+   * as the round's whole reason, and the artifacts written.
+   */
+  it("a failing size preflight parks the run the same way a font mismatch does, and keeps the round", () => {
+    const result = {
+      skeleton: skeletonPass,
+      values: [{ path: "card", prop: "width", expected: "400px", actual: "500px", message: "x" }],
+      pixels: null,
+      appImage: Buffer.from("app"),
+    };
+    const message = "snímky mají různé rozměry — design 800×600 px, implementace 1000×600 px.";
+    const { payload, verdict } = buildCompareOutcome({
+      result,
+      spec: { selector: "#x" },
+      slug: "epic-card",
+      masks: [],
+      history: [],
+      fontPreflight: { ok: true, message: "font stack shodný v první rodině: Geist" },
+      sizePreflight: { ok: false, message },
+    });
+
+    const currentRound = payload.rounds.at(-1);
+    expect(currentRound.percent).toBeNull();
+    expect(currentRound.reason).toBe(message);
+    expect(verdict.status).toBe("parked");
+    expect(selectExitCode(verdict)).toBe(2);
+    // The value layer ran and its result is real — a size mismatch must not be
+    // laundered into "not measured", which is what a skeleton-gate-level answer
+    // would have done.
+    expect(payload.values).toHaveLength(1);
+  });
+
+  // A font mismatch stops the run before the screenshots are even taken, so it is
+  // the one that must win when a caller somehow has both.
+  it("reports the font mismatch first when both preflights failed", () => {
+    const { verdict } = buildCompareOutcome({
+      result: { skeleton: skeletonPass, values: [], pixels: null },
+      spec: { selector: "#x" },
+      slug: "epic-card",
+      masks: [],
+      history: [],
+      fontPreflight: { ok: false, message: "font stack se liší" },
+      sizePreflight: { ok: false, message: "snímky mají různé rozměry" },
+    });
+    expect(verdict.reason).toBe("font stack se liší");
+  });
+});
+
+/**
+ * D12 (task 19). Both `ok: true` branches of the font preflight computed a
+ * message that nothing ever read — so a clean `compare` said nothing at all about
+ * fonts, and silence covered three different facts: verified and equal, verified
+ * nothing, and never ran. That is this branch's "no differences vs not measured"
+ * collision in miniature, and deleting the messages would have collapsed it
+ * further rather than resolving it.
+ *
+ * They are surfaced in the round record (and from there in report.md), never on
+ * stdout — a clean run's console stays one line.
+ */
+describe("describePreflights", () => {
+  const skeletonPass = { pass: true, findings: [] };
+  const skeletonFail = { pass: false, findings: [{ path: "form", message: "x" }] };
+
+  it("carries each preflight's own message, including the passing ones", () => {
+    const entries = describePreflights({
+      skeleton: skeletonPass,
+      fontPreflight: { ok: true, message: "font stack shodný v první rodině: Geist" },
+      sizePreflight: { ok: true, message: "rozměry snímků sedí: 800×600 px" },
+    });
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toMatchObject({ ok: true });
+    expect(entries[0].message).toContain("Geist");
+    expect(entries[1].message).toContain("800×600");
+  });
+
+  // The distinction the whole branch exists to keep: a preflight that never ran
+  // must not read the same as one that ran and agreed.
+  it("says a preflight did not run rather than leaving it silent", () => {
+    const entries = describePreflights({ skeleton: skeletonFail });
+    expect(entries).toHaveLength(2);
+    for (const entry of entries) {
+      expect(entry.ok).toBeNull();
+      expect(entry.message).toMatch(/neproběhl/);
+      expect(entry.message).toMatch(/skeleton/i);
+    }
+  });
+
+  // A font mismatch short-circuits before the screenshots exist, so the size
+  // preflight has a different reason for not having run — and naming the gate
+  // there would be a confident, wrong cause.
+  it("names the real reason the size preflight was skipped after a font mismatch", () => {
+    const entries = describePreflights({
+      skeleton: skeletonPass,
+      fontPreflight: { ok: false, message: "font stack se liší" },
+    });
+    expect(entries[1].ok).toBeNull();
+    expect(entries[1].message).not.toMatch(/skeleton/i);
+    expect(entries[1].message).toMatch(/písm|font/i);
   });
 });
 

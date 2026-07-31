@@ -98,3 +98,53 @@ export function fontPreflight(designFonts, appFonts) {
     message: `font stack se liší v první vykreslované rodině — design: ${show(designPrimary)}, implementace: ${show(appPrimary)} (celé stacky — design: [${design.join(", ")}], implementace: [${app.join(", ")}]). Sjednoť je dřív, než se začne porovnávat.`,
   };
 }
+
+/**
+ * D10 (task 19). Two screenshots of different size used to reach `diffPngs`,
+ * which throws — inside `runCompare`'s browser block, before anything is written.
+ * The message was already a clean `design-match:` line, so this was never a
+ * prefix-escape defect; what was wrong is that a run which got all the way to the
+ * pixel layer left NOTHING behind, and `design.png` and `app.png` are not merely
+ * evidence here — they are the two images whose sizes differ, i.e. the entire
+ * content of the finding.
+ *
+ * WHY A PREFLIGHT AND NOT THE SKELETON GATE, which is the other candidate owner:
+ *
+ * 1. The gate cannot see it. It runs on the DOM, rounds before either image
+ *    exists, and its whole currency is geometry RELATIVE to a parent —
+ *    `relativeTo` hands the root `{w:1,h:1,x:0,y:0}` by construction. Teaching it
+ *    an absolute size would mean stamping one into `spec.json` (a format change
+ *    that invalidates every measured spec on disk) and then comparing a DOM box
+ *    against what Playwright actually captured, which are not the same number:
+ *    device-pixel ratio, transforms and border-box rounding all sit between them.
+ *    The gate would be reasoning about a proxy for the fact instead of the fact.
+ * 2. A gate failure means `values: null` — "not measured". That would be false:
+ *    the values ARE measurable here, and they are where the actionable detail
+ *    lives.
+ * 3. The font preflight is the existing precedent for exactly this shape — a
+ *    difference that makes the pixel layer meaningless, reported with pixels
+ *    suppressed and no crash. A size mismatch is that, and more so: with
+ *    different canvases the comparison is not merely misleading, it is undefined.
+ *
+ * NOT A SECOND VOCABULARY FOR THE SAME FACT. `width` and `height` are in
+ * `VALUE_PROPS`, so a differently-sized root already surfaces as value deltas —
+ * in CSS pixels, on the node, in `values.md`. These are the captured images'
+ * dimensions, in device pixels, and they are the reason the pixel layer cannot
+ * run. The message states only that, and points at `values.md` for the per-node
+ * difference rather than restating it here in a different unit.
+ */
+export function sizePreflight(design, app) {
+  if (design.width === app.width && design.height === app.height) {
+    return {
+      ok: true,
+      message: `rozměry snímků sedí: ${design.width}×${design.height} px`,
+    };
+  }
+  return {
+    ok: false,
+    message:
+      `snímky mají různé rozměry — design ${design.width}×${design.height} px, implementace ${app.width}×${app.height} px (rozměry obrázků, tedy CSS px × DPR). ` +
+      `Nad různě velkými plátny není pixelový rozdíl definovaný, takže se pixelová vrstva přeskakuje — oba snímky ale zůstávají na disku a jsou tím nálezem. ` +
+      `Sjednoť velikost scény (jiný --selector, nebo uprav implementaci); konkrétní rozdíl v šířce a výšce pojmenovaný u uzlu najdeš ve values.md.`,
+  };
+}

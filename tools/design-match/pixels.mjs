@@ -49,9 +49,27 @@ function largestDifferingRegion(diff, width, height) {
   return best;
 }
 
+/**
+ * A png's dimensions, read from the buffer itself rather than derived from a DOM
+ * box — `sizePreflight` (preflight.mjs) compares what was actually captured, and
+ * device-pixel ratio, transforms and border-box rounding all sit between a
+ * `getBoundingClientRect` and the image Playwright produced. This module already
+ * owns png decoding, so the decoding stays in one place.
+ */
+export function pngSize(buffer) {
+  const { width, height } = PNG.sync.read(buffer);
+  return { width, height };
+}
+
 export function diffPngs(designBuf, appBuf, options = {}) {
   const design = PNG.sync.read(designBuf);
   const app = PNG.sync.read(appBuf);
+  // D10 (task 19): kept as a LAST-RESORT INVARIANT. A library function that
+  // diffs two buffers must still refuse mismatched ones rather than produce a
+  // number — but nothing in normal operation reaches it any more, because
+  // `runCompare` asks `sizePreflight` first and parks with both images on disk.
+  // If this ever fires again it means a caller skipped that check, and the stack
+  // is the diagnostic.
   if (design.width !== app.width || design.height !== app.height) {
     throw new Error(
       `design-match: rozměry se liší — design ${design.width}×${design.height}, app ${app.width}×${app.height}`,

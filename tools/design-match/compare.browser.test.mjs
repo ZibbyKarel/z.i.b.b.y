@@ -85,9 +85,9 @@ async function makeWorkspace(files) {
 }
 
 /** The design mockup and the two implementations differ in exactly one thing each. */
-const page = (body, fontStack = "Geist, Arial, sans-serif") =>
+const page = (body, fontStack = "Geist, Arial, sans-serif", size = "width:400px;height:300px") =>
   `<!doctype html><html lang="cs"><head><meta charset="utf-8" /></head><body style="margin:0">
-<div id="root" style="width:400px;height:300px;background:#101418;font-family:${fontStack}">${body}</div>
+<div id="root" style="${size};background:#101418;font-family:${fontStack}">${body}</div>
 </body></html>`;
 
 const CARD = `<h2 style="margin:0;color:#eaeaea">karta</h2>`;
@@ -362,6 +362,97 @@ describe("compare, end to end through the CLI", () => {
     // The retraction adds a caveat; it must not fabricate a new verdict, and it
     // must not destroy the record of the round that really did run.
     expect(stale).toContain("**Výsledek:**");
+  });
+
+  /*
+   * D10 (task 19). The skeleton gate CANNOT catch this: `relativeTo` returns
+   * `{w:1,h:1,x:0,y:0}` for the root by construction, so the root's absolute size
+   * is never compared and two structurally identical trees of different size pass
+   * the gate cleanly. The run then reached `diffPngs`, which threw INSIDE the
+   * browser block — before a single artifact was written — so the operator was
+   * told the two images differ in size and given neither image.
+   *
+   * The fixture differs in exactly the root's width, which is what makes the gate
+   * pass (every child's box is relative to its parent, and those ratios are
+   * unchanged) and the two screenshots differ (800×600 vs 1000×600 device px).
+   */
+  it("parks on mismatched screenshot sizes instead of crashing, and keeps both images", async () => {
+    const dir = await makeWorkspace({
+      "design.html": page(CARD),
+      "impl.html": page(CARD, "Geist, Arial, sans-serif", "width:500px;height:300px"),
+    });
+    await measure(dir, "design.html", "s");
+    const server = await startCountingServer(dir);
+
+    const result = await compare(dir, [
+      "--slug",
+      "s",
+      "--route",
+      "/impl.html",
+      "--app-base",
+      server.origin,
+      "--selector",
+      "#root",
+    ]);
+
+    // PARK, not CHYBA: an ordinary implementation difference, handed to the
+    // operator as one decision rather than as a tool failure.
+    expect(result.code).toBe(2);
+    expect(result.stdout).toContain("PARK");
+    expect(result.stderr).not.toContain("at ");
+    const artifactDir = path.join(dir, ".design-match", "s");
+    // The two images whose sizes differ ARE the finding, so they are the one
+    // thing that must survive.
+    await expect(fs.readFile(path.join(artifactDir, "design.png"))).resolves.toBeInstanceOf(Buffer);
+    await expect(fs.readFile(path.join(artifactDir, "app.png"))).resolves.toBeInstanceOf(Buffer);
+    const report = await fs.readFile(path.join(artifactDir, "report.md"), "utf8");
+    expect(report).toContain("800×600");
+    expect(report).toContain("1000×600");
+    // The gate really did pass — this is not a skeleton failure wearing a
+    // different label.
+    const skeleton = await fs.readFile(path.join(artifactDir, "skeleton.md"), "utf8");
+    expect(skeleton).not.toContain("SKELETON MISMATCH");
+    // …and the values really were measured, which is where the actionable
+    // difference (`width`) is named against a node.
+    const values = await fs.readFile(path.join(artifactDir, "values.md"), "utf8");
+    expect(values).not.toContain("Neměřeno");
+    expect(values).toContain("width");
+    await expect(fs.readFile(path.join(artifactDir, "round-1.json"), "utf8")).resolves.toContain(
+      "rozměry",
+    );
+  });
+
+  /*
+   * D12 (task 19). `preflight.mjs:93` built a message for the passing case that
+   * nothing ever read, so a clean round said nothing about fonts at all — and
+   * silence from that layer is indistinguishable from a round that never reached
+   * it. This is the round that DOES reach it: identical pages, so the gate passes
+   * and the preflight actually runs (a gate-failing fixture would assert on a path
+   * the run never walks).
+   */
+  it("records the passing font preflight in report.md rather than leaving it silent", async () => {
+    const dir = await makeWorkspace({ "design.html": page(CARD), "impl.html": page(CARD) });
+    await measure(dir, "design.html", "s");
+    const server = await startCountingServer(dir);
+
+    const result = await compare(dir, [
+      "--slug",
+      "s",
+      "--route",
+      "/impl.html",
+      "--app-base",
+      server.origin,
+      "--selector",
+      "#root",
+    ]);
+
+    const report = await fs.readFile(path.join(dir, ".design-match", "s", "report.md"), "utf8");
+    expect(report).toContain("## Preflighty");
+    expect(report).toContain("font stack shodný v první rodině");
+    expect(report).toContain("rozměry snímků sedí");
+    // Not on stdout: a clean run's console stays the one outcome line it has
+    // always been.
+    expect(result.stdout).not.toContain("font stack");
   });
 
   it("does not stack a second retraction onto an already-superseded report", async () => {

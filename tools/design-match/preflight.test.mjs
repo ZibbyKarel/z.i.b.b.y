@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { collectRemoteUrls, rewriteToCache } from "./cdn-cache.mjs";
-import { fontPreflight } from "./preflight.mjs";
+import { fontPreflight, sizePreflight } from "./preflight.mjs";
 
 const HTML = `
 <link href="https://fonts.googleapis.com/css2?family=Geist" rel="stylesheet" />
@@ -116,5 +116,47 @@ describe("fontPreflight", () => {
     expect(result.ok).toBe(false);
     expect(result.message).toContain("Geist");
     expect(result.message).toContain("Inter");
+  });
+});
+
+/*
+ * D10 (task 19). A size mismatch used to reach `diffPngs`, which threw inside the
+ * browser block before a single artifact was written — so a run that got all the
+ * way to the pixel layer left nothing behind, and the two images whose sizes
+ * differ (design.png, app.png) are the entire content of the finding.
+ *
+ * It is the font preflight's shape exactly: a difference that makes every pixel
+ * delta a lie, reported rather than crashed on, with pixels suppressed.
+ */
+describe("sizePreflight", () => {
+  it("passes on equal sizes and says what it verified rather than staying silent", () => {
+    const result = sizePreflight({ width: 800, height: 600 }, { width: 800, height: 600 });
+    expect(result.ok).toBe(true);
+    expect(result.message).toContain("800×600");
+  });
+
+  it("fails naming both sizes, so the message is the whole finding", () => {
+    const result = sizePreflight({ width: 800, height: 240 }, { width: 640, height: 54 });
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain("800×240");
+    expect(result.message).toContain("640×54");
+  });
+
+  // Only one axis differing is still a mismatch — pixelmatch needs both.
+  it("fails when only one axis differs", () => {
+    expect(sizePreflight({ width: 800, height: 600 }, { width: 800, height: 601 }).ok).toBe(false);
+    expect(sizePreflight({ width: 800, height: 600 }, { width: 801, height: 600 }).ok).toBe(false);
+  });
+
+  /*
+   * The fact is reported ONCE, in one vocabulary. `width`/`height` are in
+   * `VALUE_PROPS`, so a differently-sized root already produces value deltas —
+   * but those are CSS pixels of the node's own box, and these are the captured
+   * images' device pixels. Rather than restate the same difference in a second
+   * unit, the message points at the layer that can name the node.
+   */
+  it("sends the operator to the value layer instead of restating the difference in CSS pixels", () => {
+    const result = sizePreflight({ width: 800, height: 240 }, { width: 640, height: 54 });
+    expect(result.message).toContain("values.md");
   });
 });

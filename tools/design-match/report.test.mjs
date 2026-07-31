@@ -224,6 +224,53 @@ describe("renderReport", () => {
     expect(out).toContain("`form/input[2]`");
   });
 
+  /*
+   * D12 (task 19). Both passing branches of the font preflight computed a message
+   * nothing read, so a clean `compare` gave the operator no way to know the check
+   * had run at all — the same silence a red gate produces, meaning something
+   * completely different. The section is the record that the layer ran, per round,
+   * in the layer's own words.
+   */
+  it("records what each preflight said, so a passing check is not silence", () => {
+    const out = renderReport({
+      slug: "roadmap",
+      rounds: [
+        {
+          percent: 0.3,
+          skeletonPass: true,
+          reason: "diff 0.3 %",
+          preflights: [
+            { name: "písma", ok: true, message: "font stack shodný v první rodině: Geist" },
+            { name: "rozměry snímků", ok: true, message: "rozměry snímků sedí: 800×600 px" },
+          ],
+        },
+      ],
+      verdict: { stop: false, status: "done", reason: "diff 0.3 %" },
+      masks: [],
+    });
+    expect(out).toContain("## Preflighty");
+    expect(out).toContain("font stack shodný v první rodině: Geist");
+    expect(out).toContain("rozměry snímků sedí: 800×600 px");
+    // Attributed to its round, because report.md renders the whole accumulated
+    // history and an unattributed line would read as a claim about all of it.
+    expect(out).toContain("kolo 1");
+  });
+
+  /*
+   * `preflights` is absent on every round written before this field existed, and
+   * `rounds.json` is replayed. Absent is a THIRD state — not "they passed" and not
+   * "they did not run" — so it renders as neither, the same rule `settled` follows.
+   */
+  it("says nothing about preflights for a round that predates the field", () => {
+    const out = renderReport({
+      slug: "roadmap",
+      rounds: [{ percent: 8, skeletonPass: true, reason: "diff 8 %" }],
+      verdict: { stop: false, status: "continue", reason: "pokračuje" },
+      masks: [],
+    });
+    expect(out).not.toContain("Preflighty");
+  });
+
   // D4 (task 15): a round that exits 1 — the normal "keep going" case — used to
   // write `Výsledek: PARK` into the one file SKILL.md tells the operator to read
   // first. The rendered verdict contradicted the exit code the driving agent was

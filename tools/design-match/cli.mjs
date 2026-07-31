@@ -10,8 +10,8 @@ import { extractRaw } from "./extract.mjs";
 import { collectRegions, cropRegions, formatInventory, rankCandidates } from "./inventory.mjs";
 import { decideNext, describeOutcome, evaluateRound, selectExitCode } from "./loop.mjs";
 import { childPath, normalizeSkeleton, rootPath } from "./normalize.mjs";
-import { diffPngs } from "./pixels.mjs";
-import { fontPreflight } from "./preflight.mjs";
+import { diffPngs, pngSize } from "./pixels.mjs";
+import { fontPreflight, sizePreflight } from "./preflight.mjs";
 import { writeArtifacts } from "./report.mjs";
 import {
   assertServableRoot,
@@ -354,6 +354,57 @@ export function checkFontPreflight(designValues, appValues) {
 }
 
 /**
+ * The `(design.png, app.png) → preflight result` step, beside its font
+ * counterpart above and pulled out of `runCompare` for the same reason: that
+ * function is browser-driven and untestable here.
+ */
+export function checkSizePreflight(designPng, appPng) {
+  return sizePreflight(pngSize(designPng), pngSize(appPng));
+}
+
+/**
+ * The two names, in the order they run. Kept as a table rather than as branches
+ * so a third preflight cannot be added to one place and forgotten in the other.
+ */
+const PREFLIGHTS = [
+  { key: "fontPreflight", name: "písma" },
+  { key: "sizePreflight", name: "rozměry snímků" },
+];
+
+/**
+ * What each preflight said, for the round record — and from there for
+ * `report.md`.
+ *
+ * D12 (task 19): both `ok: true` branches of `fontPreflight` computed a message
+ * that nothing ever read, so a clean `compare` said nothing at all about fonts.
+ * Silence then covered three different facts — verified and equal, verified
+ * nothing (two empty stacks), and never ran — which is exactly the
+ * "no differences vs not measured" collision this branch exists to prevent, one
+ * layer down from where it was first fixed. Deleting the messages would have
+ * collapsed those three further rather than resolving them.
+ *
+ * Surfaced only in the artifact, never on stdout: a clean run's console stays the
+ * one outcome line it has always been, so this costs the operator nothing until
+ * they go looking.
+ *
+ * `ok: null` is "did not run", and it carries the REAL reason rather than a
+ * generic one — a size preflight skipped because the fonts differed did not fail
+ * the gate, and naming the gate there would be a confident, wrong cause.
+ */
+export function describePreflights({ skeleton, fontPreflight: font, sizePreflight: size }) {
+  const results = { fontPreflight: font, sizePreflight: size };
+  let blocked = skeleton.pass ? null : "skeleton gate neprošel, k porovnání se běh nedostal";
+  return PREFLIGHTS.map(({ key, name }) => {
+    const result = results[key];
+    if (result) {
+      if (!result.ok) blocked ??= "porovnání se zastavilo na předchozím preflightu (písma)";
+      return { name, ok: result.ok, message: result.message };
+    }
+    return { name, ok: null, message: `neproběhl — ${blocked ?? "běh se zastavil dřív"}` };
+  });
+}
+
+/**
  * `renderReport` keys HOTOVO/PARK off the final round's own `RoundVerdict.status`
  * (evaluateRound), not off `decideNext`'s `stop` flag — `stop` only means the loop
  * halted, which is equally true whether it halted because the match succeeded or
@@ -553,23 +604,31 @@ export function buildCompareOutcome({
   masks,
   history,
   fontPreflight,
+  sizePreflight,
   strictWrappers = false,
   settled,
 }) {
-  // A font mismatch makes every pixel delta a lie — the numbers move but the
-  // cause is not in the code — so it overrides whatever `evaluateRound` would
-  // have said, and forces `pixels: null` even if a caller (or a future bug)
-  // handed us pixels anyway. The preflight message becomes the round's whole
-  // reason, so it reaches report.md and round-N.json instead of being swallowed.
-  const preflightFailed = Boolean(fontPreflight && !fontPreflight.ok);
-  const effectiveResult = preflightFailed ? { ...result, pixels: null } : result;
-  // "parked", not "continue": a font mismatch is not fixed by another round —
-  // the pixel layer stays suppressed, `percent` stays `null` forever, and
+  // A failing preflight makes every pixel delta a lie — for fonts the numbers
+  // move but the cause is not in the code; for sizes (D10, task 19) the diff is
+  // not even defined — so it overrides whatever `evaluateRound` would have said,
+  // and forces `pixels: null` even if a caller (or a future bug) handed us pixels
+  // anyway. The preflight message becomes the round's whole reason, so it reaches
+  // report.md and round-N.json instead of being swallowed.
+  //
+  // FIRST failure wins, in run order: the fonts are checked before either
+  // screenshot exists, so a font mismatch is the earlier and more fundamental
+  // fact, and reporting the later one over it would name the wrong cause.
+  const failedPreflight = [fontPreflight, sizePreflight].find(
+    (preflight) => preflight && !preflight.ok,
+  );
+  const effectiveResult = failedPreflight ? { ...result, pixels: null } : result;
+  // "parked", not "continue": neither mismatch is fixed by another round — the
+  // pixel layer stays suppressed, `percent` stays `null` forever, and
   // `decideNext`'s thrash/progress logic can only ever see "no signal". This
   // hands the operator one clear decision instead of burning all five rounds
   // against a condition no code edit can change.
-  const roundVerdict = preflightFailed
-    ? { status: "parked", reason: fontPreflight.message }
+  const roundVerdict = failedPreflight
+    ? { status: "parked", reason: failedPreflight.message }
     : evaluateRound(effectiveResult);
   // Only this invocation's round carries image buffers — replayed history
   // rounds (read back from rounds.json) never do, they were stripped before
@@ -578,6 +637,9 @@ export function buildCompareOutcome({
     percent: effectiveResult.pixels ? effectiveResult.pixels.percent : null,
     skeletonPass: effectiveResult.skeleton.pass,
     reason: roundVerdict.reason,
+    // D12: what each preflight said, including when it passed and when it never
+    // ran — the record that the layer was there at all.
+    preflights: describePreflights({ skeleton: result.skeleton, fontPreflight, sizePreflight }),
     // Fix round 1, I3. Spread conditionally: absent is a THIRD state, meaning
     // "this round predates the flag", and a round replayed from an older
     // rounds.json must not be rendered as though it had been observed to settle.
@@ -859,6 +921,28 @@ async function runCompare(cmd) {
 
     const appImage = await shootScene(page, scene, path.join(dir, "app.png"));
     const designPng = await fs.readFile(path.join(dir, "design.png"));
+
+    // D10 (task 19). The second preflight, and the last thing between here and
+    // `diffPngs` — which throws on mismatched buffers, inside this block, before
+    // `writeArtifacts` has run. Asked of the images themselves rather than of the
+    // DOM boxes, because the images are what the pixel layer would consume.
+    //
+    // `app.png` is already on disk by now and `design.png` has been there since
+    // `measure`, so parking here leaves the operator holding the two pictures the
+    // finding is about — which is the whole point of moving the check off the
+    // crash path.
+    const sizes = checkSizePreflight(designPng, appImage);
+    if (!sizes.ok) {
+      return {
+        settled,
+        skeleton,
+        values,
+        pixels: null,
+        fontPreflight: preflight,
+        sizePreflight: sizes,
+      };
+    }
+
     return {
       settled,
       skeleton,
@@ -866,6 +950,7 @@ async function runCompare(cmd) {
       pixels: diffPngs(designPng, appImage),
       appImage,
       fontPreflight: preflight,
+      sizePreflight: sizes,
     };
   });
 
@@ -876,6 +961,7 @@ async function runCompare(cmd) {
     masks: scene.masks,
     history,
     fontPreflight: result.fontPreflight,
+    sizePreflight: result.sizePreflight,
     strictWrappers: cmd.strictWrappers,
     settled: result.settled,
   });
