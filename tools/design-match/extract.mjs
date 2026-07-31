@@ -109,8 +109,11 @@ export async function extractRaw(page, selector, depth = 6) {
 }
 
 /**
- * Values keyed by the same path shape the skeleton comparator uses, so a value
- * delta can be pointed at the node the structural gate already named.
+ * Values keyed by a path built from the raw DOM walk (role + index at each
+ * level). This is NOT the same address space as `compareSkeletons`' `path`:
+ * that one walks the normalised tree, which collapses pass-through wrappers
+ * and re-sorts children by CSS `order`. The same element can therefore carry
+ * two different paths — nothing joins the two, and nothing should.
  */
 export async function extractValues(page, selector, props = VALUE_PROPS, depth = 6) {
   return page.evaluate(
