@@ -42,4 +42,13 @@ describe("fontPreflight", () => {
     expect(result.message).toContain("Geist");
     expect(result.message).toContain("Inter");
   });
+
+  it("passes when the families match but differ only in case", () => {
+    // CSS font-family names are case-insensitive; a false mismatch here stops
+    // a run that should have proceeded.
+    expect(fontPreflight(["geist", "JetBrains mono"], ["Geist", "jetbrains Mono"])).toEqual({
+      ok: true,
+      message: "font stack shodný: geist, JetBrains mono",
+    });
+  });
 });

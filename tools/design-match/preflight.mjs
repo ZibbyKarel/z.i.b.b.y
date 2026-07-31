@@ -7,7 +7,11 @@ const normalise = (families) => families.map((f) => f.replace(/["']/g, "").trim(
 export function fontPreflight(designFonts, appFonts) {
   const design = normalise(designFonts);
   const app = normalise(appFonts);
-  if (design.join(", ") === app.join(", ")) {
+  // CSS font-family names are case-insensitive; comparing case-sensitively
+  // would report "geist" vs "Geist" as a mismatch and stop a run that should
+  // have proceeded. The messages below keep each side's original casing.
+  const fold = (families) => families.map((f) => f.toLowerCase()).join(", ");
+  if (fold(design) === fold(app)) {
     return { ok: true, message: `font stack shodný: ${design.join(", ")}` };
   }
   return {

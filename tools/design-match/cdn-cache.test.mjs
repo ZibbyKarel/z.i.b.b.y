@@ -93,4 +93,84 @@ describe("ensureCdnCache", () => {
     expect(result.downloaded).toEqual([REACT_URL]);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  it("names the cached file from the response's content-type, not the url path, when the url has no extension", async () => {
+    // The brief's own flagship fixture: a Google Fonts css url with no
+    // extension anywhere in its path. The url-derived name would fall back
+    // to .txt, which Chromium refuses to apply as a stylesheet — see
+    // cdn-cache.browser.test.mjs for the browser-level proof of that failure.
+    // This test only proves the filename picks up ".css" from the header.
+    const styleUrl = "https://fonts.googleapis.com/css2?family=Geist";
+    await fs.writeFile(htmlPath, `<link href="${styleUrl}" rel="stylesheet" />`, "utf8");
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: {
+        get: (name) => (name.toLowerCase() === "content-type" ? "text/css; charset=utf-8" : null),
+      },
+      arrayBuffer: async () => Buffer.from("body { color: red; }"),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await ensureCdnCache(htmlPath, cacheDir);
+
+    const entries = await fs.readdir(cacheDir);
+    expect(entries.some((name) => name.endsWith(".css"))).toBe(true);
+    expect(entries.some((name) => name.endsWith(".txt"))).toBe(false);
+  });
+
+  it("rejects a zero-length body instead of caching it as a valid entry", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      arrayBuffer: async () => Buffer.alloc(0),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(ensureCdnCache(htmlPath, cacheDir)).rejects.toThrow(/prázdný/);
+    const entries = await fs.readdir(cacheDir).catch(() => []);
+    expect(entries).toEqual([]);
+  });
+
+  it("cleans up the temp file when the write itself throws, without masking the original error", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      arrayBuffer: async () => Buffer.from("window.React = {};"),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    // The tmp file's own write succeeds and lands fully on disk (unlike the
+    // mid-write-crash test above); it's the rename onto the final path that
+    // fails. This is the debris scenario: a fully-written orphan left behind
+    // because nothing ever removes it on the failure path.
+    const renameSpy = vi.spyOn(fs, "rename").mockRejectedValueOnce(new Error("disk full"));
+
+    await expect(ensureCdnCache(htmlPath, cacheDir)).rejects.toThrow("disk full");
+
+    renameSpy.mockRestore();
+    const entries = await fs.readdir(cacheDir);
+    expect(entries.some((name) => name.includes(".tmp-"))).toBe(false);
+  });
+
+  it("surfaces a non-missing error from the cache-hit check instead of silently re-downloading", async () => {
+    await fs.mkdir(cacheDir, { recursive: true });
+    // If the error were swallowed, the loop would fall through to download
+    // and this mock would let it succeed silently — masking the bug.
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      arrayBuffer: async () => Buffer.from("window.React = {};"),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const permissionError = Object.assign(new Error("permission denied"), { code: "EACCES" });
+    const readdirSpy = vi.spyOn(fs, "readdir").mockRejectedValueOnce(permissionError);
+
+    await expect(ensureCdnCache(htmlPath, cacheDir)).rejects.toThrow("permission denied");
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    readdirSpy.mockRestore();
+  });
 });
