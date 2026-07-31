@@ -12,6 +12,7 @@ export default defineConfig({
     root: __dirname,
     environment: "node",
     include: ["**/*.test.mjs"],
+    exclude: ["**/*.browser.test.mjs"],
     testTimeout: 30_000,
   },
 });

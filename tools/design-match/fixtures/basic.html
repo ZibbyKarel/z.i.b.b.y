@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: monospace;
+        background: #0b0e13;
+        color: #c9d4e8;
+      }
+      .card {
+        width: 400px;
+        padding: 24px;
+        background: #11151d;
+        border-radius: 8px;
+      }
+      .form {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .row {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+      }
+      .row > label {
+        width: 96px;
+        font-size: 14px;
+      }
+      .row > input {
+        flex: 1;
+        height: 32px;
+        background: #0b0e13;
+        border: 1px solid #26303f;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card" data-region="card">
+      <form class="form">
+        <div class="row"><label>Jméno</label><input type="text" /></div>
+        <div class="row"><label>E-mail</label><input type="email" /></div>
+        <div class="row"><label>Firma</label><input type="text" /></div>
+        <div class="row"><label>Role</label><input type="text" /></div>
+      </form>
+    </div>
+  </body>
+</html>

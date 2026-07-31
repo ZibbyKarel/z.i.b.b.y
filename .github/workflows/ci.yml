@@ -46,6 +46,12 @@ jobs:
       - uses: ./.github/actions/setup
       # vitest run — all 5 workspace projects (design-system, contracts, api, web, web-components).
       - run: pnpm run test
+      # design-match's browser-driven tests live outside vitest.workspace.ts (Step 0 of
+      # task 4) so the fast suite above stays browser-free; Chromium isn't installed yet.
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Browser-driven design-match tests
+        run: pnpm run test:browser
 
   self-knowledge:
     runs-on: ubuntu-latest
