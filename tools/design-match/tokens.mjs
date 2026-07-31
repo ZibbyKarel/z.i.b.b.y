@@ -21,11 +21,17 @@ const PROP_PREFIX = {
   letterSpacing: "tracking",
 };
 
+/** Strips /* ... *\/ comments (including multi-line) before any declaration matching. */
+function stripComments(css) {
+  return css.replace(/\/\*[\s\S]*?\*\//g, "");
+}
+
 export function parseThemeTokens(css) {
   const tokens = [];
+  const stripped = stripComments(css);
   const themeBlock = /@theme[^{]*\{([\s\S]*?)\}/g;
   let block;
-  while ((block = themeBlock.exec(css)) !== null) {
+  while ((block = themeBlock.exec(stripped)) !== null) {
     const decl = /(--[\w-]+)\s*:\s*([^;]+);/g;
     let match;
     while ((match = decl.exec(block[1])) !== null) {
@@ -35,20 +41,43 @@ export function parseThemeTokens(css) {
   return tokens;
 }
 
+/**
+ * Parses a colour into its RGB triple and alpha (default 1, opaque). `transparent`
+ * is a special case: its RGB is irrelevant, so it is fixed at [0, 0, 0] and alpha 0 —
+ * this also makes a computed `rgba(0, 0, 0, 0)` match it exactly, with no separate
+ * case needed.
+ */
 function parseColor(value) {
-  const hex = /^#([0-9a-f]{6})$/i.exec(value.trim());
+  const trimmed = value.trim();
+  if (/^transparent$/i.test(trimmed)) return { rgb: [0, 0, 0], alpha: 0 };
+  const hex = /^#([0-9a-f]{6})$/i.exec(trimmed);
   if (hex) {
     const int = Number.parseInt(hex[1], 16);
-    return [(int >> 16) & 255, (int >> 8) & 255, int & 255];
+    return { rgb: [(int >> 16) & 255, (int >> 8) & 255, int & 255], alpha: 1 };
   }
-  const rgb = /^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i.exec(value.trim());
-  if (rgb) return [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])];
+  const rgb = /^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)(?:\s*[,/]\s*([\d.]+))?\s*\)$/i.exec(trimmed);
+  if (rgb) {
+    const alpha = rgb[4] === undefined ? 1 : Number(rgb[4]);
+    return { rgb: [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])], alpha };
+  }
   return null;
 }
 
-function parseLength(value) {
-  const px = /^(-?[\d.]+)px$/.exec(value.trim());
-  return px ? Number(px[1]) : null;
+/** Root font size (px) used to resolve `rem` lengths. Named, never a buried magic number. */
+export const DEFAULT_ROOT_FONT_SIZE_PX = 16;
+
+/**
+ * Parses a length into px. `rem` is resolved against `rootFontSizePx`. `em` is
+ * deliberately NOT resolved — it depends on the element's own font size, which this
+ * module cannot know, so `null` (no candidate) is the honest answer.
+ */
+function parseLength(value, rootFontSizePx) {
+  const trimmed = value.trim();
+  const px = /^(-?[\d.]+)px$/.exec(trimmed);
+  if (px) return Number(px[1]);
+  const rem = /^(-?[\d.]+)rem$/.exec(trimmed);
+  if (rem) return Number(rem[1]) * rootFontSizePx;
+  return null;
 }
 
 function toLab([r, g, b]) {
@@ -73,33 +102,50 @@ function deltaE(a, b) {
 
 const round = (n) => Math.round(n * 10) / 10;
 
-export function mapValue(value, tokens) {
+/**
+ * Colour candidates are ranked with equal-alpha matches first, then by ascending
+ * (raw) ΔE within each group. A candidate whose alpha differs can still be reported
+ * as nearest if nothing better exists — that is honest — but it is never exact.
+ */
+export function mapValue(value, tokens, { rootFontSizePx = DEFAULT_ROOT_FONT_SIZE_PX } = {}) {
   const color = parseColor(value);
-  const length = parseLength(value);
+  const length = color ? null : parseLength(value, rootFontSizePx);
 
   const candidates = tokens
     .map((token) => {
       if (color) {
         const tokenColor = parseColor(token.value);
-        return tokenColor ? { token, distance: round(deltaE(color, tokenColor)) } : null;
+        if (!tokenColor) return null;
+        return {
+          token,
+          distance: deltaE(color.rgb, tokenColor.rgb),
+          alphaMatch: color.alpha === tokenColor.alpha,
+        };
       }
       if (length !== null) {
-        const tokenLength = parseLength(token.value);
+        const tokenLength = parseLength(token.value, rootFontSizePx);
         return tokenLength !== null
-          ? { token, distance: round(Math.abs(length - tokenLength)) }
+          ? { token, distance: Math.abs(length - tokenLength), alphaMatch: true }
           : null;
       }
-      return token.value === value ? { token, distance: 0 } : null;
+      return token.value === value ? { token, distance: 0, alphaMatch: true } : null;
     })
     .filter(Boolean)
-    .sort((a, b) => a.distance - b.distance);
+    .sort((a, b) => {
+      if (a.alphaMatch !== b.alphaMatch) return a.alphaMatch ? -1 : 1;
+      return a.distance - b.distance;
+    });
 
   const best = candidates[0];
-  if (best && best.distance === 0) return { kind: "exact", token: best.token.name };
+  // Exactness is decided on the RAW distance (and, for colours, matching alpha) —
+  // rounding happens only for the number that gets reported below.
+  if (best && best.distance === 0 && best.alphaMatch) {
+    return { kind: "exact", token: best.token.name };
+  }
   return {
     kind: "new",
     nearest: best ? best.token.name : null,
-    distance: best ? best.distance : null,
+    distance: best ? round(best.distance) : null,
     proposedName: null,
   };
 }
