@@ -388,7 +388,17 @@ export class TaskRunsService {
           projectNames,
         ),
       ),
-      ...scheduled.flatMap((t) => scheduledTaskToView(t) ?? []),
+      // A held/queued/pending/scheduled task already carries its own `projectId` (set at
+      // create time — see `TaskSchedulerService.createTask`'s held/queued/pending/deferred
+      // branches), but `scheduledTaskToView` itself only stamps that id, leaving `project`
+      // (the display NAME the web actually renders — `TaskCard`'s footer, `RunDetail`'s meta
+      // cell value) hardcoded `""`. Every other run-kind view above resolves its name via
+      // `resolveProjectDisplay`; this one must too, or a roadmap pickup parked behind the
+      // budget/concurrency cap reads as project-less until it dispatches.
+      ...scheduled.flatMap((t) => {
+        const view = scheduledTaskToView(t);
+        return view ? [resolveProjectDisplay(view, projectNames)] : [];
+      }),
     ];
     return { runs, childRunIds, pipelineDefsById };
   }

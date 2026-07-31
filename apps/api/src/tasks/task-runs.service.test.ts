@@ -468,6 +468,35 @@ describe("TaskRunsService", () => {
       const run = await service.getTaskRun(pipeP.pipelineRunId);
       expect(run.project).toBe("Acme Corp");
     });
+
+    // BUG: a roadmap release that hit the concurrency cap persists `queued` with
+    // `projectId` correctly set (`TaskSchedulerService.createTask` → `storage.createQueued`
+    // does thread it through), but `scheduledTaskToView` — unlike the agent/pipeline/goal
+    // view builders — is never passed through `resolveProjectDisplay`, so its `project`
+    // display label stays the hardcoded `""` even though `projectId` resolves to a real,
+    // registered project. The web reads `run.project` (not `projectId`) for the card
+    // footer (`TaskCard.tsx`) and the run-detail meta cell's *value* (`RunDetail.tsx`),
+    // so the operator sees a project-less card/chip for exactly a parked roadmap pickup —
+    // "pickupnutý task z roadmapy nemá přiřazený projekt".
+    it("resolves a QUEUED scheduled task's project display label from its projectId", async () => {
+      const { service, scheduled } = build();
+      scheduled.list.mockResolvedValue([
+        { ...scheduledS, id: "queued-task", status: "queued", projectId: "acme" },
+      ]);
+      const run = (await service.listTaskRuns()).find((r) => r.runId === "queued-task");
+      expect(run?.projectId).toBe("acme");
+      expect(run?.project).toBe("Acme Corp");
+    });
+
+    it("resolves a HELD scheduled task's project display label from its projectId", async () => {
+      const { service, scheduled } = build();
+      scheduled.list.mockResolvedValue([
+        { ...scheduledS, id: "held-task", status: "held", projectId: "acme" },
+      ]);
+      const run = (await service.listTaskRuns()).find((r) => r.runId === "held-task");
+      expect(run?.projectId).toBe("acme");
+      expect(run?.project).toBe("Acme Corp");
+    });
   });
 
   describe("taskOutcomeFinishedAt (total run duration)", () => {
