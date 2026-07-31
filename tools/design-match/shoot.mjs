@@ -3,6 +3,7 @@ import { realpathSync } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { DesignMatchError, describing } from "./errors.mjs";
 
 export const STORYBOOK_BASE = "http://localhost:6006";
 export const APP_BASE = "http://localhost:3000";
@@ -57,7 +58,7 @@ export function resolveScene(options) {
   }
   if (options.route) {
     if (!options.selector) {
-      throw new Error(
+      throw new DesignMatchError(
         "design-match: --route vyžaduje i --selector — v implementaci neexistuje uzel, který by šlo bezpečně uhodnout, " +
           "a selector z designu (spec.json) se nedědí: buď v aplikaci není, nebo tam náhodou sedí na úplně jiný prvek. " +
           "Otevři route v prohlížeči a předej selector kořene porovnávané části.",
@@ -70,7 +71,7 @@ export function resolveScene(options) {
     const url = `${options.appBase ?? APP_BASE}${route}`;
     return { mode: masks.length > 0 ? "mask" : "route", url, selector: options.selector, masks };
   }
-  throw new Error("design-match: chybí scéna — zadej --story <id> nebo --route <cesta>");
+  throw new DesignMatchError("design-match: chybí scéna — zadej --story <id> nebo --route <cesta>");
 }
 
 /**
@@ -127,13 +128,13 @@ export function assertServableRoot(root, label, cwd = process.cwd()) {
   const resolved = realpathOr(path.resolve(root));
   const workingDir = realpathOr(path.resolve(cwd));
   if (!contains(workingDir, resolved)) {
-    throw new Error(
+    throw new DesignMatchError(
       `design-match: ${label} (${resolved}) leží mimo aktuální pracovní adresář (${workingDir}) — design-match servíruje jen adresáře uvnitř něj. Spusť measure z adresáře, který mockup obsahuje, nebo mockup do něj zkopíruj.`,
     );
   }
   const home = realpathOr(path.resolve(os.homedir()));
   if (contains(resolved, home)) {
-    throw new Error(
+    throw new DesignMatchError(
       `design-match: ${label} (${resolved}) by zpřístupnil celý domovský adresář (${home}) — to design-match nikdy neudělá. Spusť measure z konkrétního projektu, ne z ${home} ani z kořene disku.`,
     );
   }
@@ -282,7 +283,7 @@ export async function withStaticServer(mounts, fn) {
     try {
       resolved = await fs.realpath(path.resolve(root));
     } catch (error) {
-      throw new Error(
+      throw new DesignMatchError(
         `design-match: adresář k servírování "${root}" nelze otevřít (${error.code ?? error.message})`,
       );
     }
@@ -307,7 +308,7 @@ export async function withStaticServer(mounts, fn) {
     const address = server.address();
     port = typeof address === "object" && address !== null ? address.port : undefined;
     if (port === undefined) {
-      throw new Error("design-match: lokální server se nepodařilo navázat na port");
+      throw new DesignMatchError("design-match: lokální server se nepodařilo navázat na port");
     }
     return await fn(`http://127.0.0.1:${port}`);
   } finally {
@@ -325,23 +326,6 @@ export async function withStaticServer(mounts, fn) {
  * burn before failing outright.
  */
 export const SETTLE_IDLE_TIMEOUT_MS = 10_000;
-
-/**
- * A navigation that times out is not a crash — it is a page that never loaded,
- * and the operator needs the one-line treatment, not a Playwright stack. Only
- * the timeout is translated; any other navigation failure is a real fault and
- * keeps its stack.
- */
-export function translateNavigationError(url, error) {
-  if (error instanceof Error && error.name === "TimeoutError") {
-    return new Error(
-      `design-match: stránku se nepodařilo načíst (událost load nenastala) — ${url}. ` +
-        `Ověř, že adresa odpovídá (u --route běží dev server? u --story běží Storybook?) a že se stránka otevře v prohlížeči. ` +
-        `Pozn.: na požadavek, který nikdy neskončí — fetch s nepřečtenou odpovědí (větev pro 404) nebo polling — se už nečeká fatálně.`,
-    );
-  }
-  return error;
-}
 
 function warnUnsettled(url, idleTimeoutMs) {
   console.warn(
@@ -374,11 +358,10 @@ function warnUnsettled(url, idleTimeoutMs) {
 export async function gotoSettled(page, url, options = {}) {
   const idleTimeoutMs = options.idleTimeoutMs ?? SETTLE_IDLE_TIMEOUT_MS;
   const onUnsettled = options.onUnsettled ?? warnUnsettled;
-  try {
-    await page.goto(url, { waitUntil: "load" });
-  } catch (error) {
-    throw translateNavigationError(url, error);
-  }
+  // `kind: "navigate"` is what lets the boundary read a `TimeoutError` here as
+  // "the page never loaded" while leaving a `waitFor` timeout elsewhere alone —
+  // the annotation records the operation, the boundary decides what it means.
+  await describing({ kind: "navigate", url }, () => page.goto(url, { waitUntil: "load" }));
   let settled = true;
   try {
     await page.waitForLoadState("networkidle", { timeout: idleTimeoutMs });
@@ -415,14 +398,19 @@ function boxesIntersect(a, b) {
 async function resolveMaskLocators(page, masks, targetBox) {
   const locators = [];
   for (const selector of masks) {
-    const matches = await page.locator(selector).all();
+    // A `--mask` the operator typed is the second thing in this tool that can be
+    // unparseable CSS; the boundary recognises that (errors.mjs), this records
+    // which mask it was so the sentence can name it.
+    const matches = await describing({ kind: "mask", selector }, () =>
+      page.locator(selector).all(),
+    );
     if (matches.length === 0) {
-      throw new Error(`design-match: maska "${selector}" neodpovídá žádnému prvku`);
+      throw new DesignMatchError(`design-match: maska "${selector}" neodpovídá žádnému prvku`);
     }
     const boxes = await Promise.all(matches.map((match) => match.boundingBox()));
     const intersectsTarget = boxes.some((box) => box && boxesIntersect(box, targetBox));
     if (!intersectsTarget) {
-      throw new Error(`design-match: maska "${selector}" leží mimo snímaný výřez`);
+      throw new DesignMatchError(`design-match: maska "${selector}" leží mimo snímaný výřez`);
     }
     locators.push(page.locator(selector));
   }
@@ -445,7 +433,7 @@ export async function shootScene(page, scene, outPath) {
   const mask = await resolveMaskLocators(page, scene.masks, targetBox);
   return shootElement(target, outPath, mask, {
     selector: scene.selector,
-    // `boundingBox()` speaks width/height; the inventory and `translateCaptureError`
+    // `boundingBox()` speaks width/height; the inventory and the capture refusal
     // speak w/h. Converted here rather than teaching the message two shapes.
     box: targetBox
       ? { x: targetBox.x, y: targetBox.y, w: targetBox.width, h: targetBox.height }
@@ -455,52 +443,6 @@ export async function shootScene(page, scene, outPath) {
     // thing the operator can change.
     remedy: " Zvol přes --selector menší prvek scény.",
   });
-}
-
-/**
- * Chromium refuses to photograph an area past its own capture limit and rejects
- * with `Protocol error (Page.captureScreenshot): Unable to capture screenshot`.
- * That message does not start with `design-match:`, so `isDeliberateError`
- * (cli.mjs) called it a crash and `logFailure` printed the whole Playwright stack
- * — the THIRD time on this branch a throw escaped that check by being prefixed by
- * Playwright (`extract.mjs`'s in-page throw and `cli.mjs`'s emptiness guard record
- * the previous two), and the first to land on the invocation SKILL.md documents as
- * the default. D9, task 19.
- *
- * Translated on the NODE side, where the rejection is already an ordinary
- * `Promise` rejection — no prefix to escape. Same shape as
- * `translateNavigationError` above, and the same discipline: ONLY the one
- * recognisable refusal is translated. A detached element, a closed page, a crashed
- * browser or a timeout is a real fault whose stack is the diagnostic, and passing
- * it through untouched is what keeps this from becoming a swallow-everything
- * catch.
- *
- * Deliberately NOT a predictive guard, and specifically not `cropFitsPage`'s
- * (inventory.mjs). That predicate answers "does this box lie on the full-page
- * screenshot", which is the right question for a `clip`-based thumbnail and the
- * WRONG one here: `ZIBBY Redesign Canvas`'s winning region under `"karta"` is
- * 4256×1103 at (0,1173) — off the page image by that definition, refused a crop —
- * and `locator.screenshot` photographs it in full, producing the 8512×2206
- * `design.png` the published corpus table is measured from. Refusing it would be a
- * confident claim the tool cannot back, which is the one thing this branch forbids.
- * What actually decides is Chromium's capture limit, and the browser is the only
- * thing that knows where it is — so the tool asks it rather than guessing.
- *
- * `remedy` is the caller's, not this function's: `measure` has an inventory and
- * `--region`, `compare` has `--selector`, and inventing one sentence for both
- * would send half of its readers somewhere that does not exist.
- */
-const UNCAPTURABLE_MESSAGE = "Unable to capture screenshot";
-
-export function translateCaptureError(error, { selector, box, remedy = "" } = {}) {
-  if (!(error instanceof Error) || !error.message.includes(UNCAPTURABLE_MESSAGE)) return error;
-  const size = box
-    ? ` o rozměrech ${Math.round(box.w)}×${Math.round(box.h)} px na pozici (${Math.round(box.x)},${Math.round(box.y)})`
-    : "";
-  return new Error(
-    `design-match: region "${selector}" se nepodařilo vyfotit — prohlížeč odmítl snímek plochy${size}. ` +
-      `Tak velký výřez je nad limitem snímkování v prohlížeči; není to chyba mockupu a menší výřez projde.${remedy}`,
-  );
 }
 
 /**
@@ -521,14 +463,20 @@ export function translateCaptureError(error, { selector, box, remedy = "" } = {}
  * measured ~0.01 % on `ZIBBY Loading Screen`). This option makes both sides
  * frozen the SAME way; it does not make either side reproducible.
  *
- * Being the one capture site is also why the D9 translation lives here: both
- * sides get it from one `try`, and `path` is written by Playwright only on
- * success, so a refused capture leaves no half-written png to name.
+ * Being the one capture site is also why the capture context is attached here:
+ * both sides get it from one `describing`, and `path` is written by Playwright
+ * only on success, so a refused capture leaves no half-written png to name.
+ *
+ * `context` is what the boundary (errors.mjs) needs in order to name the region,
+ * its box and a remedy — `remedy` in particular is genuinely per-call (`measure`
+ * has an inventory and `--region`, `compare` has `--selector`, and one sentence
+ * for both would send half its readers somewhere that does not exist). What is
+ * NOT per-call, and no longer lives here, is the recognition: `cropRegions`'
+ * `page.screenshot` raises the identical Chromium refusal, and a translator
+ * beside this one call did not cover it.
  */
 export async function shootElement(locator, outPath, mask = [], context = {}) {
-  try {
-    return await locator.screenshot({ path: outPath, mask, animations: "disabled" });
-  } catch (error) {
-    throw translateCaptureError(error, context);
-  }
+  return describing({ kind: "capture", ...context }, () =>
+    locator.screenshot({ path: outPath, mask, animations: "disabled" }),
+  );
 }

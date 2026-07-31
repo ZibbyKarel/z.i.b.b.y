@@ -24,8 +24,6 @@ import {
   resolveRegionIndex,
   selectExitCode,
   stripImages,
-  translateCaptureError,
-  translateNavigationError,
 } from "./cli.mjs";
 import { parseThemeTokens } from "./tokens.mjs";
 import { DESIGN_MATCH_VERSION } from "./version.mjs";
@@ -1279,108 +1277,6 @@ describe("planMeasureMounts", () => {
       await fs.rm(link, { force: true });
       await fs.rm(real, { recursive: true, force: true });
     }
-  });
-});
-
-/**
- * Fix round 1, I3: deferring the networkidle FIX was right, but this diff
- * created the failure path, and an operator-facing condition gets one clean
- * line — not a 30-second wait ending in a Playwright stack.
- */
-describe("translateNavigationError", () => {
-  const timeout = () =>
-    Object.assign(new Error("Timeout 30000ms exceeded."), { name: "TimeoutError" });
-
-  it("turns a navigation timeout into the clean one-line treatment", () => {
-    const translated = translateNavigationError("http://127.0.0.1:1/x.html", timeout());
-    expect(isDeliberateError(translated)).toBe(true);
-    expect(translated.message).toContain("http://127.0.0.1:1/x.html");
-    // D7 (task 17): the fatal wait is now `load`, not `networkidle` — a page
-    // that renders and then never goes idle is measured, not failed.
-    expect(translated.message).toMatch(/load/);
-  });
-
-  it("names the cause an operator can act on", () => {
-    expect(translateNavigationError("http://x/y", timeout()).message).toMatch(
-      /dev server|Storybook/,
-    );
-  });
-
-  // A navigation that fails any other way is a real fault and keeps its stack —
-  // the same split `isDeliberateError` draws everywhere else in this tool.
-  it("passes any other navigation failure through untouched", () => {
-    const other = new Error("net::ERR_CONNECTION_REFUSED");
-    expect(translateNavigationError("http://x/y", other)).toBe(other);
-  });
-});
-
-/**
- * D9 (task 19). The THIRD escape of `isDeliberateError` on this branch: a region
- * Chromium cannot photograph rejects `locator.screenshot` with
- * `locator.screenshot: Protocol error (Page.captureScreenshot): Unable to
- * capture screenshot`, which does not start with `design-match:`, so `logFailure`
- * dumped the whole Playwright stack — on the invocation SKILL.md documents as the
- * default.
- *
- * Same shape as `translateNavigationError` directly above, deliberately: only the
- * one recognisable failure is translated, everything else keeps its stack.
- */
-describe("translateCaptureError", () => {
-  const refusal = () =>
-    new Error(
-      "locator.screenshot: Protocol error (Page.captureScreenshot): Unable to capture screenshot\nCall log:\n  - taking element screenshot",
-    );
-
-  it("turns Chromium's capture refusal into one clean design-match: line naming the region and its box", () => {
-    const translated = translateCaptureError(refusal(), {
-      selector: "div.design-canvas > div > div:nth-child(1)",
-      box: { x: -6000, y: -6000, w: 16256, h: 18608 },
-      remedy: " Vyber jiný region.",
-    });
-
-    expect(isDeliberateError(translated)).toBe(true);
-    expect(translated.message).toContain("div.design-canvas > div > div:nth-child(1)");
-    expect(translated.message).toContain("16256×18608");
-    expect(translated.message).toContain("(-6000,-6000)");
-    expect(translated.message).toContain("Vyber jiný region.");
-    // The Playwright text is what defeated the prefix check; it must not be
-    // smuggled back into the line that replaces it.
-    expect(translated.message).not.toContain("Call log");
-  });
-
-  // The two callers shoot different things and have different remedies —
-  // `measure` picks another `--region`, `compare` points `--selector` somewhere
-  // smaller — so the remedy is supplied, not guessed.
-  it("carries the caller's own remedy rather than inventing one", () => {
-    const translated = translateCaptureError(refusal(), {
-      selector: "#root",
-      box: { x: 0, y: 0, w: 20000, h: 20000 },
-      remedy: " Zvol přes --selector menší prvek scény.",
-    });
-    expect(translated.message).toContain("--selector");
-    expect(translated.message).not.toContain("--region");
-  });
-
-  // A box is the caller's context, not this function's — a caller that has none
-  // (a `boundingBox()` that came back null) must still get the clean line rather
-  // than "undefined×undefined".
-  it("still refuses cleanly when the caller has no box to name", () => {
-    const translated = translateCaptureError(refusal(), {
-      selector: "#root",
-      remedy: " Zkus jiný.",
-    });
-    expect(isDeliberateError(translated)).toBe(true);
-    expect(translated.message).not.toContain("undefined");
-    expect(translated.message).not.toContain("NaN");
-  });
-
-  // Every other screenshot failure — a detached element, a closed page, a
-  // crashed browser — is a real fault whose stack is the diagnostic.
-  it("passes any other screenshot failure through untouched", () => {
-    const other = new Error("locator.screenshot: Timeout 30000ms exceeded.");
-    expect(translateCaptureError(other, { selector: "#root" })).toBe(other);
-    const notAnError = "not even an Error instance";
-    expect(translateCaptureError(notAnError, { selector: "#root" })).toBe(notAnError);
   });
 });
 

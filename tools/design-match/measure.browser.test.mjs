@@ -267,6 +267,45 @@ describe("measure, end to end through the CLI", () => {
   });
 
   /*
+   * Task 20, I1 — instance 7, and the control that proves the boundary covers
+   * the call site the per-call translator missed rather than only the one it was
+   * written beside.
+   *
+   * `cropRegions` shoots the whole page to cut previews. On a 20000×9000
+   * document Chromium refuses that shot with the SAME
+   * `Protocol error (Page.captureScreenshot): Unable to capture screenshot`
+   * `translateCaptureError` already recognised — one call site over, so the
+   * operator got a raw stack, and it killed `measure` before the inventory
+   * printed at all.
+   *
+   * This runs through the real `page.screenshot`, so it fails if the boundary is
+   * removed, and it asserts on the absence of a stack, which is the whole defect.
+   */
+  it("refuses a page the browser cannot photograph for previews with one design-match: line, no stack", async () => {
+    const dir = await makeWorkspace({
+      "oversized-page.html": await fs.readFile(path.join(FIXTURES, "oversized-page.html"), "utf8"),
+    });
+
+    const failure = await measure(dir, "oversized-page.html", "wide").catch((error) => error);
+
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure.code).toBe(3);
+    expect(failure.stderr).toContain("design-match:");
+    expect(failure.stderr).not.toContain("page.screenshot");
+    expect(failure.stderr).not.toContain("Protocol error");
+    expect(failure.stderr).not.toContain("    at ");
+    // Named by fact: the page whose shot was refused, at its real size.
+    expect(failure.stderr).toContain("20000×9000");
+    // The remedy must not be `--region`: the inventory the operator would pick
+    // from is exactly what this failure prevented from printing.
+    expect(failure.stdout).not.toContain("Inventura");
+    expect(failure.stderr).not.toContain("--region");
+    // Nothing that asserts a conclusion was written.
+    const artifactDir = path.join(dir, ".design-match", "wide");
+    expect(await fs.readdir(artifactDir)).not.toContain("spec.json");
+  });
+
+  /*
    * Fix round 1, I4. `shootScene` shoots the implementation with
    * `animations: "disabled"`; `design.png` was shot without it, so the two sides
    * of every comparison were captured under different settings and the tool

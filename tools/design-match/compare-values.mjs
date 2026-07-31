@@ -16,12 +16,17 @@ function walk(design, app, path, deltas) {
   // broken — say so, loudly, instead of dressing a structural failure up as a
   // value difference and sending the coding agent after the wrong thing.
   //
-  // Deliberately NOT prefixed `design-match:`, unlike every other throw in this
-  // tool: cli.mjs's `isDeliberateError` reads that prefix as "a clean operator-
-  // facing usage error" and logs one line with no stack. Every message this
-  // module could produce is the opposite of that — it means an invariant the
-  // gate is supposed to guarantee did not hold, and the stack is the whole
-  // diagnostic. It must surface as a genuine crash.
+  // Deliberately a plain `Error`, and deliberately NOT prefixed `design-match:`,
+  // unlike every refusal in this tool: `isDeliberateError` (errors.mjs) logs a
+  // refusal as one line with no stack. Every message this module could produce is
+  // the opposite of that — it means an invariant the gate is supposed to
+  // guarantee did not hold, and the stack is the whole diagnostic. It must
+  // surface as a genuine crash.
+  //
+  // Since classification moved to identity, this is no longer one keystroke from
+  // breaking: a `design-match BUG:` that gained a colon used to flip to "clean
+  // refusal" silently. What decides now is that it is not a `DesignMatchError`,
+  // which is a fact about the throw rather than about its spelling.
   if (design.children.length !== app.children.length) {
     throw new Error(
       `design-match BUG: skeleton gate propustil strom, který neodpovídá — ${path} má ${design.children.length} potomků v designu a ${app.children.length} v implementaci; je to chyba v gate, ne hodnotový rozdíl`,

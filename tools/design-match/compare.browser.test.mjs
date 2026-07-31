@@ -176,6 +176,114 @@ describe("compare, end to end through the CLI", () => {
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  /*
+   * Task 20, I1 — instance 4, and the commonest operator error the tool has:
+   * `--route` against a dev server that is not running. `page.goto` rejects with
+   * `net::ERR_CONNECTION_REFUSED` under `name: "Error"`, so the per-call
+   * `translateNavigationError`'s `TimeoutError` test missed it and the operator
+   * got an 11-line raw stack.
+   *
+   * The control is at the call site, not at the boundary's unit test: it goes
+   * through the real `page.goto` in `gotoSettled`, so it fails if the annotation
+   * or the boundary is removed.
+   */
+  it("refuses an unreachable --app-base with one clean design-match: line, no stack", async () => {
+    const dir = await makeWorkspace({ "design.html": page(CARD), "impl.html": page(CARD) });
+    await measure(dir, "design.html", "s");
+    // A port nothing is listening on — bound to get one the OS considered free,
+    // then closed. A literal low port would report ERR_UNSAFE_PORT instead, which
+    // is a different browser refusal and would not pin the one this is about.
+    const dead = await startCountingServer(dir);
+    await dead.close();
+
+    const result = await compare(dir, [
+      "--slug",
+      "s",
+      "--route",
+      "/impl.html",
+      "--app-base",
+      dead.origin,
+      "--selector",
+      "#root",
+    ]);
+
+    expect(result.code).toBe(3);
+    expect(result.stderr).toContain("design-match:");
+    expect(result.stderr).toContain(`${dead.origin}/impl.html`);
+    expect(result.stderr).toContain("ERR_CONNECTION_REFUSED");
+    // The whole defect: without the boundary this is a raw Playwright stack.
+    expect(result.stderr).not.toContain("page.goto:");
+    expect(result.stderr).not.toContain("Call log");
+    expect(result.stderr).not.toContain("    at ");
+  });
+
+  /*
+   * Task 20, I1 — instance 5. A Tailwind class name typed straight into
+   * `--selector` (`.sm:flex`) is legal-looking and is not legal CSS: the browser
+   * rejects it inside `page.evaluate` with a `SyntaxError`, Playwright prefixes
+   * the message, and the operator got an 8-line stack.
+   *
+   * This is a DIFFERENT failure from the test below it (a selector that is valid
+   * CSS and matches nothing) and it walks the same call site — which is exactly
+   * why one had a clean line and the other did not.
+   */
+  it("refuses a selector that is not valid CSS with one clean design-match: line, no stack", async () => {
+    const dir = await makeWorkspace({ "design.html": page(CARD), "impl.html": page(CARD) });
+    await measure(dir, "design.html", "s");
+    const server = await startCountingServer(dir);
+
+    const result = await compare(dir, [
+      "--slug",
+      "s",
+      "--route",
+      "/impl.html",
+      "--app-base",
+      server.origin,
+      "--selector",
+      ".sm:flex",
+    ]);
+
+    expect(result.code).toBe(3);
+    expect(result.stderr).toContain("design-match:");
+    expect(result.stderr).toContain(".sm:flex");
+    expect(result.stderr).not.toContain("page.evaluate");
+    expect(result.stderr).not.toContain("Failed to execute");
+    expect(result.stderr).not.toContain("    at ");
+  });
+
+  /*
+   * Task 20, I1 — instance 6. The same operator mistake in `--mask`, arriving
+   * through `locator.all` and Playwright's OWN selector parser rather than the
+   * browser's. Two different libraries, two different message shapes, one rule
+   * at the boundary — and the round has to get past the skeleton gate and the
+   * font preflight to reach `shootScene` at all, which identical pages do.
+   */
+  it("refuses a --mask that is not valid CSS with one clean design-match: line, no stack", async () => {
+    const dir = await makeWorkspace({ "design.html": page(CARD), "impl.html": page(CARD) });
+    await measure(dir, "design.html", "s");
+    const server = await startCountingServer(dir);
+
+    const result = await compare(dir, [
+      "--slug",
+      "s",
+      "--route",
+      "/impl.html",
+      "--app-base",
+      server.origin,
+      "--selector",
+      "#root",
+      "--mask",
+      "div[",
+    ]);
+
+    expect(result.code).toBe(3);
+    expect(result.stderr).toContain("design-match:");
+    expect(result.stderr).toContain("div[");
+    expect(result.stderr).not.toContain("locator.all");
+    expect(result.stderr).not.toContain("Unexpected token");
+    expect(result.stderr).not.toContain("    at ");
+  });
+
   // D5 part 2: the throw happened inside `page.evaluate`, Playwright prefixed
   // the message, `isDeliberateError` stopped recognising it, and the operator
   // got a raw stack. A selector that matches nothing is the likeliest operator

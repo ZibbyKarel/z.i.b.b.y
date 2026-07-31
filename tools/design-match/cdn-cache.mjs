@@ -14,6 +14,7 @@
 
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
+import { DesignMatchError } from "./errors.mjs";
 import path from "node:path";
 
 /**
@@ -217,13 +218,13 @@ async function writeAtomic(file, buffer) {
 async function downloadContent(url) {
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(
+    throw new DesignMatchError(
       `design-match: nelze stáhnout ${url} (HTTP ${response.status}). Bez cache se mockup nevykreslí.`,
     );
   }
   const buffer = Buffer.from(await response.arrayBuffer());
   if (buffer.length === 0) {
-    throw new Error(
+    throw new DesignMatchError(
       `design-match: stažení ${url} vrátilo prázdný obsah (0 bajtů). Bez obsahu se mockup nevykreslí.`,
     );
   }

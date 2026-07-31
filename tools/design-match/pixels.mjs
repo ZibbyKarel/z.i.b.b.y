@@ -1,5 +1,6 @@
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
+import { DesignMatchError } from "./errors.mjs";
 
 /**
  * The largest contiguous differing region matters more than the raw percentage:
@@ -94,7 +95,7 @@ export function diffPngs(designBuf, appBuf, options = {}) {
   // If this ever fires again it means a caller skipped that check, and the stack
   // is the diagnostic.
   if (design.width !== app.width || design.height !== app.height) {
-    throw new Error(
+    throw new DesignMatchError(
       `design-match: rozměry se liší — design ${design.width}×${design.height}, app ${app.width}×${app.height}`,
     );
   }

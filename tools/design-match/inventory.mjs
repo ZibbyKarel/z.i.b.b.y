@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { describing } from "./errors.mjs";
 
 /**
  * Známá omezení (deliberately out of scope for this file):
@@ -164,25 +165,40 @@ export async function cropRegions(page, regions, outDir, limit = 5) {
       continue;
     }
     const file = path.join(outDir, `r${index + 1}.png`);
-    await page.screenshot({
-      path: file,
-      // Without `fullPage`, `clip` is resolved against the 900px-tall viewport,
-      // so any candidate whose box starts below the fold threw a raw
-      // Playwright "Clipped area is either empty or outside the resulting
-      // image" — which killed every long-document mockup. With it, `clip` is
-      // resolved against the full document, the same space `collectRegions`
-      // reports boxes in.
-      fullPage: true,
-      clip: {
-        // Clamped only within the subpixel tolerance above, so a box that is
-        // genuinely on the page keeps its exact rectangle and one that is not
-        // never got here.
-        x: Math.max(0, region.box.x),
-        y: Math.max(0, region.box.y),
-        width: Math.min(region.box.w, pageSize.width - Math.max(0, region.box.x)),
-        height: Math.min(region.box.h, pageSize.height - Math.max(0, region.box.y)),
-      },
-    });
+    // Instance 7 of the prefix-escape class, and the one that settled its
+    // shape: this is `page.screenshot`, and Chromium refuses a document past its
+    // capture limit here with the SAME `Unable to capture screenshot` message
+    // `locator.screenshot` produces — which task 19 had already translated,
+    // beside the other call. The recognition now sits at the boundary
+    // (errors.mjs), so this call site only records what it was doing.
+    //
+    // `kind: "preview"` matters: what the browser refused is the whole page, so
+    // every candidate loses its crop at once and the inventory never prints.
+    // "Pick a different --region" would be a remedy this run has not put the
+    // operator in a position to take.
+    await describing(
+      { kind: "preview", index: index + 1, selector: region.selector, pageSize },
+      () =>
+        page.screenshot({
+          path: file,
+          // Without `fullPage`, `clip` is resolved against the 900px-tall viewport,
+          // so any candidate whose box starts below the fold threw a raw
+          // Playwright "Clipped area is either empty or outside the resulting
+          // image" — which killed every long-document mockup. With it, `clip` is
+          // resolved against the full document, the same space `collectRegions`
+          // reports boxes in.
+          fullPage: true,
+          clip: {
+            // Clamped only within the subpixel tolerance above, so a box that is
+            // genuinely on the page keeps its exact rectangle and one that is not
+            // never got here.
+            x: Math.max(0, region.box.x),
+            y: Math.max(0, region.box.y),
+            width: Math.min(region.box.w, pageSize.width - Math.max(0, region.box.x)),
+            height: Math.min(region.box.h, pageSize.height - Math.max(0, region.box.y)),
+          },
+        }),
+    );
     written.push(file);
   }
   return written;

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <title>oversized page</title>
+    <style>
+      /*
+       * Instance 7 of the prefix-escape class (task 20, I1), reproduced from the
+       * whole-branch review's own probe: a 20000×9000 DOCUMENT.
+       *
+       * `oversized.html` beside this file is the other half of the same browser
+       * limit — one ELEMENT too large for `locator.screenshot`, which task 19
+       * translated. This one is too large for `page.screenshot({ fullPage: true })`,
+       * which `cropRegions` calls to cut the region previews. Same Chromium
+       * refusal, same message, a different call site — which is why a translator
+       * written beside one of them did not cover the other.
+       *
+       * `.card` is deliberately small and on the page, so `cropFitsPage` accepts
+       * it and the preview shot is actually ATTEMPTED. Without it every candidate
+       * would be skipped before the screenshot and the fixture would prove
+       * nothing.
+       */
+      body {
+        margin: 0;
+        background: #101418;
+      }
+      .sheet {
+        width: 20000px;
+        height: 9000px;
+        background: #202830;
+      }
+      .card {
+        width: 400px;
+        height: 300px;
+        background: #3a4a5a;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="sheet"><div class="card">karta</div></div>
+  </body>
+</html>

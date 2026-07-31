@@ -6,6 +6,7 @@ import { withPage } from "./browser.mjs";
 import { CDN_CACHE_URL_PREFIX, ensureCdnCache } from "./cdn-cache.mjs";
 import { compareSkeletons } from "./compare-skeleton.mjs";
 import { compareValues } from "./compare-values.mjs";
+import { DesignMatchError, isDeliberateError } from "./errors.mjs";
 import { extractRaw } from "./extract.mjs";
 import { collectRegions, cropRegions, formatInventory, rankCandidates } from "./inventory.mjs";
 import { decideNext, describeOutcome, evaluateRound, selectExitCode } from "./loop.mjs";
@@ -47,7 +48,7 @@ const slugify = (s) =>
 function takeFlagValue(rest, index, flagName) {
   const value = rest[index + 1];
   if (value === undefined) {
-    throw new Error(`design-match: příznak "${flagName}" vyžaduje hodnotu`);
+    throw new DesignMatchError(`design-match: příznak "${flagName}" vyžaduje hodnotu`);
   }
   return value;
 }
@@ -55,7 +56,9 @@ function takeFlagValue(rest, index, flagName) {
 export function parseArgs(argv) {
   const [command, ...rest] = argv;
   if (command !== "measure" && command !== "compare") {
-    throw new Error(`design-match: neznámý příkaz "${command}" — použij measure nebo compare`);
+    throw new DesignMatchError(
+      `design-match: neznámý příkaz "${command}" — použij measure nebo compare`,
+    );
   }
   const positional = [];
   const flags = { masks: [], strictWrappers: false, reset: false };
@@ -108,12 +111,12 @@ export function parseArgs(argv) {
   const [design, description] = positional;
 
   if (command === "measure" && (!design || !description)) {
-    throw new Error(
+    throw new DesignMatchError(
       'design-match: measure vyžaduje cestu k design souboru a popis — measure <design.html> "<popis>"',
     );
   }
   if (command === "compare" && !flags.slug) {
-    throw new Error("design-match: compare vyžaduje --slug <slug>");
+    throw new DesignMatchError("design-match: compare vyžaduje --slug <slug>");
   }
 
   return {
@@ -196,7 +199,7 @@ export function chooseRegionHint(crops = []) {
  */
 export function resolveRegionIndex(region, candidateCount, crops = []) {
   if (!(region >= 1 && region <= candidateCount)) {
-    throw new Error(
+    throw new DesignMatchError(
       `design-match: region ${region} neexistuje — platný rozsah je 1–${candidateCount}.` +
         chooseRegionHint(crops),
     );
@@ -498,7 +501,8 @@ const SELF_CONTENT_TAGS = new Set([
  * that was cut off is UNKNOWN, not empty, and unknown must not condemn.
  *
  * Runs in Node on the value `extractRaw` returned — never inside
- * `page.evaluate`, which would prefix the message and defeat `isDeliberateError`.
+ * `page.evaluate`, which cannot construct a `DesignMatchError` that survives the
+ * round trip (only the message crosses, and Playwright rewrites it).
  */
 function carriesContent(raw) {
   if (raw.text.trim().length > 0) return true;
@@ -509,7 +513,7 @@ function carriesContent(raw) {
 
 export function assertRegionRendered(raw, selector, artifactDir, cropFile = null) {
   if (carriesContent(raw)) return;
-  throw new Error(
+  throw new DesignMatchError(
     `design-match: region "${selector}" nic neobsahuje — v celém podstromu není text ani žádný obsahový prvek, takže spec by popisoval prázdno. ` +
       `Pravděpodobné příčiny: stránka se nevykreslila, skripty se nenačetly, nebo selector míří na prázdný kontejner. ` +
       `Otevři mockup v prohlížeči a ověř, že se vykreslí, případně zvol jiný region přes --region <n>.` +
@@ -568,22 +572,25 @@ function skeletonCarriesContent(node) {
  */
 export function assertSpecMeasured(spec, slug) {
   if (skeletonCarriesContent(spec.skeleton)) return;
-  throw new Error(
+  throw new DesignMatchError(
     `design-match: spec.json pro slug "${slug}" popisuje prázdný region — vznikl před kontrolou prázdnoty, kdy se nevykreslený mockup uložil jako platný spec. Spusť znovu measure pro tento slug.`,
   );
 }
 
 /**
- * Our own thrown errors are already one clean Czech sentence prefixed
- * `design-match:` (every module in this tool follows the same convention) —
- * logging just that line is the right amount of detail for an operator.
- * Anything else — a browser that failed to launch, an unexpected fs error, an
- * actual bug — needs its stack to be diagnosable, so it must be logged in full
- * rather than reduced to `.message`.
+ * Our own thrown refusals are one clean Czech sentence prefixed `design-match:`
+ * (every module in this tool follows the same convention) — logging just that
+ * line is the right amount of detail for an operator. Anything else — a browser
+ * that failed to launch, an unexpected fs error, an actual bug — needs its stack
+ * to be diagnosable, so it must be logged in full rather than reduced to
+ * `.message`.
+ *
+ * Which of the two a failure is is decided by IDENTITY now, not by the spelling
+ * of a message this tool does not own once a library has touched it. See
+ * errors.mjs — that file is where the reasoning lives, and where instance eight
+ * belongs.
  */
-export function isDeliberateError(error) {
-  return error instanceof Error && error.message.startsWith("design-match:");
-}
+export { isDeliberateError } from "./errors.mjs";
 
 /**
  * Everything between "I have a round result" and "here is the object
@@ -709,7 +716,7 @@ export async function readSpec(dir, slug) {
     raw = await fs.readFile(path.join(dir, "spec.json"), "utf8");
   } catch (error) {
     if (error.code === "ENOENT") {
-      throw new Error(
+      throw new DesignMatchError(
         `design-match: spec.json pro slug "${slug}" neexistuje — nejprve spusť measure pro tento slug.`,
       );
     }
@@ -722,7 +729,7 @@ export async function readSpec(dir, slug) {
   // of the honest "this cache is stale" it actually is. Any mismatch, including
   // a spec.json old enough to have no version field at all, is unusable as-is.
   if (spec.version !== DESIGN_MATCH_VERSION) {
-    throw new Error(
+    throw new DesignMatchError(
       `design-match: spec.json pro slug "${slug}" pochází ze starší verze design-match (${spec.version ?? "neznámá"}, aktuální je ${DESIGN_MATCH_VERSION}) — spusť znovu measure pro tento slug.`,
     );
   }
@@ -749,7 +756,7 @@ export function checkStrictWrappersMatch(spec, requestedStrictWrappers) {
   const measured = Boolean(spec.strictWrappers);
   const requested = Boolean(requestedStrictWrappers);
   if (measured === requested) return;
-  throw new Error(
+  throw new DesignMatchError(
     `design-match: --strict-wrappers se neshoduje s measure (measure běžel ${measured ? "s" : "bez"} --strict-wrappers, compare žádá ${requested ? "s" : "bez"}) — spusť znovu measure se stejným příznakem jako compare, nebo příznak u compare uprav tak, aby seděl.`,
   );
 }
@@ -779,17 +786,6 @@ export function planMeasureMounts(localHtmlPath, cacheDir) {
     mounts: { "/": mockupDir, [CDN_CACHE_URL_PREFIX]: cacheRoot },
   };
 }
-
-/**
- * Moved to shoot.mjs (D7, task 17), beside `gotoSettled` — the function that
- * does the navigating owns the translation of its failure. Re-exported here
- * because this module is the CLI's published surface.
- *
- * `translateCaptureError` (D9, task 19) is the same rule applied to the other
- * Playwright call this tool makes: the function that does the capturing owns the
- * translation of its failure, and it lives beside `shootElement`.
- */
-export { translateCaptureError, translateNavigationError } from "./shoot.mjs";
 
 async function runMeasure(cmd) {
   const dir = path.join(ARTIFACT_ROOT, cmd.slug);

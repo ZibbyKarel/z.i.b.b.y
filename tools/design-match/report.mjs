@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { PNG } from "pngjs";
+import { DesignMatchError } from "./errors.mjs";
 import { MAX_ROUNDS, classifyVerdict, describeOutcome } from "./loop.mjs";
 
 const bullet = (line) => `- ${line}`;
@@ -59,7 +60,7 @@ const WRAPPER_COVERAGE_NOTE =
 // one-liner every other usage error in this tool gets — never `?? []` again.
 export function renderValues(deltas, { wrappersCollapsed = true } = {}) {
   if (deltas === undefined) {
-    throw new Error(
+    throw new DesignMatchError(
       "design-match: renderValues dostal payload bez pole `values` — musí být buď `null` (skeleton gate neprošel), nebo pole delt (i prázdné).",
     );
   }
@@ -246,7 +247,7 @@ export function compositeDiff(appPngBuffer, maskPngBuffer) {
   const app = PNG.sync.read(appPngBuffer);
   const mask = PNG.sync.read(maskPngBuffer);
   if (app.width !== mask.width || app.height !== mask.height) {
-    throw new Error(
+    throw new DesignMatchError(
       `design-match: rozměry se liší — app ${app.width}×${app.height}, maska ${mask.width}×${mask.height}`,
     );
   }
@@ -385,6 +386,6 @@ export async function writeArtifacts(dir, payload) {
     if (writeFailures.length > 0) {
       parts.push(`zápis selhal pro: ${writeFailures.join(", ")}`);
     }
-    throw new Error(`design-match: ${parts.join("; ")}`);
+    throw new DesignMatchError(`design-match: ${parts.join("; ")}`);
   }
 }
