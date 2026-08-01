@@ -78,27 +78,29 @@ export function ChatTopBar({
 }: ChatTopBarProps) {
   return (
     <Container height={CHAT_TOPBAR_HEIGHT}>
-      <Stack
-        align="center"
+      {/* Design `VcTopBarD`: CSS grid `auto 1fr auto`, not a flex row — the
+          middle column genuinely sizes to the space left between the two side
+          groups (not the viewport); the search box centers itself within that
+          column via its own flex wrapper below. `gap: 10` between columns. */}
+      <Container
         as="header"
         data-testid={ChatTopBarTestId.Root}
-        direction="row"
-        gap="125"
-        justify="between"
-        style={{ height: "100%", position: "relative" }}
+        style={{
+          alignItems: "center",
+          display: "grid",
+          gap: "10px",
+          gridTemplateColumns: "auto 1fr auto",
+          height: "100%",
+          position: "relative",
+        }}
       >
         <GlassSurface radius="pill">
           <StatusPill />
         </GlassSurface>
 
-        {/* Absolutely centred, not a flow item: the design centres the search on
-            the VIEWPORT, and a flow item would drift with the status pill's
-            content-driven width (its label and counters change at runtime). */}
         <Container
           data-testid={ChatTopBarTestId.Search}
-          left="50%"
-          position="absolute"
-          style={{ transform: "translateX(-50%)" }}
+          style={{ display: "flex", justifyContent: "center" }}
         >
           <ChatSearch
             briefingPending={briefingPending}
@@ -123,7 +125,7 @@ export function ChatTopBar({
             <LangSwitch size="md" />
           </GlassSurface>
         </Stack>
-      </Stack>
+      </Container>
     </Container>
   );
 }

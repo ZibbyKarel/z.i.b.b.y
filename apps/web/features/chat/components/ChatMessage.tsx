@@ -142,8 +142,9 @@ function ReadAloudButton({ text }: { text: string }) {
  *
  * Phase 33 dropped the per-message "Zibby" name + bowler-hat header — role is
  * read from the bubble's background tone instead (accent-tinted for the
- * assistant, the plain raised surface for the operator), so nothing repeats
- * per turn.
+ * operator's own turn, the plain raised surface for ZIBBY's reply — Velin-D
+ * design-match: the operator's turn is the one that stands out), so nothing
+ * repeats per turn.
  */
 export function ChatMessage({ role, text, toolEvents, briefing, streaming }: ChatMessageProps) {
   const t = useTranslations("chat");
@@ -163,7 +164,7 @@ export function ChatMessage({ role, text, toolEvents, briefing, streaming }: Cha
         <BriefingMessageCard briefing={briefing} />
       ) : (
         <Card
-          background={isUser ? "raised" : "accent"}
+          background={isUser ? "accent" : "raised"}
           data-testid={isUser ? ChatMessageTestId.UserBubble : ChatMessageTestId.AssistantBubble}
           radius="lg"
         >

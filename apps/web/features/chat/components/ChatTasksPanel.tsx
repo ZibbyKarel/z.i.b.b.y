@@ -129,7 +129,11 @@ export function ChatTasksPanel({ selectedRunId, onSelectRun }: ChatTasksPanelPro
     // root sizes to its own content, so the `pointer-events-auto` wrapper `ChatScreen`
     // mounts it in hugs the cards rather than catching clicks over the gutter's
     // empty track (Phase 121).
-    <Container data-testid={ChatTasksPanelTestId.Root} padding={["0", "50", "0", "0"]}>
+    <Container
+      data-testid={ChatTasksPanelTestId.Root}
+      padding={["0", "50", "0", "0"]}
+      style={{ display: "flex", flexDirection: "column" }}
+    >
       <Stack gap="150">
         {active.length === 0 && archivedCount === 0 ? (
           <Typography

@@ -6,6 +6,7 @@ export enum SearchInputTestId {
   Root = "search-input-root",
   Icon = "search-input-icon",
   Control = "search-input-control",
+  Count = "search-input-count",
 }
 
 export interface SearchInputProps extends Omit<
@@ -20,6 +21,10 @@ export interface SearchInputProps extends Omit<
    * drops the own background + border so a surrounding `GlassSurface` shows
    * through instead of doubling up (mirrors `SearchBar`'s own `surface` prop). */
   surface?: "solid" | "transparent";
+  /** A trailing result-count badge (mono, faint) — for a search box that
+   * fronts a known total, e.g. the archive's item count. Absent renders
+   * nothing (most callers have no fixed total to show). */
+  count?: number | string;
 }
 
 /**
@@ -30,7 +35,13 @@ export interface SearchInputProps extends Omit<
  * it filters an already-loaded list or (like the task archive) drives a
  * server-side search.
  */
-export function SearchInput({ ariaLabel, ref, surface = "solid", ...props }: SearchInputProps) {
+export function SearchInput({
+  ariaLabel,
+  ref,
+  surface = "solid",
+  count,
+  ...props
+}: SearchInputProps) {
   return (
     <div
       className={cn(
@@ -54,6 +65,14 @@ export function SearchInput({ ariaLabel, ref, surface = "solid", ...props }: Sea
         type="text"
         {...props}
       />
+      {count != null && (
+        <span
+          className="shrink-0 font-mono text-xs text-foreground-faint"
+          data-testid={SearchInputTestId.Count}
+        >
+          {count}
+        </span>
+      )}
     </div>
   );
 }

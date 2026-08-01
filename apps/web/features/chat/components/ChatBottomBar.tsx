@@ -7,7 +7,6 @@ import {
   Icon,
   type IconName,
   Pressable,
-  Stack,
   Tooltip,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
@@ -85,71 +84,73 @@ export function ChatBottomBar({
   const collapse = () => setMode(null);
 
   return (
+    // Design `VcBottomBar`: the row itself IS the positioned root (`display: flex,
+    // alignItems: flex-end, gap: 10`) — no separate flex wrapper inside it.
     <Container
       data-testid={ChatBottomBarTestId.Root}
       pointerEvents={dimmed ? "none" : "auto"}
       style={{
-        opacity: dimmed ? 0.28 : 1,
+        alignItems: "flex-end",
+        display: "flex",
         filter: dimmed ? "blur(2px)" : "none",
+        gap: "10px",
+        opacity: dimmed ? 0.28 : 1,
         transition: "opacity .4s ease, filter .4s ease",
       }}
     >
-      {/* gap 10 — the design's `VcBottomBar` (`gap: 10, alignItems: flex-end`). */}
-      <Stack align="end" direction="row" gap="125">
-        {SLOTS.map((slot) => {
-          const active = mode === slot.id;
-          const label = t(slot.id);
-          return (
-            <Container
-              key={slot.id}
-              shrink={false}
-              style={{ transition: "width .38s cubic-bezier(.2,.8,.2,1)" }}
-              width={active ? slot.width : "48px"}
-            >
-              {active ? (
-                slot.id === "chat" ? (
-                  <ChatDock
-                    conversationId={conversationId}
-                    messages={messages}
-                    onClose={collapse}
-                    onMessagesChange={onMessagesChange}
-                    onNewChat={onNewChat}
-                    onStreamingChange={onStreamingChange}
-                  />
-                ) : slot.id === "task" ? (
-                  <ChatQuickTask onClose={collapse} />
-                ) : (
-                  <ChatQuickNote onClose={collapse} />
-                )
+      {SLOTS.map((slot) => {
+        const active = mode === slot.id;
+        const label = t(slot.id);
+        return (
+          <Container
+            key={slot.id}
+            shrink={false}
+            style={{ transition: "width .38s cubic-bezier(.2,.8,.2,1)" }}
+            width={active ? slot.width : "48px"}
+          >
+            {active ? (
+              slot.id === "chat" ? (
+                <ChatDock
+                  conversationId={conversationId}
+                  messages={messages}
+                  onClose={collapse}
+                  onMessagesChange={onMessagesChange}
+                  onNewChat={onNewChat}
+                  onStreamingChange={onStreamingChange}
+                />
+              ) : slot.id === "task" ? (
+                <ChatQuickTask onClose={collapse} />
               ) : (
-                <Tooltip content={label}>
-                  <Pressable
-                    aria-label={label}
-                    data-testid={slot.testId}
-                    onClick={() => setMode(slot.id)}
-                    title={label}
+                <ChatQuickNote onClose={collapse} />
+              )
+            ) : (
+              <Tooltip content={label}>
+                <Pressable
+                  aria-label={label}
+                  data-testid={slot.testId}
+                  onClick={() => setMode(slot.id)}
+                  title={label}
+                >
+                  <GlassSurface
+                    radius="pill"
+                    style={{
+                      alignItems: "center",
+                      color: "var(--color-foreground-dim)",
+                      display: "flex",
+                      height: "48px",
+                      justifyContent: "center",
+                      transition: "color .18s ease",
+                      width: "48px",
+                    }}
                   >
-                    <GlassSurface
-                      radius="pill"
-                      style={{
-                        alignItems: "center",
-                        color: "var(--color-foreground-dim)",
-                        display: "flex",
-                        height: "48px",
-                        justifyContent: "center",
-                        transition: "color .18s ease",
-                        width: "48px",
-                      }}
-                    >
-                      <Icon name={slot.glyph} size="lg" />
-                    </GlassSurface>
-                  </Pressable>
-                </Tooltip>
-              )}
-            </Container>
-          );
-        })}
-      </Stack>
+                    <Icon name={slot.glyph} size="lg" />
+                  </GlassSurface>
+                </Pressable>
+              </Tooltip>
+            )}
+          </Container>
+        );
+      })}
     </Container>
   );
 }

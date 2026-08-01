@@ -94,6 +94,25 @@ export const Overview: Story = {
   ),
 };
 
+/** Isolated single orb, args matched to the `ZIBBY Orb.html` mockup's idle
+ * state (hex `#5b8def`, no active tasks) — for design-match `--story` compares
+ * against the mockup's `#stage` region. */
+export const Idle: Story = {
+  render: () => (
+    <div className="relative h-40 w-32">
+      <OrbNode
+        activeCount={0}
+        diameter={76}
+        hex="#5b8def"
+        icon={<Icon name="compass" size="lg" />}
+        label="Atlas"
+        nodeId="idle-design-match"
+        state="idle"
+      />
+    </div>
+  ),
+};
+
 interface PlaygroundArgs {
   state: OrbState;
   diameter: number;

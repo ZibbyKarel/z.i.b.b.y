@@ -148,9 +148,10 @@ export function Screen() {
   return (
     <ImmersivePage
       actions={
-        <Container shrink={false} width="280px">
+        <Container shrink={false} width="380px">
           <SearchInput
             ariaLabel={t("searchAriaLabel")}
+            count={archivedTotal}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("searchPlaceholder")}
             value={query}
@@ -216,7 +217,7 @@ export function Screen() {
 
         <Container grow height="100%" overflowY="auto">
           {selected ? (
-            <Container padding="300">
+            <Container data-testid="archive-detail-pane" padding="300">
               <RunDetail
                 avatar={runAvatar(selected, avatarById)}
                 deleting={deleting}

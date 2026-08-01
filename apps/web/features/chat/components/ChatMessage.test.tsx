@@ -72,15 +72,15 @@ describe("ChatMessage", () => {
 
   it("distinguishes assistant vs user turns by background tone, with no repeated author header (Phase 33)", () => {
     renderWithProviders(<ChatMessage role="assistant" text="Ahoj!" />);
-    expect(screen.getByTestId(ChatMessageTestId.AssistantBubble).className).toContain(
-      "bg-accent-dim",
-    );
+    // Velin-D design-match: the plain raised surface reads as ZIBBY's reply —
+    // the accent tint belongs to the operator's own turn instead (below).
+    expect(screen.getByTestId(ChatMessageTestId.AssistantBubble).className).toContain("bg-raised");
     // The old per-message "ZIBBY" name + bowler-hat header is gone — role now
     // reads from the bubble's background alone.
     expect(screen.queryByText("ZIBBY")).not.toBeInTheDocument();
 
     renderWithProviders(<ChatMessage role="user" text="Ahoj" />);
-    expect(screen.getByTestId(ChatMessageTestId.UserBubble).className).toContain("bg-raised");
+    expect(screen.getByTestId(ChatMessageTestId.UserBubble).className).toContain("bg-accent-dim");
   });
 
   it("shows the streaming cursor only while streaming", () => {

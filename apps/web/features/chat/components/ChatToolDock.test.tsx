@@ -15,8 +15,10 @@ describe("ChatToolDock", () => {
     const { getByTestId } = renderWithProviders(<ChatToolDock />);
     // Select by testid (repo rule); role/ARIA as assertions only. The aria-label reads
     // chat.toolDock.label (renders as the key path until Task 7 lands the copy —
-    // assert presence, not copy).
-    const nav = getByTestId(ChatToolDockTestId.Nav);
+    // assert presence, not copy). The Root testid now sits on the outer `<nav>`
+    // itself (design-match structure alignment: no separate nav wrapper in the
+    // design to mirror).
+    const nav = getByTestId(ChatToolDockTestId.Root);
     expect(nav).toHaveRole("navigation");
     expect(nav).toHaveAttribute("aria-label");
   });

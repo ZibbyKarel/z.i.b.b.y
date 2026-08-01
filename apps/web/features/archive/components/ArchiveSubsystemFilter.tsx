@@ -103,6 +103,7 @@ export function ArchiveSubsystemFilter({
         as="button"
         data-testid={ArchiveSubsystemFilterTestId.Trigger}
         onClick={() => setOpen((o) => !o)}
+        style={{ display: "flex" }}
       >
         <Container padding="150">
           <Stack align="center" direction="row" gap="100">
