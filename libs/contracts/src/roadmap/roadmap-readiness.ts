@@ -18,9 +18,11 @@ export function isBlocked(
 }
 
 /**
- * The board's five states. Four are columns (`ready`/`in-progress`/`done`,
- * `blocked` — BLOKOVANÉ first per the master plan); `archived` is not a
- * column at all — the board filters it out entirely (see DECISIONS.md D-004).
+ * The board's five states, of which three are columns: `ready` (TO DO),
+ * `in-progress` and `done`. `blocked` is a real state but no longer a column —
+ * a blocked item renders inside TO DO carrying its own badge, sorted below
+ * everything unblocked (see the web board's `BOARD_COLUMNS`). `archived` has
+ * never been a column — the board filters it out entirely (DECISIONS.md D-004).
  */
 export type RoadmapReadiness = "archived" | "blocked" | "ready" | "in-progress" | "done";
 
@@ -29,9 +31,9 @@ export type RoadmapReadiness = "archived" | "blocked" | "ready" | "in-progress" 
  * (DECISIONS.md D-004): `done` first — a finished item stays finished even if
  * an edge is added to it later — then `archived`, then the derived `blocked`
  * check (checked before lifecycle, so a blocked-but-`enqueued` item reads as
- * BLOKOVANÉ rather than in-progress), then `enqueued`/`running`/
+ * blocked rather than in-progress), then `enqueued`/`running`/
  * `awaiting-merge` → `in-progress`, and everything else (`todo`, `failed`) →
- * `ready`. `failed` deliberately maps to READY, not its own column: the
+ * `ready`. `failed` deliberately maps to TO DO, not its own column: the
  * operator can act on it right now (Restart/Resume), and it still never
  * unblocks a dependent because `isBlocked` tests `lifecycle !== "done"`.
  */

@@ -35,6 +35,17 @@ export interface HighlightTextAreaFieldProps extends Omit<
   label: string;
   hint?: string;
   error?: string;
+  /** Forwarded to {@link Field} — keeps the associated `<label>` in the DOM (so the
+   *  control still has an accessible name) but hides it visually. */
+  hideLabel?: boolean;
+  /**
+   * Drop the field's own chrome — border, background and padding — leaving a bare
+   * growable text surface. For a host that already frames the composer itself and
+   * whose design has no visible field box (the Velín-D chat dock's composer row).
+   * Both layers switch together, so the highlight rectangles stay aligned under the
+   * glyphs.
+   */
+  frameless?: boolean;
   /** Controlled text — the backdrop mirrors it to align the highlights. */
   value: string;
   /**
@@ -116,6 +127,14 @@ const toneRingClass: Record<HighlightTone, string> = {
 // and `whitespace-pre-wrap break-words` (mirror the textarea's soft-wrapping).
 const layerClass = "min-h-20 resize-none whitespace-pre-wrap break-words";
 
+// `frameless`: the same typography with no box at all — no border, no background,
+// no padding, no focus ring (the host's own surface carries the focus affordance),
+// and a one-line minimum instead of the boxed 5rem.
+const framelessControlClass =
+  "w-full border-0 bg-transparent p-0 font-sans text-md text-foreground " +
+  "placeholder:text-foreground-faint focus:outline-none focus-visible:outline-none";
+const framelessLayerClass = "min-h-[22px] resize-none whitespace-pre-wrap break-words";
+
 /**
  * A multi-line text input that highlights character spans of its value inline,
  * while staying fully editable. The highlights live on an `aria-hidden` backdrop
@@ -126,6 +145,8 @@ export function HighlightTextAreaField({
   label,
   hint,
   error,
+  hideLabel,
+  frameless = false,
   value,
   highlights,
   rows = 6,
@@ -135,16 +156,19 @@ export function HighlightTextAreaField({
 }: HighlightTextAreaFieldProps) {
   const backdropRef = useRef<HTMLDivElement>(null);
   const segments = buildSegments(value, highlights);
+  // Both layers read the SAME pair, so the marks keep sitting exactly under the glyphs.
+  const controlClass = frameless ? framelessControlClass : fieldControlClass;
+  const sizingClass = frameless ? framelessLayerClass : layerClass;
 
   return (
-    <Field error={error} hint={hint} label={label}>
+    <Field error={error} hideLabel={hideLabel} hint={hint} label={label}>
       {({ id, describedBy, invalid }) => (
         <div className="relative">
           <div
             aria-hidden
             className={cn(
-              fieldControlClass,
-              layerClass,
+              controlClass,
+              sizingClass,
               "pointer-events-none absolute inset-0 select-none overflow-hidden text-transparent",
             )}
             data-testid={HighlightTextAreaFieldTestId.Backdrop}
@@ -172,7 +196,7 @@ export function HighlightTextAreaField({
           <textarea
             aria-describedby={describedBy}
             aria-invalid={invalid || undefined}
-            className={cn(fieldControlClass, layerClass, "relative bg-transparent")}
+            className={cn(controlClass, sizingClass, "relative bg-transparent")}
             data-testid={HighlightTextAreaFieldTestId.Control}
             id={id}
             onScroll={(event) => {

@@ -52,9 +52,12 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLElement>, "className"
   lg?: GridCols;
   /**
    * Responsive dashboard split (overrides cols): "right" = content + 360px rail,
-   * "left" = 320px list + content. Single column below the lg breakpoint.
+   * "left" = 320px list + content, "left-wide" = the same split proportionally
+   * (~33% list + content) for a rail whose rows carry real prose — a fixed 320px
+   * truncates them regardless of how much room the viewport actually has.
+   * Single column below the lg breakpoint.
    */
-  sidebar?: "left" | "right";
+  sidebar?: "left" | "left-wide" | "right";
   gap?: Spacing;
   align?: GridAlign;
   maxWidth?: string;
@@ -95,6 +98,7 @@ export function Grid({
       className={cn(
         sidebar === "right" && "grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px]",
         sidebar === "left" && "grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)]",
+        sidebar === "left-wide" && "grid-cols-1 lg:grid-cols-[minmax(0,33%)_minmax(0,1fr)]",
         !sidebar && [baseCols[cols], sm && smCols[sm], md && mdCols[md], lg && lgCols[lg]],
         align && alignClass[align],
       )}

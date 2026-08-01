@@ -15,7 +15,10 @@ describe("i18n catalog parity", () => {
   it("has the phase-2 chrome keys (new + reused)", () => {
     for (const key of [
       "chat.toolDock.label", // new this phase
-      "chat.tasks.title", // existing, copy updated
+      // `chat.tasks.title` used to be pinned here. The Velín-D design-match made
+      // the tasks panel headerless (the design's `VcTaskRail` has no title row),
+      // so the key lost its only consumer and was dropped from both catalogs.
+      "chat.tasks.activeEmpty", // the panel's surviving quiet-state copy
       "chat.statusPill.nominal", // existing, copy confirmed
       "topbar.langSwitcherLabel", // existing, reused by LangSwitch
       "nav.settings", // existing, reused by the tool dock

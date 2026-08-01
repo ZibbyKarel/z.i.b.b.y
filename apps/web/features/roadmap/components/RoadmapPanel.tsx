@@ -1,7 +1,7 @@
 "use client";
 
 import type { RoadmapItemLevel } from "@zibby/contracts";
-import { DropDownButton, Grid, Stack } from "@zibby/design-system";
+import { Button, DropDownButton, Grid, Stack } from "@zibby/design-system";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -20,6 +20,7 @@ export enum RoadmapPanelTestId {
   Root = "roadmap-panel",
   Empty = "roadmap-panel-empty",
   Header = "roadmap-panel-header",
+  CreateTask = "roadmap-panel-create-task",
 }
 
 /**
@@ -33,12 +34,24 @@ export enum RoadmapPanelTestId {
  * which to list). A toast reports the sync summary; the item list itself
  * refreshes via the mutation's own query invalidation.
  *
+ * "Nový task" rides in the same row (its own optional slot, since the empty
+ * state has no board to create into): both are actions ON the board, and split
+ * across two stacked rows they read as unrelated. The board's own header line
+ * is then just the dot + epic name, which is what the design mock shows.
+ *
  * The auto-sync/auto-play toggles used to sit here and now live in
  * `RoadmapAutomationPanel` on the Integrations tab: Sync stays because its
  * result lands on this very board, while a standing automation setting has
  * nothing to show here.
  */
-function RoadmapSyncHeader({ projectId }: { projectId: string }) {
+function RoadmapSyncHeader({
+  projectId,
+  createTask,
+}: {
+  projectId: string;
+  /** Omitted on the empty state — there is no board to add a task to yet. */
+  createTask?: { onCreate: () => void; disabled: boolean };
+}) {
   const t = useTranslations("roadmap");
   const syncMutation = useSyncRoadmapItemsMutation(projectId);
 
@@ -64,6 +77,24 @@ function RoadmapSyncHeader({ projectId }: { projectId: string }) {
       gap="200"
       justify="end"
     >
+      {/* A task is always created UNDER an epic — `RoadmapItemFormDialog` has no
+          epic picker and passes the selected epic straight through as `parentId`.
+          In all-tasks mode there is no selected epic, so the button has no parent
+          to hand over; enabled, it would open a dialog whose submit can only
+          produce a parentless task. Disabled with a hint is the honest state until
+          an epic picker exists (126c follow-up). */}
+      {createTask && (
+        <Button
+          data-testid={RoadmapPanelTestId.CreateTask}
+          disabled={createTask.disabled}
+          icon="plus"
+          intent="ghost"
+          onClick={createTask.onCreate}
+          size="sm"
+        >
+          {t("create.newTask")}
+        </Button>
+      )}
       <DropDownButton
         disabled={syncMutation.isPending}
         icon="retry"
@@ -91,7 +122,7 @@ type CreateTarget = { level: RoadmapItemLevel; parentId?: string };
 
 /**
  * The project detail's roadmap tab: epic list on the left, the selected
- * epic's 4-column task board on the right, and the detail dialog on
+ * epic's 3-column task board on the right, and the detail dialog on
  * card/badge click (125d, read-only there — play/dispatch is 125e). "Nový
  * epik" (from the epic list) and "Nový task" (from the board, scoped to the
  * selected epic) open the SAME manual-create dialog (125f) with a different
@@ -156,8 +187,17 @@ export function RoadmapPanel({ projectId }: RoadmapPanelProps) {
 
   return (
     <Stack data-testid={RoadmapPanelTestId.Root} gap="200">
-      <RoadmapSyncHeader projectId={projectId} />
-      <Grid gap="250" sidebar="left">
+      <RoadmapSyncHeader
+        createTask={{
+          onCreate: () => setCreateTarget({ level: "task", parentId: selectedEpic?.id }),
+          disabled: !selectedEpic,
+        }}
+        projectId={projectId}
+      />
+      {/* `left-wide` (~33%), not the fixed 320px: an epic row carries a real
+          name plus a description, and at 320px both truncated on every row
+          regardless of how wide the viewport was. 33% is the mock's own split. */}
+      <Grid gap="300" sidebar="left-wide">
         <RoadmapEpicList
           epics={epics}
           items={items}
@@ -170,7 +210,6 @@ export function RoadmapPanel({ projectId }: RoadmapPanelProps) {
         <RoadmapBoard
           epic={selectedEpic}
           items={items}
-          onCreateTask={() => setCreateTarget({ level: "task", parentId: selectedEpic?.id })}
           onSelectEpic={() => {
             if (selectedEpic) setDetailItemId(selectedEpic.id);
           }}

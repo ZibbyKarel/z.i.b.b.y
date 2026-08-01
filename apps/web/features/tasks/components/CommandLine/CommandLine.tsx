@@ -67,6 +67,17 @@ export interface CommandLineProps {
    *  passes its own "Message" wording so the label reflects what's actually
    *  being composed. */
   label?: string;
+  /** Hide the input's visible label while keeping its accessible name. The Velín-D
+   *  chat dock's composer has no "Zpráva" caption in the design — the dock's own
+   *  header already says what it is. Default `false` (every other host shows it). */
+  hideLabel?: boolean;
+  /**
+   * Drop the input's own border/background/padding, leaving a bare growable text
+   * surface — for a host whose design frames the composer itself (the chat dock's
+   * glass row). Independent of {@link CommandLineProps.chrome}, which only controls
+   * the outer velin-b `Panel` wrapper. Default `false`.
+   */
+  frameless?: boolean;
   initialText?: string;
   initialTarget?: TaskTarget;
   /** An extra guard from the caller (e.g. an incomplete "write to a file" output
@@ -364,6 +375,8 @@ export function CommandLine({
   placeholder,
   attachIcon = "plus",
   label,
+  hideLabel = false,
+  frameless = false,
   initialText,
   initialTarget,
   disabled = false,
@@ -866,6 +879,8 @@ export function CommandLine({
           autoFocus
           data-testid={CommandLineTestId.Input}
           disabled={disabled}
+          frameless={frameless}
+          hideLabel={hideLabel}
           highlights={highlights}
           label={label ?? t("commandLine.label")}
           onBlur={closeMention}

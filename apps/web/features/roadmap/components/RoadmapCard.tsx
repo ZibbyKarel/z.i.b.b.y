@@ -42,10 +42,10 @@ export interface RoadmapCardProps {
    * carries a distinct red edge on top of it; see {@link edgeToneFor}). */
   column: BoardColumn;
   /**
-   * This item's own epic, passed only in all-tasks mode (126c/D2) — renders an
-   * epic-attribution chip so two identically-named tasks from different epics
+   * This item's own epic, passed only in all-tasks mode (126c/D2) — renders the
+   * epic-attribution line so two identically-named tasks from different epics
    * stay distinguishable. `undefined` in epic-filtered mode, where every card
-   * already belongs to the same epic and the chip would be redundant.
+   * already belongs to the same epic and the line would be redundant.
    */
   epic?: RoadmapItem;
   /** Resolved `dependsOn` targets, in order (see `blockersOf`). */
@@ -61,15 +61,17 @@ export interface RoadmapCardProps {
   onSelectDependency: (itemId: string) => void;
 }
 
-/** BLOKOVANÉ = warn (waiting, not an error); IN PROGRESS = run; DONE = ok; READY =
- * accent, UNLESS the item is `failed` — a failed item stays in READY (D-004) but
- * must never read as ordinary un-started work, so it gets the same red as an
- * error state regardless of column. */
+/** IN PROGRESS = run; DONE = ok; TO DO = accent, UNLESS the item is `failed` — a
+ * failed item stays in TO DO (D-004) but must never read as ordinary un-started
+ * work, so it gets the same red as an error state regardless of column.
+ *
+ * A blocked item deliberately gets NO edge of its own: it now shares TO DO with
+ * everything else there, and the operator's call was that blocking is carried by
+ * the badge alone. Position in the column (blocked items sort last) is the second
+ * signal; a third would only compete with `failed` for the same 2px of edge. */
 function edgeToneFor(column: BoardColumn, item: RoadmapItem): StateTone {
   if (item.lifecycle === "failed") return "bad";
   switch (column) {
-    case "blocked":
-      return "warn";
     case "in-progress":
       return "run";
     case "done":
@@ -77,6 +79,22 @@ function edgeToneFor(column: BoardColumn, item: RoadmapItem): StateTone {
     case "ready":
       return "accent";
   }
+}
+
+/**
+ * The epic-attribution dot (D2), matching the design mock's own task card: a
+ * 5px hue dot ahead of the epic's name in mono.
+ *
+ * This replaces a hued `Chip`, which was a real bug, not just a style choice —
+ * `Chip` is `whitespace-nowrap` with no truncation, so an epic named
+ * "[Shoptet CLI Greenfield] Phase 1 — Offline mode" measured 280px inside a
+ * 188px card and spilled across the column gap onto its neighbour. A dot plus a
+ * truncating `Typography` cannot overflow, and is what the design specified in
+ * the first place. `Chip` itself is left alone: every other caller passes a
+ * short status word, which is what it is for.
+ */
+function hueDotStyle(hue: string): CSSProperties {
+  return { width: 5, height: 5, borderRadius: "50%", background: hue };
 }
 
 /**
@@ -88,17 +106,6 @@ function edgeToneFor(column: BoardColumn, item: RoadmapItem): StateTone {
  * name/description area is its own `Pressable` instead, so "click the card"
  * still opens the dialog everywhere except the parts that do something else.
  */
-/** Tints the epic-attribution chip (D2) with the epic's hue — the same value
- * used for its dot in the rail and the board header — via the DS `Chip`'s
- * `style` passthrough, since tone is a fixed enum with no per-epic slot. */
-function epicChipStyle(hue: string): CSSProperties {
-  return {
-    color: hue,
-    borderColor: hue,
-    backgroundColor: `color-mix(in srgb, ${hue} 14%, transparent)`,
-  };
-}
-
 export function RoadmapCard({
   item,
   column,
@@ -222,16 +229,6 @@ export function RoadmapCard({
             )}
           </Stack>
 
-          {epic && (
-            <Chip
-              data-testid={RoadmapCardTestId.Epic}
-              style={epicChipStyle(epicHue(epic.id))}
-              tone="idle"
-            >
-              {epic.name}
-            </Chip>
-          )}
-
           <Pressable
             aria-label={t("card.openDetail", { name: item.name })}
             data-testid={RoadmapCardTestId.Open}
@@ -253,6 +250,19 @@ export function RoadmapCard({
               </Typography>
             </Stack>
           </Pressable>
+
+          {/* Below the name, exactly as in the design mock — an attribution line
+              reads as a footnote to the task, not as a heading above it. */}
+          {epic && (
+            <Stack align="center" data-testid={RoadmapCardTestId.Epic} direction="row" gap="75">
+              <Container shrink={false} style={hueDotStyle(epicHue(epic.id))} />
+              <Container grow minW0>
+                <Typography mono truncate size="2xs" type="note" variant="tertiary">
+                  {epic.name}
+                </Typography>
+              </Container>
+            </Stack>
+          )}
 
           {(blockers.length > 0 || dependents.length > 0) && (
             <Stack wrap align="center" direction="row" gap="75">

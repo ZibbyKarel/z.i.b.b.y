@@ -90,7 +90,7 @@ describe("RoadmapCard", () => {
     render(
       <RoadmapCard
         blockers={blockers}
-        column="blocked"
+        column="ready"
         dependents={[]}
         item={item({
           id: "t2b",
@@ -111,7 +111,7 @@ describe("RoadmapCard", () => {
     render(
       <RoadmapCard
         blockers={[blocker]}
-        column="blocked"
+        column="ready"
         dependents={[]}
         item={item({ id: "t3", name: "Blocked task 2", dependsOn: ["blocker-2"] })}
         onHoverChange={vi.fn()}
@@ -128,7 +128,7 @@ describe("RoadmapCard", () => {
     render(
       <RoadmapCard
         blockers={[archived, live]}
-        column="blocked"
+        column="ready"
         dependents={[]}
         item={item({
           id: "t2c",
@@ -149,7 +149,7 @@ describe("RoadmapCard", () => {
     render(
       <RoadmapCard
         blockers={[live]}
-        column="blocked"
+        column="ready"
         dependents={[]}
         item={item({ id: "t2d", name: "Blocked live", dependsOn: ["blocker-live2"] })}
         onHoverChange={vi.fn()}
@@ -167,7 +167,7 @@ describe("RoadmapCard", () => {
     render(
       <RoadmapCard
         blockers={[archived, live]}
-        column="blocked"
+        column="ready"
         dependents={[]}
         item={item({
           id: "t2e",
@@ -361,7 +361,7 @@ describe("RoadmapCard", () => {
     render(
       <RoadmapCard
         blockers={[blocker]}
-        column="blocked"
+        column="ready"
         dependents={[]}
         item={item({ id: "t7", name: "Blocked", dependsOn: ["blocker-3"] })}
         onHoverChange={vi.fn()}
@@ -409,7 +409,7 @@ describe("RoadmapCard", () => {
     expect(screen.getByText("blokuje 2")).toBeInTheDocument();
   });
 
-  it("renders the epic chip when `epic` is passed (126c/D2 all-tasks mode)", () => {
+  it("renders the epic attribution line when `epic` is passed (126c/D2 all-tasks mode)", () => {
     const epic = item({ id: "epic-1", level: "epic", name: "Rate limiting" });
     render(
       <RoadmapCard
@@ -426,7 +426,33 @@ describe("RoadmapCard", () => {
     expect(screen.getByTestId(RoadmapCardTestId.Epic)).toHaveTextContent("Rate limiting");
   });
 
-  it("has no epic chip when `epic` is not passed (epic-filtered mode)", () => {
+  it("truncates a long epic name instead of overflowing the card", () => {
+    // The regression this replaced a `Chip` for: `Chip` is whitespace-nowrap with
+    // no truncation, so a long epic name spilled out of the card and across the
+    // column gap. The name must be inside a truncating element, not just short.
+    const epic = item({
+      id: "epic-1",
+      level: "epic",
+      name: "[Shoptet CLI Greenfield] Phase 1 — Offline mode and everything after it",
+    });
+    render(
+      <RoadmapCard
+        blockers={[]}
+        column="ready"
+        dependents={[]}
+        epic={epic}
+        item={item({ id: "t12", name: "Task" })}
+        onHoverChange={vi.fn()}
+        onSelect={vi.fn()}
+        onSelectDependency={vi.fn()}
+      />,
+    );
+    const line = screen.getByTestId(RoadmapCardTestId.Epic);
+    expect(line).toHaveTextContent(epic.name);
+    expect(line.querySelector(".truncate")).not.toBeNull();
+  });
+
+  it("has no epic attribution line when `epic` is not passed (epic-filtered mode)", () => {
     render(
       <RoadmapCard
         blockers={[]}

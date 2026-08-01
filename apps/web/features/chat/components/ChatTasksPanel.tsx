@@ -1,6 +1,6 @@
 "use client";
 
-import { Container, Icon, Stack, StatusDot, Typography } from "@zibby/design-system";
+import { Container, Icon, Stack, Typography } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -14,10 +14,6 @@ export enum ChatTasksPanelTestId {
   Root = "chat-tasks-panel",
   List = "chat-tasks-panel-list",
   Empty = "chat-tasks-panel-empty",
-  /** The header's localized title — selected by testid rather than asserting the
-   * translated copy itself, since the `chat.tasks.title` string is Task 7's to
-   * change (cs `"Tasky"` → `"Běžící úlohy"`). */
-  Title = "chat-tasks-panel-title",
   /** Quiet "no active tasks" hint shown when the feed has archived tasks but
    * nothing active — distinct from {@link Empty}, which covers "no tasks at all". */
   ActiveEmpty = "chat-tasks-panel-active-empty",
@@ -74,9 +70,14 @@ export interface ChatTasksPanelProps {
  * Phase 121 (Velín-D `VcTaskRail` alignment): TRANSPARENT gutter, not a boxed panel —
  * there is no wrapping `HudPanel`/`Card` any more. Each {@link ChatTaskRow} already
  * renders its own design-close floating glass card (edge tone, living glow, avatar,
- * meta strip, progress meter); this component only supplies a minimal live-dot +
- * count header and the scrolling column, so the orb map behind stays visible (and
- * clickable) through the gutter's own empty space.
+ * meta strip, progress meter); this component only supplies the scrolling column, so
+ * the orb map behind stays visible (and clickable) through the gutter's own empty
+ * space.
+ *
+ * Velín-D design-match: the panel is HEADERLESS. The design's `VcTaskRail` is a bare
+ * column of cards with no title row and no count — the cards themselves say what is
+ * running. The operator kept the "Archiv · N" link below the list (it is the only way
+ * out to `/archiv` from here), so that is the one non-card element left.
  *
  * Reads the STABLE unified runs feed ({@link useRunsQuery}, kept fresh by the shared
  * SSE bus) rather than the chat data-layer. Phase 108: there is no global project
@@ -84,10 +85,9 @@ export interface ChatTasksPanelProps {
  * top-bar scope this used to honor is gone). Scrollable, with a quiet empty hint
  * when there are no tasks at all.
  *
- * Phase 123: the header's "Běžící úlohy" (running tasks) title is now honest — the
- * gutter shows only {@link isArchived}-false ("active") tasks; finished/settled
- * tasks (`done`/`error`/`interrupted`/`parked`) count behind an "Archiv" entry
- * below the active list.
+ * Phase 123: the gutter shows only {@link isArchived}-false ("active") tasks;
+ * finished/settled tasks (`done`/`error`/`interrupted`/`parked`) count behind an
+ * "Archiv" entry below the active list.
  *
  * F2 (`docs/plans/hud2chat-F2-archive.md`, operator decision O4): that entry
  * used to expand the archived cards inline (Phase 123); it is now a plain link
@@ -127,21 +127,10 @@ export function ChatTasksPanel({ selectedRunId, onSelectRun }: ChatTasksPanelPro
   return (
     // No fixed `height` here (only the list below caps with `maxHeight`) — this
     // root sizes to its own content, so the `pointer-events-auto` wrapper `ChatScreen`
-    // mounts it in hugs the header + cards rather than catching clicks over the
-    // gutter's empty track (Phase 121).
-    <Container data-testid={ChatTasksPanelTestId.Root} padding={["0", "100", "0", "0"]}>
+    // mounts it in hugs the cards rather than catching clicks over the gutter's
+    // empty track (Phase 121).
+    <Container data-testid={ChatTasksPanelTestId.Root} padding={["0", "50", "0", "0"]}>
       <Stack gap="150">
-        <Stack align="center" direction="row" gap="100" justify="between">
-          <Stack align="center" direction="row" gap="75">
-            <StatusDot pulse size="75" tone="run" />
-            <Typography data-testid={ChatTasksPanelTestId.Title} type="label">
-              {t("title")}
-            </Typography>
-          </Stack>
-          <Typography mono type="note" variant="secondary">
-            {active.length}
-          </Typography>
-        </Stack>
         {active.length === 0 && archivedCount === 0 ? (
           <Typography
             mono
@@ -154,10 +143,10 @@ export function ChatTasksPanel({ selectedRunId, onSelectRun }: ChatTasksPanelPro
           </Typography>
         ) : (
           // Active list, then the Archiv link — one scroll region (Phase 123).
-          <Container maxHeight="calc(100vh - 220px)" overflowY="auto">
+          <Container maxHeight="calc(100vh - 200px)" overflowY="auto">
             <Stack gap="150">
               {active.length > 0 ? (
-                <Stack data-testid={ChatTasksPanelTestId.List} gap="100">
+                <Stack data-testid={ChatTasksPanelTestId.List} gap="150">
                   {active.map(renderRow)}
                 </Stack>
               ) : (

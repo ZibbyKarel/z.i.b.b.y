@@ -1,16 +1,7 @@
 "use client";
 
 import type { RoadmapItem } from "@zibby/contracts";
-import {
-  Button,
-  Card,
-  Container,
-  Grid,
-  Panel,
-  Pressable,
-  Stack,
-  Typography,
-} from "@zibby/design-system";
+import { Card, Container, Grid, Panel, Pressable, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { type CSSProperties, useState } from "react";
 import {
@@ -33,14 +24,13 @@ export enum RoadmapBoardTestId {
   Column = "roadmap-column",
   ColumnBody = "roadmap-column-body",
   ColumnEmpty = "roadmap-column-empty",
-  CreateTask = "roadmap-board-create-task",
 }
 
 export interface RoadmapBoardProps {
   /**
    * The selected epic to filter the board to. `undefined` (126c) means "no
    * epic selected" — the board falls back to {@link allTasks}, every
-   * task-level item in the project, bucketed into the same four columns.
+   * task-level item in the project, bucketed into the same three columns.
    */
   epic?: RoadmapItem;
   /**
@@ -59,8 +49,6 @@ export interface RoadmapBoardProps {
    * selection gesture.
    */
   onSelectEpic: () => void;
-  /** Opens the "Nový task" manual-create dialog (125f), scoped to this epic. */
-  onCreateTask: () => void;
 }
 
 const COLUMN_MAX_HEIGHT = "28rem";
@@ -77,21 +65,19 @@ function hueDotStyle(hue: string): CSSProperties {
 }
 
 /**
- * The right-hand side of the roadmap tab (125d): the selected epic's 4-column
- * task board — `BLOKOVANÉ | READY | IN PROGRESS | DONE` (DECISIONS.md D-001),
- * `archived` items filtered off entirely (D-004). Hovering a card highlights its
- * blockers and dependents across every column (local state only, no query).
- * The header's "Nový task" button (125f) opens the manual-create dialog scoped
- * to THIS epic — the parent panel owns the dialog and passes the epic's id as
- * `parentId`, so a task always lands under the epic that's currently selected.
+ * The right-hand side of the roadmap tab (125d): the selected epic's 3-column
+ * task board — `TO DO | IN PROGRESS | DONE`, the design mock's own columns.
+ * `archived` items are filtered off entirely (D-004) and blocked ones live at
+ * the bottom of TO DO behind their badge (see `BOARD_COLUMNS`). Hovering a card
+ * highlights its blockers and dependents across every column (local state only,
+ * no query).
+ *
+ * "Nový task" is NOT here: it sits in the panel's own header row alongside
+ * "Synchronizovat", so the two buttons read as one row of board-level actions
+ * rather than one floating per section. The board header line is then just the
+ * dot + name, exactly as the mock has it.
  */
-export function RoadmapBoard({
-  epic,
-  items,
-  onSelectItem,
-  onSelectEpic,
-  onCreateTask,
-}: RoadmapBoardProps) {
+export function RoadmapBoard({ epic, items, onSelectItem, onSelectEpic }: RoadmapBoardProps) {
   const t = useTranslations("roadmap");
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
@@ -107,7 +93,6 @@ export function RoadmapBoard({
   }
 
   const columnLabel: Record<BoardColumn, string> = {
-    blocked: t("board.columns.blocked"),
     ready: t("board.columns.ready"),
     "in-progress": t("board.columns.inProgress"),
     done: t("board.columns.done"),
@@ -115,13 +100,7 @@ export function RoadmapBoard({
 
   return (
     <Stack data-testid={RoadmapBoardTestId.Root} gap="200">
-      <Stack
-        align="center"
-        data-testid={RoadmapBoardTestId.Header}
-        direction="row"
-        gap="100"
-        justify="between"
-      >
+      <Stack align="center" data-testid={RoadmapBoardTestId.Header} direction="row" gap="100">
         {epic ? (
           <Pressable
             aria-label={t("board.openEpicDetail")}
@@ -143,39 +122,26 @@ export function RoadmapBoard({
             </Typography>
           </Stack>
         )}
-        {/* A task is always created UNDER an epic — `RoadmapItemFormDialog` has no
-            epic picker and passes the selected epic straight through as `parentId`.
-            In all-tasks mode there is no selected epic, so the button has no parent
-            to hand over; enabled, it would open a dialog whose submit can only
-            produce a parentless task. Disabled with a hint is the honest state until
-            an epic picker exists (126c follow-up). */}
-        <Button
-          data-testid={RoadmapBoardTestId.CreateTask}
-          disabled={!epic}
-          icon="plus"
-          intent="ghost"
-          onClick={onCreateTask}
-          size="sm"
-        >
-          {t("create.newTask")}
-        </Button>
       </Stack>
 
-      <Grid cols={4} gap="150">
+      <Grid cols={3} gap="150">
         {BOARD_COLUMNS.map((column) => {
           const columnItems = groups[column];
           return (
             <Panel
               data-testid={RoadmapBoardTestId.Column}
+              /* Label and count sit together on the left, as in the mock — the
+                 count is a property OF the label ("TO DO 12"), and pushing it to
+                 the far edge (`headerEnd`) read as an unrelated second field. */
               header={
-                <Typography mono uppercase size="xs" tracking="wider" type="label">
-                  {columnLabel[column]}
-                </Typography>
-              }
-              headerEnd={
-                <Typography mono size="xs" type="note" variant="tertiary">
-                  {columnItems.length}
-                </Typography>
+                <Stack align="baseline" direction="row" gap="100">
+                  <Typography mono uppercase size="xs" tracking="wider" type="label">
+                    {columnLabel[column]}
+                  </Typography>
+                  <Typography mono size="xs" type="note" variant="tertiary">
+                    {columnItems.length}
+                  </Typography>
+                </Stack>
               }
               key={column}
             >
@@ -205,9 +171,9 @@ export function RoadmapBoard({
                         blockers={blockersOf(item, get)}
                         column={column}
                         dependents={dependentsOf(item, items)}
-                        // Only all-tasks mode needs the attribution chip (D2) —
+                        // Only all-tasks mode needs the attribution line (D2) —
                         // every card is already the selected epic's own child
-                        // in filtered mode, so the chip would be redundant.
+                        // in filtered mode, so the line would be redundant.
                         epic={epic ? undefined : get(item.parentId ?? "")}
                         highlighted={highlightedIds.has(item.id)}
                         item={item}

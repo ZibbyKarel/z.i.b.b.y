@@ -183,7 +183,7 @@ export function StatusPill() {
 
   return (
     <div
-      className="rounded-full px-[14px] py-[6px]"
+      className="flex h-[38px] items-center rounded-full px-[14px] whitespace-nowrap"
       data-testid={StatusPillTestId.Root}
       id={STATUS_PILL_DOM_ID}
       onBlur={onRootBlur}

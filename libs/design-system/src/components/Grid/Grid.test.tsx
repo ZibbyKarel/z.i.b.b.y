@@ -26,6 +26,13 @@ describe("Grid", () => {
     );
   });
 
+  it("switches to the wide left-sidebar template", () => {
+    render(<Grid sidebar="left-wide" />);
+    expect(screen.getByTestId(GridTestId.Root).className).toContain(
+      "lg:grid-cols-[minmax(0,33%)_minmax(0,1fr)]",
+    );
+  });
+
   it("centres and constrains width", () => {
     render(<Grid center maxWidth="1400px" />);
     const el = screen.getByTestId(GridTestId.Root);

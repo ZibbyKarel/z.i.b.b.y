@@ -38,3 +38,16 @@ export const MainAside: Story = {
     </Grid>
   ),
 };
+
+export const WideListAndContent: Story = {
+  render: () => (
+    <Grid align="start" gap="300" sidebar="left-wide">
+      <Card>
+        <Container padding="200">List (~33%)</Container>
+      </Card>
+      <Card>
+        <Container padding="200">Content</Container>
+      </Card>
+    </Grid>
+  ),
+};

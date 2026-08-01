@@ -33,7 +33,7 @@ import type { ChatSearchHandle } from "./ChatSearch";
 import { ChatTaskDetailColumn } from "./ChatTaskDetailColumn";
 import { ChatTasksPanel } from "./ChatTasksPanel";
 import { ChatToolDock } from "./ChatToolDock";
-import { ChatTopBar } from "./ChatTopBar";
+import { CHAT_TOPBAR_HEIGHT_PX, ChatTopBar } from "./ChatTopBar";
 import { CoreOverviewDialog } from "./CoreOverviewDialog";
 import { SubsystemOrbMap } from "./SubsystemOrbMap";
 
@@ -43,8 +43,8 @@ export enum ChatScreenTestId {
 
 /** The chat top-bar band height — the orb ellipse is inset by this so its top
  *  ring clears the bar instead of sitting under it (the bar is a z-20 overlay
- *  over the full-screen map). */
-const CHAT_TOPBAR_INSET = 56;
+ *  over the full-screen map). One number, owned by the bar itself. */
+const CHAT_TOPBAR_INSET = CHAT_TOPBAR_HEIGHT_PX;
 
 /** The orb ellipse's bottom inset — reserves room for the Velín-D floating
  *  chrome anchored to the bottom edge (the bottom-center `ChatBottomBar`, whose
@@ -271,10 +271,11 @@ export function ChatScreen({
       </div>
 
       {/* ── Top-right tool dock (Velín-D `VcDockGroup`) ───────────────────
-          A glass island pinned to the top-right, just under the top bar
-          (design `right:24 top:68`), floating above the orb map. `pointerEvents`
+          A glass island pinned to the top-right, floating above the orb map. The
+          design anchors it at `right:24 top:68` INSIDE the body below the 56px
+          header, so from this screen's root that is `top: 124`. `pointerEvents`
           re-enables clicks through the page's ambient pointer-events-none scene. */}
-      <Container pointerEvents="auto" position="absolute" right="24px" top="72px" zIndex={20}>
+      <Container pointerEvents="auto" position="absolute" right="24px" top="124px" zIndex={20}>
         <ChatToolDock />
       </Container>
 
@@ -309,8 +310,10 @@ export function ChatScreen({
         <div className="pointer-events-none relative z-10 flex h-full w-full flex-col items-center justify-end">
           {/* ── Left panel: ALL tasks in scope (Phase 57) ──────────────────
               A `z`-raised fixed-width column pinned to the left, above the scene.
-              Hidden below `lg` so it never crowds the map on a narrow viewport. */}
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-20 hidden w-[300px] flex-col p-4 lg:flex">
+              Hidden below `lg` so it never crowds the map on a narrow viewport.
+              Design `VcTaskRail`: left 24, top/bottom 22, a 296px-wide column —
+              so 320 = 24 + 296. */}
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-20 hidden w-[320px] flex-col py-[22px] pl-[24px] lg:flex">
             <div className="pointer-events-auto">
               <ChatTasksPanel onSelectRun={selectRun} selectedRunId={selectedRunId} />
             </div>

@@ -11,6 +11,7 @@ import {
   epicProgress,
   epicStatus,
   groupByColumn,
+  isItemBlocked,
   stripMarkdownPreview,
 } from "./roadmap-board";
 
@@ -126,7 +127,7 @@ describe("epicStatus", () => {
 });
 
 describe("groupByColumn", () => {
-  it("sorts children into the four columns and drops archived entirely", () => {
+  it("sorts children into the three columns and drops archived entirely", () => {
     const blocker = item({ id: "blocker", lifecycle: "todo" });
     const items = [
       blocker,
@@ -140,22 +141,40 @@ describe("groupByColumn", () => {
     const children = items.filter((i) => i.id !== "gone" || true); // include archived on purpose
     const groups = groupByColumn(children, get);
 
-    expect(groups.blocked.map((i) => i.id)).toEqual(["blocked"]);
-    expect(groups.ready.map((i) => i.id).sort()).toEqual(["blocker", "ready"]);
+    // A blocked item now shares TO DO with the unblocked ones and sorts last.
+    expect(groups.ready.map((i) => i.id)).toEqual(["blocker", "ready", "blocked"]);
     expect(groups["in-progress"].map((i) => i.id)).toEqual(["running"]);
     expect(groups.done.map((i) => i.id)).toEqual(["done"]);
 
-    const allRendered = [
-      ...groups.blocked,
-      ...groups.ready,
-      ...groups["in-progress"],
-      ...groups.done,
-    ];
+    const allRendered = [...groups.ready, ...groups["in-progress"], ...groups.done];
     expect(allRendered.some((i) => i.id === "gone")).toBe(false);
   });
 
-  it("BOARD_COLUMNS is BLOKOVANÉ-first and never lists archived", () => {
-    expect(BOARD_COLUMNS).toEqual(["blocked", "ready", "in-progress", "done"]);
+  it("keeps insertion order within the unblocked and blocked runs alike", () => {
+    const items = [
+      item({ id: "b1", dependsOn: ["u2"] }),
+      item({ id: "u1" }),
+      item({ id: "b2", dependsOn: ["u1"] }),
+      item({ id: "u2" }),
+    ];
+    const groups = groupByColumn(items, buildRoadmapLookup(items));
+    expect(groups.ready.map((i) => i.id)).toEqual(["u1", "u2", "b1", "b2"]);
+  });
+
+  it("BOARD_COLUMNS lists neither blocked nor archived — three columns, TO DO first", () => {
+    expect(BOARD_COLUMNS).toEqual(["ready", "in-progress", "done"]);
+  });
+});
+
+describe("isItemBlocked", () => {
+  it("is true only while a dependency is unresolved", () => {
+    const items = [item({ id: "a" }), item({ id: "b", dependsOn: ["a"] }), item({ id: "c" })];
+    const get = buildRoadmapLookup(items);
+    expect(isItemBlocked(items[1]!, get)).toBe(true);
+    expect(isItemBlocked(items[2]!, get)).toBe(false);
+
+    const settled = [item({ id: "a", lifecycle: "done" }), item({ id: "b", dependsOn: ["a"] })];
+    expect(isItemBlocked(settled[1]!, buildRoadmapLookup(settled))).toBe(false);
   });
 });
 

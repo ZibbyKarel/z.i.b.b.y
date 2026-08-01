@@ -7,6 +7,7 @@ import { RoadmapPanel, RoadmapPanelTestId } from "./RoadmapPanel";
 import { RoadmapBoardTestId } from "./RoadmapBoard";
 import { RoadmapCardTestId } from "./RoadmapCard";
 import { RoadmapItemDialogTestId } from "./RoadmapItemDialog";
+import { RoadmapItemFormDialogTestId } from "./RoadmapItemFormDialog";
 
 function item(partial: Partial<RoadmapItem> & Pick<RoadmapItem, "id">): RoadmapItem {
   return {
@@ -140,6 +141,47 @@ describe("RoadmapPanel", () => {
 
   // The auto-sync/auto-play toggles moved to `RoadmapAutomationPanel` on the
   // Integrations tab — their behaviour is covered by that component's own suite.
+
+  describe("Nový task (in the header row, level with Sync)", () => {
+    const epicA = item({ id: "e1", level: "epic", name: "Epic A", parentId: undefined });
+
+    it("sits in the panel header, not in the board's own header line", () => {
+      hooks.items.data = [epicA];
+      render(<RoadmapPanel projectId="proj-1" />);
+
+      const header = screen.getByTestId(RoadmapPanelTestId.Header);
+      expect(within(header).getByTestId(RoadmapPanelTestId.CreateTask)).toBeInTheDocument();
+      expect(
+        within(screen.getByTestId(RoadmapBoardTestId.Header)).queryByTestId(
+          RoadmapPanelTestId.CreateTask,
+        ),
+      ).not.toBeInTheDocument();
+    });
+
+    it("is disabled in all-tasks mode — there is no epic to create the task under", () => {
+      hooks.items.data = [epicA, item({ id: "t1", parentId: "e1", name: "Task in A" })];
+      render(<RoadmapPanel projectId="proj-1" />);
+
+      expect(screen.getByTestId(RoadmapPanelTestId.CreateTask)).toBeDisabled();
+    });
+
+    it("opens the create dialog once an epic is selected", async () => {
+      hooks.items.data = [epicA, item({ id: "t1", parentId: "e1", name: "Task in A" })];
+      render(<RoadmapPanel projectId="proj-1" />);
+
+      await userEvent.click(screen.getByTestId("roadmap-epic-row-e1"));
+      await userEvent.click(screen.getByTestId(RoadmapPanelTestId.CreateTask));
+
+      expect(screen.getByTestId(RoadmapItemFormDialogTestId.Root)).toBeInTheDocument();
+    });
+
+    it("is absent on the empty state — there is no board to create into yet", () => {
+      hooks.items.data = [];
+      render(<RoadmapPanel projectId="proj-1" />);
+
+      expect(screen.queryByTestId(RoadmapPanelTestId.CreateTask)).not.toBeInTheDocument();
+    });
+  });
 
   it("clicking the board header's epic name opens the EPIC's detail dialog", async () => {
     // Descriptions, not names: the epic's name also renders in the epic list and

@@ -11,8 +11,12 @@ export enum ChatToolDockTestId {
   Settings = "chat-tool-dock-settings",
 }
 
-/** px the map's right inset must clear (Task 6 consumes this to size the reserved gutter). */
-export const CHAT_TOOL_DOCK_WIDTH = 70;
+/** px the map's right inset must clear (Task 6 consumes this to size the reserved gutter).
+ *  38px hit target + the design strip's 7px side padding + its 1px glass border. */
+export const CHAT_TOOL_DOCK_WIDTH = 54;
+
+/** Design `velin-d-dock.jsx`: the strip is a 22px-radius glass pill padded 10/7. */
+const DOCK_STRIP_STYLE = { borderRadius: "22px", padding: "10px 7px" } as const;
 
 // The design's tool set, in order — a subset of the HUD nav (source of truth).
 // `hooks` joined in F3 (docs/plans/hud2chat-F3-catalogs-a.md): it was one of the
@@ -41,9 +45,10 @@ const DOCK_IDS = [
   "memory",
 ] as const;
 
-// 38×38 hit target (spec §5.3), dim by default, accent on hover/focus.
+// 38×38 hit target (spec §5.3) with the design's 12px button rounding, dim by
+// default, accent on hover/focus.
 const DOCK_LINK_CLASS =
-  "flex size-[38px] items-center justify-center rounded-[6px] text-foreground-dim outline-none transition-colors hover:text-accent focus-visible:text-accent";
+  "flex size-[38px] items-center justify-center rounded-[12px] text-foreground-dim outline-none transition-colors hover:text-accent focus-visible:text-accent";
 
 /**
  * Right-side glass tool dock — icon links into the HUD pages (Velin-D design).
@@ -58,7 +63,7 @@ export function ChatToolDock() {
   );
 
   return (
-    <GlassSurface data-testid={ChatToolDockTestId.Root} radius="panel">
+    <GlassSurface data-testid={ChatToolDockTestId.Root} radius="panel" style={DOCK_STRIP_STYLE}>
       {/* Semantic landmark; bare element, no styles. Consumes chat.toolDock.label. */}
       <nav aria-label={tChat("toolDock.label")} data-testid={ChatToolDockTestId.Nav}>
         <Stack align="center" direction="col" gap="75">

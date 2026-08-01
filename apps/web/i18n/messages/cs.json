@@ -1785,7 +1785,6 @@
       "collapseAria": "Sbalit detail běhu"
     },
     "tasks": {
-      "title": "Běžící úlohy",
       "empty": "Žádné tasky",
       "activeEmpty": "Žádné běžící úlohy",
       "archive": "Archiv",
@@ -2085,8 +2084,7 @@
       "allTasksCount": "Všechny tasky ({count})",
       "openEpicDetail": "Otevřít detail epicu",
       "columns": {
-        "blocked": "Blokované",
-        "ready": "Ready",
+        "ready": "To Do",
         "inProgress": "In Progress",
         "done": "Done"
       },

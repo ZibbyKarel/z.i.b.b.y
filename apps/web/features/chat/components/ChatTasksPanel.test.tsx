@@ -104,8 +104,8 @@ describe("ChatTasksPanel (Phase 57, selection wiring Phase 100)", () => {
       });
       render(<ChatTasksPanel onSelectRun={vi.fn()} selectedRunId={null} />);
 
-      // Header count is active-only.
-      expect(screen.getByTestId(ChatTasksPanelTestId.Root)).toHaveTextContent("1");
+      // The list is active-only (there is no header count any more — the panel
+      // is headerless after the Velín-D design-match).
       const list = screen.getByTestId(ChatTasksPanelTestId.List);
       expect(within(list).getAllByTestId(ChatTaskRowTestId.Row)).toHaveLength(1);
 
@@ -159,7 +159,10 @@ describe("ChatTasksPanel (Phase 57, selection wiring Phase 100)", () => {
     expect(screen.queryByTestId(ChatTasksPanelTestId.List)).not.toBeInTheDocument();
   });
 
-  it("shows the localized header title and an active-only count", () => {
+  // Velín-D design-match: the panel is headerless — the design's `VcTaskRail` has
+  // no title row and no count, so the list is the whole panel (bar the archive
+  // link). This asserts BOTH: no header renders, and the list is active-only.
+  it("renders no header, and lists active tasks only", () => {
     runsMock.mockReturnValue({
       runs: [
         run({ runId: "run_a", title: "Fix login bug", status: "running" }),
@@ -168,11 +171,7 @@ describe("ChatTasksPanel (Phase 57, selection wiring Phase 100)", () => {
     });
     render(<ChatTasksPanel onSelectRun={vi.fn()} selectedRunId={null} />);
 
-    // Asserted via testid, not the translated copy: `chat.tasks.title`'s copy is
-    // Task 7's to change (cs "Tasky" → "Běžící úlohy"), so this only asserts the
-    // header title renders (whatever it currently says). The header count is
-    // active-only (Phase 123) — one `running` task, the `done` one archived.
-    expect(screen.getByTestId(ChatTasksPanelTestId.Title)).toBeInTheDocument();
+    expect(screen.queryByTestId("chat-tasks-panel-title")).not.toBeInTheDocument();
     const list = screen.getByTestId(ChatTasksPanelTestId.List);
     expect(within(list).getAllByTestId(ChatTaskRowTestId.Row)).toHaveLength(1);
   });

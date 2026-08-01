@@ -206,3 +206,38 @@ of those two provider injections resolves it cleanly, verified by booting the fu
 explicit import — slightly less locality than the rest of the codebase's module graph,
 which favors explicit imports everywhere else. Flagged here so a later sub-phase
 doesn't "clean this up" back into the four-file cycle without reading this entry first.
+
+---
+
+## D-001-R — the fourth column is removed; blocking becomes a badge (2026-08-01)
+
+**This reverses D-001 above.** D-001 is left in place, unedited, because its reasoning is
+still the reason the *information* has to be prominent — only its conclusion about the
+*shape* changed.
+
+**Context.** Aligning `/projects/:id?tab=roadmap` against
+`design/Z.I.B.B.Y/ZIBBY Roadmap.html`, which renders three columns. D-001 had chosen four,
+BLOKOVANÉ first, deliberately departing from that mock.
+
+**Decision (operator's call).** Three columns — `TO DO | IN PROGRESS | DONE`. A blocked item
+lives in TO DO, marked by the "čeká" / "blokován (N)" badge it already carried, and sorts
+**below** every unblocked item in that column. `readiness()` still returns `blocked`; only
+the board's rendering of it changed, so nothing on the contract or API side moved.
+
+**Why this does not reintroduce the failure D-001 named.** D-001's worry was a blocked item
+"silently sitting in To Do". It is not silent: the badge names the blocking, its tooltip
+lists the blockers, and the ordering keeps everything actionable above the fold. What the
+fourth column actually bought was one glance; what it cost was splitting one queue in two,
+and — measured on `shoptet-partner-cli` — 252px-wide columns in which nearly every card
+title truncated.
+
+**Costs, accepted knowingly.**
+- Blocking is now carried by ONE marker rather than a column plus a badge. The operator was
+  offered a warn-toned left edge as a second, peripheral signal and declined it: the card
+  edge stays neutral so `failed` keeps sole ownership of a coloured edge in TO DO.
+- TO DO is now the longest column by construction (it holds what used to be two). Its
+  `28rem` cap is unchanged from the mock, so a busy project scrolls that column sooner.
+
+**Related, same pass.** `board.columns.blocked` is deleted from both catalogs; `ready`
+becomes "To Do" (a blocked item shares this column, so "Ready" would have been a claim the
+column could no longer make).

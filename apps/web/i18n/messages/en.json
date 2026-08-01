@@ -1785,7 +1785,6 @@
       "collapseAria": "Collapse run detail"
     },
     "tasks": {
-      "title": "Running tasks",
       "empty": "No tasks",
       "activeEmpty": "No active tasks",
       "archive": "Archive",
@@ -2085,8 +2084,7 @@
       "allTasksCount": "All tasks ({count})",
       "openEpicDetail": "Open epic detail",
       "columns": {
-        "blocked": "Blocked",
-        "ready": "Ready",
+        "ready": "To Do",
         "inProgress": "In Progress",
         "done": "Done"
       },

@@ -287,7 +287,12 @@ export function ChatDock({
             {voice.active && (
               <VoiceStatusStrip interim={voice.interim} listening={voice.listening} />
             )}
+            {/* The design's composer row is chrome-less: no caption above it and no
+                field box around it — the dock's own glass surface (and its focus
+                border-top above) is the frame. */}
             <CommandLine
+              frameless
+              hideLabel
               showAttach
               attachIcon="paperclip"
               chrome={false}

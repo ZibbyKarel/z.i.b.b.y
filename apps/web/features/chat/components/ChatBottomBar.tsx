@@ -42,9 +42,9 @@ export interface ChatBottomBarProps {
 
 interface SlotSpec {
   id: Exclude<BottomBarMode, null>;
-  /** Collapsed icon-button glyph. The design's `chat` glyph has no DS
-   *  equivalent (the DS icon set has no chat-bubble glyph) — `bot` is the
-   *  same stand-in the top-bar `ChatButton` trigger already uses for "chat". */
+  /** Collapsed icon-button glyph — the design's own (`VD_BB_ITEMS`). The
+   *  chat-bubble glyph was ported into the DS icon set for this bar; it used to
+   *  fall back to the `bot` stand-in. */
   glyph: IconName;
   /** Expanded design width — mirrors `VD_BB_ITEMS` in `velin-d-bottombar.jsx`. */
   width: string;
@@ -53,7 +53,7 @@ interface SlotSpec {
 
 const SLOTS: SlotSpec[] = [
   { id: "task", glyph: "play", width: "400px", testId: ChatBottomBarTestId.TaskSlot },
-  { id: "chat", glyph: "bot", width: "560px", testId: ChatBottomBarTestId.ChatSlot },
+  { id: "chat", glyph: "chat", width: "560px", testId: ChatBottomBarTestId.ChatSlot },
   { id: "note", glyph: "edit", width: "360px", testId: ChatBottomBarTestId.NoteSlot },
 ];
 
@@ -67,9 +67,9 @@ const SLOTS: SlotSpec[] = [
  * Chat is active by default (operator decision); each hosted component's own
  * close affordance collapses the bar to all-icons (`mode = null`).
  *
- * Standalone unit, like the components it hosts — not yet mounted in
- * `ChatScreen` (a later phase positions and mounts the whole bar), so this
- * component owns only the slot row itself, not screen coordinates.
+ * Position-agnostic, like the components it hosts: `ChatScreen` owns the screen
+ * coordinates (design `left:50% bottom:26 translateX(-50%)`); this component owns
+ * only the slot row itself.
  */
 export function ChatBottomBar({
   conversationId,
@@ -94,7 +94,8 @@ export function ChatBottomBar({
         transition: "opacity .4s ease, filter .4s ease",
       }}
     >
-      <Stack align="end" direction="row" gap="100">
+      {/* gap 10 — the design's `VcBottomBar` (`gap: 10, alignItems: flex-end`). */}
+      <Stack align="end" direction="row" gap="125">
         {SLOTS.map((slot) => {
           const active = mode === slot.id;
           const label = t(slot.id);

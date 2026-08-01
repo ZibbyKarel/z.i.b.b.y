@@ -66,10 +66,19 @@ export function epicStatus(
   return "todo";
 }
 
-/** The board's four columns, BLOKOVANÉ first (DECISIONS.md D-001). `archived` is
- * deliberately absent from this tuple — it is not a column at all (D-004). */
-export const BOARD_COLUMNS: readonly Exclude<RoadmapReadiness, "archived">[] = [
-  "blocked",
+/**
+ * The board's three columns — the design mock's `TO DO | IN PROGRESS | DONE`.
+ *
+ * `blocked` is deliberately absent: it WAS a fourth column (D-001), and the
+ * operator reversed that call — a blocked item now lives in TO DO carrying its
+ * own "blokován (N)" badge, which is the same information without a column that
+ * splits one queue in two. `archived` is absent for the older reason (D-004):
+ * it is not a column at all.
+ *
+ * Both are still `readiness()` values; only the board's rendering changed, so
+ * nothing downstream of the contract had to move.
+ */
+export const BOARD_COLUMNS: readonly Exclude<RoadmapReadiness, "archived" | "blocked">[] = [
   "ready",
   "in-progress",
   "done",
@@ -78,26 +87,45 @@ export const BOARD_COLUMNS: readonly Exclude<RoadmapReadiness, "archived">[] = [
 export type BoardColumn = (typeof BOARD_COLUMNS)[number];
 
 /**
- * Group an epic's children onto the four board columns via `readiness()`,
+ * Group an epic's children onto the three board columns via `readiness()`,
  * dropping `archived` items entirely (D-004) — they are kept on disk but never
  * rendered on the board, in any column.
+ *
+ * `blocked` items land in TO DO **after** every unblocked one. Insertion order
+ * is preserved within each of the two runs (both are plain appends), so the
+ * only reordering is the one the operator asked for: what can be started now
+ * reads first, and what is waiting sinks below it.
  */
 export function groupByColumn(
   children: RoadmapItem[],
   get: (id: string) => RoadmapItem | undefined,
 ): Record<BoardColumn, RoadmapItem[]> {
   const groups: Record<BoardColumn, RoadmapItem[]> = {
-    blocked: [],
     ready: [],
     "in-progress": [],
     done: [],
   };
+  const blocked: RoadmapItem[] = [];
   for (const item of children) {
     const state = readiness(item, get);
     if (state === "archived") continue;
-    groups[state].push(item);
+    if (state === "blocked") blocked.push(item);
+    else groups[state].push(item);
   }
+  groups.ready.push(...blocked);
   return groups;
+}
+
+/**
+ * Is this item blocked right now? The card needs the answer directly, since
+ * `blocked` no longer survives as a column it could read off (see
+ * {@link BOARD_COLUMNS}).
+ */
+export function isItemBlocked(
+  item: RoadmapItem,
+  get: (id: string) => RoadmapItem | undefined,
+): boolean {
+  return readiness(item, get) === "blocked";
 }
 
 /**

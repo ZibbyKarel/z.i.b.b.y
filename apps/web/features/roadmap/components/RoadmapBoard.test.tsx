@@ -27,6 +27,10 @@ function item(partial: Partial<RoadmapItem> & Pick<RoadmapItem, "id">): RoadmapI
 
 const epic = item({ id: "epic-1", level: "epic", name: "Rate limiting", parentId: undefined });
 
+/** Columns render in BOARD_COLUMNS order: to-do, in-progress, done. */
+const TODO = 0;
+const DONE = 2;
+
 describe("RoadmapBoard", () => {
   it("sorts each epic's children into the right column and drops archived entirely", () => {
     const blocker = item({ id: "t-blocker", name: "Blocker task" });
@@ -39,13 +43,7 @@ describe("RoadmapBoard", () => {
       item({ id: "t-gone", name: "Archived task", lifecycle: "archived" }),
     ];
     render(
-      <RoadmapBoard
-        epic={epic}
-        items={items}
-        onCreateTask={vi.fn()}
-        onSelectEpic={vi.fn()}
-        onSelectItem={vi.fn()}
-      />,
+      <RoadmapBoard epic={epic} items={items} onSelectEpic={vi.fn()} onSelectItem={vi.fn()} />,
     );
 
     expect(screen.getByText("Blocked task")).toBeInTheDocument();
@@ -56,23 +54,70 @@ describe("RoadmapBoard", () => {
     expect(screen.queryByText("Archived task")).not.toBeInTheDocument();
   });
 
-  it("puts a failed item in READY, marked selhalo — never a column of its own", () => {
-    const items = [epic, item({ id: "t-failed", name: "Failed task", lifecycle: "failed" })];
+  it("renders three columns — BLOKOVANÉ is no longer one of them", () => {
     render(
-      <RoadmapBoard
-        epic={epic}
-        items={items}
-        onCreateTask={vi.fn()}
-        onSelectEpic={vi.fn()}
-        onSelectItem={vi.fn()}
-      />,
+      <RoadmapBoard epic={epic} items={[epic]} onSelectEpic={vi.fn()} onSelectItem={vi.fn()} />,
     );
 
     const columns = screen.getAllByTestId(RoadmapBoardTestId.Column);
-    // Columns render in BOARD_COLUMNS order: blocked, ready, in-progress, done.
-    const readyColumn = columns[1]!;
-    expect(within(readyColumn).getByText("Failed task")).toBeInTheDocument();
-    expect(within(readyColumn).getByTestId(RoadmapCardTestId.Failed)).toHaveTextContent("Selhalo");
+    expect(columns).toHaveLength(3);
+    expect(columns.map((c) => within(c).getByTestId("panel-header").textContent)).toEqual([
+      "To Do0",
+      "In Progress0",
+      "Done0",
+    ]);
+  });
+
+  it("puts a blocked item in TO DO behind its badge, below everything unblocked", () => {
+    const items = [
+      epic,
+      // Declared blocked-first on purpose: the reordering must come from the
+      // grouping, not from the caller happening to pass them in a helpful order.
+      item({ id: "t-blocked", name: "Blocked task", dependsOn: ["t-free"] }),
+      item({ id: "t-free", name: "Free task" }),
+    ];
+    render(
+      <RoadmapBoard epic={epic} items={items} onSelectEpic={vi.fn()} onSelectItem={vi.fn()} />,
+    );
+
+    const todo = screen.getAllByTestId(RoadmapBoardTestId.Column)[TODO]!;
+    const names = within(todo)
+      .getAllByTestId(RoadmapCardTestId.Open)
+      .map((el) => el.textContent);
+    expect(names).toEqual(["Free task", "Blocked task"]);
+
+    // The blocking is carried by the badge, which is the card's only marker for it.
+    const blockedCard = within(todo)
+      .getByText("Blocked task")
+      .closest('[data-testid="roadmap-card"]')!;
+    expect(
+      within(blockedCard as HTMLElement).getByTestId(RoadmapCardTestId.Blocker),
+    ).toHaveTextContent("čeká");
+  });
+
+  it("puts a failed item in TO DO, marked selhalo — never a column of its own", () => {
+    const items = [epic, item({ id: "t-failed", name: "Failed task", lifecycle: "failed" })];
+    render(
+      <RoadmapBoard epic={epic} items={items} onSelectEpic={vi.fn()} onSelectItem={vi.fn()} />,
+    );
+
+    const todo = screen.getAllByTestId(RoadmapBoardTestId.Column)[TODO]!;
+    expect(within(todo).getByText("Failed task")).toBeInTheDocument();
+    expect(within(todo).getByTestId(RoadmapCardTestId.Failed)).toHaveTextContent("Selhalo");
+  });
+
+  it("keeps done items in DONE even when an edge is added to them later", () => {
+    const items = [
+      epic,
+      item({ id: "t-blocker", name: "Blocker task" }),
+      item({ id: "t-done", name: "Done task", lifecycle: "done", dependsOn: ["t-blocker"] }),
+    ];
+    render(
+      <RoadmapBoard epic={epic} items={items} onSelectEpic={vi.fn()} onSelectItem={vi.fn()} />,
+    );
+
+    const done = screen.getAllByTestId(RoadmapBoardTestId.Column)[DONE]!;
+    expect(within(done).getByText("Done task")).toBeInTheDocument();
   });
 
   it("hovering a card highlights its blockers and dependents", async () => {
@@ -83,13 +128,7 @@ describe("RoadmapBoard", () => {
       item({ id: "t-c", name: "Task C" }),
     ];
     render(
-      <RoadmapBoard
-        epic={epic}
-        items={items}
-        onCreateTask={vi.fn()}
-        onSelectEpic={vi.fn()}
-        onSelectItem={vi.fn()}
-      />,
+      <RoadmapBoard epic={epic} items={items} onSelectEpic={vi.fn()} onSelectItem={vi.fn()} />,
     );
 
     const cardFor = (name: string) =>
@@ -108,21 +147,6 @@ describe("RoadmapBoard", () => {
     expect(cardA).not.toHaveClass("border-accent");
   });
 
-  it("the header's Nový task button calls onCreateTask", async () => {
-    const onCreateTask = vi.fn();
-    render(
-      <RoadmapBoard
-        epic={epic}
-        items={[epic]}
-        onCreateTask={onCreateTask}
-        onSelectEpic={vi.fn()}
-        onSelectItem={vi.fn()}
-      />,
-    );
-    await userEvent.click(screen.getByTestId(RoadmapBoardTestId.CreateTask));
-    expect(onCreateTask).toHaveBeenCalledTimes(1);
-  });
-
   describe("all-tasks mode (126c, `epic` undefined)", () => {
     const epicB = item({ id: "epic-2", level: "epic", name: "Other epic", parentId: undefined });
 
@@ -133,14 +157,7 @@ describe("RoadmapBoard", () => {
         item({ id: "t-a", name: "Task in epic 1", parentId: "epic-1" }),
         item({ id: "t-b", name: "Task in epic 2", parentId: "epic-2" }),
       ];
-      render(
-        <RoadmapBoard
-          items={items}
-          onCreateTask={vi.fn()}
-          onSelectEpic={vi.fn()}
-          onSelectItem={vi.fn()}
-        />,
-      );
+      render(<RoadmapBoard items={items} onSelectEpic={vi.fn()} onSelectItem={vi.fn()} />);
 
       expect(screen.getByText("Task in epic 1")).toBeInTheDocument();
       expect(screen.getByText("Task in epic 2")).toBeInTheDocument();
@@ -148,32 +165,11 @@ describe("RoadmapBoard", () => {
 
     it("renders the all-tasks label, not an epic name, in the header", () => {
       const items = [epic, item({ id: "t-a", name: "Task A" })];
-      render(
-        <RoadmapBoard
-          items={items}
-          onCreateTask={vi.fn()}
-          onSelectEpic={vi.fn()}
-          onSelectItem={vi.fn()}
-        />,
-      );
+      render(<RoadmapBoard items={items} onSelectEpic={vi.fn()} onSelectItem={vi.fn()} />);
 
       const header = screen.getByTestId(RoadmapBoardTestId.Header);
       expect(within(header).getByText("Všechny tasky")).toBeInTheDocument();
       expect(screen.queryByTestId(RoadmapBoardTestId.EpicDetail)).not.toBeInTheDocument();
-    });
-
-    it("disables Nový task — there is no epic to create the task under", () => {
-      const items = [epic, item({ id: "t-a", name: "Task A" })];
-      render(
-        <RoadmapBoard
-          items={items}
-          onCreateTask={vi.fn()}
-          onSelectEpic={vi.fn()}
-          onSelectItem={vi.fn()}
-        />,
-      );
-
-      expect(screen.getByTestId(RoadmapBoardTestId.CreateTask)).toBeDisabled();
     });
   });
 
@@ -186,13 +182,7 @@ describe("RoadmapBoard", () => {
       item({ id: "t-b", name: "Task in epic 2", parentId: "epic-2" }),
     ];
     render(
-      <RoadmapBoard
-        epic={epic}
-        items={items}
-        onCreateTask={vi.fn()}
-        onSelectEpic={vi.fn()}
-        onSelectItem={vi.fn()}
-      />,
+      <RoadmapBoard epic={epic} items={items} onSelectEpic={vi.fn()} onSelectItem={vi.fn()} />,
     );
 
     expect(screen.getByText("Task in epic 1")).toBeInTheDocument();
