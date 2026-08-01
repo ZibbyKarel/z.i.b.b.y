@@ -21,3 +21,5 @@
 
 - [x] pokud běží task a je přiřazen subsystému, ten subsystém by okolo svého orbu měl mít obíhající kuličky simbolizující každá jeden task který subsystém zpracovává. ZároveŇ mezi orbem subsystému a centrálním orbem musí probíhat "komunikace" po spojité čáře tak jak je v designu velinu-D
       <br>→ `01b67d6a` — animace byly hotové už dřív, jen se nikdy nespustily: všechny tři cesty atribuce filtrovaly na `kind === "pipeline"`, přitom zhruba polovina běhů je agentní. Rozšířeno na serveru i klientovi, včetně SSE scope `agent-runs` pro komunikaci po spojnici.
+
+- [ ] U kartiček zpráv, která jsou k návrhu schválení / zamítnutí musíme dát vždy odkaz na zrdoj té zprávy - tedy do JIRY/Githubu/Slacku/... Taky abychom zprávu vždy mohli otevřít v kontextu
