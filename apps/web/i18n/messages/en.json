@@ -599,6 +599,7 @@
     "tier": "Tier {n}",
     "dispatched": "dispatched",
     "replied": "replied",
+    "openSource": "Open source ↗",
     "state": {
       "new": "new",
       "triaged": "triaged",
@@ -671,7 +672,8 @@
       "push": "push",
       "send": "send"
     },
-    "originAgentFactory": "Agent Factory"
+    "originAgentFactory": "Agent Factory",
+    "openSource": "Open source ↗"
   },
   "runModal": {
     "editRaw": "Edit raw SKILL.md",

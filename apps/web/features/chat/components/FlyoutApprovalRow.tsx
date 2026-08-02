@@ -23,6 +23,7 @@ export enum FlyoutApprovalRowTestId {
   Root = "chat-flyout-approval-row",
   Approve = "chat-flyout-approval-approve",
   Reject = "chat-flyout-approval-reject",
+  Source = "chat-flyout-approval-source",
 }
 
 export interface FlyoutApprovalRowProps {
@@ -106,6 +107,19 @@ export function FlyoutApprovalRow({ approval }: FlyoutApprovalRowProps) {
           <Typography size="sm" type="note" variant="secondary">
             {approval.detail}
           </Typography>
+
+          {approval.sourceUrl && (
+            <a
+              data-testid={FlyoutApprovalRowTestId.Source}
+              href={approval.sourceUrl}
+              rel="noreferrer"
+              target="_blank"
+            >
+              <Typography size="sm" tone="accent" type="note" weight="semibold">
+                {t("openSource")}
+              </Typography>
+            </a>
+          )}
 
           {done ? (
             <Alert severity={done === "ok" ? "ok" : "error"}>

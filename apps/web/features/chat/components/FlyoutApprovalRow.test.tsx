@@ -59,4 +59,22 @@ describe("FlyoutApprovalRow", () => {
     await userEvent.click(screen.getByTestId(FlyoutApprovalRowTestId.Reject));
     expect(screen.queryByTestId(FlyoutApprovalRowTestId.Reject)).toBeNull();
   });
+
+  describe("sourceUrl (Phase 127)", () => {
+    it("renders a link to the item's origin when sourceUrl is present", () => {
+      renderWithProviders(
+        <FlyoutApprovalRow
+          approval={approval({ sourceUrl: "https://github.com/acme/repo/issues/42" })}
+        />,
+      );
+      const link = screen.getByTestId(FlyoutApprovalRowTestId.Source);
+      expect(link).toHaveAttribute("href", "https://github.com/acme/repo/issues/42");
+      expect(link).toHaveAttribute("target", "_blank");
+    });
+
+    it("omits the link when sourceUrl is absent", () => {
+      renderWithProviders(<FlyoutApprovalRow approval={approval()} />);
+      expect(screen.queryByTestId(FlyoutApprovalRowTestId.Source)).toBeNull();
+    });
+  });
 });

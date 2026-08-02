@@ -23,6 +23,7 @@ const TIER_TONE: Record<1 | 2 | 3, "ok" | "accent" | "warn"> = {
 export enum InboxPanelTestId {
   Root = "inbox-panel",
   Item = "inbox-item",
+  Source = "inbox-item-source",
 }
 
 /** One inbox row: state chip, category, a text preview, and an approval marker. */
@@ -58,6 +59,13 @@ function InboxRow({ item }: { item: ChannelItem }) {
         {item.reply && <Tag tone="ok">{t("inbox.replied")}</Tag>}
         {item.approvalId && item.state === "triaged" && (
           <Tag tone="warn">{t("inbox.needsApproval")}</Tag>
+        )}
+        {item.url && (
+          <a data-testid={InboxPanelTestId.Source} href={item.url} rel="noreferrer" target="_blank">
+            <Typography size="sm" tone="accent" type="note" weight="semibold">
+              {t("inbox.openSource")}
+            </Typography>
+          </a>
         )}
         <Typography mono size="xs" type="note" variant="tertiary">
           {item.integrationId}

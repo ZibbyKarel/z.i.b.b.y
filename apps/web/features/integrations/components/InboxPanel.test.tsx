@@ -92,4 +92,20 @@ describe("InboxPanel", () => {
     expect(screen.queryByText("VIP")).toBeNull();
     expect(screen.getByText(/bob@corp\.com/)).toBeInTheDocument();
   });
+
+  describe("url (Phase 127)", () => {
+    it("renders a link to the item's origin when url is present", () => {
+      items = [item({ id: "u1", url: "https://github.com/acme/repo/issues/42" })];
+      render(<InboxPanel />);
+      const link = screen.getByTestId(InboxPanelTestId.Source);
+      expect(link).toHaveAttribute("href", "https://github.com/acme/repo/issues/42");
+      expect(link).toHaveAttribute("target", "_blank");
+    });
+
+    it("omits the link when url is absent", () => {
+      items = [item({ id: "u2" })];
+      render(<InboxPanel />);
+      expect(screen.queryByTestId(InboxPanelTestId.Source)).toBeNull();
+    });
+  });
 });
