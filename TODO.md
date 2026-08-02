@@ -1,5 +1,8 @@
 > Fáze 126 — všech 7 bodů hotovo na větvi `feat/phase-126-todo-arc`.
 > Plány, rozhodnutí a stav: [`docs/plans/phase-126/PROGRESS.md`](docs/plans/phase-126/PROGRESS.md).
+>
+> Fáze 127 — oba body hotovo na větvi `feat/phase-127-source-links`.
+> Plán: [`docs/plans/phase-127-source-links.md`](docs/plans/phase-127-source-links.md).
 
 - [x] v projektu shoptet-partner-cli se stahují všechny možné otázky. Měly by se stahovat opět jen ty, které se týkají PR, která otevřel ZIBBY a nebo těch, kde jsem výslovně menchnutý
       <br>→ `dda64f8b` — GitHub adaptér ingestuje jen dvě množiny: PR, které otevřel ZIBBY (podle jeho vlastního záznamu, ne `author:`), a explicitní `mentions:`. Dotaz `assignee:` zrušen.
@@ -22,4 +25,8 @@
 - [x] pokud běží task a je přiřazen subsystému, ten subsystém by okolo svého orbu měl mít obíhající kuličky simbolizující každá jeden task který subsystém zpracovává. ZároveŇ mezi orbem subsystému a centrálním orbem musí probíhat "komunikace" po spojité čáře tak jak je v designu velinu-D
       <br>→ `01b67d6a` — animace byly hotové už dřív, jen se nikdy nespustily: všechny tři cesty atribuce filtrovaly na `kind === "pipeline"`, přitom zhruba polovina běhů je agentní. Rozšířeno na serveru i klientovi, včetně SSE scope `agent-runs` pro komunikaci po spojnici.
 
-- [ ] U kartiček zpráv, která jsou k návrhu schválení / zamítnutí musíme dát vždy odkaz na zrdoj té zprávy - tedy do JIRY/Githubu/Slacku/... Taky abychom zprávu vždy mohli otevřít v kontextu
+- [x] topbar - U kartiček zpráv, která jsou k návrhu schválení / zamítnutí musíme dát vždy odkaz na zrdoj té zprávy - tedy do JIRY/Githubu/Slacku/... Taky abychom zprávu vždy mohli otevřít v kontextu
+      <br>→ `d557d136` (plán [`docs/plans/phase-127-source-links.md`](docs/plans/phase-127-source-links.md)) — `ChannelItem.url` stamped at ingest (Jira `/browse/<key>`, GitHub `/issues|pull/<n>`, Slack best-effort `chat.getPermalink`), kopírováno jako `Approval.sourceUrl` při zaparkování Tier-3 draftu; topbar kartička (`FlyoutApprovalRow`) ho zobrazuje jako odkaz "Otevřít zdroj ↗".
+
+- [x] Detail projektu - záložka Integrace - seznam zpráv - musíme dát vždy odkaz na zrdoj zprávy - tedy do JIRY/Githubu/Slacku/... Taky abychom zprávu vždy mohli otevřít v kontextu
+      <br>→ `d557d136` — stejné `ChannelItem.url` promítnuté do `InboxPanel` (Integrace tab), stejný odkaz "Otevřít zdroj ↗" u každé položky, která ho má.
