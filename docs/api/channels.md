@@ -179,6 +179,38 @@ type ChannelItemState =
 
 Stored at `.zibby/data/channels/<integrationId>-<itemId>.json`.
 
+## SourceLinkBackfillService (Phase 127 follow-up)
+
+**File:** `apps/api/src/channels/source-link-backfill.service.ts`
+
+Phase 127 stamps `ChannelItem.url` / `Approval.sourceUrl` only going forward — at ingest
+time and at approval-parking time. That left every record written before the code shipped
+without a link, which doesn't satisfy the TODO's "vždy" (always). This service is a
+one-shot, idempotent `OnModuleInit` sweep (mirrors `OwnerBackfillService`'s pattern: a
+per-entity try/catch, atomic writes via each store's own `update`, never fatal to boot)
+that closes the gap for the two kinds where the URL is cheaply re-derivable after the fact:
+
+1. **Items**: every `ChannelItem` missing `url` with `kind: "jira"` or `kind: "github"` gets
+   one derived from data already on disk — `externalRef.messageId` (the issue key/number)
+   plus the owning integration's non-secret `config` (`baseUrl` / `repo`) — no extra network
+   call. GitHub always uses `/issues/<n>` (GitHub redirects to `/pull/<n>` when it's
+   actually a PR), since the stored item doesn't retain the `isPr` distinction the adapter
+   had at ingest time.
+2. **Approvals**: every still-`pending`, `kind: "channel"` approval missing `sourceUrl` is
+   resolved back to its item via the `<integrationId>/<itemId>` `runId` convention (the
+   same split `ChannelTriageFlowService.itemFromRef` uses) and, if that item now has a
+   `url`, copies it across via `ApprovalsService.patchSourceUrl(id, url)` (see
+   `docs/api/approvals.md`).
+
+**Slack is NOT backfilled.** A permalink can only be _fetched live_ via
+`chat.getPermalink`; there's nothing on a stored item to reconstruct it from. Backfilling
+Slack would mean replaying that live call for every historical message — the exact
+per-item API cost the ingest-time design kept off this path. Old Slack items get a link
+only once naturally re-ingested by the adapter.
+
+Runs on every boot; already-linked records are skipped, so it converges to a no-op once the
+fleet is caught up.
+
 ## ChannelTriageFlowService
 
 **File:** `apps/api/src/channels/channel-triage-flow.service.ts`

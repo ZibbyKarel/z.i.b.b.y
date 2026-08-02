@@ -27,6 +27,8 @@
 
 - [x] topbar - U kartiček zpráv, která jsou k návrhu schválení / zamítnutí musíme dát vždy odkaz na zrdoj té zprávy - tedy do JIRY/Githubu/Slacku/... Taky abychom zprávu vždy mohli otevřít v kontextu
       <br>→ `d557d136` (plán [`docs/plans/phase-127-source-links.md`](docs/plans/phase-127-source-links.md)) — `ChannelItem.url` stamped at ingest (Jira `/browse/<key>`, GitHub `/issues|pull/<n>`, Slack best-effort `chat.getPermalink`), kopírováno jako `Approval.sourceUrl` při zaparkování Tier-3 draftu; topbar kartička (`FlyoutApprovalRow`) ho zobrazuje jako odkaz "Otevřít zdroj ↗".
+      <br>→ **follow-up:** stávající (před fází 127 zaparkované) approvaly odkaz neměly — `SourceLinkBackfillService` je jednorázově dosazuje pro Jira/GitHub (odkaz je zpětně odvoditelný z dat na disku); Slack zpětně dosadit nejde (permalink lze jen živě dotázat při příjmu).
 
 - [x] Detail projektu - záložka Integrace - seznam zpráv - musíme dát vždy odkaz na zrdoj zprávy - tedy do JIRY/Githubu/Slacku/... Taky abychom zprávu vždy mohli otevřít v kontextu
       <br>→ `d557d136` — stejné `ChannelItem.url` promítnuté do `InboxPanel` (Integrace tab), stejný odkaz "Otevřít zdroj ↗" u každé položky, která ho má.
+      <br>→ **follow-up:** stejný `SourceLinkBackfillService` dosazuje `url` i na existující `ChannelItem` záznamy (Jira/GitHub), takže se odkaz objeví i u zpráv přijatých před fází 127.

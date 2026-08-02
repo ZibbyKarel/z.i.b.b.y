@@ -21,9 +21,14 @@ Jira/GitHub/Slack to parity on the two surfaces the TODO items name.
   (`InboxPanel.tsx`'s `InboxRow`) — this project's recent channel items.
 
 **Out of scope**: `NeedsAttentionPanel` (overview "needs attention" cards) — already has its
-own Gmail link, not named by either TODO item. No backfill of historical `ChannelItem` /
-`Approval` records on disk — both new fields are optional and additive, so an old record
-simply renders without the link, same as a Gmail item with no `messageId` does today.
+own Gmail link, not named by either TODO item.
+
+> **Follow-up (post-ship):** the original design here explicitly excluded backfilling
+> historical records ("an old record simply renders without the link"). The operator caught
+> this the same day — dozens of already-parked Tier-3 approvals stayed link-less, which
+> doesn't satisfy the TODO's literal "vždy" (always). See **Backfill** below for the fix:
+> `SourceLinkBackfillService`, a one-shot startup sweep that closes the gap for Jira/GitHub
+> (Slack still can't be backfilled — see that section for why).
 
 ## Data model (`libs/contracts`)
 
@@ -77,6 +82,33 @@ When `item.url` is set, render the same link treatment, following the precedent 
 `NeedsAttentionCard`'s `link &&` block in `NeedsAttentionPanel.tsx` (an `<a>` wrapping DS
 `Typography`, opens in a new tab). New i18n key `inbox.openSource` (`cs`: "Otevřít zdroj ↗",
 mirroring `inbox.attention.openEmail`'s existing style), alongside the existing `inbox.*` keys.
+
+## Backfill (`SourceLinkBackfillService`, follow-up)
+
+A one-shot, idempotent `OnModuleInit` sweep in `channels.module.ts`, mirroring
+`OwnerBackfillService`'s pattern (per-entity try/catch, atomic writes via each store's own
+`update`, never fatal to boot):
+
+- **Items**: every `ChannelItem` missing `url` is checked; for `kind: "jira"` /
+  `kind: "github"` the URL is cheaply re-derivable from data already on disk — the issue key
+  (`externalRef.messageId`) plus the owning integration's non-secret `config` (`baseUrl` /
+  `repo`) — so no extra network call is needed. GitHub backfills use a uniform
+  `/issues/<n>` path (GitHub redirects to `/pull/<n>` when it's actually a PR), sidestepping
+  the `isPr` distinction the adapter has at ingest time but the stored item doesn't.
+- **Approvals**: every still-`pending`, `kind: "channel"` approval missing `sourceUrl` is
+  resolved back to its `ChannelItem` via the existing `<integrationId>/<itemId>` `runId`
+  convention (same split `channel-triage-flow.service.ts`'s `itemFromRef` uses) and, if that
+  item now has a `url` (freshly backfilled or otherwise), copies it across via a new
+  `ApprovalsService.patchSourceUrl(id, url)` — a narrow, lock-guarded patch that touches only
+  `sourceUrl`, never `status`/`decidedAt`, and is a no-op against a concurrent decide.
+- **Slack is NOT backfilled.** A permalink can only be *fetched live* via `chat.getPermalink`
+  at ingest time — there's nothing on a stored `ChannelItem` to reconstruct it from after the
+  fact. Backfilling Slack would mean replaying that live call for every historical message,
+  reintroducing exactly the per-item API cost the ingest-time design kept off this path. Old
+  Slack items get a link only once naturally re-ingested.
+
+Runs on every boot; already-linked items/approvals are skipped, so it converges to a no-op
+once the fleet is caught up — same idempotence guarantee as `OwnerBackfillService`.
 
 ## Tests
 

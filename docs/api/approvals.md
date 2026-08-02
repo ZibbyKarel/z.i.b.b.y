@@ -85,6 +85,14 @@ Tier-3 draft-reply gate) supplies it, copied straight from the originating
 produce one. Every other kind omits it, and a pre-existing approval re-parses
 untouched.
 
+`ApprovalsService.patchSourceUrl(id, sourceUrl)` (Phase 127 follow-up) is a
+narrow, lock-guarded exception to "only set at request time": it patches
+`sourceUrl` onto an already-pending approval without touching `status` /
+`decidedAt`, and is a no-op if the approval was already decided or already has
+a `sourceUrl`. It exists solely for `SourceLinkBackfillService` (see
+`docs/api/channels.md`) to retroactively link approvals parked before Phase
+127 shipped — no other caller should use it.
+
 ## ApprovalsService
 
 **File:** `apps/api/src/approvals/approvals.service.ts`

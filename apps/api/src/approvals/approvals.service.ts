@@ -157,6 +157,22 @@ export class ApprovalsService {
   }
 
   /**
+   * Phase 127 follow-up — patch a still-pending approval's `sourceUrl` in place,
+   * touching nothing else (not `status`/`decidedAt`). Used only by
+   * `SourceLinkBackfillService` to retroactively link approvals parked before
+   * Phase 127 shipped, once their underlying `ChannelItem` gains a `url`. Same
+   * per-id lock as {@link decide} so a concurrent decision can't race the patch;
+   * a no-longer-pending or already-linked approval is left untouched.
+   */
+  async patchSourceUrl(id: string, sourceUrl: string): Promise<void> {
+    await withPathLock(`approval:${id}`, async () => {
+      const approval = await this.storage.get(id);
+      if (approval.status !== "pending" || approval.sourceUrl) return;
+      await this.storage.update({ ...approval, sourceUrl });
+    });
+  }
+
+  /**
    * TOCTOU guard (Phase 8.2 pattern): a read-check-write on the shared approval
    * file races another concurrent `decide` on the same id (two operators, or a
    * double-click) — both could pass the `!== "pending"` check before either
