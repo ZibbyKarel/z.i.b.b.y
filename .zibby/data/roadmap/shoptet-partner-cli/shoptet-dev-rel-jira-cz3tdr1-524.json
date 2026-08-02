@@ -30,13 +30,13 @@
       "taskId": "task_1785404320727_b04b6e",
       "runRef": "documentation-engineer_1785404321011_55989",
       "startedAt": "2026-07-30T09:38:42.853Z",
-      "outcome": "failed",
-      "finishedAt": "2026-07-30T09:40:59.440Z"
+      "finishedAt": "2026-07-30T09:40:59.440Z",
+      "outcome": "failed"
     }
   ],
   "lastFailureReason": "─── ended (error_during_execution)",
   "syncNotes": [],
   "createdAt": "2026-07-29T10:57:40.140Z",
-  "updatedAt": "2026-07-30T09:40:59.440Z",
-  "syncedAt": "2026-07-30T05:10:53.006Z"
+  "updatedAt": "2026-08-01T18:04:57.749Z",
+  "syncedAt": "2026-08-01T18:04:57.749Z"
 }

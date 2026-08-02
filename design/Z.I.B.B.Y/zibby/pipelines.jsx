@@ -17,8 +17,10 @@ const ModelBadge = ({ model, onClick }) => <Pill color={MODEL_C[model] || Z.inkD
 const ThinkBadge = ({ level, onClick }) => <Pill color={THINK_C[level] || Z.inkDim} onClick={onClick} title="thinking level">◇ {level}</Pill>;
 
 // ---- a single phase node -------------------------------------------------
+const PG_KIND_C = { verify: '#56c4d6', qualify: '#b07cff' };
 const PhaseNode = ({ phase, accent, idx, active, isFirst, isLast }) => {
-  const a = agentByName(phase.agent);
+  const kind = phase.kind || 'agent';
+  const a = kind === 'agent' ? agentByName(phase.agent) : { glyph: kind === 'verify' ? 'terminal' : 'compass', avatar: null };
   // Vstup/výstup uvnitř karty jen u krajů řetězu — jinak je nese šipka.
   const showIn = isFirst;
   const showOut = isLast;
@@ -29,14 +31,17 @@ const PhaseNode = ({ phase, accent, idx, active, isFirst, isLast }) => {
       boxShadow: active ? `0 0 0 1px ${accent}55, 0 0 22px ${accent}33` : 'none'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-        <Avatar src={a.avatar} glyph={a.glyph} size={30} radius={2} accent={accent} dim={accentDimOf(phase.ctx || 'work')} />
+        {kind === 'agent'
+          ? <Avatar src={a.avatar} glyph={a.glyph} size={30} radius={2} accent={accent} dim={accentDimOf(phase.ctx || 'work')} />
+          : <div style={{ width: 30, height: 30, flex: '0 0 auto', borderRadius: 2, display: 'grid', placeItems: 'center', background: `${PG_KIND_C[kind]}1f`, color: PG_KIND_C[kind], border: `1px solid ${PG_KIND_C[kind]}44` }}><Icon name={a.glyph} size={15} /></div>}
         <div style={{ minWidth: 0 }}>
           <Mono style={{ fontSize: 8.5, color: Z.inkFaint, letterSpacing: '0.1em' }}>FÁZE {idx + 1}</Mono>
           <div style={{ fontFamily: Z.mono, fontSize: 12, fontWeight: 600, color: Z.ink, whiteSpace: 'nowrap' }}>{phase.agent}</div>
         </div>
       </div>
       <div style={{ display: 'flex', gap: 5, marginTop: 10, flexWrap: 'wrap' }}>
-        <ModelBadge model={phase.model} /><ThinkBadge level={phase.thinking} />
+        {kind === 'agent' ? <React.Fragment><ModelBadge model={phase.model} /><ThinkBadge level={phase.thinking} /></React.Fragment>
+          : <Pill color={PG_KIND_C[kind]}>{kind === 'verify' ? 'deterministický · shell' : 'verdikt · drift-routing'}</Pill>}
       </div>
       {(showIn || showOut) &&
       <div style={{ marginTop: 11, paddingTop: 9, borderTop: `1px solid ${Z.line}`, display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -192,6 +197,7 @@ const PipelineCard = ({ p, accent, selected, onSelect }) => {
           <Pill color={sm.c}><span style={{ width: 5, height: 5, borderRadius: '50%', background: sm.c, display: 'inline-block' }} />{sm.label}</Pill>
         </div>
       </div>
+      {p.ownerSubsystem && <Mono style={{ fontSize: 9.5, color: Z.inkFaint, display: 'block', marginTop: 7 }}>vlastní <span style={{ color: accent }}>{p.ownerSubsystem}</span></Mono>}
       <div style={{ fontSize: 11.5, color: Z.inkDim, marginTop: 6, lineHeight: 1.4 }}>{p.desc}</div>
       {/* phase chips */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 11, flexWrap: 'wrap' }}>
@@ -286,6 +292,12 @@ const PipelineRunModal = ({ pipeline, accent, onClose }) => {
             <div style={{ width: 52, height: 52, margin: '0 auto', borderRadius: '50%', display: 'grid', placeItems: 'center', color: accent, border: `1.5px solid ${accent}`, boxShadow: `0 0 24px ${accent}55` }}><Icon name="flow" size={22} /></div>
             <div style={{ fontSize: 15, fontWeight: 600, marginTop: 16 }}>Pipeline spuštěna na pozadí</div>
             <Mono style={{ fontSize: 12, color: Z.inkDim, display: 'block', marginTop: 6 }}>{pipeline.name} → {proj} · strop ${budget}</Mono>
+            {loopPhase && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 12, padding: '6px 12px', borderRadius: 999, background: `${Z.warn}12`, border: `1px solid ${Z.warn}44` }}>
+                <Icon name="retry" size={13} style={{ color: Z.warn }} />
+                <Mono style={{ fontSize: 11.5, color: Z.warn }}>{loopPhase.agent} · pokus {attempt}/{loopPhase.loop.maxRetries}</Mono>
+              </div>
+            )}
             <div style={{ fontSize: 12.5, color: Z.inkDim, marginTop: 8 }}>Sleduj fáze v sekci <span style={{ color: accent }}>Běžící agenti</span> · pracuje v izolované branchi.</div>
             <div style={{ marginTop: 20 }}><GhostBtn icon="pulse" onClick={onClose}>Zavřít</GhostBtn></div>
           </div>
@@ -362,6 +374,7 @@ const PipelinesBody = ({ accent }) => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                   <Icon name="file" size={12} style={{ color: Z.inkFaint }} />
                   <Mono style={{ fontSize: 10, color: Z.inkFaint }}>{sel.file}</Mono>
+                  {sel.ownerSubsystem && <span style={{ fontFamily: Z.mono, fontSize: 10, color: accent, background: `${accent}14`, border: `1px solid ${accent}44`, borderRadius: 2, padding: '2px 7px' }}>{sel.ownerSubsystem}</span>}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <GhostBtn icon="edit" accent={accent} onClick={openEdit}>Editovat</GhostBtn>
@@ -371,7 +384,7 @@ const PipelinesBody = ({ accent }) => {
               </div>
 
               {/* budget strip */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginTop: 18, paddingTop: 16, borderTop: `1px solid ${Z.line}`, flexWrap: 'wrap' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginTop: 18, paddingTop: 16, borderTop: `1px solid ${Z.line}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Icon name="dollar" size={16} style={{ color: accent }} />
                   <div>
@@ -379,17 +392,21 @@ const PipelinesBody = ({ accent }) => {
                     <Mono style={{ fontSize: 15, fontWeight: 700, color: Z.ink }}>${sel.budget}</Mono>
                   </div>
                 </div>
-                <div style={{ width: 1, height: 30, background: Z.line }} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Icon name="branch" size={16} style={{ color: Z.inkDim }} />
+                  <Icon name="branch" size={16} style={{ color: Z.inkDim, flex: '0 0 auto' }} />
                   <Mono style={{ fontSize: 11, color: Z.inkDim }}>výstup → izolovaná branch · PR k ranní review</Mono>
                 </div>
-                <div style={{ width: 1, height: 30, background: Z.line }} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Icon name="checkpoint" size={16} style={{ color: Z.inkDim }} />
+                  <Icon name="checkpoint" size={16} style={{ color: Z.inkDim, flex: '0 0 auto' }} />
                   <Mono style={{ fontSize: 11, color: Z.inkDim }}>checkpoint po každé fázi</Mono>
                 </div>
               </div>
+              {!!(sel.sinks && sel.sinks.length) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+                  <Icon name="upload" size={16} style={{ color: accent, flex: '0 0 auto' }} />
+                  <Mono style={{ fontSize: 11, color: Z.inkDim, lineHeight: 1.5 }}>výstupy: {sel.sinks.map((s) => `${s.kind === 'pr' ? 'PR' : 'soubor'} → ${s.target}${s.name ? ' · ' + s.name : ''}`).join(' · ')}</Mono>
+                </div>
+              )}
             </div>
           </div>
 

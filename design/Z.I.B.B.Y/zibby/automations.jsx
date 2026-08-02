@@ -6,6 +6,8 @@ const TRIG = {
   cron:  { glyph: 'clock', label: 'cron',  c: '#5b8def' },
   event: { glyph: 'bolt',  label: 'event', c: '#f0b429' },
 };
+const SYS_TARGETS = ['memory-distill', 'self-knowledge', 'sentinel-scan', 'loom-audit', 'post-merge-watch', 'review-learn', 'pattern-extract', 'gap-detect', 'agent-factory'];
+const SYS_TARGET_GLYPH = { 'memory-distill': 'brain', 'self-knowledge': 'brain', 'sentinel-scan': 'shield', 'loom-audit': 'doc', 'post-merge-watch': 'branch', 'review-learn': 'check', 'pattern-extract': 'search', 'gap-detect': 'warn', 'agent-factory': 'gear' };
 
 const AU_STATE = {
   done:      { canon: 'done',              label: 'hotovo',      c: Z.ok },
@@ -17,11 +19,13 @@ const AU_STATE = {
 };
 
 // ---- automation card -----------------------------------------------------
-const AutomationCard = ({ au, accent, onToggle }) => {
+const AutomationCard = ({ au, accent, onToggle, onEdit }) => {
   const [h, setH] = useStateAu(false);
   const tg = TRIG[au.trigger.type];
   const sm = AU_STATE[au.lastState] || AU_STATE.done;
   const off = !au.enabled;
+  const isSystem = au.owner === 'system';
+  const honestNextRun = off ? '— (vypnuto)' : au.nextRun;
   return (
     <div onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
       style={{
@@ -37,6 +41,7 @@ const AutomationCard = ({ au, accent, onToggle }) => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
             <Dot color={off ? Z.inkFaint : (au.lastState === 'running' ? Z.run : Z.ok)} pulse={!off && au.lastState === 'running'} size={7} />
             <div style={{ fontSize: 15, fontWeight: 600, color: Z.ink }}>{au.name}</div>
+            {isSystem && <span title="systémová — server-owned, jen rozvrh, bez mazání" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: Z.mono, fontSize: 9, color: Z.inkFaint, border: `1px solid ${Z.line}`, borderRadius: 2, padding: '2px 6px' }}><Icon name="shield" size={10} /> systémová</span>}
           </div>
           <div style={{ fontSize: 12, color: Z.inkDim, marginTop: 6, lineHeight: 1.45, maxWidth: 520 }}>{au.desc}</div>
         </div>
@@ -85,10 +90,10 @@ const AutomationCard = ({ au, accent, onToggle }) => {
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: sm.c, display: 'inline-block' }} />
             <Mono style={{ fontSize: 10, color: Z.inkFaint }} title={`stav: ${sm.canon}`}>poslední {au.lastRun} · <span style={{ color: sm.c }}>{sm.label}</span></Mono>
           </div>
-          <Mono style={{ fontSize: 10, color: Z.inkFaint }}>příště {au.nextRun}</Mono>
+          <Mono style={{ fontSize: 10, color: Z.inkFaint }}>příště {honestNextRun}</Mono>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <GhostBtn icon="edit" accent={accent}>Upravit</GhostBtn>
+          <GhostBtn icon="edit" accent={accent} onClick={() => onEdit(au)}>Upravit</GhostBtn>
           <RunBtn accent={accent} size="sm" label="Spustit teď" />
         </div>
       </div>
@@ -99,34 +104,49 @@ const AutomationCard = ({ au, accent, onToggle }) => {
 // ---- new-automation dialog ----------------------------------------------
 // a action boundary. Drží stejný princip: výsledek = soubor *.cron/event.md.
 
-const AutomationDialog = ({ accent, onClose, onAdd }) => {
-  const [name, setName] = useStateAu('');
-  const [trigType, setTrigType] = useStateAu('cron');
-  const [spec, setSpec] = useStateAu('');
-  const [tKind, setTKind] = useStateAu('agent');
-  const [tName, setTName] = useStateAu('');
-  const [prompt, setPrompt] = useStateAu('');
-  const [gate, setGate] = useStateAu(false);
-  const [gateText, setGateText] = useStateAu('');
+const AutomationDialog = ({ accent, onClose, onAdd, onSave, editing }) => {
+  const isSystemEdit = editing && editing.owner === 'system';
+  const [name, setName] = useStateAu(editing ? editing.name : '');
+  const [trigType, setTrigType] = useStateAu(editing ? editing.trigger.type : 'cron');
+  const [spec, setSpec] = useStateAu(editing ? editing.trigger.spec : '');
+  const [tKind, setTKind] = useStateAu(editing ? editing.target.kind : 'agent');
+  const [tName, setTName] = useStateAu(editing ? editing.target.name : '');
+  const [prompt, setPrompt] = useStateAu(editing ? (editing.prompt || '') : '');
+  const [gate, setGate] = useStateAu(editing ? !!editing.requiresApproval : false);
+  const [gateText, setGateText] = useStateAu(editing ? (editing.gate || '') : '');
   const [safeKind, setSafeKind] = useStateAu('time');
-  const [safeAfter, setSafeAfter] = useStateAu('');
-  useEffectAu(() => { setTName(''); }, [tKind]);
+  const [safeAfter, setSafeAfter] = useStateAu(editing ? (editing.actionSafeAfter || '') : '');
+  useEffectAu(() => { if (!editing) setTName(''); }, [tKind]);
 
-  const targetList = tKind === 'agent' ? AGENTS : PIPELINES;
+  const targetList = tKind === 'agent' ? AGENTS : tKind === 'pipeline' ? PIPELINES : SYS_TARGETS.map((n) => ({ id: n, name: n }));
   const glyphFor = (kind, nm) => {
     if (kind === 'pipeline') return 'flow';
+    if (kind === 'system') return SYS_TARGET_GLYPH[nm] || 'gear';
     const o = AGENTS.find((x) => x.name === nm);
     return o ? o.glyph : (kind === 'agent' ? 'bot' : 'spark');
   };
   const tg = TRIG[trigType];
   const isBriefing = tKind === 'briefing';
-  const valid = name.trim() && spec.trim() && (isBriefing ? prompt.trim() : tName);
+  const valid = name.trim() && spec.trim() && (isBriefing || tKind === 'system' ? true : tName) && (tKind !== 'system' || tName);
   const submit = () => {
     if (!valid) return;
+    if (editing) {
+      onSave({
+        ...editing, name: name.trim(),
+        trigger: { type: trigType, spec: spec.trim(), human: spec.trim() },
+        target: isSystemEdit ? editing.target : { kind: tKind, name: isBriefing ? 'briefing' : tName, glyph: glyphFor(tKind, tName) },
+        prompt: isSystemEdit ? editing.prompt : (prompt.trim() || null),
+        requiresApproval: isSystemEdit ? editing.requiresApproval : gate,
+        gate: isSystemEdit ? editing.gate : (gate ? (gateText.trim() || 'rizikový výsledek') : null),
+        actionSafeAfter: safeAfter.trim() || null,
+      });
+      onClose();
+      return;
+    }
     const slug = name.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     const id = 'au-' + (slug || ('a' + Date.now()));
     onAdd({
-      id, name: name.trim(), enabled: true,
+      id, name: name.trim(), enabled: true, owner: 'operator',
       trigger: { type: trigType, spec: spec.trim(), human: spec.trim() },
       target: { kind: tKind, name: isBriefing ? 'briefing' : tName, glyph: glyphFor(tKind, tName) },
       prompt: prompt.trim() || null,
@@ -151,8 +171,8 @@ const AutomationDialog = ({ accent, onClose, onAdd }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '17px 20px', borderBottom: `1px solid ${Z.line}` }}>
           <div style={{ width: 38, height: 38, flex: '0 0 auto', borderRadius: 2, display: 'grid', placeItems: 'center', background: `${accent}16`, color: accent, border: `1px solid ${accent}44` }}><Icon name="clock" size={19} /></div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 16, fontWeight: 600, color: Z.ink }}>Nová automatizace</div>
-            <Mono style={{ fontSize: 10.5, color: Z.inkDim }}>trigger → cíl → gate</Mono>
+            <div style={{ fontSize: 16, fontWeight: 600, color: Z.ink }}>{editing ? (isSystemEdit ? 'Upravit rozvrh · systémová' : 'Upravit automatizaci') : 'Nová automatizace'}</div>
+            <Mono style={{ fontSize: 10.5, color: Z.inkDim }}>{isSystemEdit ? 'server-owned — jen rozvrh se dá změnit' : 'trigger → cíl → gate'}</Mono>
           </div>
           <button onClick={onClose} style={{ display: 'flex', padding: 6, cursor: 'pointer', color: Z.inkDim, background: 'transparent', border: 'none' }}><Icon name="x" size={16} /></button>
         </div>
@@ -176,12 +196,12 @@ const AutomationDialog = ({ accent, onClose, onAdd }) => {
           {/* target */}
           <FieldLabel style={{ marginTop: 18 }}>Cíl</FieldLabel>
           <div style={{ display: 'flex', gap: 7, marginTop: 8 }}>
-            {[['agent', 'agent'], ['pipeline', 'pipeline'], ['briefing', 'briefing']].map(([k, lbl]) => (
-              <ChipToggle key={k} active={tKind === k} accent={accent} onClick={() => setTKind(k)}>{lbl}</ChipToggle>
+            {[['agent', 'agent'], ['pipeline', 'pipeline'], ['briefing', 'briefing'], ['system', 'systémový cíl']].map(([k, lbl]) => (
+              <ChipToggle key={k} active={tKind === k} accent={accent} onClick={() => !isSystemEdit && setTKind(k)}>{lbl}</ChipToggle>
             ))}
           </div>
 
-          {!isBriefing && (
+          {!isBriefing && tKind !== 'system' && (
             <React.Fragment>
               <FieldLabel style={{ marginTop: 18 }}>Co se má provést <span style={{ color: Z.inkFaint, textTransform: 'none', letterSpacing: 0 }}>· prompt pro agenta / pipeline</span></FieldLabel>
               <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="např. Shrň dnešní emaily a pošli mi souhrn" rows={3} style={{ ...inputStyle(prompt.trim()), fontFamily: Z.sans, fontSize: 13, resize: 'vertical', lineHeight: 1.55 }} />
@@ -194,14 +214,21 @@ const AutomationDialog = ({ accent, onClose, onAdd }) => {
               <Mono style={{ fontSize: 11, color: Z.inkDim, lineHeight: 1.6 }}>Trigger spustí nový briefing s výše zadaným promptem. Výsledek přistane v sekci Tasky.</Mono>
             </div>
           ) : (
-            <select value={tName} onChange={(e) => setTName(e.target.value)} style={{ ...inputStyle(tName), cursor: 'pointer', appearance: 'none' }}>
+            <select value={tName} disabled={isSystemEdit} onChange={(e) => setTName(e.target.value)} style={{ ...inputStyle(tName), cursor: isSystemEdit ? 'default' : 'pointer', appearance: 'none', opacity: isSystemEdit ? 0.6 : 1 }}>
               <option value="">— vyber {tKind} —</option>
               {targetList.map((o) => <option key={o.id} value={o.name}>{o.name}</option>)}
             </select>
           )}
 
-          {/* approval gate + action boundary — skryto pro briefing */}
-          {!isBriefing && (
+          {isSystemEdit && (
+            <div style={{ marginTop: 10, padding: '11px 13px', background: Z.bg0, border: `1px solid ${Z.line}`, borderRadius: 3, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <Icon name="shield" size={14} style={{ color: Z.inkFaint, flex: '0 0 auto', marginTop: 1 }} />
+              <Mono style={{ fontSize: 11, color: Z.inkDim, lineHeight: 1.6 }}>Server-owned automatizace — cíl, gate a prompt jsou pevné. Editovatelný je jen rozvrh spouštění a zapnutí/vypnutí.</Mono>
+            </div>
+          )}
+
+          {/* approval gate + action boundary — skryto pro briefing a systémové */}
+          {!isBriefing && tKind !== 'system' && (
             <React.Fragment>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 18, padding: '11px 13px', background: Z.bg0, border: `1px solid ${gate ? Z.warn + '44' : Z.line}`, borderRadius: 3 }}>
                 <Icon name="shield" size={15} style={{ color: gate ? Z.warn : Z.inkFaint, flex: '0 0 auto' }} />
@@ -226,7 +253,7 @@ const AutomationDialog = ({ accent, onClose, onAdd }) => {
         {/* footer */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 9, padding: '14px 20px', borderTop: `1px solid ${Z.line}`, background: Z.bg0 }}>
           <button onClick={onClose} style={{ fontFamily: Z.mono, fontSize: 12, padding: '9px 15px', cursor: 'pointer', borderRadius: 2, color: Z.inkDim, background: 'transparent', border: `1px solid ${Z.line}` }}>Zrušit</button>
-          <button onClick={submit} disabled={!valid} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: Z.mono, fontSize: 12, fontWeight: 600, padding: '9px 16px', cursor: valid ? 'pointer' : 'not-allowed', borderRadius: 2, color: Z.bg0, background: accent, border: 'none', opacity: valid ? 1 : 0.4 }}><Icon name="check" size={14} stroke={2} /> Vytvořit automatizaci</button>
+          <button onClick={submit} disabled={!valid} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: Z.mono, fontSize: 12, fontWeight: 600, padding: '9px 16px', cursor: valid ? 'pointer' : 'not-allowed', borderRadius: 2, color: Z.bg0, background: accent, border: 'none', opacity: valid ? 1 : 0.4 }}><Icon name="check" size={14} stroke={2} /> {editing ? 'Uložit změny' : 'Vytvořit automatizaci'}</button>
         </div>
       </div>
     </div>
@@ -235,10 +262,12 @@ const AutomationDialog = ({ accent, onClose, onAdd }) => {
 
 // ---- main body -----------------------------------------------------------
 const AutomationsBody = ({ accent }) => {
-  const [autos, setAutos] = useStateAu(AUTOMATIONS);
+  const [autos, setAutos] = useStateAu(AUTOMATIONS.map((a) => ({ owner: 'operator', ...a })));
   const [adding, setAdding] = useStateAu(false);
+  const [editingAu, setEditingAu] = useStateAu(null);
   const toggle = (id) => setAutos((prev) => prev.map((a) => a.id === id ? { ...a, enabled: !a.enabled } : a));
   const add = (au) => setAutos((prev) => [au, ...prev]);
+  const save = (next) => setAutos((prev) => prev.map((a) => a.id === next.id ? next : a));
   const active = autos.filter((a) => a.enabled).length;
   const gated = autos.filter((a) => a.requiresApproval && a.enabled).length;
   const crons = autos.filter((a) => a.trigger.type === 'cron');
@@ -255,7 +284,7 @@ const AutomationsBody = ({ accent }) => {
           </span>
         </SectionLabel>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-          {items.map((au) => <AutomationCard key={au.id} au={au} accent={accent} onToggle={toggle} />)}
+          {items.map((au) => <AutomationCard key={au.id} au={au} accent={accent} onToggle={toggle} onEdit={setEditingAu} />)}
         </div>
       </div>
     );
@@ -298,6 +327,7 @@ const AutomationsBody = ({ accent }) => {
       )}
 
       {adding && <AutomationDialog accent={accent} onClose={() => setAdding(false)} onAdd={add} />}
+      {editingAu && <AutomationDialog accent={accent} editing={editingAu} onClose={() => setEditingAu(null)} onSave={save} />}
     </div>
   );
 };

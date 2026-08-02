@@ -14,6 +14,12 @@ const CANVAS_H = 940;
 
 const PG_MODEL_C = { opus: '#b07cff', sonnet: '#56c4d6', haiku: '#7fd98a' };
 const PG_THINK_C = { high: '#f0883e', medium: '#5b8def', low: '#5d6b7a' };
+const PG_SUBSYSTEMS = ['Forge', 'Puls', 'Sentinel', 'Maestro', 'Beacon', 'Scout', 'Herald', 'Loom', 'Codex', 'Ledger', 'Hearth'];
+const PG_KIND_META = {
+  agent:   { label: 'agent',   glyph: 'bot',      c: null },
+  verify:  { label: 'verify · shell', glyph: 'terminal', c: '#56c4d6' },
+  qualify: { label: 'qualify · verdikt', glyph: 'compass', c: '#b07cff' },
+};
 
 let _gid = 0;
 const guid = (p) => `${p}${++_gid}${Date.now().toString(36).slice(-3)}`;
@@ -36,7 +42,7 @@ function graphToPhases(graph) {
     const inE = incoming[n.id], outE = outgoing[n.id];
     const rw = rework.find((r) => r.from === n.id);
     const ph = {
-      agent: n.agent, model: n.model, thinking: n.thinking,
+      agent: n.agent, kind: n.kind || 'agent', model: n.model, thinking: n.thinking,
       consumes: inE ? inE.file : 'vstup.md',
       produces: outE ? outE.file : 'výstup.md',
     };
@@ -79,7 +85,11 @@ const reworkPath = (a, b) => { const peak = Math.min(a.y, b.y) - 56; const mx = 
 
 // ---- jeden uzel (zjednodušená karta agenta) -------------------------------
 const GNode = ({ n, accent, pending, hover, dragging, onPortDown, onNodeDown, onDelete, onCycleModel, onCycleThink, onPortEnter, onPortLeave, onNodeEnter, onNodeLeave }) => {
-  const a = agentByName(n.agent);
+  const kind = n.kind || 'agent';
+  const km = PG_KIND_META[kind];
+  const a = kind === 'agent' ? agentByName(n.agent) : { avatar: null, glyph: km.glyph };
+  const topColor = kind === 'qualify' ? km.c : Z.bad;
+  const topTitle = kind === 'qualify' ? 'drift routing — táhni na cíl podle verdiktu' : 'při chybě vrátit práci — táhni na předchozího agenta';
   const flowTarget = pending && pending.kind === 'flow' && pending.from !== n.id;
   const reworkTarget = pending && pending.kind === 'rework' && pending.from !== n.id;
   const inLit = flowTarget && hover && hover.type === 'in' && hover.node === n.id;
@@ -88,11 +98,11 @@ const GNode = ({ n, accent, pending, hover, dragging, onPortDown, onNodeDown, on
   const port = (which, extra) => {
     const dim = 14;
     const isTop = which === 'top';
-    const c = isTop ? Z.bad : accent;
+    const c = isTop ? topColor : accent;
     const lit = (which === 'in' && inLit);
     return (
       <div
-        title={which === 'in' ? 'vstup — sem připoj výstup jiného agenta' : which === 'out' ? 'výstup — táhni do vstupu dalšího agenta' : 'při chybě vrátit práci — táhni na předchozího agenta'}
+        title={which === 'in' ? 'vstup — sem připoj výstup jiného agenta' : which === 'out' ? 'výstup — táhni do vstupu dalšího agenta' : topTitle}
         onMouseDown={which === 'in' ? undefined : (e) => onPortDown(which, n.id, e)}
         onMouseEnter={which === 'in' ? () => onPortEnter('in', n.id) : undefined}
         onMouseLeave={which === 'in' ? () => onPortLeave('in', n.id) : undefined}
@@ -118,9 +128,9 @@ const GNode = ({ n, accent, pending, hover, dragging, onPortDown, onNodeDown, on
       style={{
         position: 'absolute', left: n.x, top: n.y, width: NODE_W, height: NODE_H,
         background: nodeLit ? Z.panelHi : Z.panel,
-        border: `1px solid ${nodeLit ? Z.bad : (reworkTarget ? Z.bad + '55' : accent + '55')}`,
+        border: `1px solid ${nodeLit ? topColor : (reworkTarget ? topColor + '55' : (km.c || accent) + '55')}`,
         borderRadius: 4, padding: '9px 11px', boxSizing: 'border-box', cursor: dragging ? 'grabbing' : 'grab',
-        boxShadow: dragging ? `0 10px 28px rgba(0,0,0,0.5), 0 0 0 1px ${accent}66` : (nodeLit ? `0 0 0 1px ${Z.bad}66, 0 0 18px ${Z.bad}33` : '0 2px 10px rgba(0,0,0,0.3)'),
+        boxShadow: dragging ? `0 10px 28px rgba(0,0,0,0.5), 0 0 0 1px ${accent}66` : (nodeLit ? `0 0 0 1px ${topColor}66, 0 0 18px ${topColor}33` : '0 2px 10px rgba(0,0,0,0.3)'),
         userSelect: 'none', transition: 'box-shadow .12s, border-color .12s',
       }}>
       {/* delete */}
@@ -130,15 +140,24 @@ const GNode = ({ n, accent, pending, hover, dragging, onPortDown, onNodeDown, on
       </button>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Avatar src={a.avatar} glyph={a.glyph} size={24} radius={2} accent={accent} dim={`${accent}1f`} />
+        {kind === 'agent'
+          ? <Avatar src={a.avatar} glyph={a.glyph} size={24} radius={2} accent={accent} dim={`${accent}1f`} />
+          : <div style={{ width: 24, height: 24, flex: '0 0 auto', borderRadius: 2, display: 'grid', placeItems: 'center', background: `${km.c}1f`, color: km.c, border: `1px solid ${km.c}44` }}><Icon name={km.glyph} size={13} /></div>}
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ fontFamily: Z.mono, fontSize: 11.5, fontWeight: 700, color: Z.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.agent}</div>
         </div>
       </div>
       <div style={{ display: 'flex', gap: 5, marginTop: 7 }}>
-        <span onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onCycleModel(n.id); }} title="model" style={{ cursor: 'pointer', fontFamily: Z.mono, fontSize: 8.5, fontWeight: 600, padding: '2px 6px', borderRadius: 2, color: PG_MODEL_C[n.model] || Z.inkDim, background: `${PG_MODEL_C[n.model] || Z.inkDim}1f`, border: `1px solid ${PG_MODEL_C[n.model] || Z.inkDim}55` }}>{n.model}</span>
-        <span onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onCycleThink(n.id); }} title="thinking" style={{ cursor: 'pointer', fontFamily: Z.mono, fontSize: 8.5, fontWeight: 600, padding: '2px 6px', borderRadius: 2, color: PG_THINK_C[n.thinking] || Z.inkDim, background: `${PG_THINK_C[n.thinking] || Z.inkDim}1f`, border: `1px solid ${PG_THINK_C[n.thinking] || Z.inkDim}55` }}>◇ {n.thinking}</span>
+        {kind === 'verify' ? (
+          <span style={{ fontFamily: Z.mono, fontSize: 8.5, fontWeight: 600, padding: '2px 6px', borderRadius: 2, color: km.c, background: `${km.c}1f`, border: `1px solid ${km.c}55` }}>deterministický · shell</span>
+        ) : (
+          <React.Fragment>
+            <span onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onCycleModel(n.id); }} title="model" style={{ cursor: 'pointer', fontFamily: Z.mono, fontSize: 8.5, fontWeight: 600, padding: '2px 6px', borderRadius: 2, color: PG_MODEL_C[n.model] || Z.inkDim, background: `${PG_MODEL_C[n.model] || Z.inkDim}1f`, border: `1px solid ${PG_MODEL_C[n.model] || Z.inkDim}55` }}>{n.model}</span>
+            <span onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onCycleThink(n.id); }} title="thinking" style={{ cursor: 'pointer', fontFamily: Z.mono, fontSize: 8.5, fontWeight: 600, padding: '2px 6px', borderRadius: 2, color: PG_THINK_C[n.thinking] || Z.inkDim, background: `${PG_THINK_C[n.thinking] || Z.inkDim}1f`, border: `1px solid ${PG_THINK_C[n.thinking] || Z.inkDim}55` }}>◇ {n.thinking}</span>
+          </React.Fragment>
+        )}
       </div>
+      {kind === 'qualify' && <Mono style={{ fontSize: 8, color: km.c, display: 'block', marginTop: 4 }}>horní port = drift routing podle verdiktu</Mono>}
 
       {port('in', { left: -7, top: NODE_H / 2 - 7 })}
       {port('out', { left: NODE_W - 7, top: NODE_H / 2 - 7 })}
@@ -175,6 +194,8 @@ const PipelineGraphEditor = ({ pipeline, mode, accent, onClose, onSave }) => {
   const [desc, setDesc] = useStateG(pipeline ? pipeline.desc || '' : '');
   const [avatar, setAvatar] = useStateG(pipeline ? pipeline.avatar || null : null);
   const [budget, setBudget] = useStateG(pipeline ? pipeline.budget || 25 : 25);
+  const [ownerSubsystem, setOwnerSubsystem] = useStateG(pipeline ? pipeline.ownerSubsystem || '' : '');
+  const [sinks, setSinks] = useStateG(pipeline && pipeline.sinks ? pipeline.sinks.map((s) => ({ ...s })) : []);
   const [graph, setGraph] = useStateG(() => ensureGraph(pipeline));
   const [pending, setPending] = useStateG(null); // { kind, from, cursor:{x,y} }
   const [nodeDrag, setNodeDrag] = useStateG(null); // { id }
@@ -189,12 +210,16 @@ const PipelineGraphEditor = ({ pipeline, mode, accent, onClose, onSave }) => {
   const toCanvas = (cx, cy) => { const r = canvasRef.current.getBoundingClientRect(); return { x: cx - r.left, y: cy - r.top }; };
 
   // mutace grafu
-  const addNode = (agentName, x, y) => {
-    const a = agentByName(agentName);
+  const addNode = (agentName, x, y, kind = 'agent') => {
+    const a = kind === 'agent' ? agentByName(agentName) : { model: 'sonnet', thinking: 'medium' };
     const nx = clamp(x == null ? 60 + graph.nodes.length * 26 : x, 8, CANVAS_W - NODE_W - 8);
     const ny = clamp(y == null ? 150 + graph.nodes.length * 18 : y, 8, CANVAS_H - NODE_H - 8);
-    setGraph((g) => ({ ...g, nodes: [...g.nodes, { id: guid('n'), agent: agentName, x: nx, y: ny, model: a.model || 'sonnet', thinking: a.thinking || 'medium' }] }));
+    const label = kind === 'agent' ? agentName : (kind === 'verify' ? 'Verify' : 'Qualify') + ' ' + (graph.nodes.filter((n) => n.kind === kind).length + 1);
+    setGraph((g) => ({ ...g, nodes: [...g.nodes, { id: guid('n'), agent: label, kind, x: nx, y: ny, model: a.model || 'sonnet', thinking: a.thinking || 'medium' }] }));
   };
+  const addSink = () => setSinks((prev) => [...prev, { id: guid('sk'), kind: 'pr', target: 'projekt', name: '' }]);
+  const updateSink = (id, patch) => setSinks((prev) => prev.map((s) => s.id === id ? { ...s, ...patch } : s));
+  const delSink = (id) => setSinks((prev) => prev.filter((s) => s.id !== id));
   const delNode = (id) => setGraph((g) => ({ nodes: g.nodes.filter((n) => n.id !== id), edges: g.edges.filter((e) => e.from !== id && e.to !== id), rework: g.rework.filter((r) => r.from !== id && r.to !== id) }));
   const cycleModel = (id) => setGraph((g) => ({ ...g, nodes: g.nodes.map((n) => n.id === id ? { ...n, model: { opus: 'sonnet', sonnet: 'haiku', haiku: 'opus' }[n.model] || 'sonnet' } : n) }));
   const cycleThink = (id) => setGraph((g) => ({ ...g, nodes: g.nodes.map((n) => n.id === id ? { ...n, thinking: { high: 'medium', medium: 'low', low: 'high' }[n.thinking] || 'medium' } : n) }));
@@ -256,7 +281,7 @@ const PipelineGraphEditor = ({ pipeline, mode, accent, onClose, onSave }) => {
 
   const phases = graphToPhases(graph);
   const valid = name.trim().length > 0 && graph.nodes.length > 0;
-  const submit = () => { if (!valid) return; onSave({ ...(pipeline || {}), name: name.trim(), desc: desc.trim(), budget, avatar, graph, phases }, isNew); };
+  const submit = () => { if (!valid) return; onSave({ ...(pipeline || {}), name: name.trim(), desc: desc.trim(), budget, avatar, ownerSubsystem, sinks, graph, phases }, isNew); };
 
   const pendFrom = pending ? portPt(nodeById(pending.from), pending.kind === 'rework' ? 'top' : 'out') : null;
 
@@ -277,6 +302,13 @@ const PipelineGraphEditor = ({ pipeline, mode, accent, onClose, onSave }) => {
             style={{ flex: 1, minWidth: 0, padding: '7px 11px', background: Z.bg0, border: `1px solid ${Z.line}`, borderRadius: 3, color: Z.ink, fontFamily: Z.sans, fontSize: 13, outline: 'none' }}
             onFocus={(e) => e.target.style.borderColor = `${accent}88`} onBlur={(e) => e.target.style.borderColor = Z.line} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, flex: '0 0 auto' }}>
+            <Mono style={{ fontSize: 9, color: Z.inkFaint, marginRight: 2 }}>VLASTNÍ Ó SUBSYSTÉM</Mono>
+            <select value={ownerSubsystem} onChange={(e) => setOwnerSubsystem(e.target.value)} style={{ fontFamily: Z.mono, fontSize: 11, padding: '5px 8px', borderRadius: 2, color: ownerSubsystem ? accent : Z.inkFaint, background: Z.bg0, border: `1px solid ${Z.line}`, cursor: 'pointer' }}>
+              <option value="">— žádný —</option>
+              {PG_SUBSYSTEMS.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flex: '0 0 auto' }}>
             <Mono style={{ fontSize: 9, color: Z.inkFaint, marginRight: 2 }}>STROP</Mono>
             {[10, 25, 50, 100].map((b) => (
               <button key={b} onClick={() => setBudget(b)} style={{ fontFamily: Z.mono, fontSize: 11, padding: '5px 9px', cursor: 'pointer', borderRadius: 2, color: budget === b ? Z.bg0 : Z.inkDim, background: budget === b ? accent : 'transparent', border: `1px solid ${budget === b ? accent : Z.line}` }}>${b}</button>
@@ -295,6 +327,11 @@ const PipelineGraphEditor = ({ pipeline, mode, accent, onClose, onSave }) => {
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px 10px' }}>
               {AGENTS.map((a) => <PaletteItem key={a.id} a={a} accent={accent} onAdd={(nm) => addNode(nm)} />)}
+            </div>
+            <div style={{ padding: '8px 14px 12px', borderTop: `1px solid ${Z.line}`, flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <Mono style={{ fontSize: 8.5, letterSpacing: '0.18em', color: Z.inkFaint, textTransform: 'uppercase' }}>speciální fáze</Mono>
+              <button onClick={() => addNode(null, null, null, 'verify')} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', borderRadius: 3, cursor: 'pointer', background: 'transparent', border: `1px solid ${PG_KIND_META.verify.c}44`, color: PG_KIND_META.verify.c, fontFamily: Z.mono, fontSize: 11 }}><Icon name="terminal" size={13} /> + Verify (shell)</button>
+              <button onClick={() => addNode(null, null, null, 'qualify')} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', borderRadius: 3, cursor: 'pointer', background: 'transparent', border: `1px solid ${PG_KIND_META.qualify.c}44`, color: PG_KIND_META.qualify.c, fontFamily: Z.mono, fontSize: 11 }}><Icon name="compass" size={13} /> + Qualify (verdikt)</button>
             </div>
           </div>
 
@@ -389,6 +426,25 @@ const PipelineGraphEditor = ({ pipeline, mode, accent, onClose, onSave }) => {
               )}
             </div>
           </div>
+        </div>
+
+        {/* výstupy pipeline (sinks) */}
+        <div style={{ padding: '10px 18px', borderTop: `1px solid ${Z.line}`, flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <Mono style={{ fontSize: 9, letterSpacing: '0.1em', color: Z.inkFaint, textTransform: 'uppercase' }}>Výstupy pipeline</Mono>
+          {sinks.map((s) => (
+            <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 4px 4px 9px', background: Z.bg0, border: `1px solid ${Z.line}`, borderRadius: 3 }}>
+              <select value={s.kind} onChange={(e) => updateSink(s.id, { kind: e.target.value })} style={{ fontFamily: Z.mono, fontSize: 10.5, color: accent, background: 'transparent', border: 'none', cursor: 'pointer' }}>
+                <option value="pr">PR</option><option value="file">soubor</option>
+              </select>
+              <span style={{ color: Z.inkFaint, fontFamily: Z.mono, fontSize: 10 }}>→</span>
+              <select value={s.target} onChange={(e) => updateSink(s.id, { target: e.target.value })} style={{ fontFamily: Z.mono, fontSize: 10.5, color: Z.ink, background: 'transparent', border: 'none', cursor: 'pointer' }}>
+                <option value="projekt">projekt</option><option value="vault">vault</option>
+              </select>
+              <input value={s.name} onChange={(e) => updateSink(s.id, { name: e.target.value })} placeholder="název" style={{ width: 84, padding: 0, background: 'transparent', border: 'none', borderLeft: `1px solid ${Z.line}`, paddingLeft: 6, color: Z.inkDim, fontFamily: Z.mono, fontSize: 10.5, outline: 'none' }} />
+              <button onClick={() => delSink(s.id)} style={{ width: 16, height: 16, display: 'grid', placeItems: 'center', cursor: 'pointer', borderRadius: 2, background: 'transparent', border: 'none', color: Z.inkFaint, padding: 0 }}><Icon name="x" size={10} /></button>
+            </div>
+          ))}
+          <button onClick={addSink} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: Z.mono, fontSize: 10.5, padding: '5px 9px', cursor: 'pointer', borderRadius: 3, color: accent, background: 'transparent', border: `1px solid ${accent}44` }}><Icon name="plus" size={10} /> přidat výstup</button>
         </div>
 
         {/* footer */}

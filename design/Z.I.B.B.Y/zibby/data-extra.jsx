@@ -350,6 +350,42 @@ const AUTOMATIONS = [
     desc: 'Reviewer projde diff nového PR a připraví push k tvému schválení.',
     file: '~/zibby/automations/pr-guard.event.md',
   },
+  {
+    id: 'au-sys-memory-distill', name: 'memory-distill', enabled: true, owner: 'system',
+    trigger: { type: 'cron', spec: 'denně · 03:30', human: 'každou noc ve 3:30' },
+    target: { kind: 'system', name: 'memory-distill', glyph: 'brain' },
+    lastRun: 'dnes 03:30', lastState: 'done', nextRun: 'zítra 03:30',
+    requiresApproval: false, gate: null,
+    desc: 'Systémová údržba: destiluje denní poznámky do MEMORY.md, bez zásahu operátora.',
+    file: '~/zibby/automations/system/memory-distill.cron.md',
+  },
+  {
+    id: 'au-sys-sentinel-scan', name: 'sentinel-scan', enabled: true, owner: 'system',
+    trigger: { type: 'cron', spec: 'každou hodinu', human: 'každou celou hodinu' },
+    target: { kind: 'system', name: 'sentinel-scan', glyph: 'shield' },
+    lastRun: 'před 42 m', lastState: 'done', nextRun: 'za 18 m',
+    requiresApproval: false, gate: null,
+    desc: 'Systémová kontrola zdraví subsystémů a otevřených rizik.',
+    file: '~/zibby/automations/system/sentinel-scan.cron.md',
+  },
+  {
+    id: 'au-sys-post-merge', name: 'post-merge-watch', enabled: true, owner: 'system',
+    trigger: { type: 'event', spec: 'merge do main', human: 'při každém mergi do main' },
+    target: { kind: 'system', name: 'post-merge-watch', glyph: 'branch' },
+    lastRun: 'před 1h', lastState: 'done', nextRun: '— (na událost)',
+    requiresApproval: false, gate: null,
+    desc: 'Systémová kontrola: sleduje CI a produkční metriky po každém mergi.',
+    file: '~/zibby/automations/system/post-merge-watch.event.md',
+  },
+  {
+    id: 'au-sys-agent-factory', name: 'agent-factory', enabled: false, owner: 'system',
+    trigger: { type: 'cron', spec: 'týdně · Po 05:00', human: 'každé pondělí v 5:00' },
+    target: { kind: 'system', name: 'agent-factory', glyph: 'gear' },
+    lastRun: 'minulé po', lastState: 'done', nextRun: 'Po 05:00',
+    requiresApproval: false, gate: null,
+    desc: 'Systémová údržba: navrhuje nové agenty na základě opakujících se vzorů práce.',
+    file: '~/zibby/automations/system/agent-factory.cron.md',
+  },
 ];
 
 // ---- PAMĚŤ (Obsidian vault) ---------------------------------------------
@@ -428,9 +464,46 @@ if (typeof SKILLS !== 'undefined') {
   });
 }
 
+// ---- FIRMY (Companies) ---------------------------------------------------
+// Firma = super-entita nad projekty. Kanonický tým lidí a výchozí rozpočet se
+// dědí do projektů (projekt může mít vlastní, přísnější). Zdroj pravdy: karta
+// = ~/zibby/companies/<id>.company.md (mock zde, žádné volání na API).
+const COMPANIES = [
+  {
+    id: 'acme', name: 'Acme Corp', glyph: 'building',
+    desc: 'Klient — SaaS platforma pro fleet management. Hlavní zdroj práce na auth-svc a zibby-core.',
+    budget: { daily: 40, weekly: 180, monthly: 600, costCap: 900 },
+    team: [
+      { id: 'p1', name: 'Petra Nováková', role: 'Product Owner', email: 'petra@acme.io', commStyle: 'Slack, stručně, reaguje do 1h', vip: true },
+      { id: 'p2', name: 'Tomáš Dvořák', role: 'Tech Lead', email: 'tomas@acme.io', commStyle: 'E-mail, detailní review, obvykle večer', vip: false },
+      { id: 'p3', name: 'Lucie Bartošová', role: 'QA', email: 'lucie@acme.io', commStyle: 'Slack, rychlé dotazy přes den', vip: false },
+    ],
+    projectIds: ['auth-svc', 'zibby-core'],
+  },
+  {
+    id: 'northwind', name: 'Northwind Media', glyph: 'building',
+    desc: 'Menší klient — správa mediální knihovny a domácí automatizace.',
+    budget: { daily: 10, weekly: 45, monthly: 150, costCap: 200 },
+    team: [
+      { id: 'p4', name: 'Jakub Svoboda', role: 'Majitel', email: 'jakub@northwind.cz', commStyle: 'WhatsApp, neformální, večer', vip: true },
+    ],
+    projectIds: ['media-vault'],
+  },
+  {
+    id: 'greenfield', name: 'Greenfield Labs', glyph: 'building',
+    desc: 'Nový klient — zatím bez přiřazených projektů, čeká se na kickoff.',
+    budget: { daily: 15, weekly: 60, monthly: 200, costCap: 300 },
+    team: [
+      { id: 'p5', name: 'Eva Horáková', role: 'Zakladatelka', email: 'eva@greenfieldlabs.dev', commStyle: 'E-mail, formální', vip: false },
+    ],
+    projectIds: [],
+  },
+];
+
 Object.assign(window, {
   RISK, SEVERITY, sevOf, INT_TOOL_RISK, riskTypeOfTool, riskyToolsForSkill,
   RUN_STATE, APPROVAL_QUEUE, RUNS, mkLog,
   INTEGRATIONS, INTEGRATION_CATALOG, AUTOMATIONS,
   MEM_LAYER, VAULT_NODES, VAULT_LINKS,
+  COMPANIES,
 });
