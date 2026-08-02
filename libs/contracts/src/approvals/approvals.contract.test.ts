@@ -68,4 +68,23 @@ describe("approval schema", () => {
       );
     });
   });
+
+  describe("sourceUrl (Phase 127)", () => {
+    it("accepts a link back to the item's origin", () => {
+      const parsed = ApprovalSchema.safeParse({
+        ...base,
+        sourceUrl: "https://github.com/acme/repo/issues/42",
+      });
+      expect(parsed.success).toBe(true);
+      if (parsed.success) {
+        expect(parsed.data.sourceUrl).toBe("https://github.com/acme/repo/issues/42");
+      }
+    });
+
+    it("is omissible — every pre-existing approval re-parses untouched", () => {
+      const parsed = ApprovalSchema.safeParse(base);
+      expect(parsed.success).toBe(true);
+      if (parsed.success) expect(parsed.data.sourceUrl).toBeUndefined();
+    });
+  });
 });

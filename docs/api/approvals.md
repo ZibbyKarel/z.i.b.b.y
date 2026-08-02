@@ -62,6 +62,7 @@ interface Approval {
   requestedAt: string; // ISO datetime
   decidedAt?: string; // ISO datetime
   ownerSubsystem?: SubsystemId; // NS2 F3c — the acting unit's owning subsystem
+  sourceUrl?: string; // Phase 127 — link to the item's origin (Jira/GitHub/Slack)
 }
 ```
 
@@ -76,6 +77,13 @@ for the synthetic orchestrator). The other call sites (machine, jira-issue,
 channel, budget-task, agent-proposal) omit it — a system-owned gate with no
 acting unit never invents an owner. It is pure attribution for the queue's
 per-subsystem filter and the activity lens; decisions still route by `kind`.
+
+`sourceUrl` (Phase 127) is optional and additive the same way: only the
+`channel` run-path caller (`ChannelTriageFlowService.parkForApproval`, the
+Tier-3 draft-reply gate) supplies it, copied straight from the originating
+`ChannelItem.url` when the item's adapter (Jira/GitHub/Slack) was able to
+produce one. Every other kind omits it, and a pre-existing approval re-parses
+untouched.
 
 ## ApprovalsService
 

@@ -87,5 +87,12 @@ export const ChannelItemSchema = z.object({
   reply: z.object({ text: z.string(), sentAt: IsoDateTimeSchema }).optional(),
   /** Copied from the dispatched task's outcome once its run finishes (Tier 1). */
   outcome: TaskOutcomeSchema.optional(),
+  /**
+   * Phase 127 — a human-facing link back to this item's origin (a Jira issue, a
+   * GitHub issue/PR, a Slack message), so the operator can open it in context.
+   * Stamped only by adapters that can cheaply produce one at ingest time
+   * (Jira, GitHub, Slack); other kinds simply omit it.
+   */
+  url: z.string().optional(),
 });
 export type ChannelItem = z.infer<typeof ChannelItemSchema>;

@@ -73,4 +73,23 @@ describe("ChannelItemSchema", () => {
     expect(ChannelItemSchema.safeParse({ ...minimal, text: "x".repeat(4500) }).success).toBe(true);
     expect(ChannelItemSchema.safeParse({ ...minimal, text: "x".repeat(4501) }).success).toBe(false);
   });
+
+  describe("url (Phase 127)", () => {
+    it("accepts a source link (Jira/GitHub/Slack)", () => {
+      const parsed = ChannelItemSchema.safeParse({
+        ...minimal,
+        url: "https://example.atlassian.net/browse/PROJ-1",
+      });
+      expect(parsed.success).toBe(true);
+      if (parsed.success) {
+        expect(parsed.data.url).toBe("https://example.atlassian.net/browse/PROJ-1");
+      }
+    });
+
+    it("is omissible — a pre-existing item without url re-parses untouched", () => {
+      const parsed = ChannelItemSchema.safeParse(minimal);
+      expect(parsed.success).toBe(true);
+      if (parsed.success) expect(parsed.data.url).toBeUndefined();
+    });
+  });
 });
