@@ -249,6 +249,7 @@ export class ChannelWatcherService
         text: sanitizeInbound(msg.text),
         raw: msg.raw,
         state: "new",
+        ...(msg.url ? { url: msg.url } : {}),
       };
       const stored = await this.store.put(item);
       // Only a genuinely new item (not a dedup hit) is acted on / announced.

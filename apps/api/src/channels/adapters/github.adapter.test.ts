@@ -50,6 +50,8 @@ describe("GitHubChannelAdapter", () => {
     expect(items.map((i) => i.id)).toEqual(["gh-acme-app-issue-1", "gh-acme-app-pr-2"]);
     expect(items[0]!.externalRef).toMatchObject({ channel: "acme/app", messageId: "1" });
     expect(items[0]!.from).toBe("dana");
+    expect(items[0]!.url).toBe("https://github.com/acme/app/issues/1");
+    expect(items[1]!.url).toBe("https://github.com/acme/app/pull/2");
     expect(cursor).toBe("2026-06-17T10:00:00.000Z");
   });
 

@@ -46,6 +46,30 @@ export class SlackChannelAdapter implements ChannelAdapter {
 
   constructor(private readonly fetchImpl: typeof fetch = fetch) {}
 
+  /**
+   * Best-effort permalink lookup (Phase 127) — Slack has no cheap way to derive this
+   * from data already in hand, unlike Jira/GitHub, so this costs one extra call per
+   * NEW message (polling only ever fetches deltas). Never throws: a failed lookup
+   * just means the item ships without a `url`, same fail-open style as the rate-limit
+   * handling above — a permalink is a nice-to-have, not worth failing the poll over.
+   */
+  private async getPermalink(
+    token: string,
+    channel: string,
+    ts: string,
+  ): Promise<string | undefined> {
+    try {
+      const params = new URLSearchParams({ channel, message_ts: ts });
+      const res = await this.fetchImpl(`${SLACK_API}/chat.getPermalink?${params}`, {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      const body = (await res.json()) as { ok: boolean; permalink?: string };
+      return body.ok ? body.permalink : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   async test(integration: Integration, creds: CredentialsInput): Promise<TestResult> {
     const token = tokenOf(creds);
     if (!token) return { ok: false, detail: "no slack token configured" };
@@ -101,6 +125,7 @@ export class SlackChannelAdapter implements ChannelAdapter {
           receivedAt: new Date(Math.floor(Number(m.ts) * 1000) || 0).toISOString(),
           text: m.text ?? "",
           raw: m,
+          url: await this.getPermalink(token, channel, m.ts),
         });
         if (newestTs === undefined || Number(m.ts) > Number(newestTs)) newestTs = m.ts;
       }

@@ -212,6 +212,7 @@ export class GitHubChannelAdapter implements ChannelAdapter {
         receivedAt: new Date(updated).toISOString(),
         text: `#${issue.number} ${issue.title ?? ""}${issue.body ? `\n\n${issue.body}` : ""}`.trim(),
         raw: issue,
+        url: `https://github.com/${repo}/${isPr ? "pull" : "issues"}/${issue.number}`,
       });
       if (newest === undefined || updated > newest) newest = updated;
     }

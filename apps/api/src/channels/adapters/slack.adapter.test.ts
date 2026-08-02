@@ -48,6 +48,62 @@ describe("SlackChannelAdapter", () => {
     expect(cursor).toBe("1700000200.000300");
   });
 
+  it("sets url from a successful chat.getPermalink lookup, per message", async () => {
+    const history = JSON.parse(await fs.readFile(path.join(FIXTURES, "history.json"), "utf8"));
+    const fetchImpl = vi.fn(async (input: string | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/chat.getPermalink")) {
+        const ts = url.searchParams.get("message_ts");
+        return new Response(
+          JSON.stringify({ ok: true, permalink: `https://acme.slack.com/archives/C123/p${ts}` }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      return new Response(JSON.stringify(history), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+    const adapter = new SlackChannelAdapter(fetchImpl);
+    const { items } = await adapter.poll(slack, { token: "xoxb-1" }, undefined);
+    expect(items[0]!.url).toBe("https://acme.slack.com/archives/C123/p1700000100.000200");
+  });
+
+  it("omits url (never throws) when the permalink lookup fails", async () => {
+    const history = JSON.parse(await fs.readFile(path.join(FIXTURES, "history.json"), "utf8"));
+    const fetchImpl = vi.fn(async (input: string | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/chat.getPermalink")) {
+        return new Response(JSON.stringify({ ok: false, error: "message_not_found" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify(history), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+    const adapter = new SlackChannelAdapter(fetchImpl);
+    const { items } = await adapter.poll(slack, { token: "xoxb-1" }, undefined);
+    expect(items[0]!.url).toBeUndefined();
+  });
+
+  it("omits url (never throws) when the permalink lookup itself throws", async () => {
+    const history = JSON.parse(await fs.readFile(path.join(FIXTURES, "history.json"), "utf8"));
+    const fetchImpl = vi.fn(async (input: string | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/chat.getPermalink")) throw new Error("network down");
+      return new Response(JSON.stringify(history), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+    const adapter = new SlackChannelAdapter(fetchImpl);
+    const { items } = await adapter.poll(slack, { token: "xoxb-1" }, undefined);
+    expect(items[0]!.url).toBeUndefined();
+  });
+
   it("passes the cursor as `oldest` on a subsequent poll", async () => {
     const fetchImpl = jsonFetch({ ok: true, messages: [] });
     const adapter = new SlackChannelAdapter(fetchImpl);

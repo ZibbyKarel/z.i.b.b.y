@@ -22,6 +22,11 @@ export interface InboundMessage {
   text: string;
   /** The original provider payload, kept verbatim for the record. */
   raw: unknown;
+  /**
+   * Phase 127 — a human-facing link back to this message's origin, when the
+   * adapter can produce one cheaply (Jira, GitHub, Slack). Omitted otherwise.
+   */
+  url?: string;
 }
 
 /** What one poll round returns: the new messages plus the advanced cursor. */

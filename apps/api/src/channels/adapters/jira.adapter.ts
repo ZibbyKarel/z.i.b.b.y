@@ -109,6 +109,7 @@ export class JiraChannelAdapter implements ChannelAdapter {
         receivedAt: new Date(updated).toISOString(),
         text: `[${issue.key}] ${issue.fields?.summary ?? ""}`.trim(),
         raw: issue,
+        url: `${baseUrl}/browse/${issue.key}`,
       });
       if (newest === undefined || updated > newest) newest = updated;
     }

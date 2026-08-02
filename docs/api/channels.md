@@ -84,6 +84,9 @@ Maps `integration.type` to a concrete adapter implementation.
 - Poll: Slack API Conversations History since the cursor (timestamp)
 - Cursor = `ts` of the last processed message
 - Returns `ChannelItem[]` with `user`, `text`, `channel`
+- `url` (Phase 127): a best-effort `chat.getPermalink` call per newly ingested
+  message (needs no OAuth scope) — a failed lookup just omits `url`, never
+  fails the poll.
 
 ### Jira adapter
 
@@ -91,6 +94,8 @@ Maps `integration.type` to a concrete adapter implementation.
   `email:apiToken`
 - Cursor = the most recent `updated`; id = `jira-<KEY>`, `externalRef.messageId`
   = issue key
+- `url` (Phase 127): `${baseUrl}/browse/${key}` — built from data already in
+  hand, no extra request.
 - Send: adds a comment on the issue (`/rest/api/3/issue/{key}/comment`)
 - **Create ("creates a Jira task"):** `createIssue` (POST `/rest/api/3/issue`)
   always sits behind approval — floor `jira.create_issue → ask` plus
@@ -134,6 +139,8 @@ for storage itself.
 - `listAll()` (`/repos/{owner}/{name}/issues?since=cursor`, no scoping) survives only
   for a config with no `username` — which `GitHubConfigSchema` no longer permits. It is
   unreachable in practice; left in place rather than deleted as a drive-by.
+- `url` (Phase 127): `https://github.com/{repo}/{issues|pull}/{n}` — built from
+  data already in hand, no extra request.
 
 ### Google Calendar adapter
 

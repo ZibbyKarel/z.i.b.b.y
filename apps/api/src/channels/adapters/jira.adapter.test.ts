@@ -55,6 +55,7 @@ describe("JiraChannelAdapter", () => {
     expect(items[0]!.externalRef).toMatchObject({ channel: "BUG", messageId: "BUG-1" });
     expect(items[0]!.text).toContain("Login crashes");
     expect(items[0]!.from).toBe("Dana");
+    expect(items[0]!.url).toBe("https://acme.atlassian.net/browse/BUG-1");
     expect(cursor).toBe("2026-06-17T10:00:00.000Z");
     // Basic auth header from email:token.
     const init = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock
