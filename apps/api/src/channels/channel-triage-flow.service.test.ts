@@ -273,7 +273,16 @@ describe("ChannelTriageFlowService", () => {
       kind: "channel",
       runId: "team/C1-100",
     });
+    expect(requestApproval.mock.calls[0]![0]).not.toHaveProperty("sourceUrl");
     expect(out.state).toBe("triaged");
+  });
+
+  it("Tier 3 forwards the item's url as the approval's sourceUrl when present (Phase 127)", async () => {
+    const flow = makeFlow({ verdict: scope });
+    await flow.handle(item({ url: "https://acme.slack.com/archives/C1/p100" }));
+    expect(requestApproval.mock.calls[0]![0]).toMatchObject({
+      sourceUrl: "https://acme.slack.com/archives/C1/p100",
+    });
   });
 
   it("resume sends the reviewed draft + handles; cancel ignores; missing item tolerated", async () => {

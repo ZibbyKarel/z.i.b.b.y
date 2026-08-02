@@ -34,6 +34,12 @@ export interface RequestApprovalInput {
    * no acting unit never invents an owner.
    */
   ownerSubsystem?: SubsystemId;
+  /**
+   * Phase 127 — a link back to the gated item's origin (Jira/GitHub/Slack).
+   * Only `ChannelTriageFlowService.parkForApproval` supplies it, copied from
+   * the originating `ChannelItem.url`; every other call site omits it.
+   */
+  sourceUrl?: string;
 }
 
 /**
@@ -77,6 +83,7 @@ export class ApprovalsService {
       status: "pending",
       requestedAt: new Date().toISOString(),
       ...(input.ownerSubsystem ? { ownerSubsystem: input.ownerSubsystem } : {}),
+      ...(input.sourceUrl ? { sourceUrl: input.sourceUrl } : {}),
     };
     this.log?.info("approval requested", {
       id: approval.id,

@@ -171,6 +171,36 @@ describe("ApprovalsService", () => {
     });
   });
 
+  describe("sourceUrl tagging (Phase 127)", () => {
+    it("persists the source link when the caller supplies one", async () => {
+      const created = await service.requestApproval({
+        runId: "team/C1-100",
+        kind: "channel",
+        skill: "Team Slack",
+        action: "channel.reply",
+        detail: "draft reply",
+        risk: "low",
+        sourceUrl: "https://acme.slack.com/archives/C1/p100",
+      });
+      expect(created.sourceUrl).toBe("https://acme.slack.com/archives/C1/p100");
+      const persisted = await service.get(created.id);
+      expect(persisted.sourceUrl).toBe("https://acme.slack.com/archives/C1/p100");
+    });
+
+    it("omits the field entirely when the caller supplies none", async () => {
+      const created = await service.requestApproval({
+        runId: "team/C1-200",
+        kind: "channel",
+        skill: "Team Slack",
+        action: "channel.reply",
+        detail: "draft reply",
+        risk: "low",
+      });
+      expect(created.sourceUrl).toBeUndefined();
+      expect("sourceUrl" in created).toBe(false);
+    });
+  });
+
   it("persists durably: a fresh service over the same dir sees the approval", async () => {
     const created = await request();
     const fresh = new ApprovalsService(new ApprovalsStorageService(dir));

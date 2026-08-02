@@ -399,6 +399,7 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
       // Display-only detail (shown to the operator, never fed to a prompt).
       detail: `Draft reply:\n${draft}\n\nIn reply to:\n${item.text}`,
       risk: verdict.tier === 3 ? "medium" : "low",
+      ...(item.url ? { sourceUrl: item.url } : {}),
     });
     const parked: ChannelItem = {
       ...item,
