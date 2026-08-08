@@ -36,8 +36,15 @@ const CHANNEL_REPLY_ACTION = "channel-reply";
 /** Strength ordering, mirroring the gate evaluator — a higher rank is stricter. */
 const DECISION_RANK: Record<Decision, number> = { allow: 0, notify: 1, ask: 2, deny: 3 };
 
-/** A default draft when triage produced none (kept generic; never echoes raw text into a prompt). */
-const DEFAULT_DRAFT = "Thanks for reaching out — I'll follow up shortly.";
+/**
+ * There is deliberately NO default draft. Triage used to fall back to a generic
+ * "Thanks for reaching out — I'll follow up shortly." whenever it produced no
+ * suggestion, which meant every surfaced item grew a reply proposal whether or not
+ * there was anything to say — an approval queue of content-free templates the
+ * operator would only ever reject. When there is no substantive draft the item is
+ * now surfaced for attention instead ({@link surfaceWithoutDraft}): still visible,
+ * just not pretending to be a reply worth reviewing.
+ */
 
 /**
  * The tier executor (the heart of 5.3) AND the kind-"channel" {@link ResumableRunner}.
@@ -52,6 +59,10 @@ const DEFAULT_DRAFT = "Thanks for reaching out — I'll follow up shortly.";
  *   through to the Tier-3 path; a `deny` ignores the item.
  * - Tier 3 (or low confidence, or gated to `ask`): park a kind-"channel" approval
  *   carrying the draft; the operator approves to send, rejects to ignore.
+ *
+ * Every one of those reply paths requires a **substantive draft**. When triage
+ * suggests none, Tier 2 does not send and Tier 3 does not park — the item is surfaced
+ * for attention instead (state `triaged`, no approval). See {@link surfaceWithoutDraft}.
  *
  * Law 4 throughout: item text enters a task/prompt ONLY inside {@link envelopeInbound};
  * the title is built from operator-owned fields, never the message body.
@@ -378,8 +389,12 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
       // Operator hardened channel-reply to ask → park instead of sending.
       return this.parkForApproval(item, verdict);
     }
-    // allow / notify → send.
-    const sent = await this.sendReply(item, this.draftOf(verdict));
+    // allow / notify → send, but only if there is something to say. Auto-sending a
+    // content-free acknowledgement is the worst version of this path: it commits the
+    // operator's voice to an outside party and says nothing.
+    const draft = this.draftOf(verdict);
+    if (!draft) return this.surfaceWithoutDraft(item, verdict);
+    const sent = await this.sendReply(item, draft);
     // NS2 F6a — record the Tier-2 gated auto-send in Herald's ledger (best-effort:
     // a ledger failure never blocks the triage tick).
     this.recordLedgerProposal(sent, verdict, { tier: 2, outcome: "sent-auto" });
@@ -389,8 +404,12 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
   // ---- Tier 3 / fallback: park a kind-"channel" approval ----------------------
 
   private async parkForApproval(item: ChannelItem, verdict: TriageVerdict): Promise<ChannelItem> {
-    const integration = await this.integrations.get(item.integrationId).catch(() => null);
+    // Nothing substantive to propose → surface it, don't manufacture an approval. A
+    // parked reply asks the operator a real question ("send this?"); with no draft
+    // behind it there is no question, only a queue entry to dismiss.
     const draft = this.draftOf(verdict);
+    if (!draft) return this.surfaceWithoutDraft(item, verdict);
+    const integration = await this.integrations.get(item.integrationId).catch(() => null);
     const approval = await this.approvals.requestApproval({
       runId: `${item.integrationId}/${item.id}`,
       kind: "channel",
@@ -427,6 +446,37 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     return parked;
   }
 
+  /**
+   * Surface an item the operator should see but that ZIBBY has no reply to propose
+   * for: state `triaged`, NO approval, one activity line. Deliberately the same shape
+   * as {@link handleNotifyOnly}'s surfaced branch — "you should look at this" is one
+   * outcome with one representation, whether it comes from a notify-only kind or from
+   * a channel whose triage simply had nothing to say.
+   */
+  private async surfaceWithoutDraft(
+    item: ChannelItem,
+    verdict: TriageVerdict,
+  ): Promise<ChannelItem> {
+    const surfaced: ChannelItem = { ...item, state: "triaged", triage: verdict };
+    await this.store.update(surfaced);
+    this.log.info("channel item surfaced without a draft reply (no suggestion)", {
+      itemId: item.id,
+      tier: verdict.tier,
+      category: verdict.category,
+    });
+    void this.activity.record({
+      kind: "channel-needs-attention",
+      // Operator-owned fields only — the untrusted text rides on the item (Law 4).
+      summary: `${item.kind} item from ${item.integrationId} needs your attention (${verdict.category})`,
+      refs: {
+        itemId: item.id,
+        integrationId: item.integrationId,
+        ...(item.projectId ? { projectId: item.projectId } : {}),
+      },
+    });
+    return surfaced;
+  }
+
   // ---- ResumableRunner (kind "channel") ---------------------------------------
 
   /** Approve → send the reviewed draft and stamp the reply + handled. */
@@ -436,7 +486,16 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
       this.log.warn("channel approval resume: item missing", { runId });
       return;
     }
-    await this.sendReply(item, this.draftOf(item.triage));
+    // An approval only ever exists when there WAS a draft (parkForApproval surfaces
+    // instead of parking otherwise), so this is a can't-happen guard — but approving
+    // an empty reply would send a blank comment to an outside party, so it fails
+    // loudly rather than sending nothing.
+    const draft = this.draftOf(item.triage);
+    if (!draft) {
+      this.log.warn("channel approval resume: approved item carries no draft", { runId });
+      return;
+    }
+    await this.sendReply(item, draft);
     // NS2 F6a — the parked draft was approved UNEDITED and sent: patch the ledger
     // entry (this is the graduation streak's only positive signal). Best-effort.
     this.recordLedgerDecision(item, "approved");
@@ -568,8 +627,9 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     return mandate.channels[integrationId]?.[key] ?? mandate.defaults[key];
   }
 
-  private draftOf(verdict: TriageVerdict | undefined): string {
-    return verdict?.suggestedReply?.trim() || DEFAULT_DRAFT;
+  /** The triage-suggested reply, or null when triage produced nothing substantive. */
+  private draftOf(verdict: TriageVerdict | undefined): string | null {
+    return verdict?.suggestedReply?.trim() || null;
   }
 
   private mandateSummary(mandate: Mandate, integrationId: string): string {

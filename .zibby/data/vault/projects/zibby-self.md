@@ -1,5 +1,5 @@
 ---
-title: Z.I.B.B.Y
+title: Z.I.B.B.Y - copy
 type: project
 id: zibby-self
 project: zibby-self
@@ -22,7 +22,7 @@ daily_rhythm:
   format: yesterday / today / blockers
   active_hours: '09:00-19:00'
 ---
-# Z.I.B.B.Y
+# Z.I.B.B.Y - copy
 
 > ZIBBY's own repo — self-development target. Worktree-isolated; PR is the gate.
 

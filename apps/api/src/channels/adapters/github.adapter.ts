@@ -30,13 +30,16 @@ function tokenOf(creds: CredentialsInput): string | null {
  * `since` = the cursor, normalizes each to an {@link InboundMessage} with a
  * deterministic `gh-<repo>-<issue|pr>-<number>` id, and advances the cursor to the
  * newest `updated_at`. `streams` filters issues vs pulls. When `config.username` is
- * set, polling narrows to exactly two sets (phase-126a): explicit mentions via the
- * Search API ({@link searchMentioned}) and PRs ZIBBY itself opened for this
- * project, fetched directly by number ({@link fetchZibbyPrs}) from the numbers the
- * watcher resolves into `ctx.zibbyPrNumbers`. `assignee:{username}` is deliberately
- * NOT queried — everything assigned to the operator on a repo they work on
- * professionally is not the same as something that concerns ZIBBY (see
- * `docs/plans/phase-126a-github-question-scope.md`). A fresh integration (no
+ * set, polling narrows to exactly three sets: items that explicitly mention the
+ * operator, items assigned to them (both via the Search API, {@link searchScoped}),
+ * and PRs ZIBBY itself opened for this project, fetched directly by number
+ * ({@link fetchZibbyPrs}) from the numbers the watcher resolves into
+ * `ctx.zibbyPrNumbers`. The `assignee:` half is there by the operator's explicit
+ * later instruction — phase-126a had dropped it on the reasoning that "assigned to
+ * me at work" ≠ "concerns ZIBBY"
+ * (`docs/plans/phase-126a-github-question-scope.md`), which the operator has since
+ * overruled: an issue assigned to them is theirs to see. No fourth set exists —
+ * nothing outside this union may be ingested. A fresh integration (no
  * persisted cursor) seeds the cursor to "now" and ingests nothing on that first poll —
  * every later poll fetches only what changed since the last sync, never a full
  * backfill (same contract as the email adapter). No method sleeps on a rate limit; a
@@ -89,25 +92,22 @@ export class GitHubChannelAdapter implements ChannelAdapter {
   }
 
   /**
-   * Only issues/PRs that explicitly mention `username`, via the Search API
-   * (`/search/issues`) — condition (b) of phase-126a's target behaviour.
-   * `assignee:` is deliberately not queried here (or anywhere in this adapter):
-   * it was the leak phase-126a removed, and the PRs-ZIBBY-opened half of the
-   * union is answered separately by {@link fetchZibbyPrs}, not by a search
-   * qualifier (D6 — `author:`/`assignee:` cannot tell a ZIBBY-opened PR from one
-   * the operator opened by hand, since both go out under the operator's token).
+   * One Search API (`/search/issues`) pass for a single scope qualifier —
+   * `mentions:<user>` or `assignee:<user>`. Two separate searches rather than one
+   * query because GitHub search ANDs its qualifiers: `mentions:X assignee:X` would
+   * return only the items that are BOTH, where the operator's rule is a union.
    * `updated:>=cursor` stands in for the issues endpoint's `since` (Search has no
    * such param); items ship in the same shape as `/repos/{repo}/issues`,
    * distinguished the same way via `pull_request`.
    */
-  private async searchMentioned(
+  private async searchScoped(
     repo: string,
-    username: string,
+    qualifier: string,
     cursor: string | undefined,
     creds: CredentialsInput,
   ): Promise<GitHubIssue[]> {
     const since = cursor ? ` updated:>=${cursor}` : "";
-    const q = `repo:${repo} is:open mentions:${username}${since}`;
+    const q = `repo:${repo} is:open ${qualifier}${since}`;
     const params = new URLSearchParams({ q, sort: "updated", order: "asc", per_page: "50" });
     const res = await this.fetchImpl(`${GITHUB_API}/search/issues?${params}`, {
       headers: this.headers(creds),
@@ -121,12 +121,13 @@ export class GitHubChannelAdapter implements ChannelAdapter {
   }
 
   /**
-   * PRs ZIBBY itself opened for this project — condition (a) of phase-126a's
-   * target behaviour. `numbers` comes from `ctx.zibbyPrNumbers`, which
-   * `ChannelWatcherService` resolves via `ZibbyPrLocator` before calling
-   * `poll()`; no Search qualifier can answer this (D6), so this is N direct
-   * `GET /repos/{repo}/issues/{number}` reads — the honest implementation for a
-   * small, known set of numbers.
+   * PRs ZIBBY itself opened for this project. No Search qualifier can answer this
+   * (D6 — `author:`/`assignee:` cannot tell a ZIBBY-opened PR from one the operator
+   * opened by hand, since both go out under the operator's token), so it stays a
+   * direct read. `numbers` comes from `ctx.zibbyPrNumbers`, which
+   * `ChannelWatcherService` resolves via `ZibbyPrLocator` before calling `poll()`,
+   * and each becomes its own `GET /repos/{repo}/issues/{number}` — the honest
+   * implementation for a small, known set of numbers.
    *
    * The list arrives already capped at `MAX_ZIBBY_PR_READS`; the watcher caps it
    * because it owns the scoped logger and a dropped number has to be visible in
@@ -178,18 +179,22 @@ export class GitHubChannelAdapter implements ChannelAdapter {
       return { items: [], cursor: new Date().toISOString() };
     }
 
-    const mentioned = username
-      ? await this.searchMentioned(repo, username, cursor, creds)
+    const scoped = username
+      ? [
+          ...(await this.searchScoped(repo, `mentions:${username}`, cursor, creds)),
+          ...(await this.searchScoped(repo, `assignee:${username}`, cursor, creds)),
+        ]
       : await this.listAll(repo, cursor, creds);
     const zibbyNumbers = ctx?.zibbyPrNumbers ?? [];
     const zibbyPrs = zibbyNumbers.length
       ? await this.fetchZibbyPrs(repo, zibbyNumbers, cursor, creds)
       : [];
 
-    // Union the two sets, deduping by issue number exactly as the old two-search
-    // union did — a ZIBBY PR that also turns up in the mentions search ingests once.
+    // Union the three sets, deduping by issue number — an item that is both
+    // mentioned-me and assigned-to-me (or a ZIBBY PR that mentions the operator)
+    // ingests exactly once.
     const byNumber = new Map<number, GitHubIssue>();
-    for (const issue of [...mentioned, ...zibbyPrs]) {
+    for (const issue of [...scoped, ...zibbyPrs]) {
       if (issue.number !== undefined) byNumber.set(issue.number, issue);
     }
     const issues = [...byNumber.values()].sort((a, b) =>

@@ -108,22 +108,33 @@ describe("GitHubChannelAdapter", () => {
     );
   });
 
-  it("uses the Search API for mentions ONLY when username is configured — no assignee query (phase-126a)", async () => {
+  it("searches mentions AND assignee as two queries, unioned — the operator's scope rule", async () => {
     const mine: Integration = {
       ...gh,
       config: { kind: "github", repo: "acme/app", streams: ["issues", "pulls"], username: "karel" },
     };
     const calls: string[] = [];
     const fetchImpl = vi.fn(async (url: string) => {
-      calls.push(decodeURIComponent(url));
-      const items = [
-        {
-          number: 1,
-          title: "mentioned",
-          updated_at: "2026-06-17T09:00:00.000Z",
-          user: { login: "dana" },
-        },
-      ];
+      const decoded = decodeURIComponent(url);
+      calls.push(decoded);
+      // Each qualifier answers with a different item, so the union is observable.
+      const items = decoded.includes("assignee:karel")
+        ? [
+            {
+              number: 2,
+              title: "assigned",
+              updated_at: "2026-06-17T11:00:00.000Z",
+              user: { login: "eli" },
+            },
+          ]
+        : [
+            {
+              number: 1,
+              title: "mentioned",
+              updated_at: "2026-06-17T09:00:00.000Z",
+              user: { login: "dana" },
+            },
+          ];
       return new Response(JSON.stringify({ items }), {
         status: 200,
         headers: { "content-type": "application/json" },
@@ -137,13 +148,27 @@ describe("GitHubChannelAdapter", () => {
       "2026-06-17T08:00:00.000Z",
     );
 
-    // Only one search is issued (the old two-query union is gone).
-    expect(calls.length).toBe(1);
-    expect(calls[0]).toContain("/search/issues");
-    expect(calls[0]).toContain("mentions:karel");
-    expect(calls[0]).not.toContain("assignee");
-    expect(items.map((i) => i.id)).toEqual(["gh-acme-app-issue-1"]);
-    expect(cursor).toBe("2026-06-17T09:00:00.000Z");
+    // Two searches, not one combined query: GitHub ANDs qualifiers, so
+    // `mentions:karel assignee:karel` would return the intersection, not the union.
+    expect(calls.length).toBe(2);
+    expect(calls.every((c) => c.includes("/search/issues"))).toBe(true);
+    expect(calls.some((c) => c.includes("mentions:karel"))).toBe(true);
+    expect(calls.some((c) => c.includes("assignee:karel"))).toBe(true);
+    expect(calls.every((c) => c.includes("is:open"))).toBe(true);
+    expect(items.map((i) => i.id)).toEqual(["gh-acme-app-issue-1", "gh-acme-app-issue-2"]);
+    expect(cursor).toBe("2026-06-17T11:00:00.000Z");
+  });
+
+  it("an item that is both mentioned and assigned ingests exactly once", async () => {
+    const both = {
+      number: 7,
+      title: "mine twice over",
+      updated_at: "2026-06-17T09:00:00.000Z",
+      user: { login: "dana" },
+    };
+    const adapter = new GitHubChannelAdapter(jsonFetch({ items: [both] }));
+    const { items } = await adapter.poll(gh, { token: "ghp" }, "2026-06-17T08:00:00.000Z");
+    expect(items.map((i) => i.id)).toEqual(["gh-acme-app-issue-7"]);
   });
 
   describe("ZIBBY-opened PRs (ctx.zibbyPrNumbers, phase-126a)", () => {

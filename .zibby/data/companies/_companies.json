@@ -4,11 +4,16 @@
     "name": "Shoptet",
     "people": [
       {
+        "id": "pavel-husa",
         "name": "Pavel Husa",
         "role": "Engineering Team Lead",
         "vip": true,
         "comms_style": "Přátelský, věcný, vtipný, tykání"
       }
     ]
+  },
+  {
+    "id": "zibby-corp",
+    "name": "Zibby CORP"
   }
 ]

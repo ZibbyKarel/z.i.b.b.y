@@ -26,6 +26,7 @@ true })`).
 | `ZIBBY_API_BASE`           | `http://localhost:$PORT`             | Base URL the chat session's own MCP client calls back into the API on (`chat/chat-session.service.ts`)                                                              |
 | `ZIBBY_INTENT_DIR`         | `input.cwd` / `process.cwd()`        | Working dir the approval hook (`runner/claude-approval-hook.mjs`) resolves relative paths against — a test seam                                                     |
 | `HEAP_SNAPSHOT_ON_SIGUSR2` | _(unset)_                            | `1` = write a heap snapshot on `SIGUSR2` (`main.ts`), for diagnosing memory growth in the running API process                                                       |
+| `HTTP_SHUTDOWN_GRACE_MS`   | `250`                                | How long an open connection may drain on SIGTERM before it is destroyed (`HttpConnectionReaper`) — see _Shutdown_ below                                             |
 
 Every entity store built on `EntityFileStore` (agents, pipelines, goals, tasks,
 approvals, artifacts, channels, integrations, projects, companies, skills,
@@ -37,6 +38,29 @@ isolation; there's no need to set them individually in normal operation since
 `ZIBBY_DATA_DIR` repoints all of them at once. Grep `process.env.*_DIR` /
 `process.env.*_FILE` under `apps/api/src/*/**.store.ts` for the exhaustive
 current list.
+
+### Shutdown
+
+`main.ts` calls `app.enableShutdownHooks()`, so SIGTERM/SIGINT run `app.close()`.
+That sequence ends in Node's `server.close()`, which closes the listening socket and
+then **waits for every open connection to end on its own**. This API serves SSE
+(`/api/events`, run/stage log streams, chat), and an SSE stream never ends — so the
+process used to hang forever on every restart. The signature was distinctive and worth
+recognising: **process alive, sockets `ESTABLISHED`, no `LISTEN` socket**, every
+request failing to connect (`curl` exits 7 / writes nothing), and under
+`ts-node-dev --respawn` no new server could take over.
+
+`HttpConnectionReaper`
+(`apps/api/src/shared/http/http-connection-reaper.service.ts`) fixes this from a
+`beforeApplicationShutdown` hook — the last point that still runs before
+`server.close()`. It drops idle keep-alive sockets, waits `HTTP_SHUTDOWN_GRACE_MS`
+(default 250 ms) for anything genuinely in flight to finish, then destroys whatever is
+left. Raise the grace only if a legitimately slow request needs to survive a restart;
+the streams themselves never drain, so a longer wait costs every restart and buys
+nothing for them.
+
+To verify by hand: start the API, `curl -sN http://localhost:3333/api/events &`, then
+`kill -TERM <api-pid>` — it should exit within a couple of seconds, not hang.
 
 ### Speech (`speakd` daemon)
 

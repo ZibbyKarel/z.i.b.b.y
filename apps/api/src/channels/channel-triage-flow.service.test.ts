@@ -372,11 +372,59 @@ describe("ChannelTriageFlowService", () => {
     };
     const flow = makeFlow({ verdict: bug, projects: [project] });
     const out = await flow.handle(item({ text: "alpha bug report", from: "alice@corp.com" }));
-    // Tier-1 dispatch was suppressed; approval queued instead.
+    // The escalation's job is to suppress the autonomous Tier-1 dispatch — that holds.
     expect(createTask).not.toHaveBeenCalled();
+    // `bug` carries no suggestedReply, so there is no reply to propose: the item is
+    // surfaced for attention rather than parked behind a content-free approval.
+    expect(requestApproval).not.toHaveBeenCalled();
+    expect(out.state).toBe("triaged");
+    expect(out.approvalId).toBeUndefined();
+    expect(out.vip).toBe(true);
+  });
+
+  it("VIP escalation still parks a real approval when triage HAS a draft", async () => {
+    const project: Project = {
+      id: "alpha",
+      name: "Alpha",
+      path: "/work/alpha",
+      identity: { people: [{ name: "alice", role: "CEO", vip: true }] },
+      autonomy_policy: { vip_escalation: true },
+    };
+    const flow = makeFlow({ verdict: question, projects: [project] });
+    const out = await flow.handle(item({ text: "alpha question", from: "alice@corp.com" }));
     expect(requestApproval).toHaveBeenCalledTimes(1);
     expect(out.state).toBe("triaged");
-    expect(out.vip).toBe(true);
+    expect(out.approvalId).toBeDefined();
+  });
+
+  it("no suggestedReply → surfaced for attention, never a boilerplate approval", async () => {
+    const noDraft: TriageVerdict = {
+      actionable: true,
+      tier: 3,
+      category: "request",
+      confidence: 0.6,
+      reason: "nothing to say",
+    };
+    const flow = makeFlow({ verdict: noDraft });
+    const out = await flow.handle(item({ text: "FYI" }));
+    expect(requestApproval).not.toHaveBeenCalled();
+    expect(out.state).toBe("triaged");
+    expect(out.approvalId).toBeUndefined();
+  });
+
+  it("Tier 2 does not auto-send when triage produced no draft", async () => {
+    const noDraft: TriageVerdict = {
+      actionable: true,
+      tier: 2,
+      category: "question",
+      confidence: 0.9,
+      reason: "no suggestion",
+    };
+    const flow = makeFlow({ verdict: noDraft });
+    const out = await flow.handle(item({ text: "?" }));
+    expect(send).not.toHaveBeenCalled();
+    expect(requestApproval).not.toHaveBeenCalled();
+    expect(out.state).toBe("triaged");
   });
 
   it("respond_as=draft_only forces Tier 3 even when triage says Tier 2", async () => {

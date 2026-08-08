@@ -4,7 +4,7 @@
     "name": "cms4",
     "desc": "Shoptet CMS4 is a multi-tenant e-commerce monorepo powering the Shoptet E-shop solution and related applications. It includes backend services, frontend applications, APIs, CRM, and shared platform packages. Use this README as a high-level navigation entrypoint; detailed workflows live in subsystem documentation.",
     "category": "Shoptet",
-    "logo": "assets/cms4.png",
+    "companyId": "shoptet",
     "gitRemote": "git@github.com:shoptet/cms4.git"
   },
   {
@@ -13,27 +13,28 @@
     "path": "/Users/zibby/Workspace/kzphoto",
     "desc": "Moje fotografické stránky",
     "category": "Internal",
-    "logo": "assets/kzphoto.jpg"
+    "companyId": "zibby-corp"
   },
   {
     "id": "portfolio",
     "name": "portfolio",
     "path": "/Users/zibby/Workspace/portfolio",
     "desc": "Moje portfolio stránky",
-    "category": "Internal"
+    "category": "Internal",
+    "companyId": "zibby-corp"
   },
   {
     "id": "shoptet-partner-cli",
     "name": "Shoptet Partner CLI",
     "category": "Shoptet",
-    "logo": "assets/shoptet-partner-cli.jpg",
     "gitRemote": "git@github.com:shoptet/partner-cli.git"
   },
   {
     "id": "test-project",
     "name": "Test Project",
     "path": "~/Workspace/test",
-    "category": "Testing"
+    "category": "Testing",
+    "companyId": "zibby-corp"
   },
   {
     "id": "zibby-self",
@@ -53,7 +54,6 @@
       "monthlyRuns": 500,
       "maxConcurrent": 2
     },
-    "logo": "assets/zibby-self.png",
     "identity": {
       "people": [
         {
@@ -84,6 +84,7 @@
       "format": "yesterday / today / blockers",
       "active_hours": "09:00-19:00"
     },
+    "companyId": "zibby-corp",
     "gitRemote": "https://github.com/ZibbyKarel/z.i.b.b.y"
   }
 ]

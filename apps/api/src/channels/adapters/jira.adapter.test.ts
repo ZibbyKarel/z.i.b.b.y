@@ -17,6 +17,9 @@ const jira: Integration = {
   hasCredentials: true,
 };
 
+const ME = "acct-operator";
+const CURSOR = "2026-06-17T08:00:00.000Z";
+
 function jsonFetch(body: unknown, status = 200): typeof fetch {
   return vi.fn(
     async () =>
@@ -27,9 +30,45 @@ function jsonFetch(body: unknown, status = 200): typeof fetch {
   ) as unknown as typeof fetch;
 }
 
+/**
+ * A fetch that answers `/myself` with the operator's accountId and every
+ * `/search/jql` with `searchBody` — the shape every scoped poll test needs, since
+ * poll() now resolves "me" before it searches.
+ */
+function pollFetch(searchBody: unknown, status = 200): typeof fetch {
+  return vi.fn(async (url: string) => {
+    const body = url.includes("/myself") ? { accountId: ME } : searchBody;
+    return new Response(JSON.stringify(body), {
+      status: url.includes("/myself") ? 200 : status,
+      headers: { "content-type": "application/json" },
+    });
+  }) as unknown as typeof fetch;
+}
+
+/** An ADF document whose only content is an @-mention of `accountId`. */
+function adfMention(accountId: string): unknown {
+  return {
+    type: "doc",
+    version: 1,
+    content: [
+      {
+        type: "paragraph",
+        content: [{ type: "mention", attrs: { id: accountId, text: "@Someone" } }],
+      },
+    ],
+  };
+}
+
+/** The URLs a `pollFetch` was called with, decoded (`+` back to spaces for JQL). */
+function urlsOf(fetchImpl: typeof fetch): string[] {
+  return (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls.map((c) =>
+    decodeURIComponent(c[0] as string).replace(/\+/g, " "),
+  );
+}
+
 describe("JiraChannelAdapter", () => {
-  it("normalizes issues, derives a jira-<KEY> id, and advances the cursor", async () => {
-    const fetchImpl = jsonFetch({
+  it("normalizes in-scope issues, derives a jira-<KEY> id, and advances the cursor", async () => {
+    const fetchImpl = pollFetch({
       issues: [
         {
           key: "BUG-1",
@@ -37,6 +76,7 @@ describe("JiraChannelAdapter", () => {
             summary: "Login crashes",
             updated: "2026-06-17T09:00:00.000Z",
             reporter: { displayName: "Dana" },
+            assignee: { accountId: ME },
           },
         },
         {
@@ -45,12 +85,13 @@ describe("JiraChannelAdapter", () => {
             summary: "Slow search",
             updated: "2026-06-17T10:00:00.000Z",
             reporter: { displayName: "Eli" },
+            description: adfMention(ME),
           },
         },
       ],
     });
     const adapter = new JiraChannelAdapter(fetchImpl);
-    const { items, cursor } = await adapter.poll(jira, { token: "tok" }, undefined);
+    const { items, cursor } = await adapter.poll(jira, { token: "tok" }, CURSOR);
     expect(items.map((i) => i.id)).toEqual(["jira-BUG-1", "jira-BUG-2"]);
     expect(items[0]!.externalRef).toMatchObject({ channel: "BUG", messageId: "BUG-1" });
     expect(items[0]!.text).toContain("Login crashes");
@@ -64,26 +105,127 @@ describe("JiraChannelAdapter", () => {
     expect(auth).toBe(`Basic ${Buffer.from("me@acme.com:tok").toString("base64")}`);
   });
 
-  it("adds an `updated >=` JQL clause once a cursor exists", async () => {
-    const fetchImpl = jsonFetch({ issues: [] });
+  it("first poll (no persisted cursor) seeds the cursor to now and ingests nothing", async () => {
+    const fetchImpl = vi.fn();
+    const adapter = new JiraChannelAdapter(fetchImpl as unknown as typeof fetch);
+    const before = Date.now();
+    const { items, cursor } = await adapter.poll(jira, { token: "tok" }, undefined);
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(items).toEqual([]);
+    expect(cursor).toBeDefined();
+    expect(new Date(cursor!).getTime()).toBeGreaterThanOrEqual(before);
+  });
+
+  it("drops an issue that is neither assigned to nor mentions the operator", async () => {
+    const fetchImpl = pollFetch({
+      issues: [
+        {
+          key: "BUG-9",
+          fields: {
+            summary: "Someone else's work",
+            updated: "2026-06-17T09:00:00.000Z",
+            assignee: { accountId: "acct-stranger" },
+            description: adfMention("acct-stranger"),
+          },
+        },
+      ],
+    });
+    const adapter = new JiraChannelAdapter(fetchImpl);
+    const { items, cursor } = await adapter.poll(jira, { token: "tok" }, CURSOR);
+    expect(items).toEqual([]);
+    // The cursor still advances past the dropped issue — it is dropped, not deferred,
+    // so a stalled cursor would re-fetch and re-drop the same page every tick.
+    expect(cursor).toBe("2026-06-17T09:00:00.000Z");
+  });
+
+  it("keeps an issue mentioning the operator in a comment, not just the description", async () => {
+    const fetchImpl = pollFetch({
+      issues: [
+        {
+          key: "BUG-3",
+          fields: {
+            summary: "Question for you",
+            updated: "2026-06-17T09:00:00.000Z",
+            assignee: null,
+            comment: { comments: [{ id: "1", body: adfMention(ME) }] },
+          },
+        },
+      ],
+    });
+    const adapter = new JiraChannelAdapter(fetchImpl);
+    const { items } = await adapter.poll(jira, { token: "tok" }, CURSOR);
+    expect(items.map((i) => i.id)).toEqual(["jira-BUG-3"]);
+  });
+
+  it("requests the assignee and comment fields the scope filter needs", async () => {
+    const fetchImpl = pollFetch({ issues: [] });
+    const adapter = new JiraChannelAdapter(fetchImpl);
+    await adapter.poll(jira, { token: "tok" }, CURSOR);
+    const search = urlsOf(fetchImpl).find((u) => u.includes("/search/jql"))!;
+    expect(search).toContain("assignee");
+    expect(search).toContain("comment");
+  });
+
+  it("adds an `updated >=` JQL clause narrowing the poll to the cursor delta", async () => {
+    const fetchImpl = pollFetch({ issues: [] });
     const adapter = new JiraChannelAdapter(fetchImpl);
     await adapter.poll(jira, { token: "tok" }, "2026-06-17T10:00:00.000Z");
-    const url = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls[0]![0] as string;
-    // URLSearchParams encodes spaces as `+`; normalise before asserting the JQL clause.
-    expect(decodeURIComponent(url).replace(/\+/g, " ")).toContain("updated >=");
+    const search = urlsOf(fetchImpl).find((u) => u.includes("/search/jql"))!;
+    expect(search).toContain('(project = BUG) AND updated >= "2026-06-17 10:00"');
+  });
+
+  it("strips a trailing ORDER BY from a custom jql so the AND stays valid JQL", async () => {
+    const custom: Integration = {
+      ...jira,
+      config: {
+        kind: "jira",
+        baseUrl: "https://acme.atlassian.net",
+        email: "me@acme.com",
+        jql: "project = BUG AND labels = urgent ORDER BY created DESC",
+      },
+    };
+    const fetchImpl = pollFetch({ issues: [] });
+    const adapter = new JiraChannelAdapter(fetchImpl);
+    await adapter.poll(custom, { token: "tok" }, CURSOR);
+    const search = urlsOf(fetchImpl).find((u) => u.includes("/search/jql"))!;
+    expect(search).toContain("(project = BUG AND labels = urgent) AND updated >=");
+    expect(search).not.toContain("ORDER BY created");
+  });
+
+  it("a custom jql cannot widen the scope — the assignee/mention filter still applies", async () => {
+    const custom: Integration = {
+      ...jira,
+      config: {
+        kind: "jira",
+        baseUrl: "https://acme.atlassian.net",
+        email: "me@acme.com",
+        jql: "project = BUG",
+      },
+    };
+    const fetchImpl = pollFetch({
+      issues: [
+        {
+          key: "BUG-9",
+          fields: { summary: "not mine", updated: "2026-06-17T09:00:00.000Z", assignee: null },
+        },
+      ],
+    });
+    const adapter = new JiraChannelAdapter(fetchImpl);
+    const { items } = await adapter.poll(custom, { token: "tok" }, CURSOR);
+    expect(items).toEqual([]);
   });
 
   it("polls the /search/jql endpoint, not the removed /rest/api/3/search", async () => {
-    const fetchImpl = jsonFetch({ issues: [] });
+    const fetchImpl = pollFetch({ issues: [] });
     const adapter = new JiraChannelAdapter(fetchImpl);
-    await adapter.poll(jira, { token: "tok" }, undefined);
-    const url = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls[0]![0] as string;
-    expect(new URL(url).pathname).toBe("/rest/api/3/search/jql");
+    await adapter.poll(jira, { token: "tok" }, CURSOR);
+    const search = urlsOf(fetchImpl).find((u) => u.includes("search"))!;
+    expect(new URL(search).pathname).toBe("/rest/api/3/search/jql");
   });
 
   it("surfaces a 429 rather than swallowing it", async () => {
-    const adapter = new JiraChannelAdapter(jsonFetch({}, 429));
-    await expect(adapter.poll(jira, { token: "tok" }, undefined)).rejects.toThrow(/rate limited/);
+    const adapter = new JiraChannelAdapter(pollFetch({}, 429));
+    await expect(adapter.poll(jira, { token: "tok" }, CURSOR)).rejects.toThrow(/rate limited/);
   });
 
   it("test maps /myself to a TestResult", async () => {

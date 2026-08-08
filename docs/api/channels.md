@@ -1,5 +1,10 @@
 # Channels & autonomy
 
+<!-- Reviewed 2026-08-08: BOTH conversational adapters are now scoped to "only what
+concerns the operator" — the Jira adapter gained the scope it never had (it was
+ingesting a whole project: 115 issues, each with a boilerplate draft reply), and the
+GitHub adapter got `assignee:` back by the operator's explicit instruction. See the
+two adapter sections below. -->
 <!-- Reviewed 2026-07-31 (phase 126a): the GitHub adapter's ingest scope changed —
 see "GitHub adapter" below. `poll()` also gained an optional fourth argument. -->
 <!-- Reviewed 2026-07-29 (roadmap-sync-mine arc): `GitHubConfig.username` became a
@@ -90,7 +95,42 @@ Maps `integration.type` to a concrete adapter implementation.
 
 ### Jira adapter
 
-- Poll: REST `search` (JQL `project = KEY` + `updated >= cursor`), Basic auth
+**What gets ingested.** Only issues the operator is the **assignee** of, or is
+**@-mentioned** in (description or any comment). Nothing else — a project's other
+issues are the project's business, not the inbox's.
+
+Two mechanisms enforce that, because one is not enough:
+
+1. **Initial sync = "from now on"** — first enable (no cursor) seeds the cursor to
+   `now` and ingests **0 items**, without issuing a request. Same contract as the
+   email and GitHub adapters. Before this, a first poll ran bare `project = KEY` and
+   swallowed the entire backlog.
+2. **The assignee/mention filter**, applied to every issue in the `updated >= cursor`
+   delta before it can become a `ChannelItem`.
+
+The filter is **client-side, and has to be**: Jira Cloud does not index @-mentions in
+its text index, so no JQL can express "mentions me". Probed against the live site,
+`text ~ "<display name>"`, `text ~ "<accountId>"` and `text ~ "accountid:<id>"` all
+return 0 for an issue whose ADF provably carries that person's `mention` node, while
+`text ~ "<an ordinary word>"` returns plenty — the operator works; mentions simply are
+not in the index. So the poll asks for `assignee` + `description` + `comment` and walks
+the ADF for a `mention` node whose `attrs.id` is the operator's accountId. The assignee
+half could have gone into the JQL, but both halves live in one place so the two rules
+cannot drift apart.
+
+"The operator" = the accountId the **token** authenticates as (`/rest/api/3/myself`,
+cached per site per process), not `config.email` — so a mention still matches when the
+Atlassian account's primary address differs from the configured login.
+
+A custom `config.jql` still **narrows** (it is AND-ed with `updated >=`, and a trailing
+`ORDER BY` is stripped so the AND stays valid JQL) but can no longer **widen**: the
+scope filter applies to whatever it returns.
+
+The cursor advances over **every** issue in the delta, in scope or not. An out-of-scope
+issue is dropped, not deferred — leaving the cursor behind it would re-fetch and
+re-drop the same page on every tick, forever.
+
+- Poll: REST `/search/jql` (`(<jql|project = KEY>) AND updated >= cursor`), Basic auth
   `email:apiToken`
 - Cursor = the most recent `updated`; id = `jira-<KEY>`, `externalRef.messageId`
   = issue key
@@ -109,22 +149,26 @@ Maps `integration.type` to a concrete adapter implementation.
 
 ### GitHub adapter
 
-**What gets ingested — and what deliberately doesn't.** On a repo the operator works
-on professionally, "everything touching me" is far too much: the inbox filled with
-threads the operator was never addressed in. Since phase 126a the adapter ingests the
-union of exactly two sets, and nothing else:
+**What gets ingested — and what deliberately doesn't.** The adapter ingests the union
+of exactly three sets, and nothing else:
 
-1. **Threads that explicitly @-mention the operator** — one search,
+1. **Threads that explicitly @-mention the operator** —
    `q=repo:{repo} is:open mentions:{username}`, incremental via the cursor.
-2. **PRs ZIBBY itself opened** — read directly by number.
+2. **Issues/PRs assigned to the operator** — the same search with
+   `assignee:{username}`.
+3. **PRs ZIBBY itself opened** — read directly by number.
 
-`assignee:{username}` was **removed**. It was the leak: it pulled in anything assigned
-to the operator regardless of who opened it or whether they were addressed. Note that
-`RoadmapSourceService` still uses `assignee:` on purpose — roadmap sync's question
-genuinely _is_ "my work items". Do not "fix" it to match this adapter; they answer
-different questions.
+Sets 1 and 2 are **two separate requests**, not one query: GitHub search ANDs its
+qualifiers, so `mentions:X assignee:X` would return the intersection where the rule is
+a union.
 
-Set 2 does **not** use `author:{username}`. ZIBBY opens PRs with the operator's
+Phase 126a had dropped `assignee:` on the reasoning that "assigned to me at work" is
+not the same as "concerns ZIBBY". The operator has since overruled that — an issue
+assigned to them is theirs to see — so set 2 is back. (`RoadmapSourceService` also uses
+`assignee:`; the two now agree, but they still answer different questions and neither
+should be edited to chase the other.)
+
+Set 3 does **not** use `author:{username}`. ZIBBY opens PRs with the operator's
 credentials, so `author:` cannot tell a ZIBBY PR from one the operator opened by hand.
 The authoritative answer is ZIBBY's own record — `ZibbyPrLocator.numbersFor(projectId)`,
 which unions the artifact registry (kind `pr`) with directed tasks' `outcome.pr.url`,
@@ -134,7 +178,8 @@ for storage itself.
 
 - Cursor = the most recent `updated_at`; id = `gh-<repo>-<issue|pr>-<n>`,
   `externalRef.messageId` = the number
-- Both sets are deduped by issue number, then filtered by `streams`
+- All three sets are deduped by issue number, then filtered by `streams` — an item
+  that is both mentioned-me and assigned-to-me ingests exactly once
 - Send: a comment (`/repos/{repo}/issues/{n}/comments`)
 - `listAll()` (`/repos/{owner}/{name}/issues?since=cursor`, no scoping) survives only
   for a config with no `username` — which `GitHubConfigSchema` no longer permits. It is
@@ -233,8 +278,18 @@ Implements the `ChannelTriageFlow` interface and is also the kind-`"channel"`
      that commits the operator) — parks a kind-`channel` approval carrying the
      draft
 3. Dispatch the corresponding action
-4. Write to the activity log (`channel-triage`, plus `channel-reply` /
-   `channel-approval` as the path continues)
+
+**No draft → no reply proposal.** Both reply paths require a substantive
+`suggestedReply` from triage. There is deliberately no default draft: the flow used
+to fall back to a generic "Thanks for reaching out — I'll follow up shortly.", so
+every surfaced item grew a reply proposal whether or not there was anything to say —
+an approval queue of content-free templates whose only possible outcome was rejection.
+When triage suggests nothing, Tier 2 does not send and Tier 3 does not park; the item
+is **surfaced for attention** instead (state `triaged`, no `approvalId`, one
+`channel-needs-attention` activity line — the same shape as the notify-only path
+below). The operator still sees it; ZIBBY just does not pretend to have written a
+reply worth reviewing. 4. Write to the activity log (`channel-triage`, plus `channel-reply` /
+`channel-approval` as the path continues)
 
 ### Read-only adapters: noted, not acted on
 

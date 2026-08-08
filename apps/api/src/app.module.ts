@@ -34,6 +34,7 @@ import { MonitorsModule } from "./monitors/monitors.module";
 import { PipelinesModule } from "./pipelines/pipelines.module";
 import { ProjectsModule } from "./projects/projects.module";
 import { ReviewLearningModule } from "./review-learning/review-learning.module";
+import { HttpConnectionReaperModule } from "./shared/http/http-connection-reaper.module";
 import { LoggingModule } from "./shared/logging/logging.module";
 import { PinsModule } from "./pins/pins.module";
 import { RoadmapModule } from "./roadmap/roadmap.module";
@@ -50,6 +51,9 @@ import { TasksModule } from "./tasks/tasks.module";
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     LoggingModule,
+    // Lets SIGTERM actually kill the process: an open SSE stream otherwise keeps
+    // Node's `server.close()` pending forever. See the service doc.
+    HttpConnectionReaperModule,
     // F6c: @Global — every TickingWatcherBase watcher self-registers its heartbeat
     // probe here; listed early (like LoggingModule) so it exists before any watcher.
     WatcherHealthModule,
