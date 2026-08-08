@@ -1964,8 +1964,13 @@
       "panelTitle": "Odchozí pravidla předávání",
       "sentencePrefix": "Když {subject} vyprodukuje",
       "severityPrefix": "≥",
-      "targetPrefix": "předat",
-      "tierLabel": "· tier {tier}",
+      "targetPrefix": "→ předat",
+      "tierPrefix": "jako",
+      "tierName": {
+        "1": "automaticky",
+        "2": "jen oznámit",
+        "3": "čeká na schválení"
+      },
       "systemBadge": "systémové",
       "toggleLabel": "Aktivní",
       "edit": "Upravit",

@@ -1964,8 +1964,13 @@
       "panelTitle": "Outgoing handoff rules",
       "sentencePrefix": "When {subject} produces",
       "severityPrefix": "≥",
-      "targetPrefix": "hand off to",
-      "tierLabel": "· tier {tier}",
+      "targetPrefix": "→ hand off to",
+      "tierPrefix": "as",
+      "tierName": {
+        "1": "automatic",
+        "2": "notify only",
+        "3": "awaiting approval"
+      },
       "systemBadge": "system",
       "toggleLabel": "Active",
       "edit": "Edit",

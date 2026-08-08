@@ -23,6 +23,10 @@ import { ResolvedProjectService } from "./resolved-project.service";
 
 const GITHUB_API = "https://api.github.com";
 
+/** Bounds the open-PRs listing call — this feeds the Maestro merge queue and
+ *  the briefing/`get_status` chat tool, so a stalled request must not hang it. */
+const LIST_OPEN_TIMEOUT_MS = 8_000;
+
 /** NS2 F7b-2 — how long a merge is watched for its target-branch CI outcome. */
 const POST_MERGE_WINDOW_MIN = 120;
 
@@ -143,6 +147,7 @@ export class ProjectPrService {
       `${GITHUB_API}/repos/${link.repo}/pulls?state=open&per_page=50`,
       {
         headers: { authorization: `Bearer ${link.token}`, accept: "application/vnd.github+json" },
+        signal: AbortSignal.timeout(LIST_OPEN_TIMEOUT_MS),
       },
     );
     if (res.status === 429 || res.status === 403) {

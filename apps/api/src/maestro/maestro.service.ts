@@ -22,6 +22,10 @@ const GITHUB_API = "https://api.github.com";
 const MAX_ENRICHED_PER_REPO = 20;
 /** `stale` when not `ready` and older than this (2 weeks). */
 const STALE_AFTER_HOURS = 24 * 14;
+/** Bounds each GitHub enrichment call so one stalled request can't hang the
+ *  whole queue — this feeds the briefing/`get_status` chat path, so a stuck
+ *  fetch here otherwise stalls that response indefinitely. */
+const GITHUB_FETCH_TIMEOUT_MS = 8_000;
 
 interface GitHubPullDetail {
   mergeable?: boolean | null;
@@ -186,41 +190,44 @@ export class MaestroService {
     );
     const toEnrich = new Set(sorted.slice(0, MAX_ENRICHED_PER_REPO).map((pr) => pr.number));
 
-    const entries: MergeQueueEntry[] = [];
-    for (const pr of sorted) {
-      const ageHours = ageHoursOf(pr, now);
-      if (!toEnrich.has(pr.number)) {
-        entries.push({
+    // Each PR's enrichment is an independent set of GitHub reads — run them
+    // concurrently (bounded by MAX_ENRICHED_PER_REPO) instead of one PR at a
+    // time, which used to serialize up to 3 round trips × 20 PRs on this
+    // request path (it also feeds the briefing/`get_status` chat tool).
+    return Promise.all(
+      sorted.map(async (pr) => {
+        const ageHours = ageHoursOf(pr, now);
+        if (!toEnrich.has(pr.number)) {
+          return {
+            ...pr,
+            projectId: project.id,
+            projectName: project.name,
+            repo: link.repo,
+            checkState: "unknown" as const,
+            reviewState: "unknown" as const,
+            mergeable: "unknown" as const,
+            ageHours,
+            // Deliberately deprioritized rather than reclassified — a capped-out
+            // PR always reads as `stale` regardless of its actual age.
+            queueState: "stale" as const,
+          };
+        }
+
+        const { checkState, reviewState, mergeable } = await this.enrich(link, pr);
+        const queueState = classify(checkState, reviewState, mergeable, pr.draft, ageHours);
+        return {
           ...pr,
           projectId: project.id,
           projectName: project.name,
           repo: link.repo,
-          checkState: "unknown",
-          reviewState: "unknown",
-          mergeable: "unknown",
+          checkState,
+          reviewState,
+          mergeable,
           ageHours,
-          // Deliberately deprioritized rather than reclassified — a capped-out
-          // PR always reads as `stale` regardless of its actual age.
-          queueState: "stale",
-        });
-        continue;
-      }
-
-      const { checkState, reviewState, mergeable } = await this.enrich(link, pr);
-      const queueState = classify(checkState, reviewState, mergeable, pr.draft, ageHours);
-      entries.push({
-        ...pr,
-        projectId: project.id,
-        projectName: project.name,
-        repo: link.repo,
-        checkState,
-        reviewState,
-        mergeable,
-        ageHours,
-        queueState,
-      });
-    }
-    return entries;
+          queueState,
+        };
+      }),
+    );
   }
 
   private async enrich(
@@ -236,28 +243,20 @@ export class MaestroService {
       accept: "application/vnd.github+json",
     };
 
-    let mergeable: MergeQueueEntry["mergeable"] = "unknown";
-    let sha: string | undefined;
-    try {
-      const res = await this.fetchImpl(`${GITHUB_API}/repos/${link.repo}/pulls/${pr.number}`, {
-        headers,
-      });
-      if (res.ok) {
-        const detail = (await res.json().catch(() => null)) as GitHubPullDetail | null;
-        if (detail?.mergeable === true) mergeable = "mergeable";
-        else if (detail?.mergeable === false) mergeable = "conflicting";
-        sha = detail?.head?.sha;
-      }
-    } catch (err) {
-      this.log.debug("maestro: pull detail fetch failed", { repo: link.repo, error: String(err) });
-    }
+    // Check-runs need the head sha from the detail fetch, but reviews are
+    // independent — run detail + reviews concurrently instead of chaining
+    // all three calls one after another.
+    const [{ mergeable, sha }, reviewState] = await Promise.all([
+      this.fetchPrDetail(link, pr, headers),
+      this.fetchReviewState(link, pr, headers),
+    ]);
 
     let checkState: MergeCheckState = "unknown";
     if (sha) {
       try {
         const res = await this.fetchImpl(
           `${GITHUB_API}/repos/${link.repo}/commits/${sha}/check-runs`,
-          { headers },
+          { headers, signal: AbortSignal.timeout(GITHUB_FETCH_TIMEOUT_MS) },
         );
         if (res.ok) {
           const body = (await res.json().catch(() => null)) as GitHubCheckRunsResponse | null;
@@ -268,21 +267,51 @@ export class MaestroService {
       }
     }
 
-    let reviewState: MergeReviewState = "unknown";
+    return { checkState, reviewState, mergeable };
+  }
+
+  private async fetchPrDetail(
+    link: { repo: string; token: string },
+    pr: ProjectPr,
+    headers: Record<string, string>,
+  ): Promise<{ mergeable: MergeQueueEntry["mergeable"]; sha?: string }> {
+    try {
+      const res = await this.fetchImpl(`${GITHUB_API}/repos/${link.repo}/pulls/${pr.number}`, {
+        headers,
+        signal: AbortSignal.timeout(GITHUB_FETCH_TIMEOUT_MS),
+      });
+      if (!res.ok) return { mergeable: "unknown" };
+      const detail = (await res.json().catch(() => null)) as GitHubPullDetail | null;
+      const mergeable =
+        detail?.mergeable === true
+          ? "mergeable"
+          : detail?.mergeable === false
+            ? "conflicting"
+            : "unknown";
+      return { mergeable, sha: detail?.head?.sha };
+    } catch (err) {
+      this.log.debug("maestro: pull detail fetch failed", { repo: link.repo, error: String(err) });
+      return { mergeable: "unknown" };
+    }
+  }
+
+  private async fetchReviewState(
+    link: { repo: string; token: string },
+    pr: ProjectPr,
+    headers: Record<string, string>,
+  ): Promise<MergeReviewState> {
     try {
       const res = await this.fetchImpl(
         `${GITHUB_API}/repos/${link.repo}/pulls/${pr.number}/reviews`,
-        { headers },
+        { headers, signal: AbortSignal.timeout(GITHUB_FETCH_TIMEOUT_MS) },
       );
-      if (res.ok) {
-        const body = (await res.json().catch(() => null)) as unknown;
-        const reviews = Array.isArray(body) ? (body as GitHubReview[]) : [];
-        reviewState = rollupReviewState(reviews);
-      }
+      if (!res.ok) return "unknown";
+      const body = (await res.json().catch(() => null)) as unknown;
+      const reviews = Array.isArray(body) ? (body as GitHubReview[]) : [];
+      return rollupReviewState(reviews);
     } catch (err) {
       this.log.debug("maestro: reviews fetch failed", { repo: link.repo, error: String(err) });
+      return "unknown";
     }
-
-    return { checkState, reviewState, mergeable };
   }
 }

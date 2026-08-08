@@ -290,6 +290,7 @@ export type {
   DropdownProps,
   DropdownSingleProps,
   DropdownSize,
+  DropdownTone,
   DropdownVariant,
 } from "./components/Dropdown/Dropdown";
 

@@ -16,11 +16,11 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { signalKindDescription, signalKindLabel } from "../signalKinds";
+import { TIER_TONE } from "../tierTone";
 
 export enum HandoffRuleEditorTestId {
   Root = "handoff-rule-editor-root",
   SignalKind = "handoff-rule-editor-signal-kind",
-  NewSignal = "handoff-rule-editor-new-signal",
   Severity = "handoff-rule-editor-severity",
   Target = "handoff-rule-editor-target",
   Tier = "handoff-rule-editor-tier",
@@ -32,6 +32,11 @@ const SEVERITIES: HandoffSeverity[] = ["low", "moderate", "high", "critical"];
 const TIERS = ["1", "2", "3"] as const;
 type TierOption = (typeof TIERS)[number];
 type TargetKind = HandoffTarget["kind"];
+
+/** Sentinel signal-kind option value — picking it navigates to the signal-creation
+ * page instead of assigning a signal kind; kept distinct from any real kind id or
+ * the `"*"` any-signal value. */
+const NEW_SIGNAL = "__new_signal__";
 
 /** `subsystem:<id>` / `pipeline:<id>` — a merged target list needs the kind encoded
  * into one option value; split back into `{ kind, id }` on save. */
@@ -77,7 +82,13 @@ export interface HandoffRuleEditorProps {
  * doc) — the editable twin of `HandoffRuleRow`'s read-only sentence, replacing the
  * `HandoffRuleModal` Dialog (which the subsystem drawer's `transform`d fixed panel
  * clips). Same `Stack wrap direction="row"` + `Typography` connector shape as the
- * read row, with inline `Dropdown` pills standing in for the `Pat` chips.
+ * read row, with inline `Dropdown` pills standing in for the `Pat` chips — each
+ * toned the same as its read-only chip counterpart (signal = run, severity =
+ * neutral, target = accent, tier = ok/run/warn) so the row reads apart by field
+ * instead of as a run of identical generic dropdowns. "+ new signal" is the last
+ * entry of the signal-kind dropdown's own option list rather than a separate
+ * button, so picking it (a navigation, not a field edit) doesn't sit inside the
+ * sentence flow.
  */
 export function HandoffRuleEditor({
   initial,
@@ -124,7 +135,19 @@ export function HandoffRuleEditor({
       description:
         sk.status === "pending" ? t("signalKind.pendingBadge") : signalKindDescription(sk, t),
     })),
+    // Folded into the picker's own option list (rather than a standalone button
+    // beside it) so the "+ new signal" affordance doesn't break the mad-libs
+    // sentence flow — selecting it navigates away instead of setting a kind.
+    { value: NEW_SIGNAL, label: t("editor.newSignal") },
   ];
+
+  const handleSignalKindChange = (value: string) => {
+    if (value === NEW_SIGNAL) {
+      router.push(`/signals/new?from=${fromSubsystemId}` as Route);
+      return;
+    }
+    setSignalKind(value);
+  };
 
   const severityOptions: DropdownOption<HandoffSeverity | "">[] = [
     { value: "", label: t("editor.anySeverity") },
@@ -188,23 +211,14 @@ export function HandoffRuleEditor({
           <div data-testid={HandoffRuleEditorTestId.SignalKind}>
             <Dropdown
               aria-label={t("editor.signalKindAria")}
-              onChange={setSignalKind}
+              onChange={handleSignalKindChange}
               options={signalKindOptions}
               size="sm"
+              tone="run"
               value={signalKind}
               variant="inline"
             />
           </div>
-
-          <Button
-            data-testid={HandoffRuleEditorTestId.NewSignal}
-            icon="plus"
-            intent="ghost"
-            onClick={() => router.push(`/signals/new?from=${fromSubsystemId}` as Route)}
-            size="sm"
-          >
-            {t("editor.newSignal")}
-          </Button>
 
           <Typography size="sm" type="text" variant="secondary">
             {t("editor.severityPrefix")}
@@ -216,6 +230,7 @@ export function HandoffRuleEditor({
               onChange={setSeverity}
               options={severityOptions}
               size="sm"
+              tone="neutral"
               value={severity}
               variant="inline"
             />
@@ -231,6 +246,7 @@ export function HandoffRuleEditor({
               onChange={setTarget}
               options={targetOptions}
               size="sm"
+              tone="accent"
               value={target}
               variant="inline"
             />
@@ -242,6 +258,7 @@ export function HandoffRuleEditor({
               onChange={setTier}
               options={tierOptions}
               size="sm"
+              tone={TIER_TONE[Number(tier) as 1 | 2 | 3]}
               value={tier}
               variant="inline"
             />

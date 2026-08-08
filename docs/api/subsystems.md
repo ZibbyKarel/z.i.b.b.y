@@ -4,6 +4,14 @@
 session were test-fixture-only (the now-required `GitHubConfig.username`); no
 subsystem behaviour changed. This doc remains accurate. -->
 
+<!-- Reviewed 2026-08-08 (get_status hang fix): apps/api/src/maestro/ changed
+this session — `MaestroService`'s GitHub PR enrichment was parallelized and
+bounded with per-request timeouts (a fully sequential, untimed loop was
+stalling the briefing/`get_status` chat tool for 30s+). That's the *merge
+queue* service, unrelated to the subsystem registry this doc describes beyond
+"Maestro" sharing a name/color entry; no subsystem identity, status, or
+endpoint behaviour changed. This doc remains accurate. -->
+
 Phase 80 of the subsystem-federation arc — see
 `docs/superpowers/specs/2026-07-08-subsystem-federation-design.md` for the design
 doc, `docs/plans/phase-80-subsystem-registry.md` for the registry plan, and

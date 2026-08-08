@@ -24,15 +24,18 @@ back on its own, and how close is the window to tripping again."
 
 1. **Layer 1 (live, preferred): `UsageFetcher.fetch()`.** Reads the OAuth
    token Claude Code itself uses from the macOS Keychain
-   (`Claude Code-credentials`), then fires a deliberately tiny
-   `POST /v1/messages` (`max_tokens: 1`) and parses the response's
+   (`Claude Code-credentials`, bounded by `KEYCHAIN_TIMEOUT_MS` — a
+   headless/non-interactive session with no UI to click an access prompt can
+   otherwise block instead of erroring), then fires a deliberately tiny
+   `POST /v1/messages` (`max_tokens: 1`, bounded by `FETCH_TIMEOUT_MS` via
+   `AbortSignal.timeout`) and parses the response's
    `anthropic-ratelimit-unified-5h-utilization` / `-7d-utilization` /
    `-*-reset` headers — the same server-computed percentages Claude Code's own
    status line renders, fresh whenever asked. Returns `null` (falls through to
-   layer 2) when there's no token, the network call fails, or neither header
-   is present — including on a 429, whose headers are still parsed. Under
-   `VITEST` this never touches the Keychain or network at all, so the test
-   suite never burns real quota.
+   layer 2) when there's no token, the network call fails or times out, or
+   neither header is present — including on a 429, whose headers are still
+   parsed. Under `VITEST` this never touches the Keychain or network at all,
+   so the test suite never burns real quota.
 2. **Layer 2 (fallback): `RateLimitsReader.read()`.** Parses
    `<claudeConfigDir>/rate-limits.json` — the file the user's status-line hook
    captures the same `rate_limits` block into. `stale` is `true` when the

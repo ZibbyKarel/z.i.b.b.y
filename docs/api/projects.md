@@ -5,6 +5,11 @@ was test-fixture-only (the now-required `GitHubConfig.username` in
 project-pr.service.test.ts); ProjectPrService behaviour is unchanged. This doc
 remains accurate. -->
 
+<!-- Reviewed 2026-08-08 (get_status hang fix): added a request timeout to
+`listOpen` (see the "GitHub PRs" section below) — the fix for a slow
+briefing/`get_status` chat response caused by Maestro's unbounded, fully
+sequential PR enrichment. `merge`/`getPr`/`isMerged` are untouched. -->
+
 The catalog of target directories agents, skills and pipelines run against.
 A project is a **registry entry** (`_projects.json`), not files of its own —
 deleting a project removes only the registry record, never the files it
@@ -138,6 +143,9 @@ rate-limit error, injectable `fetchImpl` for tests).
   github integration + stored token via `ResolvedProjectService.resolveIntegrations`;
   returns `[]` (never an error) when there's no link/token — a missing
   integration reads as "nothing to show". A real GitHub failure still throws.
+  The request is bounded by `LIST_OPEN_TIMEOUT_MS` (`AbortSignal.timeout`) — this
+  feeds Maestro's merge queue, which in turn feeds the briefing/`get_status`
+  chat tool, so a stalled request must not hang that chain.
 - `merge(projectId, number, method?)` — **the only merge path in ZIBBY**,
   reached only from the operator-triggered controller route. Explicitly
   documented as never called from any scheduler/monitor/autonomous runner —

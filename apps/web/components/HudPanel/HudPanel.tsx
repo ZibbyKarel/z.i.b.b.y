@@ -15,6 +15,14 @@ export interface HudPanelProps {
   padding?: Padding;
   children?: ReactNode;
   /**
+   * Background step — lets a panel nested inside another panel sit one shade
+   * darker (e.g. a row card on its section's surface). Only meaningful on the
+   * "hud" surface; defaults to `Card`'s own default when omitted.
+   */
+  background?: CardProps["background"];
+  /** Corner radius — defaults to `Card`'s own default ("lg") when omitted. */
+  radius?: CardProps["radius"];
+  /**
    * Live emphasis — tints the border and renders the HUD corner brackets.
    * Reserve for live content (running, awaiting approval, system alerts);
    * panels are matte by default. Only meaningful on the "hud" surface — the
@@ -42,6 +50,8 @@ export function HudPanel({
   title,
   action,
   padding = "250",
+  background,
+  radius,
   tone,
   live,
   surface = "hud",
@@ -67,7 +77,13 @@ export function HudPanel({
   }
 
   return (
-    <Card corners={Boolean(tone)} living={Boolean(tone) && live} tone={tone}>
+    <Card
+      background={background}
+      corners={Boolean(tone)}
+      living={Boolean(tone) && live}
+      radius={radius}
+      tone={tone}
+    >
       {body}
     </Card>
   );

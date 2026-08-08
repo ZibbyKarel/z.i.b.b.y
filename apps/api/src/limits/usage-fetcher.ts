@@ -46,6 +46,17 @@ export function parseUsageHeaders(headers: HeaderBag, now: number): RateLimitSna
 /** The macOS Keychain item Claude Code stores its OAuth credentials under. */
 const KEYCHAIN_SERVICE = "Claude Code-credentials";
 
+/** Bounds the live `/v1/messages` probe so a stalled connection can never hang a caller. */
+const FETCH_TIMEOUT_MS = 8_000;
+
+/**
+ * Bounds the Keychain read. `security` is normally instant, but under a
+ * headless/non-interactive session (no UI to click an access prompt) it can
+ * block indefinitely instead of erroring — this keeps that from hanging the
+ * caller too.
+ */
+const KEYCHAIN_TIMEOUT_MS = 5_000;
+
 /**
  * Fetches the real interactive-window utilization straight from Anthropic. Unlike
  * the status-line capture (which only refreshes while Claude Code is rendering, so
@@ -74,12 +85,11 @@ export class UsageFetcher {
   /** Read `claudeAiOauth.accessToken` from the Keychain, or null if unavailable. */
   protected async getToken(): Promise<string | null> {
     try {
-      const { stdout } = await execFileAsync("security", [
-        "find-generic-password",
-        "-s",
-        KEYCHAIN_SERVICE,
-        "-w",
-      ]);
+      const { stdout } = await execFileAsync(
+        "security",
+        ["find-generic-password", "-s", KEYCHAIN_SERVICE, "-w"],
+        { timeout: KEYCHAIN_TIMEOUT_MS },
+      );
       const token = (JSON.parse(stdout) as { claudeAiOauth?: { accessToken?: unknown } })
         .claudeAiOauth?.accessToken;
       return typeof token === "string" && token.length > 0 ? token : null;
@@ -89,10 +99,17 @@ export class UsageFetcher {
     }
   }
 
-  /** The raw HTTP call. Overridable for tests; production uses global `fetch`. */
+  /**
+   * The raw HTTP call. Overridable for tests; production uses global `fetch`.
+   * Bounded by {@link FETCH_TIMEOUT_MS} — plain `fetch` has no built-in
+   * request timeout, so a stalled connection (bad network, silently dropped
+   * packets) would otherwise hang this call — and everything awaiting it —
+   * forever.
+   */
   protected doFetch(token: string): Promise<Response> {
     return fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       headers: {
         authorization: `Bearer ${token}`,
         "anthropic-version": "2023-06-01",

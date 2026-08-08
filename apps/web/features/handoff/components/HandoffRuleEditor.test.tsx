@@ -85,12 +85,13 @@ describe("HandoffRuleEditor (P2 inline)", () => {
     push.mockClear();
   });
 
-  it('"+ nový signál" NAVIGATES to /signals/new with the drawer\'s from prefilled', async () => {
+  it("\"+ nový signál\" is the signal picker's last option and NAVIGATES to /signals/new with the drawer's from prefilled, without changing the selected signal kind", async () => {
+    const onSave = vi.fn();
     render(
       <HandoffRuleEditor
         fromSubsystemId="sentinel"
         onCancel={vi.fn()}
-        onSave={vi.fn()}
+        onSave={onSave}
         pipelines={pipelines}
         receiverSubsystemIds={receiverSubsystemIds}
         signalKinds={signalKinds}
@@ -98,9 +99,12 @@ describe("HandoffRuleEditor (P2 inline)", () => {
         subsystems={subsystems}
       />,
     );
-    expect(screen.getByTestId(HandoffRuleEditorTestId.NewSignal)).toBeInTheDocument();
-    await userEvent.click(screen.getByTestId(HandoffRuleEditorTestId.NewSignal));
+    await pick(HandoffRuleEditorTestId.SignalKind, "+ nový signál");
     expect(push).toHaveBeenCalledWith("/signals/new?from=sentinel");
+    // Navigating away must not corrupt the rule being edited — the signal kind
+    // stays at its prior value (the first producer kind, "cve").
+    await userEvent.click(screen.getByTestId(HandoffRuleEditorTestId.Save));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ signalKind: "cve" }));
   });
 
   it("renders the sentence with the subsystem name", () => {

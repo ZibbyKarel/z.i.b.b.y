@@ -1,10 +1,11 @@
 "use client";
 
 import type { HandoffRule, HandoffSignalKind } from "@zibby/contracts";
-import { Button, Stack, Tag, Toggle, Typography } from "@zibby/design-system";
+import { Button, Stack, Tag, type TagTone, Toggle, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { signalKindLabel } from "../signalKinds";
+import { TIER_TONE } from "../tierTone";
 
 export enum HandoffRuleRowTestId {
   Root = "handoff-rule-row-root",
@@ -29,23 +30,28 @@ export interface HandoffRuleRowProps {
   onDelete?: () => void;
 }
 
-/** A highlighted inline value chip — mirrors the gates `Pat` chip used for match patterns. */
-function Pat({ children }: { children: string }) {
+/** A highlighted inline value chip — mirrors the gates `Pat` chip used for match
+ * patterns, toned per field so signal/target/tier read apart at a glance. */
+function Pat({ children, tone = "accent" }: { children: string; tone?: TagTone }) {
   return (
-    <Tag size="sm" tone="accent">
+    <Tag size="sm" tone={tone}>
       {children}
     </Tag>
   );
 }
 
 /**
- * One outgoing handoff rule as a mad-libs Czech sentence (P2 design doc): „Když
- * **[subsystém]** vyprodukuje **[signalKind]** (≥ **[severity]**) → předat **[cíl]**
- * · tier **[N]**" — the `(≥ severity)` clause only renders when `minSeverity` is
- * set. Mirrors `GateRuleSentenceRow`'s structure (`HudPanel` has no `data-testid`
- * passthrough — the wrapping `div` carries it) and its row affordances: an
- * enable/disable toggle (always available — even a system rule can be retuned),
- * an edit button, and a delete button hidden for system rules.
+ * One outgoing handoff rule as a mad-libs Czech sentence (P2 design doc, aligned
+ * to `design/Z.I.B.B.Y/ZIBBY Handoff.html`'s rule row): „Když **[subsystém]**
+ * vyprodukuje **[signalKind]** (≥ **[severity]**) → předat **[cíl]** jako
+ * **[tier]**" — the `(≥ severity)` clause only renders when `minSeverity` is set.
+ * The three chips are toned per field (signal = run, target = accent, tier =
+ * ok/run/warn by autonomy tier) so the sentence reads apart at a glance, same as
+ * the mockup's colored inline selects. Mirrors `GateRuleSentenceRow`'s structure
+ * (`HudPanel` has no `data-testid` passthrough — the wrapping `div` carries it)
+ * and its row affordances: an enable/disable toggle (always available — even a
+ * system rule can be retuned), an edit button, and a delete button hidden for
+ * system rules.
  */
 export function HandoffRuleRow({
   rule,
@@ -65,28 +71,29 @@ export function HandoffRuleRow({
 
   return (
     <div data-testid={HandoffRuleRowTestId.Root}>
-      <HudPanel padding="150">
-        <Stack wrap align="center" direction="row" gap="150">
-          <Stack grow wrap align="center" direction="row" gap="75">
+      <HudPanel background="background" padding="150" radius="sm">
+        <Stack wrap align="center" direction="row" gap="125">
+          <Stack grow wrap align="center" direction="row" gap="100">
             <Typography size="sm" type="text" variant="secondary">
               {t("sentencePrefix", { subject: subsystemName })}
             </Typography>
-            <Pat>{signalKindText}</Pat>
+            <Pat tone="run">{signalKindText}</Pat>
             {rule.minSeverity && (
               <>
                 <Typography size="sm" type="text" variant="secondary">
                   {t("severityPrefix")}
                 </Typography>
-                <Pat>{t(`severity.${rule.minSeverity}`)}</Pat>
+                <Pat tone="neutral">{t(`severity.${rule.minSeverity}`)}</Pat>
               </>
             )}
             <Typography size="sm" type="text" variant="secondary">
               {t("targetPrefix")}
             </Typography>
-            <Pat>{targetLabel}</Pat>
-            <Typography mono size="2xs" type="note" variant="tertiary">
-              {t("tierLabel", { tier: rule.tier })}
+            <Pat tone="accent">{targetLabel}</Pat>
+            <Typography size="sm" type="text" variant="secondary">
+              {t("tierPrefix")}
             </Typography>
+            <Pat tone={TIER_TONE[rule.tier]}>{t(`tierName.${rule.tier}`)}</Pat>
             {rule.system && (
               <Typography mono size="2xs" type="note" variant="tertiary">
                 {t("systemBadge")}
