@@ -1,31 +1,38 @@
 import type { HTMLAttributes } from "react";
+import type { StateTone } from "../../stateTone";
 import { cn } from "../../utils/cn";
 import { type Spacing, spacingToPx } from "../../tokens";
 
 /**
- * Canonical states: ok / run / wait / bad / idle ("color = state"), plus
- * accent for interaction/selection markers. Non-live dots are matte; glow +
- * 2s opacity pulse appear only with `pulse` (running, awaiting approval).
+ * The canonical {@link StateTone} palette ("color = state"), plus two dot-only
+ * extras: `wait` — the established "awaiting" call-site vocabulary for the same
+ * amber/`warn` shade (kept as its own name since callers read a dot as
+ * "waiting", not "warning" — see the health/status call sites) — and `idle`
+ * (no activity, matte grey, no `StateTone` equivalent). Non-live dots are
+ * matte; glow + 2s opacity pulse appear only with `pulse` (running, awaiting
+ * approval).
  */
-export type DotTone = "ok" | "run" | "wait" | "bad" | "idle" | "accent";
+export type DotTone = StateTone | "wait" | "idle";
 
 const toneClass: Record<DotTone, string> = {
+  accent: "bg-accent",
   ok: "bg-ok",
+  warn: "bg-warn",
+  bad: "bg-bad",
   run: "bg-run",
   wait: "bg-warn",
-  bad: "bg-bad",
   idle: "bg-foreground-faint",
-  accent: "bg-accent",
 };
 
 /** Live glow — only rendered when `pulse` is set. */
 const glowClass: Record<DotTone, string> = {
+  accent: "shadow-[0_0_8px_color-mix(in_srgb,var(--color-accent)_67%,transparent)]",
   ok: "shadow-[0_0_8px_color-mix(in_srgb,var(--color-ok)_67%,transparent)]",
+  warn: "shadow-[0_0_8px_color-mix(in_srgb,var(--color-warn)_67%,transparent)]",
+  bad: "shadow-[0_0_8px_color-mix(in_srgb,var(--color-bad)_67%,transparent)]",
   run: "shadow-[0_0_8px_color-mix(in_srgb,var(--color-run)_67%,transparent)]",
   wait: "shadow-[0_0_8px_color-mix(in_srgb,var(--color-warn)_67%,transparent)]",
-  bad: "shadow-[0_0_8px_color-mix(in_srgb,var(--color-bad)_67%,transparent)]",
   idle: "",
-  accent: "shadow-[0_0_8px_color-mix(in_srgb,var(--color-accent)_67%,transparent)]",
 };
 
 export enum StatusDotTestId {

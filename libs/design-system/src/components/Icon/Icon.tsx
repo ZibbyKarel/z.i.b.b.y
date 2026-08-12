@@ -42,7 +42,7 @@ const strokeWidthPx: Record<IconStroke, number> = {
 
 export interface IconProps extends Omit<
   SVGProps<SVGSVGElement>,
-  "name" | "stroke" | "width" | "height" | "strokeWidth"
+  "name" | "stroke" | "width" | "height" | "strokeWidth" | "className"
 > {
   /** Which glyph to render. */
   name: IconName;
@@ -56,20 +56,12 @@ export interface IconProps extends Omit<
 }
 
 /** Inline stroke icon, inherits `currentColor`. */
-export function Icon({
-  name,
-  size = "md",
-  stroke = "default",
-  tone,
-  className,
-  ref,
-  ...props
-}: IconProps) {
+export function Icon({ name, size = "md", stroke = "default", tone, ref, ...props }: IconProps) {
   const px = iconSizePx[size];
   return (
     <svg
       aria-hidden="true"
-      className={cn("block shrink-0", tone && toneClass[tone], className)}
+      className={cn("block shrink-0", tone && toneClass[tone])}
       data-testid={IconTestId.Root}
       fill="none"
       height={px}

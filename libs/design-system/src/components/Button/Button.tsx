@@ -24,7 +24,7 @@ const button = cva(
         primary: "border border-transparent bg-accent/90 text-accent-contrast hover:bg-accent",
         ghost:
           "border border-border text-foreground-dim bg-transparent " +
-          "hover:bg-[rgba(255,255,255,0.05)] hover:text-foreground hover:border-border-strong",
+          "hover:bg-hover hover:text-foreground hover:border-border-strong",
         danger:
           "border border-bad/35 text-bad bg-transparent " + "hover:bg-bad/10 hover:text-foreground",
       },

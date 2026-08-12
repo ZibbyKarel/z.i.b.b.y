@@ -1,4 +1,4 @@
-import type { CSSProperties, HTMLAttributes, Ref } from "react";
+import type { CSSProperties, FC, HTMLAttributes, Ref } from "react";
 import { type Spacing, spacingToPx } from "../../tokens";
 import { cn } from "../../utils/cn";
 
@@ -91,10 +91,28 @@ export function Grid({
     ...style,
   };
 
+  // Rendering through a bare `ElementType` breaks once any library augments
+  // React.JSX.IntrinsicElements globally — see the identical cast in Stack.tsx for
+  // the full rationale. `as` is a closed union of DOM tags, so the tag is cast to a
+  // component signature carrying exactly the props Grid forwards; this also lets
+  // `data-testid` sit before `{...rest}` below without an `any` spread.
+  const Component = Tag as unknown as FC<
+    Omit<HTMLAttributes<HTMLElement>, "className"> & {
+      ref?: Ref<HTMLElement>;
+      style?: CSSProperties;
+      // Grid computes its own className from CVA-style Tailwind maps (unlike Stack,
+      // which is styled entirely via inline `style`) — GridProps still omits
+      // `className` from the public surface, so this only re-admits it for Grid's
+      // own internal use below, never for a consumer.
+      className?: string;
+      "data-testid"?: string;
+    }
+  >;
+
   return (
-    <Tag
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      {...(rest as any)}
+    <Component
+      data-testid={GridTestId.Root}
+      {...rest}
       className={cn(
         sidebar === "right" && "grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px]",
         sidebar === "left" && "grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)]",
@@ -102,8 +120,7 @@ export function Grid({
         !sidebar && [baseCols[cols], sm && smCols[sm], md && mdCols[md], lg && lgCols[lg]],
         align && alignClass[align],
       )}
-      data-testid={GridTestId.Root}
-      ref={ref as Ref<HTMLDivElement>}
+      ref={ref}
       style={computedStyle}
     />
   );

@@ -3,6 +3,9 @@ import { Field, fieldControlClass } from "../Field";
 
 export enum NumberFieldTestId {
   Control = "number-field-control",
+  /** The component renders a single node (the control itself) — `Root` aliases
+   *  `Control` so every field component's enum has a `Root` to select on. */
+  Root = Control,
 }
 
 export interface NumberFieldProps extends Omit<

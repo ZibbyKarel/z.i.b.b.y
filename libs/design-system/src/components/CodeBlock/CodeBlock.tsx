@@ -1,7 +1,8 @@
 "use client";
 
 import { type ReactNode, type Ref, useEffect, useRef } from "react";
-import { cn, mergeRefs } from "@zibby/design-system";
+import { cn } from "../../utils/cn";
+import { mergeRefs } from "../../utils/refs";
 
 export enum CodeBlockTestId {
   Root = "code-block-root",

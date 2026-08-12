@@ -42,4 +42,19 @@ describe("Tooltip", () => {
     await userEvent.tab();
     expect(screen.queryByTestId(TooltipTestId.Content)).toBeNull();
   });
+
+  it("dismisses the bubble on Escape while keeping focus on the trigger", async () => {
+    render(
+      <Tooltip content="x">
+        <button type="button">?</button>
+      </Tooltip>,
+    );
+    await userEvent.tab();
+    const trigger = screen.getByRole("button");
+    expect(screen.getByTestId(TooltipTestId.Content)).toBeInTheDocument();
+
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByTestId(TooltipTestId.Content)).toBeNull();
+    expect(trigger).toHaveFocus();
+  });
 });

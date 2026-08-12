@@ -6,7 +6,11 @@ const meta: Meta<typeof Progress> = {
   title: "DesignSystem/Progress",
   component: Progress,
   parameters: { backgrounds: { default: "velin" } },
-  args: { value: 64, tone: "warn", height: "50" },
+  argTypes: {
+    tone: { control: "select", options: ["accent", "ok", "warn", "bad", "run"] },
+    height: { control: "select", options: ["25", "50", "75", "100", "125", "150"] },
+  },
+  args: { value: 64, tone: "warn", height: "75" },
   decorators: [
     (Story) => (
       <div className="w-64">

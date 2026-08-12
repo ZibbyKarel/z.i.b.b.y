@@ -9,20 +9,20 @@ export enum MenuSurfaceTestId {
 export type MenuSurfaceAlign = "stretch" | "end";
 
 /** How the surface is positioned in the layout.
- *  - `anchored` — `absolute`, just under its `relative` trigger wrapper (the default).
+ *  - `anchored`: `absolute`, just under its `relative` trigger wrapper (the default).
  *    Simple, but clipped by any ancestor with `overflow: hidden`.
- *  - `fixed` — `position: fixed`; the consumer supplies `top`/`left`/`width` via
+ *  - `fixed`: `position: fixed`; the consumer supplies `top`/`left`/`width` via
  *    `style` (typically from the trigger's bounding rect) and renders the surface
  *    through a portal so no ancestor can clip it. */
 export type MenuSurfacePlacement = "anchored" | "fixed";
 
 export interface MenuSurfaceProps extends Omit<HTMLAttributes<HTMLDivElement>, "className"> {
-  /** Horizontal placement under the trigger (ignored when `placement` is `fixed` —
+  /** Horizontal placement under the trigger (ignored when `placement` is `fixed`,
    *  the consumer positions the surface explicitly via `style`).
-   *  - `stretch` — pinned to both edges (full-width field / search input).
-   *  - `end` — right-aligned with a minimum width (compact inline triggers). */
+   *  - `stretch`: pinned to both edges (full-width field / search input).
+   *  - `end`: right-aligned with a minimum width (compact inline triggers). */
   align?: MenuSurfaceAlign;
-  /** Positioning strategy — `anchored` (absolute, default) or `fixed` (portal). */
+  /** Positioning strategy: `anchored` (absolute, default) or `fixed` (portal). */
   placement?: MenuSurfacePlacement;
   /** Cap the height and scroll overflowing content (long result lists);
    *  otherwise the surface clips its content to the radius. */
@@ -37,9 +37,9 @@ const alignClass: Record<MenuSurfaceAlign, string> = {
 
 /**
  * The floating option-list surface shared by {@link Dropdown} and
- * {@link SearchMenu} — a popover panel anchored just under its trigger. Owns the
+ * {@link SearchMenu}: a popover panel anchored just under its trigger. Owns the
  * shared chrome (position, frame, shadow, scroll); consumers render their own
- * rows inside. Pass `role`, `id` and `data-testid` through — they override the
+ * rows inside. Pass `role`, `id` and `data-testid` through, they override the
  * defaults so each consumer keeps its own test contract.
  */
 export function MenuSurface({

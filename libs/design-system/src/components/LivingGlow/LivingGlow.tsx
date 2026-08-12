@@ -6,7 +6,7 @@ export enum LivingGlowTestId {
   Root = "living-glow-root",
 }
 
-/** Ambient (`idle`) vs energized (`hot`) — the two living-glow intensities,
+/** Ambient (`idle`) vs energized (`hot`), the two living-glow intensities,
  * mapped onto the shared `v-glow-idle` / `v-glow-hot` keyframes. */
 export type LivingGlowIntensity = "idle" | "hot";
 
@@ -24,20 +24,20 @@ const radiusClass = {
 } as const;
 
 export interface LivingGlowProps extends Omit<HTMLAttributes<HTMLSpanElement>, "className"> {
-  /** Which state this glow expresses — the canonical vocabulary. */
+  /** Which state this glow expresses: the canonical vocabulary. */
   tone?: StateTone;
   /** Ambient pulse (`idle`) or the energized, in-flight pulse (`hot`). */
   intensity?: LivingGlowIntensity;
-  /** Also scale/opacity-breathe (`v-breath`) — for a free-standing orb-like glow;
+  /** Also scale/opacity-breathe (`v-breath`), for a free-standing orb-like glow;
    *  omit when the glow lines a fixed panel so its box-shadow stays flush. */
   breathe?: boolean;
-  /** Corner radius of the glow shell — match it to the host card/panel. */
+  /** Corner radius of the glow shell; match it to the host card/panel. */
   radius?: keyof typeof radiusClass;
   ref?: Ref<HTMLSpanElement>;
 }
 
 /**
- * The shared "this is alive and in `tone` state" primitive — an absolutely
+ * The shared "this is alive and in `tone` state" primitive: an absolutely
  * positioned, animated glow shell tinted by the canonical {@link StateTone}. It is
  * the animated half of the living-state contract (the static half is the tone border
  * on `Card`/`Corners`/`Tag`); both the HUD (`Card living` / `HudPanel live`) and the

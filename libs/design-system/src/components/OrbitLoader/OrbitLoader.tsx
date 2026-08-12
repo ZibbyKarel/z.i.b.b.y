@@ -20,7 +20,7 @@ const sizeSpec: Record<
   lg: { box: 96, core: 20, dot: 9, ring: 2.5, label: "base" },
 };
 
-/** Accent colour at a given opacity — keeps the orbit on the theme accent token. */
+/** Accent colour at a given opacity, keeps the orbit on the theme accent token. */
 const accent = (pct: number) => `color-mix(in srgb, var(--color-accent) ${pct}%, transparent)`;
 
 export interface OrbitLoaderProps {
@@ -32,7 +32,7 @@ export interface OrbitLoaderProps {
 }
 
 /**
- * Indeterminate loading orbit — the in-page twin of the boot splash. A glowing accent
+ * Indeterminate loading orbit, the in-page twin of the boot splash. A glowing accent
  * core breathes at the centre while a dot orbits a faint HUD ring and two rings pulse.
  * Reuses the shared `orbit-spin` / `ring-pulse` keyframes; all motion is suppressed under
  * `prefers-reduced-motion`, leaving a static glow. Render it wherever content is loading.
@@ -60,7 +60,7 @@ export function OrbitLoader({ size = "md", label, ref }: OrbitLoaderProps) {
         data-testid={OrbitLoaderTestId.Orbit}
         style={{ width: box, height: box }}
       >
-        {/* Outer track — faint HUD ring, gently pulsing. */}
+        {/* Outer track, faint HUD ring, gently pulsing. */}
         <span
           className={`${ringBase} animate-ring-pulse`}
           style={{ ...fill, border: `${ring}px solid ${accent(14)}` }}
@@ -82,7 +82,7 @@ export function OrbitLoader({ size = "md", label, ref }: OrbitLoaderProps) {
             }}
           />
         </span>
-        {/* Inner ring — stronger, pulsing slightly out of phase. */}
+        {/* Inner ring, stronger, pulsing slightly out of phase. */}
         <span
           className={`${ringBase} animate-ring-pulse`}
           style={{

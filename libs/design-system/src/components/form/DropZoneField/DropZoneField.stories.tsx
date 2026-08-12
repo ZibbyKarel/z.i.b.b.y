@@ -1,44 +1,46 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { DropZoneField } from "./DropZoneField";
 
-const meta = {
+const meta: Meta<typeof DropZoneField> = {
   title: "DesignSystem/Field/DropZoneField",
   component: DropZoneField,
-  tags: ["autodocs"],
-  parameters: { layout: "centered" },
+  parameters: { backgrounds: { default: "velin" } },
   decorators: [
     (Story) => (
-      <div style={{ width: 480 }}>
+      <div className="w-96">
         <Story />
       </div>
     ),
   ],
-} satisfies Meta<typeof DropZoneField>;
-
+  args: { onDrop: (files) => console.log("dropped", files) },
+};
 export default meta;
-type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {
-  args: {
-    label: "Přílohy",
-    hint: "PDF, DOCX nebo obrázky",
-    onDrop: (files) => console.log("dropped", files),
-  },
+type Story = StoryObj<typeof DropZoneField>;
+
+export const Overview: Story = {
+  render: () => (
+    <div className="flex flex-col gap-6">
+      <DropZoneField
+        hint="PDF, DOCX nebo obrázky"
+        label="Přílohy"
+        onDrop={(files) => console.log("dropped", files)}
+      />
+      <DropZoneField
+        error="Nahrajte alespoň jeden soubor"
+        label="Přílohy"
+        onDrop={(files) => console.log("dropped", files)}
+      />
+      <DropZoneField
+        disabled
+        hint="Nahrávání není k dispozici"
+        label="Přílohy"
+        onDrop={(files) => console.log("dropped", files)}
+      />
+    </div>
+  ),
 };
 
-export const WithError: Story = {
-  args: {
-    label: "Přílohy",
-    error: "Nahrajte alespoň jeden soubor",
-    onDrop: (files) => console.log("dropped", files),
-  },
-};
-
-export const Disabled: Story = {
-  args: {
-    label: "Přílohy",
-    hint: "Nahrávání není k dispozici",
-    disabled: true,
-    onDrop: (files) => console.log("dropped", files),
-  },
+export const Playground: Story = {
+  args: { label: "Přílohy", hint: "PDF, DOCX nebo obrázky" },
 };

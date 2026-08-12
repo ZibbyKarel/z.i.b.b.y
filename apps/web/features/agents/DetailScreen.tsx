@@ -165,7 +165,7 @@ function AgentEditor({ agent }: { agent: Agent }) {
               editable
               desc={agent.description}
               glyph={(agent.glyph as IconName | undefined) ?? "bot"}
-              height={200}
+              height="md"
               image={agent.avatar}
               name={name}
               onRemove={() =>

@@ -10,9 +10,10 @@ export type ChipTone = DotTone;
 const toneClass: Record<ChipTone, string> = {
   ok: "text-ok border-ok/20 bg-ok/[0.06]",
   run: "text-run border-run/20 bg-run/[0.06]",
+  warn: "text-warn border-warn/20 bg-warn/[0.06]",
   wait: "text-warn border-warn/20 bg-warn/[0.06]",
   bad: "text-bad border-bad/20 bg-bad/[0.06]",
-  idle: "text-foreground-faint border-border bg-[rgba(255,255,255,0.03)]",
+  idle: "text-foreground-faint border-border bg-foreground/[0.03]",
   accent: "text-accent border-accent/20 bg-accent/[0.06]",
 };
 

@@ -27,6 +27,10 @@ export interface NavItem {
 
 interface ListItemCtxValue {
   active: boolean;
+  /** The owning `ListItem`'s stable key (its `id`, when the consumer passes one) —
+   *  threaded down so `ListItemIcon`/`ListItemBadge` can suffix their own testid
+   *  the same way, without each needing its own id prop. */
+  testKey?: string;
 }
 const ListItemCtx = createContext<ListItemCtxValue>({ active: false });
 
@@ -37,11 +41,11 @@ export interface ListItemIconProps {
 }
 
 export function ListItemIcon({ glyph }: ListItemIconProps) {
-  const { active } = useContext(ListItemCtx);
+  const { active, testKey } = useContext(ListItemCtx);
   return (
     <span
       className={cn("flex", active ? "text-accent" : "text-foreground-faint")}
-      data-testid={ListTestId.Icon}
+      data-testid={testKey ? `${ListTestId.Icon}-${testKey}` : ListTestId.Icon}
     >
       <Icon name={glyph} size="md" />
     </span>
@@ -55,11 +59,12 @@ export function ListItemText({ children }: { children: ReactNode }) {
 export type ListItemBadgeProps = Omit<React.HTMLAttributes<HTMLSpanElement>, "className">;
 
 export function ListItemBadge({ children, ...rest }: ListItemBadgeProps) {
+  const { testKey } = useContext(ListItemCtx);
   return (
     <span
+      data-testid={testKey ? `${ListTestId.Badge}-${testKey}` : ListTestId.Badge}
       {...rest}
       className="rounded-full bg-accent px-2 py-px font-mono text-sm font-bold text-accent-contrast"
-      data-testid={ListTestId.Badge}
     >
       {children}
     </span>
@@ -73,17 +78,22 @@ export type ListItemProps = Omit<React.HTMLAttributes<HTMLElement>, "className" 
   onSelect?: () => void;
 };
 
-export function ListItem({ active = false, onSelect, children, ...rest }: ListItemProps) {
+export function ListItem({ active = false, onSelect, children, id, ...rest }: ListItemProps) {
   const className = cn(
     "relative flex w-full items-center gap-3 rounded px-3 py-2 text-left text-lg transition-colors",
     focusRing,
     active
-      ? "bg-[rgba(255,255,255,0.04)] font-semibold text-foreground"
+      ? "bg-hover font-semibold text-foreground"
       : "font-medium text-foreground-dim hover:text-foreground",
   );
+  // Repeated rows (nav lists, option lists) share the enum's static value unless
+  // the consumer gives the row a stable `id` — the same convention SchedulePicker
+  // uses for its weekday toggles (`${TestId.Part}-${key}`). No `id` falls back to
+  // the static member, selectable with `getAllByTestId` + index.
+  const testId = id ? `${ListTestId.Item}-${id}` : ListTestId.Item;
 
   const inner = (
-    <ListItemCtx.Provider value={{ active }}>
+    <ListItemCtx.Provider value={{ active, testKey: id }}>
       {active && (
         <span className="absolute -left-3.5 bottom-2 top-2 w-[3px] rounded bg-accent shadow-glow-accent" />
       )}
@@ -94,12 +104,13 @@ export function ListItem({ active = false, onSelect, children, ...rest }: ListIt
   if (onSelect) {
     return (
       <button
-        type="button"
+        data-testid={testId}
         {...rest}
         aria-current={active ? "page" : undefined}
         className={className}
-        data-testid={ListTestId.Item}
+        id={id}
         onClick={onSelect}
+        type="button"
       >
         {inner}
       </button>
@@ -108,10 +119,11 @@ export function ListItem({ active = false, onSelect, children, ...rest }: ListIt
 
   return (
     <div
+      data-testid={testId}
       {...rest}
       aria-current={active ? "page" : undefined}
       className={className}
-      data-testid={ListTestId.Item}
+      id={id}
     >
       {inner}
     </div>

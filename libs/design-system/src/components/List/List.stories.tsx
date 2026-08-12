@@ -11,7 +11,7 @@ const navItems: NavItem[] = [
   { id: "integrations", label: "Integrace", glyph: "plug" },
   { id: "automations", label: "Automatizace", glyph: "clock" },
   { id: "memory", label: "Paměť", glyph: "brain" },
-  { id: "runs", label: "Běžící agenti", glyph: "pulse", badge: 2 },
+  { id: "runs", label: "Běžící agenti", glyph: "pulse", badge: 2, badgeLabel: "2 běžící agenti" },
 ];
 
 const settingsItem: NavItem = {
@@ -43,10 +43,17 @@ export const Overview: Story = {
       <div className="flex min-h-0 flex-1 flex-col">
         <List>
           {navItems.map((item) => (
-            <ListItem active={item.id === active} key={item.id} onSelect={() => setActive(item.id)}>
+            <ListItem
+              active={item.id === active}
+              id={item.id}
+              key={item.id}
+              onSelect={() => setActive(item.id)}
+            >
               <ListItemIcon glyph={item.glyph} />
               <ListItemText>{item.label}</ListItemText>
-              {item.badge ? <ListItemBadge>{item.badge}</ListItemBadge> : null}
+              {item.badge ? (
+                <ListItemBadge aria-label={item.badgeLabel}>{item.badge}</ListItemBadge>
+              ) : null}
             </ListItem>
           ))}
         </List>

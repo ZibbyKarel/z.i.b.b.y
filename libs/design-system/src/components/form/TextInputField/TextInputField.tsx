@@ -3,6 +3,9 @@ import { Field, fieldControlClass } from "../Field";
 
 export enum TextInputFieldTestId {
   Control = "text-input-control",
+  /** The component renders a single node (the control itself) — `Root` aliases
+   *  `Control` so every field component's enum has a `Root` to select on. */
+  Root = Control,
 }
 
 export interface TextInputFieldProps extends Omit<

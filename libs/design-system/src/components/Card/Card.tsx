@@ -1,4 +1,4 @@
-import type { HTMLAttributes, ReactNode, Ref } from "react";
+import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode, Ref } from "react";
 import { cn } from "../../utils/cn";
 import { focusRing } from "../../utils/focus";
 import { Container } from "../Container/Container";
@@ -13,6 +13,7 @@ export enum CardTestId {
   Content = "card-content",
   Footer = "card-footer",
   Edge = "card-edge",
+  Corner = "card-corner",
 }
 
 /** The HUD bracket tone — the canonical {@link StateTone} vocabulary. */
@@ -38,19 +39,27 @@ export function Corners({ inset = "75", tone = "accent" }: CornersProps) {
   return (
     <>
       <span
+        aria-hidden="true"
         className={cn(base, "border-t-[1.5px] border-l-[1.5px]")}
+        data-testid={CardTestId.Corner}
         style={{ top: px, left: px }}
       />
       <span
+        aria-hidden="true"
         className={cn(base, "border-t-[1.5px] border-r-[1.5px]")}
+        data-testid={CardTestId.Corner}
         style={{ top: px, right: px }}
       />
       <span
+        aria-hidden="true"
         className={cn(base, "border-b-[1.5px] border-l-[1.5px]")}
+        data-testid={CardTestId.Corner}
         style={{ bottom: px, left: px }}
       />
       <span
+        aria-hidden="true"
         className={cn(base, "border-b-[1.5px] border-r-[1.5px]")}
+        data-testid={CardTestId.Corner}
         style={{ bottom: px, right: px }}
       />
     </>
@@ -179,8 +188,12 @@ export function Card({
   return (
     <Tag
       data-testid={CardTestId.Root}
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      {...(rest as any)}
+      // `Tag` is a union ("div" | "button"), so JSX resolves the prop type for
+      // `{...rest}` as the intersection of both intrinsic element prop sets —
+      // TS can't know at this point which element `rest`'s event handlers were
+      // typed against, so a same-shape intersection cast (not `any`) is the
+      // narrowest fix; the `as="button"` branch is exercised by Card.test.tsx.
+      {...(rest as HTMLAttributes<HTMLDivElement> & ButtonHTMLAttributes<HTMLButtonElement>)}
       className={cn(
         "relative group",
         elevated ? "bg-elevated" : bgClasses[background],

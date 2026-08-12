@@ -1,5 +1,6 @@
 import type { InputHTMLAttributes, Ref } from "react";
 import { cn } from "../../utils/cn";
+import { focusRingInset } from "../../utils/focus";
 import { Icon } from "../Icon/Icon";
 
 export enum SearchInputTestId {
@@ -59,7 +60,15 @@ export function SearchInput({
       <Icon data-testid={SearchInputTestId.Icon} name="search" size="sm" tone="faint" />
       <input
         aria-label={ariaLabel}
-        className="min-w-0 flex-1 border-none bg-transparent font-sans text-base text-foreground outline-none placeholder:text-foreground-faint"
+        className={cn(
+          "min-w-0 flex-1 border-none bg-transparent font-sans text-base text-foreground",
+          "placeholder:text-foreground-faint",
+          // "solid" is already ringed by the wrapper's own focus-within style above;
+          // "transparent" has no border/ring of its own, so the input must carry an
+          // explicit fallback — never silently unfocusable-looking regardless of
+          // whatever (if anything) wraps it.
+          surface === "transparent" && focusRingInset,
+        )}
         data-testid={SearchInputTestId.Control}
         ref={ref}
         type="text"

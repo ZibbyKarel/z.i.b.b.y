@@ -6,8 +6,13 @@ import { cn } from "../../../utils/cn";
 import { Field, fieldControlClass } from "../Field";
 
 export enum HighlightTextAreaFieldTestId {
+  /** The outer `position:relative` wrapper hosting both layers. */
+  Root = "highlight-text-area-root",
   Control = "highlight-text-area-control",
   Backdrop = "highlight-text-area-backdrop",
+  /** Each rendered mark, suffixed with its segment's source offset — e.g.
+   *  `highlight-text-area-mark-5`. Segments never share a `start`, so it's a
+   *  stable per-segment key (same pattern as `SchedulePicker`'s weekday toggles). */
   Mark = "highlight-text-area-mark",
 }
 
@@ -163,7 +168,7 @@ export function HighlightTextAreaField({
   return (
     <Field error={error} hideLabel={hideLabel} hint={hint} label={label}>
       {({ id, describedBy, invalid }) => (
-        <div className="relative">
+        <div className="relative" data-testid={HighlightTextAreaFieldTestId.Root}>
           <div
             aria-hidden
             className={cn(
@@ -181,7 +186,7 @@ export function HighlightTextAreaField({
                     "rounded-sm text-transparent",
                     seg.tone ? cn(toneBgClass[seg.tone], toneRingClass[seg.tone]) : "bg-accent/20",
                   )}
-                  data-testid={HighlightTextAreaFieldTestId.Mark}
+                  data-testid={`${HighlightTextAreaFieldTestId.Mark}-${seg.start}`}
                   key={seg.start}
                 >
                   {seg.text}

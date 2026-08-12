@@ -3,11 +3,15 @@
 import { type InputHTMLAttributes, type Ref, useRef, useState } from "react";
 import { cn } from "../../../utils/cn";
 import { focusRingInset } from "../../../utils/focus";
+import { mergeRefs } from "../../../utils/refs";
 import { Icon } from "../../Icon/Icon";
 import { Field } from "../Field";
 
 export enum FilePickerFieldTestId {
+  /** The outermost wrapper — same node as `Control`, aliased so the enum always
+   *  has a `Root` to select on. */
   Control = "file-picker-field-control",
+  Root = Control,
   Display = "file-picker-field-display",
   Input = "file-picker-field-input",
   Trigger = "file-picker-field-trigger",
@@ -47,15 +51,10 @@ export function FilePickerField({
   const ownRef = useRef<HTMLInputElement>(null);
 
   function assignRef(el: HTMLInputElement | null) {
-    (ownRef as React.MutableRefObject<HTMLInputElement | null>).current = el;
+    mergeRefs(ownRef, ref)(el);
     if (el && directory) {
       // webkitdirectory is not in @types/react; set it imperatively
       el.setAttribute("webkitdirectory", "");
-    }
-    if (typeof ref === "function") {
-      ref(el);
-    } else if (ref) {
-      (ref as React.MutableRefObject<HTMLInputElement | null>).current = el;
     }
   }
 
@@ -88,11 +87,11 @@ export function FilePickerField({
           data-testid={FilePickerFieldTestId.Control}
         >
           <input
+            data-testid={FilePickerFieldTestId.Input}
             {...props}
             aria-describedby={describedBy}
             aria-invalid={invalid || undefined}
             className="sr-only"
-            data-testid={FilePickerFieldTestId.Input}
             id={id}
             multiple={multiple}
             onChange={handleChange}

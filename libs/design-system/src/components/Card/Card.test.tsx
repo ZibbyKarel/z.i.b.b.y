@@ -105,6 +105,20 @@ describe("Card", () => {
     expect(screen.queryByTestId(CardTestId.Edge)).not.toBeInTheDocument();
   });
 
+  it("renders decorative corner marks hidden from assistive tech when `corners` is set", () => {
+    render(<Card corners>x</Card>);
+    const corners = screen.getAllByTestId(CardTestId.Corner);
+    expect(corners).toHaveLength(4);
+    for (const corner of corners) {
+      expect(corner).toHaveAttribute("aria-hidden", "true");
+    }
+  });
+
+  it("omits corner marks by default", () => {
+    render(<Card>x</Card>);
+    expect(screen.queryByTestId(CardTestId.Corner)).not.toBeInTheDocument();
+  });
+
   it("CardActions renders its children via CardFooter", () => {
     render(
       <Card>

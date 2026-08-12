@@ -16,17 +16,17 @@ export interface PanelProps extends Omit<HTMLAttributes<HTMLDivElement>, "classN
   headerEnd?: ReactNode;
   /** Body padding token; omit to let the body content own its spacing. */
   padding?: Padding;
-  /** Live panel — corner brackets in the live color; reserve for running/awaiting content. */
+  /** Live panel: corner brackets in the live color; reserve for running/awaiting content. */
   live?: boolean;
   /** Bracket color of a live panel. */
   liveTone?: CornersTone;
-  /** Elevated panel — one step above surface, with the elevation shadow. */
+  /** Elevated panel: one step above surface, with the elevation shadow. */
   elevated?: boolean;
   ref?: Ref<HTMLDivElement>;
 }
 
 /**
- * The single titled surface (design `ZtPanel`) — a clipped {@link Card} with a
+ * The single titled surface (design `ZtPanel`): a clipped {@link Card} with a
  * matte default; corner brackets mark live panels only ("light only on what's
  * alive").
  */

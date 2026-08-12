@@ -194,7 +194,7 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
             desc={editing ? editDesc : selected.desc}
             fit="contain"
             glyph="flow"
-            height={220}
+            height="lg"
             image={selected.avatar}
             name={editing ? editName : selected.name}
             onRemove={() =>

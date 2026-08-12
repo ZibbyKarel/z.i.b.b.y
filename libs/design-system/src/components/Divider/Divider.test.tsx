@@ -4,9 +4,9 @@ import { render } from "../../utils/testRender";
 import { Divider, DividerTestId } from "./Divider";
 
 describe("Divider", () => {
-  it("renders a separator element", () => {
+  it("is decorative — no separator role, aria-hidden from assistive tech", () => {
     render(<Divider />);
-    expect(screen.getByTestId(DividerTestId.Root)).toHaveRole("separator");
+    expect(screen.getByTestId(DividerTestId.Root)).not.toHaveRole("separator");
   });
 
   it("is aria-hidden", () => {

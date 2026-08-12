@@ -79,7 +79,7 @@ export function ChatDetailDialog({ detail, onClose }: ChatDetailDialogProps) {
             desc={desc}
             fit={isAgent ? "cover" : "contain"}
             glyph={glyph}
-            height={180}
+            height="sm"
             image={image}
             meta={meta}
             name={name}

@@ -23,10 +23,9 @@ export enum AccordionTestId {
 export interface AccordionProps {
   children: ReactNode;
   single?: boolean;
-  className?: string;
 }
 
-export function Accordion({ children, single = false, className }: AccordionProps) {
+export function Accordion({ children, single = false }: AccordionProps) {
   const [openId, setOpenId] = useState<string | null>(null);
   const claimed = useRef(false);
 
@@ -42,7 +41,7 @@ export function Accordion({ children, single = false, className }: AccordionProp
   return (
     <AccordionContext.Provider value={{ single, openId, toggle, claimDefault }}>
       <div
-        className={cn("border border-border rounded overflow-hidden", className)}
+        className="border border-border rounded overflow-hidden"
         data-testid={AccordionTestId.Root}
       >
         {children}
@@ -92,13 +91,12 @@ export function AccordionSummary({
 export interface AccordionDetailsProps {
   children: ReactNode;
   expanded?: boolean;
-  className?: string;
 }
 
-export function AccordionDetails({ children, expanded = false, className }: AccordionDetailsProps) {
+export function AccordionDetails({ children, expanded = false }: AccordionDetailsProps) {
   if (!expanded) return null;
   return (
-    <div className={cn("px-3.5 py-3", className)} data-testid={AccordionTestId.Details}>
+    <div className="px-3.5 py-3" data-testid={AccordionTestId.Details}>
       {children}
     </div>
   );

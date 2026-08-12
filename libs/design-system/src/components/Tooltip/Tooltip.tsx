@@ -48,12 +48,14 @@ export function Tooltip({ content, children, side = "top" }: TooltipProps) {
     : children;
 
   return (
-     
     <span
       className="relative inline-flex"
       data-testid={TooltipTestId.Root}
       onBlur={() => setOpen(false)}
       onFocus={() => setOpen(true)}
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && open) setOpen(false);
+      }}
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
     >

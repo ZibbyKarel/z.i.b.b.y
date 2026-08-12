@@ -6,6 +6,10 @@ const meta: Meta<typeof FloatingPanel> = {
   title: "DesignSystem/FloatingPanel",
   component: FloatingPanel,
   parameters: { backgrounds: { default: "velin" } },
+  argTypes: {
+    index: { control: { type: "number", min: 0, max: 8 } },
+  },
+  args: { index: 0 },
 };
 export default meta;
 
@@ -32,6 +36,14 @@ export const Overview: Story = {
           <Swatch index={index} key={index} />
         ))}
       </div>
+    </div>
+  ),
+};
+
+export const Playground: Story = {
+  render: (args) => (
+    <div className="p-12">
+      <Swatch index={args.index ?? 0} />
     </div>
   ),
 };

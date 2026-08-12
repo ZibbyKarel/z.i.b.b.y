@@ -1,9 +1,11 @@
 import type { HTMLAttributes } from "react";
+import type { StateTone } from "../../stateTone";
 import { cn } from "../../utils/cn";
 import { Row, Stack } from "../Stack/Stack";
 import { Icon, type IconName } from "../Icon/Icon";
 
-export type StatTone = "accent" | "ok" | "warn" | "bad" | "neutral";
+/** The canonical {@link StateTone} palette, plus `neutral` for a non-live metric. */
+export type StatTone = StateTone | "neutral";
 
 export enum StatTestId {
   Root = "stat-root",
@@ -17,6 +19,7 @@ const toneText: Record<StatTone, string> = {
   ok: "text-ok",
   warn: "text-warn",
   bad: "text-bad",
+  run: "text-run",
   neutral: "text-foreground-dim",
 };
 

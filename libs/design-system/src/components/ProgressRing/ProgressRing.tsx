@@ -73,7 +73,7 @@ export function ProgressRing({
           cy={box / 2}
           fill="none"
           r={r}
-          stroke="rgba(255,255,255,0.09)"
+          stroke="var(--color-border)"
           strokeWidth={stroke}
         />
         <circle

@@ -20,4 +20,9 @@ describe("ProgressRing", () => {
     render(<ProgressRing showValue={false} value={20} />);
     expect(screen.queryByTestId(ProgressRingTestId.Value)).toBeNull();
   });
+
+  it("renders no progressbar role without a label", () => {
+    render(<ProgressRing value={20} />);
+    expect(screen.getByTestId(ProgressRingTestId.Root)).not.toHaveAttribute("role");
+  });
 });

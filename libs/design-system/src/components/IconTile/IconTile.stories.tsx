@@ -10,6 +10,13 @@ const meta: Meta<typeof IconTile> = {
   title: "DesignSystem/IconTile",
   component: IconTile,
   parameters: { backgrounds: { default: "velin" } },
+  argTypes: {
+    size: { control: "select", options: ["sm", "md", "lg", "xl"] },
+    tone: { control: "select", options: ["accent", "neutral"] },
+    radius: { control: "select", options: ["sm", "default"] },
+    shape: { control: "select", options: ["square", "circle"] },
+    as: { control: "select", options: ["span", "div", "button"] },
+  },
   args: { glyph: "bot", size: "md", tone: "accent", radius: "sm" },
 };
 export default meta;
@@ -52,3 +59,5 @@ export const Overview: Story = {
     </div>
   ),
 };
+
+export const Playground: Story = {};

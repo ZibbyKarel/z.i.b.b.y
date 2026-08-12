@@ -32,7 +32,7 @@ export interface ProgressProps extends Omit<HTMLAttributes<HTMLDivElement>, "cla
 export function Progress({
   value,
   tone = "accent",
-  height = "50",
+  height = "75",
   label,
   ref,
   ...props
@@ -44,7 +44,7 @@ export function Progress({
       aria-valuemax={label ? 100 : undefined}
       aria-valuemin={label ? 0 : undefined}
       aria-valuenow={label ? pct : undefined}
-      className="relative overflow-hidden rounded-full bg-[rgba(255,255,255,0.07)]"
+      className="relative overflow-hidden rounded-full bg-border"
       data-testid={ProgressTestId.Root}
       ref={ref}
       role={label ? "progressbar" : undefined}

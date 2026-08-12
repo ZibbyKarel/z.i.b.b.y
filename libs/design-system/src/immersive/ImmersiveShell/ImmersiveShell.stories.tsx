@@ -13,7 +13,9 @@ type Story = StoryObj<typeof ImmersiveShell>;
 
 const BackButton = () => (
   <a aria-label="Zpět" className="flex size-full items-center justify-center text-accent" href="#">
-    <Icon className="rotate-180" name="arrow" size="sm" />
+    <span className="inline-flex rotate-180">
+      <Icon name="arrow" size="sm" />
+    </span>
   </a>
 );
 

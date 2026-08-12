@@ -2,6 +2,7 @@
 
 import { type Ref, useEffect, useId, useMemo, useRef, useState } from "react";
 import { cn } from "../../utils/cn";
+import { focusRingInset } from "../../utils/focus";
 import { mergeRefs } from "../../utils/refs";
 import { Icon, type IconName } from "../Icon/Icon";
 import { Kbd } from "../Kbd/Kbd";
@@ -147,7 +148,7 @@ export function SearchMenu({
           "bg-background border rounded-sm",
           "transition-colors",
           panelOpen ? "border-border-strong text-foreground" : "border-border text-foreground-dim",
-          "focus-within:border-border-strong focus-within:ring-2 focus-within:ring-accent",
+          "focus-within:border-border-strong",
         )}
       >
         <Icon data-testid={SearchMenuTestId.Icon} name="search" size="sm" tone="faint" />
@@ -164,7 +165,8 @@ export function SearchMenu({
           autoComplete="off"
           className={cn(
             "flex-1 min-w-0 bg-transparent text-base text-foreground",
-            "placeholder:text-foreground-faint outline-none",
+            "placeholder:text-foreground-faint",
+            focusRingInset,
           )}
           data-testid={SearchMenuTestId.Input}
           onChange={(e) => {
@@ -181,13 +183,9 @@ export function SearchMenu({
           value={value}
         />
         {loading ? (
-          <Icon
-            className="animate-spin"
-            data-testid={SearchMenuTestId.Spinner}
-            name="retry"
-            size="sm"
-            tone="faint"
-          />
+          <span className="inline-flex animate-spin" data-testid={SearchMenuTestId.Spinner}>
+            <Icon name="retry" size="sm" tone="faint" />
+          </span>
         ) : shortcut && !hasQuery ? (
           <Kbd data-testid={SearchMenuTestId.Shortcut}>{shortcut}</Kbd>
         ) : null}
@@ -231,9 +229,10 @@ export function SearchMenu({
                         aria-selected={active}
                         className={cn(
                           "flex items-center gap-2.5 w-full px-3.5 py-1.5 text-left",
-                          "transition-colors outline-none",
+                          "transition-colors",
                           active ? "bg-raised text-foreground" : "text-foreground-dim",
                           "hover:bg-raised hover:text-foreground",
+                          focusRingInset,
                         )}
                         data-testid={`${SearchMenuTestId.Item}-${section.id}-${item.id}`}
                         id={`${listboxId}-${section.id}-${item.id}`}

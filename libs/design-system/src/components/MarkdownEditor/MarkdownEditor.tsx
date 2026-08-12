@@ -50,7 +50,7 @@ export interface MarkdownEditorProps {
 /**
  * Rich Markdown editor (toolbar + Editor/Náhled toggle) wrapping
  * `@uiw/react-md-editor`, re-themed to the design-system tokens. The editor
- * only ever sees the Markdown *body* — YAML frontmatter is assembled by the
+ * only ever sees the Markdown *body*: YAML frontmatter is assembled by the
  * backend from structured fields, never typed here.
  */
 export function MarkdownEditor({
@@ -62,8 +62,8 @@ export function MarkdownEditor({
   ariaLabel,
 }: MarkdownEditorProps) {
   const id = useId();
-  // Declared (not an inline literal) so the extra `data-testid` — absent from
-  // the third-party `ITextAreaProps` — passes structural assignability instead
+  // Declared (not an inline literal) so the extra `data-testid`, absent from
+  // the third-party `ITextAreaProps`, passes structural assignability instead
   // of tripping the excess-property check.
   const textareaProps = {
     id,

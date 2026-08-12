@@ -444,15 +444,14 @@ export function PipelineStageTimeline({
                               status={displayStatus}
                             />
                             {hasLog && (
-                              <Icon
+                              <span
                                 className={cn(
-                                  "transition-transform duration-150",
+                                  "inline-flex transition-transform duration-150",
                                   isOpen && "rotate-90",
                                 )}
-                                name="chevron"
-                                size="xs"
-                                tone="faint"
-                              />
+                              >
+                                <Icon name="chevron" size="xs" tone="faint" />
+                              </span>
                             )}
                           </Stack>
                         </Stack>

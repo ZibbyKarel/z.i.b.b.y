@@ -32,7 +32,7 @@ export const Overview: Story = {
   render: () => (
     <div className="flex flex-col gap-8 p-12">
       <div className="flex flex-col gap-3">
-        <Typography type="label">idle — ambient pulse, one per tone</Typography>
+        <Typography type="label">idle, ambient pulse, one per tone</Typography>
         <div className="flex items-center gap-8">
           {STATE_TONES.map((tone) => (
             <Swatch intensity="idle" key={tone} tone={tone} />
@@ -40,7 +40,7 @@ export const Overview: Story = {
         </div>
       </div>
       <div className="flex flex-col gap-3">
-        <Typography type="label">hot — energized, in-flight pulse</Typography>
+        <Typography type="label">hot, energized, in-flight pulse</Typography>
         <div className="flex items-center gap-8">
           {STATE_TONES.map((tone) => (
             <Swatch intensity="hot" key={tone} tone={tone} />
@@ -48,7 +48,7 @@ export const Overview: Story = {
         </div>
       </div>
       <div className="flex flex-col gap-3">
-        <Typography type="label">breathe — free-standing orb glow</Typography>
+        <Typography type="label">breathe, free-standing orb glow</Typography>
         <div className="relative h-24 w-24 rounded-full border border-accent/40">
           <LivingGlow breathe intensity="hot" radius="full" tone="run" />
         </div>

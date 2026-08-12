@@ -70,6 +70,7 @@ export function DropZone({
     <div
       {...getRootProps()}
       aria-describedby={ariaDescribedBy}
+      aria-label={ariaLabelledBy ? undefined : idleLabel}
       aria-labelledby={ariaLabelledBy}
       className={cn(
         "flex cursor-pointer flex-col items-center justify-center gap-3",
@@ -82,6 +83,7 @@ export function DropZone({
         disabled && "cursor-not-allowed opacity-50",
       )}
       data-testid={DropZoneTestId.Root}
+      role="button"
     >
       <input {...getInputProps()} data-testid={DropZoneTestId.Input} />
       <Icon aria-hidden name="file" size="lg" stroke="thin" tone={iconTone} />

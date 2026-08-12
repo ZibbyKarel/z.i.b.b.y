@@ -189,11 +189,11 @@ export function DropDownButton({
           size={size}
           style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}
         >
-          <Icon
-            className={cn("transition-transform duration-150", open && "rotate-90")}
-            name="chevron"
-            size={size === "sm" ? "xs" : "sm"}
-          />
+          <span
+            className={cn("inline-flex transition-transform duration-150", open && "rotate-90")}
+          >
+            <Icon name="chevron" size={size === "sm" ? "xs" : "sm"} />
+          </span>
         </Button>
       </div>
 

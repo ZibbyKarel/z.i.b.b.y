@@ -6,6 +6,9 @@ const meta: Meta<typeof Sparkline> = {
   title: "DesignSystem/Sparkline",
   component: Sparkline,
   parameters: { backgrounds: { default: "velin" } },
+  argTypes: {
+    tone: { control: "select", options: ["accent", "ok", "warn", "bad", "run"] },
+  },
   decorators: [
     (Story) => (
       <div className="w-[260px]">

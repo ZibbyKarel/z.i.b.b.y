@@ -17,7 +17,7 @@ export enum MenuButtonTestId {
 
 /**
  * Reuses {@link DropDownButtonItem}'s shape (`{ id, label, icon?, disabled?,
- * onSelect }`) and adds an optional `danger` flag — a destructive row (Stop,
+ * onSelect }`) and adds an optional `danger` flag: a destructive row (Stop,
  * Delete) painted with the `bad` token instead of a separate item type.
  */
 export interface MenuButtonItem extends DropDownButtonItem {
@@ -38,7 +38,7 @@ export interface MenuButtonProps {
 
 /**
  * An icon-only kebab (three-dot) trigger that opens a {@link MenuSurface} of
- * action rows — the pure "overflow menu" shape `DropDownButton` doesn't cover
+ * action rows: the pure "overflow menu" shape `DropDownButton` doesn't cover
  * (that one is a split button with a mandatory primary segment). Reuses
  * `DropDownButton`'s proven mechanics verbatim: fixed-position portal,
  * `updateRect` on scroll/resize, ArrowUp/Down + Enter/Escape/Tab keyboard nav
@@ -211,10 +211,7 @@ export function MenuButton({
                         <Icon name={item.icon} size="sm" tone={danger ? "bad" : undefined} />
                       )}
                       <span
-                        className={cn(
-                          "text-md flex-1",
-                          danger ? "text-bad" : "text-foreground",
-                        )}
+                        className={cn("text-md flex-1", danger ? "text-bad" : "text-foreground")}
                       >
                         {item.label}
                       </span>

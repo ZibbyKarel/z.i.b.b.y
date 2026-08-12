@@ -54,15 +54,15 @@ export const Overview: Story = {
       </Panel>
 
       <Panel live header={<Label>running build</Label>} padding="200">
-        <Typography type="data">live panel — corner brackets in the run color</Typography>
+        <Typography type="data">live panel, corner brackets in the run color</Typography>
       </Panel>
 
       <Panel live header={<Label>awaiting approval</Label>} liveTone="warn" padding="200">
-        <Typography type="data">live panel — awaiting tone</Typography>
+        <Typography type="data">live panel, awaiting tone</Typography>
       </Panel>
 
       <Panel elevated header={<Label>elevated</Label>} padding="200">
-        <Typography type="data">elevated panel — one step above surface</Typography>
+        <Typography type="data">elevated panel, one step above surface</Typography>
       </Panel>
     </div>
   ),

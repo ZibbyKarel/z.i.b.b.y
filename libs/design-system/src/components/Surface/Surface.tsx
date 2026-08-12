@@ -27,21 +27,25 @@ export interface SurfaceProps extends Omit<HTMLAttributes<HTMLElement>, "classNa
  */
 export function Surface({
   background = "surface",
-  as: Tag = "div",
+  as = "div",
   children,
   ref,
   ...rest
 }: SurfaceProps) {
+  // `div`/`main`/`section` share the same `HTMLAttributes<HTMLElement>` shape — a
+  // variable JSX tag typed as their string-literal union can't resolve props/ref
+  // against all three at once, so narrow to one for typing only. The real tag
+  // rendered at runtime is still whatever `as` holds; this cast doesn't change it.
+  const Tag = as as "div";
   return (
     <Tag
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      {...(rest as any)}
       className={cn(
         "relative h-full w-full overflow-hidden font-sans text-foreground",
         bgClass[background],
       )}
       data-testid={SurfaceTestId.Root}
       ref={ref as Ref<HTMLDivElement>}
+      {...rest}
     >
       <div className="relative z-[1] flex h-full" data-testid={SurfaceTestId.Content}>
         {children}

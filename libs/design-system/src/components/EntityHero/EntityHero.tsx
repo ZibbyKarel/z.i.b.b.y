@@ -2,9 +2,24 @@
 
 import type { ReactNode } from "react";
 import { useRef, useState } from "react";
+import type { Size } from "../../tokens";
 import { cn } from "../../utils/cn";
 import type { IconName } from "../Icon/Icon";
 import { Icon } from "../Icon/Icon";
+
+/**
+ * Band height per semantic size. `EntityHero`'s band is much taller than the
+ * `Icon`/`StatusDot` uses of {@link Size}, so it owns its own px mapping —
+ * `Size` is just the shared T-shirt-size vocabulary, not a single fixed scale.
+ * `md` (190px) matches the historical unconditional default.
+ */
+const entityHeroHeightPx: Record<Size, string> = {
+  xs: "160px",
+  sm: "180px",
+  md: "190px",
+  lg: "220px",
+  xl: "260px",
+};
 
 export enum EntityHeroTestId {
   Root = "entity-hero-root",
@@ -50,8 +65,8 @@ export interface EntityHeroProps {
    * caller already owns the overlay in that case.
    */
   showIdentity?: boolean;
-  /** Band height in px. */
-  height?: number;
+  /** Band height — semantic size, not a raw px value. Defaults to `"md"` (190px). */
+  height?: Size;
   /** How the image fills the band — `contain` for wide art, `cover` for portraits. */
   fit?: "cover" | "contain";
   /**
@@ -96,7 +111,7 @@ export function EntityHero({
   tag,
   desc,
   showIdentity = true,
-  height = 190,
+  height = "md",
   fit = "cover",
   imageBleed = "full",
   editable = false,
@@ -132,7 +147,7 @@ export function EntityHero({
             }
           : undefined
       }
-      style={{ minHeight: height }}
+      style={{ minHeight: entityHeroHeightPx[height] }}
     >
       {showImage ? (
         <img
@@ -170,6 +185,7 @@ export function EntityHero({
       {editable && (
         <div className="absolute top-3 right-3 z-10 flex gap-2">
           <button
+            aria-label={uploadLabel}
             className="grid size-7 place-items-center rounded-sm border border-border bg-background/70 text-foreground backdrop-blur-sm"
             data-testid={EntityHeroTestId.UploadButton}
             onClick={() => inputRef.current?.click()}
@@ -180,6 +196,7 @@ export function EntityHero({
           </button>
           {image && (
             <button
+              aria-label={removeLabel}
               className="grid size-7 place-items-center rounded-sm border border-bad/50 bg-background/70 text-bad backdrop-blur-sm"
               data-testid={EntityHeroTestId.RemoveButton}
               onClick={() => onRemove?.()}
@@ -220,6 +237,10 @@ export function EntityHero({
           <div className="absolute right-5 bottom-3.5 left-5 z-[1]">
             {tag && <div className="mb-1.5">{tag}</div>}
             <div
+              // Legibility scrim for text over an arbitrary photographic avatar — must
+              // stay visually dark regardless of theme (a photo's bright regions need a
+              // dark halo to keep the overlaid text readable), unlike `colorBackgroundDeep`
+              // which flips near-white in the light theme. Kept as literal black on purpose.
               className="truncate font-mono text-[22px] font-bold text-foreground drop-shadow-[0_2px_14px_rgba(0,0,0,0.7)]"
               data-testid={EntityHeroTestId.Name}
             >
@@ -227,6 +248,7 @@ export function EntityHero({
             </div>
             {meta && <div className="mt-1.5">{meta}</div>}
             {desc && (
+              // Same photographic-legibility exception as the name above.
               <div className="mt-1 max-w-[62ch] text-[12.5px] leading-snug text-foreground-dim drop-shadow-[0_1px_8px_rgba(0,0,0,0.6)]">
                 {desc}
               </div>

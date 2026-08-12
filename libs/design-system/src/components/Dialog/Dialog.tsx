@@ -138,7 +138,10 @@ export function Dialog({
         aria-describedby={description ? descriptionId : undefined}
         aria-label={ariaLabel}
         aria-labelledby={title && !ariaLabel ? titleId : undefined}
-        className="relative flex max-h-[calc(100vh-64px)] flex-col bg-elevated border border-border-strong rounded-lg shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-accent)_13%,transparent),var(--shadow-modal)] animate-scale-in outline-none"
+        className={cn(
+          "relative flex max-h-[calc(100vh-64px)] flex-col bg-elevated border border-border-strong rounded-lg shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-accent)_13%,transparent),var(--shadow-modal)] animate-scale-in",
+          focusRing,
+        )}
         data-testid={DialogTestId.Root}
         ref={dialogRef}
         role="dialog"

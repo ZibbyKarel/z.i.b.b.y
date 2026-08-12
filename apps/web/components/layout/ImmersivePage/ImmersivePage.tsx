@@ -35,7 +35,9 @@ export function ImmersivePage({ backHref = "/chat", ...rest }: ImmersivePageProp
           href={backHref}
           title={t("back")}
         >
-          <Icon className="rotate-180" name="arrow" size="sm" />
+          <span className="inline-flex rotate-180">
+            <Icon name="arrow" size="sm" />
+          </span>
         </Link>
       }
     />

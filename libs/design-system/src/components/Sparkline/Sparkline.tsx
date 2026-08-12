@@ -1,4 +1,5 @@
 import type { SVGProps } from "react";
+import type { ProgressTone } from "../Progress/Progress";
 
 export enum SparklineTestId {
   Root = "sparkline-root",
@@ -6,14 +7,22 @@ export enum SparklineTestId {
   Line = "sparkline-line",
 }
 
+const toneVar: Record<ProgressTone, string> = {
+  accent: "var(--color-accent)",
+  ok: "var(--color-ok)",
+  warn: "var(--color-warn)",
+  bad: "var(--color-bad)",
+  run: "var(--color-run)",
+};
+
 export interface SparklineProps extends Omit<
   SVGProps<SVGSVGElement>,
-  "points" | "className" | "width" | "height"
+  "points" | "className" | "width" | "height" | "color"
 > {
   /** Series values. */
   data: number[];
-  /** Stroke color (defaults to the active accent). */
-  color?: string;
+  /** Line/fill tone — matches the sibling gauges' tone vocabulary. */
+  tone?: ProgressTone;
   ref?: React.Ref<SVGSVGElement>;
 }
 
@@ -21,7 +30,8 @@ const VIEW_W = 260;
 const VIEW_H = 40;
 
 /** A tiny filled trend line — used by the Agent SDK 14-day spend widget. */
-export function Sparkline({ data, color = "var(--color-accent)", ref, ...props }: SparklineProps) {
+export function Sparkline({ data, tone = "accent", ref, ...props }: SparklineProps) {
+  const color = toneVar[tone];
   const width = VIEW_W;
   const height = VIEW_H;
   if (data.length === 0) return null;

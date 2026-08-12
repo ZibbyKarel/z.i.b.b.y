@@ -19,70 +19,66 @@ type Story = StoryObj<typeof Dialog>;
 
 export const Overview: Story = {
   render: () => (
-    <Dialog
-      open
-      actions={
-        <>
-          <Button intent="ghost">Zrušit</Button>
-          <Button icon="x" intent="danger">
-            Smazat
-          </Button>
-        </>
-      }
-      description="Pipeline a veškerá jeho data budou trvale odstraněna."
-      title="Smazat pipeline"
-    >
-      <DialogBody>
-        <p>Agent zpracovává 3 fronty a čeká na schválení.</p>
-      </DialogBody>
-    </Dialog>
-  ),
-};
-
-export const FullCanvas: Story = {
-  name: "Full (canvas)",
-  render: () => (
-    <Dialog
-      open
-      actions={
-        <>
-          <Button intent="ghost">Zrušit</Button>
-          <Button icon="plus" intent="primary">
-            Vytvořit
-          </Button>
-        </>
-      }
-      title="Editor pipeline"
-      width="full"
-    >
-      <DialogBody>
-        <p>Near-viewport modal — hosts a scrollable canvas in a flex-1 body.</p>
-      </DialogBody>
-    </Dialog>
-  ),
-};
-
-export const Fullscreen: Story = {
-  name: "Fullscreen",
-  render: () => (
-    <Dialog
-      fullscreen
-      open
-      actions={
-        <>
-          <Button intent="ghost">Zrušit</Button>
-          <Button icon="collapse" intent="primary">
-            Zmenšit
-          </Button>
-        </>
-      }
-      title="Editor pipeline"
-      width="full"
-    >
-      <DialogBody>
-        <p>Fills the viewport (minus margins) — overrides `width` for max working area.</p>
-      </DialogBody>
-    </Dialog>
+    <div className="flex flex-col gap-6">
+      <Dialog
+        open
+        actions={
+          <>
+            <Button intent="ghost">Zrušit</Button>
+            <Button icon="x" intent="danger">
+              Smazat
+            </Button>
+          </>
+        }
+        description="Pipeline a veškerá jeho data budou trvale odstraněna."
+        title="Smazat pipeline"
+      >
+        <DialogBody>
+          <p>Agent zpracovává 3 fronty a čeká na schválení.</p>
+        </DialogBody>
+      </Dialog>
+      <Dialog
+        open
+        actions={
+          <>
+            <Button intent="ghost">Zrušit</Button>
+            <Button icon="plus" intent="primary">
+              Vytvořit
+            </Button>
+          </>
+        }
+        title="Editor pipeline"
+        width="full"
+      >
+        <DialogBody>
+          <p>
+            Near-viewport modal (width=&quot;full&quot;) — hosts a scrollable canvas in a flex-1
+            body.
+          </p>
+        </DialogBody>
+      </Dialog>
+      <Dialog
+        fullscreen
+        open
+        actions={
+          <>
+            <Button intent="ghost">Zrušit</Button>
+            <Button icon="collapse" intent="primary">
+              Zmenšit
+            </Button>
+          </>
+        }
+        title="Editor pipeline (fullscreen)"
+        width="full"
+      >
+        <DialogBody>
+          <p>
+            Fills the viewport (minus margins) — `fullscreen` overrides `width` for max working
+            area.
+          </p>
+        </DialogBody>
+      </Dialog>
+    </div>
   ),
 };
 

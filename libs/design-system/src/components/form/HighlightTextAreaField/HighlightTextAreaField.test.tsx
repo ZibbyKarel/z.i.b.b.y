@@ -3,6 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 import { FieldTestId } from "../Field";
 import { HighlightTextAreaField, HighlightTextAreaFieldTestId } from "./HighlightTextAreaField";
 
+/** Marks are keyed per segment (`${Mark}-${start}`) — select every rendered mark
+ *  the same way `SchedulePicker`'s test suite selects its suffixed weekday toggles. */
+const markPattern = new RegExp(`^${HighlightTextAreaFieldTestId.Mark}-`);
+
 describe("HighlightTextAreaField", () => {
   it("renders a labelled textarea with a hint", () => {
     render(
@@ -12,19 +16,28 @@ describe("HighlightTextAreaField", () => {
     expect(control).toHaveRole("textbox");
     expect(control).toHaveAccessibleName("Zadání");
     expect(screen.getByTestId(FieldTestId.Hint)).toHaveTextContent("napiš cestu");
+    expect(screen.getByTestId(HighlightTextAreaFieldTestId.Root)).toBeInTheDocument();
   });
 
   it("renders no marks when there are no highlights", () => {
     render(<HighlightTextAreaField highlights={[]} label="Zadání" value="just prose" />);
-    expect(screen.queryByTestId(HighlightTextAreaFieldTestId.Mark)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(markPattern)).not.toBeInTheDocument();
   });
 
   it("marks the highlighted span with the matching text on the backdrop", () => {
     // "open ~/a/b" → highlight the path span [5, 10).
-    render(<HighlightTextAreaField highlights={[{ start: 5, end: 10 }]} label="Zadání" value="open ~/a/b" />);
-    const marks = screen.getAllByTestId(HighlightTextAreaFieldTestId.Mark);
+    render(
+      <HighlightTextAreaField
+        highlights={[{ start: 5, end: 10 }]}
+        label="Zadání"
+        value="open ~/a/b"
+      />,
+    );
+    const marks = screen.getAllByTestId(markPattern);
     expect(marks).toHaveLength(1);
     expect(marks[0]).toHaveTextContent("~/a/b");
+    // Suffixed by the segment's source offset — a stable per-segment key.
+    expect(marks[0]).toHaveAttribute("data-testid", `${HighlightTextAreaFieldTestId.Mark}-5`);
     // The highlight layer is hidden from assistive tech — the textarea carries the text.
     expect(screen.getByTestId(HighlightTextAreaFieldTestId.Backdrop)).toHaveAttribute(
       "aria-hidden",
@@ -43,14 +56,16 @@ describe("HighlightTextAreaField", () => {
         value="abcdefgh"
       />,
     );
-    const marks = screen.getAllByTestId(HighlightTextAreaFieldTestId.Mark);
+    const marks = screen.getAllByTestId(markPattern);
     expect(marks).toHaveLength(1);
     expect(marks[0]).toHaveTextContent("abcdef");
   });
 
   it("keeps the default mark untoned (byte-identical bg-accent/20, no ring)", () => {
-    render(<HighlightTextAreaField highlights={[{ start: 0, end: 4 }]} label="Zadání" value="ahoj" />);
-    const mark = screen.getByTestId(HighlightTextAreaFieldTestId.Mark);
+    render(
+      <HighlightTextAreaField highlights={[{ start: 0, end: 4 }]} label="Zadání" value="ahoj" />,
+    );
+    const mark = screen.getByTestId(markPattern);
     expect(mark).toHaveClass("bg-accent/20");
     expect(mark.className).not.toMatch(/shadow-\[/);
   });
@@ -66,7 +81,7 @@ describe("HighlightTextAreaField", () => {
         value="@delivery run"
       />,
     );
-    const marks = screen.getAllByTestId(HighlightTextAreaFieldTestId.Mark);
+    const marks = screen.getAllByTestId(markPattern);
     expect(marks).toHaveLength(2);
     expect(marks[0]).toHaveTextContent("@deli");
     expect(marks[0]).toHaveClass("bg-risk-push/[0.14]");
@@ -77,9 +92,7 @@ describe("HighlightTextAreaField", () => {
 
   it("fires onChange as the operator edits", () => {
     const onChange = vi.fn();
-    render(
-      <HighlightTextAreaField highlights={[]} label="Zadání" onChange={onChange} value="a" />,
-    );
+    render(<HighlightTextAreaField highlights={[]} label="Zadání" onChange={onChange} value="a" />);
     fireEvent.change(screen.getByTestId(HighlightTextAreaFieldTestId.Control), {
       target: { value: "ab" },
     });

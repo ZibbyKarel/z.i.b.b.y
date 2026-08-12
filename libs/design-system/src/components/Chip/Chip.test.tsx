@@ -1,6 +1,7 @@
-import { render, screen, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { render } from "../../utils/testRender";
 import { StatusDotTestId } from "../StatusDot/StatusDot";
 import { Chip, ChipTestId } from "./Chip";
 

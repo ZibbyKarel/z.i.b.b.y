@@ -46,23 +46,28 @@ export type { OverlayStackHandle } from "./hooks/useOverlayStack";
 // ---------------------------------------------------------------------------
 // Primitives
 // ---------------------------------------------------------------------------
-export { computeContainerStyle, Container, CONTAINER_STYLE_KEYS } from "./components/Container";
+export {
+  computeContainerStyle,
+  Container,
+  ContainerTestId,
+  CONTAINER_STYLE_KEYS,
+} from "./components/Container";
 export type { ContainerAs, ContainerProps } from "./components/Container";
 export { Grid, GridTestId } from "./components/Grid/Grid";
 export type { GridAlign, GridCols, GridProps } from "./components/Grid/Grid";
 export { Pressable, PressableTestId } from "./components/Pressable/Pressable";
 export type { PressableProps } from "./components/Pressable/Pressable";
-export { Spacer } from "./components/Spacer";
+export { Spacer, SpacerTestId } from "./components/Spacer";
 export type { SpacerProps } from "./components/Spacer";
-export { Stack } from "./components/Stack";
-export type { StackProps } from "./components/Stack";
+export { Row, Stack, StackTestId } from "./components/Stack";
+export type { RowProps, StackProps } from "./components/Stack";
 export { Surface, SurfaceTestId } from "./components/Surface/Surface";
 export type { SurfaceProps } from "./components/Surface/Surface";
 
 // ---------------------------------------------------------------------------
 // Foundations
 // ---------------------------------------------------------------------------
-export { Icon, iconNames } from "./components/Icon/Icon";
+export { Icon, IconTestId, iconNames } from "./components/Icon/Icon";
 export type { IconName, IconProps, IconStroke, IconTone } from "./components/Icon/Icon";
 
 export { IconTile, IconTileTestId } from "./components/IconTile/IconTile";
@@ -93,7 +98,7 @@ export type {
   TypographyWeight,
 } from "./components/Typography/Typography";
 
-export { Divider } from "./components/Divider/Divider";
+export { Divider, DividerTestId } from "./components/Divider/Divider";
 export type { DividerProps } from "./components/Divider/Divider";
 
 export { Chip, ChipTestId } from "./components/Chip/Chip";
@@ -105,7 +110,7 @@ export type { CheckboxProps, CheckboxSize } from "./components/Checkbox/Checkbox
 export { Tag, TagTestId, riskIcon } from "./components/Tag/Tag";
 export type { RiskKind, TagProps, TagTone } from "./components/Tag/Tag";
 
-export { Kbd } from "./components/Kbd/Kbd";
+export { Kbd, KbdTestId } from "./components/Kbd/Kbd";
 export type { KbdProps } from "./components/Kbd/Kbd";
 
 export { SearchBar, SearchBarTestId } from "./components/SearchBar/SearchBar";
@@ -121,7 +126,7 @@ export type {
   SearchMenuSection,
 } from "./components/SearchMenu/SearchMenu";
 
-export { Alert } from "./components/Alert/Alert";
+export { Alert, AlertTestId } from "./components/Alert/Alert";
 export type { AlertProps, AlertSeverity } from "./components/Alert/Alert";
 
 export {
@@ -140,10 +145,10 @@ export type { LivingGlowIntensity, LivingGlowProps } from "./components/LivingGl
 export { FloatingPanel, FloatingPanelTestId } from "./components/FloatingPanel/FloatingPanel";
 export type { FloatingPanelProps } from "./components/FloatingPanel/FloatingPanel";
 
-export { Dialog, DialogBody } from "./components/Dialog/Dialog";
+export { Dialog, DialogBody, DialogTestId } from "./components/Dialog/Dialog";
 export type { DialogProps, DialogWidth } from "./components/Dialog/Dialog";
 
-export { Tab, TabList, TabPanel, Tabs } from "./components/Tabs/Tabs";
+export { Tab, TabList, TabPanel, Tabs, TabsTestId } from "./components/Tabs/Tabs";
 export type { TabProps, TabsProps } from "./components/Tabs/Tabs";
 
 export {
@@ -151,6 +156,7 @@ export {
   AccordionDetails,
   AccordionItem,
   AccordionSummary,
+  AccordionTestId,
 } from "./components/Accordion/Accordion";
 export type {
   AccordionDetailsProps,
@@ -159,7 +165,7 @@ export type {
   AccordionSummaryProps,
 } from "./components/Accordion/Accordion";
 
-export { Button } from "./components/Button/Button";
+export { Button, ButtonTestId } from "./components/Button/Button";
 export type { ButtonIntent, ButtonProps, ButtonSize } from "./components/Button/Button";
 
 export { HoldButton, HoldButtonTestId } from "./components/HoldButton/HoldButton";
@@ -169,10 +175,10 @@ export type {
   HoldButtonTone,
 } from "./components/HoldButton/HoldButton";
 
-export { getUsageTone, Progress } from "./components/Progress/Progress";
+export { getUsageTone, Progress, ProgressTestId } from "./components/Progress/Progress";
 export type { ProgressProps, ProgressTone } from "./components/Progress/Progress";
 
-export { ProgressRing } from "./components/ProgressRing/ProgressRing";
+export { ProgressRing, ProgressRingTestId } from "./components/ProgressRing/ProgressRing";
 export type { ProgressRingProps, ProgressRingSize } from "./components/ProgressRing/ProgressRing";
 
 export { OrbitLoader, OrbitLoaderTestId } from "./components/OrbitLoader/OrbitLoader";
@@ -198,7 +204,7 @@ export type { CornersProps, CornersTone } from "./components/Card/Card";
 export { Stat, StatTestId } from "./components/Stat/Stat";
 export type { StatProps, StatTone } from "./components/Stat/Stat";
 
-export { Sparkline } from "./components/Sparkline/Sparkline";
+export { Sparkline, SparklineTestId } from "./components/Sparkline/Sparkline";
 export type { SparklineProps } from "./components/Sparkline/Sparkline";
 
 export { Field, FieldTestId } from "./components/form/Field";

@@ -1,5 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { render } from "../../utils/testRender";
 import { CodeBlock, CodeBlockTestId } from "./CodeBlock";
 
 describe("CodeBlock", () => {

@@ -48,7 +48,7 @@ export const Overview: Story = {
         <div className="flex flex-col gap-3">
           {types.map((type) => (
             <Typography key={type} type={type}>
-              {type} — Skoč na velín, kapitáne
+              {type}, skoč na velín, kapitáne
             </Typography>
           ))}
         </div>

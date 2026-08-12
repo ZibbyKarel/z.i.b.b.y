@@ -31,6 +31,16 @@ export const Overview: Story = {
     const [text, setText] = useState(
       "Zkontroluj zálohy na Holly a výsledek ulož do ~/zibby/memory/holly-backup.md",
     );
+    // Per-type `@mention` tones alongside untoned path highlights (Phase 31 — CommandLine).
+    const [mentionText, setMentionText] = useState(
+      "@Builder projdi ~/zibby/backlog a spusť @Delivery, přilož @report.md",
+    );
+    const mentionHighlights = [
+      { start: 0, end: 8, tone: "accent" as const }, // @Builder — agent
+      { start: 16, end: 31 }, // ~/zibby/backlog — untoned path
+      { start: 40, end: 49, tone: "push" as const }, // @Delivery — pipeline
+      { start: 58, end: 68, tone: "dim" as const }, // @report.md — unresolved file
+    ];
     return (
       <div className="flex flex-col gap-6">
         <HighlightTextAreaField
@@ -46,31 +56,14 @@ export const Overview: Story = {
           label="S chybou"
           value=""
         />
+        <HighlightTextAreaField
+          highlights={mentionHighlights}
+          hint="agent = accent · pipeline = push · soubor/neznámé = dim"
+          label="Toned @mentions"
+          onChange={(e) => setMentionText(e.target.value)}
+          value={mentionText}
+        />
       </div>
-    );
-  },
-};
-
-/** Per-type `@mention` tones alongside untoned path highlights (Phase 31 — CommandLine). */
-export const TonedMentions: Story = {
-  render: () => {
-    const [text, setText] = useState(
-      "@Builder projdi ~/zibby/backlog a spusť @Delivery, přilož @report.md",
-    );
-    const highlights = [
-      { start: 0, end: 8, tone: "accent" as const }, // @Builder — agent
-      { start: 16, end: 31 }, // ~/zibby/backlog — untoned path
-      { start: 40, end: 49, tone: "push" as const }, // @Delivery — pipeline
-      { start: 58, end: 68, tone: "dim" as const }, // @report.md — unresolved file
-    ];
-    return (
-      <HighlightTextAreaField
-        highlights={highlights}
-        hint="agent = accent · pipeline = push · soubor/neznámé = dim"
-        label="Zadání"
-        onChange={(e) => setText(e.target.value)}
-        value={text}
-      />
     );
   },
 };

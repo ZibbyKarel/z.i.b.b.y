@@ -25,6 +25,13 @@
       "skillPath": "skills/output-skill/SKILL.md",
       "computedHash": "26bd29ce4c5e02c7666b2d503609bf466bd32290822e91f0e984147048dbb924"
     },
+    "impeccable": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/impeccable/SKILL.md",
+      "sourceCommit": "ae388ac58fb33aade50fc47e2be07c3192dcaabd",
+      "computedHash": "7dbaaae9719bd75c573f3d16c61e958393f9e7bd773237b73c0f40a30ae95c69"
+    },
     "gpt-taste": {
       "source": "Leonxlnx/taste-skill",
       "sourceType": "github",

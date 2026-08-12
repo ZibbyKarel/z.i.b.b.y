@@ -1,25 +1,37 @@
 import type { HTMLAttributes } from "react";
 import { type VariantProps, cva } from "class-variance-authority";
+import type { StateTone } from "../../stateTone";
 import { cn } from "../../utils/cn";
 import { Icon, type IconName } from "../Icon/Icon";
+
+/**
+ * Risk categories — the design system's one categorical palette
+ * ("color = state, shape = category"; everything else is glyph + text).
+ */
+export type RiskKind = "payment" | "deletion" | "push" | "send";
+
+/** The canonical {@link StateTone} palette, plus `neutral` and the risk kinds. */
+export type TagTone = StateTone | "neutral" | RiskKind;
+
+const toneClass: Record<TagTone, string> = {
+  neutral: "text-foreground-dim border-border bg-hover",
+  accent: "text-accent border-accent/35 bg-accent-dim",
+  ok: "text-ok border-ok/35 bg-ok/10",
+  warn: "text-warn border-warn/35 bg-warn/10",
+  bad: "text-bad border-bad/35 bg-bad/10",
+  run: "text-run border-run/35 bg-run/10",
+  payment: "text-risk-payment border-risk-payment/25 bg-risk-payment/[0.08]",
+  deletion: "text-risk-deletion border-risk-deletion/25 bg-risk-deletion/[0.08]",
+  push: "text-risk-push border-risk-push/25 bg-risk-push/[0.08]",
+  send: "text-risk-send border-risk-send/25 bg-risk-send/[0.08]",
+};
 
 const tag = cva(
   "inline-flex items-center gap-1 font-mono text-xs font-semibold " +
     "rounded-sm border whitespace-nowrap tracking-wide",
   {
     variants: {
-      tone: {
-        neutral: "text-foreground-dim border-border bg-[rgba(255,255,255,0.04)]",
-        accent: "text-accent border-accent/35 bg-accent-dim",
-        ok: "text-ok border-ok/35 bg-ok/10",
-        warn: "text-warn border-warn/35 bg-warn/10",
-        bad: "text-bad border-bad/35 bg-bad/10",
-        run: "text-run border-run/35 bg-run/10",
-        payment: "text-risk-payment border-risk-payment/25 bg-risk-payment/[0.08]",
-        deletion: "text-risk-deletion border-risk-deletion/25 bg-risk-deletion/[0.08]",
-        push: "text-risk-push border-risk-push/25 bg-risk-push/[0.08]",
-        send: "text-risk-send border-risk-send/25 bg-risk-send/[0.08]",
-      },
+      tone: toneClass,
       size: {
         sm: "px-2 py-0.5",
         md: "px-2.5 py-1.5",
@@ -46,14 +58,6 @@ const tag = cva(
     defaultVariants: { tone: "neutral", solid: false, size: "sm" },
   },
 );
-
-export type TagTone = NonNullable<VariantProps<typeof tag>["tone"]>;
-
-/**
- * Risk categories — the design system's one categorical palette
- * ("color = state, shape = category"; everything else is glyph + text).
- */
-export type RiskKind = "payment" | "deletion" | "push" | "send";
 
 /** Default glyph for each risk category — the canonical risk → icon mapping. */
 export const riskIcon: Record<RiskKind, IconName> = {

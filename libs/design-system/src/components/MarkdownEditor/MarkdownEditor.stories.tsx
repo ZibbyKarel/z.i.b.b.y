@@ -36,7 +36,7 @@ export const Overview: Story = {
     const [value, setValue] = useState(SAMPLE);
     return (
       <MarkdownEditor
-        hint="Frontmatter is assembled by the backend — body only."
+        hint="Frontmatter is assembled by the backend, body only."
         label="agent.md"
         onChange={setValue}
         value={value}
