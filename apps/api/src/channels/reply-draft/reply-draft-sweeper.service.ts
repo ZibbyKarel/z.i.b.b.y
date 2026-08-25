@@ -31,7 +31,10 @@ const STALE_PENDING_MS = 15 * 60 * 1000;
  *
  * Terminal `draftResearch` statuses (`ok`, and `failed` at the cap) are persisted BY the
  * hand-off, never before it — `isReady` never retries a terminal marker, so writing one
- * ahead of a throwing `parkOrSurface` would strand the item permanently.
+ * ahead of a throwing `parkOrSurface` would strand the item permanently. The item is left
+ * on its pending lock instead and the staleness path picks it up again — bounded by
+ * {@link MAX_ATTEMPTS}, so a hand-off that throws structurally (deleted integration,
+ * missing credentials) is surfaced notify-only rather than researched forever.
  */
 @Injectable()
 export class ReplyDraftSweeperService {
@@ -61,7 +64,15 @@ export class ReplyDraftSweeperService {
     }
   }
 
-  /** Ready = never attempted, retry budget left, or a crashed `pending` marker. */
+  /**
+   * Ready = never attempted, retry budget left, or a crashed `pending` marker.
+   *
+   * A stale `pending` marker stays ready at ANY attempt count, deliberately: this is a
+   * candidacy test, and an item dropped here has no other path out — it would sit on its
+   * lock forever with no approval and no surface, silently. The retry budget is applied
+   * to that path in {@link researchOne}, where the terminal alternative (a notify-only
+   * surface) is actually reachable.
+   */
   private isReady(item: ChannelItem): boolean {
     const r = item.draftResearch;
     if (!r) return true;
@@ -87,6 +98,35 @@ export class ReplyDraftSweeperService {
         itemId: item.id,
         state: fresh?.state ?? "deleted",
       });
+      return;
+    }
+
+    // The retry cap on the STALE-PENDING path. A pending marker only survives its own
+    // research when the hand-off threw (parkOrSurface persists every terminal marker, so
+    // a completed one is never pending) — and a hand-off that throws for a STRUCTURAL
+    // reason (a deleted integration, missing credentials on the Tier-2 sendReply leg)
+    // throws every time. Without this, that item re-spawns a PAID 5-minute research every
+    // STALE_PENDING_MS, forever, with nothing to show for it. At the budget, stop
+    // researching and force the surface: telling the operator is the correct terminal
+    // state for "we cannot hand this off". If the surface itself throws the item stays
+    // pending and only the CHEAP surface is retried next sweep — never the research.
+    const prior = fresh.draftResearch;
+    if (prior?.status === "pending" && prior.attempts >= MAX_ATTEMPTS) {
+      const capped: ChannelItem = {
+        ...fresh,
+        draftResearch: {
+          status: "failed",
+          attempts: prior.attempts,
+          ...(prior.startedAt ? { startedAt: prior.startedAt } : {}),
+          finishedAt: new Date().toISOString(),
+          reason: `hand-off failed on all ${MAX_ATTEMPTS} attempts`,
+        },
+      };
+      this.log.warn("reply-draft hand-off budget spent; surfacing notify-only", {
+        itemId: fresh.id,
+        attempts: prior.attempts,
+      });
+      await this.flow.parkOrSurface(capped, capped.triage, null);
       return;
     }
 
