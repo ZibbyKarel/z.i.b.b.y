@@ -26,8 +26,8 @@ timer whenever the value changes.
 
 ### One tick
 
-`sweepOutcomes()` runs first (see below), then for each enabled integration with
-credentials:
+`sweepOutcomes()` runs first (see below), then `sweepDrafts()` — reply research
+parked by an earlier tick — then for each enabled integration with credentials:
 
 1. `adapter.poll(integration, credentials, cursor, ctx?)` → new items, retried with
    exponential backoff (`withRetry`; `CHANNEL_POLL_RETRIES` default 2,
@@ -274,23 +274,45 @@ fleet is caught up.
 Implements the `ChannelTriageFlow` interface and is also the kind-`"channel"`
 `ResumableRunner` (registered with `ApprovalsService` at startup).
 
-### `handle(item)`
+The flow runs in **two stages**, split by the reply research. Research reads a
+repository and takes minutes, so the tier decision cannot happen until it is
+done — deciding earlier would let Tier 2 fire with nothing to send.
+
+### Stage 1 — `handle(item)`
 
 1. Classify the item (actionable / informational / spam / question)
-2. Determine the autonomy tier via `MandateStorageService` (`Mandate` + the
-   `channel-reply` gate rule; a hardened `ask` or `mandate.reply=false` falls
-   through to Tier 3):
-   - **Tier 1** — silent processing (analysis, memory write); dispatched through
-     the normal task scheduler, reconciled back onto the item once the run
-     finishes
-   - **Tier 2** — act, then report (reply to a routine question, PR, post) —
-     sends the drafted reply and persists it
-   - **Tier 3** — surface and wait (replies it isn't confident about, anything
-     that commits the operator) — parks a kind-`channel` approval carrying the
-     draft
-3. Dispatch the corresponding action
-4. Write to the activity log (`channel-triage`, plus `channel-reply` /
-   `channel-approval` as the path continues)
+2. Attribute it to a project, apply the project autonomy policy (VIP escalation,
+   `respond_as: draft_only`) — both fold into the verdict's `tier`
+3. Act only on what needs no draft:
+   - **Tier 1** (actionable, `mandate.dispatch`) — silent processing; dispatched
+     through the normal task scheduler and reconciled back onto the item once the
+     run finishes
+   - a `bug` verdict additionally files a **gated** Jira issue (`propose` only
+     parks an approval)
+4. Everything reply-bearing stops at state **`needs-draft`** — the waiting room.
+   No approval record is created, which is what makes the deferral safe: an item
+   in `needs-draft` is not sendable by any path.
+5. Write to the activity log (`channel-triage`)
+
+### Stage 2 — `parkOrSurface(item, verdict, draft)`
+
+Called by `ReplyDraftSweeperService` once research finishes, **never** from
+`handle()`. Only here is the tier decided, and only against a finished draft:
+
+- **`draft === null`** → the item is surfaced (`triaged`) with **no approval at
+  all** and a `channel-needs-attention` activity line. No courtesy phrase is ever
+  substituted (see _No filler drafts_).
+- **Tier 2**, or a Herald-**graduated** Tier 3 (confident, not policy-forced —
+  the escalation is re-derived from the item's stored `projectId`/`vip`), with
+  `mandate.reply` on and the `channel-reply` gate resolving below `ask` → send
+  the researched reply and persist it. `deny` ignores the item; `ask` parks.
+- otherwise → park a kind-`channel` approval carrying the researched draft
+  (`channel-approval`), which the operator approves to send or rejects to ignore.
+
+A triager-proposed `suggestedReply` is **stripped** on the way into
+`needs-draft`: the triager classifies from the message text alone, so anything it
+suggests is a guess. Only `ReplyDraftService`'s researched answer is ever written
+back as a draft, and `resume()` fails closed if an approved item has none.
 
 ### Read-only adapters: noted, not acted on
 
@@ -335,6 +357,87 @@ authorization — Law 4).
 
 Walks items in state `handled` that carry a `taskId` and copies the finished
 task's terminal outcome back onto the item.
+
+### `sweepDrafts()`
+
+Delegates to `ReplyDraftSweeperService` (resolved lazily through the
+`REPLY_DRAFT_SWEEPER` token — the sweeper depends on this service, so injecting
+it directly would be a DI cycle). Absent, it is a no-op.
+
+## ReplyDraftSweeperService
+
+**File:** `apps/api/src/channels/reply-draft/reply-draft-sweeper.service.ts`
+
+One pass per watcher tick over the `needs-draft` backlog, mirroring the
+`sweepOutcomes()` pattern — bounded, idempotent, and never throwing:
+
+- **at most 2 items per sweep**, so a busy backlog cannot fork a process storm
+- `draftResearch.status = "pending"` is written **before** the child spawns. That
+  is the in-flight lock: a research taking minutes is skipped by the next tick
+  rather than double-spawned.
+- a `pending` marker older than **15 minutes** is treated as a crashed research
+  and retried
+- **2 attempts**. A first `null` just re-queues the item; once the budget is
+  spent the item goes to `parkOrSurface(item, verdict, null)` — surfaced for the
+  operator, not retried forever.
+- on success the researched string goes to `parkOrSurface(item, verdict, draft)`,
+  which owns every tier/gate decision from there.
+
+`needs-draft` items count as **in flight** for the briefing (`watching`), never
+as a "needs you" decision — there is nothing for the operator to decide yet.
+
+## ReplyDraftService — researched replies
+
+**File:** `apps/api/src/channels/reply-draft/reply-draft.service.ts`
+
+`research(item): Promise<string | null>` produces the concrete answer a reply
+draft is allowed to carry. It resolves the item's project to a local repo
+(`ProjectsStorageService.list()` + `ProjectLocalService.resolveForRun()`) and
+spawns a one-shot `claude -p` **inside that repo** so a question like "how does
+X work?" is answered from the code rather than guessed.
+
+It returns `null` on **every** no-answer path — the `NO_ANSWER` sentinel, a
+timeout, a spawn failure, empty output, a missing `projectId`, an unresolvable
+repo. `null` means notify-only; it never degrades into a courtesy phrase (see
+_No filler drafts_ above).
+
+### Security posture of the research pass
+
+The prompt carries **untrusted inbound text** (a Jira comment) into a process
+running inside the operator's own repo, so the tool grant is the security
+boundary, not a convenience setting. The spawn is scoped to:
+
+```
+--permission-mode dontAsk
+--allowedTools Read(<cwd>/**) Grep(<cwd>/**) Glob(<cwd>/**)
+--disallowedTools Bash WebFetch WebSearch Write Edit Agent
+--safe-mode
+```
+
+Verified empirically against Claude CLI 2.1.245, with a control run proving the
+scoping is what closes the hole:
+
+- Out-of-repo `Grep`/`Read`, `../` traversal, and **symlinks pointing outside
+  the repo** (file _and_ directory) are all denied — the CLI matches on
+  realpath, not on path text.
+- In-repo `Read`/`Grep` still succeed, so legitimate research is intact.
+- The same argv with an **unscoped** `--allowedTools Read Grep Glob` leaks a
+  credential from outside the repo verbatim into the result body. That is the
+  threat model: crafted comment → secret in the draft → operator approves →
+  posted under their own name.
+- An unknown flag on a future CLI fails **closed** (exit 1 → rejected spawn →
+  `null` → notify-only).
+
+Two properties are easy to get wrong and worth stating explicitly:
+
+- `--disallowedTools` is **load-bearing, not belt-and-suspenders.** The CLI's
+  own denial text coaches the model to route around a block "using other tools
+  … e.g. using `head`"; only denying `Bash` closes that.
+- Under `dontAsk`, `--allowedTools` is a **permission list, not a toolset
+  filter.** Tools absent from it are still present and must be denied by name.
+
+**When adding a tool to this call site, deny by default.** The researcher needs
+to read one repo and nothing else.
 
 ## Mandate system
 

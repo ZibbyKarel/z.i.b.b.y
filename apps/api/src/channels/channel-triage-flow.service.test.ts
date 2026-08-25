@@ -155,6 +155,26 @@ describe("ChannelTriageFlowService", () => {
     reason: "s",
   };
 
+  /**
+   * The real two-stage path: `handle()` triages and stops at `needs-draft`, then the
+   * reply-draft sweeper hands the researched draft (or null) to `parkOrSurface()`.
+   * Every reply-bearing assertion below goes through this, because that is the only
+   * order in which the tier/gate decision ever sees a draft.
+   */
+  async function researched(
+    flow: ChannelTriageFlowService,
+    input: ChannelItem,
+    draft: string | null,
+  ): Promise<ChannelItem> {
+    const pending = await flow.handle(input);
+    // The invariant that makes deferral safe: nothing is sendable while it waits.
+    expect(pending.state).toBe("needs-draft");
+    expect(pending.approvalId).toBeUndefined();
+    expect(send).not.toHaveBeenCalled();
+    expect(requestApproval).not.toHaveBeenCalled();
+    return flow.parkOrSurface(pending, pending.triage, draft);
+  }
+
   it("Tier 1: dispatches a task with enveloped text and marks the item handled", async () => {
     const flow = makeFlow({ verdict: bug });
     const out = await flow.handle(item({ text: "secret-payload" }));
@@ -233,18 +253,41 @@ describe("ChannelTriageFlowService", () => {
     expect(createTask.mock.calls[0]![2]).toBe("acme-app");
   });
 
-  it("Tier 2 + reply mandate + gate notify: sends the draft and persists the reply", async () => {
+  // ---- The reply path: research first, THEN the tier/gate decision -------------
+
+  it("handle() defers every reply-bearing item to needs-draft — no approval, no send", async () => {
     const flow = makeFlow({ verdict: question, decision: "notify" });
     const out = await flow.handle(item());
+    expect(out.state).toBe("needs-draft");
+    expect(out.approvalId).toBeUndefined();
+    // Tier 2 does NOT fire here: there is nothing to send yet.
+    expect(send).not.toHaveBeenCalled();
+    expect(requestApproval).not.toHaveBeenCalled();
+  });
+
+  it("no researched draft → the item surfaces for the operator with NO approval (no filler)", async () => {
+    const flow = makeFlow({ verdict: question, decision: "notify" });
+    const out = await researched(flow, item(), null);
+    expect(out.state).toBe("triaged");
+    expect(out.approvalId).toBeUndefined();
+    expect(requestApproval).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+    // Nothing courtesy-shaped was written onto the verdict either.
+    expect(out.triage?.suggestedReply).toBeUndefined();
+  });
+
+  it("Tier 2 + reply mandate + gate notify: sends the RESEARCHED draft and persists the reply", async () => {
+    const flow = makeFlow({ verdict: question, decision: "notify" });
+    const out = await researched(flow, item(), "Backoff doubles — runner-core.ts:88.");
     expect(send).toHaveBeenCalledTimes(1);
-    expect(send.mock.calls[0]![3]).toBe("here you go");
+    expect(send.mock.calls[0]![3]).toBe("Backoff doubles — runner-core.ts:88.");
     expect(out.state).toBe("handled");
-    expect(out.reply?.text).toBe("here you go");
+    expect(out.reply?.text).toBe("Backoff doubles — runner-core.ts:88.");
   });
 
   it("Tier 2 with reply mandate OFF parks an approval instead", async () => {
     const flow = makeFlow({ verdict: question, mandate: MANDATE_NO_REPLY });
-    const out = await flow.handle(item());
+    const out = await researched(flow, item(), "the real answer");
     expect(send).not.toHaveBeenCalled();
     expect(requestApproval).toHaveBeenCalledTimes(1);
     expect(out.state).toBe("triaged");
@@ -253,33 +296,35 @@ describe("ChannelTriageFlowService", () => {
 
   it("Tier 2 hardened to ask parks an approval", async () => {
     const flow = makeFlow({ verdict: question, decision: "ask" });
-    const out = await flow.handle(item());
+    const out = await researched(flow, item(), "the real answer");
     expect(send).not.toHaveBeenCalled();
     expect(out.state).toBe("triaged");
   });
 
   it("a deny gate ignores the item", async () => {
     const flow = makeFlow({ verdict: question, decision: "deny" });
-    const out = await flow.handle(item());
+    const out = await researched(flow, item(), "the real answer");
     expect(out.state).toBe("ignored");
     expect(send).not.toHaveBeenCalled();
   });
 
   it("Tier 3 parks a channel approval carrying the draft", async () => {
     const flow = makeFlow({ verdict: scope });
-    const out = await flow.handle(item());
+    const out = await researched(flow, item(), "the real answer");
     expect(requestApproval).toHaveBeenCalledTimes(1);
     expect(requestApproval.mock.calls[0]![0]).toMatchObject({
       kind: "channel",
       runId: "team/C1-100",
     });
+    expect(requestApproval.mock.calls[0]![0].detail).toContain("the real answer");
     expect(requestApproval.mock.calls[0]![0]).not.toHaveProperty("sourceUrl");
     expect(out.state).toBe("triaged");
+    expect(out.triage?.suggestedReply).toBe("the real answer");
   });
 
   it("Tier 3 forwards the item's url as the approval's sourceUrl when present (Phase 127)", async () => {
     const flow = makeFlow({ verdict: scope });
-    await flow.handle(item({ url: "https://acme.slack.com/archives/C1/p100" }));
+    await researched(flow, item({ url: "https://acme.slack.com/archives/C1/p100" }), "an answer");
     expect(requestApproval.mock.calls[0]![0]).toMatchObject({
       sourceUrl: "https://acme.slack.com/archives/C1/p100",
     });
@@ -287,7 +332,7 @@ describe("ChannelTriageFlowService", () => {
 
   it("resume sends the reviewed draft + handles; cancel ignores; missing item tolerated", async () => {
     const flow = makeFlow({ verdict: scope });
-    await flow.handle(item()); // parks → triaged with the draft on the verdict
+    await researched(flow, item(), "an answer"); // parks → triaged with the draft
     await flow.resume("team/C1-100");
     expect(send).toHaveBeenCalledTimes(1);
     expect((await store.get("team", "C1-100"))?.state).toBe("handled");
@@ -299,6 +344,18 @@ describe("ChannelTriageFlowService", () => {
 
     // missing item: resolves without throwing
     await expect(flow.resume("team/none")).resolves.toBeUndefined();
+  });
+
+  it("resume fails CLOSED when the item carries no draft — never substitutes filler", async () => {
+    const flow = makeFlow({ verdict: scope });
+    // An approval can only be created WITH a draft, so a draft-less item here means it
+    // was rewritten underneath us. Nothing may be sent.
+    const draftless: TriageVerdict = { ...scope };
+    delete draftless.suggestedReply;
+    await store.update(item({ id: "C1-300", state: "triaged", triage: draftless }));
+    await flow.resume("team/C1-300");
+    expect(send).not.toHaveBeenCalled();
+    expect((await store.get("team", "C1-300"))?.state).toBe("triaged");
   });
 
   it("read-only integration (calendar): item is noted as handled — no approval, no task, no send", async () => {
@@ -371,7 +428,11 @@ describe("ChannelTriageFlowService", () => {
       autonomy_policy: { vip_escalation: true },
     };
     const flow = makeFlow({ verdict: bug, projects: [project] });
-    const out = await flow.handle(item({ text: "alpha bug report", from: "alice@corp.com" }));
+    const out = await researched(
+      flow,
+      item({ text: "alpha bug report", from: "alice@corp.com" }),
+      "an answer",
+    );
     // Tier-1 dispatch was suppressed; approval queued instead.
     expect(createTask).not.toHaveBeenCalled();
     expect(requestApproval).toHaveBeenCalledTimes(1);
@@ -387,7 +448,11 @@ describe("ChannelTriageFlowService", () => {
       autonomy_policy: { respond_as: "draft_only" },
     };
     const flow = makeFlow({ verdict: question, projects: [project] });
-    const out = await flow.handle(item({ text: "beta question", integrationId: "team" }));
+    const out = await researched(
+      flow,
+      item({ text: "beta question", integrationId: "team" }),
+      "an answer",
+    );
     expect(send).not.toHaveBeenCalled();
     expect(requestApproval).toHaveBeenCalledTimes(1);
     expect(out.state).toBe("triaged");
@@ -404,11 +469,11 @@ describe("ChannelTriageFlowService", () => {
   it("graduated (team, request) + confident T3 verdict → promoted to Tier-2 auto-send, ledger sent-auto", async () => {
     const herald = makeHerald(true);
     const flow = makeFlow({ verdict: scope, herald, decision: "notify" });
-    const out = await flow.handle(item());
+    const out = await researched(flow, item(), "the researched answer");
     expect(send).toHaveBeenCalledTimes(1);
     expect(requestApproval).not.toHaveBeenCalled();
     expect(out.state).toBe("handled");
-    expect(out.reply?.text).toBe("let me check");
+    expect(out.reply?.text).toBe("the researched answer");
     // The promotion is audited on the verdict + recorded to the ledger as sent-auto.
     expect(out.triage?.tier).toBe(2);
     expect(out.triage?.reason).toContain("graduated");
@@ -417,10 +482,19 @@ describe("ChannelTriageFlowService", () => {
     );
   });
 
+  it("a graduated pair with NO researched answer still sends nothing (no filler auto-send)", async () => {
+    const herald = makeHerald(true);
+    const flow = makeFlow({ verdict: scope, herald, decision: "notify" });
+    const out = await researched(flow, item(), null);
+    expect(send).not.toHaveBeenCalled();
+    expect(requestApproval).not.toHaveBeenCalled();
+    expect(out.state).toBe("triaged");
+  });
+
   it("a non-graduated identical verdict parks unchanged", async () => {
     const herald = makeHerald(false);
     const flow = makeFlow({ verdict: scope, herald });
-    const out = await flow.handle(item());
+    const out = await researched(flow, item(), "an answer");
     expect(send).not.toHaveBeenCalled();
     expect(requestApproval).toHaveBeenCalledTimes(1);
     expect(out.state).toBe("triaged");
@@ -430,7 +504,7 @@ describe("ChannelTriageFlowService", () => {
     const lowConf: TriageVerdict = { ...scope, confidence: 0.3 };
     const herald = makeHerald(true);
     const flow = makeFlow({ verdict: lowConf, herald });
-    const out = await flow.handle(item());
+    const out = await researched(flow, item(), "an answer");
     expect(send).not.toHaveBeenCalled();
     expect(requestApproval).toHaveBeenCalledTimes(1);
     expect(out.state).toBe("triaged");
@@ -446,17 +520,19 @@ describe("ChannelTriageFlowService", () => {
     const herald = makeHerald(true);
     // A Tier-2 verdict forced to T3 by policy — graduation must not undo it.
     const flow = makeFlow({ verdict: question, herald, projects: [project] });
-    const out = await flow.handle(item({ text: "beta question" }));
+    const out = await researched(flow, item({ text: "beta question" }), "an answer");
     expect(send).not.toHaveBeenCalled();
     expect(requestApproval).toHaveBeenCalledTimes(1);
     expect(out.state).toBe("triaged");
+    // The policy escalation is re-derived at the post-research stage from the item's
+    // own projectId/vip stamp — graduation is never even consulted.
     expect(herald.isGraduated).not.toHaveBeenCalled();
   });
 
   it("invariants c+d: a hardened channel-reply=ask on a graduated channel still parks (gate wins)", async () => {
     const herald = makeHerald(true);
     const flow = makeFlow({ verdict: scope, herald, decision: "ask" });
-    const out = await flow.handle(item());
+    const out = await researched(flow, item(), "an answer");
     expect(send).not.toHaveBeenCalled();
     expect(requestApproval).toHaveBeenCalledTimes(1);
     expect(out.state).toBe("triaged");
@@ -476,7 +552,7 @@ describe("ChannelTriageFlowService", () => {
   it("a parked draft records a pending ledger proposal; resume records approved; cancel rejected", async () => {
     const herald = makeHerald(false);
     const flow = makeFlow({ verdict: scope, herald });
-    await flow.handle(item());
+    await researched(flow, item(), "an answer");
     expect(herald.recordProposal).toHaveBeenCalledWith(
       expect.objectContaining({ outcome: "pending", approvalId: "appr_1", tier: 3 }),
     );

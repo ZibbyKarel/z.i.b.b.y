@@ -15,6 +15,9 @@ import { ChannelTriageFlowService } from "./channel-triage-flow.service";
 import { CHANNEL_TRIAGE_FLOW, ChannelWatcherService } from "./channel-watcher.service";
 import { ChannelsController } from "./channels.controller";
 import { JiraIssueFlowService } from "./jira-issue-flow.service";
+import { ReplyDraftSweeperService } from "./reply-draft/reply-draft-sweeper.service";
+import { REPLY_DRAFT_SWEEPER } from "./reply-draft/reply-draft-sweeper.token";
+import { ReplyDraftService } from "./reply-draft/reply-draft.service";
 import { SourceLinkBackfillService } from "./source-link-backfill.service";
 import { ClaudeCliTriager } from "./triage/claude-cli-triager";
 import { KeywordTriager } from "./triage/keyword-triager";
@@ -57,6 +60,11 @@ export function resolveChannelsDir(): string {
     TriageService,
     ChannelTriageFlowService,
     { provide: CHANNEL_TRIAGE_FLOW, useExisting: ChannelTriageFlowService },
+    ReplyDraftService,
+    ReplyDraftSweeperService,
+    // The flow resolves the sweeper through this token (lazily, via ModuleRef) so the
+    // two-way dependency never becomes a two-way import — see the token's docblock.
+    { provide: REPLY_DRAFT_SWEEPER, useExisting: ReplyDraftSweeperService },
     ChannelWatcherService,
     JiraIssueFlowService,
     SourceLinkBackfillService,

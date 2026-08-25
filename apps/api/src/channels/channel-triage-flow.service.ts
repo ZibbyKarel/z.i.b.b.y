@@ -1,4 +1,5 @@
 import { Injectable, type OnModuleInit, Optional } from "@nestjs/common";
+import { ModuleRef } from "@nestjs/core";
 import type {
   ChannelItem,
   Decision,
@@ -27,6 +28,10 @@ import { ChannelItemStore } from "./channel-item.store";
 import type { ChannelTriageFlow } from "./channel-watcher.service";
 import { JiraIssueFlowService } from "./jira-issue-flow.service";
 import { NOTIFY_ONLY_KINDS } from "./notify-only-kinds";
+import {
+  REPLY_DRAFT_SWEEPER,
+  type ReplyDraftSweeper,
+} from "./reply-draft/reply-draft-sweeper.token";
 import { envelopeInbound } from "../shared/text/untrusted-envelope";
 import { TRIAGE_CONFIDENCE_FLOOR, TriageService } from "./triage/triage.service";
 
@@ -36,22 +41,27 @@ const CHANNEL_REPLY_ACTION = "channel-reply";
 /** Strength ordering, mirroring the gate evaluator — a higher rank is stricter. */
 const DECISION_RANK: Record<Decision, number> = { allow: 0, notify: 1, ask: 2, deny: 3 };
 
-/** A default draft when triage produced none (kept generic; never echoes raw text into a prompt). */
-const DEFAULT_DRAFT = "Thanks for reaching out — I'll follow up shortly.";
-
 /**
  * The tier executor (the heart of 5.3) AND the kind-"channel" {@link ResumableRunner}.
  * For each `new` item it triages, records the verdict, and acts by tier within the
- * mandate (decision 12):
+ * mandate (decision 12) — but in TWO stages, because a reply must be researched
+ * before anyone can decide what to do with it:
  *
- * - Tier 1 (actionable, mandate.dispatch): dispatch a delivery task through the
- *   normal scheduler — silent (Tier 1 is logged, not announced) — and reconcile the
- *   task's outcome back onto the item once the run finishes.
- * - Tier 2 (mandate.reply + the channel-reply gate resolves below `ask`): send the
- *   drafted reply and persist it. A hardened `ask` rule or mandate.reply=false falls
- *   through to the Tier-3 path; a `deny` ignores the item.
- * - Tier 3 (or low confidence, or gated to `ask`): park a kind-"channel" approval
- *   carrying the draft; the operator approves to send, rejects to ignore.
+ * - Stage 1, {@link handle}: triage, engagement attribution, Tier-1 dispatch, and the
+ *   gated Jira bug filing. Everything reply-bearing stops at state `needs-draft` —
+ *   an item with NO approval record, so nothing about it is sendable while it waits.
+ * - Stage 2, {@link parkOrSurface}: run by `ReplyDraftSweeperService` once research
+ *   finished. Only here does the tier/gate decision happen:
+ *   - Tier 2 (or a Herald-graduated Tier 3) + mandate.reply + the channel-reply gate
+ *     resolving below `ask`: send the researched reply and persist it. A hardened
+ *     `ask` rule or mandate.reply=false falls through to parking; a `deny` ignores.
+ *   - Tier 3 (or low confidence, or gated to `ask`): park a kind-"channel" approval
+ *     carrying the researched draft; the operator approves to send, rejects to ignore.
+ *   - No draft at all: surface the item for the operator with NO approval. There is
+ *     no filler text anywhere in this flow — see `channels/README.md`.
+ *
+ * The ordering is load-bearing: deciding the tier before the draft exists would let
+ * Tier 2 fire with nothing to send.
  *
  * Law 4 throughout: item text enters a task/prompt ONLY inside {@link envelopeInbound};
  * the title is built from operator-owned fields, never the message body.
@@ -59,6 +69,8 @@ const DEFAULT_DRAFT = "Thanks for reaching out — I'll follow up shortly.";
 @Injectable()
 export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRunner, OnModuleInit {
   private readonly log: ScopedLogger;
+  /** Memoized lazy resolution of the reply-draft sweeper — see {@link sweepDrafts}. */
+  private sweeper?: ReplyDraftSweeper;
 
   constructor(
     private readonly triage: TriageService,
@@ -85,6 +97,12 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     // graduated (integrationId, category) pair promotes a confident, naturally-T3
     // verdict to the Tier-2 path (which still runs the gate — never a direct send).
     @Optional() private readonly herald?: HeraldService,
+    // The reply-draft sweeper depends on THIS service (it drives parkOrSurface after
+    // research), so it cannot be constructor-injected here without a DI cycle. It is
+    // resolved lazily instead — the same idiom ChannelWatcherService uses for its
+    // flow seam. Optional so the unit tests' manual construction still works; absent
+    // moduleRef simply means `sweepDrafts()` is a no-op.
+    @Optional() private readonly moduleRef?: ModuleRef,
   ) {
     this.log = logger.child(ChannelTriageFlowService.name);
   }
@@ -205,39 +223,36 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     }
 
     const dispatchAllowed = this.allowed(mandate, item.integrationId, "dispatch");
-    const replyAllowed = this.allowed(mandate, item.integrationId, "reply");
 
     if (effectiveVerdict.tier === 1 && effectiveVerdict.actionable && dispatchAllowed) {
       return this.dispatchTier1(triaged, effectiveVerdict);
     }
-    if (effectiveVerdict.tier === 2 && effectiveVerdict.actionable) {
-      return this.handleTier2(triaged, effectiveVerdict, replyAllowed);
-    }
-    // NS2 F6a — evidence-based graduation: a confident, NATURALLY-Tier-3 verdict on
-    // a graduated (integrationId, category) pair is promoted to the Tier-2 path.
-    // Never on `forceT3` (the project policy escalation stands), never below the
-    // confidence floor (the low-confidence escalation stands — correction #3), and
-    // ALWAYS through handleTier2, so evaluateReply's gate still runs: a hardened
-    // `ask` rule still parks. Best-effort — a graduation read failure just parks.
-    if (
-      this.herald &&
-      !forceT3 &&
-      effectiveVerdict.tier === 3 &&
-      effectiveVerdict.actionable &&
-      effectiveVerdict.confidence >= TRIAGE_CONFIDENCE_FLOOR &&
-      (await this.herald
-        .isGraduated(item.integrationId, effectiveVerdict.category)
-        .catch(() => false))
-    ) {
-      const promoted: TriageVerdict = {
-        ...effectiveVerdict,
-        tier: 2,
-        reason: `${effectiveVerdict.reason} (graduated: Tier-2 auto-reply)`,
-      };
-      return this.handleTier2({ ...triaged, triage: promoted }, promoted, replyAllowed);
-    }
-    // Tier 3, or a non-actionable/edge case → surface for the operator.
-    return this.parkForApproval(triaged, effectiveVerdict);
+
+    // Every reply-bearing path now defers: the draft is researched by
+    // ReplyDraftSweeperService, and the tier/gate decision runs afterwards in
+    // parkOrSurface(). No approval exists in `needs-draft`, so nothing is sendable.
+    // `forceT3` is intentionally NOT consulted here — it is already baked into
+    // `effectiveVerdict.tier`, which is what the post-research stage reads.
+    return this.awaitDraft(triaged, effectiveVerdict);
+  }
+
+  /**
+   * Park an item at `needs-draft` — the waiting room between triage and the
+   * tier/gate decision. Deliberately creates NO approval: an item here is not
+   * sendable by any path, which is what makes the deferral safe.
+   */
+  private async awaitDraft(item: ChannelItem, verdict: TriageVerdict): Promise<ChannelItem> {
+    const pending: ChannelItem = {
+      ...item,
+      state: "needs-draft",
+      triage: stripUnresearchedReply(verdict),
+    };
+    await this.store.update(pending);
+    this.log.info("channel item awaiting reply research", {
+      itemId: item.id,
+      tier: verdict.tier,
+    });
+    return pending;
   }
 
   // ---- Notify-only channels (email): surface, never act -----------------------
@@ -349,48 +364,133 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
       this.log.info("channel item dispatched (tier 1)", { itemId: item.id, taskId });
       return handled;
     } catch (err) {
-      // Empty catalog etc. — leave it for the operator rather than dropping it.
-      this.log.warn("tier-1 dispatch failed; parking for approval", {
+      // Empty catalog etc. — leave it for the reply path rather than dropping it:
+      // research may still produce a real answer, and if it cannot, the item
+      // surfaces for the operator. Never a filler draft behind an approval.
+      this.log.warn("tier-1 dispatch failed; deferring to the reply-draft path", {
         itemId: item.id,
         error: (err as Error).message,
       });
-      return this.parkForApproval(item, verdict);
+      return this.awaitDraft(item, verdict);
     }
   }
 
-  // ---- Tier 2: reply if the mandate + gate allow ------------------------------
+  // ---- Post-research: the tier/gate decision ----------------------------------
 
-  private async handleTier2(
+  /**
+   * The post-research decision: park a Tier-3 approval carrying `draft`, auto-send
+   * it when the mandate + gate + tier allow, or — when `draft` is null — surface the
+   * item for the operator with NO approval at all.
+   *
+   * Called by ReplyDraftSweeperService once research finishes, never from handle():
+   * the tier/gate decision must see the finished draft, or Tier-2 would fire with
+   * nothing to send.
+   */
+  async parkOrSurface(
     item: ChannelItem,
-    verdict: TriageVerdict,
-    replyAllowed: boolean,
+    verdict: TriageVerdict | undefined,
+    draft: string | null,
   ): Promise<ChannelItem> {
-    if (!replyAllowed) return this.parkForApproval(item, verdict);
+    if (!verdict) return this.surfaceWithoutDraft(item);
+    if (draft === null) return this.surfaceWithoutDraft(item);
 
-    const decision = await this.evaluateReply(item.integrationId, item.kind);
-    if (decision === "deny") {
-      const ignored: ChannelItem = { ...item, state: "ignored" };
-      await this.store.update(ignored);
-      this.log.info("channel reply denied by gate", { itemId: item.id });
-      return ignored;
+    const withDraft: ChannelItem = { ...item, triage: { ...verdict, suggestedReply: draft } };
+    const mandate = await this.mandate.read();
+    const replyAllowed = this.allowed(mandate, item.integrationId, "reply");
+
+    // NS2 F6a — evidence-based graduation: a confident, NATURALLY-Tier-3 verdict on a
+    // graduated (integrationId, category) pair is promoted to the Tier-2 path. Never
+    // when the project policy forced Tier 3 (that escalation stands — re-derived from
+    // the item here because this stage runs a tick or more after triage), never below
+    // the confidence floor, and ALWAYS through the gate below: a hardened `ask` rule
+    // still parks. Best-effort — a graduation read failure just parks.
+    const graduated =
+      verdict.tier === 3 &&
+      verdict.actionable &&
+      verdict.confidence >= TRIAGE_CONFIDENCE_FLOOR &&
+      this.herald !== undefined &&
+      !(await this.forcedTier3(item)) &&
+      (await this.herald.isGraduated(item.integrationId, verdict.category).catch(() => false));
+
+    const effective: TriageVerdict = graduated
+      ? { ...verdict, tier: 2, reason: `${verdict.reason} (graduated: Tier-2 auto-reply)` }
+      : verdict;
+
+    // Tier 2, or a graduated Tier-3 pair, may auto-send — still through the gate.
+    if ((verdict.tier === 2 || graduated) && verdict.actionable && replyAllowed) {
+      const decision = await this.evaluateReply(item.integrationId, item.kind);
+      if (decision === "deny") {
+        const ignored: ChannelItem = { ...withDraft, state: "ignored" };
+        await this.store.update(ignored);
+        this.log.info("channel reply denied by gate", { itemId: item.id });
+        return ignored;
+      }
+      if (decision !== "ask") {
+        const sent = await this.sendReply(
+          { ...withDraft, triage: { ...effective, suggestedReply: draft } },
+          draft,
+        );
+        // NS2 F6a — record the gated auto-send in Herald's ledger (best-effort: a
+        // ledger failure never blocks the tick).
+        this.recordLedgerProposal(sent, effective, { tier: 2, outcome: "sent-auto" });
+        return sent;
+      }
     }
-    if (decision === "ask") {
-      // Operator hardened channel-reply to ask → park instead of sending.
-      return this.parkForApproval(item, verdict);
-    }
-    // allow / notify → send.
-    const sent = await this.sendReply(item, this.draftOf(verdict));
-    // NS2 F6a — record the Tier-2 gated auto-send in Herald's ledger (best-effort:
-    // a ledger failure never blocks the triage tick).
-    this.recordLedgerProposal(sent, verdict, { tier: 2, outcome: "sent-auto" });
-    return sent;
+
+    return this.parkForApproval(withDraft, verdict, draft);
+  }
+
+  /**
+   * No concrete answer: the item is surfaced for the operator and NO `channel-reply`
+   * approval is created. A courtesy phrase behind an approval costs the operator a
+   * decision and sends noise under their name — see `channels/README.md`.
+   */
+  private async surfaceWithoutDraft(item: ChannelItem): Promise<ChannelItem> {
+    const surfaced: ChannelItem = {
+      ...item,
+      state: "triaged",
+      ...(item.triage ? { triage: stripUnresearchedReply(item.triage) } : {}),
+    };
+    await this.store.update(surfaced);
+    this.log.info("channel item surfaced without a draft (needs the operator)", {
+      itemId: item.id,
+    });
+    void this.activity.record({
+      kind: "channel-needs-attention",
+      // Operator-owned fields only — the untrusted text rides on the item (Law 4).
+      summary: `${item.kind} item from ${item.integrationId} needs your answer`,
+      refs: {
+        itemId: item.id,
+        integrationId: item.integrationId,
+        ...(item.projectId ? { projectId: item.projectId } : {}),
+      },
+    });
+    return surfaced;
+  }
+
+  /**
+   * Re-derive the project-policy Tier-3 escalation from the stored item. `handle()`
+   * computed it a tick (or a restart) earlier and folded it into the verdict's tier;
+   * the graduation check needs to know it happened, so it is recomputed from the
+   * item's own `projectId` + `vip` stamp rather than smuggled through the verdict.
+   */
+  private async forcedTier3(item: ChannelItem): Promise<boolean> {
+    if (!item.projectId) return false;
+    const projects = await this.projects.list().catch(() => []);
+    const project = projects.find((p) => p.id === item.projectId);
+    if (!project) return false;
+    return this.forcesTier3(project, item.vip === true);
   }
 
   // ---- Tier 3 / fallback: park a kind-"channel" approval ----------------------
 
-  private async parkForApproval(item: ChannelItem, verdict: TriageVerdict): Promise<ChannelItem> {
+  /** Park a Tier-3 `channel` approval carrying the researched draft. */
+  private async parkForApproval(
+    item: ChannelItem,
+    verdict: TriageVerdict,
+    draft: string,
+  ): Promise<ChannelItem> {
     const integration = await this.integrations.get(item.integrationId).catch(() => null);
-    const draft = this.draftOf(verdict);
     const approval = await this.approvals.requestApproval({
       runId: `${item.integrationId}/${item.id}`,
       kind: "channel",
@@ -436,7 +536,14 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
       this.log.warn("channel approval resume: item missing", { runId });
       return;
     }
-    await this.sendReply(item, this.draftOf(item.triage));
+    const draft = this.draftOf(item.triage);
+    if (!draft) {
+      // Defensive: an approval is only ever created WITH a draft, so this means the
+      // item was rewritten underneath us. Fail closed — never send filler.
+      this.log.warn("channel approval resume: no draft on the item, not sending", { runId });
+      return;
+    }
+    await this.sendReply(item, draft);
     // NS2 F6a — the parked draft was approved UNEDITED and sent: patch the ledger
     // entry (this is the graduation streak's only positive signal). Best-effort.
     this.recordLedgerDecision(item, "approved");
@@ -473,6 +580,19 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
         this.log.info("channel item outcome reconciled", { itemId: item.id, taskId: item.taskId });
       }
     }
+  }
+
+  /**
+   * Delegates to the reply-draft sweeper (the watcher calls this once per tick).
+   * The sweeper is resolved lazily through {@link REPLY_DRAFT_SWEEPER}, not
+   * constructor-injected: it depends on this service, so injecting it here would be
+   * a DI cycle. Absent (a manually-constructed instance in a unit test) → no-op.
+   */
+  async sweepDrafts(): Promise<void> {
+    if (!this.sweeper && this.moduleRef) {
+      this.sweeper = this.moduleRef.get<ReplyDraftSweeper>(REPLY_DRAFT_SWEEPER, { strict: false });
+    }
+    await this.sweeper?.sweep();
   }
 
   // ---- helpers ----------------------------------------------------------------
@@ -568,13 +688,29 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     return mandate.channels[integrationId]?.[key] ?? mandate.defaults[key];
   }
 
-  private draftOf(verdict: TriageVerdict | undefined): string {
-    return verdict?.suggestedReply?.trim() || DEFAULT_DRAFT;
+  /** The reviewed draft, or null. There is NO fallback text — see channels/README.md. */
+  private draftOf(verdict: TriageVerdict | undefined): string | null {
+    const draft = verdict?.suggestedReply?.trim();
+    return draft && draft.length > 0 ? draft : null;
   }
 
   private mandateSummary(mandate: Mandate, integrationId: string): string {
     return `dispatch=${this.allowed(mandate, integrationId, "dispatch")}, reply=${this.allowed(mandate, integrationId, "reply")}`;
   }
+}
+
+/**
+ * Drop a triager-proposed `suggestedReply`. The LLM triager is still ASKED for one
+ * (the field is in its output contract), but it classifies from the message text
+ * alone — it has not read a line of the repository, so anything it proposes is a
+ * guess, i.e. exactly the filler this flow refuses to put behind an approval. Only
+ * `ReplyDraftService`'s researched answer is ever written back as a draft, so a
+ * verdict that has not been through research must not carry reply text at all.
+ */
+function stripUnresearchedReply(verdict: TriageVerdict): TriageVerdict {
+  const classified: TriageVerdict = { ...verdict };
+  delete classified.suggestedReply;
+  return classified;
 }
 
 /** A global gate rule projected to the evaluator's `GateRule` shape (agent-source, unlocked). */

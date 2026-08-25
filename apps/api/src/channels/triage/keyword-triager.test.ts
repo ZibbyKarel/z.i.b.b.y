@@ -10,15 +10,17 @@ describe("KeywordTriager", () => {
     expect(v.suggestedTaskText).toBeTruthy();
   });
 
-  it("routes a client question to Tier 2 with a reply draft", () => {
+  it("routes a client question to Tier 2 and proposes NO reply text", () => {
     const v = t.score("Can you share the latest status?");
     expect(v).toMatchObject({ actionable: true, tier: 2, category: "question" });
-    expect(v.suggestedReply).toBeTruthy();
+    // A regex cannot know the answer; a draft is researched later or not offered.
+    expect(v.suggestedReply).toBeUndefined();
   });
 
-  it("routes a scope/price request to Tier 3", () => {
+  it("routes a scope/price request to Tier 3 and proposes NO reply text", () => {
     const v = t.score("Tady je nabídka a smlouva s deadline na příští týden");
     expect(v).toMatchObject({ actionable: true, tier: 3, category: "request" });
+    expect(v.suggestedReply).toBeUndefined();
   });
 
   it("routes gibberish to Tier 3 with low confidence (unknown → higher tier)", () => {

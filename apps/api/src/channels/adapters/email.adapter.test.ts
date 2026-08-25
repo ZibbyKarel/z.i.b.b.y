@@ -155,7 +155,9 @@ describe("EmailChannelAdapter", () => {
       close,
     };
     const adapter = new EmailChannelAdapter(() => client);
-    await expect(adapter.poll(email, { password: "pw" }, undefined)).rejects.toThrow("mailbox gone");
+    await expect(adapter.poll(email, { password: "pw" }, undefined)).rejects.toThrow(
+      "mailbox gone",
+    );
     expect(close).toHaveBeenCalledOnce();
   });
 

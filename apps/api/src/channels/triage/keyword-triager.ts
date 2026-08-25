@@ -18,6 +18,11 @@ const QUESTION_RE =
  * Its terminal rule is the precise dual of the classifier's orchestrator rule:
  * anything it can't classify is treated as ACTIONABLE at TIER 3 with low
  * confidence — "unknown → higher tier" — never silently dropped.
+ *
+ * It NEVER proposes reply text. A regex knows the shape of a message, not its
+ * answer, so anything it could put in `suggestedReply` would be a courtesy phrase —
+ * exactly what `channels/README.md` forbids. Classification is this triager's whole
+ * job; drafting belongs to `ReplyDraftService`, which reads the repo first.
  */
 @Injectable()
 export class KeywordTriager implements TriageRouter {
@@ -43,7 +48,6 @@ export class KeywordTriager implements TriageRouter {
         actionable: true,
         tier: 3,
         category: "request",
-        suggestedReply: "Thanks for the details — I'll review and get back to you shortly.",
         confidence: 0.6,
         reason: "Matched scope/commercial/commitment terms — a decision that commits the operator.",
       };
@@ -53,7 +57,6 @@ export class KeywordTriager implements TriageRouter {
         actionable: true,
         tier: 2,
         category: "question",
-        suggestedReply: "Thanks for reaching out — here's where things stand.",
         confidence: 0.7,
         reason: "Matched an interrogative shape.",
       };
