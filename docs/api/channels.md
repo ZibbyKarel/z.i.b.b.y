@@ -137,10 +137,24 @@ worth reading if every row is a real answer awaiting a yes. Binds every channel.
 - Cursor = the most recent issue `updated`, independent of which comments qualified.
   id = `jira-<KEY>-c<commentId>`; `externalRef.messageId` stays the **issue key**
   (unchanged — `send()` replies by posting a comment on the issue, not on a comment).
-- `text` = summary + issue description + comment body, truncated to the 4500-char
-  contract cap (the comment claims its budget first, the description takes what's
-  left) — `ChannelItemSchema.text` is a hard `.max(4500)` and an oversized item
-  silently vanishes from `list()` on the next read.
+- **Initial sync = "from now on"** (same contract as the email adapter): a fresh
+  integration (no persisted cursor) seeds the cursor to the newest `updated` seen and
+  ingests **0** items on that first poll, rather than draining every qualifying
+  comment on every matching issue.
+- **Comment-age filter:** a comment older than the cursor is skipped even on an issue
+  that re-enters the poll window for an unrelated reason (a label edit, a
+  transition) — dedup-by-id only protects comments already stored, not the ones an
+  unrelated touch drags back through the mine-and-mentions filter for the first time.
+  A 2-minute slack window guards the boundary against JQL's minute-precision cursor.
+- `text` = summary + **comment body first, issue description second** — truncated to
+  `MAX_INBOUND_CHARS` (4000, `shared/text/untrusted-envelope.ts`), the cap the
+  downstream `sanitizeInbound()` (`channel-watcher.service.ts`) actually enforces on
+  stored text, cutting from the **end**. Both halves of the fix matter together: the
+  comment claims its truncation budget first, AND sits first in the text, so a tail
+  cut always eats the description, never the question. (Budgeting against the looser
+  `ChannelItemSchema.text` cap of 4500 previously let content past char 4000 survive
+  the adapter only to be silently cut by `sanitizeInbound` before the schema ever saw
+  it — losing the comment entirely when the description ran long.)
 - `url` (Phase 127): `${baseUrl}/browse/${key}?focusedCommentId=<commentId>` — built
   from data already in hand, no extra request.
 - Send: adds a comment on the issue (`/rest/api/3/issue/{key}/comment`)
