@@ -2,11 +2,18 @@
  * Maps the project's internal tool vocabulary (an agent's frontmatter `tools`)
  * onto Claude Code's own tool / permission-rule strings.
  *
- * The runner spawns `claude -p` under `--permission-mode dontAsk`, where only
- * tools matching the `--allowedTools` allow-list execute.
- * So the agent's declared `tools` become its precise capability scope; anything
- * it didn't ask for is denied. The same mapping feeds each subagent's `tools`
- * field in the `--agents` catalog JSON.
+ * The runner spawns `claude -p` under `--permission-mode dontAsk`, where
+ * `--allowedTools` is a PERMISSION list, not a toolset filter: a tool matching it
+ * runs without prompting, but **omission is not denial** — a tool left off the
+ * list is still present in the session and still executes. Verified empirically on
+ * this branch; see the explanation at
+ * `channels/reply-draft/reply-draft.service.ts:181-188` for the transcripts and the
+ * `--disallowedTools` conclusion drawn from them.
+ *
+ * So the agent's declared `tools` are the set it is granted un-prompted, NOT a
+ * boundary on what it can reach — denying a capability takes naming it in
+ * `--disallowedTools` (or a PreToolUse hook). The same mapping feeds each
+ * subagent's `tools` field in the `--agents` catalog JSON.
  */
 
 /** Internal token → one or more Claude tool / rule strings. Keyed lower-case. */
