@@ -6,12 +6,26 @@ import type {
   TestResult,
 } from "@zibby/contracts";
 import { adfToText, collectMentionAccountIds } from "../../shared/text/adf-to-text";
+import { MAX_INBOUND_CHARS } from "../../shared/text/untrusted-envelope";
 import type { ChannelAdapter, InboundMessage, PollResult } from "./adapter";
 
-/** Mirrors `ChannelItemSchema.text`'s `.max(4500)` — exceeding it fails schema-parse. */
-const MAX_ITEM_TEXT = 4500;
-/** Room reserved for the header lines so description+comment truncation stays safe. */
+/**
+ * Room reserved for the header lines (summary + labels + blank lines) so the
+ * comment+description budget stays under {@link MAX_INBOUND_CHARS} — the cap
+ * `sanitizeInbound()` (`channel-watcher.service.ts`) actually enforces on stored
+ * text, and it cuts from the END. Budgeting against the looser `ChannelItemSchema`
+ * cap (4500) let content past char 4000 get silently dropped by `sanitizeInbound`
+ * before the schema ever saw it — see `toItem()`'s ordering for the other half.
+ */
 const TEXT_HEADROOM = 200;
+
+/**
+ * JQL time is minute-precision (see {@link toJqlTime}), so a comment created in
+ * the same minute as the cursor must not be treated as "before" it — that would
+ * drop a real question forever. A 2-minute slack window on the older side costs
+ * at most re-checking one extra minute of history.
+ */
+const CURSOR_SLACK_MS = 2 * 60 * 1000;
 
 interface JiraUser {
   accountId?: string;
@@ -61,16 +75,27 @@ function tokenOf(creds: CredentialsInput): string | null {
  * asked the operator anything (see `github.adapter.ts`'s scoped-ingestion precedent).
  * The item id is `jira-<KEY>-c<commentId>` (deterministic per comment) but
  * `externalRef.messageId` stays the ISSUE KEY, since `send()` replies by posting a
- * comment on the issue, not on a comment. Auth is Basic `base64(email:apiToken)` — the
- * email is non-secret config, the token is the credential. No method sleeps on a rate
- * limit; a failure surfaces to the watcher (which retries with backoff, M8).
+ * comment on the issue, not on a comment. A fresh integration (no persisted cursor)
+ * seeds the cursor to the newest `updated` seen and ingests ZERO items — same
+ * "initial sync = now" contract as the email adapter — and a comment predating the
+ * cursor is skipped even on an issue that re-enters the poll window for an unrelated
+ * reason (a label edit, a transition), since dedup-by-id only protects comments
+ * already stored, not ones an unrelated touch drags back through the filter for the
+ * first time. Auth is Basic `base64(email:apiToken)` — the email is non-secret
+ * config, the token is the credential. No method sleeps on a rate limit; a failure
+ * surfaces to the watcher (which retries with backoff, M8).
  */
 export class JiraChannelAdapter implements ChannelAdapter {
   readonly kind = "jira" as const;
 
   constructor(private readonly fetchImpl: typeof fetch = fetch) {}
 
-  /** Memoized operator accountId per baseUrl — ADF mentions carry accountId, not email. */
+  /**
+   * Memoized operator accountId per `integration.id` (NOT `baseUrl`) — two
+   * integrations can point at the same Atlassian site with different tokens
+   * (different operators, or a rotated token), and keying on the shared site
+   * would answer the second poll from the first integration's stale identity.
+   */
   private readonly operatorIds = new Map<string, string>();
 
   /**
@@ -85,7 +110,7 @@ export class JiraChannelAdapter implements ChannelAdapter {
   ): Promise<string> {
     if (integration.config.kind !== "jira") throw new Error("not a jira integration");
     const { baseUrl, email } = integration.config;
-    const cached = this.operatorIds.get(baseUrl);
+    const cached = this.operatorIds.get(integration.id);
     if (cached) return cached;
     const res = await this.fetchImpl(`${baseUrl}/rest/api/3/myself`, {
       headers: { authorization: this.authHeader(creds, email), accept: "application/json" },
@@ -93,7 +118,7 @@ export class JiraChannelAdapter implements ChannelAdapter {
     if (!res.ok) throw new Error(`jira /myself: HTTP ${res.status}`);
     const body = (await res.json()) as { accountId?: string };
     if (!body.accountId) throw new Error("jira /myself returned no accountId");
-    this.operatorIds.set(baseUrl, body.accountId);
+    this.operatorIds.set(integration.id, body.accountId);
     return body.accountId;
   }
 
@@ -132,6 +157,11 @@ export class JiraChannelAdapter implements ChannelAdapter {
     if (integration.config.kind !== "jira") throw new Error("not a jira integration");
     const { baseUrl, email, projectKey, jql } = integration.config;
     const operator = await this.operatorAccountId(integration, creds);
+    // "Initial sync = now" (same contract as the email adapter): a brand-new
+    // integration has no cursor yet, and emitting every qualifying comment on
+    // every matching issue on that first poll would be a silent full-history
+    // drain disguised as a heartbeat. Seed the cursor below and ingest nothing.
+    const firstRun = cursor === undefined;
 
     // The JQL stays BROAD on purpose. A comment mentioning the operator can sit on
     // an issue they do not own, and this instance's comment index does not work
@@ -164,6 +194,7 @@ export class JiraChannelAdapter implements ChannelAdapter {
       if (!issue.key) continue;
       const updated = issue.fields?.updated ?? new Date(0).toISOString();
       if (newest === undefined || updated > newest) newest = updated;
+      if (firstRun) continue; // seed-only pass: cursor advances, nothing is ingested
 
       const owned = this.isOwned(issue, operator);
       const comments = await this.commentsOf(integration, creds, issue);
@@ -171,6 +202,11 @@ export class JiraChannelAdapter implements ChannelAdapter {
         if (!c.id) continue;
         // Never reply to yourself.
         if (c.author?.accountId === operator) continue;
+        // An issue re-entering the `updated >= cursor` window for an unrelated
+        // reason (a label edit, a transition) drags its whole comment history
+        // back through this filter. Dedup-by-id only protects comments already
+        // STORED, so a comment older than the cursor is skipped here too.
+        if (this.predatesCursor(c.created, cursor)) continue;
         // Mine-and-mentions: a comment on an owned issue is addressed to the
         // operator in practice; on any other issue only an explicit mention is.
         if (!owned && !collectMentionAccountIds(c.body).includes(operator)) continue;
@@ -188,6 +224,19 @@ export class JiraChannelAdapter implements ChannelAdapter {
       f?.reporter?.accountId === operator ||
       f?.watches?.isWatching === true
     );
+  }
+
+  /**
+   * True when `created` is older than `cursor` by more than {@link CURSOR_SLACK_MS}.
+   * No cursor (first run) never predates anything — that path already ingests
+   * nothing via `firstRun` above, before this is ever called.
+   */
+  private predatesCursor(created: string | undefined, cursor: string | undefined): boolean {
+    if (!cursor || !created) return false;
+    const createdMs = new Date(created).getTime();
+    const cursorMs = new Date(cursor).getTime();
+    if (Number.isNaN(createdMs) || Number.isNaN(cursorMs)) return false;
+    return createdMs < cursorMs - CURSOR_SLACK_MS;
   }
 
   /**
@@ -218,7 +267,9 @@ export class JiraChannelAdapter implements ChannelAdapter {
     });
     if (!res.ok) return comments; // best-effort: never fail the whole poll for one issue
     const body = (await res.json()) as { comments?: JiraComment[] };
-    return body.comments ?? comments;
+    // `[]` is not nullish — a re-fetch that comes back with no comments at all
+    // (error page, transient glitch) must not clobber the good inline page.
+    return body.comments && body.comments.length > 0 ? body.comments : comments;
   }
 
   /** Build the enriched inbound message for one relevant comment. */
@@ -230,23 +281,26 @@ export class JiraChannelAdapter implements ChannelAdapter {
     const description = adfToText(issue.fields?.description);
     const commentText = adfToText(c.body);
 
-    // The 4500-char contract cap is shared: the comment is what must be answered,
-    // so it keeps its budget first and the description takes what is left.
-    const budget = MAX_ITEM_TEXT - TEXT_HEADROOM;
+    // Budget against MAX_INBOUND_CHARS, not the looser schema cap: that's what
+    // `sanitizeInbound()` actually enforces downstream, and it cuts from the END.
+    // The comment — the thing that must be answered — claims its budget first AND
+    // is placed first in the text below, so a tail cut eats the description, never
+    // the question.
+    const budget = MAX_INBOUND_CHARS - TEXT_HEADROOM;
     const commentBudget = Math.min(commentText.length, budget);
     const descBudget = Math.max(0, budget - commentBudget);
 
     const text = [
       `[${key}] ${issue.fields?.summary ?? ""}`.trim(),
       "",
-      "Issue description:",
-      truncate(description, descBudget),
-      "",
       `Comment by ${author}:`,
       truncate(commentText, commentBudget),
+      "",
+      "Issue description:",
+      truncate(description, descBudget),
     ]
       .join("\n")
-      .slice(0, MAX_ITEM_TEXT);
+      .slice(0, MAX_INBOUND_CHARS);
 
     const ref: ExternalRef = { channel: projectKey ?? baseUrl, messageId: key };
     return {
