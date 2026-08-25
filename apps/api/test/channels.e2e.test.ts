@@ -101,6 +101,7 @@ describe("Channels triage throughline (e2e)", () => {
       "CLAUDE_BIN",
       "FAKE_CLAUDE_STEPS",
       "FAKE_CLAUDE_DELAY_MS",
+      "FAKE_CLAUDE_DRAFT",
     ]) {
       delete process.env[k];
     }
@@ -129,24 +130,83 @@ describe("Channels triage throughline (e2e)", () => {
     expect(["done", "error"]).toContain(withOutcome.outcome.status);
   });
 
-  it("Tier 2 question with reply mandate ON → reply sent (recorded by the fake adapter)", async () => {
+  it("Tier 2 question with reply mandate ON → researched reply sent (recorded by the fake adapter)", async () => {
     // Opt the channel into autonomous replies.
     await request(app.getHttpServer())
       .put("/api/mandate")
       .send({ defaults: { dispatch: true, reply: true }, channels: {} })
       .expect(200);
 
+    process.env.FAKE_CLAUDE_DRAFT = "Retries back off exponentially — runner-core.ts:88.";
     await seed(fakeDir, "team", "002.json", "Can you share the latest status?");
-    await app.get(ChannelWatcherService).tick();
+    const watcher = app.get(ChannelWatcherService);
+    await watcher.tick();
 
-    const item = await findItem((i) => i.text.includes("share the latest status"));
-    expect(item.triage.tier).toBe(2);
-    expect(item.state).toBe("handled");
-    expect(item.reply?.text).toBeTruthy();
+    // Stage 1: triage stops at `needs-draft` — nothing is sendable yet, and no
+    // approval exists for the item at all.
+    const pending = await findItem((i) => i.text.includes("share the latest status"));
+    expect(pending.triage.tier).toBe(2);
+    expect(pending.state).toBe("needs-draft");
+    expect(pending.approvalId).toBeFalsy();
+    expect(pending.reply).toBeFalsy();
+    const parkedEarly = await request(app.getHttpServer())
+      .get("/api/approvals?status=pending")
+      .expect(200);
+    expect(
+      parkedEarly.body.find(
+        (a: { kind: string; runId: string }) =>
+          a.kind === "channel" && a.runId === `team/${pending.id}`,
+      ),
+    ).toBeFalsy();
+
+    // Stage 2: a later tick sweeps the draft, and only THEN does Tier 2 fire.
+    const item = await until(async () => {
+      await watcher.tick();
+      const found = (await items()).body.find((i: { id: string }) => i.id === pending.id);
+      return found?.state === "handled" ? found : null;
+    });
+    expect(item.reply?.text).toBe("Retries back off exponentially — runner-core.ts:88.");
 
     // The fake adapter recorded the outbound reply.
     const sent = await fs.readdir(path.join(fakeDir, "sent"));
     expect(sent.length).toBeGreaterThanOrEqual(1);
+  });
+
+  // The operator's mandate after 32 rejected courtesy drafts: no concrete answer →
+  // no approval at all. The item just surfaces for them to answer themselves.
+  it("no researched answer → the item surfaces with NO approval and NO reply (never filler)", async () => {
+    delete process.env.FAKE_CLAUDE_DRAFT; // the researcher finds nothing
+    const sentBefore = (await fs.readdir(path.join(fakeDir, "sent")).catch(() => [])).length;
+    // The fake adapter's cursor is the last consumed FILENAME, compared lexically, so
+    // this fixture has to sort between 002 and the 003/004 seeded by later tests.
+    await seed(fakeDir, "team", "002b.json", "Why did you pick this approach?");
+    const watcher = app.get(ChannelWatcherService);
+    await watcher.tick();
+
+    const pending = await findItem((i) => i.text.includes("pick this approach"));
+    expect(pending.state).toBe("needs-draft");
+
+    // Two research attempts, then it is surfaced rather than retried forever.
+    const surfaced = await until(async () => {
+      await watcher.tick();
+      const found = (await items()).body.find((i: { id: string }) => i.id === pending.id);
+      return found?.state === "triaged" ? found : null;
+    });
+    expect(surfaced.approvalId).toBeFalsy();
+    expect(surfaced.reply).toBeFalsy();
+    // No draft text was invented anywhere along the way.
+    expect(surfaced.triage.suggestedReply).toBeFalsy();
+    const pendingApprovals = await request(app.getHttpServer())
+      .get("/api/approvals?status=pending")
+      .expect(200);
+    expect(
+      pendingApprovals.body.find(
+        (a: { kind: string; runId: string }) =>
+          a.kind === "channel" && a.runId === `team/${surfaced.id}`,
+      ),
+    ).toBeFalsy();
+    const sentAfter = (await fs.readdir(path.join(fakeDir, "sent")).catch(() => [])).length;
+    expect(sentAfter).toBe(sentBefore);
   });
 
   it("PUT /api/mandate rejects unknown keys (422)", async () => {
@@ -157,13 +217,27 @@ describe("Channels triage throughline (e2e)", () => {
   });
 
   it("Tier 3 scope request → channel approval pending → approve → reply sent + item handled", async () => {
+    process.env.FAKE_CLAUDE_DRAFT = "The deadline is driven by the release branch — README.md:12.";
     await seed(fakeDir, "team", "003.json", "Tady je nabídka a smlouva s deadline");
-    await app.get(ChannelWatcherService).tick();
+    const watcher = app.get(ChannelWatcherService);
+    await watcher.tick();
 
-    const triaged = await findItem((i) => i.text.includes("nabídka"));
-    expect(triaged.triage.tier).toBe(3);
+    const awaiting = await findItem((i) => i.text.includes("nabídka"));
+    expect(awaiting.triage.tier).toBe(3);
+    expect(awaiting.state).toBe("needs-draft");
+    // The invariant: an item awaiting research has no approval, so it is unsendable.
+    expect(awaiting.approvalId).toBeFalsy();
+
+    // The sweep researches the answer and only then parks the approval carrying it.
+    const triaged = await until(async () => {
+      await watcher.tick();
+      const found = (await items()).body.find((i: { id: string }) => i.id === awaiting.id);
+      return found?.approvalId ? found : null;
+    });
     expect(triaged.state).toBe("triaged");
-    expect(triaged.approvalId).toBeTruthy();
+    expect(triaged.triage.suggestedReply).toBe(
+      "The deadline is driven by the release branch — README.md:12.",
+    );
 
     // A kind-"channel" approval is pending.
     const pending = await request(app.getHttpServer())
@@ -198,9 +272,16 @@ describe("Channels triage throughline (e2e)", () => {
   });
 
   it("rejecting a channel approval ignores the item", async () => {
+    process.env.FAKE_CLAUDE_DRAFT = "Scope is fixed by the signed SOW — docs/sow.md:4.";
     await seed(fakeDir, "team", "004.json", "Another nabídka with a smlouva");
-    await app.get(ChannelWatcherService).tick();
-    const triaged = await findItem((i) => i.text.includes("Another nabídka"));
+    const watcher = app.get(ChannelWatcherService);
+    await watcher.tick();
+    const awaiting = await findItem((i) => i.text.includes("Another nabídka"));
+    const triaged = await until(async () => {
+      await watcher.tick();
+      const found = (await items()).body.find((i: { id: string }) => i.id === awaiting.id);
+      return found?.approvalId ? found : null;
+    });
 
     const pending = await request(app.getHttpServer())
       .get("/api/approvals?status=pending")

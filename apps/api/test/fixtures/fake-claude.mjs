@@ -45,6 +45,18 @@ if (argv[0] === "auth" && argv[1] === "status") {
   process.exit(0);
 }
 
+// Reply researcher seam (ReplyDraftService): answer with the CLI's `{result}` JSON
+// envelope and nothing else — `extractResultText` JSON.parses the WHOLE stdout, so
+// not a single log line may precede it. `--safe-mode` is the researcher's unique
+// signature (the triager spawns `--model haiku` without it), and the branch is only
+// taken when FAKE_CLAUDE_DRAFT is set, so every other suite using this fixture is
+// byte-for-byte unaffected. Leaving it unset is the "no concrete answer" path: the
+// normal session output below is not JSON, which the service fails closed on.
+if (process.env.FAKE_CLAUDE_DRAFT && argv.includes("--safe-mode")) {
+  process.stdout.write(JSON.stringify({ result: process.env.FAKE_CLAUDE_DRAFT, is_error: false }));
+  process.exit(0);
+}
+
 // Phase 4: dump the real session's argv so an e2e can assert what reached the CLI
 // (e.g. that the grounding block landed in --append-system-prompt). Best-effort.
 if (process.env.FAKE_CLAUDE_DUMP_ARGS_FILE) {

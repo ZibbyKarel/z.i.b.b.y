@@ -186,7 +186,12 @@ export class BriefingService {
     // Phase 9: runs paused on the usage limit feed the "watching" line (Tier 1 — they
     // auto-resume, so they don't go in "needs you").
     const pausedLimitRuns = allRuns.filter((r) => r.status === "paused-limit");
-    const inFlight = channelItems.filter((i) => i.state === "new" || i.state === "triaged");
+    // `needs-draft` is in flight too: ZIBBY is researching a reply for it. It carries
+    // no approval, so it is something being WATCHED, never a needs-you decision —
+    // dropping it here would make an item silently invisible while it waits.
+    const inFlight = channelItems.filter(
+      (i) => i.state === "new" || i.state === "triaged" || i.state === "needs-draft",
+    );
     // Only the still-waiting tasks feed the engagement rollup (queued / held).
     const tasks = allTasks.filter((t) => t.status === "queued" || t.status === "held");
     // M8: dead-lettered tasks (dispatch exhausted its retries) are a needs-you decision.

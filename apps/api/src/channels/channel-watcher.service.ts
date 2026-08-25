@@ -35,6 +35,8 @@ export interface ChannelTriageFlow {
   handle(item: ChannelItem): Promise<ChannelItem>;
   /** Sweep handled-with-taskId items and copy a finished task's outcome. */
   sweepOutcomes(): Promise<void>;
+  /** Sweep `needs-draft` items: research a reply, then park or surface. */
+  sweepDrafts(): Promise<void>;
 }
 export const CHANNEL_TRIAGE_FLOW = Symbol("CHANNEL_TRIAGE_FLOW");
 
@@ -123,6 +125,10 @@ export class ChannelWatcherService
     await this.flow
       ?.sweepOutcomes()
       .catch((err) => this.log.debug("outcome sweep failed", { error: (err as Error).message }));
+    // Then finish any reply research parked from an earlier tick.
+    await this.flow
+      ?.sweepDrafts()
+      .catch((err) => this.log.debug("draft sweep failed", { error: (err as Error).message }));
 
     for (const integration of await this.integrations.list()) {
       if (!integration.enabled) continue;
