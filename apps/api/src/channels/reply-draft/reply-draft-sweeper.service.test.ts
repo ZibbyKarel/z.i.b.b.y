@@ -270,6 +270,48 @@ describe("ReplyDraftSweeperService.sweep", () => {
     expect(h.parked).toHaveLength(1);
   });
 
+  // ── The cap: a permanently-throwing hand-off must not bill forever ──────────────
+  // The stale-retry above is deliberate, but against a hand-off that always throws (a
+  // deleted integration, missing credentials on the Tier-2 sendReply path) it re-spawns
+  // a PAID 5-minute research every STALE_PENDING_MS, forever. The retry budget the
+  // failure path already uses has to bound the stale-pending path too.
+  //
+  // `parkOrSurface` here throws only when it carries a draft — that is the real shape:
+  // the reply legs reach integrations/credentials, `surfaceWithoutDraft` reaches neither.
+  const throwsOnDraft = async (_i: ChannelItem, d: string | null) => {
+    if (d !== null) throw new Error("no credentials for jira-x");
+  };
+
+  it("stops re-researching once the stale-pending retry budget is spent", async () => {
+    const research = vi.fn(async () => "a real answer");
+    const h = harness({ research, park: throwsOnDraft });
+
+    // Three sweeps, each after the pending lock has aged out — without a cap this is
+    // three paid researches, and it would keep going every 15 minutes forever.
+    for (let i = 0; i < 3; i++) {
+      await h.svc.sweep();
+      h.age("jira-ABC-1-c501");
+    }
+    expect(research).toHaveBeenCalledTimes(2);
+
+    // …and it stays stopped on every later sweep, too.
+    await h.svc.sweep();
+    expect(research).toHaveBeenCalledTimes(2);
+  });
+
+  it("surfaces the item notify-only at the cap instead of discarding it", async () => {
+    const h = harness({ research: async () => "a real answer", park: throwsOnDraft });
+    for (let i = 0; i < 3; i++) {
+      await h.svc.sweep();
+      h.age("jira-ABC-1-c501");
+    }
+    // The correct terminal state for "we cannot hand this off": the operator is told.
+    expect(h.parked).toHaveLength(1);
+    expect(h.parked[0]?.draft).toBeNull();
+    expect(h.parked[0]?.item.draftResearch?.status).toBe("failed");
+    expect(h.parked[0]?.item.draftResearch?.attempts).toBe(2);
+  });
+
   it("researches at most 2 items per sweep", async () => {
     const research = vi.fn(async () => "answer");
     const h = harness({
