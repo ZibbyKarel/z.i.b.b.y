@@ -7,6 +7,7 @@ import { useChannelItemsQuery } from "../queries";
 /** Display tone for each item state — the single source for the inbox chip. */
 const STATE_TONE: Record<ChannelItemState, "neutral" | "ok" | "warn" | "bad"> = {
   new: "neutral",
+  "needs-draft": "warn",
   triaged: "warn",
   handled: "ok",
   ignored: "bad",

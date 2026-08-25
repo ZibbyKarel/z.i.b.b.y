@@ -37,9 +37,40 @@ export const TriageVerdictSchema = z
   .strict();
 export type TriageVerdict = z.infer<typeof TriageVerdictSchema>;
 
-/** Lifecycle of a channel item; mutated only by the watcher/triage/approval paths. */
-export const ChannelItemStateSchema = z.enum(["new", "triaged", "handled", "ignored"]);
+/**
+ * Lifecycle of a channel item; mutated only by the watcher/triage/approval paths.
+ *
+ * `needs-draft` (2026-08) sits between `new` and `triaged`: the item has been
+ * triaged, but its reply draft is still being researched by the reply-draft
+ * sweeper. NO approval exists in this state, so nothing is sendable — the item
+ * only leaves it once a concrete draft exists (→ `triaged` with an `approvalId`)
+ * or research gave up (→ `triaged`, notify-only, no approval).
+ */
+export const ChannelItemStateSchema = z.enum([
+  "new",
+  "needs-draft",
+  "triaged",
+  "handled",
+  "ignored",
+]);
 export type ChannelItemState = z.infer<typeof ChannelItemStateSchema>;
+
+/**
+ * The reply-draft research marker. Doubles as the sweeper's in-flight lock:
+ * `pending` is written BEFORE the child process spawns, so a slow research is
+ * never double-spawned across ticks. `attempts` bounds the retry budget.
+ */
+export const DraftResearchSchema = z
+  .object({
+    status: z.enum(["pending", "ok", "failed"]),
+    attempts: z.number().int().min(0),
+    startedAt: IsoDateTimeSchema.optional(),
+    finishedAt: IsoDateTimeSchema.optional(),
+    /** Why research failed — operator-facing, display-only. */
+    reason: z.string().max(500).optional(),
+  })
+  .strict();
+export type DraftResearch = z.infer<typeof DraftResearchSchema>;
 
 /** The channel-native identity an item came from (used for replies + dedup). */
 export const ExternalRefSchema = z.object({
@@ -94,5 +125,7 @@ export const ChannelItemSchema = z.object({
    * (Jira, GitHub, Slack); other kinds simply omit it.
    */
   url: z.string().optional(),
+  /** Set while / after the reply-draft sweeper researches an answer for this item. */
+  draftResearch: DraftResearchSchema.optional(),
 });
 export type ChannelItem = z.infer<typeof ChannelItemSchema>;

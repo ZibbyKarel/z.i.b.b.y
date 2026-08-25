@@ -602,6 +602,7 @@
     "openSource": "Open source ↗",
     "state": {
       "new": "new",
+      "needs-draft": "researching reply…",
       "triaged": "triaged",
       "handled": "handled",
       "ignored": "ignored"

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { EmptyBodySchema } from "../common.schema";
-import { ChannelItemSchema, TriageVerdictSchema, channelsContract } from "../index";
+import {
+  ChannelItemSchema,
+  ChannelItemStateSchema,
+  TriageVerdictSchema,
+  channelsContract,
+} from "../index";
 
 describe("channelsContract", () => {
   it("exposes read-only ITEM routes (items are never client-writable, Law 4)", () => {
@@ -91,5 +96,43 @@ describe("ChannelItemSchema", () => {
       expect(parsed.success).toBe(true);
       if (parsed.success) expect(parsed.data.url).toBeUndefined();
     });
+  });
+});
+
+describe("ChannelItem draft-research fields", () => {
+  const base = {
+    id: "jira-ABC-1-c99",
+    integrationId: "jira-x",
+    kind: "jira" as const,
+    externalRef: { messageId: "ABC-1" },
+    receivedAt: "2026-08-25T10:00:00.000Z",
+    text: "hello",
+    raw: {},
+  };
+
+  it("accepts the needs-draft state", () => {
+    expect(ChannelItemStateSchema.safeParse("needs-draft").success).toBe(true);
+  });
+
+  it("accepts an item carrying a pending draftResearch marker", () => {
+    const parsed = ChannelItemSchema.safeParse({
+      ...base,
+      state: "needs-draft",
+      draftResearch: { status: "pending", attempts: 1, startedAt: base.receivedAt },
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects an unknown draftResearch status", () => {
+    const parsed = ChannelItemSchema.safeParse({
+      ...base,
+      state: "needs-draft",
+      draftResearch: { status: "elsewhere", attempts: 0 },
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("still accepts an item with no draftResearch at all", () => {
+    expect(ChannelItemSchema.safeParse({ ...base, state: "new" }).success).toBe(true);
   });
 });
