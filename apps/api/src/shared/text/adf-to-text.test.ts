@@ -1,0 +1,139 @@
+import { describe, expect, it } from "vitest";
+import { adfToText, collectMentionAccountIds } from "./adf-to-text";
+
+describe("adfToText", () => {
+  it("joins paragraphs with a blank line", () => {
+    const doc = {
+      type: "doc",
+      version: 1,
+      content: [
+        { type: "paragraph", content: [{ type: "text", text: "First." }] },
+        { type: "paragraph", content: [{ type: "text", text: "Second." }] },
+      ],
+    };
+    expect(adfToText(doc)).toBe("First.\n\nSecond.");
+  });
+
+  it("renders a mention as @name and a link as text (href)", () => {
+    const doc = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            { type: "mention", attrs: { id: "acc-1", text: "@Karel" } },
+            { type: "text", text: " see " },
+            {
+              type: "text",
+              text: "the docs",
+              marks: [{ type: "link", attrs: { href: "https://example.test/d" } }],
+            },
+          ],
+        },
+      ],
+    };
+    expect(adfToText(doc)).toBe("@Karel see the docs (https://example.test/d)");
+  });
+
+  it("renders bullet lists one item per line", () => {
+    const doc = {
+      type: "doc",
+      content: [
+        {
+          type: "bulletList",
+          content: [
+            {
+              type: "listItem",
+              content: [{ type: "paragraph", content: [{ type: "text", text: "one" }] }],
+            },
+            {
+              type: "listItem",
+              content: [{ type: "paragraph", content: [{ type: "text", text: "two" }] }],
+            },
+          ],
+        },
+      ],
+    };
+    expect(adfToText(doc)).toBe("- one\n- two");
+  });
+
+  it("keeps code block content and turns hardBreak into a newline", () => {
+    const doc = {
+      type: "doc",
+      content: [
+        { type: "codeBlock", content: [{ type: "text", text: "npm run build" }] },
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text: "a" },
+            { type: "hardBreak" },
+            { type: "text", text: "b" },
+          ],
+        },
+      ],
+    };
+    expect(adfToText(doc)).toBe("npm run build\n\na\nb");
+  });
+
+  it("recurses into unknown node types instead of throwing", () => {
+    const doc = {
+      type: "doc",
+      content: [
+        {
+          type: "someFutureNode",
+          content: [{ type: "paragraph", content: [{ type: "text", text: "kept" }] }],
+        },
+      ],
+    };
+    expect(adfToText(doc)).toBe("kept");
+  });
+
+  it("returns an empty string for null, undefined and non-objects", () => {
+    expect(adfToText(null)).toBe("");
+    expect(adfToText(undefined)).toBe("");
+    expect(adfToText("already a string")).toBe("");
+    expect(adfToText(42)).toBe("");
+  });
+});
+
+describe("collectMentionAccountIds", () => {
+  it("collects every mention accountId, nested at any depth", () => {
+    const doc = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "mention", attrs: { id: "acc-1", text: "@A" } }],
+        },
+        {
+          type: "bulletList",
+          content: [
+            {
+              type: "listItem",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [{ type: "mention", attrs: { id: "acc-2", text: "@B" } }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    expect(collectMentionAccountIds(doc).sort()).toEqual(["acc-1", "acc-2"]);
+  });
+
+  it("returns an empty array when there are no mentions", () => {
+    expect(collectMentionAccountIds({ type: "doc", content: [] })).toEqual([]);
+    expect(collectMentionAccountIds(null)).toEqual([]);
+  });
+
+  it("ignores a mention node with no attrs.id (migrated placeholder)", () => {
+    const doc = {
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "mention", attrs: { text: "@Ghost" } }] }],
+    };
+    expect(collectMentionAccountIds(doc)).toEqual([]);
+  });
+});
