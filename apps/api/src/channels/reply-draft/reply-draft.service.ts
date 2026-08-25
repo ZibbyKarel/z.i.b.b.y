@@ -95,8 +95,34 @@ export class ReplyDraftService {
     this.log = logger.child(ReplyDraftService.name);
   }
 
-  /** Research an answer for `item`, or `null` when no concrete answer exists. */
+  /**
+   * Research an answer for `item`, or `null` when no concrete answer exists.
+   *
+   * The `VITEST` guard is the same one {@link ClaudeCliTriager.triage} carries at
+   * `channels/triage/claude-cli-triager.ts:61` — a test must never spawn the real,
+   * PAID CLI — but it is deliberately conditioned on `CLAUDE_BIN`, and that
+   * difference is load-bearing rather than cosmetic. Do not "simplify" it back to
+   * the bare form:
+   *
+   * - The triager's `null` is absorbed (the service falls back to the deterministic
+   *   keyword triager), so its bare guard changes nothing observable. This method's
+   *   `null` IS the observable output — a bare guard would make every research
+   *   return "no answer" and silently break `test/channels.e2e.test.ts`, which
+   *   asserts the drafted reply text end-to-end.
+   * - `CLAUDE_BIN` is the repo's established "this is a fake binary" seam
+   *   (`shared/spawn-claude-cli.ts:52`), and the channel e2e pins it at
+   *   `test/fixtures/fake-claude.mjs`. With it pinned, no real CLI can be reached,
+   *   so there is nothing for the guard to protect against.
+   * - What the guard therefore catches is exactly the gap it exists for: a future
+   *   test that ticks the watcher WITHOUT pinning `CLAUDE_BIN` would otherwise
+   *   spawn a real 5-minute sonnet run per swept item.
+   *
+   * A unit test that wants the real path clears `VITEST` outright, the same idiom
+   * `tasks/claude-cli-task-namer.test.ts` uses.
+   */
   async research(item: ChannelItem): Promise<string | null> {
+    if (process.env.VITEST && !process.env.CLAUDE_BIN) return null;
+
     const cwd = await this.repoFor(item);
     if (!cwd) return null;
 
