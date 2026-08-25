@@ -3,7 +3,7 @@
   "kind": "jira",
   "projectId": "shoptet-partner-cli",
   "name": "Shoptet DevRel JIRA",
-  "enabled": false,
+  "enabled": true,
   "config": {
     "kind": "jira",
     "baseUrl": "https://teamdotblue.atlassian.net",
