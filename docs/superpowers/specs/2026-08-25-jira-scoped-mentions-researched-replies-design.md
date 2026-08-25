@@ -161,10 +161,14 @@ This is the fix for the root cause: today `description` is fetched and then
 **discarded** (`jira.adapter.ts:110` builds `text` from the summary alone), which
 is why the triager had nothing to answer and fell through to the phrase.
 
-Truncation: the enriched `text` is far longer than `[KEY] summary`. Cap the text
-handed to the 8s haiku triager (`ClaudeCliTriager`) — the envelope and Law-4
-posture are unchanged, only the length. The **full** text is retained on the item
-for the researcher and for the operator's UI.
+Truncation: the enriched `text` is far longer than `[KEY] summary`, and
+**`ChannelItemSchema.text` is capped at 4500 characters**
+(`libs/contracts/src/channels/channel.schema.ts:69`). Exceeding the cap is not a
+soft failure — `ChannelItemStore.readFile` schema-parses on every read, so an
+oversized item silently vanishes from `list()`. The adapter therefore truncates
+when building the item: the comment (the thing that must be answered) claims its
+budget first, the description takes what is left, and a cut is marked with `…`.
+_(Amendment: the cap was not stated in the first draft of this spec.)_
 
 ---
 
@@ -259,6 +263,13 @@ actually made (now in the sweeper), `recordDecision` on approve/reject as today.
 
 - Delete the `DEFAULT_DRAFT` constant (`channel-triage-flow.service.ts:40`) and the
   `|| DEFAULT_DRAFT` fallback in `draftOf()` (`:572`).
+- Delete the **two further filler phrases in the keyword triager** —
+  `keyword-triager.ts:46` ("Thanks for the details — I'll review and get back to you
+  shortly.") and `:56` ("Thanks for reaching out — here's where things stand."). The
+  deterministic fallback triager classifies; it never proposes reply text. Its test
+  (`keyword-triager.test.ts:16`) asserts `suggestedReply` is truthy today and must be
+  inverted. _(Amendment: found while writing the plan; the first draft of this
+  section named only the flow-service constant.)_
 - `draftOf()` returns `string | null`.
 - **No draft → no reply approval.** The item is set to `state: "triaged"` and
   surfaces through the existing `channel-needs-attention` activity path with the
