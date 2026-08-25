@@ -51,13 +51,19 @@ const RESEARCH_SYSTEM_PROMPT = [
  * - The toolset is exactly `Read`/`Grep`/`Glob`, and each is PATH-SCOPED to the
  *   resolved repo (`Read(<cwd>/**)` etc.) under `--permission-mode dontAsk` —
  *   `--disallowedTools` additionally denies Bash/WebFetch/WebSearch/Write/
- *   Edit/Agent explicitly. Path-scoping is load-bearing, not decorative:
- *   verified empirically (see task-4-report.md) that an unscoped `Read,Grep,Glob`
- *   allow-list lets the model read ANYTHING the API process can see —
- *   `~/.ssh`, `~/.zibby/data/credentials/`, env-var secrets — via an
- *   absolute out-of-repo path, which is exactly the exfiltration primitive a
- *   crafted inbound message could aim at (read a credential, put it in the
- *   drafted reply, the operator approves and posts it under their own name).
+ *   Edit/Agent/Skill/ToolSearch/ListAgents/RemoteTrigger by name. Path-scoping
+ *   is load-bearing, not decorative: verified empirically (see
+ *   task-4-report.md) that an unscoped `Read,Grep,Glob` allow-list lets the
+ *   model read ANYTHING the API process can see — `~/.ssh`,
+ *   `~/.zibby/data/credentials/`, env-var secrets — via an absolute
+ *   out-of-repo path, which is exactly the exfiltration primitive a crafted
+ *   inbound message could aim at (read a credential, put it in the drafted
+ *   reply, the operator approves and posts it under their own name).
+ *   `--allowedTools` under `dontAsk` is a permission list, not a toolset
+ *   filter — a tool absent from it still exists and still runs, so every
+ *   tool this call site doesn't need must be denied by name explicitly; see
+ *   the `runClaude` docblock below for what forced `Skill`/`ToolSearch`/
+ *   `ListAgents`/`RemoteTrigger` onto that list.
  * - The item's text reaches the prompt ONLY inside `envelopeInbound` (Law 4),
  *   never interpolated bare — see {@link buildPrompt}.
  * - `extractResultText` fails CLOSED: a non-JSON or `is_error:true` CLI
@@ -145,30 +151,65 @@ export class ReplyDraftService {
    * `protected` so the unit test can stub the spawn without touching the CLI.
    *
    * Empirically verified against the real `claude` 2.1.245 CLI (see
-   * task-4-report.md for the transcripts):
+   * task-4-report.md for the transcripts, including a second security-review
+   * pass that found three further gaps in an earlier revision of this
+   * comment and the deny list below — fixed here):
    *
-   * - `--permission-mode dontAsk` does NOT gate whether `Read`/`Grep`/`Glob`
-   *   execute at all — a bare, unscoped `Read` runs fine even with no
-   *   `--permission-mode` flag. What `dontAsk` actually does is make PATH-
-   *   SCOPED allow rules (`Read(<dir>/**)`) enforceable at all; without it a
-   *   scoped rule is inert and the tool auto-allows everywhere. So `dontAsk`
-   *   stays, but for this reason, not the "tools would otherwise hang/be
-   *   denied" reasoning an earlier revision of this comment gave.
+   * - `--permission-mode dontAsk` is what makes this one-shot, non-interactive
+   *   call possible at all — without it, a decision that would normally
+   *   prompt a human instead has nothing to prompt and the run cannot
+   *   proceed unattended. It does NOT decide whether a path-scoped allow rule
+   *   is enforced: a control run with the identical argv but `dontAsk`
+   *   removed still DENIED an out-of-repo `Read` ("you haven't granted it
+   *   yet") while the in-repo, path-scoped `Read` was allowed exactly as
+   *   with `dontAsk` present. So the scoping below holds with or without this
+   *   flag; `dontAsk` is kept because the call must not block on a prompt,
+   *   not because it is what makes the scoping real.
    * - `Read`/`Grep`/`Glob` are scoped to `<cwd>/**` — an EARLIER revision
    *   passed them bare (unscoped), which let the model `Grep`/`Read` any
    *   absolute path the API process can see (`~/.ssh`,
    *   `~/.zibby/data/credentials/`, …) with zero permission denials. Scoping
-   *   to the resolved repo is the fix; `--disallowedTools` additionally
-   *   denies Bash/WebFetch/WebSearch/Write/Edit/Agent by name, belt-and-
-   *   suspenders on top of the allow-list.
+   *   to the resolved repo is the fix.
+   * - `--disallowedTools` is **load-bearing, not belt-and-suspenders.** The
+   *   CLI's own denial text actively coaches the model to route around a
+   *   block — observed verbatim suggesting it try "using other tools … e.g.
+   *   using `head`" after a `Bash` denial. Only denying `Bash` by name closes
+   *   that; an allow-list alone does not, because under `dontAsk`,
+   *   `--allowedTools` is a permission list, not a toolset filter — a tool
+   *   left off it is still present in the session and still executes,
+   *   nothing about omission denies it. The list here denies
+   *   `Bash WebFetch WebSearch Write Edit Agent Skill ToolSearch ListAgents
+   *   RemoteTrigger` for exactly that reason: a second review ran this call
+   *   site's argv and got `Skill` to execute (it injected a skill's full
+   *   instruction payload as a simulated user turn — an injection
+   *   amplifier), `ListAgents` to return five peer-session names and IDs
+   *   (cross-session metadata leaking into a context whose only output
+   *   becomes a reply posted under the operator's name), and surfaced
+   *   `RemoteTrigger` (calls the claude.ai remote-trigger API with an
+   *   OAuth token added in-process — network egress the `WebFetch`/
+   *   `WebSearch` denial does not cover). `ToolSearch` is denied because it
+   *   is how a model discovers and loads tools not already in front of it,
+   *   including the ones just denied by name. The researcher needs to read
+   *   one repo and nothing else — deny by default for anything new added to
+   *   this call site.
    * - Unlike `runner/claude-run-command.service.ts`'s `dontAsk` usage, THIS
    *   call site has no `--settings`/PreToolUse approval hook — the path
    *   scoping above is what stands in for it here; there is no mid-run
    *   approval loop to defer to for a one-shot research call.
-   * - `--safe-mode` disables CLAUDE.md/skills/plugins/hooks/custom
-   *   commands/agents for the session while leaving auth, model selection,
-   *   and permissions untouched — verified it does not disturb the scoping
-   *   above. `--bare` was tried first and rejected: it forces
+   * - `--safe-mode` disables project/user-level CUSTOMIZATIONS — CLAUDE.md,
+   *   configured skills/plugins/hooks/MCP servers, custom slash commands and
+   *   subagent definitions, output styles, themes, keybindings — while
+   *   leaving auth, model selection, and built-in tools/permissions working
+   *   normally (this is the CLI's own documented behaviour, `claude --help`).
+   *   It is NOT a tool-isolation boundary: the same review that executed
+   *   `Skill` and `ListAgents` above did so WITH `--safe-mode` present, so
+   *   the flag does not stop the built-in `Skill`/`Agent`-family tools from
+   *   running — that containment now comes only from `--disallowedTools`
+   *   above. `--safe-mode` is kept because it still closes off
+   *   project/user config as an injection vector (a poisoned CLAUDE.md or
+   *   configured skill/hook in this repo could otherwise steer the
+   *   researcher); it is just not, by itself, the tool sandbox this file
+   *   once claimed it was. `--bare` was tried first and rejected: it forces
    *   `ANTHROPIC_API_KEY`-only auth (no OAuth/keychain), which broke this
    *   environment's session entirely (`"Not logged in"`), so it would only
    *   work in a deployment that provisions a raw API key for this one call.
@@ -195,6 +236,10 @@ export class ReplyDraftService {
         "Write",
         "Edit",
         "Agent",
+        "Skill",
+        "ToolSearch",
+        "ListAgents",
+        "RemoteTrigger",
         "--safe-mode",
       ],
       timeoutMs: RESEARCH_TIMEOUT_MS,
