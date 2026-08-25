@@ -602,6 +602,7 @@
     "openSource": "Otevřít zdroj ↗",
     "state": {
       "new": "nové",
+      "needs-draft": "hledá se odpověď…",
       "triaged": "roztříděno",
       "handled": "vyřízeno",
       "ignored": "ignorováno"
