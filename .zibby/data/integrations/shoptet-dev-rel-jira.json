@@ -1,1 +1,14 @@
-{"id":"shoptet-dev-rel-jira","kind":"jira","projectId":"shoptet-partner-cli","name":"Shoptet DevRel JIRA","enabled":true,"config":{"kind":"jira","baseUrl":"https://teamdotblue.atlassian.net","email":"karel.zibar@team.blue","projectKey":"CZ3TDR1"},"ownerSubsystem":"puls"}
+{
+  "id": "shoptet-dev-rel-jira",
+  "kind": "jira",
+  "projectId": "shoptet-partner-cli",
+  "name": "Shoptet DevRel JIRA",
+  "enabled": false,
+  "config": {
+    "kind": "jira",
+    "baseUrl": "https://teamdotblue.atlassian.net",
+    "email": "karel.zibar@team.blue",
+    "projectKey": "CZ3TDR1"
+  },
+  "ownerSubsystem": "puls"
+}
