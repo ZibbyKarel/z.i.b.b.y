@@ -193,7 +193,7 @@ export class JiraChannelAdapter implements ChannelAdapter {
     for (const issue of body.issues ?? []) {
       if (!issue.key) continue;
       const updated = issue.fields?.updated ?? new Date(0).toISOString();
-      if (newest === undefined || updated > newest) newest = updated;
+      if (this.isNewer(updated, newest)) newest = updated;
       if (firstRun) continue; // seed-only pass: cursor advances, nothing is ingested
 
       const owned = this.isOwned(issue, operator);
@@ -224,6 +224,26 @@ export class JiraChannelAdapter implements ChannelAdapter {
       f?.reporter?.accountId === operator ||
       f?.watches?.isWatching === true
     );
+  }
+
+  /**
+   * True when `updated` is a LATER INSTANT than the current high-water mark — the same
+   * `new Date(...).getTime()` comparison {@link predatesCursor} already uses, and for the
+   * same reason: Jira stamps `updated` with a local UTC OFFSET (`…+0200`), not normalized
+   * to `Z`, so `>` on the raw strings is not instant order. Across the Prague DST
+   * fall-back (+0200 → +0100) `"02:30…+0200"` (00:30Z) string-beats `"02:00…+0100"`
+   * (01:00Z), which would park the cursor at an earlier instant than the newest issue
+   * actually seen. Impact is over-fetch, never loss — but the cursor should mean what it
+   * says. An unparseable stamp never wins (NaN comparisons are false), and the CALLER
+   * still stores the raw string: only the ordering is by instant.
+   */
+  private isNewer(updated: string, newest: string | undefined): boolean {
+    if (newest === undefined) return true;
+    const updatedMs = new Date(updated).getTime();
+    const newestMs = new Date(newest).getTime();
+    if (Number.isNaN(updatedMs)) return false;
+    if (Number.isNaN(newestMs)) return true;
+    return updatedMs > newestMs;
   }
 
   /**

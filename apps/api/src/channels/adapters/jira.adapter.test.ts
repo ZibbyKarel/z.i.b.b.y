@@ -236,6 +236,22 @@ describe("JiraChannelAdapter", () => {
     expect(cursor).toBe("2026-08-20T10:05:00.000Z");
   });
 
+  // Jira returns `updated` with a LOCAL offset suffix, not normalized to Z. Across the
+  // 25-Oct DST fall-back in Prague (+0200 → +0100) the string order and the instant order
+  // disagree: "02:30…+0200" is 00:30Z but string-beats "02:00…+0100", which is 01:00Z.
+  // A lexicographic high-water mark therefore parks the cursor at an EARLIER instant than
+  // the newest issue actually seen — a permanent over-fetch window. Compare instants.
+  it("advances the cursor by instant, not lexicographically, across a DST offset change", async () => {
+    const beforeDst = "2026-10-25T02:30:00.000+0200"; // 00:30Z — string-largest
+    const afterDst = "2026-10-25T02:00:00.000+0100"; // 01:00Z — the true newest instant
+    expect(beforeDst > afterDst).toBe(true); // the trap: strings order the wrong way
+    const adapter = new JiraChannelAdapter(
+      stubFor([issue("ABC-20", { updated: beforeDst }), issue("ABC-21", { updated: afterDst })]),
+    );
+    const { cursor } = await adapter.poll(jira, { token: "tok" }, undefined);
+    expect(cursor).toBe(afterDst);
+  });
+
   it("test maps /myself to a TestResult", async () => {
     const ok = new JiraChannelAdapter(jsonFetch({ displayName: "Dana" }));
     expect(await ok.test(jira, { token: "tok" })).toEqual({
