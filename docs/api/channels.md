@@ -64,6 +64,34 @@ fails silently").
 
 Maps `integration.type` to a concrete adapter implementation.
 
+### The default scope every adapter must implement: "mine and mentions"
+
+A new adapter does **not** ingest everything its remote can see. The ceiling is the
+operator's own work — assigned to / reported by / watched by them — plus messages
+that explicitly `@`-mention them.
+
+How close to that ceiling an adapter sits follows from its **unit**, and the two
+below differ on purpose: GitHub's unit is the whole thread, so it went
+mentions-only; Jira's unit is the individual comment, so the wider owner scope is
+safe. Prefer a conversational unit (something a person wrote and may expect an
+answer to) over an object-state change (an issue being created, a field edited) —
+drafting a reply to the latter is meaningless by construction, and was the source
+of a 32-approval pile-up on `shoptet-dev-rel-jira` in August 2026.
+
+Remote-side filtering is an optimization, not the contract: where the remote can
+express the scope, use it; where it cannot, fetch wider and filter in the adapter.
+The ingested set must come out the same either way.
+
+Full rationale: `apps/api/src/channels/README.md`.
+
+### No filler drafts
+
+There is no generic fallback reply text. When no concrete answer can be produced,
+the flow parks **no** `channel-reply` approval — the item surfaces as notify-only
+and the operator answers it themselves. A courtesy phrase behind an approval costs
+a decision and sends noise under the operator's name; an approval queue is only
+worth reading if every row is a real answer awaiting a yes. Binds every channel.
+
 ### Email adapter (IMAP)
 
 - Library: `imapflow`

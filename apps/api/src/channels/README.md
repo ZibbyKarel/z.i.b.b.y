@@ -23,27 +23,39 @@ nothing else. This is the default a new adapter must implement, not an opt-in.**
 An adapter that ingests everything its remote can see is a defect, however
 faithful. The operator is one person; a channel that surfaces a whole project's
 activity buries the handful of items that actually need them, and each buried item
-still costs a triage call. Concretely, an item is created only when:
+still costs a triage call.
 
-- the underlying object is **owned by the operator** — assigned to, reported by, or
-  watched by them (`assignee`/`reporter`/`watcher = currentUser()` in Jira,
-  `assignee:{username}` in GitHub, and the equivalent in whatever comes next); **or**
-- the message **explicitly `@`-mentions the operator**, wherever it sits.
+**The ceiling** — no adapter may ever exceed it — is the operator's own work
+(assigned to / reported by / watched by them) plus messages that explicitly
+`@`-mention them. Everything else is out of scope by construction.
 
-Two rules follow from experience:
+**How close to that ceiling an adapter sits is decided by its unit,** and the two
+existing adapters deliberately differ:
+
+- **`github.adapter.ts` — mentions only** (`q=repo:{repo} is:open mentions:{username}`),
+  plus PRs ZIBBY itself opened. `assignee:{username}` was **removed** in phase 126a:
+  GitHub's unit is the whole _thread_, and a thread merely assigned to the operator —
+  who was never actually addressed in it — is noise. Do not "restore" it.
+- **`jira.adapter.ts` — owner legs plus mentions.** Jira's unit is the _comment_, and
+  someone commenting on an issue the operator owns is in practice addressing them.
+  The wider owner scope is safe precisely because the unit is narrow.
+
+Two rules follow:
 
 - **Prefer a conversational unit over an object-state unit.** A comment, a reply, a
   message is something a person wrote and may expect an answer to. An object being
-  created or a field changing is not — drafting a reply to it is meaningless by
+  created, or a field changing, is not — drafting a reply to it is meaningless by
   construction. Jira ingests comments, not issue events, for exactly this reason.
-- **Remote-side filtering is an optimization, not the contract.** Where the remote
-  can express the scope (GitHub's `mentions:` search), use it. Where it cannot
-  (Jira's comment index does not work on our instance — see the design spec dated
-  2026-08-25), fetch wider and filter in the adapter. The ingested set must be the
-  same either way.
+  Choose the unit first; the owner/mention scope follows from it.
+- **Remote-side filtering is an optimization, not the contract.** Where the remote can
+  express the scope (GitHub's `mentions:` search), use it. Where it cannot (Jira's
+  comment index does not work on our instance — see the design spec dated 2026-08-25),
+  fetch wider and filter inside the adapter. The ingested set must come out the same
+  either way.
 
-Precedent: `github.adapter.ts` (`mentions:{username}`), `jira.adapter.ts`
-(owner legs + ADF mention-node matching).
+Related but **not** the same question: `RoadmapSourceService` still scopes with
+`assignee:` on purpose — roadmap sync genuinely asks "what are my work items". Do not
+align it with the channel adapters; they answer different questions.
 
 ## No filler drafts — a reply is concrete or it is not drafted
 
