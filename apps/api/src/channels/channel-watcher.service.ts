@@ -62,6 +62,9 @@ export class ChannelWatcherService
    * durable per-integration `lastError`; triage-degraded surfacing is a follow-up. */
   private lastPollError: string | null = null;
 
+  /** True while a detached reply-draft sweep is running — stops two from overlapping. */
+  private draftSweepInFlight = false;
+
   constructor(
     private readonly integrations: IntegrationsStorageService,
     private readonly credentials: CredentialsStore,
@@ -125,10 +128,24 @@ export class ChannelWatcherService
     await this.flow
       ?.sweepOutcomes()
       .catch((err) => this.log.debug("outcome sweep failed", { error: (err as Error).message }));
-    // Then finish any reply research parked from an earlier tick.
-    await this.flow
-      ?.sweepDrafts()
-      .catch((err) => this.log.debug("draft sweep failed", { error: (err as Error).message }));
+    // Then finish any reply research parked from an earlier tick — DETACHED. A sweep
+    // spawns up to MAX_PER_SWEEP researches at RESEARCH_TIMEOUT_MS each (~10 min), and
+    // awaiting that here would block every integration poll below for the whole window:
+    // `guardedTick` skips a tick while the previous one runs, and `lastTickAt` is stamped
+    // at tick START, so ~20 ticks would be skipped while health still read `ok`. The
+    // in-flight flag is what keeps two sweeps from overlapping and double-spawning.
+    if (this.flow && !this.draftSweepInFlight) {
+      this.draftSweepInFlight = true;
+      void this.flow
+        .sweepDrafts()
+        // Logged at warn, not debug: this also catches a `moduleRef.get` failure, i.e.
+        // the sweeper being unreachable — reply research silently never running is
+        // exactly the kind of quiet breakage the operator has to be told about.
+        .catch((err) => this.log.warn("draft sweep failed", { error: (err as Error).message }))
+        .finally(() => {
+          this.draftSweepInFlight = false;
+        });
+    }
 
     for (const integration of await this.integrations.list()) {
       if (!integration.enabled) continue;
