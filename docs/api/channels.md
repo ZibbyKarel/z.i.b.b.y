@@ -118,12 +118,26 @@ worth reading if every row is a real answer awaiting a yes. Binds every channel.
 
 ### Jira adapter
 
-- Poll: REST `search` (JQL `project = KEY` + `updated >= cursor`), Basic auth
-  `email:apiToken`
-- Cursor = the most recent `updated`; id = `jira-<KEY>`, `externalRef.messageId`
-  = issue key
-- `url` (Phase 127): `${baseUrl}/browse/${key}` — built from data already in
-  hand, no extra request.
+- Poll: REST `search` (JQL `project = KEY`/custom `jql` + `updated >= cursor`), Basic
+  auth `email:apiToken`. The JQL stays **broad** — mine-and-mentions scope is applied
+  in-process, not in the query, because this instance's comment index doesn't work
+  (`comment ~ currentUser()` / `comment IS NOT EMPTY` both return 0 against issues
+  that demonstrably have comments).
+- **Unit is the individual comment, not the issue** (see "mine and mentions" above):
+  one `InboundMessage` per comment that is either on an issue the operator owns
+  (assignee, reporter, or watcher) or that `@`-mentions them — never a comment the
+  operator wrote themselves. Polling every issue update produced one inbound item per
+  touch regardless of relevance (the 32-approval pile-up referenced above); this is
+  the fix.
+- Cursor = the most recent issue `updated`, independent of which comments qualified.
+  id = `jira-<KEY>-c<commentId>`; `externalRef.messageId` stays the **issue key**
+  (unchanged — `send()` replies by posting a comment on the issue, not on a comment).
+- `text` = summary + issue description + comment body, truncated to the 4500-char
+  contract cap (the comment claims its budget first, the description takes what's
+  left) — `ChannelItemSchema.text` is a hard `.max(4500)` and an oversized item
+  silently vanishes from `list()` on the next read.
+- `url` (Phase 127): `${baseUrl}/browse/${key}?focusedCommentId=<commentId>` — built
+  from data already in hand, no extra request.
 - Send: adds a comment on the issue (`/rest/api/3/issue/{key}/comment`)
 - **Create ("creates a Jira task"):** `createIssue` (POST `/rest/api/3/issue`)
   always sits behind approval — floor `jira.create_issue → ask` plus
