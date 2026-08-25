@@ -19,6 +19,12 @@ export interface SpawnClaudeCliOptions {
   label: string;
   /** Per-stream output cap, in characters. Defaults to {@link DEFAULT_MAX_OUTPUT_CHARS}. */
   maxOutputBytes?: number;
+  /**
+   * Working directory for the child. Omitted by every classify/summarize caller
+   * (they inherit the API process cwd); set by the reply researcher, which must
+   * read the project's repo. Additive — existing callers are unaffected.
+   */
+  cwd?: string;
 }
 
 /**
@@ -45,6 +51,7 @@ export function spawnClaudeCli(opts: SpawnClaudeCliOptions): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn(process.env.CLAUDE_BIN ?? "claude", opts.args, {
       stdio: ["ignore", "pipe", "pipe"],
+      ...(opts.cwd ? { cwd: opts.cwd } : {}),
     });
 
     let stdout = "";
