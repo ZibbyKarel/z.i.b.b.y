@@ -123,47 +123,26 @@ worth reading if every row is a real answer awaiting a yes. Binds every channel.
 
 ### Jira adapter
 
-**What gets ingested.** Only issues the operator is the **assignee** of, or is
-**@-mentioned** in (description or any comment). Nothing else — a project's other
-issues are the project's business, not the inbox's.
-
-Two mechanisms enforce that, because one is not enough:
-
-1. **Initial sync = "from now on"** — first enable (no cursor) seeds the cursor to
-   `now` and ingests **0 items**, without issuing a request. Same contract as the
-   email and GitHub adapters. Before this, a first poll ran bare `project = KEY` and
-   swallowed the entire backlog.
-2. **The assignee/mention filter**, applied to every issue in the `updated >= cursor`
-   delta before it can become a `ChannelItem`.
-
-The filter is **client-side, and has to be**: Jira Cloud does not index @-mentions in
-its text index, so no JQL can express "mentions me". Probed against the live site,
-`text ~ "<display name>"`, `text ~ "<accountId>"` and `text ~ "accountid:<id>"` all
-return 0 for an issue whose ADF provably carries that person's `mention` node, while
-`text ~ "<an ordinary word>"` returns plenty — the operator works; mentions simply are
-not in the index. So the poll asks for `assignee` + `description` + `comment` and walks
-the ADF for a `mention` node whose `attrs.id` is the operator's accountId. The assignee
-half could have gone into the JQL, but both halves live in one place so the two rules
-cannot drift apart.
-
-"The operator" = the accountId the **token** authenticates as (`/rest/api/3/myself`,
-cached per site per process), not `config.email` — so a mention still matches when the
-Atlassian account's primary address differs from the configured login.
-
-A custom `config.jql` still **narrows** (it is AND-ed with `updated >=`, and a trailing
-`ORDER BY` is stripped so the AND stays valid JQL) but can no longer **widen**: the
-scope filter applies to whatever it returns.
-
-The cursor advances over **every** issue in the delta, in scope or not. An out-of-scope
-issue is dropped, not deferred — leaving the cursor behind it would re-fetch and
-re-drop the same page on every tick, forever.
-
-- Poll: REST `/search/jql` (`(<jql|project = KEY>) AND updated >= cursor`), Basic auth
-  `email:apiToken`
-- Cursor = the most recent `updated`; id = `jira-<KEY>`, `externalRef.messageId`
-  = issue key
-- `url` (Phase 127): `${baseUrl}/browse/${key}` — built from data already in
-  hand, no extra request.
+- Poll: REST `search` (JQL `project = KEY`/custom `jql` + `updated >= cursor`), Basic
+  auth `email:apiToken`. The JQL stays **broad** — mine-and-mentions scope is applied
+  in-process, not in the query, because this instance's comment index doesn't work
+  (`comment ~ currentUser()` / `comment IS NOT EMPTY` both return 0 against issues
+  that demonstrably have comments).
+- **Unit is the individual comment, not the issue** (see "mine and mentions" above):
+  one `InboundMessage` per comment that is either on an issue the operator owns
+  (assignee, reporter, or watcher) or that `@`-mentions them — never a comment the
+  operator wrote themselves. Polling every issue update produced one inbound item per
+  touch regardless of relevance (the 32-approval pile-up referenced above); this is
+  the fix.
+- Cursor = the most recent issue `updated`, independent of which comments qualified.
+  id = `jira-<KEY>-c<commentId>`; `externalRef.messageId` stays the **issue key**
+  (unchanged — `send()` replies by posting a comment on the issue, not on a comment).
+- `text` = summary + issue description + comment body, truncated to the 4500-char
+  contract cap (the comment claims its budget first, the description takes what's
+  left) — `ChannelItemSchema.text` is a hard `.max(4500)` and an oversized item
+  silently vanishes from `list()` on the next read.
+- `url` (Phase 127): `${baseUrl}/browse/${key}?focusedCommentId=<commentId>` — built
+  from data already in hand, no extra request.
 - Send: adds a comment on the issue (`/rest/api/3/issue/{key}/comment`)
 - **Create ("creates a Jira task"):** `createIssue` (POST `/rest/api/3/issue`)
   always sits behind approval — floor `jira.create_issue → ask` plus

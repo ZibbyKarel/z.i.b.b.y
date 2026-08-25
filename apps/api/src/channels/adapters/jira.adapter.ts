@@ -5,51 +5,44 @@ import type {
   Integration,
   TestResult,
 } from "@zibby/contracts";
+import { adfToText, collectMentionAccountIds } from "../../shared/text/adf-to-text";
 import type { ChannelAdapter, InboundMessage, PollResult } from "./adapter";
+
+/** Mirrors `ChannelItemSchema.text`'s `.max(4500)` — exceeding it fails schema-parse. */
+const MAX_ITEM_TEXT = 4500;
+/** Room reserved for the header lines so description+comment truncation stays safe. */
+const TEXT_HEADROOM = 200;
+
+interface JiraUser {
+  accountId?: string;
+  displayName?: string;
+  emailAddress?: string;
+}
+
+interface JiraComment {
+  id?: string;
+  author?: JiraUser;
+  body?: unknown;
+  created?: string;
+  updated?: string;
+}
 
 interface JiraIssue {
   key?: string;
   fields?: {
     summary?: string;
     updated?: string;
-    reporter?: { displayName?: string; emailAddress?: string };
-    assignee?: { accountId?: string } | null;
+    reporter?: JiraUser;
+    assignee?: JiraUser;
+    watches?: { isWatching?: boolean };
     description?: unknown;
-    comment?: unknown;
+    comment?: { total?: number; comments?: JiraComment[] };
   };
 }
 
 interface SearchResponse {
   issues?: JiraIssue[];
   errorMessages?: string[];
-}
-
-/** The fields the poll needs: display data plus the two scope inputs (assignee, mentions). */
-const POLL_FIELDS = "summary,updated,reporter,description,assignee,comment";
-
-/**
- * Every accountId that appears as an ADF `mention` node anywhere in `node`.
- *
- * This is the ONLY way to answer "does this issue @-mention the operator": Jira
- * Cloud does not index mentions in the text index, so no JQL can express it —
- * probed against the live site, `text ~ "<display name>"`, `text ~ "<accountId>"`
- * and `text ~ "accountid:<id>"` all return 0 for an issue whose ADF provably
- * carries that person's mention node, while `text ~ "<an ordinary word>"` returns
- * plenty (so the operator itself works — mentions simply aren't in the index).
- * Hence the scope is enforced client-side over a cursor-narrowed page.
- */
-function mentionedAccountIds(node: unknown, found: Set<string>): Set<string> {
-  if (Array.isArray(node)) {
-    for (const child of node) mentionedAccountIds(child, found);
-  } else if (node !== null && typeof node === "object") {
-    const record = node as Record<string, unknown>;
-    if (record.type === "mention") {
-      const id = (record.attrs as { id?: unknown } | undefined)?.id;
-      if (typeof id === "string") found.add(id);
-    }
-    for (const child of Object.values(record)) mentionedAccountIds(child, found);
-  }
-  return found;
 }
 
 /** API token from the closed credentials union (Jira Cloud Basic `email:token`). */
@@ -60,54 +53,47 @@ function tokenOf(creds: CredentialsInput): string | null {
 /**
  * Jira adapter over plain `fetch` (Node 20+ global). Polls the REST `search` API with
  * a JQL that selects issues updated since the cursor (the operator's `jql` or a
- * `project = KEY` default), normalizes each to an {@link InboundMessage} with a
- * deterministic `jira-<KEY>` id, and advances the cursor to the newest `updated` seen.
- * Auth is Basic `base64(email:apiToken)` — the email is non-secret config, the token
- * is the credential. No method sleeps on a rate limit; a failure surfaces to the
- * watcher (which retries with backoff, M8).
- *
- * **Scope — only issues that concern the operator.** Two changes bound what this
- * adapter can ever ingest, because `project = KEY` alone pulled the project's whole
- * backlog into the inbox (115 issues, each of which grew a boilerplate draft reply):
- *
- * 1. A fresh integration (no persisted cursor) seeds the cursor to "now" and ingests
- *    nothing on that first poll — the same "initial sync = now" contract the email and
- *    GitHub adapters already hold. No poll can ever backfill history.
- * 2. Every later poll fetches only the `updated >= cursor` delta and then keeps ONLY
- *    the issues the operator is the assignee of, or is @-mentioned in
- *    ({@link mentionedAccountIds}). Everything else is dropped before it becomes a
- *    {@link ChannelItem}. The assignee half could be pushed into the JQL; the mention
- *    half provably cannot, so both are applied in one place client-side rather than
- *    split across two mechanisms that could drift.
- *
- * The identity that "me" resolves to is the token's own account (`/myself`), cached
- * per adapter instance — not `config.email`, so a mention still matches when the
- * Atlassian account's primary address differs from the configured login.
+ * `project = KEY` default), then emits one {@link InboundMessage} per COMMENT that is
+ * relevant to the operator rather than one per issue — a comment on an issue the
+ * operator owns (assignee, reporter, or watcher), or a comment anywhere that
+ * @-mentions them. This is deliberately narrower than "every issue update": polling
+ * the whole project produced one inbound item per issue touch, most of which nobody
+ * asked the operator anything (see `github.adapter.ts`'s scoped-ingestion precedent).
+ * The item id is `jira-<KEY>-c<commentId>` (deterministic per comment) but
+ * `externalRef.messageId` stays the ISSUE KEY, since `send()` replies by posting a
+ * comment on the issue, not on a comment. Auth is Basic `base64(email:apiToken)` — the
+ * email is non-secret config, the token is the credential. No method sleeps on a rate
+ * limit; a failure surfaces to the watcher (which retries with backoff, M8).
  */
 export class JiraChannelAdapter implements ChannelAdapter {
   readonly kind = "jira" as const;
-  /** `baseUrl` → the token owner's accountId; one `/myself` read per site per process. */
-  private readonly accountIdCache = new Map<string, string>();
 
   constructor(private readonly fetchImpl: typeof fetch = fetch) {}
 
+  /** Memoized operator accountId per baseUrl — ADF mentions carry accountId, not email. */
+  private readonly operatorIds = new Map<string, string>();
+
   /**
-   * The accountId the credential authenticates as — the "me" both scope rules test
-   * against. Cached: it cannot change for a given token, and a poll that re-read it
-   * every tick would double this adapter's request count for a constant.
+   * The accountId of the user the API token belongs to — i.e. the operator.
+   * Throws on failure rather than degrading: an unresolved identity would mean
+   * "no owner legs, no mention matching", which silently ingests nothing (or,
+   * worse, everything). The watcher's retry/backoff (M8) handles the throw.
    */
-  private async myAccountId(integration: Integration, creds: CredentialsInput): Promise<string> {
+  private async operatorAccountId(
+    integration: Integration,
+    creds: CredentialsInput,
+  ): Promise<string> {
     if (integration.config.kind !== "jira") throw new Error("not a jira integration");
     const { baseUrl, email } = integration.config;
-    const cached = this.accountIdCache.get(baseUrl);
+    const cached = this.operatorIds.get(baseUrl);
     if (cached) return cached;
     const res = await this.fetchImpl(`${baseUrl}/rest/api/3/myself`, {
       headers: { authorization: this.authHeader(creds, email), accept: "application/json" },
     });
     if (!res.ok) throw new Error(`jira /myself: HTTP ${res.status}`);
     const body = (await res.json()) as { accountId?: string };
-    if (!body.accountId) throw new Error("jira /myself: no accountId returned");
-    this.accountIdCache.set(baseUrl, body.accountId);
+    if (!body.accountId) throw new Error("jira /myself returned no accountId");
+    this.operatorIds.set(baseUrl, body.accountId);
     return body.accountId;
   }
 
@@ -145,29 +131,19 @@ export class JiraChannelAdapter implements ChannelAdapter {
   ): Promise<PollResult> {
     if (integration.config.kind !== "jira") throw new Error("not a jira integration");
     const { baseUrl, email, projectKey, jql } = integration.config;
+    const operator = await this.operatorAccountId(integration, creds);
 
-    // First enable (no persisted cursor): seed it to "now" and ingest nothing, so a
-    // fresh integration never backfills the project's whole issue history. No fetch
-    // happens on this pass; the next tick has a real cursor and polls only the delta.
-    if (cursor === undefined) {
-      return { items: [], cursor: new Date().toISOString() };
-    }
-
-    const me = await this.myAccountId(integration, creds);
-    // The operator's own `jql` still narrows further, but it can no longer widen the
-    // scope: the assignee/mention filter below applies to whatever this returns.
-    // A trailing ORDER BY is stripped before the clause is parenthesised — `(… ORDER
-    // BY x) AND …` is not valid JQL.
-    const narrowing = (jql ?? (projectKey ? `project = ${projectKey}` : ""))
-      .replace(/\s+order\s+by\s+.*$/i, "")
-      .trim();
+    // The JQL stays BROAD on purpose. A comment mentioning the operator can sit on
+    // an issue they do not own, and this instance's comment index does not work
+    // (`comment ~ currentUser()` returns 0 against issues that demonstrably have
+    // comments), so the mine-and-mentions scope is applied below, in-process.
+    const base = jql ?? (projectKey ? `project = ${projectKey}` : "order by updated DESC");
     // Narrow to issues changed since the cursor (Jira JQL minute precision).
-    const updatedClause = `updated >= "${toJqlTime(cursor)}"`;
-    const clause = narrowing ? `(${narrowing}) AND ${updatedClause}` : updatedClause;
+    const clause = cursor ? `(${base}) AND updated >= "${toJqlTime(cursor)}"` : base;
     const params = new URLSearchParams({
       jql: clause,
       maxResults: "50",
-      fields: POLL_FIELDS,
+      fields: "summary,updated,reporter,assignee,watches,description,comment",
     });
     // `/search/jql` — the legacy `/rest/api/3/search` was removed by Atlassian
     // (May 2025, CHANGE-2046) and answers 410 Gone; the `issues`/`errorMessages`
@@ -187,27 +163,101 @@ export class JiraChannelAdapter implements ChannelAdapter {
     for (const issue of body.issues ?? []) {
       if (!issue.key) continue;
       const updated = issue.fields?.updated ?? new Date(0).toISOString();
-      // The cursor advances over EVERY issue in the delta, in scope or not — an
-      // out-of-scope issue is dropped, not deferred, so leaving the cursor behind it
-      // would re-fetch (and re-drop) the same page on every tick, forever.
       if (newest === undefined || updated > newest) newest = updated;
-      const assigneeId = issue.fields?.assignee?.accountId;
-      const inScope =
-        assigneeId === me || mentionedAccountIds(issue.fields ?? {}, new Set()).has(me);
-      if (!inScope) continue;
-      const ref: ExternalRef = { channel: projectKey ?? baseUrl, messageId: issue.key };
-      items.push({
-        id: `jira-${issue.key}`,
-        externalRef: ref,
-        from: issue.fields?.reporter?.displayName ?? issue.fields?.reporter?.emailAddress,
-        receivedAt: new Date(updated).toISOString(),
-        text: `[${issue.key}] ${issue.fields?.summary ?? ""}`.trim(),
-        raw: issue,
-        url: `${baseUrl}/browse/${issue.key}`,
-      });
-      if (newest === undefined || updated > newest) newest = updated;
+
+      const owned = this.isOwned(issue, operator);
+      const comments = await this.commentsOf(integration, creds, issue);
+      for (const c of comments) {
+        if (!c.id) continue;
+        // Never reply to yourself.
+        if (c.author?.accountId === operator) continue;
+        // Mine-and-mentions: a comment on an owned issue is addressed to the
+        // operator in practice; on any other issue only an explicit mention is.
+        if (!owned && !collectMentionAccountIds(c.body).includes(operator)) continue;
+        items.push(this.toItem(integration, issue, c));
+      }
     }
     return { items, cursor: newest };
+  }
+
+  /** Assignee / reporter / watcher legs of the owner test (Jira `currentUser()`). */
+  private isOwned(issue: JiraIssue, operator: string): boolean {
+    const f = issue.fields;
+    return (
+      f?.assignee?.accountId === operator ||
+      f?.reporter?.accountId === operator ||
+      f?.watches?.isWatching === true
+    );
+  }
+
+  /**
+   * The issue's comments. The inline `fields.comment` page is used as-is when it
+   * is complete; when it is partial (`comments.length < total`) we re-fetch that
+   * one issue's comments so the newest ones cannot be silently dropped by the
+   * inline page being the OLDEST page.
+   */
+  private async commentsOf(
+    integration: Integration,
+    creds: CredentialsInput,
+    issue: JiraIssue,
+  ): Promise<JiraComment[]> {
+    if (integration.config.kind !== "jira") return [];
+    const inline = issue.fields?.comment;
+    const comments = inline?.comments ?? [];
+    const total = inline?.total ?? comments.length;
+    if (comments.length >= total || !issue.key) return comments;
+
+    const { baseUrl, email } = integration.config;
+    const params = new URLSearchParams({
+      startAt: String(Math.max(0, total - 50)),
+      maxResults: "50",
+      orderBy: "created",
+    });
+    const res = await this.fetchImpl(`${baseUrl}/rest/api/3/issue/${issue.key}/comment?${params}`, {
+      headers: { authorization: this.authHeader(creds, email), accept: "application/json" },
+    });
+    if (!res.ok) return comments; // best-effort: never fail the whole poll for one issue
+    const body = (await res.json()) as { comments?: JiraComment[] };
+    return body.comments ?? comments;
+  }
+
+  /** Build the enriched inbound message for one relevant comment. */
+  private toItem(integration: Integration, issue: JiraIssue, c: JiraComment): InboundMessage {
+    if (integration.config.kind !== "jira") throw new Error("not a jira integration");
+    const { baseUrl, projectKey } = integration.config;
+    const key = issue.key as string;
+    const author = c.author?.displayName ?? c.author?.emailAddress ?? "unknown";
+    const description = adfToText(issue.fields?.description);
+    const commentText = adfToText(c.body);
+
+    // The 4500-char contract cap is shared: the comment is what must be answered,
+    // so it keeps its budget first and the description takes what is left.
+    const budget = MAX_ITEM_TEXT - TEXT_HEADROOM;
+    const commentBudget = Math.min(commentText.length, budget);
+    const descBudget = Math.max(0, budget - commentBudget);
+
+    const text = [
+      `[${key}] ${issue.fields?.summary ?? ""}`.trim(),
+      "",
+      "Issue description:",
+      truncate(description, descBudget),
+      "",
+      `Comment by ${author}:`,
+      truncate(commentText, commentBudget),
+    ]
+      .join("\n")
+      .slice(0, MAX_ITEM_TEXT);
+
+    const ref: ExternalRef = { channel: projectKey ?? baseUrl, messageId: key };
+    return {
+      id: `jira-${key}-c${c.id}`,
+      externalRef: ref,
+      from: author,
+      receivedAt: new Date(c.created ?? issue.fields?.updated ?? Date.now()).toISOString(),
+      text,
+      raw: { issue, comment: c },
+      url: `${baseUrl}/browse/${key}?focusedCommentId=${c.id}`,
+    };
   }
 
   /**
@@ -290,4 +340,11 @@ function toJqlTime(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return d.toISOString().slice(0, 16).replace("T", " ");
+}
+
+/** Hard-cut `text` to `max` chars, marking the cut so the operator knows it happened. */
+function truncate(text: string, max: number): string {
+  if (max <= 0) return "";
+  if (text.length <= max) return text;
+  return `${text.slice(0, Math.max(0, max - 1))}…`;
 }
