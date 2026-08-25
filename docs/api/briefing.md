@@ -42,7 +42,9 @@ of `generate`:
    `last-briefing.json` under the activity dir. A missing or garbage cursor falls
    back to the start of the current day (first boot, or a deleted cursor file).
 2. Gather, in parallel: pending approvals, all pipeline runs and all goal runs
-   (filtered down to parked / in-flight), in-flight channel items (`new`/`triaged`),
+   (filtered down to parked / in-flight), in-flight channel items
+   (`new`/`needs-draft`/`triaged` — an item awaiting reply research carries no
+   approval, so it is something ZIBBY is watching, never a needs-you decision),
    activity entries since the cursor, queued/held/dead-lettered scheduled tasks,
    project names (for the engagement rollup), last-known CI statuses, the
    subsystem status rows (`SubsystemsService.list`) and the weekly usage window %
