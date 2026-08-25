@@ -71,6 +71,14 @@ function render(value: unknown): string {
       return `@${attrString(node, "text")?.replace(/^@/, "") ?? attrString(node, "id") ?? "unknown"}`;
     case "emoji":
       return attrString(node, "shortName") ?? attrString(node, "text") ?? "";
+    case "status":
+      // A Jira status lozenge (e.g. "In Progress") carries no `content` at
+      // all — only `attrs.text` — so it needs its own case; the default
+      // case's `renderChildren` has nothing to recurse into and drops it.
+      return attrString(node, "text") ?? "";
+    case "date":
+      // Same shape as `status`: attrs-only, no `content`.
+      return attrString(node, "timestamp") ?? "";
     case "inlineCard":
     case "blockCard":
       return attrString(node, "url") ?? "";
@@ -79,15 +87,30 @@ function render(value: unknown): string {
     case "mediaSingle":
       return "[attachment]";
     case "listItem":
-      return `- ${renderChildren(node, "\n")}`;
-    case "bulletList":
-    case "orderedList":
+      // No marker here — the parent list owns it, since a bullet and an
+      // ordered list render different markers for the same node type.
       return renderChildren(node, "\n");
+    case "bulletList":
+      return childrenOf(node)
+        .map((child) => render(child))
+        .filter((s) => s.length > 0)
+        .map((item) => `- ${item}`)
+        .join("\n");
+    case "orderedList":
+      return childrenOf(node)
+        .map((child) => render(child))
+        .filter((s) => s.length > 0)
+        .map((item, index) => `${index + 1}. ${item}`)
+        .join("\n");
     case "codeBlock":
     case "paragraph":
     case "heading":
-    case "blockquote":
       return renderChildren(node, "");
+    case "blockquote":
+      // Unlike codeBlock/paragraph/heading, a blockquote's children are
+      // BLOCK-level nodes (typically paragraphs) — joining with "" jams a
+      // multi-paragraph quote's words together with no separator at all.
+      return renderChildren(node, "\n\n");
     case "doc":
       return renderChildren(node, "\n\n");
     default:
