@@ -22,6 +22,10 @@ const STALE_PENDING_MS = 15 * 60 * 1000;
  * The `draftResearch.status = "pending"` write happens BEFORE the child process
  * spawns, which is what makes the sweep idempotent across ticks — a research
  * taking minutes is simply skipped by the next tick rather than double-spawned.
+ *
+ * The symmetric guard is on the way out: the item is re-read after the research and
+ * the result is DISCARDED unless it is still `needs-draft`. Without that, a snapshot
+ * captured minutes earlier would be written back over an operator's dismissal.
  */
 @Injectable()
 export class ReplyDraftSweeperService {
@@ -77,9 +81,23 @@ export class ReplyDraftSweeperService {
     const draft = await this.drafts.research(locked);
     const finishedAt = new Date().toISOString();
 
+    // Research takes minutes, and `locked` has been a stale snapshot the whole time.
+    // The operator can dismiss an item in that window (`POST /items/:id/dismiss` takes
+    // any state), so writing the snapshot back would resurrect a retired item — and
+    // then hand it to parkOrSurface, which may AUTO-SEND a Tier-2 reply on something
+    // the operator explicitly killed. Re-read and bail unless the item is still ours.
+    const current = await this.store.findById(item.id);
+    if (current?.state !== "needs-draft") {
+      this.log.debug("reply-draft research discarded: item left needs-draft", {
+        itemId: item.id,
+        state: current?.state ?? "deleted",
+      });
+      return;
+    }
+
     if (draft) {
       const done: ChannelItem = {
-        ...locked,
+        ...current,
         draftResearch: {
           status: "ok",
           attempts,
@@ -93,7 +111,7 @@ export class ReplyDraftSweeperService {
     }
 
     const failed: ChannelItem = {
-      ...locked,
+      ...current,
       draftResearch: {
         status: "failed",
         attempts,
