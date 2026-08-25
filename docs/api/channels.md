@@ -26,8 +26,16 @@ timer whenever the value changes.
 
 ### One tick
 
-`sweepOutcomes()` runs first (see below), then `sweepDrafts()` — reply research
-parked by an earlier tick — then for each enabled integration with credentials:
+`sweepOutcomes()` runs first (see below). Then `sweepDrafts()` — reply research
+parked by an earlier tick — is started **detached**: the tick does not await it, and
+an in-flight flag stops a second sweep overlapping the first. A sweep can run for
+~10 minutes (`MAX_PER_SWEEP` researches × `RESEARCH_TIMEOUT_MS`), and awaiting it
+would block every poll below for that window — `guardedTick` skips a tick while the
+previous one runs, and `lastTickAt` is stamped at tick _start_, so ingestion would
+stall for ~20 ticks while the health probe still read `ok`. A sweep failure is
+logged at **warn** (it also catches the sweeper being unreachable via `moduleRef`).
+
+Then, for each enabled integration with credentials:
 
 1. `adapter.poll(integration, credentials, cursor, ctx?)` → new items, retried with
    exponential backoff (`withRetry`; `CHANNEL_POLL_RETRIES` default 2,
@@ -362,7 +370,8 @@ task's terminal outcome back onto the item.
 
 Delegates to `ReplyDraftSweeperService` (resolved lazily through the
 `REPLY_DRAFT_SWEEPER` token — the sweeper depends on this service, so injecting
-it directly would be a DI cycle). Absent, it is a no-op.
+it directly would be a DI cycle). Absent, it is a no-op. The watcher calls this
+detached and never awaits it — see _One tick_.
 
 ## ReplyDraftSweeperService
 

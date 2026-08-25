@@ -111,7 +111,11 @@ describe("ChannelWatcherService", () => {
     );
   }
 
-  function makeWatcher(registry: AdapterRegistry, moduleRef: ModuleRef = fakeModuleRef()) {
+  function makeWatcher(
+    registry: AdapterRegistry,
+    moduleRef: ModuleRef = fakeModuleRef(),
+    flow?: unknown,
+  ) {
     return new ChannelWatcherService(
       integrations,
       credentials,
@@ -126,8 +130,60 @@ describe("ChannelWatcherService", () => {
       // base/e2e specs, not here.
       { register: () => {} } as never,
       moduleRef,
+      flow as never,
     );
   }
+
+  // A reply research can run for minutes (MAX_PER_SWEEP × RESEARCH_TIMEOUT_MS ≈ 10 min).
+  // Awaiting it inside the tick would block every integration poll for that whole
+  // window — and `guardedTick` skips overlapping ticks while `lastTickAt` is stamped at
+  // tick START, so health would still read `ok` through ~20 skipped ticks.
+  describe("the reply-draft sweep runs alongside the poll loop, not in front of it", () => {
+    function gatedFlow() {
+      let release!: () => void;
+      const gate = new Promise<void>((r) => {
+        release = r;
+      });
+      const sweepDrafts = vi.fn(() => gate);
+      const flow = {
+        sweepOutcomes: async () => {},
+        sweepDrafts,
+        handle: async (i: unknown) => i,
+      };
+      return { flow, sweepDrafts, release: () => release() };
+    }
+
+    it("does not block the tick on a slow sweep", async () => {
+      const { flow, sweepDrafts, release } = gatedFlow();
+      const watcher = makeWatcher(makeRegistry(), fakeModuleRef(), flow);
+
+      // resolves even though the sweep is still unresolved
+      await watcher.tick();
+      expect(sweepDrafts).toHaveBeenCalledTimes(1);
+      release();
+    });
+
+    it("does not start a second sweep while one is still in flight", async () => {
+      const { flow, sweepDrafts, release } = gatedFlow();
+      const watcher = makeWatcher(makeRegistry(), fakeModuleRef(), flow);
+
+      await watcher.tick();
+      await watcher.tick();
+      expect(sweepDrafts).toHaveBeenCalledTimes(1);
+      release();
+    });
+
+    it("sweeps again on the next tick once the previous sweep finished", async () => {
+      const { flow, sweepDrafts, release } = gatedFlow();
+      const watcher = makeWatcher(makeRegistry(), fakeModuleRef(), flow);
+
+      await watcher.tick();
+      release();
+      await new Promise((r) => setImmediate(r)); // let the in-flight flag reset
+      await watcher.tick();
+      expect(sweepDrafts).toHaveBeenCalledTimes(2);
+    });
+  });
 
   it("persists polled messages as `new` and advances the cursor after persist", async () => {
     await integrations.create(slack("team"));
