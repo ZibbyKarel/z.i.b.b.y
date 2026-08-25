@@ -29,10 +29,14 @@ function item(over: Partial<ChannelItem> = {}): ChannelItem {
 function harness(over: {
   items?: ChannelItem[];
   research?: (i: ChannelItem) => Promise<string | null>;
+  /** Overrides what a re-read sees — used to simulate a concurrent operator write. */
+  latest?: (id: string) => ChannelItem | undefined;
 }) {
   const updates: ChannelItem[] = [];
+  const seed = over.items ?? [item()];
   const store = {
-    list: async () => over.items ?? [item()],
+    list: async () => seed,
+    findById: async (id: string) => (over.latest ? over.latest(id) : seed.find((i) => i.id === id)),
     update: async (i: ChannelItem) => {
       updates.push(i);
       return i;
@@ -120,6 +124,41 @@ describe("ReplyDraftSweeperService.sweep", () => {
     });
     await h.svc.sweep();
     expect(research).toHaveBeenCalledTimes(1);
+  });
+
+  // The research runs for minutes while `locked` goes stale in memory. If the operator
+  // dismisses the item in that window, writing the snapshot back would resurrect it —
+  // and hand it to parkOrSurface, which can AUTO-SEND a Tier-2 reply on something the
+  // operator explicitly retired. The re-read is the gate that stops that.
+  it("discards the research when the operator dismissed the item mid-flight", async () => {
+    const h = harness({
+      research: async () => "a real answer",
+      latest: (id) => item({ id, state: "ignored" }),
+    });
+    await h.svc.sweep();
+    expect(h.parked).toHaveLength(0);
+    // only the pending lock was written — the stale snapshot never went back
+    expect(h.updates).toHaveLength(1);
+    expect(h.updates[0]?.draftResearch?.status).toBe("pending");
+  });
+
+  it("discards a failed research too when the item left needs-draft", async () => {
+    const h = harness({
+      items: [item({ draftResearch: { status: "failed", attempts: 1 } })],
+      research: async () => null,
+      latest: (id) => item({ id, state: "ignored" }),
+    });
+    await h.svc.sweep();
+    // retry budget was spent, but a dismissed item must not be surfaced anyway
+    expect(h.parked).toHaveLength(0);
+    expect(h.updates).toHaveLength(1);
+  });
+
+  it("discards the research when the item was deleted mid-flight", async () => {
+    const h = harness({ research: async () => "a real answer", latest: () => undefined });
+    await h.svc.sweep();
+    expect(h.parked).toHaveLength(0);
+    expect(h.updates).toHaveLength(1);
   });
 
   it("researches at most 2 items per sweep", async () => {
