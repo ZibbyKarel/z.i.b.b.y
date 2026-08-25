@@ -26,19 +26,25 @@ function item(over: Partial<ChannelItem> = {}): ChannelItem {
   } as ChannelItem;
 }
 
+/**
+ * The store is a live map, not a fixed snapshot, so a test can mutate an item *while*
+ * a research is in flight — which is the only way to exercise the two dismissal doors
+ * (before the lock write, and after the research returns) at their real call order.
+ */
 function harness(over: {
   items?: ChannelItem[];
   research?: (i: ChannelItem) => Promise<string | null>;
-  /** Overrides what a re-read sees — used to simulate a concurrent operator write. */
-  latest?: (id: string) => ChannelItem | undefined;
+  park?: (i: ChannelItem, d: string | null) => Promise<void>;
 }) {
   const updates: ChannelItem[] = [];
   const seed = over.items ?? [item()];
+  const world = new Map<string, ChannelItem>(seed.map((i) => [i.id, i]));
   const store = {
-    list: async () => seed,
-    findById: async (id: string) => (over.latest ? over.latest(id) : seed.find((i) => i.id === id)),
+    list: async () => [...world.values()].filter((i) => i.state === "needs-draft"),
+    findById: async (id: string) => world.get(id),
     update: async (i: ChannelItem) => {
       updates.push(i);
+      world.set(i.id, i);
       return i;
     },
   } as never;
@@ -46,6 +52,7 @@ function harness(over: {
   const parked: { item: ChannelItem; draft: string | null }[] = [];
   const flow = {
     parkOrSurface: async (i: ChannelItem, _v: unknown, d: string | null) => {
+      await over.park?.(i, d);
       parked.push({ item: i, draft: d });
       return i;
     },
@@ -56,7 +63,30 @@ function harness(over: {
     flow,
     new LoggerService(new TraceContextService()),
   );
-  return { svc, updates, parked };
+  return {
+    svc,
+    updates,
+    parked,
+    /** The operator retiring an item from the UI, mid-sweep. */
+    dismiss: (id: string) => {
+      const cur = world.get(id);
+      if (cur) world.set(id, { ...cur, state: "ignored" });
+    },
+    remove: (id: string) => world.delete(id),
+    /** Age the pending lock past STALE_PENDING_MS so the next sweep retries it. */
+    age: (id: string) => {
+      const cur = world.get(id);
+      if (cur?.draftResearch) {
+        world.set(id, {
+          ...cur,
+          draftResearch: {
+            ...cur.draftResearch,
+            startedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+          },
+        });
+      }
+    },
+  };
 }
 
 describe("ReplyDraftSweeperService.sweep", () => {
@@ -79,6 +109,9 @@ describe("ReplyDraftSweeperService.sweep", () => {
     await h.svc.sweep();
     expect(h.parked).toHaveLength(1);
     expect(h.parked[0]?.draft).toBe("Backoff doubles — runner-core.ts:88.");
+    // the `ok` marker rides ON the handed-off item: parkOrSurface's own write is what
+    // persists it, so the terminal status can never outlive a failed hand-off.
+    expect(h.parked[0]?.item.draftResearch?.status).toBe("ok");
   });
 
   it("passes a null draft through when research found no answer", async () => {
@@ -126,14 +159,16 @@ describe("ReplyDraftSweeperService.sweep", () => {
     expect(research).toHaveBeenCalledTimes(1);
   });
 
-  // The research runs for minutes while `locked` goes stale in memory. If the operator
-  // dismisses the item in that window, writing the snapshot back would resurrect it —
-  // and hand it to parkOrSurface, which can AUTO-SEND a Tier-2 reply on something the
-  // operator explicitly retired. The re-read is the gate that stops that.
+  // ── Door 1: the operator dismisses the item WHILE ITS OWN research is running ──
+  // The snapshot the sweeper holds is stale by then. Writing it back would resurrect the
+  // item and hand it to parkOrSurface, which can AUTO-SEND a Tier-2 reply on something
+  // the operator explicitly retired. The post-research re-read is what stops that.
   it("discards the research when the operator dismissed the item mid-flight", async () => {
-    const h = harness({
-      research: async () => "a real answer",
-      latest: (id) => item({ id, state: "ignored" }),
+    const h: ReturnType<typeof harness> = harness({
+      research: async () => {
+        h.dismiss("jira-ABC-1-c501");
+        return "a real answer";
+      },
     });
     await h.svc.sweep();
     expect(h.parked).toHaveLength(0);
@@ -143,10 +178,12 @@ describe("ReplyDraftSweeperService.sweep", () => {
   });
 
   it("discards a failed research too when the item left needs-draft", async () => {
-    const h = harness({
+    const h: ReturnType<typeof harness> = harness({
       items: [item({ draftResearch: { status: "failed", attempts: 1 } })],
-      research: async () => null,
-      latest: (id) => item({ id, state: "ignored" }),
+      research: async () => {
+        h.dismiss("jira-ABC-1-c501");
+        return null;
+      },
     });
     await h.svc.sweep();
     // retry budget was spent, but a dismissed item must not be surfaced anyway
@@ -155,10 +192,82 @@ describe("ReplyDraftSweeperService.sweep", () => {
   });
 
   it("discards the research when the item was deleted mid-flight", async () => {
-    const h = harness({ research: async () => "a real answer", latest: () => undefined });
+    const h: ReturnType<typeof harness> = harness({
+      research: async () => {
+        h.remove("jira-ABC-1-c501");
+        return "a real answer";
+      },
+    });
     await h.svc.sweep();
     expect(h.parked).toHaveLength(0);
     expect(h.updates).toHaveLength(1);
+  });
+
+  // ── Door 2: the operator dismisses B while an EARLIER candidate is researching ──
+  // The candidate list is snapshotted once, but researches run sequentially, so B's turn
+  // can come minutes later. Locking B from that stale snapshot would resurrect it — and
+  // the post-research guard would then read B's own resurrection and wave it through.
+  it("never locks a candidate dismissed while an earlier one was researching", async () => {
+    const research = vi.fn(async (i: ChannelItem) => {
+      if (i.id === "A") h.dismiss("B");
+      return "answer";
+    });
+    const h: ReturnType<typeof harness> = harness({
+      items: [item({ id: "A" }), item({ id: "B" })],
+      research,
+    });
+    await h.svc.sweep();
+    expect(research).toHaveBeenCalledTimes(1);
+    expect(research.mock.calls[0]?.[0]?.id).toBe("A");
+    // B was never locked, never researched, never handed off
+    expect(h.updates.some((u) => u.id === "B")).toBe(false);
+    expect(h.parked.map((p) => p.item.id)).not.toContain("B");
+  });
+
+  // ── Liveness: a terminal marker must never outlive a failed hand-off ──
+  // parkOrSurface reaches integrations, credentials and approvals, any of which can
+  // throw. sweep() swallows that, so persisting `ok` first would strand the item:
+  // isReady never retries `ok`, and it has neither an approval nor a surface.
+  it("does not persist a terminal ok marker when the hand-off throws", async () => {
+    const h = harness({
+      research: async () => "a real answer",
+      park: async () => {
+        throw new Error("no credentials for jira-x");
+      },
+    });
+    await h.svc.sweep();
+    expect(h.updates).toHaveLength(1);
+    expect(h.updates[0]?.draftResearch?.status).toBe("pending");
+  });
+
+  it("does not persist a terminal failed marker when the notify-only hand-off throws", async () => {
+    const h = harness({
+      items: [item({ draftResearch: { status: "failed", attempts: 1 } })],
+      research: async () => null,
+      park: async () => {
+        throw new Error("approvals unavailable");
+      },
+    });
+    await h.svc.sweep();
+    expect(h.updates).toHaveLength(1);
+    expect(h.updates[0]?.draftResearch?.status).toBe("pending");
+  });
+
+  it("retries a failed hand-off once the pending lock goes stale", async () => {
+    const research = vi.fn(async () => "a real answer");
+    let park: () => Promise<void> = async () => {
+      throw new Error("approvals unavailable");
+    };
+    const h: ReturnType<typeof harness> = harness({ research, park: () => park() });
+    await h.svc.sweep();
+    expect(h.parked).toHaveLength(0);
+
+    // the item is left on its pending lock; once that ages out it is picked up again
+    h.age("jira-ABC-1-c501");
+    park = async () => {};
+    await h.svc.sweep();
+    expect(research).toHaveBeenCalledTimes(2);
+    expect(h.parked).toHaveLength(1);
   });
 
   it("researches at most 2 items per sweep", async () => {
