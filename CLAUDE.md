@@ -148,10 +148,11 @@ Applies to every phase, feature, and PR:
   screen: edit is top-right, a card-click navigates to a detail page, dialogs are for
   creating and confirming only, nothing interactive is unlabeled. HUD and Chat-UI share
   one visual language.
-- **Channels ingest "mine and mentions"** — a new adapter defaults to the operator's
-  own work (assigned / reported / watched) plus explicit `@`-mentions, and prefers a
-  conversational unit (a comment) over an object-state change. Never ingest
-  everything a remote can see. See `apps/api/src/channels/README.md`.
+- **Channels ingest "mine and mentions"** — the operator's own work (assigned /
+  reported / watched) plus explicit `@`-mentions is the ceiling no adapter may exceed;
+  how close to it an adapter sits follows from its unit, and a conversational unit (a
+  comment) always beats an object-state change. Never ingest everything a remote can
+  see. See `apps/api/src/channels/README.md`.
 - **A reply is concrete or it is not drafted** — no generic fallback text. When no
   real answer can be produced, no reply approval is created; the item surfaces as
   notify-only for the operator.
