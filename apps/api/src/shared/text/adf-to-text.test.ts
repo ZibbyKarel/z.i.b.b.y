@@ -94,6 +94,64 @@ describe("adfToText", () => {
     expect(adfToText("already a string")).toBe("");
     expect(adfToText(42)).toBe("");
   });
+
+  it("joins a blockquote's paragraph children with a blank line (not jammed together)", () => {
+    const doc = {
+      type: "doc",
+      content: [
+        {
+          type: "blockquote",
+          content: [
+            { type: "paragraph", content: [{ type: "text", text: "First quoted para." }] },
+            { type: "paragraph", content: [{ type: "text", text: "Second quoted para." }] },
+          ],
+        },
+      ],
+    };
+    expect(adfToText(doc)).toBe("First quoted para.\n\nSecond quoted para.");
+  });
+
+  it("renders an orderedList with numbered markers, not bullet dashes", () => {
+    const doc = {
+      type: "doc",
+      content: [
+        {
+          type: "orderedList",
+          content: [
+            {
+              type: "listItem",
+              content: [{ type: "paragraph", content: [{ type: "text", text: "one" }] }],
+            },
+            {
+              type: "listItem",
+              content: [{ type: "paragraph", content: [{ type: "text", text: "two" }] }],
+            },
+          ],
+        },
+      ],
+    };
+    expect(adfToText(doc)).toBe("1. one\n2. two");
+  });
+
+  it("renders a status lozenge's text and a date's timestamp instead of dropping them", () => {
+    const doc = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text: "Status: " },
+            { type: "status", attrs: { text: "In Progress", color: "yellow" } },
+          ],
+        },
+        {
+          type: "paragraph",
+          content: [{ type: "date", attrs: { timestamp: "1700000000000" } }],
+        },
+      ],
+    };
+    expect(adfToText(doc)).toBe("Status: In Progress\n\n1700000000000");
+  });
 });
 
 describe("collectMentionAccountIds", () => {
