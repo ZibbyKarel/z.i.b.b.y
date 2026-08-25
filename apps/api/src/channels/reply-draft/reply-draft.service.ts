@@ -51,7 +51,8 @@ const RESEARCH_SYSTEM_PROMPT = [
  * - The toolset is exactly `Read`/`Grep`/`Glob`, and each is PATH-SCOPED to the
  *   resolved repo (`Read(<cwd>/**)` etc.) under `--permission-mode dontAsk` —
  *   `--disallowedTools` additionally denies Bash/WebFetch/WebSearch/Write/
- *   Edit/Agent/Skill/ToolSearch/ListAgents/RemoteTrigger by name. Path-scoping
+ *   Edit/NotebookEdit/Agent/Workflow/Skill/ToolSearch/ListAgents/RemoteTrigger
+ *   by name. Path-scoping
  *   is load-bearing, not decorative: verified empirically (see
  *   task-4-report.md) that an unscoped `Read,Grep,Glob` allow-list lets the
  *   model read ANYTHING the API process can see — `~/.ssh`,
@@ -63,7 +64,11 @@ const RESEARCH_SYSTEM_PROMPT = [
  *   filter — a tool absent from it still exists and still runs, so every
  *   tool this call site doesn't need must be denied by name explicitly; see
  *   the `runClaude` docblock below for what forced `Skill`/`ToolSearch`/
- *   `ListAgents`/`RemoteTrigger` onto that list.
+ *   `ListAgents`/`RemoteTrigger` onto that list. `NotebookEdit` and `Workflow`
+ *   ride along by the same rule: `NotebookEdit` writes (its siblings `Write`
+ *   and `Edit` are denied, and a researcher writes nothing), and `Workflow`
+ *   orchestrates subagents, which would route straight around the `Agent`
+ *   denial next to it.
  * - The item's text reaches the prompt ONLY inside `envelopeInbound` (Law 4),
  *   never interpolated bare — see {@link buildPrompt}.
  * - `extractResultText` fails CLOSED: a non-JSON or `is_error:true` CLI
@@ -178,8 +183,9 @@ export class ReplyDraftService {
    *   `--allowedTools` is a permission list, not a toolset filter — a tool
    *   left off it is still present in the session and still executes,
    *   nothing about omission denies it. The list here denies
-   *   `Bash WebFetch WebSearch Write Edit Agent Skill ToolSearch ListAgents
-   *   RemoteTrigger` for exactly that reason: a second review ran this call
+   *   `Bash WebFetch WebSearch Write Edit NotebookEdit Agent Workflow Skill
+   *   ToolSearch ListAgents RemoteTrigger` for exactly that reason: a second
+   *   review ran this call
    *   site's argv and got `Skill` to execute (it injected a skill's full
    *   instruction payload as a simulated user turn — an injection
    *   amplifier), `ListAgents` to return five peer-session names and IDs
@@ -235,7 +241,9 @@ export class ReplyDraftService {
         "WebSearch",
         "Write",
         "Edit",
+        "NotebookEdit",
         "Agent",
+        "Workflow",
         "Skill",
         "ToolSearch",
         "ListAgents",
