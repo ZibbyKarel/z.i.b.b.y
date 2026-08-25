@@ -1,7 +1,14 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChannelItem } from "@zibby/contracts";
 import type { LoggerService } from "../../shared/logging/logger.service";
+import { spawnClaudeCli } from "../../shared/spawn-claude-cli";
 import { ReplyDraftService } from "./reply-draft.service";
+
+// Mocked so the "scopes tool access" test can assert the exact argv shape
+// `runClaude` builds, the same pattern `review-comment.distiller.test.ts` uses.
+// Every other test in this file overrides the `runClaude` seam directly and
+// never reaches this mock.
+vi.mock("../../shared/spawn-claude-cli", () => ({ spawnClaudeCli: vi.fn() }));
 
 // Same fake-logger shape as `tasks/claude-cli-router.test.ts`: `new LoggerService()`
 // doesn't compile (its constructor requires a `TraceContextService`), so every
@@ -42,6 +49,38 @@ function make(over: {
 }
 
 describe("ReplyDraftService.research", () => {
+  beforeEach(() => {
+    vi.mocked(spawnClaudeCli).mockReset();
+  });
+
+  it("scopes tool access to the resolved repo and denies everything else", async () => {
+    vi.mocked(spawnClaudeCli).mockResolvedValue(JSON.stringify({ result: "answer" }));
+    const svc = make({});
+    await svc.research(item);
+
+    expect(spawnClaudeCli).toHaveBeenCalledTimes(1);
+    const call = vi.mocked(spawnClaudeCli).mock.calls[0]?.[0];
+    expect(call?.args).toEqual(
+      expect.arrayContaining([
+        "--allowedTools",
+        "Read(/repo/**)",
+        "Grep(/repo/**)",
+        "Glob(/repo/**)",
+        "--disallowedTools",
+        "Bash",
+        "WebFetch",
+        "WebSearch",
+        "Write",
+        "Edit",
+        "Agent",
+      ]),
+    );
+    // Bare tool names (unscoped) must never appear — only the path-scoped form.
+    expect(call?.args).not.toContain("Read");
+    expect(call?.args).not.toContain("Grep");
+    expect(call?.args).not.toContain("Glob");
+  });
+
   it("returns the researched answer text", async () => {
     const svc = make({
       runClaude: async () =>
@@ -108,6 +147,19 @@ describe("ReplyDraftService.research", () => {
 
   it("returns null when the answer comes back empty", async () => {
     const svc = make({ runClaude: async () => JSON.stringify({ result: "   " }) });
+    await expect(svc.research(item)).resolves.toBeNull();
+  });
+
+  it("returns null when the CLI reports is_error, even with a result string present", async () => {
+    const svc = make({
+      runClaude: async () =>
+        JSON.stringify({ result: "some text that looks like an answer", is_error: true }),
+    });
+    await expect(svc.research(item)).resolves.toBeNull();
+  });
+
+  it("returns null (fails closed) when the CLI output is not JSON", async () => {
+    const svc = make({ runClaude: async () => "not json garbage from a crashed CLI" });
     await expect(svc.research(item)).resolves.toBeNull();
   });
 });

@@ -3,7 +3,7 @@
  * onto Claude Code's own tool / permission-rule strings.
  *
  * The runner spawns `claude -p` under `--permission-mode dontAsk`, where only
- * tools matching the `--allowedTools` allow-list (plus read-only Bash) execute.
+ * tools matching the `--allowedTools` allow-list execute.
  * So the agent's declared `tools` become its precise capability scope; anything
  * it didn't ask for is denied. The same mapping feeds each subagent's `tools`
  * field in the `--agents` catalog JSON.
