@@ -382,10 +382,19 @@ One pass per watcher tick over the `needs-draft` backlog, mirroring the
   operator, not retried forever.
 - on success the researched string goes to `parkOrSurface(item, verdict, draft)`,
   which owns every tier/gate decision from there.
-- the item is **re-read after the research** and the result discarded unless it is
-  still `needs-draft`. The snapshot the sweeper holds is minutes old by then, and
-  `POST /items/:id/dismiss` accepts any state — without the re-read a dismissal
-  would be overwritten and the retired item could still be auto-replied to.
+- the item is re-read at **both ends** of a research — before the lock write and
+  after the draft returns — and the work is discarded unless it is still
+  `needs-draft`. `POST /items/:id/dismiss` accepts any state, and the sweeper's
+  snapshot is minutes old (the candidate list ages while earlier candidates
+  research), so without both doors a dismissed item would be resurrected and could
+  still be auto-replied to. The post-research door alone is not enough: it would
+  read a resurrection the pre-lock write had just caused.
+- terminal `draftResearch` statuses (`ok`, and `failed` at the cap) are persisted
+  **by** the hand-off, not before it — every terminal branch of `parkOrSurface`
+  spreads the item into its own write. `isReady` never retries a terminal marker,
+  so writing one ahead of a throwing `parkOrSurface` (deleted integration, missing
+  credentials, approvals down) would strand the item with neither an approval nor a
+  surface. Left on its pending lock instead, the 15-minute staleness path retries it.
 
 `needs-draft` items count as **in flight** for the briefing (`watching`), never
 as a "needs you" decision — there is nothing for the operator to decide yet.

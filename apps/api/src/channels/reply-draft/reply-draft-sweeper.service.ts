@@ -23,9 +23,15 @@ const STALE_PENDING_MS = 15 * 60 * 1000;
  * spawns, which is what makes the sweep idempotent across ticks — a research
  * taking minutes is simply skipped by the next tick rather than double-spawned.
  *
- * The symmetric guard is on the way out: the item is re-read after the research and
- * the result is DISCARDED unless it is still `needs-draft`. Without that, a snapshot
- * captured minutes earlier would be written back over an operator's dismissal.
+ * An operator can dismiss an item at any moment, so the snapshot this service holds is
+ * re-checked at BOTH ends of a research — once before the lock is written (the candidate
+ * list ages while earlier candidates research) and once after the draft comes back. Each
+ * door alone is insufficient: skip the first and the second reads a resurrection it
+ * caused itself. A dismissed item must never be revived, let alone auto-replied to.
+ *
+ * Terminal `draftResearch` statuses (`ok`, and `failed` at the cap) are persisted BY the
+ * hand-off, never before it — `isReady` never retries a terminal marker, so writing one
+ * ahead of a throwing `parkOrSurface` would strand the item permanently.
  */
 @Injectable()
 export class ReplyDraftSweeperService {
@@ -70,10 +76,24 @@ export class ReplyDraftSweeperService {
   }
 
   private async researchOne(item: ChannelItem): Promise<void> {
-    const attempts = (item.draftResearch?.attempts ?? 0) + 1;
+    // The candidate list was snapshotted before the FIRST research of this sweep, and
+    // researches run sequentially — so by this item's turn the snapshot can be minutes
+    // old. Re-read before locking: building the lock from the stale copy would resurrect
+    // an item the operator dismissed while an earlier candidate was researching, and the
+    // post-research guard below would then read that resurrection and wave it through.
+    const fresh = await this.store.findById(item.id);
+    if (fresh?.state !== "needs-draft" || !this.isReady(fresh)) {
+      this.log.debug("reply-draft research skipped: item is no longer a candidate", {
+        itemId: item.id,
+        state: fresh?.state ?? "deleted",
+      });
+      return;
+    }
+
+    const attempts = (fresh.draftResearch?.attempts ?? 0) + 1;
     // The in-flight lock: written BEFORE the spawn, so the next tick skips this item.
     const locked: ChannelItem = {
-      ...item,
+      ...fresh,
       draftResearch: { status: "pending", attempts, startedAt: new Date().toISOString() },
     };
     await this.store.update(locked);
@@ -95,17 +115,24 @@ export class ReplyDraftSweeperService {
       return;
     }
 
+    const startedAt = locked.draftResearch?.startedAt;
+
     if (draft) {
       const done: ChannelItem = {
         ...current,
         draftResearch: {
           status: "ok",
           attempts,
-          ...(locked.draftResearch?.startedAt ? { startedAt: locked.draftResearch.startedAt } : {}),
+          ...(startedAt ? { startedAt } : {}),
           finishedAt,
         },
       };
-      await this.store.update(done);
+      // The hand-off IS the persistence: every terminal branch of parkOrSurface spreads
+      // the item into its own `store.update`, so the `ok` marker rides through with it.
+      // Writing `ok` here first would be terminal — `isReady` never retries it — so a
+      // parkOrSurface throw (deleted integration, missing credentials, approvals down)
+      // would strand the item with no approval and no surface. Left on its pending lock
+      // instead, the staleness path picks it up again.
       await this.flow.parkOrSurface(done, done.triage, draft);
       return;
     }
@@ -115,17 +142,22 @@ export class ReplyDraftSweeperService {
       draftResearch: {
         status: "failed",
         attempts,
-        ...(locked.draftResearch?.startedAt ? { startedAt: locked.draftResearch.startedAt } : {}),
+        ...(startedAt ? { startedAt } : {}),
         finishedAt,
         reason: "no concrete answer from the repository",
       },
     };
-    await this.store.update(failed);
+
+    // Budget left → persist the retryable marker and stop. This one is safe to write:
+    // `failed` under the cap is exactly what tells the next sweep to try again.
+    if (attempts < MAX_ATTEMPTS) {
+      await this.store.update(failed);
+      return;
+    }
 
     // Retry budget spent → surface it for the operator rather than retrying forever.
-    // No draft means NO reply approval — a filler phrase is never substituted.
-    if (attempts >= MAX_ATTEMPTS) {
-      await this.flow.parkOrSurface(failed, failed.triage, null);
-    }
+    // No draft means NO reply approval — a filler phrase is never substituted. Same
+    // rule as above: the terminal marker is persisted by the hand-off, not before it.
+    await this.flow.parkOrSurface(failed, failed.triage, null);
   }
 }
