@@ -10,9 +10,7 @@ type MutateOpts = { onSuccess?: (result: { body: unknown }) => void };
 
 const FAKE_RESULT = { body: { outcome: "pending", task: { id: "task-1" } } };
 
-const createTask = vi.fn((_vars: MutateVars, opts?: MutateOpts) =>
-  opts?.onSuccess?.(FAKE_RESULT),
-);
+const createTask = vi.fn((_vars: MutateVars, opts?: MutateOpts) => opts?.onSuccess?.(FAKE_RESULT));
 
 vi.mock("../../tasks/mutations", () => ({
   useCreateTaskMutation: () => ({ mutate: createTask, isPending: false }),

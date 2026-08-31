@@ -31,6 +31,13 @@ export interface UseTaskSubmitArgs {
   toolGrants?: string[];
   /** An explicit single-dispatch target, or null for auto (the backend classifies). */
   chosenTarget: TaskTarget | null;
+  /**
+   * Task 8 fix round 1: the picked team tag (KB scope, never a dispatch
+   * destination — orthogonal to {@link chosenTarget}, exactly like the contract's
+   * `teamId` sits beside `target` on `CreateTaskInput`). Omitted from the
+   * dispatched body entirely when absent — never sent as `""` or `null`.
+   */
+  teamId?: string;
   isLoop: boolean;
   loop: LoopFormState;
   now: number;
@@ -68,6 +75,7 @@ export function useTaskSubmit({
   output,
   toolGrants,
   chosenTarget,
+  teamId,
   isLoop,
   loop,
   now,
@@ -117,6 +125,7 @@ export function useTaskSubmit({
             ...(attachmentSetId ? { attachmentSetId } : {}),
             scheduledAt,
             ...(chosenTarget ? { target: toApiTarget(chosenTarget) } : {}),
+            ...(teamId ? { teamId } : {}),
             ...(output ? { output } : {}),
             ...(toolGrants && toolGrants.length > 0 ? { toolGrants } : {}),
           },
@@ -126,6 +135,7 @@ export function useTaskSubmit({
     },
     [
       chosenTarget,
+      teamId,
       createTask,
       title,
       composedText,
@@ -158,6 +168,7 @@ export function useTaskSubmit({
                   ...(attachmentSetId ? { attachmentSetId } : {}),
                   scheduledAt,
                   target: { kind: "goal", id: goalId, name: body.name ?? seed.slice(0, 80) },
+                  ...(teamId ? { teamId } : {}),
                   ...(toolGrants && toolGrants.length > 0 ? { toolGrants } : {}),
                 },
               },
@@ -174,6 +185,7 @@ export function useTaskSubmit({
       composedText,
       paths,
       attachmentSetId,
+      teamId,
       toolGrants,
       createGoal,
       createTask,

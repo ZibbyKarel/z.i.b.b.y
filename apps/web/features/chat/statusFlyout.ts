@@ -71,7 +71,8 @@ export function formatRelativeTime(iso: string, locale: string, now: Date = new 
   const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "always" });
   let duration = (then - now.getTime()) / 1000;
   for (const division of DIVISIONS) {
-    if (Math.abs(duration) < division.amount) return rtf.format(Math.round(duration), division.unit);
+    if (Math.abs(duration) < division.amount)
+      return rtf.format(Math.round(duration), division.unit);
     duration /= division.amount;
   }
   return rtf.format(Math.round(duration), "weeks");

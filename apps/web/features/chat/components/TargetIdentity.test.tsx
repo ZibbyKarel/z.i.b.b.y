@@ -22,9 +22,7 @@ describe("chat TargetIdentity", () => {
   });
 
   it("falls back to the glyph when the target has no avatar", () => {
-    render(
-      <TargetIdentity targets={[{ kind: "agent", id: "x", name: "X", glyph: "compass" }]} />,
-    );
+    render(<TargetIdentity targets={[{ kind: "agent", id: "x", name: "X", glyph: "compass" }]} />);
     expect(screen.queryByTestId(IconTileTestId.Image)).toBeNull();
   });
 });

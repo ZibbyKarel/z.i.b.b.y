@@ -27,11 +27,7 @@ vi.mock("../../../state/api", () => ({
 }));
 
 vi.mock("./useAudioPlayback", () => ({
-  playAudioPlayback: (
-    key: string,
-    audioBase64: string,
-    onSettled?: (reason: Reason) => void,
-  ) => {
+  playAudioPlayback: (key: string, audioBase64: string, onSettled?: (reason: Reason) => void) => {
     playCalls.push({ key, audioBase64, onSettled });
   },
   stopAudioPlayback: stopSpy,

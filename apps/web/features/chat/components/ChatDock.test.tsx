@@ -26,6 +26,11 @@ vi.mock("../../subsystems/queries/useSubsystemsQuery", () => ({
 vi.mock("../../tasks/mutations/useUploadTaskAttachmentsMutation", () => ({
   useUploadTaskAttachmentsMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
+// Task 8 fix round 1: the fourth mention source (team @-mentions), same fixture
+// `CommandLine.test.tsx`/`TaskCommandLine.test.tsx` use.
+vi.mock("../../teams", () => ({
+  useTeamsQuery: () => ({ data: [{ id: "devrel", name: "DevRel" }] }),
+}));
 
 // The dock's own hooks are mocked directly (unit-style — unlike `ChatScreen.test.tsx`,
 // which drives the real `useChatStream`/`useVoiceMode` through a mocked `EventSource`/
@@ -174,5 +179,58 @@ describe("ChatDock", () => {
     renderWithProviders(<ChatDockHarness />);
     expect(screen.queryByTestId(VoiceToggleButtonTestId.Root)).not.toBeInTheDocument();
     voiceState.supported = true;
+  });
+
+  describe("Task 8 fix round 1 — a tagged team reaches the send mutation body", () => {
+    it("sends the exact picked team id on the mutation body, not merely that it was called", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatDockHarness />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+
+      await user.type(input, "@DevRel");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`));
+      await user.type(input, "co víme o partner portálu?");
+      await user.click(screen.getByTestId(ChatDockTestId.Send));
+
+      expect(sendMutate).toHaveBeenCalledWith({
+        body: {
+          conversationId: "c1",
+          text: "@DevRel co víme o partner portálu?",
+          teamId: "devrel",
+        },
+      });
+    });
+
+    it('omits teamId entirely — not "", not null — when no team is picked', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatDockHarness />);
+
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "ahoj");
+      await user.click(screen.getByTestId(ChatDockTestId.Send));
+
+      const call = sendMutate.mock.calls[0]?.[0] as { body: Record<string, unknown> };
+      expect(call.body).not.toHaveProperty("teamId");
+    });
+
+    it("does not leak a team tagged on one turn onto the next, untagged turn", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatDockHarness />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+
+      await user.type(input, "@DevRel");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`));
+      await user.type(input, "první tah");
+      await user.click(screen.getByTestId(ChatDockTestId.Send));
+      expect(sendMutate).toHaveBeenLastCalledWith({
+        body: { conversationId: "c1", text: "@DevRel první tah", teamId: "devrel" },
+      });
+
+      await user.type(input, "druhý tah");
+      await user.click(screen.getByTestId(ChatDockTestId.Send));
+
+      const secondCall = sendMutate.mock.calls[1]?.[0] as { body: Record<string, unknown> };
+      expect(secondCall.body).not.toHaveProperty("teamId");
+      expect(secondCall.body.text).toBe("druhý tah");
+    });
   });
 });

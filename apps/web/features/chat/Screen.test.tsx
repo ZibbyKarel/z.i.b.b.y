@@ -24,9 +24,7 @@ const { chatState } = vi.hoisted(() => ({
 
 vi.mock("./ChatContext", () => ({
   useChat: () => {
-    const [conversationId, setConversationId] = useState<string | null>(
-      chatState.conversationId,
-    );
+    const [conversationId, setConversationId] = useState<string | null>(chatState.conversationId);
     const [messages, setMessages] = useState<ChatMessageType[]>([]);
     return {
       conversationId,
@@ -80,7 +78,12 @@ vi.mock("./components/ChatScreen", () => ({
         onClick={() =>
           onMessagesChange((prev) => [
             ...prev,
-            { id: `local-${prev.length}`, role: "user", text: "hi", at: "2026-07-07T00:00:00.000Z" },
+            {
+              id: `local-${prev.length}`,
+              role: "user",
+              text: "hi",
+              at: "2026-07-07T00:00:00.000Z",
+            },
           ])
         }
         type="button"
@@ -102,7 +105,10 @@ describe("chat Screen — reload hydration", () => {
     chatState.conversationId = null;
     chatState.autoMint = false;
     transcriptByKey.clear();
-    setTranscript(undefined, { conversationId: "conv_server", messages: [message("m1"), message("m2")] });
+    setTranscript(undefined, {
+      conversationId: "conv_server",
+      messages: [message("m1"), message("m2")],
+    });
 
     render(<Screen />);
 

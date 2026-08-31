@@ -65,6 +65,7 @@ type CreateVars = {
     scheduledAt?: number | null;
     target?: { kind: string; id?: string };
     attachmentSetId?: string;
+    teamId?: string;
   };
 };
 type CreateOpts = { onSuccess?: (res: { status: 201; body: unknown }) => void };
@@ -243,6 +244,31 @@ describe("TaskCommandLine (Phase 118b task-launch container)", () => {
     await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`));
 
     expect(onTeamChange).toHaveBeenCalledWith("devrel");
+  });
+
+  it("carries the picked team's exact id onto the dispatched createTask body — Task 8 fix round 1", async () => {
+    const user = userEvent.setup();
+    render(<TaskCommandLine />);
+    const input = screen.getByTestId(CommandLineTestId.Input);
+
+    await user.type(input, "@DevRel");
+    await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`));
+    await user.type(input, "co víme o partner portálu?");
+    await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
+
+    expect(createTask).toHaveBeenCalledTimes(1);
+    expect(createTask.mock.calls[0]?.[0].body.teamId).toBe("devrel");
+  });
+
+  it('omits teamId entirely — not "", not null — when no team is picked', async () => {
+    const user = userEvent.setup();
+    render(<TaskCommandLine />);
+
+    await user.type(screen.getByTestId(CommandLineTestId.Input), "zkontroluj zálohy");
+    await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
+
+    expect(createTask).toHaveBeenCalledTimes(1);
+    expect(createTask.mock.calls[0]?.[0].body).not.toHaveProperty("teamId");
   });
 
   it("mirrors the per-task project pick up via onProjectChange, and folds its path into the dispatched task", async () => {

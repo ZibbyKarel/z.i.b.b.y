@@ -170,10 +170,10 @@ export function TaskCommandLine({
   });
   const [draftTarget, setDraftTarget] = useState<TaskTarget | undefined>(initialTarget);
   // Task 8: mirrors `CommandLine`'s own team-tag state, exactly like `draftTarget`
-  // mirrors its target — not yet read by `useTaskSubmit` (a later task wires the
-  // dispatched body's `teamId`); this container only needs to keep forwarding
-  // `onTeamChange` faithfully, same as every other draft mirror here.
-  const [, setDraftTeamId] = useState<string | undefined>(undefined);
+  // mirrors its target. Fed straight into `useTaskSubmit`'s `teamId` below (fix
+  // round 1) — the same mirror-then-feed pattern `draftTarget`/`chosenTarget`
+  // already use.
+  const [draftTeamId, setDraftTeamId] = useState<string | undefined>(undefined);
   const [draftAttachments, setDraftAttachments] = useState<TaskAttachmentSet>({ files: [] });
   const [taskProjectId, setTaskProjectId] = useState<string | null>(() => initialProjectId ?? null);
   const [ack, setAck] = useState<AckInfo | null>(null);
@@ -213,6 +213,7 @@ export function TaskCommandLine({
     output,
     toolGrants,
     chosenTarget: draftTarget ?? null,
+    teamId: draftTeamId,
     isLoop,
     loop,
     now,

@@ -126,6 +126,18 @@ export function ChatDock({
     onError: appendError,
   });
 
+  // Task 8 fix round 1: the picked team tag, mirrored from `CommandLine`'s own
+  // `onTeamChange` exactly the way `target` already arrives as `send`'s own 2nd
+  // argument — but a team is NOT part of `onSubmit`'s signature (see
+  // `CommandLine`'s docblock: picking a team never touches `onTargetChange`), so it
+  // needs its own piece of state here instead of riding along on `send`'s args.
+  // Cleared for the NEXT turn by `CommandLine` itself: `submit()` fires `onSubmit`
+  // (this hook's `send`, reading the CURRENT `teamId` below) THEN — because this
+  // composer uses the default `resetOnSubmit` — fires `onTeamChange(undefined)`,
+  // updating this state for the following render. That ordering is exactly why a
+  // team tagged on one turn doesn't leak onto the next.
+  const [teamId, setTeamId] = useState<string | undefined>(undefined);
+
   // A turn is in flight from send (`isPending`) through the streamed reply until
   // the terminal `done`/`error` — mirrors `ChatScreen`'s own derivation.
   const thinking = sendMessage.isPending || stream.streaming;
@@ -146,9 +158,16 @@ export function ChatDock({
         ...prev,
         { id: `u-${crypto.randomUUID()}`, role: "user", text, at: new Date().toISOString() },
       ]);
-      sendMessage.mutate({ body: { conversationId, text, ...(target ? { target } : {}) } });
+      sendMessage.mutate({
+        body: {
+          conversationId,
+          text,
+          ...(target ? { target } : {}),
+          ...(teamId ? { teamId } : {}),
+        },
+      });
     },
-    [conversationId, setMessages, sendMessage],
+    [conversationId, setMessages, sendMessage, teamId],
   );
 
   // Hands-free dictation (Phase 119a) — a finalized utterance is sent verbatim,
@@ -305,6 +324,7 @@ export function ChatDock({
               }
               maxRows={CHAT_COMPOSER_MAX_ROWS}
               onSubmit={send}
+              onTeamChange={setTeamId}
               placeholder={t("composer.placeholder")}
               renderTrailing={({ canSubmit, submit }) => (
                 <Button

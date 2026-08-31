@@ -164,7 +164,11 @@ function subscribe(listener: Listener): () => void {
  * / self-talk hazard). SSR snapshot is `false` — nothing plays on the server.
  */
 export function useAnyAudioPlaying(): boolean {
-  return useSyncExternalStore(subscribe, () => getPlayingKey() !== null, () => false);
+  return useSyncExternalStore(
+    subscribe,
+    () => getPlayingKey() !== null,
+    () => false,
+  );
 }
 
 /**
