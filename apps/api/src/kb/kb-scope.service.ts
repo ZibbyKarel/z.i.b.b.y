@@ -163,8 +163,8 @@ export class KbScopeService {
 
 /**
  * True when a persisted agent run id matches the `X-Zibby-Run-Id` header — exact
- * equality, or the header plus exactly one MORE numeric segment (the pid
- * `RunnerCore` cannot know before spawn: `${header}_${pid}`).
+ * equality, or the header plus exactly ONE more segment (the suffix
+ * `RunnerCore` cannot know before spawn).
  *
  * A plain `record.startsWith(header + "_")` is NOT enough: a bare `agentId`
  * header (`architekt`, `koder`, … — public constants in the runner, never
@@ -172,14 +172,19 @@ export class KbScopeService {
  * `${agentId}_${startedMs}_${pid}`, so it would satisfy that check too and
  * resolve to whatever project that agent last ran under — any run reaching
  * any other team's knowledge base just by truncating its own run id down to
- * the bare agent id. Requiring the remainder to be a SINGLE all-digit segment
- * accepts `<agentId>_<startedMs>` → `_<pid>` (the intended case) while
- * rejecting `<agentId>` → `_<startedMs>_<pid>` (two segments, and the second
- * one isn't the pid).
+ * the bare agent id.
+ *
+ * The invariant that closes this is "the remainder is a SINGLE segment", and
+ * `_` is the separator — so the test is simply that the remainder contains no
+ * separator. That accepts `<agentId>_<startedMs>` → `_<pid>` (the intended
+ * case) and rejects `<agentId>` → `_<startedMs>_<pid>` (two segments). It is
+ * deliberately shape-based rather than all-digit: `RunnerCore.createPending`
+ * mints a `_p<hex>` suffix instead of a bare pid, and an all-digit rule would
+ * silently drop such a run's KB scope — failing closed, but for no reason.
  */
 function matchesAgentRunId(record: string, header: string): boolean {
   if (record === header) return true;
   if (!record.startsWith(`${header}_`)) return false;
   const rest = record.slice(header.length + 1);
-  return /^\d+$/.test(rest);
+  return rest.length > 0 && !rest.includes("_");
 }

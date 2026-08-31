@@ -209,9 +209,13 @@ enough: agent ids (`architekt`, `koder`, …) are public constants, not
 secrets, and a bare agent id is itself a shorter, boundary-aligned prefix of
 `${agentId}_${startedMs}_${pid}` — sending it as the header would resolve to
 whatever project that agent last ran under. `KbScopeService` additionally
-requires the remainder after the boundary to be a **single numeric segment**
-(`_${pid}`, never `_${startedMs}_${pid}`), which accepts the intended header
-and rejects the bare-agent-id truncation. A pipeline run's header IS its
+requires the remainder after the boundary to be a **single segment** — i.e. to
+contain no further `_`, the separator itself (`_${pid}`, never
+`_${startedMs}_${pid}`), which accepts the intended header and rejects the
+bare-agent-id truncation. The rule is shape-based rather than all-digit on
+purpose: `RunnerCore.createPending` mints a `_p${hex}` suffix instead of a bare
+pid, and an all-digit rule would silently drop such a run's KB scope — failing
+closed, but for no reason. A pipeline run's header IS its
 `pipelineRunId`, resolved by exact match (also supported for a completed
 agent run, in principle).
 

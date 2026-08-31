@@ -244,6 +244,23 @@ describe("KbScopeService", () => {
       expect(roots.map((r) => r.teamId)).toEqual(["devrel"]);
     });
 
+    it("accepts a non-numeric one-segment suffix — the rule is 'one segment', not 'all digits'", async () => {
+      // `RunnerCore.createPending` mints `${ownerId}_${startedMs}_p${hex}` rather
+      // than a bare pid. An all-digit rule would silently drop such a run's KB
+      // scope; the invariant that actually closes the truncation hole is that the
+      // remainder is a SINGLE segment, and `_` is the separator.
+      const scope = build({
+        teams: [{ ...team({ id: "devrel", name: "DevRel" }), knowledgeBase: source("/kb/devrel") }],
+        projects: [project({ id: "proj-devrel", teamId: "devrel" })],
+        agentRuns: [agentRun({ runId: "architekt_1756600000000_p3f9a", project: "proj-devrel" })],
+      });
+      expect((await scope.rootsForRun("architekt_1756600000000")).map((r) => r.teamId)).toEqual([
+        "devrel",
+      ]);
+      // …and the truncation attack is still refused for that id shape too.
+      expect(await scope.rootsForRun("architekt")).toEqual([]);
+    });
+
     it("resolves a pipeline run by EXACT match: the header IS the pipelineRunId", async () => {
       const scope = build({
         teams: [{ ...team({ id: "devrel", name: "DevRel" }), knowledgeBase: source("/kb/devrel") }],

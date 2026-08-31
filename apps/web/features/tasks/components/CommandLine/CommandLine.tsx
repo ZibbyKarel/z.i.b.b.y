@@ -118,8 +118,9 @@ export interface CommandLineProps {
    * real on the chat path (`ChatDock`, which passes `true` explicitly): a tagged
    * team there genuinely narrows the KB end-to-end via `onTeamChange`. Every task
    * path — `TaskCommandLine`, and the automations composers
-   * (`AutomationFormDialog`, the `DetailScreen` task-edit surface) — leaves this at
-   * its default `false`: a team tagged on a task doesn't reach a run yet (needs new
+   * (`AutomationFormDialog`, the `DetailScreen` task-edit surface) — passes `false`
+   * explicitly rather than relying on the default, per the rule below: a team tagged
+   * on a task doesn't reach a run yet (needs new
    * fields on `PipelineRunSchema`/`GoalRunSchema`/`ScheduledTaskSchema` — see
    * `docs/api/teams.md`), so offering the mention there would promise a scope that
    * silently does nothing. The default is opt-in (not opt-out) precisely so a
