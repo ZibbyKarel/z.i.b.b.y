@@ -237,10 +237,16 @@ read_team_kb_note({ noteId: string, team?: string })
   order) that has it; its body is enveloped the same way.
 - **No write tool exists**, and none is planned — `KbReaderService` itself
   never writes.
-- An empty scope (unknown team, no permission, no KB configured) returns the
-  SAME explicit empty result as a real query with zero hits, on both tools —
-  never an error, and never a message that would let a caller distinguish
-  "team doesn't exist" from "team exists but you can't read it".
+- An empty scope (unknown team, no permission, no KB configured) always
+  returns an explicit empty-result message, on both tools — never an error,
+  and never a message naming the cause: "team doesn't exist" and "team
+  exists but you can't reach it" both land on the same empty-scope branch,
+  indistinguishable to the caller. `search_team_kb`'s empty-scope message
+  ("no team knowledge base is reachable here") does differ from its
+  zero-hits message ("no results for `<query>`") — that's a hint to the
+  model about where to widen its query, not a security-relevant leak, since
+  an unauthorized or unknown team never gets past the empty-scope branch in
+  the first place.
 
 **Guard is the sole auth boundary.** `KbMcpAuthGuard`
 (`apps/api/src/kb/kb-mcp-auth.guard.ts`) mirrors `ChatMcpAuthGuard` exactly:

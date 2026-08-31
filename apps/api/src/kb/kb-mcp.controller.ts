@@ -61,10 +61,15 @@ function formatHit(hit: AttributedHit): string {
  * itself (see `KbScopeService`'s class doc). {@link KbMcpAuthGuard} — a per-boot
  * bearer token + loopback check — is the ONLY authentication boundary for this route.
  *
- * An empty scope (unknown team, no permission, no KB configured) returns the SAME
- * explicit empty result as a real query with zero hits — never an error, and never a
- * message that would let a caller distinguish "team doesn't exist" from "team exists
- * but you can't read it".
+ * An empty scope (unknown team, no permission, no KB configured) always returns an
+ * explicit empty-result message, never an error and never a message naming the
+ * cause — a caller can never tell "team doesn't exist" apart from "team exists but
+ * you can't reach it", both land on the same empty-scope branch. `search_team_kb`'s
+ * empty-scope message differs from its zero-hits message ("no knowledge base is
+ * reachable" vs. "no results for <query>") — that's a hint to the model about where
+ * to widen its query, not a security-relevant distinction: both are equally reachable
+ * to an unauthorized caller, since an unknown/unreachable team never gets past the
+ * empty-scope branch to begin with.
  */
 @Controller()
 export class KbMcpController {

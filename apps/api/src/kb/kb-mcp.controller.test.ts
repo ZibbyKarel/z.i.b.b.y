@@ -189,6 +189,38 @@ describe("POST /api/kb/mcp — KbMcpController", () => {
     await client.close();
   });
 
+  it("read_team_kb_note returns the first root's note, enveloped — never a bare body", async () => {
+    const rootA = root({ teamId: "devrel" });
+    const rootB = root({ teamId: "platform" });
+    rootsForChat.mockResolvedValue([rootA, rootB]);
+    // rootA doesn't have the note; rootB does — first-non-null-wins, in scope order.
+    read.mockImplementation(async (source) => {
+      if (source === rootA.source) return null;
+      return { path: "wiki/onboarding.md", title: "Onboarding", body: "UNIQUE_NOTE_BODY" };
+    });
+    const client = await connect();
+    const result = await client.callTool({
+      name: "read_team_kb_note",
+      arguments: { noteId: "onboarding" },
+    });
+    const textOut = firstText(result);
+
+    // Attribution: the SECOND root's team id, never the first's.
+    expect(textOut).toContain("platform");
+    expect(textOut).not.toContain("devrel");
+    expect(textOut).toContain("wiki/onboarding.md");
+    expect(textOut).toContain("UNIQUE_NOTE_BODY");
+
+    // Law-4 envelope on the body — a bare `note.body` would fail these two.
+    expect((textOut.match(/untrusted inbound channel data/g) ?? []).length).toBe(1);
+    expect(textOut).toMatch(/<<<zibby-data-[0-9a-f]+>>>/);
+
+    // First-root-wins ordering: rootA must have been tried before rootB, not skipped.
+    expect(read).toHaveBeenNthCalledWith(1, rootA.source, "onboarding");
+    expect(read).toHaveBeenNthCalledWith(2, rootB.source, "onboarding");
+    await client.close();
+  });
+
   it("resolves scope via rootsForRun when X-Zibby-Run-Id is present, rootsForChat otherwise", async () => {
     rootsForRun.mockResolvedValue([]);
     rootsForChat.mockResolvedValue([]);
