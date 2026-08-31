@@ -18,6 +18,7 @@ export * from "./projects/resolved-project-context.schema";
 export * from "./projects/projects.contract";
 export * from "./companies/company.schema";
 export * from "./companies/companies.contract";
+export * from "./teams";
 export * from "./pipelines/pipeline.schema";
 export * from "./pipelines/pipeline-run.schema";
 export * from "./pipelines/stage-verdict.schema";

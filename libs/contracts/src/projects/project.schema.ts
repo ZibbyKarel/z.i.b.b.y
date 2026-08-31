@@ -284,6 +284,13 @@ export const ProjectSchema = z.object({
   companyId: z.string().optional(),
 
   /**
+   * Owning team (Firma → Tým → Projekt). Bare optional string, not an FK —
+   * mirrors `companyId`: deleting a team leaves a dangling id that resolves to
+   * "no team" at read time. At most one team per project.
+   */
+  teamId: z.string().optional(),
+
+  /**
    * Phase 76 — the canonical clone source for this project (a `https://…` or
    * `git@…` URL), synced in the registry since the clone source is the same on
    * every machine. Distinct from `path`, which stays the canonical (but
@@ -327,6 +334,7 @@ export const UpdateProjectSchema = ProjectSchema.omit({ id: true, hasSecrets: tr
   .partial()
   .extend({
     companyId: z.string().optional().nullable(),
+    teamId: z.string().optional().nullable(),
     logo: AvatarSchema.optional().nullable(),
   });
 export type UpdateProjectInput = z.infer<typeof UpdateProjectSchema>;

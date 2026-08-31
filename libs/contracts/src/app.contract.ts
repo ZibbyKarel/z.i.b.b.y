@@ -14,6 +14,7 @@ import { handoffContract } from "./handoff/handoff.contract";
 import { channelsContract } from "./channels/channels.contract";
 import { commandsContract } from "./commands/commands.contract";
 import { companiesContract } from "./companies/companies.contract";
+import { teamsContract } from "./teams/teams.contract";
 import { integrationsContract } from "./integrations/integrations.contract";
 import { mandateContract } from "./mandate/mandate.contract";
 import { mcpContract } from "./mcp/mcp.contract";
@@ -64,6 +65,7 @@ export const appContract = c.router({
   projects: projectsContract,
   projectCategories: projectCategoriesContract,
   companies: companiesContract,
+  teams: teamsContract,
   pipelines: pipelinesContract,
   pipelineRuns: pipelineRunsContract,
   goals: goalsContract,
