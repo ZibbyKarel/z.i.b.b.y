@@ -192,12 +192,16 @@ describe("KbScopeService", () => {
         teams: [{ ...team({ id: "devrel", name: "DevRel" }), knowledgeBase: source("/kb/devrel") }],
         projects: [project({ id: "proj-devrel", teamId: "devrel" })],
         agentRuns: [
-          agentRun({ runId: "codex_1000_4321", project: "proj-devrel" }),
-          // A boundary-collision decoy: a DIFFERENT agent/start-time run whose id
-          // shares the header as a raw string prefix but not up to an underscore
-          // boundary. A naive `startsWith(header)` (no trailing "_") would match
-          // this too; the correct implementation must not.
+          // A boundary-collision decoy, listed FIRST so `find()` reaches it
+          // before the real match: a DIFFERENT agent/start-time run whose id
+          // shares the header as a raw string prefix but not up to an
+          // underscore boundary. A naive `startsWith(header)` (no trailing
+          // "_") would match this decoy first and resolve `proj-teamless`
+          // (absent from the projects fixture) → `[]`, failing the assertion
+          // below — only the boundary-safe `startsWith(header + "_")` skips
+          // it and reaches the real match.
           agentRun({ runId: "codex_10000_9", project: "proj-teamless" }),
+          agentRun({ runId: "codex_1000_4321", project: "proj-devrel" }),
         ],
       });
       const roots = await scope.rootsForRun("codex_1000");
