@@ -148,6 +148,7 @@ export function DetailScreen({ teamId }: TeamDetailScreenProps) {
             {!isNew && team && (
               <>
                 <TeamKnowledgeBasePanel
+                  key={`kb-${team.id}-${team.knowledgeBase ? "set" : "none"}`}
                   knowledgeBase={team.knowledgeBase}
                   onSave={saveKnowledgeBase}
                   saving={isSaving}

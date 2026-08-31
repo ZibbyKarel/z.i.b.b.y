@@ -6,12 +6,16 @@ import { renderWithProviders as render, screen } from "../../test/render";
 import { ImmersivePageTestId } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { DetailScreen } from "./DetailScreen";
 
-const team: Team = {
+const teamWithKb: Team = {
   id: "platform",
   name: "Platform",
   desc: "Core infra",
   knowledgeBase: { kind: "vault", path: "/Users/karel/vault", readOnly: true },
 };
+
+// Reassigned by the KB-panel resync test below to simulate a refetch after a
+// successful mutation (e.g. the clear action succeeding server-side).
+let team: Team = teamWithKb;
 
 const createMutate = vi.fn();
 const updateMutate = vi.fn();
@@ -59,6 +63,7 @@ beforeEach(() => {
   replace.mockReset();
   push.mockReset();
   projects = [];
+  team = teamWithKb;
 });
 
 describe("teams DetailScreen", () => {
@@ -128,6 +133,19 @@ describe("teams DetailScreen", () => {
           body: { knowledgeBase: null },
         }),
       );
+    });
+
+    it("re-syncs the panel's fields after a successful clear — no stale path/gitRemote display", () => {
+      const { rerender } = render(<DetailScreen teamId="platform" />);
+      expect(screen.getByDisplayValue("/Users/karel/vault")).toBeInTheDocument();
+
+      // Simulate the refetch that follows a successful `knowledgeBase: null`
+      // clear: the team query now returns no knowledge base at all.
+      team = { id: "platform", name: "Platform", desc: "Core infra" };
+      rerender(<DetailScreen teamId="platform" />);
+
+      expect(screen.queryByDisplayValue("/Users/karel/vault")).not.toBeInTheDocument();
+      expect(screen.getByPlaceholderText("/Users/…/vault")).toHaveValue("");
     });
   });
 
