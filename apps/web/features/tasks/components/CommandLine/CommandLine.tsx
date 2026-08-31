@@ -112,6 +112,15 @@ export interface CommandLineProps {
    * independent (a draft may carry both, either, or neither).
    */
   onTeamChange?: (teamId: string | undefined) => void;
+  /**
+   * Task 9b: whether a team can be picked as an `@`-mention source at all — default
+   * `true` (chat, where a tagged team genuinely narrows the KB end-to-end). The task
+   * composer (`TaskCommandLine`) sets this `false`: a team tagged on a task doesn't
+   * reach a run yet (needs new fields on `PipelineRunSchema`/`GoalRunSchema`/
+   * `ScheduledTaskSchema` — see `docs/api/teams.md`), so offering the mention would
+   * promise a scope that silently does nothing.
+   */
+  allowTeamMentions?: boolean;
   /** Mirrors the attached file set up — needed by a parent whose OWN submit path
    *  (e.g. a synthesized loop) must carry the same attachment set. */
   onAttachmentsChange?: (set: TaskAttachmentSet) => void;
@@ -396,6 +405,7 @@ export function CommandLine({
   onTextChange,
   onTargetChange,
   onTeamChange,
+  allowTeamMentions = true,
   onAttachmentsChange,
   onSubmit,
   resetOnSubmit = true,
@@ -831,16 +841,20 @@ export function CommandLine({
     // base a turn can see, not WHO runs it). `"brain"` is the app's existing
     // knowledge/memory glyph (`features/memory/Screen.tsx`'s empty state) —
     // reused here rather than authoring a new icon.
-    const teamHits: MentionResult[] = teams
-      .filter((tm) => matchesQuery(mention.query, tm.name, tm.id))
-      .map((tm) => ({
-        kind: "team" as const,
-        id: tm.id,
-        name: tm.name,
-        glyph: "brain" as IconName,
-      }));
+    // Task 9b: gated by `allowTeamMentions` — the task composer turns this off
+    // (see the prop's own docblock), since a tagged team doesn't reach a run yet.
+    const teamHits: MentionResult[] = allowTeamMentions
+      ? teams
+          .filter((tm) => matchesQuery(mention.query, tm.name, tm.id))
+          .map((tm) => ({
+            kind: "team" as const,
+            id: tm.id,
+            name: tm.name,
+            glyph: "brain" as IconName,
+          }))
+      : [];
     return [...agentHits, ...pipelineHits, ...subsystemHits, ...teamHits].slice(0, 50);
-  }, [mention, agents, pipelines, rosterSubsystems, teams]);
+  }, [mention, agents, pipelines, rosterSubsystems, teams, allowTeamMentions]);
   // Clamp at read time so a result list that shrank between renders never
   // leaves the keyboard highlight out of range.
   const activeMentionIndex =
@@ -1150,7 +1164,9 @@ export function CommandLine({
           }
           headerEnd={
             <Typography mono size="2xs" type="note" variant="tertiary">
-              {t("commandLine.chrome.hint")}
+              {/* Task 9b: the hint must not claim a mention source this render
+                  doesn't actually offer — see `allowTeamMentions`'s docblock. */}
+              {t(allowTeamMentions ? "commandLine.chrome.hint" : "commandLine.chrome.hintNoTeams")}
             </Typography>
           }
           padding="150"

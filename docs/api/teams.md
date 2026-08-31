@@ -320,6 +320,26 @@ turn:
   project (via `runId`), which the tool argument narrows the same way it
   always has, and `?teamId=` is never read on that path at all.
 
+**The task path has no per-task team tag — by design, not by oversight (Task
+9b).** A run's knowledge base is resolved from its **project's** team
+(`rootsForRun`, above) — a run never carries its own `?teamId=`-style ceiling
+the way a chat turn does. The task composer (`TaskCommandLine`) does not offer
+`@team` as a mention source at all: `CommandLine`'s `allowTeamMentions` prop
+defaults to `true` (what the chat composer, `ChatDock`, relies on) and
+`TaskCommandLine` passes `false`. `CreateTaskInput.teamId`
+(`libs/contracts/src/tasks/task.schema.ts`) still exists on the wire and still
+accepts a well-formed team id — it is the seam a later branch builds on — but
+nothing on the task path sets it any more, and nothing on the API reads it: a
+task's dispatched run has no field to carry an explicit team tag through to
+its KB scope. Wiring one through needs a new field on each of three persisted
+schemas that don't have one today — `PipelineRunSchema`, `GoalRunSchema`, and
+`ScheduledTaskSchema` (a task itself, the earliest point the tag would
+otherwise die) — plus the `rootsForRun` resolution above extended to prefer
+that explicit tag over the project's own team. That's deferred, deliberately,
+to a later branch; until it lands, offering the mention on the task path
+would promise a scope that silently does nothing, which is worse than not
+offering it.
+
 **How the bearer token reaches a run.** `McpServersStorageService` writes the
 **run token** — never the chat token — into the `zibby-kb` row's credentials
 (`authToken`) via `McpCredentialsStore` on every boot — unconditionally,

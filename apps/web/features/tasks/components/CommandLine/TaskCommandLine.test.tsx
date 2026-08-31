@@ -235,29 +235,31 @@ describe("TaskCommandLine (Phase 118b task-launch container)", () => {
     expect(onTextChange).toHaveBeenLastCalledWith("a");
   });
 
-  it("mirrors the picked team tag up via onTeamChange, exactly as CommandLine emits it — Task 8", async () => {
-    const onTeamChange = vi.fn();
-    const user = userEvent.setup();
-    render(<TaskCommandLine onTeamChange={onTeamChange} />);
-
-    await user.type(screen.getByTestId(CommandLineTestId.Input), "@DevRel");
-    await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`));
-
-    expect(onTeamChange).toHaveBeenCalledWith("devrel");
-  });
-
-  it("carries the picked team's exact id onto the dispatched createTask body — Task 8 fix round 1", async () => {
+  it("does not surface a team as an @-mention source — Task 9b: a tagged team doesn't reach a run yet", async () => {
     const user = userEvent.setup();
     render(<TaskCommandLine />);
     const input = screen.getByTestId(CommandLineTestId.Input);
 
     await user.type(input, "@DevRel");
-    await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`));
-    await user.type(input, "co víme o partner portálu?");
-    await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
 
-    expect(createTask).toHaveBeenCalledTimes(1);
-    expect(createTask.mock.calls[0]?.[0].body.teamId).toBe("devrel");
+    // The teams fixture (mocked above) still resolves "devrel" — proving the row's
+    // absence is the task path turning the source off, not an empty catalog.
+    expect(
+      screen.queryByTestId(`${CommandLineTestId.MentionItem}-team-devrel`),
+    ).not.toBeInTheDocument();
+    // The picker itself still works for every OTHER source — an agent query still
+    // lists a hit, so this isn't a broken picker silently matching nothing.
+    await user.clear(input);
+    await user.type(input, "@Bui");
+    expect(
+      screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the no-teams composer hint — Task 9b: the chrome hint must not claim a mention source this path doesn't offer", () => {
+    render(<TaskCommandLine />);
+    expect(screen.getByText(/hledá agenty, pipeliny a podsystémy ·/)).toBeInTheDocument();
+    expect(screen.queryByText(/a týmy/)).not.toBeInTheDocument();
   });
 
   it('omits teamId entirely — not "", not null — when no team is picked', async () => {

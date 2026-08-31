@@ -94,9 +94,6 @@ export interface TaskCommandLineProps {
   onInjectedTargetConsumed?: () => void;
   onTextChange?: (text: string) => void;
   onTargetChange?: (target: TaskTarget | undefined) => void;
-  /** Mirrors the picked @-mention TEAM tag up — Task 8. See `CommandLine`'s
-   *  own `onTeamChange` docblock: independent of `onTargetChange`. */
-  onTeamChange?: (teamId: string | undefined) => void;
   onDraftChange?: (hasDraft: boolean) => void;
   onAttachmentsChange?: (set: TaskAttachmentSet) => void;
 }
@@ -148,7 +145,6 @@ export function TaskCommandLine({
   onInjectedTargetConsumed,
   onTextChange,
   onTargetChange,
-  onTeamChange,
   onDraftChange,
   onAttachmentsChange,
 }: TaskCommandLineProps) {
@@ -169,11 +165,6 @@ export function TaskCommandLine({
     return base.length > 0 ? `${mention}${base}` : mention;
   });
   const [draftTarget, setDraftTarget] = useState<TaskTarget | undefined>(initialTarget);
-  // Task 8: mirrors `CommandLine`'s own team-tag state, exactly like `draftTarget`
-  // mirrors its target. Fed straight into `useTaskSubmit`'s `teamId` below (fix
-  // round 1) — the same mirror-then-feed pattern `draftTarget`/`chosenTarget`
-  // already use.
-  const [draftTeamId, setDraftTeamId] = useState<string | undefined>(undefined);
   const [draftAttachments, setDraftAttachments] = useState<TaskAttachmentSet>({ files: [] });
   const [taskProjectId, setTaskProjectId] = useState<string | null>(() => initialProjectId ?? null);
   const [ack, setAck] = useState<AckInfo | null>(null);
@@ -213,7 +204,6 @@ export function TaskCommandLine({
     output,
     toolGrants,
     chosenTarget: draftTarget ?? null,
-    teamId: draftTeamId,
     isLoop,
     loop,
     now,
@@ -279,11 +269,6 @@ export function TaskCommandLine({
     onTargetChange?.(next);
   }
 
-  function handleTeamChange(next: string | undefined) {
-    setDraftTeamId(next);
-    onTeamChange?.(next);
-  }
-
   function handleAttachmentsChange(next: TaskAttachmentSet) {
     setDraftAttachments(next);
     onAttachmentsChange?.(next);
@@ -336,6 +321,7 @@ export function TaskCommandLine({
   return (
     <Stack data-testid={TaskCommandLineTestId.Root} direction="col" gap="150">
       <CommandLine
+        allowTeamMentions={false}
         chrome={chrome}
         disabled={disabled}
         initialTarget={initialTarget}
@@ -357,7 +343,6 @@ export function TaskCommandLine({
         onInjectedTargetConsumed={onInjectedTargetConsumed}
         onSubmit={() => dispatch(null)}
         onTargetChange={handleTargetChange}
-        onTeamChange={handleTeamChange}
         onTextChange={handleTextChange}
         placeholder={placeholder}
         renderTrailing={renderTrailingControl}
