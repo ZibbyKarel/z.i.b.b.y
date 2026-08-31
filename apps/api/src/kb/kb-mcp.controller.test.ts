@@ -21,7 +21,6 @@ const vaultSource = (path: string): KnowledgeBaseSource => ({
 });
 
 const root = (over: Partial<KbRoot> & Pick<KbRoot, "teamId">): KbRoot => ({
-  teamName: over.teamId,
   source: vaultSource(`/kb/${over.teamId}`),
   ...over,
 });
@@ -232,7 +231,6 @@ describe("POST /api/kb/mcp — KbMcpController", () => {
     const ABSOLUTE_ROOT = "/Users/host/secret-vault-path";
     const oneRoot: KbRoot = {
       teamId: "devrel",
-      teamName: "DevRel",
       source: vaultSource(ABSOLUTE_ROOT),
     };
     rootsForChat.mockResolvedValue([oneRoot]);

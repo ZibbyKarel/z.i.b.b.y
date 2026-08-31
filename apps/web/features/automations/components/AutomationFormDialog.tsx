@@ -85,8 +85,13 @@ export function AutomationFormDialog({ onClose, onCreate }: AutomationFormDialog
     >
       <Stack gap="200">
         <TriggerFields form={form} />
+        {/* Fix round: explicit `false` — this dialog always creates a `type: "task"`
+            target, which doesn't reach a run's KB scope yet (see CommandLine's
+            `allowTeamMentions` docblock). Matches the (opt-in) default; stated
+            explicitly so the intent survives a future default change. */}
         <CommandLine
           showAttach
+          allowTeamMentions={false}
           chrome={false}
           disabled={!scheduleValid}
           onSubmit={save}

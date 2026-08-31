@@ -276,7 +276,7 @@ describe("CommandLine (Phase 118d generic composer)", () => {
   describe("Task 8 — team @-mentions tag scope, never a routing target", () => {
     it("lists a team row as the fourth mention source", async () => {
       const user = userEvent.setup();
-      render(<CommandLine onSubmit={vi.fn()} />);
+      render(<CommandLine allowTeamMentions onSubmit={vi.fn()} />);
       await user.type(screen.getByTestId(CommandLineTestId.Input), "@");
 
       expect(
@@ -284,9 +284,19 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       ).toBeInTheDocument();
     });
 
-    it("gives the team row a distinct icon and tone from every routing row — Task 8 fix round 2", async () => {
+    it("offers no team row at all when `allowTeamMentions` is left at its (opt-in) default — fix round: a truthy value must now be explicit", async () => {
       const user = userEvent.setup();
       render(<CommandLine onSubmit={vi.fn()} />);
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "@");
+
+      expect(
+        screen.queryByTestId(`${CommandLineTestId.MentionItem}-team-devrel`),
+      ).not.toBeInTheDocument();
+    });
+
+    it("gives the team row a distinct icon and tone from every routing row — Task 8 fix round 2", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine allowTeamMentions onSubmit={vi.fn()} />);
       await user.type(screen.getByTestId(CommandLineTestId.Input), "@");
 
       const teamRow = screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`);
@@ -319,6 +329,7 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       const user = userEvent.setup();
       render(
         <CommandLine
+          allowTeamMentions
           onSubmit={vi.fn()}
           onTargetChange={onTargetChange}
           onTeamChange={onTeamChange}
@@ -336,7 +347,7 @@ describe("CommandLine (Phase 118d generic composer)", () => {
     it("submits with no target when only a team was picked — a team tag never becomes a dispatch destination", async () => {
       const onSubmit = vi.fn();
       const user = userEvent.setup();
-      render(<CommandLine onSubmit={onSubmit} />);
+      render(<CommandLine allowTeamMentions onSubmit={onSubmit} />);
       const input = screen.getByTestId(CommandLineTestId.Input);
       await user.type(input, "@DevRel");
       await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`));
@@ -354,7 +365,7 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       const onSubmit = vi.fn();
       const onTeamChange = vi.fn();
       const user = userEvent.setup();
-      render(<CommandLine onSubmit={onSubmit} onTeamChange={onTeamChange} />);
+      render(<CommandLine allowTeamMentions onSubmit={onSubmit} onTeamChange={onTeamChange} />);
       const input = screen.getByTestId(CommandLineTestId.Input);
       await user.type(input, "@DevRel");
       await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`));
@@ -374,7 +385,7 @@ describe("CommandLine (Phase 118d generic composer)", () => {
     it("deleting the @Name out of the text clears the team tag, independent of any picked target", async () => {
       const onTeamChange = vi.fn();
       const user = userEvent.setup();
-      render(<CommandLine onSubmit={vi.fn()} onTeamChange={onTeamChange} />);
+      render(<CommandLine allowTeamMentions onSubmit={vi.fn()} onTeamChange={onTeamChange} />);
       const input = screen.getByTestId(CommandLineTestId.Input);
       await user.type(input, "@DevRel");
       await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`));
@@ -475,8 +486,17 @@ describe("CommandLine (Phase 118d generic composer)", () => {
     it("wraps the input in the panel chrome by default (header icon + label + hint)", () => {
       render(<CommandLine onSubmit={vi.fn()} />);
       expect(screen.getByTestId(PanelTestId.Header)).toHaveTextContent("Zadej směr");
-      // Fix round 2: teams are the fourth mention source — the hint must say so,
-      // else tagging one has no discovery path at all.
+      // `allowTeamMentions` fix round: the hint's wording must track what THIS
+      // render actually offers — with the prop left at its (opt-in) default, no
+      // team row is offered, so the hint must not claim one either.
+      expect(screen.getByText(/hledá agenty, pipeliny a podsystémy/)).toBeInTheDocument();
+      expect(
+        screen.queryByText(/hledá agenty, pipeliny, podsystémy a týmy/),
+      ).not.toBeInTheDocument();
+    });
+
+    it("the chrome hint includes teams once `allowTeamMentions` is explicitly on — Fix round 2", () => {
+      render(<CommandLine allowTeamMentions onSubmit={vi.fn()} />);
       expect(screen.getByText(/hledá agenty, pipeliny, podsystémy a týmy/)).toBeInTheDocument();
     });
 

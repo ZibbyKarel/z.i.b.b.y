@@ -144,7 +144,6 @@ describe("KbScopeService", () => {
       // ResolvedProjectService.knowledgeBaseFor returned, not a value read off
       // `team.knowledgeBase` through some other path.
       expect(roots[0]?.source).toEqual(source("/kb/devrel-resolved-marker"));
-      expect(roots[0]?.teamName).toBe("DevRel");
     });
 
     it("gives a run whose project has no team nothing", async () => {

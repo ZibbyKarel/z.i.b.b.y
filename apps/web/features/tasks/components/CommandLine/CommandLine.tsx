@@ -113,12 +113,18 @@ export interface CommandLineProps {
    */
   onTeamChange?: (teamId: string | undefined) => void;
   /**
-   * Task 9b: whether a team can be picked as an `@`-mention source at all — default
-   * `true` (chat, where a tagged team genuinely narrows the KB end-to-end). The task
-   * composer (`TaskCommandLine`) sets this `false`: a team tagged on a task doesn't
-   * reach a run yet (needs new fields on `PipelineRunSchema`/`GoalRunSchema`/
-   * `ScheduledTaskSchema` — see `docs/api/teams.md`), so offering the mention would
-   * promise a scope that silently does nothing.
+   * Task 9b, fix round: whether a team can be picked as an `@`-mention source at
+   * all — default **`false`**, opt-IN. Offering the mention only does something
+   * real on the chat path (`ChatDock`, which passes `true` explicitly): a tagged
+   * team there genuinely narrows the KB end-to-end via `onTeamChange`. Every task
+   * path — `TaskCommandLine`, and the automations composers
+   * (`AutomationFormDialog`, the `DetailScreen` task-edit surface) — leaves this at
+   * its default `false`: a team tagged on a task doesn't reach a run yet (needs new
+   * fields on `PipelineRunSchema`/`GoalRunSchema`/`ScheduledTaskSchema` — see
+   * `docs/api/teams.md`), so offering the mention there would promise a scope that
+   * silently does nothing. The default is opt-in (not opt-out) precisely so a
+   * FUTURE caller that forgets this prop is safe by default, rather than silently
+   * surfacing a mention it can't honor — every call site's intent must be explicit.
    */
   allowTeamMentions?: boolean;
   /** Mirrors the attached file set up — needed by a parent whose OWN submit path
@@ -405,7 +411,7 @@ export function CommandLine({
   onTextChange,
   onTargetChange,
   onTeamChange,
-  allowTeamMentions = true,
+  allowTeamMentions = false,
   onAttachmentsChange,
   onSubmit,
   resetOnSubmit = true,

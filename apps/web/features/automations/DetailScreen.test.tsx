@@ -87,6 +87,12 @@ vi.mock("../limits/queries/useLimitsQuery", () => ({
 vi.mock("../tasks/mutations/useUploadTaskAttachmentsMutation", () => ({
   useUploadTaskAttachmentsMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
+// I1 fix round: a team WITH a name matching an `@` query, so the discriminating
+// test below actually exercises the mention catalog rather than passing by
+// accident because the catalog was empty either way.
+vi.mock("../teams", () => ({
+  useTeamsQuery: () => ({ data: [{ id: "devrel", name: "DevRel" }] }),
+}));
 
 describe("automations DetailScreen (N4f grammar)", () => {
   beforeEach(() => {
@@ -186,6 +192,18 @@ describe("automations DetailScreen (N4f grammar)", () => {
     it("has no project selector — this edit surface is the generic CommandLine (send-delegation), not the task-launch container (Phase 118d)", () => {
       render(<DetailScreen automationId="check-prs" />);
       expect(screen.queryByTestId("task-command-line-project-selector")).not.toBeInTheDocument();
+    });
+
+    it("I1 fix round: does not surface a team row for an @ query that would match one — a task automation doesn't reach a run's KB scope yet", async () => {
+      const user = userEvent.setup();
+      render(<DetailScreen automationId="check-prs" />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.clear(input);
+      await user.type(input, "@DevRel");
+
+      expect(
+        screen.queryByTestId(`${CommandLineTestId.MentionItem}-team-devrel`),
+      ).not.toBeInTheDocument();
     });
 
     it("saving via CommandLine issues a task-target update preserving the attachmentSetId when no new files are attached", async () => {

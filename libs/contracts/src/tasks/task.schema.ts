@@ -668,10 +668,21 @@ export const CreateTaskInputSchema = z.object({
   /**
    * Task 8: the operator's explicit team tag, carried alongside (never inside)
    * `target` — deliberately NOT a `TaskTarget` variant. `target` answers WHO runs
-   * this (agent/pipeline/goal/subsystem/orchestrator); `teamId` answers WHAT it
-   * can see, wiring the `zibby-kb` MCP server's team-knowledge-base scope. The
-   * two are orthogonal: a task can carry a target AND a team tag together,
-   * either alone, or neither.
+   * this (agent/pipeline/goal/subsystem/orchestrator); `teamId` is INTENDED to
+   * answer WHAT it can see, by wiring the `zibby-kb` MCP server's
+   * team-knowledge-base scope the same way a chat turn's tagged team does.
+   *
+   * Fix round (final review): today it is accepted but INERT on the task path —
+   * nothing on the API reads it. It is the seam a later branch builds on, not
+   * live wiring: the task composer doesn't even offer the `@team` mention (see
+   * `CommandLine`'s `allowTeamMentions` prop), and even if a caller set this
+   * directly over the wire, a task's dispatched run has no field to carry it
+   * through to `KbScopeService.rootsForRun`. Wiring it needs a new field on each
+   * of three persisted schemas that don't have one today —
+   * `ScheduledTaskSchema` (this task itself, the earliest point the tag would
+   * otherwise die), `PipelineRunSchema`, and `GoalRunSchema` — plus
+   * `rootsForRun` extended to prefer that explicit tag over the project's own
+   * team. That work is deliberately deferred to a later branch.
    */
   teamId: TeamIdSchema.optional(),
   /**

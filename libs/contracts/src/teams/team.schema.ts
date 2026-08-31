@@ -6,6 +6,17 @@ import { isValidGitRemote } from "../projects/project.schema";
 export const TeamIdSchema = AgentIdSchema;
 
 /**
+ * True for a POSIX absolute path (`/…`), a Windows drive-absolute path
+ * (`C:\…`/`C:/…`), or a UNC path (`\\server\share`). Dependency-free (no
+ * `node:path` import — `libs/contracts` stays usable outside Node) and
+ * deliberately permissive about which OS: the operator configures this host
+ * path directly, and the API process may run on either.
+ */
+function isAbsoluteHostPath(p: string): boolean {
+  return p.startsWith("/") || /^[a-zA-Z]:[\\/]/.test(p) || p.startsWith("\\\\");
+}
+
+/**
  * Where a team's knowledge base lives.
  *
  * A discriminated union from day one even though v1 has a single member: a
@@ -22,7 +33,9 @@ export const KnowledgeBaseSourceSchema = z.discriminatedUnion("kind", [
     .object({
       kind: z.literal("vault"),
       /** Absolute host path, read in place. Never copied into ZIBBY's vault. */
-      path: z.string().min(1),
+      path: z.string().min(1).refine(isAbsoluteHostPath, {
+        message: "must be an absolute path",
+      }),
       gitRemote: z
         .string()
         .min(1)

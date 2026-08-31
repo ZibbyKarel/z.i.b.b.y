@@ -47,6 +47,26 @@ describe("TeamSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("M7: rejects a relative vault path — the docblock and docs promise an absolute host path", () => {
+    const result = KnowledgeBaseSourceSchema.safeParse({
+      kind: "vault",
+      path: "relative/kb",
+      readOnly: true,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("M7: accepts a Windows drive-absolute and a UNC path too — operator-configured, not tied to one OS", () => {
+    expect(
+      KnowledgeBaseSourceSchema.safeParse({ kind: "vault", path: "C:\\kb", readOnly: true })
+        .success,
+    ).toBe(true);
+    expect(
+      KnowledgeBaseSourceSchema.safeParse({ kind: "vault", path: "\\\\server\\kb", readOnly: true })
+        .success,
+    ).toBe(true);
+  });
+
   it("ignores id on the update schema", () => {
     expect(UpdateTeamSchema.parse({ id: "other" })).toEqual({});
   });

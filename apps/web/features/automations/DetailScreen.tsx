@@ -166,8 +166,13 @@ function AutomationEditor({ automation }: { automation: Automation }) {
               ) : target.type === "task" ? (
                 <Stack gap="200">
                   <TriggerFields form={form} />
+                  {/* Fix round: explicit `false` — this edit surface is a `type: "task"`
+                      target, which doesn't reach a run's KB scope yet (see CommandLine's
+                      `allowTeamMentions` docblock). Matches the (opt-in) default; stated
+                      explicitly so the intent survives a future default change. */}
                   <CommandLine
                     showAttach
+                    allowTeamMentions={false}
                     chrome={false}
                     disabled={!form.canSave()}
                     initialTarget={target.target ? toClientTarget(target.target) : undefined}

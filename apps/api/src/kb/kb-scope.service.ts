@@ -9,7 +9,6 @@ import { TeamsStorageService } from "../teams/teams.storage.service";
 /** One knowledge base a caller is allowed to read, with the team it belongs to. */
 export interface KbRoot {
   readonly teamId: string;
-  readonly teamName: string;
   readonly source: KnowledgeBaseSource;
 }
 
@@ -113,7 +112,7 @@ export class KbScopeService {
     const teamRecord = await this.teams.get(project.teamId).catch(() => null);
     if (!teamRecord) return [];
     if (team && team !== teamRecord.id) return [];
-    return [{ teamId: teamRecord.id, teamName: teamRecord.name, source }];
+    return [{ teamId: teamRecord.id, source }];
   }
 
   /**
@@ -128,7 +127,7 @@ export class KbScopeService {
     return teams.flatMap((t) => {
       if (!t.knowledgeBase) return [];
       if (team && t.id !== team) return [];
-      return [{ teamId: t.id, teamName: t.name, source: t.knowledgeBase }];
+      return [{ teamId: t.id, source: t.knowledgeBase }];
     });
   }
 

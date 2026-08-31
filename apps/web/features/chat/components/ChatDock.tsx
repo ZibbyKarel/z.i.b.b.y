@@ -310,6 +310,7 @@ export function ChatDock({
                 field box around it — the dock's own glass surface (and its focus
                 border-top above) is the frame. */}
             <CommandLine
+              allowTeamMentions
               frameless
               hideLabel
               showAttach

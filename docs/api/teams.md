@@ -4,8 +4,10 @@
 `Project`: many teams per company, at most one company per team, and a
 project optionally points at one team via `Project.teamId`. In v1 a team owns
 no roster and no budget — those stay on `Company`/`Project`. What a team
-uniquely owns is a **read-only knowledge base** (`knowledgeBase`), the seed
-for team-scoped grounding that a later task wires up for actual reads.
+uniquely owns is a **read-only knowledge base** (`knowledgeBase`) — wired up
+for actual reads by `KbReaderService`/`KbScopeService`/the `zibby-kb` MCP
+server (see "Reading a knowledge base" and "Scoping which KBs a caller can
+reach" below).
 
 ## Pieces
 
@@ -157,7 +159,6 @@ security story for the `zibby-kb` MCP server — it decides which
 ```typescript
 interface KbRoot {
   teamId: string;
-  teamName: string;
   source: KnowledgeBaseSource;
 }
 
@@ -186,10 +187,14 @@ display name), resolved by id-then-name exactly like
 `AgentRunnerService`'s own private `resolveProject`. A pipeline run carries
 only `projectPath` (absolute path), resolved by path exactly like
 `PipelineRunnerService`'s own private `projectForRun`. This means scope
-resolution is a query-time lookup that can drift if the project registry
-changes between run start and this call (rename, or a different project now
-bearing the same name/path) — persisting a canonical `projectId` on the run
-record would close this, and is out of scope here.
+resolution is a query-time lookup, redone on every call, NOT a "fails closed
+at worst" one: if the referenced project is deleted and a new one is
+registered reusing the same id/name (or the same `projectPath`), the SAME run
+id resolves to a DIFFERENT team's knowledge base entirely — a team the run
+never started under. This is a silent cross-team leak, not a fail-closed
+degradation. Persisting a canonical `projectId` on the run record at run
+start (and resolving from that instead of re-resolving a free-form label at
+query time) would close this; it is a named follow-up, out of scope here.
 
 The `X-Zibby-Run-Id` header this resolves is **scoping input only, never
 authentication** — low-entropy, guessable, forgeable by any local process
@@ -198,10 +203,15 @@ its guard (bearer token + loopback check) — see the next section.
 
 For an agent run the header carries the pre-spawn
 `${agentId}_${startedMs}`, while the persisted runId is
-`${ownerId}_${startedMs}_${pid}` built from the same `startedMs` — so
-`KbScopeService` resolves by prefix match (`record.runId.startsWith(header +
-"_")`), safe because the boundary underscore rules out a false match against
-a different, numerically prefix-colliding run. A pipeline run's header IS its
+`${ownerId}_${startedMs}_${pid}` built from the same `startedMs`. A plain
+boundary-safe prefix match (`record.runId.startsWith(header + "_")`) is NOT
+enough: agent ids (`architekt`, `koder`, …) are public constants, not
+secrets, and a bare agent id is itself a shorter, boundary-aligned prefix of
+`${agentId}_${startedMs}_${pid}` — sending it as the header would resolve to
+whatever project that agent last ran under. `KbScopeService` additionally
+requires the remainder after the boundary to be a **single numeric segment**
+(`_${pid}`, never `_${startedMs}_${pid}`), which accepts the intended header
+and rejects the bare-agent-id truncation. A pipeline run's header IS its
 `pipelineRunId`, resolved by exact match (also supported for a completed
 agent run, in principle).
 
@@ -310,11 +320,20 @@ turn:
   operator's) then narrows the result **within** whatever the ceiling
   already resolved to: `roots.filter((root) => root.teamId === toolTeam)`.
   It is never passed to `rootsForChat` directly.
-- **Both directions narrow, neither widens.** A tool `team` argument outside
-  the ceiling (e.g. the operator tagged `devrel` but the model asks for
-  `platform`) resolves to an empty result on that ceiling — not `platform`'s
-  KB, and not an error. A tool call with no `team` argument at all gets
-  everything the ceiling allows, nothing more.
+- **Both directions narrow, neither widens — within the sanctioned tool
+  surface.** A tool `team` argument outside the ceiling (e.g. the operator
+  tagged `devrel` but the model asks for `platform`) resolves to an empty
+  result on that ceiling — not `platform`'s KB, and not an error. A tool call
+  with no `team` argument at all gets everything the ceiling allows, nothing
+  more. Be accurate about what this buys, the same way the run path's
+  forgeable header is: a chat turn's principal is the OPERATOR, and nothing
+  stops a chat-turn model from reading its own 0600 MCP config and curling
+  `/api/kb/mcp` directly, with no `?teamId=` at all, to reach
+  `rootsForChat(undefined)` — every team's KB. That is not an escalation past
+  what the chat principal could already reach by default (the operator's own
+  reach is "every team with a KB"), so the design stands; the ceiling narrows
+  what the SANCTIONED tools return, it is not a hard wall around the
+  connection.
 - The run path is unaffected: `rootsForRun(runId, team?)` still receives the
   tool's `team` argument directly, unchanged — a run's ceiling is its single
   project (via `runId`), which the tool argument narrows the same way it
@@ -323,10 +342,14 @@ turn:
 **The task path has no per-task team tag — by design, not by oversight (Task
 9b).** A run's knowledge base is resolved from its **project's** team
 (`rootsForRun`, above) — a run never carries its own `?teamId=`-style ceiling
-the way a chat turn does. The task composer (`TaskCommandLine`) does not offer
-`@team` as a mention source at all: `CommandLine`'s `allowTeamMentions` prop
-defaults to `true` (what the chat composer, `ChatDock`, relies on) and
-`TaskCommandLine` passes `false`. `CreateTaskInput.teamId`
+the way a chat turn does. `CommandLine`'s `allowTeamMentions` prop (fix round:
+default **`false`**, opt-in) decides whether `@team` is offered as a mention
+source at all — every call site states its own intent explicitly rather than
+relying on a default: `ChatDock` passes `true` (a tagged team genuinely
+narrows the KB end-to-end there); `TaskCommandLine` and both automations
+composers (`AutomationFormDialog`, the `DetailScreen` task-edit surface) pass
+`false` — none of them reach a run's KB scope yet, so offering the mention
+would promise a scope that silently does nothing. `CreateTaskInput.teamId`
 (`libs/contracts/src/tasks/task.schema.ts`) still exists on the wire and still
 accepts a well-formed team id — it is the seam a later branch builds on — but
 nothing on the task path sets it any more, and nothing on the API reads it: a
@@ -345,8 +368,9 @@ offering it.
 (`authToken`) via `McpCredentialsStore` on every boot — unconditionally,
 unlike the entity row itself (create-if-absent). The chat token is never
 persisted anywhere and is not reachable through `GET /api/mcp-servers`.
-`ClaudeRunCommandService.buildMcpConfig` (already existing, unmodified) reads
-that credential fresh at every run's spawn time and folds it into the
+`ClaudeRunCommandService.buildMcpConfig` — extended by Task 5 with a `runId`
+parameter and the `X-Zibby-Run-Id` header it threads onto loopback servers —
+reads that credential fresh at every run's spawn time and folds it into the
 `Authorization: Bearer` header, exactly like it does for any other server's
 stored `authToken` — so a boot-time refresh is enough; the token is never
 written into the entity's own `headers` field (that field is plain and
@@ -361,10 +385,12 @@ storage instances and the guard always agree on the same token pair.
 
 - **`app.module.ts`** — `TeamsModule` is registered beside `CompaniesModule`;
   `KbModule` (`apps/api/src/kb/kb.module.ts`) is registered beside `McpModule`.
-- **`projects` module** — `Project.teamId` is a bare optional string today (no
-  resolver reads it yet); a later task is expected to add the same kind of
-  read-time resolution `ResolvedProjectService` already does for `companyId`.
-  See `docs/api/projects.md`.
+- **`projects` module** — `Project.teamId` is a bare optional string (same
+  dangling-ref tolerance as `companyId`), but it is no longer unread:
+  `ResolvedProjectService.findTeam` resolves it to a `Team` (or `null` for "no
+  team") the same read-time way it already does for `companyId`, and
+  `KbScopeService.rootsForRun` depends on it directly (`project.teamId` → the
+  team's KB). See `docs/api/projects.md`.
 
 ## Gotchas
 

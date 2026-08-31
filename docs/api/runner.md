@@ -259,10 +259,11 @@ Key assembled pieces:
   pre-spawn id in), an `X-Zibby-Run-Id` header is added to every http/sse
   server whose `url` resolves to a **loopback host**
   (`localhost`/`127.0.0.1`/`[::1]`) — i.e. ZIBBY's own in-process MCP
-  controllers (`zibby-entities`, a future knowledge-base server), never a
-  third-party remote server (context7, playwright, …). Task 5 plumbing only —
-  nothing reads it yet; Task 7 is where an in-process controller consumes the
-  header to scope what the run may read.
+  controllers (`zibby-entities`, `zibby-kb`), never a third-party remote
+  server (context7, playwright, …). `KbScopeService`
+  (`apps/api/src/kb/kb-scope.service.ts`) consumes the header to scope what
+  the run may read — see `docs/api/teams.md`'s "Scoping which KBs a caller
+  can reach" section.
 - `--resume <sessionId>` when `resumeSessionId` is set (Phase 49 — continuing
   a captured session instead of a cold start on retry).
 - `--model`/`--effort` from the agent's `model`/`thinking` (`THINKING_TO_EFFORT`
