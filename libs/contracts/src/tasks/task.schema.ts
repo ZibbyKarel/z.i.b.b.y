@@ -4,6 +4,7 @@ import { AgentIdSchema } from "../agents/agent.schema";
 import { MakerRefSchema, VerifierSpecSchema } from "../goals/goal.schema";
 import { ProjectIdSchema } from "../projects/project.schema";
 import { SubsystemIdSchema } from "../subsystems/subsystem.schema";
+import { TeamIdSchema } from "../teams/team.schema";
 
 /**
  * Metadata for one uploaded attachment. The bytes live on disk under the set's dir
@@ -664,6 +665,15 @@ export const CreateTaskInputSchema = z.object({
    * dispatch destination, not a project assertion.
    */
   target: TaskTargetSchema.optional(),
+  /**
+   * Task 8: the operator's explicit team tag, carried alongside (never inside)
+   * `target` — deliberately NOT a `TaskTarget` variant. `target` answers WHO runs
+   * this (agent/pipeline/goal/subsystem/orchestrator); `teamId` answers WHAT it
+   * can see, wiring the `zibby-kb` MCP server's team-knowledge-base scope. The
+   * two are orthogonal: a task can carry a target AND a team tag together,
+   * either alone, or neither.
+   */
+  teamId: TeamIdSchema.optional(),
   /**
    * The operator's CONFIRMED tool-grant set for this run — independent of
    * `TaskRouting.toolGrants` (the classifier's advisory proposal). The New Task

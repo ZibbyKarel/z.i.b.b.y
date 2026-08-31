@@ -86,11 +86,7 @@ function calledCreateTask(stdout: string): boolean {
     } catch {
       continue;
     }
-    if (
-      typeof d === "object" &&
-      d !== null &&
-      (d as { type?: unknown }).type === "assistant"
-    ) {
+    if (typeof d === "object" && d !== null && (d as { type?: unknown }).type === "assistant") {
       const content = (d as { message?: { content?: unknown } }).message?.content;
       if (Array.isArray(content)) {
         for (const block of content) {

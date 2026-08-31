@@ -17,10 +17,7 @@ function makeAuth(token: string = TOKEN): ChatMcpAuthService {
 
 /** A minimal `ExecutionContext` stand-in carrying only what the guard reads:
  * `req.headers.authorization` and `req.socket.remoteAddress`. */
-function makeContext(opts: {
-  authorization?: string;
-  remoteAddress?: string;
-}): ExecutionContext {
+function makeContext(opts: { authorization?: string; remoteAddress?: string }): ExecutionContext {
   const req = {
     headers: opts.authorization !== undefined ? { authorization: opts.authorization } : {},
     socket: { remoteAddress: opts.remoteAddress },
@@ -72,7 +69,9 @@ describe("ChatMcpAuthGuard", () => {
   it("accepts the exact matching token from a loopback peer", () => {
     const guard = new ChatMcpAuthGuard(makeAuth());
     expect(
-      guard.canActivate(makeContext({ authorization: `Bearer ${TOKEN}`, remoteAddress: "127.0.0.1" })),
+      guard.canActivate(
+        makeContext({ authorization: `Bearer ${TOKEN}`, remoteAddress: "127.0.0.1" }),
+      ),
     ).toBe(true);
     expect(
       guard.canActivate(makeContext({ authorization: `Bearer ${TOKEN}`, remoteAddress: "::1" })),
@@ -96,7 +95,9 @@ describe("ChatMcpAuthGuard", () => {
   it("rejects a missing remoteAddress even with the correct token", () => {
     const guard = new ChatMcpAuthGuard(makeAuth());
     expect(() =>
-      guard.canActivate(makeContext({ authorization: `Bearer ${TOKEN}`, remoteAddress: undefined })),
+      guard.canActivate(
+        makeContext({ authorization: `Bearer ${TOKEN}`, remoteAddress: undefined }),
+      ),
     ).toThrow(UnauthorizedException);
   });
 });

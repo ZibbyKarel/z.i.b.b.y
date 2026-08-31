@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Briefing } from "../briefing/briefing.schema";
-import { ChatMessageSchema, ChatToolEventSchema } from "./chat.schema";
+import { TaskTargetSchema } from "../tasks/task.schema";
+import { ChatMessageSchema, ChatToolEventSchema, SendChatMessageBodySchema } from "./chat.schema";
 
 describe("ChatToolEventSchema.name (T11 finding #7)", () => {
   const base = { name: "create_task", status: "ok" as const };
@@ -80,5 +81,29 @@ describe("ChatMessageSchema backward compatibility (F8a — the `briefing` field
     });
     expect(parsed.success).toBe(true);
     if (parsed.success) expect(parsed.data.briefing?.headline).toBe("Nothing needs you.");
+  });
+});
+
+describe("SendChatMessageBodySchema.teamId (Task 8 — tag a team on a chat turn)", () => {
+  it("carries teamId alongside an explicit target", () => {
+    const body = SendChatMessageBodySchema.parse({
+      text: "co víme o partner portálu?",
+      teamId: "devrel",
+    });
+    expect(body.teamId).toBe("devrel");
+  });
+
+  it("stays valid with no teamId (back-compatible)", () => {
+    const body = SendChatMessageBodySchema.parse({ text: "ahoj" });
+    expect(body.teamId).toBeUndefined();
+  });
+
+  it("rejects a teamId that isn't a valid filename-safe id — proves it's TeamIdSchema, not a bare string", () => {
+    const parsed = SendChatMessageBodySchema.safeParse({ text: "x", teamId: "not/a/valid/id" });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("does not add a team variant to TaskTarget", () => {
+    expect(TaskTargetSchema.safeParse({ kind: "team", id: "devrel" }).success).toBe(false);
   });
 });

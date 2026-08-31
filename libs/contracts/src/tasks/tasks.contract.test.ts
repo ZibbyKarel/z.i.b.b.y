@@ -9,6 +9,7 @@ import {
   ScheduledTaskStatusSchema,
   TaskOutputSchema,
   TaskRoutingSchema,
+  TaskTargetSchema,
   tasksContract,
 } from "../index";
 
@@ -214,6 +215,35 @@ describe("CreateTaskInputSchema (Phase 11 explicit target)", () => {
     expect(CreateTaskInputSchema.safeParse({ text: "x", output: { type: "file" } }).success).toBe(
       false,
     );
+  });
+});
+
+describe("Task 8 — teamId carried beside target, never inside it", () => {
+  it("carries an optional teamId on CreateTaskInput", () => {
+    const parsed = CreateTaskInputSchema.safeParse({
+      text: "co víme o partner portálu?",
+      teamId: "devrel",
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.teamId).toBe("devrel");
+  });
+
+  it("stays valid with no teamId (back-compatible)", () => {
+    expect(CreateTaskInputSchema.safeParse({ text: "just do it" }).success).toBe(true);
+  });
+
+  it("rejects a teamId that isn't a valid filename-safe id — proves it's TeamIdSchema, not a bare string", () => {
+    const parsed = CreateTaskInputSchema.safeParse({ text: "x", teamId: "not/a/valid/id" });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("does not add a team variant to TaskTarget — a team is scope, not a routing destination", () => {
+    expect(TaskTargetSchema.safeParse({ kind: "team", id: "devrel" }).success).toBe(false);
+  });
+
+  it("accepts a well-formed but non-existent teamId at the schema level — a dangling reference resolves to 'no team' at runtime (KbScopeService), never a parse-time error", () => {
+    const parsed = CreateTaskInputSchema.safeParse({ text: "x", teamId: "no-such-team" });
+    expect(parsed.success).toBe(true);
   });
 });
 

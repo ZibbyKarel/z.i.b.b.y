@@ -8,6 +8,7 @@ import {
   type SendChatMessageBody,
   type SendChatMessageResult,
 } from "@zibby/contracts";
+import { KbMcpAuthService } from "../kb/kb-mcp-auth.service";
 import { collisionResistantId, ensureDir } from "../shared/file-storage";
 import { SystemConfigStore } from "../system/system-config.store";
 import { ChatEventsService } from "./chat-events.service";
@@ -79,6 +80,10 @@ export class ChatSessionService {
     private readonly toolResults: ChatToolResultRegistry,
     private readonly mcpAuth: ChatMcpAuthService,
     @Inject(CHAT_DIR) private readonly chatDir: string,
+    // Task 8: the KB auth service's CHAT token (never the run token — see
+    // `kbMcpUrl`/`toolArgs`'s docblocks) for the `zibby-kb` MCP server this
+    // service also mounts.
+    private readonly kbMcpAuth: KbMcpAuthService,
   ) {}
 
   /**
@@ -106,7 +111,10 @@ export class ChatSessionService {
     const turnId = collisionResistantId("turn");
     // Fire-and-forget: the turn streams over SSE and persists itself. Failures are
     // surfaced as an `error` turn event and logged, never thrown at the caller.
-    void this.runTurn(conversationId, turnId, body.text).catch((error) => {
+    // `now` is passed explicitly as `undefined` so `runTurn` keeps minting its OWN
+    // fresh timestamp (unchanged behaviour) while `body.teamId` threads through as
+    // the turn's KB scope tag — Task 8, mirrors how `conversationId` already threads.
+    void this.runTurn(conversationId, turnId, body.text, undefined, body.teamId).catch((error) => {
       this.logger.error(`chat turn ${turnId} failed: ${String(error)}`);
       this.events.emit({ conversationId, turnId, type: "error", message: "Něco se pokazilo." });
     });
@@ -121,6 +129,7 @@ export class ChatSessionService {
     text: string,
     sessionId: string | null,
     conversationId: string,
+    teamId?: string,
   ): Promise<string[]> {
     const explicitTarget = this.toolResults.getExplicitTarget(conversationId);
     const persona = buildChatPrompt(this.systemConfig.current().chatPersona);
@@ -157,7 +166,7 @@ export class ChatSessionService {
       "dontAsk",
     ];
     if (sessionId) args.push("--resume", sessionId);
-    args.push(...(await this.toolArgs(conversationId)));
+    args.push(...(await this.toolArgs(conversationId, teamId)));
     return args;
   }
 
@@ -169,6 +178,18 @@ export class ChatSessionService {
     return `${base}/api/chat/mcp?conversationId=${encodeURIComponent(conversationId)}`;
   }
 
+  /** The base URL the spawned `claude` reaches the `zibby-kb` MCP server at
+   * (Task 8) — mirrors {@link mcpBaseUrl}'s shape. `teamId` (the operator's
+   * `@`-mention tag for this turn) rides as the `?teamId=` query param, exactly
+   * like `conversationId` does above, and is OMITTED entirely when the turn
+   * carries no tag — `KbMcpController` reads its absence as "no ceiling", not
+   * as an empty-string team id. */
+  protected kbMcpUrl(teamId?: string): string {
+    const base = process.env.ZIBBY_API_BASE ?? `http://localhost:${process.env.PORT ?? 3333}`;
+    const query = teamId ? `?teamId=${encodeURIComponent(teamId)}` : "";
+    return `${base}/api/kb/mcp${query}`;
+  }
+
   /**
    * MCP tool wiring (`--mcp-config` + `--allowedTools`): point the turn at the
    * in-process HTTP MCP server (server id `zibby`), carrying the per-boot bearer
@@ -176,18 +197,34 @@ export class ChatSessionService {
    * and allow its six tools. The CLI round-trips tool-use against this under the
    * verified chat spawn config.
    *
+   * Task 8 adds a SECOND server entry, `zibby-kb` — the load-bearing part of that
+   * task: without it, `KbScopeService.rootsForChat` is unreachable dead code and a
+   * chat turn can never read any team's knowledge base, no matter how the KB
+   * endpoint itself is guarded/scoped. It carries the KB auth service's **chat**
+   * token (`KbMcpAuthService.chatBearerToken`) — never the run token, and never
+   * `ChatMcpAuthService.bearerToken` (that's the unrelated `zibby` server's own
+   * guard). The token is what `KbMcpAuthGuard` uses to decide the caller path
+   * (`req.kbCaller`), NOT the presence of `X-Zibby-Run-Id` — see
+   * `KbMcpAuthService`'s and `KbMcpController`'s class docs for the full
+   * rationale and the four-row truth table this depends on.
+   *
    * The token must never land on argv (`ps`-visible to any local user — the exact
    * bug class T5c/`68de5655` fixed for the runner's `--mcp-config`, which this
    * service's inline-JSON shape had NOT yet picked up). So the whole config —
-   * including the `Authorization: Bearer …` header — is spilled to a `0600` file
-   * under the chat dir (`resolveChatDir()`, gitignored) and passed as
+   * including BOTH servers' `Authorization: Bearer …` headers — is spilled to a
+   * `0600` file under the chat dir (`resolveChatDir()`, gitignored) and passed as
    * `--mcp-config <path>`; only the file PATH goes on argv. A fresh, collision-safe
    * filename per call (mirrors the runner's `buildMcpConfigArgs`, minus a shared
    * per-run sandbox dir chat doesn't have) — left on disk after the turn (chat has
    * no per-run cleanup sweep; the file carries no secret usable outside this boot
    * and sits mode-0600 in a gitignored dir).
+   *
+   * `--allowedTools` widens to cover both servers (`mcp__zibby__*,mcp__zibby-kb__*`).
+   * Per commit `eb525567`, this list is a PROMPTING hint, not a toolset filter — a
+   * tool left off it still exists and still executes — so what actually makes the
+   * KB tools reachable at all is the `mcpServers` entry above, not this list.
    */
-  protected async toolArgs(conversationId: string): Promise<string[]> {
+  protected async toolArgs(conversationId: string, teamId?: string): Promise<string[]> {
     const config = {
       mcpServers: {
         zibby: {
@@ -195,12 +232,17 @@ export class ChatSessionService {
           url: this.mcpBaseUrl(conversationId),
           headers: { Authorization: `Bearer ${this.mcpAuth.bearerToken}` },
         },
+        "zibby-kb": {
+          type: "http",
+          url: this.kbMcpUrl(teamId),
+          headers: { Authorization: `Bearer ${this.kbMcpAuth.chatBearerToken}` },
+        },
       },
     };
     await ensureDir(this.chatDir);
     const file = path.join(this.chatDir, `${collisionResistantId("mcp-config")}.json`);
     await fs.writeFile(file, JSON.stringify(config), { mode: 0o600 });
-    return ["--mcp-config", file, "--allowedTools", "mcp__zibby__*"];
+    return ["--mcp-config", file, "--allowedTools", "mcp__zibby__*,mcp__zibby-kb__*"];
   }
 
   /** The real spawn; overridden in tests. Isolated stdin, piped stdout/stderr. */
@@ -231,9 +273,13 @@ export class ChatSessionService {
     turnId: string,
     text: string,
     now: Date = new Date(),
+    // Task 8: the operator's `@`-mention team tag for this turn, threaded straight
+    // through into `buildArgs` → `toolArgs` → `kbMcpUrl` — the same explicit-parameter
+    // threading `conversationId` already gets, not new registry state.
+    teamId?: string,
   ): Promise<void> {
     const sessionId = await this.store.getSessionId(conversationId);
-    const proc = this.createProcess(await this.buildArgs(text, sessionId, conversationId));
+    const proc = this.createProcess(await this.buildArgs(text, sessionId, conversationId, teamId));
 
     let accumulated = "";
     let capturedSession: string | null = null;

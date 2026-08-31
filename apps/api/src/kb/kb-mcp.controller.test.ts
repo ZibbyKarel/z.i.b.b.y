@@ -79,15 +79,16 @@ describe("POST /api/kb/mcp — KbMcpController", () => {
   });
 
   /** Connect an authenticated MCP client with a SPECIFIC bearer token,
-   * optionally carrying `X-Zibby-Run-Id`. The token — never the header — is
-   * what decides the caller path post fix-round-1 (F3), so every call site
-   * states which token it's using explicitly. */
-  async function connect(token: string, runId?: string): Promise<Client> {
+   * optionally carrying `X-Zibby-Run-Id` and/or `?teamId=` (Task 8 — the
+   * operator's explicit `@`-mention tag on the connection's URL). The token —
+   * never the header — is what decides the caller path post fix-round-1 (F3),
+   * so every call site states which token it's using explicitly. */
+  async function connect(token: string, runId?: string, queryTeamId?: string): Promise<Client> {
     const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
     if (runId !== undefined) headers["X-Zibby-Run-Id"] = runId;
-    const transport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/api/kb/mcp`), {
-      requestInit: { headers },
-    });
+    const url = new URL(`${baseUrl}/api/kb/mcp`);
+    if (queryTeamId !== undefined) url.searchParams.set("teamId", queryTeamId);
+    const transport = new StreamableHTTPClientTransport(url, { requestInit: { headers } });
     const client = new Client({ name: "kb-mcp-test-client", version: "1.0.0" });
     await client.connect(transport);
     return client;
@@ -397,50 +398,121 @@ describe("POST /api/kb/mcp — KbMcpController", () => {
   });
 
   // ---------------------------------------------------------------------
-  // F4 — the `team` argument must actually reach the scope service, on
-  // BOTH paths. An implementation that destructured `{ query }`/`{ noteId }`
-  // and silently dropped `team` would pass every other test in this file.
+  // F4 (run path) — the `team` argument must actually reach the scope
+  // service on the RUN path, unchanged by Task 8. An implementation that
+  // destructured `{ query }`/`{ noteId }` and silently dropped `team` would
+  // pass every other test in this file.
   // ---------------------------------------------------------------------
 
-  it("search_team_kb forwards the team argument to the scope service, on both the chat and run paths", async () => {
-    rootsForChat.mockResolvedValue([]);
+  it("run path: search_team_kb still forwards the tool's team argument straight to rootsForRun, untouched by Task 8", async () => {
     rootsForRun.mockResolvedValue([]);
-
-    const chatClient = await connect(chatToken);
-    await chatClient.callTool({
-      name: "search_team_kb",
-      arguments: { query: "x", team: "platform" },
-    });
-    expect(rootsForChat).toHaveBeenCalledWith("platform");
-    await chatClient.close();
-
-    const runClient = await connect(runToken, "codex_1000_4321");
-    await runClient.callTool({
-      name: "search_team_kb",
-      arguments: { query: "x", team: "platform" },
-    });
+    const client = await connect(runToken, "codex_1000_4321");
+    await client.callTool({ name: "search_team_kb", arguments: { query: "x", team: "platform" } });
     expect(rootsForRun).toHaveBeenCalledWith("codex_1000_4321", "platform");
-    await runClient.close();
+    expect(rootsForChat).not.toHaveBeenCalled();
+    await client.close();
   });
 
-  it("read_team_kb_note forwards the team argument to the scope service, on both the chat and run paths", async () => {
-    rootsForChat.mockResolvedValue([]);
+  it("run path: read_team_kb_note still forwards the tool's team argument straight to rootsForRun, untouched by Task 8", async () => {
     rootsForRun.mockResolvedValue([]);
-
-    const chatClient = await connect(chatToken);
-    await chatClient.callTool({
-      name: "read_team_kb_note",
-      arguments: { noteId: "n1", team: "platform" },
-    });
-    expect(rootsForChat).toHaveBeenCalledWith("platform");
-    await chatClient.close();
-
-    const runClient = await connect(runToken, "codex_1000_4321");
-    await runClient.callTool({
+    const client = await connect(runToken, "codex_1000_4321");
+    await client.callTool({
       name: "read_team_kb_note",
       arguments: { noteId: "n1", team: "platform" },
     });
     expect(rootsForRun).toHaveBeenCalledWith("codex_1000_4321", "platform");
-    await runClient.close();
+    expect(rootsForChat).not.toHaveBeenCalled();
+    await client.close();
+  });
+
+  // ---------------------------------------------------------------------
+  // Task 8 — the chat path's `?teamId=` query param is the CEILING; a tool
+  // call's own `team` argument only narrows WITHIN it, never widens past it.
+  // Both stages must independently narrow (spec: "the query param is the
+  // ceiling and the tool argument narrows within it").
+  // ---------------------------------------------------------------------
+
+  it("chat path: search_team_kb no longer passes the tool's team argument straight to rootsForChat — the ceiling call omits it", async () => {
+    rootsForChat.mockResolvedValue([]);
+    const client = await connect(chatToken);
+    await client.callTool({ name: "search_team_kb", arguments: { query: "x", team: "platform" } });
+    // The ceiling call carries the QUERY param (absent on this connection),
+    // never the tool's own argument — the pre-Task-8 wiring passed "platform"
+    // straight through here instead.
+    expect(rootsForChat).toHaveBeenCalledWith(undefined);
+    await client.close();
+  });
+
+  it("chat path: read_team_kb_note no longer passes the tool's team argument straight to rootsForChat either", async () => {
+    rootsForChat.mockResolvedValue([]);
+    const client = await connect(chatToken);
+    await client.callTool({
+      name: "read_team_kb_note",
+      arguments: { noteId: "n1", team: "platform" },
+    });
+    expect(rootsForChat).toHaveBeenCalledWith(undefined);
+    await client.close();
+  });
+
+  it("a tool team argument that matches the (unset) ceiling narrows the merged result to just that team's KB", async () => {
+    const rootA = root({ teamId: "devrel" });
+    const rootB = root({ teamId: "platform" });
+    rootsForChat.mockResolvedValue([rootA, rootB]); // ceiling: no ?teamId= — everything reachable
+    search.mockImplementation(async (source) => [
+      hit({ noteId: source === rootA.source ? "d1" : "p1" }),
+    ]);
+    const client = await connect(chatToken);
+    const result = await client.callTool({
+      name: "search_team_kb",
+      arguments: { query: "x", team: "platform" },
+    });
+    const textOut = firstText(result);
+    expect(textOut).toContain("platform");
+    expect(textOut).not.toContain("devrel");
+    // Only platform's root was ever searched — devrel was filtered out BEFORE
+    // reaching the reader, not merged in and then hidden by formatting.
+    expect(search).toHaveBeenCalledTimes(1);
+    expect(search).toHaveBeenCalledWith(rootB.source, "x", MAX_SEARCH_HITS);
+    await client.close();
+  });
+
+  it("with ?teamId=devrel, a tool team argument OUTSIDE that ceiling returns empty — not that team's KB, and not an error", async () => {
+    const devrelRoot = root({ teamId: "devrel" });
+    rootsForChat.mockResolvedValue([devrelRoot]); // the operator tagged ONLY devrel
+    const client = await connect(chatToken, undefined, "devrel");
+    const result = await client.callTool({
+      name: "search_team_kb",
+      arguments: { query: "x", team: "platform" },
+    });
+    expect(rootsForChat).toHaveBeenCalledWith("devrel");
+    expect((result as { isError?: boolean }).isError).not.toBe(true);
+    expect(firstText(result)).toMatch(/no team knowledge base/i);
+    expect(search).not.toHaveBeenCalled();
+    await client.close();
+  });
+
+  it("with ?teamId=devrel and a tool team argument that matches it, the intersection still resolves that team's KB", async () => {
+    const devrelRoot = root({ teamId: "devrel" });
+    rootsForChat.mockResolvedValue([devrelRoot]);
+    search.mockResolvedValue([hit({ noteId: "n1" })]);
+    const client = await connect(chatToken, undefined, "devrel");
+    const result = await client.callTool({
+      name: "search_team_kb",
+      arguments: { query: "x", team: "devrel" },
+    });
+    expect(rootsForChat).toHaveBeenCalledWith("devrel");
+    expect(firstText(result)).toContain("devrel");
+    await client.close();
+  });
+
+  it("with ?teamId=devrel and NO tool team argument, the full ceiling (just devrel here) is used unfiltered", async () => {
+    const devrelRoot = root({ teamId: "devrel" });
+    rootsForChat.mockResolvedValue([devrelRoot]);
+    search.mockResolvedValue([hit({ noteId: "n1" })]);
+    const client = await connect(chatToken, undefined, "devrel");
+    const result = await client.callTool({ name: "search_team_kb", arguments: { query: "x" } });
+    expect(rootsForChat).toHaveBeenCalledWith("devrel");
+    expect(firstText(result)).toContain("devrel");
+    await client.close();
   });
 });

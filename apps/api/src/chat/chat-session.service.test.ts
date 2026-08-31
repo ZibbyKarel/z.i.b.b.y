@@ -5,6 +5,7 @@ import * as path from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ChatPersona, ChatToolEvent, TaskTarget } from "@zibby/contracts";
+import { KbMcpAuthService } from "../kb/kb-mcp-auth.service";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { CHAT_GOVERNOR_PROMPT, CHAT_PERSONAS } from "./chat-persona";
 import { ChatEventsService, type ChatTurnEvent } from "./chat-events.service";
@@ -44,6 +45,10 @@ class TestSession extends ChatSessionService {
     // writes, mirrors "safe to leave" per task-9-brief.md).
     mcpAuth: ChatMcpAuthService = new ChatMcpAuthService(),
     chatDir: string = os.tmpdir(),
+    // Task 8: a fresh in-memory KB auth service per TestSession by default — same
+    // posture as `mcpAuth` above; tests asserting a SPECIFIC KB token construct
+    // their own and pass it explicitly (see the "zibby-kb MCP server" block below).
+    kbMcpAuth: KbMcpAuthService = new KbMcpAuthService(),
   ) {
     super(
       store,
@@ -52,6 +57,7 @@ class TestSession extends ChatSessionService {
       toolResults,
       mcpAuth,
       chatDir,
+      kbMcpAuth,
     );
   }
   protected createProcess(args: string[]): ClaudeProcess {
@@ -164,13 +170,98 @@ describe("ChatSessionService", () => {
       dir,
     );
     const args = await svc.buildArgs("ahoj", null, "c1");
-    expect(args[args.indexOf("--allowedTools") + 1]).toBe("mcp__zibby__*");
+    // Task 8: widened to cover BOTH mounted servers — a permission-list PROMPTING
+    // hint (commit eb525567), not what makes either server reachable.
+    expect(args[args.indexOf("--allowedTools") + 1]).toBe("mcp__zibby__*,mcp__zibby-kb__*");
     // T9: the config is now spilled to a file — the argv value is a PATH, not inline JSON.
     const configPath = args[args.indexOf("--mcp-config") + 1] ?? "";
     expect(configPath).toMatch(/\.json$/);
     const config = JSON.parse(await fs.readFile(configPath, "utf8"));
     expect(config.mcpServers.zibby.type).toBe("http");
     expect(config.mcpServers.zibby.url).toMatch(/\/api\/chat\/mcp\?conversationId=c1$/);
+  });
+
+  describe("zibby-kb MCP server (Task 8 — the load-bearing wiring: chat can now reach the KB)", () => {
+    it("mounts a zibby-kb entry carrying the KB auth service's CHAT token — never the run token", async () => {
+      const kbMcpAuth = new KbMcpAuthService();
+      const svc = new TestSession(
+        store,
+        events,
+        [],
+        "jarvis",
+        new ChatToolResultRegistry(),
+        undefined,
+        dir,
+        kbMcpAuth,
+      );
+      const args = await svc.buildArgs("ahoj", null, "c1");
+      const configPath = args[args.indexOf("--mcp-config") + 1] ?? "";
+      const config = JSON.parse(await fs.readFile(configPath, "utf8"));
+
+      expect(config.mcpServers["zibby-kb"].type).toBe("http");
+      expect(config.mcpServers["zibby-kb"].headers.Authorization).toBe(
+        `Bearer ${kbMcpAuth.chatBearerToken}`,
+      );
+      // Discriminating: a swap to the run token (a plausible wrong wiring the brief
+      // calls out explicitly) would make every chat KB call correctly return `[]`.
+      expect(config.mcpServers["zibby-kb"].headers.Authorization).not.toBe(
+        `Bearer ${kbMcpAuth.runBearerToken}`,
+      );
+      // The token must live only inside the (non-argv) mcp-config file's JSON —
+      // never inlined onto the CLI argument vector itself (mirrors the existing
+      // "zibby" run-token argv check below; an implementation that put the KB
+      // header directly on argv instead of in the config file would fail only here).
+      expect(args.some((arg) => arg.includes(kbMcpAuth.chatBearerToken))).toBe(false);
+    });
+
+    it("omits the ?teamId= query param entirely when the turn carries no team tag", async () => {
+      const svc = new TestSession(store, events, [], "jarvis", new ChatToolResultRegistry());
+      const args = await svc.buildArgs("ahoj", null, "c1");
+      const configPath = args[args.indexOf("--mcp-config") + 1] ?? "";
+      const config = JSON.parse(await fs.readFile(configPath, "utf8"));
+
+      expect(config.mcpServers["zibby-kb"].url).toMatch(/\/api\/kb\/mcp$/);
+      expect(config.mcpServers["zibby-kb"].url).not.toContain("?");
+    });
+
+    it("carries an explicit teamId as the ?teamId= query param, mirroring conversationId", async () => {
+      const svc = new TestSession(store, events, [], "jarvis", new ChatToolResultRegistry());
+      const args = await svc.buildArgs("ahoj", null, "c1", "devrel");
+      const configPath = args[args.indexOf("--mcp-config") + 1] ?? "";
+      const config = JSON.parse(await fs.readFile(configPath, "utf8"));
+
+      expect(config.mcpServers["zibby-kb"].url).toMatch(/\/api\/kb\/mcp\?teamId=devrel$/);
+    });
+
+    it("threads body.teamId from sendMessage through runTurn into the zibby-kb url", async () => {
+      const svc = new TestSession(store, events, [
+        line({ type: "system", subtype: "init", session_id: "s" }),
+        line({ type: "result", is_error: false, result: "ok" }),
+      ]);
+      const result = await svc.sendMessage(
+        { conversationId: "c-team-1", text: "co víme o partner portálu?", teamId: "devrel" },
+        NOW,
+      );
+      await settled(result.turnId);
+
+      const configPath = svc.lastArgs[svc.lastArgs.indexOf("--mcp-config") + 1] ?? "";
+      const config = JSON.parse(await fs.readFile(configPath, "utf8"));
+      expect(config.mcpServers["zibby-kb"].url).toMatch(/\/api\/kb\/mcp\?teamId=devrel$/);
+    });
+
+    it("mounts no ?teamId= at all when sendMessage's body carries none", async () => {
+      const svc = new TestSession(store, events, [
+        line({ type: "system", subtype: "init", session_id: "s" }),
+        line({ type: "result", is_error: false, result: "ok" }),
+      ]);
+      const result = await svc.sendMessage({ conversationId: "c-team-2", text: "ahoj" }, NOW);
+      await settled(result.turnId);
+
+      const configPath = svc.lastArgs[svc.lastArgs.indexOf("--mcp-config") + 1] ?? "";
+      const config = JSON.parse(await fs.readFile(configPath, "utf8"));
+      expect(config.mcpServers["zibby-kb"].url).toMatch(/\/api\/kb\/mcp$/);
+      expect(config.mcpServers["zibby-kb"].url).not.toContain("?");
+    });
   });
 
   it("adds --resume with the threaded session id", async () => {

@@ -31,6 +31,9 @@ vi.mock("../../../pipelines/queries/usePipelinesQuery", () => ({
 vi.mock("../../../subsystems/queries/useSubsystemsQuery", () => ({
   useSubsystemsQuery: () => ({ data: [] }),
 }));
+vi.mock("../../../teams", () => ({
+  useTeamsQuery: () => ({ data: [{ id: "devrel", name: "DevRel" }] }),
+}));
 vi.mock("../../../projects/queries/useProjectsQuery", () => ({
   useProjectsQuery: () => ({
     data: [{ id: "alpha", name: "Alpha", path: "/Users/zibby/Projects/alpha" }],
@@ -229,6 +232,17 @@ describe("TaskCommandLine (Phase 118b task-launch container)", () => {
 
     await user.type(screen.getByTestId(CommandLineTestId.Input), "a");
     expect(onTextChange).toHaveBeenLastCalledWith("a");
+  });
+
+  it("mirrors the picked team tag up via onTeamChange, exactly as CommandLine emits it — Task 8", async () => {
+    const onTeamChange = vi.fn();
+    const user = userEvent.setup();
+    render(<TaskCommandLine onTeamChange={onTeamChange} />);
+
+    await user.type(screen.getByTestId(CommandLineTestId.Input), "@DevRel");
+    await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`));
+
+    expect(onTeamChange).toHaveBeenCalledWith("devrel");
   });
 
   it("mirrors the per-task project pick up via onProjectChange, and folds its path into the dispatched task", async () => {

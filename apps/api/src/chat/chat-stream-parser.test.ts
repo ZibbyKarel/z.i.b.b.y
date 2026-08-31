@@ -22,7 +22,11 @@ describe("parseChatStreamLine", () => {
   it("ignores thinking (signature) deltas — only visible text streams", () => {
     const line = JSON.stringify({
       type: "stream_event",
-      event: { type: "content_block_delta", index: 0, delta: { type: "signature_delta", signature: "x" } },
+      event: {
+        type: "content_block_delta",
+        index: 0,
+        delta: { type: "signature_delta", signature: "x" },
+      },
     });
     expect(parseChatStreamLine(line)).toEqual([]);
   });
@@ -51,7 +55,12 @@ describe("parseChatStreamLine", () => {
       },
     });
     expect(parseChatStreamLine(line)).toEqual([
-      { type: "tool", name: "mcp__zibby__create_task", input: { text: "postav X" }, id: "toolu_01Abc" },
+      {
+        type: "tool",
+        name: "mcp__zibby__create_task",
+        input: { text: "postav X" },
+        id: "toolu_01Abc",
+      },
     ]);
   });
 
@@ -76,7 +85,12 @@ describe("parseChatStreamLine", () => {
   });
 
   it("emits done with the final result text", () => {
-    const line = JSON.stringify({ type: "result", subtype: "success", is_error: false, result: "hotovo" });
+    const line = JSON.stringify({
+      type: "result",
+      subtype: "success",
+      is_error: false,
+      result: "hotovo",
+    });
     expect(parseChatStreamLine(line)).toEqual([{ type: "done", text: "hotovo" }]);
   });
 

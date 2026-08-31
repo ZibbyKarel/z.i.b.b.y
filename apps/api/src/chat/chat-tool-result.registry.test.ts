@@ -72,7 +72,9 @@ describe("ChatToolResultRegistry", () => {
     it("stops delivering to an unsubscribed callback and falls back to the queue", () => {
       const registry = new ChatToolResultRegistry();
       const received: string[] = [];
-      const unsubscribe = registry.onCreateTaskResult("c1", (result) => received.push(result.taskId));
+      const unsubscribe = registry.onCreateTaskResult("c1", (result) =>
+        received.push(result.taskId),
+      );
       unsubscribe();
       registry.pushCreateTaskResult("c1", { taskId: "t1", target: AGENT_TARGET });
 

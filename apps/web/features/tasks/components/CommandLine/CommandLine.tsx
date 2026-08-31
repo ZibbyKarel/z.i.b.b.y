@@ -30,6 +30,7 @@ import { createPortal } from "react-dom";
 import { useAgentsQuery } from "../../../agents";
 import { usePipelinesQuery } from "../../../pipelines";
 import { useSubsystemsQuery } from "../../../subsystems/queries/useSubsystemsQuery";
+import { useTeamsQuery } from "../../../teams";
 import { useUploadTaskAttachmentsMutation } from "../../mutations/useUploadTaskAttachmentsMutation";
 import { type SubsystemId, type TaskTarget, extractPathRanges } from "../../task";
 import type { TaskAttachmentSet } from "../TaskAttachments";
@@ -103,6 +104,14 @@ export interface CommandLineProps {
   onTextChange?: (text: string) => void;
   /** Mirrors the picked @-mention target (or its clearing) up to the parent. */
   onTargetChange?: (target: TaskTarget | undefined) => void;
+  /**
+   * Mirrors the picked @-mention TEAM tag (or its clearing) up to the parent —
+   * Task 8. A team answers WHAT knowledge base a turn can see, never WHO runs
+   * it: picking a team row never touches {@link CommandLineProps.onTargetChange}
+   * and picking a target never touches this — the two @-mention picks are
+   * independent (a draft may carry both, either, or neither).
+   */
+  onTeamChange?: (teamId: string | undefined) => void;
   /** Mirrors the attached file set up — needed by a parent whose OWN submit path
    *  (e.g. a synthesized loop) must carry the same attachment set. */
   onAttachmentsChange?: (set: TaskAttachmentSet) => void;
@@ -176,9 +185,11 @@ interface Mention {
  * (glyph/tone by `kind`) and build the `TaskTarget` it resolves to on pick.
  * `color` is set only for a `subsystem` row — the mention list's rendering swaps
  * the usual `Tag` glyph for a dot tinted with the subsystem's own brand color
- * (Phase 91), matching `PipelineOwnerChip`'s established "colored dot" pattern. */
+ * (Phase 91), matching `PipelineOwnerChip`'s established "colored dot" pattern.
+ * A `team` row (Task 8) resolves to NO `TaskTarget` at all — picking it sets
+ * the draft's team tag instead (see `pickMentionResult`'s branch). */
 interface MentionResult {
-  kind: "agent" | "pipeline" | "subsystem";
+  kind: "agent" | "pipeline" | "subsystem" | "team";
   id: string;
   name: string;
   glyph: IconName;
@@ -384,6 +395,7 @@ export function CommandLine({
   suggestions,
   onTextChange,
   onTargetChange,
+  onTeamChange,
   onAttachmentsChange,
   onSubmit,
   resetOnSubmit = true,
@@ -410,6 +422,11 @@ export function CommandLine({
     return base.length > 0 ? `${mention}${base}` : mention;
   });
   const [target, setTarget] = useState<TaskTarget | undefined>(initialTarget);
+  // Task 8: the picked @-mention TEAM tag — independent of `target` (see
+  // `onTeamChange`'s docblock). Keeps the name alongside the id so the same
+  // "still referenced in the text" reconciliation `target` gets (below) applies
+  // to a team tag too.
+  const [team, setTeam] = useState<{ id: string; name: string } | undefined>(undefined);
   const [attachments, setAttachments] = useState<TaskAttachmentSet>({ files: [] });
   const [attachError, setAttachError] = useState<string | null>(null);
   const hasDraftRef = useRef(false);
@@ -440,6 +457,7 @@ export function CommandLine({
   const { data: agents = [] } = useAgentsQuery();
   const { data: pipelines = [] } = usePipelinesQuery();
   const { data: subsystems = [] } = useSubsystemsQuery();
+  const { data: teams = [] } = useTeamsQuery();
 
   const upload = useUploadTaskAttachmentsMutation();
 
@@ -552,6 +570,10 @@ export function CommandLine({
       notifyDraftChange("");
       setTarget(undefined);
       onTargetChange?.(undefined);
+      if (team) {
+        setTeam(undefined);
+        onTeamChange?.(undefined);
+      }
       if (attachmentPayload) {
         setAttachments({ files: [] });
         onAttachmentsChange?.({ files: [] });
@@ -608,6 +630,12 @@ export function CommandLine({
       setTarget(undefined);
       onTargetChange?.(undefined);
     }
+    // Task 8: the picked team tag reconciles the SAME way — its `@Name` deleted
+    // out of the text clears it, independent of whatever happens to `target`.
+    if (team && !hasMentionFor(nextValue, team.name)) {
+      setTeam(undefined);
+      onTeamChange?.(undefined);
+    }
     syncMention(e.target);
   }
 
@@ -663,33 +691,44 @@ export function CommandLine({
 
   function pickMentionResult(result: MentionResult) {
     if (!mention) return;
-    // A per-kind switch (not a generic `{ kind: result.kind, ... }` object) so each
-    // branch's literal `kind` matches `TaskTarget`'s properly-distributed union —
-    // see `toApiTarget`'s doc comment in `task.ts` for why a unioned-kind
-    // construction stops being assignable once there are enough branches. A
-    // subsystem row's `id` is cast to `SubsystemId`: `MentionResult.id` is a plain
-    // `string` (shared with agent/pipeline rows), but for a `kind: "subsystem"` row
-    // it always came from `useSubsystemsQuery()`'s own `SubsystemId`-typed id.
-    const picked: TaskTarget =
-      result.kind === "agent"
-        ? { kind: "agent", id: result.id, name: result.name, glyph: result.glyph }
-        : result.kind === "pipeline"
-          ? { kind: "pipeline", id: result.id, name: result.name, glyph: result.glyph }
-          : {
-              kind: "subsystem",
-              id: result.id as SubsystemId,
-              name: result.name,
-              glyph: result.glyph,
-            };
-    const mentionText = `@${picked.name} `;
+    const mentionText = `@${result.name} `;
     const el = textareaRef.current;
     const end = el?.selectionStart ?? mention.start + 1 + mention.query.length;
     const nextValue = text.slice(0, mention.start) + mentionText + text.slice(end);
     setText(nextValue);
     onTextChange?.(nextValue);
     notifyDraftChange(nextValue);
-    setTarget(picked);
-    onTargetChange?.(picked);
+
+    if (result.kind === "team") {
+      // Task 8: a team answers WHAT scope a turn can see, never WHO runs it —
+      // this branches BEFORE building a `TaskTarget` so a team pick never
+      // touches `target`/`onTargetChange` at all (the two are independent;
+      // see `onTeamChange`'s docblock).
+      setTeam({ id: result.id, name: result.name });
+      onTeamChange?.(result.id);
+    } else {
+      // A per-kind switch (not a generic `{ kind: result.kind, ... }` object) so each
+      // branch's literal `kind` matches `TaskTarget`'s properly-distributed union —
+      // see `toApiTarget`'s doc comment in `task.ts` for why a unioned-kind
+      // construction stops being assignable once there are enough branches. A
+      // subsystem row's `id` is cast to `SubsystemId`: `MentionResult.id` is a plain
+      // `string` (shared with agent/pipeline rows), but for a `kind: "subsystem"` row
+      // it always came from `useSubsystemsQuery()`'s own `SubsystemId`-typed id.
+      const picked: TaskTarget =
+        result.kind === "agent"
+          ? { kind: "agent", id: result.id, name: result.name, glyph: result.glyph }
+          : result.kind === "pipeline"
+            ? { kind: "pipeline", id: result.id, name: result.name, glyph: result.glyph }
+            : {
+                kind: "subsystem",
+                id: result.id as SubsystemId,
+                name: result.name,
+                glyph: result.glyph,
+              };
+      setTarget(picked);
+      onTargetChange?.(picked);
+    }
+
     pendingCursorRef.current = mention.start + mentionText.length;
     closeMention();
   }
@@ -785,8 +824,18 @@ export function CommandLine({
         glyph: "grid" as IconName,
         color: s.color,
       }));
-    return [...agentHits, ...pipelineHits, ...subsystemHits].slice(0, 50);
-  }, [mention, agents, pipelines, rosterSubsystems]);
+    // Task 8: the fourth mention source — a team resolves to a scope tag, never
+    // a `TaskTarget` (see `pickMentionResult`'s branch).
+    const teamHits: MentionResult[] = teams
+      .filter((tm) => matchesQuery(mention.query, tm.name, tm.id))
+      .map((tm) => ({
+        kind: "team" as const,
+        id: tm.id,
+        name: tm.name,
+        glyph: "grid" as IconName,
+      }));
+    return [...agentHits, ...pipelineHits, ...subsystemHits, ...teamHits].slice(0, 50);
+  }, [mention, agents, pipelines, rosterSubsystems, teams]);
   // Clamp at read time so a result list that shrank between renders never
   // leaves the keyboard highlight out of range.
   const activeMentionIndex =
@@ -1030,7 +1079,13 @@ export function CommandLine({
                           ) : (
                             <Tag
                               icon={result.glyph}
-                              tone={result.kind === "agent" ? "accent" : "push"}
+                              tone={
+                                result.kind === "agent"
+                                  ? "accent"
+                                  : result.kind === "pipeline"
+                                    ? "push"
+                                    : "neutral"
+                              }
                             >
                               {result.name}
                             </Tag>

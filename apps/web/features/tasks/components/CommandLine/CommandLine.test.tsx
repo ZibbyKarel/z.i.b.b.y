@@ -48,6 +48,10 @@ vi.mock("../../../subsystems/queries/useSubsystemsQuery", () => ({
     ],
   }),
 }));
+// Task 8: the fourth mention source — teams a picked row tags, never dispatches to.
+vi.mock("../../../teams", () => ({
+  useTeamsQuery: () => ({ data: [{ id: "devrel", name: "DevRel" }] }),
+}));
 
 const uploadMutateAsync = vi.fn().mockResolvedValue({
   attachmentSetId: "set_1",
@@ -265,6 +269,90 @@ describe("CommandLine (Phase 118d generic composer)", () => {
         { kind: "subsystem", id: "forge", name: "Forge", glyph: "grid" },
         undefined,
       );
+    });
+  });
+
+  describe("Task 8 — team @-mentions tag scope, never a routing target", () => {
+    it("lists a team row as the fourth mention source", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine onSubmit={vi.fn()} />);
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "@");
+
+      expect(
+        screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`),
+      ).toBeInTheDocument();
+    });
+
+    it("picking a team inserts the inline @Name and calls onTeamChange with its id — onTargetChange never fires", async () => {
+      const onTargetChange = vi.fn();
+      const onTeamChange = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <CommandLine
+          onSubmit={vi.fn()}
+          onTargetChange={onTargetChange}
+          onTeamChange={onTeamChange}
+        />,
+      );
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "@DevRel");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`));
+
+      expect(input).toHaveValue("@DevRel ");
+      expect(onTeamChange).toHaveBeenCalledWith("devrel");
+      expect(onTargetChange).not.toHaveBeenCalled();
+    });
+
+    it("submits with no target when only a team was picked — a team tag never becomes a dispatch destination", async () => {
+      const onSubmit = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine onSubmit={onSubmit} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "@DevRel");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`));
+      await user.type(input, "co víme o partner portálu?");
+      await user.click(screen.getByTestId(CommandLineTestId.Send));
+
+      expect(onSubmit).toHaveBeenCalledWith(
+        "@DevRel co víme o partner portálu?",
+        undefined,
+        undefined,
+      );
+    });
+
+    it("a team tag and an agent target co-exist independently in the same draft", async () => {
+      const onSubmit = vi.fn();
+      const onTeamChange = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine onSubmit={onSubmit} onTeamChange={onTeamChange} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "@DevRel");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`));
+      await user.type(input, "@Bui");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`));
+      await user.type(input, "shrň to");
+      await user.click(screen.getByTestId(CommandLineTestId.Send));
+
+      expect(onSubmit).toHaveBeenCalledWith(
+        "@DevRel @Builder shrň to",
+        { kind: "agent", id: "builder", name: "Builder", glyph: "hammer" },
+        undefined,
+      );
+      expect(onTeamChange).toHaveBeenCalledWith("devrel");
+    });
+
+    it("deleting the @Name out of the text clears the team tag, independent of any picked target", async () => {
+      const onTeamChange = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine onSubmit={vi.fn()} onTeamChange={onTeamChange} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "@DevRel");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`));
+      onTeamChange.mockClear();
+
+      await user.clear(input);
+
+      expect(onTeamChange).toHaveBeenCalledWith(undefined);
     });
   });
 

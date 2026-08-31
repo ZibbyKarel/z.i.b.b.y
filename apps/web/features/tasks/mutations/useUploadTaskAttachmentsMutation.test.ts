@@ -23,7 +23,9 @@ describe("useUploadTaskAttachmentsMutation", () => {
 
   it("posts files as multipart to the API origin and returns the set", async () => {
     const body = { attachmentSetId: "set_1", files: [{ name: "a.txt", size: 2 }] };
-    vi.spyOn(global, "fetch").mockResolvedValue(new Response(JSON.stringify(body), { status: 201 }));
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(JSON.stringify(body), { status: 201 }),
+    );
 
     const wrapper = makeWrapper();
     const { result } = renderHook(() => useUploadTaskAttachmentsMutation(), { wrapper });

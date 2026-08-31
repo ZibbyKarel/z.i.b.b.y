@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { BriefingSchema } from "../briefing/briefing.schema";
 import { TaskTargetSchema } from "../tasks/task.schema";
+import { TeamIdSchema } from "../teams/team.schema";
 
 /**
  * Chat (chat-first conversational layer, replaces the Voice UI). The operator
@@ -88,6 +89,16 @@ export const SendChatMessageBodySchema = z.object({
    * target overrides the classifier".
    */
   target: TaskTargetSchema.optional(),
+  /**
+   * Task 8: the operator's explicit team tag for THIS turn (the `@`-mention
+   * picker's team row) — deliberately NOT a `TaskTarget` variant, carried as its
+   * own field beside `target`. `target` answers WHO a dispatched `create_task`
+   * runs as; `teamId` answers WHAT knowledge base this turn's `zibby-kb` MCP
+   * tools may reach (`ChatSessionService.kbMcpUrl`), independent of whether the
+   * turn also names a target. Absent means the chat KB tools reach every team
+   * that has a knowledge base (`KbScopeService.rootsForChat(undefined)`).
+   */
+  teamId: TeamIdSchema.optional(),
 });
 export type SendChatMessageBody = z.infer<typeof SendChatMessageBodySchema>;
 

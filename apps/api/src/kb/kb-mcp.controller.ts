@@ -35,6 +35,15 @@ function runIdFromHeader(value: string | string[] | undefined): string | undefin
   return Array.isArray(value) ? value[0] : value;
 }
 
+/** Pull `teamId` off the request URL's query string — Task 8, mirrors
+ * `conversationIdFromUrl` in `../chat/chat-mcp.controller.ts` exactly.
+ * `undefined` (never `""`) when the operator tagged no team, so
+ * `KbScopeService.rootsForChat(undefined)` still resolves to EVERY team's KB
+ * as designed — this is the CEILING `rootsFor` applies on the chat path. */
+function teamIdFromUrl(url: string | undefined): string | undefined {
+  return new URL(url ?? "", "http://localhost").searchParams.get("teamId") ?? undefined;
+}
+
 /** Truncate a title to {@link MAX_KB_TITLE_CHARS} BEFORE it goes anywhere near
  * `envelopeInbound` — that function's own length cap bounds the COMBINED
  * path+title+snippet/body string, so an uncapped title alone could consume
@@ -156,7 +165,11 @@ export class KbMcpController {
     // header → `[]`, never every team's KB) if it somehow weren't set.
     const caller: KbCaller = req.kbCaller ?? "run";
     const runId = runIdFromHeader(req.headers["x-zibby-run-id"]);
-    const server = this.buildServer(caller, runId);
+    // Task 8: the operator's explicit `@`-mention team tag, if any — the CEILING
+    // a tool call's own `team` argument narrows within on the chat path (see
+    // `rootsFor`'s doc). Read regardless of caller; only ever consulted there.
+    const queryTeamId = teamIdFromUrl(req.url);
+    const server = this.buildServer(caller, runId, queryTeamId);
     // Stateless: no session id, single JSON response per request (simplest round-trip).
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
@@ -199,20 +212,46 @@ export class KbMcpController {
     );
   }
 
-  /** Resolve the caller's reachable KB roots. `caller` — derived from WHICH
+  /**
+   * Resolve the caller's reachable KB roots. `caller` — derived from WHICH
    * token authenticated the request, never from header presence — decides
    * the path; see the class doc's four-row table. `runId` is read from the
-   * header regardless, but only ever consulted on the `"run"` path. */
-  private rootsFor(
+   * header regardless, but only ever consulted on the `"run"` path — untouched
+   * by Task 8.
+   *
+   * Task 8 — the chat path narrows in TWO stages, and BOTH only ever narrow,
+   * never widen:
+   *
+   *  1. `queryTeamId` (the `?teamId=` query param — the operator's explicit
+   *     `@`-mention tag for this turn) is the CEILING: `rootsForChat(queryTeamId)`
+   *     resolves exactly what the operator tagged, or every team's KB when the
+   *     turn carried no tag.
+   *  2. `toolTeam` (the tool call's own `team` argument — the MODEL's request,
+   *     inside one turn) then filters that ceiling client-side. It can never
+   *     reach a team outside the ceiling: a model asking for a team the operator
+   *     did not tag gets `[]`, not that team's KB and not an error.
+   *
+   * The run path is UNCHANGED: `toolTeam` still passes straight through to
+   * `rootsForRun`, which enforces its own single-project ceiling independently.
+   */
+  private async rootsFor(
     caller: KbCaller,
     runId: string | undefined,
-    team: string | undefined,
+    queryTeamId: string | undefined,
+    toolTeam: string | undefined,
   ): Promise<KbRoot[]> {
-    return caller === "run" ? this.scope.rootsForRun(runId, team) : this.scope.rootsForChat(team);
+    if (caller === "run") return this.scope.rootsForRun(runId, toolTeam);
+    const roots = await this.scope.rootsForChat(queryTeamId);
+    return toolTeam ? roots.filter((root) => root.teamId === toolTeam) : roots;
   }
 
-  /** Build a per-request MCP server with the KB tools registered, scoped to one caller. */
-  private buildServer(caller: KbCaller, runId: string | undefined): McpServer {
+  /** Build a per-request MCP server with the KB tools registered, scoped to one
+   * caller and (Task 8) the operator's query-param team ceiling. */
+  private buildServer(
+    caller: KbCaller,
+    runId: string | undefined,
+    queryTeamId: string | undefined,
+  ): McpServer {
     const server = new McpServer({ name: "zibby-kb", version: "1.0.0" });
 
     server.registerTool(
@@ -234,7 +273,7 @@ export class KbMcpController {
         },
       },
       async ({ query, team }) => {
-        const roots = await this.rootsFor(caller, runId, team);
+        const roots = await this.rootsFor(caller, runId, queryTeamId, team);
         if (roots.length === 0) {
           return text("No team knowledge base is reachable here.");
         }
@@ -277,7 +316,7 @@ export class KbMcpController {
         },
       },
       async ({ noteId, team }) => {
-        const roots = await this.rootsFor(caller, runId, team);
+        const roots = await this.rootsFor(caller, runId, queryTeamId, team);
         for (const root of roots) {
           const note = await this.reader.read(root.source, noteId);
           if (note) {
