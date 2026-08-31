@@ -191,13 +191,42 @@ follow from the conversation"). The asymmetry is deliberate and must be preserve
 
 ### 5.2 Prerequisite — run identity must reach the MCP controller
 
-Server-side scoping requires the controller to know which run is calling. `buildMcpConfig`
-(`claude-run-command.service.ts:632-659`) packs connection config including headers into
-`--mcp-config`, so the mechanism is a per-run header or scoped token.
+**Verified 2026-08-31. Verdict: it does not exist today and must be built.**
 
-**This was not verified during design.** Whether a per-run identity already reaches the in-process
-MCP controllers is the **first implementation task**; if it does not exist, adding it is a blocking
-prerequisite for the whole scoping story. Do not build the reader before settling this.
+`buildMcpConfig` (`apps/api/src/runner/claude-run-command.service.ts:632-660`) builds every field of
+an http server's entry — `url`, `headers` — from the **persisted, static `McpServer` row** plus a
+credentials lookup keyed only by `server.id`. Nothing run-specific is written. `ClaudeRunOptions`
+has no run-identity field at all (`resumeSessionId` is for `claude --resume`, unrelated).
+`EntityMcpController.handle()` (`apps/api/src/memory/entity-mcp.controller.ts:118-147`) takes
+`@Req()` but reads nothing off it, and `buildServer()` (`:163`) is zero-argument.
+
+**The pattern to copy already exists verbatim on the chat path.** `ChatMcpController.handle()`
+(`apps/api/src/chat/chat-mcp.controller.ts:57-59`) does
+`conversationIdFromUrl(req.url)` → `buildServer(conversationId)`, where the query param is written
+per turn by `ChatSessionService` (`apps/api/src/chat/chat-session.service.ts:167-170`,
+`mcpBaseUrl(conversationId)`), into a fresh per-turn `--mcp-config`. That is chat-turn scoping; the
+agent/pipeline run path has no equivalent.
+
+Minimal change, and the only shape this design endorses:
+
+1. Add `runId: string` to `ClaudeRunOptions` (`claude-run-command.service.ts:18-77`) and thread it
+   from `buildClaudeCommand` (`:419`) into the `buildMcpConfig` call (`:449`).
+2. In `buildMcpConfig`'s http/sse branch (`:652-657`), carry it as a header
+   (`X-Zibby-Run-Id`) for ZIBBY's own in-process servers.
+3. Read it in the KB controller and pass it to `buildServer(runId)`, mirroring
+   `ChatMcpController.buildServer(conversationId)`.
+
+**Security finding, discovered while verifying (pre-existing, not introduced here):**
+`/api/memory/mcp` has **no guard at all** — no `@UseGuards`, no header check — while the app binds
+on all interfaces. `/api/chat/mcp` by contrast is gated by `ChatMcpAuthGuard`
+(`apps/api/src/chat/chat-mcp-auth.guard.ts`): a per-boot bearer token compared with
+`timingSafeEqual`, plus a loopback check on `req.socket.remoteAddress`.
+
+**Binding consequence for this design:** the `zibby-kb` endpoint **must ship with the
+`ChatMcpAuthGuard`-shaped guard from its first commit.** An unauthenticated endpoint that reads a
+team's knowledge base off disk is a worse exposure than the entity catalog, and "match the existing
+entity server" is the wrong precedent to copy here. Whether to retrofit the guard onto
+`/api/memory/mcp` is a separate question (§10).
 
 ## 6. Routing: explicit tag vs. inference
 
@@ -280,5 +309,11 @@ verifiable; standalone (team-less) behavior provably unchanged in every phase.
 1. **`recall_memory` in chat ignores vault isolation** (§3.2) — it searches the whole vault with no
    `visibleToProject` / `visibleInDomain` filter. Pre-existing. Fix as part of this work, or file
    separately? Recommendation: file separately; it is a distinct defect with its own blast radius.
-2. **Whether per-run identity already reaches in-process MCP controllers** (§5.2) — settle first;
-   it gates phases 4–6.
+2. ~~**Whether per-run identity already reaches in-process MCP controllers**~~ — **RESOLVED
+   2026-08-31: it does not.** It must be built; the minimal shape is specified in §5.2 and is now
+   phase 0 of §7.
+3. **Should `/api/memory/mcp` be retrofitted with a guard?** Discovered while resolving (2) — the
+   existing entity MCP endpoint is unauthenticated while the app binds on all interfaces (§5.2).
+   The new `zibby-kb` endpoint ships guarded regardless; retrofitting the old one is a separate,
+   security-shaped change with its own blast radius. Recommendation: file separately, do not fold
+   it into this feature.
