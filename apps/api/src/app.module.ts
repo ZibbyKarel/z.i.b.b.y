@@ -46,6 +46,7 @@ import { SubsystemsModule } from "./subsystems/subsystems.module";
 import { SystemModule } from "./system/system.module";
 import { AttachmentSetRefsModule } from "./tasks/attachment-set-refs.module";
 import { TasksModule } from "./tasks/tasks.module";
+import { TeamsModule } from "./teams/teams.module";
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { TasksModule } from "./tasks/tasks.module";
     SkillsModule,
     ProjectsModule,
     CompaniesModule,
+    TeamsModule,
     PipelinesModule,
     GoalsModule,
     ApprovalsModule,

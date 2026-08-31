@@ -62,6 +62,7 @@ export const API_MODULE_DOC_MAP = {
   subsystems: "docs/api/subsystems.md",
   system: "docs/api/system.md",
   tasks: "docs/api/tasks.md",
+  teams: "docs/api/teams.md",
   workspace: "docs/api/workspace.md",
 };
 
