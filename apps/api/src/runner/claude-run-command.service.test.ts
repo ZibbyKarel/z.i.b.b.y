@@ -380,7 +380,10 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
       status: "proposed",
     };
     const svc = makeService([CODER, candidate], []);
-    const { args, catalogAgentIds } = await svc.buildClaudeCommand({ instructions: "x", task: "t" });
+    const { args, catalogAgentIds } = await svc.buildClaudeCommand({
+      instructions: "x",
+      task: "t",
+    });
     const catalog = JSON.parse(flagValue(args, "--agents") ?? "{}");
     expect(catalog).not.toHaveProperty("auto-deploy-staging");
     expect(catalogAgentIds).not.toContain("auto-deploy-staging");
@@ -605,6 +608,61 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     expect(allowedToolsOf(args).some((t) => t.startsWith("mcp__"))).toBe(false);
   });
 
+  it("carries the run id as a header on ZIBBY's own in-process MCP servers", async () => {
+    const server: McpServer = {
+      id: "zibby-kb",
+      type: "http",
+      url: "http://localhost:3333/api/kb/mcp",
+      enabled: true,
+      hasCredentials: false,
+    };
+    const svc = makeService([CODER], [], { mcpServers: [server] });
+    const { args } = await svc.buildClaudeCommand({
+      instructions: "x",
+      task: "t",
+      runId: "run-123",
+    });
+    const cfg = JSON.parse(flagValue(args, "--mcp-config") ?? "{}");
+    expect(cfg.mcpServers["zibby-kb"]?.headers).toMatchObject({ "X-Zibby-Run-Id": "run-123" });
+  });
+
+  it("does not leak the run id to third-party MCP servers", async () => {
+    // context7 (and any other non-loopback host) never sees the internal
+    // capability token — only ZIBBY's own in-process controllers do.
+    const server: McpServer = {
+      id: "context7",
+      type: "http",
+      url: "https://mcp.context7.com/mcp",
+      enabled: true,
+      hasCredentials: false,
+    };
+    const svc = makeService([CODER], [], { mcpServers: [server] });
+    const { args } = await svc.buildClaudeCommand({
+      instructions: "x",
+      task: "t",
+      runId: "run-123",
+    });
+    const cfg = JSON.parse(flagValue(args, "--mcp-config") ?? "{}");
+    expect(cfg.mcpServers.context7?.headers ?? {}).not.toHaveProperty("X-Zibby-Run-Id");
+  });
+
+  it("omits the run-id header entirely when no runId is given (today's behaviour unchanged)", async () => {
+    const server: McpServer = {
+      id: "zibby-kb",
+      type: "http",
+      url: "http://localhost:3333/api/kb/mcp",
+      enabled: true,
+      hasCredentials: false,
+    };
+    const svc = makeService([CODER], [], { mcpServers: [server] });
+    const { args } = await svc.buildClaudeCommand({ instructions: "x", task: "t" });
+    const cfg = JSON.parse(flagValue(args, "--mcp-config") ?? "{}");
+    expect(cfg.mcpServers["zibby-kb"]).toEqual({
+      type: "http",
+      url: "http://localhost:3333/api/kb/mcp",
+    });
+  });
+
   it("spills --mcp-config to a 0600 file under systemPromptDir (off argv, secret included)", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "zibby-mcpconfig-"));
     try {
@@ -639,8 +697,17 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
       const written = JSON.parse(await fs.readFile(file as string, "utf8"));
       expect(written).toEqual({
         mcpServers: {
-          fs: { type: "stdio", command: "npx", args: ["-y", "server-fs"], env: { TOKEN: "s3cr3t" } },
-          remote: { type: "sse", url: "https://example.com/sse", headers: { Authorization: "Bearer abc" } },
+          fs: {
+            type: "stdio",
+            command: "npx",
+            args: ["-y", "server-fs"],
+            env: { TOKEN: "s3cr3t" },
+          },
+          remote: {
+            type: "sse",
+            url: "https://example.com/sse",
+            headers: { Authorization: "Bearer abc" },
+          },
         },
       });
       // Regression (the audit's ps-visibility concern): no argv element carries the

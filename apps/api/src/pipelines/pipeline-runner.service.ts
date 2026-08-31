@@ -1631,6 +1631,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       resumeContext,
       delegates,
       ownerSubsystem,
+      run.pipelineRunId,
     );
     // Materialize enabled custom commands into the stage's working tree (worktree
     // for a project run, else the sandbox) so commands resolve; best-effort.
@@ -1863,6 +1864,14 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     /** F4a: the pipeline's owning subsystem — forwarded into grounding so the
      *  stage sees the owner's knowledge shelf. */
     ownerSubsystem?: SubsystemId,
+    /**
+     * Task 5: the pipeline run's own stable identity (`PipelineRun.pipelineRunId`,
+     * known up-front — unlike the stage's own core-internal run id, which isn't
+     * assigned until spawn). Threaded to
+     * {@link ClaudeRunCommandService.buildClaudeCommand} as `runId` so it can ride
+     * the `X-Zibby-Run-Id` header to ZIBBY's own in-process MCP servers.
+     */
+    pipelineRunId?: string,
   ): Promise<{ command: string; args: string[]; spawnCwd?: string }> {
     const spawnCwd = worktreePath ?? project?.path;
     // Verify phases are deterministic shell checks — identical in demo and
@@ -1928,6 +1937,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         // Curated delegation roster + system prompt spilled to the sandbox: both keep
         // the run's argv under the OS limit (spawn E2BIG) as the agent library grows.
         ...(delegates ? { delegates } : {}),
+        ...(pipelineRunId ? { runId: pipelineRunId } : {}),
         systemPromptDir: cwd,
         // Spawn in stream-json mode so the stage log captures the agent's whole
         // run (thinking + tool calls), flattened by the core's formatLine — not

@@ -313,9 +313,15 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     this.log.info("starting agent run", { agentId, project, files: files.length });
 
     const startedMs = Date.now();
+    // The run's own stable identity — known up-front (pre-spawn), unlike the core's
+    // internal `<ownerId>_<startedMs>_<pid>` record id (the pid isn't known until
+    // after spawn, too late for the command/MCP-config already being built here).
+    // Threaded into the command as `ClaudeRunOptions.runId` (Task 5) so it can ride
+    // the `X-Zibby-Run-Id` header to ZIBBY's own in-process MCP servers.
+    const runId = `${agentId}_${startedMs}`;
     // The per-run sandbox the session runs in (its cwd). The directories it
     // operates on are passed separately as `--add-dir` grants, never as the cwd.
-    const cwd = path.join(this.dir, `${agentId}_${startedMs}`);
+    const cwd = path.join(this.dir, runId);
     const grantDirs = await this.resolveGrantDirs(files);
 
     // Resolve the project first so memory grounding can include the project note;
@@ -339,6 +345,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       attachments,
       resumeSessionId,
       finalGrants,
+      runId,
     );
 
     // Phase 3.1: a resolvable git project gets a dedicated worktree under the run
@@ -364,10 +371,10 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
         try {
           workspace = await this.workspace.createWorktree({
             projectPath: local.path,
-            runId: `${agentId}_${startedMs}`,
+            runId,
             slug: title || agentId,
             // Phase 12.7: worktree OUTSIDE the repo/data tree (only the sandbox stays under cwd).
-            dir: await prepareWorktreeDir(`${agentId}_${startedMs}`),
+            dir: await prepareWorktreeDir(runId),
           });
           spawnCwd = workspace.path;
         } catch (error) {
@@ -731,6 +738,12 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     resumeSessionId?: string,
     /** Phase 108: the FINAL (already-intersected) tool-grant set for this run. */
     toolGrants?: string[],
+    /**
+     * Task 5: this run's own stable identity, threaded to
+     * {@link ClaudeRunCommandService.buildClaudeCommand} as `runId` so it can ride
+     * the `X-Zibby-Run-Id` header to ZIBBY's own in-process MCP servers.
+     */
+    runId?: string,
   ): Promise<{ command: string; args: string[]; catalogAgentIds: string[] }> {
     // The work directory (the run's `files`, if any) stays the "operate on" target;
     // the attachments dir is reference material, never the thing to act on.
@@ -764,6 +777,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       streamTranscript: true,
       // Phase 49: re-run of an errored/interrupted run continues its captured session.
       ...(resumeSessionId ? { resumeSessionId } : {}),
+      ...(runId ? { runId } : {}),
       // Spill the system prompt into the run's sandbox so it rides
       // --append-system-prompt-file, keeping argv off the OS limit (spawn E2BIG). A
       // standalone agent run passes no `delegates`, so its catalog folds down to

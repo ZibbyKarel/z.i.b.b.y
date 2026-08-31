@@ -60,6 +60,12 @@ export interface ClaudeRunOptions {
    */
   resumeSessionId?: string;
   /**
+   * The run this command belongs to. Carried to ZIBBY's own in-process MCP
+   * servers as `X-Zibby-Run-Id` so they can scope what the run may read. Never
+   * sent to third-party servers.
+   */
+  runId?: string;
+  /**
    * Agent ids that should populate the delegation catalog (`--agents`). The catalog
    * inlines every entry's full instruction body into a SINGLE argv string, so passing
    * the whole agent LIBRARY (every stored agent) overflows the OS argv limit once the
@@ -248,7 +254,9 @@ function collidesWithApprovalGate(hook: Hook): boolean {
   return matcher
     .split("|")
     .map((token) => token.trim())
-    .some((token) => token === "" || token === "*" || token.includes("Bash") || token.includes("Task"));
+    .some(
+      (token) => token === "" || token === "*" || token.includes("Bash") || token.includes("Task"),
+    );
 }
 
 /**
@@ -446,7 +454,7 @@ export class ClaudeRunCommandService {
     const customHooks = (await this.hooks.list().catch((): Hook[] => [])).filter(
       (hook) => hook.enabled,
     );
-    const mcpConfig = await this.buildMcpConfig(mcpServers);
+    const mcpConfig = await this.buildMcpConfig(mcpServers, opts.runId);
     // The assembled system prompt (contract + grounding + resume + body) can be large.
     // When a sandbox dir is given, spill it to a file and pass it by path — keeping it
     // off argv, where it counts toward the same OS limit `--agents` can blow (E2BIG).
@@ -625,12 +633,16 @@ export class ClaudeRunCommandService {
    * Assemble the `--mcp-config` payload from the enabled servers, merging each
    * server's secret (from the gitignored credentials store) into its config: a
    * stdio server gets its secret `env`; an http/sse server gets its secret
-   * `headers` (plus an `authToken` folded into an `Authorization: Bearer` header).
-   * Returns `null` when no servers are enabled so the caller omits the flag.
-   * Secrets are read here and never logged.
+   * `headers` (plus an `authToken` folded into an `Authorization: Bearer` header)
+   * — and, when `runId` is given AND the server is one of ZIBBY's OWN in-process
+   * controllers (see {@link isInProcessMcpUrl}), the run-id capability header
+   * (`X-Zibby-Run-Id`, see {@link ClaudeRunOptions.runId}). Returns `null` when no
+   * servers are enabled so the caller omits the flag. Secrets are read here and
+   * never logged.
    */
   private async buildMcpConfig(
     servers: readonly McpServer[],
+    runId?: string,
   ): Promise<{ mcpServers: Record<string, Record<string, unknown>> } | null> {
     if (servers.length === 0) return null;
     const mcpServers: Record<string, Record<string, unknown>> = {};
@@ -648,6 +660,12 @@ export class ClaudeRunCommandService {
           ...(server.headers ?? {}),
           ...(creds?.headers ?? {}),
           ...(creds?.authToken ? { Authorization: `Bearer ${creds.authToken}` } : {}),
+          // The run id is an internal capability token — it must reach ONLY
+          // ZIBBY's own in-process http/sse servers, never a third-party MCP
+          // server (context7, playwright, …). Gated on the server's URL host
+          // being loopback (see isInProcessMcpUrl's docblock for why that test,
+          // not an id allow-list, was chosen).
+          ...(runId && isInProcessMcpUrl(server.url) ? { "X-Zibby-Run-Id": runId } : {}),
         };
         mcpServers[server.id] = {
           type: server.type,
@@ -657,5 +675,32 @@ export class ClaudeRunCommandService {
       }
     }
     return { mcpServers };
+  }
+}
+
+/**
+ * Is `url` one of ZIBBY's OWN in-process MCP controllers (e.g. `zibby-entities`
+ * at `/api/memory/mcp`, a future `/api/kb/mcp`) rather than a third-party remote
+ * server (context7, playwright, …)?
+ *
+ * Decided by LOOPBACK HOST (`localhost`/`127.0.0.1`/`[::1]`), not an explicit
+ * server-id allow-list: every in-process controller is seeded with a
+ * `http://localhost:<port>/api/...` URL (see `McpServersStorageService.seedSystem`
+ * and `ChatSessionService.mcpBaseUrl`) precisely because it's this same api
+ * process serving it — that property is structural, not something each new
+ * in-process controller has to remember to register itself for. A malformed or
+ * missing URL is conservatively NOT in-process (fails closed: no header, never a
+ * leak).
+ */
+function isInProcessMcpUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  try {
+    // WHATWG URL.hostname returns an IPv6 literal WITH its brackets (`[::1]`,
+    // not `::1`) — both forms are checked so the loopback IPv6 literal isn't
+    // silently missed.
+    const hostname = new URL(url).hostname;
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+  } catch {
+    return false;
   }
 }

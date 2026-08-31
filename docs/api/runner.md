@@ -215,7 +215,7 @@ flapped-out limit pause fails to `error` with a readable reason).
 
 Builds the full `command`/`args` array for one run from a `ClaudeRunOptions`
 (instructions, task, tools, model, thinking, grantDirs, streamTranscript,
-grounding, resumeContext, resumeSessionId, delegates, systemPromptDir,
+grounding, resumeContext, resumeSessionId, runId, delegates, systemPromptDir,
 toolGrants). Returns `{ command, args, catalogAgentIds }` — `catalogAgentIds`
 is persisted on the run record so a later orchestrator-run intent evaluation
 can pull each delegated subagent's own `gates`/`requires_approval` back in
@@ -254,7 +254,15 @@ Key assembled pieces:
 - **`--mcp-config`** — enabled MCP servers' connection config, secrets merged
   in from the credentials store; spilled to a `0o600` sandbox file
   (`.zibby-mcp-config.json`) rather than inline JSON when a sandbox dir is
-  available, since it carries live credentials.
+  available, since it carries live credentials. When `runId` is set (both
+  `AgentRunnerService` and `PipelineRunnerService` thread their run's own
+  pre-spawn id in), an `X-Zibby-Run-Id` header is added to every http/sse
+  server whose `url` resolves to a **loopback host**
+  (`localhost`/`127.0.0.1`/`::1`) — i.e. ZIBBY's own in-process MCP
+  controllers (`zibby-entities`, a future knowledge-base server), never a
+  third-party remote server (context7, playwright, …). Task 5 plumbing only —
+  nothing reads it yet; Task 7 is where an in-process controller consumes the
+  header to scope what the run may read.
 - `--resume <sessionId>` when `resumeSessionId` is set (Phase 49 — continuing
   a captured session instead of a cold start on retry).
 - `--model`/`--effort` from the agent's `model`/`thinking` (`THINKING_TO_EFFORT`
