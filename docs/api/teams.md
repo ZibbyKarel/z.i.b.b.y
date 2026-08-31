@@ -120,9 +120,12 @@ frontmatter shape and `grounding.service.ts`'s `selectIndexes`/`scoreEntry`
 scoring shape, applied to the real KB layout (`team-context.md`,
 `wiki/INDEX.md`, `wiki/{notes,projects,areas}/*.md`, `meetings/*.vtt`):
 
-- **Read-only is structural.** No `fs.writeFile`/`mkdir`/`rename`/`unlink`/
-  `appendFile` anywhere in the file — enforced by a source-scanning test, not
-  just left implicit.
+- **Read-only is structural.** The only `fs` calls in the file are `stat`,
+  `readdir`, `lstat` and `readFile`. A source-scanning test acts as a
+  regression tripwire, but it is a supplementary heuristic, not the guarantee:
+  its pattern does not cover every write primitive (e.g. `fs.writeFileSync`,
+  `chmod`, `createWriteStream`, `fs.open(…, "w")`), so a reviewer must still
+  read the file. Reviewed 2026-08-31 against `apps/api/src/kb/`.
 - **Path guard.** Every file the walk touches is containment-checked against
   the root after `path.resolve` (the `resolveSafeFile` shape,
   `apps/api/src/shared/file-storage/file-utils.ts:56-66`) and `fs.lstat`'d —

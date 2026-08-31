@@ -761,7 +761,7 @@ Add the `teams` segment to the dashboard nav the same way `companies` is registe
 
 Mirror the companies component tests. At minimum: the list renders teams and the empty state; the detail screen lists member projects by reverse lookup; the KB panel never renders a writable toggle; the project team panel sends `teamId: null` when cleared.
 
-Run: `rtk pnpm exec vitest run apps/web/features/teams apps/web/features/projects --project web`
+Run: `rtk pnpm exec vitest run apps/web/features/teams apps/web/features/projects --project web-components`
 
 Expected: PASS.
 
@@ -1146,7 +1146,7 @@ In `chat-session.service.ts`, carry `body.teamId` into the turn so the KB tools 
 
 - [ ] **Step 6: Run tests**
 
-Run: `rtk pnpm exec vitest run libs/contracts apps/api/src/chat --project contracts && rtk pnpm exec vitest run apps/web/features/tasks --project web`
+Run: `rtk pnpm exec vitest run libs/contracts apps/api/src/chat --project contracts && rtk pnpm exec vitest run apps/web/features/tasks --project web-components`
 
 Expected: PASS.
 
