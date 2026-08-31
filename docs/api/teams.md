@@ -48,8 +48,18 @@ day one so a future `kind: "confluence"` company-level source can be added
 without disturbing `kind: "vault"`.
 
 `CreateTeamSchema` is the full entity (`id` + `name` required).
-`UpdateTeamSchema` is `TeamSchema.omit({ id: true }).partial()` and is
-deliberately **not** `.strict()`, matching `UpdateCompanySchema`'s shape.
+`UpdateTeamSchema` is `TeamSchema.omit({ id: true }).partial()`, deliberately
+**not** `.strict()` (matching `UpdateCompanySchema`'s shape), with `companyId`
+and `knowledgeBase` re-widened to also accept `null` — the explicit "clear
+this field" signal (mirrors `UpdateProjectSchema.companyId`). A JSON PATCH
+body silently drops `undefined`-valued keys on the wire, so `null` is the only
+way to express "unset" for an already-linked team; an absent key still means
+"leave the current value alone". `TeamsStorageService.update` branches on
+`"companyId" in patch` / `"knowledgeBase" in patch` to tell "clear" (`null`)
+apart from "leave alone" (absent) before re-parsing against `TeamSchema`
+(whose own `companyId`/`knowledgeBase` stay `string | undefined` /
+`KnowledgeBaseSource | undefined` — never `null` — so a present `null` is
+translated to `undefined` before the merge).
 
 ## Storage
 

@@ -10,8 +10,14 @@ export interface TeamKnowledgeBasePanelProps {
   /** The team's current knowledge base; undefined when none is attached. */
   knowledgeBase?: KnowledgeBaseSource;
   saving?: boolean;
-  /** Persist the edited KB, or `undefined` to clear it entirely. */
-  onSave: (knowledgeBase: KnowledgeBaseSource | undefined) => void;
+  /**
+   * Persist the edited KB, or `null` to clear it entirely. `null` (not
+   * `undefined`) is the explicit clear signal `UpdateTeamSchema.knowledgeBase`
+   * and `TeamsStorageService.update` act on — an `undefined`-valued key is
+   * dropped by JSON.stringify before the request leaves the browser, so it
+   * can never express "clear" on its own.
+   */
+  onSave: (knowledgeBase: KnowledgeBaseSource | null) => void;
 }
 
 type KnowledgeBaseEditValues = {
@@ -99,7 +105,7 @@ export function TeamKnowledgeBasePanel({
                 disabled={saving}
                 icon="x"
                 intent="ghost"
-                onClick={() => onSave(undefined)}
+                onClick={() => onSave(null)}
                 size="sm"
               >
                 {t("clear")}

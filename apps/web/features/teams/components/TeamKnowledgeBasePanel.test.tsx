@@ -62,6 +62,6 @@ describe("TeamKnowledgeBasePanel", () => {
     expect(screen.getByDisplayValue("/Users/karel/vault")).toBeInTheDocument();
 
     await userEvent.click(screen.getByTestId("clear-kb"));
-    expect(onSave).toHaveBeenCalledWith(undefined);
+    expect(onSave).toHaveBeenCalledWith(null);
   });
 });

@@ -70,9 +70,13 @@ export function DetailScreen({ teamId }: TeamDetailScreenProps) {
 
   function saveBasics(body: TeamBasicsBody) {
     if (isNew) {
+      // A brand-new team has no existing company link to unlink, so the
+      // panel's `null` ("no company" picked) is translated to `undefined` —
+      // `CreateTeamSchema.companyId` doesn't accept `null` (only
+      // `UpdateTeamSchema.companyId` was re-widened for the clear signal).
       const newId = slug(body.name) || `team-${Date.now()}`;
       createTeam.mutate(
-        { body: { ...body, id: newId } },
+        { body: { ...body, companyId: body.companyId ?? undefined, id: newId } },
         { onSuccess: () => router.replace(`/teams/${newId}`) },
       );
     } else {
@@ -80,7 +84,7 @@ export function DetailScreen({ teamId }: TeamDetailScreenProps) {
     }
   }
 
-  function saveKnowledgeBase(knowledgeBase: KnowledgeBaseSource | undefined) {
+  function saveKnowledgeBase(knowledgeBase: KnowledgeBaseSource | null) {
     updateTeam.mutate({ params: { id }, body: { knowledgeBase } });
   }
 

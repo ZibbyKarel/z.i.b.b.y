@@ -10,11 +10,17 @@ import { useCompaniesQuery } from "../../companies";
 /** Sentinel for "no company" in the company select — a real id can never be empty. */
 const NO_COMPANY = "";
 
-/** The core team record fields this panel edits (name/desc/companyId). */
+/**
+ * The core team record fields this panel edits (name/desc/companyId).
+ * `companyId: null` is the explicit "no company" signal (mirrors
+ * `UpdateTeamSchema.companyId` / `UpdateProjectSchema.companyId`) — the caller
+ * translates it back to `undefined` on the create path, where there is no
+ * existing link to unlink.
+ */
 export interface TeamBasicsBody {
   name: string;
   desc?: string;
-  companyId?: string;
+  companyId?: string | null;
 }
 
 export interface TeamBasicsPanelProps {
@@ -58,7 +64,7 @@ export function TeamBasicsPanel({ team, isNew, saving, onSave, onDelete }: TeamB
       onSave({
         name: values.name.trim(),
         desc: values.desc.trim() || undefined,
-        companyId: values.companyId === NO_COMPANY ? undefined : values.companyId,
+        companyId: values.companyId === NO_COMPANY ? null : values.companyId,
       });
     },
   });

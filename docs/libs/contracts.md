@@ -18,7 +18,7 @@ All exports are re-exported from `libs/contracts/src/index.ts`.
 
 ## Domains
 
-38 domain folders exist today under `libs/contracts/src/` (every one below,
+39 domain folders exist today under `libs/contracts/src/` (every one below,
 excluding the composite `app.contract.ts` and the shared `common.schema.ts`):
 
 | Folder             | Key schema(s)                                                                                                                    | Contract                                                                                                             |
@@ -31,6 +31,7 @@ excluding the composite `app.contract.ts` and the shared `common.schema.ts`):
 | `commands/`        | `CommandSchema`                                                                                                                  | Slash-command catalog CRUD                                                                                           |
 | `projects/`        | `ProjectSchema`                                                                                                                  | Projects                                                                                                             |
 | `companies/`       | `CompanySchema`                                                                                                                  | Company registry CRUD — the super-entity above `Project`                                                             |
+| `teams/`           | `TeamSchema`, `KnowledgeBaseSourceSchema`                                                                                        | Team CRUD — the layer between `Company` and `Project` that owns a read-only knowledge base; see `docs/api/teams.md`  |
 | `pipelines/`       | `PipelineSchema`, `PipelineRunSchema`, `StageVerdictSchema`                                                                      | Pipeline CRUD + runs                                                                                                 |
 | `goals/`           | `GoalSchema`, `GoalRunSchema`                                                                                                    | Loop-engine goal definitions + runs                                                                                  |
 | `approvals/`       | `ApprovalSchema`                                                                                                                 | Approval queue                                                                                                       |
@@ -209,6 +210,7 @@ export const appContract = c.router({
   projects: projectsContract,
   projectCategories: projectCategoriesContract,
   companies: companiesContract,
+  teams: teamsContract,
   pipelines: pipelinesContract,
   pipelineRuns: pipelineRunsContract, // now just GET /pipelines/runs (catalog liveness)
   goals: goalsContract,

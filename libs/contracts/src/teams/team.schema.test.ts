@@ -51,3 +51,37 @@ describe("TeamSchema", () => {
     expect(UpdateTeamSchema.parse({ id: "other" })).toEqual({});
   });
 });
+
+describe("UpdateTeamSchema clear semantics (companyId, knowledgeBase)", () => {
+  it("accepts a companyId string (link)", () => {
+    const parsed = UpdateTeamSchema.parse({ companyId: "acme" });
+    expect(parsed.companyId).toBe("acme");
+  });
+
+  it("accepts a null companyId (explicit unlink, distinct from absent/undefined)", () => {
+    const parsed = UpdateTeamSchema.parse({ companyId: null });
+    expect(parsed.companyId).toBeNull();
+  });
+
+  it("accepts a patch with no companyId key at all (leave the link alone)", () => {
+    const parsed = UpdateTeamSchema.parse({ desc: "moved" });
+    expect(parsed.companyId).toBeUndefined();
+  });
+
+  it("accepts a vault knowledgeBase (set)", () => {
+    const parsed = UpdateTeamSchema.parse({
+      knowledgeBase: { kind: "vault", path: "/tmp/kb", readOnly: true },
+    });
+    expect(parsed.knowledgeBase).toEqual({ kind: "vault", path: "/tmp/kb", readOnly: true });
+  });
+
+  it("accepts a null knowledgeBase (explicit clear, distinct from absent/undefined)", () => {
+    const parsed = UpdateTeamSchema.parse({ knowledgeBase: null });
+    expect(parsed.knowledgeBase).toBeNull();
+  });
+
+  it("accepts a patch with no knowledgeBase key at all (leave it alone)", () => {
+    const parsed = UpdateTeamSchema.parse({ desc: "moved" });
+    expect(parsed.knowledgeBase).toBeUndefined();
+  });
+});

@@ -23,7 +23,7 @@ describe("TeamBasicsPanel", () => {
     await userEvent.click(screen.getByTestId("save-basics"));
 
     expect(onSave).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "Growth", desc: "Acquisition", companyId: undefined }),
+      expect.objectContaining({ name: "Growth", desc: "Acquisition", companyId: null }),
     );
   });
 
@@ -51,6 +51,25 @@ describe("TeamBasicsPanel", () => {
     await userEvent.click(screen.getByTestId("save-basics"));
 
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ companyId: "acme" }));
+  });
+
+  it("sends companyId: null when an existing team's company is cleared", async () => {
+    const onSave = vi.fn();
+    render(
+      <TeamBasicsPanel
+        isNew={false}
+        onSave={onSave}
+        team={{ id: "platform", name: "Platform", companyId: "acme" }}
+      />,
+    );
+
+    await userEvent.click(screen.getByTestId(DropdownTestId.Trigger));
+    const options = screen.getAllByTestId(DropdownTestId.Option);
+    const none = options.find((o) => o.textContent === "Bez firmy");
+    await userEvent.click(none!);
+    await userEvent.click(screen.getByTestId("save-basics"));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ companyId: null }));
   });
 
   it("shows a delete button for an existing team but not for a new one", () => {

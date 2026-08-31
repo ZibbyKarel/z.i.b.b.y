@@ -54,5 +54,17 @@ export type Team = z.infer<typeof TeamSchema>;
 export const CreateTeamSchema = TeamSchema;
 export type CreateTeamInput = z.infer<typeof CreateTeamSchema>;
 
-export const UpdateTeamSchema = TeamSchema.omit({ id: true }).partial();
+/**
+ * Body accepted by `updateTeam` — every field optional (partial update), id
+ * excluded. `companyId` and `knowledgeBase` are re-widened to also accept
+ * `null` (mirrors `UpdateProjectSchema.companyId`, Phase 72): a JSON PATCH
+ * body silently drops `undefined`-valued keys on the wire, so "unset this
+ * field" is otherwise inexpressible for an already-linked team — `null` is
+ * the explicit "clear it" signal the storage layer acts on, while
+ * `undefined`/absent still means "leave the current value alone".
+ */
+export const UpdateTeamSchema = TeamSchema.omit({ id: true }).partial().extend({
+  companyId: z.string().optional().nullable(),
+  knowledgeBase: KnowledgeBaseSourceSchema.optional().nullable(),
+});
 export type UpdateTeamInput = z.infer<typeof UpdateTeamSchema>;

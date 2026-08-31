@@ -77,7 +77,28 @@ export class TeamsStorageService {
     const teams = await this.list();
     const existing = teams.find((t) => t.id === id);
     if (!existing) throw new TeamNotFoundError(id);
-    const merged = TeamSchema.parse({ ...existing, ...patch, id: existing.id });
+    // `companyId: null` is the explicit "unlink the company" signal — distinct
+    // from an ABSENT `companyId` key, which leaves the current link alone (a
+    // JSON PATCH body can't otherwise express "clear" since `undefined`-valued
+    // keys never survive the wire). Zod's `Team.companyId` itself only ever
+    // accepts `string | undefined`, so a present `null` is translated to an
+    // explicit-undefined override before parsing; an absent key is left out of
+    // the merge entirely so the existing value survives the spread.
+    const hasCompanyId = "companyId" in patch;
+    // `knowledgeBase: null` is the explicit "clear the knowledge base" signal —
+    // distinct from an ABSENT `knowledgeBase` key, which leaves the current
+    // value alone (same rationale as `hasCompanyId` above).
+    const hasKnowledgeBase = "knowledgeBase" in patch;
+    const { companyId, knowledgeBase, ...rest } = patch;
+    const merged = TeamSchema.parse({
+      ...existing,
+      ...rest,
+      ...(hasCompanyId ? { companyId: companyId === null ? undefined : companyId } : {}),
+      ...(hasKnowledgeBase
+        ? { knowledgeBase: knowledgeBase === null ? undefined : knowledgeBase }
+        : {}),
+      id: existing.id,
+    });
     await this.writeAtomic(teams.map((t) => (t.id === id ? merged : t)));
     return merged;
   }

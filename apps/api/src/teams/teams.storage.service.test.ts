@@ -46,6 +46,48 @@ describe("TeamsStorageService", () => {
     expect(updated).toMatchObject({ id: "devrel", desc: "renamed" });
   });
 
+  describe("companyId link/unlink (clear semantics)", () => {
+    it("sets companyId via a normal patch", async () => {
+      await service.create(base);
+      const updated = await service.update("devrel", { companyId: "shoptet" });
+      expect(updated.companyId).toBe("shoptet");
+    });
+
+    it("clears a linked companyId when the patch sends `null`", async () => {
+      await service.create({ ...base, companyId: "shoptet" });
+      const updated = await service.update("devrel", { companyId: null });
+      expect(updated.companyId).toBeUndefined();
+    });
+
+    it("leaves companyId untouched when the patch omits the key entirely", async () => {
+      await service.create({ ...base, companyId: "shoptet" });
+      const updated = await service.update("devrel", { desc: "moved" });
+      expect(updated.companyId).toBe("shoptet");
+    });
+  });
+
+  describe("knowledgeBase clear semantics", () => {
+    const kb = { kind: "vault" as const, path: "/tmp/kb", readOnly: true as const };
+
+    it("sets knowledgeBase via a normal patch", async () => {
+      await service.create(base);
+      const updated = await service.update("devrel", { knowledgeBase: kb });
+      expect(updated.knowledgeBase).toEqual(kb);
+    });
+
+    it("clears a linked knowledgeBase when the patch sends `null`", async () => {
+      await service.create({ ...base, knowledgeBase: kb });
+      const updated = await service.update("devrel", { knowledgeBase: null });
+      expect(updated.knowledgeBase).toBeUndefined();
+    });
+
+    it("leaves knowledgeBase untouched when the patch omits the key entirely", async () => {
+      await service.create({ ...base, knowledgeBase: kb });
+      const updated = await service.update("devrel", { name: "DevRel Team" });
+      expect(updated.knowledgeBase).toEqual(kb);
+    });
+  });
+
   it("throws when updating or getting a missing team", async () => {
     await expect(service.get("nope")).rejects.toBeInstanceOf(TeamNotFoundError);
     await expect(service.update("nope", { name: "x" })).rejects.toBeInstanceOf(TeamNotFoundError);

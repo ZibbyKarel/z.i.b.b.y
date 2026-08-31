@@ -125,7 +125,7 @@ describe("teams DetailScreen", () => {
       expect(updateMutate).toHaveBeenCalledWith(
         expect.objectContaining({
           params: { id: "platform" },
-          body: { knowledgeBase: undefined },
+          body: { knowledgeBase: null },
         }),
       );
     });
