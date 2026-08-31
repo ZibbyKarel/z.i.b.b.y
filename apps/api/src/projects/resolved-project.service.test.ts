@@ -1,11 +1,18 @@
-import type { Company, Integration, Project } from "@zibby/contracts";
+import type { Company, Integration, Project, Team } from "@zibby/contracts";
 import { describe, expect, it } from "vitest";
 import { CompanyNotFoundError } from "../companies/companies.errors";
+import { ProjectNotFoundError } from "./projects.errors";
+import { TeamNotFoundError } from "../teams/teams.errors";
 import { ResolvedProjectService } from "./resolved-project.service";
 
 const project = (over: Partial<Project> & Pick<Project, "id">): Project => ({
   name: over.id,
   path: `/work/${over.id}`,
+  ...over,
+});
+
+const team = (over: Partial<Team> & Pick<Team, "id">): Team => ({
+  name: over.id,
   ...over,
 });
 
@@ -20,9 +27,18 @@ const integration = (
   ...over,
 });
 
-function build(opts: { companies?: Company[]; integrations?: Integration[] } = {}) {
+function build(
+  opts: {
+    companies?: Company[];
+    integrations?: Integration[];
+    teams?: Team[];
+    projects?: Project[];
+  } = {},
+) {
   const companies = opts.companies ?? [];
   const integrations = opts.integrations ?? [];
+  const teams = opts.teams ?? [];
+  const projects = opts.projects ?? [];
   const companiesStore = {
     get: async (id: string) => {
       const found = companies.find((c) => c.id === id);
@@ -31,7 +47,30 @@ function build(opts: { companies?: Company[]; integrations?: Integration[] } = {
     },
   };
   const integrationsStore = { list: async () => integrations };
-  return new ResolvedProjectService(companiesStore as never, integrationsStore as never);
+  // Real `TeamsStorageService.get`/`ProjectsStorageService.get` tolerance
+  // (throw a NotFound error for an unknown id) — needed so `findTeam`'s
+  // `.catch(() => null)` and `knowledgeBaseFor`'s equivalent are exercised
+  // against the same shape the real stores throw, not a generic Error.
+  const teamsStore = {
+    get: async (id: string) => {
+      const found = teams.find((t) => t.id === id);
+      if (!found) throw new TeamNotFoundError(id);
+      return found;
+    },
+  };
+  const projectsStore = {
+    get: async (id: string) => {
+      const found = projects.find((p) => p.id === id);
+      if (!found) throw new ProjectNotFoundError(id);
+      return found;
+    },
+  };
+  return new ResolvedProjectService(
+    companiesStore as never,
+    integrationsStore as never,
+    teamsStore as never,
+    projectsStore as never,
+  );
 }
 
 describe("ResolvedProjectService", () => {
@@ -123,6 +162,51 @@ describe("ResolvedProjectService", () => {
       const service = build({ companies: [acme] });
       const alpha = project({ id: "alpha", companyId: "acme" });
       expect(await service.resolveCompanyRef(alpha)).toEqual({ id: "acme", name: "Acme Corp" });
+    });
+  });
+
+  describe("team resolution chain (Phase 3, team knowledge base)", () => {
+    const kb = { kind: "vault", path: "/tmp/kb", readOnly: true } as const;
+
+    it("knowledgeBaseFor returns the linked team's knowledge base", async () => {
+      const devrel = team({ id: "devrel", knowledgeBase: kb });
+      const alpha = project({ id: "alpha", teamId: "devrel" });
+      const service = build({ teams: [devrel], projects: [alpha] });
+      await expect(service.knowledgeBaseFor("alpha")).resolves.toEqual(kb);
+    });
+
+    it("dangling teamId (team deleted): knowledgeBaseFor resolves to null, does not throw", async () => {
+      const alpha = project({ id: "alpha", teamId: "ghost" });
+      const service = build({ teams: [], projects: [alpha] }); // no "ghost" team exists
+      await expect(service.knowledgeBaseFor("alpha")).resolves.toBeNull();
+    });
+
+    it("no teamId: knowledgeBaseFor returns null and existing resolve* stay unchanged", async () => {
+      const alpha = project({ id: "alpha", budget: { dailyRuns: 3 } });
+      const service = build({ projects: [alpha] });
+      await expect(service.knowledgeBaseFor("alpha")).resolves.toBeNull();
+      expect(await service.resolveBudget(alpha)).toEqual(alpha.budget);
+    });
+
+    it("no companyId on the project but the team has one: the team-inherited company reaches resolveBudget", async () => {
+      const acme: Company = {
+        id: "acme",
+        name: "Acme Corp",
+        budget: { dailyRuns: 10, weeklyRuns: 50 },
+      };
+      const devrel = team({ id: "devrel", companyId: "acme" });
+      const alpha = project({ id: "alpha", teamId: "devrel", budget: { dailyRuns: 3 } });
+      const service = build({ companies: [acme], teams: [devrel] });
+      expect(await service.resolveBudget(alpha)).toEqual({ dailyRuns: 3, weeklyRuns: 50 });
+    });
+
+    it("an explicit project companyId stays authoritative over the team's company", async () => {
+      const acme: Company = { id: "acme", name: "Acme Corp", budget: { dailyRuns: 10 } };
+      const shoptet: Company = { id: "shoptet", name: "Shoptet", budget: { dailyRuns: 99 } };
+      const devrel = team({ id: "devrel", companyId: "shoptet" });
+      const alpha = project({ id: "alpha", companyId: "acme", teamId: "devrel" });
+      const service = build({ companies: [acme, shoptet], teams: [devrel] });
+      expect(await service.resolveBudget(alpha)).toEqual({ dailyRuns: 10 });
     });
   });
 });

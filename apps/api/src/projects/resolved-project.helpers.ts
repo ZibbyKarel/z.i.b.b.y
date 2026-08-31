@@ -131,7 +131,7 @@ export function computeResolvedContext(
  */
 export function resolveEffectiveCompanyId(
   project: Pick<Project, "id" | "name" | "companyId">,
-  team: Team | null,
+  team: Pick<Team, "id" | "name" | "companyId" | "knowledgeBase"> | null,
 ): string | undefined {
   return project.companyId ?? team?.companyId;
 }
@@ -147,7 +147,7 @@ export function resolveEffectiveCompanyId(
  */
 export function resolveKnowledgeBase(
   _project: Pick<Project, "id" | "name">,
-  team: Team | null,
+  team: Pick<Team, "id" | "name" | "companyId" | "knowledgeBase"> | null,
 ): KnowledgeBaseSource | null {
   return team?.knowledgeBase ?? null;
 }
