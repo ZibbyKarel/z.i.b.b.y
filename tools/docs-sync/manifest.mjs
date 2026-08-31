@@ -35,6 +35,7 @@ export const API_MODULE_DOC_MAP = {
   herald: "docs/api/subsystems.md",
   hooks: "docs/api/extensibility.md",
   integrations: "docs/api/integrations.md",
+  kb: "docs/api/teams.md",
   "limits-resume": "docs/api/limits.md",
   limits: "docs/api/limits.md",
   loom: "docs/api/subsystems.md",

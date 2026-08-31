@@ -17,6 +17,7 @@ for team-scoped grounding that a later task wires up for actual reads.
 | Controller | `apps/api/src/teams/teams.controller.ts`      | implements `teamsContract`                                                        |
 | Errors     | `apps/api/src/teams/teams.errors.ts`          | `TeamNotFoundError`, `TeamConflictError`                                          |
 | Module     | `apps/api/src/teams/teams.module.ts`          | wires the manifest dir, exports the storage service                               |
+| Reader     | `apps/api/src/kb/kb-reader.service.ts`        | `KbReaderService` — pure, read-only reader over one `KnowledgeBaseSource` root    |
 
 ## Data model
 
@@ -91,6 +92,57 @@ DELETE /teams/:id         delete (allowed with linked projects — no cascade)
 `TeamsController` mirrors `CompaniesController` in shape: `deleteTeam` reads
 the team first (`storage.get(id)`) so a 404 surfaces before any side effect,
 then deletes.
+
+## Reading a knowledge base (`apps/api/src/kb`)
+
+**Task 6 of the team-knowledge-base plan.** `KbReaderService`
+(`apps/api/src/kb/kb-reader.service.ts`) is the pure, filesystem-level reader
+over ONE `KnowledgeBaseSource` root — no Nest request context, no MCP, no
+multi-team scoping (a later task wraps this with the operator's team/mandate
+context and the MCP boundary's `envelopeInbound`, never called here).
+
+```typescript
+interface KbHit {
+  noteId: string;
+  title: string;
+  path: string; // repo-relative to the KB root — never an absolute host path
+  snippet: string;
+}
+
+class KbReaderService {
+  search(source: KnowledgeBaseSource, query: string, limit?: number): Promise<KbHit[]>;
+  read(source: KnowledgeBaseSource, noteId: string): Promise<{ path; title; body } | null>;
+}
+```
+
+Mirrors `VaultService`'s (`apps/api/src/memory/vault.service.ts`) walk +
+frontmatter shape and `grounding.service.ts`'s `selectIndexes`/`scoreEntry`
+scoring shape, applied to the real KB layout (`team-context.md`,
+`wiki/INDEX.md`, `wiki/{notes,projects,areas}/*.md`, `meetings/*.vtt`):
+
+- **Read-only is structural.** No `fs.writeFile`/`mkdir`/`rename`/`unlink`/
+  `appendFile` anywhere in the file — enforced by a source-scanning test, not
+  just left implicit.
+- **Path guard.** Every file the walk touches is containment-checked against
+  the root after `path.resolve` (the `resolveSafeFile` shape,
+  `apps/api/src/shared/file-storage/file-utils.ts:56-66`) and `fs.lstat`'d —
+  a symlink (file OR directory) is refused outright, never followed. Dot-
+  directories are skipped, exactly as `VaultService.walk()` does.
+- **Fail soft, never throw.** A missing, unreadable, or non-directory root —
+  or a future non-`vault` source kind — yields `[]`/`null`.
+- **Budgets as named constants**: `KB_SNIPPET_MAX_CHARS` (500),
+  `KB_BODY_MAX_CHARS` (4000, truncated with a visible marker).
+- **Index-first ordering**: `team-context.md`, then `wiki/INDEX.md`, then the
+  notes it links to, then the rest of `wiki/`, then everything else
+  (`meetings/*.vtt`). A query term in the title or an `aliases`/`tags`
+  frontmatter field outranks one only in the body.
+- **`.vtt` files are indexed by filename only, never parsed** — they are raw
+  verbatim transcripts of real people speaking. `read()` on a `.vtt` id
+  returns `null`; only `search()` can surface one, by filename.
+- **`noteId`** is the file's basename without extension (mirrors
+  `VaultService`'s note `id`), resolved by looking it up among the entries the
+  walk already validated — never by resolving a caller-supplied path
+  directly, which is what makes the traversal/symlink guards hold.
 
 ## Wired into the rest of the system
 
