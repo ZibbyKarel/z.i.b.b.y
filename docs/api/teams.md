@@ -147,6 +147,64 @@ scoring shape, applied to the real KB layout (`team-context.md`,
   walk already validated — never by resolving a caller-supplied path
   directly, which is what makes the traversal/symlink guards hold.
 
+## Scoping which KBs a caller can reach (`apps/api/src/kb/kb-scope.service.ts`)
+
+**Task 7a of the team-knowledge-base plan.** `KbScopeService` is the entire
+security story for the `zibby-kb` MCP server (guard/controller/module wiring
+are a separate, later task) — it decides which `KnowledgeBaseSource` roots a
+given caller may read at all, before `KbReaderService` ever reads one:
+
+```typescript
+interface KbRoot {
+  teamId: string;
+  teamName: string;
+  source: KnowledgeBaseSource;
+}
+
+class KbScopeService {
+  rootsForRun(runId: string | undefined, team?: string): Promise<KbRoot[]>;
+  rootsForChat(team?: string): Promise<KbRoot[]>;
+}
+```
+
+**The asymmetry (deliberate).** A project-scoped agent/pipeline run reaches
+ONLY its own team's KB (`runId → run record → projectId → knowledgeBaseFor →
+[root]`) — no team, a team with no KB, an unknown run id, or an absent runId
+all fail closed to `[]`. A chat turn has the _operator_ as its principal and
+carries no project at all, so `rootsForChat(undefined)` deliberately returns
+**every** team with a KB — narrowed only by an explicit `team`. Collapsing
+these to one rule would make an untagged chat turn resolve to no project → no
+team → empty, silently killing "let it follow from the conversation".
+
+**`team` narrows, never widens** on both methods — passing a team the caller
+couldn't otherwise reach yields `[]`, never that team's root.
+
+**Resolving a run id to a project is by reference, not a stored id.** Neither
+`AgentRun` nor `PipelineRun` persists a canonical `projectId`. An agent run
+carries only `project` (the free-form label passed to `startRun` — an id or a
+display name), resolved by id-then-name exactly like
+`AgentRunnerService`'s own private `resolveProject`. A pipeline run carries
+only `projectPath` (absolute path), resolved by path exactly like
+`PipelineRunnerService`'s own private `projectForRun`. This means scope
+resolution is a query-time lookup that can drift if the project registry
+changes between run start and this call (rename, or a different project now
+bearing the same name/path) — persisting a canonical `projectId` on the run
+record would close this, and is out of scope here.
+
+The `X-Zibby-Run-Id` header this resolves is **scoping input only, never
+authentication** — low-entropy, guessable, forgeable by any local process
+including the run itself. The auth boundary for the `zibby-kb` endpoint is
+its guard (bearer token + loopback check), a later task.
+
+For an agent run the header carries the pre-spawn
+`${agentId}_${startedMs}`, while the persisted runId is
+`${ownerId}_${startedMs}_${pid}` built from the same `startedMs` — so
+`KbScopeService` resolves by prefix match (`record.runId.startsWith(header +
+"_")`), safe because the boundary underscore rules out a false match against
+a different, numerically prefix-colliding run. A pipeline run's header IS its
+`pipelineRunId`, resolved by exact match (also supported for a completed
+agent run, in principle).
+
 ## Wired into the rest of the system
 
 - **`app.module.ts`** — `TeamsModule` is registered beside `CompaniesModule`.
