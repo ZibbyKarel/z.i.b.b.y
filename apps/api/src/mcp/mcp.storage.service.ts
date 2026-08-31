@@ -6,7 +6,9 @@ import {
   McpServerSchema,
   type UpdateMcpServerInput,
 } from "@zibby/contracts";
+import { KB_MCP_BEARER_TOKEN } from "../kb/kb-mcp-auth.guard";
 import { EntityFileStore } from "../shared/file-storage";
+import { McpCredentialsStore } from "./mcp-credentials.store";
 import {
   InvalidMcpServerIdError,
   McpServerConflictError,
@@ -17,6 +19,9 @@ export const MCP_DIR = "MCP_DIR";
 
 /** Stable id of the built-in entity-directory MCP server (Phase 106). */
 export const ENTITY_MCP_SERVER_ID = "zibby-entities";
+
+/** Stable id of the built-in, team-scoped, read-only knowledge-base MCP server (Task 7b). */
+export const KB_MCP_SERVER_ID = "zibby-kb";
 
 /**
  * Durable, file-backed persistence for MCP servers — one `<id>.json` each.
@@ -30,13 +35,17 @@ export class McpServersStorageService extends EntityFileStore<McpServer> {
   protected readonly fileExt = ".json";
   protected readonly idRegex = AGENT_ID_REGEX;
 
-  constructor(@Inject(MCP_DIR) dir: string) {
+  constructor(
+    @Inject(MCP_DIR) dir: string,
+    private readonly credentials: McpCredentialsStore,
+  ) {
     super(dir);
   }
 
   async onModuleInit(): Promise<void> {
     await super.onModuleInit();
-    await this.seedSystem();
+    await this.seedEntitiesServer();
+    await this.seedKbServer();
   }
 
   /**
@@ -48,7 +57,7 @@ export class McpServersStorageService extends EntityFileStore<McpServer> {
    * an operator who disables or edits it afterwards keeps their change across
    * restarts, this never re-asserts fields on an existing row.
    */
-  private async seedSystem(): Promise<void> {
+  private async seedEntitiesServer(): Promise<void> {
     let existing: McpServer | null = null;
     try {
       existing = await this.get(ENTITY_MCP_SERVER_ID);
@@ -69,6 +78,51 @@ export class McpServersStorageService extends EntityFileStore<McpServer> {
       enabled: true,
     });
     await this.writeEntity(server);
+  }
+
+  /**
+   * Ensure the built-in `zibby-kb` row exists (Task 7b — `KbMcpController`,
+   * `apps/api/src/kb/kb-mcp.controller.ts`), and keep its bearer credential in
+   * sync with the CURRENT boot's {@link KB_MCP_BEARER_TOKEN}.
+   *
+   * The entity row itself follows the same idempotent "create only if absent"
+   * rule as {@link seedEntitiesServer} — an operator's edit (disabling it, say)
+   * survives a restart. The CREDENTIAL is deliberately different: it is
+   * OVERWRITTEN on every boot, unconditionally, because `KbMcpAuthGuard`'s
+   * token is minted fresh per process (never persisted) — a credential left
+   * over from a prior boot would 401 every run's call to this server after a
+   * restart. `ClaudeRunCommandService.buildMcpConfig` reads this credential
+   * fresh (live filesystem read) at EVERY run's spawn time, folding it into the
+   * `Authorization: Bearer` header exactly like any other server's stored
+   * `authToken` — so refreshing it once here, at boot, is sufficient; no
+   * further invalidation/rotation logic is needed. The token itself is never
+   * written into the entity row / `headers` field (that field is plain,
+   * served-as-is over `GET /api/mcp-servers` — see `McpServerSchema`'s "Law 3 /
+   * credentials hygiene" doc) — only into the separate, gitignored credentials
+   * store, exactly the channel `authToken` already exists for.
+   */
+  private async seedKbServer(): Promise<void> {
+    let existing: McpServer | null = null;
+    try {
+      existing = await this.get(KB_MCP_SERVER_ID);
+    } catch (error) {
+      if (!(error instanceof McpServerNotFoundError)) throw error;
+    }
+    if (!existing) {
+      const port = Number(process.env.PORT ?? 3333);
+      const server = McpServerSchema.parse({
+        id: KB_MCP_SERVER_ID,
+        name: "ZIBBY team knowledge base",
+        desc:
+          "Read-only, team-scoped knowledge-base search/read (search_team_kb, " +
+          "read_team_kb_note) — see docs/api/teams.md.",
+        type: "http",
+        url: `http://localhost:${port}/api/kb/mcp`,
+        enabled: true,
+      });
+      await this.writeEntity(server);
+    }
+    await this.credentials.write(KB_MCP_SERVER_ID, { authToken: KB_MCP_BEARER_TOKEN });
   }
 
   async create(input: CreateMcpServerInput): Promise<McpServer> {

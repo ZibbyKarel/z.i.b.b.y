@@ -22,6 +22,7 @@ import { HealthModule } from "./health/health.module";
 import { WatcherHealthModule } from "./health/watcher-health.module";
 import { HooksModule } from "./hooks/hooks.module";
 import { IntegrationsModule } from "./integrations/integrations.module";
+import { KbModule } from "./kb/kb.module";
 import { LimitResumeModule } from "./limits-resume/limit-resume.module";
 import { LimitsModule } from "./limits/limits.module";
 import { MaestroModule } from "./maestro/maestro.module";
@@ -81,6 +82,7 @@ import { TeamsModule } from "./teams/teams.module";
     IntegrationsModule,
     HooksModule,
     McpModule,
+    KbModule,
     CommandsModule,
     MandateModule,
     ChannelsModule,

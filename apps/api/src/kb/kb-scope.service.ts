@@ -72,13 +72,18 @@ export interface KbRoot {
  * fallback — this service does not have access to those private methods, and
  * would need the identical lookup even if it did.
  *
- * Caveat this implies: the lookup is by REFERENCE at query time, not by a
- * canonical id captured at run start. If the project registry changes between
- * a run starting and this being called (renamed, or a different project now
- * bears the same name/path), scope resolution can drift from what the run
- * actually executed against. Out of scope to fix here (would require
- * persisting a canonical `projectId` on the run record); flagged for whoever
- * revisits run→project attribution.
+ * Caveat this implies, stated plainly: this is NOT a "fails closed at worst"
+ * lookup. Neither `AgentRun` nor `PipelineRun` persists a canonical
+ * `projectId` — resolution is a query-time lookup by free-form label/path,
+ * redone on every call. If the referenced project is deleted and a new one is
+ * registered reusing the same id or name (or the same `projectPath`), the
+ * SAME run id resolves to a DIFFERENT team's knowledge base entirely — a team
+ * the run never started under. This is a silent cross-team leak, not a
+ * fail-closed degradation.
+ *
+ * FOLLOW-UP (named, before this drift can matter in practice): persist a resolved
+ * `projectId` on the run record at run start and resolve from that, instead of
+ * re-resolving a free-form label at query time.
  */
 @Injectable()
 export class KbScopeService {

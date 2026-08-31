@@ -150,9 +150,9 @@ scoring shape, applied to the real KB layout (`team-context.md`,
 ## Scoping which KBs a caller can reach (`apps/api/src/kb/kb-scope.service.ts`)
 
 **Task 7a of the team-knowledge-base plan.** `KbScopeService` is the entire
-security story for the `zibby-kb` MCP server (guard/controller/module wiring
-are a separate, later task) — it decides which `KnowledgeBaseSource` roots a
-given caller may read at all, before `KbReaderService` ever reads one:
+security story for the `zibby-kb` MCP server — it decides which
+`KnowledgeBaseSource` roots a given caller may read at all, before
+`KbReaderService` ever reads one:
 
 ```typescript
 interface KbRoot {
@@ -194,7 +194,7 @@ record would close this, and is out of scope here.
 The `X-Zibby-Run-Id` header this resolves is **scoping input only, never
 authentication** — low-entropy, guessable, forgeable by any local process
 including the run itself. The auth boundary for the `zibby-kb` endpoint is
-its guard (bearer token + loopback check), a later task.
+its guard (bearer token + loopback check) — see the next section.
 
 For an agent run the header carries the pre-spawn
 `${agentId}_${startedMs}`, while the persisted runId is
@@ -205,9 +205,66 @@ a different, numerically prefix-colliding run. A pipeline run's header IS its
 `pipelineRunId`, resolved by exact match (also supported for a completed
 agent run, in principle).
 
+## The `zibby-kb` MCP endpoint (`apps/api/src/kb/kb-mcp.controller.ts`)
+
+**Task 7b of the team-knowledge-base plan.** `POST /api/kb/mcp` exposes
+`KbScopeService` + `KbReaderService` as an in-process HTTP MCP server (same
+shape as `ChatMcpController`/`EntityMcpController` — one fresh `McpServer` +
+`StreamableHTTPServerTransport` per request, no session table). It is seeded
+as the `zibby-kb` row in `apps/api/data/mcp-servers` (`McpServersStorageService`,
+beside `zibby-entities`) at `http://localhost:{port}/api/kb/mcp`, so it is
+injected into every enabled-MCP-servers run's `--mcp-config` like any other
+connected server.
+
+**Two tools, both read-only:**
+
+```typescript
+search_team_kb({ query: string, team?: string })
+read_team_kb_note({ noteId: string, team?: string })
+```
+
+- **`team` is a team ID, never its display name** — the same narrowing rule
+  `KbScopeService` enforces (Step 0b's fixture de-alias test pins this down).
+- Neither tool schema exposes a path/directory parameter — the model can name
+  a query and a note id, never a filesystem location.
+- `search_team_kb` searches every `KbRoot` the caller's scope reaches, merges
+  hits across roots, and **caps the merged total at 8** — never per root.
+  Each hit is cited by team id + the note's repo-relative path (never an
+  absolute host path) + title, with its snippet passed through
+  `envelopeInbound` (Law 4 — untrusted vault content is data, not
+  instructions).
+- `read_team_kb_note` reads one note from the first reachable root (in scope
+  order) that has it; its body is enveloped the same way.
+- **No write tool exists**, and none is planned — `KbReaderService` itself
+  never writes.
+- An empty scope (unknown team, no permission, no KB configured) returns the
+  SAME explicit empty result as a real query with zero hits, on both tools —
+  never an error, and never a message that would let a caller distinguish
+  "team doesn't exist" from "team exists but you can't read it".
+
+**Guard is the sole auth boundary.** `KbMcpAuthGuard`
+(`apps/api/src/kb/kb-mcp-auth.guard.ts`) mirrors `ChatMcpAuthGuard` exactly:
+a per-boot bearer token (`KB_MCP_BEARER_TOKEN`, minted once per process,
+in-memory only) compared via `crypto.timingSafeEqual`, AND a loopback check
+on `req.socket.remoteAddress` — both enforced independently. `X-Zibby-Run-Id`
+(read by the controller to pick `rootsForRun` vs `rootsForChat`) plays **no
+part in authentication** — see the scoping section above.
+
+**How the bearer token reaches a run.** `McpServersStorageService` writes
+`KB_MCP_BEARER_TOKEN` into the `zibby-kb` row's credentials (`authToken`) via
+`McpCredentialsStore` on every boot — unconditionally, unlike the entity row
+itself (create-if-absent). `ClaudeRunCommandService.buildMcpConfig` (already
+existing, unmodified) reads that credential fresh at every run's spawn time
+and folds it into the `Authorization: Bearer` header, exactly like it does
+for any other server's stored `authToken` — so a boot-time refresh is enough;
+the token is never written into the entity's own `headers` field (that field
+is plain and served as-is over `GET /api/mcp-servers` — see
+`McpServerSchema`'s "Law 3 / credentials hygiene" doc).
+
 ## Wired into the rest of the system
 
-- **`app.module.ts`** — `TeamsModule` is registered beside `CompaniesModule`.
+- **`app.module.ts`** — `TeamsModule` is registered beside `CompaniesModule`;
+  `KbModule` (`apps/api/src/kb/kb.module.ts`) is registered beside `McpModule`.
 - **`projects` module** — `Project.teamId` is a bare optional string today (no
   resolver reads it yet); a later task is expected to add the same kind of
   read-time resolution `ResolvedProjectService` already does for `companyId`.

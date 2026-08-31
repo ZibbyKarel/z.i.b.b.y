@@ -14,8 +14,15 @@ const project = (over: Partial<Project> & Pick<Project, "id">): Project => ({
   ...over,
 });
 
+/**
+ * Deliberately de-aliased default: `name` defaults to something visibly
+ * DIFFERENT from `id` (never the same string) so a test that narrows on
+ * `team` and asserts on `teamId` cannot pass against an implementation that
+ * accidentally matches on `name` instead of `id` — every fixture team's `id`
+ * and `name` differ unless a test explicitly overrides both to collide.
+ */
 const team = (over: Partial<Team> & Pick<Team, "id">): Team => ({
-  name: over.id,
+  name: `${over.id}-display-name`,
   ...over,
 });
 
@@ -254,6 +261,20 @@ describe("KbScopeService", () => {
         teams: [team({ id: "kbless-team", name: "No KB Team" })],
       });
       expect(await scope.rootsForChat("kbless-team")).toEqual([]);
+    });
+
+    it("narrows on the team ID, not its display name — the display name yields nothing", async () => {
+      const scope = build({
+        teams: [
+          { ...team({ id: "devrel", name: "DevRel Team" }), knowledgeBase: source("/kb/devrel") },
+        ],
+      });
+      // The id narrows correctly.
+      expect((await scope.rootsForChat("devrel")).map((r) => r.teamId)).toEqual(["devrel"]);
+      // The display name — a different string from the id — narrows to nothing.
+      // A team-argument test that used the same string for id and name (the old
+      // fixture default) could not tell these two cases apart.
+      expect(await scope.rootsForChat("DevRel Team")).toEqual([]);
     });
   });
 });
