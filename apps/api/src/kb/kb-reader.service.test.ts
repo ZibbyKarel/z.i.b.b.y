@@ -56,7 +56,10 @@ describe("KbReaderService", () => {
 
     await fs.writeFile(
       path.join(root, "meetings", "kickoff.vtt"),
-      "WEBVTT\n\n1\n00:00:00.000 --> 00:00:02.000\nHello everyone, this is a real transcript.\n",
+      // "zorbatron9000" is a distinctive word that appears ONLY in this body —
+      // if `.vtt` content were ever indexed, searching for it would wrongly
+      // surface this transcript.
+      "WEBVTT\n\n1\n00:00:00.000 --> 00:00:02.000\nHello everyone, the codename is zorbatron9000.\n",
       "utf8",
     );
 
@@ -80,12 +83,14 @@ describe("KbReaderService", () => {
   it("refuses to escape the knowledge-base root", async () => {
     // Plain traversal — never resolves inside the walk-validated id space.
     expect(await reader.read(source, "../../../etc/passwd")).toBeNull();
-    // URL-encoded variant — must not be decoded into a real traversal either.
-    expect(await reader.read(source, "..%2f..%2fetc%2fpasswd")).toBeNull();
     // The escape target genuinely exists (as `outside.md`, one level above the
-    // KB root) so this assertion can't pass merely because nothing is there.
+    // KB root) so these assertions can't pass merely because nothing is there.
     expect(await fs.readFile(outsideFile, "utf8")).toContain("must never be readable");
     expect(await reader.read(source, "../outside")).toBeNull();
+    // URL-encoded variant, pointed at the same real, existing target — a
+    // decode-then-resolve regression would find `../outside.md` and actually
+    // return it, so this discriminates instead of passing vacuously.
+    expect(await reader.read(source, "..%2foutside")).toBeNull();
   });
 
   it("does not follow a symlink pointing outside the root", async () => {
@@ -108,6 +113,20 @@ describe("KbReaderService", () => {
   it("caps a note body so one huge note cannot flood a prompt", async () => {
     const note = await reader.read(source, "huge");
     expect(note?.body.length).toBeLessThanOrEqual(4000);
+  });
+
+  it("never hands back a .vtt transcript body through read()", async () => {
+    expect(await reader.read(source, "kickoff")).toBeNull();
+  });
+
+  it("indexes a .vtt by filename only, never by its (verbatim transcript) content", async () => {
+    const byFilename = await reader.search(source, "kickoff");
+    expect(byFilename.some((h) => h.noteId === "kickoff")).toBe(true);
+
+    // Distinctive text that exists ONLY inside the transcript body — if
+    // `.vtt` content were ever parsed/indexed, this would wrongly find it.
+    const byBody = await reader.search(source, "zorbatron9000");
+    expect(byBody).toEqual([]);
   });
 });
 
