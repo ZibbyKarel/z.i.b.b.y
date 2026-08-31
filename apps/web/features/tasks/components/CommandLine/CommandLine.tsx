@@ -825,14 +825,19 @@ export function CommandLine({
         color: s.color,
       }));
     // Task 8: the fourth mention source — a team resolves to a scope tag, never
-    // a `TaskTarget` (see `pickMentionResult`'s branch).
+    // a `TaskTarget` (see `pickMentionResult`'s branch). Fix round 2: `"brain"`
+    // (not `"grid"` — that's the subsystem rows' glyph in this SAME list, and a
+    // team answers a different question than every routing row: WHAT knowledge
+    // base a turn can see, not WHO runs it). `"brain"` is the app's existing
+    // knowledge/memory glyph (`features/memory/Screen.tsx`'s empty state) —
+    // reused here rather than authoring a new icon.
     const teamHits: MentionResult[] = teams
       .filter((tm) => matchesQuery(mention.query, tm.name, tm.id))
       .map((tm) => ({
         kind: "team" as const,
         id: tm.id,
         name: tm.name,
-        glyph: "grid" as IconName,
+        glyph: "brain" as IconName,
       }));
     return [...agentHits, ...pipelineHits, ...subsystemHits, ...teamHits].slice(0, 50);
   }, [mention, agents, pipelines, rosterSubsystems, teams]);
@@ -1084,7 +1089,15 @@ export function CommandLine({
                                   ? "accent"
                                   : result.kind === "pipeline"
                                     ? "push"
-                                    : "neutral"
+                                    : // Fix round 2: a team row is the ONLY remaining
+                                      // kind reaching this branch (subsystem renders its
+                                      // own colored-dot row above, never a `Tag`) — `"send"`
+                                      // is an existing `TagTone` unused elsewhere in this
+                                      // dropdown (and, per a repo-wide check, unused
+                                      // anywhere else in `apps/web`), so a team reads as
+                                      // its own thing rather than folding into the
+                                      // catch-all `"neutral"` a future 5th kind might reuse.
+                                      "send"
                               }
                             >
                               {result.name}

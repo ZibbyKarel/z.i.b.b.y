@@ -198,7 +198,7 @@
       "dropHint": "Pustit sem — přidá se jako @soubor do textu",
       "chrome": {
         "label": "Zadej směr · přirozeným jazykem",
-        "hint": "@ hledá agenty, pipeliny a podsystémy · přetáhni soubor, nebo použij sponku"
+        "hint": "@ hledá agenty, pipeliny, podsystémy a týmy · přetáhni soubor, nebo použij sponku"
       },
       "ack": {
         "kind": {

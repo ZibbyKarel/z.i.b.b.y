@@ -271,12 +271,12 @@ and a chat token. The guard accepts either, and records which one matched as
 `req.kbCaller: "run" | "chat"`. The controller branches on `kbCaller`, never
 on whether `X-Zibby-Run-Id` is present:
 
-| token | `X-Zibby-Run-Id` | result                                                                            |
-| ----- | ---------------- | --------------------------------------------------------------------------------- |
-| run   | present          | `rootsForRun(headerRunId, team?)`                                                 |
-| run   | absent           | `rootsForRun(undefined, …)` → `[]` — fails closed                                 |
-| chat  | absent           | `rootsForChat(team?)`                                                             |
-| chat  | present          | `rootsForChat(team?)` — the header carries no authority here, only the token does |
+| token | `X-Zibby-Run-Id` | result                                                                    |
+| ----- | ---------------- | ------------------------------------------------------------------------- |
+| run   | present          | `rootsForRun(headerRunId, team?)`                                         |
+| run   | absent           | `rootsForRun(undefined, …)` → `[]` — fails closed                         |
+| chat  | absent           | `rootsForChat(queryTeamId)`, then narrowed by `team?` — see below         |
+| chat  | present          | same as above — the header carries no authority here, only the token does |
 
 Before this fix, the caller path was decided by the header's presence alone
 (`runId ? rootsForRun(...) : rootsForChat(...)`), so a caller holding a valid
@@ -289,6 +289,36 @@ same-uid process; it stops a caller from silently escaping its own intended
 scope by omitting a header, not a determined local attacker with filesystem
 access. It is deliberately not a credential framework: two tokens, one
 `if`/`else`, nothing more.
+
+**The chat path's `?teamId=` query param is a ceiling, not a filter (Task 8).**
+`ChatSessionService` builds the `zibby-kb` MCP server's URL per turn
+(`kbMcpUrl(teamId?)`): `http://localhost:{port}/api/kb/mcp?teamId=<id>` when
+the turn carries an operator-tagged team (from the composer's `@`-mention
+picker, via `SendChatMessageBody.teamId`), or the same URL with **no query
+string at all** when it doesn't — never `?teamId=` with an empty value.
+`teamIdFromUrl` reads that param off the request (`undefined`, never `""`,
+when absent) and `kb-mcp.controller.ts`'s `rootsFor` uses it as the CEILING
+for every tool call this MCP connection serves, for the lifetime of that one
+turn:
+
+- `rootsForChat(queryTeamId)` resolves the roots reachable within that
+  ceiling — `rootsForChat(undefined)` (no tag) still resolves to **every**
+  team's KB, exactly as it did before Task 8; tagging a team narrows the
+  ceiling itself down to that one team's roots.
+- The tool's own `team` argument (`search_team_kb({ query, team? })` /
+  `read_team_kb_note({ noteId, team? })` — the model's own choice, not the
+  operator's) then narrows the result **within** whatever the ceiling
+  already resolved to: `roots.filter((root) => root.teamId === toolTeam)`.
+  It is never passed to `rootsForChat` directly.
+- **Both directions narrow, neither widens.** A tool `team` argument outside
+  the ceiling (e.g. the operator tagged `devrel` but the model asks for
+  `platform`) resolves to an empty result on that ceiling — not `platform`'s
+  KB, and not an error. A tool call with no `team` argument at all gets
+  everything the ceiling allows, nothing more.
+- The run path is unaffected: `rootsForRun(runId, team?)` still receives the
+  tool's `team` argument directly, unchanged — a run's ceiling is its single
+  project (via `runId`), which the tool argument narrows the same way it
+  always has, and `?teamId=` is never read on that path at all.
 
 **How the bearer token reaches a run.** `McpServersStorageService` writes the
 **run token** — never the chat token — into the `zibby-kb` row's credentials

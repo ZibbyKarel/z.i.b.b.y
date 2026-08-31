@@ -198,7 +198,7 @@
       "dropHint": "Drop here — added as an @file in the text",
       "chrome": {
         "label": "Say what you need · plain language",
-        "hint": "@ searches agents, pipelines and subsystems · drag a file, or use the paperclip"
+        "hint": "@ searches agents, pipelines, subsystems and teams · drag a file, or use the paperclip"
       },
       "ack": {
         "kind": {

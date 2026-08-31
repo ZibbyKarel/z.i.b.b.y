@@ -5,6 +5,7 @@ import {
   HighlightTextAreaFieldTestId,
   PanelTestId,
   SearchMenuTestId,
+  TagTestId,
 } from "@zibby/design-system";
 import {
   fireEvent,
@@ -283,6 +284,35 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       ).toBeInTheDocument();
     });
 
+    it("gives the team row a distinct icon and tone from every routing row — Task 8 fix round 2", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine onSubmit={vi.fn()} />);
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "@");
+
+      const teamRow = screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`);
+      const agentRow = screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`);
+      const pipelineRow = screen.getByTestId(`${CommandLineTestId.MentionItem}-pipeline-delivery`);
+
+      // Tone: no longer the plain "neutral" a subsystem's non-Tag dot row implies,
+      // and not either routing row's own tone — asserted on the rendered variant
+      // class (matching how the design system's own Tag.test.tsx asserts tone),
+      // never on a raw colour value.
+      const teamTag = within(teamRow).getByTestId(TagTestId.Root);
+      expect(teamTag).toHaveClass("text-risk-send");
+      expect(teamTag).not.toHaveClass("text-foreground-dim");
+      expect(teamTag).not.toHaveClass("text-accent");
+      expect(teamTag).not.toHaveClass("text-risk-push");
+
+      // Icon: the actual rendered glyph markup, not just the prop we pass in —
+      // proves the team row doesn't share "grid" (the subsystem glyph reused
+      // for the same row before this fix) with either routing row's icon.
+      const teamIconMarkup = within(teamRow).getByTestId(TagTestId.Icon).innerHTML;
+      const agentIconMarkup = within(agentRow).getByTestId(TagTestId.Icon).innerHTML;
+      const pipelineIconMarkup = within(pipelineRow).getByTestId(TagTestId.Icon).innerHTML;
+      expect(teamIconMarkup).not.toBe(agentIconMarkup);
+      expect(teamIconMarkup).not.toBe(pipelineIconMarkup);
+    });
+
     it("picking a team inserts the inline @Name and calls onTeamChange with its id — onTargetChange never fires", async () => {
       const onTargetChange = vi.fn();
       const onTeamChange = vi.fn();
@@ -445,7 +475,9 @@ describe("CommandLine (Phase 118d generic composer)", () => {
     it("wraps the input in the panel chrome by default (header icon + label + hint)", () => {
       render(<CommandLine onSubmit={vi.fn()} />);
       expect(screen.getByTestId(PanelTestId.Header)).toHaveTextContent("Zadej směr");
-      expect(screen.getByText(/hledá agenty, pipeliny a podsystémy/)).toBeInTheDocument();
+      // Fix round 2: teams are the fourth mention source — the hint must say so,
+      // else tagging one has no discovery path at all.
+      expect(screen.getByText(/hledá agenty, pipeliny, podsystémy a týmy/)).toBeInTheDocument();
     });
 
     it("renders a bare input with no panel chrome when chrome={false}", () => {
