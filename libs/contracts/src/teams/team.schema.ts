@@ -54,5 +54,5 @@ export type Team = z.infer<typeof TeamSchema>;
 export const CreateTeamSchema = TeamSchema;
 export type CreateTeamInput = z.infer<typeof CreateTeamSchema>;
 
-export const UpdateTeamSchema = TeamSchema.omit({ id: true }).partial().strict();
+export const UpdateTeamSchema = TeamSchema.omit({ id: true }).partial();
 export type UpdateTeamInput = z.infer<typeof UpdateTeamSchema>;

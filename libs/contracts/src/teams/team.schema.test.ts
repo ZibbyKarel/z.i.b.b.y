@@ -47,7 +47,7 @@ describe("TeamSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("omits id from the update schema", () => {
-    expect(UpdateTeamSchema.safeParse({ id: "other" }).success).toBe(false);
+  it("ignores id on the update schema", () => {
+    expect(UpdateTeamSchema.parse({ id: "other" })).toEqual({});
   });
 });
