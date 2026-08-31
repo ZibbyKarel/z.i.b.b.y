@@ -38,11 +38,19 @@ import { Injectable } from "@nestjs/common";
  * Do not build this out into a credential framework; it is two minted
  * strings and a branch.
  *
- * SINGLE source of truth: `KbModule` provides AND *exports* this so
- * `McpServersStorageService` (`../mcp/mcp.storage.service.ts`, a different
- * Nest module) can inject it to write the RUN token — never the chat token —
- * into the seeded `zibby-kb` row's credentials. The chat token is not
- * written anywhere and is not reachable through `GET /api/mcp-servers`.
+ * SINGLE source of truth: this class is provided by the leaf `KbAuthModule`
+ * (`./kb-auth.module.ts` — no imports of its own), which `KbModule` imports
+ * and re-exports, so `import`ing `KbModule` still resolves it. `McpModule`
+ * and `ClaudeRunModule` import `KbAuthModule` directly instead (NOT the full
+ * `KbModule`) — see `KbAuthModule`'s doc for why importing the full
+ * `KbModule` back would close a real ES-import-level cycle. NestJS shares
+ * ONE app-wide singleton across every importer, so `McpServersStorageService`
+ * (`../mcp/mcp.storage.service.ts`, both its `McpModule` instance and
+ * `ClaudeRunModule`'s independently-constructed duplicate) always resolves
+ * the SAME instance as `KbMcpAuthGuard` — never a second, mismatched token
+ * pair. That instance writes the RUN token — never the chat token — into the
+ * seeded `zibby-kb` row's credentials. The chat token is not written
+ * anywhere and is not reachable through `GET /api/mcp-servers`.
  */
 @Injectable()
 export class KbMcpAuthService {
