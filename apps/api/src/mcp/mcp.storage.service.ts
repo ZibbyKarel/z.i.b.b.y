@@ -6,7 +6,7 @@ import {
   McpServerSchema,
   type UpdateMcpServerInput,
 } from "@zibby/contracts";
-import { KB_MCP_BEARER_TOKEN } from "../kb/kb-mcp-auth.guard";
+import { KbMcpAuthService } from "../kb/kb-mcp-auth.service";
 import { EntityFileStore } from "../shared/file-storage";
 import { McpCredentialsStore } from "./mcp-credentials.store";
 import {
@@ -38,6 +38,7 @@ export class McpServersStorageService extends EntityFileStore<McpServer> {
   constructor(
     @Inject(MCP_DIR) dir: string,
     private readonly credentials: McpCredentialsStore,
+    private readonly kbAuth: KbMcpAuthService,
   ) {
     super(dir);
   }
@@ -83,13 +84,20 @@ export class McpServersStorageService extends EntityFileStore<McpServer> {
   /**
    * Ensure the built-in `zibby-kb` row exists (Task 7b — `KbMcpController`,
    * `apps/api/src/kb/kb-mcp.controller.ts`), and keep its bearer credential in
-   * sync with the CURRENT boot's {@link KB_MCP_BEARER_TOKEN}.
+   * sync with the CURRENT boot's {@link KbMcpAuthService.runBearerToken}.
+   *
+   * **The RUN token, never the chat token** (fix round 1, F3): this row is
+   * what `ClaudeRunCommandService.buildMcpConfig` folds into every agent/
+   * pipeline run's `--mcp-config`, so it must carry the token that resolves
+   * to `KbScopeService.rootsForRun` — the path that fails CLOSED without a
+   * live run id. The chat token is never written here, and is not reachable
+   * through `GET /api/mcp-servers` either way (see below).
    *
    * The entity row itself follows the same idempotent "create only if absent"
    * rule as {@link seedEntitiesServer} — an operator's edit (disabling it, say)
    * survives a restart. The CREDENTIAL is deliberately different: it is
-   * OVERWRITTEN on every boot, unconditionally, because `KbMcpAuthGuard`'s
-   * token is minted fresh per process (never persisted) — a credential left
+   * OVERWRITTEN on every boot, unconditionally, because `KbMcpAuthService`'s
+   * tokens are minted fresh per process (never persisted) — a credential left
    * over from a prior boot would 401 every run's call to this server after a
    * restart. `ClaudeRunCommandService.buildMcpConfig` reads this credential
    * fresh (live filesystem read) at EVERY run's spawn time, folding it into the
@@ -122,7 +130,7 @@ export class McpServersStorageService extends EntityFileStore<McpServer> {
       });
       await this.writeEntity(server);
     }
-    await this.credentials.write(KB_MCP_SERVER_ID, { authToken: KB_MCP_BEARER_TOKEN });
+    await this.credentials.write(KB_MCP_SERVER_ID, { authToken: this.kbAuth.runBearerToken });
   }
 
   async create(input: CreateMcpServerInput): Promise<McpServer> {

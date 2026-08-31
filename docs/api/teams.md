@@ -227,14 +227,25 @@ read_team_kb_note({ noteId: string, team?: string })
   `KbScopeService` enforces (Step 0b's fixture de-alias test pins this down).
 - Neither tool schema exposes a path/directory parameter — the model can name
   a query and a note id, never a filesystem location.
-- `search_team_kb` searches every `KbRoot` the caller's scope reaches, merges
-  hits across roots, and **caps the merged total at 8** — never per root.
-  Each hit is cited by team id + the note's repo-relative path (never an
-  absolute host path) + title, with its snippet passed through
-  `envelopeInbound` (Law 4 — untrusted vault content is data, not
-  instructions).
+- `search_team_kb` searches every `KbRoot` the caller's scope reaches (each
+  root capped at `MAX_SEARCH_HITS` before merging), then **interleaves hits
+  round-robin across roots** before capping the merged total at 8 — fair by
+  team, not global-best-first, so no single root can crowd out the others
+  just because it happens to come first (fix round 1, F5; `KbHit` carries no
+  relevance score to sort by, and none is planned). Each hit is cited by team
+  id (trusted, kept outside the envelope) followed by the note's
+  repo-relative path (never an absolute host path) + a length-capped title +
+  its snippet — **path, title, and snippet all pass through a single
+  `envelopeInbound` call together** (fix round 1, F2): title used to be
+  formatted outside the envelope, so a hostile YAML-frontmatter title could
+  reach the model unsanitized; it's now capped by its own constant
+  (`MAX_KB_TITLE_CHARS`, separate from the envelope's own 4000-char budget,
+  so an oversized title can't crowd the snippet out of the shared budget) and
+  combined into the same envelope as the snippet (Law 4 — untrusted vault
+  content is data, not instructions).
 - `read_team_kb_note` reads one note from the first reachable root (in scope
-  order) that has it; its body is enveloped the same way.
+  order) that has it; its path + title + body are enveloped together the
+  same way.
 - **No write tool exists**, and none is planned — `KbReaderService` itself
   never writes.
 - An empty scope (unknown team, no permission, no KB configured) always
@@ -248,24 +259,53 @@ read_team_kb_note({ noteId: string, team?: string })
   an unauthorized or unknown team never gets past the empty-scope branch in
   the first place.
 
-**Guard is the sole auth boundary.** `KbMcpAuthGuard`
-(`apps/api/src/kb/kb-mcp-auth.guard.ts`) mirrors `ChatMcpAuthGuard` exactly:
-a per-boot bearer token (`KB_MCP_BEARER_TOKEN`, minted once per process,
-in-memory only) compared via `crypto.timingSafeEqual`, AND a loopback check
-on `req.socket.remoteAddress` — both enforced independently. `X-Zibby-Run-Id`
-(read by the controller to pick `rootsForRun` vs `rootsForChat`) plays **no
-part in authentication** — see the scoping section above.
+**Guard is the sole auth boundary — and the TOKEN decides the caller path,
+never the header (fix round 1, F3).** `KbMcpAuthGuard`
+(`apps/api/src/kb/kb-mcp-auth.guard.ts`) mirrors `ChatMcpAuthGuard`'s checks
+exactly (same length-check-then-`crypto.timingSafeEqual` comparison, same
+loopback check on `req.socket.remoteAddress`, both enforced independently) —
+but instead of one shared token, `KbMcpAuthService`
+(`apps/api/src/kb/kb-mcp-auth.service.ts`, provided by the leaf
+`KbAuthModule`) mints **two** per-boot, in-memory-only tokens: a run token
+and a chat token. The guard accepts either, and records which one matched as
+`req.kbCaller: "run" | "chat"`. The controller branches on `kbCaller`, never
+on whether `X-Zibby-Run-Id` is present:
 
-**How the bearer token reaches a run.** `McpServersStorageService` writes
-`KB_MCP_BEARER_TOKEN` into the `zibby-kb` row's credentials (`authToken`) via
-`McpCredentialsStore` on every boot — unconditionally, unlike the entity row
-itself (create-if-absent). `ClaudeRunCommandService.buildMcpConfig` (already
-existing, unmodified) reads that credential fresh at every run's spawn time
-and folds it into the `Authorization: Bearer` header, exactly like it does
-for any other server's stored `authToken` — so a boot-time refresh is enough;
-the token is never written into the entity's own `headers` field (that field
-is plain and served as-is over `GET /api/mcp-servers` — see
-`McpServerSchema`'s "Law 3 / credentials hygiene" doc).
+| token | `X-Zibby-Run-Id` | result                                                                            |
+| ----- | ---------------- | --------------------------------------------------------------------------------- |
+| run   | present          | `rootsForRun(headerRunId, team?)`                                                 |
+| run   | absent           | `rootsForRun(undefined, …)` → `[]` — fails closed                                 |
+| chat  | absent           | `rootsForChat(team?)`                                                             |
+| chat  | present          | `rootsForChat(team?)` — the header carries no authority here, only the token does |
+
+Before this fix, the caller path was decided by the header's presence alone
+(`runId ? rootsForRun(...) : rootsForChat(...)`), so a caller holding a valid
+token could simply omit `X-Zibby-Run-Id` and reach every team's KB via
+`rootsForChat(undefined)` — no forgery needed, because the header was never
+the authentication boundary in the first place. **Be accurate about what the
+two-token split buys**: it is leash integrity, not a hard security boundary —
+either token still sits in a 0600-permission credentials file readable by any
+same-uid process; it stops a caller from silently escaping its own intended
+scope by omitting a header, not a determined local attacker with filesystem
+access. It is deliberately not a credential framework: two tokens, one
+`if`/`else`, nothing more.
+
+**How the bearer token reaches a run.** `McpServersStorageService` writes the
+**run token** — never the chat token — into the `zibby-kb` row's credentials
+(`authToken`) via `McpCredentialsStore` on every boot — unconditionally,
+unlike the entity row itself (create-if-absent). The chat token is never
+persisted anywhere and is not reachable through `GET /api/mcp-servers`.
+`ClaudeRunCommandService.buildMcpConfig` (already existing, unmodified) reads
+that credential fresh at every run's spawn time and folds it into the
+`Authorization: Bearer` header, exactly like it does for any other server's
+stored `authToken` — so a boot-time refresh is enough; the token is never
+written into the entity's own `headers` field (that field is plain and
+served as-is over `GET /api/mcp-servers` — see `McpServerSchema`'s "Law 3 /
+credentials hygiene" doc). `ClaudeRunModule` owns its own duplicate
+`McpServersStorageService` instance (see that module's doc) but imports
+`KbAuthModule` rather than re-providing `KbMcpAuthService` — NestJS shares
+one app-wide `KbMcpAuthService` singleton across every importer, so both
+storage instances and the guard always agree on the same token pair.
 
 ## Wired into the rest of the system
 

@@ -3,7 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { CreateMcpServerInput } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { KB_MCP_BEARER_TOKEN } from "../kb/kb-mcp-auth.guard";
+import { KbMcpAuthService } from "../kb/kb-mcp-auth.service";
 import { McpCredentialsStore } from "./mcp-credentials.store";
 import {
   InvalidMcpServerIdError,
@@ -28,13 +28,15 @@ describe("McpServersStorageService", () => {
   let dir: string;
   let credDir: string;
   let credentials: McpCredentialsStore;
+  let kbAuth: KbMcpAuthService;
   let service: McpServersStorageService;
 
   beforeEach(async () => {
     dir = await fs.mkdtemp(path.join(os.tmpdir(), "mcp-test-"));
     credDir = await fs.mkdtemp(path.join(os.tmpdir(), "mcp-creds-test-"));
     credentials = new McpCredentialsStore(credDir);
-    service = new McpServersStorageService(dir, credentials);
+    kbAuth = new KbMcpAuthService();
+    service = new McpServersStorageService(dir, credentials, kbAuth);
     await service.onModuleInit();
   });
   afterEach(async () => {
@@ -96,7 +98,11 @@ describe("McpServersStorageService", () => {
         process.env.PORT = "4444";
         const otherDir = await fs.mkdtemp(path.join(os.tmpdir(), "mcp-test-port-"));
         const otherCredDir = await fs.mkdtemp(path.join(os.tmpdir(), "mcp-creds-test-port-"));
-        const other = new McpServersStorageService(otherDir, new McpCredentialsStore(otherCredDir));
+        const other = new McpServersStorageService(
+          otherDir,
+          new McpCredentialsStore(otherCredDir),
+          new KbMcpAuthService(),
+        );
         await other.onModuleInit();
         const seeded = await other.get(ENTITY_MCP_SERVER_ID);
         expect(seeded.url).toBe("http://localhost:4444/api/memory/mcp");
@@ -124,26 +130,31 @@ describe("McpServersStorageService", () => {
       expect(reread.enabled).toBe(false);
     });
 
-    it("the persisted zibby-kb entity JSON never contains the bearer token (Law 3 hygiene)", async () => {
+    it("the persisted zibby-kb entity JSON never contains either bearer token (Law 3 hygiene)", async () => {
       const onDisk = await fs.readFile(fileFor(dir, KB_MCP_SERVER_ID), "utf8");
-      expect(onDisk).not.toContain(KB_MCP_BEARER_TOKEN);
+      expect(onDisk).not.toContain(kbAuth.runBearerToken);
+      expect(onDisk).not.toContain(kbAuth.chatBearerToken);
     });
 
-    it("writes the current boot's bearer token into the credentials store", async () => {
+    it("writes the current boot's RUN token — never the chat token — into the credentials store", async () => {
+      // Fix round 1, F3: this row feeds every run's `--mcp-config`, so it must
+      // carry the token that resolves via `rootsForRun` (fails closed), never
+      // the one that resolves via `rootsForChat` (every team's KB).
       const creds = await credentials.read(KB_MCP_SERVER_ID);
-      expect(creds?.authToken).toBe(KB_MCP_BEARER_TOKEN);
+      expect(creds?.authToken).toBe(kbAuth.runBearerToken);
+      expect(creds?.authToken).not.toBe(kbAuth.chatBearerToken);
     });
 
     it("refreshes a STALE credential on every boot, even though the entity row itself is create-if-absent", async () => {
       // Simulate a credential left over from a PRIOR boot (a different process, a
-      // different random KB_MCP_BEARER_TOKEN value) — a naive "only seed if absent"
+      // different random run-token value) — a naive "only seed if absent"
       // implementation (copy-pasting the entity row's idempotent rule onto the
       // credential too) would leave this stale value in place, 401-ing every run
       // against the CURRENT boot's guard forever after a restart.
       await credentials.write(KB_MCP_SERVER_ID, { authToken: "stale-token-from-a-prior-boot" });
       await service.onModuleInit();
       const creds = await credentials.read(KB_MCP_SERVER_ID);
-      expect(creds?.authToken).toBe(KB_MCP_BEARER_TOKEN);
+      expect(creds?.authToken).toBe(kbAuth.runBearerToken);
     });
   });
 });
