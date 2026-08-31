@@ -38,8 +38,13 @@ const DOCK_STRIP_STYLE = {
 // `docs/superpowers/specs/2026-07-22-handoff-signal-registry-and-receiver-filter-design.md`)
 // — same posture as `hooks`/`automations` above: a config-ish catalog with its
 // own NAV_ITEMS entry that needs a dock icon to actually be reachable.
+// `teams` joined with the Team layer between Company and Project (the
+// team-knowledge-base plan) — same posture again: a fresh NAV_ITEMS entry with
+// no dock icon is orphaned since the HUD sidebar is gone and this dock is the
+// only nav surface left.
 const DOCK_IDS = [
   "companies",
+  "teams",
   "projects",
   "agents",
   "pipelines",

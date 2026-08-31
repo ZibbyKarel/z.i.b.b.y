@@ -14,6 +14,7 @@
     "settings": "System settings",
     "projects": "Projects",
     "companies": "Companies",
+    "teams": "Teams",
     "mcp": "MCP servers",
     "commands": "Commands",
     "hooks": "Hooks",
@@ -1472,6 +1473,12 @@
         "none": "No company",
         "hint": "Link this project to a company to share its team, budget and integrations. Applies immediately."
       },
+      "teamLink": {
+        "title": "Team",
+        "select": "Linked team",
+        "none": "No team",
+        "hint": "Link this project to a team — the owner of the knowledge base the project reads."
+      },
       "effective": {
         "title": "Effective data",
         "fromCompany": "Merged with {name} — the project's own values override the company's where both set a field.",
@@ -1549,6 +1556,62 @@
         "placeholder": "Pick a project…",
         "confirm": "Link",
         "noCandidates": "No other project to link — every project already belongs to this company."
+      }
+    }
+  },
+  "teams": {
+    "title": "Teams",
+    "countSummary": "{count, plural, =0 {no teams} one {# team} other {# teams}} · the knowledge-base owner between a company and a project",
+    "addTeam": "Add team",
+    "openAria": "Open {name}",
+    "emptyTitle": "No teams yet",
+    "emptyDescription": "A team is the layer between a company and a project — it owns a knowledge base its projects read. Add the first one and it shows up here as a card.",
+    "emptyHint": "// registry ~/zibby/teams.json",
+    "hasKnowledgeBase": "knowledge base",
+    "newTeam": "New team",
+    "create": "Create team",
+    "save": "Save changes",
+    "delete": "Delete",
+    "deleteTitle": "Delete team?",
+    "deleteBody": "Really delete {name}? Projects referencing it keep a now-dangling teamId — nothing else is lost.",
+    "fields": {
+      "name": "Team name",
+      "namePlaceholder": "Platform",
+      "desc": "Description",
+      "descPlaceholder": "What the team does",
+      "company": "Company",
+      "companyNone": "No company"
+    },
+    "profile": {
+      "basics": {
+        "title": "Team",
+        "newHint": "Once the team is saved you'll set its knowledge base."
+      }
+    },
+    "knowledgeBase": {
+      "title": "Knowledge base",
+      "path": "Vault path",
+      "pathPlaceholder": "/Users/…/vault",
+      "pathHint": "Read directly from this path on disk — never copied into ZIBBY's own vault.",
+      "gitRemote": "Git remote (optional)",
+      "gitRemotePlaceholder": "git@github.com:org/repo.git",
+      "readOnlyNote": "Always read-only — ZIBBY never writes to a knowledge base, and this cannot be turned off.",
+      "save": "Save",
+      "clear": "Remove knowledge base"
+    },
+    "memberProjects": {
+      "title": "Team projects",
+      "empty": "No projects link to this team yet — set it on a project's detail page.",
+      "addExisting": "Add existing project",
+      "createNew": "Create new project",
+      "add": "Add project",
+      "linkDialog": {
+        "title": "Add existing project",
+        "subtitle": "link to this team",
+        "selectLabel": "Project",
+        "placeholder": "Pick a project…",
+        "confirm": "Link",
+        "noCandidates": "No other project to link — every project already belongs to this team."
       }
     }
   },

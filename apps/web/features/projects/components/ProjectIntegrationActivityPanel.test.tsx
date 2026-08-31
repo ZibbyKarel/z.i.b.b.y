@@ -25,9 +25,7 @@ describe("ProjectIntegrationActivityPanel", () => {
   it("shows the empty state when no integration activity is recorded", () => {
     mockData.mockReturnValue({ data: [] });
     render(<ProjectIntegrationActivityPanel projectId="acme" />);
-    expect(
-      screen.getByTestId(ProjectIntegrationActivityPanelTestId.Empty),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId(ProjectIntegrationActivityPanelTestId.Empty)).toBeInTheDocument();
   });
 
   it("renders the activity feed when entries exist", () => {

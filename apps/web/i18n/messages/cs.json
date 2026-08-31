@@ -14,6 +14,7 @@
     "settings": "Nastavení systému",
     "projects": "Projekty",
     "companies": "Firmy",
+    "teams": "Týmy",
     "mcp": "MCP servery",
     "commands": "Příkazy",
     "hooks": "Hooky",
@@ -1472,6 +1473,12 @@
         "none": "Bez firmy",
         "hint": "Napoj projekt na firmu a sdílej její tým, rozpočet a integrace. Projeví se okamžitě."
       },
+      "teamLink": {
+        "title": "Tým",
+        "select": "Napojený tým",
+        "none": "Bez týmu",
+        "hint": "Napoj projekt na tým — vlastníka znalostní báze, kterou projekt čte."
+      },
       "effective": {
         "title": "Efektivní data",
         "fromCompany": "Sloučeno s {name} — vlastní hodnoty projektu mají přednost tam, kde je nastaví obě strany.",
@@ -1549,6 +1556,62 @@
         "placeholder": "Vyber projekt…",
         "confirm": "Propojit",
         "noCandidates": "Žádný jiný projekt k propojení — všechny už patří k této firmě."
+      }
+    }
+  },
+  "teams": {
+    "title": "Týmy",
+    "countSummary": "{count, plural, =0 {žádné týmy} one {# tým} few {# týmy} other {# týmů}} · vlastník znalostní báze mezi firmou a projektem",
+    "addTeam": "Přidat tým",
+    "openAria": "Otevřít {name}",
+    "emptyTitle": "Zatím žádné týmy",
+    "emptyDescription": "Tým je vrstva mezi firmou a projektem — vlastní znalostní bázi, kterou projekty čtou. Přidej první a objeví se tu jako karta.",
+    "emptyHint": "// registr ~/zibby/teams.json",
+    "hasKnowledgeBase": "znalostní báze",
+    "newTeam": "Nový tým",
+    "create": "Vytvořit tým",
+    "save": "Uložit změny",
+    "delete": "Smazat",
+    "deleteTitle": "Smazat tým?",
+    "deleteBody": "Opravdu smazat tým {name}? Projekty na něj odkazující si ponechají neplatné teamId — nic se neztratí.",
+    "fields": {
+      "name": "Název týmu",
+      "namePlaceholder": "Platforma",
+      "desc": "Popis",
+      "descPlaceholder": "Čím se tým zabývá",
+      "company": "Firma",
+      "companyNone": "Bez firmy"
+    },
+    "profile": {
+      "basics": {
+        "title": "Tým",
+        "newHint": "Po uložení týmu nastavíš jeho znalostní bázi."
+      }
+    },
+    "knowledgeBase": {
+      "title": "Znalostní báze",
+      "path": "Cesta k trezoru",
+      "pathPlaceholder": "/Users/…/vault",
+      "pathHint": "Čte se přímo z této cesty na disku — nikdy se nekopíruje do trezoru ZIBBY.",
+      "gitRemote": "Git remote (volitelné)",
+      "gitRemotePlaceholder": "git@github.com:org/repo.git",
+      "readOnlyNote": "Vždy jen ke čtení — ZIBBY do znalostní báze nikdy nezapisuje a toto se nedá vypnout.",
+      "save": "Uložit",
+      "clear": "Odebrat znalostní bázi"
+    },
+    "memberProjects": {
+      "title": "Projekty týmu",
+      "empty": "Zatím na tento tým neodkazuje žádný projekt — nastav ho na detailu projektu.",
+      "addExisting": "Přidat existující projekt",
+      "createNew": "Vytvořit nový projekt",
+      "add": "Přidat projekt",
+      "linkDialog": {
+        "title": "Přidat existující projekt",
+        "subtitle": "propojit s tímto týmem",
+        "selectLabel": "Projekt",
+        "placeholder": "Vyber projekt…",
+        "confirm": "Propojit",
+        "noCandidates": "Žádný jiný projekt k propojení — všechny už patří k tomuto týmu."
       }
     }
   },

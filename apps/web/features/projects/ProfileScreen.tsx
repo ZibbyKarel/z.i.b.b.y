@@ -45,6 +45,7 @@ import {
 } from "./components/ProjectPullRequestsPanel";
 import { ProjectRunSummary } from "./components/ProjectRunSummary";
 import { ProjectSecretsPanel } from "./components/ProjectSecretsPanel";
+import { ProjectTeamPanel } from "./components/ProjectTeamPanel";
 import {
   useCloneProjectMutation,
   useCreateProjectMutation,
@@ -627,6 +628,7 @@ export function ProfileScreen({ projectId }: ProfileScreenProps) {
                   <Stack gap="300">
                     {basicsPanel}
                     <ProjectCompanyPanel companyId={project.companyId} projectId={id} />
+                    <ProjectTeamPanel projectId={id} teamId={project.teamId} />
                     <ProjectRunSummary projectId={id} />
                     <ProjectPullRequestsPanel projectId={id} />
                   </Stack>

@@ -26,6 +26,7 @@ export const NAV_ITEMS = [
   // anywhere, `/archiv` via `ChatTasksPanel`'s own "Archiv" link.
   { id: "projects", glyph: "code", href: "/projects" },
   { id: "companies", glyph: "branch", href: "/companies" },
+  { id: "teams", glyph: "grid", href: "/teams" },
   { id: "agents", glyph: "bot", href: "/agents" },
   { id: "pipelines", glyph: "flow", href: "/pipelines" },
   { id: "automations", glyph: "clock", href: "/automations" },

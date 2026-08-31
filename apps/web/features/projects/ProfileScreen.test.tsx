@@ -80,6 +80,14 @@ vi.mock("../companies", () => ({
   useCompaniesQuery: () => ({ data: companies }),
 }));
 
+// The team selector (`ProjectTeamPanel`) reads the registry to populate its
+// options — its own dedicated tests cover the selector's behavior in isolation
+// (see `ProjectTeamPanel.test.tsx`).
+let teams: { id: string; name: string }[] = [];
+vi.mock("../teams", () => ({
+  useTeamsQuery: () => ({ data: teams }),
+}));
+
 // Individual tests flip this to exercise the clone button's loading state
 // (Phase 98 — the button stays clickable-suppressed via `loading`, never `disabled`).
 let cloneIsPending = false;
@@ -158,6 +166,7 @@ beforeEach(() => {
   searchTab = "";
   searchCompanyId = "";
   companies = [];
+  teams = [];
   projectOverride = {};
   cloneIsPending = false;
   localState = {

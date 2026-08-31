@@ -49,9 +49,14 @@ app/
     │   └── [id]/integrations/[integrationId]/page.tsx  Integration detail (N4h)
     ├── runs/page.tsx       Run history
     ├── settings/page.tsx  Workspace settings
-    └── skills/
-        ├── page.tsx        Skill inventory
-        └── [id]/page.tsx   Skill detail (edit; N4d)
+    ├── skills/
+    │   ├── page.tsx        Skill inventory
+    │   └── [id]/page.tsx   Skill detail (edit; N4d)
+    └── teams/
+        ├── page.tsx        Team catalog
+        ├── new/page.tsx    Create team
+        └── [id]/page.tsx   Team detail (basics, read-only knowledge base,
+                             member projects)
 ```
 
 There is no standalone `/approvals`, `/tasks`, or `/limits` route — those concerns
@@ -252,7 +257,10 @@ features/
 ├── speech/         `speakd` voices/status queries (settings voice picker);
 │                   the synthesize mutation itself stays in `features/chat`
 ├── system/         Runtime system-config surface
-└── tasks/          New task dialog (tabs: Standard task / Loop) + scheduler
+├── tasks/          New task dialog (tabs: Standard task / Loop) + scheduler
+└── teams/          Team catalog — the layer between Company and Project that
+                     owns a read-only knowledge base (`knowledgeBase`); a team
+                     has no people roster or budget of its own (company-only)
 ```
 
 Each feature module follows:
@@ -305,7 +313,7 @@ madge.)
 
 - **Route features** (have a `Screen.tsx` + a segment under `(dashboard)/`):
   agents, automations, commands, companies, gates, hooks, mcp, memory,
-  overview, pipelines, projects, runs, settings, skills (`gates` is
+  overview, pipelines, projects, runs, settings, skills, teams (`gates` is
   route-only, with no nav item).
 - **Shared services** (no `Screen`, consumed by other features / mounted in
   chrome): approvals, chat, goals, health, integrations, limits, notifications,
