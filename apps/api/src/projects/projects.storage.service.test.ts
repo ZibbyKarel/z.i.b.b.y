@@ -73,6 +73,26 @@ describe("ProjectsStorageService", () => {
     });
   });
 
+  describe("teamId link/unlink (Phase 3, team knowledge base)", () => {
+    it("sets teamId via a normal patch", async () => {
+      await service.create(base);
+      const updated = await service.update("media-vault", { teamId: "devrel" });
+      expect(updated.teamId).toBe("devrel");
+    });
+
+    it("clears a linked teamId when the patch sends `null`", async () => {
+      await service.create({ ...base, teamId: "devrel" });
+      const updated = await service.update("media-vault", { teamId: null });
+      expect(updated.teamId).toBeUndefined();
+    });
+
+    it("leaves teamId untouched when the patch omits the key entirely", async () => {
+      await service.create({ ...base, teamId: "devrel" });
+      const updated = await service.update("media-vault", { name: "x" });
+      expect(updated.teamId).toBe("devrel");
+    });
+  });
+
   it("throws when updating or getting a missing project", async () => {
     await expect(service.get("nope")).rejects.toBeInstanceOf(ProjectNotFoundError);
     await expect(service.update("nope", { name: "x" })).rejects.toBeInstanceOf(

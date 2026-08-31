@@ -111,15 +111,20 @@ export class ProjectsStorageService {
     // translated to an explicit-undefined override before parsing; an absent key
     // is left out of the merge entirely so the existing value survives the spread.
     const hasCompanyId = "companyId" in patch;
+    // `teamId: null` is the explicit "unlink the team" signal — distinct from an
+    // ABSENT `teamId` key, which leaves the current link alone (same rationale
+    // as `hasCompanyId` above).
+    const hasTeamId = "teamId" in patch;
     // `logo: null` is the explicit "clear the logo" signal (Phase 113, parity
     // with agents/pipelines' `avatar: null`) — distinct from an absent `logo`
     // key, which leaves the current value alone.
     const hasLogo = "logo" in patch;
-    const { companyId, logo, ...rest } = patch;
+    const { companyId, teamId, logo, ...rest } = patch;
     const merged = ProjectSchema.parse({
       ...existing,
       ...rest,
       ...(hasCompanyId ? { companyId: companyId === null ? undefined : companyId } : {}),
+      ...(hasTeamId ? { teamId: teamId === null ? undefined : teamId } : {}),
       ...(hasLogo ? { logo: logo === null ? undefined : logo } : {}),
       id: existing.id,
     });

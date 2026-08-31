@@ -5,6 +5,8 @@ import {
   mergeBudget,
   mergeIntegrationsByKind,
   mergePeople,
+  resolveEffectiveCompanyId,
+  resolveKnowledgeBase,
   samePerson,
 } from "./resolved-project.helpers";
 
@@ -180,5 +182,60 @@ describe("computeResolvedContext", () => {
     expect(result.people.map((p) => p.id).sort()).toEqual(["alice", "bob"]);
     expect(result.budget).toEqual({ dailyRuns: 3, weeklyRuns: 50 });
     expect(result.integrations.map((i) => i.id).sort()).toEqual(["co-jira", "proj-slack"]);
+  });
+});
+
+const kb = { kind: "vault", path: "/tmp/kb", readOnly: true } as const;
+
+describe("resolveKnowledgeBase", () => {
+  it("returns null when the project has no team", () => {
+    expect(resolveKnowledgeBase({ id: "p", name: "P" }, null)).toBeNull();
+  });
+
+  it("returns null when the team has no knowledge base", () => {
+    expect(
+      resolveKnowledgeBase({ id: "p", name: "P" }, { id: "devrel", name: "DevRel" }),
+    ).toBeNull();
+  });
+
+  it("returns the team's knowledge base", () => {
+    expect(
+      resolveKnowledgeBase(
+        { id: "p", name: "P" },
+        { id: "devrel", name: "DevRel", knowledgeBase: kb },
+      ),
+    ).toEqual(kb);
+  });
+});
+
+describe("resolveEffectiveCompanyId", () => {
+  it("prefers an explicit project link over the team's company", () => {
+    expect(
+      resolveEffectiveCompanyId(
+        { id: "p", name: "P", companyId: "acme" },
+        {
+          id: "devrel",
+          name: "DevRel",
+          companyId: "shoptet",
+        },
+      ),
+    ).toBe("acme");
+  });
+
+  it("falls back to the team's company", () => {
+    expect(
+      resolveEffectiveCompanyId(
+        { id: "p", name: "P" },
+        {
+          id: "devrel",
+          name: "DevRel",
+          companyId: "shoptet",
+        },
+      ),
+    ).toBe("shoptet");
+  });
+
+  it("returns undefined when neither has one", () => {
+    expect(resolveEffectiveCompanyId({ id: "p", name: "P" }, null)).toBeUndefined();
   });
 });

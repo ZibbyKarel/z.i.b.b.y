@@ -1,4 +1,11 @@
-import type { Integration, Project, ProjectBudget, ProjectPerson } from "@zibby/contracts";
+import type {
+  Integration,
+  KnowledgeBaseSource,
+  Project,
+  ProjectBudget,
+  ProjectPerson,
+  Team,
+} from "@zibby/contracts";
 
 /**
  * Pure merge rules behind the resolved-project context (Phase 70 — the read-time
@@ -113,4 +120,34 @@ export function computeResolvedContext(
     budget: mergeBudget(company?.budget, project.budget),
     integrations: mergeIntegrationsByKind(companyIntegrations, projectIntegrations),
   };
+}
+
+/**
+ * Effective company for a project (project → team → company): an explicit
+ * project link stays authoritative; otherwise it is inherited from the
+ * project's team. `team` is `null` for "no team" — no `teamId`, or a dangling
+ * one the caller already resolved to `null` (same tolerance as a dangling
+ * `companyId` elsewhere in this file).
+ */
+export function resolveEffectiveCompanyId(
+  project: Pick<Project, "id" | "name" | "companyId">,
+  team: Team | null,
+): string | undefined {
+  return project.companyId ?? team?.companyId;
+}
+
+/**
+ * Effective knowledge base for a project. v1: the owning team's, or none.
+ * The signature takes the resolved team (not a `teamId`) so a future
+ * project-level or company-level knowledge base can be layered in without
+ * changing call sites.
+ *
+ * `project` is intentionally unused today — it is the documented seam for
+ * that future project-level source, kept rather than deleted.
+ */
+export function resolveKnowledgeBase(
+  _project: Pick<Project, "id" | "name">,
+  team: Team | null,
+): KnowledgeBaseSource | null {
+  return team?.knowledgeBase ?? null;
 }
