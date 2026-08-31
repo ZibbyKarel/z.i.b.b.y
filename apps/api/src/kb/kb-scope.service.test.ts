@@ -215,6 +215,36 @@ describe("KbScopeService", () => {
       expect(roots.map((r) => r.teamId)).toEqual(["devrel"]);
     });
 
+    it("C1: a BARE agent id — a shorter, boundary-aligned prefix of a persisted run id — resolves to NOTHING", async () => {
+      // The vulnerability this pins: agent ids (`architekt`, `koder`, …) are public
+      // constants in the runner, not secrets. Sending the bare id as the header
+      // must NOT prefix-match `${agentId}_${startedMs}_${pid}` — that would let any
+      // run reach whatever team `architekt` last ran a project under, by truncating
+      // its own run id down to the agent id alone. Wired end-to-end (run → project
+      // WITH a team → team WITH a KB) so a vulnerable implementation actually
+      // resolves a non-empty root here instead of failing closed for an unrelated
+      // reason (e.g. a fixture gap) and passing by accident.
+      const scope = build({
+        teams: [{ ...team({ id: "devrel", name: "DevRel" }), knowledgeBase: source("/kb/devrel") }],
+        projects: [project({ id: "proj-devrel", teamId: "devrel" })],
+        agentRuns: [agentRun({ runId: "architekt_1756600000000_5511", project: "proj-devrel" })],
+      });
+      const roots = await scope.rootsForRun("architekt");
+      expect(roots).toEqual([]);
+    });
+
+    it("C1: the intended case still resolves — header `${agentId}_${startedMs}` matches the persisted `_${pid}` remainder", async () => {
+      // The non-regression half of the pair above: the fix must not overcorrect
+      // and reject the legitimate pre-spawn header the run itself sends.
+      const scope = build({
+        teams: [{ ...team({ id: "devrel", name: "DevRel" }), knowledgeBase: source("/kb/devrel") }],
+        projects: [project({ id: "proj-devrel", teamId: "devrel" })],
+        agentRuns: [agentRun({ runId: "architekt_1756600000000_5511", project: "proj-devrel" })],
+      });
+      const roots = await scope.rootsForRun("architekt_1756600000000");
+      expect(roots.map((r) => r.teamId)).toEqual(["devrel"]);
+    });
+
     it("resolves a pipeline run by EXACT match: the header IS the pipelineRunId", async () => {
       const scope = build({
         teams: [{ ...team({ id: "devrel", name: "DevRel" }), knowledgeBase: source("/kb/devrel") }],

@@ -53,12 +53,16 @@ export interface KbRoot {
  * `${agentId}_${startedMs}`, while `RunnerCore` persists
  * `${ownerId}_${startedMs}_${pid}` (the pid is unknowable before the command
  * is built) — built from the SAME `startedMs`, so the persisted id is
- * deterministically `<header>_<pid>`. Resolved by prefix match
- * (`record.runId.startsWith(header + "_")`), safe because the boundary
- * underscore rules out a false match against a different, numerically
- * prefix-colliding agent/start-time. Exact equality is also supported: for a
- * PIPELINE run the header IS `pipelineRunId` outright, and a completed agent
- * run may in principle match exactly too.
+ * deterministically `<header>_<pid>`. Resolved by {@link matchesAgentRunId}:
+ * the boundary underscore alone does NOT rule out a false match — a BARE
+ * `agentId` (a public constant, not a secret) is itself a shorter,
+ * boundary-aligned prefix of `${agentId}_${startedMs}_${pid}`, so a naive
+ * `startsWith(header + "_")` would let a truncated header resolve to
+ * whatever project that agent last ran under. The remainder after the
+ * boundary must additionally be a SINGLE numeric segment (`_${pid}`, never
+ * `_${startedMs}_${pid}`) for the match to count. Exact equality is also
+ * supported: for a PIPELINE run the header IS `pipelineRunId` outright, and
+ * a completed agent run may in principle match exactly too.
  *
  * ## Record → project is a by-reference lookup, not a stored id
  *
@@ -131,7 +135,7 @@ export class KbScopeService {
   /** Resolve a run id (agent prefix-match, or pipeline/agent exact-match) to its project. */
   private async projectForRun(runId: string): Promise<Project | null> {
     const agentRuns = await this.agentRunner.listAll().catch((): AgentRun[] => []);
-    const agentMatch = agentRuns.find((r) => r.runId === runId || r.runId.startsWith(`${runId}_`));
+    const agentMatch = agentRuns.find((r) => matchesAgentRunId(r.runId, runId));
     if (agentMatch) return this.resolveByRef(agentMatch.project);
 
     const pipelineRuns = await this.pipelineRunner.listAll().catch((): PipelineRun[] => []);
@@ -156,4 +160,27 @@ export class KbScopeService {
     const all = await this.projects.list().catch((): Project[] => []);
     return all.find((p) => p.path === projectPath) ?? null;
   }
+}
+
+/**
+ * True when a persisted agent run id matches the `X-Zibby-Run-Id` header — exact
+ * equality, or the header plus exactly one MORE numeric segment (the pid
+ * `RunnerCore` cannot know before spawn: `${header}_${pid}`).
+ *
+ * A plain `record.startsWith(header + "_")` is NOT enough: a bare `agentId`
+ * header (`architekt`, `koder`, … — public constants in the runner, never
+ * secret) is itself a shorter, boundary-aligned prefix of
+ * `${agentId}_${startedMs}_${pid}`, so it would satisfy that check too and
+ * resolve to whatever project that agent last ran under — any run reaching
+ * any other team's knowledge base just by truncating its own run id down to
+ * the bare agent id. Requiring the remainder to be a SINGLE all-digit segment
+ * accepts `<agentId>_<startedMs>` → `_<pid>` (the intended case) while
+ * rejecting `<agentId>` → `_<startedMs>_<pid>` (two segments, and the second
+ * one isn't the pid).
+ */
+function matchesAgentRunId(record: string, header: string): boolean {
+  if (record === header) return true;
+  if (!record.startsWith(`${header}_`)) return false;
+  const rest = record.slice(header.length + 1);
+  return /^\d+$/.test(rest);
 }
