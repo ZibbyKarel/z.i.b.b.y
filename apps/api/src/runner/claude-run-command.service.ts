@@ -691,6 +691,16 @@ export class ClaudeRunCommandService {
  * in-process controller has to remember to register itself for. A malformed or
  * missing URL is conservatively NOT in-process (fails closed: no header, never a
  * leak).
+ *
+ * Residual: `McpServerSchema.url` is a bare `z.string().url()` with no host
+ * restriction, so nothing stops an OPERATOR from registering a genuinely
+ * third-party server at a loopback address (a local proxy, an SSH tunnel) —
+ * such an entry would be (mis)classified as in-process and receive the run-id
+ * header. That requires a deliberate operator action (adding/editing an MCP
+ * server row), not something a remote attacker or a stored credential can
+ * trigger; the loopback test's job is only to separate ZIBBY's OWN seeded
+ * in-process controllers from the remote third-party servers a run is
+ * configured with today, not to authenticate every loopback URL as trustworthy.
  */
 function isInProcessMcpUrl(url: string | undefined): boolean {
   if (!url) return false;

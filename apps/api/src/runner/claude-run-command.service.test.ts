@@ -663,6 +663,96 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     });
   });
 
+  // The four cases below all discriminate the real parsed-hostname check from a
+  // naive `url.includes("localhost")` substring test — every URL below CONTAINS
+  // "localhost" or "127.0.0.1" as a substring, or looks loopback-ish, yet must
+  // NOT be treated as in-process. Without these, a regression to the naive
+  // substring form would pass the three tests above unnoticed (Critical-shaped
+  // defect the task warned about).
+
+  it("does not leak the run id to a look-alike domain (localhost.evil.com)", async () => {
+    const server: McpServer = {
+      id: "lookalike",
+      type: "http",
+      url: "http://localhost.evil.com/mcp",
+      enabled: true,
+      hasCredentials: false,
+    };
+    const svc = makeService([CODER], [], { mcpServers: [server] });
+    const { args } = await svc.buildClaudeCommand({
+      instructions: "x",
+      task: "t",
+      runId: "run-123",
+    });
+    const cfg = JSON.parse(flagValue(args, "--mcp-config") ?? "{}");
+    expect(cfg.mcpServers.lookalike?.headers ?? {}).not.toHaveProperty("X-Zibby-Run-Id");
+  });
+
+  it("does not leak the run id to a look-alike domain (127.0.0.1.evil.com)", async () => {
+    const server: McpServer = {
+      id: "lookalike-ip",
+      type: "http",
+      url: "http://127.0.0.1.evil.com/mcp",
+      enabled: true,
+      hasCredentials: false,
+    };
+    const svc = makeService([CODER], [], { mcpServers: [server] });
+    const { args } = await svc.buildClaudeCommand({
+      instructions: "x",
+      task: "t",
+      runId: "run-123",
+    });
+    const cfg = JSON.parse(flagValue(args, "--mcp-config") ?? "{}");
+    expect(cfg.mcpServers["lookalike-ip"]?.headers ?? {}).not.toHaveProperty("X-Zibby-Run-Id");
+  });
+
+  it("does not leak the run id via a userinfo trick (http://localhost@evil.com/mcp)", async () => {
+    // The hostname here is "evil.com" — "localhost" is userinfo (auth), not the
+    // host. A substring check would wrongly treat this as loopback.
+    const server: McpServer = {
+      id: "userinfo-trick",
+      type: "http",
+      url: "http://localhost@evil.com/mcp",
+      enabled: true,
+      hasCredentials: false,
+    };
+    const svc = makeService([CODER], [], { mcpServers: [server] });
+    const { args } = await svc.buildClaudeCommand({
+      instructions: "x",
+      task: "t",
+      runId: "run-123",
+    });
+    const cfg = JSON.parse(flagValue(args, "--mcp-config") ?? "{}");
+    expect(cfg.mcpServers["userinfo-trick"]?.headers ?? {}).not.toHaveProperty("X-Zibby-Run-Id");
+  });
+
+  it("fails closed (no throw, no header) on a malformed or absent url for an http entry", async () => {
+    const malformed: McpServer = {
+      id: "malformed",
+      type: "http",
+      url: "not a valid url",
+      enabled: true,
+      hasCredentials: false,
+    };
+    const absent: McpServer = {
+      id: "no-url",
+      type: "http",
+      enabled: true,
+      hasCredentials: false,
+    };
+    const svc = makeService([CODER], [], { mcpServers: [malformed, absent] });
+    // Awaiting directly (no try/catch) already asserts "does not throw" — a
+    // rejection here would fail the test.
+    const { args } = await svc.buildClaudeCommand({
+      instructions: "x",
+      task: "t",
+      runId: "run-123",
+    });
+    const cfg = JSON.parse(flagValue(args, "--mcp-config") ?? "{}");
+    expect(cfg.mcpServers.malformed?.headers ?? {}).not.toHaveProperty("X-Zibby-Run-Id");
+    expect(cfg.mcpServers["no-url"]?.headers ?? {}).not.toHaveProperty("X-Zibby-Run-Id");
+  });
+
   it("spills --mcp-config to a 0600 file under systemPromptDir (off argv, secret included)", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "zibby-mcpconfig-"));
     try {

@@ -258,7 +258,7 @@ Key assembled pieces:
   `AgentRunnerService` and `PipelineRunnerService` thread their run's own
   pre-spawn id in), an `X-Zibby-Run-Id` header is added to every http/sse
   server whose `url` resolves to a **loopback host**
-  (`localhost`/`127.0.0.1`/`::1`) — i.e. ZIBBY's own in-process MCP
+  (`localhost`/`127.0.0.1`/`[::1]`) — i.e. ZIBBY's own in-process MCP
   controllers (`zibby-entities`, a future knowledge-base server), never a
   third-party remote server (context7, playwright, …). Task 5 plumbing only —
   nothing reads it yet; Task 7 is where an in-process controller consumes the
