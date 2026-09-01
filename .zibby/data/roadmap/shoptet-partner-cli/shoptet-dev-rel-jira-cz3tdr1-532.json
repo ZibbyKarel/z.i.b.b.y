@@ -1,0 +1,33 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-532",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-520",
+  "name": "`shoptet doctor` command",
+  "description": "Environment sanity check: Node version, config-dir reachability, pinned-pack freshness, autoupdate status + last check. Reports which shop the project targets and whether it matches the declared development shop. Prints the fully resolved configuration with the layer each value came from (flags/env/project/machine/default) — per §5.7, this is what turns \"why is dev pointing at a different shop\" into one command instead of a support conversation.\n\n--report writes a redacted support bundle (must strip shop URLs, cookies, and auth headers before the bundle leaves the machine).\n\nReference: cli-greenfield.md §5.7, §9.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-532",
+    "externalKey": "CZ3TDR1-532",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-532"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-525",
+    "shoptet-dev-rel-jira-cz3tdr1-529",
+    "shoptet-dev-rel-jira-cz3tdr1-531"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-525",
+    "shoptet-dev-rel-jira-cz3tdr1-529",
+    "shoptet-dev-rel-jira-cz3tdr1-531"
+  ],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-08-31T13:05:21.046Z",
+  "updatedAt": "2026-08-31T18:45:38.250Z",
+  "syncedAt": "2026-08-31T18:45:38.250Z"
+}

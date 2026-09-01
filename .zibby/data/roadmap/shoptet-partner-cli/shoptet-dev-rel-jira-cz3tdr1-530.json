@@ -1,0 +1,31 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-530",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-520",
+  "name": "`shoptet validate` command",
+  "description": "Run the same lint + typecheck checks CI will run, locally, against the project's pinned generation/template. Implement the severity policy from §8: deterministic findings (TS typecheck, schema/manifest violations, datalayer fields absent from schema) are errors with a non-zero exit code; findings that depend on platform data that moves under the partner (not present yet in the MVP, but the contract must exist) are warnings with exit code zero.\n\nSupport --strict (promote warnings to errors) and --max-warnings N. Uses the shared Diagnostic contract: { code, severity, file, range, message, docUrl, fixable? }.\n\nReference: cli-greenfield.md §8, §9.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-530",
+    "externalKey": "CZ3TDR1-530",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-530"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-528",
+    "shoptet-dev-rel-jira-cz3tdr1-529"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-528",
+    "shoptet-dev-rel-jira-cz3tdr1-529"
+  ],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-08-31T13:05:21.044Z",
+  "updatedAt": "2026-08-31T18:45:38.244Z",
+  "syncedAt": "2026-08-31T18:45:38.244Z"
+}

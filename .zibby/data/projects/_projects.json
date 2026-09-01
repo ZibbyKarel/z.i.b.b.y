@@ -27,6 +27,7 @@
     "id": "shoptet-partner-cli",
     "name": "Shoptet Partner CLI",
     "category": "Shoptet",
+    "teamId": "devrel",
     "gitRemote": "git@github.com:shoptet/partner-cli.git"
   },
   {
@@ -66,16 +67,8 @@
       ]
     },
     "autonomy_policy": {
-      "can_do_alone": [
-        "reply",
-        "create_task",
-        "summarize"
-      ],
-      "always_ask": [
-        "merge",
-        "deploy",
-        "delete"
-      ],
+      "can_do_alone": ["reply", "create_task", "summarize"],
+      "always_ask": ["merge", "deploy", "delete"],
       "vip_escalation": false,
       "respond_as": "autonomous"
     },

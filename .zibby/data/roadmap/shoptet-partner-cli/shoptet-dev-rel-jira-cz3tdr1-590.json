@@ -1,0 +1,35 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-590",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-592",
+  "name": "shoptet init: add node_modules/ to the scaffolded .gitignore",
+  "description": "## Why\n\n`shoptet init` scaffolds a project that is unambiguously an npm project — `scaffold.ts:80-84` writes a merged `package.json`, and the documented workflow has the partner run an install before `shoptet dev`/`build`. But the `.gitignore` it writes does not ignore `node_modules/`, so a partner who follows the scaffold's own instructions ends up with an npm project whose dependency tree is tracked by git until they notice and fix it themselves.\n\n## What is true today\n\n`packages/create/src/gitignore.ts:31` defines the full set of entries `create` is responsible for:\n\n```\nexport const SHOPTET_GITIGNORE_ENTRIES: readonly string[] = [SHOPTET_GITIGNORE_ENTRY, \"dist/\"];\n// SHOPTET_GITIGNORE_ENTRY === \".shoptet/\"\n```\n\n`node_modules/` is absent **deliberately**, not by oversight. The doc comment at `packages/create/src/gitignore.ts:5-7` states the reasoning:\n\n> `shoptet.lock` and everything npm-tooling-related (`node_modules/`, …) is deliberately _not_ this package's concern — a partner's own project almost always already has an opinion about those, and inventing one here risks fighting it.\n\nand `gitignore.ts:9-16` draws the line it is defending: `dist/` was added (phase-2.1j) precisely _because_ it is this CLI's own build output path, \"a narrower and different obligation than 'guess at a partner's own tooling conventions', which is what the paragraph above still correctly refuses to do for `node_modules/`.\"\n\n**So this issue is a deliberate reversal of a recorded decision, not a bug fix.** It needs an ADR, not just a one-line array edit.\n\n## The counter-argument to weigh\n\nTwo facts push against the original reasoning:\n\n1. The scaffold _itself_ writes `package.json` (`scaffold.ts:80-84`). `node_modules/` is therefore a directory this CLI's own scaffold causes to exist, which is the same test that justified `dist/`.\n2. Every mainstream JS toolchain agrees on the literal string `node_modules/`. Unlike a lint or build-output convention, there is no realistic partner opinion to fight — and `computeGitignoreUpdate`'s existing exact-line negation rule (`!node_modules/`) already gives a partner a documented way to opt out.\n\n## The retroactive-append question\n\n`.gitignore` is **merge**-disposition, not create-only (ADR 0007; `doc/scaffolding.md:181`). Adding an entry to `SHOPTET_GITIGNORE_ENTRIES` means every _existing_ partner project picks the new line up the next time `shoptet init` runs against it — that is the documented upgrade path (`gitignore.ts:76-81`), and it is how `dist/` reached older projects. Decide explicitly whether that retroactive append is wanted here, or whether `node_modules/` should only be written into a freshly created `.gitignore`. The simple option (just extend the array) gets the retroactive behaviour automatically.\n\n## Files in scope\n\n- `packages/create/src/gitignore.ts` — `SHOPTET_GITIGNORE_ENTRIES` (line 31) and the doc comment at lines 1-22, which currently argues the opposite of this change and must be rewritten, not left standing.\n- `packages/create/src/gitignore.test.ts` — many assertions hardcode the exact output string (e.g. lines 12-24, 75-77, 153-177) and use `node_modules/` as the _pre-existing_ content that proves the append path; each will need reworking, and at least one new case should cover `!node_modules/` negation.\n- `packages/create/src/scaffold.test.ts`, `packages/create/src/write-policy.test.ts` — assert scaffolded `.gitignore` contents and the merge/idempotency outcomes.\n- `doc/scaffolding.md:185` (lists the entries) and `:209` (explicitly names `node_modules/` as what this package \"deliberately leaves alone\").\n- `doc/decisions/0007-scaffold-write-policy.md` — its 2026-08-18 amendment (line ~179) repeats the same `node_modules/` carve-out.\n- A new ADR (next free number is **0063**) recording the reversal, the two arguments above, and the retroactive-append decision.\n\n## Acceptance\n\n- A fresh `shoptet init` produces a `.gitignore` containing `node_modules/`.\n- Re-running `init` never duplicates the line, and an exact `!node_modules/` line suppresses the append (consistent with the existing rule).\n- The `gitignore.ts` doc comment, `doc/scaffolding.md`, and ADR 0007's amendment no longer claim `node_modules/` is out of scope.\n- The new ADR lands in the same commit as the code change (CLAUDE.md's docs-with-code rule).",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-590",
+    "externalKey": "CZ3TDR1-590",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-590"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "failed",
+  "enqueuedAt": "2026-08-31T13:05:22.390Z",
+  "runs": [
+    {
+      "taskId": "task_1788181538478_8f6866",
+      "runRef": "delivery_1788181538481",
+      "startedAt": "2026-08-31T13:05:40.354Z",
+      "finishedAt": "2026-08-31T13:06:22.257Z",
+      "outcome": "failed"
+    }
+  ],
+  "lastFailureReason": "1 stages, failed",
+  "syncNotes": [],
+  "createdAt": "2026-08-31T13:05:21.051Z",
+  "updatedAt": "2026-08-31T18:45:38.256Z",
+  "syncedAt": "2026-08-31T18:45:38.256Z"
+}

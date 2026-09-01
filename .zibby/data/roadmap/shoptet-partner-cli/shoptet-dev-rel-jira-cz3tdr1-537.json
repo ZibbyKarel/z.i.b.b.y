@@ -1,0 +1,31 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-537",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-521",
+  "name": "Dev-loop test suite (fixtures + Playwright e2e)",
+  "description": "Fixture corpus of real, recorded shop pages — per template number, per page type, including edge cases (missing marker, duplicated marker, marker inside a comment/script, minified HTML, <base> tag, exotic encodings). Assert: bundle injected exactly once, at the right marker, every other byte unchanged.\n\nRecorded HTTP fixtures including headers: gzip/br/zstd bodies, Set-Cookie with Secure/Domain, redirects with absolute Location, CSP headers, Upgrade-Insecure-Requests, Content-Type variants that must not be intercepted.\n\nDedicated fixtures for the rendered-version bug class: cookie loss across redirects, stale version ids, forced refresh — dev must detect and report, never silently show the wrong thing.\n\nPlaywright end-to-end test against a locally served fixture shop: start dev, load the page, assert the injected script actually executed (a sentinel on window), edit a source file, assert hot-swap without full reload.\n\nReference: cli-greenfield.md §12.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-537",
+    "externalKey": "CZ3TDR1-537",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-537"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-534",
+    "shoptet-dev-rel-jira-cz3tdr1-535"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-534",
+    "shoptet-dev-rel-jira-cz3tdr1-535"
+  ],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-08-31T13:05:21.050Z",
+  "updatedAt": "2026-08-31T18:45:38.255Z",
+  "syncedAt": "2026-08-31T18:45:38.255Z"
+}

@@ -1,0 +1,1 @@
+{"id":"zibby-kb","name":"ZIBBY team knowledge base","desc":"Read-only, team-scoped knowledge-base search/read (search_team_kb, read_team_kb_note) — see docs/api/teams.md.","type":"http","url":"http://localhost:3333/api/kb/mcp","enabled":true}

@@ -1,0 +1,13 @@
+[
+  {
+    "id": "devrel",
+    "name": "DevRel",
+    "companyId": "shoptet",
+    "knowledgeBase": {
+      "kind": "vault",
+      "path": "/Users/zibar/Workspace/devrel-knowledgebase",
+      "gitRemote": "git@github.com:shoptet/devrel-knowledgebase.git",
+      "readOnly": true
+    }
+  }
+]

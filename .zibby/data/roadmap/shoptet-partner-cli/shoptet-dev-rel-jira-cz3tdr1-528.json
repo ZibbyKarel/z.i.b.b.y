@@ -12,7 +12,7 @@
     "externalKey": "CZ3TDR1-528",
     "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-528"
   },
-  "externalLevel": "Úkol",
+  "externalLevel": "Task",
   "attachments": [],
   "dependsOn": [
     "shoptet-dev-rel-jira-cz3tdr1-524"
@@ -20,10 +20,10 @@
   "dependsOnFromSource": [
     "shoptet-dev-rel-jira-cz3tdr1-524"
   ],
-  "lifecycle": "todo",
+  "lifecycle": "done",
   "runs": [],
   "syncNotes": [],
   "createdAt": "2026-07-29T10:56:34.187Z",
-  "updatedAt": "2026-08-01T18:04:57.754Z",
-  "syncedAt": "2026-08-01T18:04:57.754Z"
+  "updatedAt": "2026-08-31T18:45:38.239Z",
+  "syncedAt": "2026-08-31T18:45:38.239Z"
 }

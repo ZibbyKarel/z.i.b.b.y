@@ -11,15 +11,15 @@
     "externalKey": "CZ3TDR1-513",
     "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-513"
   },
-  "externalLevel": "Úkol",
+  "externalLevel": "Task",
   "attachments": [],
   "dependsOn": [],
   "dependsOnFromSource": [],
-  "lifecycle": "failed",
+  "lifecycle": "done",
   "enqueuedAt": "2026-07-29T13:04:27.706Z",
   "runs": [],
   "syncNotes": [],
   "createdAt": "2026-07-29T10:56:34.180Z",
-  "updatedAt": "2026-08-01T18:04:57.741Z",
-  "syncedAt": "2026-08-01T18:04:57.741Z"
+  "updatedAt": "2026-08-31T18:45:38.206Z",
+  "syncedAt": "2026-08-31T18:45:38.206Z"
 }
