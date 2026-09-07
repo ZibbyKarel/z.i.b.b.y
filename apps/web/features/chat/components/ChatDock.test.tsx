@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
 import { renderWithProviders, screen, within } from "../../../test/render";
@@ -31,18 +31,25 @@ vi.mock("../../tasks/mutations/useUploadTaskAttachmentsMutation", () => ({
 vi.mock("../../teams", () => ({
   useTeamsQuery: () => ({ data: [{ id: "devrel", name: "DevRel" }] }),
 }));
-// TODO 9: `CommandLine` now calls `useSkillsQuery()` unconditionally.
+// TODO 9: `CommandLine` now calls `useSkillsQuery()` unconditionally. Shaped like
+// `CommandLine.test.tsx`'s own fixture so a `/`-pick resolves to a real skill.
 vi.mock("../../skills", () => ({
-  useSkillsQuery: () => ({ data: [] }),
+  useSkillsQuery: () => ({
+    data: [{ id: "code-review", name: "Code Review", glyph: "spark", desc: "", file: "" }],
+  }),
 }));
 
 // The dock's own hooks are mocked directly (unit-style — unlike `ChatScreen.test.tsx`,
 // which drives the real `useChatStream`/`useVoiceMode` through a mocked `EventSource`/
 // `SpeechRecognition`) so each test controls exactly the stream/voice state it needs.
 const sendMutate = vi.fn();
-const sendState = { isPending: false };
+const sendState = { isPending: false, error: null as Error | null };
 vi.mock("../mutations/useSendChatMessageMutation", () => ({
-  useSendChatMessageMutation: () => ({ mutate: sendMutate, isPending: sendState.isPending }),
+  useSendChatMessageMutation: () => ({
+    mutate: sendMutate,
+    isPending: sendState.isPending,
+    error: sendState.error,
+  }),
 }));
 
 const streamState = {
@@ -235,6 +242,69 @@ describe("ChatDock", () => {
       const secondCall = sendMutate.mock.calls[1]?.[0] as { body: Record<string, unknown> };
       expect(secondCall.body).not.toHaveProperty("teamId");
       expect(secondCall.body.text).toBe("druhý tah");
+    });
+  });
+
+  describe("TODO 9 — a `/`-picked skill reaches the send mutation body", () => {
+    afterEach(() => {
+      sendState.error = null;
+    });
+
+    it("sends the `/`-picked skill as body.skillId", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatDockHarness />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "/Code");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-code-review`));
+      await user.type(input, "projdi to");
+      await user.click(screen.getByTestId(ChatDockTestId.Send));
+
+      expect(sendMutate).toHaveBeenCalledWith({
+        body: {
+          conversationId: "c1",
+          text: "/Code Review projdi to",
+          skillId: "code-review",
+        },
+      });
+    });
+
+    it('omits skillId entirely — not "", not null — when no skill is picked', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatDockHarness />);
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "ahoj");
+      await user.click(screen.getByTestId(ChatDockTestId.Send));
+
+      // The cast mirrors the file's existing style (:211, :231) — `noUncheckedIndexedAccess`
+      // makes the indexed read optional, and asserting through a typed local keeps a
+      // never-called mock a clear failure rather than a confusing `undefined` read.
+      const call = sendMutate.mock.calls[0]?.[0] as { body: Record<string, unknown> };
+      expect(call.body).not.toHaveProperty("skillId");
+    });
+
+    it("does not leak a picked skill onto the next turn", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatDockHarness />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "/Code");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-code-review`));
+      await user.type(input, "první tah");
+      await user.click(screen.getByTestId(ChatDockTestId.Send));
+
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "druhý tah");
+      await user.click(screen.getByTestId(ChatDockTestId.Send));
+
+      const secondCall = sendMutate.mock.calls[1]?.[0] as { body: Record<string, unknown> };
+      expect(secondCall.body).not.toHaveProperty("skillId");
+    });
+
+    it("surfaces a rejected send in the transcript instead of swallowing it", async () => {
+      sendState.error = new Error("404");
+      renderWithProviders(<ChatDockHarness />);
+
+      // One plain sentence: the assistant branch renders through `MarkdownProse`
+      // (`ChatMessage.tsx:182`), so the copy must stay free of markdown-significant
+      // characters for this text match to hold.
+      expect(await screen.findByText("Zprávu se nepodařilo odeslat.")).toBeInTheDocument();
     });
   });
 });

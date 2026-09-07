@@ -1835,7 +1835,8 @@
     "composer": {
       "label": "Message",
       "placeholder": "Message ZIBBY… (Enter to send, Shift+Enter for a newline)",
-      "send": "Send"
+      "send": "Send",
+      "sendError": "The message couldn't be sent."
     },
     "mention": {
       "ariaLabel": "Search to mention",

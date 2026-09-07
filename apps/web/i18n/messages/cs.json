@@ -1835,7 +1835,8 @@
     "composer": {
       "label": "Zpráva",
       "placeholder": "Napište ZIBBY… (Enter odešle, Shift+Enter nový řádek)",
-      "send": "Odeslat"
+      "send": "Odeslat",
+      "sendError": "Zprávu se nepodařilo odeslat."
     },
     "mention": {
       "ariaLabel": "Vyhledávání k oslovení",
