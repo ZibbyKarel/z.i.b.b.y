@@ -10,12 +10,35 @@ of the conversation.
 
 ## Endpoints
 
-| Method       | Path                                   | Description                                                                                                                                                                                                                               |
-| ------------ | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST`       | `/api/chat/messages`                   | Adds the operator's turn and starts the streaming reply. Body `{ conversationId?, text }` → `{ conversationId, turnId }` (returns immediately; tokens arrive over SSE).                                                                   |
-| `GET`        | `/api/chat/transcript?conversationId=` | Plain read of the conversation transcript (`{ conversationId, sessionId, messages }`). Without `conversationId` → the active thread.                                                                                                      |
-| `GET`        | `/api/chat/stream?conversationId=`     | **SSE** (raw `@Sse()`, outside ts-rest) — live tokens. Each `data` is a JSON `ChatTurnEvent`.                                                                                                                                             |
-| `POST`/`GET` | `/api/chat/mcp`                        | In-process **MCP server** (Streamable HTTP) exposing ZIBBY's tools. Called by the spawned `claude` process, not the frontend — gated by `ChatMcpAuthGuard` (see below); `GET` is an unguarded 405 (no server-initiated streaming needed). |
+| Method       | Path                                   | Description                                                                                                                                                                                                                                              |
+| ------------ | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST`       | `/api/chat/messages`                   | Adds the operator's turn and starts the streaming reply. Body `{ conversationId?, text, target?, teamId?, skillId? }` → `{ conversationId, turnId }` (returns immediately; tokens arrive over SSE). An unknown `skillId` → 404 (see _Three axes_ below). |
+| `GET`        | `/api/chat/transcript?conversationId=` | Plain read of the conversation transcript (`{ conversationId, sessionId, messages }`). Without `conversationId` → the active thread.                                                                                                                     |
+| `GET`        | `/api/chat/stream?conversationId=`     | **SSE** (raw `@Sse()`, outside ts-rest) — live tokens. Each `data` is a JSON `ChatTurnEvent`.                                                                                                                                                            |
+| `POST`/`GET` | `/api/chat/mcp`                        | In-process **MCP server** (Streamable HTTP) exposing ZIBBY's tools. Called by the spawned `claude` process, not the frontend — gated by `ChatMcpAuthGuard` (see below); `GET` is an unguarded 405 (no server-initiated streaming needed).                |
+
+### Three axes on one turn
+
+Beside `text`, a turn may carry three optional fields. They are deliberately
+separate rather than one "context" object, because each answers a different
+question and any combination is valid:
+
+| Field     | Answers                                           | Effect                                                                                                                                                                                                     |
+| --------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `target`  | WHO a dispatched `create_task` runs as            | Held in the tool-result registry before the turn starts, so `create_task` reads it as an explicit target and skips the classifier ("explicit target overrides the classifier"). Also stated in the prompt. |
+| `teamId`  | WHAT knowledge base the turn may read             | Rides as `?teamId=` on the `zibby-kb` MCP server's url, capping what `KbScopeService.rootsForChat` will resolve. Absent = every team that has a KB.                                                        |
+| `skillId` | WHICH ZIBBY skill's instructions the turn follows | Resolved against `SkillsStorageService`; the skill's `instructions` are appended to `--append-system-prompt` after the persona.                                                                            |
+
+`skillId` reaches the model through the prompt rather than a tool because the
+chat turn runs with `--tools ""` and `--setting-sources ""` — there is no native
+Skill tool to invoke, so the prompt is the mechanism. A skill AUGMENTS the
+answer/ask/act governor; it never replaces it.
+
+An unknown or unsafe `skillId` is a **404**, resolved BEFORE the conversation is
+created and before the operator's message is appended — a turn never starts with
+a silently dropped skill, and a bad id leaves no orphan message in the
+transcript. `target` and `teamId` have no such failure mode: neither is looked up
+at send time.
 
 ### `ChatTurnEvent` (SSE payload)
 
