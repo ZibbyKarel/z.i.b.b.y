@@ -29,6 +29,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAgentsQuery } from "../../../agents";
 import { usePipelinesQuery } from "../../../pipelines";
+import { useSkillsQuery } from "../../../skills";
 import { useSubsystemsQuery } from "../../../subsystems/queries/useSubsystemsQuery";
 import { useTeamsQuery } from "../../../teams";
 import { useUploadTaskAttachmentsMutation } from "../../mutations/useUploadTaskAttachmentsMutation";
@@ -138,6 +139,13 @@ export interface CommandLineProps {
    * opens the picker with no rows, exactly like an unmatched `@` query today.
    */
   allowSkillMentions?: boolean;
+  /**
+   * TODO 9: mirrors the picked `/`-mention SKILL id (or its clearing) up to the
+   * parent. A third independent axis beside {@link CommandLineProps.onTargetChange}
+   * (WHO runs it) and {@link CommandLineProps.onTeamChange} (WHAT it may read):
+   * picking a skill touches neither, and a draft may carry any combination.
+   */
+  onSkillChange?: (skillId: string | undefined) => void;
   /** Mirrors the attached file set up — needed by a parent whose OWN submit path
    *  (e.g. a synthesized loop) must carry the same attachment set. */
   onAttachmentsChange?: (set: TaskAttachmentSet) => void;
@@ -227,7 +235,7 @@ interface Mention {
  * picking it sets the draft's team tag instead (see `pickMentionResult`'s
  * branch). */
 interface MentionResult {
-  kind: "agent" | "pipeline" | "subsystem" | "team";
+  kind: "agent" | "pipeline" | "subsystem" | "team" | "skill";
   id: string;
   name: string;
   glyph: IconName;
@@ -479,6 +487,7 @@ export function CommandLine({
   onTeamChange,
   allowTeamMentions = false,
   allowSkillMentions = false,
+  onSkillChange,
   onAttachmentsChange,
   onSubmit,
   resetOnSubmit = true,
@@ -510,6 +519,10 @@ export function CommandLine({
   // "still referenced in the text" reconciliation `target` gets (below) applies
   // to a team tag too.
   const [team, setTeam] = useState<{ id: string; name: string } | undefined>(undefined);
+  // TODO 9: the picked `/`-mention SKILL — independent of both `target` and
+  // `team` (see `onSkillChange`'s docblock). Keeps the name alongside the id so
+  // the same "still referenced in the text" reconciliation applies.
+  const [skill, setSkill] = useState<{ id: string; name: string } | undefined>(undefined);
   const [attachments, setAttachments] = useState<TaskAttachmentSet>({ files: [] });
   const [attachError, setAttachError] = useState<string | null>(null);
   const hasDraftRef = useRef(false);
@@ -541,6 +554,7 @@ export function CommandLine({
   const { data: pipelines = [] } = usePipelinesQuery();
   const { data: subsystems = [] } = useSubsystemsQuery();
   const { data: teams = [] } = useTeamsQuery();
+  const { data: skills = [] } = useSkillsQuery();
 
   const upload = useUploadTaskAttachmentsMutation();
 
@@ -657,6 +671,10 @@ export function CommandLine({
         setTeam(undefined);
         onTeamChange?.(undefined);
       }
+      if (skill) {
+        setSkill(undefined);
+        onSkillChange?.(undefined);
+      }
       if (attachmentPayload) {
         setAttachments({ files: [] });
         onAttachmentsChange?.({ files: [] });
@@ -735,6 +753,12 @@ export function CommandLine({
       setTeam(undefined);
       onTeamChange?.(undefined);
     }
+    // TODO 9: the picked skill reconciles the SAME way — its `/Name` deleted out
+    // of the text clears it, independent of `target` and `team`.
+    if (skill && !hasMentionFor(nextValue, skill.name)) {
+      setSkill(undefined);
+      onSkillChange?.(undefined);
+    }
     syncMention(e.target);
   }
 
@@ -805,6 +829,12 @@ export function CommandLine({
       // see `onTeamChange`'s docblock).
       setTeam({ id: result.id, name: result.name });
       onTeamChange?.(result.id);
+    } else if (result.kind === "skill") {
+      // TODO 9: like a team, a skill is NOT a routing destination — this branches
+      // before any `TaskTarget` is built so a skill pick never touches
+      // `target`/`onTargetChange`.
+      setSkill({ id: result.id, name: result.name });
+      onSkillChange?.(result.id);
     } else {
       // A per-kind switch (not a generic `{ kind: result.kind, ... }` object) so each
       // branch's literal `kind` matches `TaskTarget`'s properly-distributed union —
@@ -899,11 +929,20 @@ export function CommandLine({
   const mentionResults = useMemo<MentionResult[]>(() => {
     if (!mention) return [];
 
-    // `/` — the skill trigger. This task only wires the trigger and its gate;
-    // the `skill` kind (and its rows) lands in the next task. An explicit empty
-    // branch (rather than falling through below) keeps `/query` from listing
-    // agents/pipelines/subsystems in the meantime.
-    if (mention.trigger === "/") return [];
+    // `/` — the skill trigger. A skill resolves to neither a `TaskTarget` nor a KB
+    // scope: it decides WHICH instructions the turn follows.
+    if (mention.trigger === "/") {
+      if (!allowSkillMentions) return [];
+      return skills
+        .filter((s) => matchesQuery(mention.query, s.name, s.id))
+        .map((s) => ({
+          kind: "skill" as const,
+          id: s.id,
+          name: s.name,
+          glyph: s.glyph,
+        }))
+        .slice(0, MENTION_MAX_ROWS);
+    }
 
     // `#` — the KB-scope trigger. A team resolves to a scope tag, never a
     // `TaskTarget` (see `pickMentionResult`'s branch); `"brain"` is the app's
@@ -948,7 +987,16 @@ export function CommandLine({
         color: s.color,
       }));
     return [...agentHits, ...pipelineHits, ...subsystemHits].slice(0, MENTION_MAX_ROWS);
-  }, [mention, agents, pipelines, rosterSubsystems, teams, allowTeamMentions]);
+  }, [
+    mention,
+    agents,
+    pipelines,
+    rosterSubsystems,
+    teams,
+    allowTeamMentions,
+    skills,
+    allowSkillMentions,
+  ]);
   // Clamp at read time so a result list that shrank between renders never
   // leaves the keyboard highlight out of range.
   const activeMentionIndex =
@@ -1197,15 +1245,21 @@ export function CommandLine({
                                   ? "accent"
                                   : result.kind === "pipeline"
                                     ? "push"
-                                    : // Fix round 2: a team row is the ONLY remaining
-                                      // kind reaching this branch (subsystem renders its
-                                      // own colored-dot row above, never a `Tag`) — `"send"`
-                                      // is an existing `TagTone` unused elsewhere in this
-                                      // dropdown (and, per a repo-wide check, unused
-                                      // anywhere else in `apps/web`), so a team reads as
-                                      // its own thing rather than folding into the
-                                      // catch-all `"neutral"` a future 5th kind might reuse.
-                                      "send"
+                                    : result.kind === "skill"
+                                      ? // TODO 9: `"run"` — an existing `TagTone`
+                                        // unused elsewhere in this dropdown, and the
+                                        // one whose meaning ("running") matches what
+                                        // `/` does. Keeps every kind visually distinct.
+                                        "run"
+                                      : // Fix round 2: a team row is the only remaining
+                                        // kind reaching this branch (subsystem renders its
+                                        // own colored-dot row above, never a `Tag`) — `"send"`
+                                        // is an existing `TagTone` unused elsewhere in this
+                                        // dropdown (and, per a repo-wide check, unused
+                                        // anywhere else in `apps/web`), so a team reads as
+                                        // its own thing rather than folding into the
+                                        // catch-all `"neutral"` a future 5th kind might reuse.
+                                        "send"
                               }
                             >
                               {result.name}

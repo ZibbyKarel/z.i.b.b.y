@@ -31,6 +31,10 @@ vi.mock("../../tasks/mutations/useUploadTaskAttachmentsMutation", () => ({
 vi.mock("../../teams", () => ({
   useTeamsQuery: () => ({ data: [{ id: "devrel", name: "DevRel" }] }),
 }));
+// TODO 9: `CommandLine` now calls `useSkillsQuery()` unconditionally.
+vi.mock("../../skills", () => ({
+  useSkillsQuery: () => ({ data: [] }),
+}));
 
 // The dock's own hooks are mocked directly (unit-style — unlike `ChatScreen.test.tsx`,
 // which drives the real `useChatStream`/`useVoiceMode` through a mocked `EventSource`/

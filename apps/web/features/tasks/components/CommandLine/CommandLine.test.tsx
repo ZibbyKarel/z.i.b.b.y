@@ -60,6 +60,17 @@ vi.mock("../../../teams", () => ({
   }),
 }));
 
+// TODO 9: the `/` trigger's source — the ZIBBY skill catalog. Shaped like
+// `useSkillsQuery`'s domain `Skill` (name and glyph always present).
+vi.mock("../../../skills", () => ({
+  useSkillsQuery: () => ({
+    data: [
+      { id: "code-review", name: "Code Review", glyph: "spark", desc: "", file: "" },
+      { id: "brainstorm", name: "Brainstorm", glyph: "spark", desc: "", file: "" },
+    ],
+  }),
+}));
+
 const uploadMutateAsync = vi.fn().mockResolvedValue({
   attachmentSetId: "set_1",
   files: [{ name: "a.txt", size: 2 }],
@@ -804,6 +815,118 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       render(<CommandLine attachIcon="pin" onSubmit={vi.fn()} />);
       const svg = screen.getByTestId(CommandLineTestId.Attach).querySelector("svg");
       expect(svg?.innerHTML).not.toContain('d="M12 5v14M5 12h14"');
+    });
+  });
+
+  describe("TODO 9 — `/` picks a ZIBBY skill, never a routing target", () => {
+    it("lists skills under `/` and filters them live", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine allowSkillMentions onSubmit={vi.fn()} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+
+      await user.type(input, "/");
+      expect(
+        screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-code-review`),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-brainstorm`),
+      ).toBeInTheDocument();
+
+      await user.type(input, "brain");
+      expect(
+        screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-brainstorm`),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId(`${CommandLineTestId.MentionItem}-skill-code-review`),
+      ).not.toBeInTheDocument();
+    });
+
+    it("opens no picker at all on `/` when `allowSkillMentions` is left at its (opt-in) default", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine onSubmit={vi.fn()} />);
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "/");
+
+      expect(screen.queryByTestId(CommandLineTestId.MentionMenu)).not.toBeInTheDocument();
+    });
+
+    it("picking a skill inserts the inline /Name and calls onSkillChange — onTargetChange and onTeamChange never fire", async () => {
+      const onSkillChange = vi.fn();
+      const onTargetChange = vi.fn();
+      const onTeamChange = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <CommandLine
+          allowSkillMentions
+          allowTeamMentions
+          onSkillChange={onSkillChange}
+          onSubmit={vi.fn()}
+          onTargetChange={onTargetChange}
+          onTeamChange={onTeamChange}
+        />,
+      );
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "/Code");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-code-review`));
+
+      expect(input).toHaveValue("/Code Review ");
+      expect(onSkillChange).toHaveBeenCalledWith("code-review");
+      expect(onTargetChange).not.toHaveBeenCalled();
+      expect(onTeamChange).not.toHaveBeenCalled();
+    });
+
+    it("submits with no target when only a skill was picked", async () => {
+      const onSubmit = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine allowSkillMentions onSubmit={onSubmit} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "/Code");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-code-review`));
+      await user.type(input, "projdi ten diff");
+      await user.click(screen.getByTestId(CommandLineTestId.Send));
+
+      expect(onSubmit).toHaveBeenCalledWith("/Code Review projdi ten diff", undefined, undefined);
+    });
+
+    it("deleting the /Name out of the text clears the picked skill", async () => {
+      const onSkillChange = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine allowSkillMentions onSkillChange={onSkillChange} onSubmit={vi.fn()} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "/Code");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-code-review`));
+      onSkillChange.mockClear();
+
+      await user.clear(input);
+
+      expect(onSkillChange).toHaveBeenCalledWith(undefined);
+    });
+
+    it("clears the picked skill after a submit that resets the draft, so it never leaks onto the next turn", async () => {
+      const onSkillChange = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine allowSkillMentions onSkillChange={onSkillChange} onSubmit={vi.fn()} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "/Code");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-code-review`));
+      await user.type(input, "projdi to");
+      onSkillChange.mockClear();
+      await user.click(screen.getByTestId(CommandLineTestId.Send));
+
+      expect(onSkillChange).toHaveBeenLastCalledWith(undefined);
+    });
+
+    it("gives the skill row a tone distinct from every other kind in the picker", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine allowSkillMentions onSubmit={vi.fn()} />);
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "/");
+
+      const skillTag = within(
+        screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-code-review`),
+      ).getByTestId(TagTestId.Root);
+      expect(skillTag).toHaveClass("text-run");
+      expect(skillTag).not.toHaveClass("text-accent");
+      expect(skillTag).not.toHaveClass("text-risk-push");
+      expect(skillTag).not.toHaveClass("text-risk-send");
     });
   });
 });

@@ -34,6 +34,10 @@ vi.mock("../../../subsystems/queries/useSubsystemsQuery", () => ({
 vi.mock("../../../teams", () => ({
   useTeamsQuery: () => ({ data: [{ id: "devrel", name: "DevRel" }] }),
 }));
+// TODO 9: `CommandLine` now calls `useSkillsQuery()` unconditionally.
+vi.mock("../../../skills", () => ({
+  useSkillsQuery: () => ({ data: [] }),
+}));
 vi.mock("../../../projects/queries/useProjectsQuery", () => ({
   useProjectsQuery: () => ({
     data: [{ id: "alpha", name: "Alpha", path: "/Users/zibby/Projects/alpha" }],

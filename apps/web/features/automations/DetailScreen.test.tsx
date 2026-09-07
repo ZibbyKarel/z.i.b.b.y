@@ -93,6 +93,10 @@ vi.mock("../tasks/mutations/useUploadTaskAttachmentsMutation", () => ({
 vi.mock("../teams", () => ({
   useTeamsQuery: () => ({ data: [{ id: "devrel", name: "DevRel" }] }),
 }));
+// TODO 9: `CommandLine` now calls `useSkillsQuery()` unconditionally.
+vi.mock("../skills", () => ({
+  useSkillsQuery: () => ({ data: [] }),
+}));
 
 describe("automations DetailScreen (N4f grammar)", () => {
   beforeEach(() => {
