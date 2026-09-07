@@ -107,3 +107,25 @@ describe("SendChatMessageBodySchema.teamId (Task 8 — tag a team on a chat turn
     expect(TaskTargetSchema.safeParse({ kind: "team", id: "devrel" }).success).toBe(false);
   });
 });
+
+describe("SendChatMessageBodySchema.skillId (TODO 9 — the `/` trigger picks a skill)", () => {
+  it("carries skillId alongside a target and a teamId", () => {
+    const body = SendChatMessageBodySchema.parse({
+      text: "shrň to",
+      target: { kind: "agent", id: "builder", name: "Builder", glyph: "hammer" },
+      teamId: "devrel",
+      skillId: "code-review",
+    });
+    expect(body.skillId).toBe("code-review");
+  });
+
+  it("stays valid with no skillId (back-compatible)", () => {
+    const body = SendChatMessageBodySchema.parse({ text: "x" });
+    expect(body.skillId).toBeUndefined();
+  });
+
+  it("rejects a skillId that isn't a valid filename-safe id — proves it's SkillIdSchema, not a bare string", () => {
+    const parsed = SendChatMessageBodySchema.safeParse({ text: "x", skillId: "../etc/passwd" });
+    expect(parsed.success).toBe(false);
+  });
+});

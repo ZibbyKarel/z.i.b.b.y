@@ -29,6 +29,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAgentsQuery } from "../../../agents";
 import { usePipelinesQuery } from "../../../pipelines";
+import { useSkillsQuery } from "../../../skills";
 import { useSubsystemsQuery } from "../../../subsystems/queries/useSubsystemsQuery";
 import { useTeamsQuery } from "../../../teams";
 import { useUploadTaskAttachmentsMutation } from "../../mutations/useUploadTaskAttachmentsMutation";
@@ -105,29 +106,46 @@ export interface CommandLineProps {
   /** Mirrors the picked @-mention target (or its clearing) up to the parent. */
   onTargetChange?: (target: TaskTarget | undefined) => void;
   /**
-   * Mirrors the picked @-mention TEAM tag (or its clearing) up to the parent —
+   * Mirrors the picked `#`-mention TEAM tag (or its clearing) up to the parent —
    * Task 8. A team answers WHAT knowledge base a turn can see, never WHO runs
    * it: picking a team row never touches {@link CommandLineProps.onTargetChange}
-   * and picking a target never touches this — the two @-mention picks are
-   * independent (a draft may carry both, either, or neither).
+   * and picking a target never touches this — the `@`-target and `#`-team picks
+   * are independent (a draft may carry both, either, or neither).
    */
   onTeamChange?: (teamId: string | undefined) => void;
   /**
-   * Task 9b, fix round: whether a team can be picked as an `@`-mention source at
-   * all — default **`false`**, opt-IN. Offering the mention only does something
-   * real on the chat path (`ChatDock`, which passes `true` explicitly): a tagged
-   * team there genuinely narrows the KB end-to-end via `onTeamChange`. Every task
-   * path — `TaskCommandLine`, and the automations composers
-   * (`AutomationFormDialog`, the `DetailScreen` task-edit surface) — passes `false`
-   * explicitly rather than relying on the default, per the rule below: a team tagged
-   * on a task doesn't reach a run yet (needs new
-   * fields on `PipelineRunSchema`/`GoalRunSchema`/`ScheduledTaskSchema` — see
-   * `docs/api/teams.md`), so offering the mention there would promise a scope that
-   * silently does nothing. The default is opt-in (not opt-out) precisely so a
-   * FUTURE caller that forgets this prop is safe by default, rather than silently
-   * surfacing a mention it can't honor — every call site's intent must be explicit.
+   * TODO 9: whether the `#` trigger — the team/KB-scope picker — is live at all.
+   * Default **`false`**, opt-IN, and a disabled trigger opens no picker at all
+   * rather than an empty one. Offering it only does something real on the chat
+   * path (`ChatDock`, which passes `true` explicitly): a tagged team there
+   * genuinely narrows the KB end-to-end via `onTeamChange`. Every task path —
+   * `TaskCommandLine`, and the automations composers (`AutomationFormDialog`, the
+   * `DetailScreen` task-edit surface) — passes `false` explicitly rather than
+   * relying on the default, per the rule this prop exists for: a team tagged on a
+   * task doesn't reach a run yet (needs new fields on
+   * `PipelineRunSchema`/`GoalRunSchema`/`ScheduledTaskSchema` — see
+   * `docs/api/teams.md`), so offering the trigger there would promise a scope
+   * that silently does nothing. The default is opt-in (not opt-out) precisely so
+   * a FUTURE caller that forgets this prop is safe by default — every call site's
+   * intent must be explicit.
    */
   allowTeamMentions?: boolean;
+  /**
+   * TODO 9: whether the `/` trigger — the ZIBBY-skill picker — is live at all.
+   * Default **`false`**, opt-IN, mirroring `allowTeamMentions`' rule above: a
+   * disabled trigger opens no picker at all rather than an empty one. This task
+   * only wires the trigger's gate — the `/` results source (a `skill` kind
+   * resolving to a skill id) lands in the next task; until then an enabled `/`
+   * opens the picker with no rows, exactly like an unmatched `@` query today.
+   */
+  allowSkillMentions?: boolean;
+  /**
+   * TODO 9: mirrors the picked `/`-mention SKILL id (or its clearing) up to the
+   * parent. A third independent axis beside {@link CommandLineProps.onTargetChange}
+   * (WHO runs it) and {@link CommandLineProps.onTeamChange} (WHAT it may read):
+   * picking a skill touches neither, and a draft may carry any combination.
+   */
+  onSkillChange?: (skillId: string | undefined) => void;
   /** Mirrors the attached file set up — needed by a parent whose OWN submit path
    *  (e.g. a synthesized loop) must carry the same attachment set. */
   onAttachmentsChange?: (set: TaskAttachmentSet) => void;
@@ -190,9 +208,20 @@ export interface CommandLineProps {
   renderTrailing?: (api: { canSubmit: boolean; submit: () => void }) => ReactNode;
 }
 
-/** An in-progress `@query` the caret is currently sitting inside — `start` is the
- * index of the `@` itself, so `text.slice(start, caret)` is `@query`. */
+/**
+ * The composer's three triggers. Each answers a different question, which is why
+ * they are separate characters rather than four kinds inside one list:
+ * `@` = WHO runs the turn (agent/pipeline/subsystem → a `TaskTarget`),
+ * `/` = WHICH ZIBBY skill it runs (TODO 9, wired in the next task),
+ * `#` = WHAT knowledge base it may read (team → a scope tag).
+ */
+export type MentionTrigger = "@" | "/" | "#";
+
+/** An in-progress `<trigger>query` the caret is currently sitting inside —
+ * `start` is the index of the trigger char itself, so
+ * `text.slice(start, caret)` is `<trigger>query`. */
 interface Mention {
+  trigger: MentionTrigger;
   query: string;
   start: number;
 }
@@ -202,34 +231,51 @@ interface Mention {
  * `color` is set only for a `subsystem` row — the mention list's rendering swaps
  * the usual `Tag` glyph for a dot tinted with the subsystem's own brand color
  * (Phase 91), matching `PipelineOwnerChip`'s established "colored dot" pattern.
- * A `team` row (Task 8) resolves to NO `TaskTarget` at all — picking it sets
- * the draft's team tag instead (see `pickMentionResult`'s branch). */
+ * A `team` row (a `#`-mention, Task 8) resolves to NO `TaskTarget` at all —
+ * picking it sets the draft's team tag instead (see `pickMentionResult`'s
+ * branch). */
 interface MentionResult {
-  kind: "agent" | "pipeline" | "subsystem" | "team";
+  kind: "agent" | "pipeline" | "subsystem" | "team" | "skill";
   id: string;
   name: string;
   glyph: IconName;
   color?: string;
 }
 
-/** Matches an in-progress `@query` immediately before the caret — an `@` followed
- * by word/`.`/`-` characters, anchored at the caret (`$`). Ported verbatim from
- * the velin-b design reference's `checkMention`. */
-const MENTION_QUERY_RE = /@([\w.-]*)$/;
+/** Every live trigger char, in hint order. The single source of truth for what
+ *  counts as a trigger — `MENTION_QUERY_RE`/`MENTION_RE` encode the same set as
+ *  a character class, and `hasMentionFor` iterates this. */
+const MENTION_TRIGGERS = ["@", "/", "#"] as const;
+
+/**
+ * Matches an in-progress `<trigger>query` immediately before the caret. The
+ * trigger only counts at the start of the text or right after whitespace — that
+ * boundary is load-bearing now that `/` and `#` are triggers: without it a
+ * MID-WORD trigger (the `/` in `apps/web`) would open a picker on every
+ * keystroke. It does NOT stop a trigger that starts a word — `co je v /tmp` or
+ * `use #f97316` still opens a (typically empty) picker; that case is instead
+ * handled by `handleKeyDown` falling through to submit when no row is active.
+ */
+const MENTION_QUERY_RE = /(?:^|\s)([@/#])([\w.-]*)$/;
 
 /** Keys the mention dropdown's own keyboard nav fully owns while open — skipped
  * by the keyup re-scan below so closing (Escape) or navigating (Arrow/Enter)
  * never immediately reopens the panel from the unchanged caret position. */
 const MENTION_NAV_KEYS = new Set(["ArrowUp", "ArrowDown", "Enter", "Escape"]);
 
+/** Runaway guard on one picker's row count — `MenuSurface`'s own `scroll` +
+ *  `maxHeight` is what keeps the panel inside the viewport. */
+const MENTION_MAX_ROWS = 50;
+
 /** Re-derives the in-progress mention (or `null`) from the text up to the caret —
  * called on every change/click/keyup so the dropdown tracks the caret live, never
- * just the moment `@` was typed. */
+ * just the moment the trigger was typed. */
 function checkMention(text: string, caret: number): Mention | null {
-  const before = text.slice(0, caret);
-  const match = MENTION_QUERY_RE.exec(before);
+  const match = MENTION_QUERY_RE.exec(text.slice(0, caret));
   if (!match) return null;
-  return { query: (match[1] ?? "").toLowerCase(), start: caret - match[0].length };
+  const trigger = match[1] as MentionTrigger;
+  const raw = match[2] ?? "";
+  return { trigger, query: raw.toLowerCase(), start: caret - trigger.length - raw.length };
 }
 
 /** Case-insensitive substring match on a target's display name or id. */
@@ -247,13 +293,20 @@ function computeRows(text: string, min: number, max: number): number {
   return Math.min(max, Math.max(min, lines));
 }
 
-/** Every `@token` occurrence in the text, verbatim (no spaces) — matches how the
- * mention picker inserts `@Name ` and how a dropped file inserts `@filename`. */
-const MENTION_RE = /@\S+/g;
+/** Every `<trigger>token` occurrence in the text, verbatim (no spaces) — same
+ * start-of-text-or-whitespace boundary `MENTION_QUERY_RE` uses, so a `/segment`
+ * INSIDE a path (`apps/web`) is never mistaken for a skill token. A path that
+ * starts a word (` /tmp/scratch`) still matches here and overlaps the range
+ * `extractPathRanges` emits for it; that is harmless because
+ * `HighlightTextAreaField.buildSegments` sorts by `start` and coalesces overlaps
+ * lower-start-wins under a stable sort, and `pathHighlights` precede
+ * `mentionHighlights` in the concatenated array — so the path keeps its own tone.
+ * The token itself is capture 1; `match[0]` may carry a leading space. */
+const MENTION_RE = /(?:^|\s)([@/#]\S+)/g;
 
-/** Per-type highlight tone for a detected `@token`: a known agent name resolves
- * `accent`, a known pipeline name resolves `push` (the risk-category purple), and
- * anything else (a dropped file, an unresolved name) resolves `dim`. */
+/** Per-type highlight tone for a detected token: a known agent name resolves
+ * `accent`, a known pipeline name resolves `push`, and anything else (a skill, a
+ * team, a dropped file, an unresolved name) resolves `dim`. */
 function mentionRanges(
   text: string,
   agentNames: ReadonlySet<string>,
@@ -261,27 +314,49 @@ function mentionRanges(
 ): HighlightRange[] {
   const ranges: HighlightRange[] = [];
   for (const match of text.matchAll(MENTION_RE)) {
-    if (match.index === undefined) continue;
-    const token = match[0].slice(1).toLowerCase();
-    const tone: HighlightTone = agentNames.has(token)
+    const token = match[1];
+    if (match.index === undefined || token === undefined) continue;
+    const start = match.index + match[0].length - token.length;
+    const name = token.slice(1).toLowerCase();
+    const tone: HighlightTone = agentNames.has(name)
       ? "accent"
-      : pipelineNames.has(token)
+      : pipelineNames.has(name)
         ? "push"
         : "dim";
-    ranges.push({ start: match.index, end: match.index + match[0].length, tone });
+    ranges.push({ start, end: start + token.length, tone });
   }
   return ranges;
 }
 
-/** True when a `@token` case-insensitive match for `name` still appears in
- * `text` — the exact "present in text" rule {@link mentionRanges} uses for the
- * inline highlight, reused so a picked `target` is reconciled against the SAME
- * definition of "still referenced" (see the target-clearing effect in
- * `handleChange`). */
+/**
+ * True when a `<trigger><name>` case-insensitive occurrence still appears in
+ * `text` — the "still referenced" rule every picked value (target, team tag,
+ * skill) is reconciled against in `handleChange`. Trigger-agnostic on purpose: a
+ * `#DevRel` occurrence keeps the team tag alive, an `@Builder` one the target.
+ *
+ * Matches the whole inserted name INCLUDING its spaces, rather than reusing
+ * `MENTION_RE`'s `\S+` token: a multi-word name ("Partner Portal", "Code
+ * Review") inserts as `@Partner Portal ` / `/Code Review `, whose `\S+` token is
+ * only `@Partner` — so a token-equality check would report the pick as gone on
+ * the very next keystroke and silently clear it. Both ends are boundary-checked
+ * (start-of-text-or-whitespace before the trigger, whitespace-or-end after the
+ * name) so `@Forge` never satisfies a pick named `Forge Two`, and a `/` inside a
+ * path never counts.
+ */
 function hasMentionFor(text: string, name: string): boolean {
+  const haystack = text.toLowerCase();
   const needle = name.toLowerCase();
-  for (const match of text.matchAll(MENTION_RE)) {
-    if (match[0].slice(1).toLowerCase() === needle) return true;
+  for (const trigger of MENTION_TRIGGERS) {
+    const token = `${trigger}${needle}`;
+    for (
+      let from = haystack.indexOf(token);
+      from !== -1;
+      from = haystack.indexOf(token, from + 1)
+    ) {
+      const before = from === 0 ? " " : (haystack[from - 1] ?? " ");
+      const after = haystack[from + token.length] ?? " ";
+      if (/\s/.test(before) && /\s/.test(after)) return true;
+    }
   }
   return false;
 }
@@ -413,6 +488,8 @@ export function CommandLine({
   onTargetChange,
   onTeamChange,
   allowTeamMentions = false,
+  allowSkillMentions = false,
+  onSkillChange,
   onAttachmentsChange,
   onSubmit,
   resetOnSubmit = true,
@@ -444,6 +521,10 @@ export function CommandLine({
   // "still referenced in the text" reconciliation `target` gets (below) applies
   // to a team tag too.
   const [team, setTeam] = useState<{ id: string; name: string } | undefined>(undefined);
+  // TODO 9: the picked `/`-mention SKILL — independent of both `target` and
+  // `team` (see `onSkillChange`'s docblock). Keeps the name alongside the id so
+  // the same "still referenced in the text" reconciliation applies.
+  const [skill, setSkill] = useState<{ id: string; name: string } | undefined>(undefined);
   const [attachments, setAttachments] = useState<TaskAttachmentSet>({ files: [] });
   const [attachError, setAttachError] = useState<string | null>(null);
   const hasDraftRef = useRef(false);
@@ -475,6 +556,7 @@ export function CommandLine({
   const { data: pipelines = [] } = usePipelinesQuery();
   const { data: subsystems = [] } = useSubsystemsQuery();
   const { data: teams = [] } = useTeamsQuery();
+  const { data: skills = [] } = useSkillsQuery();
 
   const upload = useUploadTaskAttachmentsMutation();
 
@@ -591,6 +673,10 @@ export function CommandLine({
         setTeam(undefined);
         onTeamChange?.(undefined);
       }
+      if (skill) {
+        setSkill(undefined);
+        onSkillChange?.(undefined);
+      }
       if (attachmentPayload) {
         setAttachments({ files: [] });
         onAttachmentsChange?.({ files: [] });
@@ -621,14 +707,30 @@ export function CommandLine({
     setCaretRect(null);
   }
 
+  /** Whether a trigger is live on THIS host. `@` always is (routing is what the
+   *  composer is for); `#` is opt-in via `allowTeamMentions`. A disabled trigger
+   *  opens no picker at all — never an empty one, which would advertise a source
+   *  the host can't honor (see `allowTeamMentions`'s docblock). */
+  function triggerEnabled(trigger: MentionTrigger): boolean {
+    switch (trigger) {
+      case "@":
+        return true;
+      case "#":
+        return allowTeamMentions;
+      case "/":
+        return allowSkillMentions;
+    }
+  }
+
   /** Re-derives `mention` from the textarea's live value + caret — shared by
    *  change/click/keyup so the dropdown tracks the caret continuously, not just
-   *  the instant `@` was typed (ported from the velin-b reference). Measures the
-   *  caret rect synchronously off the live element so the portaled panel anchors to
-   *  the active caret line, flipping above when there's no room below. */
+   *  the instant the trigger was typed (ported from the velin-b reference). Measures
+   *  the caret rect synchronously off the live element so the portaled panel anchors
+   *  to the active caret line, flipping above when there's no room below. */
   function syncMention(el: HTMLTextAreaElement) {
     const caret = el.selectionStart ?? el.value.length;
-    const next = checkMention(el.value, caret);
+    const found = checkMention(el.value, caret);
+    const next = found && triggerEnabled(found.trigger) ? found : null;
     setMention(next);
     setMentionIndex(0);
     setCaretRect(next ? measureCaretRect(el) : null);
@@ -652,6 +754,12 @@ export function CommandLine({
     if (team && !hasMentionFor(nextValue, team.name)) {
       setTeam(undefined);
       onTeamChange?.(undefined);
+    }
+    // TODO 9: the picked skill reconciles the SAME way — its `/Name` deleted out
+    // of the text clears it, independent of `target` and `team`.
+    if (skill && !hasMentionFor(nextValue, skill.name)) {
+      setSkill(undefined);
+      onSkillChange?.(undefined);
     }
     syncMention(e.target);
   }
@@ -684,11 +792,15 @@ export function CommandLine({
       }
       if (e.key === "Enter") {
         const active = mentionResults[activeMentionIndex];
+        // An empty picker (no matching row) must not swallow Enter — prose like
+        // `co je v /tmp` or `use #f97316` opens a picker with zero rows, and
+        // falling through to the normal submit path below is the only way Enter
+        // still submits instead of inserting a newline.
         if (active) {
           e.preventDefault();
           pickMentionResult(active);
+          return;
         }
-        return;
       }
       if (e.key === "Escape") {
         // Also stop native bubbling: an enclosing Dialog closes itself on a
@@ -708,9 +820,9 @@ export function CommandLine({
 
   function pickMentionResult(result: MentionResult) {
     if (!mention) return;
-    const mentionText = `@${result.name} `;
+    const mentionText = `${mention.trigger}${result.name} `;
     const el = textareaRef.current;
-    const end = el?.selectionStart ?? mention.start + 1 + mention.query.length;
+    const end = el?.selectionStart ?? mention.start + mention.trigger.length + mention.query.length;
     const nextValue = text.slice(0, mention.start) + mentionText + text.slice(end);
     setText(nextValue);
     onTextChange?.(nextValue);
@@ -723,6 +835,12 @@ export function CommandLine({
       // see `onTeamChange`'s docblock).
       setTeam({ id: result.id, name: result.name });
       onTeamChange?.(result.id);
+    } else if (result.kind === "skill") {
+      // TODO 9: like a team, a skill is NOT a routing destination — this branches
+      // before any `TaskTarget` is built so a skill pick never touches
+      // `target`/`onTargetChange`.
+      setSkill({ id: result.id, name: result.name });
+      onSkillChange?.(result.id);
     } else {
       // A per-kind switch (not a generic `{ kind: result.kind, ... }` object) so each
       // branch's literal `kind` matches `TaskTarget`'s properly-distributed union —
@@ -816,6 +934,39 @@ export function CommandLine({
 
   const mentionResults = useMemo<MentionResult[]>(() => {
     if (!mention) return [];
+
+    // `/` — the skill trigger. A skill resolves to neither a `TaskTarget` nor a KB
+    // scope: it decides WHICH instructions the turn follows.
+    if (mention.trigger === "/") {
+      if (!allowSkillMentions) return [];
+      return skills
+        .filter((s) => matchesQuery(mention.query, s.name, s.id))
+        .map((s) => ({
+          kind: "skill" as const,
+          id: s.id,
+          name: s.name,
+          glyph: s.glyph,
+        }))
+        .slice(0, MENTION_MAX_ROWS);
+    }
+
+    // `#` — the KB-scope trigger. A team resolves to a scope tag, never a
+    // `TaskTarget` (see `pickMentionResult`'s branch); `"brain"` is the app's
+    // existing knowledge/memory glyph.
+    if (mention.trigger === "#") {
+      if (!allowTeamMentions) return [];
+      return teams
+        .filter((tm) => matchesQuery(mention.query, tm.name, tm.id))
+        .map((tm) => ({
+          kind: "team" as const,
+          id: tm.id,
+          name: tm.name,
+          glyph: "brain" as IconName,
+        }))
+        .slice(0, MENTION_MAX_ROWS);
+    }
+
+    // `@` — the routing trigger: the three kinds that produce a `TaskTarget`.
     const agentHits: MentionResult[] = agents
       .filter((a) => matchesQuery(mention.query, a.name ?? a.id, a.id))
       .map((a) => ({
@@ -841,27 +992,17 @@ export function CommandLine({
         glyph: "grid" as IconName,
         color: s.color,
       }));
-    // Task 8: the fourth mention source — a team resolves to a scope tag, never
-    // a `TaskTarget` (see `pickMentionResult`'s branch). Fix round 2: `"brain"`
-    // (not `"grid"` — that's the subsystem rows' glyph in this SAME list, and a
-    // team answers a different question than every routing row: WHAT knowledge
-    // base a turn can see, not WHO runs it). `"brain"` is the app's existing
-    // knowledge/memory glyph (`features/memory/Screen.tsx`'s empty state) —
-    // reused here rather than authoring a new icon.
-    // Task 9b: gated by `allowTeamMentions` — the task composer turns this off
-    // (see the prop's own docblock), since a tagged team doesn't reach a run yet.
-    const teamHits: MentionResult[] = allowTeamMentions
-      ? teams
-          .filter((tm) => matchesQuery(mention.query, tm.name, tm.id))
-          .map((tm) => ({
-            kind: "team" as const,
-            id: tm.id,
-            name: tm.name,
-            glyph: "brain" as IconName,
-          }))
-      : [];
-    return [...agentHits, ...pipelineHits, ...subsystemHits, ...teamHits].slice(0, 50);
-  }, [mention, agents, pipelines, rosterSubsystems, teams, allowTeamMentions]);
+    return [...agentHits, ...pipelineHits, ...subsystemHits].slice(0, MENTION_MAX_ROWS);
+  }, [
+    mention,
+    agents,
+    pipelines,
+    rosterSubsystems,
+    teams,
+    allowTeamMentions,
+    skills,
+    allowSkillMentions,
+  ]);
   // Clamp at read time so a result list that shrank between renders never
   // leaves the keyboard highlight out of range.
   const activeMentionIndex =
@@ -1110,22 +1251,28 @@ export function CommandLine({
                                   ? "accent"
                                   : result.kind === "pipeline"
                                     ? "push"
-                                    : // Fix round 2: a team row is the ONLY remaining
-                                      // kind reaching this branch (subsystem renders its
-                                      // own colored-dot row above, never a `Tag`) — `"send"`
-                                      // is an existing `TagTone` unused elsewhere in this
-                                      // dropdown (and, per a repo-wide check, unused
-                                      // anywhere else in `apps/web`), so a team reads as
-                                      // its own thing rather than folding into the
-                                      // catch-all `"neutral"` a future 5th kind might reuse.
-                                      "send"
+                                    : result.kind === "skill"
+                                      ? // TODO 9: `"run"` — an existing `TagTone`
+                                        // unused elsewhere in this dropdown, and the
+                                        // one whose meaning ("running") matches what
+                                        // `/` does. Keeps every kind visually distinct.
+                                        "run"
+                                      : // Fix round 2: a team row is the only remaining
+                                        // kind reaching this branch (subsystem renders its
+                                        // own colored-dot row above, never a `Tag`) — `"send"`
+                                        // is an existing `TagTone` unused elsewhere in this
+                                        // dropdown (and, per a repo-wide check, unused
+                                        // anywhere else in `apps/web`), so a team reads as
+                                        // its own thing rather than folding into the
+                                        // catch-all `"neutral"` a future 5th kind might reuse.
+                                        "send"
                               }
                             >
                               {result.name}
                             </Tag>
                           )}
                           <Typography mono size="xs" type="note" variant="tertiary">
-                            {`@${result.name}`}
+                            {`${mention.trigger}${result.name}`}
                           </Typography>
                         </Stack>
                       </CardContent>
@@ -1171,9 +1318,14 @@ export function CommandLine({
           }
           headerEnd={
             <Typography mono size="2xs" type="note" variant="tertiary">
-              {/* Task 9b: the hint must not claim a mention source this render
-                  doesn't actually offer — see `allowTeamMentions`'s docblock. */}
-              {t(allowTeamMentions ? "commandLine.chrome.hint" : "commandLine.chrome.hintNoTeams")}
+              {/* TODO 9: the hint must name exactly the triggers this render
+                  offers and nothing else — see `allowTeamMentions`'s docblock. */}
+              {[
+                t("commandLine.chrome.triggerAgents"),
+                ...(allowSkillMentions ? [t("commandLine.chrome.triggerSkills")] : []),
+                ...(allowTeamMentions ? [t("commandLine.chrome.triggerTeams")] : []),
+                ...(showAttach ? [t("commandLine.chrome.hintAttach")] : []),
+              ].join(" · ")}
             </Typography>
           }
           padding="150"

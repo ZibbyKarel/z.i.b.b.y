@@ -85,12 +85,14 @@ export function AutomationFormDialog({ onClose, onCreate }: AutomationFormDialog
     >
       <Stack gap="200">
         <TriggerFields form={form} />
-        {/* Fix round: explicit `false` — this dialog always creates a `type: "task"`
-            target, which doesn't reach a run's KB scope yet (see CommandLine's
-            `allowTeamMentions` docblock). Matches the (opt-in) default; stated
-            explicitly so the intent survives a future default change. */}
+        {/* Explicit `false` on both: this dialog always creates a `type: "task"`
+            target, and neither a team's KB scope nor a picked skill reaches a task
+            run yet (see CommandLine's `allowTeamMentions` / `allowSkillMentions`
+            docblocks). Matches the (opt-in) default; stated explicitly so the
+            intent survives a future default change. */}
         <CommandLine
           showAttach
+          allowSkillMentions={false}
           allowTeamMentions={false}
           chrome={false}
           disabled={!scheduleValid}

@@ -3,6 +3,7 @@ import { MachineModule } from "../machine/machine.module";
 import { BriefingModule } from "../briefing/briefing.module";
 import { KbModule } from "../kb/kb.module";
 import { MemoryModule } from "../memory/memory.module";
+import { SkillsModule } from "../skills/skills.module";
 import { SubsystemsModule } from "../subsystems/subsystems.module";
 import { TasksModule } from "../tasks/tasks.module";
 import { dataDir } from "../shared/data-dir";
@@ -41,7 +42,18 @@ export function resolveChatDir(): string {
 @Module({
   // SubsystemsModule (NS2 F3c) feeds the per-subsystem `get_status` lens — a
   // one-directional edge (subsystems never imports chat).
-  imports: [TasksModule, MemoryModule, BriefingModule, MachineModule, SubsystemsModule, KbModule],
+  imports: [
+    TasksModule,
+    MemoryModule,
+    BriefingModule,
+    MachineModule,
+    SubsystemsModule,
+    KbModule,
+    // TODO 9: `ChatSessionService` resolves a `/`-picked `skillId` against
+    // `SkillsStorageService`. `SkillsModule` imports nothing, so this is a leaf
+    // edge — no cycle.
+    SkillsModule,
+  ],
   controllers: [ChatController, ChatMcpController],
   providers: [
     { provide: CHAT_DIR, useFactory: resolveChatDir },

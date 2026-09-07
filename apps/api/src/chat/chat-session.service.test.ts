@@ -6,6 +6,8 @@ import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ChatPersona, ChatToolEvent, TaskTarget } from "@zibby/contracts";
 import { KbMcpAuthService } from "../kb/kb-mcp-auth.service";
+import { SkillNotFoundError } from "../skills/skills.errors";
+import { SkillsStorageService } from "../skills/skills.storage.service";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { CHAT_GOVERNOR_PROMPT, CHAT_PERSONAS } from "./chat-persona";
 import { ChatEventsService, type ChatTurnEvent } from "./chat-events.service";
@@ -49,6 +51,10 @@ class TestSession extends ChatSessionService {
     // posture as `mcpAuth` above; tests asserting a SPECIFIC KB token construct
     // their own and pass it explicitly (see the "zibby-kb MCP server" block below).
     kbMcpAuth: KbMcpAuthService = new KbMcpAuthService(),
+    // TODO 9: the skills store the `/`-picked skill is resolved against. Defaults
+    // to the OS tmp dir — every test that actually picks a skill constructs its
+    // own dir and writes a `<id>.md` into it (see the "picked skill" block below).
+    skills: SkillsStorageService = new SkillsStorageService(os.tmpdir()),
   ) {
     super(
       store,
@@ -58,6 +64,7 @@ class TestSession extends ChatSessionService {
       mcpAuth,
       chatDir,
       kbMcpAuth,
+      skills,
     );
   }
   protected createProcess(args: string[]): ClaudeProcess {
@@ -605,6 +612,98 @@ describe("ChatSessionService", () => {
       const configPath = args[args.indexOf("--mcp-config") + 1] ?? "";
       const stat = await fs.stat(configPath);
       expect(stat.mode & 0o777).toBe(0o600);
+    });
+  });
+
+  describe("TODO 9 — a picked skill reaches the turn's prompt", () => {
+    /** A skills dir holding one real `code-review.md`, the way the store expects it. */
+    async function skillsDirWithCodeReview(): Promise<SkillsStorageService> {
+      const dir = await fs.mkdtemp(path.join(os.tmpdir(), "zibby-skills-"));
+      await fs.writeFile(
+        path.join(dir, "code-review.md"),
+        "---\nname: Code Review\n---\n\nReview the diff and report findings.\n",
+        "utf8",
+      );
+      return new SkillsStorageService(dir);
+    }
+
+    it("appends the skill's instructions to --append-system-prompt", async () => {
+      const svc = new TestSession(
+        store,
+        events,
+        [],
+        "jarvis",
+        new ChatToolResultRegistry(),
+        new ChatMcpAuthService(),
+        os.tmpdir(),
+        new KbMcpAuthService(),
+        await skillsDirWithCodeReview(),
+      );
+      const args = await svc.buildArgs("projdi to", null, "c1", undefined, {
+        name: "Code Review",
+        instructions: "Review the diff and report findings.",
+      });
+      const prompt = args[args.indexOf("--append-system-prompt") + 1] ?? "";
+
+      expect(prompt).toContain("Review the diff and report findings.");
+      expect(prompt).toContain("Code Review");
+      // The persona is still there — a skill AUGMENTS the governor, never replaces it.
+      expect(prompt).toContain(CHAT_GOVERNOR_PROMPT);
+    });
+
+    it("leaves the prompt exactly as-is when the turn carries no skill", async () => {
+      const svc = new TestSession(store, events, [], "jarvis", new ChatToolResultRegistry());
+      const args = await svc.buildArgs("ahoj", null, "c1");
+      const prompt = args[args.indexOf("--append-system-prompt") + 1] ?? "";
+
+      expect(prompt).toContain(CHAT_GOVERNOR_PROMPT);
+      expect(prompt).not.toContain("skill");
+    });
+
+    it("threads body.skillId from sendMessage through runTurn into the prompt", async () => {
+      const svc = new TestSession(
+        store,
+        events,
+        [
+          line({ type: "system", subtype: "init", session_id: "s" }),
+          line({ type: "result", is_error: false, result: "ok" }),
+        ],
+        "jarvis",
+        new ChatToolResultRegistry(),
+        new ChatMcpAuthService(),
+        os.tmpdir(),
+        new KbMcpAuthService(),
+        await skillsDirWithCodeReview(),
+      );
+      const result = await svc.sendMessage(
+        { conversationId: "c-skill-1", text: "projdi to", skillId: "code-review" },
+        NOW,
+      );
+      await settled(result.turnId);
+
+      const prompt = svc.lastArgs[svc.lastArgs.indexOf("--append-system-prompt") + 1] ?? "";
+      expect(prompt).toContain("Review the diff and report findings.");
+    });
+
+    it("throws for an unknown skillId — and appends NO user message, so a bad id never mutates the transcript", async () => {
+      const svc = new TestSession(
+        store,
+        events,
+        [],
+        "jarvis",
+        new ChatToolResultRegistry(),
+        new ChatMcpAuthService(),
+        os.tmpdir(),
+        new KbMcpAuthService(),
+        await skillsDirWithCodeReview(),
+      );
+
+      await expect(
+        svc.sendMessage({ conversationId: "c-skill-2", text: "projdi to", skillId: "nope" }, NOW),
+      ).rejects.toBeInstanceOf(SkillNotFoundError);
+
+      const transcript = await store.readTranscript("c-skill-2");
+      expect(transcript.messages).toHaveLength(0);
     });
   });
 });

@@ -321,6 +321,7 @@ export function TaskCommandLine({
   return (
     <Stack data-testid={TaskCommandLineTestId.Root} direction="col" gap="150">
       <CommandLine
+        allowSkillMentions={false}
         allowTeamMentions={false}
         chrome={chrome}
         disabled={disabled}

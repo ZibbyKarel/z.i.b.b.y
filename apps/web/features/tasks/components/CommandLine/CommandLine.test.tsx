@@ -51,7 +51,24 @@ vi.mock("../../../subsystems/queries/useSubsystemsQuery", () => ({
 }));
 // Task 8: the fourth mention source — teams a picked row tags, never dispatches to.
 vi.mock("../../../teams", () => ({
-  useTeamsQuery: () => ({ data: [{ id: "devrel", name: "DevRel" }] }),
+  useTeamsQuery: () => ({
+    data: [
+      { id: "devrel", name: "DevRel" },
+      // TODO 9: a two-word name — the picked-value reconciliation must survive it.
+      { id: "partner-portal", name: "Partner Portal" },
+    ],
+  }),
+}));
+
+// TODO 9: the `/` trigger's source — the ZIBBY skill catalog. Shaped like
+// `useSkillsQuery`'s domain `Skill` (name and glyph always present).
+vi.mock("../../../skills", () => ({
+  useSkillsQuery: () => ({
+    data: [
+      { id: "code-review", name: "Code Review", glyph: "spark", desc: "", file: "" },
+      { id: "brainstorm", name: "Brainstorm", glyph: "spark", desc: "", file: "" },
+    ],
+  }),
 }));
 
 const uploadMutateAsync = vi.fn().mockResolvedValue({
@@ -273,57 +290,41 @@ describe("CommandLine (Phase 118d generic composer)", () => {
     });
   });
 
-  describe("Task 8 — team @-mentions tag scope, never a routing target", () => {
-    it("lists a team row as the fourth mention source", async () => {
+  describe("TODO 9 — `#` is the team trigger; `@` is routing only", () => {
+    it("lists teams under `#`, never under `@`", async () => {
       const user = userEvent.setup();
       render(<CommandLine allowTeamMentions onSubmit={vi.fn()} />);
-      await user.type(screen.getByTestId(CommandLineTestId.Input), "@");
+      const input = screen.getByTestId(CommandLineTestId.Input);
 
-      expect(
-        screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`),
-      ).toBeInTheDocument();
-    });
-
-    it("offers no team row at all when `allowTeamMentions` is left at its (opt-in) default — fix round: a truthy value must now be explicit", async () => {
-      const user = userEvent.setup();
-      render(<CommandLine onSubmit={vi.fn()} />);
-      await user.type(screen.getByTestId(CommandLineTestId.Input), "@");
-
+      await user.type(input, "@");
       expect(
         screen.queryByTestId(`${CommandLineTestId.MentionItem}-team-devrel`),
       ).not.toBeInTheDocument();
+      expect(
+        screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`),
+      ).toBeInTheDocument();
+
+      await user.clear(input);
+      await user.type(input, "#");
+      expect(
+        screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId(`${CommandLineTestId.MentionItem}-agent-builder`),
+      ).not.toBeInTheDocument();
     });
 
-    it("gives the team row a distinct icon and tone from every routing row — Task 8 fix round 2", async () => {
+    it("opens no picker at all on `#` when `allowTeamMentions` is left at its (opt-in) default", async () => {
       const user = userEvent.setup();
-      render(<CommandLine allowTeamMentions onSubmit={vi.fn()} />);
-      await user.type(screen.getByTestId(CommandLineTestId.Input), "@");
+      render(<CommandLine onSubmit={vi.fn()} />);
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "#");
 
-      const teamRow = screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`);
-      const agentRow = screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`);
-      const pipelineRow = screen.getByTestId(`${CommandLineTestId.MentionItem}-pipeline-delivery`);
-
-      // Tone: no longer the plain "neutral" a subsystem's non-Tag dot row implies,
-      // and not either routing row's own tone — asserted on the rendered variant
-      // class (matching how the design system's own Tag.test.tsx asserts tone),
-      // never on a raw colour value.
-      const teamTag = within(teamRow).getByTestId(TagTestId.Root);
-      expect(teamTag).toHaveClass("text-risk-send");
-      expect(teamTag).not.toHaveClass("text-foreground-dim");
-      expect(teamTag).not.toHaveClass("text-accent");
-      expect(teamTag).not.toHaveClass("text-risk-push");
-
-      // Icon: the actual rendered glyph markup, not just the prop we pass in —
-      // proves the team row doesn't share "grid" (the subsystem glyph reused
-      // for the same row before this fix) with either routing row's icon.
-      const teamIconMarkup = within(teamRow).getByTestId(TagTestId.Icon).innerHTML;
-      const agentIconMarkup = within(agentRow).getByTestId(TagTestId.Icon).innerHTML;
-      const pipelineIconMarkup = within(pipelineRow).getByTestId(TagTestId.Icon).innerHTML;
-      expect(teamIconMarkup).not.toBe(agentIconMarkup);
-      expect(teamIconMarkup).not.toBe(pipelineIconMarkup);
+      // Not "an open menu with an empty note" — no menu: a host without the
+      // trigger must not advertise a source it can't honor.
+      expect(screen.queryByTestId(CommandLineTestId.MentionMenu)).not.toBeInTheDocument();
     });
 
-    it("picking a team inserts the inline @Name and calls onTeamChange with its id — onTargetChange never fires", async () => {
+    it("picking a team inserts the inline #Name and calls onTeamChange with its id — onTargetChange never fires", async () => {
       const onTargetChange = vi.fn();
       const onTeamChange = vi.fn();
       const user = userEvent.setup();
@@ -336,29 +337,12 @@ describe("CommandLine (Phase 118d generic composer)", () => {
         />,
       );
       const input = screen.getByTestId(CommandLineTestId.Input);
-      await user.type(input, "@DevRel");
+      await user.type(input, "#DevRel");
       await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`));
 
-      expect(input).toHaveValue("@DevRel ");
+      expect(input).toHaveValue("#DevRel ");
       expect(onTeamChange).toHaveBeenCalledWith("devrel");
       expect(onTargetChange).not.toHaveBeenCalled();
-    });
-
-    it("submits with no target when only a team was picked — a team tag never becomes a dispatch destination", async () => {
-      const onSubmit = vi.fn();
-      const user = userEvent.setup();
-      render(<CommandLine allowTeamMentions onSubmit={onSubmit} />);
-      const input = screen.getByTestId(CommandLineTestId.Input);
-      await user.type(input, "@DevRel");
-      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`));
-      await user.type(input, "co víme o partner portálu?");
-      await user.click(screen.getByTestId(CommandLineTestId.Send));
-
-      expect(onSubmit).toHaveBeenCalledWith(
-        "@DevRel co víme o partner portálu?",
-        undefined,
-        undefined,
-      );
     });
 
     it("a team tag and an agent target co-exist independently in the same draft", async () => {
@@ -367,7 +351,7 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       const user = userEvent.setup();
       render(<CommandLine allowTeamMentions onSubmit={onSubmit} onTeamChange={onTeamChange} />);
       const input = screen.getByTestId(CommandLineTestId.Input);
-      await user.type(input, "@DevRel");
+      await user.type(input, "#DevRel");
       await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`));
       await user.type(input, "@Bui");
       await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`));
@@ -375,25 +359,123 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       await user.click(screen.getByTestId(CommandLineTestId.Send));
 
       expect(onSubmit).toHaveBeenCalledWith(
-        "@DevRel @Builder shrň to",
+        "#DevRel @Builder shrň to",
         { kind: "agent", id: "builder", name: "Builder", glyph: "hammer" },
         undefined,
       );
       expect(onTeamChange).toHaveBeenCalledWith("devrel");
     });
 
-    it("deleting the @Name out of the text clears the team tag, independent of any picked target", async () => {
+    it("deleting the #Name out of the text clears the team tag", async () => {
       const onTeamChange = vi.fn();
       const user = userEvent.setup();
       render(<CommandLine allowTeamMentions onSubmit={vi.fn()} onTeamChange={onTeamChange} />);
       const input = screen.getByTestId(CommandLineTestId.Input);
-      await user.type(input, "@DevRel");
+      await user.type(input, "#DevRel");
       await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`));
       onTeamChange.mockClear();
 
       await user.clear(input);
 
       expect(onTeamChange).toHaveBeenCalledWith(undefined);
+    });
+
+    it("gives the team row a distinct icon and tone from every routing row — Task 8 fix round 2, now across the two triggers", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine allowTeamMentions onSubmit={vi.fn()} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+
+      // The routing rows now live under a DIFFERENT trigger than the team row, so
+      // the comparison captures the `@` rows' markup first, then reopens on `#`.
+      // The assertion set is unchanged from Task 8 — only how the rows are reached.
+      await user.type(input, "@");
+      const agentIconMarkup = within(
+        screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`),
+      ).getByTestId(TagTestId.Icon).innerHTML;
+      const pipelineIconMarkup = within(
+        screen.getByTestId(`${CommandLineTestId.MentionItem}-pipeline-delivery`),
+      ).getByTestId(TagTestId.Icon).innerHTML;
+
+      await user.clear(input);
+      await user.type(input, "#");
+      const teamRow = screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`);
+
+      // Tone: asserted on the rendered variant class (matching how the design
+      // system's own Tag.test.tsx asserts tone), never on a raw colour value.
+      const teamTag = within(teamRow).getByTestId(TagTestId.Root);
+      expect(teamTag).toHaveClass("text-risk-send");
+      expect(teamTag).not.toHaveClass("text-foreground-dim");
+      expect(teamTag).not.toHaveClass("text-accent");
+      expect(teamTag).not.toHaveClass("text-risk-push");
+
+      // Icon: the actual rendered glyph markup, not just the prop passed in.
+      const teamIconMarkup = within(teamRow).getByTestId(TagTestId.Icon).innerHTML;
+      expect(teamIconMarkup).not.toBe(agentIconMarkup);
+      expect(teamIconMarkup).not.toBe(pipelineIconMarkup);
+    });
+
+    it("submits with no target when only a team was picked — a team tag never becomes a dispatch destination", async () => {
+      const onSubmit = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine allowTeamMentions onSubmit={onSubmit} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "#DevRel");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`));
+      await user.type(input, "co víme o partner portálu?");
+      await user.click(screen.getByTestId(CommandLineTestId.Send));
+
+      expect(onSubmit).toHaveBeenCalledWith(
+        "#DevRel co víme o partner portálu?",
+        undefined,
+        undefined,
+      );
+    });
+
+    it("keeps a picked MULTI-WORD name alive as the operator keeps typing", async () => {
+      const onTeamChange = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine allowTeamMentions onSubmit={vi.fn()} onTeamChange={onTeamChange} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+
+      await user.type(input, "#Partner");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-team-partner-portal`));
+      expect(input).toHaveValue("#Partner Portal ");
+      onTeamChange.mockClear();
+
+      // The inserted token is `#Partner Portal` — two words. A reconciliation that
+      // tokenized on whitespace would read the tag as deleted here and clear it.
+      await user.type(input, "co víme?");
+
+      expect(onTeamChange).not.toHaveBeenCalled();
+    });
+
+    it("a trigger char mid-token is not a trigger — a path never opens the `/` picker and a hex colour never opens `#`", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine allowTeamMentions onSubmit={vi.fn()} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+
+      await user.type(input, "apps/web");
+      expect(screen.queryByTestId(CommandLineTestId.MentionMenu)).not.toBeInTheDocument();
+
+      await user.clear(input);
+      await user.type(input, "barva#f97316");
+      expect(screen.queryByTestId(CommandLineTestId.MentionMenu)).not.toBeInTheDocument();
+    });
+
+    it("a path that STARTS a word does open the `/` picker on a host that offers it — documented, not accidental", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine allowSkillMentions onSubmit={vi.fn()} />);
+
+      // The boundary rule is "start of text or after whitespace", so ` /tmp` is
+      // indistinguishable from a deliberate `/`-trigger at the keystroke level. The
+      // picker opening here is the accepted cost of that rule (Escape closes it,
+      // and typing on past the first segment's `/` closes it too); asserted so a
+      // future change to the rule is a deliberate one, not a silent regression.
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "uprav /tmp");
+      expect(screen.getByTestId(CommandLineTestId.MentionMenu)).toBeInTheDocument();
+
+      await user.keyboard("{Escape}");
+      expect(screen.queryByTestId(CommandLineTestId.MentionMenu)).not.toBeInTheDocument();
     });
   });
 
@@ -486,18 +568,21 @@ describe("CommandLine (Phase 118d generic composer)", () => {
     it("wraps the input in the panel chrome by default (header icon + label + hint)", () => {
       render(<CommandLine onSubmit={vi.fn()} />);
       expect(screen.getByTestId(PanelTestId.Header)).toHaveTextContent("Zadej směr");
-      // `allowTeamMentions` fix round: the hint's wording must track what THIS
-      // render actually offers — with the prop left at its (opt-in) default, no
-      // team row is offered, so the hint must not claim one either.
-      expect(screen.getByText(/hledá agenty, pipeliny a podsystémy/)).toBeInTheDocument();
-      expect(
-        screen.queryByText(/hledá agenty, pipeliny, podsystémy a týmy/),
-      ).not.toBeInTheDocument();
+      // TODO 9: the hint names exactly the triggers THIS render offers — with both
+      // opt-in props left at their default, only `@` is live.
+      const hint = screen.getByTestId(PanelTestId.Header).textContent ?? "";
+      expect(hint).toContain("@ hledá agenty, pipeliny a podsystémy");
+      expect(hint).not.toContain("/ pustí skill");
+      expect(hint).not.toContain("# hledá týmy");
     });
 
-    it("the chrome hint includes teams once `allowTeamMentions` is explicitly on — Fix round 2", () => {
-      render(<CommandLine allowTeamMentions onSubmit={vi.fn()} />);
-      expect(screen.getByText(/hledá agenty, pipeliny, podsystémy a týmy/)).toBeInTheDocument();
+    it("names `/` and `#` once both triggers are explicitly on", () => {
+      render(<CommandLine allowSkillMentions allowTeamMentions onSubmit={vi.fn()} />);
+      const hint = screen.getByTestId(PanelTestId.Header).textContent ?? "";
+
+      expect(hint).toContain("@ hledá agenty, pipeliny a podsystémy");
+      expect(hint).toContain("/ pustí skill");
+      expect(hint).toContain("# hledá týmy");
     });
 
     it("renders a bare input with no panel chrome when chrome={false}", () => {
@@ -603,6 +688,20 @@ describe("CommandLine (Phase 118d generic composer)", () => {
         { kind: "agent", id: "builder", name: "Builder", glyph: "hammer" },
         undefined,
       );
+      expect(input).toHaveValue("");
+    });
+
+    it("submits (not a newline) on Enter while an empty picker is open — prose like `/tmp` opens a picker with no matching row", async () => {
+      const onSubmit = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine allowSkillMentions onSubmit={onSubmit} />);
+
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "co je v /tmp");
+      expect(screen.getByTestId(CommandLineTestId.MentionMenu)).toBeInTheDocument();
+      await user.keyboard("{Enter}");
+
+      expect(onSubmit).toHaveBeenCalledWith("co je v /tmp", undefined, undefined);
       expect(input).toHaveValue("");
     });
 
@@ -733,6 +832,118 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       render(<CommandLine attachIcon="pin" onSubmit={vi.fn()} />);
       const svg = screen.getByTestId(CommandLineTestId.Attach).querySelector("svg");
       expect(svg?.innerHTML).not.toContain('d="M12 5v14M5 12h14"');
+    });
+  });
+
+  describe("TODO 9 — `/` picks a ZIBBY skill, never a routing target", () => {
+    it("lists skills under `/` and filters them live", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine allowSkillMentions onSubmit={vi.fn()} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+
+      await user.type(input, "/");
+      expect(
+        screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-code-review`),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-brainstorm`),
+      ).toBeInTheDocument();
+
+      await user.type(input, "brain");
+      expect(
+        screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-brainstorm`),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId(`${CommandLineTestId.MentionItem}-skill-code-review`),
+      ).not.toBeInTheDocument();
+    });
+
+    it("opens no picker at all on `/` when `allowSkillMentions` is left at its (opt-in) default", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine onSubmit={vi.fn()} />);
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "/");
+
+      expect(screen.queryByTestId(CommandLineTestId.MentionMenu)).not.toBeInTheDocument();
+    });
+
+    it("picking a skill inserts the inline /Name and calls onSkillChange — onTargetChange and onTeamChange never fire", async () => {
+      const onSkillChange = vi.fn();
+      const onTargetChange = vi.fn();
+      const onTeamChange = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <CommandLine
+          allowSkillMentions
+          allowTeamMentions
+          onSkillChange={onSkillChange}
+          onSubmit={vi.fn()}
+          onTargetChange={onTargetChange}
+          onTeamChange={onTeamChange}
+        />,
+      );
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "/Code");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-code-review`));
+
+      expect(input).toHaveValue("/Code Review ");
+      expect(onSkillChange).toHaveBeenCalledWith("code-review");
+      expect(onTargetChange).not.toHaveBeenCalled();
+      expect(onTeamChange).not.toHaveBeenCalled();
+    });
+
+    it("submits with no target when only a skill was picked", async () => {
+      const onSubmit = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine allowSkillMentions onSubmit={onSubmit} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "/Code");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-code-review`));
+      await user.type(input, "projdi ten diff");
+      await user.click(screen.getByTestId(CommandLineTestId.Send));
+
+      expect(onSubmit).toHaveBeenCalledWith("/Code Review projdi ten diff", undefined, undefined);
+    });
+
+    it("deleting the /Name out of the text clears the picked skill", async () => {
+      const onSkillChange = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine allowSkillMentions onSkillChange={onSkillChange} onSubmit={vi.fn()} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "/Code");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-code-review`));
+      onSkillChange.mockClear();
+
+      await user.clear(input);
+
+      expect(onSkillChange).toHaveBeenCalledWith(undefined);
+    });
+
+    it("clears the picked skill after a submit that resets the draft, so it never leaks onto the next turn", async () => {
+      const onSkillChange = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine allowSkillMentions onSkillChange={onSkillChange} onSubmit={vi.fn()} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "/Code");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-code-review`));
+      await user.type(input, "projdi to");
+      onSkillChange.mockClear();
+      await user.click(screen.getByTestId(CommandLineTestId.Send));
+
+      expect(onSkillChange).toHaveBeenLastCalledWith(undefined);
+    });
+
+    it("gives the skill row a tone distinct from every other kind in the picker", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine allowSkillMentions onSubmit={vi.fn()} />);
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "/");
+
+      const skillTag = within(
+        screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-code-review`),
+      ).getByTestId(TagTestId.Root);
+      expect(skillTag).toHaveClass("text-run");
+      expect(skillTag).not.toHaveClass("text-accent");
+      expect(skillTag).not.toHaveClass("text-risk-push");
+      expect(skillTag).not.toHaveClass("text-risk-send");
     });
   });
 });

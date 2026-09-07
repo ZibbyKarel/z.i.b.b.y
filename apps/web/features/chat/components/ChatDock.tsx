@@ -138,9 +138,27 @@ export function ChatDock({
   // team tagged on one turn doesn't leak onto the next.
   const [teamId, setTeamId] = useState<string | undefined>(undefined);
 
+  // TODO 9: the `/`-picked skill for the NEXT turn, mirrored from `CommandLine`'s
+  // `onSkillChange` exactly the way `teamId` is (a skill is not part of
+  // `onSubmit`'s signature either). Cleared by `CommandLine` itself right after
+  // `onSubmit` fires, under the default `resetOnSubmit` — which is why a skill
+  // picked for one turn doesn't leak onto the next.
+  const [skillId, setSkillId] = useState<string | undefined>(undefined);
+
   // A turn is in flight from send (`isPending`) through the streamed reply until
   // the terminal `done`/`error` — mirrors `ChatScreen`'s own derivation.
   const thinking = sendMessage.isPending || stream.streaming;
+
+  // TODO 9: a rejected turn (e.g. a 404 for a skill deleted between the catalog
+  // read and the send) must be visible — the optimistic user message is already in
+  // the transcript. Read off the mutation's own error state so `mutate` keeps its
+  // single-argument call shape.
+  useEffect(() => {
+    if (sendMessage.error) appendError(t("composer.sendError"));
+    // `appendError` is a stable `useCallback([setMessages])` and next-intl memoizes
+    // `t` — both matter here: an unstable dep would re-append on every render for as
+    // long as `error` stays truthy.
+  }, [sendMessage.error, appendError, t]);
 
   // Bridge the in-flight state up to the host (`ChatScreen`'s orb-map pulse) —
   // this dock is the single stream owner now, so the pulse can't be derived on
@@ -164,10 +182,20 @@ export function ChatDock({
           text,
           ...(target ? { target } : {}),
           ...(teamId ? { teamId } : {}),
+          ...(skillId ? { skillId } : {}),
         },
       });
+      // `CommandLine.submit()` clears its own `teamId`/`skillId` for its NEXT
+      // render (see the docblocks above) — but the DICTATION path (`useVoiceMode`
+      // below) calls `send` directly, bypassing `CommandLine.submit()` entirely.
+      // Without clearing here too, a skill/team picked in the composer but never
+      // submitted would silently carry onto every dictated turn after it. Both
+      // axes are deliberately symmetric one-turn state, so both are cleared here,
+      // not just the one the picker last touched.
+      setTeamId(undefined);
+      setSkillId(undefined);
     },
-    [conversationId, setMessages, sendMessage, teamId],
+    [conversationId, setMessages, sendMessage, teamId, skillId],
   );
 
   // Hands-free dictation (Phase 119a) — a finalized utterance is sent verbatim,
@@ -310,6 +338,7 @@ export function ChatDock({
                 field box around it — the dock's own glass surface (and its focus
                 border-top above) is the frame. */}
             <CommandLine
+              allowSkillMentions
               allowTeamMentions
               frameless
               hideLabel
@@ -324,6 +353,7 @@ export function ChatDock({
                 )
               }
               maxRows={CHAT_COMPOSER_MAX_ROWS}
+              onSkillChange={setSkillId}
               onSubmit={send}
               onTeamChange={setTeamId}
               placeholder={t("composer.placeholder")}

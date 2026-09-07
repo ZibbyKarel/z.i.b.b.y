@@ -10,6 +10,7 @@ import {
 } from "@zibby/contracts";
 import { KbMcpAuthService } from "../kb/kb-mcp-auth.service";
 import { collisionResistantId, ensureDir } from "../shared/file-storage";
+import { SkillsStorageService } from "../skills/skills.storage.service";
 import { SystemConfigStore } from "../system/system-config.store";
 import { ChatEventsService } from "./chat-events.service";
 import { ChatMcpAuthService } from "./chat-mcp-auth.service";
@@ -29,6 +30,12 @@ export interface ClaudeProcess {
 
 /** Hard ceiling on one turn; a stuck `claude` is killed and the turn ends in error. */
 const TURN_TIMEOUT_MS = 120_000;
+
+/** The `/`-picked skill for one turn, reduced to what the prompt needs. */
+export interface ChatTurnSkill {
+  name: string;
+  instructions: string;
+}
 
 /**
  * Merge a newly emitted {@link ChatToolEvent} into the turn's accumulated (and
@@ -84,6 +91,11 @@ export class ChatSessionService {
     // `kbMcpUrl`/`toolArgs`'s docblocks) for the `zibby-kb` MCP server this
     // service also mounts.
     private readonly kbMcpAuth: KbMcpAuthService,
+    // TODO 9: the file-backed skills catalog. A `/`-picked `skillId` is resolved
+    // here BEFORE the turn starts, so an id with no file behind it fails the
+    // request outright (mapped to a 404 by `ChatController`) instead of starting a
+    // turn whose skill silently did nothing.
+    private readonly skills: SkillsStorageService,
   ) {}
 
   /**
@@ -98,6 +110,16 @@ export class ChatSessionService {
     body: SendChatMessageBody,
     now: Date = new Date(),
   ): Promise<SendChatMessageResult> {
+    // TODO 9: resolve BEFORE anything is created or appended — a `skillId` with no
+    // skill file behind it must fail the request without minting a conversation or
+    // leaving an orphan user turn in the transcript. `SkillsStorageService.get`
+    // throws `SkillNotFoundError` / `InvalidSkillIdError`; `ChatController` maps
+    // both to a 404.
+    const picked = body.skillId ? await this.skills.get(body.skillId) : undefined;
+    const skill = picked
+      ? { name: picked.name ?? picked.id, instructions: picked.instructions }
+      : undefined;
+
     const conversationId = await this.store.ensureConversation(body.conversationId, now);
     if (body.target) this.toolResults.setExplicitTarget(conversationId, body.target);
     const userMessage: ChatMessage = {
@@ -114,10 +136,12 @@ export class ChatSessionService {
     // `now` is passed explicitly as `undefined` so `runTurn` keeps minting its OWN
     // fresh timestamp (unchanged behaviour) while `body.teamId` threads through as
     // the turn's KB scope tag — Task 8, mirrors how `conversationId` already threads.
-    void this.runTurn(conversationId, turnId, body.text, undefined, body.teamId).catch((error) => {
-      this.logger.error(`chat turn ${turnId} failed: ${String(error)}`);
-      this.events.emit({ conversationId, turnId, type: "error", message: "Něco se pokazilo." });
-    });
+    void this.runTurn(conversationId, turnId, body.text, undefined, body.teamId, skill).catch(
+      (error) => {
+        this.logger.error(`chat turn ${turnId} failed: ${String(error)}`);
+        this.events.emit({ conversationId, turnId, type: "error", message: "Něco se pokazilo." });
+      },
+    );
 
     return { conversationId, turnId };
   }
@@ -130,17 +154,28 @@ export class ChatSessionService {
     sessionId: string | null,
     conversationId: string,
     teamId?: string,
+    // TODO 9: the `/`-picked skill, already resolved by `sendMessage`.
+    skill?: ChatTurnSkill,
   ): Promise<string[]> {
     const explicitTarget = this.toolResults.getExplicitTarget(conversationId);
     const persona = buildChatPrompt(this.systemConfig.current().chatPersona);
     // Fáze 14.2: when the operator @mentioned a unit, tell the model plainly — it still
     // decides WHETHER to call `create_task` (rule 3 of the governor), but if it does,
     // routing is already decided (`explicitTarget` skips the classifier server-side).
-    const prompt = explicitTarget
+    const targeted = explicitTarget
       ? `${persona}\n\nOperátor v této zprávě výslovně oslovil ${describeTarget(explicitTarget)} ` +
         "(@mention). Pokud zavoláš create_task, tato volba už má přednost před klasifikací — " +
         "nemusíš znovu vybírat cíl."
       : persona;
+    // TODO 9: the `/`-picked skill's instructions ride in the SAME
+    // `--append-system-prompt` the persona does — the chat turn runs with
+    // `--tools ""` and `--setting-sources ""`, so there is no native Skill tool to
+    // invoke; the prompt is the mechanism. It AUGMENTS the governor (appended
+    // after it), never replaces it.
+    const prompt = skill
+      ? `${targeted}\n\nOperátor pro tuto zprávu vybral skill "${skill.name}" (/mention). ` +
+        `Řiď se jeho instrukcemi:\n\n${skill.instructions}`
+      : targeted;
     const args = [
       "-p",
       text,
@@ -277,9 +312,14 @@ export class ChatSessionService {
     // through into `buildArgs` → `toolArgs` → `kbMcpUrl` — the same explicit-parameter
     // threading `conversationId` already gets, not new registry state.
     teamId?: string,
+    // TODO 9: the resolved `/`-picked skill, threaded straight into `buildArgs`
+    // the same explicit-parameter way `teamId` is.
+    skill?: ChatTurnSkill,
   ): Promise<void> {
     const sessionId = await this.store.getSessionId(conversationId);
-    const proc = this.createProcess(await this.buildArgs(text, sessionId, conversationId, teamId));
+    const proc = this.createProcess(
+      await this.buildArgs(text, sessionId, conversationId, teamId, skill),
+    );
 
     let accumulated = "";
     let capturedSession: string | null = null;

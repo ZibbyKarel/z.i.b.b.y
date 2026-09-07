@@ -2,6 +2,7 @@ import { Controller, type MessageEvent, Query, Sse } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { chatContract } from "@zibby/contracts";
 import { type Observable, filter, map } from "rxjs";
+import { InvalidSkillIdError, SkillNotFoundError } from "../skills/skills.errors";
 import { ChatEventsService } from "./chat-events.service";
 import { ChatSessionService } from "./chat-session.service";
 import { ChatTranscriptStore } from "./chat-transcript.store";
@@ -24,10 +25,22 @@ export class ChatController {
   @TsRestHandler(chatContract)
   handler() {
     return tsRestHandler(chatContract, {
-      sendMessage: async ({ body }) => ({
-        status: 201,
-        body: await this.session.sendMessage(body),
-      }),
+      // TODO 9: an unknown/unsafe `skillId` surfaces as a 404 rather than a 500 —
+      // `ChatSessionService.sendMessage` resolves the skill before it touches the
+      // transcript, so nothing has been created when this fires.
+      sendMessage: async ({ body }) => {
+        try {
+          return { status: 201 as const, body: await this.session.sendMessage(body) };
+        } catch (error) {
+          if (error instanceof SkillNotFoundError || error instanceof InvalidSkillIdError) {
+            return {
+              status: 404 as const,
+              body: { message: `Skill "${body.skillId ?? ""}" not found` },
+            };
+          }
+          throw error;
+        }
+      },
       getTranscript: async ({ query }) => {
         // No explicit id → ensure (create if absent) the single active conversation,
         // so the response always carries a real conversationId. The chat overlay opens

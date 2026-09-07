@@ -173,6 +173,26 @@ the provider's state down as props; landing on `/chat` any way other than
 (`chatSlot`) and the `chat` nav item (`state/config.ts`, glyph `butlerSign`)
 both navigate to `/chat`.
 
+### `CommandLine` — three trigger characters, one engine
+
+`CommandLine` (`features/tasks/components/CommandLine/`), the composer behind
+both the task launcher and `ChatDock`, detects three separate trigger
+characters in the draft text, each answering a different question:
+
+- `@` — WHO runs the turn. Always live. Lists agents/pipelines/subsystems;
+  picking one resolves a `TaskTarget` via `onTargetChange`.
+- `#` — WHAT knowledge base the turn may read. Opt-in via `allowTeamMentions`
+  (default `false`; `ChatDock` passes `true`). Lists teams; picking one sets a
+  scope tag via `onTeamChange`, independent of any `@`-picked target.
+- `/` — WHICH ZIBBY skill runs. Opt-in via `allowSkillMentions` (default
+  `false`). The trigger and its gate exist now; the skill catalog and the
+  `skill` result kind land in a follow-up task.
+
+A trigger only opens at the start of the text or right after whitespace, so a
+path (`apps/web`) or a hex colour (`#f97316`) never opens a picker mid-token.
+A trigger disabled on a given host opens no picker at all — never an empty
+one, which would advertise a source the host can't honor.
+
 ### RightRail = live log (global)
 
 `RightRail` (`components/layout/RightRail/`) is now **purely a live log of what
