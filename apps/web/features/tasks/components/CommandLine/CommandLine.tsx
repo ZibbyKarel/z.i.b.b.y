@@ -250,9 +250,11 @@ const MENTION_TRIGGERS = ["@", "/", "#"] as const;
 /**
  * Matches an in-progress `<trigger>query` immediately before the caret. The
  * trigger only counts at the start of the text or right after whitespace — that
- * boundary is load-bearing now that `/` and `#` are triggers: without it a path
- * (`apps/web`) would open the skills picker and a hex colour (`#f97316`) the
- * teams one on every keystroke.
+ * boundary is load-bearing now that `/` and `#` are triggers: without it a
+ * MID-WORD trigger (the `/` in `apps/web`) would open a picker on every
+ * keystroke. It does NOT stop a trigger that starts a word — `co je v /tmp` or
+ * `use #f97316` still opens a (typically empty) picker; that case is instead
+ * handled by `handleKeyDown` falling through to submit when no row is active.
  */
 const MENTION_QUERY_RE = /(?:^|\s)([@/#])([\w.-]*)$/;
 
@@ -790,11 +792,15 @@ export function CommandLine({
       }
       if (e.key === "Enter") {
         const active = mentionResults[activeMentionIndex];
+        // An empty picker (no matching row) must not swallow Enter — prose like
+        // `co je v /tmp` or `use #f97316` opens a picker with zero rows, and
+        // falling through to the normal submit path below is the only way Enter
+        // still submits instead of inserting a newline.
         if (active) {
           e.preventDefault();
           pickMentionResult(active);
+          return;
         }
-        return;
       }
       if (e.key === "Escape") {
         // Also stop native bubbling: an enclosing Dialog closes itself on a

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
-import { renderWithProviders, screen, within } from "../../../test/render";
+import { act, renderWithProviders, screen, within } from "../../../test/render";
 import { CommandLineTestId } from "../../tasks/components/CommandLine/CommandLine";
 import { VoiceToggleButtonTestId } from "./VoiceToggleButton";
 import { ChatDock, ChatDockTestId } from "./ChatDock";
@@ -71,8 +71,16 @@ const voiceState = {
   interim: "",
   toggle: voiceToggle,
 };
+// Captures the dock's own `send` (passed as `onSend`) so a test can invoke it
+// directly to simulate a finalized dictated utterance — the whole point of
+// dictation is that it bypasses `CommandLine.submit()`, so driving it through
+// the composer's DOM isn't possible.
+let capturedOnSend: ((text: string) => void) | undefined;
 vi.mock("../hooks/useVoiceMode", () => ({
-  useVoiceMode: () => voiceState,
+  useVoiceMode: ({ onSend }: { onSend: (text: string) => void }) => {
+    capturedOnSend = onSend;
+    return voiceState;
+  },
 }));
 
 function ChatDockHarness({ initialMessages = [] }: { initialMessages?: ChatMessageType[] }) {
@@ -305,6 +313,76 @@ describe("ChatDock", () => {
       // (`ChatMessage.tsx:182`), so the copy must stay free of markdown-significant
       // characters for this text match to hold.
       expect(await screen.findByText("Zprávu se nepodařilo odeslat.")).toBeInTheDocument();
+    });
+  });
+
+  describe("Final-review fix — a picked skill/team must not leak onto a dictated turn", () => {
+    afterEach(() => {
+      capturedOnSend = undefined;
+    });
+
+    it("does not carry a skill picked in the composer onto a SECOND dictated send", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatDockHarness />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+
+      // Pick a skill in the composer but never submit it.
+      await user.type(input, "/Code");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-code-review`));
+
+      // Dictation bypasses `CommandLine.submit()` entirely — invoke the dock's own
+      // `send` the way `useVoiceMode`'s finalized-utterance callback does. The
+      // FIRST dictated utterance legitimately carries the currently-picked skill
+      // (exactly like submitting the composer would) — the bug was that it kept
+      // leaking onto every utterance AFTER that one too.
+      expect(capturedOnSend).toBeDefined();
+      act(() => {
+        capturedOnSend?.("první diktovaná věta");
+      });
+      expect(sendMutate).toHaveBeenLastCalledWith({
+        body: {
+          conversationId: "c1",
+          text: "první diktovaná věta",
+          skillId: "code-review",
+        },
+      });
+
+      act(() => {
+        capturedOnSend?.("druhá diktovaná věta");
+      });
+
+      const secondCall = sendMutate.mock.calls[1]?.[0] as { body: Record<string, unknown> };
+      expect(secondCall.body).not.toHaveProperty("skillId");
+      expect(secondCall.body.text).toBe("druhá diktovaná věta");
+    });
+
+    it("does not carry a team tagged in the composer onto a SECOND dictated send", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ChatDockHarness />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+
+      await user.type(input, "#DevRel");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`));
+
+      expect(capturedOnSend).toBeDefined();
+      act(() => {
+        capturedOnSend?.("první diktovaná věta");
+      });
+      expect(sendMutate).toHaveBeenLastCalledWith({
+        body: {
+          conversationId: "c1",
+          text: "první diktovaná věta",
+          teamId: "devrel",
+        },
+      });
+
+      act(() => {
+        capturedOnSend?.("druhá diktovaná věta");
+      });
+
+      const secondCall = sendMutate.mock.calls[1]?.[0] as { body: Record<string, unknown> };
+      expect(secondCall.body).not.toHaveProperty("teamId");
+      expect(secondCall.body.text).toBe("druhá diktovaná věta");
     });
   });
 });

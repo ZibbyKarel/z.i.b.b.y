@@ -691,6 +691,20 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       expect(input).toHaveValue("");
     });
 
+    it("submits (not a newline) on Enter while an empty picker is open — prose like `/tmp` opens a picker with no matching row", async () => {
+      const onSubmit = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine allowSkillMentions onSubmit={onSubmit} />);
+
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "co je v /tmp");
+      expect(screen.getByTestId(CommandLineTestId.MentionMenu)).toBeInTheDocument();
+      await user.keyboard("{Enter}");
+
+      expect(onSubmit).toHaveBeenCalledWith("co je v /tmp", undefined, undefined);
+      expect(input).toHaveValue("");
+    });
+
     it("renders the Send action, and Send dispatches via onSubmit", async () => {
       const onSubmit = vi.fn();
       const user = userEvent.setup();

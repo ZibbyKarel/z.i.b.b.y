@@ -185,6 +185,15 @@ export function ChatDock({
           ...(skillId ? { skillId } : {}),
         },
       });
+      // `CommandLine.submit()` clears its own `teamId`/`skillId` for its NEXT
+      // render (see the docblocks above) — but the DICTATION path (`useVoiceMode`
+      // below) calls `send` directly, bypassing `CommandLine.submit()` entirely.
+      // Without clearing here too, a skill/team picked in the composer but never
+      // submitted would silently carry onto every dictated turn after it. Both
+      // axes are deliberately symmetric one-turn state, so both are cleared here,
+      // not just the one the picker last touched.
+      setTeamId(undefined);
+      setSkillId(undefined);
     },
     [conversationId, setMessages, sendMessage, teamId, skillId],
   );
