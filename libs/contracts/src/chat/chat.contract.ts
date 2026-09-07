@@ -1,5 +1,6 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
+import { ErrorSchema } from "../common.schema";
 import {
   ChatTranscriptSchema,
   SendChatMessageBodySchema,
@@ -16,6 +17,9 @@ const c = initContract();
  * part of this ts-rest router). `GET /chat/transcript` is a pure read of the
  * append-only transcript. Omitting `conversationId` targets the single active
  * conversation (MVP is one ongoing thread).
+ *
+ * A `skillId` naming no existing skill is a 404 — the turn is never started with
+ * a silently dropped skill (see `SendChatMessageBodySchema.skillId`).
  */
 export const chatContract = c.router(
   {
@@ -23,7 +27,7 @@ export const chatContract = c.router(
       method: "POST",
       path: "/chat/messages",
       body: SendChatMessageBodySchema,
-      responses: { 201: SendChatMessageResultSchema },
+      responses: { 201: SendChatMessageResultSchema, 404: ErrorSchema },
       summary: "Append a turn and start a streaming assistant response",
     },
     getTranscript: {

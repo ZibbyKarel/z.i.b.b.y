@@ -2,6 +2,7 @@ import { z } from "zod";
 import { BriefingSchema } from "../briefing/briefing.schema";
 import { TaskTargetSchema } from "../tasks/task.schema";
 import { TeamIdSchema } from "../teams/team.schema";
+import { SkillIdSchema } from "../skills/skill.schema";
 
 /**
  * Chat (chat-first conversational layer, replaces the Voice UI). The operator
@@ -99,6 +100,16 @@ export const SendChatMessageBodySchema = z.object({
    * that has a knowledge base (`KbScopeService.rootsForChat(undefined)`).
    */
   teamId: TeamIdSchema.optional(),
+  /**
+   * TODO 9: the skill the operator picked with the composer's `/` trigger. A
+   * third, independent axis beside `target` and `teamId`: `target` answers WHO a
+   * dispatched `create_task` runs as, `teamId` WHAT knowledge base the turn may
+   * read, and `skillId` WHICH ZIBBY skill's instructions the turn follows —
+   * `ChatSessionService` resolves it against the skills store and folds the
+   * skill's `instructions` into the turn's `--append-system-prompt`. An id with
+   * no skill file behind it is a 404, never a silently ignored field.
+   */
+  skillId: SkillIdSchema.optional(),
 });
 export type SendChatMessageBody = z.infer<typeof SendChatMessageBodySchema>;
 
