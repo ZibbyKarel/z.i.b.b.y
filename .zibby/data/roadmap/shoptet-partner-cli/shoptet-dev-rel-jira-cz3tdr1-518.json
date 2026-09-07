@@ -2,7 +2,7 @@
   "id": "shoptet-dev-rel-jira-cz3tdr1-518",
   "projectId": "shoptet-partner-cli",
   "level": "epic",
-  "name": "[Shoptet CLI Greenfield] Research & Design (Pre-Phase)",
+  "name": "Shoptet addon CLI - Greenfield - Research & Design (Pre-Phase)",
   "description": "Part of the \"Shoptet Partner CLI — Greenfield Rebuild\" initiative (no Initiative issue type exists in this project, so this label groups the whole effort: `shoptet-cli-greenfield`).\n\nResearch and design work that produced the consolidated greenfield blueprint (`cli-greenfield.md`), which defines the MVP (init/validate/dev/build) and the end-game (ownership boundary + host-owned runtime) for the Shoptet Partner CLI, replacing the four legacy repos (create-visual-addon-boilerplate, shoptet-bender, addon-repository-github-app, templates-assets).\n\nThis epic covers work already completed and is tracked for provenance.",
   "source": {
     "kind": "jira",
@@ -19,6 +19,6 @@
   "runs": [],
   "syncNotes": [],
   "createdAt": "2026-07-29T10:56:34.182Z",
-  "updatedAt": "2026-08-31T18:45:38.207Z",
-  "syncedAt": "2026-08-31T18:45:38.207Z"
+  "updatedAt": "2026-09-07T08:13:07.710Z",
+  "syncedAt": "2026-09-07T08:13:07.710Z"
 }

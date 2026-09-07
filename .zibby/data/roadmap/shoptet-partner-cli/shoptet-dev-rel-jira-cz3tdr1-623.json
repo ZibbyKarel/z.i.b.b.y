@@ -1,0 +1,35 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-623",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-592",
+  "name": "shoptet dev: expose environment-driven settings as command flags instead of NODE_OPTIONS",
+  "description": "## Why\n\nRunning `shoptet dev` against a shop behind a corporate TLS-inspecting proxy today requires the user to prefix the invocation with a Node startup option:\n\n```\nNODE_OPTIONS=--use-system-ca shoptet dev\n```\n\nThat is not a documented part of the CLI's surface. `doc/configuration.md` lists the CLI's environment variables (`SHOPTET_CONFIG_HOME`, `SHOPTET_DEV_SHOP`, `SHOPTET_NO_AUTOUPDATE`, `SHOPTET_NO_PARTNER_ESLINT_CONFIG`, `SHOPTET_LOCALE`, `LC_ALL`/`LC_MESSAGES`/`LANG`, `NO_COLOR`) and `NODE_OPTIONS` is not among them — a user who hits a `UNABLE_TO_VERIFY_LEAF_SIGNATURE`-class failure has no way to discover the workaround from `shoptet dev --help`. It also does not compose: `NODE_OPTIONS` is a shell-level prefix, invisible to `--describe`, to the `--json` envelope, and to `doctor`.\n\nThe ask: everything a user has to set in the environment to make `shoptet dev` work should be reachable as a flag on the command.\n\n## What the command exposes today\n\n`packages/cli/src/commands/dev/oclif.ts` declares exactly five flags: `--json`, `--dev-shop`, `--port`, `--skip-header-include`, `--skip-footer-include`. Of the documented environment variables, only `SHOPTET_DEV_SHOP` already has a flag counterpart (`--dev-shop`), wired through the precedence chain `flags > env > project config > machine config > defaults` documented in `doc/configuration.md`.\n\nSo the gap this issue closes splits in two, and they are not the same kind of work:\n\n1. **Node startup options (**`NODE_OPTIONS`) — the actual request. `--use-system-ca` and its relatives (`NODE_EXTRA_CA_CERTS`, `NODE_TLS_REJECT_UNAUTHORIZED`) are consumed by Node _before_ the CLI's own code runs. An oclif flag is parsed after startup, so `shoptet dev --use-system-ca` cannot simply set a variable. Two implementation paths, to be decided during design:\n\n  - **Programmatic.** `packages/cli/package.json` pins `engines.node` to `^22.15.0 || ^24.0.0 || >=26.0.0`, and `tls.getCACertificates(\"system\")` exists across that whole floor — the CA bundle can be loaded in-process and handed to the proxy's own HTTPS agent in `packages/dev-engine/src/proxy/`. Scoped, no re-exec, but only covers the code paths we control.\n  - **Re-exec.** Detect the flag, re-spawn the CLI with `NODE_OPTIONS=--use-system-ca`. Covers everything, but forks the process lifecycle — and `dev` is the one command with cooperative `SIGINT`/`SIGTERM` shutdown (ADR 0053's Amendment measured a real signal-handling race here), so a second process is a real risk to that teardown.\n2. **CLI environment variables that lack a flag.** Audit the list in `doc/configuration.md` against `dev`'s flag set and decide, per variable, whether a flag is warranted. Some are deliberately env-only (`SHOPTET_CONFIG_HOME` relocates the machine config; `NO_COLOR` follows the no-color.org convention). This part is a scoping decision, not a foregone conclusion — the issue should not add flags for their own sake.\n\n## Definition of done\n\n- `shoptet dev --use-system-ca` works without a `NODE_OPTIONS` prefix, with an ADR recording which of the two paths was chosen and why (the measurement, not the preference).\n- Any environment variable that gains a flag keeps the documented precedence chain — the flag wins, the variable still works.\n- Contract surfaces updated in the same commit: `doc/cli-reference.md`'s `dev` flag table, `doc/configuration.md`, message-catalog keys for any new user-facing string, `--describe` parity, the golden `--json` envelope if it moves, and a changeset.\n\n## Source\n\nTODO.md item 5 (`shoptet/partner-cli`).",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-623",
+    "externalKey": "CZ3TDR1-623",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-623"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "failed",
+  "enqueuedAt": "2026-09-01T18:32:50.521Z",
+  "runs": [
+    {
+      "taskId": "task_1788287586616_13c95c",
+      "runRef": "patch_1788287586631",
+      "startedAt": "2026-09-01T18:33:10.231Z",
+      "finishedAt": "2026-09-01T18:34:05.093Z",
+      "outcome": "failed"
+    }
+  ],
+  "lastFailureReason": "1 stages, failed",
+  "syncNotes": [],
+  "createdAt": "2026-09-01T18:32:49.350Z",
+  "updatedAt": "2026-09-07T08:13:07.737Z",
+  "syncedAt": "2026-09-07T08:13:07.737Z"
+}
