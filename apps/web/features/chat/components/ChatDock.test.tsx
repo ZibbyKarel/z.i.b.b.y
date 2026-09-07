@@ -26,8 +26,8 @@ vi.mock("../../subsystems/queries/useSubsystemsQuery", () => ({
 vi.mock("../../tasks/mutations/useUploadTaskAttachmentsMutation", () => ({
   useUploadTaskAttachmentsMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
-// Task 8 fix round 1: the fourth mention source (team @-mentions), same fixture
-// `CommandLine.test.tsx`/`TaskCommandLine.test.tsx` use.
+// Task 8 fix round 1: the fourth mention source (team `#`-mentions, TODO 9), same
+// fixture `CommandLine.test.tsx`/`TaskCommandLine.test.tsx` use.
 vi.mock("../../teams", () => ({
   useTeamsQuery: () => ({ data: [{ id: "devrel", name: "DevRel" }] }),
 }));
@@ -187,7 +187,7 @@ describe("ChatDock", () => {
       renderWithProviders(<ChatDockHarness />);
       const input = screen.getByTestId(CommandLineTestId.Input);
 
-      await user.type(input, "@DevRel");
+      await user.type(input, "#DevRel");
       await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`));
       await user.type(input, "co víme o partner portálu?");
       await user.click(screen.getByTestId(ChatDockTestId.Send));
@@ -195,7 +195,7 @@ describe("ChatDock", () => {
       expect(sendMutate).toHaveBeenCalledWith({
         body: {
           conversationId: "c1",
-          text: "@DevRel co víme o partner portálu?",
+          text: "#DevRel co víme o partner portálu?",
           teamId: "devrel",
         },
       });
@@ -217,12 +217,12 @@ describe("ChatDock", () => {
       renderWithProviders(<ChatDockHarness />);
       const input = screen.getByTestId(CommandLineTestId.Input);
 
-      await user.type(input, "@DevRel");
+      await user.type(input, "#DevRel");
       await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`));
       await user.type(input, "první tah");
       await user.click(screen.getByTestId(ChatDockTestId.Send));
       expect(sendMutate).toHaveBeenLastCalledWith({
-        body: { conversationId: "c1", text: "@DevRel první tah", teamId: "devrel" },
+        body: { conversationId: "c1", text: "#DevRel první tah", teamId: "devrel" },
       });
 
       await user.type(input, "druhý tah");
