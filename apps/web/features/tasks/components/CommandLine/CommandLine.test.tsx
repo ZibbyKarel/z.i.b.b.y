@@ -568,18 +568,21 @@ describe("CommandLine (Phase 118d generic composer)", () => {
     it("wraps the input in the panel chrome by default (header icon + label + hint)", () => {
       render(<CommandLine onSubmit={vi.fn()} />);
       expect(screen.getByTestId(PanelTestId.Header)).toHaveTextContent("Zadej směr");
-      // `allowTeamMentions` fix round: the hint's wording must track what THIS
-      // render actually offers — with the prop left at its (opt-in) default, no
-      // team row is offered, so the hint must not claim one either.
-      expect(screen.getByText(/hledá agenty, pipeliny a podsystémy/)).toBeInTheDocument();
-      expect(
-        screen.queryByText(/hledá agenty, pipeliny, podsystémy a týmy/),
-      ).not.toBeInTheDocument();
+      // TODO 9: the hint names exactly the triggers THIS render offers — with both
+      // opt-in props left at their default, only `@` is live.
+      const hint = screen.getByTestId(PanelTestId.Header).textContent ?? "";
+      expect(hint).toContain("@ hledá agenty, pipeliny a podsystémy");
+      expect(hint).not.toContain("/ pustí skill");
+      expect(hint).not.toContain("# hledá týmy");
     });
 
-    it("the chrome hint includes teams once `allowTeamMentions` is explicitly on — Fix round 2", () => {
-      render(<CommandLine allowTeamMentions onSubmit={vi.fn()} />);
-      expect(screen.getByText(/hledá agenty, pipeliny, podsystémy a týmy/)).toBeInTheDocument();
+    it("names `/` and `#` once both triggers are explicitly on", () => {
+      render(<CommandLine allowSkillMentions allowTeamMentions onSubmit={vi.fn()} />);
+      const hint = screen.getByTestId(PanelTestId.Header).textContent ?? "";
+
+      expect(hint).toContain("@ hledá agenty, pipeliny a podsystémy");
+      expect(hint).toContain("/ pustí skill");
+      expect(hint).toContain("# hledá týmy");
     });
 
     it("renders a bare input with no panel chrome when chrome={false}", () => {

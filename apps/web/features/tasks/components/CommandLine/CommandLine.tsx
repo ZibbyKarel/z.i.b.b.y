@@ -1312,9 +1312,14 @@ export function CommandLine({
           }
           headerEnd={
             <Typography mono size="2xs" type="note" variant="tertiary">
-              {/* Task 9b: the hint must not claim a mention source this render
-                  doesn't actually offer — see `allowTeamMentions`'s docblock. */}
-              {t(allowTeamMentions ? "commandLine.chrome.hint" : "commandLine.chrome.hintNoTeams")}
+              {/* TODO 9: the hint must name exactly the triggers this render
+                  offers and nothing else — see `allowTeamMentions`'s docblock. */}
+              {[
+                t("commandLine.chrome.triggerAgents"),
+                ...(allowSkillMentions ? [t("commandLine.chrome.triggerSkills")] : []),
+                ...(allowTeamMentions ? [t("commandLine.chrome.triggerTeams")] : []),
+                ...(showAttach ? [t("commandLine.chrome.hintAttach")] : []),
+              ].join(" · ")}
             </Typography>
           }
           padding="150"

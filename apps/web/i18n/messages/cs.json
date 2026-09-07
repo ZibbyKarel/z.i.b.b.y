@@ -198,8 +198,10 @@
       "dropHint": "Pustit sem — přidá se jako @soubor do textu",
       "chrome": {
         "label": "Zadej směr · přirozeným jazykem",
-        "hint": "@ hledá agenty, pipeliny, podsystémy a týmy · přetáhni soubor, nebo použij sponku",
-        "hintNoTeams": "@ hledá agenty, pipeliny a podsystémy · přetáhni soubor, nebo použij sponku"
+        "triggerAgents": "@ hledá agenty, pipeliny a podsystémy",
+        "triggerSkills": "/ pustí skill",
+        "triggerTeams": "# hledá týmy",
+        "hintAttach": "přetáhni soubor, nebo použij sponku"
       },
       "ack": {
         "kind": {
@@ -1836,7 +1838,7 @@
       "send": "Odeslat"
     },
     "mention": {
-      "ariaLabel": "Vyhledat agenta nebo pipeline k oslovení",
+      "ariaLabel": "Vyhledávání k oslovení",
       "placeholder": "Hledat agenta nebo pipeline…",
       "empty": "Nic nenalezeno",
       "removeAria": "Odebrat cíl",

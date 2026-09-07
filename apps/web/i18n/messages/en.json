@@ -198,8 +198,10 @@
       "dropHint": "Drop here — added as an @file in the text",
       "chrome": {
         "label": "Say what you need · plain language",
-        "hint": "@ searches agents, pipelines, subsystems and teams · drag a file, or use the paperclip",
-        "hintNoTeams": "@ searches agents, pipelines and subsystems · drag a file, or use the paperclip"
+        "triggerAgents": "@ searches agents, pipelines and subsystems",
+        "triggerSkills": "/ runs a skill",
+        "triggerTeams": "# searches teams",
+        "hintAttach": "drag a file, or use the paperclip"
       },
       "ack": {
         "kind": {
@@ -1836,7 +1838,7 @@
       "send": "Send"
     },
     "mention": {
-      "ariaLabel": "Search agents and pipelines to mention",
+      "ariaLabel": "Search to mention",
       "placeholder": "Search agents or pipelines…",
       "empty": "Nothing found",
       "removeAria": "Remove target",
