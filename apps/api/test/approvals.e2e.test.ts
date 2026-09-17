@@ -15,7 +15,11 @@ const FAKE_CLAUDE = path.resolve(
 );
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-async function until<T>(fn: () => Promise<T>, timeoutMs = 8000): Promise<T> {
+// Generous default (Phase 13.4): each gate test spawns a real fake-claude child and
+// waits on status flips, so under full-suite CPU load a flow that normally settles in
+// well under a second can be starved for seconds — an 8s poll window was the observed
+// flake ("until: timed out" at ~8.6s). Stays under the 30s testTimeout.
+async function until<T>(fn: () => Promise<T>, timeoutMs = 25000): Promise<T> {
   const start = Date.now();
   for (;;) {
     const result = await fn();

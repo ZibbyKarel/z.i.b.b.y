@@ -875,7 +875,10 @@ describe("RunnerCore", () => {
     const resumeAt = await waitForResumeAt(core, run.runId);
     expect(resumeAt).toBe(epoch * 1000);
     expect(core.get(run.runId).limitResumeCycles).toBe(0);
-    // The spawn spec is stashed so restart + respawn come free.
+    // The spawn spec is stashed so restart + respawn come free. `resumeAt` is set
+    // in memory BEFORE `writePendingSpec` awaits, so waiting on it does not imply
+    // the spec is on disk — poll the file or a loaded run reads it too early.
+    await waitForPendingSpec(run.runId);
     const pending = JSON.parse(
       await fs.readFile(path.join(dir, `${run.runId}.pending.json`), "utf8"),
     );

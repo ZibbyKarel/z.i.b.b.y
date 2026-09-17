@@ -206,6 +206,13 @@ Variant-B "release a blocked child" branch (the child is already dead).
 > observing in-memory state races the write and will flake under load. Wait for the
 > **file**, not the status. (`runner-core.test.ts`'s `waitForPendingSpec` does
 > exactly this; it was a real intermittent failure, not a hypothetical.)
+>
+> `resumeAt` is no safer a proxy than the status: `completeLimitPause` assigns
+> `run.resumeAt` in memory _before_ it awaits the `writePendingSpec` call, so a
+> poll that waits for `resumeAt` to be populated can still observe the run a tick
+> before the spec exists on disk. Anything that then reads `<runId>.pending.json`
+> directly must wait on the file too — waiting on `resumeAt` first does not order
+> the write.
 
 `markResumeCycle`/`failLimit`/`discardPausedLimit` support the owner-side
 retry-cap and re-drive logic (agent runs have no parked terminal state, so a
