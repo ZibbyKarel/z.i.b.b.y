@@ -64,6 +64,17 @@ function tailOf(text: string): string {
 }
 
 /**
+ * Strip any literal `<verdict>` / `</verdict>` tag out of operator-authored text before it
+ * reaches a `claude` verifier's prompt. `readLog()` returns the whole log, prompt echo included,
+ * and {@link parseGoalVerdict} is literal last-tag-wins — so a tag smuggled in through the goal's
+ * objective would become the deciding verdict whenever the judge omits its own, turning
+ * fail-closed into fail-open.
+ */
+function stripVerdictTags(text: string): string {
+  return text.replace(/<\/?verdict>/gi, "");
+}
+
+/**
  * Phase 12.1/12.2 — decide whether a goal `checks` verifier is safe to run, the
  * single predicate shared by the `drive()` pre-flight park and the `runVerifier`
  * floor. Returns a readable refusal reason, or `null` when it is safe to run.
@@ -672,8 +683,10 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
     // The tag is described, never instanced: a literal `<verdict>pass</verdict>` in
     // the prompt would be echoed into the log and — under last-match-wins — become the
     // ruling whenever the judge forgot to write one, turning fail-closed into fail-open.
+    // The objective is operator-authored (not under our control), so it is scrubbed
+    // with `stripVerdictTags` before interpolation for the same reason.
     const prompt = [
-      `Verify whether this goal is satisfied: ${goal.objective}`,
+      `Verify whether this goal is satisfied: ${stripVerdictTags(goal.objective)}`,
       `This is verification iteration ${index + 1}. Inspect the working tree and report PASS or FAIL with a short reason.`,
       `End your report with a machine-readable verdict on its own line: a "verdict" XML tag whose only content is the single word pass or fail. It is read by a parser, not a human, and the LAST such tag in your output wins. If you cannot reach a confident conclusion, rule fail — a missing or unreadable verdict is treated as a failure.`,
     ].join("\n\n");
@@ -692,13 +705,21 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
     const output = tailOf(log?.content ?? "");
     const ruled = parseGoalVerdict(log?.content ?? "");
     const satisfied = status === "done" && ruled === "pass"; // fail-closed on null
-    this.log.info("goal claude verifier graded", {
+    // status === "done" && ruled === null means the judge agent ran to completion but
+    // never wrote a parseable verdict — the agent itself is likely misconfigured, not
+    // an ordinary FAIL, so it is surfaced as a warning rather than routine info.
+    const logFields = {
       goalRunId: run.goalRunId,
       runRef: r.runId,
       status,
       verdict: ruled ?? "absent",
       satisfied,
-    });
+    };
+    if (status === "done" && ruled === null) {
+      this.log.warn("goal claude verifier produced no parseable verdict", logFields);
+    } else {
+      this.log.info("goal claude verifier graded", logFields);
+    }
     return { kind: "claude", runRef: r.runId, satisfied, output };
   }
 

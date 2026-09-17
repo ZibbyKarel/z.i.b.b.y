@@ -92,6 +92,15 @@ immediately; `drive()` runs the loop in the background.
    shared session, graded on the `<verdict>pass|fail</verdict>` tag it writes into its
    own log (`parseGoalVerdict`, last tag wins) — **not** on its exit code. It is
    fail-closed: no parseable verdict, or a judge that never finished, is not satisfied.
+   In practice this means a `claude`-verified goal whose judge never emits a
+   parseable verdict is never satisfied, so it will burn every iteration up to
+   `maxIterations` and then park with reason `iterations` rather than finishing
+   `done`. Because `readLog()` returns the whole log — prompt echo included — and
+   grading is literal last-tag-wins, an agent used as a `claude` verifier must
+   never carry a complete, literal opening-verdict-tag/word/closing-verdict-tag
+   example in its own instructions: that example would sit in the log next to
+   whatever the judge actually rules, and if the judge omits its own tag, the
+   instruction's example becomes the deciding verdict instead.
    **Phase 12.6 shortcut:** if the maker
    was a workflow that already ran its own deterministic verify phase with the exact
    same commands the goal's `checks` verifier would run, the runner synthesizes a
