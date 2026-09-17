@@ -264,6 +264,19 @@ folded into the failure-context handoff so Kodér/Architekt know why they
 were re-run. `qualify` doesn't apply to a phase's error path (only to
 `done`) — a crashed phase takes the ordinary failure route.
 
+**Who actually opts in.** The mechanism above is only as good as the definitions
+that use it. The shipped `delivery` pipeline gates **both** of its judging
+phases — `review` (code-reviewer) and `n-9` (test-automator) — each with
+`driftTo: architekt`, so a `gap` returns the work to Kodér while a `drift`
+goes back for a replan. Before that, neither was gated: the phases wrote a
+verdict into their artifact and the runner threw it away, leaving the claude
+process's exit code as the only pass/fail signal — a reviewer could write
+"this is broken" and the run would still advance to the PR. `qualify` is
+absent from a definition by default, and absence is invisible at runtime,
+so `apps/api/src/pipelines/shipped-pipelines.test.ts` parses every shipped
+`.zibby/data/pipelines/*.pipeline.md` against `PipelineSchema` and pins which
+phases are gates.
+
 ### Loop and escalation
 
 ```
