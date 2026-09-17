@@ -16,6 +16,10 @@ import {
 } from "../../../../test/render";
 import { CommandLine, CommandLineTestId } from "./CommandLine";
 
+/** Marks are keyed per segment (`${Mark}-${start}`), so every rendered mark is
+ *  selected by prefix — the same way `HighlightTextAreaField`'s own suite does it. */
+const markPattern = new RegExp(`^${HighlightTextAreaFieldTestId.Mark}-`);
+
 /**
  * Phase 118d: `CommandLine` is the GENERIC draft composer — text, `@`-mention target,
  * attachments, highlights, suggestions — firing `onSubmit` on Enter/Send. It no longer
@@ -123,7 +127,7 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       // highlighted, is the only visible trace of the assigned target.
       expect(screen.queryByTestId(RETIRED_TARGET_CHIP_TESTID)).not.toBeInTheDocument();
       expect(input).toHaveValue("@Builder ");
-      const marks = screen.getAllByTestId(HighlightTextAreaFieldTestId.Mark);
+      const marks = screen.getAllByTestId(markPattern);
       expect(marks.find((m) => m.textContent === "@Builder")).toHaveClass("bg-accent/[0.14]");
       expect(screen.queryByTestId(CommandLineTestId.MentionMenu)).not.toBeInTheDocument();
       expect(onTargetChange).toHaveBeenLastCalledWith({
@@ -535,7 +539,7 @@ describe("CommandLine (Phase 118d generic composer)", () => {
         screen.getByTestId(CommandLineTestId.Input),
         "uprav /tmp/scratch/widget a otestuj",
       );
-      const marks = await screen.findAllByTestId(HighlightTextAreaFieldTestId.Mark);
+      const marks = await screen.findAllByTestId(markPattern);
       expect(marks.map((m) => m.textContent).join("")).toContain("/tmp/scratch/widget");
     });
 
@@ -549,7 +553,7 @@ describe("CommandLine (Phase 118d generic composer)", () => {
         target: { value: "@Builder a @Delivery a @report.md" },
       });
 
-      const marks = screen.getAllByTestId(HighlightTextAreaFieldTestId.Mark);
+      const marks = screen.getAllByTestId(markPattern);
       const byText = (needle: string) => marks.find((m) => m.textContent === needle);
 
       expect(byText("@Builder")).toHaveClass("bg-accent/[0.14]");

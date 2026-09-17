@@ -998,7 +998,12 @@ describe("RunnerCore", () => {
   });
 
   it("resume() respawns a paused-limit run from its stashed spec and it can finish", async () => {
-    const epoch = Math.floor(Date.now() / 1000) + 2;
+    // A far-future reset epoch: this test drives resume() BY HAND, so the automatic
+    // resume-at-epoch timer must never fire inside it. With a near epoch (+2s) a
+    // slow, loaded full-suite run lets that timer land after the manual resume has
+    // already cleared `<runId>.pending.json`, re-stashing the spec and failing the
+    // "pending spec is cleared" assertion below.
+    const epoch = Math.floor(Date.now() / 1000) + 3600;
     const core = new RunnerCore(
       dir,
       strategy,

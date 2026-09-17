@@ -247,7 +247,7 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
     render(<NewTaskDialog onClose={() => {}} />);
     await user.type(screen.getByLabelText(/Zadání/), "Srovnej média v ~/Projects/media-vault");
     // The path is marked inline (on the highlight backdrop), not listed as a chip below.
-    const marks = await screen.findAllByTestId("highlight-text-area-mark");
+    const marks = await screen.findAllByTestId(/^highlight-text-area-mark-/);
     expect(marks.map((m) => m.textContent).join("")).toContain("~/Projects/media-vault");
   });
 
