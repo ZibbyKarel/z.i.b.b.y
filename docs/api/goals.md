@@ -89,7 +89,10 @@ immediately; `drive()` runs the loop in the background.
    group so a kill reaps the whole tree, a wall-clock deadline that SIGTERMs then
    escalates to SIGKILL after a grace period, a capped rolling output tail); satisfied
    on exit 0. A `claude` verifier is a **fresh** agent run on its own model with no
-   shared session, satisfied when it completes. **Phase 12.6 shortcut:** if the maker
+   shared session, graded on the `<verdict>pass|fail</verdict>` tag it writes into its
+   own log (`parseGoalVerdict`, last tag wins) — **not** on its exit code. It is
+   fail-closed: no parseable verdict, or a judge that never finished, is not satisfied.
+   **Phase 12.6 shortcut:** if the maker
    was a workflow that already ran its own deterministic verify phase with the exact
    same commands the goal's `checks` verifier would run, the runner synthesizes a
    satisfied verdict instead of re-running the suite.

@@ -37,6 +37,7 @@ import { SystemConfigStore } from "../system/system-config.store";
 import { WorkspaceService, WorkspaceSetupError } from "../workspace/workspace.service";
 import { GoalsStorageService } from "./goals.storage.service";
 import { decideStop, renderGoalProgress } from "./goal-stop";
+import { parseGoalVerdict } from "./goal-verdict";
 import {
   GoalRunNotFoundError,
   GoalRunNotParkedError,
@@ -660,10 +661,18 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
       const { code, output } = await this.runShell(command, args, spawnCwd as string);
       return { kind: "checks", satisfied: code === 0, output: tailOf(output) };
     }
-    // claude verifier: a fresh agent run handed the goal + iteration context.
+    // claude verifier: a fresh agent run handed the goal + iteration context. It is
+    // graded on the verdict it WRITES, not on its exit code — a judge that rules FAIL
+    // and exits 0 has not satisfied anything. Fail-closed on a missing/unparseable
+    // verdict and on a judge that never finished.
+    //
+    // The tag is described, never instanced: a literal `<verdict>pass</verdict>` in
+    // the prompt would be echoed into the log and — under last-match-wins — become the
+    // ruling whenever the judge forgot to write one, turning fail-closed into fail-open.
     const prompt = [
       `Verify whether this goal is satisfied: ${goal.objective}`,
       `This is verification iteration ${index + 1}. Inspect the working tree and report PASS or FAIL with a short reason.`,
+      `End your report with a machine-readable verdict on its own line: a "verdict" XML tag whose only content is the single word pass or fail. It is read by a parser, not a human, and the LAST such tag in your output wins. If you cannot reach a confident conclusion, rule fail — a missing or unreadable verdict is treated as a failure.`,
     ].join("\n\n");
     const r = await this.agentRunner.start(
       spec.agent,
@@ -677,12 +686,17 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
     );
     const status = await this.waitForMaker(run, "agent", r.runId);
     const log = await this.agentRunner.readLog(r.runId, 0).catch(() => null);
-    return {
-      kind: "claude",
+    const output = tailOf(log?.content ?? "");
+    const ruled = parseGoalVerdict(log?.content ?? "");
+    const satisfied = status === "done" && ruled === "pass"; // fail-closed on null
+    this.log.info("goal claude verifier graded", {
+      goalRunId: run.goalRunId,
       runRef: r.runId,
-      satisfied: status === "done",
-      output: tailOf(log?.content ?? ""),
-    };
+      status,
+      verdict: ruled ?? "absent",
+      satisfied,
+    });
+    return { kind: "claude", runRef: r.runId, satisfied, output };
   }
 
   /** The verifier shell deadline (operator-owned config; tests seed a short one). */
