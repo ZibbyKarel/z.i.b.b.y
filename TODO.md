@@ -6,7 +6,7 @@
 - [ ] Uvnitř jednoho běhu neexistuje paralelizace — jeden claude -p na run, fáze pipeline striktně sériově; souběžnost je jen mezi samostatnými top-level runy (cap maxConcurrentRuns: 3). Zvážit fan-out nezávislých úkolů jedné zakázky do vlastních git worktree (Albert: DAG scheduler + worktree per task + sériový merge v topo pořadí)
 - [ ] Chybí plánovač, který z cíle vyrobí task list s file_scope a model tierem per úkol — pipeliny jsou ručně psané, model je statický (escalation ladder je pevná tabulka). Roadmap decomposition sice dělá dependsOn položky, ale bez file scopes, bez per-task volby modelu a bez re-planu za běhu. Dopsat plánovací fázi (levný tier na rutinu, drahý jen na těžké uvažování)
 - [ ] Do běžícího runu se nedá promluvit — stdin je ignore (runner-core.ts:397), operátor má jen stop/resume/delete a poznámku až po zaparkování. Přidat inbox (soubory v sandboxu), který runner načte na začátku každé fáze: umožní přeprioritizovat nebo zastavit, ale nikdy neoslabit gate ani zvrátit zamítnutí revize
-- [ ] rozdělit v chatu mentions (momentálně mention funguje jen přes "@") nově ale bude
+- [x] rozdělit v chatu mentions (momentálně mention funguje jen přes "@") nově ale bude ([69](https://github.com/ZibbyKarel/z.i.b.b.y/pull/69))
   - "@" označovat agenty
   - "/" pouštět specifické skills zibbyho
   - "#" hledat firmy a týmy

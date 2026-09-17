@@ -1,0 +1,35 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-629",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-592",
+  "name": "Rename each command's oclif.ts to a framework-neutral adapter.ts",
+  "description": "## Why\n\nEvery command directory in `packages/cli/src/commands/` bakes the CLI framework's brand name into a\nfile name. Each `oclif.ts` is a thin leaf — flag/arg declarations, a real-deps factory, and\ndelegation to a framework-agnostic `run<Domain>Command` in the sibling `index.ts`, per\n[ADR 0054](https://github.com/shoptet/partner-cli/blob/develop/doc/decisions/0054-the-port-to-oclif-keeps-the-wire-and-owns-the-exit-path.md).\nThe seam is already framework-neutral by design; only the file name isn't. Renaming it to\n`adapter.ts` makes the file name describe the _role_ (the framework binding) rather than the\n_current_ framework, so a future framework change touches the contents of these files and not their\npaths — and, more immediately, not the eight-plus documentation sites that name them by path.\n\n**A correction to the original TODO's premise, measured against the code:** this is not a future\n_migration blocker_. `packages/cli/package.json`'s `oclif` block uses\n`\"commands\": { \"strategy\": \"explicit\", \"target\": \"./dist/index.js\", \"identifier\": \"commands\" }` —\noclif imports the hand-built `commands` record from `packages/cli/src/index.ts:205-216` and never\nscans the filesystem for command files by path or name. No `tsdown` entry glob, ESLint config, or\n`vitest.config.ts` coverage path matches these filenames either (checked; none found). So the code\nside is a mechanical, compiler-catchable rename: every reference is a TypeScript module specifier,\nand a missed one fails `check:types`. The real cost being paid today is documentation drift across\nseven files.\n\n## Scope — the eight files\n\nConfirmed by glob; exactly these, all extending `ShoptetOclifCommand` from\n`packages/cli/src/lib/oclif/command.ts`:\n\nFile\n\nExports\n\n`packages/cli/src/commands/build/oclif.ts:69`\n\n`BuildOclifCommand`\n\n`packages/cli/src/commands/dev/oclif.ts:144`\n\n`DevOclifCommand`\n\n`packages/cli/src/commands/validate/oclif.ts:88`\n\n`ValidateOclifCommand`\n\n`packages/cli/src/commands/init/oclif.ts:89`\n\n`InitOclifCommand`\n\n`packages/cli/src/commands/refresh/oclif.ts:73`\n\n`RefreshOclifCommand`\n\n`packages/cli/src/commands/update/oclif.ts:78`\n\n`UpdateOclifCommand`\n\n`packages/cli/src/commands/doctor/oclif.ts:72`\n\n`DoctorOclifCommand`\n\n`packages/cli/src/commands/config/autoupdate/oclif.ts:62,72,82`\n\n`ConfigAutoupdateOn/Off/StatusOclifCommand`\n\nEach `oclif.test.ts` sibling is renamed alongside its subject (`adapter.test.ts`).\n\n## Code references to update\n\n- `packages/cli/src/index.ts:2-8,13` — the registry's eight `./commands/<domain>/oclif.js` imports.\n- Eight sibling test imports of `\"./oclif.js\"`: `init/oclif.test.ts:8`, `validate/oclif.test.ts:7`,\n  `update/oclif.test.ts:6`, `config/autoupdate/oclif.test.ts:10`, `refresh/oclif.test.ts:8`,\n  `doctor/oclif.test.ts:5`, `dev/oclif.test.ts:5`, `build/oclif.test.ts:6`.\n- `packages/cli/src/commands/refresh/index.test.ts:21` — imports the autoupdate classes from\n  `\"../config/autoupdate/oclif.js\"`.\n\n## Documentation to update, per CLAUDE.md's same-commit rule\n\n- `doc/contracts.md:250` (prose), `:282` (mermaid node `commands/**/oclif.ts`)\n- `doc/overview.md:28` (`commands/dev/oclif.ts`'s `realDevExtraDeps`)\n- `doc/cli-reference.md:5` (`packages/cli/src/commands/**/oclif.ts`)\n- `doc/decisions/0054-…-port-to-oclif….md` — lines 302, 403, 723, 751, 770, 782, 789, 862, 950, 975\n- `doc/decisions/0061-dev-default-port.md` — lines 123, 188, 248, 259\n- `.claude/skills/new-command/SKILL.md` — lines 17, 62, 66, 281\n- `doc/configuration.md:93` — not in the original TODO list: `commands/update/oclif.ts:64`\n  appears in the enumeration of every `process.env` read site.\n\nA historical ADR records a decision as it was made, so where 0054/0061 describe _what was done at\nthe time_, prefer an added note over rewriting history; where they name a path a reader is expected\nto open _today_, update the path.\n\n## Explicitly out of scope\n\nThe framework's name also appears in `packages/cli/src/lib/oclif/` (`command.ts`,\n`command.test.ts`, `test-support.ts`) and in the `*OclifCommand` class-name suffix itself. This\nissue deliberately covers only the eight file names, matching the original request. Widening it to\nthe directory and the class names is a separate decision — worth raising in review, not assumed\nhere. Note also that no `adapter.ts` exists anywhere in the repo today: the established vocabulary\nis `index.ts` = framework-neutral core, `oclif.ts` = framework binding, so `adapter.ts` is a new\ncoinage rather than an existing convention being restored.\n\n## Done when\n\n- The eight `oclif.ts` files and their eight `oclif.test.ts` siblings are renamed via `git mv`\n  (preserving rename detection), every module specifier updated.\n- Every documentation site above is updated in the same commit.\n- `pnpm verify` is green, and `--describe` parity still holds for all eight commands.\n- No behaviour change: golden envelopes in `packages/test-fixtures/fixtures/envelopes/` are\n  byte-identical, and no changeset bump beyond `patch`/empty is owed (internal file layout only, no\n  public API change).\n\n---\n\nSource: `TODO.md` item 10, raised 2026-08-20.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-629",
+    "externalKey": "CZ3TDR1-629",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-629"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "failed",
+  "enqueuedAt": "2026-09-07T13:56:11.786Z",
+  "runs": [
+    {
+      "taskId": "task_1788789387861_c006b2",
+      "runRef": "patch_1788789387872",
+      "startedAt": "2026-09-07T13:56:29.588Z",
+      "finishedAt": "2026-09-07T13:57:11.866Z",
+      "outcome": "failed"
+    }
+  ],
+  "lastFailureReason": "1 stages, failed",
+  "syncNotes": [],
+  "createdAt": "2026-09-07T13:56:10.753Z",
+  "updatedAt": "2026-09-07T14:08:10.680Z",
+  "syncedAt": "2026-09-07T14:08:10.680Z"
+}
