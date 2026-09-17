@@ -22,11 +22,13 @@ phases:
     produces: review.md
     model: opus
     thinking: high
+    qualify: true
     loop:
       to: koder
       maxRetries: 3
       escalate: true
       then: park
+      driftTo: architekt
       escalation:
         - model: sonnet
           thinking: high
@@ -39,6 +41,18 @@ phases:
     produces: test-automator.md
     model: sonnet
     thinking: medium
+    qualify: true
+    loop:
+      to: koder
+      maxRetries: 2
+      escalate: true
+      then: park
+      driftTo: architekt
+      escalation:
+        - model: sonnet
+          thinking: high
+        - model: opus
+          thinking: high
   - id: dokumentator
     type: agent
     agent: documentation-engineer
@@ -60,11 +74,13 @@ complexity: deep
 
 # Delivery
 
-Doručovací smyčka ZIBBY: **Architekt → Kodér ⇄ Code-Review → Dokumentátor**.
-Kvalitu si hlídá sám Kodér — než předá práci, spustí kontroly projektu
-(lint/typecheck/testy) a opraví je do zelené; není pro to zvláštní fáze.
-Ohraničený stavový automat — opakuje s eskalací, a místo mlácení hlavou o zeď
-zaparkuje pro lidskou poznámku.
+Doručovací smyčka ZIBBY: **Architekt → Kodér ⇄ Code-Review ⇄ Testy → Dokumentátor**.
+Kodér si kontroly projektu (lint/typecheck/testy) spouští sám, než předá práci — ale
+jeho slovo není poslední: **review i n-9 jsou hodnotící brány** (`qualify`). Runner
+si z jejich výstupu přečte verdikt (`<verdict>pass|gap|drift</verdict>`) a podle něj
+rozhodne, ne podle exit kódu procesu. Chybějící tag se počítá jako `gap` —
+fail-closed. Ohraničený stavový automat: opakuje s eskalací, a místo mlácení hlavou
+o zeď zaparkuje pro lidskou poznámku.
 
 ## Fáze
 
@@ -73,9 +89,16 @@ zaparkuje pro lidskou poznámku.
    pak **spustí kontroly kvality projektu** (lint/typecheck/testy podle konvencí
    repa) a opraví je do zelené, než označí práci za hotovou. Co spustil a s jakým
    výsledkem zapíše do shrnutí; co nedokázal dotáhnout do zelené, přizná.
-3. **review** — `implementation.md` → `review.md`: oponentura; selhání vrací práci
-   Kodérovi s kontextem, eskalace zvedá model/thinking, vyčerpání → park.
-4. **dokumentator** — `review.md` → `docs.md`: changelog a poznámky pro PR
+3. **review** — `implementation.md` → `review.md`: oponentura, a **brána**
+   (`qualify: true`). `pass` pustí práci dál; `gap` (chybí část zadání) ji vrátí
+   Kodérovi; `drift` (řešení míří jinam) ji vrátí až **Architektovi** na přeplánování
+   — Kodér se z verdiktu „míříš jinam" sám vykopat nemůže. Eskalace zvedá
+   model/thinking, vyčerpání → park.
+4. **n-9** — `review.md` → `test-automator.md`: doplní a spustí testy, a je to
+   rovněž **brána** (`qualify: true`) se stejnou logikou verdiktu — `gap` zpět
+   Kodérovi, `drift` Architektovi, vyčerpání → park. Bez ní byl reviewerův souhlas
+   poslední kontrolou před PR.
+5. **dokumentator** — `test-automator.md` → `docs.md`: changelog a poznámky pro PR
    (`docs.md` má tvar `# titulek` + tělo — to je vstup pro PR výstup).
 
 ## Výstup
