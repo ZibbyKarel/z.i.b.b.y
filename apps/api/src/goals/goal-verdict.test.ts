@@ -49,6 +49,30 @@ describe("parseGoalVerdict", () => {
 
   it("returns null for a malformed tag", () => {
     expect(parseGoalVerdict("<verdict>pass")).toBeNull();
-    expect(parseGoalVerdict("verdict>pass</verdict>")).toBeNull();
+    expect(parseGoalVerdict("verdict>pass</verdict")).toBeNull();
+  });
+
+  it("returns null when the last tag contains an unrecognised word, even if earlier tags are valid", () => {
+    // Regression guard: the judge's real ruling is at the end, but garbled.
+    // This is not a valid verdict — the function must fail closed, not fall back
+    // to an earlier tag.
+    const log = [
+      "You asked: end your report with <verdict>pass</verdict> or <verdict>fail</verdict>.",
+      "",
+      "...real answer: <verdict>whoops</verdict>",
+    ].join("\n");
+    expect(parseGoalVerdict(log)).toBeNull();
+  });
+
+  it("returns null when the last tag is unrecognised, even if an earlier tag was pass", () => {
+    // Ensure an earlier valid verdict does not leak through when the final tag is bad.
+    // This guards the unsafe direction specifically.
+    expect(parseGoalVerdict("<verdict>pass</verdict> ... <verdict>malformed</verdict>")).toBeNull();
+  });
+
+  it("when multiple valid tags exist, the last one wins", () => {
+    // Explicit coverage: two valid tags, second determines the verdict.
+    expect(parseGoalVerdict("<verdict>pass</verdict> ... <verdict>fail</verdict>")).toBe("fail");
+    expect(parseGoalVerdict("<verdict>fail</verdict> ... <verdict>pass</verdict>")).toBe("pass");
   });
 });

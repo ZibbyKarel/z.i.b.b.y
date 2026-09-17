@@ -18,20 +18,25 @@ const VERDICT_WORDS: Record<string, GoalVerdict> = {
  * across the codebase — but mapped onto the goal domain's binary pass/fail, because
  * a goal verdict picks a boolean, not a pipeline back-edge.
  *
- * Case-insensitive and whitespace-tolerant. Uses the **LAST** tag, which is
- * load-bearing: `AgentRunnerService.readLog()` returns the whole log including any
- * echoed prompt, so an early tag may be the instruction rather than the ruling.
+ * Case-insensitive and whitespace-tolerant. Uses the **literal LAST** tag: the final
+ * `<verdict>…</verdict>` in the text determines the verdict, and an unrecognised word
+ * in that final tag means `null` (fail-closed), not a fallback to an earlier tag.
+ * This is load-bearing because `AgentRunnerService.readLog()` returns the whole log
+ * including any echoed prompt, so an early tag may be the instruction rather than
+ * the ruling.
  *
- * Returns `null` when no valid tag is present. The caller owns the fail-closed
- * default — see `GoalRunnerService.runVerifier`.
+ * Returns `null` when there is no tag at all, or when the last tag's word is not
+ * recognized. The caller owns the fail-closed default — see `GoalRunnerService.runVerifier`.
  */
 export function parseGoalVerdict(text: string): GoalVerdict | null {
   const re = /<verdict>\s*([a-z]+)\s*<\/verdict>/gi;
-  let last: GoalVerdict | null = null;
+  let lastWord: string | null = null;
   for (const m of text.matchAll(re)) {
-    const word = m[1]!.toLowerCase();
-    const mapped = VERDICT_WORDS[word];
-    if (mapped) last = mapped;
+    lastWord = m[1]!.toLowerCase();
   }
-  return last;
+  // No tags at all
+  if (lastWord === null) return null;
+  // Map the last word; unrecognised words yield null (fail-closed)
+  const verdict = VERDICT_WORDS[lastWord];
+  return verdict ?? null;
 }
