@@ -630,8 +630,11 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
    * deterministic shell command (shared {@link buildVerifyCommand}) in the worktree
    * and is satisfied on exit 0. A `claude` verifier is a FRESH agent run on its own
    * (cheaper) model — a separate spawn with no shared session (decision 3/8) —
-   * satisfied when that run completes. Either way the captured output (the failing
-   * tail / the verdict text) feeds the next iteration's resume-context.
+   * graded on the `<verdict>pass|fail</verdict>` tag it writes into its own log
+   * (`parseGoalVerdict`, literal last tag wins), not on its exit code, and is
+   * fail-closed: no parseable verdict, or a judge that never finished, is not
+   * satisfied. Either way the captured output (the failing tail / the verdict
+   * text) feeds the next iteration's resume-context.
    */
   protected async runVerifier(
     run: GoalRun,
