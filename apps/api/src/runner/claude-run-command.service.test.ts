@@ -251,7 +251,7 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     });
     // The catalog still DESCRIBES the narrow subagent as read-only…
     const catalog = JSON.parse(flagValue(args, "--agents") ?? "{}");
-    expect(catalog.narrow.tools).toBe("Read");
+    expect(catalog.narrow.tools).toEqual(["Read"]);
     // …but the enforced session allow-list carries the union including the broad
     // coder's write/bash — the narrow entry is not a real permission boundary.
     const allowed = allowedToolsOf(args);
@@ -276,14 +276,14 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     expect(catalog.coder).toEqual({
       description: "Implementuje",
       prompt: "Jsi Kodér.",
-      tools: "Read, Write, Edit, Bash, Bash(git:*)",
+      tools: ["Read", "Write", "Edit", "Bash", "Bash(git:*)"],
       model: "sonnet",
     });
     // Skills: desc → description, default tools, no model.
     expect(catalog["task-spec-writer"]).toEqual({
       description: "Sepíše spec",
       prompt: "Jsi spec writer.",
-      tools: "Read, Write, Edit",
+      tools: ["Read", "Write", "Edit"],
     });
   });
 

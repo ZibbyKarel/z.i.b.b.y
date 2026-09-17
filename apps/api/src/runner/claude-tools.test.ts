@@ -45,11 +45,11 @@ describe("toAllowedTools", () => {
 });
 
 describe("toSubagentTools", () => {
-  it("returns a comma-separated string in Claude's vocabulary, without Agent", () => {
-    expect(toSubagentTools(["read", "git"])).toBe("Read, Bash(git:*)");
+  it("returns an array of Claude's vocabulary, without Agent", () => {
+    expect(toSubagentTools(["read", "git"])).toEqual(["Read", "Bash(git:*)"]);
   });
 
   it("applies the default tools when none are declared (skills)", () => {
-    expect(toSubagentTools(undefined)).toBe("Read, Write, Edit");
+    expect(toSubagentTools(undefined)).toEqual(["Read", "Write", "Edit"]);
   });
 });

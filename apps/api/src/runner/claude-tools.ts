@@ -69,13 +69,17 @@ export function toAllowedTools(tools: readonly string[] | undefined): string[] {
 }
 
 /**
- * A subagent's `tools` value for the `--agents` catalog JSON: a comma-separated
- * string in Claude's vocabulary. Still emitted (it scopes the subagent's *own*
- * intent and shows in the catalog) even though `dontAsk` enforces at the session
- * level. `Agent` is intentionally omitted — catalog subagents are leaves.
- * Returns `undefined` when empty so the caller can omit the key.
+ * A subagent's `tools` value for the `--agents` catalog JSON: an **array** of
+ * strings in Claude's vocabulary. claude CLI ≥ 2.1.251 validates this key as an
+ * array and rejects the whole catalog on a comma-joined string
+ * (`Invalid input: expected array, received string`). Still emitted (it scopes the
+ * subagent's *own* intent and shows in the catalog) even though `dontAsk` enforces
+ * at the session level. `Agent` is intentionally omitted — catalog subagents are
+ * leaves. Returns `undefined` when empty so the caller can omit the key.
  */
-export function toSubagentTools(tools: readonly string[] | undefined): string | undefined {
+export function toSubagentTools(
+  tools: readonly string[] | undefined,
+): readonly string[] | undefined {
   const mapped = mapTools(tools);
-  return mapped.length > 0 ? mapped.join(", ") : undefined;
+  return mapped.length > 0 ? mapped : undefined;
 }

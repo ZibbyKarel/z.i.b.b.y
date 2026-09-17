@@ -290,7 +290,7 @@ function buildSettings(customHooks: readonly Hook[]): string {
 interface CatalogEntry {
   description: string;
   prompt: string;
-  tools?: string;
+  tools?: readonly string[];
   model?: string;
 }
 
