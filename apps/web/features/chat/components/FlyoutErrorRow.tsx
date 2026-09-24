@@ -1,6 +1,8 @@
 "use client";
 
-import { Card, Container, Stack, StatusDot, Typography } from "@zibby/design-system";
+import type { Route } from "next";
+import Link from "next/link";
+import { Card, Container, Icon, Stack, StatusDot, Typography } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
 import { type RunView, runTitle } from "../../runs/run";
 import { formatRelativeTime } from "../statusFlyout";
@@ -10,6 +12,7 @@ export enum FlyoutErrorRowTestId {
   Meta = "chat-flyout-error-row-meta",
   Title = "chat-flyout-error-row-title",
   Detail = "chat-flyout-error-row-detail",
+  Link = "chat-flyout-error-row-link",
 }
 
 export interface FlyoutErrorRowProps {
@@ -25,12 +28,15 @@ export interface FlyoutErrorRowProps {
  * One failed run in the flyout's error section: subsystem + owner + relative
  * finish, the task title, and the recorded failure (`taskOutcomeSummary`). A run
  * id whose run already left the feed still renders — the count said it failed,
- * so the row must not silently vanish. Non-navigating, like FlyoutWorkRow.
+ * so the row must not silently vanish. Navigates to the run's archive detail
+ * (`/archiv?run=<runId>`) via the same icon-link `ChatRunCard` uses — rendered
+ * for the missing-run fallback too, since the archive can still resolve it.
  */
 export function FlyoutErrorRow({ runId, run, subsystemName }: FlyoutErrorRowProps) {
   const locale = useLocale();
   const t = useTranslations("chat.statusPill.flyout.error");
-  const finishedAt = run?.taskOutcomeFinishedAt ?? run?.startedAt;
+  const tRunCard = useTranslations("chat.runCard");
+  const finishedAt = run?.taskOutcomeFinishedAt;
   const detail = run == null ? t("missingRun") : run.taskOutcomeSummary?.trim() || t("noDetail");
 
   return (
@@ -58,11 +64,20 @@ export function FlyoutErrorRow({ runId, run, subsystemName }: FlyoutErrorRowProp
                 {run ? `${subsystemName} · ${run.owner}` : subsystemName}
               </Typography>
             </Stack>
-            {finishedAt != null && (
-              <Typography mono size="xs" type="note" variant="tertiary">
-                {formatRelativeTime(finishedAt, locale)}
-              </Typography>
-            )}
+            <Stack align="center" direction="row" gap="100">
+              {finishedAt != null && (
+                <Typography mono size="xs" type="note" variant="tertiary">
+                  {formatRelativeTime(finishedAt, locale)}
+                </Typography>
+              )}
+              <Link
+                aria-label={tRunCard("openRunAria")}
+                data-testid={FlyoutErrorRowTestId.Link}
+                href={`/archiv?run=${runId}` as Route}
+              >
+                <Icon name="arrow" size="sm" tone="accent" />
+              </Link>
+            </Stack>
           </Stack>
           <Typography
             truncate

@@ -165,7 +165,7 @@ function ErrorSection({ headerId }: { headerId: string }) {
   const subsystemsQuery = useSubsystemsQuery();
   const { runs, isPending, isError, refetch } = useRunsQuery();
   const t = useTranslations("chat.statusPill.flyout");
-  // Mirrors the pill's count exactly: only subsystems whose HEADLINE state is
+  // Mirrors the pill's filter: only subsystems whose HEADLINE state is
   // `error` (a `waiting` subsystem outranks its own errors and isn't counted).
   const runById = new Map(runs.map((r) => [r.runId, r]));
   const failed = (subsystemsQuery.data ?? [])

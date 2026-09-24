@@ -1931,7 +1931,7 @@
           "emptyTitle": "No errors",
           "emptyBody": "Nothing failed since your last visit.",
           "noDetail": "No error detail recorded.",
-          "missingRun": "Run is no longer in the feed (archived)."
+          "missingRun": "Run is no longer in the feed."
         },
         "loading": "Loading…",
         "errorTitle": "Couldn't load",

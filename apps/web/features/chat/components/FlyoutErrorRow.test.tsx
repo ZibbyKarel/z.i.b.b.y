@@ -27,6 +27,22 @@ describe("FlyoutErrorRow", () => {
     );
   });
 
+  it("links to the run's archive detail", () => {
+    renderWithProviders(<FlyoutErrorRow run={run} runId={run.runId} subsystemName="Forge" />);
+    expect(screen.getByTestId(FlyoutErrorRowTestId.Link)).toHaveAttribute(
+      "href",
+      "/archiv?run=delivery_1",
+    );
+  });
+
+  it("still links to the archive when the run is no longer in the feed", () => {
+    renderWithProviders(<FlyoutErrorRow run={undefined} runId="gone_1" subsystemName="Forge" />);
+    expect(screen.getByTestId(FlyoutErrorRowTestId.Link)).toHaveAttribute(
+      "href",
+      "/archiv?run=gone_1",
+    );
+  });
+
   it("falls back to a localized no-detail line when the run recorded no summary", () => {
     renderWithProviders(
       <FlyoutErrorRow
@@ -43,6 +59,8 @@ describe("FlyoutErrorRow", () => {
   it("still renders the run id when the run is no longer in the feed", () => {
     renderWithProviders(<FlyoutErrorRow run={undefined} runId="gone_1" subsystemName="Forge" />);
     expect(screen.getByTestId(FlyoutErrorRowTestId.Title)).toHaveTextContent("gone_1");
-    expect(screen.getByTestId(FlyoutErrorRowTestId.Detail)).toHaveTextContent("archivován");
+    expect(screen.getByTestId(FlyoutErrorRowTestId.Detail)).toHaveTextContent(
+      "Běh už není v přehledu.",
+    );
   });
 });
