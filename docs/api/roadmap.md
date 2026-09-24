@@ -349,12 +349,18 @@ note the archived-blocker consequence above). For an item still in a sync-owned
 lifecycle (`todo`/`external`/`archived`), the sync moves it to `todo` or `external` per
 the remote work state above — including a plain reappearance of an archived item,
 which lands wherever its current remote state says. A done source status always wins
-and moves the item to `"done"`, from any of those three. These are the ONLY lifecycle
-transitions the sync ever makes: `enqueued`/`running`/`awaiting-merge`/`failed` are
-never touched, and a `"done"` item never moves back out of `"done"`. For an item in a
-sync-owned lifecycle, `linkedPr` is written only while the resulting lifecycle is
-`"external"` and cleared as soon as the item returns to `"todo"` or moves to `"done"`
-(rather than left stale on the card); a gate-owned item keeps its `linkedPr` untouched.
+and moves the item to `"done"` from ANY lifecycle — that transition pre-dates this sync
+and is unrelated to it. Otherwise, `enqueued`/`running`/`awaiting-merge`/`failed` are
+untouched, with one exception: an `enqueued` item whose remote work state is
+`"external"` also moves to `"external"` (nothing has started on it yet, so the same
+not-safe-to-start signal that keeps a `todo` item from being played keeps it from being
+released while it still sits in the queue — its `enqueuedAt` is cleared along with the
+move). A remote `"todo"` state leaves an `enqueued` item alone. A `"done"` item never
+moves back out of `"done"`. For an item in a sync-owned lifecycle — now including an
+`enqueued` item moving to `external` — `linkedPr` is written only while the resulting
+lifecycle is `"external"` and cleared as soon as the item returns to `"todo"` or moves
+to `"done"` (rather than left stale on the card); any other gate-owned item keeps its
+`linkedPr` untouched.
 
 An item whose level-mapping `target` resolves to `"ignore"` is parsed but never
 turned into a roadmap item (counted in `skipped`), and is deliberately excluded from

@@ -155,7 +155,9 @@ export class RoadmapGateService {
    * "Play on an epic" (125g, master plan's decisions table): with children,
    * enqueue every `todo` child via the EXISTING `playBulk` FIFO path (never
    * duplicated here); childless, dispatch a decomposition run instead
-   * (`RoadmapDecompositionService.dispatch`). Either way the epic ITSELF is
+   * (`RoadmapDecompositionService.dispatch`) — unless the epic itself is
+   * `external`/`done`, which 409s instead (see the childless branch below;
+   * Important #2 review finding). Either way the epic ITSELF is
    * returned unchanged (its own `lifecycle` is never touched by Play — see
    * `RoadmapDecompositionService`'s docblock for why), so repeatedly
    * pressing Play on the same epic — before and after it gains children —
@@ -168,6 +170,17 @@ export class RoadmapGateService {
       const todoChildIds = children.filter((c) => c.lifecycle === "todo").map((c) => c.id);
       if (todoChildIds.length > 0) await this.playBulk(projectId, todoChildIds);
       return this.roadmap.get(projectId, epic.id);
+    }
+    // Important #2 review finding: a childless epic that is `external`/`done`
+    // must not be decomposed — someone (or the source) is already on it, the
+    // same not-safe-to-start guard a task gets via the `todo` check above.
+    // An epic that already has children is unaffected by this branch.
+    if (epic.lifecycle === "external" || epic.lifecycle === "done") {
+      throw new RoadmapItemLifecycleError(
+        projectId,
+        epic.id,
+        `is already in flight (lifecycle "${epic.lifecycle}")`,
+      );
     }
     return this.decomposition.dispatch(projectId, epic);
   }
@@ -337,7 +350,17 @@ export class RoadmapGateService {
     if (todoTaskIds.length > 0) await this.playBulk(projectId, todoTaskIds);
 
     for (const epic of items) {
-      if (epic.level !== "epic" || epic.lifecycle === "archived") continue;
+      if (epic.level !== "epic") continue;
+      // `archived`: gone from the source. `external`/`done`: someone (or the
+      // source itself) is already on it — the same not-safe-to-start guard a
+      // task gets, extended to epics (Important #2 review finding).
+      if (
+        epic.lifecycle === "archived" ||
+        epic.lifecycle === "external" ||
+        epic.lifecycle === "done"
+      ) {
+        continue;
+      }
       if (epic.runs.length > 0) continue;
       // Matches `playEpic`'s own childless test exactly — every child counts,
       // archived included — so the two entry points can never disagree.

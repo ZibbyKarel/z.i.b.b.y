@@ -862,6 +862,60 @@ describe("RoadmapSourceService", () => {
       expect(proj12.lifecycle).toBe("awaiting-merge"); // gate-owned lifecycle untouched
     });
 
+    it("moves an enqueued item to external when a colleague picks it up remotely (Important #3)", async () => {
+      const state = {
+        issues: [issue("PROJ-30", "To Do", "new"), issue("PROJ-31", "To Do", "new")],
+        pulls: [] as { number: number; html_url: string; title: string; head: { ref: string } }[],
+      };
+      const { service, roadmap } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [JIRA_INTEGRATION, GITHUB_INTEGRATION],
+        fetchImpl: jiraAndPullsFetch(state),
+      });
+      await service.sync(PROJECT.id);
+
+      const proj30Id = roadmapItemIdForSource(JIRA_INTEGRATION.id, "PROJ-30");
+      const proj31Id = roadmapItemIdForSource(JIRA_INTEGRATION.id, "PROJ-31");
+
+      // Simulate the gate enqueueing both items (blocked/parked/full — nothing
+      // has actually started on either one yet).
+      await roadmap.update(PROJECT.id, proj30Id, (current) => ({
+        ...current,
+        lifecycle: "enqueued",
+        enqueuedAt: "2026-09-24T00:00:00.000Z",
+      }));
+      await roadmap.update(PROJECT.id, proj31Id, (current) => ({
+        ...current,
+        lifecycle: "enqueued",
+        enqueuedAt: "2026-09-24T00:00:00.000Z",
+      }));
+
+      // A colleague starts PROJ-30 in Jira; PROJ-31 stays To Do.
+      state.issues = [
+        issue("PROJ-30", "In Progress", "indeterminate"),
+        issue("PROJ-31", "To Do", "new"),
+      ];
+      state.pulls = [
+        {
+          number: 7,
+          html_url: "https://github.com/acme/app/pull/7",
+          title: "PROJ-30 wip",
+          head: { ref: "wip" },
+        },
+      ];
+      await service.sync(PROJECT.id);
+
+      const proj30 = await roadmap.get(PROJECT.id, proj30Id);
+      expect(proj30.lifecycle).toBe("external"); // no longer safe to dispatch
+      expect(proj30.linkedPr?.number).toBe(7);
+      expect(proj30.enqueuedAt).toBeUndefined(); // dropped with the move, not stale
+
+      const proj31 = await roadmap.get(PROJECT.id, proj31Id);
+      expect(proj31.lifecycle).toBe("enqueued"); // remote todo leaves it alone
+      expect(proj31.enqueuedAt).toBe("2026-09-24T00:00:00.000Z");
+    });
+
     it("keeps a gate-owned item's linkedPr untouched across a re-sync", async () => {
       const state = {
         issues: [issue("PROJ-20", "In Progress", "indeterminate")],

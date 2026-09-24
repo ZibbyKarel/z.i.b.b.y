@@ -892,14 +892,19 @@ export class RoadmapSourceService {
    * `attachments`/`attachmentSetId`, `source.url`, `parentId`,
    * `dependsOnFromSource`, `syncNotes`, `syncedAt`, `linkedPr` — plus the
    * narrow, explicitly-sanctioned lifecycle transitions: `-> done` whenever
-   * the source reports a done status, and, for an item still in a
-   * sync-owned lifecycle (`todo`/`external`/`archived`), `-> todo | external`
-   * per the remote work state (the safe-to-start rule — see
-   * `jiraWorkState`/`findLinkedPr`). `enqueued`/`running`/`awaiting-merge`/
-   * `failed` are NEVER touched here, and a `done` item never moves back out
-   * of `done`. `linkedPr` is written only while the resulting lifecycle is
-   * `external`; it is cleared (not merely left stale) once an item returns to
-   * `todo`. Never touches `runs`/`overrideBlocked`/`origin`, and rewrites
+   * the source reports a done status (from ANY lifecycle — pre-existing,
+   * unrelated to this sync), and, for an item still in a sync-owned lifecycle
+   * (`todo`/`external`/`archived`), `-> todo | external` per the remote work
+   * state (the safe-to-start rule — see `jiraWorkState`/`findLinkedPr`).
+   * `running`/`awaiting-merge`/`failed` are NEVER touched here, and a `done`
+   * item never moves back out of `done`. `enqueued` is untouched too, EXCEPT
+   * `-> external` when the remote work state is `external`: nothing has
+   * started on it yet, so a colleague picking it up while it waits in the
+   * queue must still stop ZIBBY from dispatching it (`enqueuedAt` is dropped
+   * with the move; a remote `todo` state leaves `enqueued` alone). `linkedPr`
+   * is written only while the resulting lifecycle is `external`; it is
+   * cleared (not merely left stale) once an item returns to `todo`. Never
+   * touches `runs`/`overrideBlocked`/`origin`, and rewrites
    * `dependsOn` only via the pure, separately-tested `mergeDependsOn`
    * (dropping a source edge the source removed, adding one it newly
    * declares, preserving every manual edge).
@@ -969,9 +974,13 @@ export class RoadmapSourceService {
       );
       // Only the sanctioned transitions happen here (see the docblock);
       // anything else — including a lifecycle a later sub-phase (125e)
-      // advanced, like `enqueued`/`running`/`awaiting-merge`/`failed` —
-      // passes through completely untouched.
+      // advanced, like `running`/`awaiting-merge`/`failed` — passes through
+      // completely untouched. `enqueued` is untouched too, except the one
+      // `-> external` exception below (Important #3): nothing has started on
+      // it yet, so it must stop being safe-to-start the moment a colleague
+      // picks it up remotely, same as `todo`/`external`/`archived`.
       let nextLifecycle = current.lifecycle;
+      const enqueuedToExternal = current.lifecycle === "enqueued" && input.workState === "external";
       if (input.workState === "done") {
         nextLifecycle = "done";
       } else if (
@@ -980,6 +989,8 @@ export class RoadmapSourceService {
         current.lifecycle === "external"
       ) {
         nextLifecycle = input.workState;
+      } else if (enqueuedToExternal) {
+        nextLifecycle = "external";
       }
 
       const next: RoadmapItem = {
@@ -1000,19 +1011,24 @@ export class RoadmapSourceService {
         // Left untouched by spreading `current` first: runs, overrideBlocked,
         // origin, createdAt.
       };
+      // An `enqueued -> external` move (Important #3) also drops `enqueuedAt`:
+      // the item is leaving the queue `drain` scans by `lifecycle === "enqueued"`,
+      // so a stale timestamp would be meaningless once it's gone.
+      if (enqueuedToExternal) delete next.enqueuedAt;
       // `linkedPr` is only meaningful while the item is `external` — drop it
       // (rather than leaving it stale) once the item returns to `todo` or
       // moves anywhere else. But a GATE-owned lifecycle
       // (enqueued/running/awaiting-merge/failed) is untouched by this sync —
       // its `linkedPr` (set from before ZIBBY picked the item up) must be
-      // left exactly as-is too, unless the source now reports it done (the
-      // one sync transition that reaches even a gate-owned lifecycle).
+      // left exactly as-is too, unless the source now reports it done, or
+      // (Important #3) an `enqueued` item just moved to `external` — both
+      // are sync transitions that reach even a gate-owned lifecycle.
       const isGateOwned =
         current.lifecycle === "enqueued" ||
         current.lifecycle === "running" ||
         current.lifecycle === "awaiting-merge" ||
         current.lifecycle === "failed";
-      if (isGateOwned && input.workState !== "done") {
+      if (isGateOwned && input.workState !== "done" && !enqueuedToExternal) {
         // leave `next.linkedPr` (== `current.linkedPr`, via the initial spread) alone
       } else if (nextLifecycle === "external" && input.linkedPr) {
         next.linkedPr = input.linkedPr;

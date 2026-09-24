@@ -432,6 +432,18 @@ describe("RoadmapGateService", () => {
       expect(taskScheduler.createTask).not.toHaveBeenCalled();
     });
 
+    it("childless AND external/done — 409s (RoadmapItemLifecycleError) instead of decomposing", async () => {
+      await store.put(
+        item({ id: "epic-external", level: "epic", name: "Epic", lifecycle: "external" }),
+      );
+      const gate = makeGate();
+
+      await expect(gate.play("acme", "epic-external")).rejects.toBeInstanceOf(
+        RoadmapItemLifecycleError,
+      );
+      expect(decomposition.dispatch).not.toHaveBeenCalled();
+    });
+
     it("playing the same epic again after it gains children takes the enqueue-children branch", async () => {
       await store.put(item({ id: "epic-1", level: "epic", name: "Epic" }));
       const gate = makeGate();
@@ -588,6 +600,18 @@ describe("RoadmapGateService", () => {
       await store.put(item({ id: "epic-1", level: "epic", name: "Epic" }));
       await store.put(item({ id: "child", parentId: "epic-1", lifecycle: "done" }));
       await store.put(item({ id: "epic-old", level: "epic", name: "Old", lifecycle: "archived" }));
+      const gate = makeGate();
+
+      await gate.autoPickup("acme");
+
+      expect(decomposition.dispatch).not.toHaveBeenCalled();
+    });
+
+    it("skips a childless epic that is external or done — someone (or the source) is already on it", async () => {
+      await store.put(
+        item({ id: "epic-external", level: "epic", name: "External", lifecycle: "external" }),
+      );
+      await store.put(item({ id: "epic-done", level: "epic", name: "Done", lifecycle: "done" }));
       const gate = makeGate();
 
       await gate.autoPickup("acme");

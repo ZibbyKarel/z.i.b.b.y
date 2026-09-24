@@ -93,8 +93,12 @@ export type RoadmapOrigin = z.infer<typeof RoadmapOriginSchema>;
  *
  * `external` — the source says someone is already working on it outside
  * ZIBBY (Jira status category not To Do, or an open PR names its key).
- * Sync-owned: only the sync moves an item into/out of it (⇄ `todo`); ZIBBY
- * never dispatches it — every Play path requires `todo`.
+ * Sync-owned: only the sync moves an item into/out of it (⇄ `todo`, or from
+ * `enqueued` if a colleague picks the item up while it is still queued).
+ * ZIBBY never dispatches it: a TASK's every Play path requires `todo`; an
+ * EPIC's childless-decompose path (`RoadmapGateService.playEpic`) and
+ * `autoPickup`'s decomposition pass both refuse an `external` (or `done`)
+ * epic instead.
  */
 export const RoadmapItemLifecycleSchema = z.enum([
   "todo",
