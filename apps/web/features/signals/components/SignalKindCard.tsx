@@ -26,7 +26,7 @@ export interface SignalKindCardProps {
  * (mirrors `HookCard`). Click navigates to `/signals/[id]`.
  */
 export function SignalKindCard({ kind, onSelect, selectLabel }: SignalKindCardProps) {
-  const t = useTranslations("subsystems.handoff");
+  const t = useTranslations("departments.handoff");
 
   return (
     <div data-testid={`${SignalKindCardTestId.Root}-${kind.id}`}>

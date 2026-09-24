@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Container, IconTile, Pressable, Stack, Tag, Typography } from "@zibby/design-system";
-import { type Category, SUBSYSTEMS } from "@zibby/contracts";
+import { type Category, DEPARTMENTS } from "@zibby/contracts";
 import {
   type Control,
   Controller,
@@ -70,9 +70,9 @@ export function AgentEditBasics({ control, categories }: AgentEditBasicsProps) {
             />
 
             <FormSelect<string, AgentEditValues>
-              label={t("fields.ownerSubsystem")}
-              name="ownerSubsystem"
-              options={SUBSYSTEMS.map((s) => ({ value: s.id, label: s.name }))}
+              label={t("fields.department")}
+              name="department"
+              options={DEPARTMENTS.map((s) => ({ value: s.id, label: s.name }))}
             />
 
             <Stack direction="row" gap="150">

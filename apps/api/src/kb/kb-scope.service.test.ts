@@ -206,11 +206,11 @@ describe("KbScopeService", () => {
           // (absent from the projects fixture) → `[]`, failing the assertion
           // below — only the boundary-safe `startsWith(header + "_")` skips
           // it and reaches the real match.
-          agentRun({ runId: "codex_10000_9", project: "proj-teamless" }),
-          agentRun({ runId: "codex_1000_4321", project: "proj-devrel" }),
+          agentRun({ runId: "knowledge_10000_9", project: "proj-teamless" }),
+          agentRun({ runId: "knowledge_1000_4321", project: "proj-devrel" }),
         ],
       });
-      const roots = await scope.rootsForRun("codex_1000");
+      const roots = await scope.rootsForRun("knowledge_1000");
       expect(roots.map((r) => r.teamId)).toEqual(["devrel"]);
     });
 

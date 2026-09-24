@@ -3,9 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import {
   type Agent,
-  SUBSYSTEMS,
-  type SubsystemRoster,
-  type SubsystemWithStatus,
+  DEPARTMENTS,
+  type DepartmentRoster,
+  type DepartmentWithStatus,
 } from "@zibby/contracts";
 import type { Pipeline } from "../../../../domain";
 import {
@@ -29,8 +29,8 @@ const AGENTS: Agent[] = [
   },
 ];
 
-const FORGE: SubsystemWithStatus = {
-  ...SUBSYSTEMS.find((s) => s.id === "forge")!,
+const DEV: DepartmentWithStatus = {
+  ...DEPARTMENTS.find((s) => s.id === "dev")!,
   state: "idle",
   tier2Count: 0,
   tier3Count: 0,
@@ -61,7 +61,7 @@ function pipelineFixture(overrides: Partial<Pipeline> = {}): Pipeline {
   };
 }
 
-/** A wide linear chain (mirrors Loom's real 5-node "Code Audit" pipeline the
+/** A wide linear chain (mirrors Arch's real 5-node "Code Audit" pipeline the
  * architect review flagged) — wide enough that `phasesToGraph`'s auto-layout
  * overflows the drawer's narrow panel and exercises the fit-to-view shrink. */
 function wideChainPhases(count: number): Pipeline["phases"] {
@@ -93,7 +93,7 @@ function readTransform(el: HTMLElement): { scale: number; tx: number; ty: number
   };
 }
 
-const EMPTY_ROSTER: SubsystemRoster = { agents: [], integrations: [], monitors: [] };
+const EMPTY_ROSTER: DepartmentRoster = { agents: [], integrations: [], monitors: [] };
 
 const { hooks } = vi.hoisted(() => ({
   hooks: {
@@ -110,19 +110,19 @@ vi.mock("../../../pipelines", () => ({
   useUpdatePipelineMutation: () => ({ mutate: hooks.updatePipeline, isPending: false }),
 }));
 vi.mock("../../../agents", () => ({ useAgentsQuery: () => ({ data: AGENTS }) }));
-vi.mock("../../queries/useSubsystemRosterQuery", () => ({
-  useSubsystemRosterQuery: () => ({ data: hooks.roster }),
+vi.mock("../../queries/useDepartmentRosterQuery", () => ({
+  useDepartmentRosterQuery: () => ({ data: hooks.roster }),
 }));
 
 describe("RosterTab (Phase 85)", () => {
-  it("filters pipelines to ones owned by the subsystem", () => {
+  it("filters pipelines to ones owned by the department", () => {
     hooks.pipelines = [
-      pipelineFixture({ id: "delivery", name: "Delivery", ownerSubsystem: "forge" }),
-      pipelineFixture({ id: "code-audit", name: "Code Audit", ownerSubsystem: "loom" }),
+      pipelineFixture({ id: "delivery", name: "Delivery", department: "dev" }),
+      pipelineFixture({ id: "code-audit", name: "Code Audit", department: "qa" }),
       pipelineFixture({ id: "untagged", name: "Untagged" }),
     ];
 
-    render(<RosterTab subsystem={FORGE} />);
+    render(<RosterTab department={DEV} />);
 
     expect(screen.getByText("Delivery")).toBeInTheDocument();
     expect(screen.queryByText("Code Audit")).toBeNull();
@@ -130,11 +130,9 @@ describe("RosterTab (Phase 85)", () => {
   });
 
   it("renders a read-only canvas per owned pipeline — no ports, no delete affordances", () => {
-    hooks.pipelines = [
-      pipelineFixture({ id: "delivery", name: "Delivery", ownerSubsystem: "forge" }),
-    ];
+    hooks.pipelines = [pipelineFixture({ id: "delivery", name: "Delivery", department: "dev" })];
 
-    render(<RosterTab subsystem={FORGE} />);
+    render(<RosterTab department={DEV} />);
 
     expect(screen.getAllByTestId("pipeline-node")).toHaveLength(1);
     expect(screen.queryByTestId("node-delete")).toBeNull();
@@ -142,12 +140,10 @@ describe("RosterTab (Phase 85)", () => {
   });
 
   it("clicking a node opens the pipeline's existing config surface (PipelineDialog, edit mode)", async () => {
-    hooks.pipelines = [
-      pipelineFixture({ id: "delivery", name: "Delivery", ownerSubsystem: "forge" }),
-    ];
+    hooks.pipelines = [pipelineFixture({ id: "delivery", name: "Delivery", department: "dev" })];
     const user = userEvent.setup();
 
-    render(<RosterTab subsystem={FORGE} />);
+    render(<RosterTab department={DEV} />);
     expect(screen.queryByRole("dialog")).toBeNull();
 
     await user.click(screen.getByTestId("pipeline-node"));
@@ -156,12 +152,12 @@ describe("RosterTab (Phase 85)", () => {
     expect(within(dialog).getByLabelText("Název pipeline")).toHaveValue("Delivery");
   });
 
-  it("shows the empty state and pre-fills the create dialog's ownerSubsystem into the create payload", async () => {
+  it("shows the empty state and pre-fills the create dialog's department into the create payload", async () => {
     hooks.pipelines = [];
     hooks.createPipeline.mockReset();
     const user = userEvent.setup();
 
-    render(<RosterTab subsystem={FORGE} />);
+    render(<RosterTab department={DEV} />);
     expect(screen.getByText("Zatím žádná pipeline")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Přidat pipeline" }));
@@ -170,10 +166,8 @@ describe("RosterTab (Phase 85)", () => {
     await user.click(screen.getByRole("button", { name: /Vytvořit pipeline/ }));
 
     expect(hooks.createPipeline).toHaveBeenCalledTimes(1);
-    const [{ body }] = hooks.createPipeline.mock.calls[0] as [
-      { body: { ownerSubsystem?: string } },
-    ];
-    expect(body.ownerSubsystem).toBe("forge");
+    const [{ body }] = hooks.createPipeline.mock.calls[0] as [{ body: { department?: string } }];
+    expect(body.department).toBe("dev");
   });
 
   it("fit-to-view: shrinks a wide chain's canvas transform to less than 1:1 (architect-review fix)", () => {
@@ -181,12 +175,12 @@ describe("RosterTab (Phase 85)", () => {
       pipelineFixture({
         id: "code-audit",
         name: "Code Audit",
-        ownerSubsystem: "forge",
+        department: "dev",
         phases: wideChainPhases(5),
       }),
     ];
 
-    render(<RosterTab subsystem={FORGE} />);
+    render(<RosterTab department={DEV} />);
 
     // jsdom never runs ResizeObserver, so the component falls back to its
     // documented default viewport guess — deterministic in tests.
@@ -207,11 +201,9 @@ describe("RosterTab (Phase 85)", () => {
   });
 
   it("fit-to-view: does not shrink a chain that already fits (stays 1:1)", () => {
-    hooks.pipelines = [
-      pipelineFixture({ id: "delivery", name: "Delivery", ownerSubsystem: "forge" }),
-    ];
+    hooks.pipelines = [pipelineFixture({ id: "delivery", name: "Delivery", department: "dev" })];
 
-    render(<RosterTab subsystem={FORGE} />);
+    render(<RosterTab department={DEV} />);
 
     const { scale } = readTransform(screen.getByTestId(RosterTabTestId.PipelineFit));
     expect(scale).toBe(1);
@@ -225,9 +217,9 @@ describe("RosterTab crew — stored roster (NS2 F1c)", () => {
       agents: [{ id: "writer" }, { id: "tester" }],
       integrations: [],
       monitors: [],
-    } satisfies SubsystemRoster;
+    } satisfies DepartmentRoster;
 
-    render(<RosterTab subsystem={FORGE} />);
+    render(<RosterTab department={DEV} />);
 
     const crewSection = screen.getByTestId(RosterTabTestId.CrewSection);
     expect(within(crewSection).getByText("Posádka")).toBeInTheDocument();
@@ -244,9 +236,9 @@ describe("RosterTab crew — stored roster (NS2 F1c)", () => {
       agents: [{ id: "writer" }, { id: "ghost" }],
       integrations: [],
       monitors: [],
-    } satisfies SubsystemRoster;
+    } satisfies DepartmentRoster;
 
-    render(<RosterTab subsystem={FORGE} />);
+    render(<RosterTab department={DEV} />);
 
     const rows = screen.getAllByTestId(RosterTabTestId.CrewRow);
     expect(rows).toHaveLength(1);
@@ -259,9 +251,9 @@ describe("RosterTab crew — stored roster (NS2 F1c)", () => {
       agents: [{ id: "tester" }],
       integrations: [],
       monitors: [],
-    } satisfies SubsystemRoster;
+    } satisfies DepartmentRoster;
 
-    render(<RosterTab subsystem={FORGE} />);
+    render(<RosterTab department={DEV} />);
 
     const row = screen.getByTestId(RosterTabTestId.CrewRow);
     expect(within(row).getByText("Tester")).toBeInTheDocument();
@@ -275,9 +267,9 @@ describe("RosterTab crew — stored roster (NS2 F1c)", () => {
       agents: [{ id: "writer" }],
       integrations: [],
       monitors: [],
-    } satisfies SubsystemRoster;
+    } satisfies DepartmentRoster;
 
-    render(<RosterTab subsystem={FORGE} />);
+    render(<RosterTab department={DEV} />);
 
     const link = screen.getByRole("link", { name: /Writer/ });
     expect(link).toHaveAttribute("href", "/agents/writer");
@@ -287,7 +279,7 @@ describe("RosterTab crew — stored roster (NS2 F1c)", () => {
     hooks.pipelines = [];
     hooks.roster = EMPTY_ROSTER;
 
-    render(<RosterTab subsystem={FORGE} />);
+    render(<RosterTab department={DEV} />);
 
     expect(screen.queryByTestId(RosterTabTestId.CrewSection)).toBeNull();
     expect(screen.queryByTestId(RosterTabTestId.CrewRow)).toBeNull();
@@ -297,7 +289,7 @@ describe("RosterTab crew — stored roster (NS2 F1c)", () => {
     hooks.pipelines = [];
     hooks.roster = undefined;
 
-    render(<RosterTab subsystem={FORGE} />);
+    render(<RosterTab department={DEV} />);
 
     expect(screen.queryByTestId(RosterTabTestId.CrewSection)).toBeNull();
   });
@@ -313,9 +305,9 @@ describe("RosterTab integrations + monitors (NS2 F1c)", () => {
         { id: "ci-repo", name: "CI Repo", kind: "github" },
       ],
       monitors: [{ id: "ci-repo", name: "CI Repo", kind: "github" }],
-    } satisfies SubsystemRoster;
+    } satisfies DepartmentRoster;
 
-    render(<RosterTab subsystem={FORGE} />);
+    render(<RosterTab department={DEV} />);
 
     const integrationSection = screen.getByTestId(RosterTabTestId.IntegrationSection);
     expect(within(integrationSection).getByText("Team Slack")).toBeInTheDocument();
@@ -329,7 +321,7 @@ describe("RosterTab integrations + monitors (NS2 F1c)", () => {
     hooks.pipelines = [];
     hooks.roster = EMPTY_ROSTER;
 
-    render(<RosterTab subsystem={FORGE} />);
+    render(<RosterTab department={DEV} />);
 
     expect(screen.queryByTestId(RosterTabTestId.IntegrationSection)).toBeNull();
     expect(screen.queryByTestId(RosterTabTestId.MonitorSection)).toBeNull();

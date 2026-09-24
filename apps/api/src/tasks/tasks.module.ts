@@ -63,14 +63,14 @@ import { TasksController } from "./tasks.controller";
   ],
   // Re-export the storage module + scheduler so the channel triage flow (Phase 5.3)
   // can dispatch a task and read its outcome back onto the channel item.
-  // TaskRunsService is also exported (Phase 82) so `SubsystemsModule` can read the
+  // TaskRunsService is also exported (Phase 82) so `DepartmentsModule` can read the
   // unified run feed for its status aggregation without re-implementing the merge.
   exports: [
     TaskSchedulerService,
     TaskRunsService,
     // Exported so `RoadmapGateService` can ask the ONE question the switchboard
     // should ask for a gate release — "whose domain is this?" — via
-    // `classifySubsystem`, and let the subsystem pick its own unit.
+    // `classifyDepartment`, and let the department pick its own unit.
     TaskClassifierService,
     AttachmentStorageService,
     ScheduledTasksStorageModule,

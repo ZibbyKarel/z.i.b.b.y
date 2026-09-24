@@ -4,7 +4,7 @@ import type { KeyboardEvent, Ref } from "react";
 import { useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
-import type { SubsystemId } from "@zibby/contracts";
+import type { DepartmentId } from "@zibby/contracts";
 import {
   Button,
   Card,
@@ -30,8 +30,8 @@ import { useProjectsQuery } from "../../projects";
 import { useRunsQuery } from "../../runs/queries/useRunsQuery";
 import { runTitle } from "../../runs/run";
 import { useSkillsQuery } from "../../skills";
-import { SUBSYSTEM_GLYPH } from "../../subsystems/subsystemVisuals";
-import { useSubsystemsQuery } from "../../subsystems/queries/useSubsystemsQuery";
+import { DEPARTMENT_GLYPH } from "../../departments/departmentVisuals";
+import { useDepartmentsQuery } from "../../departments/queries/useDepartmentsQuery";
 import type { ChatDetailTarget } from "./ChatDetailDialog";
 
 export enum ChatSearchTestId {
@@ -45,7 +45,7 @@ export enum ChatSearchTestId {
 type SearchKind =
   | "agent"
   | "pipeline"
-  | "subsystem"
+  | "department"
   | "task"
   | "memory"
   | "skill"
@@ -75,8 +75,8 @@ export interface ChatSearchHandle {
 export interface ChatSearchProps {
   /** Agent/pipeline pick → open its read-only detail dialog, as the old palette did. */
   onDetailSelect: (detail: ChatDetailTarget) => void;
-  /** Subsystem pick → open the in-chat subsystem drawer. */
-  onSelectSubsystem: (id: SubsystemId) => void;
+  /** Department pick → open the in-chat department drawer. */
+  onSelectDepartment: (id: DepartmentId) => void;
   /** Task (run) pick → open the in-chat run-detail column. */
   onOpenRun: (runId: string) => void;
   /** Every other kind with nowhere to render inline yet navigates away. */
@@ -105,13 +105,13 @@ const RESULT_CAP = 30;
  * The Velín-D inline top-search (B1–B6, replacing the centered `ChatPalette`): a
  * glass pill that expands on focus/click, dropping a results panel directly below
  * it with a full-page dim backdrop behind — never a centered modal. Built from the
- * broadened live index (B2): agents, pipelines, subsystems, running tasks, memory,
+ * broadened live index (B2): agents, pipelines, departments, running tasks, memory,
  * skills, MCP servers, projects, commands, companies, a static settings shortcut,
  * and the synthetic "generate briefing" action.
  */
 export function ChatSearch({
   onDetailSelect,
-  onSelectSubsystem,
+  onSelectDepartment,
   onOpenRun,
   onNavigate,
   onGenerateBriefing,
@@ -138,7 +138,7 @@ export function ChatSearch({
 
   const { data: agents = [] } = useAgentsQuery();
   const { data: pipelines = [] } = usePipelinesQuery();
-  const { data: subsystems = [] } = useSubsystemsQuery();
+  const { data: departments = [] } = useDepartmentsQuery();
   const { runs } = useRunsQuery();
   const { data: skills = [] } = useSkillsQuery();
   const { data: mcpServers = [] } = useMcpServersQuery();
@@ -170,13 +170,13 @@ export function ChatSearch({
         glyph: "flow",
       });
     }
-    for (const s of subsystems) {
+    for (const s of departments) {
       items.push({
-        kind: "subsystem",
+        kind: "department",
         id: s.id,
         title: s.name,
         subtitle: s.tagline,
-        glyph: SUBSYSTEM_GLYPH[s.id],
+        glyph: DEPARTMENT_GLYPH[s.id],
       });
     }
     for (const r of runs) {
@@ -223,7 +223,7 @@ export function ChatSearch({
     }
     items.push({ kind: "setting", id: "settings", title: t("kind.setting"), glyph: "gear" });
     return items;
-  }, [agents, pipelines, subsystems, runs, skills, mcpServers, projects, commands, companies, t]);
+  }, [agents, pipelines, departments, runs, skills, mcpServers, projects, commands, companies, t]);
 
   const results = useMemo<SearchItem[]>(() => {
     const q = query.trim();
@@ -284,8 +284,8 @@ export function ChatSearch({
         if (pipeline) onDetailSelect({ kind: "pipeline", pipeline });
         return;
       }
-      case "subsystem":
-        onSelectSubsystem(item.id as SubsystemId);
+      case "department":
+        onSelectDepartment(item.id as DepartmentId);
         return;
       case "task":
         onOpenRun(item.id);

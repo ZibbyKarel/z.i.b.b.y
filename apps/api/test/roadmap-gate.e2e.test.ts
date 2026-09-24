@@ -59,7 +59,7 @@ describe("Roadmap gate API (e2e)", () => {
       category: "Jiné",
       description: "Nesouvisí s roadmapem",
       instructions: "Dělej něco úplně jiného.",
-      ownerSubsystem: "forge",
+      department: "dev",
     });
 
     // 125g — the decomposition dispatch's explicit target must resolve to a real
@@ -72,7 +72,7 @@ describe("Roadmap gate API (e2e)", () => {
         category: "Roadmap",
         description: "Decomposes a childless epic into a JSON list of child tasks.",
         instructions: "Respond with an empty JSON array: []",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
   });

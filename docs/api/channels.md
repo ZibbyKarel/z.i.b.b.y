@@ -311,7 +311,7 @@ Called by `ReplyDraftSweeperService` once research finishes, **never** from
 - **`draft === null`** → the item is surfaced (`triaged`) with **no approval at
   all** and a `channel-needs-attention` activity line. No courtesy phrase is ever
   substituted (see _No filler drafts_).
-- **Tier 2**, or a Herald-**graduated** Tier 3 (confident, not policy-forced —
+- **Tier 2**, or a Comms-**graduated** Tier 3 (confident, not policy-forced —
   the escalation is re-derived from the item's stored `projectId`/`vip`), with
   `mandate.reply` on and the `channel-reply` gate resolving below `ask` → send
   the researched reply and persist it. `deny` ignores the item; `ask` parks.
@@ -354,7 +354,7 @@ keep the normal act-by-tier behavior.
 
 **Dismiss:** the operator clears a surfaced summary via
 `POST /api/channels/items/:id/dismiss` → `triaged` → `ignored` (the only
-client-driven write; it can't forge a verdict, only retire a surfaced item).
+client-driven write; it can't fake a verdict, only retire a surfaced item).
 
 **Project attribution:** an item is attributed to a project via the stored
 `integration.projectId` (the authoritative owner); the text/name heuristic
@@ -419,7 +419,7 @@ draft is allowed to carry. It resolves the item's project to a local repo
 spawns a one-shot `claude -p` **inside that repo** so a question like "how does
 X work?" is answered from the code rather than guessed.
 
-It returns `null` on **every** no-answer path — the `NO_ANSWER` sentinel, a
+It returns `null` on **every** no-answer path — the `NO_ANSWER` security, a
 timeout, a spawn failure, empty output, a missing `projectId`, an unresolvable
 repo. `null` means notify-only; it never degrades into a courtesy phrase (see
 _No filler drafts_ above).

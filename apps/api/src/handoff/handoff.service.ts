@@ -1,13 +1,13 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
 import {
   type CreateTaskInput,
+  DEPARTMENTS,
   HANDOFF_SEVERITY_ORDER,
   type HandoffOutcome,
   type HandoffProposal,
   type HandoffRule,
   type HandoffSignal,
   type HandoffTarget,
-  SUBSYSTEMS,
   type TaskTarget,
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
@@ -23,7 +23,7 @@ import { HandoffSignalKindStore } from "./handoff-signal-kind.store";
 
 /**
  * A2 — the handoff evaluation engine (design doc
- * `docs/superpowers/specs/2026-07-22-subsystem-handoff-design.md`, Part A.2):
+ * `docs/superpowers/specs/2026-07-22-department-handoff-design.md`, Part A.2):
  * matches a producer's normalized {@link HandoffSignal} against the standing
  * {@link HandoffRule} set and either dispatches silently (Tier 1), dispatches
  * and reports (Tier 2), or parks a {@link HandoffProposal} behind a
@@ -111,11 +111,11 @@ export class HandoffService implements OnModuleInit, ResumableRunner {
     if (rule.tier === 2) {
       void this.activity.record({
         kind: "handoff",
-        summary: `${subsystemLabel(signal.from)} → ${targetLabel(rule.to)}: ${signal.title}`,
+        summary: `${departmentLabel(signal.from)} → ${targetLabel(rule.to)}: ${signal.title}`,
         refs: {
           runRef,
           ...(signal.projectId ? { projectId: signal.projectId } : {}),
-          ...(rule.to.kind === "subsystem" ? { ownerSubsystem: rule.to.id } : {}),
+          ...(rule.to.kind === "department" ? { department: rule.to.id } : {}),
         },
       });
     } else {
@@ -139,9 +139,9 @@ export class HandoffService implements OnModuleInit, ResumableRunner {
       kind: "handoff-proposal",
       skill: signal.from,
       action: "handoff",
-      detail: `${subsystemLabel(signal.from)} → ${targetLabel(rule.to)}: ${signal.title}`,
+      detail: `${departmentLabel(signal.from)} → ${targetLabel(rule.to)}: ${signal.title}`,
       risk: "medium",
-      ownerSubsystem: signal.from,
+      department: signal.from,
     });
     await this.fired.markFired(rule.id, signal.fingerprint);
     return { action: "proposed", approvalId: approval.id };
@@ -165,17 +165,17 @@ export class HandoffService implements OnModuleInit, ResumableRunner {
   /**
    * Decorate a stored {@link HandoffTarget} (routing identity only) into a full
    * {@link TaskTarget} `createTask` needs (routing identity + display `name`):
-   *  - `subsystem` — looked up in the `SUBSYSTEMS` registry; falls back to the raw
-   *    id if somehow absent (defensive only — `SubsystemIdSchema` already closes
+   *  - `department` — looked up in the `DEPARTMENTS` registry; falls back to the raw
+   *    id if somehow absent (defensive only — `DepartmentIdSchema` already closes
    *    the id space).
    *  - `pipeline` — looked up in the live pipelines store; falls back to the raw
    *    id if the pipeline was deleted/renamed since the rule was written
    *    (fail-open — a display-name miss should never block a dispatch).
    */
   private async decorateTarget(target: HandoffTarget): Promise<TaskTarget> {
-    if (target.kind === "subsystem") {
-      const name = SUBSYSTEMS.find((s) => s.id === target.id)?.name ?? target.id;
-      return { kind: "subsystem", id: target.id, name };
+    if (target.kind === "department") {
+      const name = DEPARTMENTS.find((s) => s.id === target.id)?.name ?? target.id;
+      return { kind: "department", id: target.id, name };
     }
     const pipeline = await this.pipelines.get(target.id).catch(() => null);
     return { kind: "pipeline", id: target.id, name: pipeline?.name ?? target.id };
@@ -215,10 +215,10 @@ function severityGatePasses(rule: HandoffRule, signal: HandoffSignal): boolean {
   );
 }
 
-function subsystemLabel(id: string): string {
-  return SUBSYSTEMS.find((s) => s.id === id)?.name ?? id;
+function departmentLabel(id: string): string {
+  return DEPARTMENTS.find((s) => s.id === id)?.name ?? id;
 }
 
 function targetLabel(target: HandoffTarget): string {
-  return target.kind === "subsystem" ? subsystemLabel(target.id) : target.id;
+  return target.kind === "department" ? departmentLabel(target.id) : target.id;
 }

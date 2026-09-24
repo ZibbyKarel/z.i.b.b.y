@@ -26,8 +26,8 @@ type FiredSnapshot = z.infer<typeof FiredSnapshotSchema>;
  * `(rule.id, signal.fingerprint)` never dispatches twice" guarantee (design doc
  * Part A.2). One `<ruleId>.json` file per rule, holding the set of fingerprints
  * that already fired for it — the same fingerprint-set pattern
- * `SubsystemFindingsStore` (`apps/api/src/subsystems/subsystem-findings.store.ts`)
- * uses for Sentinel/Loom scan diffing, kept as its own internal store here (no
+ * `DepartmentFindingsStore` (`apps/api/src/departments/department-findings.store.ts`)
+ * uses for Security/Arch scan diffing, kept as its own internal store here (no
  * contract endpoint, own dir) rather than reused directly, since the keying
  * concept differs (rule id, not scan key) even though the storage shape matches.
  *

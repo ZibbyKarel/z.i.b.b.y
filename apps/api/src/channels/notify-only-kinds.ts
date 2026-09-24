@@ -6,8 +6,8 @@ import type { ChannelItem } from "@zibby/contracts";
  * mailbox is a firehose — autonomous action on inbound mail burns budget and the gate
  * belongs to the human). Slack/Jira/GitHub keep their act-by-tier behaviour.
  *
- * Lives in its own module (NS2 F6a) so BOTH the triage flow and Herald's graduation
- * defense-in-depth can import it without a `channels ⇄ herald` import cycle (the flow
- * imports `HeraldService`; Herald must never import the flow back).
+ * Lives in its own module (NS2 F6a) so BOTH the triage flow and Comms's graduation
+ * defense-in-depth can import it without a `channels ⇄ comms` import cycle (the flow
+ * imports `CommsService`; Comms must never import the flow back).
  */
 export const NOTIFY_ONLY_KINDS: ReadonlySet<ChannelItem["kind"]> = new Set(["email"]);

@@ -17,23 +17,23 @@ const { hooks } = vi.hoisted(() => ({
       isError: false,
       refetch: vi.fn(),
     },
-    subsystems: { data: [] as unknown[] },
+    departments: { data: [] as unknown[] },
   },
 }));
 
 vi.mock("../../handoff/queries", () => ({
   useSignalKindsQuery: () => hooks.signalKinds,
 }));
-vi.mock("../../subsystems/queries", () => ({
-  useSubsystemsQuery: () => hooks.subsystems,
+vi.mock("../../departments/queries", () => ({
+  useDepartmentsQuery: () => hooks.departments,
 }));
 
-const SENTINEL = { id: "sentinel", name: "Sentinel" };
-const LOOM = { id: "loom", name: "Loom" };
+const SECURITY = { id: "sec", name: "Security" };
+const ARCH = { id: "qa", name: "Arch" };
 
 const CVE: HandoffSignalKind = {
   id: "cve",
-  from: "sentinel",
+  from: "sec",
   label: "CVE (stored)",
   description: "stored description",
   severityBearing: true,
@@ -43,7 +43,7 @@ const CVE: HandoffSignalKind = {
 
 const CUSTOM: HandoffSignalKind = {
   id: "custom-thing",
-  from: "loom",
+  from: "qa",
   label: "Custom Thing",
   description: "an operator-registered signal",
   severityBearing: false,
@@ -55,33 +55,33 @@ describe("SignalsScreen (B3a)", () => {
   beforeEach(() => {
     push.mockClear();
     hooks.signalKinds = { data: [CVE, CUSTOM], isPending: false, isError: false, refetch: vi.fn() };
-    hooks.subsystems = { data: [SENTINEL, LOOM] };
+    hooks.departments = { data: [SECURITY, ARCH] };
   });
 
-  it("groups kinds by producer subsystem, one section per producer", () => {
+  it("groups kinds by producer department, one section per producer", () => {
     render(<SignalsScreen />);
 
-    const sentinelCard = screen.getByTestId(`${SignalKindCardTestId.Root}-cve`);
-    const loomCard = screen.getByTestId(`${SignalKindCardTestId.Root}-custom-thing`);
+    const securityCard = screen.getByTestId(`${SignalKindCardTestId.Root}-cve`);
+    const archCard = screen.getByTestId(`${SignalKindCardTestId.Root}-custom-thing`);
 
     // The producer's display name heads its own group.
-    expect(screen.getByText("Sentinel")).toBeInTheDocument();
-    expect(screen.getByText("Loom")).toBeInTheDocument();
+    expect(screen.getByText("Security")).toBeInTheDocument();
+    expect(screen.getByText("Arch")).toBeInTheDocument();
     // A built-in id renders its localized label (cs catalog), an operator id
     // renders the stored label verbatim.
-    expect(within(sentinelCard).getByText("Zranitelnost (CVE)")).toBeInTheDocument();
-    expect(within(loomCard).getByText("Custom Thing")).toBeInTheDocument();
+    expect(within(securityCard).getByText("Zranitelnost (CVE)")).toBeInTheDocument();
+    expect(within(archCard).getByText("Custom Thing")).toBeInTheDocument();
   });
 
   it("shows a distinct status badge per kind", () => {
     render(<SignalsScreen />);
-    const sentinelCard = screen.getByTestId(`${SignalKindCardTestId.Root}-cve`);
-    const loomCard = screen.getByTestId(`${SignalKindCardTestId.Root}-custom-thing`);
+    const securityCard = screen.getByTestId(`${SignalKindCardTestId.Root}-cve`);
+    const archCard = screen.getByTestId(`${SignalKindCardTestId.Root}-custom-thing`);
 
-    expect(within(sentinelCard).getByTestId(SignalStatusBadgeTestId.Root)).toHaveTextContent(
+    expect(within(securityCard).getByTestId(SignalStatusBadgeTestId.Root)).toHaveTextContent(
       "vestavěný",
     );
-    expect(within(loomCard).getByTestId(SignalStatusBadgeTestId.Root)).toHaveTextContent(
+    expect(within(archCard).getByTestId(SignalStatusBadgeTestId.Root)).toHaveTextContent(
       "čeká na producenta",
     );
   });
@@ -100,7 +100,7 @@ describe("SignalsScreen (B3a)", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("renders the empty state when the registry has no kinds for any subsystem", () => {
+  it("renders the empty state when the registry has no kinds for any department", () => {
     hooks.signalKinds = { data: [], isPending: false, isError: false, refetch: vi.fn() };
     render(<SignalsScreen />);
     expect(screen.getByText("Zatím žádné signály")).toBeInTheDocument();

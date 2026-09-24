@@ -37,7 +37,7 @@ export const ReplyLedgerEntrySchema = z.object({
 export type ReplyLedgerEntry = z.infer<typeof ReplyLedgerEntrySchema>;
 
 /** A graduated (channel, category) pair — Tier-3 → Tier-2 auto-send, evidence-backed. */
-export const HeraldGraduationSchema = z.object({
+export const CommsGraduationSchema = z.object({
   integrationId: IntegrationIdSchema,
   kind: IntegrationKindSchema,
   category: TriageCategorySchema,
@@ -46,4 +46,4 @@ export const HeraldGraduationSchema = z.object({
   approvalId: z.string().min(1),
   graduatedAt: IsoDateTimeSchema,
 });
-export type HeraldGraduation = z.infer<typeof HeraldGraduationSchema>;
+export type CommsGraduation = z.infer<typeof CommsGraduationSchema>;

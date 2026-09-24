@@ -4,16 +4,16 @@ import { IntegrationsModule } from "../integrations/integrations.module";
 import { MemoryModule } from "../memory/memory.module";
 import { ProjectsModule } from "../projects/projects.module";
 import { ResolvedProjectModule } from "../projects/resolved-project.module";
-import { SubsystemFindingsModule } from "../subsystems/subsystem-findings.module";
-import { SentinelService } from "./sentinel.service";
+import { DepartmentFindingsModule } from "../departments/department-findings.module";
+import { SecurityService } from "./security.service";
 
 /**
- * NS2 F5a — Sentinel's scheduled security watch. A leaf module (like
+ * NS2 F5a — Security's scheduled security watch. A leaf module (like
  * `GapsModule`): imported by `AutomationsModule` (the scheduler target) and
  * `BriefingModule` (the findings extras array) but imports neither back — no
  * cycle risk, same position as `gap-detect`/`self-knowledge`.
  *
- * A3: `TasksModule` dropped — Sentinel no longer dispatches directly; every
+ * A3: `TasksModule` dropped — Security no longer dispatches directly; every
  * finding routes through `HandoffModule`'s rule engine instead (which itself
  * carries the `TaskSchedulerService` dependency for the actual dispatch).
  */
@@ -24,9 +24,9 @@ import { SentinelService } from "./sentinel.service";
     IntegrationsModule,
     MemoryModule,
     HandoffModule,
-    SubsystemFindingsModule,
+    DepartmentFindingsModule,
   ],
-  providers: [SentinelService],
-  exports: [SentinelService],
+  providers: [SecurityService],
+  exports: [SecurityService],
 })
-export class SentinelModule {}
+export class SecurityModule {}

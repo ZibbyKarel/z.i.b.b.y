@@ -9,7 +9,7 @@ import { Collection } from "../../../components/Collection/Collection";
 import { useApprovalsQuery } from "../../approvals";
 import { useRunGlyphMap, useRunsQuery } from "../../runs/queries/useRunsQuery";
 import { runGlyph } from "../../runs/run";
-import { useSubsystemsQuery } from "../../subsystems/queries/useSubsystemsQuery";
+import { useDepartmentsQuery } from "../../departments/queries/useDepartmentsQuery";
 import {
   type FlyoutSection,
   SECTION_META,
@@ -162,18 +162,18 @@ function WaitingSection({ headerId }: { headerId: string }) {
 }
 
 function ErrorSection({ headerId }: { headerId: string }) {
-  const subsystemsQuery = useSubsystemsQuery();
+  const departmentsQuery = useDepartmentsQuery();
   const { runs, isPending, isError, refetch } = useRunsQuery();
   const t = useTranslations("chat.statusPill.flyout");
-  // Mirrors the pill's filter: only subsystems whose HEADLINE state is
-  // `error` (a `waiting` subsystem outranks its own errors and isn't counted).
+  // Mirrors the pill's filter: only departments whose HEADLINE state is
+  // `error` (a `waiting` department outranks its own errors and isn't counted).
   const runById = new Map(runs.map((r) => [r.runId, r]));
-  const failed = (subsystemsQuery.data ?? [])
+  const failed = (departmentsQuery.data ?? [])
     .filter((s) => s.state === "error")
     .flatMap((s) =>
       (s.errorRunIds ?? []).map((runId) => ({
         runId,
-        subsystemName: s.name,
+        departmentName: s.name,
         run: runById.get(runId),
       })),
     );
@@ -200,10 +200,10 @@ function ErrorSection({ headerId }: { headerId: string }) {
           loading={isPending ? { label: t("loading") } : undefined}
           renderItem={(f) => (
             <FlyoutErrorRow
+              departmentName={f.departmentName}
               key={f.runId}
               run={f.run}
               runId={f.runId}
-              subsystemName={f.subsystemName}
             />
           )}
           sm={2}

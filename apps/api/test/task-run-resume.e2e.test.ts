@@ -70,7 +70,7 @@ describe("Task run resume — re-run an errored agent run (e2e)", () => {
         id: "resumer",
         name: "Resumer",
         instructions: "test agent",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
   });

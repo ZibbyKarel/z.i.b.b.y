@@ -15,7 +15,7 @@ export function resolvePolicyDir(): string {
  * gates controller can depend on it without a cycle (they live in the agents
  * module, which imports this). NS2 F3a adds the one data dependency the evaluator
  * does take: the global gate-rule catalog ({@link GateRulesModule}), read-only, as
- * the source of the per-subsystem rule bucket — one-directional (gate-rules
+ * the source of the per-department rule bucket — one-directional (gate-rules
  * depends on nothing in gates), so still no cycle.
  */
 @Module({

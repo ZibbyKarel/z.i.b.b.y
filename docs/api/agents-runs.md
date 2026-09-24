@@ -201,3 +201,5 @@ under it:
 A synthetic fallback agent — it has no stored definition under `data/agents/`.
 Used as the routing target when no concrete agent matches the classification.
 Runs directly as the `claude` CLI with generic instructions.
+
+<!-- Last reviewed 2026-09-24 (ZibbyCorp rename): module code changed only by the subsystem → department rename; this doc has no subsystem references. -->

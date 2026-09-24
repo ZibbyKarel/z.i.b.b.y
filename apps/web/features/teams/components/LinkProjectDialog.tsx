@@ -12,7 +12,7 @@ export enum LinkProjectDialogTestId {
   NoCandidates = "link-project-no-candidates",
 }
 
-/** Sentinel value for "nothing picked yet" — a real project id can never be empty. */
+/** Security value for "nothing picked yet" — a real project id can never be empty. */
 const NO_SELECTION = "";
 
 export interface LinkProjectDialogProps {

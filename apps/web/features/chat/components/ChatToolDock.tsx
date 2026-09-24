@@ -32,7 +32,7 @@ const DOCK_STRIP_STYLE = {
 // in F4 (docs/plans/hud2chat-F4-catalogs-b.md) — the audit's other fully
 // orphaned section, already in NAV_ITEMS with a `clock` glyph. `pipelines`
 // joined in F5 (docs/plans/hud2chat-F5-orchestration.md): it was missing from
-// Chat entirely per the audit (only reachable via the subsystem drawer's
+// Chat entirely per the audit (only reachable via the department drawer's
 // Roster tab).
 // `signals` joined with the B3a handoff signal-kind registry (design doc
 // `docs/superpowers/specs/2026-07-22-handoff-signal-registry-and-receiver-filter-design.md`)

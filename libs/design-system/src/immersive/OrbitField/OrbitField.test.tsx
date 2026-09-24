@@ -4,7 +4,7 @@ import { OrbitField, OrbitFieldTestId } from "./OrbitField";
 
 describe("OrbitField", () => {
   it("renders one dot per count", () => {
-    render(<OrbitField baseRadius={40} color="#7aa5f8" count={4} seed="forge" />);
+    render(<OrbitField baseRadius={40} color="#7aa5f8" count={4} seed="dev" />);
     expect(screen.getAllByTestId(OrbitFieldTestId.Dot)).toHaveLength(4);
   });
 
@@ -14,12 +14,10 @@ describe("OrbitField", () => {
   });
 
   it("is deterministic — same seed yields the same dot sizes", () => {
-    const { unmount } = render(
-      <OrbitField baseRadius={50} color="#3fcf8e" count={3} seed="scout" />,
-    );
+    const { unmount } = render(<OrbitField baseRadius={50} color="#3fcf8e" count={3} seed="rnd" />);
     const first = screen.getAllByTestId(OrbitFieldTestId.Dot).map((d) => d.style.width);
     unmount();
-    render(<OrbitField baseRadius={50} color="#3fcf8e" count={3} seed="scout" />);
+    render(<OrbitField baseRadius={50} color="#3fcf8e" count={3} seed="rnd" />);
     const second = screen.getAllByTestId(OrbitFieldTestId.Dot).map((d) => d.style.width);
     expect(second).toEqual(first);
   });

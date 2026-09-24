@@ -80,20 +80,20 @@ describe("NoteView (Phase 109) — raw-note 'untriaged' badge", () => {
   });
 });
 
-describe("NoteView (F4b) — subsystem shelf badge", () => {
+describe("NoteView (F4b) — department shelf badge", () => {
   beforeEach(() => {
     onSelect.mockClear();
     updateNote.mockClear();
   });
 
-  it("shows the subsystem badge when the note carries an owning subsystem", () => {
-    render(<NoteView note={{ ...note, subsystem: "forge" }} onSelect={onSelect} />);
-    expect(screen.getByTestId(NoteViewTestId.SubsystemBadge)).toHaveTextContent("forge");
+  it("shows the department badge when the note carries an owning department", () => {
+    render(<NoteView note={{ ...note, department: "dev" }} onSelect={onSelect} />);
+    expect(screen.getByTestId(NoteViewTestId.DepartmentBadge)).toHaveTextContent("dev");
   });
 
-  it("hides the badge when the note has no subsystem", () => {
+  it("hides the badge when the note has no department", () => {
     render(<NoteView note={note} onSelect={onSelect} />);
-    expect(screen.queryByTestId(NoteViewTestId.SubsystemBadge)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(NoteViewTestId.DepartmentBadge)).not.toBeInTheDocument();
   });
 });
 

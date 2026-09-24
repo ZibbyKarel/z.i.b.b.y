@@ -19,7 +19,7 @@ globalThis.ResizeObserver ??= class {
   disconnect() {}
 } as unknown as typeof ResizeObserver;
 
-const NODE_IDS = ["atlas", "forge", "scribe", "sentry", "mint", "relay", "codex", "scout"];
+const NODE_IDS = ["atlas", "dev", "scribe", "sentry", "mint", "relay", "knw", "rnd"];
 
 function buildNodes(): OrbMapNode[] {
   const states: OrbState[] = [
@@ -57,11 +57,11 @@ describe("OrbMap", () => {
     const user = userEvent.setup();
     const onSelectNode = vi.fn();
     render(<OrbMap core={CORE} nodes={buildNodes()} onSelectNode={onSelectNode} />);
-    const forgeWrapper = screen.getByTestId(`${OrbMapTestId.Node}-forge`);
-    const forgeRoot = within(forgeWrapper).getByTestId(OrbNodeTestId.Root);
-    await user.click(forgeRoot);
+    const devWrapper = screen.getByTestId(`${OrbMapTestId.Node}-dev`);
+    const devRoot = within(devWrapper).getByTestId(OrbNodeTestId.Root);
+    await user.click(devRoot);
     expect(onSelectNode).toHaveBeenCalledTimes(1);
-    expect(onSelectNode).toHaveBeenCalledWith("forge");
+    expect(onSelectNode).toHaveBeenCalledWith("dev");
   });
 
   it("fires onSelectCore when the core is activated", async () => {
@@ -78,7 +78,7 @@ describe("OrbMap", () => {
     render(
       <OrbMap
         core={CORE}
-        flares={[{ id: "flare-1", fromId: "atlas", toId: "forge" }]}
+        flares={[{ id: "flare-1", fromId: "atlas", toId: "dev" }]}
         nodes={buildNodes()}
       />,
     );
@@ -89,7 +89,7 @@ describe("OrbMap", () => {
     render(
       <OrbMap
         core={CORE}
-        flares={[{ id: "flare-core", fromId: ORB_MAP_CORE_ID, toId: "forge" }]}
+        flares={[{ id: "flare-core", fromId: ORB_MAP_CORE_ID, toId: "dev" }]}
         nodes={buildNodes()}
       />,
     );
@@ -121,7 +121,7 @@ describe("OrbMap", () => {
       render(
         <OrbMap
           core={CORE}
-          flares={[{ id: "flare-1", fromId: "atlas", toId: "forge" }]}
+          flares={[{ id: "flare-1", fromId: "atlas", toId: "dev" }]}
           nodes={buildNodes()}
           onFlareDone={onFlareDone}
         />,

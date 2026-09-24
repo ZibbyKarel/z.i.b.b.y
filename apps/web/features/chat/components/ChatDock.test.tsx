@@ -8,7 +8,7 @@ import { VoiceToggleButtonTestId } from "./VoiceToggleButton";
 import { ChatDock, ChatDockTestId } from "./ChatDock";
 
 // `CommandLine` (rendered chrome-less, `showAttach`) reads the agent/pipeline/
-// subsystem catalogs for its `@`-mention picker and the attachment-upload
+// department catalogs for its `@`-mention picker and the attachment-upload
 // mutation for drag/drop — the same minimal mock set `CommandLine.test.tsx`
 // itself uses to mount it standalone, without hitting the network.
 vi.mock("../../agents/queries/useAgentsQuery", () => ({
@@ -19,9 +19,9 @@ vi.mock("../../pipelines/queries/usePipelinesQuery", () => ({
   usePipelinesQuery: () => ({ data: [] }),
   getPipelinesQueryKey: () => ["pipelines"],
 }));
-vi.mock("../../subsystems/queries/useSubsystemsQuery", () => ({
-  useSubsystemsQuery: () => ({ data: [] }),
-  getSubsystemsQueryKey: () => ["subsystems"],
+vi.mock("../../departments/queries/useDepartmentsQuery", () => ({
+  useDepartmentsQuery: () => ({ data: [] }),
+  getDepartmentsQueryKey: () => ["departments"],
 }));
 vi.mock("../../tasks/mutations/useUploadTaskAttachmentsMutation", () => ({
   useUploadTaskAttachmentsMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),

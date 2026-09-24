@@ -5,7 +5,7 @@ import { Injectable, Optional } from "@nestjs/common";
 import type { HandoffSeverity, HandoffSignal, Project } from "@zibby/contracts";
 import { CredentialsStore } from "../integrations/credentials.store";
 import { HandoffService } from "../handoff/handoff.service";
-import { subsystemShelfId } from "../memory/subsystem-shelf";
+import { departmentShelfId } from "../memory/department-shelf";
 import { VaultService } from "../memory/vault.service";
 import { resolveGithubToken } from "../projects/project-pr.service";
 import { ProjectLocalService } from "../projects/project-local.service";
@@ -13,16 +13,16 @@ import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ResolvedProjectService } from "../projects/resolved-project.service";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
-import { SubsystemFindingsStore } from "../subsystems/subsystem-findings.store";
+import { DepartmentFindingsStore } from "../departments/department-findings.store";
 
 const GITHUB_API = "https://api.github.com";
 
 /** The findings-store snapshot key + the vault note id (gap-detector's note pattern). */
-const FINDINGS_KEY = "sentinel";
+const FINDINGS_KEY = "sec";
 const NOTE_ID = "suggestions/security-findings";
 
 /** A dependency CVE from GitHub Dependabot's open alerts. */
-export interface SentinelCveFinding {
+export interface SecurityCveFinding {
   kind: "cve";
   fingerprint: string;
   projectId: string;
@@ -41,7 +41,7 @@ export interface SentinelCveFinding {
  * only `file`/`line`/`rule`, which is all that reaches the vault note, the
  * briefing line, the activity summary and the fingerprint.
  */
-export interface SentinelSecretFinding {
+export interface SecuritySecretFinding {
   kind: "secret";
   fingerprint: string;
   projectId: string;
@@ -51,7 +51,7 @@ export interface SentinelSecretFinding {
   rule: string;
 }
 
-export type SentinelFinding = SentinelCveFinding | SentinelSecretFinding;
+export type SecurityFinding = SecurityCveFinding | SecuritySecretFinding;
 
 /** Tolerant shape of one `GET /repos/{repo}/dependabot/alerts` entry. */
 interface GitHubDependabotAlert {
@@ -119,7 +119,7 @@ const SEVERITY_MAP: Record<string, HandoffSeverity> = {
 };
 
 /** One human line for the vault note / briefing — never the matched secret text. */
-function toFindingLine(finding: SentinelFinding): string {
+function toFindingLine(finding: SecurityFinding): string {
   if (finding.kind === "cve") {
     const sev = finding.severity.toUpperCase();
     const pkg = finding.package ? ` in ${finding.package}` : "";
@@ -131,10 +131,10 @@ function toFindingLine(finding: SentinelFinding): string {
 }
 
 /**
- * NS2 F5a — Sentinel's scheduled security watch. Per project: open Dependabot
+ * NS2 F5a — Security's scheduled security watch. Per project: open Dependabot
  * alerts over REST (the token-resolution seam `ProjectPrService` already
  * uses) plus a bounded secret-pattern scan over the local clone. Findings are
- * a vault-note proposal (gap-detector's pattern) filed onto Sentinel's shelf
+ * a vault-note proposal (gap-detector's pattern) filed onto Security's shelf
  * and read back for the briefing; every NEW finding is ALSO normalized into a
  * {@link HandoffSignal} and routed through the {@link HandoffService} rule
  * engine (A3) — a critical CVE still ends up dispatching a gated fix task
@@ -146,7 +146,7 @@ function toFindingLine(finding: SentinelFinding): string {
  * "nothing to show", never a thrown error out of the scheduler's tick.
  */
 @Injectable()
-export class SentinelService {
+export class SecurityService {
   private readonly fetchImpl: typeof fetch;
   private readonly log: ScopedLogger;
 
@@ -158,23 +158,23 @@ export class SentinelService {
     private readonly vault: VaultService,
     private readonly handoff: HandoffService,
     private readonly activity: ActivityLogService,
-    private readonly findingsStore: SubsystemFindingsStore,
+    private readonly findingsStore: DepartmentFindingsStore,
     logger: LoggerService,
     @Optional() fetchImpl?: typeof fetch,
   ) {
     this.fetchImpl = fetchImpl ?? fetch;
-    this.log = logger.child(SentinelService.name);
+    this.log = logger.child(SecurityService.name);
   }
 
   /** Scan every project for open CVEs + possible leaked secrets. */
-  async scan(now: Date = new Date()): Promise<{ findings: SentinelFinding[] }> {
+  async scan(now: Date = new Date()): Promise<{ findings: SecurityFinding[] }> {
     const projects = await this.projects.list().catch(() => []);
-    const findings: SentinelFinding[] = [];
+    const findings: SecurityFinding[] = [];
     for (const project of projects) {
       try {
         findings.push(...(await this.scanDependabot(project)));
       } catch (err) {
-        this.log.warn("sentinel: dependabot scan failed", {
+        this.log.warn("security: dependabot scan failed", {
           project: project.id,
           error: String(err),
         });
@@ -182,7 +182,7 @@ export class SentinelService {
       try {
         findings.push(...(await this.scanSecrets(project)));
       } catch (err) {
-        this.log.warn("sentinel: secret scan failed", { project: project.id, error: String(err) });
+        this.log.warn("security: secret scan failed", { project: project.id, error: String(err) });
       }
     }
 
@@ -194,25 +194,25 @@ export class SentinelService {
       [...currentFingerprints].some((fp) => !lastFingerprints.has(fp));
 
     if (!changed) {
-      this.log.info("sentinel: no new findings", { scanned: projects.length });
+      this.log.info("security: no new findings", { scanned: projects.length });
       await this.findingsStore.write(FINDINGS_KEY, currentFingerprints);
       return { findings };
     }
 
     await this.writeFindings(findings, now).catch((err) => {
-      this.log.warn("sentinel: failed to write findings to vault", { error: String(err) });
+      this.log.warn("security: failed to write findings to vault", { error: String(err) });
     });
     await this.vault
       .updateIndex(
-        subsystemShelfId("sentinel"),
+        departmentShelfId("sec"),
         NOTE_ID,
         `Bezpečnostní nálezy — ${now.toISOString().slice(0, 10)}`,
       )
       .catch(() => {});
     await this.findingsStore.write(FINDINGS_KEY, currentFingerprints);
     void this.activity.record({
-      kind: "subsystem-scan",
-      summary: `Sentinel: ${newFindings.length} nových bezpečnostních nálezů`,
+      kind: "department-scan",
+      summary: `Security: ${newFindings.length} nových bezpečnostních nálezů`,
       refs: { noteId: NOTE_ID },
     });
 
@@ -226,7 +226,7 @@ export class SentinelService {
         // Belt-and-suspenders: `evaluate` is itself fail-open and never throws, but
         // the scan tick must survive regardless. A failed handoff leaves the
         // finding in the note; the next scan retries it (same fingerprint).
-        this.log.warn("sentinel: handoff evaluate failed — finding stays for retry", {
+        this.log.warn("security: handoff evaluate failed — finding stays for retry", {
           fingerprint: finding.fingerprint,
           error: String(err),
         });
@@ -242,14 +242,14 @@ export class SentinelService {
    * only the tier/rule table now decides whether it fires). A secret finding's
    * body is `toFindingLine` — NEVER the matched secret value.
    */
-  private toSignal(f: SentinelFinding): HandoffSignal {
+  private toSignal(f: SecurityFinding): HandoffSignal {
     if (f.kind === "cve") {
       return {
-        from: "sentinel",
+        from: "sec",
         kind: "cve",
         severity: SEVERITY_MAP[f.severity] ?? "low",
         projectId: f.projectId,
-        title: `Sentinel: kritická zranitelnost ${f.package ?? f.repo}`,
+        title: `Security: kritická zranitelnost ${f.package ?? f.repo}`,
         body: [
           f.summary ?? "Kritická CVE nalezena.",
           "",
@@ -262,10 +262,10 @@ export class SentinelService {
       };
     }
     return {
-      from: "sentinel",
+      from: "sec",
       kind: "secret",
       projectId: f.projectId,
-      title: `Sentinel: možný únik tajemství v ${f.projectName}`,
+      title: `Security: možný únik tajemství v ${f.projectName}`,
       body: toFindingLine(f),
       fingerprint: f.fingerprint,
     };
@@ -285,7 +285,7 @@ export class SentinelService {
     }
   }
 
-  private async scanDependabot(project: Project): Promise<SentinelFinding[]> {
+  private async scanDependabot(project: Project): Promise<SecurityFinding[]> {
     const link = await resolveGithubToken(this.resolvedProjects, this.credentials, project);
     if (!link) return [];
 
@@ -298,7 +298,7 @@ export class SentinelService {
         },
       );
     } catch (err) {
-      this.log.debug("sentinel: dependabot fetch failed", {
+      this.log.debug("security: dependabot fetch failed", {
         project: project.id,
         error: String(err),
       });
@@ -308,7 +308,7 @@ export class SentinelService {
       // 403 (Dependabot alerts disabled / no scope), 404 (no repo access), 429
       // (rate limited) — all fail-open. A scheduled scan never throws out of
       // the heartbeat the way an operator's interactive read is allowed to.
-      this.log.debug("sentinel: dependabot alerts unavailable", {
+      this.log.debug("security: dependabot alerts unavailable", {
         project: project.id,
         status: res.status,
       });
@@ -317,7 +317,7 @@ export class SentinelService {
     const body = (await res.json().catch(() => null)) as unknown;
     const alerts = Array.isArray(body) ? (body as GitHubDependabotAlert[]) : [];
 
-    const findings: SentinelFinding[] = [];
+    const findings: SecurityFinding[] = [];
     for (const alert of alerts) {
       if (alert.number === undefined) continue;
       findings.push({
@@ -336,12 +336,12 @@ export class SentinelService {
     return findings;
   }
 
-  private async scanSecrets(project: Project): Promise<SentinelFinding[]> {
+  private async scanSecrets(project: Project): Promise<SecurityFinding[]> {
     const local = await this.projectLocal.resolve(project).catch(() => null);
     if (!local?.present || !local.resolvedPath) return [];
     const root = local.resolvedPath;
 
-    const findings: SentinelFinding[] = [];
+    const findings: SecurityFinding[] = [];
     let scanned = 0;
     const stack: string[] = [root];
     while (stack.length > 0 && scanned < MAX_FILES_SCANNED) {
@@ -384,7 +384,7 @@ export class SentinelService {
     return findings;
   }
 
-  private async writeFindings(findings: SentinelFinding[], now: Date): Promise<void> {
+  private async writeFindings(findings: SecurityFinding[], now: Date): Promise<void> {
     const date = now.toISOString().slice(0, 10);
     const lines = findings.map(toFindingLine);
     const body = [

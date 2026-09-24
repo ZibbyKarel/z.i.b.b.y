@@ -13,7 +13,7 @@ const agents: Agent[] = [
 // The `/pipelines` page moved edit mode inline into the detail view
 // (Screen.tsx) — see `Screen.test.tsx` for those cases, so this file only
 // covers create mode. `mode="edit"`/`initial`/`onSave` got a second caller in
-// Phase 85: the subsystem drawer's Roster tab opens this same dialog as a
+// Phase 85: the department drawer's Roster tab opens this same dialog as a
 // modal when a canvas node is clicked (see `RosterTab.test.tsx`) — the inline
 // detail view and the Roster modal are two entry points onto one editor.
 

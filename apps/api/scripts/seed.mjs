@@ -302,24 +302,24 @@ plan and wait; carry it out.
 
 // Contract Agent: full shape incl. category + gates (GateRuleInput[]).
 //
-// `owner` → the required `ownerSubsystem` (NS2 F9). The task switchboard routes ONLY
-// to subsystems and a subsystem offers only its own owned units, so an unowned agent
+// `owner` → the required `department` (NS2 F9). The task switchboard routes ONLY
+// to departments and a department offers only its own owned units, so an unowned agent
 // is permanently unroutable dead weight — every agent this script writes carries one.
 // The mapping follows each demo agent's evident role against the federation mandates
-// (`libs/contracts/src/subsystems/subsystem.schema.ts`):
-//   forge   — the delivery loop itself (Architekt → Kodér ⇄ Code-Review → Tester →
+// (`libs/contracts/src/departments/department.schema.ts`):
+//   dev   — the delivery loop itself (Architekt → Kodér ⇄ Code-Review → Tester →
 //             Dokumentátor), so demo-architect / coder / reviewer / tester / doc, plus
 //             agent-007 (the token-free fixture that exercises that same machinery).
-//   scout   — researcher: gathers sources and hands the artifact on.
-//   codex   — chronicler: journal + weekly distillation of notes = memory upkeep.
-//   hearth  — the personal domain: curator (media library), steward (shopping and
+//   research   — researcher: gathers sources and hands the artifact on.
+//   knowledge   — chronicler: journal + weekly distillation of notes = memory upkeep.
+//   personal  — the personal domain: curator (media library), steward (shopping and
 //             household stock), cleaner (housekeeping a directory on the machine).
 const AGENTS = [
   {
-    // Renamed from `architect`: the live fleet has a REAL, first-class forge agent at
+    // Renamed from `architect`: the live fleet has a REAL, first-class dev agent at
     // `.zibby/data/agents/architect.md` (with its own avatar and English category), and
     // a bare `pnpm seed` writes into that same live dir — so the old id made every
-    // re-seed silently strip the real agent's `ownerSubsystem`/`avatar` and rename it.
+    // re-seed silently strip the real agent's `department`/`avatar` and rename it.
     // `demo-architect` cannot collide with anything in the fleet.
     id: "demo-architect",
     name: "Architekt (demo)",
@@ -329,7 +329,7 @@ const AGENTS = [
     thinking: "high",
     tools: ["read", "web", "write"],
     category: "Vývoj",
-    owner: "forge",
+    owner: "dev",
   },
   {
     id: "coder",
@@ -340,7 +340,7 @@ const AGENTS = [
     thinking: "medium",
     tools: ["read", "write", "bash", "git"],
     category: "Vývoj",
-    owner: "forge",
+    owner: "dev",
     approval: true,
     risk: "medium",
     gates: [
@@ -357,7 +357,7 @@ const AGENTS = [
     thinking: "medium",
     tools: ["read", "bash", "git"],
     category: "Kvalita",
-    owner: "forge",
+    owner: "dev",
     gates: [{ match: [{ type: "tool", tool: "bash" }], decision: "allow" }],
   },
   {
@@ -369,7 +369,7 @@ const AGENTS = [
     thinking: "high",
     tools: ["read", "git"],
     category: "Kvalita",
-    owner: "forge",
+    owner: "dev",
     gateRuleIds: ["gr-push-main", "gr-merge"],
     gates: [
       {
@@ -388,7 +388,7 @@ const AGENTS = [
     thinking: "medium",
     tools: ["read", "web", "write"],
     category: "Výzkum",
-    owner: "scout",
+    owner: "rnd",
   },
   {
     id: "doc",
@@ -399,7 +399,7 @@ const AGENTS = [
     thinking: "low",
     tools: ["read", "write"],
     category: "Dokumentace",
-    owner: "forge",
+    owner: "dev",
   },
   {
     id: "curator",
@@ -410,7 +410,7 @@ const AGENTS = [
     thinking: "low",
     tools: ["read", "write", "web"],
     category: "Média",
-    owner: "hearth",
+    owner: "per",
   },
   {
     id: "steward",
@@ -421,7 +421,7 @@ const AGENTS = [
     thinking: "medium",
     tools: ["read", "write", "web"],
     category: "Domácnost",
-    owner: "hearth",
+    owner: "per",
     gateRuleIds: ["gr-big-purchase"],
   },
   {
@@ -433,7 +433,7 @@ const AGENTS = [
     thinking: "low",
     tools: ["read", "write"],
     category: "Psaní",
-    owner: "codex",
+    owner: "knw",
   },
   // Cleaner — the reference tidy-up agent. Deletes through the approval gate, so its
   // body deliberately tells it to RUN the delete (not ask in chat): the platform
@@ -449,7 +449,7 @@ const AGENTS = [
     thinking: "medium",
     tools: ["read", "write", "bash"],
     category: "Údržba",
-    owner: "hearth",
+    owner: "per",
     approval: true,
     risk: "high",
     body: CLEANER_BODY,
@@ -479,7 +479,7 @@ async function seedAgents() {
       tools: a.tools,
       category: a.category,
       // Required by the F9 invariant — no free agents (see the AGENTS docblock).
-      ownerSubsystem: a.owner,
+      department: a.owner,
     };
     if (a.approval) fm.requires_approval = true;
     if (a.risk) fm.risk = a.risk;
@@ -497,8 +497,8 @@ async function seedAgents() {
     model: "haiku",
     thinking: "low",
     tools: ["write"],
-    // Owned by forge: it exercises the delivery machinery end to end.
-    ownerSubsystem: "forge",
+    // Owned by dev: it exercises the delivery machinery end to end.
+    department: "dev",
   };
   await writeFile(
     dir("agents", "agent-007.md"),
@@ -531,20 +531,20 @@ async function seedAgents() {
 // Contract phase.agent = agent id (design uses display name); phases need ids;
 // loop.then must be an existing phase id or "fail" (design's "park_for_review" → "fail").
 //
-// `owner` → `ownerSubsystem`, `complexity` → the F9 ladder rung. Both are mandatory
-// here for the same reason as on an agent: the switchboard routes only to subsystems
+// `owner` → `department`, `complexity` → the F9 ladder rung. Both are mandatory
+// here for the same reason as on an agent: the switchboard routes only to departments
 // and grades within one, so an unowned or ungraded pipeline is unroutable. Rungs are
 // graded by phase count and cost per `PipelineComplexitySchema` — `light` (2–3 cheap
 // phases), `standard` (3–4 with review + verification), `deep` (4–6 with loops and
 // escalation). Every `phases[].agent` below is an agent THIS script also seeds; a
-// phase agent may belong to another subsystem than the pipeline's owner (ownership
+// phase agent may belong to another department than the pipeline's owner (ownership
 // governs dispatch and the roster, not which agents a chain composes).
 const PIPELINES = [
   {
     id: "build-feature",
     name: "Build Feature",
     desc: "Spec → implementace → testy → docs, se zpětnou smyčkou u Testera.",
-    owner: "forge",
+    owner: "dev",
     // 4 phases, design → code → tests → docs, with an escalating tester back-edge.
     complexity: "deep",
     phases: [
@@ -587,7 +587,7 @@ const PIPELINES = [
     id: "nightly-research",
     name: "Nightly Research",
     desc: "Researcher nasbírá zdroje, Architekt je zsyntetizuje do poznámky.",
-    owner: "scout",
+    owner: "rnd",
     // 2 phases, no loop — the cheapest rung that is still a pipeline.
     complexity: "light",
     phases: [
@@ -613,7 +613,7 @@ const PIPELINES = [
     id: "pr-guard",
     name: "PR Guard",
     desc: "Reviewer projde diff a připraví push k tvému schválení.",
-    owner: "forge",
+    owner: "dev",
     // A single review phase — below the ladder's floor in spirit, `light` in practice
     // (the enum has no rung under `light`; the rung below it is a bare agent).
     complexity: "light",
@@ -632,7 +632,7 @@ const PIPELINES = [
     id: "media-tidy",
     name: "Media tidy",
     desc: "Stáhne a srovná média na Holly.",
-    owner: "hearth",
+    owner: "per",
     // 2 phases, both sonnet/low — cheap household tidy-up.
     complexity: "light",
     phases: [
@@ -662,7 +662,7 @@ async function seedPipelines() {
       name: p.name,
       phases: p.phases,
       desc: p.desc,
-      ownerSubsystem: p.owner,
+      department: p.owner,
       complexity: p.complexity,
     };
     const body = `# ${p.name}\n\n${p.desc}\n\n## Fáze\n${p.phases.map((ph, i) => `${i + 1}. **${ph.agent}** — \`${ph.consumes}\` → \`${ph.produces}\``).join("\n")}`;

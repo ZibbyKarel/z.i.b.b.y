@@ -63,7 +63,7 @@ async function makeService(
   };
   // N2a: the durable artifact registry — a delivered sink writes one record.
   const artifacts = { record: vi.fn(async () => {}) };
-  // A3: fake HandoffService — a Scout-owned pipeline's delivery also emits a
+  // A3: fake HandoffService — a Research-owned pipeline's delivery also emits a
   // research-artifact signal (recordArtifact). Resolved lazily via ModuleRef
   // (not constructor-injected — see pipeline-runner.service.ts's doc comment),
   // so the double passed to the constructor below is a ModuleRef whose `.get()`
@@ -214,7 +214,7 @@ describe("PipelineRunnerService — output sinks", () => {
         producedBy: expect.objectContaining({ runRef: RUN_ID, pipelineId: "audit" }),
       }),
     );
-    // A3: a non-Scout pipeline (no ownerSubsystem) never emits a handoff signal.
+    // A3: a non-Research pipeline (no department) never emits a handoff signal.
     expect(d.handoff.evaluate).not.toHaveBeenCalled();
   });
 
@@ -465,13 +465,13 @@ describe("PipelineRunnerService — output sinks", () => {
     );
   });
 
-  describe("A3 — Scout-owned pipelines hand off a research-artifact signal", () => {
-    it("a Scout-owned pipeline's delivered artifact emits a research-artifact signal", async () => {
+  describe("A3 — Research-owned pipelines hand off a research-artifact signal", () => {
+    it("a Research-owned pipeline's delivered artifact emits a research-artifact signal", async () => {
       const pipeline: Pipeline = {
-        id: "scout-brief",
-        ownerSubsystem: "scout",
+        id: "research-brief",
+        department: "rnd",
         phases: [docPhase],
-        outputs: [{ type: "file", from: "docs.md", dest: "vault", to: "scout-brief-2026" }],
+        outputs: [{ type: "file", from: "docs.md", dest: "vault", to: "research-brief-2026" }],
         instructions: "x",
         complexity: "standard",
       };
@@ -485,14 +485,14 @@ describe("PipelineRunnerService — output sinks", () => {
       expect(d.handoff.evaluate).toHaveBeenCalledTimes(1);
       expect(d.handoff.evaluate).toHaveBeenCalledWith(
         expect.objectContaining({
-          from: "scout",
+          from: "rnd",
           kind: "research-artifact",
           fingerprint: `${RUN_ID}_vault-note_docs-md`,
         }),
       );
     });
 
-    it("a non-Scout pipeline (ownerSubsystem unset) never emits a handoff signal", async () => {
+    it("a non-Research pipeline (department unset) never emits a handoff signal", async () => {
       const pipeline: Pipeline = {
         id: "audit",
         phases: [docPhase],
@@ -510,12 +510,12 @@ describe("PipelineRunnerService — output sinks", () => {
       expect(d.handoff.evaluate).not.toHaveBeenCalled();
     });
 
-    it("a non-Scout ownerSubsystem (e.g. forge) never emits a handoff signal either", async () => {
+    it("a non-Research department (e.g. dev) never emits a handoff signal either", async () => {
       const pipeline: Pipeline = {
-        id: "forge-build",
-        ownerSubsystem: "forge",
+        id: "dev-build",
+        department: "dev",
         phases: [docPhase],
-        outputs: [{ type: "file", from: "docs.md", dest: "vault", to: "forge-note" }],
+        outputs: [{ type: "file", from: "docs.md", dest: "vault", to: "dev-note" }],
         instructions: "x",
         complexity: "standard",
       };

@@ -80,7 +80,7 @@ describe("Health API (e2e) — claude available", () => {
 
   it("a stale watcher never flips the overall status to degraded (fail-open, F6c)", async () => {
     // Register an extra, deliberately-stale probe straight into the registry —
-    // the overall status must stay governed by claude + subsystems only.
+    // the overall status must stay governed by claude + departments only.
     app.get(WatcherHealthRegistry).register(() => ({
       id: "channel",
       status: "stale",
@@ -123,7 +123,7 @@ describe("Health API (e2e) — claude unavailable", () => {
         id: "preflight-probe",
         name: "Preflight probe",
         instructions: "noop",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
 

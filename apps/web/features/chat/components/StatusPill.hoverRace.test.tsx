@@ -5,8 +5,8 @@ import { CLOSE_GRACE_MS } from "../statusFlyout";
 import { StatusFlyoutTestId } from "./StatusFlyoutPanel";
 import { StatusPill, StatusPillTestId } from "./StatusPill";
 
-vi.mock("../../subsystems/queries/useSubsystemsQuery", () => ({
-  useSubsystemsQuery: () => ({
+vi.mock("../../departments/queries/useDepartmentsQuery", () => ({
+  useDepartmentsQuery: () => ({
     data: [
       { id: "a", name: "A", color: "#fff", state: "running" },
       { id: "b", name: "B", color: "#fff", state: "waiting" },
@@ -20,7 +20,7 @@ vi.mock("../../runs/queries/useRunsQuery", () => ({
 }));
 
 // The "waiting" trigger segment renders only when the global PENDING-APPROVAL
-// count is non-zero — not when a subsystem reports a `waiting` state (see
+// count is non-zero — not when a department reports a `waiting` state (see
 // `StatusPill.tsx`' own comment on `waiting`). One pending approval is therefore
 // the precondition for this whole test: without it there is no second trigger to
 // race against. The row shape mirrors `ChatScreen.test.tsx`, because this suite

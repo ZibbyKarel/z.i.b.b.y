@@ -2,8 +2,8 @@ import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SubsystemFindingsStore } from "../subsystems/subsystem-findings.store";
-import { LoomService } from "./loom.service";
+import { DepartmentFindingsStore } from "../departments/department-findings.store";
+import { ArchService } from "./arch.service";
 
 const SAMPLE_REPORT = [
   "# Graph Report - z.i.b.b.y",
@@ -45,7 +45,7 @@ function makeVault(body = "") {
       notes.set(id, { body: b });
       return { id };
     }),
-    updateIndex: vi.fn(async () => ({ id: "subsystem-loom-moc" })),
+    updateIndex: vi.fn(async () => ({ id: "department-arch-moc" })),
     notes,
   };
 }
@@ -63,18 +63,18 @@ interface BuildOpts {
 async function build(opts: BuildOpts = {}) {
   const vault = opts.vault ?? makeVault();
   const activity = { record: vi.fn(async () => undefined) };
-  // Fake HandoffService — LoomService now emits a signal per new finding (A3);
+  // Fake HandoffService — ArchService now emits a signal per new finding (A3);
   // the seed rule is tier-3, so `evaluate` returning "none"/"proposed" (never
   // "dispatched" by the real rule table) is the realistic double here.
   const handoff = { evaluate: opts.evaluate ?? vi.fn(async () => ({ action: "proposed" })) };
   const findingsDir =
-    opts.findingsDir ?? (await fs.mkdtemp(path.join(os.tmpdir(), "loom-findings-")));
-  const findingsStore = new SubsystemFindingsStore(findingsDir, makeLogger() as never);
+    opts.findingsDir ?? (await fs.mkdtemp(path.join(os.tmpdir(), "arch-findings-")));
+  const findingsStore = new DepartmentFindingsStore(findingsDir, makeLogger() as never);
   // A path that does not exist by default — mirrors SelfKnowledgeService's test
   // convention ("codebaseShape absent" is the default state).
   const reportPath = opts.reportPath ?? path.join(findingsDir, "GRAPH_REPORT.md");
 
-  const service = new LoomService(
+  const service = new ArchService(
     vault as never,
     findingsStore,
     activity as never,
@@ -86,7 +86,7 @@ async function build(opts: BuildOpts = {}) {
   return { service, vault, activity, handoff, findingsDir, findingsStore };
 }
 
-describe("LoomService.audit", () => {
+describe("ArchService.audit", () => {
   let tmpReportDirs: string[] = [];
 
   afterEach(async () => {
@@ -94,8 +94,8 @@ describe("LoomService.audit", () => {
     tmpReportDirs = [];
   });
 
-  it("a fixture graphify report over the threshold writes a proposal onto Loom's shelf and records activity", async () => {
-    const reportDir = await fs.mkdtemp(path.join(os.tmpdir(), "loom-report-"));
+  it("a fixture graphify report over the threshold writes a proposal onto Arch's shelf and records activity", async () => {
+    const reportDir = await fs.mkdtemp(path.join(os.tmpdir(), "arch-report-"));
     tmpReportDirs.push(reportDir);
     const reportPath = path.join(reportDir, "GRAPH_REPORT.md");
     await fs.writeFile(reportPath, SAMPLE_REPORT, "utf8");
@@ -108,21 +108,21 @@ describe("LoomService.audit", () => {
     expect(findings.map((f) => f.kind).sort()).toEqual(["community", "god-node"]);
     expect(vault.createNote).toHaveBeenCalledTimes(1);
     expect(vault.updateIndex).toHaveBeenCalledWith(
-      "subsystem-loom-moc",
+      "department-qa-moc",
       "suggestions/quality-findings",
       expect.any(String),
     );
     expect(activity.record).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: "subsystem-scan" }),
+      expect.objectContaining({ kind: "department-scan" }),
     );
     // Every new finding is normalized into a handoff signal — no severity, no
-    // projectId (only Sentinel's CVEs carry severity).
+    // projectId (only Security's CVEs carry severity).
     expect(handoff.evaluate).toHaveBeenCalledTimes(2);
     expect(handoff.evaluate).toHaveBeenCalledWith(
-      expect.objectContaining({ from: "loom", kind: "god-node" }),
+      expect.objectContaining({ from: "qa", kind: "god-node" }),
     );
     expect(handoff.evaluate).toHaveBeenCalledWith(
-      expect.objectContaining({ from: "loom", kind: "community" }),
+      expect.objectContaining({ from: "qa", kind: "community" }),
     );
     for (const call of handoff.evaluate.mock.calls as unknown as Array<
       [{ severity?: string; projectId?: string }]
@@ -155,11 +155,11 @@ describe("LoomService.audit", () => {
   });
 
   it("a no-delta scan (same fingerprints as the last snapshot) writes nothing and records nothing", async () => {
-    const reportDir = await fs.mkdtemp(path.join(os.tmpdir(), "loom-report-nodelta-"));
+    const reportDir = await fs.mkdtemp(path.join(os.tmpdir(), "arch-report-nodelta-"));
     tmpReportDirs.push(reportDir);
     const reportPath = path.join(reportDir, "GRAPH_REPORT.md");
     await fs.writeFile(reportPath, SAMPLE_REPORT, "utf8");
-    const findingsDir = await fs.mkdtemp(path.join(os.tmpdir(), "loom-findings-nodelta-"));
+    const findingsDir = await fs.mkdtemp(path.join(os.tmpdir(), "arch-findings-nodelta-"));
 
     const built1 = await build({ reportPath, findingsDir });
     await built1.service.audit(new Date());
@@ -181,11 +181,11 @@ describe("LoomService.audit", () => {
   });
 
   it("only the NEW finding since the last snapshot triggers a write; the note lists all current findings", async () => {
-    const reportDir = await fs.mkdtemp(path.join(os.tmpdir(), "loom-report-partial-"));
+    const reportDir = await fs.mkdtemp(path.join(os.tmpdir(), "arch-report-partial-"));
     tmpReportDirs.push(reportDir);
     const reportPath = path.join(reportDir, "GRAPH_REPORT.md");
     await fs.writeFile(reportPath, SAMPLE_REPORT, "utf8");
-    const findingsDir = await fs.mkdtemp(path.join(os.tmpdir(), "loom-findings-partial-"));
+    const findingsDir = await fs.mkdtemp(path.join(os.tmpdir(), "arch-findings-partial-"));
 
     // First run: graphify findings only (no cycle yet) — seeds the snapshot.
     const built1 = await build({ reportPath, findingsDir, execImpl: NO_CYCLES });
@@ -211,7 +211,7 @@ describe("LoomService.audit", () => {
     // Only the NEW finding (the cycle) is handed to the rule engine.
     expect(built2.handoff.evaluate).toHaveBeenCalledTimes(1);
     expect(built2.handoff.evaluate).toHaveBeenCalledWith(
-      expect.objectContaining({ from: "loom", kind: "cycle" }),
+      expect.objectContaining({ from: "qa", kind: "cycle" }),
     );
   });
 
@@ -225,7 +225,7 @@ describe("LoomService.audit", () => {
   });
 
   it("fails open: a rejecting exec skips the cycle source, graphify-only findings still filed", async () => {
-    const reportDir = await fs.mkdtemp(path.join(os.tmpdir(), "loom-report-execfail-"));
+    const reportDir = await fs.mkdtemp(path.join(os.tmpdir(), "arch-report-execfail-"));
     tmpReportDirs.push(reportDir);
     const reportPath = path.join(reportDir, "GRAPH_REPORT.md");
     await fs.writeFile(reportPath, SAMPLE_REPORT, "utf8");
@@ -256,7 +256,7 @@ describe("LoomService.audit", () => {
   });
 });
 
-describe("LoomService.readFindings", () => {
+describe("ArchService.readFindings", () => {
   it("reads the checkbox bullet lines back out of the vault note for the briefing", async () => {
     const body =
       "*Updated: 2026-07-17*\n\nOpen code-quality findings:\n\n- [ ] god node: AppShell (degree 40)\n";

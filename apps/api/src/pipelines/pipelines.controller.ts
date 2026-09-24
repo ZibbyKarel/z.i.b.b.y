@@ -37,12 +37,12 @@ export class PipelinesController {
     return tsRestHandler(pipelinesContract, {
       createPipeline: ({ body }) => {
         // NS2 F9: the mirror of `agents.controller.ts`' create guard. Since F9 the
-        // switchboard routes only to subsystems, and a subsystem offers only its
+        // switchboard routes only to departments, and a department offers only its
         // own owned units — so a pipeline created without an owner would be
         // permanently unroutable. Create-only, like the agent guard: pre-F9
         // pipelines are tagged by the owner-backfill sweep, not rejected on read.
-        if (!body.ownerSubsystem) {
-          return Promise.resolve(unprocessable("ownerSubsystem is required"));
+        if (!body.department) {
+          return Promise.resolve(unprocessable("department is required"));
         }
         return errors.created(() => this.storage.create(body), invalid);
       },

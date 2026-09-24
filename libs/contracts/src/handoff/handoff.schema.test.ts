@@ -12,7 +12,7 @@ import {
 } from "./handoff.schema";
 
 const SIGNAL = {
-  from: "sentinel",
+  from: "sec",
   kind: "cve",
   severity: "critical",
   projectId: "acme",
@@ -22,11 +22,11 @@ const SIGNAL = {
 } as const;
 
 const RULE = {
-  id: "sentinel-cve-critical",
-  from: "sentinel",
+  id: "security-cve-critical",
+  from: "sec",
   signalKind: "cve",
   minSeverity: "critical",
-  to: { kind: "subsystem", id: "forge" },
+  to: { kind: "department", id: "dev" },
   tier: 2,
   enabled: true,
   system: true,
@@ -48,10 +48,10 @@ describe("HandoffSeveritySchema / HANDOFF_SEVERITY_ORDER", () => {
 });
 
 describe("HandoffTargetSchema", () => {
-  it("parses a minimal subsystem target ({kind, id} only, no display fields)", () => {
-    expect(HandoffTargetSchema.parse({ kind: "subsystem", id: "forge" })).toEqual({
-      kind: "subsystem",
-      id: "forge",
+  it("parses a minimal department target ({kind, id} only, no display fields)", () => {
+    expect(HandoffTargetSchema.parse({ kind: "department", id: "dev" })).toEqual({
+      kind: "department",
+      id: "dev",
     });
   });
 
@@ -63,13 +63,13 @@ describe("HandoffTargetSchema", () => {
   });
 
   it("rejects a bogus kind", () => {
-    expect(HandoffTargetSchema.safeParse({ kind: "agent", id: "forge" }).success).toBe(false);
-    expect(HandoffTargetSchema.safeParse({ kind: "bogus", id: "forge" }).success).toBe(false);
+    expect(HandoffTargetSchema.safeParse({ kind: "agent", id: "dev" }).success).toBe(false);
+    expect(HandoffTargetSchema.safeParse({ kind: "bogus", id: "dev" }).success).toBe(false);
   });
 
-  it("rejects a subsystem target with an id outside SubsystemIdSchema", () => {
+  it("rejects a department target with an id outside DepartmentIdSchema", () => {
     expect(
-      HandoffTargetSchema.safeParse({ kind: "subsystem", id: "not-a-subsystem" }).success,
+      HandoffTargetSchema.safeParse({ kind: "department", id: "not-a-department" }).success,
     ).toBe(false);
   });
 });
@@ -79,7 +79,7 @@ describe("HandoffSignalSchema", () => {
     expect(HandoffSignalSchema.parse(SIGNAL)).toEqual(SIGNAL);
   });
 
-  it("parses a signal with no severity (Loom/Maestro/artifact producers)", () => {
+  it("parses a signal with no severity (Arch/Release/artifact producers)", () => {
     const rest: Omit<typeof SIGNAL, "severity"> = {
       from: SIGNAL.from,
       kind: SIGNAL.kind,
@@ -91,8 +91,8 @@ describe("HandoffSignalSchema", () => {
     expect(HandoffSignalSchema.parse(rest)).toEqual(rest);
   });
 
-  it("rejects an unknown `from` subsystem", () => {
-    expect(HandoffSignalSchema.safeParse({ ...SIGNAL, from: "not-a-subsystem" }).success).toBe(
+  it("rejects an unknown `from` department", () => {
+    expect(HandoffSignalSchema.safeParse({ ...SIGNAL, from: "not-a-department" }).success).toBe(
       false,
     );
   });
@@ -104,12 +104,12 @@ describe("HandoffRuleSchema", () => {
   });
 
   it("accepts a wildcard signalKind", () => {
-    const wildcard = { ...RULE, id: "loom-architecture", signalKind: "*", minSeverity: undefined };
+    const wildcard = { ...RULE, id: "arch-architecture", signalKind: "*", minSeverity: undefined };
     expect(HandoffRuleSchema.parse(wildcard).signalKind).toBe("*");
   });
 
-  it("rejects an unknown `from` subsystem", () => {
-    expect(HandoffRuleSchema.safeParse({ ...RULE, from: "not-a-subsystem" }).success).toBe(false);
+  it("rejects an unknown `from` department", () => {
+    expect(HandoffRuleSchema.safeParse({ ...RULE, from: "not-a-department" }).success).toBe(false);
   });
 
   it("rejects a tier outside 1|2|3", () => {
@@ -175,7 +175,7 @@ describe("HandoffOutcomeSchema", () => {
 describe("HandoffSignalKindSchema", () => {
   const KIND = {
     id: "cve",
-    from: "sentinel",
+    from: "sec",
     label: "Vulnerability (CVE)",
     description: "A vulnerability found in a project dependency.",
     severityBearing: true,
@@ -190,7 +190,7 @@ describe("HandoffSignalKindSchema", () => {
   it("round-trips a minimal operator kind (no system/buildTaskId)", () => {
     const operator = {
       id: "dependency-outdated",
-      from: "loom",
+      from: "qa",
       label: "Dependency outdated",
       description: "A dependency has fallen behind its latest release.",
       severityBearing: false,
@@ -204,8 +204,8 @@ describe("HandoffSignalKindSchema", () => {
     expect(HandoffSignalKindSchema.parse(withTask).buildTaskId).toBe("task-1");
   });
 
-  it("rejects an unknown `from` subsystem", () => {
-    expect(HandoffSignalKindSchema.safeParse({ ...KIND, from: "not-a-subsystem" }).success).toBe(
+  it("rejects an unknown `from` department", () => {
+    expect(HandoffSignalKindSchema.safeParse({ ...KIND, from: "not-a-department" }).success).toBe(
       false,
     );
   });
@@ -218,7 +218,7 @@ describe("HandoffSignalKindSchema", () => {
 describe("HandoffSignalKindInputSchema", () => {
   const KIND = {
     id: "cve",
-    from: "sentinel",
+    from: "sec",
     label: "Vulnerability (CVE)",
     description: "A vulnerability found in a project dependency.",
     severityBearing: true,
@@ -243,9 +243,9 @@ describe("HandoffSignalKindInputSchema", () => {
 
   it("accepts a valid input without id/status/system/buildTaskId", () => {
     const input = {
-      from: "beacon" as const,
-      label: "Ask Forge",
-      description: "Something Beacon wants Forge to know about.",
+      from: "inc" as const,
+      label: "Ask Dev",
+      description: "Something Incident wants Dev to know about.",
       severityBearing: false,
     };
     expect(HandoffSignalKindInputSchema.parse(input)).toEqual(input);

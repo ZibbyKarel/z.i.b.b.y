@@ -5,8 +5,8 @@ import { Container, GlassSurface, Stack, StatusDot, Typography } from "@zibby/de
 import { useTranslations } from "next-intl";
 import {
   BriefingCardTestId,
+  DepartmentLineRow,
   NeedsYouRow,
-  SubsystemLineRow,
 } from "../../briefing/components/BriefingRows";
 
 export enum BriefingMessageCardTestId {
@@ -15,10 +15,10 @@ export enum BriefingMessageCardTestId {
 
 /**
  * The butler briefing rendered as a chat transcript message (F8a, O6): the
- * headline, the needs-you rows (deep-linked to `/archiv`), the per-subsystem
+ * headline, the needs-you rows (deep-linked to `/archiv`), the per-department
  * lines, engagement rollups, and the did-for-you/watching/paused-limit counters —
  * the same content `BriefingCard` shows on `/overview`, reusing its row
- * sub-components (`NeedsYouRow`, `SubsystemLineRow`) rather than re-implementing
+ * sub-components (`NeedsYouRow`, `DepartmentLineRow`) rather than re-implementing
  * the layout (the brief's explicit instruction).
  *
  * Differs from `BriefingCard` in exactly the ways a transcript message must:
@@ -71,13 +71,13 @@ export function BriefingMessageCard({ briefing }: { briefing: Briefing }) {
             </Stack>
           )}
 
-          {briefing.subsystems && briefing.subsystems.length > 0 && (
+          {briefing.departments && briefing.departments.length > 0 && (
             <Stack gap="50">
               <Typography mono size="2xs" type="note" variant="tertiary">
-                {t("overview.briefingSubsystems")}
+                {t("overview.briefingDepartments")}
               </Typography>
-              {briefing.subsystems.map((line) => (
-                <SubsystemLineRow key={line.subsystem} line={line} />
+              {briefing.departments.map((line) => (
+                <DepartmentLineRow key={line.department} line={line} />
               ))}
             </Stack>
           )}

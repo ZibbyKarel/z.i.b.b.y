@@ -1,6 +1,6 @@
 "use client";
 
-import type { Agent, RosterIntegrationRef, SubsystemWithStatus } from "@zibby/contracts";
+import type { Agent, DepartmentWithStatus, RosterIntegrationRef } from "@zibby/contracts";
 import { Card, Container, type IconName, IconTile, Stack, Typography } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
@@ -11,7 +11,7 @@ import { EmptyState } from "../../../../components/EmptyState/EmptyState";
 import { ModelBadge } from "../../../../components/RuntimeBadges/RuntimeBadges";
 import type { Pipeline } from "../../../../domain";
 import { useAgentsQuery } from "../../../agents";
-import { useSubsystemRosterQuery } from "../../queries/useSubsystemRosterQuery";
+import { useDepartmentRosterQuery } from "../../queries/useDepartmentRosterQuery";
 import { NewPipelineDialog } from "../../../pipelines/components/NewPipelineDialog/NewPipelineDialog";
 import { PipelineCanvas } from "../../../pipelines/components/PipelineDialog/PipelineCanvas";
 import { PipelineDialog } from "../../../pipelines/components/PipelineDialog/PipelineDialog";
@@ -47,7 +47,7 @@ export enum RosterTabTestId {
 }
 
 export interface RosterTabProps {
-  subsystem: SubsystemWithStatus;
+  department: DepartmentWithStatus;
 }
 
 /** The read-only canvas needs no editing callbacks — they never fire. */
@@ -203,7 +203,7 @@ interface PipelineRosterCanvasProps {
  *
  * The scale is a CSS `transform` on a wrapper `Container` around
  * `PipelineCanvas` — routed through the DS `Container`'s own `style`
- * passthrough (no raw-DOM inline style), same idiom as `SubsystemDrawer`'s
+ * passthrough (no raw-DOM inline style), same idiom as `DepartmentDrawer`'s
  * hero-band gradient. `pipeline-graph.ts`'s coordinate math and
  * `PipelineCanvas` itself are untouched: the transform only scales *paint*,
  * so native click hit-testing (and therefore `onNodeClick`) keeps working
@@ -279,10 +279,10 @@ function PipelineRosterCanvas({ pipeline, graph, agents, onNodeClick }: Pipeline
 }
 
 /**
- * Roster tab (Phase 85, stored roster NS2 F1c): the subsystem's owned
+ * Roster tab (Phase 85, stored roster NS2 F1c): the department's owned
  * pipelines rendered with the *exact same* node-graph canvas `/pipelines`
  * uses (`PipelineCanvas` + `pipeline-graph.ts`), filtered client-side to
- * `ownerSubsystem === subsystem.id` — zero new graph code, per the design doc
+ * `department === department.id` — zero new graph code, per the design doc
  * ("not a new editor"). Clicking a node opens the pipeline's existing config
  * surface: `PipelineDialog` in edit mode, the same dialog `/pipelines`
  * already ships for creating pipelines (its edit mode moved inline into that
@@ -290,7 +290,7 @@ function PipelineRosterCanvas({ pipeline, graph, agents, onNodeClick }: Pipeline
  * `PipelineDialog.test.tsx`'s header comment).
  *
  * The crew (Posádka), integrations, and monitors sections read from
- * `useSubsystemRosterQuery` — the server-stored `ownerSubsystem` tags, NOT a
+ * `useDepartmentRosterQuery` — the server-stored `department` tags, NOT a
  * client-side derivation from pipeline phases (the old `deriveCrew`, removed
  * in F1c). The roster's agent refs are cross-referenced against the already-
  * fetched `agents` list (needed anyway for `phasesToGraph`) to hydrate the
@@ -299,17 +299,17 @@ function PipelineRosterCanvas({ pipeline, graph, agents, onNodeClick }: Pipeline
  * `integrations` that are a `ci`-stream GitHub integration; the integrations
  * section below excludes them so a monitor doesn't render twice.
  */
-export function RosterTab({ subsystem }: RosterTabProps) {
-  const t = useTranslations("subsystems.roster");
+export function RosterTab({ department }: RosterTabProps) {
+  const t = useTranslations("departments.roster");
   const tPipelines = useTranslations("pipelines");
 
   const { data: pipelines = [] } = usePipelinesQuery();
   const { data: agents = [] } = useAgentsQuery();
-  const { data: roster } = useSubsystemRosterQuery(subsystem.id);
+  const { data: roster } = useDepartmentRosterQuery(department.id);
   const createPipeline = useCreatePipelineMutation();
   const updatePipeline = useUpdatePipelineMutation();
 
-  const ownedPipelines = pipelines.filter((p) => p.ownerSubsystem === subsystem.id);
+  const ownedPipelines = pipelines.filter((p) => p.department === department.id);
   const crew = (roster?.agents ?? [])
     .map((ref) => agents.find((a) => a.id === ref.id))
     .filter((a): a is Agent => a != null);
@@ -383,7 +383,7 @@ export function RosterTab({ subsystem }: RosterTabProps) {
       {adding && (
         <NewPipelineDialog
           agents={agents}
-          defaultOwnerSubsystem={subsystem.id}
+          defaultOwnerDepartment={department.id}
           isPending={createPipeline.isPending}
           onClose={() => setAdding(false)}
           onCreate={(body) =>

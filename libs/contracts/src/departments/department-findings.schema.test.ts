@@ -4,7 +4,7 @@ import { FindingSnapshotSchema } from "../index";
 describe("FindingSnapshotSchema", () => {
   it("accepts a snapshot with sorted fingerprints", () => {
     const parsed = FindingSnapshotSchema.safeParse({
-      key: "sentinel",
+      key: "sec",
       fingerprints: ["dep-owner/repo-1", "secret-proj_1-abc123"],
       updatedAt: "2026-07-17T05:00:00.000Z",
     });
@@ -14,7 +14,7 @@ describe("FindingSnapshotSchema", () => {
   it("accepts an empty fingerprint list (green run)", () => {
     expect(
       FindingSnapshotSchema.safeParse({
-        key: "loom",
+        key: "qa",
         fingerprints: [],
         updatedAt: "2026-07-17T02:00:00.000Z",
       }).success,

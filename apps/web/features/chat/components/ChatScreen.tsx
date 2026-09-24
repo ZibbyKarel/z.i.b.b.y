@@ -3,7 +3,7 @@
    styles with no DS prop equivalent — sanctioned escape hatch, file-level. */
 "use client";
 
-import type { ChatMessage as ChatMessageType, SubsystemId } from "@zibby/contracts";
+import type { ChatMessage as ChatMessageType, DepartmentId } from "@zibby/contracts";
 import { Container, MAIN_CONTENT_ID } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
@@ -24,8 +24,8 @@ import { usePipelinesQuery } from "../../pipelines";
 import { useRunAvatarMap, useRunGlyphMap, useRunsQuery } from "../../runs/queries/useRunsQuery";
 import { runAvatar, runGlyph } from "../../runs/run";
 import { useRunActions } from "../../runs/useRunActions";
-import { SubsystemDrawer } from "../../subsystems/components/SubsystemDrawer/SubsystemDrawer";
-import { useSubsystemsQuery } from "../../subsystems/queries/useSubsystemsQuery";
+import { DepartmentDrawer } from "../../departments/components/DepartmentDrawer/DepartmentDrawer";
+import { useDepartmentsQuery } from "../../departments/queries/useDepartmentsQuery";
 import { ChatBottomBar } from "./ChatBottomBar";
 import { ChatDetailDialog, type ChatDetailTarget } from "./ChatDetailDialog";
 import { ChatLiveLog } from "./ChatLiveLog";
@@ -35,7 +35,7 @@ import { ChatTasksPanel } from "./ChatTasksPanel";
 import { ChatToolDock } from "./ChatToolDock";
 import { CHAT_TOPBAR_HEIGHT_PX, ChatTopBar } from "./ChatTopBar";
 import { CoreOverviewDialog } from "./CoreOverviewDialog";
-import { SubsystemOrbMap } from "./SubsystemOrbMap";
+import { DepartmentOrbMap } from "./DepartmentOrbMap";
 
 export enum ChatScreenTestId {
   Root = "chat-screen",
@@ -74,7 +74,7 @@ export interface ChatScreenProps {
 /**
  * The chat-first conversational surface, rendered by the `/chat` route inside the
  * dashboard shell — the Velín-D "velín": a JARVIS-style HUD with an ambient
- * {@link SubsystemOrbMap} filling the page (an ellipse of subsystem orbs ringing
+ * {@link DepartmentOrbMap} filling the page (an ellipse of department orbs ringing
  * the central conversational core), the glass {@link ChatTopBar} chrome, a
  * top-right {@link ChatToolDock}, a bottom-center {@link ChatBottomBar}
  * (chat / run-a-task / add-a-note composers) and a bottom-right {@link ChatLiveLog}.
@@ -167,31 +167,31 @@ export function ChatScreen({
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  // The pipeline catalog — still needed to feed `SubsystemOrbMap`'s active-run
-  // counts (it maps a run's `owner` pipeline to its `ownerSubsystem`).
+  // The pipeline catalog — still needed to feed `DepartmentOrbMap`'s active-run
+  // counts (it maps a run's `owner` pipeline to its `department`).
   const { data: pipelineCatalog } = usePipelinesQuery();
   // The agent catalog — Phase 126g: an agent-kind run's `owner` is its agent id,
-  // resolved against `Agent.ownerSubsystem` the same way a pipeline-kind run's
-  // `owner` is resolved against `Pipeline.ownerSubsystem` above.
+  // resolved against `Agent.department` the same way a pipeline-kind run's
+  // `owner` is resolved against `Pipeline.department` above.
   const { data: agentCatalog } = useAgentsQuery();
 
   // The running/queued runs feed (kept fresh by the shared RunEventsProvider bus).
   const { runs } = useRunsQuery();
 
-  // The subsystem web (Phase 83): the 8 named subsystems + live status. Selection is
+  // The department web (Phase 83): the 8 named departments + live status. Selection is
   // local — clicking a node reports its id, and the drawer below reads
-  // `selectedSubsystemId` to render the subsystem's detail. There's no selection ring
+  // `selectedDepartmentId` to render the department's detail. There's no selection ring
   // on the node itself (Task 13) — the drawer opening IS the selection feedback.
-  const { data: subsystems } = useSubsystemsQuery();
-  const [selectedSubsystemId, setSelectedSubsystemId] = useState<SubsystemId | null>(null);
+  const { data: departments } = useDepartmentsQuery();
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState<DepartmentId | null>(null);
   // Task C1: clicking the central orb opens the whole-federation overview dialog
-  // (`CoreOverviewDialog`) instead of the per-subsystem drawer below. Picking a
-  // subsystem row inside it reuses the EXISTING `setSelectedSubsystemId` — it closes
+  // (`CoreOverviewDialog`) instead of the per-department drawer below. Picking a
+  // department row inside it reuses the EXISTING `setSelectedDepartmentId` — it closes
   // the overview and opens the same drawer a direct mini-orb click would.
   const [coreOpen, setCoreOpen] = useState(false);
   // Resolved against the live status list so the drawer always shows fresh
   // state/counts (Phase 84) — a dangling id just renders nothing rather than stale.
-  const selectedSubsystem = subsystems?.find((s) => s.id === selectedSubsystemId) ?? null;
+  const selectedDepartment = departments?.find((s) => s.id === selectedDepartmentId) ?? null;
 
   // Phase 100: the left tasks panel's selection — a click opens the run's detail
   // inline, in a column beside the panel. Re-clicking the already-selected row
@@ -211,12 +211,12 @@ export function ChatScreen({
     () => setSelectedRunId(null),
   );
 
-  // Any overlay (detail dialog / subsystem drawer / run detail / core overview)
+  // Any overlay (detail dialog / department drawer / run detail / core overview)
   // dims the floating chrome — the shared `dimmed` contract every Velín-D widget
   // honours. The search's own panel+backdrop are self-contained (Workstream B)
   // and don't need to fold into this.
   const overlayOpen =
-    detailTarget != null || selectedSubsystem != null || selectedRun != null || coreOpen;
+    detailTarget != null || selectedDepartment != null || selectedRun != null || coreOpen;
 
   return (
     <main
@@ -229,7 +229,7 @@ export function ChatScreen({
       {/* The immersive orb map's clean radial backdrop, centered at 50% 42% (the
           app-shell's shared --gradient-scene token is top-anchored for other pages
           — this page needs its own center to frame the orb map). Sits behind
-          `SubsystemOrbMap`; shows through at any edge its DOM layers don't cover. */}
+          `DepartmentOrbMap`; shows through at any edge its DOM layers don't cover. */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 z-0 bg-[image:radial-gradient(ellipse_130%_100%_at_50%_42%,#121a27_0%,var(--color-background)_62%)]"
@@ -265,7 +265,7 @@ export function ChatScreen({
           onGenerateBriefing={triggerBriefing}
           onNavigate={handleSearchNavigate}
           onOpenRun={setSelectedRunId}
-          onSelectSubsystem={setSelectedSubsystemId}
+          onSelectDepartment={setSelectedDepartmentId}
           searchRef={searchRef}
         />
       </div>
@@ -285,21 +285,21 @@ export function ChatScreen({
           (`CHAT_TOPBAR_INSET`) and the bottom floating bar + live log
           (`CHAT_BOTTOM_INSET`). The `thinking` pulse is bridged up from the bottom
           bar's chat dock (this screen owns no stream). */}
-      <SubsystemOrbMap
+      <DepartmentOrbMap
         agents={agentCatalog ?? []}
+        departments={departments ?? []}
         insets={{ top: CHAT_TOPBAR_INSET, left: 0, right: 0, bottom: CHAT_BOTTOM_INSET }}
         onOpenCore={() => setCoreOpen(true)}
-        onSelectSubsystem={setSelectedSubsystemId}
+        onSelectDepartment={setSelectedDepartmentId}
         pipelines={pipelineCatalog ?? []}
         runs={runs}
-        subsystems={subsystems ?? []}
         thinking={thinking}
       />
 
       {/* ── Main area: the left tasks gutter + inline drawers over the scene ─
           This outer wrapper deliberately carries NO explicit z-index — only
           `relative` (a containing block for the left tasks panel below, via its
-          `absolute` positioning). The subsystem detail modal no longer depends
+          `absolute` positioning). The department detail modal no longer depends
           on this wrapper at all as of Phase 125 — it's `position: fixed` with
           its own z-40, escaping this stacking context entirely (see the mount
           comment further down). */}
@@ -320,29 +320,29 @@ export function ChatScreen({
           </div>
         </div>
 
-        {/* ── Subsystem detail modal (Phase 84, reworked Phase 125) ────────
+        {/* ── Department detail modal (Phase 84, reworked Phase 125) ────────
             Was a docked-right, no-backdrop panel through Phase 99; now a true
-            modal over the whole Velín canvas — `SubsystemDrawer` renders its
+            modal over the whole Velín canvas — `DepartmentDrawer` renders its
             own `position: fixed` backdrop (z-40), which escapes this
             wrapper's stacking context on its own, so no special mounting
-            position is needed here any more. Selecting a subsystem in the web
+            position is needed here any more. Selecting a department in the web
             above still swaps this drawer's content rather than opening a
             second one. */}
-        {selectedSubsystem && (
-          <SubsystemDrawer
-            onClose={() => setSelectedSubsystemId(null)}
-            subsystem={selectedSubsystem}
+        {selectedDepartment && (
+          <DepartmentDrawer
+            department={selectedDepartment}
+            onClose={() => setSelectedDepartmentId(null)}
           />
         )}
 
         {/* ── Task detail modal (Phase 100, frame Phase 122, modal Phase 126) ──
             A click in `ChatTasksPanel` (the 300px left gutter above) opens the
             run's detail as a true modal over the whole Velín canvas — same
-            treatment `SubsystemDrawer` got in Phase 125.
+            treatment `DepartmentDrawer` got in Phase 125.
             `ChatTaskDetailColumn` renders its own `position: fixed` backdrop
             (z-40), which escapes this wrapper's stacking context on its own, so
             no special mounting position is needed here. It now covers the left
-            gutter while open, same as the subsystem drawer already does. */}
+            gutter while open, same as the department drawer already does. */}
         {selectedRun && (
           <ChatTaskDetailColumn
             avatar={runAvatar(selectedRun, runAvatarById)}
@@ -399,14 +399,14 @@ export function ChatScreen({
 
       {/* ── ZIBBY overview (Task C1) ─────────────────────────────────────
           Clicking the central orb opens this whole-federation snapshot. Picking a
-          subsystem row inside it reuses the existing selection state, so it closes
-          the overview and opens the same `SubsystemDrawer` a direct mini-orb click
+          department row inside it reuses the existing selection state, so it closes
+          the overview and opens the same `DepartmentDrawer` a direct mini-orb click
           would. */}
       <CoreOverviewDialog
         onClose={() => setCoreOpen(false)}
-        onSelectSubsystem={(id) => {
+        onSelectDepartment={(id) => {
           setCoreOpen(false);
-          setSelectedSubsystemId(id);
+          setSelectedDepartmentId(id);
         }}
         open={coreOpen}
       />

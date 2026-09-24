@@ -69,23 +69,23 @@ describe("GateRulesStorageService", () => {
     expect(rules.some((r) => r.id === created.id)).toBe(true);
   });
 
-  // Phase 87: ownerSubsystem is pure passthrough — the storage layer has no
+  // Phase 87: department is pure passthrough — the storage layer has no
   // special-case code for it, it just flows through the existing spread/parse.
-  it("round-trips ownerSubsystem on create, update and list", async () => {
-    const created = await store.create({ ...allowRule, ownerSubsystem: "forge" });
-    expect(created.ownerSubsystem).toBe("forge");
+  it("round-trips department on create, update and list", async () => {
+    const created = await store.create({ ...allowRule, department: "dev" });
+    expect(created.department).toBe("dev");
 
     const listed = await store.list();
-    expect(listed.find((r) => r.id === created.id)?.ownerSubsystem).toBe("forge");
+    expect(listed.find((r) => r.id === created.id)?.department).toBe("dev");
 
-    const retagged = await store.update(created.id, { ...allowRule, ownerSubsystem: "puls" });
-    expect(retagged.ownerSubsystem).toBe("puls");
+    const retagged = await store.update(created.id, { ...allowRule, department: "ops" });
+    expect(retagged.department).toBe("ops");
   });
 
-  it("leaves existing untagged rules valid — ownerSubsystem stays undefined", async () => {
+  it("leaves existing untagged rules valid — department stays undefined", async () => {
     const created = await store.create(allowRule);
-    expect(created.ownerSubsystem).toBeUndefined();
+    expect(created.department).toBeUndefined();
     const listed = await store.list();
-    expect(listed.find((r) => r.id === created.id)?.ownerSubsystem).toBeUndefined();
+    expect(listed.find((r) => r.id === created.id)?.department).toBeUndefined();
   });
 });

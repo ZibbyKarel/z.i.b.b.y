@@ -1,6 +1,6 @@
 "use client";
 
-import type { SubsystemWithStatus } from "@zibby/contracts";
+import type { DepartmentWithStatus } from "@zibby/contracts";
 import { Icon, Stack, Typography } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
@@ -13,7 +13,7 @@ import { useRunGlyphMap, useRunsQuery } from "../../../runs";
 import { PipelineStageTimeline } from "../../../runs/components/PipelineStageTimeline";
 import { TaskCard } from "../../../runs/components/TaskCard";
 import { type RunView, runGlyph } from "../../../runs/run";
-import { runSubsystemId, useOwnerSubsystemMaps } from "../../useOwnerSubsystem";
+import { runDepartmentId, useOwnerDepartmentMaps } from "../../useOwnerDepartment";
 
 export enum AktivitaTabTestId {
   Root = "aktivita-tab-root",
@@ -24,7 +24,7 @@ export enum AktivitaTabTestId {
 }
 
 export interface AktivitaTabProps {
-  subsystem: SubsystemWithStatus;
+  department: DepartmentWithStatus;
 }
 
 /** Cap the drawer's list — the full, unbounded history lives on `/archiv` (F8d —
@@ -42,24 +42,24 @@ const MAX_RUNS = 20;
 const EXPANDABLE_STATUSES = new Set<RunView["status"]>(["running", "error"]);
 
 /**
- * Recent runs scoped to THIS subsystem's owned pipelines (Phase 86,
+ * Recent runs scoped to THIS department's owned pipelines (Phase 86,
  * design doc "Aktivita — recent runs, live log. Reuses today's Runs & Activity
- * page behavior, scoped to this subsystem").
+ * page behavior, scoped to this department").
  *
  * Scoped runs endpoint OR client filter (phase-86 plan §1): chose the CLIENT
- * FILTER, not a new `ownerSubsystem` query param on the unified runs endpoint —
+ * FILTER, not a new `department` query param on the unified runs endpoint —
  * the unified feed (`useRunsQuery`) already returns `kind`/`owner` per row, and
  * `RosterTab` (phase 85) already fetches the full pipeline catalog
- * (`ownerSubsystem` included) for the SAME drawer. Filtering those already-
+ * (`department` included) for the SAME drawer. Filtering those already-
  * fetched, already-cached lists client-side — exactly `RosterTab`'s own
- * `pipelines.filter((p) => p.ownerSubsystem === subsystem.id)` pattern — costs
+ * `pipelines.filter((p) => p.department === department.id)` pattern — costs
  * zero new endpoints, zero contract changes, and zero new API tests, for a
  * ~20-row cap in one drawer tab. A server-side filter would only earn its keep
  * once the unified feed itself gets too large to fetch in full, which it isn't.
  *
  * RECON CORRECTION on the plan's literal "expanding … shows the live log tail
  * via RunLogStream" — ownership only ever attributes through a pipeline (see
- * `SubsystemsService.aggregateAll`, mirrored by the filter below), so every
+ * `DepartmentsService.aggregateAll`, mirrored by the filter below), so every
  * run in scope here is `kind: "pipeline"`, never `"agent"`. A pipeline run
  * carries `logBase: null` (only an agent run has a single unified log — see
  * `TaskRunSchema`'s doc comment), and `TaskRunsService.getLogs` actively
@@ -72,18 +72,18 @@ const EXPANDABLE_STATUSES = new Set<RunView["status"]>(["running", "error"]);
  * actually matches the kind in scope.
  *
  * Query hooks mount only while this component itself is mounted — the `TabPanel`
- * hosting it (`SubsystemDrawer.tsx`) unmounts its children whenever another tab
+ * hosting it (`DepartmentDrawer.tsx`) unmounts its children whenever another tab
  * is active (`Tabs.tsx`: `if (active !== value) return null`), so a closed
  * drawer, or the drawer open on a different tab, polls nothing here.
  */
-export function AktivitaTab({ subsystem }: AktivitaTabProps) {
-  const t = useTranslations("subsystems.aktivita");
+export function AktivitaTab({ department }: AktivitaTabProps) {
+  const t = useTranslations("departments.aktivita");
   const tRuns = useTranslations("runs");
   const router = useRouter();
 
   const { runs } = useRunsQuery();
   const glyphById = useRunGlyphMap();
-  const ownerMaps = useOwnerSubsystemMaps();
+  const ownerMaps = useOwnerDepartmentMaps();
   // Render-stable "now" for the coarse relative "started" label (Date.now() in
   // render is impure — mirrors the runs Screen's own `now` state).
   const [now] = useState(() => Date.now());
@@ -91,10 +91,10 @@ export function AktivitaTab({ subsystem }: AktivitaTabProps) {
 
   // `runs` is already newest-first (the unified feed's own order — see
   // `useRunsQuery`'s header comment); only filtering + capping happens here.
-  // The join itself (F2) now lives in `useOwnerSubsystemMaps`/`runSubsystemId`,
-  // shared with the `/archiv` page's subsystem grouping.
+  // The join itself (F2) now lives in `useOwnerDepartmentMaps`/`runDepartmentId`,
+  // shared with the `/archiv` page's department grouping.
   const scoped = runs
-    .filter((r) => runSubsystemId(r, ownerMaps) === subsystem.id)
+    .filter((r) => runDepartmentId(r, ownerMaps) === department.id)
     .slice(0, MAX_RUNS);
 
   const ago = (n: number, unit: string) =>

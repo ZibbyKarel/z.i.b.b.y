@@ -11,35 +11,35 @@ import { ImmersivePage } from "../../../components/layout/ImmersivePage/Immersiv
 import { PageContainer } from "../../../components/PageContainer/PageContainer";
 import { useSignalKindsQuery } from "../../handoff/queries";
 import { signalKindLabel } from "../../handoff/signalKinds";
-import { useSubsystemsQuery } from "../../subsystems/queries";
+import { useDepartmentsQuery } from "../../departments/queries";
 import { SignalKindCard } from "./SignalKindCard";
 
 /**
  * `/signals` — the handoff signal-kind registry, BROWSE half only (B3a design
  * doc, `docs/superpowers/specs/2026-07-22-handoff-signal-registry-and-receiver-filter-design.md`
- * §"Slot B → B3"). Kinds are grouped by producer subsystem, one `HudPanel`
+ * §"Slot B → B3"). Kinds are grouped by producer department, one `HudPanel`
  * section per producer that owns ≥1 kind (mirrors `ArtefaktyTab`'s per-section
  * `HudPanel` grouping). "Nový signál" NAVIGATES to `/signals/new` — that route,
  * plus edit/delete, is a separate later slice (B3b); this screen only reads.
  */
 export function SignalsScreen() {
   const t = useTranslations("signals");
-  const th = useTranslations("subsystems.handoff");
+  const th = useTranslations("departments.handoff");
   const router = useRouter();
 
   const signalKindsQuery = useSignalKindsQuery();
   const signalKinds = signalKindsQuery.data ?? [];
-  // Subsystem list drives group order + producer display names; not gated on
+  // Department list drives group order + producer display names; not gated on
   // its own pending state (HandoffRulesSection takes the same posture — a
   // slowly-changing catalog usually already warm in cache).
-  const { data: subsystems = [] } = useSubsystemsQuery();
+  const { data: departments = [] } = useDepartmentsQuery();
 
   const goToNew = () => router.push("/signals/new");
 
-  const groups = subsystems
-    .map((subsystem) => ({
-      subsystem,
-      kinds: signalKinds.filter((kind) => kind.from === subsystem.id),
+  const groups = departments
+    .map((department) => ({
+      department,
+      kinds: signalKinds.filter((kind) => kind.from === department.id),
     }))
     .filter((group) => group.kinds.length > 0);
 
@@ -69,8 +69,8 @@ export function SignalsScreen() {
                 title={t("emptyTitle")}
               />
             ) : (
-              groups.map(({ subsystem, kinds }) => (
-                <HudPanel key={subsystem.id} surface="glass" title={subsystem.name}>
+              groups.map(({ department, kinds }) => (
+                <HudPanel key={department.id} surface="glass" title={department.name}>
                   <Grid cols={1} gap="150" lg={3} sm={2}>
                     {kinds.map((kind) => (
                       <SignalKindCard

@@ -1,32 +1,32 @@
 import { describe, expect, it } from "vitest";
-import { SHELF_ID_PREFIX, shelfDailyLink, subsystemShelfId } from "./subsystem-shelf";
+import { SHELF_ID_PREFIX, departmentShelfId, shelfDailyLink } from "./department-shelf";
 
 /** Mirrors `VaultService.index()`'s entry-point regex — see `vault.service.ts:186`. */
 const ENTRY_POINT_RE = /(^|[-_ ])(index|moc)$/i;
 
-describe("subsystemShelfId", () => {
-  it("builds the flat `subsystem-<id>-moc` shape", () => {
-    expect(subsystemShelfId("forge")).toBe("subsystem-forge-moc");
-    expect(subsystemShelfId("scout")).toBe("subsystem-scout-moc");
+describe("departmentShelfId", () => {
+  it("builds the flat `department-<id>-moc` shape", () => {
+    expect(departmentShelfId("dev")).toBe("department-dev-moc");
+    expect(departmentShelfId("rnd")).toBe("department-rnd-moc");
   });
 
   it("starts with SHELF_ID_PREFIX", () => {
-    expect(subsystemShelfId("puls").startsWith(SHELF_ID_PREFIX)).toBe(true);
+    expect(departmentShelfId("ops").startsWith(SHELF_ID_PREFIX)).toBe(true);
   });
 
   it("matches the vault's index/MOC entry-point regex", () => {
-    expect(ENTRY_POINT_RE.test(subsystemShelfId("forge"))).toBe(true);
-    expect(ENTRY_POINT_RE.test(subsystemShelfId("ledger"))).toBe(true);
+    expect(ENTRY_POINT_RE.test(departmentShelfId("dev"))).toBe(true);
+    expect(ENTRY_POINT_RE.test(departmentShelfId("fin"))).toBe(true);
   });
 });
 
 describe("shelfDailyLink", () => {
   it("builds an alias-form wikilink pointing at the shelf, labeled with the bare id", () => {
-    expect(shelfDailyLink("forge")).toBe("[[subsystem-forge-moc|forge]]");
+    expect(shelfDailyLink("dev")).toBe("[[department-dev-moc|dev]]");
   });
 
-  it("the link target matches subsystemShelfId (real graph edge)", () => {
-    const link = shelfDailyLink("scout");
-    expect(link).toContain(subsystemShelfId("scout"));
+  it("the link target matches departmentShelfId (real graph edge)", () => {
+    const link = shelfDailyLink("rnd");
+    expect(link).toContain(departmentShelfId("rnd"));
   });
 });

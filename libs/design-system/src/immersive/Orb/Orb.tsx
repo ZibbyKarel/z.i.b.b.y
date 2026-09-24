@@ -20,7 +20,7 @@ export interface OrbProps {
   diameter?: number;
   /** Identity color of the orb body. */
   hex?: string;
-  /** Conversational/subsystem state — selects the {@link ORB_MOTION} target. */
+  /** Conversational/department state — selects the {@link ORB_MOTION} target. */
   state?: OrbState;
   /** IcosahedronGeometry subdivision — nodes use 0 (the base 20-face solid), the core 4. */
   detail?: number;

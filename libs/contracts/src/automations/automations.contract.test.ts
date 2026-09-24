@@ -25,33 +25,33 @@ describe("automationsContract", () => {
   });
 });
 
-describe("automation schema — NS2 F5a sentinel-scan target", () => {
-  it("accepts a cron→sentinel-scan automation and round-trips through AutomationSchema", () => {
+describe("automation schema — NS2 F5a security-scan target", () => {
+  it("accepts a cron→security-scan automation and round-trips through AutomationSchema", () => {
     const parsed = AutomationSchema.safeParse({
-      id: "sentinel-scan",
+      id: "security-scan",
       name: "Bezpečnostní hlídka",
       trigger: { type: "cron", expr: "0 5 * * 1" },
-      target: { type: "sentinel-scan" },
+      target: { type: "security-scan" },
       enabled: true,
       system: true,
     });
     expect(parsed.success).toBe(true);
-    expect(parsed.success && parsed.data.target).toEqual({ type: "sentinel-scan" });
+    expect(parsed.success && parsed.data.target).toEqual({ type: "security-scan" });
   });
 });
 
-describe("automation schema — NS2 F5c loom-audit target", () => {
-  it("accepts a cron→loom-audit automation and round-trips through AutomationSchema", () => {
+describe("automation schema — NS2 F5c arch-audit target", () => {
+  it("accepts a cron→arch-audit automation and round-trips through AutomationSchema", () => {
     const parsed = AutomationSchema.safeParse({
-      id: "loom-audit",
+      id: "arch-audit",
       name: "Noční audit kvality",
       trigger: { type: "cron", expr: "0 2 * * *" },
-      target: { type: "loom-audit" },
+      target: { type: "arch-audit" },
       enabled: true,
       system: true,
     });
     expect(parsed.success).toBe(true);
-    expect(parsed.success && parsed.data.target).toEqual({ type: "loom-audit" });
+    expect(parsed.success && parsed.data.target).toEqual({ type: "arch-audit" });
   });
 });
 

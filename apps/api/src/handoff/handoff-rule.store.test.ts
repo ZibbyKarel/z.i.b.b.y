@@ -48,9 +48,9 @@ describe("HandoffRuleStore", () => {
     const custom = [
       {
         id: "custom-rule",
-        from: "loom",
+        from: "qa",
         signalKind: "*",
-        to: { kind: "subsystem", id: "forge" },
+        to: { kind: "department", id: "dev" },
         tier: 3,
         enabled: true,
       },
@@ -71,9 +71,9 @@ describe("HandoffRuleStore", () => {
 
   describe("create/update/delete", () => {
     const USER_INPUT: HandoffRuleInput = {
-      from: "beacon",
-      signalKind: "ask-forge",
-      to: { kind: "subsystem", id: "forge" },
+      from: "inc",
+      signalKind: "ask-dev",
+      to: { kind: "department", id: "dev" },
       tier: 3,
       enabled: true,
     };

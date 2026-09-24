@@ -107,14 +107,14 @@ describe("selectLinkedNotes (1-hop wikilink expansion)", () => {
       { id: "deploy-runbook", title: "Deploy Runbook", tier: "knowledge" as const },
       { id: "noise-note", title: "Noise", tier: "knowledge" as const },
     ];
-    const mocs = [note("forge-moc", ["deploy-runbook", "noise-note"])];
-    const picked = selectLinkedNotes(["deploy"], mocs, visible, new Set(["forge-moc"]));
+    const mocs = [note("dev-moc", ["deploy-runbook", "noise-note"])];
+    const picked = selectLinkedNotes(["deploy"], mocs, visible, new Set(["dev-moc"]));
     expect(picked).toEqual(["deploy-runbook"]);
   });
 
   it("excludes a linked note not present in `visible` (M7 project isolation holds through expansion)", () => {
     const visible = [{ id: "own-note", title: "Deploy Runbook", tier: "knowledge" as const }];
-    const mocs = [note("forge-moc", ["deploy-runbook", "own-note"])];
+    const mocs = [note("dev-moc", ["deploy-runbook", "own-note"])];
     // "deploy-runbook" is linked but NOT in `visible` (another project's note) — excluded.
     const picked = selectLinkedNotes(["deploy"], mocs, visible, new Set());
     expect(picked).toEqual(["own-note"]);
@@ -122,14 +122,14 @@ describe("selectLinkedNotes (1-hop wikilink expansion)", () => {
 
   it("excludes ids already in alreadySeen", () => {
     const visible = [{ id: "deploy-runbook", title: "Deploy Runbook", tier: "knowledge" as const }];
-    const mocs = [note("forge-moc", ["deploy-runbook"])];
+    const mocs = [note("dev-moc", ["deploy-runbook"])];
     const picked = selectLinkedNotes(["deploy"], mocs, visible, new Set(["deploy-runbook"]));
     expect(picked).toEqual([]);
   });
 
   it("returns nothing when terms is empty", () => {
     const visible = [{ id: "deploy-runbook", title: "Deploy Runbook", tier: "knowledge" as const }];
-    const mocs = [note("forge-moc", ["deploy-runbook"])];
+    const mocs = [note("dev-moc", ["deploy-runbook"])];
     expect(selectLinkedNotes([], mocs, visible, new Set())).toEqual([]);
   });
 });
@@ -299,7 +299,7 @@ describe("GroundingService.compose", () => {
     // Both `visible` (index-first candidate set) and `selectLinkedNotes`'s expansion
     // set derive from the SAME `vault.index()` entries — only "-moc"/"-index"-suffixed
     // notes are entry points (`vault.service.ts` `index()`), so the linked target must
-    // be one too, exactly as real subsystem/project MOCs link to one another.
+    // be one too, exactly as real department/project MOCs link to one another.
     const made = await makeVault(async (vault) => {
       await vault.createNote({
         id: "north-star",
@@ -309,29 +309,29 @@ describe("GroundingService.compose", () => {
       });
       // Both score 2 (title matches BOTH terms) — the two direct MOC_LIMIT=2 slots.
       await vault.createNote({
-        id: "forge-moc",
+        id: "dev-moc",
         tier: "knowledge",
-        title: "Forge Deploy Hub",
-        body: "The forge deploy pipeline. See [[deploy-runbook-moc]] and [[foreign-linked-moc]].",
+        title: "Dev Deploy Hub",
+        body: "The dev deploy pipeline. See [[deploy-runbook-moc]] and [[foreign-linked-moc]].",
         frontmatter: { project: "acme" },
       });
       await vault.createNote({
         id: "ops-moc",
         tier: "knowledge",
-        title: "Ops Forge Deploy Notes",
+        title: "Ops Dev Deploy Notes",
         body: "Operational notes.",
         frontmatter: { project: "acme" },
       });
       // Scores only 1 (matches "deploy" alone) — outranked by both MOCs above, so direct
-      // top-2 selection excludes it; only reachable via forge-moc's wikilink (expansion).
+      // top-2 selection excludes it; only reachable via dev-moc's wikilink (expansion).
       await vault.createNote({
         id: "deploy-runbook-moc",
         tier: "knowledge",
         title: "Deploy Runbook",
-        body: "How to deploy the forge.",
+        body: "How to deploy the dev.",
         frontmatter: { project: "acme" },
       });
-      // Linked from forge-moc but owned by a different project — filtered out of
+      // Linked from dev-moc but owned by a different project — filtered out of
       // `visible` before expansion ever sees it (M7 isolation holds through expansion).
       await vault.createNote({
         id: "foreign-linked-moc",
@@ -344,16 +344,16 @@ describe("GroundingService.compose", () => {
     dir = made.dir;
     const block = await made.grounding.compose({
       task: "x",
-      matchedTerms: ["forge", "deploy"],
+      matchedTerms: ["dev", "deploy"],
       projectId: "acme",
     });
-    expect(block).toContain("Forge Deploy Hub");
-    expect(block).toContain("Ops Forge Deploy Notes");
+    expect(block).toContain("Dev Deploy Hub");
+    expect(block).toContain("Ops Dev Deploy Notes");
     // Recovered exclusively via 1-hop expansion — direct selectIndexes ranked it 3rd.
     expect(block).toContain("Deploy Runbook");
     expect(block).not.toContain("Foreign Deploy Notes");
     const headings = block.match(/^### /gm) ?? [];
-    // North Star + forge-moc + ops-moc + the one expanded note.
+    // North Star + dev-moc + ops-moc + the one expanded note.
     expect(headings.length).toBe(4);
   });
 
@@ -366,9 +366,9 @@ describe("GroundingService.compose", () => {
         body: "Mission.",
       });
       await vault.createNote({
-        id: "forge-moc",
+        id: "dev-moc",
         tier: "knowledge",
-        title: "Forge MOC",
+        title: "Dev MOC",
         body: "See [[deploy-runbook-moc]].",
       });
       await vault.createNote({
@@ -379,7 +379,7 @@ describe("GroundingService.compose", () => {
       });
     });
     dir = made.dir;
-    const input = { task: "x", matchedTerms: ["forge", "deploy"] };
+    const input = { task: "x", matchedTerms: ["dev", "deploy"] };
     const first = await made.grounding.compose(input);
     const second = await made.grounding.compose(input);
     expect(first).toBe(second);
@@ -468,7 +468,7 @@ describe("GroundingService.compose", () => {
     expect(block).not.toContain("Self-Knowledge");
   });
 
-  it("F4a: compose with ownerSubsystem includes the shelf between self-knowledge and term-matched MOCs", async () => {
+  it("F4a: compose with department includes the shelf between self-knowledge and term-matched MOCs", async () => {
     const made = await makeVault(async (vault) => {
       await vault.createNote({
         id: "north-star",
@@ -483,11 +483,11 @@ describe("GroundingService.compose", () => {
         body: "Agents, pipelines, gates, channels.",
       });
       await vault.createNote({
-        id: "subsystem-forge-moc",
+        id: "department-dev-moc",
         tier: "knowledge",
-        title: "Forge — polička",
-        body: "The delivery forge's shelf.",
-        frontmatter: { subsystem: "forge" },
+        title: "Dev — polička",
+        body: "The delivery dev's shelf.",
+        frontmatter: { department: "dev" },
       });
       await vault.createNote({
         id: "billing-moc",
@@ -500,11 +500,11 @@ describe("GroundingService.compose", () => {
     const block = await made.grounding.compose({
       task: "x",
       matchedTerms: ["billing"],
-      ownerSubsystem: "forge",
+      department: "dev",
     });
     const nsAt = block.indexOf("North Star");
     const skAt = block.indexOf("Self-Knowledge");
-    const shelfAt = block.indexOf("Forge — polička");
+    const shelfAt = block.indexOf("Dev — polička");
     const billingAt = block.indexOf("Billing");
     expect(nsAt).toBeGreaterThan(-1);
     expect(skAt).toBeGreaterThan(nsAt);
@@ -512,7 +512,7 @@ describe("GroundingService.compose", () => {
     expect(billingAt).toBeGreaterThan(shelfAt);
   });
 
-  it("F4a: absent shelf note → composed block identical to no ownerSubsystem", async () => {
+  it("F4a: absent shelf note → composed block identical to no department", async () => {
     const made = await makeVault(async (vault) => {
       await vault.createNote({
         id: "north-star",
@@ -531,13 +531,13 @@ describe("GroundingService.compose", () => {
     const withOwner = await made.grounding.compose({
       task: "x",
       matchedTerms: ["billing"],
-      ownerSubsystem: "forge",
+      department: "dev",
     });
     const withoutOwner = await made.grounding.compose({ task: "x", matchedTerms: ["billing"] });
     expect(withOwner).toBe(withoutOwner);
   });
 
-  it("F4a: no ownerSubsystem in the input → unchanged (regression)", async () => {
+  it("F4a: no department in the input → unchanged (regression)", async () => {
     const made = await makeVault(seedFull);
     dir = made.dir;
     const block = await made.grounding.compose({ task: "rohlik delivery question" });
@@ -567,7 +567,7 @@ describe("GroundingService.compose", () => {
     expect(block).not.toContain("Osobní poznámka");
   });
 
-  it("F8: a personal-domain compose sees the personal note and grounds the Hearth shelf", async () => {
+  it("F8: a personal-domain compose sees the personal note and grounds the Personal shelf", async () => {
     const made = await makeVault(async (vault) => {
       await vault.createNote({
         id: "north-star",
@@ -576,11 +576,11 @@ describe("GroundingService.compose", () => {
         body: "The mission.",
       });
       await vault.createNote({
-        id: "subsystem-hearth-moc",
+        id: "department-per-moc",
         tier: "knowledge",
-        title: "Hearth — polička",
+        title: "Personal — polička",
         body: "Krb domova.",
-        frontmatter: { subsystem: "hearth" },
+        frontmatter: { department: "per" },
       });
       // `-moc`-suffixed so it is a retrieval entry point alongside the shelf note
       // above (`vault.index()` restricts to entry points once any exist).
@@ -598,15 +598,15 @@ describe("GroundingService.compose", () => {
       matchedTerms: ["kávě"],
       domain: "personal",
     });
-    expect(block).toContain("Hearth — polička");
+    expect(block).toContain("Personal — polička");
     expect(block).toContain("Osobní poznámka");
   });
 
-  it("F8: a work run (no domain) is unaffected by an absent Hearth shelf (regression)", async () => {
+  it("F8: a work run (no domain) is unaffected by an absent Personal shelf (regression)", async () => {
     const made = await makeVault(seedFull);
     dir = made.dir;
     const block = await made.grounding.compose({ task: "rohlik delivery question" });
-    expect(block).not.toContain("Hearth");
+    expect(block).not.toContain("Personal");
   });
 
   it("never throws on an unreadable vault → ''", async () => {

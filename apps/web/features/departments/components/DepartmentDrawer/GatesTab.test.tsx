@@ -1,4 +1,4 @@
-import { type GateRule, type GlobalGateRule, type Project, SUBSYSTEMS } from "@zibby/contracts";
+import { DEPARTMENTS, type GateRule, type GlobalGateRule, type Project } from "@zibby/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen } from "../../../../test/render";
 import { GatesTab, GatesTabTestId } from "./GatesTab";
@@ -30,13 +30,14 @@ vi.mock("../../../projects", () => ({
   useProjectsQuery: () => ({ data: hooks.projects }),
 }));
 
-const forge = SUBSYSTEMS.find((s) => s.id === "forge")!;
-const subsystem = {
-  id: forge.id,
-  name: forge.name,
-  tagline: forge.tagline,
-  mandate: forge.mandate,
-  color: forge.color,
+const dev = DEPARTMENTS.find((s) => s.id === "dev")!;
+const department = {
+  id: dev.id,
+  code: dev.code,
+  name: dev.name,
+  tagline: dev.tagline,
+  mandate: dev.mandate,
+  color: dev.color,
   state: "idle" as const,
   tier2Count: 0,
   tier3Count: 0,
@@ -47,32 +48,32 @@ const allowRule: GlobalGateRule = {
   id: "gr-allow",
   match: [{ type: "scope", scope: "feature/*" }],
   decision: "allow",
-  ownerSubsystem: "forge",
+  department: "dev",
 };
 const notifyRule: GlobalGateRule = {
   id: "gr-notify",
   match: [{ type: "action", action: "git.push", branch: "feature/x" }],
   decision: "notify",
-  ownerSubsystem: "forge",
+  department: "dev",
 };
 const askRule: GlobalGateRule = {
   id: "gr-ask",
   match: [{ type: "action", action: "merge" }],
   decision: "ask",
   resolve: { type: "human" },
-  ownerSubsystem: "forge",
+  department: "dev",
 };
 const denyRule: GlobalGateRule = {
   id: "gr-deny",
   match: [{ type: "tool", tool: "Bash" }],
   decision: "deny",
-  ownerSubsystem: "forge",
+  department: "dev",
 };
-const otherSubsystemRule: GlobalGateRule = {
-  id: "gr-puls",
+const otherDepartmentRule: GlobalGateRule = {
+  id: "gr-ops",
   match: [{ type: "context", context: "channel" }],
   decision: "notify",
-  ownerSubsystem: "puls",
+  department: "ops",
 };
 const untaggedRule: GlobalGateRule = {
   id: "gr-global",
@@ -99,7 +100,7 @@ describe("GatesTab (Phase 87)", () => {
     hooks.floor = { data: [lockedFloorRule] };
     hooks.rules = { data: [], isPending: false, isError: false, refetch: vi.fn() };
 
-    renderWithProviders(<GatesTab subsystem={subsystem} />);
+    renderWithProviders(<GatesTab department={department} />);
 
     // "the floor is visible, not hidden" (design doc) — the shared SystemFloorPanel
     // title from the gates catalog namespace.
@@ -115,12 +116,12 @@ describe("GatesTab (Phase 87)", () => {
       refetch: vi.fn(),
     };
 
-    renderWithProviders(<GatesTab subsystem={subsystem} />);
+    renderWithProviders(<GatesTab department={department} />);
 
     const rows = screen.getAllByTestId(GatesTabTestId.SentenceRow);
     expect(rows).toHaveLength(4);
 
-    expect(rows[0]).toHaveTextContent("Než Forge udělá");
+    expect(rows[0]).toHaveTextContent("Než Development udělá");
     expect(rows[0]).toHaveTextContent("scope");
     expect(rows[0]).toHaveTextContent("allow");
 
@@ -135,15 +136,15 @@ describe("GatesTab (Phase 87)", () => {
     expect(rows[3]).toHaveTextContent("deny");
   });
 
-  it("scopes both the sentence panel and the catalog to this subsystem's tagged rules", () => {
+  it("scopes both the sentence panel and the catalog to this department's tagged rules", () => {
     hooks.rules = {
-      data: [allowRule, otherSubsystemRule, untaggedRule],
+      data: [allowRule, otherDepartmentRule, untaggedRule],
       isPending: false,
       isError: false,
       refetch: vi.fn(),
     };
 
-    renderWithProviders(<GatesTab subsystem={subsystem} />);
+    renderWithProviders(<GatesTab department={department} />);
 
     expect(screen.getAllByTestId(GatesTabTestId.SentenceRow)).toHaveLength(1);
     expect(screen.getByTestId(GatesTabTestId.Catalog)).toHaveTextContent("scope");
@@ -154,7 +155,7 @@ describe("GatesTab (Phase 87)", () => {
     hooks.projects = [{ id: "acme", name: "Acme Corp", path: "/repo/acme" }];
     hooks.rules = { data: [], isPending: false, isError: false, refetch: vi.fn() };
 
-    renderWithProviders(<GatesTab subsystem={subsystem} />);
+    renderWithProviders(<GatesTab department={department} />);
 
     expect(screen.getByTestId(GatesTabTestId.AutopilotEmpty)).toBeInTheDocument();
     expect(screen.queryByTestId(`${GatesTabTestId.AutopilotLink}-acme`)).not.toBeInTheDocument();
@@ -174,7 +175,7 @@ describe("GatesTab (Phase 87)", () => {
     ];
     hooks.rules = { data: [], isPending: false, isError: false, refetch: vi.fn() };
 
-    renderWithProviders(<GatesTab subsystem={subsystem} />);
+    renderWithProviders(<GatesTab department={department} />);
 
     expect(screen.getByText("Acme Corp")).toBeInTheDocument();
     expect(screen.getByText("reply")).toBeInTheDocument();
@@ -203,7 +204,7 @@ describe("GatesTab (Phase 87)", () => {
     ];
     hooks.rules = { data: [], isPending: false, isError: false, refetch: vi.fn() };
 
-    renderWithProviders(<GatesTab subsystem={subsystem} />);
+    renderWithProviders(<GatesTab department={department} />);
 
     expect(screen.getByTestId(`${GatesTabTestId.AutopilotRow}-acme`)).toBeInTheDocument();
     expect(screen.getByTestId(`${GatesTabTestId.AutopilotRow}-beta`)).toBeInTheDocument();

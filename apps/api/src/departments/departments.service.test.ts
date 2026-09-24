@@ -1,5 +1,5 @@
 import type { Agent, Approval, Integration, Mandate, Pipeline, TaskRun } from "@zibby/contracts";
-import { DEFAULT_MANDATE, SUBSYSTEMS } from "@zibby/contracts";
+import { DEFAULT_MANDATE, DEPARTMENTS } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
 import type { AgentsStorageService } from "../agents/agents.storage.service";
 import type { ApprovalsService } from "../approvals/approvals.service";
@@ -7,14 +7,14 @@ import type { IntegrationsStorageService } from "../integrations/integrations.st
 import type { MandateStorageService } from "../mandate/mandate.storage.service";
 import type { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
 import type { TaskRunsService } from "../tasks/task-runs.service";
-import { SUBSYSTEM_SEEN_EPOCH, type SubsystemSeenStore } from "./subsystem-seen.store";
-import { SubsystemNotFoundError } from "./subsystems.errors";
-import { SubsystemsService } from "./subsystems.service";
+import { DEPARTMENT_SEEN_EPOCH, type DepartmentSeenStore } from "./department-seen.store";
+import { DepartmentNotFoundError } from "./departments.errors";
+import { DepartmentsService } from "./departments.service";
 
 const AT = "2026-07-08T00:00:00.000Z";
 const LATER = "2026-07-08T01:00:00.000Z";
 
-function pipelineFixture(id: string, ownerSubsystem?: Pipeline["ownerSubsystem"]): Pipeline {
+function pipelineFixture(id: string, department?: Pipeline["department"]): Pipeline {
   return {
     id,
     phases: [{ id: "p0", type: "verify" }],
@@ -22,7 +22,7 @@ function pipelineFixture(id: string, ownerSubsystem?: Pipeline["ownerSubsystem"]
     instructions: "do the thing",
     // NS2 F9 — schema-defaulted, so non-optional on a parsed entity.
     complexity: "standard",
-    ...(ownerSubsystem ? { ownerSubsystem } : {}),
+    ...(department ? { department } : {}),
   } as Pipeline;
 }
 
@@ -54,7 +54,7 @@ function approvalFixture(
   };
 }
 
-/** Builds a `SubsystemsService` over hand-rolled fakes of its five injected domain services + the seen store. */
+/** Builds a `DepartmentsService` over hand-rolled fakes of its five injected domain services + the seen store. */
 function build(opts: {
   pipelines?: Pipeline[];
   runs?: TaskRun[];
@@ -72,7 +72,7 @@ function build(opts: {
   const mandateStore = { read: vi.fn(async () => opts.mandate ?? DEFAULT_MANDATE) };
   const seenMap = new Map<string, string>(Object.entries(opts.seenAt ?? {}));
   const seenStore = {
-    seenAt: vi.fn(async (id: string) => seenMap.get(id) ?? SUBSYSTEM_SEEN_EPOCH),
+    seenAt: vi.fn(async (id: string) => seenMap.get(id) ?? DEPARTMENT_SEEN_EPOCH),
     markSeen: vi.fn(async (id: string) => {
       const now = new Date().toISOString();
       seenMap.set(id, now);
@@ -80,11 +80,11 @@ function build(opts: {
     }),
   };
 
-  const service = new SubsystemsService(
+  const service = new DepartmentsService(
     pipelinesStore as unknown as PipelinesStorageService,
     taskRuns as unknown as TaskRunsService,
     approvals as unknown as ApprovalsService,
-    seenStore as unknown as SubsystemSeenStore,
+    seenStore as unknown as DepartmentSeenStore,
     agentsStore as unknown as AgentsStorageService,
     integrationsStore as unknown as IntegrationsStorageService,
     mandateStore as unknown as MandateStorageService,
@@ -101,11 +101,11 @@ function build(opts: {
   };
 }
 
-describe("SubsystemsService", () => {
+describe("DepartmentsService", () => {
   describe("get() — attribution", () => {
     it("a running run on an owned pipeline reads as running", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "forge")],
+        pipelines: [pipelineFixture("delivery", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
@@ -115,13 +115,13 @@ describe("SubsystemsService", () => {
           }),
         ],
       });
-      const forge = await service.get("forge");
-      expect(forge).toMatchObject({ state: "running", tier2Count: 0, tier3Count: 0 });
+      const dev = await service.get("dev");
+      expect(dev).toMatchObject({ state: "running", tier2Count: 0, tier3Count: 0 });
     });
 
-    it("a pending pipeline-output approval attributes to the owning subsystem as waiting", async () => {
+    it("a pending pipeline-output approval attributes to the owning department as waiting", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "forge")],
+        pipelines: [pipelineFixture("delivery", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
@@ -134,13 +134,13 @@ describe("SubsystemsService", () => {
           approvalFixture({ id: "appr-1", runId: "delivery_1", kind: "pipeline-output" }),
         ],
       });
-      const forge = await service.get("forge");
-      expect(forge).toMatchObject({ state: "waiting", tier3Count: 1 });
+      const dev = await service.get("dev");
+      expect(dev).toMatchObject({ state: "waiting", tier3Count: 1 });
     });
 
     it("a pending pipeline-stage approval (stage-run-id prefix) attributes the same way", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "forge")],
+        pipelines: [pipelineFixture("delivery", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
@@ -157,13 +157,13 @@ describe("SubsystemsService", () => {
           }),
         ],
       });
-      const forge = await service.get("forge");
-      expect(forge).toMatchObject({ state: "waiting", tier3Count: 1 });
+      const dev = await service.get("dev");
+      expect(dev).toMatchObject({ state: "waiting", tier3Count: 1 });
     });
 
     it("precedence: waiting wins even while another owned run is running", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "forge"), pipelineFixture("release", "forge")],
+        pipelines: [pipelineFixture("delivery", "dev"), pipelineFixture("release", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
@@ -182,14 +182,14 @@ describe("SubsystemsService", () => {
           approvalFixture({ id: "appr-1", runId: "release_1", kind: "pipeline-output" }),
         ],
       });
-      const forge = await service.get("forge");
-      expect(forge.state).toBe("waiting");
-      expect(forge.tier3Count).toBe(1);
+      const dev = await service.get("dev");
+      expect(dev.state).toBe("waiting");
+      expect(dev.tier3Count).toBe(1);
     });
 
     it("a completed owned run after lastSeenAt reads as report with a count", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "forge")],
+        pipelines: [pipelineFixture("delivery", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
@@ -200,13 +200,13 @@ describe("SubsystemsService", () => {
           }),
         ],
       });
-      const forge = await service.get("forge");
-      expect(forge).toMatchObject({ state: "report", tier2Count: 1 });
+      const dev = await service.get("dev");
+      expect(dev).toMatchObject({ state: "report", tier2Count: 1 });
     });
 
     it("an errored owned run after lastSeenAt reads as error with its own count, not report", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "forge")],
+        pipelines: [pipelineFixture("delivery", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
@@ -217,13 +217,13 @@ describe("SubsystemsService", () => {
           }),
         ],
       });
-      const forge = await service.get("forge");
-      expect(forge).toMatchObject({ state: "error", tier2Count: 0, errorCount: 1 });
+      const dev = await service.get("dev");
+      expect(dev).toMatchObject({ state: "error", tier2Count: 0, errorCount: 1 });
     });
 
     it("lists the run ids behind errorCount, and an empty list when there are none", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "forge")],
+        pipelines: [pipelineFixture("delivery", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
@@ -241,15 +241,15 @@ describe("SubsystemsService", () => {
           }),
         ],
       });
-      const forge = await service.get("forge");
-      expect(forge).toMatchObject({ errorCount: 1, errorRunIds: ["delivery_1"] });
-      const scout = await service.get("scout");
-      expect(scout.errorRunIds).toEqual([]);
+      const dev = await service.get("dev");
+      expect(dev).toMatchObject({ errorCount: 1, errorRunIds: ["delivery_1"] });
+      const research = await service.get("rnd");
+      expect(research.errorRunIds).toEqual([]);
     });
 
     it("a done AND an errored owned run after lastSeenAt both count, error wins the headline state", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "forge"), pipelineFixture("release", "forge")],
+        pipelines: [pipelineFixture("delivery", "dev"), pipelineFixture("release", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
@@ -267,13 +267,13 @@ describe("SubsystemsService", () => {
           }),
         ],
       });
-      const forge = await service.get("forge");
-      expect(forge).toMatchObject({ state: "error", tier2Count: 1, errorCount: 1 });
+      const dev = await service.get("dev");
+      expect(dev).toMatchObject({ state: "error", tier2Count: 1, errorCount: 1 });
     });
 
     it("precedence: error outranks a still-running owned run", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "forge"), pipelineFixture("release", "forge")],
+        pipelines: [pipelineFixture("delivery", "dev"), pipelineFixture("release", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
@@ -290,13 +290,13 @@ describe("SubsystemsService", () => {
           }),
         ],
       });
-      const forge = await service.get("forge");
-      expect(forge.state).toBe("error");
+      const dev = await service.get("dev");
+      expect(dev.state).toBe("error");
     });
 
     it("precedence: waiting still outranks error", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "forge"), pipelineFixture("release", "forge")],
+        pipelines: [pipelineFixture("delivery", "dev"), pipelineFixture("release", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
@@ -316,13 +316,13 @@ describe("SubsystemsService", () => {
           approvalFixture({ id: "appr-1", runId: "delivery_1", kind: "pipeline-output" }),
         ],
       });
-      const forge = await service.get("forge");
-      expect(forge.state).toBe("waiting");
+      const dev = await service.get("dev");
+      expect(dev.state).toBe("waiting");
     });
 
     it("a completed run BEFORE lastSeenAt does not count", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "forge")],
+        pipelines: [pipelineFixture("delivery", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
@@ -332,38 +332,38 @@ describe("SubsystemsService", () => {
             startedAt: AT,
           }),
         ],
-        seenAt: { forge: LATER },
+        seenAt: { dev: LATER },
       });
-      const forge = await service.get("forge");
-      expect(forge).toMatchObject({ state: "idle", tier2Count: 0 });
+      const dev = await service.get("dev");
+      expect(dev).toMatchObject({ state: "idle", tier2Count: 0 });
     });
 
-    it("with no owned activity a subsystem reads as idle with zero counts", async () => {
+    it("with no owned activity a department reads as idle with zero counts", async () => {
       const { service } = build({});
-      const puls = await service.get("puls");
-      expect(puls).toMatchObject({ state: "idle", tier2Count: 0, tier3Count: 0 });
+      const ops = await service.get("ops");
+      expect(ops).toMatchObject({ state: "idle", tier2Count: 0, tier3Count: 0 });
     });
 
-    it("throws SubsystemNotFoundError for an id outside the registry", async () => {
+    it("throws DepartmentNotFoundError for an id outside the registry", async () => {
       const { service } = build({});
-      await expect(service.get("nope")).rejects.toThrow(SubsystemNotFoundError);
+      await expect(service.get("nope")).rejects.toThrow(DepartmentNotFoundError);
     });
   });
 
   describe("unattributable exclusion", () => {
     it("an approval whose kind carries no pipeline (e.g. channel/task) is excluded without error", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "forge")],
+        pipelines: [pipelineFixture("delivery", "dev")],
         pendingApprovals: [
           approvalFixture({ id: "appr-1", runId: "integration_1/item_2", kind: "channel" }),
           approvalFixture({ id: "appr-2", runId: "task_9", kind: "task" }),
         ],
       });
-      const forge = await service.get("forge");
-      expect(forge).toMatchObject({ state: "idle", tier3Count: 0 });
+      const dev = await service.get("dev");
+      expect(dev).toMatchObject({ state: "idle", tier3Count: 0 });
     });
 
-    it("a run on an unowned pipeline never surfaces for any subsystem", async () => {
+    it("a run on an unowned pipeline never surfaces for any department", async () => {
       const { service } = build({
         pipelines: [pipelineFixture("orphan")],
         runs: [
@@ -379,46 +379,46 @@ describe("SubsystemsService", () => {
       expect(rows.every((r) => r.state === "idle")).toBe(true);
     });
 
-    it("an agent-kind run whose agent has no ownerSubsystem never attributes", async () => {
+    it("an agent-kind run whose agent has no department never attributes", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "forge")],
+        pipelines: [pipelineFixture("delivery", "dev")],
         agents: [{ id: "koder", instructions: "x" } as Agent],
         runs: [
           taskRunFixture({ runId: "koder_1", kind: "agent", owner: "koder", status: "running" }),
         ],
       });
-      const forge = await service.get("forge");
-      expect(forge.state).toBe("idle");
+      const dev = await service.get("dev");
+      expect(dev.state).toBe("idle");
     });
 
     it("a goal-kind run never attributes (D16 — goal runs are deliberately unattributed)", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "forge")],
-        agents: [{ id: "koder", ownerSubsystem: "forge", instructions: "x" } as Agent],
+        pipelines: [pipelineFixture("delivery", "dev")],
+        agents: [{ id: "koder", department: "dev", instructions: "x" } as Agent],
         runs: [
           taskRunFixture({ runId: "goal_1", kind: "goal", owner: "koder", status: "running" }),
         ],
       });
-      const forge = await service.get("forge");
-      expect(forge.state).toBe("idle");
+      const dev = await service.get("dev");
+      expect(dev.state).toBe("idle");
     });
   });
 
   describe("agent-run attribution", () => {
-    it("a running agent-kind run whose agent has ownerSubsystem: forge puts forge in a running state", async () => {
+    it("a running agent-kind run whose agent has department: dev puts dev in a running state", async () => {
       const { service } = build({
-        agents: [{ id: "koder", ownerSubsystem: "forge", instructions: "x" } as Agent],
+        agents: [{ id: "koder", department: "dev", instructions: "x" } as Agent],
         runs: [
           taskRunFixture({ runId: "koder_1", kind: "agent", owner: "koder", status: "running" }),
         ],
       });
-      const forge = await service.get("forge");
-      expect(forge).toMatchObject({ state: "running", tier2Count: 0, tier3Count: 0 });
+      const dev = await service.get("dev");
+      expect(dev).toMatchObject({ state: "running", tier2Count: 0, tier3Count: 0 });
     });
 
     it("a completed owned agent run after lastSeenAt reads as report with a count", async () => {
       const { service } = build({
-        agents: [{ id: "koder", ownerSubsystem: "forge", instructions: "x" } as Agent],
+        agents: [{ id: "koder", department: "dev", instructions: "x" } as Agent],
         runs: [
           taskRunFixture({
             runId: "koder_1",
@@ -429,14 +429,14 @@ describe("SubsystemsService", () => {
           }),
         ],
       });
-      const forge = await service.get("forge");
-      expect(forge).toMatchObject({ state: "report", tier2Count: 1 });
+      const dev = await service.get("dev");
+      expect(dev).toMatchObject({ state: "report", tier2Count: 1 });
     });
 
-    it("agent and pipeline runs owned by the same subsystem both count", async () => {
+    it("agent and pipeline runs owned by the same department both count", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "forge")],
-        agents: [{ id: "koder", ownerSubsystem: "forge", instructions: "x" } as Agent],
+        pipelines: [pipelineFixture("delivery", "dev")],
+        agents: [{ id: "koder", department: "dev", instructions: "x" } as Agent],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
@@ -454,15 +454,15 @@ describe("SubsystemsService", () => {
           }),
         ],
       });
-      const forge = await service.get("forge");
-      expect(forge).toMatchObject({ state: "report", tier2Count: 2 });
+      const dev = await service.get("dev");
+      expect(dev).toMatchObject({ state: "report", tier2Count: 2 });
     });
   });
 
   describe("markSeen", () => {
     it("resets tier2Count to 0 and the state falls back to idle once seen", async () => {
       const { service, seenStore } = build({
-        pipelines: [pipelineFixture("delivery", "forge")],
+        pipelines: [pipelineFixture("delivery", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
@@ -473,16 +473,16 @@ describe("SubsystemsService", () => {
           }),
         ],
       });
-      expect((await service.get("forge")).tier2Count).toBe(1);
+      expect((await service.get("dev")).tier2Count).toBe(1);
 
-      const refreshed = await service.markSeen("forge");
-      expect(seenStore.markSeen).toHaveBeenCalledWith("forge");
+      const refreshed = await service.markSeen("dev");
+      expect(seenStore.markSeen).toHaveBeenCalledWith("dev");
       expect(refreshed).toMatchObject({ state: "idle", tier2Count: 0 });
     });
 
     it("falls back to running (not idle) when a run is still active after being seen", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "forge")],
+        pipelines: [pipelineFixture("delivery", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
@@ -499,13 +499,13 @@ describe("SubsystemsService", () => {
           }),
         ],
       });
-      const refreshed = await service.markSeen("forge");
+      const refreshed = await service.markSeen("dev");
       expect(refreshed).toMatchObject({ state: "running", tier2Count: 0 });
     });
 
-    it("throws SubsystemNotFoundError for an unknown id", async () => {
+    it("throws DepartmentNotFoundError for an unknown id", async () => {
       const { service } = build({});
-      await expect(service.markSeen("nope")).rejects.toThrow(SubsystemNotFoundError);
+      await expect(service.markSeen("nope")).rejects.toThrow(DepartmentNotFoundError);
     });
   });
 
@@ -513,46 +513,46 @@ describe("SubsystemsService", () => {
     it("sorts waiting first, then report, then running, then idle; registry order is the stable tiebreak", async () => {
       const { service } = build({
         pipelines: [
-          pipelineFixture("p-beacon", "beacon"),
-          pipelineFixture("p-scout", "scout"),
-          pipelineFixture("p-forge", "forge"),
+          pipelineFixture("p-incident", "inc"),
+          pipelineFixture("p-research", "rnd"),
+          pipelineFixture("p-dev", "dev"),
         ],
         runs: [
-          // forge: running → running
+          // dev: running → running
           taskRunFixture({
-            runId: "p-forge_1",
+            runId: "p-dev_1",
             kind: "pipeline",
-            owner: "p-forge",
+            owner: "p-dev",
             status: "running",
           }),
-          // scout: completed after lastSeenAt → report
+          // research: completed after lastSeenAt → report
           taskRunFixture({
-            runId: "p-scout_1",
+            runId: "p-research_1",
             kind: "pipeline",
-            owner: "p-scout",
+            owner: "p-research",
             status: "done",
             startedAt: LATER,
           }),
-          // beacon: awaiting-approval, attributed below → waiting
+          // incident: awaiting-approval, attributed below → waiting
           taskRunFixture({
-            runId: "p-beacon_1",
+            runId: "p-incident_1",
             kind: "pipeline",
-            owner: "p-beacon",
+            owner: "p-incident",
             status: "awaiting-approval",
           }),
         ],
         pendingApprovals: [
-          approvalFixture({ id: "appr-1", runId: "p-beacon_1", kind: "pipeline-output" }),
+          approvalFixture({ id: "appr-1", runId: "p-incident_1", kind: "pipeline-output" }),
         ],
       });
       const rows = await service.list();
       const ids = rows.map((r) => r.id);
-      const waitingIndex = ids.indexOf("beacon");
-      const reportIndex = ids.indexOf("scout");
-      const runningIndex = ids.indexOf("forge");
+      const waitingIndex = ids.indexOf("inc");
+      const reportIndex = ids.indexOf("rnd");
+      const runningIndex = ids.indexOf("dev");
       const idleIndexes = ids
         .map((id, i) => [id, i] as const)
-        .filter(([id]) => !["beacon", "scout", "forge"].includes(id))
+        .filter(([id]) => !["inc", "rnd", "dev"].includes(id))
         .map(([, i]) => i);
 
       expect(waitingIndex).toBeLessThan(reportIndex);
@@ -561,54 +561,51 @@ describe("SubsystemsService", () => {
 
       // registry-order tiebreak among the untouched `idle` entries.
       const idleIds = idleIndexes.map((i) => ids[i]);
-      const registryIdleOrder = SUBSYSTEMS.map((s) => s.id).filter(
-        (id) => !["beacon", "scout", "forge"].includes(id),
+      const registryIdleOrder = DEPARTMENTS.map((s) => s.id).filter(
+        (id) => !["inc", "rnd", "dev"].includes(id),
       );
       expect(idleIds).toEqual(registryIdleOrder);
     });
 
     it("within waiting, higher tier3Count sorts first", async () => {
       const { service } = build({
-        pipelines: [
-          pipelineFixture("p-beacon", "beacon"),
-          pipelineFixture("p-sentinel", "sentinel"),
-        ],
+        pipelines: [pipelineFixture("p-incident", "inc"), pipelineFixture("p-security", "sec")],
         runs: [
           taskRunFixture({
-            runId: "p-beacon_1",
+            runId: "p-incident_1",
             kind: "pipeline",
-            owner: "p-beacon",
+            owner: "p-incident",
             status: "awaiting-approval",
           }),
           taskRunFixture({
-            runId: "p-sentinel_1",
+            runId: "p-security_1",
             kind: "pipeline",
-            owner: "p-sentinel",
+            owner: "p-security",
             status: "awaiting-approval",
           }),
           taskRunFixture({
-            runId: "p-sentinel_2",
+            runId: "p-security_2",
             kind: "pipeline",
-            owner: "p-sentinel",
+            owner: "p-security",
             status: "awaiting-approval",
           }),
         ],
         pendingApprovals: [
-          approvalFixture({ id: "appr-1", runId: "p-beacon_1", kind: "pipeline-output" }),
-          approvalFixture({ id: "appr-2", runId: "p-sentinel_1", kind: "pipeline-output" }),
-          approvalFixture({ id: "appr-3", runId: "p-sentinel_2", kind: "pipeline-output" }),
+          approvalFixture({ id: "appr-1", runId: "p-incident_1", kind: "pipeline-output" }),
+          approvalFixture({ id: "appr-2", runId: "p-security_1", kind: "pipeline-output" }),
+          approvalFixture({ id: "appr-3", runId: "p-security_2", kind: "pipeline-output" }),
         ],
       });
       const rows = await service.list();
       const ids = rows.filter((r) => r.state === "waiting").map((r) => r.id);
-      expect(ids).toEqual(["sentinel", "beacon"]);
+      expect(ids).toEqual(["sec", "inc"]);
     });
 
     it("all-idle registry stays in registry order (list() still returns all 11)", async () => {
       const { service } = build({});
       const rows = await service.list();
       expect(rows).toHaveLength(11);
-      expect(rows.map((r) => r.id)).toEqual(SUBSYSTEMS.map((s) => s.id));
+      expect(rows.map((r) => r.id)).toEqual(DEPARTMENTS.map((s) => s.id));
       expect(rows.every((r) => r.state === "idle")).toBe(true);
     });
   });
@@ -616,8 +613,8 @@ describe("SubsystemsService", () => {
   describe("listUnowned() — NS2 F1b", () => {
     it("returns [] when every pipeline/agent is owned (integrations are never reported)", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "forge")],
-        agents: [{ id: "architect", ownerSubsystem: "forge", instructions: "x" } as Agent],
+        pipelines: [pipelineFixture("delivery", "dev")],
+        agents: [{ id: "architect", department: "dev", instructions: "x" } as Agent],
         // An integration with no owner tag is NOT an ownership gap — membership is
         // derived, so it never appears in the unowned report.
         integrations: [
@@ -663,12 +660,12 @@ describe("SubsystemsService", () => {
   });
 
   describe("roster()", () => {
-    function agentFixture(id: string, ownerSubsystem?: Agent["ownerSubsystem"]): Agent {
+    function agentFixture(id: string, department?: Agent["department"]): Agent {
       return {
         id,
         name: id,
         instructions: "x",
-        ...(ownerSubsystem ? { ownerSubsystem } : {}),
+        ...(department ? { department } : {}),
       } as Agent;
     }
 
@@ -698,29 +695,29 @@ describe("SubsystemsService", () => {
       } as Integration;
     }
 
-    it("agents are filtered by ownerSubsystem; a non-puls/herald subsystem sees no integrations", async () => {
+    it("agents are filtered by department; a non-ops/comms department sees no integrations", async () => {
       const { service } = build({
-        agents: [agentFixture("architekt", "forge"), agentFixture("scribe", "codex")],
+        agents: [agentFixture("architekt", "dev"), agentFixture("scribe", "knw")],
         integrations: [slackFixture("team-slack"), slackFixture("watch")],
       });
-      const forge = await service.roster("forge");
-      expect(forge.agents).toEqual([{ id: "architekt", name: "architekt" }]);
-      expect(forge.integrations).toEqual([]);
-      expect(forge.monitors).toEqual([]);
+      const dev = await service.roster("dev");
+      expect(dev.agents).toEqual([{ id: "architekt", name: "architekt" }]);
+      expect(dev.integrations).toEqual([]);
+      expect(dev.monitors).toEqual([]);
     });
 
-    it("puls sees EVERY integration (the heartbeat watcher listens to all)", async () => {
+    it("ops sees EVERY integration (the heartbeat watcher listens to all)", async () => {
       const { service } = build({
         integrations: [slackFixture("team-slack"), slackFixture("watch")],
       });
-      const puls = await service.roster("puls");
-      expect(puls.integrations).toEqual([
+      const ops = await service.roster("ops");
+      expect(ops.integrations).toEqual([
         { id: "team-slack", name: "team-slack", kind: "slack" },
         { id: "watch", name: "watch", kind: "slack" },
       ]);
     });
 
-    it("herald sees only the reply-enabled integrations (mandate.reply)", async () => {
+    it("comms sees only the reply-enabled integrations (mandate.reply)", async () => {
       const mandate: Mandate = {
         defaults: { dispatch: true, reply: false },
         channels: { "team-slack": { reply: true } },
@@ -729,31 +726,29 @@ describe("SubsystemsService", () => {
         integrations: [slackFixture("team-slack"), slackFixture("silent")],
         mandate,
       });
-      const herald = await service.roster("herald");
-      expect(herald.integrations).toEqual([
-        { id: "team-slack", name: "team-slack", kind: "slack" },
-      ]);
+      const comms = await service.roster("com");
+      expect(comms.integrations).toEqual([{ id: "team-slack", name: "team-slack", kind: "slack" }]);
     });
 
-    it("herald falls back to the default reply flag when a channel has no override", async () => {
+    it("comms falls back to the default reply flag when a channel has no override", async () => {
       const mandate: Mandate = { defaults: { dispatch: true, reply: true }, channels: {} };
       const { service } = build({ integrations: [slackFixture("team-slack")], mandate });
-      const herald = await service.roster("herald");
-      expect(herald.integrations).toHaveLength(1);
+      const comms = await service.roster("com");
+      expect(comms.integrations).toHaveLength(1);
     });
 
-    it("is empty for a subsystem that owns nothing (codex/ledger)", async () => {
+    it("is empty for a department that owns nothing (knowledge/finance)", async () => {
       const { service } = build({
-        agents: [agentFixture("architekt", "forge")],
+        agents: [agentFixture("architekt", "dev")],
         integrations: [slackFixture("team-slack")],
       });
-      const codex = await service.roster("codex");
-      expect(codex).toEqual({ agents: [], integrations: [], monitors: [] });
-      const ledger = await service.roster("ledger");
-      expect(ledger).toEqual({ agents: [], integrations: [], monitors: [] });
+      const knowledge = await service.roster("knw");
+      expect(knowledge).toEqual({ agents: [], integrations: [], monitors: [] });
+      const finance = await service.roster("fin");
+      expect(finance).toEqual({ agents: [], integrations: [], monitors: [] });
     });
 
-    it("monitors is the subset of the subsystem's integrations that are a GitHub integration with a ci stream", async () => {
+    it("monitors is the subset of the department's integrations that are a GitHub integration with a ci stream", async () => {
       const { service } = build({
         integrations: [
           githubFixture("ci-repo", ["issues", "pulls", "ci"]),
@@ -761,14 +756,14 @@ describe("SubsystemsService", () => {
           slackFixture("team-slack"),
         ],
       });
-      const puls = await service.roster("puls");
-      expect(puls.integrations).toHaveLength(3);
-      expect(puls.monitors).toEqual([{ id: "ci-repo", name: "ci-repo", kind: "github" }]);
+      const ops = await service.roster("ops");
+      expect(ops.integrations).toHaveLength(3);
+      expect(ops.monitors).toEqual([{ id: "ci-repo", name: "ci-repo", kind: "github" }]);
     });
 
-    it("throws SubsystemNotFoundError for an id outside the registry", async () => {
+    it("throws DepartmentNotFoundError for an id outside the registry", async () => {
       const { service } = build({});
-      await expect(service.roster("nope")).rejects.toThrow(SubsystemNotFoundError);
+      await expect(service.roster("nope")).rejects.toThrow(DepartmentNotFoundError);
     });
   });
 });

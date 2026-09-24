@@ -30,7 +30,7 @@ export interface FlyoutWorkRowProps {
  * card on the solid panel — state dot + owner + relative start, the task title, and
  * a mono work line (glyph + owner + optional pct). Non-navigating this phase (the
  * prototype's onOpenSys has no real target). Dot/pulse come from RUN_STATE (exhaustive
- * per-status map) — a RunView has no subsystem hue.
+ * per-status map) — a RunView has no department hue.
  */
 export function FlyoutWorkRow({ run, glyph }: FlyoutWorkRowProps) {
   const locale = useLocale();

@@ -298,7 +298,7 @@ Renders `listGrounded`'s `active` rules into the vault notes `GroundingService`
 loads unconditionally (Task 7 — see below) — the artifact this whole learning
 loop exists to produce. Two note ids, exported from
 `apps/api/src/memory/review-rules-note.ts` (deliberately in `memory/`, next to
-`subsystem-shelf.ts`, so `GroundingService` can ground them without the memory
+`department-shelf.ts`, so `GroundingService` can ground them without the memory
 module importing the review-learning module):
 
 - `GLOBAL_REVIEW_RULES_ID` = `"review-rules"` — the cross-project note
@@ -360,7 +360,7 @@ schválené pravidlo z review.`), not a missing file.
 **File:** `apps/api/src/memory/grounding.service.ts` (`GroundingService.compose`)
 
 Two `add()` calls, grouped together right after the North Star and
-self-knowledge notes and ahead of the subsystem shelf / term-matched MOCs /
+self-knowledge notes and ahead of the department shelf / term-matched MOCs /
 1-hop wikilink expansion — never term-matched, because a rule exists
 precisely because the operator already had to say it twice:
 
@@ -375,7 +375,7 @@ precisely because the operator already had to say it twice:
   `<projectId>-review-rules` note, because the id itself is keyed off the
   _current_ run's `projectId`.
 
-Both sit ahead of the subsystem shelf and MOC/expansion sections on purpose:
+Both sit ahead of the department shelf and MOC/expansion sections on purpose:
 `render`'s whole-block truncation (`BLOCK_BUDGET = 8000`) drops the block's
 _tail_, and operator-approved learned rules are bounded
 (`MAX_RENDERED_RULES = 25`) and high-value, while MOC matches and wikilink

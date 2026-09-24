@@ -1,6 +1,6 @@
 "use client";
 
-import type { HandoffSignalKind, SubsystemId } from "@zibby/contracts";
+import type { DepartmentId, HandoffSignalKind } from "@zibby/contracts";
 import { Button, Stack, Typography } from "@zibby/design-system";
 import {
   FormSelect,
@@ -16,7 +16,7 @@ import { z } from "zod";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { toastBus } from "../../../components/Toaster/toastBus";
 import { useCreateSignalKindMutation, useUpdateSignalKindMutation } from "../../handoff/mutations";
-import { useSubsystemsQuery } from "../../subsystems/queries";
+import { useDepartmentsQuery } from "../../departments/queries";
 
 export enum SignalCreateFormTestId {
   Root = "signal-create-form-root",
@@ -40,7 +40,7 @@ type SignalCreateValues = z.infer<typeof schema>;
 
 export interface SignalCreateFormProps {
   /** Prefills the producer picker — the drawer's "+ nový signál" link-out passes
-   * its own `fromSubsystemId` through `/signals/new?from=`. */
+   * its own `fromDepartmentId` through `/signals/new?from=`. */
   defaultFrom?: string;
   /**
    * When present, the form runs in EDIT mode (B3c): all fields prefill from this
@@ -73,7 +73,7 @@ export function previewSlug(label: string): string {
  * `docs/superpowers/specs/2026-07-22-handoff-signal-registry-and-receiver-filter-design.md`
  * §"Slot B → B3"). Mirrors `ProjectBasicsPanel`'s `@zibby/forms` shape
  * (`useFormControls` + `zodResolver` + DS `Form*` field wrappers). On success
- * navigates to `/signals` — the spawned Forge build task surfaces there via the
+ * navigates to `/signals` — the spawned Dev build task surfaces there via the
  * runs-feed invalidation in {@link useCreateSignalKindMutation}.
  *
  * B3c generalizes this same form for EDIT: passing `initial` (an operator kind)
@@ -86,7 +86,7 @@ export function previewSlug(label: string): string {
 export function SignalCreateForm({ defaultFrom, initial, onDone }: SignalCreateFormProps) {
   const t = useTranslations("signals");
   const router = useRouter();
-  const { data: subsystems = [] } = useSubsystemsQuery();
+  const { data: departments = [] } = useDepartmentsQuery();
   const createMutation = useCreateSignalKindMutation();
   const updateMutation = useUpdateSignalKindMutation();
   const isEditMode = Boolean(initial);
@@ -94,7 +94,7 @@ export function SignalCreateForm({ defaultFrom, initial, onDone }: SignalCreateF
 
   const { renderForm, submit, form } = useFormControls<SignalCreateValues>({
     defaultValues: {
-      from: initial?.from ?? defaultFrom ?? subsystems[0]?.id ?? "",
+      from: initial?.from ?? defaultFrom ?? departments[0]?.id ?? "",
       label: initial?.label ?? "",
       description: initial?.description ?? "",
       severityBearing: initial?.severityBearing ?? false,
@@ -104,7 +104,7 @@ export function SignalCreateForm({ defaultFrom, initial, onDone }: SignalCreateF
     onSubmit: (values) => {
       if (activeMutation.isPending) return;
       const body = {
-        from: values.from as SubsystemId,
+        from: values.from as DepartmentId,
         label: values.label.trim(),
         description: values.description.trim(),
         severityBearing: values.severityBearing,
@@ -187,7 +187,7 @@ export function SignalCreateForm({ defaultFrom, initial, onDone }: SignalCreateF
             <FormSelect<string, SignalCreateValues>
               label={t("create.fields.producer")}
               name="from"
-              options={subsystems.map((s) => ({ value: s.id, label: s.name }))}
+              options={departments.map((s) => ({ value: s.id, label: s.name }))}
             />
           </div>
 

@@ -7,7 +7,7 @@ import { FormSelect, FormTextInput, useFormControls } from "@zibby/forms";
 import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useCompaniesQuery } from "../../companies";
 
-/** Sentinel for "no company" in the company select — a real id can never be empty. */
+/** Security for "no company" in the company select — a real id can never be empty. */
 const NO_COMPANY = "";
 
 /**

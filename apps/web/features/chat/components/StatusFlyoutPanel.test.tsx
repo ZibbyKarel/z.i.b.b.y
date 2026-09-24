@@ -1,4 +1,4 @@
-import type { SubsystemWithStatus } from "@zibby/contracts";
+import type { DepartmentWithStatus } from "@zibby/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LoadErrorTestId } from "../../../components/LoadError/LoadError";
 import type { DashboardApproval } from "../../approvals/approval";
@@ -32,15 +32,16 @@ vi.mock("../../approvals", () => ({
   useRejectMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
-const subsystemsState = { data: [] as SubsystemWithStatus[] };
-vi.mock("../../subsystems/queries/useSubsystemsQuery", () => ({
-  useSubsystemsQuery: () => subsystemsState,
+const departmentsState = { data: [] as DepartmentWithStatus[] };
+vi.mock("../../departments/queries/useDepartmentsQuery", () => ({
+  useDepartmentsQuery: () => departmentsState,
 }));
 
-function sub(overrides: Partial<SubsystemWithStatus> = {}): SubsystemWithStatus {
+function sub(overrides: Partial<DepartmentWithStatus> = {}): DepartmentWithStatus {
   return {
-    id: "forge",
-    name: "Forge",
+    id: "dev",
+    code: "DEV",
+    name: "Dev",
     tagline: "t",
     mandate: "m",
     color: "#5b8def",
@@ -53,7 +54,7 @@ function sub(overrides: Partial<SubsystemWithStatus> = {}): SubsystemWithStatus 
 }
 
 beforeEach(() => {
-  subsystemsState.data = [];
+  departmentsState.data = [];
 });
 
 function panelProps() {
@@ -115,7 +116,7 @@ describe("StatusFlyoutPanel", () => {
         id: "app_1",
         runId: "run_1",
         kind: "agent",
-        skill: "Herald",
+        skill: "Comms",
         action: "send the digest",
         detail: "3 recipients",
         risk: "medium",
@@ -136,13 +137,13 @@ describe("StatusFlyoutPanel", () => {
     runsState.isError = false;
   });
 
-  it("error section lists the failed runs of subsystems in error state only", () => {
-    subsystemsState.data = [
-      sub({ id: "forge", name: "Forge", state: "error", errorCount: 1, errorRunIds: ["r_err"] }),
+  it("error section lists the failed runs of departments in error state only", () => {
+    departmentsState.data = [
+      sub({ id: "dev", name: "Dev", state: "error", errorCount: 1, errorRunIds: ["r_err"] }),
       // waiting outranks error for the headline state → not in the pill's error count
       sub({
-        id: "scout",
-        name: "Scout",
+        id: "rnd",
+        name: "Research",
         state: "waiting",
         errorCount: 1,
         errorRunIds: ["r_hidden"],
@@ -157,8 +158,8 @@ describe("StatusFlyoutPanel", () => {
     runsState.runs = [];
   });
 
-  it("error section shows the empty state when no subsystem carries errorRunIds", () => {
-    subsystemsState.data = [sub({ id: "forge", name: "Forge", state: "error", errorCount: 1 })];
+  it("error section shows the empty state when no department carries errorRunIds", () => {
+    departmentsState.data = [sub({ id: "dev", name: "Dev", state: "error", errorCount: 1 })];
     runsState.runs = [];
     renderWithProviders(<StatusFlyoutPanel {...panelProps()} section="error" />);
     expect(screen.queryByTestId(FlyoutErrorRowTestId.Root)).toBeNull();

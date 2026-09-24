@@ -1,13 +1,13 @@
 import { renderWithProviders as render, screen } from "../../../../test/render";
 import { fireEvent } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { SUBSYSTEMS, type SubsystemWithStatus } from "@zibby/contracts";
+import { DEPARTMENTS, type DepartmentWithStatus } from "@zibby/contracts";
 import type { Pipeline } from "../../../../domain";
 import type { RunView } from "../../../runs/run";
 import { AktivitaTab, AktivitaTabTestId } from "./AktivitaTab";
 
-const FORGE: SubsystemWithStatus = {
-  ...SUBSYSTEMS.find((s) => s.id === "forge")!,
+const DEV: DepartmentWithStatus = {
+  ...DEPARTMENTS.find((s) => s.id === "dev")!,
   state: "idle",
   tier2Count: 0,
   tier3Count: 0,
@@ -92,10 +92,10 @@ describe("AktivitaTab (Phase 86)", () => {
     push.mockReset();
   });
 
-  it("scopes runs to pipelines owned by the subsystem — unowned and agent runs excluded", () => {
+  it("scopes runs to pipelines owned by the department — unowned and agent runs excluded", () => {
     hooks.pipelines = [
-      pipelineFixture({ id: "delivery", ownerSubsystem: "forge" }),
-      pipelineFixture({ id: "other", ownerSubsystem: "loom" }),
+      pipelineFixture({ id: "delivery", department: "dev" }),
+      pipelineFixture({ id: "other", department: "qa" }),
       pipelineFixture({ id: "untagged" }),
     ];
     hooks.runs = [
@@ -115,7 +115,7 @@ describe("AktivitaTab (Phase 86)", () => {
       runFixture({ runId: "run-agent", kind: "agent", owner: "writer", title: "Agent Run" }),
     ];
 
-    render(<AktivitaTab subsystem={FORGE} />);
+    render(<AktivitaTab department={DEV} />);
 
     expect(screen.getByTestId("task-card-run-delivery")).toBeInTheDocument();
     expect(screen.queryByTestId("task-card-run-other")).toBeNull();
@@ -124,12 +124,12 @@ describe("AktivitaTab (Phase 86)", () => {
   });
 
   it("expanding a running pipeline run mounts PipelineStageTimeline with its runId; collapsing unmounts it", () => {
-    hooks.pipelines = [pipelineFixture({ id: "delivery", ownerSubsystem: "forge" })];
+    hooks.pipelines = [pipelineFixture({ id: "delivery", department: "dev" })];
     hooks.runs = [
       runFixture({ runId: "run-delivery", kind: "pipeline", owner: "delivery", status: "running" }),
     ];
 
-    render(<AktivitaTab subsystem={FORGE} />);
+    render(<AktivitaTab department={DEV} />);
 
     expect(screen.queryByTestId("stage-timeline-stub")).toBeNull();
 
@@ -142,12 +142,12 @@ describe("AktivitaTab (Phase 86)", () => {
   });
 
   it("a completed (non-expandable) run navigates to the run detail page instead of expanding inline", () => {
-    hooks.pipelines = [pipelineFixture({ id: "delivery", ownerSubsystem: "forge" })];
+    hooks.pipelines = [pipelineFixture({ id: "delivery", department: "dev" })];
     hooks.runs = [
       runFixture({ runId: "run-delivery", kind: "pipeline", owner: "delivery", status: "done" }),
     ];
 
-    render(<AktivitaTab subsystem={FORGE} />);
+    render(<AktivitaTab department={DEV} />);
 
     fireEvent.click(screen.getByTestId("task-card-run-delivery"));
 
@@ -155,15 +155,15 @@ describe("AktivitaTab (Phase 86)", () => {
     expect(screen.queryByTestId("stage-timeline-stub")).toBeNull();
   });
 
-  it("shows an honest translated empty state when the subsystem owns no runs", () => {
-    render(<AktivitaTab subsystem={FORGE} />);
+  it("shows an honest translated empty state when the department owns no runs", () => {
+    render(<AktivitaTab department={DEV} />);
 
     expect(screen.getByText("Zatím žádná aktivita")).toBeInTheDocument();
     expect(screen.queryByTestId(AktivitaTabTestId.List)).toBeNull();
   });
 
   it("links to the archive (F8d — /runs is deleted; /archiv is the surviving global runs view)", () => {
-    render(<AktivitaTab subsystem={FORGE} />);
+    render(<AktivitaTab department={DEV} />);
 
     expect(screen.getByTestId(AktivitaTabTestId.AllRunsLink)).toHaveAttribute("href", "/archiv");
   });

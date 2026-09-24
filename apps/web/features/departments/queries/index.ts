@@ -1,2 +1,2 @@
-export { getSubsystemsQueryKey, useSubsystemsQuery } from "./useSubsystemsQuery";
-export { getSubsystemRosterQueryKey, useSubsystemRosterQuery } from "./useSubsystemRosterQuery";
+export { getDepartmentsQueryKey, useDepartmentsQuery } from "./useDepartmentsQuery";
+export { getDepartmentRosterQueryKey, useDepartmentRosterQuery } from "./useDepartmentRosterQuery";

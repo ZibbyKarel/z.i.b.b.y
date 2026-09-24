@@ -2,9 +2,9 @@
 
 import {
   type Agent,
-  SUBSYSTEMS,
-  type SubsystemId,
-  type SubsystemWithStatus,
+  DEPARTMENTS,
+  type DepartmentId,
+  type DepartmentWithStatus,
 } from "@zibby/contracts";
 import {
   type EllipseInsets,
@@ -24,22 +24,22 @@ import {
   type EventFlight,
   appendParticle,
   flightForEvent,
-} from "../../subsystems/components/SubsystemWeb/particle-mapping";
-import { SUBSYSTEM_GLYPH, SUBSYSTEM_ORB_STATE } from "../../subsystems/subsystemVisuals";
-import { activeRunsBySubsystem } from "../subsystemLoad";
+} from "../../departments/components/DepartmentWeb/particle-mapping";
+import { DEPARTMENT_GLYPH, DEPARTMENT_ORB_STATE } from "../../departments/departmentVisuals";
+import { activeRunsByDepartment } from "../departmentLoad";
 
-export enum SubsystemOrbMapTestId {
-  Root = "subsystem-orb-map-root",
+export enum DepartmentOrbMapTestId {
+  Root = "department-orb-map-root",
 }
 
-export interface SubsystemOrbMapProps {
-  subsystems: SubsystemWithStatus[];
+export interface DepartmentOrbMapProps {
+  departments: DepartmentWithStatus[];
   runs: readonly RunView[];
   pipelines: readonly Pipeline[];
   /**
    * The agent catalog — Phase 126g: an agent-kind run attributes to its
-   * `Agent.ownerSubsystem` the same way a pipeline-kind run already attributes
-   * to `Pipeline.ownerSubsystem`, both for `activeRunsBySubsystem`'s orbit-field
+   * `Agent.department` the same way a pipeline-kind run already attributes
+   * to `Pipeline.department`, both for `activeRunsByDepartment`'s orbit-field
    * dot count and for `flightForEvent`'s handoff-flare classification.
    */
   agents: readonly Agent[];
@@ -54,7 +54,7 @@ export interface SubsystemOrbMapProps {
    */
   insets?: Partial<EllipseInsets>;
   onOpenCore: () => void;
-  onSelectSubsystem: (id: SubsystemId) => void;
+  onSelectDepartment: (id: DepartmentId) => void;
 }
 
 /** Core heartbeat curve: calm at rest, busier with more active runs, capped so a
@@ -67,63 +67,63 @@ const CORE_MAX_INTENSITY = 0.7;
  * but the app always renders 4 regardless of active-run count). */
 const CORE_ACTIVE_COUNT = 0;
 
-/** An `EventFlight` endpoint (`SubsystemId | "orb"`) → an `OrbMapFlare`
+/** An `EventFlight` endpoint (`DepartmentId | "orb"`) → an `OrbMapFlare`
  * `fromId`/`toId` — the orb side maps to `OrbMap`'s reserved core id, a real
- * subsystem endpoint passes through unchanged. */
+ * department endpoint passes through unchanged. */
 function toFlareEndpoint(id: EventFlight["from"]): string {
   return id === "orb" ? ORB_MAP_CORE_ID : id;
 }
 
 /**
- * The thin domain→DS adapter (Task 12): maps the subsystem roster + active runs
- * onto `OrbMap`'s generic node/core props, in the fixed `SUBSYSTEMS` registry
+ * The thin domain→DS adapter (Task 12): maps the department roster + active runs
+ * onto `OrbMap`'s generic node/core props, in the fixed `DEPARTMENTS` registry
  * order so the 8-node ring never reflows when the feed order changes.
  *
  * `insets` (Task 13) passes straight through to `OrbMap` — `ChatScreen` supplies
  * the seam's real layout reserves (tasks-panel width, composer band height);
  * omitted, `OrbMap` falls back to its own all-zero default.
  *
- * There is no selection-ring visual on the node itself — picking a subsystem
- * only reports the id via `onSelectSubsystem`; whatever opens on selection
- * (the subsystem drawer) owns showing that it's selected.
+ * There is no selection-ring visual on the node itself — picking a department
+ * only reports the id via `onSelectDepartment`; whatever opens on selection
+ * (the department drawer) owns showing that it's selected.
  *
  * Task 13b: owns the comet handoff-flares' state end to end (the gap the retired
  * `CosmicScene`'s `emitFlight` used to close). Subscribes to the shared
  * `RunEventsProvider` bus once and, for every event, runs the SAME pure
  * `flightForEvent` classifier the old scene's WebGL particles used (real
  * dispatch/report transitions only — never a timer, never a guess): a
- * `pipeline-runs` event that resolves to an owning subsystem becomes a flare
- * from the core to that subsystem (`running`, a dispatch) or from the
- * subsystem back to the core (`done`/`failed`/`parked`, a report). Flares are
+ * `pipeline-runs` event that resolves to an owning department becomes a flare
+ * from the core to that department (`running`, a dispatch) or from the
+ * department back to the core (`done`/`failed`/`parked`, a report). Flares are
  * appended and bounded by `particle-mapping.ts`'s own `MAX_PARTICLES` cap (the
  * SAME "~12, thin the tail" bound the old scene enforced) and pruned via
  * `OrbMap`'s `onFlareDone` once each comet's lifetime ends — fully internal:
  * the caller never drives `flares` itself.
  */
-export function SubsystemOrbMap({
-  subsystems,
+export function DepartmentOrbMap({
+  departments,
   runs,
   pipelines,
   agents,
   thinking,
   insets,
   onOpenCore,
-  onSelectSubsystem,
-}: SubsystemOrbMapProps) {
-  const t = useTranslations("subsystems");
+  onSelectDepartment,
+}: DepartmentOrbMapProps) {
+  const t = useTranslations("departments");
 
-  const statusById = new Map<SubsystemId, SubsystemWithStatus>(subsystems.map((s) => [s.id, s]));
-  const counts = activeRunsBySubsystem(runs, pipelines, agents);
+  const statusById = new Map<DepartmentId, DepartmentWithStatus>(departments.map((s) => [s.id, s]));
+  const counts = activeRunsByDepartment(runs, pipelines, agents);
 
-  const nodes: OrbMapNode[] = SUBSYSTEMS.map((sub) => {
+  const nodes: OrbMapNode[] = DEPARTMENTS.map((sub) => {
     const state = statusById.get(sub.id)?.state ?? "idle";
     return {
       id: sub.id,
       hex: sub.color,
-      state: SUBSYSTEM_ORB_STATE[state],
+      state: DEPARTMENT_ORB_STATE[state],
       label: sub.name,
       ariaLabel: t("nodeAria", { name: sub.name, state: t(`state.${state}`) }),
-      icon: <Icon name={SUBSYSTEM_GLYPH[sub.id]} size="lg" />,
+      icon: <Icon name={DEPARTMENT_GLYPH[sub.id]} size="lg" />,
       activeCount: counts[sub.id] ?? 0,
     };
   });
@@ -163,8 +163,8 @@ export function SubsystemOrbMap({
       );
       if (!flight) return;
       flareSeq.current += 1;
-      const color = SUBSYSTEMS.find((s) => s.id === flight.subsystemId)?.color;
-      const id = `flare-${flight.subsystemId}-${event.runId ?? "run"}-${event.status ?? "status"}-${Date.now()}-${flareSeq.current}`;
+      const color = DEPARTMENTS.find((s) => s.id === flight.departmentId)?.color;
+      const id = `flare-${flight.departmentId}-${event.runId ?? "run"}-${event.status ?? "status"}-${Date.now()}-${flareSeq.current}`;
       const next: OrbMapFlare = {
         id,
         fromId: toFlareEndpoint(flight.from),
@@ -182,7 +182,7 @@ export function SubsystemOrbMap({
   }, []);
 
   return (
-    <div data-testid={SubsystemOrbMapTestId.Root}>
+    <div data-testid={DepartmentOrbMapTestId.Root}>
       <OrbMap
         core={{
           hex: resolveStateToneHex("accent"),
@@ -198,7 +198,7 @@ export function SubsystemOrbMap({
         nodes={nodes}
         onFlareDone={handleFlareDone}
         onSelectCore={onOpenCore}
-        onSelectNode={(id) => onSelectSubsystem(id as SubsystemId)}
+        onSelectNode={(id) => onSelectDepartment(id as DepartmentId)}
       />
     </div>
   );

@@ -25,7 +25,7 @@ import { IntegrationsModule } from "./integrations/integrations.module";
 import { KbModule } from "./kb/kb.module";
 import { LimitResumeModule } from "./limits-resume/limit-resume.module";
 import { LimitsModule } from "./limits/limits.module";
-import { MaestroModule } from "./maestro/maestro.module";
+import { ReleaseModule } from "./release/release.module";
 import { MandateModule } from "./mandate/mandate.module";
 import { McpModule } from "./mcp/mcp.module";
 import { MemoryModule } from "./memory/memory.module";
@@ -43,7 +43,7 @@ import { SelfModule } from "./self/self.module";
 import { SelfKnowledgeModule } from "./self-knowledge/self-knowledge.module";
 import { SkillsModule } from "./skills/skills.module";
 import { SpeechModule } from "./speech/speech.module";
-import { SubsystemsModule } from "./subsystems/subsystems.module";
+import { DepartmentsModule } from "./departments/departments.module";
 import { SystemModule } from "./system/system.module";
 import { AttachmentSetRefsModule } from "./tasks/attachment-set-refs.module";
 import { TasksModule } from "./tasks/tasks.module";
@@ -88,11 +88,11 @@ import { TeamsModule } from "./teams/teams.module";
     ChannelsModule,
     MachineModule,
     MonitorsModule,
-    MaestroModule,
+    ReleaseModule,
     ReviewLearningModule,
     HandoffModule,
     HealthModule,
-    SubsystemsModule,
+    DepartmentsModule,
     SelfModule,
     SelfKnowledgeModule,
     LimitsModule,

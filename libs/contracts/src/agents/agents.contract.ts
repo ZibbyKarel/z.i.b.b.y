@@ -18,8 +18,8 @@ export const agentsContract = c.router(
       path: "/agents",
       body: CreateAgentSchema,
       responses: {
-        // 422: missing `ownerSubsystem` (NS2 F1b — every new agent must be
-        // attributed to a subsystem at create time; pre-F1 agents are exempt,
+        // 422: missing `department` (NS2 F1b — every new agent must be
+        // attributed to a department at create time; pre-F1 agents are exempt,
         // backfilled by the owner-backfill sweep instead).
         201: AgentSchema,
         409: ErrorSchema,

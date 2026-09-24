@@ -12,7 +12,7 @@ export interface ProjectTeamPanelProps {
   teamId?: string;
 }
 
-/** The `SelectField` sentinel value for "no team" — an id can never be empty. */
+/** The `SelectField` security value for "no team" — an id can never be empty. */
 const NO_TEAM = "";
 
 /**

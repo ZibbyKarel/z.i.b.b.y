@@ -1,7 +1,7 @@
-/** Raised when no subsystem in the registry matches the requested id. */
-export class SubsystemNotFoundError extends Error {
+/** Raised when no department in the registry matches the requested id. */
+export class DepartmentNotFoundError extends Error {
   constructor(public readonly id: string) {
-    super(`Subsystem "${id}" not found`);
-    this.name = "SubsystemNotFoundError";
+    super(`Department "${id}" not found`);
+    this.name = "DepartmentNotFoundError";
   }
 }

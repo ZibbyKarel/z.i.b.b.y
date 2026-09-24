@@ -1,6 +1,6 @@
 "use client";
 
-import type { GlobalGateRule, Project, SubsystemWithStatus } from "@zibby/contracts";
+import type { DepartmentWithStatus, GlobalGateRule, Project } from "@zibby/contracts";
 import { Divider, Icon, Stack, Tag, Typography } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
@@ -26,11 +26,11 @@ export enum GatesTabTestId {
 }
 
 export interface GatesTabProps {
-  subsystem: SubsystemWithStatus;
+  department: DepartmentWithStatus;
 }
 
 /**
- * One rule rendered as a mad-libs sentence — „Než **[subsystém]** udělá **[akce]**
+ * One rule rendered as a mad-libs sentence — „Než **[oddělení]** udělá **[akce]**
  * → **[cíl]** → **[chování]**" (design doc, phase-87 plan §2). `[akce] → [cíl]` reuses
  * `MatcherText` verbatim (it already renders each match condition as `lead → pattern`,
  * exactly the akce/cíl split), `[chování]` is the decision — for `ask`, the resolve
@@ -41,12 +41,12 @@ export interface GatesTabProps {
  */
 function GateRuleSentenceRow({
   rule,
-  subsystemName,
+  departmentName,
 }: {
   rule: GlobalGateRule;
-  subsystemName: string;
+  departmentName: string;
 }) {
-  const t = useTranslations("subsystems.gates");
+  const t = useTranslations("departments.gates");
   const tg = useTranslations("gates");
   return (
     // `HudPanel` has no `data-testid` passthrough (it destructures a fixed prop
@@ -55,7 +55,7 @@ function GateRuleSentenceRow({
       <HudPanel padding="150">
         <Stack wrap align="center" direction="row" gap="75">
           <Typography size="sm" type="text" variant="secondary">
-            {t("sentencePrefix", { subject: subsystemName })}
+            {t("sentencePrefix", { subject: departmentName })}
           </Typography>
           <MatcherText andLabel={tg("and")} match={rule.match} />
           <Icon name="arrow" size="xs" tone="faint" />
@@ -87,7 +87,7 @@ function GateRuleSentenceRow({
  * implicit" reasoning extends to "never duplicate an editor").
  */
 function ProjectAutopilotRow({ project }: { project: Project }) {
-  const t = useTranslations("subsystems.gates");
+  const t = useTranslations("departments.gates");
   const policy = project.autonomy_policy ?? {};
   const canDoAlone = policy.can_do_alone ?? [];
   const alwaysAsk = policy.always_ask ?? [];
@@ -159,7 +159,7 @@ function hasAutonomyPolicy(project: Project): boolean {
  * honest empty state when none do.
  */
 function AutopilotSummary() {
-  const t = useTranslations("subsystems.gates");
+  const t = useTranslations("departments.gates");
   const { data: projects = [] } = useProjectsQuery();
   const withPolicy = projects.filter(hasAutonomyPolicy);
 
@@ -191,7 +191,7 @@ function AutopilotSummary() {
 }
 
 /**
- * Gates tab (Phase 87, design doc "the subsystem's slice of gate rules, mad-libs
+ * Gates tab (Phase 87, design doc "the department's slice of gate rules, mad-libs
  * rule sentences, the locked floor visible inside the same UI, plus the per-project
  * autopilot dial"). RECON CORRECTION carried from the phase-87 plan: gate rules are
  * a GLOBAL catalog (`.zibby/data/gate-rules.json`), not project-scoped data —
@@ -200,13 +200,13 @@ function AutopilotSummary() {
  * over that existing global catalog, exactly the design's own "data lives
  * elsewhere, the tab is a filtered lens" principle. Since NS2 F3a the tag this
  * tab filters by is LOAD-BEARING, not mere attribution: a rule tagged for this
- * subsystem is loaded by the gate evaluator as a third bucket (own rules →
- * subsystem rules → locked floor, strictest wins) for every run of a unit this
- * subsystem owns — editing here changes what those runs are allowed to do
+ * department is loaded by the gate evaluator as a third bucket (own rules →
+ * department rules → locked floor, strictest wins) for every run of a unit this
+ * department owns — editing here changes what those runs are allowed to do
  * (tighten-only; the floor still cannot be weakened).
  *
  * Three blocks, top to bottom:
- * 1. Mad-libs sentence rendering of this subsystem's own tagged rules — a plain-
+ * 1. Mad-libs sentence rendering of this department's own tagged rules — a plain-
  *    Czech READ view (`GateRuleSentenceRow`). v1 is rendering only; a full
  *    sentence-builder AUTHORING UI (typing a sentence to construct match/decision/
  *    resolve) is deferred until the per-project open question above is resolved —
@@ -215,17 +215,17 @@ function AutopilotSummary() {
  * 2. A per-project autopilot dial for every project with a policy set (read-only
  *    + link out; Phase 108 dropped the single "active project" this used to
  *    read — there is no global project scope left in the app).
- * 3. The full editable catalog, scoped via `GateRulesSection`'s `ownerSubsystem`
+ * 3. The full editable catalog, scoped via `GateRulesSection`'s `department`
  *    prop (Phase 87 addition) — create/edit/delete still go through the EXISTING
  *    `RuleModal` form, unchanged. `GateRulesSection` already renders the locked
  *    system floor (`SystemFloorPanel`) internally, UNFILTERED regardless of the
- *    `ownerSubsystem` prop ("the floor is visible, not hidden") — this tab does not
+ *    `department` prop ("the floor is visible, not hidden") — this tab does not
  *    render a second copy of it.
  */
-export function GatesTab({ subsystem }: GatesTabProps) {
-  const t = useTranslations("subsystems.gates");
+export function GatesTab({ department }: GatesTabProps) {
+  const t = useTranslations("departments.gates");
   const { data: allRules = [] } = useGateRulesQuery();
-  const ownRules = allRules.filter((r) => r.ownerSubsystem === subsystem.id);
+  const ownRules = allRules.filter((r) => r.department === department.id);
 
   return (
     <Stack data-testid={GatesTabTestId.Root} gap="200">
@@ -240,7 +240,7 @@ export function GatesTab({ subsystem }: GatesTabProps) {
           ) : (
             <Stack gap="100">
               {ownRules.map((rule) => (
-                <GateRuleSentenceRow key={rule.id} rule={rule} subsystemName={subsystem.name} />
+                <GateRuleSentenceRow departmentName={department.name} key={rule.id} rule={rule} />
               ))}
             </Stack>
           )}
@@ -252,7 +252,7 @@ export function GatesTab({ subsystem }: GatesTabProps) {
       <Divider />
 
       <div data-testid={GatesTabTestId.Catalog}>
-        <GateRulesSection ownerSubsystem={subsystem.id} />
+        <GateRulesSection department={department.id} />
       </div>
     </Stack>
   );

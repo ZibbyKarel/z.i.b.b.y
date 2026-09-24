@@ -569,7 +569,7 @@ describe("MemoryDistillerService — import ingest front-phase (phase 112)", () 
     expect(vault.updates[0]?.id).toBe("halda-survives");
   });
 
-  it("F4a: a run owned by a scout-owned pipeline files a digest AND auto-creates scout's shelf", async () => {
+  it("F4a: a run owned by a research-owned pipeline files a digest AND auto-creates research's shelf", async () => {
     const pipelineCwd = await fs.mkdtemp(path.join(os.tmpdir(), "distiller-pipeline-"));
     try {
       const vault = makeVault();
@@ -583,7 +583,7 @@ describe("MemoryDistillerService — import ingest front-phase (phase 112)", () 
           readLatestArtifact: async () => null,
         } as unknown as PipelineRunnerService,
         pipelinesStore: {
-          get: async () => ({ ownerSubsystem: "scout" }),
+          get: async () => ({ department: "rnd" }),
         } as unknown as PipelinesStorageService,
       });
 
@@ -591,7 +591,7 @@ describe("MemoryDistillerService — import ingest front-phase (phase 112)", () 
 
       expect(ref).toBe("memory-distill:1");
       expect(vault.indexed).toContainEqual({
-        moc: "subsystem-scout-moc",
+        moc: "department-rnd-moc",
         target: "distilled-2026-07-10",
       });
     } finally {
@@ -599,7 +599,7 @@ describe("MemoryDistillerService — import ingest front-phase (phase 112)", () 
     }
   });
 
-  it("F4a: a mixed batch (scout pipeline + forge agent + unowned goal) links exactly two shelves", async () => {
+  it("F4a: a mixed batch (research pipeline + dev agent + unowned goal) links exactly two shelves", async () => {
     const vault = makeVault();
     const pipelineCwd = await fs.mkdtemp(path.join(os.tmpdir(), "distiller-pipeline-"));
     const agentCwd = await fs.mkdtemp(path.join(os.tmpdir(), "distiller-agent-"));
@@ -634,24 +634,24 @@ describe("MemoryDistillerService — import ingest front-phase (phase 112)", () 
           ],
         } as unknown as GoalRunnerService,
         pipelinesStore: {
-          get: async () => ({ ownerSubsystem: "scout" }),
+          get: async () => ({ department: "rnd" }),
         } as unknown as PipelinesStorageService,
         agentsStore: {
-          get: async () => ({ ownerSubsystem: "forge" }),
+          get: async () => ({ department: "dev" }),
         } as unknown as AgentsStorageService,
       });
 
       const ref = await service.distill(now);
 
       expect(ref).toBe("memory-distill:3");
-      const shelfLinks = vault.indexed.filter((i) => i.moc.startsWith("subsystem-"));
+      const shelfLinks = vault.indexed.filter((i) => i.moc.startsWith("department-"));
       expect(shelfLinks).toHaveLength(2);
       expect(shelfLinks).toContainEqual({
-        moc: "subsystem-scout-moc",
+        moc: "department-rnd-moc",
         target: "distilled-2026-07-10",
       });
       expect(shelfLinks).toContainEqual({
-        moc: "subsystem-forge-moc",
+        moc: "department-dev-moc",
         target: "distilled-2026-07-10",
       });
     } finally {
@@ -666,7 +666,7 @@ describe("MemoryDistillerService — import ingest front-phase (phase 112)", () 
     const vault = makeVault();
     const originalUpdateIndex = vault.updateIndex;
     vault.updateIndex = vi.fn(async (moc: string, target: string) => {
-      if (moc.startsWith("subsystem-")) throw new Error("shelf write boom");
+      if (moc.startsWith("department-")) throw new Error("shelf write boom");
       return originalUpdateIndex(moc, target);
     });
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -681,7 +681,7 @@ describe("MemoryDistillerService — import ingest front-phase (phase 112)", () 
           readLatestArtifact: async () => null,
         } as unknown as PipelineRunnerService,
         pipelinesStore: {
-          get: async () => ({ ownerSubsystem: "scout" }),
+          get: async () => ({ department: "rnd" }),
         } as unknown as PipelinesStorageService,
       });
 
@@ -689,7 +689,7 @@ describe("MemoryDistillerService — import ingest front-phase (phase 112)", () 
 
       expect(ref).toBe("memory-distill:1");
       expect(vault.notes.has("distilled-2026-07-10")).toBe(true);
-      expect(vault.indexed.some((i) => i.moc.startsWith("subsystem-"))).toBe(false);
+      expect(vault.indexed.some((i) => i.moc.startsWith("department-"))).toBe(false);
     } finally {
       warn.mockRestore();
       await fs.rm(pipelineCwd, { recursive: true, force: true });

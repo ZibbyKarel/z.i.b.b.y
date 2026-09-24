@@ -61,24 +61,24 @@ describe("GateRulesSection — delete confirm dialog (Phase 18.1)", () => {
   });
 });
 
-// Phase 87: the `ownerSubsystem` filter prop is the Gates tab's third call site —
+// Phase 87: the `department` filter prop is the Gates tab's third call site —
 // Settings (the other call site above; F10 deleted the standalone `/gates` page
 // that used to be the third, O8) never passes it, so this is purely additive
 // behavior gated behind an opt-in prop.
-describe("GateRulesSection — ownerSubsystem filter + auto-tag (Phase 87)", () => {
-  const forgeRule: GlobalGateRule = {
-    id: "gr-forge",
-    name: "Forge rule",
+describe("GateRulesSection — department filter + auto-tag (Phase 87)", () => {
+  const devRule: GlobalGateRule = {
+    id: "gr-dev",
+    name: "Dev rule",
     match: [{ type: "action", action: "deploy" }],
     decision: "allow",
-    ownerSubsystem: "forge",
+    department: "dev",
   };
-  const pulsRule: GlobalGateRule = {
-    id: "gr-puls",
-    name: "Puls rule",
+  const opsRule: GlobalGateRule = {
+    id: "gr-ops",
+    name: "Ops rule",
     match: [{ type: "action", action: "notify" }],
     decision: "notify",
-    ownerSubsystem: "puls",
+    department: "ops",
   };
   const untaggedRule: GlobalGateRule = {
     id: "gr-global",
@@ -89,7 +89,7 @@ describe("GateRulesSection — ownerSubsystem filter + auto-tag (Phase 87)", () 
 
   beforeEach(() => {
     hooks.rules = {
-      data: [forgeRule, pulsRule, untaggedRule],
+      data: [devRule, opsRule, untaggedRule],
       isPending: false,
       isError: false,
       refetch: vi.fn(),
@@ -98,45 +98,45 @@ describe("GateRulesSection — ownerSubsystem filter + auto-tag (Phase 87)", () 
     hooks.update.mockClear();
   });
 
-  it("with no ownerSubsystem prop, shows every rule (today's two call sites)", () => {
+  it("with no department prop, shows every rule (today's two call sites)", () => {
     render(<GateRulesSection />);
-    expect(screen.getByText("Forge rule")).toBeInTheDocument();
-    expect(screen.getByText("Puls rule")).toBeInTheDocument();
+    expect(screen.getByText("Dev rule")).toBeInTheDocument();
+    expect(screen.getByText("Ops rule")).toBeInTheDocument();
     expect(screen.getByText("Global rule")).toBeInTheDocument();
   });
 
-  it("with ownerSubsystem set, shows only that subsystem's tagged rules", () => {
-    render(<GateRulesSection ownerSubsystem="forge" />);
-    expect(screen.getByText("Forge rule")).toBeInTheDocument();
-    expect(screen.queryByText("Puls rule")).not.toBeInTheDocument();
+  it("with department set, shows only that department's tagged rules", () => {
+    render(<GateRulesSection department="dev" />);
+    expect(screen.getByText("Dev rule")).toBeInTheDocument();
+    expect(screen.queryByText("Ops rule")).not.toBeInTheDocument();
     expect(screen.queryByText("Global rule")).not.toBeInTheDocument();
   });
 
-  it("auto-tags a rule created from a subsystem-scoped call site", async () => {
-    render(<GateRulesSection ownerSubsystem="forge" />);
+  it("auto-tags a rule created from a department-scoped call site", async () => {
+    render(<GateRulesSection department="dev" />);
     await userEvent.click(screen.getByRole("button", { name: "Přidat pravidlo" }));
     await userEvent.type(screen.getByLabelText("Sloveso akce"), "merge");
     await userEvent.click(screen.getByRole("button", { name: "Uložit pravidlo" }));
 
     expect(hooks.create).toHaveBeenCalledTimes(1);
     const [callArgs] = hooks.create.mock.calls[0]!;
-    expect(callArgs.body.ownerSubsystem).toBe("forge");
+    expect(callArgs.body.department).toBe("dev");
   });
 
-  // NS2 F3a: a tagged rule is load-bearing (a per-subsystem evaluation bucket),
+  // NS2 F3a: a tagged rule is load-bearing (a per-department evaluation bucket),
   // so the card names its owner scope with a glyph+name Tag.
-  it("renders the owner-subsystem tag exactly on tagged rules (NS2 F3a)", () => {
+  it("renders the owner-department tag exactly on tagged rules (NS2 F3a)", () => {
     render(<GateRulesSection />);
     const tags = screen.getAllByTestId("global-rule-card-owner-tag");
-    // forgeRule + pulsRule are tagged; untaggedRule renders no owner tag.
+    // devRule + opsRule are tagged; untaggedRule renders no owner tag.
     expect(tags).toHaveLength(2);
-    expect(tags[0]).toHaveTextContent("Forge");
-    expect(tags[1]).toHaveTextContent("Puls");
+    expect(tags[0]).toHaveTextContent("Dev");
+    expect(tags[1]).toHaveTextContent("Ops");
   });
 
   it("preserves an existing tag on edit, even though the edit form has no tag field", async () => {
     render(<GateRulesSection />);
-    // Editing the untagged call site's own `forgeRule` (no `ownerSubsystem`
+    // Editing the untagged call site's own `devRule` (no `department`
     // prop) must not drop its existing tag.
     const editButtons = screen.getAllByRole("button", { name: "Upravit" });
     await userEvent.click(editButtons[0]!);
@@ -144,6 +144,6 @@ describe("GateRulesSection — ownerSubsystem filter + auto-tag (Phase 87)", () 
 
     expect(hooks.update).toHaveBeenCalledTimes(1);
     const [callArgs] = hooks.update.mock.calls[0]!;
-    expect(callArgs.body.ownerSubsystem).toBe("forge");
+    expect(callArgs.body.department).toBe("dev");
   });
 });

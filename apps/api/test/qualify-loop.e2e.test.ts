@@ -92,7 +92,7 @@ describe("Qualify loop (e2e)", () => {
           phase("z"),
         ],
         instructions: "a → review (qualify) → z",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
 

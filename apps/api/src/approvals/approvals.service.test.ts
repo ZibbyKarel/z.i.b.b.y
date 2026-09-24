@@ -127,7 +127,7 @@ describe("ApprovalsService", () => {
     await expect(service.get("nope")).rejects.toBeInstanceOf(ApprovalNotFoundError);
   });
 
-  describe("ownerSubsystem tagging (NS2 F3c)", () => {
+  describe("department tagging (NS2 F3c)", () => {
     const makeActivity = () => ({ record: vi.fn().mockResolvedValue(undefined) });
 
     it("persists the tag and stamps it into the approval-requested activity refs", async () => {
@@ -140,15 +140,15 @@ describe("ApprovalsService", () => {
         action: "git.push",
         detail: "push the fix branch",
         risk: "medium",
-        ownerSubsystem: "forge",
+        department: "dev",
       });
-      expect(created.ownerSubsystem).toBe("forge");
+      expect(created.department).toBe("dev");
       const persisted = await tagged.get(created.id);
-      expect(persisted.ownerSubsystem).toBe("forge");
+      expect(persisted.department).toBe("dev");
       expect(activity.record).toHaveBeenCalledWith(
         expect.objectContaining({
           kind: "approval-requested",
-          refs: expect.objectContaining({ ownerSubsystem: "forge" }),
+          refs: expect.objectContaining({ department: "dev" }),
         }),
       );
     });
@@ -164,10 +164,10 @@ describe("ApprovalsService", () => {
         detail: "rename",
         risk: "high",
       });
-      expect(created.ownerSubsystem).toBeUndefined();
-      expect("ownerSubsystem" in created).toBe(false);
+      expect(created.department).toBeUndefined();
+      expect("department" in created).toBe(false);
       const refs = activity.record.mock.calls[0]?.[0]?.refs as Record<string, unknown>;
-      expect("ownerSubsystem" in refs).toBe(false);
+      expect("department" in refs).toBe(false);
     });
   });
 

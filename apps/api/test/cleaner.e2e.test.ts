@@ -104,7 +104,7 @@ describe("Cleaner agent (Variant B, e2e)", () => {
         name: "Cleaner",
         instructions: "tidies directories",
         risk: "high",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
   });

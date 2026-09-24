@@ -145,8 +145,8 @@ export class PipelinesStorageService extends MarkdownEntityStore<Pipeline> {
     }
     // Delivery sinks (default [] when absent, so older pipelines parse unchanged).
     if (data.outputs !== undefined) candidate.outputs = data.outputs;
-    // Subsystem attribution (Phase 81) — absent stays absent, no phantom rewrite.
-    if (typeof data.ownerSubsystem === "string") candidate.ownerSubsystem = data.ownerSubsystem;
+    // Department attribution (Phase 81) — absent stays absent, no phantom rewrite.
+    if (typeof data.department === "string") candidate.department = data.department;
     // Ladder rung (NS2 F9). Absent falls through to the schema's `"standard"`
     // default, so pre-F9 pipelines parse unchanged. This MUST be copied: the
     // schema defaulting the field means a missing copy here is silent — every
@@ -167,7 +167,7 @@ export class PipelinesStorageService extends MarkdownEntityStore<Pipeline> {
     if (pipeline.desc !== undefined) data.desc = pipeline.desc;
     if (pipeline.avatar !== undefined) data.avatar = pipeline.avatar;
     if (pipeline.outputs.length > 0) data.outputs = pipeline.outputs;
-    if (pipeline.ownerSubsystem !== undefined) data.ownerSubsystem = pipeline.ownerSubsystem;
+    if (pipeline.department !== undefined) data.department = pipeline.department;
     // Always written, unlike the optional fields above: `complexity` is schema-
     // defaulted, so it is never `undefined` on a parsed entity, and omitting it
     // here would silently strip the rung from disk on any update round-trip.

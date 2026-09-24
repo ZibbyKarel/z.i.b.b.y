@@ -22,9 +22,9 @@ export interface OrbNodeProps {
   diameter: number;
   /** Identity color of the orb body. */
   hex: string;
-  /** Conversational/subsystem state — selects motion, chrome color, and ping visibility. */
+  /** Conversational/department state — selects motion, chrome color, and ping visibility. */
   state: OrbState;
-  /** Subsystem name shown under the orb. */
+  /** Department name shown under the orb. */
   label: string;
   /** Accessible name for the root button — defaults to `label` when omitted.
    * Lets a caller announce more than what's visually shown (e.g. name + state)
@@ -52,7 +52,7 @@ function buildFloatConfig(nodeId: string): FloatConfig {
 }
 
 /**
- * A composed subsystem node: a WebGL {@link Orb} (identity color) wrapped in state
+ * A composed department node: a WebGL {@link Orb} (identity color) wrapped in state
  * chrome — a contact shadow, an {@link OrbitField} of active-task dots, a state-colored
  * halo, an attention ping for `await`/`incident`/`report`, and a per-node seeded float
  * drift — plus a centered icon overlay and a name/status label row.

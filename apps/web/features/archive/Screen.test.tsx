@@ -2,18 +2,18 @@ import { fireEvent, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen, within } from "../../test/render";
 import type { RunView } from "../runs/run";
-import { ArchiveSubsystemFilterTestId } from "./components/ArchiveSubsystemFilter";
+import { ArchiveDepartmentFilterTestId } from "./components/ArchiveDepartmentFilter";
 import { Screen } from "./Screen";
 
 /**
  * F2 (`docs/plans/hud2chat-F2-archive.md`): the `/archiv` page's own Screen-level
- * wiring — search, the subsystem multi-select, `?run=` deep-link selection, and the
- * honest empty states. Search/subsystem filtering and pagination all run server-side
+ * wiring — search, the department multi-select, `?run=` deep-link selection, and the
+ * honest empty states. Search/department filtering and pagination all run server-side
  * now (`TaskRunsService.listArchivedTaskRuns`/`getArchiveCounts`), so this suite mocks
- * `./queries` and asserts the WIRING (the debounced search value and the subsystem
+ * `./queries` and asserts the WIRING (the debounced search value and the department
  * selection reach the query hooks; rows render whatever the (mocked) hook returns) —
  * the actual filter/sort/cursor logic is unit-tested in
- * `apps/api/src/tasks/task-runs.service.test.ts`. `ArchiveRow`/`ArchiveSubsystemFilter`
+ * `apps/api/src/tasks/task-runs.service.test.ts`. `ArchiveRow`/`ArchiveDepartmentFilter`
  * are exercised for real (each already has its own focused unit suite); only
  * `RunDetail` — a heavy, already-tested composite — is stubbed, mirroring the runs
  * `Screen.test.tsx`'s own `vi.mock("./components/RunDetail", …)`.
@@ -36,7 +36,7 @@ const { hooks } = vi.hoisted(() => ({
     total: 0,
     countsPending: false,
     countsError: false,
-    pipelines: [] as { id: string; ownerSubsystem?: string }[],
+    pipelines: [] as { id: string; department?: string }[],
   },
 }));
 const refetchItems = vi.fn();
@@ -129,7 +129,7 @@ describe("Archive Screen (F2)", () => {
     hooks.total = 0;
     hooks.countsPending = false;
     hooks.countsError = false;
-    hooks.pipelines = [{ id: "delivery", ownerSubsystem: "forge" }];
+    hooks.pipelines = [{ id: "delivery", department: "dev" }];
     refetchItems.mockClear();
     refetchCounts.mockClear();
     fetchNextPage.mockClear();
@@ -169,20 +169,20 @@ describe("Archive Screen (F2)", () => {
     );
   });
 
-  it("passes the subsystem multi-select's selection through to the server query", () => {
-    hooks.items = [run({ runId: "run-a", title: "Forge task" })];
+  it("passes the department multi-select's selection through to the server query", () => {
+    hooks.items = [run({ runId: "run-a", title: "Dev task" })];
     hooks.total = 1;
-    hooks.counts = { forge: 1 };
+    hooks.counts = { dev: 1 };
     render(<Screen />);
 
-    fireEvent.click(screen.getByTestId(ArchiveSubsystemFilterTestId.Trigger));
-    const options = screen.getAllByTestId(ArchiveSubsystemFilterTestId.Option);
-    const forgeOption = options.find((el) => el.getAttribute("data-subsystem-id") === "forge");
-    expect(forgeOption).toBeDefined();
-    fireEvent.click(within(forgeOption!).getByText("Forge"));
+    fireEvent.click(screen.getByTestId(ArchiveDepartmentFilterTestId.Trigger));
+    const options = screen.getAllByTestId(ArchiveDepartmentFilterTestId.Option);
+    const devOption = options.find((el) => el.getAttribute("data-department-id") === "dev");
+    expect(devOption).toBeDefined();
+    fireEvent.click(within(devOption!).getByText("Development"));
 
     expect(archiveRunsArgs).toHaveBeenLastCalledWith(
-      expect.objectContaining({ subsystems: ["forge"] }),
+      expect.objectContaining({ departments: ["dev"] }),
     );
   });
 
@@ -293,7 +293,7 @@ describe("Archive Screen (F2)", () => {
   it("renders QueryError when only the items query fails and counts succeeds (the real bug's shape)", () => {
     hooks.itemsError = true;
     hooks.countsError = false;
-    hooks.counts = { forge: 3 };
+    hooks.counts = { dev: 3 };
     hooks.total = 3;
     render(<Screen />);
     expect(screen.getByText("Nepodařilo se načíst")).toBeInTheDocument();

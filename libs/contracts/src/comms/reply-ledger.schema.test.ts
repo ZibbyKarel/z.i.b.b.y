@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ApprovalRunKindSchema,
-  HeraldGraduationSchema,
+  CommsGraduationSchema,
   ReplyLedgerEntrySchema,
   ReplyLedgerOutcomeSchema,
   TriageCategorySchema,
@@ -66,9 +66,9 @@ describe("ReplyLedgerEntrySchema", () => {
   });
 });
 
-describe("HeraldGraduationSchema", () => {
+describe("CommsGraduationSchema", () => {
   it("accepts a graduated pair", () => {
-    const parsed = HeraldGraduationSchema.safeParse({
+    const parsed = CommsGraduationSchema.safeParse({
       integrationId: "team",
       kind: "slack",
       category: "question",
@@ -80,7 +80,7 @@ describe("HeraldGraduationSchema", () => {
   });
 
   it("rejects a non-positive evidenceCount", () => {
-    const parsed = HeraldGraduationSchema.safeParse({
+    const parsed = CommsGraduationSchema.safeParse({
       integrationId: "team",
       kind: "slack",
       category: "question",
@@ -93,7 +93,7 @@ describe("HeraldGraduationSchema", () => {
 });
 
 describe("ApprovalRunKindSchema", () => {
-  it("includes herald-graduation", () => {
-    expect(ApprovalRunKindSchema.safeParse("herald-graduation").success).toBe(true);
+  it("includes comms-graduation", () => {
+    expect(ApprovalRunKindSchema.safeParse("comms-graduation").success).toBe(true);
   });
 });

@@ -34,7 +34,7 @@ function selectPipelines(response: { body: ContractPipeline[] }): Pipeline[] {
     })),
     outputs: p.outputs,
     avatar: p.avatar,
-    ownerSubsystem: p.ownerSubsystem,
+    department: p.department,
     complexity: p.complexity,
   }));
 }

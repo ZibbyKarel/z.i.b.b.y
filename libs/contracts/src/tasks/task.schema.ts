@@ -3,7 +3,7 @@ import { AvatarSchema, IsoDateTimeSchema } from "../common.schema";
 import { AgentIdSchema } from "../agents/agent.schema";
 import { MakerRefSchema, VerifierSpecSchema } from "../goals/goal.schema";
 import { ProjectIdSchema } from "../projects/project.schema";
-import { SubsystemIdSchema } from "../subsystems/subsystem.schema";
+import { DepartmentIdSchema } from "../departments/department.schema";
 import { TeamIdSchema } from "../teams/team.schema";
 
 /**
@@ -71,31 +71,31 @@ export const OrchestratorTaskTargetSchema = z.object({
 });
 
 /**
- * Phase 91 — a named subsystem as a routing destination (the `@`-mention /
- * "dispatch to Herald" case). Like goal/chain it is EXPLICIT-ONLY: the top-level
+ * Phase 91 — a named department as a routing destination (the `@`-mention /
+ * "dispatch to Comms" case). Like goal/chain it is EXPLICIT-ONLY: the top-level
  * `TaskClassifierService` never emits this kind (scope guard — see
- * `docs/plans/phase-91-subsystem-dispatch.md`). It never reaches a stored run
+ * `docs/plans/phase-91-department-dispatch.md`). It never reaches a stored run
  * record either — `TaskSchedulerService` resolves it to a concrete
- * `{ kind: "pipeline" }` target (the subsystem's one owned pipeline, or the
+ * `{ kind: "pipeline" }` target (the department's one owned pipeline, or the
  * scoped classifier's pick among several) before dispatch, so a run's "via
- * <subsystem>" attribution rides for free on the dispatched pipeline's own
- * `Pipeline.ownerSubsystem` (Phase 81) — no new run-level field needed.
+ * <department>" attribution rides for free on the dispatched pipeline's own
+ * `Pipeline.department` (Phase 81) — no new run-level field needed.
  */
-export const SubsystemTaskTargetSchema = z.object({
-  kind: z.literal("subsystem"),
-  id: SubsystemIdSchema,
+export const DepartmentTaskTargetSchema = z.object({
+  kind: z.literal("department"),
+  id: DepartmentIdSchema,
   ...taskTargetDisplayShape,
 });
 
 /**
  * A destination for a free-text task: a stored agent, a stored pipeline, a
- * named subsystem (Phase 91, explicit-only), or the orchestrator fallback.
+ * named department (Phase 91, explicit-only), or the orchestrator fallback.
  */
 export const TaskTargetSchema = z.discriminatedUnion("kind", [
   AgentTaskTargetSchema,
   PipelineTaskTargetSchema,
   GoalTaskTargetSchema,
-  SubsystemTaskTargetSchema,
+  DepartmentTaskTargetSchema,
   OrchestratorTaskTargetSchema,
 ]);
 export type TaskTarget = z.infer<typeof TaskTargetSchema>;
@@ -196,12 +196,12 @@ export const ClassifyTaskInputSchema = z.object({
    * The sink the finished work MUST land in, when the caller already knows it —
    * and therefore a hard constraint on which units may be ranked at all, not a
    * hint. `{ type: "pr" }` means "this task has to end in a PR-shaped code
-   * change", which only a subsystem's PR-capable pipeline can honour; see
+   * change", which only a department's PR-capable pipeline can honour; see
    * `TaskClassifierService.prCapablePipelines`.
    *
    * The motivating failure: a JIRA-imported roadmap item is by construction
    * "implement this → PR", the roadmap gate already stamps `output: {type:"pr"}`
-   * on the task it queues — and stage-2 routing then ranked the whole forge
+   * on the task it queues — and stage-2 routing then ranked the whole dev
    * roster anyway and picked `documentation-engineer`, an agent with no Bash that
    * cannot run a build, a test or a commit. The strongest available signal for
    * "this is implementation work" was being computed and then dropped on the
@@ -358,15 +358,15 @@ export type TaskRouting = z.infer<typeof TaskRoutingSchema>;
 /**
  * F2c — the persisted classification trace: the switchboard's STAGE-1 verdict
  * (the terminal unit that actually ran already lives on `ScheduledTask.target`/
- * `TaskRun.target`, so this is the "why", not a second target). `subsystem` is
- * set only when stage-1 delegated to a subsystem (a stage-2 `classifyWithinSubsystem`
+ * `TaskRun.target`, so this is the "why", not a second target). `department` is
+ * set only when stage-1 delegated to a department (a stage-2 `classifyWithinDepartment`
  * call happened); absent when stage-1 already named a concrete agent/pipeline.
  * Optional/additive on both `ScheduledTask` and `TaskRun` — an old-shaped record
  * still parses with no trace, and the explicit `@mention` path never writes one
  * (nothing was actually classified).
  */
 export const ClassificationTraceSchema = z.object({
-  /** The switchboard's stage-1 pick — may itself be a `{kind:"subsystem"}` verdict. */
+  /** The switchboard's stage-1 pick — may itself be a `{kind:"department"}` verdict. */
   stage1: TaskTargetSchema,
   /** 0–1; the stage-1 verdict's confidence. */
   confidence: z.number().min(0).max(1),
@@ -374,17 +374,17 @@ export const ClassificationTraceSchema = z.object({
   reason: z.string(),
   /** Catalog terms that justified the stage-1 pick. */
   matchedTerms: z.array(z.string()),
-  /** Set when stage-1 delegated to a subsystem and stage-2 resolved the unit. */
-  subsystem: SubsystemIdSchema.optional(),
+  /** Set when stage-1 delegated to a department and stage-2 resolved the unit. */
+  department: DepartmentIdSchema.optional(),
   /** Which leg produced the stage-1 verdict — see {@link TaskRoutingSchema.leg}. */
   leg: RoutingLegSchema.optional(),
   /**
-   * The STAGE-2 verdict — how the subsystem named at `stage1` chose the unit that
-   * actually ran. Present only when a stage-2 pass happened (`subsystem` set AND
-   * the subsystem owned 2+ units; a 0/1-owned roster resolves without classifying).
+   * The STAGE-2 verdict — how the department named at `stage1` chose the unit that
+   * actually ran. Present only when a stage-2 pass happened (`department` set AND
+   * the department owned 2+ units; a 0/1-owned roster resolves without classifying).
    *
-   * Without this the record answered "which subsystem, and why" but was silent on
-   * the decision that picks the thing that runs — `resolveSubsystemTargetOrNull`
+   * Without this the record answered "which department, and why" but was silent on
+   * the decision that picks the thing that runs — `resolveDepartmentTargetOrNull`
    * used to return `routing?.target ?? primary`, discarding the reason, the
    * confidence and the leg. That is the half of the trace whose absence made a
    * misroute undiagnosable from the files.
@@ -400,7 +400,7 @@ export const ClassificationTraceSchema = z.object({
        * How many candidates stage 2 actually ranked, AFTER any constraint filter.
        * A `1` here says the choice was forced by the constraint rather than won on
        * merit — the difference between "the router picked delivery" and "delivery
-       * was the only PR-capable pipeline forge owns".
+       * was the only PR-capable pipeline dev owns".
        */
       rankedCandidates: z.number().int().min(0),
       /**
@@ -668,7 +668,7 @@ export const CreateTaskInputSchema = z.object({
   /**
    * Task 8: the operator's explicit team tag, carried alongside (never inside)
    * `target` — deliberately NOT a `TaskTarget` variant. `target` answers WHO runs
-   * this (agent/pipeline/goal/subsystem/orchestrator); `teamId` is INTENDED to
+   * this (agent/pipeline/goal/department/orchestrator); `teamId` is INTENDED to
    * answer WHAT it can see, by wiring the `zibby-kb` MCP server's
    * team-knowledge-base scope the same way a chat turn's tagged team does.
    *

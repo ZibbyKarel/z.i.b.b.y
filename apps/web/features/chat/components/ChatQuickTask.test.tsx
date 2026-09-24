@@ -2,7 +2,7 @@ import { renderWithProviders as render, screen } from "../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DropdownTestId } from "@zibby/design-system";
-import { SUBSYSTEMS } from "@zibby/contracts";
+import { DEPARTMENTS } from "@zibby/contracts";
 import { ChatQuickTask, ChatQuickTaskTestId } from "./ChatQuickTask";
 
 type MutateVars = { body: { text: string; target?: Record<string, unknown> } };
@@ -21,19 +21,19 @@ describe("ChatQuickTask — bottom-bar run-a-task composer", () => {
     createTask.mockClear();
   });
 
-  it("renders the subsystem select, text area and run button", () => {
+  it("renders the department select, text area and run button", () => {
     render(<ChatQuickTask onClose={vi.fn()} />);
-    expect(screen.getByTestId(ChatQuickTaskTestId.Subsystem)).toBeInTheDocument();
+    expect(screen.getByTestId(ChatQuickTaskTestId.Department)).toBeInTheDocument();
     expect(screen.getByTestId(ChatQuickTaskTestId.Text)).toBeInTheDocument();
     expect(screen.getByTestId(ChatQuickTaskTestId.Run)).toBeInTheDocument();
   });
 
-  it("offers all 8 subsystems in the select, defaulting to the first", async () => {
+  it("offers all 8 departments in the select, defaulting to the first", async () => {
     const user = userEvent.setup();
     render(<ChatQuickTask onClose={vi.fn()} />);
     await user.click(screen.getByTestId(DropdownTestId.Trigger));
     const labels = screen.getAllByTestId(DropdownTestId.Option).map((o) => o.textContent);
-    expect(labels).toEqual(SUBSYSTEMS.map((s) => s.name));
+    expect(labels).toEqual(DEPARTMENTS.map((s) => s.name));
   });
 
   it("disables Run until there is text", () => {
@@ -47,16 +47,16 @@ describe("ChatQuickTask — bottom-bar run-a-task composer", () => {
     expect(screen.getByTestId(ChatQuickTaskTestId.Run)).toBeEnabled();
   });
 
-  it("running POSTs the text and a subsystem target for the selected subsystem, then closes", async () => {
+  it("running POSTs the text and a department target for the selected department, then closes", async () => {
     const onClose = vi.fn();
     const onCreated = vi.fn();
     const user = userEvent.setup();
     render(<ChatQuickTask onClose={onClose} onCreated={onCreated} />);
 
-    // Pick the second subsystem instead of the default first.
+    // Pick the second department instead of the default first.
     await user.click(screen.getByTestId(DropdownTestId.Trigger));
-    const target = SUBSYSTEMS[1];
-    if (!target) throw new Error("expected at least 2 subsystems");
+    const target = DEPARTMENTS[1];
+    if (!target) throw new Error("expected at least 2 departments");
     await user.click(
       screen.getAllByTestId(DropdownTestId.Option).find((o) => o.textContent === target.name)!,
     );
@@ -67,7 +67,7 @@ describe("ChatQuickTask — bottom-bar run-a-task composer", () => {
     expect(createTask).toHaveBeenCalledTimes(1);
     const body = createTask.mock.calls[0]?.[0].body;
     expect(body?.text).toBe("watch the CI pipeline");
-    expect(body?.target).toMatchObject({ kind: "subsystem", id: target.id });
+    expect(body?.target).toMatchObject({ kind: "department", id: target.id });
 
     expect(onCreated).toHaveBeenCalledWith(FAKE_RESULT.body);
     expect(onClose).toHaveBeenCalled();

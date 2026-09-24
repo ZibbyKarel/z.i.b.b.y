@@ -1,6 +1,6 @@
 /**
  * Note ids for the learned review rules. They live in `memory/` (next to
- * `subsystem-shelf.ts`) rather than in `review-learning/` so `GroundingService`
+ * `department-shelf.ts`) rather than in `review-learning/` so `GroundingService`
  * can ground them without the memory module importing the review-learning module.
  *
  * A vault note id is a filesystem-safe BASENAME with no path separators —

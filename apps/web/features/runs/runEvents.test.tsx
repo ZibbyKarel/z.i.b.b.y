@@ -77,7 +77,7 @@ describe("RunEventsProvider — SSE-driven invalidation (N1)", () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: getPipelineRunQueryKey("delivery_1") });
   });
 
-  // Phase 89: the plain subscribe API the subsystem web's particle layer rides.
+  // Phase 89: the plain subscribe API the department web's particle layer rides.
   describe("onRunEvent (Phase 89 subscribe API)", () => {
     it("delivers a parsed event to every subscribed listener", () => {
       const listener = vi.fn();

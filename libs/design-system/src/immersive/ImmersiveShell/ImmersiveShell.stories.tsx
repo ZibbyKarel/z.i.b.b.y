@@ -28,7 +28,7 @@ export const Overview: Story = {
         </button>
       }
       backSlot={<BackButton />}
-      subtitle="Vše, co ZIBBY dokončil napříč subsystémy"
+      subtitle="Vše, co ZIBBY dokončil napříč odděleními"
       title="Archiv úloh"
     >
       <div className="p-6 text-foreground-dim">obsah stránky</div>
@@ -39,7 +39,7 @@ export const Overview: Story = {
 export const Playground: Story = {
   args: {
     title: "Archiv úloh",
-    subtitle: "Vše, co ZIBBY dokončil napříč subsystémy",
+    subtitle: "Vše, co ZIBBY dokončil napříč odděleními",
     backSlot: <BackButton />,
     children: <div className="p-6 text-foreground-dim">obsah stránky</div>,
   },

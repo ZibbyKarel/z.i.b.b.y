@@ -7,7 +7,7 @@ import type { useTranslations } from "next-intl";
  * Scoping a producer's kinds and the built-in/operator catalog itself now live
  * server-side in the signal-kind registry (`useSignalKindsQuery`) — this module
  * only keeps the built-in type-guard and the cs/en label lookup for the 7 seeded
- * kinds (`SUBSYSTEM_SIGNAL_KINDS`/`signalKindsFor` were removed with Slot B2; the
+ * kinds (`DEPARTMENT_SIGNAL_KINDS`/`signalKindsFor` were removed with Slot B2; the
  * registry's `from` field is the scoping source of truth now).
  */
 export const ALL_SIGNAL_KINDS = [
@@ -35,7 +35,7 @@ export function isKnownSignalKind(kind: string): kind is SignalKind {
  */
 export function signalKindLabel(
   kind: HandoffSignalKind,
-  t: ReturnType<typeof useTranslations<"subsystems.handoff">>,
+  t: ReturnType<typeof useTranslations<"departments.handoff">>,
 ): string {
   return isKnownSignalKind(kind.id) ? t(`signalKind.${kind.id}`) : kind.label;
 }
@@ -43,7 +43,7 @@ export function signalKindLabel(
 /** Description counterpart of `signalKindLabel` — same built-in/operator split. */
 export function signalKindDescription(
   kind: HandoffSignalKind,
-  t: ReturnType<typeof useTranslations<"subsystems.handoff">>,
+  t: ReturnType<typeof useTranslations<"departments.handoff">>,
 ): string {
   return isKnownSignalKind(kind.id) ? t(`signalKindDesc.${kind.id}`) : kind.description;
 }

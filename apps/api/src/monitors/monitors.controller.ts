@@ -5,7 +5,7 @@ import { MonitorEventStore } from "./monitor-event.store";
 
 /**
  * Implements `monitorsContract` — READ-ONLY. Alerts are born only inside the API
- * (the watcher ingests them), so a client can never forge one; handling is the
+ * (the watcher ingests them), so a client can never fake one; handling is the
  * watcher's tier path, not an HTTP mutation.
  */
 @Controller()

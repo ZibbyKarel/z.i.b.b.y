@@ -44,12 +44,12 @@ function taskAutomation(over: Partial<Automation> = {}): Automation {
   };
 }
 
-function sentinelScanAutomation(over: Partial<Automation> = {}): Automation {
+function securityScanAutomation(over: Partial<Automation> = {}): Automation {
   return {
-    id: "sentinel-scan",
+    id: "security-scan",
     name: "Bezpečnostní hlídka",
     trigger: { type: "cron", expr: "0 5 * * 1" },
-    target: { type: "sentinel-scan" },
+    target: { type: "security-scan" },
     enabled: true,
     system: true,
     ...over,
@@ -68,12 +68,12 @@ function selfKnowledgeAutomation(over: Partial<Automation> = {}): Automation {
   };
 }
 
-function loomAuditAutomation(over: Partial<Automation> = {}): Automation {
+function archAuditAutomation(over: Partial<Automation> = {}): Automation {
   return {
-    id: "loom-audit",
+    id: "arch-audit",
     name: "Noční audit kvality",
     trigger: { type: "cron", expr: "0 2 * * *" },
-    target: { type: "loom-audit" },
+    target: { type: "arch-audit" },
     enabled: true,
     system: true,
     ...over,
@@ -112,8 +112,8 @@ function makeService(opts: {
   pipelineRunner?: { start: ReturnType<typeof vi.fn> };
   taskScheduler?: { createTask: ReturnType<typeof vi.fn> };
   selfKnowledge?: { check: ReturnType<typeof vi.fn>; write: ReturnType<typeof vi.fn> };
-  sentinel?: { scan: ReturnType<typeof vi.fn> };
-  loom?: { audit: ReturnType<typeof vi.fn> };
+  security?: { scan: ReturnType<typeof vi.fn> };
+  arch?: { audit: ReturnType<typeof vi.fn> };
   postMergeWatch?: { poll: ReturnType<typeof vi.fn> };
   reviewLearning?: { learn: ReturnType<typeof vi.fn> };
 }): { service: SchedulerService; storage: { markFired: ReturnType<typeof vi.fn> } } {
@@ -140,8 +140,8 @@ function makeService(opts: {
     { detect: opts.detect ?? vi.fn() } as never,
     (opts.taskScheduler ?? { createTask: vi.fn() }) as never,
     (opts.selfKnowledge ?? { check: vi.fn(async () => false), write: vi.fn() }) as never,
-    (opts.sentinel ?? { scan: vi.fn(async () => ({ findings: [] })) }) as never,
-    (opts.loom ?? { audit: vi.fn(async () => ({ findings: [] })) }) as never,
+    (opts.security ?? { scan: vi.fn(async () => ({ findings: [] })) }) as never,
+    (opts.arch ?? { audit: vi.fn(async () => ({ findings: [] })) }) as never,
     (opts.postMergeWatch ?? { poll: vi.fn(async () => ({ resolved: 0 })) }) as never,
     // F6c watcher-health registry double — registration is exercised in the
     // base/e2e specs, not here.
@@ -330,37 +330,37 @@ describe("SchedulerService — dispatch (F4c: self-knowledge target)", () => {
   });
 });
 
-describe("SchedulerService — dispatch (NS2 F5a: sentinel-scan target)", () => {
-  it("dispatches straight to SentinelService.scan and refs the finding count", async () => {
+describe("SchedulerService — dispatch (NS2 F5a: security-scan target)", () => {
+  it("dispatches straight to SecurityService.scan and refs the finding count", async () => {
     const scan = vi.fn(async () => ({ findings: [{ kind: "cve" }, { kind: "secret" }] }));
-    const { service } = makeService({ automation: sentinelScanAutomation(), sentinel: { scan } });
+    const { service } = makeService({ automation: securityScanAutomation(), security: { scan } });
 
-    const ref = await service.trigger("sentinel-scan");
+    const ref = await service.trigger("security-scan");
 
     expect(scan).toHaveBeenCalledTimes(1);
-    expect(ref).toBe("sentinel:2");
+    expect(ref).toBe("security:2");
   });
 
   it("refs a zero count on a green (no-findings) scan", async () => {
-    const { service } = makeService({ automation: sentinelScanAutomation() });
-    expect(await service.trigger("sentinel-scan")).toBe("sentinel:0");
+    const { service } = makeService({ automation: securityScanAutomation() });
+    expect(await service.trigger("security-scan")).toBe("security:0");
   });
 });
 
-describe("SchedulerService — dispatch (NS2 F5c: loom-audit target)", () => {
-  it("dispatches straight to LoomService.audit and refs the finding count", async () => {
+describe("SchedulerService — dispatch (NS2 F5c: arch-audit target)", () => {
+  it("dispatches straight to ArchService.audit and refs the finding count", async () => {
     const audit = vi.fn(async () => ({ findings: [{ kind: "god-node" }, { kind: "cycle" }] }));
-    const { service } = makeService({ automation: loomAuditAutomation(), loom: { audit } });
+    const { service } = makeService({ automation: archAuditAutomation(), arch: { audit } });
 
-    const ref = await service.trigger("loom-audit");
+    const ref = await service.trigger("arch-audit");
 
     expect(audit).toHaveBeenCalledTimes(1);
-    expect(ref).toBe("loom:2");
+    expect(ref).toBe("arch:2");
   });
 
   it("refs a zero count on a green (no-findings) audit", async () => {
-    const { service } = makeService({ automation: loomAuditAutomation() });
-    expect(await service.trigger("loom-audit")).toBe("loom:0");
+    const { service } = makeService({ automation: archAuditAutomation() });
+    expect(await service.trigger("arch-audit")).toBe("arch:0");
   });
 });
 

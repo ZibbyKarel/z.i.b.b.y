@@ -16,7 +16,7 @@ const denyRule: GateRule = {
   decision: "deny",
 };
 
-describe("SystemFloorPanel (37) — the locked POLICY.md floor is visible in Settings/the subsystem drawer", () => {
+describe("SystemFloorPanel (37) — the locked POLICY.md floor is visible in Settings/the department drawer", () => {
   beforeEach(() => {
     floor = [];
   });

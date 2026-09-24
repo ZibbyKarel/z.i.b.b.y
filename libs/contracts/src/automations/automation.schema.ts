@@ -67,17 +67,17 @@ export const TargetSchema = z.discriminatedUnion("type", [
   // behind an `agent-proposal` approval. Deterministic; proposes ≠ activates (only
   // an approval flips a candidate to `status: active`).
   z.object({ type: z.literal("agent-factory") }),
-  // NS2 F5a — Sentinel's scheduled security watch: per project repo, open
+  // NS2 F5a — Security's scheduled security watch: per project repo, open
   // Dependabot alerts (GitHub REST) + a bounded secret-pattern scan over the
   // local clone. Deterministic; proposes ≠ acts (findings → a vault note +
-  // Sentinel's shelf); a CRITICAL CVE additionally dispatches a gated fix task
-  // through the ordinary scheduler (ends at the PR gate). ref = `sentinel:<count>`.
-  z.object({ type: z.literal("sentinel-scan") }),
-  // NS2 F5c — Loom's nightly quality audit: graphify god-node/community deltas +
+  // Security's shelf); a CRITICAL CVE additionally dispatches a gated fix task
+  // through the ordinary scheduler (ends at the PR gate). ref = `security:<count>`.
+  z.object({ type: z.literal("security-scan") }),
+  // NS2 F5c — Arch's nightly quality audit: graphify god-node/community deltas +
   // madge circular-dep check over ZIBBY itself. Deterministic; proposes ≠ acts
-  // (new findings → a vault note + Loom's shelf + briefing; the operator turns a
-  // line into work). knip deferred (not installed). ref = `loom:<count>`.
-  z.object({ type: z.literal("loom-audit") }),
+  // (new findings → a vault note + Arch's shelf + briefing; the operator turns a
+  // line into work). knip deferred (not installed). ref = `arch:<count>`.
+  z.object({ type: z.literal("arch-audit") }),
   // NS2 F7b-2 — poll pending post-merge CI watches: for each merge ZIBBY performed,
   // check the merged sha's target-branch CI within a bounded window; on red dispatch
   // a gated fix task (tier path), on green record success, past deadline expire.
@@ -101,7 +101,7 @@ export const TargetSchema = z.discriminatedUnion("type", [
     /** The typed prompt — forwarded as the task's free-text (`CreateTaskInput.text`). */
     text: z.string().min(1),
     /**
-     * Optional @-mentioned run target (agent/pipeline/subsystem/goal/chain/…).
+     * Optional @-mentioned run target (agent/pipeline/department/goal/chain/…).
      * Absent = the task classifier/orchestrator-fallback decides at fire time,
      * exactly like an unrouted task from the dialog.
      */
@@ -109,7 +109,7 @@ export const TargetSchema = z.discriminatedUnion("type", [
     /**
      * Files uploaded into the automation's context (a tasks attachment-set id, see
      * `AttachmentSchema`). Fed to the run for agent/orchestrator/goal targets;
-     * pipeline/chain/subsystem targets cannot carry attachments yet (pre-existing
+     * pipeline/chain/department targets cannot carry attachments yet (pre-existing
      * runner gap — same limitation an ordinary task has today).
      */
     attachmentSetId: z.string().optional(),

@@ -24,11 +24,11 @@ export class TaskRunsController {
     return tsRestHandler(taskRunsContract, {
       listTaskRuns: async () => ({ status: 200, body: await this.runs.listTaskRuns() }),
 
-      listArchivedTaskRuns: async ({ query: { search, subsystems, before, limit } }) => ({
+      listArchivedTaskRuns: async ({ query: { search, departments, before, limit } }) => ({
         status: 200,
         body: await this.runs.listArchivedTaskRuns({
           search,
-          subsystems: subsystems ? subsystems.split(",").filter(Boolean) : undefined,
+          departments: departments ? departments.split(",").filter(Boolean) : undefined,
           before,
           limit,
         }),

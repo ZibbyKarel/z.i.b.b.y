@@ -40,7 +40,7 @@ describe("Agents API (e2e)", () => {
     id: "writer",
     description: "Writes things",
     instructions: "Write clearly.",
-    ownerSubsystem: "forge",
+    department: "dev",
   };
 
   it("runs the full happy path: create → get → list → update → delete", async () => {
@@ -52,7 +52,7 @@ describe("Agents API (e2e)", () => {
       name: "writer",
       description: "Writes things",
       instructions: "Write clearly.",
-      ownerSubsystem: "forge",
+      department: "dev",
     });
 
     const got = await request(app.getHttpServer()).get(`${BASE}/writer`);
@@ -90,7 +90,7 @@ describe("Agents API (e2e)", () => {
       tools: ["read", "write"],
       category: "writing",
       instructions: "Polish the prose.",
-      ownerSubsystem: "forge",
+      department: "dev",
     };
     const created = await request(app.getHttpServer()).post(BASE).send(body);
     expect(created.status).toBe(201);
@@ -108,7 +108,7 @@ describe("Agents API (e2e)", () => {
         description: "Writes things",
         category: "prose",
         instructions: "Write.",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
     await request(app.getHttpServer())
@@ -117,7 +117,7 @@ describe("Agents API (e2e)", () => {
         id: "reviewer",
         description: "Reviews PRs",
         instructions: "Review.",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
 
@@ -180,7 +180,7 @@ describe("Agents API (e2e)", () => {
     expect(files).toContain("writer.md");
   });
 
-  it("NS2 F1b: rejects create without ownerSubsystem (422)", async () => {
+  it("NS2 F1b: rejects create without department (422)", async () => {
     const withoutOwner = {
       id: "writer",
       description: "Writes things",
@@ -188,12 +188,12 @@ describe("Agents API (e2e)", () => {
     };
     const res = await request(app.getHttpServer()).post(BASE).send(withoutOwner);
     expect(res.status).toBe(422);
-    expect(res.body.message).toContain("ownerSubsystem");
+    expect(res.body.message).toContain("department");
   });
 
-  it("NS2 F1b: accepts create with a valid ownerSubsystem (201)", async () => {
+  it("NS2 F1b: accepts create with a valid department (201)", async () => {
     const res = await request(app.getHttpServer()).post(BASE).send(validBody);
     expect(res.status).toBe(201);
-    expect(res.body.ownerSubsystem).toBe("forge");
+    expect(res.body.department).toBe("dev");
   });
 });

@@ -14,18 +14,18 @@ import type {
   ClassificationTrace,
   CreateTaskInput,
   CreateTaskResult,
+  DepartmentId,
   GoalRun,
   Pipeline,
   PipelineRun,
   Project,
   ScheduledTask,
-  SubsystemId,
   TaskOutcome,
   TaskOutput,
   TaskTarget,
 } from "@zibby/contracts";
 import { PIPELINE_COMPLEXITY_ORDER } from "@zibby/contracts";
-import { ORCHESTRATOR_TARGET, SUBSYSTEMS } from "@zibby/contracts";
+import { DEPARTMENTS, ORCHESTRATOR_TARGET } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import type { AttachmentSetRefProvider } from "./attachment-set-ref-provider";
 import { ATTACHMENT_SET_REF_PROVIDER } from "./attachment-set-ref-provider";
@@ -59,8 +59,8 @@ import { taskTargetId } from "./task-target";
 /** A create input with its attachment set resolved once (Task 6 — resolve, then thread). */
 type CreateTaskInputResolved = CreateTaskInput & { attachments: Attachment[] };
 
-/** See {@link TaskSchedulerService.resolveSubsystemTargetOrNull}. */
-interface SubsystemResolution {
+/** See {@link TaskSchedulerService.resolveDepartmentTargetOrNull}. */
+interface DepartmentResolution {
   target: TaskTarget;
   stage2?: NonNullable<ClassificationTrace["stage2"]>;
 }
@@ -74,17 +74,17 @@ export class EmptyCatalogError extends Error {
 }
 
 /**
- * Phase 91 — thrown when a task explicitly targets a subsystem with ZERO owned
+ * Phase 91 — thrown when a task explicitly targets a department with ZERO owned
  * pipelines. A described task must never silently no-op (Law 5), and a mandate
  * without capability shouldn't pretend to execute (deliberate v1 floor: this does
  * NOT fall back to the orchestrator) — so it surfaces as a clear, immediate,
  * Czech-language validation rejection instead. The controller maps it to 422,
  * mirroring {@link EmptyCatalogError}.
  */
-export class SubsystemEmptyRosterError extends Error {
-  constructor(subsystemName: string) {
-    super(`Subsystém ${subsystemName} zatím nemá žádnou pipeline.`);
-    this.name = "SubsystemEmptyRosterError";
+export class DepartmentEmptyRosterError extends Error {
+  constructor(departmentName: string) {
+    super(`Oddělení ${departmentName} zatím nemá žádnou pipeline.`);
+    this.name = "DepartmentEmptyRosterError";
   }
 }
 
@@ -149,7 +149,7 @@ export class TaskSchedulerService
     private readonly agentRunner: AgentRunnerService,
     private readonly pipelineRunner: PipelineRunnerService,
     private readonly pipelinesStore: PipelinesStorageService,
-    /** F2b — for {@link resolveSubsystemTargetOrNull}'s owned-roster count (pipelines + agents). */
+    /** F2b — for {@link resolveDepartmentTargetOrNull}'s owned-roster count (pipelines + agents). */
     private readonly agentsStore: AgentsStorageService,
     private readonly goalRunner: GoalRunnerService,
     private readonly logger: LoggerService,
@@ -326,17 +326,17 @@ export class TaskSchedulerService
     // scheduled loop's goal). A server-side `explicitTarget` arg (proposed-task
     // resume) still wins when both are present.
     const rawTarget = explicitTarget ?? input.target;
-    // Phase 91: an explicit subsystem target is resolved to a concrete pipeline
+    // Phase 91: an explicit department target is resolved to a concrete pipeline
     // target HERE — before either persistence path below (scheduled or immediate)
     // — so a 0-owned rejection is a clean validation error, never a task record
-    // that later fails on dispatch. See `resolveSubsystemTarget`.
+    // that later fails on dispatch. See `resolveDepartmentTarget`.
     // `routingText` when the caller supplied one: stage 2 runs HERE, so it must read the
     // same footer-free text stage 1 was given, or the framing the roadmap gate appends
     // for the actor lands right back in the ranker's haystack (see
     // `CreateTaskInput.routingText`).
     const target =
-      rawTarget?.kind === "subsystem"
-        ? await this.resolveSubsystemTarget(
+      rawTarget?.kind === "department"
+        ? await this.resolveDepartmentTarget(
             rawTarget,
             input.routingText ?? input.text,
             input.paths ?? [],
@@ -385,27 +385,27 @@ export class TaskSchedulerService
   }
 
   /**
-   * Phase 91 / F2a / F2b — resolve a subsystem target to a concrete pipeline or
+   * Phase 91 / F2a / F2b — resolve a department target to a concrete pipeline or
    * agent target (the design doc's 0/1/N-owned-unit rule, widened in F2b from
    * pipelines-only to pipelines + owned active agents):
    *  - **0 owned** → `null` — no capability to delegate to.
    *  - **1 owned** → dispatches straight to it; the classifier is never called.
-   *  - **2+ owned** → `TaskClassifierService.classifyWithinSubsystem`, restricted
-   *    to just the subsystem's own roster (never the full catalog, never a
+   *  - **2+ owned** → `TaskClassifierService.classifyWithinDepartment`, restricted
+   *    to just the department's own roster (never the full catalog, never a
    *    fallback to the orchestrator here — the operator, or the switchboard's
-   *    stage-1 verdict, already named the subsystem; `classifyWithinSubsystem`'s
-   *    own `SUBSYSTEM_FALLBACK` policy decides what "not confident" resolves to).
+   *    stage-1 verdict, already named the department; `classifyWithinDepartment`'s
+   *    own `DEPARTMENT_FALLBACK` policy decides what "not confident" resolves to).
    *
-   * The resolved target IS the run's "via <subsystem>" attribution: any
-   * consumer can already read `Pipeline.ownerSubsystem`/`Agent.ownerSubsystem`
+   * The resolved target IS the run's "via <department>" attribution: any
+   * consumer can already read `Pipeline.department`/`Agent.department`
    * (Phase 81 / F1a) off the dispatched id, so this adds no new run-level field.
    *
-   * Two callers choose differently on `null` — see {@link resolveSubsystemTarget}
+   * Two callers choose differently on `null` — see {@link resolveDepartmentTarget}
    * (the explicit `@mention` path, throws) and {@link dispatch} (the undirected
    * switchboard path, falls back to {@link ORCHESTRATOR_TARGET}).
    */
   /**
-   * The outcome of resolving a subsystem verdict to the unit that actually runs:
+   * The outcome of resolving a department verdict to the unit that actually runs:
    * the `target`, plus the stage-2 rationale for the persisted trace.
    *
    * `stage2` is absent only when the classifier returned nothing usable and the
@@ -413,38 +413,38 @@ export class TaskSchedulerService
    * pairing exists because the previous shape returned the target alone, so the
    * decision that picks the running unit left no record at all.
    */
-  private async resolveSubsystemTargetOrNull(
-    target: Extract<TaskTarget, { kind: "subsystem" }>,
+  private async resolveDepartmentTargetOrNull(
+    target: Extract<TaskTarget, { kind: "department" }>,
     text: string,
     paths: string[],
     /**
      * The task's required sink, when it has one. A `pr` sink makes this resolution a
-     * SIZING choice over the subsystem's PR-capable pipelines instead of a free pick
+     * SIZING choice over the department's PR-capable pipelines instead of a free pick
      * over its whole roster — mirroring `TaskClassifierService.constrainByOutput`, so
      * a direct dispatch and the scoped classifier agree on what is even eligible.
      * Without it a roadmap item that must open a PR could resolve to an agent that
      * cannot open one.
      */
     output?: TaskOutput,
-  ): Promise<SubsystemResolution | null> {
+  ): Promise<DepartmentResolution | null> {
     const [allPipelines, allAgents] = await Promise.all([
       this.pipelinesStore.list().catch((): Pipeline[] => []),
       this.agentsStore.listActive().catch((): Agent[] => []),
     ]);
-    const ownedPipelines = allPipelines.filter((p) => p.ownerSubsystem === target.id);
-    const ownedAgents = allAgents.filter((a) => a.ownerSubsystem === target.id);
+    const ownedPipelines = allPipelines.filter((p) => p.department === target.id);
+    const ownedAgents = allAgents.filter((a) => a.department === target.id);
     const totalOwned = ownedPipelines.length + ownedAgents.length;
     if (totalOwned === 0) return null;
     // Same rule, same reason as the classifier's own filter: a task that must end in a
     // PR is eligible only for pipelines that DECLARE a `pr` sink — never a lone agent.
-    // Falls back to the full roster (and warns) when the subsystem owns no such
+    // Falls back to the full roster (and warns) when the department owns no such
     // pipeline, because "route it somewhere and let the run fail" is strictly worse
     // than routing it the old way and saying so.
     const prCapable = ownedPipelines.filter((p) => p.outputs.some((o) => o.type === "pr"));
     const prConstrained = output?.type === "pr" && prCapable.length > 0;
     if (output?.type === "pr" && prCapable.length === 0) {
-      this.log.warn("task requires a PR but the subsystem owns no PR-capable pipeline", {
-        subsystem: target.id,
+      this.log.warn("task requires a PR but the department owns no PR-capable pipeline", {
+        department: target.id,
         ownedUnits: totalOwned,
       });
     }
@@ -455,10 +455,10 @@ export class TaskSchedulerService
     // what the scoped classifier would have chosen as its `"primary"` fallback.
     //
     // NS2 F9 note: this used to be plain `ownedPipelines[0]` and a comment claiming
-    // it mirrored `subsystemCandidates`' pipelines-first ordering. F9 reversed that
+    // it mirrored `departmentCandidates`' pipelines-first ordering. F9 reversed that
     // ordering (agents first, then pipelines by rung) AND moved the fallback off
     // list order onto the ladder, which left this reading FILE order — so a
-    // subsystem whose directory happens to list a `deep` pipeline before its
+    // department whose directory happens to list a `deep` pipeline before its
     // `light` one would dispatch the expensive rung here while the classifier
     // picked the cheap one. Sorting by the ladder restores the agreement the
     // comment only claimed.
@@ -474,7 +474,7 @@ export class TaskSchedulerService
     // spend a round-trip to be told what the constraint already decided.
     if (eligibleCount === 1) {
       this.log.info("stage-2 resolved without classifying — one eligible unit", {
-        subsystem: target.id,
+        department: target.id,
         target: `${primary.kind}:${taskTargetId(primary)}`,
         ...(prConstrained ? { constrainedBy: "pr-output" } : {}),
       });
@@ -487,13 +487,13 @@ export class TaskSchedulerService
           confidence: 1,
           reason: prConstrained
             ? "Only one owned unit can deliver a PR — no ranking was needed."
-            : "The subsystem owns a single dispatchable unit — no ranking was needed.",
+            : "The department owns a single dispatchable unit — no ranking was needed.",
           rankedCandidates: 1,
           ...(prConstrained ? { constrainedBy: "pr-output" as const } : {}),
         },
       };
     }
-    const routing = await this.classifier.classifyWithinSubsystem(
+    const routing = await this.classifier.classifyWithinDepartment(
       { text, paths, ...(output ? { output } : {}) },
       target.id,
     );
@@ -505,7 +505,7 @@ export class TaskSchedulerService
     // a real decision.
     if (routing) {
       this.log.info("stage-2 verdict", {
-        subsystem: target.id,
+        department: target.id,
         target: `${routing.target.kind}:${"id" in routing.target ? routing.target.id : "-"}`,
         confidence: routing.confidence,
         reason: routing.reason,
@@ -514,7 +514,7 @@ export class TaskSchedulerService
         ...(prConstrained ? { constrainedBy: "pr-output" } : {}),
       });
     }
-    // Defensive only: `classifyWithinSubsystem` returns null solely for an empty
+    // Defensive only: `classifyWithinDepartment` returns null solely for an empty
     // candidate set, which `eligibleCount > 1` already rules out.
     if (!routing) return { target: primary };
     return {
@@ -531,21 +531,21 @@ export class TaskSchedulerService
   }
 
   /**
-   * The EXPLICIT-target wrapper around {@link resolveSubsystemTargetOrNull}:
+   * The EXPLICIT-target wrapper around {@link resolveDepartmentTargetOrNull}:
    * called once, up front, by {@link createTask} before any persistence, for an
-   * `@`-mentioned subsystem target. A mandate without capability shouldn't
+   * `@`-mentioned department target. A mandate without capability shouldn't
    * pretend to execute (deliberate v1 floor) — 0 owned pipelines rejects
-   * immediately with {@link SubsystemEmptyRosterError}, a clear Czech validation
+   * immediately with {@link DepartmentEmptyRosterError}, a clear Czech validation
    * message, rather than silently falling back to the orchestrator.
    */
-  private async resolveSubsystemTarget(
-    target: Extract<TaskTarget, { kind: "subsystem" }>,
+  private async resolveDepartmentTarget(
+    target: Extract<TaskTarget, { kind: "department" }>,
     text: string,
     paths: string[],
     output?: TaskOutput,
   ): Promise<TaskTarget> {
-    const resolved = await this.resolveSubsystemTargetOrNull(target, text, paths, output);
-    if (!resolved) throw new SubsystemEmptyRosterError(subsystemDisplayName(target.id));
+    const resolved = await this.resolveDepartmentTargetOrNull(target, text, paths, output);
+    if (!resolved) throw new DepartmentEmptyRosterError(departmentDisplayName(target.id));
     return resolved.target;
   }
 
@@ -1338,18 +1338,18 @@ export class TaskSchedulerService
       // The classifier's matched terms ride into the run so memory grounding selects
       // the same MOCs the routing keyed on (Phase 4).
       matchedTerms = routing.matchedTerms;
-      // F2a — the switchboard may now emit a whole-subsystem verdict (never the
+      // F2a — the switchboard may now emit a whole-department verdict (never the
       // explicit `@mention` path above, which is already resolved by `createTask`
       // before `dispatch` is ever called). Soft stage-2: resolve to a concrete
       // pipeline, or — an empty roster — fall through to the orchestrator exactly
       // like any other "nothing matched confidently" verdict (the terminal block
       // below, unchanged, already records `orchestrator-fallback` for a
       // non-explicit target and starts the orchestrator).
-      let subsystem: SubsystemId | undefined;
+      let department: DepartmentId | undefined;
       let stage2: ClassificationTrace["stage2"];
-      if (target.kind === "subsystem") {
-        subsystem = target.id;
-        const resolved = await this.resolveSubsystemTargetOrNull(target, text, paths, output);
+      if (target.kind === "department") {
+        department = target.id;
+        const resolved = await this.resolveDepartmentTargetOrNull(target, text, paths, output);
         target = resolved?.target ?? ORCHESTRATOR_TARGET;
         stage2 = resolved?.stage2;
       }
@@ -1358,7 +1358,7 @@ export class TaskSchedulerService
         confidence: routing.confidence,
         reason: routing.reason,
         matchedTerms: routing.matchedTerms,
-        ...(subsystem ? { subsystem } : {}),
+        ...(department ? { department } : {}),
         ...(routing.leg ? { leg: routing.leg } : {}),
         ...(stage2 ? { stage2 } : {}),
       };
@@ -1477,7 +1477,7 @@ export class TaskSchedulerService
   }
 
   /**
-   * F2c: async now — awaits the best-effort {@link ownerSubsystemOf} store read
+   * F2c: async now — awaits the best-effort {@link ownerDepartmentOf} store read
    * BEFORE calling `activity.record`, so the record call itself still lands
    * deterministically within the caller's own await chain (matching the old
    * synchronous-call guarantee) rather than racing off on an unawaited `.then()`.
@@ -1488,7 +1488,7 @@ export class TaskSchedulerService
     projectId: string | undefined,
     dispatched: { runRef: string; target: TaskTarget; classification?: ClassificationTrace },
   ): Promise<void> {
-    const ownerSubsystem = await this.ownerSubsystemOf(dispatched);
+    const department = await this.ownerDepartmentOf(dispatched);
     void this.activity.record({
       kind: "task-dispatched",
       summary: `dispatched to ${dispatched.target.kind} ${targetIdOf(dispatched.target)}`,
@@ -1498,32 +1498,32 @@ export class TaskSchedulerService
         status: dispatched.target.kind,
         ...(projectId ? { projectId } : {}),
         ...refForTarget(dispatched.target),
-        ...(ownerSubsystem ? { ownerSubsystem } : {}),
+        ...(department ? { department } : {}),
       },
     });
   }
 
   /**
-   * F2c — best-effort owning subsystem for a dispatched activity entry: the
-   * classification trace's own `subsystem` when stage-1 delegated (cheapest,
+   * F2c — best-effort owning department for a dispatched activity entry: the
+   * classification trace's own `department` when stage-1 delegated (cheapest,
    * already in hand); otherwise a guarded store read of the dispatched unit's
-   * own `ownerSubsystem` (a pipeline/agent target only — nothing else carries
+   * own `department` (a pipeline/agent target only — nothing else carries
    * one). Never throws — attribution only (Law 4), so a store failure just
    * omits the ref rather than blocking the activity record.
    */
-  private async ownerSubsystemOf(dispatched: {
+  private async ownerDepartmentOf(dispatched: {
     target: TaskTarget;
     classification?: ClassificationTrace;
-  }): Promise<SubsystemId | undefined> {
-    if (dispatched.classification?.subsystem) return dispatched.classification.subsystem;
+  }): Promise<DepartmentId | undefined> {
+    if (dispatched.classification?.department) return dispatched.classification.department;
     const { target } = dispatched;
     if (target.kind === "pipeline") {
       const pipelines = await this.pipelinesStore.list().catch((): Pipeline[] => []);
-      return pipelines.find((p) => p.id === target.id)?.ownerSubsystem;
+      return pipelines.find((p) => p.id === target.id)?.department;
     }
     if (target.kind === "agent") {
       const agents = await this.agentsStore.listActive().catch((): Agent[] => []);
-      return agents.find((a) => a.id === target.id)?.ownerSubsystem;
+      return agents.find((a) => a.id === target.id)?.department;
     }
     return undefined;
   }
@@ -1775,12 +1775,12 @@ function targetIdOf(target: TaskTarget): string {
 }
 
 /**
- * A subsystem's mythic display name for {@link SubsystemEmptyRosterError}'s
- * message — falls back to the raw id (never happens with a valid `SubsystemId`,
- * since {@link SUBSYSTEMS} is the closed registry it comes from).
+ * A department's mythic display name for {@link DepartmentEmptyRosterError}'s
+ * message — falls back to the raw id (never happens with a valid `DepartmentId`,
+ * since {@link DEPARTMENTS} is the closed registry it comes from).
  */
-function subsystemDisplayName(id: SubsystemId): string {
-  return SUBSYSTEMS.find((s) => s.id === id)?.name ?? id;
+function departmentDisplayName(id: DepartmentId): string {
+  return DEPARTMENTS.find((s) => s.id === id)?.name ?? id;
 }
 
 /**
@@ -1795,7 +1795,7 @@ function pipelineTaskTarget(p: Pipeline): TaskTarget {
 /**
  * F2b — the agent counterpart of {@link pipelineTaskTarget}: project a stored
  * agent definition onto the routing-target shape for the 1-owned direct-dispatch
- * path (a subsystem that owns exactly one agent and no pipeline).
+ * path (a department that owns exactly one agent and no pipeline).
  */
 function agentTaskTarget(a: Agent): TaskTarget {
   return {

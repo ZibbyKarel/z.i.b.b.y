@@ -155,7 +155,7 @@ describe.skip("Goal loop API (e2e, demo maker)", () => {
         id: "delivery",
         phases: [agentPhase("build")],
         instructions: "build it",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
   });
@@ -430,7 +430,7 @@ describe.skip("Goal loop API (e2e, demo maker)", () => {
         id: "vpipe",
         phases: [agentPhase("build"), { id: "v", type: "verify" }],
         instructions: "build then verify",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
     await request(app.getHttpServer())

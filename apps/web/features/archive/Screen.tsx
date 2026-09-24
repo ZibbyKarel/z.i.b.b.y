@@ -1,6 +1,6 @@
 "use client";
 
-import { SUBSYSTEMS } from "@zibby/contracts";
+import { DEPARTMENTS } from "@zibby/contracts";
 import { Container, SearchInput, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
@@ -16,27 +16,27 @@ import { useTaskRunQuery } from "../runs/queries/useTaskRunQuery";
 import { useRunAvatarMap, useRunGlyphMap } from "../runs/queries/useRunsQuery";
 import { type RunView, findSelectedRun, runAvatar, runGlyph } from "../runs/run";
 import { useRunActions } from "../runs/useRunActions";
-import { useOwnerSubsystemMaps } from "../subsystems/useOwnerSubsystem";
+import { useOwnerDepartmentMaps } from "../departments/useOwnerDepartment";
 import {
-  type ArchiveSubsystemFilterId,
-  NO_SUBSYSTEM,
-  archiveSubsystemFilterId,
+  type ArchiveDepartmentFilterId,
+  NO_DEPARTMENT,
+  archiveDepartmentFilterId,
 } from "./archiveGroups";
 import { ArchiveRow } from "./components/ArchiveRow";
-import { ArchiveSubsystemFilter } from "./components/ArchiveSubsystemFilter";
+import { ArchiveDepartmentFilter } from "./components/ArchiveDepartmentFilter";
 import { useArchiveCountsQuery, useArchiveRunsInfiniteQuery } from "./queries";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
 /** A run's display name + dot colour — resolved here (not in the pure
- * `archiveGroups` module) since it needs both `t()` and the `SUBSYSTEMS`
- * registry. Shown in every row's subline (`{subsystem} · {project}`). */
-function subsystemDisplay(
-  id: ArchiveSubsystemFilterId,
+ * `archiveGroups` module) since it needs both `t()` and the `DEPARTMENTS`
+ * registry. Shown in every row's subline (`{department} · {project}`). */
+function departmentDisplay(
+  id: ArchiveDepartmentFilterId,
   t: ReturnType<typeof useTranslations<"archive">>,
 ): { name: string; color?: string } {
-  if (id === NO_SUBSYSTEM) return { name: t("noSubsystem") };
-  const s = SUBSYSTEMS.find((x) => x.id === id);
+  if (id === NO_DEPARTMENT) return { name: t("noDepartment") };
+  const s = DEPARTMENTS.find((x) => x.id === id);
   return { name: s?.name ?? id, color: s?.color };
 }
 
@@ -49,11 +49,11 @@ function durationLabel(run: RunView): string {
 
 /**
  * `/archiv` — the task archive (F2, `docs/plans/hud2chat-F2-archive.md`): every
- * finished task (D9's `ARCHIVED_STATES`) across every subsystem, in one
+ * finished task (D9's `ARCHIVED_STATES`) across every department, in one
  * design-literal master/detail page (`design/Z.I.B.B.Y/ZIBBY Archiv úloh.html`).
  *
  * A flat list, newest → oldest, lazy-loaded as the operator scrolls
- * (`useArchiveRunsInfiniteQuery`) — search and the subsystem filter both run
+ * (`useArchiveRunsInfiniteQuery`) — search and the department filter both run
  * server-side (`TaskRunsService.listArchivedTaskRuns`/`getArchiveCounts`), so they
  * reach every archived run, not just whatever page has already loaded.
  *
@@ -65,13 +65,13 @@ export function Screen() {
   const t = useTranslations("archive");
   const glyphById = useRunGlyphMap();
   const avatarById = useRunAvatarMap();
-  const ownerMaps = useOwnerSubsystemMaps();
+  const ownerMaps = useOwnerDepartmentMaps();
   const [now] = useState(() => Date.now());
 
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
-  const [subsystemFilter, setSubsystemFilter] = useState<ArchiveSubsystemFilterId[]>([]);
+  const [departmentFilter, setDepartmentFilter] = useState<ArchiveDepartmentFilterId[]>([]);
   const [selId, setSelId] = useState<string | null>(searchParams.get("run"));
 
   const {
@@ -82,7 +82,7 @@ export function Screen() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useArchiveRunsInfiniteQuery({ search: debouncedQuery, subsystems: subsystemFilter });
+  } = useArchiveRunsInfiniteQuery({ search: debouncedQuery, departments: departmentFilter });
   const {
     data: archiveCounts,
     isPending: countsPending,
@@ -95,9 +95,9 @@ export function Screen() {
     () => setSelId(null),
   );
 
-  const sentinelRef = useRef<HTMLDivElement>(null);
+  const securityRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const node = sentinelRef.current;
+    const node = securityRef.current;
     if (!node || !hasNextPage) return;
     const observer = new IntersectionObserver(
       (entries) => {
@@ -110,7 +110,9 @@ export function Screen() {
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   const archivedTotal = archiveCounts?.total ?? 0;
-  const counts = (archiveCounts?.counts ?? {}) as Partial<Record<ArchiveSubsystemFilterId, number>>;
+  const counts = (archiveCounts?.counts ?? {}) as Partial<
+    Record<ArchiveDepartmentFilterId, number>
+  >;
   // This feed only holds SETTLED runs, but `?run=` links arrive from places that
   // don't know that — the roadmap item dialog's "open run" points at an issue's
   // run while it is usually still in flight. `findSelectedRun` falls back to
@@ -170,10 +172,10 @@ export function Screen() {
           width="340px"
         >
           <Container padding="150" style={{ borderBottom: "1px solid var(--color-border)" }}>
-            <ArchiveSubsystemFilter
+            <ArchiveDepartmentFilter
               counts={counts}
-              onChange={setSubsystemFilter}
-              selected={subsystemFilter}
+              onChange={setDepartmentFilter}
+              selected={departmentFilter}
               total={archivedTotal}
             />
           </Container>
@@ -195,21 +197,21 @@ export function Screen() {
             ) : (
               <Stack gap="50">
                 {items.map((run) => {
-                  const subsystemId = archiveSubsystemFilterId(run, ownerMaps);
-                  const display = subsystemDisplay(subsystemId, t);
+                  const departmentId = archiveDepartmentFilterId(run, ownerMaps);
+                  const display = departmentDisplay(departmentId, t);
                   return (
                     <ArchiveRow
                       active={selected?.runId === run.runId}
+                      departmentColor={display.color}
+                      departmentName={display.name}
                       durationLabel={durationLabel(run)}
                       key={run.runId}
                       onSelect={setSelId}
                       run={run}
-                      subsystemColor={display.color}
-                      subsystemName={display.name}
                     />
                   );
                 })}
-                <div ref={sentinelRef} />
+                <div ref={securityRef} />
               </Stack>
             )}
           </Container>

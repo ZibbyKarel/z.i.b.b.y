@@ -72,4 +72,4 @@ GET /api/monitors/status          last known CI state per source (?projectId=)
 ```
 
 Both events and statuses are born only inside the API — a client can never
-forge one.
+dev one.

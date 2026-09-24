@@ -18,8 +18,8 @@ type Story = StoryObj<typeof OrbitField>;
 
 const FIELDS: { seed: string; color: string; count: number; baseRadius: number }[] = [
   { seed: "zibby-core", color: "#7aa5f8", count: 2, baseRadius: 30 },
-  { seed: "scout", color: "#3fcf8e", count: 4, baseRadius: 40 },
-  { seed: "forge", color: "#f0b429", count: 6, baseRadius: 50 },
+  { seed: "rnd", color: "#3fcf8e", count: 4, baseRadius: 40 },
+  { seed: "dev", color: "#f0b429", count: 6, baseRadius: 50 },
 ];
 
 export const Overview: Story = {

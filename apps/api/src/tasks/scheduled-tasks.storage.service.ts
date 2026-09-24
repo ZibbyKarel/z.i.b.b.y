@@ -207,7 +207,7 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
    *
    * `markDispatched` already writes the trace for the UNDIRECTED classify path,
    * but a caller that classified the task ITSELF and then dispatched it with an
-   * `explicitTarget` (the roadmap gate's subsystem-first release) never reaches
+   * `explicitTarget` (the roadmap gate's department-first release) never reaches
    * that branch — `TaskSchedulerService.dispatch` only builds a trace when it
    * did the classifying. Without this the run detail's classification panel goes
    * blank for exactly the runs whose routing is most worth explaining.

@@ -100,7 +100,7 @@ describe("Budget restart (e2e)", () => {
       category: "Dev",
       description: "Implements fixes",
       instructions: "Write code.",
-      ownerSubsystem: "forge",
+      department: "dev",
     });
     // alpha: dailyRuns 1 drives the HOLD path. beta: maxConcurrent 1 only, so the
     // QUEUE path is exercised without the daily cap interfering.

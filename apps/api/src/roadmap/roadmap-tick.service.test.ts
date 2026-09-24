@@ -280,9 +280,9 @@ describe("RoadmapTickService", () => {
       };
       const taskRuns = { resume: vi.fn() };
       // The release's stage-1 "whose domain is this?" call. `null` = no seated
-      // subsystem, so the release stays undirected — this test is about the merge
+      // department, so the release stays undirected — this test is about the merge
       // poll releasing a dependent, not about routing.
-      const classifier = { classifySubsystem: vi.fn(async () => null) };
+      const classifier = { classifyDepartment: vi.fn(async () => null) };
       // The operator merged straight on GitHub — the poll (not the eager
       // recordMerge hook) is what has to discover this.
       const projectPr = { isMerged: vi.fn(async () => true), getPr: vi.fn() };
@@ -299,7 +299,7 @@ describe("RoadmapTickService", () => {
         // 125g's decomposition service — unused by this poll-path test.
         {} as never,
         // NS2 F10's routing-proposal store + approvals gate. Nothing ever PARKS here
-        // (this test's `classifySubsystem` returns null, so there is no verdict to be
+        // (this test's `classifyDepartment` returns null, so there is no verdict to be
         // ambiguous about), but `drain` still scans the store for already-parked items
         // before releasing — so the store needs a real `list`, not a bare `{}`.
         { list: async () => [] } as never,

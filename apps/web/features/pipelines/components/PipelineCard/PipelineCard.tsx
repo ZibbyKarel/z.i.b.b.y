@@ -1,13 +1,5 @@
 import type { Agent } from "@zibby/contracts";
-import {
-  Card,
-  Container,
-  Divider,
-  Icon,
-  IconTile,
-  Stack,
-  Typography,
-} from "@zibby/design-system";
+import { Card, Container, Divider, Icon, IconTile, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { Fragment } from "react";
 import { type Pipeline, type PipelineState, glyphForPhase } from "../../../../domain";
@@ -98,8 +90,8 @@ export function PipelineCard({
 
           <Divider />
           <Stack align="center" direction="row" justify="between">
-            {pipeline.ownerSubsystem ? (
-              <PipelineOwnerChip ownerSubsystem={pipeline.ownerSubsystem} />
+            {pipeline.department ? (
+              <PipelineOwnerChip department={pipeline.department} />
             ) : (
               <span />
             )}

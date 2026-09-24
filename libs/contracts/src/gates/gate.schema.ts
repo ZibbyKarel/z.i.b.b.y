@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type SubsystemId, SubsystemIdSchema } from "../subsystems/subsystem.schema";
+import { type DepartmentId, DepartmentIdSchema } from "../departments/department.schema";
 
 /**
  * Risk is a property of (action, arguments/target, context), not of an entity —
@@ -86,13 +86,13 @@ export const GateRuleInputSchema = z
 export type GateRuleInput = z.infer<typeof GateRuleInputSchema>;
 
 /** A stored rule: the input plus provenance. `locked` system rules are the floor.
- * `source: "subsystem"` (NS2 F3a) marks a rule loaded from the global catalog on
- * behalf of the acting unit's owning subsystem — a middle evaluation bucket
+ * `source: "department"` (NS2 F3a) marks a rule loaded from the global catalog on
+ * behalf of the acting unit's owning department — a middle evaluation bucket
  * between the agent's own rules and the locked floor. */
 export const GateRuleSchema = z
   .object({
     id: z.string().min(1),
-    source: z.enum(["system", "agent", "subsystem"]),
+    source: z.enum(["system", "agent", "department"]),
     locked: z.boolean(),
     match: z.array(MatchConditionSchema).min(1),
     decision: DecisionSchema,
@@ -163,43 +163,43 @@ const GlobalGateRuleBaseSchema = z.object({
   decision: DecisionSchema,
   resolve: ResolveSchema.optional(),
   /**
-   * Scoping to a subsystem of the federation (Phase 87 introduced it as a
+   * Scoping to a department of the federation (Phase 87 introduced it as a
    * filter/auto-tag lens; NS2 F3a made it LOAD-BEARING). A tagged rule is loaded
-   * by the gate evaluator as a third "subsystem" bucket — between the acting
+   * by the gate evaluator as a third "department" bucket — between the acting
    * agent's own rules and the locked system floor — for runs of units OWNED by
-   * that subsystem (`agent.ownerSubsystem` / `pipeline.ownerSubsystem`), and
+   * that department (`agent.department` / `pipeline.department`), and
    * only for those runs. Tagging a rule therefore CAN change what a run of that
-   * subsystem decides (strictest-of-buckets, so it can only tighten — never
+   * department decides (strictest-of-buckets, so it can only tighten — never
    * weaken the floor). Absent is legitimate — untagged rules stay global/unowned
-   * and are never loaded into any subsystem bucket.
+   * and are never loaded into any department bucket.
    */
-  ownerSubsystem: SubsystemIdSchema.optional(),
+  department: DepartmentIdSchema.optional(),
 });
 
 /**
- * NS2 F3a — the static per-subsystem tier default: a catch-all decision appended
- * to a subsystem's gate-rule bucket (as a `{type:"context", context:"*"}` rule)
- * so a subsystem can declare how an otherwise-unmatched action of its own runs is
+ * NS2 F3a — the static per-department tier default: a catch-all decision appended
+ * to a department's gate-rule bucket (as a `{type:"context", context:"*"}` rule)
+ * so a department can declare how an otherwise-unmatched action of its own runs is
  * treated. `null` = no catch-all (the run falls through to the agent's own rules
- * and the locked floor exactly as before). Only `beacon` is non-null: its mandate
+ * and the locked floor exactly as before). Only `inc` is non-null: its mandate
  * IS Tier-3 escalation (surface-and-wait), so every unmatched action of a
- * beacon-owned run asks. A typed `Record` over the closed `SubsystemId` enum is
- * exhaustiveness discipline (mirrors F2b's `SUBSYSTEM_FALLBACK`) — a future
- * subsystem id fails `tsc` here until it's given a default. Operator-editable
+ * incident-owned run asks. A typed `Record` over the closed `DepartmentId` enum is
+ * exhaustiveness discipline (mirrors F2b's `DEPARTMENT_FALLBACK`) — a future
+ * department id fails `tsc` here until it's given a default. Operator-editable
  * defaults are deferred; this table is the v1 data-model home.
  */
-export const SUBSYSTEM_TIER_DEFAULT: Record<SubsystemId, Decision | null> = {
-  forge: null,
-  puls: null,
-  sentinel: null,
-  maestro: null,
-  beacon: "ask",
-  scout: null,
-  herald: null,
-  loom: null,
-  codex: null,
-  ledger: null,
-  hearth: null,
+export const DEPARTMENT_TIER_DEFAULT: Record<DepartmentId, Decision | null> = {
+  dev: null,
+  ops: null,
+  sec: null,
+  rel: null,
+  inc: "ask",
+  rnd: null,
+  com: null,
+  qa: null,
+  knw: null,
+  fin: null,
+  per: null,
 };
 
 /** Body accepted by `createGateRule` / `updateGateRule` — the server assigns the `id`. */

@@ -212,25 +212,25 @@ export const AssignTaskRunProjectSchema = z.object({
 export type AssignTaskRunProjectInput = z.infer<typeof AssignTaskRunProjectSchema>;
 
 /**
- * Pseudo subsystem id for a run with no subsystem attribution — an agent/goal run
- * (no subsystem concept applies at all) or a pipeline run whose owner isn't tagged.
- * Shared between the API (which filters/counts archived runs by subsystem) and the
- * web (which renders the "bez subsystému" bucket) so both sides match the exact
- * same sentinel instead of each declaring their own literal.
+ * Pseudo department id for a run with no department attribution — an agent/goal run
+ * (no department concept applies at all) or a pipeline run whose owner isn't tagged.
+ * Shared between the API (which filters/counts archived runs by department) and the
+ * web (which renders the "bez oddělení" bucket) so both sides match the exact
+ * same security instead of each declaring their own literal.
  */
-export const NO_SUBSYSTEM = "none" as const;
+export const NO_DEPARTMENT = "none" as const;
 
 /**
  * Query for `GET /api/tasks/runs/archive` — keyset (cursor) pagination over the
- * WHOLE archived task history, newest-first, with server-side search and subsystem
+ * WHOLE archived task history, newest-first, with server-side search and department
  * filtering (mirrors `ActivityPageQuerySchema`'s shape). `before` is the opaque
- * `<startedAt>|<runId>` cursor of the previous page's oldest run; `subsystems` is a
- * comma-separated list of subsystem ids (or {@link NO_SUBSYSTEM}) — omitted/empty
- * means "all subsystems"; `limit` is clamped to [1, 100].
+ * `<startedAt>|<runId>` cursor of the previous page's oldest run; `departments` is a
+ * comma-separated list of department ids (or {@link NO_DEPARTMENT}) — omitted/empty
+ * means "all departments"; `limit` is clamped to [1, 100].
  */
 export const ArchivePageQuerySchema = z.object({
   search: z.string().optional(),
-  subsystems: z.string().optional(),
+  departments: z.string().optional(),
   before: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
 });
@@ -247,16 +247,16 @@ export const ArchivePageSchema = z.object({
 });
 export type ArchivePage = z.infer<typeof ArchivePageSchema>;
 
-/** Query for `GET /api/tasks/runs/archive/counts` — search-scoped, subsystem-independent. */
+/** Query for `GET /api/tasks/runs/archive/counts` — search-scoped, department-independent. */
 export const ArchiveCountsQuerySchema = z.object({
   search: z.string().optional(),
 });
 export type ArchiveCountsQuery = z.infer<typeof ArchiveCountsQuerySchema>;
 
 /**
- * Per-subsystem-id counts (keyed by a real subsystem id or {@link NO_SUBSYSTEM}) among
- * archived + search-matched runs, computed BEFORE any subsystem selection — so picking
- * one subsystem in the UI doesn't zero out every other option's count. `total` is every
+ * Per-department-id counts (keyed by a real department id or {@link NO_DEPARTMENT}) among
+ * archived + search-matched runs, computed BEFORE any department selection — so picking
+ * one department in the UI doesn't zero out every other option's count. `total` is every
  * archived run regardless of search, for the page's "archive is genuinely empty" check.
  */
 export const ArchiveCountsSchema = z.object({

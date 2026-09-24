@@ -23,12 +23,12 @@ class TestableRouter extends ClaudeCliRouter {
   }
 }
 
-const subsystem = (id: string, name: string): RoutableTarget =>
-  ({ kind: "subsystem", id, name, glyph: "grid", search: name }) as unknown as RoutableTarget;
+const department = (id: string, name: string): RoutableTarget =>
+  ({ kind: "department", id, name, glyph: "grid", search: name }) as unknown as RoutableTarget;
 
-const FORGE = subsystem("forge", "Forge");
-const CODEX = subsystem("codex", "Codex");
-const CANDIDATES = [FORGE, CODEX];
+const DEV = department("dev", "Dev");
+const KNOWLEDGE = department("knw", "Knowledge");
+const CANDIDATES = [DEV, KNOWLEDGE];
 
 /** Wrap a verdict the way `--output-format json` does. */
 function envelope(verdict: unknown): string {
@@ -36,8 +36,8 @@ function envelope(verdict: unknown): string {
 }
 
 const BASE_VERDICT = {
-  targetKind: "subsystem",
-  targetId: "forge",
+  targetKind: "department",
+  targetId: "dev",
   confidence: 0.9,
   reason: "delivery work",
   matchedTerms: ["rollout"],
@@ -58,8 +58,8 @@ describe("ClaudeCliRouter.parseVerdict — confidence (NS2 F10)", () => {
     expect(
       router.parse(
         envelope({
-          targetKind: "subsystem",
-          targetId: "forge",
+          targetKind: "department",
+          targetId: "dev",
           reason: "delivery work",
           matchedTerms: ["rollout"],
         }),
@@ -85,10 +85,10 @@ describe("ClaudeCliRouter.parseVerdict — runnerUp (NS2 F10)", () => {
     const parsed = router.parse(
       envelope({
         ...BASE_VERDICT,
-        runnerUp: { targetKind: "subsystem", targetId: "codex", confidence: 0.8, reason: "docs" },
+        runnerUp: { targetKind: "department", targetId: "knw", confidence: 0.8, reason: "docs" },
       }),
     );
-    expect(parsed?.runnerUp).toMatchObject({ targetId: "codex", confidence: 0.8 });
+    expect(parsed?.runnerUp).toMatchObject({ targetId: "knw", confidence: 0.8 });
   });
 
   it("treats an absent or explicitly null runner-up as none", () => {
@@ -100,11 +100,11 @@ describe("ClaudeCliRouter.parseVerdict — runnerUp (NS2 F10)", () => {
     // A missing confidence would make the margin meaningless; the confidence floor
     // is the correct fallback signal, and it needs `null` here to take over.
     const noConfidence = router.parse(
-      envelope({ ...BASE_VERDICT, runnerUp: { targetKind: "subsystem", targetId: "codex" } }),
+      envelope({ ...BASE_VERDICT, runnerUp: { targetKind: "department", targetId: "knw" } }),
     );
     expect(noConfidence?.runnerUp).toBeNull();
     const noId = router.parse(
-      envelope({ ...BASE_VERDICT, runnerUp: { targetKind: "subsystem", confidence: 0.8 } }),
+      envelope({ ...BASE_VERDICT, runnerUp: { targetKind: "department", confidence: 0.8 } }),
     );
     expect(noId?.runnerUp).toBeNull();
   });
@@ -115,14 +115,14 @@ describe("ClaudeCliRouter.resolveRunnerUp — catalog validation (NS2 F10)", () 
 
   it("projects a catalog-backed runner-up onto the contract shape", () => {
     const resolved = router.runnerUp(
-      { targetKind: "subsystem", targetId: "codex", confidence: 0.8, reason: "docs work" },
+      { targetKind: "department", targetId: "knw", confidence: 0.8, reason: "docs work" },
       CANDIDATES,
-      FORGE,
+      DEV,
     );
     // `toMatchObject`: `toTaskTarget` also emits `glyph`/`avatar`/`category` (the
     // latter two `undefined` here), which this assertion isn't about.
     expect(resolved).toMatchObject({
-      target: { kind: "subsystem", id: "codex", name: "Codex" },
+      target: { kind: "department", id: "knw", name: "Knowledge" },
       confidence: 0.8,
       reason: "docs work",
     });
@@ -133,9 +133,9 @@ describe("ClaudeCliRouter.resolveRunnerUp — catalog validation (NS2 F10)", () 
     // "no alternative" instead of throwing the good pick away.
     expect(
       router.runnerUp(
-        { targetKind: "subsystem", targetId: "atlantis", confidence: 0.8, reason: "?" },
+        { targetKind: "department", targetId: "atlantis", confidence: 0.8, reason: "?" },
         CANDIDATES,
-        FORGE,
+        DEV,
       ),
     ).toBeNull();
   });
@@ -143,9 +143,9 @@ describe("ClaudeCliRouter.resolveRunnerUp — catalog validation (NS2 F10)", () 
   it("drops a runner-up that is the WINNER again (a zero margin would park everything)", () => {
     expect(
       router.runnerUp(
-        { targetKind: "subsystem", targetId: "forge", confidence: 0.9, reason: "same" },
+        { targetKind: "department", targetId: "dev", confidence: 0.9, reason: "same" },
         CANDIDATES,
-        FORGE,
+        DEV,
       ),
     ).toBeNull();
   });
@@ -153,9 +153,9 @@ describe("ClaudeCliRouter.resolveRunnerUp — catalog validation (NS2 F10)", () 
   it("clamps a runner-up confidence outside 0..1 onto the declared scale", () => {
     expect(
       router.runnerUp(
-        { targetKind: "subsystem", targetId: "codex", confidence: 4.2, reason: "eager" },
+        { targetKind: "department", targetId: "knw", confidence: 4.2, reason: "eager" },
         CANDIDATES,
-        FORGE,
+        DEV,
       )?.confidence,
     ).toBe(1);
   });

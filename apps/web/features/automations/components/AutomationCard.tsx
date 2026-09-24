@@ -41,11 +41,11 @@ const TARGET_GLYPH = {
   // F4c: no dedicated "eye"/"scan" glyph exists in the DS icon set — "brain" is
   // pre-approved as the fallback (reused from `memory-distill`, same memory domain).
   "self-knowledge": "brain",
-  // NS2 F5a — Sentinel's scheduled security watch: the DS "shield" glyph.
-  "sentinel-scan": "shield",
-  // NS2 F5c — Loom's nightly quality audit: the DS "code" glyph.
-  "loom-audit": "code",
-  // NS2 F7b-2 — Maestro's post-merge CI watch: the DS "branch" (git) glyph.
+  // NS2 F5a — Security's scheduled security watch: the DS "shield" glyph.
+  "security-scan": "shield",
+  // NS2 F5c — Arch's nightly quality audit: the DS "code" glyph.
+  "arch-audit": "code",
+  // NS2 F7b-2 — Release's post-merge CI watch: the DS "branch" (git) glyph.
   "post-merge-watch": "branch",
   // PR review learning v1 — "brain" again: same learning/memory domain as
   // `memory-distill`/`self-knowledge`, no dedicated glyph exists for it.
@@ -124,9 +124,9 @@ export function AutomationCard({
         ? t("targetMemoryDistill")
         : target.type === "self-knowledge"
           ? t("targetSelfKnowledge")
-          : target.type === "sentinel-scan"
+          : target.type === "security-scan"
             ? t("targetSentinelScan")
-            : target.type === "loom-audit"
+            : target.type === "arch-audit"
               ? t("targetLoomAudit")
               : target.type === "post-merge-watch"
                 ? t("targetPostMergeWatch")
@@ -310,9 +310,9 @@ function targetKindKey(
       return "targetAgentFactory";
     case "self-knowledge":
       return "targetSelfKnowledge";
-    case "sentinel-scan":
+    case "security-scan":
       return "targetSentinelScan";
-    case "loom-audit":
+    case "arch-audit":
       return "targetLoomAudit";
     case "post-merge-watch":
       return "targetPostMergeWatch";

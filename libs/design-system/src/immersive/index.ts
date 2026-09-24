@@ -28,7 +28,7 @@ export { OrbitField, OrbitFieldTestId } from "./OrbitField/OrbitField";
 export type { OrbitFieldProps } from "./OrbitField/OrbitField";
 
 // ---------------------------------------------------------------------------
-// OrbNode — composed subsystem node (orb + chrome + label)
+// OrbNode — composed department node (orb + chrome + label)
 // ---------------------------------------------------------------------------
 export { OrbNode, OrbNodeTestId } from "./OrbNode/OrbNode";
 export type { OrbNodeProps } from "./OrbNode/OrbNode";

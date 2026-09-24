@@ -10,13 +10,13 @@ export enum ArchiveRowTestId {
 
 export interface ArchiveRowProps {
   run: RunView;
-  /** Display name of the run's subsystem attribution (or the "bez subsystému"
+  /** Display name of the run's department attribution (or the "bez oddělení"
    * fallback copy) — shown in the subline regardless of the page's active
-   * grouping mode (design: `{subsystem} · {project}`). */
-  subsystemName: string;
-  /** The subsystem's registry colour for the leading dot — absent (no
-   * subsystem attribution, D8) renders a neutral dot instead of a hue. */
-  subsystemColor?: string;
+   * grouping mode (design: `{department} · {project}`). */
+  departmentName: string;
+  /** The department's registry colour for the leading dot — absent (no
+   * department attribution, D8) renders a neutral dot instead of a hue. */
+  departmentColor?: string;
   active: boolean;
   onSelect: (runId: string) => void;
   /** Pre-formatted duration/finish label (mono, trailing edge) — `""` when
@@ -26,8 +26,8 @@ export interface ArchiveRowProps {
 
 /**
  * One row of the `/archiv` master list (F2, `docs/plans/hud2chat-F2-archive.md`)
- * — a design-literal, single-line row: subsystem-colour dot (with glow) → title
- * (ellipsis) → subline (`{subsystem} · {project}`, mono) → state glyph →
+ * — a design-literal, single-line row: department-colour dot (with glow) → title
+ * (ellipsis) → subline (`{department} · {project}`, mono) → state glyph →
  * duration (mono). Deliberately NOT `TaskCard` (the live runs feed's heavier
  * card with a progress bar/caption/avatar tile) — the archive is finished tasks
  * only, so this matches `design/Z.I.B.B.Y/ZIBBY Archiv úloh.html`'s `ArRow`
@@ -36,12 +36,12 @@ export interface ArchiveRowProps {
  * The active row's hue tint and the dot's glow are dynamic per-instance
  * colours DS's sealed `Card`/`Container` carry no token for — forwarded
  * through their `style` passthrough, the same sanctioned pattern as
- * `PipelineOwnerChip` and `SubsystemDrawer`'s `headerBandStyle`.
+ * `PipelineOwnerChip` and `DepartmentDrawer`'s `headerBandStyle`.
  */
 export function ArchiveRow({
   run,
-  subsystemName,
-  subsystemColor,
+  departmentName,
+  departmentColor,
   active,
   onSelect,
   durationLabel,
@@ -55,8 +55,8 @@ export function ArchiveRow({
       onClick={() => onSelect(run.runId)}
       selected={active}
       style={
-        active && subsystemColor
-          ? { background: `${subsystemColor}14`, borderColor: `${subsystemColor}55` }
+        active && departmentColor
+          ? { background: `${departmentColor}14`, borderColor: `${departmentColor}55` }
           : undefined
       }
     >
@@ -66,9 +66,9 @@ export function ArchiveRow({
             data-testid={ArchiveRowTestId.Dot}
             height="7px"
             style={{
-              background: subsystemColor ?? "var(--color-foreground-faint)",
+              background: departmentColor ?? "var(--color-foreground-faint)",
               borderRadius: "50%",
-              boxShadow: subsystemColor ? `0 0 6px ${subsystemColor}88` : undefined,
+              boxShadow: departmentColor ? `0 0 6px ${departmentColor}88` : undefined,
             }}
             width="7px"
           />
@@ -78,8 +78,8 @@ export function ArchiveRow({
             </Typography>
             <Typography mono truncate size="2xs" type="note" variant="tertiary">
               {/* Join on the separator so a run with no project (or no owning
-                  subsystem) does not render a dangling " · ". */}
-              {[subsystemName, run.project].filter(Boolean).join(" · ")}
+                  department) does not render a dangling " · ". */}
+              {[departmentName, run.project].filter(Boolean).join(" · ")}
             </Typography>
           </Container>
           <Icon name={state.glyph} size="xs" tone={tone} />

@@ -20,7 +20,7 @@ import { mandateContract } from "./mandate/mandate.contract";
 import { mcpContract } from "./mcp/mcp.contract";
 import { memoryContract } from "./memory/memory.contract";
 import { machineContract } from "./machine/machine.contract";
-import { maestroContract } from "./maestro/maestro.contract";
+import { releaseContract } from "./release/release.contract";
 import { monitorsContract } from "./monitors/monitors.contract";
 import {
   categoriesContract,
@@ -28,7 +28,7 @@ import {
   skillCategoriesContract,
 } from "./categories/categories.contract";
 import { healthContract } from "./health/health.contract";
-import { subsystemsContract } from "./subsystems/subsystems.contract";
+import { departmentsContract } from "./departments/departments.contract";
 import { selfContract } from "./self/self.contract";
 import { selfKnowledgeContract } from "./self-knowledge/self-knowledge.contract";
 import { hooksContract } from "./hooks/hooks.contract";
@@ -78,14 +78,14 @@ export const appContract = c.router({
   memory: memoryContract,
   machine: machineContract,
   monitors: monitorsContract,
-  maestro: maestroContract,
+  rel: releaseContract,
   automations: automationsContract,
   integrations: integrationsContract,
   mcpServers: mcpContract,
   channels: channelsContract,
   mandate: mandateContract,
   health: healthContract,
-  subsystems: subsystemsContract,
+  departments: departmentsContract,
   self: selfContract,
   selfKnowledge: selfKnowledgeContract,
   limits: limitsContract,

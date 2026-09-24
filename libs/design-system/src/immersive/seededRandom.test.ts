@@ -3,16 +3,16 @@ import { seededRandom } from "./seededRandom";
 
 describe("seededRandom", () => {
   it("produces the same sequence for the same seed", () => {
-    const a = seededRandom("scout");
-    const b = seededRandom("scout");
+    const a = seededRandom("rnd");
+    const b = seededRandom("rnd");
     const seqA = [a(), a(), a()];
     const seqB = [b(), b(), b()];
     expect(seqB).toEqual(seqA);
   });
 
   it("produces a different first value for a different seed", () => {
-    const a = seededRandom("scout");
-    const b = seededRandom("forge");
+    const a = seededRandom("rnd");
+    const b = seededRandom("dev");
     expect(a()).not.toBe(b());
   });
 

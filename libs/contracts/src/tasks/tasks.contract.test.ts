@@ -161,18 +161,18 @@ describe("CreateTaskInputSchema (Phase 11 explicit target)", () => {
     expect(parsed.success).toBe(true);
   });
 
-  it("Phase 91: accepts a subsystem target with a valid closed-enum id", () => {
+  it("Phase 91: accepts a department target with a valid closed-enum id", () => {
     const parsed = CreateTaskInputSchema.safeParse({
-      text: "dispatch to the subsystem",
-      target: { kind: "subsystem", id: "herald", name: "Herald" },
+      text: "dispatch to the department",
+      target: { kind: "department", id: "com", name: "Comms" },
     });
     expect(parsed.success).toBe(true);
   });
 
-  it("Phase 91: rejects a subsystem target whose id isn't in the closed registry", () => {
+  it("Phase 91: rejects a department target whose id isn't in the closed registry", () => {
     const parsed = CreateTaskInputSchema.safeParse({
-      text: "dispatch to the subsystem",
-      target: { kind: "subsystem", id: "not-a-real-subsystem", name: "??" },
+      text: "dispatch to the department",
+      target: { kind: "department", id: "not-a-real-department", name: "??" },
     });
     expect(parsed.success).toBe(false);
   });
@@ -326,22 +326,22 @@ describe("ClassificationTraceSchema (F2c)", () => {
     expect(ScheduledTaskSchema.safeParse(base).success).toBe(true);
   });
 
-  it("parses on ScheduledTask when stage-1 delegated to a subsystem", () => {
+  it("parses on ScheduledTask when stage-1 delegated to a department", () => {
     const parsed = ScheduledTaskSchema.safeParse({
       ...base,
       target: { kind: "pipeline", id: "delivery", name: "Delivery" },
       classification: {
-        stage1: { kind: "subsystem", id: "forge", name: "Forge" },
+        stage1: { kind: "department", id: "dev", name: "Dev" },
         confidence: 0.8,
-        reason: "matches forge's mandate",
+        reason: "matches dev's mandate",
         matchedTerms: ["ship"],
-        subsystem: "forge",
+        department: "dev",
       },
     });
     expect(parsed.success).toBe(true);
   });
 
-  it("parses on ScheduledTask when stage-1 already named a concrete unit (no subsystem)", () => {
+  it("parses on ScheduledTask when stage-1 already named a concrete unit (no department)", () => {
     const parsed = ScheduledTaskSchema.safeParse({
       ...base,
       target: { kind: "agent", id: "writer", name: "Writer" },

@@ -12,7 +12,7 @@ export function getSignalKindsQueryKey() {
  * `docs/superpowers/specs/2026-07-22-handoff-signal-registry-and-receiver-filter-design.md`).
  * Returns the TanStack query result directly; `select` unwraps the ts-rest envelope
  * so `data` is the bare `HandoffSignalKind[]` body. Consumers (the handoff-rule
- * editor and row) scope this down to `from === subsystemId` or look up a single
+ * editor and row) scope this down to `from === departmentId` or look up a single
  * `id` themselves — this hook always returns the whole registry.
  */
 export function useSignalKindsQuery() {

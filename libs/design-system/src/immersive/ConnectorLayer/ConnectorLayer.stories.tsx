@@ -4,9 +4,9 @@ import { ConnectorLayer, type ConnectorNode } from "./ConnectorLayer";
 const CENTER = { x: 300, y: 220 };
 
 const ringNodes: ConnectorNode[] = [
-  { id: "codex", x: 300, y: 40, color: "#8b5cf6", live: true },
+  { id: "knw", x: 300, y: 40, color: "#8b5cf6", live: true },
   { id: "atlas", x: 500, y: 130, color: "#22d3ee", live: true },
-  { id: "forge", x: 540, y: 320, color: "#f97316", live: false },
+  { id: "dev", x: 540, y: 320, color: "#f97316", live: false },
   { id: "scribe", x: 380, y: 400, color: "#34d399", live: false },
   { id: "sentry", x: 180, y: 400, color: "#f43f5e", live: true },
   { id: "mint", x: 60, y: 320, color: "#facc15", live: false },

@@ -7,6 +7,7 @@ import { ModuleRef } from "@nestjs/core";
 import {
   type ArtifactKind,
   DEFAULT_VERIFY_CHECKS,
+  type DepartmentId,
   type IntendedAction,
   PIPELINE_RUN_ARTIFACTS,
   type PhaseEscalation,
@@ -20,7 +21,6 @@ import {
   type RunLogChunk,
   type StageRun,
   type StageVerdict,
-  type SubsystemId,
   type TaskOutput,
   type Workspace,
 } from "@zibby/contracts";
@@ -1347,10 +1347,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
    * write error is logged and the delivery stands. Stable id ⇒ an idempotent
    * re-delivery replaces its record instead of duplicating it.
    *
-   * A3: when the owning pipeline is Scout-owned, ALSO hands a `research-artifact`
+   * A3: when the owning pipeline is Research-owned, ALSO hands a `research-artifact`
    * signal to the handoff rule engine — same best-effort contract, a signal
-   * emission must never fail an already-green delivery. Every non-Scout
-   * pipeline is completely unaffected (gated on `ownerSubsystem === "scout"`).
+   * emission must never fail an already-green delivery. Every non-Research
+   * pipeline is completely unaffected (gated on `department === "rnd"`).
    */
   private async recordArtifact(
     run: PipelineRun,
@@ -1383,8 +1383,8 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         });
       });
 
-    const owner = (await this.pipelines.get(run.pipelineId).catch(() => null))?.ownerSubsystem;
-    if (owner !== "scout") return;
+    const owner = (await this.pipelines.get(run.pipelineId).catch(() => null))?.department;
+    if (owner !== "rnd") return;
     try {
       // Resolved lazily via ModuleRef (non-strict — searches the whole app
       // container), not constructor-injected: PipelinesModule doesn't import
@@ -1395,17 +1395,17 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       const { HandoffService } = await import("../handoff/handoff.service");
       const handoff = this.moduleRef.get<HandoffService>(HandoffService, { strict: false });
       await handoff.evaluate({
-        from: "scout",
+        from: "rnd",
         kind: "research-artifact",
         ...(projectId ? { projectId } : {}),
-        title: `Scout: research artifact ${from}`,
+        title: `Research: research artifact ${from}`,
         body: `Delivered ${kind} ${locator}. Build on this research.`,
         fingerprint: artifactId,
       });
     } catch (error) {
       // `evaluate` is itself fail-open, but a signal emission must NEVER fail an
       // already-green delivery — same contract as the artifact record above.
-      this.log.warn("scout handoff signal failed (soft) — delivery stands", {
+      this.log.warn("research handoff signal failed (soft) — delivery stands", {
         pipelineRunId: run.pipelineRunId,
         from,
         err: error instanceof Error ? error.message : String(error),
@@ -1616,11 +1616,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     if (escalation) {
       this.log.info("applying escalation rung", { phase: phase.id, attempt, ...escalation });
     }
-    // F4a: resolve the pipeline's owning subsystem once per stage so grounding
+    // F4a: resolve the pipeline's owning department once per stage so grounding
     // can attach its knowledge shelf. Fail-open — a missing/renamed pipeline
     // must never block the stage.
-    const ownerSubsystem = (await this.pipelines.get(run.pipelineId).catch(() => null))
-      ?.ownerSubsystem;
+    const department = (await this.pipelines.get(run.pipelineId).catch(() => null))?.department;
     const { command, args, spawnCwd } = await this.buildStageCommand(
       phase,
       stageCwd,
@@ -1630,7 +1629,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       run.matchedTerms,
       resumeContext,
       delegates,
-      ownerSubsystem,
+      department,
       run.pipelineRunId,
     );
     // Materialize enabled custom commands into the stage's working tree (worktree
@@ -1717,14 +1716,14 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       if (!phase.agent) throw new Error(`Phase "${rec.phaseId}" carries no agent`);
       const agent = await this.agents.get(phase.agent);
       // NS2 F3a — a pipeline stage evaluates with the PIPELINE's owning
-      // subsystem's catalog-rule bucket (the executing unit is the authoritative
-      // actor; the phase agent may be shared across subsystems).
-      const rules = await this.gates.rulesForAgentInSubsystem(
+      // department's catalog-rule bucket (the executing unit is the authoritative
+      // actor; the phase agent may be shared across departments).
+      const rules = await this.gates.rulesForAgentInDepartment(
         {
           gates: agent.gates,
           requires_approval: agent.requires_approval,
         },
-        pipeline.ownerSubsystem,
+        pipeline.department,
       );
       const evaluation = this.gates.evaluate(rules, action);
       this.log.info("evaluating mid-run stage intent", {
@@ -1765,8 +1764,8 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
           detail: action.context ?? `Pipeline "${run.pipelineId}", fáze "${rec.phaseId}"`,
           risk: agent.risk ?? "medium",
           // NS2 F3c — attribute the approval to the EXECUTING unit's owner (the
-          // pipeline, not the phase agent, which may be shared across subsystems).
-          ...(pipeline.ownerSubsystem ? { ownerSubsystem: pipeline.ownerSubsystem } : {}),
+          // pipeline, not the phase agent, which may be shared across departments).
+          ...(pipeline.department ? { department: pipeline.department } : {}),
         });
         return;
       }
@@ -1861,9 +1860,9 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     /** Curated `--agents` delegation roster (this pipeline's stage agents) — keeps the
      *  whole agent library off argv (spawn E2BIG). */
     delegates?: readonly string[],
-    /** F4a: the pipeline's owning subsystem — forwarded into grounding so the
+    /** F4a: the pipeline's owning department — forwarded into grounding so the
      *  stage sees the owner's knowledge shelf. */
-    ownerSubsystem?: SubsystemId,
+    department?: DepartmentId,
     /**
      * Task 5: the pipeline run's own stable identity (`PipelineRun.pipelineRunId`,
      * known up-front — unlike the stage's own core-internal run id, which isn't
@@ -1909,7 +1908,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         task,
         projectId: project?.id,
         matchedTerms,
-        ownerSubsystem,
+        department,
       });
       // P1-T2: `cwd` is THIS stage's own sandbox folder, a subdirectory of the run
       // root (`path.dirname(cwd)`). The handoff into `consumes` is now a relative

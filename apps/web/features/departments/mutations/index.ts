@@ -1,1 +1,1 @@
-export { useMarkSubsystemSeenMutation } from "./useMarkSubsystemSeenMutation";
+export { useMarkDepartmentSeenMutation } from "./useMarkDepartmentSeenMutation";

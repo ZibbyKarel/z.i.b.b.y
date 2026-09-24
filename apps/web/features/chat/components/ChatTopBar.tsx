@@ -2,7 +2,7 @@
 
 import type { Route } from "next";
 import type { Ref } from "react";
-import type { SubsystemId } from "@zibby/contracts";
+import type { DepartmentId } from "@zibby/contracts";
 import { Container, GlassSurface, Stack } from "@zibby/design-system";
 import { LimitsRings } from "../../../components/layout/LimitsRings/LimitsRings";
 import type { ChatDetailTarget } from "./ChatDetailDialog";
@@ -42,7 +42,7 @@ export interface ChatTopBarProps {
   /** Forwarded up from `ChatScreen` so its ⌘K handler can open+focus the search. */
   searchRef: Ref<ChatSearchHandle>;
   onDetailSelect: (detail: ChatDetailTarget) => void;
-  onSelectSubsystem: (id: SubsystemId) => void;
+  onSelectDepartment: (id: DepartmentId) => void;
   onOpenRun: (runId: string) => void;
   onNavigate: (href: Route) => void;
   onGenerateBriefing: () => void;
@@ -70,7 +70,7 @@ export interface ChatTopBarProps {
 export function ChatTopBar({
   searchRef,
   onDetailSelect,
-  onSelectSubsystem,
+  onSelectDepartment,
   onOpenRun,
   onNavigate,
   onGenerateBriefing,
@@ -108,7 +108,7 @@ export function ChatTopBar({
             onGenerateBriefing={onGenerateBriefing}
             onNavigate={onNavigate}
             onOpenRun={onOpenRun}
-            onSelectSubsystem={onSelectSubsystem}
+            onSelectDepartment={onSelectDepartment}
             ref={searchRef}
           />
         </Container>

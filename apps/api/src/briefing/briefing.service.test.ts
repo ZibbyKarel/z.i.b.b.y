@@ -38,8 +38,8 @@ function makeVault() {
   };
 }
 
-/** NS2 F3b — a subsystem row fixture in the SubsystemsService.list() shape. */
-function subsystemRow(id: string, name: string, state = "idle", tier2Count = 0, tier3Count = 0) {
+/** NS2 F3b — a department row fixture in the DepartmentsService.list() shape. */
+function departmentRow(id: string, name: string, state = "idle", tier2Count = 0, tier3Count = 0) {
   return { id, name, tagline: "t", mandate: "m", color: "#000000", state, tier2Count, tier3Count };
 }
 
@@ -48,13 +48,13 @@ describe("BriefingService", () => {
   let vault: ReturnType<typeof makeVault>;
   let record: ReturnType<typeof vi.fn>;
   let briefer: { headline: ReturnType<typeof vi.fn> };
-  let subsystems: { list: ReturnType<typeof vi.fn> };
+  let departments: { list: ReturnType<typeof vi.fn> };
   let limits: { snapshot: ReturnType<typeof vi.fn> };
   let monitorEvents: { listStatuses: ReturnType<typeof vi.fn> };
   let selfKnowledge: { check: ReturnType<typeof vi.fn> };
-  let sentinel: { readFindings: ReturnType<typeof vi.fn> };
-  let maestro: { summaryLines: ReturnType<typeof vi.fn> };
-  let loom: { readFindings: ReturnType<typeof vi.fn> };
+  let security: { readFindings: ReturnType<typeof vi.fn> };
+  let release: { summaryLines: ReturnType<typeof vi.fn> };
+  let arch: { readFindings: ReturnType<typeof vi.fn> };
   let watchers: { all: ReturnType<typeof vi.fn> };
   let mergeWatch: { list: ReturnType<typeof vi.fn> };
   let channels: { list: ReturnType<typeof vi.fn> };
@@ -76,9 +76,9 @@ describe("BriefingService", () => {
     const tasks = { list: vi.fn().mockResolvedValue([]) };
     const projects = { list: vi.fn().mockResolvedValue([]) };
     monitorEvents = { listStatuses: vi.fn().mockResolvedValue([]) };
-    // NS2 F3b — default fixtures: no subsystem rows, no limits reading (each
+    // NS2 F3b — default fixtures: no department rows, no limits reading (each
     // test overrides what it exercises).
-    subsystems = { list: vi.fn().mockResolvedValue([]) };
+    departments = { list: vi.fn().mockResolvedValue([]) };
     limits = {
       snapshot: vi.fn().mockResolvedValue({ weekly: { usedPct: 0 }, rolling: { usedPct: 0 } }),
     };
@@ -86,13 +86,13 @@ describe("BriefingService", () => {
     selfKnowledge = { check: vi.fn().mockResolvedValue(false) };
     // NS2 F5a — default fixture: no security findings (each test overrides what
     // it exercises).
-    sentinel = { readFindings: vi.fn().mockResolvedValue([]) };
+    security = { readFindings: vi.fn().mockResolvedValue([]) };
     // NS2 F5b — default fixture: no merge-queue lines (each test overrides what
     // it exercises).
-    maestro = { summaryLines: vi.fn().mockResolvedValue([]) };
+    release = { summaryLines: vi.fn().mockResolvedValue([]) };
     // NS2 F5c — default fixture: no quality findings (each test overrides what
     // it exercises).
-    loom = { readFindings: vi.fn().mockResolvedValue([]) };
+    arch = { readFindings: vi.fn().mockResolvedValue([]) };
     // NS2 F6c — default fixture: every watcher healthy (each test overrides
     // what it exercises).
     watchers = { all: vi.fn().mockReturnValue([]) };
@@ -111,12 +111,12 @@ describe("BriefingService", () => {
       tasks as never,
       projects as never,
       monitorEvents as never,
-      subsystems as never,
+      departments as never,
       limits as never,
       selfKnowledge as never,
-      sentinel as never,
-      maestro as never,
-      loom as never,
+      security as never,
+      release as never,
+      arch as never,
       watchers as never,
       mergeWatch as never,
       dir,
@@ -166,33 +166,33 @@ describe("BriefingService", () => {
     expect(briefing.since).toBe("2026-06-12T00:00:00.000Z");
   });
 
-  describe("per-subsystem lines (NS2 F3b)", () => {
-    it("mirrors the gathered subsystem states and tier counts", async () => {
-      subsystems.list.mockResolvedValue([
-        subsystemRow("forge", "Forge", "waiting", 0, 2),
-        subsystemRow("beacon", "Beacon", "waiting", 0, 1),
-        subsystemRow("scout", "Scout", "report", 3, 0),
+  describe("per-department lines (NS2 F3b)", () => {
+    it("mirrors the gathered department states and tier counts", async () => {
+      departments.list.mockResolvedValue([
+        departmentRow("dev", "Dev", "waiting", 0, 2),
+        departmentRow("inc", "Incident", "waiting", 0, 1),
+        departmentRow("rnd", "Research", "report", 3, 0),
       ]);
       const briefing = await service.assemble(now);
-      expect(briefing.subsystems).toHaveLength(3);
-      expect(briefing.subsystems?.[0]).toMatchObject({
-        subsystem: "forge",
-        name: "Forge",
+      expect(briefing.departments).toHaveLength(3);
+      expect(briefing.departments?.[0]).toMatchObject({
+        department: "dev",
+        name: "Dev",
         state: "waiting",
         tier3Count: 2,
       });
-      expect(briefing.subsystems?.[2]).toMatchObject({ subsystem: "scout", tier2Count: 3 });
+      expect(briefing.departments?.[2]).toMatchObject({ department: "rnd", tier2Count: 3 });
     });
 
-    it("Ledger's note carries the weekly usage window %", async () => {
-      subsystems.list.mockResolvedValue([subsystemRow("ledger", "Ledger")]);
+    it("Finance's note carries the weekly usage window %", async () => {
+      departments.list.mockResolvedValue([departmentRow("fin", "Finance")]);
       limits.snapshot.mockResolvedValue({ weekly: { usedPct: 62 }, rolling: { usedPct: 10 } });
       const briefing = await service.assemble(now);
-      expect(briefing.subsystems?.[0]?.note).toBe("62 % týdenního okna");
+      expect(briefing.departments?.[0]?.note).toBe("62 % týdenního okna");
     });
 
-    it("Puls' note reflects CI health from the gathered statuses", async () => {
-      subsystems.list.mockResolvedValue([subsystemRow("puls", "Puls")]);
+    it("Ops' note reflects CI health from the gathered statuses", async () => {
+      departments.list.mockResolvedValue([departmentRow("ops", "Ops")]);
       monitorEvents.listStatuses.mockResolvedValue([
         {
           integrationId: "gh",
@@ -203,7 +203,7 @@ describe("BriefingService", () => {
         },
       ]);
       const green = await service.assemble(now);
-      expect(green.subsystems?.[0]?.note).toBe("CI zelené");
+      expect(green.departments?.[0]?.note).toBe("CI zelené");
 
       monitorEvents.listStatuses.mockResolvedValue([
         {
@@ -215,22 +215,22 @@ describe("BriefingService", () => {
         },
       ]);
       const red = await service.assemble(now);
-      expect(red.subsystems?.[0]?.note).toBe("CI červená (1)");
+      expect(red.departments?.[0]?.note).toBe("CI červená (1)");
     });
 
-    it("a failed subsystem read omits the lines but the briefing still assembles", async () => {
-      subsystems.list.mockRejectedValue(new Error("registry down"));
+    it("a failed department read omits the lines but the briefing still assembles", async () => {
+      departments.list.mockRejectedValue(new Error("registry down"));
       const briefing = await service.assemble(now);
-      expect(briefing.subsystems).toBeUndefined();
+      expect(briefing.departments).toBeUndefined();
       expect(briefing.headline).toBe("Nothing needs you.");
     });
 
-    it("a failed limits read only drops Ledger's note, not the section", async () => {
-      subsystems.list.mockResolvedValue([subsystemRow("ledger", "Ledger")]);
+    it("a failed limits read only drops Finance's note, not the section", async () => {
+      departments.list.mockResolvedValue([departmentRow("fin", "Finance")]);
       limits.snapshot.mockRejectedValue(new Error("statusline missing"));
       const briefing = await service.assemble(now);
-      expect(briefing.subsystems).toHaveLength(1);
-      expect(briefing.subsystems?.[0]?.note).toBeUndefined();
+      expect(briefing.departments).toHaveLength(1);
+      expect(briefing.departments?.[0]?.note).toBeUndefined();
     });
   });
 
@@ -256,20 +256,20 @@ describe("BriefingService", () => {
   });
 
   describe("security findings (NS2 F5a)", () => {
-    it("surfaces Sentinel's open findings", async () => {
-      sentinel.readFindings.mockResolvedValue(["CVE-2026-1234 in lodash"]);
+    it("surfaces Security's open findings", async () => {
+      security.readFindings.mockResolvedValue(["CVE-2026-1234 in lodash"]);
       const briefing = await service.assemble(now);
       expect(briefing.securityFindings).toEqual(["CVE-2026-1234 in lodash"]);
     });
 
     it("omits securityFindings when there are none", async () => {
-      sentinel.readFindings.mockResolvedValue([]);
+      security.readFindings.mockResolvedValue([]);
       const briefing = await service.assemble(now);
       expect(briefing.securityFindings).toBeUndefined();
     });
 
     it("a failed read fails open — omits the field, the briefing still assembles", async () => {
-      sentinel.readFindings.mockRejectedValue(new Error("vault hiccup"));
+      security.readFindings.mockRejectedValue(new Error("vault hiccup"));
       const briefing = await service.assemble(now);
       expect(briefing.securityFindings).toBeUndefined();
       expect(briefing.headline).toBe("Nothing needs you.");
@@ -277,20 +277,20 @@ describe("BriefingService", () => {
   });
 
   describe("merge queue (NS2 F5b)", () => {
-    it("surfaces Maestro's per-project summary lines", async () => {
-      maestro.summaryLines.mockResolvedValue(["Acme: 2 ready · 1 blocked"]);
+    it("surfaces Release's per-project summary lines", async () => {
+      release.summaryLines.mockResolvedValue(["Acme: 2 ready · 1 blocked"]);
       const briefing = await service.assemble(now);
       expect(briefing.mergeQueue).toEqual(["Acme: 2 ready · 1 blocked"]);
     });
 
     it("omits mergeQueue when there are no lines", async () => {
-      maestro.summaryLines.mockResolvedValue([]);
+      release.summaryLines.mockResolvedValue([]);
       const briefing = await service.assemble(now);
       expect(briefing.mergeQueue).toBeUndefined();
     });
 
     it("a failed read fails open — omits the field, the briefing still assembles", async () => {
-      maestro.summaryLines.mockRejectedValue(new Error("github rate limited"));
+      release.summaryLines.mockRejectedValue(new Error("github rate limited"));
       const briefing = await service.assemble(now);
       expect(briefing.mergeQueue).toBeUndefined();
       expect(briefing.headline).toBe("Nothing needs you.");
@@ -298,20 +298,20 @@ describe("BriefingService", () => {
   });
 
   describe("quality findings (NS2 F5c)", () => {
-    it("surfaces Loom's new quality findings", async () => {
-      loom.readFindings.mockResolvedValue(["god node: AppShell (degree 40)"]);
+    it("surfaces Arch's new quality findings", async () => {
+      arch.readFindings.mockResolvedValue(["god node: AppShell (degree 40)"]);
       const briefing = await service.assemble(now);
       expect(briefing.qualityFindings).toEqual(["god node: AppShell (degree 40)"]);
     });
 
     it("omits qualityFindings when there are none", async () => {
-      loom.readFindings.mockResolvedValue([]);
+      arch.readFindings.mockResolvedValue([]);
       const briefing = await service.assemble(now);
       expect(briefing.qualityFindings).toBeUndefined();
     });
 
     it("a failed read fails open — omits the field, the briefing still assembles", async () => {
-      loom.readFindings.mockRejectedValue(new Error("vault hiccup"));
+      arch.readFindings.mockRejectedValue(new Error("vault hiccup"));
       const briefing = await service.assemble(now);
       expect(briefing.qualityFindings).toBeUndefined();
       expect(briefing.headline).toBe("Nothing needs you.");

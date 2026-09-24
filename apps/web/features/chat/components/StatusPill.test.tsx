@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../../../test/render";
 import { StatusPill, StatusPillTestId } from "./StatusPill";
 
-vi.mock("../../subsystems/queries/useSubsystemsQuery", () => ({
-  useSubsystemsQuery: () => ({
+vi.mock("../../departments/queries/useDepartmentsQuery", () => ({
+  useDepartmentsQuery: () => ({
     data: [
       { id: "a", name: "A", color: "#fff", state: "running" },
       { id: "b", name: "B", color: "#fff", state: "running" },
@@ -18,7 +18,7 @@ vi.mock("../../subsystems/queries/useSubsystemsQuery", () => ({
 }));
 
 // The waiting count/trigger must come from the real approvals feed, not the
-// subsystem roster above (a "d" subsystem in `waiting` state is deliberately
+// department roster above (a "d" department in `waiting` state is deliberately
 // present to prove the two are no longer coupled — see StatusPill.tsx).
 vi.mock("../../approvals", () => ({
   useApprovalsQuery: () => ({ data: [{ id: "appr_1" }] }),
@@ -56,7 +56,7 @@ vi.mock("./StatusFlyoutPanel", async (importOriginal) => {
 });
 
 describe("StatusPill", () => {
-  it("shows per-state counts derived from the subsystem roster", () => {
+  it("shows per-state counts derived from the department roster", () => {
     renderWithProviders(<StatusPill />);
     expect(screen.getByTestId(StatusPillTestId.Working)).toHaveTextContent("2");
     expect(screen.getByTestId(StatusPillTestId.Error)).toHaveTextContent("1");

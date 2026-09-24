@@ -110,7 +110,7 @@ The gate now sets `routingText` to the item's bare name + description
 (`buildRoadmapRoutingText`) while `text` keeps the framing.
 
 ⚠️ It has to be honoured at **both** stages. Stage 1 runs in the gate, but stage 2 runs
-later inside `createTask` (`resolveSubsystemTarget`), which reads
+later inside `createTask` (`resolveDepartmentTarget`), which reads
 `input.routingText ?? input.text` — stripping the footer only for stage 1 would have
 left it in the haystack of the pass that actually picks the running unit.
 
@@ -124,19 +124,19 @@ source rather than one agent id at a time.
 
 The classifier finds the best target for the task's text, in up to two stages:
 
-1. **Stage 1 — the switchboard. SUBSYSTEMS ONLY (NS2 F9).** The catalog is exactly
-   one coarse `subsystem` candidate per subsystem that owns ≥1 pipeline or active
-   agent (`ownerSubsystem`) — `stage1SubsystemCandidates`, and nothing else. A
-   subsystem candidate's `search` is its Czech mandate, so mandate-term overlap
+1. **Stage 1 — the switchboard. DEPARTMENTS ONLY (NS2 F9).** The catalog is exactly
+   one coarse `department` candidate per department that owns ≥1 pipeline or active
+   agent (`department`) — `stage1DepartmentCandidates`, and nothing else. A
+   department candidate's `search` is its Czech mandate, so mandate-term overlap
    ranks it in the keyword-scorer leg too.
 
    Stage 1 asks exactly one question: **"whose domain is this?"** Concrete agents
    and pipelines are no longer offered here.
 
    > **Changed in F9.** Stage 1 used to list every active agent and every pipeline
-   > _alongside_ the subsystem candidates, and let one ranking pass choose between
+   > _alongside_ the department candidates, and let one ranking pass choose between
    > them. That asked the router to compare units at two different levels of
-   > abstraction — `code-reviewer` (an agent) against `Forge` (the subsystem that
+   > abstraction — `code-reviewer` (an agent) against `Dev` (the department that
    > owns that very agent). They are not peers: one contains the other, so
    > whichever won was arbitrary, and the two winners produced materially
    > different runs. A direct agent/pipeline pick also skipped the size policy
@@ -145,20 +145,20 @@ The classifier finds the best target for the task's text, in up to two stages:
    > pipeline with nothing asking whether the hammer fit.
    >
    > The knock-on effect is the enforcement behind F9's "no free units": an agent
-   > or pipeline with **no `ownerSubsystem` is unroutable by construction**,
+   > or pipeline with **no `department` is unroutable by construction**,
    > because no catalog contains it and the classifier can emit nothing else.
 
 2. Keyword scoring — counts word overlap between the task text and each candidate's
    `search` blob (an LLM router runs first in production; the keyword scorer is the
    deterministic fallback; `isCoherent` rejects an orchestrator/goal pick, but a
-   seated `subsystem` pick is coherent)
+   seated `department` pick is coherent)
 3. Returns a `TaskRouting`:
    ```typescript
    {
-     // stage 1 emits only "subsystem" | "orchestrator" since F9;
+     // stage 1 emits only "department" | "orchestrator" since F9;
      // "agent" / "pipeline" come from the scoped stage-2 pass or an explicit target
-     target: "agent" | "pipeline" | "subsystem" | "orchestrator"
-     id?: string        // agent/pipeline/subsystem id (the orchestrator has none)
+     target: "agent" | "pipeline" | "department" | "orchestrator"
+     id?: string        // agent/pipeline/department id (the orchestrator has none)
      confidence: number // 0–1
      reason: string     // why this target
      runnerUp: { target, confidence, reason } | null  // NS2 F10
@@ -200,13 +200,13 @@ threshold does, a mid-scale default turns a parse gap into a routing decision.
 
 **Who acts on `ambiguous`** — the asymmetry is about what a wrong pick costs:
 
-| Caller                                                 | On ambiguous                                                                                                                 |
-| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| `classify()` — the interactive preview                 | Carries the flag to the wire. The preview + manual picker _is_ the intervention; no gate.                                    |
-| `classifyWithinSubsystem()` — stage 2                  | **Strips it and guesses.** Bounded cost: one `cheapestPipeline` run inside a named subsystem.                                |
-| `classifySubsystem()` — the autonomous roadmap release | **Exposes it.** A wrong pick is a whole wrong subsystem and nobody sees a preview → Tier-3 park (see `docs/api/roadmap.md`). |
+| Caller                                                  | On ambiguous                                                                                                                  |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `classify()` — the interactive preview                  | Carries the flag to the wire. The preview + manual picker _is_ the intervention; no gate.                                     |
+| `classifyWithinDepartment()` — stage 2                  | **Strips it and guesses.** Bounded cost: one `cheapestPipeline` run inside a named department.                                |
+| `classifyDepartment()` — the autonomous roadmap release | **Exposes it.** A wrong pick is a whole wrong department and nobody sees a preview → Tier-3 park (see `docs/api/roadmap.md`). |
 
-`POST /api/tasks/classify` returns this **raw stage-1 verdict** — a `subsystem`
+`POST /api/tasks/classify` returns this **raw stage-1 verdict** — a `department`
 target is NOT resolved further by this endpoint, so previewing a task shows the
 switchboard's coarse pick as-is.
 
@@ -218,9 +218,9 @@ agents — the only sanctioned way in is a caller supplying an `explicitTarget`,
 house rule "an explicit target skips the classifier", read from the other side.
 
 The filter lives in `TaskClassifierService.agentCandidates` — the single projection shared
-by `buildCandidates` (stage 1) and `subsystemCandidates` (stage 2) — so neither the
-top-level switchboard nor a scoped subsystem pass can reach one, even if such an agent is
-later given an `ownerSubsystem`. Because the id is then absent from `candidates`,
+by `buildCandidates` (stage 1) and `departmentCandidates` (stage 2) — so neither the
+top-level switchboard nor a scoped department pass can reach one, even if such an agent is
+later given an `department`. Because the id is then absent from `candidates`,
 `isCoherent` also rejects an LLM verdict that names it outright.
 
 Current members:
@@ -241,60 +241,60 @@ item's own words via [`routingText`](#routing-text--what-a-ranker-sees-vs-what-a
 rather than the framed text. This list stays as the per-agent backstop for agents whose
 _own_ description is the hazard.
 
-### Stage 1 only — `classifySubsystem` (subsystem-first callers)
+### Stage 1 only — `classifyDepartment` (department-first callers)
 
 A caller that wants the switchboard to answer **only** "whose domain is this?" — and
-to let the subsystem pick its own unit — calls `classifySubsystem(input, preferred?)`
+to let the department pick its own unit — calls `classifyDepartment(input, preferred?)`
 instead of `classify`. `RoadmapGateService.release()` is the first such caller (see
-[roadmap.md](./roadmap.md#subsystem-first-release)). It is the North-Star-2 Subsystem
-Charter read literally: _"The global classifier only picks the subsystem; the subsystem
+[roadmap.md](./roadmap.md#department-first-release)). It is the North-Star-2 Department
+Charter read literally: _"The global classifier only picks the department; the department
 picks the unit."_
 
 Three differences from `classify` that carry weight:
 
-- **The catalog is subsystem-only** — concrete agents/pipelines are never offered, so
-  the verdict cannot skip the subsystem layer. A router verdict naming a concrete unit
+- **The catalog is department-only** — concrete agents/pipelines are never offered, so
+  the verdict cannot skip the department layer. A router verdict naming a concrete unit
   fails `isCoherent` (it isn't in this catalog) and falls through.
-- **Every candidate is SEATED by construction.** `stage1SubsystemCandidates` only emits
-  subsystems owning ≥1 pipeline or active agent, so the returned target can never trip
-  `SubsystemEmptyRosterError` downstream — the one real hazard of routing this way,
-  since 7 of the 11 subsystems own nothing today.
+- **Every candidate is SEATED by construction.** `stage1DepartmentCandidates` only emits
+  departments owning ≥1 pipeline or active agent, so the returned target can never trip
+  `DepartmentEmptyRosterError` downstream — the one real hazard of routing this way,
+  since 7 of the 11 departments own nothing today.
 - **No `enrich`** — no loop synthesis, no tool-grant proposal. Those belong to the
   interactive composer; a gate release wants the bare verdict.
 
 `preferred` is the caller's domain default, used only when nothing matches confidently
-and only if that subsystem is actually seated (otherwise the first seated candidate
-wins). Returns `null` only when NO subsystem is seated at all — which a caller must
+and only if that department is actually seated (otherwise the first seated candidate
+wins). Returns `null` only when NO department is seated at all — which a caller must
 read as "don't direct this task", not as a failure.
 
-⚠️ A stage-1 subsystem candidate's `search` blob is the subsystem's **mandate**, not its
+⚠️ A stage-1 department candidate's `search` blob is the department's **mandate**, not its
 owned units' descriptions. Keyword-leg overlap is therefore against mandate wording
 (and the mandates are Czech).
 
-### Stage 2 — inside a subsystem (`classifyWithinSubsystem`)
+### Stage 2 — inside a department (`classifyWithinDepartment`)
 
-When an actual task dispatch (not the preview endpoint) lands on a `kind: "subsystem"`
+When an actual task dispatch (not the preview endpoint) lands on a `kind: "department"`
 target — either the switchboard's own stage-1 pick, or an operator's explicit
 `@`-mention — `TaskSchedulerService` resolves it to a concrete unit before starting a
-run, via `resolveSubsystemTargetOrNull` / `resolveSubsystemTarget`:
+run, via `resolveDepartmentTargetOrNull` / `resolveDepartmentTarget`:
 
-- **0 owned units** (no pipeline or active agent with that `ownerSubsystem`) — the
+- **0 owned units** (no pipeline or active agent with that `department`) — the
   undirected switchboard path falls back to the orchestrator (soft, like any other
   low-confidence verdict); the explicit `@mention` path instead throws
-  `SubsystemEmptyRosterError` (a clear Czech message) → HTTP 422 — a mandate without
+  `DepartmentEmptyRosterError` (a clear Czech message) → HTTP 422 — a mandate without
   capability shouldn't pretend to execute.
 - **1 owned unit** → dispatches straight to it (pipeline before agent); the scoped
   classifier is never called.
-- **2+ owned units** → `classifyWithinSubsystem(input, subsystemId)` — the same
+- **2+ owned units** → `classifyWithinDepartment(input, departmentId)` — the same
   router/keyword-scorer machinery reused with the catalog restricted to that
-  subsystem's own pipelines + active agents (never another subsystem), and the LLM
-  router prompt gets an extra `preamble` (the subsystem's mandate + an "owned units"
+  department's own pipelines + active agents (never another department), and the LLM
+  router prompt gets an extra `preamble` (the department's mandate + an "owned units"
   list, each line labelled with its ladder rung, + `EFFORT_RULE`) so it reasons about
   the mandate, not bare catalog rows. A low-confidence stage-2 verdict resolves per
-  `SUBSYSTEM_FALLBACK[subsystemId]`: `"orchestrator"` (defer to the global
-  orchestrator) or `"primary"` (stay inside the subsystem, dispatch its **cheapest
-  owned pipeline**) — a typed `Record` over the closed `SubsystemId` enum, so a new
-  subsystem id fails `tsc` until it's given a policy.
+  `DEPARTMENT_FALLBACK[departmentId]`: `"orchestrator"` (defer to the global
+  orchestrator) or `"primary"` (stay inside the department, dispatch its **cheapest
+  owned pipeline**) — a typed `Record` over the closed `DepartmentId` enum, so a new
+  department id fails `tsc` until it's given a policy.
 
 Both counts above are counts of **eligible** units, not owned ones — the required-sink
 constraint below is applied first, so a roster of one agent + one PR pipeline is a
@@ -321,7 +321,7 @@ agent's config), applied to capability.
 
 **Every agent is dropped, and that is deliberate rather than an omission.** A task that
 must produce a PR is never routed to a lone agent. The rung that looks like "one
-implementer agent" already exists as a pipeline — forge's `quick-fix` (`light`: a single
+implementer agent" already exists as a pipeline — dev's `quick-fix` (`light`: a single
 `fullstack-developer` phase plus a declared `pr` output) — so the invariant costs no
 expressiveness while keeping review, verification and a real sink in the path. The
 motivating misroute landed on `documentation-engineer`, an agent whose tool list has no
@@ -335,23 +335,23 @@ Two consequences worth naming:
   hand a narrow-sounding ticket to one agent. The question becomes purely _how big is
   this_, over three pipelines instead of a dozen mixed units, with a bounded worst case:
   pick `patch` where `delivery` was warranted and the work still lands as a PR.
-- **It overrides `SUBSYSTEM_FALLBACK`'s `"orchestrator"` policy.** Escaping to the
+- **It overrides `DEPARTMENT_FALLBACK`'s `"orchestrator"` policy.** Escaping to the
   orchestrator would break the very invariant the constraint holds (no PR-shaped
   output → `reconcileRunning` kills the item), so a constrained fallback always names
   the cheapest eligible pipeline.
 
-If a subsystem owns **no** PR-capable pipeline, the filter keeps the full roster and
+If a department owns **no** PR-capable pipeline, the filter keeps the full roster and
 `warn`s instead of emptying the catalog: that is a roster gap for the operator to fix,
-and routing it the old way while saying so beats routing it nowhere. Only forge, hearth
-and codex own a PR pipeline today.
+and routing it the old way while saying so beats routing it nowhere. Only dev, personal
+and knowledge own a PR pipeline today.
 
-`TaskSchedulerService.resolveSubsystemTargetOrNull` mirrors this rule for the direct
+`TaskSchedulerService.resolveDepartmentTargetOrNull` mirrors this rule for the direct
 (non-classifying) resolution paths, so a 1-eligible dispatch and the scoped classifier
 never disagree about what counts as eligible.
 
 **This is where "a small change shouldn't run the whole pipeline" is decided** — and
-since NS2 F9 it is the ONLY place a concrete unit is chosen, for every subsystem
-rather than just forge. Every seated subsystem now owns specialist agents plus a
+since NS2 F9 it is the ONLY place a concrete unit is chosen, for every department
+rather than just dev. Every seated department now owns specialist agents plus a
 graded set of pipelines, so `EFFORT_RULE` (`task-classifier.service.ts`) describes a
 **four-rung ladder** instead of a binary agent-vs-pipeline rule:
 
@@ -365,20 +365,20 @@ graded set of pipelines, so `EFFORT_RULE` (`task-classifier.service.ts`) describ
 The rule says "prefer the cheapest rung that can do it safely", and the scoped catalog
 is ordered cheapest-first (agents, then pipelines by `complexity`) so the list itself
 reinforces it. The wording stays prose in the preamble rather than a contract field —
-the preamble is already the one place per-subsystem routing policy lives — but the
+the preamble is already the one place per-department routing policy lives — but the
 _ordering_ it describes is data (`PIPELINE_COMPLEXITY_ORDER`, see
 [pipelines.md](./pipelines.md)).
 
-**`SUBSYSTEM_FALLBACK.forge` is `"primary"`, not `"orchestrator"`.** It used to be
-`"orchestrator"`, on the reasoning that forge's units are delivery _specialists_ so an
-unsure pick was better self-delegated. That is wrong for the work forge actually
+**`DEPARTMENT_FALLBACK.dev` is `"primary"`, not `"orchestrator"`.** It used to be
+`"orchestrator"`, on the reasoning that dev's units are delivery _specialists_ so an
+unsure pick was better self-delegated. That is wrong for the work dev actually
 receives: escaping to the global orchestrator yields a session with no PR-shaped
 output, and `RoadmapGateService.reconcileRunning` then kills the item as _"Run finished
 without producing an artifact"_ — the very failure the fallback was meant to avoid.
 `"primary"` makes "unsure" mean "run a pipeline", which is the safe direction.
 
 > **What `"primary"` resolves to changed in F9.** It used to read `candidates[0]`,
-> which — with pipelines sorted first — was forge's `delivery`, the most _expensive_
+> which — with pipelines sorted first — was dev's `delivery`, the most _expensive_
 > unit it owns. Now that the catalog is ordered cheapest-first, `candidates[0]` is an
 > agent, which is precisely the wrong answer for an unsure verdict (a bare agent is
 > what produced the artifact-less runs above). So the fallback stops reading list
@@ -387,13 +387,13 @@ without producing an artifact"_ — the very failure the fallback was meant to a
 > coupled to catalog ordering, which is what made it safe to reorder the catalog for
 > the router's benefit.
 
-`codex` and `hearth` became `"primary"` in F9 (each now owns a `light` pipeline).
-`beacon` and `ledger` are `"orchestrator"` but the value is **inert**: they own no
+`knw` and `per` became `"primary"` in F9 (each now owns a `light` pipeline).
+`inc` and `ledger` are `"orchestrator"` but the value is **inert**: they own no
 dispatchable units by design, so they are never seated at stage 1 and stage 2 is
 unreachable for them.
 
-The resolved target IS the run's "via `<subsystem>`" attribution — any consumer can
-already read `Pipeline.ownerSubsystem` / `Agent.ownerSubsystem` off the dispatched id,
+The resolved target IS the run's "via `<department>`" attribution — any consumer can
+already read `Pipeline.department` / `Agent.department` off the dispatched id,
 so no extra run-level field is needed for that. The verdict itself is separately
 persisted as the task's `ClassificationTrace` and enriched onto the run
 (`TaskRun.classification`, read-only) so `RunDetail` can show "why this was routed
@@ -402,7 +402,7 @@ here."
 ### The trace records BOTH stages, and which leg answered
 
 `ClassificationTrace` carries the stage-1 verdict (target, confidence, reason,
-matchedTerms, and — when it named a subsystem — the subsystem id) plus:
+matchedTerms, and — when it named a department — the department id) plus:
 
 | Field                      | Meaning                                                                        |
 | -------------------------- | ------------------------------------------------------------------------------ |
@@ -421,16 +421,16 @@ tie with the runner-up) — but nothing said so, and diagnosing it meant reverse
 that arithmetic by hand. `route()` now also `warn`s when the router was unusable.
 
 `rankedCandidates: 1` is the honest distinction between _"the router picked delivery"_ and
-_"delivery was the only PR-capable pipeline forge owns"_.
+_"delivery was the only PR-capable pipeline dev owns"_.
 
-`stage2` was previously discarded outright: `resolveSubsystemTargetOrNull` returned
+`stage2` was previously discarded outright: `resolveDepartmentTargetOrNull` returned
 `routing?.target ?? primary`, dropping the reason, the confidence and the leg of the
 decision that picks the thing that actually runs. It is absent only when no usable
 verdict existed and the fallback unit was taken.
 
 ⚠️ **Gap.** `stage2` is persisted on the undirected classify path (`dispatch` builds the
 trace). On the explicit-target path — which includes the roadmap release, since the gate
-hands `createTask` a resolved subsystem — the trace is written by
+hands `createTask` a resolved department — the trace is written by
 `RoadmapGateService.writeClassificationTrace` from the stage-1 verdict only, so `stage2`
 is logged (`"stage-2 verdict"`, with target/confidence/reason/leg/rankedCandidates) but
 not yet on the record. Closing it means one writer owning the whole trace.
@@ -502,7 +502,7 @@ setInterval(() => tick(), systemConfig.current().taskTickMs);
 | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `agent`        | `AgentRunnerService.startRun(agentId, { prompt, project })`                                                                                   |
 | `pipeline`     | `PipelineRunnerService.startRun(pipelineId, { prompt, project })`                                                                             |
-| `subsystem`    | Resolved to a concrete `agent`/`pipeline` target first (stage 2, see above), then dispatched like any other — never reaches a runner directly |
+| `department`   | Resolved to a concrete `agent`/`pipeline` target first (stage 2, see above), then dispatched like any other — never reaches a runner directly |
 | `orchestrator` | `AgentRunnerService.startRun(ORCHESTRATOR_ID, { prompt })`                                                                                    |
 
 After dispatch, `runRef` is written back to the task record.
@@ -542,9 +542,9 @@ rows), but stay reachable from the goal's detail view.
 
 ```
 GET    /api/tasks/runs                                       the unified feed (newest-first; agent/pipeline/goal/scheduled)
-GET    /api/tasks/runs/archive                                the `/archiv` page's feed: cursor-paginated, search/subsystem-
+GET    /api/tasks/runs/archive                                the `/archiv` page's feed: cursor-paginated, search/department-
                                                                 filtered, archived-only (below)
-GET    /api/tasks/runs/archive/counts                          per-subsystem archive counts (search-scoped) + the unsearched total
+GET    /api/tasks/runs/archive/counts                          per-department archive counts (search-scoped) + the unsearched total
 GET    /api/tasks/runs/:runId                                a single run's detail
 GET    /api/tasks/runs/:runId/logs?offset=                   log chunk from a byte offset
 GET    /api/tasks/runs/:runId/logs/stream                    SSE tail (falls back to the offset-poll above)
@@ -581,17 +581,17 @@ in the catalog) — see [agents-runs.md](./agents-runs.md) and [pipelines.md](./
 
 The `/archiv` page's flat, lazy-loaded list: every archived run (`done` / `error` /
 `interrupted` / `parked` — NOT `paused-limit`, a mid-run pause), newest-first, with
-search and subsystem filtering both running server-side so they reach every archived
+search and department filtering both running server-side so they reach every archived
 run rather than only whatever page the frontend has already loaded. Built on the same
 in-memory merge `GET /api/tasks/runs` uses (`TaskRunsService.collect()`) — there is no
 separate archive store.
 
 ```
-GET /api/tasks/runs/archive?search=&subsystems=&before=&limit=
+GET /api/tasks/runs/archive?search=&departments=&before=&limit=
   search       free text, matched against a run's display title and project
-  subsystems   comma-separated subsystem ids, or "none" for runs with no subsystem
+  departments   comma-separated department ids, or "none" for runs with no department
                attribution (an agent/goal run, or a pipeline whose owner isn't
-               tagged) — omitted/empty means "all subsystems"
+               tagged) — omitted/empty means "all departments"
   before       opaque `<startedAt>|<runId>` cursor from the previous page's
                `nextCursor` — keyset pagination, not offset-based
   limit        clamped to [1, 100], default 40
@@ -600,8 +600,8 @@ GET /api/tasks/runs/archive?search=&subsystems=&before=&limit=
 
 GET /api/tasks/runs/archive/counts?search=
   → { counts: Record<string, number>, total: number }
-    counts: per-subsystem-id (or "none") count among archived + search-matched runs,
-            computed BEFORE any subsystem selection (picking one subsystem in the UI
+    counts: per-department-id (or "none") count among archived + search-matched runs,
+            computed BEFORE any department selection (picking one department in the UI
             must not zero out every other option's count)
     total:  every archived run, ignoring search entirely — feeds the page's
             "archive is genuinely empty" vs. "this filter matched nothing" distinction

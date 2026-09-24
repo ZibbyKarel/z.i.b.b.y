@@ -1,6 +1,6 @@
 import type { Integration, Project, ProjectPr } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
-import { MaestroService } from "./maestro.service";
+import { ReleaseService } from "./release.service";
 
 const ACME: Project = { id: "acme", name: "Acme", path: "~/Projects/acme" };
 const BETA: Project = { id: "beta", name: "Beta", path: "~/Projects/beta" };
@@ -59,7 +59,7 @@ function build(opts: BuildOpts) {
     child: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() }),
   };
 
-  const service = new MaestroService(
+  const service = new ReleaseService(
     projectsStore as never,
     resolvedProjects as never,
     credentials as never,
@@ -111,7 +111,7 @@ function readyRoutes(number = 1, sha = "sha1"): Route[] {
   ];
 }
 
-describe("MaestroService.queue", () => {
+describe("ReleaseService.queue", () => {
   it("passing checks + approved + mergeable + fresh → ready", async () => {
     const { service } = build({ fetchImpl: routedFetch(readyRoutes()) });
     const { entries } = await service.queue({}, new Date("2026-07-17T06:00:00.000Z"));
@@ -273,7 +273,7 @@ describe("MaestroService.queue", () => {
   });
 });
 
-describe("MaestroService.summaryLines", () => {
+describe("ReleaseService.summaryLines", () => {
   it("summarizes one line per project with open PRs", async () => {
     const { service } = build({ fetchImpl: routedFetch(readyRoutes()) });
     const lines = await service.summaryLines();

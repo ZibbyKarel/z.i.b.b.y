@@ -69,22 +69,22 @@ describe("BriefingSchema", () => {
     expect(BriefingSchema.safeParse(bad).success).toBe(false);
   });
 
-  describe("per-subsystem lines (NS2 F3b — strictly additive)", () => {
-    it("accepts a briefing with subsystem lines (note optional)", () => {
-      const withSubsystems = {
+  describe("per-department lines (NS2 F3b — strictly additive)", () => {
+    it("accepts a briefing with department lines (note optional)", () => {
+      const withDepartments = {
         ...base,
-        subsystems: [
+        departments: [
           {
-            subsystem: "forge",
-            name: "Forge",
+            department: "dev",
+            name: "Dev",
             state: "waiting",
             tier2Count: 0,
             errorCount: 0,
             tier3Count: 2,
           },
           {
-            subsystem: "ledger",
-            name: "Ledger",
+            department: "fin",
+            name: "Finance",
             state: "idle",
             tier2Count: 0,
             errorCount: 0,
@@ -93,25 +93,27 @@ describe("BriefingSchema", () => {
           },
         ],
       };
-      expect(BriefingSchema.safeParse(withSubsystems).success).toBe(true);
+      expect(BriefingSchema.safeParse(withDepartments).success).toBe(true);
     });
 
-    it("omitting subsystems entirely still parses (old briefings)", () => {
+    it("omitting departments entirely still parses (old briefings)", () => {
       const parsed = BriefingSchema.safeParse(base);
       expect(parsed.success).toBe(true);
-      expect(parsed.success && parsed.data.subsystems).toBeUndefined();
+      expect(parsed.success && parsed.data.departments).toBeUndefined();
     });
 
-    it("rejects an unknown subsystem id or state", () => {
+    it("rejects an unknown department id or state", () => {
       const badId = {
         ...base,
-        subsystems: [{ subsystem: "nope", name: "X", state: "idle", tier2Count: 0, tier3Count: 0 }],
+        departments: [
+          { department: "nope", name: "X", state: "idle", tier2Count: 0, tier3Count: 0 },
+        ],
       };
       expect(BriefingSchema.safeParse(badId).success).toBe(false);
       const badState = {
         ...base,
-        subsystems: [
-          { subsystem: "forge", name: "Forge", state: "sleeping", tier2Count: 0, tier3Count: 0 },
+        departments: [
+          { department: "dev", name: "Dev", state: "sleeping", tier2Count: 0, tier3Count: 0 },
         ],
       };
       expect(BriefingSchema.safeParse(badState).success).toBe(false);

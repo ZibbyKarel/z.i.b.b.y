@@ -2,7 +2,7 @@ import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Pipeline } from "../../domain";
 import type { RunView } from "../runs/run";
-import { runSubsystemId, useOwnerSubsystemMaps } from "./useOwnerSubsystem";
+import { runDepartmentId, useOwnerDepartmentMaps } from "./useOwnerDepartment";
 
 const hooks = vi.hoisted(() => ({
   pipelines: [] as Pipeline[],
@@ -40,40 +40,40 @@ function runFixture(overrides: Partial<RunView> = {}): RunView {
   };
 }
 
-describe("useOwnerSubsystem", () => {
+describe("useOwnerDepartment", () => {
   beforeEach(() => {
     hooks.pipelines = [];
   });
 
-  it("joins a pipeline run to its owning pipeline's ownerSubsystem", () => {
-    hooks.pipelines = [pipelineFixture({ id: "delivery", ownerSubsystem: "forge" })];
-    const { result } = renderHook(() => useOwnerSubsystemMaps());
+  it("joins a pipeline run to its owning pipeline's department", () => {
+    hooks.pipelines = [pipelineFixture({ id: "delivery", department: "dev" })];
+    const { result } = renderHook(() => useOwnerDepartmentMaps());
 
     const run = runFixture({ kind: "pipeline", owner: "delivery" });
-    expect(runSubsystemId(run, result.current)).toBe("forge");
+    expect(runDepartmentId(run, result.current)).toBe("dev");
   });
 
-  it("returns null for an agent run — agent runs have no subsystem concept at all", () => {
-    const { result } = renderHook(() => useOwnerSubsystemMaps());
+  it("returns null for an agent run — agent runs have no department concept at all", () => {
+    const { result } = renderHook(() => useOwnerDepartmentMaps());
     const run = runFixture({ kind: "agent", owner: "writer" });
-    expect(runSubsystemId(run, result.current)).toBeNull();
+    expect(runDepartmentId(run, result.current)).toBeNull();
   });
 
-  it("returns null for a goal run — goal runs have no subsystem concept at all", () => {
-    const { result } = renderHook(() => useOwnerSubsystemMaps());
+  it("returns null for a goal run — goal runs have no department concept at all", () => {
+    const { result } = renderHook(() => useOwnerDepartmentMaps());
     const run = runFixture({ kind: "goal", owner: "some-goal" });
-    expect(runSubsystemId(run, result.current)).toBeNull();
+    expect(runDepartmentId(run, result.current)).toBeNull();
   });
 
   it("returns null (not a crash) for a pipeline run whose owner is untagged or unknown", () => {
     hooks.pipelines = [pipelineFixture({ id: "untagged" })];
-    const { result } = renderHook(() => useOwnerSubsystemMaps());
+    const { result } = renderHook(() => useOwnerDepartmentMaps());
 
     expect(
-      runSubsystemId(runFixture({ kind: "pipeline", owner: "untagged" }), result.current),
+      runDepartmentId(runFixture({ kind: "pipeline", owner: "untagged" }), result.current),
     ).toBeNull();
     expect(
-      runSubsystemId(runFixture({ kind: "pipeline", owner: "does-not-exist" }), result.current),
+      runDepartmentId(runFixture({ kind: "pipeline", owner: "does-not-exist" }), result.current),
     ).toBeNull();
   });
 });

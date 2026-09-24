@@ -2,12 +2,12 @@ import * as path from "node:path";
 import { Injectable, Logger } from "@nestjs/common";
 import type {
   AgentRun,
+  DepartmentId,
   GoalRun,
   Note,
   NoteType,
   PipelineRun,
   Project,
-  SubsystemId,
 } from "@zibby/contracts";
 import { AgentRunnerService } from "../agents/agent-runner.service";
 import { AgentsStorageService } from "../agents/agents.storage.service";
@@ -19,7 +19,7 @@ import { ChatTranscriptStore } from "../chat/chat-transcript.store";
 import { fileExists, writeFileAtomic } from "../shared/file-storage/file-utils";
 import { ClaudeCliDistiller, type Learning, type RunDigest } from "./claude-cli-distiller";
 import { MemoryImportService } from "./memory-import.service";
-import { subsystemShelfId } from "./subsystem-shelf";
+import { departmentShelfId } from "./department-shelf";
 import {
   DuplicateNoteError,
   SimilarNoteError,
@@ -64,12 +64,12 @@ interface Candidate {
   projectId: string | null;
   summary: RunDigest;
   /**
-   * The owning subsystem (F4a), resolved from the run's agent/pipeline
-   * `ownerSubsystem`. `null` when the run has no owner (unowned agent/pipeline)
+   * The owning department (F4a), resolved from the run's agent/pipeline
+   * `department`. `null` when the run has no owner (unowned agent/pipeline)
    * or no owner path exists at all (goal/chat/raw-note candidates — correction
    * #4: those reference no owned entity in F1).
    */
-  subsystemId: SubsystemId | null;
+  departmentId: DepartmentId | null;
   /** Set for chat conversations (no run `cwd`); drives the incremental marker. */
   chatId?: string;
   /** Message count distilled through, persisted on the chat marker after filing. */
@@ -183,7 +183,7 @@ export class MemoryDistillerService {
     const consider = async (
       cwd: string,
       projectId: string | null,
-      subsystemId: SubsystemId | null,
+      departmentId: DepartmentId | null,
       build: () => Promise<RunDigest>,
     ): Promise<void> => {
       if (await this.isDistilled(cwd)) return;
@@ -191,28 +191,30 @@ export class MemoryDistillerService {
         deferred++;
         return;
       }
-      out.push({ cwd, projectId, subsystemId, summary: await build() });
+      out.push({ cwd, projectId, departmentId, summary: await build() });
     };
 
     for (const run of await this.pipelines.listAll().catch((): PipelineRun[] => [])) {
       if (!TERMINAL_PIPELINE.has(run.status)) continue;
       const projectId = await this.byPath(run.projectPath);
-      const subsystemId =
-        (await this.pipelinesStore.get(run.pipelineId).catch(() => null))?.ownerSubsystem ?? null;
-      await consider(run.cwd, projectId, subsystemId, () => this.summarizePipeline(run, projectId));
+      const departmentId =
+        (await this.pipelinesStore.get(run.pipelineId).catch(() => null))?.department ?? null;
+      await consider(run.cwd, projectId, departmentId, () =>
+        this.summarizePipeline(run, projectId),
+      );
     }
     for (const run of await this.agents.listAll().catch((): AgentRun[] => [])) {
       if (!TERMINAL_AGENT.has(run.status)) continue;
       const projectId = await this.byRef(run.project);
-      const subsystemId =
-        (await this.agentsStore.get(run.agentId).catch(() => null))?.ownerSubsystem ?? null;
-      await consider(run.cwd, projectId, subsystemId, () => this.summarizeAgent(run, projectId));
+      const departmentId =
+        (await this.agentsStore.get(run.agentId).catch(() => null))?.department ?? null;
+      await consider(run.cwd, projectId, departmentId, () => this.summarizeAgent(run, projectId));
     }
     for (const run of await this.goals.listAll().catch((): GoalRun[] => [])) {
       if (!TERMINAL_GOAL.has(run.status)) continue;
       const projectId = await this.byPath(run.projectPath);
       // Correction #4: goal runs reference no owned entity (goals were not given
-      // `ownerSubsystem` in F1) — no owner path, always null.
+      // `department` in F1) — no owner path, always null.
       await consider(run.cwd, projectId, null, async () => this.summarizeGoal(run, projectId));
     }
     // Chat conversations distill INCREMENTALLY (a thread is long-lived): only messages
@@ -229,7 +231,7 @@ export class MemoryDistillerService {
       out.push({
         cwd: "",
         projectId: null,
-        subsystemId: null,
+        departmentId: null,
         chatId: id,
         chatCount: summary.count,
         summary: summary.digest,
@@ -249,7 +251,7 @@ export class MemoryDistillerService {
         cwd: "",
         projectId: ownerProjectOf(note.frontmatter ?? {}) ?? null,
         // Raw notes have no owner path either (correction #4) — always null.
-        subsystemId: null,
+        departmentId: null,
         noteId: note.id,
         summary: {
           kind: "note",
@@ -391,16 +393,16 @@ export class MemoryDistillerService {
       });
     }
 
-    // F4a: link the digest from every contributing subsystem's shelf too — a
+    // F4a: link the digest from every contributing department's shelf too — a
     // missing shelf is auto-created by `updateIndex`, and a write failure is
     // logged but never blocks filing (the digest itself is already durable).
-    const subsystemIds = [
+    const departmentIds = [
       ...new Set(
-        candidates.map((c) => c.subsystemId).filter((id): id is SubsystemId => Boolean(id)),
+        candidates.map((c) => c.departmentId).filter((id): id is DepartmentId => Boolean(id)),
       ),
     ];
-    for (const subsystemId of subsystemIds) {
-      const shelfId = subsystemShelfId(subsystemId);
+    for (const departmentId of departmentIds) {
+      const shelfId = departmentShelfId(departmentId);
       await this.vault.updateIndex(shelfId, filedId, `Destilace — ${day}`).catch((error) => {
         this.logger.warn(`could not link ${filedId} from ${shelfId}: ${String(error)}`);
       });

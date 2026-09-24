@@ -53,7 +53,7 @@ describe("HandoffSignalKindStore", () => {
     const custom = [
       {
         id: "custom-kind",
-        from: "loom",
+        from: "qa",
         label: "Custom",
         description: "A custom kind.",
         severityBearing: false,
@@ -77,7 +77,7 @@ describe("HandoffSignalKindStore", () => {
 
   describe("create/update/delete/markBuildTask", () => {
     const USER_INPUT: HandoffSignalKindInput = {
-      from: "beacon",
+      from: "inc",
       label: "Dependency outdated",
       description: "A dependency has fallen behind its latest release.",
       severityBearing: false,
@@ -182,7 +182,7 @@ describe("HandoffSignalKindStore", () => {
 
   describe("markSeen", () => {
     const USER_INPUT: HandoffSignalKindInput = {
-      from: "beacon",
+      from: "inc",
       label: "Dependency outdated",
       description: "A dependency has fallen behind its latest release.",
       severityBearing: false,

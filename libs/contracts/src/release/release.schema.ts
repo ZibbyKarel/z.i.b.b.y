@@ -3,7 +3,7 @@ import { IsoDateTimeSchema } from "../common.schema";
 import { ProjectPrSchema } from "../projects/project-pr.schema";
 
 /**
- * NS2 F5b — Maestro's read-side merge queue: every open PR across project
+ * NS2 F5b — Release's read-side merge queue: every open PR across project
  * repos enriched with its CI/check state, review state, mergeability and age,
  * classified for an operator's "what can I merge now" glance. Read-only —
  * merging stays the operator's existing `POST /projects/:id/prs/:number/merge`
@@ -24,7 +24,7 @@ export const MergeReviewStateSchema = z.enum([
 ]);
 export type MergeReviewState = z.infer<typeof MergeReviewStateSchema>;
 
-/** Maestro's classification of a PR's release-readiness (display only). */
+/** Release's classification of a PR's release-readiness (display only). */
 export const MergeQueueStateSchema = z.enum(["ready", "blocked", "stale"]);
 export type MergeQueueState = z.infer<typeof MergeQueueStateSchema>;
 

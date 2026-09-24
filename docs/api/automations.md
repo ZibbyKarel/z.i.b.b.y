@@ -94,7 +94,7 @@ interface ReviewLearnTarget {
 interface PromptAutomationTarget {
   type: "task";
   text: string; // the typed prompt — forwarded as the task's free-text
-  target?: RunTarget; // optional @-mentioned run target (agent/pipeline/subsystem/goal/chain/…);
+  target?: RunTarget; // optional @-mentioned run target (agent/pipeline/department/goal/chain/…);
   // absent = the task classifier/orchestrator-fallback decides at fire time
   attachmentSetId?: string; // uploaded files (a tasks attachment-set id)
   output?: TaskOutput; // chosen terminal output (pr / file / void)
@@ -104,7 +104,7 @@ interface PromptAutomationTarget {
 
 `RunTarget` here is `TaskTarget` from `libs/contracts/src/tasks/task.schema.ts` (the
 same discriminated union a New Task uses: `agent` / `pipeline` / `goal` / `chain` /
-`subsystem` / `orchestrator`); `TaskOutput` is that same file's terminal-output
+`department` / `orchestrator`); `TaskOutput` is that same file's terminal-output
 schema (`pr` / `file` / `void`).
 
 > Phase 116a retired the `discovery`, `research-digest` and `app-ideas` targets —
@@ -120,7 +120,7 @@ schema (`pr` / `file` / `void`).
 > present it bypasses classification (an explicit override); when absent the
 > classifier/orchestrator-fallback picks a destination at fire time. As with an
 > ordinary task, attachments only flow to an agent/orchestrator/goal
-> destination — a pipeline/chain/subsystem target carries neither (a
+> destination — a pipeline/chain/department target carries neither (a
 > pre-existing runner gap, not new to automations). An attachment set
 > referenced by a `task`-target automation is exempted from the tasks
 > attachment-sweep's 24h TTL (it never becomes a `ScheduledTask` — and thus

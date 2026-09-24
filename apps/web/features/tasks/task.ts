@@ -1,14 +1,14 @@
 import type {
   TaskRouting as ApiTaskRouting,
   TaskTarget as ApiTaskTarget,
+  DepartmentId,
   ProposedGoal,
   ResolvedPath,
-  SubsystemId,
   TaskMode,
 } from "@zibby/contracts";
 import type { IconName } from "@zibby/design-system";
 
-export type { SubsystemId };
+export type { DepartmentId };
 
 export type { ProposedGoal, ResolvedPath, TaskMode };
 
@@ -59,11 +59,11 @@ export function basename(path: string): string {
 }
 
 /**
- * A destination for a task — an agent, pipeline, goal, a named subsystem
+ * A destination for a task — an agent, pipeline, goal, a named department
  * (Phase 91, explicit-only — never emitted by the top-level classifier), or the
  * orchestrator fallback.
  */
-export type TaskTargetKind = "agent" | "pipeline" | "goal" | "subsystem" | "orchestrator";
+export type TaskTargetKind = "agent" | "pipeline" | "goal" | "department" | "orchestrator";
 
 /** A stable key for a target, used to pre-select and dedupe entries in the picker. */
 export function targetKey(target: TaskTarget): string {
@@ -93,8 +93,8 @@ export function toApiTarget(target: TaskTarget) {
       return { kind: "pipeline" as const, id: target.id, name, glyph, category };
     case "goal":
       return { kind: "goal" as const, id: target.id, name, glyph, category };
-    case "subsystem":
-      return { kind: "subsystem" as const, id: target.id, name, glyph, category };
+    case "department":
+      return { kind: "department" as const, id: target.id, name, glyph, category };
   }
 }
 
@@ -108,8 +108,8 @@ interface TaskTargetDisplay {
 
 /**
  * Mirrors the contract's discriminated union: agents/pipelines/goals carry
- * the filesystem-safe `id` of their stored definition, a subsystem (Phase 91)
- * carries the closed `SubsystemId` enum, and the orchestrator is synthetic (no
+ * the filesystem-safe `id` of their stored definition, a department (Phase 91)
+ * carries the closed `DepartmentId` enum, and the orchestrator is synthetic (no
  * stored definition, no id) and exists in the UI purely as a name + glyph.
  *
  * Each `kind` is its OWN intersection member (not one shape with a unioned `kind`
@@ -118,14 +118,14 @@ interface TaskTargetDisplay {
  * like the API's zod `discriminatedUnion`. That distribution matters: a single
  * shape with a *unioned* `kind` stops being assignable to the API's distributed
  * union once there are enough branches (see `toApiTarget`'s doc comment) — Phase
- * 91 (subsystem, the 5th non-orchestrator kind) is what surfaced it.
+ * 91 (department, the 5th non-orchestrator kind) is what surfaced it.
  */
 export type TaskTarget = TaskTargetDisplay &
   (
     | { kind: "agent"; id: string }
     | { kind: "pipeline"; id: string }
     | { kind: "goal"; id: string }
-    | { kind: "subsystem"; id: SubsystemId }
+    | { kind: "department"; id: DepartmentId }
     | { kind: "orchestrator" }
   );
 
@@ -168,7 +168,7 @@ export interface TaskRouting {
   ambiguous?: boolean;
   /**
    * NS2 F10: the runner-up that made the verdict ambiguous, so the preview can name
-   * the actual choice ("Forge, or Codex?") instead of only flagging unease. `null`
+   * the actual choice ("Dev, or Knowledge?") instead of only flagging unease. `null`
    * when the router named no alternative — then the doubt is "nothing fits", not "these
    * two are tied", and the copy differs accordingly.
    */
@@ -188,7 +188,7 @@ const KIND_FALLBACK_GLYPH: Record<TaskTargetKind, IconName> = {
   agent: "bot",
   pipeline: "flow",
   goal: "retry",
-  subsystem: "grid",
+  department: "grid",
   orchestrator: "compass",
 };
 
@@ -211,8 +211,8 @@ export function toClientTarget(target: ApiTaskTarget): TaskTarget {
       return { kind: "pipeline", id: target.id, ...display };
     case "goal":
       return { kind: "goal", id: target.id, ...display };
-    case "subsystem":
-      return { kind: "subsystem", id: target.id, ...display };
+    case "department":
+      return { kind: "department", id: target.id, ...display };
   }
 }
 

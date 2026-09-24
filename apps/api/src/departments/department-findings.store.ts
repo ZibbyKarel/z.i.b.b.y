@@ -10,13 +10,13 @@ import {
 } from "../shared/file-storage/file-utils";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 
-export const SUBSYSTEM_FINDINGS_DIR = "SUBSYSTEM_FINDINGS_DIR";
+export const DEPARTMENT_FINDINGS_DIR = "DEPARTMENT_FINDINGS_DIR";
 
-/** Scan keys are simple slugs (`"sentinel"`, `"loom"`…) — no path separators. */
+/** Scan keys are simple slugs (`"sec"`, `"qa"`…) — no path separators. */
 const KEY_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
 
 /**
- * NS2 F5a — a tiny durable JSON snapshot store so each chair (Sentinel, Loom)
+ * NS2 F5a — a tiny durable JSON snapshot store so each chair (Security, Arch)
  * can diff this run's fingerprints against the last-persisted set without
  * re-deriving state from the vault note. One `<key>.json` file per scan key,
  * modeled on the cursor half of `MonitorEventStore`
@@ -28,14 +28,14 @@ const KEY_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
  * proposal surface, this is the machine cursor.
  */
 @Injectable()
-export class SubsystemFindingsStore {
+export class DepartmentFindingsStore {
   private readonly log: ScopedLogger;
 
   constructor(
-    @Inject(SUBSYSTEM_FINDINGS_DIR) private readonly dir: string,
+    @Inject(DEPARTMENT_FINDINGS_DIR) private readonly dir: string,
     logger: LoggerService,
   ) {
-    this.log = logger.child(SubsystemFindingsStore.name);
+    this.log = logger.child(DepartmentFindingsStore.name);
   }
 
   /** The last-persisted fingerprint set for `key`; `[]` (empty set) on any read failure. */

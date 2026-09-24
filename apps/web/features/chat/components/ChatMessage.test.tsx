@@ -28,7 +28,7 @@ const { pipelineRunMock } = vi.hoisted(() => ({
 vi.mock("../../pipelines", () => ({ usePipelineRunQuery: pipelineRunMock }));
 
 // The read-aloud button (Phase 120) is exercised at the mutation/player-hook
-// boundary — mirrors `SubsystemDrawer.test.tsx`'s pattern of mocking a
+// boundary — mirrors `DepartmentDrawer.test.tsx`'s pattern of mocking a
 // `mutations/use*Mutation` (and here, the sibling player hook) module rather
 // than the ts-rest client underneath it.
 const { synthesizeMock, audioPlaybackMock } = vi.hoisted(() => ({

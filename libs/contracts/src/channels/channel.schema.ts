@@ -3,7 +3,7 @@ import { IsoDateTimeSchema } from "../common.schema";
 import { IntegrationIdSchema, IntegrationKindSchema } from "../integrations/integration.schema";
 import { TaskOutcomeSchema } from "../tasks/task.schema";
 
-/** The triage categories — shared by TriageVerdict and the Herald reply ledger (NS2 F6a). */
+/** The triage categories — shared by TriageVerdict and the Comms reply ledger (NS2 F6a). */
 export const TriageCategorySchema = z.enum(["bug", "question", "request", "other"]);
 export type TriageCategory = z.infer<typeof TriageCategorySchema>;
 
@@ -87,7 +87,7 @@ export type ExternalRef = z.infer<typeof ExternalRefSchema>;
  * sha1 of Message-ID), so a re-polled message can never duplicate — dedup = id
  * collision. `text` is the sanitized, capped body; `raw` keeps the original payload
  * for the record. State + triage + links are stamped by the server only — there is
- * no client write path (Law 4: the API never lets a client forge a triaged state).
+ * no client write path (Law 4: the API never lets a client fake a triaged state).
  */
 export const ChannelItemSchema = z.object({
   id: z.string().min(1),

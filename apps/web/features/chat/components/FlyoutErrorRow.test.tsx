@@ -18,17 +18,17 @@ const run: RunView = {
 };
 
 describe("FlyoutErrorRow", () => {
-  it("shows the failed run's title, subsystem and error detail", () => {
-    renderWithProviders(<FlyoutErrorRow run={run} runId={run.runId} subsystemName="Forge" />);
+  it("shows the failed run's title, department and error detail", () => {
+    renderWithProviders(<FlyoutErrorRow departmentName="Dev" run={run} runId={run.runId} />);
     expect(screen.getByTestId(FlyoutErrorRowTestId.Title)).toHaveTextContent("Fix login bug");
-    expect(screen.getByTestId(FlyoutErrorRowTestId.Meta)).toHaveTextContent("Forge");
+    expect(screen.getByTestId(FlyoutErrorRowTestId.Meta)).toHaveTextContent("Dev");
     expect(screen.getByTestId(FlyoutErrorRowTestId.Detail)).toHaveTextContent(
       "tests red: auth.spec.ts",
     );
   });
 
   it("links to the run's archive detail", () => {
-    renderWithProviders(<FlyoutErrorRow run={run} runId={run.runId} subsystemName="Forge" />);
+    renderWithProviders(<FlyoutErrorRow departmentName="Dev" run={run} runId={run.runId} />);
     expect(screen.getByTestId(FlyoutErrorRowTestId.Link)).toHaveAttribute(
       "href",
       "/archiv?run=delivery_1",
@@ -36,7 +36,7 @@ describe("FlyoutErrorRow", () => {
   });
 
   it("still links to the archive when the run is no longer in the feed", () => {
-    renderWithProviders(<FlyoutErrorRow run={undefined} runId="gone_1" subsystemName="Forge" />);
+    renderWithProviders(<FlyoutErrorRow departmentName="Dev" run={undefined} runId="gone_1" />);
     expect(screen.getByTestId(FlyoutErrorRowTestId.Link)).toHaveAttribute(
       "href",
       "/archiv?run=gone_1",
@@ -46,9 +46,9 @@ describe("FlyoutErrorRow", () => {
   it("falls back to a localized no-detail line when the run recorded no summary", () => {
     renderWithProviders(
       <FlyoutErrorRow
+        departmentName="Dev"
         run={{ ...run, taskOutcomeSummary: undefined }}
         runId={run.runId}
-        subsystemName="Forge"
       />,
     );
     expect(screen.getByTestId(FlyoutErrorRowTestId.Detail)).toHaveTextContent(
@@ -57,7 +57,7 @@ describe("FlyoutErrorRow", () => {
   });
 
   it("still renders the run id when the run is no longer in the feed", () => {
-    renderWithProviders(<FlyoutErrorRow run={undefined} runId="gone_1" subsystemName="Forge" />);
+    renderWithProviders(<FlyoutErrorRow departmentName="Dev" run={undefined} runId="gone_1" />);
     expect(screen.getByTestId(FlyoutErrorRowTestId.Title)).toHaveTextContent("gone_1");
     expect(screen.getByTestId(FlyoutErrorRowTestId.Detail)).toHaveTextContent(
       "Běh už není v přehledu.",

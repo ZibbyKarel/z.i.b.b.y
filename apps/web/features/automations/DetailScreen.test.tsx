@@ -65,9 +65,9 @@ vi.mock("./mutations", () => ({
 // network, but let the component itself run for real.
 vi.mock("../agents/queries", () => ({ useAgentsQuery: () => ({ data: [] }) }));
 vi.mock("../pipelines/queries", () => ({ usePipelinesQuery: () => ({ data: [] }) }));
-vi.mock("../subsystems/queries/useSubsystemsQuery", () => ({
-  useSubsystemsQuery: () => ({ data: [] }),
-  getSubsystemsQueryKey: () => ["subsystems"],
+vi.mock("../departments/queries/useDepartmentsQuery", () => ({
+  useDepartmentsQuery: () => ({ data: [] }),
+  getDepartmentsQueryKey: () => ["departments"],
 }));
 vi.mock("../projects/queries/useProjectsQuery", () => ({
   useProjectsQuery: () => ({ data: [] }),

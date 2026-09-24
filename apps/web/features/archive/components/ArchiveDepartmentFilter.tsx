@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { SUBSYSTEMS } from "@zibby/contracts";
+import { DEPARTMENTS } from "@zibby/contracts";
 import {
   Card,
   Checkbox,
@@ -13,38 +13,38 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { type ArchiveSubsystemFilterId, NO_SUBSYSTEM } from "../archiveGroups";
+import { type ArchiveDepartmentFilterId, NO_DEPARTMENT } from "../archiveGroups";
 
-export enum ArchiveSubsystemFilterTestId {
-  Root = "archive-subsystem-filter-root",
-  Trigger = "archive-subsystem-filter-trigger",
-  Panel = "archive-subsystem-filter-panel",
-  AllOption = "archive-subsystem-filter-all-option",
-  Option = "archive-subsystem-filter-option",
+export enum ArchiveDepartmentFilterTestId {
+  Root = "archive-department-filter-root",
+  Trigger = "archive-department-filter-trigger",
+  Panel = "archive-department-filter-panel",
+  AllOption = "archive-department-filter-all-option",
+  Option = "archive-department-filter-option",
 }
 
-export interface ArchiveSubsystemFilterProps {
-  /** Currently selected filter ids — empty means "all subsystems" (no filter). */
-  selected: readonly ArchiveSubsystemFilterId[];
-  onChange: (next: ArchiveSubsystemFilterId[]) => void;
-  /** Per-id counts from `computeSubsystemCounts` — absent id reads as 0. */
-  counts: Partial<Record<ArchiveSubsystemFilterId, number>>;
-  /** Total archived + search-matched rows, for the "all subsystems" option's count. */
+export interface ArchiveDepartmentFilterProps {
+  /** Currently selected filter ids — empty means "all departments" (no filter). */
+  selected: readonly ArchiveDepartmentFilterId[];
+  onChange: (next: ArchiveDepartmentFilterId[]) => void;
+  /** Per-id counts from `computeDepartmentCounts` — absent id reads as 0. */
+  counts: Partial<Record<ArchiveDepartmentFilterId, number>>;
+  /** Total archived + search-matched rows, for the "all departments" option's count. */
   total: number;
 }
 
 /**
- * The `/archiv` page's subsystem filter (F2, `docs/plans/hud2chat-F2-archive.md`,
+ * The `/archiv` page's department filter (F2, `docs/plans/hud2chat-F2-archive.md`,
  * decision D3) — a multi-select with per-option coloured dots and live counts.
  *
  * Built as a DOMAIN COMPOSITE here, not a DS `Dropdown` extension: DS's existing
  * `Dropdown` multi-select (`libs/design-system/src/components/Dropdown/Dropdown.tsx`)
  * already covers "pick many options with checkboxes", but its `DropdownOption`
  * shape has no per-option colour-dot slot and no trailing-count slot — both of
- * which need the `SUBSYSTEMS` registry's domain-shaped data (hex colours, live
+ * which need the `DEPARTMENTS` registry's domain-shaped data (hex colours, live
  * run counts) that a generic DS primitive shouldn't carry for one call site. This
  * mirrors the SKILL.md rule ("decide explicitly: DS, or a domain composite") the
- * same way `PipelineOwnerChip`/`SubsystemDrawer` already do for per-subsystem
+ * same way `PipelineOwnerChip`/`DepartmentDrawer` already do for per-department
  * colour.
  *
  * Every DS piece here IS reused, though: `Card as="button"` for the trigger (bakes
@@ -55,12 +55,12 @@ export interface ArchiveSubsystemFilterProps {
  * deliberately NOT used here: it sets `aria-current="page"`, which is the wrong
  * semantic for a checkbox-shaped option (`aria-selected` is correct instead).
  */
-export function ArchiveSubsystemFilter({
+export function ArchiveDepartmentFilter({
   selected,
   onChange,
   counts,
   total,
-}: ArchiveSubsystemFilterProps) {
+}: ArchiveDepartmentFilterProps) {
   const t = useTranslations("archive.filter");
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -74,7 +74,7 @@ export function ArchiveSubsystemFilter({
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [open]);
 
-  function toggle(id: ArchiveSubsystemFilterId) {
+  function toggle(id: ArchiveDepartmentFilterId) {
     onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
   }
 
@@ -82,26 +82,26 @@ export function ArchiveSubsystemFilter({
     selected.length === 0
       ? t("all")
       : selected.length === 1
-        ? subsystemLabel(selected[0]!, t)
+        ? departmentLabel(selected[0]!, t)
         : t("multiple", { n: selected.length });
 
   // A small colour-dot preview on the trigger — only when every selected id is a
-  // real subsystem (the "bez subsystému" pseudo id has no colour of its own).
+  // real department (the "bez oddělení" pseudo id has no colour of its own).
   const dotColors =
     selected.length > 0 && selected.length <= 3
       ? selected
-          .map((id) => SUBSYSTEMS.find((s) => s.id === id)?.color)
+          .map((id) => DEPARTMENTS.find((s) => s.id === id)?.color)
           .filter((c): c is string => Boolean(c))
       : [];
   const showDots = dotColors.length === selected.length && dotColors.length > 0;
 
   return (
-    <Container data-testid={ArchiveSubsystemFilterTestId.Root} position="relative" ref={rootRef}>
+    <Container data-testid={ArchiveDepartmentFilterTestId.Root} position="relative" ref={rootRef}>
       <Card
         aria-expanded={open}
         aria-haspopup="listbox"
         as="button"
-        data-testid={ArchiveSubsystemFilterTestId.Trigger}
+        data-testid={ArchiveDepartmentFilterTestId.Trigger}
         onClick={() => setOpen((o) => !o)}
         style={{ display: "flex" }}
       >
@@ -134,7 +134,7 @@ export function ArchiveSubsystemFilter({
         <MenuSurface
           scroll
           align="stretch"
-          data-testid={ArchiveSubsystemFilterTestId.Panel}
+          data-testid={ArchiveDepartmentFilterTestId.Panel}
           role="listbox"
         >
           {/* `data-testid` sits on the inner `Stack`, not `ListItem` itself — `ListItem`
@@ -149,7 +149,7 @@ export function ArchiveSubsystemFilter({
           >
             <Stack
               align="center"
-              data-testid={ArchiveSubsystemFilterTestId.AllOption}
+              data-testid={ArchiveDepartmentFilterTestId.AllOption}
               direction="row"
               gap="100"
             >
@@ -165,7 +165,7 @@ export function ArchiveSubsystemFilter({
             </Stack>
           </ListItem>
 
-          {SUBSYSTEMS.map((s) => (
+          {DEPARTMENTS.map((s) => (
             <ListItem
               aria-selected={selected.includes(s.id)}
               key={s.id}
@@ -174,8 +174,8 @@ export function ArchiveSubsystemFilter({
             >
               <Stack
                 align="center"
-                data-subsystem-id={s.id}
-                data-testid={ArchiveSubsystemFilterTestId.Option}
+                data-department-id={s.id}
+                data-testid={ArchiveDepartmentFilterTestId.Option}
                 direction="row"
                 gap="100"
               >
@@ -198,25 +198,25 @@ export function ArchiveSubsystemFilter({
           ))}
 
           <ListItem
-            aria-selected={selected.includes(NO_SUBSYSTEM)}
-            onSelect={() => toggle(NO_SUBSYSTEM)}
+            aria-selected={selected.includes(NO_DEPARTMENT)}
+            onSelect={() => toggle(NO_DEPARTMENT)}
             role="option"
           >
             <Stack
               align="center"
-              data-subsystem-id={NO_SUBSYSTEM}
-              data-testid={ArchiveSubsystemFilterTestId.Option}
+              data-department-id={NO_DEPARTMENT}
+              data-testid={ArchiveDepartmentFilterTestId.Option}
               direction="row"
               gap="100"
             >
-              <Checkbox presentational checked={selected.includes(NO_SUBSYSTEM)} size="sm" />
+              <Checkbox presentational checked={selected.includes(NO_DEPARTMENT)} size="sm" />
               <Container grow>
                 <Typography size="sm" type="note" variant="tertiary">
-                  {t("noSubsystem")}
+                  {t("noDepartment")}
                 </Typography>
               </Container>
               <Typography mono size="xs" type="note" variant="tertiary">
-                {counts[NO_SUBSYSTEM] ?? 0}
+                {counts[NO_DEPARTMENT] ?? 0}
               </Typography>
             </Stack>
           </ListItem>
@@ -226,10 +226,10 @@ export function ArchiveSubsystemFilter({
   );
 }
 
-function subsystemLabel(
-  id: ArchiveSubsystemFilterId,
+function departmentLabel(
+  id: ArchiveDepartmentFilterId,
   t: ReturnType<typeof useTranslations<"archive.filter">>,
 ): string {
-  if (id === NO_SUBSYSTEM) return t("noSubsystem");
-  return SUBSYSTEMS.find((s) => s.id === id)?.name ?? id;
+  if (id === NO_DEPARTMENT) return t("noDepartment");
+  return DEPARTMENTS.find((s) => s.id === id)?.name ?? id;
 }

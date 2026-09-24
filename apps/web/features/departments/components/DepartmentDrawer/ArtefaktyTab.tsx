@@ -1,6 +1,6 @@
 "use client";
 
-import type { ArtifactKind, ArtifactRecord, SubsystemWithStatus } from "@zibby/contracts";
+import type { ArtifactKind, ArtifactRecord, DepartmentWithStatus } from "@zibby/contracts";
 import { Divider, Icon, type IconName, Stack, Typography } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
@@ -27,7 +27,7 @@ export enum ArtefaktyTabTestId {
 }
 
 export interface ArtefaktyTabProps {
-  subsystem: SubsystemWithStatus;
+  department: DepartmentWithStatus;
 }
 
 /** Cap the history list — same "recent slice, /runs or the registry owns the full
@@ -41,7 +41,7 @@ const ARTIFACT_KIND_GLYPH: Record<ArtifactKind, IconName> = {
   "project-file": "file",
 };
 
-/** The `subsystems.artefakty` i18n key naming one output sink's static promise
+/** The `departments.artefakty` i18n key naming one output sink's static promise
  * label ("PR na review" / "soubor → projekt" / "poznámka → vault") — a literal
  * return type (not a translated string) so a component's own namespaced `t`
  * can call it directly without threading a translator function through props
@@ -57,12 +57,12 @@ function sinkKey(output: PipelineOutput): "sinkPr" | "sinkFileProject" | "sinkFi
 interface ProduceRowProps {
   pipelineName: string;
   output: PipelineOutput;
-  /** The receiving subsystem's display name, or `undefined` for "→ operátor". */
+  /** The receiving department's display name, or `undefined` for "→ operátor". */
   consumerName: string | undefined;
 }
 
 function ProduceRow({ pipelineName, output, consumerName }: ProduceRowProps) {
-  const t = useTranslations("subsystems.artefakty");
+  const t = useTranslations("departments.artefakty");
   return (
     <div data-testid={ArtefaktyTabTestId.ProduceRow}>
       <Stack wrap align="center" direction="row" gap="75">
@@ -99,7 +99,7 @@ interface HistoryRowProps {
  * producing run link and a relative timestamp.
  */
 function HistoryRow({ artifact, now, ago }: HistoryRowProps) {
-  const t = useTranslations("subsystems.artefakty");
+  const t = useTranslations("departments.artefakty");
   const name = artifact.from;
   return (
     <div data-testid={ArtefaktyTabTestId.HistoryRow}>
@@ -151,35 +151,35 @@ function HistoryRow({ artifact, now, ago }: HistoryRowProps) {
 }
 
 /**
- * Artefakty tab (Phase 88, design doc "what this subsystem produces and who it
+ * Artefakty tab (Phase 88, design doc "what this department produces and who it
  * hands off to"). Two derived-only sections, no new artifact-ownership store:
  *
  * - **Produkuje**: the owned pipelines' `outputs[]` — one line per sink, its
- *   static delivery type, and a derived receiver (`consumerSubsystemName` above).
+ *   static delivery type, and a derived receiver (`consumerDepartmentName` above).
  * - **Vyrobené artefakty**: the N2a artifact registry (`useArtifactsQuery`,
  *   unfiltered — its own `pipelineId` query filter only takes one id, so a
- *   multi-pipeline subsystem filters client-side, the same posture
+ *   multi-pipeline department filters client-side, the same posture
  *   `AktivitaTab` (Phase 86) already took for the unified runs feed), scoped
- *   to `producedBy.pipelineId` in this subsystem's owned set and capped to
+ *   to `producedBy.pipelineId` in this department's owned set and capped to
  *   `MAX_ARTIFACTS`.
  *
- * An owner-less subsystem (no pipeline at all) collapses BOTH sections into
+ * An owner-less department (no pipeline at all) collapses BOTH sections into
  * ONE combined empty state — there is nothing to produce and nothing that
  * could have been delivered, so two separate empty panels would just repeat
- * the same fact. A subsystem WITH pipelines but none configuring `outputs`
+ * the same fact. A department WITH pipelines but none configuring `outputs`
  * gets a lighter, single-line honest note in the Produkuje panel instead (the
  * `GatesTab` autopilot-summary posture: a plain sentence, not a second empty
  * card) — this is a "not configured" state, not an "empty catalog" one.
  */
-export function ArtefaktyTab({ subsystem }: ArtefaktyTabProps) {
-  const t = useTranslations("subsystems.artefakty");
+export function ArtefaktyTab({ department }: ArtefaktyTabProps) {
+  const t = useTranslations("departments.artefakty");
   const tRuns = useTranslations("runs");
   const [now] = useState(() => Date.now());
 
   const { data: pipelines = [] } = usePipelinesQuery();
   const { data: artifacts = [] } = useArtifactsQuery();
 
-  const ownedPipelines = pipelines.filter((p) => p.ownerSubsystem === subsystem.id);
+  const ownedPipelines = pipelines.filter((p) => p.department === department.id);
 
   if (ownedPipelines.length === 0) {
     return (

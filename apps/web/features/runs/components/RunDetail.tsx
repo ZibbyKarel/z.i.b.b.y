@@ -1,4 +1,4 @@
-import { SUBSYSTEMS } from "@zibby/contracts";
+import { DEPARTMENTS } from "@zibby/contracts";
 import {
   Accordion,
   AccordionItem,
@@ -386,8 +386,8 @@ export enum ClassificationTracePanelTestId {
 
 /**
  * F2c — the switchboard's stage-1 classification trace: a minimal, read-only
- * "why" strip — `Switchboard → <subsystem> → <unit>` (the middle hop only when
- * stage-1 delegated to a subsystem; `stage1` itself already names the concrete
+ * "why" strip — `Switchboard → <department> → <unit>` (the middle hop only when
+ * stage-1 delegated to a department; `stage1` itself already names the concrete
  * unit otherwise) plus the verdict's reason and confidence. Renders nothing
  * when the run carries no trace — an explicitly-targeted task was never
  * classified, and a pre-F2c run wrote none.
@@ -397,13 +397,14 @@ function ClassificationTracePanel({ run }: { run: RunView }) {
   const classification = run.classification;
   if (!classification) return null;
   const stage1 = toClientTarget(classification.stage1);
-  const subsystemName = classification.subsystem
-    ? (SUBSYSTEMS.find((s) => s.id === classification.subsystem)?.name ?? classification.subsystem)
+  const departmentName = classification.department
+    ? (DEPARTMENTS.find((s) => s.id === classification.department)?.name ??
+      classification.department)
     : null;
-  // When stage-1 delegated to a subsystem, the dispatched unit is whatever the
+  // When stage-1 delegated to a department, the dispatched unit is whatever the
   // run actually resolved to (`processor`); otherwise stage-1's own pick already
   // IS the unit that ran.
-  const unitName = subsystemName ? (run.processor?.name ?? run.owner) : stage1.name;
+  const unitName = departmentName ? (run.processor?.name ?? run.owner) : stage1.name;
   return (
     <HudPanel padding="250" title={t("classificationTitle")}>
       <Stack data-testid={ClassificationTracePanelTestId.Panel} gap="100">
@@ -412,10 +413,10 @@ function ClassificationTracePanel({ run }: { run: RunView }) {
             {t("classificationSwitchboard")}
           </Typography>
           <Icon name="chevron" size="xs" tone="faint" />
-          {subsystemName && (
+          {departmentName && (
             <>
               <Typography mono size="xs" type="note" variant="secondary">
-                {subsystemName}
+                {departmentName}
               </Typography>
               <Icon name="chevron" size="xs" tone="faint" />
             </>

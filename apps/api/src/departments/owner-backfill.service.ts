@@ -5,14 +5,14 @@ import { agentOwnersFromPipelines, pipelineOwnerSeed } from "./owner-seed";
 
 /**
  * NS2 F1b — one-shot, idempotent startup backfill that tags every pre-F1
- * pipeline / agent with its `ownerSubsystem`, mirroring the proven
+ * pipeline / agent with its `department`, mirroring the proven
  * `sweepInlineAvatars` sweep pattern (`agents.storage.service.ts`): a
  * per-entity try/catch, atomic writes via each store's own `update`, never
  * fatal to boot. Idempotent by construction — an already-owned entity is
  * skipped, so re-running on every boot is a no-op once the fleet is tagged.
  *
  * Integrations are NOT backfilled: their federation membership is derived, not
- * stored (see `SubsystemsService.roster`).
+ * stored (see `DepartmentsService.roster`).
  *
  * Runs after each injected store's own directory-ensure: constructor injection
  * gives Nest the dependency edges it needs to run THIS service's
@@ -35,11 +35,11 @@ export class OwnerBackfillService implements OnModuleInit {
   private async backfillPipelines(): Promise<void> {
     const all = await this.pipelines.list();
     for (const pipeline of all) {
-      if (pipeline.ownerSubsystem) continue;
+      if (pipeline.department) continue;
       const owner = pipelineOwnerSeed(pipeline.id);
       if (!owner) continue;
       await this.tag("pipeline", pipeline.id, () =>
-        this.pipelines.update(pipeline.id, { ownerSubsystem: owner }),
+        this.pipelines.update(pipeline.id, { department: owner }),
       );
     }
   }
@@ -51,12 +51,10 @@ export class OwnerBackfillService implements OnModuleInit {
     ]);
     const owners = agentOwnersFromPipelines(allPipelines);
     for (const agent of allAgents) {
-      if (agent.ownerSubsystem) continue;
+      if (agent.department) continue;
       const owner = owners.get(agent.id);
       if (!owner) continue;
-      await this.tag("agent", agent.id, () =>
-        this.agents.update(agent.id, { ownerSubsystem: owner }),
-      );
+      await this.tag("agent", agent.id, () => this.agents.update(agent.id, { department: owner }));
     }
   }
 

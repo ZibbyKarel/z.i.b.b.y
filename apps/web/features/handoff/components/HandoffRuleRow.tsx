@@ -19,9 +19,9 @@ export interface HandoffRuleRowProps {
   /** The full signal-kind registry — used to resolve `rule.signalKind`'s display
    * label (built-in → localized `t()`, operator → stored `label`). */
   signalKinds: HandoffSignalKind[];
-  /** This drawer's own subsystem name — the mad-libs sentence's subject. */
-  subsystemName: string;
-  /** Resolved display name of `rule.to` (subsystem or pipeline name, id fallback). */
+  /** This drawer's own department name — the mad-libs sentence's subject. */
+  departmentName: string;
+  /** Resolved display name of `rule.to` (department or pipeline name, id fallback). */
   targetLabel: string;
   onToggle: () => void;
   onEdit: () => void;
@@ -42,7 +42,7 @@ function Pat({ children, tone = "accent" }: { children: string; tone?: TagTone }
 
 /**
  * One outgoing handoff rule as a mad-libs Czech sentence (P2 design doc, aligned
- * to `design/Z.I.B.B.Y/ZIBBY Handoff.html`'s rule row): „Když **[subsystém]**
+ * to `design/Z.I.B.B.Y/ZIBBY Handoff.html`'s rule row): „Když **[oddělení]**
  * vyprodukuje **[signalKind]** (≥ **[severity]**) → předat **[cíl]** jako
  * **[tier]**" — the `(≥ severity)` clause only renders when `minSeverity` is set.
  * The three chips are toned per field (signal = run, target = accent, tier =
@@ -56,13 +56,13 @@ function Pat({ children, tone = "accent" }: { children: string; tone?: TagTone }
 export function HandoffRuleRow({
   rule,
   signalKinds,
-  subsystemName,
+  departmentName,
   targetLabel,
   onToggle,
   onEdit,
   onDelete,
 }: HandoffRuleRowProps) {
-  const t = useTranslations("subsystems.handoff");
+  const t = useTranslations("departments.handoff");
 
   // Registry lookup by id — falls back to the raw stored kind when the rule's
   // signal kind isn't (or is no longer) in the registry (stale/unknown).
@@ -75,7 +75,7 @@ export function HandoffRuleRow({
         <Stack wrap align="center" direction="row" gap="125">
           <Stack grow wrap align="center" direction="row" gap="100">
             <Typography size="sm" type="text" variant="secondary">
-              {t("sentencePrefix", { subject: subsystemName })}
+              {t("sentencePrefix", { subject: departmentName })}
             </Typography>
             <Pat tone="run">{signalKindText}</Pat>
             {rule.minSeverity && (

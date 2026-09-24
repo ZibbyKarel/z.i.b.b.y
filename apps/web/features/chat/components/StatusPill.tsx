@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import { useApprovalsQuery } from "../../approvals";
 import { useHealthQuery } from "../../health";
 import { deriveHealthPresentation } from "../../health/healthPresentation";
-import { useSubsystemsQuery } from "../../subsystems/queries/useSubsystemsQuery";
+import { useDepartmentsQuery } from "../../departments/queries/useDepartmentsQuery";
 import { type FlyoutSection, STATUS_PILL_DOM_ID } from "../statusFlyout";
 import { useStatusFlyout } from "../useStatusFlyout";
 import { STATUS_FLYOUT_PANEL_ID, StatusFlyoutPanel } from "./StatusFlyoutPanel";
@@ -33,7 +33,7 @@ const TRIGGER_CLASS: Record<FlyoutSection, string> = {
 };
 
 /**
- * The top-bar live status pill — subsystem state counts, now also the flyout host
+ * The top-bar live status pill — department state counts, now also the flyout host
  * (Velín-D phase 3a): the working/error/waiting segments are hover+keyboard triggers
  * for the portalled StatusFlyoutPanel; the report segment stays a plain count
  * (operator: reports section omitted this phase). Raw <button> triggers are the
@@ -42,8 +42,8 @@ const TRIGGER_CLASS: Record<FlyoutSection, string> = {
 export function StatusPill() {
   const t = useTranslations("chat");
   const tRoot = useTranslations();
-  const { data } = useSubsystemsQuery();
-  const subsystems = data ?? [];
+  const { data } = useDepartmentsQuery();
+  const departments = data ?? [];
   const flyout = useStatusFlyout();
 
   // Overall system health (F8b): the pill used to hardcode tone="ok" +
@@ -77,15 +77,15 @@ export function StatusPill() {
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const [originRect, setOriginRect] = useState<DOMRect | null>(null);
 
-  const working = subsystems.filter((s) => s.state === "running").length;
-  const error = subsystems.filter((s) => s.state === "error").length;
-  const report = subsystems.filter((s) => s.state === "report").length;
-  // The real global pending-approval count — NOT subsystems in a "waiting"
-  // state. Subsystem `waiting` only covers approvals attributable to an OWNED
-  // PIPELINE run (see `subsystems.service.ts`'s `attributeApproval`); every
-  // other kind (channel, agent, task, herald-graduation, …) has no pipeline to
-  // attribute through and would never flip a subsystem's state, so counting
-  // subsystems here silently hid e.g. Herald's parked Jira/Slack reply drafts —
+  const working = departments.filter((s) => s.state === "running").length;
+  const error = departments.filter((s) => s.state === "error").length;
+  const report = departments.filter((s) => s.state === "report").length;
+  // The real global pending-approval count — NOT departments in a "waiting"
+  // state. Department `waiting` only covers approvals attributable to an OWNED
+  // PIPELINE run (see `departments.service.ts`'s `attributeApproval`); every
+  // other kind (channel, agent, task, comms-graduation, …) has no pipeline to
+  // attribute through and would never flip a department's state, so counting
+  // departments here silently hid e.g. Comms's parked Jira/Slack reply drafts —
   // this trigger is the ONLY entry point into the waiting flyout, so it must
   // mirror exactly what that flyout (and `useApprovalsQuery`) actually shows.
   const { data: pendingApprovals } = useApprovalsQuery();

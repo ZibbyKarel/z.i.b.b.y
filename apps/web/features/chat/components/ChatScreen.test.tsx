@@ -31,15 +31,15 @@ vi.mock("../../pipelines/queries/usePipelinesQuery", () => ({
   usePipelinesQuery: () => ({ data: [] }),
   getPipelinesQueryKey: () => ["pipelines"],
 }));
-// The Phase 83 subsystem web polls the subsystem-federation registry — stub it with a
+// The Phase 83 department web polls the department-federation registry — stub it with a
 // couple of fixtures (one idle, one running) so the orb map has something concrete to
 // render and the suite never hits the network.
-vi.mock("../../subsystems/queries/useSubsystemsQuery", () => ({
-  useSubsystemsQuery: () => ({
+vi.mock("../../departments/queries/useDepartmentsQuery", () => ({
+  useDepartmentsQuery: () => ({
     data: [
       {
-        id: "forge",
-        name: "Forge",
+        id: "dev",
+        name: "Dev",
         tagline: "Kovárna doručení",
         mandate: "…",
         color: "#f97316",
@@ -48,8 +48,8 @@ vi.mock("../../subsystems/queries/useSubsystemsQuery", () => ({
         tier3Count: 0,
       },
       {
-        id: "puls",
-        name: "Puls",
+        id: "ops",
+        name: "Ops",
         tagline: "Tep systému",
         mandate: "…",
         color: "#14b8a6",
@@ -59,7 +59,7 @@ vi.mock("../../subsystems/queries/useSubsystemsQuery", () => ({
       },
     ],
   }),
-  getSubsystemsQueryKey: () => ["subsystems"],
+  getDepartmentsQueryKey: () => ["departments"],
 }));
 // `CommandLine` also reads the limits query (its schedule menu, and the top bar's
 // limits gauge) and the attachment-upload mutation — stub both so mounting never hits
@@ -159,9 +159,9 @@ import { ChatBottomBarTestId } from "./ChatBottomBar";
 import { ChatDockTestId } from "./ChatDock";
 import { ChatLiveLogTestId } from "./ChatLiveLog";
 import { CommandLineTestId } from "../../tasks/components/CommandLine/CommandLine";
-import { SubsystemDrawerTestId } from "../../subsystems/components/SubsystemDrawer/SubsystemDrawer";
+import { DepartmentDrawerTestId } from "../../departments/components/DepartmentDrawer/DepartmentDrawer";
 import { ChatDetailDialogTestId } from "./ChatDetailDialog";
-import { SubsystemOrbMapTestId } from "./SubsystemOrbMap";
+import { DepartmentOrbMapTestId } from "./DepartmentOrbMap";
 
 // The transcript lives in the provider; this harness supplies the lifted state so the
 // screen behaves exactly as it does under `ChatProvider`.
@@ -202,7 +202,7 @@ describe("ChatScreen", () => {
     expect(screen.getByTestId(ChatScreenTestId.Root)).toBeInTheDocument();
     expect(screen.getByTestId(ChatTopBarTestId.Root)).toBeInTheDocument();
     expect(screen.getByTestId(ChatToolDockTestId.Root)).toBeInTheDocument();
-    expect(screen.getByTestId(SubsystemOrbMapTestId.Root)).toBeInTheDocument();
+    expect(screen.getByTestId(DepartmentOrbMapTestId.Root)).toBeInTheDocument();
     // The transcript + composer moved into the bottom bar's chat dock (Task 6); the
     // live-log mini-widget mounts bottom-right. Both are present.
     expect(screen.getByTestId(ChatBottomBarTestId.Root)).toBeInTheDocument();
@@ -239,34 +239,34 @@ describe("ChatScreen", () => {
     expect(screen.queryByTestId("task-command-line-project-selector")).not.toBeInTheDocument();
   });
 
-  describe("subsystem orb map (Task 13)", () => {
-    it("renders the map with all mocked subsystems, over the scene", () => {
+  describe("department orb map (Task 13)", () => {
+    it("renders the map with all mocked departments, over the scene", () => {
       renderWithProviders(<ChatScreenHarness />);
 
-      expect(screen.getByTestId(SubsystemOrbMapTestId.Root)).toBeInTheDocument();
-      expect(screen.getByTestId(`${OrbMapTestId.Node}-forge`)).toBeInTheDocument();
-      expect(screen.getByTestId(`${OrbMapTestId.Node}-puls`)).toBeInTheDocument();
+      expect(screen.getByTestId(DepartmentOrbMapTestId.Root)).toBeInTheDocument();
+      expect(screen.getByTestId(`${OrbMapTestId.Node}-dev`)).toBeInTheDocument();
+      expect(screen.getByTestId(`${OrbMapTestId.Node}-ops`)).toBeInTheDocument();
     });
 
-    it("clicking a node opens the drawer for that subsystem, and picking a different node swaps it", async () => {
+    it("clicking a node opens the drawer for that department, and picking a different node swaps it", async () => {
       const user = userEvent.setup();
       renderWithProviders(<ChatScreenHarness />);
 
-      expect(screen.queryByTestId(SubsystemDrawerTestId.Root)).not.toBeInTheDocument();
+      expect(screen.queryByTestId(DepartmentDrawerTestId.Root)).not.toBeInTheDocument();
 
-      const forgeButton = within(screen.getByTestId(`${OrbMapTestId.Node}-forge`)).getByTestId(
+      const devButton = within(screen.getByTestId(`${OrbMapTestId.Node}-dev`)).getByTestId(
         OrbNodeTestId.Root,
       );
-      await user.click(forgeButton);
-      expect(screen.getByTestId(SubsystemDrawerTestId.Root)).toBeInTheDocument();
-      expect(screen.getByTestId(SubsystemDrawerTestId.Name)).toHaveTextContent("Forge");
+      await user.click(devButton);
+      expect(screen.getByTestId(DepartmentDrawerTestId.Root)).toBeInTheDocument();
+      expect(screen.getByTestId(DepartmentDrawerTestId.Name)).toHaveTextContent("Dev");
 
       // Selecting a different node swaps the drawer's content — only one open at a time.
-      const pulsButton = within(screen.getByTestId(`${OrbMapTestId.Node}-puls`)).getByTestId(
+      const opsButton = within(screen.getByTestId(`${OrbMapTestId.Node}-ops`)).getByTestId(
         OrbNodeTestId.Root,
       );
-      await user.click(pulsButton);
-      expect(screen.getByTestId(SubsystemDrawerTestId.Name)).toHaveTextContent("Puls");
+      await user.click(opsButton);
+      expect(screen.getByTestId(DepartmentDrawerTestId.Name)).toHaveTextContent("Ops");
     });
   });
 

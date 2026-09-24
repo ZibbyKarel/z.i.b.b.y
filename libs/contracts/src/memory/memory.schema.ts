@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { SubsystemIdSchema } from "../subsystems/subsystem.schema";
+import { DepartmentIdSchema } from "../departments/department.schema";
 
 /** Vault tiers: curated `memory`, episodic `daily/`, thematic `knowledge/`. */
 export const MemoryTierSchema = z.enum(["memory", "daily", "knowledge"]);
@@ -50,8 +50,8 @@ export const NoteSchema = z.object({
   type: NoteTypeSchema.optional(),
   tags: z.array(z.string()).optional(),
   raw: z.boolean().optional(),
-  /** The owning subsystem (F4a shelves), derived from `subsystem:` frontmatter. */
-  subsystem: SubsystemIdSchema.optional(),
+  /** The owning department (F4a shelves), derived from `department:` frontmatter. */
+  department: DepartmentIdSchema.optional(),
   /** Life-domain (F8), derived from `domain:` frontmatter — absent means work. */
   domain: NoteDomainSchema.optional(),
 });
@@ -68,8 +68,8 @@ export const IndexEntrySchema = z.object({
    * visible to every run; present → only a run in that project may ground on it.
    */
   project: z.string().optional(),
-  /** The owning subsystem (F4a shelves), derived from `subsystem:` frontmatter. */
-  subsystem: SubsystemIdSchema.optional(),
+  /** The owning department (F4a shelves), derived from `department:` frontmatter. */
+  department: DepartmentIdSchema.optional(),
   /** Life-domain (F8), derived from `domain:` frontmatter — absent means work. */
   domain: NoteDomainSchema.optional(),
   /**
@@ -95,8 +95,8 @@ export const MemoryGraphSchema = z.object({
        * absent for a global note, so older payloads stay valid.
        */
       project: z.string().optional(),
-      /** The owning subsystem (F4a shelves) — same optional/back-compat posture. */
-      subsystem: SubsystemIdSchema.optional(),
+      /** The owning department (F4a shelves) — same optional/back-compat posture. */
+      department: DepartmentIdSchema.optional(),
       /** Life-domain (F8) — same optional/back-compat posture. */
       domain: NoteDomainSchema.optional(),
     }),

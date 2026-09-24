@@ -1,31 +1,31 @@
 import { Injectable } from "@nestjs/common";
-import type { SubsystemHealth } from "@zibby/contracts";
+import type { DepartmentHealth } from "@zibby/contracts";
 import { SchedulerService } from "../automations/scheduler.service";
 import { IntegrationsStorageService } from "../integrations/integrations.storage.service";
 import { VaultService } from "../memory/vault.service";
 
 /**
- * Per-subsystem health probes (M8 — "never fail silently"). Each probe is cheap and
- * defensive: it can only resolve to a {@link SubsystemHealth}, never throw, so one
- * unreachable subsystem degrades only its own line. The overall readiness status is
- * composed by the controller (degraded if any subsystem is not `ok`).
+ * Per-department health probes (M8 — "never fail silently"). Each probe is cheap and
+ * defensive: it can only resolve to a {@link DepartmentHealth}, never throw, so one
+ * unreachable department degrades only its own line. The overall readiness status is
+ * composed by the controller (degraded if any department is not `ok`).
  */
 @Injectable()
-export class SubsystemHealthService {
+export class DepartmentHealthService {
   constructor(
     private readonly vault: VaultService,
     private readonly integrations: IntegrationsStorageService,
     private readonly scheduler: SchedulerService,
   ) {}
 
-  /** Probe every subsystem concurrently. Backend is up by definition (it answered). */
-  async probeAll(): Promise<SubsystemHealth[]> {
+  /** Probe every department concurrently. Backend is up by definition (it answered). */
+  async probeAll(): Promise<DepartmentHealth[]> {
     const [vault, integrations] = await Promise.all([this.probeVault(), this.probeIntegrations()]);
     return [{ name: "backend", status: "ok" }, vault, integrations, this.probeScheduler()];
   }
 
   /** Vault is healthy if its index is readable (the dir exists + parses). */
-  private async probeVault(): Promise<SubsystemHealth> {
+  private async probeVault(): Promise<DepartmentHealth> {
     try {
       await this.vault.index();
       return { name: "vault", status: "ok" };
@@ -35,7 +35,7 @@ export class SubsystemHealthService {
   }
 
   /** Integrations storage is healthy if the registry is listable. */
-  private async probeIntegrations(): Promise<SubsystemHealth> {
+  private async probeIntegrations(): Promise<DepartmentHealth> {
     try {
       await this.integrations.list();
       return { name: "integrations", status: "ok" };
@@ -49,7 +49,7 @@ export class SubsystemHealthService {
    * is intentionally disabled (`tickMs <= 0`, the test/CI mode), and `degraded` only
    * when it was configured to run but failed to arm — the genuine fault.
    */
-  private probeScheduler(): SubsystemHealth {
+  private probeScheduler(): DepartmentHealth {
     const h = this.scheduler.health();
     if (h.running) {
       return {

@@ -10,28 +10,28 @@ import { HandoffController } from "./handoff.controller";
 import { SignalKindService } from "./signal-kind.service";
 
 const SYSTEM_RULE: HandoffRule = {
-  id: "sentinel-cve-critical",
-  from: "sentinel",
+  id: "security-cve-critical",
+  from: "sec",
   signalKind: "cve",
   minSeverity: "critical",
-  to: { kind: "subsystem", id: "forge" },
+  to: { kind: "department", id: "dev" },
   tier: 2,
   enabled: true,
   system: true,
 };
 
 const USER_INPUT = {
-  from: "beacon" as const,
-  signalKind: "ask-forge",
-  to: { kind: "subsystem" as const, id: "forge" as const },
+  from: "inc" as const,
+  signalKind: "ask-dev",
+  to: { kind: "department" as const, id: "dev" as const },
   tier: 3 as const,
   enabled: true,
 };
 
 const SIGNAL_KIND_INPUT = {
-  from: "beacon" as const,
-  label: "Ask Forge",
-  description: "Something Beacon wants Forge to know about.",
+  from: "inc" as const,
+  label: "Ask Dev",
+  description: "Something Incident wants Dev to know about.",
   severityBearing: false,
 };
 
@@ -137,7 +137,7 @@ describe("handoffContract CRUD routes", () => {
   });
 
   it("POST /api/handoff-signal-kinds returns 201 with {signalKind, buildTaskId}", async () => {
-    const signalKind = { ...SIGNAL_KIND_INPUT, id: "ask-forge", status: "pending", system: false };
+    const signalKind = { ...SIGNAL_KIND_INPUT, id: "ask-dev", status: "pending", system: false };
     skCreate.mockResolvedValue({ signalKind, buildTaskId: "task-1" });
     const res = await request(app.getHttpServer())
       .post("/api/handoff-signal-kinds")
@@ -148,10 +148,10 @@ describe("handoffContract CRUD routes", () => {
   });
 
   it("PATCH /api/handoff-signal-kinds/:id returns 200 with the updated kind", async () => {
-    const updated = { ...SIGNAL_KIND_INPUT, id: "ask-forge", status: "pending", system: false };
+    const updated = { ...SIGNAL_KIND_INPUT, id: "ask-dev", status: "pending", system: false };
     skUpdate.mockResolvedValue(updated);
     const res = await request(app.getHttpServer())
-      .patch("/api/handoff-signal-kinds/ask-forge")
+      .patch("/api/handoff-signal-kinds/ask-dev")
       .send(SIGNAL_KIND_INPUT);
     expect(res.status).toBe(200);
     expect(res.body).toEqual(updated);
@@ -175,9 +175,9 @@ describe("handoffContract CRUD routes", () => {
 
   it("DELETE /api/handoff-signal-kinds/:id returns 200 {id} for an operator kind", async () => {
     skDelete.mockResolvedValue(undefined);
-    const res = await request(app.getHttpServer()).delete("/api/handoff-signal-kinds/ask-forge");
+    const res = await request(app.getHttpServer()).delete("/api/handoff-signal-kinds/ask-dev");
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ id: "ask-forge" });
+    expect(res.body).toEqual({ id: "ask-dev" });
   });
 
   it("DELETE /api/handoff-signal-kinds/:id returns 404 for an unknown id", async () => {

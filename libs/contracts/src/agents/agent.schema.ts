@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { AvatarSchema, RiskSchema } from "../common.schema";
 import { GateRuleInputSchema } from "../gates/gate.schema";
-import { SubsystemIdSchema } from "../subsystems/subsystem.schema";
+import { DepartmentIdSchema } from "../departments/department.schema";
 
 /**
  * Allowed shape of an agent `id`. The id doubles as the on-disk file name (and is
@@ -84,13 +84,13 @@ export const AgentSchema = z.object({
    */
   status: z.enum(["proposed", "active"]).optional(),
   /**
-   * Optional attribution to a subsystem of the federation (NS2 F1a) — which
-   * subsystem "owns" this agent for the Roster. Absent is a legitimate state for
+   * Optional attribution to a department of the federation (NS2 F1a) — which
+   * department "owns" this agent for the Roster. Absent is a legitimate state for
    * pre-F1 agents (backfilled by the owner-backfill sweep); write paths (create,
    * and updates that would clear it) require it once seeded — see
    * `agents.controller.ts`.
    */
-  ownerSubsystem: SubsystemIdSchema.optional(),
+  department: DepartmentIdSchema.optional(),
   instructions: z.string().min(1),
 });
 export type Agent = z.infer<typeof AgentSchema>;

@@ -8,7 +8,7 @@ import type {
   Project,
   ScheduledTask,
 } from "@zibby/contracts";
-import { NO_SUBSYSTEM } from "@zibby/contracts";
+import { NO_DEPARTMENT } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
 import type { AgentRunnerService } from "../agents/agent-runner.service";
 import type { AgentsStorageService } from "../agents/agents.storage.service";
@@ -355,21 +355,21 @@ describe("TaskRunsService", () => {
           id: "task1",
           status: "dispatched",
           classification: {
-            stage1: { kind: "subsystem", id: "forge", name: "Forge" },
+            stage1: { kind: "department", id: "dev", name: "Dev" },
             confidence: 0.8,
-            reason: "matches forge's mandate",
+            reason: "matches dev's mandate",
             matchedTerms: ["ship"],
-            subsystem: "forge",
+            department: "dev",
           },
         },
       ]);
       const feed = await service.listTaskRuns();
       const run = feed.find((r) => r.runId === "researcher_1");
-      expect(run?.classification?.subsystem).toBe("forge");
+      expect(run?.classification?.department).toBe("dev");
       expect(run?.classification?.stage1).toEqual({
-        kind: "subsystem",
-        id: "forge",
-        name: "Forge",
+        kind: "department",
+        id: "dev",
+        name: "Dev",
       });
     });
 
@@ -626,15 +626,15 @@ describe("TaskRunsService", () => {
       startedAt: "2026-06-14T00:00:00.000Z",
     };
 
-    const forgePipelineDef = {
-      id: "forge-deploy",
-      name: "Forge Deploy",
-      ownerSubsystem: "forge",
+    const devPipelineDef = {
+      id: "dev-deploy",
+      name: "Dev Deploy",
+      department: "dev",
     } as Pipeline;
-    const forgeRun: PipelineRun = {
+    const devRun: PipelineRun = {
       ...pipeP,
-      pipelineRunId: "forge_1",
-      pipelineId: "forge-deploy",
+      pipelineRunId: "dev_1",
+      pipelineId: "dev-deploy",
       status: "done",
       startedAt: "2026-06-15T00:00:00.000Z",
     };
@@ -677,38 +677,38 @@ describe("TaskRunsService", () => {
       expect(page.items.map((r) => r.runId)).toEqual(["a_done_1"]);
     });
 
-    it("filters by subsystem — a pipeline run's ownerSubsystem, or the explicit 'none' bucket", async () => {
+    it("filters by department — a pipeline run's department, or the explicit 'none' bucket", async () => {
       const { service, agentRunner, pipelineRunner, pipelinesStore } = build();
       agentRunner.listAll.mockResolvedValue([doneA]);
-      pipelineRunner.listAll.mockResolvedValue([forgeRun]);
-      pipelinesStore.list.mockResolvedValue([forgePipelineDef]);
+      pipelineRunner.listAll.mockResolvedValue([devRun]);
+      pipelinesStore.list.mockResolvedValue([devPipelineDef]);
 
-      const forgeOnly = await service.listArchivedTaskRuns({ subsystems: ["forge"] });
-      expect(forgeOnly.items.map((r) => r.runId)).toEqual(["forge_1"]);
+      const devOnly = await service.listArchivedTaskRuns({ departments: ["dev"] });
+      expect(devOnly.items.map((r) => r.runId)).toEqual(["dev_1"]);
 
-      const noneOnly = await service.listArchivedTaskRuns({ subsystems: [NO_SUBSYSTEM] });
+      const noneOnly = await service.listArchivedTaskRuns({ departments: [NO_DEPARTMENT] });
       expect(noneOnly.items.map((r) => r.runId)).toEqual(["a_done_1"]);
 
       const both = await service.listArchivedTaskRuns({});
-      expect(both.items.map((r) => r.runId).sort()).toEqual(["a_done_1", "forge_1"]);
+      expect(both.items.map((r) => r.runId).sort()).toEqual(["a_done_1", "dev_1"]);
     });
 
-    it("counts archived runs per subsystem (search-scoped) plus the unsearched total", async () => {
+    it("counts archived runs per department (search-scoped) plus the unsearched total", async () => {
       const { service, agentRunner, pipelineRunner, pipelinesStore } = build();
       agentRunner.listAll.mockResolvedValue([doneA, runningA]);
-      pipelineRunner.listAll.mockResolvedValue([forgeRun]);
-      pipelinesStore.list.mockResolvedValue([forgePipelineDef]);
+      pipelineRunner.listAll.mockResolvedValue([devRun]);
+      pipelinesStore.list.mockResolvedValue([devPipelineDef]);
 
       const counts = await service.getArchiveCounts({});
       expect(counts.total).toBe(2);
-      expect(counts.counts).toEqual({ forge: 1, [NO_SUBSYSTEM]: 1 });
+      expect(counts.counts).toEqual({ dev: 1, [NO_DEPARTMENT]: 1 });
     });
 
     it("counts stay search-scoped while total ignores search entirely", async () => {
       const { service, agentRunner, pipelineRunner, pipelinesStore } = build();
       agentRunner.listAll.mockResolvedValue([doneA]);
-      pipelineRunner.listAll.mockResolvedValue([forgeRun]);
-      pipelinesStore.list.mockResolvedValue([forgePipelineDef]);
+      pipelineRunner.listAll.mockResolvedValue([devRun]);
+      pipelinesStore.list.mockResolvedValue([devPipelineDef]);
 
       const counts = await service.getArchiveCounts({ search: "nothing-matches-this" });
       expect(counts.counts).toEqual({});

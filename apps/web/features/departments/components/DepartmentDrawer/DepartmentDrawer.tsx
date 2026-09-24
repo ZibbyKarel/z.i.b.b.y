@@ -1,6 +1,6 @@
 "use client";
 
-import type { SubsystemState, SubsystemWithStatus } from "@zibby/contracts";
+import type { DepartmentState, DepartmentWithStatus } from "@zibby/contracts";
 import {
   Container,
   Icon,
@@ -21,8 +21,8 @@ import { useTranslations } from "next-intl";
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePrefersReducedMotion } from "../../../../hooks/usePrefersReducedMotion";
-import { useMarkSubsystemSeenMutation } from "../../mutations/useMarkSubsystemSeenMutation";
-import { SUBSYSTEM_GLYPH, SUBSYSTEM_ORB_STATE } from "../../subsystemVisuals";
+import { useMarkDepartmentSeenMutation } from "../../mutations/useMarkDepartmentSeenMutation";
+import { DEPARTMENT_GLYPH, DEPARTMENT_ORB_STATE } from "../../departmentVisuals";
 import { AktivitaTab } from "./AktivitaTab";
 import { ArtefaktyTab } from "./ArtefaktyTab";
 import { GatesTab } from "./GatesTab";
@@ -35,27 +35,27 @@ import { RosterTab } from "./RosterTab";
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-export enum SubsystemDrawerTestId {
-  Root = "subsystem-drawer-root",
-  Panel = "subsystem-drawer-panel",
-  Close = "subsystem-drawer-close",
-  Hero = "subsystem-drawer-hero",
-  Glyph = "subsystem-drawer-glyph",
-  Name = "subsystem-drawer-name",
-  Mandate = "subsystem-drawer-mandate",
-  Status = "subsystem-drawer-status",
-  Count = "subsystem-drawer-count",
+export enum DepartmentDrawerTestId {
+  Root = "department-drawer-root",
+  Panel = "department-drawer-panel",
+  Close = "department-drawer-close",
+  Hero = "department-drawer-hero",
+  Glyph = "department-drawer-glyph",
+  Name = "department-drawer-name",
+  Mandate = "department-drawer-mandate",
+  Status = "department-drawer-status",
+  Count = "department-drawer-count",
 }
 
 /**
  * The modal's own lifecycle, independent of the `open`/mounted question (the
- * parent controls mounting via `{selectedSubsystem && <SubsystemDrawer .../>}`
+ * parent controls mounting via `{selectedDepartment && <DepartmentDrawer .../>}`
  * — this only tracks the animation state within that mounted lifetime).
  * `"entering"` is the one-frame initial paint (hidden), flipped to `"open"`
  * by an effect right after mount so the browser has a "from" state to
  * transition away from rather than painting the open state immediately.
  */
-export type SubsystemDrawerPhase = "entering" | "open" | "closing";
+export type DepartmentDrawerPhase = "entering" | "open" | "closing";
 
 export const PANEL_ENTER_MS = 220;
 export const PANEL_EXIT_MS = 140;
@@ -69,7 +69,7 @@ const MODAL_WIDTH = "800px";
  * ease-out opening, 140ms ease-in closing (a plain reverse, no extra blur
  * ramp — Velín-D design spec, phase 125).
  */
-export function backdropStyle(phase: SubsystemDrawerPhase): CSSProperties {
+export function backdropStyle(phase: DepartmentDrawerPhase): CSSProperties {
   const open = phase === "open";
   const duration = phase === "closing" ? BACKDROP_EXIT_MS : BACKDROP_ENTER_MS;
   const easing = phase === "closing" ? "ease-in" : "ease-out";
@@ -89,7 +89,7 @@ export function backdropStyle(phase: SubsystemDrawerPhase): CSSProperties {
  * the design spec.
  */
 export function panelTransitionStyle(
-  phase: SubsystemDrawerPhase,
+  phase: DepartmentDrawerPhase,
   reducedMotion: boolean,
 ): CSSProperties {
   const open = phase === "open";
@@ -107,10 +107,10 @@ export function panelTransitionStyle(
   };
 }
 
-export interface SubsystemDrawerProps {
-  /** The subsystem to show — the caller (`ChatScreen`) only mounts this when
-   * `selectedSubsystemId` is non-null, resolved against the live status list. */
-  subsystem: SubsystemWithStatus;
+export interface DepartmentDrawerProps {
+  /** The department to show — the caller (`ChatScreen`) only mounts this when
+   * `selectedDepartmentId` is non-null, resolved against the live status list. */
+  department: DepartmentWithStatus;
   /** Close the drawer (Escape, header close button). */
   onClose: () => void;
 }
@@ -120,14 +120,14 @@ export interface SubsystemDrawerProps {
 // `RosterTab.tsx` / `AktivitaTab.tsx` / `GatesTab.tsx` / `ArtefaktyTab.tsx`,
 // all under this component's own directory. Roster (85), Aktivita (86), Gates
 // (87) and Artefakty (88) have all landed their real content — the drawer no
-// longer carries any placeholder machinery. P2 (subsystem-handoff design)
-// inserts `handoff` between `gates` and `artefakty` — this subsystem's own
+// longer carries any placeholder machinery. P2 (department-handoff design)
+// inserts `handoff` between `gates` and `artefakty` — this department's own
 // outgoing handoff rules (`HandoffTab.tsx`), same filtered-lens shape as `gates`.
-const SUBSYSTEM_DRAWER_TABS = ["roster", "aktivita", "gates", "handoff", "artefakty"] as const;
+const DEPARTMENT_DRAWER_TABS = ["roster", "aktivita", "gates", "handoff", "artefakty"] as const;
 
 /** Count-badge tone for the two states that carry one — mirrors
- * `SubsystemWeb`'s `BADGE_TONE_CLASS` (report calm ok, waiting urgent warn). */
-const STATE_TAG_TONE: Partial<Record<SubsystemState, TagTone>> = {
+ * `DepartmentWeb`'s `BADGE_TONE_CLASS` (report calm ok, waiting urgent warn). */
+const STATE_TAG_TONE: Partial<Record<DepartmentState, TagTone>> = {
   report: "ok",
   waiting: "warn",
   error: "bad",
@@ -141,13 +141,13 @@ const HEADER_ORB_DIAMETER = 44;
 const HEADER_ORB_BOX = 48;
 
 /**
- * The header's band. Velín-D (`VcSubsystemDetail`, `velin-c-detail.jsx:213`)
- * tints the header with the subsystem's own hue fading downward into the panel
+ * The header's band. Velín-D (`VcDepartmentDetail`, `velin-c-detail.jsx:213`)
+ * tints the header with the department's own hue fading downward into the panel
  * — `linear-gradient(180deg, ${hue}18, transparent)` — and nothing more. No
  * portrait, no radial wash: identity is the orb's job here, and the tint only
- * has to whisper which subsystem you're in.
+ * has to whisper which department you're in.
  *
- * `color` is a contract-validated 6-digit hex (`SubsystemSchema`), so appending
+ * `color` is a contract-validated 6-digit hex (`DepartmentSchema`), so appending
  * the 2-digit `18` alpha suffix is safe, well-formed 8-digit hex CSS — a
  * genuinely dynamic per-instance value with no DS prop equivalent, routed
  * through the DS `Container`'s own `style` passthrough rather than a raw inline
@@ -194,33 +194,33 @@ export function stateDotStyle(stateColor: string, live: boolean): CSSProperties 
 }
 
 /**
- * The subsystem detail drawer (Phase 84, design doc "an inline panel over the
+ * The department detail drawer (Phase 84, design doc "an inline panel over the
  * chat, never a page navigation"): docked to the right of the transcript on
  * `lg+` (chat stays interactive to its left — no modal backdrop), a
  * full-width sheet below `lg` (PROVISIONAL — the design doc left mobile
  * behavior open; this is the conservative v1 floor, see phase-84 plan). Only
  * one drawer at a time — selecting another node swaps this component's
- * `subsystem` prop rather than stacking a second drawer (also PROVISIONAL,
+ * `department` prop rather than stacking a second drawer (also PROVISIONAL,
  * same doc).
  *
  * Phase 84 built the frame + header + empty tab shell; Roster (85), Aktivita
  * (86), Gates (87) and Artefakty (88) have all landed their real content
  * since — every tab below renders live data, no placeholder remains.
  */
-export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
-  const t = useTranslations("subsystems");
-  const markSeen = useMarkSubsystemSeenMutation();
+export function DepartmentDrawer({ department, onClose }: DepartmentDrawerProps) {
+  const t = useTranslations("departments");
+  const markSeen = useMarkDepartmentSeenMutation();
   const panelRef = useRef<HTMLDivElement>(null);
-  // Tracks which subsystem id has already fired the "seen" acknowledgment —
+  // Tracks which department id has already fired the "seen" acknowledgment —
   // NOT a per-mount ref, since this component stays mounted while the
-  // operator swaps between subsystems (single drawer, phase-84 plan): a
-  // re-render with the SAME id (e.g. the periodic `useSubsystemsQuery` poll
+  // operator swaps between departments (single drawer, phase-84 plan): a
+  // re-render with the SAME id (e.g. the periodic `useDepartmentsQuery` poll
   // handing down a fresh object) must not refire, but selecting a DIFFERENT
-  // subsystem — a genuine "open" of that subsystem's report — must.
+  // department — a genuine "open" of that department's report — must.
   const seenIdRef = useRef<string | null>(null);
 
   const reducedMotion = usePrefersReducedMotion();
-  const [phase, setPhase] = useState<SubsystemDrawerPhase>("entering");
+  const [phase, setPhase] = useState<DepartmentDrawerPhase>("entering");
   const closingRef = useRef(false);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -257,13 +257,13 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
   }, [onClose]);
 
   useEffect(() => {
-    if (seenIdRef.current === subsystem.id) return;
-    seenIdRef.current = subsystem.id;
-    markSeen.mutate({ params: { id: subsystem.id }, body: {} });
+    if (seenIdRef.current === department.id) return;
+    seenIdRef.current = department.id;
+    markSeen.mutate({ params: { id: department.id }, body: {} });
     // Keyed on the id only (see the ref comment above): markSeen's identity
     // churning on every mutation-state change must not refire this effect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subsystem.id]);
+  }, [department.id]);
 
   // Shares the DS `Dialog`'s overlay stack: `true` because this component IS
   // the modal for its whole mounted lifetime, including the `"closing"` phase
@@ -274,7 +274,7 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
 
   // Escape closes; focus moves into the drawer on mount and returns to
   // whatever was focused before it (the clicked/keyboard-activated node in
-  // `SubsystemWeb`) on unmount — the same a11y idiom as the DS `Dialog`.
+  // `DepartmentWeb`) on unmount — the same a11y idiom as the DS `Dialog`.
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       if (!isTopmost()) return;
@@ -317,35 +317,35 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
   }, []);
 
   // The orb's state and its chrome color come from the SAME tables the map
-  // reads (`subsystemVisuals` → DS `ORB_STATE`), so the header orb and the map
-  // node can't drift apart — see `subsystemVisuals`'s doc comment.
-  const orbState = SUBSYSTEM_ORB_STATE[subsystem.state];
+  // reads (`departmentVisuals` → DS `ORB_STATE`), so the header orb and the map
+  // node can't drift apart — see `departmentVisuals`'s doc comment.
+  const orbState = DEPARTMENT_ORB_STATE[department.state];
   const stateStyle = ORB_STATE[orbState];
-  const tagTone = STATE_TAG_TONE[subsystem.state];
+  const tagTone = STATE_TAG_TONE[department.state];
   // `countValue` is what the badge SHOWS, `countLabel` what it's ANNOUNCED as —
   // see the badge's own comment for why those differ.
   const countValue =
-    subsystem.state === "report"
-      ? subsystem.tier2Count
-      : subsystem.state === "waiting"
-        ? subsystem.tier3Count
-        : subsystem.state === "error"
-          ? subsystem.errorCount
+    department.state === "report"
+      ? department.tier2Count
+      : department.state === "waiting"
+        ? department.tier3Count
+        : department.state === "error"
+          ? department.errorCount
           : null;
   const countLabel =
-    subsystem.state === "report"
-      ? t("tier2Badge", { count: subsystem.tier2Count })
-      : subsystem.state === "waiting"
-        ? t("tier3Badge", { count: subsystem.tier3Count })
-        : subsystem.state === "error"
-          ? t("errorBadge", { count: subsystem.errorCount })
+    department.state === "report"
+      ? t("tier2Badge", { count: department.tier2Count })
+      : department.state === "waiting"
+        ? t("tier3Badge", { count: department.tier3Count })
+        : department.state === "error"
+          ? t("errorBadge", { count: department.errorCount })
           : null;
   const showCount = countLabel !== null && tagTone !== undefined;
 
   return (
     <Container
       bottom="0"
-      data-testid={SubsystemDrawerTestId.Root}
+      data-testid={DepartmentDrawerTestId.Root}
       left="0"
       onClick={(event) => {
         if (event.target === event.currentTarget) requestClose();
@@ -364,8 +364,8 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
     >
       <Panel
         elevated
-        aria-label={t("drawer.ariaLabel", { name: subsystem.name })}
-        data-testid={SubsystemDrawerTestId.Panel}
+        aria-label={t("drawer.ariaLabel", { name: department.name })}
+        data-testid={DepartmentDrawerTestId.Panel}
         ref={panelRef}
         role="region"
         // Sized as a centered modal (phase 125 — was a docked, viewport-minus-
@@ -389,14 +389,14 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
         }}
         tabIndex={-1}
       >
-        {/* The DS `Container` (not a raw `div`) so the per-subsystem gradient
+        {/* The DS `Container` (not a raw `div`) so the per-department gradient
               — see `headerBandStyle`'s doc comment — goes through a DS
               component's own `style` passthrough rather than a raw DOM node. */}
         <Container
-          data-testid={SubsystemDrawerTestId.Hero}
+          data-testid={DepartmentDrawerTestId.Hero}
           padding={["250", "300"]}
           shrink={false}
-          style={headerBandStyle(subsystem.color)}
+          style={headerBandStyle(department.color)}
         >
           <Stack align="center" direction="row" gap="200">
             {/* The orb, carried over from the map node the operator just
@@ -412,28 +412,28 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
               <Orb
                 detail={1}
                 diameter={HEADER_ORB_DIAMETER}
-                hex={subsystem.color}
+                hex={department.color}
                 state={orbState}
               />
               <Container
-                data-testid={SubsystemDrawerTestId.Glyph}
+                data-testid={DepartmentDrawerTestId.Glyph}
                 pointerEvents="none"
                 position="absolute"
                 style={{ inset: 0, display: "grid", placeItems: "center", color: "#eef3fb" }}
               >
-                <Icon name={SUBSYSTEM_GLYPH[subsystem.id]} size="lg" />
+                <Icon name={DEPARTMENT_GLYPH[department.id]} size="lg" />
               </Container>
             </Container>
 
             <Container grow minW0>
               <Stack gap="50">
                 <Stack align="center" direction="row" gap="150">
-                  <Typography truncate data-testid={SubsystemDrawerTestId.Name} type="title">
-                    {subsystem.name}
+                  <Typography truncate data-testid={DepartmentDrawerTestId.Name} type="title">
+                    {department.name}
                   </Typography>
 
                   <Container
-                    data-testid={SubsystemDrawerTestId.Status}
+                    data-testid={DepartmentDrawerTestId.Status}
                     padding={["25", "150"]}
                     shrink={false}
                     style={statePillStyle(stateStyle.color)}
@@ -444,7 +444,7 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
                         style={stateDotStyle(stateStyle.color, stateStyle.live)}
                       />
                       <Typography nowrap style={{ color: stateStyle.color }} type="micro">
-                        {t(`state.${subsystem.state}`)}
+                        {t(`state.${department.state}`)}
                       </Typography>
                     </Stack>
                   </Container>
@@ -459,7 +459,7 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
                   {showCount && tagTone && (
                     <Tag
                       aria-label={countLabel}
-                      data-testid={SubsystemDrawerTestId.Count}
+                      data-testid={DepartmentDrawerTestId.Count}
                       tone={tagTone}
                     >
                       {countValue}
@@ -468,15 +468,15 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
                 </Stack>
 
                 {/* Velín-D folds mandate and tagline onto one line — the
-                      mandate leads (it's what the subsystem DOES), the epithet
+                      mandate leads (it's what the department DOES), the epithet
                       trails. */}
                 <Typography
                   truncate
-                  data-testid={SubsystemDrawerTestId.Mandate}
+                  data-testid={DepartmentDrawerTestId.Mandate}
                   type="note"
                   variant="secondary"
                 >
-                  {subsystem.mandate} · {subsystem.tagline}
+                  {department.mandate} · {department.tagline}
                 </Typography>
               </Stack>
             </Container>
@@ -484,7 +484,7 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
             <button
               aria-label={t("drawer.close")}
               className="flex shrink-0 cursor-pointer p-1 text-foreground-faint hover:text-foreground"
-              data-testid={SubsystemDrawerTestId.Close}
+              data-testid={DepartmentDrawerTestId.Close}
               onClick={requestClose}
               type="button"
             >
@@ -495,25 +495,25 @@ export function SubsystemDrawer({ subsystem, onClose }: SubsystemDrawerProps) {
 
         <Tabs defaultValue="roster">
           <TabList>
-            {SUBSYSTEM_DRAWER_TABS.map((tab) => (
+            {DEPARTMENT_DRAWER_TABS.map((tab) => (
               <Tab key={tab} value={tab}>
                 {t(`drawer.tabs.${tab}`)}
               </Tab>
             ))}
           </TabList>
-          {SUBSYSTEM_DRAWER_TABS.map((tab) => (
+          {DEPARTMENT_DRAWER_TABS.map((tab) => (
             <TabPanel key={tab} value={tab}>
               <div className="p-4">
                 {tab === "roster" ? (
-                  <RosterTab subsystem={subsystem} />
+                  <RosterTab department={department} />
                 ) : tab === "aktivita" ? (
-                  <AktivitaTab subsystem={subsystem} />
+                  <AktivitaTab department={department} />
                 ) : tab === "gates" ? (
-                  <GatesTab subsystem={subsystem} />
+                  <GatesTab department={department} />
                 ) : tab === "handoff" ? (
-                  <HandoffTab subsystem={subsystem} />
+                  <HandoffTab department={department} />
                 ) : (
-                  <ArtefaktyTab subsystem={subsystem} />
+                  <ArtefaktyTab department={department} />
                 )}
               </div>
             </TabPanel>

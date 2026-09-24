@@ -59,15 +59,15 @@ describe("BriefingMessageCard (F8a / O6)", () => {
     expect(rows[0]).toHaveTextContent("Alpha");
   });
 
-  it("renders per-subsystem lines when the briefing carries them (NS2 F3b)", () => {
+  it("renders per-department lines when the briefing carries them (NS2 F3b)", () => {
     render(
       <BriefingMessageCard
         briefing={{
           ...calm,
-          subsystems: [
+          departments: [
             {
-              subsystem: "forge",
-              name: "Forge",
+              department: "dev",
+              name: "Dev",
               state: "waiting",
               tier2Count: 0,
               errorCount: 0,
@@ -77,20 +77,20 @@ describe("BriefingMessageCard (F8a / O6)", () => {
         }}
       />,
     );
-    const rows = screen.getAllByTestId(BriefingCardTestId.SubsystemLine);
+    const rows = screen.getAllByTestId(BriefingCardTestId.DepartmentLine);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toHaveTextContent("Forge");
+    expect(rows[0]).toHaveTextContent("Dev");
   });
 
-  it("renders a distinct failed-count line for a subsystem's errorCount", () => {
+  it("renders a distinct failed-count line for a department's errorCount", () => {
     render(
       <BriefingMessageCard
         briefing={{
           ...calm,
-          subsystems: [
+          departments: [
             {
-              subsystem: "sentinel",
-              name: "Sentinel",
+              department: "sec",
+              name: "Security",
               state: "error",
               tier2Count: 0,
               tier3Count: 0,
@@ -100,7 +100,7 @@ describe("BriefingMessageCard (F8a / O6)", () => {
         }}
       />,
     );
-    const rows = screen.getAllByTestId(BriefingCardTestId.SubsystemLine);
+    const rows = screen.getAllByTestId(BriefingCardTestId.DepartmentLine);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toHaveTextContent("1 selhalo");
   });

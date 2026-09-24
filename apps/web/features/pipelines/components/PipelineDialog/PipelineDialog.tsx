@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import type {
   Agent,
   CreatePipelineInput,
-  SubsystemId,
+  DepartmentId,
   UpdatePipelineInput,
 } from "@zibby/contracts";
 import { Button, Container, Dialog, IconTile, Stack, Typography } from "@zibby/design-system";
@@ -34,12 +34,12 @@ export interface PipelineDialogProps {
   /** Edit mode submit — only the fields that actually changed. */
   onSave?: (id: string, patch: UpdatePipelineInput) => void;
   /**
-   * Create mode only: pre-fills the created pipeline's `ownerSubsystem` (Phase 85
+   * Create mode only: pre-fills the created pipeline's `department` (Phase 85
    * Roster tab's "no pipeline yet" affordance opens this dialog scoped to the
-   * subsystem it was opened from). No picker UI — the value flows straight into
+   * department it was opened from). No picker UI — the value flows straight into
    * the create payload.
    */
-  defaultOwnerSubsystem?: SubsystemId;
+  defaultOwnerDepartment?: DepartmentId;
 }
 
 /**
@@ -57,7 +57,7 @@ export function PipelineDialog({
   onClose,
   onCreate,
   onSave,
-  defaultOwnerSubsystem,
+  defaultOwnerDepartment,
 }: PipelineDialogProps) {
   const t = useTranslations();
   const [name, setName] = useState(initial?.name ?? "");
@@ -100,7 +100,7 @@ export function PipelineDialog({
         // as `outputs`), so a dialog-created pipeline starts on the middle rung —
         // the contract's own default — and is graded in the `.pipeline.md`.
         complexity: "standard",
-        ...(defaultOwnerSubsystem ? { ownerSubsystem: defaultOwnerSubsystem } : {}),
+        ...(defaultOwnerDepartment ? { department: defaultOwnerDepartment } : {}),
       });
       return;
     }

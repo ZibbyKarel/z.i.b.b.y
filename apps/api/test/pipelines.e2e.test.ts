@@ -156,7 +156,7 @@ describe("Pipelines API (e2e)", () => {
         id: "release",
         phases: [phase("a"), phase("b")],
         instructions: "ship",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
 
@@ -169,7 +169,7 @@ describe("Pipelines API (e2e)", () => {
           phase("only", { loop: { to: "ghost", maxRetries: 1, escalate: false, then: "fail" } }),
         ],
         instructions: "x",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(400);
 
@@ -188,19 +188,19 @@ describe("Pipelines API (e2e)", () => {
   /**
    * NS2 F9 — the write-path half of the "no free units" invariant, mirroring
    * `agents.controller.ts`' pre-existing guard. The structural half is that stage 1
-   * emits only subsystems and a subsystem offers only what it owns, so an unowned
+   * emits only departments and a department offers only what it owns, so an unowned
    * pipeline is unroutable by construction; this 422 is what stops one being
    * created in the first place. Deliberately NOT enforced by making the schema
    * field required — the entity store's listing is tolerant, so a required field
    * would turn a hand-edited file that lost its owner into a silent disappearance
    * and would break `OwnerBackfillService`'s healing path.
    */
-  it("422s a create with no ownerSubsystem — an unowned pipeline would be unroutable", async () => {
+  it("422s a create with no department — an unowned pipeline would be unroutable", async () => {
     const res = await request(app.getHttpServer())
       .post("/api/pipelines")
       .send({ id: "ownerless", phases: [phase("a")], instructions: "ship" });
     expect(res.status).toBe(422);
-    expect(res.body.message).toContain("ownerSubsystem");
+    expect(res.body.message).toContain("department");
 
     // Nothing was written — the guard runs before storage.
     await request(app.getHttpServer()).get("/api/pipelines/ownerless").expect(404);
@@ -213,7 +213,7 @@ describe("Pipelines API (e2e)", () => {
         id: "ownerless",
         phases: [phase("a")],
         instructions: "ship",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
     await request(app.getHttpServer()).delete("/api/pipelines/ownerless").expect(200);
@@ -257,7 +257,7 @@ describe("Pipelines API (e2e)", () => {
         id: "learnpipe",
         phases: [phase("doc")],
         instructions: "deliver",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
 
@@ -327,7 +327,7 @@ describe("Pipelines API (e2e)", () => {
           phase("b", { loop: { to: "a", maxRetries: 1, escalate: true, then: "fail" } }),
         ],
         instructions: "loop",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
 
@@ -374,7 +374,7 @@ describe("Pipelines API (e2e)", () => {
           phase("b"),
         ],
         instructions: "agent → verify → agent",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
 
@@ -426,7 +426,7 @@ describe("Pipelines API (e2e)", () => {
         ],
         outputs: [{ type: "file", from: "final.out", dest: "vault", to: "structure-smoke-note" }],
         instructions: "structure smoke",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
 
@@ -511,7 +511,7 @@ describe("Pipelines API (e2e)", () => {
           phase("b", { loop: { to: "a", maxRetries: 0, escalate: true, then: "park" } }),
         ],
         instructions: "park on exhaustion",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
 
@@ -836,7 +836,7 @@ describe("Pipeline stage gates (claude mode, e2e)", () => {
         name: "Gated writer",
         instructions: "writes, deletes behind the gate",
         risk: "high",
-        ownerSubsystem: "forge",
+        department: "dev",
         gates: [
           {
             match: [{ type: "action", action: "delete" }],
@@ -862,7 +862,7 @@ describe("Pipeline stage gates (claude mode, e2e)", () => {
           },
         ],
         instructions: "gated pipeline",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
   });
@@ -1051,7 +1051,7 @@ describe("PR gate on a git project (claude mode, e2e)", () => {
         name: "PR writer",
         instructions: "opens PRs",
         risk: "medium",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
     await request(app.getHttpServer())
@@ -1073,7 +1073,7 @@ describe("PR gate on a git project (claude mode, e2e)", () => {
           },
         ],
         instructions: "single PR-gate phase",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
   });

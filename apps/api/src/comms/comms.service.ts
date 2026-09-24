@@ -6,7 +6,7 @@ import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.s
 import { NOTIFY_ONLY_KINDS } from "../channels/notify-only-kinds";
 import { collisionResistantId } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
-import { HeraldGraduationStore } from "./herald-graduation.store";
+import { CommsGraduationStore } from "./comms-graduation.store";
 import { ReplyLedgerStore } from "./reply-ledger.store";
 
 /** Parse a non-negative integer env var, falling back to `dflt` on absent/garbage. */
@@ -15,7 +15,7 @@ function intEnv(name: string, dflt: number): number {
   return Number.isFinite(n) && n >= 0 ? n : dflt;
 }
 
-/** Input to {@link HeraldService.recordProposal}. */
+/** Input to {@link CommsService.recordProposal}. */
 export interface RecordProposalInput {
   integrationId: string;
   kind: IntegrationKind;
@@ -30,38 +30,38 @@ export interface RecordProposalInput {
 }
 
 /**
- * NS2 F6a — the ledger/graduation brain AND the `herald-graduation`
+ * NS2 F6a — the ledger/graduation brain AND the `comms-graduation`
  * {@link ResumableRunner}. Records every drafted reply (Tier-2 auto-send or Tier-3
  * parked draft) to the durable ledger; when a `(integrationId, category)` pair
- * accumulates {@link HERALD_GRADUATION_THRESHOLD} CONSECUTIVE `approved` (unedited)
- * proposals, it parks a Tier-3 `herald-graduation` approval — the operator's
- * explicit sign-off is what widens autonomy, never Herald itself. Email can never
+ * accumulates {@link COMMS_GRADUATION_THRESHOLD} CONSECUTIVE `approved` (unedited)
+ * proposals, it parks a Tier-3 `comms-graduation` approval — the operator's
+ * explicit sign-off is what widens autonomy, never Comms itself. Email can never
  * reach this path BY CONSTRUCTION: `ChannelTriageFlowService.handleNotifyOnly`
  * returns before any reply branch, so no `channel` approval — and no ledger entry
  * — is ever created for it; {@link maybeProposeGraduation}'s `NOTIFY_ONLY_KINDS`
  * check is defense-in-depth on top of that structural guarantee.
  */
 @Injectable()
-export class HeraldService implements OnModuleInit, ResumableRunner {
+export class CommsService implements OnModuleInit, ResumableRunner {
   private readonly log: ScopedLogger;
   private readonly threshold: number;
 
   constructor(
     private readonly ledger: ReplyLedgerStore,
-    private readonly graduation: HeraldGraduationStore,
+    private readonly graduation: CommsGraduationStore,
     private readonly approvals: ApprovalsService,
     private readonly activity: ActivityLogService,
     logger: LoggerService,
   ) {
-    this.log = logger.child(HeraldService.name);
+    this.log = logger.child(CommsService.name);
     // Read at construction (not module load) so tests can set the env before
     // building the service; production reads it once at boot like every other
     // TickingWatcherBase-adjacent env knob.
-    this.threshold = intEnv("HERALD_GRADUATION_THRESHOLD", 10);
+    this.threshold = intEnv("COMMS_GRADUATION_THRESHOLD", 10);
   }
 
   onModuleInit(): void {
-    this.approvals.register("herald-graduation", this);
+    this.approvals.register("comms-graduation", this);
   }
 
   /** Record a fresh proposal (auto-sent or parked). Returns the new ledger entry id. */
@@ -87,7 +87,7 @@ export class HeraldService implements OnModuleInit, ResumableRunner {
   /**
    * Patch the matching pending entry's outcome once the operator decides. On
    * `approved`, evaluates whether the pair has now earned a graduation proposal.
-   * Fail-open: a missing pending entry (e.g. a resume for an item Herald never
+   * Fail-open: a missing pending entry (e.g. a resume for an item Comms never
    * saw) logs a warning and no-ops.
    */
   async recordDecision(
@@ -142,38 +142,38 @@ export class HeraldService implements OnModuleInit, ResumableRunner {
     if (await this.graduation.isGraduated(integrationId, category)) return;
     const runId = graduationRunId(integrationId, category);
     const pending = await this.approvals.list("pending");
-    if (pending.some((a) => a.kind === "herald-graduation" && a.runId === runId)) return;
+    if (pending.some((a) => a.kind === "comms-graduation" && a.runId === runId)) return;
     const count = await this.ledger.consecutiveApproved(integrationId, category);
     if (count < this.threshold) return;
     await this.approvals.requestApproval({
       runId,
-      kind: "herald-graduation",
-      skill: "Herald",
+      kind: "comms-graduation",
+      skill: "Comms",
       action: "graduate-tier2",
       detail: `${count}/${this.threshold} consecutive replies approved unedited for "${category}" on ${integrationId} — promote to Tier-2 auto-send?`,
       risk: "medium",
     });
-    this.log.info("herald graduation proposed", { integrationId, category, count });
+    this.log.info("comms graduation proposed", { integrationId, category, count });
     void this.activity.record({
       kind: "channel-approval",
-      summary: `Herald navrhuje Tier-2 auto-reply pro ${integrationId}/${category}`,
+      summary: `Comms navrhuje Tier-2 auto-reply pro ${integrationId}/${category}`,
       refs: { integrationId, status: category, ...(projectId ? { projectId } : {}) },
     });
   }
 
-  // ---- ResumableRunner (kind "herald-graduation") -----------------------------
+  // ---- ResumableRunner (kind "comms-graduation") -----------------------------
 
   /** Approve → write the graduation. Kind is looked up from the ledger (restart-safe). */
   async resume(runId: string): Promise<void> {
     const parsed = parseGraduationRunId(runId);
     if (!parsed) {
-      this.log.warn("herald-graduation resume: unparseable runId", { runId });
+      this.log.warn("comms-graduation resume: unparseable runId", { runId });
       return;
     }
     const { integrationId, category } = parsed;
     const entries = await this.ledger.listFiltered({ integrationId, category });
     if (entries.length === 0) {
-      this.log.warn("herald-graduation resume: no ledger entries for pair — nothing to graduate", {
+      this.log.warn("comms-graduation resume: no ledger entries for pair — nothing to graduate", {
         runId,
       });
       return;
@@ -185,9 +185,9 @@ export class HeraldService implements OnModuleInit, ResumableRunner {
     );
     const decidedApprovals = await this.approvals.list();
     const approval = decidedApprovals
-      .filter((a) => a.kind === "herald-graduation" && a.runId === runId)
+      .filter((a) => a.kind === "comms-graduation" && a.runId === runId)
       .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))[0];
-    const approvalId = approval?.id ?? collisionResistantId("herald-graduation");
+    const approvalId = approval?.id ?? collisionResistantId("comms-graduation");
     await this.graduation.add({
       integrationId,
       kind: latest.kind,
@@ -197,21 +197,21 @@ export class HeraldService implements OnModuleInit, ResumableRunner {
       approvalId,
       graduatedAt: new Date().toISOString(),
     });
-    this.log.info("herald graduation recorded", { integrationId, category, evidenceCount });
+    this.log.info("comms graduation recorded", { integrationId, category, evidenceCount });
     void this.activity.record({
       kind: "channel-approval",
-      summary: `Herald: ${category} replies on ${integrationId} graduated to Tier-2 auto-send`,
+      summary: `Comms: ${category} replies on ${integrationId} graduated to Tier-2 auto-send`,
       refs: { integrationId, status: category, approvalId },
     });
   }
 
   /** Reject → leave the channel at Tier-3 (streak stays; a later approval can re-propose). */
   cancel(runId: string): void {
-    this.log.info("herald-graduation rejected — pair stays Tier-3", { runId });
+    this.log.info("comms-graduation rejected — pair stays Tier-3", { runId });
   }
 }
 
-/** `<integrationId>/<category>` — the herald-graduation approval's runId. */
+/** `<integrationId>/<category>` — the comms-graduation approval's runId. */
 function graduationRunId(integrationId: string, category: TriageCategory): string {
   return `${integrationId}/${category}`;
 }

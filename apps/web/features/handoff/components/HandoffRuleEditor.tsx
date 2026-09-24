@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import type {
+  DepartmentId,
   HandoffRule,
   HandoffRuleInput,
   HandoffSeverity,
   HandoffSignalKind,
   HandoffTarget,
-  SubsystemId,
 } from "@zibby/contracts";
 import { Button, Dropdown, Stack, Typography } from "@zibby/design-system";
 import type { DropdownOption } from "@zibby/design-system";
@@ -33,12 +33,12 @@ const TIERS = ["1", "2", "3"] as const;
 type TierOption = (typeof TIERS)[number];
 type TargetKind = HandoffTarget["kind"];
 
-/** Sentinel signal-kind option value — picking it navigates to the signal-creation
+/** Security signal-kind option value — picking it navigates to the signal-creation
  * page instead of assigning a signal kind; kept distinct from any real kind id or
  * the `"*"` any-signal value. */
 const NEW_SIGNAL = "__new_signal__";
 
-/** `subsystem:<id>` / `pipeline:<id>` — a merged target list needs the kind encoded
+/** `department:<id>` / `pipeline:<id>` — a merged target list needs the kind encoded
  * into one option value; split back into `{ kind, id }` on save. */
 const ANY_TARGET = "";
 
@@ -51,26 +51,26 @@ function decodeTarget(value: string): { kind: TargetKind; id: string } | null {
   if (sepIndex < 0) return null;
   const kind = value.slice(0, sepIndex);
   const id = value.slice(sepIndex + 1);
-  if (kind !== "subsystem" && kind !== "pipeline") return null;
+  if (kind !== "department" && kind !== "pipeline") return null;
   return { kind, id };
 }
 
 export interface HandoffRuleEditorProps {
   /** The rule being edited, or undefined to create a fresh one. */
   initial?: HandoffRule;
-  /** The drawer's own subsystem — `from` is fixed to it, never editable here. */
-  fromSubsystemId: SubsystemId;
-  subsystemName: string;
+  /** The drawer's own department — `from` is fixed to it, never editable here. */
+  fromDepartmentId: DepartmentId;
+  departmentName: string;
   /** The full signal-kind registry (built-ins + operator-registered) — scoped to
-   * `fromSubsystemId` internally for the signal picker (Slot B2). */
+   * `fromDepartmentId` internally for the signal picker (Slot B2). */
   signalKinds: HandoffSignalKind[];
-  subsystems: { id: string; name: string }[];
+  departments: { id: string; name: string }[];
   pipelines: { id: string; name: string }[];
-  /** Subsystem ids that own ≥1 pipeline or ≥1 agent — mirrors the server's
-   * `resolveSubsystemTarget`, which hard-fails dispatch to an empty-roster
-   * subsystem. Only NEW target selections are constrained to this set; see
-   * `currentTargetSubsystemId` below for the preserve-current guard. */
-  receiverSubsystemIds: string[];
+  /** Department ids that own ≥1 pipeline or ≥1 agent — mirrors the server's
+   * `resolveDepartmentTarget`, which hard-fails dispatch to an empty-roster
+   * department. Only NEW target selections are constrained to this set; see
+   * `currentTargetDepartmentId` below for the preserve-current guard. */
+  receiverDepartmentIds: string[];
   onCancel: () => void;
   onSave: (input: HandoffRuleInput) => void;
   /** True while the save mutation is in flight. */
@@ -80,7 +80,7 @@ export interface HandoffRuleEditorProps {
 /**
  * Inline mad-libs editable sentence for a handoff rule (P2 inline-editor design
  * doc) — the editable twin of `HandoffRuleRow`'s read-only sentence, replacing the
- * `HandoffRuleModal` Dialog (which the subsystem drawer's `transform`d fixed panel
+ * `HandoffRuleModal` Dialog (which the department drawer's `transform`d fixed panel
  * clips). Same `Stack wrap direction="row"` + `Typography` connector shape as the
  * read row, with inline `Dropdown` pills standing in for the `Pat` chips — each
  * toned the same as its read-only chip counterpart (signal = run, severity =
@@ -92,27 +92,27 @@ export interface HandoffRuleEditorProps {
  */
 export function HandoffRuleEditor({
   initial,
-  fromSubsystemId,
-  subsystemName,
+  fromDepartmentId,
+  departmentName,
   signalKinds,
-  subsystems,
+  departments,
   pipelines,
-  receiverSubsystemIds,
+  receiverDepartmentIds,
   onCancel,
   onSave,
   pending = false,
 }: HandoffRuleEditorProps) {
-  const t = useTranslations("subsystems.handoff");
+  const t = useTranslations("departments.handoff");
   const router = useRouter();
 
-  // Scope the registry to this drawer's own producer subsystem — the picker
-  // only ever offers signals `fromSubsystemId` can actually emit.
-  const producerKinds = signalKinds.filter((sk) => sk.from === fromSubsystemId);
+  // Scope the registry to this drawer's own producer department — the picker
+  // only ever offers signals `fromDepartmentId` can actually emit.
+  const producerKinds = signalKinds.filter((sk) => sk.from === fromDepartmentId);
   const defaultSignalKind = initial?.signalKind ?? producerKinds[0]?.id ?? "*";
   const defaultTarget = initial
     ? encodeTarget(initial.to.kind, initial.to.id)
-    : subsystems[0]
-      ? encodeTarget("subsystem", subsystems[0].id)
+    : departments[0]
+      ? encodeTarget("department", departments[0].id)
       : pipelines[0]
         ? encodeTarget("pipeline", pipelines[0].id)
         : ANY_TARGET;
@@ -143,7 +143,7 @@ export function HandoffRuleEditor({
 
   const handleSignalKindChange = (value: string) => {
     if (value === NEW_SIGNAL) {
-      router.push(`/signals/new?from=${fromSubsystemId}` as Route);
+      router.push(`/signals/new?from=${fromDepartmentId}` as Route);
       return;
     }
     setSignalKind(value);
@@ -154,20 +154,20 @@ export function HandoffRuleEditor({
     ...SEVERITIES.map((s) => ({ value: s, label: t(`severity.${s}`) })),
   ];
 
-  // A subsystem with no pipeline and no agent hard-fails dispatch server-side
-  // (`SubsystemEmptyRosterError` in `resolveSubsystemTarget`) — restrict new
+  // A department with no pipeline and no agent hard-fails dispatch server-side
+  // (`DepartmentEmptyRosterError` in `resolveDepartmentTarget`) — restrict new
   // selections to receivers, but never silently drop the currently-stored
   // target of a rule being edited (stale rule / roster changed since authoring).
-  const currentTargetSubsystemId = initial?.to.kind === "subsystem" ? initial.to.id : undefined;
-  const visibleSubsystems = subsystems.filter(
-    (s) => receiverSubsystemIds.includes(s.id) || s.id === currentTargetSubsystemId,
+  const currentTargetDepartmentId = initial?.to.kind === "department" ? initial.to.id : undefined;
+  const visibleDepartments = departments.filter(
+    (s) => receiverDepartmentIds.includes(s.id) || s.id === currentTargetDepartmentId,
   );
 
   const targetOptions: DropdownOption[] = [
-    ...visibleSubsystems.map((s) => ({
-      value: encodeTarget("subsystem", s.id),
+    ...visibleDepartments.map((s) => ({
+      value: encodeTarget("department", s.id),
       label: s.name,
-      description: t("editor.targetKindSubsystem"),
+      description: t("editor.targetKindDepartment"),
     })),
     ...pipelines.map((p) => ({
       value: encodeTarget("pipeline", p.id),
@@ -187,11 +187,11 @@ export function HandoffRuleEditor({
     const decoded = decodeTarget(target);
     if (!decoded) return;
     const to: HandoffTarget =
-      decoded.kind === "subsystem"
-        ? { kind: "subsystem", id: decoded.id as SubsystemId }
+      decoded.kind === "department"
+        ? { kind: "department", id: decoded.id as DepartmentId }
         : { kind: "pipeline", id: decoded.id };
     onSave({
-      from: fromSubsystemId,
+      from: fromDepartmentId,
       signalKind,
       ...(severity ? { minSeverity: severity } : {}),
       to,
@@ -205,7 +205,7 @@ export function HandoffRuleEditor({
       <HudPanel padding="150">
         <Stack wrap align="center" direction="row" gap="75">
           <Typography size="sm" type="text" variant="secondary">
-            {t("sentencePrefix", { subject: subsystemName })}
+            {t("sentencePrefix", { subject: departmentName })}
           </Typography>
 
           <div data-testid={HandoffRuleEditorTestId.SignalKind}>

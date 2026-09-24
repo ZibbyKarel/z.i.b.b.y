@@ -1,4 +1,4 @@
-import { type GlobalGateRule, SUBSYSTEMS } from "@zibby/contracts";
+import { DEPARTMENTS, type GlobalGateRule } from "@zibby/contracts";
 import type { IconName } from "@zibby/design-system";
 import {
   Button,
@@ -11,12 +11,12 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { SUBSYSTEM_GLYPH } from "../../subsystems/subsystemVisuals";
+import { DEPARTMENT_GLYPH } from "../../departments/departmentVisuals";
 import { DECISION_META, MATCHER_ICON } from "../gate";
 import { DecisionBadge, MatcherText, ResolveChips } from "./RuleParts";
 
 export enum GlobalRuleCardTestId {
-  /** The owning-subsystem scope tag (NS2 F3a) — rendered iff `rule.ownerSubsystem` is set. */
+  /** The owning-department scope tag (NS2 F3a) — rendered iff `rule.department` is set. */
   OwnerTag = "global-rule-card-owner-tag",
 }
 
@@ -76,11 +76,9 @@ export function GlobalRuleCard({
   const meta = DECISION_META[rule.decision];
   const matcherIcon = MATCHER_ICON[rule.match[0]?.type ?? "action"];
   const total = agents.length + skills.length;
-  // NS2 F3a — a tagged rule is load-bearing for its subsystem's runs (a third
+  // NS2 F3a — a tagged rule is load-bearing for its department's runs (a third
   // evaluation bucket), so the card names its owner scope explicitly.
-  const owner = rule.ownerSubsystem
-    ? SUBSYSTEMS.find((s) => s.id === rule.ownerSubsystem)
-    : undefined;
+  const owner = rule.department ? DEPARTMENTS.find((s) => s.id === rule.department) : undefined;
 
   return (
     // eslint-disable-next-line react/forbid-dom-props
@@ -127,7 +125,7 @@ export function GlobalRuleCard({
                 {owner && (
                   <Tag data-testid={GlobalRuleCardTestId.OwnerTag} tone="accent">
                     <Stack inline align="center" as="span" direction="row" gap="50">
-                      <Icon name={SUBSYSTEM_GLYPH[owner.id]} size="xs" />
+                      <Icon name={DEPARTMENT_GLYPH[owner.id]} size="xs" />
                       {owner.name}
                     </Stack>
                   </Tag>

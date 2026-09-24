@@ -2,7 +2,12 @@ import { Inject, Injectable } from "@nestjs/common";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import * as prettier from "prettier";
-import { IntegrationKindSchema, type Note, SUBSYSTEMS, type SelfKnowledge } from "@zibby/contracts";
+import {
+  DEPARTMENTS,
+  IntegrationKindSchema,
+  type Note,
+  type SelfKnowledge,
+} from "@zibby/contracts";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.service";
 import { PolicyStorageService } from "../gates/policy.storage.service";
@@ -101,7 +106,7 @@ export class SelfKnowledgeService {
     return {
       agents,
       pipelines,
-      subsystems: [...SUBSYSTEMS],
+      departments: [...DEPARTMENTS],
       gateRules,
       policyFloor,
       channelKinds: [...IntegrationKindSchema.options],

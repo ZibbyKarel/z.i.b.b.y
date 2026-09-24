@@ -47,7 +47,7 @@ function MergeQueueRow({ entry }: { entry: MergeQueueEntry }) {
           <Stack align="center" direction="row" gap="75" justify="between">
             <Stack align="center" direction="row" gap="75">
               <Tag tone={STATE_TONE[entry.queueState]}>
-                {t(`maestro.queueState.${entry.queueState}`)}
+                {t(`release.queueState.${entry.queueState}`)}
               </Tag>
               {entry.projectName && <Tag tone="neutral">{entry.projectName}</Tag>}
             </Stack>
@@ -58,7 +58,7 @@ function MergeQueueRow({ entry }: { entry: MergeQueueEntry }) {
               target="_blank"
             >
               <Typography size="sm" tone="accent" type="note" weight="semibold">
-                {t("maestro.merge.openInGithub")}
+                {t("release.merge.openInGithub")}
               </Typography>
             </a>
           </Stack>
@@ -72,9 +72,9 @@ function MergeQueueRow({ entry }: { entry: MergeQueueEntry }) {
           {entry.queueState === "ready" ? (
             <Container data-testid={MergeQueueCardTestId.MergeHold}>
               <HoldButton
-                armedLabel={t("maestro.merge.armed")}
-                doneLabel={t("maestro.merge.done")}
-                label={t("maestro.merge.hold", { number: entry.number })}
+                armedLabel={t("release.merge.armed")}
+                doneLabel={t("release.merge.done")}
+                label={t("release.merge.hold", { number: entry.number })}
                 onConfirm={onConfirmMerge}
                 size="sm"
                 tone="warn"
@@ -82,9 +82,9 @@ function MergeQueueRow({ entry }: { entry: MergeQueueEntry }) {
             </Container>
           ) : (
             <Typography size="xs" type="note" variant="tertiary">
-              {t("maestro.merge.blockedReason", {
-                check: t(`maestro.check.${entry.checkState}`),
-                review: t(`maestro.review.${entry.reviewState}`),
+              {t("release.merge.blockedReason", {
+                check: t(`release.check.${entry.checkState}`),
+                review: t(`release.review.${entry.reviewState}`),
               })}
             </Typography>
           )}
@@ -95,7 +95,7 @@ function MergeQueueRow({ entry }: { entry: MergeQueueEntry }) {
 }
 
 /**
- * Overview surface for Maestro's read-side merge queue (NS2 F7b-1): every open
+ * Overview surface for Release's read-side merge queue (NS2 F7b-1): every open
  * PR across project repos with a merge control ONLY on genuinely `ready`
  * entries — a `HoldButton` (double-confirmation guardrail) whose `onConfirm`
  * fires the EXISTING gated `POST /projects/:id/prs/:number/merge`
@@ -113,7 +113,7 @@ export function MergeQueueCard() {
 
   return (
     <Container data-testid={MergeQueueCardTestId.Root}>
-      <HudPanel title={t("maestro.title")}>
+      <HudPanel title={t("release.title")}>
         <Stack direction="col" gap="100">
           {entries.map((entry) => (
             <MergeQueueRow entry={entry} key={`${entry.projectId}-${entry.number}`} />

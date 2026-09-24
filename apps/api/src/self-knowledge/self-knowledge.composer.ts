@@ -1,11 +1,11 @@
 import type {
   Agent,
+  Department,
   GateRule,
   GlobalGateRule,
   MatchCondition,
   Pipeline,
   SelfKnowledgeSections,
-  Subsystem,
 } from "@zibby/contracts";
 import { escapeAutoBoundaryMarkers } from "../shared/text/escape-md-markers";
 import type { ParsedGraphReport } from "./graph-report.parser";
@@ -30,7 +30,7 @@ const BLOCK_KEYS = [
   "META",
   "AGENTS",
   "PIPELINES",
-  "SUBSYSTEMS",
+  "DEPARTMENTS",
   "GATES",
   "CHANNELS",
   "CODEBASE-SHAPE",
@@ -41,9 +41,9 @@ type BlockKey = (typeof BLOCK_KEYS)[number];
 export interface SelfKnowledgeComposerInput {
   agents: Agent[];
   pipelines: Pipeline[];
-  /** Static subsystem identities (`@zibby/contracts` `SUBSYSTEMS`) — name + mandate
+  /** Static department identities (`@zibby/contracts` `DEPARTMENTS`) — name + mandate
    *  only, NEVER live state/tier2Count/tier3Count (decision 3, phase-105 master plan). */
-  subsystems: Subsystem[];
+  departments: Department[];
   /** The global gate-rule catalog (the "Pravidla schvalování" page). */
   gateRules: GlobalGateRule[];
   /** The locked system policy floor (`POLICY.md`). */
@@ -170,17 +170,17 @@ function renderPipelines(pipelines: Pipeline[]): string {
  * AUTO block would make `computeDrift` read "changed" almost continuously,
  * defeating the drift signal — live status stays a live-query surface).
  */
-function renderSubsystems(subsystems: Subsystem[]): string {
-  const sorted = [...subsystems].sort(ascendingById);
-  const lines = [`## Subsystems (${sorted.length})`];
+function renderDepartments(departments: Department[]): string {
+  const sorted = [...departments].sort(ascendingById);
+  const lines = [`## Departments (${sorted.length})`];
   if (sorted.length === 0) {
-    lines.push("_No subsystems registered yet._");
+    lines.push("_No departments registered yet._");
   } else {
-    for (const subsystem of sorted) {
-      const name = subsystem.name ? escapeAutoBoundaryMarkers(subsystem.name) : subsystem.name;
+    for (const department of sorted) {
+      const name = department.name ? escapeAutoBoundaryMarkers(department.name) : department.name;
       const label =
-        name && name !== subsystem.id ? `${name} (\`${subsystem.id}\`)` : `\`${subsystem.id}\``;
-      lines.push(`- ${label} — ${escapeAutoBoundaryMarkers(subsystem.mandate)}`);
+        name && name !== department.id ? `${name} (\`${department.id}\`)` : `\`${department.id}\``;
+      lines.push(`- ${label} — ${escapeAutoBoundaryMarkers(department.mandate)}`);
     }
   }
   return lines.join("\n");
@@ -280,7 +280,7 @@ export function composeSelfKnowledge(input: SelfKnowledgeComposerInput): Compose
     pipelines: input.pipelines.length,
     gateRules: input.policyFloor.length + input.gateRules.length,
     channels: input.channelKinds.length,
-    subsystems: input.subsystems.length,
+    departments: input.departments.length,
     codebaseShape: {
       present: codebaseShape !== null,
       godNodes: codebaseShape?.godNodes.length ?? 0,
@@ -292,7 +292,7 @@ export function composeSelfKnowledge(input: SelfKnowledgeComposerInput): Compose
     META: renderMeta(generatedAt),
     AGENTS: renderAgents(input.agents),
     PIPELINES: renderPipelines(input.pipelines),
-    SUBSYSTEMS: renderSubsystems(input.subsystems),
+    DEPARTMENTS: renderDepartments(input.departments),
     GATES: renderGates(input.policyFloor, input.gateRules),
     CHANNELS: renderChannels(input.channelKinds),
     "CODEBASE-SHAPE": renderCodebaseShape(codebaseShape),

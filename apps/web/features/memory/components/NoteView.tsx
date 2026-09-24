@@ -24,8 +24,8 @@ export enum NoteViewTestId {
   Title = "memory-note-title-input",
   /** Phase 109: shown when the open note is unprocessed "halda" (`raw: true`). */
   RawBadge = "memory-note-raw-badge",
-  /** F4b: shown when the open note carries an owning subsystem (F4a shelves). */
-  SubsystemBadge = "memory-note-subsystem-badge",
+  /** F4b: shown when the open note carries an owning department (F4a shelves). */
+  DepartmentBadge = "memory-note-department-badge",
 }
 
 export interface NoteViewProps {
@@ -170,15 +170,15 @@ export function NoteView({ note, onSelect, surface }: NoteViewProps) {
                   {t("untriaged")}
                 </Tag>
               )}
-              {note.subsystem && (
+              {note.department && (
                 <Tag
-                  aria-label={t("subsystemBadge")}
-                  data-testid={NoteViewTestId.SubsystemBadge}
+                  aria-label={t("departmentBadge")}
+                  data-testid={NoteViewTestId.DepartmentBadge}
                   size="sm"
-                  title={t("subsystemBadge")}
+                  title={t("departmentBadge")}
                   tone="accent"
                 >
-                  {note.subsystem}
+                  {note.department}
                 </Tag>
               )}
             </Stack>

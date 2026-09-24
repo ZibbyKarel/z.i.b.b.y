@@ -173,7 +173,7 @@ export class PostMergeWatchService {
   private async dispatchFix(watch: MergeWatch): Promise<boolean> {
     try {
       const outcome = await this.handoff.evaluate({
-        from: "maestro",
+        from: "rel",
         kind: "post-merge-red",
         projectId: watch.projectId,
         title: `Post-merge red: #${watch.prNumber}`,

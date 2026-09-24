@@ -49,23 +49,21 @@ describe("approval schema", () => {
     ).toBe(true);
   });
 
-  describe("ownerSubsystem (NS2 F3c)", () => {
-    it("accepts a subsystem-tagged approval", () => {
-      const parsed = ApprovalSchema.safeParse({ ...base, ownerSubsystem: "forge" });
+  describe("department (NS2 F3c)", () => {
+    it("accepts a department-tagged approval", () => {
+      const parsed = ApprovalSchema.safeParse({ ...base, department: "dev" });
       expect(parsed.success).toBe(true);
-      if (parsed.success) expect(parsed.data.ownerSubsystem).toBe("forge");
+      if (parsed.success) expect(parsed.data.department).toBe("dev");
     });
 
     it("is omissible — every pre-existing approval re-parses untouched", () => {
       const parsed = ApprovalSchema.safeParse(base);
       expect(parsed.success).toBe(true);
-      if (parsed.success) expect(parsed.data.ownerSubsystem).toBeUndefined();
+      if (parsed.success) expect(parsed.data.department).toBeUndefined();
     });
 
-    it("rejects an id outside the closed subsystem enum", () => {
-      expect(ApprovalSchema.safeParse({ ...base, ownerSubsystem: "warp-drive" }).success).toBe(
-        false,
-      );
+    it("rejects an id outside the closed department enum", () => {
+      expect(ApprovalSchema.safeParse({ ...base, department: "warp-drive" }).success).toBe(false);
     });
   });
 

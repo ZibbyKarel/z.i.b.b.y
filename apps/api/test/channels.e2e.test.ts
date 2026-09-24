@@ -67,7 +67,7 @@ describe("Channels triage throughline (e2e)", () => {
         name: "Fixer",
         description: "fixes reported bugs",
         instructions: "Fix bugs.",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
     // Integrations are owned by a project; create one so the FK check passes.
@@ -83,7 +83,7 @@ describe("Channels triage throughline (e2e)", () => {
         projectId: "acme-app",
         name: "Team",
         config: { kind: "slack", channels: ["C1"] },
-        ownerSubsystem: "puls",
+        department: "ops",
       })
       .expect(201);
     await request(app.getHttpServer())
@@ -310,7 +310,7 @@ describe("Channels triage throughline (e2e)", () => {
         kind: "email",
         projectId: "acme-app",
         name: "Support Mail",
-        ownerSubsystem: "puls",
+        department: "ops",
         config: {
           kind: "email",
           imapHost: "imap.x",

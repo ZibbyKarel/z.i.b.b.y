@@ -23,10 +23,10 @@ export interface IntegrationAutonomyPanelProps {
 /**
  * Per-integration autonomy on the integration detail page — the same
  * `mandate.channels[id]` the global Settings → Mandate editor writes, surfaced
- * where the operator configures this one channel. Puls listens to every
+ * where the operator configures this one channel. Ops listens to every
  * integration regardless (structural); these two toggles are the autonomy
  * levers: `dispatch` (act on inbound, Tier 1) and `reply` (auto-reply, Tier 2 —
- * the reply-enabled set is what herald's roster derives from). A channel with no
+ * the reply-enabled set is what comms's roster derives from). A channel with no
  * override follows `mandate.defaults`; flipping a toggle writes an explicit one.
  */
 export function IntegrationAutonomyPanel({ integrationId }: IntegrationAutonomyPanelProps) {

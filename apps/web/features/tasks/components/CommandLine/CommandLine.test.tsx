@@ -38,18 +38,18 @@ vi.mock("../../../agents/queries/useAgentsQuery", () => ({
 }));
 vi.mock("../../../pipelines/queries/usePipelinesQuery", () => ({
   usePipelinesQuery: () => ({
-    data: [{ id: "delivery", name: "Delivery", ownerSubsystem: "forge" }],
+    data: [{ id: "delivery", name: "Delivery", department: "dev" }],
   }),
   getPipelinesQueryKey: () => ["pipelines"],
 }));
-// Phase 91: two subsystems in the registry — only "forge" owns a pipeline (see the
-// pipelines mock above), "puls" owns none — so the mention catalog roster-filter
+// Phase 91: two departments in the registry — only "dev" owns a pipeline (see the
+// pipelines mock above), "ops" owns none — so the mention catalog roster-filter
 // (≥1 owned pipeline) has something real to exclude.
-vi.mock("../../../subsystems/queries/useSubsystemsQuery", () => ({
-  useSubsystemsQuery: () => ({
+vi.mock("../../../departments/queries/useDepartmentsQuery", () => ({
+  useDepartmentsQuery: () => ({
     data: [
-      { id: "forge", name: "Forge", color: "#f97316", state: "idle", tier2Count: 0, tier3Count: 0 },
-      { id: "puls", name: "Puls", color: "#14b8a6", state: "idle", tier2Count: 0, tier3Count: 0 },
+      { id: "dev", name: "Dev", color: "#f97316", state: "idle", tier2Count: 0, tier3Count: 0 },
+      { id: "ops", name: "Ops", color: "#14b8a6", state: "idle", tier2Count: 0, tier3Count: 0 },
     ],
   }),
 }));
@@ -222,56 +222,56 @@ describe("CommandLine (Phase 118d generic composer)", () => {
     });
   });
 
-  describe("Phase 91 — subsystem @-mentions (roster-only, explicit target)", () => {
-    it("lists a roster-bearing subsystem (≥1 owned pipeline) as a colored-dot row, never a capability-less one", async () => {
+  describe("Phase 91 — department @-mentions (roster-only, explicit target)", () => {
+    it("lists a roster-bearing department (≥1 owned pipeline) as a colored-dot row, never a capability-less one", async () => {
       const user = userEvent.setup();
       render(<CommandLine onSubmit={vi.fn()} />);
       const input = screen.getByTestId(CommandLineTestId.Input);
       await user.type(input, "@");
 
-      // "forge" owns the "delivery" pipeline (mocked above) — it's dispatchable,
+      // "dev" owns the "delivery" pipeline (mocked above) — it's dispatchable,
       // so it belongs in the picker.
       expect(
-        screen.getByTestId(`${CommandLineTestId.MentionItem}-subsystem-forge`),
+        screen.getByTestId(`${CommandLineTestId.MentionItem}-department-dev`),
       ).toBeInTheDocument();
-      // "puls" owns nothing — mentioning it would only ever hit the 0-owned
+      // "ops" owns nothing — mentioning it would only ever hit the 0-owned
       // validation reject, so it must never appear, at ANY query (including empty).
       expect(
-        screen.queryByTestId(`${CommandLineTestId.MentionItem}-subsystem-puls`),
+        screen.queryByTestId(`${CommandLineTestId.MentionItem}-department-ops`),
       ).not.toBeInTheDocument();
 
-      // The icon is a colored dot (the subsystem's own brand color), not the usual
+      // The icon is a colored dot (the department's own brand color), not the usual
       // agent/pipeline Tag+glyph chip.
-      const dot = screen.getByTestId(`${CommandLineTestId.MentionItem}-subsystem-forge-dot`);
+      const dot = screen.getByTestId(`${CommandLineTestId.MentionItem}-department-dev-dot`);
       expect(dot).toHaveStyle({ background: "#f97316" });
     });
 
-    it("filters the subsystem row by query exactly like agents/pipelines", async () => {
+    it("filters the department row by query exactly like agents/pipelines", async () => {
       const user = userEvent.setup();
       render(<CommandLine onSubmit={vi.fn()} />);
       const input = screen.getByTestId(CommandLineTestId.Input);
-      await user.type(input, "@puls");
+      await user.type(input, "@ops");
 
-      // "puls" never matches the query either, because it's excluded from the
+      // "ops" never matches the query either, because it's excluded from the
       // candidate list before filtering even runs.
       expect(screen.getByTestId(CommandLineTestId.MentionEmpty)).toBeInTheDocument();
     });
 
-    it("selecting a subsystem sets the explicit subsystem target — the submit payload carries kind: subsystem", async () => {
+    it("selecting a department sets the explicit department target — the submit payload carries kind: department", async () => {
       const onSubmit = vi.fn();
       const user = userEvent.setup();
       render(<CommandLine onSubmit={onSubmit} />);
       const input = screen.getByTestId(CommandLineTestId.Input);
-      await user.type(input, "@Forge");
-      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-subsystem-forge`));
+      await user.type(input, "@Dev");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-department-dev`));
 
-      expect(input).toHaveValue("@Forge ");
-      await user.type(input, "dispatch this to the subsystem");
+      expect(input).toHaveValue("@Dev ");
+      await user.type(input, "dispatch this to the department");
       await user.click(screen.getByTestId(CommandLineTestId.Send));
 
       expect(onSubmit).toHaveBeenCalledWith(
-        "@Forge dispatch this to the subsystem",
-        { kind: "subsystem", id: "forge", name: "Forge", glyph: "grid" },
+        "@Dev dispatch this to the department",
+        { kind: "department", id: "dev", name: "Dev", glyph: "grid" },
         undefined,
       );
     });
@@ -307,7 +307,7 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       const agentRow = screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`);
       const pipelineRow = screen.getByTestId(`${CommandLineTestId.MentionItem}-pipeline-delivery`);
 
-      // Tone: no longer the plain "neutral" a subsystem's non-Tag dot row implies,
+      // Tone: no longer the plain "neutral" a department's non-Tag dot row implies,
       // and not either routing row's own tone — asserted on the rendered variant
       // class (matching how the design system's own Tag.test.tsx asserts tone),
       // never on a raw colour value.
@@ -318,7 +318,7 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       expect(teamTag).not.toHaveClass("text-risk-push");
 
       // Icon: the actual rendered glyph markup, not just the prop we pass in —
-      // proves the team row doesn't share "grid" (the subsystem glyph reused
+      // proves the team row doesn't share "grid" (the department glyph reused
       // for the same row before this fix) with either routing row's icon.
       const teamIconMarkup = within(teamRow).getByTestId(TagTestId.Icon).innerHTML;
       const agentIconMarkup = within(agentRow).getByTestId(TagTestId.Icon).innerHTML;
@@ -493,15 +493,13 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       // `allowTeamMentions` fix round: the hint's wording must track what THIS
       // render actually offers — with the prop left at its (opt-in) default, no
       // team row is offered, so the hint must not claim one either.
-      expect(screen.getByText(/hledá agenty, pipeliny a podsystémy/)).toBeInTheDocument();
-      expect(
-        screen.queryByText(/hledá agenty, pipeliny, podsystémy a týmy/),
-      ).not.toBeInTheDocument();
+      expect(screen.getByText(/hledá agenty, pipeliny a oddělení/)).toBeInTheDocument();
+      expect(screen.queryByText(/hledá agenty, pipeliny, oddělení a týmy/)).not.toBeInTheDocument();
     });
 
     it("the chrome hint includes teams once `allowTeamMentions` is explicitly on — Fix round 2", () => {
       render(<CommandLine allowTeamMentions onSubmit={vi.fn()} />);
-      expect(screen.getByText(/hledá agenty, pipeliny, podsystémy a týmy/)).toBeInTheDocument();
+      expect(screen.getByText(/hledá agenty, pipeliny, oddělení a týmy/)).toBeInTheDocument();
     });
 
     it("renders a bare input with no panel chrome when chrome={false}", () => {

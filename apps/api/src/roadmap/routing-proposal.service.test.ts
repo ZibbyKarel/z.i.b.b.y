@@ -15,11 +15,11 @@ const PROPOSAL: RoutingProposal = {
   itemId: "item-1",
   text: "Rollout za flagem",
   projectPath: "/repos/acme",
-  pick: { kind: "subsystem", id: "forge", name: "Forge" },
+  pick: { kind: "department", id: "dev", name: "Dev" },
   confidence: 0.55,
   reason: "could be either",
   runnerUp: {
-    target: { kind: "subsystem", id: "codex", name: "Codex" },
+    target: { kind: "department", id: "knw", name: "Knowledge" },
     confidence: 0.5,
     reason: "also plausible",
   },

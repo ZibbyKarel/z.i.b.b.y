@@ -66,11 +66,11 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     onRunStatus: ReturnType<typeof vi.fn>;
     get: ReturnType<typeof vi.fn>;
   };
-  /** Phase 91: the pipeline definition store, for subsystem-target resolution
-   *  (`ownerSubsystem` lookup). Empty by default — no test in this file dispatches
-   *  a subsystem target; `task-scheduler.subsystem-dispatch.test.ts` covers those. */
+  /** Phase 91: the pipeline definition store, for department-target resolution
+   *  (`department` lookup). Empty by default — no test in this file dispatches
+   *  a department target; `task-scheduler.department-dispatch.test.ts` covers those. */
   let pipelinesStore: { list: ReturnType<typeof vi.fn> };
-  /** F2b — {@link TaskSchedulerService}'s owned-agents lookup for subsystem resolution. */
+  /** F2b — {@link TaskSchedulerService}'s owned-agents lookup for department resolution. */
   let agentsStore: { listActive: ReturnType<typeof vi.fn> };
   let goalRunner: {
     start: ReturnType<typeof vi.fn>;
@@ -79,8 +79,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
   };
   let classifier: {
     classify: ReturnType<typeof vi.fn>;
-    /** Phase 91 — the subsystem-scoped classify seam. */
-    classifyWithinSubsystem: ReturnType<typeof vi.fn>;
+    /** Phase 91 — the department-scoped classify seam. */
+    classifyWithinDepartment: ReturnType<typeof vi.fn>;
   };
   let fakeLimits: {
     windowExhausted: ReturnType<typeof vi.fn>;
@@ -157,12 +157,12 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         matchedTerms: [],
         candidates: [{ kind: "agent", id: "writer", name: "Writer" }],
       })),
-      // Phase 91: no test in THIS describe block dispatches a subsystem target
-      // (see the "Phase 91 — subsystem dispatch" describe below); a call here
+      // Phase 91: no test in THIS describe block dispatches a department target
+      // (see the "Phase 91 — department dispatch" describe below); a call here
       // would be a scope-guard violation, so the default throws loudly rather
       // than silently returning something plausible.
-      classifyWithinSubsystem: vi.fn(async () => {
-        throw new Error("classifyWithinSubsystem should not be called by this describe block");
+      classifyWithinDepartment: vi.fn(async () => {
+        throw new Error("classifyWithinDepartment should not be called by this describe block");
       }),
     };
 
@@ -872,7 +872,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     expect(call.metrics).toBeUndefined();
   });
 
-  describe("Phase 91 — subsystem dispatch (0/1/N owned pipelines)", () => {
+  describe("Phase 91 — department dispatch (0/1/N owned pipelines)", () => {
     /** A minimal pipeline definition fixture — only the fields the resolver reads. */
     function pipelineDef(id: string, name: string) {
       // `outputs` mirrors `PipelineSchema`'s `default([])` and declares a `pr` sink —
@@ -881,7 +881,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       return {
         id,
         name,
-        ownerSubsystem: "forge",
+        department: "dev",
         desc: "",
         phases: [],
         outputs: [{ type: "pr", from: "out.md" }],
@@ -893,12 +893,12 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       const result = await service.createTask({
         text: "ship it",
         title: "Ship",
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
       });
       expect(result.outcome).toBe("dispatched");
       if (result.outcome !== "dispatched") return;
       expect(classifier.classify).not.toHaveBeenCalled();
-      expect(classifier.classifyWithinSubsystem).not.toHaveBeenCalled();
+      expect(classifier.classifyWithinDepartment).not.toHaveBeenCalled();
       expect(pipelineRunner.start).toHaveBeenCalledWith(
         "delivery",
         result.task.id,
@@ -907,9 +907,9 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         undefined,
         undefined,
       );
-      // The resolved target IS a concrete pipeline target — a subsystem target
-      // never reaches persistence (its "via <subsystem>" attribution rides on the
-      // dispatched pipeline's own `ownerSubsystem`, not a new run-level field).
+      // The resolved target IS a concrete pipeline target — a department target
+      // never reaches persistence (its "via <department>" attribution rides on the
+      // dispatched pipeline's own `department`, not a new run-level field).
       expect(result.task.target).toEqual({
         kind: "pipeline",
         id: "delivery",
@@ -924,7 +924,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         pipelineDef("delivery", "Delivery"),
         pipelineDef("build-feature", "Build Feature"),
       ]);
-      classifier.classifyWithinSubsystem.mockResolvedValue({
+      classifier.classifyWithinDepartment.mockResolvedValue({
         target: { kind: "pipeline", id: "build-feature", name: "Build Feature" },
         confidence: 0.9,
         reason: "matched",
@@ -937,14 +937,14 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       const result = await service.createTask({
         text: "spec out the new feature",
         title: "Spec",
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
       });
       expect(result.outcome).toBe("dispatched");
       if (result.outcome !== "dispatched") return;
       expect(classifier.classify).not.toHaveBeenCalled();
-      expect(classifier.classifyWithinSubsystem).toHaveBeenCalledWith(
+      expect(classifier.classifyWithinDepartment).toHaveBeenCalledWith(
         { text: "spec out the new feature", paths: [] },
-        "forge",
+        "dev",
       );
       expect(pipelineRunner.start).toHaveBeenCalledWith(
         "build-feature",
@@ -956,16 +956,16 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       );
     });
 
-    it("low-confidence N-owned verdict still lands INSIDE the subsystem, never the orchestrator (asserted via the classifier stub's own contract)", async () => {
+    it("low-confidence N-owned verdict still lands INSIDE the department, never the orchestrator (asserted via the classifier stub's own contract)", async () => {
       pipelinesStore.list.mockResolvedValue([
         pipelineDef("delivery", "Delivery"),
         pipelineDef("build-feature", "Build Feature"),
       ]);
-      // classifyWithinSubsystem itself is responsible for the never-orchestrator
+      // classifyWithinDepartment itself is responsible for the never-orchestrator
       // fallback rule (see task-classifier.service.test.ts's "low-confidence
       // fallback" case) — here we only assert the scheduler faithfully dispatches
       // whatever concrete pipeline target the scoped classify hands back.
-      classifier.classifyWithinSubsystem.mockResolvedValue({
+      classifier.classifyWithinDepartment.mockResolvedValue({
         target: { kind: "pipeline", id: "delivery", name: "Delivery" },
         confidence: 0,
         reason: "no confident match — first owned pipeline",
@@ -978,7 +978,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       const result = await service.createTask({
         text: "xyzzy — no signal",
         title: "T",
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
       });
       expect(result.outcome).toBe("dispatched");
       if (result.outcome !== "dispatched") return;
@@ -998,25 +998,25 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         service.createTask({
           text: "do anything",
           title: "T",
-          target: { kind: "subsystem", id: "forge", name: "Forge" },
+          target: { kind: "department", id: "dev", name: "Dev" },
         }),
-      ).rejects.toThrow(/Forge.*nemá žádnou pipeline/);
+      ).rejects.toThrow(/Dev.*nemá žádnou pipeline/);
       expect(classifier.classify).not.toHaveBeenCalled();
-      expect(classifier.classifyWithinSubsystem).not.toHaveBeenCalled();
+      expect(classifier.classifyWithinDepartment).not.toHaveBeenCalled();
       expect(pipelineRunner.start).not.toHaveBeenCalled();
       expect(agentRunner.start).not.toHaveBeenCalled();
       expect(agentRunner.startOrchestrator).not.toHaveBeenCalled();
     });
 
-    it("an explicit subsystem target never reaches the top-level classifier — 1-owned direct-dispatch path", async () => {
+    it("an explicit department target never reaches the top-level classifier — 1-owned direct-dispatch path", async () => {
       // Belt-and-braces on top of the first test above: the scope guard's whole
-      // point is that naming a subsystem is a hard override, structurally
+      // point is that naming a department is a hard override, structurally
       // incapable of falling through to the undirected top-level classify().
       pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery")]);
       await service.createTask({
         text: "ship it",
         title: "Ship",
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
       });
       expect(classifier.classify).not.toHaveBeenCalled();
     });
@@ -1031,7 +1031,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       return {
         id,
         name,
-        ownerSubsystem: "forge",
+        department: "dev",
         desc: "",
         phases: [],
         outputs: [{ type: "pr", from: "out.md" }],
@@ -1039,7 +1039,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     }
     /** A minimal agent definition fixture — only the fields the resolver reads. */
     function agentDef(id: string, name: string) {
-      return { id, name, ownerSubsystem: "forge" };
+      return { id, name, department: "dev" };
     }
 
     it("1 owned agent, 0 owned pipelines → direct dispatch to the agent, the classifier is NEVER called", async () => {
@@ -1048,12 +1048,12 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       const result = await service.createTask({
         text: "fix the bug",
         title: "Fix",
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
       });
       expect(result.outcome).toBe("dispatched");
       if (result.outcome !== "dispatched") return;
       expect(classifier.classify).not.toHaveBeenCalled();
-      expect(classifier.classifyWithinSubsystem).not.toHaveBeenCalled();
+      expect(classifier.classifyWithinDepartment).not.toHaveBeenCalled();
       expect(agentRunner.start).toHaveBeenCalledWith(
         "coder",
         "fix the bug",
@@ -1068,10 +1068,10 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       );
     });
 
-    it("1 owned pipeline + 1 owned agent (2 units) → classifyWithinSubsystem is invoked, restricted to the owned catalog", async () => {
+    it("1 owned pipeline + 1 owned agent (2 units) → classifyWithinDepartment is invoked, restricted to the owned catalog", async () => {
       pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery")]);
       agentsStore.listActive.mockResolvedValue([agentDef("coder", "Coder")]);
-      classifier.classifyWithinSubsystem.mockResolvedValue({
+      classifier.classifyWithinDepartment.mockResolvedValue({
         target: { kind: "agent", id: "coder", name: "Coder" },
         confidence: 0.9,
         reason: "matched",
@@ -1084,13 +1084,13 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       const result = await service.createTask({
         text: "fix a small bug",
         title: "Fix",
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
       });
       expect(result.outcome).toBe("dispatched");
       if (result.outcome !== "dispatched") return;
-      expect(classifier.classifyWithinSubsystem).toHaveBeenCalledWith(
+      expect(classifier.classifyWithinDepartment).toHaveBeenCalledWith(
         { text: "fix a small bug", paths: [] },
-        "forge",
+        "dev",
       );
       expect(agentRunner.start).toHaveBeenCalledWith(
         "coder",
@@ -1114,12 +1114,12 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
    * to open a PR could still resolve to an agent that cannot open one — the misroute
    * that put a pnpm/Turborepo monorepo skeleton on `documentation-engineer`.
    */
-  describe("a required PR sink makes subsystem resolution a pipeline-only sizing choice", () => {
+  describe("a required PR sink makes department resolution a pipeline-only sizing choice", () => {
     function pipelineDef(id: string, name: string, deliversPr = true, complexity = "standard") {
       return {
         id,
         name,
-        ownerSubsystem: "forge",
+        department: "dev",
         desc: "",
         phases: [],
         complexity,
@@ -1127,7 +1127,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       };
     }
     function agentDef(id: string, name: string) {
-      return { id, name, ownerSubsystem: "forge" };
+      return { id, name, department: "dev" };
     }
 
     it("resolves to the sole PR-capable pipeline WITHOUT classifying, even though the roster has 2 units", async () => {
@@ -1138,11 +1138,11 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       const result = await service.createTask({
         text: "Monorepo & CLI skeleton — set up pnpm workspaces + Turborepo",
         title: "Skeleton",
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
         output: { type: "pr" },
       });
       expect(result.outcome).toBe("dispatched");
-      expect(classifier.classifyWithinSubsystem).not.toHaveBeenCalled();
+      expect(classifier.classifyWithinDepartment).not.toHaveBeenCalled();
       expect(agentRunner.start).not.toHaveBeenCalled();
       expect(pipelineRunner.start).toHaveBeenCalledWith(
         "delivery",
@@ -1154,13 +1154,13 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       );
     });
 
-    it("passes the sink into classifyWithinSubsystem when 2+ units stay eligible", async () => {
+    it("passes the sink into classifyWithinDepartment when 2+ units stay eligible", async () => {
       pipelinesStore.list.mockResolvedValue([
         pipelineDef("quick-fix", "Quick Fix", true, "light"),
         pipelineDef("delivery", "Delivery", true, "deep"),
       ]);
       agentsStore.listActive.mockResolvedValue([agentDef("documentation-engineer", "Docs")]);
-      classifier.classifyWithinSubsystem.mockResolvedValue({
+      classifier.classifyWithinDepartment.mockResolvedValue({
         target: { kind: "pipeline", id: "delivery", name: "Delivery" },
         confidence: 0.9,
         reason: "multi-surface scaffolding",
@@ -1173,16 +1173,16 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       await service.createTask({
         text: "prove the dev-loop mechanism on a real shop",
         title: "Spike",
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
         output: { type: "pr" },
       });
-      expect(classifier.classifyWithinSubsystem).toHaveBeenCalledWith(
+      expect(classifier.classifyWithinDepartment).toHaveBeenCalledWith(
         {
           text: "prove the dev-loop mechanism on a real shop",
           paths: [],
           output: { type: "pr" },
         },
-        "forge",
+        "dev",
       );
     });
 
@@ -1197,10 +1197,10 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       await service.createTask({
         text: "implement it",
         title: "Impl",
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
         output: { type: "pr" },
       });
-      expect(classifier.classifyWithinSubsystem).not.toHaveBeenCalled();
+      expect(classifier.classifyWithinDepartment).not.toHaveBeenCalled();
       expect(pipelineRunner.start).toHaveBeenCalledWith(
         "delivery",
         expect.any(String),
@@ -1219,7 +1219,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         pipelineDef("delivery", "Delivery", true, "deep"),
       ]);
       agentsStore.listActive.mockResolvedValue([]);
-      classifier.classifyWithinSubsystem.mockResolvedValue({
+      classifier.classifyWithinDepartment.mockResolvedValue({
         target: { kind: "pipeline", id: "delivery", name: "Delivery" },
         confidence: 0.9,
         reason: "deep",
@@ -1233,17 +1233,17 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         text: "Monorepo skeleton\n\n---\nZIBBY ROADMAP CONTEXT (system-generated …)\nEpic: Phase 0",
         routingText: "Monorepo skeleton",
         title: "Skeleton",
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
         output: { type: "pr" },
       });
-      expect(classifier.classifyWithinSubsystem).toHaveBeenCalledWith(
+      expect(classifier.classifyWithinDepartment).toHaveBeenCalledWith(
         { text: "Monorepo skeleton", paths: [], output: { type: "pr" } },
-        "forge",
+        "dev",
       );
     });
 
     it("persists the stage-2 rationale on the trace, including the leg and the constraint", async () => {
-      // The half of the trace that used to be discarded: `resolveSubsystemTargetOrNull`
+      // The half of the trace that used to be discarded: `resolveDepartmentTargetOrNull`
       // returned `routing?.target ?? primary`, so the decision that picks the RUNNING
       // unit left no record — which is what made the original misroute undiagnosable.
       pipelinesStore.list.mockResolvedValue([
@@ -1252,7 +1252,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       ]);
       agentsStore.listActive.mockResolvedValue([agentDef("documentation-engineer", "Docs")]);
       classifier.classify.mockResolvedValue({
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
         confidence: 0.8,
         reason: "delivery work",
         matchedTerms: ["code"],
@@ -1262,7 +1262,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         paths: [],
         leg: "router",
       });
-      classifier.classifyWithinSubsystem.mockResolvedValue({
+      classifier.classifyWithinDepartment.mockResolvedValue({
         target: { kind: "pipeline", id: "delivery", name: "Delivery" },
         confidence: 0.86,
         reason: "multi-surface scaffolding",
@@ -1284,7 +1284,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       expect(result.outcome).toBe("dispatched");
       if (result.outcome !== "dispatched") return;
       expect(result.task.classification).toMatchObject({
-        subsystem: "forge",
+        department: "dev",
         leg: "router",
         stage2: {
           target: { kind: "pipeline", id: "delivery" },
@@ -1303,33 +1303,33 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       const result = await service.createTask({
         text: "write the API guide",
         title: "Docs",
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
       });
       expect(result.outcome).toBe("dispatched");
       expect(agentRunner.start).toHaveBeenCalled();
     });
   });
 
-  describe("F2a — switchboard subsystem verdicts (soft stage-2 in dispatch(), never a hard error)", () => {
+  describe("F2a — switchboard department verdicts (soft stage-2 in dispatch(), never a hard error)", () => {
     /** A minimal pipeline definition fixture — only the fields the resolver reads. */
-    function pipelineDef(id: string, name: string, ownerSubsystem = "forge") {
+    function pipelineDef(id: string, name: string, department = "dev") {
       // See the `pipelineDef` above on why `outputs` has to be present.
       return {
         id,
         name,
-        ownerSubsystem,
+        department,
         desc: "",
         phases: [],
         outputs: [{ type: "pr", from: "out.md" }],
       };
     }
 
-    it("non-empty roster: an undirected subsystem verdict resolves to the owned pipeline and dispatches to it", async () => {
+    it("non-empty roster: an undirected department verdict resolves to the owned pipeline and dispatches to it", async () => {
       pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery")]);
       classifier.classify.mockResolvedValue({
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
         confidence: 0.8,
-        reason: "matches forge's mandate",
+        reason: "matches dev's mandate",
         matchedTerms: [],
         candidates: [],
       });
@@ -1338,7 +1338,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       if (result.outcome !== "dispatched") return;
       // A non-empty roster with exactly one owned pipeline resolves directly — the
       // scoped classifier is never called (mirrors the explicit-path 1-owned case).
-      expect(classifier.classifyWithinSubsystem).not.toHaveBeenCalled();
+      expect(classifier.classifyWithinDepartment).not.toHaveBeenCalled();
       expect(pipelineRunner.start).toHaveBeenCalledWith(
         "delivery",
         result.task.id,
@@ -1357,22 +1357,22 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     });
 
     it("empty roster: falls back to the orchestrator (soft — never a 422/thrown error), persists ORCHESTRATOR_TARGET, and records orchestrator-fallback", async () => {
-      pipelinesStore.list.mockResolvedValue([]); // forge owns nothing right now
+      pipelinesStore.list.mockResolvedValue([]); // dev owns nothing right now
       classifier.classify.mockResolvedValue({
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
         confidence: 0.6,
-        reason: "matches forge's mandate",
+        reason: "matches dev's mandate",
         matchedTerms: [],
         candidates: [],
       });
       const result = await service.createTask({ text: "ship something" });
       expect(result.outcome).toBe("dispatched");
       if (result.outcome !== "dispatched") return;
-      expect(classifier.classifyWithinSubsystem).not.toHaveBeenCalled();
+      expect(classifier.classifyWithinDepartment).not.toHaveBeenCalled();
       expect(agentRunner.startOrchestrator).toHaveBeenCalled();
       expect(pipelineRunner.start).not.toHaveBeenCalled();
       // The soft fallback persists the honest terminal target — never the raw
-      // subsystem verdict (that would be a lie: the subsystem never ran anything).
+      // department verdict (that would be a lie: the department never ran anything).
       expect(result.task.target).toEqual({
         kind: "orchestrator",
         name: "Orchestrator",
@@ -1384,26 +1384,26 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     });
   });
 
-  describe("F2c — classification trace persists + activity carries ownerSubsystem", () => {
+  describe("F2c — classification trace persists + activity carries department", () => {
     /** A minimal pipeline definition fixture — only the fields the resolver reads. */
-    function pipelineDef(id: string, name: string, ownerSubsystem = "forge") {
+    function pipelineDef(id: string, name: string, department = "dev") {
       // See the `pipelineDef` above on why `outputs` has to be present.
       return {
         id,
         name,
-        ownerSubsystem,
+        department,
         desc: "",
         phases: [],
         outputs: [{ type: "pr", from: "out.md" }],
       };
     }
 
-    it("an undirected subsystem verdict persists the full two-stage trace: stage1 is the raw subsystem verdict, subsystem is set, and the final target is the resolved concrete pipeline", async () => {
+    it("an undirected department verdict persists the full two-stage trace: stage1 is the raw department verdict, department is set, and the final target is the resolved concrete pipeline", async () => {
       pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery")]);
       classifier.classify.mockResolvedValue({
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
         confidence: 0.8,
-        reason: "matches forge's mandate",
+        reason: "matches dev's mandate",
         matchedTerms: ["ship"],
         candidates: [],
       });
@@ -1411,24 +1411,24 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       expect(result.outcome).toBe("dispatched");
       if (result.outcome !== "dispatched") return;
       expect(result.task.classification?.stage1).toEqual({
-        kind: "subsystem",
-        id: "forge",
-        name: "Forge",
+        kind: "department",
+        id: "dev",
+        name: "Dev",
       });
-      expect(result.task.classification?.subsystem).toBe("forge");
+      expect(result.task.classification?.department).toBe("dev");
       expect(result.task.classification?.confidence).toBe(0.8);
       expect(result.task.classification?.matchedTerms).toEqual(["ship"]);
       expect(result.task.target?.kind).toBe("pipeline");
       expect(activity.record).toHaveBeenCalledWith(
         expect.objectContaining({
           kind: "task-dispatched",
-          refs: expect.objectContaining({ ownerSubsystem: "forge" }),
+          refs: expect.objectContaining({ department: "dev" }),
         }),
       );
     });
 
-    it("a directly-classified pipeline target (no subsystem delegation) persists a trace with NO subsystem field, and the activity's ownerSubsystem falls back to a guarded store read of the unit's own ownership", async () => {
-      pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery", "forge")]);
+    it("a directly-classified pipeline target (no department delegation) persists a trace with NO department field, and the activity's department falls back to a guarded store read of the unit's own ownership", async () => {
+      pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery", "dev")]);
       classifier.classify.mockResolvedValue({
         target: { kind: "pipeline", id: "delivery", name: "Delivery" },
         confidence: 0.9,
@@ -1444,10 +1444,10 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         id: "delivery",
         name: "Delivery",
       });
-      expect(result.task.classification?.subsystem).toBeUndefined();
+      expect(result.task.classification?.department).toBeUndefined();
       expect(activity.record).toHaveBeenCalledWith(
         expect.objectContaining({
-          refs: expect.objectContaining({ ownerSubsystem: "forge" }),
+          refs: expect.objectContaining({ department: "dev" }),
         }),
       );
     });
@@ -1513,8 +1513,8 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
         matchedTerms: [],
         candidates: [{ kind: "agent", id: "writer", name: "Writer" }],
       })),
-      classifyWithinSubsystem: vi.fn(async () => {
-        throw new Error("classifyWithinSubsystem should not be called by this describe block");
+      classifyWithinDepartment: vi.fn(async () => {
+        throw new Error("classifyWithinDepartment should not be called by this describe block");
       }),
     };
     const fakeProjects = {
@@ -1703,7 +1703,7 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
         matchedTerms: [],
         candidates: [{ kind: "agent", id: "writer", name: "Writer" }],
       })),
-      classifyWithinSubsystem: vi.fn(async () => {
+      classifyWithinDepartment: vi.fn(async () => {
         throw new Error("not exercised by this describe block");
       }),
     };
@@ -2087,7 +2087,7 @@ describe("125c — system-wide maxConcurrentRuns cap", () => {
         matchedTerms: [],
         candidates: [{ kind: "agent", id: "writer", name: "Writer" }],
       })),
-      classifyWithinSubsystem: vi.fn(async () => {
+      classifyWithinDepartment: vi.fn(async () => {
         throw new Error("not exercised by this describe block");
       }),
     };

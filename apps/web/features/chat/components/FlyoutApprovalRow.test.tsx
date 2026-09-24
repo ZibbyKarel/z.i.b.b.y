@@ -17,7 +17,7 @@ function approval(overrides: Partial<DashboardApproval> = {}): DashboardApproval
     id: "app_1",
     runId: "run_1",
     kind: "agent",
-    skill: "Herald",
+    skill: "Comms",
     action: "send the weekly digest",
     detail: "3 recipients",
     risk: "medium",

@@ -33,20 +33,20 @@ export function resolveHandoffFiredDir(): string {
 
 /**
  * A2 — the handoff evaluation engine (design doc
- * `docs/superpowers/specs/2026-07-22-subsystem-handoff-design.md`, Part A.2): the
+ * `docs/superpowers/specs/2026-07-22-department-handoff-design.md`, Part A.2): the
  * standing rule store + idempotency snapshot + Tier-3 proposal store, wired to
  * dispatch through the existing task scheduler and gate through the existing
  * approvals queue. Imports `TasksModule` (for `TaskSchedulerService`) and
  * `PipelinesModule` (to resolve a pipeline-kind rule target's display `name`
  * before dispatch) directly — `TasksModule` itself imports `PipelinesModule` but
  * does not re-export it, so this module needs its own edge; neither imports back
- * (or imports `HandoffModule`), so there is no cycle. Producers (Sentinel/
- * Maestro/Loom/pipeline artifacts) wire in at A3 — nothing here imports them.
+ * (or imports `HandoffModule`), so there is no cycle. Producers (Security/
+ * Release/Arch/pipeline artifacts) wire in at A3 — nothing here imports them.
  *
  * B1 (design doc
  * `docs/superpowers/specs/2026-07-22-handoff-signal-registry-and-receiver-filter-design.md`)
  * adds the signal-kind registry (`HandoffSignalKindStore`) and its
- * `SignalKindService`, which spawns a Forge build task on `create` via the SAME
+ * `SignalKindService`, which spawns a Dev build task on `create` via the SAME
  * already-imported `TasksModule`/`TaskSchedulerService` — no new module edge, no
  * DI cycle. `SignalKindService` is exported alongside `HandoffService` for B4
  * (auto-activation) to consume later.

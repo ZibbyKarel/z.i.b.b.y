@@ -24,7 +24,7 @@ describe("OwnerBackfillService (NS2 F1b)", () => {
     await fs.rm(root, { recursive: true, force: true });
   });
 
-  it("tags an untagged delivery pipeline forge, and its phase agents forge", async () => {
+  it("tags an untagged delivery pipeline dev, and its phase agents dev", async () => {
     await pipelines.create({
       id: "delivery",
       phases: [
@@ -46,11 +46,11 @@ describe("OwnerBackfillService (NS2 F1b)", () => {
 
     await backfill.onModuleInit();
 
-    expect((await pipelines.get("delivery")).ownerSubsystem).toBe("forge");
-    expect((await agents.get("architect")).ownerSubsystem).toBe("forge");
+    expect((await pipelines.get("delivery")).department).toBe("dev");
+    expect((await agents.get("architect")).department).toBe("dev");
   });
 
-  it("tags an untagged research-shaped pipeline scout", async () => {
+  it("tags an untagged research-shaped pipeline research", async () => {
     await pipelines.create({
       id: "research",
       phases: [
@@ -71,7 +71,7 @@ describe("OwnerBackfillService (NS2 F1b)", () => {
 
     await backfill.onModuleInit();
 
-    expect((await pipelines.get("research")).ownerSubsystem).toBe("scout");
+    expect((await pipelines.get("research")).department).toBe("rnd");
   });
 
   it("skips an already-owned entity (idempotent — never overwrites an existing owner)", async () => {
@@ -80,13 +80,13 @@ describe("OwnerBackfillService (NS2 F1b)", () => {
       phases: [{ id: "a", type: "verify" }],
       outputs: [],
       instructions: "x",
-      ownerSubsystem: "loom", // deliberately NOT what the seed table would pick
+      department: "qa", // deliberately NOT what the seed table would pick
       complexity: "standard",
     });
 
     await backfill.onModuleInit();
 
-    expect((await pipelines.get("delivery")).ownerSubsystem).toBe("loom");
+    expect((await pipelines.get("delivery")).department).toBe("qa");
   });
 
   it("running onModuleInit twice is a no-op the second time (idempotent)", async () => {
@@ -103,7 +103,7 @@ describe("OwnerBackfillService (NS2 F1b)", () => {
     await backfill.onModuleInit();
     const secondPass = await pipelines.get("delivery");
 
-    expect(firstPass.ownerSubsystem).toBe("forge");
+    expect(firstPass.department).toBe("dev");
     expect(secondPass).toEqual(firstPass);
   });
 
@@ -128,7 +128,7 @@ describe("OwnerBackfillService (NS2 F1b)", () => {
 
     await expect(backfill.onModuleInit()).resolves.toBeUndefined();
 
-    expect((await pipelines.get("demo-pipe")).ownerSubsystem).toBeUndefined();
+    expect((await pipelines.get("demo-pipe")).department).toBeUndefined();
   });
 
   it("a corrupt entity file is skipped, never fatal to boot", async () => {
@@ -147,6 +147,6 @@ describe("OwnerBackfillService (NS2 F1b)", () => {
     });
 
     await expect(backfill.onModuleInit()).resolves.toBeUndefined();
-    expect((await pipelines.get("delivery")).ownerSubsystem).toBe("forge");
+    expect((await pipelines.get("delivery")).department).toBe("dev");
   });
 });

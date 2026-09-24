@@ -51,7 +51,7 @@ describe("RoadmapGateService", () => {
   let projects: { get: ReturnType<typeof vi.fn> };
   let projectLocal: { resolveForRun: ReturnType<typeof vi.fn> };
   let taskScheduler: { createTask: ReturnType<typeof vi.fn> };
-  let classifier: { classifySubsystem: ReturnType<typeof vi.fn> };
+  let classifier: { classifyDepartment: ReturnType<typeof vi.fn> };
   let scheduledTasks: {
     get: ReturnType<typeof vi.fn>;
     setRoadmapRef: ReturnType<typeof vi.fn>;
@@ -103,12 +103,12 @@ describe("RoadmapGateService", () => {
         task: task({ id: "task-1" }),
       })),
     };
-    // Seated-subsystem verdict, the shape `classifySubsystem` guarantees.
+    // Seated-department verdict, the shape `classifyDepartment` guarantees.
     classifier = {
-      classifySubsystem: vi.fn(async () => ({
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+      classifyDepartment: vi.fn(async () => ({
+        target: { kind: "department", id: "dev", name: "Dev" },
         confidence: 0.81,
-        reason: "matches forge's mandate",
+        reason: "matches dev's mandate",
         matchedTerms: ["rollout"],
         candidates: [],
         mode: "single",
@@ -170,24 +170,24 @@ describe("RoadmapGateService", () => {
       expect(trustedProjectId).toBe("acme");
     });
 
-    it("releases to the item's SUBSYSTEM, letting that subsystem pick its own unit", async () => {
+    it("releases to the item's DEPARTMENT, letting that department pick its own unit", async () => {
       await store.put(item());
       const gate = makeGate();
 
       await gate.play("acme", "item-1");
 
       // Stage 1 saw the task text + the resolved project path, and was nominated
-      // forge as its not-confident fallback.
-      expect(classifier.classifySubsystem).toHaveBeenCalledTimes(1);
-      const [input, preferred] = classifier.classifySubsystem.mock.calls[0]!;
+      // dev as its not-confident fallback.
+      expect(classifier.classifyDepartment).toHaveBeenCalledTimes(1);
+      const [input, preferred] = classifier.classifyDepartment.mock.calls[0]!;
       expect(input.text).toContain("Rollout za flagem");
       expect(input.paths).toEqual(["/repos/acme"]);
-      expect(preferred).toBe("forge");
+      expect(preferred).toBe("dev");
 
       // ...and the verdict rode into createTask as the EXPLICIT target, so the
-      // subsystem — not the full catalog — resolves the concrete unit.
+      // department — not the full catalog — resolves the concrete unit.
       const [, , , explicitTarget] = taskScheduler.createTask.mock.calls[0]!;
-      expect(explicitTarget).toMatchObject({ kind: "subsystem", id: "forge" });
+      expect(explicitTarget).toMatchObject({ kind: "department", id: "dev" });
     });
 
     it("persists the stage-1 trace so the run detail can still say why it landed there", async () => {
@@ -197,16 +197,16 @@ describe("RoadmapGateService", () => {
       await gate.play("acme", "item-1");
 
       expect(scheduledTasks.setClassification).toHaveBeenCalledWith("task-1", {
-        stage1: { kind: "subsystem", id: "forge", name: "Forge" },
+        stage1: { kind: "department", id: "dev", name: "Dev" },
         confidence: 0.81,
-        reason: "matches forge's mandate",
+        reason: "matches dev's mandate",
         matchedTerms: ["rollout"],
-        subsystem: "forge",
+        department: "dev",
       });
     });
 
-    it("releases UNDIRECTED when no subsystem is seated (never fails the release)", async () => {
-      classifier.classifySubsystem.mockResolvedValue(null);
+    it("releases UNDIRECTED when no department is seated (never fails the release)", async () => {
+      classifier.classifyDepartment.mockResolvedValue(null);
       await store.put(item());
       const gate = makeGate();
 
@@ -219,7 +219,7 @@ describe("RoadmapGateService", () => {
     });
 
     it("releases UNDIRECTED when the classifier itself throws", async () => {
-      classifier.classifySubsystem.mockRejectedValue(new Error("router exploded"));
+      classifier.classifyDepartment.mockRejectedValue(new Error("router exploded"));
       await store.put(item());
       const gate = makeGate();
 
@@ -231,8 +231,8 @@ describe("RoadmapGateService", () => {
       expect(explicitTarget).toBeUndefined();
     });
 
-    it("refuses a non-subsystem verdict rather than bypassing the subsystem layer", async () => {
-      classifier.classifySubsystem.mockResolvedValue({
+    it("refuses a non-department verdict rather than bypassing the department layer", async () => {
+      classifier.classifyDepartment.mockResolvedValue({
         target: { kind: "agent", id: "fullstack-developer", name: "Fullstack" },
         confidence: 0.9,
         reason: "picked an agent outright",
@@ -933,10 +933,10 @@ describe("RoadmapGateService", () => {
   // -----------------------------------------------------------------------
 
   describe("ambiguous stage-1 verdict (NS2 F10)", () => {
-    /** Make the switchboard report a coin flip between forge and codex. */
+    /** Make the switchboard report a coin flip between dev and knowledge. */
     function makeAmbiguous() {
-      classifier.classifySubsystem = vi.fn(async () => ({
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+      classifier.classifyDepartment = vi.fn(async () => ({
+        target: { kind: "department", id: "dev", name: "Dev" },
         confidence: 0.55,
         reason: "could be either",
         matchedTerms: [],
@@ -946,7 +946,7 @@ describe("RoadmapGateService", () => {
         paths: [],
         toolGrants: [],
         runnerUp: {
-          target: { kind: "subsystem", id: "codex", name: "Codex" },
+          target: { kind: "department", id: "knw", name: "Knowledge" },
           confidence: 0.5,
           reason: "also plausible",
         },
@@ -967,15 +967,15 @@ describe("RoadmapGateService", () => {
       const [approval] = approvals.requestApproval.mock.calls[0]!;
       expect(approval.kind).toBe("routing-proposal");
       // The operator must see the actual choice, not just the winner.
-      expect(approval.detail).toContain("Forge");
-      expect(approval.detail).toContain("Codex");
+      expect(approval.detail).toContain("Dev");
+      expect(approval.detail).toContain("Knowledge");
       // The approval's runId IS the parked proposal's id (no live child to pause).
       const [proposal] = proposals.create.mock.calls[0]!;
       expect(approval.runId).toBe(proposal.id);
       expect(proposal).toMatchObject({
         projectId: "acme",
         itemId: "item-1",
-        pick: { kind: "subsystem", id: "forge" },
+        pick: { kind: "department", id: "dev" },
       });
     });
 
@@ -1041,7 +1041,7 @@ describe("RoadmapGateService", () => {
   });
 
   describe("releaseRouted (NS2 F10 — an approved routing decision)", () => {
-    const APPROVED = { kind: "subsystem" as const, id: "codex" as const, name: "Codex" };
+    const APPROVED = { kind: "department" as const, id: "knw" as const, name: "Knowledge" };
 
     it("releases a parked (`enqueued`) item to the approved target, skipping classification", async () => {
       await store.put(item({ lifecycle: "enqueued" }));
@@ -1051,7 +1051,7 @@ describe("RoadmapGateService", () => {
 
       // The question was already answered by a human — re-asking could disagree with
       // the decision being honoured.
-      expect(classifier.classifySubsystem).not.toHaveBeenCalled();
+      expect(classifier.classifyDepartment).not.toHaveBeenCalled();
       expect(taskScheduler.createTask).toHaveBeenCalledTimes(1);
       const [, , , explicitTarget] = taskScheduler.createTask.mock.calls[0]!;
       expect(explicitTarget).toEqual(APPROVED);
@@ -1089,7 +1089,7 @@ describe("RoadmapGateService", () => {
       itemId: "item-1",
       text: "t",
       projectPath: "/repos/acme",
-      pick: { kind: "subsystem" as const, id: "forge" as const, name: "Forge" },
+      pick: { kind: "department" as const, id: "dev" as const, name: "Dev" },
       confidence: 0.55,
       reason: "could be either",
       runnerUp: null,

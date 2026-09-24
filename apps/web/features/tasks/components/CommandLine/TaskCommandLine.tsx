@@ -217,7 +217,7 @@ export function TaskCommandLine({
     agent: t("commandLine.ack.kind.agent"),
     pipeline: t("commandLine.ack.kind.pipeline"),
     goal: t("commandLine.ack.kind.goal"),
-    subsystem: t("commandLine.ack.kind.subsystem"),
+    department: t("commandLine.ack.kind.department"),
     orchestrator: t("commandLine.ack.kind.orchestrator"),
   };
 

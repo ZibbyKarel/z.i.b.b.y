@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { maestroContract } from "./maestro.contract";
-import { MergeQueueEntrySchema, MergeQueueQuerySchema, MergeQueueSchema } from "./maestro.schema";
+import { releaseContract } from "./release.contract";
+import { MergeQueueEntrySchema, MergeQueueQuerySchema, MergeQueueSchema } from "./release.schema";
 
 const ENTRY = {
   number: 42,
@@ -20,7 +20,7 @@ const ENTRY = {
   queueState: "ready",
 };
 
-describe("maestro.schema", () => {
+describe("release.schema", () => {
   it("round-trips a full merge-queue entry", () => {
     expect(MergeQueueEntrySchema.parse(ENTRY)).toEqual(ENTRY);
   });
@@ -50,10 +50,10 @@ describe("maestro.schema", () => {
   });
 });
 
-describe("maestroContract", () => {
-  it("is read-only under /api/maestro (no merge route — merging stays operator-only)", () => {
-    expect(Object.keys(maestroContract)).toEqual(["getMergeQueue"]);
-    expect(maestroContract.getMergeQueue.method).toBe("GET");
-    expect(maestroContract.getMergeQueue.path).toBe("/api/maestro/queue");
+describe("releaseContract", () => {
+  it("is read-only under /api/release (no merge route — merging stays operator-only)", () => {
+    expect(Object.keys(releaseContract)).toEqual(["getMergeQueue"]);
+    expect(releaseContract.getMergeQueue.method).toBe("GET");
+    expect(releaseContract.getMergeQueue.path).toBe("/api/release/queue");
   });
 });

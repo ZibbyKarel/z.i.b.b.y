@@ -8,9 +8,9 @@ import {
   AgentSchema,
   AgentThinkingSchema,
   type CreateAgentInput,
+  DepartmentIdSchema,
   GateRuleInputSchema,
   RiskSchema,
-  SubsystemIdSchema,
   type UpdateAgentInput,
 } from "@zibby/contracts";
 import matter from "gray-matter";
@@ -183,8 +183,8 @@ export class AgentsStorageService extends MarkdownEntityStore<Agent> {
     const gates = GateRuleInputSchema.array().safeParse(data.gates);
     if (gates.success) candidate.gates = gates.data;
     if (data.status === "proposed" || data.status === "active") candidate.status = data.status;
-    if (SubsystemIdSchema.safeParse(data.ownerSubsystem).success)
-      candidate.ownerSubsystem = data.ownerSubsystem;
+    if (DepartmentIdSchema.safeParse(data.department).success)
+      candidate.department = data.department;
 
     const result = AgentSchema.safeParse(candidate);
     return result.success ? result.data : null;
@@ -204,7 +204,7 @@ export class AgentsStorageService extends MarkdownEntityStore<Agent> {
     if (agent.risk !== undefined) data.risk = agent.risk;
     if (agent.gates !== undefined) data.gates = agent.gates;
     if (agent.status !== undefined) data.status = agent.status;
-    if (agent.ownerSubsystem !== undefined) data.ownerSubsystem = agent.ownerSubsystem;
+    if (agent.department !== undefined) data.department = agent.department;
     return data;
   }
 

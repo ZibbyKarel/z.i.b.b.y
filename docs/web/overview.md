@@ -227,14 +227,14 @@ features/
 ├── automations/    Cron/event triggers
 ├── chat/           Chat-first interface (replaces the old Voice UI), including
 │                   phase-119 voice mode (STT hook, mic toggle, auto-speak);
-│                   its ambient orb-map backdrop is `SubsystemOrbMap`
-│                   (see docs/web/subsystem-orb-map.md)
+│                   its ambient orb-map backdrop is `DepartmentOrbMap`
+│                   (see docs/web/department-orb-map.md)
 ├── commands/       Slash-command catalog
 ├── companies/      Company portfolio (client/company records)
 ├── gates/          Gate rule catalog
 ├── goals/          Loop engine — goal definitions + runs (maker ⇄ verifier)
-├── handoff/        Cross-subsystem handoff rules (inline mad-libs editor in
-│                   the subsystem drawer's "Předávání" tab)
+├── handoff/        Cross-department handoff rules (inline mad-libs editor in
+│                   the department drawer's "Předávání" tab)
 ├── health/         System health status
 ├── hooks/          Hook catalog
 ├── integrations/   Channel adapters (email, Slack), scoped under a project

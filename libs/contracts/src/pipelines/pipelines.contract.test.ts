@@ -185,33 +185,33 @@ describe("pipeline schema", () => {
       );
   });
 
-  it("accepts a valid ownerSubsystem tag (Phase 81)", () => {
+  it("accepts a valid department tag (Phase 81)", () => {
     const result = PipelineSchema.safeParse({
       id: "delivery",
       phases: [phase("a")],
       instructions: "x",
-      ownerSubsystem: "forge",
+      department: "dev",
     });
-    expect(result.success && result.data.ownerSubsystem).toBe("forge");
+    expect(result.success && result.data.department).toBe("dev");
   });
 
-  it("rejects an unknown ownerSubsystem value", () => {
+  it("rejects an unknown department value", () => {
     const result = PipelineSchema.safeParse({
       id: "delivery",
       phases: [phase("a")],
       instructions: "x",
-      ownerSubsystem: "not-a-subsystem",
+      department: "not-a-department",
     });
     expect(result.success).toBe(false);
   });
 
-  it("omitting ownerSubsystem stays valid (backward compat — existing fixtures unedited)", () => {
+  it("omitting department stays valid (backward compat — existing fixtures unedited)", () => {
     const result = PipelineSchema.safeParse({
       id: "release",
       phases: [phase("a"), phase("b")],
       instructions: "ship it",
     });
-    expect(result.success && result.data.ownerSubsystem).toBeUndefined();
+    expect(result.success && result.data.department).toBeUndefined();
   });
 
   it("rejects a loop.driftTo that names no existing phase", () => {

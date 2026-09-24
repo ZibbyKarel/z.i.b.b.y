@@ -18,7 +18,7 @@ import { toastBus } from "../../../components/Toaster/toastBus";
 import { useDeleteSignalKindMutation } from "../../handoff/mutations";
 import { useSignalKindsQuery } from "../../handoff/queries";
 import { signalKindDescription, signalKindLabel } from "../../handoff/signalKinds";
-import { useSubsystemsQuery } from "../../subsystems/queries";
+import { useDepartmentsQuery } from "../../departments/queries";
 import { SignalCreateForm } from "./SignalCreateForm";
 import { SignalStatusBadge } from "./SignalStatusBadge";
 
@@ -89,17 +89,17 @@ function FieldRow({ label, value }: { label: string; value: ReactNode }) {
 
 function SignalDetail({ kind }: { kind: HandoffSignalKind }) {
   const t = useTranslations("signals");
-  const th = useTranslations("subsystems.handoff");
+  const th = useTranslations("departments.handoff");
   const tk = useTranslations();
   const router = useRouter();
-  const { data: subsystems = [] } = useSubsystemsQuery();
+  const { data: departments = [] } = useDepartmentsQuery();
   const deleteMutation = useDeleteSignalKindMutation();
 
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const label = signalKindLabel(kind, th);
-  const producerName = subsystems.find((s) => s.id === kind.from)?.name ?? kind.from;
+  const producerName = departments.find((s) => s.id === kind.from)?.name ?? kind.from;
   const isOperatorKind = !kind.system;
 
   return (

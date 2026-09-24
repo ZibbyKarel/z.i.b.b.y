@@ -3,14 +3,14 @@ import { AgentFactoryModule } from "../agent-factory/agent-factory.module";
 import { AgentsModule } from "../agents/agents.module";
 import { BriefingModule } from "../briefing/briefing.module";
 import { GapsModule } from "../gaps/gaps.module";
-import { LoomModule } from "../loom/loom.module";
-import { MaestroModule } from "../maestro/maestro.module";
+import { ArchModule } from "../arch/arch.module";
+import { ReleaseModule } from "../release/release.module";
 import { MemoryDistillerModule } from "../memory/memory-distiller.module";
 import { PatternsModule } from "../patterns/patterns.module";
 import { PipelinesModule } from "../pipelines/pipelines.module";
 import { ReviewLearningModule } from "../review-learning/review-learning.module";
 import { SelfKnowledgeModule } from "../self-knowledge/self-knowledge.module";
-import { SentinelModule } from "../sentinel/sentinel.module";
+import { SecurityModule } from "../security/security.module";
 import { dataDir } from "../shared/data-dir";
 import { TasksModule } from "../tasks/tasks.module";
 import { AUTOMATIONS_DIR, AutomationsStorageService } from "./automations.storage.service";
@@ -35,12 +35,12 @@ export function resolveAutomationsDir(): string {
  * wired without one). F4c: also imports `SelfKnowledgeModule` so the `self-knowledge`
  * target can dispatch straight to `SelfKnowledgeService` — no cycle, `SelfKnowledgeModule`
  * only imports Agents/Pipelines/GateRules/Gates/Memory, none of which import this module.
- * NS2 F5a: also imports `SentinelModule` (a leaf, same position as `GapsModule`) so the
- * `sentinel-scan` target can dispatch to `SentinelService.scan`. NS2 F5c: also imports
- * `LoomModule` (same leaf position) so the `loom-audit` target can dispatch to
- * `LoomService.audit`. NS2 F7b-2: also imports `MaestroModule` so the
+ * NS2 F5a: also imports `SecurityModule` (a leaf, same position as `GapsModule`) so the
+ * `security-scan` target can dispatch to `SecurityService.scan`. NS2 F5c: also imports
+ * `ArchModule` (same leaf position) so the `arch-audit` target can dispatch to
+ * `ArchService.audit`. NS2 F7b-2: also imports `ReleaseModule` so the
  * `post-merge-watch` target can dispatch to `PostMergeWatchService.poll` — no
- * cycle, `MaestroModule` imports Projects/ResolvedProject/Integrations/
+ * cycle, `ReleaseModule` imports Projects/ResolvedProject/Integrations/
  * MergeWatch/Monitors/Tasks, none of which import this module back. PR review
  * learning v1: also imports `ReviewLearningModule` so the `review-learn` target
  * can dispatch to `ReviewLearningService.learn` — no cycle, `ReviewLearningModule`
@@ -55,14 +55,14 @@ export function resolveAutomationsDir(): string {
     AgentsModule,
     BriefingModule,
     GapsModule,
-    LoomModule,
-    MaestroModule,
+    ArchModule,
+    ReleaseModule,
     MemoryDistillerModule,
     PatternsModule,
     PipelinesModule,
     ReviewLearningModule,
     SelfKnowledgeModule,
-    SentinelModule,
+    SecurityModule,
     TasksModule,
   ],
   controllers: [AutomationsController],

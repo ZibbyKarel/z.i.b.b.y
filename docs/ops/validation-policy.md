@@ -84,7 +84,7 @@ Scope: staged files only (typecheck is the one exception — see below).
 - `pnpm check:docs-sync` (`tools/docs-sync/`) — blocks a commit that touches an
   `apps/api/src/<module>` directory with no entry in `tools/docs-sync/manifest.mjs`,
   or whose mapped `docs/api/*.md` file doesn't exist on disk. Only catches "shipped a
-  brand-new subsystem, zero docs" — it does not require every commit touching an
+  brand-new department, zero docs" — it does not require every commit touching an
   already-documented module to also touch that module's doc (too noisy at
   single-commit granularity; see docs/README.md's "Self-modification & intelligence"
   section and `docs/api/self-knowledge.md` for the drift-check family this belongs to).

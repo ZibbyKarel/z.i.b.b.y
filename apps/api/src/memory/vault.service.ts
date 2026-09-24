@@ -3,6 +3,8 @@ import * as path from "node:path";
 import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import {
   type CreateNoteInput,
+  type DepartmentId,
+  DepartmentIdSchema,
   type IndexEntry,
   type MemoryGraph,
   type MemoryTier,
@@ -12,8 +14,6 @@ import {
   type NoteType,
   NoteTypeSchema,
   type SearchHit,
-  type SubsystemId,
-  SubsystemIdSchema,
   type UpdateNoteInput,
 } from "@zibby/contracts";
 import matter from "gray-matter";
@@ -105,31 +105,31 @@ function aliasesOf(frontmatter: Record<string, unknown>): string[] {
 }
 
 /**
- * Parse the optional typed `type`/`tags`/`raw`/`subsystem` frontmatter fields back
+ * Parse the optional typed `type`/`tags`/`raw`/`department` frontmatter fields back
  * into top-level `Note` fields (Fáze 3 / Fáze 107 / F4b). Tolerant of malformed/
  * foreign frontmatter — an invalid `type`, non-string-array `tags`, non-boolean
- * `raw`, or invalid `subsystem` is simply omitted rather than surfaced.
+ * `raw`, or invalid `department` is simply omitted rather than surfaced.
  */
 function typedFieldsOf(frontmatter: Record<string, unknown>): {
   type?: NoteType;
   tags?: string[];
   raw?: boolean;
-  subsystem?: SubsystemId;
+  department?: DepartmentId;
   domain?: NoteDomain;
 } {
   const out: {
     type?: NoteType;
     tags?: string[];
     raw?: boolean;
-    subsystem?: SubsystemId;
+    department?: DepartmentId;
     domain?: NoteDomain;
   } = {};
   const parsedType = NoteTypeSchema.safeParse(frontmatter.type);
   if (parsedType.success) out.type = parsedType.data;
   if (Array.isArray(frontmatter.tags)) out.tags = tagsOf(frontmatter);
   if (typeof frontmatter.raw === "boolean") out.raw = frontmatter.raw;
-  const subsystem = ownerSubsystemOf(frontmatter);
-  if (subsystem !== undefined) out.subsystem = subsystem;
+  const department = ownerDepartmentOf(frontmatter);
+  if (department !== undefined) out.department = department;
   const domain = domainOf(frontmatter);
   if (domain !== undefined) out.domain = domain;
   return out;
@@ -155,19 +155,19 @@ export function ownerProjectOf(frontmatter: Record<string, unknown>): string | u
 }
 
 /**
- * The subsystem a note belongs to (F4a shelves), or undefined if it carries no
- * (valid) `subsystem:` frontmatter. Mirrors {@link ownerProjectOf}'s derivation
+ * The department a note belongs to (F4a shelves), or undefined if it carries no
+ * (valid) `department:` frontmatter. Mirrors {@link ownerProjectOf}'s derivation
  * shape — pure, exported for unit testing.
  */
-export function ownerSubsystemOf(frontmatter: Record<string, unknown>): SubsystemId | undefined {
-  const parsed = SubsystemIdSchema.safeParse(frontmatter.subsystem);
+export function ownerDepartmentOf(frontmatter: Record<string, unknown>): DepartmentId | undefined {
+  const parsed = DepartmentIdSchema.safeParse(frontmatter.department);
   return parsed.success ? parsed.data : undefined;
 }
 
 /**
  * The life-domain a note belongs to (NS2 F8), or undefined (work — the
  * default) if it carries no (valid) `domain:` frontmatter. Mirrors
- * {@link ownerProjectOf}/{@link ownerSubsystemOf}'s derivation shape — pure,
+ * {@link ownerProjectOf}/{@link ownerDepartmentOf}'s derivation shape — pure,
  * exported for unit testing.
  */
 export function domainOf(frontmatter: Record<string, unknown>): NoteDomain | undefined {
@@ -233,7 +233,7 @@ export class VaultService implements OnModuleInit {
     const chosen = entryPoints.length > 0 ? entryPoints : notes;
     return chosen.map((n) => {
       const project = ownerProjectOf(n.frontmatter);
-      const subsystem = ownerSubsystemOf(n.frontmatter);
+      const department = ownerDepartmentOf(n.frontmatter);
       const domain = domainOf(n.frontmatter);
       const tags = tagsOf(n.frontmatter);
       const aliases = aliasesOf(n.frontmatter);
@@ -242,7 +242,7 @@ export class VaultService implements OnModuleInit {
         title: n.title,
         tier: n.tier,
         ...(project ? { project } : {}),
-        ...(subsystem ? { subsystem } : {}),
+        ...(department ? { department } : {}),
         ...(domain ? { domain } : {}),
         ...(tags.length > 0 ? { tags } : {}),
         ...(aliases.length > 0 ? { aliases } : {}),
@@ -273,17 +273,17 @@ export class VaultService implements OnModuleInit {
     const ids = new Set(notes.map((n) => n.id));
     // Nodes carry the note's owning project (Fáze 11 project context) via the same
     // `ownerProjectOf` derivation the index uses — absent for a global note. F4b:
-    // also the owning subsystem, same optional posture.
+    // also the owning department, same optional posture.
     const nodes = notes.map((n) => {
       const project = ownerProjectOf(n.frontmatter);
-      const subsystem = ownerSubsystemOf(n.frontmatter);
+      const department = ownerDepartmentOf(n.frontmatter);
       const domain = domainOf(n.frontmatter);
       return {
         id: n.id,
         label: n.title,
         tier: n.tier,
         ...(project ? { project } : {}),
-        ...(subsystem ? { subsystem } : {}),
+        ...(department ? { department } : {}),
         ...(domain ? { domain } : {}),
       };
     });

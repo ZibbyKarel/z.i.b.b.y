@@ -35,11 +35,11 @@ is operator-owned and untouched by a merge. Block order = render order:
    Reviewed 2026-07-30 (NS2 F9): the phase count is still the only rendered
    field — `renderPipelines` reads `pipeline.phases.length` and nothing else, so
    F9's `complexity` rung is deliberately **not** in this block. It is a
-   within-subsystem routing input (`EFFORT_RULE`), not part of ZIBBY's
+   within-department routing input (`EFFORT_RULE`), not part of ZIBBY's
    self-description, and rendering it would add a drift trigger for a value the
    note never uses.
-4. **SUBSYSTEMS** — static subsystem identity only (name + mandate) from
-   `@zibby/contracts`' `SUBSYSTEMS` — **never** live state/tier2Count/tier3Count
+4. **DEPARTMENTS** — static department identity only (name + mandate) from
+   `@zibby/contracts`' `DEPARTMENTS` — **never** live state/tier2Count/tier3Count
    (phase-105 decision 3: baking live status in would make drift read "changed"
    almost continuously, defeating the signal).
 5. **GATES** — the locked system floor (`POLICY.md`, via `PolicyStorageService.floor()`)

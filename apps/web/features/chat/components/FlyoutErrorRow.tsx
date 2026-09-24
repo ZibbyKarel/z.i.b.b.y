@@ -16,23 +16,23 @@ export enum FlyoutErrorRowTestId {
 }
 
 export interface FlyoutErrorRowProps {
-  /** The failed run's id — always known (from the subsystem's `errorRunIds`). */
+  /** The failed run's id — always known (from the department's `errorRunIds`). */
   runId: string;
   /** The run from the feed; undefined when it has aged out of it (archived). */
   run: RunView | undefined;
-  /** Display name of the subsystem that owns the failed run. */
-  subsystemName: string;
+  /** Display name of the department that owns the failed run. */
+  departmentName: string;
 }
 
 /**
- * One failed run in the flyout's error section: subsystem + owner + relative
+ * One failed run in the flyout's error section: department + owner + relative
  * finish, the task title, and the recorded failure (`taskOutcomeSummary`). A run
  * id whose run already left the feed still renders — the count said it failed,
  * so the row must not silently vanish. Navigates to the run's archive detail
  * (`/archiv?run=<runId>`) via the same icon-link `ChatRunCard` uses — rendered
  * for the missing-run fallback too, since the archive can still resolve it.
  */
-export function FlyoutErrorRow({ runId, run, subsystemName }: FlyoutErrorRowProps) {
+export function FlyoutErrorRow({ runId, run, departmentName }: FlyoutErrorRowProps) {
   const locale = useLocale();
   const t = useTranslations("chat.statusPill.flyout.error");
   const tRunCard = useTranslations("chat.runCard");
@@ -61,7 +61,7 @@ export function FlyoutErrorRow({ runId, run, subsystemName }: FlyoutErrorRowProp
                 variant="tertiary"
                 weight="semibold"
               >
-                {run ? `${subsystemName} · ${run.owner}` : subsystemName}
+                {run ? `${departmentName} · ${run.owner}` : departmentName}
               </Typography>
             </Stack>
             <Stack align="center" direction="row" gap="100">

@@ -40,7 +40,7 @@ export enum RoadmapItemDialogTestId {
   OpenRun = "roadmap-item-dialog-open-run",
 }
 
-/** Sentinel for the "add dependency" picker — reset to this right after firing
+/** Security for the "add dependency" picker — reset to this right after firing
  * the mutation, so the trigger always shows the placeholder rather than
  * "remembering" the last pick (there is nothing to remember: the pick becomes
  * a chip in the list above, not a persistent selection in this control). */

@@ -1,5 +1,10 @@
 import { Injectable } from "@nestjs/common";
-import type { ClassifyTaskInput, RoutingAlternative, TaskRouting } from "@zibby/contracts";
+import {
+  type ClassifyTaskInput,
+  DEPARTMENTS,
+  type RoutingAlternative,
+  type TaskRouting,
+} from "@zibby/contracts";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { spawnClaudeCli } from "../shared/spawn-claude-cli";
 import { type RoutableTarget, type TaskRouter, toTaskTarget } from "./task-router";
@@ -16,17 +21,17 @@ const MAX_TASK_CHARS = 4000;
  */
 const ROUTER_SYSTEM_PROMPT = [
   "You are a task router for an agentic OS. Given a task description and a catalog",
-  "of available agents, pipelines and subsystems, choose the SINGLE best target to handle it.",
+  "of available agents, pipelines and departments, choose the SINGLE best target to handle it.",
   "",
   "Reply with ONLY a JSON object, no prose and no code fences:",
-  '{"targetKind":"agent"|"pipeline"|"subsystem","targetId":string,"confidence":number,"reason":string,"matchedTerms":string[],"loop":boolean,"objective":string,"runnerUp":{"targetKind":string,"targetId":string,"confidence":number,"reason":string}|null}',
+  '{"targetKind":"agent"|"pipeline"|"department","targetId":string,"confidence":number,"reason":string,"matchedTerms":string[],"loop":boolean,"objective":string,"runnerUp":{"targetKind":string,"targetId":string,"confidence":number,"reason":string}|null}',
   "",
   "- targetId MUST be one of the ids in the catalog — never invent one.",
-  '- A "subsystem" row is a whole delegation, not a specific unit: pick it when the task',
-  "  clearly fits that subsystem's mandate but no single agent/pipeline in the catalog is",
-  "  obviously the best fit — the task is then routed again INSIDE that subsystem to pick",
+  '- A "department" row is a whole delegation, not a specific unit: pick it when the task',
+  "  clearly fits that department's mandate but no single agent/pipeline in the catalog is",
+  "  obviously the best fit — the task is then routed again INSIDE that department to pick",
   "  the specific pipeline or agent. Prefer a concrete agent/pipeline whenever one matches",
-  "  well; only fall back to a subsystem row for the broader, mandate-level match.",
+  "  well; only fall back to a department row for the broader, mandate-level match.",
   "- confidence is your calibrated 0..1 belief the choice is correct.",
   "- reason is one short sentence a human can read.",
   "- matchedTerms are the catalog/task words that justify the choice.",
@@ -40,7 +45,7 @@ const ROUTER_SYSTEM_PROMPT = [
 ].join("\n");
 
 interface RouterVerdict {
-  targetKind: "agent" | "pipeline" | "subsystem";
+  targetKind: "agent" | "pipeline" | "department";
   targetId: string;
   confidence: number;
   reason: string;
@@ -212,7 +217,7 @@ export class ClaudeCliRouter implements TaskRouter {
 
   /**
    * Serialize the task + catalog into the `-p` user turn. F2b: an optional
-   * `preamble` (a subsystem's mandate + owned-unit list) is injected between
+   * `preamble` (a department's mandate + owned-unit list) is injected between
    * the frozen system prompt and the task line — extra context for a
    * stage-2 scoped call, absent for the top-level catalog.
    */
@@ -222,7 +227,19 @@ export class ClaudeCliRouter implements TaskRouter {
     preamble?: string,
   ): string {
     const catalog = candidates
-      .map((c) => `${c.kind}  ${c.id} | ${c.category ?? "-"} | ${c.search}`)
+      .map((c) => {
+        // Department rows carry no `name`/`category` of their own worth trusting at
+        // this layer, so look the org-chart code + English name up from the
+        // registry — the LLM then sees a department as `id (CODE) Name`, not a bare
+        // id, without the classifier having to thread `code` through the wider
+        // RoutableTarget/TaskTarget contract for this one prompt-formatting need.
+        if (c.kind === "department") {
+          const department = DEPARTMENTS.find((d) => d.id === c.id);
+          const label = department ? `${c.id} (${department.code}) ${department.name}` : c.id;
+          return `department  ${label} | ${c.search}`;
+        }
+        return `${c.kind}  ${c.id} | ${c.category ?? "-"} | ${c.search}`;
+      })
       .join("\n");
     const paths = input.paths?.length ? `\nPATHS: ${input.paths.join(", ")}` : "";
     const text = input.text.slice(0, MAX_TASK_CHARS);
@@ -263,7 +280,7 @@ export class ClaudeCliRouter implements TaskRouter {
     const kind = obj.targetKind;
     const id = obj.targetId;
     if (
-      (kind !== "agent" && kind !== "pipeline" && kind !== "subsystem") ||
+      (kind !== "agent" && kind !== "pipeline" && kind !== "department") ||
       typeof id !== "string" ||
       id.length === 0
     ) {

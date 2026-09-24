@@ -2,10 +2,10 @@ import type {
   ActivityEntry,
   Approval,
   Briefing,
+  BriefingDepartmentLine,
   BriefingDidItem,
   BriefingEngagement,
   BriefingNeedsYouItem,
-  BriefingSubsystemLine,
   BriefingWatchItem,
   ChannelItem,
   CiStatus,
@@ -46,17 +46,17 @@ export interface BriefingInput {
   automationGaps?: string[];
   /** Weekly "3 app ideas" — interests × trends prototype pitches (M6). */
   appIdeas?: string[];
-  /** NS2 F3b — per-subsystem lines, gathered by the service (state + tier counts
-   * from SubsystemsService, Ledger/Puls notes). Absent when the read failed. */
-  subsystems?: BriefingSubsystemLine[];
+  /** NS2 F3b — per-department lines, gathered by the service (state + tier counts
+   * from DepartmentsService, Ledger/Ops notes). Absent when the read failed. */
+  departments?: BriefingDepartmentLine[];
   /** NS2 F4c — whether the self-knowledge vault note has drifted from a fresh
    * compose (gathered via `SelfKnowledgeService.check()`, fail-open to `false`). */
   selfKnowledgeDrift?: boolean;
-  /** NS2 F5a — Sentinel's open security findings (CVE/secret), read off its vault note. */
+  /** NS2 F5a — Security's open security findings (CVE/secret), read off its vault note. */
   securityFindings?: string[];
-  /** NS2 F5b — Maestro's per-project merge-queue summary lines. */
+  /** NS2 F5b — Release's per-project merge-queue summary lines. */
   mergeQueue?: string[];
-  /** NS2 F5c — Loom's new code-quality findings (god-nodes, cycles). */
+  /** NS2 F5c — Arch's new code-quality findings (god-nodes, cycles). */
   qualityFindings?: string[];
   /** NS2 F6c — heartbeat watchers currently probing stale (formatted lines,
    * gathered from the WatcherHealthRegistry, fail-open to `[]`). */
@@ -151,7 +151,9 @@ export function assembleBriefing(input: BriefingInput): Briefing {
       ? { automationGaps: input.automationGaps }
       : {}),
     ...(input.appIdeas && input.appIdeas.length > 0 ? { appIdeas: input.appIdeas } : {}),
-    ...(input.subsystems && input.subsystems.length > 0 ? { subsystems: input.subsystems } : {}),
+    ...(input.departments && input.departments.length > 0
+      ? { departments: input.departments }
+      : {}),
     ...(input.selfKnowledgeDrift ? { selfKnowledgeDrift: true } : {}),
     ...(input.securityFindings && input.securityFindings.length > 0
       ? { securityFindings: input.securityFindings }
@@ -410,9 +412,9 @@ export function renderBriefingMarkdown(briefing: Briefing): string {
     lines.push("");
   }
 
-  if ((briefing.subsystems && briefing.subsystems.length > 0) || briefing.selfKnowledgeDrift) {
-    lines.push("## Subsystems");
-    for (const s of briefing.subsystems ?? []) {
+  if ((briefing.departments && briefing.departments.length > 0) || briefing.selfKnowledgeDrift) {
+    lines.push("## Departments");
+    for (const s of briefing.departments ?? []) {
       const counts: string[] = [];
       if (s.tier3Count > 0) counts.push(`${s.tier3Count} waiting on you`);
       if (s.errorCount > 0) counts.push(`${s.errorCount} failed`);
@@ -420,8 +422,8 @@ export function renderBriefingMarkdown(briefing: Briefing): string {
       const detail = [s.state, ...counts, ...(s.note ? [s.note] : [])].join(" · ");
       lines.push(`- **${s.name}** — ${detail}`);
     }
-    // NS2 F4c: Codex owns the second brain — its drift signal lands in the same
-    // Subsystems section rather than a duplicate `## Memory` heading.
+    // NS2 F4c: Knowledge owns the second brain — its drift signal lands in the same
+    // Departments section rather than a duplicate `## Memory` heading.
     if (briefing.selfKnowledgeDrift) {
       lines.push(
         "- self-knowledge note drifted from the live catalog (nightly refresh may have failed)",
@@ -481,7 +483,7 @@ export function renderBriefingMarkdown(briefing: Briefing): string {
       `${c.approvalsPending} approvals pending · ${c.channelItemsNew} new channel items`,
   );
 
-  // NS2 F8c — Hearth's surface-only personal sections: today's calendar agenda
+  // NS2 F8c — Personal's surface-only personal sections: today's calendar agenda
   // and open reminders. Strictly additive, absent whenever both are empty;
   // per the post-F7 handoff note, new sections append after `## Counts`.
   if (briefing.personalAgenda && briefing.personalAgenda.length > 0) {

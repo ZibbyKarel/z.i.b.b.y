@@ -528,15 +528,15 @@ describe("RunDetail — started time is absolute, not relative (Phase 67 item A)
 });
 
 describe("RunDetail — classification trace (F2c)", () => {
-  it("renders the switchboard trace, subsystem hop, and confidence when the run carries one", () => {
+  it("renders the switchboard trace, department hop, and confidence when the run carries one", () => {
     renderDetail({
       ...pipelineRun,
       classification: {
-        stage1: { kind: "subsystem", id: "forge", name: "Forge" },
+        stage1: { kind: "department", id: "dev", name: "Dev" },
         confidence: 0.82,
         reason: "matched keywords: fix, bug",
         matchedTerms: ["fix", "bug"],
-        subsystem: "forge",
+        department: "dev",
       },
     });
     expect(screen.getByTestId("classification-trace")).toBeInTheDocument();

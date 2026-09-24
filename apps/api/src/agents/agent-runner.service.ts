@@ -334,7 +334,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       task: prompt,
       projectId: resolved?.id,
       matchedTerms,
-      ownerSubsystem: agent.ownerSubsystem,
+      department: agent.department,
     });
     const { command, args, catalogAgentIds } = await this.buildCommand(
       agent,
@@ -513,9 +513,9 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       // delegated action (Zjištění 3a). For an orchestrator run, evaluate against the
       // orchestrator's rules PLUS every catalog subagent's own rules and take the
       // strictest decision; a non-orchestrator run is unchanged.
-      // NS2 F3a — a non-orchestrator run evaluates with its owning subsystem's
-      // catalog-rule bucket (the acting subsystem derives from the OWNED UNIT,
-      // `agent.ownerSubsystem`, not from the task classification). The
+      // NS2 F3a — a non-orchestrator run evaluates with its owning department's
+      // catalog-rule bucket (the acting department derives from the OWNED UNIT,
+      // `agent.department`, not from the task classification). The
       // orchestrator path stays two-bucket: it is synthetic/unowned, and its
       // strictest-union already probes every catalog agent — a documented F3a
       // scope boundary, not an oversight.
@@ -526,7 +526,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
             action,
           )
         : this.gates.evaluate(
-            await this.gates.rulesForAgentInSubsystem(agentInput, agent.ownerSubsystem),
+            await this.gates.rulesForAgentInDepartment(agentInput, agent.department),
             action,
           );
       const decision = evaluation.decision;
@@ -563,8 +563,8 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
           // "medium". (The hook tags these with `action: "delete"`.)
           risk: action.action === "delete" ? "high" : (agent.risk ?? "medium"),
           // NS2 F3c — attribute the approval to the acting agent's owning
-          // subsystem (absent for the synthetic orchestrator agent: no owner).
-          ...(agent.ownerSubsystem ? { ownerSubsystem: agent.ownerSubsystem } : {}),
+          // department (absent for the synthetic orchestrator agent: no owner).
+          ...(agent.department ? { department: agent.department } : {}),
         });
         return;
       }

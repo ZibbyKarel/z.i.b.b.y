@@ -65,7 +65,7 @@ function hueTileStyle(hue: string): CSSProperties {
 /**
  * The left-hand ~33% rail of the roadmap tab (D-002): one row per epic — a hued
  * `IconTile` (see `epicHue` in `../roadmap-board` for why it's a hash of the
- * epic id rather than a real `subsystem`), name + truncated description, a
+ * epic id rather than a real `department`), name + truncated description, a
  * progress bar (`done/total tasků`) or the italic-mono `nerozfázováno` when the
  * epic has no children, and a status pill. Selecting a row drives the board.
  * A trailing "Nový epik" button (125f) opens the manual-create dialog — this

@@ -48,23 +48,23 @@ function run(overrides: Partial<RunView> = {}): RunView {
 }
 
 describe("resolveEventOwner", () => {
-  it("resolves a pipeline-runs event to the pipeline's ownerSubsystem", () => {
+  it("resolves a pipeline-runs event to the pipeline's department", () => {
     const owner = resolveEventOwner(
       { scope: "pipeline-runs", runId: "delivery_1" },
       [run()],
-      [pipeline({ ownerSubsystem: "forge" })],
+      [pipeline({ department: "dev" })],
       [],
     );
-    expect(owner).toBe("forge");
+    expect(owner).toBe("dev");
   });
 
-  it("returns undefined for a scope with no ownerSubsystem path (goal-runs, channel-items, activity)", () => {
+  it("returns undefined for a scope with no department path (goal-runs, channel-items, activity)", () => {
     for (const scope of ["goal-runs", "channel-items", "activity"] as const) {
       expect(
         resolveEventOwner(
           { scope, runId: "delivery_1" },
           [run()],
-          [pipeline({ ownerSubsystem: "forge" })],
+          [pipeline({ department: "dev" })],
           [],
         ),
       ).toBeUndefined();
@@ -75,7 +75,7 @@ describe("resolveEventOwner", () => {
     const owner = resolveEventOwner(
       { scope: "goal-runs", runId: "delivery_1" },
       [run()],
-      [pipeline({ ownerSubsystem: "forge" })],
+      [pipeline({ department: "dev" })],
       [],
     );
     expect(owner).toBeUndefined();
@@ -85,13 +85,13 @@ describe("resolveEventOwner", () => {
     const owner = resolveEventOwner(
       { scope: "pipeline-runs", runId: "brand-new_1" },
       [run()],
-      [pipeline({ ownerSubsystem: "forge" })],
+      [pipeline({ department: "dev" })],
       [],
     );
     expect(owner).toBeUndefined();
   });
 
-  it("returns undefined when the pipeline has no ownerSubsystem tag", () => {
+  it("returns undefined when the pipeline has no department tag", () => {
     const owner = resolveEventOwner(
       { scope: "pipeline-runs", runId: "delivery_1" },
       [run()],
@@ -103,36 +103,31 @@ describe("resolveEventOwner", () => {
 
   it("returns undefined when runId is missing", () => {
     expect(
-      resolveEventOwner(
-        { scope: "pipeline-runs" },
-        [run()],
-        [pipeline({ ownerSubsystem: "forge" })],
-        [],
-      ),
+      resolveEventOwner({ scope: "pipeline-runs" }, [run()], [pipeline({ department: "dev" })], []),
     ).toBeUndefined();
   });
 
-  it("resolves an agent-kind run symmetrically, against the agent's ownerSubsystem", () => {
+  it("resolves an agent-kind run symmetrically, against the agent's department", () => {
     const owner = resolveEventOwner(
       { scope: "pipeline-runs", runId: "koder_1" },
       [run({ runId: "koder_1", kind: "agent", owner: "koder" })],
       [],
-      [agent({ ownerSubsystem: "forge" })],
+      [agent({ department: "dev" })],
     );
-    expect(owner).toBe("forge");
+    expect(owner).toBe("dev");
   });
 
-  it("resolves a REAL agent-runs SSE event to the owning agent's ownerSubsystem", () => {
+  it("resolves a REAL agent-runs SSE event to the owning agent's department", () => {
     const owner = resolveEventOwner(
       { scope: "agent-runs", runId: "koder_1" },
       [run({ runId: "koder_1", kind: "agent", owner: "koder" })],
       [],
-      [agent({ ownerSubsystem: "forge" })],
+      [agent({ department: "dev" })],
     );
-    expect(owner).toBe("forge");
+    expect(owner).toBe("dev");
   });
 
-  it("returns undefined when the owning agent has no ownerSubsystem tag", () => {
+  it("returns undefined when the owning agent has no department tag", () => {
     const owner = resolveEventOwner(
       { scope: "pipeline-runs", runId: "koder_1" },
       [run({ runId: "koder_1", kind: "agent", owner: "koder" })],
@@ -145,7 +140,7 @@ describe("resolveEventOwner", () => {
 
 describe("flightForEvent", () => {
   const runs = [run()];
-  const pipelines = [pipeline({ ownerSubsystem: "forge" })];
+  const pipelines = [pipeline({ department: "dev" })];
 
   it("'running' → dispatch, center to node", () => {
     const flight = flightForEvent(
@@ -154,7 +149,7 @@ describe("flightForEvent", () => {
       pipelines,
       [],
     );
-    expect(flight).toEqual({ from: "orb", to: "forge", subsystemId: "forge" });
+    expect(flight).toEqual({ from: "orb", to: "dev", departmentId: "dev" });
   });
 
   it.each(["done", "failed", "parked"])("'%s' → report, node to center", (status) => {
@@ -164,7 +159,7 @@ describe("flightForEvent", () => {
       pipelines,
       [],
     );
-    expect(flight).toEqual({ from: "forge", to: "orb", subsystemId: "forge" });
+    expect(flight).toEqual({ from: "dev", to: "orb", departmentId: "dev" });
   });
 
   it.each(["paused-limit", "interrupted"])(
@@ -202,7 +197,7 @@ describe("flightForEvent", () => {
 
   describe("agent-runs — comms travel both directions for agent-kind runs too", () => {
     const agentRuns = [run({ runId: "koder_1", kind: "agent", owner: "koder" })];
-    const agentCatalog = [agent({ ownerSubsystem: "forge" })];
+    const agentCatalog = [agent({ department: "dev" })];
 
     it("'running' → dispatch, center to node", () => {
       const flight = flightForEvent(
@@ -211,7 +206,7 @@ describe("flightForEvent", () => {
         [],
         agentCatalog,
       );
-      expect(flight).toEqual({ from: "orb", to: "forge", subsystemId: "forge" });
+      expect(flight).toEqual({ from: "orb", to: "dev", departmentId: "dev" });
     });
 
     it.each(["done", "error", "awaiting-approval"])("'%s' → report, node to center", (status) => {
@@ -221,7 +216,7 @@ describe("flightForEvent", () => {
         [],
         agentCatalog,
       );
-      expect(flight).toEqual({ from: "forge", to: "orb", subsystemId: "forge" });
+      expect(flight).toEqual({ from: "dev", to: "orb", departmentId: "dev" });
     });
 
     it.each(["paused-limit", "interrupted"])(

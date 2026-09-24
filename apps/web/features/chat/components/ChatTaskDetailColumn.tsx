@@ -20,7 +20,7 @@ import { usePrefersReducedMotion } from "../../../hooks/usePrefersReducedMotion"
 import { RunDetail } from "../../runs/components/RunDetail";
 import { type RunView, runTitle } from "../../runs/run";
 
-// Same idiom the DS `Dialog` and `SubsystemDrawer` use for their own focus
+// Same idiom the DS `Dialog` and `DepartmentDrawer` use for their own focus
 // traps — duplicated here rather than imported/shared, matching the
 // established precedent in both of those files.
 const FOCUSABLE_SELECTOR =
@@ -37,7 +37,7 @@ export enum ChatTaskDetailColumnTestId {
  * The modal's own lifecycle, independent of the `open`/mounted question (the
  * parent controls mounting via `{selectedRun && <ChatTaskDetailColumn .../>}`
  * — this only tracks the animation state within that mounted lifetime).
- * Same idiom as `SubsystemDrawerPhase` (phase 125).
+ * Same idiom as `DepartmentDrawerPhase` (phase 125).
  */
 export type ChatTaskDetailPhase = "entering" | "open" | "closing";
 
@@ -51,7 +51,7 @@ const MODAL_WIDTH = "800px";
 /**
  * The backdrop's fade — same both directions except duration/easing: 180ms
  * ease-out opening, 140ms ease-in closing (a plain reverse, no extra blur
- * ramp — Velín-D design spec, phase 126, identical values to `SubsystemDrawer`).
+ * ramp — Velín-D design spec, phase 126, identical values to `DepartmentDrawer`).
  */
 export function backdropStyle(phase: ChatTaskDetailPhase): CSSProperties {
   const open = phase === "open";
@@ -110,7 +110,7 @@ export interface ChatTaskDetailColumnProps {
  * a centered modal over the whole Velín canvas, opened from a row in the left
  * tasks gutter (`ChatTasksPanel`). Was a docked column immediately right of the
  * gutter through Phase 122 (no backdrop, gutter stayed interactive beside it);
- * now the same true-modal treatment `SubsystemDrawer` got in Phase 125 — see
+ * now the same true-modal treatment `DepartmentDrawer` got in Phase 125 — see
  * that component and `docs/superpowers/specs/2026-07-17-task-detail-modal-design.md`.
  * Reuses {@link RunDetail} verbatim as the body; this component only supplies
  * the surrounding modal chrome (backdrop, entrance/exit animation, floating
@@ -139,7 +139,7 @@ export function ChatTaskDetailColumn({
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Flips "entering" → "open" right after mount — same idiom and same
-  // `react-hooks/set-state-in-effect` justification as `SubsystemDrawer`
+  // `react-hooks/set-state-in-effect` justification as `DepartmentDrawer`
   // (phase 125): a `requestAnimationFrame` deferral would desync from
   // `renderWithProviders`' synchronous `act()` flush in tests.
   useEffect(() => {
@@ -163,7 +163,7 @@ export function ChatTaskDetailColumn({
     closeTimeoutRef.current = setTimeout(onClose, PANEL_EXIT_MS);
   }, [onClose]);
 
-  // Shares the DS `Dialog`'s overlay stack (the same one `SubsystemDrawer`
+  // Shares the DS `Dialog`'s overlay stack (the same one `DepartmentDrawer`
   // uses): `true` for this component's whole mounted lifetime, including the
   // `"closing"` phase, since the parent doesn't unmount it until
   // `requestClose`'s deferred `onClose` fires — scroll must stay locked

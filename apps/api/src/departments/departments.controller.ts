@@ -1,36 +1,39 @@
 import { Controller } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import { subsystemsContract } from "@zibby/contracts";
+import { departmentsContract } from "@zibby/contracts";
 import { makeErrorMapper } from "../shared/http/error-mapping";
-import { SubsystemNotFoundError } from "./subsystems.errors";
-import { SubsystemsService } from "./subsystems.service";
+import { DepartmentNotFoundError } from "./departments.errors";
+import { DepartmentsService } from "./departments.service";
 
-const errors = makeErrorMapper("Subsystem", {
-  missing: [SubsystemNotFoundError],
+const errors = makeErrorMapper("Department", {
+  missing: [DepartmentNotFoundError],
 });
 
 /**
- * Implements `subsystemsContract` against the fixed `SUBSYSTEMS` registry. Not to
- * be confused with `HealthModule`'s `SubsystemHealthService` — unrelated concept
+ * Implements `departmentsContract` against the fixed `DEPARTMENTS` registry. Not to
+ * be confused with `HealthModule`'s `DepartmentHealthService` — unrelated concept
  * (liveness of backend/vault/integrations/scheduler), never touched here.
  */
 @Controller()
-export class SubsystemsController {
-  constructor(private readonly subsystems: SubsystemsService) {}
+export class DepartmentsController {
+  constructor(private readonly departments: DepartmentsService) {}
 
-  @TsRestHandler(subsystemsContract)
+  @TsRestHandler(departmentsContract)
   handler() {
-    return tsRestHandler(subsystemsContract, {
-      getSubsystems: async () => ({ status: 200, body: await this.subsystems.list() }),
+    return tsRestHandler(departmentsContract, {
+      getDepartments: async () => ({ status: 200, body: await this.departments.list() }),
 
-      listUnownedEntities: async () => ({ status: 200, body: await this.subsystems.listUnowned() }),
+      listUnownedEntities: async () => ({
+        status: 200,
+        body: await this.departments.listUnowned(),
+      }),
 
-      getSubsystem: ({ params: { id } }) => errors.or404(id, async () => this.subsystems.get(id)),
+      getDepartment: ({ params: { id } }) => errors.or404(id, async () => this.departments.get(id)),
 
-      markSubsystemSeen: ({ params: { id } }) =>
-        errors.or404(id, async () => this.subsystems.markSeen(id)),
+      markDepartmentSeen: ({ params: { id } }) =>
+        errors.or404(id, async () => this.departments.markSeen(id)),
 
-      getRoster: ({ params: { id } }) => errors.or404(id, async () => this.subsystems.roster(id)),
+      getRoster: ({ params: { id } }) => errors.or404(id, async () => this.departments.roster(id)),
     });
   }
 }

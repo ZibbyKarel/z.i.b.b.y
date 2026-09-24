@@ -1,11 +1,11 @@
-import { type ArtifactRecord, SUBSYSTEMS, type SubsystemWithStatus } from "@zibby/contracts";
+import { type ArtifactRecord, DEPARTMENTS, type DepartmentWithStatus } from "@zibby/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen } from "../../../../test/render";
 import type { Pipeline } from "../../../../domain";
 import { ArtefaktyTab, ArtefaktyTabTestId } from "./ArtefaktyTab";
 
-const FORGE: SubsystemWithStatus = {
-  ...SUBSYSTEMS.find((s) => s.id === "forge")!,
+const DEV: DepartmentWithStatus = {
+  ...DEPARTMENTS.find((s) => s.id === "dev")!,
   state: "idle",
   tier2Count: 0,
   tier3Count: 0,
@@ -68,7 +68,7 @@ describe("ArtefaktyTab (Phase 88)", () => {
     hooks.pipelines = [
       pipelineFixture({
         id: "delivery",
-        ownerSubsystem: "forge",
+        department: "dev",
         outputs: [
           { type: "pr", from: "pr-draft.md" },
           { type: "file", from: "report.md", dest: "vault", to: "audit-report" },
@@ -77,7 +77,7 @@ describe("ArtefaktyTab (Phase 88)", () => {
     ];
     hooks.artifacts = [];
 
-    render(<ArtefaktyTab subsystem={FORGE} />);
+    render(<ArtefaktyTab department={DEV} />);
 
     const rows = screen.getAllByTestId(ArtefaktyTabTestId.ProduceRow);
     expect(rows).toHaveLength(2);
@@ -88,10 +88,10 @@ describe("ArtefaktyTab (Phase 88)", () => {
   });
 
   it("shows an honest single-line note when owned pipelines configure no outputs", () => {
-    hooks.pipelines = [pipelineFixture({ id: "delivery", ownerSubsystem: "forge", outputs: [] })];
+    hooks.pipelines = [pipelineFixture({ id: "delivery", department: "dev", outputs: [] })];
     hooks.artifacts = [];
 
-    render(<ArtefaktyTab subsystem={FORGE} />);
+    render(<ArtefaktyTab department={DEV} />);
 
     expect(screen.getByTestId(ArtefaktyTabTestId.ProduceEmpty)).toBeInTheDocument();
     expect(screen.queryByTestId(ArtefaktyTabTestId.ProduceRow)).toBeNull();
@@ -99,8 +99,8 @@ describe("ArtefaktyTab (Phase 88)", () => {
 
   it("history filters the artifact registry to runs of owned pipelines only", () => {
     hooks.pipelines = [
-      pipelineFixture({ id: "delivery", ownerSubsystem: "forge" }),
-      pipelineFixture({ id: "other", ownerSubsystem: "loom" }),
+      pipelineFixture({ id: "delivery", department: "dev" }),
+      pipelineFixture({ id: "other", department: "qa" }),
     ];
     hooks.artifacts = [
       artifactFixture({ id: "owned-1", producedBy: { runRef: "run-1", pipelineId: "delivery" } }),
@@ -113,7 +113,7 @@ describe("ArtefaktyTab (Phase 88)", () => {
       }),
     ];
 
-    render(<ArtefaktyTab subsystem={FORGE} />);
+    render(<ArtefaktyTab department={DEV} />);
 
     const rows = screen.getAllByTestId(ArtefaktyTabTestId.HistoryRow);
     expect(rows).toHaveLength(1);
@@ -121,10 +121,10 @@ describe("ArtefaktyTab (Phase 88)", () => {
   });
 
   it("a pr artifact's link opens externally with rel=noreferrer", () => {
-    hooks.pipelines = [pipelineFixture({ id: "delivery", ownerSubsystem: "forge" })];
+    hooks.pipelines = [pipelineFixture({ id: "delivery", department: "dev" })];
     hooks.artifacts = [artifactFixture()];
 
-    render(<ArtefaktyTab subsystem={FORGE} />);
+    render(<ArtefaktyTab department={DEV} />);
 
     const link = screen.getByTestId(ArtefaktyTabTestId.ArtifactLink);
     expect(link).toHaveAttribute("href", "https://github.com/example/repo/pull/1");
@@ -132,24 +132,24 @@ describe("ArtefaktyTab (Phase 88)", () => {
     expect(link).toHaveAttribute("target", "_blank");
   });
 
-  it("shows an honest empty state for the history section when the subsystem owns pipelines but nothing was delivered", () => {
-    hooks.pipelines = [pipelineFixture({ id: "delivery", ownerSubsystem: "forge" })];
+  it("shows an honest empty state for the history section when the department owns pipelines but nothing was delivered", () => {
+    hooks.pipelines = [pipelineFixture({ id: "delivery", department: "dev" })];
     hooks.artifacts = [];
 
-    render(<ArtefaktyTab subsystem={FORGE} />);
+    render(<ArtefaktyTab department={DEV} />);
 
     expect(screen.getByTestId(ArtefaktyTabTestId.HistoryEmpty)).toBeInTheDocument();
   });
 
-  it("shows a single combined empty state, translated, when the subsystem owns no pipeline at all", () => {
+  it("shows a single combined empty state, translated, when the department owns no pipeline at all", () => {
     hooks.pipelines = [];
     hooks.artifacts = [];
 
-    render(<ArtefaktyTab subsystem={FORGE} />);
+    render(<ArtefaktyTab department={DEV} />);
 
     expect(screen.getByTestId(ArtefaktyTabTestId.CombinedEmpty)).toBeInTheDocument();
     expect(
-      screen.getByText("Tenhle podsystém si zatím nevlastní žádnou pipeline"),
+      screen.getByText("Tohle oddělení si zatím nevlastní žádnou pipeline"),
     ).toBeInTheDocument();
     expect(screen.queryByTestId(ArtefaktyTabTestId.Produce)).toBeNull();
     expect(screen.queryByTestId(ArtefaktyTabTestId.History)).toBeNull();

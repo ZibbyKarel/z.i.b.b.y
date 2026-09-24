@@ -1,4 +1,4 @@
-import { type Agent, SUBSYSTEMS, type SubsystemWithStatus } from "@zibby/contracts";
+import { type Agent, DEPARTMENTS, type DepartmentWithStatus } from "@zibby/contracts";
 import {
   CoreOrbTestId,
   DEFAULT_DURATION_MS,
@@ -16,7 +16,7 @@ import { installEventSourceMock } from "../../../test/eventSourceMock";
 import { RunEventsProvider } from "../../runs/runEvents";
 import type { RunView } from "../../runs/run";
 import { renderWithProviders, screen, within } from "../../../test/render";
-import { SubsystemOrbMap, SubsystemOrbMapTestId } from "./SubsystemOrbMap";
+import { DepartmentOrbMap, DepartmentOrbMapTestId } from "./DepartmentOrbMap";
 
 // The provider reads `API_URL` off the env; pin it so its `EventSource` opens
 // (mirrors `ChatScreen.test.tsx`'s own pattern for the same reason).
@@ -25,10 +25,11 @@ vi.mock("../../../state/api", async (importOriginal) => {
   return { ...actual, API_URL: "http://localhost:3333" };
 });
 
-function subsystem(overrides: Partial<SubsystemWithStatus> = {}): SubsystemWithStatus {
-  const base = SUBSYSTEMS[0]!;
+function department(overrides: Partial<DepartmentWithStatus> = {}): DepartmentWithStatus {
+  const base = DEPARTMENTS[0]!;
   return {
     id: base.id,
+    code: base.code,
     name: base.name,
     tagline: base.tagline,
     mandate: base.mandate,
@@ -41,12 +42,12 @@ function subsystem(overrides: Partial<SubsystemWithStatus> = {}): SubsystemWithS
   };
 }
 
-/** All 8 registry subsystems, each `idle` by default, some overridable by id. */
-function allSubsystems(
-  overrides: Record<string, Partial<SubsystemWithStatus>> = {},
-): SubsystemWithStatus[] {
-  return SUBSYSTEMS.map((s) =>
-    subsystem({ id: s.id, name: s.name, color: s.color, ...(overrides[s.id] ?? {}) }),
+/** All 8 registry departments, each `idle` by default, some overridable by id. */
+function allDepartments(
+  overrides: Record<string, Partial<DepartmentWithStatus>> = {},
+): DepartmentWithStatus[] {
+  return DEPARTMENTS.map((s) =>
+    department({ id: s.id, name: s.name, color: s.color, ...(overrides[s.id] ?? {}) }),
   );
 }
 
@@ -77,57 +78,57 @@ function run(overrides: Partial<RunView> = {}): RunView {
   } as RunView;
 }
 
-describe("SubsystemOrbMap", () => {
+describe("DepartmentOrbMap", () => {
   it("renders the root and all 8 registry nodes", () => {
     renderWithProviders(
-      <SubsystemOrbMap
+      <DepartmentOrbMap
         agents={[]}
+        departments={allDepartments()}
         onOpenCore={vi.fn()}
-        onSelectSubsystem={vi.fn()}
+        onSelectDepartment={vi.fn()}
         pipelines={[]}
         runs={[]}
-        subsystems={allSubsystems()}
         thinking={false}
       />,
     );
 
-    expect(screen.getByTestId(SubsystemOrbMapTestId.Root)).toBeInTheDocument();
-    for (const s of SUBSYSTEMS) {
+    expect(screen.getByTestId(DepartmentOrbMapTestId.Root)).toBeInTheDocument();
+    for (const s of DEPARTMENTS) {
       expect(screen.getByTestId(`${OrbMapTestId.Node}-${s.id}`)).toBeInTheDocument();
     }
   });
 
-  it("clicking a node fires onSelectSubsystem with its id", async () => {
+  it("clicking a node fires onSelectDepartment with its id", async () => {
     const user = userEvent.setup();
-    const onSelectSubsystem = vi.fn();
+    const onSelectDepartment = vi.fn();
     renderWithProviders(
-      <SubsystemOrbMap
+      <DepartmentOrbMap
         agents={[]}
+        departments={allDepartments()}
         onOpenCore={vi.fn()}
-        onSelectSubsystem={onSelectSubsystem}
+        onSelectDepartment={onSelectDepartment}
         pipelines={[]}
         runs={[]}
-        subsystems={allSubsystems()}
         thinking={false}
       />,
     );
 
-    const wrapper = screen.getByTestId(`${OrbMapTestId.Node}-puls`);
+    const wrapper = screen.getByTestId(`${OrbMapTestId.Node}-ops`);
     await user.click(within(wrapper).getByTestId(OrbNodeTestId.Root));
-    expect(onSelectSubsystem).toHaveBeenCalledWith("puls");
+    expect(onSelectDepartment).toHaveBeenCalledWith("ops");
   });
 
   it("clicking the core fires onOpenCore", async () => {
     const user = userEvent.setup();
     const onOpenCore = vi.fn();
     renderWithProviders(
-      <SubsystemOrbMap
+      <DepartmentOrbMap
         agents={[]}
+        departments={allDepartments()}
         onOpenCore={onOpenCore}
-        onSelectSubsystem={vi.fn()}
+        onSelectDepartment={vi.fn()}
         pipelines={[]}
         runs={[]}
-        subsystems={allSubsystems()}
         thinking={false}
       />,
     );
@@ -137,105 +138,107 @@ describe("SubsystemOrbMap", () => {
     expect(onOpenCore).toHaveBeenCalledTimes(1);
   });
 
-  it("falls back to idle for a subsystem missing from the roster", () => {
-    // Drop `loom` from the roster entirely — the node still renders (fixed
+  it("falls back to idle for a department missing from the roster", () => {
+    // Drop `qa` from the roster entirely — the node still renders (fixed
     // registry order) and falls back to `idle`/0 rather than throwing.
-    const subsystems = allSubsystems().filter((s) => s.id !== "loom");
+    const departments = allDepartments().filter((s) => s.id !== "qa");
     renderWithProviders(
-      <SubsystemOrbMap
+      <DepartmentOrbMap
         agents={[]}
+        departments={departments}
         onOpenCore={vi.fn()}
-        onSelectSubsystem={vi.fn()}
+        onSelectDepartment={vi.fn()}
         pipelines={[]}
         runs={[]}
-        subsystems={subsystems}
         thinking={false}
       />,
     );
 
-    const wrapper = screen.getByTestId(`${OrbMapTestId.Node}-loom`);
-    expect(within(wrapper).getByTestId(OrbNodeTestId.Root)).toHaveAccessibleName("Loom, V klidu");
+    const wrapper = screen.getByTestId(`${OrbMapTestId.Node}-qa`);
+    expect(within(wrapper).getByTestId(OrbNodeTestId.Root)).toHaveAccessibleName(
+      "QA & Architecture, V klidu",
+    );
   });
 
-  it("wires each node's accessible name to name + localized state via subsystems.nodeAria", () => {
+  it("wires each node's accessible name to name + localized state via departments.nodeAria", () => {
     renderWithProviders(
-      <SubsystemOrbMap
+      <DepartmentOrbMap
         agents={[]}
+        departments={allDepartments({ dev: { state: "running" } })}
         onOpenCore={vi.fn()}
-        onSelectSubsystem={vi.fn()}
+        onSelectDepartment={vi.fn()}
         pipelines={[]}
         runs={[]}
-        subsystems={allSubsystems({ forge: { state: "running" } })}
         thinking={false}
       />,
     );
 
-    const wrapper = screen.getByTestId(`${OrbMapTestId.Node}-forge`);
-    expect(within(wrapper).getByTestId(OrbNodeTestId.Root)).toHaveAccessibleName("Forge, Běží");
+    const wrapper = screen.getByTestId(`${OrbMapTestId.Node}-dev`);
+    expect(within(wrapper).getByTestId(OrbNodeTestId.Root)).toHaveAccessibleName(
+      "Development, Běží",
+    );
   });
 
   it("an owned failed run reads as the error state (red incident halo)", () => {
     renderWithProviders(
-      <SubsystemOrbMap
+      <DepartmentOrbMap
         agents={[]}
+        departments={allDepartments({ sec: { state: "error", errorCount: 1 } })}
         onOpenCore={vi.fn()}
-        onSelectSubsystem={vi.fn()}
+        onSelectDepartment={vi.fn()}
         pipelines={[]}
         runs={[]}
-        subsystems={allSubsystems({ sentinel: { state: "error", errorCount: 1 } })}
         thinking={false}
       />,
     );
 
-    const wrapper = screen.getByTestId(`${OrbMapTestId.Node}-sentinel`);
-    expect(within(wrapper).getByTestId(OrbNodeTestId.Root)).toHaveAccessibleName("Sentinel, Chyba");
+    const wrapper = screen.getByTestId(`${OrbMapTestId.Node}-sec`);
+    expect(within(wrapper).getByTestId(OrbNodeTestId.Root)).toHaveAccessibleName("Security, Chyba");
     expect(within(wrapper).getByTestId(OrbNodeTestId.Halo)).toHaveStyle({
       border: "1.5px solid #ff6b6b",
     });
   });
 
   it("derives a node's activeCount from active runs owned by its pipeline", () => {
-    const pipelines = [pipeline({ id: "forge-a", ownerSubsystem: "forge" })];
+    const pipelines = [pipeline({ id: "dev-a", department: "dev" })];
     const runs = [
-      run({ runId: "r1", owner: "forge-a", status: "running" }),
-      run({ runId: "r2", owner: "forge-a", status: "queued" }),
+      run({ runId: "r1", owner: "dev-a", status: "running" }),
+      run({ runId: "r2", owner: "dev-a", status: "queued" }),
     ];
     renderWithProviders(
-      <SubsystemOrbMap
+      <DepartmentOrbMap
         agents={[]}
+        departments={allDepartments()}
         onOpenCore={vi.fn()}
-        onSelectSubsystem={vi.fn()}
+        onSelectDepartment={vi.fn()}
         pipelines={pipelines}
         runs={runs}
-        subsystems={allSubsystems()}
         thinking={false}
       />,
     );
 
     // One `OrbitField` dot per active task — the node's own `OrbitField` instance
     // renders exactly the 2 active runs above as orbiting dots.
-    const wrapper = screen.getByTestId(`${OrbMapTestId.Node}-forge`);
+    const wrapper = screen.getByTestId(`${OrbMapTestId.Node}-dev`);
     expect(within(wrapper).getAllByTestId(OrbitFieldTestId.Dot)).toHaveLength(2);
   });
 
-  it("an agent-kind running run whose agent has ownerSubsystem renders one OrbitField dot", () => {
-    const agents = [
-      { id: "koder", name: "Kodér", instructions: "x", ownerSubsystem: "forge" } as Agent,
-    ];
+  it("an agent-kind running run whose agent has department renders one OrbitField dot", () => {
+    const agents = [{ id: "koder", name: "Kodér", instructions: "x", department: "dev" } as Agent];
     const runs = [run({ runId: "r1", kind: "agent", owner: "koder", status: "running" })];
     renderWithProviders(
-      <SubsystemOrbMap
+      <DepartmentOrbMap
         agents={agents}
+        departments={allDepartments()}
         onOpenCore={vi.fn()}
-        onSelectSubsystem={vi.fn()}
+        onSelectDepartment={vi.fn()}
         pipelines={[]}
         runs={runs}
-        subsystems={allSubsystems()}
         thinking={false}
       />,
     );
 
-    const wrapper = screen.getByTestId(`${OrbMapTestId.Node}-forge`);
+    const wrapper = screen.getByTestId(`${OrbMapTestId.Node}-dev`);
     expect(within(wrapper).getAllByTestId(OrbitFieldTestId.Dot)).toHaveLength(1);
   });
 
@@ -251,28 +254,28 @@ describe("SubsystemOrbMap", () => {
       vi.useRealTimers();
     });
 
-    /** Mounts `SubsystemOrbMap` under a real `RunEventsProvider` so a mocked SSE
+    /** Mounts `DepartmentOrbMap` under a real `RunEventsProvider` so a mocked SSE
      * frame reaches the adapter's own `onRunEvent` subscription — exactly the bus
      * `ChatScreen`'s real tree provides at `apps/web/app/providers.tsx`. */
     function renderUnderBus(pipelines: Pipeline[], runs: RunView[]) {
       renderWithProviders(
         <RunEventsProvider>
-          <SubsystemOrbMap
+          <DepartmentOrbMap
             agents={[]}
+            departments={allDepartments()}
             onOpenCore={vi.fn()}
-            onSelectSubsystem={vi.fn()}
+            onSelectDepartment={vi.fn()}
             pipelines={pipelines}
             runs={runs}
-            subsystems={allSubsystems()}
             thinking={false}
           />
         </RunEventsProvider>,
       );
     }
 
-    it("a dispatch run-event (pipeline-runs → running) appends a flare from the core to the owning subsystem", () => {
-      const pipelines = [pipeline({ id: "forge-a", ownerSubsystem: "forge" })];
-      const runs = [run({ runId: "r1", owner: "forge-a", status: "running" })];
+    it("a dispatch run-event (pipeline-runs → running) appends a flare from the core to the owning department", () => {
+      const pipelines = [pipeline({ id: "dev-a", department: "dev" })];
+      const runs = [run({ runId: "r1", owner: "dev-a", status: "running" })];
       renderUnderBus(pipelines, runs);
 
       expect(screen.queryByTestId(HandoffFlareTestId.Root)).toBeNull();
@@ -292,8 +295,8 @@ describe("SubsystemOrbMap", () => {
 
     it("onFlareDone prunes the flare once its comet lifetime ends", () => {
       vi.useFakeTimers();
-      const pipelines = [pipeline({ id: "forge-a", ownerSubsystem: "forge" })];
-      const runs = [run({ runId: "r1", owner: "forge-a", status: "running" })];
+      const pipelines = [pipeline({ id: "dev-a", department: "dev" })];
+      const runs = [run({ runId: "r1", owner: "dev-a", status: "running" })];
       renderUnderBus(pipelines, runs);
 
       act(() => {

@@ -21,7 +21,7 @@ export interface ProjectCompanyPanelProps {
   companyId?: string;
 }
 
-/** The `SelectField` sentinel value for "no company" — an id can never be empty. */
+/** The `SelectField` security value for "no company" — an id can never be empty. */
 const NO_COMPANY = "";
 
 /** Full (root-namespace) i18n key for each fixed `Integration.kind` value. */

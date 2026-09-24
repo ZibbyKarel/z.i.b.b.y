@@ -47,8 +47,8 @@ excluding the composite `app.contract.ts` and the shared `common.schema.ts`):
 | `channels/`        | `ChannelItemSchema`                                                                                                              | Inbound channel items                                                                                                |
 | `mandate/`         | `MandateSchema`                                                                                                                  | Autonomy scope                                                                                                       |
 | `health/`          | `HealthStatusSchema`                                                                                                             | System health status                                                                                                 |
-| `subsystems/`      | `SubsystemSchema`, `SubsystemWithStatusSchema`                                                                                   | GAIA-style federation registry (8 named subsystems) + status                                                         |
-| `handoff/`         | `HandoffRuleSchema`, `HandoffSignalSchema`, `HandoffProposalSchema`                                                              | Cross-subsystem handoff rules (see `docs/api/handoff.md`)                                                            |
+| `departments/`     | `DepartmentSchema`, `DepartmentWithStatusSchema`                                                                                 | GAIA-style federation registry (8 named departments) + status                                                        |
+| `handoff/`         | `HandoffRuleSchema`, `HandoffSignalSchema`, `HandoffProposalSchema`                                                              | Cross-department handoff rules (see `docs/api/handoff.md`)                                                           |
 | `self/`            | `SelfStatusSchema`, `SelfUpdateResultSchema`                                                                                     | The ZIBBY install repo's own freshness + operator-triggered self-update                                              |
 | `self-knowledge/`  | `SelfKnowledgeSchema`, `SelfKnowledgeSectionsSchema`                                                                             | The machine-generated self-knowledge snapshot (read-only; regeneration is a CLI concern)                             |
 | `limits/`          | `LimitsSchema`                                                                                                                   | Budget and rate limits                                                                                               |
@@ -230,7 +230,7 @@ export const appContract = c.router({
   channels: channelsContract,
   mandate: mandateContract,
   health: healthContract,
-  subsystems: subsystemsContract,
+  departments: departmentsContract,
   self: selfContract,
   selfKnowledge: selfKnowledgeContract,
   limits: limitsContract,

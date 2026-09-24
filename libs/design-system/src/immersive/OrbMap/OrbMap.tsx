@@ -18,11 +18,11 @@ export enum OrbMapTestId {
 }
 
 export interface OrbMapNode {
-  /** Stable key (e.g. the subsystem id in the app). */
+  /** Stable key (e.g. the department id in the app). */
   id: string;
   /** Identity color of the orb body. */
   hex: string;
-  /** Conversational/subsystem state — drives motion, chrome color, and connector liveness. */
+  /** Conversational/department state — drives motion, chrome color, and connector liveness. */
   state: OrbState;
   /** Name shown under the orb. */
   label: string;

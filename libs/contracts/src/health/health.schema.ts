@@ -14,16 +14,16 @@ export const ClaudeHealthSchema = z.object({
 export type ClaudeHealth = z.infer<typeof ClaudeHealthSchema>;
 
 /**
- * One subsystem's health (M8). `status`: `ok` reachable/healthy, `degraded`
+ * One department's health (M8). `status`: `ok` reachable/healthy, `degraded`
  * answering but impaired (e.g. the scheduler loop intentionally disabled), `down`
  * unreachable. `detail` is a short human reason for a non-ok status.
  */
-export const SubsystemHealthSchema = z.object({
+export const DepartmentHealthSchema = z.object({
   name: z.enum(["backend", "vault", "integrations", "scheduler"]),
   status: z.enum(["ok", "degraded", "down"]),
   detail: z.string().optional(),
 });
-export type SubsystemHealth = z.infer<typeof SubsystemHealthSchema>;
+export type DepartmentHealth = z.infer<typeof DepartmentHealthSchema>;
 
 /** The heartbeat watchers probed for liveness (F6c; `roadmap` added 125h). Closed
  *  enum — a new watcher is added here on purpose, never a free-form string. */
@@ -57,10 +57,10 @@ export type WatcherHealth = z.infer<typeof WatcherHealthSchema>;
 
 /**
  * Liveness/readiness payload returned by `getHealth`. `status` is `"ok"` when the
- * process is up, the Claude CLI preflight passes, and every subsystem is ok;
+ * process is up, the Claude CLI preflight passes, and every department is ok;
  * `"degraded"` when the API answers but something is impaired (claude refused, or a
- * subsystem `degraded`/`down`). Plus dynamic process metadata (`uptime` in seconds,
- * ISO `timestamp`) and the per-subsystem breakdown (M8 — never fail silently).
+ * department `degraded`/`down`). Plus dynamic process metadata (`uptime` in seconds,
+ * ISO `timestamp`) and the per-department breakdown (M8 — never fail silently).
  *
  * `watchers` (F6c) carries the per-watcher heartbeat probes. A `stale` watcher
  * deliberately does NOT flip `status` to `degraded` in v1 (fail-open): it surfaces
@@ -71,7 +71,7 @@ export const HealthSchema = z.object({
   uptime: z.number().nonnegative(),
   timestamp: IsoDateTimeSchema,
   claude: ClaudeHealthSchema,
-  subsystems: z.array(SubsystemHealthSchema),
+  departments: z.array(DepartmentHealthSchema),
   watchers: z.array(WatcherHealthSchema),
 });
 export type Health = z.infer<typeof HealthSchema>;

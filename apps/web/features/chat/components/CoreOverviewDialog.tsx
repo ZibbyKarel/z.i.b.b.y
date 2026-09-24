@@ -1,6 +1,6 @@
 "use client";
 
-import type { SubsystemId, SubsystemWithStatus } from "@zibby/contracts";
+import type { DepartmentId, DepartmentWithStatus } from "@zibby/contracts";
 import {
   Container,
   Dialog,
@@ -12,22 +12,22 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { useSubsystemsQuery } from "../../subsystems/queries/useSubsystemsQuery";
+import { useDepartmentsQuery } from "../../departments/queries/useDepartmentsQuery";
 
 export enum CoreOverviewDialogTestId {
   Root = "core-overview-dialog-root",
   Close = "core-overview-dialog-close",
   Stat = "core-overview-dialog-stat",
-  SubsystemRow = "core-overview-dialog-subsystem-row",
+  DepartmentRow = "core-overview-dialog-department-row",
 }
 
 export interface CoreOverviewDialogProps {
   open: boolean;
   onClose: () => void;
-  /** Picks a subsystem for further inspection — wired to `SubsystemDrawer` by a
+  /** Picks a department for further inspection — wired to `DepartmentDrawer` by a
    * later task (C1). Fires before `onClose` so the caller can open its own
    * surface without racing this dialog's own close. */
-  onSelectSubsystem: (id: SubsystemId) => void;
+  onSelectDepartment: (id: DepartmentId) => void;
 }
 
 interface StateCounts {
@@ -39,7 +39,7 @@ interface StateCounts {
 }
 
 /** Pure tally of the roster by live state — feeds the 4 header stats. */
-function countByState(subs: SubsystemWithStatus[]): StateCounts {
+function countByState(subs: DepartmentWithStatus[]): StateCounts {
   return {
     running: subs.filter((s) => s.state === "running").length,
     error: subs.filter((s) => s.state === "error").length,
@@ -52,7 +52,7 @@ function countByState(subs: SubsystemWithStatus[]): StateCounts {
 /**
  * Center-orb overview modal (Velín-D task A1): what the operator sees when they
  * click the WebGL orb on `/chat` — a snapshot of the whole federation, not one
- * subsystem. Ports the `VcCoreDetailD` prototype's layout onto DS primitives: a
+ * department. Ports the `VcCoreDetailD` prototype's layout onto DS primitives: a
  * butler-mark header with a live `ok` status dot, a one-line derived summary, the
  * 4 state-tally stats (`running`/`report`/`waiting`/`idle`), then a 2-col roster grid.
  *
@@ -67,21 +67,21 @@ function countByState(subs: SubsystemWithStatus[]): StateCounts {
  * than a one-liner, and duplicating that subscription here would pull in
  * approval/channel detail this dialog doesn't show. Rendering a summary derived
  * from the roster's own state tally (already fetched for the stats row) needs no
- * second query and stays scoped to "what's happening across subsystems right now".
+ * second query and stays scoped to "what's happening across departments right now".
  *
- * Wiring `onSelectSubsystem` into the existing `SubsystemDrawer` and making the
+ * Wiring `onSelectDepartment` into the existing `DepartmentDrawer` and making the
  * orb open this dialog are both later tasks (C1) — this component only exports
- * the `{ open, onClose, onSelectSubsystem }` surface.
+ * the `{ open, onClose, onSelectDepartment }` surface.
  */
-export function CoreOverviewDialog({ open, onClose, onSelectSubsystem }: CoreOverviewDialogProps) {
+export function CoreOverviewDialog({ open, onClose, onSelectDepartment }: CoreOverviewDialogProps) {
   const t = useTranslations("chat.overview");
   const tChat = useTranslations("chat");
-  const tSubsystems = useTranslations("subsystems");
-  const { data: subsystems = [] } = useSubsystemsQuery();
+  const tDepartments = useTranslations("departments");
+  const { data: departments = [] } = useDepartmentsQuery();
 
   if (!open) return null;
 
-  const counts = countByState(subsystems);
+  const counts = countByState(departments);
   const stats: Array<{ key: keyof StateCounts; label: string }> = [
     { key: "running", label: t("statWorking") },
     { key: "error", label: t("statError") },
@@ -90,8 +90,8 @@ export function CoreOverviewDialog({ open, onClose, onSelectSubsystem }: CoreOve
     { key: "idle", label: t("statIdle") },
   ];
 
-  const selectSubsystem = (id: SubsystemId) => {
-    onSelectSubsystem(id);
+  const selectDepartment = (id: DepartmentId) => {
+    onSelectDepartment(id);
     onClose();
   };
 
@@ -110,7 +110,7 @@ export function CoreOverviewDialog({ open, onClose, onSelectSubsystem }: CoreOve
                   <StatusDot pulse tone="ok" />
                 </Stack>
                 <Typography size="xs" type="note" variant="secondary">
-                  {t("role", { count: subsystems.length })}
+                  {t("role", { count: departments.length })}
                 </Typography>
               </Stack>
             </Stack>
@@ -148,13 +148,13 @@ export function CoreOverviewDialog({ open, onClose, onSelectSubsystem }: CoreOve
           </Grid>
 
           <Stack gap="100">
-            <Typography type="label">{t("crossSubsystems")}</Typography>
+            <Typography type="label">{t("crossDepartments")}</Typography>
             <Grid cols={2} gap="100">
-              {subsystems.map((subsystem) => (
+              {departments.map((department) => (
                 <Pressable
-                  data-testid={CoreOverviewDialogTestId.SubsystemRow}
-                  key={subsystem.id}
-                  onClick={() => selectSubsystem(subsystem.id)}
+                  data-testid={CoreOverviewDialogTestId.DepartmentRow}
+                  key={department.id}
+                  onClick={() => selectDepartment(department.id)}
                 >
                   <Container
                     padding="150"
@@ -165,15 +165,15 @@ export function CoreOverviewDialog({ open, onClose, onSelectSubsystem }: CoreOve
                       <Stack align="center" direction="row" gap="100">
                         <Container
                           height="8px"
-                          style={{ backgroundColor: subsystem.color, borderRadius: "9999px" }}
+                          style={{ backgroundColor: department.color, borderRadius: "9999px" }}
                           width="8px"
                         />
                         <Typography size="sm" type="label" weight="semibold">
-                          {subsystem.name}
+                          {department.name}
                         </Typography>
                       </Stack>
                       <Typography size="xs" type="note" variant="tertiary">
-                        {tSubsystems(`state.${subsystem.state}`)}
+                        {tDepartments(`state.${department.state}`)}
                       </Typography>
                     </Stack>
                   </Container>

@@ -2,7 +2,7 @@
  * Neutralize the literal HTML-comment delimiters (`<!--` / `-->`) that the
  * self-knowledge composer's own `<!-- AUTO:<KEY>:START/END -->` block markers
  * depend on (`self-knowledge.composer.ts`'s `blockRegex`/`mergeAutoBlocks`/
- * `extractBlockContent`). Catalog-entity free-text (agent/pipeline/subsystem
+ * `extractBlockContent`). Catalog-entity free-text (agent/pipeline/department
  * names, descriptions, mandates, gate-rule names, channel kinds) is
  * interpolated into that markdown verbatim; a forged
  * `<!-- AUTO:GATES:END -->` inside one of those strings could prematurely

@@ -6,7 +6,7 @@ import { ArtifactsStorageService } from "./artifacts.storage.service";
 /**
  * Implements `artifactsContract` — READ-ONLY. Records are born only inside the
  * API (the pipeline delivery sinks write them), so there is deliberately no
- * write endpoint: a client can never forge provenance.
+ * write endpoint: a client can never fake provenance.
  */
 @Controller()
 export class ArtifactsController {

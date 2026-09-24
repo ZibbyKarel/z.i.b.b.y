@@ -22,7 +22,7 @@ const SAMPLES: StateSample[] = [
   },
   {
     state: "working",
-    label: "Forge",
+    label: "Dev",
     hex: "#f0b429",
     icon: "gear",
     activeCount: 3,
@@ -138,7 +138,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     diameter: 76,
     hex: "#f0b429",
     activeCount: 3,
-    label: "Forge",
+    label: "Dev",
     iconName: "gear",
   },
   render: ({ state, diameter, hex, activeCount, label, iconName }) => (

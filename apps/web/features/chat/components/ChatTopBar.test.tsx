@@ -16,9 +16,9 @@ vi.mock("../../pipelines/queries/usePipelinesQuery", () => ({
   usePipelinesQuery: () => ({ data: [] }),
   getPipelinesQueryKey: () => ["pipelines"],
 }));
-vi.mock("../../subsystems/queries/useSubsystemsQuery", () => ({
-  useSubsystemsQuery: () => ({ data: [] }),
-  getSubsystemsQueryKey: () => ["subsystems"],
+vi.mock("../../departments/queries/useDepartmentsQuery", () => ({
+  useDepartmentsQuery: () => ({ data: [] }),
+  getDepartmentsQueryKey: () => ["departments"],
 }));
 vi.mock("../../runs/queries/useRunsQuery", () => ({
   useRunsQuery: () => ({ runs: [], isPending: false, isError: false, refetch: vi.fn() }),
@@ -69,7 +69,7 @@ function renderTopBar() {
       onGenerateBriefing={vi.fn()}
       onNavigate={vi.fn()}
       onOpenRun={vi.fn()}
-      onSelectSubsystem={vi.fn()}
+      onSelectDepartment={vi.fn()}
       searchRef={searchRef()}
     />,
   );

@@ -361,9 +361,9 @@ describe("POST /api/kb/mcp — KbMcpController", () => {
 
   it("[run token, header present] resolves via rootsForRun with the header's run id", async () => {
     rootsForRun.mockResolvedValue([]);
-    const client = await connect(runToken, "codex_1000_4321");
+    const client = await connect(runToken, "knowledge_1000_4321");
     await client.callTool({ name: "search_team_kb", arguments: { query: "x" } });
-    expect(rootsForRun).toHaveBeenCalledWith("codex_1000_4321", undefined);
+    expect(rootsForRun).toHaveBeenCalledWith("knowledge_1000_4321", undefined);
     expect(rootsForChat).not.toHaveBeenCalled();
     await client.close();
   });
@@ -388,7 +388,7 @@ describe("POST /api/kb/mcp — KbMcpController", () => {
 
   it("[chat token, header PRESENT] STILL resolves via rootsForChat — the header carries no authority, only the token does", async () => {
     rootsForChat.mockResolvedValue([]);
-    const client = await connect(chatToken, "codex_1000_4321");
+    const client = await connect(chatToken, "knowledge_1000_4321");
     await client.callTool({ name: "search_team_kb", arguments: { query: "x" } });
     expect(rootsForChat).toHaveBeenCalledWith(undefined);
     expect(rootsForRun).not.toHaveBeenCalled();
@@ -404,21 +404,21 @@ describe("POST /api/kb/mcp — KbMcpController", () => {
 
   it("run path: search_team_kb still forwards the tool's team argument straight to rootsForRun, untouched by Task 8", async () => {
     rootsForRun.mockResolvedValue([]);
-    const client = await connect(runToken, "codex_1000_4321");
+    const client = await connect(runToken, "knowledge_1000_4321");
     await client.callTool({ name: "search_team_kb", arguments: { query: "x", team: "platform" } });
-    expect(rootsForRun).toHaveBeenCalledWith("codex_1000_4321", "platform");
+    expect(rootsForRun).toHaveBeenCalledWith("knowledge_1000_4321", "platform");
     expect(rootsForChat).not.toHaveBeenCalled();
     await client.close();
   });
 
   it("run path: read_team_kb_note still forwards the tool's team argument straight to rootsForRun, untouched by Task 8", async () => {
     rootsForRun.mockResolvedValue([]);
-    const client = await connect(runToken, "codex_1000_4321");
+    const client = await connect(runToken, "knowledge_1000_4321");
     await client.callTool({
       name: "read_team_kb_note",
       arguments: { noteId: "n1", team: "platform" },
     });
-    expect(rootsForRun).toHaveBeenCalledWith("codex_1000_4321", "platform");
+    expect(rootsForRun).toHaveBeenCalledWith("knowledge_1000_4321", "platform");
     expect(rootsForChat).not.toHaveBeenCalled();
     await client.close();
   });

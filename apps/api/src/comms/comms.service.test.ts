@@ -3,8 +3,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { Approval, ReplyLedgerEntry } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { HeraldGraduationStore } from "./herald-graduation.store";
-import { HeraldService } from "./herald.service";
+import { CommsGraduationStore } from "./comms-graduation.store";
+import { CommsService } from "./comms.service";
 import { ReplyLedgerStore } from "./reply-ledger.store";
 
 const fakeLogger = {
@@ -28,20 +28,20 @@ const entry = (over: Partial<ReplyLedgerEntry> = {}): ReplyLedgerEntry => {
   };
 };
 
-describe("HeraldService", () => {
+describe("CommsService", () => {
   let dir: string;
   let ledger: ReplyLedgerStore;
-  let graduation: HeraldGraduationStore;
+  let graduation: CommsGraduationStore;
   let requestApproval: ReturnType<typeof vi.fn>;
   let pendingApprovals: Approval[];
-  let service: HeraldService;
+  let service: CommsService;
 
   beforeEach(async () => {
-    dir = await fs.mkdtemp(path.join(os.tmpdir(), "herald-"));
-    process.env.HERALD_GRADUATION_THRESHOLD = "3";
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "comms-"));
+    process.env.COMMS_GRADUATION_THRESHOLD = "3";
     seq = 0;
     ledger = new ReplyLedgerStore(path.join(dir, "ledger"), fakeLogger as never);
-    graduation = new HeraldGraduationStore(path.join(dir, "graduations.json"), fakeLogger as never);
+    graduation = new CommsGraduationStore(path.join(dir, "graduations.json"), fakeLogger as never);
     pendingApprovals = [];
     requestApproval = vi.fn(async () => ({ id: "appr_grad_1" }));
     const approvals = {
@@ -49,7 +49,7 @@ describe("HeraldService", () => {
       requestApproval,
       list: vi.fn(async () => pendingApprovals),
     };
-    service = new HeraldService(
+    service = new CommsService(
       ledger,
       graduation,
       approvals as never,
@@ -58,7 +58,7 @@ describe("HeraldService", () => {
     );
   });
   afterEach(async () => {
-    delete process.env.HERALD_GRADUATION_THRESHOLD;
+    delete process.env.COMMS_GRADUATION_THRESHOLD;
     await fs.rm(dir, { recursive: true, force: true });
   });
 
@@ -73,12 +73,12 @@ describe("HeraldService", () => {
     return pending;
   }
 
-  it("a decision that completes the streak parks exactly one herald-graduation approval", async () => {
+  it("a decision that completes the streak parks exactly one comms-graduation approval", async () => {
     const pending = await seedStreak(2); // 2 approved + this approval = 3 = threshold
     await service.recordDecision(pending.itemId, "team", "question", "approved");
     expect(requestApproval).toHaveBeenCalledTimes(1);
     expect(requestApproval.mock.calls[0]![0]).toMatchObject({
-      kind: "herald-graduation",
+      kind: "comms-graduation",
       runId: "team/question",
       risk: "medium",
       action: "graduate-tier2",
@@ -93,7 +93,7 @@ describe("HeraldService", () => {
 
   it("a pending graduation approval for the pair suppresses a second park (no nagging)", async () => {
     pendingApprovals = [
-      { kind: "herald-graduation", runId: "team/question", status: "pending" } as Approval,
+      { kind: "comms-graduation", runId: "team/question", status: "pending" } as Approval,
     ];
     const pending = await seedStreak(5);
     await service.recordDecision(pending.itemId, "team", "question", "approved");

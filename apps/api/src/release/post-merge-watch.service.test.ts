@@ -80,7 +80,7 @@ describe("PostMergeWatchService", () => {
       evaluate: vi.fn(async () => ({
         action: "dispatched",
         runRef: "task_9",
-        target: { kind: "subsystem", id: "maestro" },
+        target: { kind: "department", id: "rel" },
       })),
     };
     activity = { record: vi.fn(async () => {}) };
@@ -118,7 +118,7 @@ describe("PostMergeWatchService", () => {
     expect(handoff.evaluate).toHaveBeenCalledTimes(1);
     expect(handoff.evaluate).toHaveBeenCalledWith(
       expect.objectContaining({
-        from: "maestro",
+        from: "rel",
         kind: "post-merge-red",
         projectId: "acme",
         fingerprint: `pm-red-${watch().id}`,

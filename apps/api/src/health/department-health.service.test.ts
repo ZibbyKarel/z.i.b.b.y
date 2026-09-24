@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { SubsystemHealthService } from "./subsystem-health.service";
+import { DepartmentHealthService } from "./department-health.service";
 
 function build(over: {
   vaultThrows?: boolean;
@@ -15,14 +15,14 @@ function build(over: {
   const scheduler = {
     health: () => over.scheduler ?? { running: true, tickMs: 60000, lastTickAt: null },
   };
-  return new SubsystemHealthService(vault as never, integrations as never, scheduler as never);
+  return new DepartmentHealthService(vault as never, integrations as never, scheduler as never);
 }
 
 function byName(rows: { name: string; status: string; detail?: string }[], name: string) {
   return rows.find((r) => r.name === name);
 }
 
-describe("SubsystemHealthService", () => {
+describe("DepartmentHealthService", () => {
   it("reports all ok when every probe succeeds and the loop is armed", async () => {
     const rows = await build({
       scheduler: { running: true, tickMs: 60000, lastTickAt: "2026-06-17T00:00:00.000Z" },

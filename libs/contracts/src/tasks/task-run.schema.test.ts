@@ -65,22 +65,22 @@ describe("TaskRunSchema — classification (F2c)", () => {
     expect(parsed.classification).toBeUndefined();
   });
 
-  it("round-trips a classification trace, including the delegated subsystem", () => {
+  it("round-trips a classification trace, including the delegated department", () => {
     const parsed = TaskRunSchema.parse({
       ...minimalRun,
       classification: {
-        stage1: { kind: "subsystem", id: "forge", name: "Forge" },
+        stage1: { kind: "department", id: "dev", name: "Dev" },
         confidence: 0.8,
-        reason: "matches forge's mandate",
+        reason: "matches dev's mandate",
         matchedTerms: ["ship"],
-        subsystem: "forge",
+        department: "dev",
       },
     });
-    expect(parsed.classification?.subsystem).toBe("forge");
+    expect(parsed.classification?.department).toBe("dev");
     expect(parsed.classification?.stage1).toEqual({
-      kind: "subsystem",
-      id: "forge",
-      name: "Forge",
+      kind: "department",
+      id: "dev",
+      name: "Dev",
     });
   });
 });

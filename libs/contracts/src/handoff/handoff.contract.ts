@@ -11,8 +11,8 @@ import {
 const c = initContract();
 
 /**
- * Cross-subsystem handoff rules (design doc
- * `docs/superpowers/specs/2026-07-22-subsystem-handoff-design.md`, Part A). Full
+ * Cross-department handoff rules (design doc
+ * `docs/superpowers/specs/2026-07-22-department-handoff-design.md`, Part A). Full
  * CRUD over the file-backed rule set (`HandoffRuleStore`, A2): the seeded system
  * rules (`system: true`) can be retuned but never deleted — a delete of a system
  * rule is a 403, mirrored by `HandoffRuleStore.delete`.
@@ -66,7 +66,7 @@ export const handoffContract = c.router(
         201: z.object({ signalKind: HandoffSignalKindSchema, buildTaskId: z.string() }),
       },
       summary:
-        "Register a new operator-authored signal kind (status: pending) and spawn a Forge build task to implement its emit",
+        "Register a new operator-authored signal kind (status: pending) and spawn a Dev build task to implement its emit",
     },
     updateSignalKind: {
       method: "PATCH",

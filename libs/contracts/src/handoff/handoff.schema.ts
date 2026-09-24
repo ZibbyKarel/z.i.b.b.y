@@ -1,23 +1,23 @@
 import { z } from "zod";
 import { IsoDateTimeSchema } from "../common.schema";
-import { SubsystemIdSchema } from "../subsystems/subsystem.schema";
-import { PipelineTaskTargetSchema, SubsystemTaskTargetSchema } from "../tasks/task.schema";
+import { DepartmentIdSchema } from "../departments/department.schema";
+import { DepartmentTaskTargetSchema, PipelineTaskTargetSchema } from "../tasks/task.schema";
 
 /**
- * Cross-subsystem handoff (design doc
- * `docs/superpowers/specs/2026-07-22-subsystem-handoff-design.md`, Part A): one
+ * Cross-department handoff (design doc
+ * `docs/superpowers/specs/2026-07-22-department-handoff-design.md`, Part A): one
  * declarative, auditable rule model replacing the three hard-coded producer→
- * consumer wires (Sentinel critical-CVE dispatch, Maestro post-merge-red dispatch,
- * Loom's deliberate no-dispatch) and the legacy `chains` feature's one-off,
- * operator-run sequence. A producer subsystem emits a normalized {@link HandoffSignal};
+ * consumer wires (Security critical-CVE dispatch, Release post-merge-red dispatch,
+ * Arch's deliberate no-dispatch) and the legacy `chains` feature's one-off,
+ * operator-run sequence. A producer department emits a normalized {@link HandoffSignal};
  * the engine matches it against standing {@link HandoffRule}s and either dispatches
  * silently (tier 1), dispatches and reports (tier 2), or parks a
  * {@link HandoffProposal} behind an approval gate (tier 3) — never a fourth path.
  */
 
 /**
- * A small ordered severity ladder. Only severity-bearing producers (today: Sentinel's
- * CVE findings) set {@link HandoffSignalSchema.severity}; Loom/Maestro/artifact
+ * A small ordered severity ladder. Only severity-bearing producers (today: Security's
+ * CVE findings) set {@link HandoffSignalSchema.severity}; Arch/Release/artifact
  * signals omit it, and a rule's `minSeverity` is then ignored for them (a
  * severity-less signal never fails a severity gate).
  */
@@ -38,23 +38,23 @@ export const HANDOFF_SEVERITY_ORDER: readonly HandoffSeverity[] = [
 ] as const;
 
 /**
- * The normalized thing a producer subsystem emits. Heterogeneous producers
- * (Sentinel/Loom/Maestro findings, a pipeline's delivered artifact) all map into
+ * The normalized thing a producer department emits. Heterogeneous producers
+ * (Security/Arch/Release findings, a pipeline's delivered artifact) all map into
  * this one shape before the engine ever sees them:
  *
- *  - `from`        — the producing subsystem (`SubsystemIdSchema`).
+ *  - `from`        — the producing department (`DepartmentIdSchema`).
  *  - `kind`         — a producer-defined signal kind (`"cve"`, `"secret"`,
  *                      `"post-merge-red"`, `"god-node"`, `"research-artifact"`, …);
  *                      matched against a rule's `signalKind` (exact, or the rule's
  *                      `"*"` wildcard).
- *  - `severity`     — only set by severity-bearing producers (Sentinel CVEs today).
+ *  - `severity`     — only set by severity-bearing producers (Security CVEs today).
  *  - `projectId`    — attribution only (Law 4), threaded into the dispatched task.
  *  - `title`/`body` — human-readable; `body` becomes the dispatched task's text.
  *  - `fingerprint`  — the producer's own dedupe key. Handoff is idempotent per
  *                      `(rule.id, fingerprint)` — the same finding never dispatches twice.
  */
 export const HandoffSignalSchema = z.object({
-  from: SubsystemIdSchema,
+  from: DepartmentIdSchema,
   kind: z.string().min(1),
   severity: HandoffSeveritySchema.optional(),
   projectId: z.string().optional(),
@@ -65,21 +65,21 @@ export const HandoffSignalSchema = z.object({
 export type HandoffSignal = z.infer<typeof HandoffSignalSchema>;
 
 /**
- * A handoff rule's dispatch destination — REUSES the `subsystem` and `pipeline`
+ * A handoff rule's dispatch destination — REUSES the `department` and `pipeline`
  * members of `TaskTargetSchema` (`../tasks/task.schema.ts`) rather than inventing a
  * parallel target concept, restricted to their routing identity (`kind` + `id`).
  * The full `TaskTarget` members also carry display metadata (`name`, `glyph`,
  * `avatar`, `category`) that a stored rule has no use for — a rule only ever names
- * *which* subsystem/pipeline to route to (`{subsystem: "forge"}` in the seed
+ * *which* department/pipeline to route to (`{department: "dev"}` in the seed
  * table), never how to render it; the dispatch path (`TaskSchedulerService`,
- * A2/A3) resolves the id against the live subsystem/pipeline registry to build the
+ * A2/A3) resolves the id against the live department/pipeline registry to build the
  * fully-decorated `TaskTarget` it actually schedules with. Picking `kind`/`id`
  * off the same member schemas (not redeclaring them) keeps the two field types
  * identical by construction, so a resolved `HandoffTarget` id always round-trips
- * through the same `SubsystemIdSchema/AgentIdSchema` validation `TaskTarget` uses.
+ * through the same `DepartmentIdSchema/AgentIdSchema` validation `TaskTarget` uses.
  */
 export const HandoffTargetSchema = z.discriminatedUnion("kind", [
-  SubsystemTaskTargetSchema.pick({ kind: true, id: true }),
+  DepartmentTaskTargetSchema.pick({ kind: true, id: true }),
   PipelineTaskTargetSchema.pick({ kind: true, id: true }),
 ]);
 export type HandoffTarget = z.infer<typeof HandoffTargetSchema>;
@@ -91,7 +91,7 @@ export type HandoffTarget = z.infer<typeof HandoffTargetSchema>;
  * Part-2 rule-editor UI ships (v1 here is seeded + read-only list).
  *
  *  - `from`/`signalKind` — match a `HandoffSignal`'s `from` exactly and its `kind`
- *    exactly OR via the `"*"` wildcard (any kind from that subsystem).
+ *    exactly OR via the `"*"` wildcard (any kind from that department).
  *  - `minSeverity`       — only applied when the matched signal itself carries a
  *                           severity; ignored for severity-less signals.
  *  - `to`                 — the resolved destination once the rule fires.
@@ -104,7 +104,7 @@ export type HandoffTarget = z.infer<typeof HandoffTargetSchema>;
  */
 export const HandoffRuleSchema = z.object({
   id: z.string().min(1),
-  from: SubsystemIdSchema,
+  from: DepartmentIdSchema,
   signalKind: z.string().min(1),
   minSeverity: HandoffSeveritySchema.optional(),
   to: HandoffTargetSchema,
@@ -125,7 +125,7 @@ export type HandoffRuleInput = z.infer<typeof HandoffRuleInputSchema>;
  * A signal-kind's lifecycle (design doc
  * `docs/superpowers/specs/2026-07-22-handoff-signal-registry-and-receiver-filter-design.md`,
  * Slot B): `"builtin"` — one of the 7 seeded kinds a producer service already
- * emits; `"pending"` — operator-registered, no producer emits it yet (a Forge
+ * emits; `"pending"` — operator-registered, no producer emits it yet (a Dev
  * build task exists to implement the emit); `"active"` — a `pending` kind that
  * has been seen at least once by `HandoffService.evaluate` (B4, auto-activation
  * — not part of this slice).
@@ -138,13 +138,13 @@ export type HandoffSignalKindStatus = z.infer<typeof HandoffSignalKindStatusSche
  * `HandoffSignal.kind` string means, who produces it, and whether it carries a
  * severity (drives whether a rule editor's severity pill is meaningful for it).
  * Built-in kinds (`system: true`) are the 7 kinds the 4 existing producers
- * (Sentinel/Maestro/Loom/Scout) already emit — seeded, view-only, non-deletable.
+ * (Security/Release/Arch/Research) already emit — seeded, view-only, non-deletable.
  * Operator-registered kinds start `status: "pending"` and carry a `buildTaskId`
- * linking to the Forge build task that will implement the emit.
+ * linking to the Dev build task that will implement the emit.
  */
 export const HandoffSignalKindSchema = z.object({
   id: z.string().min(1),
-  from: SubsystemIdSchema,
+  from: DepartmentIdSchema,
   label: z.string().min(1),
   description: z.string().min(1),
   severityBearing: z.boolean(),
@@ -169,7 +169,7 @@ export type HandoffSignalKindInput = z.infer<typeof HandoffSignalKindInputSchema
  * A parked tier-3 handoff, gated behind a `"handoff-proposal"` approval
  * (`../approvals/approval.schema.ts`). The full payload the engine needs to
  * dispatch on approval: which rule fired, the signal that triggered it, and the
- * resolved target — mirrors the agent-factory candidate / herald-graduation
+ * resolved target — mirrors the agent-factory candidate / comms-graduation
  * store's "durable payload, no live child" pattern.
  */
 export const HandoffProposalSchema = z.object({

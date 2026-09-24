@@ -13,8 +13,8 @@ const API = "http://localhost:3333";
  * CHANNEL approval's `runId` is a compound `<integrationId>/<itemId>` ref (contract
  * `ApprovalRunKindSchema` docblock), not a real entry in the unified runs feed. It
  * never appears in `/chat`'s task gutter or any `RunDetail`, and (per
- * `apps/api/src/subsystems/subsystems.service.ts`'s own docblock) it has no owning
- * subsystem either, so it never lights up the status pill's "waiting" flyout —
+ * `apps/api/src/departments/departments.service.ts`'s own docblock) it has no owning
+ * department either, so it never lights up the status pill's "waiting" flyout —
  * that trigger only counts approvals attributable to an owned pipeline/chain run.
  * **A channel approval currently has no UI surface to decide it from at all** — a
  * regression this deletion phase surfaces rather than causes (flagged in the F8d

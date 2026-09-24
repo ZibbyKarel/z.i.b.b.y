@@ -8,7 +8,7 @@ let entries: MergeQueueEntry[] = [];
 const mutate = vi.fn();
 vi.mock("../queries", () => ({
   useMergeQueueQuery: () => ({ data: { entries, generatedAt: "2026-07-17T00:00:00.000Z" } }),
-  getMergeQueueQueryKey: (projectId?: string) => ["maestro-queue", projectId ?? "all"],
+  getMergeQueueQueryKey: (projectId?: string) => ["release-queue", projectId ?? "all"],
 }));
 vi.mock("../../projects/mutations", () => ({
   useMergeProjectPrMutation: () => ({ mutate, isPending: false }),

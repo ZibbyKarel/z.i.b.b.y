@@ -39,9 +39,9 @@ describe("GlobalGateRule schema", () => {
   });
 });
 
-// Phase 87: subsystem attribution is optional and additive — existing untagged
+// Phase 87: department attribution is optional and additive — existing untagged
 // fixtures above (and every rule on disk today) must keep parsing unchanged.
-describe("GlobalGateRule ownerSubsystem (Phase 87)", () => {
+describe("GlobalGateRule department (Phase 87)", () => {
   const base = {
     id: "gr-merge",
     match: [{ type: "action" as const, action: "merge" }],
@@ -49,20 +49,20 @@ describe("GlobalGateRule ownerSubsystem (Phase 87)", () => {
   };
 
   it("round-trips a tagged rule", () => {
-    const parsed = GlobalGateRuleSchema.safeParse({ ...base, ownerSubsystem: "forge" });
+    const parsed = GlobalGateRuleSchema.safeParse({ ...base, department: "dev" });
     expect(parsed.success).toBe(true);
-    if (parsed.success) expect(parsed.data.ownerSubsystem).toBe("forge");
+    if (parsed.success) expect(parsed.data.department).toBe("dev");
   });
 
-  it("leaves an untagged rule valid, with ownerSubsystem undefined", () => {
+  it("leaves an untagged rule valid, with department undefined", () => {
     const parsed = GlobalGateRuleSchema.safeParse(base);
     expect(parsed.success).toBe(true);
-    if (parsed.success) expect(parsed.data.ownerSubsystem).toBeUndefined();
+    if (parsed.success) expect(parsed.data.department).toBeUndefined();
   });
 
-  it("rejects an unknown subsystem id", () => {
+  it("rejects an unknown department id", () => {
     expect(
-      GlobalGateRuleInputSchema.safeParse({ ...base, ownerSubsystem: "not-a-subsystem" }).success,
+      GlobalGateRuleInputSchema.safeParse({ ...base, department: "not-a-department" }).success,
     ).toBe(false);
   });
 });

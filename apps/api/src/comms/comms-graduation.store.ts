@@ -1,15 +1,15 @@
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Inject, Injectable } from "@nestjs/common";
-import { type HeraldGraduation, HeraldGraduationSchema } from "@zibby/contracts";
+import { type CommsGraduation, CommsGraduationSchema } from "@zibby/contracts";
 import { z } from "zod";
 import { safeJson, writeFileAtomic } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 
 /** DI token for the single graduations JSON file. */
-export const HERALD_GRADUATION_FILE = "HERALD_GRADUATION_FILE";
+export const COMMS_GRADUATION_FILE = "COMMS_GRADUATION_FILE";
 
-const GraduationListSchema = z.array(HeraldGraduationSchema);
+const GraduationListSchema = z.array(CommsGraduationSchema);
 
 /**
  * NS2 F6a — the durable list of graduated `(integrationId, category)` pairs: a
@@ -19,16 +19,16 @@ const GraduationListSchema = z.array(HeraldGraduationSchema);
  * graduation rather than a throw).
  */
 @Injectable()
-export class HeraldGraduationStore {
+export class CommsGraduationStore {
   private readonly file: string;
   private readonly log: ScopedLogger;
 
-  constructor(@Inject(HERALD_GRADUATION_FILE) file: string, logger: LoggerService) {
+  constructor(@Inject(COMMS_GRADUATION_FILE) file: string, logger: LoggerService) {
     this.file = path.resolve(file);
-    this.log = logger.child(HeraldGraduationStore.name);
+    this.log = logger.child(CommsGraduationStore.name);
   }
 
-  async list(): Promise<HeraldGraduation[]> {
+  async list(): Promise<CommsGraduation[]> {
     const raw = await fs.readFile(this.file, "utf8").catch(() => null);
     if (raw === null) return [];
     const parsed = GraduationListSchema.safeParse(safeJson(raw));
@@ -41,14 +41,14 @@ export class HeraldGraduationStore {
 
   async isGraduated(
     integrationId: string,
-    category: HeraldGraduation["category"],
+    category: CommsGraduation["category"],
   ): Promise<boolean> {
     const all = await this.list();
     return all.some((g) => g.integrationId === integrationId && g.category === category);
   }
 
   /** Add a graduation (idempotent — replaces an existing entry for the same pair). */
-  async add(graduation: HeraldGraduation): Promise<void> {
+  async add(graduation: CommsGraduation): Promise<void> {
     const all = await this.list();
     const next = [
       ...all.filter(
@@ -61,13 +61,13 @@ export class HeraldGraduationStore {
   }
 
   /** Remove a graduation (downgrade / admin path). No-op if not present. */
-  async remove(integrationId: string, category: HeraldGraduation["category"]): Promise<void> {
+  async remove(integrationId: string, category: CommsGraduation["category"]): Promise<void> {
     const all = await this.list();
     const next = all.filter((g) => !(g.integrationId === integrationId && g.category === category));
     if (next.length !== all.length) await this.write(next);
   }
 
-  private async write(all: HeraldGraduation[]): Promise<void> {
+  private async write(all: CommsGraduation[]): Promise<void> {
     await fs.mkdir(path.dirname(this.file), { recursive: true });
     await writeFileAtomic(this.file, JSON.stringify(all, null, 2));
   }

@@ -45,11 +45,11 @@ DELETE /api/gate-rules/:id       remove a catalog rule
 ```
 
 A catalog rule (`GlobalGateRule`) is a `GateRuleInput` plus `id` and an optional
-`name`/`desc`. It also carries an optional `ownerSubsystem` (Phase 87 as a
+`name`/`desc`. It also carries an optional `department` (Phase 87 as a
 filter/auto-tag lens; **load-bearing since NS2 F3a**): a tagged rule is loaded by
-the evaluator as a third "subsystem" bucket for every run of a unit that subsystem
-owns — see _Per-subsystem bucket_ below. Untagged rules stay global/unowned and
-never enter any subsystem bucket. Agents and skills can carry a `gateRuleIds: [...]` field that names
+the evaluator as a third "department" bucket for every run of a unit that department
+owns — see _Per-department bucket_ below. Untagged rules stay global/unowned and
+never enter any department bucket. Agents and skills can carry a `gateRuleIds: [...]` field that names
 catalog rules by id — but this is **composed on the client** (the web UI reads an
 entity's `gateRuleIds` and renders/edits the referenced catalog rules alongside its
 inline `gates`). The runtime `GateEvaluatorService` does **not** read `gateRuleIds`
@@ -115,28 +115,28 @@ has no dependency on the agents store.
 
 ```
 rulesForAgent(input)                        = [...ownRules(input), ...floor()]
-rulesForAgentInSubsystem(input, subsystem?) = [...ownRules(input), ...subsystemRules(subsystem), ...floor()]
+rulesForAgentInDepartment(input, department?) = [...ownRules(input), ...departmentRules(department), ...floor()]
 ```
 
-Matching buckets the list into own / subsystem / floor (first match wins WITHIN a
+Matching buckets the list into own / department / floor (first match wins WITHIN a
 bucket) and the **strictest** bucket winner decides (`deny > ask > notify >
-allow`) — an agent or a subsystem rule can harden the floor, never weaken it.
-`subsystemId` absent degrades to exactly the two-bucket `rulesForAgent` result.
+allow`) — an agent or a department rule can harden the floor, never weaken it.
+`departmentId` absent degrades to exactly the two-bucket `rulesForAgent` result.
 
-### Per-subsystem bucket (NS2 F3a)
+### Per-department bucket (NS2 F3a)
 
-`subsystemRules(id)` = every catalog rule tagged `ownerSubsystem === id`
-(re-sourced `source: "subsystem"`, never locked), plus the subsystem's static
-tier-default catch-all from `SUBSYSTEM_TIER_DEFAULT` (contracts): all `null`
-except `beacon → ask` (its mandate IS Tier-3 surface-and-wait), appended as a
+`departmentRules(id)` = every catalog rule tagged `department === id`
+(re-sourced `source: "department"`, never locked), plus the department's static
+tier-default catch-all from `DEPARTMENT_TIER_DEFAULT` (contracts): all `null`
+except `incident → ask` (its mandate IS Tier-3 surface-and-wait), appended as a
 `{type: "context", context: "*"}` rule. The bucket applies **only** to runs of
-units owned by that subsystem — the acting subsystem derives from the owned unit
-(`agent.ownerSubsystem` for a non-orchestrator agent run,
-`pipeline.ownerSubsystem` for a pipeline stage), never from the task
+units owned by that department — the acting department derives from the owned unit
+(`agent.department` for a non-orchestrator agent run,
+`pipeline.department` for a pipeline stage), never from the task
 classification. Out of scope by decision: `evaluateForOrchestrator` (the
 orchestrator is synthetic/unowned) and the floor-only call sites
 (agent-proposal, task-scheduler budget guard). There is no write-time 422 for a
-weakening subsystem-tagged catalog rule (the evaluator sits downstream of the
+weakening department-tagged catalog rule (the evaluator sits downstream of the
 gate-rules module; injecting it back would cycle) — `matchOnce`'s
 strictest-of-buckets makes a weakening rule inert at eval time, which is the
 actual security boundary.

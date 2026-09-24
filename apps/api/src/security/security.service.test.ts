@@ -3,8 +3,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { Integration, Project } from "@zibby/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SubsystemFindingsStore } from "../subsystems/subsystem-findings.store";
-import { SentinelService } from "./sentinel.service";
+import { DepartmentFindingsStore } from "../departments/department-findings.store";
+import { SecurityService } from "./security.service";
 
 const PROJECT: Project = { id: "acme", name: "acme", path: "~/Projects/acme" };
 
@@ -51,7 +51,7 @@ function makeVault(body = "") {
       notes.set(id, { body: b });
       return { id };
     }),
-    updateIndex: vi.fn(async () => ({ id: "subsystem-sentinel-moc" })),
+    updateIndex: vi.fn(async () => ({ id: "department-security-moc" })),
     notes,
   };
 }
@@ -83,15 +83,15 @@ async function build(opts: BuildOpts) {
         : { present: true, isGitRepo: true, resolvedPath: opts.localPath },
   };
   const vault = opts.vault ?? makeVault();
-  // Fake HandoffService — SentinelService no longer dispatches directly (A3); it
+  // Fake HandoffService — SecurityService no longer dispatches directly (A3); it
   // normalizes each finding into a HandoffSignal and hands it to `evaluate`.
   const handoff = { evaluate: opts.evaluate ?? vi.fn(async () => ({ action: "none" })) };
   const activity = { record: vi.fn(async () => undefined) };
   const findingsDir =
-    opts.findingsDir ?? (await fs.mkdtemp(path.join(os.tmpdir(), "sentinel-findings-")));
-  const findingsStore = new SubsystemFindingsStore(findingsDir, makeLogger() as never);
+    opts.findingsDir ?? (await fs.mkdtemp(path.join(os.tmpdir(), "security-findings-")));
+  const findingsStore = new DepartmentFindingsStore(findingsDir, makeLogger() as never);
 
-  const service = new SentinelService(
+  const service = new SecurityService(
     projectsStore as never,
     resolvedProjects as never,
     credentials as never,
@@ -106,7 +106,7 @@ async function build(opts: BuildOpts) {
   return { service, vault, handoff, activity, findingsDir, findingsStore };
 }
 
-describe("SentinelService.scan", () => {
+describe("SecurityService.scan", () => {
   let tmpRepoDirs: string[] = [];
 
   afterEach(async () => {
@@ -114,7 +114,7 @@ describe("SentinelService.scan", () => {
     tmpRepoDirs = [];
   });
 
-  it("a new CVE finding writes a proposal note onto Sentinel's shelf, records activity, and hands off a cve signal", async () => {
+  it("a new CVE finding writes a proposal note onto Security's shelf, records activity, and hands off a cve signal", async () => {
     const fetchImpl = vi.fn(async () =>
       jsonResponse(200, [dependabotAlert({ security_advisory: { severity: "high" } })]),
     ) as unknown as typeof fetch;
@@ -125,18 +125,18 @@ describe("SentinelService.scan", () => {
     expect(findings).toHaveLength(1);
     expect(vault.createNote).toHaveBeenCalledTimes(1);
     expect(vault.updateIndex).toHaveBeenCalledWith(
-      "subsystem-sentinel-moc",
+      "department-sec-moc",
       "suggestions/security-findings",
       expect.any(String),
     );
     expect(activity.record).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: "subsystem-scan" }),
+      expect.objectContaining({ kind: "department-scan" }),
     );
     // Every finding is normalized and handed to the rule engine — a high CVE
     // maps to a non-critical handoff severity (the seed rule then gates it out).
     expect(handoff.evaluate).toHaveBeenCalledTimes(1);
     expect(handoff.evaluate).toHaveBeenCalledWith(
-      expect.objectContaining({ from: "sentinel", kind: "cve", severity: "high" }),
+      expect.objectContaining({ from: "sec", kind: "cve", severity: "high" }),
     );
   });
 
@@ -186,7 +186,7 @@ describe("SentinelService.scan", () => {
   });
 
   it("finds an AKIA-shaped secret in a scanned local clone; the finding line never contains the matched text", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "sentinel-repo-"));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "security-repo-"));
     tmpRepoDirs.push(root);
     const secret = "AKIAABCDEFGHIJKLMNOP";
     await fs.writeFile(path.join(root, "config.env"), `AWS_KEY=${secret}\n`, "utf8");
@@ -224,7 +224,7 @@ describe("SentinelService.scan", () => {
   });
 
   it("a clean directory finds no secrets", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "sentinel-repo-clean-"));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "security-repo-clean-"));
     tmpRepoDirs.push(root);
     await fs.writeFile(path.join(root, "readme.md"), "hello world\n", "utf8");
 
@@ -237,7 +237,7 @@ describe("SentinelService.scan", () => {
 
   it("a green scan (no delta from the last snapshot) writes no proposal note and dispatches nothing", async () => {
     const fetchImpl = vi.fn(async () => jsonResponse(200, [])) as unknown as typeof fetch;
-    const findingsDir = await fs.mkdtemp(path.join(os.tmpdir(), "sentinel-findings-"));
+    const findingsDir = await fs.mkdtemp(path.join(os.tmpdir(), "security-findings-"));
     const built1 = await build({ fetchImpl, findingsDir });
     await built1.service.scan(new Date());
 
@@ -287,7 +287,7 @@ describe("SentinelService.scan", () => {
   });
 });
 
-describe("SentinelService.readFindings", () => {
+describe("SecurityService.readFindings", () => {
   it("reads the checkbox bullet lines back out of the vault note for the briefing", async () => {
     const body =
       "*Updated: 2026-07-17*\n\nOpen security findings:\n\n- [ ] acme: HIGH vulnerability in lodash\n";

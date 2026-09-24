@@ -14,7 +14,7 @@ const c = initContract();
  * Activity (Phase 6.1): READ-ONLY access to the append-only activity log. There is
  * deliberately NO write endpoint — entries are born only inside the API process
  * (the emission points beside the existing diagnostics logs), so a client can never
- * forge the record. The overview feed and the briefing read through this route.
+ * dev the record. The overview feed and the briefing read through this route.
  */
 export const activityContract = c.router(
   {

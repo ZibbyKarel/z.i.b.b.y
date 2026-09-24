@@ -18,12 +18,12 @@ describe("OrbNode", () => {
         diameter={72}
         hex="#5b8def"
         icon={<span>icon</span>}
-        label="Forge"
-        nodeId="forge"
+        label="Dev"
+        nodeId="dev"
         state="working"
       />,
     );
-    expect(screen.getByTestId(OrbNodeTestId.Label)).toHaveTextContent("Forge");
+    expect(screen.getByTestId(OrbNodeTestId.Label)).toHaveTextContent("Dev");
     expect(screen.queryByTestId("orb-node-status")).toBeNull();
   });
 
@@ -34,28 +34,28 @@ describe("OrbNode", () => {
         diameter={72}
         hex="#5b8def"
         icon={<span>icon</span>}
-        label="Forge"
-        nodeId="forge"
+        label="Dev"
+        nodeId="dev"
         state="working"
       />,
     );
-    expect(screen.getByTestId(OrbNodeTestId.Root)).toHaveAccessibleName("Forge");
+    expect(screen.getByTestId(OrbNodeTestId.Root)).toHaveAccessibleName("Dev");
   });
 
   it("uses ariaLabel over the visible label when supplied", () => {
     render(
       <OrbNode
         activeCount={0}
-        ariaLabel="Forge, Working"
+        ariaLabel="Dev, Working"
         diameter={72}
         hex="#5b8def"
         icon={<span>icon</span>}
-        label="Forge"
-        nodeId="forge"
+        label="Dev"
+        nodeId="dev"
         state="working"
       />,
     );
-    expect(screen.getByTestId(OrbNodeTestId.Root)).toHaveAccessibleName("Forge, Working");
+    expect(screen.getByTestId(OrbNodeTestId.Root)).toHaveAccessibleName("Dev, Working");
   });
 
   it("passes the icon slot the exact node supplied", () => {
@@ -65,8 +65,8 @@ describe("OrbNode", () => {
         diameter={72}
         hex="#5b8def"
         icon={<span data-testid="custom-icon">glyph</span>}
-        label="Scout"
-        nodeId="scout"
+        label="Research"
+        nodeId="rnd"
         state="idle"
       />,
     );

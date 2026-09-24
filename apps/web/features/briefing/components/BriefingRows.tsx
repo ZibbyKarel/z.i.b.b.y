@@ -1,6 +1,10 @@
 "use client";
 
-import type { BriefingNeedsYouItem, BriefingSubsystemLine, SubsystemState } from "@zibby/contracts";
+import type {
+  BriefingDepartmentLine,
+  BriefingNeedsYouItem,
+  DepartmentState,
+} from "@zibby/contracts";
 import {
   Container,
   type DotTone,
@@ -12,7 +16,7 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { SUBSYSTEM_GLYPH } from "../../subsystems/subsystemVisuals";
+import { DEPARTMENT_GLYPH } from "../../departments/departmentVisuals";
 
 export enum BriefingCardTestId {
   Root = "briefing-card",
@@ -21,12 +25,12 @@ export enum BriefingCardTestId {
   Engagement = "briefing-engagement",
   Generate = "briefing-generate",
   Ready = "briefing-ready",
-  /** One per-subsystem grouping row (NS2 F3b). */
-  SubsystemLine = "briefing-subsystem-line",
+  /** One per-department grouping row (NS2 F3b). */
+  DepartmentLine = "briefing-department-line",
 }
 
-/** Contract `SubsystemState` → DS dot tone for the compact subsystem rows. */
-export const STATE_DOT_TONE: Record<SubsystemState, DotTone> = {
+/** Contract `DepartmentState` → DS dot tone for the compact department rows. */
+export const STATE_DOT_TONE: Record<DepartmentState, DotTone> = {
   idle: "idle",
   running: "run",
   report: "ok",
@@ -35,25 +39,25 @@ export const STATE_DOT_TONE: Record<SubsystemState, DotTone> = {
 };
 
 /**
- * One compact subsystem row (NS2 F3b): glyph + name + state dot + counts/note.
+ * One compact department row (NS2 F3b): glyph + name + state dot + counts/note.
  * Shared by `overview/BriefingCard` (the page card) and `chat/BriefingMessageCard`
  * (F8a, the chat transcript variant) — relocated here in F8c (D18) so neither
  * imports from the other.
  */
-export function SubsystemLineRow({ line }: { line: BriefingSubsystemLine }) {
+export function DepartmentLineRow({ line }: { line: BriefingDepartmentLine }) {
   const t = useTranslations();
   const parts: string[] = [];
   if (line.tier3Count > 0)
-    parts.push(t("overview.briefingSubsystemTier3", { count: line.tier3Count }));
+    parts.push(t("overview.briefingDepartmentTier3", { count: line.tier3Count }));
   if (line.errorCount > 0)
-    parts.push(t("overview.briefingSubsystemError", { count: line.errorCount }));
+    parts.push(t("overview.briefingDepartmentError", { count: line.errorCount }));
   if (line.tier2Count > 0)
-    parts.push(t("overview.briefingSubsystemTier2", { count: line.tier2Count }));
+    parts.push(t("overview.briefingDepartmentTier2", { count: line.tier2Count }));
   if (line.note) parts.push(line.note);
   return (
     <Stack
       align="center"
-      data-testid={BriefingCardTestId.SubsystemLine}
+      data-testid={BriefingCardTestId.DepartmentLine}
       direction="row"
       gap="100"
       justify="between"
@@ -64,7 +68,7 @@ export function SubsystemLineRow({ line }: { line: BriefingSubsystemLine }) {
           size="75"
           tone={STATE_DOT_TONE[line.state]}
         />
-        <Icon name={SUBSYSTEM_GLYPH[line.subsystem]} size="xs" tone="faint" />
+        <Icon name={DEPARTMENT_GLYPH[line.department]} size="xs" tone="faint" />
         <Typography mono size="xs" type="note" variant="secondary">
           {line.name}
         </Typography>

@@ -1,5 +1,5 @@
 import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
-import { SUBSYSTEMS } from "@zibby/contracts";
+import { DEPARTMENTS } from "@zibby/contracts";
 import { composeSeedNotes } from "./vault-seed.content";
 import { VaultService } from "./vault.service";
 
@@ -7,7 +7,7 @@ import { VaultService } from "./vault.service";
  * Fresh-install vault seeding (F4c): on boot, if the vault holds ZERO notes
  * (a genuinely empty `VAULT_DIR` — checked via `graph()`, a full scan, not just
  * `index()`'s entry-point-filtered view), write the North Star stub, the root
- * MOC, and all ten subsystem shelves (`composeSeedNotes`). Any NON-empty vault —
+ * MOC, and all ten department shelves (`composeSeedNotes`). Any NON-empty vault —
  * including this repo's committed `.zibby/data/vault/`, which already carries
  * these notes — is a strict no-op (fresh-install semantics only, never a
  * migration). Registered in `MemoryModule` ONLY: `VaultService`/`VAULT_DIR` are
@@ -29,7 +29,7 @@ export class VaultSeedService implements OnModuleInit {
         this.logger.debug("vault already has notes — seed skipped (fresh-install only)");
         return;
       }
-      const seeds = composeSeedNotes(SUBSYSTEMS);
+      const seeds = composeSeedNotes(DEPARTMENTS);
       let written = 0;
       for (const note of seeds) {
         try {

@@ -47,14 +47,14 @@ of `generate`:
    approval, so it is something ZIBBY is watching, never a needs-you decision),
    activity entries since the cursor, queued/held/dead-lettered scheduled tasks,
    project names (for the engagement rollup), last-known CI statuses, the
-   subsystem status rows (`SubsystemsService.list`) and the weekly usage window %
+   department status rows (`DepartmentsService.list`) and the weekly usage window %
    (`LimitsService.snapshot`, both NS2 F3b), plus four vault
    reads — the 7-day trend (first line of each of the last 7 daily notes), learned
    automation patterns, the research digest headlines, the automation-gap
    suggestions, and the weekly app ideas. Every vault read is individually
    fail-soft — a missing or unreadable note degrades to an empty list, never throws;
-   the subsystem/limits reads are equally `.catch`-guarded (a failed subsystem read
-   drops the `subsystems` section, a failed limits read only drops Ledger's note).
+   the department/limits reads are equally `.catch`-guarded (a failed department read
+   drops the `departments` section, a failed limits read only drops Ledger's note).
 3. Hand all of it to `assembleBriefing` (the pure function in
    `briefing-assembly.ts`), which builds five sections:
    - **`needsYou`** — pending approvals, parked pipeline/goal runs, dead-lettered
@@ -70,13 +70,13 @@ of `generate`:
    - **`engagements`** — one row per project with waiting tasks or attributable
      activity, rolling up `needsYou`/`didForYou`/`queued`/`held` counts (Phase 8.2);
      empty for a single-engagement operator, no rollup noise.
-   - **`subsystems`** (optional, NS2 F3b) — one line per subsystem ("Forge: 2 PRs
-     čekají · Puls: CI zelené · Ledger: 62 % týdenního okna"): state +
-     tier2/tier3 counts straight from `SubsystemsService.list()`, plus a
-     mandate-specific `note` for Ledger (weekly usage window %) and Puls (CI
+   - **`departments`** (optional, NS2 F3b) — one line per department ("Dev: 2 PRs
+     čekají · Ops: CI zelené · Ledger: 62 % týdenního okna"): state +
+     tier2/tier3 counts straight from `DepartmentsService.list()`, plus a
+     mandate-specific `note` for Ledger (weekly usage window %) and Ops (CI
      health from the gathered statuses). Strictly additive — old briefings omit
-     the key, and a failed subsystem read assembles the briefing without it.
-     Rendered as its own `## Subsystems` block in the vault note.
+     the key, and a failed department read assembles the briefing without it.
+     Rendered as its own `## Departments` block in the vault note.
      A deterministic, English headline (`deterministicHeadline`) is always computed as
      the fallback — "Nothing needs you." when `needsYou` is empty, otherwise a count
      summary by kind.

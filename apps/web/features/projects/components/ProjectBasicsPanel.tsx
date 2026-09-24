@@ -17,7 +17,7 @@ import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { toastBus } from "../../../components/Toaster/toastBus";
 import { KeyValueEditor, type KeyValueRow } from "./KeyValueEditor";
 
-/** The `SelectField` sentinel value for "no category" — a category name can never be empty. */
+/** The `SelectField` security value for "no category" — a category name can never be empty. */
 const NO_CATEGORY = "";
 
 /**

@@ -296,7 +296,7 @@ describe("Integrations API (e2e)", () => {
       .expect(200);
   });
 
-  it("creates without any subsystem attribution (membership is derived, not stored)", async () => {
+  it("creates without any department attribution (membership is derived, not stored)", async () => {
     const res = await request(app.getHttpServer())
       .post("/api/integrations")
       .send({
@@ -307,7 +307,7 @@ describe("Integrations API (e2e)", () => {
         config: { kind: "slack", channels: ["C123"] },
       });
     expect(res.status).toBe(201);
-    expect(res.body).not.toHaveProperty("ownerSubsystem");
+    expect(res.body).not.toHaveProperty("department");
   });
 
   it("delete cascades the credentials file", async () => {

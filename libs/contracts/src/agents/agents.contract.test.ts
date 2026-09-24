@@ -167,28 +167,28 @@ describe("agent schemas", () => {
     }
   });
 
-  it("accepts a valid ownerSubsystem (NS2 F1a)", () => {
-    const parsed = AgentSchema.safeParse({ id: "a", instructions: "i", ownerSubsystem: "forge" });
+  it("accepts a valid department (NS2 F1a)", () => {
+    const parsed = AgentSchema.safeParse({ id: "a", instructions: "i", department: "dev" });
     expect(parsed.success).toBe(true);
     if (parsed.success) {
-      expect(parsed.data.ownerSubsystem).toBe("forge");
+      expect(parsed.data.department).toBe("dev");
     }
   });
 
-  it("rejects an unknown ownerSubsystem", () => {
+  it("rejects an unknown department", () => {
     const parsed = AgentSchema.safeParse({
       id: "a",
       instructions: "i",
-      ownerSubsystem: "not-a-subsystem",
+      department: "not-a-department",
     });
     expect(parsed.success).toBe(false);
   });
 
-  it("omitting ownerSubsystem still validates (pre-F1 agents)", () => {
+  it("omitting department still validates (pre-F1 agents)", () => {
     const parsed = AgentSchema.safeParse({ id: "a", instructions: "i" });
     expect(parsed.success).toBe(true);
     if (parsed.success) {
-      expect(parsed.data.ownerSubsystem).toBeUndefined();
+      expect(parsed.data.department).toBeUndefined();
     }
   });
 

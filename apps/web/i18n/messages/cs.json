@@ -54,7 +54,7 @@
     "emptyTitle": "Paměť je prázdná",
     "emptyDescription": "Ve vaultu zatím nejsou žádné poznámky. Objeví se tu, jak do něj zapisují běhy — nebo vytvoř první.",
     "untriaged": "Netříděno",
-    "subsystemBadge": "Polička subsystému",
+    "departmentBadge": "Polička oddělení",
     "quickCapture": {
       "trigger": "Rychlý zápis",
       "title": "Rychlý zápis",
@@ -198,15 +198,15 @@
       "dropHint": "Pustit sem — přidá se jako @soubor do textu",
       "chrome": {
         "label": "Zadej směr · přirozeným jazykem",
-        "hint": "@ hledá agenty, pipeliny, podsystémy a týmy · přetáhni soubor, nebo použij sponku",
-        "hintNoTeams": "@ hledá agenty, pipeliny a podsystémy · přetáhni soubor, nebo použij sponku"
+        "hint": "@ hledá agenty, pipeliny, oddělení a týmy · přetáhni soubor, nebo použij sponku",
+        "hintNoTeams": "@ hledá agenty, pipeliny a oddělení · přetáhni soubor, nebo použij sponku"
       },
       "ack": {
         "kind": {
           "agent": "agent",
           "pipeline": "pipeline",
           "goal": "goal loop",
-          "subsystem": "podsystém",
+          "department": "oddělení",
           "orchestrator": "orchestrátor",
           "loop": "goal loop",
           "auto": "auto-klasifikace"
@@ -333,10 +333,10 @@
     "systemDegraded": "Systém · DEGRADOVANÝ",
     "daemonReady": "· démon připraven · žádné běhy",
     "apiUnreachable": "· api nedostupné",
-    "subsystemBackend": "backend",
-    "subsystemVault": "vault",
-    "subsystemIntegrations": "integrace",
-    "subsystemScheduler": "plánovač",
+    "departmentBackend": "backend",
+    "departmentVault": "vault",
+    "departmentIntegrations": "integrace",
+    "departmentScheduler": "plánovač",
     "claudeUnavailable": "· claude cli nedostupné · běhy se odmítají",
     "title": "Dobré ráno.",
     "emptyTitle": "Dashboard je prázdný — postav si ho.",
@@ -354,10 +354,10 @@
     "briefingWatching": "sleduji {count} kanálů",
     "briefingPausedLimit": "{count} pozastaveno na limitu",
     "briefingEngagement": "{needs} čeká · {did} hotovo · {queued} ve frontě · {held} pozdrženo",
-    "briefingSubsystems": "Subsystémy",
-    "briefingSubsystemTier3": "{count} čeká na tebe",
-    "briefingSubsystemError": "{count} selhalo",
-    "briefingSubsystemTier2": "{count} k reportu",
+    "briefingDepartments": "Oddělení",
+    "briefingDepartmentTier3": "{count} čeká na tebe",
+    "briefingDepartmentError": "{count} selhalo",
+    "briefingDepartmentTier2": "{count} k reportu",
     "starterTitle": "začni tady · postav dashboard",
     "commandBar": {
       "suggestions": {
@@ -395,10 +395,10 @@
       }
     },
     "allApprovals": "celá fronta →",
-    "approvalsSubsystemFilter": "Filtr schválení podle podsystému",
+    "approvalsDepartmentFilter": "Filtr schválení podle oddělení",
     "liveLog": "Živý log",
     "liveLogEmpty": "Zatím žádná aktivita.",
-    "liveLogSubsystemFilter": "Filtr aktivit podle podsystému",
+    "liveLogDepartmentFilter": "Filtr aktivit podle oddělení",
     "loadOlder": "Načíst starší",
     "groupedCount": "{count}× {group}"
   },
@@ -466,7 +466,7 @@
       "whenToUse": "Kdy použít",
       "whenToUsePlaceholder": "…při kontrole diffu před pushem",
       "category": "Kategorie",
-      "ownerSubsystem": "Vlastnící subsystém",
+      "department": "Vlastnící oddělení",
       "model": "Model",
       "thinking": "Thinking",
       "icon": "Ikona",
@@ -561,13 +561,13 @@
     "create": "Vytvořit",
     "detailPanel": "Konfigurace integrace",
     "autonomyPanel": "Autonomie",
-    "autonomyHint": "Puls tenhle kanál sleduje vždy. Tady určíš, co smí ZIBBY dělat sám: dispatch = jednat podle příchozích zpráv (Tier 1), odpověď = sám odepsat (Tier 2, jménem Heralda). Bez nastavení platí výchozí hodnoty ze Settings → Mandate.",
+    "autonomyHint": "Ops tenhle kanál sleduje vždy. Tady určíš, co smí ZIBBY dělat sám: dispatch = jednat podle příchozích zpráv (Tier 1), odpověď = sám odepsat (Tier 2, jménem Heralda). Bez nastavení platí výchozí hodnoty ze Settings → Mandate.",
     "autonomyDispatch": "Dispatch (jednat)",
-    "autonomyReply": "Odpověď (Herald)",
+    "autonomyReply": "Odpověď (Comms)",
     "deleteTitle": "Smazat integraci?",
     "deleteBody": "Opravdu smazat integraci {name}? Uložené přihlašovací údaje se smažou také. Tuto akci nelze vrátit."
   },
-  "maestro": {
+  "release": {
     "title": "Fronta ke sloučení",
     "merge": {
       "hold": "Podržte pro sloučení #{number}",
@@ -1871,7 +1871,7 @@
       "kind": {
         "agent": "Agent",
         "pipeline": "Pipeline",
-        "subsystem": "Subsystém",
+        "department": "Oddělení",
         "task": "Úloha",
         "memory": "Paměť",
         "skill": "Skill",
@@ -1897,14 +1897,14 @@
     "overview": {
       "title": "Přehled ZIBBY",
       "openAria": "Otevřít přehled ZIBBY",
-      "role": "orchestrátor · řídím {count} podsystémů",
+      "role": "orchestrátor · řídím {count} oddělení",
       "summary": "{working} v akci, {error} v chybě, {report} s hlášením, {waiting} čeká na tebe.",
       "statWorking": "pracují",
       "statError": "v chybě",
       "statReport": "hlášení čeká",
       "statWaiting": "čekají na tebe",
       "statIdle": "v klidu",
-      "crossSubsystems": "Napříč subsystémy"
+      "crossDepartments": "Napříč odděleními"
     },
     "statusPill": {
       "nominal": "Nominální",
@@ -1947,7 +1947,7 @@
       "close": "Zavřít"
     },
     "task": {
-      "subsystemLabel": "Subsystém",
+      "departmentLabel": "Oddělení",
       "textLabel": "Úloha",
       "placeholder": "Zadej práci přirozeným jazykem…",
       "run": "Spustit úlohu",
@@ -1959,8 +1959,8 @@
       "note": "Přidat poznámku"
     }
   },
-  "subsystems": {
-    "ariaLabel": "Podsystémová síť ZIBBY",
+  "departments": {
+    "ariaLabel": "Síť oddělení ZIBBY",
     "state": {
       "idle": "V klidu",
       "running": "Běží",
@@ -1973,8 +1973,8 @@
     "tier3Badge": "{count} čeká na rozhodnutí",
     "errorBadge": "{count} chyb",
     "drawer": {
-      "ariaLabel": "Detail podsystému {name}",
-      "close": "Zavřít detail podsystému",
+      "ariaLabel": "Detail oddělení {name}",
+      "close": "Zavřít detail oddělení",
       "tabs": {
         "roster": "Roster",
         "aktivita": "Aktivita",
@@ -1988,12 +1988,12 @@
       "integrationsTitle": "Integrace",
       "monitorsTitle": "Monitory",
       "emptyTitle": "Zatím žádná pipeline",
-      "emptyDescription": "Tenhle podsystém si zatím nevlastní žádnou pipeline. Vytvoř první — rovnou s ním jako vlastníkem."
+      "emptyDescription": "Tohle oddělení si zatím nevlastní žádnou pipeline. Vytvoř první — rovnou s ním jako vlastníkem."
     },
     "aktivita": {
       "allRuns": "Všechny runy",
       "emptyTitle": "Zatím žádná aktivita",
-      "emptyDescription": "Tenhle podsystém ještě nespustil žádnou pipeline. Jakmile poběží, běhy se objeví tady."
+      "emptyDescription": "Tohle oddělení ještě nespustilo žádnou pipeline. Jakmile poběží, běhy se objeví tady."
     },
     "gates": {
       "sentencePrefix": "Než {subject} udělá",
@@ -2005,7 +2005,7 @@
       },
       "sentencesTitle": "Pravidla v mad-libs znění",
       "sentencesEmptyTitle": "Zatím žádné vlastní pravidlo",
-      "sentencesEmptyDescription": "Tenhle podsystém nemá v katalogu žádné vlastní pravidlo. Přidej ho v katalogu níž.",
+      "sentencesEmptyDescription": "Tohle oddělení nemá v katalogu žádné vlastní pravidlo. Přidej ho v katalogu níž.",
       "autopilotTitle": "Autopilot podle projektů",
       "autopilotNoProject": "Žádný projekt zatím nemá nastavený autopilot.",
       "autopilotCanDoAlone": "Může sám:",
@@ -2029,8 +2029,8 @@
         "project-file": "Soubor"
       },
       "runLink": "Zobrazit běh",
-      "emptyTitle": "Tenhle podsystém si zatím nevlastní žádnou pipeline",
-      "emptyDescription": "Bez vlastní pipeline nemá tenhle podsystém co produkovat ani co doručit."
+      "emptyTitle": "Tohle oddělení si zatím nevlastní žádnou pipeline",
+      "emptyDescription": "Bez vlastní pipeline nemá tohle oddělení co produkovat ani co doručit."
     },
     "handoff": {
       "panelTitle": "Odchozí pravidla předávání",
@@ -2049,7 +2049,7 @@
       "delete": "Smazat",
       "addRule": "Přidat pravidlo",
       "emptyTitle": "Zatím žádná odchozí pravidla",
-      "emptyDescription": "Tento subsystém zatím nemá žádné vlastní pravidlo předávání. Přidej první níže.",
+      "emptyDescription": "Toto oddělení zatím nemá žádné vlastní pravidlo předávání. Přidej první níže.",
       "deleteTitle": "Smazat pravidlo předávání?",
       "deleteBody": "Opravdu smazat toto pravidlo předávání? Tuto akci nelze vrátit.",
       "severity": {
@@ -2081,7 +2081,7 @@
         "severityPrefix": "se závažností",
         "anySignal": "Jakýkoli signál (∗)",
         "anySeverity": "jakoukoli",
-        "targetKindSubsystem": "subsystém",
+        "targetKindDepartment": "oddělení",
         "targetKindPipeline": "pipeline",
         "tierClause": {
           "1": "automaticky",
@@ -2109,14 +2109,14 @@
   },
   "archive": {
     "title": "Archiv úloh",
-    "subtitle": "Vše, co ZIBBY dokončil napříč subsystémy",
+    "subtitle": "Vše, co ZIBBY dokončil napříč odděleními",
     "searchPlaceholder": "Hledat v archivu…",
     "searchAriaLabel": "Hledat v archivu",
-    "noSubsystem": "Bez subsystému",
+    "noDepartment": "Bez oddělení",
     "filter": {
-      "all": "Všechny subsystémy",
-      "multiple": "{n} subsystémy",
-      "noSubsystem": "Bez subsystému"
+      "all": "Všechna oddělení",
+      "multiple": "{n} oddělení",
+      "noDepartment": "Bez oddělení"
     },
     "emptyFilter": "Nic nenalezeno.",
     "emptyTitle": "Archiv je zatím prázdný",

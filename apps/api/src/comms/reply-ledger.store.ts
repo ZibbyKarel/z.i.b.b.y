@@ -4,7 +4,7 @@ import { EntityFileStore } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 
 /** DI token for the root directory holding one file per ledger entry. */
-export const HERALD_LEDGER_DIR = "HERALD_LEDGER_DIR";
+export const COMMS_LEDGER_DIR = "COMMS_LEDGER_DIR";
 
 /** Ledger entry ids are `collisionResistantId("reply")`-shaped — no separators. */
 const LEDGER_ID_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
@@ -16,7 +16,7 @@ export interface ReplyLedgerFilter {
 
 /**
  * NS2 F6a — the durable, auditable record of every drafted reply (Tier-2 auto-send
- * or Tier-3 parked draft). One `<id>.json` per entry under `HERALD_LEDGER_DIR`,
+ * or Tier-3 parked draft). One `<id>.json` per entry under `COMMS_LEDGER_DIR`,
  * modeled on {@link ChannelItemStore}: atomic write, tolerant Zod read (a corrupt
  * entry is skipped, never fatal — fail-open, per the F6 plan's shared conventions).
  * `consecutiveApproved` is the graduation streak counter: newest-first over
@@ -29,7 +29,7 @@ export class ReplyLedgerStore extends EntityFileStore<ReplyLedgerEntry> {
   protected readonly idRegex = LEDGER_ID_REGEX;
   private readonly log: ScopedLogger;
 
-  constructor(@Inject(HERALD_LEDGER_DIR) dir: string, logger: LoggerService) {
+  constructor(@Inject(COMMS_LEDGER_DIR) dir: string, logger: LoggerService) {
     super(dir);
     this.log = logger.child(ReplyLedgerStore.name);
   }

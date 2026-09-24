@@ -1,27 +1,27 @@
 /**
  * Pure event→particle mapping for Phase 89 ("alive, not merely animated"). No React,
- * no DOM — same posture as `subsystem-web-geometry.ts` — so the classification is
+ * no DOM — same posture as `department-web-geometry.ts` — so the classification is
  * unit-tested independent of rendering.
  *
  * THE CONSTRAINT: motion = real events only. A flight fires because a `RunStatusEvent`
- * actually arrived and could be attributed to an owning subsystem — never a guess,
+ * actually arrived and could be attributed to an owning department — never a guess,
  * never a timer. An unattributable event (owner unknown, or a status that isn't a
  * dispatch/report) produces no flight; the scene's existing ambience already stands
  * for "something happened" (design doc, phase-89 handoff).
  *
  * ATTRIBUTION resolves both `pipeline`- and `agent`-kind runs (Phase 126g):
- * `Pipeline`/`Chain`/`Agent` all carry an optional `ownerSubsystem` (Phase 81 tagged
+ * `Pipeline`/`Chain`/`Agent` all carry an optional `department` (Phase 81 tagged
  * the first two, NS2 F1a added it to `Agent`) — only `GoalRun` carries none (D16,
- * `docs/plans/phase-126g-subsystem-orb-agent-runs.md`), so `goal-runs` events can
+ * `docs/plans/phase-126g-department-orb-agent-runs.md`), so `goal-runs` events can
  * never resolve an owner. The top-level scope gate below accepts BOTH the
  * `pipeline-runs` and `agent-runs` SSE scopes (Phase 126g review pass) — the API
  * really does emit a real `agent-runs` scope for an agent run's own dispatch/report
  * transitions (`apps/api/src/events/events.controller.ts`'s `fromRunStatus<AgentRun>`
  * call, `runId: run.runId` — the same id `RunView.runId` carries for that run), so
  * without this the comet handoff-flares (`flightForEvent`'s live caller,
- * `SubsystemOrbMap.tsx`) would stay silent for agent-kind work even though the
- * orbit-field dots and the connector-dash state both light up. `subsystemLoad.ts`'s
- * `activeRunsBySubsystem` still synthesizes `{ scope: "pipeline-runs", runId }` for
+ * `DepartmentOrbMap.tsx`) would stay silent for agent-kind work even though the
+ * orbit-field dots and the connector-dash state both light up. `departmentLoad.ts`'s
+ * `activeRunsByDepartment` still synthesizes `{ scope: "pipeline-runs", runId }` for
  * every run regardless of its real kind — that scope literal is no longer
  * load-bearing (either accepted scope reaches the same RUN lookup below, which was
  * already kind-agnostic), it's just the one that was there first. A CHAIN's owner
@@ -31,7 +31,7 @@
  * never wired into `/api/events`), so a chain's progress is only ever OBSERVABLE
  * client-side as its underlying pipeline STEP's own `pipeline-runs` transitions —
  * which is fine, because each step's pipeline carries its own independent
- * `ownerSubsystem` tag (Phase 81 tagged both `Pipeline` and `Chain`).
+ * `department` tag (Phase 81 tagged both `Pipeline` and `Chain`).
  *
  * The raw event payload for `pipeline-runs` mirrors `PipelineRun.status`
  * (`PipelineStateSchema`: `running | done | parked | failed | paused-limit |
@@ -45,7 +45,7 @@
  * failure as `error` (never `failed`) and its Tier-3 handup as
  * `awaiting-approval` (never `parked`); both are in {@link REPORT_STATUSES}.
  */
-import type { Agent, SubsystemId } from "@zibby/contracts";
+import type { Agent, DepartmentId } from "@zibby/contracts";
 import type { Pipeline } from "../../../../domain";
 import type { RunView } from "../../../runs/run";
 import type { RunStatusEvent } from "../../../runs/runEvents";
@@ -54,9 +54,9 @@ import type { RunStatusEvent } from "../../../runs/runEvents";
  * rim edge (see the module doc: rim/node→node handoffs are SKIPPED entirely — no
  * `chain-runs` SSE scope exists to identify a step-to-step transition honestly). */
 export interface EventFlight {
-  from: SubsystemId | "orb";
-  to: SubsystemId | "orb";
-  subsystemId: SubsystemId;
+  from: DepartmentId | "orb";
+  to: DepartmentId | "orb";
+  departmentId: DepartmentId;
 }
 
 /** A status that means "just started" — center → node. Shared across both
@@ -76,29 +76,29 @@ const STARTED_STATUSES = new Set(["running"]);
  *   Tier-3 handup, the mirror image of the pipeline's `parked`.
  *
  * `paused-limit` (an automatic, non-decision pause) and `interrupted` (an
- * operator-initiated stop, not the subsystem reporting anything) are
+ * operator-initiated stop, not the department reporting anything) are
  * deliberately excluded for BOTH kinds.
  */
 const REPORT_STATUSES = new Set(["done", "failed", "parked", "error", "awaiting-approval"]);
 
-/** SSE scopes that can resolve to an owning subsystem — `pipeline-runs` against
+/** SSE scopes that can resolve to an owning department — `pipeline-runs` against
  * `pipelines`, `agent-runs` against `agents` (Phase 126g). `goal-runs` (D16),
  * `channel-items` and `activity` are deliberately absent — see the module doc. */
 const ATTRIBUTABLE_SCOPES = new Set(["pipeline-runs", "agent-runs"]);
 
 /**
- * The subsystem that owns the run named by an attributable event
+ * The department that owns the run named by an attributable event
  * ({@link ATTRIBUTABLE_SCOPES}), or `undefined` when it can't be resolved: any
- * other scope (no `ownerSubsystem` path exists for it — most notably
+ * other scope (no `department` path exists for it — most notably
  * `goal-runs`, D16), a run not yet present in the client's (SSE-invalidated,
  * asynchronously refetched) runs cache — a real race on a brand-new run's very
  * first `running` transition, accepted per the module doc rather than papered
- * over with a guess — or a pipeline/agent with no `ownerSubsystem` tag at all.
+ * over with a guess — or a pipeline/agent with no `department` tag at all.
  * Resolves BOTH a `pipeline`-kind run (against `pipelines`) and an
  * `agent`-kind run (against `agents`), symmetrically. The RUN lookup below is
  * kind-agnostic on purpose (it doesn't cross-check the event's scope against
- * the matched run's kind) — that's what lets `subsystemLoad.ts`'s
- * `activeRunsBySubsystem` keep synthesizing a `pipeline-runs` scope for every
+ * the matched run's kind) — that's what lets `departmentLoad.ts`'s
+ * `activeRunsByDepartment` keep synthesizing a `pipeline-runs` scope for every
  * run regardless of its real kind and still reach the agent branch; a REAL
  * event's scope and its `runId`'s real kind always agree in practice, so this
  * never cross-attributes in production.
@@ -108,7 +108,7 @@ export function resolveEventOwner(
   runs: readonly RunView[],
   pipelines: readonly Pipeline[],
   agents: readonly Agent[],
-): SubsystemId | undefined {
+): DepartmentId | undefined {
   if (!ATTRIBUTABLE_SCOPES.has(event.scope) || !event.runId) return undefined;
   const run = runs.find(
     (r) => (r.kind === "pipeline" || r.kind === "agent") && r.runId === event.runId,
@@ -116,10 +116,10 @@ export function resolveEventOwner(
   if (!run) return undefined;
   if (run.kind === "agent") {
     const agent = agents.find((a) => a.id === run.owner);
-    return agent?.ownerSubsystem;
+    return agent?.department;
   }
   const pipeline = pipelines.find((p) => p.id === run.owner);
-  return pipeline?.ownerSubsystem;
+  return pipeline?.department;
 }
 
 /**
@@ -134,10 +134,10 @@ export function flightForEvent(
   pipelines: readonly Pipeline[],
   agents: readonly Agent[],
 ): EventFlight | undefined {
-  const subsystemId = resolveEventOwner(event, runs, pipelines, agents);
-  if (!subsystemId || !event.status) return undefined;
-  if (STARTED_STATUSES.has(event.status)) return { from: "orb", to: subsystemId, subsystemId };
-  if (REPORT_STATUSES.has(event.status)) return { from: subsystemId, to: "orb", subsystemId };
+  const departmentId = resolveEventOwner(event, runs, pipelines, agents);
+  if (!departmentId || !event.status) return undefined;
+  if (STARTED_STATUSES.has(event.status)) return { from: "orb", to: departmentId, departmentId };
+  if (REPORT_STATUSES.has(event.status)) return { from: departmentId, to: "orb", departmentId };
   return undefined;
 }
 

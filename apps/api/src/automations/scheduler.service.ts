@@ -9,11 +9,11 @@ import { PatternExtractorService } from "../patterns/pattern-extractor.service";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { GapDetectorService } from "../gaps/gap-detector.service";
 import { WatcherHealthRegistry } from "../health/watcher-health.registry";
-import { LoomService } from "../loom/loom.service";
-import { PostMergeWatchService } from "../maestro/post-merge-watch.service";
+import { ArchService } from "../arch/arch.service";
+import { PostMergeWatchService } from "../release/post-merge-watch.service";
 import { ReviewLearningService } from "../review-learning/review-learning.service";
 import { SelfKnowledgeService } from "../self-knowledge/self-knowledge.service";
-import { SentinelService } from "../sentinel/sentinel.service";
+import { SecurityService } from "../security/security.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TraceContextService } from "../shared/logging/trace-context.service";
 import { TickingWatcherBase } from "../shared/ticking-watcher-base";
@@ -34,7 +34,7 @@ import { matchesCron } from "./cron";
 export class SchedulerService extends TickingWatcherBase implements OnModuleInit, OnModuleDestroy {
   private unsubscribe: (() => void) | null = null;
   /** Wall-clock of the last tick (any path, incl. test-driven `tick()`) — the M8
-   * subsystem probe's heartbeat. Distinct from the base's timer-path-only F6c
+   * department probe's heartbeat. Distinct from the base's timer-path-only F6c
    * field (which is private up there, so this needed its own name). */
   private lastTickAtM8: string | null = null;
   protected readonly log: ScopedLogger;
@@ -54,8 +54,8 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
     private readonly agentFactory: AgentFactoryService,
     private readonly taskScheduler: TaskSchedulerService,
     private readonly selfKnowledge: SelfKnowledgeService,
-    private readonly sentinel: SentinelService,
-    private readonly loom: LoomService,
+    private readonly security: SecurityService,
+    private readonly arch: ArchService,
     private readonly postMerge: PostMergeWatchService,
     private readonly watcherHealthRegistry: WatcherHealthRegistry,
     private readonly reviewLearning: ReviewLearningService,
@@ -238,17 +238,17 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
           return "self-knowledge:error";
         }
       }
-      case "sentinel-scan": {
+      case "security-scan": {
         // NS2 F5a: weekly system automation — dependency CVEs (Dependabot REST)
-        // + a bounded secret scan, deterministic; ref = `sentinel:<count>`.
-        const { findings } = await this.sentinel.scan();
-        return `sentinel:${findings.length}`;
+        // + a bounded secret scan, deterministic; ref = `security:<count>`.
+        const { findings } = await this.security.scan();
+        return `security:${findings.length}`;
       }
-      case "loom-audit": {
+      case "arch-audit": {
         // NS2 F5c: nightly system automation — graphify god-node/community deltas
-        // + a madge circular-dep check, deterministic; ref = `loom:<count>`.
-        const { findings } = await this.loom.audit();
-        return `loom:${findings.length}`;
+        // + a madge circular-dep check, deterministic; ref = `arch:<count>`.
+        const { findings } = await this.arch.audit();
+        return `arch:${findings.length}`;
       }
       case "post-merge-watch": {
         // NS2 F7b-2: frequent system automation — poll pending post-merge CI

@@ -8,7 +8,7 @@ import { ChatQuickNoteTestId } from "./ChatQuickNote";
 import { ChatQuickTaskTestId } from "./ChatQuickTask";
 import { ChatBottomBar, ChatBottomBarTestId } from "./ChatBottomBar";
 
-// `ChatDock` (the chat slot) reads the agent/pipeline/subsystem catalogs for its
+// `ChatDock` (the chat slot) reads the agent/pipeline/department catalogs for its
 // `CommandLine`'s `@`-mention picker, the attachment-upload mutation, its own
 // send mutation, the chat stream and voice-mode hooks — the same minimal mock
 // set `ChatDock.test.tsx` uses to mount it standalone, without hitting the
@@ -22,9 +22,9 @@ vi.mock("../../pipelines/queries/usePipelinesQuery", () => ({
   usePipelinesQuery: () => ({ data: [] }),
   getPipelinesQueryKey: () => ["pipelines"],
 }));
-vi.mock("../../subsystems/queries/useSubsystemsQuery", () => ({
-  useSubsystemsQuery: () => ({ data: [] }),
-  getSubsystemsQueryKey: () => ["subsystems"],
+vi.mock("../../departments/queries/useDepartmentsQuery", () => ({
+  useDepartmentsQuery: () => ({ data: [] }),
+  getDepartmentsQueryKey: () => ["departments"],
 }));
 vi.mock("../../tasks/mutations/useUploadTaskAttachmentsMutation", () => ({
   useUploadTaskAttachmentsMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),

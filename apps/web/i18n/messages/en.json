@@ -54,7 +54,7 @@
     "emptyTitle": "Memory is empty",
     "emptyDescription": "No notes in the vault yet. Notes appear here as runs write to it — or create the first one.",
     "untriaged": "Untriaged",
-    "subsystemBadge": "Subsystem shelf",
+    "departmentBadge": "Department shelf",
     "quickCapture": {
       "trigger": "Quick capture",
       "title": "Quick capture",
@@ -198,15 +198,15 @@
       "dropHint": "Drop here — added as an @file in the text",
       "chrome": {
         "label": "Say what you need · plain language",
-        "hint": "@ searches agents, pipelines, subsystems and teams · drag a file, or use the paperclip",
-        "hintNoTeams": "@ searches agents, pipelines and subsystems · drag a file, or use the paperclip"
+        "hint": "@ searches agents, pipelines, departments and teams · drag a file, or use the paperclip",
+        "hintNoTeams": "@ searches agents, pipelines and departments · drag a file, or use the paperclip"
       },
       "ack": {
         "kind": {
           "agent": "agent",
           "pipeline": "pipeline",
           "goal": "goal loop",
-          "subsystem": "subsystem",
+          "department": "department",
           "orchestrator": "orchestrator",
           "loop": "goal loop",
           "auto": "auto-classify"
@@ -333,10 +333,10 @@
     "systemDegraded": "System · DEGRADED",
     "daemonReady": "· daemon ready · no runs",
     "apiUnreachable": "· api unreachable",
-    "subsystemBackend": "backend",
-    "subsystemVault": "vault",
-    "subsystemIntegrations": "integrations",
-    "subsystemScheduler": "scheduler",
+    "departmentBackend": "backend",
+    "departmentVault": "vault",
+    "departmentIntegrations": "integrations",
+    "departmentScheduler": "scheduler",
     "claudeUnavailable": "· claude cli unavailable · runs refused",
     "title": "Good morning.",
     "emptyTitle": "Dashboard is empty — build it up.",
@@ -354,10 +354,10 @@
     "briefingWatching": "watching {count} channels",
     "briefingPausedLimit": "{count} paused on the limit",
     "briefingEngagement": "{needs} need · {did} done · {queued} queued · {held} held",
-    "briefingSubsystems": "Subsystems",
-    "briefingSubsystemTier3": "{count} waiting on you",
-    "briefingSubsystemError": "{count} failed",
-    "briefingSubsystemTier2": "{count} to report",
+    "briefingDepartments": "Departments",
+    "briefingDepartmentTier3": "{count} waiting on you",
+    "briefingDepartmentError": "{count} failed",
+    "briefingDepartmentTier2": "{count} to report",
     "starterTitle": "start here · build the dashboard",
     "commandBar": {
       "suggestions": {
@@ -395,10 +395,10 @@
       }
     },
     "allApprovals": "full queue →",
-    "approvalsSubsystemFilter": "Filter approvals by subsystem",
+    "approvalsDepartmentFilter": "Filter approvals by department",
     "liveLog": "Live log",
     "liveLogEmpty": "No activity yet.",
-    "liveLogSubsystemFilter": "Filter activity by subsystem",
+    "liveLogDepartmentFilter": "Filter activity by department",
     "loadOlder": "Load older",
     "groupedCount": "{count}× {group}"
   },
@@ -466,7 +466,7 @@
       "whenToUse": "When to use",
       "whenToUsePlaceholder": "…reviewing a diff before push",
       "category": "Category",
-      "ownerSubsystem": "Owning subsystem",
+      "department": "Owning department",
       "model": "Model",
       "thinking": "Thinking",
       "icon": "Icon",
@@ -561,13 +561,13 @@
     "create": "Create",
     "detailPanel": "Integration configuration",
     "autonomyPanel": "Autonomy",
-    "autonomyHint": "Puls always watches this channel. Set what ZIBBY may do on its own: dispatch = act on inbound messages (Tier 1), reply = send replies itself (Tier 2, as Herald). With nothing set here, the Settings → Mandate defaults apply.",
+    "autonomyHint": "Ops always watches this channel. Set what ZIBBY may do on its own: dispatch = act on inbound messages (Tier 1), reply = send replies itself (Tier 2, as Comms). With nothing set here, the Settings → Mandate defaults apply.",
     "autonomyDispatch": "Dispatch (act)",
-    "autonomyReply": "Reply (Herald)",
+    "autonomyReply": "Reply (Comms)",
     "deleteTitle": "Delete integration?",
     "deleteBody": "Really delete integration {name}? Stored credentials are deleted too. This cannot be undone."
   },
-  "maestro": {
+  "release": {
     "title": "Merge queue",
     "merge": {
       "hold": "Hold to merge #{number}",
@@ -1871,7 +1871,7 @@
       "kind": {
         "agent": "Agent",
         "pipeline": "Pipeline",
-        "subsystem": "Subsystem",
+        "department": "Department",
         "task": "Task",
         "memory": "Memory",
         "skill": "Skill",
@@ -1897,14 +1897,14 @@
     "overview": {
       "title": "ZIBBY overview",
       "openAria": "Open ZIBBY overview",
-      "role": "orchestrator · directing {count} subsystems",
+      "role": "orchestrator · directing {count} departments",
       "summary": "{working} at work, {error} in error, {report} awaiting review, {waiting} waiting on you.",
       "statWorking": "working",
       "statError": "in error",
       "statReport": "reports waiting",
       "statWaiting": "waiting on you",
       "statIdle": "idle",
-      "crossSubsystems": "Across subsystems"
+      "crossDepartments": "Across departments"
     },
     "statusPill": {
       "nominal": "Nominal",
@@ -1947,7 +1947,7 @@
       "close": "Close"
     },
     "task": {
-      "subsystemLabel": "Subsystem",
+      "departmentLabel": "Department",
       "textLabel": "Task",
       "placeholder": "Describe the work in plain language…",
       "run": "Run task",
@@ -1959,8 +1959,8 @@
       "note": "Add a note"
     }
   },
-  "subsystems": {
-    "ariaLabel": "ZIBBY subsystem web",
+  "departments": {
+    "ariaLabel": "ZIBBY department web",
     "state": {
       "idle": "Idle",
       "running": "Running",
@@ -1973,8 +1973,8 @@
     "tier3Badge": "{count} awaiting decision",
     "errorBadge": "{count} errors",
     "drawer": {
-      "ariaLabel": "{name} subsystem detail",
-      "close": "Close subsystem detail",
+      "ariaLabel": "{name} department detail",
+      "close": "Close department detail",
       "tabs": {
         "roster": "Roster",
         "aktivita": "Activity",
@@ -1988,12 +1988,12 @@
       "integrationsTitle": "Integrations",
       "monitorsTitle": "Monitors",
       "emptyTitle": "No pipeline yet",
-      "emptyDescription": "This subsystem doesn't own a pipeline yet. Create the first one — with it as owner from the start."
+      "emptyDescription": "This department doesn't own a pipeline yet. Create the first one — with it as owner from the start."
     },
     "aktivita": {
       "allRuns": "All runs",
       "emptyTitle": "No activity yet",
-      "emptyDescription": "This subsystem hasn't run a pipeline yet. Once it does, runs will show up here."
+      "emptyDescription": "This department hasn't run a pipeline yet. Once it does, runs will show up here."
     },
     "gates": {
       "sentencePrefix": "Before {subject} does",
@@ -2005,7 +2005,7 @@
       },
       "sentencesTitle": "Rules in mad-libs form",
       "sentencesEmptyTitle": "No rules of its own yet",
-      "sentencesEmptyDescription": "This subsystem has no rule of its own in the catalog yet. Add one in the catalog below.",
+      "sentencesEmptyDescription": "This department has no rule of its own in the catalog yet. Add one in the catalog below.",
       "autopilotTitle": "Autopilot by project",
       "autopilotNoProject": "No project has an autopilot policy set yet.",
       "autopilotCanDoAlone": "Can do alone:",
@@ -2029,8 +2029,8 @@
         "project-file": "File"
       },
       "runLink": "View run",
-      "emptyTitle": "This subsystem doesn't own a pipeline yet",
-      "emptyDescription": "Without a pipeline of its own, this subsystem has nothing to produce and nothing to hand off."
+      "emptyTitle": "This department doesn't own a pipeline yet",
+      "emptyDescription": "Without a pipeline of its own, this department has nothing to produce and nothing to hand off."
     },
     "handoff": {
       "panelTitle": "Outgoing handoff rules",
@@ -2049,7 +2049,7 @@
       "delete": "Delete",
       "addRule": "Add rule",
       "emptyTitle": "No outgoing rules yet",
-      "emptyDescription": "This subsystem doesn't have a handoff rule of its own yet. Add the first one below.",
+      "emptyDescription": "This department doesn't have a handoff rule of its own yet. Add the first one below.",
       "deleteTitle": "Delete handoff rule?",
       "deleteBody": "Really delete this handoff rule? This action can't be undone.",
       "severity": {
@@ -2081,7 +2081,7 @@
         "severityPrefix": "with severity",
         "anySignal": "Any signal (∗)",
         "anySeverity": "any",
-        "targetKindSubsystem": "subsystem",
+        "targetKindDepartment": "department",
         "targetKindPipeline": "pipeline",
         "tierClause": {
           "1": "automatically",
@@ -2109,14 +2109,14 @@
   },
   "archive": {
     "title": "Task archive",
-    "subtitle": "Everything ZIBBY finished, across every subsystem",
+    "subtitle": "Everything ZIBBY finished, across every department",
     "searchPlaceholder": "Search the archive…",
     "searchAriaLabel": "Search the archive",
-    "noSubsystem": "No subsystem",
+    "noDepartment": "No department",
     "filter": {
-      "all": "All subsystems",
-      "multiple": "{n} subsystems",
-      "noSubsystem": "No subsystem"
+      "all": "All departments",
+      "multiple": "{n} departments",
+      "noDepartment": "No department"
     },
     "emptyFilter": "Nothing found.",
     "emptyTitle": "The archive is still empty",

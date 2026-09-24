@@ -48,7 +48,7 @@ function buildOrbiters(seed: string, count: number, baseRadius: number): Orbiter
 
 /**
  * Faux-3D orbiting task dots — each dot is one active task on an inclined orbit
- * around the host (an `Orb`, a subsystem node, …). A seeded PRNG lays out the
+ * around the host (an `Orb`, a department node, …). A seeded PRNG lays out the
  * orbiters deterministically (stable across renders for the same `seed`); a
  * `requestAnimationFrame` loop projects them to 2D each frame, mutating each
  * dot's `transform` / `opacity` / `filter` / `zIndex` in place (no per-frame
@@ -62,10 +62,7 @@ function buildOrbiters(seed: string, count: number, baseRadius: number): Orbiter
  * prototype.
  */
 export function OrbitField({ seed, color, count, baseRadius }: OrbitFieldProps) {
-  const orbiters = useMemo(
-    () => buildOrbiters(seed, count, baseRadius),
-    [seed, count, baseRadius],
-  );
+  const orbiters = useMemo(() => buildOrbiters(seed, count, baseRadius), [seed, count, baseRadius]);
 
   const dots = useRef<(HTMLSpanElement | null)[]>([]);
 

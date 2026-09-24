@@ -106,14 +106,14 @@ function sortEntries(entries: MergeQueueEntry[]): MergeQueueEntry[] {
 }
 
 /**
- * NS2 F5b — Maestro's read-side merge queue. Enrichment-only over
+ * NS2 F5b — Release's read-side merge queue. Enrichment-only over
  * `ProjectPrService.listOpen` (zero merge code): per open PR, three bounded
  * REST reads (mergeability, check-runs, reviews), all tolerant-parsed and
  * fail-open to `"unknown"`. Merging stays the operator's existing gated
  * `POST /projects/:id/prs/:number/merge` — this service never calls it.
  */
 @Injectable()
-export class MaestroService {
+export class ReleaseService {
   private readonly fetchImpl: typeof fetch;
   private readonly log: ScopedLogger;
 
@@ -126,7 +126,7 @@ export class MaestroService {
     @Optional() fetchImpl?: typeof fetch,
   ) {
     this.fetchImpl = fetchImpl ?? fetch;
-    this.log = logger.child(MaestroService.name);
+    this.log = logger.child(ReleaseService.name);
   }
 
   async queue(query: MergeQueueQuery = {}, now: Date = new Date()): Promise<MergeQueue> {
@@ -140,7 +140,7 @@ export class MaestroService {
       try {
         entries.push(...(await this.queueForProject(project, now)));
       } catch (err) {
-        this.log.warn("maestro: project queue failed — skipping repo", {
+        this.log.warn("release: project queue failed — skipping repo", {
           project: project.id,
           error: String(err),
         });
@@ -180,7 +180,7 @@ export class MaestroService {
     if (!link) return [];
 
     const prs = await this.projectPr.listOpen(project.id).catch((err) => {
-      this.log.debug("maestro: listOpen failed", { project: project.id, error: String(err) });
+      this.log.debug("release: listOpen failed", { project: project.id, error: String(err) });
       return [] as ProjectPr[];
     });
     if (prs.length === 0) return [];
@@ -263,7 +263,7 @@ export class MaestroService {
           checkState = rollupCheckState(body?.check_runs ?? []);
         }
       } catch (err) {
-        this.log.debug("maestro: check-runs fetch failed", { repo: link.repo, error: String(err) });
+        this.log.debug("release: check-runs fetch failed", { repo: link.repo, error: String(err) });
       }
     }
 
@@ -290,7 +290,7 @@ export class MaestroService {
             : "unknown";
       return { mergeable, sha: detail?.head?.sha };
     } catch (err) {
-      this.log.debug("maestro: pull detail fetch failed", { repo: link.repo, error: String(err) });
+      this.log.debug("release: pull detail fetch failed", { repo: link.repo, error: String(err) });
       return { mergeable: "unknown" };
     }
   }
@@ -310,7 +310,7 @@ export class MaestroService {
       const reviews = Array.isArray(body) ? (body as GitHubReview[]) : [];
       return rollupReviewState(reviews);
     } catch (err) {
-      this.log.debug("maestro: reviews fetch failed", { repo: link.repo, error: String(err) });
+      this.log.debug("release: reviews fetch failed", { repo: link.repo, error: String(err) });
       return "unknown";
     }
   }

@@ -9,13 +9,13 @@ import { parseGraphReport } from "../self-knowledge/graph-report.parser";
 import { exec } from "../shared/git-exec";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { installRoot } from "../shared/data-dir";
-import { subsystemShelfId } from "../memory/subsystem-shelf";
+import { departmentShelfId } from "../memory/department-shelf";
 import { VaultService } from "../memory/vault.service";
-import { SubsystemFindingsStore } from "../subsystems/subsystem-findings.store";
+import { DepartmentFindingsStore } from "../departments/department-findings.store";
 
 /** The narrow slice of `exec`'s signature this service actually calls — matches
  *  `promisify(execFile)`'s shape, injectable for tests (same posture as the
- *  Sentinel/Maestro services' optional `fetchImpl`). */
+ *  Security/Release services' optional `fetchImpl`). */
 type ExecImpl = (
   file: string,
   args: string[],
@@ -23,7 +23,7 @@ type ExecImpl = (
 ) => Promise<{ stdout: string; stderr: string }>;
 
 /** The findings-store snapshot key + the vault note id (gap-detector's note pattern). */
-const FINDINGS_KEY = "loom";
+const FINDINGS_KEY = "qa";
 const NOTE_ID = "suggestions/quality-findings";
 
 /** A "god node" — a symbol with an outsized number of edges in the graphify report. */
@@ -35,7 +35,7 @@ const MADGE_TARGET = "apps/web";
 const MADGE_TIMEOUT_MS = 60_000;
 
 /** A god node in the dependency graph (too many incoming/outgoing edges). */
-export interface LoomGodNodeFinding {
+export interface ArchGodNodeFinding {
   kind: "god-node";
   fingerprint: string;
   name: string;
@@ -43,7 +43,7 @@ export interface LoomGodNodeFinding {
 }
 
 /** An oversized community cluster in the dependency graph. */
-export interface LoomCommunityFinding {
+export interface ArchCommunityFinding {
   kind: "community";
   fingerprint: string;
   label: string;
@@ -51,13 +51,13 @@ export interface LoomCommunityFinding {
 }
 
 /** A circular dependency chain reported by madge. */
-export interface LoomCycleFinding {
+export interface ArchCycleFinding {
   kind: "cycle";
   fingerprint: string;
   members: string[];
 }
 
-export type LoomFinding = LoomGodNodeFinding | LoomCommunityFinding | LoomCycleFinding;
+export type ArchFinding = ArchGodNodeFinding | ArchCommunityFinding | ArchCycleFinding;
 
 /** Sha1 hex digest — the cycle fingerprint's collision-resistant tail. */
 function sha1(input: string): string {
@@ -65,7 +65,7 @@ function sha1(input: string): string {
 }
 
 /** One human line for the vault note / briefing. */
-function toFindingLine(finding: LoomFinding): string {
+function toFindingLine(finding: ArchFinding): string {
   if (finding.kind === "god-node") return `god node: ${finding.name} (degree ${finding.degree})`;
   if (finding.kind === "community")
     return `oversized community: ${finding.label} (${finding.size} nodes)`;
@@ -76,14 +76,14 @@ function toFindingLine(finding: LoomFinding): string {
 type MadgeCircularOutput = string[][];
 
 /**
- * NS2 F5c — Loom's nightly quality audit over ZIBBY itself: graphify's
+ * NS2 F5c — Arch's nightly quality audit over ZIBBY itself: graphify's
  * god-node/community report (already parsed by `SelfKnowledgeService`'s
  * `parseGraphReport`) plus a madge circular-dependency check (scoped to
  * `apps/web`, matching the existing `check:cycles` script — knip is deferred,
  * not installed). Findings are a vault-note proposal (gap-detector's pattern)
- * filed onto Loom's shelf and read back for the briefing. A3: every NEW
+ * filed onto Arch's shelf and read back for the briefing. A3: every NEW
  * finding is ALSO normalized into a {@link HandoffSignal} and handed to the
- * {@link HandoffService} rule engine — the seed `loom-architecture` rule is a
+ * {@link HandoffService} rule engine — the seed `arch-architecture` rule is a
  * wildcard tier-3 rule, so every finding parks an operator-gated proposal
  * rather than dispatching. "Proposes ≠ acts" still holds — it now lives in
  * the rule's tier (data), not in the absence of a dispatch call (code).
@@ -92,13 +92,13 @@ type MadgeCircularOutput = string[][];
  * scheduler's tick.
  */
 @Injectable()
-export class LoomService {
+export class ArchService {
   private readonly execImpl: ExecImpl;
   private readonly log: ScopedLogger;
 
   constructor(
     private readonly vault: VaultService,
-    private readonly findingsStore: SubsystemFindingsStore,
+    private readonly findingsStore: DepartmentFindingsStore,
     private readonly activity: ActivityLogService,
     private readonly handoff: HandoffService,
     @Inject(GRAPH_REPORT_PATH) private readonly graphReportPath: string,
@@ -106,12 +106,12 @@ export class LoomService {
     @Optional() execImpl?: ExecImpl,
   ) {
     this.execImpl = execImpl ?? exec;
-    this.log = logger.child(LoomService.name);
+    this.log = logger.child(ArchService.name);
   }
 
   /** Audit ZIBBY itself for quality drift: god nodes/communities + circular deps. */
-  async audit(now: Date = new Date()): Promise<{ findings: LoomFinding[] }> {
-    const findings: LoomFinding[] = [
+  async audit(now: Date = new Date()): Promise<{ findings: ArchFinding[] }> {
+    const findings: ArchFinding[] = [
       ...(await this.auditGraphify()),
       ...(await this.auditCycles()),
     ];
@@ -124,25 +124,25 @@ export class LoomService {
       [...currentFingerprints].some((fp) => !lastFingerprints.has(fp));
 
     if (!changed) {
-      this.log.info("loom: no new findings");
+      this.log.info("arch: no new findings");
       await this.findingsStore.write(FINDINGS_KEY, currentFingerprints);
       return { findings };
     }
 
     await this.writeFindings(findings, now).catch((err) => {
-      this.log.warn("loom: failed to write findings to vault", { error: String(err) });
+      this.log.warn("arch: failed to write findings to vault", { error: String(err) });
     });
     await this.vault
       .updateIndex(
-        subsystemShelfId("loom"),
+        departmentShelfId("qa"),
         NOTE_ID,
         `Audit kvality — ${now.toISOString().slice(0, 10)}`,
       )
       .catch(() => {});
     await this.findingsStore.write(FINDINGS_KEY, currentFingerprints);
     void this.activity.record({
-      kind: "subsystem-scan",
-      summary: `Loom: ${newFindings.length} nových nálezů kvality`,
+      kind: "department-scan",
+      summary: `Arch: ${newFindings.length} nových nálezů kvality`,
       refs: { noteId: NOTE_ID },
     });
 
@@ -153,7 +153,7 @@ export class LoomService {
         // fail-open, but the audit tick must survive regardless).
         await this.handoff.evaluate(this.toSignal(finding));
       } catch (err) {
-        this.log.warn("loom: handoff evaluate failed — finding stays for retry", {
+        this.log.warn("arch: handoff evaluate failed — finding stays for retry", {
           fingerprint: finding.fingerprint,
           error: String(err),
         });
@@ -164,15 +164,15 @@ export class LoomService {
   }
 
   /** Normalize one finding into the handoff engine's signal shape — no severity, no projectId. */
-  private toSignal(f: LoomFinding): HandoffSignal {
+  private toSignal(f: ArchFinding): HandoffSignal {
     const title =
       f.kind === "god-node"
-        ? `Loom: god node ${f.name}`
+        ? `Arch: god node ${f.name}`
         : f.kind === "community"
-          ? `Loom: oversized community ${f.label}`
-          : "Loom: circular dependency";
+          ? `Arch: oversized community ${f.label}`
+          : "Arch: circular dependency";
     return {
-      from: "loom",
+      from: "qa",
       kind: f.kind,
       title,
       body: toFindingLine(f),
@@ -194,7 +194,7 @@ export class LoomService {
     }
   }
 
-  private async auditGraphify(): Promise<LoomFinding[]> {
+  private async auditGraphify(): Promise<ArchFinding[]> {
     let markdown: string;
     try {
       markdown = await fs.readFile(this.graphReportPath, "utf8");
@@ -202,14 +202,14 @@ export class LoomService {
       // graphify-out/ is gitignored and routinely absent — "not available", not an
       // error. Keeping the report current is the existing `graphify update .` hook,
       // never this service's job.
-      this.log.debug("loom: graph report unavailable — skipping graphify source", {
+      this.log.debug("arch: graph report unavailable — skipping graphify source", {
         error: String(err),
       });
       return [];
     }
 
     const { godNodes, communities } = parseGraphReport(markdown);
-    const findings: LoomFinding[] = [];
+    const findings: ArchFinding[] = [];
     for (const node of godNodes) {
       if (node.degree === undefined || node.degree < GOD_NODE_DEGREE_THRESHOLD) continue;
       findings.push({
@@ -231,7 +231,7 @@ export class LoomService {
     return findings;
   }
 
-  private async auditCycles(): Promise<LoomFinding[]> {
+  private async auditCycles(): Promise<ArchFinding[]> {
     let stdout: string;
     try {
       const result = await this.execImpl(
@@ -249,7 +249,7 @@ export class LoomService {
       if (typeof stdoutFromError === "string" && stdoutFromError.trim().length > 0) {
         stdout = stdoutFromError;
       } else {
-        this.log.debug("loom: madge unavailable — skipping cycle source", { error: String(err) });
+        this.log.debug("arch: madge unavailable — skipping cycle source", { error: String(err) });
         return [];
       }
     }
@@ -259,7 +259,7 @@ export class LoomService {
       const parsed = JSON.parse(stdout) as unknown;
       cycles = Array.isArray(parsed) ? parsed.filter((c): c is string[] => Array.isArray(c)) : [];
     } catch {
-      this.log.debug("loom: madge output was not valid JSON — skipping cycle source");
+      this.log.debug("arch: madge output was not valid JSON — skipping cycle source");
       return [];
     }
 
@@ -273,7 +273,7 @@ export class LoomService {
     });
   }
 
-  private async writeFindings(findings: LoomFinding[], now: Date): Promise<void> {
+  private async writeFindings(findings: ArchFinding[], now: Date): Promise<void> {
     const date = now.toISOString().slice(0, 10);
     const lines = findings.map(toFindingLine);
     const body = [
@@ -283,7 +283,7 @@ export class LoomService {
       "",
       ...lines.map((l) => `- [ ] ${l}`),
       "",
-      "_These are proposals to Forge — approve a line to turn it into work._",
+      "_These are proposals to Dev — approve a line to turn it into work._",
     ].join("\n");
     try {
       await this.vault.updateNote(NOTE_ID, { body });

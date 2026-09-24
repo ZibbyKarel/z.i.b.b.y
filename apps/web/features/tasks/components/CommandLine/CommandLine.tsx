@@ -29,10 +29,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAgentsQuery } from "../../../agents";
 import { usePipelinesQuery } from "../../../pipelines";
-import { useSubsystemsQuery } from "../../../subsystems/queries/useSubsystemsQuery";
+import { useDepartmentsQuery } from "../../../departments/queries/useDepartmentsQuery";
 import { useTeamsQuery } from "../../../teams";
 import { useUploadTaskAttachmentsMutation } from "../../mutations/useUploadTaskAttachmentsMutation";
-import { type SubsystemId, type TaskTarget, extractPathRanges } from "../../task";
+import { type DepartmentId, type TaskTarget, extractPathRanges } from "../../task";
 import type { TaskAttachmentSet } from "../TaskAttachments";
 
 export enum CommandLineTestId {
@@ -199,13 +199,13 @@ interface Mention {
 
 /** A single row of the inline mention dropdown — enough to both render the row
  * (glyph/tone by `kind`) and build the `TaskTarget` it resolves to on pick.
- * `color` is set only for a `subsystem` row — the mention list's rendering swaps
- * the usual `Tag` glyph for a dot tinted with the subsystem's own brand color
+ * `color` is set only for a `department` row — the mention list's rendering swaps
+ * the usual `Tag` glyph for a dot tinted with the department's own brand color
  * (Phase 91), matching `PipelineOwnerChip`'s established "colored dot" pattern.
  * A `team` row (Task 8) resolves to NO `TaskTarget` at all — picking it sets
  * the draft's team tag instead (see `pickMentionResult`'s branch). */
 interface MentionResult {
-  kind: "agent" | "pipeline" | "subsystem" | "team";
+  kind: "agent" | "pipeline" | "department" | "team";
   id: string;
   name: string;
   glyph: IconName;
@@ -385,7 +385,7 @@ const CONTROLS_INSET = "8px";
  * The generic draft composer (Phase 26; restyled to the velin-b command bar in Phase
  * 31a; stripped of all task-launch machinery in Phase 118d): one growable input that
  * owns ONLY the draft — free-text description, an inline `@` search to assign an
- * agent/pipeline/subsystem target, a `+`/pin button (and drag-and-drop) to attach
+ * agent/pipeline/department target, a `+`/pin button (and drag-and-drop) to attach
  * files, highlights (path + `@token` tones), and suggestion chips — firing `onSubmit`
  * on Enter or the trailing action. Composed entirely from DS primitives plus the
  * reused {@link HighlightTextAreaField} and the `@`-mention picker ported from
@@ -473,7 +473,7 @@ export function CommandLine({
 
   const { data: agents = [] } = useAgentsQuery();
   const { data: pipelines = [] } = usePipelinesQuery();
-  const { data: subsystems = [] } = useSubsystemsQuery();
+  const { data: departments = [] } = useDepartmentsQuery();
   const { data: teams = [] } = useTeamsQuery();
 
   const upload = useUploadTaskAttachmentsMutation();
@@ -728,17 +728,17 @@ export function CommandLine({
       // branch's literal `kind` matches `TaskTarget`'s properly-distributed union —
       // see `toApiTarget`'s doc comment in `task.ts` for why a unioned-kind
       // construction stops being assignable once there are enough branches. A
-      // subsystem row's `id` is cast to `SubsystemId`: `MentionResult.id` is a plain
-      // `string` (shared with agent/pipeline rows), but for a `kind: "subsystem"` row
-      // it always came from `useSubsystemsQuery()`'s own `SubsystemId`-typed id.
+      // department row's `id` is cast to `DepartmentId`: `MentionResult.id` is a plain
+      // `string` (shared with agent/pipeline rows), but for a `kind: "department"` row
+      // it always came from `useDepartmentsQuery()`'s own `DepartmentId`-typed id.
       const picked: TaskTarget =
         result.kind === "agent"
           ? { kind: "agent", id: result.id, name: result.name, glyph: result.glyph }
           : result.kind === "pipeline"
             ? { kind: "pipeline", id: result.id, name: result.name, glyph: result.glyph }
             : {
-                kind: "subsystem",
-                id: result.id as SubsystemId,
+                kind: "department",
+                id: result.id as DepartmentId,
                 name: result.name,
                 glyph: result.glyph,
               };
@@ -801,17 +801,17 @@ export function CommandLine({
   // `maxHeight` clamp (see `mentionMenuStyle`) is what keeps the panel itself
   // from growing past the viewport, so the list is scrollable rather than cut
   // off (ported from the velin-b reference's `mentionResults`).
-  // Phase 91: only subsystems with at least one owned pipeline are dispatchable —
-  // a capability-less subsystem would only ever hit the 0-owned validation reject,
+  // Phase 91: only departments with at least one owned pipeline are dispatchable —
+  // a capability-less department would only ever hit the 0-owned validation reject,
   // so it stays out of the picker entirely (mirrors an empty agent/pipeline catalog
   // never appearing either).
-  const rosterSubsystemIds = useMemo(
-    () => new Set(pipelines.flatMap((p) => (p.ownerSubsystem ? [p.ownerSubsystem] : []))),
+  const rosterDepartmentIds = useMemo(
+    () => new Set(pipelines.flatMap((p) => (p.department ? [p.department] : []))),
     [pipelines],
   );
-  const rosterSubsystems = useMemo(
-    () => subsystems.filter((s) => rosterSubsystemIds.has(s.id)),
-    [subsystems, rosterSubsystemIds],
+  const rosterDepartments = useMemo(
+    () => departments.filter((s) => rosterDepartmentIds.has(s.id)),
+    [departments, rosterDepartmentIds],
   );
 
   const mentionResults = useMemo<MentionResult[]>(() => {
@@ -832,10 +832,10 @@ export function CommandLine({
         name: p.name,
         glyph: "flow" as IconName,
       }));
-    const subsystemHits: MentionResult[] = rosterSubsystems
+    const departmentHits: MentionResult[] = rosterDepartments
       .filter((s) => matchesQuery(mention.query, s.name, s.id))
       .map((s) => ({
-        kind: "subsystem" as const,
+        kind: "department" as const,
         id: s.id,
         name: s.name,
         glyph: "grid" as IconName,
@@ -843,7 +843,7 @@ export function CommandLine({
       }));
     // Task 8: the fourth mention source — a team resolves to a scope tag, never
     // a `TaskTarget` (see `pickMentionResult`'s branch). Fix round 2: `"brain"`
-    // (not `"grid"` — that's the subsystem rows' glyph in this SAME list, and a
+    // (not `"grid"` — that's the department rows' glyph in this SAME list, and a
     // team answers a different question than every routing row: WHAT knowledge
     // base a turn can see, not WHO runs it). `"brain"` is the app's existing
     // knowledge/memory glyph (`features/memory/Screen.tsx`'s empty state) —
@@ -860,8 +860,8 @@ export function CommandLine({
             glyph: "brain" as IconName,
           }))
       : [];
-    return [...agentHits, ...pipelineHits, ...subsystemHits, ...teamHits].slice(0, 50);
-  }, [mention, agents, pipelines, rosterSubsystems, teams, allowTeamMentions]);
+    return [...agentHits, ...pipelineHits, ...departmentHits, ...teamHits].slice(0, 50);
+  }, [mention, agents, pipelines, rosterDepartments, teams, allowTeamMentions]);
   // Clamp at read time so a result list that shrank between renders never
   // leaves the keyboard highlight out of range.
   const activeMentionIndex =
@@ -1089,7 +1089,7 @@ export function CommandLine({
                     >
                       <CardContent padding="75">
                         <Stack align="center" direction="row" gap="75" justify="between">
-                          {result.kind === "subsystem" ? (
+                          {result.kind === "department" ? (
                             <Stack inline align="center" direction="row" gap="50">
                               <Container
                                 data-testid={`${CommandLineTestId.MentionItem}-${result.kind}-${result.id}-dot`}
@@ -1111,7 +1111,7 @@ export function CommandLine({
                                   : result.kind === "pipeline"
                                     ? "push"
                                     : // Fix round 2: a team row is the ONLY remaining
-                                      // kind reaching this branch (subsystem renders its
+                                      // kind reaching this branch (department renders its
                                       // own colored-dot row above, never a `Tag`) — `"send"`
                                       // is an existing `TagTone` unused elsewhere in this
                                       // dropdown (and, per a repo-wide check, unused

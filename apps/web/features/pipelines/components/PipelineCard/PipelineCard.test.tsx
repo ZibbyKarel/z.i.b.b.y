@@ -78,11 +78,11 @@ describe("PipelineCard", () => {
       <PipelineCard
         agents={agents}
         onSelect={() => {}}
-        pipeline={{ ...pipeline, ownerSubsystem: "forge" }}
+        pipeline={{ ...pipeline, department: "dev" }}
         selected={false}
       />,
     );
-    expect(screen.getByTestId(PipelineOwnerChipTestId.Root)).toHaveTextContent("Forge");
+    expect(screen.getByTestId(PipelineOwnerChipTestId.Root)).toHaveTextContent("Dev");
 
     rerender(
       <PipelineCard agents={agents} onSelect={() => {}} pipeline={pipeline} selected={false} />,

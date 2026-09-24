@@ -471,10 +471,10 @@ On release, the gate calls `TaskSchedulerService.createTask` with:
   **before** routing, not just before dispatch: a required `pr` sink constrains which
   units are even eligible at stage 2 (see
   [tasks.md](./tasks.md#a-required-pr-sink-is-a-hard-constraint-not-a-hint)), and it is
-  passed into `classifySubsystem` as well so both stages see the same constraint.
-- `explicitTarget` = **the item's SUBSYSTEM** (`{ kind: "subsystem", id }`),
-  resolved by `RoadmapGateService.classifySubsystem` →
-  `TaskClassifierService.classifySubsystem`. See "Subsystem-first release" below.
+  passed into `classifyDepartment` as well so both stages see the same constraint.
+- `explicitTarget` = **the item's DEPARTMENT** (`{ kind: "department", id }`),
+  resolved by `RoadmapGateService.classifyDepartment` →
+  `TaskClassifierService.classifyDepartment`. See "Department-first release" below.
   It used to be **absent** ("the classifier picks the target", the original
   Phase-125 Play UX decision) — that predates the F2 federation work and is what
   changed.
@@ -490,22 +490,22 @@ On release, the gate calls `TaskSchedulerService.createTask` with:
 The returned task id (and `runRef`, when the dispatch was synchronous) lands
 on a new entry in the item's `runs[]`; `lifecycle → "running"`.
 
-#### Subsystem-first release
+#### Department-first release
 
 The release asks the switchboard **one** question — "whose domain is this?" — and hands
-the answer to `createTask` as the `explicitTarget`. The subsystem then picks its own
-unit (`resolveSubsystemTarget` → `classifyWithinSubsystem`, see
-[tasks.md](./tasks.md#stage-1-only--classifysubsystem-subsystem-first-callers)).
+the answer to `createTask` as the `explicitTarget`. The department then picks its own
+unit (`resolveDepartmentTarget` → `classifyWithinDepartment`, see
+[tasks.md](./tasks.md#stage-1-only--classifydepartment-department-first-callers)).
 
 ```
 release()
   └─ output = item.output ?? { type: "pr" }        # a routing CONSTRAINT, not just a sink
   └─ routingText = buildRoadmapRoutingText(item)   # the item's own words, footer-free
-  └─ classifySubsystem(routingText, projectPath, output)   # RoadmapGateService, private
-       └─ TaskClassifierService.classifySubsystem(input, DEFAULT_ROADMAP_SUBSYSTEM)
-            → { kind: "subsystem", id }            # seated by construction
-  └─ createTask(…, text, routingText, output, explicitTarget: that subsystem)
-       └─ resolveSubsystemTarget → classifyWithinSubsystem  # reads routingText + output
+  └─ classifyDepartment(routingText, projectPath, output)   # RoadmapGateService, private
+       └─ TaskClassifierService.classifyDepartment(input, DEFAULT_ROADMAP_DEPARTMENT)
+            → { kind: "department", id }            # seated by construction
+  └─ createTask(…, text, routingText, output, explicitTarget: that department)
+       └─ resolveDepartmentTarget → classifyWithinDepartment  # reads routingText + output
             → a PR-capable pipeline (quick-fix | patch | delivery), never a lone agent
   └─ setRoadmapRef(taskId, item)                   # the reverse edge
   └─ setClassification(taskId, stage-1 trace)      # so RunDetail can still say "why here"
@@ -517,15 +517,15 @@ roadmap item was ranked against the FULL catalog of every agent + pipeline. Two
 consequences, both observed: the `roadmap-decomposer` won ordinary roadmap tasks on the
 gate's own footer wording (see [The artifact](#the-artifact)), and every item that did
 route to delivery paid for Architekt → Kodér ⇄ Review → Tester → Dokumentátor whether
-it needed all five phases or not. Routing to the subsystem instead lets forge make the
+it needed all five phases or not. Routing to the department instead lets dev make the
 pipeline-vs-agent call with its own mandate and `EFFORT_RULE` in the prompt.
 
-**What that change then exposed.** Letting forge choose freely also let it choose a lone
+**What that change then exposed.** Letting dev choose freely also let it choose a lone
 agent, and for an imported issue that is never right: ~all of them are "implement this →
-PR", and an agent run has no review, no verification and — for most forge agents, which
+PR", and an agent run has no review, no verification and — for most dev agents, which
 carry no `Bash` — no way to build or commit at all. The required-sink constraint makes
 that structural rather than a matter of how a small model reads two descriptions: a `pr`
-sink narrows stage 2 to forge's PR-capable pipelines, so the remaining question is only
+sink narrows stage 2 to dev's PR-capable pipelines, so the remaining question is only
 _how big is this_ (`quick-fix` / `patch` / `delivery`). Cheap items still land cheaply —
 `quick-fix` IS the "one implementer agent" rung, with a PR sink attached.
 
@@ -549,25 +549,25 @@ This is a routing fix, not a weakening of the trust boundary. Law 4 is enforced 
 text an actor reads, which is unchanged; a ranker cannot be prompt-injected in the first
 place — it only ever emits a catalog id.
 
-**`DEFAULT_ROADMAP_SUBSYSTEM` = `forge`** — the not-confident fallback only. A roadmap
-item is by construction delivery work on a code project, and forge is the only
-subsystem owning both a pipeline and specialist agents. `classifySubsystem` may still
-pick any other seated subsystem when the text genuinely matches its mandate (a
-research-shaped item → scout). If a project ever needs a different default, this is the
+**`DEFAULT_ROADMAP_DEPARTMENT` = `dev`** — the not-confident fallback only. A roadmap
+item is by construction delivery work on a code project, and dev is the only
+department owning both a pipeline and specialist agents. `classifyDepartment` may still
+pick any other seated department when the text genuinely matches its mandate (a
+research-shaped item → research). If a project ever needs a different default, this is the
 constant to promote to a `RoadmapConfig` field.
 
 **It can never fail a release.** Three fallbacks, all landing on "release undirected"
 (i.e. exactly the old behaviour) rather than on a failed item:
 
-| situation                             | result                               |
-| ------------------------------------- | ------------------------------------ |
-| no subsystem seated at all            | `null` → `explicitTarget` undefined  |
-| the classifier throws                 | logged → `explicitTarget` undefined  |
-| the verdict isn't `kind: "subsystem"` | refused → `explicitTarget` undefined |
+| situation                              | result                               |
+| -------------------------------------- | ------------------------------------ |
+| no department seated at all            | `null` → `explicitTarget` undefined  |
+| the classifier throws                  | logged → `explicitTarget` undefined  |
+| the verdict isn't `kind: "department"` | refused → `explicitTarget` undefined |
 
-The last is a belt-and-braces check: `classifySubsystem`'s catalog makes it impossible,
+The last is a belt-and-braces check: `classifyDepartment`'s catalog makes it impossible,
 but a concrete target arriving as an `explicitTarget` would silently bypass the whole
-subsystem layer, which is worth one cheap `if`.
+department layer, which is worth one cheap `if`.
 
 **The trace is written by hand here.** `TaskSchedulerService.dispatch` only builds a
 `ClassificationTrace` when IT did the classifying — and this release hands it an
@@ -579,17 +579,17 @@ explaining. Best-effort: a missing trace costs an explanation, never a dispatch.
 #### Ambiguous routing → Tier-3 park (NS2 F10)
 
 The table above covers a classifier that **fails**. A different case is a classifier that
-_answers_ but can't separate its top two subsystems (`TaskRouting.ambiguous` — see
+_answers_ but can't separate its top two departments (`TaskRouting.ambiguous` — see
 [tasks.md](./tasks.md#an-outage-and-a-coin-flip-are-different-failures-ns2-f10)). Guessing
-here is the most expensive routing mistake available — a whole wrong subsystem's run — and
+here is the most expensive routing mistake available — a whole wrong department's run — and
 on this path nobody is watching a preview. So the release **parks and asks** instead:
 
 ```
 release()
-  └─ classifySubsystem(...) → { ambiguous: true, target: pick, runnerUp }
+  └─ classifyDepartment(...) → { ambiguous: true, target: pick, runnerUp }
   └─ parkForRouting(item, text, projectPath, routing)      # and RETURN — no createTask
        ├─ RoutingProposalStore.create(proposal)            # data/routing-proposals/<id>.json
-       └─ requestApproval({ kind: "routing-proposal", runId: proposal.id, detail: "Forge or Codex?" })
+       └─ requestApproval({ kind: "routing-proposal", runId: proposal.id, detail: "Dev or Knowledge?" })
 ```
 
 Returning before `createTask` is load-bearing: the item must never reach
@@ -609,10 +609,10 @@ Resolution is `RoutingProposalService` — a separate `ResumableRunner` rather t
 on the gate, because `RoadmapGateService.resume(projectId, itemId)` already means
 "resume a failed item's last run" and two senses of `resume` on one class is a trap:
 
-| Decision    | What happens                                                                                                                                                                                                                                                                                   |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **approve** | `gate.releaseRouted(projectId, itemId, pick)` — releases with the operator-sanctioned target, skipping classification entirely (re-asking could disagree with the decision being honoured), then deletes the payload. A release failure leaves the payload for a retry.                        |
-| **reject**  | `gate.cancelRouting(proposalId)` — deletes the payload and returns the item to `todo`. It must leave the enqueued set: with the proposal gone the idempotency guard no longer holds it, so an `enqueued` item would simply be re-parked. Re-entry is Play with the subsystem named explicitly. |
+| Decision    | What happens                                                                                                                                                                                                                                                                                    |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **approve** | `gate.releaseRouted(projectId, itemId, pick)` — releases with the operator-sanctioned target, skipping classification entirely (re-asking could disagree with the decision being honoured), then deletes the payload. A release failure leaves the payload for a retry.                         |
+| **reject**  | `gate.cancelRouting(proposalId)` — deletes the payload and returns the item to `todo`. It must leave the enqueued set: with the proposal gone the idempotency guard no longer holds it, so an `enqueued` item would simply be re-parked. Re-entry is Play with the department named explicitly. |
 
 `releaseRouted` re-reads the item under the same `roadmap-gate:<projectId>` lock and
 refuses anything not still `enqueued`, so a double approval — or an item that moved on

@@ -1,23 +1,23 @@
-import { SUBSYSTEMS, type SubsystemWithStatus } from "@zibby/contracts";
+import { DEPARTMENTS, type DepartmentWithStatus } from "@zibby/contracts";
 import { Dialog } from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, renderWithProviders, screen } from "../../../../test/render";
 import {
+  DepartmentDrawer,
+  DepartmentDrawerTestId,
   PANEL_EXIT_MS,
-  SubsystemDrawer,
-  SubsystemDrawerTestId,
   backdropStyle,
   headerBandStyle,
   panelTransitionStyle,
   stateDotStyle,
   statePillStyle,
-} from "./SubsystemDrawer";
+} from "./DepartmentDrawer";
 
 const markSeenMutate = vi.fn();
 
-vi.mock("../../mutations/useMarkSubsystemSeenMutation", () => ({
-  useMarkSubsystemSeenMutation: () => ({ mutate: markSeenMutate, isPending: false }),
+vi.mock("../../mutations/useMarkDepartmentSeenMutation", () => ({
+  useMarkDepartmentSeenMutation: () => ({ mutate: markSeenMutate, isPending: false }),
 }));
 
 // The drawer's own suite covers chrome (header, tabs, focus, escape) — each
@@ -26,35 +26,36 @@ vi.mock("../../mutations/useMarkSubsystemSeenMutation", () => ({
 // `ArtefaktyTab.test.tsx`), so all four are stubbed here to keep this file's
 // mocks focused on what it actually exercises.
 vi.mock("./RosterTab", () => ({
-  RosterTab: ({ subsystem }: { subsystem: { id: string } }) => (
-    <div data-testid="roster-tab-stub">{subsystem.id}</div>
+  RosterTab: ({ department }: { department: { id: string } }) => (
+    <div data-testid="roster-tab-stub">{department.id}</div>
   ),
 }));
 vi.mock("./AktivitaTab", () => ({
-  AktivitaTab: ({ subsystem }: { subsystem: { id: string } }) => (
-    <div data-testid="aktivita-tab-stub">{subsystem.id}</div>
+  AktivitaTab: ({ department }: { department: { id: string } }) => (
+    <div data-testid="aktivita-tab-stub">{department.id}</div>
   ),
 }));
 vi.mock("./GatesTab", () => ({
-  GatesTab: ({ subsystem }: { subsystem: { id: string } }) => (
-    <div data-testid="gates-tab-stub">{subsystem.id}</div>
+  GatesTab: ({ department }: { department: { id: string } }) => (
+    <div data-testid="gates-tab-stub">{department.id}</div>
   ),
 }));
 vi.mock("./HandoffTab", () => ({
-  HandoffTab: ({ subsystem }: { subsystem: { id: string } }) => (
-    <div data-testid="handoff-tab-stub">{subsystem.id}</div>
+  HandoffTab: ({ department }: { department: { id: string } }) => (
+    <div data-testid="handoff-tab-stub">{department.id}</div>
   ),
 }));
 vi.mock("./ArtefaktyTab", () => ({
-  ArtefaktyTab: ({ subsystem }: { subsystem: { id: string } }) => (
-    <div data-testid="artefakty-tab-stub">{subsystem.id}</div>
+  ArtefaktyTab: ({ department }: { department: { id: string } }) => (
+    <div data-testid="artefakty-tab-stub">{department.id}</div>
   ),
 }));
 
-function fixture(overrides: Partial<SubsystemWithStatus> = {}): SubsystemWithStatus {
-  const base = SUBSYSTEMS[0]!;
+function fixture(overrides: Partial<DepartmentWithStatus> = {}): DepartmentWithStatus {
+  const base = DEPARTMENTS[0]!;
   return {
     id: base.id,
+    code: base.code,
     name: base.name,
     tagline: base.tagline,
     mandate: base.mandate,
@@ -67,7 +68,7 @@ function fixture(overrides: Partial<SubsystemWithStatus> = {}): SubsystemWithSta
   };
 }
 
-describe("SubsystemDrawer (Phase 84)", () => {
+describe("DepartmentDrawer (Phase 84)", () => {
   beforeEach(() => {
     markSeenMutate.mockReset();
   });
@@ -77,27 +78,25 @@ describe("SubsystemDrawer (Phase 84)", () => {
   });
 
   it("renders the panel and header identity", () => {
-    renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />);
+    renderWithProviders(<DepartmentDrawer department={fixture()} onClose={vi.fn()} />);
 
-    expect(screen.getByTestId(SubsystemDrawerTestId.Root)).toBeInTheDocument();
-    expect(screen.getByTestId(SubsystemDrawerTestId.Panel)).toBeInTheDocument();
-    expect(screen.getByTestId(SubsystemDrawerTestId.Name)).toHaveTextContent(SUBSYSTEMS[0]!.name);
+    expect(screen.getByTestId(DepartmentDrawerTestId.Root)).toBeInTheDocument();
+    expect(screen.getByTestId(DepartmentDrawerTestId.Panel)).toBeInTheDocument();
+    expect(screen.getByTestId(DepartmentDrawerTestId.Name)).toHaveTextContent(DEPARTMENTS[0]!.name);
     // Velín-D folds the mandate and the epithet onto one line.
-    const mandate = screen.getByTestId(SubsystemDrawerTestId.Mandate);
-    expect(mandate).toHaveTextContent(SUBSYSTEMS[0]!.mandate);
-    expect(mandate).toHaveTextContent(SUBSYSTEMS[0]!.tagline);
+    const mandate = screen.getByTestId(DepartmentDrawerTestId.Mandate);
+    expect(mandate).toHaveTextContent(DEPARTMENTS[0]!.mandate);
+    expect(mandate).toHaveTextContent(DEPARTMENTS[0]!.tagline);
   });
 
-  // The header's identity mark is the orb + the subsystem's own glyph. The DS
+  // The header's identity mark is the orb + the department's own glyph. The DS
   // `Icon` renders its paths with no name attribute, so WHICH glyph landed
-  // isn't observable here — `subsystemVisuals.test.ts` pins the id→glyph table
+  // isn't observable here — `departmentVisuals.test.ts` pins the id→glyph table
   // itself (the thing that could actually drift); this only pins that the
   // header renders the mark at all, rather than the old generic `bot` tile.
   it("renders the identity glyph over the orb", () => {
-    renderWithProviders(
-      <SubsystemDrawer onClose={vi.fn()} subsystem={fixture({ id: "sentinel" })} />,
-    );
-    expect(screen.getByTestId(SubsystemDrawerTestId.Glyph).querySelector("svg")).not.toBeNull();
+    renderWithProviders(<DepartmentDrawer department={fixture({ id: "sec" })} onClose={vi.fn()} />);
+    expect(screen.getByTestId(DepartmentDrawerTestId.Glyph).querySelector("svg")).not.toBeNull();
   });
 
   it.each([
@@ -108,59 +107,65 @@ describe("SubsystemDrawer (Phase 84)", () => {
     ["error", { errorCount: 1 }, "Chyba"],
   ] as const)("renders the header status for state %s", (state, extra, label) => {
     renderWithProviders(
-      <SubsystemDrawer onClose={vi.fn()} subsystem={fixture({ state, ...extra })} />,
+      <DepartmentDrawer department={fixture({ state, ...extra })} onClose={vi.fn()} />,
     );
-    const status = screen.getByTestId(SubsystemDrawerTestId.Status);
+    const status = screen.getByTestId(DepartmentDrawerTestId.Status);
     expect(status).toHaveTextContent(label);
   });
 
   it("shows the Tier-2/Tier-3 count badge only for report/waiting", () => {
     const { unmount } = renderWithProviders(
-      <SubsystemDrawer onClose={vi.fn()} subsystem={fixture({ state: "report", tier2Count: 4 })} />,
+      <DepartmentDrawer
+        department={fixture({ state: "report", tier2Count: 4 })}
+        onClose={vi.fn()}
+      />,
     );
     // Shows the bare numeral (the pill beside it already says the state), but
     // still announces the full phrase.
-    const count = screen.getByTestId(SubsystemDrawerTestId.Count);
+    const count = screen.getByTestId(DepartmentDrawerTestId.Count);
     expect(count).toHaveTextContent("4");
     expect(count).toHaveAccessibleName("4 hlášení k nahlédnutí");
     unmount();
 
     // idle/running have nothing outstanding to count — the state pill alone.
-    renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />);
-    expect(screen.queryByTestId(SubsystemDrawerTestId.Count)).toBeNull();
+    renderWithProviders(<DepartmentDrawer department={fixture()} onClose={vi.fn()} />);
+    expect(screen.queryByTestId(DepartmentDrawerTestId.Count)).toBeNull();
   });
 
   it("shows the error count badge for the error state", () => {
     renderWithProviders(
-      <SubsystemDrawer onClose={vi.fn()} subsystem={fixture({ state: "error", errorCount: 2 })} />,
+      <DepartmentDrawer
+        department={fixture({ state: "error", errorCount: 2 })}
+        onClose={vi.fn()}
+      />,
     );
-    const count = screen.getByTestId(SubsystemDrawerTestId.Count);
+    const count = screen.getByTestId(DepartmentDrawerTestId.Count);
     expect(count).toHaveTextContent("2");
     expect(count).toHaveAccessibleName("2 chyb");
   });
 
-  it("fires markSubsystemSeen exactly once per open — not again on a re-render with the same subsystem", () => {
+  it("fires markDepartmentSeen exactly once per open — not again on a re-render with the same department", () => {
     const { rerender } = renderWithProviders(
-      <SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />,
+      <DepartmentDrawer department={fixture()} onClose={vi.fn()} />,
     );
     expect(markSeenMutate).toHaveBeenCalledTimes(1);
     expect(markSeenMutate).toHaveBeenCalledWith({ params: { id: fixture().id }, body: {} });
 
     // A re-render with a FRESH object for the SAME id (e.g. the polled query
     // handing down a new reference) must not refire.
-    rerender(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture({ tier2Count: 1 })} />);
+    rerender(<DepartmentDrawer department={fixture({ tier2Count: 1 })} onClose={vi.fn()} />);
     expect(markSeenMutate).toHaveBeenCalledTimes(1);
   });
 
-  it("fires markSubsystemSeen again when the selection swaps to a different subsystem", () => {
+  it("fires markDepartmentSeen again when the selection swaps to a different department", () => {
     const { rerender } = renderWithProviders(
-      <SubsystemDrawer onClose={vi.fn()} subsystem={fixture({ id: "forge" })} />,
+      <DepartmentDrawer department={fixture({ id: "dev" })} onClose={vi.fn()} />,
     );
     expect(markSeenMutate).toHaveBeenCalledTimes(1);
 
-    rerender(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture({ id: "puls" })} />);
+    rerender(<DepartmentDrawer department={fixture({ id: "ops" })} onClose={vi.fn()} />);
     expect(markSeenMutate).toHaveBeenCalledTimes(2);
-    expect(markSeenMutate).toHaveBeenLastCalledWith({ params: { id: "puls" }, body: {} });
+    expect(markSeenMutate).toHaveBeenLastCalledWith({ params: { id: "ops" }, body: {} });
   });
 
   it("closes via the header close button after the exit transition", () => {
@@ -171,9 +176,9 @@ describe("SubsystemDrawer (Phase 84)", () => {
     // (`StatusPill.hoverRace.test.tsx`) uses `fireEvent`, not `userEvent`.
     vi.useFakeTimers();
     const onClose = vi.fn();
-    renderWithProviders(<SubsystemDrawer onClose={onClose} subsystem={fixture()} />);
+    renderWithProviders(<DepartmentDrawer department={fixture()} onClose={onClose} />);
 
-    fireEvent.click(screen.getByTestId(SubsystemDrawerTestId.Close));
+    fireEvent.click(screen.getByTestId(DepartmentDrawerTestId.Close));
     expect(onClose).not.toHaveBeenCalled();
 
     vi.advanceTimersByTime(PANEL_EXIT_MS);
@@ -181,12 +186,12 @@ describe("SubsystemDrawer (Phase 84)", () => {
   });
 
   it("keeps the glyph overlay non-interactive so it can't swallow a click", () => {
-    renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />);
+    renderWithProviders(<DepartmentDrawer department={fixture()} onClose={vi.fn()} />);
 
     // The glyph sits ON TOP of the orb; it must never eat pointer events.
     // (The close button no longer needs this guard — Velín-D puts it in the
     // header's own flex row rather than floating it over the art.)
-    expect(screen.getByTestId(SubsystemDrawerTestId.Glyph)).toHaveStyle({
+    expect(screen.getByTestId(DepartmentDrawerTestId.Glyph)).toHaveStyle({
       pointerEvents: "none",
     });
   });
@@ -194,7 +199,7 @@ describe("SubsystemDrawer (Phase 84)", () => {
   it("closes on Escape after the exit transition", () => {
     vi.useFakeTimers();
     const onClose = vi.fn();
-    renderWithProviders(<SubsystemDrawer onClose={onClose} subsystem={fixture()} />);
+    renderWithProviders(<DepartmentDrawer department={fixture()} onClose={onClose} />);
 
     fireEvent.keyDown(document, { key: "Escape" });
     expect(onClose).not.toHaveBeenCalled();
@@ -210,9 +215,9 @@ describe("SubsystemDrawer (Phase 84)", () => {
     expect(document.activeElement).toBe(opener);
 
     const { unmount } = renderWithProviders(
-      <SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />,
+      <DepartmentDrawer department={fixture()} onClose={vi.fn()} />,
     );
-    expect(document.activeElement).toBe(screen.getByTestId(SubsystemDrawerTestId.Panel));
+    expect(document.activeElement).toBe(screen.getByTestId(DepartmentDrawerTestId.Panel));
 
     unmount();
     expect(document.activeElement).toBe(opener);
@@ -220,21 +225,21 @@ describe("SubsystemDrawer (Phase 84)", () => {
   });
 
   describe("header band (Velín-D)", () => {
-    it("tints the band with the subsystem's own hue, fading downward", () => {
+    it("tints the band with the department's own hue, fading downward", () => {
       const hero = fixture();
-      renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={hero} />);
+      renderWithProviders(<DepartmentDrawer department={hero} onClose={vi.fn()} />);
 
-      const band = screen.getByTestId(SubsystemDrawerTestId.Hero);
+      const band = screen.getByTestId(DepartmentDrawerTestId.Hero);
       expect(band.style.backgroundImage).toBe(
         `linear-gradient(180deg, ${hero.color}18, transparent)`,
       );
     });
 
     it("carries no portrait — the orb is the only identity mark", () => {
-      renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />);
+      renderWithProviders(<DepartmentDrawer department={fixture()} onClose={vi.fn()} />);
 
-      const band = screen.getByTestId(SubsystemDrawerTestId.Hero);
-      // The phase-90 hero art is gone for good (see `SubsystemSchema`): no
+      const band = screen.getByTestId(DepartmentDrawerTestId.Hero);
+      // The phase-90 hero art is gone for good (see `DepartmentSchema`): no
       // portrait may creep back into the band by any route.
       expect(band.style.backgroundImage).not.toContain("url(");
       expect(band.style.backgroundImage).not.toContain("image-set(");
@@ -243,7 +248,7 @@ describe("SubsystemDrawer (Phase 84)", () => {
       expect(band.style.minHeight).toBe("");
     });
 
-    it("builds the band gradient from any subsystem hue", () => {
+    it("builds the band gradient from any department hue", () => {
       expect(headerBandStyle("#b07cff").backgroundImage).toBe(
         "linear-gradient(180deg, #b07cff18, transparent)",
       );
@@ -273,7 +278,7 @@ describe("SubsystemDrawer (Phase 84)", () => {
 
   it("defaults to the Roster tab and switches between all five tabs", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />);
+    renderWithProviders(<DepartmentDrawer department={fixture()} onClose={vi.fn()} />);
 
     expect(screen.getByTestId("roster-tab-stub")).toBeInTheDocument();
 
@@ -294,14 +299,14 @@ describe("SubsystemDrawer (Phase 84)", () => {
 
   describe("modal backdrop and animation (phase 125)", () => {
     it("renders fully open once mounted (not stuck in the entering state)", () => {
-      renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />);
-      const panel = screen.getByTestId(SubsystemDrawerTestId.Panel);
+      renderWithProviders(<DepartmentDrawer department={fixture()} onClose={vi.fn()} />);
+      const panel = screen.getByTestId(DepartmentDrawerTestId.Panel);
       expect(panel).toHaveStyle({ opacity: "1", transform: "scale(1) translateY(0)" });
     });
 
     it("blurs and dims the backdrop", () => {
-      renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />);
-      const backdrop = screen.getByTestId(SubsystemDrawerTestId.Root);
+      renderWithProviders(<DepartmentDrawer department={fixture()} onClose={vi.fn()} />);
+      const backdrop = screen.getByTestId(DepartmentDrawerTestId.Root);
       expect(backdrop.style.backdropFilter).toBe("blur(14px) saturate(140%)");
       expect(backdrop.style.background).toBe("rgba(11, 14, 19, 0.55)");
     });
@@ -309,9 +314,9 @@ describe("SubsystemDrawer (Phase 84)", () => {
     it("closes when clicking the backdrop itself", () => {
       vi.useFakeTimers();
       const onClose = vi.fn();
-      renderWithProviders(<SubsystemDrawer onClose={onClose} subsystem={fixture()} />);
+      renderWithProviders(<DepartmentDrawer department={fixture()} onClose={onClose} />);
 
-      fireEvent.click(screen.getByTestId(SubsystemDrawerTestId.Root));
+      fireEvent.click(screen.getByTestId(DepartmentDrawerTestId.Root));
       expect(onClose).not.toHaveBeenCalled();
 
       vi.advanceTimersByTime(PANEL_EXIT_MS);
@@ -321,18 +326,18 @@ describe("SubsystemDrawer (Phase 84)", () => {
     it("does not close when clicking inside the panel", () => {
       vi.useFakeTimers();
       const onClose = vi.fn();
-      renderWithProviders(<SubsystemDrawer onClose={onClose} subsystem={fixture()} />);
+      renderWithProviders(<DepartmentDrawer department={fixture()} onClose={onClose} />);
 
-      fireEvent.click(screen.getByTestId(SubsystemDrawerTestId.Panel));
+      fireEvent.click(screen.getByTestId(DepartmentDrawerTestId.Panel));
       vi.advanceTimersByTime(PANEL_EXIT_MS);
       expect(onClose).not.toHaveBeenCalled();
     });
 
     it("collapses to a fade-only transition under prefers-reduced-motion", () => {
       vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
-      renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />);
+      renderWithProviders(<DepartmentDrawer department={fixture()} onClose={vi.fn()} />);
 
-      const panel = screen.getByTestId(SubsystemDrawerTestId.Panel);
+      const panel = screen.getByTestId(DepartmentDrawerTestId.Panel);
       expect(panel.style.transform).toBe("");
       expect(panel.style.transition).toBe("opacity 220ms cubic-bezier(0.16, 1, 0.3, 1)");
       vi.unstubAllGlobals();
@@ -376,18 +381,18 @@ describe("SubsystemDrawer (Phase 84)", () => {
 
   describe("focus trap and scroll lock (phase 125)", () => {
     it("wraps Tab focus from the last focusable element back to the first", () => {
-      renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />);
+      renderWithProviders(<DepartmentDrawer department={fixture()} onClose={vi.fn()} />);
 
       screen.getByRole("tab", { name: "Artefakty" }).focus();
       fireEvent.keyDown(document, { key: "Tab" });
 
-      expect(document.activeElement).toBe(screen.getByTestId(SubsystemDrawerTestId.Close));
+      expect(document.activeElement).toBe(screen.getByTestId(DepartmentDrawerTestId.Close));
     });
 
     it("wraps Shift+Tab from the first focusable element back to the last", () => {
-      renderWithProviders(<SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />);
+      renderWithProviders(<DepartmentDrawer department={fixture()} onClose={vi.fn()} />);
 
-      screen.getByTestId(SubsystemDrawerTestId.Close).focus();
+      screen.getByTestId(DepartmentDrawerTestId.Close).focus();
       fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
 
       expect(document.activeElement).toBe(screen.getByRole("tab", { name: "Artefakty" }));
@@ -395,7 +400,7 @@ describe("SubsystemDrawer (Phase 84)", () => {
 
     it("locks body scroll while open and restores it on unmount", () => {
       const { unmount } = renderWithProviders(
-        <SubsystemDrawer onClose={vi.fn()} subsystem={fixture()} />,
+        <DepartmentDrawer department={fixture()} onClose={vi.fn()} />,
       );
       expect(document.body.style.overflow).toBe("hidden");
 
@@ -411,7 +416,7 @@ describe("SubsystemDrawer (Phase 84)", () => {
       vi.useFakeTimers();
       const onClose = vi.fn();
       const { unmount } = renderWithProviders(
-        <SubsystemDrawer onClose={onClose} subsystem={fixture()} />,
+        <DepartmentDrawer department={fixture()} onClose={onClose} />,
       );
       expect(document.body.style.overflow).toBe("hidden");
 

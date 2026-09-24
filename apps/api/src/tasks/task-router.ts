@@ -6,26 +6,26 @@ import type {
   TaskTarget,
 } from "@zibby/contracts";
 
-/** A named subsystem as a rankable stage-1 verdict (F2a — see {@link RoutableTarget}). */
-type SubsystemTaskTarget = Extract<TaskTarget, { kind: "subsystem" }>;
+/** A named department as a rankable stage-1 verdict (F2a — see {@link RoutableTarget}). */
+type DepartmentTaskTarget = Extract<TaskTarget, { kind: "department" }>;
 
 /**
  * A routable destination: a {@link CatalogTaskTarget} (a stored agent or
- * pipeline) or — as of F2a — a named {@link SubsystemTaskTarget} (a whole
+ * pipeline) or — as of F2a — a named {@link DepartmentTaskTarget} (a whole
  * delegation, resolved to a concrete unit by stage-2 downstream). Never the
  * synthetic orchestrator, which is the classifier's terminal fallback, not a
  * ranked candidate. Plus the free-text catalog blob (`search`) used to score
  * and describe it (name, id, category, description / pipeline desc + phase
- * agents / subsystem mandate). The contract response carries only the plain
+ * agents / department mandate). The contract response carries only the plain
  * target, so {@link toTaskTarget} strips the internal `search`.
  */
-export type RoutableTarget = (CatalogTaskTarget | SubsystemTaskTarget) & {
+export type RoutableTarget = (CatalogTaskTarget | DepartmentTaskTarget) & {
   search: string;
   /**
-   * NS2 F9 — the candidate's rung on its subsystem's complexity ladder, present
+   * NS2 F9 — the candidate's rung on its department's complexity ladder, present
    * only on `kind: "pipeline"` candidates. Agents are the rung BELOW `light` and
-   * carry no value; subsystem candidates (stage 1) have no rung at all, because
-   * the ladder is a within-subsystem ordering.
+   * carry no value; department candidates (stage 1) have no rung at all, because
+   * the ladder is a within-department ordering.
    */
   complexity?: PipelineComplexity;
   /**
@@ -40,7 +40,7 @@ export type RoutableTarget = (CatalogTaskTarget | SubsystemTaskTarget) & {
    * Deliberately absent (falsy) on every AGENT candidate, and that is the whole
    * point rather than an omission: a task that must produce a PR is never routed to
    * a lone agent. The rung that looks like "one implementer agent" already exists as
-   * a pipeline — forge's `quick-fix` (light: a single `fullstack-developer` phase
+   * a pipeline — dev's `quick-fix` (light: a single `fullstack-developer` phase
    * plus a declared `pr` output) — so the invariant costs no expressiveness while
    * keeping review, verification and a real sink in the path.
    */
@@ -55,11 +55,11 @@ export type RoutableTarget = (CatalogTaskTarget | SubsystemTaskTarget) & {
  * one shape with a unioned `kind` (which stops being assignable once there are
  * enough branches — the same pitfall documented on the web's `toApiTarget`).
  */
-export function toTaskTarget(candidate: RoutableTarget): CatalogTaskTarget | SubsystemTaskTarget {
+export function toTaskTarget(candidate: RoutableTarget): CatalogTaskTarget | DepartmentTaskTarget {
   const { name, glyph, avatar, category } = candidate;
   switch (candidate.kind) {
-    case "subsystem":
-      return { kind: "subsystem", id: candidate.id, name, glyph, avatar, category };
+    case "department":
+      return { kind: "department", id: candidate.id, name, glyph, avatar, category };
     case "agent":
       return { kind: "agent", id: candidate.id, name, glyph, avatar, category };
     case "pipeline":
@@ -77,7 +77,7 @@ export function toTaskTarget(candidate: RoutableTarget): CatalogTaskTarget | Sub
  * service then falls back to the keyword scorer (which never returns null).
  *
  * F2b: an optional `preamble` — extra context injected ahead of the task text
- * (a subsystem's mandate + owned-unit list, for {@link TaskClassifierService.classifyWithinSubsystem}'s
+ * (a department's mandate + owned-unit list, for {@link TaskClassifierService.classifyWithinDepartment}'s
  * scoped catalog). The LLM router weaves it into its prompt; the keyword
  * scorer has no prompt to inject into, so it accepts and ignores it
  * (signature parity — both implementations of this interface stay swappable).

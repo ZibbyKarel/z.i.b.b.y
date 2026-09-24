@@ -3,7 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import { SUBSYSTEMS } from "@zibby/contracts";
+import { DEPARTMENTS } from "@zibby/contracts";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
@@ -26,7 +26,7 @@ async function boot(): Promise<{ app: INestApplication; dir: string }> {
   // rule table doesn't recognize (by design — unrelated to production ids),
   // which would leave them legitimately unowned and break the "empty fleet"
   // owner-backfill assertion below.
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "subsystems-e2e-"));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "departments-e2e-"));
   process.env.AGENTS_DIR = path.join(dir, "agents");
   process.env.AGENT_RUNS_DIR = path.join(dir, "runs");
   process.env.PIPELINES_DIR = path.join(dir, "pipelines");
@@ -45,7 +45,7 @@ async function teardown(app: INestApplication, dir: string): Promise<void> {
   for (const key of ISOLATED_ENV_VARS) delete process.env[key];
 }
 
-describe("Subsystems API (e2e)", () => {
+describe("Departments API (e2e)", () => {
   let app: INestApplication;
   let dir: string;
 
@@ -57,48 +57,48 @@ describe("Subsystems API (e2e)", () => {
     await teardown(app, dir);
   });
 
-  it("GET /api/subsystems lists all 11 in registry order with stub status", async () => {
-    const res = await request(app.getHttpServer()).get("/api/subsystems");
+  it("GET /api/departments lists all 11 in registry order with stub status", async () => {
+    const res = await request(app.getHttpServer()).get("/api/departments");
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(11);
     expect((res.body as Array<{ id: string }>).map((s) => s.id)).toEqual(
-      SUBSYSTEMS.map((s) => s.id),
+      DEPARTMENTS.map((s) => s.id),
     );
-    for (const subsystem of res.body as Array<{
+    for (const department of res.body as Array<{
       state: string;
       tier2Count: number;
       tier3Count: number;
     }>) {
-      expect(subsystem).toMatchObject({ state: "idle", tier2Count: 0, tier3Count: 0 });
+      expect(department).toMatchObject({ state: "idle", tier2Count: 0, tier3Count: 0 });
     }
   });
 
-  it("GET /api/subsystems/:id returns the matching entry", async () => {
-    const res = await request(app.getHttpServer()).get("/api/subsystems/forge");
+  it("GET /api/departments/:id returns the matching entry", async () => {
+    const res = await request(app.getHttpServer()).get("/api/departments/dev");
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ id: "forge", name: "Forge", color: "#5b8def" });
+    expect(res.body).toMatchObject({ id: "dev", name: "Development", color: "#5b8def" });
   });
 
-  it("GET /api/subsystems/:id 404s on an unknown id", async () => {
-    const res = await request(app.getHttpServer()).get("/api/subsystems/nope");
+  it("GET /api/departments/:id 404s on an unknown id", async () => {
+    const res = await request(app.getHttpServer()).get("/api/departments/nope");
     expect(res.status).toBe(404);
     expect(res.body).toHaveProperty("message");
   });
 
-  it("POST /api/subsystems/:id/seen acknowledges and returns the refreshed entry", async () => {
-    const res = await request(app.getHttpServer()).post("/api/subsystems/forge/seen").send({});
+  it("POST /api/departments/:id/seen acknowledges and returns the refreshed entry", async () => {
+    const res = await request(app.getHttpServer()).post("/api/departments/dev/seen").send({});
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ id: "forge", state: "idle", tier2Count: 0, tier3Count: 0 });
+    expect(res.body).toMatchObject({ id: "dev", state: "idle", tier2Count: 0, tier3Count: 0 });
   });
 
-  it("POST /api/subsystems/:id/seen 404s on an unknown id", async () => {
-    const res = await request(app.getHttpServer()).post("/api/subsystems/nope/seen").send({});
+  it("POST /api/departments/:id/seen 404s on an unknown id", async () => {
+    const res = await request(app.getHttpServer()).post("/api/departments/nope/seen").send({});
     expect(res.status).toBe(404);
     expect(res.body).toHaveProperty("message");
   });
 
-  it("NS2 F1b: GET /api/subsystems/unowned is [] once the owner-backfill sweep has run (empty fleet)", async () => {
-    const res = await request(app.getHttpServer()).get("/api/subsystems/unowned");
+  it("NS2 F1b: GET /api/departments/unowned is [] once the owner-backfill sweep has run (empty fleet)", async () => {
+    const res = await request(app.getHttpServer()).get("/api/departments/unowned");
     expect(res.status).toBe(200);
     expect(res.body).toEqual([]);
   });

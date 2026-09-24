@@ -2,9 +2,9 @@ import type {
   Agent,
   AgentModel,
   AgentThinking,
+  DepartmentId,
   GateRuleInput,
   GlobalGateRule,
-  SubsystemId,
 } from "@zibby/contracts";
 
 /**
@@ -21,8 +21,8 @@ export type AgentEditValues = {
   tools: string[];
   category: string;
   instructions: string;
-  /** NS2 F1: the subsystem that owns this agent (write-required by the API). */
-  ownerSubsystem: SubsystemId;
+  /** NS2 F1: the department that owns this agent (write-required by the API). */
+  department: DepartmentId;
   /** The agent's own approval-gate rules (frontmatter `gates`). */
   gates: GateRuleInput[];
   /** Ids of linked global catalog rules (frontmatter `gateRuleIds`). */
@@ -40,7 +40,7 @@ export function toFormValues(agent: Agent): AgentEditValues {
     tools: agent.tools ?? [],
     category: agent.category ?? "",
     instructions: agent.instructions,
-    ownerSubsystem: agent.ownerSubsystem ?? "forge",
+    department: agent.department ?? "dev",
     gates: agent.gates ?? [],
     gateRuleIds: agent.gateRuleIds ?? [],
   };
@@ -68,7 +68,7 @@ export function applyFormValues(agent: Agent, values: AgentEditValues): Agent {
     tools: values.tools,
     category: values.category || undefined,
     instructions: values.instructions,
-    ownerSubsystem: values.ownerSubsystem,
+    department: values.department,
     gates: values.gates,
     gateRuleIds: values.gateRuleIds,
   };

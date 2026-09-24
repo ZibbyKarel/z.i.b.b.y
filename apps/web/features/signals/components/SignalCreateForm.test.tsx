@@ -12,7 +12,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push, back }) }));
 
 const { hooks } = vi.hoisted(() => ({
   hooks: {
-    subsystems: { data: [] as { id: string; name: string }[] },
+    departments: { data: [] as { id: string; name: string }[] },
     createMutation: {
       mutate: vi.fn(),
       isPending: false,
@@ -26,22 +26,22 @@ const { hooks } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("../../subsystems/queries", () => ({
-  useSubsystemsQuery: () => hooks.subsystems,
+vi.mock("../../departments/queries", () => ({
+  useDepartmentsQuery: () => hooks.departments,
 }));
 vi.mock("../../handoff/mutations", () => ({
   useCreateSignalKindMutation: () => hooks.createMutation,
   useUpdateSignalKindMutation: () => hooks.updateMutation,
 }));
 
-const SENTINEL = { id: "sentinel", name: "Sentinel" };
-const LOOM = { id: "loom", name: "Loom" };
+const SECURITY = { id: "sec", name: "Security" };
+const ARCH = { id: "qa", name: "Arch" };
 
 describe("SignalCreateForm (B3b)", () => {
   beforeEach(() => {
     push.mockClear();
     back.mockClear();
-    hooks.subsystems = { data: [SENTINEL, LOOM] };
+    hooks.departments = { data: [SECURITY, ARCH] };
     hooks.createMutation = { mutate: vi.fn(), isPending: false, isError: false };
     hooks.updateMutation = { mutate: vi.fn(), isPending: false, isError: false };
   });
@@ -59,9 +59,9 @@ describe("SignalCreateForm (B3b)", () => {
   });
 
   it("prefills the producer from defaultFrom", () => {
-    render(<SignalCreateForm defaultFrom="loom" />);
+    render(<SignalCreateForm defaultFrom="qa" />);
     const wrapper = screen.getByTestId(SignalCreateFormTestId.Producer);
-    expect(within(wrapper).getByTestId(DropdownTestId.Trigger)).toHaveTextContent("Loom");
+    expect(within(wrapper).getByTestId(DropdownTestId.Trigger)).toHaveTextContent("Arch");
   });
 
   it("updates the slug preview as the label changes", async () => {
@@ -79,7 +79,7 @@ describe("SignalCreateForm (B3b)", () => {
   });
 
   it("required-field validation blocks submit until label/description are filled", async () => {
-    render(<SignalCreateForm defaultFrom="sentinel" />);
+    render(<SignalCreateForm defaultFrom="sec" />);
     expect(screen.getByTestId(SignalCreateFormTestId.Submit)).toBeDisabled();
 
     await userEvent.type(screen.getByPlaceholderText("např. Prošlý certifikát"), "Cert expired");
@@ -97,7 +97,7 @@ describe("SignalCreateForm (B3b)", () => {
     hooks.createMutation.mutate = vi.fn((_vars, opts) => {
       opts?.onSuccess?.({ status: 201, body: { buildTaskId: "task_1" } });
     });
-    render(<SignalCreateForm defaultFrom="sentinel" />);
+    render(<SignalCreateForm defaultFrom="sec" />);
 
     await userEvent.type(screen.getByPlaceholderText("např. Prošlý certifikát"), "Cert expired");
     await userEvent.type(
@@ -114,7 +114,7 @@ describe("SignalCreateForm (B3b)", () => {
       expect(hooks.createMutation.mutate).toHaveBeenCalledWith(
         {
           body: {
-            from: "sentinel",
+            from: "sec",
             label: "Cert expired",
             description: "Fires when a TLS cert is about to expire.",
             severityBearing: false,
@@ -139,7 +139,7 @@ describe("SignalCreateForm (B3b)", () => {
 describe("SignalCreateForm — edit mode (B3c)", () => {
   const CUSTOM_THING: HandoffSignalKind = {
     id: "custom-thing",
-    from: "loom",
+    from: "qa",
     label: "Custom Thing",
     description: "an operator-registered signal",
     severityBearing: false,
@@ -150,7 +150,7 @@ describe("SignalCreateForm — edit mode (B3c)", () => {
   beforeEach(() => {
     push.mockClear();
     back.mockClear();
-    hooks.subsystems = { data: [SENTINEL, LOOM] };
+    hooks.departments = { data: [SECURITY, ARCH] };
     hooks.createMutation = { mutate: vi.fn(), isPending: false, isError: false };
     hooks.updateMutation = { mutate: vi.fn(), isPending: false, isError: false };
   });
@@ -159,7 +159,7 @@ describe("SignalCreateForm — edit mode (B3c)", () => {
     render(<SignalCreateForm initial={CUSTOM_THING} />);
 
     const producerWrapper = screen.getByTestId(SignalCreateFormTestId.Producer);
-    expect(within(producerWrapper).getByTestId(DropdownTestId.Trigger)).toHaveTextContent("Loom");
+    expect(within(producerWrapper).getByTestId(DropdownTestId.Trigger)).toHaveTextContent("Arch");
     expect(screen.getByDisplayValue("Custom Thing")).toBeInTheDocument();
     expect(screen.getByDisplayValue("an operator-registered signal")).toBeInTheDocument();
     expect(screen.getByTestId(SignalCreateFormTestId.SlugPreview)).toHaveTextContent(
@@ -184,7 +184,7 @@ describe("SignalCreateForm — edit mode (B3c)", () => {
         {
           params: { id: "custom-thing" },
           body: {
-            from: "loom",
+            from: "qa",
             label: "Custom Thing",
             description: "an operator-registered signal",
             severityBearing: false,

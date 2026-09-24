@@ -7,7 +7,7 @@ import { OrbMap, type OrbMapCore, type OrbMapFlare, type OrbMapNode } from "./Or
 
 const STAGE_BACKGROUND = "radial-gradient(ellipse 120% 90% at 50% -8%, #101722 0%, #05070c 58%)";
 
-interface SubsystemSample {
+interface DepartmentSample {
   id: string;
   label: string;
   hex: string;
@@ -16,15 +16,22 @@ interface SubsystemSample {
   activeCount: number;
 }
 
-const SAMPLES: SubsystemSample[] = [
+const SAMPLES: DepartmentSample[] = [
   { id: "atlas", label: "Atlas", hex: "#7aa5f8", icon: "compass", state: "idle", activeCount: 0 },
-  { id: "forge", label: "Forge", hex: "#f0b429", icon: "gear", state: "working", activeCount: 3 },
+  { id: "dev", label: "Dev", hex: "#f0b429", icon: "gear", state: "working", activeCount: 3 },
   { id: "scribe", label: "Scribe", hex: "#3fcf8e", icon: "doc", state: "report", activeCount: 1 },
   { id: "sentry", label: "Sentry", hex: "#f43f5e", icon: "shield", state: "await", activeCount: 2 },
   { id: "mint", label: "Mint", hex: "#ff6b6b", icon: "warn", state: "incident", activeCount: 1 },
   { id: "relay", label: "Relay", hex: "#5b8def", icon: "brain", state: "thinking", activeCount: 2 },
-  { id: "scout", label: "Scout", hex: "#22d3ee", icon: "search", state: "idle", activeCount: 0 },
-  { id: "codex", label: "Codex", hex: "#a78bfa", icon: "flask", state: "working", activeCount: 4 },
+  { id: "rnd", label: "Research", hex: "#22d3ee", icon: "search", state: "idle", activeCount: 0 },
+  {
+    id: "knw",
+    label: "Knowledge",
+    hex: "#a78bfa",
+    icon: "flask",
+    state: "working",
+    activeCount: 4,
+  },
 ];
 
 function buildNodes(): OrbMapNode[] {
@@ -145,6 +152,6 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     flareFromId: { control: "select", options: NODE_IDS, name: "flare: from" },
     flareToId: { control: "select", options: NODE_IDS, name: "flare: to" },
   },
-  args: { flareFromId: "scout", flareToId: "forge" },
+  args: { flareFromId: "rnd", flareToId: "dev" },
   render: (args) => <PlaygroundStage {...args} />,
 };

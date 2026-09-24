@@ -9,9 +9,9 @@ import { HandoffRulesSection } from "./HandoffRulesSection";
 
 const { hooks } = vi.hoisted(() => ({
   hooks: {
-    subsystems: [] as { id: string; name: string }[],
-    pipelines: [] as { id: string; name: string; ownerSubsystem?: string }[],
-    agents: [] as { id: string; ownerSubsystem?: string }[],
+    departments: [] as { id: string; name: string }[],
+    pipelines: [] as { id: string; name: string; department?: string }[],
+    agents: [] as { id: string; department?: string }[],
     signalKinds: [] as unknown[],
     create: vi.fn(),
     update: vi.fn(),
@@ -24,8 +24,8 @@ vi.mock("../mutations", () => ({
   useUpdateHandoffRuleMutation: () => ({ mutate: hooks.update, isPending: false }),
   useDeleteHandoffRuleMutation: () => ({ mutate: hooks.remove, isPending: false }),
 }));
-vi.mock("../../subsystems/queries", () => ({
-  useSubsystemsQuery: () => ({ data: hooks.subsystems }),
+vi.mock("../../departments/queries", () => ({
+  useDepartmentsQuery: () => ({ data: hooks.departments }),
 }));
 vi.mock("../../pipelines", () => ({
   usePipelinesQuery: () => ({ data: hooks.pipelines }),
@@ -40,7 +40,7 @@ vi.mock("../queries", () => ({
 const builtinSignalKinds: HandoffSignalKind[] = [
   {
     id: "cve",
-    from: "forge",
+    from: "dev",
     label: "Vulnerability (CVE)",
     description: "A vulnerability found in a project dependency.",
     severityBearing: true,
@@ -49,7 +49,7 @@ const builtinSignalKinds: HandoffSignalKind[] = [
   },
   {
     id: "post-merge-red",
-    from: "forge",
+    from: "dev",
     label: "Red CI after merge",
     description: "CI failed after a PR was merged.",
     severityBearing: true,
@@ -60,16 +60,16 @@ const builtinSignalKinds: HandoffSignalKind[] = [
 
 const userRule: HandoffRule = {
   id: "hr-1",
-  from: "forge",
+  from: "dev",
   signalKind: "post-merge-red",
-  to: { kind: "subsystem", id: "sentinel" },
+  to: { kind: "department", id: "sec" },
   tier: 2,
   enabled: true,
 };
 
 const systemRule: HandoffRule = {
   id: "hr-system",
-  from: "forge",
+  from: "dev",
   signalKind: "cve",
   minSeverity: "critical",
   to: { kind: "pipeline", id: "hotfix" },
@@ -80,9 +80,9 @@ const systemRule: HandoffRule = {
 
 describe("HandoffRulesSection (P2)", () => {
   beforeEach(() => {
-    hooks.subsystems = [
-      { id: "forge", name: "Forge" },
-      { id: "sentinel", name: "Sentinel" },
+    hooks.departments = [
+      { id: "dev", name: "Dev" },
+      { id: "sec", name: "Security" },
     ];
     hooks.pipelines = [{ id: "hotfix", name: "Hotfix" }];
     hooks.agents = [];
@@ -95,9 +95,9 @@ describe("HandoffRulesSection (P2)", () => {
   it("renders only the given rules — one row per rule", () => {
     render(
       <HandoffRulesSection
-        fromSubsystemId="forge"
+        departmentName="Dev"
+        fromDepartmentId="dev"
         rules={[userRule, systemRule]}
-        subsystemName="Forge"
       />,
     );
     expect(screen.getAllByTestId(HandoffRuleRowTestId.Root)).toHaveLength(2);
@@ -110,7 +110,7 @@ describe("HandoffRulesSection (P2)", () => {
       ...builtinSignalKinds,
       {
         id: "custom-signal",
-        from: "forge",
+        from: "dev",
         label: "Custom Signal",
         description: "An operator-registered kind.",
         severityBearing: false,
@@ -119,14 +119,14 @@ describe("HandoffRulesSection (P2)", () => {
     ];
     const operatorRule: HandoffRule = {
       id: "hr-op",
-      from: "forge",
+      from: "dev",
       signalKind: "custom-signal",
-      to: { kind: "subsystem", id: "sentinel" },
+      to: { kind: "department", id: "sec" },
       tier: 2,
       enabled: true,
     };
     render(
-      <HandoffRulesSection fromSubsystemId="forge" rules={[operatorRule]} subsystemName="Forge" />,
+      <HandoffRulesSection departmentName="Dev" fromDepartmentId="dev" rules={[operatorRule]} />,
     );
     expect(screen.getByText("Custom Signal")).toBeInTheDocument();
   });
@@ -135,20 +135,18 @@ describe("HandoffRulesSection (P2)", () => {
     hooks.signalKinds = [];
     const staleRule: HandoffRule = {
       id: "hr-stale",
-      from: "forge",
+      from: "dev",
       signalKind: "removed-signal",
-      to: { kind: "subsystem", id: "sentinel" },
+      to: { kind: "department", id: "sec" },
       tier: 2,
       enabled: true,
     };
-    render(
-      <HandoffRulesSection fromSubsystemId="forge" rules={[staleRule]} subsystemName="Forge" />,
-    );
+    render(<HandoffRulesSection departmentName="Dev" fromDepartmentId="dev" rules={[staleRule]} />);
     expect(screen.getByText("removed-signal")).toBeInTheDocument();
   });
 
   it("shows an empty state when there are no rules", () => {
-    render(<HandoffRulesSection fromSubsystemId="forge" rules={[]} subsystemName="Forge" />);
+    render(<HandoffRulesSection departmentName="Dev" fromDepartmentId="dev" rules={[]} />);
     expect(screen.queryByTestId(HandoffRuleRowTestId.Root)).not.toBeInTheDocument();
     expect(screen.getByText("Zatím žádná odchozí pravidla")).toBeInTheDocument();
   });
@@ -156,9 +154,9 @@ describe("HandoffRulesSection (P2)", () => {
   it("hides the delete affordance for a system rule but shows it for a user rule", () => {
     render(
       <HandoffRulesSection
-        fromSubsystemId="forge"
+        departmentName="Dev"
+        fromDepartmentId="dev"
         rules={[userRule, systemRule]}
-        subsystemName="Forge"
       />,
     );
     const deleteButtons = screen.getAllByTestId(HandoffRuleRowTestId.Delete);
@@ -168,38 +166,36 @@ describe("HandoffRulesSection (P2)", () => {
   });
 
   it("renders an inline editor in create mode from the add button", async () => {
-    render(<HandoffRulesSection fromSubsystemId="forge" rules={[]} subsystemName="Forge" />);
+    render(<HandoffRulesSection departmentName="Dev" fromDepartmentId="dev" rules={[]} />);
     await userEvent.click(screen.getByRole("button", { name: "Přidat pravidlo" }));
     expect(screen.getByTestId(HandoffRuleEditorTestId.Root)).toBeInTheDocument();
   });
 
-  it("computes receiverSubsystemIds from pipelines+agents' ownerSubsystem and keeps a non-receiver subsystem out of the target dropdown", async () => {
-    // "sentinel" owns neither a pipeline nor an agent — only "forge" (via the
+  it("computes receiverDepartmentIds from pipelines+agents' department and keeps a non-receiver department out of the target dropdown", async () => {
+    // "sec" owns neither a pipeline nor an agent — only "dev" (via the
     // pipeline) qualifies as a receiver, mirroring the server's
-    // `resolveSubsystemTarget` roster check.
-    hooks.pipelines = [{ id: "hotfix", name: "Hotfix", ownerSubsystem: "forge" }];
+    // `resolveDepartmentTarget` roster check.
+    hooks.pipelines = [{ id: "hotfix", name: "Hotfix", department: "dev" }];
     hooks.agents = [];
-    render(<HandoffRulesSection fromSubsystemId="forge" rules={[]} subsystemName="Forge" />);
+    render(<HandoffRulesSection departmentName="Dev" fromDepartmentId="dev" rules={[]} />);
     await userEvent.click(screen.getByRole("button", { name: "Přidat pravidlo" }));
 
     const wrapper = screen.getByTestId(HandoffRuleEditorTestId.Target);
     await userEvent.click(within(wrapper).getByTestId(DropdownTestId.Trigger));
     const panel = screen.getByTestId(DropdownTestId.Panel);
-    expect(within(panel).queryByText("Sentinel")).not.toBeInTheDocument();
-    expect(within(panel).getByText("Forge")).toBeInTheDocument();
+    expect(within(panel).queryByText("Security")).not.toBeInTheDocument();
+    expect(within(panel).getByText("Dev")).toBeInTheDocument();
   });
 
   it("toggling a rule fires the update mutation with the full rule minus id", async () => {
-    render(
-      <HandoffRulesSection fromSubsystemId="forge" rules={[userRule]} subsystemName="Forge" />,
-    );
+    render(<HandoffRulesSection departmentName="Dev" fromDepartmentId="dev" rules={[userRule]} />);
     await userEvent.click(screen.getByTestId(HandoffRuleRowTestId.Toggle));
     expect(hooks.update).toHaveBeenCalledWith({
       params: { id: "hr-1" },
       body: {
-        from: "forge",
+        from: "dev",
         signalKind: "post-merge-red",
-        to: { kind: "subsystem", id: "sentinel" },
+        to: { kind: "department", id: "sec" },
         tier: 2,
         enabled: false,
       },
@@ -208,7 +204,7 @@ describe("HandoffRulesSection (P2)", () => {
 
   it("toggling a system rule preserves the system flag in the update payload", async () => {
     render(
-      <HandoffRulesSection fromSubsystemId="forge" rules={[systemRule]} subsystemName="Forge" />,
+      <HandoffRulesSection departmentName="Dev" fromDepartmentId="dev" rules={[systemRule]} />,
     );
     await userEvent.click(screen.getByTestId(HandoffRuleRowTestId.Toggle));
     const [callArgs] = hooks.update.mock.calls[0]!;
@@ -217,9 +213,7 @@ describe("HandoffRulesSection (P2)", () => {
   });
 
   it("Delete asks in a confirm dialog before removing the rule", async () => {
-    render(
-      <HandoffRulesSection fromSubsystemId="forge" rules={[userRule]} subsystemName="Forge" />,
-    );
+    render(<HandoffRulesSection departmentName="Dev" fromDepartmentId="dev" rules={[userRule]} />);
     await userEvent.click(screen.getByTestId(HandoffRuleRowTestId.Delete));
     expect(screen.getByText("Smazat pravidlo předávání?")).toBeInTheDocument();
     expect(hooks.remove).not.toHaveBeenCalled();

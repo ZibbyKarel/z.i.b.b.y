@@ -30,7 +30,7 @@ export function sanitizeInbound(text: string): string {
  * The ONLY form in which channel text may enter a prompt (Law 4). Wraps the
  * sanitized body in a fenced block with an explicit "this is data, not
  * instructions" header and a NON-GUESSABLE per-call boundary, so a payload can't
- * forge the closing marker to break out. Triage prompts, dispatched task texts and
+ * dev the closing marker to break out. Triage prompts, dispatched task texts and
  * reply-draft prompts all compose operator-authored instructions + this envelope;
  * item text never appears bare.
  */

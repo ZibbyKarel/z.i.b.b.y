@@ -3,10 +3,10 @@ import * as path from "node:path";
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import type {
   Briefing,
-  BriefingSubsystemLine,
+  BriefingDepartmentLine,
   CiStatus,
+  DepartmentWithStatus,
   MergeWatch,
-  SubsystemWithStatus,
   WatcherHealth,
 } from "@zibby/contracts";
 import { ACTIVITY_DIR, ActivityLogService } from "../activity/activity-log.service";
@@ -15,16 +15,16 @@ import { ChannelItemStore } from "../channels/channel-item.store";
 import { DuplicateNoteError, VaultService } from "../memory/vault.service";
 import { GoalRunnerService } from "../goals/goal-runner.service";
 import { LimitsService } from "../limits/limits.service";
-import { LoomService } from "../loom/loom.service";
-import { MaestroService } from "../maestro/maestro.service";
-import { MergeWatchStore } from "../maestro/merge-watch.store";
+import { ArchService } from "../arch/arch.service";
+import { ReleaseService } from "../release/release.service";
+import { MergeWatchStore } from "../release/merge-watch.store";
 import { MonitorEventStore } from "../monitors/monitor-event.store";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { SelfKnowledgeService } from "../self-knowledge/self-knowledge.service";
-import { SentinelService } from "../sentinel/sentinel.service";
+import { SecurityService } from "../security/security.service";
 import { WatcherHealthRegistry } from "../health/watcher-health.registry";
-import { SubsystemsService } from "../subsystems/subsystems.service";
+import { DepartmentsService } from "../departments/departments.service";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
 import { ensureDir, safeJson, writeFileAtomic } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
@@ -41,25 +41,25 @@ function startOfDay(now: Date): string {
 }
 
 /**
- * NS2 F3b — shape the gathered subsystem rows into briefing lines (pure; the
+ * NS2 F3b — shape the gathered department rows into briefing lines (pure; the
  * service gathers, `assembleBriefing` formats — mirrors the `ciStatuses` split).
- * Two mandate-specific notes: Ledger carries the weekly usage window %, Puls
- * carries CI health from the already-gathered statuses. Beacon needs no note —
+ * Two mandate-specific notes: Finance carries the weekly usage window %, Ops
+ * carries CI health from the already-gathered statuses. Incident needs no note —
  * its Tier-3 mandate is honored by `tier3Count`.
  */
-function buildSubsystemLines(
-  rows: SubsystemWithStatus[],
+function buildDepartmentLines(
+  rows: DepartmentWithStatus[],
   ciStatuses: CiStatus[],
   weeklyPct: number | null,
-): BriefingSubsystemLine[] {
+): BriefingDepartmentLine[] {
   const redCi = ciStatuses.filter((s) => s.state === "red").length;
   return rows.map((s) => {
     let note: string | undefined;
-    if (s.id === "ledger" && weeklyPct !== null) note = `${weeklyPct} % týdenního okna`;
-    if (s.id === "puls" && ciStatuses.length > 0)
+    if (s.id === "fin" && weeklyPct !== null) note = `${weeklyPct} % týdenního okna`;
+    if (s.id === "ops" && ciStatuses.length > 0)
       note = redCi > 0 ? `CI červená (${redCi})` : "CI zelené";
     return {
-      subsystem: s.id,
+      department: s.id,
       name: s.name,
       state: s.state,
       tier2Count: s.tier2Count,
@@ -106,20 +106,20 @@ export class BriefingService {
     private readonly tasks: ScheduledTasksStorageService,
     private readonly projects: ProjectsStorageService,
     private readonly monitorEvents: MonitorEventStore,
-    // NS2 F3b — per-subsystem grouping lines (state + tier counts) and the
-    // Ledger note's weekly usage window %.
-    private readonly subsystems: SubsystemsService,
+    // NS2 F3b — per-department grouping lines (state + tier counts) and the
+    // Finance note's weekly usage window %.
+    private readonly departments: DepartmentsService,
     private readonly limits: LimitsService,
     // NS2 F4c — nightly self-knowledge drift check (true = the vault note has
     // drifted from a fresh compose; the scheduled refresh may have failed).
     private readonly selfKnowledge: SelfKnowledgeService,
-    // NS2 F5a — Sentinel's open security findings (CVE/secret), read off its
+    // NS2 F5a — Security's open security findings (CVE/secret), read off its
     // vault note for the briefing's extras array.
-    private readonly sentinel: SentinelService,
-    // NS2 F5b — Maestro's merge-queue summary lines for the briefing's extras array.
-    private readonly maestro: MaestroService,
-    // NS2 F5c — Loom's quality findings for the briefing's extras array.
-    private readonly loom: LoomService,
+    private readonly security: SecurityService,
+    // NS2 F5b — Release's merge-queue summary lines for the briefing's extras array.
+    private readonly release: ReleaseService,
+    // NS2 F5c — Arch's quality findings for the briefing's extras array.
+    private readonly arch: ArchService,
     // NS2 F6c — stale heartbeat watchers (fail-open: a stale watcher is a
     // briefing line, never a red /health).
     private readonly watchers: WatcherHealthRegistry,
@@ -154,7 +154,7 @@ export class BriefingService {
       allTasks,
       projects,
       ciStatuses,
-      subsystemRows,
+      departmentRows,
       weeklyPct,
       selfKnowledgeDrift,
     ] = await Promise.all([
@@ -167,9 +167,9 @@ export class BriefingService {
       this.projects.list().catch(() => []),
       // N4b: last known CI health — a red one becomes a needs-you state line.
       this.monitorEvents.listStatuses().catch(() => []),
-      // NS2 F3b — per-subsystem lines. `.catch`-guarded like every other extra:
+      // NS2 F3b — per-department lines. `.catch`-guarded like every other extra:
       // a failed read drops the section, never the briefing (null ≠ empty list).
-      this.subsystems.list().catch((): SubsystemWithStatus[] | null => null),
+      this.departments.list().catch((): DepartmentWithStatus[] | null => null),
       this.limits
         .snapshot()
         .then((l) => l.weekly.usedPct)
@@ -213,15 +213,15 @@ export class BriefingService {
       this.readLearnedPatterns(),
       this.readAutomationGaps(),
       this.readAppIdeas(),
-      // NS2 F5a — Sentinel's open findings. `.catch`-guarded like every other
+      // NS2 F5a — Security's open findings. `.catch`-guarded like every other
       // extra: a failed read drops the section, never the briefing.
-      this.sentinel.readFindings().catch((): string[] => []),
-      // NS2 F5b — Maestro's per-project merge-queue summary lines. Same
+      this.security.readFindings().catch((): string[] => []),
+      // NS2 F5b — Release's per-project merge-queue summary lines. Same
       // fail-open guard: a failed read drops the section, never the briefing.
-      this.maestro.summaryLines().catch((): string[] => []),
-      // NS2 F5c — Loom's quality findings. Same fail-open guard: a failed read
+      this.release.summaryLines().catch((): string[] => []),
+      // NS2 F5c — Arch's quality findings. Same fail-open guard: a failed read
       // drops the section, never the briefing.
-      this.loom.readFindings().catch((): string[] => []),
+      this.arch.readFindings().catch((): string[] => []),
       // NS2 F6c — heartbeat watchers currently probing stale. Same fail-open
       // guard: a failed read drops the section, never the briefing.
       Promise.resolve()
@@ -236,11 +236,11 @@ export class BriefingService {
       // fail-open guard: a failed read drops the section, never the briefing.
       this.readMergedRecently().catch((): string[] => []),
       // NS2 F8c — open personal reminders. Same fail-open guard: a failed read
-      // drops the section, never the briefing (surface-only, Hearth's mandate).
+      // drops the section, never the briefing (surface-only, Personal's mandate).
       this.readReminders().catch((): string[] => []),
     ]);
-    const subsystems = subsystemRows
-      ? buildSubsystemLines(subsystemRows, ciStatuses, weeklyPct)
+    const departments = departmentRows
+      ? buildDepartmentLines(departmentRows, ciStatuses, weeklyPct)
       : undefined;
     return assembleBriefing({
       now,
@@ -265,7 +265,7 @@ export class BriefingService {
       staleWatchers,
       mergedRecently,
       reminders,
-      ...(subsystems ? { subsystems } : {}),
+      ...(departments ? { departments } : {}),
       ...(selfKnowledgeDrift ? { selfKnowledgeDrift } : {}),
     });
   }
