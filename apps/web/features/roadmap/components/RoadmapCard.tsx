@@ -30,6 +30,8 @@ export enum RoadmapCardTestId {
   Play = "roadmap-card-play",
   Open = "roadmap-card-open",
   Failed = "roadmap-card-failed",
+  External = "roadmap-card-external",
+  LinkedPr = "roadmap-card-linked-pr",
   Epic = "roadmap-card-epic",
   Blocker = "roadmap-card-blocker",
   BlockerTooltip = "roadmap-card-blocker-tooltip",
@@ -244,12 +246,34 @@ export function RoadmapCard({
                     {t("card.failed")}
                   </Chip>
                 )}
+                {item.lifecycle === "external" && (
+                  <Chip dot data-testid={RoadmapCardTestId.External} tone="run">
+                    {t("card.external")}
+                  </Chip>
+                )}
               </Stack>
               <Typography truncate size="xs" type="note" variant="secondary">
                 {preview}
               </Typography>
             </Stack>
           </Pressable>
+
+          {item.linkedPr && (
+            <a
+              data-testid={RoadmapCardTestId.LinkedPr}
+              href={item.linkedPr.url}
+              rel="noopener noreferrer"
+              target="_blank"
+              title={item.linkedPr.title}
+            >
+              <Stack align="center" direction="row" gap="50">
+                <Typography mono size="xs" type="note" variant="secondary">
+                  {t("card.linkedPr", { number: item.linkedPr.number })}
+                </Typography>
+                <Icon aria-hidden name="arrow" size="xs" tone="faint" />
+              </Stack>
+            </a>
+          )}
 
           {/* Below the name, exactly as in the design mock — an attribution line
               reads as a footnote to the task, not as a heading above it. */}

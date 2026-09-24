@@ -325,6 +325,12 @@ describe("RoadmapGateService", () => {
       await expect(gate.play("acme", "item-1")).rejects.toBeInstanceOf(RoadmapItemLifecycleError);
     });
 
+    it("409s (RoadmapItemLifecycleError) when the item is external", async () => {
+      await store.put(item({ lifecycle: "external" }));
+      const gate = makeGate();
+      await expect(gate.play("acme", "item-1")).rejects.toBeInstanceOf(RoadmapItemLifecycleError);
+    });
+
     it("a failed blocker does NOT release its dependent", async () => {
       await store.put(item({ id: "blocker", lifecycle: "failed" }));
       await store.put(item({ id: "item-1", dependsOn: ["blocker"] }));
@@ -424,6 +430,18 @@ describe("RoadmapGateService", () => {
       expect(decomposition.dispatch.mock.calls[0]![1]).toMatchObject({ id: "epic-1" });
       // Never the ordinary release() path — no plain task for the epic itself.
       expect(taskScheduler.createTask).not.toHaveBeenCalled();
+    });
+
+    it("childless AND external/done — 409s (RoadmapItemLifecycleError) instead of decomposing", async () => {
+      await store.put(
+        item({ id: "epic-external", level: "epic", name: "Epic", lifecycle: "external" }),
+      );
+      const gate = makeGate();
+
+      await expect(gate.play("acme", "epic-external")).rejects.toBeInstanceOf(
+        RoadmapItemLifecycleError,
+      );
+      expect(decomposition.dispatch).not.toHaveBeenCalled();
     });
 
     it("playing the same epic again after it gains children takes the enqueue-children branch", async () => {
@@ -582,6 +600,18 @@ describe("RoadmapGateService", () => {
       await store.put(item({ id: "epic-1", level: "epic", name: "Epic" }));
       await store.put(item({ id: "child", parentId: "epic-1", lifecycle: "done" }));
       await store.put(item({ id: "epic-old", level: "epic", name: "Old", lifecycle: "archived" }));
+      const gate = makeGate();
+
+      await gate.autoPickup("acme");
+
+      expect(decomposition.dispatch).not.toHaveBeenCalled();
+    });
+
+    it("skips a childless epic that is external or done — someone (or the source) is already on it", async () => {
+      await store.put(
+        item({ id: "epic-external", level: "epic", name: "External", lifecycle: "external" }),
+      );
+      await store.put(item({ id: "epic-done", level: "epic", name: "Done", lifecycle: "done" }));
       const gate = makeGate();
 
       await gate.autoPickup("acme");

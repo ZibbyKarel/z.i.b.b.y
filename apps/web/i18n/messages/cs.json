@@ -2176,6 +2176,8 @@
       "resume": "Pokračovat",
       "actionsLabel": "Obnovovací akce",
       "failed": "Selhalo",
+      "external": "Rozpracováno mimo ZIBBY",
+      "linkedPr": "PR #{number}",
       "blockedOne": "čeká",
       "blockedMany": "blokován ({count})",
       "blockedTooltipTitle": "Čeká na:",

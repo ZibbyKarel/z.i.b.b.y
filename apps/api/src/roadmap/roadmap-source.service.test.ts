@@ -193,6 +193,30 @@ function jiraFetch(state: { issues: unknown[] }): typeof fetch {
   }) as unknown as typeof fetch;
 }
 
+function jiraAndPullsFetch(state: {
+  issues: unknown[];
+  pulls?: unknown[];
+  pullsStatus?: number;
+}): typeof fetch {
+  const jira = jiraFetch(state);
+  return (async (url: string | URL, init?: RequestInit) => {
+    const u = String(url);
+    if (u.includes("api.github.com/repos/acme/app/pulls")) {
+      return jsonResponse(state.pulls ?? [], state.pullsStatus ?? 200);
+    }
+    return jira(url, init);
+  }) as unknown as typeof fetch;
+}
+
+const issue = (key: string, statusName: string, category: string | undefined) => ({
+  key,
+  fields: {
+    summary: key,
+    issuetype: { name: "Story" },
+    status: { name: statusName, ...(category ? { statusCategory: { key: category } } : {}) },
+  },
+});
+
 // --- GitHub fixtures ----------------------------------------------------------
 
 const GITHUB_INTEGRATION: Integration = {
@@ -452,7 +476,7 @@ describe("RoadmapSourceService", () => {
       expect(items.map((item) => item.id)).toContain(subtaskId); // never deleted
     });
 
-    it("builds a currentUser()-scoped clause, narrowed by projectKey when configured", async () => {
+    it("scopes the default JQL to the whole project when projectKey is set", async () => {
       const capturedJql: string[] = [];
       const fetchImpl = (async (url: string | URL) => {
         const u = new URL(String(url));
@@ -467,9 +491,7 @@ describe("RoadmapSourceService", () => {
         fetchImpl,
       });
       await service.sync(PROJECT.id);
-      expect(capturedJql).toEqual([
-        "project = PROJ AND assignee = currentUser() ORDER BY created ASC",
-      ]);
+      expect(capturedJql).toEqual(["project = PROJ ORDER BY created ASC"]);
     });
 
     it("builds a bare currentUser()-scoped clause when no projectKey is configured", async () => {
@@ -655,6 +677,284 @@ describe("RoadmapSourceService", () => {
       expect(epic.level).toBe("epic");
 
       await expect(roadmap.get(PROJECT.id, storyId)).rejects.toThrow(); // never imported
+    });
+
+    it("imports To Do as todo, In Progress / Code Review / unknown as external, Done as done", async () => {
+      const state = {
+        issues: [
+          issue("PROJ-10", "To Do", "new"),
+          issue("PROJ-11", "In Progress", "indeterminate"),
+          issue("PROJ-12", "Code Review", "indeterminate"),
+          issue("PROJ-13", "Weird", undefined),
+          issue("PROJ-14", "Done", "done"),
+        ],
+      };
+      const { service, roadmap } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [JIRA_INTEGRATION],
+        fetchImpl: jiraAndPullsFetch(state),
+      });
+      await service.sync(PROJECT.id);
+      const lc = async (k: string) =>
+        (await roadmap.get(PROJECT.id, roadmapItemIdForSource(JIRA_INTEGRATION.id, k))).lifecycle;
+      expect(await lc("PROJ-10")).toBe("todo");
+      expect(await lc("PROJ-11")).toBe("external");
+      expect(await lc("PROJ-12")).toBe("external");
+      expect(await lc("PROJ-13")).toBe("external");
+      expect(await lc("PROJ-14")).toBe("done");
+    });
+
+    it("links an open PR naming the key, and treats a To Do item with an open PR as external", async () => {
+      const state = {
+        issues: [
+          issue("PROJ-1", "In Progress", "indeterminate"),
+          issue("PROJ-2", "To Do", "new"),
+          issue("PROJ-3", "To Do", "new"),
+        ],
+        pulls: [
+          {
+            number: 7,
+            html_url: "https://github.com/acme/app/pull/7",
+            title: "PROJ-1: fix login",
+            head: { ref: "feature/x" },
+          },
+          {
+            number: 8,
+            html_url: "https://github.com/acme/app/pull/8",
+            title: "tidy",
+            head: { ref: "proj-2-cleanup" },
+          },
+          {
+            number: 9,
+            html_url: "https://github.com/acme/app/pull/9",
+            title: "PROJ-30 unrelated",
+            head: { ref: "proj-31" },
+          },
+        ],
+      };
+      const { service, roadmap } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [JIRA_INTEGRATION, GITHUB_INTEGRATION],
+        fetchImpl: jiraAndPullsFetch(state),
+      });
+      await service.sync(PROJECT.id);
+
+      const proj1 = await roadmap.get(
+        PROJECT.id,
+        roadmapItemIdForSource(JIRA_INTEGRATION.id, "PROJ-1"),
+      );
+      expect(proj1.lifecycle).toBe("external");
+      expect(proj1.linkedPr).toEqual({
+        number: 7,
+        url: "https://github.com/acme/app/pull/7",
+        title: "PROJ-1: fix login",
+      });
+
+      const proj2 = await roadmap.get(
+        PROJECT.id,
+        roadmapItemIdForSource(JIRA_INTEGRATION.id, "PROJ-2"),
+      );
+      expect(proj2.lifecycle).toBe("external");
+      expect(proj2.linkedPr).toEqual({
+        number: 8,
+        url: "https://github.com/acme/app/pull/8",
+        title: "tidy",
+      });
+
+      // PROJ-30/proj-31 must NOT match PROJ-3.
+      const proj3 = await roadmap.get(
+        PROJECT.id,
+        roadmapItemIdForSource(JIRA_INTEGRATION.id, "PROJ-3"),
+      );
+      expect(proj3.lifecycle).toBe("todo");
+      expect(proj3.linkedPr).toBeUndefined();
+    });
+
+    it("a PR lookup failure is a note, not a failed sync — items fall back to Jira status", async () => {
+      const state = {
+        issues: [issue("PROJ-1", "In Progress", "indeterminate"), issue("PROJ-2", "To Do", "new")],
+        pullsStatus: 500,
+      };
+      const { service, roadmap } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [JIRA_INTEGRATION, GITHUB_INTEGRATION],
+        fetchImpl: jiraAndPullsFetch(state),
+      });
+      const result = await service.sync(PROJECT.id);
+
+      const proj2 = await roadmap.get(
+        PROJECT.id,
+        roadmapItemIdForSource(JIRA_INTEGRATION.id, "PROJ-2"),
+      );
+      expect(proj2.lifecycle).toBe("todo");
+      expect(result.notes.some((n) => n.note.includes("github PR lookup failed"))).toBe(true);
+
+      const proj1 = await roadmap.get(
+        PROJECT.id,
+        roadmapItemIdForSource(JIRA_INTEGRATION.id, "PROJ-1"),
+      );
+      expect(proj1.lifecycle).toBe("external"); // Jira items still imported
+    });
+
+    it("re-sync moves todo ⇄ external with the remote status but never touches a gate-owned lifecycle", async () => {
+      const state = {
+        issues: [
+          issue("PROJ-10", "In Progress", "indeterminate"),
+          issue("PROJ-11", "To Do", "new"),
+          issue("PROJ-12", "To Do", "new"),
+        ],
+        pulls: [
+          {
+            number: 5,
+            html_url: "https://github.com/acme/app/pull/5",
+            title: "PROJ-10 wip",
+            head: { ref: "wip" },
+          },
+        ],
+      };
+      const { service, roadmap } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [JIRA_INTEGRATION, GITHUB_INTEGRATION],
+        fetchImpl: jiraAndPullsFetch(state),
+      });
+      await service.sync(PROJECT.id);
+
+      const proj10Id = roadmapItemIdForSource(JIRA_INTEGRATION.id, "PROJ-10");
+      const proj11Id = roadmapItemIdForSource(JIRA_INTEGRATION.id, "PROJ-11");
+      const proj12Id = roadmapItemIdForSource(JIRA_INTEGRATION.id, "PROJ-12");
+      const proj10First = await roadmap.get(PROJECT.id, proj10Id);
+      expect(proj10First.lifecycle).toBe("external");
+      expect(proj10First.linkedPr?.number).toBe(5);
+      expect((await roadmap.get(PROJECT.id, proj11Id)).lifecycle).toBe("todo");
+
+      // Simulate ZIBBY dispatch putting PROJ-11 into "running" and PROJ-12 into "awaiting-merge".
+      await roadmap.update(PROJECT.id, proj11Id, (current) => ({
+        ...current,
+        lifecycle: "running",
+      }));
+      await roadmap.update(PROJECT.id, proj12Id, (current) => ({
+        ...current,
+        lifecycle: "awaiting-merge",
+      }));
+
+      // Jira status now flips: PROJ-10 returns to To Do (no PR); PROJ-11 and
+      // PROJ-12 both show In Progress upstream.
+      state.issues = [
+        issue("PROJ-10", "To Do", "new"),
+        issue("PROJ-11", "In Progress", "indeterminate"),
+        issue("PROJ-12", "In Progress", "indeterminate"),
+      ];
+      state.pulls = [];
+      await service.sync(PROJECT.id);
+
+      const proj10 = await roadmap.get(PROJECT.id, proj10Id);
+      expect(proj10.lifecycle).toBe("todo");
+      expect(proj10.linkedPr).toBeUndefined();
+
+      const proj11 = await roadmap.get(PROJECT.id, proj11Id);
+      expect(proj11.lifecycle).toBe("running"); // gate-owned lifecycle untouched
+
+      const proj12 = await roadmap.get(PROJECT.id, proj12Id);
+      expect(proj12.lifecycle).toBe("awaiting-merge"); // gate-owned lifecycle untouched
+    });
+
+    it("moves an enqueued item to external when a colleague picks it up remotely (Important #3)", async () => {
+      const state = {
+        issues: [issue("PROJ-30", "To Do", "new"), issue("PROJ-31", "To Do", "new")],
+        pulls: [] as { number: number; html_url: string; title: string; head: { ref: string } }[],
+      };
+      const { service, roadmap } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [JIRA_INTEGRATION, GITHUB_INTEGRATION],
+        fetchImpl: jiraAndPullsFetch(state),
+      });
+      await service.sync(PROJECT.id);
+
+      const proj30Id = roadmapItemIdForSource(JIRA_INTEGRATION.id, "PROJ-30");
+      const proj31Id = roadmapItemIdForSource(JIRA_INTEGRATION.id, "PROJ-31");
+
+      // Simulate the gate enqueueing both items (blocked/parked/full — nothing
+      // has actually started on either one yet).
+      await roadmap.update(PROJECT.id, proj30Id, (current) => ({
+        ...current,
+        lifecycle: "enqueued",
+        enqueuedAt: "2026-09-24T00:00:00.000Z",
+      }));
+      await roadmap.update(PROJECT.id, proj31Id, (current) => ({
+        ...current,
+        lifecycle: "enqueued",
+        enqueuedAt: "2026-09-24T00:00:00.000Z",
+      }));
+
+      // A colleague starts PROJ-30 in Jira; PROJ-31 stays To Do.
+      state.issues = [
+        issue("PROJ-30", "In Progress", "indeterminate"),
+        issue("PROJ-31", "To Do", "new"),
+      ];
+      state.pulls = [
+        {
+          number: 7,
+          html_url: "https://github.com/acme/app/pull/7",
+          title: "PROJ-30 wip",
+          head: { ref: "wip" },
+        },
+      ];
+      await service.sync(PROJECT.id);
+
+      const proj30 = await roadmap.get(PROJECT.id, proj30Id);
+      expect(proj30.lifecycle).toBe("external"); // no longer safe to dispatch
+      expect(proj30.linkedPr?.number).toBe(7);
+      expect(proj30.enqueuedAt).toBeUndefined(); // dropped with the move, not stale
+
+      const proj31 = await roadmap.get(PROJECT.id, proj31Id);
+      expect(proj31.lifecycle).toBe("enqueued"); // remote todo leaves it alone
+      expect(proj31.enqueuedAt).toBe("2026-09-24T00:00:00.000Z");
+    });
+
+    it("keeps a gate-owned item's linkedPr untouched across a re-sync", async () => {
+      const state = {
+        issues: [issue("PROJ-20", "In Progress", "indeterminate")],
+        pulls: [
+          {
+            number: 3,
+            html_url: "https://github.com/acme/app/pull/3",
+            title: "PROJ-20 wip",
+            head: { ref: "wip" },
+          },
+        ],
+      };
+      const { service, roadmap } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [JIRA_INTEGRATION, GITHUB_INTEGRATION],
+        fetchImpl: jiraAndPullsFetch(state),
+      });
+      await service.sync(PROJECT.id);
+
+      const proj20Id = roadmapItemIdForSource(JIRA_INTEGRATION.id, "PROJ-20");
+      const proj20First = await roadmap.get(PROJECT.id, proj20Id);
+      expect(proj20First.lifecycle).toBe("external");
+      expect(proj20First.linkedPr?.number).toBe(3);
+
+      // Simulate ZIBBY dispatch putting PROJ-20 into "running".
+      await roadmap.update(PROJECT.id, proj20Id, (current) => ({
+        ...current,
+        lifecycle: "running",
+      }));
+
+      // The PR search no longer returns it (e.g. merged and re-opened under a
+      // different number), but Jira still shows In Progress.
+      state.pulls = [];
+      await service.sync(PROJECT.id);
+
+      const proj20 = await roadmap.get(PROJECT.id, proj20Id);
+      expect(proj20.lifecycle).toBe("running"); // gate-owned lifecycle untouched
+      expect(proj20.linkedPr?.number).toBe(3); // untouched, not cleared
     });
   });
 

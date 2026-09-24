@@ -32,8 +32,8 @@ export type RoadmapReadiness = "archived" | "blocked" | "ready" | "in-progress" 
  * an edge is added to it later — then `archived`, then the derived `blocked`
  * check (checked before lifecycle, so a blocked-but-`enqueued` item reads as
  * blocked rather than in-progress), then `enqueued`/`running`/
- * `awaiting-merge` → `in-progress`, and everything else (`todo`, `failed`) →
- * `ready`. `failed` deliberately maps to TO DO, not its own column: the
+ * `awaiting-merge`/`external` → `in-progress`, and everything else (`todo`,
+ * `failed`) → `ready`. `failed` deliberately maps to TO DO, not its own column: the
  * operator can act on it right now (Restart/Resume), and it still never
  * unblocks a dependent because `isBlocked` tests `lifecycle !== "done"`.
  */
@@ -47,7 +47,8 @@ export function readiness(
   if (
     item.lifecycle === "enqueued" ||
     item.lifecycle === "running" ||
-    item.lifecycle === "awaiting-merge"
+    item.lifecycle === "awaiting-merge" ||
+    item.lifecycle === "external"
   ) {
     return "in-progress";
   }

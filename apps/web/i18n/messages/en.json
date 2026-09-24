@@ -2176,6 +2176,8 @@
       "resume": "Resume",
       "actionsLabel": "Recovery actions",
       "failed": "Failed",
+      "external": "In progress outside ZIBBY",
+      "linkedPr": "PR #{number}",
       "blockedOne": "waiting",
       "blockedMany": "blocked ({count})",
       "blockedTooltipTitle": "Waiting on:",

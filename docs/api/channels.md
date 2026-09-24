@@ -184,9 +184,10 @@ union of exactly two sets, and nothing else:
 
 `assignee:{username}` was **removed**. It was the leak: it pulled in anything assigned
 to the operator regardless of who opened it or whether they were addressed. Note that
-`RoadmapSourceService` still uses `assignee:` on purpose — roadmap sync's question
-genuinely _is_ "my work items". Do not "fix" it to match this adapter; they answer
-different questions.
+`RoadmapSourceService` is not a channel and answers a different question: with a Jira
+`projectKey` it imports the whole project backlog (so it can see work already started
+elsewhere and keep ZIBBY off it); GitHub import and a key-less Jira stay
+`assignee:`-scoped. Do not "fix" it to match this adapter.
 
 Set 2 does **not** use `author:{username}`. ZIBBY opens PRs with the operator's
 credentials, so `author:` cannot tell a ZIBBY PR from one the operator opened by hand.
