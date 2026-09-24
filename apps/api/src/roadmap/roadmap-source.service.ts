@@ -1002,8 +1002,19 @@ export class RoadmapSourceService {
       };
       // `linkedPr` is only meaningful while the item is `external` — drop it
       // (rather than leaving it stale) once the item returns to `todo` or
-      // moves anywhere else.
-      if (nextLifecycle === "external" && input.linkedPr) {
+      // moves anywhere else. But a GATE-owned lifecycle
+      // (enqueued/running/awaiting-merge/failed) is untouched by this sync —
+      // its `linkedPr` (set from before ZIBBY picked the item up) must be
+      // left exactly as-is too, unless the source now reports it done (the
+      // one sync transition that reaches even a gate-owned lifecycle).
+      const isGateOwned =
+        current.lifecycle === "enqueued" ||
+        current.lifecycle === "running" ||
+        current.lifecycle === "awaiting-merge" ||
+        current.lifecycle === "failed";
+      if (isGateOwned && input.workState !== "done") {
+        // leave `next.linkedPr` (== `current.linkedPr`, via the initial spread) alone
+      } else if (nextLifecycle === "external" && input.linkedPr) {
         next.linkedPr = input.linkedPr;
       } else {
         delete next.linkedPr;

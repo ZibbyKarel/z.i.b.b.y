@@ -804,6 +804,7 @@ describe("RoadmapSourceService", () => {
         issues: [
           issue("PROJ-10", "In Progress", "indeterminate"),
           issue("PROJ-11", "To Do", "new"),
+          issue("PROJ-12", "To Do", "new"),
         ],
         pulls: [
           {
@@ -824,21 +825,28 @@ describe("RoadmapSourceService", () => {
 
       const proj10Id = roadmapItemIdForSource(JIRA_INTEGRATION.id, "PROJ-10");
       const proj11Id = roadmapItemIdForSource(JIRA_INTEGRATION.id, "PROJ-11");
+      const proj12Id = roadmapItemIdForSource(JIRA_INTEGRATION.id, "PROJ-12");
       const proj10First = await roadmap.get(PROJECT.id, proj10Id);
       expect(proj10First.lifecycle).toBe("external");
       expect(proj10First.linkedPr?.number).toBe(5);
       expect((await roadmap.get(PROJECT.id, proj11Id)).lifecycle).toBe("todo");
 
-      // Simulate ZIBBY dispatch putting PROJ-11 into "running".
+      // Simulate ZIBBY dispatch putting PROJ-11 into "running" and PROJ-12 into "awaiting-merge".
       await roadmap.update(PROJECT.id, proj11Id, (current) => ({
         ...current,
         lifecycle: "running",
       }));
+      await roadmap.update(PROJECT.id, proj12Id, (current) => ({
+        ...current,
+        lifecycle: "awaiting-merge",
+      }));
 
-      // Jira status now flips: PROJ-10 returns to To Do (no PR); PROJ-11 shows In Progress upstream.
+      // Jira status now flips: PROJ-10 returns to To Do (no PR); PROJ-11 and
+      // PROJ-12 both show In Progress upstream.
       state.issues = [
         issue("PROJ-10", "To Do", "new"),
         issue("PROJ-11", "In Progress", "indeterminate"),
+        issue("PROJ-12", "In Progress", "indeterminate"),
       ];
       state.pulls = [];
       await service.sync(PROJECT.id);
@@ -849,6 +857,50 @@ describe("RoadmapSourceService", () => {
 
       const proj11 = await roadmap.get(PROJECT.id, proj11Id);
       expect(proj11.lifecycle).toBe("running"); // gate-owned lifecycle untouched
+
+      const proj12 = await roadmap.get(PROJECT.id, proj12Id);
+      expect(proj12.lifecycle).toBe("awaiting-merge"); // gate-owned lifecycle untouched
+    });
+
+    it("keeps a gate-owned item's linkedPr untouched across a re-sync", async () => {
+      const state = {
+        issues: [issue("PROJ-20", "In Progress", "indeterminate")],
+        pulls: [
+          {
+            number: 3,
+            html_url: "https://github.com/acme/app/pull/3",
+            title: "PROJ-20 wip",
+            head: { ref: "wip" },
+          },
+        ],
+      };
+      const { service, roadmap } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [JIRA_INTEGRATION, GITHUB_INTEGRATION],
+        fetchImpl: jiraAndPullsFetch(state),
+      });
+      await service.sync(PROJECT.id);
+
+      const proj20Id = roadmapItemIdForSource(JIRA_INTEGRATION.id, "PROJ-20");
+      const proj20First = await roadmap.get(PROJECT.id, proj20Id);
+      expect(proj20First.lifecycle).toBe("external");
+      expect(proj20First.linkedPr?.number).toBe(3);
+
+      // Simulate ZIBBY dispatch putting PROJ-20 into "running".
+      await roadmap.update(PROJECT.id, proj20Id, (current) => ({
+        ...current,
+        lifecycle: "running",
+      }));
+
+      // The PR search no longer returns it (e.g. merged and re-opened under a
+      // different number), but Jira still shows In Progress.
+      state.pulls = [];
+      await service.sync(PROJECT.id);
+
+      const proj20 = await roadmap.get(PROJECT.id, proj20Id);
+      expect(proj20.lifecycle).toBe("running"); // gate-owned lifecycle untouched
+      expect(proj20.linkedPr?.number).toBe(3); // untouched, not cleared
     });
   });
 
