@@ -1,7 +1,8 @@
 import type { TaskRunStatus } from "@zibby/contracts";
 
-/** Which flyout section is open. Reports are OMITTED this phase (operator decision). */
-export type FlyoutSection = "working" | "waiting";
+/** Which flyout section is open. Reports are still OMITTED this phase (operator
+ * decision); errors are now expandable like waiting. */
+export type FlyoutSection = "working" | "waiting" | "error";
 
 /** Shared close grace: leaving BOTH the pill and the panel for this long closes. */
 export const CLOSE_GRACE_MS = 200;
@@ -25,9 +26,9 @@ export interface FlyoutSectionMeta {
   /** Panel width in px (design: work 640, wait 720). */
   width: number;
   /** Header dot tone — DS DotTone vocabulary ("wait", not "warn"). */
-  dotTone: "run" | "wait";
+  dotTone: "run" | "wait" | "bad";
   /** Header title tone — DS TypographyTone vocabulary ("warn", not "wait"). */
-  titleTone: "run" | "warn";
+  titleTone: "run" | "warn" | "bad";
   /** 1px section-accent ring (design `0 0 0 1px ${color}22`) — the one visual value
    * with no DS token (no "state hue at 13% alpha" scale exists); composed with
    * var(--shadow-modal) by the panel. */
@@ -50,6 +51,13 @@ export const SECTION_META: Record<FlyoutSection, FlyoutSectionMeta> = {
     titleTone: "warn",
     ringShadow: "0 0 0 1px rgba(240,180,41,0.13)",
     headerGradient: "linear-gradient(180deg, rgba(240,180,41,0.08), transparent)",
+  },
+  error: {
+    width: 640,
+    dotTone: "bad",
+    titleTone: "bad",
+    ringShadow: "0 0 0 1px rgba(255,107,107,0.13)",
+    headerGradient: "linear-gradient(180deg, rgba(255,107,107,0.08), transparent)",
   },
 };
 

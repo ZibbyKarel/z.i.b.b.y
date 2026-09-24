@@ -9,6 +9,7 @@ import { Collection } from "../../../components/Collection/Collection";
 import { useApprovalsQuery } from "../../approvals";
 import { useRunGlyphMap, useRunsQuery } from "../../runs/queries/useRunsQuery";
 import { runGlyph } from "../../runs/run";
+import { useSubsystemsQuery } from "../../subsystems/queries/useSubsystemsQuery";
 import {
   type FlyoutSection,
   SECTION_META,
@@ -16,6 +17,7 @@ import {
   WORKING_STATUSES,
 } from "../statusFlyout";
 import { FlyoutApprovalRow } from "./FlyoutApprovalRow";
+import { FlyoutErrorRow } from "./FlyoutErrorRow";
 import { FlyoutWorkRow } from "./FlyoutWorkRow";
 
 export enum StatusFlyoutTestId {
@@ -55,7 +57,12 @@ function SectionHeader({
 }) {
   const meta = SECTION_META[section];
   const t = useTranslations("chat.statusPill.flyout");
-  const title = section === "working" ? t("working.title") : t("waiting.title");
+  const title =
+    section === "working"
+      ? t("working.title")
+      : section === "waiting"
+        ? t("waiting.title")
+        : t("error.title");
   return (
     <Container
       data-testid={StatusFlyoutTestId.Header}
@@ -147,6 +154,58 @@ function WaitingSection({ headerId }: { headerId: string }) {
           lg={2}
           loading={query.isPending ? { label: t("loading") } : undefined}
           renderItem={(approval) => <FlyoutApprovalRow approval={approval} key={approval.id} />}
+          sm={2}
+        />
+      </Container>
+    </>
+  );
+}
+
+function ErrorSection({ headerId }: { headerId: string }) {
+  const subsystemsQuery = useSubsystemsQuery();
+  const { runs, isPending, isError, refetch } = useRunsQuery();
+  const t = useTranslations("chat.statusPill.flyout");
+  // Mirrors the pill's count exactly: only subsystems whose HEADLINE state is
+  // `error` (a `waiting` subsystem outranks its own errors and isn't counted).
+  const runById = new Map(runs.map((r) => [r.runId, r]));
+  const failed = (subsystemsQuery.data ?? [])
+    .filter((s) => s.state === "error")
+    .flatMap((s) =>
+      (s.errorRunIds ?? []).map((runId) => ({
+        runId,
+        subsystemName: s.name,
+        run: runById.get(runId),
+      })),
+    );
+  return (
+    <>
+      <SectionHeader count={failed.length} headerId={headerId} section="error" />
+      <Container data-testid={StatusFlyoutTestId.Body} padding="150">
+        <Collection
+          cols={1}
+          empty={{ glyph: "ok", title: t("error.emptyTitle"), description: t("error.emptyBody") }}
+          error={
+            isError
+              ? {
+                  title: t("errorTitle"),
+                  description: t("errorBody"),
+                  retryLabel: t("retry"),
+                  onRetry: () => void refetch(),
+                }
+              : undefined
+          }
+          gap="100"
+          items={failed}
+          lg={2}
+          loading={isPending ? { label: t("loading") } : undefined}
+          renderItem={(f) => (
+            <FlyoutErrorRow
+              key={f.runId}
+              run={f.run}
+              runId={f.runId}
+              subsystemName={f.subsystemName}
+            />
+          )}
           sm={2}
         />
       </Container>
@@ -286,8 +345,10 @@ export function StatusFlyoutPanel({
     >
       {section === "working" ? (
         <WorkingSection headerId={headerId} />
-      ) : (
+      ) : section === "waiting" ? (
         <WaitingSection headerId={headerId} />
+      ) : (
+        <ErrorSection headerId={headerId} />
       )}
     </Container>,
     document.body,

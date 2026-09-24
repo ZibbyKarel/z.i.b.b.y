@@ -1926,6 +1926,13 @@
           "emptyTitle": "Nothing waiting",
           "emptyBody": "nothing is waiting · ZIBBY never orders on its own"
         },
+        "error": {
+          "title": "Errors",
+          "emptyTitle": "No errors",
+          "emptyBody": "Nothing failed since your last visit.",
+          "noDetail": "No error detail recorded.",
+          "missingRun": "Run is no longer in the feed (archived)."
+        },
         "loading": "Loading…",
         "errorTitle": "Couldn't load",
         "errorBody": "Please try again.",

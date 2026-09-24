@@ -1,9 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import type { SubsystemWithStatus } from "@zibby/contracts";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LoadErrorTestId } from "../../../components/LoadError/LoadError";
 import type { DashboardApproval } from "../../approvals/approval";
 import type { RunView } from "../../runs/run";
 import { renderWithProviders, screen } from "../../../test/render";
 import { FlyoutApprovalRowTestId } from "./FlyoutApprovalRow";
+import { FlyoutErrorRowTestId } from "./FlyoutErrorRow";
 import { FlyoutWorkRowTestId } from "./FlyoutWorkRow";
 import { StatusFlyoutPanel, StatusFlyoutTestId } from "./StatusFlyoutPanel";
 
@@ -29,6 +31,30 @@ vi.mock("../../approvals", () => ({
   useApproveMutation: () => ({ mutate: vi.fn(), isPending: false }),
   useRejectMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
+
+const subsystemsState = { data: [] as SubsystemWithStatus[] };
+vi.mock("../../subsystems/queries/useSubsystemsQuery", () => ({
+  useSubsystemsQuery: () => subsystemsState,
+}));
+
+function sub(overrides: Partial<SubsystemWithStatus> = {}): SubsystemWithStatus {
+  return {
+    id: "forge",
+    name: "Forge",
+    tagline: "t",
+    mandate: "m",
+    color: "#5b8def",
+    state: "idle",
+    tier2Count: 0,
+    tier3Count: 0,
+    errorCount: 0,
+    ...overrides,
+  };
+}
+
+beforeEach(() => {
+  subsystemsState.data = [];
+});
 
 function panelProps() {
   return {
@@ -108,5 +134,34 @@ describe("StatusFlyoutPanel", () => {
     renderWithProviders(<StatusFlyoutPanel section="working" {...panelProps()} />);
     expect(screen.getByTestId(LoadErrorTestId.Root)).toBeInTheDocument();
     runsState.isError = false;
+  });
+
+  it("error section lists the failed runs of subsystems in error state only", () => {
+    subsystemsState.data = [
+      sub({ id: "forge", name: "Forge", state: "error", errorCount: 1, errorRunIds: ["r_err"] }),
+      // waiting outranks error for the headline state → not in the pill's error count
+      sub({
+        id: "scout",
+        name: "Scout",
+        state: "waiting",
+        errorCount: 1,
+        errorRunIds: ["r_hidden"],
+      }),
+    ];
+    runsState.runs = [makeRun({ runId: "r_err", status: "error", title: "Broken build" })];
+    renderWithProviders(<StatusFlyoutPanel {...panelProps()} section="error" />);
+    const rows = screen.getAllByTestId(FlyoutErrorRowTestId.Root);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent("Broken build");
+    expect(screen.getByTestId(StatusFlyoutTestId.Header)).toHaveTextContent("Chyby");
+    runsState.runs = [];
+  });
+
+  it("error section shows the empty state when no subsystem carries errorRunIds", () => {
+    subsystemsState.data = [sub({ id: "forge", name: "Forge", state: "error", errorCount: 1 })];
+    runsState.runs = [];
+    renderWithProviders(<StatusFlyoutPanel {...panelProps()} section="error" />);
+    expect(screen.queryByTestId(FlyoutErrorRowTestId.Root)).toBeNull();
+    expect(screen.getByTestId(StatusFlyoutTestId.Body)).toHaveTextContent("Žádné chyby");
   });
 });
