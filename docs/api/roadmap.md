@@ -85,7 +85,7 @@ overrideBlocked?    // Tier-3 "pustit i tak"
 origin?             // "zibby-decomposed" -> the "navrhla ZIBBY" badge (125g); cleared on any operator edit
 output?             // 125e: the gate's terminal output choice for this item's task; absent = { type: "pr" }
 lifecycle           // "todo" | "external" | "enqueued" | "running" | "awaiting-merge" | "done" | "failed" | "archived"
-linkedPr?           // sync-owned: an open PR naming this item's key ({ number, url, title }); only set while lifecycle is "external"
+linkedPr?           // sync-owned: an open PR naming this item's key ({ number, url, title }); set/cleared by the sync while the item is sync-owned; gate-owned lifecycles keep it untouched
 enqueuedAt?         // 125e: stamped by play/playBulk/restart; the gate drains a project's enqueued
                     // items strictly FIFO by this timestamp, never `updatedAt`
 runs[]              // { taskId, runRef?, prNumber?, prUrl?, artifactPath?, startedAt, finishedAt?, outcome }
@@ -351,9 +351,10 @@ the remote work state above — including a plain reappearance of an archived it
 which lands wherever its current remote state says. A done source status always wins
 and moves the item to `"done"`, from any of those three. These are the ONLY lifecycle
 transitions the sync ever makes: `enqueued`/`running`/`awaiting-merge`/`failed` are
-never touched, and a `"done"` item never moves back out of `"done"`. `linkedPr` is
-written only while the resulting lifecycle is `"external"`; it is cleared as soon as an
-item returns to `"todo"` (rather than left stale on the card).
+never touched, and a `"done"` item never moves back out of `"done"`. For an item in a
+sync-owned lifecycle, `linkedPr` is written only while the resulting lifecycle is
+`"external"` and cleared as soon as the item returns to `"todo"` or moves to `"done"`
+(rather than left stale on the card); a gate-owned item keeps its `linkedPr` untouched.
 
 An item whose level-mapping `target` resolves to `"ignore"` is parsed but never
 turned into a roadmap item (counted in `skipped`), and is deliberately excluded from
