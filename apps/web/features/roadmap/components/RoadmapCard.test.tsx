@@ -217,6 +217,58 @@ describe("RoadmapCard", () => {
     expect(screen.getByTestId(RoadmapCardTestId.Failed)).toHaveTextContent("Selhalo");
   });
 
+  it("marks an external item and links its existing PR; Play stays inert", () => {
+    const external = item({
+      id: "t-ext-1",
+      name: "Started outside ZIBBY",
+      lifecycle: "external",
+      linkedPr: {
+        number: 7,
+        url: "https://github.com/acme/app/pull/7",
+        title: "PROJ-1: fix",
+      },
+    });
+    render(
+      <RoadmapCard
+        blockers={[]}
+        column="in-progress"
+        dependents={[]}
+        item={external}
+        onHoverChange={vi.fn()}
+        onSelect={vi.fn()}
+        onSelectDependency={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId(RoadmapCardTestId.External)).toHaveTextContent(
+      "Rozpracováno mimo ZIBBY",
+    );
+    const pr = screen.getByTestId(RoadmapCardTestId.LinkedPr);
+    expect(pr).toHaveAttribute("href", "https://github.com/acme/app/pull/7");
+    expect(pr).toHaveTextContent("PR #7");
+    expect(screen.getByTestId(RoadmapCardTestId.Play)).toBeDisabled();
+  });
+
+  it("shows the external chip without a PR link when none was found", () => {
+    const external = item({
+      id: "t-ext-2",
+      name: "Started outside ZIBBY, no PR yet",
+      lifecycle: "external",
+    });
+    render(
+      <RoadmapCard
+        blockers={[]}
+        column="in-progress"
+        dependents={[]}
+        item={external}
+        onHoverChange={vi.fn()}
+        onSelect={vi.fn()}
+        onSelectDependency={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId(RoadmapCardTestId.External)).toBeInTheDocument();
+    expect(screen.queryByTestId(RoadmapCardTestId.LinkedPr)).not.toBeInTheDocument();
+  });
+
   it("enables the play button for a todo item (125e wires it up)", () => {
     render(
       <RoadmapCard
