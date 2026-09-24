@@ -325,6 +325,12 @@ describe("RoadmapGateService", () => {
       await expect(gate.play("acme", "item-1")).rejects.toBeInstanceOf(RoadmapItemLifecycleError);
     });
 
+    it("409s (RoadmapItemLifecycleError) when the item is external", async () => {
+      await store.put(item({ lifecycle: "external" }));
+      const gate = makeGate();
+      await expect(gate.play("acme", "item-1")).rejects.toBeInstanceOf(RoadmapItemLifecycleError);
+    });
+
     it("a failed blocker does NOT release its dependent", async () => {
       await store.put(item({ id: "blocker", lifecycle: "failed" }));
       await store.put(item({ id: "item-1", dependsOn: ["blocker"] }));

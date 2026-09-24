@@ -8,6 +8,7 @@ import type {
   Project,
   RoadmapItem,
   RoadmapItemLevel,
+  RoadmapLinkedPr,
   RoadmapSource,
   RoadmapSyncResult,
 } from "@zibby/contracts";
@@ -66,7 +67,10 @@ interface NormalizedSourceIssue {
   parentExternalId?: string;
   /** Ids (in this source's externalId domain) this item depends on. */
   dependsOnExternalIds: string[];
-  done: boolean;
+  /** `"todo" | "external" | "done"` — see `jiraWorkState`. GitHub issues pass `"done"`/`"todo"`. */
+  workState: JiraWorkState;
+  /** An open PR naming this item's key — Jira only, sync-owned (see `findLinkedPr`). */
+  linkedPr?: RoadmapLinkedPr;
   attachments: NormalizedAttachment[];
 }
 
@@ -134,6 +138,12 @@ interface GitHubMilestone {
   description?: string | null;
   state?: string;
   html_url?: string;
+}
+interface GitHubPull {
+  number?: number;
+  html_url?: string;
+  title?: string;
+  head?: { ref?: string };
 }
 
 /** PAT/API-token from the closed credentials union (null if absent) — same helper every adapter has. */
@@ -224,6 +234,32 @@ function isJiraDone(status: JiraStatus | undefined): boolean {
   if (!status) return false;
   if (status.statusCategory?.key === "done") return true;
   return typeof status.name === "string" && /^(done|closed|resolved)$/i.test(status.name);
+}
+
+type JiraWorkState = "todo" | "external" | "done";
+
+/**
+ * Whether ZIBBY may start this issue. Only the "new" status category (To Do,
+ * Backlog, Open, …) is safe to start; "done" is finished; anything else —
+ * "indeterminate" (In Progress, Code Review, …), a missing or unknown
+ * category — means someone may already be on it, so it is `external`
+ * (fail-closed: an unrecognised status never becomes startable work).
+ */
+function jiraWorkState(status: JiraStatus | undefined): JiraWorkState {
+  if (isJiraDone(status)) return "done";
+  return status?.statusCategory?.key === "new" ? "todo" : "external";
+}
+
+/**
+ * Whole-token, case-insensitive match of a source key in a PR title or branch
+ * (`PROJ-1` matches "PROJ-1: fix" and "proj-1-login", never "PROJ-12").
+ */
+function findLinkedPr(key: string, pulls: readonly GitHubPull[]): RoadmapLinkedPr | undefined {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`(^|[^A-Za-z0-9])${escaped}(?![0-9])`, "i");
+  const pr = pulls.find((p) => re.test(p.title ?? "") || re.test(p.head?.ref ?? ""));
+  if (!pr?.number || !pr.html_url) return undefined;
+  return { number: pr.number, url: pr.html_url, title: pr.title ?? "" };
 }
 
 /**
@@ -324,9 +360,16 @@ export class RoadmapSourceService {
     };
     if (!jira && !github) return summary;
 
+    // PR lookup for linking is resolved independently of the `source` filter
+    // — a `source: "jira"` sync must still be able to link an existing PR.
+    const githubForPrs = integrations.find(
+      (integration): integration is Integration & { config: GitHubConfig } =>
+        integration.config.kind === "github",
+    );
+
     if (jira) {
       try {
-        await this.syncJira(projectId, jira, summary);
+        await this.syncJira(projectId, jira, summary, githubForPrs);
       } catch (error) {
         summary.notes.push({
           itemId: jira.id,
@@ -353,9 +396,28 @@ export class RoadmapSourceService {
     projectId: string,
     integration: Integration & { config: JiraConfig },
     summary: RoadmapSyncResult,
+    githubForPrs?: Integration & { config: GitHubConfig },
   ): Promise<void> {
     const token = tokenOf(await this.credentials.read(integration.id));
     if (!token) return; // no credentials configured for this integration — nothing to sync
+
+    let pulls: GitHubPull[] = [];
+    if (githubForPrs) {
+      const ghToken = tokenOf(await this.credentials.read(githubForPrs.id));
+      if (ghToken) {
+        try {
+          pulls = await this.fetchOpenGithubPulls(githubForPrs.config.repo, {
+            authorization: `Bearer ${ghToken}`,
+            accept: "application/vnd.github+json",
+          });
+        } catch (error) {
+          summary.notes.push({
+            itemId: githubForPrs.id,
+            note: `github PR lookup failed: ${(error as Error).message}`,
+          });
+        }
+      }
+    }
 
     const authHeader = `Basic ${Buffer.from(`${integration.config.email}:${token}`).toString("base64")}`;
     const primaryIssues = await this.fetchAllJiraIssues(
@@ -365,8 +427,11 @@ export class RoadmapSourceService {
       authHeader,
     );
     // Custom jql means the operator already declared the exact set they want
-    // — augmenting it with ancestor epics would second-guess that. Only the
-    // default "mine" clause gets epic-preservation.
+    // — augmenting it with ancestor epics would second-guess that. The
+    // default clause (whole-project or "mine") still gets epic-preservation:
+    // for the whole-project scope this is mostly a no-op (an ancestor in the
+    // same project is already in the primary set), but a cross-project
+    // parent still needs the supplementary fetch.
     const hasCustomJql = Boolean(integration.config.jql);
     const ownedKeys = new Set(
       primaryIssues
@@ -414,7 +479,9 @@ export class RoadmapSourceService {
         // (see `expandWithAncestorEpics`) — imported ONLY when it resolves to
         // an epic. An ancestor that resolves to `"task"` (e.g. an
         // intermediate story in a multi-hop chain) is silently dropped here:
-        // importing it would put someone else's story on my board. It also
+        // it's outside the configured scope (a cross-project parent, or —
+        // without a `projectKey` — outside "mine"), pulled in only to walk
+        // the chain, never meant to land on the board itself. It also
         // must NOT count toward `summary.skipped` (that counter is reserved
         // for level-mapping `"ignore"`, a different reason) or join `seen`
         // (so `archiveMissing` never has to reason about it).
@@ -432,6 +499,10 @@ export class RoadmapSourceService {
         download: () => this.downloadBytes(raw.content, { authorization: authHeader }),
       }));
 
+      const linkedPr = findLinkedPr(issue.key, pulls);
+      const remote = jiraWorkState(issue.fields?.status);
+      const workState: JiraWorkState = remote === "todo" && linkedPr ? "external" : remote;
+
       const outcome = await this.upsertItem({
         projectId,
         integrationId: integration.id,
@@ -445,7 +516,8 @@ export class RoadmapSourceService {
         level: target,
         parentExternalId,
         dependsOnExternalIds: jiraDependsOnKeys(issue.fields?.issuelinks ?? []),
-        done: isJiraDone(issue.fields?.status),
+        workState,
+        ...(linkedPr ? { linkedPr } : {}),
         attachments,
       });
       summary[outcome.outcome] += 1;
@@ -465,9 +537,12 @@ export class RoadmapSourceService {
    * `MAX_PAGES` so a runaway result set still terminates).
    *
    * A custom `jql` is used VERBATIM — the operator already declared the
-   * exact set they want. Otherwise the default scope is "mine"
-   * (`assignee = currentUser()`), narrowed by `projectKey` when configured.
-   * This is also reused (with an explicit `jql` and no `projectKey`) for the
+   * exact set they want. Otherwise the default scope is the WHOLE project
+   * backlog when `projectKey` is set (`project = <projectKey>`) — the sync
+   * must see work others already started, so it can keep ZIBBY off it — and
+   * falls back to "mine" (`assignee = currentUser()`) only when no
+   * `projectKey` is configured, so it never pulls a whole Jira site. This is
+   * also reused (with an explicit `jql` and no `projectKey`) for the
    * `key in (...)` supplementary ancestor-epic fetch in
    * `expandWithAncestorEpics`.
    *
@@ -487,7 +562,7 @@ export class RoadmapSourceService {
     const clause =
       jql ??
       (projectKey
-        ? `project = ${projectKey} AND assignee = currentUser() ORDER BY created ASC`
+        ? `project = ${projectKey} ORDER BY created ASC`
         : `assignee = currentUser() ORDER BY created ASC`);
     const out: JiraSearchIssue[] = [];
     let nextPageToken: string | undefined;
@@ -637,7 +712,7 @@ export class RoadmapSourceService {
           externalLevel: "Milestone",
           level: milestoneTarget,
           dependsOnExternalIds: [],
-          done: milestone.state === "closed",
+          workState: milestone.state === "closed" ? "done" : "todo",
           // GitHub issues expose attachments only as inline markdown links in
           // the body, with no listing/download endpoint the way Jira's
           // `fields.attachment` is a structured array — out of scope here.
@@ -681,7 +756,7 @@ export class RoadmapSourceService {
           level: issueTarget,
           parentExternalId,
           dependsOnExternalIds: [...dependsOnNumbers].map((n) => `issue:${n}`),
-          done: issue.state === "closed",
+          workState: issue.state === "closed" ? "done" : "todo",
           attachments: [],
         });
         summary[outcome.outcome] += 1;
@@ -757,6 +832,33 @@ export class RoadmapSourceService {
   }
 
   /**
+   * Open PRs for the PR-linking lookup (`GET /repos/{repo}/pulls?state=open`),
+   * paged like `fetchAllGithubIssues`. Failure propagates to the caller
+   * (`syncJira`), which turns it into a `summary.notes` entry rather than
+   * failing the Jira sync.
+   */
+  private async fetchOpenGithubPulls(
+    repo: string,
+    headers: Record<string, string>,
+  ): Promise<GitHubPull[]> {
+    const out: GitHubPull[] = [];
+    for (let page = 1; page <= MAX_PAGES; page += 1) {
+      const params = new URLSearchParams({
+        state: "open",
+        per_page: String(PAGE_SIZE),
+        page: String(page),
+      });
+      const res = await this.fetchImpl(`${GITHUB_API}/repos/${repo}/pulls?${params}`, { headers });
+      if (!res.ok) throw new Error(`github pulls: HTTP ${res.status}`);
+      const body = (await res.json()) as unknown;
+      const pulls = Array.isArray(body) ? (body as GitHubPull[]) : [];
+      out.push(...pulls);
+      if (pulls.length < PAGE_SIZE) break;
+    }
+    return out;
+  }
+
+  /**
    * Best-effort native sub-issues (`GET /issues/{n}/sub_issues`). A 404/410
    * (an older GitHub Enterprise/API version without the endpoint) is NOT an
    * error — nor, for this enrichment-only call, is any other failure: it
@@ -788,13 +890,19 @@ export class RoadmapSourceService {
    * becomes two items). Enforces the ownership split (`docs/api/roadmap.md`):
    * a re-sync writes only `name`, `description`, `externalLevel`,
    * `attachments`/`attachmentSetId`, `source.url`, `parentId`,
-   * `dependsOnFromSource`, `syncNotes`, `syncedAt` — plus the two narrow,
-   * explicitly-sanctioned lifecycle transitions (`-> done` on a Done/closed
-   * source status, `-> todo` when an archived item reappears in the source).
-   * It NEVER otherwise touches `lifecycle`, never touches `runs`/
-   * `overrideBlocked`/`origin`, and rewrites `dependsOn` only via the pure,
-   * separately-tested `mergeDependsOn` (dropping a source edge the source
-   * removed, adding one it newly declares, preserving every manual edge).
+   * `dependsOnFromSource`, `syncNotes`, `syncedAt`, `linkedPr` — plus the
+   * narrow, explicitly-sanctioned lifecycle transitions: `-> done` whenever
+   * the source reports a done status, and, for an item still in a
+   * sync-owned lifecycle (`todo`/`external`/`archived`), `-> todo | external`
+   * per the remote work state (the safe-to-start rule — see
+   * `jiraWorkState`/`findLinkedPr`). `enqueued`/`running`/`awaiting-merge`/
+   * `failed` are NEVER touched here, and a `done` item never moves back out
+   * of `done`. `linkedPr` is written only while the resulting lifecycle is
+   * `external`; it is cleared (not merely left stale) once an item returns to
+   * `todo`. Never touches `runs`/`overrideBlocked`/`origin`, and rewrites
+   * `dependsOn` only via the pure, separately-tested `mergeDependsOn`
+   * (dropping a source edge the source removed, adding one it newly
+   * declares, preserving every manual edge).
    */
   private async upsertItem(input: NormalizedSourceIssue): Promise<UpsertOutcome> {
     const id = roadmapItemIdForSource(input.integrationId, input.externalId);
@@ -841,9 +949,10 @@ export class RoadmapSourceService {
         attachments,
         dependsOn: [...dependsOnFromSource],
         dependsOnFromSource,
-        lifecycle: input.done ? "done" : "todo",
+        lifecycle: input.workState,
         runs: [],
         syncNotes: notes,
+        ...(input.linkedPr ? { linkedPr: input.linkedPr } : {}),
         createdAt: now,
         updatedAt: now,
         syncedAt: now,
@@ -858,17 +967,22 @@ export class RoadmapSourceService {
         current.dependsOnFromSource,
         dependsOnFromSource,
       );
-      // Only two lifecycle transitions are sanctioned here (see the
-      // docblock); anything else — including a lifecycle a later sub-phase
-      // (125e) advanced, like `enqueued`/`running`/`awaiting-merge`/`failed`
-      // — passes through completely untouched.
+      // Only the sanctioned transitions happen here (see the docblock);
+      // anything else — including a lifecycle a later sub-phase (125e)
+      // advanced, like `enqueued`/`running`/`awaiting-merge`/`failed` —
+      // passes through completely untouched.
       let nextLifecycle = current.lifecycle;
-      if (input.done) {
+      if (input.workState === "done") {
         nextLifecycle = "done";
-      } else if (current.lifecycle === "archived") {
-        nextLifecycle = "todo";
+      } else if (
+        current.lifecycle === "archived" ||
+        current.lifecycle === "todo" ||
+        current.lifecycle === "external"
+      ) {
+        nextLifecycle = input.workState;
       }
-      return {
+
+      const next: RoadmapItem = {
         ...current,
         name: input.name,
         description: input.description,
@@ -886,6 +1000,15 @@ export class RoadmapSourceService {
         // Left untouched by spreading `current` first: runs, overrideBlocked,
         // origin, createdAt.
       };
+      // `linkedPr` is only meaningful while the item is `external` — drop it
+      // (rather than leaving it stale) once the item returns to `todo` or
+      // moves anywhere else.
+      if (nextLifecycle === "external" && input.linkedPr) {
+        next.linkedPr = input.linkedPr;
+      } else {
+        delete next.linkedPr;
+      }
+      return next;
     });
 
     return { outcome: "updated", itemId: id, notes };

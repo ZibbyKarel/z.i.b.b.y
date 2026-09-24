@@ -84,7 +84,8 @@ dependsOnFromSource: string[]    // the subset the source owns; re-sync (125b) m
 overrideBlocked?    // Tier-3 "pustit i tak"
 origin?             // "zibby-decomposed" -> the "navrhla ZIBBY" badge (125g); cleared on any operator edit
 output?             // 125e: the gate's terminal output choice for this item's task; absent = { type: "pr" }
-lifecycle           // "todo" | "enqueued" | "running" | "awaiting-merge" | "done" | "failed" | "archived"
+lifecycle           // "todo" | "external" | "enqueued" | "running" | "awaiting-merge" | "done" | "failed" | "archived"
+linkedPr?           // sync-owned: an open PR naming this item's key ({ number, url, title }); only set while lifecycle is "external"
 enqueuedAt?         // 125e: stamped by play/playBulk/restart; the gate drains a project's enqueued
                     // items strictly FIFO by this timestamp, never `updatedAt`
 runs[]              // { taskId, runRef?, prNumber?, prUrl?, artifactPath?, startedAt, finishedAt?, outcome }
@@ -198,15 +199,21 @@ large project/repo.
 > replacement `/search/jql` paginates by an opaque `nextPageToken` cursor and returns
 > **no** `total` — a page is the last when it reports `isLast` or omits `nextPageToken`.
 
-- **Scope is "mine" by default.** A custom `config.jql` is used VERBATIM (the operator
-  already declared the exact set they want — never augmented). Otherwise the clause is
-  `assignee = currentUser()`, narrowed by `project = <projectKey> AND …` when a
-  `projectKey` is configured, `ORDER BY created ASC` in both cases.
-- **Epic-preservation.** `assignee = currentUser()` returns my tasks/stories but not
-  their parent epics (epics are rarely assigned to me), so a plain "mine" fetch would
-  leave every owned issue unparented — `resolveEpicParent` finds no ancestor in the
-  batch. `expandWithAncestorEpics` fixes this: after the primary "mine" fetch, it walks
-  the owned issues' `fields.parent.key` chain, collects ancestor keys not already in the
+- **Scope is the whole project when `projectKey` is set.** A custom `config.jql` is
+  used VERBATIM (the operator already declared the exact set they want — never
+  augmented). Otherwise the default clause is `project = <projectKey>` — the sync must
+  see work already started elsewhere in the project, so it can keep ZIBBY off it.
+  Without a `projectKey` it falls back to `assignee = currentUser()` — widening it
+  there would pull an operator's whole Jira site. `ORDER BY created ASC` in every case.
+  GitHub import stays `assignee:<username>`-scoped regardless (GitHub issues carry no
+  in-progress signal, so widening there would import exactly the duplicate-work risk
+  this rule exists to avoid).
+- **Epic-preservation.** The default clause returns my tasks/stories (or the whole
+  project's) but not necessarily their parent epics (an epic outside the primary batch,
+  e.g. a cross-project parent), so a plain fetch can leave an owned issue unparented —
+  `resolveEpicParent` finds no ancestor in the batch. `expandWithAncestorEpics` fixes
+  this: after the primary fetch, it walks the owned issues' `fields.parent.key` chain,
+  collects ancestor keys not already in the
   batch, and does bounded (cap 5 iterations) supplementary `key in (<keys>) ORDER BY
 created ASC` fetches — repeating because a newly-fetched ancestor can itself have a
   missing parent (the multi-hop task → story → epic chain) — until no new ancestor key
@@ -310,9 +317,9 @@ Keyed by `(integrationId, externalId)` through `roadmapItemIdForSource`, so re-i
 is idempotent and one issue never becomes two items.
 
 A re-sync writes only `name`, `description`, `externalLevel`, `attachments`,
-`source.url`, `parentId`, `dependsOnFromSource`, `syncNotes` and `syncedAt`. It never
-touches `lifecycle`, `runs`, `overrideBlocked`, `origin` — or any manual `dependsOn`
-edge.
+`source.url`, `parentId`, `dependsOnFromSource`, `syncNotes`, `syncedAt` and
+`linkedPr` — plus the sanctioned lifecycle transitions below. It never touches
+`runs`, `overrideBlocked`, `origin` — or any manual `dependsOn` edge.
 
 That last one is subtle enough to live in its own pure, separately-tested function,
 `mergeDependsOn(current, oldFromSource, newFromSource)`: `dependsOn` is the union of
@@ -321,12 +328,32 @@ source removed, pick up newly-declared ones, and leave every manual edge alone. 
 the one place a bug silently loses an operator's dependency, which is why it is not
 buried in the upsert's read-modify-write.
 
-Source status Done/closed → `lifecycle: "done"`. An item the source stops returning →
-`lifecycle: "archived"`, **never deleted** (and note the archived-blocker consequence
-above). An archived item that reappears in the source returns to `todo`. These are
-the only two lifecycle transitions the sync ever makes — a lifecycle a later
-sub-phase (125e) has since advanced (`enqueued`/`running`/`awaiting-merge`/`failed`)
-passes straight through untouched whenever neither transition applies.
+**Safe-to-start classification (Jira).** Only Jira's `"new"` status category (To Do,
+Backlog, Open, Selected for Development, …) is safe for ZIBBY to start — that maps to
+`lifecycle: "todo"`. A done status (`"done"` category, or a status name matching
+`/^(done|closed|resolved)$/i`) maps to `"done"`. Anything else — `"indeterminate"` (In
+Progress, Code Review, In Test, …), a missing category, or an unrecognised one — maps
+to `"external"`: someone may already be on it, and an unrecognised status is treated
+as NOT safe (fail-closed). An open GitHub PR whose title or head branch names the
+item's Jira key as a whole token (case-insensitive: `PROJ-1` matches "PROJ-1: fix" or
+"proj-1-login", never "PROJ-12") also forces a not-done item to `"external"`, whatever
+the Jira status says — recorded on the item as `linkedPr: { number, url, title }`. The
+PR lookup (`GET /repos/<repo>/pulls?state=open`) is best-effort: no GitHub integration,
+no token, or an HTTP failure all mean no `linkedPr` and no failure of the Jira sync
+itself — an HTTP failure additionally adds one `summary.notes` entry ("github PR lookup
+failed: …"). GitHub issue import has no such classification — a GitHub issue is `"done"`
+when closed, `"todo"` otherwise.
+
+An item the source stops returning → `lifecycle: "archived"`, **never deleted** (and
+note the archived-blocker consequence above). For an item still in a sync-owned
+lifecycle (`todo`/`external`/`archived`), the sync moves it to `todo` or `external` per
+the remote work state above — including a plain reappearance of an archived item,
+which lands wherever its current remote state says. A done source status always wins
+and moves the item to `"done"`, from any of those three. These are the ONLY lifecycle
+transitions the sync ever makes: `enqueued`/`running`/`awaiting-merge`/`failed` are
+never touched, and a `"done"` item never moves back out of `"done"`. `linkedPr` is
+written only while the resulting lifecycle is `"external"`; it is cleared as soon as an
+item returns to `"todo"` (rather than left stale on the card).
 
 An item whose level-mapping `target` resolves to `"ignore"` is parsed but never
 turned into a roadmap item (counted in `skipped`), and is deliberately excluded from
