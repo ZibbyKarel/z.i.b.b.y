@@ -58,8 +58,8 @@ desc: >-
   aplikací nebo systémem. Bezpečnostní audit, security audit, pentest,
   penetrační test, zranitelnosti, threat model, authn, authz, secrets, OWASP,
   GDPR, compliance, hardening. Na samotný přehled závislostí a CVE stačí levný
-  `dep-scan`; kvalitu kódu bez bezpečnostní optiky řeší loom.
-ownerSubsystem: sentinel
+  `dep-scan`; kvalitu kódu bez bezpečnostní optiky řeší arch.
+department: sec
 complexity: deep
 ---
 

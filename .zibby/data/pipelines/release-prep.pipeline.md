@@ -59,7 +59,7 @@ desc: >-
   verzování, semver, rollback plán, release checklist, jde to vydat. Končí u
   brány — **nikdy nemerguje ani nedeployuje** (Zákon 3). Na samotný changelog
   stačí `release-notes`.
-ownerSubsystem: maestro
+department: rel
 complexity: deep
 ---
 

@@ -15,7 +15,7 @@ tools:
   - Grep
 category: Quality & Security
 gates: []
-ownerSubsystem: loom
+department: qa
 ---
 
 ## Prompt Defense Baseline

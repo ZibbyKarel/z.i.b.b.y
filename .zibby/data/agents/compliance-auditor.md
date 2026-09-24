@@ -13,7 +13,7 @@ tools:
   - Glob
 category: Quality & Security
 gates: []
-ownerSubsystem: sentinel
+department: sec
 ---
 
 ## Prompt Defense Baseline

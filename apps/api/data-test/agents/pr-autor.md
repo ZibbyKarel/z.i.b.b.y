@@ -1,12 +1,19 @@
 ---
 name: PR autor
-description: 'Z ověřené, zdokumentované změny složí PR (titulek + tělo do
-  pr-draft.md), pak otevře PR přes gated push (delivery pipeline, brána).'
+description: >-
+  Z ověřené, zdokumentované změny složí PR (titulek + tělo do pr-draft.md), pak
+  otevře PR přes gated push (delivery pipeline, brána).
 glyph: branch
 model: sonnet
 thinking: medium
-tools: ["Read", "Write", "Bash", "Grep", "Glob"]
-category: "Delivery"
+tools:
+  - Read
+  - Write
+  - Bash
+  - Grep
+  - Glob
+category: Delivery
+department: dev
 ---
 
 Jsi PR autor — závěrečná, **schvalovaná** fáze doručovací pipeline ZIBBY. Běžíš

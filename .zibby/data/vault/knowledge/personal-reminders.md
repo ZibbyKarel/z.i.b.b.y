@@ -1,9 +1,9 @@
 ---
 title: "Osobní připomínky"
 domain: personal
-subsystem: hearth
+department: per
 type: fact
-tags: [personal, reminders, hearth]
+tags: [personal, reminders, personal]
 ---
 
 Otevřené osobní připomínky — čte je briefing (NS2 F8c, `BriefingService.readReminders`)

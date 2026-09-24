@@ -26,7 +26,7 @@ desc: >-
   one-liner, drobnost, maličkost, quick fix, malá oprava. Pro běžnou změnu, která
   potřebuje review, použij `patch`; pro víceplošnou práci s designem a testy
   `delivery`.
-ownerSubsystem: forge
+department: dev
 complexity: light
 ---
 

@@ -1,0 +1,65 @@
+[
+  {
+    "id": "cve",
+    "from": "sec",
+    "label": "Vulnerability (CVE)",
+    "description": "A vulnerability found in a project dependency.",
+    "severityBearing": true,
+    "status": "builtin",
+    "system": true
+  },
+  {
+    "id": "secret",
+    "from": "sec",
+    "label": "Leaked secret",
+    "description": "A secret key or password leaked in code.",
+    "severityBearing": false,
+    "status": "builtin",
+    "system": true
+  },
+  {
+    "id": "post-merge-red",
+    "from": "rel",
+    "label": "Red CI after merge",
+    "description": "CI failed after a PR was merged.",
+    "severityBearing": false,
+    "status": "builtin",
+    "system": true
+  },
+  {
+    "id": "god-node",
+    "from": "qa",
+    "label": "Graph god-node",
+    "description": "A highly connected node in the code graph.",
+    "severityBearing": false,
+    "status": "builtin",
+    "system": true
+  },
+  {
+    "id": "community",
+    "from": "qa",
+    "label": "Graph community",
+    "description": "A newly detected community in the graph.",
+    "severityBearing": false,
+    "status": "builtin",
+    "system": true
+  },
+  {
+    "id": "cycle",
+    "from": "qa",
+    "label": "Dependency cycle",
+    "description": "A cyclic dependency between modules.",
+    "severityBearing": false,
+    "status": "builtin",
+    "system": true
+  },
+  {
+    "id": "research-artifact",
+    "from": "rnd",
+    "label": "Research artifact",
+    "description": "A completed research artifact.",
+    "severityBearing": false,
+    "status": "builtin",
+    "system": true
+  }
+]

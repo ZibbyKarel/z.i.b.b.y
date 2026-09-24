@@ -15,7 +15,7 @@ tools:
   - Grep
 category: Infrastructure
 gates: []
-ownerSubsystem: maestro
+department: rel
 ---
 
 ## Prompt Defense Baseline

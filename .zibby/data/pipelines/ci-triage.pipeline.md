@@ -27,7 +27,7 @@ desc: >-
   testy, failed run, CI failure, triage pipeline, proč to spadlo, zelená se
   nevrátila, GitHub Actions. Levná a rychlá linka pro srdeční tep — neopravuje,
   jen zařadí. Živý incident řeší `incident-response`.
-ownerSubsystem: puls
+department: ops
 complexity: light
 ---
 

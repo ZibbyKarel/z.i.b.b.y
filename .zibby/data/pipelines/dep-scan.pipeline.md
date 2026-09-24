@@ -27,7 +27,7 @@ desc: >-
   zranitelné balíčky, npm audit, outdated, licence, supply chain, dep scan.
   Na plný bezpečnostní audit aplikace s validací zranitelností použij
   `security-audit`; samotný upgrade provede `patch` nebo `delivery`.
-ownerSubsystem: sentinel
+department: sec
 complexity: light
 ---
 

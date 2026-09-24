@@ -51,7 +51,7 @@ desc: >-
   úprava, oprava bugu, refaktor, code change with review. Na jednořádkovou
   drobnost stačí `quick-fix`; na víceplošnou feature s designem, testy a
   dokumentací je `delivery`.
-ownerSubsystem: forge
+department: dev
 complexity: standard
 ---
 

@@ -1,0 +1,8 @@
+{
+  "id": "agent-factory",
+  "name": "Továrna agentů",
+  "trigger": { "type": "cron", "expr": "0 4 * * 1" },
+  "target": { "type": "agent-factory" },
+  "enabled": false,
+  "system": true
+}

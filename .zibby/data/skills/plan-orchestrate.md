@@ -18,6 +18,7 @@ Bridge a plan document to `/orchestrate custom` by emitting one ready-to-paste i
 - A step-by-step plan exists but the user does not want to manually pick agents per step.
 
 Skip when:
+
 - The work is one ad-hoc step → call `/orchestrate custom` directly.
 - The plan is unreadable or empty. Lack of explicit numbering alone is not a skip condition — see the "No clear steps" edge case below.
 
@@ -51,16 +52,17 @@ Two install forms determine the prefix on **both** the slash command and every a
 
 Let `<claude-home>` denote the Claude Code home directory: `~/.claude` on macOS/Linux, `%USERPROFILE%\.claude` on Windows. Resolve it the way the host platform resolves the user home directory (do not hardcode `~`).
 
-| Form | Detection | `{ORCH_CMD}` | Agent name format |
-|---|---|---|---|
+| Form                    | Detection                                                           | `{ORCH_CMD}`                          | Agent name format               |
+| ----------------------- | ------------------------------------------------------------------- | ------------------------------------- | ------------------------------- |
 | Plugin install (1.9.0+) | `<claude-home>/plugins/marketplaces/everything-claude-code/` exists | `/everything-claude-code:orchestrate` | `everything-claude-code:<name>` |
-| Legacy bare install | Above absent; agent files under `<claude-home>/agents/` | `/orchestrate` | `<name>` |
+| Legacy bare install     | Above absent; agent files under `<claude-home>/agents/`             | `/orchestrate`                        | `<name>`                        |
 
 Why this matters: under the plugin install, agents register as `everything-claude-code:tdd-guide`. Bare names force fuzzy matching, which fails intermittently under parallel calls. Under legacy, the prefixed forms are not registered and fail outright.
 
 ## Available agent catalogue (must pick from these)
 
 General:
+
 - `planner` — requirement restatement, risk decomposition, step planning
 - `architect` — architecture, system design, refactor proposals
 - `tdd-guide` — write tests → implement → 80%+ coverage
@@ -76,9 +78,11 @@ General:
 - `chief-of-staff` — multi-channel triage (rarely a fit for plan steps)
 
 Build error resolvers:
+
 - `build-error-resolver` (generic) / `cpp-build-resolver` / `go-build-resolver` / `java-build-resolver` / `kotlin-build-resolver` / `rust-build-resolver` / `pytorch-build-resolver`
 
 Code reviewers:
+
 - `python-reviewer` / `typescript-reviewer` / `go-reviewer` / `rust-reviewer` / `cpp-reviewer` / `java-reviewer` / `kotlin-reviewer` / `flutter-reviewer`
 
 A misspelled agent name fails `/orchestrate`. Cross-check against this list before emitting.
@@ -95,11 +99,12 @@ A misspelled agent name fails `/orchestrate`. Cross-check against this list befo
    4. If both markers exist (mixed install), `plugin` wins — the plugin namespace is the only one that resolves agent names without fuzzy matching.
 
    From this point on, every emitted line uses the matching prefix on **both** the slash command and every agent name. **Never emit both forms in the same output.**
+
 3. Resolve `--lang`. When `auto`, run a polyglot-aware detection:
    - Probe markers: `pyproject.toml` / `uv.lock` / `requirements.txt` → python; `package.json` → typescript; `go.mod` → go; `Cargo.toml` → rust; `CMakeLists.txt` or top-level `*.cpp` → cpp; `pom.xml` / `build.gradle` (Java) → java; `build.gradle.kts` or top-level Kotlin → kotlin; `pubspec.yaml` → flutter.
    - **Polyglot tie-break**: if more than one marker matches, pick the language whose source files outnumber the others (count via `git ls-files`, excluding `vendor/`, `node_modules/`, `dist/`, `build/`, `.venv/`, generated files, and obvious test fixtures). On a tie or when no language exceeds 60% of source files, set `lang=unknown`.
    - No marker matched → set `lang=unknown`.
-   - `lang=unknown` is a sentinel — it is **not** an agent name. Phase 2 rules 4 and 5 turn it into `code-reviewer` / `build-error-resolver` at chain composition time.
+   - `lang=unknown` is a security — it is **not** an agent name. Phase 2 rules 4 and 5 turn it into `code-reviewer` / `build-error-resolver` at chain composition time.
 4. Detect a **PyTorch sub-profile**: when `lang=python` and any of `pyproject.toml` / `requirements.txt` / `uv.lock` declares a dependency on `torch`, set `pytorch=true`. This only affects `build` chain selection (Phase 2 rule below); the reviewer remains `python-reviewer`.
 5. **Normalize any agent names declared in the plan**: if the plan text references agents by their plugin-prefixed form (e.g. `everything-claude-code:tdd-guide`), strip the prefix to get the bare catalogue name before validating or composing chains. Re-prefixing happens only at output time per `ECC_MODE` (Phase 4). Never let a pre-prefixed name flow into chain composition — it would double-prefix in plugin mode.
 
@@ -120,23 +125,24 @@ Tag by intent (multi-tag allowed; chain built from primary + stacked secondaries
 
 Trigger words below are matched case-insensitively. Multilingual plans are supported by matching the word stems in any language as long as the meaning aligns with the listed English trigger words.
 
-| Tag | Trigger words | Default chain |
-|---|---|---|
-| `design` | architecture, design, choose, evaluate, RFC | `planner,architect` |
-| `plan` | plan, breakdown, milestone | `planner` |
-| `impl` | implement, build, add, create, port | `tdd-guide,<lang>-reviewer` |
-| `test` | test, coverage, e2e, integration | `tdd-guide,e2e-runner` |
-| `refactor` | refactor, cleanup, dedupe, split | `architect,refactor-cleaner,<lang>-reviewer` |
-| `migration` | migrate, upgrade, rewrite, port | `architect,tdd-guide,<lang>-reviewer` |
-| `db` | schema, migration, index, SQL, Postgres, alembic, sqlmodel | `database-reviewer,<lang>-reviewer` |
-| `security` | encrypt, auth, secret, OWASP, PII | `security-reviewer,<lang>-reviewer` |
-| `build` | build, compile, lint failure, CI | `<lang>-build-resolver` (falls back to `build-error-resolver`) |
-| `docs` | docs, readme, codemap, changelog | `doc-updater` |
-| `lookup` | lookup, reference, API usage | `docs-lookup` |
-| `review` | review, audit, verify | `<lang>-reviewer,code-reviewer` |
-| `loop` | loop, autonomous, watchdog | `loop-operator` |
+| Tag         | Trigger words                                              | Default chain                                                  |
+| ----------- | ---------------------------------------------------------- | -------------------------------------------------------------- |
+| `design`    | architecture, design, choose, evaluate, RFC                | `planner,architect`                                            |
+| `plan`      | plan, breakdown, milestone                                 | `planner`                                                      |
+| `impl`      | implement, build, add, create, port                        | `tdd-guide,<lang>-reviewer`                                    |
+| `test`      | test, coverage, e2e, integration                           | `tdd-guide,e2e-runner`                                         |
+| `refactor`  | refactor, cleanup, dedupe, split                           | `architect,refactor-cleaner,<lang>-reviewer`                   |
+| `migration` | migrate, upgrade, rewrite, port                            | `architect,tdd-guide,<lang>-reviewer`                          |
+| `db`        | schema, migration, index, SQL, Postgres, alembic, sqlmodel | `database-reviewer,<lang>-reviewer`                            |
+| `security`  | encrypt, auth, secret, OWASP, PII                          | `security-reviewer,<lang>-reviewer`                            |
+| `build`     | build, compile, lint failure, CI                           | `<lang>-build-resolver` (falls back to `build-error-resolver`) |
+| `docs`      | docs, readme, codemap, changelog                           | `doc-updater`                                                  |
+| `lookup`    | lookup, reference, API usage                               | `docs-lookup`                                                  |
+| `review`    | review, audit, verify                                      | `<lang>-reviewer,code-reviewer`                                |
+| `loop`      | loop, autonomous, watchdog                                 | `loop-operator`                                                |
 
 Chain composition rules:
+
 1. **Primary tag selection**: when a step matches multiple tags, the **first one in table order** (top of the table = highest priority) is the primary; the rest are secondaries. Composition rules 2 and 3 below handle specific multi-tag combinations explicitly; otherwise, append secondary chains in tag table order.
 2. `impl` + `security` → `tdd-guide,<lang>-reviewer,security-reviewer`.
 3. `impl` + `db` → `tdd-guide,database-reviewer,<lang>-reviewer`.
@@ -151,6 +157,7 @@ Chain composition rules:
 ### Phase 3 — Compress task description
 
 Each emitted `<task description>` must:
+
 - Be self-contained (the first agent does not need the plan document open).
 - Start with `[Plan: <path>#step-<id>]`.
 - Include 1–3 verifiable Acceptance criteria.
@@ -181,10 +188,10 @@ Output structure:
 
 ## Steps overview
 
-| # | Title | Tags | Chain |
-|---|---|---|---|
-| 1 | ... | impl, db | `{AGENT(tdd-guide)},{AGENT(database-reviewer)},{AGENT(python-reviewer)}` |
-| ... | | | |
+| #   | Title | Tags     | Chain                                                                    |
+| --- | ----- | -------- | ------------------------------------------------------------------------ |
+| 1   | ...   | impl, db | `{AGENT(tdd-guide)},{AGENT(database-reviewer)},{AGENT(python-reviewer)}` |
+| ... |       |          |                                                                          |
 
 ---
 
@@ -231,11 +238,13 @@ Append a final "Batch execution" block aggregating every step's command in order
 ### Example 1 — Plugin mode, Python plan
 
 Input:
+
 ```
 plan-orchestrate @docs/plan/example-feature.md --lang=python
 ```
 
 Excerpt of expected output:
+
 ````markdown
 ## Step 2 — Encrypt sensitive UserProfile fields
 

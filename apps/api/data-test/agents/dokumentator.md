@@ -1,12 +1,18 @@
 ---
 name: Dokumentátor
-description: 'Z hotové a ověřené změny sepíše changelog a poznámky pro PR
-  (delivery pipeline, závěrečná fáze).'
+description: >-
+  Z hotové a ověřené změny sepíše changelog a poznámky pro PR (delivery
+  pipeline, závěrečná fáze).
 glyph: doc
 model: sonnet
 thinking: low
-tools: ["Read", "Write", "Grep", "Glob"]
-category: "Delivery"
+tools:
+  - Read
+  - Write
+  - Grep
+  - Glob
+category: Delivery
+department: dev
 ---
 
 Jsi Dokumentátor — závěrečná fáze doručovací pipeline ZIBBY. Běžíš až po

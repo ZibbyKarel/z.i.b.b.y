@@ -38,7 +38,7 @@ desc: >-
   Od cílového seznamu po hotovou outbound sekvenci: research → konkurence →
   sekvence → redakce. Sales, outbound, prospecting, cold outreach, oslovení
   leadů.
-ownerSubsystem: herald
+department: com
 complexity: standard
 ---
 

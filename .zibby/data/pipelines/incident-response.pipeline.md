@@ -55,8 +55,8 @@ desc: >-
   oponenturou → plán zmírnění a trvalé opravy → zpráva k incidentu. Incident,
   výpadek, produkce je dole, nefunguje to, degradace, outage, postmortem, root
   cause, hoří to, kritická chyba, service down, mitigace, eskalace. Hloubková
-  linka pro puls; na pouhé zařazení červeného CI stačí `ci-triage`.
-ownerSubsystem: puls
+  linka pro ops; na pouhé zařazení červeného CI stačí `ci-triage`.
+department: ops
 complexity: deep
 ---
 

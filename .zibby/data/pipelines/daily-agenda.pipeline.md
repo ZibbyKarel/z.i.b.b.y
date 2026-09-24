@@ -26,7 +26,7 @@ desc: >-
   co mám dnes, plán dne, moje připomínky, todo na dnes, osobní úkoly, nákupní
   seznam, co jsem si poznamenal, ranní přehled, daily agenda. Osobní domov
   operátora — oddělené od práce a od doručování.
-ownerSubsystem: hearth
+department: per
 complexity: light
 ---
 

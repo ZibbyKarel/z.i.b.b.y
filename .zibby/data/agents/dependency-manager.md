@@ -15,7 +15,7 @@ tools:
   - Grep
 category: Developer Experience
 gates: []
-ownerSubsystem: sentinel
+department: sec
 ---
 
 ## Prompt Defense Baseline
