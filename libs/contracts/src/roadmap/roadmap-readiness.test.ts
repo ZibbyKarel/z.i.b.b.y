@@ -131,4 +131,9 @@ describe("readiness", () => {
     const b = withLifecycle("b", "todo");
     expect(readiness(a, storeOf([a, b]))).toBe("ready");
   });
+
+  it("maps an item worked on outside ZIBBY (external) to in-progress", () => {
+    const ext = withLifecycle("ext", "external");
+    expect(readiness(ext, storeOf([ext]))).toBe("in-progress");
+  });
 });

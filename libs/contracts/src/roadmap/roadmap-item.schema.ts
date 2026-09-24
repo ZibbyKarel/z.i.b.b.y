@@ -90,9 +90,15 @@ export type RoadmapOrigin = z.infer<typeof RoadmapOriginSchema>;
  * `done` for a document artifact; `awaiting-merge` → `done` on merge;
  * anything that ends without an artifact → `failed`; an item the source stops
  * returning → `archived` (never deleted).
+ *
+ * `external` — the source says someone is already working on it outside
+ * ZIBBY (Jira status category not To Do, or an open PR names its key).
+ * Sync-owned: only the sync moves an item into/out of it (⇄ `todo`); ZIBBY
+ * never dispatches it — every Play path requires `todo`.
  */
 export const RoadmapItemLifecycleSchema = z.enum([
   "todo",
+  "external",
   "enqueued",
   "running",
   "awaiting-merge",
@@ -134,6 +140,18 @@ export const RoadmapItemRunSchema = z.object({
   outcome: RoadmapRunOutcomeSchema,
 });
 export type RoadmapItemRun = z.infer<typeof RoadmapItemRunSchema>;
+
+/**
+ * An already-existing PR the sync found for an item being worked on outside
+ * ZIBBY (its title or head branch names the item's source key). Sync-owned,
+ * recomputed on every sync; absent when no open PR matches.
+ */
+export const RoadmapLinkedPrSchema = z.object({
+  number: z.number().int().positive(),
+  url: z.string().url(),
+  title: z.string(),
+});
+export type RoadmapLinkedPr = z.infer<typeof RoadmapLinkedPrSchema>;
 
 /**
  * A roadmap item: an epic or a task, imported from Jira/GitHub or created
@@ -213,6 +231,8 @@ export const RoadmapItemSchema = z.object({
    * dialog later (125d), not just in a one-off API response nobody reads twice.
    */
   syncNotes: z.array(z.string()).default([]),
+  /** Sync-owned; see `RoadmapLinkedPrSchema`. */
+  linkedPr: RoadmapLinkedPrSchema.optional(),
   createdAt: IsoDateTimeSchema,
   updatedAt: IsoDateTimeSchema,
   /** Last time a sync tick (125b) wrote this item from its source. Absent for manual items. */
