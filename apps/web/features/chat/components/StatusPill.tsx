@@ -28,14 +28,16 @@ const TRIGGER_CLASS: Record<FlyoutSection, string> = {
     "rounded-full px-2 py-0.5 transition-colors hover:bg-run/15 aria-expanded:bg-run/15 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-run",
   waiting:
     "rounded-full px-2 py-0.5 transition-colors hover:bg-warn/15 aria-expanded:bg-warn/15 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-warn",
+  error:
+    "rounded-full px-2 py-0.5 transition-colors hover:bg-bad/15 aria-expanded:bg-bad/15 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bad",
 };
 
 /**
  * The top-bar live status pill — subsystem state counts, now also the flyout host
- * (Velín-D phase 3a): the working/waiting segments are hover+keyboard triggers for
- * the portalled StatusFlyoutPanel; the report segment stays a plain count (operator:
- * reports section omitted this phase). Raw <button> triggers are the sanctioned
- * bespoke-control pattern; Tailwind classes only, no inline style.
+ * (Velín-D phase 3a): the working/error/waiting segments are hover+keyboard triggers
+ * for the portalled StatusFlyoutPanel; the report segment stays a plain count
+ * (operator: reports section omitted this phase). Raw <button> triggers are the
+ * sanctioned bespoke-control pattern; Tailwind classes only, no inline style.
  */
 export function StatusPill() {
   const t = useTranslations("chat");
@@ -223,18 +225,14 @@ export function StatusPill() {
               {t("statusPill.working", { n: working })}
             </Typography>,
           )}
-        {error > 0 && (
-          <Typography
-            mono
-            data-testid={StatusPillTestId.Error}
-            size="xs"
-            tone="bad"
-            tracking="wide"
-            type="note"
-          >
-            {t("statusPill.error", { n: error })}
-          </Typography>
-        )}
+        {error > 0 &&
+          trigger(
+            "error",
+            StatusPillTestId.Error,
+            <Typography mono size="xs" tone="bad" tracking="wide" type="note">
+              {t("statusPill.error", { n: error })}
+            </Typography>,
+          )}
         {report > 0 && (
           <Typography
             mono

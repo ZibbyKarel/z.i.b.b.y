@@ -50,6 +50,7 @@ interface Aggregate {
   tier2Count: number;
   tier3Count: number;
   errorCount: number;
+  errorRunIds: string[];
 }
 
 /** A pipeline run owned by a subsystem, kept around for the approval-attribution pass. */
@@ -231,7 +232,7 @@ export class SubsystemsService {
 
     const running = new Set<SubsystemId>();
     const tier2Count = new Map<SubsystemId, number>();
-    const errorCount = new Map<SubsystemId, number>();
+    const errorRuns = new Map<SubsystemId, string[]>();
     const ownedPipelineRuns: OwnedPipelineRun[] = [];
 
     for (const run of runs) {
@@ -250,8 +251,11 @@ export class SubsystemsService {
         const completedAt = completionSignal(run);
         const lastSeen = lastSeenById.get(owner);
         if (lastSeen !== undefined && completedAt > lastSeen) {
-          const bucket = run.status === "error" ? errorCount : tier2Count;
-          bucket.set(owner, (bucket.get(owner) ?? 0) + 1);
+          if (run.status === "error") {
+            errorRuns.set(owner, [...(errorRuns.get(owner) ?? []), run.runId]);
+          } else {
+            tier2Count.set(owner, (tier2Count.get(owner) ?? 0) + 1);
+          }
         }
       }
     }
@@ -267,7 +271,8 @@ export class SubsystemsService {
     for (const s of SUBSYSTEMS) {
       const t3 = tier3Count.get(s.id) ?? 0;
       const t2 = tier2Count.get(s.id) ?? 0;
-      const errs = errorCount.get(s.id) ?? 0;
+      const errorRunIds = errorRuns.get(s.id) ?? [];
+      const errs = errorRunIds.length;
       const candidates: SubsystemState[] = [
         ...(t3 > 0 ? (["waiting"] as const) : []),
         ...(errs > 0 ? (["error"] as const) : []),
@@ -278,7 +283,7 @@ export class SubsystemsService {
       const state = candidates.reduce((best, candidate) =>
         STATE_PRECEDENCE[candidate] < STATE_PRECEDENCE[best] ? candidate : best,
       );
-      result.set(s.id, { state, tier2Count: t2, tier3Count: t3, errorCount: errs });
+      result.set(s.id, { state, tier2Count: t2, tier3Count: t3, errorCount: errs, errorRunIds });
     }
     return result;
   }
@@ -316,6 +321,7 @@ function withAggregate(
     tier2Count: 0,
     tier3Count: 0,
     errorCount: 0,
+    errorRunIds: [],
   };
   return { ...subsystem, ...aggregate };
 }

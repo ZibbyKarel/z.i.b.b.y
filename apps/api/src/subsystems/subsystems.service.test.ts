@@ -221,6 +221,32 @@ describe("SubsystemsService", () => {
       expect(forge).toMatchObject({ state: "error", tier2Count: 0, errorCount: 1 });
     });
 
+    it("lists the run ids behind errorCount, and an empty list when there are none", async () => {
+      const { service } = build({
+        pipelines: [pipelineFixture("delivery", "forge")],
+        runs: [
+          taskRunFixture({
+            runId: "delivery_1",
+            kind: "pipeline",
+            owner: "delivery",
+            status: "error",
+            startedAt: LATER,
+          }),
+          taskRunFixture({
+            runId: "delivery_2",
+            kind: "pipeline",
+            owner: "delivery",
+            status: "done",
+            startedAt: LATER,
+          }),
+        ],
+      });
+      const forge = await service.get("forge");
+      expect(forge).toMatchObject({ errorCount: 1, errorRunIds: ["delivery_1"] });
+      const scout = await service.get("scout");
+      expect(scout.errorRunIds).toEqual([]);
+    });
+
     it("a done AND an errored owned run after lastSeenAt both count, error wins the headline state", async () => {
       const { service } = build({
         pipelines: [pipelineFixture("delivery", "forge"), pipelineFixture("release", "forge")],

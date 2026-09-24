@@ -147,13 +147,15 @@ export type SubsystemState = z.infer<typeof SubsystemStateSchema>;
  * (act-then-report) and Tier-3 (surface-and-wait) items are outstanding, plus
  * how many owned runs failed. `tier2Count` counts only SUCCESSFUL (`done`)
  * terminal runs since last seen — a failed run counts toward `errorCount`
- * instead, never both.
+ * instead, never both. `errorRunIds` names the runs behind `errorCount`, so a
+ * client can show what actually failed.
  */
 export const SubsystemWithStatusSchema = SubsystemSchema.extend({
   state: SubsystemStateSchema,
   tier2Count: z.number().int().nonnegative(),
   tier3Count: z.number().int().nonnegative(),
   errorCount: z.number().int().nonnegative(),
+  errorRunIds: z.array(z.string().min(1)).optional(),
 });
 export type SubsystemWithStatus = z.infer<typeof SubsystemWithStatusSchema>;
 

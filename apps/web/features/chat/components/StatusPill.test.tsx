@@ -69,14 +69,23 @@ describe("StatusPill", () => {
     expect(screen.getByTestId(StatusPillTestId.Root)).toBeInTheDocument();
   });
 
-  it("exposes working and waiting segments as flyout trigger buttons; report stays plain", () => {
+  it("exposes working, error and waiting segments as flyout trigger buttons; report stays plain", () => {
     renderWithProviders(<StatusPill />);
     const working = screen.getByTestId(StatusPillTestId.Working);
     expect(working.tagName).toBe("BUTTON");
     expect(working).toHaveAttribute("aria-haspopup", "dialog");
     expect(working).toHaveAttribute("aria-controls");
+    const error = screen.getByTestId(StatusPillTestId.Error);
+    expect(error.tagName).toBe("BUTTON");
+    expect(error).toHaveAttribute("aria-haspopup", "dialog");
     expect(screen.getByTestId(StatusPillTestId.Waiting).tagName).toBe("BUTTON");
     expect(screen.getByTestId(StatusPillTestId.Report).tagName).not.toBe("BUTTON");
+  });
+
+  it("opens the error section on hover of the error segment", async () => {
+    renderWithProviders(<StatusPill />);
+    await userEvent.hover(screen.getByTestId(StatusPillTestId.Error));
+    expect(screen.getByTestId("chat-status-flyout")).toHaveTextContent("error");
   });
 
   it("opens the section on trigger focus and closes on Escape without reopening", async () => {

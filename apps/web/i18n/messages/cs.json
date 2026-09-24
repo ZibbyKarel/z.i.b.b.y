@@ -1926,6 +1926,13 @@
           "emptyTitle": "Nic nečeká",
           "emptyBody": "žádná akce nečeká · ZIBBY sám neobjedná"
         },
+        "error": {
+          "title": "Chyby",
+          "emptyTitle": "Žádné chyby",
+          "emptyBody": "Od poslední návštěvy nic neselhalo.",
+          "noDetail": "Bez zaznamenaného detailu chyby.",
+          "missingRun": "Běh už není v přehledu."
+        },
         "loading": "Načítám…",
         "errorTitle": "Nepodařilo se načíst",
         "errorBody": "Zkus to prosím znovu.",
