@@ -1,0 +1,35 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-659",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-618",
+  "name": "Addons overview screen",
+  "description": "### Why?\n\nPart of  (\"[Portal] Addons — dev & testing\"). The new Partner Portal needs a \"Moje doplňky → Přehled\" screen per . That data and UI already exist as the \"Addons\" tab of ApiPartnerController (admin/controllers/ApiPartnerController.php:165) — this ticket exposes it in Partner Portal too, without duplicating the implementation.\n\n### What?\n\nNew controller under admin/controllers/PartnerPortal/ (same shape as PartnerPortalOverviewController: Inertia #[Component], RequiresActiveModule('partnerPortal')) renders the addons table matching the Figma frame — columns Datum, Jméno doplňku, Kategorie, Uživatelé, Cena, Objednatelné, Premium, Schváleno, plus Filtr.\n\nThe listing logic/screen is shared, not copied: both the new Partner Portal route and the existing ApiPartnerController::adminAddonsAction render off one implementation. The existing ApiPartner Addons tab keeps working unchanged in parallel — no removal, no regression.\n\nThe \"Přidat nový doplněk\" CTA opens the existing add-addon flow (PartnerServiceAddController, already linked via AddAddonButton.tsx) — this is a relocation so it's reachable from Partner Portal, not new functionality.\n\n### Acceptance Criteria\n\nNew Partner Portal controller renders the addons overview screen matching Figma node 531:9225 (table + Filtr + CTA)\n\nAddon-listing logic is extracted/shared so ApiPartnerController's existing Addons tab and the new Partner Portal screen use the same implementation, not a copy\n\nExisting ApiPartner Addons tab verified unchanged (no regression)\n\n\"Přidat nový doplněk\" button on the new screen opens the existing PartnerServiceAdd flow — no new addon-creation logic\n\nNew screen gated behind RequiresActiveModule('partnerPortal')\n\nUnit/PHPUnit coverage for the new/shared controller logic; Vitest coverage for the new page component\n\n### Resources\n\nFigma — Partner Portal, Addons overview: \n\nParent epic:",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-659",
+    "externalKey": "CZ3TDR1-659",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-659"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "failed",
+  "enqueuedAt": "2026-09-24T05:20:05.658Z",
+  "runs": [
+    {
+      "taskId": "task_1790227275845_35abad",
+      "runRef": "git-workflow-manager_1790227275851_48786",
+      "startedAt": "2026-09-24T05:21:17.599Z",
+      "finishedAt": "2026-09-24T05:22:05.288Z",
+      "outcome": "failed"
+    }
+  ],
+  "lastFailureReason": "\u001b[31mprompt-optimizer.description: Description cannot be empty\u001b[39m\u001b[0m",
+  "syncNotes": [],
+  "createdAt": "2026-09-24T05:20:04.323Z",
+  "updatedAt": "2026-09-24T05:23:04.135Z",
+  "syncedAt": "2026-09-24T05:23:04.135Z"
+}

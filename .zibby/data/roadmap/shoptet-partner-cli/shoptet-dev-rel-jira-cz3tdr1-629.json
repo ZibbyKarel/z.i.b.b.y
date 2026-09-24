@@ -16,7 +16,7 @@
   "attachments": [],
   "dependsOn": [],
   "dependsOnFromSource": [],
-  "lifecycle": "failed",
+  "lifecycle": "done",
   "enqueuedAt": "2026-09-07T13:56:11.786Z",
   "runs": [
     {
@@ -30,6 +30,6 @@
   "lastFailureReason": "1 stages, failed",
   "syncNotes": [],
   "createdAt": "2026-09-07T13:56:10.753Z",
-  "updatedAt": "2026-09-07T14:08:10.680Z",
-  "syncedAt": "2026-09-07T14:08:10.680Z"
+  "updatedAt": "2026-09-24T05:23:04.119Z",
+  "syncedAt": "2026-09-24T05:23:04.119Z"
 }

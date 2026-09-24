@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-631",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-592",
+  "name": "CI: split lint and types out of the verify matrix into standalone Node 26 jobs",
+  "description": "## Why\n\n`.github/workflows/ci.yml`'s `verify` job runs a three-axis matrix — `os: [ubuntu-latest, macos-latest, windows-latest]` × `node: [22, 24]` × `task: [lint, types, test, build]` (`ci.yml:49-56`). Two of those four tasks are pure static analysis:\n\n- `lint` → `pnpm run check:lint` (`turbo run check:lint && pnpm run check:lint:root`, i.e. `eslint`)\n- `types` → `pnpm run check:types` (`turbo run check:types && tsc -p tsconfig.json --noEmit`)\n\nNeither result can differ by OS or by Node major: TypeScript is pinned _exactly_ at `6.0.3` in the `pnpm-workspace.yaml` catalog and ESLint reads the same root `eslint.config.js` everywhere. The matrix therefore runs each of them **6 times** for one bit of signal — 12 wasted job legs per CI run, on every push to `main`/`develop` and every PR.\n\nThe cross-platform matrix itself is non-negotiable for `test` and `build` (`ci.yml:34-36`: `env-paths` resolves different directories per OS, path separators differ, and the dev-engine's local-origin behaviour is OS-sensitive). That reasoning simply does not extend to `eslint` and `tsc`.\n\n## What\n\nIn `.github/workflows/ci.yml`:\n\n1. Reduce the `verify` matrix's `task` axis to `[test, build]`, and drop the now-dead `lint)`/`types)` branches from the `case` statement in the `Run ${{ matrix.task }}` step (`ci.yml:71-79`).\n2. Add two standalone jobs beside `verify`, in the same style as the existing `describe-parity` / `coverage` / `e2e` jobs — pinned action SHAs, `persist-credentials: false`, `cache: pnpm` — running on `ubuntu-latest` / **node 26**:\n\n  - `lint` → `pnpm run check:lint`\n  - `types` → `pnpm run check:types`\n3. Update the `verify` job's own explanatory comment (`ci.yml:38-41`), which currently claims the `task` axis splits all four of `pnpm run verify`'s checks.\n\n### Measured facts that shape the implementation\n\n- **Node 26 is available.** `nodejs.org/dist/index.json` lists 12 `v26.*` releases (latest `v26.8.1`), so `actions/setup-node` resolves it.\n- `engines.node` accepts it. The root `package.json` declares `\"node\": \"^22.18.0 || >=24.11.0\"`, so `pnpm install --frozen-lockfile` will not reject Node 26 in the new jobs.\n- **Neither new job needs its own **`pnpm run build` step. In `turbo.json`, `check:types` declares `dependsOn: [\"^build\"]` and `check:lint` declares `dependsOn: [\"@shoptet/eslint-config#build\"]` — Turbo builds what each needs. This is precisely what distinguishes them from the existing `coverage` and `e2e` jobs, which carry an explicit build step _because_ they are not Turbo-chained (`ci.yml:115-118`).\n- **Keep the composite root scripts.** `pnpm run check:lint` is `turbo run check:lint && pnpm run check:lint:root`, and `pnpm run check:types` is `turbo run check:types && pnpm run check:types:root`. The current matrix leg runs the composite script, so the standalone jobs must run the same composite — not the bare `turbo run` half, which would silently stop checking `test/`, `scripts/`, `vitest.config.ts` and `eslint.config.js`.\n\n## Documentation (same commit)\n\nCLAUDE.md's routing table sends \"a Turbo task, a Vitest project, a CI job, a `scripts/` tool\" to `doc/development.md`, and requires the doc change to land in the same commit as the code. `doc/development.md:204-216` describes the `verify` matrix's `task` axis verbatim and becomes false with this change; the two new jobs need their own bullets alongside `describe-parity`, `coverage` and `e2e`.\n\n## Out of scope\n\nEverything else in `ci.yml`: the `permissions:` block, the pinned action SHAs, `TURBO_LOG_ORDER`, `timeout-minutes`, the `describe-parity` / `coverage` / `e2e` jobs, the `test`/`build` matrix legs' own `node: [22, 24]` × 3-OS spread, and the changeset gate (disabled pre-MVP, `ci.yml:148-149`). No release, publishing, or branch-protection configuration is touched.\n\n## Acceptance\n\n- `ci.yml`'s `verify` matrix has a two-value `task` axis; `lint` and `types` appear as two standalone jobs on `ubuntu-latest` / node 26.\n- Both new jobs are green on the PR, and the `verify` matrix shrinks from 24 legs to 12.\n- `pnpm verify` passes locally, unchanged (it is not a CI-shape consumer).\n- `doc/development.md`'s CI section matches the new job set.\n\n---\n\n_Filed from _`TODO.md` item 9 by `zibby:todo-driven-development` (unattended run 2026-09-08-1119).",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-631",
+    "externalKey": "CZ3TDR1-631",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-631"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T05:20:04.311Z",
+  "updatedAt": "2026-09-24T05:23:04.120Z",
+  "syncedAt": "2026-09-24T05:23:04.120Z"
+}

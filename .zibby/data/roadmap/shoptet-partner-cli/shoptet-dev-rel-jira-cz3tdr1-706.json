@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-706",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-592",
+  "name": "Rule unification: config repo A0–A3 (freeze, ESLint 9 migration, extract &amp; publish rule packages, equality/conformance tests)",
+  "description": "**Repo:** `shoptet/addon-repository-actions-config`. Consolidates and supersedes CZ3TDR1-652 and CZ3TDR1-655 (both closed as duplicates of this one) — this issue reflects what actually shipped on branch `zibby` as a single body of work, rather than the originally split A0–A2 / A3 slices.\n\n## Why\n\n`shoptet validate` (the CLI repo) and this repo's deploy gate ran unrelated rule sets — ESLint overlap 3/40, Stylelint overlap 0. This work makes this repo's rule set the single, published authority both runners consume, replacing hand-maintained duplication with one source of truth.\n\n## What was done (77 files changed, ~5700 insertions across 15 commits on `zibby`)\n\n**A0 — freeze.** Landed in-flight branches touching rule config (`fix/large-file-inline-comments` promoted `max-lines` to a blocker) before extraction started, then froze a `rule@severity` baseline (`doc/plans/rule-unification/a0-baseline.md`).\n\n**A1 — ESLint 8→9 flat-config migration.** `linter_review_tool/eslint.flat.config.js`, `linters/eslint-linter.js`. Fixed a critical fail-green bug: a hardcoded `cwd: ROOT` silently downgraded findings for files outside `basePath` to `WARNING` (uncounted by the gate) under ESLint ≥9.5.0 — exactly the shape CI hits, since `review.js` lints a sibling `src/` directory. Fixed by deriving `cwd` from the common ancestor of the resolved file list. ~25 removed-API call sites migrated (`getScope()` → `sourceCode.getScope(node)`, etc.).\n\n**A2 — extract three publishable packages** (out of `linter_review_tool/rules/`, `stylelint-rules/`, `linters/html-linter.js`):\n\n- `packages/addon-eslint-config` — flat config, 8 `shoptet/*` rules, `RELIABLE_RULES` named export, peer range `>=9.5.0 <11`.\n- `packages/addon-stylelint-config` — config + 4 plugin rules.\n- `packages/addon-html-lint` — 3 parse5-based checks (`html/no-inline-script`, `a11y/img-alt`, `html/deprecated-tag`).\n\n`linter_review_tool/profiles.js` now assembles `RELIABLE_RULES` as the union of these three packages' exports instead of a local `Set`.\n\n**A3 — prove the two sides stay in sync:**\n\n- `linter_review_tool/test/rule-equality.js` — asserts this repo's effective rule set equals the shared packages' declared `RELIABLE_RULES` + config severity, by rule id and severity only (never message text or report ranges, since those diverge between ESLint 9 here and ESLint 10 in the CLI repo).\n- `linter_review_tool/test/conformance.js` + new package `packages/addon-lint-conformance` (`corpus.json`, `materialize.js`) — a shared discovery-corpus manifest (11 shapes: minified/bundle/`dist/`/`vendor`/dotfile/symlink skipping, fail-closed-on-all-skipped, target directory outside the tool's own tree) run against `review.js` so both repos exercise identical directory-shape rules.\n\n**Publish/release tooling:**\n\n- `.github/workflows/publish-packages.yml` — `workflow_dispatch`-only publish for the four packages via npm trusted publishing (OIDC); deliberately not wired to push/PR, since a rule package should never ship as a side effect of a merge.\n- `scripts/release-local.js` + `scripts/verdaccio.config.yaml` — a local Verdaccio registry rehearsal of the full publish/consume flow, needed because real `npm publish` to the `@shoptet` scope is blocked on an access/org decision (publish rights held by other maintainers), not on anything in this repo.\n\n**Supporting changes:** `linter_review_tool/.eslintrc.js` deleted (superseded by flat config); prettier introduced (`.prettierrc.json`, `.prettierignore`, `.claude/hooks/format-changed.mjs`); `doc/plans/rule-unification/{README,a0,a0-baseline,a1,a2,a3}.md` planning docs; `CLAUDE.md` and `README.md` updated for the new architecture; `.github/workflows/selftest.yml` extended to run on `packages/**` changes too.\n\n## Explicitly out of scope (tracked separately / deferred)\n\n- Actual `npm publish` to the `@shoptet` scope — blocked on an org/access decision, not code.\n- Whether `checks.workflow.yml` / `default.workflow.yml` callers pin to a tagged package version vs. floating `@main`.\n- The CLI repo's consumption side (B1–B4) — separate repo, separate work.\n\n## Definition of done\n\n`yarn test` (selftest + rule-equality + conformance) green in CI; three rule packages + the conformance corpus package committed and buildable; PR merged to `main`.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-706",
+    "externalKey": "CZ3TDR1-706",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-706"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T05:20:04.324Z",
+  "updatedAt": "2026-09-24T05:23:04.137Z",
+  "syncedAt": "2026-09-24T05:23:04.137Z"
+}

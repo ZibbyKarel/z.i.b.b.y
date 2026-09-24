@@ -1,0 +1,31 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-655",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-592",
+  "name": "Rule unification: equality test, conformance corpus, ADRs (A3+B4)",
+  "description": "**Cross-repo**: config repo's A3 + this repo's B4, done together per the plan. Source of truth: `doc/plans/rule-unification.md` (§\"Slices\", §\"ADRs this track owes\").\n\n## What\n\n- An equality test running in **both** repos' CI, proving the two runners agree on **rule id + severity** — deliberately not finding-level, message text, or end positions (that's exactly where ESLint 9 and 10 differ).\n- The config repo consumes the **published** packages, not its own working copy, in that test — otherwise its gate exercises rules no release actually contains.\n- A conformance corpus exercising the shared rule set on real fixtures across both runners.\n- Write the asymmetry list into `doc/validation.md`, alongside the plain statement that a clean `shoptet validate` is not a deploy guarantee:\n\n  - config repo gates on the PR's added lines; the CLI runs whole-project.\n  - `tsc` is CLI-only; a TypeScript addon can fail `validate` and pass the gate.\n  - the CLI lints HTML project-wide; the gate roots at `src/` — the CLI is noisier here.\n  - no `docUrl` on any lint diagnostic in v1.\n\n## ADRs owed by this track (next free number: 0068)\n\n- `A2` — the config repo is the rule authority; adds a fifth consumer to `cli-greenfield.md` §8's \"one rule package, four consumers\" and supersedes its framing.\n- `A2` — the shared packages pin `@eslint/js` and enumerate rules rather than spreading `recommended`, so one package cannot mean two rule sets.\n- `B2` — `Diagnostic.source` gains `\"html\"`.\n- `B3` — this repo's 12 lint rules are deleted, and what capability that gives up (`shoptet/datalayer-schema`).\n- `B4` — parity is rule-id-and-severity, not finding-level; and the asymmetry list.\n\n## Definition of done\n\nEquality test green in both repos' CI; conformance corpus committed; all five ADRs above merged; `doc/validation.md` carries the asymmetry list.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-655",
+    "externalKey": "CZ3TDR1-655",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-655"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-654",
+    "shoptet-dev-rel-jira-cz3tdr1-636"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-654",
+    "shoptet-dev-rel-jira-cz3tdr1-636"
+  ],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T05:20:04.321Z",
+  "updatedAt": "2026-09-24T05:23:04.134Z",
+  "syncedAt": "2026-09-24T05:23:04.134Z"
+}

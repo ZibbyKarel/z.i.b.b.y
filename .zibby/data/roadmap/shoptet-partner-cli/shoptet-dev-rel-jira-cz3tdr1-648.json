@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-648",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-592",
+  "name": "A0 — Land in-flight branches and freeze the linter rule set",
+  "description": "**Slice 1/8 of the rule-unification track** (`addon-repository-actions-config` repo, `doc/plans/rule-unification-a0.md`). Track index: `shoptet/partner-cli` repo, `doc/plans/rule-unification.md`. Next slice: A1.\n\n### Why this is its own slice\n\nThree open branches are editing the exact rule config/severities/`profiles.js` that A1/A2 will port and extract. Extracting a moving target makes \"preserve existing functionality\" undefined. The branch that matters most is `fix/large-file-inline-comments`, which changes the severity → gate mapping and promotes `max-lines` from recommendation to blocker — both layers the shared packages will own.\n\n### Scope\n\n- Land or close each open branch (`fix/large-file-inline-comments`, `fix/merge-audit-base-branch-guard`, `node22-update`, `webpack`, `feature/ai-review-skill`). For any not landed, record why in the PR.\n\n  - `node22-update` cannot land as-is: its `default.workflow.yml` hardcodes `node-version: '22'` with no `node_version` input, while `main` (after PR #13) exposes the input with default `'24'`. Cherry-pick the `actions/*`/artifact-upload-v5 bumps instead, or close and reopen separately.\n  - `feature/ai-review-skill` is out of scope for the CLI track but touches `rules-catalog.md`, whose codes (A1, B5, C4, H1) the rule comments cite.\n- Take a **rule-set snapshot** after landing: the exact `rule@severity` set the gate produces, from `test/selftest.js` + `test-cases/expected.json`. This is the baseline A1 preserves and A2 publishes.\n- Re-run the selftest, confirm green on `main`.\n- Decide and record the `max-lines` question: if `fix/large-file-inline-comments` lands, `@shoptet/addon-eslint-config` ships `max-lines` as a blocker at 400 lines from v1 — a partner-visible gate change that belongs in the snapshot.\n\n### Definition of done\n\n- No open branch modifies `linter_review_tool/` rule config, severities, or `profiles.js`.\n- `node test/selftest.js` green on `main`; the resulting `rule@severity` set is written down in the PR as the frozen baseline.\n- README's Node-version inconsistency fixed (one paragraph still says `node_version` default is `'22'`, while `default.workflow.yml` sets `'24'` after PR #13).\n\n### Review checklist\n\n- Frozen baseline produced by _running_ the selftest, not by reading `expected.json`.\n- No branch left open with rule-config changes in it.\n- `default.workflow.yml` still exposes `node_version` with default `'24'`.\n- Baseline includes stylelint and HTML findings, not just ESLint.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-648",
+    "externalKey": "CZ3TDR1-648",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-648"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T05:20:04.317Z",
+  "updatedAt": "2026-09-24T05:23:04.128Z",
+  "syncedAt": "2026-09-24T05:23:04.128Z"
+}

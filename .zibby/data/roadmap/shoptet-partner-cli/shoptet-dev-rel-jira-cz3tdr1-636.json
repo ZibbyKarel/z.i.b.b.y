@@ -1,0 +1,35 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-636",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-592",
+  "name": "Get npm publish rights in the @shoptet scope for the three shared lint packages",
+  "description": "## Why\n\nThe rule-unification track makes `shoptet/addon-repository-actions-config`'s rule set the single authority behind both `shoptet validate` and the addon deploy gate. Today those two run **unrelated** rule sets — ESLint rule overlap is 3 of 40, Stylelint overlap is zero — so a partner can pass `shoptet validate` and be rejected at deploy, and the reverse.\n\nUnifying them means publishing the config repo's rule set as three npm packages that both runners consume. Publish rights in the `@shoptet` scope are held by the SOFA/g4 maintainers (`janvoracek`, `shoptet-ci`), so slice `A2` cannot complete without that access being granted.\n\nThis is an **access conversation, not a pipeline to build**: the scope already has a working OIDC publish path — `@shoptet/ui` is released through it.\n\n## What\n\nObtain publish access to the `@shoptet` npm scope (or an agreed delegation/CI-token path) for these three packages, published from `shoptet/addon-repository-actions-config`:\n\npackage\n\ncontents\n\npeer range\n\n`@shoptet/addon-eslint-config`\n\nflat config, the 8 `shoptet/*` rules, `RELIABLE_RULES` as a named export\n\n`>=9.5.0 <11`\n\n`@shoptet/addon-stylelint-config`\n\nconfig, the 4 plugin rules, its allowlist slice\n\n`>=15 <18`\n\n`@shoptet/addon-html-lint`\n\nthe 3 parse5 checks\n\n—\n\nAll three are plain CommonJS with no build step.\n\n## Blast radius\n\n`A2` is the publish slice, and the fixed track order is **A0 → A1 → A2 → B1 → B2 → B3 → A3/B4**, so every slice on the `shoptet/partner-cli` side is transitively blocked:\n\n- **B1** is explicitly blocked — `doc/plans/rule-unification-b1.md:7-8`: _\"Blocked on _`A2`. This slice cannot start until `@shoptet/addon-eslint-config` and `@shoptet/addon-stylelint-config` exist on the registry at a real version.\"\n- **B2** consumes `@shoptet/addon-html-lint`, pinned exactly (`doc/plans/rule-unification-b2.md:34-35`), and is sequenced after B1.\n- **B3** (deleting this repo's 12 rules) and **B4** (the equality test and ADRs) follow.\n\n## References\n\n- `doc/plans/rule-unification.md:127-132` — the blocker as recorded\n- `doc/plans/rule-unification.md:39-46` — the three-package table\n- `doc/plans/rule-unification.md:89` — the slice order\n- `doc/plans/rule-unification-b1.md:7-8` — B1's explicit dependency\n- PRs carrying the plans: shoptet/partner-cli#27 and shoptet/addon-repository-actions-config#14\n\n## Current state worth knowing\n\n`shoptet/partner-cli` today consumes exactly one external `@shoptet/*` package — `@shoptet/datalayer`, pinned exact at `0.1.3-alpha.1` (`packages/cli/package.json:81`, `packages/create/package.json:39`). It declares no `publishConfig` and has no `.npmrc`; it only consumes from the default public registry. So nothing in this repo needs publish credentials — only the config repo does.\n\n## Done when\n\nSomeone on the track can `npm publish` all three package names in the `@shoptet` scope from the config repo's CI, and `A2` is unblocked.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-636",
+    "externalKey": "CZ3TDR1-636",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-636"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "failed",
+  "enqueuedAt": "2026-09-24T05:20:05.655Z",
+  "runs": [
+    {
+      "taskId": "task_1790227221780_8860e8",
+      "runRef": "delivery_1790227221788",
+      "startedAt": "2026-09-24T05:20:23.785Z",
+      "finishedAt": "2026-09-24T05:22:05.282Z",
+      "outcome": "failed"
+    }
+  ],
+  "lastFailureReason": "1 stages, failed",
+  "syncNotes": [],
+  "createdAt": "2026-09-24T05:20:04.314Z",
+  "updatedAt": "2026-09-24T05:23:04.123Z",
+  "syncedAt": "2026-09-24T05:23:04.123Z"
+}

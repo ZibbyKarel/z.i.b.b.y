@@ -1,0 +1,24 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-618",
+  "projectId": "shoptet-partner-cli",
+  "level": "epic",
+  "name": "[Portal] Addons — dev & testing (former API Partner)",
+  "description": "",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-618",
+    "externalKey": "CZ3TDR1-618",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-618"
+  },
+  "externalLevel": "Epic",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T05:20:04.325Z",
+  "updatedAt": "2026-09-24T05:23:04.139Z",
+  "syncedAt": "2026-09-24T05:23:04.139Z"
+}

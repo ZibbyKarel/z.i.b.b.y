@@ -1,0 +1,31 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-653",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-592",
+  "name": "Rule unification: swap to published rule packages + HTML linting (B1+B2)",
+  "description": "**Repo: this repo (**`shoptet-partner-cli`). Depends on the config repo's A2 slice (packages must be published first). Source of truth: `doc/plans/rule-unification-b1.md` and `-b2.md`.\n\n## B1 — swap ESLint/Stylelint onto the published packages\n\n- `packages/validator/src/g3/eslint.ts` — swap `baseConfig: shoptetEslintConfig` for the published `@shoptet/addon-eslint-config`; keep `overrideConfigFile: true`; filter results through the package's `RELIABLE_RULES` named export.\n- `packages/validator/src/g3/stylelint.ts` — same swap for `config: shoptetStylelintConfig` → `@shoptet/addon-stylelint-config`.\n- Pin both exactly (not caret) via the `pnpm-workspace.yaml` catalog in `packages/validator/package.json`. This repo stays on eslint 10.8.0 / stylelint 17.14.1 (peer ranges `>=9.5.0 <11` / `>=15 <18` allow this).\n- `docUrl` goes empty for every lint diagnostic in v1 (the config repo's rules cite catalogue codes, not URLs) — this is a golden-envelope diff, needs a version bump per `doc/versioning.md`.\n- **Open decision to make in this slice**: `eslint.ts` currently reads the partner's own `eslint.config.js` for `ignores` only (a second `ESLint` instance, `isPathIgnored`, env opt-out `SHOPTET_NO_PARTNER_ESLINT_CONFIG`, latched warning `ESLINT_PARTNER_CONFIG_FAILED`); the config repo instead hardcodes an `IGNORE` list + `ignorePath: os.devNull`. Decide which stance this repo keeps.\n\n## B2 — HTML linting\n\n- New third engine in `packages/validator/src/g3/` alongside `typescript.ts`, `eslint.ts`, `stylelint.ts`, consuming `@shoptet/addon-html-lint` (pinned exactly), joined into the existing `Promise.all`. Checks are imported parse5 walks, never reimplemented.\n- Globs `**/*.{html,htm}` minus `distDir` — broader than the gate (rooted at `src/`); this is a deliberate, documented asymmetry, not covered by the B4 rule-equality test.\n- `Diagnostic.source` (`packages/manifest/src/diagnostic.ts:16-23`, currently `\"typescript\" | \"eslint\" | \"stylelint\" | \"datalayer\" | \"manifest\" | \"shoptet\"`) gains `\"html\"`. Requires re-running `pnpm --filter @shoptet/manifest run emit-schemas` (against built `dist/`, not `src/`) and updating golden envelopes — minor version bump minimum.\n- Severity: `html/no-inline-script` and `a11y/img-alt` = error, `html/deprecated-tag` = warning.\n\n## Hard constraint\n\nBoth sub-slices must leave `validate` linting something at every point — never a fail-green gap (this is why B1 lands before B3).\n\n## Definition of done\n\nA fixture project with an inline `<script>` fails `validate` with the gate's own message; ESLint/Stylelint findings come from the published packages, filtered by `RELIABLE_RULES`.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-653",
+    "externalKey": "CZ3TDR1-653",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-653"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-652",
+    "shoptet-dev-rel-jira-cz3tdr1-636"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-652",
+    "shoptet-dev-rel-jira-cz3tdr1-636"
+  ],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T05:20:04.319Z",
+  "updatedAt": "2026-09-24T05:23:04.132Z",
+  "syncedAt": "2026-09-24T05:23:04.132Z"
+}

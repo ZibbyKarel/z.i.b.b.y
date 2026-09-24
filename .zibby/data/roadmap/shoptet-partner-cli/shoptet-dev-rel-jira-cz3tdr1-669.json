@@ -1,0 +1,29 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-669",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-618",
+  "name": "[Portal] Build the shared-content extraction skill",
+  "description": "Build the agent skill that automates extracting existing admin screens into reusable units for the Partner Portal.\n\nThe skill is distilled **after** the first extraction is done by hand (pilot: CZ3TDR1-659, Addons overview), not written up front.\n\n### What the skill must do\n\nIt is interactive, not automatic. Placement cannot be inferred from the code — whether a screen survives cutover is product knowledge.\n\n1. **Analyse** the source page and propose a breakdown into candidate units (sections, tables, field groups), listing what each one pulls in: schema slice, handlers, chrome it is currently welded to.\n2. **Ask, one question at a time:** which units are in scope, and for each one — stays in `Core` (original survives cutover) or moves to `PartnerPortal/domains/` (original gets deleted).\n3. **Extract** to the chosen destination, applying the temporary-bridge machinery only to the units marked as moving.\n4. **Record** in the cutover debt register: moved units, bridge imports, deferred translation keys, and the old location that will be deleted.\n\nNever auto-decide the destination. A Core-surviving unit parked in `PartnerPortal` creates a bridge and a debt row that should never have existed; a Portal-only unit left in `Core` quietly survives a cutover it was supposed to die in.\n\n### Shape\n\nBuilt as a sibling of `docs/tpl-to-react/` — playbook, one record per extraction, learnings, and a checking skill — because the team already knows that structure.\n\n### Depends on\n\n- CZ3TDR1-659 — the pilot extraction the skill is distilled from.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-669",
+    "externalKey": "CZ3TDR1-669",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-669"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-659"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-659"
+  ],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T05:20:04.324Z",
+  "updatedAt": "2026-09-24T05:23:04.136Z",
+  "syncedAt": "2026-09-24T05:23:04.136Z"
+}

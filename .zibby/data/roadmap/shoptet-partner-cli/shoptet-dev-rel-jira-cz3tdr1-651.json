@@ -1,0 +1,35 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-651",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-592",
+  "name": "A3 — Rule-set equality test and the discovery conformance corpus",
+  "description": "**Slice 7/8 of the rule-unification track** (`addon-repository-actions-config` repo, `doc/plans/rule-unification-a3.md`). Previous: A2. Runs in parallel with `B4` in `shoptet/partner-cli` — the two are halves of one mechanism and should be reviewed together.\n\n### Two mechanisms with different earliest landing dates\n\nThe slice number (7/8) describes only the conformance-corpus half. **The equality test needs only the published packages to exist — land it with or immediately after A2**, not held until slice 7: leaving it that late means rule drift between this repo and the packages is undetectable through the entire `B` (CLI) track, exactly when the packages are most actively touched. The conformance corpus genuinely needs both runners and stays at slice 7.\n\n**Cross-repo order:** A0 → A1 → A2 → B1 → B2 → B3 → A3/B4 (this ticket's equality-test half should land right after A2, ahead of B1; the conformance-corpus half waits for B4 in the CLI repo).\n\n### Scope — the rule-set equality test\n\nThis repo asserts its effective rule set equals the shared packages' declared set, **by rule id and severity only** — never message text or report ranges (across ESLint 9.39.5 vs 10.8.0, `max-depth`'s `endColumn` and `no-useless-assignment`'s message text diverge for reasons unrelated to policy; asserting on those makes a test that cries wolf and gets deleted).\n\nFour failure classes it must catch:\n\n- a rule enabled in the shared config but missing from this repo's effective set\n- a rule whose severity differs between the two\n- a rule configured but absent from `RELIABLE_RULES`\n- a rule in `RELIABLE_RULES` that nothing configures\n\nExtends the existing selftest's `RELIABLE_RULES` coverage assertion across the repo boundary.\n\n### Scope — the discovery conformance corpus\n\nFile discovery is the one verdict-determining layer the shared packages don't cover (this repo's `IGNORE` globs + fail-closed rule vs. the CLI's own globs/`distDir` exclusions) — and it's the layer already proven to fail silently: A1's `cwd`/basePath collapse made the gate report zero blockers and pass green, invisible to the 53-fixture selftest because every fixture lives inside the tool tree.\n\nA shared set of directory shapes with expected outcomes, run in **both** repos' CI:\n\nshape\n\nexpected\n\nminified file, bundle, `dist/`, `vendor/` copy\n\nskipped, visibly reported as skipped\n\ndotfile, symlinked directory\n\nnever linted\n\n**target directory outside the runner's own tree**\n\nfindings reported, blockers still blocking\n\nevery candidate skipped\n\nfail-closed, never a silent pass\n\nfile with a known blocker\n\nreported identically by both runners\n\nDecide in this ticket's PR where the corpus lives — the requirement is **neither repo owns a private copy** (two copies of a conformance corpus recreates the exact duplication problem the track exists to remove).\n\n### Definition of done\n\n- Equality test runs in this repo's CI, fails on all four divergence classes (proven by perturbation) — landed no later than the first B slice.\n- Conformance corpus runs in both repos from one shared source, identical results on every shape.\n- Outside-the-tree case demonstrably fails when A1's `cwd` fix is reverted.\n- `node test/selftest.js` still green.\n\n### Review checklist\n\n- **Perturbation, the important one:** revert the `cwd` fix — confirm the corpus fails.\n- **Perturbation:** add a rule to the shared config and not to this repo's expectations — equality test must fail; flip a severity — must fail again.\n- **Perturbation:** point the equality test at a local copy of `RELIABLE_RULES` instead of the package export — confirm it passes trivially (the bug shape to guard against).\n- Confirm the equality test asserts on rule id and severity only.\n- Confirm the corpus has exactly one source of truth, vendored by neither repo.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-651",
+    "externalKey": "CZ3TDR1-651",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-651"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "failed",
+  "enqueuedAt": "2026-09-24T05:20:05.657Z",
+  "runs": [
+    {
+      "taskId": "task_1790227257908_5928ea",
+      "runRef": "quick-fix_1790227257913",
+      "startedAt": "2026-09-24T05:20:59.767Z",
+      "finishedAt": "2026-09-24T05:22:05.285Z",
+      "outcome": "failed"
+    }
+  ],
+  "lastFailureReason": "1 stages, failed",
+  "syncNotes": [],
+  "createdAt": "2026-09-24T05:20:04.319Z",
+  "updatedAt": "2026-09-24T05:23:04.130Z",
+  "syncedAt": "2026-09-24T05:23:04.130Z"
+}

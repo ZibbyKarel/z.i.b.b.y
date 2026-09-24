@@ -1,0 +1,39 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-650",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-592",
+  "name": "A2 — Extract and publish the three shared rule packages to npm",
+  "description": "**Slice 3/8 of the rule-unification track** (`addon-repository-actions-config` repo, `doc/plans/rule-unification-a2.md`). Previous: A1. Next: `B1` in the `shoptet/partner-cli` repo, which consumes what this slice publishes.\n\n**Blocked on an access conversation, not on code** — see below. Should be raised before A1 finishes so it isn't the thing everything waits on at the end.\n\n### Why this is its own slice\n\nTurns rule knowledge from a directory in one repo into a versioned artifact both the deploy gate and `shoptet validate` consume. It's also the slice where this repo becomes an **npm publisher** for the first time (Yarn classic, CommonJS, no build step, no changesets, no release workflow) — new machinery, deliberately not combined with the A1 ESLint port.\n\n### Scope\n\nThree packages, plain CommonJS, no build step (rewriting in TypeScript during the move would make \"preserve existing functionality\" unverifiable):\n\npackage\n\ncontents\n\npeer range\n\n`@shoptet/addon-eslint-config`\n\nflat config, 8 `shoptet/*` rules, `rules/global-callee.js`, `rules/script-detect.js`, `RELIABLE_RULES` as a named export\n\n`>=9.5.0 <11`\n\n`@shoptet/addon-stylelint-config`\n\nconfig, 4 plugin rules, its slice of the allowlist\n\n`>=15 <18`\n\n`@shoptet/addon-html-lint`\n\n3 parse5 checks (`a11y/img-alt`, `html/no-inline-script`, `html/deprecated-tag`)\n\n—\n\nLive in `packages/<name>/` at repo root as a Yarn classic workspace; `linter_review_tool/` keeps its own `package.json`/lockfile as the consumer.\n\n- `RELIABLE_RULES` is an export, not a copy — it's verdict-affecting (a rule configured `error` but absent from it is dropped entirely), so a consumer reimplementing it will silently disagree on verdicts. `profiles.js` must assemble the merged set from the three packages at load time, never restate it locally — this is also what makes A3's equality test meaningful.\n- `review.js`, `profiles.js`'s wiring, `lib/reconcile-utils.js`, RDJSON emission, reconciled inline comments, the fingerprint marker, diff-scoped gate, `FILE_LEVEL_RULES`, fail-closed plumbing, and file discovery (`IGNORE` globs) all **stay in this repo** — this slice extracts _what to check_, not _how to run/report it_.\n- This repo switches to consuming the **published**, exact-pinned versions (in `yarn.lock`) — not the local workspace directory.\n- Release machinery: a publish workflow via the `@shoptet` scope's existing npm trusted-publishing/OIDC path (same shape as `@shoptet/ui`'s most recent release) — no long-lived `NPM_TOKEN`. Strict SemVer: a new blocking rule is a **major** bump, a new warning-level rule is a **minor**.\n- v1's rule set = A0's frozen baseline, but only after A1's two intentional deltas (`caughtErrors: 'none'`, the `no-implicit-globals`-on-`shoptet = {}` decision) are already folded in — there's no \"baseline ± later deltas\" version of v1.\n- Worth stating in the PR: after this slice the _rules_ are pinned by version, but the workflow ref partner repos call is still floating at `@main` — that's a separate, later decision.\n\n### The blocker\n\nnpm publish rights in the `@shoptet` scope are held by the SOFA/g4 maintainers (`janvoracek`, `shoptet-ci`). All three package names (and unscoped variants) are currently unpublished and free. This is an organizational conversation, not code.\n\n### Definition of done\n\n- Three packages published at `1.0.0`, each with `exports`, `files`, `repository`, a license, and a correct peer range.\n- `linter_review_tool` consumes them from the registry, exact-pinned; `node test/selftest.js` green against the published copies.\n- Gate still gates on a real PR.\n- `RELIABLE_RULES` is a named export; the runner reads it from the packages, not a local file.\n- Publish workflow runs from CI with OIDC.\n\n### Review checklist\n\n- **Perturbation:** publish a prerelease with one rule's severity changed — confirm both this repo's gate and the CLI's `validate` follow it.\n- **Perturbation:** delete a rule from published `RELIABLE_RULES` — confirm its findings disappear from the gate's output.\n- Confirm pins are exact by reading `yarn.lock`, not `package.json`.\n- Confirm no rule file was reformatted/\"cleaned up\" during the move — diff should be a move plus packaging metadata.\n- Confirm `review.js`/RDJSON/reconciliation did not move into a package.\n- Confirm `profiles.js` assembles `RELIABLE_RULES` from the three packages and hardcodes no rule id locally.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-650",
+    "externalKey": "CZ3TDR1-650",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-650"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-706"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-706"
+  ],
+  "lifecycle": "failed",
+  "enqueuedAt": "2026-09-24T05:20:05.656Z",
+  "runs": [
+    {
+      "taskId": "task_1790227239860_f2bc01",
+      "runRef": "quick-fix_1790227240014",
+      "startedAt": "2026-09-24T05:20:41.853Z",
+      "finishedAt": "2026-09-24T05:22:05.283Z",
+      "outcome": "failed"
+    }
+  ],
+  "lastFailureReason": "1 stages, failed",
+  "syncNotes": [],
+  "createdAt": "2026-09-24T05:20:04.318Z",
+  "updatedAt": "2026-09-24T05:23:04.129Z",
+  "syncedAt": "2026-09-24T05:23:04.129Z"
+}

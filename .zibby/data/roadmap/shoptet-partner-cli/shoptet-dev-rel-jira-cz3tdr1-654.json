@@ -1,0 +1,31 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-654",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-592",
+  "name": "Rule unification: delete legacy rules and rewrite scaffold (B3)",
+  "description": "**Repo: this repo (**`shoptet-partner-cli`). Depends on the previous B1+B2 task (deletion must never leave `validate` linting nothing). Source of truth: `doc/plans/rule-unification-b3.md`.\n\n## What gets deleted\n\n- `packages/eslint-config` — `shoptet/no-load-order-globals` (with its ~120-entry `KNOWN_WINDOW_GLOBALS` list) and `shoptet/datalayer-schema`, plus `ruleDocUrl`, `no-var`, `no-implicit-globals`, `no-global-assign`.\n- `packages/stylelint-config` — the 5 stock-rule config (`selector-max-combinators`, `selector-max-type`, `selector-max-universal`, `selector-max-specificity`, `selector-no-qualifying-type`).\n- `packages/stylelint-plugin-fragile-selectors` — `shoptet/selector-no-universal-child-combinator`, `shoptet/selector-no-positional-nth-child`.\n- Subpath exports `packages/cli/src/eslint-config.ts` and `src/stylelint-config.ts` (and their `tsdown.config.ts` entries and `packages/cli/package.json` `./eslint-config` / `./stylelint-config` exports).\n\n## Capability lost — must be recorded in the ADR\n\n`shoptet/datalayer-schema` has no replacement in the config repo's rule set: it validated `dataLayer` pushes for `unknownField`, `unguardedOptionalAccess`, `invalidPageType`, `schemaUnavailable`. Say this plainly in the ADR, per this repo's \"never document an unimplemented capability as if it works\" rule.\n\n## Scaffold rewrite\n\n`packages/create/src/templates.ts` currently writes `import shoptetConfig from \"shoptet/eslint-config\"` and a `.stylelintrc` extending `\"shoptet/stylelint-config\"`. Both retarget to `@shoptet/addon-eslint-config` / `@shoptet/addon-stylelint-config`, added to generated `devDependencies` via `packages/create/src/package-json.ts` — **with a caret** (the one deliberately caret spot in the whole track; every gatekeeper pin stays exact).\n\n## Follow-on cleanup\n\n- Amend ADR 0062 (`selectorSpecificityIdCaveat` — dead once its target rule is gone).\n- Remove `ruleDocUrl` and the `https://developers.shoptet.com/cli/lint/{eslint,stylelint}/…` URL scheme.\n- Retarget or delete `.claude/skills/lint-rule-authoring`.\n- Decide on the now-orphaned `\"datalayer\"` value in `Diagnostic.source`.\n- Adjust `vitest.config.ts` coverage entries for the deleted packages.\n- Fix the stale `doc/overview.md` `deps.alwaysBundle` claim (actual config is `deps: { onlyBundle: [\"@shoptet/*\"] }`).\n\n## Definition of done\n\n`validate`'s observable behaviour is unchanged by this slice (proves B1/B2 already fully wired the shared rules before anything old is deleted). Perturbation check: deleting a shared package from `node_modules` must fail loudly. Grep the whole tree (incl. `.claude/`, `doc/`, fixtures) for `no-load-order-globals`, `datalayer-schema`, `fragile-selectors`, `shoptet/eslint-config`, `shoptet/stylelint-config` — nothing should remain outside history.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-654",
+    "externalKey": "CZ3TDR1-654",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-654"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-653",
+    "shoptet-dev-rel-jira-cz3tdr1-636"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-653",
+    "shoptet-dev-rel-jira-cz3tdr1-636"
+  ],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T05:20:04.320Z",
+  "updatedAt": "2026-09-24T05:23:04.133Z",
+  "syncedAt": "2026-09-24T05:23:04.133Z"
+}

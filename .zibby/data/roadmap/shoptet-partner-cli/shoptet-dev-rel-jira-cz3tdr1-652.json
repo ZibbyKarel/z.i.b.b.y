@@ -1,0 +1,29 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-652",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-592",
+  "name": "Rule unification: config repo A0–A2 (freeze, ESLint 8→9, extract &amp; publish packages)",
+  "description": "**Repo: **`shoptet/addon-repository-actions-config` (not this CLI repo). Source of truth: `doc/plans/rule-unification.md` in `shoptet-partner-cli`.\n\n## Why\n\n`shoptet validate` and the config repo's deploy gate run unrelated rule sets today (ESLint overlap 3/40, Stylelint overlap 0). This slice makes the config repo's rules the published, single authority both runners will consume.\n\n## What\n\n- **A0** — land in-flight branches and freeze the rule set before extraction starts.\n- **A1** — migrate ESLint 8 → 9 to flat config, and fix the `cwd`/basePath behaviour the CLI's `eslint.ts` depends on (see B1).\n- **A2** — extract and publish three packages under the `@shoptet` scope:\n\n  - `@shoptet/addon-eslint-config` — flat config, the 8 `shoptet/*` rules, `RELIABLE_RULES` as a named export, peer range `>=9.5.0 <11`.\n  - `@shoptet/addon-stylelint-config` — config, the 4 plugin rules, its allowlist slice, peer range `>=15 <18`.\n  - `@shoptet/addon-html-lint` — the 3 parse5 checks (`html/no-inline-script`, `a11y/img-alt`, `html/deprecated-tag`).\n  - `@eslint/js` must be a pinned regular dependency, never a peer (it doesn't track eslint's version).\n  - The shared config must enumerate its rules explicitly — never spread `js.configs.recommended` (61 rules on ESLint 9 vs 64 on ESLint 10; spreading it makes the package produce different findings on each side).\n\n## Blocked on\n\n- **npm publish rights in the **`@shoptet` scope — held by SOFA/g4 maintainers (`janvoracek`, `shoptet-ci`). A2 cannot complete without this access. This is an access conversation, not a pipeline to build — the scope already has a working OIDC publish path (`@shoptet/ui`).\n- `fix/large-file-inline-comments` is changing the rule set right now (makes `max-lines` a blocker, drops warnings from inline comments) — this is exactly why A0 exists; whoever owns that branch needs to know an extraction is coming.\n\n## Definition of done\n\nThree packages published from the config repo at real semver versions; this repo's B1 slice can `pnpm add` them.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-652",
+    "externalKey": "CZ3TDR1-652",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-652"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-636"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-636"
+  ],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T05:20:04.319Z",
+  "updatedAt": "2026-09-24T05:23:04.131Z",
+  "syncedAt": "2026-09-24T05:23:04.131Z"
+}

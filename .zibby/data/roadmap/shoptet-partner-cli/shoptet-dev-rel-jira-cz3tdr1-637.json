@@ -1,0 +1,24 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-637",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "name": "Land or close fix/large-file-inline-comments to freeze the rule set before extraction (A0)",
+  "description": "## Why\n\nThe rule-unification track extracts `shoptet/addon-repository-actions-config`'s rule set into three published npm packages (`A1` ports it to ESLint 9 flat config, `A2` extracts and publishes). Both slices operate on the rule set as a whole, and their safety argument rests on the 53-fixture selftest staying green across what should be a move plus packaging metadata — no rewrite.\n\nThe branch `fix/large-file-inline-comments` in the config repo is editing the very layers about to be extracted. Per the plan (`doc/plans/rule-unification.md:133-135`) it:\n\n- makes `max-lines` a **blocker** (a severity change, so it changes the severity→gate mapping), and\n- **drops warnings from inline comments**.\n\nExtracting on top of a moving rule set means the \"baseline preserved\" claim `A1` must prove and `A2` must publish has no fixed referent. That is the entire reason slice `A0` exists.\n\nThis system's worst failure mode is **fail-green** — a gate that reports zero blockers while looking healthy — so a rule set that shifts mid-extraction is not a cosmetic problem.\n\n## What\n\n1. Land or close `fix/large-file-inline-comments` (branch exists in `shoptet/addon-repository-actions-config`, currently **no open PR**: https://github.com/shoptet/addon-repository-actions-config/tree/fix/large-file-inline-comments).\n2. Tell whoever owns it that an extraction is coming, so the work isn't duplicated or stranded.\n3. Do the same for the other in-flight branches touching those layers.\n4. Then snapshot the exact `rule@severity` set as the baseline `A1` must preserve and `A2` must publish.\n\n## Blast radius\n\nThe track order is fixed — **A0 → A1 → A2 → B1 → B2 → B3 → A3/B4** (`doc/plans/rule-unification.md:89`) — and every slice must leave both repos green and shippable, which the plan states as a hard constraint rather than a preference. `A0` is first, so nothing else on the track can start: not the ESLint 8 → 9 flat-config port (`A1`), not the publish (`A2`, tracked separately as the `@shoptet` scope access request), and none of `shoptet/partner-cli`'s B1–B4.\n\nDownstream, `B3` deletes this repo's 12 rules across `packages/eslint-config`, `packages/stylelint-config` and `packages/stylelint-plugin-fragile-selectors` — including `shoptet/datalayer-schema` and `shoptet/no-load-order-globals` — on the strength of the published packages covering them. The frozen baseline is what makes that deletion checkable.\n\n## References\n\n- `doc/plans/rule-unification.md:133-135` — the blocker as recorded\n- `doc/plans/rule-unification.md:89` — the slice order and the green/shippable constraint\n- `doc/plans/rule-unification.md:99` — the `A0` row: _\"land the in-flight branches, freeze the rule set\"_\n- `doc/plans/rule-unification-b3.md:24-33` — the 12 rules B3 deletes\n- PRs carrying the plans: shoptet/partner-cli#27 and shoptet/addon-repository-actions-config#14\n\n## Done when\n\nNo in-flight branch is editing the rule set, and the `rule@severity` baseline snapshot is committed in the config repo, so `A1` can start against a fixed referent.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-637",
+    "externalKey": "CZ3TDR1-637",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-637"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T05:20:04.315Z",
+  "updatedAt": "2026-09-24T05:23:04.125Z",
+  "syncedAt": "2026-09-24T05:23:04.125Z"
+}
