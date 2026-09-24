@@ -2,6 +2,8 @@
 name: Prompt Optimizer
 glyph: spark
 desc: >-
+  Analyze a draft prompt, critique it and output a complete optimized prompt
+  the user can paste and run. Advisory only.
 category: Agentic
 ---
 

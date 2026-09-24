@@ -609,7 +609,8 @@ export class ClaudeRunCommandService {
       const tools = toSubagentTools(agent.tools);
       for (const t of mapTools(agent.tools)) allowed.add(t);
       catalog[agent.id] = {
-        description: agent.description ?? agent.name ?? agent.id,
+        // `||`, not `??`: claude rejects an empty description and fails the whole launch.
+        description: agent.description?.trim() || agent.name || agent.id,
         prompt: agent.instructions,
         ...(tools ? { tools } : {}),
         ...(agent.model ? { model: agent.model } : {}),
@@ -621,7 +622,7 @@ export class ClaudeRunCommandService {
       const tools = toSubagentTools(undefined);
       for (const t of mapTools(undefined)) allowed.add(t);
       catalog[skill.id] = {
-        description: skill.desc ?? skill.name ?? skill.id,
+        description: skill.desc?.trim() || skill.name || skill.id,
         prompt: skill.instructions,
         ...(tools ? { tools } : {}),
       };

@@ -287,6 +287,15 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     });
   });
 
+  it("falls back to name/id when a description is empty (claude rejects an empty one)", async () => {
+    const svc = makeService([{ ...CODER, description: "  " }], [{ ...WRITER_SKILL, desc: "" }]);
+    const { args } = await svc.buildClaudeCommand({ instructions: "x", task: "t" });
+    const catalog = JSON.parse(flagValue(args, "--agents") ?? "{}");
+    for (const entry of Object.values<{ description: string }>(catalog)) {
+      expect(entry.description.trim()).not.toBe("");
+    }
+  });
+
   it("passes a small agent library through unchanged (no curation under the cap)", async () => {
     // The whole-library overflow only bites at scale; a handful of agents and no
     // explicit delegates must keep today's full catalog.

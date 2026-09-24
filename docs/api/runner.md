@@ -247,6 +247,9 @@ Key assembled pieces:
   never the whole seeded library (160+ agents would overflow `spawn E2BIG`).
   Only agents from `AgentsStorageService.listActive()` are eligible — a
   `status: "proposed"` Agent-Factory candidate is never delegatable.
+  Each entry's `description` falls back to name, then id, when the agent's
+  `description` / skill's `desc` is empty or whitespace — claude rejects an
+  empty description and fails the whole launch, not just that entry.
 - **`--allowedTools`** — the union of the primary's tools, every catalog
   subagent's tools, each enabled MCP server's `mcp__<id>__*` wildcard, and
   (Phase 108) resolved tool grants (`resolveGrantId`) — under
