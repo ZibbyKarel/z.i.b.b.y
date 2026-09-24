@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-549",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-543",
+  "name": "Feasibility: Addons — dev and testing",
+  "description": "Owners per PRD: Addons team, API team, DevRel team. This area carries the clearest efficiency win — on average 20% of API team capacity goes to partner support (API duty), part of which the portal would eliminate.\n\nh2. Scope in PRD\n\n- Step-by-step development guide (request → contract → development → testing → deployment)\n- Deployment form (submission for review)\n- Automated sandbox creation\n- Sandbox API access activation (form → Salesforce)\n- Form for test environment extension requests (iFrame, blank mode, endpoints)\n\nh2. To analyse\n\n- Automated sandbox creation — is there an API/automation path today, what would it take\n- Secure token handling in the deployment submission form (PRD names token security risk and repeated credential leaks)\n- Add-ons repository integration with GitHub — scope and method (OQ-15)\n- Which parts of API duty the portal can actually remove (logs, statuses, docs availability)\n- Final add-on review stays out of scope — portal allows submission only\n\nh2. Output\n\nSystems involved, integration gaps, T-shirt size, blockers, MVP / later / out-of-scope recommendation.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-549",
+    "externalKey": "CZ3TDR1-549",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-549"
+  },
+  "externalLevel": "Analysis",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.241Z",
+  "updatedAt": "2026-09-24T06:59:48.658Z",
+  "syncedAt": "2026-09-24T06:59:47.241Z",
+  "enqueuedAt": "2026-09-24T06:59:48.658Z"
+}

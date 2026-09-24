@@ -1,0 +1,32 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-335",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-6",
+  "name": "Docusaurus - add PHP syntax highlighting",
+  "description": "# Context\n\nAdd syntax highlighting support for the PHP language in documentation generated using Docusaurus, specifically for the {{ }}``php` code block.\n\n[https://docusaurus.io/docs/markdown-features/code-blocks#supported-languages](https://docusaurus.io/docs/markdown-features/code-blocks#supported-languages) \n\n# Task\n\n- ☐ Implement PHP highlighting\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/15269](https://github.com/shoptet/cms4/issues/15269)_\n_Created on GitHub by @havlicekl on 2025-03-25 13:36 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-335",
+    "externalKey": "CZ3TDR1-335",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-335"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "running",
+  "enqueuedAt": "2026-09-24T06:59:48.643Z",
+  "runs": [
+    {
+      "taskId": "task_1790233339508_6634a9",
+      "startedAt": "2026-09-24T07:02:19.510Z",
+      "outcome": "running"
+    }
+  ],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:46.808Z",
+  "updatedAt": "2026-09-24T07:02:19.510Z",
+  "syncedAt": "2026-09-24T06:59:46.808Z"
+}

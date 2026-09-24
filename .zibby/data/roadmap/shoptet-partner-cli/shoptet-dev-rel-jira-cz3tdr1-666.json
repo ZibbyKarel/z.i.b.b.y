@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-666",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "A re-review asked for on an unchanged commit silently does nothing",
+  "description": "A partner can ask for a re-review by commenting on the pull request. If they ask on a commit we have already reviewed, the tool today does nothing at all — no answer, no result, no explanation. From the partner's side it simply looks broken.\n\nIt should not run a fresh review either, and for two separate reasons. The code is byte-for-byte what we already read, so a second pass cannot reach a different answer and would only cost money. And under the rule that a finding is closed only by a real change in the code, a commit with no changes cannot close anything anyway.\n\nSo the answer becomes deterministic: we tell the partner there are no new commits since the one we reviewed.\n\n**Update after build:** a claim that something was fixed still always gets a proper reply — but only when it is written as its own comment, separate from the `/rereview` one. Text added after the `/rereview` line, on that same comment, is not read by anything today: a comment is classified as either a command or a claim, never both, so nothing looks at what follows the command. Answering that combined case is left for later — noted with a TODO in the code at the point it would matter, not built here.\n\nOne thing stays exactly as it is today: if part of the earlier round crashed, asking again still retries the part that died. \"No new review\" means no second pass over what already succeeded, not abandoning what failed.\n\n**Done when:** a re-review asked for on an unchanged commit answers the partner instead of doing nothing, never starts a fresh review over code it has already read, and still recovers a round that failed halfway.\n\nPlan: https://github.com/shoptet/aidev-apps/pull/27 — batch 2, task T11. Independent of everything else in batch 2.\n\nPR: https://github.com/shoptet/aidev-apps/pull/40",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-666",
+    "externalKey": "CZ3TDR1-666",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-666"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.314Z",
+  "updatedAt": "2026-09-24T06:59:47.314Z",
+  "syncedAt": "2026-09-24T06:59:47.314Z"
+}

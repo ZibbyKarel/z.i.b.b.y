@@ -1,0 +1,24 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-639",
+  "projectId": "shoptet-partner-cli",
+  "level": "epic",
+  "name": "[Portal] Scaffolding / Misc",
+  "description": "",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-639",
+    "externalKey": "CZ3TDR1-639",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-639"
+  },
+  "externalLevel": "Epic",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.288Z",
+  "updatedAt": "2026-09-24T06:59:47.288Z",
+  "syncedAt": "2026-09-24T06:59:47.288Z"
+}

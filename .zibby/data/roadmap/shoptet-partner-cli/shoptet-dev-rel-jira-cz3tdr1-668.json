@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-668",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-618",
+  "name": "Addon statistics - Usability Tab",
+  "description": "**Why?**\nThe new Shoptet Partner Portal (Figma: Moje doplňky → Statistiky doplňků) needs to show partners their addon **usability** stats (Použitelnost tab). Today that data only exists inside the admin's API Partner section (`ApiPartnerController`, views `statsUsabilityView`/`statsUsabilityDetailView`).\n\n**What?**\nImplement the Partner Portal's \"Statistiky doplňků\" screen — **Použitelnost** tab — per the linked Figma design, reusing the standalone controller extracted from `ApiPartnerController` (see CZ3TDR1-658) so no business logic is duplicated between admin and Partner Portal.\n\nPozn.: Fakturace tab a samotná extrakce controlleru jsou řešeny v CZ3TDR1-658.\n\n**Acceptance Criteria**\n\n- Shoptet Partner Portal's \"Moje doplňky → Statistiky doplňků\" screen — **Použitelnost tab** — is implemented per Figma and served by the controller extracted in CZ3TDR1-658\n- No duplicated business logic vs. the admin's existing usability views\n- Unit/integration tests cover the usability tab behaviour\n\n**Resources**\n\n- Figma — Použitelnost tab: https://www.figma.com/design/uyNyEpBk6MYXqjXprmXftl/Partner-Portal?node-id=657-53310&m=dev\n- Current implementation: `admin/controllers/ApiPartnerController.php`, `admin/react/src/Core/pages/ApiPartner/`\n- Related: CZ3TDR1-658 (Fakturace tab, controller extraction)",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-668",
+    "externalKey": "CZ3TDR1-668",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-668"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.317Z",
+  "updatedAt": "2026-09-24T06:59:48.703Z",
+  "syncedAt": "2026-09-24T06:59:47.317Z",
+  "enqueuedAt": "2026-09-24T06:59:48.703Z"
+}

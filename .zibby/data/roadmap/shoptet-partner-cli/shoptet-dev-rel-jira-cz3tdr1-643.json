@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-643",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-613",
+  "name": "[Portal] Self-registration + email verification screens (UI)",
+  "description": "**Why?**\nThe backend composition (`RegisterPartnerCommand` → project creation + `SwitchToPartnerSandboxCommand`) is described in `003-registration-flow.md`. Figma's own embedded spec states the goal directly: _\"As a partner, I want to create a new account in the Partner Portal, so that I can access features relevant to my partnership type.\"_ This issue is the front-end registration + verification flow per Figma.\n\n**What?**\nBuild the registration popup flow and verification banner per Figma ([node 17:83](https://www.figma.com/design/uyNyEpBk6MYXqjXprmXftl/Partner-Portal?node-id=17-83)).\n\n**Acceptance Criteria**\n\n- [ ] Entry popup collects email only (frame 122:557)\n- [ ] Duplicate email shows an \"already exists\" popup offering password + login instead (frame 134:836)\n- [ ] Invalid email format shows an inline error (frame 128:3197)\n- [ ] On success: verification email sent; user lands in their sandbox with an \"unverified\" banner (472:7255) until they click the verification link (→ 472:7302 verified state)\n- [ ] Registration and verification available in CZ/SK/HU/EN\n- [ ] Sandbox provisioning dispatches the current `CreateProjectCommand` (renamed from `CreateTrialCommand` per [CZ3EXP1-136](https://teamdotblue.atlassian.net/browse/CZ3EXP1-136), done) + `SwitchToPartnerSandboxCommand` — **not** the legacy `CreateTrialCommand` handler path described in `003-registration-flow.md`, which predates that rename\n- [ ] `make fe-test` covers the happy path and the \"email already exists\" branch\n\n**Open design question (unresolved on the Figma board, sticky note 131:735):** what happens when the entered email already has a Partner Portal account — flag for design before implementation.\n\n**Resources**\n\n- Figma: https://www.figma.com/design/uyNyEpBk6MYXqjXprmXftl/Partner-Portal?node-id=17-83&m=dev\n- Backend flow: `Partner_Portal/issues/03-user-management/003-registration-flow.md`, `Partner_Portal/16_PARTNER_REGISTRATION_FLOW.md`\n- Project-creation rename: [CZ3EXP1-136](https://teamdotblue.atlassian.net/browse/CZ3EXP1-136) (epic [CZ3EXP1-127](https://teamdotblue.atlassian.net/browse/CZ3EXP1-127) \"NEO domain init and project lifecycle\")",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-643",
+    "externalKey": "CZ3TDR1-643",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-643"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.292Z",
+  "updatedAt": "2026-09-24T06:59:48.698Z",
+  "syncedAt": "2026-09-24T06:59:47.292Z",
+  "enqueuedAt": "2026-09-24T06:59:48.698Z"
+}

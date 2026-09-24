@@ -1,0 +1,31 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-464",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "name": "Webpack entry point",
+  "description": "Imported scripts instead of multiple entries\nTBU\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/39479](https://github.com/shoptet/cms4/issues/39479)_\n_Created on GitHub by @shoptet-addon-reviewer on 2026-06-08 07:58 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-464",
+    "externalKey": "CZ3TDR1-464",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-464"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "running",
+  "enqueuedAt": "2026-09-24T06:59:48.650Z",
+  "runs": [
+    {
+      "taskId": "task_1790233452990_eb978d",
+      "startedAt": "2026-09-24T07:04:12.996Z",
+      "outcome": "running"
+    }
+  ],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:46.819Z",
+  "updatedAt": "2026-09-24T07:04:12.996Z",
+  "syncedAt": "2026-09-24T06:59:46.819Z"
+}

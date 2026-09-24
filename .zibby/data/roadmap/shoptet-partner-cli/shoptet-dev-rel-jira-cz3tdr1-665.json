@@ -1,0 +1,29 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-665",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "A discussion the partner closes without fixing anything disappears unnoticed",
+  "description": "A partner can close a discussion thread themselves. Sometimes that is honest — they fixed it and tidied up. Sometimes it is housekeeping. Sometimes it is a way to make the review look finished.\n\nToday nothing on our side reads that at all. The finding drops off the pull request, nobody on the team learns, and the next round has no memory of it either. **This is the one place where a finding can disappear with no one noticing.**\n\nThe catch is the timing, and it is why this is separate work rather than part of the round. The natural moment to notice would be the partner's next push — but a partner who closes a thread instead of fixing it is exactly the one who never pushes again. The trigger would systematically miss the group it exists to catch. So this runs on its own schedule, once a day, over pull requests that still have something open.\n\nIt only looks and counts. A discussion closed with no code change behind it stays open in our records, with its state kept current every day; any message back to the partner still waits for a person. **Update after build:** \"visible to the reviewer\" today means the data is there, current, and ready to read — not that anyone sees it without knowing to query for it. Actually showing it in the console, so a reviewer runs into it without looking for it, is the triage panel — separate, larger work, not yet built.\n\n**Done when:** a discussion closed with no code change behind it is noticed within a day rather than at the next push, and stays open in our records with its state kept current. Showing that to the reviewer in the console is the triage panel's job, tracked separately — this ticket only guarantees the data is ready for it.\n\nPlan: https://github.com/shoptet/aidev-apps/pull/27 — batch 2, task T12. Independent of the rest of batch 2 apart from needing the discussion threads to be remembered first.\n\nPR: https://github.com/shoptet/aidev-apps/pull/39",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-665",
+    "externalKey": "CZ3TDR1-665",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-665"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-660"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-660"
+  ],
+  "lifecycle": "external",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.313Z",
+  "updatedAt": "2026-09-24T06:59:47.313Z",
+  "syncedAt": "2026-09-24T06:59:47.313Z"
+}

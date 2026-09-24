@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-554",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-543",
+  "name": "Feasibility: Integrations and data architecture (cross-cutting)",
+  "description": "Not a PRD feature area, but the PRD's highest-severity risk and the prerequisite for every other analysis in this epic: _\"Integration with existing CRM and Salesforce — risk of delays and technical obstacles. Mitigation: verify feasibility ASAP.\"_\n\nh2. Scope\n\nMust-have integrations per PRD: Salesforce + 123FormBuilder (CRM core, forms, pipeline, status sync), internal CRM/CMS (partner and add-on management, e-shop admin access), Keboola (data pipeline, duplicate check).\n\nNice-to-have: DocuSign, GitHub, Office 365 / Outlook, HubSpot, WordPress.\n\nh2. To analyse\n\n- Bidirectional data sync portal ↔ CRM ↔ Salesforce — who owns master data for each entity (OQ-19)\n- WordPress: retain or replace with a new frontend — blocks the overall architecture (OQ-20)\n- Data quality audit before development — inconsistent WP/SF data may complicate display\n- Available APIs, rate limits, auth model and sandbox availability for each must-have system\n- Where the portal itself would run and what it owns as its own data\n- DevRel team capacity as a delivery constraint (OQ-18)\n\nh2. Output\n\nTarget integration architecture sketch, master-data ownership table, per-system gap list, and the ordered set of decisions the MVP scope depends on.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-554",
+    "externalKey": "CZ3TDR1-554",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-554"
+  },
+  "externalLevel": "Analysis",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.242Z",
+  "updatedAt": "2026-09-24T06:59:48.663Z",
+  "syncedAt": "2026-09-24T06:59:47.242Z",
+  "enqueuedAt": "2026-09-24T06:59:48.663Z"
+}

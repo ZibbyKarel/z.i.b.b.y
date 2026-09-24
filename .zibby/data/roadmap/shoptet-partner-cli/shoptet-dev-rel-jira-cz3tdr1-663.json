@@ -1,0 +1,29 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-663",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "The same finding gets posted twice when a partner does not fix it",
+  "description": "Today a finding the partner has not fixed comes back in the next round as a **new** discussion thread, right next to the one that is already there. The partner sees the same remark twice, and the thread they may already have replied to is left behind without an answer.\n\nTwo things change, and both are about the partner's experience of a second round:\n\n- **A finding an open discussion already covers is not posted again.** One problem, one thread, however many rounds it takes.\n- **The letter says what carried over.** What is still open from the previous round is named again, so it does not quietly vanish just because this round found nothing new. What got fixed is acknowledged in one sentence, without counts.\n\nOne rule about that acknowledgement: it only ever covers findings a **reviewer confirmed** as fixed — never ones the tool merely believes are fixed. Telling a partner \"some of this is done\" on the tool's own unreviewed say-so would be a milder version of exactly the problem this epic exists to remove.\n\n**Done when:** a finding still open from an earlier round is never posted a second time, the letter names it exactly once, and no number the partner sees contradicts what the letter says.\n\nPlan: https://github.com/shoptet/aidev-apps/pull/27 — batch 2, task T9.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-663",
+    "externalKey": "CZ3TDR1-663",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-663"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-662"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-662"
+  ],
+  "lifecycle": "external",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.306Z",
+  "updatedAt": "2026-09-24T06:59:47.306Z",
+  "syncedAt": "2026-09-24T06:59:47.306Z"
+}

@@ -1,0 +1,32 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-275",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-6",
+  "name": "User feedback & testing before launch",
+  "description": "# Context\n\nWe have a feedback loop included on the new developers portal but we want to check if there is no general flaws beforehand.\n\n# Task\n\nIn cooperation with Pavla Řadkova, conduct a user testing, create a follow-up task, that will eventually emerges.\n\nDiscuss with @bradacova\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/10871](https://github.com/shoptet/cms4/issues/10871)_\n_Created on GitHub by @pavelhusa on 2024-12-16 12:36 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-275",
+    "externalKey": "CZ3TDR1-275",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-275"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "running",
+  "enqueuedAt": "2026-09-24T06:59:48.642Z",
+  "runs": [
+    {
+      "taskId": "task_1790233323436_dc0164",
+      "startedAt": "2026-09-24T07:02:03.447Z",
+      "outcome": "running"
+    }
+  ],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:46.802Z",
+  "updatedAt": "2026-09-24T07:02:03.447Z",
+  "syncedAt": "2026-09-24T06:59:46.802Z"
+}

@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-156",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check]: Časový odpočet do odeslání",
+  "description": "### Partner Name\n\nJakub Turský\n\n### Partner Email (Technical Contact)\n\njakubtursky769@gmail.com\n\n### Shoptet CRM Url\n\n[https://crm.shoptet.cz/admin/sluzby-detail/?id=2553](https://crm.shoptet.cz/admin/sluzby-detail/?id=2553)\n\n### Salesforce Url\n\n[https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP4000003cwSFIAY/view](https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP4000003cwSFIAY/view)\n\n### Test Project URL\n\n_No response_\n\n### Addons Repository URL\n\n[https://www.github.com/jakubtursky/shoptet-shipping-countdown/](https://www.github.com/jakubtursky/shoptet-shipping-countdown/)\n\n### New Addon or Modification\n\nNew\n\n### Brief Addon Description\n\nAhoj, prosím o kontrolu tohoto doplňku:\n\n- Doplněk umožňuje zobrazit přesný čas, do kdy je možné objednat pro odeslání ještě tentýž den (více v popisu v CRM).\n\n### Information on Data Usage\n\nKontaktní údaje e-shopařů\n\n### Salesforce URL\n\n[Časový odpočet do odeslání](https://shoptet.my.salesforce.com/a0rP4000003cwSFIAY)\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/19220](https://github.com/shoptet/cms4/issues/19220)_\n_Created on GitHub by @hrabcova on 2025-06-12 14:56 UTC_\n_GitHub assignee: @pavelkunes_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-156",
+    "externalKey": "CZ3TDR1-156",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-156"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.309Z",
+  "updatedAt": "2026-09-24T06:59:45.309Z",
+  "syncedAt": "2026-09-24T06:59:45.309Z"
+}

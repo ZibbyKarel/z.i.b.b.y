@@ -1,0 +1,24 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "projectId": "shoptet-partner-cli",
+  "level": "epic",
+  "name": "Addon check",
+  "description": "An umbrella task for addons review.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-647",
+    "externalKey": "CZ3TDR1-647",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-647"
+  },
+  "externalLevel": "Epic",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.294Z",
+  "updatedAt": "2026-09-24T06:59:47.294Z",
+  "syncedAt": "2026-09-24T06:59:47.294Z"
+}

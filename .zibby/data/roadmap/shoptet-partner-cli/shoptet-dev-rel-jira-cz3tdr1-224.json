@@ -1,0 +1,24 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-224",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "name": "Inform and enable logs in ` shoptet.dev.deprecated`",
+  "description": "### Description\n\n# Context\n\nIn [https://github.com/shoptet/cms4/pull/10796](https://github.com/shoptet/cms4/pull/10796) we added a deprecation function {{ shoptet.dev.deprecated}}. We want to inform our partners first. \n\n# Task\n\n- Put the note about the deprecation notice function in the FE News after a few days enable the `console.log` in `shoptet.dev.deprecated`. \n- Think about the message that appears in the console. Maybe there can be something like 'Contact your Partner to fix this issue'.\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/13247](https://github.com/shoptet/cms4/issues/13247)_\n_Created on GitHub by @pavelhusa on 2025-02-12 09:14 UTC_\n_GitHub assignees: @pavelkunes, @tomovova_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-224",
+    "externalKey": "CZ3TDR1-224",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-224"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.313Z",
+  "updatedAt": "2026-09-24T06:59:45.313Z",
+  "syncedAt": "2026-09-24T06:59:45.313Z"
+}

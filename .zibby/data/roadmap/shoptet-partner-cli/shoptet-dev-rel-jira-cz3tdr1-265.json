@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-265",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-6",
+  "name": "Screencast help for Shoptet Bender and Shoptet Primer",
+  "description": "> JIRA issue: [https://shoptet.atlassian.net/browse/FRONTEND-2946](https://shoptet.atlassian.net/browse/FRONTEND-2946)\n\nSP: UNDEFINED\n\n---\n\n### Context\n\nWe want to provide a more visual help for our tool. Both for GitHub and documentation\n\n### Task\n\nBased on [https://shoptet.slab.com/posts/jak-vytvorit-screencast-navod-na-developers-portal-2v70lgsi](https://shoptet.slab.com/posts/jak-vytvorit-screencast-navod-na-developers-portal-2v70lgsi)\n\nCreate screencast how to use:\n\n- [https://github.com/shoptet/shoptet-bender](https://github.com/shoptet/shoptet-bender)\n- [https://github.com/shoptet/create-visual-addon-boilerplate](https://github.com/shoptet/create-visual-addon-boilerplate)\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/10447](https://github.com/shoptet/cms4/issues/10447)_\n_Created on GitHub by @denischripak on 2024-12-09 15:41 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-265",
+    "externalKey": "CZ3TDR1-265",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-265"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.320Z",
+  "updatedAt": "2026-09-24T06:59:45.320Z",
+  "syncedAt": "2026-09-24T06:59:45.320Z"
+}

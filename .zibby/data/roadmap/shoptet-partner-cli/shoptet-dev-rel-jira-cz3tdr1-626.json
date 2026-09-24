@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-626",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "Make sure no PR is left without a verdict",
+  "description": "We've seen review quietly disappear: every engine failed and no one was notified, or the partner pushed a new version of the code while the system was still finishing its assessment of the old one. In both cases, it only came to light because someone happened to check the console.\n\nThis task closes that gap — when nothing comes back, an alert fires; if the code changed in the meantime, the verdict and submission never get applied to that stale version; and a review that's still in progress can't flip itself into a \"failed\" state even though it actually completed successfully.\n\nImplemented in [PR #8](https://github.com/shoptet/aidev-apps/pull/8).\n\n**Done when:** a stuck or failed review triggers a system alert before a person has to notice it.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-626",
+    "externalKey": "CZ3TDR1-626",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-626"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.276Z",
+  "updatedAt": "2026-09-24T06:59:47.276Z",
+  "syncedAt": "2026-09-24T06:59:47.276Z"
+}

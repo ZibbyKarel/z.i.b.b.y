@@ -1,0 +1,32 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-274",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-6",
+  "name": "Search engine implementation",
+  "description": "# Context\n\nWe have a search in WP site now. It's necessary to keep this up, to date. Confirm, that we want to use [Algolia](https://docsearch.algolia.com). We should be eligible to use it for free, since it is public. It's off-the-shelf solution for dev. documentation.\n\n# Task\n\nDocumentation:  [https://docusaurus.io/docs/search](https://docusaurus.io/docs/search)\n\n- ☐ Implement search bar\n- ☐ Initialize indexing\n- ☐ Implement indexing on request when new version is published\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/10874](https://github.com/shoptet/cms4/issues/10874)_\n_Created on GitHub by @pavelhusa on 2024-12-16 12:52 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-274",
+    "externalKey": "CZ3TDR1-274",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-274"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "running",
+  "enqueuedAt": "2026-09-24T06:59:48.641Z",
+  "runs": [
+    {
+      "taskId": "task_1790233307351_e7a9b2",
+      "startedAt": "2026-09-24T07:01:47.360Z",
+      "outcome": "running"
+    }
+  ],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:46.802Z",
+  "updatedAt": "2026-09-24T07:01:47.360Z",
+  "syncedAt": "2026-09-24T06:59:46.802Z"
+}

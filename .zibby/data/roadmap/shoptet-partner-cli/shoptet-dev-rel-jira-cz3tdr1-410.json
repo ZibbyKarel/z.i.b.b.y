@@ -1,0 +1,31 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-410",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "name": "Add date/time format info into the dataLayer",
+  "description": "# Context\n\n[https://shoptet.slack.com/archives/C12JVB526/p1765182496968459](https://shoptet.slack.com/archives/C12JVB526/p1765182496968459)\n\n# Task\n\nAdd similar info as `currencyInfo` about the data. Specifically, to the root of DL add `dateTimeInfo` and inside that:\n\n- `dateFormat` ~~> {{Localization::getActive()~~>getJqueryDateFormat()}}\n- `timeFormat` ~~> {{Localization::getActive()~~>getTimeFormat()}}\n\n> [!IMPORTANT]\n> Don't forget update dataLayer package. \n\n_Migrated from __[https://github.com/shoptet/cms4/issues/28174](https://github.com/shoptet/cms4/issues/28174)_\n_Created on GitHub by @pavelhusa on 2025-12-08 09:43 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-410",
+    "externalKey": "CZ3TDR1-410",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-410"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "running",
+  "enqueuedAt": "2026-09-24T06:59:48.645Z",
+  "runs": [
+    {
+      "taskId": "task_1790233371632_63883d",
+      "startedAt": "2026-09-24T07:02:51.666Z",
+      "outcome": "running"
+    }
+  ],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:46.813Z",
+  "updatedAt": "2026-09-24T07:02:51.666Z",
+  "syncedAt": "2026-09-24T06:59:46.813Z"
+}

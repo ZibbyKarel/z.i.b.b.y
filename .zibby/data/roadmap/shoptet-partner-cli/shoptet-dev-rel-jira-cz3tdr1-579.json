@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-579",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "Run the review from the interface, triage findings and send comments",
+  "description": "## Why?\n\nThe review has to be startable and its output reviewable from one place, without opening the pull request and without anything reaching the partner unchecked.\n\n## What?\n\n- A **button** on a PR starts the review. Findings appear as pending in the interface. The same button re-runs the review. No automatic trigger on PR open in this round.\n- The reviewer goes through the findings, discards the wrong ones, and sends the rest.\n- Comments are posted under the `shoptet-addon-reviewer` identity, following our standards — with icons, in English.\n- **All comments are handled here. Merge stays in the pull request.**\n\nTriage happens in the interface because that is the only place where the **share of discarded findings** becomes visible — the one signal telling us whether the skill is working or missing the mark.\n\n## Acceptance Criteria\n\n- ☐ A button starts the review on a given PR and produces pending findings\n- ☐ Pressing the button again re-runs the review\n- ☐ The reviewer can discard individual findings before sending\n- ☐ Sending posts the remaining findings as comments on the PR under `shoptet-addon-reviewer`\n- ☐ Nothing is sent without the reviewer's action\n- ☐ The interface records how many findings were discarded versus sent\n- ☐ Comments follow our standard format — icons, English",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-579",
+    "externalKey": "CZ3TDR1-579",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-579"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.249Z",
+  "updatedAt": "2026-09-24T06:59:48.672Z",
+  "syncedAt": "2026-09-24T06:59:47.249Z",
+  "enqueuedAt": "2026-09-24T06:59:48.672Z"
+}

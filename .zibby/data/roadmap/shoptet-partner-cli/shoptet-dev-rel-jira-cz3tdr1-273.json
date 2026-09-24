@@ -1,0 +1,39 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-273",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-6",
+  "name": "FE and API news, feeds, component",
+  "description": "# Context\n\nWe have FE and API news as Feeds \n\n. \nWe want to keep up the status quo. See [https://developers.shoptet.com/](https://developers.shoptet.com/)\n\n# Task\n\nBlog is implemented here: [https://shoptet-developers.vercel.app/news](https://shoptet-developers.vercel.app/news)\n\n[https://docusaurus.io/docs/blog](https://docusaurus.io/docs/blog)\n\nImplement Blog posts that will the same as the current FE and API news. It is time, sensitive page (containing date). There are two main categories, `Frontend news` and `API news`.\nCreate a widget (component) that will show only N last posts\n\nIt should copy the [https://developers.shoptet.com/category/api/](https://developers.shoptet.com/category/api/) and [https://developers.shoptet.com/frontend](https://developers.shoptet.com/frontend).\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/10870](https://github.com/shoptet/cms4/issues/10870)_\n_Created on GitHub by @pavelhusa on 2024-12-16 12:31 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-273",
+    "externalKey": "CZ3TDR1-273",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-273"
+  },
+  "externalLevel": "Task",
+  "attachmentSetId": "set_muf6m7lc_ca934b92",
+  "attachments": [
+    {
+      "name": "19b7a4b947aee366.png",
+      "size": 20303,
+      "mediaType": "image/png"
+    }
+  ],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "running",
+  "enqueuedAt": "2026-09-24T06:59:48.640Z",
+  "runs": [
+    {
+      "taskId": "task_1790233291252_4fd0e9",
+      "startedAt": "2026-09-24T07:01:31.274Z",
+      "outcome": "running"
+    }
+  ],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:46.801Z",
+  "updatedAt": "2026-09-24T07:01:31.274Z",
+  "syncedAt": "2026-09-24T06:59:46.801Z"
+}

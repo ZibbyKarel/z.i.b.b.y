@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-272",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-6",
+  "name": "Typography and color tokens",
+  "description": "# Context\n\nWe are creating a shared Docusaurus theme for the Developers' portal. Figma is [here](https://www.figma.com/design/ZmSsc8dVmzloTI8jVFN1ur/Docusaurus?node-id=160-7121&t=h0iszn2LPRqYVW2J-1).\n\n# Task\n\nThere is a basic token implementation based on our DS tokens. Docusaurus is using [Infima framework](https://infima.dev) assigned to custom Docusaurus tokens. Infima is not quite compatible with our Tokens see [Figma](https://www.figma.com/design/ZmSsc8dVmzloTI8jVFN1ur/Docusaurus?node-id=393-9748&t=h0iszn2LPRqYVW2J-4).\n\nSee [styleguide](https://www.figma.com/design/ZmSsc8dVmzloTI8jVFN1ur/Docusaurus?node-id=115-5180) and \n\n- ☐ Implement typography based on the Figma design \n- ☐ add tokens import\n- ☐ And color tokens - assign tokens from the Admin Design System\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/10509](https://github.com/shoptet/cms4/issues/10509)_\n_Created on GitHub by @pavelhusa on 2024-12-10 12:47 UTC_\n_GitHub assignee: @pavelhusa_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-272",
+    "externalKey": "CZ3TDR1-272",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-272"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:46.437Z",
+  "updatedAt": "2026-09-24T06:59:46.437Z",
+  "syncedAt": "2026-09-24T06:59:46.437Z"
+}

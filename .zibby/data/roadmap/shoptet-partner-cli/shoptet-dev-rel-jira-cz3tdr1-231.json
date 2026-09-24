@@ -1,0 +1,24 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-231",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "name": "Addon repository installation quide",
+  "description": "# Context\n\nWe have often problems with the Addon Repository installation. Some of the Partners are not able to create PR that is ready for a review. \n\n# Task\n\nCreate an E2E videotutorial based on [the guide](https://shoptet.slab.com/posts/jak-vytvorit-screencast-navod-na-developers-portal-2v70lgsi) from installation to PR, use the [boilerplate](https://github.com/shoptet/create-visual-addon-boilerplate).\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/15468](https://github.com/shoptet/cms4/issues/15468)_\n_Created on GitHub by @pavelhusa on 2025-03-30 21:15 UTC_\n_GitHub assignee: @pavelhusa_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-231",
+    "externalKey": "CZ3TDR1-231",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-231"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.314Z",
+  "updatedAt": "2026-09-24T06:59:45.314Z",
+  "syncedAt": "2026-09-24T06:59:45.314Z"
+}

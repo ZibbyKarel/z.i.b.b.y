@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-702",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "Turning the cross-round messages live still needs somebody on the server",
+  "description": "The cross-round work has two switches, and only one of them can be reached from the console.\n\n**Carried-over findings** is in Admin → Outbound, and it refuses to turn on until the one-off backfill has run — a guard we added on purpose, because that backfill was the step that could be skipped without anyone noticing.\n\nThe other switch is the one that decides whether the tool prepares any message at all. It ships **on**, which means every round classifies and records but proposes nothing, and turning it off is what actually starts the feature. That switch has no control anywhere in the console: today it takes someone with access to the server.\n\n**Why that matters more than it looks.** It is a release step, and a manual step on a server is exactly the kind that gets skipped, or done in the wrong order, or done by someone who is not the person who knows what order it goes in. That is the same risk the backfill guard exists to remove, left in place one switch over. It also sits badly with the rest of the design: the console is the only surface the internal team has, and this is the one lever that decides whether anything reaches a partner.\n\n**Done when:** an admin can turn it off and back on from Admin → Outbound, next to the switch that is already there; the change is recorded with who made it; and the help text beside it says what changes when it moves, in the same place it explains the other one.\n\n**One thing to decide, not a given.** The neighbouring switch has a hard precondition. This one probably should not: the backfill is something the feature is blind without, so blocking makes sense there, whereas turning the dry run off is a deliberate act at release time and a hard block would only make it impossible from the place a person actually does it. A warning that says what is about to change reads like the better fit — but that is a recommendation, not a decision already taken.\n\nFound while building CZ3TDR1-664; deliberately left out of it, because it is a release control rather than part of the triage panel.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-702",
+    "externalKey": "CZ3TDR1-702",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-702"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "external",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.348Z",
+  "updatedAt": "2026-09-24T06:59:47.348Z",
+  "syncedAt": "2026-09-24T06:59:47.348Z"
+}

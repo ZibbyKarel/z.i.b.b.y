@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-658",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-618",
+  "name": "Addon statistics - Invoicing Tab ",
+  "description": "**Why?**\nThe new Shoptet Partner Portal (Figma: Moje doplňky → Statistiky doplňků) needs to show partners their addon **invoicing** stats (Fakturace tab). Today that data only exists inside the admin's API Partner section (`ApiPartnerController`, views `statsSummaryView`/`statsDetailView`).\n\n**What?**\nExtract the addon-statistics logic from `ApiPartnerController` into its own standalone controller so the same screen/data serves both the existing admin section and the new Partner Portal — without duplicating the implementation. The admin's API Partner → Statistiky screen keeps working exactly as today (same tables, columns, footnote definitions), just backed by the new controller. The Partner Portal exposes the \"Statistiky doplňků\" screen's **Fakturace** tab per the linked Figma design, reusing that controller.\n\nPozn.: Použitelnost (usability) tab je řešen samostatně v CZ3TDR1-668.\n\n**Acceptance Criteria**\n\n- Addon-statistics logic (Fakturace table) is extracted from `ApiPartnerController` into a dedicated, standalone controller\n- Existing admin API Partner → Statistiky screen renders unchanged (same columns, values, footnote text), backed by the new controller\n- Shoptet Partner Portal's \"Moje doplňky → Statistiky doplňků\" screen — **Fakturace tab** — is implemented per Figma and served by the same controller\n- Unit/integration tests cover the extracted controller\n\n**Resources**\n\n- Figma — Fakturace tab: https://www.figma.com/design/uyNyEpBk6MYXqjXprmXftl/Partner-Portal?node-id=531-10086&m=dev\n- Current implementation: `admin/controllers/ApiPartnerController.php`, `admin/react/src/Core/pages/ApiPartner/`\n- Related: CZ3TDR1-668 (Použitelnost tab)",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-658",
+    "externalKey": "CZ3TDR1-658",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-658"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.302Z",
+  "updatedAt": "2026-09-24T06:59:48.702Z",
+  "syncedAt": "2026-09-24T06:59:47.302Z",
+  "enqueuedAt": "2026-09-24T06:59:48.702Z"
+}

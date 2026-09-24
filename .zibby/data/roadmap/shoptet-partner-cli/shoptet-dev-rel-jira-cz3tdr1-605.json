@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-605",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "Dashboard: show addon description/functionality",
+  "description": "Display what each addon does. Depends on requiring a README in addon repos — **consult **@Pavel Husa ** first**.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-605",
+    "externalKey": "CZ3TDR1-605",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-605"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.259Z",
+  "updatedAt": "2026-09-24T06:59:48.686Z",
+  "syncedAt": "2026-09-24T06:59:47.259Z",
+  "enqueuedAt": "2026-09-24T06:59:48.686Z"
+}

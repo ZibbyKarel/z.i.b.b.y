@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-183",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check]: Počet kusů v košíku",
+  "description": "### Partner Name\n\nJakub Turský\n\n### Partner Email (Technical Contact)\n\njakubtursky769@gmail.com\n\n### Shoptet CRM Url\n\n[https://crm.shoptet.cz/admin/sluzby-detail/?id=2550](https://crm.shoptet.cz/admin/sluzby-detail/?id=2550)\n\n### Salesforce Url\n\n[https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000J2fxDIAR/view](https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000J2fxDIAR/view)\n\n### Test Project URL\n\n_No response_\n\n### Addons Repository URL\n\n[https://www.github.com/jakubtursky/shoptet-product-cart-quantity/](https://www.github.com/jakubtursky/shoptet-product-cart-quantity/)\n\n### New Addon or Modification\n\nNew\n\n### Brief Addon Description\n\nAhoj, prosím o kontrolu tohoto doplňku od Jakuba Turského. \nJakmile to bude na Addons repo zprocesováno, dejte mi vědět - ještě si to u sebe nainstaluju a zkontroluju po uživatelské stránce.\nDěkuji :slight_smile:\n\n### Information on Data Usage\n\nChecklist: [https://shoptet.file.force.com/servlet/servlet.FileDownload?file=00PP400000RqZn0MAF&operationContext=S1](https://shoptet.file.force.com/servlet/servlet.FileDownload?file=00PP400000RqZn0MAF&operationContext=S1)\n\nPartner dle smlouvy zpracovává kontaktní údaje e-shopařů.\n\n### Salesforce URL\n\n[Počet kusů v košíku](https://shoptet.my.salesforce.com/a0rP400000J2fxDIAR)\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/18810](https://github.com/shoptet/cms4/issues/18810)_\n_Created on GitHub by @hrabcova on 2025-06-04 07:57 UTC_\n_GitHub assignee: @pavelhusa_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-183",
+    "externalKey": "CZ3TDR1-183",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-183"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.310Z",
+  "updatedAt": "2026-09-24T06:59:45.310Z",
+  "syncedAt": "2026-09-24T06:59:45.310Z"
+}

@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-564",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-618",
+  "name": "PartnerServiceAdd React rewrite: Kody (Codes) tab",
+  "description": "## Why?\n\nThe Codes tab injects partner HTML/JS/CSS into the storefront. It is gated on `enableHtmlInclude` and is only shown to services allowed to inject code, so it needs its visibility rule ported as carefully as its fields.\n\n## What?\n\nPort `sub/ServiceDetail/HtmlIncludes.tpl` to React, remove the external-tab bridge entry and delete the legacy partial.\n\nFields: `addonRepositoryUrl` (text), three code editors `codes[header]`, `codes[footer]`, `codes[orderFinale]`, and the checkboxes `blankModeJs` and `blankModeCss`. The tab renders only when `enableHtmlInclude` is set on the service; the blank-mode checkboxes additionally depend on `blankModeAllowed`.\n\n## Acceptance Criteria\n\n- Tab renders only when `enableHtmlInclude` is set; hidden otherwise on both create and edit\n- All three code editors render with the legacy editor mode and syntax highlighting, and round-trip content unchanged\n- `blankModeJs` and `blankModeCss` respect `blankModeAllowed`\n- `addonRepositoryUrl` saves and validates as before\n- Field names in the POST body unchanged\n- Every `data-testid` from `HtmlIncludes.tpl` preserved verbatim, no hardcoded strings\n- `HtmlIncludes.tpl` deleted and its bridge entry removed\n- `make check-fast`, `make lint`, `make fe-test` green\n\n## Resources\n\n- Legacy: `admin/controllers/templates/sub/ServiceDetail/HtmlIncludes.tpl:18,31,40,49,61,67`\n- `cms/packages/Frontend/Helper/HtmlInclude.php`, `cms/packages/Frontend/HtmlInclude/Model/Addon.php`\n- Data: `st_api.service` (`enableHtmlInclude`, `blankModeCss`, `blankModeJs`, `blankModeAllowed`), `st_api.addon_html_include`",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-564",
+    "externalKey": "CZ3TDR1-564",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-564"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "external",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.244Z",
+  "updatedAt": "2026-09-24T06:59:47.244Z",
+  "syncedAt": "2026-09-24T06:59:47.244Z"
+}

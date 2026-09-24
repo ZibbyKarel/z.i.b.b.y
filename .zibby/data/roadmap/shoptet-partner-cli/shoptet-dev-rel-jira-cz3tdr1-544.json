@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-544",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-543",
+  "name": "Feasibility: User management",
+  "description": "Owners per PRD: Partnership team, Addons team.\n\nh2. Scope in PRD\n\n- Registration, login, password recovery\n- Email verification\n- Roles and permissions system\n- Add / remove users under a company account\n- Account information editing\n- Multilingual support (CZ / SK / HU / EN)\n\nThis is the foundation all other feature areas depend on — analyse it first.\n\nh2. To analyse\n\n- Reuse of existing Shoptet identity/auth vs. new one — can partners log in with an existing Shoptet account as the PRD assumes?\n- Where does the company ↔ user relationship live (Salesforce, internal CRM), and who is master?\n- Roles & permissions model needed across partner types (consulting, affiliate, add-on dev) and how it relates to Partner Role in admin\n- Access management when expanding to more countries (OQ-02)\n- i18n approach for 4 locales\n\nh2. Output\n\nSystems involved, integration gaps, T-shirt size, blockers, MVP / later / out-of-scope recommendation.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-544",
+    "externalKey": "CZ3TDR1-544",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-544"
+  },
+  "externalLevel": "Analysis",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.240Z",
+  "updatedAt": "2026-09-24T06:59:48.654Z",
+  "syncedAt": "2026-09-24T06:59:47.240Z",
+  "enqueuedAt": "2026-09-24T06:59:48.654Z"
+}

@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-725",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "Get rule codes onto the second review model",
+  "description": "Cross-round matching keys on a finding's rule code, and only a skill-mode engine produces one. `ruleCode` is written in exactly one place — the skill mapping in `packages/runner/src/run-review.ts` — so any provider that parses the standard contract stores NULL for every finding it reports. In the ensemble we actually run that means `stskill` findings carry a code and `claudecode` findings never do.\n\nThat one gap has now been measured, twice over, on a single drill PR: `roman-talas-snowly-code/st-addon-drill-moved` #2, two rounds, with an XSS blocker that moves inside `src/render.js` between rounds and is left unfixed on purpose.\n\n**1. A moved finding from the code-less model is never paired with its earlier self.** Pairing happens within a `(path, rule code)` group and only fires when exactly one earlier finding and one current finding are left unmatched in it. Every code-less finding in one file falls into the same `(path, NULL)` group — here three on each side — so the pairing declines, and that model's re-find of the problem comes back as brand new in every round. The `stskill` half of the very same XSS finding paired correctly in the same run (`links: 3`, `reanchoredFindings: 3`), which is what isolates the cause: nothing is wrong with the pairing, the second model simply gives it nothing to pair on.\n\n**2. The partner still gets a second thread for a problem they already have open.** A consolidated finding is held back only when every engine finding behind it is recognised as carried over. The `stskill` half was; the `claudecode` half could not be, for the reason above. So the consolidated finding publishes — round 2's release preview shows it as \"Will publish\" on `src/render.js:96` — and it would open a second thread beside the one round 1 already opened. On the same round, reconcile has a reply queued into that original thread which says in so many words that we are not opening a new one. Both would go out together.\n\nThe upshot is that the dedup shipped in the previous batch works for one of the two models and is simply absent on the other. `packages/github/src/draft.ts` already names the fix: the NULL-code trade there \"is the strongest argument for getting rule codes onto the other providers\".\n\n**One claim to correct while we are in there.** The comment on the \"every carrier\" rule justifies publishing with the case of \"a canonical consolidating one carried-over finding and one genuinely NEW one\". In the ensemble we run, that premise does not hold. The uncarried half is not a new finding at all — it is the same problem reported by the other model, which merely has no code to pair on. The rule itself may well be right, because it does protect against losing a genuinely new finding, but the cost it states describes a shape that is not the common one here.\n\n**Done when:** every review model attaches a rule code to a finding that maps to the catalog, a finding that moves is paired whichever model reported it, and a problem the partner is already holding open does not get a second thread.\n\nEvidence: drill run on `st-addon-drill-moved` #2 (23 Sep 2026) — the reconcile summary for head `bed94f08` and the round-2 release preview.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-725",
+    "externalKey": "CZ3TDR1-725",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-725"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.376Z",
+  "updatedAt": "2026-09-24T06:59:48.749Z",
+  "syncedAt": "2026-09-24T06:59:47.376Z",
+  "enqueuedAt": "2026-09-24T06:59:48.749Z"
+}

@@ -1,0 +1,24 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-673",
+  "projectId": "shoptet-partner-cli",
+  "level": "epic",
+  "name": "[Portal] MVP temp",
+  "description": "Temporary holding epic for Partner Portal MVP tasks that have no final parent yet: partner websites (CZ/SK/HU), medailonek migration from WordPress, go-live, CRM & API foundation. Sort every child into a feature epic before development starts; this epic should end up empty and be closed.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-673",
+    "externalKey": "CZ3TDR1-673",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-673"
+  },
+  "externalLevel": "Epic",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.319Z",
+  "updatedAt": "2026-09-24T06:59:47.319Z",
+  "syncedAt": "2026-09-24T06:59:47.319Z"
+}

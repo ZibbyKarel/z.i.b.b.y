@@ -1,0 +1,29 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-660",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "A re-run cannot tell a finding it already sent from a new one",
+  "description": "Every review round today starts from nothing. When a partner pushes a fix and the tool reviews again, it has no way to tell whether a finding it just produced is the same one we told the partner about last week or something genuinely new — nothing connects the two.\n\nThis is the groundwork for that connection, and it is the part with no visible effect of its own.\n\nThree things get remembered that today are forgotten:\n\n- **What each finding actually points at.** A finding gets a stable identity derived from the code at the place it describes, so the same problem can be recognised in the next round even after the surrounding code shifts up or down.\n- **What we actually sent.** Today we can reconstruct which remarks reached the partner only by guessing from their current state, which a reviewer may have edited since. Publication gets recorded when it happens — including remarks that went into the body of the letter rather than into their own discussion thread, which is the group that would otherwise be lost entirely.\n- **Where the discussion lives.** Each posted remark gets tied to the discussion thread it opened on the pull request, so a later round can reply into it instead of starting a new one.\n\nNothing changes for the partner or for the reviewer in this step. It is what makes the next one possible.\n\n**Done when:** for any pull request with more than one round, the tool can list what we already told the partner and have not closed since — including remarks that never got their own thread — and each of those carries enough to be recognised again in a later round.\n\nPlan: https://github.com/shoptet/aidev-apps/pull/27 — batch 2, tasks T0-T4.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-660",
+    "externalKey": "CZ3TDR1-660",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-660"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-634"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-634"
+  ],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.304Z",
+  "updatedAt": "2026-09-24T06:59:47.304Z",
+  "syncedAt": "2026-09-24T06:59:47.304Z"
+}

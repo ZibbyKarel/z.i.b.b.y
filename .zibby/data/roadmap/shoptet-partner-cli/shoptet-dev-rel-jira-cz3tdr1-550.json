@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-550",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-543",
+  "name": "Feasibility: Addons — stats and dashboards",
+  "description": "Owner per PRD: Addons team.\n\nh2. Scope in PRD\n\n- Downloads, ratings and usage rate per add-on\n- Gives developers direct visibility into their performance without contacting the Addons team\n\nh2. To analyse\n\n- Where download / activation / rating data lives today and whether per-partner filtering is possible\n- Freshness requirement: live query vs. periodic aggregation (Keboola / Power BI dataset)\n- Data privacy — what an add-on developer may and may not see about merchants\n- Relation to the metric \"time from add-on release to first activation in an e-shop\"\n\nh2. Output\n\nSystems involved, integration gaps, T-shirt size, blockers, MVP / later / out-of-scope recommendation.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-550",
+    "externalKey": "CZ3TDR1-550",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-550"
+  },
+  "externalLevel": "Analysis",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.241Z",
+  "updatedAt": "2026-09-24T06:59:48.659Z",
+  "syncedAt": "2026-09-24T06:59:47.241Z",
+  "enqueuedAt": "2026-09-24T06:59:48.659Z"
+}

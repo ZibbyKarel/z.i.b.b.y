@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-569",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-618",
+  "name": "PartnerServiceAdd React rewrite: Hodnoceni (Ratings) tab as its own Inertia page",
+  "description": "## Why?\n\nHodnoceni is not an in-page tab. It is a separate controller and a separate page (`PartnerServiceRatings`, section-map id 1118, slug `hodnoceni-partnerske-sluzby`) that the tab strip reaches through `ui-tab-external`, which does a full page navigation. It therefore needs its own Inertia page rather than a panel inside `PartnerServiceAdd`.\n\n## What?\n\nRewrite `PartnerServiceRatings` as its own React/Inertia page with the shared tab strip. Port `sub/ServiceDetail/Ratings.tpl` (read-only table) and `sub/ServiceDetail/RatingModal.tpl` (reaction editing), then delete both legacy partials and `PartnerServiceRatings.tpl`.\n\nNote `PartnerServiceRatingsController extends PartnerServiceAddController`, so the shell work from the first task has to be reusable across both pages. Ratings data comes from the marketplace database via `MarketplaceDbDriver`, not from the shop silo.\n\n## Acceptance Criteria\n\n- `'PartnerServiceRatings'` added to `cms/packages/Inertia/InertiaControllers.php` and the page renders React\n- Table renders date, score stars, comment, author with IP and reaction, with sorting on `created` and `score` and working pagination\n- Rating reaction modal edits and saves `reactionDescription` via `adminUpdateAction()?ratingId=`; `description` stays disabled\n- Rating count in the tab label matches the legacy page\n- Tab strip is shared with `PartnerServiceAdd` and both directions of navigation work\n- `data-testid=\"inputRatingDescription\"` and `data-testid=\"inputReactionDescription\"` preserved verbatim, no hardcoded strings\n- `PartnerServiceRatings.tpl`, `sub/ServiceDetail/Ratings.tpl` and `sub/ServiceDetail/RatingModal.tpl` deleted\n- `make check-fast`, `make lint`, `make fe-test` green\n\n## Resources\n\n- Legacy: `admin/controllers/PartnerServiceRatingsController.php:21,59,73`, `admin/controllers/templates/PartnerServiceRatings.tpl`, `sub/ServiceDetail/Ratings.tpl`, `sub/ServiceDetail/RatingModal.tpl:15,42`\n- `cms/packages/Crm/Helper/ServiceRatingHelper.php:67,86,132,177,236`, `cms/packages/Layout/PaginationBackend`, `cms/packages/Layout/SortingBackend`\n- Tab bridge: `sub/ServiceDetail/ServiceDetailTabs.tpl:23`, `public/cms/js/_repo-shared/main.js:149-153`\n- Data: `st_pattern.ratings` via `MarketplaceDbDriver`, joined with `st_cms.projects` and `st_cms.tariffs`",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-569",
+    "externalKey": "CZ3TDR1-569",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-569"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.247Z",
+  "updatedAt": "2026-09-24T06:59:48.668Z",
+  "syncedAt": "2026-09-24T06:59:47.247Z",
+  "enqueuedAt": "2026-09-24T06:59:48.668Z"
+}

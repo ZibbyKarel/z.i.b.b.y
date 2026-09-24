@@ -1,0 +1,32 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-38",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check]: Konfigurátor produktu",
+  "description": "### Partner Name\n\nWebotvurci\n\n### Partner Email (Technical Contact)\n\nshoptet@webotvurci.cz, 778 499 905 Dominika Pospíšilová\n\n### Shoptet CRM Url\n\n[https://crm.shoptet.cz/admin/sluzby-detail/?id=2418](https://crm.shoptet.cz/admin/sluzby-detail/?id=2418)\n\n### Salesforce Url\n\n[https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000K83lCIAR/view?ws=%2Flightning%2Fr%2FCase%2F500P400000moi74IAA%2Fview](https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000K83lCIAR/view?ws=%2Flightning%2Fr%2FCase%2F500P400000moi74IAA%2Fview)\n\n### Test Project URL\n\nexample: [https://www.jablkoshop.cz/apple-iphone-16-128gb-cerna/](https://www.jablkoshop.cz/apple-iphone-16-128gb-cerna/), [https://www.kouzlonamiru.cz/exkluzivni-kulaty-prouteny-kosik-s-kozennym-stitkem/](https://www.kouzlonamiru.cz/exkluzivni-kulaty-prouteny-kosik-s-kozennym-stitkem/)\n\n### Addons Repository URL\n\n([https://github.com/Webotvurci-s-r-o/shoptet-plugin-surcharge-parameters-configurator](https://github.com/Webotvurci-s-r-o/shoptet-plugin-surcharge-parameters-configurator))\n\n### New Addon or Modification\n\nNew\n\n### Brief Addon Description\n\nZobrazuje příplatkové parametry na detailu produktu přehlednější a atraktivnější formou\nUmožňuje upravovat vlastní popisy parametrů i jejich jednotlivých hodnot\nPodporuje nahrání obrázků k hodnotám příplatkových parametrů\nNabízí vlastní filtrování pro lepší organizaci a orientaci v možnostech\nLze jej zapnout pro celý e-shop nebo omezit jen na vybrané kategorie\n\n### Information on Data Usage\n\nDoplněk volá tyto endpointy (vše GET, žádné webhooky, žádný cron):\n\n1. GET api/eshop\n  Volán při instalaci doplňku (job FetchEshopLanguages) a při manuální synchronizaci jazyků v adminu doplňku.\n  Volán také při zobrazení produktu s konfigurátorem na frontendu (cache 24 hodin).\n  Účel: získání seznamu jazyků a měn e-shopu pro správné zobrazení příplatkových parametrů ve více jazycích a\n  měnách.\n\n1. GET api/products/surcharge-parameters (stránkovaně)\n  Volán při instalaci doplňku (job FetchSurchargeParameters) a při manuální synchronizaci příplatkových\n  parametrů v adminu doplňku.\n  Účel: stažení všech definic příplatkových parametrů z e-shopu pro lokální uložení a následné generování\n  konfiguračního JSON souboru nahrávaného na FTP.\n\n1. GET api/products/code/\n\n  ```java\n\n  ```\n\n  ?include=surchargeParameters\n  Volán on-demand z frontendu e-shopu při zobrazení detailu produktu, který využívá konfigurátor (cache 10\n  minut na produkt).\n  Účel: získání příplatkových parametrů konkrétního produktu pro vykreslení konfigurátoru zákazníkovi, včetně\n  přepočtu cen do měn e-shopu.\n\n1. GET api/categories (stránkovaně)\n  Volán manuálně uživatelem v administraci doplňku přes tlačítko synchronizace kategorií (cache 1 hodina, reset\n  při manuální synchronizaci).\n  Účel: načtení seznamu kategorií produktů pro výběr v nastavení doplňku (režim \"konfigurátor pouze ve\n  vybraných kategoriích\").\n\nDoplněk neodebírá žádné webhooky a nemá žádné plánované (cron) úlohy — veškerá komunikace s API je buď\n\niniciována uživatelem v administraci, spuštěna při instalaci, nebo vyvolána on-demand návštěvou produktu na\nfrontendu.\n\n### Salesforce URL\n\n[FW: Doplněk Konfigurátor - předání](https://shoptet.my.salesforce.com/500P400000moi74IAA)\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/37939](https://github.com/shoptet/cms4/issues/37939)_\n_Created on GitHub by @jakublokai on 2026-05-19 09:43 UTC_\n_GitHub assignee: @roman-talas-snowly-code_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-38",
+    "externalKey": "CZ3TDR1-38",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-38"
+  },
+  "externalLevel": "Task",
+  "attachmentSetId": "set_muf6m6ff_82cc4c22",
+  "attachments": [
+    {
+      "name": "34d5e906c868b0f0.png",
+      "size": 267188,
+      "mediaType": "image/png"
+    }
+  ],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "external",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.292Z",
+  "updatedAt": "2026-09-24T06:59:45.292Z",
+  "syncedAt": "2026-09-24T06:59:45.292Z"
+}

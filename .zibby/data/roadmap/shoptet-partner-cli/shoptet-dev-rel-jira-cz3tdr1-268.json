@@ -1,0 +1,32 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-268",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "name": "Clean-up of stable classnames and IDs endpoint",
+  "description": "> JIRA issue: [https://shoptet.atlassian.net/browse/FRONTEND-1979](https://shoptet.atlassian.net/browse/FRONTEND-1979)\n\nSP: 3\n\n---\n\n### Context\n\nHere: [https://developers.shoptet.com/stabilni-tridy-a-id](https://developers.shoptet.com/stabilni-tridy-a-id) is the declared endpoint that returns stable Classnames and IDs in our frontstore. This is obviously not maintained and outdated. \n\n### Task\n\nClean the controller and remove the post - both in silence.\n\nRef: [http://www.shoptet.cz/action/ShoptetFrontendDevelopers/getCrucialIdsAndClasses/](http://www.shoptet.cz/action/ShoptetFrontendDevelopers/getCrucialIdsAndClasses/)\n\n[https://github.com/shoptet/cms4/blob/bb6b36a30b2199beb02dc03d39284e5115aca326/cms/templates/docs/crucialIdsAndClasses.json](https://github.com/shoptet/cms4/blob/bb6b36a30b2199beb02dc03d39284e5115aca326/cms/templates/docs/crucialIdsAndClasses.json#L1)\n[https://github.com/shoptet/cms4/blob/92427a52dc1cfd816b9bb3e11e69e7cd3f130078/scripts/controllers/ShoptetFrontendDevelopers.php](https://github.com/shoptet/cms4/blob/92427a52dc1cfd816b9bb3e11e69e7cd3f130078/scripts/controllers/ShoptetFrontendDevelopers.php#L3)\n[https://github.com/shoptet/cms4/blob/947b520dd20c3aa052871fc9f0bf86254d342f08/cms/packages/ClassLoading/ControllerClassMapper.php#L11](https://github.com/shoptet/cms4/blob/947b520dd20c3aa052871fc9f0bf86254d342f08/cms/packages/ClassLoading/ControllerClassMapper.php#L11)\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/10574](https://github.com/shoptet/cms4/issues/10574)_\n_Created on GitHub by @denischripak on 2024-12-11 14:26 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-268",
+    "externalKey": "CZ3TDR1-268",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-268"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "running",
+  "enqueuedAt": "2026-09-24T06:59:48.637Z",
+  "runs": [
+    {
+      "taskId": "task_1790233241361_cc1f81",
+      "runRef": "patch_1790233241382",
+      "startedAt": "2026-09-24T07:00:43.040Z",
+      "outcome": "running"
+    }
+  ],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.823Z",
+  "updatedAt": "2026-09-24T07:00:43.040Z",
+  "syncedAt": "2026-09-24T06:59:45.823Z"
+}

@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-628",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon check] – TikTok widget",
+  "description": "### Partner Name\n\nZdeněk Dušátko\n\n### Partner Email (Technical Contact)\n\n[zdenek.dusatko@gmail.com](mailto:zdenek.dusatko@gmail.com)\n\n### Shoptet CRM Url\n\n[https://crm.shoptet.cz/admin/sluzby-detail/?id=3125](https://crm.shoptet.cz/admin/sluzby-detail/?id=3125)\n\n### Salesforce Url\n\n \n\n### Test Project URL\n\n### Addons Repository URL\n\n .\n\n### New Addon or Modification\n\nNew\n\n### Brief Addon Description\n\nTikTok widget umožňuje automaticky zobrazovať **najnovšie videá z TikToku priamo na e-shope**.\n\nHlavné funkcie addonu:\n\n- Automatické zobrazovanie najnovších TikTok videí na e-shope\n- Prepojenie TikTok videí s produktmi a ich zobrazenie v detaile produktu\n- Možnosť pridať **TikTok videá od zákazníkov** (UGC marketing)\n- Výzva návštevníkom e-shopu na sledovanie TikTok profilu\n- Úprava farieb a textov widgetu podľa vizuálnej identity značky\n\n## Addon Details\n\n**Addon Name:** TikTok widget\n**Partner:** Zdeněk Dušátko\n**Phone:** +420 725 317 066\n**Primary Owner:** Kateřina Pacáková\n**Total Active Project:** 1",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-628",
+    "externalKey": "CZ3TDR1-628",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-628"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.277Z",
+  "updatedAt": "2026-09-24T06:59:48.693Z",
+  "syncedAt": "2026-09-24T06:59:47.277Z",
+  "enqueuedAt": "2026-09-24T06:59:48.693Z"
+}

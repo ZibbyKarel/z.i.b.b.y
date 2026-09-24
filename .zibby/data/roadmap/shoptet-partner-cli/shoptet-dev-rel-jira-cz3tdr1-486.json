@@ -1,0 +1,31 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-486",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "name": "Addon review tool",
+  "description": "## Why?\n\nThe addon review tool ([`shoptet/addon-repository-actions-config`](https://github.com/shoptet/addon-repository-actions-config) → `review_tool/review.js`) surfaces ESLint findings as GitHub Actions **check annotations**. On every PR push the annotations are re-emitted and old ones are never cleared, so identical findings pile up — the same `no-console` (R3) and `no-unused-vars` (R6) appear multiple times on one line (see screenshot). For partner addon repos that call this reusable workflow multiple times, the review is noisy.\n\n## What?\n\nDeliver findings as **inline PR review comments** instead of accumulating check annotations, and reconcile them across pushes so nothing duplicates:\n\n- Findings post as inline review comments via the workflow's `GITHUB_TOKEN` (`github-actions[bot]`).\n- On PR update, reconcile: skip findings already commented, remove comments for findings that no longer exist.\n- Keep **one overall status check** (Checks API) — blockers fail it and gate merge; per-line detail lives in the comments.\n- Runs automatically on pull request `opened`, `reopened`, and `synchronize`.\n- Review the current rule set (stock ESLint + `shoptet/*`) and confirm each rule's relevance and severity (blocker vs recommend).\n\n## Acceptance Criteria\n\n- ☐ ESLint findings are posted as inline PR review comments on the changed lines via `GITHUB_TOKEN`; individual-finding check annotations are removed.\n- ☐ On PR `synchronize`, the tool reconciles comments — no finding is duplicated across pushes, and comments for resolved findings are removed.\n- ☐ A single check run reports overall pass/fail: blockers fail the check (gate merge), recommendations do not.\n- ☐ The review runs automatically on pull request `opened`, `reopened`, and `synchronize`.\n- ☐ The current rule set is audited; each rule's relevance and severity (blocker/recommend) is confirmed or adjusted.\n- ☐ Verified on a test PR: pushing new commits creates no duplicate comments, and fixing a finding removes its comment.\n\n## Resources\n\n- Tool: [`review_tool/review.js`](https://github.com/shoptet/addon-repository-actions-config/blob/main/review_tool/review.js), [`checks.workflow.yml`](https://github.com/shoptet/addon-repository-actions-config/blob/main/.github/workflows/checks.workflow.yml), [`review_tool/rules/`](https://github.com/shoptet/addon-repository-actions-config/tree/main/review_tool/rules)\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/42093](https://github.com/shoptet/cms4/issues/42093)_\n_Created on GitHub by @pavelhusa on 2026-07-20 11:34 UTC_\n_GitHub assignee: @TomasHermanSnowlyCode_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-486",
+    "externalKey": "CZ3TDR1-486",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-486"
+  },
+  "externalLevel": "Task",
+  "attachmentSetId": "set_muf6m7wz_a96194c2",
+  "attachments": [
+    {
+      "name": "ca364177a8fb8b53.png",
+      "size": 291049,
+      "mediaType": "image/png"
+    }
+  ],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.222Z",
+  "updatedAt": "2026-09-24T06:59:47.222Z",
+  "syncedAt": "2026-09-24T06:59:47.222Z"
+}

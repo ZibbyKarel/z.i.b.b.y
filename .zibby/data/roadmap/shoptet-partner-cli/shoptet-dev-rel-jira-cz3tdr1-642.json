@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-642",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-613",
+  "name": "[Portal] Password recovery screens + emails (UI)",
+  "description": "**Why?**\nThe recovery helper (`AdminUserHelper::createAndSaveRenewHashCrm`) already exists per `004-auth-wiring.md`. This issue is the 3 front-end screens + 2 transactional emails per Figma (same board as Login — the designer put both flows on one section).\n\n**What?**\nBuild the email-entry, success, and new-password screens, plus the recovery-request and password-changed emails, per Figma ([node 22:71](https://www.figma.com/design/uyNyEpBk6MYXqjXprmXftl/Partner-Portal?node-id=22-71)).\n\n**Acceptance Criteria**\n\n- [ ] Email-entry screen matches frame 168:985\n- [ ] Success confirmation on the login page matches frame 168:1703 (Alert/Success)\n- [ ] New-password screen matches frame 182:1820\n- [ ] Recovery-request email (180:805) and password-changed confirmation email (234:894) sent in CZ/SK/HU/EN\n- [ ] Recovery hash: 6-hour expiry, single-use; reuse shows \"token expired\" (per 004-auth-wiring.md)\n- [ ] `make fe-test` covers all 3 screens\n\n**Resources**\n\n- Figma: https://www.figma.com/design/uyNyEpBk6MYXqjXprmXftl/Partner-Portal?node-id=22-71&m=dev\n- Backend wiring: `Partner_Portal/issues/03-user-management/004-auth-wiring.md`\n- i18n/emails: `Partner_Portal/issues/03-user-management/006-i18n-emails.md`",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-642",
+    "externalKey": "CZ3TDR1-642",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-642"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.291Z",
+  "updatedAt": "2026-09-24T06:59:48.697Z",
+  "syncedAt": "2026-09-24T06:59:47.291Z",
+  "enqueuedAt": "2026-09-24T06:59:48.697Z"
+}

@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-580",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "Narrow shoptet-addon-reviewer down to addon review only",
+  "description": "## Why?\n\nEverything in the review interface runs under the `shoptet-addon-reviewer` identity. That account still has CMS access it does not need for this purpose. Narrowing it down keeps the identity scoped to what it is actually used for and avoids permission conflicts.\n\n## What?\n\nRemove the `shoptet-addon-reviewer` account's CMS access so the identity serves addon review only. It keeps the access it needs on partner addon repositories.\n\n## Acceptance Criteria\n\n- ☐ `shoptet-addon-reviewer` no longer has CMS access\n- ☐ The account retains the access needed to read partner addon repositories and post PR comments\n- ☐ The review interface still works after the change — verified by sending a comment\n\n## Note\n\nSplitting the AI review identity from human review — likely via the Addon Repository App — is a separate, later step. This subtask only narrows the existing shared account.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-580",
+    "externalKey": "CZ3TDR1-580",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-580"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.250Z",
+  "updatedAt": "2026-09-24T06:59:47.250Z",
+  "syncedAt": "2026-09-24T06:59:47.250Z"
+}

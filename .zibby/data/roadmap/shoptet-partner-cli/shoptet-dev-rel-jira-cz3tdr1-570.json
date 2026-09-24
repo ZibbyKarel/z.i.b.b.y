@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-570",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-618",
+  "name": "PartnerServiceAdd React rewrite: Doprava (Shipping / Logistics) tab",
+  "description": "## Why?\n\nConditional tab, rendered only when the service is a shipping service (`isShippingService`), which is why it is not visible on a normal addon. It has two mutually exclusive template branches behind the `FEATURE_LOGISTICS_GUI` flag and it is the only tab owned by a different team, so it is scoped as its own task.\n\n## What?\n\nPort both branches of the Doprava tab to React, remove the external-tab bridge entry and delete the legacy partials. Coordinate with logistics-team before starting: section-map row 1469 (`PartnerServiceShippingServiceDetail`) carries `serviceTeam='logistics'`.\n\nLegacy branch `sub/ServiceDetail/Shipping.tpl`: `shippingService[externalScriptUrl]`, `shippingService[calculatePriceMethod]` (select), `shippingService[deliveryAddressFill]` (select), and per frontend language `shippingService[language][]`, `shippingService[packageUrl][]`, `shippingService[initText][]`, `shippingService[updateText][]`.\n\nNew GUI branch `sub/ServiceDetail/Logistics.tpl` (`FEATURE_LOGISTICS_GUI`): only `shippingService[language][]` and `shippingService[packageUrl][]`, plus the links into `PartnerServiceShippingServiceDetail`.\n\n## Acceptance Criteria\n\n- Tab renders only when `isShippingService` is true\n- Both `FEATURE_LOGISTICS_GUI` branches render correctly and switching the flag produces the legacy behaviour in each case\n- All `shippingService[...]` field names unchanged; `saveShippingData()` round-trips values correctly, including the per-language block\n- `calculatePriceMethod` and `deliveryAddressFill` selects use the same enum options as the legacy page\n- Links into `PartnerServiceShippingServiceDetail` work; that controller is not modified beyond the Inertia bridge\n- Every `data-testid` from both partials preserved verbatim, no hardcoded strings\n- Legacy partials deleted and bridge entry removed\n- Reviewed by logistics-team\n- `make check-fast`, `make lint`, `make fe-test` green\n\n## Resources\n\n- Legacy: `admin/controllers/templates/sub/ServiceDetail/Shipping.tpl`, `sub/ServiceDetail/Logistics.tpl:20,21,33,46,47`, `admin/controllers/templates/PartnerServiceAdd.tpl:76,78`\n- Backend: `admin/controllers/PartnerServiceAddController.php:1309-1345` (`saveShippingData()`), `admin/controllers/PartnerServiceShippingServiceDetailController.php`\n- `cms/packages/Logistics/CmsShipping/` (`ShippingServiceRepository`, `Commands/UpdateShippingServiceCommand`), `cms/packages/Accounting/Enum/CalculatePriceMethod`, `cms/packages/Accounting/Enum/DeliveryAddressFill`\n- Ownership: `/cms/packages/Logistics`, `/cms/packages/Shipping`, `/admin/controllers/Logistics` are owned by logistics-team in CODEOWNERS\n- Data: `st_cms.shipping_methods`, `st_cms.shipping_methods_lng`",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-570",
+    "externalKey": "CZ3TDR1-570",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-570"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.247Z",
+  "updatedAt": "2026-09-24T06:59:48.669Z",
+  "syncedAt": "2026-09-24T06:59:47.247Z",
+  "enqueuedAt": "2026-09-24T06:59:48.669Z"
+}

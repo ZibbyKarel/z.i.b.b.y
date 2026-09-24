@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-487",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check]: Datixo",
+  "description": "### Partner Name\n\nDatixo.com, s.r.o.\n\n### Partner Email (Technical Contact)\n\ntomas@datixo.com — Tomáš Jorpalidis, CTO\n\n### Shoptet CRM Url\n\n[https://crm.shoptet.cz/admin/sluzby-detail/?id=3017](https://crm.shoptet.cz/admin/sluzby-detail/?id=3017)\n\n### Salesforce Url\n\n[https://shoptet.lightning.force.com/lightning/r/Case/500Vk00000sdIniIAE/view](https://shoptet.lightning.force.com/lightning/r/Case/500Vk00000sdIniIAE/view)\n\n### Test Project URL\n\n[https://736509.myshoptet.com/](https://736509.myshoptet.com/), Partner development project: [https://datixo.myshoptet.com/](https://datixo.myshoptet.com/) Project ID: 793086\n\n### Addons Repository URL\n\n[https://github.com/datixo/datixo-shoptet-addon](https://github.com/datixo/datixo-shoptet-addon)\n\n### New Addon or Modification\n\nNew\n\n### Brief Addon Description\n\nDatixo is an API + frontend analytics addon that transfers order data from Shoptet to the Datixo platform for reporting and marketing attribution.\n\nThe addon connects orders with the visitor's original advertising source using attribution parameters such as UTM parameters, gclid and fbclid. This allows merchants to evaluate the performance of campaigns and individual advertisements in one dashboard without having to combine data manually from GA4, Google Ads, Meta and other systems.\n\nThe integration processes new and updated orders through Shoptet API and webhooks. A lightweight frontend measurement script is distributed through the Shoptet Addons Repository. The script does not add any visual or interactive elements to the storefront.\n\nThe addon was successfully installed and tested on the test project. The external settings redirect and initial data import are working after the fixes supplied by the partner.\n\n### Information on Data Usage\n\nPOST [OAuth token URL e-shopu] - při instalaci doplňku, výměna OAuth code za OAuth access token.\nGET /action/ApiOAuthServer/getAccessToken - při prvním API volání a následně při expiraci API tokenu, získání\nShoptet API access tokenu. Token se cachuje do expirace.\nGET /api/webhooks?itemsPerPage=500 - při provisioningu, kontrola již registrovaných webhooků.\nPOST /api/webhooks/renew-signature-key - při provisioningu, pokud ještě nemáme webhook signature key.\nPOST /api/webhooks - při provisioningu, registrace order webhooků pro synchronizaci objednávek.\nPOST /api/template-include - při provisioningu, vložení dynamické konfigurace instalace do common-header:\nDatixo integration/project ID a API URL. Samotný měřicí script je vkládán Shoptetem z Addon Repository/CDN.\nGET /api/orders?creationTimeFrom=...&page=...&itemsPerPage=50 - při prvním historickém backfillu, stažení\nobjednávek za poslední 2 měsíce.\nGET /api/orders?changeTimeFrom=...&page=...&itemsPerPage=50 - pravidelný reconciliation sync jako fallback\nk webhookům.\nGET /api/orders/\n\n```java\n\n```\n\n?include=notes,shippingDetails - po order webhooku nebo pokud list endpoint nevrátí\nkompletní payload objednávky.\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/42099](https://github.com/shoptet/cms4/issues/42099)_\n_Created on GitHub by @jakublokai on 2026-07-20 12:27 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-487",
+    "externalKey": "CZ3TDR1-487",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-487"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.222Z",
+  "updatedAt": "2026-09-24T06:59:47.222Z",
+  "syncedAt": "2026-09-24T06:59:47.222Z"
+}

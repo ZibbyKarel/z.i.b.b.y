@@ -1,0 +1,29 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-661",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "Working out whether a change in the code actually fixed a finding",
+  "description": "When a partner pushes a fix, something has to decide whether what they changed actually addresses what we told them. Today nothing does — a re-run simply reviews the new commit from scratch and forgets the previous one.\n\nThis is the piece that decides, and it rests on one hard rule: **a finding counts as fixed only when the code at its place actually changed.** Never because we simply did not find it again the second time. Not finding something again is the weakest evidence there is — the second review may have been thinner, the engine may have drifted or failed outright — and treating it as proof is exactly how a real problem quietly disappears.\n\nSo it works in two steps:\n\n- **Was the place touched at all?** Compare the two commits. If the code the finding points at was not changed, the finding stays open — full stop, no second opinion needed.\n- **Does the change address it?** Where it was touched, read the surrounding code and decide. A fix made fifty lines away — a check moved, validation pulled into a helper — has to be recognised, or we end up telling a partner that something they did fix is still open.\n\nEverything uncertain lands on \"still open\": a commit we can no longer reach after a rewritten history, an answer we cannot read, a budget we ran out of. That direction is deliberate and one-sided. Over-reporting costs the partner one extra look; under-reporting loses a real finding.\n\n**Done when:** for a finding still open from an earlier round, the tool decides new / still open / fixed, records what that decision was based on, and every way the decision can be uncertain has its own test proving it lands on \"still open\".\n\nPlan: https://github.com/shoptet/aidev-apps/pull/27 — batch 2, tasks T5 and T6.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-661",
+    "externalKey": "CZ3TDR1-661",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-661"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-660"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-660"
+  ],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.305Z",
+  "updatedAt": "2026-09-24T06:59:47.305Z",
+  "syncedAt": "2026-09-24T06:59:47.305Z"
+}

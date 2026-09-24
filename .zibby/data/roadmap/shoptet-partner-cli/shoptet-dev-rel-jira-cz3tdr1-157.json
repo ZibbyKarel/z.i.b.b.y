@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-157",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check]: Sdílený košík",
+  "description": "### Partner Name\n\nJakub Turský \n\n### Partner Email (Technical Contact)\n\njakubtursky769@gmail.com\n\n### Shoptet CRM Url\n\n[https://crm.shoptet.cz/admin/sluzby-detail/?id=2367](https://crm.shoptet.cz/admin/sluzby-detail/?id=2367)\n\n### Salesforce Url\n\n[https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000GGDGUIA5/view](https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000GGDGUIA5/view)\n\n### Test Project URL\n\n[https://hrtest.myshoptet.com/](https://hrtest.myshoptet.com/)\n\n### Addons Repository URL\n\n[https://github.com/jakubtursky/shoptet-sharing-basket-addons](https://github.com/jakubtursky/shoptet-sharing-basket-addons)\n\n### New Addon or Modification\n\nNew\n\n### Brief Addon Description\n\nDoplněk umožňuje jednoduše sdílet obsah košíku pomocí unikátního odkazu.\n\n### Information on Data Usage\n\nKontaktní údaje e-shopu\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/14303](https://github.com/shoptet/cms4/issues/14303)_\n_Created on GitHub by @hrabcova on 2025-03-04 13:54 UTC_\n_GitHub assignee: @pavelkunes_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-157",
+    "externalKey": "CZ3TDR1-157",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-157"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.309Z",
+  "updatedAt": "2026-09-24T06:59:45.309Z",
+  "syncedAt": "2026-09-24T06:59:45.309Z"
+}

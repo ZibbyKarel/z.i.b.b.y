@@ -1,0 +1,24 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-730",
+  "projectId": "shoptet-partner-cli",
+  "level": "epic",
+  "name": "[Portal] Partners web revision",
+  "description": "",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-730",
+    "externalKey": "CZ3TDR1-730",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-730"
+  },
+  "externalLevel": "Epic",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.380Z",
+  "updatedAt": "2026-09-24T06:59:47.380Z",
+  "syncedAt": "2026-09-24T06:59:47.380Z"
+}

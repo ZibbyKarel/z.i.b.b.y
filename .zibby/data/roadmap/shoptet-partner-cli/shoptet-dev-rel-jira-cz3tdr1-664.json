@@ -1,0 +1,29 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-664",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "A reviewer has no place to act on findings carried over from earlier rounds",
+  "description": "The tool opens discussion threads on the partner's pull request and then never touches them again. Round two does not reply into round one's thread, does not close it when the work is actually done, and does not notice when the thread has been closed from the other side.\n\nThis gives the reviewer somewhere to act. Everything carried over from earlier rounds in one panel, and next to each proposal **the evidence behind it** — what changed in the code and why we think it does or does not address the remark. That ordering is deliberate: the reviewer should be able to disagree with the evidence, not merely with a verdict.\n\n**Four actions, each its own decision:**\n\n- reply that it is still open,\n- close it with a short message,\n- agree it is already closed, when someone got there before us,\n- reopen one that was closed without anything being fixed.\n\nReopening someone else's decision is the most confrontational thing this feature can do, so it never rides along with anything else — it is always its own deliberate click. And nothing at all is sent, closed or reopened without the reviewer approving that specific message.\n\n**One limitation we cannot promise away.** Whether we are allowed to close a discussion at all depends on the access each partner gave our bot, and we cannot tell in advance — posting comments needs only read access, so the fact that comments work today says nothing about closing. Where we cannot, the action says so rather than failing quietly: the partner still gets the closing message and closes the thread themselves, which is what about half of them do anyway.\n\n**A second limitation, settled during the build: we can see that a thread is closed, never who closed it.** GitHub tells us the closure, and our own bot, a Shoptet colleague clicking Resolve by hand and the partner are indistinguishable from what we store. Every message and every line of the panel therefore speaks about the thread's state and claims no actor — saying \"you closed this\" would be an untruth the approving reviewer has no way to check. Telling the three apart would need a new GitHub call and still would not separate a partner from a colleague, so it stays out.\n\n**Done when:** a reviewer can act on every carried-over finding from one place and can see what each proposal is based on — and one round has run silently first, with the classification recorded and compared against what the reviewer actually decided, before any of this reaches a partner.\n\nPlan: https://github.com/shoptet/aidev-apps/pull/27 — batch 2, task T10 and the rest of T8.\n\nDelivered in two PRs: https://github.com/shoptet/aidev-apps/pull/42 (the thread-state send path and the message bodies, rest of T8) and https://github.com/shoptet/aidev-apps/pull/43 (the triage panel, T10).",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-664",
+    "externalKey": "CZ3TDR1-664",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-664"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-663"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-663"
+  ],
+  "lifecycle": "external",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.309Z",
+  "updatedAt": "2026-09-24T06:59:47.309Z",
+  "syncedAt": "2026-09-24T06:59:47.309Z"
+}

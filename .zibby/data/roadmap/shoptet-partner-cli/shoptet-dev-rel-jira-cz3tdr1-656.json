@@ -1,0 +1,24 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-656",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "name": "SD - Error handling for Shipping Addons dependent on external resources",
+  "description": "Based on incidents [INC-339](https://shoptet.slab.com/posts/incident-339-postmortem-inability-to-complete-an-order-when-shipping-method-is-set-up-through-the-sps-add-on-vehmv2qk?shr=oz7p2c6p3gn01dt9sbt8mbfj), [INC-342](https://shoptet.slab.com/posts/incident-342-postmortem-inability-to-complete-an-order-when-shipping-method-is-set-up-through-the-sps-add-on-ksir0ikn?shr=soj2ttyuv7wgw0nfxa1ng8om) and [INC-335](https://shoptet.slab.com/posts/incident-335-postmortem-bricol-cz-checkout-blocked-by-mime-shipping-addon-f3cexw6s?shr=60dap3whjmjcdszasiwa0527) (Premium custom carrier), where eshops with the SPS shipping add-on could not complete orders at checkout, resulting in an infinite loading screen, due to one of their endpoints being used to load shipping settings like ([https://sluzby.sps-sro.sk/shoptetclient/rest/eshop/settings/434846](https://sluzby.sps-sro.sk/shoptetclient/rest/eshop/settings/434846)), wasn't accessible or contained an error.\nWe need to examine whether our error handling can handle this external script when it is not accessible or returns error responses. Alternatively, we could set rules on how this should be set on the partners' side via templates.\n\n# Task\n\nCreate a documentation for external shipping.\n\nAddress how to solve this issue.\n\n## Linked PRs\n\n- #36718\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/27950](https://github.com/shoptet/cms4/issues/27950)_\n_Created on GitHub by @nojmido on 2025-12-03 10:39 UTC_\n_GitHub assignee: @pavelhusa_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-656",
+    "externalKey": "CZ3TDR1-656",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-656"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "external",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.303Z",
+  "updatedAt": "2026-09-24T06:59:45.303Z",
+  "syncedAt": "2026-09-24T06:59:45.303Z"
+}

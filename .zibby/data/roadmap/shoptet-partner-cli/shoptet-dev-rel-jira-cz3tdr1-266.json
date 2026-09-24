@@ -1,0 +1,40 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-266",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-6",
+  "name": "Sidebar component",
+  "description": "# Context\n\nWe are creating a shared Docusaurus theme for the Developers' portal. Figma is [here](https://www.figma.com/design/ZmSsc8dVmzloTI8jVFN1ur/Docusaurus?node-id=160-7121&t=h0iszn2LPRqYVW2J-1).\n\n# Task\n\nCurrently, a delimiter is implemented, but the menu items don't support icons. Also, there is a default arrow when expanding the items.\n\n- ☐ implement menu icon\n- ☐ assign icons to each section (in coop with @hudak-filip)\n- ☐ customize delimiter and expand arrow\n\nSee: [https://www.figma.com/design/ZmSsc8dVmzloTI8jVFN1ur/Docusaurus?node-id=125-4250&t=IQDSLDjQBWfwBle2-4](https://www.figma.com/design/ZmSsc8dVmzloTI8jVFN1ur/Docusaurus?node-id=125-4250&t=IQDSLDjQBWfwBle2-4)\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/10508](https://github.com/shoptet/cms4/issues/10508)_\n_Created on GitHub by @pavelhusa on 2024-12-10 12:37 UTC_\n_GitHub assignee: @pavelhusa_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-266",
+    "externalKey": "CZ3TDR1-266",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-266"
+  },
+  "externalLevel": "Task",
+  "attachmentSetId": "set_muf6m6u1_b903c60a",
+  "attachments": [
+    {
+      "name": "554dcb6afdc5d22f.png",
+      "size": 224080,
+      "mediaType": "image/png"
+    }
+  ],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "running",
+  "enqueuedAt": "2026-09-24T06:59:48.635Z",
+  "runs": [
+    {
+      "taskId": "task_1790233204805_c444b0",
+      "runRef": "patch_1790233204813",
+      "startedAt": "2026-09-24T07:00:07.204Z",
+      "outcome": "running"
+    }
+  ],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.819Z",
+  "updatedAt": "2026-09-24T07:00:07.204Z",
+  "syncedAt": "2026-09-24T06:59:45.819Z"
+}

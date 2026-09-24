@@ -1,0 +1,24 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-485",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "name": "Support different package managers in Addons deployment workflow",
+  "description": "### Why?\n\nThe reusable addon build/deploy workflows (`deploy.workflow.yml`, `default.workflow.yml` in `shoptet/addon-repository-actions-config`) hardcode Yarn — both `cache: 'yarn'` in `setup-node` and a raw `yarn` / `yarn build` install step. Every partner addon repo that calls these workflows is forced to commit a `yarn.lock` and use Yarn. Partners who use npm or pnpm either can't use the pipeline or hit install/cache failures.\n\n### What?\n\nThe reusable workflow should support **npm, Yarn, and pnpm**. It should **auto-detect** the package manager from the committed lockfile (`package-lock.json` → npm, `yarn.lock` → Yarn, `pnpm-lock.yaml` → pnpm) and configure the `setup-node` cache and install/build commands accordingly, with an **optional workflow input to override** the detected manager. Existing Yarn-based addons must keep working with no changes on their side.\n\n### Acceptance Criteria\n\n- ☐ Workflow auto-detects package manager from the lockfile present in the calling repo (npm / Yarn / pnpm)\n- ☐ Optional `package_manager` input on `workflow_call` overrides auto-detection\n- ☐ `setup-node` `cache` is set to match the resolved package manager\n- ☐ Install + `build --env production` steps run with the resolved manager's commands\n- ☐ Change applied to both `deploy.workflow.yml` and `default.workflow.yml`\n- ☐ Existing Yarn addon repos build successfully with no config change\n- ☐ Fallback/clear error when no recognized lockfile is found and no input is given\n\n### Resources\n\n- Workflow files: `deploy.workflow.yml`, `default.workflow.yml` in `shoptet/addon-repository-actions-config`\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/41986](https://github.com/shoptet/cms4/issues/41986)_\n_Created on GitHub by @pavelhusa on 2026-07-16 15:06 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-485",
+    "externalKey": "CZ3TDR1-485",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-485"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:46.822Z",
+  "updatedAt": "2026-09-24T06:59:46.822Z",
+  "syncedAt": "2026-09-24T06:59:46.822Z"
+}

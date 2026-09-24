@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-247",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-5",
+  "name": "Addons - Getting started - FE part",
+  "description": "### How to\n\nThe changes are in the [https://github.com/shoptet/microsites/tree/main/developers.shoptet.com](https://github.com/shoptet/microsites/tree/main/developers.shoptet.com) \n\nThere are no Codeowners for this, so please assign @pavelhusa  for PR.\n\nReplace the following with the actual content.\n\n```java\n<pre>\n    {frontMatter.docsPageDescription}\n</pre>\n```\n\n### Task\n\nSee the page with the task description at: [https://shoptet-developers.vercel.app/addons/getting-started/](https://shoptet-developers.vercel.app/addons/getting-started/)\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/10091](https://github.com/shoptet/cms4/issues/10091)_\n_Created on GitHub by @bradacova on 2024-12-04 10:10 UTC_\n_GitHub assignee: @pavelhusa_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-247",
+    "externalKey": "CZ3TDR1-247",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-247"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.319Z",
+  "updatedAt": "2026-09-24T06:59:45.319Z",
+  "syncedAt": "2026-09-24T06:59:45.319Z"
+}

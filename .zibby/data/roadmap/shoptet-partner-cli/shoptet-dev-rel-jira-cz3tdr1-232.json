@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-232",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check]: Cena po zadání slevového kódu",
+  "description": "# Název addonu\n\nCena po zadání slevového kódu\n\n# Partner\n\nDominik Martini\n\n# E-mail partnera (technický kontakt)\n\ndominik.martini@icloud.com\n\n# CRM ID\n\n[https://crm.shoptet.cz/admin/sluzby-detail/?id=2322](https://crm.shoptet.cz/admin/sluzby-detail/?id=2322)\n\n# Odkaz do SalesForce\n\n[https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000KHDyGIAX/view](https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000KHDyGIAX/view)\n\n# Stručný popis doplňku\n\nDoplněk umožňuje ukázat akční cenu po zadání slevového kódu (automaticky ji vypočítat a zobrazit v náhledu i detailu produktu) a zpřehlednit tak nabídku pro zvýšení šance na dokončení nákupu.\n\n# Nový doplněk/úprava stávajícího\n\nNový\n\n# Informace, se kterými daty může doplněk pracovat (dle smlouvy)\n\n---\n\n# Kontaktní údaje\n\n---\n\n# URL Addons repository\n\n[https://github.com/dominikmartini/product_salecode](https://github.com/dominikmartini/product_salecode)\n\n# URL testovacího projektu\n\n[https://dmartini.myshoptet.com/](https://dmartini.myshoptet.com/)\n\n# Status [FE]\n\n- ☐ Addon Repository is not active\n- ☐ Addon repository active/ready for check\n- ☑ Waiting for Shoptet review\n- ☐ Waiting for Partner's response\n- ☐ Checked / Deployed\n\n# Status [API]\n\n_bude upřesněno_\n\n# Checklist (API/FE)\n\n---\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/13289](https://github.com/shoptet/cms4/issues/13289)_\n_Created on GitHub by @pavelhusa on 2025-02-12 15:05 UTC_\n_GitHub assignee: @pavelhusa_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-232",
+    "externalKey": "CZ3TDR1-232",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-232"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.314Z",
+  "updatedAt": "2026-09-24T06:59:45.314Z",
+  "syncedAt": "2026-09-24T06:59:45.314Z"
+}

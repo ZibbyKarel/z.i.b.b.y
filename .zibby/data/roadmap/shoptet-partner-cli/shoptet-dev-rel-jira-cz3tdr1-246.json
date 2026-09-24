@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-246",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-5",
+  "name": "ShoptetDot function documentation",
+  "description": "### Context\n\nIn [https://github.com/shoptet/microsites/tree/FRONTEND-3026-shoptet-dot-references](https://github.com/shoptet/microsites/tree/FRONTEND-3026-shoptet-dot-references)  there is PoC of automatic generation of reference docs from our JS assets [https://github.com/shoptet/templates-assets](https://github.com/shoptet/templates-assets).\n\nThe JSDocs itself can by easy peasy done by the Copilot (just select the JS function and ask for JSDocs).\n\nWe have to select what functions worth documenting (which are used and useful for Shoptet Developers).\n\n### Task\n\nRefine the docs template for references. Now, it contains the template assets link.\n\nThe list of functions worth documenting:\n\n**Function name **\n\n**Links/notes **\n\n`shoptet.cardShared.addToCart, shoptet.cartShared.removeFromCart , shoptet.cartShared.updateQuantityInCart` \n\n[https://raw.githubusercontent.com/shoptet/templates-assets/refs/heads/master/shared/js/libs/cartShared.js](https://raw.githubusercontent.com/shoptet/templates-assets/refs/heads/master/shared/js/libs/cartShared.js), [https://developers.shoptet.com/home/shoptet-tools/editing-templates/how-to-properly-add-product-to-cart-with-javascript/](https://developers.shoptet.com/home/shoptet-tools/editing-templates/how-to-properly-add-product-to-cart-with-javascript/), [https://developers.shoptet.com/how-to-properly-remove-a-product-from-the-cart-with-javascript/](https://developers.shoptet.com/how-to-properly-remove-a-product-from-the-cart-with-javascript/), [https://developers.shoptet.com/how-to-properly-update-quantity-in-cart-with-javascript/](https://developers.shoptet.com/how-to-properly-update-quantity-in-cart-with-javascript/) \n\n`shoptet.helpers.formatAsCurrency` \n\n[https://raw.githubusercontent.com/shoptet/templates-assets/refs/heads/master/shared/js/libs/helpers.js](https://raw.githubusercontent.com/shoptet/templates-assets/refs/heads/master/shared/js/libs/helpers.js) \n\n`shoptet.cookies` \n\n[https://github.com/shoptet/templates-assets/blob/master/shared/js/libs/cookie.js](https://github.com/shoptet/templates-assets/blob/master/shared/js/libs/cookie.js) \n\n`shoptet.consent` \n\n[https://github.com/shoptet/templates-assets/blob/master/shared/js/libs/consent.js](https://github.com/shoptet/templates-assets/blob/master/shared/js/libs/consent.js) \n\n`shoptet.ajax` \n\n[https://github.com/shoptet/templates-assets/tree/master/shared/js/libs/ajax](https://github.com/shoptet/templates-assets/tree/master/shared/js/libs/ajax) \n\nWe also want to document the object `shoptet.config`.\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/10043](https://github.com/shoptet/cms4/issues/10043)_\n_Created on GitHub by @bradacova on 2024-12-03 12:39 UTC_\n_GitHub assignees: @pavelkunes, @tomovova_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-246",
+    "externalKey": "CZ3TDR1-246",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-246"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.318Z",
+  "updatedAt": "2026-09-24T06:59:45.318Z",
+  "syncedAt": "2026-09-24T06:59:45.318Z"
+}

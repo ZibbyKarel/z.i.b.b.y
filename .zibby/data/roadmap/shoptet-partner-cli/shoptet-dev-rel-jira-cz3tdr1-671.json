@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-671",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "name": "Let addon iframes request a confirmation modal from the admin",
+  "description": "**Context**\n\nAddons with `addon_settings_in_iframe` enabled render inside `#partner-iframe`. `PartnerServiceIframeController` serves that page from `admin/controllers/templates/PartnerServiceIframe.tpl`. Today the iframe and the admin exchange only theme messages, `shoptet:admin-theme` and `shoptet:admin-theme-request`. The contract is in `docs/frontend/admin-theme-in-iframes.md`. An addon developer asked for a confirmation dialog in Slack:  \n\n**Problem**\n\nAn addon has no way to ask the merchant \"are you sure?\" that looks like the admin. A dialog drawn inside the iframe stops at the iframe edge. A native `window.confirm()` works but looks wrong next to the admin design. So destructive addon actions run with no confirmation, or with an ugly one.\n\n**Proposed solution**\n\nThe admin page owns the dialog. The iframe only asks for it.\n\n- Iframe sends `shoptet:confirm-request` with `requestId` (required), `message` (required, max 1000 chars), and optional `title` (max 120), `confirmLabel` and `cancelLabel` (max 40), `destructive` (boolean).\n- The admin renders the request through the existing `showModal()` and replies with `shoptet:confirm-response` `{ requestId, confirmed: true|false }`.\n- The cancel button, the close cross, an overlay click and Escape all reply `confirmed: false`. Each request gets exactly one reply.\n- A request without `message` gets `error: 'invalid-request'`. A request sent while a modal is open gets `error: 'busy'`.\n- The admin accepts requests only from `iframe.contentWindow`. It replies to `event.origin`, not to `*`. It renders addon strings through `textContent`, because `showModal` parses string content as HTML and runs `<script>` tags.\n- A developer doc describes the contract and gives a `confirmInAdmin()` promise helper for addons.\n\n**Proof of concept**\n\nWorking implementation and doc in a draft PR:  \n\n**Acceptance criteria**\n\n- [ ] A request from an addon iframe opens an admin-styled modal with the given title, message and labels. `destructive: true` makes the accept button destructive.\n- [ ] Accept replies `confirmed: true`. Cancel, cross, overlay and Escape reply `confirmed: false`, once each.\n- [ ] HTML inside `message` shows as plain text.\n- [ ] A second request during an open modal gets `error: 'busy'`. A request without `message` gets `error: 'invalid-request'`.\n- [ ] The modal looks right in the stock, brand and dark theme.\n- [ ] `make lint-smarty` passes.\n- [ ] The contract is published on  . The string \"Confirm\" is translated in Weblate.\n\n**Open questions**\n\n- Does this request shape match what the addon developer asked for in the Slack thread? I could not read the thread while drafting.\n- Do we want a queue instead of the `busy` error? I lean no. Addons can disable the trigger button while they wait.\n- Keep the code inline in the template, or move both iframe protocols into one bundled `partnerIframe.js`?\n\n**Out of scope**\n\nRich modal content such as forms or HTML. Modals the admin opens toward the iframe. A React or Inertia version of the addon page.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-671",
+    "externalKey": "CZ3TDR1-671",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-671"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.319Z",
+  "updatedAt": "2026-09-24T06:59:48.705Z",
+  "syncedAt": "2026-09-24T06:59:47.319Z",
+  "enqueuedAt": "2026-09-24T06:59:48.705Z"
+}

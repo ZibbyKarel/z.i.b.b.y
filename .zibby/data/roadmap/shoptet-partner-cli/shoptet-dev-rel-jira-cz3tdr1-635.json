@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-635",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check] Záchrana prázdneho vyhledávaní",
+  "description": "Popis\n\n### Partner Name\n\nmoow s. r. o. / PlugDeck\n\n### Partner Email (Technical Contact)\n\n[dev@plugdeck.co](mailto:dev@plugdeck.co)\n\n### Shoptet CRM Url\n\n[https://crm.shoptet.cz/admin/sluzby-detail/?id=3032](https://crm.shoptet.cz/admin/sluzby-detail/?id=3032)\n\n### Salesforce Url\n\n \n\n### Test Project URL\n\n_No response_\n\n### Addons Repository URL\n\n[https://github.com/plugdeck/zachrana-prazdneho-vyhledavani-widget/pull/1/changes](https://github.com/plugdeck/zachrana-prazdneho-vyhledavani-widget/pull/1/changes) \n\n### New Addon or Modification\n\nNew\n\n### Brief Addon Description\n\nDoplněk „Záchrana prázdného vyhledávání (AI Rescue)“ řeší situaci, kdy vyhledávání na e-shopu nevrátí žádné výsledky. V takovém případě má zákazníkovi nabídnout relevantní alternativní výsledky / doporučení pomocí AI.\n\nVíce informací je uvedeno v souvisejícím Salesforce case „PlugDeck: Záchrana prázdného vyhledávání (AI Rescue) - Doplňující informace (seznam endpointů)“.\n\n### Information on Data Usage\n\nDle podkladů je potřeba ověřit především seznam používaných API endpointů a rozsah dat, která doplněk z e-shopu načítá a dále zpracovává.\n\nKonkrétní rozsah dat není v dodaných podkladech jednoznačně uveden.\n\n### Salesforce URL\n\n[Záchrana prázdného vyhledávání (AI Rescue)](https://shoptet.lightning.force.com/lightning/r/Case/500Vk00000y8cNSIAY/view)\n\n## Affected eshop / Client domain\n\n_No response_\n\n## Subtasks\n\n**Add subtask**\n\n## Linked work items",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-635",
+    "externalKey": "CZ3TDR1-635",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-635"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.285Z",
+  "updatedAt": "2026-09-24T06:59:48.694Z",
+  "syncedAt": "2026-09-24T06:59:47.285Z",
+  "enqueuedAt": "2026-09-24T06:59:48.694Z"
+}

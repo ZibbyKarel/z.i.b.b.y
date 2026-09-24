@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-202",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check]: CodGuard",
+  "description": "Author: Klára Hrabcová, hrabcova@shoptet.cz\n\n### Salesforce URL\n\n[Utánvét Ellenőr - HU (CodGuard)](https://shoptet.my.salesforce.com/a0r7Q000003qqSaQAI)\n\n### Partner Name\n\nSokso Kft\n\n### Partner Email\n\nkss.tamas@gmail.com\n\n### Shoptet CRM Url\n\n[https://crm.shoptet.cz/admin/sluzby-detail/?id=2301](https://crm.shoptet.cz/admin/sluzby-detail/?id=2301)\n\n### Test Project URL\n\n[https://sokso-hu.myshoptet.com/](https://sokso-hu.myshoptet.com/)\n\n### Addons Repository URL\n\n([https://github.com/Druckermeister/Utanvet-Ellenor-FE-repo---Addon-repository](https://github.com/Druckermeister/Utanvet-Ellenor-FE-repo---Addon-repository))\n\n### New Addon or Modification\n\nNew\n\n### Brief Addon Description\n\nDoplněk umožňuje skrývat některé možnosti dopravy pro nespolehlivé zákazníky (např. ty co si objednávají na dobírku, ale opakovaně nepřebírají zásilky - těm se povolí jen platba předem). Doplněk nepracuje s API, pouze vkládá na e-shopy kód. Více v checklistu:\n\n[Form Checklist review - Utánvét Ellenőr - HU.pdf](https://github.com/user-attachments/files/19776024/Form.Checklist.review.-.Utanvet.Ellenor.-.HU.pdf)\n\n### Information on Data Usage\n\nE-mail address, phone number, delivery number, number of purchases vs. successfully delivered orders\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/16339](https://github.com/shoptet/cms4/issues/16339)_\n_Created on GitHub by @n8n-automator on 2025-04-16 11:08 UTC_\n_GitHub assignee: @pavelhusa_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-202",
+    "externalKey": "CZ3TDR1-202",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-202"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.312Z",
+  "updatedAt": "2026-09-24T06:59:45.312Z",
+  "syncedAt": "2026-09-24T06:59:45.312Z"
+}

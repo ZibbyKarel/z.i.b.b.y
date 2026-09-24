@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-657",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "name": "Restrict partner scripts based on page type (INC-394)",
+  "description": "Hi, could be verify whether Shoptet can restrict partner scripts based on page type. This is issue is derived from action steps in [INC-394](https://shoptet.slab.com/posts/%E2%9C%85-incident-394-postmortem-order-completion-unavailable-for-stores-using-foxentry-cz46fd26?shr=d92m8s1dj01fwdz9hpklt55p)\n\nThank you in advance. 🙏\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/39746](https://github.com/shoptet/cms4/issues/39746)_\n_Created on GitHub by @nojmido on 2026-06-10 15:57 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-657",
+    "externalKey": "CZ3TDR1-657",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-657"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:46.819Z",
+  "updatedAt": "2026-09-24T06:59:48.651Z",
+  "syncedAt": "2026-09-24T06:59:46.819Z",
+  "enqueuedAt": "2026-09-24T06:59:48.651Z"
+}

@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-124",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check]: Pokročilý slider",
+  "description": "### Partner Name\n\nVitalii Paparyha\n\n### Partner Email (Technical Contact)\n\np.vitalik1997@gmail.com\n\n### Shoptet CRM Url\n\n[https://crm.shoptet.cz/admin/sluzby-detail/?id=2138](https://crm.shoptet.cz/admin/sluzby-detail/?id=2138)\n\n### Salesforce Url\n\n[https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000FSgWtIAL/view](https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000FSgWtIAL/view)\n\n### Test Project URL\n\n[https://655090.myshoptet.com/](https://655090.myshoptet.com/)\n\n### Addons Repository URL\n\n_No response_\n\n### New Addon or Modification\n\nNew\n\n### Brief Addon Description\n\nDoplněk s pokročilými funkcemi umožňující detailní nastavení základního slideru.\n\n### Information on Data Usage\n\nKontaktní údaje e-shopu\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/14700](https://github.com/shoptet/cms4/issues/14700)_\n_Created on GitHub by @hrabcova on 2025-03-12 14:47 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-124",
+    "externalKey": "CZ3TDR1-124",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-124"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "external",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.306Z",
+  "updatedAt": "2026-09-24T06:59:45.306Z",
+  "syncedAt": "2026-09-24T06:59:45.306Z"
+}

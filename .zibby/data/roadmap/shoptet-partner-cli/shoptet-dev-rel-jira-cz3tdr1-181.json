@@ -1,0 +1,24 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-181",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "name": "FE news",
+  "description": "Cookie bar move up - after release #19159\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/19980](https://github.com/shoptet/cms4/issues/19980)_\n_Created on GitHub by @pavelhusa on 2025-06-26 08:06 UTC_\n_GitHub assignee: @pavelhusa_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-181",
+    "externalKey": "CZ3TDR1-181",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-181"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.310Z",
+  "updatedAt": "2026-09-24T06:59:45.310Z",
+  "syncedAt": "2026-09-24T06:59:45.310Z"
+}

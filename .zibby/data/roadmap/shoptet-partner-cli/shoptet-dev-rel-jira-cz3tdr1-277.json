@@ -1,0 +1,24 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-277",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "name": "Incomplete DataLayer on the Thank you page",
+  "description": "# Context\n\nWe published a dataLayer package [https://www.npmjs.com/package/@shoptet/datalayer](https://www.npmjs.com/package/@shoptet/datalayer) from which the documentation is generated. We have found out that it's missing some values. Some are added [https://github.com/shoptet/cms4/pull/13022/files](https://github.com/shoptet/cms4/pull/13022/files), but overall this part (thank you page) is not covered with the nigh test.\n\n# Task\n\n- Investigate and add all mising values from [backend](https://github.com/shoptet/cms4/blob/0d485bd6fa6191820cae473d8156d34de9cb9f4a/cms/packages/Google/GoogleTagManager.php). `discountCoupons` is missing to name one example\n- extend the [night test spec](https://github.com/shoptet/cms4/blob/97fb25568f911c4d35c9cb5b9f8decd7de2db8f7/cypress_tests/cypress/tests/functional/common/data_layer.spec.js) to test Thank you page\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/13102](https://github.com/shoptet/cms4/issues/13102)_\n_Created on GitHub by @pavelhusa on 2025-02-10 12:21 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-277",
+    "externalKey": "CZ3TDR1-277",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-277"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:46.806Z",
+  "updatedAt": "2026-09-24T06:59:46.806Z",
+  "syncedAt": "2026-09-24T06:59:46.806Z"
+}

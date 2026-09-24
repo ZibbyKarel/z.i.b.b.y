@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-624",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "Turn on calibrated AI review for partner addons",
+  "description": "Today's review runs on a generic prompt — it flags whatever catches its attention, and the scope shifts from run to run. We already have our own methodology and rule catalog that we use to review addons by hand; this task wires the AI into that same path: what to check, when a finding blocks and when it's just a suggestion, and when it should verify a claim against the code before writing it down.\n\nFindings are also split into two groups — ones backed by one of our rules, and the AI's own observations. The second group never blocks anything, so the team can see at a glance what's binding.\n\nOn a test PR we measured roughly double the findings compared to the current prompt, same model. It runs alongside the existing review, not instead of it, and can be switched off at any time.\n\nImplemented in [PR #8](https://github.com/shoptet/aidev-apps/pull/8).\n\n**Done when:** the engine runs in production, a side-by-side comparison against the current review is visible on several real PRs, and the team confirms the findings hold up.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-624",
+    "externalKey": "CZ3TDR1-624",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-624"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.274Z",
+  "updatedAt": "2026-09-24T06:59:47.274Z",
+  "syncedAt": "2026-09-24T06:59:47.274Z"
+}

@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-609",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "Statistics",
+  "description": "Define KPIs (throughput, verdict distribution, time-to-release, cost per review — ties into the existing cost-tracking plan)\n\nBuild the metrics view",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-609",
+    "externalKey": "CZ3TDR1-609",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-609"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.262Z",
+  "updatedAt": "2026-09-24T06:59:48.690Z",
+  "syncedAt": "2026-09-24T06:59:47.262Z",
+  "enqueuedAt": "2026-09-24T06:59:48.690Z"
+}

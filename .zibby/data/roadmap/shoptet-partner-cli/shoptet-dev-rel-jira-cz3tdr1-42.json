@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-42",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check]: Předprodej",
+  "description": "### Partner Name\n\nBc. Lukáš Václavek\n\n### Partner Email (Technical Contact)\n\nlv.vaclavek@gmail.com\n\n### Shoptet CRM Url\n\n[https://crm.shoptet.cz/admin/sluzby-detail/?id=2415](https://crm.shoptet.cz/admin/sluzby-detail/?id=2415)\n\n### Salesforce Url\n\n[https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000HMar7IAD/view?ws=%2Flightning%2Fr%2FCase%2F500P400000Zo0lWIAR%2Fview](https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000HMar7IAD/view?ws=%2Flightning%2Fr%2FCase%2F500P400000Zo0lWIAR%2Fview)\n\n### Test Project URL\n\n[https://697363.myshoptet.com/](https://697363.myshoptet.com/)\n\n### Addons Repository URL\n\n[https://github.com/Vacii/shoptet-presale-scripts](https://github.com/Vacii/shoptet-presale-scripts)\n\n### New Addon or Modification\n\nNew\n\n### Brief Addon Description\n\nTento doplnok zobrazuje na produktovej stránke odpočítavací banner so zľavou a umožňuje nastaviť zľavový kód, ktorý si zákazník jednoducho skopíruje. Pomáha zvýšiť konverziu tým, že vizuálne zvýrazňuje časovo obmedzené ponuky a dá sa rýchlo nastaviť cez jednoduchú administráciu.\n\n### Information on Data Usage\n\n_No response_\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/25656](https://github.com/shoptet/cms4/issues/25656)_\n_Created on GitHub by @jakublokai on 2025-10-16 07:26 UTC_\n_GitHub assignee: @TomasHermanSnowlyCode_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-42",
+    "externalKey": "CZ3TDR1-42",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-42"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "external",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.294Z",
+  "updatedAt": "2026-09-24T06:59:45.294Z",
+  "syncedAt": "2026-09-24T06:59:45.294Z"
+}

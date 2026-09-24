@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-704",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "The demo data shows every part of the console except the new triage panel",
+  "description": "`pnpm db:seed:demo` is the documented way to look at the console without waiting for a real pull request, and it covers the inbox, every verdict, a claim, the history and the dynamic results. After the cross-round work it has a blind spot in exactly the place with the most new behaviour: **the carried-over triage panel is empty, so it does not render at all.**\n\nThat is not a cosmetic gap. The panel is hidden entirely when there is nothing to show — no empty state, no hint that the screen exists — so somebody looking at a freshly seeded console cannot tell the feature is there. Seeing it today means writing the rows by hand in SQL, which is both slow and a good way to invent a state the real pipeline never produces.\n\n**Done when:** seeding the demo data produces a pull request whose triage panel is populated and worth looking at — a finding still open, one whose thread has been closed, one proposed as fixed with the evidence behind that proposal, and one the reviewer took back. Along with them: a finding with no thread at all, where confirming it closed is the only thing on offer, and one on a repository where we may not close conversations, so the panel's explanation of that limit is visible rather than theoretical.\n\nThe seed keeps the guarantees the rest of it already has: it refuses to run against production and it can be run twice without making a mess.\n\n**Not part of this.** The two release switches stay where they ship — off, and dry run on. Faking either in demo data would teach a rollout order that is not the real one; the seed should say what to run and flip instead, so the screen can be seen in the state an operator will actually meet first.\n\nFound while building CZ3TDR1-664. Next task in the chain, on top of it.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-704",
+    "externalKey": "CZ3TDR1-704",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-704"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.350Z",
+  "updatedAt": "2026-09-24T06:59:47.350Z",
+  "syncedAt": "2026-09-24T06:59:47.350Z"
+}

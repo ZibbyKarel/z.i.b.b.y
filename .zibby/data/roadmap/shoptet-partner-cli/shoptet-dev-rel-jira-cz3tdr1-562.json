@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-562",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-618",
+  "name": "PartnerServiceAdd React rewrite: Screenshoty (Screenshots) tab",
+  "description": "## Why?\n\nScreenshots are the only tab backed by real AJAX endpoints rather than the shared form POST: upload, delete and drag-to-reorder each hit their own action. It is the highest-risk tab of the rewrite because the file uploader and the priority-reorder interaction have to keep working exactly as before.\n\n## What?\n\nPort `sub/ServiceDetail/Screenshots.tpl` and the `sub/Uploader.tpl` include to React, remove its external-tab bridge entry and delete the legacy partials if this page is their last consumer.\n\nCovers the image grid per image type and language, the `alts[imageId]` textarea per image, and three AJAX endpoints on `PartnerServiceAddController`: `adminUploadImageAction()`, `adminDeleteImageAction()`, `adminSetImagePrioritiesAction()`. Convert the actions to Ajax responses; URLs and business logic stay unchanged.\n\n## Acceptance Criteria\n\n- Upload works per image type and language via `/admin/action/PartnerServiceAdd/UploadImage/?id=...`, including validation and error rendering\n- Delete works via `/admin/action/PartnerServiceAdd/DeleteImage/?imageid=...` with the legacy confirmation\n- Drag reorder persists via `/admin/action/PartnerServiceAdd/SetImagePriorities/?ids=...`\n- `alts[imageId]` saves with the main form\n- Endpoint URLs, request shapes and response contracts unchanged\n- Every `data-testid` from `Screenshots.tpl` preserved verbatim, no hardcoded strings\n- `Screenshots.tpl` deleted and its bridge entry removed; `sub/Uploader.tpl` only deleted if no other live page consumes it\n- `make check-fast`, `make lint`, `make fe-test` green\n\n## Resources\n\n- Legacy: `admin/controllers/templates/sub/ServiceDetail/Screenshots.tpl:22,62,77,105,130`, `admin/controllers/templates/sub/Uploader.tpl`\n- Backend: `admin/controllers/PartnerServiceAddController.php:818,878,901`\n- `cms/packages/Crm/Helper/ModulesHelper.php`, `cms/packages/Filesystem/Helper/StandardHelper`\n- Data: `st_crm.module_images`",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-562",
+    "externalKey": "CZ3TDR1-562",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-562"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "external",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.243Z",
+  "updatedAt": "2026-09-24T06:59:47.243Z",
+  "syncedAt": "2026-09-24T06:59:47.243Z"
+}

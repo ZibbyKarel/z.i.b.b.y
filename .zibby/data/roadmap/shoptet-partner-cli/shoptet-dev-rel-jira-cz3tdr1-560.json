@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-560",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-618",
+  "name": "PartnerServiceAdd React rewrite: page shell + Nastaveni (Settings) tab",
+  "description": "## Why?\n\nFirst task of the rewrite. It establishes the React/Inertia shell for `PartnerServiceAdd` and ports the Nastaveni tab, the only tab visible in every state of the page. Until later tasks land, all other tabs stay on the legacy page and are reached through the external-tab bridge.\n\n## What?\n\nConvert `PartnerServiceAddController::adminIndexAction()` to `enableInertiaPage()` with a typed `PartnerServiceAddPageProps` DTO, add the React page and its Zod schema, and render the tab strip, the page header and the action buttons in React. Port the Nastaveni tab natively. Every other tab renders as an external tab linking to the legacy page, the same mechanism already used for Hodnoceni at `sub/ServiceDetail/ServiceDetailTabs.tpl:23`.\n\nFields to port from `sub/ServiceDetail/Settings.tpl`: `orderable` (checkbox, always disabled), `premium` (checkbox, always disabled), `urlCode`, `urlUninstall`, `urlSuspend`, `urlApprove`, `urlTerminate`, `urlSetting`, `sendEmailNotifications` (checkbox, default on), `displaySettings` (select, gated on `settingsInIframe`). Hidden globals `serviceTypeId`, `moduleIndexName`, `activityTypeId` stay in the payload.\n\n## Acceptance Criteria\n\n- `adminIndexAction()` uses `enableInertiaPage()`; `PartnerServiceAddPageProps` DTO is the source of truth, `schema.json` and `schema.ts` generated from it, `shoptet.inertiaProps.*` PHPStan rule green\n- `admin/react/src/Core/pages/PartnerServiceAdd/page.tsx` renders the header, tab strip, Ulozit / Ulozit a odejit / Zpet, and the edit-lock banner (`RedisServiceLockerHelper`, `Document/Templates/LockDetail.tpl`)\n- Nastaveni tab renders all 10 fields with legacy labels, tooltips, disabled states and the `urlCode` required rule (required when endpoints exist and the service is orderable)\n- POST contract unchanged: `action=insert|update`, `buttonAction=saveAndExit`, `resolveNextUrl()` redirect behaviour preserved\n- All tabs not yet ported render as external tabs pointing at the legacy page and work on both create and edit\n- Every `data-testid` from `Settings.tpl` preserved verbatim, no hardcoded strings\n- Rewrite record `docs/tpl-to-react/rewrites/PartnerServiceAdd.md` created with the parity map skeleton (skill Gates 1 and 2 passed)\n- `make check-fast`, `make lint`, `make fe-test`, `make fe-build-admin` green\n\n## Resources\n\n- Skill `/st-tpl-to-react`, reference page `admin/react/src/Core/pages/ApiRateLimiterStats/page.tsx`, backend reference `admin/controllers/AdminUserDetailController.php`\n- Legacy: `admin/controllers/PartnerServiceAddController.php:390,559,598,618`, `admin/controllers/templates/PartnerServiceAdd.tpl`, `sub/ServiceDetail/Settings.tpl`, `sub/ServiceDetail/ServiceDetailTabs.tpl`\n- Data: `st_api.service`, `st_crm.services`",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-560",
+    "externalKey": "CZ3TDR1-560",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-560"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.243Z",
+  "updatedAt": "2026-09-24T06:59:47.243Z",
+  "syncedAt": "2026-09-24T06:59:47.243Z"
+}

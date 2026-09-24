@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-203",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check]: Tisk cenové nabídky",
+  "description": "# Název add-onu\n\nTisk cenové nabídky\n\n# Partner\n\nRyvenia s.r.o.\n\n# E-mail partnera (technický kontakt)\n\ntoldy@kvalitnyeshop.sk\n\n# CRM ID\n\n[https://crm.shoptet.cz/admin/sluzby-detail/?id=2026](https://crm.shoptet.cz/admin/sluzby-detail/?id=2026)\n\n# Odkaz do SalesForce\n\n[https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP4000009UShhIAG/view](https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP4000009UShhIAG/view)\n\n# Stručný popis doplňku\n\nDoplněk umožňuje zobrazit v košíku zákazníkům cenovou nabídku s možností exportu do PDF nebo tisku.\n\n# Nový doplněk/úprava stávajícího\n\nNový\n\n# Informace, se kterými daty může doplněk pracovat (dle smlouvy)\n\n- Kontaktní údaje (jméno, příjmení, e-mail, telefonní číslo) - koncový zákazník, e-shopař\n- Osobní údaje - název společnosti, email společnosti, název obchodu, URL adresa obchodu, země, telefonní číslo\n\n# URL Addons repository\n\n[https://github.com/SP444C3/shoptet-priceoffer-addon](https://github.com/SP444C3/shoptet-priceoffer-addon)\n\n# URL testovacího projektu\n\n[https://hrtest-sk.myshoptet.com/](https://hrtest-sk.myshoptet.com/)\n\n# Status [FE]\n\nAddon Repository is not active, Addon repository active/ready for check, Waiting for Shoptet review, Waiting for Partner's response, Checked / Deployed\n\n# Status [API]\n\n_bude upřesněno_\n\n# Checklist (API/FE)\n\n---\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/13290](https://github.com/shoptet/cms4/issues/13290)_\n_Created on GitHub by @pavelhusa on 2025-02-12 15:11 UTC_\n_GitHub assignee: @pavelhusa_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-203",
+    "externalKey": "CZ3TDR1-203",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-203"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.312Z",
+  "updatedAt": "2026-09-24T06:59:45.312Z",
+  "syncedAt": "2026-09-24T06:59:45.312Z"
+}

@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-582",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-639",
+  "name": "Add basic pages & forms for partnerPortal",
+  "description": "- Add partner edit/create form\n- Add partner texts edit/create/form\n- Add pages",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-582",
+    "externalKey": "CZ3TDR1-582",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-582"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.250Z",
+  "updatedAt": "2026-09-24T06:59:48.673Z",
+  "syncedAt": "2026-09-24T06:59:47.250Z",
+  "enqueuedAt": "2026-09-24T06:59:48.673Z"
+}

@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-726",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check] Design hodnocení produktu",
+  "description": "**Addons repository:  ****\nhttps://github.com/dominikmartini/product_rating_design**\n\n**Testovací projekt:**  \n \n\n**Partner kontakt:**  \nDominik Martini  \nE-mail: dominik.martini@icloud.com  \nTelefon: +420 606 569 565  \nIČO: 09179755\n\n## Shoptet CRM\n\nAddon detail:  \nhttps://crm.shoptet.cz/admin/sluzby-detail/?id=3107\n\nAPI Partner / addon:  \nhttps://crm.shoptet.cz/admin/sluzby-api/?id=396082&action=addons\n\n---\n\n# Short description – function & benefits\n\nNová placená verze aktuálního doplňku **Hodnocení produktu+**.\n\n- Stávajícím uživatelům původní verze zůstává; bude dostávat patche, opravy a záplaty, ale ne nové funkce.\n- Nová verze stojí **50 Kč / měsíc** a má nastavení přímo v administraci.\n- Upravuje vzhled hodnocení na detailu produktu, v patičce, v postranním panelu a na úvodní stránce.\n- Placená verze má průběžně přinášet další funkce zahrnuté v měsíční ceně.\n\n## Základní chování a nastavení\n\nPo zapnutí doplněk funguje bez nutnosti další konfigurace a sjednocuje vzhled recenzí, které vykresluje Shoptet. V administraci lze nastavovat filtry recenzí, podobu jména hodnotícího, rozložení jednotlivých umístění, barvy a textace.\n\nTestovací scénáře z checklistu pokrývají zejména:\n\n- výchozí stav po instalaci,\n- minimální počet hvězd a minimální délku textu,\n- skrytí recenzí bez textu,\n- varianty zobrazení jména hodnotícího,\n- rozložení detailu produktu, patičky, sidebaru a homepage,\n- minimální počet recenzí k zobrazení,\n- vypnutí úprav pro konkrétní umístění,\n- barvy a textace,\n- klávesnicovou přístupnost,\n- vypnutí / opětovné zapnutí doplňku.\n\n## API / technické informace\n\nDoplněk používá API a podle checklistu volá:\n\n- `POST /action/OAuthServer/token` při otevření nastavení,\n- `GET /action/OAuthServer/resource?method=getBasicEshop` pro ověření identity e-shopu,\n- `GET /action/ApiOAuthServer/getAccessToken` při instalaci a po expiraci API tokenu,\n- `GET https://api.myshoptet.com/api/eshop/design` jednou při instalaci,\n- `GET https://api.myshoptet.com/api/reviews/project?itemsPerPage=1&page=1` jednou při instalaci,\n- `POST https://api.myshoptet.com/api/template-include` po uložení nastavení.\n\nDoplněk neregistruje webhooky a podle checklistu nestahuje data recenzí přes API; recenze renderuje Shoptet a doplněk upravuje jejich vzhled.\n\n## Front-end\n\nFrontend add-on: **Ano**.  \nSpolečný kód je v Shoptet Addons repository; individuální konfigurace se zapisuje přes `template-include`.\n\n## Review poznámka\n\nV test plánu jsou jako nepodporované uvedeny šablony **Celestin, Miranda Joy a Crystal** (doplněk na nich vzhled neupravuje), zatímco v části Front-end code review je zaškrtnuto, že je doplněk kompatibilní se všemi Shoptet šablonami. Prosím ověřit při review.\n\n##",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-726",
+    "externalKey": "CZ3TDR1-726",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-726"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.377Z",
+  "updatedAt": "2026-09-24T06:59:48.750Z",
+  "syncedAt": "2026-09-24T06:59:47.377Z",
+  "enqueuedAt": "2026-09-24T06:59:48.750Z"
+}

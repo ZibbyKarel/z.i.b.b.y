@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-625",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "Make sure review reaches the partner in full and on the right lines",
+  "description": "During one production release it turned out GitHub rejects a large review — it refused comments posted too fast one after another, and the service account got temporarily blocked. Some notes also targeted lines that aren't part of the diff, which brought down the whole submission.\n\nThis task changes how that works: the review is assembled step by step and submitted as a single batch, so the partner gets one notification and the account isn't put at risk. A note that can't be attached to a specific line isn't lost — it moves into the review body along with the original link. And when the partner replies to a comment, the system reliably knows which finding that reply belongs to.\n\nImplemented in [PR #8](https://github.com/shoptet/aidev-apps/pull/8).\n\n**Done when:** a release with fifty or more comments goes through on the first try, the partner gets a single notification, and the account stays unrestricted.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-625",
+    "externalKey": "CZ3TDR1-625",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-625"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.275Z",
+  "updatedAt": "2026-09-24T06:59:47.275Z",
+  "syncedAt": "2026-09-24T06:59:47.275Z"
+}

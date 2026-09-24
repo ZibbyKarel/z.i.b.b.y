@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-709",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check] Design a widget hodnocení obchodu",
+  "description": "### Partner Name\n\nDominik Martini\n\n### Partner Email (Technical Contact)\n\ndominik.martini@icloud.com\n\n### Shoptet CRM Url\n\nhttps://crm.shoptet.cz/admin/sluzby-detail/?id=3104\n\nAPI Partner detail:\nhttps://crm.shoptet.cz/admin/sluzby-api/?id=396082&action=addons\n\n### Salesforce Url\n\nhttps://shoptet.lightning.force.com/lightning/r/Case/500Vk00000vxOIbIAM/view\n\nChecklist case:\nhttps://shoptet.lightning.force.com/lightning/r/Case/500Vk00000yTOhBIAW/view\n\n### Test Project URL\n\nhttps://dmartini.myshoptet.com/\n\n### Addons Repository URL\n\n**[https://github.com/dominikmartini/shop_rating_complete/pull/4/changes](https://github.com/dominikmartini/shop_rating_complete/pull/4/changes)**** **\n\n### New Addon or Modification\n\nModification / nová verzia existujúceho addonu Hodnocení obchodu+\n\n### Brief Addon Description\n\nNová verzia addonu **Hodnocení obchodu+**. Widget zobrazuje hodnotenia obchodu na frontende a ponúka rozšírené nastavenia priamo v administrácii.\n\nPodľa checklistu sa widget po aktivácii zobrazí automaticky v pätičke e-shopu. Merchant môže nastavovať slider/mriežku, autoplay, filtre recenzií, radenie, zobrazované prvky, umiestnenie, farby, responzívne nastavenia a vlastné texty.\n\n### API / Data usage\n\nAddon používa API.\n\nPoužívané endpointy:\n\n- `GET /api/eshop` – pri inštalácii a pravidelnej synchronizácii; jazyk, formát dátumu, časové pásmo, aktívne moduly, pri inštalácii aj fakturačné údaje.\n- `GET /api/eshop/design` – pri inštalácii; zistenie šablóny.\n- `GET /api/sales-channels` – pri viacjazyčných e-shopoch; formát dátumu pre jednotlivé jazyky.\n- `POST /api/webhooks` – pri inštalácii; registrácia webhookov `projectReview:create` a `eshop:design`.\n- `GET /api/reviews/project` – synchronizácia hodnotení; kontrola počtu najviac raz za 30 minút, plná synchronizácia raz týždenne a po webhooku novej recenzie.\n- `GET /api/reviews/settings` – výnimočne; kontrola, či má e-shop hodnotenie obchodu zapnuté.\n- `POST /api/template-include` – po uložení nastavení a po synchronizácii pri zmene recenzií; zapisuje nastavenia a vybrané recenzie ako JS/CSS blok.\n\n###",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-709",
+    "externalKey": "CZ3TDR1-709",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-709"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.355Z",
+  "updatedAt": "2026-09-24T06:59:48.733Z",
+  "syncedAt": "2026-09-24T06:59:47.355Z",
+  "enqueuedAt": "2026-09-24T06:59:48.733Z"
+}

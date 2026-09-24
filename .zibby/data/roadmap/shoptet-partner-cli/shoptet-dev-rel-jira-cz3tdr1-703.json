@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-703",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "A message waiting for approval can outlive the reason we prepared it",
+  "description": "When a round decides something about a finding from an earlier round, it prepares the message to the partner and leaves it for a reviewer to approve. Between preparing and approving, the thing that message says can stop being true — and nothing takes it back.\n\nIt showed up four separate times while building CZ3TDR1-664, and it is one question asked from four sides:\n\n- a later round finds the problem again, so the waiting message \"this looks fixed, we are closing it\" is no longer what we think,\n- the code moves a second time, so the waiting message still names the place the problem has left,\n- the reviewer decides the finding was wrong and drops it, so a waiting reply or reopen is about a remark we no longer make,\n- the reviewer changes their mind back, so a waiting \"we are taking this back\" is about a remark we do still make.\n\n**Where we got to for now.** Three of those four are marked in the triage panel, so the reviewer sees a warning and cancels the message themselves. The fourth — the second move — is not marked at all, and its message keeps pointing at the old place. That asymmetry is not a decision, it is where the work stopped.\n\n**The question this ticket is for: does the tool tidy these up, or does the person?** Marking them and leaving the click to a reviewer is what we have, and it has a real argument behind it — cancelling on its own reaches into a row somebody may be reading at that moment, and the most confrontational things this feature does should not become automatic. Tidying up on its own is more robust, because a warning informs while a cancellation removes.\n\n**It should be answered once, for all four.** Answering it path by path is how four situations turn into three different behaviours, which is the shape of the problem rather than a fix for it. The code is already arranged so the choice is a matter of configuration rather than new logic, whichever way it goes.\n\n**Done when:** all four behave the same way, that way is written down with its reasoning, and the fourth case stops being an omission.\n\nNote on reach: today none of this can reach a partner, because the switch that would let the tool prepare anything at all still ships off. The exposure starts with the release.\n\n**Sequencing note.** If this is decided after the triage panel is deployed, that is the point where a stale withdrawal can reach a partner: the panel becomes the surface where those pending messages can be approved, so an outdated one stops being a harmless record and becomes something a reviewer can send. Worth resolving before the dry-run switch is turned off.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-703",
+    "externalKey": "CZ3TDR1-703",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-703"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "external",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.349Z",
+  "updatedAt": "2026-09-24T06:59:47.349Z",
+  "syncedAt": "2026-09-24T06:59:47.349Z"
+}

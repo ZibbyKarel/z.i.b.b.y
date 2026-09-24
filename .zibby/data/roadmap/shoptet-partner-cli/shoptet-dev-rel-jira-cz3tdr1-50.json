@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-50",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check]: Šablona Alfa",
+  "description": "### Partner Name\n\nREJ media\n\n### Partner Email (Technical Contact)\n\ninfo@rejmedia.com\n\n### Shoptet CRM Url\n\n[https://crm.shoptet.cz/admin/sluzby-detail/?id=2544](https://crm.shoptet.cz/admin/sluzby-detail/?id=2544)\n\n### Salesforce Url\n\n[https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000MxUyHIAV/view](https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000MxUyHIAV/view)\n\n### Test Project URL\n\n[https://alfa.rejmedia.com/](https://alfa.rejmedia.com/)\n\n### Addons Repository URL\n\n[https://github.com/ORejmont/Alfa](https://github.com/ORejmont/Alfa)\n\n### New Addon or Modification\n\nNew\n\n### Brief Addon Description\n\nŠablona\n\n### Information on Data Usage\n\n_No response_\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/27572](https://github.com/shoptet/cms4/issues/27572)_\n_Created on GitHub by @jakublokai on 2025-11-26 09:27 UTC_\n_GitHub assignee: @roman-talas-snowly-code_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-50",
+    "externalKey": "CZ3TDR1-50",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-50"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.303Z",
+  "updatedAt": "2026-09-24T06:59:45.303Z",
+  "syncedAt": "2026-09-24T06:59:45.303Z"
+}

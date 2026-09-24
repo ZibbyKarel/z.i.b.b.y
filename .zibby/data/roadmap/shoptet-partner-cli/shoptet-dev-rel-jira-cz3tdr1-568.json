@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-568",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-618",
+  "name": "PartnerServiceAdd React rewrite: Prehled novinek (Release notes) tab",
+  "description": "## Why?\n\nRelease notes are shown to merchants in the marketplace when an addon updates. One WYSIWYG field per language, sharing the same per-language tab machinery as the Popis tab, so it should follow that task.\n\n## What?\n\nPort `sub/ServiceDetail/ReleaseNotes.tpl` to React, remove the external-tab bridge entry and delete the legacy partial.\n\nFields per CRM language: `language[]` (hidden) and `releaseNotes[]` (WYSIWYG).\n\n## Acceptance Criteria\n\n- Nested language tabs render one WYSIWYG panel per CRM language, reusing the component built for the Popis tab\n- `releaseNotes[]` round-trips content unchanged, including existing HTML\n- Field names in the POST body unchanged; verified against `getUpdatedLanguageFields()`\n- Every `data-testid` from `ReleaseNotes.tpl` preserved verbatim, no hardcoded strings\n- `ReleaseNotes.tpl` deleted and its bridge entry removed\n- `make check-fast`, `make lint`, `make fe-test` green\n\n## Resources\n\n- Legacy: `admin/controllers/templates/sub/ServiceDetail/ReleaseNotes.tpl:11,15`\n- Backend: `admin/controllers/PartnerServiceAddController.php:199-211`\n- Data: `st_crm.services_lng` (`releaseNotes`)",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-568",
+    "externalKey": "CZ3TDR1-568",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-568"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.247Z",
+  "updatedAt": "2026-09-24T06:59:48.667Z",
+  "syncedAt": "2026-09-24T06:59:47.247Z",
+  "enqueuedAt": "2026-09-24T06:59:48.667Z"
+}

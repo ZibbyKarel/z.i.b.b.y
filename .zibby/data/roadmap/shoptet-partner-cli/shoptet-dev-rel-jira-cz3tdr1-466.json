@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-466",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "name": "Add GUID for articles",
+  "description": "# Context\n\n[https://teamdotblue.slack.com/archives/C0A8U4BUFLH/p1781165262200299](https://teamdotblue.slack.com/archives/C0A8U4BUFLH/p1781165262200299)\n\n# Task\n\nAdd GUID for article to the dataLayer or Meta tags in the DOM\n\nIn case of adding to the dataLayer, update the schema.\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/39828](https://github.com/shoptet/cms4/issues/39828)_\n_Created on GitHub by @pavelhusa on 2026-06-11 11:51 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-466",
+    "externalKey": "CZ3TDR1-466",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-466"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:46.820Z",
+  "updatedAt": "2026-09-24T06:59:48.652Z",
+  "syncedAt": "2026-09-24T06:59:46.820Z",
+  "enqueuedAt": "2026-09-24T06:59:48.652Z"
+}

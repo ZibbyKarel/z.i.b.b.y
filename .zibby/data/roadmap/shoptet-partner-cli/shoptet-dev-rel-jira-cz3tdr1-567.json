@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-567",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-618",
+  "name": "PartnerServiceAdd React rewrite: Marketing tab",
+  "description": "## Why?\n\nSmallest tab of the page: six flat text fields, one save path, no per-language repetition and no conditional rendering. Lowest-risk tab to port.\n\n## What?\n\nPort `sub/ServiceDetail/Marketing.tpl` to React, remove the external-tab bridge entry and delete the legacy partial.\n\nFields: `marketingCodes[googleAds]`, `marketingCodes[sklik]`, `marketingCodes[facebookPixel]`, `marketingCodes[googleAdsConversion]`, `marketingCodes[sklikConversion]`, `marketingCodes[facebookPixelConversion]`.\n\n## Acceptance Criteria\n\n- All six fields render with legacy labels, grouping and help texts\n- Values save through `saveMarketingCodes()` with the field names unchanged\n- Every `data-testid` from `Marketing.tpl` preserved verbatim, no hardcoded strings\n- `Marketing.tpl` deleted and its bridge entry removed\n- `make check-fast`, `make lint`, `make fe-test` green\n\n## Resources\n\n- Legacy: `admin/controllers/templates/sub/ServiceDetail/Marketing.tpl:7,13,19,33,39,45`\n- Backend: `admin/controllers/PartnerServiceAddController.php:1026` (`saveMarketingCodes()`)\n- Data: `st_crm.services_marketing_codes`",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-567",
+    "externalKey": "CZ3TDR1-567",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-567"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.246Z",
+  "updatedAt": "2026-09-24T06:59:48.666Z",
+  "syncedAt": "2026-09-24T06:59:47.246Z",
+  "enqueuedAt": "2026-09-24T06:59:48.666Z"
+}

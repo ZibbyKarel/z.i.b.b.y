@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-561",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-618",
+  "name": "PartnerServiceAdd React rewrite: Popis (Description) tab",
+  "description": "## Why?\n\nThe Popis tab holds all merchant-facing addon copy shown in the marketplace. It is the most content-heavy tab: every field repeats per CRM language inside nested language tabs, and three of them are WYSIWYG editors.\n\n## What?\n\nPort `sub/ServiceDetail/Descriptions.tpl` to React inside the page shell, remove its external-tab bridge entry and delete the legacy partial. Keep the nested per-language tab structure and the per-language field naming.\n\nFields, all keyed by language code: `language[]` (hidden), `title[]` (required, disabled when `orderable`), the read-only marketplace URL static field, `urlIndexName[]`, `addonInformationUrl[]`, `partnerPriceList[]`, `privacyProtectionInformationUrl[]`, `termsAndConditionsUrl[]`, `benefits[]` (WYSIWYG, small, absolute URLs), `shortDescription[]` (textarea with character counter capped at `Addon::CONTENT_SHORT_DESC_MAX_LENGTH`), `description[]` (WYSIWYG).\n\n## Acceptance Criteria\n\n- Nested language tabs render one panel per CRM language with the legacy anchor scheme\n- All 11 fields present per language with legacy labels, required and disabled rules preserved\n- Both WYSIWYG editors work, including the absolute-URL behaviour on `benefits[]`\n- `shortDescription[]` character counter enforces `Addon::CONTENT_SHORT_DESC_MAX_LENGTH` and matches the legacy counter UI\n- Server round-trip verified against `getUpdatedLanguageFields()` and `getRequiredFields()`; field names in the POST body unchanged\n- Every `data-testid` from `Descriptions.tpl` preserved verbatim, no hardcoded strings\n- `Descriptions.tpl` deleted and its bridge entry removed\n- `make check-fast`, `make lint`, `make fe-test` green\n\n## Resources\n\n- Legacy: `admin/controllers/templates/sub/ServiceDetail/Descriptions.tpl`, `admin/controllers/PartnerServiceAddController.php:157-180,199-211,396-410`\n- `cms/packages/Crm/Helper/Addon.php` (`CONTENT_SHORT_DESC_MAX_LENGTH`)\n- Data: `st_crm.services_lng`",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-561",
+    "externalKey": "CZ3TDR1-561",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-561"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "external",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.243Z",
+  "updatedAt": "2026-09-24T06:59:47.243Z",
+  "syncedAt": "2026-09-24T06:59:47.243Z"
+}

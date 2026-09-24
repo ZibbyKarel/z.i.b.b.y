@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-602",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "Shared table pattern: filtering, sorting, bulk actions",
+  "description": "One reusable pattern for all lists/tables instead of per-page one-offs.\n\nShared components (filter bar, column sort, multi-select + bulk action bar)\n\nApply to inbox + history\n\nBulk actions in comment triage on PR detail (e.g. \"Keep all\")\n\nApply to Admin → Partners\n\nApply to Admin → Repos",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-602",
+    "externalKey": "CZ3TDR1-602",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-602"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "external",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.257Z",
+  "updatedAt": "2026-09-24T06:59:47.257Z",
+  "syncedAt": "2026-09-24T06:59:47.257Z"
+}

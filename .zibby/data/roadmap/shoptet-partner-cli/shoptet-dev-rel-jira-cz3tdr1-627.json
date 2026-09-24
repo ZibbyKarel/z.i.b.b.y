@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-627",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "Give the partner-facing release comment a proper letter, not an AI headline",
+  "description": "Until now, the comment a partner sees when we release their PR led with a one-line AI headline — a sentence Claude wrote on the spot, never something Product signed off on as partner communication.\n\nThis replaces that with an actual letter, written in Czech and built the same deterministic way every time: greet the partner by name, list only the blockers with their exact spot in the code, and roll any recommendations into at most three general topics — no counts. If the AI flagged something of its own beyond our rules, that gets a separate note marked as non-binding, phrased consistently with the rest of the letter. Because the letter is generated from the same set of comments we actually decided to send, it can never mention a finding a reviewer already discarded.\n\nTurned out to need substantially more hardening than expected, across several review rounds:\n\n- A crafted addon could talk its way out of the blocking section by relabeling its own real problem as a harmless remark, or get a genuinely rule-breaking finding waved through auto-release under that same mislabel. Both are closed — a finding that matches one of our rules can no longer dodge review just because the model also called it non-binding.\n- The letter could be made to cut off or garble what it tells the partner (numbered lists, abbreviations, code fences swallowing the rest of the message) — fixed.\n- An addon could get the bot to post a live link or forge a fake heading under our identity, by hiding markdown syntax inside a finding's text, a dependency name, or a quoted console error. All partner-facing text is now escaped consistently, everywhere it's rendered.\n- The letter could claim nothing blocks release right next to a real dependency risk it names in the same message — fixed, along with the supply-chain section silently not appearing at all for older PRs that predate a later data migration.\n- An unusually long letter could silently fail to post (GitHub's size limit); we now get warned before that happens instead of after.\n\nImplemented in [PR #11](https://github.com/shoptet/aidev-apps/pull/11), merged 2026-09-07.\n\n**Done:** a partner's release comment reads as one coherent letter — addressed to them, blockers up front, never mentioning a dropped finding, never talked into hiding a real one or inventing a location, and safe against being used to post a forged link or heading under our identity.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-627",
+    "externalKey": "CZ3TDR1-627",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-627"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.277Z",
+  "updatedAt": "2026-09-24T06:59:47.277Z",
+  "syncedAt": "2026-09-24T06:59:47.277Z"
+}

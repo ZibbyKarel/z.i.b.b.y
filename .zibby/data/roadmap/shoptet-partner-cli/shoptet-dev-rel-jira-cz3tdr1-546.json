@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-546",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-543",
+  "name": "Feasibility: Partner program — Tiering",
+  "description": "Owner per PRD: Partnership team. The new 2026 tiering structure is to be implemented in the Partner Portal and launch together with it.\n\nh2. Scope in PRD\n\n- Onboarding guide for the program and conditions for each level\n- Online test with immediate scoring\n- Final approval by a Shoptet manager\n- Progress bar — level progress indicator\n- Meeting booking with partner manager from Silver level; lower levels see contact details only\n- Online contract signing (DocuSign) — used for all signing: NDA, onboarding, add-on contracts. Confirmed as MVP scope (OQ-06)\n\nh2. To analyse\n\n- Where tier state and tier criteria live, and what data feeds level progress\n- Test engine: build vs. buy; scoring and storage of results\n- DocuSign integration — licensing, API, envelope templates, storage of signed documents\n- Meeting booking — Office 365 / Outlook calendar integration feasibility\n- Dependency on User management and Partner profile\n\nh2. Resources\n\n- Tiering — Miro: https://miro.com/app/board/uXjVLyXOTg8=/?share_link_id=64078324013\n- Tiering — Asana: https://app.asana.com/1/413336835149603/project/1213490525117294/task/1212069914555344\n\nh2. Output\n\nSystems involved, integration gaps, T-shirt size, blockers, MVP / later / out-of-scope recommendation.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-546",
+    "externalKey": "CZ3TDR1-546",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-546"
+  },
+  "externalLevel": "Analysis",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.240Z",
+  "updatedAt": "2026-09-24T06:59:48.655Z",
+  "syncedAt": "2026-09-24T06:59:47.240Z",
+  "enqueuedAt": "2026-09-24T06:59:48.655Z"
+}

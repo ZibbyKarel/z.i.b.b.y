@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-188",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check]: Warranty Plus",
+  "description": "### Partner Name\n\nWarranty Plus s.r.o.\n\n### Partner Email (Technical Contact)\n\ninfo@warrantyplus.eu, marek.krivan@gmail.com\n\n### Shoptet CRM Url\n\n[https://crm.shoptet.cz/admin/sluzby-detail/?id=2484](https://crm.shoptet.cz/admin/sluzby-detail/?id=2484)\n\n### Salesforce Url\n\n[https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000RSwrBIAT/view](https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000RSwrBIAT/view)\n\n### Test Project URL\n\n[https://hrtest.myshoptet.com/](https://hrtest.myshoptet.com/)\n\n### Addons Repository URL\n\nnení\n\n### New Addon or Modification\n\nNew\n\n### Brief Addon Description\n\nAhoj, prosím o kontrolu doplňku:\n\n- Doplněk poskytuje online prodloužení zákonné záruky na veškeré elektro zboží a hobby nářadí.\n- Addons repository jsme řešili s Markem Křivanem v mailech - je potřeba dokončit, ale nevím teď, v jaké to skončilo fázi.\n\n### Information on Data Usage\n\nDle smlouvy - zpracovává data e-shopařů a koncových zákazníků:\n\n- Kontaktní údaje\n- Data o objednaných produktech\n- Informace z objednávek zákazníků\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/20093](https://github.com/shoptet/cms4/issues/20093)_\n_Created on GitHub by @hrabcova on 2025-06-30 07:19 UTC_\n_GitHub assignee: @pavelhusa_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-188",
+    "externalKey": "CZ3TDR1-188",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-188"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.311Z",
+  "updatedAt": "2026-09-24T06:59:45.311Z",
+  "syncedAt": "2026-09-24T06:59:45.311Z"
+}

@@ -1,0 +1,24 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-5",
+  "projectId": "shoptet-partner-cli",
+  "level": "epic",
+  "name": "Developers portal content revision",
+  "description": "> [!NOTE]\n> Jira: [https://shoptet.atlassian.net/browse/FRONTEND-1643](https://shoptet.atlassian.net/browse/FRONTEND-1643)\n\nWe provide information to our Partners on our portal [https://developers.shoptet.com/](https://developers.shoptet.com/). This site consists of updated posts (like a blog post) and articles that are not always up-to-date. Another minor flaw is an outdated design that doesn’t resemble modern documentation/developers portals.\n\nThis initiative aims to raise these topics and, hopefully, outcome with a better Shoptet Developers portal.\n\nThe perspective solution for the new Developers portal is [https://docusaurus.io/that](https://docusaurus.io/that) we used previously for Sofa and now for Addon Repository documentation [https://addon-repository-github-app.vercel.app/](https://addon-repository-github-app.vercel.app/).\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/9298](https://github.com/shoptet/cms4/issues/9298)_\n_Created on GitHub by @bradacova on 2024-11-18 12:22 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-5",
+    "externalKey": "CZ3TDR1-5",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-5"
+  },
+  "externalLevel": "Epic",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:44.428Z",
+  "updatedAt": "2026-09-24T06:59:44.428Z",
+  "syncedAt": "2026-09-24T06:59:44.428Z"
+}

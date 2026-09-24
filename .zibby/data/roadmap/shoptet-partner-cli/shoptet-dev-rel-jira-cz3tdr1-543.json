@@ -1,0 +1,24 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-543",
+  "projectId": "shoptet-partner-cli",
+  "level": "epic",
+  "name": "Partner Portal feasibility analysis",
+  "description": "h1. Why?\n\nThe Partner Portal PRD (Tier 1 for 2026) defines the full intended scope of a unified space for all Shoptet partner types. Before any delivery scope can be committed, we need to know what is technically feasible, at what cost, and in what order.\n\nThe PRD flags feasibility as its top risk: _\"Integration with existing CRM and Salesforce — risk of delays and technical obstacles. Mitigation: verify feasibility ASAP.\"_ Two more red risks (data quality in migration, DevRel team capacity) and four red open questions (OQ-04, OQ-18, OQ-19, OQ-20) cannot be closed without this analysis. OQ-20 (WordPress: retain or replace) explicitly blocks the overall architecture.\n\nToday the partner data and processes are fragmented across Salesforce, internal CRM, 3 WordPress instances (CZ/SK/HU) and SharePoint, with much of the administration handled manually over email. Partners and add-ons account for at least 14% of company profit and 1.3M MRR (September 2025), and ~20% of API team capacity goes to partner support.\n\nh1. What?\n\nOne analysis child issue per key feature area from the PRD, plus one cross-cutting integration & architecture analysis. Each child answers the same questions for its area:\n\n- Which existing systems hold the data (Salesforce, internal CRM/CMS, WordPress, Keboola) and which of them must be read from vs. written to?\n- Is the needed integration/API available today, does it need extending, or is it missing entirely?\n- Rough effort size (T-shirt) and the main technical unknowns.\n- Blockers and dependencies on other feature areas or on other teams.\n- Recommendation: MVP candidate / later phase / out of scope.\n\nDeliberately _not_ in scope of this epic: UX/design work, final delivery estimates, sprint planning, and any implementation. This is a decision input, not a commitment.\n\nh1. Acceptance criteria\n\nEvery child analysis issue is completed with the five questions above answered\n\nCross-cutting integration analysis states who owns master data for portal ↔ CRM ↔ Salesforce (OQ-19)\n\nWordPress retain-vs-replace recommendation is documented (OQ-20)\n\nData migration scope from 3 WP instances is assessed (OQ-04)\n\nEach feature area has a T-shirt size and an MVP / later / out-of-scope recommendation\n\nConsolidated summary is reviewed with DevRel, API, Addons and Partnership teams\n\nResult feeds the MVP scope decision for 2026 planning\n\nh1. Resources\n\n- Partner Portal PRD (Slab) — source document for this epic\n- Asana project: https://app.asana.com/1/413336835149603/project/1208392338617942\n- Tiering — Miro: https://miro.com/app/board/uXjVLyXOTg8=/?share_link_id=64078324013\n- Tiering — Asana: https://app.asana.com/1/413336835149603/project/1213490525117294/task/1212069914555344",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-543",
+    "externalKey": "CZ3TDR1-543",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-543"
+  },
+  "externalLevel": "Epic",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.239Z",
+  "updatedAt": "2026-09-24T06:59:47.239Z",
+  "syncedAt": "2026-09-24T06:59:47.239Z"
+}

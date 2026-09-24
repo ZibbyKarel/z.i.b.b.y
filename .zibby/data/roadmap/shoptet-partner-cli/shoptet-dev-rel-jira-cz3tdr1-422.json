@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-422",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check]: Varianty jako samostatné produkty",
+  "description": "### Partner Name\n\nJakub Turský\n\n### Partner Email (Technical Contact)\n\njakubtursky769@gmail.com\n\n### Shoptet CRM Url\n\n[https://crm.shoptet.cz/admin/sluzby-detail/?id=2571](https://crm.shoptet.cz/admin/sluzby-detail/?id=2571)\n\n### Salesforce Url\n\n[https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000GGJYiIAP/view?ws=%2Flightning%2Fr%2FCase%2F500P400000YUnxPIAT%2Fview](https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000GGJYiIAP/view?ws=%2Flightning%2Fr%2FCase%2F500P400000YUnxPIAT%2Fview)\n\n### Test Project URL\n\n[https://apollo.jakubtursky.sk](https://apollo.jakubtursky.sk/)\n\n### Addons Repository URL\n\n[https://www.github.com/jakubtursky/shoptet-product-variant-links/](https://www.github.com/jakubtursky/shoptet-product-variant-links/)\n\n### New Addon or Modification\n\nNew\n\n### Brief Addon Description\n\nAhoj, prosím o kontrolu doplnku. Viac info v CRM.\n\n### Information on Data Usage\n\n_No response_\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/23527](https://github.com/shoptet/cms4/issues/23527)_\n_Created on GitHub by @jakublokai on 2025-09-05 10:22 UTC_\n_GitHub assignee: @roman-talas-snowly-code_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-422",
+    "externalKey": "CZ3TDR1-422",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-422"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:46.815Z",
+  "updatedAt": "2026-09-24T06:59:46.815Z",
+  "syncedAt": "2026-09-24T06:59:46.815Z"
+}

@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-153",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check]: Rozšířená realita u produktů",
+  "description": "### Partner Name\n\nWebotvůrci\n\n### Partner Email (Technical Contact)\n\njsme@webotvurci.cz\n\n### Shoptet CRM Url\n\n[https://crm.shoptet.cz/admin/sluzby-detail/?id=2436](https://crm.shoptet.cz/admin/sluzby-detail/?id=2436)\n\n### Salesforce Url\n\n[https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000K8322IAB/view](https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000K8322IAB/view)\n\n### Test Project URL\n\n[https://hrtest.myshoptet.com/](https://hrtest.myshoptet.com/)\n\n### Addons Repository URL\n\n[https://github.com/Webotvurci-s-r-o/ar-product-viewer/pull/1](https://github.com/Webotvurci-s-r-o/ar-product-viewer/pull/1)\n\n### New Addon or Modification\n\nNew\n\n### Brief Addon Description\n\nAhoj, prosím o kontrolu doplňku Rozšířená realita u produktů:\n\n- Doplněk umožňuje snadné nahrávání a správu 3D modelů produktů, zobrazení produktů ve 3D přímo v telefonu - více viz popis v CRM\n- Checklist: [https://shoptet.file.force.com/servlet/servlet.FileDownload?file=00PP400000TD0eEMAT&operationContext=S1](https://shoptet.file.force.com/servlet/servlet.FileDownload?file=00PP400000TD0eEMAT&operationContext=S1)\n\n### Information on Data Usage\n\nKontaktní údaje e-shopařů a koncových zákazníků\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/20938](https://github.com/shoptet/cms4/issues/20938)_\n_Created on GitHub by @hrabcova on 2025-07-11 07:55 UTC_\n_GitHub assignee: @pavelhusa_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-153",
+    "externalKey": "CZ3TDR1-153",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-153"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.308Z",
+  "updatedAt": "2026-09-24T06:59:45.308Z",
+  "syncedAt": "2026-09-24T06:59:45.308Z"
+}

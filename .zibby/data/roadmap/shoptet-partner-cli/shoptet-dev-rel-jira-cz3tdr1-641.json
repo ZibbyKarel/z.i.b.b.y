@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-641",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-613",
+  "name": "[Portal] Login screen (UI)",
+  "description": "**Why?**\nThe mechanical login helper already exists and is described in `004-auth-wiring.md`; what's missing is the Partner Portal's own login screen. This issue is the front-end screen only — not new authentication logic.\n\n**What?**\nBuild `/partner-portal/login` per Figma ([node 22:71](https://www.figma.com/design/uyNyEpBk6MYXqjXprmXftl/Partner-Portal?node-id=22-71)), frames \"Login page - default\" and \"Login page - error messages\". The design explicitly calls for reusing existing Shoptet login components/variants/colors verbatim — no new design-system work.\n\n**Acceptance Criteria**\n\n- [ ] Page renders per Figma default (164:711) and error-message (168:697) frames, using existing Shoptet login components\n- [ ] Successful login redirects to the Partner Portal home\n- [ ] Failed login shows the standard error alert\n- [ ] Wired to the existing `AdminUserHelper::getCrmAdminUserByCredentials` (`cms/packages/Profiles/Helper/AdminUserHelper.php:300`) — no new auth logic\n- [ ] Login is rate-limited per existing CMS4 pattern\n- [ ] `make fe-test` covers rendering + both states\n\n**Resources**\n\n- Figma: https://www.figma.com/design/uyNyEpBk6MYXqjXprmXftl/Partner-Portal?node-id=22-71&m=dev\n- Backend wiring: `Partner_Portal/issues/03-user-management/004-auth-wiring.md`",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-641",
+    "externalKey": "CZ3TDR1-641",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-641"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.290Z",
+  "updatedAt": "2026-09-24T06:59:48.696Z",
+  "syncedAt": "2026-09-24T06:59:47.290Z",
+  "enqueuedAt": "2026-09-24T06:59:48.696Z"
+}

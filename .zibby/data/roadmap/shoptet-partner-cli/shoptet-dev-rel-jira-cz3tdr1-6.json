@@ -1,0 +1,24 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-6",
+  "projectId": "shoptet-partner-cli",
+  "level": "epic",
+  "name": "Developers Portal implementation & launch",
+  "description": "# Context\n\nThis epic follows / overlaps content revision: #9298 \n\nWe internall announced that in Q1 we want to launch the new DevPortal.\n\n# Task list (this will be transformed into single tasks)\n\n- ☑ #10509 \n- ☑ #10510\n- ☑ Init user testing and incorporate the feedback\n- ☐ Connect with API (redocly) documentation\n- ☑ Coordinate launch shoptet.dev (cancel the redirect) announcment and celebration 🎉\n- ☑ Implement FE and API news with RSS feed\n- ☑ Create Slab handout for creating new content (FE, API news) or editing the current\n\n# DoD\n\n> [!NOTE]\n> WIP\n\nWe have a new designed Developers portal on [https://shoptet.dev](https://shoptet.dev/) with revised content. There is an established feedback loop, that enables the user indicates whether the page is useful or not and suggest a change.\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/10333](https://github.com/shoptet/cms4/issues/10333)_\n_Created on GitHub by @pavelhusa on 2024-12-09 12:58 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-6",
+    "externalKey": "CZ3TDR1-6",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-6"
+  },
+  "externalLevel": "Epic",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:44.430Z",
+  "updatedAt": "2026-09-24T06:59:44.430Z",
+  "syncedAt": "2026-09-24T06:59:44.430Z"
+}

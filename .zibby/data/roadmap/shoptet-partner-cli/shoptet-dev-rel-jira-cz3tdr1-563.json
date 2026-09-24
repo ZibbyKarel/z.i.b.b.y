@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-563",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-618",
+  "name": "PartnerServiceAdd React rewrite: Endpointy (Endpoints) tab",
+  "description": "## Why?\n\nThe Endpoints tab controls what API data an addon may read and write. It is the security-relevant tab of the page: wrong access checkboxes mean an addon gets rights it was never granted. It also pulls in two separate modal controllers.\n\n## What?\n\nPort `sub/ServiceDetail/Endpoints.tpl` and `sub/ServiceDetail/EndpointAccess.tpl` to React, remove the external-tab bridge entry and delete the legacy partials.\n\nCovers the endpoint-group table with `endpointAccess[groupId][]` read/write checkboxes, the delete actions `?action=deleteEndpoint&groupId=&apiServiceId=` and `?action=deleteEndpointModification`, and the two modals opened from this tab: `PartnerServiceEndpoints` (endpoint-group detail) and `PartnerServiceEndPointModify` (access change request).\n\n## Acceptance Criteria\n\n- Endpoint-group table renders with correct read/write state per group, including pending modification rows\n- `endpointAccess[groupId][]` values `read` and `write` post unchanged\n- `deleteEndpoint` and `deleteEndpointModification` work with the legacy confirmation and redirect\n- Both modals open and submit correctly; their controllers are not modified beyond what the Inertia bridge requires\n- Rights resolution matches the legacy page for a service with granted, requested and revoked groups\n- Every `data-testid` from `Endpoints.tpl` and `EndpointAccess.tpl` preserved verbatim, no hardcoded strings\n- Legacy partials deleted and bridge entry removed\n- `make check-fast`, `make lint`, `make fe-test` green\n\n## Resources\n\n- Legacy: `admin/controllers/templates/sub/ServiceDetail/Endpoints.tpl:33,38,97,134,139,143`, `sub/ServiceDetail/EndpointAccess.tpl`\n- Backend: `admin/controllers/PartnerServiceAddController.php:931,943`, `admin/controllers/PartnerServiceEndpointsController.php`, `admin/controllers/PartnerServiceEndPointModifyController.php`\n- `cms/packages/Api/Framework/Rights/RightsRepository.php`, `cms/packages/Miscellaneous/Helper/Partners.php`\n- Data: `st_api.endpoint`, `st_api.endpoint_group`, `st_api.service_endpoint_group`, `st_api.service_endpoint_group_modify`",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-563",
+    "externalKey": "CZ3TDR1-563",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-563"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "external",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.244Z",
+  "updatedAt": "2026-09-24T06:59:47.244Z",
+  "syncedAt": "2026-09-24T06:59:47.244Z"
+}

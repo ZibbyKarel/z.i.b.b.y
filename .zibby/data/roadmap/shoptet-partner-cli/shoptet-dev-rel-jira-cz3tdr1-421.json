@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-421",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check new PR]: Tisk cenové nabídky",
+  "description": "There is a bigger modification in the addon [https://github.com/shoptet/cms4/issues/13290](https://github.com/shoptet/cms4/issues/13290)\n\nPR is attached:\n[https://github.com/SP444C3/shoptet-priceoffer-addon](https://github.com/SP444C3/shoptet-priceoffer-addon)\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/30037](https://github.com/shoptet/cms4/issues/30037)_\n_Created on GitHub by @pavelhusa on 2026-01-23 09:01 UTC_\n_GitHub assignee: @pavelkunes_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-421",
+    "externalKey": "CZ3TDR1-421",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-421"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:46.814Z",
+  "updatedAt": "2026-09-24T06:59:46.814Z",
+  "syncedAt": "2026-09-24T06:59:46.814Z"
+}

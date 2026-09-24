@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-553",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-543",
+  "name": "Feasibility: Communication and support",
+  "description": "The portal should replace the partner Facebook group — explicitly not the Poradna.\n\nh2. Scope in PRD\n\n- Channel for a partner to report a current issue or open a discussion topic\n- AI chatbot able to answer basic questions and navigate partners around the portal\n- Terms and conditions\n- Educational documentation / webinars\n- Sign-up for beta testing\n\nh2. To analyse\n\n- Discussion/community functionality — build vs. integrate an existing tool\n- Issue reporting — route into an existing ticketing system or build in-portal\n- AI chatbot — knowledge source (docs, API docs), tooling, hosting, content freshness\n- Where educational content is authored and stored\n- Relation to the metric \"reduction in time to resolve technical queries\"\n\nh2. Output\n\nSystems involved, integration gaps, T-shirt size, blockers, MVP / later / out-of-scope recommendation.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-553",
+    "externalKey": "CZ3TDR1-553",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-553"
+  },
+  "externalLevel": "Analysis",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.242Z",
+  "updatedAt": "2026-09-24T06:59:48.662Z",
+  "syncedAt": "2026-09-24T06:59:47.242Z",
+  "enqueuedAt": "2026-09-24T06:59:48.662Z"
+}

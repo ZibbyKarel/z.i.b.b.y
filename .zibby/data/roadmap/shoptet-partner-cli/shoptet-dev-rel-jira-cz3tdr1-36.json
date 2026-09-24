@@ -1,0 +1,32 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-36",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check]: Agregátor produktových recenzií, Súhrnné recenzie produktov",
+  "description": "### Partner Name\n\nJakub Grác\n\n### Partner Email (Technical Contact)\n\ngrac.jakub@jg-media.eu\n\n### Shoptet CRM Url\n\n[https://crm.shoptet.cz/admin/sluzby-detail/?id=2909](https://crm.shoptet.cz/admin/sluzby-detail/?id=2909)\n\n### Salesforce Url\n\n[https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400001aNLJcIAO/view?ws=%2Flightning%2Fr%2FCase%2F500P400000lw9hWIAQ%2Fview](https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400001aNLJcIAO/view?ws=%2Flightning%2Fr%2FCase%2F500P400000lw9hWIAQ%2Fview)\n\n### Test Project URL\n\n[https://736509.myshoptet.com/](https://736509.myshoptet.com/), [https://jg-media.myshoptet.com/hodnotenia-produktov-vyber/](https://jg-media.myshoptet.com/hodnotenia-produktov-vyber/), [https://jg-media.myshoptet.com/hodnotenia-produktov-wall/](https://jg-media.myshoptet.com/hodnotenia-produktov-wall/)\n\n### Addons Repository URL\n\n[https://github.com/JakubGrac/Recenzie-produktov-pre-Shoptet](https://github.com/JakubGrac/Recenzie-produktov-pre-Shoptet)\n\n### New Addon or Modification\n\nNew\n\n### Brief Addon Description\n\nAddon na Produktové recenzie\nDoplnok dáta len číta, nemá právo na zápis a zmeny\n\n### Information on Data Usage\n\nPOST /action/ApiOAuthServer/getAccessToken pre inštaláciu a výmenu kódu za bearer token\nGET /action/ApiOAuthServer/getAccessToken pre obnovu access tokenu\nGET /api/eshop pre info o eshope\nGET /api/reviews/products pre získanie recenzií produktov\nGET /api/products pre získanie info o produktoch pre url, obrázok, popis\n\ntest project 736509.myshoptet.com\n\nadditional info:\n\n- zobrazí všetky recenzie produktov vrátane záložiek s kategóriami a stránkovaním\n  do divu je možné pridať atribúty\n  data-count=\"X\" pre zobrazenie len vybraného počtu recenzií\n  data-order=\"random\" pre zobrazenie náhodného výberu a poradia\n  data-category=\"kategoria, druha-kategoria\" pre zobrazenie recenzií z konkrétnych kategórií, používa sa slug z\n  url\n  data-product=\"url-na-produkt, dalsi-produkt\" pre recenzie vybraných produktov, používa sa slug z url, koncová\n  časť url\n  <!-- Náhodný výber 8 recenzií, napr. do popisu kategórie, bez stránkovania -->\n\n<!-- Filter podľa kategórie -->\n\n<!-- Filter podľa jedného produktu -->\nalebo \n<!-- Filter podľa viacerých produktov — lomky sú voliteľné -->\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/40340](https://github.com/shoptet/cms4/issues/40340)_\n_Created on GitHub by @jakublokai on 2026-06-19 10:22 UTC_\n_GitHub assignee: @roman-talas-snowly-code_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-36",
+    "externalKey": "CZ3TDR1-36",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-36"
+  },
+  "externalLevel": "Task",
+  "attachmentSetId": "set_muf6m64c_fe2d8cd0",
+  "attachments": [
+    {
+      "name": "0cf02a2c1da59724.png",
+      "size": 249917,
+      "mediaType": "image/png"
+    }
+  ],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:44.895Z",
+  "updatedAt": "2026-09-24T06:59:44.895Z",
+  "syncedAt": "2026-09-24T06:59:44.895Z"
+}

@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-571",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-618",
+  "name": "PartnerServiceAdd React rewrite: cutover verification and legacy cleanup",
+  "description": "## Why?\n\nBecause the rewrite lands tab by tab, the page runs in a mixed state for the whole epic: React tabs alongside external-tab links into the legacy page. This task closes that state, removes the bridge and deletes what is left of the Smarty family, so the migration does not leave a permanent hybrid behind.\n\n## What?\n\nRun the final verification and cleanup once all tab tasks are closed. Remove the external-tab bridge, delete the remaining legacy templates, and finish the rewrite record.\n\nDeletion must respect shared consumers: `sub/ServiceDetail/ServiceDetailTabs.tpl` is also consumed by `PartnerServiceRatings.tpl` and `PartnerServiceShippingServiceDetail.tpl`, and a same-named twin exists at `crm/admin/controllers/templates/sub/ServiceDetail/ServiceDetailTabs.tpl` which must not be touched. `PartnerServiceController` is an abstract base with 10 children and must not be modified for the benefit of this page alone.\n\n## Acceptance Criteria\n\n- No external-tab bridge entries remain; every tab renders natively in React\n- `/st-tpl-to-react-check` passes with no unresolved parity rows\n- `admin/controllers/templates/PartnerServiceAdd.tpl` deleted, and every `sub/ServiceDetail/` partial whose last consumer was this page deleted\n- `ServiceDetailTabs.tpl` only deleted if no live page still consumes it; the CRM twin under `crm/admin/` untouched\n- `PartnerServiceController` (abstract base) unmodified\n- Modal controllers still reachable and working: `PartnerServiceSubmit`, `PartnerServiceInstall`, `PartnerServiceEndpoints`, `PartnerServiceEndPointModify`, `PartnerServiceShippingServiceDetail`\n- `saveAndExit` still redirects to `ApiPartner`\n- Rewrite record `docs/tpl-to-react/rewrites/PartnerServiceAdd.md` complete; learning rule files added under `docs/tpl-to-react/check-learnings/`\n- Manual pass on the dev shop across create, edit, a shipping service and a service with `enableHtmlInclude`\n- `make check-fast`, `make lint`, `make fe-test`, `make fe-build-admin` green\n\n## Resources\n\n- Skill `/st-tpl-to-react` Phase 7, `/st-tpl-to-react-check`, `docs/tpl-to-react/qa-strategy.md`, `docs/tpl-to-react/pr-template.md`\n- `docs/tpl-to-react/coupling-snapshot.md:76,95,261,311`\n- `cms/packages/Inertia/InertiaControllers.php`\n- Backend: `admin/controllers/PartnerServiceAddController.php:606-607` (`saveAndExit` redirect)",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-571",
+    "externalKey": "CZ3TDR1-571",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-571"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.248Z",
+  "updatedAt": "2026-09-24T06:59:48.670Z",
+  "syncedAt": "2026-09-24T06:59:47.248Z",
+  "enqueuedAt": "2026-09-24T06:59:48.670Z"
+}

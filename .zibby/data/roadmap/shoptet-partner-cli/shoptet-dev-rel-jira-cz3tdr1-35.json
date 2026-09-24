@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-35",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check]: Šablona orion",
+  "description": "### Partner Name\n\ntechka (tomáš hlad)\n\n### Partner Email (Technical Contact)\n\ninfo@tomashlad.eu\n\n### Shoptet CRM Url\n\n[https://crm.shoptet.cz/admin/sluzby-detail/?id=2062](https://crm.shoptet.cz/admin/sluzby-detail/?id=2062)\n\n### Salesforce Url\n\n[https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000II2FiIAL/view?ws=%2Flightning%2Fr%2FCase%2F500P400000m1Fz3IAE%2Fview](https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000II2FiIAL/view?ws=%2Flightning%2Fr%2FCase%2F500P400000m1Fz3IAE%2Fview)\n\n### Test Project URL\n\n_No response_\n\n### Addons Repository URL\n\n([https://github.com/techka-sro/orion-template](https://github.com/techka-sro/orion-template))\n\n### New Addon or Modification\n\nNew\n\n### Brief Addon Description\n\nGrafická šablona pro e-shopy s velkým množstvím kategorií\nDesign pro široký výběr produktů se zaměřením na hobby\nUX přizpůsobené pro snadné prohlížení a orientaci v e-shopu\nVlastní administrace pro snadnější nastavení vlastních funkcí\nJednoduché nastavení vycházející ze šablony Shoptet Classic\nExklusivní funkce \"[Produkt na poptávku](https://github.com/orgs/shoptet/projects/76/views/12#produkt-na-poptavku)\"\n\n### Information on Data Usage\n\n_No response_\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/39628](https://github.com/shoptet/cms4/issues/39628)_\n_Created on GitHub by @jakublokai on 2026-06-09 12:33 UTC_\n_GitHub assignee: @roman-talas-snowly-code_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-35",
+    "externalKey": "CZ3TDR1-35",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-35"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "external",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:44.439Z",
+  "updatedAt": "2026-09-24T06:59:44.439Z",
+  "syncedAt": "2026-09-24T06:59:44.439Z"
+}

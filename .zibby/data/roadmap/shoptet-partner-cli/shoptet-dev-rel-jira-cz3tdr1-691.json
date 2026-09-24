@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-691",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "name": "useForm doesn't expose its leave-prompt guard — pages keep reinventing it for custom navigates",
+  "description": "useForm.ts's built-in leavePrompt guard is opaque: it's driven by an internal showLeavePrompt ref the page has no access to. Any page that needs to clear (or arm) that guard synchronously around a custom navigate — a mixed-outcome redirect, a publish handoff, anything that isn't a plain successful submit — has to disable it entirely (leavePrompt: false) and hand-roll its own ref + useLeavePrompt call instead.\n\n**Two pages have already, independently, reinvented this exact workaround:**\n\n- `admin/react/src/Core/pages/PartnerServiceAdd/components/useMixedOutcomeRedirect.ts` — owns its own ref to follow a mixed-outcome save's redirect and clear the guard synchronously before useForm's own success handler runs. Needed an extra bug-fix round mid-review to get the success-path clear wired correctly too (see PR).\n- `admin/react/src/AiRnd/pages/CopyWriterDetail/CopyWriterDetailEdit.tsx` — its own comment: \"Mirrors useForm's built-in leave prompt (disabled above) because the publish handoff must clear the guard synchronously before navigate(), and useForm does not expose its internal prompt ref.\"\n\nSame root cause, same hand-rolled shape, each implementation has to independently get the synchronous-clear-before-navigate timing right — a subtle detail that's easy to get wrong even once, let alone twice. Worth a shared primitive (e.g. useForm returning/accepting a controllable guard ref, or an onSuccess/onError wrapper that exposes the clear) before a third page copies the pattern.\n\n_Not urgent — no known live bug from the duplication today. This is a maintainability/DRY flag for whenever useForm.ts next gets touched, or for the next page that needs this pattern._\n\nRaised during code review on , PR",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-691",
+    "externalKey": "CZ3TDR1-691",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-691"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.339Z",
+  "updatedAt": "2026-09-24T06:59:48.723Z",
+  "syncedAt": "2026-09-24T06:59:47.339Z",
+  "enqueuedAt": "2026-09-24T06:59:48.723Z"
+}

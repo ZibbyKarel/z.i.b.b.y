@@ -1,0 +1,24 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-695",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "name": "A transient database hiccup during partner polling or inbound sync can silently skip every partner after it",
+  "description": "Twice over, in two separate background jobs — checking for new pull requests, and checking for partner replies/commands — we loop over every partner and look up that partner's repositories along the way. If that lookup ever fails, even from a brief, unremarkable database hiccup, the whole loop stops right there. Every partner listed after the one that failed gets skipped for that entire cycle, with nothing in the logs pointing at why some partners just went quiet that time.\n\nThe fix treats one partner's lookup failure the way we already treat a partner with no valid access token: log it, move on to the next partner. Nobody else's poll or sync is held up by one partner's bad luck.\n\nFound while working on a different ticket in this same area, and built as its own small, independent piece rather than folded into unrelated work.\n\n**Done when:** one partner's repository lookup failing during either the regular poll or the inbound sync no longer stops any other partner from being checked that same cycle.\n\nPR: https://github.com/shoptet/aidev-apps/pull/41",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-695",
+    "externalKey": "CZ3TDR1-695",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-695"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.343Z",
+  "updatedAt": "2026-09-24T06:59:47.343Z",
+  "syncedAt": "2026-09-24T06:59:47.343Z"
+}

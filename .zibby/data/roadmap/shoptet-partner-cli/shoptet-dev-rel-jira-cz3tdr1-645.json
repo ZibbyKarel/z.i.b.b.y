@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-645",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-613",
+  "name": "[Portal] Account settings screen, incl. migrated API-access section (UI)",
+  "description": "**Why?**\nConsolidates contact/company/language/header settings (`005-account-surfaces.md`) with the OAuth/API-access fields that today live on a separate merchant-admin page (API Partner → \"Access to API\" tab).\n\n**What?**\nBuild the single Account settings page per Figma ([node 41:335](https://www.figma.com/design/uyNyEpBk6MYXqjXprmXftl/Partner-Portal?node-id=41-335)).\n\n**Acceptance Criteria**\n\n- [ ] Contact, access (email verify, password change, 2FA toggle), and company/billing sections render and save per `005-account-surfaces.md`\n- [ ] **API-access section**: OAuth Client ID + masked secret (reveal last 5 chars / renew), OAuth server URLs — wired to the existing `ApiPartner::regenerateOAuthClientSecret()` (`cms/packages/Connectors/Model/ApiPartner.php:397`), replacing today's separate `ApiPartnerController::adminOauthAction` (`admin/controllers/ApiPartnerController.php:139`) / `Oauth.tpl` tab — no new OAuth logic\n- [ ] Language/date/time-format selectors persist across CZ/SK/HU/EN\n- [ ] Portal header color picker persists and applies to portal chrome\n- [ ] `make fe-test` covers all sections\n\n**Resources**\n\n- Figma: https://www.figma.com/design/uyNyEpBk6MYXqjXprmXftl/Partner-Portal?node-id=41-335&m=dev\n- Backend: `Partner_Portal/issues/03-user-management/005-account-surfaces.md`, `Partner_Portal/issues/03-user-management/006-i18n-emails.md`\n- Existing API-access code being migrated: `admin/controllers/ApiPartnerController.php:139`, `admin/controllers/templates/sub/ApiPartner/Oauth.tpl`, `cms/packages/Connectors/Model/ApiPartner.php:397`",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-645",
+    "externalKey": "CZ3TDR1-645",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-645"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.293Z",
+  "updatedAt": "2026-09-24T06:59:48.700Z",
+  "syncedAt": "2026-09-24T06:59:47.293Z",
+  "enqueuedAt": "2026-09-24T06:59:48.700Z"
+}

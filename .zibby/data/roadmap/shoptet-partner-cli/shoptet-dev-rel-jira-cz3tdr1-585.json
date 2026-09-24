@@ -1,0 +1,24 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-585",
+  "projectId": "shoptet-partner-cli",
+  "level": "epic",
+  "name": "DevRel agenda handover",
+  "description": "Goal\n\nThe aim is to smoothly transfer the agenda from the Templates and DevRel teams to the newly formed DevRel team.\n\nMetrics\n\n- New developers from DevRel team are handling all FE reviews.\n\n**Asana:** [https://app.asana.com/1/413336835149603/project/1209299133542055/task/1213589400104661](https://app.asana.com/1/413336835149603/project/1209299133542055/task/1213589400104661)\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/34173](https://github.com/shoptet/cms4/issues/34173)_\n_Created on GitHub by @pavelhusa on 2026-03-26 09:09 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-585",
+    "externalKey": "CZ3TDR1-585",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-585"
+  },
+  "externalLevel": "Epic",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:44.430Z",
+  "updatedAt": "2026-09-24T06:59:44.430Z",
+  "syncedAt": "2026-09-24T06:59:44.430Z"
+}

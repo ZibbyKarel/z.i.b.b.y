@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-276",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-6",
+  "name": "Docusaurus – Finalization of the UI Kit for Docusaurus",
+  "description": "In collaboration with FE prepare working UI kit for Docusaurus.\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/11580](https://github.com/shoptet/cms4/issues/11580)_\n_Created on GitHub by @hudak-filip on 2025-01-09 02:29 UTC_\n_GitHub assignee: @hudak-filip_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-276",
+    "externalKey": "CZ3TDR1-276",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-276"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:46.804Z",
+  "updatedAt": "2026-09-24T06:59:46.804Z",
+  "syncedAt": "2026-09-24T06:59:46.804Z"
+}

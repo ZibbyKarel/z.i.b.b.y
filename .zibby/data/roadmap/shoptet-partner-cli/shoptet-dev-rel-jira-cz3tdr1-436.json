@@ -1,0 +1,32 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-436",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-6",
+  "name": "Multilang support",
+  "description": "# Context\n\nWe have a request for a multilang support for Developers portal. We want to at least investigate the possibilities.\n\n# Task\n\nValidate the options for generate automatic translations from the English source or open it to a community.\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/33347](https://github.com/shoptet/cms4/issues/33347)_\n_Created on GitHub by @pavelhusa on 2026-03-16 10:51 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-436",
+    "externalKey": "CZ3TDR1-436",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-436"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "running",
+  "enqueuedAt": "2026-09-24T06:59:48.648Z",
+  "runs": [
+    {
+      "taskId": "task_1790233419974_9e5fb9",
+      "startedAt": "2026-09-24T07:03:40.010Z",
+      "outcome": "running"
+    }
+  ],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:46.817Z",
+  "updatedAt": "2026-09-24T07:03:40.010Z",
+  "syncedAt": "2026-09-24T06:59:46.817Z"
+}

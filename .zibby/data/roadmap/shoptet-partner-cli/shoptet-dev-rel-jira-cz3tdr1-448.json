@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-448",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check]: Video galerie produktů",
+  "description": "### Partner Name\n\nJakub Grac\n\n### Partner Email (Technical Contact)\n\ngrac.jakub@jg-media.eu\n\n### Shoptet CRM Url\n\n[https://crm.shoptet.cz/admin/sluzby-detail/?id=2858](https://crm.shoptet.cz/admin/sluzby-detail/?id=2858)\n\n### Salesforce Url\n\n[https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000ZToRtIAL/view?ws=%2Flightning%2Fr%2FCase%2F500P400000f4ED2IAM%2Fview](https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000ZToRtIAL/view?ws=%2Flightning%2Fr%2FCase%2F500P400000f4ED2IAM%2Fview)\n\n### Test Project URL\n\n[https://jg-media.myshoptet.com/mobilny-telefon-realme-7-smartphone-6gb/](https://jg-media.myshoptet.com/mobilny-telefon-realme-7-smartphone-6gb/)\n\n### Addons Repository URL\n\n[https://github.com/JakubGrac/Video-galeria-produktov](https://github.com/JakubGrac/Video-galeria-produktov)\n\n### New Addon or Modification\n\nNew\n\n### Brief Addon Description\n\nDoplnok Video galéria produktov rozširuje štandardnú galériu produktov na eshope o možnosť pridávať videá. Umožňuje zobrazovať videá z YouTube, Vimeo alebo vlastné MP4 súbory priamo medzi obrázkami produktu. Videá sa pridávajú pomocou parametrov a je možné ich prispôsobiť pre rôzne jazyky. Doplnok zároveň ponúka možnosti úpravy vzhľadu galérie a spôsobu prehrávania videí.\n\nDemo + config web: [https://www.jg-media.eu/shoptet/videa-do-galerie-produktov-na-shoptete/navod/](https://www.jg-media.eu/shoptet/videa-do-galerie-produktov-na-shoptete/navod/)\n\n### Information on Data Usage\n\n-\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/36289](https://github.com/shoptet/cms4/issues/36289)_\n_Created on GitHub by @jakublokai on 2026-04-24 08:27 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-448",
+    "externalKey": "CZ3TDR1-448",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-448"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:46.818Z",
+  "updatedAt": "2026-09-24T06:59:46.818Z",
+  "syncedAt": "2026-09-24T06:59:46.818Z"
+}

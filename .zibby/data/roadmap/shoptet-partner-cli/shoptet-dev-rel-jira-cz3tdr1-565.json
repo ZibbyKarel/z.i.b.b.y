@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-565",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-618",
+  "name": "PartnerServiceAdd React rewrite: Uzivatele (Users) tab",
+  "description": "## Why?\n\nSmall read-only tab, no form inputs. Good candidate to port early alongside a heavier tab because it carries almost no risk.\n\n## What?\n\nPort `sub/ServiceDetail/Users.tpl` to React as a read-only table, remove the external-tab bridge entry and delete the legacy partial. No inputs, no write actions: only the table and its action links.\n\n## Acceptance Criteria\n\n- Table renders the same columns, ordering and empty state as the legacy tab\n- Action links point at the same URLs\n- Tab visibility gate unchanged (edit mode only, `serviceType` is module or service)\n- Every `data-testid` from `Users.tpl` preserved verbatim, no hardcoded strings\n- `Users.tpl` deleted and its bridge entry removed\n- `make check-fast`, `make lint`, `make fe-test` green\n\n## Resources\n\n- Legacy: `admin/controllers/templates/sub/ServiceDetail/Users.tpl`\n- `cms/packages/Miscellaneous/Helper/Partners.php`",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-565",
+    "externalKey": "CZ3TDR1-565",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-565"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.245Z",
+  "updatedAt": "2026-09-24T06:59:48.664Z",
+  "syncedAt": "2026-09-24T06:59:47.245Z",
+  "enqueuedAt": "2026-09-24T06:59:48.664Z"
+}

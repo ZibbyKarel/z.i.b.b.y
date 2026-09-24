@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-566",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-618",
+  "name": "PartnerServiceAdd React rewrite: Testovaci instalace (Test installation) tab",
+  "description": "## Why?\n\nThis is how a partner installs their addon on a test shop and issues an API token before submitting for approval. It has no form fields of its own but it is the entry point to the `PartnerServiceInstall` modal, so the modal wiring is the real work.\n\n## What?\n\nPort `sub/ServiceDetail/TestInstallation.tpl` to React as a read-only table plus action links, remove the external-tab bridge entry and delete the legacy partial. Wire the `PartnerServiceInstall` modal (test install and token creation) and the link into the `PartnerServiceEndpoints` modal.\n\n## Acceptance Criteria\n\n- Installation table renders the same columns, states and empty state as the legacy tab\n- `PartnerServiceInstall` modal opens, creates a test installation and issues a token exactly as before; its controller is not modified beyond the Inertia bridge\n- Link into the `PartnerServiceEndpoints` modal works\n- Tab visibility gate unchanged (edit mode only)\n- Every `data-testid` from `TestInstallation.tpl` preserved verbatim, no hardcoded strings\n- `TestInstallation.tpl` deleted and its bridge entry removed\n- `make check-fast`, `make lint`, `make fe-test` green\n\n## Resources\n\n- Legacy: `admin/controllers/templates/sub/ServiceDetail/TestInstallation.tpl:12,49,65`, `admin/controllers/PartnerServiceInstallController.php`\n- `cms/packages/Connectors/Model/ApiPartner.php` (`getApiAccessTokens`), `cms/packages/Miscellaneous/Helper/Partners.php`\n- Data: `st_api.token`, `st_api.service_endpoint_token`, `st_api.service_endpoint_group_token`",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-566",
+    "externalKey": "CZ3TDR1-566",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-566"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.245Z",
+  "updatedAt": "2026-09-24T06:59:48.665Z",
+  "syncedAt": "2026-09-24T06:59:47.245Z",
+  "enqueuedAt": "2026-09-24T06:59:48.665Z"
+}

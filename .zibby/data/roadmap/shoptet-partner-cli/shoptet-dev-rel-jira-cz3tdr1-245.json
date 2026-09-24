@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-245",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check]: Banner - svátek",
+  "description": "### Partner Name\n\nJakub Turský\n\n### Partner Email (Technical Contact)\n\njakubtursky769@gmail.com\n\n### Shoptet CRM Url\n\n[https://crm.shoptet.cz/admin/sluzby-detail/?id=2370](https://crm.shoptet.cz/admin/sluzby-detail/?id=2370)\n\n### Salesforce Url\n\n[https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000GGD0EIAX/view](https://shoptet.lightning.force.com/lightning/r/Addon__c/a0rP400000GGD0EIAX/view)\n\n### Test Project URL\n\n[https://hrtest.myshoptet.com/](https://hrtest.myshoptet.com/)\n\n### Addons Repository URL\n\n[https://github.com/jakubtursky/shoptet-banner-nameday-addons/](https://github.com/jakubtursky/shoptet-banner-nameday-addons/)\n\n### New Addon or Modification\n\nNew\n\n### Brief Addon Description\n\nDoplněk přidává na e-shop banner s informací o svátku/jmeninách pro daný den.\n\n### Information on Data Usage\n\nKontaktní údaje e-shopu\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/14302](https://github.com/shoptet/cms4/issues/14302)_\n_Created on GitHub by @hrabcova on 2025-03-04 13:51 UTC_\n_GitHub assignee: @pavelhusa_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-245",
+    "externalKey": "CZ3TDR1-245",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-245"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.316Z",
+  "updatedAt": "2026-09-24T06:59:45.316Z",
+  "syncedAt": "2026-09-24T06:59:45.316Z"
+}

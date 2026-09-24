@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-634",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "A second round can present a pull request as clean while earlier findings are still open",
+  "description": "Once a partner pushes a second time, four independent parts of the tool make claims that are not true — each of them looks only at the round in front of it.\n\n**Two of them reach the partner directly:**\n\n- The letter we send can say the pull request has **no comments** while blockers from the previous round are still open and unfixed.\n- The \"review completed\" notice can tell the partner **0 findings** in the same situation. It counts only what this round found, so it reads as a clean result over work that is still outstanding.\n\n**One misleads the reviewer who is supposed to catch the other three:**\n\n- The conclusion shown in the console and posted to Slack can read **approve** over those same open blockers. It is the one that is not partner-facing, which is exactly why it is easy to miss — it removes the safety net for the rest.\n\n**And one removes the person entirely:**\n\n- In that same situation the tool can **send the letter by itself**, with no reviewer involved. This is the only place where anything reaches a partner without a person approving it.\n\nNone of these is caused by the rerun work — all four happen today for any partner who pushes twice.\n\nThis is deliberately separated from the rerun feature (CZ3TDR1-630). It does not need to know whether anything was actually fixed, which is the hard part and the slow part. It only needs to know what we already told the partner and haven't closed since — so it can ship much sooner and on its own.\n\nUntil the rerun feature lands, the tool will be **cautious rather than wrong**: it treats everything it once reported as still open, so the letter says only what we can stand behind (\"from the previous round this is still open on our side — we have not confirmed a fix\") and the automatic send simply steps back and asks a reviewer.\n\n**Done when:** a round with an open finding from an earlier round never tells the partner the pull request is clean — neither in the letter nor in the completion notice — never presents itself as approved to the reviewer, never sends itself automatically, and pull requests already in flight are covered too.\n\nPlan and PR: https://github.com/shoptet/aidev-apps/pull/27 — the full scope of this ticket is batch 1 of that plan, which is more detailed than the summary above.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-634",
+    "externalKey": "CZ3TDR1-634",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-634"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.285Z",
+  "updatedAt": "2026-09-24T06:59:47.285Z",
+  "syncedAt": "2026-09-24T06:59:47.285Z"
+}

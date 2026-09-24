@@ -1,0 +1,24 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-340",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "name": "FE news",
+  "description": "# Context\n\nHere is the cookbook: [https://shoptet.slab.com/posts/fe-news-cookbook-gy8lp2i5](https://shoptet.slab.com/posts/fe-news-cookbook-gy8lp2i5)\n\n# Task\n\nIssues TBA\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/16331](https://github.com/shoptet/cms4/issues/16331)_\n_Created on GitHub by @pavelhusa on 2025-04-16 10:24 UTC_\n_GitHub assignee: @pavelhusa_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-340",
+    "externalKey": "CZ3TDR1-340",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-340"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:46.808Z",
+  "updatedAt": "2026-09-24T06:59:46.808Z",
+  "syncedAt": "2026-09-24T06:59:46.808Z"
+}

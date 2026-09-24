@@ -1,0 +1,32 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-271",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-6",
+  "name": "Accordion component",
+  "description": "# Context\n\nWe are creating a shared Docusaurus theme for the Developers' portal. Figma is [here](https://www.figma.com/design/ZmSsc8dVmzloTI8jVFN1ur/Docusaurus?node-id=160-7121&t=h0iszn2LPRqYVW2J-1).\n\n# Task\n\nCreate a Accordion component that will be used e. g. in FAQ. \n\nSee [https://www.figma.com/design/ZmSsc8dVmzloTI8jVFN1ur/Docusaurus?node-id=463-6403&t=IQDSLDjQBWfwBle2-4](https://www.figma.com/design/ZmSsc8dVmzloTI8jVFN1ur/Docusaurus?node-id=463-6403&t=IQDSLDjQBWfwBle2-4)\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/10872](https://github.com/shoptet/cms4/issues/10872)_\n_Created on GitHub by @pavelhusa on 2024-12-16 12:43 UTC_\n_GitHub assignee: @pavelhusa_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-271",
+    "externalKey": "CZ3TDR1-271",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-271"
+  },
+  "externalLevel": "Task",
+  "attachmentSetId": "set_muf6m7b7_9b90dfc9",
+  "attachments": [
+    {
+      "name": "6b01efd4a92fe5bd.png",
+      "size": 109036,
+      "mediaType": "image/png"
+    }
+  ],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:46.436Z",
+  "updatedAt": "2026-09-24T06:59:46.436Z",
+  "syncedAt": "2026-09-24T06:59:46.436Z"
+}

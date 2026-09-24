@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-591",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "UX/UI",
+  "description": "Polish UX/UI. Make tool more intuitive and simplier.\n \n\n**Pages**\n\nDashboard / Inbox\n\nPR Detail\n\nDetail code\n\nDetail Supply chain\n\nDetail Activity\n\nDetail Conversation\n\nOPS\n\nHistory\n\nAdmin Rules\n\nAdmin Partners\n\nResponsive design",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-591",
+    "externalKey": "CZ3TDR1-591",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-591"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.253Z",
+  "updatedAt": "2026-09-24T06:59:47.253Z",
+  "syncedAt": "2026-09-24T06:59:47.253Z"
+}

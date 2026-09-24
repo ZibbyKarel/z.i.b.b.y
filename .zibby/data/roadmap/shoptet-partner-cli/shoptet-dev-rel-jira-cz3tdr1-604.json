@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-604",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "AI comments: rendering improvements",
+  "description": "Audit and improve \"suggestion\" block layout\n\nRender short code as inline \n\ncode\n\n, not in quotation marks\n\nHide the \"Propose as rule\" button",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-604",
+    "externalKey": "CZ3TDR1-604",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-604"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.259Z",
+  "updatedAt": "2026-09-24T06:59:48.685Z",
+  "syncedAt": "2026-09-24T06:59:47.259Z",
+  "enqueuedAt": "2026-09-24T06:59:48.685Z"
+}

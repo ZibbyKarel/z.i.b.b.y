@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-578",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "Overview of open partner pull requests with wait state and idle time",
+  "description": "## Why?\n\nReviewers today keep partner PRs open in browser tabs with ad-hoc naming to remember which ones wait on the partner. There is no single view of what is in flight and where the ball is.\n\n## What?\n\nWalk repositories with the Addon Repository GitHub App installed, take all open pull requests, and show them in one list. GitHub is the only source — this must not depend on how consistently Jira is filled in.\n\nPer PR show:\n\n- review state\n- whether a response is already on the PR\n- whether it waits on us or on the partner\n- time since the last response\n\n**Waits on whom** is derived from the author of the last activity: last comment or push from the partner means it waits on us, last from us means it waits on the partner. Nothing is maintained by hand. Idle time comes from the same timestamp.\n\n## Acceptance Criteria\n\n- ☐ Open PRs from repositories with the Addon Repository GitHub App installed are listed\n- ☐ Each row shows review state, whether a response exists, wait state, and idle time\n- ☐ Wait state is computed from the author of the last activity, not maintained manually\n- ☐ A partner comment on a PR flips it to \"waits on us\" on the next refresh\n- ☐ Verified against a real open partner PR",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-578",
+    "externalKey": "CZ3TDR1-578",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-578"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.249Z",
+  "updatedAt": "2026-09-24T06:59:48.671Z",
+  "syncedAt": "2026-09-24T06:59:47.249Z",
+  "enqueuedAt": "2026-09-24T06:59:48.671Z"
+}

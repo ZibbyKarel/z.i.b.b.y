@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-612",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "Unify component design (buttons etc.)",
+  "description": "Audit and consolidate buttons, chips, and form controls into shared components. Include unifying the \"Add\" action placement on admin pages (no forms at the bottom of the page — e.g. header action opening a dialog).",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-612",
+    "externalKey": "CZ3TDR1-612",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-612"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "external",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.264Z",
+  "updatedAt": "2026-09-24T06:59:47.264Z",
+  "syncedAt": "2026-09-24T06:59:47.264Z"
+}

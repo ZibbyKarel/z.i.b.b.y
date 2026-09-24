@@ -1,0 +1,24 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-613",
+  "projectId": "shoptet-partner-cli",
+  "level": "epic",
+  "name": "[Portal] User management",
+  "description": "",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-613",
+    "externalKey": "CZ3TDR1-613",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-613"
+  },
+  "externalLevel": "Epic",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.265Z",
+  "updatedAt": "2026-09-24T06:59:47.265Z",
+  "syncedAt": "2026-09-24T06:59:47.265Z"
+}

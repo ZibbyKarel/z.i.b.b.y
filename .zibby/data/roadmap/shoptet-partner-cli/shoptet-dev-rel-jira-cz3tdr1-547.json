@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-547",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-543",
+  "name": "Feasibility: Affiliate program",
+  "description": "Owner per PRD: Commercial team (Daniel Hrouzek).\n\nAs-Is: manual tracking in Salesforce, manual UTM link distribution, duplicate check with Sales (manual + Keboola), Power BI reports sent as monthly screenshots. No Core affiliate program exists for the CZ market — the portal is a direct prerequisite for launching it.\n\nh2. Scope in PRD\n\n- Application to the affiliate program — a partner can be a Premium affiliate without being in the Partner Program, so two separate dashboard views are needed\n- Approve / reject application\n- Automatic generation of affiliate code and UTM link\n- Affiliate dashboard: payout eligibility, progress graph, project overview, commissions\n- Reward calculation and invoicing\n- Program and commission structure description\n- E-shop overview (status, subscription plan, link to admin)\n\nh2. To analyse\n\n- Duplicate-check logic (affiliate × Sales) — how to move it from manual + Keboola into the portal (OQ-09)\n- Replacing monthly Power BI screenshots with a live dashboard — who owns the data source (OQ-10)\n- Attribution: where affiliate code → e-shop → subscription is recorded and how reliable it is\n- Commission calculation — reuse existing logic or reimplement\n- Two-view dashboard model (Partner Program member vs. standalone affiliate)\n\nh2. Output\n\nSystems involved, integration gaps, T-shirt size, blockers, MVP / later / out-of-scope recommendation.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-547",
+    "externalKey": "CZ3TDR1-547",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-547"
+  },
+  "externalLevel": "Analysis",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.241Z",
+  "updatedAt": "2026-09-24T06:59:48.656Z",
+  "syncedAt": "2026-09-24T06:59:47.241Z",
+  "enqueuedAt": "2026-09-24T06:59:48.656Z"
+}

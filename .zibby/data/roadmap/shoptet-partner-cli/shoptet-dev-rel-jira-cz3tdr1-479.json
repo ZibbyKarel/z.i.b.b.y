@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-479",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "name": "shoptet.product.code neodpovídá dokumentaci",
+  "description": "V dokumentaci [dataLayeru](https://developers.shoptet.com/shoptet-tools/data-layer/) není uvedeno `shoptet.product.code`, ale u produktů bez variant v datech je.\n\n```java\ndataLayer[0].shoptet.product.hasVariants ==> true\ndataLayer[0].shoptet.product.codes[0].code ==> 326\ndataLayer[0].shoptet.product.code ==> undefined\n```\n\n```java\ndataLayer[0].shoptet.product.hasVariants ==> false\ndataLayer[0].shoptet.product.codes[0].code ==> 345\ndataLayer[0].shoptet.product.code ==> \"345\"\n```\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/41577](https://github.com/shoptet/cms4/issues/41577)_\n_Created on GitHub by @roman-talas-snowly-code on 2026-07-09 08:29 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-479",
+    "externalKey": "CZ3TDR1-479",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-479"
+  },
+  "externalLevel": "Bug",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:46.821Z",
+  "updatedAt": "2026-09-24T06:59:48.653Z",
+  "syncedAt": "2026-09-24T06:59:46.821Z",
+  "enqueuedAt": "2026-09-24T06:59:48.653Z"
+}

@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-705",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "The console no longer starts in development, because a browser screen pulls in server-only code",
+  "description": "Starting the console for local development fails outright. The build stops on the release letter's composer, because something that runs in the browser ends up importing it, and it reaches for a file-path helper that only exists on a server.\n\n**The production build does not fail**, which is why this went unnoticed: it strips out the unused parts, and the offending helper is one of them. The development build keeps modules whole, so it surfaces. The problem was there either way — the production bundle was simply hiding it.\n\n**What is actually wrong is the boundary, not the helper.** The Release section runs in the browser and needs exactly two small rules about which findings face a partner. It gets them by importing the module that composes the whole release letter — more than two thousand lines of server-side work — so the browser carries all of it to use two functions. Its own comment already complains about the symptom next door: the same set of publish rules gets imported from two different places depending on which one you read.\n\nRemoving the file-path helper would make it build again and leave that arrangement in place. Moving the two rules to where their siblings already live fixes the reason instead.\n\n**Done when:** the console starts in development again, the browser no longer carries the release-letter composer, and all four publish rules come from one place rather than two.\n\nNot caused by the cross-round work — the whole import chain is identical on master, and none of the pull requests in that chain touch any of the three files involved. Most likely surfaced by a routine toolchain update.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-705",
+    "externalKey": "CZ3TDR1-705",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-705"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.351Z",
+  "updatedAt": "2026-09-24T06:59:47.351Z",
+  "syncedAt": "2026-09-24T06:59:47.351Z"
+}

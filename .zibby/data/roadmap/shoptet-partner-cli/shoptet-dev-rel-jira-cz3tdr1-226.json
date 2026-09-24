@@ -1,0 +1,24 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-226",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "name": "FE news",
+  "description": "[https://github.com/shoptet/cms4/issues/13073](https://github.com/shoptet/cms4/issues/13073)\n[https://github.com/shoptet/cms4/issues/13247](https://github.com/shoptet/cms4/issues/13247)\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/15725](https://github.com/shoptet/cms4/issues/15725)_\n_Created on GitHub by @shoptet-addon-reviewer on 2025-04-03 08:36 UTC_\n_GitHub assignees: @pavelhusa, @pavelkunes_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-226",
+    "externalKey": "CZ3TDR1-226",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-226"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.313Z",
+  "updatedAt": "2026-09-24T06:59:45.313Z",
+  "syncedAt": "2026-09-24T06:59:45.313Z"
+}

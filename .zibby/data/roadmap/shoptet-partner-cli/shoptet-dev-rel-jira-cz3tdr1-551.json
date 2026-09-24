@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-551",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-543",
+  "name": "Feasibility: Partner access to CMS / merchant admin",
+  "description": "Security-driven area — the PRD reports repeated incidents of partner credential leaks, and the existing Partner Role in admin is not widely adopted.\n\nh2. Scope in PRD\n\n- Access to the e-shop the partner is working on, on behalf of the merchant\n- List of e-shops and add-ons the partner works on\n- Deep link to e-shop admin\n- WordPress admin retained for now, with the long-term aim of phasing it out\n\nh2. To analyse\n\n- Definition of the Partner role in CRM/CMS — how it works and who manages it (OQ-16)\n- Impersonation / on-behalf-of access model: what exists today, what is missing, audit logging\n- Merchant consent — how a merchant grants and revokes partner access\n- Source of the partner ↔ e-shop relationship and its data quality\n- Whether enforcing Partner Role can actually retire shared-credential access\n\nh2. Output\n\nSystems involved, integration gaps, T-shirt size, blockers, MVP / later / out-of-scope recommendation.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-551",
+    "externalKey": "CZ3TDR1-551",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-551"
+  },
+  "externalLevel": "Analysis",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.242Z",
+  "updatedAt": "2026-09-24T06:59:48.660Z",
+  "syncedAt": "2026-09-24T06:59:47.242Z",
+  "enqueuedAt": "2026-09-24T06:59:48.660Z"
+}

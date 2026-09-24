@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-572",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-639",
+  "name": "Create database structure based on parteri web",
+  "description": "- Categories => [https://partneri.shoptet.cz/wp-admin/edit-tags.php?taxonomy=category_professionals&post_type=profesionalove](https://partneri.shoptet.cz/wp-admin/edit-tags.php?taxonomy=category_professionals&post_type=profesionalove)\n- Partners => [https://partneri.shoptet.cz/wp-admin/post.php?post=31481&action=edit](https://partneri.shoptet.cz/wp-admin/post.php?post=31481&action=edit)",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-572",
+    "externalKey": "CZ3TDR1-572",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-572"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.248Z",
+  "updatedAt": "2026-09-24T06:59:47.248Z",
+  "syncedAt": "2026-09-24T06:59:47.248Z"
+}

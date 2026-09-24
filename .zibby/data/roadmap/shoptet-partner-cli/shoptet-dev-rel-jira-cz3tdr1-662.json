@@ -1,0 +1,29 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-662",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "Classifying every carried-over finding, once per round",
+  "description": "The previous piece can decide about a single finding. This is what runs it for every finding still open on a pull request, once per round, and records what came out.\n\nIt has to wait until the round has genuinely finished, which is less obvious than it sounds — a round can end in several different shapes and the last part to finish is not always the same one. Getting that wrong means either classifying against half a round, or never classifying at all.\n\n**What it produces**, per finding carried over from an earlier round: new, still open, or fixed, each with the evidence behind it kept alongside.\n\n**What it proposes:** for a finding that is fixed, a short closing message and closing the discussion; for one that is still open but moved somewhere else in the file, a reply into the existing discussion instead of a new one; for one that is still open and untouched, nothing at all — the existing discussion already carries it and a reminder every round is noise for the partner and a click for the reviewer.\n\n**What it never does:** send anything. Everything above is a proposal waiting for a person.\n\nTwo limits worth naming up front, because they decide cost and honesty:\n\n- The second read costs money, so it is capped per round. Findings past the cap fall back to \"still open\" rather than being guessed at, and blockers get the budget first.\n- When several findings sit at the same place and we can only tell that _one_ of them was fixed, **none** of them is marked. We record what we know and leave it there rather than picking one.\n\n**Done when:** a second round on a real pull request classifies every finding carried over from earlier rounds, with the evidence stored for each \"fixed\", and nothing it concludes reaches a partner without a reviewer approving that specific message.\n\nPlan: https://github.com/shoptet/aidev-apps/pull/27 — batch 2, task T7 and the first step of T8.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-662",
+    "externalKey": "CZ3TDR1-662",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-662"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [
+    "shoptet-dev-rel-jira-cz3tdr1-661"
+  ],
+  "dependsOnFromSource": [
+    "shoptet-dev-rel-jira-cz3tdr1-661"
+  ],
+  "lifecycle": "external",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.306Z",
+  "updatedAt": "2026-09-24T06:59:47.306Z",
+  "syncedAt": "2026-09-24T06:59:47.306Z"
+}

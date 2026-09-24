@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-40",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check]: Spropitné",
+  "description": "### Partner Name\n\nizora (Štefan Mazáň)\n\n### Partner Email (Technical Contact)\n\nsmazan@gmail.com\n\n### Shoptet CRM Url\n\n[https://crm.shoptet.cz/admin/sluzby-detail/?id=2310](https://crm.shoptet.cz/admin/sluzby-detail/?id=2310)\n\n### Salesforce Url\n\n[https://shoptet.lightning.force.com/lightning/r/Addon__c/a0r7Q000002dwS2QAI/view](https://shoptet.lightning.force.com/lightning/r/Addon__c/a0r7Q000002dwS2QAI/view)\n\n### Test Project URL\n\n[https://hrtest-sk.myshoptet.com/](https://hrtest-sk.myshoptet.com/)\n\n### Addons Repository URL\n\n[https://www.github.com/smazan/Spropitne/](https://www.github.com/smazan/Spropitne/)\n\n### New Addon or Modification\n\nNew\n\n### Brief Addon Description\n\nDoplněk umožňuje v rámci nákupního košíku nabídnout zákazníkům možnost přispět drobnou částkou v hodnotě 5 Kč, 10 Kč, 20 Kč nebo 50 Kč.\n\n### Information on Data Usage\n\nKontaktní údaje e-shopů\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/14683](https://github.com/shoptet/cms4/issues/14683)_\n_Created on GitHub by @hrabcova on 2025-03-12 12:17 UTC_\n_GitHub assignee: @TomasHermanSnowlyCode_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-40",
+    "externalKey": "CZ3TDR1-40",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-40"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.293Z",
+  "updatedAt": "2026-09-24T06:59:45.293Z",
+  "syncedAt": "2026-09-24T06:59:45.293Z"
+}

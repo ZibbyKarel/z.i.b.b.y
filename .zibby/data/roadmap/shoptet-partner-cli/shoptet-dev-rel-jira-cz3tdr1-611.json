@@ -1,0 +1,26 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-611",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "Supply-chain analysis (spike)",
+  "description": "Analyze how dependency/supply-chain changes in partner PRs are detected and surfaced today, and propose what a proper check should include.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-611",
+    "externalKey": "CZ3TDR1-611",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-611"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "enqueued",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.263Z",
+  "updatedAt": "2026-09-24T06:59:48.692Z",
+  "syncedAt": "2026-09-24T06:59:47.263Z",
+  "enqueuedAt": "2026-09-24T06:59:48.692Z"
+}

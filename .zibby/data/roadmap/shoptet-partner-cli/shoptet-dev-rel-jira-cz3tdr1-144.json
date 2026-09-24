@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-144",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-647",
+  "name": "[Addon Check]: Rezervační systém",
+  "description": "### Partner Name\n\nMarek Bastl\n\n### Partner Email (Technical Contact)\n\nmarek.bastl5@gmail.com\n\n### Shoptet CRM Url\n\n[https://crm.shoptet.cz/admin/sluzby-detail/?id=1416](https://crm.shoptet.cz/admin/sluzby-detail/?id=1416)\n\n### Salesforce Url\n\n_No response_\n\n### Test Project URL\n\n[https://hrtest.myshoptet.com/](https://hrtest.myshoptet.com/)\n\n### Addons Repository URL\n\n[https://github.com/Mirak52/ShoptetAddon-FE](https://github.com/Mirak52/ShoptetAddon-FE)\n\n### New Addon or Modification\n\nNew\n\n### Brief Addon Description\n\nAhoj, prosím o kontrolu doplňku Rezervační systém:\nDoplněk umožňuje rezervovat/pronajmout produkty na e-shopu na stanovený den a čas.\nDoplněk pracuje s endpointem pro nastavení, produkty, objednávky, sklady a zákazníky - popis volání níže nebo v přiloženém checklistu\nAktivita je k vidění na testovacím projektu ID 502973 ([https://hrtest.myshoptet.com/](https://hrtest.myshoptet.com/))\nDíky za kontrolu :slight_smile:\n\n[Form Checklist review - Rezervační systém.pdf](https://github.com/user-attachments/files/19773908/Form.Checklist.review.-.Rezervacni.system.pdf)\n\n### Information on Data Usage\n\n/api/webhooks, POST, registrace order:create webhooku při inicializaci projektu, aby mi chodili informace o objednávce\n/api/products/code/\n\n```java\ninclude=variantParameters', GET, Stažení detailu produktu pro nastavení rezervací, provádí uživatel po zadání kódu produktu\n/api/orders/statuses, GET, : Nastavení nastavení stavů objednávek v rámci shoptetu, při instalaci a při vyžádání klientem, umožnuje upravovat stavy objednávek\n/api/orders/\n```\n\n, GET: Při obdržení webhooku, pokud má eshop vytvořenou rezervaci ve stavu new\n/api/orders/changes, GET, posíláno s query s page + from od poslední synchronizace, pokud si to klient vyžádá. aktuálně, se spoléhám na webhook, ale může v budoucnu být využit\n/api/orders/\n\n```java\n\n```\n\n/status, PATCH, Update objednávky v případě vyvolání klientem nebo dle nastavení při získání webhooku create\n/api/eshop, GET, po instalaci doplňku, pro získání informací o eshpu, např pro zobrazování údajů v administraci\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/21888](https://github.com/shoptet/cms4/issues/21888)_\n_Created on GitHub by @hrabcova on 2025-07-31 08:51 UTC_\n_GitHub assignee: @pavelhusa_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-144",
+    "externalKey": "CZ3TDR1-144",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-144"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:45.307Z",
+  "updatedAt": "2026-09-24T06:59:45.307Z",
+  "syncedAt": "2026-09-24T06:59:45.307Z"
+}

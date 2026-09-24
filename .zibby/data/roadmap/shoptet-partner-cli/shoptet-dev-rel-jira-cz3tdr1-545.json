@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-545",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-543",
+  "name": "Feasibility: Partner profile (Medailonek)",
+  "description": "Owner per PRD: Partnership team.\n\nAs-Is: all edits go via email to the partner manager, who manually enters them into WordPress. There are 3 separate WP instances for CZ/SK/HU.\n\nh2. Scope in PRD\n\n- Company information, public profile on the Partners website\n- Profile editing (mandatory / optional fields)\n- Approval / rejection of changes before publication — AI keyword check, no manual review\n- Skill verification when a new qualification is added; requirements checklist per skill group\n- Displayed ratings and feedback\n- Partner commissions overview, partner program overview with link to tier detail\n- My contracts (signed, unsigned, status), partner projects overview\n\nh2. To analyse\n\n- WordPress: retain as public frontend or replace (OQ-20) — this decision blocks the architecture\n- Scope and approach to data migration from the 3 WP instances (OQ-04) — data quality audit\n- Publishing path: portal → public profile. Write API into WP, or new frontend?\n- AI keyword check — feasibility, tooling, false-positive handling\n- Where profile master data lives and how it syncs\n\nh2. Output\n\nSystems involved, integration gaps, T-shirt size, blockers, MVP / later / out-of-scope recommendation.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-545",
+    "externalKey": "CZ3TDR1-545",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-545"
+  },
+  "externalLevel": "Analysis",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "external",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-24T06:59:47.240Z",
+  "updatedAt": "2026-09-24T06:59:47.240Z",
+  "syncedAt": "2026-09-24T06:59:47.240Z"
+}
