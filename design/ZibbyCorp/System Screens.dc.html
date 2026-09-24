@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="padding:24px 28px;display:flex;flex-direction:column;gap:22px;color:var(--ink)">
+
+<sc-if value="{{ isSettings }}" hint-placeholder-val="{{ true }}">
+  <div data-screen-label="Settings" style="display:flex;flex-direction:column;gap:20px;max-width:880px">
+    <div style="display:flex;align-items:baseline;gap:16px"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">SYSTEM — SETTINGS</span><h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">Settings</h1><span style="margin-left:auto;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2)">{{ savedU }}</span></div>
+    <sc-for list="{{ groups }}" as="g" hint-placeholder-count="3">
+      <div style="border:1px solid var(--line);background:var(--panel)">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">{{ g.label }}</div>
+        <sc-for list="{{ g.rows }}" as="r">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)">
+            <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:14px">{{ r.label }}</span><span style="font-size:12px;color:var(--ink2)">{{ r.help }}</span></div>
+            <sc-if value="{{ r.isText }}"><input value="{{ r.value }}" onChange="{{ r.onText }}" style="height:34px;box-sizing:border-box;border:1px solid var(--line2);background:var(--bg);padding:0 10px;font-size:13px;outline:none" style-focus="border-color:var(--ink)"></sc-if>
+            <sc-if value="{{ r.isSeg }}"><div style="display:flex;border:1px solid var(--line2);justify-self:start;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em"><sc-for list="{{ r.opts }}" as="o"><button onClick="{{ o.onClick }}" style="all:unset;cursor:pointer;padding:7px 12px;background:{{ o.bg }};color:{{ o.ink }}">{{ o.label }}</button></sc-for></div></sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </sc-for>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isRegistries }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Registries" style="display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">SYSTEM — REGISTRIES</span><h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">Global libraries</h1><span style="font-size:14px;color:var(--ink2)">Departments bind to these in their own tabs.</span></div>
+    <div style="display:flex;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em">
+      <sc-for list="{{ regTabs }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.onClick }}" style="all:unset;cursor:pointer;padding:10px 14px;margin-bottom:-1px;border-bottom:1px solid {{ t.line }};color:{{ t.color }}">{{ t.label }} <span style="color:var(--ink3)">{{ t.n }}</span></button></sc-for>
+    </div>
+    <div style="border:1px solid var(--line);background:var(--panel)">
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) minmax(0,.8fr) minmax(0,1.6fr);gap:14px;padding:9px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>NAME</span><span>DESCRIPTION</span><span>{{ metaHead }}</span><span>BOUND IN</span></div>
+      <sc-for list="{{ regRows }}" as="r" hint-placeholder-count="8">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) minmax(0,.8fr) minmax(0,1.6fr);gap:14px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--line)">
+          <span style="font-family:'Geist Mono',monospace;font-size:12px">{{ r.name }}</span><span style="font-size:13px;color:var(--ink2)">{{ r.desc }}</span>
+          <span style="display:flex;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)">{{ r.dot }}{{ r.meta }}</span>
+          <div style="display:flex;flex-wrap:wrap;gap:4px"><sc-for list="{{ r.depts }}" as="d"><button onClick="{{ d.onClick }}" style="all:unset;cursor:pointer;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;border:1px solid var(--line2);padding:3px 6px;color:var(--ink2)" style-hover="border-color:var(--ink);color:var(--ink)">{{ d.code }}</button></sc-for></div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;route&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;go&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(r:string)=&gt;void&quot;},&quot;tick&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;number&quot;},&quot;theme&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;setTheme&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(t:string)=&gt;void&quot;}}">
+class Component extends DCLogic {
+  state = { tab: 'mcp', saved: '' };
+  componentDidMount() { this.p = setInterval(() => { if (window.ZC) { clearInterval(this.p); this.forceUpdate(); } }, 50); }
+  componentWillUnmount() { clearInterval(this.p); }
+  renderVals() {
+    const Z = window.ZC, B = window.ZB, go = this.props.go || (() => {});
+    const empty = { groups: [], regTabs: [], regRows: [] };
+    if (!Z || !B) return empty;
+    const pad = Z.pad, parts = (this.props.route || 'system/settings').split('/'), v = parts[1] || 'settings';
+    const out = { ...empty, isSettings: v === 'settings', isRegistries: v === 'registries' };
+    if (out.isSettings) {
+      const S = Z.settings, save = p => { Object.assign(S, p); this.setState({ saved: 'SAVED ' + B.clock() }); };
+      const seg = (k, labels, onPick) => labels.map(l => { const cur = String(S[k]).toUpperCase() === l || (l === 'ON' && S[k] === true) || (l === 'OFF' && S[k] === false); return { label: l, bg: cur ? 'var(--ink)' : 'transparent', ink: cur ? 'var(--panel)' : 'var(--ink3)', onClick: () => onPick(l) }; });
+      const T = (label, help, k) => ({ label, help, isText: true, value: S[k], onText: e => save({ [k]: e.target.value }) });
+      const O = (label, help, k, labels, map) => ({ label, help, isSeg: true, opts: seg(k, labels, l => save({ [k]: map ? map(l) : l.toLowerCase() })) });
+      const onoff = l => l === 'ON';
+      S.theme = this.props.theme || S.theme;
+      out.groups = [
+        { label: 'GENERAL', rows: [T('Company name', 'Shown in the header and briefings.', 'name'), T('Time zone', 'Used for schedules and briefings.', 'tz'), O('Concurrent agents', 'How many agents may run at once.', 'concurrency', ['6','12','24'], l => +l)] },
+        { label: 'VOICE', rows: [T('Wake word', 'Say it to open the COO dock hands-free.', 'wake'), O('Voice', 'How Zibby sounds when it speaks.', 'voice', ['CALM','BRISK','NEUTRAL'], l => l.charAt(0) + l.slice(1).toLowerCase()), O('Push to talk', 'Hold the VOICE button instead of listening continuously.', 'ptt', ['ON','OFF'], onoff), O('Speak replies', 'Read COO replies aloud.', 'speak', ['ON','OFF'], onoff)] },
+        { label: 'THEME', rows: [{ label: 'Appearance', help: 'Light is instrument paper. Dark adds a glow to live status.', isSeg: true, opts: ['LIGHT','DARK'].map(l => { const cur = (this.props.theme || 'light').toUpperCase() === l; return { label: l, bg: cur ? 'var(--ink)' : 'transparent', ink: cur ? 'var(--panel)' : 'var(--ink3)', onClick: () => this.props.setTheme && this.props.setTheme(l.toLowerCase()) }; }) }, O('Motion', 'Glyph and status animations. Off also follows reduced motion.', 'motion', ['ON','OFF'], onoff)] }
+      ];
+      out.savedU = this.state.saved || 'CHANGES SAVE AUTOMATICALLY';
+    }
+    if (out.isRegistries) {
+      const R = Z.registries, tab = this.state.tab;
+      out.regTabs = [['mcp','MCP SERVERS'],['skills','SKILLS'],['hooks','HOOKS'],['commands','COMMANDS']].map(([k, l]) => ({ label: l, n: pad(R[k].length), line: k === tab ? 'var(--ink)' : 'transparent', color: k === tab ? 'var(--ink)' : 'var(--ink3)', onClick: () => this.setState({ tab: k }) }));
+      const dl = ds => (ds.includes('*') ? [{ code: 'ALL', onClick: () => go('org/map') }] : ds.map(d => ({ code: Z.D(d).code, onClick: () => go('org/dept/' + d + '/' + (tab === 'mcp' ? 'integrations' : tab)) })));
+      out.metaHead = { mcp: 'STATUS', skills: 'TYPE', hooks: 'EVENT', commands: 'SCOPE' }[tab];
+      if (tab === 'mcp') out.regRows = R.mcp.map(([n, d, st, ds]) => ({ name: n, desc: d, meta: st.toUpperCase(), dot: B.dot(React, st === 'connected' ? 'working' : 'blocked', 6), depts: dl(ds) }));
+      if (tab === 'skills') out.regRows = R.skills.map(([n, d, ds]) => ({ name: n, desc: d, meta: 'SKILL', depts: dl(ds) }));
+      if (tab === 'hooks') out.regRows = R.hooks.map(([n, ev, d, ds]) => ({ name: n, desc: d, meta: ev.toUpperCase(), depts: dl(ds) }));
+      if (tab === 'commands') out.regRows = R.commands.map(([n, d]) => ({ name: n, desc: d, meta: '⌘K · COO', depts: [{ code: 'GLOBAL', onClick: () => {} }] }));
+    }
+    return out;
+  }
+}
+</script>
+</body>
+</html>

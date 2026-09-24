@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="padding:24px 28px;display:flex;flex-direction:column;gap:22px;color:var(--ink)">
+
+<sc-if value="{{ isVault }}" hint-placeholder-val="{{ true }}">
+  <div data-screen-label="Vault" style="display:grid;grid-template-columns:240px minmax(0,1fr) 260px;gap:20px;align-items:start">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <input value="{{ q }}" onChange="{{ onQ }}" placeholder="Search the vault" style="height:34px;box-sizing:border-box;border:1px solid var(--line2);background:var(--bg);padding:0 10px;font-size:13px;outline:none">
+      <sc-for list="{{ folders }}" as="f" hint-placeholder-count="5">
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3);padding:6px 0">{{ f.nameU }} · {{ f.n }}</span>
+          <sc-for list="{{ f.notes }}" as="n"><button onClick="{{ n.onClick }}" style="all:unset;cursor:pointer;padding:6px 10px;font-size:13px;border-left:1px solid {{ n.line }};background:{{ n.bg }}" style-hover="background:var(--panel2)">{{ n.title }}</button></sc-for>
+        </div>
+      </sc-for>
+    </div>
+    <article style="position:relative;border:1px solid var(--line2);background:var(--panel);padding:26px 30px;display:flex;flex-direction:column;gap:16px;min-height:480px">
+      <div style="position:absolute;top:-1px;left:-1px;width:10px;height:10px;border-top:1px solid var(--ink);border-left:1px solid var(--ink)"></div>
+      <div style="position:absolute;bottom:-1px;right:-1px;width:10px;height:10px;border-bottom:1px solid var(--ink);border-right:1px solid var(--ink)"></div>
+      <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">{{ note.folderU }} / {{ note.titleU }}</span>
+      <h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">{{ note.title }}</h1>
+      <sc-for list="{{ note.paras }}" as="p" hint-placeholder-count="3">
+        <p style="margin:0;font-size:15px;line-height:1.6;text-wrap:pretty"><sc-for list="{{ p }}" as="s"><sc-if value="{{ s.link }}"><button onClick="{{ s.onClick }}" style="all:unset;cursor:pointer;border-bottom:1px solid var(--ink);font-weight:500">{{ s.text }}</button></sc-if><sc-if value="{{ s.plain }}"><span>{{ s.text }}</span></sc-if></sc-for></p>
+      </sc-for>
+      <span style="margin-top:auto;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">OWNED BY KNOWLEDGE MANAGEMENT · LAST DISTILLED 02:11</span>
+    </article>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="border:1px solid var(--line);background:var(--panel)">
+        <div style="padding:11px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">BACKLINKS · {{ backCount }}</div>
+        <sc-for list="{{ backlinks }}" as="b" hint-placeholder-count="3"><button onClick="{{ b.onClick }}" style="all:unset;cursor:pointer;box-sizing:border-box;width:100%;display:flex;flex-direction:column;gap:3px;padding:10px 14px;border-bottom:1px solid var(--line)" style-hover="background:var(--panel2)"><span style="font-size:13px">{{ b.title }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink3)">{{ b.folderU }}</span></button></sc-for>
+        <sc-if value="{{ noBack }}"><div style="padding:10px 14px;font-size:13px;color:var(--ink2)">No notes link here.</div></sc-if>
+      </div>
+      <div style="border:1px solid var(--line);background:var(--panel)">
+        <div style="padding:11px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">OUTGOING · {{ outCount }}</div>
+        <sc-for list="{{ outgoing }}" as="b"><button onClick="{{ b.onClick }}" style="all:unset;cursor:pointer;box-sizing:border-box;width:100%;padding:9px 14px;border-bottom:1px solid var(--line);font-size:13px" style-hover="background:var(--panel2)">{{ b.title }}</button></sc-for>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isDistill }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Distillation" style="display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">KNOWLEDGE — DISTILLATION</span><h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">Nightly runs</h1><span style="font-size:14px;color:var(--ink2)">Every night at 02:00, Knowledge Management folds the day into the vault.</span>
+      <button onClick="{{ runNow }}" style="all:unset;cursor:pointer;margin-left:auto;background:var(--ink);color:var(--panel);padding:10px 14px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em">{{ runLabel }}</button></div>
+    <div style="display:grid;grid-template-columns:300px minmax(0,1fr);gap:20px;align-items:start">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <sc-for list="{{ runs }}" as="r" hint-placeholder-count="3"><button onClick="{{ r.onClick }}" style="all:unset;cursor:pointer;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid {{ r.line }};background:{{ r.bg }}"><div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)"><span>{{ r.id }}</span><span style="display:flex;align-items:center;gap:6px;color:var(--ink)">{{ r.dot }}{{ r.stateU }}</span></div><span style="font-size:14px">{{ r.date }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)">{{ r.meta }}</span></button></sc-for>
+      </div>
+      <div style="border:1px solid var(--ink);background:var(--panel)">
+        <div style="display:flex;align-items:center;gap:14px;padding:13px 18px;border-bottom:1px solid var(--line)"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">{{ dr.id }}</span><span style="font-size:18px;font-weight:500">{{ dr.date }}</span></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--line);padding:0 18px"><sc-for list="{{ dr.metrics }}" as="m" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:4px;padding:12px 0"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ m.k }}</span><span style="font-size:20px;font-weight:500;font-variant-numeric:tabular-nums">{{ m.v }}</span></div></sc-for></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr">
+          <div style="padding:16px 18px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:10px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">GAPS FOUND · {{ dr.gapCount }}</span><sc-for list="{{ dr.gaps }}" as="g"><div style="display:flex;flex-direction:column;gap:8px;border:1px solid var(--line2);background:var(--bg);padding:10px"><span style="font-size:13px;line-height:1.4">{{ g.text }}</span><button onClick="{{ g.onTask }}" style="all:unset;cursor:pointer;align-self:flex-start;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;border:1px solid var(--line2);padding:4px 8px">{{ g.label }}</button></div></sc-for><sc-if value="{{ dr.noGaps }}"><span style="font-size:13px;color:var(--ink2)">No gaps.</span></sc-if></div>
+          <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">APP IDEAS · {{ dr.ideaCount }}</span><sc-for list="{{ dr.ideas }}" as="i"><div style="border:1px dashed var(--line2);padding:10px;font-size:13px;line-height:1.4">{{ i }}</div></sc-for></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;route&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;go&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(r:string)=&gt;void&quot;},&quot;tick&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;number&quot;}}">
+class Component extends DCLogic {
+  state = { note: 'moc', q: '', dsel: 0, running: false, filed: {}, extra: [] };
+  componentDidMount() { this.p = setInterval(() => { if (window.ZC) { clearInterval(this.p); this.forceUpdate(); } }, 50); }
+  componentWillUnmount() { clearInterval(this.p); clearTimeout(this.rt); }
+  links(txt) { const r = []; txt.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, a) => r.push(a)); return r; }
+  renderVals() {
+    const Z = window.ZC, B = window.ZB, go = this.props.go || (() => {});
+    const empty = { folders: [], note: { paras: [] }, backlinks: [], outgoing: [], runs: [], dr: { metrics: [], gaps: [], ideas: [] } };
+    if (!Z || !B) return empty;
+    const pad = Z.pad, parts = (this.props.route || 'knowledge/vault').split('/'), v = parts[1] || 'vault';
+    const out = { ...empty, isVault: v === 'vault', isDistill: v === 'distill' };
+    if (out.isVault) {
+      const V = Z.vault, cur = V.find(n => n.id === this.state.note) || V[0], q = this.state.q.toLowerCase();
+      const open = id => { if (V.find(n => n.id === id)) this.setState({ note: id }); };
+      const fs = [...new Set(V.map(n => n.folder))];
+      out.q = this.state.q; out.onQ = e => this.setState({ q: e.target.value });
+      out.folders = fs.map(f => { const notes = V.filter(n => n.folder === f && (!q || (n.title + n.body.join(' ')).toLowerCase().includes(q))); return { nameU: f.toUpperCase(), n: pad(notes.length), notes: notes.map(n => ({ title: n.title, line: n.id === cur.id ? 'var(--ink)' : 'var(--line)', bg: n.id === cur.id ? 'var(--panel2)' : 'transparent', onClick: () => open(n.id) })) }; }).filter(f => f.notes.length);
+      out.note = { title: cur.title, titleU: cur.title.toUpperCase(), folderU: cur.folder.toUpperCase(),
+        paras: cur.body.map(p => { const segs = []; let last = 0; p.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (m, a, lbl, idx) => { if (idx > last) segs.push({ text: p.slice(last, idx), plain: true }); segs.push({ text: lbl || a, link: true, onClick: () => open(a) }); last = idx + m.length; }); if (last < p.length) segs.push({ text: p.slice(last), plain: true }); return segs; }) };
+      const back = V.filter(n => n.id !== cur.id && this.links(n.body.join(' ')).includes(cur.id));
+      out.backlinks = back.map(n => ({ title: n.title, folderU: n.folder.toUpperCase(), onClick: () => open(n.id) })); out.backCount = pad(back.length); out.noBack = !back.length;
+      const outs = [...new Set(this.links(cur.body.join(' ')))];
+      out.outgoing = outs.map(id => ({ title: id, onClick: () => open(id) })); out.outCount = pad(outs.length);
+    }
+    if (out.isDistill) {
+      const all = this.state.extra.concat(Z.distills), r = all[this.state.dsel] || all[0];
+      out.runs = all.map((x, i) => ({ id: x.id, date: x.date, meta: pad(x.notes) + ' NOTES · ' + pad(x.gaps.length) + ' GAPS · ' + x.dur, dot: B.dot(React, x.live ? 'working' : 'done', 6), stateU: x.live ? 'RUNNING' : 'DONE', line: i === this.state.dsel ? 'var(--ink)' : 'var(--line)', bg: i === this.state.dsel ? 'var(--panel2)' : 'var(--panel)', onClick: () => this.setState({ dsel: i }) }));
+      out.dr = { id: r.id, date: r.date, metrics: [{ k: 'NOTES READ', v: pad(r.notes) }, { k: 'LINKS ADDED', v: pad(r.links) }, { k: 'DURATION', v: r.dur }],
+        gaps: r.gaps.map((g, i) => { const key = r.id + i, done = this.state.filed[key]; return { text: g.replace(/\[\[|\]\]/g, ''), label: done ? 'FILED · ' + done : 'CREATE TASK →', onTask: () => { if (done) return go('work/task/' + done); const t = Z.createTask({ title: 'Fill vault gap: ' + g.replace(/\[\[|\]\]/g, ''), chain: 'research', source: 'Distillation ' + r.id, picked: 'auto' }); this.setState(s => ({ filed: { ...s.filed, [key]: t.id } })); } }; }),
+        ideas: r.ideas, gapCount: pad(r.gaps.length), ideaCount: pad(r.ideas.length), noGaps: !r.gaps.length };
+      out.runLabel = this.state.running ? 'RUNNING…' : 'RUN NOW';
+      out.runNow = () => { if (this.state.running) return; const live = { id: 'DST-NOW', date: '2026-09-24 ' + B.clock().slice(0, 5), notes: 0, links: 0, dur: '—', gaps: [], ideas: [], live: true };
+        this.setState({ running: true, extra: [live], dsel: 0 });
+        this.rt = setTimeout(() => this.setState({ running: false, extra: [{ ...live, live: false, notes: 12, links: 9, dur: '2m', gaps: ['TSK-0145 has no postmortem note yet'], ideas: ['Auto-draft postmortems from incident timelines'] }] }), 3000); };
+    }
+    return out;
+  }
+}
+</script>
+</body>
+</html>

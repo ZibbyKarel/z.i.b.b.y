@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap">
+<style>html,body{margin:0;background:#0A0B0B}a{color:var(--ink)}a:hover{color:var(--ink2)}</style>
+<script src="./zibby.js"></script>
+</helmet>
+<div ref="{{ rootRef }}" style="--bg:#F3F4F2;--panel:#FAFAF8;--panel2:#EDEEEB;--line:#D9DBD6;--line2:#BFC2BC;--ink:#111312;--ink2:#50544F;--ink3:#8A8E88;--grid:rgba(17,19,18,.05);--gw:0px;--s-work:oklch(0.6 0.14 160);--s-think:oklch(0.58 0.14 250);--s-block:oklch(0.7 0.15 70);--s-err:oklch(0.58 0.2 25);--s-done:oklch(0.56 0.15 300);--s-idle:#A9ADA7;width:100vw;height:100vh;min-width:1440px;min-height:900px;box-sizing:border-box;transition:background-color .2s;background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px, transparent 1px),linear-gradient(90deg, var(--grid) 1px, transparent 1px);background-size:24px 24px;color:var(--ink);font-family:'Geist',system-ui,sans-serif;display:grid;grid-template-rows:56px minmax(0,1fr);overflow:hidden;--dot-r:0">
+  <header style="display:flex;align-items:center;gap:36px;padding:0 24px;border-bottom:1px solid var(--line);background:var(--panel)">
+    <div style="display:flex;align-items:center;gap:10px">{{ logoGlyph }}<span style="font-family:'Geist Mono',monospace;font-size:13px;letter-spacing:.18em;font-weight:600">ZIBBYCORP</span><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">/ AGENT OS</span></div>
+    <nav style="display:flex;height:100%;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em">
+      <span style="display:flex;align-items:center;padding:0 14px;border-bottom:1px solid var(--ink);color:var(--ink)">ORG</span>
+      <span style="display:flex;align-items:center;padding:0 14px;color:var(--ink3)">TASKS</span>
+      <span style="display:flex;align-items:center;padding:0 14px;color:var(--ink3)">ACTIVITY</span>
+      <span style="display:flex;align-items:center;padding:0 14px;color:var(--ink3)">LEDGER</span>
+    </nav>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:22px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--ink2)">
+      <div style="display:flex;align-items:center;gap:8px">{{ liveDot }}<span>{{ activeCount }} ACTIVE / 50</span></div>
+      <span>{{ clock }} UTC</span>
+      <div style="display:flex;border:1px solid var(--line2);font-size:10px;letter-spacing:.14em"><button onClick="{{ setLight }}" style="all:unset;cursor:pointer;padding:6px 10px;background:{{ lightBg }};color:{{ lightInk }}">LIGHT</button><button onClick="{{ setDark }}" style="all:unset;cursor:pointer;padding:6px 10px;background:{{ darkBg }};color:{{ darkInk }}">DARK</button></div>
+      <div style="display:flex;gap:14px;border:1px solid var(--line2);padding:6px 10px"><span>SEARCH AGENTS</span><span style="color:var(--ink3)">⌘K</span></div>
+    </div>
+  </header>
+  <div style="display:grid;grid-template-columns:280px minmax(0,1fr) 400px;min-height:0">
+    <aside style="border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0">
+      <div style="padding:20px 20px 12px;display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)"><span>NEEDS YOU</span><span style="color:var(--ink)">03</span></div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding:0 12px">
+        <sc-for list="{{ approvals }}" as="p" hint-placeholder-count="3">
+          <div style="border:1px solid var(--line2);padding:12px;display:flex;flex-direction:column;gap:12px;background:var(--bg)">
+            <div style="display:flex;align-items:center;gap:10px">
+              {{ p.glyph }}
+              <div style="display:flex;flex-direction:column;gap:3px;min-width:0;flex:1">
+                <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;font-weight:600">{{ p.nameU }}</span>
+                <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink3)">{{ p.id }} · {{ p.deptU }}</span>
+              </div>
+              <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink3)">{{ p.wait }}</span>
+            </div>
+            <span style="font-size:13px;line-height:1.35;color:var(--ink)">{{ p.text }}</span>
+            <div style="display:flex;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">
+              <span style="flex:1;background:var(--ink);color:var(--panel);padding:7px;text-align:center;cursor:pointer">APPROVE</span>
+              <span style="flex:1;border:1px solid var(--line2);color:var(--ink2);padding:6px;text-align:center;cursor:pointer">DENY</span>
+              <span style="border:1px solid var(--line2);color:var(--ink2);padding:6px 9px;text-align:center;cursor:pointer">→</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="margin-top:auto;border-top:1px solid var(--line);padding:16px 20px 20px;display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2)">
+        <sc-for list="{{ legend }}" as="l" hint-placeholder-count="6">
+          <div style="display:flex;align-items:center;gap:8px">{{ l.dot }}<span style="flex:1">{{ l.labelU }}</span><span style="color:var(--ink3)">{{ l.n }}</span></div>
+        </sc-for>
+      </div>
+    </aside>
+    <main style="padding:26px 32px;display:flex;flex-direction:column;min-width:0;min-height:0">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          
+          
+          
+        </div>
+        <div style="display:flex;gap:8px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em">
+          <div style="display:flex;border:1px solid var(--line2);background:var(--panel)"></div>
+          
+        </div>
+      </div>
+      <div style="display:flex;justify-content:center">
+        <div style="position:relative;display:flex;align-items:center;gap:14px;padding:10px 18px 10px 10px;border:1px solid var(--line2);background:var(--panel)">
+          <div style="position:absolute;top:-1px;left:-1px;width:8px;height:8px;border-top:1px solid var(--ink);border-left:1px solid var(--ink)"></div>
+          <div style="position:absolute;top:-1px;right:-1px;width:8px;height:8px;border-top:1px solid var(--ink);border-right:1px solid var(--ink)"></div>
+          <div style="position:absolute;bottom:-1px;left:-1px;width:8px;height:8px;border-bottom:1px solid var(--ink);border-left:1px solid var(--ink)"></div>
+          <div style="position:absolute;bottom:-1px;right:-1px;width:8px;height:8px;border-bottom:1px solid var(--ink);border-right:1px solid var(--ink)"></div>
+          <div style="width:50px;height:50px;display:grid;place-items:center;background:var(--panel2)">{{ ceoGlyph }}</div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">EXEC-00 · ROOT</span>
+            <span style="font-size:16px;font-weight:500">Zibby</span>
+            <span style="font-size:12px;color:var(--ink2)">Chief Orchestrator</span>
+          </div>
+          <div style="margin-left:22px;display:flex;align-items:center;gap:7px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2)">{{ ceoDot }}WORKING</div>
+        </div>
+      </div>
+      <div style="width:1px;height:22px;background:var(--line2);margin:0 auto"></div>
+      <div style="position:relative;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px">
+        <div style="position:absolute;top:0;height:1px;background:var(--line2);left:calc((100% - 56px) / 16);right:calc((100% - 56px) / 16)"></div>
+        <sc-for list="{{ depts }}" as="d" hint-placeholder-count="8">
+          <div style="display:flex;flex-direction:column;align-items:center">
+            <div style="width:1px;height:18px;background:var(--line2)"></div>
+            <button onClick="{{ d.onClick }}" style="all:unset;cursor:pointer;box-sizing:border-box;width:100%;display:flex;flex-direction:column;gap:8px;padding:10px;background:var(--panel);border:1px solid {{ d.nodeLine }}">
+              <div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink3)"><span>{{ d.code }}</span><span>{{ d.countStr }} AG</span></div>
+              <span style="font-size:13px;font-weight:500">{{ d.name }}</span>
+              <div style="display:grid;grid-template-columns:repeat(5,9px);gap:3px;height:21px;align-content:start"><sc-for list="{{ d.cells }}" as="x">{{ x }}</sc-for></div>
+              <div style="display:flex;align-items:center;gap:6px;padding-top:8px;border-top:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;white-space:nowrap;color:{{ d.alertColor }}">{{ d.alertDot }}<span>{{ d.alertU }}</span></div>
+            </button>
+            <div style="width:1px;height:22px;background:{{ d.stubColor }}"></div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="flex:1;min-height:0;border:1px solid var(--ink);background:var(--panel);display:flex;flex-direction:column;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:16px;padding:13px 18px;border-bottom:1px solid var(--line)">
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">03 — DEPARTMENT</span>
+          <span style="font-size:18px;font-weight:500">{{ dept.name }}</span>
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--ink2)">LEAD · {{ dept.leadU }}</span>
+          <div style="margin-left:auto;display:flex;gap:18px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--ink2)"><span>{{ dept.countStr }} AGENTS</span><span>{{ dept.activeStr }} ACTIVE</span><span>{{ dept.blockedStr }} BLOCKED</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;padding:14px;align-content:start;min-height:0;overflow-y:auto">
+          <sc-for list="{{ team }}" as="a" hint-placeholder-count="10">
+            <button onClick="{{ a.onClick }}" style="all:unset;cursor:pointer;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid {{ a.line }};background:var(--bg)">
+              <div style="height:72px;display:grid;place-items:center;border:1px solid var(--line);background-image:linear-gradient(var(--grid) 1px, transparent 1px),linear-gradient(90deg, var(--grid) 1px, transparent 1px);background-size:8px 8px">{{ a.glyph }}</div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px"><span style="font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.1em;font-weight:600">{{ a.nameU }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--ink3)">{{ a.id }}</span></div>
+              <span style="font-size:12px;color:var(--ink2);margin-top:-4px">{{ a.role }}</span>
+              <div style="display:flex;align-items:center;gap:7px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink)">{{ a.dot }}<span>{{ a.stateU }}</span></div>
+              <span style="font-size:12px;line-height:1.35;color:var(--ink2);min-height:32px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ a.task }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </main>
+    <aside style="border-left:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;gap:16px;padding:20px;min-height:0;overflow:hidden">
+      <div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)"><span>AGENT PROFILE</span><span>{{ agent.id }}</span></div>
+      <div style="position:relative;height:188px;flex-shrink:0;display:grid;place-items:center;border:1px solid var(--line2);background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px, transparent 1px),linear-gradient(90deg, var(--grid) 1px, transparent 1px);background-size:12px 12px">
+        <div style="position:absolute;top:-1px;left:-1px;width:10px;height:10px;border-top:1px solid var(--ink);border-left:1px solid var(--ink)"></div>
+        <div style="position:absolute;top:-1px;right:-1px;width:10px;height:10px;border-top:1px solid var(--ink);border-right:1px solid var(--ink)"></div>
+        <div style="position:absolute;bottom:-1px;left:-1px;width:10px;height:10px;border-bottom:1px solid var(--ink);border-left:1px solid var(--ink)"></div>
+        <div style="position:absolute;bottom:-1px;right:-1px;width:10px;height:10px;border-bottom:1px solid var(--ink);border-right:1px solid var(--ink)"></div>
+        {{ bigGlyph }}
+        <span style="position:absolute;left:12px;bottom:10px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">GLYPH · SEED {{ prof.seed }}</span>
+        <span style="position:absolute;right:12px;bottom:10px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">8×8 · SYM</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h2 style="margin:0;font-size:30px;font-weight:500;letter-spacing:-.02em">{{ agent.name }}</h2>
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 10px;border:1px solid var(--line2);font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em">{{ agentDot }}{{ agentStateU }}</div>
+        </div>
+        <span style="font-size:14px;color:var(--ink2)">{{ agent.role }} · {{ agent.deptName }}</span>
+      </div>
+      <div style="border:1px solid var(--line);padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--bg)">
+        <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">CURRENT TASK</span>
+        <span style="font-size:15px;line-height:1.35">{{ agent.task }}</span>
+        <div style="height:2px;background:var(--line)"><div style="height:2px;width:{{ progressPct }};background:var(--ink)"></div></div>
+        <div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2)"><span>{{ prof.step }}</span><span>{{ prof.elapsed }} ELAPSED</span><span>{{ progressPct }}</span></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>REPORTS TO</span>{{ leadGlyph }}<span style="color:var(--ink)">{{ leadName }}</span></div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">TOOLS · {{ toolCount }}</span>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <sc-for list="{{ prof.tools }}" as="t" hint-placeholder-count="4"><span style="font-family:'Geist Mono',monospace;font-size:11px;border:1px solid var(--line2);padding:4px 8px;color:var(--ink2)">{{ t }}</span></sc-for>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+        <sc-for list="{{ prof.metrics }}" as="m" hint-placeholder-count="3">
+          <div style="display:flex;flex-direction:column;gap:4px;padding:12px 0"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ m.k }}</span><span style="font-size:20px;font-weight:500;font-variant-numeric:tabular-nums">{{ m.v }}</span></div>
+        </sc-for>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-height:0;overflow:hidden">
+        <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">ACTIVITY</span>
+        <sc-for list="{{ log }}" as="l" hint-placeholder-count="5">
+          <div style="display:flex;gap:12px;font-family:'Geist Mono',monospace;font-size:11px;line-height:1.4"><span style="color:var(--ink3)">{{ l.t }}</span><span style="color:{{ l.color }}">{{ l.text }}{{ l.caret }}</span></div>
+        </sc-for>
+      </div>
+      <div style="display:flex;gap:8px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em">
+        <span style="flex:1;text-align:center;border:1px solid var(--line2);padding:11px;color:var(--ink);cursor:pointer">PAUSE</span>
+        <span style="flex:2;text-align:center;background:var(--ink);color:var(--panel);padding:12px;cursor:pointer">OPEN SESSION →</span>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { ready: !!window.ZB, dept: 'eng', agent: 'ENG-02', now: '', theme: localStorage.getItem('zb-dash-theme') || 'light' };
+  rootRef = React.createRef();
+  THEMES = {
+    light: { '--bg':'#F3F4F2','--panel':'#FAFAF8','--panel2':'#EDEEEB','--line':'#D9DBD6','--line2':'#BFC2BC','--ink':'#111312','--ink2':'#50544F','--ink3':'#8A8E88','--grid':'rgba(17,19,18,.05)','--gw':'0px','--s-work':'oklch(0.6 0.14 160)','--s-think':'oklch(0.58 0.14 250)','--s-block':'oklch(0.7 0.15 70)','--s-err':'oklch(0.58 0.2 25)','--s-done':'oklch(0.56 0.15 300)','--s-idle':'#A9ADA7' },
+    dark: { '--bg':'#0A0B0B','--panel':'#101211','--panel2':'#161917','--line':'#232725','--line2':'#343936','--ink':'#ECEFEA','--ink2':'#A2A8A2','--ink3':'#666C67','--grid':'rgba(236,239,234,.035)','--gw':'8px','--s-work':'oklch(0.82 0.17 160)','--s-think':'oklch(0.78 0.13 245)','--s-block':'oklch(0.84 0.15 80)','--s-err':'oklch(0.7 0.2 25)','--s-done':'oklch(0.78 0.14 300)','--s-idle':'#4A504B' }
+  };
+  applyTheme() { const el = this.rootRef.current; if (!el) return; const v = this.THEMES[this.state.theme]; for (const k in v) el.style.setProperty(k, v[k]); document.body.style.background = v['--bg']; }
+  setTheme(t) { localStorage.setItem('zb-dash-theme', t); this.setState({ theme: t }); }
+  componentDidUpdate() { this.applyTheme(); }
+  componentDidMount() {
+    this.applyTheme();
+    this.t = setInterval(() => { if (window.ZB) this.setState({ ready: true, now: window.ZB.clock() }); }, 1000);
+    this.p = setInterval(() => { if (window.ZB) { clearInterval(this.p); this.setState({ ready: true, now: window.ZB.clock() }); } }, 50);
+  }
+  componentWillUnmount() { clearInterval(this.t); clearInterval(this.p); }
+  renderVals() {
+    const Z = window.ZB;
+    if (!Z) return { rootRef: this.rootRef, depts: [], team: [], approvals: [], legend: [], log: [], prof: { tools: [], metrics: [] }, dept: {}, agent: {} };
+    const G = (a, size, glow) => Z.glyph(React, { seed: a.name, state: a.state, size, glow });
+    const pad = n => String(n).padStart(2, '0');
+    const act = d => d.agents.filter(a => a.state === 'working' || a.state === 'thinking').length;
+    const al = d => {
+      const bad = d.agents.filter(a => a.state === 'blocked' || a.state === 'error'), n = act(d);
+      if (bad.length) { const err = bad.some(a => a.state === 'error'); return { u: err ? bad.length + (bad.length > 1 ? ' ALERTS' : ' ERROR') : bad.length + ' BLOCKED', k: err ? 'error' : 'blocked', c: 'var(--ink)' }; }
+      return { u: n ? n + '/' + d.agents.length + ' ON' : 'QUIET', k: n ? 'working' : 'idle', c: 'var(--ink2)' };
+    };
+    const sel = Z.depts.find(d => d.id === this.state.dept);
+    const agent = Z.agent(this.state.agent) || sel.agents[0];
+    const prof = Z.profile(agent);
+    const depts = Z.depts.map(d => {
+      const on = d.id === sel.id;
+      return { ...d, countStr: pad(d.agents.length), activeStr: pad(act(d)), segs: Z.segs(d),
+        cells: d.agents.map(a => Z.dot(React, a.state, 9)),
+        alertU: al(d).u, alertDot: Z.dot(React, al(d).k, 7), alertColor: al(d).c,
+        rowBg: on ? 'var(--panel2)' : 'transparent', rowLine: on ? 'var(--line2)' : 'transparent', nodeLine: on ? 'var(--ink)' : 'var(--line)', stubColor: on ? 'var(--ink)' : 'transparent',
+        onClick: () => this.setState({ dept: d.id, agent: d.agents[0].id }) };
+    });
+    const team = sel.agents.map(a => ({ ...a, nameU: a.name.toUpperCase(), stateU: Z.S[a.state].label.toUpperCase(), glyph: G(a, 48, true), dot: Z.dot(React, a.state, 7),
+      line: a.id === agent.id ? 'var(--ink)' : 'var(--line)', onClick: () => this.setState({ agent: a.id }) }));
+    const activeCount = Z.all.filter(a => a.state === 'working' || a.state === 'thinking').length;
+    const dk = this.state.theme === 'dark';
+    return {
+      rootRef: this.rootRef, setLight: () => this.setTheme('light'), setDark: () => this.setTheme('dark'),
+      lightBg: dk ? 'transparent' : 'var(--ink)', lightInk: dk ? 'var(--ink3)' : 'var(--panel)', darkBg: dk ? 'var(--ink)' : 'transparent', darkInk: dk ? 'var(--panel)' : 'var(--ink3)',
+      depts, team, activeCount, clock: this.state.now || Z.clock(),
+      logoGlyph: Z.glyph(React, { seed: 'Zibby', state: 'idle', size: 22 }),
+      liveDot: Z.dot(React, 'working', 7), ceoGlyph: G(Z.ceo, 38, true), ceoDot: Z.dot(React, 'working', 7),
+      approvals: Z.approvals.map((p, i) => ({ ...p, nameU: p.name.toUpperCase(), deptU: p.deptName.toUpperCase(), wait: ['4M', '11M', '26M'][i], glyph: G(p, 30, true) })),
+      legend: Z.ORDER.map(k => ({ labelU: Z.S[k].label.toUpperCase(), n: pad(Z.counts[k]), dot: Z.dot(React, k, 8) })),
+      dept: { name: sel.name, leadU: sel.agents[0].name.toUpperCase(), countStr: pad(sel.agents.length), activeStr: pad(act(sel)), blockedStr: pad(sel.agents.filter(a => a.state === 'blocked' || a.state === 'error').length) },
+      agent, agentStateU: Z.S[agent.state].label.toUpperCase(), agentDot: Z.dot(React, agent.state, 8),
+      bigGlyph: G(agent, 128, true), prof, progressPct: prof.progress + '%', toolCount: pad(prof.tools.length),
+      leadGlyph: prof.lead ? G(prof.lead, 18, false) : null, leadName: prof.lead ? prof.lead.name.toUpperCase() : 'BOARD',
+      log: prof.log.map(([t, text], i) => ({ t, text, color: i === 0 ? 'var(--ink)' : 'var(--ink2)', caret: i === 0 ? Z.caret(React) : null }))
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -122,3 +122,5 @@ z-i-b-b-y
 # regenerated locally e.g. by `pnpm self-knowledge:generate`; never versioned)
 /apps/api/data/
 /scratchpad/
+.zibby/backups/
+design/ZibbyCorp.zip

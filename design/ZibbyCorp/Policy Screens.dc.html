@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="padding:24px 28px;display:flex;flex-direction:column;gap:22px;color:var(--ink)">
+
+<sc-if value="{{ isApprovals }}" hint-placeholder-val="{{ true }}">
+  <div data-screen-label="Approvals" style="display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">POLICY — APPROVALS</span><h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">Needs you</h1><span style="font-size:14px;color:var(--ink2)">{{ queueMeta }}</span></div>
+    <div style="border:1px solid var(--ink);background:var(--panel)">
+      <div style="display:grid;grid-template-columns:84px 90px minmax(0,2fr) minmax(0,1.4fr) 50px 60px 200px;gap:12px;padding:9px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>ID</span><span>KIND</span><span>REQUEST</span><span>RULE</span><span>DEPT</span><span>WAIT</span><span></span></div>
+      <sc-for list="{{ queue }}" as="q" hint-placeholder-count="4">
+        <div style="display:grid;grid-template-columns:84px 90px minmax(0,2fr) minmax(0,1.4fr) 50px 60px 200px;gap:12px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--line)">
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ q.id }}</span>
+          <span style="display:flex;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em">{{ q.dot }}{{ q.kind }}</span>
+          <div style="display:flex;align-items:center;gap:10px;min-width:0">{{ q.glyph }}<div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px">{{ q.text }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink3)">{{ q.who }}</span></div></div>
+          <span style="font-size:12px;color:var(--ink2)">{{ q.rule }}</span>
+          <span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--ink2)">{{ q.deptCode }}</span>
+          <span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--ink2)">{{ q.wait }}</span>
+          <div style="display:flex;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em"><button onClick="{{ q.onApprove }}" style="all:unset;cursor:pointer;flex:1;text-align:center;background:var(--ink);color:var(--panel);padding:7px">{{ q.primary }}</button><button onClick="{{ q.onDeny }}" style="all:unset;cursor:pointer;flex:1;text-align:center;border:1px solid var(--line2);padding:6px;color:var(--ink2)">DENY</button><button onClick="{{ q.onOpen }}" style="all:unset;cursor:pointer;border:1px solid var(--line2);padding:6px 9px;color:var(--ink2)">→</button></div>
+        </div>
+      </sc-for>
+      <sc-if value="{{ queueEmpty }}"><div style="padding:16px 14px;font-size:13px;color:var(--ink2)">The queue is empty.</div></sc-if>
+    </div>
+    <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3);margin-top:8px">HISTORY</span>
+    <div style="border:1px solid var(--line);background:var(--panel)">
+      <div style="display:grid;grid-template-columns:84px 100px 90px minmax(0,2fr) 50px 90px 50px;gap:12px;padding:9px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>ID</span><span>DECISION</span><span>KIND</span><span>REQUEST</span><span>DEPT</span><span>TASK</span><span style="text-align:right">WHEN</span></div>
+      <sc-for list="{{ history }}" as="h" hint-placeholder-count="6">
+        <div style="display:grid;grid-template-columns:84px 100px 90px minmax(0,2fr) 50px 90px 50px;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);font-size:13px">
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ h.id }}</span><span style="display:flex;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em">{{ h.dot }}{{ h.decision }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)">{{ h.kind }}</span><span>{{ h.text }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--ink2)">{{ h.dept }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--ink2)">{{ h.task }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--ink3);text-align:right">{{ h.when }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isGates }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Gate rules" style="display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">POLICY — GATE RULES</span><h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">What waits for you</h1></div>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start">
+      <div style="border:1px dashed var(--line2);background:var(--bg)">
+        <div style="display:flex;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em"><span style="color:var(--ink3)">01 — FIXED FLOOR</span><span style="color:var(--ink2)">LOCKED</span></div>
+        <sc-for list="{{ floor }}" as="f" hint-placeholder-count="6"><div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px;padding:11px 14px;border-bottom:1px solid var(--line)"><span style="font-size:13px">{{ f.a }}</span><span style="font-size:12px;color:var(--ink2)">{{ f.b }}</span></div></sc-for>
+        <span style="display:block;padding:11px 14px;font-size:12px;color:var(--ink2)">The floor applies to every project and no rule can loosen it.</span>
+      </div>
+      <div style="border:1px solid var(--line);background:var(--panel)">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em"><span style="color:var(--ink3)">02 — HANDOFF RULES</span><button onClick="{{ addHandoff }}" style="all:unset;cursor:pointer;font-size:10px;border:1px solid var(--line2);padding:4px 8px">+ RULE</button></div>
+        <sc-for list="{{ handoffs }}" as="h" hint-placeholder-count="7">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:9px 14px;border-bottom:1px solid var(--line)">
+            <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em"><span style="border:1px solid var(--line2);padding:4px 7px">{{ h.from }}</span><span style="color:var(--ink3)">→</span><span style="border:1px solid var(--line2);padding:4px 7px">{{ h.to }}</span><span style="font-family:'Geist',sans-serif;font-size:12px;letter-spacing:0;color:var(--ink2)">{{ h.names }}</span></div>
+            <div style="display:flex;border:1px solid var(--line2);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em"><sc-for list="{{ h.opts }}" as="o"><button onClick="{{ o.onClick }}" style="all:unset;cursor:pointer;padding:5px 10px;background:{{ o.bg }};color:{{ o.ink }}">{{ o.label }}</button></sc-for></div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="border:1px solid var(--line);background:var(--panel)">
+      <div style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em"><span style="color:var(--ink3)">03 — PER-PROJECT RULES</span>
+        <div style="display:flex;border:1px solid var(--line2);font-size:10px;margin-left:auto"><sc-for list="{{ projTabs }}" as="o"><button onClick="{{ o.onClick }}" style="all:unset;cursor:pointer;padding:5px 10px;background:{{ o.bg }};color:{{ o.ink }}">{{ o.label }}</button></sc-for></div></div>
+      <sc-for list="{{ projRules }}" as="r" hint-placeholder-count="3">
+        <div style="display:grid;grid-template-columns:140px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)">
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ r.project }}</span><span style="font-family:'Geist Mono',monospace;font-size:12px">{{ r.action }}</span>
+          <div style="display:flex;border:1px solid var(--line2);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em"><sc-for list="{{ r.opts }}" as="o"><button onClick="{{ o.onClick }}" style="all:unset;cursor:pointer;padding:5px 10px;background:{{ o.bg }};color:{{ o.ink }}">{{ o.label }}</button></sc-for></div>
+        </div>
+      </sc-for>
+      <div style="display:flex;gap:8px;padding:10px 14px"><input value="{{ newAction }}" onChange="{{ onNewAction }}" onKeyDown="{{ onNewKey }}" placeholder="Action pattern, e.g. git.push release/*" style="flex:1;height:32px;box-sizing:border-box;border:1px solid var(--line2);background:var(--bg);padding:0 10px;font-size:13px;outline:none"><button onClick="{{ addRule }}" style="all:unset;cursor:pointer;border:1px solid var(--line2);padding:0 12px;display:flex;align-items:center;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">+ ADD RULE</button></div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isPatterns }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Learned patterns" style="display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">POLICY — LEARNED PATTERNS</span><h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">Suggested rules</h1><span style="font-size:14px;color:var(--ink2)">Built from your past approvals. Nothing changes until you accept.</span></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:12px">
+      <sc-for list="{{ patterns }}" as="p" hint-placeholder-count="4">
+        <div style="border:1px solid {{ p.line }};background:var(--panel);padding:16px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)"><span>{{ p.id }} · {{ p.scopeU }}</span><span style="color:var(--ink)">{{ p.statusU }}</span></div>
+          <span style="font-size:16px;font-weight:500;text-wrap:pretty">{{ p.text }}</span>
+          <div style="display:flex;gap:3px"><sc-for list="{{ p.cells }}" as="c">{{ c }}</sc-for></div>
+          <span style="font-size:13px;color:var(--ink2)">{{ p.evidence }}</span>
+          <sc-if value="{{ p.open }}"><div style="display:flex;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em"><button onClick="{{ p.onAccept }}" style="all:unset;cursor:pointer;flex:2;text-align:center;background:var(--ink);color:var(--panel);padding:8px">ACCEPT AS RULE</button><button onClick="{{ p.onDismiss }}" style="all:unset;cursor:pointer;flex:1;text-align:center;border:1px solid var(--line2);padding:7px;color:var(--ink2)">DISMISS</button></div></sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;route&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;go&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(r:string)=&gt;void&quot;},&quot;tick&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;number&quot;},&quot;openApproval&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(id:string,deny?:boolean)=&gt;void&quot;}}">
+class Component extends DCLogic {
+  state = { proj: 'all', newAction: '', pat: {} };
+  componentDidMount() { this.p = setInterval(() => { if (window.ZC) { clearInterval(this.p); this.forceUpdate(); } }, 50); }
+  componentWillUnmount() { clearInterval(this.p); }
+  renderVals() {
+    const Z = window.ZC, B = window.ZB, go = this.props.go || (() => {}), open = this.props.openApproval || (() => {});
+    const empty = { queue: [], history: [], floor: [], handoffs: [], projTabs: [], projRules: [], patterns: [] };
+    if (!Z || !B) return empty;
+    const pad = Z.pad, parts = (this.props.route || 'policy/approvals').split('/'), v = parts[1] || 'approvals';
+    const out = { ...empty, isApprovals: v === 'approvals', isGates: v === 'gates', isPatterns: v === 'patterns' };
+    const seg = (cur, labels, set) => labels.map(l => ({ label: l, bg: cur === l ? 'var(--ink)' : 'transparent', ink: cur === l ? 'var(--panel)' : 'var(--ink3)', onClick: () => set(l) }));
+    if (out.isApprovals) {
+      out.queue = Z.approvals.map(q => { const a = Z.A(q.agent); return { ...q, deptCode: Z.D(q.dept).code, dot: B.dot(React, 'blocked', 6), glyph: B.glyph(React, { seed: a.name, state: a.state, size: 30 }), who: a.name.toUpperCase() + ' · ' + (q.task || 'NO TASK'),
+        primary: q.kind === 'QUESTION' ? 'REPLY' : 'APPROVE', onApprove: () => q.kind === 'QUESTION' ? open(q.id) : Z.resolve(q.id, 'APPROVED'), onDeny: () => open(q.id, true), onOpen: () => open(q.id) }; });
+      out.queueEmpty = !Z.approvals.length; out.queueMeta = pad(Z.approvals.length) + ' waiting · oldest ' + (Z.approvals.length ? Z.approvals[Z.approvals.length - 1].wait.toLowerCase() : '—');
+      out.history = Z.history.map(h => ({ ...h, dot: B.dot(React, h.decision === 'DENIED' ? 'error' : 'done', 6) }));
+    }
+    if (out.isGates) {
+      out.floor = Z.floor.map(([a, b]) => ({ a, b }));
+      out.handoffs = Z.handoffRules.map(h => ({ from: Z.D(h.from).code, to: Z.D(h.to).code, names: Z.D(h.from).name + ' to ' + Z.D(h.to).name, opts: seg(h.mode, ['AUTO','ASK'], l => { h.mode = l; Z.emit(); this.forceUpdate(); }) }));
+      out.addHandoff = () => { const used = new Set(Z.handoffRules.map(h => h.from + h.to)); const p = [['ops','dev'],['sec','rel'],['dev','com'],['knw','com']].find(([a, b]) => !used.has(a + b)); if (p) { Z.handoffRules.push({ from: p[0], to: p[1], mode: 'ASK' }); Z.emit(); this.forceUpdate(); } };
+      const pr = this.state.proj;
+      out.projTabs = seg(pr === 'all' ? 'ALL' : pr.toUpperCase(), ['ALL'].concat(Z.projects.map(p => p.id.toUpperCase())), l => this.setState({ proj: l === 'ALL' ? 'all' : l.toLowerCase() }));
+      out.projRules = Z.projectRules.filter(r => pr === 'all' || r.project === pr).map(r => ({ ...r, opts: seg(r.mode, ['AUTO','ASK'], l => { r.mode = l; this.forceUpdate(); }) }));
+      out.newAction = this.state.newAction; out.onNewAction = e => this.setState({ newAction: e.target.value });
+      const add = () => { const a = this.state.newAction.trim(); if (!a) return; Z.projectRules.push({ i: Z.projectRules.length, project: pr === 'all' ? Z.projects[0].id : pr, action: a, mode: 'ASK' }); this.setState({ newAction: '' }); };
+      out.addRule = add; out.onNewKey = e => { if (e.key === 'Enter') add(); };
+    }
+    if (out.isPatterns) {
+      out.patterns = Z.patterns.map(p => { const st = this.state.pat[p.id]; const set = k => this.setState(s => ({ pat: { ...s.pat, [p.id]: k } }));
+        const cells = []; for (let i = 0; i < p.of; i++) cells.push(B.dot(React, i < p.n ? 'done' : 'error', 9));
+        return { ...p, scopeU: p.scope.toUpperCase(), statusU: st === 'accepted' ? 'NOW A RULE' : st === 'dismissed' ? 'DISMISSED' : pad(p.n) + ' / ' + pad(p.of), cells, open: !st, line: st === 'accepted' ? 'var(--ink)' : 'var(--line)',
+          onAccept: () => { set('accepted'); if (p.scope === 'api') Z.projectRules.push({ i: 99, project: 'api', action: 'git.push fix/*', mode: 'AUTO' }); }, onDismiss: () => set('dismissed') }; });
+    }
+    return out;
+  }
+}
+</script>
+</body>
+</html>
