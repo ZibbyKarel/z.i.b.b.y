@@ -4,7 +4,7 @@
 part's branch to see what actually landed.
 
 - **Execution order and night-run loop:** [`ROADMAP.md`](./ROADMAP.md)
-- **Binding calls:** [`DECISIONS.md`](./DECISIONS.md), D-001 … D-011
+- **Binding calls:** [`DECISIONS.md`](./DECISIONS.md), D-001 … D-016
 - **Defaults for open questions:** [`OPEN-QUESTIONS.md`](./OPEN-QUESTIONS.md)
 - **Where everything moves:** [`ROUTE-MAP.md`](./ROUTE-MAP.md)
 - **Phase specs:** [`PART-0.md`](./PART-0.md) · [`PART-A.md`](./PART-A.md) · [`PART-B.md`](./PART-B.md)
@@ -19,9 +19,9 @@ and the data tarball is in `.zibby/backups/`. D-012 … D-015 are binding.
 - In Part B, the People screens show **employees** (D-015), and the agent library (the
   positions) moves to `/system/registries/positions`.
 
-**Last updated:** 2026-09-24 20:10. The night run has started.
+**Last updated:** 2026-09-24. Part 0 landed (see board).
 
-**Resume at:** ZC-00.
+**Resume at:** ZE-01 (Part E — employees).
 
 ---
 
@@ -33,13 +33,13 @@ Legend: ⬜ todo · 🟦 in progress · ✅ landed (sha) · ⛔ parked (reason)
 
 | Phase | Title | Status | Commit |
 |---|---|---|---|
-| ZC-00 | Bootstrap + baseline + rename inventory | ⬜ | |
-| ZC-01 | Contracts subsystem → department | ⬜ | |
-| ZC-02 | API rename | ⬜ | |
-| ZC-03 | Migration script + fixture | ⬜ | |
-| ZC-04 | Web rename | ⬜ | |
-| ZC-05 | Docs + `check:names` gate | ⬜ | |
-| ZC-06 | Validation → park | ⬜ | |
+| ZC-00 | Bootstrap + baseline + rename inventory | ✅ (with ZC commit) | |
+| ZC-01 | Contracts subsystem → department | ✅ | |
+| ZC-02 | API rename | ✅ | |
+| ZC-03 | Migration script + fixture | ✅ applied to the real data (backup in `.zibby/data/_backup-zibbycorp-*`) and to the fixture | |
+| ZC-04 | Web rename | ✅ | |
+| ZC-05 | Docs + `check:names` gate | ✅ | |
+| ZC-06 | Validation → park | ✅ | |
 
 ### Part E — Employees
 
@@ -88,6 +88,36 @@ Legend: ⬜ todo · 🟦 in progress · ✅ landed (sha) · ⛔ parked (reason)
 When a phase applies a default from `OPEN-QUESTIONS.md`, append one line here:
 `O-xx → default (phase, sha)`.
 
+## Execution notes
+
+- The rename is driven by a **codemod**, not by hand. There are two scripts:
+  - `tools/migrate/zibbycorp-map.mjs` is the shared rename map.
+  - `tools/migrate/zibbycorp-codemod.mjs` applies it across `apps`, `libs`, `tools` and
+    `e2e`, with dry-run by default.
+- The data migration reuses the same map.
+- Neutral dir names from the map:
+
+  | Old | New |
+  |---|---|
+  | `sentinel/` | `security/` |
+  | `maestro/` | `release/` |
+  | `herald/` | `comms/` |
+  | `loom/` | `arch/` |
+
+  The class names follow the same words: `SecurityService`, `ReleaseService`,
+  `CommsService`, `ArchService`.
+- Dry-run result: 364 files edited, 84 moved.
+- `ledger` is excluded from the automatic rules because it is also a generic word. Handle
+  its department-id uses by hand.
+
+- **Baseline reds** (pre-existing): the e2e specs `briefing.spec.ts` and
+  `channels.spec.ts`, and 7 apps/web typed-route `/teams` errors. The old known-reds list
+  was stale; see `baseline.md`.
+- **The migration skips inbound dirs** (`channels/`, `roadmap/`, `integration-state/`),
+  because of Law 4 and false positives such as "Atlassian Forge" and "OpenAI Codex".
+- The codemod's line-start-key rule also rewrote non-department keys in `.mjs`/JSON files
+  (the docs-sync manifest). Those were fixed by hand; tsc catches the TS cases.
+
 ## Follow-ups found
 
 ## PR drafts
@@ -96,3 +126,14 @@ When a phase applies a default from `OPEN-QUESTIONS.md`, append one line here:
 
 - [ ] Review the draft PR `feat/zibbycorp` → `main` (D-012).
 - [ ] Review the defaults applied (listed above).
+
+- **`git grep -E '\b…'` is a false-clean on macOS** — POSIX ERE has no `\b`, so the I-6 grep
+  printed nothing even with hits. `tools/check-names.mjs` (`pnpm check:names`, pre-commit + CI)
+  uses `git grep -P`. Always use `-P` for word-boundary greps.
+- The codemod over `.claude/skills` rewrote third-party skill text ("OpenAI Codex" →
+  "Knowledge"); all `.claude/**` edits were reverted. It also turned the verb "forge" into
+  "dev" in comments ("a client can never forge provenance") — reworded to "fake".
+- Part 0 validation: tsc 0 (base + web), `pnpm test` = baseline (5760 passed / 17 skipped),
+  `eslint apps libs tools --quiet` 0, `check:names` clean, self-knowledge no drift. e2e not re-run.
+- Historical docs (`docs/superpowers`, `docs/audit`, `docs/ns2`, `docs/hud2chat`, `docs/reviews`,
+  `docs/research`) keep the old vocabulary on purpose — they are records.

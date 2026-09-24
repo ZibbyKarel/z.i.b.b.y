@@ -22,6 +22,7 @@ jobs:
       - uses: ./.github/actions/setup
       # No --fix in CI: the `lint` npm script mutates files, we only want to fail on violations.
       - run: pnpm exec eslint .
+      - run: pnpm run check:names
 
   typecheck:
     runs-on: ubuntu-latest

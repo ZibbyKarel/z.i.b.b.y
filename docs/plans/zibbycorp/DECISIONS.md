@@ -398,3 +398,30 @@ positions held by employees plus pipelines.
 - The queue piggybacks on the scheduler's existing held/queued machinery.
 - `maxConcurrentRuns` stays as the global cap.
 - Headcount becomes the natural per-department cap.
+
+## D-016 — No legacy read tolerance; the migration covers everything (supersedes the D-004 tolerance clause)
+
+**Call:** because D-013 lets the night run migrate the real data, there is no
+`z.preprocess` read-tolerance layer, and no `legacy.ts` in contracts.
+
+- `DepartmentIdSchema` stays a plain `z.enum`, so `.options` and `Record<DepartmentId, …>`
+  keep working.
+- The migration script rewrites **all** of these:
+  - tracked and untracked data;
+  - `activity/*.jsonl`;
+  - `tasks`, `approvals`, `handoff` (fired, proposals, rules, kinds);
+  - automation ids;
+  - `subsystem-seen.json`;
+  - the vault MOCs and wikilinks;
+  - `herald/` and `maestro/`;
+  - `apps/api` test fixtures.
+- The only place persona ids may appear is the migration script's own map, under
+  `tools/migrate/**`.
+- The department registry keeps its `color` field until ZB-13, when the orb map (its only
+  consumer) is deleted. That keeps Part 0 visually identical.
+
+**Why:**
+- Tolerance code is dead weight the moment the migration runs.
+- The operator allowed dead code to be dropped.
+- A preprocess-wrapped enum breaks `.options` and `Record` inference across hundreds of
+  call sites.
