@@ -401,6 +401,12 @@ export type { SubNavItem, SubNavLinkComponent, SubNavProps } from "./components/
 export { PatternCard, PatternCardTestId } from "./components/PatternCard/PatternCard";
 export type { PatternCardProps } from "./components/PatternCard/PatternCard";
 
+export { GoalCard, GoalCardTestId } from "./components/GoalCard/GoalCard";
+export type { GoalCardProps } from "./components/GoalCard/GoalCard";
+
+export { ContactRow, ContactRowTestId } from "./components/ContactRow/ContactRow";
+export type { ContactRowProps } from "./components/ContactRow/ContactRow";
+
 export { Breadcrumb, BreadcrumbTestId } from "./components/Breadcrumb/Breadcrumb";
 export type { BreadcrumbItem, BreadcrumbProps } from "./components/Breadcrumb/Breadcrumb";
 

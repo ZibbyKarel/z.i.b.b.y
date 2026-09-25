@@ -46,6 +46,22 @@ describe("SubNav", () => {
     expect(screen.queryByTestId(SubNavTestId.Actions)).toBeNull();
   });
 
+  it("orientation=responsive still renders every item and preserves the active link", () => {
+    render(<SubNav items={items} orientation="responsive" />);
+    for (const item of items) {
+      expect(screen.getByTestId(`${SubNavTestId.Item}-${item.href}`)).toHaveTextContent(item.label);
+    }
+    expect(screen.getByTestId(`${SubNavTestId.Item}-/departments/dev/overview`)).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("orientation=responsive reflows to a left column at the lg breakpoint", () => {
+    render(<SubNav items={items} orientation="responsive" />);
+    expect(screen.getByTestId(SubNavTestId.List).className).toMatch(/lg:flex-col/);
+  });
+
   it("renders through a custom linkComponent (e.g. next/link) instead of a plain anchor", () => {
     function FakeLink({ href, children, ...rest }: React.ComponentProps<"a"> & { href: string }) {
       return (

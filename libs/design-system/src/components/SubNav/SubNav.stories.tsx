@@ -31,6 +31,10 @@ export const Overview: Story = {
         }
         items={items}
       />
+      {/* ZB-11 Settings sub-nav — a left column at ≥1024px, the same strip below it. */}
+      <div className="max-w-[220px]">
+        <SubNav items={items} orientation="responsive" />
+      </div>
     </div>
   ),
 };

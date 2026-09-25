@@ -219,6 +219,25 @@
 }
 
 /* ---------------------------------------------------------------------------
+ * Reduced motion opt-in (ZB-11 Appearance settings) — a per-viewer convenience
+ * layered ON TOP of the OS `prefers-reduced-motion` query above: the app sets
+ * `data-motion="reduced"` on `<html>` (localStorage-backed, independent of the
+ * OS preference) when the operator opts in from `/system/settings/appearance`.
+ * The standard "force reduced motion" override — every animation/transition
+ * collapses to effectively nothing, regardless of which keyframes a component
+ * references. Not gated to a media query: this is a deliberate app-level choice.
+ * --------------------------------------------------------------------------- */
+[data-motion="reduced"] *,
+[data-motion="reduced"] *::before,
+[data-motion="reduced"] *::after {
+  animation-delay: -1ms !important;
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* ---------------------------------------------------------------------------
  * Theme swap — DS.md §2.4, verbatim. `DesignSystemProvider` sets `data-theme`
  * on its root (and, via ZA-01's `ThemeScript`, on `<html>` before hydration to
  * avoid a flash) and additionally injects every var below as an inline style
