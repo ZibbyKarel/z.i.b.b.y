@@ -58,6 +58,18 @@ export function AgentEditBasics({ control, categories }: AgentEditBasicsProps) {
             />
 
             <FormTextInput<AgentEditValues>
+              label={t("fields.displayName")}
+              name="displayName"
+              placeholder={t("fields.displayNamePlaceholder")}
+            />
+
+            <FormTextInput<AgentEditValues>
+              label={t("fields.jobTitle")}
+              name="title"
+              placeholder={t("fields.jobTitlePlaceholder")}
+            />
+
+            <FormTextInput<AgentEditValues>
               label={t("fields.whenToUse")}
               name="description"
               placeholder={t("fields.whenToUsePlaceholder")}

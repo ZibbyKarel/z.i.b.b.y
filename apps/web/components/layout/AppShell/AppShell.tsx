@@ -20,7 +20,7 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { CatalogProvider } from "../../../state/store";
-import { NewTaskProvider, useNewTask } from "../../../features/tasks";
+import { NewTaskProvider } from "../../../features/tasks";
 import { ChatProvider } from "../../../features/chat";
 import { useApprovalsQuery, useApproveMutation } from "../../../features/approvals";
 import { HIGH_RISK_TYPES, formatWaited } from "../../../features/approvals/approval";
@@ -79,17 +79,25 @@ function SectionSubNav({ active }: { active: SectionId }) {
   const t = useTranslations("nav");
   const tShell = useTranslations("shell");
   const pathname = usePathname();
+  const router = useRouter();
   const section = SECTIONS.find((s) => s.id === active) ?? SECTIONS[0];
   const items = section.tabs.map((tab) => ({
     href: tab.href,
     label: t(`subtab.${section.id}.${tab.id}` as Parameters<typeof t>[0]),
     active: tab.href === pathname,
   }));
-  const { open } = useNewTask();
   return (
     <SubNav
       actions={
-        <Button icon="plus" intent="ghost" onClick={() => open()} size="sm">
+        // ZB-04b: "+ NEW TASK" opens the dedicated `/work/tasks/new` page
+        // (the classify-driven dialog stays reachable via the `N` shortcut and
+        // the other call sites that seed it with an initial target/context).
+        <Button
+          icon="plus"
+          intent="ghost"
+          onClick={() => router.push("/work/tasks/new" as Route)}
+          size="sm"
+        >
           {tShell("newTask")}
         </Button>
       }

@@ -60,9 +60,10 @@ export interface SubTabConfig {
 export interface SectionConfig {
   id: string;
   glyph: IconName;
-  /** Section-level fallback route (AppHeader's section nav) — the ZB-01 mapping:
-   *  org→/agents, work→/projects, activity→/archiv, policy→/settings?tab=gates,
-   *  knowledge→/memory, ledger→/settings, system→/settings. */
+  /** Section-level fallback route (AppHeader's section nav) — the ZB-01 mapping,
+   *  updated as each section ships: org→/org (ZB-02), work→/projects,
+   *  activity→/activity/log (ZB-07), policy→/settings?tab=gates, knowledge→/memory,
+   *  ledger→/settings, system→/settings. */
   href: Route;
   tabs: readonly SubTabConfig[];
 }
@@ -77,10 +78,11 @@ export const SECTIONS = [
   {
     id: "org",
     glyph: "compass",
-    href: "/agents",
+    href: "/org",
     tabs: [
-      { id: "map", href: "/agents" },
-      { id: "people", href: "/agents" },
+      // ZB-02: the map ships. ZB-03: `/org/people` (the employee directory) ships too.
+      { id: "map", href: "/org" },
+      { id: "people", href: "/org/people" },
     ],
   },
   {
@@ -88,7 +90,7 @@ export const SECTIONS = [
     glyph: "flow",
     href: "/projects",
     tabs: [
-      { id: "tasks", href: "/archiv" },
+      { id: "tasks", href: "/work/tasks" as Route },
       { id: "chains", href: "/projects" },
       { id: "goals", href: "/projects" },
       { id: "companies", href: "/companies" },
@@ -99,12 +101,12 @@ export const SECTIONS = [
   {
     id: "activity",
     glyph: "pulse",
-    href: "/archiv",
+    href: "/activity/log",
     tabs: [
-      { id: "log", href: "/archiv" },
-      { id: "runs", href: "/archiv" },
-      { id: "inbox", href: "/archiv" },
-      { id: "briefings", href: "/archiv" },
+      { id: "log", href: "/activity/log" },
+      { id: "runs", href: "/activity/runs" },
+      { id: "inbox", href: "/activity/inbox" },
+      { id: "briefings", href: "/activity/briefings" },
     ],
   },
   {
@@ -162,9 +164,15 @@ const PATH_SECTION: readonly (readonly [prefix: string, section: SectionId])[] =
   ["/pipelines", "org"],
   ["/automations", "org"],
   ["/chat", "org"],
+  // ZB-03 (D-015/D-009): the employee directory + department pages (org) and
+  // the moved position registry (system).
+  ["/org", "org"],
+  ["/system", "system"],
+  ["/work/tasks", "work"],
   ["/projects", "work"],
   ["/companies", "work"],
   ["/teams", "work"],
+  ["/activity", "activity"],
   ["/archiv", "activity"],
   ["/runs", "activity"],
   ["/signals", "policy"],

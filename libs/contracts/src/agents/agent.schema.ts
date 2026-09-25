@@ -45,6 +45,14 @@ export type AgentThinking = z.infer<typeof AgentThinkingSchema>;
 export const AgentSchema = z.object({
   id: AgentIdSchema,
   name: z.string().min(1).max(256).optional(),
+  /**
+   * O-03 — a human name for the position ("Kevin", "Stuart"), shown in the UI as
+   * `displayName ?? name`. Filling this in is the operator's content, never
+   * auto-generated; the slug (`id`/`name`) is never renamed alongside it.
+   */
+  displayName: z.string().min(1).max(256).optional(),
+  /** O-03 — a short job title ("Senior reviewer"), shown next to `displayName`. */
+  title: z.string().min(1).max(128).optional(),
   description: z.string().max(512).optional(),
   glyph: z.string().max(64).optional(),
   /** Optional avatar image (data URI or `/avatars/*.png` path) shown in place of the glyph. */

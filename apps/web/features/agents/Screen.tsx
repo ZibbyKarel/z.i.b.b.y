@@ -64,7 +64,7 @@ export function Screen() {
       {
         onSuccess: () => {
           setCreating(false);
-          router.push(`/agents/${id}`);
+          router.push(`/system/registries/positions/${id}`);
         },
       },
     );
@@ -114,7 +114,7 @@ export function Screen() {
               <AgentCard
                 agent={a}
                 key={a.id}
-                onClick={(x) => router.push(`/agents/${x.id}`)}
+                onClick={(x) => router.push(`/system/registries/positions/${x.id}`)}
                 pipelineCount={pipelineCount(a)}
               />
             ))}

@@ -9,7 +9,21 @@ import { expect, test } from "@playwright/test";
  * here, in the same commit — from then on this spec actually exercises it.
  */
 const ROUTE_MAP_REDIRECTS: ReadonlyArray<[from: string, to: string]> = [
-  // e.g. ["/agents", "/org/people"] once ZB-03 ships `/org/people`.
+  // ZB-02: `/org` ships, so `/` and `/chat` both land there now.
+  ["/", "/org"],
+  ["/chat", "/org"],
+  // ZB-03 (D-015): the employee directory and position registry replace the
+  // old `/agents` catalog; the old pipeline catalog has no single pipeline to
+  // resolve, so it goes straight to the org map. `/agents/:id` and
+  // `/pipelines/:id` are id-dependent (server-side lookup against seeded
+  // data) and are left uncovered here — this table only fits static pairs.
+  ["/agents", "/org/people"],
+  ["/pipelines", "/org"],
+  // ZB-07: the activity screens ship — `/archiv`/`/runs` land on the runs list,
+  // `/activity` on its default `log` tab.
+  ["/archiv", "/activity/runs"],
+  ["/runs", "/activity/runs"],
+  ["/activity", "/activity/log"],
 ];
 
 test("ROUTE-MAP §2 redirects land on their new route", async () => {
@@ -22,12 +36,3 @@ for (const [from, to] of ROUTE_MAP_REDIRECTS) {
     await expect(page).toHaveURL(new RegExp(`${to}$`));
   });
 }
-
-/** `/` and `/chat` are the one pair ZB-01 deliberately does NOT redirect yet —
- *  `/org` doesn't exist until ZB-02 (see `app/page.tsx`'s TODO). */
-test("/ still renders the pre-ZB-02 /chat landing, not a broken /org redirect", async ({
-  page,
-}) => {
-  await page.goto("/");
-  await expect(page).toHaveURL(/\/chat$/);
-});

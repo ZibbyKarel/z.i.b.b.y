@@ -86,10 +86,8 @@ describe("agents DetailScreen (N4c grammar)", () => {
     });
   });
 
-  it("Delete asks in a CONFIRM dialog, then deletes and navigates back to /agents", async () => {
-    hooks.del.mockImplementation((_args, opts?: { onSuccess?: () => void }) =>
-      opts?.onSuccess?.(),
-    );
+  it("Delete asks in a CONFIRM dialog, then deletes and navigates back to the registry", async () => {
+    hooks.del.mockImplementation((_args, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.());
     render(<DetailScreen agentId="koder" />);
     await userEvent.click(screen.getByTestId(AgentDetailScreenTestId.Delete));
     expect(screen.getByText("Smazat agenta?")).toBeInTheDocument();
@@ -101,7 +99,7 @@ describe("agents DetailScreen (N4c grammar)", () => {
       { params: { id: "koder" } },
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     );
-    expect(push).toHaveBeenCalledWith("/agents");
+    expect(push).toHaveBeenCalledWith("/system/registries/positions");
   });
 
   it("Run pre-fills the New Task dialog with the agent as explicit target", async () => {

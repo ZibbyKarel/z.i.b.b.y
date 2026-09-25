@@ -1,5 +1,7 @@
-import { Screen } from "../../../features/pipelines/Screen";
+import { redirect } from "next/navigation";
 
-export default function PipelinesPage() {
-  return <Screen />;
+/** ROUTE-MAP §2 — the old catalog list has no single pipeline to resolve a
+ * department from; it goes straight to the org map. */
+export default function PipelinesRedirectPage() {
+  redirect("/org");
 }

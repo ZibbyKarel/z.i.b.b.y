@@ -120,6 +120,31 @@
       "toastLater": "Staged {staged} files ({skipped} skipped). Will sort during the nightly distillation."
     }
   },
+  "knowledge": {
+    "vault": {
+      "title": "Vault",
+      "shelfGeneral": "General",
+      "usedBy": "Used by",
+      "usedByEmpty": "No note links here.",
+      "outgoing": "Links",
+      "noteFallback": "Select a note on the left."
+    },
+    "distill": {
+      "title": "Distillation",
+      "subtitle": "Every night at 02:00, Knowledge Management folds the day into the vault.",
+      "runNow": "Run now",
+      "running": "Running…",
+      "lastRun": "Last run: {ago}",
+      "neverRun": "Never run",
+      "log": "Run log",
+      "outcome": "Outcome: {ref}",
+      "noAutomations": "No distillation automation is configured.",
+      "metricsUnavailable": "Structured metrics (notes read, links added, gaps) aren't persisted today — you only see the last run's outcome reference.",
+      "selfModel": {
+        "title": "Self-model"
+      }
+    }
+  },
   "common": {
     "stop": "Stop",
     "edit": "Edit",
@@ -315,6 +340,88 @@
       "remove": "Remove attachment"
     }
   },
+  "tasksWork": {
+    "eyebrow": "WORK",
+    "state": {
+      "thinking": "Thinking",
+      "working": "Working",
+      "blocked": "Blocked",
+      "error": "Error",
+      "done": "Done"
+    },
+    "source": {
+      "operator": "Operator",
+      "department": "Department",
+      "chain": "Chain",
+      "channel": "Channel",
+      "automation": "Automation",
+      "handoff": "Handoff"
+    },
+    "filter": {
+      "all": "All",
+      "company": "Company",
+      "project": "Project",
+      "department": "Department",
+      "state": "State",
+      "source": "Source"
+    },
+    "list": {
+      "title": "Parent tasks",
+      "column": {
+        "id": "ID",
+        "task": "Task",
+        "route": "Chain progress",
+        "state": "State",
+        "source": "Source",
+        "age": "Age"
+      },
+      "emptyTitle": "No tasks",
+      "emptyBody": "No tasks match these filters.",
+      "loadMore": "Load more",
+      "loadingMore": "Loading…"
+    },
+    "detail": {
+      "back": "← Back to tasks",
+      "noSubtasksTitle": "No subtasks yet",
+      "noSubtasksBody": "This task hasn't dispatched any chain steps.",
+      "subtaskHeader": "Subtask {id}",
+      "unassigned": "Unassigned",
+      "step": "Step {n}",
+      "roster": "Department roster",
+      "noRoster": "No agents in this department yet.",
+      "runHeader": "Run",
+      "noRunTitle": "No run yet",
+      "noRunBody": "This subtask hasn't dispatched a run.",
+      "approvalsHeader": "Pending approvals",
+      "noApprovals": "Nothing needs you here.",
+      "attachmentsHeader": "Attachments",
+      "noAttachments": "No attachments.",
+      "created": "Created {time}"
+    },
+    "new": {
+      "title": "Hand work to the company",
+      "field": {
+        "title": "Title",
+        "titlePlaceholder": "e.g. Add SSO to the client portal",
+        "brief": "Brief",
+        "briefPlaceholder": "Context, links, what done looks like",
+        "entry": "Entry",
+        "project": "Project",
+        "chain": "Chain"
+      },
+      "entry": {
+        "coo": "COO (auto-classify)"
+      },
+      "chain": {
+        "none": "None"
+      },
+      "cancel": "Cancel",
+      "submit": "Create task",
+      "routePreviewHeader": "Route preview",
+      "routeSuggest": "ZIBBY will hand this to {target}",
+      "routeIdle": "Describe the task to see the route."
+    }
+  },
   "search": {
     "placeholder": "Search agents, skills, projects…",
     "ariaLabel": "Search the workspace",
@@ -508,6 +615,10 @@
     "fields": {
       "name": "Name",
       "namePlaceholder": "agent name",
+      "displayName": "Display name",
+      "displayNamePlaceholder": "Kevin",
+      "jobTitle": "Job title",
+      "jobTitlePlaceholder": "Senior reviewer",
       "whenToUse": "When to use",
       "whenToUsePlaceholder": "…reviewing a diff before push",
       "category": "Category",
@@ -2143,6 +2254,99 @@
       }
     }
   },
+  "departmentDetail": {
+    "breadcrumbOrg": "Org",
+    "reportsToCoo": "Reports to COO",
+    "kpiOpenSubtasks": "Open subtasks",
+    "kpiAgents": "Agents",
+    "kpiRunsToday": "Runs today",
+    "kpiSpendToday": "Spend today",
+    "tabs": {
+      "team": "Team",
+      "subtasks": "Subtasks",
+      "pipelines": "Pipelines",
+      "handoff": "Handoff",
+      "skills": "Skills",
+      "integrations": "Integrations",
+      "automations": "Automations",
+      "hooks": "Hooks"
+    },
+    "state": {
+      "working": "Working",
+      "thinking": "Thinking",
+      "blocked": "Blocked",
+      "error": "Error",
+      "done": "Done",
+      "idle": "Idle"
+    },
+    "team": {
+      "title": "Team",
+      "hire": "Hire",
+      "emptyTitle": "No one hired yet",
+      "emptyDescription": "This department has no employees yet — hire the first one.",
+      "colName": "Name",
+      "colPosition": "Position",
+      "colState": "State"
+    },
+    "subtasks": {
+      "emptyTitle": "No subtasks yet",
+      "emptyDescription": "This department has no subtasks yet.",
+      "colTask": "Task",
+      "colStep": "Step",
+      "colState": "State"
+    },
+    "pipelines": {
+      "emptyTitle": "No pipelines yet",
+      "emptyDescription": "This department doesn't own a pipeline yet."
+    },
+    "handoff": {
+      "manageLink": "Manage handoff rules →"
+    },
+    "registryLink": "Manage in registry →",
+    "registryDescription": "This list is managed in the global registry, not per department.",
+    "registryTitle": "Managed in the registry"
+  },
+  "people": {
+    "title": "People",
+    "hire": "Hire",
+    "hireTitle": "Hire a new employee",
+    "filterDepartment": "Department",
+    "allDepartments": "All departments",
+    "filterState": "State",
+    "allStates": "All states",
+    "filterRole": "Role",
+    "allRoles": "All roles",
+    "search": "Search",
+    "state": {
+      "working": "Working",
+      "thinking": "Thinking",
+      "blocked": "Blocked",
+      "error": "Error",
+      "done": "Done",
+      "idle": "Idle"
+    },
+    "emptyTitle": "No one here",
+    "emptyDescription": "No employees match these filters.",
+    "breadcrumbPeople": "People",
+    "stopRun": "Stop run",
+    "currentSubtask": "Current subtask",
+    "logLines": "{count, plural, one {# line} other {# lines}}",
+    "logLive": "Live",
+    "logIdle": "Log",
+    "noActiveRun": "No active run.",
+    "config": "Config",
+    "nameLabel": "Name",
+    "departmentLabel": "Department",
+    "positionLabel": "Position",
+    "positionLink": "Edit position: {name} →",
+    "nameHint": "Leave blank to keep the current name",
+    "rules": "Rules",
+    "history": "History",
+    "historyRun": "Run",
+    "historyState": "State",
+    "historyStarted": "Started",
+    "historyEmpty": "No runs yet"
+  },
   "pins": {
     "pin": "Pin",
     "unpin": "Unpin",
@@ -2161,12 +2365,21 @@
     "filter": {
       "all": "All departments",
       "multiple": "{n} departments",
-      "noDepartment": "No department"
+      "noDepartment": "No department",
+      "department": "Department"
     },
     "emptyFilter": "Nothing found.",
     "emptyTitle": "The archive is still empty",
     "emptyDescription": "Once ZIBBY finishes something, it will show up here.",
-    "selectHint": "Select a task on the left to see its detail."
+    "selectHint": "Select a task on the left to see its detail.",
+    "eyebrow": "ACTIVITY",
+    "column": {
+      "task": "Task",
+      "state": "State",
+      "duration": "Duration"
+    },
+    "loadMore": "Load more",
+    "loadingMore": "Loading…"
   },
   "roadmap": {
     "hint": "Pick an epic to see its tasks on the right.",
@@ -2280,5 +2493,77 @@
     "needsYou": "Needs you",
     "needsYouEmpty": "Nothing is waiting for you",
     "needsYouToggle": "Needs you"
+  },
+  "orgMap": {
+    "eyebrow": "01 — ORG MAP",
+    "ceoLabel": "CEO",
+    "ceoFallback": "CEO",
+    "cooLabel": "COO · ROOT",
+    "cooName": "Zibby",
+    "cooTagline": "Routes, classifies, chats",
+    "alert": {
+      "errors": "{count, plural, one {# error} other {# errors}}",
+      "approvals": "{count, plural, one {# approval waiting} other {# approvals waiting}}"
+    },
+    "focus": {
+      "eyebrow": "02 — DEPARTMENT · {code}",
+      "openDepartment": "OPEN DEPARTMENT →",
+      "teamTitle": "Team",
+      "teamEmptyTitle": "No one borrowed right now",
+      "teamEmpty": "The department borrows from the pool when a subtask starts.",
+      "subtasksTitle": "Open subtasks",
+      "subtasksEmptyTitle": "No subtasks",
+      "subtasksEmpty": "No open subtasks in this department.",
+      "handoffTitle": "Handoffs · IN / OUT",
+      "handoffEmptyTitle": "Nothing moving",
+      "handoffEmpty": "Nothing moving in or out of this department.",
+      "out": "→ OUT · {kind}",
+      "in": "→ IN · {kind}"
+    }
+  },
+  "activityLog": {
+    "eyebrow": "ACTIVITY",
+    "title": "Live log",
+    "empty": "Nothing matches yet. New events appear as they stream in.",
+    "pause": "Pause",
+    "resume": "Resume",
+    "clear": "Clear",
+    "grouped": "{count}× {group}",
+    "loadMore": "Load older",
+    "loadingMore": "Loading…",
+    "filter": {
+      "all": "All",
+      "department": "Department",
+      "agent": "Agent",
+      "task": "Task",
+      "kind": "Kind"
+    }
+  },
+  "activityInbox": {
+    "eyebrow": "ACTIVITY",
+    "title": "Inbox",
+    "emptyTitle": "No messages yet",
+    "emptyBody": "Once something arrives from a connected channel, it shows up here.",
+    "column": {
+      "source": "Source",
+      "sender": "Sender",
+      "tier": "Tier",
+      "handling": "Handling",
+      "triage": "Category",
+      "text": "Preview"
+    }
+  },
+  "activityBriefings": {
+    "eyebrow": "ACTIVITY",
+    "title": "Briefing",
+    "generateNow": "Generate now",
+    "generatedAt": "Generated {at}",
+    "headline": "Headline",
+    "needsYou": "Needs you",
+    "nothingNeedsYou": "Nothing needs you right now.",
+    "didForYou": "What ZIBBY did",
+    "emptyDid": "Nothing to record yet.",
+    "departments": "Departments",
+    "watching": "Watching"
   }
 }

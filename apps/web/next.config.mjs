@@ -34,7 +34,20 @@ const nextConfig = {
   // target route is real. Each later screen phase adds its own entry here in
   // the same commit that turns its old segment into a redirect.
   async redirects() {
-    return [];
+    // ZB-03 (D-009): the first two ROUTE-MAP §2 targets to ship — `/agents`
+    // (now the employee directory, D-015) and its detail (now a position in
+    // the registry). `/pipelines(/[id])` are page-level redirects instead
+    // (server-side department lookup), not static rewrites.
+    return [
+      { source: "/agents", destination: "/org/people", permanent: true },
+      {
+        source: "/agents/:id",
+        destination: "/system/registries/positions/:id",
+        permanent: true,
+      },
+      // ZB-09: the memory feature moved to Knowledge → Vault.
+      { source: "/memory", destination: "/knowledge/vault", permanent: true },
+    ];
   },
 };
 

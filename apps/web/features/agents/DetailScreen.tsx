@@ -151,7 +151,7 @@ function AgentEditor({ agent }: { agent: Agent }) {
           </Button>
         </>
       }
-      backHref="/agents"
+      backHref="/system/registries/positions"
       subtitle={agentFile(agent.id)}
       title={name}
     >
@@ -229,7 +229,7 @@ function AgentEditor({ agent }: { agent: Agent }) {
           onConfirm={() =>
             deleteAgent.mutate(
               { params: { id: agent.id } },
-              { onSuccess: () => router.push("/agents") },
+              { onSuccess: () => router.push("/system/registries/positions") },
             )
           }
           pending={deleteAgent.isPending}

@@ -14,6 +14,10 @@ import type {
  */
 export type AgentEditValues = {
   name: string;
+  /** O-03: a human name for the position ("Kevin"), shown as `displayName ?? name`. */
+  displayName: string;
+  /** O-03: a short job title, shown next to `displayName`. */
+  title: string;
   description: string;
   glyph: string;
   model: AgentModel;
@@ -33,6 +37,8 @@ export type AgentEditValues = {
 export function toFormValues(agent: Agent): AgentEditValues {
   return {
     name: agent.name ?? "",
+    displayName: agent.displayName ?? "",
+    title: agent.title ?? "",
     description: agent.description ?? "",
     glyph: agent.glyph ?? "",
     model: agent.model ?? "sonnet",
@@ -61,6 +67,8 @@ export function applyFormValues(agent: Agent, values: AgentEditValues): Agent {
   return {
     ...agent,
     name: values.name || undefined,
+    displayName: values.displayName || undefined,
+    title: values.title || undefined,
     description: values.description || undefined,
     glyph: values.glyph || undefined,
     model: values.model,

@@ -120,6 +120,31 @@
       "toastLater": "Zařazeno {staged} souborů ({skipped} přeskočeno). Roztřídí se při noční destilaci."
     }
   },
+  "knowledge": {
+    "vault": {
+      "title": "Trezor",
+      "shelfGeneral": "Obecné",
+      "usedBy": "Odkazuje sem",
+      "usedByEmpty": "Žádná poznámka sem neodkazuje.",
+      "outgoing": "Odkazy",
+      "noteFallback": "Vyber poznámku vlevo."
+    },
+    "distill": {
+      "title": "Destilace",
+      "subtitle": "Každou noc ve 02:00 Knowledge Management prochází den do vaultu.",
+      "runNow": "Spustit hned",
+      "running": "Běží…",
+      "lastRun": "Poslední běh: {ago}",
+      "neverRun": "Ještě neběželo",
+      "log": "Log běhu",
+      "outcome": "Výsledek: {ref}",
+      "noAutomations": "Žádná automatizace destilace není nakonfigurovaná.",
+      "metricsUnavailable": "Strukturované metriky (přečtené poznámky, přidané odkazy, mezery) se dnes nikam neukládají — vidíš jen výstupní referenci posledního běhu.",
+      "selfModel": {
+        "title": "Self-model"
+      }
+    }
+  },
   "common": {
     "stop": "Zastavit",
     "edit": "Editovat",
@@ -315,6 +340,88 @@
       "remove": "Odebrat přílohu"
     }
   },
+  "tasksWork": {
+    "eyebrow": "PRÁCE",
+    "state": {
+      "thinking": "Přemýšlí",
+      "working": "Pracuje",
+      "blocked": "Blokováno",
+      "error": "Chyba",
+      "done": "Hotovo"
+    },
+    "source": {
+      "operator": "Operátor",
+      "department": "Oddělení",
+      "chain": "Řetězec",
+      "channel": "Kanál",
+      "automation": "Automatizace",
+      "handoff": "Předání"
+    },
+    "filter": {
+      "all": "Vše",
+      "company": "Firma",
+      "project": "Projekt",
+      "department": "Oddělení",
+      "state": "Stav",
+      "source": "Zdroj"
+    },
+    "list": {
+      "title": "Nadřazené úkoly",
+      "column": {
+        "id": "ID",
+        "task": "Úkol",
+        "route": "Průběh řetězce",
+        "state": "Stav",
+        "source": "Zdroj",
+        "age": "Stáří"
+      },
+      "emptyTitle": "Žádné úkoly",
+      "emptyBody": "Žádný úkol neodpovídá zvoleným filtrům.",
+      "loadMore": "Načíst další",
+      "loadingMore": "Načítám…"
+    },
+    "detail": {
+      "back": "← Zpět na úkoly",
+      "noSubtasksTitle": "Zatím žádné podúkoly",
+      "noSubtasksBody": "Tento úkol zatím nespustil žádný krok řetězce.",
+      "subtaskHeader": "Podúkol {id}",
+      "unassigned": "Nepřiřazeno",
+      "step": "Krok {n}",
+      "roster": "Tým oddělení",
+      "noRoster": "V tomto oddělení zatím nejsou žádní agenti.",
+      "runHeader": "Běh",
+      "noRunTitle": "Zatím žádný běh",
+      "noRunBody": "Tento podúkol zatím nespustil běh.",
+      "approvalsHeader": "Čekající schválení",
+      "noApprovals": "Zde nic nepotřebuje vaši pozornost.",
+      "attachmentsHeader": "Přílohy",
+      "noAttachments": "Žádné přílohy.",
+      "created": "Vytvořeno {time}"
+    },
+    "new": {
+      "title": "Předat práci firmě",
+      "field": {
+        "title": "Název",
+        "titlePlaceholder": "např. Přidat SSO do klientského portálu",
+        "brief": "Zadání",
+        "briefPlaceholder": "Kontext, odkazy, jak vypadá hotovo",
+        "entry": "Vstup",
+        "project": "Projekt",
+        "chain": "Řetězec"
+      },
+      "entry": {
+        "coo": "COO (automatická klasifikace)"
+      },
+      "chain": {
+        "none": "Žádný"
+      },
+      "cancel": "Zrušit",
+      "submit": "Vytvořit úkol",
+      "routePreviewHeader": "Náhled trasy",
+      "routeSuggest": "ZIBBY toto předá: {target}",
+      "routeIdle": "Popište úkol pro zobrazení trasy."
+    }
+  },
   "search": {
     "placeholder": "Hledat agenty, skilly, projekty…",
     "ariaLabel": "Hledat v pracovním prostoru",
@@ -508,6 +615,10 @@
     "fields": {
       "name": "Jméno",
       "namePlaceholder": "jméno agenta",
+      "displayName": "Zobrazované jméno",
+      "displayNamePlaceholder": "Kevin",
+      "jobTitle": "Pracovní pozice",
+      "jobTitlePlaceholder": "Senior reviewer",
       "whenToUse": "Kdy použít",
       "whenToUsePlaceholder": "…při kontrole diffu před pushem",
       "category": "Kategorie",
@@ -2143,6 +2254,99 @@
       }
     }
   },
+  "departmentDetail": {
+    "breadcrumbOrg": "Organizace",
+    "reportsToCoo": "Podléhá COO",
+    "kpiOpenSubtasks": "Otevřené podúkoly",
+    "kpiAgents": "Agenti",
+    "kpiRunsToday": "Běhů dnes",
+    "kpiSpendToday": "Utraceno dnes",
+    "tabs": {
+      "team": "Tým",
+      "subtasks": "Podúkoly",
+      "pipelines": "Pipeline",
+      "handoff": "Předání",
+      "skills": "Dovednosti",
+      "integrations": "Integrace",
+      "automations": "Automatizace",
+      "hooks": "Hooky"
+    },
+    "state": {
+      "working": "Pracuje",
+      "thinking": "Přemýšlí",
+      "blocked": "Zablokováno",
+      "error": "Chyba",
+      "done": "Hotovo",
+      "idle": "Nečinný"
+    },
+    "team": {
+      "title": "Tým",
+      "hire": "Najmout",
+      "emptyTitle": "Zatím nikdo nenajat",
+      "emptyDescription": "Toto oddělení zatím nemá žádné zaměstnance — najměte prvního.",
+      "colName": "Jméno",
+      "colPosition": "Pozice",
+      "colState": "Stav"
+    },
+    "subtasks": {
+      "emptyTitle": "Zatím žádné podúkoly",
+      "emptyDescription": "Toto oddělení zatím nemá žádné podúkoly.",
+      "colTask": "Úkol",
+      "colStep": "Krok",
+      "colState": "Stav"
+    },
+    "pipelines": {
+      "emptyTitle": "Zatím žádné pipeline",
+      "emptyDescription": "Toto oddělení zatím nevlastní žádnou pipeline."
+    },
+    "handoff": {
+      "manageLink": "Spravovat pravidla předání →"
+    },
+    "registryLink": "Spravovat v registru →",
+    "registryDescription": "Tento seznam se spravuje v globálním registru, ne po odděleních.",
+    "registryTitle": "Spravováno v registru"
+  },
+  "people": {
+    "title": "Lidé",
+    "hire": "Najmout",
+    "hireTitle": "Najmout nového zaměstnance",
+    "filterDepartment": "Oddělení",
+    "allDepartments": "Všechna oddělení",
+    "filterState": "Stav",
+    "allStates": "Všechny stavy",
+    "filterRole": "Role",
+    "allRoles": "Všechny role",
+    "search": "Hledat",
+    "state": {
+      "working": "Pracuje",
+      "thinking": "Přemýšlí",
+      "blocked": "Zablokováno",
+      "error": "Chyba",
+      "done": "Hotovo",
+      "idle": "Nečinný"
+    },
+    "emptyTitle": "Nikdo tady není",
+    "emptyDescription": "Žádný zaměstnanec neodpovídá těmto filtrům.",
+    "breadcrumbPeople": "Lidé",
+    "stopRun": "Zastavit běh",
+    "currentSubtask": "Aktuální podúkol",
+    "logLines": "{count, plural, one {# řádek} few {# řádky} other {# řádků}}",
+    "logLive": "Živě",
+    "logIdle": "Log",
+    "noActiveRun": "Žádný aktivní běh.",
+    "config": "Nastavení",
+    "nameLabel": "Jméno",
+    "departmentLabel": "Oddělení",
+    "positionLabel": "Pozice",
+    "positionLink": "Upravit pozici: {name} →",
+    "nameHint": "Nechte prázdné pro zachování aktuálního jména",
+    "rules": "Pravidla",
+    "history": "Historie",
+    "historyRun": "Běh",
+    "historyState": "Stav",
+    "historyStarted": "Spuštěno",
+    "historyEmpty": "Zatím žádné běhy"
+  },
   "pins": {
     "pin": "Připnout",
     "unpin": "Odepnout",
@@ -2161,12 +2365,21 @@
     "filter": {
       "all": "Všechna oddělení",
       "multiple": "{n} oddělení",
-      "noDepartment": "Bez oddělení"
+      "noDepartment": "Bez oddělení",
+      "department": "Oddělení"
     },
     "emptyFilter": "Nic nenalezeno.",
     "emptyTitle": "Archiv je zatím prázdný",
     "emptyDescription": "Jakmile ZIBBY něco dokončí, objeví se to tady.",
-    "selectHint": "Vyber úlohu vlevo pro zobrazení detailu."
+    "selectHint": "Vyber úlohu vlevo pro zobrazení detailu.",
+    "eyebrow": "AKTIVITA",
+    "column": {
+      "task": "Úkol",
+      "state": "Stav",
+      "duration": "Délka"
+    },
+    "loadMore": "Načíst další",
+    "loadingMore": "Načítám…"
   },
   "roadmap": {
     "hint": "Vyber epik a uvidíš jeho tasky vpravo.",
@@ -2280,5 +2493,77 @@
     "needsYou": "Potřebuje tě",
     "needsYouEmpty": "Nic na tebe nečeká",
     "needsYouToggle": "Potřebuje tě"
+  },
+  "orgMap": {
+    "eyebrow": "01 — MAPA ORGANIZACE",
+    "ceoLabel": "CEO",
+    "ceoFallback": "CEO",
+    "cooLabel": "COO · ROOT",
+    "cooName": "Zibby",
+    "cooTagline": "Routuje, klasifikuje, chatuje",
+    "alert": {
+      "errors": "{count, plural, one {# chyba} few {# chyby} other {# chyb}}",
+      "approvals": "{count, plural, one {# schválení čeká} few {# schválení čekají} other {# schválení čeká}}"
+    },
+    "focus": {
+      "eyebrow": "02 — ODDĚLENÍ · {code}",
+      "openDepartment": "OTEVŘÍT ODDĚLENÍ →",
+      "teamTitle": "Tým",
+      "teamEmptyTitle": "Nikdo si teď nepůjčuje",
+      "teamEmpty": "Oddělení si zaměstnance půjčuje z fondu, jakmile začne podúkol.",
+      "subtasksTitle": "Otevřené podúkoly",
+      "subtasksEmptyTitle": "Žádné podúkoly",
+      "subtasksEmpty": "V tomto oddělení nejsou žádné otevřené podúkoly.",
+      "handoffTitle": "Předávání · IN / OUT",
+      "handoffEmptyTitle": "Nic se nepředává",
+      "handoffEmpty": "Do tohoto oddělení ani z něj se nic nepředává.",
+      "out": "→ VEN · {kind}",
+      "in": "→ DOVNITŘ · {kind}"
+    }
+  },
+  "activityLog": {
+    "eyebrow": "AKTIVITA",
+    "title": "Živý log",
+    "empty": "Zatím nic neodpovídá. Nové události se objeví, jak přibudou.",
+    "pause": "Pozastavit",
+    "resume": "Pokračovat",
+    "clear": "Vyčistit",
+    "grouped": "{count}× {group}",
+    "loadMore": "Načíst starší",
+    "loadingMore": "Načítám…",
+    "filter": {
+      "all": "Vše",
+      "department": "Oddělení",
+      "agent": "Agent",
+      "task": "Úkol",
+      "kind": "Druh"
+    }
+  },
+  "activityInbox": {
+    "eyebrow": "AKTIVITA",
+    "title": "Příchozí zprávy",
+    "emptyTitle": "Zatím žádné zprávy",
+    "emptyBody": "Jakmile něco dorazí z připojených kanálů, objeví se to tady.",
+    "column": {
+      "source": "Zdroj",
+      "sender": "Odesílatel",
+      "tier": "Tier",
+      "handling": "Zpracování",
+      "triage": "Kategorie",
+      "text": "Náhled"
+    }
+  },
+  "activityBriefings": {
+    "eyebrow": "AKTIVITA",
+    "title": "Briefing",
+    "generateNow": "Vygenerovat teď",
+    "generatedAt": "Vygenerováno {at}",
+    "headline": "Shrnutí",
+    "needsYou": "Potřebuje tě",
+    "nothingNeedsYou": "Nic tě teď nepotřebuje.",
+    "didForYou": "Co ZIBBY udělal",
+    "emptyDid": "Zatím nic k zaznamenání.",
+    "departments": "Oddělení",
+    "watching": "Sleduji"
   }
 }

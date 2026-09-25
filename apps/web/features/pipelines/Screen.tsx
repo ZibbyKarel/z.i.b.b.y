@@ -12,6 +12,7 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { AVATAR_MAX, type UpdatePipelineInput } from "@zibby/contracts";
+import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -49,6 +50,13 @@ import { usePipelineRunsQuery, usePipelinesQuery } from "./queries";
 export interface ScreenProps {
   /** Pre-selected pipeline id from the [id] route segment. */
   selectedId?: string;
+  /**
+   * ZB-03 — the list/detail route prefix. Defaults to `/pipelines`; a
+   * department's Pipelines tab hosts this same screen at
+   * `/org/departments/[id]/pipelines` so its editor opens under the
+   * department instead of the global catalog.
+   */
+  basePath?: string;
 }
 
 /** Read-only canvas: the editing callbacks are never invoked, so they no-op. */
@@ -64,7 +72,7 @@ const noop = () => {};
  * here: it must point at `/pipelines` on the detail route (never loop back to
  * itself) and at `/chat` on the list route.
  */
-export function Screen({ selectedId: routeId }: ScreenProps) {
+export function Screen({ selectedId: routeId, basePath = "/pipelines" }: ScreenProps) {
   const t = useTranslations();
   const pipelinesQuery = usePipelinesQuery();
   const pipelines = pipelinesQuery.data ?? [];
@@ -177,7 +185,7 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
           <PipelineCard
             agents={agents}
             key={p.id}
-            onSelect={(id: string) => router.push(`/pipelines/${id}`)}
+            onSelect={(id: string) => router.push(`${basePath}/${id}` as Route)}
             pipeline={p}
             selected={p.id === (selected?.id ?? "")}
           />
@@ -280,7 +288,7 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
                           duplicatePipeline.mutate(
                             { body },
                             {
-                              onSuccess: () => router.push(`/pipelines/${body.id}`),
+                              onSuccess: () => router.push(`${basePath}/${body.id}` as Route),
                             },
                           );
                         }}
@@ -401,7 +409,7 @@ export function Screen({ selectedId: routeId }: ScreenProps) {
           </Button>
         )
       }
-      backHref={routeId ? "/pipelines" : undefined}
+      backHref={routeId ? (basePath as Route) : undefined}
       subtitle={routeId ? selected?.file : t("pipelines.countSummary", { count: list.length })}
       title={routeId ? (selected?.name ?? selected?.id ?? routeId) : t("pipelines.title")}
     >

@@ -159,7 +159,6 @@ import { ChatBottomBarTestId } from "./ChatBottomBar";
 import { ChatDockTestId } from "./ChatDock";
 import { ChatLiveLogTestId } from "./ChatLiveLog";
 import { CommandLineTestId } from "../../tasks/components/CommandLine/CommandLine";
-import { DepartmentDrawerTestId } from "../../departments/components/DepartmentDrawer/DepartmentDrawer";
 import { ChatDetailDialogTestId } from "./ChatDetailDialog";
 import { DepartmentOrbMapTestId } from "./DepartmentOrbMap";
 
@@ -248,25 +247,15 @@ describe("ChatScreen", () => {
       expect(screen.getByTestId(`${OrbMapTestId.Node}-ops`)).toBeInTheDocument();
     });
 
-    it("clicking a node opens the drawer for that department, and picking a different node swaps it", async () => {
+    it("clicking a node navigates to that department's page (ZB-03: drawer replaced by a real route)", async () => {
       const user = userEvent.setup();
       renderWithProviders(<ChatScreenHarness />);
-
-      expect(screen.queryByTestId(DepartmentDrawerTestId.Root)).not.toBeInTheDocument();
 
       const devButton = within(screen.getByTestId(`${OrbMapTestId.Node}-dev`)).getByTestId(
         OrbNodeTestId.Root,
       );
       await user.click(devButton);
-      expect(screen.getByTestId(DepartmentDrawerTestId.Root)).toBeInTheDocument();
-      expect(screen.getByTestId(DepartmentDrawerTestId.Name)).toHaveTextContent("Dev");
-
-      // Selecting a different node swaps the drawer's content — only one open at a time.
-      const opsButton = within(screen.getByTestId(`${OrbMapTestId.Node}-ops`)).getByTestId(
-        OrbNodeTestId.Root,
-      );
-      await user.click(opsButton);
-      expect(screen.getByTestId(DepartmentDrawerTestId.Name)).toHaveTextContent("Ops");
+      expect(push).toHaveBeenCalledWith("/org/departments/dev/team");
     });
   });
 
