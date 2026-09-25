@@ -53,7 +53,7 @@ vi.mock("../hooks/useVoiceMode", () => ({
 vi.mock("../../tasks/mutations", () => ({
   useCreateTaskMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
-vi.mock("../../memory/mutations", () => ({
+vi.mock("../../knowledge/mutations", () => ({
   useCreateNoteMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 

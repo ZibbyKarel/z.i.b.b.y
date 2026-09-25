@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
-import type { BudgetStatus, GlobalBudget, ProjectBudgetStatus } from "@zibby/contracts";
+import type { BudgetStatus, GlobalBudget, Limits, ProjectBudgetStatus } from "@zibby/contracts";
 import { AgentRunnerService } from "../agents/agent-runner.service";
+import { ActivityLogService } from "../activity/activity-log.service";
 import { LimitsService } from "../limits/limits.service";
 import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
@@ -63,6 +64,15 @@ const over = (
 export class BudgetService {
   private readonly log: ScopedLogger;
 
+  /**
+   * O-08 edge-trigger state — whether the LAST check already saw this axis at/over
+   * its warn threshold, so a steady-state over-warn spend doesn't re-notify on
+   * every dispatch. In-memory only (ponytail: a single-process guard, restart
+   * re-arms it — acceptable, a false re-notice after a restart is harmless).
+   */
+  private rollingWarned = false;
+  private weeklyWarned = false;
+
   constructor(
     private readonly ledger: BudgetLedgerStore,
     private readonly config: BudgetConfigStore,
@@ -72,9 +82,39 @@ export class BudgetService {
     private readonly agentRunner: AgentRunnerService,
     private readonly pipelineRunner: PipelineRunnerService,
     private readonly tasks: ScheduledTasksStorageService,
+    private readonly activity: ActivityLogService,
     logger: LoggerService,
   ) {
     this.log = logger.child(BudgetService.name);
+  }
+
+  /**
+   * O-08 — non-blocking counterpart of the pause check: when a window CROSSES
+   * (not just sits above) its `warnAt*Pct`, write a `budget-warn` activity notice.
+   * Never holds a dispatch; a read/config failure upstream already fails the whole
+   * {@link check} closed, so this only runs on the happy path. Edge-triggered so a
+   * sustained over-warn spend writes one notice, not one per dispatch.
+   */
+  private noteWarnCrossings(config: GlobalBudget, limits: Limits): void {
+    const rollingOver =
+      config.warnAtRollingPct != null && limits.rolling.usedPct >= config.warnAtRollingPct;
+    if (rollingOver && !this.rollingWarned) {
+      void this.activity.record({
+        kind: "budget-warn",
+        summary: `account at ${limits.rolling.usedPct}% of the 5h window (warn ≥ ${config.warnAtRollingPct}%)`,
+      });
+    }
+    this.rollingWarned = rollingOver;
+
+    const weeklyOver =
+      config.warnAtWeeklyPct != null && limits.weekly.usedPct >= config.warnAtWeeklyPct;
+    if (weeklyOver && !this.weeklyWarned) {
+      void this.activity.record({
+        kind: "budget-warn",
+        summary: `account at ${limits.weekly.usedPct}% of the weekly window (warn ≥ ${config.warnAtWeeklyPct}%)`,
+      });
+    }
+    this.weeklyWarned = weeklyOver;
   }
 
   /**
@@ -87,6 +127,7 @@ export class BudgetService {
     try {
       const [config, limits] = await Promise.all([this.config.read(), this.limits.snapshot()]);
       if (!limits.stale) {
+        this.noteWarnCrossings(config, limits);
         if (
           config.pauseAtRollingPct != null &&
           limits.rolling.usedPct >= config.pauseAtRollingPct
@@ -387,6 +428,8 @@ export class BudgetService {
           ? { pauseAtRollingPct: config.pauseAtRollingPct }
           : {}),
         ...(config.pauseAtWeeklyPct != null ? { pauseAtWeeklyPct: config.pauseAtWeeklyPct } : {}),
+        ...(config.warnAtRollingPct != null ? { warnAtRollingPct: config.warnAtRollingPct } : {}),
+        ...(config.warnAtWeeklyPct != null ? { warnAtWeeklyPct: config.warnAtWeeklyPct } : {}),
         paused,
       },
       projects: rows,

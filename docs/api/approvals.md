@@ -63,6 +63,7 @@ interface Approval {
   decidedAt?: string; // ISO datetime
   department?: DepartmentId; // NS2 F3c — the acting unit's owning department
   sourceUrl?: string; // Phase 127 — link to the item's origin (Jira/GitHub/Slack)
+  reason?: string; // ZB-08/O-12 — an optional operator note on a rejection
 }
 ```
 
@@ -162,6 +163,8 @@ GET  /api/approvals              list (optional ?status=pending|approved|rejecte
 GET  /api/approvals/:id          get one approval
 POST /api/approvals/:id/approve  approve (resumes the gated run) — 404 | 409
 POST /api/approvals/:id/reject   reject (terminates the gated run, no action taken) — 404 | 409
+                                  body: { reason?: string } — ZB-08/O-12, an optional operator note
+                                  shown in the Policy → Approvals history table
 ```
 
 A client can never create an Approval directly — only the server (a runner or
@@ -191,3 +194,5 @@ wherever the thing it gates is already visible:
 | `approval-requested` | An approval was created |
 | `approval-approved`  | The operator approved   |
 | `approval-rejected`  | The operator rejected   |
+
+<!-- ZibbyCorp ZB-08 (2026-09-25): deny gains an optional operator reason (O-12). -->

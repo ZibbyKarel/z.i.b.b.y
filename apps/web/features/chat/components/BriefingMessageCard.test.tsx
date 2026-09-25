@@ -44,11 +44,11 @@ describe("BriefingMessageCard (F8a / O6)", () => {
     expect(screen.queryByTestId(BriefingCardTestId.NeedsYouItem)).not.toBeInTheDocument();
   });
 
-  it("renders needs-you rows linking to /archiv (F8a repoint, not /runs)", () => {
+  it("renders needs-you rows linking to /activity/runs (ZB-07)", () => {
     render(<BriefingMessageCard briefing={busy} />);
     const rows = screen.getAllByTestId(BriefingCardTestId.NeedsYouItem);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toHaveAttribute("href", "/archiv");
+    expect(rows[0]).toHaveAttribute("href", "/activity/runs");
     expect(rows[0]).toHaveTextContent("Team Slack wants to channel-reply");
   });
 

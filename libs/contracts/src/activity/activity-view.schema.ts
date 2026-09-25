@@ -92,6 +92,9 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   // other watcher discoveries (monitor-alert/merge-completed/post-merge-outcome)
   // rather than a new group for one kind.
   "roadmap-sync": "integrations",
+  // ZB-10 / O-08: a warn-threshold crossing on the budget guard — reads with the
+  // other dispatch-time run signals (run-paused-limit/run-resumed-limit).
+  "budget-warn": "runs",
 };
 
 /**

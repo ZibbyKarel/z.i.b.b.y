@@ -46,6 +46,13 @@ export interface GateRulesSectionProps {
    */
   department?: DepartmentId;
   /**
+   * ZB-08: `/policy/gates?section=global` shows the floor in its own `floor`
+   * section — set this to skip the embedded {@link SystemFloorPanel} so it
+   * isn't rendered twice. Every other call site (the department drawer's
+   * Gates tab, the pre-ZB-08 Settings tab) keeps today's behavior.
+   */
+  hideFloor?: boolean;
+  /**
    * Visual language (D7, docs/hud2chat/DECISIONS.md) — threaded to every
    * `HudPanel` this component renders (its own two panels plus
    * {@link SystemFloorPanel}). Defaults to `"hud"`, so the one consumer that
@@ -67,7 +74,7 @@ export interface GateRulesSectionProps {
  * `useGateRulesQuery` only fires once this mounts, so the Settings tab loads gate
  * rules lazily (the TabPanel unmounts inactive panels).
  */
-export function GateRulesSection({ department, surface }: GateRulesSectionProps = {}) {
+export function GateRulesSection({ department, surface, hideFloor }: GateRulesSectionProps = {}) {
   const t = useTranslations("gates");
   const tk = useTranslations();
   const rulesQuery = useGateRulesQuery();
@@ -165,7 +172,7 @@ export function GateRulesSection({ department, surface }: GateRulesSectionProps 
 
       {/* The locked POLICY.md floor — the structural guarantee, made visible above the
           editable catalog (Law 1: agents can only harden it; Law 4: never talked around). */}
-      <SystemFloorPanel surface={surface} />
+      {!hideFloor && <SystemFloorPanel surface={surface} />}
 
       {rulesQuery.isPending ? (
         <QueryLoading />

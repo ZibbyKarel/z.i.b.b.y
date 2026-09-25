@@ -84,15 +84,18 @@ export function DepartmentLineRow({ line }: { line: BriefingDepartmentLine }) {
 
 /**
  * One "needs you" row: a kind chip + the summary, linking to where it's resolved.
- * Parked runs and approvals both surface on the archive of tasks (F8a repoint —
- * `/archiv` replaced `/runs` as the task archive back in F2; `/runs` itself is
- * deleted in F8d). Shared by `chat/BriefingMessageCard` (D18) — relocated here in
- * F8c so it and the (now-deleted, F8d) `overview/BriefingCard` didn't import from
- * each other.
+ * Parked runs and approvals both surface on the run archive — `/archiv` (F2) is
+ * now `/activity/runs` (ZB-07, ROUTE-MAP §2). Shared by `chat/BriefingMessageCard`
+ * (D18) — relocated here in F8c so it and the (now-deleted, F8d) `overview/BriefingCard`
+ * didn't import from each other.
  */
 export function NeedsYouRow({ item }: { item: BriefingNeedsYouItem }) {
   return (
-    <Link data-testid={BriefingCardTestId.NeedsYouItem} href="/archiv" style={{ display: "block" }}>
+    <Link
+      data-testid={BriefingCardTestId.NeedsYouItem}
+      href="/activity/runs"
+      style={{ display: "block" }}
+    >
       <Stack align="center" direction="row" gap="100">
         <Tag tone={item.kind === "approval" ? "warn" : "neutral"}>{item.kind}</Tag>
         <Container grow minW0>

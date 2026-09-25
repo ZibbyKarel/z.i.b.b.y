@@ -846,7 +846,7 @@ export function CommandLine({
     // (not `"grid"` — that's the department rows' glyph in this SAME list, and a
     // team answers a different question than every routing row: WHAT knowledge
     // base a turn can see, not WHO runs it). `"brain"` is the app's existing
-    // knowledge/memory glyph (`features/memory/Screen.tsx`'s empty state) —
+    // knowledge/memory glyph (`features/knowledge/screens`'s empty state) —
     // reused here rather than authoring a new icon.
     // Task 9b: gated by `allowTeamMentions` — the task composer turns this off
     // (see the prop's own docblock), since a tagged team doesn't reach a run yet.

@@ -23,15 +23,34 @@ import { CatalogProvider } from "../../../state/store";
 import { NewTaskProvider } from "../../../features/tasks";
 import { ChatProvider } from "../../../features/chat";
 import { useApprovalsQuery, useApproveMutation } from "../../../features/approvals";
+import { ApprovalSheet } from "../../../features/approvals/components/ApprovalSheet";
 import { HIGH_RISK_TYPES, formatWaited } from "../../../features/approvals/approval";
 import { useRunsQuery } from "../../../features/runs";
 import { useLimitsQuery } from "../../../features/limits";
 import { useSystemConfigQuery } from "../../../features/system";
 import { SECTIONS, type SectionId, sectionForPath } from "../../../state/config";
 
-/** The pre-ZB-08 approval surface — "Open" and the high-risk path both land
- *  here until the `?approval=<id>` sheet ships. */
-const LEGACY_APPROVAL_SURFACE = "/settings?tab=gates" as Route;
+/** Sets (or clears) the shell's `?approval=` search param over whatever page
+ *  is mounted — the ZB-08 sheet reads it directly, so opening it never
+ *  navigates away from the current page. */
+function useApprovalSheetParam() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const approvalId = searchParams.get("approval");
+  const open = (id: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("approval", id);
+    router.push(`${pathname}?${next.toString()}` as Route);
+  };
+  const close = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("approval");
+    const qs = next.toString();
+    router.push((qs ? `${pathname}?${qs}` : pathname) as Route);
+  };
+  return { approvalId, open, close };
+}
 
 /**
  * Adapts `next/link`'s `Link` (which types `href` as `Route | UrlObject`) to
@@ -141,9 +160,8 @@ function useHeaderTrailing() {
  * (D-014/O-13: no `HoldButton`, even for high-risk — `highRisk` is a marker
  * only). "Open" and the high-risk path both go to `LEGACY_APPROVAL_SURFACE`;
  * quick-approve handles the common non-high-risk case in place. */
-function NeedsYouRail() {
+function NeedsYouRail({ onOpenApproval }: { onOpenApproval: (id: string) => void }) {
   const t = useTranslations("shell");
-  const router = useRouter();
   const { data: approvals } = useApprovalsQuery();
   const approve = useApproveMutation();
   const pending = approvals ?? [];
@@ -174,7 +192,7 @@ function NeedsYouRail() {
                 key={a.id}
                 meta={a.kind}
                 onApprove={() => approve.mutate({ params: { id: a.id }, body: {} })}
-                onOpen={() => router.push(LEGACY_APPROVAL_SURFACE)}
+                onOpen={() => onOpenApproval(a.id)}
                 request={a.detail}
                 taskRef={a.runId}
                 waited={formatWaited(a.requestedAt)}
@@ -192,6 +210,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   const searchParams = useSearchParams();
   const active = sectionForPath(pathname, searchParams);
   const trailing = useHeaderTrailing();
+  const approvalSheet = useApprovalSheetParam();
 
   return (
     <AppFrame
@@ -208,12 +227,13 @@ function AppShellChrome({ children }: { children: ReactNode }) {
           settingsHref="/system/settings/general"
         />
       }
-      rail={<NeedsYouRail />}
+      rail={<NeedsYouRail onOpenApproval={approvalSheet.open} />}
       railToggleLabel={tShell("needsYouToggle")}
       skipLinkLabel={t("skipToContent")}
       subnav={<SectionSubNav active={active} />}
     >
       {children}
+      <ApprovalSheet approvalId={approvalSheet.approvalId} onClose={approvalSheet.close} />
     </AppFrame>
   );
 }

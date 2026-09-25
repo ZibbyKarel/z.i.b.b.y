@@ -313,6 +313,17 @@ export const ProjectSchema = z.object({
       message: 'gitRemote must be an https://, ssh://, or scp-like ("user@host:path") git URL',
     })
     .optional(),
+
+  /**
+   * ZB-05b / O-17 — this project's default chain (`Chain.id`, a `handoff/chains`
+   * signal kind), pre-selected by New Task's chain picker when the operator
+   * hasn't picked one explicitly (v1 order: explicit pick, then this default,
+   * then none — O-23). Additive/optional; a dangling id (its chain was deleted)
+   * resolves as "no default" at read time, same posture as `companyId`/`teamId`.
+   * The gate-profile seeding the mock implies is NOT built here (O-17) — a
+   * later arc.
+   */
+  defaultChainId: z.string().optional(),
 });
 export type Project = z.infer<typeof ProjectSchema>;
 

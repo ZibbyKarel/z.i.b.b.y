@@ -413,13 +413,57 @@
         "coo": "COO (auto-classify)"
       },
       "chain": {
-        "none": "None"
+        "none": "None",
+        "projectDefault": "Project default ({label})"
       },
       "cancel": "Cancel",
       "submit": "Create task",
       "routePreviewHeader": "Route preview",
       "routeSuggest": "ZIBBY will hand this to {target}",
       "routeIdle": "Describe the task to see the route."
+    }
+  },
+  "chainsWork": {
+    "eyebrow": "WORK",
+    "list": {
+      "title": "Chain library",
+      "newAction": "New chain",
+      "column": {
+        "name": "Name",
+        "route": "Route",
+        "enabled": "Enabled",
+        "inFlight": "In flight"
+      },
+      "enabledYes": "Enabled",
+      "enabledNo": "Disabled",
+      "emptyTitle": "No chains yet",
+      "emptyBody": "No handoff chain has been authored yet."
+    },
+    "detail": {
+      "back": "← Back to chains",
+      "editAction": "Edit",
+      "saveAction": "Save",
+      "cancelAction": "Cancel",
+      "deleteAction": "Delete",
+      "deleteConfirmAction": "Confirm delete",
+      "labelField": "Label",
+      "labelPlaceholder": "e.g. Dev to QA handoff",
+      "descriptionField": "Description",
+      "descriptionPlaceholder": "What this chain is for",
+      "stepsHeader": "Route",
+      "stepDepartment": "Stop {n}",
+      "gateAria": "Hop {n} gate",
+      "moveLeftAria": "Move earlier",
+      "moveRightAria": "Move later",
+      "removeStepAria": "Remove stop",
+      "addStep": "+ Add department",
+      "enabledField": "Enabled",
+      "noRouteTitle": "No route",
+      "noRouteBody": "This chain has no resolvable steps."
+    },
+    "new": {
+      "title": "New chain",
+      "submit": "Create chain"
     }
   },
   "search": {
@@ -1515,6 +1559,9 @@
       "prOpenModeHint": "The PR always opens immediately (Tier-2, no gate) — this only chooses its state on open. Never changes the merge gate.",
       "prOpenModeReady": "Ready",
       "prOpenModeDraft": "Draft",
+      "defaultChain": "Default chain",
+      "defaultChainHint": "New Task pre-selects this chain for the project (O-23) unless overridden explicitly.",
+      "defaultChainNone": "No default chain",
       "category": "Category",
       "categoryNone": "No category",
       "desc": "Description",
@@ -2565,5 +2612,134 @@
     "emptyDid": "Nothing to record yet.",
     "departments": "Departments",
     "watching": "Watching"
+  },
+  "policy": {
+    "approvals": {
+      "title": "Policy — Approvals",
+      "queueTitle": "Queue",
+      "queueEmpty": "The queue is empty.",
+      "queueMeta": "{count} waiting",
+      "historyTitle": "History",
+      "columns": {
+        "id": "ID",
+        "kind": "Kind",
+        "request": "Request",
+        "rule": "Rule",
+        "department": "Dept",
+        "wait": "Wait",
+        "decision": "Decision",
+        "task": "Task",
+        "when": "When"
+      },
+      "decision": {
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "sheet": {
+        "title": "Approval",
+        "highRisk": "High risk",
+        "waited": "waited {waited}",
+        "metric": {
+          "action": "Action",
+          "severity": "Severity",
+          "department": "Department"
+        },
+        "chainTitle": "Task chain",
+        "reasonLabel": "Reason (optional)",
+        "reasonHint": "Shown in the approval history.",
+        "cancel": "Cancel",
+        "confirmDeny": "Confirm deny",
+        "approve": "Approve",
+        "deny": "Deny",
+        "openTask": "Open task"
+      }
+    },
+    "gates": {
+      "title": "Policy — Gates",
+      "sections": {
+        "floor": "Floor",
+        "global": "Global rules",
+        "project": "Per project",
+        "agent": "Per agent",
+        "handoff": "Handoff",
+        "signals": "Signals",
+        "mandate": "Mandate"
+      },
+      "projectPicker": "Project",
+      "allProjects": "All",
+      "agentRuleCount": "{count, plural, =0 {no rules} one {# rule} other {# rules}}",
+      "departmentFilter": "Department",
+      "allDepartments": "All",
+      "projectRulesEmpty": "Rules aren't project-scoped today — clear the filter to edit them in the global catalog."
+    },
+    "patterns": {
+      "title": "Policy — Learned patterns",
+      "subtitle": "Built from your past approvals. Nothing changes until you accept.",
+      "acceptAsRule": "Accept as rule",
+      "dismiss": "Dismiss",
+      "accepted": "Now a rule",
+      "empty": "No learned patterns yet.",
+      "evidenceCount": "{n} / {of}"
+    }
+  },
+  "ledgerBudgets": {
+    "eyebrow": "LEDGER — BUDGETS",
+    "title": "Budgets",
+    "subtitle": "Run caps across the account, its companies, and their projects.",
+    "meta": {
+      "day": "Today",
+      "week": "This week",
+      "month": "This month"
+    },
+    "cap": {
+      "day": "Daily cap",
+      "week": "Weekly cap",
+      "month": "Monthly cap"
+    },
+    "sectionCompanies": "Companies",
+    "emptyCompaniesTitle": "No companies yet",
+    "emptyCompanies": "Add a company to see its budget here.",
+    "sectionProjects": "Projects",
+    "emptyProjectsTitle": "No projects yet",
+    "emptyProjects": "Add a project to see its budget here.",
+    "sectionDepartments": "Departments",
+    "column": {
+      "code": "Code",
+      "department": "Department",
+      "runsToday": "Runs today",
+      "spendToday": "Spend today",
+      "dailyCap": "Daily cap"
+    },
+    "openAria": "Open {name}",
+    "otherWindowsCaption": "week {week} · month {month}"
+  },
+  "ledgerSpend": {
+    "eyebrow": "LEDGER — SPEND",
+    "title": "${amount} spent today",
+    "state": {
+      "ok": "OK",
+      "warn": "WARNING",
+      "stop": "STOPPED"
+    },
+    "resetsIn": "resets in {time}",
+    "resetUnknown": "reset time unknown",
+    "meter": {
+      "rolling": "5-hour window",
+      "weekly": "Weekly window"
+    },
+    "column": {
+      "code": "Code",
+      "department": "Department",
+      "spend": "Spend",
+      "value": "Value"
+    },
+    "sectionDepartments": "Spend by department",
+    "sectionThresholds": "Thresholds",
+    "warnCaption": "Notifies when crossed, doesn't pause",
+    "stopCaption": "Pauses dispatch when crossed",
+    "warnRolling": "Warn — 5h window",
+    "warnWeekly": "Warn — weekly window",
+    "stopRolling": "Stop — 5h window",
+    "stopWeekly": "Stop — weekly window"
   }
 }

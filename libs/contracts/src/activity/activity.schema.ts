@@ -112,6 +112,11 @@ export const ActivityKindSchema = z.enum([
   // the Sync button doesn't ride this either, since the operator already sees the
   // result directly in the response.
   "roadmap-sync",
+  // ZB-10 / O-08 (Ledger, Tier-1 — silent + recorded). The account's rolling-5h or
+  // weekly utilization crossed the operator's `warnAtRollingPct`/`warnAtWeeklyPct`
+  // (below the hard `pauseAt*` — dispatches keep flowing). Non-blocking, so it never
+  // rides `approval-requested`; the Ledger spend meter is the durable read.
+  "budget-warn",
 ]);
 export type ActivityKind = z.infer<typeof ActivityKindSchema>;
 

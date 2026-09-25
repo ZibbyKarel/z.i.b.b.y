@@ -12,7 +12,7 @@ import {
   TextAreaField,
   Typography,
 } from "@zibby/design-system";
-import { useCreateNoteMutation } from "../../memory/mutations";
+import { useCreateNoteMutation } from "../../knowledge/mutations";
 
 export enum ChatQuickNoteTestId {
   Root = "chat-quick-note",

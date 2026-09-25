@@ -413,13 +413,57 @@
         "coo": "COO (automatická klasifikace)"
       },
       "chain": {
-        "none": "Žádný"
+        "none": "Žádný",
+        "projectDefault": "Výchozí pro projekt ({label})"
       },
       "cancel": "Zrušit",
       "submit": "Vytvořit úkol",
       "routePreviewHeader": "Náhled trasy",
       "routeSuggest": "ZIBBY toto předá: {target}",
       "routeIdle": "Popište úkol pro zobrazení trasy."
+    }
+  },
+  "chainsWork": {
+    "eyebrow": "PRÁCE",
+    "list": {
+      "title": "Knihovna řetězců",
+      "newAction": "Nový řetězec",
+      "column": {
+        "name": "Název",
+        "route": "Trasa",
+        "enabled": "Zapnuto",
+        "inFlight": "Právě běží"
+      },
+      "enabledYes": "Zapnuto",
+      "enabledNo": "Vypnuto",
+      "emptyTitle": "Zatím žádné řetězce",
+      "emptyBody": "Zatím nebyl vytvořen žádný řetězec předávání."
+    },
+    "detail": {
+      "back": "← Zpět na řetězce",
+      "editAction": "Upravit",
+      "saveAction": "Uložit",
+      "cancelAction": "Zrušit",
+      "deleteAction": "Smazat",
+      "deleteConfirmAction": "Potvrdit smazání",
+      "labelField": "Název",
+      "labelPlaceholder": "např. Předání z Dev do QA",
+      "descriptionField": "Popis",
+      "descriptionPlaceholder": "K čemu tento řetězec slouží",
+      "stepsHeader": "Trasa",
+      "stepDepartment": "Zastávka {n}",
+      "gateAria": "Brána kroku {n}",
+      "moveLeftAria": "Posunout dříve",
+      "moveRightAria": "Posunout později",
+      "removeStepAria": "Odebrat zastávku",
+      "addStep": "+ Přidat oddělení",
+      "enabledField": "Zapnuto",
+      "noRouteTitle": "Žádná trasa",
+      "noRouteBody": "Tento řetězec nemá žádné rozřešitelné kroky."
+    },
+    "new": {
+      "title": "Nový řetězec",
+      "submit": "Vytvořit řetězec"
     }
   },
   "search": {
@@ -1515,6 +1559,9 @@
       "prOpenModeHint": "PR se otevírá vždy hned (Tier-2, bez schvalování) — tady jen volíš jeho stav při otevření. Nikdy nemění merge gate.",
       "prOpenModeReady": "Připravené",
       "prOpenModeDraft": "Koncept",
+      "defaultChain": "Výchozí řetězec",
+      "defaultChainHint": "Nový úkol pro tento projekt tento řetězec přednastaví (O-23), pokud ho ručně nepřepíšeš.",
+      "defaultChainNone": "Bez výchozího řetězce",
       "category": "Kategorie",
       "categoryNone": "Bez kategorie",
       "desc": "Popis",
@@ -2565,5 +2612,134 @@
     "emptyDid": "Zatím nic k zaznamenání.",
     "departments": "Oddělení",
     "watching": "Sleduji"
+  },
+  "policy": {
+    "approvals": {
+      "title": "Politika — Schválení",
+      "queueTitle": "Fronta",
+      "queueEmpty": "Fronta je prázdná.",
+      "queueMeta": "{count} čeká",
+      "historyTitle": "Historie",
+      "columns": {
+        "id": "ID",
+        "kind": "Druh",
+        "request": "Požadavek",
+        "rule": "Pravidlo",
+        "department": "Odd.",
+        "wait": "Čeká",
+        "decision": "Rozhodnutí",
+        "task": "Úkol",
+        "when": "Kdy"
+      },
+      "decision": {
+        "approved": "Schváleno",
+        "rejected": "Zamítnuto"
+      },
+      "sheet": {
+        "title": "Schválení",
+        "highRisk": "Vysoké riziko",
+        "waited": "čeká {waited}",
+        "metric": {
+          "action": "Akce",
+          "severity": "Závažnost",
+          "department": "Oddělení"
+        },
+        "chainTitle": "Řetězec úkolu",
+        "reasonLabel": "Důvod (volitelné)",
+        "reasonHint": "Zobrazí se v historii schválení.",
+        "cancel": "Zrušit",
+        "confirmDeny": "Potvrdit zamítnutí",
+        "approve": "Schválit",
+        "deny": "Zamítnout",
+        "openTask": "Otevřít úkol"
+      }
+    },
+    "gates": {
+      "title": "Politika — Pravidla",
+      "sections": {
+        "floor": "Podlaha",
+        "global": "Globální pravidla",
+        "project": "Podle projektu",
+        "agent": "Podle agenta",
+        "handoff": "Předávání",
+        "signals": "Signály",
+        "mandate": "Mandát"
+      },
+      "projectPicker": "Projekt",
+      "allProjects": "Vše",
+      "agentRuleCount": "{count, plural, =0 {žádná pravidla} one {# pravidlo} few {# pravidla} other {# pravidel}}",
+      "departmentFilter": "Oddělení",
+      "allDepartments": "Vše",
+      "projectRulesEmpty": "Pravidla dnes nejsou vázaná na projekt — vypni filtr a uprav je v globálním katalogu."
+    },
+    "patterns": {
+      "title": "Politika — Naučené vzory",
+      "subtitle": "Postaveno na tvých minulých schváleních. Nic se nezmění, dokud to nepřijmeš.",
+      "acceptAsRule": "Přijmout jako pravidlo",
+      "dismiss": "Zamítnout",
+      "accepted": "Teď je to pravidlo",
+      "empty": "Zatím žádné naučené vzory.",
+      "evidenceCount": "{n} / {of}"
+    }
+  },
+  "ledgerBudgets": {
+    "eyebrow": "ÚČETNICTVÍ — ROZPOČTY",
+    "title": "Rozpočty",
+    "subtitle": "Limity běhů napříč účtem, firmami a jejich projekty.",
+    "meta": {
+      "day": "Dnes",
+      "week": "Tento týden",
+      "month": "Tento měsíc"
+    },
+    "cap": {
+      "day": "Denní limit",
+      "week": "Týdenní limit",
+      "month": "Měsíční limit"
+    },
+    "sectionCompanies": "Firmy",
+    "emptyCompaniesTitle": "Zatím žádné firmy",
+    "emptyCompanies": "Přidej firmu, ať tu vidíš její rozpočet.",
+    "sectionProjects": "Projekty",
+    "emptyProjectsTitle": "Zatím žádné projekty",
+    "emptyProjects": "Přidej projekt, ať tu vidíš jeho rozpočet.",
+    "sectionDepartments": "Oddělení",
+    "column": {
+      "code": "Kód",
+      "department": "Oddělení",
+      "runsToday": "Běhy dnes",
+      "spendToday": "Útrata dnes",
+      "dailyCap": "Denní limit"
+    },
+    "openAria": "Otevřít {name}",
+    "otherWindowsCaption": "týden {week} · měsíc {month}"
+  },
+  "ledgerSpend": {
+    "eyebrow": "ÚČETNICTVÍ — ÚTRATA",
+    "title": "${amount} utraceno dnes",
+    "state": {
+      "ok": "OK",
+      "warn": "VAROVÁNÍ",
+      "stop": "ZASTAVENO"
+    },
+    "resetsIn": "reset za {time}",
+    "resetUnknown": "čas resetu neznámý",
+    "meter": {
+      "rolling": "5hodinové okno",
+      "weekly": "Týdenní okno"
+    },
+    "column": {
+      "code": "Kód",
+      "department": "Oddělení",
+      "spend": "Útrata",
+      "value": "Hodnota"
+    },
+    "sectionDepartments": "Útrata podle oddělení",
+    "sectionThresholds": "Prahy",
+    "warnCaption": "Upozorní při překročení, nepozastaví",
+    "stopCaption": "Pozastaví dispatch při překročení",
+    "warnRolling": "Varování — 5h okno",
+    "warnWeekly": "Varování — týdenní okno",
+    "stopRolling": "Stop — 5h okno",
+    "stopWeekly": "Stop — týdenní okno"
   }
 }

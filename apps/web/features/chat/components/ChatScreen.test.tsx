@@ -97,7 +97,7 @@ vi.mock("../../approvals/queries/useApprovalsQuery", () => ({
   }),
   getApprovalsQueryKey: () => ["approvals"],
 }));
-vi.mock("../../memory/queries/useMemorySearchQuery", () => ({
+vi.mock("../../knowledge/queries/useMemorySearchQuery", () => ({
   useMemorySearchQuery: () => ({ data: undefined, isFetching: false }),
   getMemorySearchQueryKey: (q: string) => ["memory", "search", q],
 }));

@@ -60,6 +60,7 @@ company-merged "effective" context.
   daily_rhythm?: ProjectDailyRhythm;
   companyId?: string;           // Phase 68 link — see resolved-project.service.ts
   gitRemote?: string;           // Phase 76 clone source, validated (see below)
+  defaultChainId?: string;      // ZB-05b / O-17 — pre-selects New Task's chain picker
 }
 ```
 

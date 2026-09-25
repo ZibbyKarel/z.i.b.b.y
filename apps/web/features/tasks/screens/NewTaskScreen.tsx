@@ -18,12 +18,18 @@ import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { chainRouteGates, chainRouteSteps, useChainsQuery } from "../../chains";
 import { useProjectsQuery } from "../../projects";
 import { TaskAttachments } from "../components/TaskAttachments";
 import { useClassifyTaskMutation, useCreateTaskMutation } from "../mutations";
 import { extractPathRanges, extractPaths, toClientTarget } from "../task";
 
 const ENTRY_COO = "coo";
+/** Explicit "no chain" pick — suppresses the project default even when one is set. */
+const CHAIN_NONE = "none";
+/** "Follow the project default" marker — the picker's initial state, so a
+ *  project with a `defaultChainId` needs no extra click to use it (O-23). */
+const CHAIN_DEFAULT = "project-default";
 
 /**
  * `/work/tasks/new` — ZB-04b: a simplified, dedicated create page (not the
@@ -31,17 +37,24 @@ const ENTRY_COO = "coo";
  * hard override this deliverable calls for: COO auto-classifies, an explicit
  * department bypasses classification entirely (`TaskTargetSchema`'s
  * `{kind:"department"}`, DNA "explicit target overrides the classifier").
- * Chain is `none` until ZB-05b ships chain picking (TODO ZB-05b).
+ *
+ * ZB-05b / O-23: the **chain** picker follows the same override posture, at a
+ * HIGHER priority than the department entry — a chosen chain (explicit, or
+ * the selected project's `defaultChainId`) becomes the routing target outright
+ * (`{kind:"chain",id}`), same "explicit target overrides the classifier" DNA.
+ * v1 order: explicit pick, then the project default, then none.
  */
 export function NewTaskScreen() {
   const t = useTranslations("tasksWork");
   const router = useRouter();
   const { data: projects = [] } = useProjectsQuery();
+  const { data: chains = [] } = useChainsQuery();
 
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
   const [projectId, setProjectId] = useState("");
   const [entry, setEntry] = useState<string>(ENTRY_COO);
+  const [chainId, setChainId] = useState<string>(CHAIN_DEFAULT);
   const [attachmentSet, setAttachmentSet] = useState<{
     attachmentSetId?: string;
     files: Attachment[];
@@ -51,6 +64,14 @@ export function NewTaskScreen() {
     () => projects.find((p) => p.id === projectId),
     [projects, projectId],
   );
+
+  // O-23 v1 order: explicit pick > the selected project's default > none.
+  const effectiveChainId =
+    chainId === CHAIN_DEFAULT ? (selectedProject?.defaultChainId ?? null) : chainId;
+  const selectedChain =
+    effectiveChainId && effectiveChainId !== CHAIN_NONE
+      ? chains.find((c) => c.id === effectiveChainId)
+      : undefined;
   const paths = useMemo(() => {
     const detected = extractPaths(text);
     return selectedProject?.path ? [...new Set([selectedProject.path, ...detected])] : detected;
@@ -67,12 +88,16 @@ export function NewTaskScreen() {
   const createTask = useCreateTaskMutation();
 
   const department = DEPARTMENTS.find((d) => d.id === entry);
-  const chosenTarget =
-    entry !== ENTRY_COO && department
+  const chosenTarget = selectedChain
+    ? { kind: "chain" as const, id: selectedChain.id, name: selectedChain.label }
+    : entry !== ENTRY_COO && department
       ? { kind: "department" as const, id: department.id, name: department.name }
       : undefined;
   const previewTarget = chosenTarget
-    ? { name: department?.name ?? entry, glyph: department ? "compass" : undefined }
+    ? {
+        name: selectedChain?.label ?? department?.name ?? entry,
+        glyph: selectedChain ? "flow" : department ? "compass" : undefined,
+      }
     : classify.data
       ? toClientTarget(classify.data.body.target)
       : null;
@@ -147,9 +172,26 @@ export function NewTaskScreen() {
 
           <SelectField
             label={t("new.field.chain")}
-            onValueChange={() => undefined}
-            options={[{ value: "none", label: t("new.chain.none") }]}
-            value="none"
+            onValueChange={setChainId}
+            options={[
+              { value: CHAIN_NONE, label: t("new.chain.none") },
+              ...(selectedProject?.defaultChainId
+                ? [
+                    {
+                      value: CHAIN_DEFAULT,
+                      label: t("new.chain.projectDefault", {
+                        label:
+                          chains.find((c) => c.id === selectedProject.defaultChainId)?.label ??
+                          selectedProject.defaultChainId,
+                      }),
+                    },
+                  ]
+                : []),
+              ...chains.map((c) => ({ value: c.id, label: c.label })),
+            ]}
+            value={
+              chainId === CHAIN_DEFAULT && !selectedProject?.defaultChainId ? CHAIN_NONE : chainId
+            }
           />
 
           <TaskAttachments onChange={setAttachmentSet} value={attachmentSet} />
@@ -179,11 +221,20 @@ export function NewTaskScreen() {
                   : t("new.routeIdle")}
               </Typography>
             </Stack>
-            {chosenTarget && department && (
+            {selectedChain ? (
               <ChainRouteStrip
+                gates={chainRouteGates(selectedChain)}
                 size="compact"
-                steps={[{ code: department.code, name: department.name, state: "thinking" }]}
+                steps={chainRouteSteps(selectedChain)}
               />
+            ) : (
+              chosenTarget &&
+              department && (
+                <ChainRouteStrip
+                  size="compact"
+                  steps={[{ code: department.code, name: department.name, state: "thinking" }]}
+                />
+              )
             )}
           </Stack>
         </Panel>

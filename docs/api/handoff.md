@@ -180,3 +180,18 @@ enabled }`; `ChainSchema` adds the derived `id` and each step's `ruleId`.
 
 D-019 (the earlier "a chain target rejects with 400" behavior) is superseded by
 this section — see `docs/plans/zibbycorp/DECISIONS.md`.
+
+## Chains UI (ZB-05b)
+
+`apps/web/features/chains/` (queries/mutations over the contract above) +
+`/work/chains` (library `DataTable`: name, a chip `ChainRouteStrip`, enabled,
+in-flight — the last is always "—": `GET /api/tasks/parents` has no chain
+filter and a `TaskParent` carries no `target`/chain field to derive it from
+client-side, only a subtask does — no API was invented for this), `/work/chains/[id]`
+(read view; an Edit action toggles the shared `ChainEditor` in place — step
+cards, `GateToggle` per hop, label/description, `ConfirmDeleteButton`
+surfacing a 409's message inline), and `/work/chains/new` (same editor,
+prefilled with an empty two-step chain, id slugified from the label). The New
+Task chain picker (`NewTaskScreen`) offers none / an explicit chain / the
+target project's `defaultChainId` (O-23's v1 order — explicit pick, then the
+project default, then none) and submits `target: { kind: "chain", id, name }`.

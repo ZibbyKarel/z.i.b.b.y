@@ -8,7 +8,7 @@ type MutateOpts = { onSuccess?: () => void };
 
 const createNote = vi.fn((_vars: MutateVars, opts?: MutateOpts) => opts?.onSuccess?.());
 
-vi.mock("../../memory/mutations", () => ({
+vi.mock("../../knowledge/mutations", () => ({
   useCreateNoteMutation: () => ({ mutate: createNote, isPending: false }),
 }));
 

@@ -25,7 +25,7 @@ import { usePipelinesQuery } from "../../pipelines";
 import { useCommandsQuery } from "../../commands/queries";
 import { useCompaniesQuery } from "../../companies";
 import { useMcpServersQuery } from "../../mcp/queries";
-import { useMemorySearchQuery } from "../../memory/queries";
+import { useMemorySearchQuery } from "../../knowledge/queries";
 import { useProjectsQuery } from "../../projects";
 import { useRunsQuery } from "../../runs/queries/useRunsQuery";
 import { runTitle } from "../../runs/run";

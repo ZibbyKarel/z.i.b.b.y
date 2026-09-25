@@ -40,7 +40,9 @@ export const approvalsContract = c.router(
       method: "POST",
       path: "/approvals/:id/reject",
       pathParams: ApprovalIdParam,
-      body: EmptyBodySchema,
+      // O-12: an optional operator note on the denial, additive alongside the
+      // pre-existing empty body — a caller that still posts `{}` is unaffected.
+      body: z.object({ reason: z.string().min(1).max(500).optional() }).optional(),
       responses: { 200: ApprovalSchema, 404: ErrorSchema, 409: ErrorSchema },
       summary: "Reject a pending approval (terminates the gated run, no action taken)",
     },

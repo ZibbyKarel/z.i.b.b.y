@@ -131,8 +131,8 @@ export class ApprovalsService {
   }
 
   /** Reject a pending approval and terminate its gated run (no action taken). */
-  async reject(id: string): Promise<Approval> {
-    const approval = await this.decide(id, "rejected");
+  async reject(id: string, reason?: string): Promise<Approval> {
+    const approval = await this.decide(id, "rejected", reason);
     this.log?.info("approval rejected; cancelling run", {
       id,
       runId: approval.runId,
@@ -183,11 +183,16 @@ export class ApprovalsService {
    * `ApprovalAlreadyDecidedError`, so it never reaches its runner call. Not
    * reentrant — this is the only call site, and it never re-enters the lock.
    */
-  private decide(id: string, status: "approved" | "rejected"): Promise<Approval> {
+  private decide(id: string, status: "approved" | "rejected", reason?: string): Promise<Approval> {
     return withPathLock(`approval:${id}`, async () => {
       const approval = await this.storage.get(id);
       if (approval.status !== "pending") throw new ApprovalAlreadyDecidedError(id);
-      const decided: Approval = { ...approval, status, decidedAt: new Date().toISOString() };
+      const decided: Approval = {
+        ...approval,
+        status,
+        decidedAt: new Date().toISOString(),
+        ...(reason ? { reason } : {}),
+      };
       void this.activity?.record({
         kind: status === "approved" ? "approval-approved" : "approval-rejected",
         summary: `approval ${status}: ${approval.skill} · ${approval.action}`,

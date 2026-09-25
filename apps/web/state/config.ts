@@ -62,8 +62,9 @@ export interface SectionConfig {
   glyph: IconName;
   /** Section-level fallback route (AppHeader's section nav) — the ZB-01 mapping,
    *  updated as each section ships: org→/org (ZB-02), work→/projects,
-   *  activity→/activity/log (ZB-07), policy→/settings?tab=gates, knowledge→/memory,
-   *  ledger→/settings, system→/settings. */
+   *  activity→/activity/log (ZB-07), policy→/settings?tab=gates,
+   *  knowledge→/knowledge/vault (ZB-09), ledger→/ledger/budgets (ZB-10),
+   *  system→/settings. */
   href: Route;
   tabs: readonly SubTabConfig[];
 }
@@ -91,7 +92,7 @@ export const SECTIONS = [
     href: "/projects",
     tabs: [
       { id: "tasks", href: "/work/tasks" as Route },
-      { id: "chains", href: "/projects" },
+      { id: "chains", href: "/work/chains" as Route },
       { id: "goals", href: "/projects" },
       { id: "companies", href: "/companies" },
       { id: "teams", href: "/teams" },
@@ -112,31 +113,32 @@ export const SECTIONS = [
   {
     id: "policy",
     glyph: "shield",
-    // `?tab=` targets aren't in Next's typed-route union — same cast pattern as
-    // the project profile's own `?tab=` links (e.g. `GatesTab.tsx`).
-    href: "/settings?tab=gates" as Route,
+    href: "/policy/approvals",
     tabs: [
-      { id: "approvals", href: "/settings?tab=gates" as Route },
-      { id: "gates", href: "/settings?tab=gates" as Route },
-      { id: "patterns", href: "/settings?tab=gates" as Route },
+      { id: "approvals", href: "/policy/approvals" },
+      // Not yet in the typed-route union until a build/dev regenerates
+      // `.next/types` for these freshly-added pages (ZB-08) — same cast
+      // pattern as the other freshly-added routes in this table.
+      { id: "gates", href: "/policy/gates" as Route },
+      { id: "patterns", href: "/policy/patterns" as Route },
     ],
   },
   {
     id: "knowledge",
     glyph: "brain",
-    href: "/memory",
+    href: "/knowledge/vault",
     tabs: [
-      { id: "vault", href: "/memory" },
-      { id: "distill", href: "/memory" },
+      { id: "vault", href: "/knowledge/vault" },
+      { id: "distill", href: "/knowledge/distill" },
     ],
   },
   {
     id: "ledger",
     glyph: "dollar",
-    href: "/settings",
+    href: "/ledger/budgets",
     tabs: [
-      { id: "budgets", href: "/settings" },
-      { id: "spend", href: "/settings" },
+      { id: "budgets", href: "/ledger/budgets" },
+      { id: "spend", href: "/ledger/spend" as Route },
     ],
   },
   {
@@ -177,6 +179,8 @@ const PATH_SECTION: readonly (readonly [prefix: string, section: SectionId])[] =
   ["/runs", "activity"],
   ["/signals", "policy"],
   ["/memory", "knowledge"],
+  ["/knowledge", "knowledge"],
+  ["/ledger", "ledger"],
   ["/skills", "system"],
   ["/mcp", "system"],
   ["/hooks", "system"],

@@ -47,6 +47,35 @@ const nextConfig = {
       },
       // ZB-09: the memory feature moved to Knowledge → Vault.
       { source: "/memory", destination: "/knowledge/vault", permanent: true },
+      // ZB-08: the signal-kind registry and the ex-settings gates/mandate tabs
+      // moved under Policy → Gates (`?section=`).
+      {
+        source: "/signals",
+        destination: "/policy/gates?section=signals",
+        permanent: true,
+      },
+      {
+        source: "/signals/new",
+        destination: "/policy/gates?section=signals&new=1",
+        permanent: true,
+      },
+      {
+        source: "/signals/:id",
+        destination: "/policy/gates?section=signals&id=:id",
+        permanent: true,
+      },
+      {
+        source: "/settings",
+        has: [{ type: "query", key: "tab", value: "gates" }],
+        destination: "/policy/gates",
+        permanent: true,
+      },
+      {
+        source: "/settings",
+        has: [{ type: "query", key: "tab", value: "mandate" }],
+        destination: "/policy/gates?section=mandate",
+        permanent: true,
+      },
     ];
   },
 };

@@ -58,26 +58,26 @@ Legend: ⬜ todo · 🟦 in progress · ✅ landed (sha) · ⛔ parked (reason)
 | ZA-03 | AgentGlyph, StatePill, CellStrip | ✅ | 4216a05a |
 | ZA-04 | Data and layout components | ✅ | ba9406b9 |
 | ZA-05 | Overlay and nav components | ✅ | ba9406b9 |
-| ZA-06 | Shell components + Splash | 🟨 WIP (paused) | |
-| ZA-07 | Lint wall + 20 className files | ⬜ | |
+| ZA-06 | Shell components + Splash | ✅ | bc47fe62 |
+| ZA-07 | Lint wall + 20 className files | ✅ (DepartmentDrawer kept as modal, not Sheet — deleted in ZB-03) | bc47fe62 |
 | ZA-08 | Validation → park | ⬜ | |
 
 ### Part B (ZB-04a / 05a / 05b are Part C, done last)
 
 | Phase | Title | Status | Commit |
 |---|---|---|---|
-| ZB-01 | Shell, sections, rail, redirects | ⬜ | |
-| ZB-02 | ORG map | ⬜ | |
-| ZB-03 | Department detail + People | ⬜ | |
-| ZB-04a | Tasks backend (parent/source/department) | ✅ | |
-| ZB-04b | Tasks UI | ⬜ | |
-| ZB-05a | Chains backend on HandoffService | ⬜ | |
-| ZB-05b | Chains UI | ⬜ | |
+| ZB-01 | Shell, sections, rail, redirects | ✅ (no header ThemeToggle — DS has none, ZB-11; `/` still → `/chat` until ZB-02) | b6d5501a |
+| ZB-02 | ORG map | ✅ | 8a014bf3 |
+| ZB-03 | Department detail + People | ✅ | 8a014bf3 |
+| ZB-04a | Tasks backend (parent/source/department) | ✅ | e858d589 |
+| ZB-04b | Tasks UI | ✅ | 8a014bf3 |
+| ZB-05a | Chains backend on HandoffService | ✅ | 1d271ece |
+| ZB-05b | Chains UI | ✅ (in-flight column shows "—": tasks/parents has no chain field) | final day-run commit |
 | ZB-06 | Goals / Companies / Teams / Projects | ⬜ | |
-| ZB-07 | Activity | ⬜ | |
-| ZB-08 | Policy | ⬜ | |
-| ZB-09 | Knowledge | ⬜ | |
-| ZB-10 | Ledger | ⬜ | |
+| ZB-07 | Activity | ✅ (no read-aloud on briefings — no useSpeech hook; run state filter client-side) | final day-run commit |
+| ZB-08 | Policy | ✅ (gaps: per-project gate rules EmptyState — no projectId on rules; PatternCard dismiss unwired — no endpoint) | final day-run commit |
+| ZB-09 | Knowledge | ✅ (MemoryGraph removed) | final day-run commit |
+| ZB-10 | Ledger | ✅ (budget edits link out to company/project detail) | final day-run commit |
 | ZB-11 | System settings + registries | ⬜ | |
 | ZB-12 | ⌘K + COO dock + voice | ⬜ | |
 | ZB-13 | Cleanup | ⬜ | |
@@ -175,3 +175,29 @@ The tip commit `wip(zibbycorp): …` was made with `--no-verify`; the tree does 
 
 Then continue: ZA-07 → ZA-08 → Part B (ZB-01 …) → Part C (ZB-05a, ZB-05b) → final validation,
 push and a **draft** PR into main (never merge).
+
+## 2026-09-25 day run (operator deadline 12:00)
+
+- Commits are made from a detached snapshot worktree in the session scratchpad (copied
+  graphify-out, symlinked node_modules), because parallel agents keep the shared tree
+  red for the pre-commit tsc. The branch ref is then moved with `git reset <sha>`.
+- `tools/check-names.mjs`: the `"ledger"` department-id rule now exempts
+  `apps/web/state/config.ts` and the i18n catalogs — LEDGER is a legitimate UI section.
+- ZB-01's agent ran Playwright against manually-started dev servers, which wrote e2e
+  fixtures into the real `.zibby/data` (demo project, gated agent, system-config ticks).
+  Reverted. The real api also re-synced `roadmap/shoptet-partner-cli` from Jira (left as is,
+  not committed). Rule for agents: e2e only with Playwright's own isolated servers.
+
+### Day-run close (11:45)
+
+- Landed: ZB-02/03/04b (8a014bf3), ZB-05a (1d271ece), then ZB-05b, ZB-07, ZB-08, ZB-09 and ZB-10
+  in the final commit.
+- ZB-09 left `features/chat` importing the deleted `features/memory`. That is fixed:
+  the imports and test mocks now use `features/knowledge`, and the BriefingMessageCard test
+  now expects `/activity/runs`.
+- Not run: Playwright e2e for the new sections (agents were barred from dev servers after the
+  ZB-01 data-pollution incident). **First step next session:** run `pnpm e2e` on a clean data dir
+  and fix redirects.spec / memory-graph.spec drift.
+- `.zibby/data/roadmap/shoptet-partner-cli/*` has a Jira re-sync residue in the working tree. It is intentionally
+  uncommitted.
+- Next: ZB-06, ZB-11, ZB-12, ZB-13, ZB-14, ZA-08.

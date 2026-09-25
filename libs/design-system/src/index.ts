@@ -398,6 +398,9 @@ export type {
 export { SubNav, SubNavTestId } from "./components/SubNav/SubNav";
 export type { SubNavItem, SubNavLinkComponent, SubNavProps } from "./components/SubNav/SubNav";
 
+export { PatternCard, PatternCardTestId } from "./components/PatternCard/PatternCard";
+export type { PatternCardProps } from "./components/PatternCard/PatternCard";
+
 export { Breadcrumb, BreadcrumbTestId } from "./components/Breadcrumb/Breadcrumb";
 export type { BreadcrumbItem, BreadcrumbProps } from "./components/Breadcrumb/Breadcrumb";
 

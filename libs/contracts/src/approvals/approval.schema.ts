@@ -121,5 +121,11 @@ export const ApprovalSchema = z.object({
    * and a pre-existing approval re-parses untouched.
    */
   sourceUrl: z.string().optional(),
+  /**
+   * ZB-08/O-12 — an optional operator note on a rejection, shown in the
+   * Policy history table. Additive: only `reject` ever sets it, and an older
+   * decided approval re-parses with it simply absent.
+   */
+  reason: z.string().min(1).max(500).optional(),
 });
 export type Approval = z.infer<typeof ApprovalSchema>;

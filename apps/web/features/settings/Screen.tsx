@@ -21,14 +21,11 @@ import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { useHealthQuery } from "../health";
-import { GateRulesSection } from "../gates/components/GateRulesSection";
 import { LevelMappingSection } from "../roadmap/components/LevelMappingSection";
 import { ActivitySection } from "./components/ActivitySection";
 import { AutomationsSection } from "./components/AutomationsSection";
 import { ChatSection } from "./components/ChatSection";
 import { MachineSection } from "./components/MachineSection";
-import { MandateSection } from "./components/MandateSection";
-import { SelfKnowledgeSection } from "./components/SelfKnowledgeSection";
 import { SystemSection } from "./components/SystemSection";
 import { WatcherRows } from "./components/WatcherRows";
 
@@ -95,15 +92,12 @@ function InfoRow({ label, value, tone }: { label: string; value: string; tone?: 
 
 const SETTINGS_TABS = [
   "preferences",
-  "gates",
   "tasks",
   "automations",
   "chat",
   "activity",
-  "mandate",
   "runtime",
   "machine",
-  "selfKnowledge",
   "system",
 ] as const;
 type SettingsTab = (typeof SETTINGS_TABS)[number];
@@ -158,15 +152,12 @@ export function Screen() {
             <Tabs defaultValue={initialTab} direction="vertical" onValueChange={setTab}>
               <TabList>
                 <Tab value="preferences">{t("preferences")}</Tab>
-                <Tab value="gates">{t("subnav.gates")}</Tab>
                 <Tab value="tasks">{t("subnav.tasks")}</Tab>
                 <Tab value="automations">{t("automations.title")}</Tab>
                 <Tab value="chat">{t("chat.title")}</Tab>
                 <Tab value="activity">{t("activity.title")}</Tab>
-                <Tab value="mandate">{t("mandate.title")}</Tab>
                 <Tab value="runtime">{t("runtime.title")}</Tab>
                 <Tab value="machine">{t("machine.title")}</Tab>
-                <Tab value="selfKnowledge">{t("selfKnowledge.title")}</Tab>
                 <Tab value="system">{t("system")}</Tab>
               </TabList>
 
@@ -204,10 +195,6 @@ export function Screen() {
                 </HudPanel>
               </TabPanel>
 
-              <TabPanel value="gates">
-                <GateRulesSection surface="glass" />
-              </TabPanel>
-
               <TabPanel value="tasks">
                 <LevelMappingSection surface="glass" />
               </TabPanel>
@@ -224,20 +211,12 @@ export function Screen() {
                 <ActivitySection />
               </TabPanel>
 
-              <TabPanel value="mandate">
-                <MandateSection />
-              </TabPanel>
-
               <TabPanel value="runtime">
                 <SystemSection />
               </TabPanel>
 
               <TabPanel value="machine">
                 <MachineSection />
-              </TabPanel>
-
-              <TabPanel value="selfKnowledge">
-                <SelfKnowledgeSection />
               </TabPanel>
 
               <TabPanel value="system">

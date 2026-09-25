@@ -24,6 +24,8 @@ const ROUTE_MAP_REDIRECTS: ReadonlyArray<[from: string, to: string]> = [
   ["/archiv", "/activity/runs"],
   ["/runs", "/activity/runs"],
   ["/activity", "/activity/log"],
+  // ZB-09: the memory feature moved to Knowledge → Vault.
+  ["/memory", "/knowledge/vault"],
 ];
 
 test("ROUTE-MAP §2 redirects land on their new route", async () => {
@@ -34,5 +36,24 @@ for (const [from, to] of ROUTE_MAP_REDIRECTS) {
   test(`${from} redirects to ${to}`, async ({ page }) => {
     await page.goto(from);
     await expect(page).toHaveURL(new RegExp(`${to}$`));
+  });
+}
+
+// ZB-08: the signal-kind registry and the ex-settings gates/mandate tabs moved
+// under Policy → Gates (`?section=`). Destinations carry a query string, so
+// these use an exact-URL assertion instead of the ROUTE-MAP table's
+// end-anchored regex (a literal `?` there would be read as a regex quantifier).
+const QUERY_REDIRECTS: ReadonlyArray<[from: string, to: string]> = [
+  ["/signals", "/policy/gates?section=signals"],
+  ["/signals/new", "/policy/gates?section=signals&new=1"],
+  ["/signals/abc", "/policy/gates?section=signals&id=abc"],
+  ["/settings?tab=gates", "/policy/gates"],
+  ["/settings?tab=mandate", "/policy/gates?section=mandate"],
+];
+
+for (const [from, to] of QUERY_REDIRECTS) {
+  test(`${from} redirects to ${to}`, async ({ page }) => {
+    await page.goto(from);
+    await expect(page).toHaveURL(new RegExp(`${to.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`));
   });
 }

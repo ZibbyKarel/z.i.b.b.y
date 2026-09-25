@@ -46,6 +46,13 @@ Every dispatch path (agent run, pipeline run, one goal iteration) calls
    `LimitsService` (see `docs/api/limits.md`). If the account's 5h rolling or weekly
    usage is at or above the configured pause percentage, the dispatch is refused
    (`over: "global"`). Any read error here is also refused — fail-closed.
+   - ZB-10 / O-08: before that pause check, the same config/limits pair is also
+     compared against the additive, lower `warnAtRollingPct`/`warnAtWeeklyPct` — a
+     window CROSSING (not merely sitting above) its warn threshold writes a
+     `budget-warn` activity notice (`ActivityLogService`, fire-and-forget) and lets
+     the dispatch continue; edge-triggered in-memory (`BudgetService` fields
+     `rollingWarned`/`weeklyWarned`) so a sustained over-warn spend notices once, not
+     per dispatch.
 2. **Per-project run-count caps** — resolve the project's _effective_ budget via
    `ResolvedProjectService.resolveBudget(project)` (Phase 70: the project's own
    `budget` fields merged over its company's defaults, field-level — a
