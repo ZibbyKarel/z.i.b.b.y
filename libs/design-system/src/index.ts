@@ -359,6 +359,120 @@ export type {
 } from "./components/List/List";
 
 // ---------------------------------------------------------------------------
+// Overlay and navigation (ZA-05)
+// ---------------------------------------------------------------------------
+export { Sheet, SheetTestId } from "./components/Sheet/Sheet";
+export type { SheetProps, SheetSide, SheetWidth } from "./components/Sheet/Sheet";
+
+export { CommandPalette, CommandPaletteTestId } from "./components/CommandPalette/CommandPalette";
+export type {
+  CommandPaletteGroup,
+  CommandPaletteItem,
+  CommandPaletteProps,
+} from "./components/CommandPalette/CommandPalette";
+
+export { ApprovalCard, ApprovalCardTestId } from "./components/ApprovalCard/ApprovalCard";
+export type {
+  ApprovalCardDensity,
+  ApprovalCardProps,
+} from "./components/ApprovalCard/ApprovalCard";
+
+export { SubNav, SubNavTestId } from "./components/SubNav/SubNav";
+export type { SubNavItem, SubNavLinkComponent, SubNavProps } from "./components/SubNav/SubNav";
+
+export { Breadcrumb, BreadcrumbTestId } from "./components/Breadcrumb/Breadcrumb";
+export type { BreadcrumbItem, BreadcrumbProps } from "./components/Breadcrumb/Breadcrumb";
+
+// ---------------------------------------------------------------------------
+// Data & layout (ZA-04)
+// ---------------------------------------------------------------------------
+export { SectionLabel, SectionLabelTestId } from "./components/SectionLabel/SectionLabel";
+export type { SectionLabelProps } from "./components/SectionLabel/SectionLabel";
+
+export {
+  SegmentedControl,
+  SegmentedControlTestId,
+} from "./components/SegmentedControl/SegmentedControl";
+export type {
+  SegmentedControlItem,
+  SegmentedControlProps,
+  SegmentedControlSize,
+} from "./components/SegmentedControl/SegmentedControl";
+
+export { MetricStrip, MetricStripTestId } from "./components/MetricStrip/MetricStrip";
+export type { MetricStripItem, MetricStripProps } from "./components/MetricStrip/MetricStrip";
+
+export { DataTable, DataTableTestId } from "./components/DataTable/DataTable";
+export type {
+  ColumnWidth,
+  DataTableColumn,
+  DataTableProps,
+} from "./components/DataTable/DataTable";
+
+export { FilterBar, FilterBarTestId } from "./components/FilterBar/FilterBar";
+export type { FilterBarProps } from "./components/FilterBar/FilterBar";
+
+export { LogStream, LogStreamTestId } from "./components/LogStream/LogStream";
+export type { LogStreamLine, LogStreamProps } from "./components/LogStream/LogStream";
+
+export {
+  ChainRouteStrip,
+  ChainRouteStripTestId,
+} from "./components/ChainRouteStrip/ChainRouteStrip";
+export type {
+  ChainRouteStripGate,
+  ChainRouteStripProps,
+  ChainRouteStripSize,
+  ChainRouteStripStep,
+} from "./components/ChainRouteStrip/ChainRouteStrip";
+
+export {
+  PipelineStepStrip,
+  PipelineStepStripTestId,
+} from "./components/PipelineStepStrip/PipelineStepStrip";
+export type {
+  PipelineStepStripPhase,
+  PipelineStepStripProps,
+} from "./components/PipelineStepStrip/PipelineStepStrip";
+
+export { GateToggle, GateToggleTestId } from "./components/GateToggle/GateToggle";
+export type { GateMode, GateToggleProps } from "./components/GateToggle/GateToggle";
+
+export { BudgetMeter, BudgetMeterTestId } from "./components/BudgetMeter/BudgetMeter";
+export type { BudgetMeterProps } from "./components/BudgetMeter/BudgetMeter";
+
+export { LimitBar, LimitBarTestId } from "./components/LimitBar/LimitBar";
+export type { LimitBarProps } from "./components/LimitBar/LimitBar";
+
+export { Slider, SliderTestId } from "./components/Slider/Slider";
+export type { SliderProps } from "./components/Slider/Slider";
+
+export { DiffView, DiffViewTestId } from "./components/DiffView/DiffView";
+export type {
+  DiffHunk,
+  DiffLine,
+  DiffLineType,
+  DiffViewProps,
+  DiffViewStat,
+} from "./components/DiffView/DiffView";
+
+export {
+  CONFIRM_DELETE_TIMEOUT_MS,
+  ConfirmDeleteButton,
+  ConfirmDeleteButtonTestId,
+} from "./components/ConfirmDeleteButton/ConfirmDeleteButton";
+export type { ConfirmDeleteButtonProps } from "./components/ConfirmDeleteButton/ConfirmDeleteButton";
+
+export { OrgNode, OrgNodeTestId } from "./components/OrgNode/OrgNode";
+export type { OrgNodeProps } from "./components/OrgNode/OrgNode";
+
+export { Legend, LegendTestId } from "./components/Legend/Legend";
+export type { LegendItem, LegendProps } from "./components/Legend/Legend";
+
+export { EmptyState, EmptyStateTestId } from "./components/EmptyState/EmptyState";
+export type { EmptyStateProps } from "./components/EmptyState/EmptyState";
+
+// ---------------------------------------------------------------------------
 // Immersive orb map — pure geometry/state helpers, WebGL/DOM primitives, and
 // the composed OrbMap. See immersive/index.ts for the hand-authored barrel
 // this section mirrors.

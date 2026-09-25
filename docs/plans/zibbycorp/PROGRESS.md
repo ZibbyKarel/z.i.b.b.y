@@ -21,7 +21,7 @@ and the data tarball is in `.zibby/backups/`. D-012 … D-015 are binding.
 
 **Last updated:** 2026-09-24. Part 0 landed (see board).
 
-**Resume at:** ZE-01 (Part E — employees).
+**Resume at:** Part A — ZA-04 running (subagent), then ZA-05, ZA-06, ZA-07, ZA-08; then Part B.
 
 ---
 
@@ -45,7 +45,7 @@ Legend: ⬜ todo · 🟦 in progress · ✅ landed (sha) · ⛔ parked (reason)
 
 | Phase | Title | Status | Commit |
 |---|---|---|---|
-| ZE-01 | Employees, name pool, allocator, migration | 🟦 subagent running | |
+| ZE-01 | Employees, name pool, allocator, migration | ✅ | e144954f |
 
 ### Part A
 
@@ -141,3 +141,10 @@ When a phase applies a default from `OPEN-QUESTIONS.md`, append one line here:
 - 2026-09-24 ~21:00 → 2026-09-25 00:00: both subagents (ZE-01, ZA-01+03) died on the account
   session rate limit (429, resets midnight Prague) with partial edits in the tree. Resumed
   via SendMessage at 01:47 from their transcripts; partial edits kept, not reverted.
+- ZE-01: real `.zibby/data` migrated — 50 employees hired (pool grown to 60, D-018). Follow-up:
+  allocator waiters wake only on `release`, so a hire made while a stage is queued does not
+  unblock it until the next release (minor; revisit in Part B if the People screen hires live).
+- `pipelines.e2e` flaked once (socket hang up) in the full run, green 2/2 in isolation — the
+  known pre-existing flake.
+- 2026-09-25 ~03:00 → 06:40: second rate-limit stop (ZA-04 partial, ZA-05 nothing written).
+  Resumed 07:15 on the operator's "pokračuj".
