@@ -102,4 +102,42 @@ describe("Typography", () => {
     const el = screen.getByTestId(TypographyTestId.Root);
     expect(el).toHaveAttribute("aria-label", "poznámka");
   });
+
+  it("renders the DS.md §3.1 sans scale at an exact px size", () => {
+    const { rerender } = render(<Typography type="display">A</Typography>);
+    expect(screen.getByTestId(TypographyTestId.Root).style.fontSize).toBe("32px");
+
+    rerender(<Typography type="h1">A</Typography>);
+    let el = screen.getByTestId(TypographyTestId.Root);
+    expect(el.tagName).toBe("H1");
+    expect(el.style.fontSize).toBe("30px");
+    expect(el.style.letterSpacing).toBe("-0.02em");
+
+    rerender(<Typography type="metric">A</Typography>);
+    el = screen.getByTestId(TypographyTestId.Root);
+    expect(el.style.fontSize).toBe("20px");
+    expect(el.style.fontVariantNumeric).toBe("tabular-nums");
+  });
+
+  it("renders the DS.md §3.2 mono scale, uppercase except `code`", () => {
+    const { rerender } = render(<Typography type="wordmark">Zibbycorp</Typography>);
+    let el = screen.getByTestId(TypographyTestId.Root);
+    expect(el.className).toContain("font-mono");
+    expect(el.className).toContain("uppercase");
+    expect(el.style.fontSize).toBe("13px");
+    expect(el.style.letterSpacing).toBe("0.18em");
+
+    rerender(<Typography type="code">agent-07</Typography>);
+    el = screen.getByTestId(TypographyTestId.Root);
+    expect(el.className).toContain("font-mono");
+    expect(el.className).not.toContain("uppercase");
+    expect(el.style.fontSize).toBe("11px");
+  });
+
+  it("keeps the pre-ZibbyCorp `title` size updated in place (DS.md §3.1)", () => {
+    render(<Typography type="title">A</Typography>);
+    const el = screen.getByTestId(TypographyTestId.Root);
+    expect(el.tagName).toBe("H2");
+    expect(el.style.fontSize).toBe("16px");
+  });
 });

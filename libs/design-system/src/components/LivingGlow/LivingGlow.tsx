@@ -1,6 +1,6 @@
 import type { CSSProperties, HTMLAttributes, Ref } from "react";
 import { cn } from "../../utils/cn";
-import { type StateTone, stateToneVar } from "../../stateTone";
+import { type AnyStateTone, normalizeStateTone, stateToneVar } from "../../stateTone";
 
 export enum LivingGlowTestId {
   Root = "living-glow-root",
@@ -24,8 +24,9 @@ const radiusClass = {
 } as const;
 
 export interface LivingGlowProps extends Omit<HTMLAttributes<HTMLSpanElement>, "className"> {
-  /** Which state this glow expresses: the canonical vocabulary. */
-  tone?: StateTone;
+  /** Which state this glow expresses — accepts both the canonical and the legacy
+   *  vocabulary (see {@link AnyStateTone}); resolved via {@link normalizeStateTone}. */
+  tone?: AnyStateTone;
   /** Ambient pulse (`idle`) or the energized, in-flight pulse (`hot`). */
   intensity?: LivingGlowIntensity;
   /** Also scale/opacity-breathe (`v-breath`), for a free-standing orb-like glow;
@@ -56,7 +57,8 @@ export function LivingGlow({
   ref,
   ...rest
 }: LivingGlowProps) {
-  const toneVarStyle = { "--living-color": stateToneVar[tone] } as CSSProperties;
+  const resolvedTone = normalizeStateTone(tone);
+  const toneVarStyle = { "--living-color": stateToneVar[resolvedTone] } as CSSProperties;
   return (
     <span
       aria-hidden="true"
@@ -68,7 +70,7 @@ export function LivingGlow({
       )}
       data-intensity={intensity}
       data-testid={LivingGlowTestId.Root}
-      data-tone={tone}
+      data-tone={resolvedTone}
       ref={ref}
       style={{ ...toneVarStyle, ...style }}
       {...rest}

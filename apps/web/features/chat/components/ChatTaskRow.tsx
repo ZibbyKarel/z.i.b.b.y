@@ -7,9 +7,9 @@ import {
   Icon,
   type IconName,
   IconTile,
+  type LegacyStateTone,
   Progress,
   Stack,
-  type StateTone,
   StatusDot,
   Typography,
 } from "@zibby/design-system";
@@ -28,9 +28,9 @@ export enum ChatTaskRowTestId {
 }
 
 /** `StatusDot` speaks the dot vocabulary (`wait`, not `warn`); map the card's
- * canonical {@link StateTone} onto it so the meta row's dot always matches the
+ * {@link LegacyStateTone} onto it so the meta row's dot always matches the
  * edge bar/border tone exactly (one state, one color, two vocabularies). */
-const DOT_TONE_BY_STATE: Record<StateTone, DotTone> = {
+const DOT_TONE_BY_STATE: Record<LegacyStateTone, DotTone> = {
   accent: "accent",
   ok: "ok",
   warn: "wait",

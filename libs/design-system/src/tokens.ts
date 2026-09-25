@@ -11,7 +11,12 @@
 // Spacing
 // ---------------------------------------------------------------------------
 
-/** Named spacing scale. Maps to px: 0/2/4/6/8/10/12/16/20/24/28/32/36/40 */
+/**
+ * Named spacing scale. Maps to px: 0/2/4/6/8/10/12/16/20/24/28/32/36/40, plus three
+ * ZibbyCorp (DS.md §4) additions that don't already have a slot on the legacy scale:
+ * `175` (14px, DS.md `space-7`), `225` (18px, `space-9`) and `700` (56px, `space-14`,
+ * the "document section gap" — the legacy scale tops out at 40px).
+ */
 export type Spacing =
   | "0"
   | "25"
@@ -20,13 +25,16 @@ export type Spacing =
   | "100"
   | "125"
   | "150"
+  | "175"
   | "200"
+  | "225"
   | "250"
   | "300"
   | "350"
   | "400"
   | "450"
-  | "500";
+  | "500"
+  | "700";
 
 export type Padding = Spacing | [Spacing, Spacing] | [Spacing, Spacing, Spacing, Spacing];
 
@@ -40,14 +48,31 @@ export const spacingValues: Record<Spacing, string> = {
   "100": "8px",
   "125": "10px",
   "150": "12px",
+  "175": "14px",
   "200": "16px",
+  "225": "18px",
   "250": "20px",
   "300": "24px",
   "350": "28px",
   "400": "32px",
   "450": "36px",
   "500": "40px",
+  "700": "56px",
 };
+
+/**
+ * ZibbyCorp layout constants (DS.md §5) — the app shell grid. Not part of `Theme`
+ * (they don't swap with theme/context), just a fixed layout vocabulary `AppFrame`/
+ * `AppHeader`/`Rail` (ZA-06) and any layout math read directly.
+ */
+export const LAYOUT = {
+  headerHeight: 56,
+  railWidthLeft: 280,
+  railWidthRight: 400,
+  docMaxWidth: 1320,
+  gridSize: 24,
+  gridSizeSm: 8,
+} as const;
 
 export function spacingToPx(token: Spacing): string {
   return spacingValues[token];
@@ -122,6 +147,48 @@ export interface Theme {
   colorRiskPush: string;
   colorRiskSend: string;
 
+  // ---- ZibbyCorp neutrals (DS.md §2.1) — the instrument-paper/blueprint palette.
+  // `colorBackground*`/`colorSurface`/… above stay the app's existing 6-level
+  // vocabulary (their *values* now derive from these 3 flat levels); these are the
+  // literal DS.md names for the new components (`AgentGlyph`, `StatePill`,
+  // `CellStrip`) and any future ZA-02 restyle to read directly. ---------------------
+  /** App background, inset surfaces — DS.md `--bg`. */
+  colorBg: string;
+  /** Rails, cards, header — DS.md `--panel`. */
+  colorPanel: string;
+  /** Selected row, avatar tile, hover — DS.md `--panel2`. */
+  colorPanel2: string;
+  /** Default hairline, dividers — DS.md `--line`. */
+  colorLine: string;
+  /** Control borders, emphasized hairline — DS.md `--line2`. */
+  colorLine2: string;
+  /** Primary text, selected border, primary button fill — DS.md `--ink`. */
+  colorInk: string;
+  /** Secondary text, metadata — DS.md `--ink2`. */
+  colorInk2: string;
+  /** Tertiary text, mono labels, placeholders — DS.md `--ink3`. */
+  colorInk3: string;
+  /** Background grid line colour — DS.md `--grid`. */
+  colorGrid: string;
+
+  // ---- ZibbyCorp state vocabulary (DS.md §2.2) — canonical order:
+  // working → thinking → blocked → error → done → idle. The only hues in the
+  // system; see `stateTone.ts` (`StateTone`, `stateToneVar`) for the TS-side
+  // vocabulary these back. ----------------------------------------------------
+  colorStateWork: string;
+  colorStateThink: string;
+  colorStateBlock: string;
+  colorStateErr: string;
+  colorStateDone: string;
+  colorStateIdle: string;
+
+  // ---- Effects (DS.md §2.3) — the only two theme-swapped effect tokens ------
+  /** Glow radius for live status: `0px` light, `8px` dark — DS.md `--gw`. Only
+   *  live status elements glow, and only in the dark theme. */
+  glowWidth: string;
+  /** Status dot radius — always `0` (square pixel) — DS.md `--dot-r`. */
+  dotRadius: string;
+
   // ---- Border radii ------------------------------------------------------
   radiusDefault: string;
   radiusSm: string;
@@ -135,7 +202,11 @@ export interface Theme {
   /** Accent glow box-shadow (color changes with context). */
   shadowGlowAccent: string;
 
-  /** Liquid-glass chrome recipe (Velín-D VD_GLASS), consumed by GlassSurface. */
+  /** Liquid-glass chrome recipe (Velín-D VD_GLASS), consumed by GlassSurface.
+   *  ZibbyCorp has no glass/blur in its language (DS.md §1.2/§6) — these flatten
+   *  to a solid panel surface / no blur / no shadow (see the theme files) rather
+   *  than being deleted, so `GlassSurface` and its remaining callers still compile
+   *  and render (a flat panel) instead of going invisible. */
   gradientGlass: string;
   colorGlassBorder: string;
   shadowGlass: string;
@@ -192,6 +263,26 @@ export function tokensToCssVars(t: Theme): Record<string, string> {
     "--color-risk-deletion": t.colorRiskDeletion,
     "--color-risk-push": t.colorRiskPush,
     "--color-risk-send": t.colorRiskSend,
+    // ZibbyCorp neutrals (DS.md §2.1)
+    "--color-bg": t.colorBg,
+    "--color-panel": t.colorPanel,
+    "--color-panel-2": t.colorPanel2,
+    "--color-line": t.colorLine,
+    "--color-line-2": t.colorLine2,
+    "--color-ink": t.colorInk,
+    "--color-ink-2": t.colorInk2,
+    "--color-ink-3": t.colorInk3,
+    "--color-grid": t.colorGrid,
+    // ZibbyCorp state vocabulary (DS.md §2.2) — working → thinking → blocked → error → done → idle
+    "--color-state-work": t.colorStateWork,
+    "--color-state-think": t.colorStateThink,
+    "--color-state-block": t.colorStateBlock,
+    "--color-state-err": t.colorStateErr,
+    "--color-state-done": t.colorStateDone,
+    "--color-state-idle": t.colorStateIdle,
+    // effects (DS.md §2.3)
+    "--gw": t.glowWidth,
+    "--dot-r": t.dotRadius,
     // radius
     "--radius": t.radiusDefault,
     "--radius-sm": t.radiusSm,

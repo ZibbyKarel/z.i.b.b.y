@@ -4,10 +4,17 @@ import { LivingGlow, LivingGlowTestId } from "./LivingGlow";
 
 describe("LivingGlow", () => {
   it("tints the glow from the canonical tone var", () => {
+    render(<LivingGlow tone="working" />);
+    const root = screen.getByTestId(LivingGlowTestId.Root);
+    expect(root).toHaveAttribute("data-tone", "working");
+    expect(root.style.getPropertyValue("--living-color")).toBe("var(--color-state-work)");
+  });
+
+  it("normalizes a legacy tone name onto the canonical vocabulary (LEGACY_TONE_MAP)", () => {
     render(<LivingGlow tone="run" />);
     const root = screen.getByTestId(LivingGlowTestId.Root);
-    expect(root).toHaveAttribute("data-tone", "run");
-    expect(root.style.getPropertyValue("--living-color")).toBe("var(--color-run)");
+    expect(root).toHaveAttribute("data-tone", "working");
+    expect(root.style.getPropertyValue("--living-color")).toBe("var(--color-state-work)");
   });
 
   it("defaults to the ambient idle intensity", () => {

@@ -388,7 +388,7 @@ export function PipelineStageTimeline({
                       data-testid={PipelineStageTimelineTestId.Connector}
                       style={{
                         background:
-                          displayStatus === "done" ? stateToneVar.ok : "var(--color-border)",
+                          displayStatus === "done" ? stateToneVar.done : "var(--color-border)",
                         flexGrow: 1,
                         marginTop: "0.375rem",
                         minHeight: "1rem",
@@ -411,7 +411,7 @@ export function PipelineStageTimeline({
                                 src={agent?.avatar}
                                 style={
                                   running
-                                    ? { boxShadow: `0 0 0 1px ${stateToneVar.run}` }
+                                    ? { boxShadow: `0 0 0 1px ${stateToneVar.working}` }
                                     : undefined
                                 }
                                 tone="accent"

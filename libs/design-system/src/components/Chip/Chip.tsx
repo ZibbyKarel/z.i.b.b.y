@@ -1,4 +1,5 @@
 import type { HTMLAttributes, Ref } from "react";
+import { type StateTone, normalizeToneLike } from "../../stateTone";
 import { cn } from "../../utils/cn";
 import { focusRing } from "../../utils/focus";
 import { Icon } from "../Icon/Icon";
@@ -7,14 +8,16 @@ import { type DotTone, StatusDot } from "../StatusDot/StatusDot";
 /** Chip tones mirror the status palette so the optional dot stays in sync. */
 export type ChipTone = DotTone;
 
-const toneClass: Record<ChipTone, string> = {
-  ok: "text-ok border-ok/20 bg-ok/[0.06]",
-  run: "text-run border-run/20 bg-run/[0.06]",
-  warn: "text-warn border-warn/20 bg-warn/[0.06]",
+// Keyed by the canonical `StateTone` (+ `wait`) — legacy classes reused where the
+// color is identical (LEGACY_TONE_MAP). See `Chip()` for the resolve step.
+const toneClass: Record<StateTone | "wait", string> = {
+  done: "text-ok border-ok/20 bg-ok/[0.06]",
+  working: "text-run border-run/20 bg-run/[0.06]",
+  blocked: "text-warn border-warn/20 bg-warn/[0.06]",
   wait: "text-warn border-warn/20 bg-warn/[0.06]",
-  bad: "text-bad border-bad/20 bg-bad/[0.06]",
+  error: "text-bad border-bad/20 bg-bad/[0.06]",
   idle: "text-foreground-faint border-border bg-foreground/[0.03]",
-  accent: "text-accent border-accent/20 bg-accent/[0.06]",
+  thinking: "text-accent border-accent/20 bg-accent/[0.06]",
 };
 
 export enum ChipTestId {
@@ -54,6 +57,7 @@ export function Chip({
   ref,
   ...props
 }: ChipProps) {
+  const resolvedTone = normalizeToneLike(tone);
   return (
     <span
       className={cn(
@@ -61,7 +65,7 @@ export function Chip({
         dot ? "pl-2" : "pl-2.5",
         closable ? "pr-1.5" : "pr-2.5",
         "font-mono text-xs whitespace-nowrap",
-        toneClass[tone],
+        toneClass[resolvedTone],
       )}
       data-testid={ChipTestId.Root}
       ref={ref}

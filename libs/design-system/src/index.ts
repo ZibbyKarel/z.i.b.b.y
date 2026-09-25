@@ -10,20 +10,32 @@ export { mergeRefs } from "./utils/refs";
 // ---------------------------------------------------------------------------
 // Token system
 // ---------------------------------------------------------------------------
-export { mergeTheme, resolvePadding, spacingToPx, spacingValues, tokensToCssVars } from "./tokens";
+export {
+  LAYOUT,
+  mergeTheme,
+  resolvePadding,
+  spacingToPx,
+  spacingValues,
+  tokensToCssVars,
+} from "./tokens";
 export type { Padding, PartialTheme, Size, Spacing, Theme } from "./tokens";
 
 // ---------------------------------------------------------------------------
 // Canonical state vocabulary (the living-state contract — see theme/LIVING-STATE.md)
 // ---------------------------------------------------------------------------
 export {
+  LEGACY_TONE_MAP,
+  normalizeStateTone,
+  normalizeToneLike,
   resetStateToneHexCache,
   resolveStateToneHex,
+  STATE_LABEL,
+  STATE_ORDER,
   STATE_TONES,
   stateToneHex,
   stateToneVar,
 } from "./stateTone";
-export type { StateTone } from "./stateTone";
+export type { AnyStateTone, LegacyStateTone, StateTone } from "./stateTone";
 
 // ---------------------------------------------------------------------------
 // Theme registry
@@ -37,8 +49,17 @@ export {
 // ---------------------------------------------------------------------------
 // DesignSystemProvider + hooks
 // ---------------------------------------------------------------------------
-export { DesignSystemProvider } from "./DesignSystemContext/DesignSystemProvider";
-export type { DesignSystemProviderProps } from "./DesignSystemContext/DesignSystemProvider";
+export {
+  DesignSystemProvider,
+  THEME_STORAGE_KEY,
+} from "./DesignSystemContext/DesignSystemProvider";
+export type {
+  DesignSystemProviderProps,
+  ResolvedTheme,
+  ThemeChoice,
+} from "./DesignSystemContext/DesignSystemProvider";
+export { ThemeScript, ThemeScriptTestId } from "./DesignSystemContext/ThemeScript";
+export type { ThemeScriptProps } from "./DesignSystemContext/ThemeScript";
 export { useSpacing, useTokens } from "./DesignSystemContext/hooks";
 export { useOverlayStack } from "./hooks/useOverlayStack";
 export type { OverlayStackHandle } from "./hooks/useOverlayStack";
@@ -186,6 +207,15 @@ export type { OrbitLoaderProps, OrbitLoaderSize } from "./components/OrbitLoader
 
 export { StatusDot, StatusDotTestId } from "./components/StatusDot/StatusDot";
 export type { DotTone, StatusDotProps } from "./components/StatusDot/StatusDot";
+
+export { AgentGlyph, AgentGlyphTestId } from "./components/AgentGlyph/AgentGlyph";
+export type { AgentGlyphProps, GlyphSize } from "./components/AgentGlyph/AgentGlyph";
+
+export { StatePill, StatePillTestId } from "./components/StatePill/StatePill";
+export type { StatePillProps } from "./components/StatePill/StatePill";
+
+export { CellStrip, CellStripTestId } from "./components/CellStrip/CellStrip";
+export type { CellStripProps } from "./components/CellStrip/CellStrip";
 
 export { Toggle, ToggleTestId } from "./components/Toggle/Toggle";
 export type { ToggleProps, ToggleSize } from "./components/Toggle/Toggle";
@@ -339,7 +369,7 @@ export type { EllipseInsets, EllipseLayout, OrbPosition } from "./immersive/elli
 export { ORB_MOTION, ORB_STATE, ORB_STATE_COLOR } from "./immersive/orbState";
 export type { OrbMotion, OrbState, OrbStateStyle } from "./immersive/orbState";
 
-export { seededRandom } from "./immersive/seededRandom";
+export { hashSeed, seededRandom } from "./immersive/seededRandom";
 export { canMountWebGL } from "./immersive/canMountWebGL";
 
 export { Orb, OrbTestId } from "./immersive/Orb/Orb";

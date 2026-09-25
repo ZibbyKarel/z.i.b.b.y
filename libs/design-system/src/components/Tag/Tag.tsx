@@ -1,6 +1,6 @@
 import type { HTMLAttributes } from "react";
 import { type VariantProps, cva } from "class-variance-authority";
-import type { StateTone } from "../../stateTone";
+import { type AnyStateTone, type StateTone, normalizeToneLike } from "../../stateTone";
 import { cn } from "../../utils/cn";
 import { Icon, type IconName } from "../Icon/Icon";
 
@@ -10,16 +10,26 @@ import { Icon, type IconName } from "../Icon/Icon";
  */
 export type RiskKind = "payment" | "deletion" | "push" | "send";
 
-/** The canonical {@link StateTone} palette, plus `neutral` and the risk kinds. */
-export type TagTone = StateTone | "neutral" | RiskKind;
+/** The canonical {@link StateTone} palette, plus `neutral` and the risk kinds — cva's
+ *  `tone` variant, resolved from {@link TagTone} via `normalizeToneLike` (see `Tag()`). */
+type CanonicalTagTone = StateTone | "neutral" | RiskKind;
 
-const toneClass: Record<TagTone, string> = {
+/** {@link CanonicalTagTone}, plus the legacy vocabulary (see {@link AnyStateTone}) —
+ *  the public prop type. */
+export type TagTone = AnyStateTone | "neutral" | RiskKind;
+
+// Keyed by the canonical `StateTone` (+ `neutral` + risk kinds) — legacy classes
+// reused where the color is identical (LEGACY_TONE_MAP). See `Tag()` for the resolve
+// step; cva matches `tone` against these keys directly, so the resolve must happen
+// before `tag()` is called.
+const toneClass: Record<CanonicalTagTone, string> = {
   neutral: "text-foreground-dim border-border bg-hover",
-  accent: "text-accent border-accent/35 bg-accent-dim",
-  ok: "text-ok border-ok/35 bg-ok/10",
-  warn: "text-warn border-warn/35 bg-warn/10",
-  bad: "text-bad border-bad/35 bg-bad/10",
-  run: "text-run border-run/35 bg-run/10",
+  thinking: "text-accent border-accent/35 bg-accent-dim",
+  done: "text-ok border-ok/35 bg-ok/10",
+  blocked: "text-warn border-warn/35 bg-warn/10",
+  error: "text-bad border-bad/35 bg-bad/10",
+  working: "text-run border-run/35 bg-run/10",
+  idle: "text-state-idle border-state-idle/35 bg-state-idle/10",
   payment: "text-risk-payment border-risk-payment/25 bg-risk-payment/[0.08]",
   deletion: "text-risk-deletion border-risk-deletion/25 bg-risk-deletion/[0.08]",
   push: "text-risk-push border-risk-push/25 bg-risk-push/[0.08]",
@@ -46,14 +56,14 @@ const tag = cva(
         className: "bg-foreground-dim text-background border-transparent",
       },
       {
-        tone: "accent",
+        tone: "thinking",
         solid: true,
         className: "bg-accent text-accent-contrast border-transparent",
       },
-      { tone: "ok", solid: true, className: "bg-ok text-background border-transparent" },
-      { tone: "warn", solid: true, className: "bg-warn text-background border-transparent" },
-      { tone: "bad", solid: true, className: "bg-bad text-background border-transparent" },
-      { tone: "run", solid: true, className: "bg-run text-background border-transparent" },
+      { tone: "done", solid: true, className: "bg-ok text-background border-transparent" },
+      { tone: "blocked", solid: true, className: "bg-warn text-background border-transparent" },
+      { tone: "error", solid: true, className: "bg-bad text-background border-transparent" },
+      { tone: "working", solid: true, className: "bg-run text-background border-transparent" },
     ],
     defaultVariants: { tone: "neutral", solid: false, size: "sm" },
   },
@@ -73,7 +83,13 @@ export enum TagTestId {
 }
 
 export interface TagProps
-  extends Omit<HTMLAttributes<HTMLSpanElement>, "className">, VariantProps<typeof tag> {
+  extends
+    Omit<HTMLAttributes<HTMLSpanElement>, "className">,
+    Omit<VariantProps<typeof tag>, "tone"> {
+  /** Toned emphasis — accepts both the canonical and the legacy vocabulary (see
+   *  {@link AnyStateTone}), plus `neutral` and the risk kinds; resolved via
+   *  `normalizeToneLike` before it reaches cva. */
+  tone?: TagTone;
   /** Optional leading glyph (categorical marker — risk kind, channel, …). */
   icon?: IconName;
   ref?: React.Ref<HTMLSpanElement>;
@@ -87,9 +103,10 @@ export interface TagProps
  * underlying text — only the CSS presentation changes.
  */
 export function Tag({ tone, solid, size, uppercase, icon, children, ref, ...props }: TagProps) {
+  const resolvedTone = tone ? normalizeToneLike(tone) : undefined;
   return (
     <span
-      className={cn(tag({ tone, solid, size, uppercase }))}
+      className={cn(tag({ tone: resolvedTone, solid, size, uppercase }))}
       data-testid={TagTestId.Root}
       ref={ref}
       {...props}
