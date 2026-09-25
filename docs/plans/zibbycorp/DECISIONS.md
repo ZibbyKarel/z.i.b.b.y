@@ -446,7 +446,14 @@ get collision-resistant ids.
 
 ## D-019 — A chain target rejects with 400 until ZB-05a (2026-09-25, ZB-04a)
 
-`{ kind: "chain" }` is schema-only in ZB-04a — `HandoffService` doesn't dispatch chain steps
+**Superseded by ZB-05a.** `{ kind: "chain" }` is now dispatchable:
+`TaskSchedulerService.createTask` persists the chain's PARENT (no run of its own) and dispatches
+step 0 straight to the chain's `entry` department; a missing/disabled chain is a clear, visible
+error outcome on the parent, never the `ChainNotImplementedError` 400 this decision originally
+specified — see PART-B.md's ZB-05a section for the full design. `ChainNotImplementedError` and
+its controller mapping are removed; the paragraph below is kept for the historical record only.
+
+~~`{ kind: "chain" }` is schema-only in ZB-04a — `HandoffService` doesn't dispatch chain steps
 until ZB-05a. Creating a task with an explicit chain target must not silently no-op (North
 Star: a described task is always executed) and must not persist a task record that can never
 dispatch. `TaskSchedulerService.createTask` throws `ChainNotImplementedError` before any
@@ -454,4 +461,4 @@ persistence; the controller maps it to **400** — a validation rejection, disti
 422 "nothing to route to" family (`EmptyCatalogError` / `DepartmentEmptyRosterError`), because
 the request itself is malformed for this phase, not merely unroutable right now. The
 classifier never emits a chain target on its own (`RoutableTarget`'s type excludes it), so
-this only fires for an explicit caller-supplied target — the same scope guard as `department`.
+this only fires for an explicit caller-supplied target — the same scope guard as `department`.~~

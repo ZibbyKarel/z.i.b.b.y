@@ -43,6 +43,7 @@ import type { HandoffService } from "../handoff/handoff.service";
 import { GroundingService } from "../memory/grounding.service";
 import { DuplicateNoteError, VaultService } from "../memory/vault.service";
 import { ClaudePreflightService } from "../runner/claude-preflight.service";
+import type { TaskSchedulerService } from "../tasks/task-scheduler.service";
 import { ClaudeRunCommandService } from "../runner/claude-run-command.service";
 import { formatClaudeStreamLine } from "../runner/claude-stream-format";
 import { CommandMaterializerService } from "../runner/command-materializer.service";
@@ -1429,32 +1430,55 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       });
 
     const owner = (await this.pipelines.get(run.pipelineId).catch(() => null))?.department;
-    if (owner !== "rnd") return;
-    try {
-      // Resolved lazily via ModuleRef (non-strict — searches the whole app
-      // container), not constructor-injected: PipelinesModule doesn't import
-      // HandoffModule (see pipelines.module.ts's doc comment for why). The
-      // class reference itself is fetched via a lazy `await import(...)` too
-      // (see the `import type` above) — deferred past module-load time, so it
-      // never re-enters the file-level require cycle through task-scheduler.
-      const { HandoffService } = await import("../handoff/handoff.service");
-      const handoff = this.moduleRef.get<HandoffService>(HandoffService, { strict: false });
-      await handoff.evaluate({
-        from: "rnd",
-        kind: "research-artifact",
-        ...(projectId ? { projectId } : {}),
-        title: `Research: research artifact ${from}`,
-        body: `Delivered ${kind} ${locator}. Build on this research.`,
-        fingerprint: artifactId,
-      });
-    } catch (error) {
-      // `evaluate` is itself fail-open, but a signal emission must NEVER fail an
-      // already-green delivery — same contract as the artifact record above.
-      this.log.warn("research handoff signal failed (soft) — delivery stands", {
-        pipelineRunId: run.pipelineRunId,
-        from,
-        err: error instanceof Error ? error.message : String(error),
-      });
+    if (owner === "rnd") {
+      try {
+        // Resolved lazily via ModuleRef (non-strict — searches the whole app
+        // container), not constructor-injected: PipelinesModule doesn't import
+        // HandoffModule (see pipelines.module.ts's doc comment for why). The
+        // class reference itself is fetched via a lazy `await import(...)` too
+        // (see the `import type` above) — deferred past module-load time, so it
+        // never re-enters the file-level require cycle through task-scheduler.
+        const { HandoffService } = await import("../handoff/handoff.service");
+        const handoff = this.moduleRef.get<HandoffService>(HandoffService, { strict: false });
+        await handoff.evaluate({
+          from: "rnd",
+          kind: "research-artifact",
+          ...(projectId ? { projectId } : {}),
+          title: `Research: research artifact ${from}`,
+          body: `Delivered ${kind} ${locator}. Build on this research.`,
+          fingerprint: artifactId,
+        });
+      } catch (error) {
+        // `evaluate` is itself fail-open, but a signal emission must NEVER fail an
+        // already-green delivery — same contract as the artifact record above.
+        this.log.warn("research handoff signal failed (soft) — delivery stands", {
+          pipelineRunId: run.pipelineRunId,
+          from,
+          err: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    // ZB-05a — ANY department's delivered artifact (not just Research's) may be a
+    // chain step's completion: `TaskSchedulerService.emitChainStep` reads the task
+    // (`run.taskId`) itself and no-ops when it carries no chain context, so this is
+    // unconditional and cheap for a non-chain run. Resolved lazily via `ModuleRef`
+    // for the same reason as the `HandoffService` fetch above — `PipelinesModule`
+    // doesn't import `TasksModule` (the reverse edge already exists).
+    if (run.taskId) {
+      try {
+        const { TaskSchedulerService } = await import("../tasks/task-scheduler.service");
+        const scheduler = this.moduleRef.get<TaskSchedulerService>(TaskSchedulerService, {
+          strict: false,
+        });
+        await scheduler.emitChainStep(run.taskId, locator);
+      } catch (error) {
+        this.log.warn("chain step emission failed (soft) — delivery stands", {
+          pipelineRunId: run.pipelineRunId,
+          from,
+          err: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
   }
 

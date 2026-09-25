@@ -52,7 +52,22 @@ export const HANDOFF_SEVERITY_ORDER: readonly HandoffSeverity[] = [
  *  - `title`/`body` — human-readable; `body` becomes the dispatched task's text.
  *  - `fingerprint`  — the producer's own dedupe key. Handoff is idempotent per
  *                      `(rule.id, fingerprint)` — the same finding never dispatches twice.
+ *  - `chain`        — ZB-05a / D-005: set ONLY by a chain-step completion emitter
+ *                      (`TaskSchedulerService`'s `emitChainStep`, one call site per
+ *                      run kind). Carries the chain's own id (a signal kind with
+ *                      `chain: true`), the parent task, the NEXT 0-based step, and
+ *                      the completed step's delivered artifact (a pipeline target's
+ *                      input for the next hop). Absent for every ordinary signal
+ *                      (Security/Release/Arch/Research) — ONLY a chain hop uses this.
  */
+export const HandoffSignalChainContextSchema = z.object({
+  chainId: z.string().min(1),
+  parentTaskId: z.string().min(1),
+  step: z.number().int().nonnegative(),
+  artifactRef: z.string().optional(),
+});
+export type HandoffSignalChainContext = z.infer<typeof HandoffSignalChainContextSchema>;
+
 export const HandoffSignalSchema = z.object({
   from: DepartmentIdSchema,
   kind: z.string().min(1),
@@ -61,6 +76,7 @@ export const HandoffSignalSchema = z.object({
   title: z.string().min(1),
   body: z.string().min(1),
   fingerprint: z.string().min(1),
+  chain: HandoffSignalChainContextSchema.optional(),
 });
 export type HandoffSignal = z.infer<typeof HandoffSignalSchema>;
 
@@ -151,6 +167,15 @@ export const HandoffSignalKindSchema = z.object({
   status: HandoffSignalKindStatusSchema,
   system: z.boolean().optional(),
   buildTaskId: z.string().optional(),
+  /**
+   * ZB-05a / D-005 — this kind IS a chain: its route is DERIVED by walking the
+   * enabled rules `{signalKind: this.id, from: X}` starting at {@link entry}
+   * (see `chain-view.ts`'s `deriveChain`). No separate `Chain` store — the rule
+   * rows themselves are the route, so there is no second copy to drift.
+   */
+  chain: z.literal(true).optional(),
+  /** The chain's first department (only set when {@link chain} is `true`). */
+  entry: DepartmentIdSchema.optional(),
 });
 export type HandoffSignalKind = z.infer<typeof HandoffSignalKindSchema>;
 
@@ -208,3 +233,50 @@ export const HandoffOutcomeSchema = z.discriminatedUnion("action", [
   }),
 ]);
 export type HandoffOutcome = z.infer<typeof HandoffOutcomeSchema>;
+
+/**
+ * ZB-05a / D-005 — a chain's route, as WRITTEN by the operator (`PUT
+ * /api/handoff/chains/:id`). Each step names the department that runs it and its
+ * gate (`"auto"` = tier 2 — act, then report; `"ask"` = tier 3 — a
+ * `handoff-proposal` approval, O-05). `entry` is the FIRST department — not one of
+ * `steps` — so a chain of N hops has N `steps` entries, not N+1.
+ */
+export const ChainStepInputSchema = z.object({
+  department: DepartmentIdSchema,
+  gate: z.enum(["auto", "ask"]),
+});
+export type ChainStepInput = z.infer<typeof ChainStepInputSchema>;
+
+export const ChainInputSchema = z.object({
+  label: z.string().min(1),
+  description: z.string().min(1),
+  entry: DepartmentIdSchema,
+  /** D-005: 1–11 steps, linear, acyclic, department targets only (`validateChainInput`). */
+  steps: z.array(ChainStepInputSchema).min(1).max(11),
+  enabled: z.boolean(),
+});
+export type ChainInput = z.infer<typeof ChainInputSchema>;
+
+/** One resolved hop on a chain's route — the step, plus the rule that carries it. */
+export const ChainStepSchema = ChainStepInputSchema.extend({
+  ruleId: z.string().min(1),
+});
+export type ChainStep = z.infer<typeof ChainStepSchema>;
+
+/**
+ * A chain — the VIEW `deriveChain` builds by walking the enabled rules for a
+ * `chain: true` signal kind, starting at `entry` (see `chain-view.ts`). Not a
+ * separate store: `id` is the signal kind's own id, `steps` are read straight off
+ * the rule set. `enabled` is true only when the route resolved to ≥1 step AND
+ * every rule on it is enabled (a PUT always writes them uniformly — see
+ * `chainToRules`).
+ */
+export const ChainSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  description: z.string().min(1),
+  entry: DepartmentIdSchema,
+  steps: z.array(ChainStepSchema),
+  enabled: z.boolean(),
+});
+export type Chain = z.infer<typeof ChainSchema>;

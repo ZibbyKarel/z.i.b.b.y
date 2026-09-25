@@ -1,5 +1,6 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
 import {
+  type Chain,
   type CreateTaskInput,
   DEPARTMENTS,
   HANDOFF_SEVERITY_ORDER,
@@ -16,6 +17,8 @@ import { PipelinesStorageService } from "../pipelines/pipelines.storage.service"
 import { collisionResistantId } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
+import { ChainNotFoundError } from "./chain.errors";
+import { ChainsService } from "./chains.service";
 import { HandoffFiredStore } from "./handoff-fired.store";
 import { HandoffProposalStore } from "./handoff-proposal.store";
 import { HandoffRuleStore } from "./handoff-rule.store";
@@ -45,9 +48,20 @@ export class HandoffService implements OnModuleInit, ResumableRunner {
     private readonly approvals: ApprovalsService,
     private readonly activity: ActivityLogService,
     private readonly pipelines: PipelinesStorageService,
+    private readonly chains: ChainsService,
     logger: LoggerService,
   ) {
     this.log = logger.child(HandoffService.name);
+  }
+
+  /** ZB-05a — a chain by id, or `null` (missing/not-a-chain — never throws). */
+  async resolveChain(id: string): Promise<Chain | null> {
+    try {
+      return await this.chains.get(id);
+    } catch (error) {
+      if (error instanceof ChainNotFoundError) return null;
+      throw error;
+    }
   }
 
   onModuleInit(): void {
@@ -64,7 +78,21 @@ export class HandoffService implements OnModuleInit, ResumableRunner {
       // ordering deterministic for tests.
       await this.signalKinds.markSeen(signal.kind);
       const rule = await this.matchRule(signal);
-      if (!rule) return { action: "none" };
+      if (!rule) {
+        // ZB-05a — a chain step that completed with no further hop to dispatch:
+        // the chain has ended (fail-soft, never blocks the "no dispatch" verdict).
+        if (signal.chain) {
+          await this.taskScheduler
+            .markChainEnded(signal.chain.parentTaskId)
+            .catch((error: unknown) => {
+              this.log.warn("handoff: markChainEnded failed", {
+                parentTaskId: signal.chain?.parentTaskId,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            });
+        }
+        return { action: "none" };
+      }
       if (await this.fired.hasFired(rule.id, signal.fingerprint)) {
         this.log.debug("handoff: fingerprint already fired — skipping", {
           ruleId: rule.id,
@@ -157,13 +185,24 @@ export class HandoffService implements OnModuleInit, ResumableRunner {
    * `post-merge-watch.service.ts`'s `"task" in result ? result.task.id : undefined`).
    */
   private async dispatchTask(signal: HandoffSignal, target: TaskTarget): Promise<string> {
-    // O-18 — always `handoff` today: chain context (`source: "chain"`) is a ZB-05a
-    // concept, and `HandoffSignal` carries none of it yet.
+    // ZB-05a — a chain hop (`signal.chain` set by `evaluate`'s caller) carries its
+    // parent linkage, next step, and any upstream artifact through to the subtask;
+    // every other signal keeps the plain O-18 `source: "handoff"` stamp.
     const input: CreateTaskInput = {
       title: signal.title,
       text: signal.body,
       paths: [],
-      source: "handoff",
+      source: signal.chain ? "chain" : "handoff",
+      ...(signal.chain
+        ? {
+            parentTaskId: signal.chain.parentTaskId,
+            // The completing subtask's own step (`signal.chain.step`) plus one — the
+            // path index of the hop this dispatch lands on (path[0] = the chain's
+            // entry, path[i] = `chainToRules`'s rule `i-1`'s `to`).
+            chain: { id: signal.chain.chainId, step: signal.chain.step + 1 },
+            ...(signal.chain.artifactRef ? { artifactRef: signal.chain.artifactRef } : {}),
+          }
+        : {}),
     };
     const result = await this.taskScheduler.createTask(input, Date.now(), signal.projectId, target);
     return result.outcome === "dispatched" ? result.runRef : result.task.id;

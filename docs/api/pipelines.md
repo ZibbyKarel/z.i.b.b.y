@@ -408,3 +408,5 @@ A restart also drops every in-memory `EmployeeAllocator` lease (the allocator
 holds no persisted state) — a stage found `running` with a dead PID
 reconciles to `interrupted` same as always, and a subsequent resume/retry
 re-acquires its lease fresh rather than assuming one is still held.
+
+<!-- ZibbyCorp ZB-05a (2026-09-25): recordArtifact gains the chain-step emitter (fail-soft, like the scout emission). -->

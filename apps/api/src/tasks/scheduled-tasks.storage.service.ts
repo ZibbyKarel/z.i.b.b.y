@@ -191,6 +191,77 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
   }
 
   /**
+   * ZB-05a / D-005 — persist a chain's PARENT task: no run of its own (`runRef`
+   * absent) — its state is derived from its subtasks (`TaskParentsService`). Status
+   * `"dispatched"` (no outcome yet) reads as `"working"` there until the last hop
+   * finishes AND `markChainEnded` stamps `chainEndedAt`.
+   */
+  async createChainParent(
+    id: string,
+    input: CreateTaskInputWithAttachments,
+    projectId: string | undefined,
+    now: number,
+    target: TaskTarget,
+  ): Promise<ScheduledTask> {
+    const task: ScheduledTask = {
+      id,
+      title: input.title ?? "",
+      text: input.text,
+      paths: input.paths ?? [],
+      toolGrants: input.toolGrants ?? [],
+      attachments: input.attachments ?? [],
+      scheduledAt: now,
+      status: "dispatched",
+      createdAt: new Date(now).toISOString(),
+      target,
+      ...(projectId ? { projectId } : {}),
+      ...provenanceFields(input),
+    };
+    await this.writeEntity(task);
+    return task;
+  }
+
+  /**
+   * ZB-05a / D-005 — a chain target that has nothing to dispatch (missing or
+   * disabled): persisted straight to `failed` with `reason` as the visible error —
+   * never a silent no-op (Law 5).
+   */
+  async createChainParentFailed(
+    id: string,
+    input: CreateTaskInputWithAttachments,
+    projectId: string | undefined,
+    now: number,
+    target: TaskTarget,
+    reason: string,
+  ): Promise<ScheduledTask> {
+    const task: ScheduledTask = {
+      id,
+      title: input.title ?? "",
+      text: input.text,
+      paths: input.paths ?? [],
+      toolGrants: input.toolGrants ?? [],
+      attachments: input.attachments ?? [],
+      scheduledAt: now,
+      status: "failed",
+      createdAt: new Date(now).toISOString(),
+      error: reason,
+      target,
+      ...(projectId ? { projectId } : {}),
+      ...provenanceFields(input),
+    };
+    await this.writeEntity(task);
+    return task;
+  }
+
+  /** ZB-05a — stamp the chain-ended marker on a chain's parent task. */
+  async markChainEnded(id: string): Promise<ScheduledTask> {
+    return this.updateEntity(id, (existing) => ({
+      ...existing,
+      chainEndedAt: new Date().toISOString(),
+    }));
+  }
+
+  /**
    * Patch a task's title in place. Used by the background dispatch path: the task is
    * persisted with a synchronous fallback title for an instant card, then the Haiku
    * namer refines it off the response path before the run starts.

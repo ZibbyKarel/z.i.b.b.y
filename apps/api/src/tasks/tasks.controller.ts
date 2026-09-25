@@ -32,7 +32,6 @@ import {
 import { TaskClassifierService } from "./task-classifier.service";
 import { TaskParentsService } from "./task-parents.service";
 import {
-  ChainNotImplementedError,
   DepartmentEmptyRosterError,
   EmptyCatalogError,
   TaskSchedulerService,
@@ -174,11 +173,6 @@ export class TasksController {
             body: await this.scheduler.createTask(body, undefined, undefined, undefined, true),
           };
         } catch (error) {
-          // D-019: a chain target is a clear validation rejection, not a routing
-          // failure — 400, distinct from the 422 "nothing to route to" family.
-          if (error instanceof ChainNotImplementedError) {
-            return { status: 400, body: { message: error.message } };
-          }
           if (error instanceof EmptyCatalogError || error instanceof DepartmentEmptyRosterError) {
             return { status: 422, body: { message: error.message } };
           }

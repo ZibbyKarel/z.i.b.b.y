@@ -620,6 +620,16 @@ export const ScheduledTaskSchema = z.object({
    */
   chain: z.object({ id: z.string().min(1), step: z.number().int().nonnegative() }).optional(),
   /**
+   * ZB-05a / D-005 — set on the PARENT (never on a subtask) once the chain's
+   * completion emitter (`TaskSchedulerService`'s `emitChainStep`, via
+   * `HandoffService.evaluate`) finds no further hop to dispatch. The read
+   * model's "chain ended" bucket (`TaskParentsService.deriveParentState`) was
+   * schema-only for this ZB-04a and always read as "no chain to end" for a
+   * non-chain parent; a real chain parent now flips to `done` only once every
+   * subtask is done AND this is set — never on a subtask still mid-route.
+   */
+  chainEndedAt: IsoDateTimeSchema.optional(),
+  /**
    * O-18 — who/what created this task (see {@link TaskSourceSchema}). Stamped by
    * the creator, never client-asserted for the four server-side legs (Law 4);
    * the operator/department legs are resolved inside
@@ -800,6 +810,16 @@ export const CreateTaskInputSchema = z.object({
    * `department` for an explicit `@department` target).
    */
   source: TaskSourceSchema.optional(),
+  /**
+   * ZB-05a / D-005 — carried by `HandoffService.dispatchTask` when a chain hop's
+   * completed step delivered an artifact: threaded into a PIPELINE target's
+   * `PipelineRunnerService.start` `input` param (N2b) so the next hop's first
+   * phase opens on the upstream artifact. Ephemeral (dispatch-time only, like
+   * `routingText`) — not persisted onto {@link ScheduledTaskSchema}, so a
+   * re-dispatch never needs to recover it (a chain step never re-dispatches —
+   * it is always created via the synchronous immediate path).
+   */
+  artifactRef: z.string().min(1).optional(),
 });
 export type CreateTaskInput = z.infer<typeof CreateTaskInputSchema>;
 

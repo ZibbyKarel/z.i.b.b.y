@@ -3,6 +3,7 @@ import { ApprovalsModule } from "../approvals/approvals.module";
 import { PipelinesModule } from "../pipelines/pipelines.module";
 import { dataDir } from "../shared/data-dir";
 import { TasksModule } from "../tasks/tasks.module";
+import { ChainsService } from "./chains.service";
 import { HANDOFF_FIRED_DIR, HandoffFiredStore } from "./handoff-fired.store";
 import { HANDOFF_PROPOSALS_DIR, HandoffProposalStore } from "./handoff-proposal.store";
 import { HANDOFF_RULES_FILE, HandoffRuleStore } from "./handoff-rule.store";
@@ -65,6 +66,7 @@ export function resolveHandoffFiredDir(): string {
     HandoffSignalKindStore,
     HandoffService,
     SignalKindService,
+    ChainsService,
   ],
   exports: [HandoffService, SignalKindService],
 })

@@ -77,8 +77,10 @@ Body: {
 }
 ```
 
-A `{ kind: "chain" }` target is rejected outright — see
-["A chain target rejects, not silently"](#a-chain-target-rejects-not-silently-d-019) below.
+A `{ kind: "chain" }` target IS dispatchable (ZB-05a / D-005, superseding D-019) —
+see ["Chains"](./handoff.md#chains-zb-05a--d-005) in handoff.md for the full route
+model, and the _Parent/subtask read model_ section below for how a chain parent's
+state is derived from its subtasks.
 
 There is no client-supplied `projectId` field — project attribution is always
 derived server-side by `matchProject` (deterministic, no tokens), never asserted by
@@ -553,7 +555,8 @@ The daemon watches the run's terminal state:
 ```
 POST   /api/tasks/classify            classify text without creating a task
 POST   /api/tasks                     create a task — dispatch now, or schedule for scheduledAt
-                                       (400 if the resolved target is { kind: "chain" }, see D-019)
+                                       ({ kind: "chain" } dispatches the chain's entry step —
+                                       see handoff.md § Chains, ZB-05a / D-005)
 GET    /api/tasks/scheduled           list deferred tasks (newest first)
 DELETE /api/tasks/scheduled/:id       cancel a still-waiting task (scheduled | queued | held)
 POST   /api/tasks/attachments         upload files as a durable attachment set (multipart)
@@ -563,24 +566,24 @@ GET    /api/tasks/:id                 one task, with its subtasks[] (ZB-04a §5,
 
 ## Parent/subtask read model (ZB-04a §5)
 
-Groundwork for chains (D-005): a `ScheduledTask` gains four additive, server-derived fields —
+A `ScheduledTask` carries four additive, server-derived fields —
 
 | Field          | Set by                                                                                                                                                                                                                          |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `parentTaskId` | The chain step's parent task id (D-005). Schema-only until ZB-05a's `HandoffService` walks chains — nothing writes it yet.                                                                                                      |
-| `chain`        | `{ id, step }` — this subtask's chain id and 0-based position. Same schema-only status.                                                                                                                                         |
+| `parentTaskId` | The chain step's parent task id (D-005). Written by `TaskSchedulerService.dispatchChain` (step 0) and `HandoffService.dispatchTask` (every later hop) — see handoff.md § Chains.                                                |
+| `chain`        | `{ id, step }` — this subtask's chain id and 0-based position. Written alongside `parentTaskId`, same call sites.                                                                                                               |
 | `source`       | O-18: who created the task — `operator` \| `department` \| `chain` \| `channel` \| `automation` \| `handoff`. Stamped once, at creation (never re-derived).                                                                     |
 | `department`   | O-06: the department that owns the DISPATCHED unit. Stamped at dispatch time (not creation — a scheduled/held/queued task has no resolved unit yet), from the classifier's stage-1 verdict or an explicit `@department` target. |
 
 **Source stamping per creation leg** — `source` is server-derived, never client-asserted for
 the four automatic legs (Law 4):
 
-| Leg                                         | `source`                                                                                                  |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `POST /api/tasks` from the New Task dialog  | `operator` (or `department`, when the input names an explicit `@department` target)                       |
-| Channel triage (`ChannelTriageFlowService`) | `channel`                                                                                                 |
-| The automations scheduler (`case "task"`)   | `automation`                                                                                              |
-| `HandoffService.dispatchTask`               | `handoff` (a chain step's `source: "chain"` is a ZB-05a concept — `HandoffSignal` carries none of it yet) |
+| Leg                                         | `source`                                                                                                          |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `POST /api/tasks` from the New Task dialog  | `operator` (or `department`, when the input names an explicit `@department` target)                               |
+| Channel triage (`ChannelTriageFlowService`) | `channel`                                                                                                         |
+| The automations scheduler (`case "task"`)   | `automation`                                                                                                      |
+| `HandoffService.dispatchTask`               | `handoff` (a chain hop dispatched from `signal.chain` stamps `source: "chain"` instead — see handoff.md § Chains) |
 
 **`TaskParentsService`** (`apps/api/src/tasks/task-parents.service.ts`) serves all three reads
 off `ScheduledTasksStorageService`'s existing full listing — no separate index:
@@ -598,31 +601,31 @@ GET /api/departments/:id/subtasks
 ```
 
 A `TaskParent`'s `state` is derived, not stored — one of `error | blocked | working | done |
-thinking`, rolled up from its subtasks (or its own state, when it has none yet — every task
-today, since nothing dispatches subtasks before ZB-05a):
+thinking`, rolled up from its subtasks (or its own state, when it has none yet — an ordinary
+non-chain task with no subtasks):
 
-| Rule (checked top-to-bottom, first match wins)                      | State      |
-| ------------------------------------------------------------------- | ---------- |
-| any entry `failed` / `dead-letter`, or an `outcome.status: "error"` | `error`    |
-| any entry `held` / `awaiting-output`                                | `blocked`  |
-| any entry `dispatched` with no `outcome` yet                        | `working`  |
-| the target isn't a chain, and every entry is `done`-or-`cancelled`  | `done`     |
-| otherwise (scheduled / queued / pending, or a chain not yet ended)  | `thinking` |
+| Rule (checked top-to-bottom, first match wins)                                                         | State      |
+| ------------------------------------------------------------------------------------------------------ | ---------- |
+| any entry `failed` / `dead-letter`, or an `outcome.status: "error"`                                    | `error`    |
+| any entry `held` / `awaiting-output`                                                                   | `blocked`  |
+| any entry `dispatched` with no `outcome` yet                                                           | `working`  |
+| the chain has ended (non-chain target, or `chainEndedAt` set) and every entry is `done`-or-`cancelled` | `done`     |
+| otherwise (scheduled / queued / pending, or a chain not yet ended)                                     | `thinking` |
 
-A chain-target parent can never resolve to `done` this phase — `chainEndedAt` is a ZB-05a
-field, so "all subtasks done" falls through to `thinking` ("the last hop finished, the next
-hasn't been dispatched").
+A chain-target parent resolves to `done` only once `HandoffService.evaluate` finds no
+further hop to dispatch and stamps `chainEndedAt` (`TaskSchedulerService.markChainEnded`) —
+until then, "all subtasks done" falls through to `thinking` ("the last hop finished, the
+next hasn't been dispatched yet"). See handoff.md § Chains for the full walk.
 
-### A chain target rejects, not silently (D-019)
+### Chains dispatch, they don't reject (D-005, supersedes D-019)
 
-`{ kind: "chain" }` is schema-only until ZB-05a implements dispatch on `HandoffService`.
-Creating a task with an explicit chain target throws `ChainNotImplementedError` **before any
-persistence** — the controller maps it to **HTTP 400**, distinct from the 422
-"nothing to route to" family (`EmptyCatalogError` / `DepartmentEmptyRosterError`): this is a
-validation rejection, not a routing failure. Never a silent no-op (North Star Law: a
-described task is always executed). The classifier itself never emits a chain target — the
-same structural scope guard as `department` — so this only fires for an explicit
-caller-supplied target. See DECISIONS.md D-019.
+`{ kind: "chain" }` is a dispatchable target (ZB-05a) — creating a task with an explicit
+chain target resolves the chain's `entry` department and dispatches step 0 immediately, no
+gate (the operator created the task). A missing or disabled chain id is a clear error
+outcome on the created task, never a silent no-op (North Star Law: a described task is
+always executed) and never an HTTP rejection. See
+["Chains"](./handoff.md#chains-zb-05a--d-005) in handoff.md for the full route model, and
+DECISIONS.md D-019 for the superseded original rejection design.
 
 There is no dedicated "list all tasks" or "update a scheduled task" endpoint — the
 unified run feed (`GET /api/tasks/runs`, below) is how every task/run is browsed, and

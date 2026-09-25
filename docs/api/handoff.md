@@ -118,9 +118,65 @@ parsing external channel content (which can never raise privileges).
 ## Task provenance (ZB-04a / O-18)
 
 Every task `dispatchTask` creates (Tier-1 silent dispatch, Tier-2 act-then-report, and a
-Tier-3 proposal's `resume()`) is stamped `source: "handoff"` — always, today: a
-`HandoffSignal` carries no chain context yet, so there is no finer distinction to make.
-Once ZB-05a threads chain steps through `HandoffService`, a chain-step dispatch will stamp
-`source: "chain"` instead; see [tasks.md](./tasks.md) → _Parent/subtask read model_ for the
-full `source` taxonomy and D-019 (why a `{ kind: "chain" }` task target itself still rejects
-with 400 until ZB-05a exists).
+Tier-3 proposal's `resume()`) is stamped `source: "handoff"`, UNLESS the signal carries a
+chain context (`signal.chain` set) — then it is stamped `source: "chain"` instead. See
+[tasks.md](./tasks.md) → _Parent/subtask read model_ for the full `source` taxonomy.
+
+## Chains (ZB-05a / D-005)
+
+A **chain** is a multi-department route the operator authors once and dispatches
+by name — `rnd → dev → rel`, with each hop either `"auto"` (Tier 2, act-then-report)
+or `"ask"` (Tier 3, a `handoff-proposal` approval). A chain is a **view**, not a
+separate store: its metadata lives on a `chain: true` signal kind
+(`HandoffSignalKindStore`), and its route is the enabled `HandoffRule` rows whose
+`signalKind` is that kind's own id — `chain-view.ts`'s `deriveChain` walks them
+from the kind's `entry` department, one hop per rule (`{from: X} -> {to: department
+Y}`), stopping at the first missing hop, a non-department target, or a repeated
+department (cycle guard). There is no separate `Chain` store to drift out of sync
+with the rules that actually drive dispatch.
+
+- **Contract** — `GET /api/handoff/chains`, `GET /api/handoff/chains/:id` (404 for
+  an unknown/non-chain id), `PUT /api/handoff/chains/:id` (create-or-replace, 400
+  on an invalid input), `DELETE /api/handoff/chains/:id` (404 unknown, 409 while a
+  non-terminal parent task still walks it). `ChainInputSchema` = `{ label,
+description, entry, steps: { department, gate: "auto" | "ask" }[1..11],
+enabled }`; `ChainSchema` adds the derived `id` and each step's `ruleId`.
+- **`chain-view.ts`** (`apps/api/src/handoff/chain-view.ts`) — pure helpers, no
+  I/O: `deriveChain` (kind + rules → `Chain | null`), `validateChainInput` (1–11
+  steps, linear/acyclic, department-only targets), `chainToRules` (input → the
+  rule rows a `PUT` writes, deterministic ids `${chainId}:${index}`, gate `"auto"`
+  → tier 2 / `"ask"` → tier 3 per O-05).
+- **`ChainsService`** (`apps/api/src/handoff/chains.service.ts`) — the CRUD
+  service behind the controller. `put`/`delete` both touch the signal-kind AND
+  the rule set, serialized under one `withPathLock` keyed on the chain id: a
+  `put` that fails writing the rules half rolls the kind back to what it was
+  before (or deletes it, for a brand-new chain), so nothing durable half-applies.
+- **Dispatch** (`TaskSchedulerService.dispatchChain`) — a task created with
+  `target: { kind: "chain", id }` persists the **parent** immediately (`status:
+"dispatched"`, no `runRef` of its own — its displayed state is entirely
+  derived from its subtasks) and dispatches step 0 straight to the chain's
+  `entry` department, no gate (the operator created the task directly, this
+  isn't a rule-routed hop). A missing/disabled chain is never a silent no-op:
+  the parent is persisted `status: "failed"` with a human-readable `error`,
+  and an activity entry is recorded.
+- **Advancing a hop** — a chain subtask's completion (an agent run's `done`
+  outcome, or a pipeline's delivered artifact) calls
+  `TaskSchedulerService.emitChainStep`, which re-evaluates the signal through
+  the normal `HandoffService.evaluate` path with `signal.chain` set
+  (`{chainId, parentTaskId, step, artifactRef?}`) — same tier-1/2/3 machinery
+  as any other handoff, just carrying parent linkage forward. No further hop
+  (`evaluate` finds no matching rule) stamps `chainEndedAt` on the parent,
+  which is what flips a fully-done chain's derived state from `"thinking"` to
+  `"done"` (see [tasks.md](./tasks.md) → _Parent/subtask read model_). An
+  errored/interrupted subtask never emits — the chain halts there, surfaced as
+  the parent's `"error"` state, never pushed through.
+- **Idempotency** — `HandoffFiredStore` dedups per `(rule.id, fingerprint)`,
+  fingerprint `${parentTaskId}:${step}` (the completing step's own index), so a
+  duplicate completion signal for the same step never re-dispatches or
+  re-proposes the next hop.
+- **Law 1** — an `"ask"` hop is a `handoff-proposal` approval like any other
+  Tier-3 handoff and never auto-advances; approving it dispatches the next step
+  with the chain context intact.
+
+D-019 (the earlier "a chain target rejects with 400" behavior) is superseded by
+this section — see `docs/plans/zibbycorp/DECISIONS.md`.

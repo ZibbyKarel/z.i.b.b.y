@@ -7,10 +7,12 @@ import {
   type OnModuleInit,
   Optional,
 } from "@nestjs/common";
+import { ModuleRef } from "@nestjs/core";
 import type {
   Agent,
   AgentRun,
   Attachment,
+  Chain,
   ClassificationTrace,
   CreateTaskInput,
   CreateTaskResult,
@@ -38,6 +40,7 @@ import { EmployeeAllocator, type EmployeeLease } from "../employees/employee-all
 import { NoEmployeeError } from "../employees/employees.errors";
 import { EmployeesStorageService } from "../employees/employees.storage.service";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
+import type { HandoffService } from "../handoff/handoff.service";
 import { WatcherHealthRegistry } from "../health/watcher-health.registry";
 import { LimitsService } from "../limits/limits.service";
 import { GoalRunnerService } from "../goals/goal-runner.service";
@@ -89,21 +92,6 @@ export class DepartmentEmptyRosterError extends Error {
   constructor(departmentName: string) {
     super(`Oddělení ${departmentName} zatím nemá žádnou pipeline.`);
     this.name = "DepartmentEmptyRosterError";
-  }
-}
-
-/**
- * D-019 — thrown when a task's target resolves to `{ kind: "chain" }`. Chains
- * are explicit-only and schema-only until ZB-05a implements dispatch on
- * `HandoffService`; creating one before then must be a clear, immediate
- * rejection — never a silent no-op (Law 5). The controller maps it to 400,
- * distinct from the 422 `EmptyCatalogError` / `DepartmentEmptyRosterError`
- * "nothing to route to" family — this is a validation rejection, not routing.
- */
-export class ChainNotImplementedError extends Error {
-  constructor() {
-    super("Chains aren't dispatchable yet — ZB-05a implements them.");
-    this.name = "ChainNotImplementedError";
   }
 }
 
@@ -208,6 +196,14 @@ export class TaskSchedulerService
     @Optional()
     @Inject(ATTACHMENT_SET_REF_PROVIDER)
     private readonly attachmentRefProviders: AttachmentSetRefProvider[] = [],
+    /**
+     * ZB-05a — `HandoffService` (chain lookup + chain-step evaluation) is resolved
+     * lazily via `ModuleRef` (non-strict), never constructor-injected: `HandoffModule`
+     * already imports `TasksModule`, so an edge in the other direction would cycle.
+     * Same posture as `PipelineRunnerService.recordArtifact`'s lazy `HandoffService`
+     * fetch — see there for the full rationale.
+     */
+    private readonly moduleRef: ModuleRef,
   ) {
     super();
     this.log = logger.child(TaskSchedulerService.name);
@@ -384,10 +380,19 @@ export class TaskSchedulerService
             input.output,
           )
         : rawTarget;
-    // D-019 — a chain target has no dispatch behind it until ZB-05a; reject it
-    // outright, before any persistence, rather than a task record that later
-    // fails to ever run. See `ChainNotImplementedError`.
-    if (target?.kind === "chain") throw new ChainNotImplementedError();
+    // D-019 superseded by ZB-05a — a chain target IS dispatchable now: the parent is
+    // persisted (no run of its own) and step 0 dispatches straight to the chain's
+    // `entry` department. See `dispatchChain`.
+    if (target?.kind === "chain") {
+      const project = trustedProjectId
+        ? await this.projects.get(trustedProjectId).catch((): Project | null => null)
+        : matchProject(await this.projects.list().catch((): Project[] => []), {
+            text: input.text,
+            paths: input.paths,
+          });
+      const taskId = this.storage.newId();
+      return this.dispatchChain(target, resolvedInput, project?.id, now, taskId);
+    }
     // O-18 — resolve the creator's source stamp when the caller didn't already
     // supply one (channel/automation/handoff all stamp their own): the explicit
     // `@department` target legs here, everything else is the operator.
@@ -432,6 +437,153 @@ export class TaskSchedulerService
       refs: { taskId, ...(project ? { projectId: project.id } : {}) },
     });
     return this.attemptCreate(taskId, resolvedInput, project, now, target, background, titleAuto);
+  }
+
+  /**
+   * ZB-05a / D-005 — dispatch a `{ kind: "chain" }` target: the PARENT is persisted
+   * with no run of its own (its state is derived from its subtasks —
+   * `TaskParentsService`), then step 0 dispatches straight to the chain's `entry`
+   * department (no gate — the operator created the task). A missing/disabled chain
+   * is a clear, immediately-visible error outcome on the parent (Law 5 — never a
+   * silent no-op), returned the same way a held/queued task is
+   * (`{ outcome: "scheduled", task }`).
+   */
+  private async dispatchChain(
+    target: Extract<TaskTarget, { kind: "chain" }>,
+    input: CreateTaskInputResolved,
+    projectId: string | undefined,
+    now: number,
+    taskId: string,
+  ): Promise<CreateTaskResult> {
+    const chainId = target.id;
+    const chain = await this.resolveChainForDispatch(chainId);
+    if (!chain || !chain.enabled) {
+      const reason = chain
+        ? `Chain "${chainId}" is disabled.`
+        : `Chain "${chainId}" was not found.`;
+      const task = await this.storage.createChainParentFailed(
+        taskId,
+        input,
+        projectId,
+        now,
+        target,
+        reason,
+      );
+      void this.activity.record({
+        kind: "task-outcome",
+        summary: `chain dispatch failed: ${reason}`,
+        refs: { taskId, status: "error", ...(projectId ? { projectId } : {}) },
+      });
+      this.log.warn("chain dispatch failed — missing or disabled chain", { chainId, taskId });
+      return { outcome: "scheduled", task };
+    }
+    let parent = await this.storage.createChainParent(taskId, input, projectId, now, target);
+    void this.activity.record({
+      kind: "task-created",
+      summary: `chain started${input.title ? `: ${input.title}` : ""}`,
+      refs: { taskId, ...(projectId ? { projectId } : {}) },
+    });
+    try {
+      await this.createTask(
+        {
+          title: input.title,
+          text: input.text,
+          paths: input.paths,
+          target: { kind: "department", id: chain.entry, name: departmentDisplayName(chain.entry) },
+          parentTaskId: parent.id,
+          chain: { id: chainId, step: 0 },
+          source: "chain",
+        },
+        now,
+        projectId,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      parent = await this.storage.markFailed(parent.id, message);
+      void this.activity.record({
+        kind: "task-outcome",
+        summary: `chain step 0 dispatch failed: ${message}`,
+        refs: { taskId: parent.id, status: "error", ...(projectId ? { projectId } : {}) },
+      });
+      this.log.warn("chain step 0 dispatch failed", { chainId, taskId: parent.id, error: message });
+    }
+    return { outcome: "scheduled", task: parent };
+  }
+
+  /** A chain by id, or `null` (missing/not-a-chain) — resolved lazily, never throws. */
+  private async resolveChainForDispatch(chainId: string): Promise<Chain | null> {
+    try {
+      const { HandoffService } = await import("../handoff/handoff.service");
+      const handoff = this.moduleRef.get<HandoffService>(HandoffService, { strict: false });
+      return await handoff.resolveChain(chainId);
+    } catch (error) {
+      this.log.warn("chain resolve failed — treated as missing", {
+        chainId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  }
+
+  /** ZB-05a — stamp `chainEndedAt` on a chain parent once no further hop matched. */
+  async markChainEnded(parentTaskId: string): Promise<void> {
+    await this.storage.markChainEnded(parentTaskId).catch((error: unknown) => {
+      this.log.debug("markChainEnded: parent not found or already ended", {
+        parentTaskId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+  }
+
+  /**
+   * ZB-05a — cross-module entry point for `PipelineRunnerService.recordArtifact`
+   * (resolved lazily via `ModuleRef`, same posture as this file's own lazy
+   * `HandoffService` fetch — see its doc comment): a pipeline stage that just
+   * delivered an artifact hands the completing task's id + the artifact's locator
+   * here rather than duplicating {@link emitChainStepForTask}'s lookup/guard logic.
+   * A task with no chain context, or one already gone, is a silent no-op (this is
+   * called for EVERY delivered artifact, chain or not).
+   */
+  async emitChainStep(taskId: string, artifactRef?: string): Promise<void> {
+    const task = await this.storage.get(taskId).catch(() => null);
+    if (!task) return;
+    await this.emitChainStepForTask(task, artifactRef);
+  }
+
+  /**
+   * ZB-05a — a chain subtask that just finished successfully: hand its completion
+   * to `HandoffService.evaluate` so it can route the next hop (or, on no match,
+   * mark the chain ended on the parent). Fail-soft — emission failure never fails
+   * the delivery it was called from (`writeAgentOutcome` / `PipelineRunnerService.
+   * recordArtifact`, via {@link emitChainStep}); it just means the chain silently
+   * halts here instead.
+   */
+  private async emitChainStepForTask(task: ScheduledTask, artifactRef?: string): Promise<void> {
+    if (!task.chain || !task.parentTaskId || !task.department) return;
+    try {
+      const { HandoffService } = await import("../handoff/handoff.service");
+      const handoff = this.moduleRef.get<HandoffService>(HandoffService, { strict: false });
+      await handoff.evaluate({
+        from: task.department,
+        kind: task.chain.id,
+        title: `Chain step done: ${task.chain.id}`,
+        body: `Task "${task.title || task.text}" (chain step ${task.chain.step}) finished.`,
+        ...(task.projectId ? { projectId: task.projectId } : {}),
+        fingerprint: `${task.parentTaskId}:${task.chain.step}`,
+        chain: {
+          chainId: task.chain.id,
+          parentTaskId: task.parentTaskId,
+          step: task.chain.step,
+          ...(artifactRef ? { artifactRef } : {}),
+        },
+      });
+    } catch (error) {
+      this.log.warn("chain step emission failed (soft) — chain halts here", {
+        taskId: task.id,
+        chainId: task.chain.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   /**
@@ -958,6 +1110,7 @@ export class TaskSchedulerService
       input.attachmentSetId,
       input.attachments,
       input.toolGrants,
+      input.artifactRef,
     );
     if (!dispatched) throw new EmptyCatalogError();
     const task = await this.persistDispatched(taskId, input, dispatched, projectId, now);
@@ -1369,6 +1522,14 @@ export class TaskSchedulerService
      * runner (never trusted blindly — see `AgentRunnerService.launch`).
      */
     toolGrants?: string[],
+    /**
+     * ZB-05a — a chain hop's upstream artifact (`CreateTaskInput.artifactRef`, set
+     * by `HandoffService.dispatchTask`), threaded into a PIPELINE target's first
+     * phase (`PipelineRunnerService.start`'s N2b `input` param). Absent for every
+     * non-chain dispatch (no behaviour change) and for an agent/goal target
+     * (neither runner has an `input` seam).
+     */
+    artifactRef?: string,
   ): Promise<{ runRef: string; target: TaskTarget; classification?: ClassificationTrace } | null> {
     // Build the run-attachments reference ONCE: an absolute dir (from storage) plus
     // the filenames, or undefined when the task carries no attachment set.
@@ -1475,14 +1636,27 @@ export class TaskSchedulerService
     if (target.kind === "pipeline") {
       // Task 8: attachments are intentionally NOT passed to a pipeline target in v1 —
       // the pipeline runner has no attachments seam yet (documented deferred gap).
-      const run = await this.pipelineRunner.start(
-        target.id,
-        taskId,
-        projectId,
-        matchedTerms,
-        undefined,
-        output,
-      );
+      // A conditional call (not a trailing `artifactRef ?? undefined` positional arg)
+      // keeps this byte-for-byte identical to the pre-ZB-05a call for every non-chain
+      // dispatch — existing `toHaveBeenCalledWith` fixtures assert an exact arg list.
+      const run = artifactRef
+        ? await this.pipelineRunner.start(
+            target.id,
+            taskId,
+            projectId,
+            matchedTerms,
+            undefined,
+            output,
+            artifactRef,
+          )
+        : await this.pipelineRunner.start(
+            target.id,
+            taskId,
+            projectId,
+            matchedTerms,
+            undefined,
+            output,
+          );
       return { runRef: run.pipelineRunId, target, classification };
     }
     if (target.kind === "goal") {
@@ -1770,6 +1944,11 @@ export class TaskSchedulerService
           },
         });
         await this.recordRunCost(task.projectId, taskId, run.runId, "agent", run.costUsd);
+        // ZB-05a — a chain subtask that finished successfully hands its completion to
+        // `HandoffService`; an errored/interrupted one halts the chain silently here
+        // (no further hop is ever dispatched for it — Law 1: an ASK hop never
+        // auto-advances, and a red step must stop the chain, not push through it).
+        if (status === "done" && task.chain) await this.emitChainStepForTask(task);
       } catch (error) {
         // Task record gone or not yet persisted — the reconcile/sweep paths cover it.
         this.log.debug("task outcome write skipped", {

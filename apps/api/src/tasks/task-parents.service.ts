@@ -21,7 +21,11 @@ import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service"
  * call on the aggregate.
  */
 function deriveTaskState(task: ScheduledTask): TaskParentState {
-  if (task.status === "failed" || task.status === "dead-letter" || task.outcome?.status === "error") {
+  if (
+    task.status === "failed" ||
+    task.status === "dead-letter" ||
+    task.outcome?.status === "error"
+  ) {
     return "error";
   }
   if (task.status === "held" || task.status === "awaiting-output") return "blocked";
@@ -50,23 +54,23 @@ function toSubtaskSummary(task: ScheduledTask): SubtaskSummary {
  * non-chain task still derives a sensible top-level state instead of being
  * vacuously `thinking` forever.
  *
- * "chain ended" has no on-disk signal yet — `chainEndedAt` is a ZB-05a field
- * (PART-B.md ZB-05a §6). A non-chain parent (`target?.kind !== "chain"`, true
- * for every task this phase can actually create — `createTask` rejects a
- * `{ kind: "chain" }` target, see `ChainNotImplementedError`) trivially
- * counts as "ended": there is no chain to end. A parent that DOES carry a
- * chain target (reachable only via a hand-built test fixture until ZB-05a)
- * can reach every bucket except `done` — "all done, chain not (yet) marked
- * ended" falls through to `thinking`, read as "the last hop finished, the
- * next hasn't been dispatched".
+ * ZB-05a — "chain ended": a non-chain parent (`target?.kind !== "chain"`)
+ * trivially counts as "ended", there is no chain to end. A real chain parent
+ * only counts as ended once `HandoffService.evaluate` finds no further hop
+ * to dispatch and stamps `chainEndedAt` (`TaskSchedulerService.markChainEnded`)
+ * — until then "all subtasks done" falls through to `thinking`, read as "the
+ * last hop finished, the next hasn't been dispatched (or evaluated) yet".
  */
-function deriveParentState(parent: ScheduledTask, subtasks: readonly ScheduledTask[]): TaskParentState {
+function deriveParentState(
+  parent: ScheduledTask,
+  subtasks: readonly ScheduledTask[],
+): TaskParentState {
   const entries = subtasks.length > 0 ? subtasks : [parent];
   const states = entries.map(deriveTaskState);
   if (states.includes("error")) return "error";
   if (states.includes("blocked")) return "blocked";
   if (states.includes("working")) return "working";
-  const chainEnded = parent.target?.kind !== "chain";
+  const chainEnded = parent.target?.kind !== "chain" || parent.chainEndedAt != null;
   if (chainEnded && states.every((s) => s === "done")) return "done";
   return "thinking";
 }

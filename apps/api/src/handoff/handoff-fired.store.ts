@@ -1,7 +1,6 @@
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Inject, Injectable } from "@nestjs/common";
-import { AGENT_ID_REGEX } from "@zibby/contracts";
 import { z } from "zod";
 import {
   ensureDir,
@@ -13,6 +12,16 @@ import { LoggerService, type ScopedLogger } from "../shared/logging/logger.servi
 
 /** DI token for the fired-fingerprints directory. */
 export const HANDOFF_FIRED_DIR = "HANDOFF_FIRED_DIR";
+
+/**
+ * ZB-05a — a rule id, as a filename: like `AGENT_ID_REGEX` (letters, numbers,
+ * `.`, `_`, `-`) but also allowing `:`, since `chainToRules` mints chain-hop
+ * rule ids as `${chainId}:${index}`. Without this, `resolveSafeFile` rejected
+ * every chain rule id outright — `fileFor` returned `null` for every chain
+ * hop, so `hasFired`/`markFired` silently no-oped and the fingerprint dedup
+ * that Law 1's idempotency guarantee depends on never persisted for chains.
+ */
+const RULE_ID_FILE_REGEX = /^[a-zA-Z0-9](?:[a-zA-Z0-9._:-]*[a-zA-Z0-9])?$/;
 
 const FiredSnapshotSchema = z.object({
   ruleId: z.string().min(1),
@@ -84,6 +93,6 @@ export class HandoffFiredStore {
   }
 
   private fileFor(ruleId: string): string | null {
-    return resolveSafeFile(path.resolve(this.dir), ruleId, ".json", AGENT_ID_REGEX);
+    return resolveSafeFile(path.resolve(this.dir), ruleId, ".json", RULE_ID_FILE_REGEX);
   }
 }

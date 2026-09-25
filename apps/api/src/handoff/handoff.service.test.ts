@@ -139,6 +139,9 @@ describe("HandoffService", () => {
       approvals as never,
       activity as never,
       pipelines as never,
+      // ZB-05a — chain lookup only; no test in this file dispatches a real chain
+      // hop end to end (that's chain-view.test.ts / the chain e2e spec).
+      { get: vi.fn(async () => null) } as never,
       fakeLogger as never,
     );
   });

@@ -199,6 +199,30 @@ export class HandoffSignalKindStore implements OnModuleInit {
     await this.write(next);
   }
 
+  /** A single kind by id, or `undefined` — ZB-05a's chain lookups (bypasses the general list+find at call sites). */
+  async getRaw(id: string): Promise<HandoffSignalKind | undefined> {
+    return (await this.list()).find((k) => k.id === id);
+  }
+
+  /**
+   * ZB-05a / D-005 — create-or-replace a CHAIN kind at a caller-given id (the
+   * `PUT /api/handoff/chains/:id` id), unlike {@link create}'s slugified,
+   * server-minted id for the general registry. `ChainsService` is the only
+   * caller — it builds the full row (including a stable `status`) itself.
+   */
+  async upsertChainKind(kind: HandoffSignalKind): Promise<void> {
+    const kinds = await this.list();
+    const index = kinds.findIndex((k) => k.id === kind.id);
+    const next = index === -1 ? [...kinds, kind] : kinds.map((k, i) => (i === index ? kind : k));
+    await this.write(next);
+  }
+
+  /** ZB-05a — remove a chain kind row (the rules half is `HandoffRuleStore.replaceForSignalKind`). */
+  async deleteChainKind(id: string): Promise<void> {
+    const kinds = await this.list();
+    await this.write(kinds.filter((k) => k.id !== id));
+  }
+
   /**
    * B4 — auto-activation (design doc, Slot B → B4): called from
    * `HandoffService.evaluate` on every real signal emission. If `kind` matches

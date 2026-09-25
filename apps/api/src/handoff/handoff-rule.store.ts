@@ -139,6 +139,24 @@ export class HandoffRuleStore implements OnModuleInit {
     await this.write(rules.filter((r) => r.id !== id));
   }
 
+  /** ZB-05a — every rule belonging to one chain (its `signalKind`), in on-disk order. */
+  async rulesForSignalKind(signalKind: string): Promise<HandoffRule[]> {
+    return (await this.list()).filter((r) => r.signalKind === signalKind);
+  }
+
+  /**
+   * ZB-05a / D-005 — atomically replace EXACTLY the rules whose `signalKind` is
+   * `signalKind` with `rules` (the chain PUT's rules half — `ChainsService`
+   * calls this after successfully upserting the kind, and rolls the kind back
+   * if this throws). Every other rule (a different chain, or an ordinary
+   * signal rule) is untouched.
+   */
+  async replaceForSignalKind(signalKind: string, rules: readonly HandoffRule[]): Promise<void> {
+    const existing = await this.list();
+    const others = existing.filter((r) => r.signalKind !== signalKind);
+    await this.write([...others, ...rules]);
+  }
+
   /**
    * Missing file, or one that fails to parse as a valid rule array, is (re)seeded
    * with the system defaults. A present, valid file is left untouched — once
