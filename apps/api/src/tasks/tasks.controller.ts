@@ -30,7 +30,9 @@ import {
   ScheduledTasksStorageService,
 } from "./scheduled-tasks.storage.service";
 import { TaskClassifierService } from "./task-classifier.service";
+import { TaskParentsService } from "./task-parents.service";
 import {
+  ChainNotImplementedError,
   DepartmentEmptyRosterError,
   EmptyCatalogError,
   TaskSchedulerService,
@@ -51,6 +53,9 @@ const scheduledTaskRoutes = {
   createTask: tasksContract.createTask,
   listScheduledTasks: tasksContract.listScheduledTasks,
   cancelScheduledTask: tasksContract.cancelScheduledTask,
+  // ZB-04a §5 — the parent/subtask read model.
+  getTaskParents: tasksContract.getTaskParents,
+  getTask: tasksContract.getTask,
 };
 
 /** Hard multipart limits — enforced by multer (per-file/count) and a manual set-total check. */
@@ -90,6 +95,7 @@ export class TasksController {
     private readonly scheduler: TaskSchedulerService,
     private readonly storage: ScheduledTasksStorageService,
     private readonly attachments: AttachmentStorageService,
+    private readonly parents: TaskParentsService,
   ) {}
 
   /**
@@ -168,7 +174,11 @@ export class TasksController {
             body: await this.scheduler.createTask(body, undefined, undefined, undefined, true),
           };
         } catch (error) {
-          if (error instanceof EmptyCatalogError || error instanceof DepartmentEmptyRosterError) {
+          if (
+            error instanceof EmptyCatalogError ||
+            error instanceof DepartmentEmptyRosterError ||
+            error instanceof ChainNotImplementedError
+          ) {
             return { status: 422, body: { message: error.message } };
           }
           if (error instanceof ClaudeUnavailableError) {
@@ -182,6 +192,10 @@ export class TasksController {
 
       cancelScheduledTask: ({ params: { id } }) =>
         errors.or404(id, () => this.scheduler.cancel(id)),
+
+      getTaskParents: async ({ query }) => ({ status: 200, body: await this.parents.listParents(query) }),
+
+      getTask: ({ params: { id } }) => errors.or404(id, () => this.parents.getTask(id)),
     });
   }
 }

@@ -79,6 +79,7 @@ export * from "./roadmap/routing-proposal.schema";
 export * from "./roadmap/roadmap.contract";
 export * from "./review-learning";
 export * from "./tasks/task.schema";
+export * from "./tasks/task-parents.schema";
 export * from "./tasks/tasks.contract";
 export * from "./tasks/task-run.schema";
 export * from "./tasks/task-runs.contract";

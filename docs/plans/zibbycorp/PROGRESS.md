@@ -21,7 +21,9 @@ and the data tarball is in `.zibby/backups/`. D-012 … D-015 are binding.
 
 **Last updated:** 2026-09-24. Part 0 landed (see board).
 
-**Resume at:** Part A — ZA-04 running (subagent), then ZA-05, ZA-06, ZA-07, ZA-08; then Part B.
+**Resume at:** 2026-09-25 PAUSED by the operator and moved to another machine. The tip
+commit is a **WIP commit made with `--no-verify`** (red typecheck), containing two
+half-done phases — finish them first, see "Paused WIP" below.
 
 ---
 
@@ -54,9 +56,9 @@ Legend: ⬜ todo · 🟦 in progress · ✅ landed (sha) · ⛔ parked (reason)
 | ZA-01 | Tokens, type, motion, theme | ✅ | 4216a05a |
 | ZA-02 | Primitive restyle | ✅ | 6ff2ba9f |
 | ZA-03 | AgentGlyph, StatePill, CellStrip | ✅ | 4216a05a |
-| ZA-04 | Data and layout components | 🟦 subagent running | |
-| ZA-05 | Overlay and nav components | ⬜ | |
-| ZA-06 | Shell components + Splash | ⬜ | |
+| ZA-04 | Data and layout components | ✅ | ba9406b9 |
+| ZA-05 | Overlay and nav components | ✅ | ba9406b9 |
+| ZA-06 | Shell components + Splash | 🟨 WIP (paused) | |
 | ZA-07 | Lint wall + 20 className files | ⬜ | |
 | ZA-08 | Validation → park | ⬜ | |
 
@@ -67,7 +69,7 @@ Legend: ⬜ todo · 🟦 in progress · ✅ landed (sha) · ⛔ parked (reason)
 | ZB-01 | Shell, sections, rail, redirects | ⬜ | |
 | ZB-02 | ORG map | ⬜ | |
 | ZB-03 | Department detail + People | ⬜ | |
-| ZB-04a | Tasks backend (parent/source/department) | ⬜ | |
+| ZB-04a | Tasks backend (parent/source/department) | 🟨 WIP (paused) | |
 | ZB-04b | Tasks UI | ⬜ | |
 | ZB-05a | Chains backend on HandoffService | ⬜ | |
 | ZB-05b | Chains UI | ⬜ | |
@@ -148,3 +150,25 @@ When a phase applies a default from `OPEN-QUESTIONS.md`, append one line here:
   known pre-existing flake.
 - 2026-09-25 ~03:00 → 06:40: second rate-limit stop (ZA-04 partial, ZA-05 nothing written).
   Resumed 07:15 on the operator's "pokračuj".
+
+## Paused WIP (2026-09-25, operator moved machines)
+
+The tip commit `wip(zibbycorp): …` was made with `--no-verify`; the tree does NOT typecheck.
+
+1. **ZA-06 (DS shell)** — new, untested folders `libs/design-system/src/components/{AppFrame,
+   AppHeader,Rail,ChatDock,Splash,Wordmark}`. Not yet exported from `index.ts`, and
+   tests/stories may be incomplete. Finish per `PART-A.md` ZA-06. The source to port for
+   Splash is `apps/web/components/LoadingScreen/*`; don't delete that yet (ZA-07 does).
+2. **ZB-04a (tasks backend)** — half-wired. `TaskTarget {kind:"chain"}` has been added to
+   contracts, and `task-parents.schema.ts` / `task-parents.service.ts` exist. The
+   departments `getDepartmentSubtasks` route is in the contract but not implemented.
+   Known tsc reds:
+   - `apps/api/src/departments/departments.controller.ts` — missing `getDepartmentSubtasks`
+     handler;
+   - `apps/api/src/chat/chat-tools.service.ts:263` and `apps/web/features/tasks/task.ts:195-198`
+     — exhaustive switches/Records need a `chain` case.
+   Planned D-019 (not yet written into DECISIONS): creating a `{kind:"chain"}` task before
+   ZB-05a exists is rejected with a clear 400 — never a silent no-op.
+
+Then continue: ZA-07 → ZA-08 → Part B (ZB-01 …) → Part C (ZB-05a, ZB-05b) → final validation,
+push and a **draft** PR into main (never merge).

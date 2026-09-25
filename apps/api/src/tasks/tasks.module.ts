@@ -18,6 +18,7 @@ import { KeywordScorer } from "./keyword-scorer";
 import { ScheduledTasksStorageModule } from "./scheduled-tasks-storage.module";
 import { TaskClassifierService } from "./task-classifier.service";
 import { TaskOutputService } from "./task-output.service";
+import { TaskParentsService } from "./task-parents.service";
 import { TASK_ROUTER } from "./task-router";
 import { TaskRunLogsController } from "./task-run-logs.controller";
 import { TaskRunsController } from "./task-runs.controller";
@@ -56,6 +57,7 @@ import { TasksController } from "./tasks.controller";
   providers: [
     TaskSchedulerService,
     TaskRunsService,
+    TaskParentsService,
     TaskClassifierService,
     TaskOutputService,
     AttachmentStorageService,
@@ -67,9 +69,13 @@ import { TasksController } from "./tasks.controller";
   // can dispatch a task and read its outcome back onto the channel item.
   // TaskRunsService is also exported (Phase 82) so `DepartmentsModule` can read the
   // unified run feed for its status aggregation without re-implementing the merge.
+  // TaskParentsService (ZB-04a) is exported the same way, so `DepartmentsController`
+  // can serve `GET /api/departments/:id/subtasks` off the one read model instead of
+  // duplicating the parent/subtask derivation.
   exports: [
     TaskSchedulerService,
     TaskRunsService,
+    TaskParentsService,
     // Exported so `RoadmapGateService` can ask the ONE question the switchboard
     // should ask for a gate release — "whose domain is this?" — via
     // `classifyDepartment`, and let the department pick its own unit.

@@ -88,14 +88,38 @@ export const DepartmentTaskTargetSchema = z.object({
 });
 
 /**
+ * ZB-04a / D-005 — a named chain (an ordered handoff route between
+ * departments) as a routing destination. `id` names the chain's signal kind
+ * (see `HandoffSignalKindSchema.chain` in ZB-05a); like department it is
+ * EXPLICIT-ONLY, and the SAME structural scope guard applies: the classifier's
+ * stage-1 candidate builder (`TaskClassifierService.buildCandidates` /
+ * `RoutableTarget` in `task-router.ts`) never widens to include this kind, so
+ * `toTaskTarget`'s exhaustive switch stays total without a `"chain"` case —
+ * the classifier cannot emit one even by omission.
+ *
+ * ZB-04a adds ONLY this schema member plus the `parentTaskId`/`chain` stamps
+ * below — chains do not run yet. `TaskSchedulerService.createTask` rejects a
+ * `{ kind: "chain" }` target outright (see `ChainNotImplementedError`) rather
+ * than silently no-op (D-019); ZB-05a is what makes this kind dispatchable.
+ */
+export const ChainTaskTargetSchema = z.object({
+  kind: z.literal("chain"),
+  id: AgentIdSchema,
+  ...taskTargetDisplayShape,
+});
+
+/**
  * A destination for a free-text task: a stored agent, a stored pipeline, a
- * named department (Phase 91, explicit-only), or the orchestrator fallback.
+ * named department (Phase 91, explicit-only), a named chain (ZB-04a schema
+ * only — explicit-only, not yet dispatchable, see {@link ChainTaskTargetSchema}),
+ * or the orchestrator fallback.
  */
 export const TaskTargetSchema = z.discriminatedUnion("kind", [
   AgentTaskTargetSchema,
   PipelineTaskTargetSchema,
   GoalTaskTargetSchema,
   DepartmentTaskTargetSchema,
+  ChainTaskTargetSchema,
   OrchestratorTaskTargetSchema,
 ]);
 export type TaskTarget = z.infer<typeof TaskTargetSchema>;
@@ -462,6 +486,31 @@ export const ScheduledTaskStatusSchema = z.enum([
 export type ScheduledTaskStatus = z.infer<typeof ScheduledTaskStatusSchema>;
 
 /**
+ * ZB-04a / O-18 — WHO/WHAT created a task, stamped by the creator itself
+ * (never client-asserted for the four server-side legs — Law 4, the same
+ * posture as `roadmapItemId`):
+ *
+ *  - `operator`   — the CommandLine / New Task dialog (`TasksController`'s
+ *                    default when nothing else names a source).
+ *  - `department` — an explicit `@department` target (`rawTarget.kind ===
+ *                    "department"` in `TaskSchedulerService.createTask`).
+ *  - `chain`      — a subtask dispatched by `HandoffService.dispatchTask` WITH
+ *                    chain context. Reserved for ZB-05a — nothing sets it yet.
+ *  - `channel`    — `ChannelTriageFlowService`'s Tier-1 dispatch.
+ *  - `automation` — the automations `SchedulerService`'s `task` job kind.
+ *  - `handoff`    — `HandoffService.dispatchTask`, absent chain context.
+ */
+export const TaskSourceSchema = z.enum([
+  "operator",
+  "department",
+  "chain",
+  "channel",
+  "automation",
+  "handoff",
+]);
+export type TaskSource = z.infer<typeof TaskSourceSchema>;
+
+/**
  * The structured result of a task whose output opened a PR — the reference the run
  * detail's "Výstup úkolu" surface renders: the PR url plus the branch's line-change
  * totals (green/red counts, no diffstat body). Computed at PR-open time from
@@ -553,6 +602,43 @@ export const ScheduledTaskSchema = z.object({
    * cycle: the roadmap module already depends on tasks).
    */
   roadmapItemLabel: z.string().max(512).optional(),
+  /**
+   * ZB-04a / D-005 — the parent task this one is a subtask of (a chain step
+   * dispatched by `HandoffService.dispatchTask`, ZB-05a). Absent on every
+   * top-level task — the `GET /api/tasks/parents` read model's own filter for
+   * "top-level" IS `parentTaskId == null`. Schema-only here: nothing produces
+   * a subtask yet (ZB-05a walks the chain), but the field is additive/optional
+   * so a later phase's writer needs no migration.
+   */
+  parentTaskId: z.string().optional(),
+  /**
+   * ZB-04a / D-005 — this subtask's position on its chain: the chain's own id
+   * (the handoff signal kind, `HandoffSignalKindSchema.chain`) and its 0-based
+   * step. Set alongside {@link parentTaskId} by `HandoffService.dispatchTask`
+   * once ZB-05a threads chain context through — schema-only here, same as
+   * `parentTaskId`.
+   */
+  chain: z.object({ id: z.string().min(1), step: z.number().int().nonnegative() }).optional(),
+  /**
+   * O-18 — who/what created this task (see {@link TaskSourceSchema}). Stamped by
+   * the creator, never client-asserted for the four server-side legs (Law 4);
+   * the operator/department legs are resolved inside
+   * `TaskSchedulerService.createTask` itself. Absent on every task that
+   * predates this field.
+   */
+  source: TaskSourceSchema.optional(),
+  /**
+   * ZB-04a / O-06 — the department this task's dispatched unit belongs to,
+   * stamped at DISPATCH time (never on creation — a scheduled/held/queued task
+   * has no resolved unit yet) by both the classifier's stage-1 department
+   * verdict and an explicit `@department` target
+   * (`TaskSchedulerService.dispatch`'s `ownerDepartmentOf`). Drives the
+   * `GET /api/tasks/parents` department filter, the department "subtasks" tab
+   * (`GET /api/departments/:id/subtasks`) and spend-by-department (O-06).
+   * Deliberately NOT part of `CreateTaskInput`, the same posture as
+   * {@link roadmapItemId} — this is provenance, server-derived only.
+   */
+  department: DepartmentIdSchema.optional(),
   /** Set on `held`: why the budget guard parked it (e.g. "project-daily cap reached"). */
   heldReason: z.string().optional(),
   /**
@@ -693,6 +779,27 @@ export const CreateTaskInputSchema = z.object({
    * target's `optionalTools` ceiling server-side (never trusted blindly).
    */
   toolGrants: z.array(z.string()).optional(),
+  /**
+   * ZB-04a / D-005 — carried by a server-side subtask dispatch
+   * (`HandoffService.dispatchTask`, ZB-05a): the parent task's id and this
+   * subtask's `{id, step}` on the chain. Both ride straight onto the persisted
+   * {@link ScheduledTaskSchema.parentTaskId} / `.chain`. Never set by the New
+   * Task dialog — there is no UI for it yet, and a stray client-supplied value
+   * only mislabels the read model (Law 4 doesn't strictly apply here the way it
+   * does to `roadmapItemId`, since a wrong parent link is attribution, not an
+   * authorization bypass — but the same discipline is kept: only the ZB-05a
+   * caller sets it).
+   */
+  parentTaskId: z.string().optional(),
+  chain: z.object({ id: z.string().min(1), step: z.number().int().nonnegative() }).optional(),
+  /**
+   * O-18 — the creator's own source stamp (see {@link TaskSourceSchema}). Set by
+   * the three server-side creators this phase wires (channel triage,
+   * automations, handoff); absent from every operator-facing caller, which
+   * `TaskSchedulerService.createTask` then resolves itself (`operator`, or
+   * `department` for an explicit `@department` target).
+   */
+  source: TaskSourceSchema.optional(),
 });
 export type CreateTaskInput = z.infer<typeof CreateTaskInputSchema>;
 

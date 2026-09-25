@@ -5,6 +5,7 @@ import {
   GoalParkedReasonSchema,
 } from "../goals/goal-run.schema";
 import { RunArtifactSchema, RunStatusSchema } from "../common.schema";
+import { DepartmentIdSchema } from "../departments/department.schema";
 import {
   ParkedDetailSchema,
   PipelineCheckpointSchema,
@@ -183,6 +184,14 @@ export const TaskRunSchema = z.object({
    * button label. Absent for non-agent runs and demo/test output.
    */
   sessionId: z.string().optional(),
+  /**
+   * ZB-04a / O-06 — enriched from the task record: the department this run's
+   * dispatched unit belongs to, stamped at dispatch time
+   * (`ScheduledTaskSchema.department`). Drives spend-by-department and
+   * activity/archive department filters. Absent for a run with no owning task,
+   * or one dispatched before this field existed.
+   */
+  department: DepartmentIdSchema.optional(),
 });
 export type TaskRun = z.infer<typeof TaskRunSchema>;
 

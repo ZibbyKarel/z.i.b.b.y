@@ -5,6 +5,7 @@ import {
   type DepartmentRoster,
   type DepartmentState,
   type DepartmentWithStatus,
+  type SubtaskSummary,
   type UnownedEntity,
 } from "@zibby/contracts";
 import type { Approval } from "@zibby/contracts";
@@ -15,6 +16,7 @@ import { EmployeesStorageService } from "../employees/employees.storage.service"
 import { IntegrationsStorageService } from "../integrations/integrations.storage.service";
 import { MandateStorageService } from "../mandate/mandate.storage.service";
 import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
+import { TaskParentsService } from "../tasks/task-parents.service";
 import { TaskRunsService } from "../tasks/task-runs.service";
 import { DepartmentSeenStore } from "./department-seen.store";
 import { DepartmentNotFoundError } from "./departments.errors";

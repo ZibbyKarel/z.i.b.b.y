@@ -1,6 +1,7 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { EmptyBodySchema, ErrorSchema } from "../common.schema";
+import { SubtaskSummarySchema } from "../tasks/task-parents.schema";
 import {
   DepartmentRosterSchema,
   DepartmentWithStatusSchema,
@@ -80,6 +81,25 @@ export const departmentsContract = c.router(
       },
       summary:
         "NS2 F1c: a department's stored roster — owned agents, integrations, and CI monitors",
+    },
+
+    /**
+     * ZB-04a §5 — a filtered view of the `GET /api/tasks/parents` read model's
+     * subtask rows: every subtask (a task with `parentTaskId` set) stamped
+     * `department === id`. `/departments/:id/subtasks` is a longer path than
+     * `/departments/:id`, so there is no key-order shadowing risk (Express
+     * matches by segment count first).
+     */
+    getDepartmentSubtasks: {
+      method: "GET",
+      path: "/departments/:id/subtasks",
+      pathParams: z.object({ id: z.string() }),
+      responses: {
+        200: z.array(SubtaskSummarySchema),
+        404: ErrorSchema,
+      },
+      summary:
+        "This department's subtasks (ZB-03's Subtasks tab — empty until ZB-05a dispatches any)",
     },
   },
   {
