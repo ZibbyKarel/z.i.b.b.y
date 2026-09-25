@@ -1,5 +1,6 @@
 "use client";
 
+import type { Route } from "next";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -77,7 +78,7 @@ function HookEditor({ hook }: { hook: Hook }) {
           </Button>
         </>
       }
-      backHref="/system/registries/hooks"
+      backHref={"/system/registries/hooks" as Route}
       subtitle={subtitle}
       title={name}
     >

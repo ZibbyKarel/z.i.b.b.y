@@ -144,7 +144,7 @@ export const SECTIONS = [
   {
     id: "system",
     glyph: "gear",
-    href: "/system/settings/general",
+    href: "/system/settings/general" as Route,
     tabs: [
       { id: "settings", href: "/system/settings/general" as Route },
       { id: "registries", href: "/system/registries/skills" as Route },

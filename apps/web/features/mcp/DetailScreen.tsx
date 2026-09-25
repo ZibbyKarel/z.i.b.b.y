@@ -1,5 +1,6 @@
 "use client";
 
+import type { Route } from "next";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -95,7 +96,7 @@ function McpServerEditor({ server }: { server: McpServer }) {
           </Button>
         </>
       }
-      backHref="/system/registries/mcp"
+      backHref={"/system/registries/mcp" as Route}
       subtitle={server.type === "stdio" ? server.command : server.url}
       title={name}
     >

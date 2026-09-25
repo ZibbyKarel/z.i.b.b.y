@@ -337,10 +337,10 @@ function HandoffTab({
 function RegistryLinkTab({ kind }: { kind: "skills" | "mcp" | "automations" | "hooks" }) {
   const t = useTranslations("departmentDetail");
   const router = useRouter();
-  const REGISTRY_ROUTE: Record<typeof kind, string> = {
-    skills: "/system/registries/skills",
-    mcp: "/system/registries/mcp",
-    hooks: "/system/registries/hooks",
+  const REGISTRY_ROUTE: Record<typeof kind, Route> = {
+    skills: "/system/registries/skills" as Route,
+    mcp: "/system/registries/mcp" as Route,
+    hooks: "/system/registries/hooks" as Route,
     automations: "/automations",
   };
   return (

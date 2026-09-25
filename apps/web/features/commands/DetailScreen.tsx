@@ -1,5 +1,6 @@
 "use client";
 
+import type { Route } from "next";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -120,7 +121,7 @@ function CommandEditor({ command }: { command: Command }) {
           </Button>
         </>
       }
-      backHref="/system/registries/commands"
+      backHref={"/system/registries/commands" as Route}
       subtitle={command["argument-hint"]}
       title={`/${command.id}`}
     >

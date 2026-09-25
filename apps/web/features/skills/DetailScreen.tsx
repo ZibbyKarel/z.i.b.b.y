@@ -1,5 +1,6 @@
 "use client";
 
+import type { Route } from "next";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -116,7 +117,7 @@ function SkillEditor({ skill }: { skill: Skill }) {
           </Button>
         </>
       }
-      backHref="/system/registries/skills"
+      backHref={"/system/registries/skills" as Route}
       subtitle={skillFile(skill.id)}
       title={name}
     >
