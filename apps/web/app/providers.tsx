@@ -28,7 +28,16 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={client}>
       <apiClient.ReactQueryProvider>
         <RunEventsProvider>
-          <DesignSystemProvider theme="dark">
+          {/* ZB-01/O-01/D-014: light is now the default theme (was dark-only).
+              `theme="system"` follows the OS preference and re-resolves live;
+              a first-run browser with no stored choice and no matchMedia read
+              falls back to light via `ThemeScript`'s `fallback` (root layout).
+              No header toggle yet: there is no DS `ThemeToggle` component and
+              no app-level `ThemeChoice` state to drive it from — both are
+              deferred to ZB-11 (Appearance settings), the phase ROUTE-MAP §3
+              already assigns them to; see the ZB-01 report for the explicit
+              call-out. */}
+          <DesignSystemProvider theme="system">
             <BootSplash>{children}</BootSplash>
             <Toaster />
           </DesignSystemProvider>

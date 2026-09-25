@@ -68,7 +68,7 @@ const ChatContext = createContext<ChatStore | null>(null);
  * and a global ⌘/Ctrl+J shortcut. Mount once, high in the client tree (see
  * {@link AppShell}), above the `/chat` route so the transcript isn't lost when the
  * operator leaves and comes back. The chat surface itself is rendered by the
- * `/chat` route (`app/(dashboard)/chat/page.tsx` → `features/chat/Screen.tsx`), not
+ * `/chat` route (`app/(company)/chat/page.tsx` → `features/chat/Screen.tsx`), not
  * by this provider — it used to mount a fullscreen overlay here, but chat is now a
  * normal routed page inside the dashboard shell.
  */

@@ -18,7 +18,51 @@
     "mcp": "MCP servery",
     "commands": "Příkazy",
     "hooks": "Hooky",
-    "signals": "Signály"
+    "signals": "Signály",
+    "org": "Org",
+    "work": "Práce",
+    "activity": "Aktivita",
+    "policy": "Politika",
+    "knowledge": "Znalosti",
+    "ledger": "Rozpočet",
+    "system": "Systém",
+    "subtab": {
+      "org": {
+        "map": "Mapa",
+        "people": "Lidé"
+      },
+      "work": {
+        "tasks": "Úkoly",
+        "chains": "Řetězce",
+        "goals": "Cíle",
+        "companies": "Firmy",
+        "teams": "Týmy",
+        "projects": "Projekty"
+      },
+      "activity": {
+        "log": "Log",
+        "runs": "Běhy",
+        "inbox": "Doručená pošta",
+        "briefings": "Souhrny"
+      },
+      "policy": {
+        "approvals": "Schválení",
+        "gates": "Pravidla",
+        "patterns": "Vzory"
+      },
+      "knowledge": {
+        "vault": "Trezor",
+        "distill": "Destilace"
+      },
+      "ledger": {
+        "budgets": "Rozpočty",
+        "spend": "Útraty"
+      },
+      "system": {
+        "settings": "Nastavení",
+        "registries": "Registry"
+      }
+    }
   },
   "notifications": {
     "attention": "{count} položek vyžaduje pozornost"
@@ -2227,5 +2271,14 @@
       "dropError": "Soubor se nepodařilo načíst",
       "error": "Vytvoření se nepodařilo"
     }
+  },
+  "shell": {
+    "newTask": "+ Nový úkol",
+    "operatorFallback": "CEO",
+    "active": "aktivních",
+    "week": "TÝDEN",
+    "needsYou": "Potřebuje tě",
+    "needsYouEmpty": "Nic na tebe nečeká",
+    "needsYouToggle": "Potřebuje tě"
   }
 }

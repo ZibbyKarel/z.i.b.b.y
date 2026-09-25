@@ -18,7 +18,51 @@
     "mcp": "MCP servers",
     "commands": "Commands",
     "hooks": "Hooks",
-    "signals": "Signals"
+    "signals": "Signals",
+    "org": "Org",
+    "work": "Work",
+    "activity": "Activity",
+    "policy": "Policy",
+    "knowledge": "Knowledge",
+    "ledger": "Ledger",
+    "system": "System",
+    "subtab": {
+      "org": {
+        "map": "Map",
+        "people": "People"
+      },
+      "work": {
+        "tasks": "Tasks",
+        "chains": "Chains",
+        "goals": "Goals",
+        "companies": "Companies",
+        "teams": "Teams",
+        "projects": "Projects"
+      },
+      "activity": {
+        "log": "Log",
+        "runs": "Runs",
+        "inbox": "Inbox",
+        "briefings": "Briefings"
+      },
+      "policy": {
+        "approvals": "Approvals",
+        "gates": "Gates",
+        "patterns": "Patterns"
+      },
+      "knowledge": {
+        "vault": "Vault",
+        "distill": "Distill"
+      },
+      "ledger": {
+        "budgets": "Budgets",
+        "spend": "Spend"
+      },
+      "system": {
+        "settings": "Settings",
+        "registries": "Registries"
+      }
+    }
   },
   "notifications": {
     "attention": "{count} items need attention"
@@ -2227,5 +2271,14 @@
       "dropError": "Couldn't read that file",
       "error": "Couldn't create the item"
     }
+  },
+  "shell": {
+    "newTask": "+ New task",
+    "operatorFallback": "CEO",
+    "active": "active",
+    "week": "WEEK",
+    "needsYou": "Needs you",
+    "needsYouEmpty": "Nothing is waiting for you",
+    "needsYouToggle": "Needs you"
   }
 }

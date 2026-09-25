@@ -46,6 +46,148 @@ export const SETTINGS_ITEM = {
   href: "/settings",
 } as const satisfies NavConfig;
 
+/**
+ * A section sub-tab. `href` is a real ZibbyCorp route once its screen phase ships
+ * (ZB-02..ZB-11); until then it is "the closest existing current route" (ZB-01's
+ * rule) — usually the section's own fallback, except the three `work` tabs
+ * (`companies`, `teams`, `projects`) that already have a distinct legacy screen.
+ */
+export interface SubTabConfig {
+  id: string;
+  href: Route;
+}
+
+export interface SectionConfig {
+  id: string;
+  glyph: IconName;
+  /** Section-level fallback route (AppHeader's section nav) — the ZB-01 mapping:
+   *  org→/agents, work→/projects, activity→/archiv, policy→/settings?tab=gates,
+   *  knowledge→/memory, ledger→/settings, system→/settings. */
+  href: Route;
+  tabs: readonly SubTabConfig[];
+}
+
+/**
+ * ZB-01: `NAV_ITEMS`' flat catalog list becomes the ZibbyCorp 7-section IA
+ * (`ROUTE-MAP.md` §1) for the `AppHeader` section nav + `SubNav` sub-tabs.
+ * `NAV_ITEMS`/`SETTINGS_ITEM` stay put — `ChatToolDock` (the `/chat` dock's own
+ * leaf-level tool list) still reads them and is out of scope until ZB-13.
+ */
+export const SECTIONS = [
+  {
+    id: "org",
+    glyph: "compass",
+    href: "/agents",
+    tabs: [
+      { id: "map", href: "/agents" },
+      { id: "people", href: "/agents" },
+    ],
+  },
+  {
+    id: "work",
+    glyph: "flow",
+    href: "/projects",
+    tabs: [
+      { id: "tasks", href: "/archiv" },
+      { id: "chains", href: "/projects" },
+      { id: "goals", href: "/projects" },
+      { id: "companies", href: "/companies" },
+      { id: "teams", href: "/teams" },
+      { id: "projects", href: "/projects" },
+    ],
+  },
+  {
+    id: "activity",
+    glyph: "pulse",
+    href: "/archiv",
+    tabs: [
+      { id: "log", href: "/archiv" },
+      { id: "runs", href: "/archiv" },
+      { id: "inbox", href: "/archiv" },
+      { id: "briefings", href: "/archiv" },
+    ],
+  },
+  {
+    id: "policy",
+    glyph: "shield",
+    // `?tab=` targets aren't in Next's typed-route union — same cast pattern as
+    // the project profile's own `?tab=` links (e.g. `GatesTab.tsx`).
+    href: "/settings?tab=gates" as Route,
+    tabs: [
+      { id: "approvals", href: "/settings?tab=gates" as Route },
+      { id: "gates", href: "/settings?tab=gates" as Route },
+      { id: "patterns", href: "/settings?tab=gates" as Route },
+    ],
+  },
+  {
+    id: "knowledge",
+    glyph: "brain",
+    href: "/memory",
+    tabs: [
+      { id: "vault", href: "/memory" },
+      { id: "distill", href: "/memory" },
+    ],
+  },
+  {
+    id: "ledger",
+    glyph: "dollar",
+    href: "/settings",
+    tabs: [
+      { id: "budgets", href: "/settings" },
+      { id: "spend", href: "/settings" },
+    ],
+  },
+  {
+    id: "system",
+    glyph: "gear",
+    href: "/settings",
+    tabs: [
+      { id: "settings", href: "/settings" },
+      { id: "registries", href: "/skills" },
+    ],
+  },
+] as const satisfies readonly SectionConfig[];
+
+export type SectionId = (typeof SECTIONS)[number]["id"];
+
+/**
+ * Reverse lookup — which section a legacy pathname belongs to, for the
+ * `AppHeader` section nav's active-item highlight (`usePathname()`). Checked as
+ * a prefix match, longest-path entries are irrelevant here since every legacy
+ * route is a single top-level segment. Falls back to `"org"` (today's `/chat`
+ * home) for anything unmatched.
+ */
+const PATH_SECTION: readonly (readonly [prefix: string, section: SectionId])[] = [
+  ["/agents", "org"],
+  ["/pipelines", "org"],
+  ["/automations", "org"],
+  ["/chat", "org"],
+  ["/projects", "work"],
+  ["/companies", "work"],
+  ["/teams", "work"],
+  ["/archiv", "activity"],
+  ["/runs", "activity"],
+  ["/signals", "policy"],
+  ["/memory", "knowledge"],
+  ["/skills", "system"],
+  ["/mcp", "system"],
+  ["/hooks", "system"],
+  ["/commands", "system"],
+  ["/settings", "system"],
+];
+
+/** `?tab=gates`/`?tab=mandate` on `/settings` currently belong to Policy, not
+ * System (ROUTE-MAP §3) — the one case a bare prefix match gets wrong. */
+const SETTINGS_POLICY_TABS = new Set(["gates", "mandate"]);
+
+export function sectionForPath(pathname: string, searchParams?: URLSearchParams): SectionId {
+  if (pathname === "/settings" && SETTINGS_POLICY_TABS.has(searchParams?.get("tab") ?? "")) {
+    return "policy";
+  }
+  const match = PATH_SECTION.find(([prefix]) => pathname.startsWith(prefix));
+  return match?.[1] ?? "org";
+}
+
 export const MODEL_OPTIONS: SelectOption[] = [
   { value: "opus", label: "opus" },
   { value: "sonnet", label: "sonnet" },

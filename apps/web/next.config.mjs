@@ -27,6 +27,15 @@ const nextConfig = {
   // (@zibby/design-system etc.) instead of stopping at apps/web.
   output: "standalone",
   outputFileTracingRoot: path.join(__dirname, "../.."),
+  // ZB-01 (D-009): the permanent-redirect infrastructure for ROUTE-MAP.md §2's
+  // old→new route table. Empty for now — every §2 target (`/org/people`,
+  // `/work/companies`, `/knowledge/vault`, …) is a screen phase that hasn't
+  // shipped yet (ZB-02..ZB-11), and the rule is to add a redirect only once its
+  // target route is real. Each later screen phase adds its own entry here in
+  // the same commit that turns its old segment into a redirect.
+  async redirects() {
+    return [];
+  },
 };
 
 export default withNextIntl(nextConfig);

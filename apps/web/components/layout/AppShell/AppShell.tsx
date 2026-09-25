@@ -1,48 +1,224 @@
 "use client";
 
-import { type ReactNode, Suspense } from "react";
-import { Container, MAIN_CONTENT_ID, SkipLink } from "@zibby/design-system";
+import { type AnchorHTMLAttributes, type ReactNode, Suspense } from "react";
+import type { Route } from "next";
+import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import {
+  AppFrame,
+  AppHeader,
+  ApprovalCard,
+  Button,
+  LimitBar,
+  Rail,
+  Row,
+  SubNav,
+  Tab,
+  TabList,
+  Tabs,
+  Typography,
+} from "@zibby/design-system";
 import { CatalogProvider } from "../../../state/store";
-import { NewTaskProvider } from "../../../features/tasks";
+import { NewTaskProvider, useNewTask } from "../../../features/tasks";
 import { ChatProvider } from "../../../features/chat";
+import { useApprovalsQuery, useApproveMutation } from "../../../features/approvals";
+import { HIGH_RISK_TYPES, formatWaited } from "../../../features/approvals/approval";
+import { useRunsQuery } from "../../../features/runs";
+import { useLimitsQuery } from "../../../features/limits";
+import { useSystemConfigQuery } from "../../../features/system";
+import { SECTIONS, type SectionId, sectionForPath } from "../../../state/config";
+
+/** The pre-ZB-08 approval surface — "Open" and the high-risk path both land
+ *  here until the `?approval=<id>` sheet ships. */
+const LEGACY_APPROVAL_SURFACE = "/settings?tab=gates" as Route;
 
 /**
- * F10 (O2/D2, docs/hud2chat/DECISIONS.md): the HUD chrome — `MainLayout`,
- * `Sidebar`, `RightRail`, `TopBar` — and the `isFullscreenRoute`/
- * `FULLSCREEN_ROUTES` route table that used to fork on it (`state/config.ts`)
- * are deleted. Every route in the app renders fullscreen now, so there is
- * nothing left to branch on — `AppShellInner` stays a separate function only
- * because it sits inside the `Suspense` boundary below.
+ * Adapts `next/link`'s `Link` (which types `href` as `Route | UrlObject`) to
+ * `SubNav`/`AppHeader`'s router-agnostic `linkComponent` contract (`href:
+ * string`) — the DS component itself never imports `next/link`. `href` is cast
+ * once here, at the one seam that needs it, rather than at every call site.
  */
-function AppShellInner({ children }: { children: ReactNode }) {
+function NavLink({
+  href,
+  ...rest
+}: { href: string } & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href">) {
+  return <Link href={href as Route} {...rest} />;
+}
+
+/**
+ * The section nav (`AppHeader`'s `nav` slot) — a mono `Tabs` bar that navigates
+ * instead of switching an internal panel (`AppHeader`'s own doc comment: "the
+ * app composes a `Tabs variant=mono`"). Each section's `href` is today's closest
+ * existing route (`SECTIONS`, ZB-01) until its own screen phase ships.
+ */
+function SectionNav({ active }: { active: SectionId }) {
+  const t = useTranslations("nav");
+  const router = useRouter();
   return (
-    <Container height="100dvh" overflow="hidden" width="100%">
+    <Tabs
+      onValueChange={(id) => {
+        const section = SECTIONS.find((s) => s.id === id);
+        if (section) router.push(section.href);
+      }}
+      value={active}
+      variant="mono"
+    >
+      <TabList>
+        {SECTIONS.map((section) => (
+          <Tab key={section.id} value={section.id}>
+            {t(section.id)}
+          </Tab>
+        ))}
+      </TabList>
+    </Tabs>
+  );
+}
+
+function SectionSubNav({ active }: { active: SectionId }) {
+  const t = useTranslations("nav");
+  const tShell = useTranslations("shell");
+  const pathname = usePathname();
+  const section = SECTIONS.find((s) => s.id === active) ?? SECTIONS[0];
+  const items = section.tabs.map((tab) => ({
+    href: tab.href,
+    label: t(`subtab.${section.id}.${tab.id}` as Parameters<typeof t>[0]),
+    active: tab.href === pathname,
+  }));
+  const { open } = useNewTask();
+  return (
+    <SubNav
+      actions={
+        <Button icon="plus" intent="ghost" onClick={() => open()} size="sm">
+          {tShell("newTask")}
+        </Button>
+      }
+      items={items}
+      linkComponent={NavLink}
+    />
+  );
+}
+
+/** `AppHeader`'s trailing operator/active-count/limits cluster — a custom hook
+ *  (not a component) so it can return plain nodes for `AppHeader`'s named slots
+ *  rather than one wrapping element. */
+function useHeaderTrailing() {
+  const t = useTranslations("shell");
+  const { data: config } = useSystemConfigQuery();
+  const { runs } = useRunsQuery();
+  const { data: limits } = useLimitsQuery();
+  const activeCount = runs.filter((r) => r.status === "running").length;
+
+  return {
+    operator: (
+      <Typography tracking="wider" type="labelSm" variant="secondary">
+        {config?.operatorName ?? t("operatorFallback")}
+      </Typography>
+    ),
+    activeCount: (
+      <Typography tracking="wider" type="labelSm" variant="secondary">
+        {activeCount} {t("active")}
+      </Typography>
+    ),
+    limits: (
+      <Row gap="150">
+        <LimitBar label="5H" max={100} value={limits?.rolling.usedPct ?? 0} />
+        <LimitBar label={t("week")} max={100} value={limits?.weekly.usedPct ?? 0} />
+      </Row>
+    ),
+  };
+}
+
+/** `Rail`'s "NEEDS YOU" — pending approvals as single-click `ApprovalCard`s
+ * (D-014/O-13: no `HoldButton`, even for high-risk — `highRisk` is a marker
+ * only). "Open" and the high-risk path both go to `LEGACY_APPROVAL_SURFACE`;
+ * quick-approve handles the common non-high-risk case in place. */
+function NeedsYouRail() {
+  const t = useTranslations("shell");
+  const router = useRouter();
+  const { data: approvals } = useApprovalsQuery();
+  const approve = useApproveMutation();
+  const pending = approvals ?? [];
+
+  return (
+    <Rail
+      count={pending.length}
+      empty={
+        <Typography type="note" variant="tertiary">
+          {t("needsYouEmpty")}
+        </Typography>
+      }
+      title={t("needsYou")}
+    >
+      {/* `Rail`'s `empty` fallback only renders when `children` is entirely
+       *  absent, not merely an empty array — an empty `.map()` result is
+       *  still "children present" to `Boolean([])`. */}
+      {pending.length === 0
+        ? undefined
+        : pending.map((a) => {
+            const highRisk = a.riskType != null && HIGH_RISK_TYPES.has(a.riskType);
+            return (
+              <ApprovalCard
+                agentName={a.skill}
+                density="row"
+                glyphSeed={a.skill}
+                highRisk={highRisk}
+                key={a.id}
+                meta={a.kind}
+                onApprove={() => approve.mutate({ params: { id: a.id }, body: {} })}
+                onOpen={() => router.push(LEGACY_APPROVAL_SURFACE)}
+                request={a.detail}
+                taskRef={a.runId}
+                waited={formatWaited(a.requestedAt)}
+              />
+            );
+          })}
+    </Rail>
+  );
+}
+
+function AppShellChrome({ children }: { children: ReactNode }) {
+  const t = useTranslations("common");
+  const tShell = useTranslations("shell");
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const active = sectionForPath(pathname, searchParams);
+  const trailing = useHeaderTrailing();
+
+  return (
+    <AppFrame
+      header={
+        <AppHeader
+          activeCount={trailing.activeCount}
+          limits={trailing.limits}
+          linkComponent={NavLink}
+          nav={<SectionNav active={active} />}
+          onSearchClick={() => {
+            /* ⌘K stub — CommandPalette lands in ZB-12. */
+          }}
+          operator={trailing.operator}
+          settingsHref="/system/settings/general"
+        />
+      }
+      rail={<NeedsYouRail />}
+      railToggleLabel={tShell("needsYouToggle")}
+      skipLinkLabel={t("skipToContent")}
+      subnav={<SectionSubNav active={active} />}
+    >
       {children}
-    </Container>
+    </AppFrame>
   );
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const t = useTranslations("common");
-
   return (
     <CatalogProvider>
-      {/* F10b (docs/plans/hud2chat-F10b-landmarks.md): the skip link is the FIRST
-          focusable element in the app, mounted once here rather than per-shell —
-          both page shells (`ImmersiveShell`, `ChatScreen`) render their `<main>`
-          landmark with the same `MAIN_CONTENT_ID`, so one skip link covers every
-          route. */}
-      <SkipLink label={t("skipToContent")} targetId={MAIN_CONTENT_ID} />
-      {/* NewTaskProvider stays the OUTER provider (the position the removed
-          VoiceProvider held), so the chat overlay can reach the task flow later.
-          Phase 108: the Fáze-11/Phase-24 app-wide "active project" scope is
-          gone — ZIBBY always shows every project's data at once, so there is
-          no dashboard-level scope left to mount here. */}
+      {/* NewTaskProvider stays the outer provider — see `SectionSubNav`'s
+          "+ NEW TASK" action and the retired HUD's own doc history. */}
       <NewTaskProvider>
         <ChatProvider>
           <Suspense>
-            <AppShellInner>{children}</AppShellInner>
+            <AppShellChrome>{children}</AppShellChrome>
           </Suspense>
         </ChatProvider>
       </NewTaskProvider>
