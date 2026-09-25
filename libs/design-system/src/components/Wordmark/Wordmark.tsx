@@ -18,7 +18,7 @@ export interface WordmarkProps {
  */
 export function Wordmark({ children = "ZIBBYCORP", ref }: WordmarkProps) {
   return (
-    <Typography data-testid={WordmarkTestId.Root} ref={ref} type="wordmark">
+    <Typography aria-label={children} data-testid={WordmarkTestId.Root} ref={ref} type="wordmark">
       {children}
     </Typography>
   );

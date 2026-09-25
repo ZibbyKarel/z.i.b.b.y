@@ -7,7 +7,15 @@ import type {
   DepartmentId,
   UpdatePipelineInput,
 } from "@zibby/contracts";
-import { Button, Container, Dialog, IconTile, Stack, Typography } from "@zibby/design-system";
+import {
+  Button,
+  Container,
+  Dialog,
+  GraphInlineInput,
+  IconTile,
+  Stack,
+  Typography,
+} from "@zibby/design-system";
 import type { Pipeline } from "../../../../domain";
 import { slug } from "../../../../utils/slug";
 import { AgentPalette } from "./AgentPalette";
@@ -168,21 +176,22 @@ export function PipelineDialog({
         {/* topbar: name + description */}
         <Stack align="center" direction="row" gap="150">
           <IconTile glyph="flow" size="md" />
-          <input
+          <GraphInlineInput
             aria-label={t("forms.pipeline.nameLabel")}
-            className="w-56 rounded-sm border border-border bg-[var(--color-background-deep)] px-2 py-1 font-mono text-sm font-bold text-foreground outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent"
             onChange={(e) => setName(e.target.value)}
             placeholder={t("forms.pipeline.namePlaceholder")}
-            spellCheck={false}
+            style={{ width: "224px" }}
             value={name}
+            variant="field"
+            weight="bold"
           />
-          <input
+          <GraphInlineInput
             aria-label={t("forms.pipeline.descLabel")}
-            className="min-w-0 flex-1 rounded-sm border border-border bg-[var(--color-background-deep)] px-2.5 py-1.5 text-[13px] text-foreground outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent"
             onChange={(e) => setDesc(e.target.value)}
             placeholder={t("forms.pipeline.descPlaceholder")}
-            spellCheck={false}
+            style={{ flex: 1 }}
             value={desc}
+            variant="field"
           />
           <Button
             aria-label={

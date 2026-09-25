@@ -2,7 +2,13 @@
 
 import { useRef, useState } from "react";
 import type { FocusEvent, KeyboardEvent, MouseEvent, PointerEvent, ReactNode } from "react";
-import { Stack, StatusDot, Typography } from "@zibby/design-system";
+import {
+  Pressable,
+  type PressableChipTone,
+  Stack,
+  StatusDot,
+  Typography,
+} from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useApprovalsQuery } from "../../approvals";
 import { useHealthQuery } from "../../health";
@@ -22,22 +28,20 @@ export enum StatusPillTestId {
   Waiting = "chat-status-pill-waiting",
 }
 
-/** Per-section trigger chrome (design: hovered/active segment tints in its hue). */
-const TRIGGER_CLASS: Record<FlyoutSection, string> = {
-  working:
-    "rounded-full px-2 py-0.5 transition-colors hover:bg-run/15 aria-expanded:bg-run/15 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-run",
-  waiting:
-    "rounded-full px-2 py-0.5 transition-colors hover:bg-warn/15 aria-expanded:bg-warn/15 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-warn",
-  error:
-    "rounded-full px-2 py-0.5 transition-colors hover:bg-bad/15 aria-expanded:bg-bad/15 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bad",
+/** Per-section trigger tone — `Pressable`'s `chipTone` owns the actual Tailwind
+ *  (design: hovered/active segment tints in its hue). */
+const TRIGGER_TONE: Record<FlyoutSection, PressableChipTone> = {
+  working: "run",
+  waiting: "warn",
+  error: "bad",
 };
 
 /**
  * The top-bar live status pill — department state counts, now also the flyout host
  * (Velín-D phase 3a): the working/error/waiting segments are hover+keyboard triggers
  * for the portalled StatusFlyoutPanel; the report segment stays a plain count
- * (operator: reports section omitted this phase). Raw <button> triggers are the
- * sanctioned bespoke-control pattern; Tailwind classes only, no inline style.
+ * (operator: reports section omitted this phase). The DS `Pressable` (`chipTone`)
+ * is the sanctioned bespoke-control pattern — apps/web owns none of its styling.
  */
 export function StatusPill() {
   const t = useTranslations("chat");
@@ -71,7 +75,7 @@ export function StatusPill() {
         ? "statusPill.degraded"
         : "statusPill.nominal";
   const showHealthDetail = !isConnecting && healthTone !== "ok";
-  const rootRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLElement>(null);
   const lastTriggerRef = useRef<HTMLButtonElement | null>(null);
   const suppressFocusOpenRef = useRef(false);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
@@ -142,7 +146,7 @@ export function StatusPill() {
   // something that is neither the PILL nor the PANEL). The portalled panel is a
   // React child of this div, so its focusout re-dispatches here too — focus moving
   // INTO the panel (the Enter/ArrowDown flow) must NOT arm the close grace.
-  const onRootBlur = (e: FocusEvent<HTMLDivElement>) => {
+  const onRootBlur = (e: FocusEvent<HTMLElement>) => {
     const next = e.relatedTarget instanceof Element ? e.relatedTarget : null;
     if (
       next != null &&
@@ -159,7 +163,7 @@ export function StatusPill() {
   // the onBlur guard hardens the same relatedTarget check here too — leaving
   // the root only actually arms the close grace when the pointer isn't headed
   // into the panel.
-  const onRootMouseLeave = (e: MouseEvent<HTMLDivElement>) => {
+  const onRootMouseLeave = (e: MouseEvent<HTMLElement>) => {
     const next = e.relatedTarget instanceof Element ? e.relatedTarget : null;
     if (next != null && next.closest(`#${STATUS_FLYOUT_PANEL_ID}`) != null) {
       return;
@@ -168,30 +172,36 @@ export function StatusPill() {
   };
 
   const trigger = (section: FlyoutSection, testId: string, label: ReactNode) => (
-    <button
+    <Pressable
       aria-controls={STATUS_FLYOUT_PANEL_ID}
       aria-expanded={flyout.activeSection === section}
       aria-haspopup="dialog"
-      className={TRIGGER_CLASS[section]}
+      chipTone={TRIGGER_TONE[section]}
       data-testid={testId}
       onFocus={onTriggerFocus(section)}
       onKeyDown={onTriggerKeyDown(section)}
       onPointerEnter={onTriggerPointerEnter(section)}
-      type="button"
     >
       {label}
-    </button>
+    </Pressable>
   );
 
   return (
-    <div
-      className="flex h-[38px] items-center rounded-full px-[14px] whitespace-nowrap"
+    <Stack
+      align="center"
       data-testid={StatusPillTestId.Root}
+      direction="row"
       id={STATUS_PILL_DOM_ID}
       onBlur={onRootBlur}
       onMouseEnter={flyout.cancelClose}
       onMouseLeave={onRootMouseLeave}
       ref={rootRef}
+      style={{
+        height: "38px",
+        borderRadius: "9999px",
+        paddingInline: "14px",
+        whiteSpace: "nowrap",
+      }}
     >
       <Stack align="center" direction="row" gap="100">
         <StatusDot pulse={healthPulse} tone={healthDotTone} />
@@ -264,6 +274,6 @@ export function StatusPill() {
           section={flyout.activeSection}
         />
       )}
-    </div>
+    </Stack>
   );
 }

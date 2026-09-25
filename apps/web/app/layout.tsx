@@ -2,7 +2,7 @@ import "./globals.css";
 
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { ThemeScript } from "@zibby/design-system";
+import { ThemeScript, htmlFontAttrs } from "@zibby/design-system";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { Providers } from "./providers";
@@ -39,7 +39,7 @@ export default async function RootLayout({ children }: PropsWithChildren) {
   return (
     <html
       suppressHydrationWarning
-      className={`${geist.variable} ${geistMono.variable}`}
+      {...htmlFontAttrs(geist.variable, geistMono.variable)}
       lang={locale}
     >
       <head>

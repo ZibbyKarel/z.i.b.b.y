@@ -3,7 +3,13 @@
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { Icon, ImmersiveShell, type ImmersiveShellProps } from "@zibby/design-system";
+import {
+  Container,
+  Icon,
+  ImmersiveShell,
+  type ImmersiveShellProps,
+  immersiveBackLinkAttrs,
+} from "@zibby/design-system";
 
 export enum ImmersivePageTestId {
   Back = "immersive-page-back",
@@ -30,14 +36,14 @@ export function ImmersivePage({ backHref = "/chat", ...rest }: ImmersivePageProp
       backSlot={
         <Link
           aria-label={t("back")}
-          className="flex size-full items-center justify-center text-foreground-dim outline-none transition-colors hover:text-accent focus-visible:text-accent"
           data-testid={ImmersivePageTestId.Back}
           href={backHref}
           title={t("back")}
+          {...immersiveBackLinkAttrs}
         >
-          <span className="inline-flex rotate-180">
+          <Container as="span" style={{ display: "inline-flex", transform: "rotate(180deg)" }}>
             <Icon name="arrow" size="sm" />
-          </span>
+          </Container>
         </Link>
       }
     />

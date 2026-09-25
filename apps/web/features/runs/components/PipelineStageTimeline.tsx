@@ -11,7 +11,6 @@ import {
   StatusDot,
   Tag,
   Typography,
-  cn,
   stateToneVar,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
@@ -444,14 +443,15 @@ export function PipelineStageTimeline({
                               status={displayStatus}
                             />
                             {hasLog && (
-                              <span
-                                className={cn(
-                                  "inline-flex transition-transform duration-150",
-                                  isOpen && "rotate-90",
-                                )}
+                              <Container
+                                style={{
+                                  display: "inline-flex",
+                                  transition: "transform 150ms",
+                                  transform: isOpen ? "rotate(90deg)" : undefined,
+                                }}
                               >
                                 <Icon name="chevron" size="xs" tone="faint" />
-                              </span>
+                              </Container>
                             )}
                           </Stack>
                         </Stack>

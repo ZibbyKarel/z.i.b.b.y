@@ -1,10 +1,7 @@
-/* eslint-disable react/forbid-dom-props -- A bespoke JARVIS-style HUD surface:
-   scanline/grid overlays and the ambient radial backdrop are decorative inline
-   styles with no DS prop equivalent — sanctioned escape hatch, file-level. */
 "use client";
 
 import type { ChatMessage as ChatMessageType, DepartmentId } from "@zibby/contracts";
-import { Container, MAIN_CONTENT_ID } from "@zibby/design-system";
+import { Container, MAIN_CONTENT_ID, Stack, hiddenBelowLgFlexAttrs } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -219,46 +216,79 @@ export function ChatScreen({
     detailTarget != null || selectedDepartment != null || selectedRun != null || coreOpen;
 
   return (
-    <main
+    <Container
       aria-label={t("title")}
-      className="relative flex h-full w-full flex-col overflow-hidden font-sans"
+      as="main"
       data-testid={ChatScreenTestId.Root}
+      height="100%"
       id={MAIN_CONTENT_ID}
+      overflow="hidden"
+      position="relative"
+      style={{ display: "flex", flexDirection: "column", fontFamily: "var(--font-sans)" }}
       tabIndex={-1}
+      width="100%"
     >
       {/* The immersive orb map's clean radial backdrop, centered at 50% 42% (the
           app-shell's shared --gradient-scene token is top-anchored for other pages
           — this page needs its own center to frame the orb map). Sits behind
           `DepartmentOrbMap`; shows through at any edge its DOM layers don't cover. */}
-      <div
+      <Container
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-0 bg-[image:radial-gradient(ellipse_130%_100%_at_50%_42%,#121a27_0%,var(--color-background)_62%)]"
+        bottom="0"
+        left="0"
+        pointerEvents="none"
+        position="absolute"
+        right="0"
+        style={{
+          backgroundImage:
+            "radial-gradient(ellipse 130% 100% at 50% 42%, #121a27 0%, var(--color-background) 62%)",
+        }}
+        top="0"
+        zIndex={0}
       />
       {/* Scanlines + grid overlays */}
-      <div
+      <Container
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-0"
+        bottom="0"
+        left="0"
+        pointerEvents="none"
+        position="absolute"
+        right="0"
         style={{
           backgroundImage:
             "repeating-linear-gradient(0deg,rgba(255,255,255,0.011) 0px,rgba(255,255,255,0.011) 1px,transparent 1px,transparent 5px)",
         }}
+        top="0"
+        zIndex={0}
       />
-      <div
+      <Container
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-0 opacity-[0.18]"
+        bottom="0"
+        left="0"
+        pointerEvents="none"
+        position="absolute"
+        right="0"
         style={{
           backgroundImage:
             "linear-gradient(var(--color-border) 1px,transparent 1px),linear-gradient(90deg,var(--color-border) 1px,transparent 1px)",
           backgroundSize: "60px 60px",
           maskImage: "radial-gradient(ellipse 80% 60% at 50% 0%,#000 10%,transparent 80%)",
+          opacity: 0.18,
         }}
+        top="0"
+        zIndex={0}
       />
 
       {/* ── Top bar ──────────────────────────────────────────────────────
           The Velín-D glass chrome: `ChatTopBar` owns its own five elements —
           status pill, search trigger, limits gauge, HUD switch and language
           switch. */}
-      <div className="relative z-20 shrink-0 px-[22px]">
+      <Container
+        position="relative"
+        shrink={false}
+        style={{ paddingLeft: "22px", paddingRight: "22px" }}
+        zIndex={20}
+      >
         <ChatTopBar
           briefingPending={generateBriefingMutation.isPending}
           onDetailSelect={handleDetailSelect}
@@ -268,7 +298,7 @@ export function ChatScreen({
           onSelectDepartment={setSelectedDepartmentId}
           searchRef={searchRef}
         />
-      </div>
+      </Container>
 
       {/* ── Top-right tool dock (Velín-D `VcDockGroup`) ───────────────────
           A glass island pinned to the top-right, floating above the orb map. The
@@ -303,22 +333,48 @@ export function ChatScreen({
           on this wrapper at all as of Phase 125 — it's `position: fixed` with
           its own z-40, escaping this stacking context entirely (see the mount
           comment further down). */}
-      <div className="relative flex min-h-0 flex-1 flex-col">
+      <Stack grow direction="col" style={{ position: "relative", minHeight: 0 }}>
         {/* `pointer-events-none` on this wrapper so the scene stays clickable
             everywhere outside its populated regions (the left panel re-enables
             pointer events on itself); orbs/core stay reachable through it. */}
-        <div className="pointer-events-none relative z-10 flex h-full w-full flex-col items-center justify-end">
+        <Stack
+          align="center"
+          direction="col"
+          justify="end"
+          style={{
+            position: "relative",
+            zIndex: 10,
+            height: "100%",
+            width: "100%",
+            pointerEvents: "none",
+          }}
+        >
           {/* ── Left panel: ALL tasks in scope (Phase 57) ──────────────────
               A `z`-raised fixed-width column pinned to the left, above the scene.
               Hidden below `lg` so it never crowds the map on a narrow viewport.
               Design `VcTaskRail`: left 24, top/bottom 22, a 296px-wide column —
               so 320 = 24 + 296. */}
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-20 hidden w-[320px] flex-col py-[22px] pl-[24px] lg:flex">
-            <div className="pointer-events-auto">
+          <Container
+            bottom="0"
+            left="0"
+            pointerEvents="none"
+            position="absolute"
+            style={{
+              display: "none",
+              width: "320px",
+              flexDirection: "column",
+              paddingBlock: "22px",
+              paddingLeft: "24px",
+            }}
+            top="0"
+            zIndex={20}
+            {...hiddenBelowLgFlexAttrs}
+          >
+            <Container pointerEvents="auto">
               <ChatTasksPanel onSelectRun={selectRun} selectedRunId={selectedRunId} />
-            </div>
-          </div>
-        </div>
+            </Container>
+          </Container>
+        </Stack>
 
         {/* ── Department detail modal (Phase 84, reworked Phase 125) ────────
             Was a docked-right, no-backdrop panel through Phase 99; now a true
@@ -358,7 +414,7 @@ export function ChatScreen({
             stopping={runActions.stopping}
           />
         )}
-      </div>
+      </Stack>
 
       {/* ── Bottom-center bar (Velín-D `VcBottomBar`) ─────────────────────
           The three floating composers — chat (default), run-a-task, add-a-note —
@@ -410,6 +466,6 @@ export function ChatScreen({
         }}
         open={coreOpen}
       />
-    </main>
+    </Container>
   );
 }

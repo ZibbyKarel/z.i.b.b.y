@@ -26,8 +26,16 @@ export const Overview: Story = {
         <span className="font-mono text-sm text-foreground-dim">removable, with size</span>
         <FilePreview name="data.csv" onRemove={() => {}} size={49_152} />
       </div>
+      <div className="flex flex-col gap-2">
+        <span className="font-mono text-sm text-foreground-dim">opens in a new tab</span>
+        <FilePreview href="/files/spec.pdf" name="spec.pdf" size={1_258_291} />
+      </div>
     </div>
   ),
 };
 
-export const Playground: Story = {};
+export const Playground: Story = {
+  argTypes: {
+    href: { control: "text" },
+  },
+};

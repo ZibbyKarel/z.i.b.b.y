@@ -25,6 +25,12 @@ export const Overview: Story = {
       <Pressable aria-label="Rozbalit" onClick={() => {}}>
         <Icon name="chevron" size="sm" />
       </Pressable>
+      <Pressable aria-expanded chipTone="run" onClick={() => {}}>
+        Pracuje · 3
+      </Pressable>
+      <Pressable aria-expanded chipTone="bad" onClick={() => {}}>
+        Chyba · 1
+      </Pressable>
     </div>
   ),
 };
@@ -33,6 +39,7 @@ export const Playground: Story = {
   argTypes: {
     disabled: { control: "boolean" },
     "aria-label": { control: "text" },
+    chipTone: { control: "select", options: [undefined, "run", "warn", "bad"] },
   },
   args: {
     "aria-label": "Změnit model",

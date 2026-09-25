@@ -1,6 +1,6 @@
 "use client";
 
-import { Divider, GlassSurface, Icon, Stack } from "@zibby/design-system";
+import { Divider, GlassSurface, Icon, Stack, iconDockLinkAttrs } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { NAV_ITEMS, SETTINGS_ITEM } from "../../../state/config";
@@ -57,13 +57,6 @@ const DOCK_IDS = [
   "memory",
 ] as const;
 
-// 38×38 hit target (spec §5.3) with the design's 12px button rounding, dim by
-// default, accent on hover/focus. Design `VdDockBtn`: `display: grid, placeItems:
-// center` (not flex) — a real layout-mode value the structural skeleton match
-// checks, not a cosmetic choice.
-const DOCK_LINK_CLASS =
-  "grid size-[38px] place-items-center rounded-[12px] text-foreground-dim outline-none transition-colors hover:text-accent focus-visible:text-accent";
-
 /**
  * Right-side glass tool dock — icon links into the HUD pages (Velin-D design).
  * Position-agnostic: the mounting `Container` (Task 6) places it at
@@ -101,11 +94,11 @@ export function ChatToolDock() {
           {items.map((item) => (
             <Link
               aria-label={t(item.id)}
-              className={DOCK_LINK_CLASS}
               data-testid={`chat-tool-dock-${item.id}`}
               href={item.href}
               key={item.id}
               title={t(item.id)}
+              {...iconDockLinkAttrs}
             >
               <Icon name={item.glyph} />
             </Link>
@@ -113,10 +106,10 @@ export function ChatToolDock() {
           <Divider />
           <Link
             aria-label={t(SETTINGS_ITEM.id)}
-            className={DOCK_LINK_CLASS}
             data-testid={ChatToolDockTestId.Settings}
             href={SETTINGS_ITEM.href}
             title={t(SETTINGS_ITEM.id)}
+            {...iconDockLinkAttrs}
           >
             <Icon name={SETTINGS_ITEM.glyph} />
           </Link>

@@ -445,11 +445,9 @@ function ClassificationTracePanel({ run }: { run: RunView }) {
  * "Vstup" accordion below it, so a long task never inflates the header. Shows the
  * full `taskText` as formatted markdown, then the attachments list. Phase 65: when the
  * run carries an `attachmentSetId`, each attachment opens the file (in a new tab) via
- * the serve route — older runs with no set id keep the plain read-only row (DS
- * `FilePreview` has no `onOpen`/`href` prop, and it's out of this phase's scope to add
- * one, so the open affordance is a plain anchor wrapping the preview, styled with DS
- * focus-ring/utility classes rather than a new DS primitive). Renders nothing when
- * there is neither text nor an attachment to show.
+ * the serve route, using DS `FilePreview`'s `href` prop (ZA-07) — older runs with no
+ * set id keep the plain read-only row. Renders nothing when there is neither text nor
+ * an attachment to show.
  */
 function RunInputSection({ run }: { run: RunView }) {
   const t = useTranslations("runs");
@@ -468,22 +466,15 @@ function RunInputSection({ run }: { run: RunView }) {
               <Typography mono uppercase size="2xs" tracking="wide" type="note" variant="tertiary">
                 {tAttach("sectionTitle")}
               </Typography>
-              {(run.attachments ?? []).map((a) =>
-                attachmentSetId ? (
-                  <a
-                    className="inline-block w-fit rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                    data-testid="attachment-open-link"
-                    href={attachmentOpenHref(attachmentSetId, a.name)}
-                    key={a.name}
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    <FilePreview mediaType={a.mediaType} name={a.name} size={a.size} />
-                  </a>
-                ) : (
-                  <FilePreview key={a.name} mediaType={a.mediaType} name={a.name} size={a.size} />
-                ),
-              )}
+              {(run.attachments ?? []).map((a) => (
+                <FilePreview
+                  href={attachmentSetId ? attachmentOpenHref(attachmentSetId, a.name) : undefined}
+                  key={a.name}
+                  mediaType={a.mediaType}
+                  name={a.name}
+                  size={a.size}
+                />
+              ))}
             </Stack>
           )}
         </Stack>

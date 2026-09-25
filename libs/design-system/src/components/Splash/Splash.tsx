@@ -19,6 +19,11 @@ export enum SplashTestId {
  *  component renders `null` from there on). */
 export type SplashPhase = "walk" | "reveal" | "settled" | "exit" | "done";
 
+/** The state actually stored — `"exit"` is never set directly; it is derived
+ *  each render from `"settled" && ready` (see `Splash`'s `displayPhase`), so
+ *  the ready→exit transition never needs a `setState` inside an effect. */
+type StoredPhase = Exclude<SplashPhase, "exit">;
+
 /** Glyph walks in, `working`. */
 export const SPLASH_WALK_MS = 900;
 /** Wordmark reveals, glyph settles to `thinking`. */
@@ -82,14 +87,15 @@ export function Splash({
   status = "Booting",
   ref,
 }: SplashProps) {
-  const reducedMotionRef = useRef<boolean | null>(null);
-  if (reducedMotionRef.current === null) reducedMotionRef.current = prefersReducedMotion();
-  const reducedMotion = reducedMotionRef.current;
+  // Lazy initializer — computed once, on mount, never re-read during render.
+  const [reducedMotion] = useState(prefersReducedMotion);
 
-  const [phase, setPhase] = useState<SplashPhase>(reducedMotion ? "settled" : "walk");
+  const [phase, setPhase] = useState<StoredPhase>(reducedMotion ? "settled" : "walk");
 
   const onDoneRef = useRef(onDone);
-  onDoneRef.current = onDone;
+  useEffect(() => {
+    onDoneRef.current = onDone;
+  });
 
   useEffect(() => {
     if (reducedMotion || phase !== "walk") return;
@@ -103,34 +109,33 @@ export function Splash({
     return () => clearTimeout(t);
   }, [reducedMotion, phase]);
 
-  // The choreography never cuts short: the exit only fires once settled
-  // (naturally, or immediately under reduced motion) AND `ready`.
-  useEffect(() => {
-    if (phase !== "settled" || !ready) return;
-    setPhase("exit");
-  }, [phase, ready]);
+  // The choreography never cuts short: the exit only starts once settled
+  // (naturally, or immediately under reduced motion) AND `ready` — computed
+  // during render instead of a stored state set from an effect.
+  const displayPhase: SplashPhase = phase === "settled" && ready ? "exit" : phase;
 
   useEffect(() => {
-    if (phase !== "exit") return;
+    if (displayPhase !== "exit") return;
     const ms = reducedMotion ? 0 : SPLASH_EXIT_MS;
     const t = setTimeout(() => {
       setPhase("done");
       onDoneRef.current?.();
     }, ms);
     return () => clearTimeout(t);
-  }, [reducedMotion, phase]);
+  }, [reducedMotion, displayPhase]);
 
-  if (phase === "done") return null;
+  if (displayPhase === "done") return null;
 
-  const exiting = phase === "exit";
-  const showWordmark = phase === "reveal" || phase === "settled" || phase === "exit";
+  const exiting = displayPhase === "exit";
+  const showWordmark =
+    displayPhase === "reveal" || displayPhase === "settled" || displayPhase === "exit";
 
   return (
     <div
       aria-busy={!exiting}
       aria-label={status}
       className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-background font-mono text-ink"
-      data-phase={phase}
+      data-phase={displayPhase}
       data-testid={SplashTestId.Root}
       ref={ref}
       role="status"
@@ -150,20 +155,19 @@ export function Splash({
         data-testid={SplashTestId.Panel}
       >
         <div data-testid={SplashTestId.Glyph}>
-          <AgentGlyph seed="Zibby" size={48} state={PHASE_GLYPH_STATE[phase]} />
+          <AgentGlyph seed="Zibby" size={48} state={PHASE_GLYPH_STATE[displayPhase]} />
         </div>
 
         <div
           className="flex flex-col items-center gap-2"
+          data-testid={SplashTestId.Wordmark}
           style={{
             opacity: showWordmark ? 1 : 0,
             transitionDuration: reducedMotion ? "0ms" : `${SPLASH_REVEAL_MS}ms`,
             transitionProperty: "opacity",
           }}
         >
-          <div data-testid={SplashTestId.Wordmark}>
-            <Wordmark>{wordmark}</Wordmark>
-          </div>
+          <Wordmark>{wordmark}</Wordmark>
           {tagline && (
             <Typography
               data-testid={SplashTestId.Tagline}
@@ -176,7 +180,12 @@ export function Splash({
           )}
         </div>
 
-        <Typography data-testid={SplashTestId.Status} tracking="wider" type="labelSm" variant="secondary">
+        <Typography
+          data-testid={SplashTestId.Status}
+          tracking="wider"
+          type="labelSm"
+          variant="secondary"
+        >
           {status}
         </Typography>
       </div>

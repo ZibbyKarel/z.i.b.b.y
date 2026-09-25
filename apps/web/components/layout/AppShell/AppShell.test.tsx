@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { MAIN_CONTENT_ID } from "@zibby/design-system";
+import { MAIN_CONTENT_ID, SkipLinkTestId } from "@zibby/design-system";
 import { renderWithProviders, screen } from "../../../test/render";
-import { SkipLinkTestId } from "../SkipLink/SkipLink";
 import { AppShell } from "./AppShell";
 
 // F10 (docs/hud2chat/DECISIONS.md, O2): the HUD chrome (`MainLayout`/`Sidebar`/

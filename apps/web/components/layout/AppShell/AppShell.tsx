@@ -1,12 +1,11 @@
 "use client";
 
 import { type ReactNode, Suspense } from "react";
-import { Container, MAIN_CONTENT_ID } from "@zibby/design-system";
+import { Container, MAIN_CONTENT_ID, SkipLink } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { CatalogProvider } from "../../../state/store";
 import { NewTaskProvider } from "../../../features/tasks";
 import { ChatProvider } from "../../../features/chat";
-import { SkipLink } from "../SkipLink/SkipLink";
 
 /**
  * F10 (O2/D2, docs/hud2chat/DECISIONS.md): the HUD chrome — `MainLayout`,

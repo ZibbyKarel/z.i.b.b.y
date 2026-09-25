@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import type { IconName } from "../../assets/icons";
+import { cn } from "../../utils/cn";
 import { formatFileSize } from "../../utils/formatFileSize";
+import { focusRing } from "../../utils/focus";
 import { Container } from "../Container/Container";
 import { Icon } from "../Icon/Icon";
 import { Stack } from "../Stack/Stack";
@@ -12,6 +14,7 @@ export enum FilePreviewTestId {
   Name = "file-preview-name",
   Size = "file-preview-size",
   Remove = "file-preview-remove",
+  Link = "file-preview-link",
 }
 
 const CODE_EXT = new Set([
@@ -52,11 +55,15 @@ export interface FilePreviewProps {
   onRemove?: () => void;
   /** Optional trailing status slot (e.g. an uploading spinner or error). */
   status?: ReactNode;
+  /** When set, the whole row opens this URL (a new tab) instead of being
+   *  plain read-only text — the run detail's "open this attachment" affordance. */
+  href?: string;
 }
 
-/** One attached-file row: type icon + name (truncated) + human size, optional remove/status. */
-export function FilePreview({ name, size, mediaType, onRemove, status }: FilePreviewProps) {
-  return (
+/** One attached-file row: type icon + name (truncated) + human size, optional remove/status.
+ *  With `href`, the row itself is the open-in-new-tab link (focus ring, `rel=noopener`). */
+export function FilePreview({ name, size, mediaType, onRemove, status, href }: FilePreviewProps) {
+  const row = (
     <Stack align="center" data-testid={FilePreviewTestId.Root} direction="row" gap="75">
       <Icon
         aria-hidden
@@ -77,7 +84,13 @@ export function FilePreview({ name, size, mediaType, onRemove, status }: FilePre
           {name}
         </Typography>
       </Container>
-      <Typography mono data-testid={FilePreviewTestId.Size} size="2xs" type="note" variant="tertiary">
+      <Typography
+        mono
+        data-testid={FilePreviewTestId.Size}
+        size="2xs"
+        type="note"
+        variant="tertiary"
+      >
         {formatFileSize(size)}
       </Typography>
       {status}
@@ -92,5 +105,19 @@ export function FilePreview({ name, size, mediaType, onRemove, status }: FilePre
         </button>
       ) : null}
     </Stack>
+  );
+
+  if (!href) return row;
+
+  return (
+    <a
+      className={cn("inline-block w-fit rounded-sm", focusRing)}
+      data-testid={FilePreviewTestId.Link}
+      href={href}
+      rel="noopener noreferrer"
+      target="_blank"
+    >
+      {row}
+    </a>
   );
 }

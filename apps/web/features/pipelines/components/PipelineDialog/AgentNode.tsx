@@ -3,7 +3,16 @@ import type { MouseEvent } from "react";
 import { useTranslations } from "next-intl";
 import type { Agent } from "@zibby/contracts";
 import type { IconName } from "@zibby/design-system";
-import { Container, Icon, IconTile, Pressable, Stack, Tag, Typography } from "@zibby/design-system";
+import {
+  Container,
+  GraphInlineInput,
+  Icon,
+  IconTile,
+  Pressable,
+  Stack,
+  Tag,
+  Typography,
+} from "@zibby/design-system";
 import { ModelBadge, ThinkBadge } from "../../../../components/RuntimeBadges/RuntimeBadges";
 import { ACCENT, BAD, SURFACE, SURFACE_HI, mix } from "./canvas-tokens";
 import { type GraphNode, NODE_H, NODE_W } from "./pipeline-graph";
@@ -255,12 +264,11 @@ export function AgentNode({
               {node.produces}
             </Typography>
           ) : (
-            <input
+            <GraphInlineInput
               aria-label={t("outputFileAria", { agent: node.agent })}
-              className="min-w-0 flex-1 border-none bg-transparent font-mono text-[10px] text-accent outline-none focus-visible:ring-2 focus-visible:ring-accent"
               onChange={(e) => onSetProduces(node.id, e.target.value)}
               onMouseDown={stop}
-              spellCheck={false}
+              style={{ flex: 1 }}
               value={node.produces}
             />
           )}

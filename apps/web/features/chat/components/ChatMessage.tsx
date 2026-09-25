@@ -2,10 +2,18 @@ import { useId } from "react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Button, Card, Container, Icon, Stack, StatusDot, Typography } from "@zibby/design-system";
+import {
+  Button,
+  Card,
+  Container,
+  Icon,
+  Markdown,
+  Stack,
+  StatusDot,
+  Typography,
+} from "@zibby/design-system";
 import type { DotTone } from "@zibby/design-system";
 import type { Briefing, ChatMessage as ChatMessageType, ChatToolEvent } from "@zibby/contracts";
-import { MarkdownProse } from "../../../components/MarkdownProse/MarkdownProse";
 import { useSystemConfigQuery } from "../../system";
 import { useAudioPlayback } from "../hooks/useAudioPlayback";
 import { useSynthesizeSpeechMutation } from "../mutations/useSynthesizeSpeechMutation";
@@ -179,7 +187,7 @@ export function ChatMessage({ role, text, toolEvents, briefing, streaming }: Cha
               // is a sibling, never part of the markdown string (so a half-typed `**`
               // can't break the parse).
               <>
-                <MarkdownProse text={text} />
+                <Markdown source={text} variant="prose" />
                 {streaming && (
                   <Typography
                     aria-label={t("streaming")}

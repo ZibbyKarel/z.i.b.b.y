@@ -159,7 +159,7 @@ describe("RunDetail — pipeline header", () => {
       ],
     });
     await userEvent.click(screen.getByText("Vstup"));
-    const links = screen.getAllByTestId("attachment-open-link");
+    const links = screen.getAllByTestId(FilePreviewTestId.Link);
     expect(links).toHaveLength(2);
     expect(links[0]).toHaveAttribute(
       "href",
@@ -179,7 +179,7 @@ describe("RunDetail — pipeline header", () => {
       attachments: [{ name: "spec.pdf", size: 100 }],
     });
     await userEvent.click(screen.getByText("Vstup"));
-    expect(screen.queryByTestId("attachment-open-link")).not.toBeInTheDocument();
+    expect(screen.queryByTestId(FilePreviewTestId.Link)).not.toBeInTheDocument();
     expect(screen.getByTestId(FilePreviewTestId.Name)).toBeInTheDocument();
   });
 

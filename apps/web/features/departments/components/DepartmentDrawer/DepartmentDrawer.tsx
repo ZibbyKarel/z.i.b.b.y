@@ -2,6 +2,7 @@
 
 import type { DepartmentState, DepartmentWithStatus } from "@zibby/contracts";
 import {
+  Button,
   Container,
   Icon,
   ORB_STATE,
@@ -481,15 +482,14 @@ export function DepartmentDrawer({ department, onClose }: DepartmentDrawerProps)
               </Stack>
             </Container>
 
-            <button
+            <Button
               aria-label={t("drawer.close")}
-              className="flex shrink-0 cursor-pointer p-1 text-foreground-faint hover:text-foreground"
               data-testid={DepartmentDrawerTestId.Close}
+              icon="x"
+              intent="ghost"
               onClick={requestClose}
-              type="button"
-            >
-              <Icon name="x" size="lg" />
-            </button>
+              size="sm"
+            />
           </Stack>
         </Container>
 
@@ -503,7 +503,7 @@ export function DepartmentDrawer({ department, onClose }: DepartmentDrawerProps)
           </TabList>
           {DEPARTMENT_DRAWER_TABS.map((tab) => (
             <TabPanel key={tab} value={tab}>
-              <div className="p-4">
+              <Container padding="200">
                 {tab === "roster" ? (
                   <RosterTab department={department} />
                 ) : tab === "aktivita" ? (
@@ -515,7 +515,7 @@ export function DepartmentDrawer({ department, onClose }: DepartmentDrawerProps)
                 ) : (
                   <ArtefaktyTab department={department} />
                 )}
-              </div>
+              </Container>
             </TabPanel>
           ))}
         </Tabs>

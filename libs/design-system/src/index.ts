@@ -77,7 +77,7 @@ export type { ContainerAs, ContainerProps } from "./components/Container";
 export { Grid, GridTestId } from "./components/Grid/Grid";
 export type { GridAlign, GridCols, GridProps } from "./components/Grid/Grid";
 export { Pressable, PressableTestId } from "./components/Pressable/Pressable";
-export type { PressableProps } from "./components/Pressable/Pressable";
+export type { PressableProps, PressableChipTone } from "./components/Pressable/Pressable";
 export { Spacer, SpacerTestId } from "./components/Spacer";
 export type { SpacerProps } from "./components/Spacer";
 export { Row, Stack, StackTestId } from "./components/Stack";
@@ -307,7 +307,25 @@ export type { DropZoneFieldProps } from "./components/form/DropZoneField/DropZon
 export { MarkdownEditor, MarkdownEditorTestId } from "./components/MarkdownEditor/MarkdownEditor";
 export type { MarkdownEditorProps } from "./components/MarkdownEditor/MarkdownEditor";
 export { Markdown, MarkdownTestId } from "./components/Markdown/Markdown";
-export type { MarkdownProps } from "./components/Markdown/Markdown";
+export type { MarkdownProps, MarkdownVariant } from "./components/Markdown/Markdown";
+
+export { GraphInlineInput, GraphInlineInputTestId } from "./components/Graph/GraphInlineInput";
+export type {
+  GraphInlineInputProps,
+  GraphInlineInputVariant,
+} from "./components/Graph/GraphInlineInput";
+export { GraphIconButton, GraphIconButtonTestId } from "./components/Graph/GraphIconButton";
+export type {
+  GraphIconButtonProps,
+  GraphIconButtonVariant,
+} from "./components/Graph/GraphIconButton";
+
+export {
+  iconDockLinkAttrs,
+  immersiveBackLinkAttrs,
+  hiddenBelowLgFlexAttrs,
+  htmlFontAttrs,
+} from "./utils/domAttrs";
 
 // ---------------------------------------------------------------------------
 // Dashboard chrome (router-agnostic, domain-neutral — stays in DS)
@@ -522,3 +540,37 @@ export {
   MAIN_CONTENT_ID,
 } from "./immersive/ImmersiveShell/ImmersiveShell";
 export type { ImmersiveShellProps } from "./immersive/ImmersiveShell/ImmersiveShell";
+
+// ---------------------------------------------------------------------------
+// Shell components + Splash (ZA-06)
+// ---------------------------------------------------------------------------
+export {
+  AppFrame,
+  AppFrameTestId,
+  APP_FRAME_MAIN_CONTENT_ID,
+} from "./components/AppFrame/AppFrame";
+export type { AppFrameProps } from "./components/AppFrame/AppFrame";
+
+export { AppHeader, AppHeaderTestId } from "./components/AppHeader/AppHeader";
+export type { AppHeaderProps } from "./components/AppHeader/AppHeader";
+
+export { Rail, RailTestId } from "./components/Rail/Rail";
+export type { RailProps } from "./components/Rail/Rail";
+
+export { ChatDock, ChatDockTestId } from "./components/ChatDock/ChatDock";
+export type { ChatDockProps } from "./components/ChatDock/ChatDock";
+
+export {
+  Splash,
+  SplashTestId,
+  SPLASH_EXIT_MS,
+  SPLASH_REVEAL_MS,
+  SPLASH_WALK_MS,
+} from "./components/Splash/Splash";
+export type { SplashPhase, SplashProps } from "./components/Splash/Splash";
+
+export { Wordmark, WordmarkTestId } from "./components/Wordmark/Wordmark";
+export type { WordmarkProps } from "./components/Wordmark/Wordmark";
+
+export { SkipLink, SkipLinkTestId } from "./components/SkipLink/SkipLink";
+export type { SkipLinkProps } from "./components/SkipLink/SkipLink";

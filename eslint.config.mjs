@@ -69,14 +69,49 @@ export default [
   },
   {
     // apps/web composes UI exclusively from the design system — it never sets
-    // inline styles on DOM elements. Genuinely dynamic / SVG values that have no
-    // DS prop use a per-line `// eslint-disable-next-line react/forbid-dom-props`
-    // escape. The design system itself is exempt (it owns the styling layer).
+    // inline styles or Tailwind classes on DOM elements (D-007). Genuinely dynamic
+    // / SVG values that have no DS prop use a per-line
+    // `// eslint-disable-next-line react/forbid-dom-props` escape for `style`.
+    // There is no per-line escape for `className` — the DS is exempt (it owns the
+    // styling layer) and stories are exempt.
     files: ["apps/web/**/*.{ts,tsx}"],
     ignores: ["apps/web/**/*.stories.{ts,tsx}"],
     plugins: { react: reactPlugin },
     rules: {
-      "react/forbid-dom-props": ["error", { forbid: ["style"] }],
+      "react/forbid-dom-props": ["error", { forbid: ["style", "className"] }],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "JSXAttribute[name.name='className']",
+          message: "apps/web composes from DS — no className (D-007)",
+        },
+      ],
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            { name: "clsx", message: "apps/web composes from DS — no clsx (D-007)" },
+            {
+              name: "tailwind-merge",
+              message: "apps/web composes from DS — no tailwind-merge (D-007)",
+            },
+            {
+              name: "class-variance-authority",
+              message: "apps/web composes from DS — no class-variance-authority (D-007)",
+            },
+          ],
+          patterns: [
+            {
+              // Every other *.css import is an ad hoc app stylesheet — banned.
+              // `./globals.css` (the app's one entry point, itself just
+              // re-exporting the DS global stylesheet) is the sanctioned
+              // exception, imported once in `app/layout.tsx`.
+              group: ["*.css", "!./globals.css", "!@zibby/design-system/*.css"],
+              message: "apps/web composes from DS — no ad hoc stylesheets (D-007)",
+            },
+          ],
+        },
+      ],
     },
   },
 ];

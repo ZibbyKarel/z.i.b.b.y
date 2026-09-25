@@ -83,6 +83,20 @@ const themeVars = {
   "--color-neutral-muted": "var(--color-surface)",
 } as CSSProperties;
 
+export type MarkdownVariant = "default" | "prose";
+
+/** Prose variant: open links in a new tab and never leak the referrer — the
+ *  chat transcript / entity-detail reading treatment (`MarkdownProse`'s old
+ *  behaviour, ported in here as of ZA-07). */
+const proseComponents: MarkdownRendererComponents = {
+  ...testIdComponents,
+  a: ({ href, children }) => (
+    <a href={href} rel="noreferrer" target="_blank">
+      {children}
+    </a>
+  ),
+};
+
 export interface MarkdownProps {
   /** Markdown source to render (the note/document body, no frontmatter). */
   source: string;
@@ -93,6 +107,14 @@ export interface MarkdownProps {
    * would otherwise vanish into an empty element.
    */
   escapeHtml?: boolean;
+  /**
+   * `"default"` (the GitHub-primer dark theme, entity/detail bodies) or
+   * `"prose"` — reading typography scoped to `.md-prose` (`theme/globals.css`),
+   * driven entirely by design tokens rather than a fixed dark palette. Used by
+   * the chat transcript, which renders over varying backgrounds. Links open in
+   * a new tab under `"prose"`.
+   */
+  variant?: MarkdownVariant;
 }
 
 /**
@@ -102,7 +124,19 @@ export interface MarkdownProps {
  * {@link MarkdownEditor}), so it adds no new dependency and no hand-rolled parser.
  * Frontmatter is owned elsewhere and never rendered here.
  */
-export function Markdown({ source, escapeHtml = false }: MarkdownProps) {
+export function Markdown({ source, escapeHtml = false, variant = "default" }: MarkdownProps) {
+  if (variant === "prose") {
+    return (
+      <div className="md-prose" data-testid={MarkdownTestId.Root}>
+        <MDEditor.Markdown
+          components={proseComponents}
+          remarkPlugins={escapeHtml ? ESCAPE_HTML_PLUGINS : undefined}
+          source={source}
+          style={{ background: "transparent", color: "inherit", fontFamily: "inherit" }}
+        />
+      </div>
+    );
+  }
   return (
     <div data-color-mode="dark" data-testid={MarkdownTestId.Root} style={themeVars}>
       <MDEditor.Markdown
