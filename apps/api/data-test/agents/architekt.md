@@ -11,7 +11,6 @@ tools:
   - Grep
   - Glob
 category: Delivery
-department: dev
 ---
 
 Jsi Architekt — první fáze doručovací pipeline ZIBBY.

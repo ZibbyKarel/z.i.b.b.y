@@ -229,11 +229,46 @@ reachable from `stageRuns`).
 ### Phase: agent
 
 1. Loads the handoff file (`consumes`) from the previous phase (if any).
-2. Builds the prompt = pipeline prompt + phase instructions + the handoff file's content.
-3. Calls `RunnerCore.spawn()` for a `pipeline-stage` kind.
-4. Waits for it to finish (polling the sidecar status).
-5. Reads the output from the `produces` file (or the log's last N lines).
-6. Evaluates the result (success / failure).
+2. **Leases an employee** for `phase.agent` from the pipeline's own
+   `department` (see "Wiring: pipeline stage dispatch" below) — before the
+   sandbox is created.
+3. Builds the prompt = pipeline prompt + phase instructions + the handoff file's content.
+4. Calls `RunnerCore.spawn()` for a `pipeline-stage` kind.
+5. Waits for it to finish (polling the sidecar status).
+6. Reads the output from the `produces` file (or the log's last N lines).
+7. Evaluates the result (success / failure).
+8. Releases the lease, on every terminal path.
+
+### Wiring: pipeline stage dispatch (D-015, ZE-01)
+
+An `agent`-type phase's dispatch **is** leasing an employee — a hired
+instance of `phase.agent` (the position), leased from the pipeline's own
+`department` via `EmployeeAllocator.acquire(pipeline.department, phase.agent,
+{ runId })`. Full model, the allocator's FIFO/park semantics, and D-017's
+single-agent-task lease ladder live in `docs/api/employees.md`; this section
+covers only what changes in the pipeline runner itself:
+
+- **Parking.** When the department owns **no** employee of that position at
+  all (`NoEmployeeError`), the run **parks**: `status: "parked"`,
+  `parkedReason: "no-employee"` — a new member of `ParkedReasonSchema`
+  alongside `approval` / `retries` / `limit` / `output` — with
+  `currentStage` set to the phase that couldn't dispatch. This is a new,
+  durable-across-restart parked state distinct from the loop-exhausted /
+  PR-gate parks already documented under "Parking" below.
+- **Queued, not parked.** When every matching employee is busy but at least
+  one exists, `acquire` blocks FIFO instead of throwing — `run.status` is
+  untouched (stays `running`) while `currentStage` reflects the phase
+  waiting on a free lease; no `stageRuns` entry is appended until the lease
+  lands.
+- **Release discipline.** The lease is released in a `finally` around
+  `runStage`, covering every terminal outcome (`done`, `error`,
+  `interrupted`, `paused-limit`) — it never outlives the dispatch it was
+  acquired for.
+- A `verify`-type phase spawns no agent and never leases (`phase.agent` is
+  absent for it).
+- The leased employee's `employeeId`/`employeeName` are recorded onto the
+  stage's `AgentRun.extra` when present — see
+  [agents-runs.md](./agents-runs.md) → "Employee attribution".
 
 ### Phase: verify
 
@@ -368,3 +403,8 @@ A parked pipeline run:
 
 Same as for agent runs: `PipelineRunnerService` checks running stage runs on
 init and reconciles orphaned `running` → `interrupted`.
+
+A restart also drops every in-memory `EmployeeAllocator` lease (the allocator
+holds no persisted state) — a stage found `running` with a dead PID
+reconciles to `interrupted` same as always, and a subsequent resume/retry
+re-acquires its lease fresh rather than assuming one is still held.

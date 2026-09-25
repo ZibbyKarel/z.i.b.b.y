@@ -15,7 +15,6 @@ tools:
   - Grep
 category: Developer Experience
 gates: []
-department: rel
 ---
 
 ## Prompt Defense Baseline

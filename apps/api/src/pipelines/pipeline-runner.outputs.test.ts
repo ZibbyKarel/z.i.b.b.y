@@ -97,6 +97,10 @@ async function makeService(
     // ProjectLocalService double (Phase 77): unused here since `projects.get`
     // always resolves null, so the git-worktree/clone-if-missing branch never runs.
     {} as never,
+    // EmployeeAllocator double (D-015): this fixture pipeline carries no
+    // `department`, so `drive()` never calls `acquire` — present only to keep
+    // the positional constructor aligned.
+    { acquire: vi.fn(), release: vi.fn(), isBusy: vi.fn(), busy: vi.fn(() => new Map()) } as never,
     moduleRef as never,
   );
   (service as unknown as { core: { init: () => void; shutdown: () => void } }).core = {

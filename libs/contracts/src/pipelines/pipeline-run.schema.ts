@@ -61,6 +61,14 @@ export const StageRunSchema = z.object({
    * doby před touhle featurou a na synthetic escalation markerech.
    */
   costUsd: z.number().optional(),
+  /**
+   * D-015: the employee (hired instance of `phase.agent`) the `EmployeeAllocator`
+   * leased for this dispatch, and its display name at dispatch time. Absent on a
+   * `verify` phase (which spawns no agent, so never acquires a lease) and on any
+   * stage run recorded before this field existed.
+   */
+  employeeId: z.string().optional(),
+  employeeName: z.string().optional(),
 });
 export type StageRun = z.infer<typeof StageRunSchema>;
 
@@ -77,8 +85,12 @@ export type StageRun = z.infer<typeof StageRunSchema>;
  *   chain already finished green — there is no live child, so (unlike `approval`) it
  *   is DURABLE: it survives a restart and resumes by re-entering output processing
  *   when the operator approves. `pendingOutput` records where to resume.
+ * - `no-employee` (D-015): the next phase's department owns no employee of the
+ *   phase's position (agent) — no live child, durable. There is no automatic
+ *   resume; the operator hires the missing position (or reassigns one) and
+ *   resumes the run, re-entering `drive()` at the same stage.
  */
-export const ParkedReasonSchema = z.enum(["approval", "retries", "limit", "output"]);
+export const ParkedReasonSchema = z.enum(["approval", "retries", "limit", "output", "no-employee"]);
 export type ParkedReason = z.infer<typeof ParkedReasonSchema>;
 
 /**

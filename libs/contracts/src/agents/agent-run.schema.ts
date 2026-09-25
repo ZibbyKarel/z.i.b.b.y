@@ -87,6 +87,15 @@ export const AgentRunSchema = z.object({
   startedAt: IsoDateTimeSchema,
   pid: z.number().int(),
   logFile: z.string(),
+  /**
+   * D-015: the employee (hired instance of `agentId`) the `EmployeeAllocator`
+   * leased for this run, and its display name at spawn time. Absent when the run
+   * was dispatched unleased (no department context and no employee of this
+   * position exists anywhere — D-017, "a described task is always executed") and
+   * on any run recorded before this field existed.
+   */
+  employeeId: z.string().optional(),
+  employeeName: z.string().optional(),
 });
 export type AgentRun = z.infer<typeof AgentRunSchema>;
 

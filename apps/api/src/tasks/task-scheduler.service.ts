@@ -15,6 +15,7 @@ import type {
   CreateTaskInput,
   CreateTaskResult,
   DepartmentId,
+  Employee,
   GoalRun,
   Pipeline,
   PipelineRun,
@@ -33,6 +34,9 @@ import { AgentsStorageService } from "../agents/agents.storage.service";
 import { AgentRunnerService, type RunAttachments } from "../agents/agent-runner.service";
 import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service";
 import { type BudgetOverMetrics, BudgetService } from "../budget/budget.service";
+import { EmployeeAllocator, type EmployeeLease } from "../employees/employee-allocator";
+import { NoEmployeeError } from "../employees/employees.errors";
+import { EmployeesStorageService } from "../employees/employees.storage.service";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
 import { WatcherHealthRegistry } from "../health/watcher-health.registry";
 import { LimitsService } from "../limits/limits.service";
@@ -142,6 +146,15 @@ export class TaskSchedulerService
    * by design: the approval record is the durable source of truth across restart.
    */
   private readonly budgetApproved = new Set<string>();
+  /**
+   * D-017: the employee leased to each in-flight single-agent run, keyed by its
+   * `runId` — set right after a successful `agentRunner.start()`, released by the
+   * `onRunStatus` subscriber below once the run reaches a terminal status. Absent
+   * for a run that never leased (the department's position has no employee
+   * anywhere — D-017's unleased fallback — or the orchestrator, which is never a
+   * position an employee holds).
+   */
+  private readonly employeeLeases = new Map<string, EmployeeLease>();
 
   constructor(
     private readonly storage: ScheduledTasksStorageService,
@@ -151,6 +164,9 @@ export class TaskSchedulerService
     private readonly pipelinesStore: PipelinesStorageService,
     /** F2b — for {@link resolveDepartmentTargetOrNull}'s owned-roster count (pipelines + agents). */
     private readonly agentsStore: AgentsStorageService,
+    /** D-017: the single-agent dispatch lease/release path (see {@link employeeLeases}). */
+    private readonly employeeAllocator: EmployeeAllocator,
+    private readonly employeesStore: EmployeesStorageService,
     private readonly goalRunner: GoalRunnerService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
@@ -189,7 +205,17 @@ export class TaskSchedulerService
     this.unsubscribes.push(
       this.agentRunner.onRunStatus((run) => {
         if (run.taskId) void this.writeAgentOutcome(run.taskId, run);
-        if (TERMINAL_AGENT.has(run.status)) void this.drainQueues();
+        if (TERMINAL_AGENT.has(run.status)) {
+          void this.drainQueues();
+          // D-017: release this run's leased employee (if any) back to the
+          // allocator's FIFO queue — the next queued acquire() for the same
+          // department+position wakes.
+          const lease = this.employeeLeases.get(run.runId);
+          if (lease) {
+            this.employeeAllocator.release(lease);
+            this.employeeLeases.delete(run.runId);
+          }
+        }
       }),
       this.pipelineRunner.onRunStatus((run) => {
         if (run.taskId) void this.writePipelineOutcome(run.taskId, run);
@@ -427,12 +453,20 @@ export class TaskSchedulerService
      */
     output?: TaskOutput,
   ): Promise<DepartmentResolution | null> {
-    const [allPipelines, allAgents] = await Promise.all([
+    const [allPipelines, allAgents, employees] = await Promise.all([
       this.pipelinesStore.list().catch((): Pipeline[] => []),
       this.agentsStore.listActive().catch((): Agent[] => []),
+      this.employeesStore.list().catch((): Employee[] => []),
     ]);
     const ownedPipelines = allPipelines.filter((p) => p.department === target.id);
-    const ownedAgents = allAgents.filter((a) => a.department === target.id);
+    // D-015: an agent (a position) is "owned" by this department IFF it has at
+    // least one active employee here — `Agent.department` is no longer read.
+    const ownedPositionIds = new Set(
+      employees
+        .filter((e) => e.status === "active" && e.department === target.id)
+        .map((e) => e.agentId),
+    );
+    const ownedAgents = allAgents.filter((a) => ownedPositionIds.has(a.id));
     const totalOwned = ownedPipelines.length + ownedAgents.length;
     if (totalOwned === 0) return null;
     // Same rule, same reason as the classifier's own filter: a task that must end in a
@@ -1364,18 +1398,50 @@ export class TaskSchedulerService
       };
     }
     if (target.kind === "agent") {
-      const run = await this.agentRunner.start(
-        target.id,
-        text,
-        projectId ?? "",
-        paths,
-        title,
-        taskId,
-        matchedTerms,
-        undefined,
-        runAttachments,
-        toolGrants,
-      );
+      // D-017: acquire BEFORE spawning — never inside `AgentRunnerService` (a
+      // pipeline stage also spawns an agent run, and leases per-stage itself; a
+      // second acquire in the runner would double-lease). See
+      // `acquireEmployeeForDispatch` for the department-known/any-department/
+      // unleased ladder.
+      const lease = await this.acquireEmployeeForDispatch(target.id, classification?.department);
+      let run: AgentRun;
+      try {
+        // A conditional call (not a trailing `lease ? {...} : undefined` arg) so an
+        // unleased dispatch's call arity is byte-for-byte identical to before D-017
+        // — existing `toHaveBeenCalledWith` fixtures assert an exact argument list.
+        run = lease
+          ? await this.agentRunner.start(
+              target.id,
+              text,
+              projectId ?? "",
+              paths,
+              title,
+              taskId,
+              matchedTerms,
+              undefined,
+              runAttachments,
+              toolGrants,
+              { employeeId: lease.employeeId, employeeName: lease.employeeName },
+            )
+          : await this.agentRunner.start(
+              target.id,
+              text,
+              projectId ?? "",
+              paths,
+              title,
+              taskId,
+              matchedTerms,
+              undefined,
+              runAttachments,
+              toolGrants,
+            );
+      } catch (error) {
+        // The spawn itself failed (e.g. preflight) — the run never entered the
+        // registry, so it will never reach the terminal `onRunStatus` release path.
+        if (lease) this.employeeAllocator.release(lease);
+        throw error;
+      }
+      if (lease) this.employeeLeases.set(run.runId, lease);
       return { runRef: run.runId, target, classification };
     }
     if (target.kind === "pipeline") {
@@ -1433,6 +1499,36 @@ export class TaskSchedulerService
       runAttachments,
     );
     return { runRef: run.runId, target, classification };
+  }
+
+  /**
+   * D-017: the single-agent-run lease ladder. A department already known (the
+   * task's own classification traced a department verdict) leases from THAT
+   * department first; failing that — or when no department is known at all —
+   * falls back to any department that currently employs the position (picking a
+   * currently-FREE one when one exists, else the first, which then queues FIFO
+   * behind whoever holds it). Returns `undefined` only when the position has no
+   * employee anywhere — the D-017 unleashed fallback ("a described task is always
+   * executed"), never a park (that's pipelines only).
+   */
+  private async acquireEmployeeForDispatch(
+    agentId: string,
+    department: DepartmentId | undefined,
+  ): Promise<EmployeeLease | undefined> {
+    if (department) {
+      try {
+        return await this.employeeAllocator.acquire(department, agentId);
+      } catch (error) {
+        if (!(error instanceof NoEmployeeError)) throw error;
+        // Fall through — the task's own department has no one in this position;
+        // try any department that does.
+      }
+    }
+    const candidates = await this.employeesStore.listActiveByPositionAnyDepartment(agentId);
+    const busy = this.employeeAllocator.busy();
+    const pick = candidates.find((e) => !busy.has(e.id)) ?? candidates[0];
+    if (!pick) return undefined;
+    return this.employeeAllocator.acquire(pick.department, agentId);
   }
 
   /** Persist an immediately-dispatched task + its activity (the create path). */

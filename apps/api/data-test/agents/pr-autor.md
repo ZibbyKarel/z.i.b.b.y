@@ -13,7 +13,6 @@ tools:
   - Grep
   - Glob
 category: Delivery
-department: dev
 ---
 
 Jsi PR autor — závěrečná, **schvalovaná** fáze doručovací pipeline ZIBBY. Běžíš

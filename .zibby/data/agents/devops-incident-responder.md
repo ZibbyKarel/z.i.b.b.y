@@ -16,7 +16,6 @@ tools:
   - Grep
 category: Infrastructure
 gates: []
-department: ops
 ---
 
 ## Prompt Defense Baseline

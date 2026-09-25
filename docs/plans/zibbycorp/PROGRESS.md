@@ -45,16 +45,16 @@ Legend: ⬜ todo · 🟦 in progress · ✅ landed (sha) · ⛔ parked (reason)
 
 | Phase | Title | Status | Commit |
 |---|---|---|---|
-| ZE-01 | Employees, name pool, allocator, migration | ⬜ | |
+| ZE-01 | Employees, name pool, allocator, migration | 🟦 subagent running | |
 
 ### Part A
 
 | Phase | Title | Status | Commit |
 |---|---|---|---|
-| ZA-01 | Tokens, type, motion, theme | ⬜ | |
-| ZA-02 | Primitive restyle | ⬜ | |
-| ZA-03 | AgentGlyph, StatePill, CellStrip | ⬜ | |
-| ZA-04 | Data and layout components | ⬜ | |
+| ZA-01 | Tokens, type, motion, theme | ✅ | 4216a05a |
+| ZA-02 | Primitive restyle | ✅ | 6ff2ba9f |
+| ZA-03 | AgentGlyph, StatePill, CellStrip | ✅ | 4216a05a |
+| ZA-04 | Data and layout components | 🟦 subagent running | |
 | ZA-05 | Overlay and nav components | ⬜ | |
 | ZA-06 | Shell components + Splash | ⬜ | |
 | ZA-07 | Lint wall + 20 className files | ⬜ | |
@@ -137,3 +137,7 @@ When a phase applies a default from `OPEN-QUESTIONS.md`, append one line here:
   `eslint apps libs tools --quiet` 0, `check:names` clean, self-knowledge no drift. e2e not re-run.
 - Historical docs (`docs/superpowers`, `docs/audit`, `docs/ns2`, `docs/hud2chat`, `docs/reviews`,
   `docs/research`) keep the old vocabulary on purpose — they are records.
+
+- 2026-09-24 ~21:00 → 2026-09-25 00:00: both subagents (ZE-01, ZA-01+03) died on the account
+  session rate limit (429, resets midnight Prague) with partial edits in the tree. Resumed
+  via SendMessage at 01:47 from their transcripts; partial edits kept, not reverted.

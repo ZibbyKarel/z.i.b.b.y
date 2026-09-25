@@ -5,6 +5,7 @@ import type { AgentRun, PipelineRun } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ActivityInput } from "../activity/activity-log.service";
 import type { BudgetCheck } from "../budget/budget.service";
+import { NoEmployeeError } from "../employees/employees.errors";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { AttachmentStorageService } from "./attachment-storage.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
@@ -72,6 +73,17 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
   let pipelinesStore: { list: ReturnType<typeof vi.fn> };
   /** F2b — {@link TaskSchedulerService}'s owned-agents lookup for department resolution. */
   let agentsStore: { listActive: ReturnType<typeof vi.fn> };
+  /**
+   * D-015/D-017 — the employees store double: `resolveDepartmentTargetOrNull`'s
+   * OWNERSHIP read (`list`) plus `acquireEmployeeForDispatch`'s any-department
+   * fallback (`listActiveByPositionAnyDepartment`). Empty by default (no employee
+   * anywhere → every existing dispatch stays unleased); F2b tests that need an
+   * owned agent set `.list` to a matching employee fixture.
+   */
+  let employeesStore: {
+    list: ReturnType<typeof vi.fn>;
+    listActiveByPositionAnyDepartment: ReturnType<typeof vi.fn>;
+  };
   let goalRunner: {
     start: ReturnType<typeof vi.fn>;
     onRunStatus: ReturnType<typeof vi.fn>;
@@ -144,6 +156,10 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     };
     pipelinesStore = { list: vi.fn(async () => []) };
     agentsStore = { listActive: vi.fn(async () => []) };
+    employeesStore = {
+      list: vi.fn(async () => []),
+      listActiveByPositionAnyDepartment: vi.fn(async () => []),
+    };
     goalRunner = {
       start: vi.fn(async () => ({ goalRunId: "goal_1" })),
       onRunStatus: vi.fn(() => () => {}),
@@ -205,6 +221,21 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       pipelineRunner as never,
       pipelinesStore as never,
       agentsStore as never,
+      // D-017: no fixture in this file gives a task a department context AND an
+      // agent-position lease scenario worth asserting on the allocator itself
+      // (that lives in employee-allocator.test.ts / employees-dispatch tests) —
+      // acquire always misses (falls through to the any-department ladder,
+      // itself empty by default) so every existing call keeps its unleased
+      // (pre-D-017) `agentRunner.start` argument list.
+      {
+        acquire: vi.fn(async () => {
+          throw new NoEmployeeError("dev", "unused");
+        }),
+        release: vi.fn(),
+        isBusy: vi.fn(() => false),
+        busy: vi.fn(() => new Map()),
+      } as never,
+      employeesStore as never,
       goalRunner as never,
       fakeLogger as never,
       fakeTrace as never,
@@ -419,6 +450,21 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       pipelineRunner as never,
       pipelinesStore as never,
       agentsStore as never,
+      // D-017: no fixture in this file gives a task a department context AND an
+      // agent-position lease scenario worth asserting on the allocator itself
+      // (that lives in employee-allocator.test.ts / employees-dispatch tests) —
+      // acquire always misses (falls through to the any-department ladder,
+      // itself empty by default) so every existing call keeps its unleased
+      // (pre-D-017) `agentRunner.start` argument list.
+      {
+        acquire: vi.fn(async () => {
+          throw new NoEmployeeError("dev", "unused");
+        }),
+        release: vi.fn(),
+        isBusy: vi.fn(() => false),
+        busy: vi.fn(() => new Map()),
+      } as never,
+      employeesStore as never,
       goalRunner as never,
       fakeLogger as never,
       fakeTrace as never,
@@ -1041,10 +1087,26 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     function agentDef(id: string, name: string) {
       return { id, name, department: "dev" };
     }
+    /**
+     * D-015: an active employee holding `agentId` in "dev" — `resolveDepartmentTargetOrNull`'s
+     * ownership read is now employees, not `Agent.department` (kept on `agentDef`
+     * above only as an unused legacy field on the fixture shape).
+     */
+    function employeeDef(agentId: string) {
+      return {
+        id: `employee_${agentId}`,
+        name: agentId,
+        agentId,
+        department: "dev" as const,
+        status: "active" as const,
+        hiredAt: "2026-01-01T00:00:00.000Z",
+      };
+    }
 
     it("1 owned agent, 0 owned pipelines → direct dispatch to the agent, the classifier is NEVER called", async () => {
       pipelinesStore.list.mockResolvedValue([]);
       agentsStore.listActive.mockResolvedValue([agentDef("coder", "Coder")]);
+      employeesStore.list.mockResolvedValue([employeeDef("coder")]);
       const result = await service.createTask({
         text: "fix the bug",
         title: "Fix",
@@ -1071,6 +1133,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     it("1 owned pipeline + 1 owned agent (2 units) → classifyWithinDepartment is invoked, restricted to the owned catalog", async () => {
       pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery")]);
       agentsStore.listActive.mockResolvedValue([agentDef("coder", "Coder")]);
+      employeesStore.list.mockResolvedValue([employeeDef("coder")]);
       classifier.classifyWithinDepartment.mockResolvedValue({
         target: { kind: "agent", id: "coder", name: "Coder" },
         confidence: 0.9,
@@ -1128,6 +1191,17 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     }
     function agentDef(id: string, name: string) {
       return { id, name, department: "dev" };
+    }
+    /** D-015: an active employee holding `agentId` in "dev" — see the F2b describe's twin. */
+    function employeeDef(agentId: string) {
+      return {
+        id: `employee_${agentId}`,
+        name: agentId,
+        agentId,
+        department: "dev" as const,
+        status: "active" as const,
+        hiredAt: "2026-01-01T00:00:00.000Z",
+      };
     }
 
     it("resolves to the sole PR-capable pipeline WITHOUT classifying, even though the roster has 2 units", async () => {
@@ -1300,6 +1374,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     it("without a PR sink the agent is still reachable — the constraint is what changes the outcome", async () => {
       pipelinesStore.list.mockResolvedValue([]);
       agentsStore.listActive.mockResolvedValue([agentDef("documentation-engineer", "Docs")]);
+      employeesStore.list.mockResolvedValue([employeeDef("documentation-engineer")]);
       const result = await service.createTask({
         text: "write the API guide",
         title: "Docs",
@@ -1566,6 +1641,24 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
       pipelineRunner as never,
       pipelinesStore as never,
       agentsStore as never,
+      // D-017: no fixture in this file gives a task a department context AND an
+      // agent-position lease scenario worth asserting on the allocator itself
+      // (that lives in employee-allocator.test.ts / employees-dispatch tests) —
+      // acquire always misses (falls through to the any-department ladder,
+      // itself empty by default) so every existing call keeps its unleased
+      // (pre-D-017) `agentRunner.start` argument list.
+      {
+        acquire: vi.fn(async () => {
+          throw new NoEmployeeError("dev", "unused");
+        }),
+        release: vi.fn(),
+        isBusy: vi.fn(() => false),
+        busy: vi.fn(() => new Map()),
+      } as never,
+      {
+        list: vi.fn(async () => []),
+        listActiveByPositionAnyDepartment: vi.fn(async () => []),
+      } as never,
       goalRunner as never,
       fakeLogger as never,
       fakeTrace as never,
@@ -1746,6 +1839,24 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
       pipelineRunner as never,
       pipelinesStore as never,
       agentsStore as never,
+      // D-017: no fixture in this file gives a task a department context AND an
+      // agent-position lease scenario worth asserting on the allocator itself
+      // (that lives in employee-allocator.test.ts / employees-dispatch tests) —
+      // acquire always misses (falls through to the any-department ladder,
+      // itself empty by default) so every existing call keeps its unleased
+      // (pre-D-017) `agentRunner.start` argument list.
+      {
+        acquire: vi.fn(async () => {
+          throw new NoEmployeeError("dev", "unused");
+        }),
+        release: vi.fn(),
+        isBusy: vi.fn(() => false),
+        busy: vi.fn(() => new Map()),
+      } as never,
+      {
+        list: vi.fn(async () => []),
+        listActiveByPositionAnyDepartment: vi.fn(async () => []),
+      } as never,
       goalRunner as never,
       fakeLogger as never,
       fakeTrace as never,
@@ -2127,6 +2238,24 @@ describe("125c — system-wide maxConcurrentRuns cap", () => {
       pipelineRunner as never,
       pipelinesStore as never,
       agentsStore as never,
+      // D-017: no fixture in this file gives a task a department context AND an
+      // agent-position lease scenario worth asserting on the allocator itself
+      // (that lives in employee-allocator.test.ts / employees-dispatch tests) —
+      // acquire always misses (falls through to the any-department ladder,
+      // itself empty by default) so every existing call keeps its unleased
+      // (pre-D-017) `agentRunner.start` argument list.
+      {
+        acquire: vi.fn(async () => {
+          throw new NoEmployeeError("dev", "unused");
+        }),
+        release: vi.fn(),
+        isBusy: vi.fn(() => false),
+        busy: vi.fn(() => new Map()),
+      } as never,
+      {
+        list: vi.fn(async () => []),
+        listActiveByPositionAnyDepartment: vi.fn(async () => []),
+      } as never,
       goalRunner as never,
       fakeLogger as never,
       fakeTrace as never,

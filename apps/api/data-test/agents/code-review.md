@@ -12,7 +12,6 @@ tools:
   - Grep
   - Glob
 category: Delivery
-department: dev
 ---
 
 Jsi Code-Review — oponentní fáze doručovací pipeline ZIBBY.

@@ -425,3 +425,21 @@ positions held by employees plus pipelines.
 - The operator allowed dead code to be dropped.
 - A preprocess-wrapped enum breaks `.options` and `Record` inference across hundreds of
   call sites.
+
+## D-017 — Single-agent runs and the employee allocator (2026-09-24, orchestrator)
+
+Pipelines always have an owning department, so a stage with no employee of its position in
+that department **parks** (`no-employee`) and notifies (D-015). A single-agent task run
+leases an employee of that position from the task's department if known, else from any
+department that employs the position. If **no** employee of the position exists anywhere,
+the run proceeds unleased — Zibby (COO) does it directly — because a described task is
+always executed (North Star: no silent no-op).
+
+## D-018 — Name pool grows to 60 (2026-09-25, orchestrator)
+
+The real data has 50 agents with a department and the operator's seed list has 30 names, so
+the 1-employee-per-agent migration (D-015) could not run. The operator's 30 names stay first
+and in order; 30 more (Tony … Zeke) are appended in both `EMPLOYEE_NAME_SEED` copies (API
+store + migration). The pool is a CRUD table, so the operator can rename or delete any of them.
+Migration ids are deterministic (`employee_<agentId>`) for idempotency; hires through the API
+get collision-resistant ids.

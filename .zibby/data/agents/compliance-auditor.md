@@ -13,7 +13,6 @@ tools:
   - Glob
 category: Quality & Security
 gates: []
-department: sec
 ---
 
 ## Prompt Defense Baseline

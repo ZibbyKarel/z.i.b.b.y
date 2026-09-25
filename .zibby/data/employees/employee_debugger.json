@@ -1,0 +1,8 @@
+{
+  "id": "employee_debugger",
+  "name": "Steve",
+  "agentId": "debugger",
+  "department": "dev",
+  "status": "active",
+  "hiredAt": "2026-09-25T00:32:32.986Z"
+}

@@ -10,6 +10,7 @@ import {
 } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
 import type { AgentsStorageService } from "../agents/agents.storage.service";
+import type { EmployeesStorageService } from "../employees/employees.storage.service";
 import type { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
 import type { ProjectsStorageService } from "../projects/projects.storage.service";
 import type { LoggerService } from "../shared/logging/logger.service";
@@ -139,12 +140,38 @@ function makeService(opts: {
   const projects = {
     list: () => Promise.resolve(opts.projects ?? []),
   } as unknown as ProjectsStorageService;
+  // D-015: `departmentCandidates`'s agent membership is now active employees, not
+  // `Agent.department` — derive one employee per departmented fixture agent so
+  // every pre-existing `agent({..., department: "dev"})` fixture keeps meaning
+  // "dev owns this position" without touching each of this file's call sites.
+  // Mirrors `listActive`'s own `status !== "proposed"` filter above: a proposed
+  // agent isn't dispatchable, so it must never seat a department via a phantom
+  // "hire" either — Phase 4c's exclusion (line ~129) has to hold here too.
+  const employees = {
+    list: () =>
+      Promise.resolve(
+        (opts.agents ?? [])
+          .filter(
+            (a): a is Agent & { department: DepartmentId } =>
+              Boolean(a.department) && a.status !== "proposed",
+          )
+          .map((a) => ({
+            id: `employee_${a.id}`,
+            name: a.id,
+            agentId: a.id,
+            department: a.department,
+            status: "active" as const,
+            hiredAt: "2026-01-01T00:00:00.000Z",
+          })),
+      ),
+  } as unknown as EmployeesStorageService;
   return new TaskClassifierService(
     agents,
     pipelines,
     opts.router ?? silentRouter,
     new KeywordScorer(),
     projects,
+    employees,
     fakeLogger,
   );
 }

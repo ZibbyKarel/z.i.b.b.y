@@ -58,6 +58,12 @@ export const agentStrategy: KindStrategy<AgentRunRecord> = {
       files: Array.isArray(spec.extra.files) ? spec.extra.files.map(String) : [],
       ...(spec.extra.taskId ? { taskId: String(spec.extra.taskId) } : {}),
       ...(spec.extra.traceId ? { traceId: String(spec.extra.traceId) } : {}),
+      // D-015/D-017: the employee leased for this run (single-agent dispatch —
+      // `TaskSchedulerService` acquires and threads it in; absent when D-017's
+      // "no employee anywhere" unleased fallback applied, or for non-task starts
+      // like `rerun`/the orchestrator, which never lease).
+      ...(spec.extra.employeeId ? { employeeId: String(spec.extra.employeeId) } : {}),
+      ...(spec.extra.employeeName ? { employeeName: String(spec.extra.employeeName) } : {}),
       ...(Array.isArray(spec.extra.catalogAgentIds)
         ? { catalogAgentIds: spec.extra.catalogAgentIds.map(String) }
         : {}),

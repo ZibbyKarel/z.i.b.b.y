@@ -28,6 +28,8 @@ import { ActivityLogService } from "../activity/activity-log.service";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { ApprovalsService } from "../approvals/approvals.service";
 import { ArtifactsStorageService, artifactRecordId } from "../artifacts/artifacts.storage.service";
+import { EmployeeAllocator, type EmployeeLease } from "../employees/employee-allocator";
+import { NoEmployeeError } from "../employees/employees.errors";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
 // A3: type-only — a plain value import here would close a *file-level*
 // require cycle (pipeline-runner.service.ts -> handoff.service.ts ->
@@ -159,6 +161,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly activity: ActivityLogService,
     private readonly artifacts: ArtifactsStorageService,
     private readonly projectLocal: ProjectLocalService,
+    private readonly employees: EmployeeAllocator,
     // A3: HandoffService is resolved lazily via ModuleRef (see recordArtifact),
     // NOT constructor-injected — PipelinesModule deliberately doesn't import
     // HandoffModule (that edge would close a module-file require cycle that
@@ -913,6 +916,39 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       }
 
       const attempt = (retries.get(phase.id) ?? 0) + 1;
+
+      // D-015: an `agent` phase's dispatch is an employee (a hired instance of
+      // `phase.agent`, the position), leased from the pipeline's OWN department.
+      // Acquiring here — before the sandbox exists — means a `no-employee` park
+      // never leaves a half-built stage folder behind. `acquire` itself blocks
+      // (FIFO, queued behind any earlier stage/run waiting on the SAME
+      // department+position) while every matching employee is busy — the "queued"
+      // wait the design calls for; `run.currentStage` above already reflects the
+      // phase the run is waiting to dispatch. A `verify` phase spawns no agent, so
+      // it never acquires (`phase.agent` is absent for it).
+      let lease: EmployeeLease | undefined;
+      if (phase.agent && pipeline.department) {
+        try {
+          lease = await this.employees.acquire(pipeline.department, phase.agent, {
+            runId: run.pipelineRunId,
+          });
+        } catch (error) {
+          if (!(error instanceof NoEmployeeError)) throw error;
+          run.status = "parked";
+          run.parkedReason = "no-employee";
+          run.currentStage = phase.id;
+          run.retries = Object.fromEntries(retries);
+          await this.writeAggregate(run);
+          await this.writeProgress(run, phaseIds);
+          this.log.warn("pipeline run parked (no employee of this position)", {
+            phase: phase.id,
+            department: pipeline.department,
+            agent: phase.agent,
+          });
+          return;
+        }
+      }
+
       // Sequential sandbox numbering: every dispatch appends exactly one `stageRuns`
       // entry when it settles (there is no same-entry retry path in this machine),
       // so `length + 1` numbers the folders in call order — a loop back-edge's
@@ -942,15 +978,24 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       });
       const stageResumeContext = pendingResumeContext ?? undefined;
       pendingResumeContext = null; // consumed by this phase only
-      const stageRun = await this.runStage(
-        run,
-        phase,
-        stageCwd,
-        attempt,
-        project,
-        stageResumeContext,
-        delegates,
-      );
+      let stageRun: StageRun;
+      try {
+        stageRun = await this.runStage(
+          run,
+          phase,
+          stageCwd,
+          attempt,
+          project,
+          stageResumeContext,
+          delegates,
+          lease,
+        );
+      } finally {
+        // Released on EVERY terminal path (done/error/interrupted/paused-limit) —
+        // `runStage` only returns once `waitForStage` sees one of those, so the
+        // lease never outlives the dispatch it was acquired for.
+        if (lease) this.employees.release(lease);
+      }
       // The stage has reached a terminal/paused state and (when terminal) is about
       // to be appended to `stageRuns` — its log is readable from there now, so drop
       // the live pointer the running attempt used.
@@ -1611,6 +1656,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     project: Project | null,
     resumeContext?: string,
     delegates?: readonly string[],
+    lease?: EmployeeLease,
   ): Promise<StageRun> {
     const escalation = this.escalationFor(phase, attempt);
     if (escalation) {
@@ -1666,6 +1712,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       status,
       dir: path.basename(stageCwd),
       ...(finishedRec?.costUsd != null ? { costUsd: finishedRec.costUsd } : {}),
+      ...(lease ? { employeeId: lease.employeeId, employeeName: lease.employeeName } : {}),
     };
   }
 

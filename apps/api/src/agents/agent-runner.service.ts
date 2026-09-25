@@ -186,6 +186,13 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
      * silently dropped here, server-side, never trusted from dispatch alone.
      */
     toolGrants?: string[],
+    /**
+     * D-017: the employee leased for this run by the caller (dispatch happens at
+     * the TASK level — `TaskSchedulerService` — never inside this service, to
+     * avoid a double-acquire against pipelines, which lease per-stage). Absent
+     * when D-017's "no employee anywhere" unleased fallback applied.
+     */
+    employee?: { employeeId: string; employeeName: string },
   ): Promise<AgentRun> {
     // Throws AgentNotFoundError / InvalidAgentIdError when the agent is unknown.
     const agent = await this.agents.get(agentId);
@@ -201,6 +208,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       attachments,
       undefined,
       toolGrants,
+      employee,
     );
   }
 
@@ -302,6 +310,8 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
      * the UI alone).
      */
     toolGrants?: string[],
+    /** D-017: the employee this run is leased to, threaded through to `spec.extra`. */
+    employee?: { employeeId: string; employeeName: string },
   ): Promise<AgentRun> {
     const agentId = agent.id;
     // Phase 108: the FINAL grant set — the ceiling is enforced HERE, server-side,
@@ -425,6 +435,11 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
         // run's mid-run intent evaluation can pull each subagent's own gates back
         // in (strictest-union) instead of evaluating on the orchestrator alone.
         catalogAgentIds,
+        // D-017: absent for a rerun/orchestrator/unleased dispatch — `assemble()`
+        // only sets these fields on the record when present.
+        ...(employee
+          ? { employeeId: employee.employeeId, employeeName: employee.employeeName }
+          : {}),
       },
     };
 

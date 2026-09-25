@@ -8,6 +8,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
 import { ChannelWatcherService } from "../src/channels/channel-watcher.service";
+import { seedEmployeeFixture } from "./fixtures/employee-fixture";
 
 const FAKE_CLAUDE = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -70,6 +71,14 @@ describe("Channels triage throughline (e2e)", () => {
         department: "dev",
       })
       .expect(201);
+    // D-015: department ownership is an employee fact — this suite points
+    // `ZIBBY_DATA_DIR` at its OWN fresh root (no migrated seed), so "dev" needs a
+    // hired position of its own to stay seated for the Tier-1 dispatch below.
+    await seedEmployeeFixture(path.join(root, "employees"), {
+      id: "employee_fixer",
+      agentId: "fixer",
+      department: "dev",
+    });
     // Integrations are owned by a project; create one so the FK check passes.
     await request(app.getHttpServer())
       .post("/api/projects")

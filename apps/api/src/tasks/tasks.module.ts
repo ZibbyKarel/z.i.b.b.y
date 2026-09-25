@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { AgentsModule } from "../agents/agents.module";
 import { ApprovalsModule } from "../approvals/approvals.module";
 import { BudgetModule } from "../budget/budget.module";
+import { EmployeesModule } from "../employees/employees.module";
 import { GatesModule } from "../gates/gates.module";
 import { GoalsModule } from "../goals/goals.module";
 import { LimitsModule } from "../limits/limits.module";
@@ -38,6 +39,7 @@ import { TasksController } from "./tasks.controller";
 @Module({
   imports: [
     AgentsModule,
+    EmployeesModule,
     PipelinesModule,
     GoalsModule,
     ProjectsModule,

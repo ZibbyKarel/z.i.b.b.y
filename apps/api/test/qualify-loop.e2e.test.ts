@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { ActivityEntry } from "@zibby/contracts";
 import { AppModule } from "../src/app.module";
 import { PipelineRunnerService } from "../src/pipelines/pipeline-runner.service";
+import { defaultEmployeesDir, seedEmployeeFixture } from "./fixtures/employee-fixture";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 async function until<T>(fn: () => Promise<T>, timeoutMs = 25000): Promise<NonNullable<T>> {
@@ -55,6 +56,15 @@ describe("Qualify loop (e2e)", () => {
     process.env.AGENT_DEMO_STEPS = "2";
     process.env.AGENT_DEMO_DELAY_MS = "30";
     process.env.PIPELINE_DEMO_GAP_PHASES = "review";
+
+    // D-017: no AGENTS_DIR override here — this suite never registers a real
+    // Agent either — so `phase()`'s bare "writer" id needs an employee seeded
+    // directly into the shared per-file data root.
+    await seedEmployeeFixture(defaultEmployeesDir(), {
+      id: "employee_writer",
+      agentId: "writer",
+      department: "dev",
+    });
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();

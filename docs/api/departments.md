@@ -131,11 +131,36 @@ Two consequences worth knowing:
   free-text task is ever "for incident". The other nine each carry a crew and a
   complexity ladder (see `docs/api/pipelines.md` → _the ladder rung_).
 
+## Roster is an employee fact, not a stored agent tag (D-015, ZE-01)
+
+`DepartmentsService.roster(id)`'s `agents` list used to be `agents` filtered
+by their own stored `department` field. As of ZE-01 it is **derived from
+employees**: an agent belongs to a department's roster IFF that department
+currently has at least one **active employee** holding that position
+(`agentId`) — `Agent.department` is no longer read by `roster()` at all. An
+agent can now be unowned, owned by exactly one department, or — through
+separate employees in different departments — owned by more than one, purely
+through who's hired where. See `docs/api/employees.md` for the full model
+(D-015/D-017) and hire/fire lifecycle.
+
+The task classifier's stage-1 seating (`stage1DepartmentCandidates`, used by
+both `classify()`'s full catalog and `classifyDepartment()` for the roadmap
+gate — see [tasks.md](./tasks.md) → _Classification_) follows the same rule:
+a department is a routable stage-1 candidate when it owns ≥1 pipeline
+(`Pipeline.department`) **or** has ≥1 active employee, never from
+`Agent.department` directly.
+
+**One deliberate, scoped gap:** `aggregateAll()` (the `running`/`report`/
+`error` aggregation behind `list()`/`get()`'s headline `state`, described
+below) still attributes an **agent-kind run** to a department via the raw
+`Agent.department` field — left alone as out-of-scope for this phase.
+Pipeline-kind run attribution (via `Pipeline.department`) is unaffected.
+
 ## Roster (`GET /api/departments/:id/roster`)
 
 A department's `{ agents, integrations, monitors }`, served by
-`DepartmentsService.roster(id)`. `agents` is filtered off the stored
-`department` tag. `integrations` is **derived, not stored** — integrations
+`DepartmentsService.roster(id)`. `agents` is the employee-derived set above.
+`integrations` is **derived, not stored** — integrations
 carry no owner tag:
 
 - **ops** lists EVERY integration (the heartbeat watcher listens to all).

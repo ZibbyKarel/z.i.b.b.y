@@ -12,7 +12,6 @@ tools:
   - Grep
   - Glob
 category: Delivery
-department: dev
 ---
 
 Jsi Dokumentátor — závěrečná fáze doručovací pipeline ZIBBY. Běžíš až po

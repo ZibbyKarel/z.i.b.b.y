@@ -1,8 +1,17 @@
-import type { Agent, Approval, Integration, Mandate, Pipeline, TaskRun } from "@zibby/contracts";
+import type {
+  Agent,
+  Approval,
+  Employee,
+  Integration,
+  Mandate,
+  Pipeline,
+  TaskRun,
+} from "@zibby/contracts";
 import { DEFAULT_MANDATE, DEPARTMENTS } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
 import type { AgentsStorageService } from "../agents/agents.storage.service";
 import type { ApprovalsService } from "../approvals/approvals.service";
+import type { EmployeesStorageService } from "../employees/employees.storage.service";
 import type { IntegrationsStorageService } from "../integrations/integrations.storage.service";
 import type { MandateStorageService } from "../mandate/mandate.storage.service";
 import type { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
@@ -63,6 +72,8 @@ function build(opts: {
   agents?: Agent[];
   integrations?: Integration[];
   mandate?: Mandate;
+  /** D-015: `roster()`'s agent membership — active employees, not `Agent.department`. */
+  employees?: Employee[];
 }) {
   const pipelinesStore = { list: vi.fn(async () => opts.pipelines ?? []) };
   const taskRuns = { listTaskRuns: vi.fn(async () => opts.runs ?? []) };
@@ -70,6 +81,7 @@ function build(opts: {
   const agentsStore = { list: vi.fn(async () => opts.agents ?? []) };
   const integrationsStore = { list: vi.fn(async () => opts.integrations ?? []) };
   const mandateStore = { read: vi.fn(async () => opts.mandate ?? DEFAULT_MANDATE) };
+  const employeesStore = { list: vi.fn(async () => opts.employees ?? []) };
   const seenMap = new Map<string, string>(Object.entries(opts.seenAt ?? {}));
   const seenStore = {
     seenAt: vi.fn(async (id: string) => seenMap.get(id) ?? DEPARTMENT_SEEN_EPOCH),
@@ -88,6 +100,7 @@ function build(opts: {
     agentsStore as unknown as AgentsStorageService,
     integrationsStore as unknown as IntegrationsStorageService,
     mandateStore as unknown as MandateStorageService,
+    employeesStore as unknown as EmployeesStorageService,
   );
   return {
     service,
@@ -98,6 +111,7 @@ function build(opts: {
     agentsStore,
     integrationsStore,
     mandateStore,
+    employeesStore,
   };
 }
 
@@ -669,6 +683,21 @@ describe("DepartmentsService", () => {
       } as Agent;
     }
 
+    /**
+     * D-015: `roster()` reads membership off active employees, not `Agent.department`
+     * — an employee "for" the agent fixtures above, in the same department.
+     */
+    function employeeFixture(agentId: string, department: Employee["department"]): Employee {
+      return {
+        id: `employee_${agentId}`,
+        name: agentId,
+        agentId,
+        department,
+        status: "active",
+        hiredAt: AT,
+      };
+    }
+
     function slackFixture(id: string): Integration {
       return {
         id,
@@ -698,6 +727,7 @@ describe("DepartmentsService", () => {
     it("agents are filtered by department; a non-ops/comms department sees no integrations", async () => {
       const { service } = build({
         agents: [agentFixture("architekt", "dev"), agentFixture("scribe", "knw")],
+        employees: [employeeFixture("architekt", "dev"), employeeFixture("scribe", "knw")],
         integrations: [slackFixture("team-slack"), slackFixture("watch")],
       });
       const dev = await service.roster("dev");
@@ -740,6 +770,7 @@ describe("DepartmentsService", () => {
     it("is empty for a department that owns nothing (knowledge/finance)", async () => {
       const { service } = build({
         agents: [agentFixture("architekt", "dev")],
+        employees: [employeeFixture("architekt", "dev")],
         integrations: [slackFixture("team-slack")],
       });
       const knowledge = await service.roster("knw");

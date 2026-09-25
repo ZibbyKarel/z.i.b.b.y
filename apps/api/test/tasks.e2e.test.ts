@@ -11,6 +11,7 @@ import { GoalRunnerService } from "../src/goals/goal-runner.service";
 import { PipelineRunnerService } from "../src/pipelines/pipeline-runner.service";
 import { isAlive } from "../src/runner/runner-core";
 import { TaskSchedulerService } from "../src/tasks/task-scheduler.service";
+import { seedEmployeeFixture } from "./fixtures/employee-fixture";
 
 const CLASSIFY = "/api/tasks/classify";
 const CREATE = "/api/tasks";
@@ -30,6 +31,7 @@ const FAKE_CLAUDE = path.resolve(
 describe("Tasks API (e2e)", () => {
   let app: INestApplication;
   let agentsDir: string;
+  let employeesDir: string;
   let pipelinesDir: string;
   let runsDir: string;
   let tasksDir: string;
@@ -37,11 +39,17 @@ describe("Tasks API (e2e)", () => {
 
   beforeAll(async () => {
     agentsDir = await fs.mkdtemp(path.join(os.tmpdir(), "tasks-agents-e2e-"));
+    // D-015/D-017: isolated alongside AGENTS_DIR (and wiped the same way in
+    // `afterEach`) — otherwise this suite inherits the shared per-file data
+    // root's migrated `dev` employees, which seats "dev" independent of
+    // whatever this file's own `seedCatalog()`/ad-hoc agents actually hire.
+    employeesDir = await fs.mkdtemp(path.join(os.tmpdir(), "tasks-employees-e2e-"));
     pipelinesDir = await fs.mkdtemp(path.join(os.tmpdir(), "tasks-pipelines-e2e-"));
     runsDir = await fs.mkdtemp(path.join(os.tmpdir(), "tasks-runs-e2e-"));
     tasksDir = await fs.mkdtemp(path.join(os.tmpdir(), "tasks-scheduled-e2e-"));
     projectsDir = await fs.mkdtemp(path.join(os.tmpdir(), "tasks-projects-e2e-"));
     process.env.AGENTS_DIR = agentsDir;
+    process.env.EMPLOYEES_DIR = employeesDir;
     process.env.PIPELINES_DIR = pipelinesDir;
     process.env.AGENT_RUNS_DIR = runsDir;
     process.env.TASKS_DIR = tasksDir;
@@ -57,7 +65,7 @@ describe("Tasks API (e2e)", () => {
   });
 
   afterEach(async () => {
-    for (const dir of [agentsDir, pipelinesDir, tasksDir, projectsDir]) {
+    for (const dir of [agentsDir, employeesDir, pipelinesDir, tasksDir, projectsDir]) {
       for (const entry of await fs.readdir(dir)) {
         await fs.rm(path.join(dir, entry), { force: true });
       }
@@ -66,11 +74,12 @@ describe("Tasks API (e2e)", () => {
 
   afterAll(async () => {
     await app.close();
-    for (const dir of [agentsDir, pipelinesDir, runsDir, tasksDir, projectsDir]) {
+    for (const dir of [agentsDir, employeesDir, pipelinesDir, runsDir, tasksDir, projectsDir]) {
       await fs.rm(dir, { recursive: true, force: true });
     }
     for (const k of [
       "AGENTS_DIR",
+      "EMPLOYEES_DIR",
       "PIPELINES_DIR",
       "AGENT_RUNS_DIR",
       "TASKS_DIR",
@@ -155,6 +164,20 @@ describe("Tasks API (e2e)", () => {
         department: "dev",
       })
       .expect(201);
+
+    // D-015: department ownership (stage 1 seating + stage-2 "owned agent") is an
+    // employee fact — hire both positions so "knw"/"dev" stay seated the same way
+    // they were before D-015 read `Agent.department` directly.
+    await seedEmployeeFixture(employeesDir, {
+      id: "employee_curator",
+      agentId: "curator",
+      department: "knw",
+    });
+    await seedEmployeeFixture(employeesDir, {
+      id: "employee_coder",
+      agentId: "coder",
+      department: "dev",
+    });
   };
 
   // Pre-F9 this asserted `target.id === "curator"` straight off classify. Stage 1

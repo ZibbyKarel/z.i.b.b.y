@@ -139,6 +139,10 @@ async function makeHarness(dir: string): Promise<Harness> {
     // resolves null, so the git-worktree/clone-if-missing branch never runs — see
     // pipeline-runner.project-local.test.ts for its dedicated dispatch coverage.
     { resolveForRun: vi.fn() } as never,
+    // EmployeeAllocator double (D-015): this fixture pipeline carries no
+    // `department`, so `drive()` never calls `acquire` — present only to keep
+    // the positional constructor aligned.
+    { acquire: vi.fn(), release: vi.fn(), isBusy: vi.fn(), busy: vi.fn(() => new Map()) } as never,
     // A3: fake ModuleRef — HandoffService is resolved lazily (not constructor-
     // injected, see pipeline-runner.service.ts's doc comment), so the double here
     // is a ModuleRef whose `.get()` hands back a fake HandoffService. This

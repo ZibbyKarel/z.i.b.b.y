@@ -15,7 +15,6 @@ tools:
   - Grep
 category: Quality & Security
 gates: []
-department: qa
 ---
 
 ## Prompt Defense Baseline

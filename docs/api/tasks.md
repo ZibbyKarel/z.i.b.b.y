@@ -507,6 +507,31 @@ setInterval(() => tick(), systemConfig.current().taskTickMs);
 
 After dispatch, `runRef` is written back to the task record.
 
+### Employee lease (D-015 / D-017, ZE-01)
+
+An `agent`-target dispatch (including one resolved from `department` above)
+first tries to **lease an employee** for the position via
+`TaskSchedulerService.acquireEmployeeForDispatch(agentId, department)` — full
+model and the allocator itself in `docs/api/employees.md`. The ladder, in
+order:
+
+1. **Department-known** — if the task's own classification traced a
+   department, lease from it first.
+2. **Any-department fallback** — on no department, or `NoEmployeeError` from
+   step 1, fall back to every active employee holding the position across
+   **all** departments (`EmployeesStorageService.listActiveByPositionAnyDepartment`),
+   preferring a currently-free one.
+3. **Unleased fallback** — when the position has **no** employee anywhere,
+   the task still dispatches directly, unleased — this is never a park
+   (parking is a pipelines-only concept for `agent` dispatch); it is the
+   concrete mechanism behind "a described task is always executed". The
+   lease (if any) is released on the run's terminal transition, same
+   discipline as the pipeline path.
+
+`employeeId`/`employeeName` land on the dispatched run's `AgentRun.extra`
+when a lease was acquired — see [agents-runs.md](./agents-runs.md) →
+"Employee attribution".
+
 ## Outcome
 
 The daemon watches the run's terminal state:

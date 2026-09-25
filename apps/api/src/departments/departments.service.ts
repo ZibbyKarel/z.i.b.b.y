@@ -11,6 +11,7 @@ import type { Approval } from "@zibby/contracts";
 import type { TaskRun } from "@zibby/contracts";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { ApprovalsService } from "../approvals/approvals.service";
+import { EmployeesStorageService } from "../employees/employees.storage.service";
 import { IntegrationsStorageService } from "../integrations/integrations.storage.service";
 import { MandateStorageService } from "../mandate/mandate.storage.service";
 import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
@@ -104,6 +105,8 @@ export class DepartmentsService {
     private readonly agents: AgentsStorageService,
     private readonly integrations: IntegrationsStorageService,
     private readonly mandate: MandateStorageService,
+    /** D-015: `roster()`'s agent membership derives from active employees, not `Agent.department`. */
+    private readonly employees: EmployeesStorageService,
   ) {}
 
   /**
@@ -175,15 +178,26 @@ export class DepartmentsService {
    * entity. Throws `DepartmentNotFoundError` for an unknown id, same as
    * {@link get}. Pipelines are deliberately excluded — the roster tab's canvas
    * already sources those client-side.
+   *
+   * D-015: an agent (a position) belongs to the department IFF it currently has
+   * at least one ACTIVE employee there — `Agent.department` is no longer read
+   * here (an agent can be unowned, or hired into a different department, purely
+   * through its employees).
    */
   async roster(id: string): Promise<DepartmentRoster> {
     const department = this.find(id);
-    const [agents, integrations, mandate] = await Promise.all([
+    const [agents, integrations, mandate, employees] = await Promise.all([
       this.agents.list(),
       this.integrations.list(),
       this.mandate.read(),
+      this.employees.list(),
     ]);
-    const ownedAgents = agents.filter((a) => a.department === department.id);
+    const ownedPositionIds = new Set(
+      employees
+        .filter((e) => e.status === "active" && e.department === department.id)
+        .map((e) => e.agentId),
+    );
+    const ownedAgents = agents.filter((a) => ownedPositionIds.has(a.id));
     const rosterIntegrations =
       department.id === "ops"
         ? integrations
