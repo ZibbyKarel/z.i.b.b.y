@@ -195,6 +195,13 @@
   --animate-scale-in: scale-in 0.16s ease-out;
   /* Live-state pulse (2s) — the only ambient motion in the quiet control room. */
   --animate-live: zt-live 2s ease-in-out infinite;
+  /* DS.md §9's own working/blocked keyframes (`zb-live`/`zb-pulse`, defined further
+   * down guarded by `prefers-reduced-motion: no-preference` — see that block's
+   * comment) — `StatusDot`'s square-dot living behaviour (ZA-02): working breathes,
+   * blocked/wait blinks. Distinct from the legacy `zt-live`/`--animate-live` pulse
+   * above, which existing HUD call sites still use. */
+  --animate-zb-live: zb-live 1.4s ease-in-out infinite;
+  --animate-zb-pulse: zb-pulse 1s steps(1, end) infinite;
   --animate-spinner: zt-spin 0.7s linear infinite;
   /* Idle "floating on water" drift for otherwise-static cards — amplitude
    * capped at 3px, translateY only (no opacity/shadow — that's zt-live's job). */

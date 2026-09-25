@@ -36,6 +36,11 @@ export interface OrbitLoaderProps {
  * core breathes at the centre while a dot orbits a faint HUD ring and two rings pulse.
  * Reuses the shared `orbit-spin` / `ring-pulse` keyframes; all motion is suppressed under
  * `prefers-reduced-motion`, leaving a static glow. Render it wherever content is loading.
+ *
+ * @deprecated A glowing/blurred ring has no place in ZibbyCorp's blueprint
+ * language (DS.md §1.2/§6 — no glow, no blur). Kept compiling for existing
+ * callers; slated for deletion in ZB-13. Do not add new call sites — reach for
+ * a square `Progress` bar or `AgentGlyph`'s working motion instead.
  */
 export function OrbitLoader({ size = "md", label, ref }: OrbitLoaderProps) {
   const { box, core, dot, ring, label: labelSize } = sizeSpec[size];

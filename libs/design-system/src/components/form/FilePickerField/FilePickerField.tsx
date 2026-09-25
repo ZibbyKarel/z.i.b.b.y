@@ -80,8 +80,8 @@ export function FilePickerField({
       {({ id, describedBy, invalid }) => (
         <div
           className={cn(
-            "flex w-full items-center overflow-hidden rounded border border-border bg-background transition-colors",
-            "focus-within:border-accent/50 focus-within:ring-2 focus-within:ring-accent",
+            "flex w-full items-center overflow-hidden rounded-none border border-border-strong bg-background transition-colors",
+            "focus-within:border-ink focus-within:ring-2 focus-within:ring-accent",
             invalid && "border-bad focus-within:ring-bad",
           )}
           data-testid={FilePickerFieldTestId.Control}

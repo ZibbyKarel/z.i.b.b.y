@@ -39,6 +39,19 @@ export const Overview: Story = {
       </div>
       <div className="flex flex-col gap-2">
         <div className="w-[420px]">
+          {/* DS.md §8 Inspector hero: no-image band gets corner brackets + grid; the
+              state pill and mono id line frame the name. */}
+          <EntityHero
+            desc="Writes the code and its tests."
+            glyph="bot"
+            idLine="AG-04 · CODER"
+            name="Kodér"
+            state="working"
+          />
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <div className="w-[420px]">
           <EntityHero editable glyph="flask" name="Tester" onUpload={() => {}} />
         </div>
       </div>

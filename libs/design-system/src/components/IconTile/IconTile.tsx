@@ -122,7 +122,9 @@ export function IconTile({
         "grid shrink-0 place-items-center overflow-hidden border",
         shape === "circle" ? "rounded-full" : radiusClass[radius],
         filled ? toneClass[tone] : outlineToneClass[tone],
-        glow && "shadow-glow-accent",
+        // DS.md §1.2/§6 has no glow/blur — a "lit" tile reads through a second,
+        // emphasized hairline instead of a box-shadow bloom.
+        glow && "ring-1 ring-accent/50",
         interactive &&
           cn(
             "cursor-pointer transition-colors hover:border-accent/35 hover:text-foreground",

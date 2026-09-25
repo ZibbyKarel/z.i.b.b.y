@@ -47,6 +47,12 @@ export interface LivingGlowProps extends Omit<HTMLAttributes<HTMLSpanElement>, "
  *
  * Renders into its nearest positioned ancestor (`absolute inset-0`), behind content,
  * and is decorative (`aria-hidden`). Honours `prefers-reduced-motion`.
+ *
+ * @deprecated ZibbyCorp (DS.md §1.2/§6) has no glow/blur/glass in its visual
+ * language — living state now reads through `StatusDot`'s breathe/blink and
+ * `AgentGlyph`'s per-state motion instead of an ambient glow shell. Kept
+ * compiling for existing HUD callers (`Card living`, `HudPanel live`); slated
+ * for deletion in ZB-13. Do not add new call sites.
  */
 export function LivingGlow({
   tone = "accent",

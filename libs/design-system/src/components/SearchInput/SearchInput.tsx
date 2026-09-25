@@ -46,14 +46,14 @@ export function SearchInput({
   return (
     <div
       className={cn(
-        "flex h-[38px] w-full items-center gap-2.5 rounded-full px-3.5 transition-colors",
+        "flex h-[36px] w-full items-center gap-2.5 rounded-none px-3.5 transition-colors",
         surface === "transparent"
           ? // No border/ring of its own — a surrounding `GlassSurface` already
             // draws the one visible boundary; giving this div its own focus
             // border on top doubled it up (see ChatSearch, which rings the
             // GlassSurface itself instead when open).
             "border border-transparent"
-          : "border border-border bg-surface focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/40",
+          : "border border-border-strong bg-background focus-within:border-ink",
       )}
       data-testid={SearchInputTestId.Root}
     >

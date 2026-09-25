@@ -16,20 +16,21 @@ export enum CardTestId {
   Corner = "card-corner",
 }
 
-/** The HUD bracket tone — accepts both the canonical vocabulary and the legacy one
+/** The bracket tone — accepts both the canonical vocabulary and the legacy one
  *  (see {@link AnyStateTone}); resolved via {@link normalizeStateTone}. */
 export type CornersTone = AnyStateTone;
 
 /** Keyed by the canonical `StateTone` — legacy classes reused where the color is
  * identical (LEGACY_TONE_MAP): thinking→accent, blocked→warn, error→bad, done→ok,
- * working→run. Only `idle` needed a new class (no legacy tone mapped to it). */
+ * working→run. `idle` renders in plain `--ink` (DS.md §6) — the generic framing
+ * device for a focus object with no particular live state, not a dimmed tone. */
 const cornersToneClass: Record<StateTone, string> = {
   thinking: "border-accent",
   blocked: "border-warn",
   error: "border-bad",
   done: "border-ok",
   working: "border-run",
-  idle: "border-state-idle",
+  idle: "border-ink",
 };
 
 export interface CornersProps {
@@ -37,37 +38,38 @@ export interface CornersProps {
   tone?: CornersTone;
 }
 
-/** HUD bracket marks — the signature of a live panel; never decorative. */
-export function Corners({ inset = "75", tone = "accent" }: CornersProps) {
+/**
+ * DS.md §6 corner brackets — four 8–10px L-shaped marks, `1px solid --ink` by
+ * default, tone-tinted only for genuinely live objects (a running task's hero,
+ * a `Panel live`). The signature framing device for a focus object.
+ */
+export function Corners({ inset = "100", tone = "idle" }: CornersProps) {
   const px = spacingToPx(inset);
   const resolvedTone = normalizeStateTone(tone);
-  const base = cn(
-    "pointer-events-none absolute h-2.5 w-2.5 opacity-55",
-    cornersToneClass[resolvedTone],
-  );
+  const base = cn("pointer-events-none absolute h-2 w-2", cornersToneClass[resolvedTone]);
   return (
     <>
       <span
         aria-hidden="true"
-        className={cn(base, "border-t-[1.5px] border-l-[1.5px]")}
+        className={cn(base, "border-t border-l")}
         data-testid={CardTestId.Corner}
         style={{ top: px, left: px }}
       />
       <span
         aria-hidden="true"
-        className={cn(base, "border-t-[1.5px] border-r-[1.5px]")}
+        className={cn(base, "border-t border-r")}
         data-testid={CardTestId.Corner}
         style={{ top: px, right: px }}
       />
       <span
         aria-hidden="true"
-        className={cn(base, "border-b-[1.5px] border-l-[1.5px]")}
+        className={cn(base, "border-b border-l")}
         data-testid={CardTestId.Corner}
         style={{ bottom: px, left: px }}
       />
       <span
         aria-hidden="true"
-        className={cn(base, "border-b-[1.5px] border-r-[1.5px]")}
+        className={cn(base, "border-b border-r")}
         data-testid={CardTestId.Corner}
         style={{ bottom: px, right: px }}
       />
@@ -238,7 +240,7 @@ export function Card({
       type={Tag === "button" ? (type ?? "button") : undefined}
     >
       {resolvedTone && living && <LivingGlow radius={radius} tone={resolvedTone} />}
-      {corners && <Corners inset="75" tone={resolvedTone ?? "thinking"} />}
+      {corners && <Corners inset="100" tone={resolvedTone ?? "idle"} />}
       {resolvedEdge && (
         <span
           aria-hidden

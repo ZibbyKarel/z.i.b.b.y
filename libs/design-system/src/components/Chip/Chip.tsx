@@ -42,9 +42,9 @@ export interface ChipProps extends Omit<HTMLAttributes<HTMLSpanElement>, "classN
 }
 
 /**
- * Rounded status pill — a tone-coloured label, optionally led by a status dot.
- * The "color = state" half of the badge family (the angular {@link Tag} is the
- * "shape = category" half).
+ * Square status label (DS.md §8 Chip/tag) — a tone-coloured, hairline-bordered
+ * label, optionally led by a status dot. The "color = state" half of the badge
+ * family (the angular {@link Tag} is the "shape = category" half).
  */
 export function Chip({
   tone = "idle",
@@ -61,7 +61,7 @@ export function Chip({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border py-[3px]",
+        "inline-flex items-center gap-1.5 rounded-none border py-[3px]",
         dot ? "pl-2" : "pl-2.5",
         closable ? "pr-1.5" : "pr-2.5",
         "font-mono text-xs whitespace-nowrap",
@@ -77,7 +77,7 @@ export function Chip({
         <button
           aria-label={closeLabel}
           className={cn(
-            "-mr-0.5 inline-flex items-center justify-center rounded-full",
+            "-mr-0.5 inline-flex items-center justify-center rounded-none",
             "cursor-pointer opacity-70 transition-opacity duration-100 hover:opacity-100",
             focusRing,
           )}

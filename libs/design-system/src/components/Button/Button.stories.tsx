@@ -9,7 +9,7 @@ const meta: Meta<typeof Button> = {
   argTypes: {
     intent: {
       control: "select",
-      options: ["primary", "ghost", "danger"],
+      options: ["primary", "secondary", "ghost", "danger"],
     },
     tone: { control: "select", options: ["accent", "ok", "warn", "bad"] },
     size: { control: "select", options: ["sm", "md"] },
@@ -29,8 +29,11 @@ export const Overview: Story = {
           <Button icon="play" intent="primary">
             Spustit
           </Button>
-          <Button icon="edit" intent="ghost">
+          <Button icon="edit" intent="secondary">
             Edit raw
+          </Button>
+          <Button icon="edit" intent="ghost">
+            Otevřít
           </Button>
           <Button icon="x" intent="danger">
             Zamítnout

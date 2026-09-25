@@ -31,6 +31,17 @@ export const Overview: Story = {
           <div className="p-4 text-sm text-foreground-dim">Záznamy aktivit</div>
         </TabPanel>
       </Tabs>
+      <div className="flex h-[56px]">
+        {/* DS.md §8 Tabs "mono" — top-nav / sub-nav look, mono uppercase labels
+            with a 1px `--ink` underline indicator. */}
+        <Tabs defaultValue="overview" direction="horizontal" variant="mono">
+          <TabList>
+            <Tab value="overview">Přehled</Tab>
+            <Tab value="agents">Agenti</Tab>
+            <Tab value="logs">Logy</Tab>
+          </TabList>
+        </Tabs>
+      </div>
       <div className="flex h-96">
         <Tabs defaultValue="overview" direction="vertical">
           <TabList>

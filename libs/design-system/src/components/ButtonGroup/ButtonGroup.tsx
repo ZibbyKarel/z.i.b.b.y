@@ -25,10 +25,10 @@ const toneSwatch: Record<ButtonGroupTone, string> = {
 };
 
 const toneActive: Record<ButtonGroupTone, string> = {
-  accent: "bg-accent text-accent-contrast",
-  ok: "bg-ok text-accent-contrast",
-  warn: "bg-warn text-accent-contrast",
-  bad: "bg-bad text-accent-contrast",
+  accent: "bg-accent text-panel",
+  ok: "bg-ok text-panel",
+  warn: "bg-warn text-panel",
+  bad: "bg-bad text-panel",
 };
 
 export interface ButtonGroupOption {
@@ -79,7 +79,7 @@ export function ButtonGroup({
       aria-describedby={ariaDescribedby}
       aria-label={ariaLabelledby ? undefined : ariaLabel}
       aria-labelledby={ariaLabelledby}
-      className="inline-block rounded border border-border bg-background p-0.5"
+      className="inline-block rounded-none border border-border-strong bg-background p-0.5"
       data-testid={ButtonGroupTestId.Root}
       role="group"
     >
@@ -90,13 +90,13 @@ export function ButtonGroup({
             <button
               aria-pressed={active}
               className={cn(
-                "inline-flex items-center gap-2 rounded-sm border-none px-3 py-1.5 font-mono text-base font-semibold transition-all",
+                "inline-flex items-center gap-2 rounded-none border-none px-[10px] py-[6px] font-mono text-[10px] font-semibold tracking-wider uppercase transition-all",
                 focusRing,
                 active
                   ? o.tone
                     ? toneActive[o.tone]
-                    : "bg-accent text-accent-contrast"
-                  : "bg-transparent text-foreground-dim hover:text-foreground",
+                    : "bg-ink text-panel"
+                  : "bg-transparent text-foreground-faint hover:text-foreground",
               )}
               data-testid={`${ButtonGroupTestId.Option}-${o.id}`}
               key={o.id}
@@ -113,10 +113,7 @@ export function ButtonGroup({
               )}
               {o.tone && (
                 <span
-                  className={cn(
-                    "h-1.5 w-1.5 rounded-full",
-                    active ? "bg-background opacity-70" : toneSwatch[o.tone],
-                  )}
+                  className={cn("h-1.5 w-1.5", active ? "bg-panel opacity-70" : toneSwatch[o.tone])}
                 />
               )}
               {o.label}

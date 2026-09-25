@@ -3,6 +3,7 @@ import { type AnyStateTone, type StateTone, normalizeToneLike } from "../../stat
 import { cn } from "../../utils/cn";
 import { Row, Stack } from "../Stack/Stack";
 import { Icon, type IconName } from "../Icon/Icon";
+import { Typography } from "../Typography/Typography";
 
 /** The canonical {@link StateTone} palette (or the legacy vocabulary — see
  *  {@link AnyStateTone}), plus `neutral` for a non-live metric. */
@@ -52,11 +53,10 @@ export function Stat({ value, label, icon, tone = "neutral", ref, ...props }: St
         >
           {value}
         </div>
-        <div
-          className="whitespace-nowrap text-sm tracking-wide text-foreground-faint"
-          data-testid={StatTestId.Label}
-        >
-          {label}
+        <div className="whitespace-nowrap">
+          <Typography as="span" data-testid={StatTestId.Label} type="label">
+            {label}
+          </Typography>
         </div>
       </Stack>
     </Row>

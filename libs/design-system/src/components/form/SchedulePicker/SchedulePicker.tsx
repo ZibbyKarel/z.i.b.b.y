@@ -93,10 +93,11 @@ export interface SchedulePickerProps {
 const timeInputClass = cn(fieldControlClass, "w-auto cursor-pointer dark:[color-scheme:dark]");
 
 const dayToggleClass =
-  "inline-flex h-9 min-w-9 items-center justify-center rounded border px-2 " +
+  "inline-flex h-9 min-w-9 items-center justify-center rounded-none border px-2 " +
   "font-mono text-sm font-semibold transition-colors";
-const dayToggleActive = "border-accent bg-accent text-accent-contrast";
-const dayToggleIdle = "border-border bg-background text-foreground-dim hover:text-foreground";
+const dayToggleActive = "border-ink bg-ink text-panel";
+const dayToggleIdle =
+  "border-border-strong bg-background text-foreground-dim hover:text-foreground";
 
 /**
  * Human-friendly recurring-schedule chooser: a weekly/monthly repeat control,

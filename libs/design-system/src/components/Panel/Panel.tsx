@@ -51,7 +51,7 @@ export function Panel({
       ref={ref}
       {...rest}
     >
-      {live && <Corners inset="75" tone={liveTone} />}
+      {live && <Corners inset="100" tone={liveTone} />}
       {(header || headerEnd) && (
         <div
           className="flex items-center gap-2 border-b border-border px-4 py-2.5 font-mono text-xs font-medium uppercase tracking-wider text-foreground-faint"

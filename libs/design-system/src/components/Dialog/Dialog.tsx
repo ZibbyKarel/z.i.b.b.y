@@ -126,7 +126,7 @@ export function Dialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-overlay)] backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-overlay)]"
       data-testid={DialogTestId.Overlay}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose?.();
@@ -139,7 +139,7 @@ export function Dialog({
         aria-label={ariaLabel}
         aria-labelledby={title && !ariaLabel ? titleId : undefined}
         className={cn(
-          "relative flex max-h-[calc(100vh-64px)] flex-col bg-elevated border border-border-strong rounded-lg shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-accent)_13%,transparent),var(--shadow-modal)] animate-scale-in",
+          "relative flex max-h-[calc(100vh-64px)] flex-col bg-surface border border-ink rounded-none animate-scale-in",
           focusRing,
         )}
         data-testid={DialogTestId.Root}

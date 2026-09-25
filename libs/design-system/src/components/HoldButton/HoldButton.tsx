@@ -152,7 +152,7 @@ export function HoldButton({
     <button
       className={cn(
         "relative inline-flex items-center justify-center gap-1.5 overflow-hidden select-none",
-        "rounded-sm border font-mono font-bold tracking-[0.02em]",
+        "rounded-none border font-mono font-bold uppercase tracking-wider",
         sizeClass[size],
         "cursor-pointer whitespace-nowrap transition-colors duration-200",
         done ? "border-ok bg-ok text-accent-contrast" : toneClass[tone],

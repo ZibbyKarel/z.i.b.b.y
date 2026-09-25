@@ -37,6 +37,18 @@ const glowClass: Record<StateTone | "wait", string> = {
   wait: "shadow-[0_0_8px_color-mix(in_srgb,var(--color-warn)_67%,transparent)]",
 };
 
+/**
+ * DS.md §7/§9 living behaviour: `working` breathes (`zb-live`/`animate-zb-live`),
+ * `blocked` (and its `wait` alias) blinks (`zb-pulse`/`animate-zb-pulse`) — every
+ * other tone is matte even when `pulse` is set ("the rest static"). Reuses the
+ * same DS.md-named keyframes `StatePill`'s `StateDot` applies inline.
+ */
+const livingAnimationClass: Partial<Record<StateTone | "wait", string>> = {
+  working: "animate-zb-live",
+  blocked: "animate-zb-pulse",
+  wait: "animate-zb-pulse",
+};
+
 export enum StatusDotTestId {
   Root = "status-dot-root",
   Dot = "status-dot-dot",
@@ -51,10 +63,17 @@ export interface StatusDotProps extends Omit<HTMLAttributes<HTMLSpanElement>, "c
   ref?: React.Ref<HTMLSpanElement>;
 }
 
-/** A status dot — matte by default, glowing and pulsing only when live. */
+/**
+ * A status dot (DS.md §7) — a square pixel of the status colour, matte by
+ * default. Living behaviour is tone-driven, not caller-chosen: `pulse` only
+ * *permits* the dot to animate (an idle read-out of a past working/blocked
+ * state should stay matte); `working` breathes, `blocked`/`wait` blink,
+ * every other tone stays static regardless of `pulse`.
+ */
 export function StatusDot({ tone, size = "100", pulse = false, ref, ...props }: StatusDotProps) {
   const px = spacingToPx(size);
   const resolvedTone = normalizeToneLike(tone);
+  const animationClass = pulse ? livingAnimationClass[resolvedTone] : undefined;
   return (
     <span
       className="relative inline-block shrink-0"
@@ -65,10 +84,10 @@ export function StatusDot({ tone, size = "100", pulse = false, ref, ...props }: 
     >
       <span
         className={cn(
-          "absolute inset-0 rounded-full",
+          "absolute inset-0",
           toneClass[resolvedTone],
-          pulse && glowClass[resolvedTone],
-          pulse && "animate-live motion-reduce:animate-none",
+          animationClass && glowClass[resolvedTone],
+          animationClass && cn(animationClass, "motion-reduce:animate-none"),
         )}
         data-testid={StatusDotTestId.Dot}
       />

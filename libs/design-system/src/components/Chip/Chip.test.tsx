@@ -48,7 +48,7 @@ describe("Chip", () => {
     );
     const root = screen.getByTestId(ChipTestId.Root);
     expect(within(root).getByTestId(ChipTestId.Dot)).toBeInTheDocument();
-    expect(within(root).getByTestId(StatusDotTestId.Dot).className).toContain("animate-live");
+    expect(within(root).getByTestId(StatusDotTestId.Dot).className).toContain("animate-zb-live");
 
     rerender(
       <Chip dot tone="ok">
@@ -57,7 +57,7 @@ describe("Chip", () => {
     );
     expect(
       within(screen.getByTestId(ChipTestId.Root)).getByTestId(StatusDotTestId.Dot).className,
-    ).not.toContain("animate-live");
+    ).not.toContain("animate-zb-live");
   });
 
   it("shows no close button by default", () => {
