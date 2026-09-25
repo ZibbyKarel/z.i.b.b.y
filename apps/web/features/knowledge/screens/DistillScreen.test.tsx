@@ -5,6 +5,7 @@ import { DistillScreen } from "./DistillScreen";
 const mutate = vi.fn();
 
 vi.mock("../../automations/queries/useAutomationsQuery", () => ({
+  getAutomationsQueryKey: () => ["automations"],
   useAutomationsQuery: () => ({
     isPending: false,
     isError: false,
@@ -48,7 +49,9 @@ vi.mock("../components/SelfKnowledgeSection", () => ({
 describe("DistillScreen", () => {
   it("lists only the KNW-owned distillation automations", () => {
     render(<DistillScreen />);
-    expect(screen.getByText("Noční destilace paměti")).toBeInTheDocument();
+    // The first automation is also the selected one, so its name shows in the
+    // list and again as the detail panel's header.
+    expect(screen.getAllByText("Noční destilace paměti").length).toBeGreaterThan(0);
     expect(screen.getByText("Detekce mezer")).toBeInTheDocument();
     expect(screen.queryByText("briefing")).not.toBeInTheDocument();
   });

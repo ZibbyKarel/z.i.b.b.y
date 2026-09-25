@@ -615,7 +615,7 @@ export function RunDetail({
       <MetaCell
         key="project"
         label={t("metaProject")}
-        onClick={() => router.push(`/projects/${projectId}`)}
+        onClick={() => router.push(`/work/projects/${projectId}`)}
         testId="run-project-link"
         tone="accent"
         value={run.project}
@@ -634,7 +634,7 @@ export function RunDetail({
       <MetaCell
         key="roadmapItem"
         label={t("metaRoadmapItem")}
-        onClick={() => router.push(`/projects/${projectId}?tab=roadmap&item=${roadmapItemId}`)}
+        onClick={() => router.push(`/work/projects/${projectId}/roadmap?item=${roadmapItemId}`)}
         testId="run-roadmap-item-link"
         tone="accent"
         value={run.roadmapItemLabel ?? roadmapItemId}

@@ -120,7 +120,7 @@ function CommandEditor({ command }: { command: Command }) {
           </Button>
         </>
       }
-      backHref="/commands"
+      backHref="/system/registries/commands"
       subtitle={command["argument-hint"]}
       title={`/${command.id}`}
     >
@@ -143,7 +143,7 @@ function CommandEditor({ command }: { command: Command }) {
           onConfirm={() =>
             deleteCommand.mutate(
               { params: { id: command.id } },
-              { onSuccess: () => router.push("/commands") },
+              { onSuccess: () => router.push("/system/registries/commands") },
             )
           }
           pending={deleteCommand.isPending}

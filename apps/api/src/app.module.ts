@@ -34,6 +34,7 @@ import { MachineModule } from "./machine/machine.module";
 import { MonitorsModule } from "./monitors/monitors.module";
 import { PipelinesModule } from "./pipelines/pipelines.module";
 import { ProjectsModule } from "./projects/projects.module";
+import { RegistriesModule } from "./registries/registries.module";
 import { ReviewLearningModule } from "./review-learning/review-learning.module";
 import { HttpConnectionReaperModule } from "./shared/http/http-connection-reaper.module";
 import { LoggingModule } from "./shared/logging/logging.module";
@@ -95,6 +96,7 @@ import { EmployeesModule } from "./employees/employees.module";
     HandoffModule,
     HealthModule,
     DepartmentsModule,
+    RegistriesModule,
     SelfModule,
     SelfKnowledgeModule,
     LimitsModule,

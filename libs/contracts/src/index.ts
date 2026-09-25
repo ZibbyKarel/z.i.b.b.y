@@ -95,4 +95,6 @@ export * from "./chat/chat.schema";
 export * from "./chat/chat.contract";
 export * from "./speech/speech.schema";
 export * from "./speech/speech.contract";
+export * from "./registries/registry-bindings.schema";
+export * from "./registries/registries.contract";
 export * from "./app.contract";

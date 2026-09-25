@@ -340,6 +340,28 @@
       "remove": "Remove attachment"
     }
   },
+  "goals": {
+    "eyebrow": "WORK — GOALS",
+    "title": "Maker ⇄ verifier loops",
+    "subtitle": "A goal repeats until the verifier passes or the run budget runs out.",
+    "emptyTitle": "No goals yet",
+    "emptyBody": "Create a goal from a maker (agent or pipeline) and a verifier to start a loop.",
+    "noProject": "—",
+    "resume": "Resume",
+    "stop": "Stop",
+    "stateTone": {
+      "working": "Working",
+      "thinking": "Thinking",
+      "blocked": "Parked",
+      "error": "Error",
+      "done": "Met",
+      "idle": "Idle"
+    },
+    "detail": {
+      "noRunsTitle": "No runs yet",
+      "noRunsBody": "This goal hasn't been dispatched yet — hand it a task to start the loop."
+    }
+  },
   "tasksWork": {
     "eyebrow": "WORK",
     "state": {
@@ -1189,11 +1211,31 @@
       "disabled": "Disabled"
     },
     "footer": "ZIBBY — Zestful Intuitive Brainy Butler for You",
+    "eyebrow": "SYSTEM — SETTINGS",
     "subnav": {
       "ariaLabel": "Settings sections",
       "general": "General",
+      "appearance": "Appearance",
+      "coo": "COO persona",
+      "activity": "Activity",
+      "automations": "Automations",
+      "runtime": "Runtime",
+      "machine": "Machine",
+      "status": "Status",
       "gates": "Approval rules",
       "tasks": "Tasks"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "themeLabel": "Theme",
+      "themeHint": "Light is instrument paper; dark adds a glow to live status. System follows the OS setting and updates live.",
+      "theme": {
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System"
+      },
+      "motionLabel": "Reduced motion",
+      "motionHint": "Turns off glyph and status animations in this browser, on top of your OS's own reduced-motion setting."
     },
     "activity": {
       "title": "Activity",
@@ -1501,6 +1543,7 @@
     "resolveCheck": "Check"
   },
   "projects": {
+    "eyebrow": "WORK — PROJECTS",
     "title": "Projects",
     "switcherLabel": "Active project",
     "switcherNoProject": "No project",
@@ -1697,6 +1740,7 @@
     }
   },
   "companies": {
+    "eyebrow": "WORK — COMPANIES",
     "title": "Companies",
     "countSummary": "{count, plural, =0 {no companies} one {# company} other {# companies}} · the super-entity above projects",
     "addCompany": "Add company",
@@ -1760,10 +1804,20 @@
         "placeholder": "Pick a project…",
         "confirm": "Link",
         "noCandidates": "No other project to link — every project already belongs to this company."
-      }
+      },
+      "columnProject": "Project",
+      "columnRepo": "Repo"
+    },
+    "allTasksLink": "ALL TASKS FOR THIS COMPANY →",
+    "contactsTitle": "Contacts",
+    "metrics": {
+      "projects": "PROJECTS",
+      "contacts": "CONTACTS",
+      "budget": "BUDGET / MO"
     }
   },
   "teams": {
+    "eyebrow": "WORK — TEAMS",
     "title": "Teams",
     "countSummary": "{count, plural, =0 {no teams} one {# team} other {# teams}} · the knowledge-base owner between a company and a project",
     "addTeam": "Add team",
@@ -1816,7 +1870,12 @@
         "placeholder": "Pick a project…",
         "confirm": "Link",
         "noCandidates": "No other project to link — every project already belongs to this team."
-      }
+      },
+      "columnProject": "Project",
+      "columnRepo": "Repo"
+    },
+    "metrics": {
+      "projects": "PROJECTS"
     }
   },
   "automations": {
@@ -2015,6 +2074,15 @@
     "deleteBody": "Really delete command /{id}? Its definition file is deleted too. This cannot be undone."
   },
   "chat": {
+    "createTask": "Create task",
+    "dock": {
+      "role": "COO · Routes, classifies, chats",
+      "toggle": "Toggle the COO chat",
+      "targetCoo": "→ COO",
+      "targetExplicit": "→ {name}",
+      "clearTarget": "Clear the target (back to the COO)",
+      "empty": "Ask the COO anything, or hand it a task."
+    },
     "title": "Chat with ZIBBY",
     "close": "Close",
     "newChat": "New chat",
@@ -2302,6 +2370,7 @@
     }
   },
   "departmentDetail": {
+    "chatWith": "Chat with {name}",
     "breadcrumbOrg": "Org",
     "reportsToCoo": "Reports to COO",
     "kpiOpenSubtasks": "Open subtasks",
@@ -2741,5 +2810,114 @@
     "warnWeekly": "Warn — weekly window",
     "stopRolling": "Stop — 5h window",
     "stopWeekly": "Stop — weekly window"
+  },
+  "commandPalette": {
+    "placeholder": "Jump to a page, department, agent, task or /command",
+    "ariaLabel": "Command palette",
+    "empty": "No results",
+    "kind": {
+      "department": "Department",
+      "person": "Person",
+      "task": "Task",
+      "chain": "Chain",
+      "goal": "Goal",
+      "company": "Company",
+      "team": "Team",
+      "project": "Project",
+      "pipeline": "Pipeline",
+      "skill": "Skill",
+      "mcp": "MCP server",
+      "hook": "Hook",
+      "command": "Command",
+      "automation": "Automation",
+      "signal": "Signal",
+      "note": "Note",
+      "setting": "Setting",
+      "gate": "Gate",
+      "action": "Action"
+    },
+    "group": {
+      "actions": "Actions",
+      "departments": "Departments",
+      "people": "People",
+      "tasks": "Tasks",
+      "chains": "Chains",
+      "goals": "Goals",
+      "companies": "Companies",
+      "teams": "Teams",
+      "projects": "Projects",
+      "pipelines": "Pipelines",
+      "registries": "Registries",
+      "automations": "Automations",
+      "signals": "Signals",
+      "vault": "Vault",
+      "settings": "Settings",
+      "gates": "Gates"
+    },
+    "settingsSection": {
+      "general": "General",
+      "automations": "Automations",
+      "coo": "COO persona",
+      "activity": "Activity",
+      "runtime": "Runtime",
+      "machine": "Machine",
+      "status": "Status",
+      "appearance": "Appearance"
+    },
+    "gateSection": {
+      "floor": "Floor",
+      "global": "Global rules",
+      "per-project": "Per-project",
+      "per-agent": "Per-agent",
+      "handoff": "Handoff rules",
+      "signals": "Signals",
+      "mandate": "Mandate"
+    },
+    "actions": {
+      "newTask": "New task",
+      "approveNext": "Approve next",
+      "toggleTheme": "Toggle theme"
+    }
+  },
+  "registries": {
+    "eyebrow": "SYSTEM — REGISTRIES",
+    "title": "Global libraries",
+    "subtitle": "Departments bind to these in their own tabs.",
+    "kinds": {
+      "skills": "Skills",
+      "mcp": "MCP servers",
+      "hooks": "Hooks",
+      "commands": "Commands"
+    },
+    "add": {
+      "skills": "Add skill",
+      "mcp": "Add server",
+      "hooks": "Add hook",
+      "commands": "Add command"
+    },
+    "columns": {
+      "name": "Name",
+      "description": "Description",
+      "boundIn": "Bound in"
+    },
+    "metaHeader": {
+      "skills": "Type",
+      "mcp": "Status",
+      "hooks": "Event",
+      "commands": "Scope"
+    },
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "commandScope": {
+      "auto": "⌘K · COO",
+      "manual": "Manual only"
+    },
+    "skillTypeFallback": "Skill",
+    "emptySkills": "No skills yet.",
+    "emptyMcp": "No MCP servers yet.",
+    "emptyHooks": "No hooks yet.",
+    "emptyCommands": "No commands yet."
   }
 }

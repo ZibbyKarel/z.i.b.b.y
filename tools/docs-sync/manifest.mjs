@@ -40,6 +40,7 @@ export const API_MODULE_DOC_MAP = {
   limits: "docs/api/limits.md",
   arch: "docs/api/departments.md",
   machine: "docs/api/machine.md",
+  registries: "docs/api/extensibility.md",
   release: "docs/api/departments.md",
   mandate: "docs/api/mandate.md",
   mcp: "docs/api/extensibility.md",

@@ -60,7 +60,7 @@ export function ProjectIntegrationsPanel({ projectId }: ProjectIntegrationsPanel
             });
           }
           setCreating(false);
-          router.push(`/projects/${projectId}/integrations/${body.id}`);
+          router.push(`/work/projects/${projectId}/integrations/${body.id}`);
         },
       },
     );
@@ -120,7 +120,7 @@ export function ProjectIntegrationsPanel({ projectId }: ProjectIntegrationsPanel
                 integration={i}
                 key={i.id}
                 onConfigure={(integration) =>
-                  router.push(`/projects/${projectId}/integrations/${integration.id}`)
+                  router.push(`/work/projects/${projectId}/integrations/${integration.id}`)
                 }
                 onTest={onTest}
                 onToggleEnabled={(integration) =>

@@ -294,22 +294,22 @@ export function ChatSearch({
         onNavigate("/memory");
         return;
       case "skill":
-        onNavigate(`/skills/${item.id}` as Route);
+        onNavigate(`/system/registries/skills/${item.id}` as Route);
         return;
       case "mcp":
-        onNavigate(`/mcp/${item.id}` as Route);
+        onNavigate(`/system/registries/mcp/${item.id}` as Route);
         return;
       case "project":
-        onNavigate(`/projects/${item.id}` as Route);
+        onNavigate(`/work/projects/${item.id}` as Route);
         return;
       case "command":
-        onNavigate(`/commands/${item.id}` as Route);
+        onNavigate(`/system/registries/commands/${item.id}` as Route);
         return;
       case "company":
-        onNavigate(`/companies/${item.id}` as Route);
+        onNavigate(`/work/companies/${item.id}` as Route);
         return;
       case "setting":
-        onNavigate("/settings");
+        onNavigate("/system/settings/general" as Route);
         return;
       case "action":
         // Already in flight — the row's own label already says so; a repeat pick

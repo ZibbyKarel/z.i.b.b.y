@@ -558,7 +558,7 @@ describe("RunDetail — project meta cell links to project detail (Phase 67 item
   it("links the project meta cell to its detail page when the run carries a projectId", async () => {
     renderDetail({ ...pipelineRun, project: "Acme", projectId: "alpha" });
     await userEvent.click(screen.getByTestId("run-project-link"));
-    expect(push).toHaveBeenCalledWith("/projects/alpha");
+    expect(push).toHaveBeenCalledWith("/work/projects/alpha");
   });
 
   it("shows the assign control (not a link) for a project-less run", () => {
@@ -581,7 +581,7 @@ describe("RunDetail — roadmap issue meta cell (the run -> issue half of the li
       roadmapItemLabel: "CZ3TDR1-524",
     });
     await userEvent.click(screen.getByTestId("run-roadmap-item-link"));
-    expect(push).toHaveBeenCalledWith("/projects/alpha?tab=roadmap&item=alpha-jira-cz3tdr1-524");
+    expect(push).toHaveBeenCalledWith("/work/projects/alpha/roadmap?item=alpha-jira-cz3tdr1-524");
   });
 
   it("falls back to the raw item id when no label was snapshotted", () => {

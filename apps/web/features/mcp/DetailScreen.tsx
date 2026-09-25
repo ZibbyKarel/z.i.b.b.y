@@ -95,7 +95,7 @@ function McpServerEditor({ server }: { server: McpServer }) {
           </Button>
         </>
       }
-      backHref="/mcp"
+      backHref="/system/registries/mcp"
       subtitle={server.type === "stdio" ? server.command : server.url}
       title={name}
     >
@@ -118,7 +118,7 @@ function McpServerEditor({ server }: { server: McpServer }) {
           onConfirm={() =>
             deleteServer.mutate(
               { params: { id: server.id } },
-              { onSuccess: () => router.push("/mcp") },
+              { onSuccess: () => router.push("/system/registries/mcp") },
             )
           }
           pending={deleteServer.isPending}

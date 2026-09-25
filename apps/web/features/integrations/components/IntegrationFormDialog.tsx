@@ -30,13 +30,17 @@ export interface IntegrationFormDialogProps {
 /**
  * The CREATE-ONLY integration dialog (N4h) — grammar: dialogs create and
  * confirm, nothing else. Editing an existing integration lives on the
- * project-nested `/projects/:id/integrations/:integrationId` detail page
+ * project-nested `/work/projects/:id/integrations/:integrationId` detail page
  * ({@link ../DetailScreen}), which renders the same
  * {@link IntegrationFormFields}. The secret rides out-of-band (never inside the
  * persisted config); the caller persists it through the separate credentials
  * mutation (email → `password`, everything else → `token`).
  */
-export function IntegrationFormDialog({ projectId, onClose, onCreate }: IntegrationFormDialogProps) {
+export function IntegrationFormDialog({
+  projectId,
+  onClose,
+  onCreate,
+}: IntegrationFormDialogProps) {
   const t = useTranslations();
   const form = useIntegrationFormState(projectId);
 

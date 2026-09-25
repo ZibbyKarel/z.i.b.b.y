@@ -116,7 +116,7 @@ function SkillEditor({ skill }: { skill: Skill }) {
           </Button>
         </>
       }
-      backHref="/skills"
+      backHref="/system/registries/skills"
       subtitle={skillFile(skill.id)}
       title={name}
     >
@@ -147,7 +147,7 @@ function SkillEditor({ skill }: { skill: Skill }) {
           onConfirm={() =>
             deleteSkill.mutate(
               { params: { id: skill.id } },
-              { onSuccess: () => router.push("/skills") },
+              { onSuccess: () => router.push("/system/registries/skills") },
             )
           }
           pending={deleteSkill.isPending}

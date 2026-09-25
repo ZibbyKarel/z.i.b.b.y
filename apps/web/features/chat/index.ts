@@ -3,6 +3,7 @@
 // it directly (see agents/Screen.tsx for the same convention).
 export { ChatProvider, useChat, CHAT_SHORTCUT_KEY } from "./ChatContext";
 export { ChatButton } from "./components/ChatButton";
+export { CooDock } from "./components/CooDock";
 export { useSendChatMessageMutation } from "./mutations";
 export { useChatTranscriptQuery, getChatTranscriptQueryKey } from "./queries";
 export { useChatStream } from "./hooks/useChatStream";

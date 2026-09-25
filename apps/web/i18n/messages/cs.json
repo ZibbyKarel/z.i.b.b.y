@@ -340,6 +340,28 @@
       "remove": "Odebrat přílohu"
     }
   },
+  "goals": {
+    "eyebrow": "PRÁCE — CÍLE",
+    "title": "Smyčky tvůrce ⇄ ověřovatel",
+    "subtitle": "Cíl se opakuje, dokud ověřovatel neprojde nebo nedojde rozpočet běhů.",
+    "emptyTitle": "Zatím žádné cíle",
+    "emptyBody": "Vytvořte cíl z tvůrce (agent nebo pipeline) a ověřovatele a spusťte smyčku.",
+    "noProject": "—",
+    "resume": "Pokračovat",
+    "stop": "Zastavit",
+    "stateTone": {
+      "working": "Pracuje",
+      "thinking": "Přemýšlí",
+      "blocked": "Zaparkováno",
+      "error": "Chyba",
+      "done": "Splněno",
+      "idle": "Nečinný"
+    },
+    "detail": {
+      "noRunsTitle": "Zatím žádné běhy",
+      "noRunsBody": "Tento cíl ještě nebyl spuštěn — přiřaďte mu úlohu a spusťte smyčku."
+    }
+  },
   "tasksWork": {
     "eyebrow": "PRÁCE",
     "state": {
@@ -1189,11 +1211,31 @@
       "disabled": "Vypnutý"
     },
     "footer": "ZIBBY — Zestful Intuitive Brainy Butler for You",
+    "eyebrow": "SYSTÉM — NASTAVENÍ",
     "subnav": {
       "ariaLabel": "Sekce nastavení",
       "general": "Obecné",
+      "appearance": "Vzhled",
+      "coo": "Osobnost COO",
+      "activity": "Aktivita",
+      "automations": "Automatizace",
+      "runtime": "Běhové parametry",
+      "machine": "Stroj",
+      "status": "Stav",
       "gates": "Pravidla schvalování",
       "tasks": "Tasky"
+    },
+    "appearance": {
+      "title": "Vzhled",
+      "themeLabel": "Motiv",
+      "themeHint": "Světlý motiv je jako papír, tmavý dodá živým stavům záři. Systémový sleduje nastavení OS a mění se za běhu.",
+      "theme": {
+        "light": "Světlý",
+        "dark": "Tmavý",
+        "system": "Systémový"
+      },
+      "motionLabel": "Omezený pohyb",
+      "motionHint": "Vypne animace glyfů a stavů v tomto prohlížeči — navíc k vlastnímu nastavení omezeného pohybu v OS."
     },
     "activity": {
       "title": "Aktivita",
@@ -1501,6 +1543,7 @@
     "resolveCheck": "Kontrola"
   },
   "projects": {
+    "eyebrow": "PRÁCE — PROJEKTY",
     "title": "Projekty",
     "switcherLabel": "Aktivní projekt",
     "switcherNoProject": "Bez projektu",
@@ -1697,6 +1740,7 @@
     }
   },
   "companies": {
+    "eyebrow": "PRÁCE — FIRMY",
     "title": "Firmy",
     "countSummary": "{count, plural, =0 {žádné firmy} one {# firma} few {# firmy} other {# firem}} · nadřazená entita nad projekty",
     "addCompany": "Přidat firmu",
@@ -1760,10 +1804,20 @@
         "placeholder": "Vyber projekt…",
         "confirm": "Propojit",
         "noCandidates": "Žádný jiný projekt k propojení — všechny už patří k této firmě."
-      }
+      },
+      "columnProject": "Projekt",
+      "columnRepo": "Repo"
+    },
+    "allTasksLink": "VŠECHNY ÚKOLY TÉTO FIRMY →",
+    "contactsTitle": "Kontakty",
+    "metrics": {
+      "projects": "PROJEKTY",
+      "contacts": "KONTAKTY",
+      "budget": "ROZPOČET / MĚS"
     }
   },
   "teams": {
+    "eyebrow": "PRÁCE — TÝMY",
     "title": "Týmy",
     "countSummary": "{count, plural, =0 {žádné týmy} one {# tým} few {# týmy} other {# týmů}} · vlastník znalostní báze mezi firmou a projektem",
     "addTeam": "Přidat tým",
@@ -1816,7 +1870,12 @@
         "placeholder": "Vyber projekt…",
         "confirm": "Propojit",
         "noCandidates": "Žádný jiný projekt k propojení — všechny už patří k tomuto týmu."
-      }
+      },
+      "columnProject": "Projekt",
+      "columnRepo": "Repo"
+    },
+    "metrics": {
+      "projects": "PROJEKTY"
     }
   },
   "automations": {
@@ -2015,6 +2074,15 @@
     "deleteBody": "Opravdu smazat příkaz /{id}? Smaže se i jeho definiční soubor. Tuto akci nelze vrátit."
   },
   "chat": {
+    "createTask": "Vytvořit úkol",
+    "dock": {
+      "role": "COO · Směruje, třídí, konverzuje",
+      "toggle": "Otevřít nebo zavřít chat s COO",
+      "targetCoo": "→ COO",
+      "targetExplicit": "→ {name}",
+      "clearTarget": "Zrušit cíl (zpět na COO)",
+      "empty": "Zeptejte se COO na cokoli, nebo mu předejte úkol."
+    },
     "title": "Chat se ZIBBY",
     "close": "Zavřít",
     "newChat": "Nový chat",
@@ -2302,6 +2370,7 @@
     }
   },
   "departmentDetail": {
+    "chatWith": "Chat s {name}",
     "breadcrumbOrg": "Organizace",
     "reportsToCoo": "Podléhá COO",
     "kpiOpenSubtasks": "Otevřené podúkoly",
@@ -2741,5 +2810,114 @@
     "warnWeekly": "Varování — týdenní okno",
     "stopRolling": "Stop — 5h okno",
     "stopWeekly": "Stop — týdenní okno"
+  },
+  "commandPalette": {
+    "placeholder": "Přejít na stránku, oddělení, agenta, úkol nebo /příkaz",
+    "ariaLabel": "Paleta příkazů",
+    "empty": "Žádné výsledky",
+    "kind": {
+      "department": "Oddělení",
+      "person": "Osoba",
+      "task": "Úkol",
+      "chain": "Řetězec",
+      "goal": "Cíl",
+      "company": "Firma",
+      "team": "Tým",
+      "project": "Projekt",
+      "pipeline": "Pipeline",
+      "skill": "Dovednost",
+      "mcp": "MCP server",
+      "hook": "Hook",
+      "command": "Příkaz",
+      "automation": "Automatizace",
+      "signal": "Signál",
+      "note": "Poznámka",
+      "setting": "Nastavení",
+      "gate": "Brána",
+      "action": "Akce"
+    },
+    "group": {
+      "actions": "Akce",
+      "departments": "Oddělení",
+      "people": "Lidé",
+      "tasks": "Úkoly",
+      "chains": "Řetězce",
+      "goals": "Cíle",
+      "companies": "Firmy",
+      "teams": "Týmy",
+      "projects": "Projekty",
+      "pipelines": "Pipelines",
+      "registries": "Registry",
+      "automations": "Automatizace",
+      "signals": "Signály",
+      "vault": "Trezor",
+      "settings": "Nastavení",
+      "gates": "Brány"
+    },
+    "settingsSection": {
+      "general": "Obecné",
+      "automations": "Automatizace",
+      "coo": "Persona COO",
+      "activity": "Aktivita",
+      "runtime": "Runtime",
+      "machine": "Stroj",
+      "status": "Stav",
+      "appearance": "Vzhled"
+    },
+    "gateSection": {
+      "floor": "Podlaha",
+      "global": "Globální pravidla",
+      "per-project": "Podle projektu",
+      "per-agent": "Podle agenta",
+      "handoff": "Pravidla předávání",
+      "signals": "Signály",
+      "mandate": "Mandát"
+    },
+    "actions": {
+      "newTask": "Nový úkol",
+      "approveNext": "Schválit další",
+      "toggleTheme": "Přepnout motiv"
+    }
+  },
+  "registries": {
+    "eyebrow": "SYSTÉM — REGISTRY",
+    "title": "Globální knihovny",
+    "subtitle": "Oddělení se na ně napojují ve vlastních záložkách.",
+    "kinds": {
+      "skills": "Skilly",
+      "mcp": "MCP servery",
+      "hooks": "Hooky",
+      "commands": "Příkazy"
+    },
+    "add": {
+      "skills": "Přidat skill",
+      "mcp": "Přidat server",
+      "hooks": "Přidat hook",
+      "commands": "Přidat příkaz"
+    },
+    "columns": {
+      "name": "Název",
+      "description": "Popis",
+      "boundIn": "Napojeno na"
+    },
+    "metaHeader": {
+      "skills": "Typ",
+      "mcp": "Stav",
+      "hooks": "Událost",
+      "commands": "Rozsah"
+    },
+    "status": {
+      "enabled": "Zapnuto",
+      "disabled": "Vypnuto"
+    },
+    "commandScope": {
+      "auto": "⌘K · COO",
+      "manual": "Jen ručně"
+    },
+    "skillTypeFallback": "Skill",
+    "emptySkills": "Zatím žádné skilly.",
+    "emptyMcp": "Zatím žádné MCP servery.",
+    "emptyHooks": "Zatím žádné hooky.",
+    "emptyCommands": "Zatím žádné příkazy."
   }
 }

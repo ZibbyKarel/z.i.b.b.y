@@ -24,6 +24,7 @@ import { EmptyState } from "../../../components/EmptyState/EmptyState";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../../components/PageContainer/PageContainer";
+import { useChat } from "../../chat";
 import { useEmployeesQuery } from "../../employees";
 import { HandoffRulesSection } from "../../handoff/components/HandoffRulesSection";
 import { useHandoffRulesQuery } from "../../handoff/queries";
@@ -42,6 +43,10 @@ export const DEPARTMENT_TABS = [
 ] as const;
 export type DepartmentTab = (typeof DEPARTMENT_TABS)[number];
 
+export enum DepartmentScreenTestId {
+  ChatButton = "department-screen-chat-button",
+}
+
 export interface DepartmentScreenProps {
   departmentId: string;
   tab: DepartmentTab;
@@ -50,6 +55,7 @@ export interface DepartmentScreenProps {
 export function DepartmentScreen({ departmentId, tab }: DepartmentScreenProps) {
   const t = useTranslations("departmentDetail");
   const router = useRouter();
+  const { open: openChat } = useChat();
   const departmentQuery = useDepartmentQuery(departmentId);
   const employeesQuery = useEmployeesQuery({
     department: departmentId as DepartmentId,
@@ -84,11 +90,27 @@ export function DepartmentScreen({ departmentId, tab }: DepartmentScreenProps) {
           />
 
           <Stack gap="100">
-            <Stack align="center" direction="row" gap="150">
-              <Typography mono size="sm" type="note" variant="tertiary">
-                {department.code}
-              </Typography>
-              <Typography type="title">{department.name}</Typography>
+            <Stack align="center" direction="row" gap="150" justify="between">
+              <Stack align="center" direction="row" gap="150">
+                <Typography mono size="sm" type="note" variant="tertiary">
+                  {department.code}
+                </Typography>
+                <Typography type="title">{department.name}</Typography>
+              </Stack>
+              {/* O-20: no separate department transcript — the COO dock opens
+                  pre-scoped with an explicit department target, which overrides
+                  the classifier ("explicit target overrides the classifier"). */}
+              <Button
+                data-testid={DepartmentScreenTestId.ChatButton}
+                icon="bot"
+                intent="secondary"
+                onClick={() =>
+                  openChat({ kind: "department", id: department.id, name: department.name })
+                }
+                size="sm"
+              >
+                {t("chatWith", { name: department.code })}
+              </Button>
             </Stack>
             <Typography type="note" variant="secondary">
               {department.mandate}
@@ -307,19 +329,26 @@ function HandoffTab({
   );
 }
 
-/** ZB-03 lazy floor for skills/integrations/automations/hooks (O-09): a link
- * out to the global registry rather than a derived "bound in" list — deriving
- * per-department bindings is deferred to ZB-11 when the registries themselves
- * land at `/system/registries/*`. */
+/** ZB-11: a link out to the global registry (skills/mcp/hooks now live at
+ * `/system/registries/<kind>`; system automations stay at `/automations` —
+ * out of ZB-11's scope) rather than a derived "bound in" list on this tab
+ * itself — the derived list now lives ON the registry table (O-09), as a
+ * "Bound in" column linking back here. */
 function RegistryLinkTab({ kind }: { kind: "skills" | "mcp" | "automations" | "hooks" }) {
   const t = useTranslations("departmentDetail");
   const router = useRouter();
+  const REGISTRY_ROUTE: Record<typeof kind, string> = {
+    skills: "/system/registries/skills",
+    mcp: "/system/registries/mcp",
+    hooks: "/system/registries/hooks",
+    automations: "/automations",
+  };
   return (
     <EmptyState
       actionLabel={t("registryLink")}
       description={t("registryDescription")}
       glyph="server"
-      onAction={() => router.push(`/${kind === "automations" ? "automations" : kind}`)}
+      onAction={() => router.push(REGISTRY_ROUTE[kind])}
       title={t("registryTitle")}
     />
   );

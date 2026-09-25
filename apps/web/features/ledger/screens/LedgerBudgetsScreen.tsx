@@ -261,7 +261,7 @@ export function LedgerBudgetsScreen() {
                 <Grid cols={1} data-testid={LedgerBudgetsScreenTestId.CompanyGrid} gap="100" md={3}>
                   {companyRows.map((c) => (
                     <EntityBudgetCard
-                      href={`/companies/${c.id}` as Route}
+                      href={`/work/companies/${c.id}` as Route}
                       key={c.id}
                       name={c.name}
                       row={c.row}
@@ -282,7 +282,7 @@ export function LedgerBudgetsScreen() {
                 <Grid cols={1} data-testid={LedgerBudgetsScreenTestId.ProjectGrid} gap="100" md={3}>
                   {projectRows.map((p) => (
                     <EntityBudgetCard
-                      href={`/projects/${p.projectId}` as Route}
+                      href={`/work/projects/${p.projectId}` as Route}
                       key={p.projectId}
                       name={p.name}
                       row={p}

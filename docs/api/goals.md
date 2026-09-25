@@ -1,8 +1,8 @@
 # Goals (Phase 10)
 
 > The delivery loop, generalized: "**Architekt → Kodér ⇄ Code-Review → Tester →
-> Dokumentátor**" — a goal is the loop's outer shell, iterating a *maker* against a
-> *verifier* until the verifier is satisfied or bounded effort runs out.
+> Dokumentátor**" — a goal is the loop's outer shell, iterating a _maker_ against a
+> _verifier_ until the verifier is satisfied or bounded effort runs out.
 
 A **goal** is the 4th `TaskTarget` kind (alongside `agent`, `pipeline`, `orchestrator`):
 a stored `.goal.md` recipe naming a maker (an existing agent or pipeline, dispatched
@@ -14,16 +14,16 @@ thin glue over delivered machinery — no new dispatch path, no new session mode
 
 ## Pieces
 
-| Piece            | File                                              | Role                                                                                                  |
-| ---------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Contract         | `libs/contracts/src/goals/goal.schema.ts`         | `Goal`, `MakerRef`, `VerifierSpec`, `CreateGoalInput`/`UpdateGoalInput` schemas                        |
-| Contract (runs)  | `libs/contracts/src/goals/goal-run.schema.ts`     | `GoalRun`, `GoalIteration`, `GoalState`, `GoalParkedReason` — the run aggregate shape                  |
-| Contract (HTTP)  | `libs/contracts/src/goals/goals.contract.ts`      | CRUD-only ts-rest router; run operations live on the unified `taskRuns` contract, not here             |
-| Storage          | `apps/api/src/goals/goals.storage.service.ts`     | `GoalsStorageService` — file-backed CRUD over `<id>.goal.md` (frontmatter = config, body = instructions) |
-| Errors           | `apps/api/src/goals/goals.errors.ts`              | `GoalNotFoundError`/`GoalConflictError`/`InvalidGoalError`/`CorruptGoalFileError` + run-side errors      |
-| Runner           | `apps/api/src/goals/goal-runner.service.ts`       | `GoalRunnerService` — the outer maker/verifier loop, one worktree per run, park/resume/reconcile         |
-| Stop logic       | `apps/api/src/goals/goal-stop.ts`                 | `decideStop` (pure stop-condition matrix) + `renderGoalProgress` (resume-context progress block)         |
-| Controller       | `apps/api/src/goals/goals.controller.ts`          | Implements `goalsContract` against `GoalsStorageService`                                                |
+| Piece           | File                                          | Role                                                                                                     |
+| --------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Contract        | `libs/contracts/src/goals/goal.schema.ts`     | `Goal`, `MakerRef`, `VerifierSpec`, `CreateGoalInput`/`UpdateGoalInput` schemas                          |
+| Contract (runs) | `libs/contracts/src/goals/goal-run.schema.ts` | `GoalRun`, `GoalIteration`, `GoalState`, `GoalParkedReason` — the run aggregate shape                    |
+| Contract (HTTP) | `libs/contracts/src/goals/goals.contract.ts`  | CRUD-only ts-rest router; run operations live on the unified `taskRuns` contract, not here               |
+| Storage         | `apps/api/src/goals/goals.storage.service.ts` | `GoalsStorageService` — file-backed CRUD over `<id>.goal.md` (frontmatter = config, body = instructions) |
+| Errors          | `apps/api/src/goals/goals.errors.ts`          | `GoalNotFoundError`/`GoalConflictError`/`InvalidGoalError`/`CorruptGoalFileError` + run-side errors      |
+| Runner          | `apps/api/src/goals/goal-runner.service.ts`   | `GoalRunnerService` — the outer maker/verifier loop, one worktree per run, park/resume/reconcile         |
+| Stop logic      | `apps/api/src/goals/goal-stop.ts`             | `decideStop` (pure stop-condition matrix) + `renderGoalProgress` (resume-context progress block)         |
+| Controller      | `apps/api/src/goals/goals.controller.ts`      | Implements `goalsContract` against `GoalsStorageService`                                                 |
 
 ## Endpoints (`/api/goals`)
 
@@ -37,7 +37,7 @@ thin glue over delivered machinery — no new dispatch path, no new session mode
 - `PATCH /goals/:id` — partial update (`404`/`422`).
 - `DELETE /goals/:id` — delete the definition.
 
-**A goal *run* has no per-kind HTTP surface.** A run is started only by creating a
+**A goal _run_ has no per-kind HTTP surface.** A run is started only by creating a
 task with a `goal` target (`POST /api/tasks`); every run operation — detail, logs,
 resume, delete, artifact fetch — lives on the unified `taskRuns` contract under
 `/api/tasks/runs/*` (see `docs/api/tasks.md`). There is intentionally no
@@ -54,7 +54,7 @@ reads the goal definition, resolves the target project, and creates a run root u
 `GOAL_RUNS_DIR/<goalId>_<startedAtMs>` holding a forensic `objective.md`. If the
 project is a git repo, the run gets **one worktree for its whole lifetime** (Phase
 3.1) — every iteration's maker spawns there so its commits land on the same branch;
-the worktree itself lives *outside* the repo/data tree (`prepareWorktreeDir`, Phase
+the worktree itself lives _outside_ the repo/data tree (`prepareWorktreeDir`, Phase
 12.7), only the forensic artifacts (`objective.md`, `run.json`, per-iteration verdict
 files) stay under the run root. A worktree-setup failure on a git project fails the
 run outright — there is no silent fallback to the main checkout. `start()` returns
@@ -72,7 +72,7 @@ immediately; `drive()` runs the loop in the background.
    monorepo root). Either failure parks the goal immediately with reason
    `verifier-scope`.
 2. **Budget check** — both the project's own daily/weekly/monthly run cap
-   (`BudgetService.check`, see `docs/api/budget.md`) and the goal's *own* windowed
+   (`BudgetService.check`, see `docs/api/budget.md`) and the goal's _own_ windowed
    budget (`goalBudgetExceeded`, Phase 13.1: a rolling count of the goal's own
    iteration `startedAt` timestamps against `goal.budget.dailyRuns`/`weeklyRuns`).
    Either over-cap parks with reason `budget`, before the maker ever dispatches.
@@ -108,12 +108,14 @@ A goal definition is one `<id>.goal.md` file (`GoalsStorageService`, extending t
 same `MarkdownEntityStore` agents/pipelines use): YAML frontmatter carries `name`,
 `desc`, `objective`, `maker` (`{kind: "agent"|"pipeline", id}`), `verifier`
 (`{kind: "checks", commands?}` or `{kind: "claude", agent, model?, thinking?}`),
-`maxIterations`, and an optional `budget`; the Markdown body is `instructions` —
+`maxIterations`, an optional `budget`, and an optional `projectId` (O-16 — the
+project the goal is scoped to; the `/work/goals` screens show it, a goal may stand
+alone); the Markdown body is `instructions` —
 standing guidance handed to every maker iteration. A goal missing a valid
 maker/verifier is treated as corrupt (`CorruptGoalFileError`) rather than silently
 dropped, since it cannot loop without them.
 
-A goal *run* is the JSON aggregate at `<GOAL_RUNS_DIR>/<goalRunId>/run.json`
+A goal _run_ is the JSON aggregate at `<GOAL_RUNS_DIR>/<goalRunId>/run.json`
 (`GoalRunSchema`) — a clone of the pipeline run's shape with `iterations[]` in place
 of `stageRuns[]`. Each `GoalIteration` records its maker's run ref, the verifier
 verdict (`kind`, `satisfied`, `output`), and status. Restart rebuilds the whole

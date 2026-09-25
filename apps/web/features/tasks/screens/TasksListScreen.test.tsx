@@ -6,7 +6,11 @@ import { renderWithProviders as render, screen } from "../../../test/render";
 import { TasksListScreen } from "./TasksListScreen";
 
 const push = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+const { navState } = vi.hoisted(() => ({ navState: { search: "" } }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push }),
+  useSearchParams: () => new URLSearchParams(navState.search),
+}));
 
 const { hooks } = vi.hoisted(() => ({
   hooks: {
@@ -17,17 +21,18 @@ const { hooks } = vi.hoisted(() => ({
 }));
 const fetchNextPage = vi.fn();
 const refetch = vi.fn();
+const useTaskParentsInfiniteQuery = vi.fn(() => ({
+  data: hooks.parents,
+  isPending: hooks.isPending,
+  isError: hooks.isError,
+  refetch,
+  fetchNextPage,
+  hasNextPage: false,
+  isFetchingNextPage: false,
+}));
 
 vi.mock("../queries", () => ({
-  useTaskParentsInfiniteQuery: () => ({
-    data: hooks.parents,
-    isPending: hooks.isPending,
-    isError: hooks.isError,
-    refetch,
-    fetchNextPage,
-    hasNextPage: false,
-    isFetchingNextPage: false,
-  }),
+  useTaskParentsInfiniteQuery: (...args: unknown[]) => useTaskParentsInfiniteQuery(...(args as [])),
 }));
 vi.mock("../../companies", () => ({ useCompaniesQuery: () => ({ data: [] }) }));
 vi.mock("../../projects", () => ({ useProjectsQuery: () => ({ data: [] }) }));
@@ -51,6 +56,8 @@ describe("TasksListScreen (ZB-04b)", () => {
     hooks.isError = false;
     push.mockClear();
     fetchNextPage.mockClear();
+    navState.search = "";
+    useTaskParentsInfiniteQuery.mockClear();
   });
 
   it("renders the parent tasks table", () => {
@@ -71,5 +78,13 @@ describe("TasksListScreen (ZB-04b)", () => {
     hooks.parents = [];
     render(<TasksListScreen />);
     expect(screen.getByText("Žádný úkol neodpovídá zvoleným filtrům.")).toBeInTheDocument();
+  });
+
+  it("seeds the company filter from ?company= (the Companies detail's All tasks link)", () => {
+    navState.search = "company=co-1";
+    render(<TasksListScreen />);
+    expect(useTaskParentsInfiniteQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ company: "co-1" }),
+    );
   });
 });

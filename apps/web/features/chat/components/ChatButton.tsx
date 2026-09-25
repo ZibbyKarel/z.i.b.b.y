@@ -23,7 +23,7 @@ export function ChatButton() {
       data-testid={ChatButtonTestId.Root}
       icon="bot"
       intent="ghost"
-      onClick={open}
+      onClick={() => open()}
       size="sm"
       title={`${t("triggerTitle")} (⌘${CHAT_SHORTCUT_KEY.toUpperCase()})`}
     >

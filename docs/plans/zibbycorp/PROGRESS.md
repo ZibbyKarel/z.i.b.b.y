@@ -73,13 +73,13 @@ Legend: ⬜ todo · 🟦 in progress · ✅ landed (sha) · ⛔ parked (reason)
 | ZB-04b | Tasks UI | ✅ | 8a014bf3 |
 | ZB-05a | Chains backend on HandoffService | ✅ | 1d271ece |
 | ZB-05b | Chains UI | ✅ (in-flight column shows "—": tasks/parents has no chain field) | final day-run commit |
-| ZB-06 | Goals / Companies / Teams / Projects | ⬜ | |
+| ZB-06 | Goals / Companies / Teams / Projects | ✅ (company/team detail dropped the "create new project" quick action — link-existing only; project tabs route-driven, so unsaved drafts do not survive a tab switch) | 2026-09-25 session 2 |
 | ZB-07 | Activity | ✅ (no read-aloud on briefings — no useSpeech hook; run state filter client-side) | final day-run commit |
 | ZB-08 | Policy | ✅ (gaps: per-project gate rules EmptyState — no projectId on rules; PatternCard dismiss unwired — no endpoint) | final day-run commit |
 | ZB-09 | Knowledge | ✅ (MemoryGraph removed) | final day-run commit |
 | ZB-10 | Ledger | ✅ (budget edits link out to company/project detail) | final day-run commit |
-| ZB-11 | System settings + registries | ⬜ | |
-| ZB-12 | ⌘K + COO dock + voice | ⬜ | |
+| ZB-11 | System settings + registries | ✅ (`GET /api/registries/bindings`: mcp from agent grants; skills/hooks/commands bind to every staffed department — they are materialized into every run) | 2026-09-25 session 2 |
+| ZB-12 | ⌘K + COO dock + voice | ✅ (dock has no attach — chat API has no attachment channel; "Toggle theme" is a light/dark flip) | 2026-09-25 session 2 |
 | ZB-13 | Cleanup | ⬜ | |
 | ZB-14 | Validation → park | ⬜ | |
 
@@ -201,3 +201,28 @@ push and a **draft** PR into main (never merge).
 - `.zibby/data/roadmap/shoptet-partner-cli/*` has a Jira re-sync residue in the working tree. It is intentionally
   uncommitted.
 - Next: ZB-06, ZB-11, ZB-12, ZB-13, ZB-14, ZA-08.
+
+## 2026-09-25 session 2 (cloud, branch `claude/zibbycorp-system-migration-7lx46s`)
+
+- ZB-06, ZB-11 and ZB-12a (⌘K) were built by parallel Sonnet subagents and reviewed by the
+  orchestrator. The orchestrator built ZB-12b (the COO dock) itself.
+- ZB-12b: `CooDock` is in `AppFrame`'s dock slot. `useCooChat` is the single stream owner
+  and does the transcript hydration. `ChatProvider` owns `dockOpen` and `dockTarget`.
+  A department page's "Chat with" button sets an explicit department target (O-20).
+  CREATE TASK opens `/work/tasks/new?text=&entry=`, and `NewTaskScreen` honours the prefill.
+- The old dock silently dropped attachments (`showAttach` with no channel in the chat
+  contract). The new dock hides the control. Follow-up: add an attachment channel to
+  `SendChatMessageBody` if chat attachments are wanted.
+- Fixed a pre-existing red: the `DistillScreen.test` mock was missing
+  `getAutomationsQueryKey`, and its assertion hit duplicate text.
+- **Environment reds in the cloud container.** These 17 tests fail identically on the
+  clean HEAD, so they are not caused by this work:
+  - `backup.test.ts`
+  - `pipelines.e2e`
+  - `pipeline-runner` read-only produces (running as root)
+  - `health.e2e` 503
+  - `unified-runs.e2e`
+  - `approvals.contract` EmptyBodySchema
+- Operator O-09 note: "Bound in" for skills/hooks/commands is coarse (every staffed
+  department) until a per-agent link exists.
+

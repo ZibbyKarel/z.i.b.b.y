@@ -1,6 +1,6 @@
 "use client";
 
-import { type AnchorHTMLAttributes, type ReactNode, Suspense } from "react";
+import { type AnchorHTMLAttributes, type ReactNode, Suspense, useState } from "react";
 import type { Route } from "next";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -21,7 +21,8 @@ import {
 } from "@zibby/design-system";
 import { CatalogProvider } from "../../../state/store";
 import { NewTaskProvider } from "../../../features/tasks";
-import { ChatProvider } from "../../../features/chat";
+import { ChatProvider, CooDock } from "../../../features/chat";
+import { CommandPaletteHost, useCommandPaletteHotkey } from "../../../features/command-palette";
 import { useApprovalsQuery, useApproveMutation } from "../../../features/approvals";
 import { ApprovalSheet } from "../../../features/approvals/components/ApprovalSheet";
 import { HIGH_RISK_TYPES, formatWaited } from "../../../features/approvals/approval";
@@ -207,22 +208,22 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   const t = useTranslations("common");
   const tShell = useTranslations("shell");
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const active = sectionForPath(pathname, searchParams);
+  const active = sectionForPath(pathname);
   const trailing = useHeaderTrailing();
   const approvalSheet = useApprovalSheetParam();
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  useCommandPaletteHotkey(() => setPaletteOpen((o) => !o));
 
   return (
     <AppFrame
+      dock={<CooDock />}
       header={
         <AppHeader
           activeCount={trailing.activeCount}
           limits={trailing.limits}
           linkComponent={NavLink}
           nav={<SectionNav active={active} />}
-          onSearchClick={() => {
-            /* ⌘K stub — CommandPalette lands in ZB-12. */
-          }}
+          onSearchClick={() => setPaletteOpen(true)}
           operator={trailing.operator}
           settingsHref="/system/settings/general"
         />
@@ -234,6 +235,11 @@ function AppShellChrome({ children }: { children: ReactNode }) {
     >
       {children}
       <ApprovalSheet approvalId={approvalSheet.approvalId} onClose={approvalSheet.close} />
+      <CommandPaletteHost
+        onOpenApproval={approvalSheet.open}
+        onOpenChange={setPaletteOpen}
+        open={paletteOpen}
+      />
     </AppFrame>
   );
 }

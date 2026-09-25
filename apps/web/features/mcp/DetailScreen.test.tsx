@@ -77,9 +77,7 @@ describe("mcp DetailScreen (N4e grammar)", () => {
   });
 
   it("Delete asks in a CONFIRM dialog, then deletes and navigates back to /mcp", async () => {
-    hooks.del.mockImplementation((_args, opts?: { onSuccess?: () => void }) =>
-      opts?.onSuccess?.(),
-    );
+    hooks.del.mockImplementation((_args, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.());
     render(<DetailScreen serverId="github" />);
     await userEvent.click(screen.getByTestId(McpDetailScreenTestId.Delete));
     expect(screen.getByText("Smazat MCP server?")).toBeInTheDocument();
@@ -91,6 +89,6 @@ describe("mcp DetailScreen (N4e grammar)", () => {
       { params: { id: "github" } },
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     );
-    expect(push).toHaveBeenCalledWith("/mcp");
+    expect(push).toHaveBeenCalledWith("/system/registries/mcp");
   });
 });

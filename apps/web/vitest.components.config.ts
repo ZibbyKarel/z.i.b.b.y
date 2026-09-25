@@ -41,6 +41,8 @@ export default defineConfig({
       "features/*/mutations/**/*.test.{ts,tsx}",
       // Shared hooks (generic cross-domain browser-API wrappers).
       "hooks/**/*.test.{ts,tsx}",
+      // Shell-global state/context providers (React context + browser persistence).
+      "state/**/*.test.{ts,tsx}",
     ],
   },
 });

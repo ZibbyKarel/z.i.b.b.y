@@ -104,7 +104,7 @@ describe("ChatSearch", () => {
     await user.click(screen.getByTestId(ChatSearchTestId.Input));
     await user.click(screen.getByTestId(`${ChatSearchTestId.Item}-project-alpha`));
 
-    expect(onNavigate).toHaveBeenCalledWith("/projects/alpha");
+    expect(onNavigate).toHaveBeenCalledWith("/work/projects/alpha");
   });
 
   it("picking the briefing action fires onGenerateBriefing", async () => {

@@ -30,27 +30,27 @@ export const NAV_ITEMS = [
   { id: "agents", glyph: "bot", href: "/agents" },
   { id: "pipelines", glyph: "flow", href: "/pipelines" },
   { id: "automations", glyph: "clock", href: "/automations" },
-  { id: "skills", glyph: "spark", href: "/skills" },
-  { id: "commands", glyph: "bolt", href: "/commands" },
-  { id: "hooks", glyph: "checkpoint", href: "/hooks" },
+  { id: "skills", glyph: "spark", href: "/system/registries/skills" as Route },
+  { id: "commands", glyph: "bolt", href: "/system/registries/commands" as Route },
+  { id: "hooks", glyph: "checkpoint", href: "/system/registries/hooks" as Route },
   // B3a (docs/superpowers/specs/2026-07-22-handoff-signal-registry-and-receiver-filter-design.md):
   // the handoff signal-kind registry — a config-ish catalog, placed with hooks/mcp.
   { id: "signals", glyph: "pulse", href: "/signals" },
-  { id: "mcp", glyph: "server", href: "/mcp" },
+  { id: "mcp", glyph: "server", href: "/system/registries/mcp" as Route },
   { id: "memory", glyph: "brain", href: "/memory" },
 ] as const satisfies readonly NavConfig[];
 
 export const SETTINGS_ITEM = {
   id: "settings",
   glyph: "gear",
-  href: "/settings",
+  href: "/system/settings/general" as Route,
 } as const satisfies NavConfig;
 
 /**
  * A section sub-tab. `href` is a real ZibbyCorp route once its screen phase ships
  * (ZB-02..ZB-11); until then it is "the closest existing current route" (ZB-01's
- * rule) — usually the section's own fallback, except the three `work` tabs
- * (`companies`, `teams`, `projects`) that already have a distinct legacy screen.
+ * rule) — usually the section's own fallback. ZB-06 shipped `goals`/`companies`/
+ * `teams`/`projects` at their real `/work/*` homes.
  */
 export interface SubTabConfig {
   id: string;
@@ -61,10 +61,10 @@ export interface SectionConfig {
   id: string;
   glyph: IconName;
   /** Section-level fallback route (AppHeader's section nav) — the ZB-01 mapping,
-   *  updated as each section ships: org→/org (ZB-02), work→/projects,
-   *  activity→/activity/log (ZB-07), policy→/settings?tab=gates,
+   *  updated as each section ships: org→/org (ZB-02), work→/work/tasks (ZB-04/06),
+   *  activity→/activity/log (ZB-07), policy→/policy/approvals (ZB-08),
    *  knowledge→/knowledge/vault (ZB-09), ledger→/ledger/budgets (ZB-10),
-   *  system→/settings. */
+   *  system→/system/settings/general (ZB-11). */
   href: Route;
   tabs: readonly SubTabConfig[];
 }
@@ -89,14 +89,14 @@ export const SECTIONS = [
   {
     id: "work",
     glyph: "flow",
-    href: "/projects",
+    href: "/work/tasks" as Route,
     tabs: [
       { id: "tasks", href: "/work/tasks" as Route },
       { id: "chains", href: "/work/chains" as Route },
-      { id: "goals", href: "/projects" },
-      { id: "companies", href: "/companies" },
-      { id: "teams", href: "/teams" },
-      { id: "projects", href: "/projects" },
+      { id: "goals", href: "/work/goals" as Route },
+      { id: "companies", href: "/work/companies" as Route },
+      { id: "teams", href: "/work/teams" as Route },
+      { id: "projects", href: "/work/projects" as Route },
     ],
   },
   {
@@ -144,10 +144,10 @@ export const SECTIONS = [
   {
     id: "system",
     glyph: "gear",
-    href: "/settings",
+    href: "/system/settings/general",
     tabs: [
-      { id: "settings", href: "/settings" },
-      { id: "registries", href: "/skills" },
+      { id: "settings", href: "/system/settings/general" as Route },
+      { id: "registries", href: "/system/registries/skills" as Route },
     ],
   },
 ] as const satisfies readonly SectionConfig[];
@@ -170,10 +170,9 @@ const PATH_SECTION: readonly (readonly [prefix: string, section: SectionId])[] =
   // the moved position registry (system).
   ["/org", "org"],
   ["/system", "system"],
-  ["/work/tasks", "work"],
-  ["/projects", "work"],
-  ["/companies", "work"],
-  ["/teams", "work"],
+  // ZB-06: goals/companies/teams/projects moved under /work/*; the bare
+  // top-level prefixes are kept as redirect targets only (D-009), not routes.
+  ["/work", "work"],
   ["/activity", "activity"],
   ["/archiv", "activity"],
   ["/runs", "activity"],
@@ -181,21 +180,9 @@ const PATH_SECTION: readonly (readonly [prefix: string, section: SectionId])[] =
   ["/memory", "knowledge"],
   ["/knowledge", "knowledge"],
   ["/ledger", "ledger"],
-  ["/skills", "system"],
-  ["/mcp", "system"],
-  ["/hooks", "system"],
-  ["/commands", "system"],
-  ["/settings", "system"],
 ];
 
-/** `?tab=gates`/`?tab=mandate` on `/settings` currently belong to Policy, not
- * System (ROUTE-MAP §3) — the one case a bare prefix match gets wrong. */
-const SETTINGS_POLICY_TABS = new Set(["gates", "mandate"]);
-
-export function sectionForPath(pathname: string, searchParams?: URLSearchParams): SectionId {
-  if (pathname === "/settings" && SETTINGS_POLICY_TABS.has(searchParams?.get("tab") ?? "")) {
-    return "policy";
-  }
+export function sectionForPath(pathname: string): SectionId {
   const match = PATH_SECTION.find(([prefix]) => pathname.startsWith(prefix));
   return match?.[1] ?? "org";
 }

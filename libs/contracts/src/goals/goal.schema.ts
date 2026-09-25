@@ -55,6 +55,8 @@ const GoalObject = z.object({
   budget: ProjectBudgetSchema.optional(),
   /** Markdown body — extra standing instructions handed to each maker iteration. */
   instructions: z.string().min(1),
+  /** The project this goal is scoped to (O-16), optional — a goal may stand alone. */
+  projectId: z.string().optional(),
 });
 
 /**

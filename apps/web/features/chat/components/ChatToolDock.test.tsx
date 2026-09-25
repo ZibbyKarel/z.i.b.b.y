@@ -8,7 +8,10 @@ describe("ChatToolDock", () => {
     expect(getByTestId(ChatToolDockTestId.Root)).toBeInTheDocument();
     expect(getByTestId("chat-tool-dock-companies")).toHaveAttribute("href", "/companies");
     expect(getByTestId("chat-tool-dock-agents")).toHaveAttribute("href", "/agents");
-    expect(getByTestId(ChatToolDockTestId.Settings)).toHaveAttribute("href", "/settings");
+    expect(getByTestId(ChatToolDockTestId.Settings)).toHaveAttribute(
+      "href",
+      "/system/settings/general",
+    );
   });
 
   it("wraps the links in a labelled navigation landmark", () => {

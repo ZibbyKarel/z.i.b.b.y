@@ -26,6 +26,20 @@ const ROUTE_MAP_REDIRECTS: ReadonlyArray<[from: string, to: string]> = [
   ["/activity", "/activity/log"],
   // ZB-09: the memory feature moved to Knowledge → Vault.
   ["/memory", "/knowledge/vault"],
+  // ZB-06: goals/companies/teams/projects moved under `/work/*`.
+  ["/companies", "/work/companies"],
+  ["/companies/new", "/work/companies/new"],
+  ["/teams", "/work/teams"],
+  ["/teams/new", "/work/teams/new"],
+  ["/projects", "/work/projects"],
+  ["/projects/new", "/work/projects/new"],
+  // ZB-11: `/skills` `/mcp` `/hooks` `/commands` moved under the global
+  // registries; the bare `/settings` lands on its default `general` section.
+  ["/skills", "/system/registries/skills"],
+  ["/mcp", "/system/registries/mcp"],
+  ["/hooks", "/system/registries/hooks"],
+  ["/commands", "/system/registries/commands"],
+  ["/settings", "/system/settings/general"],
 ];
 
 test("ROUTE-MAP §2 redirects land on their new route", async () => {
@@ -49,6 +63,17 @@ const QUERY_REDIRECTS: ReadonlyArray<[from: string, to: string]> = [
   ["/signals/abc", "/policy/gates?section=signals&id=abc"],
   ["/settings?tab=gates", "/policy/gates"],
   ["/settings?tab=mandate", "/policy/gates?section=mandate"],
+  // ZB-11: the remaining `/settings?tab=` values move to their own
+  // `/system/settings/<section>` route (ROUTE-MAP §3).
+  ["/settings?tab=preferences", "/system/settings/general"],
+  ["/settings?tab=tasks", "/system/settings/general"],
+  ["/settings?tab=automations", "/system/settings/automations"],
+  ["/settings?tab=chat", "/system/settings/coo"],
+  ["/settings?tab=activity", "/system/settings/activity"],
+  ["/settings?tab=runtime", "/system/settings/runtime"],
+  ["/settings?tab=machine", "/system/settings/machine"],
+  ["/settings?tab=selfKnowledge", "/knowledge/distill"],
+  ["/settings?tab=system", "/system/settings/status"],
 ];
 
 for (const [from, to] of QUERY_REDIRECTS) {

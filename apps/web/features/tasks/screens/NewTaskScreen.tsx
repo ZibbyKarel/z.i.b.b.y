@@ -16,7 +16,7 @@ import {
 } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { chainRouteGates, chainRouteSteps, useChainsQuery } from "../../chains";
 import { useProjectsQuery } from "../../projects";
@@ -47,13 +47,20 @@ const CHAIN_DEFAULT = "project-default";
 export function NewTaskScreen() {
   const t = useTranslations("tasksWork");
   const router = useRouter();
+  // ZB-12: the COO dock's "CREATE TASK" lands here prefilled — `?text=` seeds
+  // the description and `?entry=<departmentId>` the explicit entry (only a real
+  // department id is honoured; anything else falls back to the COO).
+  const searchParams = useSearchParams();
+  const prefillEntry = searchParams.get("entry");
   const { data: projects = [] } = useProjectsQuery();
   const { data: chains = [] } = useChainsQuery();
 
   const [title, setTitle] = useState("");
-  const [text, setText] = useState("");
+  const [text, setText] = useState(() => searchParams.get("text") ?? "");
   const [projectId, setProjectId] = useState("");
-  const [entry, setEntry] = useState<string>(ENTRY_COO);
+  const [entry, setEntry] = useState<string>(() =>
+    prefillEntry && DEPARTMENTS.some((d) => d.id === prefillEntry) ? prefillEntry : ENTRY_COO,
+  );
   const [chainId, setChainId] = useState<string>(CHAIN_DEFAULT);
   const [attachmentSet, setAttachmentSet] = useState<{
     attachmentSetId?: string;

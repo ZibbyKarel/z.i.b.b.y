@@ -77,7 +77,7 @@ function HookEditor({ hook }: { hook: Hook }) {
           </Button>
         </>
       }
-      backHref="/hooks"
+      backHref="/system/registries/hooks"
       subtitle={subtitle}
       title={name}
     >
@@ -100,7 +100,7 @@ function HookEditor({ hook }: { hook: Hook }) {
           onConfirm={() =>
             deleteHook.mutate(
               { params: { id: hook.id } },
-              { onSuccess: () => router.push("/hooks") },
+              { onSuccess: () => router.push("/system/registries/hooks") },
             )
           }
           pending={deleteHook.isPending}

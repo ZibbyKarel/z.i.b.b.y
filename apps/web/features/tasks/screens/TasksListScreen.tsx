@@ -18,7 +18,7 @@ import {
 } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
@@ -56,9 +56,13 @@ function subtaskRouteSteps(parent: TaskParent): ChainRouteStripStep[] {
 export function TasksListScreen() {
   const t = useTranslations("tasksWork");
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [now] = useState(() => Date.now());
 
-  const [company, setCompany] = useState<string>(ALL);
+  // `?company=<id>` (e.g. from the Companies detail's "All tasks" link) seeds the
+  // initial filter — read once via the lazy initializer, then behaves as normal
+  // local filter state (it does not resync if the URL changes underfoot).
+  const [company, setCompany] = useState<string>(() => searchParams.get("company") ?? ALL);
   const [project, setProject] = useState<string>(ALL);
   const [department, setDepartment] = useState<string>(ALL);
   const [state, setState] = useState<string>(ALL);

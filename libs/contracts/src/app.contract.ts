@@ -5,6 +5,7 @@ import { agentRunsContract, agentsContract } from "./agents/agents.contract";
 import { briefingContract } from "./briefing/briefing.contract";
 import { budgetContract } from "./budget/budget.contract";
 import { chatContract } from "./chat/chat.contract";
+import { registriesContract } from "./registries/registries.contract";
 import { approvalsContract } from "./approvals/approvals.contract";
 import { artifactsContract } from "./artifacts/artifacts.contract";
 import { gatesContract } from "./gates/gate.contract";
@@ -104,6 +105,7 @@ export const appContract = c.router({
   budget: budgetContract,
   chat: chatContract,
   speech: speechContract,
+  registries: registriesContract,
 });
 
 export type AppContract = typeof appContract;

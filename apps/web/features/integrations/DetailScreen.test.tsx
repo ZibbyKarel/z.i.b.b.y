@@ -71,7 +71,7 @@ describe("integrations DetailScreen (N4h grammar — closes the series)", () => 
     render(<DetailScreen integrationId="team-slack" projectId="acme" />);
     expect(screen.getByTestId(ImmersivePageTestId.Back)).toHaveAttribute(
       "href",
-      "/projects/acme?tab=integrations",
+      "/work/projects/acme/integrations",
     );
   });
 
@@ -127,6 +127,6 @@ describe("integrations DetailScreen (N4h grammar — closes the series)", () => 
       { params: { id: "team-slack" } },
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     );
-    expect(push).toHaveBeenCalledWith("/projects/acme?tab=integrations");
+    expect(push).toHaveBeenCalledWith("/work/projects/acme/integrations");
   });
 });

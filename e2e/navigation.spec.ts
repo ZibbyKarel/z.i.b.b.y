@@ -30,14 +30,14 @@ test("the section nav renders all seven sections and navigates on click", async 
   // "/chat" maps to the "org" section (state/config.ts's `sectionForPath`).
   await expect(nav.getByTestId("tabs-tab-org")).toHaveAttribute("aria-selected", "true");
 
-  // Clicking "Work" navigates to its ZB-01 fallback route (`/projects`, the
-  // closest existing screen — `/work/projects` itself ships in ZB-06).
+  // Clicking "Work" navigates to its section fallback route — `/work/tasks`
+  // (ZB-04/06 shipped every `work` sub-tab at its real `/work/*` home).
   await nav.getByTestId("tabs-tab-work").click();
-  await expect(page).toHaveURL(/\/projects$/);
+  await expect(page).toHaveURL(/\/work\/tasks$/);
 });
 
 test("the sub-nav lists the active section's tabs and offers + New task", async ({ page }) => {
-  await page.goto("/projects");
+  await page.goto("/work/tasks");
 
   const subnav = page.getByTestId("subnav-root");
   await expect(subnav).toBeVisible();

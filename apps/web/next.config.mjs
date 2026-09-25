@@ -47,6 +47,13 @@ const nextConfig = {
       },
       // ZB-09: the memory feature moved to Knowledge → Vault.
       { source: "/memory", destination: "/knowledge/vault", permanent: true },
+      // ZB-06: goals/companies/teams/projects moved under `/work/*` (ROUTE-MAP §2).
+      { source: "/companies", destination: "/work/companies", permanent: true },
+      { source: "/companies/:path*", destination: "/work/companies/:path*", permanent: true },
+      { source: "/teams", destination: "/work/teams", permanent: true },
+      { source: "/teams/:path*", destination: "/work/teams/:path*", permanent: true },
+      { source: "/projects", destination: "/work/projects", permanent: true },
+      { source: "/projects/:path*", destination: "/work/projects/:path*", permanent: true },
       // ZB-08: the signal-kind registry and the ex-settings gates/mandate tabs
       // moved under Policy → Gates (`?section=`).
       {
@@ -76,6 +83,74 @@ const nextConfig = {
         destination: "/policy/gates?section=mandate",
         permanent: true,
       },
+      // ZB-11: `/skills` `/mcp` `/hooks` `/commands` (+`/[id]`) moved under the
+      // global registries (ROUTE-MAP §2), and every remaining `/settings?tab=`
+      // moved to its own `/system/settings/<section>` route (ROUTE-MAP §3) — the
+      // bare `/settings` catch-all comes LAST so the `tab=`-specific rules above
+      // it match first.
+      { source: "/skills", destination: "/system/registries/skills", permanent: true },
+      { source: "/skills/:id", destination: "/system/registries/skills/:id", permanent: true },
+      { source: "/mcp", destination: "/system/registries/mcp", permanent: true },
+      { source: "/mcp/:id", destination: "/system/registries/mcp/:id", permanent: true },
+      { source: "/hooks", destination: "/system/registries/hooks", permanent: true },
+      { source: "/hooks/:id", destination: "/system/registries/hooks/:id", permanent: true },
+      { source: "/commands", destination: "/system/registries/commands", permanent: true },
+      { source: "/commands/:id", destination: "/system/registries/commands/:id", permanent: true },
+      {
+        source: "/settings",
+        has: [{ type: "query", key: "tab", value: "preferences" }],
+        destination: "/system/settings/general",
+        permanent: true,
+      },
+      {
+        source: "/settings",
+        has: [{ type: "query", key: "tab", value: "tasks" }],
+        destination: "/system/settings/general",
+        permanent: true,
+      },
+      {
+        source: "/settings",
+        has: [{ type: "query", key: "tab", value: "automations" }],
+        destination: "/system/settings/automations",
+        permanent: true,
+      },
+      {
+        source: "/settings",
+        has: [{ type: "query", key: "tab", value: "chat" }],
+        destination: "/system/settings/coo",
+        permanent: true,
+      },
+      {
+        source: "/settings",
+        has: [{ type: "query", key: "tab", value: "activity" }],
+        destination: "/system/settings/activity",
+        permanent: true,
+      },
+      {
+        source: "/settings",
+        has: [{ type: "query", key: "tab", value: "runtime" }],
+        destination: "/system/settings/runtime",
+        permanent: true,
+      },
+      {
+        source: "/settings",
+        has: [{ type: "query", key: "tab", value: "machine" }],
+        destination: "/system/settings/machine",
+        permanent: true,
+      },
+      {
+        source: "/settings",
+        has: [{ type: "query", key: "tab", value: "selfKnowledge" }],
+        destination: "/knowledge/distill",
+        permanent: true,
+      },
+      {
+        source: "/settings",
+        has: [{ type: "query", key: "tab", value: "system" }],
+        destination: "/system/settings/status",
+        permanent: true,
+      },
+      { source: "/settings", destination: "/system/settings/general", permanent: true },
     ];
   },
 };

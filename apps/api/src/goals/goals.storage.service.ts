@@ -105,6 +105,7 @@ export class GoalsStorageService extends MarkdownEntityStore<Goal> {
     if (typeof data.name === "string") candidate.name = data.name;
     if (typeof data.desc === "string") candidate.desc = data.desc;
     if (data.budget !== undefined) candidate.budget = data.budget;
+    if (typeof data.projectId === "string") candidate.projectId = data.projectId;
     const maker = MakerRefSchema.safeParse(data.maker);
     if (maker.success) candidate.maker = maker.data;
     const verifier = VerifierSpecSchema.safeParse(data.verifier);
@@ -124,6 +125,7 @@ export class GoalsStorageService extends MarkdownEntityStore<Goal> {
     };
     if (goal.desc !== undefined) data.desc = goal.desc;
     if (goal.budget !== undefined) data.budget = goal.budget;
+    if (goal.projectId !== undefined) data.projectId = goal.projectId;
     return data;
   }
 }
