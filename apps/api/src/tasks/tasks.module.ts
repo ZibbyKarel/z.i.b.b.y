@@ -53,7 +53,11 @@ import { TasksController } from "./tasks.controller";
     MemoryModule,
     ScheduledTasksStorageModule,
   ],
-  controllers: [TasksController, TaskRunsController, TaskRunLogsController],
+  // Order matters: Nest registers controllers in this order and Express matches
+  // the first route that fits. `TasksController` owns `GET /api/tasks/:id`
+  // (ZB-04a), which would swallow `GET /api/tasks/runs` (id = "runs") if it were
+  // registered first — so the literal `/api/tasks/runs*` controllers go first.
+  controllers: [TaskRunsController, TaskRunLogsController, TasksController],
   providers: [
     TaskSchedulerService,
     TaskRunsService,

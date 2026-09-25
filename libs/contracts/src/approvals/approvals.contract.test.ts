@@ -11,9 +11,16 @@ describe("approvalsContract", () => {
     expect(approvalsContract.approveApproval.method).toBe("POST");
   });
 
-  it("approveApproval and rejectApproval's empty bodies ARE the shared EmptyBodySchema (T11 dedup, finding #37)", () => {
+  it("approveApproval's empty body IS the shared EmptyBodySchema (T11 dedup, finding #37)", () => {
     expect(approvalsContract.approveApproval.body).toBe(EmptyBodySchema);
-    expect(approvalsContract.rejectApproval.body).toBe(EmptyBodySchema);
+  });
+
+  it("rejectApproval takes an optional reason (ZB-08 deny-with-reason), still accepting an empty body", () => {
+    const body = approvalsContract.rejectApproval.body;
+    expect(body.safeParse({}).success).toBe(true);
+    expect(body.safeParse(undefined).success).toBe(true);
+    expect(body.safeParse({ reason: "Not now" }).success).toBe(true);
+    expect(body.safeParse({ reason: "" }).success).toBe(false);
   });
 });
 
