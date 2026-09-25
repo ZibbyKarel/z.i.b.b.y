@@ -214,6 +214,7 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
             attachmentSetId: target.attachmentSetId,
             output: target.output,
             toolGrants: target.toolGrants,
+            source: "automation",
           },
           Date.now(),
           undefined,

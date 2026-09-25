@@ -5,6 +5,7 @@ import request from "supertest";
 import { AttachmentStorageService } from "./attachment-storage.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
 import { TaskClassifierService } from "./task-classifier.service";
+import { TaskParentsService } from "./task-parents.service";
 import { TaskSchedulerService } from "./task-scheduler.service";
 import { TasksController } from "./tasks.controller";
 
@@ -26,6 +27,7 @@ describe("POST /api/tasks/attachments", () => {
         { provide: TaskClassifierService, useValue: {} },
         { provide: TaskSchedulerService, useValue: {} },
         { provide: ScheduledTasksStorageService, useValue: {} },
+        { provide: TaskParentsService, useValue: {} },
       ],
     }).compile();
     app = moduleRef.createNestApplication();
@@ -93,6 +95,7 @@ describe("GET /api/tasks/attachments/:setId/:name", () => {
         { provide: TaskClassifierService, useValue: {} },
         { provide: TaskSchedulerService, useValue: {} },
         { provide: ScheduledTasksStorageService, useValue: {} },
+        { provide: TaskParentsService, useValue: {} },
       ],
     }).compile();
     app = moduleRef.createNestApplication();

@@ -63,7 +63,13 @@ export function basename(path: string): string {
  * (Phase 91, explicit-only — never emitted by the top-level classifier), or the
  * orchestrator fallback.
  */
-export type TaskTargetKind = "agent" | "pipeline" | "goal" | "department" | "orchestrator";
+export type TaskTargetKind =
+  | "agent"
+  | "pipeline"
+  | "goal"
+  | "department"
+  | "chain"
+  | "orchestrator";
 
 /** A stable key for a target, used to pre-select and dedupe entries in the picker. */
 export function targetKey(target: TaskTarget): string {
@@ -95,6 +101,8 @@ export function toApiTarget(target: TaskTarget) {
       return { kind: "goal" as const, id: target.id, name, glyph, category };
     case "department":
       return { kind: "department" as const, id: target.id, name, glyph, category };
+    case "chain":
+      return { kind: "chain" as const, id: target.id, name, glyph, category };
   }
 }
 
@@ -126,6 +134,7 @@ export type TaskTarget = TaskTargetDisplay &
     | { kind: "pipeline"; id: string }
     | { kind: "goal"; id: string }
     | { kind: "department"; id: DepartmentId }
+    | { kind: "chain"; id: string }
     | { kind: "orchestrator" }
   );
 
@@ -189,6 +198,7 @@ const KIND_FALLBACK_GLYPH: Record<TaskTargetKind, IconName> = {
   pipeline: "flow",
   goal: "retry",
   department: "grid",
+  chain: "link",
   orchestrator: "compass",
 };
 
@@ -213,6 +223,8 @@ export function toClientTarget(target: ApiTaskTarget): TaskTarget {
       return { kind: "goal", id: target.id, ...display };
     case "department":
       return { kind: "department", id: target.id, ...display };
+    case "chain":
+      return { kind: "chain", id: target.id, ...display };
   }
 }
 

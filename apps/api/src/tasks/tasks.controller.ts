@@ -174,11 +174,12 @@ export class TasksController {
             body: await this.scheduler.createTask(body, undefined, undefined, undefined, true),
           };
         } catch (error) {
-          if (
-            error instanceof EmptyCatalogError ||
-            error instanceof DepartmentEmptyRosterError ||
-            error instanceof ChainNotImplementedError
-          ) {
+          // D-019: a chain target is a clear validation rejection, not a routing
+          // failure — 400, distinct from the 422 "nothing to route to" family.
+          if (error instanceof ChainNotImplementedError) {
+            return { status: 400, body: { message: error.message } };
+          }
+          if (error instanceof EmptyCatalogError || error instanceof DepartmentEmptyRosterError) {
             return { status: 422, body: { message: error.message } };
           }
           if (error instanceof ClaudeUnavailableError) {
@@ -193,7 +194,10 @@ export class TasksController {
       cancelScheduledTask: ({ params: { id } }) =>
         errors.or404(id, () => this.scheduler.cancel(id)),
 
-      getTaskParents: async ({ query }) => ({ status: 200, body: await this.parents.listParents(query) }),
+      getTaskParents: async ({ query }) => ({
+        status: 200,
+        body: await this.parents.listParents(query),
+      }),
 
       getTask: ({ params: { id } }) => errors.or404(id, () => this.parents.getTask(id)),
     });

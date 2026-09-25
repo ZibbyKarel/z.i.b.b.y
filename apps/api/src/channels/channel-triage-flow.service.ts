@@ -357,7 +357,11 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     try {
       // The engagement was matched server-side in handle(); pass it as the trusted
       // projectId so the task is born attributed (no re-match over the enveloped text).
-      const result = await this.tasks.createTask({ text, title }, undefined, item.projectId);
+      const result = await this.tasks.createTask(
+        { text, title, source: "channel" },
+        undefined,
+        item.projectId,
+      );
       const taskId = result.task.id;
       const handled: ChannelItem = { ...item, state: "handled", taskId, projectId: item.projectId };
       await this.store.update(handled);

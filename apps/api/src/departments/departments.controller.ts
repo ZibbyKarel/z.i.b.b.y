@@ -34,6 +34,9 @@ export class DepartmentsController {
         errors.or404(id, async () => this.departments.markSeen(id)),
 
       getRoster: ({ params: { id } }) => errors.or404(id, async () => this.departments.roster(id)),
+
+      getDepartmentSubtasks: ({ params: { id } }) =>
+        errors.or404(id, async () => this.departments.subtasks(id)),
     });
   }
 }

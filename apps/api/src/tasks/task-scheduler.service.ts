@@ -92,6 +92,21 @@ export class DepartmentEmptyRosterError extends Error {
   }
 }
 
+/**
+ * D-019 — thrown when a task's target resolves to `{ kind: "chain" }`. Chains
+ * are explicit-only and schema-only until ZB-05a implements dispatch on
+ * `HandoffService`; creating one before then must be a clear, immediate
+ * rejection — never a silent no-op (Law 5). The controller maps it to 400,
+ * distinct from the 422 `EmptyCatalogError` / `DepartmentEmptyRosterError`
+ * "nothing to route to" family — this is a validation rejection, not routing.
+ */
+export class ChainNotImplementedError extends Error {
+  constructor() {
+    super("Chains aren't dispatchable yet — ZB-05a implements them.");
+    this.name = "ChainNotImplementedError";
+  }
+}
+
 /** Outcome summaries keep to one short, readable line. */
 const SUMMARY_MAX_CHARS = 200;
 
@@ -369,6 +384,15 @@ export class TaskSchedulerService
             input.output,
           )
         : rawTarget;
+    // D-019 — a chain target has no dispatch behind it until ZB-05a; reject it
+    // outright, before any persistence, rather than a task record that later
+    // fails to ever run. See `ChainNotImplementedError`.
+    if (target?.kind === "chain") throw new ChainNotImplementedError();
+    // O-18 — resolve the creator's source stamp when the caller didn't already
+    // supply one (channel/automation/handoff all stamp their own): the explicit
+    // `@department` target legs here, everything else is the operator.
+    resolvedInput.source =
+      input.source ?? (rawTarget?.kind === "department" ? "department" : "operator");
     const project = trustedProjectId
       ? await this.projects.get(trustedProjectId).catch((): Project | null => null)
       : matchProject(await this.projects.list().catch((): Project[] => []), {
@@ -1008,11 +1032,13 @@ export class TaskSchedulerService
             return;
           }
           await this.recordLedger(task.id, projectId, dispatched);
+          const department = await this.ownerDepartmentOf(dispatched);
           const updated = await this.storage.markDispatched(
             task.id,
             dispatched.runRef,
             dispatched.target,
             dispatched.classification,
+            department,
           );
           await this.recordDispatchedActivity(task.id, projectId, dispatched);
           this.log.info("task dispatched (background)", {
@@ -1117,11 +1143,13 @@ export class TaskSchedulerService
       return "failed";
     }
     await this.recordLedger(task.id, task.projectId, dispatched);
+    const department = await this.ownerDepartmentOf(dispatched);
     const updated = await this.storage.markDispatched(
       task.id,
       dispatched.runRef,
       dispatched.target,
       dispatched.classification,
+      department,
     );
     this.budgetApproved.delete(task.id);
     void this.reconcileOutcome(updated);
@@ -1540,6 +1568,10 @@ export class TaskSchedulerService
     now: number,
   ): Promise<ScheduledTask> {
     await this.recordLedger(taskId, projectId, dispatched, now);
+    // ZB-04a / O-06 — the department this run's dispatched unit belongs to,
+    // stamped onto the task record at dispatch time (never earlier — see
+    // `ScheduledTaskSchema.department`).
+    const department = await this.ownerDepartmentOf(dispatched);
     const task = await this.storage.createDispatched(
       taskId,
       input,
@@ -1548,6 +1580,7 @@ export class TaskSchedulerService
       now,
       projectId,
       dispatched.classification,
+      department,
     );
     await this.recordDispatchedActivity(taskId, projectId, dispatched);
     return task;

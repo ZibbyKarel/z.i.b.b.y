@@ -165,6 +165,7 @@ describe("HandoffService", () => {
       title: expect.stringContaining("Kritická CVE"),
       text: "Balíček má kritickou zranitelnost.",
       paths: [],
+      source: "handoff",
     });
     expect(target).toEqual({ kind: "department", id: "dev", name: "Development" });
     expect(activity.record).not.toHaveBeenCalled();
@@ -259,6 +260,7 @@ describe("HandoffService", () => {
       title: "Import cycle found",
       text: "a.ts <-> b.ts",
       paths: [],
+      source: "handoff",
     });
     expect(target).toEqual({ kind: "department", id: "dev", name: "Development" });
     await expect(proposalStore.get(proposalId)).rejects.toThrow();

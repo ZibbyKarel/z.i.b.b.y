@@ -443,3 +443,15 @@ and in order; 30 more (Tony … Zeke) are appended in both `EMPLOYEE_NAME_SEED` 
 store + migration). The pool is a CRUD table, so the operator can rename or delete any of them.
 Migration ids are deterministic (`employee_<agentId>`) for idempotency; hires through the API
 get collision-resistant ids.
+
+## D-019 — A chain target rejects with 400 until ZB-05a (2026-09-25, ZB-04a)
+
+`{ kind: "chain" }` is schema-only in ZB-04a — `HandoffService` doesn't dispatch chain steps
+until ZB-05a. Creating a task with an explicit chain target must not silently no-op (North
+Star: a described task is always executed) and must not persist a task record that can never
+dispatch. `TaskSchedulerService.createTask` throws `ChainNotImplementedError` before any
+persistence; the controller maps it to **400** — a validation rejection, distinct from the
+422 "nothing to route to" family (`EmptyCatalogError` / `DepartmentEmptyRosterError`), because
+the request itself is malformed for this phase, not merely unroutable right now. The
+classifier never emits a chain target on its own (`RoutableTarget`'s type excludes it), so
+this only fires for an explicit caller-supplied target — the same scope guard as `department`.

@@ -313,6 +313,19 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     expect(classifier.classify).toHaveBeenCalledTimes(1);
   });
 
+  describe("D-019 — a chain target is rejected, not silently dropped", () => {
+    it('rejects an explicit { kind: "chain" } target with ChainNotImplementedError', async () => {
+      await expect(
+        service.createTask({
+          text: "hand this off",
+          target: { kind: "chain", id: "c1", name: "Chain" },
+        }),
+      ).rejects.toThrow(/chain/i);
+      // No task record is left behind — a rejected create must have no side effect.
+      expect(await storage.list()).toEqual([]);
+    });
+  });
+
   describe("Phase 4a — orchestrator-fallback telemetry", () => {
     beforeEach(() => {
       // The classifier's own terminal rule: nothing matched confidently.

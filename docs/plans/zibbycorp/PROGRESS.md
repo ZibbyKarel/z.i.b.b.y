@@ -69,7 +69,7 @@ Legend: ⬜ todo · 🟦 in progress · ✅ landed (sha) · ⛔ parked (reason)
 | ZB-01 | Shell, sections, rail, redirects | ⬜ | |
 | ZB-02 | ORG map | ⬜ | |
 | ZB-03 | Department detail + People | ⬜ | |
-| ZB-04a | Tasks backend (parent/source/department) | 🟨 WIP (paused) | |
+| ZB-04a | Tasks backend (parent/source/department) | ✅ | |
 | ZB-04b | Tasks UI | ⬜ | |
 | ZB-05a | Chains backend on HandoffService | ⬜ | |
 | ZB-05b | Chains UI | ⬜ | |
@@ -159,16 +159,19 @@ The tip commit `wip(zibbycorp): …` was made with `--no-verify`; the tree does 
    AppHeader,Rail,ChatDock,Splash,Wordmark}`. Not yet exported from `index.ts`, and
    tests/stories may be incomplete. Finish per `PART-A.md` ZA-06. The source to port for
    Splash is `apps/web/components/LoadingScreen/*`; don't delete that yet (ZA-07 does).
-2. **ZB-04a (tasks backend)** — half-wired. `TaskTarget {kind:"chain"}` has been added to
-   contracts, and `task-parents.schema.ts` / `task-parents.service.ts` exist. The
-   departments `getDepartmentSubtasks` route is in the contract but not implemented.
-   Known tsc reds:
-   - `apps/api/src/departments/departments.controller.ts` — missing `getDepartmentSubtasks`
-     handler;
-   - `apps/api/src/chat/chat-tools.service.ts:263` and `apps/web/features/tasks/task.ts:195-198`
-     — exhaustive switches/Records need a `chain` case.
-   Planned D-019 (not yet written into DECISIONS): creating a `{kind:"chain"}` task before
-   ZB-05a exists is rejected with a clear 400 — never a silent no-op.
+2. **ZB-04a (tasks backend)** — DONE. `parentTaskId`/`chain`/`source`/`department` land on
+   `ScheduledTask` and `CreateTaskInput`; `TaskRun.department` is enriched at read time;
+   `GET /api/tasks/parents`, `GET /api/tasks/:id` (with `subtasks[]`) and
+   `GET /api/departments/:id/subtasks` all read off the same `TaskParentsService` derivation
+   table. Source is stamped at every creation leg (operator/department in `createTask`,
+   `channel` at channel triage, `automation` at the automations scheduler, `handoff` at
+   `HandoffService.dispatchTask`). A `{ kind: "chain" }` target rejects with 400
+   (`ChainNotImplementedError`, see D-019) before any persistence — never a silent no-op.
+   The 3 known tsc reds (`departments.controller.ts` missing handler, the `chat-tools`/
+   `task.ts` exhaustive-switch chain cases, the missing `ChainNotImplementedError` import)
+   are fixed; both `tsconfig.base.json` and `apps/web/tsconfig.json` typecheck clean (the
+   web tsconfig's one remaining red is inside ZA-07's in-flight `libs/design-system`
+   component dirs, not this phase's).
 
 Then continue: ZA-07 → ZA-08 → Part B (ZB-01 …) → Part C (ZB-05a, ZB-05b) → final validation,
 push and a **draft** PR into main (never merge).

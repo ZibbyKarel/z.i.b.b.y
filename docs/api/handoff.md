@@ -114,3 +114,13 @@ A handoff never merges, pushes, or deploys — a dispatched fix task still hits 
 existing PR gate, and a Tier-3 handoff adds a gate _before_ dispatch, never
 removes one. Signals are emitted only by trusted internal producers, never by
 parsing external channel content (which can never raise privileges).
+
+## Task provenance (ZB-04a / O-18)
+
+Every task `dispatchTask` creates (Tier-1 silent dispatch, Tier-2 act-then-report, and a
+Tier-3 proposal's `resume()`) is stamped `source: "handoff"` — always, today: a
+`HandoffSignal` carries no chain context yet, so there is no finer distinction to make.
+Once ZB-05a threads chain steps through `HandoffService`, a chain-step dispatch will stamp
+`source: "chain"` instead; see [tasks.md](./tasks.md) → _Parent/subtask read model_ for the
+full `source` taxonomy and D-019 (why a `{ kind: "chain" }` task target itself still rejects
+with 400 until ZB-05a exists).

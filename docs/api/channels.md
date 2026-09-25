@@ -360,7 +360,10 @@ client-driven write; it can't fake a verdict, only retire a surfaced item).
 `integration.projectId` (the authoritative owner); the text/name heuristic
 `matchProject` is only a fallback for integrations with no stored project.
 `projectId` rides into `createTask` as a server-derived label (never
-authorization — Law 4).
+authorization — Law 4). Channel-triage's `createTask` call also stamps
+`source: "channel"` (ZB-04a / O-18) — server-derived, never client-asserted, matching
+the `projectId` posture above. See [tasks.md](./tasks.md) → _Parent/subtask read model_
+for the full `source` taxonomy.
 
 ### `sweepOutcomes()`
 

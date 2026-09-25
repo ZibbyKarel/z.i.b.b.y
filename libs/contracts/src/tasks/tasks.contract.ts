@@ -52,6 +52,8 @@ export const tasksContract = c.router(
       body: CreateTaskInputSchema,
       responses: {
         201: CreateTaskResultSchema,
+        // D-019 — a `{ kind: "chain" }` target before ZB-05a implements dispatch.
+        400: ErrorSchema,
         422: ErrorSchema,
         // Claude CLI preflight refused the immediate dispatch (missing/broken CLI).
         503: ErrorSchema,

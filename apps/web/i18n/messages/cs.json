@@ -207,6 +207,7 @@
           "pipeline": "pipeline",
           "goal": "goal loop",
           "department": "oddělení",
+          "chain": "řetězec",
           "orchestrator": "orchestrátor",
           "loop": "goal loop",
           "auto": "auto-klasifikace"

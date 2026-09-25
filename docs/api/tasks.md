@@ -69,8 +69,16 @@ Body: {
                                # (a scheduled loop carries { kind: "goal", id }; the
                                # scheduler re-dispatches to that target on tick instead
                                # of re-classifying)
+  source?: TaskSource          # ZB-04a / O-18: who created this task. Only "operator" /
+                               # "department" are client-settable (and only meaningfully —
+                               # the other legs stamp it server-side, see below); absent
+                               # defaults to "operator", or "department" when the target
+                               # is an explicit @department mention.
 }
 ```
+
+A `{ kind: "chain" }` target is rejected outright — see
+["A chain target rejects, not silently"](#a-chain-target-rejects-not-silently-d-019) below.
 
 There is no client-supplied `projectId` field — project attribution is always
 derived server-side by `matchProject` (deterministic, no tokens), never asserted by
@@ -545,10 +553,76 @@ The daemon watches the run's terminal state:
 ```
 POST   /api/tasks/classify            classify text without creating a task
 POST   /api/tasks                     create a task — dispatch now, or schedule for scheduledAt
+                                       (400 if the resolved target is { kind: "chain" }, see D-019)
 GET    /api/tasks/scheduled           list deferred tasks (newest first)
 DELETE /api/tasks/scheduled/:id       cancel a still-waiting task (scheduled | queued | held)
 POST   /api/tasks/attachments         upload files as a durable attachment set (multipart)
+GET    /api/tasks/parents             the parent/subtask read model (ZB-04a §5, below)
+GET    /api/tasks/:id                 one task, with its subtasks[] (ZB-04a §5, below)
 ```
+
+## Parent/subtask read model (ZB-04a §5)
+
+Groundwork for chains (D-005): a `ScheduledTask` gains four additive, server-derived fields —
+
+| Field          | Set by                                                                                                                                                                                                                          |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `parentTaskId` | The chain step's parent task id (D-005). Schema-only until ZB-05a's `HandoffService` walks chains — nothing writes it yet.                                                                                                      |
+| `chain`        | `{ id, step }` — this subtask's chain id and 0-based position. Same schema-only status.                                                                                                                                         |
+| `source`       | O-18: who created the task — `operator` \| `department` \| `chain` \| `channel` \| `automation` \| `handoff`. Stamped once, at creation (never re-derived).                                                                     |
+| `department`   | O-06: the department that owns the DISPATCHED unit. Stamped at dispatch time (not creation — a scheduled/held/queued task has no resolved unit yet), from the classifier's stage-1 verdict or an explicit `@department` target. |
+
+**Source stamping per creation leg** — `source` is server-derived, never client-asserted for
+the four automatic legs (Law 4):
+
+| Leg                                         | `source`                                                                                                  |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `POST /api/tasks` from the New Task dialog  | `operator` (or `department`, when the input names an explicit `@department` target)                       |
+| Channel triage (`ChannelTriageFlowService`) | `channel`                                                                                                 |
+| The automations scheduler (`case "task"`)   | `automation`                                                                                              |
+| `HandoffService.dispatchTask`               | `handoff` (a chain step's `source: "chain"` is a ZB-05a concept — `HandoffSignal` carries none of it yet) |
+
+**`TaskParentsService`** (`apps/api/src/tasks/task-parents.service.ts`) serves all three reads
+off `ScheduledTasksStorageService`'s existing full listing — no separate index:
+
+```
+GET /api/tasks/parents?company=&project=&department=&state=&source=&before=&limit=
+  → { items: TaskParent[], nextCursor: string | null }   cursor-paginated, newest-first
+
+GET /api/tasks/:id
+  → TaskDetail   (ScheduledTask & { subtasks: SubtaskSummary[] })
+
+GET /api/departments/:id/subtasks
+  → SubtaskSummary[]   every subtask (parentTaskId set) stamped to this department
+    (see docs/api/departments.md)
+```
+
+A `TaskParent`'s `state` is derived, not stored — one of `error | blocked | working | done |
+thinking`, rolled up from its subtasks (or its own state, when it has none yet — every task
+today, since nothing dispatches subtasks before ZB-05a):
+
+| Rule (checked top-to-bottom, first match wins)                      | State      |
+| ------------------------------------------------------------------- | ---------- |
+| any entry `failed` / `dead-letter`, or an `outcome.status: "error"` | `error`    |
+| any entry `held` / `awaiting-output`                                | `blocked`  |
+| any entry `dispatched` with no `outcome` yet                        | `working`  |
+| the target isn't a chain, and every entry is `done`-or-`cancelled`  | `done`     |
+| otherwise (scheduled / queued / pending, or a chain not yet ended)  | `thinking` |
+
+A chain-target parent can never resolve to `done` this phase — `chainEndedAt` is a ZB-05a
+field, so "all subtasks done" falls through to `thinking` ("the last hop finished, the next
+hasn't been dispatched").
+
+### A chain target rejects, not silently (D-019)
+
+`{ kind: "chain" }` is schema-only until ZB-05a implements dispatch on `HandoffService`.
+Creating a task with an explicit chain target throws `ChainNotImplementedError` **before any
+persistence** — the controller maps it to **HTTP 400**, distinct from the 422
+"nothing to route to" family (`EmptyCatalogError` / `DepartmentEmptyRosterError`): this is a
+validation rejection, not a routing failure. Never a silent no-op (North Star Law: a
+described task is always executed). The classifier itself never emits a chain target — the
+same structural scope guard as `department` — so this only fires for an explicit
+caller-supplied target. See DECISIONS.md D-019.
 
 There is no dedicated "list all tasks" or "update a scheduled task" endpoint — the
 unified run feed (`GET /api/tasks/runs`, below) is how every task/run is browsed, and
@@ -563,7 +637,9 @@ only ever started by creating a task (`POST /api/tasks`); starting is not part o
 this surface. `TaskRunSchema` is a superset of the feed row plus an optional
 `processor: { kind, id, name }` (the name falls back to the id when the definition
 was deleted). Goal maker/verifier child runs are folded into the feed (not peer
-rows), but stay reachable from the goal's detail view.
+rows), but stay reachable from the goal's detail view. `TaskRun.department` (ZB-04a) is
+enriched from the underlying task's `department` field in `enrichRunWithTask` — the same
+value the parent/subtask read model above uses.
 
 ```
 GET    /api/tasks/runs                                       the unified feed (newest-first; agent/pipeline/goal/scheduled)

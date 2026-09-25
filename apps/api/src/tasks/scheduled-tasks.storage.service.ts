@@ -3,6 +3,7 @@ import {
   type Attachment,
   type ClassificationTrace,
   type CreateTaskInput,
+  type DepartmentId,
   type ScheduledTask,
   ScheduledTaskSchema,
   type TaskOutcome,
@@ -12,6 +13,23 @@ import { EntityFileStore, collisionResistantId } from "../shared/file-storage";
 
 /** A create input carrying its attachment set's resolved metadata (Task 6). */
 type CreateTaskInputWithAttachments = CreateTaskInput & { attachments?: Attachment[] };
+
+/**
+ * ZB-04a — the provenance fields every persisted-shape builder below carries
+ * straight from the create input: `source` (O-18, resolved by the caller —
+ * `TaskSchedulerService.createTask` — before any of these run) and
+ * `parentTaskId`/`chain` (D-005, schema-only until ZB-05a dispatches a chain
+ * step, but persisted here so a hand-built fixture round-trips them).
+ */
+function provenanceFields(
+  input: CreateTaskInputWithAttachments,
+): Pick<ScheduledTask, "source" | "parentTaskId" | "chain"> {
+  return {
+    ...(input.source ? { source: input.source } : {}),
+    ...(input.parentTaskId ? { parentTaskId: input.parentTaskId } : {}),
+    ...(input.chain ? { chain: input.chain } : {}),
+  };
+}
 
 export const TASKS_DIR = "TASKS_DIR";
 
@@ -90,6 +108,7 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
       // Phase 11: a scheduled loop carries its `{ kind: "goal", id }` target so the
       // tick re-dispatches to it instead of re-classifying (goals are never routed).
       ...(input.target ? { target: input.target } : {}),
+      ...provenanceFields(input),
     };
     await this.writeEntity(task);
     return task;
@@ -116,6 +135,7 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
       ...(projectId ? { projectId } : {}),
       ...(input.attachmentSetId ? { attachmentSetId: input.attachmentSetId } : {}),
       ...(input.output ? { output: input.output } : {}),
+      ...provenanceFields(input),
     };
   }
 
@@ -164,6 +184,7 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
       ...(input.attachmentSetId ? { attachmentSetId: input.attachmentSetId } : {}),
       ...(input.output ? { output: input.output } : {}),
       ...(target ? { target } : {}),
+      ...provenanceFields(input),
     };
     await this.writeEntity(task);
     return task;
@@ -260,6 +281,7 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
       ...(projectId ? { projectId } : {}),
       ...(input.attachmentSetId ? { attachmentSetId: input.attachmentSetId } : {}),
       ...(input.output ? { output: input.output } : {}),
+      ...provenanceFields(input),
     };
     await this.writeEntity(task);
     return task;
@@ -323,6 +345,8 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
     projectId?: string,
     /** F2c — the switchboard's stage-1 classification trace (additive, optional). */
     classification?: ClassificationTrace,
+    /** ZB-04a / O-06 — the dispatched unit's owning department (see `ownerDepartmentOf`). */
+    department?: DepartmentId,
   ): Promise<ScheduledTask> {
     const task: ScheduledTask = {
       id,
@@ -340,6 +364,8 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
       ...(input.attachmentSetId ? { attachmentSetId: input.attachmentSetId } : {}),
       ...(input.output ? { output: input.output } : {}),
       ...(classification ? { classification } : {}),
+      ...(department ? { department } : {}),
+      ...provenanceFields(input),
     };
     await this.writeEntity(task);
     return task;
@@ -399,6 +425,8 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
     target: TaskTarget,
     /** F2c — the switchboard's stage-1 classification trace (additive, optional). */
     classification?: ClassificationTrace,
+    /** ZB-04a / O-06 — the dispatched unit's owning department (see `ownerDepartmentOf`). */
+    department?: DepartmentId,
   ): Promise<ScheduledTask> {
     return this.updateEntity(id, (existing) => ({
       ...existing,
@@ -406,6 +434,7 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
       runRef,
       target,
       ...(classification ? { classification } : {}),
+      ...(department ? { department } : {}),
     }));
   }
 

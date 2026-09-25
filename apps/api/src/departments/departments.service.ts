@@ -109,6 +109,8 @@ export class DepartmentsService {
     private readonly mandate: MandateStorageService,
     /** D-015: `roster()`'s agent membership derives from active employees, not `Agent.department`. */
     private readonly employees: EmployeesStorageService,
+    /** ZB-04a §5: {@link subtasks} serves off the ONE parent/subtask read model. */
+    private readonly taskParents: TaskParentsService,
   ) {}
 
   /**
@@ -214,6 +216,17 @@ export class DepartmentsService {
       integrations: rosterIntegrations.map((i) => ({ id: i.id, name: i.name, kind: i.kind })),
       monitors: monitors.map((i) => ({ id: i.id, name: i.name, kind: i.kind })),
     };
+  }
+
+  /**
+   * ZB-04a §5 — this department's subtasks (ZB-03's Subtasks tab): every
+   * `GET /api/tasks/parents` subtask row stamped `department === id`, empty
+   * until ZB-05a actually dispatches a chain step. Throws
+   * `DepartmentNotFoundError` for an unknown id, same as {@link get}.
+   */
+  async subtasks(id: string): Promise<SubtaskSummary[]> {
+    const department = this.find(id);
+    return this.taskParents.getDepartmentSubtasks(department.id);
   }
 
   private find(id: string) {

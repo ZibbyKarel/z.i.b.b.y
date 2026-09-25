@@ -620,6 +620,10 @@ function enrichRunWithTask(run: TaskRun, tasksById: ReadonlyMap<string, Schedule
     // renamed item still renders as what it was at release time.
     ...(task.roadmapItemId ? { roadmapItemId: task.roadmapItemId } : {}),
     ...(task.roadmapItemLabel ? { roadmapItemLabel: task.roadmapItemLabel } : {}),
+    // ZB-04a / O-06 — the department this run's dispatched unit belongs to,
+    // stamped on the task record at dispatch time. Drives spend-by-department and
+    // activity/archive department filters.
+    ...(task.department ? { department: task.department } : {}),
   };
 }
 

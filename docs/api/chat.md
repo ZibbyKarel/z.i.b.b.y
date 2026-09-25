@@ -152,3 +152,5 @@ but you can still scroll back to the start.
 One ongoing thread per browser session (ephemeral — lost on reload).
 Branches/sub-threads and resuming an earlier thread from `/transcript` are a
 deferred increment (spec §2).
+
+<!-- ZibbyCorp ZB-04a (2026-09-25): reviewed alongside the parent/source/department task stamps. -->

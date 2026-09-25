@@ -157,7 +157,14 @@ export class HandoffService implements OnModuleInit, ResumableRunner {
    * `post-merge-watch.service.ts`'s `"task" in result ? result.task.id : undefined`).
    */
   private async dispatchTask(signal: HandoffSignal, target: TaskTarget): Promise<string> {
-    const input: CreateTaskInput = { title: signal.title, text: signal.body, paths: [] };
+    // O-18 — always `handoff` today: chain context (`source: "chain"`) is a ZB-05a
+    // concept, and `HandoffSignal` carries none of it yet.
+    const input: CreateTaskInput = {
+      title: signal.title,
+      text: signal.body,
+      paths: [],
+      source: "handoff",
+    };
     const result = await this.taskScheduler.createTask(input, Date.now(), signal.projectId, target);
     return result.outcome === "dispatched" ? result.runRef : result.task.id;
   }

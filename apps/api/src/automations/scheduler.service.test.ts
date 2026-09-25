@@ -241,6 +241,7 @@ describe("SchedulerService — dispatch (Phase 116b: task target)", () => {
         attachmentSetId: "set_1",
         output: undefined,
         toolGrants: undefined,
+        source: "automation",
       },
       expect.any(Number),
       undefined,

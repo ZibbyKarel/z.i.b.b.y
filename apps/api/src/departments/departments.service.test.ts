@@ -15,6 +15,8 @@ import type { EmployeesStorageService } from "../employees/employees.storage.ser
 import type { IntegrationsStorageService } from "../integrations/integrations.storage.service";
 import type { MandateStorageService } from "../mandate/mandate.storage.service";
 import type { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
+import type { SubtaskSummary } from "@zibby/contracts";
+import type { TaskParentsService } from "../tasks/task-parents.service";
 import type { TaskRunsService } from "../tasks/task-runs.service";
 import { DEPARTMENT_SEEN_EPOCH, type DepartmentSeenStore } from "./department-seen.store";
 import { DepartmentNotFoundError } from "./departments.errors";
@@ -74,6 +76,8 @@ function build(opts: {
   mandate?: Mandate;
   /** D-015: `roster()`'s agent membership — active employees, not `Agent.department`. */
   employees?: Employee[];
+  /** ZB-04a §5: `subtasks()`'s backing read model. */
+  departmentSubtasks?: SubtaskSummary[];
 }) {
   const pipelinesStore = { list: vi.fn(async () => opts.pipelines ?? []) };
   const taskRuns = { listTaskRuns: vi.fn(async () => opts.runs ?? []) };
@@ -82,6 +86,9 @@ function build(opts: {
   const integrationsStore = { list: vi.fn(async () => opts.integrations ?? []) };
   const mandateStore = { read: vi.fn(async () => opts.mandate ?? DEFAULT_MANDATE) };
   const employeesStore = { list: vi.fn(async () => opts.employees ?? []) };
+  const taskParents = {
+    getDepartmentSubtasks: vi.fn(async () => opts.departmentSubtasks ?? []),
+  };
   const seenMap = new Map<string, string>(Object.entries(opts.seenAt ?? {}));
   const seenStore = {
     seenAt: vi.fn(async (id: string) => seenMap.get(id) ?? DEPARTMENT_SEEN_EPOCH),
@@ -101,6 +108,7 @@ function build(opts: {
     integrationsStore as unknown as IntegrationsStorageService,
     mandateStore as unknown as MandateStorageService,
     employeesStore as unknown as EmployeesStorageService,
+    taskParents as unknown as TaskParentsService,
   );
   return {
     service,
@@ -112,6 +120,7 @@ function build(opts: {
     integrationsStore,
     mandateStore,
     employeesStore,
+    taskParents,
   };
 }
 
@@ -795,6 +804,20 @@ describe("DepartmentsService", () => {
     it("throws DepartmentNotFoundError for an id outside the registry", async () => {
       const { service } = build({});
       await expect(service.roster("nope")).rejects.toThrow(DepartmentNotFoundError);
+    });
+  });
+
+  describe("subtasks() — ZB-04a §5", () => {
+    it("delegates to the task-parents read model with the resolved department id", async () => {
+      const subtask: SubtaskSummary = { taskId: "task_1", state: "working" };
+      const { service, taskParents } = build({ departmentSubtasks: [subtask] });
+      await expect(service.subtasks("dev")).resolves.toEqual([subtask]);
+      expect(taskParents.getDepartmentSubtasks).toHaveBeenCalledWith("dev");
+    });
+
+    it("throws DepartmentNotFoundError for an id outside the registry", async () => {
+      const { service } = build({});
+      await expect(service.subtasks("nope")).rejects.toThrow(DepartmentNotFoundError);
     });
   });
 });
