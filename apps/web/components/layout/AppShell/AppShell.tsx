@@ -193,6 +193,9 @@ function NeedsYouRail({ onOpenApproval }: { onOpenApproval: (id: string) => void
                 key={a.id}
                 meta={a.kind}
                 onApprove={() => approve.mutate({ params: { id: a.id }, body: {} })}
+                // Deny takes a reason (Flow B), so it opens the sheet rather
+                // than denying blind from the rail.
+                onDeny={() => onOpenApproval(a.id)}
                 onOpen={() => onOpenApproval(a.id)}
                 request={a.detail}
                 taskRef={a.runId}

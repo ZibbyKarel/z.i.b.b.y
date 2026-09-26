@@ -90,4 +90,17 @@ describe("AppFrame", () => {
     );
     expect(screen.getByTestId(AppFrameTestId.RailToggle)).toHaveAccessibleName("Approvals");
   });
+
+  it("pins its single column to minmax(0,1fr) so a wide header can never widen the frame", () => {
+    render(
+      <AppFrame header={<div>header</div>}>
+        <p>content</p>
+      </AppFrame>,
+    );
+    // An implicit `auto` track grows to the header's min-content width, which
+    // clipped page content off a 390px viewport (ZB-14 finding).
+    expect(screen.getByTestId(AppFrameTestId.Root)).toHaveStyle({
+      gridTemplateColumns: "minmax(0,1fr)",
+    });
+  });
 });

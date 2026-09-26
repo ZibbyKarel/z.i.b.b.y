@@ -3,7 +3,7 @@ import type { ReactNode, Ref } from "react";
 import { useId, useState } from "react";
 import { LAYOUT } from "../../tokens";
 import { cn } from "../../utils/cn";
-import { focusRing } from "../../utils/focus";
+import { focusRingInset } from "../../utils/focus";
 
 export enum AppFrameTestId {
   Root = "app-frame-root",
@@ -73,7 +73,14 @@ export function AppFrame({
       className="grid h-full w-full overflow-x-hidden bg-background"
       data-testid={AppFrameTestId.Root}
       ref={ref}
-      style={{ gridTemplateRows: `${LAYOUT.headerHeight}px minmax(0,1fr)` }}
+      // The single column is pinned to `minmax(0,1fr)`: an implicit `auto`
+      // track would grow to the header's min-content width (its section nav
+      // alone is ~1100px), widening the whole body past a 390px viewport, where
+      // the root's `overflow-x-hidden` then silently clipped the page content.
+      style={{
+        gridTemplateColumns: "minmax(0,1fr)",
+        gridTemplateRows: `${LAYOUT.headerHeight}px minmax(0,1fr)`,
+      }}
     >
       <a
         className={cn(
@@ -87,7 +94,11 @@ export function AppFrame({
         {skipLinkLabel}
       </a>
 
-      <div data-testid={AppFrameTestId.Header}>{header}</div>
+      {/* Below the header's natural width the header scrolls on its own
+          axis instead of widening the frame. */}
+      <div className="min-w-0 overflow-x-auto" data-testid={AppFrameTestId.Header}>
+        {header}
+      </div>
 
       <div
         className="grid min-h-0 grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)]"
@@ -103,22 +114,6 @@ export function AppFrame({
                 onClick={() => setRailOpen(false)}
               />
             )}
-            <button
-              aria-controls={railId}
-              aria-expanded={railOpen}
-              aria-label={railToggleLabel}
-              className={cn(
-                "fixed left-3 z-30 border border-line-2 bg-panel px-2.5 py-1.5",
-                "font-mono text-[10px] uppercase tracking-wider text-ink-2 lg:hidden",
-                focusRing,
-              )}
-              data-testid={AppFrameTestId.RailToggle}
-              onClick={() => setRailOpen((v) => !v)}
-              style={{ top: LAYOUT.headerHeight + 12 }}
-              type="button"
-            >
-              {railToggleLabel}
-            </button>
             <div
               className={cn(
                 "fixed bottom-0 left-0 z-40 w-[280px] -translate-x-full border-r border-line",
@@ -139,10 +134,37 @@ export function AppFrame({
           className="relative grid min-h-0 min-w-0"
           style={{ gridTemplateRows: "min-content minmax(0,1fr)" }}
         >
-          {subnav && <div data-testid={AppFrameTestId.SubNav}>{subnav}</div>}
+          {(subnav || rail) && (
+            <div className="flex min-w-0 items-stretch">
+              {/* Below `lg` the rail is a drawer; its toggle leads the subnav row
+                  (in flow, so it never covers the subnav tabs or the COO dock). */}
+              {rail && (
+                <button
+                  aria-controls={railId}
+                  aria-expanded={railOpen}
+                  aria-label={railToggleLabel}
+                  className={cn(
+                    "shrink-0 border-r border-b border-line bg-panel px-2.5",
+                    "font-mono text-[10px] uppercase tracking-wider text-ink-2 lg:hidden",
+                    focusRingInset,
+                  )}
+                  data-testid={AppFrameTestId.RailToggle}
+                  onClick={() => setRailOpen((v) => !v)}
+                  type="button"
+                >
+                  {railToggleLabel}
+                </button>
+              )}
+              {subnav && (
+                <div className="min-w-0 flex-1 overflow-x-auto" data-testid={AppFrameTestId.SubNav}>
+                  {subnav}
+                </div>
+              )}
+            </div>
+          )}
 
           <main
-            className="min-h-0 min-w-0 overflow-x-hidden overflow-y-auto"
+            className="min-h-0 min-w-0 overflow-x-auto overflow-y-auto"
             data-testid={AppFrameTestId.Main}
             id={APP_FRAME_MAIN_CONTENT_ID}
             style={{

@@ -6,6 +6,7 @@ import {
   AgentGlyph,
   Button,
   CellStrip,
+  Container,
   EmptyState,
   Grid,
   OrgNode,
@@ -39,17 +40,10 @@ export enum OrgMapScreenTestId {
  *  `style` passthrough rather than a Tailwind utility class (CLAUDE.md's
  *  "no className" rule allows this one seam).
  *
- *  ZB-14 finding (not fixed here — see PROGRESS.md): at 390px this row's real
- *  content width (~1142px, measured) is wider than the viewport, and 7 of the
- *  11 department cards land off-canvas. `AppFrame`'s main content area clips
- *  horizontal overflow rather than scrolling it, so the page itself never
- *  shows a scrollbar — the cards are just unreachable, not merely scrolled
- *  past. Neither `overflowX: "auto"` on this element nor an explicit
- *  `width`/`maxWidth: "100%"` changed the measured width in testing (the
- *  whole ancestor chain up to `AppFrame`'s content column reported the same
- *  inflated width), so the actual constraint lives further up the shell than
- *  this screen can reach — left for a dedicated follow-up with the DS. */
-const GRID_11_COLS = { gridTemplateColumns: "repeat(11, minmax(0, 1fr))" };
+ *  Each column keeps a readable minimum width; on a narrow viewport the row
+ *  scrolls horizontally in its own container instead of squeezing the
+ *  department cards into overlapping text (ZB-14). */
+const GRID_11_COLS = { gridTemplateColumns: "repeat(11, minmax(96px, 1fr))" };
 
 /**
  * The alert an `OrgNode` shows: an error run beats a pending approval — worse
@@ -142,26 +136,29 @@ export function OrgMapScreen() {
         </Panel>
       </Stack>
 
-      <Grid data-testid={OrgMapScreenTestId.Grid} gap="100" style={GRID_11_COLS}>
-        {DEPARTMENTS.map((dept) => {
-          const status = departments.find((d) => d.id === dept.id);
-          const cells: StateTone[] = employees
-            .filter((e) => e.department === dept.id)
-            .map((e) => e.state);
-          const approvalCount = approvals.filter((a) => a.department === dept.id).length;
-          return (
-            <OrgNode
-              alert={pickAlert(status?.errorCount ?? 0, approvalCount, t)}
-              cells={cells}
-              code={dept.code}
-              key={dept.id}
-              name={dept.name}
-              onClick={() => setFocus(dept.id)}
-              selected={focusId === dept.id}
-            />
-          );
-        })}
-      </Grid>
+      {/* Only the department row scrolls on a narrow viewport. */}
+      <Container overflowX="auto">
+        <Grid data-testid={OrgMapScreenTestId.Grid} gap="100" style={GRID_11_COLS}>
+          {DEPARTMENTS.map((dept) => {
+            const status = departments.find((d) => d.id === dept.id);
+            const cells: StateTone[] = employees
+              .filter((e) => e.department === dept.id)
+              .map((e) => e.state);
+            const approvalCount = approvals.filter((a) => a.department === dept.id).length;
+            return (
+              <OrgNode
+                alert={pickAlert(status?.errorCount ?? 0, approvalCount, t)}
+                cells={cells}
+                code={dept.code}
+                key={dept.id}
+                name={dept.name}
+                onClick={() => setFocus(dept.id)}
+                selected={focusId === dept.id}
+              />
+            );
+          })}
+        </Grid>
+      </Container>
 
       {focusDepartment && (
         <Panel

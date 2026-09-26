@@ -97,7 +97,7 @@ export function ApprovalCard({
       ref={ref}
       {...rest}
     >
-      <div className={cn("flex items-center gap-2.5", density === "card" && "gap-2.5")}>
+      <div className={cn("flex items-center gap-2.5", density === "row" && "min-w-0 flex-1")}>
         <span data-testid={ApprovalCardTestId.Glyph}>
           <AgentGlyph seed={glyphSeed} size={glyphSize} state={state} />
         </span>
@@ -131,7 +131,7 @@ export function ApprovalCard({
               {highRiskLabel}
             </Tag>
           )}
-          <Row gap="50">
+          <Row gap="50" shrink={false}>
             <Button
               aria-label={approveLabel}
               data-testid={ApprovalCardTestId.Approve}

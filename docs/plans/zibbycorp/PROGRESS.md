@@ -19,11 +19,10 @@ and the data tarball is in `.zibby/backups/`. D-012 … D-015 are binding.
 - In Part B, the People screens show **employees** (D-015), and the agent library (the
   positions) moves to `/system/registries/positions`.
 
-**Last updated:** 2026-09-24. Part 0 landed (see board).
+**Last updated:** 2026-09-26. Every phase has landed (see board and "Final close" at the end).
 
-**Resume at:** 2026-09-25 PAUSED by the operator and moved to another machine. The tip
-commit is a **WIP commit made with `--no-verify`** (red typecheck), containing two
-half-done phases — finish them first, see "Paused WIP" below.
+**Resume at:** nothing left in the plan. The arc is parked at the PR gate: PR #70
+(`claude/zibbycorp-system-migration-7lx46s` → `main`). The operator reviews and merges.
 
 ---
 
@@ -60,7 +59,7 @@ Legend: ⬜ todo · 🟦 in progress · ✅ landed (sha) · ⛔ parked (reason)
 | ZA-05 | Overlay and nav components | ✅ | ba9406b9 |
 | ZA-06 | Shell components + Splash | ✅ | bc47fe62 |
 | ZA-07 | Lint wall + 20 className files | ✅ (DepartmentDrawer kept as modal, not Sheet — deleted in ZB-03) | bc47fe62 |
-| ZA-08 | Validation → park | ✅ (folded into the ZB-14 sweep — one live-browser pass covers both; see "ZB-14 validation" below) | |
+| ZA-08 | Validation → park | ✅ (DS canon pass + Storybook build; the live-browser pass is folded into the ZB-14 sweep) | f5e48fd |
 
 ### Part B (ZB-04a / 05a / 05b are Part C, done last)
 
@@ -73,16 +72,16 @@ Legend: ⬜ todo · 🟦 in progress · ✅ landed (sha) · ⛔ parked (reason)
 | ZB-04b | Tasks UI | ✅ | 8a014bf3 |
 | ZB-05a | Chains backend on HandoffService | ✅ | 1d271ece |
 | ZB-05b | Chains UI | ✅ (in-flight column shows "—": tasks/parents has no chain field) | final day-run commit |
-| ZB-06 | Goals / Companies / Teams / Projects | ✅ (company/team detail dropped the "create new project" quick action — link-existing only; project tabs route-driven, so unsaved drafts do not survive a tab switch) | 2026-09-25 session 2 |
+| ZB-06 | Goals / Companies / Teams / Projects | ✅ (company/team detail dropped the "create new project" quick action — link-existing only; project tabs route-driven, so unsaved drafts do not survive a tab switch) | 4e6fd29 |
 | ZB-07 | Activity | ✅ (no read-aloud on briefings — no useSpeech hook; run state filter client-side) | final day-run commit |
 | ZB-08 | Policy | ✅ (gaps: per-project gate rules EmptyState — no projectId on rules; PatternCard dismiss unwired — no endpoint) | final day-run commit |
 | ZB-09 | Knowledge | ✅ (MemoryGraph removed) | final day-run commit |
 | ZB-10 | Ledger | ✅ (budget edits link out to company/project detail) | final day-run commit |
-| ZB-11 | System settings + registries | ✅ (`GET /api/registries/bindings`: mcp from agent grants; skills/hooks/commands bind to every staffed department — they are materialized into every run) | 2026-09-25 session 2 |
-| ZB-12 | ⌘K + COO dock + voice | ✅ (dock has no attach — chat API has no attachment channel; "Toggle theme" is a light/dark flip) | 2026-09-25 session 2 |
-| ZB-13 | Cleanup | ✅ (orb/immersive chat deleted, 314 dead i18n keys pruned by `tools/i18n/prune-unused-keys.mjs`; `GlassSurface`/`ImmersiveShell`/`HudCard`/`HudPanel` KEPT — 62 web files still compose from them → ZB-13b) | 2026-09-26 |
-| ZB-13b | HudCard/HudPanel/ImmersivePage → DS Panel/Card, then delete them + immersive DS | ✅ (new DS `EntityCard`; DS `Panel` gained tone/background/radius; HudCard, HudPanel, ImmersivePage, PageHeader, ImmersiveShell and GlassSurface deleted; glass look retired) | 2026-09-26 |
-| ZB-14 | Validation → park | ✅ (2 real fixes landed — Turbopack server-boundary crash on `/org/departments/[id]/[tab]`, a theme-choice hydration mismatch; 1 major finding parked, see below) | |
+| ZB-11 | System settings + registries | ✅ (`GET /api/registries/bindings`: mcp from agent grants; skills/hooks/commands bind to every staffed department — they are materialized into every run) | 4e6fd29 |
+| ZB-12 | ⌘K + COO dock + voice | ✅ (dock has no attach — chat API has no attachment channel; "Toggle theme" is a light/dark flip) | 4e6fd29 |
+| ZB-13 | Cleanup | ✅ (orb/immersive chat deleted, 314 dead i18n keys pruned by `tools/i18n/prune-unused-keys.mjs`; `GlassSurface`/`ImmersiveShell`/`HudCard`/`HudPanel` KEPT — 62 web files still compose from them → ZB-13b) | 1d9820c |
+| ZB-13b | HudCard/HudPanel/ImmersivePage → DS Panel/Card, then delete them + immersive DS | ✅ (new DS `EntityCard`; DS `Panel` gained tone/background/radius; HudCard, HudPanel, ImmersivePage, PageHeader, ImmersiveShell and GlassSurface deleted; glass look retired) | 2bc4441 |
+| ZB-14 | Validation → park | ✅ (fixes: the Turbopack server-boundary crash on `/org/departments/[id]/[tab]`, a theme-choice hydration mismatch, and the 390px shell clipping — fixed in the final close) | 7638e07 + final close |
 
 ---
 
@@ -368,7 +367,7 @@ they run every time now; the `skip` guard stays as a documented fallback.
 3. `e2e/redirects.spec.ts` / `e2e/route-map-redirects.ts` — no behavior change,
    just the array extraction above.
 
-**Parked finding (not fixed — investigated at length, root cause is shell-wide,
+**Parked finding — FIXED in the final close (see "Final close" below); original notes kept (investigated at length, root cause is shell-wide,
 not one screen):** at 390px, most multi-column screens (ORG map's 11-department
 grid, `/work/tasks`'s filtered `DataTable`, `/system/registries/*`,
 `/knowledge/vault`'s 3-pane layout, even `/system/settings/*`'s side-nav) have
@@ -416,41 +415,41 @@ off-canvas with no way to reach it by touch or keyboard.
     parked.
 
 **Design-match summary** (ROUTE-MAP §1; ✅ = light+dark and 1440+390 all render
-without crashing; 🟨 = renders but the 390px clipping finding above applies):
+without crashing; the 390px clipping finding is fixed — see "Final close"):
 
 | Route | Renders L/D | 1440/390 | Mock | Notes |
 |---|---|---|---|---|
-| `/org` | ✅ | 🟨 | Org Screens → org/map | CEO→COO→11-dept grid, focus panel match the mock's structure; 390px clipping finding applies |
+| `/org` | ✅ | ✅ | Org Screens → org/map | CEO→COO→11-dept grid, focus panel match the mock's structure |
 | `/org/departments/[id]` (→`/team`) | ✅ | ✅ | — | redirect only |
 | `/org/departments/[id]/team` | ✅ | ✅ | Org Screens → org/dept | breadcrumb/KPIs/tabs match |
 | `/org/departments/[id]/subtasks` | ✅ | ✅ | — | EmptyState (ZB-04b note: not yet wired further) |
 | `/org/departments/[id]/pipelines(+[pid])` | ✅ | ✅ | — | `PipelineStepStrip` + PipelineCanvas editor render |
 | `/org/departments/[id]/handoff` | ✅ | ✅ | — | read-only rules render |
 | `/org/departments/[id]/{skills,integrations,automations,hooks}` | ✅ | ✅ | — | derived "bound in" lists render |
-| `/org/people` | ✅ | 🟨 | Org Screens → org/pool | grouped directory; 390px clipping applies |
+| `/org/people` | ✅ | ✅ | Org Screens → org/pool | grouped directory |
 | `/org/people/[id]` | ✅ | ✅ | Org Screens → org/agent | hero glyph, state, log panel |
 | `/org/people/new` | ✅ | ✅ | — | create form |
-| `/work/tasks` | ✅ | 🟨 | Work Screens → tasks | filters + `DataTable`; 390px clipping applies |
+| `/work/tasks` | ✅ | ✅ | Work Screens → tasks | filters + `DataTable` |
 | `/work/tasks/[id]` | ✅ | ✅ | Work Screens → task detail | `ChainRouteStrip` + subtasks/runs/approvals render |
 | `/work/tasks/new` | ✅ | ✅ | Work Screens → new task | entry/chain picker + route preview |
-| `/work/chains(+[id],+new)` | ✅ | 🟨 | Work Screens → chains | list/editor; 390px clipping applies |
+| `/work/chains(+[id],+new)` | ✅ | ✅ | Work Screens → chains | list/editor |
 | `/work/goals(+[id])` | ✅ | ✅ | Work Screens → goals | `GoalCard` grid |
-| `/work/companies(+[id],+new)` | ✅ | 🟨 | Work Screens → companies | 390px clipping applies |
-| `/work/teams(+[id],+new)` | ✅ | 🟨 | (D-003, companies pattern) | 390px clipping applies |
-| `/work/projects(+[id]/[tab],+new,+integrations/[id])` | ✅ | 🟨 | Work Screens → projects | all 5 tabs render; 390px clipping applies |
+| `/work/companies(+[id],+new)` | ✅ | ✅ | Work Screens → companies | |
+| `/work/teams(+[id],+new)` | ✅ | ✅ | (D-003, companies pattern) | |
+| `/work/projects(+[id]/[tab],+new,+integrations/[id])` | ✅ | ✅ | Work Screens → projects | all 5 tabs render |
 | `/activity/log` | ✅ | ✅ | Activity Screens → live log | `LogStream` + `FilterBar` |
-| `/activity/runs(+[runId])` | ✅ | 🟨 | Activity Screens → runs | 390px clipping applies |
+| `/activity/runs(+[runId])` | ✅ | ✅ | Activity Screens → runs | |
 | `/activity/inbox` | ✅ | ✅ | Activity Screens → inbox | |
 | `/activity/briefings` | ✅ | ✅ | Activity Screens → briefings | |
 | `/policy/approvals(?approval=)` | ✅ | ✅ | Policy Screens → approvals | queue/history + sheet (used live by Flow B) |
 | `/policy/gates(?section=)` | ✅ | ✅ | Policy Screens → gate rules | all 7 sections render |
 | `/policy/patterns` | ✅ | ✅ | Policy Screens → learned patterns | |
-| `/knowledge/vault(?note=)` | ✅ | 🟨 | Knowledge Screens → vault | 3-pane; 390px clipping applies |
+| `/knowledge/vault(?note=)` | ✅ | ✅ | Knowledge Screens → vault | 3-pane |
 | `/knowledge/distill` | ✅ | ✅ | Knowledge Screens → distillation | |
 | `/ledger/budgets` | ✅ | ✅ | Ledger Screens → budgets | caps + department table |
 | `/ledger/spend` | ✅ | ✅ | Ledger Screens → spend | |
-| `/system/settings/[section]` (8) | ✅ | 🟨 | System Screens → settings | side-nav; 390px clipping applies |
-| `/system/registries/[kind](+[id],+new)` (4 kinds) | ✅ | 🟨 | System Screens → registries | 390px clipping applies |
+| `/system/settings/[section]` (8) | ✅ | ✅ | System Screens → settings | side-nav |
+| `/system/registries/[kind](+[id],+new)` (4 kinds) | ✅ | ✅ | System Screens → registries | |
 
 Every ROUTE-MAP §2 redirect (static + the two id-dependent ones,
 `/agents/:id`→positions and `/pipelines/:id`→department pipeline) lands on its
@@ -496,4 +495,59 @@ budget, and is flagged 🟥 for the operator. Flow A and Flow B both pass as far
 as this sandbox's fake `claude` runner allows; both document exactly which IA
 steps need a real agent run to exercise. Nothing else needs the operator beyond
 the parked mobile-layout item and the existing PR/migration follow-ups above.
+
+## 2026-09-26 — Final close (orchestrator)
+
+**390px shell clipping: fixed.** This was the 🟥 finding from ZB-14. The orchestrator measured it and fixed it in the DS `AppFrame`.
+- **Cause:** `AppFrame`'s root grid had no explicit column. Its implicit `auto` track grew to the header's min-content width (~1142px), and the whole body followed. The root's `overflow-x-hidden` then silently clipped every screen at 390px. The sweep's `documentElement.scrollWidth` check could not see this, because the clip happened inside the shell.
+- **Fix:**
+  - The root column is pinned to `minmax(0,1fr)`.
+  - The header and subnav scroll on their own axis.
+  - `<main>` scrolls horizontally instead of hiding overflow.
+  - The ORG map's 11-department row keeps a 96px minimum per column and scrolls in its own container.
+- **Guards:** the sweep now also asserts that `app-frame-body` is no wider than the viewport, and an `AppFrame` unit test pins the column.
+- **Result:** at 390px the body measures 390px (it was 1142px).
+
+**Mobile rail toggle.** The "NEEDS YOU" toggle was fixed-positioned over the subnav's first tabs. It now leads the subnav row, in flow, below `lg`.
+
+**NEEDS YOU rail.**
+- `ApprovalCard density="row"` pushed its actions out of the 280px rail. The name block now shrinks, and the actions do not.
+- The rail's ✕ (deny) had no handler, so it was a silent no-op. It now opens the approval sheet, because deny takes a reason (Flow B).
+
+**Validation of the final tree:**
+
+| Check | Result |
+|---|---|
+| Route sweep, incl. the new shell-width check | 432/432 |
+| e2e (Flow A, Flow B, approval, navigation) | 6/6 |
+| `next build` | exit 0 |
+| `tsc` (base + web) | exit 0 |
+| `eslint apps libs tools e2e` | clean |
+| `vitest` | 5839 passed, 14 failed |
+
+The 14 vitest failures are container-only and green in CI: `backup.test` ×4, `pipelines.e2e` ×9, and `pipeline-runner` read-only ×1.
+
+### Butler's briefing
+
+The ZibbyCorp migration is complete and parked at the PR gate. PR #70 goes to `main`; merging it is yours.
+
+**What landed:**
+- **Part 0:** departments.
+- **Part E:** employees.
+- **Part A:** the ZibbyCorp design system, with a lint wall so `apps/web` has zero `className`.
+- **Part B:** the company IA, meaning ORG, WORK, ACTIVITY, POLICY, KNOWLEDGE, LEDGER and SYSTEM, plus the ⌘K palette and the shell-global COO dock.
+- **Part C:** parent tasks and chains.
+- **Cleanup:** the orb/HUD/glass UI and 314 dead i18n keys are gone.
+- **Validation:** every route renders in light and dark at 1440 and 390px.
+
+**Needs you (🟥 / 🟨 first):**
+1. 🟥 **Review and merge PR #70.** CI is green except `playwright` → `e2e/channels.spec.ts:26`. It is red on `main` too, because it waits on a real `claude` CLI reply draft. It is explained on the PR.
+2. 🟨 **Decide whether chat should take attachments.** The dock hides the attach control because `SendChatMessageBody` has no attachment channel.
+3. 🟨 **Decide whether "Bound in" should be finer for skills/hooks/commands** (O-09). Today they show every staffed department, because there is no per-agent link yet.
+4. 🟨 **Accept or reject two ZB-06 trims.** Company/team detail can only link existing projects (no "create new"), and project tabs are routes, so unsaved drafts do not survive a tab switch.
+
+**Follow-ups (not blocking):**
+- Stub the claude runner for e2e, so that `channels.spec` and the full Flow A/B paths can run in CI.
+- ZB-08 gaps: per-project gate rules need `projectId` on rules, and PatternCard dismiss has no endpoint.
+- ZB-05b: the in-flight chain column shows "—", because `tasks/parents` has no chain field.
 

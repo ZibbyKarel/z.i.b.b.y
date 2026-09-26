@@ -282,6 +282,17 @@ async function assertNoHorizontalOverflow(page: Page): Promise<void> {
     overflow.scrollWidth,
     `document.documentElement.scrollWidth (${overflow.scrollWidth}) > innerWidth + 1 (${overflow.innerWidth + 1})`,
   ).toBeLessThanOrEqual(overflow.innerWidth + 1);
+  // The document check alone is blind to content clipped *inside* the shell:
+  // `AppFrame`'s root is `overflow-x-hidden`, so a body track wider than the
+  // viewport never reaches `documentElement.scrollWidth`. Assert the shell's
+  // body itself fits (wide page content must scroll inside `<main>` instead).
+  const bodyWidth = await page
+    .getByTestId("app-frame-body")
+    .evaluate((el) => el.getBoundingClientRect().width);
+  expect(
+    bodyWidth,
+    `app-frame-body width (${bodyWidth}) > innerWidth + 1 (${overflow.innerWidth + 1})`,
+  ).toBeLessThanOrEqual(overflow.innerWidth + 1);
 }
 
 for (const viewport of VIEWPORTS) {
