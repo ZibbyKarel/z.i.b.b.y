@@ -10,7 +10,8 @@ import { Icon, type IconName } from "../Icon/Icon";
  *   secondary — hairline (`--line2`), quiet text that solidifies on hover
  *   ghost     — borderless, quietest action
  *   danger    — err-toned hairline (never a red fill)
- * `tone` recolors primary/danger (e.g. the green approve = primary + ok).
+ * `tone` recolors primary/danger with a state color (`LEGACY_TONE_MAP`, e.g.
+ * `tone="ok"` → `--s-done`'s purple — the approve = primary + ok pairing).
  */
 const button = cva(
   [

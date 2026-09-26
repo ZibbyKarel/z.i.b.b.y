@@ -16,7 +16,7 @@ const variantClass: Record<GraphInlineInputVariant, string> = {
   // description fields sitting in its non-canvas top bar.
   field: cn(
     "rounded-sm border border-border bg-[var(--color-background-deep)] px-2.5 py-1.5",
-    "text-[13px] text-foreground focus:border-accent",
+    "text-[13px] text-foreground focus:border-ink",
   ),
 };
 

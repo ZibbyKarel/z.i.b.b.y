@@ -77,12 +77,6 @@ export const lightTheme: Theme = {
   shadowModal: "none",
   shadowGlowAccent: "none",
 
-  // ---- Liquid glass — flattened to a solid panel, no blur, no shadow ------
-  gradientGlass: "var(--color-panel)",
-  colorGlassBorder: "var(--color-line-2)",
-  shadowGlass: "none",
-  blurGlass: "none",
-
   // ---- Fonts — Geist / Geist Mono (DS.md §3) ------------------------------
   fontSans: "var(--font-sans, Geist, -apple-system, BlinkMacSystemFont, system-ui, sans-serif)",
   fontMono: "var(--font-mono, 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace)",

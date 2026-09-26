@@ -75,10 +75,6 @@
   --color-raised: var(--color-panel-2);
   --color-hover: var(--color-panel-2);
   --color-surface-panel: var(--color-panel);
-  --color-surface-glass: var(--color-panel);
-  --gradient-glass: var(--color-panel);
-  --color-glass-border: var(--color-line-2);
-  --blur-glass: none;
 
   /* ---- Foreground / text — mapped onto ink/ink2/ink3 ---------------------- */
   --color-foreground: var(--color-ink);
@@ -182,7 +178,6 @@
   --shadow-modal: none;
   --shadow-dropdown: none;
   --shadow-glow-accent: 0 0 var(--gw) var(--color-state-think);
-  --shadow-glass: none;
 
   /* ---- Custom spacing overrides (z.i.b.b.y HUD scale differs at 5/6/7) -- */
   --spacing-5: 18px;
@@ -278,10 +273,6 @@
   --color-raised: var(--color-panel-2);
   --color-hover: var(--color-panel-2);
   --color-surface-panel: var(--color-panel);
-  --color-surface-glass: var(--color-panel);
-  --gradient-glass: var(--color-panel);
-  --color-glass-border: var(--color-line-2);
-  --blur-glass: none;
   --color-foreground: var(--color-ink);
   --color-foreground-dim: var(--color-ink-2);
   --color-foreground-faint: var(--color-ink-3);
@@ -306,7 +297,6 @@
   --shadow-modal: none;
   --shadow-dropdown: none;
   --shadow-glow-accent: none;
-  --shadow-glass: none;
   color-scheme: light;
 }
 
@@ -338,10 +328,6 @@
   --color-raised: var(--color-panel-2);
   --color-hover: var(--color-panel-2);
   --color-surface-panel: var(--color-panel);
-  --color-surface-glass: var(--color-panel);
-  --gradient-glass: var(--color-panel);
-  --color-glass-border: var(--color-line-2);
-  --blur-glass: none;
   --color-foreground: var(--color-ink);
   --color-foreground-dim: var(--color-ink-2);
   --color-foreground-faint: var(--color-ink-3);
@@ -366,7 +352,6 @@
   --shadow-modal: none;
   --shadow-dropdown: none;
   --shadow-glow-accent: 0 0 var(--gw) var(--color-state-think);
-  --shadow-glass: none;
   color-scheme: dark;
 }
 
@@ -591,18 +576,28 @@
 
 /* Living glow — tone-parametrized via `--living-color` (defaults to accent, so
  * existing accent-only callers are unchanged). `LivingGlow` sets `--living-color`
- * from a StateTone; both the HUD (Card/HudPanel) and Chat-UI reuse these. */
+ * from a StateTone; both the HUD (Card/HudPanel) and Chat-UI reuse these.
+ *
+ * Blur radii are expressed as a multiple of `--gw` (DS.md §2.3's glow-radius
+ * token: 0px light / 8px dark), not hardcoded px — the canon requires that
+ * "in the light theme nothing glows at all" (DS.md §1.2), and a fixed px blur
+ * would keep glowing in light regardless of theme. Multipliers reproduce the
+ * original dark-theme (`--gw: 8px`) magnitudes exactly. */
 @keyframes v-glow-idle {
   0%,
   100% {
     box-shadow:
-      0 0 38px color-mix(in srgb, var(--living-color, var(--color-accent)) 12%, transparent),
-      0 0 80px color-mix(in srgb, var(--living-color, var(--color-accent)) 6%, transparent);
+      0 0 calc(var(--gw) * 4.75)
+        color-mix(in srgb, var(--living-color, var(--color-accent)) 12%, transparent),
+      0 0 calc(var(--gw) * 10)
+        color-mix(in srgb, var(--living-color, var(--color-accent)) 6%, transparent);
   }
   50% {
     box-shadow:
-      0 0 60px color-mix(in srgb, var(--living-color, var(--color-accent)) 26%, transparent),
-      0 0 120px color-mix(in srgb, var(--living-color, var(--color-accent)) 12%, transparent);
+      0 0 calc(var(--gw) * 7.5)
+        color-mix(in srgb, var(--living-color, var(--color-accent)) 26%, transparent),
+      0 0 calc(var(--gw) * 15)
+        color-mix(in srgb, var(--living-color, var(--color-accent)) 12%, transparent);
   }
 }
 
@@ -610,13 +605,17 @@
   0%,
   100% {
     box-shadow:
-      0 0 60px color-mix(in srgb, var(--living-color, var(--color-accent)) 38%, transparent),
-      0 0 120px color-mix(in srgb, var(--living-color, var(--color-accent)) 18%, transparent);
+      0 0 calc(var(--gw) * 7.5)
+        color-mix(in srgb, var(--living-color, var(--color-accent)) 38%, transparent),
+      0 0 calc(var(--gw) * 15)
+        color-mix(in srgb, var(--living-color, var(--color-accent)) 18%, transparent);
   }
   50% {
     box-shadow:
-      0 0 100px color-mix(in srgb, var(--living-color, var(--color-accent)) 62%, transparent),
-      0 0 200px color-mix(in srgb, var(--living-color, var(--color-accent)) 28%, transparent);
+      0 0 calc(var(--gw) * 12.5)
+        color-mix(in srgb, var(--living-color, var(--color-accent)) 62%, transparent),
+      0 0 calc(var(--gw) * 25)
+        color-mix(in srgb, var(--living-color, var(--color-accent)) 28%, transparent);
   }
 }
 
@@ -949,7 +948,8 @@
   font-size: 0.88em;
   background: var(--color-surface);
   padding: 0.1em 0.35em;
-  border-radius: 4px;
+  /* DS.md §6: radius 0 everywhere — no rounded-corner exception for code. */
+  border-radius: 0;
 }
 .md-prose pre {
   margin: 0;
@@ -957,7 +957,7 @@
   overflow-x: auto;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 0;
 }
 .md-prose pre code {
   padding: 0;

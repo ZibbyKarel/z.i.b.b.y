@@ -7,11 +7,8 @@ describe("darkTheme ZibbyCorp alignment", () => {
     expect(darkTheme.colorInk3).toBe("#666c67");
   });
 
-  it("flattens the VD glass recipe to a solid panel — no blur, no shadow", () => {
-    expect(darkTheme.gradientGlass).toBe("var(--color-panel)");
-    expect(darkTheme.colorGlassBorder).toBe("var(--color-line-2)");
-    expect(darkTheme.shadowGlass).toBe("none");
-    expect(darkTheme.blurGlass).toBe("none");
+  it("carries no glass recipe (ZibbyCorp has no glass/blur, DS.md §1.2/§6)", () => {
+    expect(Object.keys(darkTheme).some((k) => /glass/i.test(k))).toBe(false);
   });
 
   it("collapses border radius to 0 everywhere except the sanctioned round exceptions", () => {

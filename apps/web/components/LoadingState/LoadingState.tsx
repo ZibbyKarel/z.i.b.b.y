@@ -17,7 +17,7 @@ export interface LoadingStateProps {
  */
 export function LoadingState({ label }: LoadingStateProps) {
   return (
-    <Card background="glass" borderStyle="dashed" data-testid={LoadingStateTestId.Root}>
+    <Card background="panel" borderStyle="dashed" data-testid={LoadingStateTestId.Root}>
       <Container padding={["500", "300"]} textAlign="center">
         <OrbitLoader label={label} />
       </Container>

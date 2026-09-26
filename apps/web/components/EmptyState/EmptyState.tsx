@@ -19,7 +19,7 @@ export function EmptyState({
   hint,
 }: EmptyStateProps) {
   return (
-    <Card background="glass" borderStyle="dashed">
+    <Card background="panel" borderStyle="dashed">
       <Container padding={["500", "300"]} textAlign="center">
         <Stack align="center" gap="150">
           <IconTile glyph={glyph} radius="default" size="xl" />

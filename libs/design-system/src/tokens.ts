@@ -202,16 +202,6 @@ export interface Theme {
   /** Accent glow box-shadow (color changes with context). */
   shadowGlowAccent: string;
 
-  /** Liquid-glass chrome recipe (Velín-D VD_GLASS), consumed by GlassSurface.
-   *  ZibbyCorp has no glass/blur in its language (DS.md §1.2/§6) — these flatten
-   *  to a solid panel surface / no blur / no shadow (see the theme files) rather
-   *  than being deleted, so `GlassSurface` and its remaining callers still compile
-   *  and render (a flat panel) instead of going invisible. */
-  gradientGlass: string;
-  colorGlassBorder: string;
-  shadowGlass: string;
-  blurGlass: string;
-
   // ---- Fonts -------------------------------------------------------------
   fontSans: string;
   fontMono: string;
@@ -293,11 +283,6 @@ export function tokensToCssVars(t: Theme): Record<string, string> {
     "--shadow-card": t.shadowCard,
     "--shadow-modal": t.shadowModal,
     "--shadow-glow-accent": t.shadowGlowAccent,
-    // liquid glass (GlassSurface)
-    "--gradient-glass": t.gradientGlass,
-    "--color-glass-border": t.colorGlassBorder,
-    "--shadow-glass": t.shadowGlass,
-    "--blur-glass": t.blurGlass,
     // fonts
     "--font-sans": t.fontSans,
     "--font-mono": t.fontMono,

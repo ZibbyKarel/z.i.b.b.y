@@ -9,13 +9,16 @@
  * - `focusRingOffset` — ring lifted off the element with a surface-colored gap,
  *   for filled controls (buttons, drop zones) where the ring needs contrast.
  */
-export const focusRing = "outline-none focus-visible:ring-2 focus-visible:ring-accent";
+// Ring color is `--ink` (`ring-foreground`), not `--color-accent` — DS.md §6's
+// `border-focus`/selected is `1px solid var(--ink)`, and §1.2/§2.2 reserve hue
+// for the six agent states. Focus is chrome, not state, so it stays grayscale.
+export const focusRing = "outline-none focus-visible:ring-2 focus-visible:ring-foreground";
 
 export const focusRingInset =
-  "outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent";
+  "outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-foreground";
 
 export const focusRingOffset =
-  "outline-none focus-visible:ring-2 focus-visible:ring-accent " +
+  "outline-none focus-visible:ring-2 focus-visible:ring-foreground " +
   "focus-visible:ring-offset-2 focus-visible:ring-offset-surface";
 
 /**
