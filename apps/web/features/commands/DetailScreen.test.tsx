@@ -46,7 +46,7 @@ describe("commands DetailScreen (N4d grammar)", () => {
 
   it("titles by /<id>, locks the id field, and carries top-right actions by name", () => {
     render(<DetailScreen commandId="orchestrate" />);
-    expect(screen.getByText("/orchestrate")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "/orchestrate" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Uložit" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Smazat" })).toBeInTheDocument();
     // The id names the backing file — the detail page must not change it.

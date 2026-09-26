@@ -1,7 +1,6 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { Typography } from "@zibby/design-system";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
+import { Panel, Typography } from "@zibby/design-system";
 import { ActivityFeed } from "../../activity/components/ActivityFeed/ActivityFeed";
 import { useProjectIntegrationActivityQuery } from "../queries";
 
@@ -28,7 +27,7 @@ export function ProjectIntegrationActivityPanel({
   });
 
   return (
-    <HudPanel title={t("integrationActivity.title")}>
+    <Panel header={t("integrationActivity.title")} padding="200">
       {data.length === 0 ? (
         <Typography
           mono
@@ -42,6 +41,6 @@ export function ProjectIntegrationActivityPanel({
       ) : (
         <ActivityFeed items={data} limit={12} />
       )}
-    </HudPanel>
+    </Panel>
   );
 }

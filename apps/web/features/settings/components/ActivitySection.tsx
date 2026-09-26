@@ -2,14 +2,13 @@
 
 import { Fragment, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ButtonGroup, Container, Divider, Stack, Typography } from "@zibby/design-system";
+import { ButtonGroup, Container, Divider, Panel, Stack, Typography } from "@zibby/design-system";
 import {
   ACTIVITY_GROUPS,
   type ActivityGroup,
   type ActivityView,
   type ActivityViewMode,
 } from "@zibby/contracts";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useActivityViewQuery } from "../queries";
 import { useSetActivityViewMutation } from "../mutations";
 
@@ -40,7 +39,7 @@ function ActivityEditor({ view }: { view: ActivityView }) {
   };
 
   return (
-    <HudPanel padding="300" surface="glass" title={t("activity.title")}>
+    <Panel header={t("activity.title")} padding="300">
       <Stack gap="200">
         <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
           {t("activity.hint")}
@@ -67,6 +66,6 @@ function ActivityEditor({ view }: { view: ActivityView }) {
           </Fragment>
         ))}
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }

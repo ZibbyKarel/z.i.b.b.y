@@ -1,14 +1,21 @@
 "use client";
 
 import type { Decision, DepartmentId, GlobalGateRule, GlobalGateRuleInput } from "@zibby/contracts";
-import { Button, ButtonGroup, Icon, type IconName, Stack, Typography } from "@zibby/design-system";
+import {
+  Button,
+  ButtonGroup,
+  Icon,
+  type IconName,
+  Panel,
+  Stack,
+  Typography,
+} from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { ConfirmDeleteDialog } from "../../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import { EmptyState } from "../../../components/EmptyState/EmptyState";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useAgentsQuery } from "../../agents";
 import { useSkillsQuery } from "../../skills";
 import { DECISION_META, DECISION_ORDER } from "../gate";
@@ -52,16 +59,6 @@ export interface GateRulesSectionProps {
    * Gates tab, the pre-ZB-08 Settings tab) keeps today's behavior.
    */
   hideFloor?: boolean;
-  /**
-   * Visual language (D7, docs/hud2chat/DECISIONS.md) — threaded to every
-   * `HudPanel` this component renders (its own two panels plus
-   * {@link SystemFloorPanel}). Defaults to `"hud"`, so the one consumer that
-   * must stay pixel-identical — `GatesTab` inside the Chat UI's department
-   * drawer (Phase 87, F7 seam) — is unaffected by this prop's existence. The
-   * Settings "Pravidla schvalování" tab (F1) opts in with `surface="glass"`
-   * (the standalone `/gates` page did too, F7, until F10 deleted it, O8).
-   */
-  surface?: "hud" | "glass";
 }
 
 /**
@@ -74,7 +71,7 @@ export interface GateRulesSectionProps {
  * `useGateRulesQuery` only fires once this mounts, so the Settings tab loads gate
  * rules lazily (the TabPanel unmounts inactive panels).
  */
-export function GateRulesSection({ department, surface, hideFloor }: GateRulesSectionProps = {}) {
+export function GateRulesSection({ department, hideFloor }: GateRulesSectionProps = {}) {
   const t = useTranslations("gates");
   const tk = useTranslations();
   const rulesQuery = useGateRulesQuery();
@@ -138,7 +135,7 @@ export function GateRulesSection({ department, surface, hideFloor }: GateRulesSe
   return (
     <Stack gap="250">
       {/* decision filter tabs */}
-      <HudPanel padding="200" surface={surface}>
+      <Panel padding="200">
         <Stack wrap align="center" direction="row" gap="100">
           <ButtonGroup
             deselectable
@@ -158,21 +155,21 @@ export function GateRulesSection({ department, surface, hideFloor }: GateRulesSe
             </Typography>
           </Stack>
         </Stack>
-      </HudPanel>
+      </Panel>
 
       {/* hierarchy note: system floor → this catalog → agent/skill rules */}
-      <HudPanel padding="150" surface={surface}>
+      <Panel padding="150">
         <Stack align="center" direction="row" gap="100">
           <Icon name="bolt" size="xs" tone="accent" />
           <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
             {t("hierarchyNote")}
           </Typography>
         </Stack>
-      </HudPanel>
+      </Panel>
 
       {/* The locked POLICY.md floor — the structural guarantee, made visible above the
           editable catalog (Law 1: agents can only harden it; Law 4: never talked around). */}
-      {!hideFloor && <SystemFloorPanel surface={surface} />}
+      {!hideFloor && <SystemFloorPanel />}
 
       {rulesQuery.isPending ? (
         <QueryLoading />

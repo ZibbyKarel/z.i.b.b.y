@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode, Ref } from "react";
 import { Container } from "../Container/Container";
-import { Card, Corners, type CornersTone } from "../Card/Card";
+import { Card, type CardProps, Corners, type CornersTone } from "../Card/Card";
 import type { Padding } from "../../tokens";
 
 export enum PanelTestId {
@@ -18,10 +18,24 @@ export interface PanelProps extends Omit<HTMLAttributes<HTMLDivElement>, "classN
   padding?: Padding;
   /** Live panel: corner brackets in the live color; reserve for running/awaiting content. */
   live?: boolean;
-  /** Bracket color of a live panel. */
+  /** Bracket color of a live panel — only meaningful without `tone`, which drives its
+   *  own corners. */
   liveTone?: CornersTone;
+  /**
+   * Toned emphasis: tints the border, always renders the corner brackets, and glows —
+   * combined with `live`, the glow animates ({@link LivingGlow}) instead of sitting
+   * static. Reserve for genuinely live content (running, awaiting approval, a system
+   * alert); panels are matte by default.
+   */
+  tone?: CornersTone;
   /** Elevated panel: one step above surface, with the elevation shadow. */
   elevated?: boolean;
+  /** Surface step — lets a panel nested inside another panel sit one shade darker
+   *  (e.g. a row on its section's own panel). Defaults to `Card`'s own default
+   *  ("surface") when omitted. */
+  background?: CardProps["background"];
+  /** Corner radius — defaults to `Card`'s own default ("lg") when omitted. */
+  radius?: CardProps["radius"];
   ref?: Ref<HTMLDivElement>;
 }
 
@@ -36,7 +50,10 @@ export function Panel({
   padding,
   live = false,
   liveTone = "run",
+  tone,
   elevated = false,
+  background,
+  radius,
   children,
   ref,
   ...rest
@@ -44,14 +61,17 @@ export function Panel({
   return (
     <Card
       clip
-      background="surface"
+      background={background}
+      corners={Boolean(tone)}
       data-testid={PanelTestId.Root}
       elevated={elevated}
-      radius="lg"
+      living={Boolean(tone) && live}
+      radius={radius}
       ref={ref}
+      tone={tone}
       {...rest}
     >
-      {live && <Corners inset="100" tone={liveTone} />}
+      {!tone && live && <Corners inset="100" tone={liveTone} />}
       {(header || headerEnd) && (
         <div
           className="flex items-center gap-2 border-b border-border px-4 py-2.5 font-mono text-xs font-medium uppercase tracking-wider text-foreground-faint"

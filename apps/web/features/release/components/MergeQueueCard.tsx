@@ -2,9 +2,8 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Card, Container, HoldButton, Stack, Tag, Typography } from "@zibby/design-system";
+import { Card, Container, HoldButton, Panel, Stack, Tag, Typography } from "@zibby/design-system";
 import type { MergeQueueEntry, MergeQueueState } from "@zibby/contracts";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useMergeProjectPrMutation } from "../../projects/mutations";
 import { getProjectPrsQueryKey } from "../../projects/queries";
 import { getMergeQueueQueryKey, useMergeQueueQuery } from "../queries";
@@ -113,13 +112,13 @@ export function MergeQueueCard() {
 
   return (
     <Container data-testid={MergeQueueCardTestId.Root}>
-      <HudPanel title={t("release.title")}>
+      <Panel header={t("release.title")} padding="200">
         <Stack direction="col" gap="100">
           {entries.map((entry) => (
             <MergeQueueRow entry={entry} key={`${entry.projectId}-${entry.number}`} />
           ))}
         </Stack>
-      </HudPanel>
+      </Panel>
     </Container>
   );
 }

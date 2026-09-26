@@ -168,10 +168,14 @@ chat message.
 DS orb-map bundle they rendered onto (`libs/design-system/src/immersive/**` —
 `Orb`, `OrbMap`, `OrbNode`, `OrbitField`, `CoreOrb`, `ConnectorLayer`,
 `HandoffFlare`, `ellipseLayout`, `orbState`, `canMountWebGL`). `GlassSurface`
-(still used by `BriefingMessageCard`) and `ImmersiveShell` (still adopted by
-every Part-B screen not yet migrated to the ZibbyCorp shell, ZA-08) moved out
-of `immersive/` into `libs/design-system/src/components/` instead of being
-deleted. `/chat` itself is now a single `next.config.mjs` permanent redirect
+and `ImmersiveShell` moved out of `immersive/` into
+`libs/design-system/src/components/` instead of being deleted at the time;
+ZB-13b (system migration) moved `apps/web` fully off both, plus `HudPanel`
+and `HudCard` — every call site now composes DS `Panel`/`Card` (or the new
+`EntityCard`) directly (`BriefingMessageCard` is now a plain `Card`), so
+`GlassSurface`/`ImmersiveShell`/`HudPanel`/`HudCard`/`ImmersivePage` (and
+the `PageHeader` wrapper) have been deleted. `/chat` itself is now a single `next.config.mjs`
+permanent redirect
 to `/org` (D-009) — there is no `app/(company)/chat/page.tsx` any more. See
 `features/chat`'s surviving surface below (ChatContext, hooks, mutations,
 queries, and the components the COO dock actually renders).
@@ -296,6 +300,7 @@ features/
 │                   a `DataTable` per kind with a derived "Bound in" department
 │                   column (`GET /api/registries/bindings`, O-09); detail/new pages
 │                   reuse each domain's own unchanged create dialog + edit form
+├── release/       Release department surfaces (merge queue card)
 ├── research/       Research pipeline surfacing
 ├── roadmap/        Per-project delivery backlog (phase 125) — the global
 │                   external-level mapping table now lives at

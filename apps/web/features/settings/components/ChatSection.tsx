@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { ButtonGroup, Stack, Typography } from "@zibby/design-system";
+import { ButtonGroup, Panel, Stack, Typography } from "@zibby/design-system";
 import type { ChatPersona, SystemConfig } from "@zibby/contracts";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useSetSystemConfigMutation, useSystemConfigQuery } from "../../system";
 
 /** The personas offered, in display order. Labels/descriptions come from i18n. */
@@ -35,7 +34,7 @@ function ChatEditor({ config }: { config: SystemConfig }) {
   };
 
   return (
-    <HudPanel padding="300" surface="glass" title={t("chat.title")}>
+    <Panel header={t("chat.title")} padding="300">
       <Stack gap="200">
         <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
           {t("chat.hint")}
@@ -52,6 +51,6 @@ function ChatEditor({ config }: { config: SystemConfig }) {
           {t(`chat.personaDesc.${persona}`)}
         </Typography>
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }

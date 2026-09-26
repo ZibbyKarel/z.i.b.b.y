@@ -15,6 +15,7 @@ import {
   Markdown,
   MenuButton,
   type MenuButtonItem,
+  Panel,
   Pressable,
   SelectField,
   Stack,
@@ -25,7 +26,6 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useState } from "react";
 import { ConfirmDeleteDialog } from "../../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { API_URL } from "../../../state/api";
 import { formatCostUsd } from "../../../utils/cost";
 import { formatDuration, resumeEta } from "../../../utils/time";
@@ -79,7 +79,7 @@ function LimitPausedPanel({ run, now }: { run: RunView; now: number }) {
   const t = useTranslations("runs");
   const locale = useLocale();
   return (
-    <HudPanel padding="300" tone="warn">
+    <Panel padding="300" tone="warn">
       <Stack align="start" direction="row" gap="150">
         <IconTile glyph="pause" size="md" />
         <Stack gap="50">
@@ -96,7 +96,7 @@ function LimitPausedPanel({ run, now }: { run: RunView; now: number }) {
           )}
         </Stack>
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }
 
@@ -209,7 +209,7 @@ function PrOutputCard({
 }) {
   const t = useTranslations("runs");
   return (
-    <HudPanel padding="250" title={title}>
+    <Panel header={title} padding="250">
       <Stack wrap align="center" direction="row" gap="200">
         <Button
           data-testid="open-pr"
@@ -239,7 +239,7 @@ function PrOutputCard({
           </Typography>
         </Stack>
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }
 
@@ -337,7 +337,7 @@ function RunOutputPanel({ run }: { run: RunView }) {
   // (`.ts`, `.json`, …) keeps the plain CodeBlock (Phase 41).
   if (fileArtifact?.content) {
     return (
-      <HudPanel padding="250" title={t("producedOutputTitle")}>
+      <Panel header={t("producedOutputTitle")} padding="250">
         <Stack gap="200">
           {isMarkdownFilename(run.outputArtifactName) ? (
             <Container maxHeight="340px" overflow="auto">
@@ -350,14 +350,14 @@ function RunOutputPanel({ run }: { run: RunView }) {
             {continueButton}
           </Stack>
         </Stack>
-      </HudPanel>
+      </Panel>
     );
   }
 
   // Agent/orchestrator: the summary reference, with a PR url opened in a new tab.
   const url = firstUrl(summary);
   return (
-    <HudPanel padding="250" title={t("producedOutputTitle")}>
+    <Panel header={t("producedOutputTitle")} padding="250">
       <Stack gap="100">
         <CodeBlock maxHeight="md" text={summary ?? ""} />
         <Stack wrap align="center" direction="row" gap="100">
@@ -375,7 +375,7 @@ function RunOutputPanel({ run }: { run: RunView }) {
           {continueButton}
         </Stack>
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }
 
@@ -406,7 +406,7 @@ function ClassificationTracePanel({ run }: { run: RunView }) {
   // IS the unit that ran.
   const unitName = departmentName ? (run.processor?.name ?? run.owner) : stage1.name;
   return (
-    <HudPanel padding="250" title={t("classificationTitle")}>
+    <Panel header={t("classificationTitle")} padding="250">
       <Stack data-testid={ClassificationTracePanelTestId.Panel} gap="100">
         <Stack wrap align="center" direction="row" gap="100">
           <Typography mono size="xs" type="note" variant="secondary">
@@ -435,7 +435,7 @@ function ClassificationTracePanel({ run }: { run: RunView }) {
           {t("classificationConfidence", { pct: Math.round(classification.confidence * 100) })}
         </Tag>
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }
 
@@ -863,16 +863,16 @@ export function RunDetail({
             </Accordion>
           </>
         ) : (
-          <HudPanel
+          <Panel
+            header={run.logBase ? t("output") : undefined}
             padding={run.logBase ? "250" : "300"}
-            title={run.logBase ? t("output") : undefined}
           >
             {logPanel}
-          </HudPanel>
+          </Panel>
         )}
 
         {run.checkpoints && run.checkpoints.length > 0 && (
-          <HudPanel padding="250" title={t("checkpoints")}>
+          <Panel header={t("checkpoints")} padding="250">
             <Stack gap="50">
               {run.checkpoints.map((c) => (
                 <Typography
@@ -886,7 +886,7 @@ export function RunDetail({
                 </Typography>
               ))}
             </Stack>
-          </HudPanel>
+          </Panel>
         )}
       </Stack>
 

@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, CodeBlock, Stack, TextAreaField, Typography } from "@zibby/design-system";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
+import { Button, CodeBlock, Panel, Stack, TextAreaField, Typography } from "@zibby/design-system";
 import { useResumePipelineRunMutation } from "../mutations";
 import { useStageRunLogQuery } from "../queries/useStageRunLogQuery";
 import type { RunView } from "../run";
@@ -36,7 +35,7 @@ export function RunParkedPanel({ run }: RunParkedPanelProps) {
     .join("\n");
 
   return (
-    <HudPanel padding="250" title={t("parkedContext")} tone="warn">
+    <Panel header={t("parkedContext")} padding="250" tone="warn">
       <Stack gap="200">
         <Typography mono size="xs" type="note" variant="secondary">
           {t("parkedSummary", { phase: parked.phaseId, attempts: parked.attempts })}
@@ -64,6 +63,6 @@ export function RunParkedPanel({ run }: RunParkedPanelProps) {
           </Button>
         </Stack>
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }

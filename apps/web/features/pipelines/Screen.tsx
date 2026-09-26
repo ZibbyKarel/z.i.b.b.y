@@ -1,26 +1,28 @@
 "use client";
 
 import {
+  Breadcrumb,
   Button,
   Container,
   Divider,
   EntityHero,
   Grid,
   Icon,
+  Panel,
   Stack,
+  type SubNavLinkComponent,
   TextInputField,
   Typography,
 } from "@zibby/design-system";
 import { AVATAR_MAX, type UpdatePipelineInput } from "@zibby/contracts";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
-import { HudPanel } from "../../components/HudPanel/HudPanel";
-import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { toastBus } from "../../components/Toaster/toastBus";
 import { useAgentsQuery } from "../agents";
@@ -194,7 +196,7 @@ export function Screen({ selectedId: routeId, basePath = "/pipelines" }: ScreenP
 
       {selected && (
         <Stack gap="250">
-          {/* D13 (docs/hud2chat/DECISIONS.md, resolved F6b): the ImmersivePage header
+          {/* D13 (docs/hud2chat/DECISIONS.md, resolved F6b): the page header
               above already shows the pipeline/chain's name — showIdentity={false}
               keeps the hero to a bare image/glyph band instead of repeating it. */}
           <EntityHero
@@ -220,7 +222,7 @@ export function Screen({ selectedId: routeId, basePath = "/pipelines" }: ScreenP
             showIdentity={false}
             uploadLabel={t("pipelines.uploadImage")}
           />
-          <HudPanel padding="250" surface="glass">
+          <Panel padding="250">
             <Stack gap="200">
               {editing && (
                 <Stack direction="row" gap="200">
@@ -322,10 +324,11 @@ export function Screen({ selectedId: routeId, basePath = "/pipelines" }: ScreenP
                 </Typography>
               </Stack>
             </Stack>
-          </HudPanel>
+          </Panel>
 
-          <HudPanel
-            action={
+          <Panel
+            header={t("pipelines.chainTitle")}
+            headerEnd={
               editing && (
                 <Button
                   icon="plus"
@@ -338,8 +341,6 @@ export function Screen({ selectedId: routeId, basePath = "/pipelines" }: ScreenP
               )
             }
             padding="250"
-            surface="glass"
-            title={t("pipelines.chainTitle")}
           >
             <Container
               height="460px"
@@ -368,10 +369,10 @@ export function Screen({ selectedId: routeId, basePath = "/pipelines" }: ScreenP
                 setGraph={editing ? setEditGraph : noop}
               />
             </Container>
-          </HudPanel>
+          </Panel>
 
           {selected.outputs.length > 0 && (
-            <HudPanel padding="250" surface="glass" title={t("pipelines.outputsTitle")}>
+            <Panel header={t("pipelines.outputsTitle")} padding="250">
               <Stack gap="100">
                 {selected.outputs.map((o, i) => (
                   <Stack align="center" direction="row" gap="100" key={`${o.type}-${o.from}-${i}`}>
@@ -393,31 +394,48 @@ export function Screen({ selectedId: routeId, basePath = "/pipelines" }: ScreenP
                   </Stack>
                 ))}
               </Stack>
-            </HudPanel>
+            </Panel>
           )}
         </Stack>
       )}
     </Grid>
   );
 
+  const title = routeId ? (selected?.name ?? selected?.id ?? routeId) : t("pipelines.title");
+  const subtitle = routeId ? selected?.file : t("pipelines.countSummary", { count: list.length });
+
   return (
-    <ImmersivePage
-      actions={
-        routeId ? undefined : (
-          <Button icon="plus" intent="primary" onClick={() => setAdding(true)}>
-            {t("pipelines.addPipeline")}
-          </Button>
-        )
-      }
-      backHref={routeId ? (basePath as Route) : undefined}
-      subtitle={routeId ? selected?.file : t("pipelines.countSummary", { count: list.length })}
-      title={routeId ? (selected?.name ?? selected?.id ?? routeId) : t("pipelines.title")}
-    >
-      <Container padding={["300", "350"]}>
-        <PageContainer>{body}</PageContainer>
-      </Container>
+    <Container padding={["300", "350"]}>
+      <PageContainer>
+        <Stack gap="250">
+          {routeId && (
+            <Breadcrumb
+              items={[{ label: t("pipelines.title"), href: basePath as Route }, { label: title }]}
+              linkComponent={Link as SubNavLinkComponent}
+            />
+          )}
+
+          <Stack wrap align="center" direction="row" gap="150" justify="between">
+            <Stack gap="25">
+              <Typography type="h1">{title}</Typography>
+              {subtitle && (
+                <Typography mono size="xs" type="note" variant="tertiary">
+                  {subtitle}
+                </Typography>
+              )}
+            </Stack>
+            {!routeId && (
+              <Button icon="plus" intent="primary" onClick={() => setAdding(true)}>
+                {t("pipelines.addPipeline")}
+              </Button>
+            )}
+          </Stack>
+
+          {body}
+        </Stack>
+      </PageContainer>
 
       {addModal}
-    </ImmersivePage>
+    </Container>
   );
 }

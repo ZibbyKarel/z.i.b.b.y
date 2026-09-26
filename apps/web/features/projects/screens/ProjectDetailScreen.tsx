@@ -9,6 +9,7 @@ import {
   Container,
   Divider,
   Tabs as DsTabs,
+  Panel,
   Pressable,
   SelectField,
   Stack,
@@ -27,7 +28,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { Route } from "next";
 import { useState } from "react";
 import { ConfirmDeleteDialog } from "../../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../../components/PageContainer/PageContainer";
@@ -326,8 +326,9 @@ export function ProjectDetailScreen({ projectId, tab = "overview" }: ProjectDeta
   );
 
   const teamPanel = (
-    <HudPanel
-      action={
+    <Panel
+      header={t("team.title")}
+      headerEnd={
         <Button
           data-testid="save-team"
           disabled={isSaving}
@@ -339,8 +340,7 @@ export function ProjectDetailScreen({ projectId, tab = "overview" }: ProjectDeta
           {tk("common.save")}
         </Button>
       }
-      surface="glass"
-      title={t("team.title")}
+      padding="200"
     >
       <Stack gap="150">
         {effectivePeople.length === 0 && (
@@ -377,12 +377,13 @@ export function ProjectDetailScreen({ projectId, tab = "overview" }: ProjectDeta
           </Button>
         </Stack>
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 
   const autonomyPanel = (
-    <HudPanel
-      action={
+    <Panel
+      header={t("autonomy.title")}
+      headerEnd={
         <Button
           data-testid="save-autonomy"
           disabled={isSaving}
@@ -394,8 +395,7 @@ export function ProjectDetailScreen({ projectId, tab = "overview" }: ProjectDeta
           {tk("common.save")}
         </Button>
       }
-      surface="glass"
-      title={t("autonomy.title")}
+      padding="200"
     >
       <Stack gap="200">
         <Stack gap="75">
@@ -472,12 +472,13 @@ export function ProjectDetailScreen({ projectId, tab = "overview" }: ProjectDeta
           />
         </Stack>
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 
   const rhythmPanel = (
-    <HudPanel
-      action={
+    <Panel
+      header={t("rhythm.title")}
+      headerEnd={
         <Button
           data-testid="save-rhythm"
           disabled={isSaving}
@@ -489,8 +490,7 @@ export function ProjectDetailScreen({ projectId, tab = "overview" }: ProjectDeta
           {tk("common.save")}
         </Button>
       }
-      surface="glass"
-      title={t("rhythm.title")}
+      padding="200"
     >
       <Stack gap="150">
         <TextInputField
@@ -520,18 +520,18 @@ export function ProjectDetailScreen({ projectId, tab = "overview" }: ProjectDeta
           value={effectiveRhythm.format ?? ""}
         />
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 
   const standupPanel = standupQ.data ? (
-    <HudPanel surface="glass" title={t("standup.title")}>
+    <Panel header={t("standup.title")} padding="200">
       <Stack gap="75">
         <Typography mono size="xs" type="note" variant="tertiary">
           {standupQ.data.date}
         </Typography>
         <CodeBlock data-testid="standup-text" text={standupQ.data.text} />
       </Stack>
-    </HudPanel>
+    </Panel>
   ) : null;
 
   // THIS machine's local-clone resolution. A present clone from the cloneRoot
@@ -686,7 +686,7 @@ export function ProjectDetailScreen({ projectId, tab = "overview" }: ProjectDeta
               {tab === "roadmap" && (
                 <Stack gap="300">
                   <RoadmapPanel projectId={id} />
-                  <LevelMappingSection surface="glass" />
+                  <LevelMappingSection />
                 </Stack>
               )}
             </>

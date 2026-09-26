@@ -2,8 +2,7 @@ import { renderWithProviders as render, screen } from "../../test/render";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { Agent, UpdatePipelineInput } from "@zibby/contracts";
-import { EntityHeroTestId, ImmersiveShellTestId } from "@zibby/design-system";
-import { ImmersivePageTestId } from "../../components/layout/ImmersivePage/ImmersivePage";
+import { BreadcrumbTestId, EntityHeroTestId } from "@zibby/design-system";
 import type { Pipeline } from "../../domain";
 import { Screen } from "./Screen";
 
@@ -94,24 +93,24 @@ describe("pipelines Screen — avatar hero", () => {
 
 // F5 (docs/plans/hud2chat-F5-orchestration.md): one Screen serves both
 // `/pipelines` (list) and `/pipelines/[id]` (detail) — `routeId` (the
-// `selectedId` prop, absent on the list route) must drive the immersive
-// header's title/subtitle/actions and, above all, `backHref` — the single
-// most likely defect: it must never loop the detail route's back button
-// back to itself.
-describe("pipelines Screen — immersive header (F5)", () => {
-  it("list route: title is the section name, back goes to /chat, actions offer Add", () => {
+// `selectedId` prop, absent on the list route) must drive the page header's
+// title/subtitle/actions and, above all, the breadcrumb — the single most
+// likely defect: it must never loop the detail route's back link back to
+// itself, and the list route (a top-level nav destination) must show none.
+describe("pipelines Screen — page header (F5)", () => {
+  it("list route: title is the section name, no breadcrumb, actions offer Add", () => {
     hooks.pipelines = { data: [PIPELINE], isPending: false, isError: false, refetch: vi.fn() };
     render(<Screen />);
-    expect(screen.getByTestId(ImmersiveShellTestId.Title)).toHaveTextContent("Pipelines");
-    expect(screen.getByTestId(ImmersivePageTestId.Back)).toHaveAttribute("href", "/chat");
+    expect(screen.getByRole("heading", { name: "Pipelines" })).toBeInTheDocument();
+    expect(screen.queryByTestId(BreadcrumbTestId.Root)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Přidat pipeline" })).toBeInTheDocument();
   });
 
-  it("detail route: title is the pipeline's name, back goes to /pipelines, no Add action", () => {
+  it("detail route: title is the pipeline's name, breadcrumb back goes to /pipelines, no Add action", () => {
     hooks.pipelines = { data: [PIPELINE], isPending: false, isError: false, refetch: vi.fn() };
     render(<Screen selectedId="build-feature" />);
-    expect(screen.getByTestId(ImmersiveShellTestId.Title)).toHaveTextContent(PIPELINE.name);
-    expect(screen.getByTestId(ImmersivePageTestId.Back)).toHaveAttribute("href", "/pipelines");
+    expect(screen.getByRole("heading", { name: PIPELINE.name })).toBeInTheDocument();
+    expect(screen.getByTestId(`${BreadcrumbTestId.Item}-0`)).toHaveAttribute("href", "/pipelines");
     expect(screen.queryByRole("button", { name: "Přidat pipeline" })).not.toBeInTheDocument();
   });
 });

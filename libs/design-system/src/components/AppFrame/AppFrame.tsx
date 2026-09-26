@@ -22,9 +22,8 @@ export enum AppFrameTestId {
  * The one `<main>` landmark id `AppFrame` renders — matches the pre-existing
  * app-wide `SkipLink` contract's target id (`apps/web/components/layout/
  * SkipLink`) so wiring `AppFrame` into the app (ZA-07) is a drop-in, not a
- * rename. Exported under a namespaced name: `ImmersiveShell` already exports
- * its own `MAIN_CONTENT_ID` binding with the same string value, and both
- * would collide in the `index.ts` barrel under the bare name.
+ * rename. The namespaced export name is historical (the retired
+ * `ImmersiveShell` once exported a bare `MAIN_CONTENT_ID`).
  */
 export const APP_FRAME_MAIN_CONTENT_ID = "main-content";
 
@@ -136,7 +135,10 @@ export function AppFrame({
           </>
         )}
 
-        <div className="relative grid min-h-0 min-w-0" style={{ gridTemplateRows: "min-content minmax(0,1fr)" }}>
+        <div
+          className="relative grid min-h-0 min-w-0"
+          style={{ gridTemplateRows: "min-content minmax(0,1fr)" }}
+        >
           {subnav && <div data-testid={AppFrameTestId.SubNav}>{subnav}</div>}
 
           <main

@@ -6,12 +6,12 @@ import {
   Button,
   CodeBlock,
   Icon,
+  Panel,
   Progress,
   Stack,
   TextAreaField,
   Typography,
 } from "@zibby/design-system";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useGoalsQuery, useResumeGoalRunMutation } from "../../goals";
 import { usePipelineRunQuery } from "../../pipelines";
 import type { RunView } from "../run";
@@ -77,7 +77,7 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
 
   return (
     <Stack gap="200">
-      <HudPanel padding="250" title={t("goalCost")}>
+      <Panel header={t("goalCost")} padding="250">
         <Stack gap="100">
           <Stack align="center" direction="row" gap="100" justify="between">
             <Typography mono size="xs" type="note" variant="secondary">
@@ -86,10 +86,10 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
           </Stack>
           <Progress label={t("goalCost")} tone={pct >= 100 ? "warn" : "accent"} value={pct} />
         </Stack>
-      </HudPanel>
+      </Panel>
 
       {budget && (
-        <HudPanel padding="250" title={t("goalBudget")}>
+        <Panel header={t("goalBudget")} padding="250">
           <Stack gap="100">
             <Typography mono size="xs" type="note" variant="secondary">
               {t("goalBudgetUsed", { used: budget.n, cap: budget.cap, window: budget.window })}
@@ -100,10 +100,10 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
               value={budgetPct}
             />
           </Stack>
-        </HudPanel>
+        </Panel>
       )}
 
-      <HudPanel padding="250" title={t("goalTimeline")}>
+      <Panel header={t("goalTimeline")} padding="250">
         {iterations.length === 0 ? (
           <Typography mono size="xs" type="note" variant="tertiary">
             {t("goalNoIterations")}
@@ -250,10 +250,10 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
             })}
           </Stack>
         )}
-      </HudPanel>
+      </Panel>
 
       {run.status === "parked" && run.goalParked && (
-        <HudPanel padding="250" title={t("parkedContext")} tone="warn">
+        <Panel header={t("parkedContext")} padding="250" tone="warn">
           <Stack gap="200">
             <Stack gap="50">
               <Typography mono size="xs" type="note" variant="secondary" weight="semibold">
@@ -293,7 +293,7 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
               </Button>
             </Stack>
           </Stack>
-        </HudPanel>
+        </Panel>
       )}
     </Stack>
   );

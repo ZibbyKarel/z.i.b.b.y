@@ -1,8 +1,7 @@
 "use client";
 
-import { Stack, ToggleField, Typography } from "@zibby/design-system";
+import { Panel, Stack, ToggleField, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { useSetRoadmapConfigMutation } from "../mutations";
 import { useRoadmapConfigQuery } from "../queries";
@@ -41,7 +40,7 @@ export function RoadmapAutomationPanel({ projectId }: RoadmapAutomationPanelProp
   const busy = configQuery.isPending || setConfig.isPending;
 
   return (
-    <HudPanel title={t("title")}>
+    <Panel header={t("title")} padding="200">
       {configQuery.isError ? (
         <QueryError onRetry={() => void configQuery.refetch()} />
       ) : (
@@ -67,6 +66,6 @@ export function RoadmapAutomationPanel({ projectId }: RoadmapAutomationPanelProp
           />
         </Stack>
       )}
-    </HudPanel>
+    </Panel>
   );
 }

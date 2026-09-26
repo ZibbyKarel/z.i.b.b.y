@@ -1,8 +1,7 @@
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { Button, Card, Container, Stack, Tag, Typography } from "@zibby/design-system";
+import { Button, Card, Container, Panel, Stack, Tag, Typography } from "@zibby/design-system";
 import type { ChannelItem, TriageVerdict } from "@zibby/contracts";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { compactAgo } from "../../../utils/time";
 import { useChannelItemsQuery } from "../queries";
 import { useDismissChannelItemMutation } from "../mutations";
@@ -40,7 +39,8 @@ function NeedsAttentionCard({ item, now }: { item: ChannelItem; now: number }) {
   const link = item.kind === "email" ? gmailLink(item.externalRef.messageId) : null;
   // Prefer the triager's one-line summary; fall back to the sender + raw preview so a
   // degraded (router-down) item is still legible.
-  const summary = item.triage?.summary?.trim() || `${item.from ? `${item.from}: ` : ""}${item.text}`;
+  const summary =
+    item.triage?.summary?.trim() || `${item.from ? `${item.from}: ` : ""}${item.text}`;
   return (
     <Card corners data-testid={NeedsAttentionTestId.Card} tone="warn">
       <Container padding="200">
@@ -70,7 +70,12 @@ function NeedsAttentionCard({ item, now }: { item: ChannelItem; now: number }) {
 
           <Stack align="center" direction="row" gap="150">
             {link && (
-              <a data-testid={NeedsAttentionTestId.OpenEmail} href={link} rel="noreferrer" target="_blank">
+              <a
+                data-testid={NeedsAttentionTestId.OpenEmail}
+                href={link}
+                rel="noreferrer"
+                target="_blank"
+              >
                 <Typography size="sm" tone="accent" type="note" weight="semibold">
                   {t("inbox.attention.openEmail")}
                 </Typography>
@@ -118,13 +123,13 @@ export function NeedsAttentionPanel({ projectId }: NeedsAttentionPanelProps) {
   const recent = [...surfaced].reverse().slice(0, 12);
   return (
     <Container data-testid={NeedsAttentionTestId.Root}>
-      <HudPanel title={t("inbox.attention.title")}>
+      <Panel header={t("inbox.attention.title")} padding="200">
         <Stack direction="col" gap="100">
           {recent.map((item) => (
             <NeedsAttentionCard item={item} key={item.id} now={now} />
           ))}
         </Stack>
-      </HudPanel>
+      </Panel>
     </Container>
   );
 }

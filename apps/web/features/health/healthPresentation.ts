@@ -2,7 +2,7 @@ import type { DotTone } from "@zibby/design-system";
 import type { DepartmentHealth } from "@zibby/contracts";
 import type { MessageKey } from "@/i18n/keys";
 
-/** The HudPanel tones the health banner uses. */
+/** The DS `Panel`/`Alert` tones the health banner uses. */
 export type HealthTone = "ok" | "warn" | "bad";
 
 export interface HealthPresentation {

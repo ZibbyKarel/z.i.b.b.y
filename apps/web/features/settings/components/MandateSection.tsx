@@ -1,9 +1,8 @@
 "use client";
 
 import type { Mandate } from "@zibby/contracts";
-import { Divider, Stack, Toggle, Typography } from "@zibby/design-system";
+import { Divider, Panel, Stack, Toggle, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useIntegrationsQuery } from "../../integrations";
 import { useSetMandateMutation } from "../mutations";
 import { useMandateQuery } from "../queries";
@@ -72,7 +71,7 @@ export function MandateSection() {
   );
 
   return (
-    <HudPanel padding="300" surface="glass" title={t("mandate.title")}>
+    <Panel header={t("mandate.title")} padding="300">
       <Stack gap="200">
         <Stack direction="row" justify="between">
           <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
@@ -95,6 +94,6 @@ export function MandateSection() {
           ),
         )}
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }

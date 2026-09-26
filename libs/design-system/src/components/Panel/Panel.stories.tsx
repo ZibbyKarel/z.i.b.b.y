@@ -64,6 +64,16 @@ export const Overview: Story = {
       <Panel elevated header={<Label>elevated</Label>} padding="200">
         <Typography type="data">elevated panel, one step above surface</Typography>
       </Panel>
+
+      <Panel header={<Label>awaiting approval</Label>} padding="200" tone="warn">
+        <Typography type="data">toned panel — tinted border + corner brackets</Typography>
+      </Panel>
+
+      <Panel live header={<Label>system alert</Label>} padding="200" tone="bad">
+        <Typography type="data">
+          toned + live panel — the animated glow replaces the static one
+        </Typography>
+      </Panel>
     </div>
   ),
 };

@@ -111,7 +111,7 @@ The same tone shows up two ways. Pick by whether the thing is _genuinely in flig
 
 | Static (matte) — "it is in state X"            | Animated (living) — "it is actively X, right now"                               |
 | ---------------------------------------------- | ------------------------------------------------------------------------------- |
-| `Card`/`Corners` tone border + `toneGlow` ring | `Card living` / `HudPanel live` → `LivingGlow`                                  |
+| `Card`/`Corners` tone border + `toneGlow` ring | `Card living` / `Panel tone live` → `LivingGlow`                                |
 | `Tag` tone                                     | `StatusDot pulse` (glow + `animate-live`)                                       |
 | `StatusDot` (no `pulse`)                       | the Chat-UI orb (`CosmicScene`)                                                 |
 | `StatePill` (ZA-03)                            | `AgentGlyph`'s per-state motion (ZA-03 — working bobs+types, blocked shakes, …) |

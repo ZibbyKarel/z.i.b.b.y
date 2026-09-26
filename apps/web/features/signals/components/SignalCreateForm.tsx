@@ -1,7 +1,7 @@
 "use client";
 
 import type { DepartmentId, HandoffSignalKind } from "@zibby/contracts";
-import { Button, Stack, Typography } from "@zibby/design-system";
+import { Button, Panel, Stack, Typography } from "@zibby/design-system";
 import {
   FormSelect,
   FormTextArea,
@@ -13,7 +13,6 @@ import {
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { toastBus } from "../../../components/Toaster/toastBus";
 import { useCreateSignalKindMutation, useUpdateSignalKindMutation } from "../../handoff/mutations";
 import { useDepartmentsQuery } from "../../departments/queries";
@@ -151,8 +150,9 @@ export function SignalCreateForm({ defaultFrom, initial, onDone }: SignalCreateF
 
   return renderForm(
     <div data-testid={SignalCreateFormTestId.Root}>
-      <HudPanel
-        action={
+      <Panel
+        header={isEditMode ? t("create.editPanelTitle") : t("create.panelTitle")}
+        headerEnd={
           <Stack direction="row" gap="100">
             <Button
               data-testid={SignalCreateFormTestId.Cancel}
@@ -174,7 +174,7 @@ export function SignalCreateForm({ defaultFrom, initial, onDone }: SignalCreateF
             </Button>
           </Stack>
         }
-        title={isEditMode ? t("create.editPanelTitle") : t("create.panelTitle")}
+        padding="200"
       >
         <Stack gap="200">
           {activeMutation.isError && (
@@ -227,7 +227,7 @@ export function SignalCreateForm({ defaultFrom, initial, onDone }: SignalCreateF
             </Typography>
           </Stack>
         </Stack>
-      </HudPanel>
+      </Panel>
     </div>,
   );
 }

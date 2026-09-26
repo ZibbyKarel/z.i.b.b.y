@@ -1,25 +1,24 @@
 "use client";
 
 import type { LevelMappingEntry, LevelMappingKind } from "@zibby/contracts";
-import { Button, Stack, Tab, TabList, TabPanel, Tabs, Typography } from "@zibby/design-system";
+import {
+  Button,
+  Panel,
+  Stack,
+  Tab,
+  TabList,
+  TabPanel,
+  Tabs,
+  Typography,
+} from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { EmptyState } from "../../../components/EmptyState/EmptyState";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { useSetLevelMappingMutation } from "../mutations";
 import { useLevelMappingQuery } from "../queries";
 import { LevelMappingTable, type LevelMappingTableRow } from "./LevelMappingTable";
-
-export interface LevelMappingSectionProps {
-  /**
-   * Visual language (D7, docs/hud2chat/DECISIONS.md), same convention as
-   * `GateRulesSection` — defaults to `"hud"`. The Settings "Tasky" tab (this
-   * component's only call site so far) opts in with `surface="glass"`.
-   */
-  surface?: "hud" | "glass";
-}
 
 const KINDS: LevelMappingKind[] = ["jira", "github"];
 
@@ -34,7 +33,7 @@ const KINDS: LevelMappingKind[] = ["jira", "github"];
  * OTHER kind's untouched entries plus this kind's edited rows, so editing Jira can
  * never silently drop GitHub's rows (and vice versa).
  */
-export function LevelMappingSection({ surface }: LevelMappingSectionProps = {}) {
+export function LevelMappingSection() {
   const t = useTranslations("settings.tasks");
   const tk = useTranslations();
   const mappingQuery = useLevelMappingQuery();
@@ -67,8 +66,9 @@ export function LevelMappingSection({ surface }: LevelMappingSectionProps = {}) 
   const canSave = !setMapping.isPending && !mappingQuery.isPending && !mappingQuery.isError;
 
   return (
-    <HudPanel
-      action={
+    <Panel
+      header={t("title")}
+      headerEnd={
         <Button
           data-testid="level-mapping-save"
           disabled={!canSave}
@@ -81,8 +81,6 @@ export function LevelMappingSection({ surface }: LevelMappingSectionProps = {}) 
         </Button>
       }
       padding="300"
-      surface={surface}
-      title={t("title")}
     >
       <Stack gap="200">
         <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
@@ -126,6 +124,6 @@ export function LevelMappingSection({ surface }: LevelMappingSectionProps = {}) 
           </Tabs>
         )}
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }

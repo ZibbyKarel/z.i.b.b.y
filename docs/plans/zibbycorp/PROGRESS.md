@@ -81,7 +81,7 @@ Legend: ⬜ todo · 🟦 in progress · ✅ landed (sha) · ⛔ parked (reason)
 | ZB-11 | System settings + registries | ✅ (`GET /api/registries/bindings`: mcp from agent grants; skills/hooks/commands bind to every staffed department — they are materialized into every run) | 2026-09-25 session 2 |
 | ZB-12 | ⌘K + COO dock + voice | ✅ (dock has no attach — chat API has no attachment channel; "Toggle theme" is a light/dark flip) | 2026-09-25 session 2 |
 | ZB-13 | Cleanup | ✅ (orb/immersive chat deleted, 314 dead i18n keys pruned by `tools/i18n/prune-unused-keys.mjs`; `GlassSurface`/`ImmersiveShell`/`HudCard`/`HudPanel` KEPT — 62 web files still compose from them → ZB-13b) | 2026-09-26 |
-| ZB-13b | HudCard/HudPanel/ImmersivePage → DS Panel/Card, then delete them + immersive DS | ⬜ | |
+| ZB-13b | HudCard/HudPanel/ImmersivePage → DS Panel/Card, then delete them + immersive DS | ✅ (new DS `EntityCard`; DS `Panel` gained tone/background/radius; HudCard, HudPanel, ImmersivePage, PageHeader, ImmersiveShell and GlassSurface deleted; glass look retired) | 2026-09-26 |
 | ZB-14 | Validation → park | ⬜ | |
 
 ---
@@ -303,4 +303,7 @@ push and a **draft** PR into main (never merge).
   `pnpm exec next build apps/web`, `check:cycles`, `check:deps`, `check:names`, and the
   `className=` grep are all clean.
 - Orchestrator review of ZB-13: the subagent had dropped `useCooChat`'s mount-time conversation mint to fix a hydration race. That left the collapsed dock's composer silently dropping a first turn when the server has no active thread. The fix: mint after the hydration query settles without a thread. A regression test is in `CooDock.test`.
+- ZB-13b: the orchestrator reviewed `EntityCard`, replaced an inline `style` line clamp with Tailwind `line-clamp-2`, dropped the dead `LevelMappingSection.surface` prop, and deleted the unused `domAttrs` helpers (`iconDockLinkAttrs`, `immersiveBackLinkAttrs`, `hiddenBelowLgFlexAttrs`).
+- **CI Playwright on PR #70:** 45/46. The one red is `channels.spec.ts:26`, the same as on `main` (see baseline). It waits on a real `claude` CLI reply draft. Follow-up: stub the claude runner for e2e.
+- Follow-up (ZA-08): the glass theme tokens (`gradientGlass`, `colorGlassBorder`, `shadowGlass`, `blurGlass`) and `Card background="glass"` are now unused by any component. Remove them in the DS visual pass.
 

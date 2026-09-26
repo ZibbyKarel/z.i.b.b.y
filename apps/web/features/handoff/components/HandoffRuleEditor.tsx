@@ -9,12 +9,11 @@ import type {
   HandoffSignalKind,
   HandoffTarget,
 } from "@zibby/contracts";
-import { Button, Dropdown, Stack, Typography } from "@zibby/design-system";
+import { Button, Dropdown, Panel, Stack, Typography } from "@zibby/design-system";
 import type { DropdownOption } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { signalKindDescription, signalKindLabel } from "../signalKinds";
 import { TIER_TONE } from "../tierTone";
 
@@ -201,90 +200,88 @@ export function HandoffRuleEditor({
   };
 
   return (
-    <div data-testid={HandoffRuleEditorTestId.Root}>
-      <HudPanel padding="150">
-        <Stack wrap align="center" direction="row" gap="75">
-          <Typography size="sm" type="text" variant="secondary">
-            {t("sentencePrefix", { subject: departmentName })}
-          </Typography>
+    <Panel data-testid={HandoffRuleEditorTestId.Root} padding="150">
+      <Stack wrap align="center" direction="row" gap="75">
+        <Typography size="sm" type="text" variant="secondary">
+          {t("sentencePrefix", { subject: departmentName })}
+        </Typography>
 
-          <div data-testid={HandoffRuleEditorTestId.SignalKind}>
-            <Dropdown
-              aria-label={t("editor.signalKindAria")}
-              onChange={handleSignalKindChange}
-              options={signalKindOptions}
-              size="sm"
-              tone="run"
-              value={signalKind}
-              variant="inline"
-            />
-          </div>
+        <div data-testid={HandoffRuleEditorTestId.SignalKind}>
+          <Dropdown
+            aria-label={t("editor.signalKindAria")}
+            onChange={handleSignalKindChange}
+            options={signalKindOptions}
+            size="sm"
+            tone="run"
+            value={signalKind}
+            variant="inline"
+          />
+        </div>
 
-          <Typography size="sm" type="text" variant="secondary">
-            {t("editor.severityPrefix")}
-          </Typography>
+        <Typography size="sm" type="text" variant="secondary">
+          {t("editor.severityPrefix")}
+        </Typography>
 
-          <div data-testid={HandoffRuleEditorTestId.Severity}>
-            <Dropdown
-              aria-label={t("editor.severityAria")}
-              onChange={setSeverity}
-              options={severityOptions}
-              size="sm"
-              tone="neutral"
-              value={severity}
-              variant="inline"
-            />
-          </div>
+        <div data-testid={HandoffRuleEditorTestId.Severity}>
+          <Dropdown
+            aria-label={t("editor.severityAria")}
+            onChange={setSeverity}
+            options={severityOptions}
+            size="sm"
+            tone="neutral"
+            value={severity}
+            variant="inline"
+          />
+        </div>
 
-          <Typography size="sm" type="text" variant="secondary">
-            {t("targetPrefix")}
-          </Typography>
+        <Typography size="sm" type="text" variant="secondary">
+          {t("targetPrefix")}
+        </Typography>
 
-          <div data-testid={HandoffRuleEditorTestId.Target}>
-            <Dropdown
-              aria-label={t("editor.targetAria")}
-              onChange={setTarget}
-              options={targetOptions}
-              size="sm"
-              tone="accent"
-              value={target}
-              variant="inline"
-            />
-          </div>
+        <div data-testid={HandoffRuleEditorTestId.Target}>
+          <Dropdown
+            aria-label={t("editor.targetAria")}
+            onChange={setTarget}
+            options={targetOptions}
+            size="sm"
+            tone="accent"
+            value={target}
+            variant="inline"
+          />
+        </div>
 
-          <div data-testid={HandoffRuleEditorTestId.Tier}>
-            <Dropdown
-              aria-label={t("editor.tierAria")}
-              onChange={setTier}
-              options={tierOptions}
-              size="sm"
-              tone={TIER_TONE[Number(tier) as 1 | 2 | 3]}
-              value={tier}
-              variant="inline"
-            />
-          </div>
+        <div data-testid={HandoffRuleEditorTestId.Tier}>
+          <Dropdown
+            aria-label={t("editor.tierAria")}
+            onChange={setTier}
+            options={tierOptions}
+            size="sm"
+            tone={TIER_TONE[Number(tier) as 1 | 2 | 3]}
+            value={tier}
+            variant="inline"
+          />
+        </div>
 
-          <Stack align="center" direction="row" gap="100">
-            <Button
-              aria-label={t("editor.save")}
-              data-testid={HandoffRuleEditorTestId.Save}
-              disabled={!canSave || pending}
-              icon="check"
-              intent="primary"
-              onClick={handleSave}
-              size="sm"
-            />
-            <Button
-              aria-label={t("editor.cancel")}
-              data-testid={HandoffRuleEditorTestId.Cancel}
-              icon="x"
-              intent="ghost"
-              onClick={onCancel}
-              size="sm"
-            />
-          </Stack>
+        <Stack align="center" direction="row" gap="100">
+          <Button
+            aria-label={t("editor.save")}
+            data-testid={HandoffRuleEditorTestId.Save}
+            disabled={!canSave || pending}
+            icon="check"
+            intent="primary"
+            onClick={handleSave}
+            size="sm"
+          />
+          <Button
+            aria-label={t("editor.cancel")}
+            data-testid={HandoffRuleEditorTestId.Cancel}
+            icon="x"
+            intent="ghost"
+            onClick={onCancel}
+            size="sm"
+          />
         </Stack>
-      </HudPanel>
-    </div>
+      </Stack>
+    </Panel>
   );
 }

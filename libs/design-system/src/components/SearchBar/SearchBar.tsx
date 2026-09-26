@@ -23,7 +23,7 @@ export interface SearchBarProps {
   onClick?: () => void;
   ref?: Ref<HTMLButtonElement>;
   /** Chrome fill. "solid" (default) keeps the opaque input look; "transparent"
-   * drops the own background + border so a surrounding GlassSurface shows through. */
+   * drops the own background + border so a surrounding surface shows through. */
   surface?: "solid" | "transparent";
 }
 

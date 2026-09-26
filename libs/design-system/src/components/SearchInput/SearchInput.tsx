@@ -19,7 +19,7 @@ export interface SearchInputProps extends Omit<
   ariaLabel: string;
   ref?: Ref<HTMLInputElement>;
   /** Chrome fill. "solid" (default) keeps the opaque input look; "transparent"
-   * drops the own background + border so a surrounding `GlassSurface` shows
+   * drops the own background + border so a surrounding surface shows
    * through instead of doubling up (mirrors `SearchBar`'s own `surface` prop). */
   surface?: "solid" | "transparent";
   /** A trailing result-count badge (mono, faint) — for a search box that
@@ -48,10 +48,9 @@ export function SearchInput({
       className={cn(
         "flex h-[36px] w-full items-center gap-2.5 rounded-none px-3.5 transition-colors",
         surface === "transparent"
-          ? // No border/ring of its own — a surrounding `GlassSurface` already
-            // draws the one visible boundary; giving this div its own focus
-            // border on top doubled it up (see ChatSearch, which rings the
-            // GlassSurface itself instead when open).
+          ? // No border/ring of its own — the surrounding surface already
+            // draws the one visible boundary; a focus border on top would
+            // double it up.
             "border border-transparent"
           : "border border-border-strong bg-background focus-within:border-ink",
       )}

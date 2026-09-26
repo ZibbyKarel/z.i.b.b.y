@@ -1,10 +1,9 @@
 "use client";
 
-import { Stack, Stat } from "@zibby/design-system";
+import { Panel, Stack, Stat } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { groupFilterParam } from "../../runs/statusGroups";
 import { useProjectTaskStats } from "../queries";
 
@@ -37,7 +36,7 @@ export function ProjectRunSummary({ projectId }: ProjectRunSummaryProps) {
   const { total, groups } = useProjectTaskStats(projectId);
 
   return (
-    <HudPanel padding="300" title={tp("runsPanelTitle")}>
+    <Panel header={tp("runsPanelTitle")} padding="300">
       <Stack wrap direction="row" gap="450">
         <Link
           data-testid="project-run-summary-total"
@@ -59,6 +58,6 @@ export function ProjectRunSummary({ projectId }: ProjectRunSummaryProps) {
           );
         })}
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }

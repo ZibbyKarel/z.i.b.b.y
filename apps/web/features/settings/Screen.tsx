@@ -6,6 +6,7 @@ import {
   Divider,
   Grid,
   Icon,
+  Panel,
   Stack,
   StatusDot,
   SubNav,
@@ -17,7 +18,6 @@ import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { useHealthQuery } from "../health";
 import { LevelMappingSection } from "../roadmap/components/LevelMappingSection";
@@ -152,7 +152,7 @@ export function SettingsScreen({ section }: SettingsScreenProps) {
             <Container grow minW0>
               {section === "general" && (
                 <Stack gap="250">
-                  <HudPanel padding="300" surface="glass" title={t("preferences")}>
+                  <Panel header={t("preferences")} padding="300">
                     <Stack gap="200">
                       <SettingRow
                         control={
@@ -182,8 +182,8 @@ export function SettingsScreen({ section }: SettingsScreenProps) {
                         label={t("caffeinate")}
                       />
                     </Stack>
-                  </HudPanel>
-                  <LevelMappingSection surface="glass" />
+                  </Panel>
+                  <LevelMappingSection />
                 </Stack>
               )}
 
@@ -195,7 +195,7 @@ export function SettingsScreen({ section }: SettingsScreenProps) {
               {section === "machine" && <MachineSection />}
 
               {section === "status" && (
-                <HudPanel padding="300" surface="glass" title={t("system")}>
+                <Panel header={t("system")} padding="300">
                   <Stack gap="150">
                     <InfoRow label={t("daemon")} value={DAEMON} />
                     <Divider />
@@ -218,7 +218,7 @@ export function SettingsScreen({ section }: SettingsScreenProps) {
                       </>
                     )}
                   </Stack>
-                </HudPanel>
+                </Panel>
               )}
             </Container>
           </Grid>

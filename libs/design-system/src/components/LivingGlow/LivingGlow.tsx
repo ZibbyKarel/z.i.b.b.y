@@ -41,7 +41,7 @@ export interface LivingGlowProps extends Omit<HTMLAttributes<HTMLSpanElement>, "
  * The shared "this is alive and in `tone` state" primitive: an absolutely
  * positioned, animated glow shell tinted by the canonical {@link StateTone}. It is
  * the animated half of the living-state contract (the static half is the tone border
- * on `Card`/`Corners`/`Tag`); both the HUD (`Card living` / `HudPanel live`) and the
+ * on `Card`/`Corners`/`Tag`); both the HUD (`Card living` / `Panel tone live`) and the
  * Chat-UI reuse it instead of each hand-rolling their own pulse. Reuses the
  * `v-glow-idle` / `v-glow-hot` / `v-breath` keyframes, parametrized by `--living-color`.
  *
@@ -51,7 +51,7 @@ export interface LivingGlowProps extends Omit<HTMLAttributes<HTMLSpanElement>, "
  * @deprecated ZibbyCorp (DS.md §1.2/§6) has no glow/blur/glass in its visual
  * language — living state now reads through `StatusDot`'s breathe/blink and
  * `AgentGlyph`'s per-state motion instead of an ambient glow shell. Kept
- * compiling for existing HUD callers (`Card living`, `HudPanel live`); slated
+ * compiling for existing HUD callers (`Card living`, `Panel tone live`); slated
  * for deletion in ZB-13. Do not add new call sites.
  */
 export function LivingGlow({

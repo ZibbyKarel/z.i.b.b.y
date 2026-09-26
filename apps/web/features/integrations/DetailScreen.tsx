@@ -3,14 +3,22 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Route } from "next";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Alert, Button, Container, Stack } from "@zibby/design-system";
+import {
+  Alert,
+  Breadcrumb,
+  Button,
+  Container,
+  Panel,
+  Stack,
+  type SubNavLinkComponent,
+  Typography,
+} from "@zibby/design-system";
 import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import type { Integration } from "@zibby/contracts";
-import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
-import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { IntegrationAutonomyPanel } from "./components/IntegrationAutonomyPanel";
 import { IntegrationFormFields, useIntegrationFormState } from "./components/IntegrationFormFields";
@@ -103,71 +111,79 @@ function IntegrationEditor({
     );
   };
 
+  const subtitle = `${integration.kind} · ${integration.id}`;
+
   return (
-    <ImmersivePage
-      actions={
-        <>
-          <Button
-            data-testid={IntegrationDetailScreenTestId.Test}
-            icon="pulse"
-            intent="ghost"
-            loading={testIntegration.isPending}
-            onClick={test}
-            size="sm"
-          >
-            {t("integrations.testConnection")}
-          </Button>
-          <Button
-            data-testid={IntegrationDetailScreenTestId.Delete}
-            icon="trash"
-            intent="danger"
-            onClick={() => setConfirmDelete(true)}
-            size="sm"
-          >
-            {t("common.delete")}
-          </Button>
-          <Button
-            data-testid={IntegrationDetailScreenTestId.Save}
-            disabled={!form.canSave(false)}
-            icon="check"
-            intent="primary"
-            loading={updateIntegration.isPending}
-            onClick={save}
-            size="sm"
-          >
-            {t("common.save")}
-          </Button>
-        </>
-      }
-      backHref={backHref}
-      subtitle={`${integration.kind} · ${integration.id}`}
-      title={name}
-    >
-      <Container padding={["300", "350"]}>
-        <PageContainer>
-          <Stack gap="250">
-            {testResult && (
-              <Alert
-                data-testid={IntegrationDetailScreenTestId.TestResult}
-                onClose={() => setTestResult(null)}
-                severity={testResult.ok ? "ok" : "error"}
+    <Container padding={["300", "350"]}>
+      <PageContainer>
+        <Stack gap="250">
+          <Breadcrumb
+            items={[{ label: t("projects.integrations.title"), href: backHref }, { label: name }]}
+            linkComponent={Link as SubNavLinkComponent}
+          />
+
+          <Stack wrap align="center" direction="row" gap="150" justify="between">
+            <Stack gap="25">
+              <Typography type="h1">{name}</Typography>
+              <Typography mono size="xs" type="note" variant="tertiary">
+                {subtitle}
+              </Typography>
+            </Stack>
+            <Stack align="center" direction="row" gap="100">
+              <Button
+                data-testid={IntegrationDetailScreenTestId.Test}
+                icon="pulse"
+                intent="ghost"
+                loading={testIntegration.isPending}
+                onClick={test}
+                size="sm"
               >
-                {testResult.detail}
-              </Alert>
-            )}
-
-            <HudPanel surface="glass" title={t("integrations.detailPanel")}>
-              <IntegrationFormFields
-                kindLocked
-                form={form}
-                hasCredentials={integration.hasCredentials}
-              />
-            </HudPanel>
-
-            <IntegrationAutonomyPanel integrationId={integration.id} />
+                {t("integrations.testConnection")}
+              </Button>
+              <Button
+                data-testid={IntegrationDetailScreenTestId.Delete}
+                icon="trash"
+                intent="danger"
+                onClick={() => setConfirmDelete(true)}
+                size="sm"
+              >
+                {t("common.delete")}
+              </Button>
+              <Button
+                data-testid={IntegrationDetailScreenTestId.Save}
+                disabled={!form.canSave(false)}
+                icon="check"
+                intent="primary"
+                loading={updateIntegration.isPending}
+                onClick={save}
+                size="sm"
+              >
+                {t("common.save")}
+              </Button>
+            </Stack>
           </Stack>
-        </PageContainer>
-      </Container>
+
+          {testResult && (
+            <Alert
+              data-testid={IntegrationDetailScreenTestId.TestResult}
+              onClose={() => setTestResult(null)}
+              severity={testResult.ok ? "ok" : "error"}
+            >
+              {testResult.detail}
+            </Alert>
+          )}
+
+          <Panel header={t("integrations.detailPanel")} padding="200">
+            <IntegrationFormFields
+              kindLocked
+              form={form}
+              hasCredentials={integration.hasCredentials}
+            />
+          </Panel>
+
+          <IntegrationAutonomyPanel integrationId={integration.id} />
+        </Stack>
+      </PageContainer>
 
       {confirmDelete && (
         <ConfirmDeleteDialog
@@ -185,6 +201,6 @@ function IntegrationEditor({
           title={t("integrations.deleteTitle")}
         />
       )}
-    </ImmersivePage>
+    </Container>
   );
 }

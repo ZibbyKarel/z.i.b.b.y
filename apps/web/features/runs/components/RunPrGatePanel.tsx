@@ -1,8 +1,7 @@
 "use client";
 
-import { CodeBlock, Stack, Typography } from "@zibby/design-system";
+import { CodeBlock, Panel, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useRunArtifactQuery } from "../queries/useRunArtifactQuery";
 
 export interface RunPrGatePanelProps {
@@ -28,7 +27,7 @@ export function RunPrGatePanel({ pipelineRunId, title }: RunPrGatePanelProps) {
   if (!draft?.content && !diffstat?.content) return null;
 
   return (
-    <HudPanel padding="250" title={title ?? t("prGate")} tone="accent">
+    <Panel header={title ?? t("prGate")} padding="250" tone="accent">
       <Stack gap="200">
         {draft?.content && (
           <Stack gap="50">
@@ -47,6 +46,6 @@ export function RunPrGatePanel({ pipelineRunId, title }: RunPrGatePanelProps) {
           </Stack>
         )}
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }

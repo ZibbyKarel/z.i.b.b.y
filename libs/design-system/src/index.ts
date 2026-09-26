@@ -103,6 +103,9 @@ export type {
 export { EntityHero, EntityHeroTestId } from "./components/EntityHero/EntityHero";
 export type { EntityHeroProps } from "./components/EntityHero/EntityHero";
 
+export { EntityCard, EntityCardTestId } from "./components/EntityCard/EntityCard";
+export type { EntityCardProps } from "./components/EntityCard/EntityCard";
+
 // ---------------------------------------------------------------------------
 // Generic components
 // ---------------------------------------------------------------------------
@@ -320,12 +323,7 @@ export type {
   GraphIconButtonVariant,
 } from "./components/Graph/GraphIconButton";
 
-export {
-  iconDockLinkAttrs,
-  immersiveBackLinkAttrs,
-  hiddenBelowLgFlexAttrs,
-  htmlFontAttrs,
-} from "./utils/domAttrs";
+export { htmlFontAttrs } from "./utils/domAttrs";
 
 // ---------------------------------------------------------------------------
 // Dashboard chrome (router-agnostic, domain-neutral — stays in DS)
@@ -498,31 +496,6 @@ export type { LegendItem, LegendProps } from "./components/Legend/Legend";
 
 export { EmptyState, EmptyStateTestId } from "./components/EmptyState/EmptyState";
 export type { EmptyStateProps } from "./components/EmptyState/EmptyState";
-
-// ---------------------------------------------------------------------------
-// GlassSurface — the "liquid glass" translucent pane. Used by the kept
-// BriefingMessageCard (a chat transcript surface, deliberately not HudPanel).
-// Formerly part of the deleted immersive/orb-map bundle (ZB-13); it has no
-// dependency on the rest of that bundle, so it moved to components/.
-// ---------------------------------------------------------------------------
-export { GlassSurface, GlassSurfaceTestId } from "./components/GlassSurface/GlassSurface";
-export type { GlassSurfaceProps } from "./components/GlassSurface/GlassSurface";
-
-// ---------------------------------------------------------------------------
-// ImmersiveShell — full-page chrome (`apps/web/components/layout/ImmersivePage`
-// wraps it) still adopted by every Part-B screen not yet migrated to the
-// ZibbyCorp shell (ZA-08). Formerly part of the deleted immersive/orb-map
-// bundle; it has no dependency on the orb-map pieces (Orb/OrbMap/OrbNode/
-// OrbitField/CoreOrb/ConnectorLayer/HandoffFlare/ellipseLayout/orbState/
-// canMountWebGL — all genuinely unused, deleted in ZB-13), so it moved to
-// components/ instead.
-// ---------------------------------------------------------------------------
-export {
-  ImmersiveShell,
-  ImmersiveShellTestId,
-  MAIN_CONTENT_ID,
-} from "./components/ImmersiveShell/ImmersiveShell";
-export type { ImmersiveShellProps } from "./components/ImmersiveShell/ImmersiveShell";
 
 // ---------------------------------------------------------------------------
 // Shell components + Splash (ZA-06)

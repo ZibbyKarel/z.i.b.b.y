@@ -3,9 +3,8 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Alert, Button, Grid, Stack, Typography } from "@zibby/design-system";
+import { Alert, Button, Grid, Panel, Stack, Typography } from "@zibby/design-system";
 import type { Integration } from "@zibby/contracts";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { IntegrationCard } from "../../integrations/components/IntegrationCard";
 import {
   type IntegrationCreateDraft,
@@ -80,8 +79,9 @@ export function ProjectIntegrationsPanel({ projectId }: ProjectIntegrationsPanel
   };
 
   return (
-    <HudPanel
-      action={
+    <Panel
+      header={t("projects.integrations.title")}
+      headerEnd={
         <Button
           data-testid="add-integration"
           icon="plus"
@@ -92,7 +92,7 @@ export function ProjectIntegrationsPanel({ projectId }: ProjectIntegrationsPanel
           {t("projects.integrations.add")}
         </Button>
       }
-      title={t("projects.integrations.title")}
+      padding="200"
     >
       <Stack gap="150">
         {testResult && (
@@ -144,6 +144,6 @@ export function ProjectIntegrationsPanel({ projectId }: ProjectIntegrationsPanel
           projectId={projectId}
         />
       )}
-    </HudPanel>
+    </Panel>
   );
 }

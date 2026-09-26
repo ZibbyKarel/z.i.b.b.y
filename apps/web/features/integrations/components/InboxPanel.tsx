@@ -1,7 +1,6 @@
 import { useTranslations } from "next-intl";
-import { Container, Stack, Tag, Typography } from "@zibby/design-system";
+import { Container, Panel, Stack, Tag, Typography } from "@zibby/design-system";
 import type { ChannelItem, ChannelItemState } from "@zibby/contracts";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useChannelItemsQuery } from "../queries";
 
 /** Display tone for each item state — the single source for the inbox chip. */
@@ -96,13 +95,13 @@ export function InboxPanel({ projectId }: InboxPanelProps) {
   const recent = [...scoped].reverse().slice(0, 12);
   return (
     <Container data-testid={InboxPanelTestId.Root}>
-      <HudPanel title={t("inbox.title")}>
+      <Panel header={t("inbox.title")} padding="200">
         <Stack direction="col" gap="100">
           {recent.map((item) => (
             <InboxRow item={item} key={item.id} />
           ))}
         </Stack>
-      </HudPanel>
+      </Panel>
     </Container>
   );
 }

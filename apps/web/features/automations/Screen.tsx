@@ -9,7 +9,6 @@ import { useState } from "react";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
-import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
 import { useAgentsQuery } from "../agents/queries";
@@ -155,20 +154,26 @@ export function Screen() {
   );
 
   return (
-    <ImmersivePage
-      actions={
-        <Button icon="plus" intent="primary" onClick={() => setCreating(true)}>
-          {t("addAutomation")}
-        </Button>
-      }
-      subtitle={t("summary", { active: activeCount, total: automations.length })}
-      title={t("title")}
-    >
-      <Container padding={["300", "350"]}>
-        <PageContainer>{body}</PageContainer>
-      </Container>
+    <Container padding={["300", "350"]}>
+      <PageContainer>
+        <Stack gap="250">
+          <Stack wrap align="center" direction="row" gap="150" justify="between">
+            <Stack gap="25">
+              <Typography type="h1">{t("title")}</Typography>
+              <Typography mono size="xs" type="note" variant="tertiary">
+                {t("summary", { active: activeCount, total: automations.length })}
+              </Typography>
+            </Stack>
+            <Button icon="plus" intent="primary" onClick={() => setCreating(true)}>
+              {t("addAutomation")}
+            </Button>
+          </Stack>
+
+          {body}
+        </Stack>
+      </PageContainer>
 
       {creating && <AutomationFormDialog onClose={() => setCreating(false)} onCreate={onCreate} />}
-    </ImmersivePage>
+    </Container>
   );
 }

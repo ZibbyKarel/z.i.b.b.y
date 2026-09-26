@@ -1,12 +1,11 @@
 "use client";
 
-import { Container, Stack, Typography } from "@zibby/design-system";
+import { Container, Panel, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { RunDetail } from "../components/RunDetail";
 import { useTaskRunQuery } from "../queries/useTaskRunQuery";
 import { useRunAvatarMap, useRunGlyphMap } from "../queries/useRunsQuery";
@@ -49,7 +48,7 @@ export function ActivityRunDetailScreen({ runId }: ActivityRunDetailScreenProps)
         {isError ? (
           <QueryError onRetry={() => void refetch()} />
         ) : (
-          <HudPanel padding="500">
+          <Panel padding="500">
             <Container textAlign="center">
               <Stack gap="75">
                 <Typography mono size="sm" type="note" variant="secondary">
@@ -57,7 +56,7 @@ export function ActivityRunDetailScreen({ runId }: ActivityRunDetailScreenProps)
                 </Typography>
               </Stack>
             </Container>
-          </HudPanel>
+          </Panel>
         )}
       </Container>
     );

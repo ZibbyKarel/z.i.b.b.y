@@ -1,9 +1,8 @@
 "use client";
 
-import { SegmentedControl, Stack, Toggle, Typography } from "@zibby/design-system";
+import { Panel, SegmentedControl, Stack, Toggle, Typography } from "@zibby/design-system";
 import type { ThemeChoice } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { type MotionChoice, useAppearance } from "../../../state/appearance";
 
 const THEME_CHOICES: ThemeChoice[] = ["light", "dark", "system"];
@@ -21,7 +20,7 @@ export function AppearanceSection() {
   const { theme, setTheme, motion, setMotion } = useAppearance();
 
   return (
-    <HudPanel padding="300" surface="glass" title={t("title")}>
+    <Panel header={t("title")} padding="300">
       <Stack gap="250">
         <Stack gap="100">
           <Typography type="text" weight="medium">
@@ -56,6 +55,6 @@ export function AppearanceSection() {
           />
         </Stack>
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }

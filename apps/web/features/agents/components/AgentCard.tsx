@@ -1,7 +1,6 @@
 import type { Agent } from "@zibby/contracts";
-import { Icon, type IconName, Tag } from "@zibby/design-system";
+import { EntityCard, Icon, type IconName, Tag } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { HudCard } from "../../../components/HudCard/HudCard";
 import { ModelBadge, ThinkBadge } from "../../../components/RuntimeBadges/RuntimeBadges";
 
 export interface AgentCardProps {
@@ -17,7 +16,7 @@ export function AgentCard({ agent, pipelineCount = 0, onClick }: AgentCardProps)
   const tools = agent.tools ?? [];
 
   return (
-    <HudCard
+    <EntityCard
       avatarSize="lg"
       badges={[
         [

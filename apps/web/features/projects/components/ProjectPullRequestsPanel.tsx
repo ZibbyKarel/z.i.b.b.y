@@ -3,9 +3,8 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { ProjectPr } from "@zibby/contracts";
-import { Button, Stack, Tag, Typography } from "@zibby/design-system";
+import { Button, Panel, Stack, Tag, Typography } from "@zibby/design-system";
 import { ConfirmDeleteDialog } from "../../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useMergeProjectPrMutation } from "../mutations";
 import { useProjectPrsQuery, useResolvedProjectQuery } from "../queries";
 
@@ -79,7 +78,7 @@ export function ProjectPullRequestsPanel({ projectId }: ProjectPullRequestsPanel
   const hasGithubLink = (resolvedQuery.data?.integrations ?? []).some((i) => i.kind === "github");
 
   return (
-    <HudPanel title={t("title")}>
+    <Panel header={t("title")} padding="200">
       <Stack gap="150">
         {prs.length === 0 ? (
           <Typography
@@ -146,6 +145,6 @@ export function ProjectPullRequestsPanel({ projectId }: ProjectPullRequestsPanel
           title={t("mergeConfirmTitle", { number: confirming.number })}
         />
       )}
-    </HudPanel>
+    </Panel>
   );
 }

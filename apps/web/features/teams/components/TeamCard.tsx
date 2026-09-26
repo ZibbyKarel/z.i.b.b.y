@@ -1,7 +1,6 @@
 import type { Team } from "@zibby/contracts";
-import { Tag } from "@zibby/design-system";
+import { EntityCard, Tag } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { HudCard } from "../../../components/HudCard/HudCard";
 
 export interface TeamCardProps {
   team: Team;
@@ -10,7 +9,7 @@ export interface TeamCardProps {
 
 /**
  * Catalog card for a single team — a thin container over the generic
- * {@link HudCard}, mirroring `CompanyCard`. A team has no roster or budget of
+ * {@link EntityCard}, mirroring `CompanyCard`. A team has no roster or budget of
  * its own (those stay company-only); its one distinguishing badge is whether a
  * read-only knowledge base is attached.
  */
@@ -19,7 +18,7 @@ export function TeamCard({ team, onOpen }: TeamCardProps) {
   const hasKnowledgeBase = team.knowledgeBase != null;
 
   return (
-    <HudCard
+    <EntityCard
       badges={[
         [
           hasKnowledgeBase ? (

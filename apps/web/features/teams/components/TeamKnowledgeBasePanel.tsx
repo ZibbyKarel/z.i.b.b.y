@@ -1,10 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Button, Divider, Stack, Typography } from "@zibby/design-system";
+import { Button, Divider, Panel, Stack, Typography } from "@zibby/design-system";
 import type { KnowledgeBaseSource } from "@zibby/contracts";
 import { FormTextInput, useFormControls } from "@zibby/forms";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 
 export interface TeamKnowledgeBasePanelProps {
   /** The team's current knowledge base; undefined when none is attached. */
@@ -63,8 +62,9 @@ export function TeamKnowledgeBasePanel({
   const canSave = (watchedPath ?? "").trim().length > 0 && !saving;
 
   return renderForm(
-    <HudPanel
-      action={
+    <Panel
+      header={t("title")}
+      headerEnd={
         <Button
           data-testid="save-kb"
           disabled={!canSave}
@@ -76,7 +76,7 @@ export function TeamKnowledgeBasePanel({
           {t("save")}
         </Button>
       }
-      title={t("title")}
+      padding="200"
     >
       <Stack gap="200">
         <FormTextInput<KnowledgeBaseEditValues>
@@ -114,6 +114,6 @@ export function TeamKnowledgeBasePanel({
           </>
         )}
       </Stack>
-    </HudPanel>,
+    </Panel>,
   );
 }

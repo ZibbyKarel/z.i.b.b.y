@@ -1,8 +1,15 @@
 "use client";
 
-import { Button, CodeBlock, HoldButton, Icon, Stack, Typography } from "@zibby/design-system";
+import {
+  Button,
+  CodeBlock,
+  HoldButton,
+  Icon,
+  Panel,
+  Stack,
+  Typography,
+} from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import type { DashboardApproval } from "../../approvals/approval";
 import { HIGH_RISK_TYPES, SEVERITY } from "../../approvals/approval";
 import { ApprovalPreview } from "../../approvals/components/ApprovalPreview";
@@ -35,7 +42,7 @@ export function RunApprovalGate({ approval }: RunApprovalGateProps) {
   const confirmAction = () => approve.mutate({ params: { id: approval.id }, body: {} });
 
   return (
-    <HudPanel padding="250" title={t("exactAction")} tone={sev.tone}>
+    <Panel header={t("exactAction")} padding="250" tone={sev.tone}>
       <Stack gap="200">
         <Stack gap="50">
           <Typography leading="tight" type="subtitle" weight="semibold">
@@ -146,6 +153,6 @@ export function RunApprovalGate({ approval }: RunApprovalGateProps) {
           </Typography>
         </Stack>
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }

@@ -15,7 +15,6 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { formatCostUsd } from "../../../utils/cost";
 import { useAgentsQuery } from "../../agents";
 import { usePipelinesQuery } from "../../pipelines";
@@ -335,7 +334,7 @@ export function PipelineStageTimeline({
   const openKey = openLog ?? liveKey;
 
   return (
-    <HudPanel padding="250" title={t("stageTimeline")}>
+    <Panel header={t("stageTimeline")} padding="250">
       {nodes.length === 0 ? (
         <Stack gap="100">
           <Typography mono size="xs" type="note" variant="tertiary">
@@ -516,6 +515,6 @@ export function PipelineStageTimeline({
           })}
         </Stack>
       )}
-    </HudPanel>
+    </Panel>
   );
 }

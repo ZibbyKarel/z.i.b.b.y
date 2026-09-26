@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Stack, TextInputField, Typography } from "@zibby/design-system";
+import { Button, Panel, Stack, TextInputField, Typography } from "@zibby/design-system";
 import type { MachineConfig } from "@zibby/contracts";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useMachineConfigQuery, useUpdateMachineConfigMutation } from "../../machine";
 
 /** Testids for the per-machine config editor (the screen + tests select via these). */
@@ -38,7 +37,7 @@ function MachineEditor({ config }: { config: MachineConfig }) {
   };
 
   return (
-    <HudPanel padding="300" surface="glass" title={t("machine.title")}>
+    <Panel header={t("machine.title")} padding="300">
       <Stack gap="200">
         <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
           {t("machine.cloneRootHint")}
@@ -64,6 +63,6 @@ function MachineEditor({ config }: { config: MachineConfig }) {
           </Button>
         </Stack>
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }

@@ -2,8 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import type { Mandate } from "@zibby/contracts";
-import { Stack, Toggle, Typography } from "@zibby/design-system";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
+import { Panel, Stack, Toggle, Typography } from "@zibby/design-system";
 import { useSetMandateMutation } from "../../settings/mutations";
 import { useMandateQuery } from "../../settings/queries";
 
@@ -51,7 +50,7 @@ export function IntegrationAutonomyPanel({ integrationId }: IntegrationAutonomyP
   };
 
   return (
-    <HudPanel surface="glass" title={t("integrations.autonomyPanel")}>
+    <Panel header={t("integrations.autonomyPanel")} padding="200">
       <Stack gap="150">
         <Typography leading="snug" size="xs" type="note" variant="tertiary">
           {t("integrations.autonomyHint")}
@@ -71,6 +70,6 @@ export function IntegrationAutonomyPanel({ integrationId }: IntegrationAutonomyP
           onChange={(v) => setChannel("reply", v)}
         />
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }

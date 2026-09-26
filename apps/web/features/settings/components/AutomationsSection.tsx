@@ -2,8 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Stack, Typography } from "@zibby/design-system";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
+import { Panel, Stack, Typography } from "@zibby/design-system";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import {
@@ -48,24 +47,24 @@ export function AutomationsSection() {
 
   if (automationsQuery.isPending) {
     return (
-      <HudPanel padding="300" surface="glass" title={t("automations.title")}>
+      <Panel header={t("automations.title")} padding="300">
         <QueryLoading />
-      </HudPanel>
+      </Panel>
     );
   }
 
   if (automationsQuery.isError) {
     return (
-      <HudPanel padding="300" surface="glass" title={t("automations.title")}>
+      <Panel header={t("automations.title")} padding="300">
         <QueryError onRetry={() => void automationsQuery.refetch()} />
-      </HudPanel>
+      </Panel>
     );
   }
 
   const systemAutomations = (automationsQuery.data ?? []).filter((a) => a.system);
 
   return (
-    <HudPanel padding="300" surface="glass" title={t("automations.title")}>
+    <Panel header={t("automations.title")} padding="300">
       <Stack gap="200">
         <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
           {t("automations.hint")}
@@ -96,6 +95,6 @@ export function AutomationsSection() {
           })}
         </Stack>
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }

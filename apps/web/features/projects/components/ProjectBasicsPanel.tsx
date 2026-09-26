@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import {
   Button,
   IconTile,
+  Panel,
   SelectField,
   Stack,
   TextAreaField,
@@ -13,7 +14,6 @@ import {
 } from "@zibby/design-system";
 import type { Category, PrOpenMode, Project } from "@zibby/contracts";
 import { Controller, FormTextInput, useFormControls } from "@zibby/forms";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { toastBus } from "../../../components/Toaster/toastBus";
 import { useChainsQuery } from "../../chains";
 import { KeyValueEditor, type KeyValueRow } from "./KeyValueEditor";
@@ -227,8 +227,9 @@ export function ProjectBasicsPanel({
   const canSave = (watchedName ?? "").trim().length > 0;
 
   return renderForm(
-    <HudPanel
-      action={
+    <Panel
+      header={t("profile.basics.title")}
+      headerEnd={
         <Button
           data-testid="save-basics"
           disabled={!canSave || saving}
@@ -240,7 +241,7 @@ export function ProjectBasicsPanel({
           {isNew ? t("create") : t("save")}
         </Button>
       }
-      title={t("profile.basics.title")}
+      padding="200"
     >
       <Stack gap="200">
         {isNew && (
@@ -454,6 +455,6 @@ export function ProjectBasicsPanel({
           </Stack>
         )}
       </Stack>
-    </HudPanel>,
+    </Panel>,
   );
 }

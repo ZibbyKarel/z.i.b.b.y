@@ -82,8 +82,8 @@ export function GatesScreen() {
 }
 
 function SectionBody({ section }: { section: Section }): ReactNode {
-  if (section === "floor") return <SystemFloorPanel surface="glass" />;
-  if (section === "global") return <GateRulesSection hideFloor surface="glass" />;
+  if (section === "floor") return <SystemFloorPanel />;
+  if (section === "global") return <GateRulesSection hideFloor />;
   if (section === "project") return <ProjectRulesSection />;
   if (section === "agent") return <AgentRulesList />;
   if (section === "handoff") return <HandoffSection />;
