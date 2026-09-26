@@ -1,5 +1,5 @@
 import type { CSSProperties, Ref } from "react";
-import { hashSeed, seededRandom } from "../../immersive/seededRandom";
+import { hashSeed, seededRandom } from "../../utils/seededRandom";
 import { type StateTone, stateToneVar } from "../../stateTone";
 
 /** The DS.md §7 sanctioned SVG sizes — no arbitrary px (sealed sizing). */

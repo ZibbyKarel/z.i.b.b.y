@@ -119,33 +119,30 @@ change does not apply mid-way through a running `--resume` thread.
   advances the cursor. Important facts flow into vault markdown the same way
   runs do.
 
-## Web page (`/chat`, JARVIS style)
+## Web dock (shell-global COO dock, ZB-12/ZB-13)
 
-Chat is a routed dashboard page (`apps/web/app/(dashboard)/chat/page.tsx` →
-`features/chat/Screen.tsx`, phase 23 — it used to be a `fixed inset-0`
-fullscreen takeover mounted by `ChatProvider`'s `isOpen` flag; it is now a
-normal page inside the shell, nav rail and top bar included). It keeps the
-JARVIS-style surface (`ChatScreen`, `apps/web/features/chat/`): a
-scanline/grid texture, an ambient orb map (`DepartmentOrbMap`, see
-`docs/web/department-orb-map.md`) behind the conversation, and a scrollable
-transcript whose top edge fades out (a mask gradient) — older messages fade,
-but you can still scroll back to the start.
+`/chat` has no page of its own any more — it is a single `next.config.mjs`
+permanent redirect to `/org` (D-009). The chat engine is `CooDock`
+(`apps/web/features/chat/components/CooDock.tsx`), mounted once in `AppFrame`'s
+`dock` slot by `AppShell` so it is available on every route, wired to the DS
+`ChatDock` shell component. The old JARVIS-style full-page surface
+(`ChatScreen`, its orb-map backdrop, glass top bar and tool dock) was deleted
+in ZB-13 — see `docs/web/overview.md`'s ZB-12/ZB-13 notes.
 
-- **The conversation lives in `ChatProvider`'s client state** (not refetched
-  from `/transcript`): the operator's turn is added optimistically on send,
-  the assistant's turn is added from the `done` stream event (the
-  authoritative `done.text` plus the tool events collected along the way).
-  The backend still writes every message to JSONL — the UI only renders what
-  the stream/POST produced. This removed the flash where "history
-  disappeared after the reply" (there was no longer a window for a refetch).
+- `useCooChat` (`features/chat/hooks/useCooChat.ts`) is the single owner of the
+  chat stream (`useChatStream` + `useSendChatMessageMutation`, the same
+  `claude --resume` conversation id) and of the reload hydration off
+  `GET /api/chat/transcript` — unlike the old page, the dock rehydrates the
+  transcript from the API on mount rather than relying solely on in-memory
+  client state.
 - **Preserved across navigation, reset by "New chat":** `ChatProvider` mints
-  `conversationId` once, lazily, and keeps it as the operator leaves `/chat`
-  and comes back (the provider sits above the route in `AppShell`, so it
-  survives the page unmounting) — the same id keeps `--resume`-ing ZIBBY's
-  `claude` session. Only "New chat" mints a fresh id and clears the
+  `conversationId` once, lazily, and keeps it as the operator navigates
+  between routes (the provider sits above the whole shell in `AppShell`, so it
+  survives any single route unmounting) — the same id keeps `--resume`-ing
+  ZIBBY's `claude` session. Only "New chat" mints a fresh id and clears the
   transcript, starting a session with nothing to `--resume`.
-- `GET /transcript` remains for a future resume/branch feature; `/chat`
-  doesn't read it.
+- ⌘/Ctrl+J toggles the dock open/closed from anywhere; a department page's
+  "Chat with" button opens it with an explicit department target (O-20).
 
 ## MVP scope
 

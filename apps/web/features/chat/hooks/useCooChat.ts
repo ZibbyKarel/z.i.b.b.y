@@ -36,11 +36,11 @@ export interface CooChat {
  *
  * Also owns the reload hydration the `/chat` screen used to do: on a full page
  * reload the provider's in-memory transcript is gone, so the durable copy
- * (`GET /api/chat/transcript`) is read back once per conversation. The server's
- * `conversationId` is authoritative (it covers the cold-start case where
- * localStorage is empty but the server already has an active thread), and the
- * `hydratedFor` ref makes the seed one-shot so it never clobbers live or
- * optimistic turns already in state.
+ * (`GET /api/chat/transcript`, queried with no `conversationId` — always the
+ * server's one active thread, never whatever `ChatContext` currently holds;
+ * see the query call below) is read back once per mount. The `hydratedFor`
+ * ref makes the seed one-shot so it never clobbers live or optimistic turns
+ * already in state.
  *
  * Voice (O-22): dictation only — a finalized utterance is sent verbatim. The mic
  * is disarmed while a turn is in flight (idle gating) and while any reply is
@@ -50,11 +50,31 @@ export function useCooChat(): CooChat {
   const { conversationId, ensureConversation, setConversationId, setMessages, dockTarget } =
     useChat();
 
-  useEffect(() => {
-    ensureConversation();
-  }, [ensureConversation]);
+  // Deliberately NOT `conversationId ?? undefined`: `ChatContext`'s `open()`/⌘J
+  // handler mints a conversation id client-side, synchronously, the moment the
+  // dock is toggled — which can (and does, reliably under Playwright's fast
+  // synthetic input) race ahead of this query's own network round trip. Once
+  // the query key stopped being `undefined`, the fetch it's keyed on stops
+  // resolving the server's *active* thread and starts asking for that specific
+  // (possibly brand new, empty) id instead — silently losing whatever the
+  // active thread actually had (e.g. a briefing an overnight automation just
+  // appended). Querying with `undefined` unconditionally sidesteps the race
+  // entirely: every mount resolves the server's one authoritative active
+  // thread (this is a single-thread MVP — `ChatTranscriptStore`'s own
+  // docblock), and the hydration effect below then adopts whatever id comes
+  // back, overwriting any client-minted placeholder.
+  const transcriptQuery = useChatTranscriptQuery(undefined);
+  const transcript = transcriptQuery.data;
 
-  const { data: transcript } = useChatTranscriptQuery(conversationId ?? undefined);
+  // Once hydration has settled without producing a thread (no active thread on
+  // the server yet, or the read failed), mint one locally — otherwise a turn
+  // typed into the always-visible dock composer before anyone pressed ⌘J would
+  // hit `send`'s `!conversationId` guard and be dropped silently. Minting only
+  // AFTER the query settles keeps the race described above closed.
+  const hydrationSettled = transcriptQuery.isSuccess || transcriptQuery.isError;
+  useEffect(() => {
+    if (hydrationSettled && !transcript) ensureConversation();
+  }, [hydrationSettled, transcript, ensureConversation]);
   const hydratedFor = useRef<string | null>(null);
   useEffect(() => {
     if (!transcript) return;

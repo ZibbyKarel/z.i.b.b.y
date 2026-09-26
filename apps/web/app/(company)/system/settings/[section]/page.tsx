@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
+import { SettingsScreen } from "../../../../../features/settings/Screen";
 import {
   SETTINGS_SECTIONS,
-  SettingsScreen,
   type SettingsSection,
-} from "../../../../../features/settings/Screen";
+} from "../../../../../features/settings/settingsSections";
 
 function isSettingsSection(value: string): value is SettingsSection {
   return (SETTINGS_SECTIONS as readonly string[]).includes(value);

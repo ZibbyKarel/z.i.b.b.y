@@ -33,7 +33,9 @@ vi.mock("../../system", () => ({ useSystemConfigQuery: () => ({ data: undefined 
 
 const transcriptState: {
   data: { conversationId: string; messages: ChatMessageType[] } | undefined;
-} = { data: undefined };
+  isSuccess: boolean;
+  isError: boolean;
+} = { data: undefined, isSuccess: false, isError: false };
 vi.mock("../queries/useChatTranscriptQuery", () => ({
   useChatTranscriptQuery: () => transcriptState,
 }));
@@ -95,6 +97,8 @@ describe("CooDock (ZB-12)", () => {
     sendMutate.mockClear();
     voiceOptions.length = 0;
     transcriptState.data = undefined;
+    transcriptState.isSuccess = false;
+    transcriptState.isError = false;
     window.localStorage.clear();
   });
 
@@ -174,5 +178,14 @@ describe("CooDock (ZB-12)", () => {
   it("keeps the mic idle-gated: voice is not suspended while idle", () => {
     renderDock();
     expect(voiceOptions.at(-1)?.suspended).toBe(false);
+  });
+
+  it("still sends from the collapsed dock when the server has no active thread (mints after hydration settles)", async () => {
+    transcriptState.isError = true;
+    renderDock({ open: false });
+    await typeAndSend("first message ever");
+    expect(sendMutate).toHaveBeenCalledTimes(1);
+    const body = sendMutate.mock.calls[0]?.[0]?.body as Record<string, unknown>;
+    expect(body.conversationId).toEqual(expect.stringMatching(/^conv_/));
   });
 });

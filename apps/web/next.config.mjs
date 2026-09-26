@@ -39,6 +39,10 @@ const nextConfig = {
     // the registry). `/pipelines(/[id])` are page-level redirects instead
     // (server-side department lookup), not static rewrites.
     return [
+      // ZB-13: `/chat` → `/org` (ZB-02) — the chat engine is now the shell-global
+      // COO dock (ZB-01/ZB-12). No query params to preserve, so this is a plain
+      // static rule rather than a page-level redirect (single redirect location).
+      { source: "/chat", destination: "/org", permanent: true },
       { source: "/agents", destination: "/org/people", permanent: true },
       {
         source: "/agents/:id",
@@ -71,23 +75,8 @@ const nextConfig = {
         destination: "/policy/gates?section=signals&id=:id",
         permanent: true,
       },
-      {
-        source: "/settings",
-        has: [{ type: "query", key: "tab", value: "gates" }],
-        destination: "/policy/gates",
-        permanent: true,
-      },
-      {
-        source: "/settings",
-        has: [{ type: "query", key: "tab", value: "mandate" }],
-        destination: "/policy/gates?section=mandate",
-        permanent: true,
-      },
       // ZB-11: `/skills` `/mcp` `/hooks` `/commands` (+`/[id]`) moved under the
-      // global registries (ROUTE-MAP §2), and every remaining `/settings?tab=`
-      // moved to its own `/system/settings/<section>` route (ROUTE-MAP §3) — the
-      // bare `/settings` catch-all comes LAST so the `tab=`-specific rules above
-      // it match first.
+      // global registries (ROUTE-MAP §2).
       { source: "/skills", destination: "/system/registries/skills", permanent: true },
       { source: "/skills/:id", destination: "/system/registries/skills/:id", permanent: true },
       { source: "/mcp", destination: "/system/registries/mcp", permanent: true },
@@ -96,61 +85,12 @@ const nextConfig = {
       { source: "/hooks/:id", destination: "/system/registries/hooks/:id", permanent: true },
       { source: "/commands", destination: "/system/registries/commands", permanent: true },
       { source: "/commands/:id", destination: "/system/registries/commands/:id", permanent: true },
-      {
-        source: "/settings",
-        has: [{ type: "query", key: "tab", value: "preferences" }],
-        destination: "/system/settings/general",
-        permanent: true,
-      },
-      {
-        source: "/settings",
-        has: [{ type: "query", key: "tab", value: "tasks" }],
-        destination: "/system/settings/general",
-        permanent: true,
-      },
-      {
-        source: "/settings",
-        has: [{ type: "query", key: "tab", value: "automations" }],
-        destination: "/system/settings/automations",
-        permanent: true,
-      },
-      {
-        source: "/settings",
-        has: [{ type: "query", key: "tab", value: "chat" }],
-        destination: "/system/settings/coo",
-        permanent: true,
-      },
-      {
-        source: "/settings",
-        has: [{ type: "query", key: "tab", value: "activity" }],
-        destination: "/system/settings/activity",
-        permanent: true,
-      },
-      {
-        source: "/settings",
-        has: [{ type: "query", key: "tab", value: "runtime" }],
-        destination: "/system/settings/runtime",
-        permanent: true,
-      },
-      {
-        source: "/settings",
-        has: [{ type: "query", key: "tab", value: "machine" }],
-        destination: "/system/settings/machine",
-        permanent: true,
-      },
-      {
-        source: "/settings",
-        has: [{ type: "query", key: "tab", value: "selfKnowledge" }],
-        destination: "/knowledge/distill",
-        permanent: true,
-      },
-      {
-        source: "/settings",
-        has: [{ type: "query", key: "tab", value: "system" }],
-        destination: "/system/settings/status",
-        permanent: true,
-      },
-      { source: "/settings", destination: "/system/settings/general", permanent: true },
+      // ZB-13: every `/settings(?tab=)` case (ROUTE-MAP §3) moved to a
+      // page-level redirect (`app/(company)/settings/page.tsx`) instead of a
+      // static `has: query` rule here — Next.js's `redirects()` forwards an
+      // unconsumed incoming query string onto the destination by default
+      // (`/settings?tab=system` landed on `/system/settings/status?tab=system`,
+      // not the clean URL), which a page reading `searchParams` itself avoids.
     ];
   },
 };

@@ -8,45 +8,6 @@ import type { IconName, SelectOption } from "@zibby/design-system";
 import type { Route } from "next";
 
 /**
- * Navigation entry without a display label — the label is resolved from the
- * `nav.<id>` message catalog at render time (see AppShell), so no UI text lives
- * in this data module.
- */
-export interface NavConfig {
-  id: string;
-  glyph: IconName;
-  /** A statically-typed app route (Next `typedRoutes`) — a typo fails `tsc`. */
-  href: Route;
-}
-
-export const NAV_ITEMS = [
-  // F8d: "overview" (`/overview`) and "runs" (`/runs`) are deleted — `/chat` is
-  // home now (O2/O3) and `/archiv` (F2) is the surviving task archive. Neither
-  // carries a nav-rail entry of its own; `/chat` is reached via ⌘J from
-  // anywhere, `/archiv` via `ChatTasksPanel`'s own "Archiv" link.
-  { id: "projects", glyph: "code", href: "/projects" },
-  { id: "companies", glyph: "branch", href: "/companies" },
-  { id: "teams", glyph: "grid", href: "/teams" },
-  { id: "agents", glyph: "bot", href: "/agents" },
-  { id: "pipelines", glyph: "flow", href: "/pipelines" },
-  { id: "automations", glyph: "clock", href: "/automations" },
-  { id: "skills", glyph: "spark", href: "/system/registries/skills" as Route },
-  { id: "commands", glyph: "bolt", href: "/system/registries/commands" as Route },
-  { id: "hooks", glyph: "checkpoint", href: "/system/registries/hooks" as Route },
-  // B3a (docs/superpowers/specs/2026-07-22-handoff-signal-registry-and-receiver-filter-design.md):
-  // the handoff signal-kind registry — a config-ish catalog, placed with hooks/mcp.
-  { id: "signals", glyph: "pulse", href: "/signals" },
-  { id: "mcp", glyph: "server", href: "/system/registries/mcp" as Route },
-  { id: "memory", glyph: "brain", href: "/memory" },
-] as const satisfies readonly NavConfig[];
-
-export const SETTINGS_ITEM = {
-  id: "settings",
-  glyph: "gear",
-  href: "/system/settings/general" as Route,
-} as const satisfies NavConfig;
-
-/**
  * A section sub-tab. `href` is a real ZibbyCorp route once its screen phase ships
  * (ZB-02..ZB-11); until then it is "the closest existing current route" (ZB-01's
  * rule) — usually the section's own fallback. ZB-06 shipped `goals`/`companies`/
@@ -70,10 +31,10 @@ export interface SectionConfig {
 }
 
 /**
- * ZB-01: `NAV_ITEMS`' flat catalog list becomes the ZibbyCorp 7-section IA
+ * ZB-01: the old flat `NAV_ITEMS` catalog list became the ZibbyCorp 7-section IA
  * (`ROUTE-MAP.md` §1) for the `AppHeader` section nav + `SubNav` sub-tabs.
- * `NAV_ITEMS`/`SETTINGS_ITEM` stay put — `ChatToolDock` (the `/chat` dock's own
- * leaf-level tool list) still reads them and is out of scope until ZB-13.
+ * `NAV_ITEMS`/`SETTINGS_ITEM` were removed in ZB-13 along with their last reader,
+ * the old `ChatToolDock` leaf-level tool list.
  */
 export const SECTIONS = [
   {

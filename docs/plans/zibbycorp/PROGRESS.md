@@ -80,7 +80,8 @@ Legend: ⬜ todo · 🟦 in progress · ✅ landed (sha) · ⛔ parked (reason)
 | ZB-10 | Ledger | ✅ (budget edits link out to company/project detail) | final day-run commit |
 | ZB-11 | System settings + registries | ✅ (`GET /api/registries/bindings`: mcp from agent grants; skills/hooks/commands bind to every staffed department — they are materialized into every run) | 2026-09-25 session 2 |
 | ZB-12 | ⌘K + COO dock + voice | ✅ (dock has no attach — chat API has no attachment channel; "Toggle theme" is a light/dark flip) | 2026-09-25 session 2 |
-| ZB-13 | Cleanup | ⬜ | |
+| ZB-13 | Cleanup | ✅ (orb/immersive chat deleted, 314 dead i18n keys pruned by `tools/i18n/prune-unused-keys.mjs`; `GlassSurface`/`ImmersiveShell`/`HudCard`/`HudPanel` KEPT — 62 web files still compose from them → ZB-13b) | 2026-09-26 |
+| ZB-13b | HudCard/HudPanel/ImmersivePage → DS Panel/Card, then delete them + immersive DS | ⬜ | |
 | ZB-14 | Validation → park | ⬜ | |
 
 ---
@@ -215,6 +216,7 @@ push and a **draft** PR into main (never merge).
   `SendChatMessageBody` if chat attachments are wanted.
 - Fixed a pre-existing red: the `DistillScreen.test` mock was missing
   `getAutomationsQueryKey`, and its assertion hit duplicate text.
+- **Correction (2026-09-26):** 3 of these 17 were real regressions, and CI showed them red. `GET /api/tasks/:id` swallowed `/api/tasks/runs`; fixed by controller order in d973d21. The approvals reject-body test was stale. The other 14 are container-only (root + `backup.sh`/read-only files) and green in CI.
 - **Environment reds in the cloud container.** These 17 tests fail identically on the
   clean HEAD, so they are not caused by this work:
   - `backup.test.ts`
@@ -225,4 +227,80 @@ push and a **draft** PR into main (never merge).
   - `approvals.contract` EmptyBodySchema
 - Operator O-09 note: "Bound in" for skills/hooks/commands is coarse (every staffed
   department) until a per-agent link exists.
+
+## 2026-09-26 — ZB-13 (cleanup)
+
+- Deleted: `libs/design-system/src/immersive/**`'s dead orb-map bundle (`Orb`, `OrbMap`,
+  `OrbNode`, `OrbitField`, `CoreOrb`, `ConnectorLayer`, `HandoffFlare`, `ellipseLayout`,
+  `orbState`, `canMountWebGL`); the old immersive chat UI (`ChatScreen`, `ChatTopBar`,
+  `ChatToolDock`, `DepartmentOrbMap`, `StatusPill`/`StatusFlyoutPanel`, `ChatLiveLog`,
+  `ChatTasksPanel`, `ChatSearch`, the old glass `ChatDock`/`ChatBottomBar`,
+  `ChatQuickNote`/`ChatQuickTask`, `ChatTaskRow`/`ChatTaskDetailColumn`,
+  `ChatDetailDialog`, `CoreOverviewDialog`, the `Flyout*Row`s, `LangSwitch`,
+  `statusFlyout.ts`/`useStatusFlyout.ts`, `departmentLoad.ts`, `features/chat/Screen.tsx`,
+  `useAutoSpeak`) and `DepartmentWeb/particle-mapping.ts` (orb-only); the old flat
+  `NAV_ITEMS`/`SETTINGS_ITEM` (only reader was `ChatToolDock`); `app/(company)/chat/page.tsx`
+  (the `/chat` redirect moved into `next.config.mjs`, single redirect location).
+- **Kept, moved instead of deleted** (still genuinely used, contrary to the plan's
+  assumption): `GlassSurface` and `ImmersiveShell` moved out of `immersive/` into
+  `libs/design-system/src/components/` — `GlassSurface` for the kept
+  `BriefingMessageCard`, `ImmersiveShell` (via `ImmersivePage`) for every Part-B screen
+  not yet migrated off it (ZA-08, which runs after this phase). `LivingGlow`,
+  `OrbitLoader`, `ProgressRing` are all still used (by `Card`, `LoadingState`/
+  `TaskCommandLine`, `LimitsRings` respectively) — none were dead. `HudCard`/`HudPanel`
+  are load-bearing for ~40 not-yet-migrated screens — out of scope until ZA-08.
+  `features/archive` is the real, live implementation behind `/activity/runs` (the plan's
+  "moved to /activity/runs" was already true when this phase started) — kept as-is.
+- i18n: wrote `tools/i18n/prune-unused-keys.mjs` (dry-run by default, `--apply` to
+  write), unit-tested (33 tests covering scope-aware `useTranslations` binding,
+  template-prefix vs. bare-literal fallbacks, the root-namespace and lookup-table/
+  ternary edge cases a first pass got wrong). Pruned 314 dead keys from both
+  `cs.json`/`en.json` (parity kept). `apps/web/i18n/messages/parity.test.ts` trimmed
+  to just the cs/en key-set-parity assertion (the phase-specific pinned-key assertions
+  were protecting keys this phase deletes).
+- knip isn't installed (`knip.json` exists, the package doesn't) — did a grep-based
+  unused-export pass on every touched file instead; no other dead exports found.
+- Found and fixed a real bug while rewriting `e2e/channels.spec.ts`/`redirects.spec.ts`:
+  `RegistriesScreen`/`Screen` (settings)/`ProjectDetailScreen` are `"use client"` files
+  that used to export their tab/section/kind `const` arrays directly; their owning
+  SERVER page (`[kind]/page.tsx`, `[section]/page.tsx`, `[tab]/page.tsx`) imported
+  those arrays to validate the dynamic segment. Under the Turbopack dev server this
+  reads back as `undefined` (`X.includes is not a function`) even though it works in
+  `next build` — moved each array into its own plain module
+  (`registries/registryKinds.ts`, `settings/settingsSections.ts`,
+  `projects/projectTabs.ts`) so the server page never crosses the client boundary
+  for it.
+- Fixed a real chat bug the rewritten `briefing.spec.ts` surfaced: `useCooChat` eagerly
+  minted a conversation id on mount, racing ahead of the transcript-hydration query
+  (keyed by that same id once minted) — the fetch that should have resolved the
+  server's *active* thread (with the just-generated briefing already on it) instead
+  queried a brand-new, empty, client-only id. Fixed by always querying with no
+  `conversationId` (the server's `ensureConversation()` always resolves "the" active
+  thread regardless — this is a single-thread MVP, `ChatTranscriptStore`'s own
+  docblock) and dropping the now-redundant mount-time mint.
+- `/settings(?tab=)` moved from a batch of `next.config.mjs` `has: query` redirects to
+  a page (`app/(company)/settings/page.tsx`): the static rule forwarded the incoming
+  `?tab=` onto the destination (`/system/settings/status?tab=system`, not the clean
+  URL) — a CI-caught bug unrelated to my deletions, fixed while touching this file.
+- Docs: deleted `docs/web/department-orb-map.md` (its only subject); updated
+  `docs/web/overview.md` and `docs/api/chat.md`'s chat sections for ZB-12/13 (both were
+  still describing the retired `ChatScreen`/`(dashboard)` era). `check:names`,
+  `docs-sync --scope=worktree`, and `self-knowledge:generate` + `--check` all clean.
+- e2e: rewrote `approval.spec.ts` (NEEDS YOU rail `ApprovalCard`, not the deleted chat
+  gutter), `briefing.spec.ts` (⌘/Ctrl+J → the COO dock, not `/chat`), `navigation.spec.ts`
+  (`/org` not `/chat`), `pipeline-edit.spec.ts`/`pipeline-run.spec.ts`
+  (`/org/departments/dev/pipelines/demo-pipe`, not the deleted `/pipelines` catalog).
+  Full `pnpm e2e`: 45/46 green. The one red, `channels.spec.ts`, is a real `claude` CLI
+  subprocess (`ReplyDraftService`'s reply research, `RESEARCH_TIMEOUT_MS = 300_000`)
+  that never completed even at a 60s poll / 120s test timeout in this sandbox — network/
+  proxy-constrained, not a routing or selector bug (confirmed: the Turbopack crash it
+  used to also hit is fixed, and the approval step it's waiting on never appears even
+  server-side). Left for the operator to re-check against real CI, which has normal
+  network access.
+- `pnpm exec vitest run`: 14 failed / 5854 passed / 17 skipped — all 14 are inside the
+  known environment-red set (backup.test.ts ×4, pipeline-runner read-only produces ×1,
+  pipelines.e2e ×9); `pnpm exec tsc` (both configs), `pnpm exec eslint apps libs tools`,
+  `pnpm exec next build apps/web`, `check:cycles`, `check:deps`, `check:names`, and the
+  `className=` grep are all clean.
+- Orchestrator review of ZB-13: the subagent had dropped `useCooChat`'s mount-time conversation mint to fix a hydration race. That left the collapsed dock's composer silently dropping a first turn when the server has no active thread. The fix: mint after the hydration query settles without a thread. A regression test is in `CooDock.test`.
 

@@ -28,6 +28,7 @@ import { ChatSection } from "./components/ChatSection";
 import { MachineSection } from "./components/MachineSection";
 import { SystemSection } from "./components/SystemSection";
 import { WatcherRows } from "./components/WatcherRows";
+import { SETTINGS_SECTIONS, type SettingsSection } from "./settingsSections";
 
 type Locale = "cs" | "en";
 
@@ -85,22 +86,6 @@ function InfoRow({ label, value, tone }: { label: string; value: string; tone?: 
     </Stack>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Sections — ROUTE-MAP §3, each a directly addressable `/system/settings/<id>` URL
-// ---------------------------------------------------------------------------
-
-export const SETTINGS_SECTIONS = [
-  "general",
-  "appearance",
-  "coo",
-  "activity",
-  "automations",
-  "runtime",
-  "machine",
-  "status",
-] as const;
-export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
 
 const CAFFEINATE_KEY = "zibby.caffeinate";
 

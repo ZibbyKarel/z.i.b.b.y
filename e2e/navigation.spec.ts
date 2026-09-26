@@ -9,7 +9,7 @@ import { expect, test } from "@playwright/test";
  * not the (mostly unbuilt) destination screens.
  */
 test("the section nav renders all seven sections and navigates on click", async ({ page }) => {
-  await page.goto("/chat");
+  await page.goto("/org");
 
   const nav = page.getByTestId("app-header-nav");
   await expect(nav).toBeVisible();
@@ -27,7 +27,7 @@ test("the section nav renders all seven sections and navigates on click", async 
     await expect(nav.getByTestId(`tabs-tab-${id}`)).toHaveText(label);
   }
 
-  // "/chat" maps to the "org" section (state/config.ts's `sectionForPath`).
+  // "/org" is the org section's own home route.
   await expect(nav.getByTestId("tabs-tab-org")).toHaveAttribute("aria-selected", "true");
 
   // Clicking "Work" navigates to its section fallback route — `/work/tasks`
@@ -51,7 +51,7 @@ test("the sub-nav lists the active section's tabs and offers + New task", async 
 });
 
 test("the NEEDS YOU rail renders on every section", async ({ page }) => {
-  await page.goto("/chat");
+  await page.goto("/org");
   await expect(page.getByTestId("rail-root")).toBeVisible();
   await expect(page.getByTestId("rail-header")).toContainText("Needs you");
 });

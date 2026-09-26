@@ -37,9 +37,7 @@ import { AddSkillModal } from "../../skills/components/AddSkillModal/AddSkillMod
 import { useCreateSkillMutation } from "../../skills/mutations";
 import { useSkillCategoriesQuery, useSkillsQuery } from "../../skills/queries";
 import { useRegistryBindingsQuery } from "../queries";
-
-export const REGISTRY_KINDS = ["skills", "mcp", "hooks", "commands"] as const;
-export type RegistryKindParam = (typeof REGISTRY_KINDS)[number];
+import { REGISTRY_KINDS, type RegistryKindParam } from "../registryKinds";
 
 export interface RegistriesScreenProps {
   kind: RegistryKindParam;

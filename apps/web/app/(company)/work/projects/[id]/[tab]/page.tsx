@@ -1,9 +1,6 @@
 import { notFound } from "next/navigation";
-import {
-  PROJECT_TABS,
-  ProjectDetailScreen,
-  type ProjectTab,
-} from "../../../../../../features/projects/screens/ProjectDetailScreen";
+import { ProjectDetailScreen } from "../../../../../../features/projects/screens/ProjectDetailScreen";
+import { PROJECT_TABS, type ProjectTab } from "../../../../../../features/projects/projectTabs";
 
 function asProjectTab(value: string): ProjectTab | null {
   return (PROJECT_TABS as readonly string[]).includes(value) ? (value as ProjectTab) : null;

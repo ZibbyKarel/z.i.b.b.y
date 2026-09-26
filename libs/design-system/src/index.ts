@@ -500,55 +500,29 @@ export { EmptyState, EmptyStateTestId } from "./components/EmptyState/EmptyState
 export type { EmptyStateProps } from "./components/EmptyState/EmptyState";
 
 // ---------------------------------------------------------------------------
-// Immersive orb map — pure geometry/state helpers, WebGL/DOM primitives, and
-// the composed OrbMap. See immersive/index.ts for the hand-authored barrel
-// this section mirrors.
+// GlassSurface — the "liquid glass" translucent pane. Used by the kept
+// BriefingMessageCard (a chat transcript surface, deliberately not HudPanel).
+// Formerly part of the deleted immersive/orb-map bundle (ZB-13); it has no
+// dependency on the rest of that bundle, so it moved to components/.
 // ---------------------------------------------------------------------------
-export { ellipseLayout } from "./immersive/ellipseLayout";
-export type { EllipseInsets, EllipseLayout, OrbPosition } from "./immersive/ellipseLayout";
+export { GlassSurface, GlassSurfaceTestId } from "./components/GlassSurface/GlassSurface";
+export type { GlassSurfaceProps } from "./components/GlassSurface/GlassSurface";
 
-export { ORB_MOTION, ORB_STATE, ORB_STATE_COLOR } from "./immersive/orbState";
-export type { OrbMotion, OrbState, OrbStateStyle } from "./immersive/orbState";
-
-export { hashSeed, seededRandom } from "./immersive/seededRandom";
-export { canMountWebGL } from "./immersive/canMountWebGL";
-
-export { Orb, OrbTestId } from "./immersive/Orb/Orb";
-export type { OrbMotionOverrides, OrbProps } from "./immersive/Orb/Orb";
-
-export { OrbitField, OrbitFieldTestId } from "./immersive/OrbitField/OrbitField";
-export type { OrbitFieldProps } from "./immersive/OrbitField/OrbitField";
-
-export { OrbNode, OrbNodeTestId } from "./immersive/OrbNode/OrbNode";
-export type { OrbNodeProps } from "./immersive/OrbNode/OrbNode";
-
-export { CoreOrb, CoreOrbTestId } from "./immersive/CoreOrb/CoreOrb";
-export type { CoreOrbProps } from "./immersive/CoreOrb/CoreOrb";
-
-export { ConnectorLayer, ConnectorLayerTestId } from "./immersive/ConnectorLayer/ConnectorLayer";
-export type { ConnectorLayerProps, ConnectorNode } from "./immersive/ConnectorLayer/ConnectorLayer";
-
-export {
-  DEFAULT_DURATION_MS,
-  HandoffFlare,
-  HandoffFlareTestId,
-  RETIRE_BUFFER_MS,
-} from "./immersive/HandoffFlare/HandoffFlare";
-export type { HandoffFlareProps } from "./immersive/HandoffFlare/HandoffFlare";
-export { arcPath } from "./immersive/HandoffFlare/arcPath";
-
-export { ORB_MAP_CORE_ID, OrbMap, OrbMapTestId } from "./immersive/OrbMap/OrbMap";
-export type { OrbMapCore, OrbMapFlare, OrbMapNode, OrbMapProps } from "./immersive/OrbMap/OrbMap";
-
-export { GlassSurface, GlassSurfaceTestId } from "./immersive/GlassSurface/GlassSurface";
-export type { GlassSurfaceProps } from "./immersive/GlassSurface/GlassSurface";
-
+// ---------------------------------------------------------------------------
+// ImmersiveShell — full-page chrome (`apps/web/components/layout/ImmersivePage`
+// wraps it) still adopted by every Part-B screen not yet migrated to the
+// ZibbyCorp shell (ZA-08). Formerly part of the deleted immersive/orb-map
+// bundle; it has no dependency on the orb-map pieces (Orb/OrbMap/OrbNode/
+// OrbitField/CoreOrb/ConnectorLayer/HandoffFlare/ellipseLayout/orbState/
+// canMountWebGL — all genuinely unused, deleted in ZB-13), so it moved to
+// components/ instead.
+// ---------------------------------------------------------------------------
 export {
   ImmersiveShell,
   ImmersiveShellTestId,
   MAIN_CONTENT_ID,
-} from "./immersive/ImmersiveShell/ImmersiveShell";
-export type { ImmersiveShellProps } from "./immersive/ImmersiveShell/ImmersiveShell";
+} from "./components/ImmersiveShell/ImmersiveShell";
+export type { ImmersiveShellProps } from "./components/ImmersiveShell/ImmersiveShell";
 
 // ---------------------------------------------------------------------------
 // Shell components + Splash (ZA-06)

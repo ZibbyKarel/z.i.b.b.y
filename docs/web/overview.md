@@ -23,8 +23,6 @@ app/
     ├── chains/
     │   ├── page.tsx        Chain catalog
     │   └── [id]/page.tsx   Chain detail
-    ├── chat/page.tsx       Chat (phase 23 — a routed page, not an overlay;
-    │                       see `features/chat/Screen.tsx`)
     ├── commands/
     │   ├── page.tsx        Command catalog
     │   └── [id]/page.tsx   Command detail (edit; N4d — same pattern as skills/[id])
@@ -160,6 +158,24 @@ per-message UI. STT is entirely client-side (Web Speech API); there is still
 no backend STT and no command-grammar bridge — a spoken utterance is just a
 chat message.
 
+**ZB-13 — the old immersive chat UI is deleted; `/chat` has no page of its own.**
+`ChatScreen`, `ChatTopBar`, `ChatToolDock`, `DepartmentOrbMap`, `StatusPill` +
+`StatusFlyoutPanel`, `ChatLiveLog`, `ChatTasksPanel`, `ChatSearch`, the old glass
+`ChatDock`/`ChatBottomBar`, `ChatQuickNote`/`ChatQuickTask`, `ChatTaskRow`/
+`ChatTaskDetailColumn`, `ChatDetailDialog`, `CoreOverviewDialog`, the
+`Flyout*Row`s, `LangSwitch`, `statusFlyout.ts`/`useStatusFlyout.ts`,
+`departmentLoad.ts` and `features/chat/Screen.tsx` are all gone, along with the
+DS orb-map bundle they rendered onto (`libs/design-system/src/immersive/**` —
+`Orb`, `OrbMap`, `OrbNode`, `OrbitField`, `CoreOrb`, `ConnectorLayer`,
+`HandoffFlare`, `ellipseLayout`, `orbState`, `canMountWebGL`). `GlassSurface`
+(still used by `BriefingMessageCard`) and `ImmersiveShell` (still adopted by
+every Part-B screen not yet migrated to the ZibbyCorp shell, ZA-08) moved out
+of `immersive/` into `libs/design-system/src/components/` instead of being
+deleted. `/chat` itself is now a single `next.config.mjs` permanent redirect
+to `/org` (D-009) — there is no `app/(company)/chat/page.tsx` any more. See
+`features/chat`'s surviving surface below (ChatContext, hooks, mutations,
+queries, and the components the COO dock actually renders).
+
 **ZB-12 — chat is the shell-global COO dock (supersedes Phase 23 below).** The
 `/chat` page is retired (it redirects to `/org`). `AppShell` mounts `CooDock`
 (`features/chat/components/CooDock.tsx`) in `AppFrame`'s `dock` slot on every
@@ -245,10 +261,15 @@ features/
 ├── agents/         Agent CRUD, run launch
 ├── approvals/      Approval queue
 ├── automations/    Cron/event triggers
-├── chat/           Chat-first interface (replaces the old Voice UI), including
-│                   phase-119 voice mode (STT hook, mic toggle, auto-speak);
-│                   its ambient orb-map backdrop is `DepartmentOrbMap`
-│                   (see docs/web/department-orb-map.md)
+├── chat/           The chat engine behind the shell-global COO dock (ZB-12):
+│                   `ChatContext`, hooks (`useChatStream`, `useCooChat`,
+│                   `useVoiceMode`, `useSpeechRecognition`, `useAudioPlayback`),
+│                   mutations/queries, and the dock's own components
+│                   (`CooDock`, `ChatTranscript`, `ChatMessage`, `ChatRunCard`,
+│                   `TargetIdentity`, `BriefingMessageCard`, `VoiceStatusStrip`,
+│                   `VoiceToggleButton`, `ChatButton`). The old immersive orb-map
+│                   backdrop (`DepartmentOrbMap`) and the rest of the pre-ZB-12
+│                   chat chrome were deleted in ZB-13 (see the note above).
 ├── command-palette/ ZB-12 ⌘K palette — index builder, filter, host (queries
 │                   mount only while open)
 ├── commands/       Slash-command catalog

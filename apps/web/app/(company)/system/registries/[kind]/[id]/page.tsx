@@ -2,8 +2,10 @@ import { notFound } from "next/navigation";
 import { DetailScreen as CommandDetailScreen } from "../../../../../../features/commands/DetailScreen";
 import { DetailScreen as HookDetailScreen } from "../../../../../../features/hooks/DetailScreen";
 import { DetailScreen as McpDetailScreen } from "../../../../../../features/mcp/DetailScreen";
-import type { RegistryKindParam } from "../../../../../../features/registries/screens/RegistriesScreen";
-import { REGISTRY_KINDS } from "../../../../../../features/registries/screens/RegistriesScreen";
+import {
+  REGISTRY_KINDS,
+  type RegistryKindParam,
+} from "../../../../../../features/registries/registryKinds";
 import { DetailScreen as SkillDetailScreen } from "../../../../../../features/skills/DetailScreen";
 
 function isRegistryKind(value: string): value is RegistryKindParam {

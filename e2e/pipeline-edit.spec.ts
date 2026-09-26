@@ -7,14 +7,13 @@ import { expect, test } from "@playwright/test";
  * name/description fields. Loop authoring (a back-edge with `then: park`) is a drag
  * on that canvas; loop *execution* and the retry visualization are covered by the
  * fast API e2e. Here it's the detail → authoring-surface UI path.
+ *
+ * ZB-06/ZB-13: `/pipelines/[id]` now redirects to `/org/departments/<dept>/pipelines/<id>`
+ * (ROUTE-MAP §2) — the seeded "Demo Pipe" is owned by the `dev` department (see
+ * `pipeline-run.spec.ts`'s note), so this goes straight there.
  */
 test("open a pipeline and enter its inline editor", async ({ page }) => {
-  await page.goto("/pipelines");
-
-  // Select Demo Pipe explicitly — the detail panel defaults to the first
-  // pipeline in the list, which need not be the seeded one.
-  await page.getByText("Demo Pipe").first().click();
-  await expect(page).toHaveURL(/\/pipelines\/demo-pipe/);
+  await page.goto("/org/departments/dev/pipelines/demo-pipe");
 
   // The detail renders the read-only phase-chain canvas.
   await expect(page.getByText(/phase chain/)).toBeVisible();

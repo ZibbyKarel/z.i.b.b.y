@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
+import { RegistriesScreen } from "../../../../../features/registries/screens/RegistriesScreen";
 import {
   REGISTRY_KINDS,
-  RegistriesScreen,
   type RegistryKindParam,
-} from "../../../../../features/registries/screens/RegistriesScreen";
+} from "../../../../../features/registries/registryKinds";
 
 function isRegistryKind(value: string): value is RegistryKindParam {
   return (REGISTRY_KINDS as readonly string[]).includes(value);

@@ -64,26 +64,16 @@
       }
     }
   },
-  "notifications": {
-    "attention": "{count} items need attention"
-  },
   "memory": {
-    "knowledgeGraph": "Knowledge graph",
     "title": "Memory",
-    "countSummary": "{count, plural, =0 {no notes} one {# note} other {# notes}} · index-first vault, plain Markdown",
-    "loadingGraph": "Loading graph…",
     "noteFallback": "Note",
     "selectNode": "Select a node to read its note.",
-    "searchLabel": "Search the vault",
     "searchPlaceholder": "Search notes…",
-    "searchResults": "Search results",
-    "noResults": "No matching notes.",
     "newNote": "New note",
     "editNote": "Edit",
     "noteLinks": "Links",
     "noteBacklinks": "Backlinks",
     "save": "Save",
-    "dailyTimeline": "Daily timeline",
     "idLabel": "Id",
     "idHint": "Unique across the vault; auto-filled from the title.",
     "titleLabel": "Title",
@@ -125,9 +115,7 @@
       "title": "Vault",
       "shelfGeneral": "General",
       "usedBy": "Used by",
-      "usedByEmpty": "No note links here.",
-      "outgoing": "Links",
-      "noteFallback": "Select a note on the left."
+      "usedByEmpty": "No note links here."
     },
     "distill": {
       "title": "Distillation",
@@ -150,7 +138,6 @@
     "edit": "Edit",
     "duplicate": "Duplicate",
     "configure": "Configure",
-    "test": "Test",
     "save": "Save",
     "delete": "Delete",
     "close": "Close",
@@ -160,40 +147,15 @@
     "loadErrorDescription": "The API connection failed — your data is fine, it's just not reachable right now. Check the connection and try again.",
     "retry": "Try again",
     "mutationError": "That didn't go through — your change wasn't saved. Please try again.",
-    "targetProject": "Target project",
     "back": "Back",
     "skipToContent": "Skip to content"
   },
-  "topbar": {
-    "commandHint": "Command or skill (⌘K)",
-    "commandAriaLabel": "Command or skill",
-    "commandPlaceholder": "Command or skill…",
-    "langSwitcherLabel": "Interface language",
-    "hideRail": "Hide side panel",
-    "showRail": "Show side panel",
-    "self": {
-      "panelTitle": "ZIBBY freshness",
-      "statusCurrent": "Current",
-      "statusUpgrade": "Upgrade",
-      "upToDate": "ZIBBY is up to date",
-      "behind": "{count} commits behind",
-      "updateButton": "Update",
-      "updateSucceeded": "ZIBBY was updated",
-      "updateFailed": "Update failed",
-      "openPrCount": "{count, plural, one {# open PR} other {# open PRs}}",
-      "noOpenPrs": "no open PRs"
-    }
-  },
   "tasks": {
-    "triggerLabel": "TASK",
-    "triggerAria": "New task",
-    "triggerTitle": "New task",
     "dialogTitle": "NEW TASK",
     "dialogSubtitle": "Describe the task — ZIBBY classifies it and hands it to an agent",
     "cancel": "Cancel",
     "classifyRun": "Run",
     "tabs": {
-      "standard": "Standard task",
       "loop": "Loop"
     },
     "preview": {
@@ -209,7 +171,6 @@
     },
     "override": {
       "label": "Hand it to",
-      "hint": "Override the routed destination.",
       "auto": "ZIBBY's pick (automatic)"
     },
     "target": {
@@ -244,24 +205,19 @@
       "label": "Delayed start",
       "now": "Now",
       "in1h": "In 1 h",
-      "limitReset": "When limits reset · {time}",
-      "willRun": "Runs at {when}",
-      "submit": "Schedule"
+      "limitReset": "When limits reset · {time}"
     },
     "confirm": {
       "accepted": "Task accepted",
       "scheduled": "Scheduled — runs at {when}"
     },
     "composer": {
-      "label": "Task",
-      "placeholder": "Describe the task… e.g.: Check the backups on Holly and save the result to ~/zibby/memory/holly-backup.md",
-      "submitHint": "⌘↩ to classify"
+      "label": "Task"
     },
     "commandLine": {
       "label": "Task",
       "placeholder": "Describe the task… e.g.: Check the backups on Holly and save the result to ~/zibby/memory/holly-backup.md",
       "attachAria": "Attach files",
-      "pinAria": "Pin a file",
       "send": "Send",
       "moreRunOptions": "More run options",
       "dropHint": "Drop here — added as an @file in the text",
@@ -489,7 +445,6 @@
     }
   },
   "search": {
-    "placeholder": "Search agents, skills, projects…",
     "ariaLabel": "Search the workspace",
     "empty": "No results",
     "agents": "Agents",
@@ -502,41 +457,18 @@
       "event": "Event trigger"
     }
   },
-  "sidebar": {
-    "navLabel": "Main navigation",
-    "tagline": "Zestful Intuitive Brainy Butler for You",
-    "railLabel": "Side panel",
-    "skipToContent": "Skip to content"
-  },
   "loading": {
     "tagline": "Intelligent Automation Platform",
-    "version": "v2.4.1 · BUILD 2026.06",
-    "init": "Initializing core systems…",
-    "registry": "Loading agent registry…",
-    "channel": "Establishing secure channel…",
     "orchestrator": "Mounting pipeline orchestrator…",
     "knowledge": "Syncing knowledge base…",
     "gates": "Calibrating gate rules…",
-    "inference": "Warming inference endpoints…",
     "ready": "System ready."
   },
   "placeholder": {
-    "body": "This screen is next in line. It follows the same pattern — cards (= files on disk) → button → prompt modal → background run.",
-    "hint": "// coming soon"
+    "body": "This screen is next in line. It follows the same pattern — cards (= files on disk) → button → prompt modal → background run."
   },
   "limits": {
     "ariaLabel": "Claude Code limits and Agent SDK credit",
-    "interactive": "inter-\nactive",
-    "agentSdk": "agent\nsdk",
-    "interactiveLimits": "Interactive limits · Claude Code",
-    "independentNote": "from your chat · independent of agents",
-    "agentSdkCredit": "Agent SDK credit",
-    "renew": "renews {date}",
-    "renewDate": "Jun 1",
-    "remaining": "remaining of ${total}",
-    "consumed": "consumed ${used} · agent runs draw from this",
-    "agentNote": "agent runs draw from this",
-    "trend14": "14-DAY TREND ($/day)",
     "rollingLabel": "5h rolling",
     "rollingShort": "5h",
     "weeklyLabel": "Weekly",
@@ -558,16 +490,8 @@
     "claudeUnavailable": "· claude cli unavailable · runs refused",
     "title": "Good morning.",
     "emptyTitle": "Dashboard is empty — build it up.",
-    "allRunning": "All systems running.",
-    "ctxChip": "ctx",
-    "statRunningAgents": "running agents",
-    "statApprovals": "approvals",
-    "statSdkCredit": "agent sdk credit",
-    "statPipelines": "pipelines",
-    "statSkills": "skills",
     "briefing": "Briefing",
     "briefingGenerate": "Generate now",
-    "briefingReady": "ready",
     "briefingDid": "{count} handled",
     "briefingWatching": "watching {count} channels",
     "briefingPausedLimit": "{count} paused on the limit",
@@ -576,75 +500,32 @@
     "briefingDepartmentTier3": "{count} waiting on you",
     "briefingDepartmentError": "{count} failed",
     "briefingDepartmentTier2": "{count} to report",
-    "starterTitle": "start here · build the dashboard",
-    "commandBar": {
-      "suggestions": {
-        "backlog": "Go through the backlog and implement the highest-impact bug",
-        "standup": "Write today's standup",
-        "research": "Research topic X overnight"
-      }
-    },
-    "approvalsQueue": "approvals queue",
-    "noApprovals": "nothing is waiting · ZIBBY never orders on its own",
-    "runningAgents": "running agents",
-    "noAgentsRunning": "no agent is running",
-    "budgets": "budgets",
-    "sdkCreditCaps": "AGENT SDK CREDIT",
-    "renew": "renews {date}",
-    "sdkCreditProgress": "Agent SDK credit",
-    "agentNote": "agent runs draw from this",
-    "interactiveCaps": "INTERACTIVE · CLAUDE CODE",
     "starters": {
       "skills": {
-        "label": "Add skill",
-        "sub": "SKILL.md — unit of work"
+        "label": "Add skill"
       },
       "projects": {
-        "label": "Add project",
-        "sub": "one company — channels and team"
+        "label": "Add project"
       },
       "agents": {
-        "label": "Add agent",
-        "sub": ".agent.md — model + tools"
+        "label": "Add agent"
       },
       "pipelines": {
-        "label": "Add pipeline",
-        "sub": "chaining of agents"
+        "label": "Add pipeline"
       }
     },
-    "allApprovals": "full queue →",
-    "approvalsDepartmentFilter": "Filter approvals by department",
-    "liveLog": "Live log",
-    "liveLogEmpty": "No activity yet.",
-    "liveLogDepartmentFilter": "Filter activity by department",
-    "loadOlder": "Load older",
-    "groupedCount": "{count}× {group}"
+    "liveLog": "Live log"
   },
   "skills": {
-    "addSkill": "Add skill",
-    "sectionLabel": "Skills",
     "emptyTitle": "No skills yet",
-    "emptyDescription": "Skills are SKILL.md files on disk. Add the first one and it will appear here as a card. Agents invoke skills from their catalog.",
-    "emptyHint": "// creates ~/zibby/skills/'<name>'/SKILL.md",
     "title": "Skills",
-    "countSummary": "{count, plural, =0 {no skills} one {# skill} other {# skills}} · SKILL.md files agents can invoke",
-    "addCategory": "Add category",
     "fields": {
       "category": "Category"
     },
     "categoryDialog": {
       "title": "New category",
-      "subtitle": "name + glyph",
-      "nameLabel": "Category name",
-      "namePlaceholder": "e.g. Media",
-      "glyphLabel": "Glyph",
-      "duplicate": "Category “{name}” already exists."
+      "subtitle": "name + glyph"
     },
-    "deleteEmptyCategory": "Delete",
-    "deleteEmptyCategoryAria": "Delete empty category {name}",
-    "emptyCategory": "Empty category — add a skill or delete it.",
-    "uncategorized": "Uncategorized",
-    "openSkillAria": "Open skill {name}",
     "deleteTitle": "Delete skill?",
     "deleteBody": "Really delete skill {name}? Its file {file} is deleted too. This cannot be undone."
   },
@@ -653,10 +534,6 @@
     "loadErrorTitle": "Couldn't load agents",
     "loadErrorDescription": "The API connection failed — your agents are fine, they're just not reachable right now. Check the connection and try again.",
     "retry": "Try again",
-    "sectionLabel": "Agents",
-    "editRaw": "Edit raw .agent.md",
-    "stopAria": "Stop {skill}",
-    "progressAria": "progress {skill}",
     "emptyTitle": "No agents yet",
     "emptyDescription": "Agents are .agent.md definition files — model, thinking level, and tools. You compose agents into pipelines in the Pipelines section.",
     "emptyHint": "// creates ~/zibby/agents/'<name>'.agent.md",
@@ -871,15 +748,8 @@
   "phase": {
     "modelTitle": "model (override per-run)",
     "thinkTitle": "thinking level",
-    "phaseLabel": "PHASE {n}",
-    "input": "input",
     "output": "output",
-    "retry": "retry · max {n}",
-    "verifyLabel": "verify",
-    "checksLabel": "checks",
-    "checksTitle": "deterministic checks (no model)",
-    "attempt": "attempt {n}/{max}",
-    "attemptTitle": "current attempt / maximum"
+    "retry": "retry · max {n}"
   },
   "approval": {
     "waiting": "Waiting for your approval",
@@ -900,47 +770,15 @@
     "originAgentFactory": "Agent Factory",
     "openSource": "Open source ↗"
   },
-  "runModal": {
-    "editRaw": "Edit raw SKILL.md",
-    "launch": "Run agent",
-    "runAria": "Run {name}",
-    "launchedTitle": "Agent launched in the background",
-    "launchedTarget": "{name} → {project}",
-    "watch": "Watch it in the <agents>Running agents</agents> section.",
-    "promptLabel": "Prompt",
-    "promptPlaceholder": "Tell {name} what to do…",
-    "targetLabel": "Target",
-    "targetProjectOption": "Project",
-    "targetFilesOption": "Files",
-    "filesLabel": "Directory",
-    "filesHint": "Pick a folder to seed the path below, or type it directly",
-    "targetDirLabel": "Target directory",
-    "targetDirHint": "Absolute path of the folder to operate on — confirm it before running",
-    "targetDirError": "Enter an absolute path (starting with /)"
-  },
   "pipelineRun": {
-    "editRaw": "Edit raw .pipeline.md",
-    "launch": "Run pipeline",
-    "runAria": "Run pipeline {name}",
     "title": "Run · {name}",
-    "subtitle": "{count} phases · multi-agent background run",
-    "launchedTitle": "Pipeline launched in the background",
-    "launchedTarget": "{name} → {project}",
-    "watch": "Watch the phases in the <agents>Running agents</agents> section · it works in an isolated branch.",
-    "promptLabel": "Prompt",
-    "promptPlaceholder": "What should the „{name}\" pipeline do…",
-    "overrideTitle": "Override model / thinking for this run",
-    "overrideHint": "click a badge to override · defaults from agent.md, push to branch awaits your approval",
-    "changeModelAria": "Change model for {agent}",
-    "changeThinkAria": "Change thinking for {agent}"
+    "subtitle": "{count} phases · multi-agent background run"
   },
   "forms": {
-    "namePlaceholder": "'<name>'",
     "skill": {
       "title": "New skill",
       "subtitle": "creates SKILL.md on disk",
       "editTitle": "Edit skill",
-      "editSubtitle": "overwrites SKILL.md on disk",
       "submitLabel": "Create skill",
       "nameLabel": "Skill name",
       "namePlaceholder": "e.g. rohlik",
@@ -971,23 +809,12 @@
     "integration": {
       "title": "New integration",
       "subtitle": "creates a config file · secrets live in .env, not here",
-      "submitLabel": "Create integration",
-      "nameLabel": "Integration name",
-      "namePlaceholder": "e.g. GitHub",
-      "descLabel": "Description",
-      "descPlaceholder": "What the system reaches through this integration…"
+      "submitLabel": "Create integration"
     },
     "agent": {
       "title": "New agent",
       "subtitle": "creates .agent.md with a definition (model, thinking, tools)",
-      "submitLabel": "Create agent",
-      "nameLabel": "Agent name",
-      "namePlaceholder": "e.g. Reviewer",
-      "roleLabel": "Role",
-      "roleHint": "what the agent does",
-      "rolePlaceholder": "Pre-review the diff before push…",
-      "modelLabel": "Model",
-      "thinkingLabel": "Thinking"
+      "submitLabel": "Create agent"
     },
     "pipeline": {
       "title": "New pipeline",
@@ -997,33 +824,12 @@
       "namePlaceholder": "e.g. Build Feature",
       "descLabel": "Description",
       "descPlaceholder": "What the pipeline does…",
-      "agentLabel": "Agent",
-      "handoffLabel": "Handoff file",
       "handoffHint": "written by this agent · the next agent picks it up as its assignment",
-      "outputHint": "written by this agent · the pipeline's final output",
-      "handoffNote": "next agent's assignment",
       "addStep": "Add agent",
-      "removeStepAria": "Remove phase {n}",
       "noAgents": "Create an agent first — the chain needs at least one.",
       "editTitle": "Edit pipeline",
       "saveLabel": "Save changes",
-      "typeLabel": "Phase type",
-      "typeAgent": "agent",
       "typeVerify": "verify (checks)",
-      "commandsLabel": "Check commands",
-      "commandsHint": "One command per line; empty = project checks / defaults.",
-      "loopToggle": "Loop on failure (back-edge)",
-      "loopToLabel": "On failure jump back to phase",
-      "loopMaxRetriesLabel": "Max retries",
-      "loopEscalateLabel": "Escalate after exhaustion",
-      "loopThenLabel": "After retries exhausted",
-      "thenFail": "fail",
-      "thenPark": "park",
-      "escalationTitle": "escalation ladder · retry n",
-      "escalationModelLabel": "Model · retry {n}",
-      "escalationThinkLabel": "Thinking · retry {n}",
-      "removeRungAria": "Remove rung {n}",
-      "addRung": "Add rung",
       "paletteTitle": "// agents · pool",
       "paletteHint": "Drag onto the canvas → a graph node",
       "paletteAddAria": "Add agent {agent} to the canvas",
@@ -1059,7 +865,6 @@
       "title": "New command",
       "subtitle": "creates a .md file on disk",
       "editTitle": "Edit command",
-      "editSubtitle": "overwrites the .md file on disk",
       "submitLabel": "Create command",
       "idLabel": "Identifier",
       "idHint": "Used as /<id> — locked in edit mode",
@@ -1081,18 +886,12 @@
   },
   "defaults": {
     "skill": "New skill",
-    "integration": "New integration",
     "agent": "New agent",
     "pipeline": "New pipeline",
     "command": "New command"
   },
   "runLog": {
-    "aria": "Run log for {agent}",
-    "close": "Close",
-    "prompt": "Prompt",
-    "waiting": "waiting for output…",
-    "streaming": "streaming…",
-    "finished": "finished"
+    "waiting": "waiting for output…"
   },
   "approvals": {
     "wants": "wants to",
@@ -1124,7 +923,6 @@
   },
   "settings": {
     "title": "System settings",
-    "daemonOn": "daemon on",
     "mandate": {
       "title": "Autonomy mandate",
       "hint": "What ZIBBY may do unprompted. Conservative by default: dispatch on, replies off — a reply only goes out after you opt in per channel.",
@@ -1279,7 +1077,6 @@
   },
   "runs": {
     "title": "Runs & activity",
-    "summary": "{running} running · {awaiting} awaiting · {total} total",
     "group": {
       "total": "Total",
       "running": "Running",
@@ -1296,12 +1093,8 @@
       "error": "Error",
       "interrupted": "Interrupted"
     },
-    "filterActive": "Project: {name}",
-    "filterClearAria": "Clear project filter",
     "emptyTitle": "No runs",
     "emptyDesc": "No task has run yet. Create a new task and it shows up here.",
-    "emptyFilter": "No tasks in this state.",
-    "selectHint": "Pick a task on the left for its detail and live log.",
     "actionsMenuLabel": "Run actions",
     "stop": "Stop run",
     "stopTitle": "Stop the run?",
@@ -1330,11 +1123,8 @@
     "metaCost": "cost",
     "metaDuration": "run duration",
     "metaAgent": "agent",
-    "metaKind": "type",
     "metaTask": "task",
     "metaRoadmapItem": "issue",
-    "showMore": "show more",
-    "showLess": "show less",
     "producedOutputTitle": "Task output",
     "classificationTitle": "Classification",
     "classificationSwitchboard": "Switchboard",
@@ -1357,13 +1147,8 @@
       "done": "succeeded",
       "error": "failed"
     },
-    "agoNow": "now",
-    "agoM": "{n} m ago",
-    "agoH": "{n} h ago",
     "inM": "in {n} m",
     "inH": "in {n} h",
-    "pipelineNote": "Pipeline run — its detail and phases live in Pipelines.",
-    "openPipeline": "Open pipeline",
     "scheduledNote": "The task waits for its scheduled time — the log appears once it starts.",
     "state": {
       "running": "running",
@@ -1438,7 +1223,6 @@
     "stageLoading": "Loading maker stages…",
     "stageWaitingLabel": "waiting",
     "stageWaitingBody": "waiting for earlier phases to finish",
-    "stageOutput": "output",
     "stageRetryAttempt": "attempt {n}/{max}",
     "stageRetryLoopTo": "looped back to {phase}",
     "stageRetryEscalated": "retries exhausted → escalated → parked for morning review",
@@ -1476,7 +1260,6 @@
     "resolveModeAny": "Any · OR",
     "addCondition": "Add condition",
     "removeCondition": "Remove condition",
-    "forAgent": "Rules for agent",
     "evalNote": "Risk is a property of (action, target, context) — not of a tool. The locked floor may only be hardened.",
     "inheritedTitle": "Inherited system rules",
     "inheritedNote": "Security floor from POLICY.md — an agent may only harden it, never loosen it.",
@@ -1490,7 +1273,6 @@
     "ownTitle": "Rules · {agent}",
     "addRule": "Add rule",
     "noOwnRules": "No own rules — this agent runs on the system floor only.",
-    "violation": "Rejected — a rule would weaken the locked floor (harden-only).",
     "you": "You",
     "notifyHint": "→ activity feed",
     "newRule": "New rule",
@@ -1747,7 +1529,6 @@
     "openAria": "Open {name}",
     "emptyTitle": "No companies yet",
     "emptyDescription": "A company is the super-entity above a project — a shared team and default budget its projects inherit. Add the first one and it shows up here as a card.",
-    "emptyHint": "// registry ~/zibby/companies.json",
     "peopleCount": "{count, plural, =0 {no people} one {# person} other {# people}}",
     "hasBudget": "default budget",
     "newCompany": "New company",
@@ -1795,7 +1576,6 @@
       "title": "Company projects",
       "empty": "No projects link to this company yet — set it on a project's detail page.",
       "addExisting": "Add existing project",
-      "createNew": "Create new project",
       "add": "Add project",
       "linkDialog": {
         "title": "Add existing project",
@@ -1824,7 +1604,6 @@
     "openAria": "Open {name}",
     "emptyTitle": "No teams yet",
     "emptyDescription": "A team is the layer between a company and a project — it owns a knowledge base its projects read. Add the first one and it shows up here as a card.",
-    "emptyHint": "// registry ~/zibby/teams.json",
     "hasKnowledgeBase": "knowledge base",
     "newTeam": "New team",
     "create": "Create team",
@@ -1861,7 +1640,6 @@
       "title": "Team projects",
       "empty": "No projects link to this team yet — set it on a project's detail page.",
       "addExisting": "Add existing project",
-      "createNew": "Create new project",
       "add": "Add project",
       "linkDialog": {
         "title": "Add existing project",
@@ -1954,14 +1732,11 @@
   },
   "hooks": {
     "title": "Hooks",
-    "countSummary": "{count, plural, =0 {no hooks} one {# hook} other {# hooks}} · shell commands run around agent events",
     "addHook": "Add hook",
     "create": "Create",
     "enabledShort": "enabled",
     "disabledShort": "disabled",
     "emptyTitle": "No hooks yet",
-    "emptyDescription": "Hooks are shell commands Claude Code runs at a point in a session. The approval hook is always locked first — this catalog can only add hooks.",
-    "emptyHint": "// creates ~/zibby/hooks/'<id>'.json",
     "idLabel": "Identifier",
     "nameLabel": "Name",
     "eventLabel": "Event",
@@ -2035,12 +1810,9 @@
   },
   "mcp": {
     "title": "MCP servers",
-    "countSummary": "{count, plural, =0 {no servers} one {# server} other {# servers}} · tool providers agents can call",
     "addServer": "Add MCP server",
     "create": "Create",
     "emptyTitle": "No MCP servers yet",
-    "emptyDescription": "MCP servers extend runs with tools. Secrets (tokens, env, headers) live in a separate store — this is just configuration.",
-    "emptyHint": "// creates ~/zibby/mcp-servers/'<id>'.json",
     "typeLabel": "Transport",
     "typeStdio": "stdio",
     "typeHttp": "HTTP",
@@ -2064,12 +1836,7 @@
   },
   "commands": {
     "title": "Commands",
-    "addCommand": "Add command",
-    "countSummary": "{count, plural, one {# command} other {# commands}}",
     "emptyTitle": "No commands yet",
-    "emptyDescription": "Commands are custom slash commands (/<id>) with a Markdown body. They materialize into each run’s .claude/commands/.",
-    "emptyHint": "// creates ~/zibby/commands/'<id>'.md",
-    "openCommandAria": "Open command /{name}",
     "deleteTitle": "Delete command?",
     "deleteBody": "Really delete command /{id}? Its definition file is deleted too. This cannot be undone."
   },
@@ -2098,8 +1865,7 @@
       "listening": "LISTENING",
       "paused": "VOICE MODE",
       "error": "Voice recognition failed, voice mode is off.",
-      "errorMicDenied": "The browser blocked microphone access — allow it in the site settings.",
-      "speakError": "Couldn't play the spoken reply."
+      "errorMicDenied": "The browser blocked microphone access — allow it in the site settings."
     },
     "composer": {
       "label": "Message",
@@ -2108,9 +1874,7 @@
     },
     "mention": {
       "ariaLabel": "Search agents and pipelines to mention",
-      "placeholder": "Search agents or pipelines…",
       "empty": "Nothing found",
-      "removeAria": "Remove target",
       "sections": {
         "agents": "Agents",
         "pipelines": "Pipelines"
@@ -2124,21 +1888,15 @@
     },
     "tasks": {
       "empty": "No tasks",
-      "activeEmpty": "No active tasks",
       "archive": "Archive",
-      "openAria": "Open run: {title}",
-      "detailAriaLabel": "Run detail: {title}",
-      "openFull": "Open on Runs page",
-      "closeDetail": "Close detail"
+      "openAria": "Open run: {title}"
     },
     "toolDock": {
       "label": "Tools"
     },
     "search": {
-      "placeholder": "Search across ZIBBY…",
       "ariaLabel": "Search across ZIBBY",
       "empty": "Nothing found",
-      "clearAria": "Clear search",
       "kind": {
         "agent": "Agent",
         "pipeline": "Pipeline",
@@ -2152,77 +1910,42 @@
         "company": "Company",
         "setting": "Setting",
         "action": "Action"
-      },
-      "actions": {
-        "generateBriefing": "Generate briefing now",
-        "generatingBriefing": "Generating briefing…"
       }
     },
     "detail": {
-      "close": "Close",
-      "kindAgent": "Agent",
-      "kindPipeline": "Pipeline",
-      "noDescription": "No description yet.",
       "phaseCount": "{count, plural, one {# phase} other {# phases}}"
     },
     "overview": {
       "title": "ZIBBY overview",
-      "openAria": "Open ZIBBY overview",
-      "role": "orchestrator · directing {count} departments",
-      "summary": "{working} at work, {error} in error, {report} awaiting review, {waiting} waiting on you.",
-      "statWorking": "working",
-      "statError": "in error",
-      "statReport": "reports waiting",
-      "statWaiting": "waiting on you",
-      "statIdle": "idle",
-      "crossDepartments": "Across departments"
+      "openAria": "Open ZIBBY overview"
     },
     "statusPill": {
-      "nominal": "Nominal",
-      "connecting": "Connecting",
       "degraded": "Degraded",
-      "offline": "Offline",
       "working": "{n} working",
       "error": "{n} errors",
-      "report": "{n} reporting",
       "waiting": "{n} waiting",
       "flyout": {
         "working": {
           "title": "Working",
-          "emptyTitle": "Nothing running",
-          "emptyBody": "No task is running right now."
+          "emptyTitle": "Nothing running"
         },
         "waiting": {
           "title": "Waiting for your decision",
-          "emptyTitle": "Nothing waiting",
-          "emptyBody": "nothing is waiting · ZIBBY never orders on its own"
+          "emptyTitle": "Nothing waiting"
         },
         "error": {
           "title": "Errors",
-          "emptyTitle": "No errors",
-          "emptyBody": "Nothing failed since your last visit.",
-          "noDetail": "No error detail recorded.",
-          "missingRun": "Run is no longer in the feed."
+          "emptyTitle": "No errors"
         },
-        "loading": "Loading…",
-        "errorTitle": "Couldn't load",
-        "errorBody": "Please try again.",
         "retry": "Retry"
       }
     },
     "note": {
       "title": "New note",
-      "bodyLabel": "Note",
-      "placeholder": "Write a note for ZIBBY…",
-      "save": "Save note",
-      "close": "Close"
+      "save": "Save note"
     },
     "task": {
-      "departmentLabel": "Department",
-      "textLabel": "Task",
-      "placeholder": "Describe the work in plain language…",
-      "run": "Run task",
-      "close": "Close"
+      "run": "Run task"
     },
     "bottomBar": {
       "chat": "Chat",
@@ -2235,76 +1958,34 @@
     "state": {
       "idle": "Idle",
       "running": "Running",
-      "report": "Report ready",
       "waiting": "Awaiting decision",
       "error": "Error"
     },
-    "nodeAria": "{name}, {state}",
-    "tier2Badge": "{count} reports to review",
-    "tier3Badge": "{count} awaiting decision",
-    "errorBadge": "{count} errors",
     "drawer": {
       "ariaLabel": "{name} department detail",
-      "close": "Close department detail",
       "tabs": {
-        "roster": "Roster",
-        "aktivita": "Activity",
-        "gates": "Settings & Gates",
-        "artefakty": "Artifacts",
-        "handoff": "Handoff"
+        "gates": "Settings & Gates"
       }
     },
     "roster": {
-      "crewTitle": "Crew",
-      "integrationsTitle": "Integrations",
-      "monitorsTitle": "Monitors",
-      "emptyTitle": "No pipeline yet",
-      "emptyDescription": "This department doesn't own a pipeline yet. Create the first one — with it as owner from the start."
+      "emptyTitle": "No pipeline yet"
     },
     "aktivita": {
-      "allRuns": "All runs",
-      "emptyTitle": "No activity yet",
-      "emptyDescription": "This department hasn't run a pipeline yet. Once it does, runs will show up here."
+      "emptyTitle": "No activity yet"
     },
     "gates": {
-      "sentencePrefix": "Before {subject} does",
       "behavior": {
-        "allow": "it just does it",
-        "notify": "it does it and logs it to the activity feed",
         "ask": "it asks",
         "deny": "it never does it"
-      },
-      "sentencesTitle": "Rules in mad-libs form",
-      "sentencesEmptyTitle": "No rules of its own yet",
-      "sentencesEmptyDescription": "This department has no rule of its own in the catalog yet. Add one in the catalog below.",
-      "autopilotTitle": "Autopilot by project",
-      "autopilotNoProject": "No project has an autopilot policy set yet.",
-      "autopilotCanDoAlone": "Can do alone:",
-      "autopilotAlwaysAsk": "Always asks:",
-      "autopilotEditLink": "Edit in the project profile"
+      }
     },
     "artefakty": {
-      "produceTitle": "Produces",
-      "sinkPr": "PR for review",
-      "sinkFileProject": "file → project",
-      "sinkFileVault": "note → vault",
-      "handsOffTo": "hands off: {name}",
-      "toOperator": "→ operator",
-      "produceEmpty": "None of the owned pipelines has an output sink configured yet.",
-      "historyTitle": "Produced artifacts",
-      "historyEmptyTitle": "No artifact yet",
-      "historyEmptyDescription": "None of the owned pipelines has delivered anything to the artifact registry yet.",
       "kind": {
-        "pr": "PR",
-        "vault-note": "Note",
-        "project-file": "File"
+        "pr": "PR"
       },
-      "runLink": "View run",
-      "emptyTitle": "This department doesn't own a pipeline yet",
-      "emptyDescription": "Without a pipeline of its own, this department has nothing to produce and nothing to hand off."
+      "emptyTitle": "This department doesn't own a pipeline yet"
     },
     "handoff": {
-      "panelTitle": "Outgoing handoff rules",
       "sentencePrefix": "When {subject} produces",
       "severityPrefix": "≥",
       "targetPrefix": "→ hand off to",
@@ -2466,11 +2147,7 @@
   "pins": {
     "pin": "Pin",
     "unpin": "Unpin",
-    "quickLaunchTitle": "Quick launch",
-    "run": "Run",
-    "unpinAria": "Unpin {name}",
-    "kindAgent": "Agent",
-    "kindPipeline": "Pipeline"
+    "run": "Run"
   },
   "archive": {
     "title": "Task archive",
@@ -2503,7 +2180,6 @@
     "emptyEpicsDescription": "This project has no roadmap yet — import it from a source, or create epics by hand.",
     "sync": {
       "button": "Sync all",
-      "autoSync": "Auto-sync",
       "toast": "{imported} imported, {updated} updated, {archived} archived",
       "sourceMenuAria": "Choose source",
       "source": {
@@ -2534,7 +2210,6 @@
     "board": {
       "header": "{name} — task board",
       "allTasks": "All tasks",
-      "allTasksCount": "All tasks ({count})",
       "openEpicDetail": "Open epic detail",
       "columns": {
         "ready": "To Do",
@@ -2687,13 +2362,11 @@
       "title": "Policy — Approvals",
       "queueTitle": "Queue",
       "queueEmpty": "The queue is empty.",
-      "queueMeta": "{count} waiting",
       "historyTitle": "History",
       "columns": {
         "id": "ID",
         "kind": "Kind",
         "request": "Request",
-        "rule": "Rule",
         "department": "Dept",
         "wait": "Wait",
         "decision": "Decision",
@@ -2738,14 +2411,11 @@
       "allProjects": "All",
       "agentRuleCount": "{count, plural, =0 {no rules} one {# rule} other {# rules}}",
       "departmentFilter": "Department",
-      "allDepartments": "All",
       "projectRulesEmpty": "Rules aren't project-scoped today — clear the filter to edit them in the global catalog."
     },
     "patterns": {
       "title": "Policy — Learned patterns",
       "subtitle": "Built from your past approvals. Nothing changes until you accept.",
-      "acceptAsRule": "Accept as rule",
-      "dismiss": "Dismiss",
       "accepted": "Now a rule",
       "empty": "No learned patterns yet.",
       "evidenceCount": "{n} / {of}"

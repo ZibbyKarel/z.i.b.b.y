@@ -49,6 +49,7 @@ import {
 import { ProjectRunSummary } from "../components/ProjectRunSummary";
 import { ProjectSecretsPanel } from "../components/ProjectSecretsPanel";
 import { ProjectTeamPanel } from "../components/ProjectTeamPanel";
+import { PROJECT_TABS, type ProjectTab } from "../projectTabs";
 import {
   useCloneProjectMutation,
   useCreateProjectMutation,
@@ -101,15 +102,6 @@ function actionOptions(current: string[]): { value: string; label: string }[] {
   const values = Array.from(new Set<string>([...AUTONOMY_ACTIONS, ...current]));
   return values.map((value) => ({ value, label: value }));
 }
-
-// ---------------------------------------------------------------------------
-// Tabs — the ZB-06 `/work/projects/[id]/[tab]` route segment drives the active
-// tab (mirrors `features/departments/screens/DepartmentScreen.tsx`'s
-// route-driven `Tabs`), replacing the old `?tab=` query-param scheme.
-// ---------------------------------------------------------------------------
-
-export const PROJECT_TABS = ["overview", "profile", "secrets", "integrations", "roadmap"] as const;
-export type ProjectTab = (typeof PROJECT_TABS)[number];
 
 // ---------------------------------------------------------------------------
 // Person row editor
