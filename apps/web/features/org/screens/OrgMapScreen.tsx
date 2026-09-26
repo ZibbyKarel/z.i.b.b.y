@@ -37,7 +37,18 @@ export enum OrgMapScreenTestId {
 /** No `GridCols` value covers 11 across (its scale tops out at 5) — the map's own
  *  canonical department count is genuinely dynamic, so it goes through `Grid`'s
  *  `style` passthrough rather than a Tailwind utility class (CLAUDE.md's
- *  "no className" rule allows this one seam). */
+ *  "no className" rule allows this one seam).
+ *
+ *  ZB-14 finding (not fixed here — see PROGRESS.md): at 390px this row's real
+ *  content width (~1142px, measured) is wider than the viewport, and 7 of the
+ *  11 department cards land off-canvas. `AppFrame`'s main content area clips
+ *  horizontal overflow rather than scrolling it, so the page itself never
+ *  shows a scrollbar — the cards are just unreachable, not merely scrolled
+ *  past. Neither `overflowX: "auto"` on this element nor an explicit
+ *  `width`/`maxWidth: "100%"` changed the measured width in testing (the
+ *  whole ancestor chain up to `AppFrame`'s content column reported the same
+ *  inflated width), so the actual constraint lives further up the shell than
+ *  this screen can reach — left for a dedicated follow-up with the DS. */
 const GRID_11_COLS = { gridTemplateColumns: "repeat(11, minmax(0, 1fr))" };
 
 /**

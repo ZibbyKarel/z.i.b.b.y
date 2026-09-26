@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import {
   DEPARTMENT_TABS,
-  DepartmentScreen,
   type DepartmentTab,
-} from "../../../../../../features/departments/screens/DepartmentScreen";
+} from "../../../../../../features/departments/departmentTabs";
+import { DepartmentScreen } from "../../../../../../features/departments/screens/DepartmentScreen";
 
 function isDepartmentTab(value: string): value is DepartmentTab {
   return (DEPARTMENT_TABS as readonly string[]).includes(value);

@@ -29,19 +29,12 @@ import { useEmployeesQuery } from "../../employees";
 import { HandoffRulesSection } from "../../handoff/components/HandoffRulesSection";
 import { useHandoffRulesQuery } from "../../handoff/queries";
 import { usePipelinesQuery } from "../../pipelines";
+import { DEPARTMENT_TABS, type DepartmentTab } from "../departmentTabs";
 import { useDepartmentQuery, useDepartmentSubtasksQuery } from "../queries";
 
-export const DEPARTMENT_TABS = [
-  "team",
-  "subtasks",
-  "pipelines",
-  "handoff",
-  "skills",
-  "integrations",
-  "automations",
-  "hooks",
-] as const;
-export type DepartmentTab = (typeof DEPARTMENT_TABS)[number];
+// Re-exported for existing call sites (the owning server page imports the
+// plain module directly instead — see `departmentTabs.ts`'s own docblock).
+export { DEPARTMENT_TABS, type DepartmentTab };
 
 export enum DepartmentScreenTestId {
   ChatButton = "department-screen-chat-button",

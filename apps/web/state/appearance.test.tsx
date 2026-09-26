@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { AppearanceProvider, useAppearance } from "./appearance";
 
@@ -39,14 +39,18 @@ describe("AppearanceProvider", () => {
     expect(document.documentElement).not.toHaveAttribute("data-motion");
   });
 
-  it("reads a previously persisted theme choice", () => {
+  it("reads a previously persisted theme choice", async () => {
+    // Deliberately seeded post-mount, not read into the first render: the
+    // initial render always starts at "system" (the SSR-safe default) so the
+    // client's hydration render matches the server's; the real stored choice
+    // is adopted right after, in a mount effect — hence `waitFor` here.
     window.localStorage.setItem("zibby-theme", "dark");
     render(
       <AppearanceProvider>
         <Probe />
       </AppearanceProvider>,
     );
-    expect(screen.getByTestId("theme")).toHaveTextContent("dark");
+    await waitFor(() => expect(screen.getByTestId("theme")).toHaveTextContent("dark"));
   });
 
   it("setMotion('reduced') persists and sets data-motion on <html>", () => {

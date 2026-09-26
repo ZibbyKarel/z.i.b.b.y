@@ -60,7 +60,7 @@ Legend: ⬜ todo · 🟦 in progress · ✅ landed (sha) · ⛔ parked (reason)
 | ZA-05 | Overlay and nav components | ✅ | ba9406b9 |
 | ZA-06 | Shell components + Splash | ✅ | bc47fe62 |
 | ZA-07 | Lint wall + 20 className files | ✅ (DepartmentDrawer kept as modal, not Sheet — deleted in ZB-03) | bc47fe62 |
-| ZA-08 | Validation → park | ⬜ | |
+| ZA-08 | Validation → park | ✅ (folded into the ZB-14 sweep — one live-browser pass covers both; see "ZB-14 validation" below) | |
 
 ### Part B (ZB-04a / 05a / 05b are Part C, done last)
 
@@ -82,7 +82,7 @@ Legend: ⬜ todo · 🟦 in progress · ✅ landed (sha) · ⛔ parked (reason)
 | ZB-12 | ⌘K + COO dock + voice | ✅ (dock has no attach — chat API has no attachment channel; "Toggle theme" is a light/dark flip) | 2026-09-25 session 2 |
 | ZB-13 | Cleanup | ✅ (orb/immersive chat deleted, 314 dead i18n keys pruned by `tools/i18n/prune-unused-keys.mjs`; `GlassSurface`/`ImmersiveShell`/`HudCard`/`HudPanel` KEPT — 62 web files still compose from them → ZB-13b) | 2026-09-26 |
 | ZB-13b | HudCard/HudPanel/ImmersivePage → DS Panel/Card, then delete them + immersive DS | ✅ (new DS `EntityCard`; DS `Panel` gained tone/background/radius; HudCard, HudPanel, ImmersivePage, PageHeader, ImmersiveShell and GlassSurface deleted; glass look retired) | 2026-09-26 |
-| ZB-14 | Validation → park | ⬜ | |
+| ZB-14 | Validation → park | ✅ (2 real fixes landed — Turbopack server-boundary crash on `/org/departments/[id]/[tab]`, a theme-choice hydration mismatch; 1 major finding parked, see below) | |
 
 ---
 
@@ -306,4 +306,194 @@ push and a **draft** PR into main (never merge).
 - ZB-13b: the orchestrator reviewed `EntityCard`, replaced an inline `style` line clamp with Tailwind `line-clamp-2`, dropped the dead `LevelMappingSection.surface` prop, and deleted the unused `domAttrs` helpers (`iconDockLinkAttrs`, `immersiveBackLinkAttrs`, `hiddenBelowLgFlexAttrs`).
 - **CI Playwright on PR #70:** 45/46. The one red is `channels.spec.ts:26`, the same as on `main` (see baseline). It waits on a real `claude` CLI reply draft. Follow-up: stub the claude runner for e2e.
 - Follow-up (ZA-08): the glass theme tokens (`gradientGlass`, `colorGlassBorder`, `shadowGlass`, `blurGlass`) and `Card background="glass"` are now unused by any component. Remove them in the DS visual pass.
+
+## 2026-09-26 — ZB-14 validation (also folds in ZA-08's live-browser pass)
+
+**Tooling built:** `tools/zc-sweep/` — a Playwright project separate from `pnpm e2e`
+(own `testDir`/config, extends the root config's `webServer`/`use`), covering:
+- `sweep.spec.ts`: every ROUTE-MAP §1 screen (real ids from its own seed) and every
+  §2 redirect, in light/dark × 1440/390, asserting an ok response, the shell
+  actually mounted (`app-frame-root` visible — sharper than the `nextjs-portal`
+  check first tried, which is a false positive on every route: it's also the
+  always-present Next dev-tools indicator, not just an error overlay), no
+  `document.documentElement` horizontal overflow, and a full-page screenshot to
+  `.playwright-mcp/zc/<slug>-<theme>-<width>.png`. Waits for the DS `Splash` boot
+  choreography to clear first (every test is a cold load — a fresh browser
+  context — so it plays every time; a fixed short wait isn't reliable).
+- `global-setup.ts`: runs the shared `e2e/global-setup.ts` first, then seeds the
+  handful of extra entities ROUTE-MAP needs a real id for and that fixture
+  doesn't already cover — an employee (hired with no `name`, since hiring only
+  accepts a name from the fixed `EmployeeName` pool, not free text), a chain, a
+  goal, a company, a team, a second non-gated task/run, and one MCP server/hook/
+  command. Ids are written to `.e2e-data/zc-sweep-ids.json` for the spec to read.
+- `e2e/route-map-redirects.ts`: the ROUTE-MAP §2 tables, pulled out of
+  `redirects.spec.ts` into their own plain (no `test()` calls) module so the
+  sweep can import them too without re-registering `pnpm e2e`'s own tests.
+
+**Sweep result:** 432/432 passed (108 routes/redirects × light/dark × 1440/390).
+Two routes are documented `test.skip`s, not failures: `/org/people/[id]` and
+`/activity/runs/[runId]` need ids the seed doesn't always produce synchronously
+(hire/dispatch can land as an async follow-up) — both resolved once
+`global-setup.ts` was fixed to poll for them (see fixes below), so in practice
+they run every time now; the `skip` guard stays as a documented fallback.
+
+**Fixes made** (apps/web + a reverted DS attempt — see the parked finding):
+1. `apps/web/features/departments/departmentTabs.ts` (new) + edits to
+   `DepartmentScreen.tsx` and `app/(company)/org/departments/[id]/[tab]/page.tsx`
+   — the sweep hit a real Turbopack-dev-only crash,
+   `DEPARTMENT_TABS.includes is not a function`, on every `/org/departments/*`
+   tab route. Same root cause and same fix ZB-13 already applied to
+   `RegistriesScreen`/settings `Screen`/`ProjectDetailScreen`: a `"use client"`
+   file's exported `const` array read back `undefined` across the server/client
+   boundary under the dev bundler. Moved the plain array into its own
+   non-`"use client"` module.
+2. `apps/web/state/appearance.tsx` (+ its test) — every route logged a real React
+   hydration-mismatch console error whenever the simulated viewer's stored theme
+   choice differed from the SSR default (i.e. every "light" run, since light is
+   now the actual product default — this would hit real returning visitors, not
+   just the sweep). Root cause: `AppearanceProvider`'s `useState` initializer
+   called `readStorage()` synchronously — `typeof window === "undefined"` only
+   guards true SSR, not the CLIENT's own hydration render (which already has
+   `window`), so the client's first render read the real stored value while the
+   server's used the fallback. `DesignSystemProvider`'s own docblock states the
+   invariant this broke: "the initial resolved theme never reads localStorage
+   synchronously." Fixed by seeding both `theme`/`motion` state at the same
+   SSR-safe default and adopting the persisted choice in a
+   `useIsomorphicLayoutEffect` instead — has to be the LAYOUT phase, not a plain
+   `useEffect`: layout effects run tree-wide, child-before-parent, strictly
+   before any passive effect — including `DesignSystemProvider`'s own mount-time
+   "persist `theme` to `localStorage`" effect, a child of this provider. A plain
+   `useEffect` here loses that race on first mount and clobbers a real stored
+   preference with its own default before ever reading it.
+3. `e2e/redirects.spec.ts` / `e2e/route-map-redirects.ts` — no behavior change,
+   just the array extraction above.
+
+**Parked finding (not fixed — investigated at length, root cause is shell-wide,
+not one screen):** at 390px, most multi-column screens (ORG map's 11-department
+grid, `/work/tasks`'s filtered `DataTable`, `/system/registries/*`,
+`/knowledge/vault`'s 3-pane layout, even `/system/settings/*`'s side-nav) have
+real content wider than the viewport that is silently **clipped and
+unreachable** — not merely requiring a scroll. `AppFrame`'s `<main>` clips
+horizontal overflow (`overflow-x-hidden`) rather than scrolling it, so
+`document.documentElement.scrollWidth` never exceeds the viewport (the sweep's
+own overflow assertion is satisfied on every one of these routes — this is why
+432/432 passed despite the finding) while a chunk of the row is simply gone
+off-canvas with no way to reach it by touch or keyboard.
+  - Reproduced directly: `getBoundingClientRect()` on the ORG map's first
+    department card returned `x: -736` at a 390px viewport — the row's real
+    (unclipped) width measured 1142px via `scrollWidth`/`clientWidth` on the
+    grid element itself.
+  - Two fixes attempted and both **measured to have zero effect** (verified by
+    re-running the same DOM measurement after each), then reverted rather than
+    left in as dead/misleading code:
+    - `apps/web/features/org/screens/OrgMapScreen.tsx`: giving the grid its own
+      `overflowX: "auto"` + an explicit `width`/`maxWidth: "100%"` (so it would
+      scroll internally instead of relying on the page). No change — the
+      *parent* Stack, and its own parent, all measured the same inflated
+      1142px, meaning the constraint that would need to change lives above
+      this screen, in the shell.
+    - `libs/design-system/src/components/AppFrame/AppFrame.tsx`: the content
+      column wrapper (`className="relative grid min-h-0 min-w-0"`) sets
+      `gridTemplateRows` but no `gridTemplateColumns`, so its one implicit
+      column sizes `auto` (unbounded) instead of `minmax(0,1fr)` the way its
+      sibling `Body` grid already does via Tailwind's `grid-cols-1`. Added the
+      matching `gridTemplateColumns: "minmax(0,1fr)"`. Confirmed via the served
+      HTML that the style change really was live, and via `apps/web/.next`
+      cache-clear that it wasn't a stale-build artifact — the measured width
+      still didn't move. **Reverted** (`git checkout` on the DS file; the
+      OrgMapScreen change rolled back to its original single-line
+      `GRID_11_COLS`) rather than leave an ineffective, unexplained style
+      change in a file the concurrent ZA-08 DS work also touches.
+  - Given the fix needs a proper CSS audit of the whole `AppFrame`/shell grid
+    chain (not a one-line change) and this phase's time budget, it's parked for
+    a dedicated responsive-layout follow-up. Flagging as 🟥 since it's a real,
+    reachable mobile regression (not cosmetic) — screenshots below show it
+    plainly on `org-map`/`work-tasks`/`system-registries-skills`/
+    `knowledge-vault` at 390px.
+  - Also found, same screenshot pass, not chased: department card names that
+    don't fit their fixed-width slot at 1440px get cut off mid-word with no
+    ellipsis (`"Communications"` → `"Communicatio"` on the ORG map) — cosmetic,
+    parked.
+
+**Design-match summary** (ROUTE-MAP §1; ✅ = light+dark and 1440+390 all render
+without crashing; 🟨 = renders but the 390px clipping finding above applies):
+
+| Route | Renders L/D | 1440/390 | Mock | Notes |
+|---|---|---|---|---|
+| `/org` | ✅ | 🟨 | Org Screens → org/map | CEO→COO→11-dept grid, focus panel match the mock's structure; 390px clipping finding applies |
+| `/org/departments/[id]` (→`/team`) | ✅ | ✅ | — | redirect only |
+| `/org/departments/[id]/team` | ✅ | ✅ | Org Screens → org/dept | breadcrumb/KPIs/tabs match |
+| `/org/departments/[id]/subtasks` | ✅ | ✅ | — | EmptyState (ZB-04b note: not yet wired further) |
+| `/org/departments/[id]/pipelines(+[pid])` | ✅ | ✅ | — | `PipelineStepStrip` + PipelineCanvas editor render |
+| `/org/departments/[id]/handoff` | ✅ | ✅ | — | read-only rules render |
+| `/org/departments/[id]/{skills,integrations,automations,hooks}` | ✅ | ✅ | — | derived "bound in" lists render |
+| `/org/people` | ✅ | 🟨 | Org Screens → org/pool | grouped directory; 390px clipping applies |
+| `/org/people/[id]` | ✅ | ✅ | Org Screens → org/agent | hero glyph, state, log panel |
+| `/org/people/new` | ✅ | ✅ | — | create form |
+| `/work/tasks` | ✅ | 🟨 | Work Screens → tasks | filters + `DataTable`; 390px clipping applies |
+| `/work/tasks/[id]` | ✅ | ✅ | Work Screens → task detail | `ChainRouteStrip` + subtasks/runs/approvals render |
+| `/work/tasks/new` | ✅ | ✅ | Work Screens → new task | entry/chain picker + route preview |
+| `/work/chains(+[id],+new)` | ✅ | 🟨 | Work Screens → chains | list/editor; 390px clipping applies |
+| `/work/goals(+[id])` | ✅ | ✅ | Work Screens → goals | `GoalCard` grid |
+| `/work/companies(+[id],+new)` | ✅ | 🟨 | Work Screens → companies | 390px clipping applies |
+| `/work/teams(+[id],+new)` | ✅ | 🟨 | (D-003, companies pattern) | 390px clipping applies |
+| `/work/projects(+[id]/[tab],+new,+integrations/[id])` | ✅ | 🟨 | Work Screens → projects | all 5 tabs render; 390px clipping applies |
+| `/activity/log` | ✅ | ✅ | Activity Screens → live log | `LogStream` + `FilterBar` |
+| `/activity/runs(+[runId])` | ✅ | 🟨 | Activity Screens → runs | 390px clipping applies |
+| `/activity/inbox` | ✅ | ✅ | Activity Screens → inbox | |
+| `/activity/briefings` | ✅ | ✅ | Activity Screens → briefings | |
+| `/policy/approvals(?approval=)` | ✅ | ✅ | Policy Screens → approvals | queue/history + sheet (used live by Flow B) |
+| `/policy/gates(?section=)` | ✅ | ✅ | Policy Screens → gate rules | all 7 sections render |
+| `/policy/patterns` | ✅ | ✅ | Policy Screens → learned patterns | |
+| `/knowledge/vault(?note=)` | ✅ | 🟨 | Knowledge Screens → vault | 3-pane; 390px clipping applies |
+| `/knowledge/distill` | ✅ | ✅ | Knowledge Screens → distillation | |
+| `/ledger/budgets` | ✅ | ✅ | Ledger Screens → budgets | caps + department table |
+| `/ledger/spend` | ✅ | ✅ | Ledger Screens → spend | |
+| `/system/settings/[section]` (8) | ✅ | 🟨 | System Screens → settings | side-nav; 390px clipping applies |
+| `/system/registries/[kind](+[id],+new)` (4 kinds) | ✅ | 🟨 | System Screens → registries | 390px clipping applies |
+
+Every ROUTE-MAP §2 redirect (static + the two id-dependent ones,
+`/agents/:id`→positions and `/pipelines/:id`→department pipeline) lands on its
+target and renders without crashing, in both themes and both widths.
+
+**Flow smoke specs** (`e2e/flow-a-task.spec.ts`, `e2e/flow-b-approval.spec.ts` —
+these DO run in `pnpm e2e`, unlike the sweep):
+- **Flow A** (new task with a chain): seeds a real chain via the handoff API,
+  fills `/work/tasks/new`, picks the chain, submits, and asserts the parent task
+  redirect, its `ChainRouteStrip` (entry step `RND` visible), and its listing on
+  `/work/tasks`. **Not covered** (documented in the spec header): step 04 (a
+  department pipeline actually running the subtask) and step 05 (an ASK gate
+  proposal, then resuming into the next department) both need a real `claude`
+  run to progress past the entry step — this sandbox's runner is the
+  deterministic `fake-claude.mjs` fixture, enough to dispatch the entry step but
+  not relied on to progress further inside a deterministic test timeout; step 06
+  (the final artifact reaching Activity/the vault) is downstream of that run.
+- **Flow B** (approval denied with a reason): seeds its own gated agent + task
+  (independent id from the shared `approval.spec.ts` fixture, so the two never
+  race for the same approval), opens the sheet from the NEEDS YOU rail's "→",
+  denies with a reason, and asserts the card leaves the rail and the denial is
+  recorded in `/policy/approvals`'s history (matched by `runId` — the history
+  table has no agent-name column, and the fake runner's own intent text isn't
+  unique per run). **Not covered:** step 01 (the gate firing) and step 05's
+  retry-after-deny path live inside the run/`HIGH_RISK_TYPES` retry-budget logic,
+  covered by the API's own e2e suite, not this UI throughline; step 06's second
+  half (denials becoming suggested patterns) is `/policy/patterns`, an unrelated
+  read model.
+
+**Validation run** (see the session's final report for exit codes): `tsc` (both
+configs), `eslint apps libs tools e2e --quiet`, `next build apps/web`,
+`check:names`, the `className=` grep, the related vitest files, the sweep, and
+`pnpm exec playwright test` (the full `pnpm e2e` set, including the two new
+Flow specs).
+
+**Butler's briefing:** ZB-14/ZA-08 landed. The route sweep found and fixed two
+real bugs (a Turbopack dev crash on every department tab route, and a theme
+hydration-mismatch affecting every "light" page load — the actual default).
+One significant finding is parked, not fixed: at 390px, several multi-column
+screens clip real content off-canvas rather than reflowing or scrolling — the
+fix needs a shell-wide CSS pass, out of scope for this validation phase's
+budget, and is flagged 🟥 for the operator. Flow A and Flow B both pass as far
+as this sandbox's fake `claude` runner allows; both document exactly which IA
+steps need a real agent run to exercise. Nothing else needs the operator beyond
+the parked mobile-layout item and the existing PR/migration follow-ups above.
 
