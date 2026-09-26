@@ -1,9 +1,15 @@
 "use client";
 
-import { Container, Stack } from "@zibby/design-system";
+import {
+  Breadcrumb,
+  Container,
+  Stack,
+  type SubNavLinkComponent,
+  Typography,
+} from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { PageContainer } from "../../../components/PageContainer/PageContainer";
-import { ImmersivePage } from "../../../components/layout/ImmersivePage/ImmersivePage";
 import { SignalCreateForm } from "./SignalCreateForm";
 
 export interface SignalCreateScreenProps {
@@ -12,7 +18,7 @@ export interface SignalCreateScreenProps {
 }
 
 /**
- * `/signals/new` chrome — mirrors `SignalDetailScreen`'s `ImmersivePage` +
+ * `/signals/new` chrome — mirrors `SignalDetailScreen`'s `Container` +
  * `PageContainer` wrapping. The guided creator itself lives in
  * {@link SignalCreateForm}; this only supplies the page frame + title.
  */
@@ -20,14 +26,17 @@ export function SignalCreateScreen({ defaultFrom }: SignalCreateScreenProps) {
   const t = useTranslations("signals");
 
   return (
-    <ImmersivePage backHref="/signals" title={t("create.title")}>
-      <Container padding={["300", "350"]}>
-        <PageContainer>
-          <Stack gap="250">
-            <SignalCreateForm defaultFrom={defaultFrom} />
-          </Stack>
-        </PageContainer>
-      </Container>
-    </ImmersivePage>
+    <Container padding={["300", "350"]}>
+      <PageContainer>
+        <Stack gap="250">
+          <Breadcrumb
+            items={[{ label: t("title"), href: "/signals" }, { label: t("create.title") }]}
+            linkComponent={Link as SubNavLinkComponent}
+          />
+          <Typography type="h1">{t("create.title")}</Typography>
+          <SignalCreateForm defaultFrom={defaultFrom} />
+        </Stack>
+      </PageContainer>
+    </Container>
   );
 }

@@ -25,7 +25,7 @@ import {
 } from "../pipelines/pipeline-runner.service";
 import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
-import { archiveSubsystemId, isArchived, matchesArchiveSearch } from "./archive";
+import { archiveDepartmentId, isArchived, matchesArchiveSearch } from "./archive";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
 import { taskTargetId } from "./task-target";
 
@@ -115,8 +115,8 @@ export class TaskRunsService {
   /**
    * The `/archiv` page's feed: keyset (cursor) pagination over the WHOLE archived
    * history (D9's `ARCHIVED_STATES`), newest-first, with server-side search
-   * (`matchesArchiveSearch`) and subsystem filtering (`archiveSubsystemId`) — so a
-   * search or subsystem selection reaches every archived run, not just whatever page
+   * (`matchesArchiveSearch`) and department filtering (`archiveDepartmentId`) — so a
+   * search or department selection reaches every archived run, not just whatever page
    * the frontend has already loaded. `before` is the opaque `<startedAt>|<runId>`
    * cursor of the previous page's oldest run; entries strictly older than it are
    * returned (the `runId` tiebreak makes the order a total order so a same-`startedAt`
@@ -124,12 +124,12 @@ export class TaskRunsService {
    */
   async listArchivedTaskRuns(opts: {
     search?: string;
-    subsystems?: readonly string[];
+    departments?: readonly string[];
     before?: string;
     limit?: number;
   }): Promise<ArchivePage> {
     const { runs, childRunIds, pipelineDefsById } = await this.collect();
-    const subsystemSet = opts.subsystems?.length ? new Set(opts.subsystems) : null;
+    const departmentSet = opts.departments?.length ? new Set(opts.departments) : null;
     const limit = Math.min(Math.max(opts.limit ?? 40, 1), 100);
     const cursor = opts.before;
 
@@ -137,7 +137,7 @@ export class TaskRunsService {
       .filter((r) => !childRunIds.has(r.runId))
       .filter((r) => isArchived(r.status))
       .filter((r) => matchesArchiveSearch(r, opts.search ?? ""))
-      .filter((r) => !subsystemSet || subsystemSet.has(archiveSubsystemId(r, pipelineDefsById)))
+      .filter((r) => !departmentSet || departmentSet.has(archiveDepartmentId(r, pipelineDefsById)))
       .sort(byNewestRun);
 
     const remaining = cursor ? matched.filter((r) => archiveSortKey(r) < cursor) : matched;
@@ -150,9 +150,9 @@ export class TaskRunsService {
   }
 
   /**
-   * Per-subsystem archive counts (search-scoped, computed BEFORE any subsystem
-   * selection — so picking one subsystem in the UI doesn't zero out every other
-   * option's count) plus the unsearched total, for the archive page's subsystem
+   * Per-department archive counts (search-scoped, computed BEFORE any department
+   * selection — so picking one department in the UI doesn't zero out every other
+   * option's count) plus the unsearched total, for the archive page's department
    * filter and its "archive is genuinely empty" check.
    */
   async getArchiveCounts(opts: { search?: string }): Promise<ArchiveCounts> {
@@ -161,7 +161,7 @@ export class TaskRunsService {
     const counts: Record<string, number> = {};
     for (const r of archived) {
       if (!matchesArchiveSearch(r, opts.search ?? "")) continue;
-      const id = archiveSubsystemId(r, pipelineDefsById);
+      const id = archiveDepartmentId(r, pipelineDefsById);
       counts[id] = (counts[id] ?? 0) + 1;
     }
     return { counts, total: archived.length };
@@ -322,7 +322,7 @@ export class TaskRunsService {
    * The full unfolded set of run views (every agent/pipeline/goal run + still-waiting
    * scheduled task), with processor + task enrichment attached, plus the set of goal
    * child run ids the feed folds out, and the pipeline-definition lookup the archive
-   * endpoints join through for subsystem attribution ({@link archiveSubsystemId}).
+   * endpoints join through for department attribution ({@link archiveDepartmentId}).
    */
   private async collect(): Promise<{
     runs: TaskRun[];
@@ -620,6 +620,10 @@ function enrichRunWithTask(run: TaskRun, tasksById: ReadonlyMap<string, Schedule
     // renamed item still renders as what it was at release time.
     ...(task.roadmapItemId ? { roadmapItemId: task.roadmapItemId } : {}),
     ...(task.roadmapItemLabel ? { roadmapItemLabel: task.roadmapItemLabel } : {}),
+    // ZB-04a / O-06 — the department this run's dispatched unit belongs to,
+    // stamped on the task record at dispatch time. Drives spend-by-department and
+    // activity/archive department filters.
+    ...(task.department ? { department: task.department } : {}),
   };
 }
 

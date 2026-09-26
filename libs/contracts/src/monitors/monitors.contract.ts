@@ -12,7 +12,7 @@ const c = initContract();
 
 /**
  * Monitor events (N3) — READ-ONLY. Events are born only inside the API (the
- * monitor watcher ingests them from the adapters), so a client can never forge
+ * monitor watcher ingests them from the adapters), so a client can never dev
  * an alert; handling happens autonomously on the tier path (the dispatched
  * task), not through this surface.
  */

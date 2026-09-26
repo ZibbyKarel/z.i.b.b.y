@@ -11,12 +11,10 @@ import {
   StatusDot,
   Tag,
   Typography,
-  cn,
   stateToneVar,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { formatCostUsd } from "../../../utils/cost";
 import { useAgentsQuery } from "../../agents";
 import { usePipelinesQuery } from "../../pipelines";
@@ -336,7 +334,7 @@ export function PipelineStageTimeline({
   const openKey = openLog ?? liveKey;
 
   return (
-    <HudPanel padding="250" title={t("stageTimeline")}>
+    <Panel header={t("stageTimeline")} padding="250">
       {nodes.length === 0 ? (
         <Stack gap="100">
           <Typography mono size="xs" type="note" variant="tertiary">
@@ -388,7 +386,7 @@ export function PipelineStageTimeline({
                       data-testid={PipelineStageTimelineTestId.Connector}
                       style={{
                         background:
-                          displayStatus === "done" ? stateToneVar.ok : "var(--color-border)",
+                          displayStatus === "done" ? stateToneVar.done : "var(--color-border)",
                         flexGrow: 1,
                         marginTop: "0.375rem",
                         minHeight: "1rem",
@@ -411,7 +409,7 @@ export function PipelineStageTimeline({
                                 src={agent?.avatar}
                                 style={
                                   running
-                                    ? { boxShadow: `0 0 0 1px ${stateToneVar.run}` }
+                                    ? { boxShadow: `0 0 0 1px ${stateToneVar.working}` }
                                     : undefined
                                 }
                                 tone="accent"
@@ -444,14 +442,15 @@ export function PipelineStageTimeline({
                               status={displayStatus}
                             />
                             {hasLog && (
-                              <span
-                                className={cn(
-                                  "inline-flex transition-transform duration-150",
-                                  isOpen && "rotate-90",
-                                )}
+                              <Container
+                                style={{
+                                  display: "inline-flex",
+                                  transition: "transform 150ms",
+                                  transform: isOpen ? "rotate(90deg)" : undefined,
+                                }}
                               >
                                 <Icon name="chevron" size="xs" tone="faint" />
-                              </span>
+                              </Container>
                             )}
                           </Stack>
                         </Stack>
@@ -516,6 +515,6 @@ export function PipelineStageTimeline({
           })}
         </Stack>
       )}
-    </HudPanel>
+    </Panel>
   );
 }

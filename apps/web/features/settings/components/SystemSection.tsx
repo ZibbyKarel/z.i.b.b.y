@@ -2,9 +2,16 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Divider, NumberField, Stack, ToggleField, Typography } from "@zibby/design-system";
+import {
+  Button,
+  Divider,
+  NumberField,
+  Panel,
+  Stack,
+  ToggleField,
+  Typography,
+} from "@zibby/design-system";
 import type { SystemConfig } from "@zibby/contracts";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useSetSystemConfigMutation, useSystemConfigQuery } from "../../system";
 
 /** Testids for the system config editor (the screen + tests select via these). */
@@ -96,7 +103,7 @@ function SystemEditor({ config }: { config: SystemConfig }) {
     });
 
   return (
-    <HudPanel padding="300" surface="glass" title={t("runtime.title")}>
+    <Panel header={t("runtime.title")} padding="300">
       <Stack gap="200">
         <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
           {t("runtime.hint")}
@@ -207,6 +214,6 @@ function SystemEditor({ config }: { config: SystemConfig }) {
           </Button>
         </Stack>
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }

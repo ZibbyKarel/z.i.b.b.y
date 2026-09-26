@@ -2,10 +2,18 @@ import { useId } from "react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Button, Card, Container, Icon, Stack, StatusDot, Typography } from "@zibby/design-system";
+import {
+  Button,
+  Card,
+  Container,
+  Icon,
+  Markdown,
+  Stack,
+  StatusDot,
+  Typography,
+} from "@zibby/design-system";
 import type { DotTone } from "@zibby/design-system";
 import type { Briefing, ChatMessage as ChatMessageType, ChatToolEvent } from "@zibby/contracts";
-import { MarkdownProse } from "../../../components/MarkdownProse/MarkdownProse";
 import { useSystemConfigQuery } from "../../system";
 import { useAudioPlayback } from "../hooks/useAudioPlayback";
 import { useSynthesizeSpeechMutation } from "../mutations/useSynthesizeSpeechMutation";
@@ -22,6 +30,7 @@ export enum ChatMessageTestId {
   ToolEventLink = "chat-message-tool-event-link",
   StreamingCursor = "chat-message-streaming-cursor",
   ReadAloudButton = "chat-message-read-aloud",
+  CreateTaskButton = "chat-message-create-task",
 }
 
 export interface ChatMessageProps {
@@ -39,6 +48,11 @@ export interface ChatMessageProps {
   briefing?: Briefing;
   /** Marks the assistant turn that is still streaming (shows a live cursor). */
   streaming?: boolean;
+  /**
+   * ZB-12 — "CREATE TASK" from a settled assistant reply: the host (the COO dock)
+   * opens `/work/tasks/new` prefilled with this turn's text. Omit for no action.
+   */
+  onCreateTask?: (text: string) => void;
 }
 
 /** Map a tool event status onto the DS StatusDot tone. */
@@ -146,7 +160,14 @@ function ReadAloudButton({ text }: { text: string }) {
  * design-match: the operator's turn is the one that stands out), so nothing
  * repeats per turn.
  */
-export function ChatMessage({ role, text, toolEvents, briefing, streaming }: ChatMessageProps) {
+export function ChatMessage({
+  role,
+  text,
+  toolEvents,
+  briefing,
+  streaming,
+  onCreateTask,
+}: ChatMessageProps) {
   const t = useTranslations("chat");
   const isUser = role === "user";
 
@@ -179,7 +200,7 @@ export function ChatMessage({ role, text, toolEvents, briefing, streaming }: Cha
               // is a sibling, never part of the markdown string (so a half-typed `**`
               // can't break the parse).
               <>
-                <MarkdownProse text={text} />
+                <Markdown source={text} variant="prose" />
                 {streaming && (
                   <Typography
                     aria-label={t("streaming")}
@@ -209,7 +230,20 @@ export function ChatMessage({ role, text, toolEvents, briefing, streaming }: Cha
           the live-streaming bubble (its text isn't final yet), a user turn, or a
           briefing card (structured rows, not prose — nothing sensible to read). */}
       {!isUser && !streaming && !briefing && text.trim().length > 0 && (
-        <ReadAloudButton text={text} />
+        <Stack align="center" direction="row" gap="50">
+          <ReadAloudButton text={text} />
+          {onCreateTask && (
+            <Button
+              data-testid={ChatMessageTestId.CreateTaskButton}
+              icon="plus"
+              intent="ghost"
+              onClick={() => onCreateTask(text)}
+              size="sm"
+            >
+              {t("createTask")}
+            </Button>
+          )}
+        </Stack>
       )}
     </Stack>
   );

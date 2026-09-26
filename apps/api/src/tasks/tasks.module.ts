@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { AgentsModule } from "../agents/agents.module";
 import { ApprovalsModule } from "../approvals/approvals.module";
 import { BudgetModule } from "../budget/budget.module";
+import { EmployeesModule } from "../employees/employees.module";
 import { GatesModule } from "../gates/gates.module";
 import { GoalsModule } from "../goals/goals.module";
 import { LimitsModule } from "../limits/limits.module";
@@ -17,6 +18,7 @@ import { KeywordScorer } from "./keyword-scorer";
 import { ScheduledTasksStorageModule } from "./scheduled-tasks-storage.module";
 import { TaskClassifierService } from "./task-classifier.service";
 import { TaskOutputService } from "./task-output.service";
+import { TaskParentsService } from "./task-parents.service";
 import { TASK_ROUTER } from "./task-router";
 import { TaskRunLogsController } from "./task-run-logs.controller";
 import { TaskRunsController } from "./task-runs.controller";
@@ -38,6 +40,7 @@ import { TasksController } from "./tasks.controller";
 @Module({
   imports: [
     AgentsModule,
+    EmployeesModule,
     PipelinesModule,
     GoalsModule,
     ProjectsModule,
@@ -50,10 +53,15 @@ import { TasksController } from "./tasks.controller";
     MemoryModule,
     ScheduledTasksStorageModule,
   ],
-  controllers: [TasksController, TaskRunsController, TaskRunLogsController],
+  // Order matters: Nest registers controllers in this order and Express matches
+  // the first route that fits. `TasksController` owns `GET /api/tasks/:id`
+  // (ZB-04a), which would swallow `GET /api/tasks/runs` (id = "runs") if it were
+  // registered first — so the literal `/api/tasks/runs*` controllers go first.
+  controllers: [TaskRunsController, TaskRunLogsController, TasksController],
   providers: [
     TaskSchedulerService,
     TaskRunsService,
+    TaskParentsService,
     TaskClassifierService,
     TaskOutputService,
     AttachmentStorageService,
@@ -63,14 +71,18 @@ import { TasksController } from "./tasks.controller";
   ],
   // Re-export the storage module + scheduler so the channel triage flow (Phase 5.3)
   // can dispatch a task and read its outcome back onto the channel item.
-  // TaskRunsService is also exported (Phase 82) so `SubsystemsModule` can read the
+  // TaskRunsService is also exported (Phase 82) so `DepartmentsModule` can read the
   // unified run feed for its status aggregation without re-implementing the merge.
+  // TaskParentsService (ZB-04a) is exported the same way, so `DepartmentsController`
+  // can serve `GET /api/departments/:id/subtasks` off the one read model instead of
+  // duplicating the parent/subtask derivation.
   exports: [
     TaskSchedulerService,
     TaskRunsService,
+    TaskParentsService,
     // Exported so `RoadmapGateService` can ask the ONE question the switchboard
     // should ask for a gate release — "whose domain is this?" — via
-    // `classifySubsystem`, and let the subsystem pick its own unit.
+    // `classifyDepartment`, and let the department pick its own unit.
     TaskClassifierService,
     AttachmentStorageService,
     ScheduledTasksStorageModule,

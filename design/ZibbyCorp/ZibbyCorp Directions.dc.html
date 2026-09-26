@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Sora:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>body{margin:0;background:#D9DAD6}a{color:#111312}a:hover{color:#50544F}</style>
+<script src="./zibby.js"></script>
+</helmet>
+<section style="padding:72px;display:flex;flex-direction:column;gap:48px;width:max-content;font-family:'Geist',system-ui,sans-serif;color:#111312">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:900px">
+    <span style="font-family:'Geist Mono',monospace;font-size:13px;letter-spacing:.16em;color:#50544F">ZIBBYCORP · AGENT OS · TURN 1</span>
+    <h1 style="margin:0;font-size:56px;font-weight:500;letter-spacing:-.03em">Blueprint, light &amp; dark</h1>
+    <p style="margin:0;font-size:19px;line-height:1.5;color:#50544F;text-wrap:pretty">Same command-center screen (org chart → department → agent profile), same pixel-glyph agents. Click any department or agent card to explore. Full page: <a href="Dashboard.dc.html">Dashboard</a>.</p>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;align-items:baseline;gap:16px"><span style="font-family:'Geist Mono',monospace;font-size:13px;letter-spacing:.14em;padding:5px 10px;background:#111312;color:#FAFAF8">SHARED</span><span style="font-size:28px;font-weight:500;letter-spacing:-.02em">Agent glyphs</span><span style="font-size:16px;color:#50544F">8×8 mirrored pixel creature, generated from the agent's name · 6 animated states</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div style="--bg:#F3F4F2;--panel:#FAFAF8;--panel2:#EDEEEB;--line:#D9DBD6;--line2:#BFC2BC;--ink:#111312;--ink2:#50544F;--ink3:#8A8E88;--grid:rgba(17,19,18,.05);--gw:0px;--s-work:oklch(0.6 0.14 160);--s-think:oklch(0.58 0.14 250);--s-block:oklch(0.7 0.15 70);--s-err:oklch(0.58 0.2 25);--s-done:oklch(0.56 0.15 300);--s-idle:#A9ADA7;--dot-r:0;background:var(--bg);border:1px solid var(--line);padding:32px;display:flex;flex-direction:column;gap:28px">
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px">
+          <sc-for list="{{ states }}" as="s" hint-placeholder-count="6">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:20px 0 16px;background:var(--panel);border:1px solid var(--line)">{{ s.glyph }}<div style="display:flex;align-items:center;gap:7px;font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.12em">{{ s.dot }}{{ s.labelU }}</div><span style="font-size:12px;color:var(--ink2);text-align:center;padding:0 10px">{{ s.note }}</span></div>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(17,1fr);gap:10px;justify-items:center">
+          <sc-for list="{{ roster }}" as="r" hint-placeholder-count="34">{{ r }}</sc-for>
+        </div>
+      </div>
+      <div style="--bg:#0A0B0B;--panel:#101211;--panel2:#161917;--line:#232725;--line2:#343936;--ink:#ECEFEA;--ink2:#A2A8A2;--ink3:#666C67;--grid:rgba(236,239,234,.035);--gw:6px;--s-work:oklch(0.82 0.17 160);--s-think:oklch(0.78 0.13 245);--s-block:oklch(0.84 0.15 80);--s-err:oklch(0.7 0.2 25);--s-done:oklch(0.78 0.14 300);--s-idle:#4A504B;--dot-r:0;background:var(--bg);border:1px solid var(--line);padding:32px;display:flex;flex-direction:column;gap:28px;color:var(--ink)">
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px">
+          <sc-for list="{{ states }}" as="s" hint-placeholder-count="6">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:20px 0 16px;background:var(--panel);border:1px solid var(--line)">{{ s.glyph }}<div style="display:flex;align-items:center;gap:7px;font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.12em">{{ s.dot }}{{ s.labelU }}</div><span style="font-size:12px;color:var(--ink2);text-align:center;padding:0 10px">{{ s.note }}</span></div>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(17,1fr);gap:10px;justify-items:center">
+          <sc-for list="{{ roster }}" as="r" hint-placeholder-count="34">{{ r }}</sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:72px;align-items:flex-start">
+    <div id="1a" style="display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;align-items:baseline;gap:16px"><span style="font-family:'Geist Mono',monospace;font-size:14px;letter-spacing:.1em;padding:5px 10px;background:#111312;color:#FAFAF8">1a</span><span style="font-size:32px;font-weight:500;letter-spacing:-.02em">Blueprint</span><span style="font-size:16px;color:#50544F;max-width:760px">Geist + Geist Mono · hairline 1px rules, square corners, drafting grid, numbered sections, corner ticks · glow only in dark</span></div>
+      <div style="--bg:#F3F4F2;--panel:#FAFAF8;--panel2:#EDEEEB;--line:#D9DBD6;--line2:#BFC2BC;--ink:#111312;--ink2:#50544F;--ink3:#8A8E88;--grid:rgba(17,19,18,.05);--gw:0px;--s-work:oklch(0.6 0.14 160);--s-think:oklch(0.58 0.14 250);--s-block:oklch(0.7 0.15 70);--s-err:oklch(0.58 0.2 25);--s-done:oklch(0.56 0.15 300);--s-idle:#A9ADA7;width:1600px;height:1000px;box-shadow:0 30px 80px rgba(0,0,0,.18)"><dc-import name="Blueprint Screen" hint-size="1600px,1000px"></dc-import></div>
+      <div style="--bg:#0A0B0B;--panel:#101211;--panel2:#161917;--line:#232725;--line2:#343936;--ink:#ECEFEA;--ink2:#A2A8A2;--ink3:#666C67;--grid:rgba(236,239,234,.035);--gw:8px;--s-work:oklch(0.82 0.17 160);--s-think:oklch(0.78 0.13 245);--s-block:oklch(0.84 0.15 80);--s-err:oklch(0.7 0.2 25);--s-done:oklch(0.78 0.14 300);--s-idle:#4A504B;width:1600px;height:1000px;box-shadow:0 30px 80px rgba(0,0,0,.3)"><dc-import name="Blueprint Screen" hint-size="1600px,1000px"></dc-import></div>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { ready: !!window.ZB };
+  componentDidMount() { if (!window.ZB) this.p = setInterval(() => { if (window.ZB) { clearInterval(this.p); this.setState({ ready: true }); } }, 50); }
+  componentWillUnmount() { clearInterval(this.p); }
+  renderVals() {
+    const Z = window.ZB;
+    if (!Z) return { states: [], roster: [] };
+    const notes = { working: 'Bobs, arms type, keys flicker', thinking: 'Slow breath, dots cycle', blocked: 'Frozen, “!” blinks', error: 'Shakes, eyes turn red', done: 'Hops, sparkles', idle: 'Breathes, blinks' };
+    const seeds = { working: 'Stuart', thinking: 'Kevin', blocked: 'Jerry', error: 'Jorge', done: 'Phil', idle: 'Carl' };
+    return {
+      states: Z.ORDER.map(k => ({ labelU: Z.S[k].label.toUpperCase(), note: notes[k], dot: Z.dot(React, k, 8), glyph: Z.glyph(React, { seed: seeds[k], state: k, size: 96 }) })),
+      roster: Z.all.slice(0, 34).map(a => Z.glyph(React, { seed: a.name, state: a.state, size: 44, key: a.id }))
+    };
+  }
+}
+</script>
+</body>
+</html>

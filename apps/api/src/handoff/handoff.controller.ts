@@ -2,15 +2,19 @@ import { Controller } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { handoffContract } from "@zibby/contracts";
 import { makeErrorMapper } from "../shared/http/error-mapping";
+import { ChainInUseError, ChainNotFoundError, InvalidChainInputError } from "./chain.errors";
+import { ChainsService } from "./chains.service";
 import { SignalKindNotFoundError, SystemSignalKindError } from "./handoff-signal-kind.errors";
 import { HandoffRuleNotFoundError, SystemHandoffRuleError } from "./handoff-rule.errors";
 import { HandoffRuleStore } from "./handoff-rule.store";
+import { HandoffSignalKindStore } from "./handoff-signal-kind.store";
 import { SignalKindService } from "./signal-kind.service";
 
 const errors = makeErrorMapper("Handoff rule", { missing: [HandoffRuleNotFoundError] });
 const signalKindErrors = makeErrorMapper("Handoff signal kind", {
   missing: [SignalKindNotFoundError],
 });
+const chainErrors = makeErrorMapper("Chain", { missing: [ChainNotFoundError] });
 
 /**
  * Implements `handoffContract` against the seeded, file-backed rule set AND (B1)
@@ -25,12 +29,20 @@ export class HandoffController {
   constructor(
     private readonly rules: HandoffRuleStore,
     private readonly signalKinds: SignalKindService,
+    private readonly signalKindStore: HandoffSignalKindStore,
+    private readonly chains: ChainsService,
   ) {}
 
   @TsRestHandler(handoffContract)
   handler() {
     return tsRestHandler(handoffContract, {
-      getHandoffRules: async () => ({ status: 200, body: await this.rules.list() }),
+      getHandoffRules: async ({ query }) => {
+        const rules = await this.rules.list();
+        if (query.includeChains === "true") return { status: 200, body: rules };
+        const kinds = await this.signalKindStore.list();
+        const chainKindIds = new Set(kinds.filter((k) => k.chain === true).map((k) => k.id));
+        return { status: 200, body: rules.filter((r) => !chainKindIds.has(r.signalKind)) };
+      },
 
       createHandoffRule: async ({ body }) => ({ status: 201, body: await this.rules.create(body) }),
 
@@ -77,6 +89,34 @@ export class HandoffController {
           (err) =>
             err instanceof SystemSignalKindError
               ? ({ status: 403, body: { message: err.message } } as const)
+              : undefined,
+        ),
+
+      listChains: async () => ({ status: 200, body: await this.chains.list() }),
+
+      getChain: ({ params: { id } }) => chainErrors.or404(id, () => this.chains.get(id)),
+
+      putChain: async ({ params: { id }, body }) => {
+        try {
+          return { status: 200, body: await this.chains.put(id, body) };
+        } catch (err) {
+          if (err instanceof InvalidChainInputError) {
+            return { status: 400, body: { message: err.message } };
+          }
+          throw err;
+        }
+      },
+
+      deleteChain: ({ params: { id } }) =>
+        chainErrors.or404(
+          id,
+          async () => {
+            await this.chains.delete(id);
+            return { id };
+          },
+          (err) =>
+            err instanceof ChainInUseError
+              ? ({ status: 409, body: { message: err.message } } as const)
               : undefined,
         ),
     });

@@ -3,7 +3,7 @@ import { AvatarSchema, IsoDateTimeSchema } from "../common.schema";
 import { AgentIdSchema } from "../agents/agent.schema";
 import { MakerRefSchema, VerifierSpecSchema } from "../goals/goal.schema";
 import { ProjectIdSchema } from "../projects/project.schema";
-import { SubsystemIdSchema } from "../subsystems/subsystem.schema";
+import { DepartmentIdSchema } from "../departments/department.schema";
 import { TeamIdSchema } from "../teams/team.schema";
 
 /**
@@ -71,31 +71,55 @@ export const OrchestratorTaskTargetSchema = z.object({
 });
 
 /**
- * Phase 91 — a named subsystem as a routing destination (the `@`-mention /
- * "dispatch to Herald" case). Like goal/chain it is EXPLICIT-ONLY: the top-level
+ * Phase 91 — a named department as a routing destination (the `@`-mention /
+ * "dispatch to Comms" case). Like goal/chain it is EXPLICIT-ONLY: the top-level
  * `TaskClassifierService` never emits this kind (scope guard — see
- * `docs/plans/phase-91-subsystem-dispatch.md`). It never reaches a stored run
+ * `docs/plans/phase-91-department-dispatch.md`). It never reaches a stored run
  * record either — `TaskSchedulerService` resolves it to a concrete
- * `{ kind: "pipeline" }` target (the subsystem's one owned pipeline, or the
+ * `{ kind: "pipeline" }` target (the department's one owned pipeline, or the
  * scoped classifier's pick among several) before dispatch, so a run's "via
- * <subsystem>" attribution rides for free on the dispatched pipeline's own
- * `Pipeline.ownerSubsystem` (Phase 81) — no new run-level field needed.
+ * <department>" attribution rides for free on the dispatched pipeline's own
+ * `Pipeline.department` (Phase 81) — no new run-level field needed.
  */
-export const SubsystemTaskTargetSchema = z.object({
-  kind: z.literal("subsystem"),
-  id: SubsystemIdSchema,
+export const DepartmentTaskTargetSchema = z.object({
+  kind: z.literal("department"),
+  id: DepartmentIdSchema,
+  ...taskTargetDisplayShape,
+});
+
+/**
+ * ZB-04a / D-005 — a named chain (an ordered handoff route between
+ * departments) as a routing destination. `id` names the chain's signal kind
+ * (see `HandoffSignalKindSchema.chain` in ZB-05a); like department it is
+ * EXPLICIT-ONLY, and the SAME structural scope guard applies: the classifier's
+ * stage-1 candidate builder (`TaskClassifierService.buildCandidates` /
+ * `RoutableTarget` in `task-router.ts`) never widens to include this kind, so
+ * `toTaskTarget`'s exhaustive switch stays total without a `"chain"` case —
+ * the classifier cannot emit one even by omission.
+ *
+ * ZB-04a adds ONLY this schema member plus the `parentTaskId`/`chain` stamps
+ * below — chains do not run yet. `TaskSchedulerService.createTask` rejects a
+ * `{ kind: "chain" }` target outright (see `ChainNotImplementedError`) rather
+ * than silently no-op (D-019); ZB-05a is what makes this kind dispatchable.
+ */
+export const ChainTaskTargetSchema = z.object({
+  kind: z.literal("chain"),
+  id: AgentIdSchema,
   ...taskTargetDisplayShape,
 });
 
 /**
  * A destination for a free-text task: a stored agent, a stored pipeline, a
- * named subsystem (Phase 91, explicit-only), or the orchestrator fallback.
+ * named department (Phase 91, explicit-only), a named chain (ZB-04a schema
+ * only — explicit-only, not yet dispatchable, see {@link ChainTaskTargetSchema}),
+ * or the orchestrator fallback.
  */
 export const TaskTargetSchema = z.discriminatedUnion("kind", [
   AgentTaskTargetSchema,
   PipelineTaskTargetSchema,
   GoalTaskTargetSchema,
-  SubsystemTaskTargetSchema,
+  DepartmentTaskTargetSchema,
+  ChainTaskTargetSchema,
   OrchestratorTaskTargetSchema,
 ]);
 export type TaskTarget = z.infer<typeof TaskTargetSchema>;
@@ -196,12 +220,12 @@ export const ClassifyTaskInputSchema = z.object({
    * The sink the finished work MUST land in, when the caller already knows it —
    * and therefore a hard constraint on which units may be ranked at all, not a
    * hint. `{ type: "pr" }` means "this task has to end in a PR-shaped code
-   * change", which only a subsystem's PR-capable pipeline can honour; see
+   * change", which only a department's PR-capable pipeline can honour; see
    * `TaskClassifierService.prCapablePipelines`.
    *
    * The motivating failure: a JIRA-imported roadmap item is by construction
    * "implement this → PR", the roadmap gate already stamps `output: {type:"pr"}`
-   * on the task it queues — and stage-2 routing then ranked the whole forge
+   * on the task it queues — and stage-2 routing then ranked the whole dev
    * roster anyway and picked `documentation-engineer`, an agent with no Bash that
    * cannot run a build, a test or a commit. The strongest available signal for
    * "this is implementation work" was being computed and then dropped on the
@@ -358,15 +382,15 @@ export type TaskRouting = z.infer<typeof TaskRoutingSchema>;
 /**
  * F2c — the persisted classification trace: the switchboard's STAGE-1 verdict
  * (the terminal unit that actually ran already lives on `ScheduledTask.target`/
- * `TaskRun.target`, so this is the "why", not a second target). `subsystem` is
- * set only when stage-1 delegated to a subsystem (a stage-2 `classifyWithinSubsystem`
+ * `TaskRun.target`, so this is the "why", not a second target). `department` is
+ * set only when stage-1 delegated to a department (a stage-2 `classifyWithinDepartment`
  * call happened); absent when stage-1 already named a concrete agent/pipeline.
  * Optional/additive on both `ScheduledTask` and `TaskRun` — an old-shaped record
  * still parses with no trace, and the explicit `@mention` path never writes one
  * (nothing was actually classified).
  */
 export const ClassificationTraceSchema = z.object({
-  /** The switchboard's stage-1 pick — may itself be a `{kind:"subsystem"}` verdict. */
+  /** The switchboard's stage-1 pick — may itself be a `{kind:"department"}` verdict. */
   stage1: TaskTargetSchema,
   /** 0–1; the stage-1 verdict's confidence. */
   confidence: z.number().min(0).max(1),
@@ -374,17 +398,17 @@ export const ClassificationTraceSchema = z.object({
   reason: z.string(),
   /** Catalog terms that justified the stage-1 pick. */
   matchedTerms: z.array(z.string()),
-  /** Set when stage-1 delegated to a subsystem and stage-2 resolved the unit. */
-  subsystem: SubsystemIdSchema.optional(),
+  /** Set when stage-1 delegated to a department and stage-2 resolved the unit. */
+  department: DepartmentIdSchema.optional(),
   /** Which leg produced the stage-1 verdict — see {@link TaskRoutingSchema.leg}. */
   leg: RoutingLegSchema.optional(),
   /**
-   * The STAGE-2 verdict — how the subsystem named at `stage1` chose the unit that
-   * actually ran. Present only when a stage-2 pass happened (`subsystem` set AND
-   * the subsystem owned 2+ units; a 0/1-owned roster resolves without classifying).
+   * The STAGE-2 verdict — how the department named at `stage1` chose the unit that
+   * actually ran. Present only when a stage-2 pass happened (`department` set AND
+   * the department owned 2+ units; a 0/1-owned roster resolves without classifying).
    *
-   * Without this the record answered "which subsystem, and why" but was silent on
-   * the decision that picks the thing that runs — `resolveSubsystemTargetOrNull`
+   * Without this the record answered "which department, and why" but was silent on
+   * the decision that picks the thing that runs — `resolveDepartmentTargetOrNull`
    * used to return `routing?.target ?? primary`, discarding the reason, the
    * confidence and the leg. That is the half of the trace whose absence made a
    * misroute undiagnosable from the files.
@@ -400,7 +424,7 @@ export const ClassificationTraceSchema = z.object({
        * How many candidates stage 2 actually ranked, AFTER any constraint filter.
        * A `1` here says the choice was forced by the constraint rather than won on
        * merit — the difference between "the router picked delivery" and "delivery
-       * was the only PR-capable pipeline forge owns".
+       * was the only PR-capable pipeline dev owns".
        */
       rankedCandidates: z.number().int().min(0),
       /**
@@ -460,6 +484,31 @@ export const ScheduledTaskStatusSchema = z.enum([
   "awaiting-output",
 ]);
 export type ScheduledTaskStatus = z.infer<typeof ScheduledTaskStatusSchema>;
+
+/**
+ * ZB-04a / O-18 — WHO/WHAT created a task, stamped by the creator itself
+ * (never client-asserted for the four server-side legs — Law 4, the same
+ * posture as `roadmapItemId`):
+ *
+ *  - `operator`   — the CommandLine / New Task dialog (`TasksController`'s
+ *                    default when nothing else names a source).
+ *  - `department` — an explicit `@department` target (`rawTarget.kind ===
+ *                    "department"` in `TaskSchedulerService.createTask`).
+ *  - `chain`      — a subtask dispatched by `HandoffService.dispatchTask` WITH
+ *                    chain context. Reserved for ZB-05a — nothing sets it yet.
+ *  - `channel`    — `ChannelTriageFlowService`'s Tier-1 dispatch.
+ *  - `automation` — the automations `SchedulerService`'s `task` job kind.
+ *  - `handoff`    — `HandoffService.dispatchTask`, absent chain context.
+ */
+export const TaskSourceSchema = z.enum([
+  "operator",
+  "department",
+  "chain",
+  "channel",
+  "automation",
+  "handoff",
+]);
+export type TaskSource = z.infer<typeof TaskSourceSchema>;
 
 /**
  * The structured result of a task whose output opened a PR — the reference the run
@@ -553,6 +602,53 @@ export const ScheduledTaskSchema = z.object({
    * cycle: the roadmap module already depends on tasks).
    */
   roadmapItemLabel: z.string().max(512).optional(),
+  /**
+   * ZB-04a / D-005 — the parent task this one is a subtask of (a chain step
+   * dispatched by `HandoffService.dispatchTask`, ZB-05a). Absent on every
+   * top-level task — the `GET /api/tasks/parents` read model's own filter for
+   * "top-level" IS `parentTaskId == null`. Schema-only here: nothing produces
+   * a subtask yet (ZB-05a walks the chain), but the field is additive/optional
+   * so a later phase's writer needs no migration.
+   */
+  parentTaskId: z.string().optional(),
+  /**
+   * ZB-04a / D-005 — this subtask's position on its chain: the chain's own id
+   * (the handoff signal kind, `HandoffSignalKindSchema.chain`) and its 0-based
+   * step. Set alongside {@link parentTaskId} by `HandoffService.dispatchTask`
+   * once ZB-05a threads chain context through — schema-only here, same as
+   * `parentTaskId`.
+   */
+  chain: z.object({ id: z.string().min(1), step: z.number().int().nonnegative() }).optional(),
+  /**
+   * ZB-05a / D-005 — set on the PARENT (never on a subtask) once the chain's
+   * completion emitter (`TaskSchedulerService`'s `emitChainStep`, via
+   * `HandoffService.evaluate`) finds no further hop to dispatch. The read
+   * model's "chain ended" bucket (`TaskParentsService.deriveParentState`) was
+   * schema-only for this ZB-04a and always read as "no chain to end" for a
+   * non-chain parent; a real chain parent now flips to `done` only once every
+   * subtask is done AND this is set — never on a subtask still mid-route.
+   */
+  chainEndedAt: IsoDateTimeSchema.optional(),
+  /**
+   * O-18 — who/what created this task (see {@link TaskSourceSchema}). Stamped by
+   * the creator, never client-asserted for the four server-side legs (Law 4);
+   * the operator/department legs are resolved inside
+   * `TaskSchedulerService.createTask` itself. Absent on every task that
+   * predates this field.
+   */
+  source: TaskSourceSchema.optional(),
+  /**
+   * ZB-04a / O-06 — the department this task's dispatched unit belongs to,
+   * stamped at DISPATCH time (never on creation — a scheduled/held/queued task
+   * has no resolved unit yet) by both the classifier's stage-1 department
+   * verdict and an explicit `@department` target
+   * (`TaskSchedulerService.dispatch`'s `ownerDepartmentOf`). Drives the
+   * `GET /api/tasks/parents` department filter, the department "subtasks" tab
+   * (`GET /api/departments/:id/subtasks`) and spend-by-department (O-06).
+   * Deliberately NOT part of `CreateTaskInput`, the same posture as
+   * {@link roadmapItemId} — this is provenance, server-derived only.
+   */
+  department: DepartmentIdSchema.optional(),
   /** Set on `held`: why the budget guard parked it (e.g. "project-daily cap reached"). */
   heldReason: z.string().optional(),
   /**
@@ -668,7 +764,7 @@ export const CreateTaskInputSchema = z.object({
   /**
    * Task 8: the operator's explicit team tag, carried alongside (never inside)
    * `target` — deliberately NOT a `TaskTarget` variant. `target` answers WHO runs
-   * this (agent/pipeline/goal/subsystem/orchestrator); `teamId` is INTENDED to
+   * this (agent/pipeline/goal/department/orchestrator); `teamId` is INTENDED to
    * answer WHAT it can see, by wiring the `zibby-kb` MCP server's
    * team-knowledge-base scope the same way a chat turn's tagged team does.
    *
@@ -693,6 +789,37 @@ export const CreateTaskInputSchema = z.object({
    * target's `optionalTools` ceiling server-side (never trusted blindly).
    */
   toolGrants: z.array(z.string()).optional(),
+  /**
+   * ZB-04a / D-005 — carried by a server-side subtask dispatch
+   * (`HandoffService.dispatchTask`, ZB-05a): the parent task's id and this
+   * subtask's `{id, step}` on the chain. Both ride straight onto the persisted
+   * {@link ScheduledTaskSchema.parentTaskId} / `.chain`. Never set by the New
+   * Task dialog — there is no UI for it yet, and a stray client-supplied value
+   * only mislabels the read model (Law 4 doesn't strictly apply here the way it
+   * does to `roadmapItemId`, since a wrong parent link is attribution, not an
+   * authorization bypass — but the same discipline is kept: only the ZB-05a
+   * caller sets it).
+   */
+  parentTaskId: z.string().optional(),
+  chain: z.object({ id: z.string().min(1), step: z.number().int().nonnegative() }).optional(),
+  /**
+   * O-18 — the creator's own source stamp (see {@link TaskSourceSchema}). Set by
+   * the three server-side creators this phase wires (channel triage,
+   * automations, handoff); absent from every operator-facing caller, which
+   * `TaskSchedulerService.createTask` then resolves itself (`operator`, or
+   * `department` for an explicit `@department` target).
+   */
+  source: TaskSourceSchema.optional(),
+  /**
+   * ZB-05a / D-005 — carried by `HandoffService.dispatchTask` when a chain hop's
+   * completed step delivered an artifact: threaded into a PIPELINE target's
+   * `PipelineRunnerService.start` `input` param (N2b) so the next hop's first
+   * phase opens on the upstream artifact. Ephemeral (dispatch-time only, like
+   * `routingText`) — not persisted onto {@link ScheduledTaskSchema}, so a
+   * re-dispatch never needs to recover it (a chain step never re-dispatches —
+   * it is always created via the synchronous immediate path).
+   */
+  artifactRef: z.string().min(1).optional(),
 });
 export type CreateTaskInput = z.infer<typeof CreateTaskInputSchema>;
 

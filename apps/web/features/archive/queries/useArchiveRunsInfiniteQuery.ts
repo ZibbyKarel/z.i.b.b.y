@@ -10,14 +10,14 @@ const PAGE_SIZE = 40;
 export interface ArchiveRunsFilter {
   /** Debounced free-text query — the caller owns debouncing the raw input. */
   search: string;
-  /** Subsystem ids (or `NO_SUBSYSTEM`) to narrow to; empty means "all subsystems". */
-  subsystems: readonly string[];
+  /** Department ids (or `NO_DEPARTMENT`) to narrow to; empty means "all departments". */
+  departments: readonly string[];
 }
 
-/** Cache key for one archive filter combination — changing `search` or `subsystems`
+/** Cache key for one archive filter combination — changing `search` or `departments`
  * naturally starts a fresh paginated query (a new key discards the old pages). */
-export function getArchiveRunsQueryKey({ search, subsystems }: ArchiveRunsFilter) {
-  return ["taskRuns", "archive", "list", search, [...subsystems].sort().join(",")] as const;
+export function getArchiveRunsQueryKey({ search, departments }: ArchiveRunsFilter) {
+  return ["taskRuns", "archive", "list", search, [...departments].sort().join(",")] as const;
 }
 
 /** Flatten the loaded pages into one newest-first, runId-deduped run list. */
@@ -38,18 +38,18 @@ function selectArchiveRuns(data: InfiniteData<ArchivePageResponse>): TaskRun[] {
  * The `/archiv` page's flat, lazy-loaded feed: `GET /api/tasks/runs/archive` walked
  * forward as an infinite query. The first page is the newest archived runs;
  * `fetchNextPage` pulls the next (older) page via the opaque `nextCursor`. Search and
- * subsystem filtering both run server-side (`TaskRunsService.listArchivedTaskRuns`),
+ * department filtering both run server-side (`TaskRunsService.listArchivedTaskRuns`),
  * so they reach every archived run, not just whatever page has already loaded —
  * mirrors `useActivityFeedInfiniteQuery`'s cursor-walk shape.
  */
-export function useArchiveRunsInfiniteQuery({ search, subsystems }: ArchiveRunsFilter) {
+export function useArchiveRunsInfiniteQuery({ search, departments }: ArchiveRunsFilter) {
   return apiClient.taskRuns.listArchivedTaskRuns.useInfiniteQuery<TaskRun[], string | undefined>({
-    queryKey: getArchiveRunsQueryKey({ search, subsystems }),
+    queryKey: getArchiveRunsQueryKey({ search, departments }),
     queryData: ({ pageParam }) => ({
       query: {
         limit: PAGE_SIZE,
         ...(search ? { search } : {}),
-        ...(subsystems.length ? { subsystems: subsystems.join(",") } : {}),
+        ...(departments.length ? { departments: departments.join(",") } : {}),
         ...(pageParam ? { before: pageParam } : {}),
       },
     }),

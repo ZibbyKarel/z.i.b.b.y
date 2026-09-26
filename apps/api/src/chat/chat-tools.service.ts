@@ -2,9 +2,9 @@ import { Injectable } from "@nestjs/common";
 import type {
   Briefing,
   CreateTaskResult,
-  SubsystemId,
-  SubsystemState,
-  SubsystemWithStatus,
+  DepartmentId,
+  DepartmentState,
+  DepartmentWithStatus,
   TaskTarget,
 } from "@zibby/contracts";
 import { NoteIdSchema } from "@zibby/contracts";
@@ -13,7 +13,7 @@ import { BriefingService } from "../briefing/briefing.service";
 import { MachineActionRejectedError, MachineService } from "../machine/machine.service";
 import { recallMemory as recallMemoryFromVault } from "../memory/recall.helper";
 import { DuplicateNoteError, VaultService } from "../memory/vault.service";
-import { SubsystemsService } from "../subsystems/subsystems.service";
+import { DepartmentsService } from "../departments/departments.service";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
 import type { ChatCreateTaskMeta } from "./chat-tool-result.registry";
 
@@ -54,11 +54,11 @@ export function personalNoteId(title: string | undefined, now: Date = new Date()
   return NoteIdSchema.safeParse(candidate).success ? candidate : timestampId;
 }
 
-/** Cap on how many recent owner-tagged activity lines the per-subsystem status lists. */
-const MAX_SUBSYSTEM_ACTIVITY_LINES = 3;
+/** Cap on how many recent owner-tagged activity lines the per-department status lists. */
+const MAX_DEPARTMENT_ACTIVITY_LINES = 3;
 
-/** NS2 F3c — the Czech state phrase for a per-subsystem status answer. */
-const SUBSYSTEM_STATE_LABEL: Record<SubsystemState, string> = {
+/** NS2 F3c — the Czech state phrase for a per-department status answer. */
+const DEPARTMENT_STATE_LABEL: Record<DepartmentState, string> = {
   idle: "v klidu",
   running: "právě pracuje",
   report: "má nové reporty",
@@ -81,9 +81,9 @@ export class ChatToolsService {
     private readonly vault: VaultService,
     private readonly briefing: BriefingService,
     private readonly machine: MachineService,
-    // NS2 F3c — the per-subsystem `get_status` lens (SubsystemsModule import;
+    // NS2 F3c — the per-department `get_status` lens (DepartmentsModule import;
     // ActivityLogService comes from the @Global activity module).
-    private readonly subsystems: SubsystemsService,
+    private readonly departments: DepartmentsService,
     private readonly activity: ActivityLogService,
   ) {}
 
@@ -142,21 +142,21 @@ export class ChatToolsService {
 
   /**
    * Summarize what's happening right now — pending decisions + what ZIBBY is
-   * watching. NS2 F3c: with a `subsystem` argument ("co dělá Forge?") the answer
-   * narrows to that one subsystem — its live state, tier counts, and the most
+   * watching. NS2 F3c: with a `department` argument ("co dělá Dev?") the answer
+   * narrows to that one department — its live state, tier counts, and the most
    * recent owner-tagged activity lines; without one, the global briefing summary
    * is unchanged.
    */
-  async getStatus(subsystem?: SubsystemId): Promise<string> {
-    if (subsystem) return this.subsystemStatus(subsystem);
+  async getStatus(department?: DepartmentId): Promise<string> {
+    if (department) return this.departmentStatus(department);
     const briefing: Briefing = await this.briefing.assemble();
     return summarizeBriefing(briefing);
   }
 
-  /** The per-subsystem Czech status answer: state + counts + recent owned activity. */
-  private async subsystemStatus(id: SubsystemId): Promise<string> {
-    const row: SubsystemWithStatus = await this.subsystems.get(id);
-    const parts: string[] = [`${row.name} — ${SUBSYSTEM_STATE_LABEL[row.state]}.`];
+  /** The per-department Czech status answer: state + counts + recent owned activity. */
+  private async departmentStatus(id: DepartmentId): Promise<string> {
+    const row: DepartmentWithStatus = await this.departments.get(id);
+    const parts: string[] = [`${row.name} — ${DEPARTMENT_STATE_LABEL[row.state]}.`];
     if (row.tier3Count > 0) {
       parts.push(`Čeká na tebe: ${row.tier3Count} (rozhodnutí ve frontě schválení).`);
     }
@@ -166,12 +166,12 @@ export class ChatToolsService {
     if (row.tier3Count === 0 && row.tier2Count === 0) {
       parts.push("Nic z něj teď nečeká na tvou pozornost.");
     }
-    // Recent owner-tagged activity (F2c's `refs.ownerSubsystem`), best-effort —
+    // Recent owner-tagged activity (F2c's `refs.department`), best-effort —
     // a failed read degrades to no activity lines, never a failed answer.
     const recent = await this.activity.list({ limit: 50 }).catch(() => []);
     const owned = recent
-      .filter((e) => e.refs.ownerSubsystem === id)
-      .slice(0, MAX_SUBSYSTEM_ACTIVITY_LINES);
+      .filter((e) => e.refs.department === id)
+      .slice(0, MAX_DEPARTMENT_ACTIVITY_LINES);
     if (owned.length > 0) {
       parts.push("Poslední aktivita:", ...owned.map((e) => `- ${e.summary}`));
     }
@@ -268,8 +268,10 @@ export function describeTarget(target: TaskTarget): string {
       return `pipeline ${target.name}`;
     case "goal":
       return `cíl ${target.name}`;
-    case "subsystem":
-      return `podsystém ${target.name}`;
+    case "department":
+      return `oddělení ${target.name}`;
+    case "chain":
+      return `řetězec ${target.name}`;
     case "orchestrator":
       return "orchestrátor";
   }

@@ -20,22 +20,22 @@ const SignalKindListSchema = z.array(HandoffSignalKindSchema);
  * The B1 seed table (design doc
  * `docs/superpowers/specs/2026-07-22-handoff-signal-registry-and-receiver-filter-design.md`,
  * Slot B → B1): the 7 signal kinds the 4 existing producers already emit —
- * Sentinel (`cve`/`secret`), Maestro (`post-merge-red`), Loom
- * (`god-node`/`community`/`cycle`), Scout (`research-artifact`). Labels/
+ * Security (`cve`/`secret`), Release (`post-merge-red`), Arch
+ * (`god-node`/`community`/`cycle`), Research (`research-artifact`). Labels/
  * descriptions are the canonical English strings from
- * `apps/web/i18n/messages/en.json`'s `subsystems.handoff.signalKind[Desc]` keys,
+ * `apps/web/i18n/messages/en.json`'s `departments.handoff.signalKind[Desc]` keys,
  * kept verbatim so server and web agree. `severityBearing` is verified against
  * each producer's actual `toSignal`/`evaluate` call site, not assumed: ONLY
- * `cve` (`sentinel.service.ts`'s `toSignal`, via `SEVERITY_MAP`) sets
+ * `cve` (`security.service.ts`'s `toSignal`, via `SEVERITY_MAP`) sets
  * `HandoffSignal.severity` — `secret` (same file), `post-merge-red`
- * (`post-merge-watch.service.ts`'s `dispatchFix`), and all three Loom kinds
- * (`loom.service.ts`'s `toSignal`) and `research-artifact`
- * (`pipeline-runner.service.ts`'s Scout delivery hook) omit it entirely.
+ * (`post-merge-watch.service.ts`'s `dispatchFix`), and all three Arch kinds
+ * (`arch.service.ts`'s `toSignal`) and `research-artifact`
+ * (`pipeline-runner.service.ts`'s Research delivery hook) omit it entirely.
  */
 export const SYSTEM_SIGNAL_KINDS: readonly HandoffSignalKind[] = [
   {
     id: "cve",
-    from: "sentinel",
+    from: "sec",
     label: "Vulnerability (CVE)",
     description: "A vulnerability found in a project dependency.",
     severityBearing: true,
@@ -44,7 +44,7 @@ export const SYSTEM_SIGNAL_KINDS: readonly HandoffSignalKind[] = [
   },
   {
     id: "secret",
-    from: "sentinel",
+    from: "sec",
     label: "Leaked secret",
     description: "A secret key or password leaked in code.",
     severityBearing: false,
@@ -53,7 +53,7 @@ export const SYSTEM_SIGNAL_KINDS: readonly HandoffSignalKind[] = [
   },
   {
     id: "post-merge-red",
-    from: "maestro",
+    from: "rel",
     label: "Red CI after merge",
     description: "CI failed after a PR was merged.",
     severityBearing: false,
@@ -62,7 +62,7 @@ export const SYSTEM_SIGNAL_KINDS: readonly HandoffSignalKind[] = [
   },
   {
     id: "god-node",
-    from: "loom",
+    from: "qa",
     label: "Graph god-node",
     description: "A highly connected node in the code graph.",
     severityBearing: false,
@@ -71,7 +71,7 @@ export const SYSTEM_SIGNAL_KINDS: readonly HandoffSignalKind[] = [
   },
   {
     id: "community",
-    from: "loom",
+    from: "qa",
     label: "Graph community",
     description: "A newly detected community in the graph.",
     severityBearing: false,
@@ -80,7 +80,7 @@ export const SYSTEM_SIGNAL_KINDS: readonly HandoffSignalKind[] = [
   },
   {
     id: "cycle",
-    from: "loom",
+    from: "qa",
     label: "Dependency cycle",
     description: "A cyclic dependency between modules.",
     severityBearing: false,
@@ -89,7 +89,7 @@ export const SYSTEM_SIGNAL_KINDS: readonly HandoffSignalKind[] = [
   },
   {
     id: "research-artifact",
-    from: "scout",
+    from: "rnd",
     label: "Research artifact",
     description: "A completed research artifact.",
     severityBearing: false,
@@ -108,7 +108,7 @@ export const SYSTEM_SIGNAL_KINDS: readonly HandoffSignalKind[] = [
  * built-in, regardless of what the input carries); `update` preserves the
  * stored `status`/`system`/`buildTaskId` verbatim; `delete`/`update` on a
  * `system: true` row throws {@link SystemSignalKindError}. `markBuildTask`
- * links a freshly-created kind to the Forge build task the service (B1's
+ * links a freshly-created kind to the Dev build task the service (B1's
  * `SignalKindService`) spawns for it.
  */
 @Injectable()
@@ -187,7 +187,7 @@ export class HandoffSignalKindStore implements OnModuleInit {
     await this.write(kinds.filter((k) => k.id !== id));
   }
 
-  /** Link a signal kind to its Forge build task id (set once, right after `create`). */
+  /** Link a signal kind to its Dev build task id (set once, right after `create`). */
   async markBuildTask(id: string, buildTaskId: string): Promise<void> {
     const kinds = await this.list();
     const index = kinds.findIndex((k) => k.id === id);
@@ -197,6 +197,30 @@ export class HandoffSignalKindStore implements OnModuleInit {
     const next = [...kinds];
     next[index] = { ...existing, buildTaskId };
     await this.write(next);
+  }
+
+  /** A single kind by id, or `undefined` — ZB-05a's chain lookups (bypasses the general list+find at call sites). */
+  async getRaw(id: string): Promise<HandoffSignalKind | undefined> {
+    return (await this.list()).find((k) => k.id === id);
+  }
+
+  /**
+   * ZB-05a / D-005 — create-or-replace a CHAIN kind at a caller-given id (the
+   * `PUT /api/handoff/chains/:id` id), unlike {@link create}'s slugified,
+   * server-minted id for the general registry. `ChainsService` is the only
+   * caller — it builds the full row (including a stable `status`) itself.
+   */
+  async upsertChainKind(kind: HandoffSignalKind): Promise<void> {
+    const kinds = await this.list();
+    const index = kinds.findIndex((k) => k.id === kind.id);
+    const next = index === -1 ? [...kinds, kind] : kinds.map((k, i) => (i === index ? kind : k));
+    await this.write(next);
+  }
+
+  /** ZB-05a — remove a chain kind row (the rules half is `HandoffRuleStore.replaceForSignalKind`). */
+  async deleteChainKind(id: string): Promise<void> {
+    const kinds = await this.list();
+    await this.write(kinds.filter((k) => k.id !== id));
   }
 
   /**

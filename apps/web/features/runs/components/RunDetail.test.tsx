@@ -159,7 +159,7 @@ describe("RunDetail — pipeline header", () => {
       ],
     });
     await userEvent.click(screen.getByText("Vstup"));
-    const links = screen.getAllByTestId("attachment-open-link");
+    const links = screen.getAllByTestId(FilePreviewTestId.Link);
     expect(links).toHaveLength(2);
     expect(links[0]).toHaveAttribute(
       "href",
@@ -179,7 +179,7 @@ describe("RunDetail — pipeline header", () => {
       attachments: [{ name: "spec.pdf", size: 100 }],
     });
     await userEvent.click(screen.getByText("Vstup"));
-    expect(screen.queryByTestId("attachment-open-link")).not.toBeInTheDocument();
+    expect(screen.queryByTestId(FilePreviewTestId.Link)).not.toBeInTheDocument();
     expect(screen.getByTestId(FilePreviewTestId.Name)).toBeInTheDocument();
   });
 
@@ -528,15 +528,15 @@ describe("RunDetail — started time is absolute, not relative (Phase 67 item A)
 });
 
 describe("RunDetail — classification trace (F2c)", () => {
-  it("renders the switchboard trace, subsystem hop, and confidence when the run carries one", () => {
+  it("renders the switchboard trace, department hop, and confidence when the run carries one", () => {
     renderDetail({
       ...pipelineRun,
       classification: {
-        stage1: { kind: "subsystem", id: "forge", name: "Forge" },
+        stage1: { kind: "department", id: "dev", name: "Dev" },
         confidence: 0.82,
         reason: "matched keywords: fix, bug",
         matchedTerms: ["fix", "bug"],
-        subsystem: "forge",
+        department: "dev",
       },
     });
     expect(screen.getByTestId("classification-trace")).toBeInTheDocument();
@@ -558,7 +558,7 @@ describe("RunDetail — project meta cell links to project detail (Phase 67 item
   it("links the project meta cell to its detail page when the run carries a projectId", async () => {
     renderDetail({ ...pipelineRun, project: "Acme", projectId: "alpha" });
     await userEvent.click(screen.getByTestId("run-project-link"));
-    expect(push).toHaveBeenCalledWith("/projects/alpha");
+    expect(push).toHaveBeenCalledWith("/work/projects/alpha");
   });
 
   it("shows the assign control (not a link) for a project-less run", () => {
@@ -581,7 +581,7 @@ describe("RunDetail — roadmap issue meta cell (the run -> issue half of the li
       roadmapItemLabel: "CZ3TDR1-524",
     });
     await userEvent.click(screen.getByTestId("run-roadmap-item-link"));
-    expect(push).toHaveBeenCalledWith("/projects/alpha?tab=roadmap&item=alpha-jira-cz3tdr1-524");
+    expect(push).toHaveBeenCalledWith("/work/projects/alpha/roadmap?item=alpha-jira-cz3tdr1-524");
   });
 
   it("falls back to the raw item id when no label was snapshotted", () => {

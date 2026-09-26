@@ -21,7 +21,7 @@ export interface LoadErrorProps {
  */
 export function LoadError({ title, description, retryLabel, onRetry }: LoadErrorProps) {
   return (
-    <Card background="glass" borderStyle="dashed" data-testid={LoadErrorTestId.Root}>
+    <Card background="panel" borderStyle="dashed" data-testid={LoadErrorTestId.Root}>
       <Container padding={["500", "300"]} textAlign="center">
         <Stack align="center" gap="150">
           <Icon name="warn" size="xl" tone="warn" />

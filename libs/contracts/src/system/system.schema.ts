@@ -84,6 +84,17 @@ export const SystemConfigSchema = z
      * `SystemConfigStore.current()`.
      */
     roadmapTickMs: z.number().int().min(0).default(60_000),
+    /**
+     * O-21: the ZibbyCorp header's "CEO" identity and brand name. Both additive and
+     * optional (no default here — an absent value reads as `undefined`, not a
+     * schema-picked string) because the real default is presentation-layer: the
+     * header shows `operatorName ?? "CEO"`, and the shipped `companyName` fallback
+     * is `"ZibbyCorp"`. Nothing seeds `operatorName` from the git user automatically
+     * (that would silently expose git config); the operator sets it once from
+     * `/system/settings/general`.
+     */
+    operatorName: z.string().min(1).optional(),
+    companyName: z.string().min(1).optional(),
   })
   .strict();
 export type SystemConfig = z.infer<typeof SystemConfigSchema>;

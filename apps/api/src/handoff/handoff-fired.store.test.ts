@@ -39,4 +39,12 @@ describe("HandoffFiredStore", () => {
     await fs.writeFile(path.join(dir, "rule-a.json"), "not json{{{");
     expect(await store.hasFired("rule-a", "fp-1")).toBe(false);
   });
+
+  it("ZB-05a — a chain rule id (`chainId:index`) dedups exactly like any other rule id", async () => {
+    // Regression: `chainToRules` mints ids like "c1:0" — these must not fail the
+    // filename guard silently (that would make the fingerprint dedup a no-op).
+    await store.markFired("c1:0", "parent-1:0");
+    expect(await store.hasFired("c1:0", "parent-1:0")).toBe(true);
+    expect(await store.hasFired("c1:1", "parent-1:0")).toBe(false);
+  });
 });

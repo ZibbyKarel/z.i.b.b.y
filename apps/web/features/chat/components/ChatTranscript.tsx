@@ -16,6 +16,8 @@ export interface ChatTranscriptProps {
   liveToolEvents?: ChatToolEvent[];
   /** Whether the live assistant turn is still streaming tokens. */
   streaming?: boolean;
+  /** ZB-12 — forwarded to each settled assistant turn's "CREATE TASK" action. */
+  onCreateTask?: (text: string) => void;
 }
 
 /**
@@ -30,6 +32,7 @@ export function ChatTranscript({
   liveText,
   liveToolEvents,
   streaming,
+  onCreateTask,
 }: ChatTranscriptProps) {
   const hasLive =
     Boolean(streaming) && ((liveText ?? "").length > 0 || (liveToolEvents?.length ?? 0) > 0);
@@ -42,6 +45,7 @@ export function ChatTranscript({
         <ChatMessage
           briefing={message.briefing}
           key={message.id}
+          onCreateTask={onCreateTask}
           role={message.role}
           text={message.text}
           toolEvents={message.toolEvents}

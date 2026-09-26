@@ -1,7 +1,14 @@
 import { useTranslations } from "next-intl";
-import { Button, Stack, StatusDot, Tag, Toggle, Typography } from "@zibby/design-system";
+import {
+  Button,
+  EntityCard,
+  Stack,
+  StatusDot,
+  Tag,
+  Toggle,
+  Typography,
+} from "@zibby/design-system";
 import type { Integration, IntegrationKind } from "@zibby/contracts";
-import { HudCard } from "../../../components/HudCard/HudCard";
 import { INTEGRATION_STATUS } from "../integrationStatus";
 
 export interface IntegrationCardProps {
@@ -59,7 +66,7 @@ function lastSyncCaption(iso: string | undefined): string {
 
 /**
  * Catalog card for a single integration: a thin container over the generic
- * {@link HudCard}. The status chip + dot are driven by the entity's real
+ * {@link EntityCard}. The status chip + dot are driven by the entity's real
  * connection `status`, the footer shows the last sync time and the configured
  * channel/host, and the actions test the connection or open the editor.
  */
@@ -90,7 +97,7 @@ export function IntegrationCard({
               : `${config.org}/${config.project}`;
 
   return (
-    <HudCard
+    <EntityCard
       actions={
         // Compact two-row footer so the card reads cleanly in a narrow grid column:
         // the last-sync time always on its own line, then the controls (test/configure

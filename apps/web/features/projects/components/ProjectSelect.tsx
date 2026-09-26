@@ -4,7 +4,7 @@ import { Dropdown, type DropdownOption, type DropdownSize } from "@zibby/design-
 import { useTranslations } from "next-intl";
 
 /**
- * Sentinel for "Bez projektu" (no-project). The DS `Dropdown` is a single-select
+ * Security for "Bez projektu" (no-project). The DS `Dropdown` is a single-select
  * over string values and real project ids are non-empty, so `""` is safe.
  */
 export const NO_PROJECT = "";
@@ -26,7 +26,7 @@ export interface ProjectSelectProps {
   /** The project registry — every host reads its own copy of `useProjectsQuery()`. */
   projects: { id: string; name: string }[];
   /** Commits a pick straight to the caller's `setActiveProject` (already `null`
-   *  for "Bez projektu" — the `NO_PROJECT` sentinel is resolved here). */
+   *  for "Bez projektu" — the `NO_PROJECT` security is resolved here). */
   onChange: (id: string | null) => void;
   size?: DropdownSize;
   "aria-label"?: string;

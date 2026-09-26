@@ -17,7 +17,6 @@ tools:
   - Grep
 category: Specialized Domains
 gates: []
-ownerSubsystem: hearth
 ---
 
 You are ZIBBY's personal assistant — the working hands of **hearth**, the

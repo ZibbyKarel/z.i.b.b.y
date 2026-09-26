@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="padding:24px 28px;display:flex;flex-direction:column;gap:22px;color:var(--ink)">
+
+<sc-if value="{{ isBudgets }}" hint-placeholder-val="{{ true }}">
+  <div data-screen-label="Budgets" style="display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">LEDGER — BUDGETS</span><h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">Run caps</h1><span style="font-size:14px;color:var(--ink2)">Managed by Finance. When a cap is hit, new runs wait in NEEDS YOU.</span></div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">
+      <sc-for list="{{ caps }}" as="c" hint-placeholder-count="3">
+        <div style="border:1px solid var(--line);background:var(--panel);padding:16px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>{{ c.label }}</span><span>{{ c.pct }}</span></div>
+          <span style="font-size:28px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.01em">{{ c.used }} <span style="font-size:14px;color:var(--ink2)">/ {{ c.cap }} runs</span></span>
+          <div style="height:2px;background:var(--line)"><div style="height:2px;width:{{ c.pct }};background:var(--ink)"></div></div>
+          <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2)">{{ c.meta }}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="border:1px solid var(--line);background:var(--panel)">
+      <div style="display:grid;grid-template-columns:50px minmax(0,1.4fr) minmax(0,2fr) 70px 110px;gap:14px;padding:9px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>CODE</span><span>DEPARTMENT</span><span>TODAY</span><span style="text-align:right">USED</span><span>DAILY CAP</span></div>
+      <sc-for list="{{ depts }}" as="d" hint-placeholder-count="11">
+        <div style="display:grid;grid-template-columns:50px minmax(0,1.4fr) minmax(0,2fr) 70px 110px;gap:14px;align-items:center;padding:9px 14px;border-bottom:1px solid var(--line)">
+          <span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--ink3)">{{ d.code }}</span><span style="font-size:13px">{{ d.name }}</span>
+          <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:2px;background:var(--line)"><div style="height:2px;width:{{ d.pct }};background:var(--ink)"></div></div>{{ d.dot }}</div>
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;text-align:right;font-variant-numeric:tabular-nums">{{ d.used }} · {{ d.pct }}</span>
+          <input type="number" value="{{ d.cap }}" onChange="{{ d.onCap }}" style="height:28px;width:90px;box-sizing:border-box;border:1px solid var(--line2);background:var(--bg);padding:0 8px;font-family:'Geist Mono',monospace;font-size:11px;outline:none">
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isSpend }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Spend" style="display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">LEDGER — SPEND</span><h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">{{ todayStr }} today</h1></div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">
+      <sc-for list="{{ meters }}" as="m" hint-placeholder-count="3">
+        <div style="position:relative;border:1px solid {{ m.line }};background:var(--panel);padding:16px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>{{ m.label }}</span><span style="display:flex;align-items:center;gap:6px;color:var(--ink)">{{ m.dot }}{{ m.stateU }}</span></div>
+          <span style="font-size:28px;font-weight:500;font-variant-numeric:tabular-nums">{{ m.value }}</span>
+          <div style="position:relative;height:6px;background:var(--line)"><div style="height:6px;width:{{ m.pct }};background:var(--ink)"></div><div style="position:absolute;top:-3px;bottom:-3px;left:{{ warnPct }};width:1px;background:var(--ink2)"></div><div style="position:absolute;top:-3px;bottom:-3px;left:{{ stopPct }};width:1px;background:var(--ink)"></div></div>
+          <span style="font-size:12px;color:var(--ink2)">{{ m.note }}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;align-items:start">
+      <div style="border:1px solid var(--line);background:var(--panel)">
+        <div style="padding:12px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">SPEND BY DEPARTMENT · TODAY</div>
+        <sc-for list="{{ byDept }}" as="d" hint-placeholder-count="11">
+          <div style="display:grid;grid-template-columns:50px minmax(0,1fr) minmax(0,2fr) 60px;gap:12px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--line)"><span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--ink3)">{{ d.code }}</span><span style="font-size:13px">{{ d.name }}</span><div style="height:8px;background:var(--panel2)"><div style="height:8px;width:{{ d.pct }};background:var(--ink)"></div></div><span style="font-family:'Geist Mono',monospace;font-size:11px;text-align:right">{{ d.v }}</span></div>
+        </sc-for>
+      </div>
+      <div style="border:1px solid var(--ink);background:var(--panel);padding:16px;display:flex;flex-direction:column;gap:16px">
+        <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">THRESHOLDS</span>
+        <sc-for list="{{ thresholds }}" as="t" hint-placeholder-count="2">
+          <div style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;justify-content:space-between;font-size:13px"><span>{{ t.label }}</span><span style="font-family:'Geist Mono',monospace;font-size:12px">{{ t.v }}%</span></div><input type="range" min="50" max="100" value="{{ t.v }}" onChange="{{ t.onChange }}" style="width:100%;accent-color:var(--ink)"><span style="font-size:12px;color:var(--ink2)">{{ t.note }}</span></div>
+        </sc-for>
+        <div style="display:flex;flex-direction:column;gap:6px;padding-top:12px;border-top:1px solid var(--line)"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">AGENT SDK CREDIT · MONTHLY CAP</span><div style="display:flex;gap:8px"><input type="number" value="{{ sdkCap }}" onChange="{{ onSdkCap }}" style="height:34px;width:120px;box-sizing:border-box;border:1px solid var(--line2);background:var(--bg);padding:0 10px;font-size:13px;outline:none"><span style="align-self:center;font-size:12px;color:var(--ink2)">Raising the cap still goes through NEEDS YOU.</span></div></div>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;route&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;go&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(r:string)=&gt;void&quot;},&quot;tick&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;number&quot;}}">
+class Component extends DCLogic {
+  componentDidMount() { this.p = setInterval(() => { if (window.ZC) { clearInterval(this.p); this.forceUpdate(); } }, 50); }
+  componentWillUnmount() { clearInterval(this.p); }
+  renderVals() {
+    const Z = window.ZC, B = window.ZB;
+    const empty = { caps: [], depts: [], meters: [], byDept: [], thresholds: [] };
+    if (!Z || !B) return empty;
+    const parts = (this.props.route || 'ledger/budgets').split('/'), v = parts[1] || 'budgets';
+    const out = { ...empty, isBudgets: v === 'budgets', isSpend: v === 'spend' };
+    const S = Z.spend, lvl = p => p >= S.stop ? 'error' : p >= S.warn ? 'blocked' : 'working';
+    if (out.isBudgets) {
+      const meta = { day: 'RESETS 00:00 UTC', week: 'RESETS MONDAY', month: 'RESETS 1 OCTOBER' };
+      out.caps = ['day','week','month'].map(k => { const [u, c] = Z.budget[k]; return { label: k.toUpperCase() + ' CAP', used: u.toLocaleString('en'), cap: c.toLocaleString('en'), pct: Math.round(u / c * 100) + '%', meta: meta[k] }; });
+      out.depts = Z.depts.map(d => { const b = Z.deptBudget[d.id], p = Math.round(b[0] / b[1] * 100); return { code: d.code, name: d.name, used: b[0], cap: b[1], pct: Math.min(100, p) + '%', dot: B.dot(React, lvl(p), 7), onCap: e => { b[1] = Math.max(1, +e.target.value || 1); this.forceUpdate(); } }; });
+    }
+    if (out.isSpend) {
+      out.todayStr = '$' + S.today.toFixed(2);
+      out.warnPct = S.warn + '%'; out.stopPct = S.stop + '%';
+      const sdkP = S.sdk[0] / S.sdk[1] * 100;
+      out.meters = [['SUBSCRIPTION · 5H WINDOW', S.sub5h, S.sub5h + '%', 'Resets in 2 h 14 min'], ['SUBSCRIPTION · WEEK', S.subWeek, S.subWeek + '%', 'Resets Monday 00:00'], ['AGENT SDK CREDIT · MONTH', sdkP, '$' + S.sdk[0].toFixed(2) + ' / $' + S.sdk[1].toFixed(0), 'Used when the subscription window is exhausted']]
+        .map(([label, p, value, note]) => { const k = lvl(p); return { label, value, note, pct: Math.min(100, p) + '%', dot: B.dot(React, k, 7), stateU: k === 'error' ? 'STOPPED' : k === 'blocked' ? 'WARNING' : 'OK', line: k === 'working' ? 'var(--line)' : 'var(--ink)' }; });
+      const mx = Math.max(...Object.values(S.byDept));
+      out.byDept = Z.depts.map(d => ({ code: d.code, name: d.name, v: '$' + S.byDept[d.id].toFixed(2), pct: Math.round(S.byDept[d.id] / mx * 100) + '%' }));
+      out.thresholds = [['Warn at', 'warn', 'Finance posts a note to the briefing and the header bar turns amber.'], ['Stop at', 'stop', 'New runs pause and wait in NEEDS YOU.']]
+        .map(([label, k, note]) => ({ label, v: S[k], note, onChange: e => { S[k] = +e.target.value; this.forceUpdate(); Z.emit(); } }));
+      out.sdkCap = S.sdk[1]; out.onSdkCap = e => { S.sdk[1] = Math.max(1, +e.target.value || 1); this.forceUpdate(); };
+    }
+    return out;
+  }
+}
+</script>
+</body>
+</html>

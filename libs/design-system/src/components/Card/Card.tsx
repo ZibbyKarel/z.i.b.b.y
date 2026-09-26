@@ -4,7 +4,7 @@ import { focusRing } from "../../utils/focus";
 import { Container } from "../Container/Container";
 import { Row } from "../Stack/Stack";
 import { type Padding, type Spacing, spacingToPx } from "../../tokens";
-import type { StateTone } from "../../stateTone";
+import { type AnyStateTone, type StateTone, normalizeStateTone } from "../../stateTone";
 import { LivingGlow } from "../LivingGlow/LivingGlow";
 
 export enum CardTestId {
@@ -16,15 +16,21 @@ export enum CardTestId {
   Corner = "card-corner",
 }
 
-/** The HUD bracket tone — the canonical {@link StateTone} vocabulary. */
-export type CornersTone = StateTone;
+/** The bracket tone — accepts both the canonical vocabulary and the legacy one
+ *  (see {@link AnyStateTone}); resolved via {@link normalizeStateTone}. */
+export type CornersTone = AnyStateTone;
 
-const cornersToneClass: Record<CornersTone, string> = {
-  accent: "border-accent",
-  bad: "border-bad",
-  ok: "border-ok",
-  warn: "border-warn",
-  run: "border-run",
+/** Keyed by the canonical `StateTone` — legacy classes reused where the color is
+ * identical (LEGACY_TONE_MAP): thinking→accent, blocked→warn, error→bad, done→ok,
+ * working→run. `idle` renders in plain `--ink` (DS.md §6) — the generic framing
+ * device for a focus object with no particular live state, not a dimmed tone. */
+const cornersToneClass: Record<StateTone, string> = {
+  thinking: "border-accent",
+  blocked: "border-warn",
+  error: "border-bad",
+  done: "border-ok",
+  working: "border-run",
+  idle: "border-ink",
 };
 
 export interface CornersProps {
@@ -32,33 +38,38 @@ export interface CornersProps {
   tone?: CornersTone;
 }
 
-/** HUD bracket marks — the signature of a live panel; never decorative. */
-export function Corners({ inset = "75", tone = "accent" }: CornersProps) {
+/**
+ * DS.md §6 corner brackets — four 8–10px L-shaped marks, `1px solid --ink` by
+ * default, tone-tinted only for genuinely live objects (a running task's hero,
+ * a `Panel live`). The signature framing device for a focus object.
+ */
+export function Corners({ inset = "100", tone = "idle" }: CornersProps) {
   const px = spacingToPx(inset);
-  const base = cn("pointer-events-none absolute h-2.5 w-2.5 opacity-55", cornersToneClass[tone]);
+  const resolvedTone = normalizeStateTone(tone);
+  const base = cn("pointer-events-none absolute h-2 w-2", cornersToneClass[resolvedTone]);
   return (
     <>
       <span
         aria-hidden="true"
-        className={cn(base, "border-t-[1.5px] border-l-[1.5px]")}
+        className={cn(base, "border-t border-l")}
         data-testid={CardTestId.Corner}
         style={{ top: px, left: px }}
       />
       <span
         aria-hidden="true"
-        className={cn(base, "border-t-[1.5px] border-r-[1.5px]")}
+        className={cn(base, "border-t border-r")}
         data-testid={CardTestId.Corner}
         style={{ top: px, right: px }}
       />
       <span
         aria-hidden="true"
-        className={cn(base, "border-b-[1.5px] border-l-[1.5px]")}
+        className={cn(base, "border-b border-l")}
         data-testid={CardTestId.Corner}
         style={{ bottom: px, left: px }}
       />
       <span
         aria-hidden="true"
-        className={cn(base, "border-b-[1.5px] border-r-[1.5px]")}
+        className={cn(base, "border-b border-r")}
         data-testid={CardTestId.Corner}
         style={{ bottom: px, right: px }}
       />
@@ -67,7 +78,7 @@ export function Corners({ inset = "75", tone = "accent" }: CornersProps) {
 }
 
 export interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, "className"> {
-  background?: "elevated" | "raised" | "surface" | "panel" | "glass" | "background" | "accent";
+  background?: "elevated" | "raised" | "surface" | "panel" | "background" | "accent";
   bordered?: boolean;
   borderStyle?: "solid" | "dashed";
   /** One step above surface — elevated background, strong border, elevation shadow.
@@ -81,7 +92,7 @@ export interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, "classNa
   animate?: "none" | "fade" | "scale";
   corners?: boolean;
   /** Toned emphasis: colours the border, corners and adds a faint ring glow. */
-  tone?: StateTone;
+  tone?: AnyStateTone;
   /** Make the tone emphasis *live*: swap the static ring for the shared animated
    *  {@link LivingGlow} pulse (same primitive the Chat-UI orb reuses). Requires `tone`. */
   living?: boolean;
@@ -100,7 +111,7 @@ export interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, "classNa
    * state at a glance without claiming to be "live". Combine with `tone` +
    * `living` on a genuinely in-flight card for the glow on top of the bar.
    */
-  edge?: StateTone;
+  edge?: AnyStateTone;
   header?: ReactNode;
   footer?: ReactNode;
   ref?: Ref<HTMLDivElement>;
@@ -111,7 +122,6 @@ const bgClasses: Record<NonNullable<CardProps["background"]>, string> = {
   raised: "bg-raised",
   surface: "bg-surface",
   panel: "bg-surface-panel",
-  glass: "bg-surface-glass",
   background: "bg-background",
   /** A faint accent-tinted surface (Phase 33's Chat message backgrounds) —
    *  distinguishes a role/state at a glance without a border or glow. */
@@ -138,28 +148,36 @@ const animateClasses: Record<NonNullable<CardProps["animate"]>, string> = {
   scale: "animate-scale-in",
 };
 
-const toneBorder: Record<NonNullable<CardProps["tone"]>, string> = {
-  accent: "border-accent/30",
-  ok: "border-ok/30",
-  warn: "border-warn/30",
-  bad: "border-bad/30",
-  run: "border-run/30",
+// All three maps below are keyed by the canonical `StateTone` — `tone`/`edge`
+// are normalized via `normalizeStateTone` before indexing (see `Card()`). Legacy
+// classes are reused where the color is identical (LEGACY_TONE_MAP): thinking→
+// accent, blocked→warn, error→bad, done→ok, working→run. Only `idle` needed a
+// new class (no legacy tone mapped to it).
+const toneBorder: Record<StateTone, string> = {
+  thinking: "border-accent/30",
+  done: "border-ok/30",
+  blocked: "border-warn/30",
+  error: "border-bad/30",
+  working: "border-run/30",
+  idle: "border-state-idle/30",
 };
 
-const toneGlow: Record<NonNullable<CardProps["tone"]>, string> = {
-  accent: "shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-accent)_12%,transparent)]",
-  ok: "shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-ok)_12%,transparent)]",
-  warn: "shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-warn)_12%,transparent)]",
-  bad: "shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-bad)_12%,transparent)]",
-  run: "shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-run)_12%,transparent)]",
+const toneGlow: Record<StateTone, string> = {
+  thinking: "shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-accent)_12%,transparent)]",
+  done: "shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-ok)_12%,transparent)]",
+  blocked: "shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-warn)_12%,transparent)]",
+  error: "shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-bad)_12%,transparent)]",
+  working: "shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-run)_12%,transparent)]",
+  idle: "shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-state-idle)_12%,transparent)]",
 };
 
-const edgeClass: Record<NonNullable<CardProps["edge"]>, string> = {
-  accent: "bg-accent",
-  ok: "bg-ok",
-  warn: "bg-warn",
-  bad: "bg-bad",
-  run: "bg-run",
+const edgeClass: Record<StateTone, string> = {
+  thinking: "bg-accent",
+  done: "bg-ok",
+  blocked: "bg-warn",
+  error: "bg-bad",
+  working: "bg-run",
+  idle: "bg-state-idle",
 };
 
 export function Card({
@@ -185,6 +203,8 @@ export function Card({
   ref,
   ...rest
 }: CardProps) {
+  const resolvedTone = tone ? normalizeStateTone(tone) : undefined;
+  const resolvedEdge = edge ? normalizeStateTone(edge) : undefined;
   return (
     <Tag
       data-testid={CardTestId.Root}
@@ -202,13 +222,13 @@ export function Card({
         animateClasses[animate],
         clip && "overflow-hidden",
         bordered &&
-          (tone
-            ? toneBorder[tone]
+          (resolvedTone
+            ? toneBorder[resolvedTone]
             : elevated
               ? "border border-border-strong"
               : "border border-border"),
-        bordered && tone && "border",
-        tone && !living && toneGlow[tone],
+        bordered && resolvedTone && "border",
+        resolvedTone && !living && toneGlow[resolvedTone],
         borderStyle === "dashed" && "border-dashed",
         Tag === "button" && cn("w-full text-left cursor-pointer", focusRing),
         interactive &&
@@ -218,14 +238,14 @@ export function Card({
       ref={ref as Ref<HTMLDivElement & HTMLButtonElement>}
       type={Tag === "button" ? (type ?? "button") : undefined}
     >
-      {tone && living && <LivingGlow radius={radius} tone={tone} />}
-      {corners && <Corners inset="75" tone={tone ?? "accent"} />}
-      {edge && (
+      {resolvedTone && living && <LivingGlow radius={radius} tone={resolvedTone} />}
+      {corners && <Corners inset="100" tone={resolvedTone ?? "idle"} />}
+      {resolvedEdge && (
         <span
           aria-hidden
           className={cn(
             "pointer-events-none absolute inset-y-0 left-0 w-[3px] rounded-l-[inherit]",
-            edgeClass[edge],
+            edgeClass[resolvedEdge],
           )}
           data-testid={CardTestId.Edge}
         />

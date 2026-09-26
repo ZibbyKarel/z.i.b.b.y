@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap">
+<style>html,body{margin:0;background:#F3F4F2}a{color:#111312}a:hover{color:#50544F}</style>
+<script src="./zibby.js"></script>
+</helmet>
+<div data-screen-label="Splash" onClick="{{ replay }}" style="--bg:#F3F4F2;--panel:#FAFAF8;--panel2:#EDEEEB;--line:#D9DBD6;--line2:#BFC2BC;--ink:#111312;--ink2:#50544F;--ink3:#8A8E88;--grid:rgba(17,19,18,.05);--gw:0px;--s-work:oklch(0.6 0.14 160);--s-think:oklch(0.58 0.14 250);--s-block:oklch(0.7 0.15 70);--s-err:oklch(0.58 0.2 25);--s-done:oklch(0.56 0.15 300);--s-idle:#A9ADA7;width:100vw;height:100vh;min-height:640px;overflow:hidden;cursor:pointer;background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px, transparent 1px),linear-gradient(90deg, var(--grid) 1px, transparent 1px);background-size:24px 24px;color:var(--ink);font-family:'Geist',system-ui,sans-serif;display:flex;align-items:center;justify-content:center">
+  <div style="position:relative;width:520px;height:360px">
+    <div style="position:absolute;left:{{ zx }};top:{{ zy }};z-index:{{ zz }};transform:rotate({{ zr }});transform-origin:50% 85%">{{ zibby }}</div>
+    <div style="position:absolute;left:0;top:0;width:520px;height:200px;box-sizing:border-box;z-index:2;background:var(--panel);border:1px solid var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px">
+      <div style="position:absolute;top:-6px;left:-6px;width:10px;height:10px;border-top:1px solid var(--ink);border-left:1px solid var(--ink)"></div>
+      <div style="position:absolute;bottom:-6px;right:-6px;width:10px;height:10px;border-bottom:1px solid var(--ink);border-right:1px solid var(--ink)"></div>
+      <span style="font-family:'Geist Mono',monospace;font-size:40px;letter-spacing:.24em;font-weight:600;padding-left:.24em">ZIBBYCORP</span>
+      <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.16em;color:var(--ink3)">AGENT OPERATIONS CONSOLE</span>
+      <span style="display:flex;align-items:center;gap:8px;margin-top:8px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink2)">{{ statusDot }}{{ status }}</span>
+    </div>
+    <div style="position:absolute;left:0;top:320px;width:520px;height:2px;background:var(--line);z-index:1"><div style="height:2px;width:{{ fill }};background:var(--ink)"></div></div>
+    <div style="position:absolute;left:0;top:334px;width:520px;display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>BOOT {{ pct }}</span><span>CLICK TO REPLAY</span></div>
+    <sc-if value="{{ bubble }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;left:{{ bx }};top:{{ by }};z-index:4;white-space:nowrap;background:var(--panel);border:1px solid var(--ink);padding:8px 11px;font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.06em">{{ bubble }}</div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;loop&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;speed&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1,&quot;min&quot;:0.25,&quot;max&quot;:2,&quot;step&quot;:0.25,&quot;tsType&quot;:&quot;number&quot;}}">class Component extends DCLogic {
+  state = { t: 0 };
+  componentDidMount() {
+    this.last = performance.now();
+    const loop = now => {
+      const dt = Math.min(.05, (now - this.last) / 1000) * (this.props.speed ?? 1); this.last = now;
+      let t = this.state.t + dt;
+      if (t > 10.2) t = (this.props.loop ?? true) ? 0 : 10.2;
+      this.setState({ t });
+      this.raf = requestAnimationFrame(loop);
+    };
+    this.raf = requestAnimationFrame(loop);
+  }
+  componentWillUnmount() { cancelAnimationFrame(this.raf); }
+  renderVals() {
+    const B = window.ZB, t = this.state.t, W = 520, S = 160, BAR = 320;
+    const cl = v => Math.max(0, Math.min(1, v)), seg = (a, b) => cl((t - a) / (b - a));
+    const eo = p => 1 - Math.pow(1 - p, 3), ei = p => p * p * p, io = p => .5 - Math.cos(Math.PI * p) / 2;
+    let x = W - S, y = 20, r = 0, z = 1, st = 'idle', bubble = '', bx = 0, by = 0, push = 0;
+    const creep = 34 * eo(seg(0, 5));
+    if (t < 2.9) {
+      const p = eo(seg(.5, 1.1)) - ei(seg(2.4, 2.7));
+      x = W - S + 105 * p; r = 14 * p;
+      if (t > 1.2 && t < 2.4) { bubble = 'psst. still loading?'; bx = W + 20; by = -18; }
+    } else if (t < 5) {
+      const p = eo(seg(3, 3.45)) - ei(seg(4.65, 4.95));
+      x = 180; y = 30 - 125 * p; st = 'thinking'; r = -6 * p * Math.sin(t * 5);
+      if (t > 3.5 && t < 4.6) { bubble = t < 4.05 ? '…yep. still loading.' : 'ugh. fine.'; bx = 330; by = -110; }
+    } else if (t < 7.7) {
+      const sx = -((window.innerWidth - W) / 2 + S + 20), ex = W - S * .83;
+      const p = io(seg(5.1, 7.7));
+      x = sx + (ex - sx) * p; z = 3; st = 'working';
+      const g = Math.sin(t * 20);
+      y = BAR - S * .83 - Math.abs(g) * 12; r = g * 5;
+      push = x + S * .83;
+    } else {
+      x = W - S * .83; y = BAR - S * .83; z = 3; st = 'done'; push = W;
+      if (t > 7.9) { bubble = 'done. you\u2019re welcome.'; bx = x - 150; by = y - 30; }
+    }
+    const fill = Math.max(creep, Math.min(W, push));
+    const pct = Math.round(fill / W * 100);
+    const status = t >= 7.7 ? 'READY · ALL AGENTS ON DUTY' : t >= 5.1 ? 'MANUAL OVERRIDE' : 'BOOTING';
+    if (!B) return { zx: '0px', zy: '0px', zz: 1, zr: '0deg', fill: '0px', pct: '0%', status: 'BOOTING', bubble: '' };
+    return {
+      zibby: B.glyph(React, { seed: 'Zibby', state: st, size: S, glow: true }),
+      zx: x + 'px', zy: y + 'px', zz: z, zr: r + 'deg',
+      fill: fill + 'px', pct: String(pct).padStart(2, '0') + '%', status,
+      statusDot: B.dot(React, t >= 7.7 ? 'done' : t >= 5.1 ? 'working' : 'thinking', 7),
+      bubble, bx: bx + 'px', by: by + 'px',
+      replay: () => this.setState({ t: 0 })
+    };
+  }
+}</script>
+</body>
+</html>

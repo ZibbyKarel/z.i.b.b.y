@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
-/** `/overview` is deleted (F8d, O2/O3) — `/chat` is home now, the one world the
- * whole HUD → Chat UI migration arc has been building toward. */
+/** ROUTE-MAP §2: `/` → `/org` (ZB-02 ships the org map, so the TODO this file
+ *  used to carry is resolved — `/chat` is no longer home). */
 export default function RootPage() {
-  redirect("/chat");
+  redirect("/org");
 }

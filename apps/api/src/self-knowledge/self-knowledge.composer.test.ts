@@ -1,4 +1,4 @@
-import type { Agent, GateRule, GlobalGateRule, Pipeline, Subsystem } from "@zibby/contracts";
+import type { Agent, Department, GateRule, GlobalGateRule, Pipeline } from "@zibby/contracts";
 import { describe, expect, it } from "vitest";
 import {
   type SelfKnowledgeComposerInput,
@@ -44,9 +44,10 @@ const floorRule: GateRule = {
   resolve: { type: "human" },
 };
 
-const subsystem: Subsystem = {
-  id: "forge",
-  name: "Forge",
+const department: Department = {
+  id: "dev",
+  code: "DEV",
+  name: "Dev",
   tagline: "Kovárna doručení",
   mandate:
     "Orchestrace delivery pipeline: Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor.",
@@ -67,7 +68,7 @@ function baseInput(
   return {
     agents: [agent],
     pipelines: [pipeline],
-    subsystems: [subsystem],
+    departments: [department],
     gateRules: [catalogRule],
     policyFloor: [floorRule],
     channelKinds: ["slack", "email"],
@@ -84,7 +85,7 @@ describe("composeSelfKnowledge", () => {
       pipelines: 1,
       gateRules: 2,
       channels: 2,
-      subsystems: 1,
+      departments: 1,
       codebaseShape: { present: false, godNodes: 0, communities: 0 },
     });
   });
@@ -95,7 +96,7 @@ describe("composeSelfKnowledge", () => {
       "META",
       "AGENTS",
       "PIPELINES",
-      "SUBSYSTEMS",
+      "DEPARTMENTS",
       "GATES",
       "CHANNELS",
       "CODEBASE-SHAPE",
@@ -105,11 +106,11 @@ describe("composeSelfKnowledge", () => {
     }
   });
 
-  it("includes agent/pipeline/subsystem/gate/channel content in their respective blocks", () => {
+  it("includes agent/pipeline/department/gate/channel content in their respective blocks", () => {
     const { markdown } = composeSelfKnowledge(baseInput());
     expect(markdown).toContain("koder");
     expect(markdown).toContain("build-app");
-    expect(markdown).toContain("Forge");
+    expect(markdown).toContain("Dev");
     expect(markdown).toContain("Orchestrace delivery pipeline");
     expect(markdown).toContain("git.push");
     expect(markdown).toContain("Merge PR");
@@ -134,7 +135,7 @@ describe("composeSelfKnowledge", () => {
       baseInput({
         agents: [],
         pipelines: [],
-        subsystems: [],
+        departments: [],
         gateRules: [],
         policyFloor: [],
         channelKinds: [],
@@ -142,7 +143,7 @@ describe("composeSelfKnowledge", () => {
     );
     expect(markdown).toContain("No agents registered yet");
     expect(markdown).toContain("No pipelines registered yet");
-    expect(markdown).toContain("No subsystems registered yet");
+    expect(markdown).toContain("No departments registered yet");
     expect(markdown).toContain("No channel adapters registered");
   });
 
@@ -159,40 +160,41 @@ describe("composeSelfKnowledge", () => {
     expect(first.indexOf("aaa-agent")).toBeLessThan(first.indexOf("zzz-agent"));
   });
 
-  describe("SUBSYSTEMS block", () => {
+  describe("DEPARTMENTS block", () => {
     it("renders name + mandate, sorted by id, with NO live state/counts", () => {
-      const beacon: Subsystem = {
-        id: "beacon",
-        name: "Beacon",
+      const incident: Department = {
+        id: "inc",
+        code: "INC",
+        name: "Incident",
         tagline: "Maják v noci",
         mandate: "Eskalace incidentů — vlastní podoba Tier-3 kontraktu surface-and-wait.",
         color: "#f59e0b",
       };
       const { markdown, sections } = composeSelfKnowledge(
-        baseInput({ subsystems: [beacon, subsystem] }),
+        baseInput({ departments: [incident, department] }),
       );
 
-      expect(markdown).toContain("## Subsystems (2)");
-      expect(markdown).toContain("Forge");
+      expect(markdown).toContain("## Departments (2)");
+      expect(markdown).toContain("Dev");
       expect(markdown).toContain("Orchestrace delivery pipeline");
-      expect(markdown).toContain("Beacon");
+      expect(markdown).toContain("Incident");
       expect(markdown).toContain("Eskalace incidentů");
       // Static identity only — no live status fields anywhere in the block.
       // (The enum-token guard for the old Czech state literals was dropped as
-      // vacuous post-rename — the composer consumes `Subsystem`, which has no
+      // vacuous post-rename — the composer consumes `Department`, which has no
       // `state` field, so the tier2Count/tier3Count assertions above already
       // enforce this structurally and behaviorally.)
       expect(markdown).not.toContain("tier2Count");
       expect(markdown).not.toContain("tier3Count");
-      // Sorted by id: "beacon" before "forge".
-      expect(markdown.indexOf("Beacon")).toBeLessThan(markdown.indexOf("Forge"));
-      expect(sections.subsystems).toBe(2);
+      // Sorted by id: "dev" before "inc".
+      expect(markdown.indexOf("Dev")).toBeLessThan(markdown.indexOf("Incident"));
+      expect(sections.departments).toBe(2);
     });
 
-    it("renders empty-state copy when there are no subsystems", () => {
-      const { markdown, sections } = composeSelfKnowledge(baseInput({ subsystems: [] }));
-      expect(markdown).toContain("No subsystems registered yet");
-      expect(sections.subsystems).toBe(0);
+    it("renders empty-state copy when there are no departments", () => {
+      const { markdown, sections } = composeSelfKnowledge(baseInput({ departments: [] }));
+      expect(markdown).toContain("No departments registered yet");
+      expect(sections.departments).toBe(0);
     });
   });
 
@@ -294,10 +296,10 @@ describe("AUTO-boundary-marker defanging (MD injection)", () => {
     expect(markdown).toContain("Trailing --› arrow");
   });
 
-  it("defangs a forged AUTO block marker inside a subsystem name/mandate", () => {
+  it("defangs a forged AUTO block marker inside a department name/mandate", () => {
     const { markdown } = composeSelfKnowledge(
       baseInput({
-        subsystems: [{ ...subsystem, name: forgedName, mandate: bareArrow }],
+        departments: [{ ...department, name: forgedName, mandate: bareArrow }],
       }),
     );
     expect(countOccurrences(markdown, "<!-- AUTO:GATES:END -->")).toBe(1);

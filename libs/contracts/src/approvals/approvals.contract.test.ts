@@ -11,9 +11,16 @@ describe("approvalsContract", () => {
     expect(approvalsContract.approveApproval.method).toBe("POST");
   });
 
-  it("approveApproval and rejectApproval's empty bodies ARE the shared EmptyBodySchema (T11 dedup, finding #37)", () => {
+  it("approveApproval's empty body IS the shared EmptyBodySchema (T11 dedup, finding #37)", () => {
     expect(approvalsContract.approveApproval.body).toBe(EmptyBodySchema);
-    expect(approvalsContract.rejectApproval.body).toBe(EmptyBodySchema);
+  });
+
+  it("rejectApproval takes an optional reason (ZB-08 deny-with-reason), still accepting an empty body", () => {
+    const body = approvalsContract.rejectApproval.body;
+    expect(body.safeParse({}).success).toBe(true);
+    expect(body.safeParse(undefined).success).toBe(true);
+    expect(body.safeParse({ reason: "Not now" }).success).toBe(true);
+    expect(body.safeParse({ reason: "" }).success).toBe(false);
   });
 });
 
@@ -49,23 +56,21 @@ describe("approval schema", () => {
     ).toBe(true);
   });
 
-  describe("ownerSubsystem (NS2 F3c)", () => {
-    it("accepts a subsystem-tagged approval", () => {
-      const parsed = ApprovalSchema.safeParse({ ...base, ownerSubsystem: "forge" });
+  describe("department (NS2 F3c)", () => {
+    it("accepts a department-tagged approval", () => {
+      const parsed = ApprovalSchema.safeParse({ ...base, department: "dev" });
       expect(parsed.success).toBe(true);
-      if (parsed.success) expect(parsed.data.ownerSubsystem).toBe("forge");
+      if (parsed.success) expect(parsed.data.department).toBe("dev");
     });
 
     it("is omissible — every pre-existing approval re-parses untouched", () => {
       const parsed = ApprovalSchema.safeParse(base);
       expect(parsed.success).toBe(true);
-      if (parsed.success) expect(parsed.data.ownerSubsystem).toBeUndefined();
+      if (parsed.success) expect(parsed.data.department).toBeUndefined();
     });
 
-    it("rejects an id outside the closed subsystem enum", () => {
-      expect(ApprovalSchema.safeParse({ ...base, ownerSubsystem: "warp-drive" }).success).toBe(
-        false,
-      );
+    it("rejects an id outside the closed department enum", () => {
+      expect(ApprovalSchema.safeParse({ ...base, department: "warp-drive" }).success).toBe(false);
     });
   });
 

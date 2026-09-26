@@ -34,10 +34,15 @@ export default defineConfig({
       "features/*/hooks/**/*.test.{ts,tsx}",
       // Feature context providers (React context + browser persistence).
       "features/*/context/**/*.test.{ts,tsx}",
+      // Feature screens (page-level composites) and their pure state helpers.
+      "features/*/screens/**/*.test.{ts,tsx}",
+      "features/*/state/**/*.test.{ts,tsx}",
       // Feature mutation hooks (TanStack Query mutations; renderHook needs jsdom).
       "features/*/mutations/**/*.test.{ts,tsx}",
       // Shared hooks (generic cross-domain browser-API wrappers).
       "hooks/**/*.test.{ts,tsx}",
+      // Shell-global state/context providers (React context + browser persistence).
+      "state/**/*.test.{ts,tsx}",
     ],
   },
 });

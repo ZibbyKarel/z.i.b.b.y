@@ -69,6 +69,7 @@ type ActivityKind =
   | "chain-advanced" // ...handed an artifact to its next step
   | "chain-parked" // ...parked on a broken/gated handoff
   | "chain-finished" // ...reached a terminal state (done/failed)
+  | "budget-warn" // ZB-10/O-08: account usage crossed a warn (non-blocking) threshold
   | "orchestrator-fallback"; // Fáze 4a: the classifier itself chose the orchestrator (no explicit override)
 ```
 

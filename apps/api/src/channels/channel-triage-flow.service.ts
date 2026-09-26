@@ -13,7 +13,7 @@ import { ActivityLogService } from "../activity/activity-log.service";
 import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
 import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.service";
-import { HeraldService } from "../herald/herald.service";
+import { CommsService } from "../comms/comms.service";
 import { CredentialsStore } from "../integrations/credentials.store";
 import { IntegrationsStorageService } from "../integrations/integrations.storage.service";
 import { MandateStorageService } from "../mandate/mandate.storage.service";
@@ -52,7 +52,7 @@ const DECISION_RANK: Record<Decision, number> = { allow: 0, notify: 1, ask: 2, d
  *   an item with NO approval record, so nothing about it is sendable while it waits.
  * - Stage 2, {@link parkOrSurface}: run by `ReplyDraftSweeperService` once research
  *   finished. Only here does the tier/gate decision happen:
- *   - Tier 2 (or a Herald-graduated Tier 3) + mandate.reply + the channel-reply gate
+ *   - Tier 2 (or a Comms-graduated Tier 3) + mandate.reply + the channel-reply gate
  *     resolving below `ask`: send the researched reply and persist it. A hardened
  *     `ask` rule or mandate.reply=false falls through to parking; a `deny` ignores.
  *   - Tier 3 (or low confidence, or gated to `ask`): park a kind-"channel" approval
@@ -93,10 +93,10 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     // also files a gated Jira issue (the finished-day "creates a Jira task").
     @Optional() private readonly jiraFlow?: JiraIssueFlowService,
     // NS2 F6a — same optionality convention as jiraFlow. When present, every reply
-    // proposal (auto-send or parked draft) is recorded to Herald's ledger, and a
+    // proposal (auto-send or parked draft) is recorded to Comms's ledger, and a
     // graduated (integrationId, category) pair promotes a confident, naturally-T3
     // verdict to the Tier-2 path (which still runs the gate — never a direct send).
-    @Optional() private readonly herald?: HeraldService,
+    @Optional() private readonly comms?: CommsService,
     // The reply-draft sweeper depends on THIS service (it drives parkOrSurface after
     // research), so it cannot be constructor-injected here without a DI cycle. It is
     // resolved lazily instead — the same idiom ChannelWatcherService uses for its
@@ -357,7 +357,11 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     try {
       // The engagement was matched server-side in handle(); pass it as the trusted
       // projectId so the task is born attributed (no re-match over the enveloped text).
-      const result = await this.tasks.createTask({ text, title }, undefined, item.projectId);
+      const result = await this.tasks.createTask(
+        { text, title, source: "channel" },
+        undefined,
+        item.projectId,
+      );
       const taskId = result.task.id;
       const handled: ChannelItem = { ...item, state: "handled", taskId, projectId: item.projectId };
       await this.store.update(handled);
@@ -408,9 +412,9 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
       verdict.tier === 3 &&
       verdict.actionable &&
       verdict.confidence >= TRIAGE_CONFIDENCE_FLOOR &&
-      this.herald !== undefined &&
+      this.comms !== undefined &&
       !(await this.forcedTier3(item)) &&
-      (await this.herald.isGraduated(item.integrationId, verdict.category).catch(() => false));
+      (await this.comms.isGraduated(item.integrationId, verdict.category).catch(() => false));
 
     const effective: TriageVerdict = graduated
       ? { ...verdict, tier: 2, reason: `${verdict.reason} (graduated: Tier-2 auto-reply)` }
@@ -430,7 +434,7 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
           { ...withDraft, triage: { ...effective, suggestedReply: draft } },
           draft,
         );
-        // NS2 F6a — record the gated auto-send in Herald's ledger (best-effort: a
+        // NS2 F6a — record the gated auto-send in Comms's ledger (best-effort: a
         // ledger failure never blocks the tick).
         this.recordLedgerProposal(sent, effective, { tier: 2, outcome: "sent-auto" });
         return sent;
@@ -603,8 +607,8 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     verdict: TriageVerdict,
     over: { tier: 1 | 2 | 3; outcome: "pending" | "sent-auto"; approvalId?: string },
   ): void {
-    if (!this.herald) return;
-    void this.herald
+    if (!this.comms) return;
+    void this.comms
       .recordProposal({
         integrationId: item.integrationId,
         kind: item.kind,
@@ -617,7 +621,7 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
         ...(over.approvalId ? { approvalId: over.approvalId } : {}),
       })
       .catch((err: unknown) => {
-        this.log.warn("herald ledger recordProposal failed (continuing)", {
+        this.log.warn("comms ledger recordProposal failed (continuing)", {
           itemId: item.id,
           error: (err as Error).message,
         });
@@ -626,11 +630,11 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
 
   /** Best-effort ledger decision patch for a decided parked draft. */
   private recordLedgerDecision(item: ChannelItem, outcome: "approved" | "rejected"): void {
-    if (!this.herald || !item.triage) return;
-    void this.herald
+    if (!this.comms || !item.triage) return;
+    void this.comms
       .recordDecision(item.id, item.integrationId, item.triage.category, outcome)
       .catch((err: unknown) => {
-        this.log.warn("herald ledger recordDecision failed (continuing)", {
+        this.log.warn("comms ledger recordDecision failed (continuing)", {
           itemId: item.id,
           error: (err as Error).message,
         });

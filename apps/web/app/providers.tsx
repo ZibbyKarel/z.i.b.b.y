@@ -1,9 +1,9 @@
 "use client";
 
 import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { DesignSystemProvider } from "@zibby/design-system";
 import { type ReactNode, useState } from "react";
 import { apiClient } from "../state/api";
+import { AppearanceProvider } from "../state/appearance";
 import { RunEventsProvider } from "../features/runs/runEvents";
 import { BootSplash } from "../components/layout/BootSplash/BootSplash";
 import { Toaster } from "../components/Toaster/Toaster";
@@ -28,10 +28,17 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={client}>
       <apiClient.ReactQueryProvider>
         <RunEventsProvider>
-          <DesignSystemProvider theme="dark">
+          {/* ZB-01/O-01/D-014: light is the default theme (was dark-only); a
+              first-run browser with no stored choice and no matchMedia read
+              falls back to light via `ThemeScript`'s `fallback` (root layout).
+              ZB-11: `AppearanceProvider` owns the live `ThemeChoice` +
+              reduced-motion state (`/system/settings/appearance` reads and
+              writes both via `useAppearance()`) and wraps `DesignSystemProvider`
+              itself so the resolved choice always drives the token swap. */}
+          <AppearanceProvider>
             <BootSplash>{children}</BootSplash>
             <Toaster />
-          </DesignSystemProvider>
+          </AppearanceProvider>
         </RunEventsProvider>
       </apiClient.ReactQueryProvider>
     </QueryClientProvider>

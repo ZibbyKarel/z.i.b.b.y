@@ -33,7 +33,7 @@ export class ChannelsController {
       },
 
       // Operator acknowledged a surfaced item — move it to `ignored` so it drops off the
-      // overview. The only client-driven state change, and a benign one: it can't forge a
+      // overview. The only client-driven state change, and a benign one: it can't dev a
       // verdict or resurrect an item, only retire a surfaced one.
       dismissChannelItem: async ({ params: { id } }) => {
         const item = await this.store.findById(id);

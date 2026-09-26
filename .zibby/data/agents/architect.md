@@ -14,7 +14,7 @@ tools:
   - Glob
 category: Core Development
 gates: []
-ownerSubsystem: forge
+department: dev
 ---
 
 ## Prompt Defense Baseline

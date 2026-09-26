@@ -38,6 +38,12 @@ export interface ProgressRingProps extends Omit<HTMLAttributes<HTMLSpanElement>,
 /**
  * A compact circular gauge — the top-bar limits readout. Matte ring on a
  * hairline track; the centered mono percentage is optional.
+ *
+ * @deprecated ZibbyCorp (DS.md §6) is `radius 0` everywhere except the two
+ * sanctioned round exceptions (status pod, flow packet) — a circular gauge
+ * isn't one of them. Kept compiling for existing callers; slated for deletion
+ * in ZB-13. Do not add new call sites — reach for the square `Progress` bar
+ * (or `BudgetMeter`/`LimitBar`, ZA-04) instead.
  */
 export function ProgressRing({
   value,

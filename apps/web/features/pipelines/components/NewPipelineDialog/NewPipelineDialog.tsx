@@ -1,5 +1,5 @@
 "use client";
-import type { Agent, CreatePipelineInput, SubsystemId } from "@zibby/contracts";
+import type { Agent, CreatePipelineInput, DepartmentId } from "@zibby/contracts";
 import { PipelineDialog } from "../PipelineDialog/PipelineDialog";
 
 export interface NewPipelineDialogProps {
@@ -8,8 +8,8 @@ export interface NewPipelineDialogProps {
   isPending?: boolean;
   onClose: () => void;
   onCreate: (input: CreatePipelineInput) => void;
-  /** Pre-fills the created pipeline's `ownerSubsystem` (Phase 85 Roster tab). */
-  defaultOwnerSubsystem?: SubsystemId;
+  /** Pre-fills the created pipeline's `department` (Phase 85 Roster tab). */
+  defaultOwnerDepartment?: DepartmentId;
 }
 
 /**
@@ -22,12 +22,12 @@ export function NewPipelineDialog({
   isPending = false,
   onClose,
   onCreate,
-  defaultOwnerSubsystem,
+  defaultOwnerDepartment,
 }: NewPipelineDialogProps) {
   return (
     <PipelineDialog
       agents={agents}
-      defaultOwnerSubsystem={defaultOwnerSubsystem}
+      defaultOwnerDepartment={defaultOwnerDepartment}
       isPending={isPending}
       mode="create"
       onClose={onClose}

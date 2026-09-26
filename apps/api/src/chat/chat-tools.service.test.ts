@@ -4,7 +4,7 @@ import type { ActivityLogService } from "../activity/activity-log.service";
 import type { BriefingService } from "../briefing/briefing.service";
 import type { MachineService } from "../machine/machine.service";
 import type { VaultService } from "../memory/vault.service";
-import type { SubsystemsService } from "../subsystems/subsystems.service";
+import type { DepartmentsService } from "../departments/departments.service";
 import type { TaskSchedulerService } from "../tasks/task-scheduler.service";
 import { ChatToolsService, personalNoteId } from "./chat-tools.service";
 
@@ -15,7 +15,7 @@ function makeService(overrides: {
   createNote?: VaultService["createNote"];
   assemble?: BriefingService["assemble"];
   propose?: MachineService["propose"];
-  subsystemGet?: SubsystemsService["get"];
+  departmentGet?: DepartmentsService["get"];
   activityList?: ActivityLogService["list"];
 }): ChatToolsService {
   const scheduler = {
@@ -27,11 +27,11 @@ function makeService(overrides: {
   } as unknown as VaultService;
   const briefing = { assemble: overrides.assemble ?? vi.fn() } as unknown as BriefingService;
   const machine = { propose: overrides.propose ?? vi.fn() } as unknown as MachineService;
-  const subsystems = { get: overrides.subsystemGet ?? vi.fn() } as unknown as SubsystemsService;
+  const departments = { get: overrides.departmentGet ?? vi.fn() } as unknown as DepartmentsService;
   const activity = {
     list: overrides.activityList ?? vi.fn().mockResolvedValue([]),
   } as unknown as ActivityLogService;
-  return new ChatToolsService(scheduler, vault, briefing, machine, subsystems, activity);
+  return new ChatToolsService(scheduler, vault, briefing, machine, departments, activity);
 }
 
 const DISPATCHED: CreateTaskResult = {
@@ -200,10 +200,10 @@ describe("ChatToolsService", () => {
       expect(out).toContain("Nic teď nepotřebuje tvou pozornost.");
     });
 
-    describe("per-subsystem lens (NS2 F3c)", () => {
-      const forgeRow = {
-        id: "forge",
-        name: "Forge",
+    describe("per-department lens (NS2 F3c)", () => {
+      const devRow = {
+        id: "dev",
+        name: "Dev",
         tagline: "t",
         mandate: "m",
         color: "#000000",
@@ -212,70 +212,70 @@ describe("ChatToolsService", () => {
         tier3Count: 2,
       };
 
-      it("getStatus('forge') answers with the subsystem's state, counts, and owned activity", async () => {
-        const subsystemGet = vi.fn().mockResolvedValue(forgeRow);
+      it("getStatus('dev') answers with the department's state, counts, and owned activity", async () => {
+        const departmentGet = vi.fn().mockResolvedValue(devRow);
         const activityList = vi.fn().mockResolvedValue([
           {
             id: "a1",
             at: "2026-07-17T08:00:00.000Z",
             kind: "pipeline-finished",
             summary: "delivery pipeline finished",
-            refs: { ownerSubsystem: "forge" },
+            refs: { department: "dev" },
           },
           {
             id: "a2",
             at: "2026-07-17T07:00:00.000Z",
             kind: "run-finished",
-            summary: "puls CI sweep done",
-            refs: { ownerSubsystem: "puls" },
+            summary: "ops CI sweep done",
+            refs: { department: "ops" },
           },
         ]);
         const assemble = vi.fn();
-        const svc = makeService({ assemble, subsystemGet, activityList });
-        const out = await svc.getStatus("forge");
+        const svc = makeService({ assemble, departmentGet, activityList });
+        const out = await svc.getStatus("dev");
 
-        expect(subsystemGet).toHaveBeenCalledWith("forge");
+        expect(departmentGet).toHaveBeenCalledWith("dev");
         expect(assemble).not.toHaveBeenCalled(); // narrowed answer, not the global briefing
-        expect(out).toContain("Forge");
+        expect(out).toContain("Dev");
         expect(out).toContain("čeká na tvé rozhodnutí");
         expect(out).toContain("Čeká na tebe: 2");
         expect(out).toContain("K reportu od tvé poslední návštěvy: 1");
         expect(out).toContain("delivery pipeline finished");
-        expect(out).not.toContain("puls CI sweep done"); // other owners filtered out
+        expect(out).not.toContain("ops CI sweep done"); // other owners filtered out
       });
 
-      it("a quiet subsystem reads as calm, without count lines", async () => {
-        const subsystemGet = vi.fn().mockResolvedValue({
-          ...forgeRow,
-          id: "codex",
-          name: "Codex",
+      it("a quiet department reads as calm, without count lines", async () => {
+        const departmentGet = vi.fn().mockResolvedValue({
+          ...devRow,
+          id: "knw",
+          name: "Knowledge",
           state: "idle",
           tier2Count: 0,
           tier3Count: 0,
         });
-        const svc = makeService({ subsystemGet });
-        const out = await svc.getStatus("codex");
-        expect(out).toContain("Codex — v klidu.");
+        const svc = makeService({ departmentGet });
+        const out = await svc.getStatus("knw");
+        expect(out).toContain("Knowledge — v klidu.");
         expect(out).toContain("Nic z něj teď nečeká na tvou pozornost.");
         expect(out).not.toContain("Čeká na tebe");
       });
 
       it("getStatus() without an argument keeps the global briefing summary", async () => {
         const assemble = vi.fn().mockResolvedValue(baseBriefing);
-        const subsystemGet = vi.fn();
-        const svc = makeService({ assemble, subsystemGet });
+        const departmentGet = vi.fn();
+        const svc = makeService({ assemble, departmentGet });
         const out = await svc.getStatus();
         expect(assemble).toHaveBeenCalledTimes(1);
-        expect(subsystemGet).not.toHaveBeenCalled();
+        expect(departmentGet).not.toHaveBeenCalled();
         expect(out).toContain("Dvě věci čekají na tebe.");
       });
 
       it("a failed activity read degrades to no activity lines, not a failed answer", async () => {
-        const subsystemGet = vi.fn().mockResolvedValue(forgeRow);
+        const departmentGet = vi.fn().mockResolvedValue(devRow);
         const activityList = vi.fn().mockRejectedValue(new Error("log unreadable"));
-        const svc = makeService({ subsystemGet, activityList });
-        const out = await svc.getStatus("forge");
-        expect(out).toContain("Forge");
+        const svc = makeService({ departmentGet, activityList });
+        const out = await svc.getStatus("dev");
+        expect(out).toContain("Dev");
         expect(out).not.toContain("Poslední aktivita");
       });
     });

@@ -18,28 +18,62 @@
     "mcp": "MCP servery",
     "commands": "Příkazy",
     "hooks": "Hooky",
-    "signals": "Signály"
-  },
-  "notifications": {
-    "attention": "{count} položek vyžaduje pozornost"
+    "signals": "Signály",
+    "org": "Org",
+    "work": "Práce",
+    "activity": "Aktivita",
+    "policy": "Politika",
+    "knowledge": "Znalosti",
+    "ledger": "Rozpočet",
+    "system": "Systém",
+    "subtab": {
+      "org": {
+        "map": "Mapa",
+        "people": "Lidé"
+      },
+      "work": {
+        "tasks": "Úkoly",
+        "chains": "Řetězce",
+        "goals": "Cíle",
+        "companies": "Firmy",
+        "teams": "Týmy",
+        "projects": "Projekty"
+      },
+      "activity": {
+        "log": "Log",
+        "runs": "Běhy",
+        "inbox": "Doručená pošta",
+        "briefings": "Souhrny"
+      },
+      "policy": {
+        "approvals": "Schválení",
+        "gates": "Pravidla",
+        "patterns": "Vzory"
+      },
+      "knowledge": {
+        "vault": "Trezor",
+        "distill": "Destilace"
+      },
+      "ledger": {
+        "budgets": "Rozpočty",
+        "spend": "Útraty"
+      },
+      "system": {
+        "settings": "Nastavení",
+        "registries": "Registry"
+      }
+    }
   },
   "memory": {
-    "knowledgeGraph": "Graf znalostí",
     "title": "Paměť",
-    "countSummary": "{count, plural, =0 {žádné poznámky} one {# poznámka} few {# poznámky} other {# poznámek}} · index-first vault, prostý Markdown",
-    "loadingGraph": "Načítám graf…",
     "noteFallback": "Poznámka",
     "selectNode": "Vyber uzel a přečti si jeho poznámku.",
-    "searchLabel": "Hledat ve vaultu",
     "searchPlaceholder": "Hledat poznámky…",
-    "searchResults": "Výsledky hledání",
-    "noResults": "Žádná odpovídající poznámka.",
     "newNote": "Nová poznámka",
     "editNote": "Editovat",
     "noteLinks": "Odkazy",
     "noteBacklinks": "Odkazuje sem",
     "save": "Uložit",
-    "dailyTimeline": "Denní záznamy",
     "idLabel": "Id",
     "idHint": "Unikátní v rámci vaultu; doplní se z názvu.",
     "titleLabel": "Název",
@@ -54,7 +88,7 @@
     "emptyTitle": "Paměť je prázdná",
     "emptyDescription": "Ve vaultu zatím nejsou žádné poznámky. Objeví se tu, jak do něj zapisují běhy — nebo vytvoř první.",
     "untriaged": "Netříděno",
-    "subsystemBadge": "Polička subsystému",
+    "departmentBadge": "Polička oddělení",
     "quickCapture": {
       "trigger": "Rychlý zápis",
       "title": "Rychlý zápis",
@@ -76,12 +110,34 @@
       "toastLater": "Zařazeno {staged} souborů ({skipped} přeskočeno). Roztřídí se při noční destilaci."
     }
   },
+  "knowledge": {
+    "vault": {
+      "title": "Trezor",
+      "shelfGeneral": "Obecné",
+      "usedBy": "Odkazuje sem",
+      "usedByEmpty": "Žádná poznámka sem neodkazuje."
+    },
+    "distill": {
+      "title": "Destilace",
+      "subtitle": "Každou noc ve 02:00 Knowledge Management prochází den do vaultu.",
+      "runNow": "Spustit hned",
+      "running": "Běží…",
+      "lastRun": "Poslední běh: {ago}",
+      "neverRun": "Ještě neběželo",
+      "log": "Log běhu",
+      "outcome": "Výsledek: {ref}",
+      "noAutomations": "Žádná automatizace destilace není nakonfigurovaná.",
+      "metricsUnavailable": "Strukturované metriky (přečtené poznámky, přidané odkazy, mezery) se dnes nikam neukládají — vidíš jen výstupní referenci posledního běhu.",
+      "selfModel": {
+        "title": "Self-model"
+      }
+    }
+  },
   "common": {
     "stop": "Zastavit",
     "edit": "Editovat",
     "duplicate": "Duplikovat",
     "configure": "Konfigurovat",
-    "test": "Test",
     "save": "Uložit",
     "delete": "Smazat",
     "close": "Zavřít",
@@ -91,40 +147,15 @@
     "loadErrorDescription": "Spojení s API selhalo — tvoje data jsou v pořádku, jen je teď nevidím. Zkontroluj připojení a zkus to znovu.",
     "retry": "Zkusit znovu",
     "mutationError": "Akce se nepovedla — změna se neuložila. Zkus to prosím znovu.",
-    "targetProject": "Cílový projekt",
     "back": "Zpět",
     "skipToContent": "Přeskočit na obsah"
   },
-  "topbar": {
-    "commandHint": "Příkaz nebo skill (⌘K)",
-    "commandAriaLabel": "Příkaz nebo skill",
-    "commandPlaceholder": "Příkaz nebo skill…",
-    "langSwitcherLabel": "Jazyk rozhraní",
-    "hideRail": "Skrýt postranní panel",
-    "showRail": "Zobrazit postranní panel",
-    "self": {
-      "panelTitle": "Aktuálnost ZIBBY",
-      "statusCurrent": "Aktuální",
-      "statusUpgrade": "Upgrade",
-      "upToDate": "ZIBBY je aktuální",
-      "behind": "o {count} commitů pozadu",
-      "updateButton": "Aktualizovat",
-      "updateSucceeded": "ZIBBY byl aktualizován",
-      "updateFailed": "Aktualizace se nezdařila",
-      "openPrCount": "{count, plural, one {# otevřené PR} few {# otevřené PR} other {# otevřených PR}}",
-      "noOpenPrs": "žádné otevřené PR"
-    }
-  },
   "tasks": {
-    "triggerLabel": "TASK",
-    "triggerAria": "Nový task",
-    "triggerTitle": "Nový task",
     "dialogTitle": "NOVÝ TASK",
     "dialogSubtitle": "Popiš zadání — ZIBBY ho zařadí a předá agentovi",
     "cancel": "Zrušit",
     "classifyRun": "Spustit",
     "tabs": {
-      "standard": "Standardní task",
       "loop": "Loop"
     },
     "preview": {
@@ -140,7 +171,6 @@
     },
     "override": {
       "label": "Předat",
-      "hint": "Přepiš zvolený cíl.",
       "auto": "Výběr ZIBBY (automaticky)"
     },
     "target": {
@@ -175,38 +205,34 @@
       "label": "Odložený start",
       "now": "Hned",
       "in1h": "Za 1 h",
-      "limitReset": "Po resetu limitů · {time}",
-      "willRun": "Spustí se v {when}",
-      "submit": "Naplánovat"
+      "limitReset": "Po resetu limitů · {time}"
     },
     "confirm": {
       "accepted": "Task přijat",
       "scheduled": "Naplánováno — spustí se v {when}"
     },
     "composer": {
-      "label": "Zadání",
-      "placeholder": "Popiš task… Např.: Zkontroluj zálohy na Holly a výsledek ulož do ~/zibby/memory/holly-backup.md",
-      "submitHint": "⌘↩ zařadit"
+      "label": "Zadání"
     },
     "commandLine": {
       "label": "Zadání",
       "placeholder": "Popiš task… Např.: Zkontroluj zálohy na Holly a výsledek ulož do ~/zibby/memory/holly-backup.md",
       "attachAria": "Přiložit soubory",
-      "pinAria": "Připnout soubor",
       "send": "Odeslat",
       "moreRunOptions": "Další možnosti spuštění",
       "dropHint": "Pustit sem — přidá se jako @soubor do textu",
       "chrome": {
         "label": "Zadej směr · přirozeným jazykem",
-        "hint": "@ hledá agenty, pipeliny, podsystémy a týmy · přetáhni soubor, nebo použij sponku",
-        "hintNoTeams": "@ hledá agenty, pipeliny a podsystémy · přetáhni soubor, nebo použij sponku"
+        "hint": "@ hledá agenty, pipeliny, oddělení a týmy · přetáhni soubor, nebo použij sponku",
+        "hintNoTeams": "@ hledá agenty, pipeliny a oddělení · přetáhni soubor, nebo použij sponku"
       },
       "ack": {
         "kind": {
           "agent": "agent",
           "pipeline": "pipeline",
           "goal": "goal loop",
-          "subsystem": "podsystém",
+          "department": "oddělení",
+          "chain": "řetězec",
           "orchestrator": "orchestrátor",
           "loop": "goal loop",
           "auto": "auto-klasifikace"
@@ -270,8 +296,155 @@
       "remove": "Odebrat přílohu"
     }
   },
+  "goals": {
+    "eyebrow": "PRÁCE — CÍLE",
+    "title": "Smyčky tvůrce ⇄ ověřovatel",
+    "subtitle": "Cíl se opakuje, dokud ověřovatel neprojde nebo nedojde rozpočet běhů.",
+    "emptyTitle": "Zatím žádné cíle",
+    "emptyBody": "Vytvořte cíl z tvůrce (agent nebo pipeline) a ověřovatele a spusťte smyčku.",
+    "noProject": "—",
+    "resume": "Pokračovat",
+    "stop": "Zastavit",
+    "stateTone": {
+      "working": "Pracuje",
+      "thinking": "Přemýšlí",
+      "blocked": "Zaparkováno",
+      "error": "Chyba",
+      "done": "Splněno",
+      "idle": "Nečinný"
+    },
+    "detail": {
+      "noRunsTitle": "Zatím žádné běhy",
+      "noRunsBody": "Tento cíl ještě nebyl spuštěn — přiřaďte mu úlohu a spusťte smyčku."
+    }
+  },
+  "tasksWork": {
+    "eyebrow": "PRÁCE",
+    "state": {
+      "thinking": "Přemýšlí",
+      "working": "Pracuje",
+      "blocked": "Blokováno",
+      "error": "Chyba",
+      "done": "Hotovo"
+    },
+    "source": {
+      "operator": "Operátor",
+      "department": "Oddělení",
+      "chain": "Řetězec",
+      "channel": "Kanál",
+      "automation": "Automatizace",
+      "handoff": "Předání"
+    },
+    "filter": {
+      "all": "Vše",
+      "company": "Firma",
+      "project": "Projekt",
+      "department": "Oddělení",
+      "state": "Stav",
+      "source": "Zdroj"
+    },
+    "list": {
+      "title": "Nadřazené úkoly",
+      "column": {
+        "id": "ID",
+        "task": "Úkol",
+        "route": "Průběh řetězce",
+        "state": "Stav",
+        "source": "Zdroj",
+        "age": "Stáří"
+      },
+      "emptyTitle": "Žádné úkoly",
+      "emptyBody": "Žádný úkol neodpovídá zvoleným filtrům.",
+      "loadMore": "Načíst další",
+      "loadingMore": "Načítám…"
+    },
+    "detail": {
+      "back": "← Zpět na úkoly",
+      "noSubtasksTitle": "Zatím žádné podúkoly",
+      "noSubtasksBody": "Tento úkol zatím nespustil žádný krok řetězce.",
+      "subtaskHeader": "Podúkol {id}",
+      "unassigned": "Nepřiřazeno",
+      "step": "Krok {n}",
+      "roster": "Tým oddělení",
+      "noRoster": "V tomto oddělení zatím nejsou žádní agenti.",
+      "runHeader": "Běh",
+      "noRunTitle": "Zatím žádný běh",
+      "noRunBody": "Tento podúkol zatím nespustil běh.",
+      "approvalsHeader": "Čekající schválení",
+      "noApprovals": "Zde nic nepotřebuje vaši pozornost.",
+      "attachmentsHeader": "Přílohy",
+      "noAttachments": "Žádné přílohy.",
+      "created": "Vytvořeno {time}"
+    },
+    "new": {
+      "title": "Předat práci firmě",
+      "field": {
+        "title": "Název",
+        "titlePlaceholder": "např. Přidat SSO do klientského portálu",
+        "brief": "Zadání",
+        "briefPlaceholder": "Kontext, odkazy, jak vypadá hotovo",
+        "entry": "Vstup",
+        "project": "Projekt",
+        "chain": "Řetězec"
+      },
+      "entry": {
+        "coo": "COO (automatická klasifikace)"
+      },
+      "chain": {
+        "none": "Žádný",
+        "projectDefault": "Výchozí pro projekt ({label})"
+      },
+      "cancel": "Zrušit",
+      "submit": "Vytvořit úkol",
+      "routePreviewHeader": "Náhled trasy",
+      "routeSuggest": "ZIBBY toto předá: {target}",
+      "routeIdle": "Popište úkol pro zobrazení trasy."
+    }
+  },
+  "chainsWork": {
+    "eyebrow": "PRÁCE",
+    "list": {
+      "title": "Knihovna řetězců",
+      "newAction": "Nový řetězec",
+      "column": {
+        "name": "Název",
+        "route": "Trasa",
+        "enabled": "Zapnuto",
+        "inFlight": "Právě běží"
+      },
+      "enabledYes": "Zapnuto",
+      "enabledNo": "Vypnuto",
+      "emptyTitle": "Zatím žádné řetězce",
+      "emptyBody": "Zatím nebyl vytvořen žádný řetězec předávání."
+    },
+    "detail": {
+      "back": "← Zpět na řetězce",
+      "editAction": "Upravit",
+      "saveAction": "Uložit",
+      "cancelAction": "Zrušit",
+      "deleteAction": "Smazat",
+      "deleteConfirmAction": "Potvrdit smazání",
+      "labelField": "Název",
+      "labelPlaceholder": "např. Předání z Dev do QA",
+      "descriptionField": "Popis",
+      "descriptionPlaceholder": "K čemu tento řetězec slouží",
+      "stepsHeader": "Trasa",
+      "stepDepartment": "Zastávka {n}",
+      "gateAria": "Brána kroku {n}",
+      "moveLeftAria": "Posunout dříve",
+      "moveRightAria": "Posunout později",
+      "removeStepAria": "Odebrat zastávku",
+      "addStep": "+ Přidat oddělení",
+      "enabledField": "Zapnuto",
+      "noRouteTitle": "Žádná trasa",
+      "noRouteBody": "Tento řetězec nemá žádné rozřešitelné kroky."
+    },
+    "new": {
+      "title": "Nový řetězec",
+      "submit": "Vytvořit řetězec"
+    }
+  },
   "search": {
-    "placeholder": "Hledat agenty, skilly, projekty…",
     "ariaLabel": "Hledat v pracovním prostoru",
     "empty": "Žádné výsledky",
     "agents": "Agenti",
@@ -284,41 +457,18 @@
       "event": "Událost"
     }
   },
-  "sidebar": {
-    "navLabel": "Hlavní navigace",
-    "tagline": "Zestful Intuitive Brainy Butler for You",
-    "railLabel": "Postranní panel",
-    "skipToContent": "Přeskočit na obsah"
-  },
   "loading": {
     "tagline": "Inteligentní automatizační platforma",
-    "version": "v2.4.1 · BUILD 2026.06",
-    "init": "Spouštím jádro systému…",
-    "registry": "Načítám registr agentů…",
-    "channel": "Navazuji zabezpečený kanál…",
     "orchestrator": "Připojuji orchestrátor pipeline…",
     "knowledge": "Synchronizuji znalostní bázi…",
     "gates": "Kalibruji schvalovací pravidla…",
-    "inference": "Zahřívám inferenční endpointy…",
     "ready": "Systém připraven."
   },
   "placeholder": {
-    "body": "Tahle obrazovka je další na řadě. Drží stejný vzor — karty (= soubory na disku) → čudlík → modal s promptem → běh na pozadí.",
-    "hint": "// v přípravě"
+    "body": "Tahle obrazovka je další na řadě. Drží stejný vzor — karty (= soubory na disku) → čudlík → modal s promptem → běh na pozadí."
   },
   "limits": {
     "ariaLabel": "Limity Claude Code a Agent SDK kredit",
-    "interactive": "inter-\naktivní",
-    "agentSdk": "agent\nsdk",
-    "interactiveLimits": "Interaktivní limity · Claude Code",
-    "independentNote": "čerpá tvůj chat · nezávislé na agentech",
-    "agentSdkCredit": "Agent SDK kredit",
-    "renew": "obnova {date}",
-    "renewDate": "1. čer",
-    "remaining": "zbývá z ${total}",
-    "consumed": "spotřebováno ${used} · běhy agentů čerpají odsud",
-    "agentNote": "běhy agentů čerpají odsud",
-    "trend14": "TREND 14 DNÍ ($/den)",
     "rollingLabel": "5h rolling",
     "rollingShort": "5h",
     "weeklyLabel": "Týdenní",
@@ -333,100 +483,49 @@
     "systemDegraded": "Systém · DEGRADOVANÝ",
     "daemonReady": "· démon připraven · žádné běhy",
     "apiUnreachable": "· api nedostupné",
-    "subsystemBackend": "backend",
-    "subsystemVault": "vault",
-    "subsystemIntegrations": "integrace",
-    "subsystemScheduler": "plánovač",
+    "departmentBackend": "backend",
+    "departmentVault": "vault",
+    "departmentIntegrations": "integrace",
+    "departmentScheduler": "plánovač",
     "claudeUnavailable": "· claude cli nedostupné · běhy se odmítají",
     "title": "Dobré ráno.",
     "emptyTitle": "Dashboard je prázdný — postav si ho.",
-    "allRunning": "Vše běží hladce.",
-    "ctxChip": "ctx",
-    "statRunningAgents": "běžící agenti",
-    "statApprovals": "schválení",
-    "statSdkCredit": "agent sdk kredit",
-    "statPipelines": "pipeline",
-    "statSkills": "skilly",
     "briefing": "Briefing",
     "briefingGenerate": "Vygenerovat",
-    "briefingReady": "připraveno",
     "briefingDid": "{count} vyřízeno",
     "briefingWatching": "sleduji {count} kanálů",
     "briefingPausedLimit": "{count} pozastaveno na limitu",
     "briefingEngagement": "{needs} čeká · {did} hotovo · {queued} ve frontě · {held} pozdrženo",
-    "briefingSubsystems": "Subsystémy",
-    "briefingSubsystemTier3": "{count} čeká na tebe",
-    "briefingSubsystemError": "{count} selhalo",
-    "briefingSubsystemTier2": "{count} k reportu",
-    "starterTitle": "začni tady · postav dashboard",
-    "commandBar": {
-      "suggestions": {
-        "backlog": "Projdi backlog a implementuj highest-impact bug",
-        "standup": "Sepiš standup za dnešek",
-        "research": "Prozkoumej téma X přes noc"
-      }
-    },
-    "approvalsQueue": "fronta schválení",
-    "noApprovals": "žádná akce nečeká · ZIBBY sám neobjedná",
-    "runningAgents": "běžící agenti",
-    "noAgentsRunning": "žádný agent neběží",
-    "budgets": "rozpočty",
-    "sdkCreditCaps": "AGENT SDK KREDIT",
-    "renew": "obnova {date}",
-    "sdkCreditProgress": "Agent SDK kredit",
-    "agentNote": "běhy agentů čerpají odsud",
-    "interactiveCaps": "INTERAKTIVNÍ · CLAUDE CODE",
+    "briefingDepartments": "Oddělení",
+    "briefingDepartmentTier3": "{count} čeká na tebe",
+    "briefingDepartmentError": "{count} selhalo",
+    "briefingDepartmentTier2": "{count} k reportu",
     "starters": {
       "skills": {
-        "label": "Přidej skill",
-        "sub": "SKILL.md — jednotka práce"
+        "label": "Přidej skill"
       },
       "projects": {
-        "label": "Přidej projekt",
-        "sub": "jedna firma — kanály a tým"
+        "label": "Přidej projekt"
       },
       "agents": {
-        "label": "Přidej agenta",
-        "sub": ".agent.md — model + nástroje"
+        "label": "Přidej agenta"
       },
       "pipelines": {
-        "label": "Přidej pipeline",
-        "sub": "zřetězení agentů"
+        "label": "Přidej pipeline"
       }
     },
-    "allApprovals": "celá fronta →",
-    "approvalsSubsystemFilter": "Filtr schválení podle podsystému",
-    "liveLog": "Živý log",
-    "liveLogEmpty": "Zatím žádná aktivita.",
-    "liveLogSubsystemFilter": "Filtr aktivit podle podsystému",
-    "loadOlder": "Načíst starší",
-    "groupedCount": "{count}× {group}"
+    "liveLog": "Živý log"
   },
   "skills": {
-    "addSkill": "Přidat skill",
-    "sectionLabel": "Skilly",
     "emptyTitle": "Zatím žádné skilly",
-    "emptyDescription": "Skilly jsou soubory SKILL.md na disku. Přidej první a objeví se tu jako karta. Skilly volají agenti ze svého katalogu.",
-    "emptyHint": "// vytvoří ~/zibby/skills/'<název>'/SKILL.md",
     "title": "Skilly",
-    "countSummary": "{count, plural, =0 {žádné skilly} one {# skill} few {# skilly} other {# skillů}} · soubory SKILL.md, které volají agenti",
-    "addCategory": "Přidat kategorii",
     "fields": {
       "category": "Kategorie"
     },
     "categoryDialog": {
       "title": "Nová kategorie",
-      "subtitle": "název + glyph",
-      "nameLabel": "Název kategorie",
-      "namePlaceholder": "např. Média",
-      "glyphLabel": "Glyph",
-      "duplicate": "Kategorie „{name}“ už existuje."
+      "subtitle": "název + glyph"
     },
-    "deleteEmptyCategory": "Smazat",
-    "deleteEmptyCategoryAria": "Smazat prázdnou kategorii {name}",
-    "emptyCategory": "Prázdná kategorie — přidej sem skill, nebo ji smaž.",
-    "uncategorized": "Bez kategorie",
-    "openSkillAria": "Otevřít skill {name}",
     "deleteTitle": "Smazat skill?",
     "deleteBody": "Opravdu smazat skill {name}? Smaže se i soubor {file}. Tuto akci nelze vrátit."
   },
@@ -435,10 +534,6 @@
     "loadErrorTitle": "Nepodařilo se načíst agenty",
     "loadErrorDescription": "Spojení s API selhalo — tvoji agenti jsou v pořádku, jen je teď nevidím. Zkontroluj připojení a zkus to znovu.",
     "retry": "Zkusit znovu",
-    "sectionLabel": "Agenti",
-    "editRaw": "Edit raw .agent.md",
-    "stopAria": "Zastavit {skill}",
-    "progressAria": "postup {skill}",
     "emptyTitle": "Zatím žádní agenti",
     "emptyDescription": "Agenti jsou definiční soubory .agent.md — model, thinking level a nástroje. Z agentů pak skládáš pipeline v Orchestraci.",
     "emptyHint": "// vytvoří ~/zibby/agents/'<název>'.agent.md",
@@ -463,10 +558,14 @@
     "fields": {
       "name": "Jméno",
       "namePlaceholder": "jméno agenta",
+      "displayName": "Zobrazované jméno",
+      "displayNamePlaceholder": "Kevin",
+      "jobTitle": "Pracovní pozice",
+      "jobTitlePlaceholder": "Senior reviewer",
       "whenToUse": "Kdy použít",
       "whenToUsePlaceholder": "…při kontrole diffu před pushem",
       "category": "Kategorie",
-      "ownerSubsystem": "Vlastnící subsystém",
+      "department": "Vlastnící oddělení",
       "model": "Model",
       "thinking": "Thinking",
       "icon": "Ikona",
@@ -561,13 +660,13 @@
     "create": "Vytvořit",
     "detailPanel": "Konfigurace integrace",
     "autonomyPanel": "Autonomie",
-    "autonomyHint": "Puls tenhle kanál sleduje vždy. Tady určíš, co smí ZIBBY dělat sám: dispatch = jednat podle příchozích zpráv (Tier 1), odpověď = sám odepsat (Tier 2, jménem Heralda). Bez nastavení platí výchozí hodnoty ze Settings → Mandate.",
+    "autonomyHint": "Ops tenhle kanál sleduje vždy. Tady určíš, co smí ZIBBY dělat sám: dispatch = jednat podle příchozích zpráv (Tier 1), odpověď = sám odepsat (Tier 2, jménem Heralda). Bez nastavení platí výchozí hodnoty ze Settings → Mandate.",
     "autonomyDispatch": "Dispatch (jednat)",
-    "autonomyReply": "Odpověď (Herald)",
+    "autonomyReply": "Odpověď (Comms)",
     "deleteTitle": "Smazat integraci?",
     "deleteBody": "Opravdu smazat integraci {name}? Uložené přihlašovací údaje se smažou také. Tuto akci nelze vrátit."
   },
-  "maestro": {
+  "release": {
     "title": "Fronta ke sloučení",
     "merge": {
       "hold": "Podržte pro sloučení #{number}",
@@ -649,15 +748,8 @@
   "phase": {
     "modelTitle": "model (override per-run)",
     "thinkTitle": "thinking level",
-    "phaseLabel": "FÁZE {n}",
-    "input": "vstup",
     "output": "výstup",
-    "retry": "retry · max {n}",
-    "verifyLabel": "verify",
-    "checksLabel": "kontroly",
-    "checksTitle": "deterministické kontroly (bez modelu)",
-    "attempt": "pokus {n}/{max}",
-    "attemptTitle": "aktuální pokus / maximum"
+    "retry": "retry · max {n}"
   },
   "approval": {
     "waiting": "Čeká na tvé schválení",
@@ -678,47 +770,15 @@
     "originAgentFactory": "Agent Factory",
     "openSource": "Otevřít zdroj ↗"
   },
-  "runModal": {
-    "editRaw": "Edit raw SKILL.md",
-    "launch": "Spustit agenta",
-    "runAria": "Spustit {name}",
-    "launchedTitle": "Agent spuštěn na pozadí",
-    "launchedTarget": "{name} → {project}",
-    "watch": "Sleduj ho v sekci <agents>Běžící agenti</agents>.",
-    "promptLabel": "Zadání / prompt",
-    "promptPlaceholder": "Řekni {name}, co má udělat…",
-    "targetLabel": "Cíl",
-    "targetProjectOption": "Projekt",
-    "targetFilesOption": "Soubory",
-    "filesLabel": "Složka",
-    "filesHint": "Vyber složku pro předvyplnění cesty níže, nebo ji napiš přímo",
-    "targetDirLabel": "Cílová složka",
-    "targetDirHint": "Absolutní cesta ke složce — před spuštěním ji zkontroluj",
-    "targetDirError": "Zadej absolutní cestu (začínající /)"
-  },
   "pipelineRun": {
-    "editRaw": "Edit raw .pipeline.md",
-    "launch": "Spustit pipeline",
-    "runAria": "Spustit pipeline {name}",
     "title": "Spustit · {name}",
-    "subtitle": "{count} fází · víceagentní běh na pozadí",
-    "launchedTitle": "Pipeline spuštěna na pozadí",
-    "launchedTarget": "{name} → {project}",
-    "watch": "Sleduj fáze v sekci <agents>Běžící agenti</agents> · pracuje v izolované branchi.",
-    "promptLabel": "Zadání",
-    "promptPlaceholder": "Co má pipeline „{name}\" udělat…",
-    "overrideTitle": "Override modelu / thinking pro tenhle běh",
-    "overrideHint": "klikni na badge pro override · defaulty z agent.md, push do branche čeká na tvé schválení",
-    "changeModelAria": "Změnit model pro {agent}",
-    "changeThinkAria": "Změnit thinking pro {agent}"
+    "subtitle": "{count} fází · víceagentní běh na pozadí"
   },
   "forms": {
-    "namePlaceholder": "'<název>'",
     "skill": {
       "title": "Nový skill",
       "subtitle": "vytvoří SKILL.md na disku",
       "editTitle": "Upravit skill",
-      "editSubtitle": "přepíše SKILL.md na disku",
       "submitLabel": "Vytvořit skill",
       "nameLabel": "Název skillu",
       "namePlaceholder": "např. rohlik",
@@ -749,23 +809,12 @@
     "integration": {
       "title": "Nová integrace",
       "subtitle": "vytvoří config soubor · secrets žijí v .env, ne tady",
-      "submitLabel": "Vytvořit integraci",
-      "nameLabel": "Název integrace",
-      "namePlaceholder": "např. GitHub",
-      "descLabel": "Popis",
-      "descPlaceholder": "Co systém touhle integrací osahá…"
+      "submitLabel": "Vytvořit integraci"
     },
     "agent": {
       "title": "Nový agent",
       "subtitle": "vytvoří .agent.md s definicí (model, thinking, nástroje)",
-      "submitLabel": "Vytvořit agenta",
-      "nameLabel": "Název agenta",
-      "namePlaceholder": "např. Reviewer",
-      "roleLabel": "Role",
-      "roleHint": "co agent dělá",
-      "rolePlaceholder": "Pre-review diffu před push…",
-      "modelLabel": "Model",
-      "thinkingLabel": "Thinking"
+      "submitLabel": "Vytvořit agenta"
     },
     "pipeline": {
       "title": "Nová pipeline",
@@ -775,33 +824,12 @@
       "namePlaceholder": "např. Build Feature",
       "descLabel": "Popis",
       "descPlaceholder": "Co pipeline dělá…",
-      "agentLabel": "Agent",
-      "handoffLabel": "Předávací soubor",
       "handoffHint": "zapíše tenhle agent · další agent si ho vezme jako zadání",
-      "outputHint": "zapíše tenhle agent · finální výstup pipeline",
-      "handoffNote": "zadání pro dalšího agenta",
       "addStep": "Přidat agenta",
-      "removeStepAria": "Odebrat fázi {n}",
       "noAgents": "Nejdřív vytvoř agenta — řetěz potřebuje aspoň jednoho.",
       "editTitle": "Upravit pipeline",
       "saveLabel": "Uložit změny",
-      "typeLabel": "Typ fáze",
-      "typeAgent": "agent",
       "typeVerify": "verify (kontroly)",
-      "commandsLabel": "Kontrolní příkazy",
-      "commandsHint": "Jeden příkaz na řádek; prázdné = kontroly projektu / výchozí.",
-      "loopToggle": "Smyčka při selhání (back-edge)",
-      "loopToLabel": "Při selhání skoč zpět na fázi",
-      "loopMaxRetriesLabel": "Max. opakování",
-      "loopEscalateLabel": "Eskalovat po vyčerpání",
-      "loopThenLabel": "Po vyčerpání pokusů",
-      "thenFail": "selhat (fail)",
-      "thenPark": "zaparkovat (park)",
-      "escalationTitle": "eskalační žebřík · pokus n",
-      "escalationModelLabel": "Model · pokus {n}",
-      "escalationThinkLabel": "Thinking · pokus {n}",
-      "removeRungAria": "Odebrat příčku {n}",
-      "addRung": "Přidat příčku",
       "paletteTitle": "// agenti · pool",
       "paletteHint": "Přetáhni na plátno → uzel grafu",
       "paletteAddAria": "Přidat agenta {agent} na plátno",
@@ -837,7 +865,6 @@
       "title": "Nový příkaz",
       "subtitle": "vytvoří .md soubor na disku",
       "editTitle": "Upravit příkaz",
-      "editSubtitle": "přepíše .md soubor na disku",
       "submitLabel": "Vytvořit příkaz",
       "idLabel": "Identifikátor",
       "idHint": "Slouží jako /<id> — v editaci zamčeno",
@@ -859,18 +886,12 @@
   },
   "defaults": {
     "skill": "Nový skill",
-    "integration": "Nová integrace",
     "agent": "Nový agent",
     "pipeline": "Nová pipeline",
     "command": "Nový příkaz"
   },
   "runLog": {
-    "aria": "Log běhu {agent}",
-    "close": "Zavřít",
-    "prompt": "Zadání",
-    "waiting": "čekání na výstup…",
-    "streaming": "streamuji…",
-    "finished": "dokončeno"
+    "waiting": "čekání na výstup…"
   },
   "approvals": {
     "wants": "chce",
@@ -902,7 +923,6 @@
   },
   "settings": {
     "title": "Nastavení systému",
-    "daemonOn": "démon na",
     "mandate": {
       "title": "Mandát autonomie",
       "hint": "Co smí ZIBBY dělat bez vyzvání. Konzervativně: dispatch zapnutý, odpovědi vypnuté — odpověď odešle až po tvém svolení na daném kanálu.",
@@ -989,11 +1009,31 @@
       "disabled": "Vypnutý"
     },
     "footer": "ZIBBY — Zestful Intuitive Brainy Butler for You",
+    "eyebrow": "SYSTÉM — NASTAVENÍ",
     "subnav": {
       "ariaLabel": "Sekce nastavení",
       "general": "Obecné",
+      "appearance": "Vzhled",
+      "coo": "Osobnost COO",
+      "activity": "Aktivita",
+      "automations": "Automatizace",
+      "runtime": "Běhové parametry",
+      "machine": "Stroj",
+      "status": "Stav",
       "gates": "Pravidla schvalování",
       "tasks": "Tasky"
+    },
+    "appearance": {
+      "title": "Vzhled",
+      "themeLabel": "Motiv",
+      "themeHint": "Světlý motiv je jako papír, tmavý dodá živým stavům záři. Systémový sleduje nastavení OS a mění se za běhu.",
+      "theme": {
+        "light": "Světlý",
+        "dark": "Tmavý",
+        "system": "Systémový"
+      },
+      "motionLabel": "Omezený pohyb",
+      "motionHint": "Vypne animace glyfů a stavů v tomto prohlížeči — navíc k vlastnímu nastavení omezeného pohybu v OS."
     },
     "activity": {
       "title": "Aktivita",
@@ -1037,7 +1077,6 @@
   },
   "runs": {
     "title": "Běhy & aktivita",
-    "summary": "{running} běží · {awaiting} čeká · {total} celkem",
     "group": {
       "total": "Celkem",
       "running": "Běží",
@@ -1054,12 +1093,8 @@
       "error": "Chyba",
       "interrupted": "Přerušeno"
     },
-    "filterActive": "Projekt: {name}",
-    "filterClearAria": "Zrušit filtr projektu",
     "emptyTitle": "Žádné běhy",
     "emptyDesc": "Zatím tu žádný task neběžel. Zadej nový task a objeví se tady.",
-    "emptyFilter": "Žádné tasky v tomto stavu.",
-    "selectHint": "Vyber task vlevo pro detail a živý log.",
     "actionsMenuLabel": "Akce běhu",
     "stop": "Zastavit běh",
     "stopTitle": "Zastavit běh?",
@@ -1088,11 +1123,8 @@
     "metaCost": "cena",
     "metaDuration": "délka běhu",
     "metaAgent": "agent",
-    "metaKind": "typ",
     "metaTask": "úkol",
     "metaRoadmapItem": "issue",
-    "showMore": "zobrazit více",
-    "showLess": "zobrazit méně",
     "producedOutputTitle": "Výstup úkolu",
     "classificationTitle": "Klasifikace",
     "classificationSwitchboard": "Rozřazovač",
@@ -1115,13 +1147,8 @@
       "done": "úspěch",
       "error": "selhání"
     },
-    "agoNow": "teď",
-    "agoM": "před {n} m",
-    "agoH": "před {n} h",
     "inM": "za {n} m",
     "inH": "za {n} h",
-    "pipelineNote": "Pipeline běh — detail a fáze najdeš v Orchestraci.",
-    "openPipeline": "Otevřít pipeline",
     "scheduledNote": "Task čeká na naplánovaný čas — log se objeví po spuštění.",
     "state": {
       "running": "běží",
@@ -1196,7 +1223,6 @@
     "stageLoading": "Načítám fáze makera…",
     "stageWaitingLabel": "čeká",
     "stageWaitingBody": "čeká na dokončení předchozích fází",
-    "stageOutput": "výstup",
     "stageRetryAttempt": "pokus {n}/{max}",
     "stageRetryLoopTo": "vráceno na {phase}",
     "stageRetryEscalated": "vyčerpány pokusy → eskalace → zaparkováno k ranní review",
@@ -1234,7 +1260,6 @@
     "resolveModeAny": "Kterákoli · OR",
     "addCondition": "Přidat podmínku",
     "removeCondition": "Odebrat podmínku",
-    "forAgent": "Pravidla pro agenta",
     "evalNote": "Risk je vlastnost (akce, cíl, kontext) — ne nástroje. Zamčený floor jde jen přitvrdit.",
     "inheritedTitle": "Zděděná systémová pravidla",
     "inheritedNote": "Bezpečnostní floor z POLICY.md — agent ho smí jen přitvrdit, ne povolit.",
@@ -1248,7 +1273,6 @@
     "ownTitle": "Pravidla · {agent}",
     "addRule": "Přidat pravidlo",
     "noOwnRules": "Žádná vlastní pravidla — agent jede jen na systémovém flooru.",
-    "violation": "Zamítnuto — pravidlo by oslabilo zamčený floor (jen přitvrzení).",
     "you": "Ty",
     "notifyHint": "→ activity feed",
     "newRule": "Nové pravidlo",
@@ -1301,6 +1325,7 @@
     "resolveCheck": "Kontrola"
   },
   "projects": {
+    "eyebrow": "PRÁCE — PROJEKTY",
     "title": "Projekty",
     "switcherLabel": "Aktivní projekt",
     "switcherNoProject": "Bez projektu",
@@ -1359,6 +1384,9 @@
       "prOpenModeHint": "PR se otevírá vždy hned (Tier-2, bez schvalování) — tady jen volíš jeho stav při otevření. Nikdy nemění merge gate.",
       "prOpenModeReady": "Připravené",
       "prOpenModeDraft": "Koncept",
+      "defaultChain": "Výchozí řetězec",
+      "defaultChainHint": "Nový úkol pro tento projekt tento řetězec přednastaví (O-23), pokud ho ručně nepřepíšeš.",
+      "defaultChainNone": "Bez výchozího řetězce",
       "category": "Kategorie",
       "categoryNone": "Bez kategorie",
       "desc": "Popis",
@@ -1494,13 +1522,13 @@
     }
   },
   "companies": {
+    "eyebrow": "PRÁCE — FIRMY",
     "title": "Firmy",
     "countSummary": "{count, plural, =0 {žádné firmy} one {# firma} few {# firmy} other {# firem}} · nadřazená entita nad projekty",
     "addCompany": "Přidat firmu",
     "openAria": "Otevřít {name}",
     "emptyTitle": "Zatím žádné firmy",
     "emptyDescription": "Firma je nadřazená entita nad projektem — sdílený tým a výchozí rozpočet, který projekty dědí. Přidej první a objeví se tu jako karta.",
-    "emptyHint": "// registr ~/zibby/companies.json",
     "peopleCount": "{count, plural, =0 {žádní lidé} one {# osoba} few {# osoby} other {# osob}}",
     "hasBudget": "výchozí rozpočet",
     "newCompany": "Nová firma",
@@ -1548,7 +1576,6 @@
       "title": "Projekty firmy",
       "empty": "Zatím na tuto firmu neodkazuje žádný projekt — nastav ji na detailu projektu.",
       "addExisting": "Přidat existující projekt",
-      "createNew": "Vytvořit nový projekt",
       "add": "Přidat projekt",
       "linkDialog": {
         "title": "Přidat existující projekt",
@@ -1557,17 +1584,26 @@
         "placeholder": "Vyber projekt…",
         "confirm": "Propojit",
         "noCandidates": "Žádný jiný projekt k propojení — všechny už patří k této firmě."
-      }
+      },
+      "columnProject": "Projekt",
+      "columnRepo": "Repo"
+    },
+    "allTasksLink": "VŠECHNY ÚKOLY TÉTO FIRMY →",
+    "contactsTitle": "Kontakty",
+    "metrics": {
+      "projects": "PROJEKTY",
+      "contacts": "KONTAKTY",
+      "budget": "ROZPOČET / MĚS"
     }
   },
   "teams": {
+    "eyebrow": "PRÁCE — TÝMY",
     "title": "Týmy",
     "countSummary": "{count, plural, =0 {žádné týmy} one {# tým} few {# týmy} other {# týmů}} · vlastník znalostní báze mezi firmou a projektem",
     "addTeam": "Přidat tým",
     "openAria": "Otevřít {name}",
     "emptyTitle": "Zatím žádné týmy",
     "emptyDescription": "Tým je vrstva mezi firmou a projektem — vlastní znalostní bázi, kterou projekty čtou. Přidej první a objeví se tu jako karta.",
-    "emptyHint": "// registr ~/zibby/teams.json",
     "hasKnowledgeBase": "znalostní báze",
     "newTeam": "Nový tým",
     "create": "Vytvořit tým",
@@ -1604,7 +1640,6 @@
       "title": "Projekty týmu",
       "empty": "Zatím na tento tým neodkazuje žádný projekt — nastav ho na detailu projektu.",
       "addExisting": "Přidat existující projekt",
-      "createNew": "Vytvořit nový projekt",
       "add": "Přidat projekt",
       "linkDialog": {
         "title": "Přidat existující projekt",
@@ -1613,7 +1648,12 @@
         "placeholder": "Vyber projekt…",
         "confirm": "Propojit",
         "noCandidates": "Žádný jiný projekt k propojení — všechny už patří k tomuto týmu."
-      }
+      },
+      "columnProject": "Projekt",
+      "columnRepo": "Repo"
+    },
+    "metrics": {
+      "projects": "PROJEKTY"
     }
   },
   "automations": {
@@ -1692,14 +1732,11 @@
   },
   "hooks": {
     "title": "Hooky",
-    "countSummary": "{count, plural, =0 {žádné hooky} one {# hook} few {# hooky} other {# hooků}} · shell příkazy kolem událostí agentů",
     "addHook": "Přidat hook",
     "create": "Vytvořit",
     "enabledShort": "aktivní",
     "disabledShort": "vypnuto",
     "emptyTitle": "Zatím žádné hooky",
-    "emptyDescription": "Hooky jsou shellové příkazy, které Claude Code spustí v určitém bodě sezení. Schvalovací hook je vždy uzamčen jako první — tento katalog umí jen přidávat.",
-    "emptyHint": "// vytvoří ~/zibby/hooks/'<id>'.json",
     "idLabel": "Identifikátor",
     "nameLabel": "Název",
     "eventLabel": "Událost",
@@ -1773,12 +1810,9 @@
   },
   "mcp": {
     "title": "MCP servery",
-    "countSummary": "{count, plural, =0 {žádné servery} one {# server} few {# servery} other {# serverů}} · poskytovatelé nástrojů pro agenty",
     "addServer": "Přidat MCP server",
     "create": "Vytvořit",
     "emptyTitle": "Zatím žádné MCP servery",
-    "emptyDescription": "MCP servery rozšiřují běhy o nástroje. Secrets (tokeny, env, hlavičky) žijí v odděleném úložišti — tady je jen konfigurace.",
-    "emptyHint": "// vytvoří ~/zibby/mcp-servers/'<id>'.json",
     "typeLabel": "Transport",
     "typeStdio": "stdio",
     "typeHttp": "HTTP",
@@ -1802,16 +1836,20 @@
   },
   "commands": {
     "title": "Příkazy",
-    "addCommand": "Přidat příkaz",
-    "countSummary": "{count, plural, one {# příkaz} few {# příkazy} other {# příkazů}}",
     "emptyTitle": "Zatím žádné příkazy",
-    "emptyDescription": "Příkazy jsou vlastní slash-příkazy (/<id>) s Markdown tělem. Při každém běhu se materializují do .claude/commands/.",
-    "emptyHint": "// vytvoří ~/zibby/commands/'<id>'.md",
-    "openCommandAria": "Otevřít příkaz /{name}",
     "deleteTitle": "Smazat příkaz?",
     "deleteBody": "Opravdu smazat příkaz /{id}? Smaže se i jeho definiční soubor. Tuto akci nelze vrátit."
   },
   "chat": {
+    "createTask": "Vytvořit úkol",
+    "dock": {
+      "role": "COO · Směruje, třídí, konverzuje",
+      "toggle": "Otevřít nebo zavřít chat s COO",
+      "targetCoo": "→ COO",
+      "targetExplicit": "→ {name}",
+      "clearTarget": "Zrušit cíl (zpět na COO)",
+      "empty": "Zeptejte se COO na cokoli, nebo mu předejte úkol."
+    },
     "title": "Chat se ZIBBY",
     "close": "Zavřít",
     "newChat": "Nový chat",
@@ -1827,8 +1865,7 @@
       "listening": "POSLOUCHÁM",
       "paused": "HLASOVÝ REŽIM",
       "error": "Rozpoznávání řeči selhalo, hlasový režim je vypnutý.",
-      "errorMicDenied": "Prohlížeč zablokoval přístup k mikrofonu — povolte ho v nastavení stránky.",
-      "speakError": "Mluvenou odpověď se nepodařilo přehrát."
+      "errorMicDenied": "Prohlížeč zablokoval přístup k mikrofonu — povolte ho v nastavení stránky."
     },
     "composer": {
       "label": "Zpráva",
@@ -1837,9 +1874,7 @@
     },
     "mention": {
       "ariaLabel": "Vyhledat agenta nebo pipeline k oslovení",
-      "placeholder": "Hledat agenta nebo pipeline…",
       "empty": "Nic nenalezeno",
-      "removeAria": "Odebrat cíl",
       "sections": {
         "agents": "Agenti",
         "pipelines": "Pipelines"
@@ -1853,25 +1888,19 @@
     },
     "tasks": {
       "empty": "Žádné tasky",
-      "activeEmpty": "Žádné běžící úlohy",
       "archive": "Archiv",
-      "openAria": "Otevřít běh: {title}",
-      "detailAriaLabel": "Detail běhu: {title}",
-      "openFull": "Otevřít na stránce Běhy",
-      "closeDetail": "Zavřít detail"
+      "openAria": "Otevřít běh: {title}"
     },
     "toolDock": {
       "label": "Nástroje"
     },
     "search": {
-      "placeholder": "Hledat napříč ZIBBY…",
       "ariaLabel": "Hledat napříč ZIBBY",
       "empty": "Nic nenalezeno",
-      "clearAria": "Vymazat hledání",
       "kind": {
         "agent": "Agent",
         "pipeline": "Pipeline",
-        "subsystem": "Subsystém",
+        "department": "Oddělení",
         "task": "Úloha",
         "memory": "Paměť",
         "skill": "Skill",
@@ -1881,77 +1910,42 @@
         "company": "Firma",
         "setting": "Nastavení",
         "action": "Akce"
-      },
-      "actions": {
-        "generateBriefing": "Vygenerovat briefing",
-        "generatingBriefing": "Generuji briefing…"
       }
     },
     "detail": {
-      "close": "Zavřít",
-      "kindAgent": "Agent",
-      "kindPipeline": "Pipeline",
-      "noDescription": "Zatím bez popisu.",
       "phaseCount": "{count, plural, one {# fáze} few {# fáze} other {# fází}}"
     },
     "overview": {
       "title": "Přehled ZIBBY",
-      "openAria": "Otevřít přehled ZIBBY",
-      "role": "orchestrátor · řídím {count} podsystémů",
-      "summary": "{working} v akci, {error} v chybě, {report} s hlášením, {waiting} čeká na tebe.",
-      "statWorking": "pracují",
-      "statError": "v chybě",
-      "statReport": "hlášení čeká",
-      "statWaiting": "čekají na tebe",
-      "statIdle": "v klidu",
-      "crossSubsystems": "Napříč subsystémy"
+      "openAria": "Otevřít přehled ZIBBY"
     },
     "statusPill": {
-      "nominal": "Nominální",
-      "connecting": "Připojuji",
       "degraded": "Degradováno",
-      "offline": "Offline",
       "working": "{n} pracují",
       "error": "{n} chyb",
-      "report": "{n} hlášení",
       "waiting": "{n} čekají na tebe",
       "flyout": {
         "working": {
           "title": "Pracují",
-          "emptyTitle": "Nikdo nepracuje",
-          "emptyBody": "Žádná úloha právě neběží."
+          "emptyTitle": "Nikdo nepracuje"
         },
         "waiting": {
           "title": "Čeká na tvé rozhodnutí",
-          "emptyTitle": "Nic nečeká",
-          "emptyBody": "žádná akce nečeká · ZIBBY sám neobjedná"
+          "emptyTitle": "Nic nečeká"
         },
         "error": {
           "title": "Chyby",
-          "emptyTitle": "Žádné chyby",
-          "emptyBody": "Od poslední návštěvy nic neselhalo.",
-          "noDetail": "Bez zaznamenaného detailu chyby.",
-          "missingRun": "Běh už není v přehledu."
+          "emptyTitle": "Žádné chyby"
         },
-        "loading": "Načítám…",
-        "errorTitle": "Nepodařilo se načíst",
-        "errorBody": "Zkus to prosím znovu.",
         "retry": "Zkusit znovu"
       }
     },
     "note": {
       "title": "Nová poznámka",
-      "bodyLabel": "Poznámka",
-      "placeholder": "Napiš poznámku pro ZIBBY…",
-      "save": "Uložit poznámku",
-      "close": "Zavřít"
+      "save": "Uložit poznámku"
     },
     "task": {
-      "subsystemLabel": "Subsystém",
-      "textLabel": "Úloha",
-      "placeholder": "Zadej práci přirozeným jazykem…",
-      "run": "Spustit úlohu",
-      "close": "Zavřít"
+      "run": "Spustit úlohu"
     },
     "bottomBar": {
       "chat": "Chat",
@@ -1959,81 +1953,39 @@
       "note": "Přidat poznámku"
     }
   },
-  "subsystems": {
-    "ariaLabel": "Podsystémová síť ZIBBY",
+  "departments": {
+    "ariaLabel": "Síť oddělení ZIBBY",
     "state": {
       "idle": "V klidu",
       "running": "Běží",
-      "report": "Hlášení připraveno",
       "waiting": "Čeká na rozhodnutí",
       "error": "Chyba"
     },
-    "nodeAria": "{name}, {state}",
-    "tier2Badge": "{count} hlášení k nahlédnutí",
-    "tier3Badge": "{count} čeká na rozhodnutí",
-    "errorBadge": "{count} chyb",
     "drawer": {
-      "ariaLabel": "Detail podsystému {name}",
-      "close": "Zavřít detail podsystému",
+      "ariaLabel": "Detail oddělení {name}",
       "tabs": {
-        "roster": "Roster",
-        "aktivita": "Aktivita",
-        "gates": "Nastavení & Gates",
-        "artefakty": "Artefakty",
-        "handoff": "Předávání"
+        "gates": "Nastavení & Gates"
       }
     },
     "roster": {
-      "crewTitle": "Posádka",
-      "integrationsTitle": "Integrace",
-      "monitorsTitle": "Monitory",
-      "emptyTitle": "Zatím žádná pipeline",
-      "emptyDescription": "Tenhle podsystém si zatím nevlastní žádnou pipeline. Vytvoř první — rovnou s ním jako vlastníkem."
+      "emptyTitle": "Zatím žádná pipeline"
     },
     "aktivita": {
-      "allRuns": "Všechny runy",
-      "emptyTitle": "Zatím žádná aktivita",
-      "emptyDescription": "Tenhle podsystém ještě nespustil žádnou pipeline. Jakmile poběží, běhy se objeví tady."
+      "emptyTitle": "Zatím žádná aktivita"
     },
     "gates": {
-      "sentencePrefix": "Než {subject} udělá",
       "behavior": {
-        "allow": "prostě to udělá",
-        "notify": "to udělá a nahlásí do aktivity",
         "ask": "se zeptá",
         "deny": "to nikdy neudělá"
-      },
-      "sentencesTitle": "Pravidla v mad-libs znění",
-      "sentencesEmptyTitle": "Zatím žádné vlastní pravidlo",
-      "sentencesEmptyDescription": "Tenhle podsystém nemá v katalogu žádné vlastní pravidlo. Přidej ho v katalogu níž.",
-      "autopilotTitle": "Autopilot podle projektů",
-      "autopilotNoProject": "Žádný projekt zatím nemá nastavený autopilot.",
-      "autopilotCanDoAlone": "Může sám:",
-      "autopilotAlwaysAsk": "Vždy se zeptá:",
-      "autopilotEditLink": "Upravit v profilu projektu"
+      }
     },
     "artefakty": {
-      "produceTitle": "Produkuje",
-      "sinkPr": "PR na review",
-      "sinkFileProject": "soubor → projekt",
-      "sinkFileVault": "poznámka → vault",
-      "handsOffTo": "předává: {name}",
-      "toOperator": "→ operátor",
-      "produceEmpty": "Žádná z vlastněných pipeline zatím nemá nastavený výstupní sink.",
-      "historyTitle": "Vyrobené artefakty",
-      "historyEmptyTitle": "Zatím žádný artefakt",
-      "historyEmptyDescription": "Žádná z vlastněných pipeline zatím nic nedoručila do registru artefaktů.",
       "kind": {
-        "pr": "PR",
-        "vault-note": "Poznámka",
-        "project-file": "Soubor"
+        "pr": "PR"
       },
-      "runLink": "Zobrazit běh",
-      "emptyTitle": "Tenhle podsystém si zatím nevlastní žádnou pipeline",
-      "emptyDescription": "Bez vlastní pipeline nemá tenhle podsystém co produkovat ani co doručit."
+      "emptyTitle": "Tohle oddělení si zatím nevlastní žádnou pipeline"
     },
     "handoff": {
-      "panelTitle": "Odchozí pravidla předávání",
       "sentencePrefix": "Když {subject} vyprodukuje",
       "severityPrefix": "≥",
       "targetPrefix": "→ předat",
@@ -2049,7 +2001,7 @@
       "delete": "Smazat",
       "addRule": "Přidat pravidlo",
       "emptyTitle": "Zatím žádná odchozí pravidla",
-      "emptyDescription": "Tento subsystém zatím nemá žádné vlastní pravidlo předávání. Přidej první níže.",
+      "emptyDescription": "Toto oddělení zatím nemá žádné vlastní pravidlo předávání. Přidej první níže.",
       "deleteTitle": "Smazat pravidlo předávání?",
       "deleteBody": "Opravdu smazat toto pravidlo předávání? Tuto akci nelze vrátit.",
       "severity": {
@@ -2081,7 +2033,7 @@
         "severityPrefix": "se závažností",
         "anySignal": "Jakýkoli signál (∗)",
         "anySeverity": "jakoukoli",
-        "targetKindSubsystem": "subsystém",
+        "targetKindDepartment": "oddělení",
         "targetKindPipeline": "pipeline",
         "tierClause": {
           "1": "automaticky",
@@ -2098,30 +2050,129 @@
       }
     }
   },
+  "departmentDetail": {
+    "chatWith": "Chat s {name}",
+    "breadcrumbOrg": "Organizace",
+    "reportsToCoo": "Podléhá COO",
+    "kpiOpenSubtasks": "Otevřené podúkoly",
+    "kpiAgents": "Agenti",
+    "kpiRunsToday": "Běhů dnes",
+    "kpiSpendToday": "Utraceno dnes",
+    "tabs": {
+      "team": "Tým",
+      "subtasks": "Podúkoly",
+      "pipelines": "Pipeline",
+      "handoff": "Předání",
+      "skills": "Dovednosti",
+      "integrations": "Integrace",
+      "automations": "Automatizace",
+      "hooks": "Hooky"
+    },
+    "state": {
+      "working": "Pracuje",
+      "thinking": "Přemýšlí",
+      "blocked": "Zablokováno",
+      "error": "Chyba",
+      "done": "Hotovo",
+      "idle": "Nečinný"
+    },
+    "team": {
+      "title": "Tým",
+      "hire": "Najmout",
+      "emptyTitle": "Zatím nikdo nenajat",
+      "emptyDescription": "Toto oddělení zatím nemá žádné zaměstnance — najměte prvního.",
+      "colName": "Jméno",
+      "colPosition": "Pozice",
+      "colState": "Stav"
+    },
+    "subtasks": {
+      "emptyTitle": "Zatím žádné podúkoly",
+      "emptyDescription": "Toto oddělení zatím nemá žádné podúkoly.",
+      "colTask": "Úkol",
+      "colStep": "Krok",
+      "colState": "Stav"
+    },
+    "pipelines": {
+      "emptyTitle": "Zatím žádné pipeline",
+      "emptyDescription": "Toto oddělení zatím nevlastní žádnou pipeline."
+    },
+    "handoff": {
+      "manageLink": "Spravovat pravidla předání →"
+    },
+    "registryLink": "Spravovat v registru →",
+    "registryDescription": "Tento seznam se spravuje v globálním registru, ne po odděleních.",
+    "registryTitle": "Spravováno v registru"
+  },
+  "people": {
+    "title": "Lidé",
+    "hire": "Najmout",
+    "hireTitle": "Najmout nového zaměstnance",
+    "filterDepartment": "Oddělení",
+    "allDepartments": "Všechna oddělení",
+    "filterState": "Stav",
+    "allStates": "Všechny stavy",
+    "filterRole": "Role",
+    "allRoles": "Všechny role",
+    "search": "Hledat",
+    "state": {
+      "working": "Pracuje",
+      "thinking": "Přemýšlí",
+      "blocked": "Zablokováno",
+      "error": "Chyba",
+      "done": "Hotovo",
+      "idle": "Nečinný"
+    },
+    "emptyTitle": "Nikdo tady není",
+    "emptyDescription": "Žádný zaměstnanec neodpovídá těmto filtrům.",
+    "breadcrumbPeople": "Lidé",
+    "stopRun": "Zastavit běh",
+    "currentSubtask": "Aktuální podúkol",
+    "logLines": "{count, plural, one {# řádek} few {# řádky} other {# řádků}}",
+    "logLive": "Živě",
+    "logIdle": "Log",
+    "noActiveRun": "Žádný aktivní běh.",
+    "config": "Nastavení",
+    "nameLabel": "Jméno",
+    "departmentLabel": "Oddělení",
+    "positionLabel": "Pozice",
+    "positionLink": "Upravit pozici: {name} →",
+    "nameHint": "Nechte prázdné pro zachování aktuálního jména",
+    "rules": "Pravidla",
+    "history": "Historie",
+    "historyRun": "Běh",
+    "historyState": "Stav",
+    "historyStarted": "Spuštěno",
+    "historyEmpty": "Zatím žádné běhy"
+  },
   "pins": {
     "pin": "Připnout",
     "unpin": "Odepnout",
-    "quickLaunchTitle": "Panel rychlého spuštění",
-    "run": "Spustit",
-    "unpinAria": "Odepnout {name}",
-    "kindAgent": "Agent",
-    "kindPipeline": "Pipeline"
+    "run": "Spustit"
   },
   "archive": {
     "title": "Archiv úloh",
-    "subtitle": "Vše, co ZIBBY dokončil napříč subsystémy",
+    "subtitle": "Vše, co ZIBBY dokončil napříč odděleními",
     "searchPlaceholder": "Hledat v archivu…",
     "searchAriaLabel": "Hledat v archivu",
-    "noSubsystem": "Bez subsystému",
+    "noDepartment": "Bez oddělení",
     "filter": {
-      "all": "Všechny subsystémy",
-      "multiple": "{n} subsystémy",
-      "noSubsystem": "Bez subsystému"
+      "all": "Všechna oddělení",
+      "multiple": "{n} oddělení",
+      "noDepartment": "Bez oddělení",
+      "department": "Oddělení"
     },
     "emptyFilter": "Nic nenalezeno.",
     "emptyTitle": "Archiv je zatím prázdný",
     "emptyDescription": "Jakmile ZIBBY něco dokončí, objeví se to tady.",
-    "selectHint": "Vyber úlohu vlevo pro zobrazení detailu."
+    "selectHint": "Vyber úlohu vlevo pro zobrazení detailu.",
+    "eyebrow": "AKTIVITA",
+    "column": {
+      "task": "Úkol",
+      "state": "Stav",
+      "duration": "Délka"
+    },
+    "loadMore": "Načíst další",
+    "loadingMore": "Načítám…"
   },
   "roadmap": {
     "hint": "Vyber epik a uvidíš jeho tasky vpravo.",
@@ -2129,7 +2180,6 @@
     "emptyEpicsDescription": "Tento projekt zatím nemá žádnou roadmapu — naimportuj ji ze zdroje, nebo epiky vytvoř ručně.",
     "sync": {
       "button": "Synchronizovat vše",
-      "autoSync": "Automatická synchronizace",
       "toast": "{imported} naimportováno, {updated} aktualizováno, {archived} archivováno",
       "sourceMenuAria": "Vybrat zdroj",
       "source": {
@@ -2160,7 +2210,6 @@
     "board": {
       "header": "{name} — task board",
       "allTasks": "Všechny tasky",
-      "allTasksCount": "Všechny tasky ({count})",
       "openEpicDetail": "Otevřít detail epicu",
       "columns": {
         "ready": "To Do",
@@ -2226,5 +2275,319 @@
       "dropError": "Soubor se nepodařilo načíst",
       "error": "Vytvoření se nepodařilo"
     }
+  },
+  "shell": {
+    "newTask": "+ Nový úkol",
+    "operatorFallback": "CEO",
+    "active": "aktivních",
+    "week": "TÝDEN",
+    "needsYou": "Potřebuje tě",
+    "needsYouEmpty": "Nic na tebe nečeká",
+    "needsYouToggle": "Potřebuje tě"
+  },
+  "orgMap": {
+    "eyebrow": "01 — MAPA ORGANIZACE",
+    "ceoLabel": "CEO",
+    "ceoFallback": "CEO",
+    "cooLabel": "COO · ROOT",
+    "cooName": "Zibby",
+    "cooTagline": "Routuje, klasifikuje, chatuje",
+    "alert": {
+      "errors": "{count, plural, one {# chyba} few {# chyby} other {# chyb}}",
+      "approvals": "{count, plural, one {# schválení čeká} few {# schválení čekají} other {# schválení čeká}}"
+    },
+    "focus": {
+      "eyebrow": "02 — ODDĚLENÍ · {code}",
+      "openDepartment": "OTEVŘÍT ODDĚLENÍ →",
+      "teamTitle": "Tým",
+      "teamEmptyTitle": "Nikdo si teď nepůjčuje",
+      "teamEmpty": "Oddělení si zaměstnance půjčuje z fondu, jakmile začne podúkol.",
+      "subtasksTitle": "Otevřené podúkoly",
+      "subtasksEmptyTitle": "Žádné podúkoly",
+      "subtasksEmpty": "V tomto oddělení nejsou žádné otevřené podúkoly.",
+      "handoffTitle": "Předávání · IN / OUT",
+      "handoffEmptyTitle": "Nic se nepředává",
+      "handoffEmpty": "Do tohoto oddělení ani z něj se nic nepředává.",
+      "out": "→ VEN · {kind}",
+      "in": "→ DOVNITŘ · {kind}"
+    }
+  },
+  "activityLog": {
+    "eyebrow": "AKTIVITA",
+    "title": "Živý log",
+    "empty": "Zatím nic neodpovídá. Nové události se objeví, jak přibudou.",
+    "pause": "Pozastavit",
+    "resume": "Pokračovat",
+    "clear": "Vyčistit",
+    "grouped": "{count}× {group}",
+    "loadMore": "Načíst starší",
+    "loadingMore": "Načítám…",
+    "filter": {
+      "all": "Vše",
+      "department": "Oddělení",
+      "agent": "Agent",
+      "task": "Úkol",
+      "kind": "Druh"
+    }
+  },
+  "activityInbox": {
+    "eyebrow": "AKTIVITA",
+    "title": "Příchozí zprávy",
+    "emptyTitle": "Zatím žádné zprávy",
+    "emptyBody": "Jakmile něco dorazí z připojených kanálů, objeví se to tady.",
+    "column": {
+      "source": "Zdroj",
+      "sender": "Odesílatel",
+      "tier": "Tier",
+      "handling": "Zpracování",
+      "triage": "Kategorie",
+      "text": "Náhled"
+    }
+  },
+  "activityBriefings": {
+    "eyebrow": "AKTIVITA",
+    "title": "Briefing",
+    "generateNow": "Vygenerovat teď",
+    "generatedAt": "Vygenerováno {at}",
+    "headline": "Shrnutí",
+    "needsYou": "Potřebuje tě",
+    "nothingNeedsYou": "Nic tě teď nepotřebuje.",
+    "didForYou": "Co ZIBBY udělal",
+    "emptyDid": "Zatím nic k zaznamenání.",
+    "departments": "Oddělení",
+    "watching": "Sleduji"
+  },
+  "policy": {
+    "approvals": {
+      "title": "Politika — Schválení",
+      "queueTitle": "Fronta",
+      "queueEmpty": "Fronta je prázdná.",
+      "historyTitle": "Historie",
+      "columns": {
+        "id": "ID",
+        "kind": "Druh",
+        "request": "Požadavek",
+        "department": "Odd.",
+        "wait": "Čeká",
+        "decision": "Rozhodnutí",
+        "task": "Úkol",
+        "when": "Kdy"
+      },
+      "decision": {
+        "approved": "Schváleno",
+        "rejected": "Zamítnuto"
+      },
+      "sheet": {
+        "title": "Schválení",
+        "highRisk": "Vysoké riziko",
+        "waited": "čeká {waited}",
+        "metric": {
+          "action": "Akce",
+          "severity": "Závažnost",
+          "department": "Oddělení"
+        },
+        "chainTitle": "Řetězec úkolu",
+        "reasonLabel": "Důvod (volitelné)",
+        "reasonHint": "Zobrazí se v historii schválení.",
+        "cancel": "Zrušit",
+        "confirmDeny": "Potvrdit zamítnutí",
+        "approve": "Schválit",
+        "deny": "Zamítnout",
+        "openTask": "Otevřít úkol"
+      }
+    },
+    "gates": {
+      "title": "Politika — Pravidla",
+      "sections": {
+        "floor": "Podlaha",
+        "global": "Globální pravidla",
+        "project": "Podle projektu",
+        "agent": "Podle agenta",
+        "handoff": "Předávání",
+        "signals": "Signály",
+        "mandate": "Mandát"
+      },
+      "projectPicker": "Projekt",
+      "allProjects": "Vše",
+      "agentRuleCount": "{count, plural, =0 {žádná pravidla} one {# pravidlo} few {# pravidla} other {# pravidel}}",
+      "departmentFilter": "Oddělení",
+      "projectRulesEmpty": "Pravidla dnes nejsou vázaná na projekt — vypni filtr a uprav je v globálním katalogu."
+    },
+    "patterns": {
+      "title": "Politika — Naučené vzory",
+      "subtitle": "Postaveno na tvých minulých schváleních. Nic se nezmění, dokud to nepřijmeš.",
+      "accepted": "Teď je to pravidlo",
+      "empty": "Zatím žádné naučené vzory.",
+      "evidenceCount": "{n} / {of}"
+    }
+  },
+  "ledgerBudgets": {
+    "eyebrow": "ÚČETNICTVÍ — ROZPOČTY",
+    "title": "Rozpočty",
+    "subtitle": "Limity běhů napříč účtem, firmami a jejich projekty.",
+    "meta": {
+      "day": "Dnes",
+      "week": "Tento týden",
+      "month": "Tento měsíc"
+    },
+    "cap": {
+      "day": "Denní limit",
+      "week": "Týdenní limit",
+      "month": "Měsíční limit"
+    },
+    "sectionCompanies": "Firmy",
+    "emptyCompaniesTitle": "Zatím žádné firmy",
+    "emptyCompanies": "Přidej firmu, ať tu vidíš její rozpočet.",
+    "sectionProjects": "Projekty",
+    "emptyProjectsTitle": "Zatím žádné projekty",
+    "emptyProjects": "Přidej projekt, ať tu vidíš jeho rozpočet.",
+    "sectionDepartments": "Oddělení",
+    "column": {
+      "code": "Kód",
+      "department": "Oddělení",
+      "runsToday": "Běhy dnes",
+      "spendToday": "Útrata dnes",
+      "dailyCap": "Denní limit"
+    },
+    "openAria": "Otevřít {name}",
+    "otherWindowsCaption": "týden {week} · měsíc {month}"
+  },
+  "ledgerSpend": {
+    "eyebrow": "ÚČETNICTVÍ — ÚTRATA",
+    "title": "${amount} utraceno dnes",
+    "state": {
+      "ok": "OK",
+      "warn": "VAROVÁNÍ",
+      "stop": "ZASTAVENO"
+    },
+    "resetsIn": "reset za {time}",
+    "resetUnknown": "čas resetu neznámý",
+    "meter": {
+      "rolling": "5hodinové okno",
+      "weekly": "Týdenní okno"
+    },
+    "column": {
+      "code": "Kód",
+      "department": "Oddělení",
+      "spend": "Útrata",
+      "value": "Hodnota"
+    },
+    "sectionDepartments": "Útrata podle oddělení",
+    "sectionThresholds": "Prahy",
+    "warnCaption": "Upozorní při překročení, nepozastaví",
+    "stopCaption": "Pozastaví dispatch při překročení",
+    "warnRolling": "Varování — 5h okno",
+    "warnWeekly": "Varování — týdenní okno",
+    "stopRolling": "Stop — 5h okno",
+    "stopWeekly": "Stop — týdenní okno"
+  },
+  "commandPalette": {
+    "placeholder": "Přejít na stránku, oddělení, agenta, úkol nebo /příkaz",
+    "ariaLabel": "Paleta příkazů",
+    "empty": "Žádné výsledky",
+    "kind": {
+      "department": "Oddělení",
+      "person": "Osoba",
+      "task": "Úkol",
+      "chain": "Řetězec",
+      "goal": "Cíl",
+      "company": "Firma",
+      "team": "Tým",
+      "project": "Projekt",
+      "pipeline": "Pipeline",
+      "skill": "Dovednost",
+      "mcp": "MCP server",
+      "hook": "Hook",
+      "command": "Příkaz",
+      "automation": "Automatizace",
+      "signal": "Signál",
+      "note": "Poznámka",
+      "setting": "Nastavení",
+      "gate": "Brána",
+      "action": "Akce"
+    },
+    "group": {
+      "actions": "Akce",
+      "departments": "Oddělení",
+      "people": "Lidé",
+      "tasks": "Úkoly",
+      "chains": "Řetězce",
+      "goals": "Cíle",
+      "companies": "Firmy",
+      "teams": "Týmy",
+      "projects": "Projekty",
+      "pipelines": "Pipelines",
+      "registries": "Registry",
+      "automations": "Automatizace",
+      "signals": "Signály",
+      "vault": "Trezor",
+      "settings": "Nastavení",
+      "gates": "Brány"
+    },
+    "settingsSection": {
+      "general": "Obecné",
+      "automations": "Automatizace",
+      "coo": "Persona COO",
+      "activity": "Aktivita",
+      "runtime": "Runtime",
+      "machine": "Stroj",
+      "status": "Stav",
+      "appearance": "Vzhled"
+    },
+    "gateSection": {
+      "floor": "Podlaha",
+      "global": "Globální pravidla",
+      "per-project": "Podle projektu",
+      "per-agent": "Podle agenta",
+      "handoff": "Pravidla předávání",
+      "signals": "Signály",
+      "mandate": "Mandát"
+    },
+    "actions": {
+      "newTask": "Nový úkol",
+      "approveNext": "Schválit další",
+      "toggleTheme": "Přepnout motiv"
+    }
+  },
+  "registries": {
+    "eyebrow": "SYSTÉM — REGISTRY",
+    "title": "Globální knihovny",
+    "subtitle": "Oddělení se na ně napojují ve vlastních záložkách.",
+    "kinds": {
+      "skills": "Skilly",
+      "mcp": "MCP servery",
+      "hooks": "Hooky",
+      "commands": "Příkazy"
+    },
+    "add": {
+      "skills": "Přidat skill",
+      "mcp": "Přidat server",
+      "hooks": "Přidat hook",
+      "commands": "Přidat příkaz"
+    },
+    "columns": {
+      "name": "Název",
+      "description": "Popis",
+      "boundIn": "Napojeno na"
+    },
+    "metaHeader": {
+      "skills": "Typ",
+      "mcp": "Stav",
+      "hooks": "Událost",
+      "commands": "Rozsah"
+    },
+    "status": {
+      "enabled": "Zapnuto",
+      "disabled": "Vypnuto"
+    },
+    "commandScope": {
+      "auto": "⌘K · COO",
+      "manual": "Jen ručně"
+    },
+    "skillTypeFallback": "Skill",
+    "emptySkills": "Zatím žádné skilly.",
+    "emptyMcp": "Zatím žádné MCP servery.",
+    "emptyHooks": "Zatím žádné hooky.",
+    "emptyCommands": "Zatím žádné příkazy."
   }
 }

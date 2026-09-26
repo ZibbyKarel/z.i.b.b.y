@@ -1,23 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { ImmersiveShellTestId } from "@zibby/design-system";
 import { renderWithProviders as render, screen } from "../../test/render";
-import { Screen } from "./Screen";
+import { AppearanceProvider } from "../../state/appearance";
+import { SettingsScreen } from "./Screen";
 
-const replace = vi.fn();
 const refresh = vi.fn();
 
-/** The `?tab=` the mocked URL reports; individual tests set this before render —
- * same pattern as `ProfileScreen.test.tsx`. */
-let searchTab = "";
-
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace, refresh }),
-  useSearchParams: () => {
-    const params = new URLSearchParams();
-    if (searchTab) params.set("tab", searchTab);
-    return params;
-  },
+  useRouter: () => ({ refresh }),
 }));
 
 vi.mock("../health", () => ({
@@ -30,53 +20,47 @@ vi.mock("../health", () => ({
 const CAFFEINATE_KEY = "zibby.caffeinate";
 
 beforeEach(() => {
-  replace.mockReset();
   refresh.mockReset();
-  searchTab = "";
   localStorage.clear();
   // Expire any cookie a previous test left behind.
   document.cookie = "locale=; path=/; max-age=0";
 });
 
-describe("Screen (settings)", () => {
-  // F1 (docs/plans/hud2chat-F1-settings.md): the page now renders inside the
-  // immersive shell (title/subtitle threaded into `ImmersivePage`) instead of
-  // `PageContainer` + `PageHeader`.
-  it("renders inside the immersive shell with the settings title", () => {
-    render(<Screen />);
-    expect(screen.getByTestId(ImmersiveShellTestId.Title)).toHaveTextContent("Nastavení systému");
+describe("SettingsScreen — /system/settings/[section]", () => {
+  it("renders the settings title", () => {
+    render(<SettingsScreen section="general" />);
+    expect(screen.getByText("Nastavení systému")).toBeInTheDocument();
   });
 
-  it("defaults to the preferences tab", () => {
-    render(<Screen />);
-    expect(screen.getByTestId("tabs-tab-preferences")).toHaveAttribute("aria-selected", "true");
+  it("marks the current section active in the sub-nav and shows its content", () => {
+    render(<SettingsScreen section="general" />);
+    expect(screen.getByTestId("subnav-item-/system/settings/general")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     expect(screen.getByText("Jazyk rozhraní")).toBeInTheDocument();
   });
 
-  it("deep-links straight to a tab from the ?tab= URL", () => {
-    searchTab = "system";
-    render(<Screen />);
-    // Lands on the system tab without a click — the URL is the source of truth.
-    expect(screen.getByTestId("tabs-tab-system")).toHaveAttribute("aria-selected", "true");
+  it("renders the status section's system info", () => {
+    render(<SettingsScreen section="status" />);
     expect(screen.getByText("Mac")).toBeInTheDocument();
   });
 
-  it("writes the chosen tab back to the URL for shareability", async () => {
-    render(<Screen />);
-    await userEvent.click(screen.getByTestId("tabs-tab-system"));
-    expect(replace).toHaveBeenCalledWith("/settings?tab=system");
-  });
-
-  it("writes back to the bare /settings URL when returning to preferences", async () => {
-    searchTab = "system";
-    render(<Screen />);
-    await userEvent.click(screen.getByTestId("tabs-tab-preferences"));
-    expect(replace).toHaveBeenCalledWith("/settings");
+  it("renders the appearance section's theme control", () => {
+    // `AppearanceSection` reads `useAppearance()` — `AppearanceProvider` isn't
+    // part of the shared `renderWithProviders` shell, so this one test brings
+    // its own (it also happens to supply the real `DesignSystemProvider`).
+    render(
+      <AppearanceProvider>
+        <SettingsScreen section="appearance" />
+      </AppearanceProvider>,
+    );
+    expect(screen.getByTestId("segmented-control-item-system")).toBeInTheDocument();
   });
 
   it("reads the caffeinate toggle from localStorage and persists changes", async () => {
     localStorage.setItem(CAFFEINATE_KEY, "false");
-    render(<Screen />);
+    render(<SettingsScreen section="general" />);
     const toggle = screen.getByRole("switch", { name: "Držet Mac vzhůru (caffeinate)" });
     expect(toggle).toHaveAttribute("aria-checked", "false");
     await userEvent.click(toggle);
@@ -84,14 +68,14 @@ describe("Screen (settings)", () => {
   });
 
   it("writes the locale cookie and refreshes the page on language change", async () => {
-    render(<Screen />);
+    render(<SettingsScreen section="general" />);
     await userEvent.click(screen.getByRole("button", { name: "English" }));
     expect(document.cookie).toContain("locale=en");
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
-  it("shows the butler footer below the tabs", () => {
-    render(<Screen />);
+  it("shows the butler footer on every section", () => {
+    render(<SettingsScreen section="machine" />);
     expect(screen.getByText("ZIBBY — Zestful Intuitive Brainy Butler for You")).toBeInTheDocument();
   });
 });

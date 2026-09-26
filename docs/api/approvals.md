@@ -21,7 +21,7 @@ operator's explicit sign-off before continuing. It survives an API restart —
 | `machine`          | An N5a machine action (e.g. renaming files in a named folder) is parked with its dry-run preview (runId = the `MachineActionRecord` id; approving executes the preview exactly once)                                                                                                      |
 | `routing-proposal` | NS2 F10 — the switchboard couldn't tell whose domain an autonomously-released roadmap item belongs to (runId = the parked `RoutingProposal` id; approving releases the item to the parked `pick` as an explicit target, rejecting returns it to the operator). See `docs/api/roadmap.md`. |
 
-> This table predates several kinds (`agent-proposal`, `herald-graduation`,
+> This table predates several kinds (`agent-proposal`, `comms-graduation`,
 > `handoff-proposal`, `review-rule`); `ApprovalRunKindSchema` in
 > `libs/contracts/src/approvals/approval.schema.ts` is the complete list.
 
@@ -31,7 +31,7 @@ Every kind resolves through `approve` / `reject`; `ApprovalsService` has no
 multiple-choice primitive. (`gates/gate.schema.ts`'s `DecisionSchema` does contain an
 `"ask"`, but that is a policy evaluator's verdict, not a decision surface.) A kind that
 _wants_ to ask "which of these?" must therefore narrow itself to one yes/no and carry the
-alternatives as information — `routing-proposal` names both candidate subsystems in its
+alternatives as information — `routing-proposal` names both candidate departments in its
 `detail` string while approving only ever means "release to the winner". Rejecting is the
 escape hatch back to the operator, whose own re-entry (an explicit target) is a hard
 override.
@@ -61,8 +61,9 @@ interface Approval {
   status: "pending" | "approved" | "rejected";
   requestedAt: string; // ISO datetime
   decidedAt?: string; // ISO datetime
-  ownerSubsystem?: SubsystemId; // NS2 F3c — the acting unit's owning subsystem
+  department?: DepartmentId; // NS2 F3c — the acting unit's owning department
   sourceUrl?: string; // Phase 127 — link to the item's origin (Jira/GitHub/Slack)
+  reason?: string; // ZB-08/O-12 — an optional operator note on a rejection
 }
 ```
 
@@ -70,13 +71,13 @@ There is no client-settable "how to resolve" field — routing a decision back t
 the paused work is entirely the concern of the runner that registered for that
 `kind` (see `ResumableRunner` below).
 
-`ownerSubsystem` (NS2 F3c) is optional and additive: it is stamped at
+`department` (NS2 F3c) is optional and additive: it is stamped at
 `requestApproval` time by the RUN-PATH callers only — the pipeline runner from
-`pipeline.ownerSubsystem`, the agent runner from `agent.ownerSubsystem` (absent
+`pipeline.department`, the agent runner from `agent.department` (absent
 for the synthetic orchestrator). The other call sites (machine, jira-issue,
 channel, budget-task, agent-proposal) omit it — a system-owned gate with no
 acting unit never invents an owner. It is pure attribution for the queue's
-per-subsystem filter and the activity lens; decisions still route by `kind`.
+per-department filter and the activity lens; decisions still route by `kind`.
 
 `sourceUrl` (Phase 127) is optional and additive the same way: only the
 `channel` run-path caller (`ChannelTriageFlowService.parkForApproval`, the
@@ -133,9 +134,9 @@ approvalsService.requestApproval({
 ```
 
 Stores JSON at `.zibby/data/approvals/<id>.json` and records an
-`approval-requested` activity entry. When the caller supplied `ownerSubsystem`,
+`approval-requested` activity entry. When the caller supplied `department`,
 it is persisted on the approval and stamped best-effort into the activity
-entry's `refs.ownerSubsystem` (F2c's field), so the activity log's subsystem
+entry's `refs.department` (F2c's field), so the activity log's department
 lens catches the request line too.
 
 ### Runner integration
@@ -162,6 +163,8 @@ GET  /api/approvals              list (optional ?status=pending|approved|rejecte
 GET  /api/approvals/:id          get one approval
 POST /api/approvals/:id/approve  approve (resumes the gated run) — 404 | 409
 POST /api/approvals/:id/reject   reject (terminates the gated run, no action taken) — 404 | 409
+                                  body: { reason?: string } — ZB-08/O-12, an optional operator note
+                                  shown in the Policy → Approvals history table
 ```
 
 A client can never create an Approval directly — only the server (a runner or
@@ -191,3 +194,5 @@ wherever the thing it gates is already visible:
 | `approval-requested` | An approval was created |
 | `approval-approved`  | The operator approved   |
 | `approval-rejected`  | The operator rejected   |
+
+<!-- ZibbyCorp ZB-08 (2026-09-25): deny gains an optional operator reason (O-12). -->

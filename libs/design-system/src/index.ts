@@ -10,20 +10,32 @@ export { mergeRefs } from "./utils/refs";
 // ---------------------------------------------------------------------------
 // Token system
 // ---------------------------------------------------------------------------
-export { mergeTheme, resolvePadding, spacingToPx, spacingValues, tokensToCssVars } from "./tokens";
+export {
+  LAYOUT,
+  mergeTheme,
+  resolvePadding,
+  spacingToPx,
+  spacingValues,
+  tokensToCssVars,
+} from "./tokens";
 export type { Padding, PartialTheme, Size, Spacing, Theme } from "./tokens";
 
 // ---------------------------------------------------------------------------
 // Canonical state vocabulary (the living-state contract — see theme/LIVING-STATE.md)
 // ---------------------------------------------------------------------------
 export {
+  LEGACY_TONE_MAP,
+  normalizeStateTone,
+  normalizeToneLike,
   resetStateToneHexCache,
   resolveStateToneHex,
+  STATE_LABEL,
+  STATE_ORDER,
   STATE_TONES,
   stateToneHex,
   stateToneVar,
 } from "./stateTone";
-export type { StateTone } from "./stateTone";
+export type { AnyStateTone, LegacyStateTone, StateTone } from "./stateTone";
 
 // ---------------------------------------------------------------------------
 // Theme registry
@@ -37,8 +49,17 @@ export {
 // ---------------------------------------------------------------------------
 // DesignSystemProvider + hooks
 // ---------------------------------------------------------------------------
-export { DesignSystemProvider } from "./DesignSystemContext/DesignSystemProvider";
-export type { DesignSystemProviderProps } from "./DesignSystemContext/DesignSystemProvider";
+export {
+  DesignSystemProvider,
+  THEME_STORAGE_KEY,
+} from "./DesignSystemContext/DesignSystemProvider";
+export type {
+  DesignSystemProviderProps,
+  ResolvedTheme,
+  ThemeChoice,
+} from "./DesignSystemContext/DesignSystemProvider";
+export { ThemeScript, ThemeScriptTestId } from "./DesignSystemContext/ThemeScript";
+export type { ThemeScriptProps } from "./DesignSystemContext/ThemeScript";
 export { useSpacing, useTokens } from "./DesignSystemContext/hooks";
 export { useOverlayStack } from "./hooks/useOverlayStack";
 export type { OverlayStackHandle } from "./hooks/useOverlayStack";
@@ -56,7 +77,7 @@ export type { ContainerAs, ContainerProps } from "./components/Container";
 export { Grid, GridTestId } from "./components/Grid/Grid";
 export type { GridAlign, GridCols, GridProps } from "./components/Grid/Grid";
 export { Pressable, PressableTestId } from "./components/Pressable/Pressable";
-export type { PressableProps } from "./components/Pressable/Pressable";
+export type { PressableProps, PressableChipTone } from "./components/Pressable/Pressable";
 export { Spacer, SpacerTestId } from "./components/Spacer";
 export type { SpacerProps } from "./components/Spacer";
 export { Row, Stack, StackTestId } from "./components/Stack";
@@ -81,6 +102,9 @@ export type {
 
 export { EntityHero, EntityHeroTestId } from "./components/EntityHero/EntityHero";
 export type { EntityHeroProps } from "./components/EntityHero/EntityHero";
+
+export { EntityCard, EntityCardTestId } from "./components/EntityCard/EntityCard";
+export type { EntityCardProps } from "./components/EntityCard/EntityCard";
 
 // ---------------------------------------------------------------------------
 // Generic components
@@ -187,6 +211,15 @@ export type { OrbitLoaderProps, OrbitLoaderSize } from "./components/OrbitLoader
 export { StatusDot, StatusDotTestId } from "./components/StatusDot/StatusDot";
 export type { DotTone, StatusDotProps } from "./components/StatusDot/StatusDot";
 
+export { AgentGlyph, AgentGlyphTestId } from "./components/AgentGlyph/AgentGlyph";
+export type { AgentGlyphProps, GlyphSize } from "./components/AgentGlyph/AgentGlyph";
+
+export { StatePill, StatePillTestId } from "./components/StatePill/StatePill";
+export type { StatePillProps } from "./components/StatePill/StatePill";
+
+export { CellStrip, CellStripTestId } from "./components/CellStrip/CellStrip";
+export type { CellStripProps } from "./components/CellStrip/CellStrip";
+
 export { Toggle, ToggleTestId } from "./components/Toggle/Toggle";
 export type { ToggleProps, ToggleSize } from "./components/Toggle/Toggle";
 export { Tooltip, TooltipTestId } from "./components/Tooltip/Tooltip";
@@ -277,7 +310,20 @@ export type { DropZoneFieldProps } from "./components/form/DropZoneField/DropZon
 export { MarkdownEditor, MarkdownEditorTestId } from "./components/MarkdownEditor/MarkdownEditor";
 export type { MarkdownEditorProps } from "./components/MarkdownEditor/MarkdownEditor";
 export { Markdown, MarkdownTestId } from "./components/Markdown/Markdown";
-export type { MarkdownProps } from "./components/Markdown/Markdown";
+export type { MarkdownProps, MarkdownVariant } from "./components/Markdown/Markdown";
+
+export { GraphInlineInput, GraphInlineInputTestId } from "./components/Graph/GraphInlineInput";
+export type {
+  GraphInlineInputProps,
+  GraphInlineInputVariant,
+} from "./components/Graph/GraphInlineInput";
+export { GraphIconButton, GraphIconButtonTestId } from "./components/Graph/GraphIconButton";
+export type {
+  GraphIconButtonProps,
+  GraphIconButtonVariant,
+} from "./components/Graph/GraphIconButton";
+
+export { htmlFontAttrs } from "./utils/domAttrs";
 
 // ---------------------------------------------------------------------------
 // Dashboard chrome (router-agnostic, domain-neutral — stays in DS)
@@ -329,52 +375,158 @@ export type {
 } from "./components/List/List";
 
 // ---------------------------------------------------------------------------
-// Immersive orb map — pure geometry/state helpers, WebGL/DOM primitives, and
-// the composed OrbMap. See immersive/index.ts for the hand-authored barrel
-// this section mirrors.
+// Overlay and navigation (ZA-05)
 // ---------------------------------------------------------------------------
-export { ellipseLayout } from "./immersive/ellipseLayout";
-export type { EllipseInsets, EllipseLayout, OrbPosition } from "./immersive/ellipseLayout";
+export { Sheet, SheetTestId } from "./components/Sheet/Sheet";
+export type { SheetProps, SheetSide, SheetWidth } from "./components/Sheet/Sheet";
 
-export { ORB_MOTION, ORB_STATE, ORB_STATE_COLOR } from "./immersive/orbState";
-export type { OrbMotion, OrbState, OrbStateStyle } from "./immersive/orbState";
+export { CommandPalette, CommandPaletteTestId } from "./components/CommandPalette/CommandPalette";
+export type {
+  CommandPaletteGroup,
+  CommandPaletteItem,
+  CommandPaletteProps,
+} from "./components/CommandPalette/CommandPalette";
 
-export { seededRandom } from "./immersive/seededRandom";
-export { canMountWebGL } from "./immersive/canMountWebGL";
+export { ApprovalCard, ApprovalCardTestId } from "./components/ApprovalCard/ApprovalCard";
+export type {
+  ApprovalCardDensity,
+  ApprovalCardProps,
+} from "./components/ApprovalCard/ApprovalCard";
 
-export { Orb, OrbTestId } from "./immersive/Orb/Orb";
-export type { OrbMotionOverrides, OrbProps } from "./immersive/Orb/Orb";
+export { SubNav, SubNavTestId } from "./components/SubNav/SubNav";
+export type { SubNavItem, SubNavLinkComponent, SubNavProps } from "./components/SubNav/SubNav";
 
-export { OrbitField, OrbitFieldTestId } from "./immersive/OrbitField/OrbitField";
-export type { OrbitFieldProps } from "./immersive/OrbitField/OrbitField";
+export { PatternCard, PatternCardTestId } from "./components/PatternCard/PatternCard";
+export type { PatternCardProps } from "./components/PatternCard/PatternCard";
 
-export { OrbNode, OrbNodeTestId } from "./immersive/OrbNode/OrbNode";
-export type { OrbNodeProps } from "./immersive/OrbNode/OrbNode";
+export { GoalCard, GoalCardTestId } from "./components/GoalCard/GoalCard";
+export type { GoalCardProps } from "./components/GoalCard/GoalCard";
 
-export { CoreOrb, CoreOrbTestId } from "./immersive/CoreOrb/CoreOrb";
-export type { CoreOrbProps } from "./immersive/CoreOrb/CoreOrb";
+export { ContactRow, ContactRowTestId } from "./components/ContactRow/ContactRow";
+export type { ContactRowProps } from "./components/ContactRow/ContactRow";
 
-export { ConnectorLayer, ConnectorLayerTestId } from "./immersive/ConnectorLayer/ConnectorLayer";
-export type { ConnectorLayerProps, ConnectorNode } from "./immersive/ConnectorLayer/ConnectorLayer";
+export { Breadcrumb, BreadcrumbTestId } from "./components/Breadcrumb/Breadcrumb";
+export type { BreadcrumbItem, BreadcrumbProps } from "./components/Breadcrumb/Breadcrumb";
 
-export {
-  DEFAULT_DURATION_MS,
-  HandoffFlare,
-  HandoffFlareTestId,
-  RETIRE_BUFFER_MS,
-} from "./immersive/HandoffFlare/HandoffFlare";
-export type { HandoffFlareProps } from "./immersive/HandoffFlare/HandoffFlare";
-export { arcPath } from "./immersive/HandoffFlare/arcPath";
-
-export { ORB_MAP_CORE_ID, OrbMap, OrbMapTestId } from "./immersive/OrbMap/OrbMap";
-export type { OrbMapCore, OrbMapFlare, OrbMapNode, OrbMapProps } from "./immersive/OrbMap/OrbMap";
-
-export { GlassSurface, GlassSurfaceTestId } from "./immersive/GlassSurface/GlassSurface";
-export type { GlassSurfaceProps } from "./immersive/GlassSurface/GlassSurface";
+// ---------------------------------------------------------------------------
+// Data & layout (ZA-04)
+// ---------------------------------------------------------------------------
+export { SectionLabel, SectionLabelTestId } from "./components/SectionLabel/SectionLabel";
+export type { SectionLabelProps } from "./components/SectionLabel/SectionLabel";
 
 export {
-  ImmersiveShell,
-  ImmersiveShellTestId,
-  MAIN_CONTENT_ID,
-} from "./immersive/ImmersiveShell/ImmersiveShell";
-export type { ImmersiveShellProps } from "./immersive/ImmersiveShell/ImmersiveShell";
+  SegmentedControl,
+  SegmentedControlTestId,
+} from "./components/SegmentedControl/SegmentedControl";
+export type {
+  SegmentedControlItem,
+  SegmentedControlProps,
+  SegmentedControlSize,
+} from "./components/SegmentedControl/SegmentedControl";
+
+export { MetricStrip, MetricStripTestId } from "./components/MetricStrip/MetricStrip";
+export type { MetricStripItem, MetricStripProps } from "./components/MetricStrip/MetricStrip";
+
+export { DataTable, DataTableTestId } from "./components/DataTable/DataTable";
+export type {
+  ColumnWidth,
+  DataTableColumn,
+  DataTableProps,
+} from "./components/DataTable/DataTable";
+
+export { FilterBar, FilterBarTestId } from "./components/FilterBar/FilterBar";
+export type { FilterBarProps } from "./components/FilterBar/FilterBar";
+
+export { LogStream, LogStreamTestId } from "./components/LogStream/LogStream";
+export type { LogStreamLine, LogStreamProps } from "./components/LogStream/LogStream";
+
+export {
+  ChainRouteStrip,
+  ChainRouteStripTestId,
+} from "./components/ChainRouteStrip/ChainRouteStrip";
+export type {
+  ChainRouteStripGate,
+  ChainRouteStripProps,
+  ChainRouteStripSize,
+  ChainRouteStripStep,
+} from "./components/ChainRouteStrip/ChainRouteStrip";
+
+export {
+  PipelineStepStrip,
+  PipelineStepStripTestId,
+} from "./components/PipelineStepStrip/PipelineStepStrip";
+export type {
+  PipelineStepStripPhase,
+  PipelineStepStripProps,
+} from "./components/PipelineStepStrip/PipelineStepStrip";
+
+export { GateToggle, GateToggleTestId } from "./components/GateToggle/GateToggle";
+export type { GateMode, GateToggleProps } from "./components/GateToggle/GateToggle";
+
+export { BudgetMeter, BudgetMeterTestId } from "./components/BudgetMeter/BudgetMeter";
+export type { BudgetMeterProps } from "./components/BudgetMeter/BudgetMeter";
+
+export { LimitBar, LimitBarTestId } from "./components/LimitBar/LimitBar";
+export type { LimitBarProps } from "./components/LimitBar/LimitBar";
+
+export { Slider, SliderTestId } from "./components/Slider/Slider";
+export type { SliderProps } from "./components/Slider/Slider";
+
+export { DiffView, DiffViewTestId } from "./components/DiffView/DiffView";
+export type {
+  DiffHunk,
+  DiffLine,
+  DiffLineType,
+  DiffViewProps,
+  DiffViewStat,
+} from "./components/DiffView/DiffView";
+
+export {
+  CONFIRM_DELETE_TIMEOUT_MS,
+  ConfirmDeleteButton,
+  ConfirmDeleteButtonTestId,
+} from "./components/ConfirmDeleteButton/ConfirmDeleteButton";
+export type { ConfirmDeleteButtonProps } from "./components/ConfirmDeleteButton/ConfirmDeleteButton";
+
+export { OrgNode, OrgNodeTestId } from "./components/OrgNode/OrgNode";
+export type { OrgNodeProps } from "./components/OrgNode/OrgNode";
+
+export { Legend, LegendTestId } from "./components/Legend/Legend";
+export type { LegendItem, LegendProps } from "./components/Legend/Legend";
+
+export { EmptyState, EmptyStateTestId } from "./components/EmptyState/EmptyState";
+export type { EmptyStateProps } from "./components/EmptyState/EmptyState";
+
+// ---------------------------------------------------------------------------
+// Shell components + Splash (ZA-06)
+// ---------------------------------------------------------------------------
+export {
+  AppFrame,
+  AppFrameTestId,
+  APP_FRAME_MAIN_CONTENT_ID,
+} from "./components/AppFrame/AppFrame";
+export type { AppFrameProps } from "./components/AppFrame/AppFrame";
+
+export { AppHeader, AppHeaderTestId } from "./components/AppHeader/AppHeader";
+export type { AppHeaderProps } from "./components/AppHeader/AppHeader";
+
+export { Rail, RailTestId } from "./components/Rail/Rail";
+export type { RailProps } from "./components/Rail/Rail";
+
+export { ChatDock, ChatDockTestId } from "./components/ChatDock/ChatDock";
+export type { ChatDockProps } from "./components/ChatDock/ChatDock";
+
+export {
+  Splash,
+  SplashTestId,
+  SPLASH_EXIT_MS,
+  SPLASH_REVEAL_MS,
+  SPLASH_WALK_MS,
+} from "./components/Splash/Splash";
+export type { SplashPhase, SplashProps } from "./components/Splash/Splash";
+
+export { Wordmark, WordmarkTestId } from "./components/Wordmark/Wordmark";
+export type { WordmarkProps } from "./components/Wordmark/Wordmark";
+
+export { SkipLink, SkipLinkTestId } from "./components/SkipLink/SkipLink";
+export type { SkipLinkProps } from "./components/SkipLink/SkipLink";

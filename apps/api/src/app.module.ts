@@ -25,7 +25,7 @@ import { IntegrationsModule } from "./integrations/integrations.module";
 import { KbModule } from "./kb/kb.module";
 import { LimitResumeModule } from "./limits-resume/limit-resume.module";
 import { LimitsModule } from "./limits/limits.module";
-import { MaestroModule } from "./maestro/maestro.module";
+import { ReleaseModule } from "./release/release.module";
 import { MandateModule } from "./mandate/mandate.module";
 import { McpModule } from "./mcp/mcp.module";
 import { MemoryModule } from "./memory/memory.module";
@@ -34,6 +34,7 @@ import { MachineModule } from "./machine/machine.module";
 import { MonitorsModule } from "./monitors/monitors.module";
 import { PipelinesModule } from "./pipelines/pipelines.module";
 import { ProjectsModule } from "./projects/projects.module";
+import { RegistriesModule } from "./registries/registries.module";
 import { ReviewLearningModule } from "./review-learning/review-learning.module";
 import { HttpConnectionReaperModule } from "./shared/http/http-connection-reaper.module";
 import { LoggingModule } from "./shared/logging/logging.module";
@@ -43,11 +44,12 @@ import { SelfModule } from "./self/self.module";
 import { SelfKnowledgeModule } from "./self-knowledge/self-knowledge.module";
 import { SkillsModule } from "./skills/skills.module";
 import { SpeechModule } from "./speech/speech.module";
-import { SubsystemsModule } from "./subsystems/subsystems.module";
+import { DepartmentsModule } from "./departments/departments.module";
 import { SystemModule } from "./system/system.module";
 import { AttachmentSetRefsModule } from "./tasks/attachment-set-refs.module";
 import { TasksModule } from "./tasks/tasks.module";
 import { TeamsModule } from "./teams/teams.module";
+import { EmployeesModule } from "./employees/employees.module";
 
 @Module({
   imports: [
@@ -69,6 +71,7 @@ import { TeamsModule } from "./teams/teams.module";
     ProjectsModule,
     CompaniesModule,
     TeamsModule,
+    EmployeesModule,
     PipelinesModule,
     GoalsModule,
     ApprovalsModule,
@@ -88,11 +91,12 @@ import { TeamsModule } from "./teams/teams.module";
     ChannelsModule,
     MachineModule,
     MonitorsModule,
-    MaestroModule,
+    ReleaseModule,
     ReviewLearningModule,
     HandoffModule,
     HealthModule,
-    SubsystemsModule,
+    DepartmentsModule,
+    RegistriesModule,
     SelfModule,
     SelfKnowledgeModule,
     LimitsModule,

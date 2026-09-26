@@ -1,13 +1,14 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
 import {
+  type Chain,
   type CreateTaskInput,
+  DEPARTMENTS,
   HANDOFF_SEVERITY_ORDER,
   type HandoffOutcome,
   type HandoffProposal,
   type HandoffRule,
   type HandoffSignal,
   type HandoffTarget,
-  SUBSYSTEMS,
   type TaskTarget,
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
@@ -16,6 +17,8 @@ import { PipelinesStorageService } from "../pipelines/pipelines.storage.service"
 import { collisionResistantId } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
+import { ChainNotFoundError } from "./chain.errors";
+import { ChainsService } from "./chains.service";
 import { HandoffFiredStore } from "./handoff-fired.store";
 import { HandoffProposalStore } from "./handoff-proposal.store";
 import { HandoffRuleStore } from "./handoff-rule.store";
@@ -23,7 +26,7 @@ import { HandoffSignalKindStore } from "./handoff-signal-kind.store";
 
 /**
  * A2 — the handoff evaluation engine (design doc
- * `docs/superpowers/specs/2026-07-22-subsystem-handoff-design.md`, Part A.2):
+ * `docs/superpowers/specs/2026-07-22-department-handoff-design.md`, Part A.2):
  * matches a producer's normalized {@link HandoffSignal} against the standing
  * {@link HandoffRule} set and either dispatches silently (Tier 1), dispatches
  * and reports (Tier 2), or parks a {@link HandoffProposal} behind a
@@ -45,9 +48,20 @@ export class HandoffService implements OnModuleInit, ResumableRunner {
     private readonly approvals: ApprovalsService,
     private readonly activity: ActivityLogService,
     private readonly pipelines: PipelinesStorageService,
+    private readonly chains: ChainsService,
     logger: LoggerService,
   ) {
     this.log = logger.child(HandoffService.name);
+  }
+
+  /** ZB-05a — a chain by id, or `null` (missing/not-a-chain — never throws). */
+  async resolveChain(id: string): Promise<Chain | null> {
+    try {
+      return await this.chains.get(id);
+    } catch (error) {
+      if (error instanceof ChainNotFoundError) return null;
+      throw error;
+    }
   }
 
   onModuleInit(): void {
@@ -64,7 +78,21 @@ export class HandoffService implements OnModuleInit, ResumableRunner {
       // ordering deterministic for tests.
       await this.signalKinds.markSeen(signal.kind);
       const rule = await this.matchRule(signal);
-      if (!rule) return { action: "none" };
+      if (!rule) {
+        // ZB-05a — a chain step that completed with no further hop to dispatch:
+        // the chain has ended (fail-soft, never blocks the "no dispatch" verdict).
+        if (signal.chain) {
+          await this.taskScheduler
+            .markChainEnded(signal.chain.parentTaskId)
+            .catch((error: unknown) => {
+              this.log.warn("handoff: markChainEnded failed", {
+                parentTaskId: signal.chain?.parentTaskId,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            });
+        }
+        return { action: "none" };
+      }
       if (await this.fired.hasFired(rule.id, signal.fingerprint)) {
         this.log.debug("handoff: fingerprint already fired — skipping", {
           ruleId: rule.id,
@@ -111,11 +139,11 @@ export class HandoffService implements OnModuleInit, ResumableRunner {
     if (rule.tier === 2) {
       void this.activity.record({
         kind: "handoff",
-        summary: `${subsystemLabel(signal.from)} → ${targetLabel(rule.to)}: ${signal.title}`,
+        summary: `${departmentLabel(signal.from)} → ${targetLabel(rule.to)}: ${signal.title}`,
         refs: {
           runRef,
           ...(signal.projectId ? { projectId: signal.projectId } : {}),
-          ...(rule.to.kind === "subsystem" ? { ownerSubsystem: rule.to.id } : {}),
+          ...(rule.to.kind === "department" ? { department: rule.to.id } : {}),
         },
       });
     } else {
@@ -139,9 +167,9 @@ export class HandoffService implements OnModuleInit, ResumableRunner {
       kind: "handoff-proposal",
       skill: signal.from,
       action: "handoff",
-      detail: `${subsystemLabel(signal.from)} → ${targetLabel(rule.to)}: ${signal.title}`,
+      detail: `${departmentLabel(signal.from)} → ${targetLabel(rule.to)}: ${signal.title}`,
       risk: "medium",
-      ownerSubsystem: signal.from,
+      department: signal.from,
     });
     await this.fired.markFired(rule.id, signal.fingerprint);
     return { action: "proposed", approvalId: approval.id };
@@ -157,7 +185,25 @@ export class HandoffService implements OnModuleInit, ResumableRunner {
    * `post-merge-watch.service.ts`'s `"task" in result ? result.task.id : undefined`).
    */
   private async dispatchTask(signal: HandoffSignal, target: TaskTarget): Promise<string> {
-    const input: CreateTaskInput = { title: signal.title, text: signal.body, paths: [] };
+    // ZB-05a — a chain hop (`signal.chain` set by `evaluate`'s caller) carries its
+    // parent linkage, next step, and any upstream artifact through to the subtask;
+    // every other signal keeps the plain O-18 `source: "handoff"` stamp.
+    const input: CreateTaskInput = {
+      title: signal.title,
+      text: signal.body,
+      paths: [],
+      source: signal.chain ? "chain" : "handoff",
+      ...(signal.chain
+        ? {
+            parentTaskId: signal.chain.parentTaskId,
+            // The completing subtask's own step (`signal.chain.step`) plus one — the
+            // path index of the hop this dispatch lands on (path[0] = the chain's
+            // entry, path[i] = `chainToRules`'s rule `i-1`'s `to`).
+            chain: { id: signal.chain.chainId, step: signal.chain.step + 1 },
+            ...(signal.chain.artifactRef ? { artifactRef: signal.chain.artifactRef } : {}),
+          }
+        : {}),
+    };
     const result = await this.taskScheduler.createTask(input, Date.now(), signal.projectId, target);
     return result.outcome === "dispatched" ? result.runRef : result.task.id;
   }
@@ -165,17 +211,17 @@ export class HandoffService implements OnModuleInit, ResumableRunner {
   /**
    * Decorate a stored {@link HandoffTarget} (routing identity only) into a full
    * {@link TaskTarget} `createTask` needs (routing identity + display `name`):
-   *  - `subsystem` — looked up in the `SUBSYSTEMS` registry; falls back to the raw
-   *    id if somehow absent (defensive only — `SubsystemIdSchema` already closes
+   *  - `department` — looked up in the `DEPARTMENTS` registry; falls back to the raw
+   *    id if somehow absent (defensive only — `DepartmentIdSchema` already closes
    *    the id space).
    *  - `pipeline` — looked up in the live pipelines store; falls back to the raw
    *    id if the pipeline was deleted/renamed since the rule was written
    *    (fail-open — a display-name miss should never block a dispatch).
    */
   private async decorateTarget(target: HandoffTarget): Promise<TaskTarget> {
-    if (target.kind === "subsystem") {
-      const name = SUBSYSTEMS.find((s) => s.id === target.id)?.name ?? target.id;
-      return { kind: "subsystem", id: target.id, name };
+    if (target.kind === "department") {
+      const name = DEPARTMENTS.find((s) => s.id === target.id)?.name ?? target.id;
+      return { kind: "department", id: target.id, name };
     }
     const pipeline = await this.pipelines.get(target.id).catch(() => null);
     return { kind: "pipeline", id: target.id, name: pipeline?.name ?? target.id };
@@ -215,10 +261,10 @@ function severityGatePasses(rule: HandoffRule, signal: HandoffSignal): boolean {
   );
 }
 
-function subsystemLabel(id: string): string {
-  return SUBSYSTEMS.find((s) => s.id === id)?.name ?? id;
+function departmentLabel(id: string): string {
+  return DEPARTMENTS.find((s) => s.id === id)?.name ?? id;
 }
 
 function targetLabel(target: HandoffTarget): string {
-  return target.kind === "subsystem" ? subsystemLabel(target.id) : target.id;
+  return target.kind === "department" ? departmentLabel(target.id) : target.id;
 }

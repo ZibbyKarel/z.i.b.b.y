@@ -10,7 +10,15 @@ export {
   useCreateTaskMutation,
   useCancelScheduledTaskMutation,
 } from "./mutations";
-export { getScheduledTasksQueryKey, useScheduledTasksQuery } from "./queries";
+export {
+  getScheduledTasksQueryKey,
+  useScheduledTasksQuery,
+  getTaskParentsQueryKey,
+  type TaskParentsFilter,
+  useTaskParentsInfiniteQuery,
+  getTaskQueryKey,
+  useTaskQuery,
+} from "./queries";
 export {
   type ConfidenceBand,
   type PathRange,

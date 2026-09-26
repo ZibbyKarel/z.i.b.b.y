@@ -68,9 +68,7 @@ describe("skills DetailScreen (N4d grammar)", () => {
   });
 
   it("Delete asks in a CONFIRM dialog, then deletes and navigates back to /skills", async () => {
-    hooks.del.mockImplementation((_args, opts?: { onSuccess?: () => void }) =>
-      opts?.onSuccess?.(),
-    );
+    hooks.del.mockImplementation((_args, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.());
     render(<DetailScreen skillId="deploy" />);
     await userEvent.click(screen.getByTestId(SkillDetailScreenTestId.Delete));
     expect(screen.getByText("Smazat skill?")).toBeInTheDocument();
@@ -82,6 +80,6 @@ describe("skills DetailScreen (N4d grammar)", () => {
       { params: { id: "deploy" } },
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     );
-    expect(push).toHaveBeenCalledWith("/skills");
+    expect(push).toHaveBeenCalledWith("/system/registries/skills");
   });
 });

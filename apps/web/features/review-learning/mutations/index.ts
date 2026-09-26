@@ -1,0 +1,1 @@
+export { usePromoteReviewRuleMutation } from "./usePromoteReviewRuleMutation";

@@ -8,7 +8,7 @@ import type {
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { CredentialsStore } from "../integrations/credentials.store";
-import { MergeWatchStore } from "../maestro/merge-watch.store";
+import { MergeWatchStore } from "../release/merge-watch.store";
 // 125e — the roadmap gate's eager merge signal (see `recordMerge` below). This
 // closes a genuine circular provider dependency with `RoadmapGateService`
 // (RoadmapModule already depends on ProjectsModule for `ProjectsStorageService`
@@ -23,7 +23,7 @@ import { ResolvedProjectService } from "./resolved-project.service";
 
 const GITHUB_API = "https://api.github.com";
 
-/** Bounds the open-PRs listing call — this feeds the Maestro merge queue and
+/** Bounds the open-PRs listing call — this feeds the Release merge queue and
  *  the briefing/`get_status` chat tool, so a stalled request must not hang it. */
 const LIST_OPEN_TIMEOUT_MS = 8_000;
 
@@ -53,7 +53,7 @@ function tokenOf(creds: CredentialsInput): string | null {
 /**
  * NS2 F5a/F5b — the project's effective github integration's repo + stored
  * token, or `null`. Extracted out of {@link ProjectPrService}'s private
- * `resolveGithubLink` so `SentinelService` and `MaestroService` reach the
+ * `resolveGithubLink` so `SecurityService` and `ReleaseService` reach the
  * exact same token-resolution seam (company-merged integrations,
  * `CredentialsStore` read, `tokenOf` narrowing) without duplicating it.
  * `ProjectPrService` itself delegates to this function below.

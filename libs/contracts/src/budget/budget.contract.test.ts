@@ -39,6 +39,17 @@ describe("GlobalBudgetSchema", () => {
   it("rejects an unknown key (strict)", () => {
     expect(GlobalBudgetSchema.safeParse({ pauseAtDailyTokens: 1000 }).success).toBe(false);
   });
+
+  it("accepts warn thresholds (O-08) alongside/independent of the pause ones", () => {
+    expect(
+      GlobalBudgetSchema.safeParse({ warnAtRollingPct: 70, warnAtWeeklyPct: 60 }).success,
+    ).toBe(true);
+    expect(GlobalBudgetSchema.safeParse({ warnAtRollingPct: 70 }).success).toBe(true);
+  });
+
+  it("rejects a warn threshold above 100", () => {
+    expect(GlobalBudgetSchema.safeParse({ warnAtRollingPct: 101 }).success).toBe(false);
+  });
 });
 
 describe("ProjectBudgetSchema", () => {

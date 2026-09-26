@@ -1,4 +1,4 @@
-import { SUBSYSTEMS } from "@zibby/contracts";
+import { DEPARTMENTS } from "@zibby/contracts";
 import {
   Accordion,
   AccordionItem,
@@ -15,6 +15,7 @@ import {
   Markdown,
   MenuButton,
   type MenuButtonItem,
+  Panel,
   Pressable,
   SelectField,
   Stack,
@@ -25,7 +26,6 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useState } from "react";
 import { ConfirmDeleteDialog } from "../../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { API_URL } from "../../../state/api";
 import { formatCostUsd } from "../../../utils/cost";
 import { formatDuration, resumeEta } from "../../../utils/time";
@@ -79,7 +79,7 @@ function LimitPausedPanel({ run, now }: { run: RunView; now: number }) {
   const t = useTranslations("runs");
   const locale = useLocale();
   return (
-    <HudPanel padding="300" tone="warn">
+    <Panel padding="300" tone="warn">
       <Stack align="start" direction="row" gap="150">
         <IconTile glyph="pause" size="md" />
         <Stack gap="50">
@@ -96,7 +96,7 @@ function LimitPausedPanel({ run, now }: { run: RunView; now: number }) {
           )}
         </Stack>
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }
 
@@ -209,7 +209,7 @@ function PrOutputCard({
 }) {
   const t = useTranslations("runs");
   return (
-    <HudPanel padding="250" title={title}>
+    <Panel header={title} padding="250">
       <Stack wrap align="center" direction="row" gap="200">
         <Button
           data-testid="open-pr"
@@ -239,7 +239,7 @@ function PrOutputCard({
           </Typography>
         </Stack>
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }
 
@@ -337,7 +337,7 @@ function RunOutputPanel({ run }: { run: RunView }) {
   // (`.ts`, `.json`, …) keeps the plain CodeBlock (Phase 41).
   if (fileArtifact?.content) {
     return (
-      <HudPanel padding="250" title={t("producedOutputTitle")}>
+      <Panel header={t("producedOutputTitle")} padding="250">
         <Stack gap="200">
           {isMarkdownFilename(run.outputArtifactName) ? (
             <Container maxHeight="340px" overflow="auto">
@@ -350,14 +350,14 @@ function RunOutputPanel({ run }: { run: RunView }) {
             {continueButton}
           </Stack>
         </Stack>
-      </HudPanel>
+      </Panel>
     );
   }
 
   // Agent/orchestrator: the summary reference, with a PR url opened in a new tab.
   const url = firstUrl(summary);
   return (
-    <HudPanel padding="250" title={t("producedOutputTitle")}>
+    <Panel header={t("producedOutputTitle")} padding="250">
       <Stack gap="100">
         <CodeBlock maxHeight="md" text={summary ?? ""} />
         <Stack wrap align="center" direction="row" gap="100">
@@ -375,7 +375,7 @@ function RunOutputPanel({ run }: { run: RunView }) {
           {continueButton}
         </Stack>
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }
 
@@ -386,8 +386,8 @@ export enum ClassificationTracePanelTestId {
 
 /**
  * F2c — the switchboard's stage-1 classification trace: a minimal, read-only
- * "why" strip — `Switchboard → <subsystem> → <unit>` (the middle hop only when
- * stage-1 delegated to a subsystem; `stage1` itself already names the concrete
+ * "why" strip — `Switchboard → <department> → <unit>` (the middle hop only when
+ * stage-1 delegated to a department; `stage1` itself already names the concrete
  * unit otherwise) plus the verdict's reason and confidence. Renders nothing
  * when the run carries no trace — an explicitly-targeted task was never
  * classified, and a pre-F2c run wrote none.
@@ -397,25 +397,26 @@ function ClassificationTracePanel({ run }: { run: RunView }) {
   const classification = run.classification;
   if (!classification) return null;
   const stage1 = toClientTarget(classification.stage1);
-  const subsystemName = classification.subsystem
-    ? (SUBSYSTEMS.find((s) => s.id === classification.subsystem)?.name ?? classification.subsystem)
+  const departmentName = classification.department
+    ? (DEPARTMENTS.find((s) => s.id === classification.department)?.name ??
+      classification.department)
     : null;
-  // When stage-1 delegated to a subsystem, the dispatched unit is whatever the
+  // When stage-1 delegated to a department, the dispatched unit is whatever the
   // run actually resolved to (`processor`); otherwise stage-1's own pick already
   // IS the unit that ran.
-  const unitName = subsystemName ? (run.processor?.name ?? run.owner) : stage1.name;
+  const unitName = departmentName ? (run.processor?.name ?? run.owner) : stage1.name;
   return (
-    <HudPanel padding="250" title={t("classificationTitle")}>
+    <Panel header={t("classificationTitle")} padding="250">
       <Stack data-testid={ClassificationTracePanelTestId.Panel} gap="100">
         <Stack wrap align="center" direction="row" gap="100">
           <Typography mono size="xs" type="note" variant="secondary">
             {t("classificationSwitchboard")}
           </Typography>
           <Icon name="chevron" size="xs" tone="faint" />
-          {subsystemName && (
+          {departmentName && (
             <>
               <Typography mono size="xs" type="note" variant="secondary">
-                {subsystemName}
+                {departmentName}
               </Typography>
               <Icon name="chevron" size="xs" tone="faint" />
             </>
@@ -434,7 +435,7 @@ function ClassificationTracePanel({ run }: { run: RunView }) {
           {t("classificationConfidence", { pct: Math.round(classification.confidence * 100) })}
         </Tag>
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }
 
@@ -444,11 +445,9 @@ function ClassificationTracePanel({ run }: { run: RunView }) {
  * "Vstup" accordion below it, so a long task never inflates the header. Shows the
  * full `taskText` as formatted markdown, then the attachments list. Phase 65: when the
  * run carries an `attachmentSetId`, each attachment opens the file (in a new tab) via
- * the serve route — older runs with no set id keep the plain read-only row (DS
- * `FilePreview` has no `onOpen`/`href` prop, and it's out of this phase's scope to add
- * one, so the open affordance is a plain anchor wrapping the preview, styled with DS
- * focus-ring/utility classes rather than a new DS primitive). Renders nothing when
- * there is neither text nor an attachment to show.
+ * the serve route, using DS `FilePreview`'s `href` prop (ZA-07) — older runs with no
+ * set id keep the plain read-only row. Renders nothing when there is neither text nor
+ * an attachment to show.
  */
 function RunInputSection({ run }: { run: RunView }) {
   const t = useTranslations("runs");
@@ -467,22 +466,15 @@ function RunInputSection({ run }: { run: RunView }) {
               <Typography mono uppercase size="2xs" tracking="wide" type="note" variant="tertiary">
                 {tAttach("sectionTitle")}
               </Typography>
-              {(run.attachments ?? []).map((a) =>
-                attachmentSetId ? (
-                  <a
-                    className="inline-block w-fit rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                    data-testid="attachment-open-link"
-                    href={attachmentOpenHref(attachmentSetId, a.name)}
-                    key={a.name}
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    <FilePreview mediaType={a.mediaType} name={a.name} size={a.size} />
-                  </a>
-                ) : (
-                  <FilePreview key={a.name} mediaType={a.mediaType} name={a.name} size={a.size} />
-                ),
-              )}
+              {(run.attachments ?? []).map((a) => (
+                <FilePreview
+                  href={attachmentSetId ? attachmentOpenHref(attachmentSetId, a.name) : undefined}
+                  key={a.name}
+                  mediaType={a.mediaType}
+                  name={a.name}
+                  size={a.size}
+                />
+              ))}
             </Stack>
           )}
         </Stack>
@@ -623,7 +615,7 @@ export function RunDetail({
       <MetaCell
         key="project"
         label={t("metaProject")}
-        onClick={() => router.push(`/projects/${projectId}`)}
+        onClick={() => router.push(`/work/projects/${projectId}`)}
         testId="run-project-link"
         tone="accent"
         value={run.project}
@@ -642,7 +634,7 @@ export function RunDetail({
       <MetaCell
         key="roadmapItem"
         label={t("metaRoadmapItem")}
-        onClick={() => router.push(`/projects/${projectId}?tab=roadmap&item=${roadmapItemId}`)}
+        onClick={() => router.push(`/work/projects/${projectId}/roadmap?item=${roadmapItemId}`)}
         testId="run-roadmap-item-link"
         tone="accent"
         value={run.roadmapItemLabel ?? roadmapItemId}
@@ -871,16 +863,16 @@ export function RunDetail({
             </Accordion>
           </>
         ) : (
-          <HudPanel
+          <Panel
+            header={run.logBase ? t("output") : undefined}
             padding={run.logBase ? "250" : "300"}
-            title={run.logBase ? t("output") : undefined}
           >
             {logPanel}
-          </HudPanel>
+          </Panel>
         )}
 
         {run.checkpoints && run.checkpoints.length > 0 && (
-          <HudPanel padding="250" title={t("checkpoints")}>
+          <Panel header={t("checkpoints")} padding="250">
             <Stack gap="50">
               {run.checkpoints.map((c) => (
                 <Typography
@@ -894,7 +886,7 @@ export function RunDetail({
                 </Typography>
               ))}
             </Stack>
-          </HudPanel>
+          </Panel>
         )}
       </Stack>
 

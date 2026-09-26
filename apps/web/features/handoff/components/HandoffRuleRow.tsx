@@ -1,9 +1,8 @@
 "use client";
 
 import type { HandoffRule, HandoffSignalKind } from "@zibby/contracts";
-import { Button, Stack, Tag, type TagTone, Toggle, Typography } from "@zibby/design-system";
+import { Button, Panel, Stack, Tag, type TagTone, Toggle, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { signalKindLabel } from "../signalKinds";
 import { TIER_TONE } from "../tierTone";
 
@@ -19,9 +18,9 @@ export interface HandoffRuleRowProps {
   /** The full signal-kind registry — used to resolve `rule.signalKind`'s display
    * label (built-in → localized `t()`, operator → stored `label`). */
   signalKinds: HandoffSignalKind[];
-  /** This drawer's own subsystem name — the mad-libs sentence's subject. */
-  subsystemName: string;
-  /** Resolved display name of `rule.to` (subsystem or pipeline name, id fallback). */
+  /** This drawer's own department name — the mad-libs sentence's subject. */
+  departmentName: string;
+  /** Resolved display name of `rule.to` (department or pipeline name, id fallback). */
   targetLabel: string;
   onToggle: () => void;
   onEdit: () => void;
@@ -42,13 +41,12 @@ function Pat({ children, tone = "accent" }: { children: string; tone?: TagTone }
 
 /**
  * One outgoing handoff rule as a mad-libs Czech sentence (P2 design doc, aligned
- * to `design/Z.I.B.B.Y/ZIBBY Handoff.html`'s rule row): „Když **[subsystém]**
+ * to `design/Z.I.B.B.Y/ZIBBY Handoff.html`'s rule row): „Když **[oddělení]**
  * vyprodukuje **[signalKind]** (≥ **[severity]**) → předat **[cíl]** jako
  * **[tier]**" — the `(≥ severity)` clause only renders when `minSeverity` is set.
  * The three chips are toned per field (signal = run, target = accent, tier =
  * ok/run/warn by autonomy tier) so the sentence reads apart at a glance, same as
- * the mockup's colored inline selects. Mirrors `GateRuleSentenceRow`'s structure
- * (`HudPanel` has no `data-testid` passthrough — the wrapping `div` carries it)
+ * the mockup's colored inline selects. Mirrors the gate catalog's own rule row
  * and its row affordances: an enable/disable toggle (always available — even a
  * system rule can be retuned), an edit button, and a delete button hidden for
  * system rules.
@@ -56,13 +54,13 @@ function Pat({ children, tone = "accent" }: { children: string; tone?: TagTone }
 export function HandoffRuleRow({
   rule,
   signalKinds,
-  subsystemName,
+  departmentName,
   targetLabel,
   onToggle,
   onEdit,
   onDelete,
 }: HandoffRuleRowProps) {
-  const t = useTranslations("subsystems.handoff");
+  const t = useTranslations("departments.handoff");
 
   // Registry lookup by id — falls back to the raw stored kind when the rule's
   // signal kind isn't (or is no longer) in the registry (stale/unknown).
@@ -70,65 +68,68 @@ export function HandoffRuleRow({
   const signalKindText = matchedKind ? signalKindLabel(matchedKind, t) : rule.signalKind;
 
   return (
-    <div data-testid={HandoffRuleRowTestId.Root}>
-      <HudPanel background="background" padding="150" radius="sm">
-        <Stack wrap align="center" direction="row" gap="125">
-          <Stack grow wrap align="center" direction="row" gap="100">
-            <Typography size="sm" type="text" variant="secondary">
-              {t("sentencePrefix", { subject: subsystemName })}
-            </Typography>
-            <Pat tone="run">{signalKindText}</Pat>
-            {rule.minSeverity && (
-              <>
-                <Typography size="sm" type="text" variant="secondary">
-                  {t("severityPrefix")}
-                </Typography>
-                <Pat tone="neutral">{t(`severity.${rule.minSeverity}`)}</Pat>
-              </>
-            )}
-            <Typography size="sm" type="text" variant="secondary">
-              {t("targetPrefix")}
-            </Typography>
-            <Pat tone="accent">{targetLabel}</Pat>
-            <Typography size="sm" type="text" variant="secondary">
-              {t("tierPrefix")}
-            </Typography>
-            <Pat tone={TIER_TONE[rule.tier]}>{t(`tierName.${rule.tier}`)}</Pat>
-            {rule.system && (
-              <Typography mono size="2xs" type="note" variant="tertiary">
-                {t("systemBadge")}
+    <Panel
+      background="background"
+      data-testid={HandoffRuleRowTestId.Root}
+      padding="150"
+      radius="sm"
+    >
+      <Stack wrap align="center" direction="row" gap="125">
+        <Stack grow wrap align="center" direction="row" gap="100">
+          <Typography size="sm" type="text" variant="secondary">
+            {t("sentencePrefix", { subject: departmentName })}
+          </Typography>
+          <Pat tone="run">{signalKindText}</Pat>
+          {rule.minSeverity && (
+            <>
+              <Typography size="sm" type="text" variant="secondary">
+                {t("severityPrefix")}
               </Typography>
-            )}
-          </Stack>
+              <Pat tone="neutral">{t(`severity.${rule.minSeverity}`)}</Pat>
+            </>
+          )}
+          <Typography size="sm" type="text" variant="secondary">
+            {t("targetPrefix")}
+          </Typography>
+          <Pat tone="accent">{targetLabel}</Pat>
+          <Typography size="sm" type="text" variant="secondary">
+            {t("tierPrefix")}
+          </Typography>
+          <Pat tone={TIER_TONE[rule.tier]}>{t(`tierName.${rule.tier}`)}</Pat>
+          {rule.system && (
+            <Typography mono size="2xs" type="note" variant="tertiary">
+              {t("systemBadge")}
+            </Typography>
+          )}
+        </Stack>
 
-          <Stack align="center" direction="row" gap="100">
-            <Toggle
-              checked={rule.enabled}
-              data-testid={HandoffRuleRowTestId.Toggle}
-              label={t("toggleLabel")}
-              onChange={onToggle}
-            />
+        <Stack align="center" direction="row" gap="100">
+          <Toggle
+            checked={rule.enabled}
+            data-testid={HandoffRuleRowTestId.Toggle}
+            label={t("toggleLabel")}
+            onChange={onToggle}
+          />
+          <Button
+            aria-label={t("edit")}
+            data-testid={HandoffRuleRowTestId.Edit}
+            icon="edit"
+            intent="ghost"
+            onClick={onEdit}
+            size="sm"
+          />
+          {onDelete && (
             <Button
-              aria-label={t("edit")}
-              data-testid={HandoffRuleRowTestId.Edit}
-              icon="edit"
+              aria-label={t("delete")}
+              data-testid={HandoffRuleRowTestId.Delete}
+              icon="trash"
               intent="ghost"
-              onClick={onEdit}
+              onClick={onDelete}
               size="sm"
             />
-            {onDelete && (
-              <Button
-                aria-label={t("delete")}
-                data-testid={HandoffRuleRowTestId.Delete}
-                icon="trash"
-                intent="ghost"
-                onClick={onDelete}
-                size="sm"
-              />
-            )}
-          </Stack>
+          )}
         </Stack>
-      </HudPanel>
-    </div>
+      </Stack>
+    </Panel>
   );
 }

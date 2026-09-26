@@ -23,7 +23,7 @@ export function resolveReviewRulesDir(): string {
 
 /**
  * Task 9 — the nightly `review-learn` pass, wired into DI. A leaf module (like
- * `MaestroModule`, which solves the exact same import set): `ProjectsModule` (for
+ * `ReleaseModule`, which solves the exact same import set): `ProjectsModule` (for
  * `ProjectsStorageService`), `ResolvedProjectModule` + `IntegrationsModule` (the
  * shared `resolveGithubToken` seam — `resolveGithubToken` itself is a free
  * function imported directly by `ReviewLearningService`, not a DI provider),

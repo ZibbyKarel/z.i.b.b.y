@@ -8,7 +8,7 @@ const c = initContract();
 
 /**
  * Channels (Phase 5): mostly READ-ONLY access to ingested inbound items. A client can
- * never CREATE an item or forge its triage verdict (Law 4) — those are stamped only by
+ * never CREATE an item or dev its triage verdict (Law 4) — those are stamped only by
  * the watcher / triage paths inside the API. The one client write is `dismiss`: an
  * operator acknowledging a surfaced notify-only item, exactly like approving/rejecting
  * an approval. It only moves a `triaged` item to `ignored`; it cannot inject content or

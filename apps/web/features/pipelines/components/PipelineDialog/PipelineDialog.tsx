@@ -4,10 +4,18 @@ import { useTranslations } from "next-intl";
 import type {
   Agent,
   CreatePipelineInput,
-  SubsystemId,
+  DepartmentId,
   UpdatePipelineInput,
 } from "@zibby/contracts";
-import { Button, Container, Dialog, IconTile, Stack, Typography } from "@zibby/design-system";
+import {
+  Button,
+  Container,
+  Dialog,
+  GraphInlineInput,
+  IconTile,
+  Stack,
+  Typography,
+} from "@zibby/design-system";
 import type { Pipeline } from "../../../../domain";
 import { slug } from "../../../../utils/slug";
 import { AgentPalette } from "./AgentPalette";
@@ -34,12 +42,12 @@ export interface PipelineDialogProps {
   /** Edit mode submit — only the fields that actually changed. */
   onSave?: (id: string, patch: UpdatePipelineInput) => void;
   /**
-   * Create mode only: pre-fills the created pipeline's `ownerSubsystem` (Phase 85
+   * Create mode only: pre-fills the created pipeline's `department` (Phase 85
    * Roster tab's "no pipeline yet" affordance opens this dialog scoped to the
-   * subsystem it was opened from). No picker UI — the value flows straight into
+   * department it was opened from). No picker UI — the value flows straight into
    * the create payload.
    */
-  defaultOwnerSubsystem?: SubsystemId;
+  defaultOwnerDepartment?: DepartmentId;
 }
 
 /**
@@ -57,7 +65,7 @@ export function PipelineDialog({
   onClose,
   onCreate,
   onSave,
-  defaultOwnerSubsystem,
+  defaultOwnerDepartment,
 }: PipelineDialogProps) {
   const t = useTranslations();
   const [name, setName] = useState(initial?.name ?? "");
@@ -100,7 +108,7 @@ export function PipelineDialog({
         // as `outputs`), so a dialog-created pipeline starts on the middle rung —
         // the contract's own default — and is graded in the `.pipeline.md`.
         complexity: "standard",
-        ...(defaultOwnerSubsystem ? { ownerSubsystem: defaultOwnerSubsystem } : {}),
+        ...(defaultOwnerDepartment ? { department: defaultOwnerDepartment } : {}),
       });
       return;
     }
@@ -168,21 +176,22 @@ export function PipelineDialog({
         {/* topbar: name + description */}
         <Stack align="center" direction="row" gap="150">
           <IconTile glyph="flow" size="md" />
-          <input
+          <GraphInlineInput
             aria-label={t("forms.pipeline.nameLabel")}
-            className="w-56 rounded-sm border border-border bg-[var(--color-background-deep)] px-2 py-1 font-mono text-sm font-bold text-foreground outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent"
             onChange={(e) => setName(e.target.value)}
             placeholder={t("forms.pipeline.namePlaceholder")}
-            spellCheck={false}
+            style={{ width: "224px" }}
             value={name}
+            variant="field"
+            weight="bold"
           />
-          <input
+          <GraphInlineInput
             aria-label={t("forms.pipeline.descLabel")}
-            className="min-w-0 flex-1 rounded-sm border border-border bg-[var(--color-background-deep)] px-2.5 py-1.5 text-[13px] text-foreground outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent"
             onChange={(e) => setDesc(e.target.value)}
             placeholder={t("forms.pipeline.descPlaceholder")}
-            spellCheck={false}
+            style={{ flex: 1 }}
             value={desc}
+            variant="field"
           />
           <Button
             aria-label={

@@ -14,46 +14,46 @@ const RuleListSchema = z.array(HandoffRuleSchema);
 
 /**
  * The A.3 seed table (design doc
- * `docs/superpowers/specs/2026-07-22-subsystem-handoff-design.md`, Part A.3):
- * migrates today's hard-coded Sentinel critical-CVE and Maestro post-merge-red
+ * `docs/superpowers/specs/2026-07-22-department-handoff-design.md`, Part A.3):
+ * migrates today's hard-coded Security critical-CVE and Release post-merge-red
  * dispatch behavior into rule-driven Tier-2s, and adds the operator's new
- * Loom→Forge and Scout→Forge asks as Tier-3 (propose, don't act). All four are
+ * Arch→Dev and Research→Dev asks as Tier-3 (propose, don't act). All four are
  * `system: true` — the operator retunes them once the Part-2 rule-editor UI ships.
  */
 export const SYSTEM_HANDOFF_RULES: readonly HandoffRule[] = [
   {
-    id: "sentinel-cve-critical",
-    from: "sentinel",
+    id: "security-cve-critical",
+    from: "sec",
     signalKind: "cve",
     minSeverity: "critical",
-    to: { kind: "subsystem", id: "forge" },
+    to: { kind: "department", id: "dev" },
     tier: 2,
     enabled: true,
     system: true,
   },
   {
-    id: "maestro-post-merge-red",
-    from: "maestro",
+    id: "release-post-merge-red",
+    from: "rel",
     signalKind: "post-merge-red",
-    to: { kind: "subsystem", id: "forge" },
+    to: { kind: "department", id: "dev" },
     tier: 2,
     enabled: true,
     system: true,
   },
   {
-    id: "loom-architecture",
-    from: "loom",
+    id: "arch-architecture",
+    from: "qa",
     signalKind: "*",
-    to: { kind: "subsystem", id: "forge" },
+    to: { kind: "department", id: "dev" },
     tier: 3,
     enabled: true,
     system: true,
   },
   {
-    id: "scout-research",
-    from: "scout",
+    id: "research",
+    from: "rnd",
     signalKind: "research-artifact",
-    to: { kind: "subsystem", id: "forge" },
+    to: { kind: "department", id: "dev" },
     tier: 3,
     enabled: true,
     system: true,
@@ -64,7 +64,7 @@ export const SYSTEM_HANDOFF_RULES: readonly HandoffRule[] = [
  * A2 — the standing handoff rule set (design doc Part A.2): a single file-backed
  * JSON array (`.zibby/data/handoff/rules.json`), unlike the per-record
  * `AutomationsStorageService` this is modeled on — a handful of rules doesn't
- * need one file each, so it's a single list, like `HeraldGraduationStore`'s
+ * need one file each, so it's a single list, like `CommsGraduationStore`'s
  * `graduations.json`. Seeded with {@link SYSTEM_HANDOFF_RULES} on first boot;
  * a missing OR corrupt file re-seeds the defaults (fail-open — never throws).
  * P1 — full CRUD has landed (the Part-2 rule-editor UI's backend): `create`
@@ -137,6 +137,24 @@ export class HandoffRuleStore implements OnModuleInit {
     if (!existing) throw new HandoffRuleNotFoundError(id);
     if (existing.system === true) throw new SystemHandoffRuleError(id);
     await this.write(rules.filter((r) => r.id !== id));
+  }
+
+  /** ZB-05a — every rule belonging to one chain (its `signalKind`), in on-disk order. */
+  async rulesForSignalKind(signalKind: string): Promise<HandoffRule[]> {
+    return (await this.list()).filter((r) => r.signalKind === signalKind);
+  }
+
+  /**
+   * ZB-05a / D-005 — atomically replace EXACTLY the rules whose `signalKind` is
+   * `signalKind` with `rules` (the chain PUT's rules half — `ChainsService`
+   * calls this after successfully upserting the kind, and rolls the kind back
+   * if this throws). Every other rule (a different chain, or an ordinary
+   * signal rule) is untouched.
+   */
+  async replaceForSignalKind(signalKind: string, rules: readonly HandoffRule[]): Promise<void> {
+    const existing = await this.list();
+    const others = existing.filter((r) => r.signalKind !== signalKind);
+    await this.write([...others, ...rules]);
   }
 
   /**

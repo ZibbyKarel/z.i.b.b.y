@@ -1,7 +1,6 @@
 import type { Company } from "@zibby/contracts";
-import { Tag } from "@zibby/design-system";
+import { EntityCard, Tag } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { HudCard } from "../../../components/HudCard/HudCard";
 
 export interface CompanyCardProps {
   company: Company;
@@ -10,7 +9,7 @@ export interface CompanyCardProps {
 
 /**
  * Catalog card for a single company (firma) — a thin container over the generic
- * {@link HudCard}, mirroring `ProjectCard`. A company has no runs of its own (it
+ * {@link EntityCard}, mirroring `ProjectCard`. A company has no runs of its own (it
  * is a super-entity above Project, Phase 68), so the footer only surfaces the
  * roster size and whether a default budget is set — no live run/cost bars.
  */
@@ -20,7 +19,7 @@ export function CompanyCard({ company, onOpen }: CompanyCardProps) {
   const hasBudget = company.budget != null;
 
   return (
-    <HudCard
+    <EntityCard
       badges={[
         [
           peopleCount > 0 ? (

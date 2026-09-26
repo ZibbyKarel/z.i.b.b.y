@@ -86,7 +86,7 @@ describe("Categories API (e2e)", () => {
         id: "busy-agent",
         category: "Busy",
         instructions: "Do things.",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
 

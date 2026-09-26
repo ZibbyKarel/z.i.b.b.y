@@ -1,8 +1,8 @@
 "use client";
 
 import type { HandoffSignalKind } from "@zibby/contracts";
+import { EntityCard } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { HudCard } from "../../../components/HudCard/HudCard";
 import { signalKindDescription, signalKindLabel } from "../../handoff/signalKinds";
 import { SignalStatusBadge } from "./SignalStatusBadge";
 
@@ -22,15 +22,15 @@ export interface SignalKindCardProps {
 
 /**
  * One signal-kind registry entry: label + mono id/slug + status badge + a
- * truncated description — a thin wrapper over the generic {@link HudCard}
+ * truncated description — a thin wrapper over the generic {@link EntityCard}
  * (mirrors `HookCard`). Click navigates to `/signals/[id]`.
  */
 export function SignalKindCard({ kind, onSelect, selectLabel }: SignalKindCardProps) {
-  const t = useTranslations("subsystems.handoff");
+  const t = useTranslations("departments.handoff");
 
   return (
     <div data-testid={`${SignalKindCardTestId.Root}-${kind.id}`}>
-      <HudCard
+      <EntityCard
         aside={<SignalStatusBadge status={kind.status} />}
         description={signalKindDescription(kind, t)}
         glyph="pulse"

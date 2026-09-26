@@ -64,7 +64,7 @@ describe("GET /api/tasks/runs/archive — route-ordering regression (Phase 126e)
         id: "archive-route-agent",
         name: "Archive Route Agent",
         instructions: "test agent",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
 

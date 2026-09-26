@@ -9,11 +9,19 @@ import { LimitWindowSchema } from "../limits/limits.schema";
  * that window); `.strict()` so an unknown key can't smuggle a third knob in. This is
  * the one config file the operator edits by hand / in Settings — same posture as
  * `mandate.json`.
+ *
+ * ZB-10 / O-08: `warnAtRollingPct`/`warnAtWeeklyPct` are the additive, lower,
+ * non-blocking counterpart — crossing one writes an activity notice only (the
+ * `BudgetService` guard), no hold. Both optional (absent = no warn on that window),
+ * independent of the matching `pauseAt*` (an operator can set a warn above its own
+ * pause, or not set a warn at all).
  */
 export const GlobalBudgetSchema = z
   .object({
     pauseAtRollingPct: z.number().min(0).max(100).optional(),
     pauseAtWeeklyPct: z.number().min(0).max(100).optional(),
+    warnAtRollingPct: z.number().min(0).max(100).optional(),
+    warnAtWeeklyPct: z.number().min(0).max(100).optional(),
   })
   .strict();
 export type GlobalBudget = z.infer<typeof GlobalBudgetSchema>;
@@ -75,6 +83,9 @@ export const BudgetStatusSchema = z.object({
     stale: z.boolean(),
     pauseAtRollingPct: z.number().min(0).max(100).optional(),
     pauseAtWeeklyPct: z.number().min(0).max(100).optional(),
+    /** ZB-10 / O-08: the non-blocking warn ticks the Ledger spend meters draw. */
+    warnAtRollingPct: z.number().min(0).max(100).optional(),
+    warnAtWeeklyPct: z.number().min(0).max(100).optional(),
     /** True when a non-stale window is at/over its pause threshold → all dispatches hold. */
     paused: z.boolean(),
   }),

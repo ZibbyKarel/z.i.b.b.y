@@ -89,7 +89,7 @@ export function useSpeechRecognition(
     // Post-hydration flip from the SSR-safe `false` default — see the `supported`
     // declaration above. `react-hooks/set-state-in-effect` flags this in general,
     // but a one-time post-mount feature-detection result is exactly this case
-    // (mirrors `SubsystemDrawer`'s justification for the same rule).
+    // (mirrors `DepartmentDrawer`'s justification for the same rule).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSupported(true);
 

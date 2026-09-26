@@ -7,6 +7,7 @@ import { ModuleRef } from "@nestjs/core";
 import {
   type ArtifactKind,
   DEFAULT_VERIFY_CHECKS,
+  type DepartmentId,
   type IntendedAction,
   PIPELINE_RUN_ARTIFACTS,
   type PhaseEscalation,
@@ -20,7 +21,6 @@ import {
   type RunLogChunk,
   type StageRun,
   type StageVerdict,
-  type SubsystemId,
   type TaskOutput,
   type Workspace,
 } from "@zibby/contracts";
@@ -28,6 +28,8 @@ import { ActivityLogService } from "../activity/activity-log.service";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { ApprovalsService } from "../approvals/approvals.service";
 import { ArtifactsStorageService, artifactRecordId } from "../artifacts/artifacts.storage.service";
+import { EmployeeAllocator, type EmployeeLease } from "../employees/employee-allocator";
+import { NoEmployeeError } from "../employees/employees.errors";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
 // A3: type-only — a plain value import here would close a *file-level*
 // require cycle (pipeline-runner.service.ts -> handoff.service.ts ->
@@ -41,6 +43,7 @@ import type { HandoffService } from "../handoff/handoff.service";
 import { GroundingService } from "../memory/grounding.service";
 import { DuplicateNoteError, VaultService } from "../memory/vault.service";
 import { ClaudePreflightService } from "../runner/claude-preflight.service";
+import type { TaskSchedulerService } from "../tasks/task-scheduler.service";
 import { ClaudeRunCommandService } from "../runner/claude-run-command.service";
 import { formatClaudeStreamLine } from "../runner/claude-stream-format";
 import { CommandMaterializerService } from "../runner/command-materializer.service";
@@ -159,6 +162,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly activity: ActivityLogService,
     private readonly artifacts: ArtifactsStorageService,
     private readonly projectLocal: ProjectLocalService,
+    private readonly employees: EmployeeAllocator,
     // A3: HandoffService is resolved lazily via ModuleRef (see recordArtifact),
     // NOT constructor-injected — PipelinesModule deliberately doesn't import
     // HandoffModule (that edge would close a module-file require cycle that
@@ -913,6 +917,39 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       }
 
       const attempt = (retries.get(phase.id) ?? 0) + 1;
+
+      // D-015: an `agent` phase's dispatch is an employee (a hired instance of
+      // `phase.agent`, the position), leased from the pipeline's OWN department.
+      // Acquiring here — before the sandbox exists — means a `no-employee` park
+      // never leaves a half-built stage folder behind. `acquire` itself blocks
+      // (FIFO, queued behind any earlier stage/run waiting on the SAME
+      // department+position) while every matching employee is busy — the "queued"
+      // wait the design calls for; `run.currentStage` above already reflects the
+      // phase the run is waiting to dispatch. A `verify` phase spawns no agent, so
+      // it never acquires (`phase.agent` is absent for it).
+      let lease: EmployeeLease | undefined;
+      if (phase.agent && pipeline.department) {
+        try {
+          lease = await this.employees.acquire(pipeline.department, phase.agent, {
+            runId: run.pipelineRunId,
+          });
+        } catch (error) {
+          if (!(error instanceof NoEmployeeError)) throw error;
+          run.status = "parked";
+          run.parkedReason = "no-employee";
+          run.currentStage = phase.id;
+          run.retries = Object.fromEntries(retries);
+          await this.writeAggregate(run);
+          await this.writeProgress(run, phaseIds);
+          this.log.warn("pipeline run parked (no employee of this position)", {
+            phase: phase.id,
+            department: pipeline.department,
+            agent: phase.agent,
+          });
+          return;
+        }
+      }
+
       // Sequential sandbox numbering: every dispatch appends exactly one `stageRuns`
       // entry when it settles (there is no same-entry retry path in this machine),
       // so `length + 1` numbers the folders in call order — a loop back-edge's
@@ -942,15 +979,24 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       });
       const stageResumeContext = pendingResumeContext ?? undefined;
       pendingResumeContext = null; // consumed by this phase only
-      const stageRun = await this.runStage(
-        run,
-        phase,
-        stageCwd,
-        attempt,
-        project,
-        stageResumeContext,
-        delegates,
-      );
+      let stageRun: StageRun;
+      try {
+        stageRun = await this.runStage(
+          run,
+          phase,
+          stageCwd,
+          attempt,
+          project,
+          stageResumeContext,
+          delegates,
+          lease,
+        );
+      } finally {
+        // Released on EVERY terminal path (done/error/interrupted/paused-limit) —
+        // `runStage` only returns once `waitForStage` sees one of those, so the
+        // lease never outlives the dispatch it was acquired for.
+        if (lease) this.employees.release(lease);
+      }
       // The stage has reached a terminal/paused state and (when terminal) is about
       // to be appended to `stageRuns` — its log is readable from there now, so drop
       // the live pointer the running attempt used.
@@ -1347,10 +1393,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
    * write error is logged and the delivery stands. Stable id ⇒ an idempotent
    * re-delivery replaces its record instead of duplicating it.
    *
-   * A3: when the owning pipeline is Scout-owned, ALSO hands a `research-artifact`
+   * A3: when the owning pipeline is Research-owned, ALSO hands a `research-artifact`
    * signal to the handoff rule engine — same best-effort contract, a signal
-   * emission must never fail an already-green delivery. Every non-Scout
-   * pipeline is completely unaffected (gated on `ownerSubsystem === "scout"`).
+   * emission must never fail an already-green delivery. Every non-Research
+   * pipeline is completely unaffected (gated on `department === "rnd"`).
    */
   private async recordArtifact(
     run: PipelineRun,
@@ -1383,33 +1429,56 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         });
       });
 
-    const owner = (await this.pipelines.get(run.pipelineId).catch(() => null))?.ownerSubsystem;
-    if (owner !== "scout") return;
-    try {
-      // Resolved lazily via ModuleRef (non-strict — searches the whole app
-      // container), not constructor-injected: PipelinesModule doesn't import
-      // HandoffModule (see pipelines.module.ts's doc comment for why). The
-      // class reference itself is fetched via a lazy `await import(...)` too
-      // (see the `import type` above) — deferred past module-load time, so it
-      // never re-enters the file-level require cycle through task-scheduler.
-      const { HandoffService } = await import("../handoff/handoff.service");
-      const handoff = this.moduleRef.get<HandoffService>(HandoffService, { strict: false });
-      await handoff.evaluate({
-        from: "scout",
-        kind: "research-artifact",
-        ...(projectId ? { projectId } : {}),
-        title: `Scout: research artifact ${from}`,
-        body: `Delivered ${kind} ${locator}. Build on this research.`,
-        fingerprint: artifactId,
-      });
-    } catch (error) {
-      // `evaluate` is itself fail-open, but a signal emission must NEVER fail an
-      // already-green delivery — same contract as the artifact record above.
-      this.log.warn("scout handoff signal failed (soft) — delivery stands", {
-        pipelineRunId: run.pipelineRunId,
-        from,
-        err: error instanceof Error ? error.message : String(error),
-      });
+    const owner = (await this.pipelines.get(run.pipelineId).catch(() => null))?.department;
+    if (owner === "rnd") {
+      try {
+        // Resolved lazily via ModuleRef (non-strict — searches the whole app
+        // container), not constructor-injected: PipelinesModule doesn't import
+        // HandoffModule (see pipelines.module.ts's doc comment for why). The
+        // class reference itself is fetched via a lazy `await import(...)` too
+        // (see the `import type` above) — deferred past module-load time, so it
+        // never re-enters the file-level require cycle through task-scheduler.
+        const { HandoffService } = await import("../handoff/handoff.service");
+        const handoff = this.moduleRef.get<HandoffService>(HandoffService, { strict: false });
+        await handoff.evaluate({
+          from: "rnd",
+          kind: "research-artifact",
+          ...(projectId ? { projectId } : {}),
+          title: `Research: research artifact ${from}`,
+          body: `Delivered ${kind} ${locator}. Build on this research.`,
+          fingerprint: artifactId,
+        });
+      } catch (error) {
+        // `evaluate` is itself fail-open, but a signal emission must NEVER fail an
+        // already-green delivery — same contract as the artifact record above.
+        this.log.warn("research handoff signal failed (soft) — delivery stands", {
+          pipelineRunId: run.pipelineRunId,
+          from,
+          err: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    // ZB-05a — ANY department's delivered artifact (not just Research's) may be a
+    // chain step's completion: `TaskSchedulerService.emitChainStep` reads the task
+    // (`run.taskId`) itself and no-ops when it carries no chain context, so this is
+    // unconditional and cheap for a non-chain run. Resolved lazily via `ModuleRef`
+    // for the same reason as the `HandoffService` fetch above — `PipelinesModule`
+    // doesn't import `TasksModule` (the reverse edge already exists).
+    if (run.taskId) {
+      try {
+        const { TaskSchedulerService } = await import("../tasks/task-scheduler.service");
+        const scheduler = this.moduleRef.get<TaskSchedulerService>(TaskSchedulerService, {
+          strict: false,
+        });
+        await scheduler.emitChainStep(run.taskId, locator);
+      } catch (error) {
+        this.log.warn("chain step emission failed (soft) — delivery stands", {
+          pipelineRunId: run.pipelineRunId,
+          from,
+          err: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
   }
 
@@ -1611,16 +1680,16 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     project: Project | null,
     resumeContext?: string,
     delegates?: readonly string[],
+    lease?: EmployeeLease,
   ): Promise<StageRun> {
     const escalation = this.escalationFor(phase, attempt);
     if (escalation) {
       this.log.info("applying escalation rung", { phase: phase.id, attempt, ...escalation });
     }
-    // F4a: resolve the pipeline's owning subsystem once per stage so grounding
+    // F4a: resolve the pipeline's owning department once per stage so grounding
     // can attach its knowledge shelf. Fail-open — a missing/renamed pipeline
     // must never block the stage.
-    const ownerSubsystem = (await this.pipelines.get(run.pipelineId).catch(() => null))
-      ?.ownerSubsystem;
+    const department = (await this.pipelines.get(run.pipelineId).catch(() => null))?.department;
     const { command, args, spawnCwd } = await this.buildStageCommand(
       phase,
       stageCwd,
@@ -1630,7 +1699,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       run.matchedTerms,
       resumeContext,
       delegates,
-      ownerSubsystem,
+      department,
       run.pipelineRunId,
     );
     // Materialize enabled custom commands into the stage's working tree (worktree
@@ -1667,6 +1736,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       status,
       dir: path.basename(stageCwd),
       ...(finishedRec?.costUsd != null ? { costUsd: finishedRec.costUsd } : {}),
+      ...(lease ? { employeeId: lease.employeeId, employeeName: lease.employeeName } : {}),
     };
   }
 
@@ -1717,14 +1787,14 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       if (!phase.agent) throw new Error(`Phase "${rec.phaseId}" carries no agent`);
       const agent = await this.agents.get(phase.agent);
       // NS2 F3a — a pipeline stage evaluates with the PIPELINE's owning
-      // subsystem's catalog-rule bucket (the executing unit is the authoritative
-      // actor; the phase agent may be shared across subsystems).
-      const rules = await this.gates.rulesForAgentInSubsystem(
+      // department's catalog-rule bucket (the executing unit is the authoritative
+      // actor; the phase agent may be shared across departments).
+      const rules = await this.gates.rulesForAgentInDepartment(
         {
           gates: agent.gates,
           requires_approval: agent.requires_approval,
         },
-        pipeline.ownerSubsystem,
+        pipeline.department,
       );
       const evaluation = this.gates.evaluate(rules, action);
       this.log.info("evaluating mid-run stage intent", {
@@ -1765,8 +1835,8 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
           detail: action.context ?? `Pipeline "${run.pipelineId}", fáze "${rec.phaseId}"`,
           risk: agent.risk ?? "medium",
           // NS2 F3c — attribute the approval to the EXECUTING unit's owner (the
-          // pipeline, not the phase agent, which may be shared across subsystems).
-          ...(pipeline.ownerSubsystem ? { ownerSubsystem: pipeline.ownerSubsystem } : {}),
+          // pipeline, not the phase agent, which may be shared across departments).
+          ...(pipeline.department ? { department: pipeline.department } : {}),
         });
         return;
       }
@@ -1861,9 +1931,9 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     /** Curated `--agents` delegation roster (this pipeline's stage agents) — keeps the
      *  whole agent library off argv (spawn E2BIG). */
     delegates?: readonly string[],
-    /** F4a: the pipeline's owning subsystem — forwarded into grounding so the
+    /** F4a: the pipeline's owning department — forwarded into grounding so the
      *  stage sees the owner's knowledge shelf. */
-    ownerSubsystem?: SubsystemId,
+    department?: DepartmentId,
     /**
      * Task 5: the pipeline run's own stable identity (`PipelineRun.pipelineRunId`,
      * known up-front — unlike the stage's own core-internal run id, which isn't
@@ -1909,7 +1979,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         task,
         projectId: project?.id,
         matchedTerms,
-        ownerSubsystem,
+        department,
       });
       // P1-T2: `cwd` is THIS stage's own sandbox folder, a subdirectory of the run
       // root (`path.dirname(cwd)`). The handoff into `consumes` is now a relative

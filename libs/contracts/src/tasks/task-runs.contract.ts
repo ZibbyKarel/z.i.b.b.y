@@ -50,7 +50,7 @@ export const taskRunsContract = c.router(
       responses: {
         200: ArchivePageSchema,
       },
-      summary: "Cursor-paginated, search/subsystem-filtered archive (newest-first)",
+      summary: "Cursor-paginated, search/department-filtered archive (newest-first)",
     },
 
     getArchivedTaskRunCounts: {
@@ -60,7 +60,7 @@ export const taskRunsContract = c.router(
       responses: {
         200: ArchiveCountsSchema,
       },
-      summary: "Per-subsystem archive counts (search-scoped) + the unsearched total",
+      summary: "Per-department archive counts (search-scoped) + the unsearched total",
     },
 
     getTaskRun: {

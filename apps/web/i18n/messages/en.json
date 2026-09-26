@@ -18,28 +18,62 @@
     "mcp": "MCP servers",
     "commands": "Commands",
     "hooks": "Hooks",
-    "signals": "Signals"
-  },
-  "notifications": {
-    "attention": "{count} items need attention"
+    "signals": "Signals",
+    "org": "Org",
+    "work": "Work",
+    "activity": "Activity",
+    "policy": "Policy",
+    "knowledge": "Knowledge",
+    "ledger": "Ledger",
+    "system": "System",
+    "subtab": {
+      "org": {
+        "map": "Map",
+        "people": "People"
+      },
+      "work": {
+        "tasks": "Tasks",
+        "chains": "Chains",
+        "goals": "Goals",
+        "companies": "Companies",
+        "teams": "Teams",
+        "projects": "Projects"
+      },
+      "activity": {
+        "log": "Log",
+        "runs": "Runs",
+        "inbox": "Inbox",
+        "briefings": "Briefings"
+      },
+      "policy": {
+        "approvals": "Approvals",
+        "gates": "Gates",
+        "patterns": "Patterns"
+      },
+      "knowledge": {
+        "vault": "Vault",
+        "distill": "Distill"
+      },
+      "ledger": {
+        "budgets": "Budgets",
+        "spend": "Spend"
+      },
+      "system": {
+        "settings": "Settings",
+        "registries": "Registries"
+      }
+    }
   },
   "memory": {
-    "knowledgeGraph": "Knowledge graph",
     "title": "Memory",
-    "countSummary": "{count, plural, =0 {no notes} one {# note} other {# notes}} · index-first vault, plain Markdown",
-    "loadingGraph": "Loading graph…",
     "noteFallback": "Note",
     "selectNode": "Select a node to read its note.",
-    "searchLabel": "Search the vault",
     "searchPlaceholder": "Search notes…",
-    "searchResults": "Search results",
-    "noResults": "No matching notes.",
     "newNote": "New note",
     "editNote": "Edit",
     "noteLinks": "Links",
     "noteBacklinks": "Backlinks",
     "save": "Save",
-    "dailyTimeline": "Daily timeline",
     "idLabel": "Id",
     "idHint": "Unique across the vault; auto-filled from the title.",
     "titleLabel": "Title",
@@ -54,7 +88,7 @@
     "emptyTitle": "Memory is empty",
     "emptyDescription": "No notes in the vault yet. Notes appear here as runs write to it — or create the first one.",
     "untriaged": "Untriaged",
-    "subsystemBadge": "Subsystem shelf",
+    "departmentBadge": "Department shelf",
     "quickCapture": {
       "trigger": "Quick capture",
       "title": "Quick capture",
@@ -76,12 +110,34 @@
       "toastLater": "Staged {staged} files ({skipped} skipped). Will sort during the nightly distillation."
     }
   },
+  "knowledge": {
+    "vault": {
+      "title": "Vault",
+      "shelfGeneral": "General",
+      "usedBy": "Used by",
+      "usedByEmpty": "No note links here."
+    },
+    "distill": {
+      "title": "Distillation",
+      "subtitle": "Every night at 02:00, Knowledge Management folds the day into the vault.",
+      "runNow": "Run now",
+      "running": "Running…",
+      "lastRun": "Last run: {ago}",
+      "neverRun": "Never run",
+      "log": "Run log",
+      "outcome": "Outcome: {ref}",
+      "noAutomations": "No distillation automation is configured.",
+      "metricsUnavailable": "Structured metrics (notes read, links added, gaps) aren't persisted today — you only see the last run's outcome reference.",
+      "selfModel": {
+        "title": "Self-model"
+      }
+    }
+  },
   "common": {
     "stop": "Stop",
     "edit": "Edit",
     "duplicate": "Duplicate",
     "configure": "Configure",
-    "test": "Test",
     "save": "Save",
     "delete": "Delete",
     "close": "Close",
@@ -91,40 +147,15 @@
     "loadErrorDescription": "The API connection failed — your data is fine, it's just not reachable right now. Check the connection and try again.",
     "retry": "Try again",
     "mutationError": "That didn't go through — your change wasn't saved. Please try again.",
-    "targetProject": "Target project",
     "back": "Back",
     "skipToContent": "Skip to content"
   },
-  "topbar": {
-    "commandHint": "Command or skill (⌘K)",
-    "commandAriaLabel": "Command or skill",
-    "commandPlaceholder": "Command or skill…",
-    "langSwitcherLabel": "Interface language",
-    "hideRail": "Hide side panel",
-    "showRail": "Show side panel",
-    "self": {
-      "panelTitle": "ZIBBY freshness",
-      "statusCurrent": "Current",
-      "statusUpgrade": "Upgrade",
-      "upToDate": "ZIBBY is up to date",
-      "behind": "{count} commits behind",
-      "updateButton": "Update",
-      "updateSucceeded": "ZIBBY was updated",
-      "updateFailed": "Update failed",
-      "openPrCount": "{count, plural, one {# open PR} other {# open PRs}}",
-      "noOpenPrs": "no open PRs"
-    }
-  },
   "tasks": {
-    "triggerLabel": "TASK",
-    "triggerAria": "New task",
-    "triggerTitle": "New task",
     "dialogTitle": "NEW TASK",
     "dialogSubtitle": "Describe the task — ZIBBY classifies it and hands it to an agent",
     "cancel": "Cancel",
     "classifyRun": "Run",
     "tabs": {
-      "standard": "Standard task",
       "loop": "Loop"
     },
     "preview": {
@@ -140,7 +171,6 @@
     },
     "override": {
       "label": "Hand it to",
-      "hint": "Override the routed destination.",
       "auto": "ZIBBY's pick (automatic)"
     },
     "target": {
@@ -175,38 +205,34 @@
       "label": "Delayed start",
       "now": "Now",
       "in1h": "In 1 h",
-      "limitReset": "When limits reset · {time}",
-      "willRun": "Runs at {when}",
-      "submit": "Schedule"
+      "limitReset": "When limits reset · {time}"
     },
     "confirm": {
       "accepted": "Task accepted",
       "scheduled": "Scheduled — runs at {when}"
     },
     "composer": {
-      "label": "Task",
-      "placeholder": "Describe the task… e.g.: Check the backups on Holly and save the result to ~/zibby/memory/holly-backup.md",
-      "submitHint": "⌘↩ to classify"
+      "label": "Task"
     },
     "commandLine": {
       "label": "Task",
       "placeholder": "Describe the task… e.g.: Check the backups on Holly and save the result to ~/zibby/memory/holly-backup.md",
       "attachAria": "Attach files",
-      "pinAria": "Pin a file",
       "send": "Send",
       "moreRunOptions": "More run options",
       "dropHint": "Drop here — added as an @file in the text",
       "chrome": {
         "label": "Say what you need · plain language",
-        "hint": "@ searches agents, pipelines, subsystems and teams · drag a file, or use the paperclip",
-        "hintNoTeams": "@ searches agents, pipelines and subsystems · drag a file, or use the paperclip"
+        "hint": "@ searches agents, pipelines, departments and teams · drag a file, or use the paperclip",
+        "hintNoTeams": "@ searches agents, pipelines and departments · drag a file, or use the paperclip"
       },
       "ack": {
         "kind": {
           "agent": "agent",
           "pipeline": "pipeline",
           "goal": "goal loop",
-          "subsystem": "subsystem",
+          "department": "department",
+          "chain": "chain",
           "orchestrator": "orchestrator",
           "loop": "goal loop",
           "auto": "auto-classify"
@@ -270,8 +296,155 @@
       "remove": "Remove attachment"
     }
   },
+  "goals": {
+    "eyebrow": "WORK — GOALS",
+    "title": "Maker ⇄ verifier loops",
+    "subtitle": "A goal repeats until the verifier passes or the run budget runs out.",
+    "emptyTitle": "No goals yet",
+    "emptyBody": "Create a goal from a maker (agent or pipeline) and a verifier to start a loop.",
+    "noProject": "—",
+    "resume": "Resume",
+    "stop": "Stop",
+    "stateTone": {
+      "working": "Working",
+      "thinking": "Thinking",
+      "blocked": "Parked",
+      "error": "Error",
+      "done": "Met",
+      "idle": "Idle"
+    },
+    "detail": {
+      "noRunsTitle": "No runs yet",
+      "noRunsBody": "This goal hasn't been dispatched yet — hand it a task to start the loop."
+    }
+  },
+  "tasksWork": {
+    "eyebrow": "WORK",
+    "state": {
+      "thinking": "Thinking",
+      "working": "Working",
+      "blocked": "Blocked",
+      "error": "Error",
+      "done": "Done"
+    },
+    "source": {
+      "operator": "Operator",
+      "department": "Department",
+      "chain": "Chain",
+      "channel": "Channel",
+      "automation": "Automation",
+      "handoff": "Handoff"
+    },
+    "filter": {
+      "all": "All",
+      "company": "Company",
+      "project": "Project",
+      "department": "Department",
+      "state": "State",
+      "source": "Source"
+    },
+    "list": {
+      "title": "Parent tasks",
+      "column": {
+        "id": "ID",
+        "task": "Task",
+        "route": "Chain progress",
+        "state": "State",
+        "source": "Source",
+        "age": "Age"
+      },
+      "emptyTitle": "No tasks",
+      "emptyBody": "No tasks match these filters.",
+      "loadMore": "Load more",
+      "loadingMore": "Loading…"
+    },
+    "detail": {
+      "back": "← Back to tasks",
+      "noSubtasksTitle": "No subtasks yet",
+      "noSubtasksBody": "This task hasn't dispatched any chain steps.",
+      "subtaskHeader": "Subtask {id}",
+      "unassigned": "Unassigned",
+      "step": "Step {n}",
+      "roster": "Department roster",
+      "noRoster": "No agents in this department yet.",
+      "runHeader": "Run",
+      "noRunTitle": "No run yet",
+      "noRunBody": "This subtask hasn't dispatched a run.",
+      "approvalsHeader": "Pending approvals",
+      "noApprovals": "Nothing needs you here.",
+      "attachmentsHeader": "Attachments",
+      "noAttachments": "No attachments.",
+      "created": "Created {time}"
+    },
+    "new": {
+      "title": "Hand work to the company",
+      "field": {
+        "title": "Title",
+        "titlePlaceholder": "e.g. Add SSO to the client portal",
+        "brief": "Brief",
+        "briefPlaceholder": "Context, links, what done looks like",
+        "entry": "Entry",
+        "project": "Project",
+        "chain": "Chain"
+      },
+      "entry": {
+        "coo": "COO (auto-classify)"
+      },
+      "chain": {
+        "none": "None",
+        "projectDefault": "Project default ({label})"
+      },
+      "cancel": "Cancel",
+      "submit": "Create task",
+      "routePreviewHeader": "Route preview",
+      "routeSuggest": "ZIBBY will hand this to {target}",
+      "routeIdle": "Describe the task to see the route."
+    }
+  },
+  "chainsWork": {
+    "eyebrow": "WORK",
+    "list": {
+      "title": "Chain library",
+      "newAction": "New chain",
+      "column": {
+        "name": "Name",
+        "route": "Route",
+        "enabled": "Enabled",
+        "inFlight": "In flight"
+      },
+      "enabledYes": "Enabled",
+      "enabledNo": "Disabled",
+      "emptyTitle": "No chains yet",
+      "emptyBody": "No handoff chain has been authored yet."
+    },
+    "detail": {
+      "back": "← Back to chains",
+      "editAction": "Edit",
+      "saveAction": "Save",
+      "cancelAction": "Cancel",
+      "deleteAction": "Delete",
+      "deleteConfirmAction": "Confirm delete",
+      "labelField": "Label",
+      "labelPlaceholder": "e.g. Dev to QA handoff",
+      "descriptionField": "Description",
+      "descriptionPlaceholder": "What this chain is for",
+      "stepsHeader": "Route",
+      "stepDepartment": "Stop {n}",
+      "gateAria": "Hop {n} gate",
+      "moveLeftAria": "Move earlier",
+      "moveRightAria": "Move later",
+      "removeStepAria": "Remove stop",
+      "addStep": "+ Add department",
+      "enabledField": "Enabled",
+      "noRouteTitle": "No route",
+      "noRouteBody": "This chain has no resolvable steps."
+    },
+    "new": {
+      "title": "New chain",
+      "submit": "Create chain"
+    }
+  },
   "search": {
-    "placeholder": "Search agents, skills, projects…",
     "ariaLabel": "Search the workspace",
     "empty": "No results",
     "agents": "Agents",
@@ -284,41 +457,18 @@
       "event": "Event trigger"
     }
   },
-  "sidebar": {
-    "navLabel": "Main navigation",
-    "tagline": "Zestful Intuitive Brainy Butler for You",
-    "railLabel": "Side panel",
-    "skipToContent": "Skip to content"
-  },
   "loading": {
     "tagline": "Intelligent Automation Platform",
-    "version": "v2.4.1 · BUILD 2026.06",
-    "init": "Initializing core systems…",
-    "registry": "Loading agent registry…",
-    "channel": "Establishing secure channel…",
     "orchestrator": "Mounting pipeline orchestrator…",
     "knowledge": "Syncing knowledge base…",
     "gates": "Calibrating gate rules…",
-    "inference": "Warming inference endpoints…",
     "ready": "System ready."
   },
   "placeholder": {
-    "body": "This screen is next in line. It follows the same pattern — cards (= files on disk) → button → prompt modal → background run.",
-    "hint": "// coming soon"
+    "body": "This screen is next in line. It follows the same pattern — cards (= files on disk) → button → prompt modal → background run."
   },
   "limits": {
     "ariaLabel": "Claude Code limits and Agent SDK credit",
-    "interactive": "inter-\nactive",
-    "agentSdk": "agent\nsdk",
-    "interactiveLimits": "Interactive limits · Claude Code",
-    "independentNote": "from your chat · independent of agents",
-    "agentSdkCredit": "Agent SDK credit",
-    "renew": "renews {date}",
-    "renewDate": "Jun 1",
-    "remaining": "remaining of ${total}",
-    "consumed": "consumed ${used} · agent runs draw from this",
-    "agentNote": "agent runs draw from this",
-    "trend14": "14-DAY TREND ($/day)",
     "rollingLabel": "5h rolling",
     "rollingShort": "5h",
     "weeklyLabel": "Weekly",
@@ -333,100 +483,49 @@
     "systemDegraded": "System · DEGRADED",
     "daemonReady": "· daemon ready · no runs",
     "apiUnreachable": "· api unreachable",
-    "subsystemBackend": "backend",
-    "subsystemVault": "vault",
-    "subsystemIntegrations": "integrations",
-    "subsystemScheduler": "scheduler",
+    "departmentBackend": "backend",
+    "departmentVault": "vault",
+    "departmentIntegrations": "integrations",
+    "departmentScheduler": "scheduler",
     "claudeUnavailable": "· claude cli unavailable · runs refused",
     "title": "Good morning.",
     "emptyTitle": "Dashboard is empty — build it up.",
-    "allRunning": "All systems running.",
-    "ctxChip": "ctx",
-    "statRunningAgents": "running agents",
-    "statApprovals": "approvals",
-    "statSdkCredit": "agent sdk credit",
-    "statPipelines": "pipelines",
-    "statSkills": "skills",
     "briefing": "Briefing",
     "briefingGenerate": "Generate now",
-    "briefingReady": "ready",
     "briefingDid": "{count} handled",
     "briefingWatching": "watching {count} channels",
     "briefingPausedLimit": "{count} paused on the limit",
     "briefingEngagement": "{needs} need · {did} done · {queued} queued · {held} held",
-    "briefingSubsystems": "Subsystems",
-    "briefingSubsystemTier3": "{count} waiting on you",
-    "briefingSubsystemError": "{count} failed",
-    "briefingSubsystemTier2": "{count} to report",
-    "starterTitle": "start here · build the dashboard",
-    "commandBar": {
-      "suggestions": {
-        "backlog": "Go through the backlog and implement the highest-impact bug",
-        "standup": "Write today's standup",
-        "research": "Research topic X overnight"
-      }
-    },
-    "approvalsQueue": "approvals queue",
-    "noApprovals": "nothing is waiting · ZIBBY never orders on its own",
-    "runningAgents": "running agents",
-    "noAgentsRunning": "no agent is running",
-    "budgets": "budgets",
-    "sdkCreditCaps": "AGENT SDK CREDIT",
-    "renew": "renews {date}",
-    "sdkCreditProgress": "Agent SDK credit",
-    "agentNote": "agent runs draw from this",
-    "interactiveCaps": "INTERACTIVE · CLAUDE CODE",
+    "briefingDepartments": "Departments",
+    "briefingDepartmentTier3": "{count} waiting on you",
+    "briefingDepartmentError": "{count} failed",
+    "briefingDepartmentTier2": "{count} to report",
     "starters": {
       "skills": {
-        "label": "Add skill",
-        "sub": "SKILL.md — unit of work"
+        "label": "Add skill"
       },
       "projects": {
-        "label": "Add project",
-        "sub": "one company — channels and team"
+        "label": "Add project"
       },
       "agents": {
-        "label": "Add agent",
-        "sub": ".agent.md — model + tools"
+        "label": "Add agent"
       },
       "pipelines": {
-        "label": "Add pipeline",
-        "sub": "chaining of agents"
+        "label": "Add pipeline"
       }
     },
-    "allApprovals": "full queue →",
-    "approvalsSubsystemFilter": "Filter approvals by subsystem",
-    "liveLog": "Live log",
-    "liveLogEmpty": "No activity yet.",
-    "liveLogSubsystemFilter": "Filter activity by subsystem",
-    "loadOlder": "Load older",
-    "groupedCount": "{count}× {group}"
+    "liveLog": "Live log"
   },
   "skills": {
-    "addSkill": "Add skill",
-    "sectionLabel": "Skills",
     "emptyTitle": "No skills yet",
-    "emptyDescription": "Skills are SKILL.md files on disk. Add the first one and it will appear here as a card. Agents invoke skills from their catalog.",
-    "emptyHint": "// creates ~/zibby/skills/'<name>'/SKILL.md",
     "title": "Skills",
-    "countSummary": "{count, plural, =0 {no skills} one {# skill} other {# skills}} · SKILL.md files agents can invoke",
-    "addCategory": "Add category",
     "fields": {
       "category": "Category"
     },
     "categoryDialog": {
       "title": "New category",
-      "subtitle": "name + glyph",
-      "nameLabel": "Category name",
-      "namePlaceholder": "e.g. Media",
-      "glyphLabel": "Glyph",
-      "duplicate": "Category “{name}” already exists."
+      "subtitle": "name + glyph"
     },
-    "deleteEmptyCategory": "Delete",
-    "deleteEmptyCategoryAria": "Delete empty category {name}",
-    "emptyCategory": "Empty category — add a skill or delete it.",
-    "uncategorized": "Uncategorized",
-    "openSkillAria": "Open skill {name}",
     "deleteTitle": "Delete skill?",
     "deleteBody": "Really delete skill {name}? Its file {file} is deleted too. This cannot be undone."
   },
@@ -435,10 +534,6 @@
     "loadErrorTitle": "Couldn't load agents",
     "loadErrorDescription": "The API connection failed — your agents are fine, they're just not reachable right now. Check the connection and try again.",
     "retry": "Try again",
-    "sectionLabel": "Agents",
-    "editRaw": "Edit raw .agent.md",
-    "stopAria": "Stop {skill}",
-    "progressAria": "progress {skill}",
     "emptyTitle": "No agents yet",
     "emptyDescription": "Agents are .agent.md definition files — model, thinking level, and tools. You compose agents into pipelines in the Pipelines section.",
     "emptyHint": "// creates ~/zibby/agents/'<name>'.agent.md",
@@ -463,10 +558,14 @@
     "fields": {
       "name": "Name",
       "namePlaceholder": "agent name",
+      "displayName": "Display name",
+      "displayNamePlaceholder": "Kevin",
+      "jobTitle": "Job title",
+      "jobTitlePlaceholder": "Senior reviewer",
       "whenToUse": "When to use",
       "whenToUsePlaceholder": "…reviewing a diff before push",
       "category": "Category",
-      "ownerSubsystem": "Owning subsystem",
+      "department": "Owning department",
       "model": "Model",
       "thinking": "Thinking",
       "icon": "Icon",
@@ -561,13 +660,13 @@
     "create": "Create",
     "detailPanel": "Integration configuration",
     "autonomyPanel": "Autonomy",
-    "autonomyHint": "Puls always watches this channel. Set what ZIBBY may do on its own: dispatch = act on inbound messages (Tier 1), reply = send replies itself (Tier 2, as Herald). With nothing set here, the Settings → Mandate defaults apply.",
+    "autonomyHint": "Ops always watches this channel. Set what ZIBBY may do on its own: dispatch = act on inbound messages (Tier 1), reply = send replies itself (Tier 2, as Comms). With nothing set here, the Settings → Mandate defaults apply.",
     "autonomyDispatch": "Dispatch (act)",
-    "autonomyReply": "Reply (Herald)",
+    "autonomyReply": "Reply (Comms)",
     "deleteTitle": "Delete integration?",
     "deleteBody": "Really delete integration {name}? Stored credentials are deleted too. This cannot be undone."
   },
-  "maestro": {
+  "release": {
     "title": "Merge queue",
     "merge": {
       "hold": "Hold to merge #{number}",
@@ -649,15 +748,8 @@
   "phase": {
     "modelTitle": "model (override per-run)",
     "thinkTitle": "thinking level",
-    "phaseLabel": "PHASE {n}",
-    "input": "input",
     "output": "output",
-    "retry": "retry · max {n}",
-    "verifyLabel": "verify",
-    "checksLabel": "checks",
-    "checksTitle": "deterministic checks (no model)",
-    "attempt": "attempt {n}/{max}",
-    "attemptTitle": "current attempt / maximum"
+    "retry": "retry · max {n}"
   },
   "approval": {
     "waiting": "Waiting for your approval",
@@ -678,47 +770,15 @@
     "originAgentFactory": "Agent Factory",
     "openSource": "Open source ↗"
   },
-  "runModal": {
-    "editRaw": "Edit raw SKILL.md",
-    "launch": "Run agent",
-    "runAria": "Run {name}",
-    "launchedTitle": "Agent launched in the background",
-    "launchedTarget": "{name} → {project}",
-    "watch": "Watch it in the <agents>Running agents</agents> section.",
-    "promptLabel": "Prompt",
-    "promptPlaceholder": "Tell {name} what to do…",
-    "targetLabel": "Target",
-    "targetProjectOption": "Project",
-    "targetFilesOption": "Files",
-    "filesLabel": "Directory",
-    "filesHint": "Pick a folder to seed the path below, or type it directly",
-    "targetDirLabel": "Target directory",
-    "targetDirHint": "Absolute path of the folder to operate on — confirm it before running",
-    "targetDirError": "Enter an absolute path (starting with /)"
-  },
   "pipelineRun": {
-    "editRaw": "Edit raw .pipeline.md",
-    "launch": "Run pipeline",
-    "runAria": "Run pipeline {name}",
     "title": "Run · {name}",
-    "subtitle": "{count} phases · multi-agent background run",
-    "launchedTitle": "Pipeline launched in the background",
-    "launchedTarget": "{name} → {project}",
-    "watch": "Watch the phases in the <agents>Running agents</agents> section · it works in an isolated branch.",
-    "promptLabel": "Prompt",
-    "promptPlaceholder": "What should the „{name}\" pipeline do…",
-    "overrideTitle": "Override model / thinking for this run",
-    "overrideHint": "click a badge to override · defaults from agent.md, push to branch awaits your approval",
-    "changeModelAria": "Change model for {agent}",
-    "changeThinkAria": "Change thinking for {agent}"
+    "subtitle": "{count} phases · multi-agent background run"
   },
   "forms": {
-    "namePlaceholder": "'<name>'",
     "skill": {
       "title": "New skill",
       "subtitle": "creates SKILL.md on disk",
       "editTitle": "Edit skill",
-      "editSubtitle": "overwrites SKILL.md on disk",
       "submitLabel": "Create skill",
       "nameLabel": "Skill name",
       "namePlaceholder": "e.g. rohlik",
@@ -749,23 +809,12 @@
     "integration": {
       "title": "New integration",
       "subtitle": "creates a config file · secrets live in .env, not here",
-      "submitLabel": "Create integration",
-      "nameLabel": "Integration name",
-      "namePlaceholder": "e.g. GitHub",
-      "descLabel": "Description",
-      "descPlaceholder": "What the system reaches through this integration…"
+      "submitLabel": "Create integration"
     },
     "agent": {
       "title": "New agent",
       "subtitle": "creates .agent.md with a definition (model, thinking, tools)",
-      "submitLabel": "Create agent",
-      "nameLabel": "Agent name",
-      "namePlaceholder": "e.g. Reviewer",
-      "roleLabel": "Role",
-      "roleHint": "what the agent does",
-      "rolePlaceholder": "Pre-review the diff before push…",
-      "modelLabel": "Model",
-      "thinkingLabel": "Thinking"
+      "submitLabel": "Create agent"
     },
     "pipeline": {
       "title": "New pipeline",
@@ -775,33 +824,12 @@
       "namePlaceholder": "e.g. Build Feature",
       "descLabel": "Description",
       "descPlaceholder": "What the pipeline does…",
-      "agentLabel": "Agent",
-      "handoffLabel": "Handoff file",
       "handoffHint": "written by this agent · the next agent picks it up as its assignment",
-      "outputHint": "written by this agent · the pipeline's final output",
-      "handoffNote": "next agent's assignment",
       "addStep": "Add agent",
-      "removeStepAria": "Remove phase {n}",
       "noAgents": "Create an agent first — the chain needs at least one.",
       "editTitle": "Edit pipeline",
       "saveLabel": "Save changes",
-      "typeLabel": "Phase type",
-      "typeAgent": "agent",
       "typeVerify": "verify (checks)",
-      "commandsLabel": "Check commands",
-      "commandsHint": "One command per line; empty = project checks / defaults.",
-      "loopToggle": "Loop on failure (back-edge)",
-      "loopToLabel": "On failure jump back to phase",
-      "loopMaxRetriesLabel": "Max retries",
-      "loopEscalateLabel": "Escalate after exhaustion",
-      "loopThenLabel": "After retries exhausted",
-      "thenFail": "fail",
-      "thenPark": "park",
-      "escalationTitle": "escalation ladder · retry n",
-      "escalationModelLabel": "Model · retry {n}",
-      "escalationThinkLabel": "Thinking · retry {n}",
-      "removeRungAria": "Remove rung {n}",
-      "addRung": "Add rung",
       "paletteTitle": "// agents · pool",
       "paletteHint": "Drag onto the canvas → a graph node",
       "paletteAddAria": "Add agent {agent} to the canvas",
@@ -837,7 +865,6 @@
       "title": "New command",
       "subtitle": "creates a .md file on disk",
       "editTitle": "Edit command",
-      "editSubtitle": "overwrites the .md file on disk",
       "submitLabel": "Create command",
       "idLabel": "Identifier",
       "idHint": "Used as /<id> — locked in edit mode",
@@ -859,18 +886,12 @@
   },
   "defaults": {
     "skill": "New skill",
-    "integration": "New integration",
     "agent": "New agent",
     "pipeline": "New pipeline",
     "command": "New command"
   },
   "runLog": {
-    "aria": "Run log for {agent}",
-    "close": "Close",
-    "prompt": "Prompt",
-    "waiting": "waiting for output…",
-    "streaming": "streaming…",
-    "finished": "finished"
+    "waiting": "waiting for output…"
   },
   "approvals": {
     "wants": "wants to",
@@ -902,7 +923,6 @@
   },
   "settings": {
     "title": "System settings",
-    "daemonOn": "daemon on",
     "mandate": {
       "title": "Autonomy mandate",
       "hint": "What ZIBBY may do unprompted. Conservative by default: dispatch on, replies off — a reply only goes out after you opt in per channel.",
@@ -989,11 +1009,31 @@
       "disabled": "Disabled"
     },
     "footer": "ZIBBY — Zestful Intuitive Brainy Butler for You",
+    "eyebrow": "SYSTEM — SETTINGS",
     "subnav": {
       "ariaLabel": "Settings sections",
       "general": "General",
+      "appearance": "Appearance",
+      "coo": "COO persona",
+      "activity": "Activity",
+      "automations": "Automations",
+      "runtime": "Runtime",
+      "machine": "Machine",
+      "status": "Status",
       "gates": "Approval rules",
       "tasks": "Tasks"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "themeLabel": "Theme",
+      "themeHint": "Light is instrument paper; dark adds a glow to live status. System follows the OS setting and updates live.",
+      "theme": {
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System"
+      },
+      "motionLabel": "Reduced motion",
+      "motionHint": "Turns off glyph and status animations in this browser, on top of your OS's own reduced-motion setting."
     },
     "activity": {
       "title": "Activity",
@@ -1037,7 +1077,6 @@
   },
   "runs": {
     "title": "Runs & activity",
-    "summary": "{running} running · {awaiting} awaiting · {total} total",
     "group": {
       "total": "Total",
       "running": "Running",
@@ -1054,12 +1093,8 @@
       "error": "Error",
       "interrupted": "Interrupted"
     },
-    "filterActive": "Project: {name}",
-    "filterClearAria": "Clear project filter",
     "emptyTitle": "No runs",
     "emptyDesc": "No task has run yet. Create a new task and it shows up here.",
-    "emptyFilter": "No tasks in this state.",
-    "selectHint": "Pick a task on the left for its detail and live log.",
     "actionsMenuLabel": "Run actions",
     "stop": "Stop run",
     "stopTitle": "Stop the run?",
@@ -1088,11 +1123,8 @@
     "metaCost": "cost",
     "metaDuration": "run duration",
     "metaAgent": "agent",
-    "metaKind": "type",
     "metaTask": "task",
     "metaRoadmapItem": "issue",
-    "showMore": "show more",
-    "showLess": "show less",
     "producedOutputTitle": "Task output",
     "classificationTitle": "Classification",
     "classificationSwitchboard": "Switchboard",
@@ -1115,13 +1147,8 @@
       "done": "succeeded",
       "error": "failed"
     },
-    "agoNow": "now",
-    "agoM": "{n} m ago",
-    "agoH": "{n} h ago",
     "inM": "in {n} m",
     "inH": "in {n} h",
-    "pipelineNote": "Pipeline run — its detail and phases live in Pipelines.",
-    "openPipeline": "Open pipeline",
     "scheduledNote": "The task waits for its scheduled time — the log appears once it starts.",
     "state": {
       "running": "running",
@@ -1196,7 +1223,6 @@
     "stageLoading": "Loading maker stages…",
     "stageWaitingLabel": "waiting",
     "stageWaitingBody": "waiting for earlier phases to finish",
-    "stageOutput": "output",
     "stageRetryAttempt": "attempt {n}/{max}",
     "stageRetryLoopTo": "looped back to {phase}",
     "stageRetryEscalated": "retries exhausted → escalated → parked for morning review",
@@ -1234,7 +1260,6 @@
     "resolveModeAny": "Any · OR",
     "addCondition": "Add condition",
     "removeCondition": "Remove condition",
-    "forAgent": "Rules for agent",
     "evalNote": "Risk is a property of (action, target, context) — not of a tool. The locked floor may only be hardened.",
     "inheritedTitle": "Inherited system rules",
     "inheritedNote": "Security floor from POLICY.md — an agent may only harden it, never loosen it.",
@@ -1248,7 +1273,6 @@
     "ownTitle": "Rules · {agent}",
     "addRule": "Add rule",
     "noOwnRules": "No own rules — this agent runs on the system floor only.",
-    "violation": "Rejected — a rule would weaken the locked floor (harden-only).",
     "you": "You",
     "notifyHint": "→ activity feed",
     "newRule": "New rule",
@@ -1301,6 +1325,7 @@
     "resolveCheck": "Check"
   },
   "projects": {
+    "eyebrow": "WORK — PROJECTS",
     "title": "Projects",
     "switcherLabel": "Active project",
     "switcherNoProject": "No project",
@@ -1359,6 +1384,9 @@
       "prOpenModeHint": "The PR always opens immediately (Tier-2, no gate) — this only chooses its state on open. Never changes the merge gate.",
       "prOpenModeReady": "Ready",
       "prOpenModeDraft": "Draft",
+      "defaultChain": "Default chain",
+      "defaultChainHint": "New Task pre-selects this chain for the project (O-23) unless overridden explicitly.",
+      "defaultChainNone": "No default chain",
       "category": "Category",
       "categoryNone": "No category",
       "desc": "Description",
@@ -1494,13 +1522,13 @@
     }
   },
   "companies": {
+    "eyebrow": "WORK — COMPANIES",
     "title": "Companies",
     "countSummary": "{count, plural, =0 {no companies} one {# company} other {# companies}} · the super-entity above projects",
     "addCompany": "Add company",
     "openAria": "Open {name}",
     "emptyTitle": "No companies yet",
     "emptyDescription": "A company is the super-entity above a project — a shared team and default budget its projects inherit. Add the first one and it shows up here as a card.",
-    "emptyHint": "// registry ~/zibby/companies.json",
     "peopleCount": "{count, plural, =0 {no people} one {# person} other {# people}}",
     "hasBudget": "default budget",
     "newCompany": "New company",
@@ -1548,7 +1576,6 @@
       "title": "Company projects",
       "empty": "No projects link to this company yet — set it on a project's detail page.",
       "addExisting": "Add existing project",
-      "createNew": "Create new project",
       "add": "Add project",
       "linkDialog": {
         "title": "Add existing project",
@@ -1557,17 +1584,26 @@
         "placeholder": "Pick a project…",
         "confirm": "Link",
         "noCandidates": "No other project to link — every project already belongs to this company."
-      }
+      },
+      "columnProject": "Project",
+      "columnRepo": "Repo"
+    },
+    "allTasksLink": "ALL TASKS FOR THIS COMPANY →",
+    "contactsTitle": "Contacts",
+    "metrics": {
+      "projects": "PROJECTS",
+      "contacts": "CONTACTS",
+      "budget": "BUDGET / MO"
     }
   },
   "teams": {
+    "eyebrow": "WORK — TEAMS",
     "title": "Teams",
     "countSummary": "{count, plural, =0 {no teams} one {# team} other {# teams}} · the knowledge-base owner between a company and a project",
     "addTeam": "Add team",
     "openAria": "Open {name}",
     "emptyTitle": "No teams yet",
     "emptyDescription": "A team is the layer between a company and a project — it owns a knowledge base its projects read. Add the first one and it shows up here as a card.",
-    "emptyHint": "// registry ~/zibby/teams.json",
     "hasKnowledgeBase": "knowledge base",
     "newTeam": "New team",
     "create": "Create team",
@@ -1604,7 +1640,6 @@
       "title": "Team projects",
       "empty": "No projects link to this team yet — set it on a project's detail page.",
       "addExisting": "Add existing project",
-      "createNew": "Create new project",
       "add": "Add project",
       "linkDialog": {
         "title": "Add existing project",
@@ -1613,7 +1648,12 @@
         "placeholder": "Pick a project…",
         "confirm": "Link",
         "noCandidates": "No other project to link — every project already belongs to this team."
-      }
+      },
+      "columnProject": "Project",
+      "columnRepo": "Repo"
+    },
+    "metrics": {
+      "projects": "PROJECTS"
     }
   },
   "automations": {
@@ -1692,14 +1732,11 @@
   },
   "hooks": {
     "title": "Hooks",
-    "countSummary": "{count, plural, =0 {no hooks} one {# hook} other {# hooks}} · shell commands run around agent events",
     "addHook": "Add hook",
     "create": "Create",
     "enabledShort": "enabled",
     "disabledShort": "disabled",
     "emptyTitle": "No hooks yet",
-    "emptyDescription": "Hooks are shell commands Claude Code runs at a point in a session. The approval hook is always locked first — this catalog can only add hooks.",
-    "emptyHint": "// creates ~/zibby/hooks/'<id>'.json",
     "idLabel": "Identifier",
     "nameLabel": "Name",
     "eventLabel": "Event",
@@ -1773,12 +1810,9 @@
   },
   "mcp": {
     "title": "MCP servers",
-    "countSummary": "{count, plural, =0 {no servers} one {# server} other {# servers}} · tool providers agents can call",
     "addServer": "Add MCP server",
     "create": "Create",
     "emptyTitle": "No MCP servers yet",
-    "emptyDescription": "MCP servers extend runs with tools. Secrets (tokens, env, headers) live in a separate store — this is just configuration.",
-    "emptyHint": "// creates ~/zibby/mcp-servers/'<id>'.json",
     "typeLabel": "Transport",
     "typeStdio": "stdio",
     "typeHttp": "HTTP",
@@ -1802,16 +1836,20 @@
   },
   "commands": {
     "title": "Commands",
-    "addCommand": "Add command",
-    "countSummary": "{count, plural, one {# command} other {# commands}}",
     "emptyTitle": "No commands yet",
-    "emptyDescription": "Commands are custom slash commands (/<id>) with a Markdown body. They materialize into each run’s .claude/commands/.",
-    "emptyHint": "// creates ~/zibby/commands/'<id>'.md",
-    "openCommandAria": "Open command /{name}",
     "deleteTitle": "Delete command?",
     "deleteBody": "Really delete command /{id}? Its definition file is deleted too. This cannot be undone."
   },
   "chat": {
+    "createTask": "Create task",
+    "dock": {
+      "role": "COO · Routes, classifies, chats",
+      "toggle": "Toggle the COO chat",
+      "targetCoo": "→ COO",
+      "targetExplicit": "→ {name}",
+      "clearTarget": "Clear the target (back to the COO)",
+      "empty": "Ask the COO anything, or hand it a task."
+    },
     "title": "Chat with ZIBBY",
     "close": "Close",
     "newChat": "New chat",
@@ -1827,8 +1865,7 @@
       "listening": "LISTENING",
       "paused": "VOICE MODE",
       "error": "Voice recognition failed, voice mode is off.",
-      "errorMicDenied": "The browser blocked microphone access — allow it in the site settings.",
-      "speakError": "Couldn't play the spoken reply."
+      "errorMicDenied": "The browser blocked microphone access — allow it in the site settings."
     },
     "composer": {
       "label": "Message",
@@ -1837,9 +1874,7 @@
     },
     "mention": {
       "ariaLabel": "Search agents and pipelines to mention",
-      "placeholder": "Search agents or pipelines…",
       "empty": "Nothing found",
-      "removeAria": "Remove target",
       "sections": {
         "agents": "Agents",
         "pipelines": "Pipelines"
@@ -1853,25 +1888,19 @@
     },
     "tasks": {
       "empty": "No tasks",
-      "activeEmpty": "No active tasks",
       "archive": "Archive",
-      "openAria": "Open run: {title}",
-      "detailAriaLabel": "Run detail: {title}",
-      "openFull": "Open on Runs page",
-      "closeDetail": "Close detail"
+      "openAria": "Open run: {title}"
     },
     "toolDock": {
       "label": "Tools"
     },
     "search": {
-      "placeholder": "Search across ZIBBY…",
       "ariaLabel": "Search across ZIBBY",
       "empty": "Nothing found",
-      "clearAria": "Clear search",
       "kind": {
         "agent": "Agent",
         "pipeline": "Pipeline",
-        "subsystem": "Subsystem",
+        "department": "Department",
         "task": "Task",
         "memory": "Memory",
         "skill": "Skill",
@@ -1881,77 +1910,42 @@
         "company": "Company",
         "setting": "Setting",
         "action": "Action"
-      },
-      "actions": {
-        "generateBriefing": "Generate briefing now",
-        "generatingBriefing": "Generating briefing…"
       }
     },
     "detail": {
-      "close": "Close",
-      "kindAgent": "Agent",
-      "kindPipeline": "Pipeline",
-      "noDescription": "No description yet.",
       "phaseCount": "{count, plural, one {# phase} other {# phases}}"
     },
     "overview": {
       "title": "ZIBBY overview",
-      "openAria": "Open ZIBBY overview",
-      "role": "orchestrator · directing {count} subsystems",
-      "summary": "{working} at work, {error} in error, {report} awaiting review, {waiting} waiting on you.",
-      "statWorking": "working",
-      "statError": "in error",
-      "statReport": "reports waiting",
-      "statWaiting": "waiting on you",
-      "statIdle": "idle",
-      "crossSubsystems": "Across subsystems"
+      "openAria": "Open ZIBBY overview"
     },
     "statusPill": {
-      "nominal": "Nominal",
-      "connecting": "Connecting",
       "degraded": "Degraded",
-      "offline": "Offline",
       "working": "{n} working",
       "error": "{n} errors",
-      "report": "{n} reporting",
       "waiting": "{n} waiting",
       "flyout": {
         "working": {
           "title": "Working",
-          "emptyTitle": "Nothing running",
-          "emptyBody": "No task is running right now."
+          "emptyTitle": "Nothing running"
         },
         "waiting": {
           "title": "Waiting for your decision",
-          "emptyTitle": "Nothing waiting",
-          "emptyBody": "nothing is waiting · ZIBBY never orders on its own"
+          "emptyTitle": "Nothing waiting"
         },
         "error": {
           "title": "Errors",
-          "emptyTitle": "No errors",
-          "emptyBody": "Nothing failed since your last visit.",
-          "noDetail": "No error detail recorded.",
-          "missingRun": "Run is no longer in the feed."
+          "emptyTitle": "No errors"
         },
-        "loading": "Loading…",
-        "errorTitle": "Couldn't load",
-        "errorBody": "Please try again.",
         "retry": "Retry"
       }
     },
     "note": {
       "title": "New note",
-      "bodyLabel": "Note",
-      "placeholder": "Write a note for ZIBBY…",
-      "save": "Save note",
-      "close": "Close"
+      "save": "Save note"
     },
     "task": {
-      "subsystemLabel": "Subsystem",
-      "textLabel": "Task",
-      "placeholder": "Describe the work in plain language…",
-      "run": "Run task",
-      "close": "Close"
+      "run": "Run task"
     },
     "bottomBar": {
       "chat": "Chat",
@@ -1959,81 +1953,39 @@
       "note": "Add a note"
     }
   },
-  "subsystems": {
-    "ariaLabel": "ZIBBY subsystem web",
+  "departments": {
+    "ariaLabel": "ZIBBY department web",
     "state": {
       "idle": "Idle",
       "running": "Running",
-      "report": "Report ready",
       "waiting": "Awaiting decision",
       "error": "Error"
     },
-    "nodeAria": "{name}, {state}",
-    "tier2Badge": "{count} reports to review",
-    "tier3Badge": "{count} awaiting decision",
-    "errorBadge": "{count} errors",
     "drawer": {
-      "ariaLabel": "{name} subsystem detail",
-      "close": "Close subsystem detail",
+      "ariaLabel": "{name} department detail",
       "tabs": {
-        "roster": "Roster",
-        "aktivita": "Activity",
-        "gates": "Settings & Gates",
-        "artefakty": "Artifacts",
-        "handoff": "Handoff"
+        "gates": "Settings & Gates"
       }
     },
     "roster": {
-      "crewTitle": "Crew",
-      "integrationsTitle": "Integrations",
-      "monitorsTitle": "Monitors",
-      "emptyTitle": "No pipeline yet",
-      "emptyDescription": "This subsystem doesn't own a pipeline yet. Create the first one — with it as owner from the start."
+      "emptyTitle": "No pipeline yet"
     },
     "aktivita": {
-      "allRuns": "All runs",
-      "emptyTitle": "No activity yet",
-      "emptyDescription": "This subsystem hasn't run a pipeline yet. Once it does, runs will show up here."
+      "emptyTitle": "No activity yet"
     },
     "gates": {
-      "sentencePrefix": "Before {subject} does",
       "behavior": {
-        "allow": "it just does it",
-        "notify": "it does it and logs it to the activity feed",
         "ask": "it asks",
         "deny": "it never does it"
-      },
-      "sentencesTitle": "Rules in mad-libs form",
-      "sentencesEmptyTitle": "No rules of its own yet",
-      "sentencesEmptyDescription": "This subsystem has no rule of its own in the catalog yet. Add one in the catalog below.",
-      "autopilotTitle": "Autopilot by project",
-      "autopilotNoProject": "No project has an autopilot policy set yet.",
-      "autopilotCanDoAlone": "Can do alone:",
-      "autopilotAlwaysAsk": "Always asks:",
-      "autopilotEditLink": "Edit in the project profile"
+      }
     },
     "artefakty": {
-      "produceTitle": "Produces",
-      "sinkPr": "PR for review",
-      "sinkFileProject": "file → project",
-      "sinkFileVault": "note → vault",
-      "handsOffTo": "hands off: {name}",
-      "toOperator": "→ operator",
-      "produceEmpty": "None of the owned pipelines has an output sink configured yet.",
-      "historyTitle": "Produced artifacts",
-      "historyEmptyTitle": "No artifact yet",
-      "historyEmptyDescription": "None of the owned pipelines has delivered anything to the artifact registry yet.",
       "kind": {
-        "pr": "PR",
-        "vault-note": "Note",
-        "project-file": "File"
+        "pr": "PR"
       },
-      "runLink": "View run",
-      "emptyTitle": "This subsystem doesn't own a pipeline yet",
-      "emptyDescription": "Without a pipeline of its own, this subsystem has nothing to produce and nothing to hand off."
+      "emptyTitle": "This department doesn't own a pipeline yet"
     },
     "handoff": {
-      "panelTitle": "Outgoing handoff rules",
       "sentencePrefix": "When {subject} produces",
       "severityPrefix": "≥",
       "targetPrefix": "→ hand off to",
@@ -2049,7 +2001,7 @@
       "delete": "Delete",
       "addRule": "Add rule",
       "emptyTitle": "No outgoing rules yet",
-      "emptyDescription": "This subsystem doesn't have a handoff rule of its own yet. Add the first one below.",
+      "emptyDescription": "This department doesn't have a handoff rule of its own yet. Add the first one below.",
       "deleteTitle": "Delete handoff rule?",
       "deleteBody": "Really delete this handoff rule? This action can't be undone.",
       "severity": {
@@ -2081,7 +2033,7 @@
         "severityPrefix": "with severity",
         "anySignal": "Any signal (∗)",
         "anySeverity": "any",
-        "targetKindSubsystem": "subsystem",
+        "targetKindDepartment": "department",
         "targetKindPipeline": "pipeline",
         "tierClause": {
           "1": "automatically",
@@ -2098,30 +2050,129 @@
       }
     }
   },
+  "departmentDetail": {
+    "chatWith": "Chat with {name}",
+    "breadcrumbOrg": "Org",
+    "reportsToCoo": "Reports to COO",
+    "kpiOpenSubtasks": "Open subtasks",
+    "kpiAgents": "Agents",
+    "kpiRunsToday": "Runs today",
+    "kpiSpendToday": "Spend today",
+    "tabs": {
+      "team": "Team",
+      "subtasks": "Subtasks",
+      "pipelines": "Pipelines",
+      "handoff": "Handoff",
+      "skills": "Skills",
+      "integrations": "Integrations",
+      "automations": "Automations",
+      "hooks": "Hooks"
+    },
+    "state": {
+      "working": "Working",
+      "thinking": "Thinking",
+      "blocked": "Blocked",
+      "error": "Error",
+      "done": "Done",
+      "idle": "Idle"
+    },
+    "team": {
+      "title": "Team",
+      "hire": "Hire",
+      "emptyTitle": "No one hired yet",
+      "emptyDescription": "This department has no employees yet — hire the first one.",
+      "colName": "Name",
+      "colPosition": "Position",
+      "colState": "State"
+    },
+    "subtasks": {
+      "emptyTitle": "No subtasks yet",
+      "emptyDescription": "This department has no subtasks yet.",
+      "colTask": "Task",
+      "colStep": "Step",
+      "colState": "State"
+    },
+    "pipelines": {
+      "emptyTitle": "No pipelines yet",
+      "emptyDescription": "This department doesn't own a pipeline yet."
+    },
+    "handoff": {
+      "manageLink": "Manage handoff rules →"
+    },
+    "registryLink": "Manage in registry →",
+    "registryDescription": "This list is managed in the global registry, not per department.",
+    "registryTitle": "Managed in the registry"
+  },
+  "people": {
+    "title": "People",
+    "hire": "Hire",
+    "hireTitle": "Hire a new employee",
+    "filterDepartment": "Department",
+    "allDepartments": "All departments",
+    "filterState": "State",
+    "allStates": "All states",
+    "filterRole": "Role",
+    "allRoles": "All roles",
+    "search": "Search",
+    "state": {
+      "working": "Working",
+      "thinking": "Thinking",
+      "blocked": "Blocked",
+      "error": "Error",
+      "done": "Done",
+      "idle": "Idle"
+    },
+    "emptyTitle": "No one here",
+    "emptyDescription": "No employees match these filters.",
+    "breadcrumbPeople": "People",
+    "stopRun": "Stop run",
+    "currentSubtask": "Current subtask",
+    "logLines": "{count, plural, one {# line} other {# lines}}",
+    "logLive": "Live",
+    "logIdle": "Log",
+    "noActiveRun": "No active run.",
+    "config": "Config",
+    "nameLabel": "Name",
+    "departmentLabel": "Department",
+    "positionLabel": "Position",
+    "positionLink": "Edit position: {name} →",
+    "nameHint": "Leave blank to keep the current name",
+    "rules": "Rules",
+    "history": "History",
+    "historyRun": "Run",
+    "historyState": "State",
+    "historyStarted": "Started",
+    "historyEmpty": "No runs yet"
+  },
   "pins": {
     "pin": "Pin",
     "unpin": "Unpin",
-    "quickLaunchTitle": "Quick launch",
-    "run": "Run",
-    "unpinAria": "Unpin {name}",
-    "kindAgent": "Agent",
-    "kindPipeline": "Pipeline"
+    "run": "Run"
   },
   "archive": {
     "title": "Task archive",
-    "subtitle": "Everything ZIBBY finished, across every subsystem",
+    "subtitle": "Everything ZIBBY finished, across every department",
     "searchPlaceholder": "Search the archive…",
     "searchAriaLabel": "Search the archive",
-    "noSubsystem": "No subsystem",
+    "noDepartment": "No department",
     "filter": {
-      "all": "All subsystems",
-      "multiple": "{n} subsystems",
-      "noSubsystem": "No subsystem"
+      "all": "All departments",
+      "multiple": "{n} departments",
+      "noDepartment": "No department",
+      "department": "Department"
     },
     "emptyFilter": "Nothing found.",
     "emptyTitle": "The archive is still empty",
     "emptyDescription": "Once ZIBBY finishes something, it will show up here.",
-    "selectHint": "Select a task on the left to see its detail."
+    "selectHint": "Select a task on the left to see its detail.",
+    "eyebrow": "ACTIVITY",
+    "column": {
+      "task": "Task",
+      "state": "State",
+      "duration": "Duration"
+    },
+    "loadMore": "Load more",
+    "loadingMore": "Loading…"
   },
   "roadmap": {
     "hint": "Pick an epic to see its tasks on the right.",
@@ -2129,7 +2180,6 @@
     "emptyEpicsDescription": "This project has no roadmap yet — import it from a source, or create epics by hand.",
     "sync": {
       "button": "Sync all",
-      "autoSync": "Auto-sync",
       "toast": "{imported} imported, {updated} updated, {archived} archived",
       "sourceMenuAria": "Choose source",
       "source": {
@@ -2160,7 +2210,6 @@
     "board": {
       "header": "{name} — task board",
       "allTasks": "All tasks",
-      "allTasksCount": "All tasks ({count})",
       "openEpicDetail": "Open epic detail",
       "columns": {
         "ready": "To Do",
@@ -2226,5 +2275,319 @@
       "dropError": "Couldn't read that file",
       "error": "Couldn't create the item"
     }
+  },
+  "shell": {
+    "newTask": "+ New task",
+    "operatorFallback": "CEO",
+    "active": "active",
+    "week": "WEEK",
+    "needsYou": "Needs you",
+    "needsYouEmpty": "Nothing is waiting for you",
+    "needsYouToggle": "Needs you"
+  },
+  "orgMap": {
+    "eyebrow": "01 — ORG MAP",
+    "ceoLabel": "CEO",
+    "ceoFallback": "CEO",
+    "cooLabel": "COO · ROOT",
+    "cooName": "Zibby",
+    "cooTagline": "Routes, classifies, chats",
+    "alert": {
+      "errors": "{count, plural, one {# error} other {# errors}}",
+      "approvals": "{count, plural, one {# approval waiting} other {# approvals waiting}}"
+    },
+    "focus": {
+      "eyebrow": "02 — DEPARTMENT · {code}",
+      "openDepartment": "OPEN DEPARTMENT →",
+      "teamTitle": "Team",
+      "teamEmptyTitle": "No one borrowed right now",
+      "teamEmpty": "The department borrows from the pool when a subtask starts.",
+      "subtasksTitle": "Open subtasks",
+      "subtasksEmptyTitle": "No subtasks",
+      "subtasksEmpty": "No open subtasks in this department.",
+      "handoffTitle": "Handoffs · IN / OUT",
+      "handoffEmptyTitle": "Nothing moving",
+      "handoffEmpty": "Nothing moving in or out of this department.",
+      "out": "→ OUT · {kind}",
+      "in": "→ IN · {kind}"
+    }
+  },
+  "activityLog": {
+    "eyebrow": "ACTIVITY",
+    "title": "Live log",
+    "empty": "Nothing matches yet. New events appear as they stream in.",
+    "pause": "Pause",
+    "resume": "Resume",
+    "clear": "Clear",
+    "grouped": "{count}× {group}",
+    "loadMore": "Load older",
+    "loadingMore": "Loading…",
+    "filter": {
+      "all": "All",
+      "department": "Department",
+      "agent": "Agent",
+      "task": "Task",
+      "kind": "Kind"
+    }
+  },
+  "activityInbox": {
+    "eyebrow": "ACTIVITY",
+    "title": "Inbox",
+    "emptyTitle": "No messages yet",
+    "emptyBody": "Once something arrives from a connected channel, it shows up here.",
+    "column": {
+      "source": "Source",
+      "sender": "Sender",
+      "tier": "Tier",
+      "handling": "Handling",
+      "triage": "Category",
+      "text": "Preview"
+    }
+  },
+  "activityBriefings": {
+    "eyebrow": "ACTIVITY",
+    "title": "Briefing",
+    "generateNow": "Generate now",
+    "generatedAt": "Generated {at}",
+    "headline": "Headline",
+    "needsYou": "Needs you",
+    "nothingNeedsYou": "Nothing needs you right now.",
+    "didForYou": "What ZIBBY did",
+    "emptyDid": "Nothing to record yet.",
+    "departments": "Departments",
+    "watching": "Watching"
+  },
+  "policy": {
+    "approvals": {
+      "title": "Policy — Approvals",
+      "queueTitle": "Queue",
+      "queueEmpty": "The queue is empty.",
+      "historyTitle": "History",
+      "columns": {
+        "id": "ID",
+        "kind": "Kind",
+        "request": "Request",
+        "department": "Dept",
+        "wait": "Wait",
+        "decision": "Decision",
+        "task": "Task",
+        "when": "When"
+      },
+      "decision": {
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "sheet": {
+        "title": "Approval",
+        "highRisk": "High risk",
+        "waited": "waited {waited}",
+        "metric": {
+          "action": "Action",
+          "severity": "Severity",
+          "department": "Department"
+        },
+        "chainTitle": "Task chain",
+        "reasonLabel": "Reason (optional)",
+        "reasonHint": "Shown in the approval history.",
+        "cancel": "Cancel",
+        "confirmDeny": "Confirm deny",
+        "approve": "Approve",
+        "deny": "Deny",
+        "openTask": "Open task"
+      }
+    },
+    "gates": {
+      "title": "Policy — Gates",
+      "sections": {
+        "floor": "Floor",
+        "global": "Global rules",
+        "project": "Per project",
+        "agent": "Per agent",
+        "handoff": "Handoff",
+        "signals": "Signals",
+        "mandate": "Mandate"
+      },
+      "projectPicker": "Project",
+      "allProjects": "All",
+      "agentRuleCount": "{count, plural, =0 {no rules} one {# rule} other {# rules}}",
+      "departmentFilter": "Department",
+      "projectRulesEmpty": "Rules aren't project-scoped today — clear the filter to edit them in the global catalog."
+    },
+    "patterns": {
+      "title": "Policy — Learned patterns",
+      "subtitle": "Built from your past approvals. Nothing changes until you accept.",
+      "accepted": "Now a rule",
+      "empty": "No learned patterns yet.",
+      "evidenceCount": "{n} / {of}"
+    }
+  },
+  "ledgerBudgets": {
+    "eyebrow": "LEDGER — BUDGETS",
+    "title": "Budgets",
+    "subtitle": "Run caps across the account, its companies, and their projects.",
+    "meta": {
+      "day": "Today",
+      "week": "This week",
+      "month": "This month"
+    },
+    "cap": {
+      "day": "Daily cap",
+      "week": "Weekly cap",
+      "month": "Monthly cap"
+    },
+    "sectionCompanies": "Companies",
+    "emptyCompaniesTitle": "No companies yet",
+    "emptyCompanies": "Add a company to see its budget here.",
+    "sectionProjects": "Projects",
+    "emptyProjectsTitle": "No projects yet",
+    "emptyProjects": "Add a project to see its budget here.",
+    "sectionDepartments": "Departments",
+    "column": {
+      "code": "Code",
+      "department": "Department",
+      "runsToday": "Runs today",
+      "spendToday": "Spend today",
+      "dailyCap": "Daily cap"
+    },
+    "openAria": "Open {name}",
+    "otherWindowsCaption": "week {week} · month {month}"
+  },
+  "ledgerSpend": {
+    "eyebrow": "LEDGER — SPEND",
+    "title": "${amount} spent today",
+    "state": {
+      "ok": "OK",
+      "warn": "WARNING",
+      "stop": "STOPPED"
+    },
+    "resetsIn": "resets in {time}",
+    "resetUnknown": "reset time unknown",
+    "meter": {
+      "rolling": "5-hour window",
+      "weekly": "Weekly window"
+    },
+    "column": {
+      "code": "Code",
+      "department": "Department",
+      "spend": "Spend",
+      "value": "Value"
+    },
+    "sectionDepartments": "Spend by department",
+    "sectionThresholds": "Thresholds",
+    "warnCaption": "Notifies when crossed, doesn't pause",
+    "stopCaption": "Pauses dispatch when crossed",
+    "warnRolling": "Warn — 5h window",
+    "warnWeekly": "Warn — weekly window",
+    "stopRolling": "Stop — 5h window",
+    "stopWeekly": "Stop — weekly window"
+  },
+  "commandPalette": {
+    "placeholder": "Jump to a page, department, agent, task or /command",
+    "ariaLabel": "Command palette",
+    "empty": "No results",
+    "kind": {
+      "department": "Department",
+      "person": "Person",
+      "task": "Task",
+      "chain": "Chain",
+      "goal": "Goal",
+      "company": "Company",
+      "team": "Team",
+      "project": "Project",
+      "pipeline": "Pipeline",
+      "skill": "Skill",
+      "mcp": "MCP server",
+      "hook": "Hook",
+      "command": "Command",
+      "automation": "Automation",
+      "signal": "Signal",
+      "note": "Note",
+      "setting": "Setting",
+      "gate": "Gate",
+      "action": "Action"
+    },
+    "group": {
+      "actions": "Actions",
+      "departments": "Departments",
+      "people": "People",
+      "tasks": "Tasks",
+      "chains": "Chains",
+      "goals": "Goals",
+      "companies": "Companies",
+      "teams": "Teams",
+      "projects": "Projects",
+      "pipelines": "Pipelines",
+      "registries": "Registries",
+      "automations": "Automations",
+      "signals": "Signals",
+      "vault": "Vault",
+      "settings": "Settings",
+      "gates": "Gates"
+    },
+    "settingsSection": {
+      "general": "General",
+      "automations": "Automations",
+      "coo": "COO persona",
+      "activity": "Activity",
+      "runtime": "Runtime",
+      "machine": "Machine",
+      "status": "Status",
+      "appearance": "Appearance"
+    },
+    "gateSection": {
+      "floor": "Floor",
+      "global": "Global rules",
+      "per-project": "Per-project",
+      "per-agent": "Per-agent",
+      "handoff": "Handoff rules",
+      "signals": "Signals",
+      "mandate": "Mandate"
+    },
+    "actions": {
+      "newTask": "New task",
+      "approveNext": "Approve next",
+      "toggleTheme": "Toggle theme"
+    }
+  },
+  "registries": {
+    "eyebrow": "SYSTEM — REGISTRIES",
+    "title": "Global libraries",
+    "subtitle": "Departments bind to these in their own tabs.",
+    "kinds": {
+      "skills": "Skills",
+      "mcp": "MCP servers",
+      "hooks": "Hooks",
+      "commands": "Commands"
+    },
+    "add": {
+      "skills": "Add skill",
+      "mcp": "Add server",
+      "hooks": "Add hook",
+      "commands": "Add command"
+    },
+    "columns": {
+      "name": "Name",
+      "description": "Description",
+      "boundIn": "Bound in"
+    },
+    "metaHeader": {
+      "skills": "Type",
+      "mcp": "Status",
+      "hooks": "Event",
+      "commands": "Scope"
+    },
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "commandScope": {
+      "auto": "⌘K · COO",
+      "manual": "Manual only"
+    },
+    "skillTypeFallback": "Skill",
+    "emptySkills": "No skills yet.",
+    "emptyMcp": "No MCP servers yet.",
+    "emptyHooks": "No hooks yet.",
+    "emptyCommands": "No commands yet."
   }
 }

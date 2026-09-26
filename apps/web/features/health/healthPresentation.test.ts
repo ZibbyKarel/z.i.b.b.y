@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { SUBSYSTEM_LABEL, deriveHealthPresentation, subsystemDotTone } from "./healthPresentation";
+import {
+  DEPARTMENT_LABEL,
+  departmentDotTone,
+  deriveHealthPresentation,
+} from "./healthPresentation";
 
 describe("deriveHealthPresentation", () => {
   it("shows the connecting state while the first fetch is in flight", () => {
@@ -62,15 +66,15 @@ describe("deriveHealthPresentation", () => {
   });
 });
 
-describe("subsystemDotTone (M8 per-subsystem HUD)", () => {
+describe("departmentDotTone (M8 per-department HUD)", () => {
   it("maps ok→ok, degraded→wait, down→bad", () => {
-    expect(subsystemDotTone("ok")).toBe("ok");
-    expect(subsystemDotTone("degraded")).toBe("wait");
-    expect(subsystemDotTone("down")).toBe("bad");
+    expect(departmentDotTone("ok")).toBe("ok");
+    expect(departmentDotTone("degraded")).toBe("wait");
+    expect(departmentDotTone("down")).toBe("bad");
   });
 
-  it("has a label for every subsystem name", () => {
-    expect(Object.keys(SUBSYSTEM_LABEL).sort()).toEqual([
+  it("has a label for every department name", () => {
+    expect(Object.keys(DEPARTMENT_LABEL).sort()).toEqual([
       "backend",
       "integrations",
       "scheduler",

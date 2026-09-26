@@ -3,13 +3,13 @@ import { useCallback, useEffect, useRef } from "react";
 
 /**
  * Coordinates body-scroll-lock and keyboard-handler precedence across every
- * concurrently mounted modal-like overlay (DS `Dialog`, `SubsystemDrawer`, any
+ * concurrently mounted modal-like overlay (DS `Dialog`, `DepartmentDrawer`, any
  * future full-screen surface) via one shared, ref-counted stack. A
  * per-component effect can't know a SIBLING overlay is mounted at the same
  * time — without this, the most-recently-closed overlay's cleanup clobbers
  * state a still-open ancestor depends on. Fixes a real bug found in the
  * phase-125 whole-branch review: closing a `Dialog` opened from inside
- * `SubsystemDrawer` re-enabled body scroll and let both overlays' Escape/Tab
+ * `DepartmentDrawer` re-enabled body scroll and let both overlays' Escape/Tab
  * handlers fire at once.
  */
 let stack: string[] = [];
@@ -41,7 +41,7 @@ export interface OverlayStackHandle {
 
 /** `active` mirrors the caller's own open/mounted condition (e.g. `Dialog`'s
  * `open` prop, or `true` for the whole mounted lifetime of a component that
- * IS the modal, like `SubsystemDrawer`). */
+ * IS the modal, like `DepartmentDrawer`). */
 export function useOverlayStack(active: boolean): OverlayStackHandle {
   const idRef = useRef<string | undefined>(undefined);
   if (idRef.current === undefined) {

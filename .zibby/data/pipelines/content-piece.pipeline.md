@@ -30,7 +30,7 @@ phases:
 desc: >-
   Rychlá linka pro jeden kus obsahu: napiš → SEO → redakce. Článek, blog post,
   landing copy, jeden příspěvek.
-ownerSubsystem: herald
+department: com
 complexity: light
 ---
 

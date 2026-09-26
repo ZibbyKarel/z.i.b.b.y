@@ -1,12 +1,12 @@
 "use client";
 
 import type { Briefing } from "@zibby/contracts";
-import { Container, GlassSurface, Stack, StatusDot, Typography } from "@zibby/design-system";
+import { Card, Container, Stack, StatusDot, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import {
   BriefingCardTestId,
+  DepartmentLineRow,
   NeedsYouRow,
-  SubsystemLineRow,
 } from "../../briefing/components/BriefingRows";
 
 export enum BriefingMessageCardTestId {
@@ -15,17 +15,18 @@ export enum BriefingMessageCardTestId {
 
 /**
  * The butler briefing rendered as a chat transcript message (F8a, O6): the
- * headline, the needs-you rows (deep-linked to `/archiv`), the per-subsystem
+ * headline, the needs-you rows (deep-linked to `/archiv`), the per-department
  * lines, engagement rollups, and the did-for-you/watching/paused-limit counters —
  * the same content `BriefingCard` shows on `/overview`, reusing its row
- * sub-components (`NeedsYouRow`, `SubsystemLineRow`) rather than re-implementing
+ * sub-components (`NeedsYouRow`, `DepartmentLineRow`) rather than re-implementing
  * the layout (the brief's explicit instruction).
  *
  * Differs from `BriefingCard` in exactly the ways a transcript message must:
- * - `GlassSurface`, not `HudPanel` — this sits inside the conversation, not on a
- *   page, so it carries no title bar, no page-width assumption, no "Generate now"
- *   button (a past turn is a fixed snapshot of the briefing that was generated,
- *   not a live control surface).
+ * - A plain `Card` (mirroring `ChatRunCard`'s own transcript surface), not a
+ *   titled `Panel` — this sits inside the conversation, not on a page, so it
+ *   carries no title bar, no page-width assumption, no "Generate now" button (a
+ *   past turn is a fixed snapshot of the briefing that was generated, not a
+ *   live control surface).
  * - Bounded width to match the surrounding message column (`ChatMessage`'s own
  *   `maxWidth="68ch"` bubble), so a long-lived conversation doesn't get a
  *   full-bleed panel wedged between narrow bubbles.
@@ -40,9 +41,10 @@ export function BriefingMessageCard({ briefing }: { briefing: Briefing }) {
   const pausedLimitRuns = briefing.watching.filter((w) => w.summary).length;
 
   return (
-    <GlassSurface
+    <Card
+      background="surface"
       data-testid={BriefingMessageCardTestId.Root}
-      radius="panel"
+      radius="lg"
       style={{ maxWidth: "68ch" }}
     >
       <Container padding="200">
@@ -71,13 +73,13 @@ export function BriefingMessageCard({ briefing }: { briefing: Briefing }) {
             </Stack>
           )}
 
-          {briefing.subsystems && briefing.subsystems.length > 0 && (
+          {briefing.departments && briefing.departments.length > 0 && (
             <Stack gap="50">
               <Typography mono size="2xs" type="note" variant="tertiary">
-                {t("overview.briefingSubsystems")}
+                {t("overview.briefingDepartments")}
               </Typography>
-              {briefing.subsystems.map((line) => (
-                <SubsystemLineRow key={line.subsystem} line={line} />
+              {briefing.departments.map((line) => (
+                <DepartmentLineRow key={line.department} line={line} />
               ))}
             </Stack>
           )}
@@ -126,6 +128,6 @@ export function BriefingMessageCard({ briefing }: { briefing: Briefing }) {
           </Stack>
         </Stack>
       </Container>
-    </GlassSurface>
+    </Card>
   );
 }

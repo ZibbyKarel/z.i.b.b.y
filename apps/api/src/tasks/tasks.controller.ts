@@ -30,9 +30,10 @@ import {
   ScheduledTasksStorageService,
 } from "./scheduled-tasks.storage.service";
 import { TaskClassifierService } from "./task-classifier.service";
+import { TaskParentsService } from "./task-parents.service";
 import {
+  DepartmentEmptyRosterError,
   EmptyCatalogError,
-  SubsystemEmptyRosterError,
   TaskSchedulerService,
 } from "./task-scheduler.service";
 
@@ -51,6 +52,9 @@ const scheduledTaskRoutes = {
   createTask: tasksContract.createTask,
   listScheduledTasks: tasksContract.listScheduledTasks,
   cancelScheduledTask: tasksContract.cancelScheduledTask,
+  // ZB-04a §5 — the parent/subtask read model.
+  getTaskParents: tasksContract.getTaskParents,
+  getTask: tasksContract.getTask,
 };
 
 /** Hard multipart limits — enforced by multer (per-file/count) and a manual set-total check. */
@@ -90,6 +94,7 @@ export class TasksController {
     private readonly scheduler: TaskSchedulerService,
     private readonly storage: ScheduledTasksStorageService,
     private readonly attachments: AttachmentStorageService,
+    private readonly parents: TaskParentsService,
   ) {}
 
   /**
@@ -101,7 +106,9 @@ export class TasksController {
   @Post("/api/tasks/attachments")
   @UseFilters(MulterLimitFilter)
   @UseInterceptors(
-    FilesInterceptor("files", MAX_FILES, { limits: { fileSize: MAX_FILE_BYTES, files: MAX_FILES } }),
+    FilesInterceptor("files", MAX_FILES, {
+      limits: { fileSize: MAX_FILE_BYTES, files: MAX_FILES },
+    }),
   )
   async uploadAttachments(@UploadedFiles() files: Express.Multer.File[]) {
     const uploaded = files ?? [];
@@ -131,7 +138,8 @@ export class TasksController {
     const stat = await fs.stat(filePath).catch(() => null);
     if (!stat || !stat.isFile()) throw new NotFoundException("Attachment not found");
     const meta = await this.attachments.list(setId);
-    const mediaType = meta.find((a) => a.name === safeName)?.mediaType ?? "application/octet-stream";
+    const mediaType =
+      meta.find((a) => a.name === safeName)?.mediaType ?? "application/octet-stream";
     return new StreamableFile(createReadStream(filePath), {
       type: mediaType,
       disposition: `inline; filename="${safeName}"`,
@@ -165,7 +173,7 @@ export class TasksController {
             body: await this.scheduler.createTask(body, undefined, undefined, undefined, true),
           };
         } catch (error) {
-          if (error instanceof EmptyCatalogError || error instanceof SubsystemEmptyRosterError) {
+          if (error instanceof EmptyCatalogError || error instanceof DepartmentEmptyRosterError) {
             return { status: 422, body: { message: error.message } };
           }
           if (error instanceof ClaudeUnavailableError) {
@@ -179,6 +187,13 @@ export class TasksController {
 
       cancelScheduledTask: ({ params: { id } }) =>
         errors.or404(id, () => this.scheduler.cancel(id)),
+
+      getTaskParents: async ({ query }) => ({
+        status: 200,
+        body: await this.parents.listParents(query),
+      }),
+
+      getTask: ({ params: { id } }) => errors.or404(id, () => this.parents.getTask(id)),
     });
   }
 }

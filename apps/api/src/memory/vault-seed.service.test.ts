@@ -23,7 +23,7 @@ describe("VaultSeedService", () => {
     expect(nodes.length).toBe(13);
     expect(nodes.map((n) => n.id)).toContain("north-star");
     expect(nodes.map((n) => n.id)).toContain("zibby-index");
-    expect(nodes.map((n) => n.id)).toContain("subsystem-forge-moc");
+    expect(nodes.map((n) => n.id)).toContain("department-dev-moc");
 
     const grounding = new GroundingService(vault);
     const block = await grounding.compose({ task: "anything" });

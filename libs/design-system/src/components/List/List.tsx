@@ -64,7 +64,7 @@ export function ListItemBadge({ children, ...rest }: ListItemBadgeProps) {
     <span
       data-testid={testKey ? `${ListTestId.Badge}-${testKey}` : ListTestId.Badge}
       {...rest}
-      className="rounded-full bg-accent px-2 py-px font-mono text-sm font-bold text-accent-contrast"
+      className="rounded-none bg-accent px-2 py-px font-mono text-sm font-bold text-accent-contrast"
     >
       {children}
     </span>
@@ -80,7 +80,7 @@ export type ListItemProps = Omit<React.HTMLAttributes<HTMLElement>, "className" 
 
 export function ListItem({ active = false, onSelect, children, id, ...rest }: ListItemProps) {
   const className = cn(
-    "relative flex w-full items-center gap-3 rounded px-3 py-2 text-left text-lg transition-colors",
+    "relative flex w-full items-center gap-3 rounded-none px-3 py-2 text-left text-lg transition-colors",
     focusRing,
     active
       ? "bg-hover font-semibold text-foreground"
@@ -95,7 +95,7 @@ export function ListItem({ active = false, onSelect, children, id, ...rest }: Li
   const inner = (
     <ListItemCtx.Provider value={{ active, testKey: id }}>
       {active && (
-        <span className="absolute -left-3.5 bottom-2 top-2 w-[3px] rounded bg-accent shadow-glow-accent" />
+        <span className="absolute -left-3.5 bottom-2 top-2 w-[3px] rounded-none bg-accent" />
       )}
       {children}
     </ListItemCtx.Provider>

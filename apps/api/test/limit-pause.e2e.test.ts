@@ -10,6 +10,7 @@ import { AppModule } from "../src/app.module";
 import { LimitResumeService } from "../src/limits-resume/limit-resume.service";
 import { LimitsService } from "../src/limits/limits.service";
 import { PipelineRunnerService } from "../src/pipelines/pipeline-runner.service";
+import { defaultEmployeesDir, seedEmployeeFixture } from "./fixtures/employee-fixture";
 
 /** Token-free `claude` stand-in so agent-run dispatch passes preflight (demo path). */
 const FAKE_CLAUDE = path.resolve(
@@ -93,6 +94,14 @@ describe("Usage-limit pause / auto-resume (e2e)", () => {
     // Start with plenty of headroom so the phase-boundary guard never pauses; only the
     // demo limit line (mid-stage) does.
     await writeLimits(configDir, 5, Math.floor(Date.now() / 1000) + 3600);
+    // D-017: AGENTS_DIR is isolated above, but not EMPLOYEES_DIR — `phase()`'s bare
+    // "writer" id needs an employee seeded directly into the shared per-file data
+    // root, or every stage parks `no-employee` instead of dispatching.
+    await seedEmployeeFixture(defaultEmployeesDir(), {
+      id: "employee_writer",
+      agentId: "writer",
+      department: "dev",
+    });
     app = await boot();
   });
 
@@ -127,7 +136,7 @@ describe("Usage-limit pause / auto-resume (e2e)", () => {
         id: "limitpipe",
         phases: [phase("a"), phase("koder"), phase("c")],
         instructions: "ship",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
 
@@ -273,7 +282,7 @@ describe("Usage-limit pause survives a restart (e2e)", () => {
           id: "boundarypipe",
           phases: [phase("a"), phase("b")],
           instructions: "ship",
-          ownerSubsystem: "forge",
+          department: "dev",
         })
         .expect(201);
       const start = await app1

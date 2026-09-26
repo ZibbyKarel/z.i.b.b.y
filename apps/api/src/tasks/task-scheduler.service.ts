@@ -7,25 +7,28 @@ import {
   type OnModuleInit,
   Optional,
 } from "@nestjs/common";
+import { ModuleRef } from "@nestjs/core";
 import type {
   Agent,
   AgentRun,
   Attachment,
+  Chain,
   ClassificationTrace,
   CreateTaskInput,
   CreateTaskResult,
+  DepartmentId,
+  Employee,
   GoalRun,
   Pipeline,
   PipelineRun,
   Project,
   ScheduledTask,
-  SubsystemId,
   TaskOutcome,
   TaskOutput,
   TaskTarget,
 } from "@zibby/contracts";
 import { PIPELINE_COMPLEXITY_ORDER } from "@zibby/contracts";
-import { ORCHESTRATOR_TARGET, SUBSYSTEMS } from "@zibby/contracts";
+import { DEPARTMENTS, ORCHESTRATOR_TARGET } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import type { AttachmentSetRefProvider } from "./attachment-set-ref-provider";
 import { ATTACHMENT_SET_REF_PROVIDER } from "./attachment-set-ref-provider";
@@ -33,7 +36,11 @@ import { AgentsStorageService } from "../agents/agents.storage.service";
 import { AgentRunnerService, type RunAttachments } from "../agents/agent-runner.service";
 import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service";
 import { type BudgetOverMetrics, BudgetService } from "../budget/budget.service";
+import { EmployeeAllocator, type EmployeeLease } from "../employees/employee-allocator";
+import { NoEmployeeError } from "../employees/employees.errors";
+import { EmployeesStorageService } from "../employees/employees.storage.service";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
+import type { HandoffService } from "../handoff/handoff.service";
 import { WatcherHealthRegistry } from "../health/watcher-health.registry";
 import { LimitsService } from "../limits/limits.service";
 import { GoalRunnerService } from "../goals/goal-runner.service";
@@ -59,8 +66,8 @@ import { taskTargetId } from "./task-target";
 /** A create input with its attachment set resolved once (Task 6 — resolve, then thread). */
 type CreateTaskInputResolved = CreateTaskInput & { attachments: Attachment[] };
 
-/** See {@link TaskSchedulerService.resolveSubsystemTargetOrNull}. */
-interface SubsystemResolution {
+/** See {@link TaskSchedulerService.resolveDepartmentTargetOrNull}. */
+interface DepartmentResolution {
   target: TaskTarget;
   stage2?: NonNullable<ClassificationTrace["stage2"]>;
 }
@@ -74,17 +81,17 @@ export class EmptyCatalogError extends Error {
 }
 
 /**
- * Phase 91 — thrown when a task explicitly targets a subsystem with ZERO owned
+ * Phase 91 — thrown when a task explicitly targets a department with ZERO owned
  * pipelines. A described task must never silently no-op (Law 5), and a mandate
  * without capability shouldn't pretend to execute (deliberate v1 floor: this does
  * NOT fall back to the orchestrator) — so it surfaces as a clear, immediate,
  * Czech-language validation rejection instead. The controller maps it to 422,
  * mirroring {@link EmptyCatalogError}.
  */
-export class SubsystemEmptyRosterError extends Error {
-  constructor(subsystemName: string) {
-    super(`Subsystém ${subsystemName} zatím nemá žádnou pipeline.`);
-    this.name = "SubsystemEmptyRosterError";
+export class DepartmentEmptyRosterError extends Error {
+  constructor(departmentName: string) {
+    super(`Oddělení ${departmentName} zatím nemá žádnou pipeline.`);
+    this.name = "DepartmentEmptyRosterError";
   }
 }
 
@@ -142,6 +149,15 @@ export class TaskSchedulerService
    * by design: the approval record is the durable source of truth across restart.
    */
   private readonly budgetApproved = new Set<string>();
+  /**
+   * D-017: the employee leased to each in-flight single-agent run, keyed by its
+   * `runId` — set right after a successful `agentRunner.start()`, released by the
+   * `onRunStatus` subscriber below once the run reaches a terminal status. Absent
+   * for a run that never leased (the department's position has no employee
+   * anywhere — D-017's unleased fallback — or the orchestrator, which is never a
+   * position an employee holds).
+   */
+  private readonly employeeLeases = new Map<string, EmployeeLease>();
 
   constructor(
     private readonly storage: ScheduledTasksStorageService,
@@ -149,8 +165,11 @@ export class TaskSchedulerService
     private readonly agentRunner: AgentRunnerService,
     private readonly pipelineRunner: PipelineRunnerService,
     private readonly pipelinesStore: PipelinesStorageService,
-    /** F2b — for {@link resolveSubsystemTargetOrNull}'s owned-roster count (pipelines + agents). */
+    /** F2b — for {@link resolveDepartmentTargetOrNull}'s owned-roster count (pipelines + agents). */
     private readonly agentsStore: AgentsStorageService,
+    /** D-017: the single-agent dispatch lease/release path (see {@link employeeLeases}). */
+    private readonly employeeAllocator: EmployeeAllocator,
+    private readonly employeesStore: EmployeesStorageService,
     private readonly goalRunner: GoalRunnerService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
@@ -177,6 +196,14 @@ export class TaskSchedulerService
     @Optional()
     @Inject(ATTACHMENT_SET_REF_PROVIDER)
     private readonly attachmentRefProviders: AttachmentSetRefProvider[] = [],
+    /**
+     * ZB-05a — `HandoffService` (chain lookup + chain-step evaluation) is resolved
+     * lazily via `ModuleRef` (non-strict), never constructor-injected: `HandoffModule`
+     * already imports `TasksModule`, so an edge in the other direction would cycle.
+     * Same posture as `PipelineRunnerService.recordArtifact`'s lazy `HandoffService`
+     * fetch — see there for the full rationale.
+     */
+    private readonly moduleRef: ModuleRef,
   ) {
     super();
     this.log = logger.child(TaskSchedulerService.name);
@@ -189,7 +216,17 @@ export class TaskSchedulerService
     this.unsubscribes.push(
       this.agentRunner.onRunStatus((run) => {
         if (run.taskId) void this.writeAgentOutcome(run.taskId, run);
-        if (TERMINAL_AGENT.has(run.status)) void this.drainQueues();
+        if (TERMINAL_AGENT.has(run.status)) {
+          void this.drainQueues();
+          // D-017: release this run's leased employee (if any) back to the
+          // allocator's FIFO queue — the next queued acquire() for the same
+          // department+position wakes.
+          const lease = this.employeeLeases.get(run.runId);
+          if (lease) {
+            this.employeeAllocator.release(lease);
+            this.employeeLeases.delete(run.runId);
+          }
+        }
       }),
       this.pipelineRunner.onRunStatus((run) => {
         if (run.taskId) void this.writePipelineOutcome(run.taskId, run);
@@ -326,23 +363,41 @@ export class TaskSchedulerService
     // scheduled loop's goal). A server-side `explicitTarget` arg (proposed-task
     // resume) still wins when both are present.
     const rawTarget = explicitTarget ?? input.target;
-    // Phase 91: an explicit subsystem target is resolved to a concrete pipeline
+    // Phase 91: an explicit department target is resolved to a concrete pipeline
     // target HERE — before either persistence path below (scheduled or immediate)
     // — so a 0-owned rejection is a clean validation error, never a task record
-    // that later fails on dispatch. See `resolveSubsystemTarget`.
+    // that later fails on dispatch. See `resolveDepartmentTarget`.
     // `routingText` when the caller supplied one: stage 2 runs HERE, so it must read the
     // same footer-free text stage 1 was given, or the framing the roadmap gate appends
     // for the actor lands right back in the ranker's haystack (see
     // `CreateTaskInput.routingText`).
     const target =
-      rawTarget?.kind === "subsystem"
-        ? await this.resolveSubsystemTarget(
+      rawTarget?.kind === "department"
+        ? await this.resolveDepartmentTarget(
             rawTarget,
             input.routingText ?? input.text,
             input.paths ?? [],
             input.output,
           )
         : rawTarget;
+    // D-019 superseded by ZB-05a — a chain target IS dispatchable now: the parent is
+    // persisted (no run of its own) and step 0 dispatches straight to the chain's
+    // `entry` department. See `dispatchChain`.
+    if (target?.kind === "chain") {
+      const project = trustedProjectId
+        ? await this.projects.get(trustedProjectId).catch((): Project | null => null)
+        : matchProject(await this.projects.list().catch((): Project[] => []), {
+            text: input.text,
+            paths: input.paths,
+          });
+      const taskId = this.storage.newId();
+      return this.dispatchChain(target, resolvedInput, project?.id, now, taskId);
+    }
+    // O-18 — resolve the creator's source stamp when the caller didn't already
+    // supply one (channel/automation/handoff all stamp their own): the explicit
+    // `@department` target legs here, everything else is the operator.
+    resolvedInput.source =
+      input.source ?? (rawTarget?.kind === "department" ? "department" : "operator");
     const project = trustedProjectId
       ? await this.projects.get(trustedProjectId).catch((): Project | null => null)
       : matchProject(await this.projects.list().catch((): Project[] => []), {
@@ -385,27 +440,174 @@ export class TaskSchedulerService
   }
 
   /**
-   * Phase 91 / F2a / F2b — resolve a subsystem target to a concrete pipeline or
+   * ZB-05a / D-005 — dispatch a `{ kind: "chain" }` target: the PARENT is persisted
+   * with no run of its own (its state is derived from its subtasks —
+   * `TaskParentsService`), then step 0 dispatches straight to the chain's `entry`
+   * department (no gate — the operator created the task). A missing/disabled chain
+   * is a clear, immediately-visible error outcome on the parent (Law 5 — never a
+   * silent no-op), returned the same way a held/queued task is
+   * (`{ outcome: "scheduled", task }`).
+   */
+  private async dispatchChain(
+    target: Extract<TaskTarget, { kind: "chain" }>,
+    input: CreateTaskInputResolved,
+    projectId: string | undefined,
+    now: number,
+    taskId: string,
+  ): Promise<CreateTaskResult> {
+    const chainId = target.id;
+    const chain = await this.resolveChainForDispatch(chainId);
+    if (!chain || !chain.enabled) {
+      const reason = chain
+        ? `Chain "${chainId}" is disabled.`
+        : `Chain "${chainId}" was not found.`;
+      const task = await this.storage.createChainParentFailed(
+        taskId,
+        input,
+        projectId,
+        now,
+        target,
+        reason,
+      );
+      void this.activity.record({
+        kind: "task-outcome",
+        summary: `chain dispatch failed: ${reason}`,
+        refs: { taskId, status: "error", ...(projectId ? { projectId } : {}) },
+      });
+      this.log.warn("chain dispatch failed — missing or disabled chain", { chainId, taskId });
+      return { outcome: "scheduled", task };
+    }
+    let parent = await this.storage.createChainParent(taskId, input, projectId, now, target);
+    void this.activity.record({
+      kind: "task-created",
+      summary: `chain started${input.title ? `: ${input.title}` : ""}`,
+      refs: { taskId, ...(projectId ? { projectId } : {}) },
+    });
+    try {
+      await this.createTask(
+        {
+          title: input.title,
+          text: input.text,
+          paths: input.paths,
+          target: { kind: "department", id: chain.entry, name: departmentDisplayName(chain.entry) },
+          parentTaskId: parent.id,
+          chain: { id: chainId, step: 0 },
+          source: "chain",
+        },
+        now,
+        projectId,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      parent = await this.storage.markFailed(parent.id, message);
+      void this.activity.record({
+        kind: "task-outcome",
+        summary: `chain step 0 dispatch failed: ${message}`,
+        refs: { taskId: parent.id, status: "error", ...(projectId ? { projectId } : {}) },
+      });
+      this.log.warn("chain step 0 dispatch failed", { chainId, taskId: parent.id, error: message });
+    }
+    return { outcome: "scheduled", task: parent };
+  }
+
+  /** A chain by id, or `null` (missing/not-a-chain) — resolved lazily, never throws. */
+  private async resolveChainForDispatch(chainId: string): Promise<Chain | null> {
+    try {
+      const { HandoffService } = await import("../handoff/handoff.service");
+      const handoff = this.moduleRef.get<HandoffService>(HandoffService, { strict: false });
+      return await handoff.resolveChain(chainId);
+    } catch (error) {
+      this.log.warn("chain resolve failed — treated as missing", {
+        chainId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  }
+
+  /** ZB-05a — stamp `chainEndedAt` on a chain parent once no further hop matched. */
+  async markChainEnded(parentTaskId: string): Promise<void> {
+    await this.storage.markChainEnded(parentTaskId).catch((error: unknown) => {
+      this.log.debug("markChainEnded: parent not found or already ended", {
+        parentTaskId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+  }
+
+  /**
+   * ZB-05a — cross-module entry point for `PipelineRunnerService.recordArtifact`
+   * (resolved lazily via `ModuleRef`, same posture as this file's own lazy
+   * `HandoffService` fetch — see its doc comment): a pipeline stage that just
+   * delivered an artifact hands the completing task's id + the artifact's locator
+   * here rather than duplicating {@link emitChainStepForTask}'s lookup/guard logic.
+   * A task with no chain context, or one already gone, is a silent no-op (this is
+   * called for EVERY delivered artifact, chain or not).
+   */
+  async emitChainStep(taskId: string, artifactRef?: string): Promise<void> {
+    const task = await this.storage.get(taskId).catch(() => null);
+    if (!task) return;
+    await this.emitChainStepForTask(task, artifactRef);
+  }
+
+  /**
+   * ZB-05a — a chain subtask that just finished successfully: hand its completion
+   * to `HandoffService.evaluate` so it can route the next hop (or, on no match,
+   * mark the chain ended on the parent). Fail-soft — emission failure never fails
+   * the delivery it was called from (`writeAgentOutcome` / `PipelineRunnerService.
+   * recordArtifact`, via {@link emitChainStep}); it just means the chain silently
+   * halts here instead.
+   */
+  private async emitChainStepForTask(task: ScheduledTask, artifactRef?: string): Promise<void> {
+    if (!task.chain || !task.parentTaskId || !task.department) return;
+    try {
+      const { HandoffService } = await import("../handoff/handoff.service");
+      const handoff = this.moduleRef.get<HandoffService>(HandoffService, { strict: false });
+      await handoff.evaluate({
+        from: task.department,
+        kind: task.chain.id,
+        title: `Chain step done: ${task.chain.id}`,
+        body: `Task "${task.title || task.text}" (chain step ${task.chain.step}) finished.`,
+        ...(task.projectId ? { projectId: task.projectId } : {}),
+        fingerprint: `${task.parentTaskId}:${task.chain.step}`,
+        chain: {
+          chainId: task.chain.id,
+          parentTaskId: task.parentTaskId,
+          step: task.chain.step,
+          ...(artifactRef ? { artifactRef } : {}),
+        },
+      });
+    } catch (error) {
+      this.log.warn("chain step emission failed (soft) — chain halts here", {
+        taskId: task.id,
+        chainId: task.chain.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
+   * Phase 91 / F2a / F2b — resolve a department target to a concrete pipeline or
    * agent target (the design doc's 0/1/N-owned-unit rule, widened in F2b from
    * pipelines-only to pipelines + owned active agents):
    *  - **0 owned** → `null` — no capability to delegate to.
    *  - **1 owned** → dispatches straight to it; the classifier is never called.
-   *  - **2+ owned** → `TaskClassifierService.classifyWithinSubsystem`, restricted
-   *    to just the subsystem's own roster (never the full catalog, never a
+   *  - **2+ owned** → `TaskClassifierService.classifyWithinDepartment`, restricted
+   *    to just the department's own roster (never the full catalog, never a
    *    fallback to the orchestrator here — the operator, or the switchboard's
-   *    stage-1 verdict, already named the subsystem; `classifyWithinSubsystem`'s
-   *    own `SUBSYSTEM_FALLBACK` policy decides what "not confident" resolves to).
+   *    stage-1 verdict, already named the department; `classifyWithinDepartment`'s
+   *    own `DEPARTMENT_FALLBACK` policy decides what "not confident" resolves to).
    *
-   * The resolved target IS the run's "via <subsystem>" attribution: any
-   * consumer can already read `Pipeline.ownerSubsystem`/`Agent.ownerSubsystem`
+   * The resolved target IS the run's "via <department>" attribution: any
+   * consumer can already read `Pipeline.department`/`Agent.department`
    * (Phase 81 / F1a) off the dispatched id, so this adds no new run-level field.
    *
-   * Two callers choose differently on `null` — see {@link resolveSubsystemTarget}
+   * Two callers choose differently on `null` — see {@link resolveDepartmentTarget}
    * (the explicit `@mention` path, throws) and {@link dispatch} (the undirected
    * switchboard path, falls back to {@link ORCHESTRATOR_TARGET}).
    */
   /**
-   * The outcome of resolving a subsystem verdict to the unit that actually runs:
+   * The outcome of resolving a department verdict to the unit that actually runs:
    * the `target`, plus the stage-2 rationale for the persisted trace.
    *
    * `stage2` is absent only when the classifier returned nothing usable and the
@@ -413,38 +615,46 @@ export class TaskSchedulerService
    * pairing exists because the previous shape returned the target alone, so the
    * decision that picks the running unit left no record at all.
    */
-  private async resolveSubsystemTargetOrNull(
-    target: Extract<TaskTarget, { kind: "subsystem" }>,
+  private async resolveDepartmentTargetOrNull(
+    target: Extract<TaskTarget, { kind: "department" }>,
     text: string,
     paths: string[],
     /**
      * The task's required sink, when it has one. A `pr` sink makes this resolution a
-     * SIZING choice over the subsystem's PR-capable pipelines instead of a free pick
+     * SIZING choice over the department's PR-capable pipelines instead of a free pick
      * over its whole roster — mirroring `TaskClassifierService.constrainByOutput`, so
      * a direct dispatch and the scoped classifier agree on what is even eligible.
      * Without it a roadmap item that must open a PR could resolve to an agent that
      * cannot open one.
      */
     output?: TaskOutput,
-  ): Promise<SubsystemResolution | null> {
-    const [allPipelines, allAgents] = await Promise.all([
+  ): Promise<DepartmentResolution | null> {
+    const [allPipelines, allAgents, employees] = await Promise.all([
       this.pipelinesStore.list().catch((): Pipeline[] => []),
       this.agentsStore.listActive().catch((): Agent[] => []),
+      this.employeesStore.list().catch((): Employee[] => []),
     ]);
-    const ownedPipelines = allPipelines.filter((p) => p.ownerSubsystem === target.id);
-    const ownedAgents = allAgents.filter((a) => a.ownerSubsystem === target.id);
+    const ownedPipelines = allPipelines.filter((p) => p.department === target.id);
+    // D-015: an agent (a position) is "owned" by this department IFF it has at
+    // least one active employee here — `Agent.department` is no longer read.
+    const ownedPositionIds = new Set(
+      employees
+        .filter((e) => e.status === "active" && e.department === target.id)
+        .map((e) => e.agentId),
+    );
+    const ownedAgents = allAgents.filter((a) => ownedPositionIds.has(a.id));
     const totalOwned = ownedPipelines.length + ownedAgents.length;
     if (totalOwned === 0) return null;
     // Same rule, same reason as the classifier's own filter: a task that must end in a
     // PR is eligible only for pipelines that DECLARE a `pr` sink — never a lone agent.
-    // Falls back to the full roster (and warns) when the subsystem owns no such
+    // Falls back to the full roster (and warns) when the department owns no such
     // pipeline, because "route it somewhere and let the run fail" is strictly worse
     // than routing it the old way and saying so.
     const prCapable = ownedPipelines.filter((p) => p.outputs.some((o) => o.type === "pr"));
     const prConstrained = output?.type === "pr" && prCapable.length > 0;
     if (output?.type === "pr" && prCapable.length === 0) {
-      this.log.warn("task requires a PR but the subsystem owns no PR-capable pipeline", {
-        subsystem: target.id,
+      this.log.warn("task requires a PR but the department owns no PR-capable pipeline", {
+        department: target.id,
         ownedUnits: totalOwned,
       });
     }
@@ -455,10 +665,10 @@ export class TaskSchedulerService
     // what the scoped classifier would have chosen as its `"primary"` fallback.
     //
     // NS2 F9 note: this used to be plain `ownedPipelines[0]` and a comment claiming
-    // it mirrored `subsystemCandidates`' pipelines-first ordering. F9 reversed that
+    // it mirrored `departmentCandidates`' pipelines-first ordering. F9 reversed that
     // ordering (agents first, then pipelines by rung) AND moved the fallback off
     // list order onto the ladder, which left this reading FILE order — so a
-    // subsystem whose directory happens to list a `deep` pipeline before its
+    // department whose directory happens to list a `deep` pipeline before its
     // `light` one would dispatch the expensive rung here while the classifier
     // picked the cheap one. Sorting by the ladder restores the agreement the
     // comment only claimed.
@@ -474,7 +684,7 @@ export class TaskSchedulerService
     // spend a round-trip to be told what the constraint already decided.
     if (eligibleCount === 1) {
       this.log.info("stage-2 resolved without classifying — one eligible unit", {
-        subsystem: target.id,
+        department: target.id,
         target: `${primary.kind}:${taskTargetId(primary)}`,
         ...(prConstrained ? { constrainedBy: "pr-output" } : {}),
       });
@@ -487,13 +697,13 @@ export class TaskSchedulerService
           confidence: 1,
           reason: prConstrained
             ? "Only one owned unit can deliver a PR — no ranking was needed."
-            : "The subsystem owns a single dispatchable unit — no ranking was needed.",
+            : "The department owns a single dispatchable unit — no ranking was needed.",
           rankedCandidates: 1,
           ...(prConstrained ? { constrainedBy: "pr-output" as const } : {}),
         },
       };
     }
-    const routing = await this.classifier.classifyWithinSubsystem(
+    const routing = await this.classifier.classifyWithinDepartment(
       { text, paths, ...(output ? { output } : {}) },
       target.id,
     );
@@ -505,7 +715,7 @@ export class TaskSchedulerService
     // a real decision.
     if (routing) {
       this.log.info("stage-2 verdict", {
-        subsystem: target.id,
+        department: target.id,
         target: `${routing.target.kind}:${"id" in routing.target ? routing.target.id : "-"}`,
         confidence: routing.confidence,
         reason: routing.reason,
@@ -514,7 +724,7 @@ export class TaskSchedulerService
         ...(prConstrained ? { constrainedBy: "pr-output" } : {}),
       });
     }
-    // Defensive only: `classifyWithinSubsystem` returns null solely for an empty
+    // Defensive only: `classifyWithinDepartment` returns null solely for an empty
     // candidate set, which `eligibleCount > 1` already rules out.
     if (!routing) return { target: primary };
     return {
@@ -531,21 +741,21 @@ export class TaskSchedulerService
   }
 
   /**
-   * The EXPLICIT-target wrapper around {@link resolveSubsystemTargetOrNull}:
+   * The EXPLICIT-target wrapper around {@link resolveDepartmentTargetOrNull}:
    * called once, up front, by {@link createTask} before any persistence, for an
-   * `@`-mentioned subsystem target. A mandate without capability shouldn't
+   * `@`-mentioned department target. A mandate without capability shouldn't
    * pretend to execute (deliberate v1 floor) — 0 owned pipelines rejects
-   * immediately with {@link SubsystemEmptyRosterError}, a clear Czech validation
+   * immediately with {@link DepartmentEmptyRosterError}, a clear Czech validation
    * message, rather than silently falling back to the orchestrator.
    */
-  private async resolveSubsystemTarget(
-    target: Extract<TaskTarget, { kind: "subsystem" }>,
+  private async resolveDepartmentTarget(
+    target: Extract<TaskTarget, { kind: "department" }>,
     text: string,
     paths: string[],
     output?: TaskOutput,
   ): Promise<TaskTarget> {
-    const resolved = await this.resolveSubsystemTargetOrNull(target, text, paths, output);
-    if (!resolved) throw new SubsystemEmptyRosterError(subsystemDisplayName(target.id));
+    const resolved = await this.resolveDepartmentTargetOrNull(target, text, paths, output);
+    if (!resolved) throw new DepartmentEmptyRosterError(departmentDisplayName(target.id));
     return resolved.target;
   }
 
@@ -900,6 +1110,7 @@ export class TaskSchedulerService
       input.attachmentSetId,
       input.attachments,
       input.toolGrants,
+      input.artifactRef,
     );
     if (!dispatched) throw new EmptyCatalogError();
     const task = await this.persistDispatched(taskId, input, dispatched, projectId, now);
@@ -974,11 +1185,13 @@ export class TaskSchedulerService
             return;
           }
           await this.recordLedger(task.id, projectId, dispatched);
+          const department = await this.ownerDepartmentOf(dispatched);
           const updated = await this.storage.markDispatched(
             task.id,
             dispatched.runRef,
             dispatched.target,
             dispatched.classification,
+            department,
           );
           await this.recordDispatchedActivity(task.id, projectId, dispatched);
           this.log.info("task dispatched (background)", {
@@ -1083,11 +1296,13 @@ export class TaskSchedulerService
       return "failed";
     }
     await this.recordLedger(task.id, task.projectId, dispatched);
+    const department = await this.ownerDepartmentOf(dispatched);
     const updated = await this.storage.markDispatched(
       task.id,
       dispatched.runRef,
       dispatched.target,
       dispatched.classification,
+      department,
     );
     this.budgetApproved.delete(task.id);
     void this.reconcileOutcome(updated);
@@ -1307,6 +1522,14 @@ export class TaskSchedulerService
      * runner (never trusted blindly — see `AgentRunnerService.launch`).
      */
     toolGrants?: string[],
+    /**
+     * ZB-05a — a chain hop's upstream artifact (`CreateTaskInput.artifactRef`, set
+     * by `HandoffService.dispatchTask`), threaded into a PIPELINE target's first
+     * phase (`PipelineRunnerService.start`'s N2b `input` param). Absent for every
+     * non-chain dispatch (no behaviour change) and for an agent/goal target
+     * (neither runner has an `input` seam).
+     */
+    artifactRef?: string,
   ): Promise<{ runRef: string; target: TaskTarget; classification?: ClassificationTrace } | null> {
     // Build the run-attachments reference ONCE: an absolute dir (from storage) plus
     // the filenames, or undefined when the task carries no attachment set.
@@ -1338,18 +1561,18 @@ export class TaskSchedulerService
       // The classifier's matched terms ride into the run so memory grounding selects
       // the same MOCs the routing keyed on (Phase 4).
       matchedTerms = routing.matchedTerms;
-      // F2a — the switchboard may now emit a whole-subsystem verdict (never the
+      // F2a — the switchboard may now emit a whole-department verdict (never the
       // explicit `@mention` path above, which is already resolved by `createTask`
       // before `dispatch` is ever called). Soft stage-2: resolve to a concrete
       // pipeline, or — an empty roster — fall through to the orchestrator exactly
       // like any other "nothing matched confidently" verdict (the terminal block
       // below, unchanged, already records `orchestrator-fallback` for a
       // non-explicit target and starts the orchestrator).
-      let subsystem: SubsystemId | undefined;
+      let department: DepartmentId | undefined;
       let stage2: ClassificationTrace["stage2"];
-      if (target.kind === "subsystem") {
-        subsystem = target.id;
-        const resolved = await this.resolveSubsystemTargetOrNull(target, text, paths, output);
+      if (target.kind === "department") {
+        department = target.id;
+        const resolved = await this.resolveDepartmentTargetOrNull(target, text, paths, output);
         target = resolved?.target ?? ORCHESTRATOR_TARGET;
         stage2 = resolved?.stage2;
       }
@@ -1358,37 +1581,82 @@ export class TaskSchedulerService
         confidence: routing.confidence,
         reason: routing.reason,
         matchedTerms: routing.matchedTerms,
-        ...(subsystem ? { subsystem } : {}),
+        ...(department ? { department } : {}),
         ...(routing.leg ? { leg: routing.leg } : {}),
         ...(stage2 ? { stage2 } : {}),
       };
     }
     if (target.kind === "agent") {
-      const run = await this.agentRunner.start(
-        target.id,
-        text,
-        projectId ?? "",
-        paths,
-        title,
-        taskId,
-        matchedTerms,
-        undefined,
-        runAttachments,
-        toolGrants,
-      );
+      // D-017: acquire BEFORE spawning — never inside `AgentRunnerService` (a
+      // pipeline stage also spawns an agent run, and leases per-stage itself; a
+      // second acquire in the runner would double-lease). See
+      // `acquireEmployeeForDispatch` for the department-known/any-department/
+      // unleased ladder.
+      const lease = await this.acquireEmployeeForDispatch(target.id, classification?.department);
+      let run: AgentRun;
+      try {
+        // A conditional call (not a trailing `lease ? {...} : undefined` arg) so an
+        // unleased dispatch's call arity is byte-for-byte identical to before D-017
+        // — existing `toHaveBeenCalledWith` fixtures assert an exact argument list.
+        run = lease
+          ? await this.agentRunner.start(
+              target.id,
+              text,
+              projectId ?? "",
+              paths,
+              title,
+              taskId,
+              matchedTerms,
+              undefined,
+              runAttachments,
+              toolGrants,
+              { employeeId: lease.employeeId, employeeName: lease.employeeName },
+            )
+          : await this.agentRunner.start(
+              target.id,
+              text,
+              projectId ?? "",
+              paths,
+              title,
+              taskId,
+              matchedTerms,
+              undefined,
+              runAttachments,
+              toolGrants,
+            );
+      } catch (error) {
+        // The spawn itself failed (e.g. preflight) — the run never entered the
+        // registry, so it will never reach the terminal `onRunStatus` release path.
+        if (lease) this.employeeAllocator.release(lease);
+        throw error;
+      }
+      if (lease) this.employeeLeases.set(run.runId, lease);
       return { runRef: run.runId, target, classification };
     }
     if (target.kind === "pipeline") {
       // Task 8: attachments are intentionally NOT passed to a pipeline target in v1 —
       // the pipeline runner has no attachments seam yet (documented deferred gap).
-      const run = await this.pipelineRunner.start(
-        target.id,
-        taskId,
-        projectId,
-        matchedTerms,
-        undefined,
-        output,
-      );
+      // A conditional call (not a trailing `artifactRef ?? undefined` positional arg)
+      // keeps this byte-for-byte identical to the pre-ZB-05a call for every non-chain
+      // dispatch — existing `toHaveBeenCalledWith` fixtures assert an exact arg list.
+      const run = artifactRef
+        ? await this.pipelineRunner.start(
+            target.id,
+            taskId,
+            projectId,
+            matchedTerms,
+            undefined,
+            output,
+            artifactRef,
+          )
+        : await this.pipelineRunner.start(
+            target.id,
+            taskId,
+            projectId,
+            matchedTerms,
+            undefined,
+            output,
+          );
       return { runRef: run.pipelineRunId, target, classification };
     }
     if (target.kind === "goal") {
@@ -1435,6 +1703,36 @@ export class TaskSchedulerService
     return { runRef: run.runId, target, classification };
   }
 
+  /**
+   * D-017: the single-agent-run lease ladder. A department already known (the
+   * task's own classification traced a department verdict) leases from THAT
+   * department first; failing that — or when no department is known at all —
+   * falls back to any department that currently employs the position (picking a
+   * currently-FREE one when one exists, else the first, which then queues FIFO
+   * behind whoever holds it). Returns `undefined` only when the position has no
+   * employee anywhere — the D-017 unleashed fallback ("a described task is always
+   * executed"), never a park (that's pipelines only).
+   */
+  private async acquireEmployeeForDispatch(
+    agentId: string,
+    department: DepartmentId | undefined,
+  ): Promise<EmployeeLease | undefined> {
+    if (department) {
+      try {
+        return await this.employeeAllocator.acquire(department, agentId);
+      } catch (error) {
+        if (!(error instanceof NoEmployeeError)) throw error;
+        // Fall through — the task's own department has no one in this position;
+        // try any department that does.
+      }
+    }
+    const candidates = await this.employeesStore.listActiveByPositionAnyDepartment(agentId);
+    const busy = this.employeeAllocator.busy();
+    const pick = candidates.find((e) => !busy.has(e.id)) ?? candidates[0];
+    if (!pick) return undefined;
+    return this.employeeAllocator.acquire(pick.department, agentId);
+  }
+
   /** Persist an immediately-dispatched task + its activity (the create path). */
   private async persistDispatched(
     taskId: string,
@@ -1444,6 +1742,10 @@ export class TaskSchedulerService
     now: number,
   ): Promise<ScheduledTask> {
     await this.recordLedger(taskId, projectId, dispatched, now);
+    // ZB-04a / O-06 — the department this run's dispatched unit belongs to,
+    // stamped onto the task record at dispatch time (never earlier — see
+    // `ScheduledTaskSchema.department`).
+    const department = await this.ownerDepartmentOf(dispatched);
     const task = await this.storage.createDispatched(
       taskId,
       input,
@@ -1452,6 +1754,7 @@ export class TaskSchedulerService
       now,
       projectId,
       dispatched.classification,
+      department,
     );
     await this.recordDispatchedActivity(taskId, projectId, dispatched);
     return task;
@@ -1477,7 +1780,7 @@ export class TaskSchedulerService
   }
 
   /**
-   * F2c: async now — awaits the best-effort {@link ownerSubsystemOf} store read
+   * F2c: async now — awaits the best-effort {@link ownerDepartmentOf} store read
    * BEFORE calling `activity.record`, so the record call itself still lands
    * deterministically within the caller's own await chain (matching the old
    * synchronous-call guarantee) rather than racing off on an unawaited `.then()`.
@@ -1488,7 +1791,7 @@ export class TaskSchedulerService
     projectId: string | undefined,
     dispatched: { runRef: string; target: TaskTarget; classification?: ClassificationTrace },
   ): Promise<void> {
-    const ownerSubsystem = await this.ownerSubsystemOf(dispatched);
+    const department = await this.ownerDepartmentOf(dispatched);
     void this.activity.record({
       kind: "task-dispatched",
       summary: `dispatched to ${dispatched.target.kind} ${targetIdOf(dispatched.target)}`,
@@ -1498,32 +1801,32 @@ export class TaskSchedulerService
         status: dispatched.target.kind,
         ...(projectId ? { projectId } : {}),
         ...refForTarget(dispatched.target),
-        ...(ownerSubsystem ? { ownerSubsystem } : {}),
+        ...(department ? { department } : {}),
       },
     });
   }
 
   /**
-   * F2c — best-effort owning subsystem for a dispatched activity entry: the
-   * classification trace's own `subsystem` when stage-1 delegated (cheapest,
+   * F2c — best-effort owning department for a dispatched activity entry: the
+   * classification trace's own `department` when stage-1 delegated (cheapest,
    * already in hand); otherwise a guarded store read of the dispatched unit's
-   * own `ownerSubsystem` (a pipeline/agent target only — nothing else carries
+   * own `department` (a pipeline/agent target only — nothing else carries
    * one). Never throws — attribution only (Law 4), so a store failure just
    * omits the ref rather than blocking the activity record.
    */
-  private async ownerSubsystemOf(dispatched: {
+  private async ownerDepartmentOf(dispatched: {
     target: TaskTarget;
     classification?: ClassificationTrace;
-  }): Promise<SubsystemId | undefined> {
-    if (dispatched.classification?.subsystem) return dispatched.classification.subsystem;
+  }): Promise<DepartmentId | undefined> {
+    if (dispatched.classification?.department) return dispatched.classification.department;
     const { target } = dispatched;
     if (target.kind === "pipeline") {
       const pipelines = await this.pipelinesStore.list().catch((): Pipeline[] => []);
-      return pipelines.find((p) => p.id === target.id)?.ownerSubsystem;
+      return pipelines.find((p) => p.id === target.id)?.department;
     }
     if (target.kind === "agent") {
       const agents = await this.agentsStore.listActive().catch((): Agent[] => []);
-      return agents.find((a) => a.id === target.id)?.ownerSubsystem;
+      return agents.find((a) => a.id === target.id)?.department;
     }
     return undefined;
   }
@@ -1641,6 +1944,11 @@ export class TaskSchedulerService
           },
         });
         await this.recordRunCost(task.projectId, taskId, run.runId, "agent", run.costUsd);
+        // ZB-05a — a chain subtask that finished successfully hands its completion to
+        // `HandoffService`; an errored/interrupted one halts the chain silently here
+        // (no further hop is ever dispatched for it — Law 1: an ASK hop never
+        // auto-advances, and a red step must stop the chain, not push through it).
+        if (status === "done" && task.chain) await this.emitChainStepForTask(task);
       } catch (error) {
         // Task record gone or not yet persisted — the reconcile/sweep paths cover it.
         this.log.debug("task outcome write skipped", {
@@ -1775,12 +2083,12 @@ function targetIdOf(target: TaskTarget): string {
 }
 
 /**
- * A subsystem's mythic display name for {@link SubsystemEmptyRosterError}'s
- * message — falls back to the raw id (never happens with a valid `SubsystemId`,
- * since {@link SUBSYSTEMS} is the closed registry it comes from).
+ * A department's mythic display name for {@link DepartmentEmptyRosterError}'s
+ * message — falls back to the raw id (never happens with a valid `DepartmentId`,
+ * since {@link DEPARTMENTS} is the closed registry it comes from).
  */
-function subsystemDisplayName(id: SubsystemId): string {
-  return SUBSYSTEMS.find((s) => s.id === id)?.name ?? id;
+function departmentDisplayName(id: DepartmentId): string {
+  return DEPARTMENTS.find((s) => s.id === id)?.name ?? id;
 }
 
 /**
@@ -1795,7 +2103,7 @@ function pipelineTaskTarget(p: Pipeline): TaskTarget {
 /**
  * F2b — the agent counterpart of {@link pipelineTaskTarget}: project a stored
  * agent definition onto the routing-target shape for the 1-owned direct-dispatch
- * path (a subsystem that owns exactly one agent and no pipeline).
+ * path (a department that owns exactly one agent and no pipeline).
  */
 function agentTaskTarget(a: Agent): TaskTarget {
   return {

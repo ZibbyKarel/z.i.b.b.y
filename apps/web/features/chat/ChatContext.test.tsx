@@ -3,24 +3,30 @@ import { act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders, screen } from "../../test/render";
 
-const push = vi.fn();
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push }),
-  usePathname: () => "/archiv",
-}));
-
 import { ChatProvider, useChat } from "./ChatContext";
 
-// A minimal harness exposing every store action + the conversation state as text,
-// so tests can drive navigation and assert on the (route-agnostic) state that
-// survives it, without needing a real Next.js router or the `/chat` route itself.
+// A minimal harness exposing every store action + the conversation/dock state as
+// text, so tests can assert on the state the shell-global COO dock reads.
 function Harness() {
-  const { conversationId, messages, open, newChat } = useChat();
+  const { conversationId, messages, open, newChat, dockOpen, dockTarget, setDockTarget } =
+    useChat();
   return (
     <div>
-      <button data-testid="open" onClick={open} type="button">
+      <button data-testid="open" onClick={() => open()} type="button">
         open
       </button>
+      <button
+        data-testid="open-dept"
+        onClick={() => open({ kind: "department", id: "dev", name: "Development" })}
+        type="button"
+      >
+        open dept
+      </button>
+      <button data-testid="clear-target" onClick={() => setDockTarget(null)} type="button">
+        clear
+      </button>
+      <span data-testid="dock-open">{String(dockOpen)}</span>
+      <span data-testid="dock-target">{dockTarget ? `${dockTarget.kind}` : "coo"}</span>
       <button data-testid="new-chat" onClick={newChat} type="button">
         new chat
       </button>
@@ -38,7 +44,6 @@ function fireKey(init: KeyboardEventInit) {
 
 describe("ChatProvider", () => {
   beforeEach(() => {
-    push.mockClear();
     window.localStorage.clear();
   });
 
@@ -51,7 +56,7 @@ describe("ChatProvider", () => {
     expect(screen.getByTestId("conversation-id")).toHaveTextContent("none");
   });
 
-  it("open() mints a conversation and navigates to /chat", async () => {
+  it("open() mints a conversation and expands the dock (no navigation — ZB-12)", async () => {
     const user = userEvent.setup();
     renderWithProviders(
       <ChatProvider>
@@ -61,8 +66,25 @@ describe("ChatProvider", () => {
 
     await user.click(screen.getByTestId("open"));
 
-    expect(push).toHaveBeenCalledWith("/chat");
+    expect(screen.getByTestId("dock-open")).toHaveTextContent("true");
+    expect(screen.getByTestId("dock-target")).toHaveTextContent("coo");
     expect(screen.getByTestId("conversation-id")).not.toHaveTextContent("none");
+  });
+
+  it("open(target) scopes the dock to an explicit department target (O-20), clearable back to the COO", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <ChatProvider>
+        <Harness />
+      </ChatProvider>,
+    );
+
+    await user.click(screen.getByTestId("open-dept"));
+    expect(screen.getByTestId("dock-open")).toHaveTextContent("true");
+    expect(screen.getByTestId("dock-target")).toHaveTextContent("department");
+
+    await user.click(screen.getByTestId("clear-target"));
+    expect(screen.getByTestId("dock-target")).toHaveTextContent("coo");
   });
 
   it("open() twice keeps the same conversation id (no re-mint on an existing thread)", async () => {
@@ -96,7 +118,7 @@ describe("ChatProvider", () => {
     expect(screen.getByTestId("message-count")).toHaveTextContent("0");
   });
 
-  it("⌘/Ctrl+J navigates to /chat from elsewhere in the dashboard", () => {
+  it("⌘/Ctrl+J toggles the dock and mints a conversation", () => {
     renderWithProviders(
       <ChatProvider>
         <Harness />
@@ -104,18 +126,11 @@ describe("ChatProvider", () => {
     );
 
     fireKey({ key: "j", metaKey: true });
-    expect(push).toHaveBeenCalledWith("/chat");
-  });
+    expect(screen.getByTestId("dock-open")).toHaveTextContent("true");
+    expect(screen.getByTestId("conversation-id")).not.toHaveTextContent("none");
 
-  it("⌘/Ctrl+J always opens /chat, even when already there (F9/O7 — no close/toggle-away affordance)", () => {
-    renderWithProviders(
-      <ChatProvider>
-        <Harness />
-      </ChatProvider>,
-    );
-
-    fireKey({ key: "j", metaKey: true });
-    expect(push).toHaveBeenCalledWith("/chat");
+    fireKey({ key: "j", ctrlKey: true });
+    expect(screen.getByTestId("dock-open")).toHaveTextContent("false");
   });
 
   it("ignores the key without the modifier", () => {
@@ -125,7 +140,7 @@ describe("ChatProvider", () => {
       </ChatProvider>,
     );
     fireKey({ key: "j" });
-    expect(push).not.toHaveBeenCalled();
+    expect(screen.getByTestId("dock-open")).toHaveTextContent("false");
   });
 
   it("keeps the transcript across the chat surface unmounting and remounting (route navigation)", async () => {

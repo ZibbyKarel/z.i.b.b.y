@@ -1,7 +1,15 @@
 "use client";
 
 import type { HandoffSignalKind } from "@zibby/contracts";
-import { Button, Container, Stack, Typography } from "@zibby/design-system";
+import {
+  Breadcrumb,
+  Button,
+  Container,
+  Panel,
+  Stack,
+  type SubNavLinkComponent,
+  Typography,
+} from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -9,16 +17,14 @@ import { useRouter } from "next/navigation";
 import { type ReactNode, useState } from "react";
 import { ConfirmDeleteDialog } from "../../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import { EmptyState } from "../../../components/EmptyState/EmptyState";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
-import { ImmersivePage } from "../../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../../components/PageContainer/PageContainer";
 import { toastBus } from "../../../components/Toaster/toastBus";
 import { useDeleteSignalKindMutation } from "../../handoff/mutations";
 import { useSignalKindsQuery } from "../../handoff/queries";
 import { signalKindDescription, signalKindLabel } from "../../handoff/signalKinds";
-import { useSubsystemsQuery } from "../../subsystems/queries";
+import { useDepartmentsQuery } from "../../departments/queries";
 import { SignalCreateForm } from "./SignalCreateForm";
 import { SignalStatusBadge } from "./SignalStatusBadge";
 
@@ -58,9 +64,13 @@ export function SignalDetailScreen({ signalId }: SignalDetailScreenProps) {
 function SignalNotFound() {
   const t = useTranslations("signals");
   return (
-    <ImmersivePage backHref="/signals" title={t("detail.notFoundTitle")}>
-      <Container padding={["300", "350"]}>
-        <PageContainer>
+    <Container padding={["300", "350"]}>
+      <PageContainer>
+        <Stack gap="250">
+          <Breadcrumb
+            items={[{ label: t("title"), href: "/signals" }, { label: t("detail.notFoundTitle") }]}
+            linkComponent={Link as SubNavLinkComponent}
+          />
           <div data-testid={SignalDetailScreenTestId.NotFound}>
             <EmptyState
               description={t("detail.notFoundDescription")}
@@ -68,9 +78,9 @@ function SignalNotFound() {
               title={t("detail.notFoundTitle")}
             />
           </div>
-        </PageContainer>
-      </Container>
-    </ImmersivePage>
+        </Stack>
+      </PageContainer>
+    </Container>
   );
 }
 
@@ -89,58 +99,66 @@ function FieldRow({ label, value }: { label: string; value: ReactNode }) {
 
 function SignalDetail({ kind }: { kind: HandoffSignalKind }) {
   const t = useTranslations("signals");
-  const th = useTranslations("subsystems.handoff");
+  const th = useTranslations("departments.handoff");
   const tk = useTranslations();
   const router = useRouter();
-  const { data: subsystems = [] } = useSubsystemsQuery();
+  const { data: departments = [] } = useDepartmentsQuery();
   const deleteMutation = useDeleteSignalKindMutation();
 
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const label = signalKindLabel(kind, th);
-  const producerName = subsystems.find((s) => s.id === kind.from)?.name ?? kind.from;
+  const producerName = departments.find((s) => s.id === kind.from)?.name ?? kind.from;
   const isOperatorKind = !kind.system;
 
   return (
-    <ImmersivePage
-      actions={
-        isOperatorKind && !editing ? (
-          <>
-            <Button
-              data-testid={SignalDetailScreenTestId.EditAction}
-              icon="edit"
-              intent="ghost"
-              onClick={() => setEditing(true)}
-              size="sm"
-            >
-              {t("detail.editAction")}
-            </Button>
-            <Button
-              data-testid={SignalDetailScreenTestId.DeleteAction}
-              icon="trash"
-              intent="danger"
-              onClick={() => setDeleting(true)}
-              size="sm"
-            >
-              {t("detail.deleteAction")}
-            </Button>
-          </>
-        ) : undefined
-      }
-      backHref="/signals"
-      subtitle={kind.id}
-      title={label}
-    >
-      <Container padding={["300", "350"]}>
-        <PageContainer>
+    <Container padding={["300", "350"]}>
+      <PageContainer>
+        <Stack gap="250">
+          <Breadcrumb
+            items={[{ label: t("title"), href: "/signals" }, { label }]}
+            linkComponent={Link as SubNavLinkComponent}
+          />
+
+          <Stack wrap align="center" direction="row" gap="150" justify="between">
+            <Stack gap="25">
+              <Typography type="h1">{label}</Typography>
+              <Typography mono size="xs" type="note" variant="tertiary">
+                {kind.id}
+              </Typography>
+            </Stack>
+            {isOperatorKind && !editing && (
+              <Stack align="center" direction="row" gap="100">
+                <Button
+                  data-testid={SignalDetailScreenTestId.EditAction}
+                  icon="edit"
+                  intent="ghost"
+                  onClick={() => setEditing(true)}
+                  size="sm"
+                >
+                  {t("detail.editAction")}
+                </Button>
+                <Button
+                  data-testid={SignalDetailScreenTestId.DeleteAction}
+                  icon="trash"
+                  intent="danger"
+                  onClick={() => setDeleting(true)}
+                  size="sm"
+                >
+                  {t("detail.deleteAction")}
+                </Button>
+              </Stack>
+            )}
+          </Stack>
+
           {editing ? (
             <div data-testid={SignalDetailScreenTestId.EditForm}>
               <SignalCreateForm initial={kind} onDone={() => setEditing(false)} />
             </div>
           ) : (
             <Stack gap="250">
-              <HudPanel surface="glass" title={t("detail.panelTitle")}>
+              <Panel header={t("detail.panelTitle")} padding="200">
                 <Stack gap="150">
                   <FieldRow
                     label={t("detail.slug")}
@@ -178,16 +196,16 @@ function SignalDetail({ kind }: { kind: HandoffSignalKind }) {
                     </div>
                   )}
                 </Stack>
-              </HudPanel>
+              </Panel>
 
-              <HudPanel surface="glass" title={t("detail.descriptionTitle")}>
+              <Panel header={t("detail.descriptionTitle")} padding="200">
                 <Typography leading="relaxed" size="sm" type="text" variant="secondary">
                   {signalKindDescription(kind, th)}
                 </Typography>
-              </HudPanel>
+              </Panel>
 
               {kind.buildTaskId && (
-                <HudPanel surface="glass" title={t("detail.buildTaskTitle")}>
+                <Panel header={t("detail.buildTaskTitle")} padding="200">
                   {/* Typed routes can't infer this template — same `as Route` idiom
                       `ArtefaktyTab`'s run link uses. `/archiv` accepts a task id
                       through `?run=` just as it does a run ref (see
@@ -200,12 +218,12 @@ function SignalDetail({ kind }: { kind: HandoffSignalKind }) {
                       {t("detail.buildTaskLink")}
                     </Typography>
                   </Link>
-                </HudPanel>
+                </Panel>
               )}
             </Stack>
           )}
-        </PageContainer>
-      </Container>
+        </Stack>
+      </PageContainer>
 
       {deleting && (
         <ConfirmDeleteDialog
@@ -228,6 +246,6 @@ function SignalDetail({ kind }: { kind: HandoffSignalKind }) {
           title={t("detail.deleteTitle")}
         />
       )}
-    </ImmersivePage>
+    </Container>
   );
 }

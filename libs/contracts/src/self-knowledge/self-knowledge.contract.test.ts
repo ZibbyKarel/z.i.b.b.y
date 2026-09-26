@@ -10,7 +10,7 @@ describe("selfKnowledgeContract", () => {
 });
 
 describe("SelfKnowledgeSchema", () => {
-  const sections = { agents: 1, pipelines: 2, gateRules: 3, channels: 4, subsystems: 5 };
+  const sections = { agents: 1, pipelines: 2, gateRules: 3, channels: 4, departments: 5 };
 
   it("accepts a well-formed payload", () => {
     const parsed = SelfKnowledgeSchema.safeParse({
@@ -81,7 +81,7 @@ describe("SelfKnowledgeSchema", () => {
     expect(parsed.success).toBe(false);
   });
 
-  it("carries a subsystems count (Phase 105)", () => {
+  it("carries a departments count (Phase 105)", () => {
     const parsed = SelfKnowledgeSchema.safeParse({
       markdown: "# Self-Knowledge\n",
       generatedAt: new Date().toISOString(),
@@ -89,10 +89,10 @@ describe("SelfKnowledgeSchema", () => {
       sections,
     });
     expect(parsed.success).toBe(true);
-    if (parsed.success) expect(parsed.data.sections.subsystems).toBe(5);
+    if (parsed.success) expect(parsed.data.sections.departments).toBe(5);
   });
 
-  it("rejects a missing or negative subsystems count", () => {
+  it("rejects a missing or negative departments count", () => {
     const { agents, pipelines, gateRules, channels } = sections;
     expect(
       SelfKnowledgeSchema.safeParse({
@@ -107,7 +107,7 @@ describe("SelfKnowledgeSchema", () => {
         markdown: "x",
         generatedAt: new Date().toISOString(),
         drift: false,
-        sections: { ...sections, subsystems: -1 },
+        sections: { ...sections, departments: -1 },
       }).success,
     ).toBe(false);
   });

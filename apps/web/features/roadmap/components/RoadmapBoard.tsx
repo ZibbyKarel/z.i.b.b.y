@@ -54,10 +54,10 @@ export interface RoadmapBoardProps {
 const COLUMN_MAX_HEIGHT = "28rem";
 
 /** The header dot's colour in all-tasks mode (no epic to hash) — the same
- * neutral fallback `ArchiveRow` uses for a subsystem-less row. */
+ * neutral fallback `ArchiveRow` uses for a department-less row. */
 const NEUTRAL_DOT_HUE = "var(--color-foreground-faint)";
 
-/** Small solid hue dot — mirrors `SubsystemDrawer`'s `stateDotStyle` precedent
+/** Small solid hue dot — mirrors `DepartmentDrawer`'s `stateDotStyle` precedent
  * (a `Container` + computed inline style is the sanctioned passthrough for a
  * genuinely dynamic colour with no DS prop for it; see CLAUDE.md). */
 function hueDotStyle(hue: string): CSSProperties {

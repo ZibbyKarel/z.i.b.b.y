@@ -18,4 +18,15 @@ describe("Pressable", () => {
     await userEvent.click(screen.getByTestId(PressableTestId.Root));
     expect(onClick).toHaveBeenCalledOnce();
   });
+
+  it("tints the pill with the given chipTone", () => {
+    render(
+      <Pressable aria-expanded chipTone="run">
+        3
+      </Pressable>,
+    );
+    const el = screen.getByTestId(PressableTestId.Root);
+    expect(el.className).toContain("rounded-full");
+    expect(el.className).toContain("aria-expanded:bg-run/15");
+  });
 });

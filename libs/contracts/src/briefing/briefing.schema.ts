@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { IsoDateTimeSchema } from "../common.schema";
 import { ActivityKindSchema, ActivityRefsSchema } from "../activity/activity.schema";
-import { SubsystemIdSchema, SubsystemStateSchema } from "../subsystems/subsystem.schema";
+import { DepartmentIdSchema, DepartmentStateSchema } from "../departments/department.schema";
 
 /**
  * One thing that needs the operator (Law 5 "surface and wait"): a pending approval,
@@ -67,23 +67,23 @@ export const BriefingWatchItemSchema = z.object({
 export type BriefingWatchItem = z.infer<typeof BriefingWatchItemSchema>;
 
 /**
- * NS2 F3b — one subsystem's line in the briefing ("Forge: 2 PRs čekají · Puls:
+ * NS2 F3b — one department's line in the briefing ("Dev: 2 PRs čekají · Ops:
  * CI zelené · Ledger: 62 % týdenního okna"): its live state + outstanding Tier-2
  * (act-then-report) and Tier-3 (surface-and-wait) counts, plus an optional
- * free-text `note` for the subsystems whose mandate has a scalar headline
- * (Ledger: the weekly usage window %; Puls: CI health). Beacon needs no special
+ * free-text `note` for the departments whose mandate has a scalar headline
+ * (Ledger: the weekly usage window %; Ops: CI health). Incident needs no special
  * shape — its mandate (Tier-3 escalation) is honored by its `tier3Count`.
  */
-export const BriefingSubsystemLineSchema = z.object({
-  subsystem: SubsystemIdSchema,
+export const BriefingDepartmentLineSchema = z.object({
+  department: DepartmentIdSchema,
   name: z.string().min(1),
-  state: SubsystemStateSchema,
+  state: DepartmentStateSchema,
   tier2Count: z.number().int().nonnegative(),
   tier3Count: z.number().int().nonnegative(),
   errorCount: z.number().int().nonnegative(),
   note: z.string().optional(),
 });
-export type BriefingSubsystemLine = z.infer<typeof BriefingSubsystemLineSchema>;
+export type BriefingDepartmentLine = z.infer<typeof BriefingDepartmentLineSchema>;
 
 /** The headline tallies — the deterministic spine the butler-voice headline summarises. */
 export const BriefingCountsSchema = z.object({
@@ -121,25 +121,25 @@ export const BriefingSchema = z.object({
   automationGaps: z.array(z.string()).max(50).optional(),
   /** Weekly "3 app ideas" — interests × trends prototype pitches (M6). */
   appIdeas: z.array(z.string()).max(50).optional(),
-  /** NS2 F3b — per-subsystem grouping lines. Optional and strictly additive: old
-   * briefings (and a briefing whose subsystem read failed) omit it entirely. */
-  subsystems: z.array(BriefingSubsystemLineSchema).optional(),
+  /** NS2 F3b — per-department grouping lines. Optional and strictly additive: old
+   * briefings (and a briefing whose department read failed) omit it entirely. */
+  departments: z.array(BriefingDepartmentLineSchema).optional(),
   /** NS2 F4c — true when the self-knowledge vault note has drifted from a fresh
    * compose (the nightly refresh may have failed). Optional and strictly
    * additive: absent on every briefing predating this check. */
   selfKnowledgeDrift: z.boolean().optional(),
-  /** NS2 F5a — Sentinel's open security findings (CVE/secret) for the briefing. */
+  /** NS2 F5a — Security's open security findings (CVE/secret) for the briefing. */
   securityFindings: z.array(z.string()).max(50).optional(),
-  /** NS2 F5b — Maestro's merge-queue summary lines for the briefing. */
+  /** NS2 F5b — Release's merge-queue summary lines for the briefing. */
   mergeQueue: z.array(z.string()).max(50).optional(),
-  /** NS2 F5c — Loom's new code-quality findings (god-nodes, cycles) for the briefing. */
+  /** NS2 F5c — Arch's new code-quality findings (god-nodes, cycles) for the briefing. */
   qualityFindings: z.array(z.string()).max(50).optional(),
   /** NS2 F6c — heartbeat watchers currently probing `stale` (fail-open: a stale
    * watcher is a briefing line, never a red /health). Absent when none are stale. */
   staleWatchers: z.array(z.string()).max(20).optional(),
   /** NS2 F7b-2 — merged-work celebration + post-merge CI outcomes per project. */
   mergedRecently: z.array(z.string()).max(50).optional(),
-  /** NS2 F8c — today's personal calendar events (from the Puls-owned calendar reads). */
+  /** NS2 F8c — today's personal calendar events (from the Ops-owned calendar reads). */
   personalAgenda: z.array(z.string()).max(50).optional(),
   /** NS2 F8c — open personal reminders parsed from the `personal-reminders` vault note. */
   reminders: z.array(z.string()).max(50).optional(),

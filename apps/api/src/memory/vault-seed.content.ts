@@ -1,5 +1,5 @@
-import type { CreateNoteInput, Subsystem } from "@zibby/contracts";
-import { subsystemShelfId } from "./subsystem-shelf";
+import type { CreateNoteInput, Department } from "@zibby/contracts";
+import { departmentShelfId } from "./department-shelf";
 
 /** A short starter mission note for a genuinely fresh install (empty vault). */
 const NORTH_STAR_STUB = `# North Star
@@ -10,9 +10,9 @@ mission note; replace it with your own North Star as ZIBBY grows with you.
 Files are the source of truth — the UI is a view.
 `;
 
-/** The root MOC body — a `Subsystémy` section linking every shelf (F4a id scheme). */
-function zibbyIndexBody(subsystems: readonly Subsystem[]): string {
-  const rows = subsystems.map((s) => `- [[${subsystemShelfId(s.id)}]] — ${s.mandate}`).join("\n");
+/** The root MOC body — a `Oddělení` section linking every shelf (F4a id scheme). */
+function zibbyIndexBody(departments: readonly Department[]): string {
+  const rows = departments.map((s) => `- [[${departmentShelfId(s.id)}]] — ${s.mandate}`).join("\n");
   return `Map of content for the ZIBBY vault — the entry point for retrieval.
 Index-first, not vector search: descriptive notes joined by \`[[wiki-links]]\`.
 
@@ -20,7 +20,7 @@ Index-first, not vector search: descriptive notes joined by \`[[wiki-links]]\`.
 
 - [[north-star]] — the operator's mission and the non-negotiable laws
 
-## Subsystémy
+## Oddělení
 
 ${rows}
 
@@ -30,10 +30,10 @@ _Project memory notes accumulate here as runs record what they learned._
 `;
 }
 
-/** A subsystem shelf body — content generated straight from the registry (single
+/** A department shelf body — content generated straight from the registry (single
  * source of truth, no duplicated prose). */
-function shelfBody(subsystem: Subsystem): string {
-  return `${subsystem.name} — ${subsystem.tagline}. ${subsystem.mandate}
+function shelfBody(department: Department): string {
+  return `${department.name} — ${department.tagline}. ${department.mandate}
 
 ## Poznatky
 
@@ -43,11 +43,11 @@ function shelfBody(subsystem: Subsystem): string {
 
 /**
  * The fresh-install seed set (F4c): the North Star stub, the root MOC (owned by
- * Codex, linking every shelf), and one flat shelf per registry subsystem
- * (`subsystem-<id>-moc`, F4a's id scheme). Pure — no I/O, easy to test; the
+ * Knowledge, linking every shelf), and one flat shelf per registry department
+ * (`department-<id>-moc`, F4a's id scheme). Pure — no I/O, easy to test; the
  * caller (`VaultSeedService`) decides WHEN to write these (empty vault only).
  */
-export function composeSeedNotes(subsystems: readonly Subsystem[]): CreateNoteInput[] {
+export function composeSeedNotes(departments: readonly Department[]): CreateNoteInput[] {
   const northStar: CreateNoteInput = {
     id: "north-star",
     tier: "memory",
@@ -59,17 +59,17 @@ export function composeSeedNotes(subsystems: readonly Subsystem[]): CreateNoteIn
     id: "zibby-index",
     tier: "knowledge",
     title: "ZIBBY Index",
-    body: zibbyIndexBody(subsystems),
-    frontmatter: { subsystem: "codex" },
+    body: zibbyIndexBody(departments),
+    frontmatter: { department: "knw" },
   };
-  const shelves: CreateNoteInput[] = subsystems.map((subsystem) => ({
-    id: subsystemShelfId(subsystem.id),
+  const shelves: CreateNoteInput[] = departments.map((department) => ({
+    id: departmentShelfId(department.id),
     tier: "knowledge",
-    title: `${subsystem.name} — polička`,
-    body: shelfBody(subsystem),
+    title: `${department.name} — polička`,
+    body: shelfBody(department),
     type: "fact",
-    tags: ["subsystem", subsystem.id, "moc"],
-    frontmatter: { subsystem: subsystem.id },
+    tags: ["department", department.id, "moc"],
+    frontmatter: { department: department.id },
   }));
   return [northStar, zibbyIndex, ...shelves];
 }

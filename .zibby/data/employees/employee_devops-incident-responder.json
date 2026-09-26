@@ -1,0 +1,8 @@
+{
+  "id": "employee_devops-incident-responder",
+  "name": "Chris",
+  "agentId": "devops-incident-responder",
+  "department": "ops",
+  "status": "active",
+  "hiredAt": "2026-09-25T00:32:32.986Z"
+}

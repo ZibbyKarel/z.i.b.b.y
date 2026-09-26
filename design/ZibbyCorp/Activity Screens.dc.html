@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="padding:24px 28px;display:flex;flex-direction:column;gap:22px;color:var(--ink)">
+
+<sc-if value="{{ isLog }}" hint-placeholder-val="{{ true }}">
+  <div data-screen-label="Live log" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">ACTIVITY — LIVE LOG</span><h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">Event stream</h1><span style="margin-left:auto;display:flex;align-items:center;gap:8px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--ink2)">{{ streamDot }}{{ streamU }}</span></div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
+      <sc-for list="{{ logFilters }}" as="f" hint-placeholder-count="3">
+        <div style="display:flex;flex-direction:column;gap:6px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">{{ f.label }}</span><select value="{{ f.value }}" onChange="{{ f.onChange }}" style="height:32px;min-width:180px;border:1px solid var(--line2);background:var(--bg);padding:0 8px;font-size:13px;border-radius:0;outline:none"><sc-for list="{{ f.opts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select></div>
+      </sc-for>
+      <button onClick="{{ togglePause }}" style="all:unset;cursor:pointer;height:32px;box-sizing:border-box;display:flex;align-items:center;padding:0 14px;border:1px solid var(--line2);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em">{{ pauseU }}</button>
+      <button onClick="{{ clearF }}" style="all:unset;cursor:pointer;height:32px;box-sizing:border-box;display:flex;align-items:center;padding:0 14px;border:1px solid var(--line2);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink2)">CLEAR FILTERS</button>
+    </div>
+    <div style="border:1px solid var(--ink);background:var(--panel)">
+      <div style="display:grid;grid-template-columns:78px 44px 110px 100px minmax(0,1fr);gap:12px;padding:9px 16px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>TIME</span><span>DEPT</span><span>AGENT</span><span>SUBTASK</span><span>EVENT</span></div>
+      <div style="padding:6px 0;background:var(--bg)">
+        <sc-for list="{{ lines }}" as="l" hint-placeholder-count="14">
+          <div style="display:grid;grid-template-columns:78px 44px 110px 100px minmax(0,1fr);gap:12px;align-items:center;padding:4px 16px;font-family:'Geist Mono',monospace;font-size:11px;line-height:1.5">
+            <span style="color:var(--ink3)">{{ l.t }}</span><span style="color:var(--ink2)">{{ l.dept }}</span><span style="display:flex;align-items:center;gap:6px">{{ l.dot }}{{ l.agent }}</span><span style="color:var(--ink2)">{{ l.sub }}</span><span style="color:{{ l.color }}">{{ l.text }}{{ l.caret }}</span>
+          </div>
+        </sc-for>
+        <sc-if value="{{ logEmpty }}"><div style="padding:14px 16px;font-size:13px;color:var(--ink2)">Nothing matches yet. New events appear as they stream in.</div></sc-if>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isRuns }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Runs" style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px;align-items:start">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:16px"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">ACTIVITY — RUNS</span><h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">Every run</h1><span style="margin-left:auto;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--ink2)">{{ runsMeta }}</span></div>
+      <div style="display:flex;border:1px solid var(--line2);align-self:flex-start;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em"><sc-for list="{{ runFilters }}" as="o"><button onClick="{{ o.onClick }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:6px;padding:7px 10px;background:{{ o.bg }};color:{{ o.ink }}">{{ o.dot }}{{ o.label }}</button></sc-for></div>
+      <div style="border:1px solid var(--line);background:var(--panel)">
+        <div style="display:grid;grid-template-columns:84px 110px 100px 110px 60px 50px 60px;gap:12px;padding:9px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>RUN</span><span>AGENT</span><span>SUBTASK</span><span>STATE</span><span>TIME</span><span>RETRY</span><span style="text-align:right">COST</span></div>
+        <sc-for list="{{ runs }}" as="r" hint-placeholder-count="10">
+          <button onClick="{{ r.onClick }}" style="all:unset;cursor:pointer;box-sizing:border-box;width:100%;display:grid;grid-template-columns:84px 110px 100px 110px 60px 50px 60px;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px;background:{{ r.bg }}" style-hover="background:var(--panel2)">
+            <span style="color:var(--ink2)">{{ r.id }}</span><span>{{ r.agentU }}</span><span style="color:var(--ink2)">{{ r.sub }}</span><span style="display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.1em">{{ r.dot }}{{ r.stateU }}</span><span style="color:var(--ink2)">{{ r.dur }}</span><span style="color:var(--ink2)">{{ r.retryStr }}</span><span style="text-align:right">{{ r.costStr }}</span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+    <div style="border:1px solid var(--ink);background:var(--panel)">
+      <div style="display:flex;align-items:center;gap:14px;padding:13px 18px;border-bottom:1px solid var(--line)"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">{{ rn.id }}</span><span style="font-size:18px;font-weight:500">{{ rn.agentName }}</span><span style="margin-left:auto;display:flex;align-items:center;gap:7px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">{{ rn.dot }}{{ rn.stateU }}</span></div>
+      <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+        <span style="font-size:14px;color:var(--ink2)">{{ rn.context }}</span>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line)"><sc-for list="{{ rn.metrics }}" as="m" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:4px;padding:12px 0"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ m.k }}</span><span style="font-size:20px;font-weight:500;font-variant-numeric:tabular-nums">{{ m.v }}</span></div></sc-for></div>
+        <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">EVENTS</span>
+        <div style="display:flex;flex-direction:column">
+          <sc-for list="{{ rn.events }}" as="e" hint-placeholder-count="3"><div style="display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;padding:9px 0;border-top:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px"><span style="color:var(--ink3)">{{ e.n }}</span><span style="color:{{ e.color }}">{{ e.t }}</span></div></sc-for>
+        </div>
+        <div style="display:flex;gap:8px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em"><button onClick="{{ rn.onAgent }}" style="all:unset;cursor:pointer;flex:1;text-align:center;border:1px solid var(--line2);padding:10px">AGENT →</button><button onClick="{{ rn.onTask }}" style="all:unset;cursor:pointer;flex:1;text-align:center;background:var(--ink);color:var(--panel);padding:11px">TASK →</button></div>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isInbox }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Inbox" style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:20px;align-items:start">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:16px"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">ACTIVITY — INBOX</span><h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">Inbound</h1><span style="font-size:14px;color:var(--ink2)">Triaged by Monitoring &amp; Ops</span></div>
+      <div style="border:1px solid var(--line);background:var(--panel)">
+        <sc-for list="{{ inbox }}" as="m" hint-placeholder-count="7">
+          <button onClick="{{ m.onClick }}" style="all:unset;cursor:pointer;box-sizing:border-box;width:100%;display:grid;grid-template-columns:70px minmax(0,1fr) 96px;gap:12px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--line);background:{{ m.bg }}" style-hover="background:var(--panel2)">
+            <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;border:1px solid var(--line2);padding:3px 6px;text-align:center">{{ m.src }}</span>
+            <div style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.title }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--ink3)">{{ m.from }} · {{ m.when }}</span></div>
+            <span style="display:flex;align-items:center;justify-content:flex-end;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em">{{ m.dot }}{{ m.statusU }}</span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+    <div style="border:1px solid var(--ink);background:var(--panel)">
+      <div style="display:flex;align-items:center;gap:14px;padding:13px 18px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)"><span>{{ im.id }}</span><span>{{ im.src }}</span><span style="margin-left:auto">{{ im.when }}</span></div>
+      <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+        <span style="font-size:20px;font-weight:500;line-height:1.25;text-wrap:pretty">{{ im.title }}</span>
+        <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">FROM · {{ im.from }}</span>
+        <span style="font-size:14px;line-height:1.5;color:var(--ink2);text-wrap:pretty">{{ im.body }}</span>
+        <div style="border:1px solid var(--line2);background:var(--bg);padding:12px;display:flex;flex-direction:column;gap:6px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">OPS TRIAGE</span><span style="font-size:14px">{{ im.triage }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)">{{ im.routeStr }}</span></div>
+        <sc-if value="{{ im.pending }}"><div style="display:flex;gap:8px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em"><button onClick="{{ im.onDismiss }}" style="all:unset;cursor:pointer;flex:1;text-align:center;border:1px solid var(--line2);padding:10px">DISMISS</button><button onClick="{{ im.onCreate }}" style="all:unset;cursor:pointer;flex:2;text-align:center;background:var(--ink);color:var(--panel);padding:11px">CREATE TASK</button></div></sc-if>
+        <sc-if value="{{ im.hasTask }}"><button onClick="{{ im.onTask }}" style="all:unset;cursor:pointer;text-align:center;border:1px solid var(--ink);padding:10px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em">OPEN {{ im.task }} →</button></sc-if>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isBrief }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Briefings" style="display:grid;grid-template-columns:260px minmax(0,1fr);gap:24px;align-items:start">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">BRIEFINGS</span>
+      <sc-for list="{{ briefs }}" as="b" hint-placeholder-count="3"><button onClick="{{ b.onClick }}" style="all:unset;cursor:pointer;box-sizing:border-box;display:flex;flex-direction:column;gap:4px;padding:10px 12px;border:1px solid {{ b.line }};background:{{ b.bg }}"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ b.date }}</span><span style="font-size:14px">{{ b.title }}</span></button></sc-for>
+    </div>
+    <article style="position:relative;max-width:760px;border:1px solid var(--line2);background:var(--panel);padding:28px 32px;display:flex;flex-direction:column;gap:22px">
+      <div style="position:absolute;top:-1px;left:-1px;width:10px;height:10px;border-top:1px solid var(--ink);border-left:1px solid var(--ink)"></div>
+      <div style="position:absolute;bottom:-1px;right:-1px;width:10px;height:10px;border-bottom:1px solid var(--ink);border-right:1px solid var(--ink)"></div>
+      <div style="display:flex;align-items:center;gap:12px">{{ cooGlyph }}<span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">DAILY STANDUP · {{ br.date }} · FROM ZIBBY</span><button onClick="{{ readAloud }}" style="all:unset;cursor:pointer;margin-left:auto;border:1px solid var(--line2);padding:6px 10px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">{{ readU }}</button></div>
+      <h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">{{ br.title }}</h1>
+      <p style="margin:0;font-size:18px;line-height:1.5;text-wrap:pretty">{{ br.lead }}</p>
+      <sc-for list="{{ br.sections }}" as="s" hint-placeholder-count="4">
+        <div style="display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px;padding-top:14px;border-top:1px solid var(--line)"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3);padding-top:3px">{{ s.h }}</span><div style="display:flex;flex-direction:column;gap:8px"><sc-for list="{{ s.items }}" as="i"><span style="font-size:14px;line-height:1.5;text-wrap:pretty">{{ i }}</span></sc-for></div></div>
+      </sc-for>
+    </article>
+  </div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;route&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;go&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(r:string)=&gt;void&quot;},&quot;tick&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;number&quot;}}">
+class Component extends DCLogic {
+  state = { lines: [], paused: false, fDept: '', fAgent: '', fTask: null, runF: 'all', run: 'RUN-8812', inbox: 'IN-309', brief: 0, reading: false };
+  VERBS = { working: ['tool call → ok', 'wrote 3 files', 'ci.run → 12 passed', 'step progress +1', 'read 14 files'], thinking: ['reasoning over context…', 'planning next edit', 'weighing 3 options'], blocked: ['waiting at gate'], error: ['retry scheduled'], done: ['artifact posted to gate'] };
+  componentDidMount() {
+    const seed = () => { const Z = window.ZC; if (!Z) return false; const L = []; Z.runs.slice(0, 10).forEach((r, i) => r.events.forEach((e, j) => L.push(this.mk(r.agent, r.sub, e, '14:' + (20 + i) + ':' + String(10 + j * 13).padStart(2, '0'))))); this.setState({ lines: L.reverse() }); return true; };
+    if (!seed()) this.p = setInterval(() => { if (seed()) clearInterval(this.p); }, 60);
+    this.t = setInterval(() => { const Z = window.ZC; if (!Z || this.state.paused) return; const live = Z.agents.filter(a => a.state !== 'idle');
+      const a = live[Math.floor(Math.random() * live.length)]; const vs = this.VERBS[a.state] || ['heartbeat']; const run = Z.runs.find(r => r.agent === a.id);
+      this.setState(s => ({ lines: [this.mk(a.id, run ? run.sub : (a.task ? a.task + '.1' : '—'), vs[Math.floor(Math.random() * vs.length)], window.ZB.clock())].concat(s.lines).slice(0, 200) })); }, 1400);
+  }
+  componentWillUnmount() { clearInterval(this.p); clearInterval(this.t); window.speechSynthesis && speechSynthesis.cancel(); }
+  mk(agent, sub, text, t) { return { agent, sub, text, t }; }
+  renderVals() {
+    const Z = window.ZC, B = window.ZB, go = this.props.go || (() => {});
+    const empty = { lines: [], logFilters: [], runs: [], runFilters: [], rn: { metrics: [], events: [] }, inbox: [], im: {}, briefs: [], br: { sections: [] } };
+    if (!Z || !B) return empty;
+    const pad = Z.pad, parts = (this.props.route || 'activity/log').split('/'), v = parts[1] || 'log';
+    const out = { ...empty, isLog: v === 'log', isRuns: v === 'runs', isInbox: v === 'inbox', isBrief: v === 'briefings' };
+
+    if (out.isLog) {
+      const fTask = this.state.fTask ?? (parts[2] || ''), { fDept, fAgent } = this.state;
+      const L = this.state.lines.filter(l => { const a = Z.A(l.agent); return (!fDept || a.dept === fDept) && (!fAgent || l.agent === fAgent) && (!fTask || l.sub.startsWith(fTask)); }).slice(0, 60);
+      out.lines = L.map((l, i) => { const a = Z.A(l.agent); return { t: l.t, dept: a.dept ? Z.D(a.dept).code : '—', agent: a.name.toUpperCase(), dot: B.dot(React, a.state, 6), sub: l.sub, text: l.text, color: i === 0 ? 'var(--ink)' : 'var(--ink2)', caret: i === 0 && !this.state.paused ? B.caret(React) : null }; });
+      out.logEmpty = !L.length;
+      out.logFilters = [
+        { label: 'DEPARTMENT', value: fDept, onChange: e => this.setState({ fDept: e.target.value }), opts: [{ v: '', l: 'All' }].concat(Z.depts.map(d => ({ v: d.id, l: d.name }))) },
+        { label: 'AGENT', value: fAgent, onChange: e => this.setState({ fAgent: e.target.value }), opts: [{ v: '', l: 'All' }].concat(Z.agents.map(a => ({ v: a.id, l: a.name + ' · ' + a.role }))) },
+        { label: 'TASK', value: fTask, onChange: e => this.setState({ fTask: e.target.value }), opts: [{ v: '', l: 'All' }].concat(Z.tasks.map(t => ({ v: t.id, l: t.id + ' · ' + t.title.slice(0, 28) }))) }];
+      out.pauseU = this.state.paused ? 'RESUME STREAM' : 'PAUSE STREAM'; out.togglePause = () => this.setState(s => ({ paused: !s.paused }));
+      out.clearF = () => this.setState({ fDept: '', fAgent: '', fTask: '' });
+      out.streamDot = B.dot(React, this.state.paused ? 'idle' : 'working', 7); out.streamU = this.state.paused ? 'PAUSED' : 'SSE · CONNECTED';
+    }
+
+    if (out.isRuns) {
+      const f = this.state.runF, list = Z.runs.filter(r => f === 'all' || r.state === f);
+      out.runFilters = ['all','working','thinking','blocked','error','done'].map(k => { const on = k === f; return { label: k === 'all' ? 'ALL' : B.S[k].label.toUpperCase(), dot: k === 'all' ? null : B.dot(React, k, 6), bg: on ? 'var(--ink)' : 'transparent', ink: on ? 'var(--panel)' : 'var(--ink3)', onClick: () => this.setState({ runF: k }) }; });
+      out.runs = list.map(r => ({ ...r, agentU: Z.A(r.agent).name.toUpperCase(), dot: B.dot(React, r.state, 6), stateU: B.S[r.state].label.toUpperCase(), retryStr: pad(r.retries), costStr: '$' + r.cost.toFixed(2), bg: r.id === this.state.run ? 'var(--panel2)' : 'transparent', onClick: () => this.setState({ run: r.id }) }));
+      const tot = Z.runs.reduce((s, r) => s + r.cost, 0);
+      out.runsMeta = pad(Z.runs.length) + ' RUNS · $' + tot.toFixed(2);
+      const r = Z.runs.find(x => x.id === this.state.run) || Z.runs[0], a = Z.A(r.agent), t = Z.Tk(r.sub.split('.')[0]);
+      out.rn = { id: r.id, agentName: a.name + ' · ' + a.role, dot: B.dot(React, r.state, 7), stateU: B.S[r.state].label.toUpperCase(), context: r.sub + ' · ' + (t ? t.title : '') + ' · ' + (a.dept ? Z.D(a.dept).name : ''),
+        metrics: [{ k: 'DURATION', v: r.dur }, { k: 'RETRIES', v: pad(r.retries) }, { k: 'COST', v: '$' + r.cost.toFixed(2) }],
+        events: r.events.map((e, i) => ({ n: pad(i + 1), t: e, color: i === r.events.length - 1 ? 'var(--ink)' : 'var(--ink2)' })), onAgent: () => go('org/agent/' + a.id), onTask: () => t && go('work/task/' + t.id) };
+    }
+
+    if (out.isInbox) {
+      const stU = m => m.status === 'task' ? 'TASK' : m.status === 'dismissed' ? 'DISMISSED' : 'TRIAGE';
+      const stK = m => m.status === 'task' ? 'working' : m.status === 'dismissed' ? 'idle' : 'blocked';
+      out.inbox = Z.inbox.map(m => ({ ...m, statusU: stU(m), dot: B.dot(React, stK(m), 6), bg: m.id === this.state.inbox ? 'var(--panel2)' : 'transparent', onClick: () => this.setState({ inbox: m.id }) }));
+      const m = Z.inbox.find(x => x.id === this.state.inbox) || Z.inbox[0], c = m.chain && Z.C(m.chain);
+      out.im = { ...m, routeStr: c ? 'PROPOSED CHAIN · ' + c.name.toUpperCase() + ' · ' + c.route.map(d => Z.D(d).code).join(' → ') : 'NO CHAIN', pending: m.status === 'pending', hasTask: !!m.task,
+        onDismiss: () => { m.status = 'dismissed'; Z.emit(); this.forceUpdate(); },
+        onCreate: () => { const t = Z.createTask({ title: m.title, chain: m.chain, source: m.src.charAt(0) + m.src.slice(1).toLowerCase() + ' · ' + m.from, picked: 'auto' }); m.status = 'task'; m.task = t.id; go('work/task/' + t.id); },
+        onTask: () => go('work/task/' + m.task) };
+    }
+
+    if (out.isBrief) {
+      const b = Z.briefings[this.state.brief];
+      out.briefs = Z.briefings.map((x, i) => ({ date: x.date, title: x.title, line: i === this.state.brief ? 'var(--ink)' : 'var(--line)', bg: i === this.state.brief ? 'var(--panel2)' : 'var(--panel)', onClick: () => this.setState({ brief: i }) }));
+      out.br = { ...b, sections: b.sections.map(([h, items]) => ({ h, items })) };
+      out.cooGlyph = B.glyph(React, { seed: 'Zibby', state: this.state.reading ? 'working' : 'idle', size: 22, glow: false });
+      out.readU = this.state.reading ? 'STOP' : 'READ ALOUD';
+      out.readAloud = () => { const S = window.speechSynthesis; if (!S) return; if (this.state.reading) { S.cancel(); return this.setState({ reading: false }); }
+        const u = new SpeechSynthesisUtterance(b.lead + ' ' + b.sections.map(([h, i]) => h.toLowerCase() + ': ' + i.join(' ')).join(' ')); u.onend = () => this.setState({ reading: false }); S.speak(u); this.setState({ reading: true }); };
+    }
+    return out;
+  }
+}
+</script>
+</body>
+</html>

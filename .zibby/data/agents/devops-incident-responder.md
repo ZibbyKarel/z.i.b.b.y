@@ -16,7 +16,6 @@ tools:
   - Grep
 category: Infrastructure
 gates: []
-ownerSubsystem: puls
 ---
 
 ## Prompt Defense Baseline

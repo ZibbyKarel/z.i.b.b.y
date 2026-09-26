@@ -37,7 +37,7 @@ describe("Automations API (e2e)", () => {
         id: "briefer",
         name: "Briefer",
         instructions: "writes the briefing",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
   });

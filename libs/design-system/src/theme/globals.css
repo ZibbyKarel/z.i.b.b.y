@@ -37,47 +37,74 @@
   /* Wipe Tailwind's built-in default color scale so only z.i.b.b.y tokens exist. */
   --color-*: initial;
 
-  /* ---- Backgrounds (3 surface levels + deep shell layer) ------------------ */
-  --color-background-deep: #090c11;
-  --color-background: #0b0e13;
-  --color-surface: #10151c;
-  --color-elevated: #151c25;
-  --color-raised: #151c25;
-  --color-hover: #151c25;
-  --color-surface-panel: rgba(16, 21, 28, 0.72);
-  --color-surface-glass: rgba(16, 21, 28, 0.5);
-  --gradient-glass: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02) 40%, rgba(16,21,28,0.5));
-  --color-glass-border: rgba(255,255,255,0.12);
-  --blur-glass: blur(22px) saturate(180%);
+  /* ---------------------------------------------------------------------
+   * ZibbyCorp neutrals + state vocabulary (DS.md §2) — DARK defaults.
+   * Single source of truth: `themes/darkTheme.ts`. These are the values
+   * DesignSystemProvider injects at runtime (inline style, same var names);
+   * this block is only the static/no-JS/SSR-before-hydration default, and
+   * the `[data-theme="light"|"dark"]` blocks below are the CSS-only theme
+   * swap for the same reason. Keep all three in lockstep (mirrors the
+   * pre-existing convention for this file — see the SKILL doc).
+   * --------------------------------------------------------------------- */
+  --color-bg: #0a0b0b;
+  --color-panel: #101211;
+  --color-panel-2: #161917;
+  --color-line: #232725;
+  --color-line-2: #343936;
+  --color-ink: #ecefea;
+  --color-ink-2: #a2a8a2;
+  --color-ink-3: #666c67;
+  --color-grid: rgba(236, 239, 234, 0.035);
 
-  /* ---- Foreground / text ------------------------------------------------- */
-  --color-foreground: #e6edf3;
-  --color-foreground-dim: #9aa7b4;
-  --color-foreground-faint: #66737f;
+  --color-state-work: oklch(0.82 0.17 160);
+  --color-state-think: oklch(0.78 0.13 245);
+  --color-state-block: oklch(0.84 0.15 80);
+  --color-state-err: oklch(0.7 0.2 25);
+  --color-state-done: oklch(0.78 0.14 300);
+  --color-state-idle: #4a504b;
 
-  /* ---- Borders ----------------------------------------------------------- */
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-strong: rgba(255, 255, 255, 0.14);
-  /* Darkness of the modal backdrop (Dialog overlay). */
-  --color-overlay: rgba(5, 7, 10, 0.72);
+  --gw: 8px;
+  --dot-r: 0;
 
-  /* ---- Accent — interaction/selection/brand (NOT the running state) ------ */
-  --color-accent: #5b8def;
-  --color-accent-dim: rgba(91, 141, 239, 0.14);
-  --color-accent-contrast: #0b0e13;
-  --color-accent-glow: rgba(91, 141, 239, 0.4);
+  /* ---- Backgrounds — the app's legacy 6-level naming, flattened onto the
+   * 3 ZibbyCorp neutrals above (bg / panel / panel2). No blur/glass. -------- */
+  --color-background-deep: var(--color-bg);
+  --color-background: var(--color-bg);
+  --color-surface: var(--color-panel);
+  --color-elevated: var(--color-panel-2);
+  --color-raised: var(--color-panel-2);
+  --color-hover: var(--color-panel-2);
+  --color-surface-panel: var(--color-panel);
 
-  /* ---- Semantic status (the only colors allowed to glow) ----------------- */
-  --color-ok: #3fcf8e;
-  --color-warn: #f0b429;
-  --color-bad: #ff6b6b;
-  --color-run: #7aa5f8;
-  --color-ok-glow: #3fcf8e;
-  --color-warn-glow: #f0b429;
-  --color-bad-glow: #ff6b6b;
-  --color-run-glow: #7aa5f8;
+  /* ---- Foreground / text — mapped onto ink/ink2/ink3 ---------------------- */
+  --color-foreground: var(--color-ink);
+  --color-foreground-dim: var(--color-ink-2);
+  --color-foreground-faint: var(--color-ink-3);
 
-  /* ---- Risk categories (the only categorical palette) -------------------- */
+  /* ---- Borders — mapped onto line/line2 ----------------------------------- */
+  --color-border: var(--color-line);
+  --color-border-strong: var(--color-line-2);
+  /* Darkness of the modal backdrop (Dialog overlay) — a flat `--bg` at 70%, no blur. */
+  --color-overlay: color-mix(in oklch, var(--color-bg) 70%, transparent);
+
+  /* ---- Accent — legacy vocabulary; LEGACY_TONE_MAP: accent → thinking ----- */
+  --color-accent: var(--color-state-think);
+  --color-accent-dim: color-mix(in oklch, var(--color-state-think) 14%, transparent);
+  --color-accent-contrast: var(--color-panel);
+  --color-accent-glow: color-mix(in oklch, var(--color-state-think) 40%, transparent);
+
+  /* ---- Semantic status — legacy vocabulary (the only colors allowed to glow,
+   * via `--gw`); LEGACY_TONE_MAP: ok→done, warn→blocked, bad→error, run→working */
+  --color-ok: var(--color-state-done);
+  --color-warn: var(--color-state-block);
+  --color-bad: var(--color-state-err);
+  --color-run: var(--color-state-work);
+  --color-ok-glow: var(--color-state-done);
+  --color-warn-glow: var(--color-state-block);
+  --color-bad-glow: var(--color-state-err);
+  --color-run-glow: var(--color-state-work);
+
+  /* ---- Risk categories (the only categorical palette; unchanged by ZA-01) -- */
   --color-risk-payment: #f0b429;
   --color-risk-deletion: #ff6b6b;
   --color-risk-push: #b07cff;
@@ -97,9 +124,9 @@
   --color-black: #000000;
   --color-white: #ffffff;
 
-  /* ---- Typography: font families ---------------------------------------- */
+  /* ---- Typography: font families (DS.md §3 — Geist / Geist Mono) --------- */
   --font-sans: "Geist", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* ---- Typography: 8-step scale (11–30px, nothing below 11px) ------------
    * label/micro 11 · data 12 · bodySm 13 · body 14 · title 21 · num 26 · display 30
@@ -131,24 +158,26 @@
   --tracking-widest: 0.14em;
   --tracking-mono: 0.3em;
 
-  /* ---- Border radius — rCtl 6px (controls), rPanel 10px (panels/modals) -- */
+  /* ---- Border radius — DS.md §6: 0 everywhere. `radius-full` survives only
+   * for the sanctioned round exceptions (status pod, flow packet). --------- */
   --radius-none: 0;
-  --radius-sm: 6px;
-  --radius: 6px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
-  --radius-xl: 10px;
-  --radius-2xl: 10px;
+  --radius-sm: 0px;
+  --radius: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
   --radius-full: 9999px;
 
-  /* ---- Shadows (overridden by Provider per theme) ----------------------- */
-  --shadow-hairline: 0 1px 0 rgba(255, 255, 255, 0.02);
-  --shadow-card: 0 6px 22px rgba(0, 0, 0, 0.35);
-  --shadow-elevated: 0 18px 50px rgba(0, 0, 0, 0.45);
-  --shadow-modal: 0 30px 80px rgba(0, 0, 0, 0.6);
-  --shadow-dropdown: 0 18px 50px rgba(0, 0, 0, 0.5);
-  --shadow-glow-accent: 0 0 16px rgba(91, 141, 239, 0.4);
-  --shadow-glass: inset 0 1px 0 rgba(255,255,255,0.13), 0 16px 40px rgba(0,0,0,0.42);
+  /* ---- Shadows — DS.md §1.2/§6: hairlines, not shadows; no drop shadow or
+   * blur. The one exception is the live-status glow, which reuses `--gw`
+   * (0 in light, 8px in dark) so it auto-disables in light. --------------- */
+  --shadow-hairline: none;
+  --shadow-card: none;
+  --shadow-elevated: none;
+  --shadow-modal: none;
+  --shadow-dropdown: none;
+  --shadow-glow-accent: 0 0 var(--gw) var(--color-state-think);
 
   /* ---- Custom spacing overrides (z.i.b.b.y HUD scale differs at 5/6/7) -- */
   --spacing-5: 18px;
@@ -161,6 +190,13 @@
   --animate-scale-in: scale-in 0.16s ease-out;
   /* Live-state pulse (2s) — the only ambient motion in the quiet control room. */
   --animate-live: zt-live 2s ease-in-out infinite;
+  /* DS.md §9's own working/blocked keyframes (`zb-live`/`zb-pulse`, defined further
+   * down guarded by `prefers-reduced-motion: no-preference` — see that block's
+   * comment) — `StatusDot`'s square-dot living behaviour (ZA-02): working breathes,
+   * blocked/wait blinks. Distinct from the legacy `zt-live`/`--animate-live` pulse
+   * above, which existing HUD call sites still use. */
+  --animate-zb-live: zb-live 1.4s ease-in-out infinite;
+  --animate-zb-pulse: zb-pulse 1s steps(1, end) infinite;
   --animate-spinner: zt-spin 0.7s linear infinite;
   /* Idle "floating on water" drift for otherwise-static cards — amplitude
    * capped at 3px, translateY only (no opacity/shadow — that's zt-live's job). */
@@ -175,6 +211,148 @@
   --animate-fade-up: fade-up 0.5s ease forwards;
   --animate-status-in: status-in 0.22s ease forwards;
   --animate-screen-out: screen-out 0.55s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+/* ---------------------------------------------------------------------------
+ * Reduced motion opt-in (ZB-11 Appearance settings) — a per-viewer convenience
+ * layered ON TOP of the OS `prefers-reduced-motion` query above: the app sets
+ * `data-motion="reduced"` on `<html>` (localStorage-backed, independent of the
+ * OS preference) when the operator opts in from `/system/settings/appearance`.
+ * The standard "force reduced motion" override — every animation/transition
+ * collapses to effectively nothing, regardless of which keyframes a component
+ * references. Not gated to a media query: this is a deliberate app-level choice.
+ * --------------------------------------------------------------------------- */
+[data-motion="reduced"] *,
+[data-motion="reduced"] *::before,
+[data-motion="reduced"] *::after {
+  animation-delay: -1ms !important;
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * Theme swap — DS.md §2.4, verbatim. `DesignSystemProvider` sets `data-theme`
+ * on its root (and, via ZA-01's `ThemeScript`, on `<html>` before hydration to
+ * avoid a flash) and additionally injects every var below as an inline style
+ * from `themes/{darkTheme,lightTheme}.ts` (the real single source of truth —
+ * these blocks are the CSS-only fallback for SSR/no-JS/Storybook-static and
+ * must be kept in lockstep with the two theme files). Legacy vars repoint via
+ * the same `LEGACY_TONE_MAP` used in TS (`stateTone.ts`): accent→thinking,
+ * ok→done, warn→blocked, bad→error, run→working.
+ * --------------------------------------------------------------------------- */
+[data-theme="light"] {
+  --color-bg: #f3f4f2;
+  --color-panel: #fafaf8;
+  --color-panel-2: #edeeeb;
+  --color-line: #d9dbd6;
+  --color-line-2: #bfc2bc;
+  --color-ink: #111312;
+  --color-ink-2: #50544f;
+  --color-ink-3: #8a8e88;
+  --color-grid: rgba(17, 19, 18, 0.05);
+  --gw: 0px;
+  --dot-r: 0;
+  /* AgentGlyph's glow is dark-theme-only (DS.md §7) — a computed CSS expression,
+   * not a discrete token, so it deliberately lives here rather than in `Theme`
+   * (`tokens.ts`); `AgentGlyph` sets `--glyph-glow-color` and reads this var, so a
+   * light-theme render is a plain no-glow `none` with zero JS branching. */
+  --glyph-glow-filter: none;
+  --color-state-work: oklch(0.6 0.14 160);
+  --color-state-think: oklch(0.58 0.14 250);
+  --color-state-block: oklch(0.7 0.15 70);
+  --color-state-err: oklch(0.58 0.2 25);
+  --color-state-done: oklch(0.56 0.15 300);
+  --color-state-idle: #a9ada7;
+
+  --color-background-deep: var(--color-bg);
+  --color-background: var(--color-bg);
+  --color-surface: var(--color-panel);
+  --color-elevated: var(--color-panel-2);
+  --color-raised: var(--color-panel-2);
+  --color-hover: var(--color-panel-2);
+  --color-surface-panel: var(--color-panel);
+  --color-foreground: var(--color-ink);
+  --color-foreground-dim: var(--color-ink-2);
+  --color-foreground-faint: var(--color-ink-3);
+  --color-border: var(--color-line);
+  --color-border-strong: var(--color-line-2);
+  --color-overlay: color-mix(in oklch, var(--color-bg) 70%, transparent);
+  --color-accent: var(--color-state-think);
+  --color-accent-dim: color-mix(in oklch, var(--color-state-think) 10%, transparent);
+  --color-accent-contrast: var(--color-panel);
+  --color-accent-glow: color-mix(in oklch, var(--color-state-think) 35%, transparent);
+  --color-ok: var(--color-state-done);
+  --color-warn: var(--color-state-block);
+  --color-bad: var(--color-state-err);
+  --color-run: var(--color-state-work);
+  --color-ok-glow: var(--color-state-done);
+  --color-warn-glow: var(--color-state-block);
+  --color-bad-glow: var(--color-state-err);
+  --color-run-glow: var(--color-state-work);
+  --shadow-hairline: none;
+  --shadow-card: none;
+  --shadow-elevated: none;
+  --shadow-modal: none;
+  --shadow-dropdown: none;
+  --shadow-glow-accent: none;
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --color-bg: #0a0b0b;
+  --color-panel: #101211;
+  --color-panel-2: #161917;
+  --color-line: #232725;
+  --color-line-2: #343936;
+  --color-ink: #ecefea;
+  --color-ink-2: #a2a8a2;
+  --color-ink-3: #666c67;
+  --color-grid: rgba(236, 239, 234, 0.035);
+  --gw: 8px;
+  --dot-r: 0;
+  /* AgentGlyph's glow is dark-theme-only (DS.md §7) — see the light block's note. */
+  --glyph-glow-filter: drop-shadow(0 0 var(--gw) var(--glyph-glow-color, transparent));
+  --color-state-work: oklch(0.82 0.17 160);
+  --color-state-think: oklch(0.78 0.13 245);
+  --color-state-block: oklch(0.84 0.15 80);
+  --color-state-err: oklch(0.7 0.2 25);
+  --color-state-done: oklch(0.78 0.14 300);
+  --color-state-idle: #4a504b;
+
+  --color-background-deep: var(--color-bg);
+  --color-background: var(--color-bg);
+  --color-surface: var(--color-panel);
+  --color-elevated: var(--color-panel-2);
+  --color-raised: var(--color-panel-2);
+  --color-hover: var(--color-panel-2);
+  --color-surface-panel: var(--color-panel);
+  --color-foreground: var(--color-ink);
+  --color-foreground-dim: var(--color-ink-2);
+  --color-foreground-faint: var(--color-ink-3);
+  --color-border: var(--color-line);
+  --color-border-strong: var(--color-line-2);
+  --color-overlay: color-mix(in oklch, var(--color-bg) 70%, transparent);
+  --color-accent: var(--color-state-think);
+  --color-accent-dim: color-mix(in oklch, var(--color-state-think) 14%, transparent);
+  --color-accent-contrast: var(--color-panel);
+  --color-accent-glow: color-mix(in oklch, var(--color-state-think) 40%, transparent);
+  --color-ok: var(--color-state-done);
+  --color-warn: var(--color-state-block);
+  --color-bad: var(--color-state-err);
+  --color-run: var(--color-state-work);
+  --color-ok-glow: var(--color-state-done);
+  --color-warn-glow: var(--color-state-block);
+  --color-bad-glow: var(--color-state-err);
+  --color-run-glow: var(--color-state-work);
+  --shadow-hairline: none;
+  --shadow-card: none;
+  --shadow-elevated: none;
+  --shadow-modal: none;
+  --shadow-dropdown: none;
+  --shadow-glow-accent: 0 0 var(--gw) var(--color-state-think);
+  color-scheme: dark;
 }
 
 /* ---------------------------------------------------------------------------
@@ -398,18 +576,28 @@
 
 /* Living glow — tone-parametrized via `--living-color` (defaults to accent, so
  * existing accent-only callers are unchanged). `LivingGlow` sets `--living-color`
- * from a StateTone; both the HUD (Card/HudPanel) and Chat-UI reuse these. */
+ * from a StateTone; both the HUD (Card/HudPanel) and Chat-UI reuse these.
+ *
+ * Blur radii are expressed as a multiple of `--gw` (DS.md §2.3's glow-radius
+ * token: 0px light / 8px dark), not hardcoded px — the canon requires that
+ * "in the light theme nothing glows at all" (DS.md §1.2), and a fixed px blur
+ * would keep glowing in light regardless of theme. Multipliers reproduce the
+ * original dark-theme (`--gw: 8px`) magnitudes exactly. */
 @keyframes v-glow-idle {
   0%,
   100% {
     box-shadow:
-      0 0 38px color-mix(in srgb, var(--living-color, var(--color-accent)) 12%, transparent),
-      0 0 80px color-mix(in srgb, var(--living-color, var(--color-accent)) 6%, transparent);
+      0 0 calc(var(--gw) * 4.75)
+        color-mix(in srgb, var(--living-color, var(--color-accent)) 12%, transparent),
+      0 0 calc(var(--gw) * 10)
+        color-mix(in srgb, var(--living-color, var(--color-accent)) 6%, transparent);
   }
   50% {
     box-shadow:
-      0 0 60px color-mix(in srgb, var(--living-color, var(--color-accent)) 26%, transparent),
-      0 0 120px color-mix(in srgb, var(--living-color, var(--color-accent)) 12%, transparent);
+      0 0 calc(var(--gw) * 7.5)
+        color-mix(in srgb, var(--living-color, var(--color-accent)) 26%, transparent),
+      0 0 calc(var(--gw) * 15)
+        color-mix(in srgb, var(--living-color, var(--color-accent)) 12%, transparent);
   }
 }
 
@@ -417,13 +605,17 @@
   0%,
   100% {
     box-shadow:
-      0 0 60px color-mix(in srgb, var(--living-color, var(--color-accent)) 38%, transparent),
-      0 0 120px color-mix(in srgb, var(--living-color, var(--color-accent)) 18%, transparent);
+      0 0 calc(var(--gw) * 7.5)
+        color-mix(in srgb, var(--living-color, var(--color-accent)) 38%, transparent),
+      0 0 calc(var(--gw) * 15)
+        color-mix(in srgb, var(--living-color, var(--color-accent)) 18%, transparent);
   }
   50% {
     box-shadow:
-      0 0 100px color-mix(in srgb, var(--living-color, var(--color-accent)) 62%, transparent),
-      0 0 200px color-mix(in srgb, var(--living-color, var(--color-accent)) 28%, transparent);
+      0 0 calc(var(--gw) * 12.5)
+        color-mix(in srgb, var(--living-color, var(--color-accent)) 62%, transparent),
+      0 0 calc(var(--gw) * 25)
+        color-mix(in srgb, var(--living-color, var(--color-accent)) 28%, transparent);
   }
 }
 
@@ -530,4 +722,265 @@
   40% {
     opacity: 1;
   }
+}
+
+/* ---------------------------------------------------------------------------
+ * ZibbyCorp motion (DS.md §9 + the AgentGlyph family, `zibby.js`) — verbatim.
+ *
+ * `steps(1,end)` for a pixel/LCD feel; UI transitions stay short (≤200ms, not
+ * defined as keyframes here). Wrapped in `prefers-reduced-motion: no-preference`
+ * so a reduced-motion user gets a hard stop for free: an `animation-name` that
+ * resolves to no `@keyframes` is simply a no-op per the CSS Animations spec — no
+ * `motion-reduce:` variant is needed at each call site (`AgentGlyph` included).
+ * --------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  /* ---- DS.md §9 — status/flow ---- */
+  @keyframes zb-live {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.35;
+    }
+  } /* working dot, 1.4s ease-in-out */
+  @keyframes zb-pulse {
+    0% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.1;
+    }
+  } /* blocked, 1s steps */
+  @keyframes zb-ring {
+    0% {
+      transform: scale(1);
+      opacity: 0.7;
+    }
+    100% {
+      transform: scale(1.28);
+      opacity: 0;
+    }
+  } /* pod */
+  @keyframes zb-flow {
+    0% {
+      transform: translateY(-3px);
+      opacity: 0;
+    }
+    15% {
+      opacity: 1;
+    }
+    85% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(var(--len, 20px));
+      opacity: 0;
+    }
+  }
+  @keyframes zb-caret {
+    0%,
+    49% {
+      opacity: 1;
+    }
+    50%,
+    100% {
+      opacity: 0;
+    }
+  }
+  @keyframes zb-twinkle {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  @keyframes zb-dot {
+    0%,
+    100% {
+      opacity: 0.12;
+    }
+    40% {
+      opacity: 1;
+    }
+  }
+
+  /* ---- AgentGlyph family (`design/ZibbyCorp/zibby.js`) — per-state motion ---- */
+  @keyframes zb-breathe {
+    0% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(0.5px);
+    }
+  }
+  @keyframes zb-bob {
+    0% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-1px);
+    }
+  }
+  @keyframes zb-arm {
+    0% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-1px);
+    }
+  }
+  @keyframes zb-blink {
+    0%,
+    93%,
+    100% {
+      transform: scaleY(1);
+    }
+    96% {
+      transform: scaleY(0.15);
+    }
+  }
+  @keyframes zb-key {
+    0% {
+      opacity: 0.2;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  @keyframes zb-shake {
+    0% {
+      transform: translateX(0);
+    }
+    25% {
+      transform: translateX(-0.6px);
+    }
+    50% {
+      transform: translateX(0);
+    }
+    75% {
+      transform: translateX(0.6px);
+    }
+  }
+  @keyframes zb-hop {
+    0% {
+      transform: translateY(0);
+    }
+    12% {
+      transform: translateY(-2px);
+    }
+    24% {
+      transform: translateY(-1px);
+    }
+    36% {
+      transform: translateY(0);
+    }
+  }
+}
+
+/* Markdown prose (`Markdown`'s `variant="prose"`) — the chat transcript and
+   entity detail bodies. Tailwind v4 preflight strips UA defaults (list
+   markers, heading sizes, margins), so the structure markdown needs is
+   restored here, scoped to `.md-prose` and driven entirely by design tokens.
+   Moved from apps/web/app/globals.css in ZA-07 (D-007): styling authored by
+   apps/web belongs in the design system, not the app's own stylesheet. */
+.md-prose {
+  color: var(--color-foreground);
+  font-size: var(--text-lg);
+  line-height: 1.6;
+}
+.md-prose > * + * {
+  margin-top: 0.7em;
+}
+.md-prose p {
+  margin: 0;
+}
+.md-prose strong {
+  font-weight: 600;
+}
+.md-prose em {
+  font-style: italic;
+}
+.md-prose a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.md-prose ul,
+.md-prose ol {
+  margin: 0;
+  padding-left: 1.4em;
+}
+.md-prose ul {
+  list-style: disc;
+}
+.md-prose ol {
+  list-style: decimal;
+}
+.md-prose li {
+  margin-top: 0.25em;
+}
+.md-prose li::marker {
+  color: var(--color-foreground-faint);
+}
+.md-prose h1,
+.md-prose h2,
+.md-prose h3,
+.md-prose h4 {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.md-prose h1 {
+  font-size: var(--text-xl);
+}
+.md-prose h2 {
+  font-size: var(--text-lg);
+}
+.md-prose h3,
+.md-prose h4 {
+  font-size: var(--text-md);
+}
+.md-prose code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--color-surface);
+  padding: 0.1em 0.35em;
+  /* DS.md §6: radius 0 everywhere — no rounded-corner exception for code. */
+  border-radius: 0;
+}
+.md-prose pre {
+  margin: 0;
+  padding: 0.7em 0.9em;
+  overflow-x: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+}
+.md-prose pre code {
+  padding: 0;
+  background: transparent;
+  font-size: 0.85em;
+  line-height: 1.5;
+}
+.md-prose blockquote {
+  margin: 0;
+  padding-left: 0.8em;
+  border-left: 2px solid var(--color-border);
+  color: var(--color-foreground-dim);
+}
+.md-prose hr {
+  border: none;
+  border-top: 1px solid var(--color-border);
+}
+.md-prose table {
+  border-collapse: collapse;
+}
+.md-prose th,
+.md-prose td {
+  border: 1px solid var(--color-border);
+  padding: 0.3em 0.6em;
+  text-align: left;
 }

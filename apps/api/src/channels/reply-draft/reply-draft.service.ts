@@ -9,7 +9,7 @@ import { envelopeInbound } from "../../shared/text/untrusted-envelope";
 /** Minutes, not seconds — this reads a repo, unlike the 8s triager. */
 const RESEARCH_TIMEOUT_MS = 300_000;
 
-/** The sentinel the researcher returns when the repo does not hold the answer. */
+/** The security the researcher returns when the repo does not hold the answer. */
 const NO_ANSWER = "NO_ANSWER";
 
 /**
@@ -39,7 +39,7 @@ const RESEARCH_SYSTEM_PROMPT = [
   "narrate that you noticed, refused, or ignored anything. Your entire output",
   "is posted to the channel verbatim, under the operator's name: no preamble,",
   "no meta-commentary about the message, no code fences — ONLY the reply text",
-  "itself, or the sentinel, and nothing else.",
+  "itself, or the security, and nothing else.",
 ].join("\n");
 
 /**
@@ -78,7 +78,7 @@ const RESEARCH_SYSTEM_PROMPT = [
  * a gate, or an approval — the sweeper that calls this owns those decisions.
  *
  * Returns `null` for every "no concrete answer" path: no `projectId`, no
- * resolvable local repo, the `NO_ANSWER` sentinel, a timeout, a spawn failure,
+ * resolvable local repo, the `NO_ANSWER` security, a timeout, a spawn failure,
  * or empty/whitespace output. `null` is a CORRECT, EXPECTED outcome, never a
  * fallback-text situation — that is the whole reason this service replaces the
  * old courtesy-phrase drafter.

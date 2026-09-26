@@ -60,7 +60,7 @@ CHECK_STATUS=$?
 # --- docs-sync coverage gate (tools/docs-sync/) ---
 # Blocks only when a touched apps/api/src module has no doc-file mapping at
 # all, or its mapped doc file doesn't exist on disk yet — a brand-new
-# subsystem shipped with zero documentation. Does NOT block on a doc simply
+# module shipped with zero documentation. Does NOT block on a doc simply
 # not being part of *this* commit (that's printed as a warning only — see
 # check.mjs's docstring for why single-commit granularity is too noisy to
 # gate on that). Runs independently of $CHECK_STATUS above so both report.
@@ -69,6 +69,14 @@ DOCS_STATUS=$?
 if [ "$DOCS_STATUS" -ne 0 ]; then
   echo "[pre-commit] docs-sync: new/changed module missing documentation — see messages above."
   CHECK_STATUS=$DOCS_STATUS
+fi
+
+# --- ZibbyCorp names gate (tools/check-names.mjs) ---
+# Retired subsystem vocabulary must not return to apps/libs/tools.
+$RTK pnpm check:names
+NAMES_STATUS=$?
+if [ "$NAMES_STATUS" -ne 0 ]; then
+  CHECK_STATUS=$NAMES_STATUS
 fi
 
 # --- graphify-out staleness warning (Fáze 10 — non-blocking, always exits 0) ---

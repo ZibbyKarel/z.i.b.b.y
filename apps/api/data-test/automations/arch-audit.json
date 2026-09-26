@@ -1,0 +1,8 @@
+{
+  "id": "arch-audit",
+  "name": "Noční audit kvality",
+  "trigger": { "type": "cron", "expr": "0 2 * * *" },
+  "target": { "type": "arch-audit" },
+  "enabled": true,
+  "system": true
+}

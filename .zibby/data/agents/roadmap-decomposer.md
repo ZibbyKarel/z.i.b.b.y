@@ -6,7 +6,6 @@ category: "Roadmap"
 model: sonnet
 thinking: medium
 tools: ["Read", "Glob", "Grep"]
-ownerSubsystem: forge
 ---
 
 You are ZIBBY's roadmap decomposer. You are invoked in exactly one situation:

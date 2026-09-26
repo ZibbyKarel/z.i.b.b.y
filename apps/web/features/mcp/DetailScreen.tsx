@@ -1,15 +1,23 @@
 "use client";
 
+import type { Route } from "next";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Container, Stack } from "@zibby/design-system";
+import {
+  Breadcrumb,
+  Button,
+  Container,
+  Panel,
+  Stack,
+  type SubNavLinkComponent,
+  Typography,
+} from "@zibby/design-system";
 import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import type { McpServer } from "@zibby/contracts";
-import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
-import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { McpServerFormFields, useMcpFormState } from "./components/McpServerFormFields";
 import {
@@ -69,45 +77,58 @@ function McpServerEditor({ server }: { server: McpServer }) {
     );
   };
 
+  const subtitle = server.type === "stdio" ? server.command : server.url;
+
   return (
-    <ImmersivePage
-      actions={
-        <>
-          <Button
-            data-testid={McpDetailScreenTestId.Delete}
-            icon="trash"
-            intent="danger"
-            onClick={() => setConfirmDelete(true)}
-            size="sm"
-          >
-            {t("common.delete")}
-          </Button>
-          <Button
-            data-testid={McpDetailScreenTestId.Save}
-            disabled={!form.canSave(false)}
-            icon="check"
-            intent="primary"
-            loading={updateServer.isPending}
-            onClick={save}
-            size="sm"
-          >
-            {t("common.save")}
-          </Button>
-        </>
-      }
-      backHref="/mcp"
-      subtitle={server.type === "stdio" ? server.command : server.url}
-      title={name}
-    >
-      <Container padding={["300", "350"]}>
-        <PageContainer>
-          <Stack gap="250">
-            <HudPanel surface="glass" title={t("mcp.detailPanel")}>
-              <McpServerFormFields idLocked form={form} hasCredentials={server.hasCredentials} />
-            </HudPanel>
+    <Container padding={["300", "350"]}>
+      <PageContainer>
+        <Stack gap="250">
+          <Breadcrumb
+            items={[
+              { label: t("registries.title"), href: "/system/registries/mcp" as Route },
+              { label: name },
+            ]}
+            linkComponent={Link as SubNavLinkComponent}
+          />
+
+          <Stack wrap align="center" direction="row" gap="150" justify="between">
+            <Stack gap="25">
+              <Typography type="h1">{name}</Typography>
+              {subtitle && (
+                <Typography mono size="xs" type="note" variant="tertiary">
+                  {subtitle}
+                </Typography>
+              )}
+            </Stack>
+            <Stack align="center" direction="row" gap="100">
+              <Button
+                data-testid={McpDetailScreenTestId.Delete}
+                icon="trash"
+                intent="danger"
+                onClick={() => setConfirmDelete(true)}
+                size="sm"
+              >
+                {t("common.delete")}
+              </Button>
+              <Button
+                data-testid={McpDetailScreenTestId.Save}
+                disabled={!form.canSave(false)}
+                icon="check"
+                intent="primary"
+                loading={updateServer.isPending}
+                onClick={save}
+                size="sm"
+              >
+                {t("common.save")}
+              </Button>
+            </Stack>
           </Stack>
-        </PageContainer>
-      </Container>
+
+          <Panel header={t("mcp.detailPanel")} padding="200">
+            <McpServerFormFields idLocked form={form} hasCredentials={server.hasCredentials} />
+          </Panel>
+        </Stack>
+      </PageContainer>
 
       {confirmDelete && (
         <ConfirmDeleteDialog
@@ -118,13 +139,13 @@ function McpServerEditor({ server }: { server: McpServer }) {
           onConfirm={() =>
             deleteServer.mutate(
               { params: { id: server.id } },
-              { onSuccess: () => router.push("/mcp") },
+              { onSuccess: () => router.push("/system/registries/mcp") },
             )
           }
           pending={deleteServer.isPending}
           title={t("mcp.deleteTitle")}
         />
       )}
-    </ImmersivePage>
+    </Container>
   );
 }

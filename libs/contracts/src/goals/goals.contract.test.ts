@@ -50,6 +50,11 @@ describe("GoalSchema", () => {
       false,
     );
   });
+
+  it("accepts an optional projectId (O-16), and still parses without one", () => {
+    expect(GoalSchema.safeParse({ ...baseGoal, projectId: "client-portal" }).success).toBe(true);
+    expect(GoalSchema.safeParse(baseGoal).success).toBe(true);
+  });
 });
 
 describe("VerifierSpecSchema", () => {

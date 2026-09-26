@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { AvatarSchema, RiskSchema } from "../common.schema";
 import { GateRuleInputSchema } from "../gates/gate.schema";
-import { SubsystemIdSchema } from "../subsystems/subsystem.schema";
+import { DepartmentIdSchema } from "../departments/department.schema";
 
 /**
  * Allowed shape of an agent `id`. The id doubles as the on-disk file name (and is
@@ -45,6 +45,14 @@ export type AgentThinking = z.infer<typeof AgentThinkingSchema>;
 export const AgentSchema = z.object({
   id: AgentIdSchema,
   name: z.string().min(1).max(256).optional(),
+  /**
+   * O-03 — a human name for the position ("Kevin", "Stuart"), shown in the UI as
+   * `displayName ?? name`. Filling this in is the operator's content, never
+   * auto-generated; the slug (`id`/`name`) is never renamed alongside it.
+   */
+  displayName: z.string().min(1).max(256).optional(),
+  /** O-03 — a short job title ("Senior reviewer"), shown next to `displayName`. */
+  title: z.string().min(1).max(128).optional(),
   description: z.string().max(512).optional(),
   glyph: z.string().max(64).optional(),
   /** Optional avatar image (data URI or `/avatars/*.png` path) shown in place of the glyph. */
@@ -84,13 +92,13 @@ export const AgentSchema = z.object({
    */
   status: z.enum(["proposed", "active"]).optional(),
   /**
-   * Optional attribution to a subsystem of the federation (NS2 F1a) — which
-   * subsystem "owns" this agent for the Roster. Absent is a legitimate state for
+   * Optional attribution to a department of the federation (NS2 F1a) — which
+   * department "owns" this agent for the Roster. Absent is a legitimate state for
    * pre-F1 agents (backfilled by the owner-backfill sweep); write paths (create,
    * and updates that would clear it) require it once seeded — see
    * `agents.controller.ts`.
    */
-  ownerSubsystem: SubsystemIdSchema.optional(),
+  department: DepartmentIdSchema.optional(),
   instructions: z.string().min(1),
 });
 export type Agent = z.infer<typeof AgentSchema>;

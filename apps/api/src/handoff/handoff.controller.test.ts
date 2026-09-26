@@ -1,37 +1,40 @@
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import type { HandoffRule } from "@zibby/contracts";
+import type { Chain, HandoffRule, HandoffSignalKind } from "@zibby/contracts";
 import request from "supertest";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { ChainInUseError, ChainNotFoundError, InvalidChainInputError } from "./chain.errors";
+import { ChainsService } from "./chains.service";
 import { SignalKindNotFoundError, SystemSignalKindError } from "./handoff-signal-kind.errors";
 import { HandoffRuleNotFoundError, SystemHandoffRuleError } from "./handoff-rule.errors";
 import { HandoffRuleStore } from "./handoff-rule.store";
+import { HandoffSignalKindStore } from "./handoff-signal-kind.store";
 import { HandoffController } from "./handoff.controller";
 import { SignalKindService } from "./signal-kind.service";
 
 const SYSTEM_RULE: HandoffRule = {
-  id: "sentinel-cve-critical",
-  from: "sentinel",
+  id: "security-cve-critical",
+  from: "sec",
   signalKind: "cve",
   minSeverity: "critical",
-  to: { kind: "subsystem", id: "forge" },
+  to: { kind: "department", id: "dev" },
   tier: 2,
   enabled: true,
   system: true,
 };
 
 const USER_INPUT = {
-  from: "beacon" as const,
-  signalKind: "ask-forge",
-  to: { kind: "subsystem" as const, id: "forge" as const },
+  from: "inc" as const,
+  signalKind: "ask-dev",
+  to: { kind: "department" as const, id: "dev" as const },
   tier: 3 as const,
   enabled: true,
 };
 
 const SIGNAL_KIND_INPUT = {
-  from: "beacon" as const,
-  label: "Ask Forge",
-  description: "Something Beacon wants Forge to know about.",
+  from: "inc" as const,
+  label: "Ask Dev",
+  description: "Something Incident wants Dev to know about.",
   severityBearing: false,
 };
 
@@ -52,6 +55,14 @@ describe("handoffContract CRUD routes", () => {
   const skCreate = vi.fn();
   const skUpdate = vi.fn();
   const skDelete = vi.fn();
+  const list = vi.fn(async (): Promise<HandoffRule[]> => []);
+  const signalKindStoreList = vi.fn(
+    async (): Promise<Pick<HandoffSignalKind, "id" | "chain">[]> => [],
+  );
+  const chainsList = vi.fn();
+  const chainsGet = vi.fn();
+  const chainsPut = vi.fn();
+  const chainsDelete = vi.fn();
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -59,11 +70,24 @@ describe("handoffContract CRUD routes", () => {
       providers: [
         {
           provide: HandoffRuleStore,
-          useValue: { list: vi.fn(), create, update, delete: del },
+          useValue: { list, create, update, delete: del },
         },
         {
           provide: SignalKindService,
           useValue: { list: skList, create: skCreate, update: skUpdate, delete: skDelete },
+        },
+        {
+          provide: HandoffSignalKindStore,
+          useValue: { list: signalKindStoreList },
+        },
+        {
+          provide: ChainsService,
+          useValue: {
+            list: chainsList,
+            get: chainsGet,
+            put: chainsPut,
+            delete: chainsDelete,
+          },
         },
       ],
     }).compile();
@@ -83,6 +107,12 @@ describe("handoffContract CRUD routes", () => {
     create.mockReset();
     update.mockReset();
     del.mockReset();
+    list.mockReset().mockResolvedValue([]);
+    signalKindStoreList.mockReset().mockResolvedValue([]);
+    chainsList.mockReset();
+    chainsGet.mockReset();
+    chainsPut.mockReset();
+    chainsDelete.mockReset();
   });
 
   it("POST /api/handoff-rules returns 201 with the created rule", async () => {
@@ -137,7 +167,7 @@ describe("handoffContract CRUD routes", () => {
   });
 
   it("POST /api/handoff-signal-kinds returns 201 with {signalKind, buildTaskId}", async () => {
-    const signalKind = { ...SIGNAL_KIND_INPUT, id: "ask-forge", status: "pending", system: false };
+    const signalKind = { ...SIGNAL_KIND_INPUT, id: "ask-dev", status: "pending", system: false };
     skCreate.mockResolvedValue({ signalKind, buildTaskId: "task-1" });
     const res = await request(app.getHttpServer())
       .post("/api/handoff-signal-kinds")
@@ -148,10 +178,10 @@ describe("handoffContract CRUD routes", () => {
   });
 
   it("PATCH /api/handoff-signal-kinds/:id returns 200 with the updated kind", async () => {
-    const updated = { ...SIGNAL_KIND_INPUT, id: "ask-forge", status: "pending", system: false };
+    const updated = { ...SIGNAL_KIND_INPUT, id: "ask-dev", status: "pending", system: false };
     skUpdate.mockResolvedValue(updated);
     const res = await request(app.getHttpServer())
-      .patch("/api/handoff-signal-kinds/ask-forge")
+      .patch("/api/handoff-signal-kinds/ask-dev")
       .send(SIGNAL_KIND_INPUT);
     expect(res.status).toBe(200);
     expect(res.body).toEqual(updated);
@@ -175,9 +205,9 @@ describe("handoffContract CRUD routes", () => {
 
   it("DELETE /api/handoff-signal-kinds/:id returns 200 {id} for an operator kind", async () => {
     skDelete.mockResolvedValue(undefined);
-    const res = await request(app.getHttpServer()).delete("/api/handoff-signal-kinds/ask-forge");
+    const res = await request(app.getHttpServer()).delete("/api/handoff-signal-kinds/ask-dev");
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ id: "ask-forge" });
+    expect(res.body).toEqual({ id: "ask-dev" });
   });
 
   it("DELETE /api/handoff-signal-kinds/:id returns 404 for an unknown id", async () => {
@@ -192,5 +222,103 @@ describe("handoffContract CRUD routes", () => {
     skDelete.mockRejectedValue(new SystemSignalKindError("cve"));
     const res = await request(app.getHttpServer()).delete("/api/handoff-signal-kinds/cve");
     expect(res.status).toBe(403);
+  });
+
+  it("GET /api/handoff-rules filters out chain-kind rules by default", async () => {
+    const chainRule = { ...USER_INPUT, id: "c1:0", signalKind: "c1" };
+    const plainRule = { ...USER_INPUT, id: "hrule-1", signalKind: "ask-dev" };
+    list.mockResolvedValue([chainRule, plainRule]);
+    signalKindStoreList.mockResolvedValue([{ id: "c1", chain: true }]);
+    const res = await request(app.getHttpServer()).get("/api/handoff-rules");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([plainRule]);
+  });
+
+  it("GET /api/handoff-rules?includeChains=true returns every rule, chain-kind included", async () => {
+    const chainRule = { ...USER_INPUT, id: "c1:0", signalKind: "c1" };
+    list.mockResolvedValue([chainRule]);
+    const res = await request(app.getHttpServer()).get("/api/handoff-rules?includeChains=true");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([chainRule]);
+    expect(signalKindStoreList).not.toHaveBeenCalled();
+  });
+
+  const CHAIN: Chain = {
+    id: "c1",
+    label: "Test chain",
+    description: "A test chain.",
+    entry: "rnd",
+    steps: [{ department: "dev", gate: "auto", ruleId: "c1:0" }],
+    enabled: true,
+  };
+
+  it("GET /api/handoff/chains returns 200 with the list", async () => {
+    chainsList.mockResolvedValue([CHAIN]);
+    const res = await request(app.getHttpServer()).get("/api/handoff/chains");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([CHAIN]);
+  });
+
+  it("GET /api/handoff/chains/:id returns 200 with the chain", async () => {
+    chainsGet.mockResolvedValue(CHAIN);
+    const res = await request(app.getHttpServer()).get("/api/handoff/chains/c1");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(CHAIN);
+  });
+
+  it("GET /api/handoff/chains/:id returns 404 for an unknown id", async () => {
+    chainsGet.mockRejectedValue(new ChainNotFoundError("does-not-exist"));
+    const res = await request(app.getHttpServer()).get("/api/handoff/chains/does-not-exist");
+    expect(res.status).toBe(404);
+  });
+
+  it("PUT /api/handoff/chains/:id returns 200 with the upserted chain", async () => {
+    chainsPut.mockResolvedValue(CHAIN);
+    const res = await request(app.getHttpServer())
+      .put("/api/handoff/chains/c1")
+      .send({
+        label: "Test chain",
+        description: "A test chain.",
+        entry: "rnd",
+        steps: [{ department: "dev", gate: "auto" }],
+        enabled: true,
+      });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(CHAIN);
+  });
+
+  it("PUT /api/handoff/chains/:id returns 400 for an invalid chain input", async () => {
+    chainsPut.mockRejectedValue(
+      new InvalidChainInputError('Chain has a cycle at department "rnd".'),
+    );
+    const res = await request(app.getHttpServer())
+      .put("/api/handoff/chains/c1")
+      .send({
+        label: "Test chain",
+        description: "A test chain.",
+        entry: "rnd",
+        steps: [{ department: "rnd", gate: "auto" }],
+        enabled: true,
+      });
+    expect(res.status).toBe(400);
+  });
+
+  it("DELETE /api/handoff/chains/:id returns 200 {id}", async () => {
+    chainsDelete.mockResolvedValue(undefined);
+    const res = await request(app.getHttpServer()).delete("/api/handoff/chains/c1");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ id: "c1" });
+  });
+
+  it("DELETE /api/handoff/chains/:id returns 404 for an unknown id", async () => {
+    chainsDelete.mockRejectedValue(new ChainNotFoundError("does-not-exist"));
+    const res = await request(app.getHttpServer()).delete("/api/handoff/chains/does-not-exist");
+    expect(res.status).toBe(404);
+  });
+
+  it("DELETE /api/handoff/chains/:id returns 409 while a parent task still references it", async () => {
+    chainsDelete.mockRejectedValue(new ChainInUseError("c1"));
+    const res = await request(app.getHttpServer()).delete("/api/handoff/chains/c1");
+    expect(res.status).toBe(409);
   });
 });

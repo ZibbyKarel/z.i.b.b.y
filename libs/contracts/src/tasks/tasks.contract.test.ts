@@ -161,18 +161,18 @@ describe("CreateTaskInputSchema (Phase 11 explicit target)", () => {
     expect(parsed.success).toBe(true);
   });
 
-  it("Phase 91: accepts a subsystem target with a valid closed-enum id", () => {
+  it("Phase 91: accepts a department target with a valid closed-enum id", () => {
     const parsed = CreateTaskInputSchema.safeParse({
-      text: "dispatch to the subsystem",
-      target: { kind: "subsystem", id: "herald", name: "Herald" },
+      text: "dispatch to the department",
+      target: { kind: "department", id: "com", name: "Comms" },
     });
     expect(parsed.success).toBe(true);
   });
 
-  it("Phase 91: rejects a subsystem target whose id isn't in the closed registry", () => {
+  it("Phase 91: rejects a department target whose id isn't in the closed registry", () => {
     const parsed = CreateTaskInputSchema.safeParse({
-      text: "dispatch to the subsystem",
-      target: { kind: "subsystem", id: "not-a-real-subsystem", name: "??" },
+      text: "dispatch to the department",
+      target: { kind: "department", id: "not-a-real-department", name: "??" },
     });
     expect(parsed.success).toBe(false);
   });
@@ -326,22 +326,22 @@ describe("ClassificationTraceSchema (F2c)", () => {
     expect(ScheduledTaskSchema.safeParse(base).success).toBe(true);
   });
 
-  it("parses on ScheduledTask when stage-1 delegated to a subsystem", () => {
+  it("parses on ScheduledTask when stage-1 delegated to a department", () => {
     const parsed = ScheduledTaskSchema.safeParse({
       ...base,
       target: { kind: "pipeline", id: "delivery", name: "Delivery" },
       classification: {
-        stage1: { kind: "subsystem", id: "forge", name: "Forge" },
+        stage1: { kind: "department", id: "dev", name: "Dev" },
         confidence: 0.8,
-        reason: "matches forge's mandate",
+        reason: "matches dev's mandate",
         matchedTerms: ["ship"],
-        subsystem: "forge",
+        department: "dev",
       },
     });
     expect(parsed.success).toBe(true);
   });
 
-  it("parses on ScheduledTask when stage-1 already named a concrete unit (no subsystem)", () => {
+  it("parses on ScheduledTask when stage-1 already named a concrete unit (no department)", () => {
     const parsed = ScheduledTaskSchema.safeParse({
       ...base,
       target: { kind: "agent", id: "writer", name: "Writer" },
@@ -393,5 +393,77 @@ describe("AttachmentSchema (Task attachments — Phase 1)", () => {
   it("accepts attachmentSetId on create input", () => {
     const input = CreateTaskInputSchema.parse({ text: "x", attachmentSetId: "set_1" });
     expect(input.attachmentSetId).toBe("set_1");
+  });
+});
+
+describe("ZB-04a — parentTaskId / chain / source / department stamps", () => {
+  const base = {
+    id: "task_1",
+    title: "",
+    text: "fix the bug",
+    paths: [],
+    scheduledAt: 1_700_000_000_000,
+    status: "dispatched" as const,
+    createdAt: new Date().toISOString(),
+  };
+
+  it("round-trips a task carrying every new field", () => {
+    const parsed = ScheduledTaskSchema.safeParse({
+      ...base,
+      parentTaskId: "task_0",
+      chain: { id: "rnd-to-rel", step: 1 },
+      source: "chain",
+      department: "dev",
+    });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.parentTaskId).toBe("task_0");
+    expect(parsed.data.chain).toEqual({ id: "rnd-to-rel", step: 1 });
+    expect(parsed.data.source).toBe("chain");
+    expect(parsed.data.department).toBe("dev");
+  });
+
+  it("round-trips (and legacy tasks still parse) without any of the new fields", () => {
+    const parsed = ScheduledTaskSchema.safeParse(base);
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.parentTaskId).toBeUndefined();
+    expect(parsed.data.chain).toBeUndefined();
+    expect(parsed.data.source).toBeUndefined();
+    expect(parsed.data.department).toBeUndefined();
+  });
+
+  it("rejects an unknown source value", () => {
+    expect(ScheduledTaskSchema.safeParse({ ...base, source: "webhook" }).success).toBe(false);
+  });
+
+  it("rejects an unknown department id", () => {
+    expect(ScheduledTaskSchema.safeParse({ ...base, department: "not-a-department" }).success).toBe(
+      false,
+    );
+  });
+
+  it("CreateTaskInput accepts parentTaskId/chain/source alongside a chain target", () => {
+    const parsed = CreateTaskInputSchema.safeParse({
+      text: "handle the next hop",
+      parentTaskId: "task_0",
+      chain: { id: "rnd-to-rel", step: 1 },
+      source: "handoff",
+      target: { kind: "chain", id: "rnd-to-rel", name: "R&D → Release" },
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("CreateTaskInput stays valid with none of the new fields (back-compatible)", () => {
+    expect(CreateTaskInputSchema.safeParse({ text: "just do it" }).success).toBe(true);
+  });
+});
+
+describe("createTask contract — D-019 chain-target rejection", () => {
+  it("declares a 400 response alongside 201/422/503", () => {
+    expect(tasksContract.createTask.responses).toHaveProperty("400");
+    expect(tasksContract.createTask.responses).toHaveProperty("201");
+    expect(tasksContract.createTask.responses).toHaveProperty("422");
+    expect(tasksContract.createTask.responses).toHaveProperty("503");
   });
 });

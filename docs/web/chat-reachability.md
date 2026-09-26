@@ -8,7 +8,7 @@ verified at 1680px on 2026-07-19 against the running dev app (`pnpm web:dev` +
 `pnpm api:dev`, both already up).
 
 Legend: **dock** = `ChatToolDock`'s 11 icons + Settings · **palette** = ⌘K
-(`ChatPalette`) · **drawer** = a subsystem orb's `SubsystemDrawer` tabs
+(`ChatPalette`) · **drawer** = a department orb's `DepartmentDrawer` tabs
 (Roster/Aktivita/Nastavení & Gates/Artefakty) · **link** = a link/button on
 another page already reached by one of the above · **dialog** = opened
 in-place over `/chat` with no route change at all (the best case — content
@@ -16,27 +16,27 @@ without leaving the design).
 
 ## Root / home
 
-| Route     | Reached via                                                                                                                                                                                                        | State                     |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------- |
-| `/`       | n/a — hard redirect to `/chat`                                                                                                                                                                                     | ✅                        |
-| `/chat`   | home; sidebar `BrandLogo`/⌘·Ctrl+J from anywhere                                                                                                                                                                   | ✅                        |
-| `/archiv` | `ChatTasksPanel` gutter's own "Archiv · N" link (live: "Archiv · 22"); also `AktivitaTab`'s "all runs" link and `ArtefaktyTab`'s per-artifact provenance link (`/archiv?run=`), both inside every subsystem drawer | ✅                        |
-| `/runs`   | redirect shim only (D17) — no UI links here anymore; kept alive for old transcript links (`?run=`)                                                                                                                 | ✅ (deprecated by design) |
+| Route     | Reached via                                                                                                                                                                                                         | State                     |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `/`       | n/a — hard redirect to `/chat`                                                                                                                                                                                      | ✅                        |
+| `/chat`   | home; sidebar `BrandLogo`/⌘·Ctrl+J from anywhere                                                                                                                                                                    | ✅                        |
+| `/archiv` | `ChatTasksPanel` gutter's own "Archiv · N" link (live: "Archiv · 22"); also `AktivitaTab`'s "all runs" link and `ArtefaktyTab`'s per-artifact provenance link (`/archiv?run=`), both inside every department drawer | ✅                        |
+| `/runs`   | redirect shim only (D17) — no UI links here anymore; kept alive for old transcript links (`?run=`)                                                                                                                  | ✅ (deprecated by design) |
 
 ## Catalog list + detail pairs (all confirmed: dock icon → list → row click → detail)
 
-| Section     | List route     | Detail route                                                                     | Dock icon         | Extra path                                                                                                                                       |
-| ----------- | -------------- | -------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Companies   | `/companies`   | `/companies/[id]`, `/companies/new`                                              | ✅ "Firmy"        | list header's Add action → `/companies/new`                                                                                                      |
-| Projects    | `/projects`    | `/projects/[id]`, `/projects/new`, `/projects/[id]/integrations/[integrationId]` | ✅ "Projekty"     | list header's Add action → `/projects/new`; project's own integrations panel → nested integration detail                                         |
-| Agents      | `/agents`      | `/agents/[id]`                                                                   | ✅ "Agenti"       | subsystem drawer **RosterTab** card → `/agents/[id]`; ⌘K palette agent pick → **dialog**, no route change                                        |
-| Pipelines   | `/pipelines`   | `/pipelines/[id]`                                                                | ✅ "Orchestrace"  | subsystem drawer **RosterTab** renders owned pipelines inline (canvas, no navigation) + "Přidat pipeline"; ⌘K palette pipeline pick → **dialog** |
-| Chains      | `/chains`      | `/chains/[id]`                                                                   | ✅ "Řetězce"      | subsystem drawer **RosterTab** card → `/chains/[id]`                                                                                             |
-| Skills      | `/skills`      | `/skills/[id]`                                                                   | ✅ "Skilly"       | —                                                                                                                                                |
-| Commands    | `/commands`    | `/commands/[id]`                                                                 | ✅ "Příkazy"      | —                                                                                                                                                |
-| MCP servers | `/mcp`         | `/mcp/[id]`                                                                      | ✅ "MCP servery"  | —                                                                                                                                                |
-| Hooks       | `/hooks`       | `/hooks/[id]`                                                                    | ✅ "Hooky"        | —                                                                                                                                                |
-| Automations | `/automations` | `/automations/[id]`                                                              | ✅ "Automatizace" | —                                                                                                                                                |
+| Section     | List route     | Detail route                                                                     | Dock icon         | Extra path                                                                                                                                        |
+| ----------- | -------------- | -------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Companies   | `/companies`   | `/companies/[id]`, `/companies/new`                                              | ✅ "Firmy"        | list header's Add action → `/companies/new`                                                                                                       |
+| Projects    | `/projects`    | `/projects/[id]`, `/projects/new`, `/projects/[id]/integrations/[integrationId]` | ✅ "Projekty"     | list header's Add action → `/projects/new`; project's own integrations panel → nested integration detail                                          |
+| Agents      | `/agents`      | `/agents/[id]`                                                                   | ✅ "Agenti"       | department drawer **RosterTab** card → `/agents/[id]`; ⌘K palette agent pick → **dialog**, no route change                                        |
+| Pipelines   | `/pipelines`   | `/pipelines/[id]`                                                                | ✅ "Orchestrace"  | department drawer **RosterTab** renders owned pipelines inline (canvas, no navigation) + "Přidat pipeline"; ⌘K palette pipeline pick → **dialog** |
+| Chains      | `/chains`      | `/chains/[id]`                                                                   | ✅ "Řetězce"      | department drawer **RosterTab** card → `/chains/[id]`                                                                                             |
+| Skills      | `/skills`      | `/skills/[id]`                                                                   | ✅ "Skilly"       | —                                                                                                                                                 |
+| Commands    | `/commands`    | `/commands/[id]`                                                                 | ✅ "Příkazy"      | —                                                                                                                                                 |
+| MCP servers | `/mcp`         | `/mcp/[id]`                                                                      | ✅ "MCP servery"  | —                                                                                                                                                 |
+| Hooks       | `/hooks`       | `/hooks/[id]`                                                                    | ✅ "Hooky"        | —                                                                                                                                                 |
+| Automations | `/automations` | `/automations/[id]`                                                              | ✅ "Automatizace" | —                                                                                                                                                 |
 
 Live-verified one full hop: dock "Orchestrace" → `/pipelines` (8 pipelines
 listed) → clicked the "Content Campaign" row → landed on
@@ -53,23 +53,23 @@ all now reachable.
 
 ## Single pages
 
-| Route       | Reached via                                                                                                                                       |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/settings` | dock's "Nastavení systému" icon (below the divider, always last)                                                                                  |
-| `/memory`   | dock's "Paměť" icon; `ArtefaktyTab` (every subsystem drawer) links out too; ⌘K palette's memory section navigates here on a non-blank query match |
+| Route       | Reached via                                                                                                                                        |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/settings` | dock's "Nastavení systému" icon (below the divider, always last)                                                                                   |
+| `/memory`   | dock's "Paměť" icon; `ArtefaktyTab` (every department drawer) links out too; ⌘K palette's memory section navigates here on a non-blank query match |
 
 ## `/gates` — the one finding
 
 **`/gates` (the standalone "global policy floor" route) is not reliably reachable
 from Chat today, and right now, live, it is reachable by literally nothing.**
 
-D15 recorded three paths: Settings, ⌘K, and every subsystem drawer. Re-verified
+D15 recorded three paths: Settings, ⌘K, and every department drawer. Re-verified
 live in this phase, precisely, and the picture is narrower than that summary
 suggests:
 
-1. **Settings' "gates" tab** (`/settings?tab=gates`) and **every subsystem
+1. **Settings' "gates" tab** (`/settings?tab=gates`) and **every department
    drawer's "Nastavení & Gates" tab** both render the _same_ `GateRulesSection`
-   component `/gates` itself renders (D14) — confirmed live on the Maestro
+   component `/gates` itself renders (D14) — confirmed live on the Release
    drawer (locked system floor + rule catalog, identical chrome). But neither
    one **links to the `/gates` URL** — they reproduce its content in place, on
    a different route (`/settings`) or no route at all (the drawer is an

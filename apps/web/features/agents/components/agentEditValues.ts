@@ -2,9 +2,9 @@ import type {
   Agent,
   AgentModel,
   AgentThinking,
+  DepartmentId,
   GateRuleInput,
   GlobalGateRule,
-  SubsystemId,
 } from "@zibby/contracts";
 
 /**
@@ -14,6 +14,10 @@ import type {
  */
 export type AgentEditValues = {
   name: string;
+  /** O-03: a human name for the position ("Kevin"), shown as `displayName ?? name`. */
+  displayName: string;
+  /** O-03: a short job title, shown next to `displayName`. */
+  title: string;
   description: string;
   glyph: string;
   model: AgentModel;
@@ -21,8 +25,8 @@ export type AgentEditValues = {
   tools: string[];
   category: string;
   instructions: string;
-  /** NS2 F1: the subsystem that owns this agent (write-required by the API). */
-  ownerSubsystem: SubsystemId;
+  /** NS2 F1: the department that owns this agent (write-required by the API). */
+  department: DepartmentId;
   /** The agent's own approval-gate rules (frontmatter `gates`). */
   gates: GateRuleInput[];
   /** Ids of linked global catalog rules (frontmatter `gateRuleIds`). */
@@ -33,6 +37,8 @@ export type AgentEditValues = {
 export function toFormValues(agent: Agent): AgentEditValues {
   return {
     name: agent.name ?? "",
+    displayName: agent.displayName ?? "",
+    title: agent.title ?? "",
     description: agent.description ?? "",
     glyph: agent.glyph ?? "",
     model: agent.model ?? "sonnet",
@@ -40,7 +46,7 @@ export function toFormValues(agent: Agent): AgentEditValues {
     tools: agent.tools ?? [],
     category: agent.category ?? "",
     instructions: agent.instructions,
-    ownerSubsystem: agent.ownerSubsystem ?? "forge",
+    department: agent.department ?? "dev",
     gates: agent.gates ?? [],
     gateRuleIds: agent.gateRuleIds ?? [],
   };
@@ -61,6 +67,8 @@ export function applyFormValues(agent: Agent, values: AgentEditValues): Agent {
   return {
     ...agent,
     name: values.name || undefined,
+    displayName: values.displayName || undefined,
+    title: values.title || undefined,
     description: values.description || undefined,
     glyph: values.glyph || undefined,
     model: values.model,
@@ -68,7 +76,7 @@ export function applyFormValues(agent: Agent, values: AgentEditValues): Agent {
     tools: values.tools,
     category: values.category || undefined,
     instructions: values.instructions,
-    ownerSubsystem: values.ownerSubsystem,
+    department: values.department,
     gates: values.gates,
     gateRuleIds: values.gateRuleIds,
   };

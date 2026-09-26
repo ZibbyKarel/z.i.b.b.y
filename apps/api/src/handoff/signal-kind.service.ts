@@ -1,9 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import {
   type CreateTaskInput,
+  DEPARTMENTS,
   type HandoffSignalKind,
   type HandoffSignalKindInput,
-  SUBSYSTEMS,
   type TaskTarget,
 } from "@zibby/contracts";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
@@ -19,7 +19,7 @@ export interface CreateSignalKindResult {
  * B1 — a thin service wrapping {@link HandoffSignalKindStore} that owns the
  * ZIBBY-native build-task spawn (design doc
  * `docs/superpowers/specs/2026-07-22-handoff-signal-registry-and-receiver-filter-design.md`,
- * Slot B → B1/B3): registering a new signal kind also creates a Forge task to
+ * Slot B → B1/B3): registering a new signal kind also creates a Dev task to
  * implement its emit, via the SAME `TaskSchedulerService.createTask(...)` call
  * `HandoffService.dispatchTask` already uses — `TaskSchedulerService` is
  * already reachable here because `HandoffModule` imports `TasksModule` for
@@ -39,7 +39,7 @@ export class SignalKindService {
 
   /**
    * Register the kind (store mints its id, forces `pending`/`system:false`),
-   * then spawn a Forge-targeted build task describing what to implement and
+   * then spawn a Dev-targeted build task describing what to implement and
    * link it back onto the stored row via `markBuildTask`.
    */
   async create(input: HandoffSignalKindInput): Promise<CreateSignalKindResult> {
@@ -53,7 +53,7 @@ export class SignalKindService {
       taskInput,
       Date.now(),
       undefined,
-      forgeTarget(),
+      devTarget(),
     );
     const buildTaskId = result.task.id;
     await this.store.markBuildTask(signalKind.id, buildTaskId);
@@ -69,20 +69,20 @@ export class SignalKindService {
   }
 }
 
-/** Resolve Forge's display name off the subsystem registry — same lookup `HandoffService.decorateTarget` uses. */
-function forgeTarget(): TaskTarget {
-  const name = SUBSYSTEMS.find((s) => s.id === "forge")?.name ?? "forge";
-  return { kind: "subsystem", id: "forge", name };
+/** Resolve Dev's display name off the department registry — same lookup `HandoffService.decorateTarget` uses. */
+function devTarget(): TaskTarget {
+  const name = DEPARTMENTS.find((s) => s.id === "dev")?.name ?? "dev";
+  return { kind: "department", id: "dev", name };
 }
 
 /** The build task's Czech instruction body — mirrors the design doc's Slot B3 template. */
 function buildTaskText(sk: HandoffSignalKind): string {
   const severityHint = sk.severityBearing ? `, severity: <low|moderate|high|critical>` : "";
   return [
-    `Subsystém **${sk.from}** má nově emitovat handoff signál \`${sk.id}\`.`,
+    `Oddělení **${sk.from}** má nově emitovat handoff signál \`${sk.id}\`.`,
     `Kdy se spustí / popis: ${sk.description}`,
     "",
-    `Implementuj to tak, že v producentské službě subsystému ${sk.from} po detekci zavoláš`,
+    `Implementuj to tak, že v producentské službě oddělení ${sk.from} po detekci zavoláš`,
     `\`HandoffService.evaluate({ from: "${sk.from}", kind: "${sk.id}"${severityHint}, ... })\`.`,
     "",
     `Signál je zaregistrovaný jako "pending" a sám se přepne na "active", jakmile emit poprvé proběhne.`,

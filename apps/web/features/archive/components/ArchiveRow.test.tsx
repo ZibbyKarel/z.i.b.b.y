@@ -21,35 +21,35 @@ function run(overrides: Partial<RunView> = {}): RunView {
 }
 
 describe("ArchiveRow", () => {
-  it("renders the title and the '{subsystem} · {project}' subline", () => {
+  it("renders the title and the '{department} · {project}' subline", () => {
     render(
       <ArchiveRow
         active={false}
+        departmentColor="#5b8def"
+        departmentName="Dev"
         durationLabel="18m"
         onSelect={vi.fn()}
         run={run()}
-        subsystemColor="#5b8def"
-        subsystemName="Forge"
       />,
     );
 
     expect(screen.getByText("Ship the release")).toBeInTheDocument();
-    expect(screen.getByText("Forge · billing-svc")).toBeInTheDocument();
+    expect(screen.getByText("Dev · billing-svc")).toBeInTheDocument();
     expect(screen.getByText("18m")).toBeInTheDocument();
   });
 
-  it("shows the 'bez subsystému' subline as plain text when there is no subsystem colour", () => {
+  it("shows the 'bez oddělení' subline as plain text when there is no department colour", () => {
     render(
       <ArchiveRow
         active={false}
+        departmentName="Bez oddělení"
         durationLabel=""
         onSelect={vi.fn()}
         run={run({ kind: "agent", owner: "writer" })}
-        subsystemName="Bez subsystému"
       />,
     );
 
-    expect(screen.getByText("Bez subsystému · billing-svc")).toBeInTheDocument();
+    expect(screen.getByText("Bez oddělení · billing-svc")).toBeInTheDocument();
     const dot = screen.getByTestId(ArchiveRowTestId.Dot);
     expect(dot).toHaveStyle({ background: "var(--color-foreground-faint)" });
   });
@@ -59,11 +59,11 @@ describe("ArchiveRow", () => {
     render(
       <ArchiveRow
         active={false}
+        departmentColor="#5b8def"
+        departmentName="Dev"
         durationLabel=""
         onSelect={onSelect}
         run={run({ runId: "run-42" })}
-        subsystemColor="#5b8def"
-        subsystemName="Forge"
       />,
     );
 
@@ -71,15 +71,15 @@ describe("ArchiveRow", () => {
     expect(onSelect).toHaveBeenCalledWith("run-42");
   });
 
-  it("hue-tints the row when active and a subsystem colour is set", () => {
+  it("hue-tints the row when active and a department colour is set", () => {
     render(
       <ArchiveRow
         active
+        departmentColor="#5b8def"
+        departmentName="Dev"
         durationLabel=""
         onSelect={vi.fn()}
         run={run()}
-        subsystemColor="#5b8def"
-        subsystemName="Forge"
       />,
     );
 
@@ -93,11 +93,11 @@ describe("ArchiveRow", () => {
     render(
       <ArchiveRow
         active={false}
+        departmentColor="#5b8def"
+        departmentName="Dev"
         durationLabel=""
         onSelect={vi.fn()}
         run={run()}
-        subsystemColor="#5b8def"
-        subsystemName="Forge"
       />,
     );
 

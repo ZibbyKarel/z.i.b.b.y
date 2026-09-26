@@ -5,10 +5,13 @@ import { cn } from "../../utils/cn";
 import { focusRingInset } from "../../utils/focus";
 import { Row, Stack } from "../Stack/Stack";
 
+export type TabsVariant = "default" | "mono";
+
 interface TabsContextValue {
   active: string;
   setActive: (id: string) => void;
   direction: "horizontal" | "vertical";
+  variant: TabsVariant;
 }
 
 const TabsContext = createContext<TabsContextValue | null>(null);
@@ -33,6 +36,10 @@ export interface TabsProps {
   value?: string;
   onValueChange?: (value: string) => void;
   direction?: "horizontal" | "vertical";
+  /** `"mono"` is DS.md §8's top-nav / sub-nav look: mono uppercase labels with a
+   *  1px `--ink` underline indicator, full header height. Defaults to the
+   *  existing accent-underline look. */
+  variant?: TabsVariant;
   children: ReactNode;
 }
 
@@ -41,6 +48,7 @@ export function Tabs({
   value,
   onValueChange,
   direction = "horizontal",
+  variant = "default",
   children,
 }: TabsProps) {
   const [internal, setInternal] = useState(defaultValue);
@@ -51,7 +59,7 @@ export function Tabs({
   };
   const Root = direction === "vertical" ? Row : Stack;
   return (
-    <TabsContext.Provider value={{ active, setActive, direction }}>
+    <TabsContext.Provider value={{ active, setActive, direction, variant }}>
       <Root align="stretch" data-testid={TabsTestId.Root}>
         {children}
       </Root>
@@ -60,7 +68,7 @@ export function Tabs({
 }
 
 export function TabList({ children }: { children: ReactNode }) {
-  const { direction } = useTabsContext();
+  const { direction, variant } = useTabsContext();
   if (direction === "vertical") {
     return (
       <div className="border-r border-border shrink-0 w-52">
@@ -71,7 +79,7 @@ export function TabList({ children }: { children: ReactNode }) {
     );
   }
   return (
-    <div className="border-b border-border shrink-0">
+    <div className={cn("border-b shrink-0", variant === "mono" ? "border-line" : "border-border")}>
       <Row align="stretch" data-testid={TabsTestId.List} gap="25" role="tablist">
         {children}
       </Row>
@@ -117,7 +125,7 @@ function nextTabTarget(
 }
 
 export function Tab({ value, children, ref, ...rest }: TabProps) {
-  const { active, setActive, direction } = useTabsContext();
+  const { active, setActive, direction, variant } = useTabsContext();
   const isActive = active === value;
 
   const handleKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
@@ -163,12 +171,22 @@ export function Tab({ value, children, ref, ...rest }: TabProps) {
       {...rest}
       aria-selected={isActive}
       className={cn(
-        "bg-transparent border-none cursor-pointer font-mono text-base -mb-px px-[14px] pt-2 pb-[7px]",
+        "bg-transparent border-none cursor-pointer -mb-px",
         "transition-[color,border-color]",
         focusRingInset,
-        isActive
-          ? "border-b-2 border-accent text-accent font-semibold"
-          : "border-b-2 border-transparent text-foreground-dim hover:text-foreground",
+        variant === "mono"
+          ? cn(
+              "font-mono uppercase tracking-wider text-[11px] h-full px-[14px] flex items-center",
+              isActive
+                ? "border-b border-ink text-ink"
+                : "border-b border-transparent text-ink-3 hover:text-ink-2",
+            )
+          : cn(
+              "font-mono text-base px-[14px] pt-2 pb-[7px]",
+              isActive
+                ? "border-b-2 border-accent text-accent font-semibold"
+                : "border-b-2 border-transparent text-foreground-dim hover:text-foreground",
+            ),
       )}
       onClick={() => setActive(value)}
       onKeyDown={handleKeyDown}

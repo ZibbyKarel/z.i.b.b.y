@@ -2,21 +2,21 @@ import { Controller } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { healthContract } from "@zibby/contracts";
 import { ClaudePreflightService } from "../runner/claude-preflight.service";
-import { SubsystemHealthService } from "./subsystem-health.service";
+import { DepartmentHealthService } from "./department-health.service";
 import { WatcherHealthRegistry } from "./watcher-health.registry";
 
 /**
  * Implements `healthContract`. Process liveness needs no I/O — if the process
  * can answer, it is alive — but readiness includes the Claude CLI preflight AND a
- * per-subsystem probe (vault, integrations, scheduler). Overall status degrades if
- * claude-shaped runs would be refused OR any subsystem is not `ok`, so the dashboard
+ * per-department probe (vault, integrations, scheduler). Overall status degrades if
+ * claude-shaped runs would be refused OR any department is not `ok`, so the dashboard
  * never has to infer a fault from silence (M8).
  */
 @Controller()
 export class HealthController {
   constructor(
     private readonly preflight: ClaudePreflightService,
-    private readonly subsystems: SubsystemHealthService,
+    private readonly departments: DepartmentHealthService,
     private readonly watchers: WatcherHealthRegistry,
   ) {}
 
@@ -24,14 +24,14 @@ export class HealthController {
   handler() {
     return tsRestHandler(healthContract, {
       getHealth: async () => {
-        const [claude, subsystems] = await Promise.all([
+        const [claude, departments] = await Promise.all([
           this.preflight.probe(),
-          this.subsystems.probeAll(),
+          this.departments.probeAll(),
         ]);
         // F6c: `watchers[]` is informational — a stale watcher deliberately does
         // NOT flip the overall status to degraded in v1 (fail-open; it surfaces
         // as a briefing line and a settings-HUD indicator instead).
-        const degraded = !claude.ok || subsystems.some((s) => s.status !== "ok");
+        const degraded = !claude.ok || departments.some((s) => s.status !== "ok");
         return {
           status: 200,
           body: {
@@ -39,7 +39,7 @@ export class HealthController {
             uptime: process.uptime(),
             timestamp: new Date().toISOString(),
             claude,
-            subsystems,
+            departments,
             watchers: this.watchers.all(),
           },
         };

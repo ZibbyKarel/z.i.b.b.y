@@ -44,7 +44,7 @@ interface Harness {
   approvals: { register: ReturnType<typeof vi.fn>; requestApproval: ReturnType<typeof vi.fn> };
   gates: {
     rulesForAgent: ReturnType<typeof vi.fn>;
-    rulesForAgentInSubsystem: ReturnType<typeof vi.fn>;
+    rulesForAgentInDepartment: ReturnType<typeof vi.fn>;
     evaluate: ReturnType<typeof vi.fn>;
   };
   runs: Map<string, PipelineRun>;
@@ -65,9 +65,9 @@ async function makeHarness(dir: string): Promise<Harness> {
   };
   const gates = {
     rulesForAgent: vi.fn(async () => []),
-    // NS2 F3a — stage intents now assemble rules via the subsystem-aware path
-    // (pipeline.ownerSubsystem picks the bucket; undefined = two-bucket).
-    rulesForAgentInSubsystem: vi.fn(async () => []),
+    // NS2 F3a — stage intents now assemble rules via the department-aware path
+    // (pipeline.department picks the bucket; undefined = two-bucket).
+    rulesForAgentInDepartment: vi.fn(async () => []),
     evaluate: vi.fn(() => ({ decision: "ask", ruleId: "rule-1" })),
   };
   const pipelines = {
@@ -139,12 +139,16 @@ async function makeHarness(dir: string): Promise<Harness> {
     // resolves null, so the git-worktree/clone-if-missing branch never runs — see
     // pipeline-runner.project-local.test.ts for its dedicated dispatch coverage.
     { resolveForRun: vi.fn() } as never,
+    // EmployeeAllocator double (D-015): this fixture pipeline carries no
+    // `department`, so `drive()` never calls `acquire` — present only to keep
+    // the positional constructor aligned.
+    { acquire: vi.fn(), release: vi.fn(), isBusy: vi.fn(), busy: vi.fn(() => new Map()) } as never,
     // A3: fake ModuleRef — HandoffService is resolved lazily (not constructor-
     // injected, see pipeline-runner.service.ts's doc comment), so the double here
     // is a ModuleRef whose `.get()` hands back a fake HandoffService. This
-    // harness's fixture pipeline carries no ownerSubsystem, so recordArtifact
+    // harness's fixture pipeline carries no department, so recordArtifact
     // never calls `.get()` at all; see pipeline-runner.outputs.test.ts for the
-    // Scout-owned dispatch coverage.
+    // Research-owned dispatch coverage.
     { get: vi.fn(() => ({ evaluate: vi.fn(async () => ({ action: "none" })) })) } as never,
   );
 

@@ -75,5 +75,5 @@ handoff name keep distinct records (the kind is part of the id).
 
 **Read-only on purpose.** Records are born only inside the API process — the
 pipeline delivery sinks are the only writer — so there is deliberately no
-`POST`/`PUT` here: a client can never forge provenance for a run that didn't
+`POST`/`PUT` here: a client can never fake provenance for a run that didn't
 actually happen.

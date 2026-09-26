@@ -2,6 +2,8 @@ import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { ErrorSchema } from "../common.schema";
 import {
+  ChainInputSchema,
+  ChainSchema,
   HandoffRuleInputSchema,
   HandoffRuleSchema,
   HandoffSignalKindInputSchema,
@@ -11,8 +13,8 @@ import {
 const c = initContract();
 
 /**
- * Cross-subsystem handoff rules (design doc
- * `docs/superpowers/specs/2026-07-22-subsystem-handoff-design.md`, Part A). Full
+ * Cross-department handoff rules (design doc
+ * `docs/superpowers/specs/2026-07-22-department-handoff-design.md`, Part A). Full
  * CRUD over the file-backed rule set (`HandoffRuleStore`, A2): the seeded system
  * rules (`system: true`) can be retuned but never deleted — a delete of a system
  * rule is a 403, mirrored by `HandoffRuleStore.delete`.
@@ -22,6 +24,14 @@ export const handoffContract = c.router(
     getHandoffRules: {
       method: "GET",
       path: "/handoff-rules",
+      /**
+       * D-005 — a chain's rules are hidden by default (`includeChains` defaults
+       * false server-side): the generic rule editor must never let an operator
+       * half-edit a chain's route row by row (a chain's own PUT is the only
+       * atomic writer of its rules). `"true"`/`"false"` as a plain string —
+       * `z.coerce.boolean()` would coerce the STRING `"false"` to `true`.
+       */
+      query: z.object({ includeChains: z.string().optional() }),
       responses: {
         200: HandoffRuleSchema.array(),
       },
@@ -66,7 +76,7 @@ export const handoffContract = c.router(
         201: z.object({ signalKind: HandoffSignalKindSchema, buildTaskId: z.string() }),
       },
       summary:
-        "Register a new operator-authored signal kind (status: pending) and spawn a Forge build task to implement its emit",
+        "Register a new operator-authored signal kind (status: pending) and spawn a Dev build task to implement its emit",
     },
     updateSignalKind: {
       method: "PATCH",
@@ -82,6 +92,42 @@ export const handoffContract = c.router(
       pathParams: z.object({ id: z.string().min(1) }),
       responses: { 200: z.object({ id: z.string().min(1) }), 404: ErrorSchema, 403: ErrorSchema },
       summary: "Remove an operator-authored signal kind (a built-in kind cannot be deleted)",
+    },
+
+    /**
+     * ZB-05a / D-005 — chains: a view over the same rule/signal-kind stores above,
+     * not a new store (see `chain-view.ts`'s `deriveChain`). A chain's rules are
+     * excluded from `getHandoffRules`'s default listing (D-005 cost).
+     */
+    listChains: {
+      method: "GET",
+      path: "/handoff/chains",
+      responses: { 200: ChainSchema.array() },
+      summary:
+        "List every chain (a signal kind with chain: true, its route derived from the rule set)",
+    },
+    getChain: {
+      method: "GET",
+      path: "/handoff/chains/:id",
+      pathParams: z.object({ id: z.string().min(1) }),
+      responses: { 200: ChainSchema, 404: ErrorSchema },
+      summary: "One chain by id",
+    },
+    putChain: {
+      method: "PUT",
+      path: "/handoff/chains/:id",
+      pathParams: z.object({ id: z.string().min(1) }),
+      body: ChainInputSchema,
+      responses: { 200: ChainSchema, 400: ErrorSchema },
+      summary:
+        "Create or replace a chain: atomically rewrites its signal kind AND exactly its own rules",
+    },
+    deleteChain: {
+      method: "DELETE",
+      path: "/handoff/chains/:id",
+      pathParams: z.object({ id: z.string().min(1) }),
+      responses: { 200: z.object({ id: z.string().min(1) }), 404: ErrorSchema, 409: ErrorSchema },
+      summary: "Remove a chain (409 while a non-terminal parent task still references it)",
     },
   },
   {

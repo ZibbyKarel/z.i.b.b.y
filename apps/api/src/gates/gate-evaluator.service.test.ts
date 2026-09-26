@@ -308,7 +308,7 @@ describe("GateEvaluatorService", () => {
     });
   });
 
-  describe("subsystem bucket (NS2 F3a — three-bucket evaluation)", () => {
+  describe("department bucket (NS2 F3a — three-bucket evaluation)", () => {
     let catalogDir: string;
     let catalog: GateRulesStorageService;
     let scoped: GateEvaluatorService;
@@ -328,113 +328,113 @@ describe("GateEvaluatorService", () => {
       await fs.rm(catalogDir, { recursive: true, force: true });
     });
 
-    it("subsystem ask + floor notify → ask (subsystem hardens the floor)", async () => {
+    it("department ask + floor notify → ask (department hardens the floor)", async () => {
       await catalog.create({
         match: [{ type: "action", action: "channel-reply" }],
         decision: "ask",
         resolve: { type: "human" },
-        ownerSubsystem: "herald",
+        department: "com",
       });
-      const rules = await scoped.rulesForAgentInSubsystem({}, "herald");
-      // floor-channel-reply is notify; the herald-tagged ask must win (strictest).
+      const rules = await scoped.rulesForAgentInDepartment({}, "com");
+      // floor-channel-reply is notify; the comms-tagged ask must win (strictest).
       expect(scoped.evaluate(rules, { action: "channel-reply" }).decision).toBe("ask");
     });
 
-    it("subsystem notify + floor ask → ask (a subsystem rule can never weaken the floor)", async () => {
+    it("department notify + floor ask → ask (a department rule can never weaken the floor)", async () => {
       await catalog.create({
         match: [{ type: "action", action: "purchase" }],
         decision: "notify",
-        ownerSubsystem: "forge",
+        department: "dev",
       });
-      const rules = await scoped.rulesForAgentInSubsystem({}, "forge");
-      // floor-purchase is ask; the weaker forge-tagged notify must NOT win.
+      const rules = await scoped.rulesForAgentInDepartment({}, "dev");
+      // floor-purchase is ask; the weaker dev-tagged notify must NOT win.
       expect(scoped.evaluate(rules, { action: "purchase" }).decision).toBe("ask");
     });
 
-    it("no subsystem id → identical to the two-bucket result (regression lock)", async () => {
+    it("no department id → identical to the two-bucket result (regression lock)", async () => {
       const input: AgentPolicyInput = {
         gates: [{ match: [{ type: "action", action: "tweet" }], decision: "notify" }],
       };
       const twoBucket = await scoped.rulesForAgent(input);
-      const viaSubsystemPath = await scoped.rulesForAgentInSubsystem(input);
-      expect(viaSubsystemPath).toEqual(twoBucket);
+      const viaDepartmentPath = await scoped.rulesForAgentInDepartment(input);
+      expect(viaDepartmentPath).toEqual(twoBucket);
       for (const action of [
         { action: "tweet" },
         { action: "purchase" },
         { action: "pr.merge" },
         { action: "unknown-action" },
       ]) {
-        expect(scoped.evaluate(viaSubsystemPath, action)).toEqual(
+        expect(scoped.evaluate(viaDepartmentPath, action)).toEqual(
           scoped.evaluate(twoBucket, action),
         );
       }
     });
 
-    it("beacon's tier-default catch-all hardens pr.open (floor notify) to ask", async () => {
-      const rules = await scoped.rulesForAgentInSubsystem({}, "beacon");
+    it("incident's tier-default catch-all hardens pr.open (floor notify) to ask", async () => {
+      const rules = await scoped.rulesForAgentInDepartment({}, "inc");
       const result = scoped.evaluate(rules, { action: "pr.open" });
       expect(result.decision).toBe("ask");
-      expect(result.ruleId).toBe("subsystem-default-beacon");
+      expect(result.ruleId).toBe("department-default-inc");
     });
 
-    it('subsystemRules("forge") returns only forge-tagged rules (and no tier default — forge is null)', async () => {
+    it('departmentRules("dev") returns only dev-tagged rules (and no tier default — dev is null)', async () => {
       await catalog.create({
         match: [{ type: "action", action: "deploy" }],
         decision: "deny",
-        ownerSubsystem: "forge",
+        department: "dev",
       });
       await catalog.create({
         match: [{ type: "action", action: "deploy" }],
         decision: "deny",
-        ownerSubsystem: "puls",
+        department: "ops",
       });
-      const rules = await scoped.subsystemRules("forge");
+      const rules = await scoped.departmentRules("dev");
       expect(rules).toHaveLength(1);
-      expect(rules[0]?.source).toBe("subsystem");
+      expect(rules[0]?.source).toBe("department");
       expect(rules[0]?.locked).toBe(false);
       expect(rules[0]?.decision).toBe("deny");
     });
 
-    it("a forge-tagged rule fires on a forge-owned run and NOT on a puls-owned run (scope proof)", async () => {
+    it("a dev-tagged rule fires on a dev-owned run and NOT on a ops-owned run (scope proof)", async () => {
       await catalog.create({
         match: [{ type: "action", action: "tweet" }],
         decision: "deny",
-        ownerSubsystem: "forge",
+        department: "dev",
       });
       const own: AgentPolicyInput = {
         gates: [{ match: [{ type: "action", action: "tweet" }], decision: "notify" }],
       };
-      const forgeRules = await scoped.rulesForAgentInSubsystem(own, "forge");
-      expect(scoped.evaluate(forgeRules, { action: "tweet" }).decision).toBe("deny");
-      const pulsRules = await scoped.rulesForAgentInSubsystem(own, "puls");
-      // puls doesn't load the forge rule; the agent's own notify wins (floor has
-      // no tweet entry, puls has no tier default).
-      expect(scoped.evaluate(pulsRules, { action: "tweet" }).decision).toBe("notify");
+      const devRules = await scoped.rulesForAgentInDepartment(own, "dev");
+      expect(scoped.evaluate(devRules, { action: "tweet" }).decision).toBe("deny");
+      const opsRules = await scoped.rulesForAgentInDepartment(own, "ops");
+      // ops doesn't load the dev rule; the agent's own notify wins (floor has
+      // no tweet entry, ops has no tier default).
+      expect(scoped.evaluate(opsRules, { action: "tweet" }).decision).toBe("notify");
     });
 
-    it("no catalog service injected → empty subsystem bucket, tier default still applies", async () => {
+    it("no catalog service injected → empty department bucket, tier default still applies", async () => {
       const bare = new GateEvaluatorService(new PolicyStorageService(dir));
-      const forgeRules = await bare.subsystemRules("forge");
-      expect(forgeRules).toEqual([]);
-      const beaconRules = await bare.subsystemRules("beacon");
-      expect(beaconRules).toHaveLength(1);
-      expect(beaconRules[0]?.id).toBe("subsystem-default-beacon");
+      const devRules = await bare.departmentRules("dev");
+      expect(devRules).toEqual([]);
+      const incidentRules = await bare.departmentRules("inc");
+      expect(incidentRules).toHaveLength(1);
+      expect(incidentRules[0]?.id).toBe("department-default-inc");
     });
 
-    it("validateSubsystemRuleHardenOnly rejects a tagged rule weakening the floor, allows hardening", async () => {
+    it("validateDepartmentRuleHardenOnly rejects a tagged rule weakening the floor, allows hardening", async () => {
       const floor = await scoped.floor();
       expect(
-        scoped.validateSubsystemRuleHardenOnly(floor, {
+        scoped.validateDepartmentRuleHardenOnly(floor, {
           match: [{ type: "action", action: "purchase" }],
           decision: "allow",
-          ownerSubsystem: "forge",
+          department: "dev",
         }),
       ).not.toBeNull();
       expect(
-        scoped.validateSubsystemRuleHardenOnly(floor, {
+        scoped.validateDepartmentRuleHardenOnly(floor, {
           match: [{ type: "action", action: "purchase" }],
           decision: "deny",
-          ownerSubsystem: "forge",
+          department: "dev",
         }),
       ).toBeNull();
     });

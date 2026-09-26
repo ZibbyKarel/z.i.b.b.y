@@ -137,24 +137,24 @@ describe("PipelinesStorageService", () => {
     expect((await service.get(created.id)).avatar).toBe("/avatars/x.png");
   });
 
-  it("round-trips the ownerSubsystem tag through frontmatter (Phase 81)", async () => {
-    const created = await service.create({ ...sample, id: "owned", ownerSubsystem: "forge" });
-    expect(created.ownerSubsystem).toBe("forge");
+  it("round-trips the department tag through frontmatter (Phase 81)", async () => {
+    const created = await service.create({ ...sample, id: "owned", department: "dev" });
+    expect(created.department).toBe("dev");
 
     const parsed = matter(await fs.readFile(fileFor(dir, "owned"), "utf8"));
-    expect(parsed.data.ownerSubsystem).toBe("forge");
+    expect(parsed.data.department).toBe("dev");
 
     const read = await service.get("owned");
-    expect(read.ownerSubsystem).toBe("forge");
+    expect(read.department).toBe("dev");
   });
 
-  it("leaves an untagged pipeline's ownerSubsystem absent — no phantom field written", async () => {
+  it("leaves an untagged pipeline's department absent — no phantom field written", async () => {
     await service.create(sample);
     const parsed = matter(await fs.readFile(fileFor(dir, "release"), "utf8"));
-    expect(parsed.data).not.toHaveProperty("ownerSubsystem");
+    expect(parsed.data).not.toHaveProperty("department");
 
     const read = await service.get("release");
-    expect(read.ownerSubsystem).toBeUndefined();
+    expect(read.department).toBeUndefined();
   });
 
   describe("avatar asset externalization (Phase 73)", () => {
@@ -298,7 +298,7 @@ describe("PipelinesStorageService", () => {
    * round-trip. This caught a real bug: the field is schema-DEFAULTED, so a
    * missing copy in `fromFrontmatter` is completely silent — every pipeline reads
    * back as `"standard"` regardless of what its file says, and the cheapest-first
-   * ordering that `subsystemCandidates` / `cheapestPipeline` depend on collapses
+   * ordering that `departmentCandidates` / `cheapestPipeline` depend on collapses
    * to a constant instead of failing loudly. Same trap on the write side: because
    * the field is never `undefined` on a parsed entity, `toFrontmatter` must write
    * it UNCONDITIONALLY, or an `update()` silently strips the rung from disk.

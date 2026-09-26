@@ -7,7 +7,7 @@
  * 1. Coverage (BLOCKING): every `apps/api/src/<module>` directory touched by
  *    the current diff must resolve to a doc file — via manifest.mjs's
  *    API_MODULE_DOC_MAP — that actually exists on disk. Catches "shipped a
- *    brand-new subsystem, never wrote a doc for it" (exactly what happened to
+ *    brand-new department, never wrote a doc for it" (exactly what happened to
  *    companies/speech/self-knowledge/agent-factory before this tool existed).
  *    Fully deterministic: either the doc file exists or it doesn't.
  *

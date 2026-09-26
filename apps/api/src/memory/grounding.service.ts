@@ -1,8 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
-import type { IndexEntry, Note, NoteDomain, SubsystemId } from "@zibby/contracts";
+import type { DepartmentId, IndexEntry, Note, NoteDomain } from "@zibby/contracts";
 import { tokenize } from "../tasks/keyword-scorer";
 import { GLOBAL_REVIEW_RULES_ID, reviewRulesIdFor } from "./review-rules-note";
-import { subsystemShelfId } from "./subsystem-shelf";
+import { departmentShelfId } from "./department-shelf";
 import { VaultService } from "./vault.service";
 
 /** Fixed id of the operator's mission note — always grounded first when present. */
@@ -30,13 +30,13 @@ export interface GroundingInput {
   task: string;
   projectId?: string;
   matchedTerms?: string[];
-  /** The owning subsystem (F4a) — when present, its knowledge shelf is grounded
+  /** The owning department (F4a) — when present, its knowledge shelf is grounded
    * right after the self-knowledge note, ahead of term-matched MOCs. Missing
    * owner or missing shelf note is silently skipped (fail-open). */
-  ownerSubsystem?: SubsystemId;
+  department?: DepartmentId;
   /**
    * The run's life-domain (F8) — absent means work (the default). A
-   * `"personal"` run additionally grounds the Hearth shelf and is the only
+   * `"personal"` run additionally grounds the Personal shelf and is the only
    * kind of run that may ground a `domain: personal` note (see
    * {@link visibleInDomain}).
    */
@@ -184,7 +184,7 @@ export class GroundingService {
       // must reach the run whether or not the task text happens to mention it. F8:
       // a personal run stays out of work memory.
       if (input.domain !== "personal") await add(GLOBAL_REVIEW_RULES_ID);
-      // Grouped with the global rules note, ahead of the subsystem shelf and the
+      // Grouped with the global rules note, ahead of the department shelf and the
       // term-matched/1-hop-expanded MOCs — not where the brief's other project-scoped
       // add (`add(input.projectId)` below) sits. Operator-approved learned rules are
       // high-value and bounded (`MAX_RENDERED_RULES`); MOC matches and wikilink
@@ -197,13 +197,13 @@ export class GroundingService {
       // as the project note itself. A deliberate choice, not an oversight.
       if (input.projectId) await add(reviewRulesIdFor(input.projectId));
       const mocs: Note[] = [];
-      const shelf = input.ownerSubsystem ? await add(subsystemShelfId(input.ownerSubsystem)) : null;
+      const shelf = input.department ? await add(departmentShelfId(input.department)) : null;
       if (shelf) mocs.push(shelf);
-      // F8 — a personal run also grounds the Hearth shelf (fail-open: a missing
+      // F8 — a personal run also grounds the Personal shelf (fail-open: a missing
       // shelf note is skipped by `add`'s own catch, same as any other note).
       if (input.domain === "personal") {
-        const hearthShelf = await add(subsystemShelfId("hearth"));
-        if (hearthShelf) mocs.push(hearthShelf);
+        const personalShelf = await add(departmentShelfId("per"));
+        if (personalShelf) mocs.push(personalShelf);
       }
       const entries = await this.vault.index().catch((): IndexEntry[] => []);
       // M7 isolation: restrict the candidate set to this run's project before

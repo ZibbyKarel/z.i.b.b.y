@@ -6,6 +6,7 @@ import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
+import { seedEmployeeFixture } from "./fixtures/employee-fixture";
 
 /**
  * 125e — the play/override/restart/resume routes + the dependency gate, exercised
@@ -19,6 +20,7 @@ describe("Roadmap gate API (e2e)", () => {
   let roadmapDir: string;
   let projectsDir: string;
   let agentsDir: string;
+  let employeesDir: string;
   let pipelinesDir: string;
   let tasksDir: string;
   let projectPath: string;
@@ -28,6 +30,11 @@ describe("Roadmap gate API (e2e)", () => {
     roadmapDir = await fs.mkdtemp(path.join(os.tmpdir(), "roadmap-gate-e2e-"));
     projectsDir = await fs.mkdtemp(path.join(os.tmpdir(), "roadmap-gate-e2e-projects-"));
     agentsDir = await fs.mkdtemp(path.join(os.tmpdir(), "roadmap-gate-e2e-agents-"));
+    // D-015/D-017: isolated too (not just AGENTS_DIR) — otherwise this suite would
+    // inherit the shared per-file data root's migrated `dev` employees (whose
+    // agent ids don't exist in THIS suite's isolated catalog), which seats "dev"
+    // at stage 1 with zero owned units once ownership is employee-based.
+    employeesDir = await fs.mkdtemp(path.join(os.tmpdir(), "roadmap-gate-e2e-employees-"));
     pipelinesDir = await fs.mkdtemp(path.join(os.tmpdir(), "roadmap-gate-e2e-pipelines-"));
     tasksDir = await fs.mkdtemp(path.join(os.tmpdir(), "roadmap-gate-e2e-tasks-"));
     // A real (but non-git) directory — `ProjectLocalService.resolveForRun` degrades
@@ -36,6 +43,7 @@ describe("Roadmap gate API (e2e)", () => {
     process.env.ROADMAP_DIR = roadmapDir;
     process.env.PROJECTS_DIR = projectsDir;
     process.env.AGENTS_DIR = agentsDir;
+    process.env.EMPLOYEES_DIR = employeesDir;
     process.env.PIPELINES_DIR = pipelinesDir;
     process.env.TASKS_DIR = tasksDir;
 
@@ -59,7 +67,7 @@ describe("Roadmap gate API (e2e)", () => {
       category: "Jiné",
       description: "Nesouvisí s roadmapem",
       instructions: "Dělej něco úplně jiného.",
-      ownerSubsystem: "forge",
+      department: "dev",
     });
 
     // 125g — the decomposition dispatch's explicit target must resolve to a real
@@ -72,17 +80,47 @@ describe("Roadmap gate API (e2e)", () => {
         category: "Roadmap",
         description: "Decomposes a childless epic into a JSON list of child tasks.",
         instructions: "Respond with an empty JSON array: []",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
+
+    // D-015: department ownership is an employee fact — hire both positions into
+    // "dev" so it stays seated at stage 1 and `resolveDepartmentTargetOrNull` sees
+    // >0 owned units (D-017's unleased fallback then covers the actual dispatch,
+    // since neither position needs to be leased for this suite's assertions).
+    await seedEmployeeFixture(employeesDir, {
+      id: "employee_unrelated-agent",
+      agentId: "unrelated-agent",
+      department: "dev",
+    });
+    await seedEmployeeFixture(employeesDir, {
+      id: "employee_roadmap-decomposer",
+      agentId: "roadmap-decomposer",
+      department: "dev",
+    });
   });
 
   afterAll(async () => {
     await app.close();
-    for (const dir of [roadmapDir, projectsDir, agentsDir, pipelinesDir, tasksDir, projectPath]) {
+    for (const dir of [
+      roadmapDir,
+      projectsDir,
+      agentsDir,
+      employeesDir,
+      pipelinesDir,
+      tasksDir,
+      projectPath,
+    ]) {
       await fs.rm(dir, { recursive: true, force: true });
     }
-    for (const k of ["ROADMAP_DIR", "PROJECTS_DIR", "AGENTS_DIR", "PIPELINES_DIR", "TASKS_DIR"]) {
+    for (const k of [
+      "ROADMAP_DIR",
+      "PROJECTS_DIR",
+      "AGENTS_DIR",
+      "EMPLOYEES_DIR",
+      "PIPELINES_DIR",
+      "TASKS_DIR",
+    ]) {
       delete process.env[k];
     }
   });

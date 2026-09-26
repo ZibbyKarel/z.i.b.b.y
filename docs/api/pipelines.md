@@ -11,7 +11,7 @@ A pipeline is a Markdown file with YAML frontmatter at
 id: delivery-loop
 name: Delivery Loop
 desc: "Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor"
-ownerSubsystem: forge # required on create (422 without it) — see below
+department: dev # required on create (422 without it) — see below
 complexity: deep # the ladder rung: light | standard | deep
 phases:
   - id: architekt
@@ -71,24 +71,24 @@ outputs: # what happens to the finished work (delivery sinks)
 The body of the `.md` file is the instructions for the whole pipeline
 (context hint).
 
-### Ownership (`ownerSubsystem`) and the ladder rung (`complexity`)
+### Ownership (`department`) and the ladder rung (`complexity`)
 
 Since NS2 F9 these two fields decide whether a pipeline is reachable at all.
 
-`ownerSubsystem` names the subsystem that owns this pipeline. It is **required on
-create** — `POST /api/pipelines` returns **422 `"ownerSubsystem is required"`**
+`department` names the department that owns this pipeline. It is **required on
+create** — `POST /api/pipelines` returns **422 `"department is required"`**
 without it, mirroring the same guard on `POST /api/agents`. The field is still
 `.optional()` in the schema on purpose: the entity store's listing is tolerant (a
 file failing validation is skipped, never fatal), so a required field would turn a
 hand-edited file that lost its owner into a _silent disappearance_ from the catalog
-instead of something `GET /api/subsystems/unowned` can report.
+instead of something `GET /api/departments/unowned` can report.
 
 The real enforcement is structural rather than schema-level: the task classifier's
-stage 1 routes **only to subsystems**, and a subsystem offers only the units it
+stage 1 routes **only to departments**, and a department offers only the units it
 owns — so an unowned pipeline is unroutable by construction. Nothing has to reject
 it; no path reaches it. See `docs/api/tasks.md` → _Classification_.
 
-`complexity` places the pipeline on its subsystem's **complexity ladder**, ordered
+`complexity` places the pipeline on its department's **complexity ladder**, ordered
 cheapest first:
 
 | rung            | shape                         | when                                                     |
@@ -104,7 +104,7 @@ canonical cheapest-first sort key — consumers use it rather than re-deriving a
 order from the enum's declaration order.
 
 The rung is data rather than file order because the stage-2 routing fallback
-resolves a low-confidence verdict to the subsystem's **cheapest owned pipeline**;
+resolves a low-confidence verdict to the department's **cheapest owned pipeline**;
 file order would silently change that meaning the first time a directory listing
 reordered.
 
@@ -172,13 +172,13 @@ provenance registry itself remains for delivery-source answerability.
 
 ```
 GET    /api/pipelines           list every pipeline
-POST   /api/pipelines           create a pipeline   (422 without ownerSubsystem)
+POST   /api/pipelines           create a pipeline   (422 without department)
 GET    /api/pipelines/:id       pipeline detail
 PUT    /api/pipelines/:id       update a pipeline
 DELETE /api/pipelines/:id       delete a pipeline
 ```
 
-`POST` returns **422** for a body with no `ownerSubsystem` (NS2 F9) as well as for
+`POST` returns **422** for a body with no `department` (NS2 F9) as well as for
 a dangling loop target; `409` on an id conflict; `404` for a missing/unsafe id.
 
 ## Starting a pipeline run
@@ -229,11 +229,46 @@ reachable from `stageRuns`).
 ### Phase: agent
 
 1. Loads the handoff file (`consumes`) from the previous phase (if any).
-2. Builds the prompt = pipeline prompt + phase instructions + the handoff file's content.
-3. Calls `RunnerCore.spawn()` for a `pipeline-stage` kind.
-4. Waits for it to finish (polling the sidecar status).
-5. Reads the output from the `produces` file (or the log's last N lines).
-6. Evaluates the result (success / failure).
+2. **Leases an employee** for `phase.agent` from the pipeline's own
+   `department` (see "Wiring: pipeline stage dispatch" below) — before the
+   sandbox is created.
+3. Builds the prompt = pipeline prompt + phase instructions + the handoff file's content.
+4. Calls `RunnerCore.spawn()` for a `pipeline-stage` kind.
+5. Waits for it to finish (polling the sidecar status).
+6. Reads the output from the `produces` file (or the log's last N lines).
+7. Evaluates the result (success / failure).
+8. Releases the lease, on every terminal path.
+
+### Wiring: pipeline stage dispatch (D-015, ZE-01)
+
+An `agent`-type phase's dispatch **is** leasing an employee — a hired
+instance of `phase.agent` (the position), leased from the pipeline's own
+`department` via `EmployeeAllocator.acquire(pipeline.department, phase.agent,
+{ runId })`. Full model, the allocator's FIFO/park semantics, and D-017's
+single-agent-task lease ladder live in `docs/api/employees.md`; this section
+covers only what changes in the pipeline runner itself:
+
+- **Parking.** When the department owns **no** employee of that position at
+  all (`NoEmployeeError`), the run **parks**: `status: "parked"`,
+  `parkedReason: "no-employee"` — a new member of `ParkedReasonSchema`
+  alongside `approval` / `retries` / `limit` / `output` — with
+  `currentStage` set to the phase that couldn't dispatch. This is a new,
+  durable-across-restart parked state distinct from the loop-exhausted /
+  PR-gate parks already documented under "Parking" below.
+- **Queued, not parked.** When every matching employee is busy but at least
+  one exists, `acquire` blocks FIFO instead of throwing — `run.status` is
+  untouched (stays `running`) while `currentStage` reflects the phase
+  waiting on a free lease; no `stageRuns` entry is appended until the lease
+  lands.
+- **Release discipline.** The lease is released in a `finally` around
+  `runStage`, covering every terminal outcome (`done`, `error`,
+  `interrupted`, `paused-limit`) — it never outlives the dispatch it was
+  acquired for.
+- A `verify`-type phase spawns no agent and never leases (`phase.agent` is
+  absent for it).
+- The leased employee's `employeeId`/`employeeName` are recorded onto the
+  stage's `AgentRun.extra` when present — see
+  [agents-runs.md](./agents-runs.md) → "Employee attribution".
 
 ### Phase: verify
 
@@ -368,3 +403,10 @@ A parked pipeline run:
 
 Same as for agent runs: `PipelineRunnerService` checks running stage runs on
 init and reconciles orphaned `running` → `interrupted`.
+
+A restart also drops every in-memory `EmployeeAllocator` lease (the allocator
+holds no persisted state) — a stage found `running` with a dead PID
+reconciles to `interrupted` same as always, and a subsequent resume/retry
+re-acquires its lease fresh rather than assuming one is still held.
+
+<!-- ZibbyCorp ZB-05a (2026-09-25): recordArtifact gains the chain-step emitter (fail-soft, like the scout emission). -->

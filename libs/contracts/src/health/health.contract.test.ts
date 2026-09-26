@@ -10,13 +10,13 @@ describe("healthContract", () => {
 });
 
 describe("health schema", () => {
-  it("accepts a well-formed ok payload with the claude preflight verdict + subsystems", () => {
+  it("accepts a well-formed ok payload with the claude preflight verdict + departments", () => {
     const parsed = HealthSchema.safeParse({
       status: "ok",
       uptime: 12.3,
       timestamp: new Date().toISOString(),
       claude: { ok: true, version: "1.2.3 (Claude Code)" },
-      subsystems: [
+      departments: [
         { name: "backend", status: "ok" },
         { name: "vault", status: "ok" },
         { name: "integrations", status: "ok" },
@@ -36,19 +36,19 @@ describe("health schema", () => {
     expect(parsed.success).toBe(true);
   });
 
-  it("accepts a degraded payload carrying the failure reason + a down subsystem", () => {
+  it("accepts a degraded payload carrying the failure reason + a down department", () => {
     const parsed = HealthSchema.safeParse({
       status: "degraded",
       uptime: 12.3,
       timestamp: new Date().toISOString(),
       claude: { ok: false, reason: "missing" },
-      subsystems: [{ name: "vault", status: "down", detail: "ENOENT" }],
+      departments: [{ name: "vault", status: "down", detail: "ENOENT" }],
       watchers: [],
     });
     expect(parsed.success).toBe(true);
   });
 
-  it("rejects an unknown subsystem name or status", () => {
+  it("rejects an unknown department name or status", () => {
     const base = {
       status: "ok",
       uptime: 1,
@@ -57,10 +57,11 @@ describe("health schema", () => {
       watchers: [],
     };
     expect(
-      HealthSchema.safeParse({ ...base, subsystems: [{ name: "db", status: "ok" }] }).success,
+      HealthSchema.safeParse({ ...base, departments: [{ name: "db", status: "ok" }] }).success,
     ).toBe(false);
     expect(
-      HealthSchema.safeParse({ ...base, subsystems: [{ name: "vault", status: "weird" }] }).success,
+      HealthSchema.safeParse({ ...base, departments: [{ name: "vault", status: "weird" }] })
+        .success,
     ).toBe(false);
   });
 
@@ -97,7 +98,7 @@ describe("health schema", () => {
       uptime: 1,
       timestamp: new Date().toISOString(),
       claude: { ok: true },
-      subsystems: [],
+      departments: [],
     });
     expect(parsed.success).toBe(false);
   });

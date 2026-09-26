@@ -3,7 +3,7 @@ import { MachineModule } from "../machine/machine.module";
 import { BriefingModule } from "../briefing/briefing.module";
 import { KbModule } from "../kb/kb.module";
 import { MemoryModule } from "../memory/memory.module";
-import { SubsystemsModule } from "../subsystems/subsystems.module";
+import { DepartmentsModule } from "../departments/departments.module";
 import { TasksModule } from "../tasks/tasks.module";
 import { dataDir } from "../shared/data-dir";
 import { ChatController } from "./chat.controller";
@@ -39,9 +39,9 @@ export function resolveChatDir(): string {
  * KbModule` ring `KbAuthModule` exists to dodge for `McpModule`/`ClaudeRunModule`.
  */
 @Module({
-  // SubsystemsModule (NS2 F3c) feeds the per-subsystem `get_status` lens — a
-  // one-directional edge (subsystems never imports chat).
-  imports: [TasksModule, MemoryModule, BriefingModule, MachineModule, SubsystemsModule, KbModule],
+  // DepartmentsModule (NS2 F3c) feeds the per-department `get_status` lens — a
+  // one-directional edge (departments never imports chat).
+  imports: [TasksModule, MemoryModule, BriefingModule, MachineModule, DepartmentsModule, KbModule],
   controllers: [ChatController, ChatMcpController],
   providers: [
     { provide: CHAT_DIR, useFactory: resolveChatDir },

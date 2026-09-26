@@ -18,6 +18,20 @@ describe("FilePreview", () => {
     expect(onRemove).toHaveBeenCalledOnce();
   });
 
+  it("wraps the row in a new-tab link when href is set", () => {
+    render(<FilePreview href="/files/spec.pdf" name="spec.pdf" size={10} />);
+    const link = screen.getByTestId(FilePreviewTestId.Link);
+    expect(link.tagName).toBe("A");
+    expect(link).toHaveAttribute("href", "/files/spec.pdf");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("renders no link when href is absent", () => {
+    render(<FilePreview name="spec.pdf" size={10} />);
+    expect(screen.queryByTestId(FilePreviewTestId.Link)).not.toBeInTheDocument();
+  });
+
   it("maps extensions to icons", () => {
     expect(iconForFile("main.ts")).toBe("code");
     expect(iconForFile("clip.mp4")).toBe("film");

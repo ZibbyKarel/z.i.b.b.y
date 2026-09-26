@@ -1,15 +1,15 @@
 import { Inject, Injectable, forwardRef } from "@nestjs/common";
 import type {
+  DepartmentId,
   Project,
   RoadmapItem,
   RoadmapItemRun,
   RoutingProposal,
-  SubsystemId,
   TaskOutput,
   TaskRouting,
   TaskTarget,
 } from "@zibby/contracts";
-import { SUBSYSTEMS, isBlocked } from "@zibby/contracts";
+import { DEPARTMENTS, isBlocked } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { ApprovalsService } from "../approvals/approvals.service";
 import { ProjectLocalService } from "../projects/project-local.service";
@@ -30,19 +30,19 @@ import { RoadmapStore } from "./roadmap.store";
 import { RoutingProposalStore } from "./routing-proposal.store";
 
 /**
- * The subsystem a roadmap release falls back to when the switchboard can't tell
- * whose domain an item belongs to. Forge, because a roadmap item is by
- * construction delivery work on a code project — and because forge is the only
- * subsystem that owns both a delivery pipeline and specialist agents, so it is
+ * The department a roadmap release falls back to when the switchboard can't tell
+ * whose domain an item belongs to. Dev, because a roadmap item is by
+ * construction delivery work on a code project — and because dev is the only
+ * department that owns both a delivery pipeline and specialist agents, so it is
  * the one that can actually make the "small change vs. full pipeline" call.
  *
- * Only a FALLBACK: `TaskClassifierService.classifySubsystem` still gets to pick
- * any seated subsystem, so a research- or content-shaped item can legitimately
- * route to scout. If a project ever needs a different default, this is the value
+ * Only a FALLBACK: `TaskClassifierService.classifyDepartment` still gets to pick
+ * any seated department, so a research- or content-shaped item can legitimately
+ * route to research. If a project ever needs a different default, this is the value
  * to promote to a `RoadmapConfig` field — not a reason to widen it speculatively
  * now.
  */
-export const DEFAULT_ROADMAP_SUBSYSTEM: SubsystemId = "forge";
+export const DEFAULT_ROADMAP_DEPARTMENT: DepartmentId = "dev";
 
 /** Parse a PR number out of a GitHub PR url (`.../pull/123`); `undefined` if it doesn't match. */
 export function parsePrNumberFromUrl(url: string): number | undefined {
@@ -109,7 +109,7 @@ export class RoadmapGateService {
     private readonly projects: ProjectsStorageService,
     private readonly projectLocal: ProjectLocalService,
     private readonly taskScheduler: TaskSchedulerService,
-    /** The stage-1 "whose domain is this?" call for a release — see {@link classifySubsystem}. */
+    /** The stage-1 "whose domain is this?" call for a release — see {@link classifyDepartment}. */
     private readonly classifier: TaskClassifierService,
     private readonly scheduledTasks: ScheduledTasksStorageService,
     private readonly taskRuns: TaskRunsService,
@@ -638,10 +638,10 @@ export class RoadmapGateService {
     const output = item.output ?? { type: "pr" as const };
     const routing = approvedTarget
       ? null
-      : await this.classifySubsystem(routingText, local.path, output);
+      : await this.classifyDepartment(routingText, local.path, output);
     // NS2 F10 — the Tier-3 exit. An ambiguous stage-1 verdict means the switchboard
-    // weighed two subsystems and couldn't separate them; on this path nobody is
-    // watching a preview, and guessing wrong costs an entire wrong subsystem's run.
+    // weighed two departments and couldn't separate them; on this path nobody is
+    // watching a preview, and guessing wrong costs an entire wrong department's run.
     // So park and ask. Returning HERE (before `createTask`) is load-bearing: the item
     // must never reach `lifecycle: "running"` without a task, or `reconcileRunning`
     // kills it as "Run finished without producing an artifact".
@@ -667,8 +667,8 @@ export class RoadmapGateService {
       // only ever matches a project's STORED `path` field, which a Phase-98
       // project like this one legitimately never sets.
       project.id,
-      // explicitTarget = the SUBSYSTEM this item belongs to (see
-      // `classifySubsystem` below), or `undefined` when no subsystem is seated
+      // explicitTarget = the DEPARTMENT this item belongs to (see
+      // `classifyDepartment` below), or `undefined` when no department is seated
       // — in which case this falls back to the old undirected full-catalog
       // classify rather than failing. background — false: the synchronous
       // server-side call pattern (`automations/scheduler.service.ts`), so the
@@ -709,7 +709,7 @@ export class RoadmapGateService {
 
   /**
    * NS2 F10 — the Tier-3 park: persist the routing question and hand the operator one
-   * clear decision instead of guessing which subsystem owns the item.
+   * clear decision instead of guessing which department owns the item.
    *
    * **The item's lifecycle is left alone (`enqueued`).** Idempotency comes from
    * {@link pendingRoutingItemIds}, which {@link drain} consults before releasing — not
@@ -752,13 +752,13 @@ export class RoadmapGateService {
       // were inseparable — showing only the winner would hide the actual question.
       detail: routingQuestion(item.name, routing),
       risk: "medium",
-      ...(routing.target.kind === "subsystem" ? { ownerSubsystem: routing.target.id } : {}),
+      ...(routing.target.kind === "department" ? { department: routing.target.id } : {}),
     });
     this.log.info("roadmap release parked for a routing decision", {
       projectId: item.projectId,
       itemId: item.id,
       proposalId: proposal.id,
-      pick: routing.target.kind === "subsystem" ? routing.target.id : routing.target.kind,
+      pick: routing.target.kind === "department" ? routing.target.id : routing.target.kind,
       confidence: routing.confidence,
     });
     void this.activity.record({
@@ -801,7 +801,7 @@ export class RoadmapGateService {
    * routing" stick: an enqueued item is exactly what the next drain would pick up, and
    * with the proposal now gone the idempotency guard would no longer hold it back — so
    * it would be re-classified and re-parked. Returning it to `todo` hands it to the
-   * operator, whose re-entry is Play with the subsystem named explicitly (a hard
+   * operator, whose re-entry is Play with the department named explicitly (a hard
    * override that skips the classifier entirely).
    *
    * Reads the proposal BEFORE deleting it, since the item it points at is the only way
@@ -831,47 +831,47 @@ export class RoadmapGateService {
 
   /**
    * Ask the ONE question a gate release should ask the switchboard — "whose
-   * domain is this?" — and let that subsystem pick its own unit
-   * (`TaskSchedulerService.resolveSubsystemTarget` →
-   * `TaskClassifierService.classifyWithinSubsystem`). This is the North-Star-2
-   * Subsystem Charter applied to the roadmap: *"The global classifier only picks
-   * the subsystem; the subsystem picks the unit."*
+   * domain is this?" — and let that department pick its own unit
+   * (`TaskSchedulerService.resolveDepartmentTarget` →
+   * `TaskClassifierService.classifyWithinDepartment`). This is the North-Star-2
+   * Department Charter applied to the roadmap: *"The global classifier only picks
+   * the department; the department picks the unit."*
    *
    * It replaces the previous `explicitTarget: undefined` ("the classifier picks
    * the target", the original Phase-125 Play UX decision, which predates the F2
    * federation work). The practical difference: a narrow roadmap item can now
-   * land on a single owned agent — forge's `fullstack-developer`, say — instead
+   * land on a single owned agent — dev's `fullstack-developer`, say — instead
    * of paying for Architekt → Kodér ⇄ Review → Tester → Dokumentátor, because
-   * that pipeline-vs-agent call is made INSIDE forge with forge's mandate and
+   * that pipeline-vs-agent call is made INSIDE dev with dev's mandate and
    * `EFFORT_RULE` in the prompt.
    *
-   * {@link DEFAULT_ROADMAP_SUBSYSTEM} is nominated as the not-confident
+   * {@link DEFAULT_ROADMAP_DEPARTMENT} is nominated as the not-confident
    * fallback: a roadmap item is by construction delivery work on a code project.
    *
    * Never throws and never blocks a release. A classifier failure, or a
-   * federation with no seated subsystem at all, returns `null` — the caller then
+   * federation with no seated department at all, returns `null` — the caller then
    * dispatches with no explicit target, i.e. exactly the old undirected
    * behaviour. Failing a release because the ROUTING lookup fell over would be a
    * strictly worse outcome than routing it the old way.
    */
-  private async classifySubsystem(
+  private async classifyDepartment(
     text: string,
     projectPath: string,
     output: TaskOutput,
   ): Promise<TaskRouting | null> {
     try {
-      const routing = await this.classifier.classifySubsystem(
+      const routing = await this.classifier.classifyDepartment(
         { text, paths: [projectPath], output },
-        DEFAULT_ROADMAP_SUBSYSTEM,
+        DEFAULT_ROADMAP_DEPARTMENT,
       );
-      // Belt to `classifySubsystem`'s own braces: its catalog is subsystem-only
-      // and seated-only by construction, so this can't fire — but a non-subsystem
+      // Belt to `classifyDepartment`'s own braces: its catalog is department-only
+      // and seated-only by construction, so this can't fire — but a non-department
       // target reaching `createTask` as an explicit target would bypass the whole
-      // subsystem layer silently, which is worth one cheap check.
-      if (routing && routing.target.kind !== "subsystem") return null;
+      // department layer silently, which is worth one cheap check.
+      if (routing && routing.target.kind !== "department") return null;
       return routing;
     } catch (error) {
-      this.log.warn("roadmap subsystem classify failed — releasing undirected instead", {
+      this.log.warn("roadmap department classify failed — releasing undirected instead", {
         error: error instanceof Error ? error.message : String(error),
       });
       return null;
@@ -890,14 +890,14 @@ export class RoadmapGateService {
     taskId: string,
     routing: TaskRouting | null,
   ): Promise<void> {
-    if (!routing || routing.target.kind !== "subsystem") return;
+    if (!routing || routing.target.kind !== "department") return;
     try {
       await this.scheduledTasks.setClassification(taskId, {
         stage1: routing.target,
         confidence: routing.confidence,
         reason: routing.reason,
         matchedTerms: routing.matchedTerms,
-        subsystem: routing.target.id,
+        department: routing.target.id,
       });
     } catch (error) {
       this.log.warn("roadmap classification trace write failed (non-fatal)", {
@@ -1006,17 +1006,17 @@ export class RoadmapGateService {
   }
 }
 
-/** A routing target's operator-facing name — a subsystem's registry name, else its kind. */
+/** A routing target's operator-facing name — a department's registry name, else its kind. */
 function targetLabel(target: TaskTarget): string {
-  if (target.kind === "subsystem") {
-    return SUBSYSTEMS.find((s) => s.id === target.id)?.name ?? target.id;
+  if (target.kind === "department") {
+    return DEPARTMENTS.find((s) => s.id === target.id)?.name ?? target.id;
   }
   return "id" in target ? target.id : target.kind;
 }
 
 /**
  * NS2 F10 — the one-line question an operator reads in the approvals queue. Names
- * BOTH candidates when there is a runner-up ("Forge, or Codex?") and falls back to
+ * BOTH candidates when there is a runner-up ("Dev, or Knowledge?") and falls back to
  * the weak-winner phrasing when the router named no alternative — the two are
  * genuinely different questions, and a single generic string would flatten the more
  * actionable one.
@@ -1024,7 +1024,7 @@ function targetLabel(target: TaskTarget): string {
 function routingQuestion(itemName: string, routing: TaskRouting): string {
   const pick = targetLabel(routing.target);
   if (!routing.runnerUp) {
-    return `"${itemName}" — no subsystem clearly owns this (best guess ${pick}). Release to ${pick}?`;
+    return `"${itemName}" — no department clearly owns this (best guess ${pick}). Release to ${pick}?`;
   }
   return `"${itemName}" — ${pick} or ${targetLabel(routing.runnerUp.target)}? Release to ${pick}?`;
 }

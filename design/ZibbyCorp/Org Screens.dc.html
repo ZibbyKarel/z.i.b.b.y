@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="padding:24px 28px;display:flex;flex-direction:column;gap:22px;color:var(--ink)">
+
+<sc-if value="{{ isMap }}" hint-placeholder-val="{{ true }}">
+  <div data-screen-label="Org map" style="display:flex;flex-direction:column;gap:22px">
+    <div style="display:flex;align-items:baseline;gap:16px"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">01 — ORG MAP</span><h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">ZibbyCorp</h1><span style="margin-left:auto;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--ink2)">{{ mapMeta }}</span></div>
+    <div style="display:flex;flex-direction:column;align-items:center">
+      <div style="position:relative;display:flex;align-items:center;gap:14px;padding:10px 18px 10px 10px;border:1px solid var(--line2);background:var(--panel)">
+        <div style="position:absolute;top:-1px;left:-1px;width:8px;height:8px;border-top:1px solid var(--ink);border-left:1px solid var(--ink)"></div>
+        <div style="position:absolute;top:-1px;right:-1px;width:8px;height:8px;border-top:1px solid var(--ink);border-right:1px solid var(--ink)"></div>
+        <div style="position:absolute;bottom:-1px;left:-1px;width:8px;height:8px;border-bottom:1px solid var(--ink);border-left:1px solid var(--ink)"></div>
+        <div style="position:absolute;bottom:-1px;right:-1px;width:8px;height:8px;border-bottom:1px solid var(--ink);border-right:1px solid var(--ink)"></div>
+        <div style="width:50px;height:50px;display:grid;place-items:center;background:var(--panel2)">{{ cooGlyph }}</div>
+        <div style="display:flex;flex-direction:column;gap:3px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">COO · ROOT</span><span style="font-size:16px;font-weight:500">Zibby</span><span style="font-size:12px;color:var(--ink2)">Routes, classifies, chats</span></div>
+        <div style="margin-left:22px;display:flex;align-items:center;gap:7px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2)">{{ workDot }}{{ cooMeta }}</div>
+      </div>
+      <div style="width:1px;height:22px;background:var(--line2)"></div>
+    </div>
+    <div style="position:relative;display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:8px;margin-top:-22px">
+      <div style="position:absolute;top:0;height:1px;background:var(--line2);left:calc((100% - 80px) / 22);right:calc((100% - 80px) / 22)"></div>
+      <sc-for list="{{ nodes }}" as="d" hint-placeholder-count="11">
+        <div style="display:flex;flex-direction:column;align-items:center">
+          <div style="width:1px;height:18px;background:var(--line2)"></div>
+          <button onClick="{{ d.onClick }}" style="all:unset;cursor:pointer;box-sizing:border-box;width:100%;min-height:128px;display:flex;flex-direction:column;gap:8px;padding:10px;background:var(--panel);border:1px solid {{ d.line }}" style-hover="background:var(--panel2)">
+            <div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink3)"><span>{{ d.code }}</span><span>{{ d.subStr }}</span></div>
+            <span style="font-size:13px;font-weight:500;line-height:1.25">{{ d.name }}</span>
+            <div style="display:flex;flex-wrap:wrap;gap:3px;min-height:9px"><sc-for list="{{ d.cells }}" as="x">{{ x }}</sc-for></div>
+            <div style="margin-top:auto;display:flex;align-items:center;gap:6px;padding-top:8px;border-top:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.04em;white-space:nowrap;color:var(--ink2)">{{ d.alertDot }}<span>{{ d.alertU }}</span></div>
+          </button>
+          <div style="width:1px;height:22px;background:{{ d.stub }}"></div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="border:1px solid var(--ink);background:var(--panel);margin-top:-22px">
+      <div style="display:flex;align-items:center;gap:16px;padding:13px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap">
+        <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">02 — DEPARTMENT · {{ sel.code }}</span>
+        <span style="font-size:18px;font-weight:500">{{ sel.name }}</span>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:18px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--ink2)"><span>{{ sel.countStr }} BORROWED</span><span>{{ sel.activeStr }} ACTIVE</span><span>{{ sel.blockedStr }} BLOCKED</span>
+          <button onClick="{{ sel.onOpen }}" style="all:unset;cursor:pointer;border:1px solid var(--line2);padding:6px 10px;color:var(--ink);font-size:10px" style-hover="background:var(--panel2)">OPEN DEPARTMENT →</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 340px;min-height:300px">
+        <div style="padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;align-content:start">
+          <sc-for list="{{ selTeam }}" as="a" hint-placeholder-count="5">
+            <button onClick="{{ a.onClick }}" style="all:unset;cursor:pointer;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--line);background:var(--bg)" style-hover="border-color:var(--ink)">
+              <div style="height:72px;display:grid;place-items:center;border:1px solid var(--line);background-image:linear-gradient(var(--grid) 1px, transparent 1px),linear-gradient(90deg, var(--grid) 1px, transparent 1px);background-size:8px 8px">{{ a.glyph }}</div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px"><span style="font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.1em;font-weight:600">{{ a.nameU }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--ink3)">{{ a.id }}</span></div>
+              <span style="font-size:12px;color:var(--ink2);margin-top:-4px">{{ a.role }} · {{ a.taskStr }}</span>
+              <div style="display:flex;align-items:center;gap:7px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">{{ a.dot }}<span>{{ a.stateU }}</span></div>
+              <span style="font-size:12px;line-height:1.35;color:var(--ink2);min-height:32px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ a.now }}</span>
+            </button>
+          </sc-for>
+          <sc-if value="{{ selEmpty }}"><div style="grid-column:1 / -1;border:1px dashed var(--line2);padding:16px;font-size:13px;color:var(--ink2)">No agents borrowed right now. The department borrows from the pool when a subtask starts.</div></sc-if>
+        </div>
+        <div style="border-left:1px solid var(--line);display:flex;flex-direction:column">
+          <div style="display:flex;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>HANDOFFS · IN / OUT</span><span>{{ selHoCount }}</span></div>
+          <sc-for list="{{ selHandoffs }}" as="h" hint-placeholder-count="3">
+            <button onClick="{{ h.onClick }}" style="all:unset;cursor:pointer;box-sizing:border-box;width:100%;display:flex;flex-direction:column;gap:8px;padding:11px 16px;border-bottom:1px solid var(--line)" style-hover="background:var(--panel2)">
+              <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em">
+                <span style="color:var(--ink3);width:30px">{{ h.dir }}</span>
+                <span style="border:1px solid {{ h.fromLine }};padding:3px 6px">{{ h.from }}</span>
+                <span style="position:relative;flex:1;height:1px;background:var(--line2)">{{ h.packet }}</span>
+                <span style="display:flex;align-items:center;gap:5px;border:1px solid {{ h.toLine }};padding:3px 6px">{{ h.dot }}{{ h.to }}</span>
+                <span style="width:40px;text-align:right;color:var(--ink2)">{{ h.gate }}</span>
+              </div>
+              <span style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ h.title }}</span>
+              <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink3)">{{ h.id }} · {{ h.art }}</span>
+            </button>
+          </sc-for>
+          <sc-if value="{{ selHoEmpty }}"><span style="padding:14px 16px;font-size:13px;color:var(--ink2)">Nothing moving in or out of this department.</span></sc-if>
+        </div>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isDept }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Department detail" style="display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;align-items:flex-end;gap:24px;flex-wrap:wrap">
+      <div style="display:flex;flex-direction:column;gap:6px;min-width:0;flex:1">
+        <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">DEPARTMENT · {{ dp.code }} · REPORTS TO COO</span>
+        <h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">{{ dp.name }}</h1>
+        <span style="font-size:14px;color:var(--ink2)">{{ dp.desc }}</span>
+      </div>
+      <div style="display:flex;gap:8px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em">
+        <button onClick="{{ dp.onChat }}" style="all:unset;cursor:pointer;border:1px solid var(--line2);padding:10px 14px;color:var(--ink)" style-hover="background:var(--panel2)">DIRECT LINE →</button>
+        <button onClick="{{ dp.onNew }}" style="all:unset;cursor:pointer;background:var(--ink);color:var(--panel);padding:11px 14px">NEW TASK HERE</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+      <sc-for list="{{ dp.metrics }}" as="m" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;gap:4px;padding:12px 0"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ m.k }}</span><span style="font-size:20px;font-weight:500;font-variant-numeric:tabular-nums">{{ m.v }}</span></div></sc-for>
+    </div>
+    <div style="display:flex;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="7"><button onClick="{{ t.onClick }}" style="all:unset;cursor:pointer;padding:10px 14px;margin-bottom:-1px;border-bottom:1px solid {{ t.line }};color:{{ t.color }}">{{ t.label }} <span style="color:var(--ink3)">{{ t.n }}</span></button></sc-for>
+    </div>
+
+    <sc-if value="{{ tab.team }}">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">BORROWED NOW · {{ dp.teamStr }}</span>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+          <sc-for list="{{ team }}" as="a" hint-placeholder-count="4">
+            <button onClick="{{ a.onClick }}" style="all:unset;cursor:pointer;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--line);background:var(--panel)" style-hover="border-color:var(--ink)">
+              <div style="height:72px;display:grid;place-items:center;border:1px solid var(--line);background-image:linear-gradient(var(--grid) 1px, transparent 1px),linear-gradient(90deg, var(--grid) 1px, transparent 1px);background-size:8px 8px">{{ a.glyph }}</div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.1em;font-weight:600">{{ a.nameU }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--ink3)">{{ a.id }}</span></div>
+              <span style="font-size:12px;color:var(--ink2);margin-top:-4px">{{ a.role }} · {{ a.task }}</span>
+              <div style="display:flex;align-items:center;gap:7px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">{{ a.dot }}<span>{{ a.stateU }}</span></div>
+              <span style="font-size:12px;line-height:1.35;color:var(--ink2)">{{ a.now }}</span>
+            </button>
+          </sc-for>
+          <sc-if value="{{ teamEmpty }}"><div style="border:1px dashed var(--line2);padding:16px;font-size:13px;color:var(--ink2)">No agents borrowed right now. The department borrows from the pool when a subtask starts.</div></sc-if>
+        </div>
+        <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3);margin-top:8px">ROLES THIS DEPARTMENT BORROWS</span>
+        <div style="border:1px solid var(--line);background:var(--panel)">
+          <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr);padding:9px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>ROLE</span><span>IN POOL</span><span>FREE NOW</span></div>
+          <sc-for list="{{ roles }}" as="r" hint-placeholder-count="4"><div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr);padding:10px 14px;border-bottom:1px solid var(--line);font-size:13px"><span>{{ r.role }}</span><span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ r.total }}</span><span style="display:flex;align-items:center;gap:7px;font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ r.dot }}{{ r.free }}</span></div></sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tab.subtasks }}">
+      <div style="border:1px solid var(--line);background:var(--panel)">
+        <div style="display:grid;grid-template-columns:100px minmax(0,2fr) 110px 150px 120px minmax(0,1fr);gap:12px;padding:9px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>SUBTASK</span><span>PARENT TASK</span><span>PIPELINE</span><span>STEP</span><span>STATE</span><span>AGENTS</span></div>
+        <sc-for list="{{ subtasks }}" as="s" hint-placeholder-count="4">
+          <button onClick="{{ s.onClick }}" style="all:unset;cursor:pointer;box-sizing:border-box;width:100%;display:grid;grid-template-columns:100px minmax(0,2fr) 110px 150px 120px minmax(0,1fr);gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);font-size:13px" style-hover="background:var(--panel2)">
+            <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ s.id }}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.title }}</span>
+            <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em">{{ s.pipeline }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)">{{ s.step }}</span>
+            <span style="display:flex;align-items:center;gap:7px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em">{{ s.dot }}{{ s.stateU }}</span>
+            <span style="display:flex;gap:4px">{{ s.glyphs }}</span>
+          </button>
+        </sc-for>
+        <sc-if value="{{ subEmpty }}"><div style="padding:16px 14px;font-size:13px;color:var(--ink2)">No subtasks in this department.</div></sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tab.pipelines }}">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <sc-for list="{{ pipes }}" as="p" hint-placeholder-count="2">
+          <div style="border:1px solid var(--line);background:var(--panel);padding:16px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;font-weight:600">{{ p.name }}</span><span style="font-size:12px;color:var(--ink2)">{{ p.stepsStr }}</span><span style="margin-left:auto;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ p.usedBy }}</span></div>
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em">
+              <sc-for list="{{ p.steps }}" as="s" hint-placeholder-count="4"><span style="display:flex;flex-direction:column;gap:4px;border:1px solid var(--line2);padding:8px 10px;background:var(--bg);min-width:92px"><span style="color:var(--ink3)">{{ s.n }}</span><span>{{ s.roleU }}</span></span><span style="color:var(--ink3);font-size:13px">{{ s.arrow }}</span></sc-for>
+            </div>
+            <span style="font-size:12px;color:var(--ink2)">{{ p.note }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ tab.list }}">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span style="font-size:13px;color:var(--ink2)">{{ listNote }}</span>
+        <div style="border:1px solid var(--line);background:var(--panel)">
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+            <div style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,2fr) minmax(0,1fr) auto;gap:14px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--line)">
+              <span style="font-family:'Geist Mono',monospace;font-size:12px">{{ r.name }}</span><span style="font-size:13px;color:var(--ink2)">{{ r.desc }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink3)">{{ r.meta }}</span>
+              <div style="display:flex;border:1px solid var(--line2);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em">
+                <sc-for list="{{ r.opts }}" as="o"><button onClick="{{ o.onClick }}" style="all:unset;cursor:pointer;padding:6px 10px;background:{{ o.bg }};color:{{ o.ink }}">{{ o.label }}</button></sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isPool }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Agent pool" style="display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">AGENT POOL</span><h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">Shared roster</h1><span style="font-size:14px;color:var(--ink2)">Departments borrow agents per subtask and return them when it ends.</span></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">
+      <sc-for list="{{ poolFilters }}" as="f" hint-placeholder-count="7"><button onClick="{{ f.onClick }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:7px;padding:6px 10px;border:1px solid {{ f.line }};background:{{ f.bg }};color:{{ f.ink }}">{{ f.dot }}{{ f.label }} <span style="color:var(--ink3)">{{ f.n }}</span></button></sc-for>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
+      <sc-for list="{{ pool }}" as="a" hint-placeholder-count="12">
+        <button onClick="{{ a.onClick }}" style="all:unset;cursor:pointer;box-sizing:border-box;display:grid;grid-template-columns:56px minmax(0,1fr);gap:12px;padding:12px;border:1px solid var(--line);background:var(--panel)" style-hover="border-color:var(--ink)">
+          <div style="width:56px;height:56px;display:grid;place-items:center;border:1px solid var(--line);background-image:linear-gradient(var(--grid) 1px, transparent 1px),linear-gradient(90deg, var(--grid) 1px, transparent 1px);background-size:8px 8px">{{ a.glyph }}</div>
+          <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+            <div style="display:flex;justify-content:space-between;gap:8px"><span style="font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.1em;font-weight:600">{{ a.nameU }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--ink3)">{{ a.id }}</span></div>
+            <span style="font-size:12px;color:var(--ink2)">{{ a.role }}</span>
+            <div style="display:flex;align-items:center;gap:7px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em">{{ a.dot }}<span>{{ a.stateU }}</span></div>
+            <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2);padding-top:6px;border-top:1px solid var(--line)">{{ a.where }}</span>
+          </div>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isAgent }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Agent profile" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:20px;align-items:start">
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div style="position:relative;height:220px;display:grid;place-items:center;border:1px solid var(--line2);background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px, transparent 1px),linear-gradient(90deg, var(--grid) 1px, transparent 1px);background-size:12px 12px">
+        <div style="position:absolute;top:-1px;left:-1px;width:10px;height:10px;border-top:1px solid var(--ink);border-left:1px solid var(--ink)"></div>
+        <div style="position:absolute;top:-1px;right:-1px;width:10px;height:10px;border-top:1px solid var(--ink);border-right:1px solid var(--ink)"></div>
+        <div style="position:absolute;bottom:-1px;left:-1px;width:10px;height:10px;border-bottom:1px solid var(--ink);border-left:1px solid var(--ink)"></div>
+        <div style="position:absolute;bottom:-1px;right:-1px;width:10px;height:10px;border-bottom:1px solid var(--ink);border-right:1px solid var(--ink)"></div>
+        {{ ag.glyph }}
+        <span style="position:absolute;left:12px;bottom:10px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ ag.id }} · SHARED POOL</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center"><h1 style="margin:0;font-size:30px;font-weight:500;letter-spacing:-.02em">{{ ag.name }}</h1><div style="display:flex;align-items:center;gap:8px;padding:5px 10px;border:1px solid var(--line2);font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em">{{ ag.dot }}{{ ag.stateU }}</div></div>
+      <span style="font-size:14px;color:var(--ink2);margin-top:-10px">{{ ag.role }} · {{ ag.where }}</span>
+      <div style="border:1px solid var(--line);padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--panel)">
+        <div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>CURRENT SUBTASK</span><span>{{ ag.sub }}</span></div>
+        <span style="font-size:15px;line-height:1.35">{{ ag.now }}</span>
+        <div style="height:2px;background:var(--line)"><div style="height:2px;width:{{ ag.pct }};background:var(--ink)"></div></div>
+        <div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2)"><span>{{ ag.step }}</span><span>{{ ag.pct }}</span></div>
+        <sc-if value="{{ ag.hasTask }}"><button onClick="{{ ag.openTask }}" style="all:unset;cursor:pointer;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink)">OPEN {{ ag.task }} →</button></sc-if>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">TOOLS · {{ ag.toolCount }}</span><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ ag.tools }}" as="t" hint-placeholder-count="4"><span style="font-family:'Geist Mono',monospace;font-size:11px;border:1px solid var(--line2);padding:4px 8px;color:var(--ink2)">{{ t }}</span></sc-for></div></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line)"><sc-for list="{{ ag.metrics }}" as="m" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:4px;padding:12px 0"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ m.k }}</span><span style="font-size:20px;font-weight:500;font-variant-numeric:tabular-nums">{{ m.v }}</span></div></sc-for></div>
+      <div style="display:flex;flex-direction:column;gap:0"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3);padding-bottom:8px">HISTORY</span>
+        <sc-for list="{{ ag.history }}" as="h" hint-placeholder-count="4"><div style="display:grid;grid-template-columns:90px 50px minmax(0,1fr) 60px;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:13px;align-items:center"><span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--ink2)">{{ h.sub }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--ink3)">{{ h.dept }}</span><span>{{ h.text }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--ink3);text-align:right">{{ h.when }}</span></div></sc-for>
+      </div>
+    </div>
+    <div style="border:1px solid var(--ink);background:var(--panel);display:flex;flex-direction:column;min-height:640px">
+      <div style="display:flex;align-items:center;gap:14px;padding:13px 18px;border-bottom:1px solid var(--line)"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">SESSION</span><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em">{{ ag.sessionId }}</span><span style="margin-left:auto;display:flex;align-items:center;gap:7px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2)">{{ ag.dot }}{{ ag.sessionState }}</span></div>
+      <div style="flex:1;padding:16px 18px;display:flex;flex-direction:column;gap:8px;background:var(--bg)">
+        <sc-for list="{{ ag.log }}" as="l" hint-placeholder-count="8"><div style="display:flex;gap:12px;font-family:'Geist Mono',monospace;font-size:11px;line-height:1.5"><span style="color:var(--ink3)">{{ l.t }}</span><span style="color:{{ l.color }}">{{ l.text }}{{ l.caret }}</span></div></sc-for>
+      </div>
+      <div style="display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)">
+        <input value="{{ sessDraft }}" onChange="{{ onSessDraft }}" onKeyDown="{{ onSessKey }}" placeholder="{{ ag.sessPh }}" style="flex:1;height:36px;box-sizing:border-box;border:1px solid var(--line2);background:var(--bg);padding:0 10px;font-size:13px;outline:none">
+        <button onClick="{{ togglePause }}" style="all:unset;cursor:pointer;border:1px solid var(--line2);padding:0 14px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;display:flex;align-items:center">{{ pauseLabel }}</button>
+        <button onClick="{{ sendSess }}" style="all:unset;cursor:pointer;background:var(--ink);color:var(--panel);padding:0 16px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;display:flex;align-items:center">SEND</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isChat }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Department chat" style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px;align-items:start">
+    <div style="border:1px solid var(--ink);background:var(--panel);display:flex;flex-direction:column;min-height:640px">
+      <div style="display:flex;align-items:center;gap:14px;padding:13px 18px;border-bottom:1px solid var(--line)"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">DIRECT LINE · {{ ch.code }}</span><span style="font-size:18px;font-weight:500">{{ ch.name }}</span><button onClick="{{ ch.onDept }}" style="all:unset;cursor:pointer;margin-left:auto;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2);border:1px solid var(--line2);padding:5px 8px">DEPARTMENT →</button></div>
+      <div style="flex:1;padding:18px;display:flex;flex-direction:column;gap:12px;background:var(--bg)">
+        <sc-for list="{{ ch.msgs }}" as="m" hint-placeholder-count="3">
+          <sc-if value="{{ m.you }}"><div style="align-self:flex-end;max-width:70%;background:var(--ink);color:var(--panel);padding:10px 12px;font-size:14px;line-height:1.45">{{ m.text }}</div></sc-if>
+          <sc-if value="{{ m.dept }}"><div style="align-self:flex-start;max-width:78%;display:flex;flex-direction:column;gap:6px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ ch.code }} · {{ ch.nameU }}</span><div style="border:1px solid var(--line2);background:var(--panel);padding:10px 12px;font-size:14px;line-height:1.45;text-wrap:pretty">{{ m.text }}</div></div></sc-if>
+        </sc-for>
+      </div>
+      <div style="display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)">
+        <input value="{{ chatDraft }}" onChange="{{ onChatDraft }}" onKeyDown="{{ onChatKey }}" placeholder="{{ ch.ph }}" style="flex:1;height:36px;box-sizing:border-box;border:1px solid var(--line2);background:var(--bg);padding:0 10px;font-size:13px;outline:none">
+        <button onClick="{{ sendChat }}" style="all:unset;cursor:pointer;background:var(--ink);color:var(--panel);padding:0 16px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;display:flex;align-items:center">SEND</button>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">CONTEXT · SUBTASKS</span>
+      <sc-for list="{{ ch.subs }}" as="s" hint-placeholder-count="3">
+        <button onClick="{{ s.onClick }}" style="all:unset;cursor:pointer;box-sizing:border-box;border:1px solid var(--line);background:var(--panel);padding:12px;display:flex;flex-direction:column;gap:6px" style-hover="border-color:var(--ink)">
+          <div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink3)"><span>{{ s.id }}</span><span style="display:flex;align-items:center;gap:6px;color:var(--ink)">{{ s.dot }}{{ s.stateU }}</span></div>
+          <span style="font-size:13px">{{ s.title }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)">{{ s.pipeline }} · {{ s.step }}</span>
+        </button>
+      </sc-for>
+      <span style="font-size:12px;color:var(--ink2);line-height:1.45">Messages here go straight to the department. Anything that turns into work becomes a task that enters at this department.</span>
+    </div>
+  </div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;route&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;go&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(r:string)=&gt;void&quot;},&quot;tick&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;number&quot;}}">
+class Component extends DCLogic {
+  state = { selDept: null, poolFilter: 'all', toggles: {}, sess: {}, sessDraft: '', paused: {}, chats: {}, chatDraft: '' };
+  componentDidMount() { this.p = setInterval(() => { if (window.ZC) { clearInterval(this.p); this.forceUpdate(); } }, 50); }
+  componentWillUnmount() { clearInterval(this.p); }
+  seed(s) { let h = 7; for (const c of s) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; }
+  renderVals() {
+    const Z = window.ZC, B = window.ZB, go = this.props.go || (() => {});
+    const empty = { nodes: [], selTeam: [], selHandoffs: [], sel: {}, tabs: [], team: [], roles: [], subtasks: [], pipes: [], rows: [], pool: [], poolFilters: [], dp: { metrics: [] }, tab: {}, ag: { tools: [], metrics: [], history: [], log: [] }, ch: { msgs: [], subs: [] } };
+    if (!Z || !B) return empty;
+    const pad = Z.pad, G = (a, size, glow) => B.glyph(React, { seed: a.name, state: a.state, size, glow });
+    const parts = (this.props.route || 'org/map').split('/'), v = parts[1] || 'map';
+    const out = { ...empty, isMap: v === 'map', isDept: v === 'dept', isPool: v === 'pool', isAgent: v === 'agent', isChat: v === 'chat' };
+    const act = a => a.state === 'working' || a.state === 'thinking';
+    const deptAgents = d => Z.agents.filter(a => a.dept === d);
+    const alertOf = d => { const ag = deptAgents(d.id), subs = Z.subtasksOf(d.id).filter(s => s.state !== 'done' && s.state !== 'idle');
+      const err = ag.filter(a => a.state === 'error').length, bl = ag.filter(a => a.state === 'blocked').length;
+      if (err) return { u: pad(err) + ' ERROR', k: 'error', bad: true }; if (bl) return { u: pad(bl) + ' BLOCKED', k: 'blocked', bad: true };
+      const n = ag.filter(act).length; return n ? { u: pad(n) + ' ACTIVE', k: 'working' } : { u: subs.length ? 'QUEUED' : 'QUIET', k: 'idle' }; };
+
+    if (out.isMap) {
+      out.cooGlyph = G(Z.coo, 38, true); out.workDot = B.dot(React, 'working', 7);
+      out.cooMeta = pad(Z.tasks.filter(t => Z.taskState(t) !== 'done').length) + ' TASKS ROUTED';
+      out.mapMeta = '11 DEPARTMENTS · ' + pad(Z.agents.length) + ' AGENTS IN POOL';
+      const selId = (Z.D(this.state.selDept) && this.state.selDept) || (Z.depts.find(d => deptAgents(d.id).some(act)) || Z.depts[0]).id;
+      out.nodes = Z.depts.map(d => { const al = alertOf(d), ag = deptAgents(d.id), open = Z.subtasksOf(d.id).filter(s => s.state !== 'done').length, on = d.id === selId;
+        return { ...d, subStr: pad(open) + ' SUB', cells: ag.map(a => B.dot(React, a.state, 9)), alertU: al.u, alertDot: B.dot(React, al.k, 7), line: on ? 'var(--ink)' : al.bad ? 'var(--line2)' : 'var(--line)', stub: on ? 'var(--ink)' : 'transparent', onClick: () => this.setState({ selDept: d.id }) }; });
+      const hs = [];
+      Z.tasks.forEach(t => { if (Z.taskState(t) === 'done') return;
+        const i = t.subs.findIndex(s => s.state !== 'done'); if (i < 0) return; const cur = t.subs[i], prev = t.subs[i - 1], next = t.subs[i + 1];
+        let from, to, state, art;
+        if (cur.state === 'blocked' && next && cur.step === 'DOCUMENTER') { from = cur.dept; to = next.dept; state = 'blocked'; art = 'PR #322'; }
+        else if (prev) { from = prev.dept; to = cur.dept; state = cur.state; art = prev.produces; }
+        else { from = 'coo'; to = cur.dept; state = cur.state; art = 'brief'; }
+        if (from !== selId && to !== selId) return;
+        const rule = Z.handoffRules.find(r => r.from === from && r.to === to), live = state === 'working' || state === 'thinking', inb = to === selId;
+        hs.push({ id: t.id, title: t.title, art: (art || '—').toUpperCase(), dir: inb ? 'IN' : 'OUT', from: from === 'coo' ? 'COO' : Z.D(from).code, to: Z.D(to).code,
+          fromLine: inb ? 'var(--line2)' : 'var(--ink)', toLine: inb || state === 'blocked' || state === 'error' ? 'var(--ink)' : 'var(--line2)',
+          dot: B.dot(React, state, 7), gate: from === 'coo' ? '—' : (rule ? rule.mode : 'AUTO'),
+          packet: live ? React.createElement('span', { style: { position: 'absolute', top: -2, width: 4, height: 4, borderRadius: '50%', background: 'var(--s-work)', boxShadow: '0 0 var(--gw) var(--s-work)', animation: `zc-flowx 1.8s linear ${(this.seed(t.id) % 10) / 10}s infinite` } }) : null,
+          onClick: () => go('work/task/' + t.id) }); });
+      hs.sort((a, b) => (a.dir === 'IN' ? 0 : 1) - (b.dir === 'IN' ? 0 : 1));
+      out.selHandoffs = hs; out.selHoCount = pad(hs.length); out.selHoEmpty = !hs.length;
+      const sd = Z.D(selId), sag = deptAgents(selId);
+      out.sel = { code: sd.code, name: sd.name, countStr: pad(sag.length), activeStr: pad(sag.filter(act).length), blockedStr: pad(sag.filter(a => a.state === 'blocked' || a.state === 'error').length), onOpen: () => go('org/dept/' + selId + '/team') };
+      out.selTeam = sag.map(a => ({ ...a, nameU: a.name.toUpperCase(), stateU: B.S[a.state].label.toUpperCase(), glyph: G(a, 48, true), dot: B.dot(React, a.state, 7), taskStr: a.task || 'Heartbeat', onClick: () => go('org/agent/' + a.id) }));
+      out.selEmpty = !sag.length;
+    }
+
+    if (out.isDept) {
+      const d = Z.D(parts[2]) || Z.depts[0], tab = parts[3] || 'team';
+      const subs = Z.subtasksOf(d.id), ag = deptAgents(d.id), [u, c] = Z.deptBudget[d.id];
+      const skills = Z.registries.skills, mcp = Z.registries.mcp, hooks = Z.registries.hooks, autos = Z.automations.filter(a => a.dept === d.id);
+      const T = (k, def) => { const key = d.id + ':' + k; return key in this.state.toggles ? this.state.toggles[key] : def; };
+      const setT = (k, val) => this.setState(s => ({ toggles: { ...s.toggles, [d.id + ':' + k]: val } }));
+      const opts = (k, def, labels) => labels.map(l => { const on = T(k, def) === l; return { label: l, bg: on ? 'var(--ink)' : 'transparent', ink: on ? 'var(--panel)' : 'var(--ink3)', onClick: () => setT(k, l) }; });
+      const boundSk = skills.filter(s => T('sk:' + s[0], s[2].includes(d.id) ? 'BOUND' : 'OFF') === 'BOUND').length;
+      const boundM = mcp.filter(s => T('mcp:' + s[0], s[3].includes(d.id) ? 'BOUND' : 'OFF') === 'BOUND').length;
+      out.dp = { ...d, teamStr: pad(ag.length), onChat: () => go('org/chat/' + d.id), onNew: () => go('work/new/' + d.id),
+        metrics: [{ k: 'OPEN SUBTASKS', v: pad(subs.filter(s => s.state !== 'done').length) }, { k: 'BORROWED AGENTS', v: pad(ag.length) }, { k: 'RUNS TODAY', v: u + ' / ' + c }, { k: 'SPEND TODAY', v: '$' + Z.spend.byDept[d.id].toFixed(2) }] };
+      const TABS = [['team','TEAM',ag.length],['subtasks','SUBTASKS',subs.length],['pipelines','PIPELINES',Z.pipelines[d.id].length],['skills','SKILLS',boundSk],['integrations','INTEGRATIONS',boundM],['automations','AUTOMATIONS',autos.length],['hooks','HOOKS',hooks.length]];
+      out.tabs = TABS.map(([k, l, n]) => ({ label: l, n: pad(n), line: k === tab ? 'var(--ink)' : 'transparent', color: k === tab ? 'var(--ink)' : 'var(--ink3)', onClick: () => go('org/dept/' + d.id + '/' + k) }));
+      out.tab = { team: tab === 'team', subtasks: tab === 'subtasks', pipelines: tab === 'pipelines', list: ['skills','integrations','automations','hooks'].includes(tab) };
+      out.team = ag.map(a => ({ ...a, nameU: a.name.toUpperCase(), stateU: B.S[a.state].label.toUpperCase(), glyph: G(a, 48, true), dot: B.dot(React, a.state, 7), task: a.task || 'Heartbeat', onClick: () => go('org/agent/' + a.id) }));
+      out.teamEmpty = !ag.length;
+      const roles = [...new Set(Z.pipelines[d.id].flatMap(p => p[1]))];
+      out.roles = roles.map(r => { const all = Z.agents.filter(a => a.role === r), free = all.filter(a => !a.dept).length; return { role: r, total: pad(all.length), free: pad(free), dot: B.dot(React, free ? 'idle' : 'working', 7) }; });
+      out.subtasks = subs.map(s => ({ id: s.id, title: s.task.title, pipeline: s.pipeline, step: s.step || '—', stateU: s.state === 'idle' ? 'QUEUED' : B.S[s.state].label.toUpperCase(), dot: B.dot(React, s.state, 7),
+        glyphs: Z.subAgents(s).map(a => React.createElement('span', { key: a.id, title: a.name }, G(a, 18, false))), onClick: () => go('work/task/' + s.task.id) }));
+      out.subEmpty = !subs.length;
+      out.pipes = Z.pipelines[d.id].map(([name, steps, loops]) => ({ name, stepsStr: pad(steps.length) + ' STEPS', usedBy: 'USED BY · ' + (Z.chains.filter(c => c.route.includes(d.id)).map(c => c.name.toUpperCase()).join(', ') || '—'),
+        steps: steps.map((r, i) => ({ n: pad(i + 1), roleU: r.toUpperCase(), arrow: i === steps.length - 1 ? '' : loops.some(([a, b]) => a === i && b === i + 1) ? '⇄' : '→' })),
+        note: loops.length ? '⇄ marks a rework loop, bounded at 3 retries before it escalates to NEEDS YOU. Each subtask runs in its own git worktree.' : 'Linear pipeline, no rework loop.' }));
+      if (tab === 'skills') { out.listNote = 'Skills come from the global registry. Bind the ones this department may use.'; out.rows = skills.map(([n, desc, ds]) => ({ name: n, desc, meta: 'REGISTRY', opts: opts('sk:' + n, ds.includes(d.id) ? 'BOUND' : 'OFF', ['BOUND','OFF']) })); }
+      if (tab === 'integrations') { out.listNote = 'MCP servers from the registry. Only bound servers are visible to borrowed agents.'; out.rows = mcp.map(([n, desc, st, ds]) => ({ name: n, desc, meta: st.toUpperCase(), opts: opts('mcp:' + n, ds.includes(d.id) ? 'BOUND' : 'OFF', ['BOUND','OFF']) })); }
+      if (tab === 'automations') { out.listNote = 'Scheduled and event-driven triggers owned by this department.'; out.rows = autos.map(a => ({ name: a.name, desc: a.sched, meta: 'NEXT · ' + a.next, opts: opts('au:' + a.name, a.on ? 'ON' : 'OFF', ['ON','OFF']) })); if (!autos.length) out.rows = [{ name: '—', desc: 'No automations yet.', meta: '', opts: [] }]; }
+      if (tab === 'hooks') { out.listNote = 'Global hooks apply everywhere. Override them for this department only.'; out.rows = hooks.map(([n, ev, desc, ds]) => ({ name: n, desc, meta: ev.toUpperCase(), opts: opts('hk:' + n, 'INHERIT', ['INHERIT','ON','OFF']) })); }
+    }
+
+    if (out.isPool) {
+      const f = this.state.poolFilter;
+      out.poolFilters = ['all'].concat(B.ORDER).map(k => { const on = k === f; return { label: k === 'all' ? 'ALL' : B.S[k].label.toUpperCase(), n: pad(k === 'all' ? Z.agents.length : Z.agents.filter(a => a.state === k).length), dot: k === 'all' ? null : B.dot(React, k, 7), line: on ? 'var(--ink)' : 'var(--line2)', bg: on ? 'var(--panel2)' : 'transparent', ink: on ? 'var(--ink)' : 'var(--ink2)', onClick: () => this.setState({ poolFilter: k }) }; });
+      out.pool = Z.agents.filter(a => f === 'all' || a.state === f).map(a => ({ ...a, nameU: a.name.toUpperCase(), stateU: B.S[a.state].label.toUpperCase(), glyph: G(a, 40, true), dot: B.dot(React, a.state, 7),
+        where: a.dept ? 'BORROWED · ' + Z.D(a.dept).code + (a.task ? ' · ' + a.task : ' · HEARTBEAT') : 'IN POOL · AVAILABLE', onClick: () => go('org/agent/' + a.id) }));
+    }
+
+    if (out.isAgent) {
+      const a = Z.A(parts[2]) || Z.agents[1], h = this.seed(a.name);
+      const run = Z.runs.find(r => r.agent === a.id), sub = run ? run.sub : a.task ? a.task + '.?' : '—';
+      const total = 3 + h % 4, pr = a.state === 'done' ? 100 : a.state === 'idle' ? 0 : 25 + h % 60, paused = this.state.paused[a.id];
+      const base = (run ? run.events.slice().reverse() : [a.now]).map((t, i) => ['14:3' + (2 - Math.min(i, 2)) + ':' + pad((h + i * 17) % 60), t]);
+      const extra = this.state.sess[a.id] || [];
+      const log = extra.slice().reverse().concat(base.concat([['14:2' + (h % 9) + ':' + pad(h % 60), 'Session started · grounded with ' + (8 + h % 30) + ' vault notes']]));
+      out.ag = { ...a, glyph: G(a, 128, true), dot: B.dot(React, paused ? 'idle' : a.state, 8), stateU: paused ? 'PAUSED' : B.S[a.state].label.toUpperCase(),
+        where: a.dept ? 'Borrowed by ' + Z.D(a.dept).name : 'In pool', sub, pct: pr + '%', step: 'STEP ' + Math.max(a.state === 'idle' ? 0 : 1, Math.round(pr / 100 * total)) + '/' + total,
+        hasTask: !!a.task, openTask: () => go('work/task/' + a.task), tools: Z.tools(a), toolCount: pad(Z.tools(a).length),
+        metrics: [{ k: 'SUBTASKS · 7D', v: String(6 + h % 30) }, { k: 'SUCCESS', v: (92 + (h % 79) / 10).toFixed(1) + '%' }, { k: 'SPEND · 24H', v: '$' + (run ? run.cost : 0.05).toFixed(2) }],
+        history: [[a.task ? a.task + '.2' : 'TSK-0141.1', a.dept ? Z.D(a.dept).code : 'DEV', a.now, 'NOW'], ['TSK-0141.1', 'DEV', 'Rate limiter fix · ' + a.role.toLowerCase() + ' step', '2H'], ['TSK-0137.1', 'DEV', 'Webhook retry fix', '1D'], ['TSK-0133.2', 'QA', 'Sweep findings on api', '3D']].map(([s, d, t, w]) => ({ sub: s, dept: d, text: t, when: w })),
+        sessionId: 'SES-' + (h % 9000 + 1000), sessionState: paused ? 'PAUSED' : a.state === 'idle' ? 'NO ACTIVE SESSION' : 'LIVE',
+        log: log.map(([t, text], i) => ({ t, text, color: i === 0 ? 'var(--ink)' : 'var(--ink2)', caret: i === 0 ? B.caret(React) : null })), sessPh: 'Message ' + a.name + ' in this session' };
+      out.sessDraft = this.state.sessDraft; out.onSessDraft = e => this.setState({ sessDraft: e.target.value });
+      const send = () => { const t = this.state.sessDraft.trim(); if (!t) return; this.setState(s => ({ sessDraft: '', sess: { ...s.sess, [a.id]: (s.sess[a.id] || []).concat([[B.clock(), 'CEO → ' + t], [B.clock(), 'Acknowledged. Adding to context for the current step.']]) } })); };
+      out.sendSess = send; out.onSessKey = e => { if (e.key === 'Enter') send(); };
+      out.pauseLabel = paused ? 'RESUME' : 'PAUSE'; out.togglePause = () => this.setState(s => ({ paused: { ...s.paused, [a.id]: !s.paused[a.id] } }));
+    }
+
+    if (out.isChat) {
+      const d = Z.D(parts[2]) || Z.depts[0];
+      const seedMsgs = (Z.chat.dept[d.id] || [['dept', d.name + ' here. ' + d.desc + ' What do you need?']]);
+      const msgs = seedMsgs.concat(this.state.chats[d.id] || []);
+      out.ch = { code: d.code, name: d.name, nameU: d.name.toUpperCase(), ph: 'Message ' + d.name, onDept: () => go('org/dept/' + d.id + '/team'),
+        msgs: msgs.map(([w, t]) => ({ text: t, you: w === 'you', dept: w !== 'you' })),
+        subs: Z.subtasksOf(d.id).map(s => ({ id: s.id, title: s.task.title, pipeline: s.pipeline, step: s.step || 'QUEUED', dot: B.dot(React, s.state, 7), stateU: B.S[s.state].label.toUpperCase(), onClick: () => go('work/task/' + s.task.id) })) };
+      out.chatDraft = this.state.chatDraft; out.onChatDraft = e => this.setState({ chatDraft: e.target.value });
+      const send = () => { const t = this.state.chatDraft.trim(); if (!t) return; const open = Z.subtasksOf(d.id).filter(s => s.state !== 'done').length;
+        const reply = /task|do|fix|build|write|make|add/i.test(t) ? 'Understood. I can open that as a task entering at ' + d.name + '. Use NEW TASK HERE, or tell Zibby and it will route it.' : 'We have ' + pad(open) + ' open subtasks. I will fold this into the current work and report back in the next briefing.';
+        this.setState(s => ({ chatDraft: '', chats: { ...s.chats, [d.id]: (s.chats[d.id] || []).concat([['you', t], ['dept', reply]]) } })); };
+      out.sendChat = send; out.onChatKey = e => { if (e.key === 'Enter') send(); };
+    }
+    return out;
+  }
+}
+</script>
+</body>
+</html>

@@ -14,7 +14,6 @@ tools:
   - WebSearch
 category: Research & Analysis
 gates: []
-ownerSubsystem: scout
 ---
 
 ## Prompt Defense Baseline

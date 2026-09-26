@@ -130,14 +130,14 @@ describe("integration schema", () => {
     ).toBe(true);
   });
 
-  it("does not carry an ownerSubsystem (membership is derived, not stored)", () => {
+  it("does not carry an department (membership is derived, not stored)", () => {
     const parsed = IntegrationSchema.parse({
       id: "x",
       kind: "slack",
       projectId: "acme-app",
       config: { kind: "slack", channels: [] },
     });
-    expect("ownerSubsystem" in parsed).toBe(false);
+    expect("department" in parsed).toBe(false);
   });
 
   it("rejects a config whose kind disagrees with the integration kind", () => {

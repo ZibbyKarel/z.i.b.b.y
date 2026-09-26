@@ -28,7 +28,7 @@ describe("Gates API (e2e)", () => {
         id: "shopper",
         name: "Shopper",
         instructions: "buys things",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
   });

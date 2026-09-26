@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { CardTestId } from "../Card/Card";
 import { Panel, PanelTestId } from "./Panel";
 
 describe("Panel", () => {
@@ -35,5 +36,37 @@ describe("Panel", () => {
 
     rerender(<Panel elevated>x</Panel>);
     expect(screen.getByTestId(PanelTestId.Root).className).toContain("bg-elevated");
+  });
+
+  it("lets a consumer override background/radius (a row nested on its own section panel)", () => {
+    render(
+      <Panel background="background" radius="sm">
+        x
+      </Panel>,
+    );
+    const root = screen.getByTestId(PanelTestId.Root);
+    expect(root.className).toContain("bg-background");
+    expect(root.className).toContain("rounded-sm");
+  });
+
+  it("tints the border and renders corner brackets when tone is set", () => {
+    render(<Panel tone="warn">x</Panel>);
+    const root = screen.getByTestId(PanelTestId.Root);
+    expect(root.className).toContain("border-warn");
+    expect(screen.getAllByTestId(CardTestId.Corner)).toHaveLength(4);
+  });
+
+  it("renders corner brackets from live/liveTone alone, with no tone set", () => {
+    render(
+      <Panel live liveTone="warn">
+        x
+      </Panel>,
+    );
+    expect(screen.getAllByTestId(CardTestId.Corner)).toHaveLength(4);
+  });
+
+  it("omits the corner brackets when neither tone nor live is set", () => {
+    render(<Panel>x</Panel>);
+    expect(screen.queryByTestId(CardTestId.Corner)).not.toBeInTheDocument();
   });
 });

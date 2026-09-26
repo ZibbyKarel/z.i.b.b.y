@@ -62,15 +62,15 @@ describe.skipIf(!SOAK)("Autonomous-loop soak (opt-in, fake channels)", () => {
         name: "Fixer",
         description: "fixes reported bugs",
         instructions: "Fix bugs.",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
     await http()
       .post("/api/projects")
       .send({ id: "acme-app", name: "Acme", path: root })
       .expect(201);
-    // The three scripted integrations (owned by the project; subsystem membership
-    // is derived — puls listens, herald replies where mandate.reply is on).
+    // The three scripted integrations (owned by the project; department membership
+    // is derived — ops listens, comms replies where mandate.reply is on).
     await http()
       .post("/api/integrations")
       .send({
@@ -120,9 +120,9 @@ describe.skipIf(!SOAK)("Autonomous-loop soak (opt-in, fake channels)", () => {
       .send({ defaults: { dispatch: true, reply: true }, channels: {} })
       .expect(200);
     // F6a seam: (announcements, request) is already graduated to Tier-2 auto-send.
-    await fs.mkdir(path.join(root, "herald"), { recursive: true });
+    await fs.mkdir(path.join(root, "com"), { recursive: true });
     await fs.writeFile(
-      path.join(root, "herald", "graduations.json"),
+      path.join(root, "com", "graduations.json"),
       JSON.stringify([
         {
           integrationId: "announcements",

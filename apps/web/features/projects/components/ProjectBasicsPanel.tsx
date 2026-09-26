@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import {
   Button,
   IconTile,
+  Panel,
   SelectField,
   Stack,
   TextAreaField,
@@ -13,12 +14,15 @@ import {
 } from "@zibby/design-system";
 import type { Category, PrOpenMode, Project } from "@zibby/contracts";
 import { Controller, FormTextInput, useFormControls } from "@zibby/forms";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { toastBus } from "../../../components/Toaster/toastBus";
+import { useChainsQuery } from "../../chains";
 import { KeyValueEditor, type KeyValueRow } from "./KeyValueEditor";
 
-/** The `SelectField` sentinel value for "no category" — a category name can never be empty. */
+/** The `SelectField` security value for "no category" — a category name can never be empty. */
 const NO_CATEGORY = "";
+
+/** The `SelectField` marker for "no default chain" (ZB-05b / O-17). */
+const NO_CHAIN = "";
 
 /**
  * Mirrors `ProjectSchema.logo`'s cap (280 000 base64 chars, ~200 KB) so an
@@ -49,6 +53,8 @@ export interface ProjectBasicsBody {
   env?: Record<string, string>;
   /** NS2 F0b — draft-PR mode; omitted when `"ready"` (today's default behavior). */
   prOpenMode?: PrOpenMode;
+  /** ZB-05b / O-17 — the chain a New Task pre-selects for this project. */
+  defaultChainId?: string;
 }
 
 export interface ProjectBasicsPanelProps {
@@ -90,6 +96,8 @@ type ProjectEditValues = {
   budgetDailyCostCapUsd: string;
   budgetWeeklyCostCapUsd: string;
   budgetMonthlyCostCapUsd: string;
+  /** ZB-05b / O-17 — `""` (NO_CHAIN) means "no default chain". */
+  defaultChainId: string;
 };
 
 /** Parse a budget field: a positive integer, or undefined when blank/invalid. */
@@ -125,6 +133,7 @@ export function ProjectBasicsPanel({
   const [checksText, setChecksText] = useState((project?.checks ?? []).join("\n"));
   const [logo, setLogo] = useState<string | undefined>(project?.logo);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const { data: chains = [] } = useChainsQuery();
 
   function handleLogoFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -154,6 +163,7 @@ export function ProjectBasicsPanel({
       category: project?.category ?? categories[0]?.name ?? "",
       gitRemote: project?.gitRemote ?? "",
       prOpenMode: project?.prOpenMode ?? "ready",
+      defaultChainId: project?.defaultChainId ?? NO_CHAIN,
       budgetDailyRuns: project?.budget?.dailyRuns != null ? String(project.budget.dailyRuns) : "",
       budgetWeeklyRuns:
         project?.budget?.weeklyRuns != null ? String(project.budget.weeklyRuns) : "",
@@ -208,6 +218,7 @@ export function ProjectBasicsPanel({
         checks: checks.length > 0 ? checks : undefined,
         env: fromRows(envRows),
         prOpenMode: values.prOpenMode === "draft" ? "draft" : undefined,
+        defaultChainId: values.defaultChainId || undefined,
       });
     },
   });
@@ -216,8 +227,9 @@ export function ProjectBasicsPanel({
   const canSave = (watchedName ?? "").trim().length > 0;
 
   return renderForm(
-    <HudPanel
-      action={
+    <Panel
+      header={t("profile.basics.title")}
+      headerEnd={
         <Button
           data-testid="save-basics"
           disabled={!canSave || saving}
@@ -229,7 +241,7 @@ export function ProjectBasicsPanel({
           {isNew ? t("create") : t("save")}
         </Button>
       }
-      title={t("profile.basics.title")}
+      padding="200"
     >
       <Stack gap="200">
         {isNew && (
@@ -263,6 +275,23 @@ export function ProjectBasicsPanel({
               options={[
                 { value: "ready", label: t("fields.prOpenModeReady") },
                 { value: "draft", label: t("fields.prOpenModeDraft") },
+              ]}
+              value={field.value}
+            />
+          )}
+        />
+
+        <Controller<ProjectEditValues, "defaultChainId">
+          control={form.control}
+          name="defaultChainId"
+          render={({ field }) => (
+            <SelectField
+              hint={t("fields.defaultChainHint")}
+              label={t("fields.defaultChain")}
+              onValueChange={field.onChange}
+              options={[
+                { value: NO_CHAIN, label: t("fields.defaultChainNone") },
+                ...chains.map((c) => ({ value: c.id, label: c.label })),
               ]}
               value={field.value}
             />
@@ -426,6 +455,6 @@ export function ProjectBasicsPanel({
           </Stack>
         )}
       </Stack>
-    </HudPanel>,
+    </Panel>,
   );
 }

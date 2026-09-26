@@ -24,12 +24,12 @@ vi.mock("../../../agents/queries/useAgentsQuery", () => ({
 }));
 vi.mock("../../../pipelines/queries/usePipelinesQuery", () => ({
   usePipelinesQuery: () => ({
-    data: [{ id: "delivery", name: "Delivery", ownerSubsystem: "forge" }],
+    data: [{ id: "delivery", name: "Delivery", department: "dev" }],
   }),
   getPipelinesQueryKey: () => ["pipelines"],
 }));
-vi.mock("../../../subsystems/queries/useSubsystemsQuery", () => ({
-  useSubsystemsQuery: () => ({ data: [] }),
+vi.mock("../../../departments/queries/useDepartmentsQuery", () => ({
+  useDepartmentsQuery: () => ({ data: [] }),
 }));
 vi.mock("../../../teams", () => ({
   useTeamsQuery: () => ({ data: [{ id: "devrel", name: "DevRel" }] }),
@@ -258,7 +258,7 @@ describe("TaskCommandLine (Phase 118b task-launch container)", () => {
 
   it("shows the no-teams composer hint — Task 9b: the chrome hint must not claim a mention source this path doesn't offer", () => {
     render(<TaskCommandLine />);
-    expect(screen.getByText(/hledá agenty, pipeliny a podsystémy ·/)).toBeInTheDocument();
+    expect(screen.getByText(/hledá agenty, pipeliny a oddělení ·/)).toBeInTheDocument();
     expect(screen.queryByText(/a týmy/)).not.toBeInTheDocument();
   });
 

@@ -22,7 +22,7 @@ export class InvalidRoutingProposalIdError extends Error {
  * NS2 F10 — the parked payload for a Tier-3 ROUTING handoff: one `<id>.json` per
  * proposal under `.zibby/data/roadmap/routing-proposals/`. A deliberate copy of
  * `HandoffProposalStore`'s shape (which itself mirrors the agent-factory candidate /
- * herald-graduation stores): a durable payload with no live child, write-once
+ * comms-graduation stores): a durable payload with no live child, write-once
  * (`RoadmapGateService`'s park path), read-once (`RoutingProposalService.resume`/
  * `cancel`), then removed either way — so there is no `update`.
  */

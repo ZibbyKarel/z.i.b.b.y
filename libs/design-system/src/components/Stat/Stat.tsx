@@ -1,11 +1,13 @@
 import type { HTMLAttributes } from "react";
-import type { StateTone } from "../../stateTone";
+import { type AnyStateTone, type StateTone, normalizeToneLike } from "../../stateTone";
 import { cn } from "../../utils/cn";
 import { Row, Stack } from "../Stack/Stack";
 import { Icon, type IconName } from "../Icon/Icon";
+import { Typography } from "../Typography/Typography";
 
-/** The canonical {@link StateTone} palette, plus `neutral` for a non-live metric. */
-export type StatTone = StateTone | "neutral";
+/** The canonical {@link StateTone} palette (or the legacy vocabulary — see
+ *  {@link AnyStateTone}), plus `neutral` for a non-live metric. */
+export type StatTone = AnyStateTone | "neutral";
 
 export enum StatTestId {
   Root = "stat-root",
@@ -14,12 +16,15 @@ export enum StatTestId {
   Label = "stat-label",
 }
 
-const toneText: Record<StatTone, string> = {
-  accent: "text-accent",
-  ok: "text-ok",
-  warn: "text-warn",
-  bad: "text-bad",
-  run: "text-run",
+// Keyed by the canonical `StateTone` (+ `neutral`) — legacy classes reused where the
+// color is identical (LEGACY_TONE_MAP). See `Stat()` for the resolve step.
+const toneText: Record<StateTone | "neutral", string> = {
+  thinking: "text-accent",
+  done: "text-ok",
+  blocked: "text-warn",
+  error: "text-bad",
+  working: "text-run",
+  idle: "text-state-idle",
   neutral: "text-foreground-dim",
 };
 
@@ -33,10 +38,11 @@ export interface StatProps extends Omit<HTMLAttributes<HTMLDivElement>, "classNa
 
 /** A single headline metric: glyph + big mono number + caption. */
 export function Stat({ value, label, icon, tone = "neutral", ref, ...props }: StatProps) {
+  const resolvedTone = normalizeToneLike(tone);
   return (
     <Row data-testid={StatTestId.Root} gap="150" ref={ref} {...props}>
       {icon && (
-        <span className={cn("flex", toneText[tone])} data-testid={StatTestId.Icon}>
+        <span className={cn("flex", toneText[resolvedTone])} data-testid={StatTestId.Icon}>
           <Icon name={icon} size="md" />
         </span>
       )}
@@ -47,11 +53,10 @@ export function Stat({ value, label, icon, tone = "neutral", ref, ...props }: St
         >
           {value}
         </div>
-        <div
-          className="whitespace-nowrap text-sm tracking-wide text-foreground-faint"
-          data-testid={StatTestId.Label}
-        >
-          {label}
+        <div className="whitespace-nowrap">
+          <Typography as="span" data-testid={StatTestId.Label} type="label">
+            {label}
+          </Typography>
         </div>
       </Stack>
     </Row>

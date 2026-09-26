@@ -4,15 +4,15 @@ import * as path from "node:path";
 import type { CreateAutomationInput } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  ARCH_AUDIT_AUTOMATION_ID,
   AutomationConflictError,
   AutomationNotFoundError,
   AutomationsStorageService,
   InvalidAutomationIdError,
-  LOOM_AUDIT_AUTOMATION_ID,
   MEMORY_DISTILL_AUTOMATION_ID,
   POST_MERGE_WATCH_AUTOMATION_ID,
+  SECURITY_SCAN_AUTOMATION_ID,
   SELF_KNOWLEDGE_AUTOMATION_ID,
-  SENTINEL_SCAN_AUTOMATION_ID,
   SystemAutomationError,
 } from "./automations.storage.service";
 
@@ -198,56 +198,56 @@ describe("AutomationsStorageService", () => {
     expect((await service.get(SELF_KNOWLEDGE_AUTOMATION_ID)).system).toBe(true);
   });
 
-  it("F5a: seeds the sentinel-scan system automation on init, enabled by default", async () => {
-    const seeded = await service.get(SENTINEL_SCAN_AUTOMATION_ID);
+  it("F5a: seeds the security-scan system automation on init, enabled by default", async () => {
+    const seeded = await service.get(SECURITY_SCAN_AUTOMATION_ID);
     expect(seeded.system).toBe(true);
-    expect(seeded.target).toEqual({ type: "sentinel-scan" });
+    expect(seeded.target).toEqual({ type: "security-scan" });
     expect(seeded.trigger).toEqual({ type: "cron", expr: "0 5 * * 1" });
     expect(seeded.enabled).toBe(true);
   });
 
-  it("F5a: an operator-edited sentinel-scan schedule survives re-seed", async () => {
-    await service.update(SENTINEL_SCAN_AUTOMATION_ID, {
+  it("F5a: an operator-edited security-scan schedule survives re-seed", async () => {
+    await service.update(SECURITY_SCAN_AUTOMATION_ID, {
       trigger: { type: "cron", expr: "0 6 * * 1" },
     });
     await new AutomationsStorageService(dir).onModuleInit();
-    const healed = await service.get(SENTINEL_SCAN_AUTOMATION_ID);
+    const healed = await service.get(SECURITY_SCAN_AUTOMATION_ID);
     expect(healed.system).toBe(true);
-    expect(healed.target).toEqual({ type: "sentinel-scan" });
+    expect(healed.target).toEqual({ type: "security-scan" });
     expect(healed.trigger).toEqual({ type: "cron", expr: "0 6 * * 1" });
   });
 
-  it("F5a: refuses to delete the sentinel-scan system automation", async () => {
-    await expect(service.delete(SENTINEL_SCAN_AUTOMATION_ID)).rejects.toBeInstanceOf(
+  it("F5a: refuses to delete the security-scan system automation", async () => {
+    await expect(service.delete(SECURITY_SCAN_AUTOMATION_ID)).rejects.toBeInstanceOf(
       SystemAutomationError,
     );
-    expect((await service.get(SENTINEL_SCAN_AUTOMATION_ID)).system).toBe(true);
+    expect((await service.get(SECURITY_SCAN_AUTOMATION_ID)).system).toBe(true);
   });
 
-  it("F5c: seeds the loom-audit system automation on init, enabled by default", async () => {
-    const seeded = await service.get(LOOM_AUDIT_AUTOMATION_ID);
+  it("F5c: seeds the arch-audit system automation on init, enabled by default", async () => {
+    const seeded = await service.get(ARCH_AUDIT_AUTOMATION_ID);
     expect(seeded.system).toBe(true);
-    expect(seeded.target).toEqual({ type: "loom-audit" });
+    expect(seeded.target).toEqual({ type: "arch-audit" });
     expect(seeded.trigger).toEqual({ type: "cron", expr: "0 2 * * *" });
     expect(seeded.enabled).toBe(true);
   });
 
-  it("F5c: an operator-edited loom-audit schedule survives re-seed", async () => {
-    await service.update(LOOM_AUDIT_AUTOMATION_ID, {
+  it("F5c: an operator-edited arch-audit schedule survives re-seed", async () => {
+    await service.update(ARCH_AUDIT_AUTOMATION_ID, {
       trigger: { type: "cron", expr: "0 3 * * *" },
     });
     await new AutomationsStorageService(dir).onModuleInit();
-    const healed = await service.get(LOOM_AUDIT_AUTOMATION_ID);
+    const healed = await service.get(ARCH_AUDIT_AUTOMATION_ID);
     expect(healed.system).toBe(true);
-    expect(healed.target).toEqual({ type: "loom-audit" });
+    expect(healed.target).toEqual({ type: "arch-audit" });
     expect(healed.trigger).toEqual({ type: "cron", expr: "0 3 * * *" });
   });
 
-  it("F5c: refuses to delete the loom-audit system automation", async () => {
-    await expect(service.delete(LOOM_AUDIT_AUTOMATION_ID)).rejects.toBeInstanceOf(
+  it("F5c: refuses to delete the arch-audit system automation", async () => {
+    await expect(service.delete(ARCH_AUDIT_AUTOMATION_ID)).rejects.toBeInstanceOf(
       SystemAutomationError,
     );
-    expect((await service.get(LOOM_AUDIT_AUTOMATION_ID)).system).toBe(true);
+    expect((await service.get(ARCH_AUDIT_AUTOMATION_ID)).system).toBe(true);
   });
 
   it("NS2 F7b-2: seeds the post-merge-watch system automation on init, enabled by default", async () => {

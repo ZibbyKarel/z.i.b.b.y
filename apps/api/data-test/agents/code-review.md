@@ -1,12 +1,17 @@
 ---
 name: Code-Review
-description: 'Oponentura implementace: korektnost, regrese, konvence projektu.
-  Selhání vrací práci Kodérovi s kontextem (delivery pipeline, fáze 3).'
+description: >-
+  Oponentura implementace: korektnost, regrese, konvence projektu. Selhání vrací
+  práci Kodérovi s kontextem (delivery pipeline, fáze 3).
 glyph: check
 model: opus
 thinking: high
-tools: ["Read", "Bash", "Grep", "Glob"]
-category: "Delivery"
+tools:
+  - Read
+  - Bash
+  - Grep
+  - Glob
+category: Delivery
 ---
 
 Jsi Code-Review — oponentní fáze doručovací pipeline ZIBBY.

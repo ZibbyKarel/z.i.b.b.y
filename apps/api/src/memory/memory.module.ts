@@ -26,7 +26,7 @@ import { VAULT_DIR, VaultService } from "./vault.service";
 /**
  * Default vault dir, anchored to `apps/api/data/vault`. This repo's committed
  * `VAULT_DIR` already carries seed notes (north-star, the root MOC, all ten
- * subsystem shelves); only the episodic `daily/` subdir is gitignored. Real
+ * department shelves); only the episodic `daily/` subdir is gitignored. Real
  * operation points `VAULT_DIR` at the operator's Obsidian vault — a genuinely
  * fresh/empty one is seeded on boot by `VaultSeedService` (F4c), so first-run
  * grounding is never empty.

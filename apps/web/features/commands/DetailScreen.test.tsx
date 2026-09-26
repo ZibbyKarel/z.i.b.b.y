@@ -46,7 +46,7 @@ describe("commands DetailScreen (N4d grammar)", () => {
 
   it("titles by /<id>, locks the id field, and carries top-right actions by name", () => {
     render(<DetailScreen commandId="orchestrate" />);
-    expect(screen.getByText("/orchestrate")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "/orchestrate" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Uložit" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Smazat" })).toBeInTheDocument();
     // The id names the backing file — the detail page must not change it.
@@ -70,9 +70,7 @@ describe("commands DetailScreen (N4d grammar)", () => {
   });
 
   it("Delete asks in a CONFIRM dialog, then deletes and navigates back to /commands", async () => {
-    hooks.del.mockImplementation((_args, opts?: { onSuccess?: () => void }) =>
-      opts?.onSuccess?.(),
-    );
+    hooks.del.mockImplementation((_args, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.());
     render(<DetailScreen commandId="orchestrate" />);
     await userEvent.click(screen.getByTestId(CommandDetailScreenTestId.Delete));
     expect(screen.getByText("Smazat příkaz?")).toBeInTheDocument();
@@ -84,6 +82,6 @@ describe("commands DetailScreen (N4d grammar)", () => {
       { params: { id: "orchestrate" } },
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     );
-    expect(push).toHaveBeenCalledWith("/commands");
+    expect(push).toHaveBeenCalledWith("/system/registries/commands");
   });
 });

@@ -77,7 +77,7 @@ describe("Activity log (e2e)", () => {
         name: "Curator",
         description: "tidies the media library",
         instructions: "tidy media",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
     // …and a gated agent (threshold → ask) for the approval path.
@@ -88,7 +88,7 @@ describe("Activity log (e2e)", () => {
         name: "Payer",
         instructions: "buys things",
         risk: "high",
-        ownerSubsystem: "forge",
+        department: "dev",
         gates: [
           {
             match: [{ type: "threshold", metric: "purchase.amount", op: "gt", value: 500 }],

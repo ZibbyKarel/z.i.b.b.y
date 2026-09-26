@@ -1,7 +1,14 @@
 import { useTranslations } from "next-intl";
-import { Button, Container, Stack, StatusDot, Tag, Typography } from "@zibby/design-system";
+import {
+  Button,
+  Container,
+  EntityCard,
+  Stack,
+  StatusDot,
+  Tag,
+  Typography,
+} from "@zibby/design-system";
 import type { Hook } from "@zibby/contracts";
-import { HudCard } from "../../../components/HudCard/HudCard";
 
 export interface HookCardProps {
   hook: Hook;
@@ -10,7 +17,7 @@ export interface HookCardProps {
 
 /**
  * Catalog card for a single hook: a thin container over the generic
- * {@link HudCard}. The aside chip shows the lifecycle event + enabled state, the
+ * {@link EntityCard}. The aside chip shows the lifecycle event + enabled state, the
  * footer shows the shell command, and the action opens the editor.
  */
 export function HookCard({ hook, onConfigure }: HookCardProps) {
@@ -19,7 +26,7 @@ export function HookCard({ hook, onConfigure }: HookCardProps) {
   const detail = hook.matcher ? `${hook.event} · ${hook.matcher}` : hook.event;
 
   return (
-    <HudCard
+    <EntityCard
       actions={
         <Stack align="center" direction="row" justify="between">
           <Container minW0 maxWidth="220px">

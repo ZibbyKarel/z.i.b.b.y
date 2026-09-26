@@ -1,13 +1,12 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Button, Stack, Typography } from "@zibby/design-system";
+import { Button, Panel, Stack, Typography } from "@zibby/design-system";
 import type { Team } from "@zibby/contracts";
 import { FormSelect, FormTextInput, useFormControls } from "@zibby/forms";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useCompaniesQuery } from "../../companies";
 
-/** Sentinel for "no company" in the company select — a real id can never be empty. */
+/** Security for "no company" in the company select — a real id can never be empty. */
 const NO_COMPANY = "";
 
 /**
@@ -78,8 +77,9 @@ export function TeamBasicsPanel({ team, isNew, saving, onSave, onDelete }: TeamB
   ];
 
   return renderForm(
-    <HudPanel
-      action={
+    <Panel
+      header={t("profile.basics.title")}
+      headerEnd={
         <Button
           data-testid="save-basics"
           disabled={!canSave || saving}
@@ -91,7 +91,7 @@ export function TeamBasicsPanel({ team, isNew, saving, onSave, onDelete }: TeamB
           {isNew ? t("create") : t("save")}
         </Button>
       }
-      title={t("profile.basics.title")}
+      padding="200"
     >
       <Stack gap="200">
         {isNew && (
@@ -127,6 +127,6 @@ export function TeamBasicsPanel({ team, isNew, saving, onSave, onDelete }: TeamB
           </Stack>
         )}
       </Stack>
-    </HudPanel>,
+    </Panel>,
   );
 }

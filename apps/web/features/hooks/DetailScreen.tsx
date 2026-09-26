@@ -1,15 +1,23 @@
 "use client";
 
+import type { Route } from "next";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Container, Stack } from "@zibby/design-system";
+import {
+  Breadcrumb,
+  Button,
+  Container,
+  Panel,
+  Stack,
+  type SubNavLinkComponent,
+  Typography,
+} from "@zibby/design-system";
 import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import type { Hook } from "@zibby/contracts";
-import { HudPanel } from "../../components/HudPanel/HudPanel";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
-import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { HookFormFields, useHookFormState } from "./components/HookFormFields";
 import { useDeleteHookMutation, useUpdateHookMutation } from "./mutations";
@@ -52,44 +60,55 @@ function HookEditor({ hook }: { hook: Hook }) {
   const subtitle = hook.matcher ? `${hook.event} · ${hook.matcher}` : hook.event;
 
   return (
-    <ImmersivePage
-      actions={
-        <>
-          <Button
-            data-testid={HookDetailScreenTestId.Delete}
-            icon="trash"
-            intent="danger"
-            onClick={() => setConfirmDelete(true)}
-            size="sm"
-          >
-            {t("common.delete")}
-          </Button>
-          <Button
-            data-testid={HookDetailScreenTestId.Save}
-            disabled={!form.canSave(false)}
-            icon="check"
-            intent="primary"
-            loading={updateHook.isPending}
-            onClick={() => updateHook.mutate({ params: { id: hook.id }, body: form.buildPatch() })}
-            size="sm"
-          >
-            {t("common.save")}
-          </Button>
-        </>
-      }
-      backHref="/hooks"
-      subtitle={subtitle}
-      title={name}
-    >
-      <Container padding={["300", "350"]}>
-        <PageContainer>
-          <Stack gap="250">
-            <HudPanel surface="glass" title={t("hooks.detailPanel")}>
-              <HookFormFields idLocked form={form} />
-            </HudPanel>
+    <Container padding={["300", "350"]}>
+      <PageContainer>
+        <Stack gap="250">
+          <Breadcrumb
+            items={[
+              { label: t("registries.title"), href: "/system/registries/hooks" as Route },
+              { label: name },
+            ]}
+            linkComponent={Link as SubNavLinkComponent}
+          />
+
+          <Stack wrap align="center" direction="row" gap="150" justify="between">
+            <Stack gap="25">
+              <Typography type="h1">{name}</Typography>
+              <Typography mono size="xs" type="note" variant="tertiary">
+                {subtitle}
+              </Typography>
+            </Stack>
+            <Stack align="center" direction="row" gap="100">
+              <Button
+                data-testid={HookDetailScreenTestId.Delete}
+                icon="trash"
+                intent="danger"
+                onClick={() => setConfirmDelete(true)}
+                size="sm"
+              >
+                {t("common.delete")}
+              </Button>
+              <Button
+                data-testid={HookDetailScreenTestId.Save}
+                disabled={!form.canSave(false)}
+                icon="check"
+                intent="primary"
+                loading={updateHook.isPending}
+                onClick={() =>
+                  updateHook.mutate({ params: { id: hook.id }, body: form.buildPatch() })
+                }
+                size="sm"
+              >
+                {t("common.save")}
+              </Button>
+            </Stack>
           </Stack>
-        </PageContainer>
-      </Container>
+
+          <Panel header={t("hooks.detailPanel")} padding="200">
+            <HookFormFields idLocked form={form} />
+          </Panel>
+        </Stack>
+      </PageContainer>
 
       {confirmDelete && (
         <ConfirmDeleteDialog
@@ -100,13 +119,13 @@ function HookEditor({ hook }: { hook: Hook }) {
           onConfirm={() =>
             deleteHook.mutate(
               { params: { id: hook.id } },
-              { onSuccess: () => router.push("/hooks") },
+              { onSuccess: () => router.push("/system/registries/hooks") },
             )
           }
           pending={deleteHook.isPending}
           title={t("hooks.deleteTitle")}
         />
       )}
-    </ImmersivePage>
+    </Container>
   );
 }

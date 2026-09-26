@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { AgentIdSchema, AgentModelSchema, AgentThinkingSchema } from "../agents/agent.schema";
 import { AvatarSchema } from "../common.schema";
-import { SubsystemIdSchema } from "../subsystems/subsystem.schema";
+import { DepartmentIdSchema } from "../departments/department.schema";
 
 /**
  * A pipeline's `id` — same restrictive filename-safe shape as `AgentIdSchema`
@@ -121,7 +121,7 @@ export const PipelineOutputSchema = z.discriminatedUnion("type", [
 export type PipelineOutput = z.infer<typeof PipelineOutputSchema>;
 
 /**
- * NS2 F9 — a pipeline's rung on its owning subsystem's complexity ladder. The
+ * NS2 F9 — a pipeline's rung on its owning department's complexity ladder. The
  * order of this enum IS the ladder, cheapest first: `light` (2–3 phases, cheap
  * models — narrow work that still wants a second pair of eyes), `standard` (3–4
  * phases — ordinary work with review and verification), `deep` (4–6 phases with
@@ -156,10 +156,10 @@ const PipelineObject = z.object({
   outputs: z.array(PipelineOutputSchema).default([]),
   instructions: z.string().min(1),
   /**
-   * Attribution to a subsystem of the federation (Phase 81) — which subsystem
+   * Attribution to a department of the federation (Phase 81) — which department
    * "owns" this pipeline for the Roster (phase 85) and, since NS2 F9, whether it
-   * is reachable at all: the switchboard routes only to subsystems, and a
-   * subsystem offers only its own owned units, so an unowned pipeline is
+   * is reachable at all: the switchboard routes only to departments, and a
+   * department offers only its own owned units, so an unowned pipeline is
    * structurally unroutable.
    *
    * Still `.optional()` here ON PURPOSE, even though F9's invariant is "no free
@@ -167,18 +167,18 @@ const PipelineObject = z.object({
    * validation is skipped, never fatal — `entity-file-store.ts`), so making this
    * required would turn a hand-edited file that lost its owner into a SILENT
    * disappearance instead of a reportable one. Keeping it optional is what lets
-   * `GET /api/subsystems/unowned` stay a working diagnostic. Enforcement lives on
+   * `GET /api/departments/unowned` stay a working diagnostic. Enforcement lives on
    * the write path instead — `pipelines.controller.ts` 422s without it, mirroring
    * `agents.controller.ts`.
    */
-  ownerSubsystem: SubsystemIdSchema.optional(),
+  department: DepartmentIdSchema.optional(),
   /**
-   * NS2 F9 — the pipeline's rung on its subsystem's complexity ladder, ordered
+   * NS2 F9 — the pipeline's rung on its department's complexity ladder, ordered
    * cheapest/shortest → most expensive/deepest. Stage-2 scoped routing
-   * (`TaskClassifierService.classifyWithinSubsystem`) grades a task onto a rung:
+   * (`TaskClassifierService.classifyWithinDepartment`) grades a task onto a rung:
    * a single owned agent below `light`, then `light` → `standard` → `deep`.
    *
-   * Data rather than file order because `SUBSYSTEM_FALLBACK`'s `"primary"` policy
+   * Data rather than file order because `DEPARTMENT_FALLBACK`'s `"primary"` policy
    * resolves a low-confidence verdict by reading `candidates[0]`, and file order
    * would silently change that the first time a directory listing reorders.
    * Defaulted so every pipeline written before F9 still parses.

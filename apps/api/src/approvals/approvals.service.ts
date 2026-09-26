@@ -1,5 +1,5 @@
 import { Injectable, Optional } from "@nestjs/common";
-import type { Approval, ApprovalRunKind, SubsystemId } from "@zibby/contracts";
+import type { Approval, ApprovalRunKind, DepartmentId } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { withPathLock } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
@@ -28,12 +28,12 @@ export interface RequestApprovalInput {
   detail: string;
   risk: Approval["risk"];
   /**
-   * NS2 F3c — the acting unit's owning subsystem. Only run-path callers supply
-   * it (pipeline-runner from `pipeline.ownerSubsystem`, agent-runner from
-   * `agent.ownerSubsystem`); every other call site omits it — an approval with
+   * NS2 F3c — the acting unit's owning department. Only run-path callers supply
+   * it (pipeline-runner from `pipeline.department`, agent-runner from
+   * `agent.department`); every other call site omits it — an approval with
    * no acting unit never invents an owner.
    */
-  ownerSubsystem?: SubsystemId;
+  department?: DepartmentId;
   /**
    * Phase 127 — a link back to the gated item's origin (Jira/GitHub/Slack).
    * Only `ChannelTriageFlowService.parkForApproval` supplies it, copied from
@@ -82,7 +82,7 @@ export class ApprovalsService {
       risk: input.risk,
       status: "pending",
       requestedAt: new Date().toISOString(),
-      ...(input.ownerSubsystem ? { ownerSubsystem: input.ownerSubsystem } : {}),
+      ...(input.department ? { department: input.department } : {}),
       ...(input.sourceUrl ? { sourceUrl: input.sourceUrl } : {}),
     };
     this.log?.info("approval requested", {
@@ -100,9 +100,9 @@ export class ApprovalsService {
         runRef: approval.runId,
         action: approval.action,
         status: approval.kind,
-        // Best-effort subsystem attribution (F2c's `refs.ownerSubsystem`) so the
-        // activity log's subsystem lens catches the request line too.
-        ...(approval.ownerSubsystem ? { ownerSubsystem: approval.ownerSubsystem } : {}),
+        // Best-effort department attribution (F2c's `refs.department`) so the
+        // activity log's department lens catches the request line too.
+        ...(approval.department ? { department: approval.department } : {}),
       },
     });
     return this.storage.create(approval);
@@ -131,8 +131,8 @@ export class ApprovalsService {
   }
 
   /** Reject a pending approval and terminate its gated run (no action taken). */
-  async reject(id: string): Promise<Approval> {
-    const approval = await this.decide(id, "rejected");
+  async reject(id: string, reason?: string): Promise<Approval> {
+    const approval = await this.decide(id, "rejected", reason);
     this.log?.info("approval rejected; cancelling run", {
       id,
       runId: approval.runId,
@@ -183,11 +183,16 @@ export class ApprovalsService {
    * `ApprovalAlreadyDecidedError`, so it never reaches its runner call. Not
    * reentrant — this is the only call site, and it never re-enters the lock.
    */
-  private decide(id: string, status: "approved" | "rejected"): Promise<Approval> {
+  private decide(id: string, status: "approved" | "rejected", reason?: string): Promise<Approval> {
     return withPathLock(`approval:${id}`, async () => {
       const approval = await this.storage.get(id);
       if (approval.status !== "pending") throw new ApprovalAlreadyDecidedError(id);
-      const decided: Approval = { ...approval, status, decidedAt: new Date().toISOString() };
+      const decided: Approval = {
+        ...approval,
+        status,
+        decidedAt: new Date().toISOString(),
+        ...(reason ? { reason } : {}),
+      };
       void this.activity?.record({
         kind: status === "approved" ? "approval-approved" : "approval-rejected",
         summary: `approval ${status}: ${approval.skill} · ${approval.action}`,

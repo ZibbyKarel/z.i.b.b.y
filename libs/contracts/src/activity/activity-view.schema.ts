@@ -69,18 +69,18 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   "integration-retry-exhausted": "integrations",
   // N3: a monitor alert rides the integration that watches the source (same PAT/config).
   "monitor-alert": "integrations",
-  // NS2 F5a/F5c: Sentinel/Loom's scheduled-scan finding — reads with the other
+  // NS2 F5a/F5c: Security/Arch's scheduled-scan finding — reads with the other
   // watcher discoveries (monitor-alert) rather than a new group for one kind.
-  "subsystem-scan": "integrations",
+  "department-scan": "integrations",
   "machine-action": "approvals",
   "briefing-generated": "briefing",
   // NS2 F7b-2: the merge loop's head + its post-merge CI outcome — read with the
-  // other watcher discoveries (monitor-alert/subsystem-scan) rather than a new
+  // other watcher discoveries (monitor-alert/department-scan) rather than a new
   // group for two kinds.
   "merge-completed": "integrations",
   "post-merge-outcome": "integrations",
   // Handoff A2: a producer→consumer dispatch report — reads with the other
-  // watcher discoveries (monitor-alert/subsystem-scan/post-merge-outcome) rather
+  // watcher discoveries (monitor-alert/department-scan/post-merge-outcome) rather
   // than a new group for one kind.
   handoff: "integrations",
   // Phase 125e: the roadmap gate's own dispatch/outcome entries — reads with the
@@ -92,6 +92,9 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   // other watcher discoveries (monitor-alert/merge-completed/post-merge-outcome)
   // rather than a new group for one kind.
   "roadmap-sync": "integrations",
+  // ZB-10 / O-08: a warn-threshold crossing on the budget guard — reads with the
+  // other dispatch-time run signals (run-paused-limit/run-resumed-limit).
+  "budget-warn": "runs",
 };
 
 /**

@@ -1,0 +1,1 @@
+export { useMarkDepartmentSeenMutation } from "./useMarkDepartmentSeenMutation";

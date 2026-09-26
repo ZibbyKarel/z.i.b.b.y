@@ -1,5 +1,5 @@
 import type { Approval as ContractApproval } from "@zibby/contracts";
-import type { IconName, StateTone, TagTone } from "@zibby/design-system";
+import type { IconName, LegacyStateTone, TagTone } from "@zibby/design-system";
 
 /**
  * The design models an approval much richer than the contract does: the contract
@@ -102,9 +102,27 @@ export function parseApprovalDetail(a: ContractApproval): DashboardApproval {
   return { ...a, ...e, detail: e.summary ?? a.detail };
 }
 
-/** Tone usable for Card / Typography / StatusDot / Icon / Stat — the canonical
- * {@link StateTone} minus `run` (which collapses to `accent` in these surfaces). */
-export type UiTone = Exclude<StateTone, "run">;
+/**
+ * ZB-01: DS `ApprovalCard`'s `waited` prop wants a bare duration ("12m", "2h"),
+ * unlike `formatRelativeTime`'s localized "3 minutes ago" (built for the retired
+ * chat flyout). Deliberately locale-agnostic mono shorthand, same register as the
+ * DS App mock's rail cards.
+ */
+export function formatWaited(iso: string, now: Date = new Date()): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "";
+  const minutes = Math.max(0, Math.round((now.getTime() - then) / 60_000));
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.round(hours / 24)}d`;
+}
+
+/** Tone usable for Card / Typography / StatusDot / Icon / Stat — the pre-ZibbyCorp
+ * {@link LegacyStateTone} minus `run` (which collapses to `accent` in these
+ * surfaces; those DS props stay on the legacy vocabulary until ZA-02 restyles
+ * them — see `run.ts`'s `BADGE_TO_STATE_TONE`). */
+export type UiTone = Exclude<LegacyStateTone, "run">;
 
 interface RiskMeta {
   label: string;

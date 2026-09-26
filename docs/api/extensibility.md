@@ -67,12 +67,31 @@ Env vars and secrets injected into a given project's runs (API keys, DB URLs).
   env, so a project can't override them. Secrets are never logged (the core logs
   `command`/`cwd`, never `env`).
 
+## Registry bindings (`/api/registries/bindings`) — ZB-11
+
+Read-only, derived "Bound in" data for the `/system/registries/[kind]` screens
+(skills, mcp, hooks, commands) and the department detail tabs (O-09 — no new FK,
+no stored binding). `RegistriesService` computes, per kind, a `Record<id,
+DepartmentId[]>`:
+
+- **mcp:** read off each active agent's `tools`/`optionalTools` — an entry equal
+  to the server id, `mcp__<id>`, or prefixed `mcp__<id>__` counts as a grant; the
+  bound departments are the distinct `department` of every such agent.
+- **skills / hooks / commands:** these three carry no per-agent reference at
+  all — every enabled one is materialized into **every** run (see the Commands
+  and Hooks sections above, and `claude-run-command.service.ts`'s `buildCatalog`
+  for skills). Their honestly-derived binding is therefore "every department with
+  at least one active employee", not a per-item subset.
+
+A single cross-cutting endpoint (rather than a computed field added to each of
+the four entity schemas) — see `registry-bindings.schema.ts`'s docblock.
+
 ## Data directories / env knobs
 
-| Store            | Dir (env override)                             | Git        |
-| ----------------- | ----------------------------------------------- | ---------- |
-| Commands          | `data/commands` (`COMMANDS_DIR`)                | committed  |
-| MCP servers       | `data/mcp-servers` (`MCP_DIR`)                   | committed  |
-| MCP credentials   | `data/mcp-credentials` (`MCP_CREDENTIALS_DIR`)   | gitignored |
-| Hooks             | `data/hooks` (`HOOKS_DIR`)                       | committed  |
-| Project secrets   | `data/project-secrets` (`PROJECT_SECRETS_DIR`)   | gitignored |
+| Store           | Dir (env override)                             | Git        |
+| --------------- | ---------------------------------------------- | ---------- |
+| Commands        | `data/commands` (`COMMANDS_DIR`)               | committed  |
+| MCP servers     | `data/mcp-servers` (`MCP_DIR`)                 | committed  |
+| MCP credentials | `data/mcp-credentials` (`MCP_CREDENTIALS_DIR`) | gitignored |
+| Hooks           | `data/hooks` (`HOOKS_DIR`)                     | committed  |
+| Project secrets | `data/project-secrets` (`PROJECT_SECRETS_DIR`) | gitignored |

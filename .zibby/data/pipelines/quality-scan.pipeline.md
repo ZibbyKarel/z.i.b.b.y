@@ -34,7 +34,7 @@ desc: >-
   na tom je, kvalita kódu, code smells, technický dluh, quality scan, prohlídka
   modulu. Na plný audit včetně bezpečnosti, přístupnosti a výkonu použij
   `code-audit`; na skutečnou opravu `patch` nebo `delivery`.
-ownerSubsystem: loom
+department: qa
 complexity: light
 ---
 

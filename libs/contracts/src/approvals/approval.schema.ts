@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { IsoDateTimeSchema, RiskSchema } from "../common.schema";
-import { SubsystemIdSchema } from "../subsystems/subsystem.schema";
+import { DepartmentIdSchema } from "../departments/department.schema";
 
 /**
  * Which run kind an approval gates — so a decision can be routed to the right
@@ -43,15 +43,15 @@ export const ApprovalRunKindSchema = z.enum([
   // `status` to `active` (visible immediately — read-through storage), rejecting
   // deletes the candidate file (the approval record remains as the trace).
   "agent-proposal",
-  // NS2 F6a — Herald's evidence-based autonomy graduation: a (channel, category)
+  // NS2 F6a — Comms's evidence-based autonomy graduation: a (channel, category)
   // that accumulated N consecutive operator-approved (unedited) replies is proposed
   // for Tier-2 auto-send. The runId is `<integrationId>/<category>`; approving writes
   // the graduation (future replies of that category on that channel auto-send through
   // the same gate), rejecting leaves the channel at Tier-3. The graduation decision
   // is itself Tier-3 — autonomy widens only on an operator's explicit sign-off.
-  "herald-graduation",
-  // Cross-subsystem handoff (design doc
-  // `docs/superpowers/specs/2026-07-22-subsystem-handoff-design.md`, Part A): a
+  "comms-graduation",
+  // Cross-department handoff (design doc
+  // `docs/superpowers/specs/2026-07-22-department-handoff-design.md`, Part A): a
   // tier-3 `HandoffRule` matched a signal but does not auto-dispatch — the runId is
   // the parked `HandoffProposal` id. Approving dispatches the parked task via the
   // rule's resolved target (`createTask(..., target)`, exactly the tier-1/2 dispatch
@@ -65,13 +65,13 @@ export const ApprovalRunKindSchema = z.enum([
   // Inbound PR text may never widen ZIBBY's behaviour by itself → always Tier-3.
   "review-rule",
   // NS2 F10 — the switchboard could not tell whose domain an autonomously-released
-  // roadmap item belongs to (its top two subsystem picks were too close to separate,
+  // roadmap item belongs to (its top two department picks were too close to separate,
   // or the winner too weak), so instead of guessing it parked a `RoutingProposal`.
   // The runId is that proposal's id — no live child; the item itself is put back to
   // `todo` so the gate's drain stops re-attempting it. Approving releases the item to
   // the parked `pick` as an explicit target; rejecting drops the proposal and leaves
-  // the item in the operator's hands (Play again, naming the subsystem — an explicit
-  // target is a hard override). Guessing a whole subsystem wrong is the single most
+  // the item in the operator's hands (Play again, naming the department — an explicit
+  // target is a hard override). Guessing a whole department wrong is the single most
   // expensive routing mistake available, so "unsure" here is Tier-3 rather than a
   // silent default.
   "routing-proposal",
@@ -104,15 +104,15 @@ export const ApprovalSchema = z.object({
   requestedAt: IsoDateTimeSchema,
   decidedAt: IsoDateTimeSchema.optional(),
   /**
-   * NS2 F3c — the owning subsystem of the ACTING unit that raised this approval
-   * (the pipeline's / agent's `ownerSubsystem`), stamped at request time by the
+   * NS2 F3c — the owning department of the ACTING unit that raised this approval
+   * (the pipeline's / agent's `department`), stamped at request time by the
    * run-path callers only. Optional and additive: system-owned gates with no
    * acting unit (machine, jira-issue, channel, budget-task, agent-proposal)
    * never invent an owner, and every pre-existing approval re-parses untouched.
-   * Powers the queue's per-subsystem filter — read-only attribution, never
+   * Powers the queue's per-department filter — read-only attribution, never
    * routing (decisions still route by `kind`).
    */
-  ownerSubsystem: SubsystemIdSchema.optional(),
+  department: DepartmentIdSchema.optional(),
   /**
    * Phase 127 — a link back to where this approval's gated item actually lives
    * (a Jira issue, a GitHub issue/PR, a Slack message). Only the "channel"
@@ -121,5 +121,11 @@ export const ApprovalSchema = z.object({
    * and a pre-existing approval re-parses untouched.
    */
   sourceUrl: z.string().optional(),
+  /**
+   * ZB-08/O-12 — an optional operator note on a rejection, shown in the
+   * Policy history table. Additive: only `reject` ever sets it, and an older
+   * decided approval re-parses with it simply absent.
+   */
+  reason: z.string().min(1).max(500).optional(),
 });
 export type Approval = z.infer<typeof ApprovalSchema>;

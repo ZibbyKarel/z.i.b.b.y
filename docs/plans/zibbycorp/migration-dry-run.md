@@ -1,0 +1,218 @@
+# ZibbyCorp department migration (dry run)
+
+Data dir: `.zibby/data`
+
+## Totals
+
+- Files scanned: 1154
+- Edited (content only): 122
+- Moved (path only): 66
+- Edited + moved: 14
+- Unchanged: 952
+- Purged: `chains/` -> `_purged/chains-2026-09-24T18-26-12-198Z/` (0 files)
+
+## Changes
+
+- EDIT `agents/accessibility-auditor.md`
+- EDIT `agents/account-executive.md`
+- EDIT `agents/api-designer.md`
+- EDIT `agents/architect-reviewer.md`
+- EDIT `agents/architect.md`
+- EDIT `agents/backend-developer.md`
+- EDIT `agents/build-engineer.md`
+- EDIT `agents/code-reviewer.md`
+- EDIT `agents/competitive-analyst.md`
+- EDIT `agents/compliance-auditor.md`
+- EDIT `agents/content-marketer.md`
+- EDIT `agents/content-quality-editor.md`
+- EDIT `agents/context-manager.md`
+- EDIT `agents/copywriter.md`
+- EDIT `agents/data-researcher.md`
+- EDIT `agents/debugger.md`
+- EDIT `agents/dependency-manager.md`
+- EDIT `agents/deployment-engineer.md`
+- EDIT `agents/devops-engineer.md`
+- EDIT `agents/devops-incident-responder.md`
+- EDIT `agents/documentation-engineer.md`
+- EDIT `agents/error-detective.md`
+- EDIT `agents/frontend-developer.md`
+- EDIT `agents/fullstack-developer.md`
+- EDIT `agents/git-workflow-manager.md`
+- EDIT `agents/incident-responder.md`
+- EDIT `agents/knowledge-synthesizer.md`
+- EDIT `agents/lead-researcher.md`
+- EDIT `agents/market-researcher.md`
+- EDIT `agents/marketing-strategist.md`
+- EDIT `agents/penetration-tester.md`
+- EDIT `agents/performance-engineer.md`
+- EDIT `agents/personal-assistant.md`
+- EDIT `agents/product-manager.md`
+- EDIT `agents/qa-expert.md`
+- EDIT `agents/refactoring-specialist.md`
+- EDIT `agents/research-analyst.md`
+- EDIT `agents/roadmap-decomposer.md`
+- EDIT `agents/runs/ai-writing-auditor_1782127459958/.zibby-system-prompt.md`
+- EDIT `agents/sdr.md`
+- EDIT `agents/search-specialist.md`
+- EDIT `agents/security-auditor.md`
+- EDIT `agents/security-engineer.md`
+- EDIT `agents/seo-specialist.md`
+- EDIT `agents/slack-expert.md`
+- EDIT `agents/sre-engineer.md`
+- EDIT `agents/technical-writer.md`
+- EDIT `agents/test-automator.md`
+- EDIT `agents/trend-analyst.md`
+- EDIT `agents/ui-ux-tester.md`
+- EDIT `agents/ux-researcher.md`
+- EDIT+MOVE `automations/loom-audit.json` -> `automations/arch-audit.json`
+- EDIT+MOVE `automations/sentinel-scan.json` -> `automations/security-scan.json`
+- EDIT `channels/shoptet-dev-rel-jira/jira-CZ3TDR1-522.json`
+- EDIT `channels/shoptet-dev-rel-jira/jira-CZ3TDR1-537.json`
+- EDIT `chat/conv_16b12b48-a1dc-40a6-8ac5-9dcd16ead6e8.jsonl`
+- EDIT `chat/conv_1783545931287_72bc75.jsonl`
+- EDIT `chat/conv_645f6eb2-614a-45af-92de-fc6e7422d378.jsonl`
+- EDIT `handoff/rules.json`
+- EDIT `handoff/signal-kinds.json`
+- MOVE `herald/ledger/reply_1785844094570_d395e8.json` -> `comms/ledger/reply_1785844094570_d395e8.json`
+- MOVE `herald/ledger/reply_1785846494726_856ed5.json` -> `comms/ledger/reply_1785846494726_856ed5.json`
+- MOVE `herald/ledger/reply_1785847544703_dd1575.json` -> `comms/ledger/reply_1785847544703_dd1575.json`
+- MOVE `herald/ledger/reply_1785847552735_a823f5.json` -> `comms/ledger/reply_1785847552735_a823f5.json`
+- MOVE `herald/ledger/reply_1785847560768_102552.json` -> `comms/ledger/reply_1785847560768_102552.json`
+- MOVE `herald/ledger/reply_1785847568797_12d86f.json` -> `comms/ledger/reply_1785847568797_12d86f.json`
+- MOVE `herald/ledger/reply_1785847576833_fb52ce.json` -> `comms/ledger/reply_1785847576833_fb52ce.json`
+- MOVE `herald/ledger/reply_1785847584865_e2540a.json` -> `comms/ledger/reply_1785847584865_e2540a.json`
+- MOVE `herald/ledger/reply_1785847592895_274bfa.json` -> `comms/ledger/reply_1785847592895_274bfa.json`
+- MOVE `herald/ledger/reply_1785848594755_8e7d08.json` -> `comms/ledger/reply_1785848594755_8e7d08.json`
+- MOVE `herald/ledger/reply_1785848602780_cff69a.json` -> `comms/ledger/reply_1785848602780_cff69a.json`
+- MOVE `herald/ledger/reply_1785848610803_f36220.json` -> `comms/ledger/reply_1785848610803_f36220.json`
+- MOVE `herald/ledger/reply_1785848618826_5ced21.json` -> `comms/ledger/reply_1785848618826_5ced21.json`
+- MOVE `herald/ledger/reply_1785848626849_9e25c7.json` -> `comms/ledger/reply_1785848626849_9e25c7.json`
+- MOVE `herald/ledger/reply_1785848639495_6a2ecb.json` -> `comms/ledger/reply_1785848639495_6a2ecb.json`
+- MOVE `herald/ledger/reply_1785848647507_495eca.json` -> `comms/ledger/reply_1785848647507_495eca.json`
+- MOVE `herald/ledger/reply_1785848655523_e6e098.json` -> `comms/ledger/reply_1785848655523_e6e098.json`
+- MOVE `herald/ledger/reply_1785848663542_c74500.json` -> `comms/ledger/reply_1785848663542_c74500.json`
+- MOVE `herald/ledger/reply_1785848671565_61db79.json` -> `comms/ledger/reply_1785848671565_61db79.json`
+- MOVE `herald/ledger/reply_1785848679587_57c7fd.json` -> `comms/ledger/reply_1785848679587_57c7fd.json`
+- MOVE `herald/ledger/reply_1785848687609_a5560b.json` -> `comms/ledger/reply_1785848687609_a5560b.json`
+- MOVE `herald/ledger/reply_1785930486267_86cf59.json` -> `comms/ledger/reply_1785930486267_86cf59.json`
+- MOVE `herald/ledger/reply_1785930494294_c3b4e3.json` -> `comms/ledger/reply_1785930494294_c3b4e3.json`
+- MOVE `herald/ledger/reply_1785930502330_70b513.json` -> `comms/ledger/reply_1785930502330_70b513.json`
+- MOVE `herald/ledger/reply_1785930510358_80af1d.json` -> `comms/ledger/reply_1785930510358_80af1d.json`
+- MOVE `herald/ledger/reply_1785930518395_70f729.json` -> `comms/ledger/reply_1785930518395_70f729.json`
+- MOVE `herald/ledger/reply_1785930526438_a9f42c.json` -> `comms/ledger/reply_1785930526438_a9f42c.json`
+- MOVE `herald/ledger/reply_1785930534461_648dee.json` -> `comms/ledger/reply_1785930534461_648dee.json`
+- MOVE `herald/ledger/reply_1785930542472_c4c5e8.json` -> `comms/ledger/reply_1785930542472_c4c5e8.json`
+- MOVE `herald/ledger/reply_1785930550487_915597.json` -> `comms/ledger/reply_1785930550487_915597.json`
+- MOVE `herald/ledger/reply_1785930558516_63e883.json` -> `comms/ledger/reply_1785930558516_63e883.json`
+- MOVE `herald/ledger/reply_1785930566544_743832.json` -> `comms/ledger/reply_1785930566544_743832.json`
+- MOVE `herald/ledger/reply_1785930574579_7b61cb.json` -> `comms/ledger/reply_1785930574579_7b61cb.json`
+- MOVE `herald/ledger/reply_1785930582613_996010.json` -> `comms/ledger/reply_1785930582613_996010.json`
+- MOVE `herald/ledger/reply_1785930589894_5164f2.json` -> `comms/ledger/reply_1785930589894_5164f2.json`
+- MOVE `herald/ledger/reply_1785930590056_bf3104.json` -> `comms/ledger/reply_1785930590056_bf3104.json`
+- MOVE `herald/ledger/reply_1785930591501_aa7b0c.json` -> `comms/ledger/reply_1785930591501_aa7b0c.json`
+- MOVE `herald/ledger/reply_1785933021665_79e296.json` -> `comms/ledger/reply_1785933021665_79e296.json`
+- MOVE `herald/ledger/reply_1785933029673_89016f.json` -> `comms/ledger/reply_1785933029673_89016f.json`
+- MOVE `herald/ledger/reply_1785933747777_6ac79a.json` -> `comms/ledger/reply_1785933747777_6ac79a.json`
+- MOVE `herald/ledger/reply_1785968832898_65f25a.json` -> `comms/ledger/reply_1785968832898_65f25a.json`
+- MOVE `herald/ledger/reply_1785969736621_4ddf86.json` -> `comms/ledger/reply_1785969736621_4ddf86.json`
+- MOVE `herald/ledger/reply_1785970763889_c69bb7.json` -> `comms/ledger/reply_1785970763889_c69bb7.json`
+- MOVE `herald/ledger/reply_1785971703443_48b69c.json` -> `comms/ledger/reply_1785971703443_48b69c.json`
+- MOVE `herald/ledger/reply_1785972623885_4674d5.json` -> `comms/ledger/reply_1785972623885_4674d5.json`
+- MOVE `herald/ledger/reply_1785973624594_b367fd.json` -> `comms/ledger/reply_1785973624594_b367fd.json`
+- MOVE `herald/ledger/reply_1785974654042_ca24b8.json` -> `comms/ledger/reply_1785974654042_ca24b8.json`
+- MOVE `herald/ledger/reply_1785974662060_4727b0.json` -> `comms/ledger/reply_1785974662060_4727b0.json`
+- MOVE `herald/ledger/reply_1785974670072_76cf24.json` -> `comms/ledger/reply_1785974670072_76cf24.json`
+- MOVE `herald/ledger/reply_1785974678094_fe6bdf.json` -> `comms/ledger/reply_1785974678094_fe6bdf.json`
+- MOVE `herald/ledger/reply_1786116063569_ac7ec9.json` -> `comms/ledger/reply_1786116063569_ac7ec9.json`
+- MOVE `herald/ledger/reply_1787643050798_2a00a4.json` -> `comms/ledger/reply_1787643050798_2a00a4.json`
+- MOVE `herald/ledger/reply_1787643058824_763ad1.json` -> `comms/ledger/reply_1787643058824_763ad1.json`
+- MOVE `herald/ledger/reply_1787643066850_9e4126.json` -> `comms/ledger/reply_1787643066850_9e4126.json`
+- MOVE `herald/ledger/reply_1787643074892_47a3f5.json` -> `comms/ledger/reply_1787643074892_47a3f5.json`
+- MOVE `herald/ledger/reply_1787643082926_d12a87.json` -> `comms/ledger/reply_1787643082926_d12a87.json`
+- MOVE `herald/ledger/reply_1787643090962_6afe25.json` -> `comms/ledger/reply_1787643090962_6afe25.json`
+- MOVE `herald/ledger/reply_1787643125398_c119a4.json` -> `comms/ledger/reply_1787643125398_c119a4.json`
+- MOVE `herald/ledger/reply_1787643133438_b8e531.json` -> `comms/ledger/reply_1787643133438_b8e531.json`
+- MOVE `herald/ledger/reply_1787643141472_33b4ff.json` -> `comms/ledger/reply_1787643141472_33b4ff.json`
+- MOVE `herald/ledger/reply_1787643149521_b63a1b.json` -> `comms/ledger/reply_1787643149521_b63a1b.json`
+- MOVE `herald/ledger/reply_1787643157554_d92d9b.json` -> `comms/ledger/reply_1787643157554_d92d9b.json`
+- MOVE `herald/ledger/reply_1787643165586_86258d.json` -> `comms/ledger/reply_1787643165586_86258d.json`
+- MOVE `herald/ledger/reply_1787643173618_e815cf.json` -> `comms/ledger/reply_1787643173618_e815cf.json`
+- MOVE `herald/ledger/reply_1787643181657_2bbd35.json` -> `comms/ledger/reply_1787643181657_2bbd35.json`
+- MOVE `herald/ledger/reply_1787643188209_0293d5.json` -> `comms/ledger/reply_1787643188209_0293d5.json`
+- EDIT `integrations/mail.json`
+- EDIT `integrations/shoptet-dev-rel-jira.json`
+- EDIT `integrations/shoptet-github-cms4.json`
+- EDIT `integrations/shoptet-partner-cli-github.json`
+- EDIT `integrations/zibbycalendar.json`
+- EDIT `pipelines/ci-triage.pipeline.md`
+- EDIT `pipelines/code-audit.pipeline.md`
+- EDIT `pipelines/content-campaign.pipeline.md`
+- EDIT `pipelines/content-piece.pipeline.md`
+- EDIT `pipelines/daily-agenda.pipeline.md`
+- EDIT `pipelines/delivery.pipeline.md`
+- EDIT `pipelines/dep-scan.pipeline.md`
+- EDIT `pipelines/incident-response.pipeline.md`
+- EDIT `pipelines/knowledge-capture.pipeline.md`
+- EDIT `pipelines/patch.pipeline.md`
+- EDIT `pipelines/product-discovery.pipeline.md`
+- EDIT `pipelines/quality-scan.pipeline.md`
+- EDIT `pipelines/quick-fix.pipeline.md`
+- EDIT `pipelines/quick-lookup.pipeline.md`
+- EDIT `pipelines/release-notes.pipeline.md`
+- EDIT `pipelines/release-prep.pipeline.md`
+- EDIT `pipelines/research.pipeline.md`
+- EDIT `pipelines/runs/code-audit_1783163824914/report/audit-report.md`
+- EDIT `pipelines/runs/code-audit_1783553932941/02_quality/quality.md`
+- EDIT `pipelines/runs/code-audit_1783553932941/03_security/security.md`
+- EDIT `pipelines/runs/code-audit_1783553932941/04_n-13/accessibility-auditor.md`
+- EDIT `pipelines/runs/code-audit_1783553932941/05_performance/performance.md`
+- EDIT `pipelines/runs/code-audit_1783553932941/06_report/audit-report.md`
+- EDIT `pipelines/runs/code-audit_1783553995559/02_quality/quality.md`
+- EDIT `pipelines/runs/code-audit_1783553995559/03_security/security.md`
+- EDIT `pipelines/runs/code-audit_1783553995559/04_n-13/accessibility-auditor.md`
+- EDIT `pipelines/runs/code-audit_1783553995559/05_performance/performance.md`
+- EDIT `pipelines/runs/code-audit_1783553995559/06_report/audit-report.md`
+- EDIT `pipelines/runs/code-audit_1783554113161/02_quality/quality.md`
+- EDIT `pipelines/runs/code-audit_1783554113161/03_security/security.md`
+- EDIT `pipelines/runs/code-audit_1783554113161/04_n-13/accessibility-auditor.md`
+- EDIT `pipelines/runs/code-audit_1783554113161/05_performance/performance.md`
+- EDIT `pipelines/runs/code-audit_1783554113161/06_report/audit-report.md`
+- EDIT `pipelines/runs/code-audit_1783554194309/02_quality/quality.md`
+- EDIT `pipelines/runs/code-audit_1783554194309/03_security/security.md`
+- EDIT `pipelines/runs/code-audit_1783554194309/04_n-13/accessibility-auditor.md`
+- EDIT `pipelines/runs/code-audit_1783554194309/05_performance/performance.md`
+- EDIT `pipelines/runs/code-audit_1783554194309/06_report/audit-report.md`
+- EDIT `pipelines/runs/delivery_1783471206101/03_review/review.md`
+- EDIT `pipelines/sales-outreach.pipeline.md`
+- EDIT `pipelines/security-audit.pipeline.md`
+- EDIT `projects/_projects.json`
+- EDIT `roadmap/shoptet-partner-cli/shoptet-dev-rel-jira-cz3tdr1-522.json`
+- EDIT `roadmap/shoptet-partner-cli/shoptet-dev-rel-jira-cz3tdr1-537.json`
+- EDIT `roadmap/shoptet-partner-cli/shoptet-dev-rel-jira-cz3tdr1-540.json`
+- EDIT `roadmap/shoptet-partner-cli/shoptet-dev-rel-jira-cz3tdr1-542.json`
+- EDIT `roadmap/shoptet-partner-cli/shoptet-dev-rel-jira-cz3tdr1-627.json`
+- EDIT `roadmap/shoptet-partner-cli/shoptet-dev-rel-jira-cz3tdr1-727.json`
+- EDIT `skills/deep-research.md`
+- EDIT `skills/plan-orchestrate.md`
+- EDIT `skills/product-capability.md`
+- EDIT+MOVE `subsystem-seen.json` -> `department-seen.json`
+- EDIT `vault/daily/briefing-2026-07-18.md`
+- EDIT `vault/daily/briefing-2026-07-19.md`
+- EDIT `vault/knowledge/code-audit-report.md`
+- EDIT `vault/knowledge/personal-reminders.md`
+- EDIT `vault/knowledge/self-knowledge.md`
+- EDIT+MOVE `vault/knowledge/subsystem-beacon-moc.md` -> `vault/knowledge/department-inc-moc.md`
+- EDIT+MOVE `vault/knowledge/subsystem-codex-moc.md` -> `vault/knowledge/department-knw-moc.md`
+- EDIT+MOVE `vault/knowledge/subsystem-forge-moc.md` -> `vault/knowledge/department-dev-moc.md`
+- EDIT+MOVE `vault/knowledge/subsystem-hearth-moc.md` -> `vault/knowledge/department-per-moc.md`
+- EDIT+MOVE `vault/knowledge/subsystem-herald-moc.md` -> `vault/knowledge/department-com-moc.md`
+- EDIT+MOVE `vault/knowledge/subsystem-ledger-moc.md` -> `vault/knowledge/department-fin-moc.md`
+- EDIT+MOVE `vault/knowledge/subsystem-loom-moc.md` -> `vault/knowledge/department-qa-moc.md`
+- EDIT+MOVE `vault/knowledge/subsystem-maestro-moc.md` -> `vault/knowledge/department-rel-moc.md`
+- EDIT+MOVE `vault/knowledge/subsystem-puls-moc.md` -> `vault/knowledge/department-ops-moc.md`
+- EDIT+MOVE `vault/knowledge/subsystem-scout-moc.md` -> `vault/knowledge/department-rnd-moc.md`
+- EDIT+MOVE `vault/knowledge/subsystem-sentinel-moc.md` -> `vault/knowledge/department-sec-moc.md`
+- EDIT `vault/knowledge/zibby-index.md`
+- EDIT `vault/north-star-2.md`
+- EDIT `vault/projects/cms4.md`
+- PURGE `chains/` -> `_purged/chains-2026-09-24T18-26-12-198Z/` (0 files)

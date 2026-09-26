@@ -20,7 +20,7 @@ import { taskRunsRootKey } from "./queries/keys";
  * channels SSE merge). Run events carry `{ scope, runId, status }`; channel-item
  * events carry `{ scope: "channel-items", itemId, state }`. Unknown scopes are
  * ignored, so the channel scope was safe to add to the server merge. Exported (Phase
- * 89) so the subsystem web's particle mapping can type the events it reads off
+ * 89) so the department web's particle mapping can type the events it reads off
  * {@link onRunEvent} without re-declaring the shape.
  */
 export interface RunStatusEvent {
@@ -42,7 +42,7 @@ type RunEventListener = (event: RunStatusEvent) => void;
  * high in the tree ("Mounted once, high in the tree" — see the provider's own doc
  * comment below); a listener added before the provider itself mounts (or surviving
  * across a remount in tests) still works, since it's independent of any component
- * instance. The subsystem web's particle layer (`SubsystemWeb`) is the first
+ * instance. The department web's particle layer (`DepartmentWeb`) is the first
  * consumer: it turns a real dispatch/report transition into a center↔node flight,
  * never a timer.
  */

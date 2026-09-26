@@ -32,7 +32,7 @@ my channels and handle what you can."
 - [Events](./api/events.md) — the single multiplexed SSE channel for live run/activity updates
 - [Projects](./api/projects.md) — the target-directory registry, per-machine clone resolution, GitHub PR overview/merge, standups
 - [Companies](./api/companies.md) — the super-entity above Project: canonical roster + default budget, merged at read time
-- [Subsystems](./api/subsystems.md) — the GAIA-style federation registry (identity + live status)
+- [Departments](./api/departments.md) — the GAIA-style federation registry (identity + live status)
 
 **Memory & accountability**
 
@@ -68,10 +68,10 @@ my channels and handle what you can."
 - [Chat](./api/chat.md) — the chat-first conversational layer
 - [Speech](./api/speech.md) — thin HTTP proxy to the local `speakd` TTS daemon
 
-**Ops-facing subsystems**
+**Ops-facing departments**
 
 - [Monitors](./api/monitors.md) — CI/CD status alerts
-- [Health](./api/health.md) — subsystem health probes
+- [Health](./api/health.md) — department health probes
 - [Self](./api/self.md) — is the ZIBBY install itself up to date (top-bar freshness)
 - [System config](./api/system.md) — file-backed runtime configuration
 - [Pins](./api/pins.md) — the Overview page's quick-launch panel

@@ -23,8 +23,6 @@ app/
     ├── chains/
     │   ├── page.tsx        Chain catalog
     │   └── [id]/page.tsx   Chain detail
-    ├── chat/page.tsx       Chat (phase 23 — a routed page, not an overlay;
-    │                       see `features/chat/Screen.tsx`)
     ├── commands/
     │   ├── page.tsx        Command catalog
     │   └── [id]/page.tsx   Command detail (edit; N4d — same pattern as skills/[id])
@@ -160,6 +158,48 @@ per-message UI. STT is entirely client-side (Web Speech API); there is still
 no backend STT and no command-grammar bridge — a spoken utterance is just a
 chat message.
 
+**ZB-13 — the old immersive chat UI is deleted; `/chat` has no page of its own.**
+`ChatScreen`, `ChatTopBar`, `ChatToolDock`, `DepartmentOrbMap`, `StatusPill` +
+`StatusFlyoutPanel`, `ChatLiveLog`, `ChatTasksPanel`, `ChatSearch`, the old glass
+`ChatDock`/`ChatBottomBar`, `ChatQuickNote`/`ChatQuickTask`, `ChatTaskRow`/
+`ChatTaskDetailColumn`, `ChatDetailDialog`, `CoreOverviewDialog`, the
+`Flyout*Row`s, `LangSwitch`, `statusFlyout.ts`/`useStatusFlyout.ts`,
+`departmentLoad.ts` and `features/chat/Screen.tsx` are all gone, along with the
+DS orb-map bundle they rendered onto (`libs/design-system/src/immersive/**` —
+`Orb`, `OrbMap`, `OrbNode`, `OrbitField`, `CoreOrb`, `ConnectorLayer`,
+`HandoffFlare`, `ellipseLayout`, `orbState`, `canMountWebGL`). `GlassSurface`
+and `ImmersiveShell` moved out of `immersive/` into
+`libs/design-system/src/components/` instead of being deleted at the time;
+ZB-13b (system migration) moved `apps/web` fully off both, plus `HudPanel`
+and `HudCard` — every call site now composes DS `Panel`/`Card` (or the new
+`EntityCard`) directly (`BriefingMessageCard` is now a plain `Card`), so
+`GlassSurface`/`ImmersiveShell`/`HudPanel`/`HudCard`/`ImmersivePage` (and
+the `PageHeader` wrapper) have been deleted. `/chat` itself is now a single `next.config.mjs`
+permanent redirect
+to `/org` (D-009) — there is no `app/(company)/chat/page.tsx` any more. See
+`features/chat`'s surviving surface below (ChatContext, hooks, mutations,
+queries, and the components the COO dock actually renders).
+
+**ZB-12 — chat is the shell-global COO dock (supersedes Phase 23 below).** The
+`/chat` page is retired (it redirects to `/org`). `AppShell` mounts `CooDock`
+(`features/chat/components/CooDock.tsx`) in `AppFrame`'s `dock` slot on every
+route: the DS `ChatDock` wired to `useCooChat` (`features/chat/hooks`), which is
+the single owner of the chat stream (`useChatStream` + `useSendChatMessageMutation`,
+the same `claude --resume` conversation id) and of the reload hydration from
+`GET /api/chat/transcript`. `ChatProvider` owns the conversation plus the dock's
+`dockOpen` and `dockTarget` state; ⌘/Ctrl+J toggles the dock, and `open(target?)`
+opens it. A department page opens it with an explicit department target (O-20),
+shown as a clearable chip. A per-turn `@`-mention still wins for that one turn.
+Voice is dictation only. The mic is idle-gated while a turn is in flight and
+echo-guarded while any reply is read aloud. The composer offers no attach control
+because the chat API has no attachment channel. A settled reply's
+**Create task** opens `/work/tasks/new?text=…(&entry=<dept>)`. ⌘/Ctrl+K opens
+the `CommandPaletteHost` (`features/command-palette`), which indexes
+departments, people, tasks, chains, goals, companies, teams, projects,
+pipelines, registries, automations, signals, vault notes, settings and gate
+sections, plus actions. "Approve next" never quick-approves a high-risk item: it
+opens the approval sheet instead.
+
 **Phase 23 — chat is a routed page, not an overlay.** `ChatProvider` only owns
 the conversation state (`conversationId`/`messages`, minted lazily and
 preserved across navigation) and the `open()`/`close()`/`toggle()` navigation
@@ -225,19 +265,29 @@ features/
 ├── agents/         Agent CRUD, run launch
 ├── approvals/      Approval queue
 ├── automations/    Cron/event triggers
-├── chat/           Chat-first interface (replaces the old Voice UI), including
-│                   phase-119 voice mode (STT hook, mic toggle, auto-speak);
-│                   its ambient orb-map backdrop is `SubsystemOrbMap`
-│                   (see docs/web/subsystem-orb-map.md)
+├── chat/           The chat engine behind the shell-global COO dock (ZB-12):
+│                   `ChatContext`, hooks (`useChatStream`, `useCooChat`,
+│                   `useVoiceMode`, `useSpeechRecognition`, `useAudioPlayback`),
+│                   mutations/queries, and the dock's own components
+│                   (`CooDock`, `ChatTranscript`, `ChatMessage`, `ChatRunCard`,
+│                   `TargetIdentity`, `BriefingMessageCard`, `VoiceStatusStrip`,
+│                   `VoiceToggleButton`, `ChatButton`). The old immersive orb-map
+│                   backdrop (`DepartmentOrbMap`) and the rest of the pre-ZB-12
+│                   chat chrome were deleted in ZB-13 (see the note above).
+├── command-palette/ ZB-12 ⌘K palette — index builder, filter, host (queries
+│                   mount only while open)
 ├── commands/       Slash-command catalog
 ├── companies/      Company portfolio (client/company records)
+├── departments/    `/org/departments/[id]/[tab]` — department detail; "Chat with"
+│                   opens the COO dock with an explicit department target
 ├── gates/          Gate rule catalog
 ├── goals/          Loop engine — goal definitions + runs (maker ⇄ verifier)
-├── handoff/        Cross-subsystem handoff rules (inline mad-libs editor in
-│                   the subsystem drawer's "Předávání" tab)
+├── handoff/        Cross-department handoff rules (inline mad-libs editor in
+│                   the department drawer's "Předávání" tab)
 ├── health/         System health status
 ├── hooks/          Hook catalog
 ├── integrations/   Channel adapters (email, Slack), scoped under a project
+├── ledger/         `/ledger/{budgets,spend}` (ZB-10)
 ├── limits/         Budget display
 ├── mcp/            MCP server catalog
 ├── memory/         Vault note editor
@@ -246,13 +296,20 @@ features/
 ├── pins/           Quick-launch pins
 ├── pipelines/      Pipeline editor + history
 ├── projects/       Project portfolio
+├── registries/     ZB-11 — `/system/registries/[kind]` (skills/mcp/hooks/commands):
+│                   a `DataTable` per kind with a derived "Bound in" department
+│                   column (`GET /api/registries/bindings`, O-09); detail/new pages
+│                   reuse each domain's own unchanged create dialog + edit form
+├── release/       Release department surfaces (merge queue card)
 ├── research/       Research pipeline surfacing
 ├── roadmap/        Per-project delivery backlog (phase 125) — the global
-│                   external-level mapping table at `/settings?tab=tasks`;
-│                   the project board lands on `/projects/<id>?tab=roadmap`
+│                   external-level mapping table now lives at
+│                   `/system/settings/general` (ZB-11); the project board lands
+│                   on `/work/projects/<id>/roadmap`
 ├── runs/           Run history + log viewer, plus the shared SSE hooks
 │                   (`runEvents`, `useRunLogStream`)
-├── settings/       Workspace settings
+├── settings/       `/system/settings/[section]` (ZB-11) — general, appearance,
+│                   coo, activity, automations, runtime, machine, status
 ├── skills/         Skill inventory
 ├── speech/         `speakd` voices/status queries (settings voice picker);
 │                   the synthesize mutation itself stays in `features/chat`

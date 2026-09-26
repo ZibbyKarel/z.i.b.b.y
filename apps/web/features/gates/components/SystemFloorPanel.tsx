@@ -1,22 +1,10 @@
 "use client";
 
 import type { GateRule } from "@zibby/contracts";
-import { Stack, Typography } from "@zibby/design-system";
+import { Panel, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useSystemPolicyQuery } from "../queries";
 import { RuleCard } from "./RuleCard";
-
-export interface SystemFloorPanelProps {
-  /**
-   * Visual language passthrough (D7) — forwarded from {@link GateRulesSection}'s
-   * own `surface` prop so the floor panel and the catalog panels below it never
-   * disagree on chrome. Defaults to `"hud"`, so the existing standalone usage
-   * (none today — this component is only ever mounted by `GateRulesSection`) is
-   * unaffected.
-   */
-  surface?: "hud" | "glass";
-}
 
 /**
  * The locked system-policy floor (`POLICY.md`) shown above the editable catalog — the
@@ -25,13 +13,13 @@ export interface SystemFloorPanelProps {
  * (shield, no edit/delete/reorder), reusing the same `RuleCard locked` treatment the agent
  * rules editor uses. Hidden entirely when the floor is empty.
  */
-export function SystemFloorPanel({ surface }: SystemFloorPanelProps = {}) {
+export function SystemFloorPanel() {
   const t = useTranslations("gates");
   const { data: floor = [] } = useSystemPolicyQuery();
   if (floor.length === 0) return null;
 
   return (
-    <HudPanel padding="200" surface={surface} title={t("inheritedTitle")} tone="warn">
+    <Panel header={t("inheritedTitle")} padding="200" tone="warn">
       <Stack gap="100">
         <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
           {t("inheritedNote")}
@@ -48,6 +36,6 @@ export function SystemFloorPanel({ surface }: SystemFloorPanelProps = {}) {
           />
         ))}
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }

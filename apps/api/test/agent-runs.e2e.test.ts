@@ -67,7 +67,7 @@ describe("Agent runs API (e2e)", () => {
         id: "agent-007",
         name: "Agent 007",
         instructions: "test agent",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
     // NS2 F4c: `app.init()` above already ran the empty-vault seeder, which
@@ -252,7 +252,7 @@ describe("Agent runs on a git project lands commits on a zibby/* branch (e2e)", 
 
     await request(app.getHttpServer())
       .post("/api/agents")
-      .send({ id: "builder", name: "Builder", instructions: "builds", ownerSubsystem: "forge" })
+      .send({ id: "builder", name: "Builder", instructions: "builds", department: "dev" })
       .expect(201);
     await request(app.getHttpServer())
       .post("/api/projects")
@@ -341,7 +341,7 @@ describe("Agent runs persistence across restart (e2e)", () => {
         id: "agent-007",
         name: "Agent 007",
         instructions: "test agent",
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
     await seed.close();

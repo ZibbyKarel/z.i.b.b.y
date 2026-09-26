@@ -15,7 +15,6 @@ tools:
   - Grep
 category: Developer Experience
 gates: []
-ownerSubsystem: maestro
 ---
 
 ## Prompt Defense Baseline

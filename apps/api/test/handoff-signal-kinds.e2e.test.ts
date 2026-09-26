@@ -18,9 +18,9 @@ const FAKE_CLAUDE = path.resolve(
  * B1 — the handoff signal-kind registry over HTTP (design doc
  * `docs/superpowers/specs/2026-07-22-handoff-signal-registry-and-receiver-filter-design.md`,
  * Slot B → B1): GET returns the 7 seeded built-ins; POST registers a new
- * `pending` kind AND spawns a Forge-targeted build task (asserted by finding
+ * `pending` kind AND spawns a Dev-targeted build task (asserted by finding
  * the returned `buildTaskId` on `GET /api/tasks/scheduled`); DELETE of a
- * built-in is a 403. `AGENTS_DIR` is isolated with one Forge-owned active
+ * built-in is a 403. `AGENTS_DIR` is isolated with one Dev-owned active
  * agent seeded so the build-task dispatch has somewhere to route to
  * (mirrors `tasks.e2e.test.ts`'s `seedCatalog`).
  */
@@ -47,16 +47,16 @@ describe("Handoff signal-kinds API (e2e)", () => {
     app = moduleRef.createNestApplication();
     await app.init();
 
-    // Forge needs SOMETHING to route the build task to (resolveSubsystemTarget
-    // rejects a 0-owned subsystem) — one active Forge-owned agent is enough for
+    // Dev needs SOMETHING to route the build task to (resolveDepartmentTarget
+    // rejects a 0-owned department) — one active Dev-owned agent is enough for
     // the single-owned-unit direct-dispatch path.
     await request(app.getHttpServer()).post("/api/agents").send({
-      id: "forge-builder",
-      name: "Forge Builder",
+      id: "dev-builder",
+      name: "Dev Builder",
       category: "Vývoj",
       description: "Implementuje nové signály pro handoff.",
       instructions: "Implementuj producenty signálů.",
-      ownerSubsystem: "forge",
+      department: "dev",
     });
   });
 
@@ -100,11 +100,11 @@ describe("Handoff signal-kinds API (e2e)", () => {
     ).toBe(true);
   });
 
-  it("POST /api/handoff-signal-kinds registers a pending kind and spawns a Forge build task", async () => {
+  it("POST /api/handoff-signal-kinds registers a pending kind and spawns a Dev build task", async () => {
     const res = await request(server())
       .post("/api/handoff-signal-kinds")
       .send({
-        from: "beacon",
+        from: "inc",
         label: "Dependency Outdated",
         description: "A dependency has fallen behind its latest release.",
         severityBearing: false,
@@ -113,7 +113,7 @@ describe("Handoff signal-kinds API (e2e)", () => {
 
     expect(res.body.signalKind).toMatchObject({
       id: "dependency-outdated",
-      from: "beacon",
+      from: "inc",
       status: "pending",
       system: false,
     });
@@ -142,7 +142,7 @@ describe("Handoff signal-kinds API (e2e)", () => {
     await request(server())
       .patch("/api/handoff-signal-kinds/cve")
       .send({
-        from: "sentinel",
+        from: "sec",
         label: "Vulnerability (CVE)",
         description: "changed",
         severityBearing: true,

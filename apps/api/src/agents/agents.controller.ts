@@ -25,11 +25,11 @@ export class AgentsController {
   handler() {
     return tsRestHandler(agentsContract, {
       createAgent: ({ body }) => {
-        // NS2 F1b: every new agent must be attributed to a subsystem — pre-F1
+        // NS2 F1b: every new agent must be attributed to a department — pre-F1
         // agents are exempt (tagged by the owner-backfill sweep instead), so
         // this is a create-only guard, not a schema-level requirement.
-        if (!body.ownerSubsystem) {
-          return Promise.resolve(unprocessable("ownerSubsystem is required"));
+        if (!body.department) {
+          return Promise.resolve(unprocessable("department is required"));
         }
         return errors.created(() => this.storage.create(body));
       },

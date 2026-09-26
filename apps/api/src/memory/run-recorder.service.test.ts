@@ -95,8 +95,8 @@ describe("RunRecorderService", () => {
     readArtifact?: (id: string, name: string) => Promise<{ name: string; content: string } | null>;
     agentList?: () => AgentRun[];
     pipelineList?: () => PipelineRun[];
-    agentsStore?: { get: (id: string) => Promise<{ ownerSubsystem?: string }> };
-    pipelinesStore?: { get: (id: string) => Promise<{ ownerSubsystem?: string }> };
+    agentsStore?: { get: (id: string) => Promise<{ department?: string }> };
+    pipelinesStore?: { get: (id: string) => Promise<{ department?: string }> };
   }): RunRecorderService {
     const agentRunner = { ...opts.agent, listRunning: opts.agentList ?? (() => []) };
     const pipelineRunner = {
@@ -201,19 +201,19 @@ describe("RunRecorderService", () => {
     await expect(vault.note("learned-delivery_123")).rejects.toThrow();
   });
 
-  it("F4a: an owned agent run's daily line links its subsystem's shelf", async () => {
+  it("F4a: an owned agent run's daily line links its department's shelf", async () => {
     const agent = makeRunner<AgentRun>();
     const pipeline = makeRunner<PipelineRun>();
     const svc = build({
       agent,
       pipeline,
-      agentsStore: { get: async () => ({ ownerSubsystem: "forge" }) },
+      agentsStore: { get: async () => ({ department: "dev" }) },
     });
     svc.onModuleInit();
     agent.emit(agentRun());
     await vi.waitFor(async () => expect(await readDaily()).toContain("coder_123"));
     const daily = await readDaily();
-    expect(daily).toContain("[[subsystem-forge-moc|forge]]");
+    expect(daily).toContain("[[department-dev-moc|dev]]");
   });
 
   it("F4a: an unowned agent run's daily line is unchanged (today's exact line)", async () => {
@@ -229,7 +229,7 @@ describe("RunRecorderService", () => {
     await vi.waitFor(async () => expect(await readDaily()).toContain("coder_123"));
     const daily = await readDaily();
     expect(daily).toMatch(/run coder_123 \(coder\) fix bug → done/);
-    expect(daily).not.toContain("subsystem-");
+    expect(daily).not.toContain("department-");
   });
 
   it("F4a: a storage lookup failure still writes the daily line (fail-open)", async () => {
@@ -241,21 +241,21 @@ describe("RunRecorderService", () => {
     await vi.waitFor(async () => expect(await readDaily()).toContain("coder_123"));
     const daily = await readDaily();
     expect(daily).toMatch(/run coder_123 \(coder\) fix bug → done/);
-    expect(daily).not.toContain("subsystem-");
+    expect(daily).not.toContain("department-");
   });
 
-  it("F4a: an owned pipeline run's daily line links its subsystem's shelf", async () => {
+  it("F4a: an owned pipeline run's daily line links its department's shelf", async () => {
     const agent = makeRunner<AgentRun>();
     const pipeline = makeRunner<PipelineRun>();
     const svc = build({
       agent,
       pipeline,
-      pipelinesStore: { get: async () => ({ ownerSubsystem: "scout" }) },
+      pipelinesStore: { get: async () => ({ department: "rnd" }) },
     });
     svc.onModuleInit();
     pipeline.emit(pipelineRun());
     await vi.waitFor(async () => expect(await readDaily()).toContain("delivery_123"));
     const daily = await readDaily();
-    expect(daily).toContain("[[subsystem-scout-moc|scout]]");
+    expect(daily).toContain("[[department-rnd-moc|rnd]]");
   });
 });

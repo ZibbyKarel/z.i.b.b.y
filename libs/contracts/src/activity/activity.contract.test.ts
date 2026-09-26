@@ -31,14 +31,12 @@ describe("ActivityRefsSchema (Law 4: closed)", () => {
     expect(ActivityRefsSchema.safeParse({ projectId: "alpha" }).success).toBe(true);
   });
 
-  it("accepts the F2c ownerSubsystem ref, and still rejects an unknown key alongside it", () => {
-    expect(ActivityRefsSchema.safeParse({ taskId: "t1", ownerSubsystem: "forge" }).success).toBe(
-      true,
+  it("accepts the F2c department ref, and still rejects an unknown key alongside it", () => {
+    expect(ActivityRefsSchema.safeParse({ taskId: "t1", department: "dev" }).success).toBe(true);
+    expect(ActivityRefsSchema.safeParse({ department: "dev", forceApprove: "yes" }).success).toBe(
+      false,
     );
-    expect(
-      ActivityRefsSchema.safeParse({ ownerSubsystem: "forge", forceApprove: "yes" }).success,
-    ).toBe(false);
-    expect(ActivityRefsSchema.safeParse({ ownerSubsystem: "not-a-subsystem" }).success).toBe(false);
+    expect(ActivityRefsSchema.safeParse({ department: "not-a-department" }).success).toBe(false);
   });
 });
 

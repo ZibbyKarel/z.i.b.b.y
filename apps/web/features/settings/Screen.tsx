@@ -4,33 +4,31 @@ import {
   ButtonGroup,
   Container,
   Divider,
+  Grid,
   Icon,
+  Panel,
   Stack,
   StatusDot,
-  Tab,
-  TabList,
-  TabPanel,
-  Tabs,
+  SubNav,
   Toggle,
   Typography,
 } from "@zibby/design-system";
+import type { SubNavLinkComponent } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
-import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { HudPanel } from "../../components/HudPanel/HudPanel";
-import { ImmersivePage } from "../../components/layout/ImmersivePage/ImmersivePage";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { useHealthQuery } from "../health";
-import { GateRulesSection } from "../gates/components/GateRulesSection";
 import { LevelMappingSection } from "../roadmap/components/LevelMappingSection";
 import { ActivitySection } from "./components/ActivitySection";
+import { AppearanceSection } from "./components/AppearanceSection";
 import { AutomationsSection } from "./components/AutomationsSection";
 import { ChatSection } from "./components/ChatSection";
 import { MachineSection } from "./components/MachineSection";
-import { MandateSection } from "./components/MandateSection";
-import { SelfKnowledgeSection } from "./components/SelfKnowledgeSection";
 import { SystemSection } from "./components/SystemSection";
 import { WatcherRows } from "./components/WatcherRows";
+import { SETTINGS_SECTIONS, type SettingsSection } from "./settingsSections";
 
 type Locale = "cs" | "en";
 
@@ -72,7 +70,7 @@ function SettingRow({
   );
 }
 
-/** A mono key/value info row for the system panel. */
+/** A mono key/value info row for the status panel. */
 function InfoRow({ label, value, tone }: { label: string; value: string; tone?: "ok" }) {
   return (
     <Stack align="center" direction="row" gap="150" justify="between">
@@ -89,31 +87,6 @@ function InfoRow({ label, value, tone }: { label: string; value: string; tone?: 
   );
 }
 
-// ---------------------------------------------------------------------------
-// Tabs — each is a directly addressable `?tab=` URL
-// ---------------------------------------------------------------------------
-
-const SETTINGS_TABS = [
-  "preferences",
-  "gates",
-  "tasks",
-  "automations",
-  "chat",
-  "activity",
-  "mandate",
-  "runtime",
-  "machine",
-  "selfKnowledge",
-  "system",
-] as const;
-type SettingsTab = (typeof SETTINGS_TABS)[number];
-
-function asSettingsTab(value: string | null): SettingsTab {
-  return (SETTINGS_TABS as readonly string[]).includes(value ?? "")
-    ? (value as SettingsTab)
-    : "preferences";
-}
-
 const CAFFEINATE_KEY = "zibby.caffeinate";
 
 /** Module-scoped so the cookie write isn't analyzed as an in-render mutation. */
@@ -121,21 +94,23 @@ function writeLocaleCookie(value: Locale) {
   document.cookie = `locale=${value}; path=/; max-age=31536000`;
 }
 
-export function Screen() {
+export interface SettingsScreenProps {
+  section: SettingsSection;
+}
+
+/**
+ * `/system/settings/[section]` (ZB-11, ROUTE-MAP §3) — the settings sections
+ * router. Each former `/settings?tab=` is now its own route; the "gates" and
+ * "mandate" tabs already moved to `/policy/gates` (ZB-08), "selfKnowledge" to
+ * `/knowledge/distill` (ZB-09), and the per-project "tasks" level mapping to
+ * `/work/projects/[id]/roadmap` (ZB-06) — only the GLOBAL DEFAULT level mapping
+ * stays here, under `general`.
+ */
+export function SettingsScreen({ section }: SettingsScreenProps) {
   const t = useTranslations("settings");
   const locale = useLocale() as Locale;
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { data: health, isSuccess } = useHealthQuery();
-
-  // The tab is a directly addressable `?tab=` URL: read once as the initial tab
-  // (deep-linkable) and write back on change for shareability — same pattern as
-  // the project profile screen's `?tab=`.
-  const initialTab = asSettingsTab(searchParams.get("tab"));
-  const setTab = (tab: string) => {
-    const next = asSettingsTab(tab);
-    router.replace(next === "preferences" ? "/settings" : `/settings?tab=${next}`);
-  };
 
   const [caffeinate, setCaffeinate] = useState(() =>
     typeof window === "undefined" ? true : localStorage.getItem(CAFFEINATE_KEY) !== "false",
@@ -151,97 +126,76 @@ export function Screen() {
   };
 
   return (
-    <ImmersivePage subtitle={`${DAEMON} · ${t("daemonOn")} ${HOST}`} title={t("title")}>
-      <Container padding={["300", "350"]}>
-        <PageContainer>
-          <Stack gap="250">
-            <Tabs defaultValue={initialTab} direction="vertical" onValueChange={setTab}>
-              <TabList>
-                <Tab value="preferences">{t("preferences")}</Tab>
-                <Tab value="gates">{t("subnav.gates")}</Tab>
-                <Tab value="tasks">{t("subnav.tasks")}</Tab>
-                <Tab value="automations">{t("automations.title")}</Tab>
-                <Tab value="chat">{t("chat.title")}</Tab>
-                <Tab value="activity">{t("activity.title")}</Tab>
-                <Tab value="mandate">{t("mandate.title")}</Tab>
-                <Tab value="runtime">{t("runtime.title")}</Tab>
-                <Tab value="machine">{t("machine.title")}</Tab>
-                <Tab value="selfKnowledge">{t("selfKnowledge.title")}</Tab>
-                <Tab value="system">{t("system")}</Tab>
-              </TabList>
+    <Container padding={["300", "350"]}>
+      <PageContainer>
+        <Stack direction="col" gap="250">
+          <Stack align="baseline" direction="row" gap="150">
+            <Typography mono size="sm" type="note" variant="tertiary">
+              {t("eyebrow")}
+            </Typography>
+            <Typography type="title">{t("title")}</Typography>
+          </Stack>
 
-              <TabPanel value="preferences">
-                <HudPanel padding="300" surface="glass" title={t("preferences")}>
-                  <Stack gap="200">
-                    <SettingRow
-                      control={
-                        <ButtonGroup
-                          ariaLabel={t("language")}
-                          onChange={(v) => setLocale(v as Locale)}
-                          options={[
-                            { id: "cs", label: "Čeština" },
-                            { id: "en", label: "English" },
-                          ]}
-                          value={locale}
-                        />
-                      }
-                      hint={t("languageHint")}
-                      label={t("language")}
-                    />
-                    <Divider />
-                    <SettingRow
-                      control={
-                        <Toggle
-                          checked={caffeinate}
-                          label={t("caffeinate")}
-                          onChange={setCaffeinateValue}
-                        />
-                      }
-                      hint={t("caffeinateHint")}
-                      label={t("caffeinate")}
-                    />
-                  </Stack>
-                </HudPanel>
-              </TabPanel>
+          <Grid gap="300" sidebar="left">
+            <Container shrink={false}>
+              <SubNav
+                items={SETTINGS_SECTIONS.map((id) => ({
+                  href: `/system/settings/${id}`,
+                  label: t(`subnav.${id}`),
+                  active: id === section,
+                }))}
+                linkComponent={Link as SubNavLinkComponent}
+                orientation="responsive"
+              />
+            </Container>
 
-              <TabPanel value="gates">
-                <GateRulesSection surface="glass" />
-              </TabPanel>
+            <Container grow minW0>
+              {section === "general" && (
+                <Stack gap="250">
+                  <Panel header={t("preferences")} padding="300">
+                    <Stack gap="200">
+                      <SettingRow
+                        control={
+                          <ButtonGroup
+                            ariaLabel={t("language")}
+                            onChange={(v) => setLocale(v as Locale)}
+                            options={[
+                              { id: "cs", label: "Čeština" },
+                              { id: "en", label: "English" },
+                            ]}
+                            value={locale}
+                          />
+                        }
+                        hint={t("languageHint")}
+                        label={t("language")}
+                      />
+                      <Divider />
+                      <SettingRow
+                        control={
+                          <Toggle
+                            checked={caffeinate}
+                            label={t("caffeinate")}
+                            onChange={setCaffeinateValue}
+                          />
+                        }
+                        hint={t("caffeinateHint")}
+                        label={t("caffeinate")}
+                      />
+                    </Stack>
+                  </Panel>
+                  <LevelMappingSection />
+                </Stack>
+              )}
 
-              <TabPanel value="tasks">
-                <LevelMappingSection surface="glass" />
-              </TabPanel>
+              {section === "appearance" && <AppearanceSection />}
+              {section === "coo" && <ChatSection />}
+              {section === "activity" && <ActivitySection />}
+              {section === "automations" && <AutomationsSection />}
+              {section === "runtime" && <SystemSection />}
+              {section === "machine" && <MachineSection />}
 
-              <TabPanel value="automations">
-                <AutomationsSection />
-              </TabPanel>
-
-              <TabPanel value="chat">
-                <ChatSection />
-              </TabPanel>
-
-              <TabPanel value="activity">
-                <ActivitySection />
-              </TabPanel>
-
-              <TabPanel value="mandate">
-                <MandateSection />
-              </TabPanel>
-
-              <TabPanel value="runtime">
-                <SystemSection />
-              </TabPanel>
-
-              <TabPanel value="machine">
-                <MachineSection />
-              </TabPanel>
-
-              <TabPanel value="selfKnowledge">
-                <SelfKnowledgeSection />
-              </TabPanel>
-
-              <TabPanel value="system">
-                <HudPanel padding="300" surface="glass" title={t("system")}>
+              {section === "status" && (
+                <Panel header={t("system")} padding="300">
                   <Stack gap="150">
                     <InfoRow label={t("daemon")} value={DAEMON} />
                     <Divider />
@@ -264,21 +218,21 @@ export function Screen() {
                       </>
                     )}
                   </Stack>
-                </HudPanel>
-              </TabPanel>
-            </Tabs>
+                </Panel>
+              )}
+            </Container>
+          </Grid>
 
-            <Stack align="center">
-              <Stack align="center" direction="row" gap="75">
-                <Icon name="butlerSign" size="sm" tone="faint" />
-                <Typography mono size="2xs" type="note" variant="tertiary">
-                  {t("footer")}
-                </Typography>
-              </Stack>
+          <Stack align="center">
+            <Stack align="center" direction="row" gap="75">
+              <Icon name="butlerSign" size="sm" tone="faint" />
+              <Typography mono size="2xs" type="note" variant="tertiary">
+                {t("footer")}
+              </Typography>
             </Stack>
           </Stack>
-        </PageContainer>
-      </Container>
-    </ImmersivePage>
+        </Stack>
+      </PageContainer>
+    </Container>
   );
 }

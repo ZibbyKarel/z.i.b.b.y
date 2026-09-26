@@ -7,7 +7,23 @@ const meta: Meta<typeof LivingGlow> = {
   title: "DesignSystem/LivingGlow",
   component: LivingGlow,
   parameters: { backgrounds: { default: "velin" } },
+  argTypes: {
+    tone: { control: "select", options: STATE_TONES },
+    intensity: { control: "radio", options: ["idle", "hot"] },
+    breathe: { control: "boolean" },
+    radius: {
+      control: "select",
+      options: ["none", "sm", "default", "lg", "full"],
+    },
+  },
   args: { tone: "accent", intensity: "idle" },
+  decorators: [
+    (Story) => (
+      <div className="relative h-24 w-24 rounded-lg border border-border bg-surface">
+        <Story />
+      </div>
+    ),
+  ],
 };
 export default meta;
 
@@ -56,3 +72,5 @@ export const Overview: Story = {
     </div>
   ),
 };
+
+export const Playground: Story = {};

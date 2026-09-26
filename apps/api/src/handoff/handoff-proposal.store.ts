@@ -21,7 +21,7 @@ export class InvalidHandoffProposalIdError extends Error {
 /**
  * A2 — the parked payload for a Tier-3 handoff (design doc Part A.2): one
  * `<id>.json` per proposal under `.zibby/data/handoff/proposals/`, mirroring the
- * agent-factory candidate / herald-graduation "durable payload, no live child"
+ * agent-factory candidate / comms-graduation "durable payload, no live child"
  * store shape. Write-once (`HandoffService.evaluate`'s propose path), read-once
  * (`resume`/`cancel`), then removed either way — no `update`.
  */

@@ -4,8 +4,11 @@ import type { ReactNode } from "react";
 import { useRef, useState } from "react";
 import type { Size } from "../../tokens";
 import { cn } from "../../utils/cn";
+import { type AnyStateTone, normalizeStateTone } from "../../stateTone";
 import type { IconName } from "../Icon/Icon";
 import { Icon } from "../Icon/Icon";
+import { Corners } from "../Card/Card";
+import { StatePill } from "../StatePill/StatePill";
 
 /**
  * Band height per semantic size. `EntityHero`'s band is much taller than the
@@ -56,6 +59,15 @@ export interface EntityHeroProps {
   tag?: ReactNode;
   /** Short description under the name. */
   desc?: string;
+  /**
+   * DS.md §8 Inspector hero: a {@link StatePill} rendered beside `name`. Accepts
+   * both the canonical and legacy tone vocabulary (see {@link AnyStateTone}).
+   * Omitted — no badge, the pre-ZibbyCorp look.
+   */
+  state?: AnyStateTone;
+  /** DS.md §8 Inspector hero's mono id line (e.g. `AG-04 · CODER`), rendered
+   *  above the name. Omitted — no id line. */
+  idLine?: ReactNode;
   /**
    * Whether the default overlay (tag/name/meta/desc) renders at all. Defaults to
    * `true` — every existing consumer is unchanged. Set `false` when a page's own
@@ -110,6 +122,8 @@ export function EntityHero({
   meta,
   tag,
   desc,
+  state,
+  idLine,
   showIdentity = true,
   height = "md",
   fit = "cover",
@@ -169,7 +183,14 @@ export function EntityHero({
         <div
           className="absolute inset-0 grid place-items-center text-accent/25"
           data-testid={EntityHeroTestId.GlyphFallback}
+          style={{
+            backgroundImage:
+              "linear-gradient(var(--color-grid) 1px, transparent 1px)," +
+              "linear-gradient(90deg, var(--color-grid) 1px, transparent 1px)",
+            backgroundSize: "12px 12px",
+          }}
         >
+          <Corners inset="100" />
           <Icon name={glyph} size="xl" />
         </div>
       )}
@@ -186,7 +207,7 @@ export function EntityHero({
         <div className="absolute top-3 right-3 z-10 flex gap-2">
           <button
             aria-label={uploadLabel}
-            className="grid size-7 place-items-center rounded-sm border border-border bg-background/70 text-foreground backdrop-blur-sm"
+            className="grid size-7 place-items-center rounded-none border border-border bg-surface text-foreground"
             data-testid={EntityHeroTestId.UploadButton}
             onClick={() => inputRef.current?.click()}
             title={uploadLabel}
@@ -197,7 +218,7 @@ export function EntityHero({
           {image && (
             <button
               aria-label={removeLabel}
-              className="grid size-7 place-items-center rounded-sm border border-bad/50 bg-background/70 text-bad backdrop-blur-sm"
+              className="grid size-7 place-items-center rounded-none border border-bad/50 bg-surface text-bad"
               data-testid={EntityHeroTestId.RemoveButton}
               onClick={() => onRemove?.()}
               title={removeLabel}
@@ -236,15 +257,23 @@ export function EntityHero({
         showIdentity && (
           <div className="absolute right-5 bottom-3.5 left-5 z-[1]">
             {tag && <div className="mb-1.5">{tag}</div>}
-            <div
-              // Legibility scrim for text over an arbitrary photographic avatar — must
-              // stay visually dark regardless of theme (a photo's bright regions need a
-              // dark halo to keep the overlaid text readable), unlike `colorBackgroundDeep`
-              // which flips near-white in the light theme. Kept as literal black on purpose.
-              className="truncate font-mono text-[22px] font-bold text-foreground drop-shadow-[0_2px_14px_rgba(0,0,0,0.7)]"
-              data-testid={EntityHeroTestId.Name}
-            >
-              {name}
+            {idLine && (
+              <div className="mb-1 font-mono text-[11px] tracking-wider text-foreground-faint uppercase">
+                {idLine}
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <div
+                // Legibility scrim for text over an arbitrary photographic avatar — must
+                // stay visually dark regardless of theme (a photo's bright regions need a
+                // dark halo to keep the overlaid text readable), unlike `colorBackgroundDeep`
+                // which flips near-white in the light theme. Kept as literal black on purpose.
+                className="truncate font-mono text-[22px] font-bold text-foreground drop-shadow-[0_2px_14px_rgba(0,0,0,0.7)]"
+                data-testid={EntityHeroTestId.Name}
+              >
+                {name}
+              </div>
+              {state && <StatePill state={normalizeStateTone(state)} />}
             </div>
             {meta && <div className="mt-1.5">{meta}</div>}
             {desc && (

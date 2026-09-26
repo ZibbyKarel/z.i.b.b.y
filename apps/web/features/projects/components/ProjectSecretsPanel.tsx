@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Stack, StatusDot, Tag, Typography } from "@zibby/design-system";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
+import { Button, Panel, Stack, StatusDot, Tag, Typography } from "@zibby/design-system";
 import { KeyValueEditor, type KeyValueRow } from "./KeyValueEditor";
 
 export interface ProjectSecretsPanelProps {
@@ -38,14 +37,15 @@ export function ProjectSecretsPanel({
   const [secretRows, setSecretRows] = useState<KeyValueRow[]>([]);
 
   return (
-    <HudPanel
-      action={
+    <Panel
+      header={t("fields.secrets")}
+      headerEnd={
         <Tag tone={hasSecrets ? "accent" : "neutral"}>
           <StatusDot size="75" tone={hasSecrets ? "ok" : "idle"} />
           {hasSecrets ? t("fields.secretsStored") : t("fields.secretsNone")}
         </Tag>
       }
-      title={t("fields.secrets")}
+      padding="200"
     >
       <Stack gap="75">
         <Typography size="xs" type="note" variant="tertiary">
@@ -86,6 +86,6 @@ export function ProjectSecretsPanel({
           )}
         </Stack>
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }

@@ -27,7 +27,7 @@ desc: >-
   srovnání, bez rozsáhlé zprávy. Zjisti, dohledej, ověř, najdi, co je, jak
   funguje, quick lookup, rychlá rešerše, jedna otázka. Na hloubkový výzkum
   z více zdrojů použij `research`; na produktové discovery `product-discovery`.
-ownerSubsystem: scout
+department: rnd
 complexity: light
 ---
 

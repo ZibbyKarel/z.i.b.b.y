@@ -69,6 +69,12 @@ system-config section — link there rather than duplicating the table here.
      See [roadmap.md](./roadmap.md).
 4. `GET /system/config` / `PUT /system/config` are the only two endpoints;
    `putConfig` replaces the entire document (not a partial patch).
+5. **`operatorName`/`companyName`** (ZB-01, O-21) are additive `.optional()`
+   fields, deliberately with no schema default — the header's fallback
+   (`operatorName ?? "CEO"`, `companyName ?? "ZibbyCorp"`) lives in the web app,
+   not the schema. Nothing seeds `operatorName` automatically; the operator
+   sets it from `/system/settings/general` (ZB-11 builds that screen — until
+   then, `PUT /system/config` is the only way to set it).
 
 ## Not the same thing: the locked policy floor
 

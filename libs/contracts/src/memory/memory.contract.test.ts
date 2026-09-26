@@ -171,20 +171,20 @@ describe("memory schemas", () => {
   });
 });
 
-describe("F4b: subsystem/tags/aliases retrieval fields", () => {
-  it("IndexEntrySchema accepts the new optional subsystem/tags/aliases fields", () => {
+describe("F4b: department/tags/aliases retrieval fields", () => {
+  it("IndexEntrySchema accepts the new optional department/tags/aliases fields", () => {
     const parsed = IndexEntrySchema.safeParse({
-      id: "subsystem-forge-moc",
-      title: "Forge — polička",
+      id: "department-dev-moc",
+      title: "Dev — polička",
       tier: "knowledge",
-      subsystem: "forge",
-      tags: ["subsystem", "forge", "moc"],
+      department: "dev",
+      tags: ["department", "dev", "moc"],
       aliases: ["kovárna"],
     });
     expect(parsed.success).toBe(true);
     if (parsed.success) {
-      expect(parsed.data.subsystem).toBe("forge");
-      expect(parsed.data.tags).toEqual(["subsystem", "forge", "moc"]);
+      expect(parsed.data.department).toBe("dev");
+      expect(parsed.data.tags).toEqual(["department", "dev", "moc"]);
       expect(parsed.data.aliases).toEqual(["kovárna"]);
     }
   });
@@ -197,33 +197,33 @@ describe("F4b: subsystem/tags/aliases retrieval fields", () => {
     });
     expect(parsed.success).toBe(true);
     if (parsed.success) {
-      expect(parsed.data.subsystem).toBeUndefined();
+      expect(parsed.data.department).toBeUndefined();
       expect(parsed.data.tags).toBeUndefined();
       expect(parsed.data.aliases).toBeUndefined();
     }
   });
 
-  it("rejects an invalid subsystem id on IndexEntry", () => {
+  it("rejects an invalid department id on IndexEntry", () => {
     expect(
       IndexEntrySchema.safeParse({
         id: "x",
         title: "X",
         tier: "knowledge",
-        subsystem: "not-a-subsystem",
+        department: "not-a-department",
       }).success,
     ).toBe(false);
   });
 
-  it("NoteSchema accepts and rejects `subsystem` the same way", () => {
+  it("NoteSchema accepts and rejects `department` the same way", () => {
     expect(
       NoteSchema.safeParse({
-        id: "subsystem-scout-moc",
-        path: "knowledge/subsystem-scout-moc.md",
+        id: "department-research-moc",
+        path: "knowledge/department-research-moc.md",
         tier: "knowledge",
-        title: "Scout — polička",
-        frontmatter: { subsystem: "scout" },
+        title: "Research — polička",
+        frontmatter: { department: "rnd" },
         links: [],
-        subsystem: "scout",
+        department: "rnd",
       }).success,
     ).toBe(true);
     expect(
@@ -234,18 +234,18 @@ describe("F4b: subsystem/tags/aliases retrieval fields", () => {
         title: "X",
         frontmatter: {},
         links: [],
-        subsystem: "not-a-subsystem",
+        department: "not-a-department",
       }).success,
     ).toBe(false);
   });
 
-  it("MemoryGraphSchema node accepts `subsystem`", () => {
+  it("MemoryGraphSchema node accepts `department`", () => {
     const parsed = MemoryGraphSchema.safeParse({
-      nodes: [{ id: "a", label: "A", tier: "knowledge", subsystem: "forge" }],
+      nodes: [{ id: "a", label: "A", tier: "knowledge", department: "dev" }],
       edges: [],
     });
     expect(parsed.success).toBe(true);
-    if (parsed.success) expect(parsed.data.nodes[0]?.subsystem).toBe("forge");
+    if (parsed.success) expect(parsed.data.nodes[0]?.department).toBe("dev");
   });
 });
 

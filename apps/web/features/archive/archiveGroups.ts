@@ -1,29 +1,29 @@
-import type { SubsystemId } from "@zibby/contracts";
-import { NO_SUBSYSTEM } from "@zibby/contracts";
+import type { DepartmentId } from "@zibby/contracts";
+import { NO_DEPARTMENT } from "@zibby/contracts";
 import type { RunView } from "../runs/run";
-import { type OwnerSubsystemMaps, runSubsystemId } from "../subsystems/useOwnerSubsystem";
+import { type OwnerDepartmentMaps, runDepartmentId } from "../departments/useOwnerDepartment";
 
 /**
- * Pure subsystem-attribution logic for the `/archiv` page (F2,
- * `docs/plans/hud2chat-F2-archive.md`, decision D3/D8). Search, subsystem filtering,
+ * Pure department-attribution logic for the `/archiv` page (F2,
+ * `docs/plans/hud2chat-F2-archive.md`, decision D3/D8). Search, department filtering,
  * and grouping/time-bucketing now run server-side (`TaskRunsService.listArchivedTaskRuns`/
  * `getArchiveCounts`) so the archive reaches every archived run, not just whatever page
  * the frontend has loaded — this module only keeps the client-side join a row still
- * needs to RENDER its subsystem name/colour dot.
+ * needs to RENDER its department name/colour dot.
  */
 
-// Re-exported so existing importers (`ArchiveSubsystemFilter.tsx`) keep resolving it from
+// Re-exported so existing importers (`ArchiveDepartmentFilter.tsx`) keep resolving it from
 // here; the canonical definition lives in contracts now (both the API's filtering and the
-// web's rendering need the exact same sentinel).
-export { NO_SUBSYSTEM };
-export type ArchiveSubsystemFilterId = SubsystemId | typeof NO_SUBSYSTEM;
+// web's rendering need the exact same security).
+export { NO_DEPARTMENT };
+export type ArchiveDepartmentFilterId = DepartmentId | typeof NO_DEPARTMENT;
 
-/** The subsystem-filter identity of a run — its real subsystem, or the explicit
- * {@link NO_SUBSYSTEM} bucket (D8). Used for each row's display attribution
- * (`Screen.tsx`'s `subsystemDisplay`); filtering/counting itself is server-side. */
-export function archiveSubsystemFilterId(
+/** The department-filter identity of a run — its real department, or the explicit
+ * {@link NO_DEPARTMENT} bucket (D8). Used for each row's display attribution
+ * (`Screen.tsx`'s `departmentDisplay`); filtering/counting itself is server-side. */
+export function archiveDepartmentFilterId(
   run: Pick<RunView, "kind" | "owner">,
-  ownerMaps: OwnerSubsystemMaps,
-): ArchiveSubsystemFilterId {
-  return runSubsystemId(run, ownerMaps) ?? NO_SUBSYSTEM;
+  ownerMaps: OwnerDepartmentMaps,
+): ArchiveDepartmentFilterId {
+  return runDepartmentId(run, ownerMaps) ?? NO_DEPARTMENT;
 }

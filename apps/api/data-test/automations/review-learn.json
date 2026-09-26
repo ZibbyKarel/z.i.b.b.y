@@ -1,0 +1,8 @@
+{
+  "id": "review-learn",
+  "name": "Učení z review",
+  "trigger": { "type": "cron", "expr": "15 3 * * *" },
+  "target": { "type": "review-learn" },
+  "enabled": false,
+  "system": true
+}

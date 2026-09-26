@@ -297,7 +297,7 @@ describe("renderBriefingMarkdown", () => {
   });
 });
 
-describe("per-subsystem lines (NS2 F3b)", () => {
+describe("per-department lines (NS2 F3b)", () => {
   const base = {
     now: NOW,
     since: SINCE,
@@ -308,16 +308,16 @@ describe("per-subsystem lines (NS2 F3b)", () => {
   };
   const lines = [
     {
-      subsystem: "forge" as const,
-      name: "Forge",
+      department: "dev" as const,
+      name: "Dev",
       state: "waiting" as const,
       tier2Count: 0,
       errorCount: 0,
       tier3Count: 2,
     },
     {
-      subsystem: "ledger" as const,
-      name: "Ledger",
+      department: "fin" as const,
+      name: "Finance",
       state: "idle" as const,
       tier2Count: 0,
       errorCount: 0,
@@ -327,35 +327,35 @@ describe("per-subsystem lines (NS2 F3b)", () => {
   ];
 
   it("passes the gathered lines through verbatim (present ⇄ absent)", () => {
-    const withLines = assembleBriefing({ ...base, subsystems: lines });
-    expect(withLines.subsystems).toEqual(lines);
+    const withLines = assembleBriefing({ ...base, departments: lines });
+    expect(withLines.departments).toEqual(lines);
     // Absent (old briefings / failed read) and empty both omit the key entirely —
     // strictly additive to the pre-F3b shape.
-    expect(assembleBriefing(base).subsystems).toBeUndefined();
-    expect(assembleBriefing({ ...base, subsystems: [] }).subsystems).toBeUndefined();
+    expect(assembleBriefing(base).departments).toBeUndefined();
+    expect(assembleBriefing({ ...base, departments: [] }).departments).toBeUndefined();
   });
 
-  it("renders a ## Subsystems markdown block iff lines are present", () => {
-    const md = renderBriefingMarkdown(assembleBriefing({ ...base, subsystems: lines }));
-    expect(md).toContain("## Subsystems");
-    expect(md).toContain("- **Forge** — waiting · 2 waiting on you");
-    expect(md).toContain("- **Ledger** — idle · 62 % týdenního okna");
-    expect(renderBriefingMarkdown(assembleBriefing(base))).not.toContain("## Subsystems");
+  it("renders a ## Departments markdown block iff lines are present", () => {
+    const md = renderBriefingMarkdown(assembleBriefing({ ...base, departments: lines }));
+    expect(md).toContain("## Departments");
+    expect(md).toContain("- **Dev** — waiting · 2 waiting on you");
+    expect(md).toContain("- **Finance** — idle · 62 % týdenního okna");
+    expect(renderBriefingMarkdown(assembleBriefing(base))).not.toContain("## Departments");
   });
 
-  it("renders a subsystem's failed count in the markdown line", () => {
+  it("renders a department's failed count in the markdown line", () => {
     const errored = [
       {
-        subsystem: "sentinel" as const,
-        name: "Sentinel",
+        department: "sec" as const,
+        name: "Security",
         state: "error" as const,
         tier2Count: 0,
         errorCount: 1,
         tier3Count: 0,
       },
     ];
-    const md = renderBriefingMarkdown(assembleBriefing({ ...base, subsystems: errored }));
-    expect(md).toContain("- **Sentinel** — error · 1 failed");
+    const md = renderBriefingMarkdown(assembleBriefing({ ...base, departments: errored }));
+    expect(md).toContain("- **Security** — error · 1 failed");
   });
 });
 
@@ -370,8 +370,8 @@ describe("self-knowledge drift (NS2 F4c)", () => {
   };
   const lines = [
     {
-      subsystem: "forge" as const,
-      name: "Forge",
+      department: "dev" as const,
+      name: "Dev",
       state: "waiting" as const,
       tier2Count: 0,
       errorCount: 0,
@@ -390,25 +390,25 @@ describe("self-knowledge drift (NS2 F4c)", () => {
     expect(assembleBriefing({ ...base, selfKnowledgeDrift: true }).selfKnowledgeDrift).toBe(true);
   });
 
-  it("a briefing with no subsystems and no drift renders no ## Subsystems block (today's exact output)", () => {
+  it("a briefing with no departments and no drift renders no ## Departments block (today's exact output)", () => {
     const md = renderBriefingMarkdown(assembleBriefing(base));
-    expect(md).not.toContain("## Subsystems");
+    expect(md).not.toContain("## Departments");
   });
 
-  it("drift alone (no subsystem lines) still opens a ## Subsystems block with just the drift bullet", () => {
+  it("drift alone (no department lines) still opens a ## Departments block with just the drift bullet", () => {
     const md = renderBriefingMarkdown(assembleBriefing({ ...base, selfKnowledgeDrift: true }));
-    expect(md).toContain("## Subsystems");
+    expect(md).toContain("## Departments");
     expect(md).toContain(
       "- self-knowledge note drifted from the live catalog (nightly refresh may have failed)",
     );
   });
 
-  it("drift renders inside the same section as subsystem lines — no duplicate heading", () => {
+  it("drift renders inside the same section as department lines — no duplicate heading", () => {
     const md = renderBriefingMarkdown(
-      assembleBriefing({ ...base, subsystems: lines, selfKnowledgeDrift: true }),
+      assembleBriefing({ ...base, departments: lines, selfKnowledgeDrift: true }),
     );
-    expect(md.match(/^## Subsystems$/gm)).toHaveLength(1);
-    expect(md).toContain("- **Forge** — waiting · 2 waiting on you");
+    expect(md.match(/^## Departments$/gm)).toHaveLength(1);
+    expect(md).toContain("- **Dev** — waiting · 2 waiting on you");
     expect(md).toContain(
       "- self-knowledge note drifted from the live catalog (nightly refresh may have failed)",
     );

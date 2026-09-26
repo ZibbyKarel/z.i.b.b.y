@@ -1,10 +1,17 @@
 import type { Project, ProjectBudgetStatus } from "@zibby/contracts";
-import { Progress, Stack, Stat, Tag, Typography, getUsageTone } from "@zibby/design-system";
+import {
+  EntityCard,
+  Progress,
+  Stack,
+  Stat,
+  Tag,
+  Typography,
+  getUsageTone,
+} from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { formatCostUsd } from "../../../utils/cost";
-import { HudCard } from "../../../components/HudCard/HudCard";
 import { groupFilterParam } from "../../runs/statusGroups";
 import { useProjectTaskStats } from "../queries";
 
@@ -73,7 +80,7 @@ function CostBar({
 
 /**
  * Catalog card for a single project (target directory): a thin container over
- * the generic {@link HudCard}. The footer leads with the per-status task-run stats
+ * the generic {@link EntityCard}. The footer leads with the per-status task-run stats
  * (the same buckets the project detail's run summary shows, minus the "Celkem"
  * total), each a deep-link into the runs feed pre-filtered to that project + bucket.
  * With a Phase-8 budget set, the daily/weekly run-count and cost bars follow.
@@ -123,7 +130,7 @@ export function ProjectCard({ project, budget, onOpen }: ProjectCardProps) {
   );
 
   return (
-    <HudCard
+    <EntityCard
       actions={
         <Stack gap="150">
           {taskStats}

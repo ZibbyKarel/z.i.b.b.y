@@ -1,8 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { SelectField } from "@zibby/design-system";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
+import { Panel, SelectField } from "@zibby/design-system";
 import { useTeamsQuery } from "../../teams";
 import { useUpdateProjectMutation } from "../mutations";
 
@@ -12,7 +11,7 @@ export interface ProjectTeamPanelProps {
   teamId?: string;
 }
 
-/** The `SelectField` sentinel value for "no team" — an id can never be empty. */
+/** The `SelectField` security value for "no team" — an id can never be empty. */
 const NO_TEAM = "";
 
 /**
@@ -43,7 +42,7 @@ export function ProjectTeamPanel({ projectId, teamId }: ProjectTeamPanelProps) {
   }
 
   return (
-    <HudPanel title={t("title")}>
+    <Panel header={t("title")} padding="200">
       <SelectField
         hint={t("hint")}
         label={t("select")}
@@ -51,6 +50,6 @@ export function ProjectTeamPanel({ projectId, teamId }: ProjectTeamPanelProps) {
         options={options}
         value={teamId ?? NO_TEAM}
       />
-    </HudPanel>
+    </Panel>
   );
 }

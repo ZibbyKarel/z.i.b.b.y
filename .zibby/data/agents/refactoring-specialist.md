@@ -15,7 +15,6 @@ tools:
   - Grep
 category: Core Development
 gates: []
-ownerSubsystem: forge
 ---
 
 ## Prompt Defense Baseline

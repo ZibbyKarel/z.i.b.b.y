@@ -57,9 +57,9 @@ vi.mock("./mutations", () => ({
 // tested end-to-end — mirrors ChatScreen.test.tsx's own mocking pattern for the
 // same component: stub every query/mutation CommandLine reads so mounting it
 // never hits the network, but let the component itself run for real.
-vi.mock("../subsystems/queries/useSubsystemsQuery", () => ({
-  useSubsystemsQuery: () => ({ data: [] }),
-  getSubsystemsQueryKey: () => ["subsystems"],
+vi.mock("../departments/queries/useDepartmentsQuery", () => ({
+  useDepartmentsQuery: () => ({ data: [] }),
+  getDepartmentsQueryKey: () => ["departments"],
 }));
 vi.mock("../projects/queries/useProjectsQuery", () => ({
   useProjectsQuery: () => ({ data: [] }),

@@ -7,13 +7,13 @@ top-bar freshness indicator. Unlike every other resource, this is about the ZIBB
 
 ## Pieces
 
-| Piece      | File                                       | Role                                                                 |
-| ---------- | ------------------------------------------ | --------------------------------------------------------------------- |
-| Contract   | `libs/contracts/src/self/self.schema.ts`   | `SelfPrSchema`, `SelfStatusSchema`, `SelfUpdateResultSchema`         |
+| Piece      | File                                       | Role                                                                                                       |
+| ---------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| Contract   | `libs/contracts/src/self/self.schema.ts`   | `SelfPrSchema`, `SelfStatusSchema`, `SelfUpdateResultSchema`                                               |
 | Contract   | `libs/contracts/src/self/self.contract.ts` | `selfContract` — `getSelfStatus` (`GET /api/self/status`), `updateSelf` (`POST /api/self/update`, 200/409) |
-| Service    | `apps/api/src/self/self.service.ts`        | `SelfService` — git/`gh` reads via bounded `execFile`, all soft-fail |
-| Controller | `apps/api/src/self/self.controller.ts`     | implements `selfContract`; maps the two refusal errors to 409        |
-| Module     | `apps/api/src/self/self.module.ts`         | standalone — no dependency on any other module                       |
+| Service    | `apps/api/src/self/self.service.ts`        | `SelfService` — git/`gh` reads via bounded `execFile`, all soft-fail                                       |
+| Controller | `apps/api/src/self/self.controller.ts`     | implements `selfContract`; maps the two refusal errors to 409                                              |
+| Module     | `apps/api/src/self/self.module.ts`         | standalone — no dependency on any other module                                                             |
 
 ## `getSelfStatus` (polled STATE, like `health`/`limits`)
 
@@ -62,3 +62,5 @@ control reveals a popover listing the open PRs as external links
 (`target="_blank" rel="noreferrer"`) straight to GitHub. A 409 from the update
 mutation (ts-rest routes any declared non-2xx status to `onError`, not
 `onSuccess`) surfaces its message as an inline note next to the button.
+
+<!-- Last reviewed 2026-09-24 (ZibbyCorp rename): module code changed only by the subsystem → department rename; this doc has no subsystem references. -->

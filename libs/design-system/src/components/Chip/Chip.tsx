@@ -1,4 +1,5 @@
 import type { HTMLAttributes, Ref } from "react";
+import { type StateTone, normalizeToneLike } from "../../stateTone";
 import { cn } from "../../utils/cn";
 import { focusRing } from "../../utils/focus";
 import { Icon } from "../Icon/Icon";
@@ -7,14 +8,16 @@ import { type DotTone, StatusDot } from "../StatusDot/StatusDot";
 /** Chip tones mirror the status palette so the optional dot stays in sync. */
 export type ChipTone = DotTone;
 
-const toneClass: Record<ChipTone, string> = {
-  ok: "text-ok border-ok/20 bg-ok/[0.06]",
-  run: "text-run border-run/20 bg-run/[0.06]",
-  warn: "text-warn border-warn/20 bg-warn/[0.06]",
+// Keyed by the canonical `StateTone` (+ `wait`) — legacy classes reused where the
+// color is identical (LEGACY_TONE_MAP). See `Chip()` for the resolve step.
+const toneClass: Record<StateTone | "wait", string> = {
+  done: "text-ok border-ok/20 bg-ok/[0.06]",
+  working: "text-run border-run/20 bg-run/[0.06]",
+  blocked: "text-warn border-warn/20 bg-warn/[0.06]",
   wait: "text-warn border-warn/20 bg-warn/[0.06]",
-  bad: "text-bad border-bad/20 bg-bad/[0.06]",
+  error: "text-bad border-bad/20 bg-bad/[0.06]",
   idle: "text-foreground-faint border-border bg-foreground/[0.03]",
-  accent: "text-accent border-accent/20 bg-accent/[0.06]",
+  thinking: "text-accent border-accent/20 bg-accent/[0.06]",
 };
 
 export enum ChipTestId {
@@ -39,9 +42,9 @@ export interface ChipProps extends Omit<HTMLAttributes<HTMLSpanElement>, "classN
 }
 
 /**
- * Rounded status pill — a tone-coloured label, optionally led by a status dot.
- * The "color = state" half of the badge family (the angular {@link Tag} is the
- * "shape = category" half).
+ * Square status label (DS.md §8 Chip/tag) — a tone-coloured, hairline-bordered
+ * label, optionally led by a status dot. The "color = state" half of the badge
+ * family (the angular {@link Tag} is the "shape = category" half).
  */
 export function Chip({
   tone = "idle",
@@ -54,14 +57,15 @@ export function Chip({
   ref,
   ...props
 }: ChipProps) {
+  const resolvedTone = normalizeToneLike(tone);
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border py-[3px]",
+        "inline-flex items-center gap-1.5 rounded-none border py-[3px]",
         dot ? "pl-2" : "pl-2.5",
         closable ? "pr-1.5" : "pr-2.5",
         "font-mono text-xs whitespace-nowrap",
-        toneClass[tone],
+        toneClass[resolvedTone],
       )}
       data-testid={ChipTestId.Root}
       ref={ref}
@@ -73,7 +77,7 @@ export function Chip({
         <button
           aria-label={closeLabel}
           className={cn(
-            "-mr-0.5 inline-flex items-center justify-center rounded-full",
+            "-mr-0.5 inline-flex items-center justify-center rounded-none",
             "cursor-pointer opacity-70 transition-opacity duration-100 hover:opacity-100",
             focusRing,
           )}

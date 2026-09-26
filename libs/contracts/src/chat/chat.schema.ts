@@ -59,7 +59,7 @@ export const ChatMessageSchema = z.object({
   toolEvents: z.array(ChatToolEventSchema).optional(),
   /**
    * F8a (O6) — a butler-briefing payload riding an assistant turn: renders as a
-   * distinguishable structured card (headline, "needs you" rows, subsystem lines,
+   * distinguishable structured card (headline, "needs you" rows, department lines,
    * engagements, counters) instead of markdown prose. `role` stays "assistant" —
    * this describes WHAT is being said, not a third speaker. Optional and purely
    * additive: every transcript line persisted before this field existed simply

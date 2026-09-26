@@ -52,7 +52,7 @@ describe("agents Screen (N4c grammar)", () => {
   it("a card click NAVIGATES to the agent detail route — no dialog", async () => {
     render(<Screen />);
     await userEvent.click(screen.getByRole("button", { name: "Otevřít Kodér" }));
-    expect(push).toHaveBeenCalledWith("/agents/koder");
+    expect(push).toHaveBeenCalledWith("/system/registries/positions/koder");
     // Nothing dialog-shaped opened.
     expect(screen.queryByRole("dialog")).toBeNull();
   });

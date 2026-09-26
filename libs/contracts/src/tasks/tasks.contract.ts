@@ -9,6 +9,11 @@ import {
   ScheduledTaskSchema,
   TaskRoutingSchema,
 } from "./task.schema";
+import {
+  TaskDetailSchema,
+  TaskParentsPageSchema,
+  TaskParentsQuerySchema,
+} from "./task-parents.schema";
 
 const c = initContract();
 
@@ -47,6 +52,8 @@ export const tasksContract = c.router(
       body: CreateTaskInputSchema,
       responses: {
         201: CreateTaskResultSchema,
+        // D-019 — a `{ kind: "chain" }` target before ZB-05a implements dispatch.
+        400: ErrorSchema,
         422: ErrorSchema,
         // Claude CLI preflight refused the immediate dispatch (missing/broken CLI).
         503: ErrorSchema,
@@ -85,6 +92,32 @@ export const tasksContract = c.router(
         422: ErrorSchema,
       },
       summary: "Upload files as a durable attachment set a task can reference",
+    },
+
+    // ZB-04a §5. Declared BEFORE `getTask`'s `/tasks/:id` — @ts-rest/nest registers
+    // routes in key order and Express matches first-wins, so a literal path
+    // declared after a parameterised sibling would be swallowed by it (same rule
+    // as `task-runs.contract.ts`'s `/tasks/runs/archive*` vs `getTaskRun`).
+    getTaskParents: {
+      method: "GET",
+      path: "/tasks/parents",
+      query: TaskParentsQuerySchema,
+      responses: {
+        200: TaskParentsPageSchema,
+      },
+      summary:
+        "Cursor-paginated top-level tasks (no parentTaskId) with their subtasks summary and derived state",
+    },
+
+    getTask: {
+      method: "GET",
+      path: "/tasks/:id",
+      pathParams: z.object({ id: z.string() }),
+      responses: {
+        200: TaskDetailSchema,
+        404: ErrorSchema,
+      },
+      summary: "Get a single task by id, including its subtasks summary",
     },
   },
   {

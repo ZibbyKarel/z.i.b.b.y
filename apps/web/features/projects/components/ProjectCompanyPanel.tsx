@@ -1,9 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Divider, SelectField, Stack, Tag, Typography } from "@zibby/design-system";
+import { Divider, Panel, SelectField, Stack, Tag, Typography } from "@zibby/design-system";
 import type { Integration, ProjectBudget } from "@zibby/contracts";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useCompaniesQuery } from "../../companies";
 import { useUpdateProjectMutation } from "../mutations";
 import { useResolvedProjectQuery } from "../queries";
@@ -21,7 +20,7 @@ export interface ProjectCompanyPanelProps {
   companyId?: string;
 }
 
-/** The `SelectField` sentinel value for "no company" — an id can never be empty. */
+/** The `SelectField` security value for "no company" — an id can never be empty. */
 const NO_COMPANY = "";
 
 /** Full (root-namespace) i18n key for each fixed `Integration.kind` value. */
@@ -86,7 +85,7 @@ export function ProjectCompanyPanel({ projectId, companyId }: ProjectCompanyPane
   const integrations = resolved?.integrations ?? [];
 
   return (
-    <HudPanel title={t("company.title")}>
+    <Panel header={t("company.title")} padding="200">
       <Stack gap="200">
         <SelectField
           hint={t("company.hint")}
@@ -195,6 +194,6 @@ export function ProjectCompanyPanel({ projectId, companyId }: ProjectCompanyPane
           </Stack>
         </Stack>
       </Stack>
-    </HudPanel>
+    </Panel>
   );
 }

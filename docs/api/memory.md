@@ -139,8 +139,8 @@ Called at the start of every run (fail-open — a vault outage never blocks a ru
    (`GLOBAL_REVIEW_RULES_ID`, skipped for a `domain: "personal"` run) and, when
    the run carries a `projectId`, that project's note
    (`reviewRulesIdFor(projectId)`); see `docs/api/review-learning.md`
-4. Loads the owning subsystem's knowledge shelf (F4a) when `ownerSubsystem` is
-   set, plus the Hearth shelf for a `domain: "personal"` run (F8)
+4. Loads the owning department's knowledge shelf (F4a) when `department` is
+   set, plus the Personal shelf for a `domain: "personal"` run (F8)
 5. Loads up to `MOC_LIMIT` term-matched indexes, narrowed first by M7 project
    isolation and F8 domain isolation, then up to `EXPANSION_LIMIT` notes reached
    by 1-hop wikilink expansion from what is already grounded (F4b)

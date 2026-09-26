@@ -44,7 +44,7 @@ export function Progress({
       aria-valuemax={label ? 100 : undefined}
       aria-valuemin={label ? 0 : undefined}
       aria-valuenow={label ? pct : undefined}
-      className="relative overflow-hidden rounded-full bg-border"
+      className="relative overflow-hidden rounded-none bg-border"
       data-testid={ProgressTestId.Root}
       ref={ref}
       role={label ? "progressbar" : undefined}
@@ -53,7 +53,7 @@ export function Progress({
     >
       <div
         className={cn(
-          "absolute inset-y-0 left-0 rounded-full transition-[width] duration-300",
+          "absolute inset-y-0 left-0 rounded-none transition-[width] duration-300",
           toneBar[tone],
         )}
         data-testid={ProgressTestId.Fill}

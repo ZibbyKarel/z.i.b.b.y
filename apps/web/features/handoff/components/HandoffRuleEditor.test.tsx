@@ -8,17 +8,17 @@ import { HandoffRuleEditor, HandoffRuleEditorTestId } from "./HandoffRuleEditor"
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
-const subsystems = [
-  { id: "forge", name: "Forge" },
-  { id: "sentinel", name: "Sentinel" },
+const departments = [
+  { id: "dev", name: "Dev" },
+  { id: "sec", name: "Security" },
 ];
 const pipelines = [{ id: "hotfix", name: "Hotfix" }];
-const receiverSubsystemIds = ["forge", "sentinel"];
+const receiverDepartmentIds = ["dev", "sec"];
 
 const signalKinds: HandoffSignalKind[] = [
   {
     id: "cve",
-    from: "sentinel",
+    from: "sec",
     label: "Vulnerability (CVE)",
     description: "A vulnerability found in a project dependency.",
     severityBearing: true,
@@ -27,7 +27,7 @@ const signalKinds: HandoffSignalKind[] = [
   },
   {
     id: "secret",
-    from: "sentinel",
+    from: "sec",
     label: "Leaked secret",
     description: "A secret key or password leaked in code.",
     severityBearing: true,
@@ -36,7 +36,7 @@ const signalKinds: HandoffSignalKind[] = [
   },
   {
     id: "post-merge-red",
-    from: "maestro",
+    from: "rel",
     label: "Red CI after merge",
     description: "CI failed after a PR was merged.",
     severityBearing: true,
@@ -45,15 +45,15 @@ const signalKinds: HandoffSignalKind[] = [
   },
   {
     id: "flaky-op-signal",
-    from: "sentinel",
+    from: "sec",
     label: "Flaky Op Signal",
-    description: "Operator-authored signal for sentinel.",
+    description: "Operator-authored signal for security.",
     severityBearing: false,
     status: "active",
   },
   {
     id: "not-yet-emitted",
-    from: "sentinel",
+    from: "sec",
     label: "Not Yet Emitted",
     description: "An operator-authored signal awaiting its producer.",
     severityBearing: false,
@@ -63,10 +63,10 @@ const signalKinds: HandoffSignalKind[] = [
 
 const existingRule: HandoffRule = {
   id: "hr-1",
-  from: "sentinel",
+  from: "sec",
   signalKind: "cve",
   minSeverity: "high",
-  to: { kind: "subsystem", id: "forge" },
+  to: { kind: "department", id: "dev" },
   tier: 2,
   enabled: true,
 };
@@ -89,52 +89,52 @@ describe("HandoffRuleEditor (P2 inline)", () => {
     const onSave = vi.fn();
     render(
       <HandoffRuleEditor
-        fromSubsystemId="sentinel"
+        departmentName="Security"
+        departments={departments}
+        fromDepartmentId="sec"
         onCancel={vi.fn()}
         onSave={onSave}
         pipelines={pipelines}
-        receiverSubsystemIds={receiverSubsystemIds}
+        receiverDepartmentIds={receiverDepartmentIds}
         signalKinds={signalKinds}
-        subsystemName="Sentinel"
-        subsystems={subsystems}
       />,
     );
     await pick(HandoffRuleEditorTestId.SignalKind, "+ nový signál");
-    expect(push).toHaveBeenCalledWith("/signals/new?from=sentinel");
+    expect(push).toHaveBeenCalledWith("/signals/new?from=sec");
     // Navigating away must not corrupt the rule being edited — the signal kind
     // stays at its prior value (the first producer kind, "cve").
     await userEvent.click(screen.getByTestId(HandoffRuleEditorTestId.Save));
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ signalKind: "cve" }));
   });
 
-  it("renders the sentence with the subsystem name", () => {
+  it("renders the sentence with the department name", () => {
     render(
       <HandoffRuleEditor
-        fromSubsystemId="sentinel"
+        departmentName="Security"
+        departments={departments}
+        fromDepartmentId="sec"
         onCancel={vi.fn()}
         onSave={vi.fn()}
         pipelines={pipelines}
-        receiverSubsystemIds={receiverSubsystemIds}
+        receiverDepartmentIds={receiverDepartmentIds}
         signalKinds={signalKinds}
-        subsystemName="Sentinel"
-        subsystems={subsystems}
       />,
     );
     expect(screen.getByTestId(HandoffRuleEditorTestId.Root)).toBeInTheDocument();
-    expect(screen.getByText("Když Sentinel vyprodukuje")).toBeInTheDocument();
+    expect(screen.getByText("Když Security vyprodukuje")).toBeInTheDocument();
   });
 
-  it("Save is disabled when there is no target (no subsystems/pipelines available)", () => {
+  it("Save is disabled when there is no target (no departments/pipelines available)", () => {
     render(
       <HandoffRuleEditor
-        fromSubsystemId="sentinel"
+        departmentName="Security"
+        departments={[]}
+        fromDepartmentId="sec"
         onCancel={vi.fn()}
         onSave={vi.fn()}
         pipelines={[]}
-        receiverSubsystemIds={[]}
+        receiverDepartmentIds={[]}
         signalKinds={signalKinds}
-        subsystemName="Sentinel"
-        subsystems={[]}
       />,
     );
     expect(screen.getByTestId(HandoffRuleEditorTestId.Save)).toBeDisabled();
@@ -144,39 +144,39 @@ describe("HandoffRuleEditor (P2 inline)", () => {
     const onCancel = vi.fn();
     render(
       <HandoffRuleEditor
-        fromSubsystemId="sentinel"
+        departmentName="Security"
+        departments={departments}
+        fromDepartmentId="sec"
         onCancel={onCancel}
         onSave={vi.fn()}
         pipelines={pipelines}
-        receiverSubsystemIds={receiverSubsystemIds}
+        receiverDepartmentIds={receiverDepartmentIds}
         signalKinds={signalKinds}
-        subsystemName="Sentinel"
-        subsystems={subsystems}
       />,
     );
     await userEvent.click(screen.getByTestId(HandoffRuleEditorTestId.Cancel));
     expect(onCancel).toHaveBeenCalled();
   });
 
-  it("defaults to a known signal kind, subsystem target and tier 2 for a new rule, and saves it", async () => {
+  it("defaults to a known signal kind, department target and tier 2 for a new rule, and saves it", async () => {
     const onSave = vi.fn();
     render(
       <HandoffRuleEditor
-        fromSubsystemId="sentinel"
+        departmentName="Security"
+        departments={departments}
+        fromDepartmentId="sec"
         onCancel={vi.fn()}
         onSave={onSave}
         pipelines={pipelines}
-        receiverSubsystemIds={receiverSubsystemIds}
+        receiverDepartmentIds={receiverDepartmentIds}
         signalKinds={signalKinds}
-        subsystemName="Sentinel"
-        subsystems={subsystems}
       />,
     );
     await userEvent.click(screen.getByTestId(HandoffRuleEditorTestId.Save));
     expect(onSave).toHaveBeenCalledWith({
-      from: "sentinel",
+      from: "sec",
       signalKind: "cve",
-      to: { kind: "subsystem", id: "forge" },
+      to: { kind: "department", id: "dev" },
       tier: 2,
       enabled: true,
     });
@@ -186,14 +186,14 @@ describe("HandoffRuleEditor (P2 inline)", () => {
     const onSave = vi.fn();
     render(
       <HandoffRuleEditor
-        fromSubsystemId="sentinel"
+        departmentName="Security"
+        departments={departments}
+        fromDepartmentId="sec"
         onCancel={vi.fn()}
         onSave={onSave}
         pipelines={pipelines}
-        receiverSubsystemIds={receiverSubsystemIds}
+        receiverDepartmentIds={receiverDepartmentIds}
         signalKinds={signalKinds}
-        subsystemName="Sentinel"
-        subsystems={subsystems}
       />,
     );
     await pick(HandoffRuleEditorTestId.SignalKind, "Jakýkoli signál (∗)");
@@ -205,14 +205,14 @@ describe("HandoffRuleEditor (P2 inline)", () => {
     const onSave = vi.fn();
     render(
       <HandoffRuleEditor
-        fromSubsystemId="sentinel"
+        departmentName="Security"
+        departments={departments}
+        fromDepartmentId="sec"
         onCancel={vi.fn()}
         onSave={onSave}
         pipelines={pipelines}
-        receiverSubsystemIds={receiverSubsystemIds}
+        receiverDepartmentIds={receiverDepartmentIds}
         signalKinds={signalKinds}
-        subsystemName="Sentinel"
-        subsystems={subsystems}
       />,
     );
     await userEvent.click(screen.getByTestId(HandoffRuleEditorTestId.Save));
@@ -224,14 +224,14 @@ describe("HandoffRuleEditor (P2 inline)", () => {
     const onSave = vi.fn();
     render(
       <HandoffRuleEditor
-        fromSubsystemId="sentinel"
+        departmentName="Security"
+        departments={departments}
+        fromDepartmentId="sec"
         onCancel={vi.fn()}
         onSave={onSave}
         pipelines={pipelines}
-        receiverSubsystemIds={receiverSubsystemIds}
+        receiverDepartmentIds={receiverDepartmentIds}
         signalKinds={signalKinds}
-        subsystemName="Sentinel"
-        subsystems={subsystems}
       />,
     );
     await pick(HandoffRuleEditorTestId.Severity, "vysoká");
@@ -243,14 +243,14 @@ describe("HandoffRuleEditor (P2 inline)", () => {
     const onSave = vi.fn();
     render(
       <HandoffRuleEditor
-        fromSubsystemId="sentinel"
+        departmentName="Security"
+        departments={departments}
+        fromDepartmentId="sec"
         onCancel={vi.fn()}
         onSave={onSave}
         pipelines={pipelines}
-        receiverSubsystemIds={receiverSubsystemIds}
+        receiverDepartmentIds={receiverDepartmentIds}
         signalKinds={signalKinds}
-        subsystemName="Sentinel"
-        subsystems={subsystems}
       />,
     );
     await pick(HandoffRuleEditorTestId.Target, "Hotfix");
@@ -260,24 +260,24 @@ describe("HandoffRuleEditor (P2 inline)", () => {
     );
   });
 
-  it("picking a subsystem target splits into { kind: 'subsystem', id }", async () => {
+  it("picking a department target splits into { kind: 'department', id }", async () => {
     const onSave = vi.fn();
     render(
       <HandoffRuleEditor
-        fromSubsystemId="sentinel"
+        departmentName="Security"
+        departments={departments}
+        fromDepartmentId="sec"
         onCancel={vi.fn()}
         onSave={onSave}
         pipelines={pipelines}
-        receiverSubsystemIds={receiverSubsystemIds}
+        receiverDepartmentIds={receiverDepartmentIds}
         signalKinds={signalKinds}
-        subsystemName="Sentinel"
-        subsystems={subsystems}
       />,
     );
-    await pick(HandoffRuleEditorTestId.Target, "Forge");
+    await pick(HandoffRuleEditorTestId.Target, "Dev");
     await userEvent.click(screen.getByTestId(HandoffRuleEditorTestId.Save));
     expect(onSave).toHaveBeenCalledWith(
-      expect.objectContaining({ to: { kind: "subsystem", id: "forge" } }),
+      expect.objectContaining({ to: { kind: "department", id: "dev" } }),
     );
   });
 
@@ -285,14 +285,14 @@ describe("HandoffRuleEditor (P2 inline)", () => {
     const onSave = vi.fn();
     render(
       <HandoffRuleEditor
-        fromSubsystemId="sentinel"
+        departmentName="Security"
+        departments={departments}
+        fromDepartmentId="sec"
         onCancel={vi.fn()}
         onSave={onSave}
         pipelines={pipelines}
-        receiverSubsystemIds={receiverSubsystemIds}
+        receiverDepartmentIds={receiverDepartmentIds}
         signalKinds={signalKinds}
-        subsystemName="Sentinel"
-        subsystems={subsystems}
       />,
     );
     await pick(HandoffRuleEditorTestId.Tier, "automaticky");
@@ -304,79 +304,79 @@ describe("HandoffRuleEditor (P2 inline)", () => {
     const onSave = vi.fn();
     render(
       <HandoffRuleEditor
-        fromSubsystemId="sentinel"
+        departmentName="Security"
+        departments={departments}
+        fromDepartmentId="sec"
         initial={existingRule}
         onCancel={vi.fn()}
         onSave={onSave}
         pipelines={pipelines}
-        receiverSubsystemIds={receiverSubsystemIds}
+        receiverDepartmentIds={receiverDepartmentIds}
         signalKinds={signalKinds}
-        subsystemName="Sentinel"
-        subsystems={subsystems}
       />,
     );
     await userEvent.click(screen.getByTestId(HandoffRuleEditorTestId.Save));
     expect(onSave).toHaveBeenCalledWith({
-      from: "sentinel",
+      from: "sec",
       signalKind: "cve",
       minSeverity: "high",
-      to: { kind: "subsystem", id: "forge" },
+      to: { kind: "department", id: "dev" },
       tier: 2,
       enabled: true,
     });
   });
 
   describe("receiver-scoped target (Slot A)", () => {
-    it("omits a subsystem with no pipeline/agent (not in receiverSubsystemIds) from the target dropdown", async () => {
+    it("omits a department with no pipeline/agent (not in receiverDepartmentIds) from the target dropdown", async () => {
       render(
         <HandoffRuleEditor
-          fromSubsystemId="sentinel"
+          departmentName="Security"
+          departments={departments}
+          fromDepartmentId="sec"
           onCancel={vi.fn()}
           onSave={vi.fn()}
           pipelines={pipelines}
-          receiverSubsystemIds={["forge"]}
+          receiverDepartmentIds={["dev"]}
           signalKinds={signalKinds}
-          subsystemName="Sentinel"
-          subsystems={subsystems}
         />,
       );
       const wrapper = screen.getByTestId(HandoffRuleEditorTestId.Target);
       await userEvent.click(within(wrapper).getByTestId(DropdownTestId.Trigger));
       const panel = screen.getByTestId(DropdownTestId.Panel);
-      expect(within(panel).queryByText("Sentinel")).not.toBeInTheDocument();
-      expect(within(panel).getByText("Forge")).toBeInTheDocument();
+      expect(within(panel).queryByText("Security")).not.toBeInTheDocument();
+      expect(within(panel).getByText("Dev")).toBeInTheDocument();
     });
 
-    it("includes a subsystem in receiverSubsystemIds in the target dropdown", async () => {
+    it("includes a department in receiverDepartmentIds in the target dropdown", async () => {
       render(
         <HandoffRuleEditor
-          fromSubsystemId="sentinel"
+          departmentName="Security"
+          departments={departments}
+          fromDepartmentId="sec"
           onCancel={vi.fn()}
           onSave={vi.fn()}
           pipelines={pipelines}
-          receiverSubsystemIds={["forge", "sentinel"]}
+          receiverDepartmentIds={["dev", "sec"]}
           signalKinds={signalKinds}
-          subsystemName="Sentinel"
-          subsystems={subsystems}
         />,
       );
       const wrapper = screen.getByTestId(HandoffRuleEditorTestId.Target);
       await userEvent.click(within(wrapper).getByTestId(DropdownTestId.Trigger));
       const panel = screen.getByTestId(DropdownTestId.Panel);
-      expect(within(panel).getByText("Sentinel")).toBeInTheDocument();
+      expect(within(panel).getByText("Security")).toBeInTheDocument();
     });
 
-    it("always shows pipelines in the target dropdown regardless of receiverSubsystemIds", async () => {
+    it("always shows pipelines in the target dropdown regardless of receiverDepartmentIds", async () => {
       render(
         <HandoffRuleEditor
-          fromSubsystemId="sentinel"
+          departmentName="Security"
+          departments={departments}
+          fromDepartmentId="sec"
           onCancel={vi.fn()}
           onSave={vi.fn()}
           pipelines={pipelines}
-          receiverSubsystemIds={[]}
+          receiverDepartmentIds={[]}
           signalKinds={signalKinds}
-          subsystemName="Sentinel"
-          subsystems={subsystems}
         />,
       );
       const wrapper = screen.getByTestId(HandoffRuleEditorTestId.Target);
@@ -385,40 +385,40 @@ describe("HandoffRuleEditor (P2 inline)", () => {
       expect(within(panel).getByText("Hotfix")).toBeInTheDocument();
     });
 
-    it("preserves the currently-edited rule's non-receiver target subsystem as a visible, selected option", () => {
+    it("preserves the currently-edited rule's non-receiver target department as a visible, selected option", () => {
       render(
         <HandoffRuleEditor
-          fromSubsystemId="sentinel"
+          departmentName="Security"
+          departments={departments}
+          fromDepartmentId="sec"
           initial={existingRule}
           onCancel={vi.fn()}
           onSave={vi.fn()}
           pipelines={pipelines}
-          receiverSubsystemIds={[]}
+          receiverDepartmentIds={[]}
           signalKinds={signalKinds}
-          subsystemName="Sentinel"
-          subsystems={subsystems}
         />,
       );
-      // `existingRule.to` is `{ kind: "subsystem", id: "forge" }` — with an empty
-      // receiver set, "Forge" would otherwise be dropped, silently orphaning the
+      // `existingRule.to` is `{ kind: "department", id: "dev" }` — with an empty
+      // receiver set, "Dev" would otherwise be dropped, silently orphaning the
       // rule's stored target. The closed trigger already shows the selected label.
       const wrapper = screen.getByTestId(HandoffRuleEditorTestId.Target);
-      expect(within(wrapper).getByText("Forge")).toBeInTheDocument();
+      expect(within(wrapper).getByText("Dev")).toBeInTheDocument();
     });
   });
 
   describe("registry-driven signal picker (Slot B2)", () => {
-    it("scopes the signal dropdown to kinds whose `from` matches fromSubsystemId, plus '*'", async () => {
+    it("scopes the signal dropdown to kinds whose `from` matches fromDepartmentId, plus '*'", async () => {
       render(
         <HandoffRuleEditor
-          fromSubsystemId="sentinel"
+          departmentName="Security"
+          departments={departments}
+          fromDepartmentId="sec"
           onCancel={vi.fn()}
           onSave={vi.fn()}
           pipelines={pipelines}
-          receiverSubsystemIds={receiverSubsystemIds}
+          receiverDepartmentIds={receiverDepartmentIds}
           signalKinds={signalKinds}
-          subsystemName="Sentinel"
-          subsystems={subsystems}
         />,
       );
       const wrapper = screen.getByTestId(HandoffRuleEditorTestId.SignalKind);
@@ -428,21 +428,21 @@ describe("HandoffRuleEditor (P2 inline)", () => {
       expect(within(panel).getByText("Zranitelnost (CVE)")).toBeInTheDocument();
       expect(within(panel).getByText("Únik tajného klíče")).toBeInTheDocument();
       expect(within(panel).getByText("Flaky Op Signal")).toBeInTheDocument();
-      // "post-merge-red" is `from: "maestro"` — not sentinel's — so it's absent.
+      // "post-merge-red" is `from: "rel"` — not security's — so it's absent.
       expect(within(panel).queryByText("Červené CI po merge")).not.toBeInTheDocument();
     });
 
     it("shows a built-in kind's localized t() label", async () => {
       render(
         <HandoffRuleEditor
-          fromSubsystemId="sentinel"
+          departmentName="Security"
+          departments={departments}
+          fromDepartmentId="sec"
           onCancel={vi.fn()}
           onSave={vi.fn()}
           pipelines={pipelines}
-          receiverSubsystemIds={receiverSubsystemIds}
+          receiverDepartmentIds={receiverDepartmentIds}
           signalKinds={signalKinds}
-          subsystemName="Sentinel"
-          subsystems={subsystems}
         />,
       );
       const wrapper = screen.getByTestId(HandoffRuleEditorTestId.SignalKind);
@@ -455,14 +455,14 @@ describe("HandoffRuleEditor (P2 inline)", () => {
     it("shows an operator kind's stored label verbatim", async () => {
       render(
         <HandoffRuleEditor
-          fromSubsystemId="sentinel"
+          departmentName="Security"
+          departments={departments}
+          fromDepartmentId="sec"
           onCancel={vi.fn()}
           onSave={vi.fn()}
           pipelines={pipelines}
-          receiverSubsystemIds={receiverSubsystemIds}
+          receiverDepartmentIds={receiverDepartmentIds}
           signalKinds={signalKinds}
-          subsystemName="Sentinel"
-          subsystems={subsystems}
         />,
       );
       const wrapper = screen.getByTestId(HandoffRuleEditorTestId.SignalKind);
@@ -474,14 +474,14 @@ describe("HandoffRuleEditor (P2 inline)", () => {
     it("marks a pending kind with the pending-badge notice instead of its description", async () => {
       render(
         <HandoffRuleEditor
-          fromSubsystemId="sentinel"
+          departmentName="Security"
+          departments={departments}
+          fromDepartmentId="sec"
           onCancel={vi.fn()}
           onSave={vi.fn()}
           pipelines={pipelines}
-          receiverSubsystemIds={receiverSubsystemIds}
+          receiverDepartmentIds={receiverDepartmentIds}
           signalKinds={signalKinds}
-          subsystemName="Sentinel"
-          subsystems={subsystems}
         />,
       );
       const wrapper = screen.getByTestId(HandoffRuleEditorTestId.SignalKind);

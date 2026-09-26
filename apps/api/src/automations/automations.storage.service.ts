@@ -44,10 +44,10 @@ export class SystemAutomationError extends Error {
 export const MEMORY_DISTILL_AUTOMATION_ID = "memory-distill";
 /** Stable id of the nightly self-knowledge-refresh system automation (F4c). */
 export const SELF_KNOWLEDGE_AUTOMATION_ID = "self-knowledge-refresh";
-/** Stable id of the weekly Sentinel security-scan system automation (F5a). */
-export const SENTINEL_SCAN_AUTOMATION_ID = "sentinel-scan";
-/** Stable id of the nightly Loom quality-audit system automation (F5c). */
-export const LOOM_AUDIT_AUTOMATION_ID = "loom-audit";
+/** Stable id of the weekly Security security-scan system automation (F5a). */
+export const SECURITY_SCAN_AUTOMATION_ID = "security-scan";
+/** Stable id of the nightly Arch quality-audit system automation (F5c). */
+export const ARCH_AUDIT_AUTOMATION_ID = "arch-audit";
 /** Stable id of the post-merge CI-watch system automation (NS2 F7b-2). */
 export const POST_MERGE_WATCH_AUTOMATION_ID = "post-merge-watch";
 /** Stable id of the nightly PR-review-learning system automation (v1). */
@@ -123,23 +123,23 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
     system: true,
   },
   {
-    // NS2 F5a — Sentinel's weekly security watch. Seeded `enabled: true` (charter
+    // NS2 F5a — Security's weekly security watch. Seeded `enabled: true` (charter
     // duty 6, orchestrator addendum ruling #3): fail-open no-op on a green system,
     // so waking it by default makes the chair real without risk.
-    id: SENTINEL_SCAN_AUTOMATION_ID,
+    id: SECURITY_SCAN_AUTOMATION_ID,
     name: "Bezpečnostní hlídka",
     trigger: { type: "cron", expr: "0 5 * * 1" },
-    target: { type: "sentinel-scan" },
+    target: { type: "security-scan" },
     enabled: true,
     system: true,
   },
   {
-    // NS2 F5c — Loom's nightly quality audit. Seeded `enabled: true` (same
-    // reasoning as Sentinel above): fail-open no-op on a green system.
-    id: LOOM_AUDIT_AUTOMATION_ID,
+    // NS2 F5c — Arch's nightly quality audit. Seeded `enabled: true` (same
+    // reasoning as Security above): fail-open no-op on a green system.
+    id: ARCH_AUDIT_AUTOMATION_ID,
     name: "Noční audit kvality",
     trigger: { type: "cron", expr: "0 2 * * *" },
-    target: { type: "loom-audit" },
+    target: { type: "arch-audit" },
     enabled: true,
     system: true,
   },

@@ -201,3 +201,22 @@ under it:
 A synthetic fallback agent — it has no stored definition under `data/agents/`.
 Used as the routing target when no concrete agent matches the classification.
 Runs directly as the `claude` CLI with generic instructions.
+
+## Employee attribution (D-015 / D-017, ZE-01)
+
+An agent-kind run dispatched via `TaskSchedulerService`'s single-agent path
+can carry a **leased employee** — a hired instance of the run's agent (the
+position) — rather than running as the bare position. When a lease was
+acquired (see `docs/api/employees.md` → "Wiring: single-agent task dispatch"),
+`AgentRun.extra` carries:
+
+- `employeeId` — the leased `Employee.id`.
+- `employeeName` — its display name at lease time (Kevin, Stuart, …).
+
+Both are **absent** when the run used D-017's unleased fallback (the
+position's agent has no hired employee anywhere — the task still dispatches
+directly, never a park) or predates the lease concept. A pipeline stage's
+`AgentRun` carries the same two fields, set from the stage's own lease — see
+[pipelines.md](./pipelines.md) → "Wiring: pipeline stage dispatch".
+
+<!-- Last reviewed 2026-09-24 (ZibbyCorp rename): module code changed only by the subsystem → department rename; this doc has no subsystem references. -->

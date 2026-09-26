@@ -11,6 +11,7 @@ import { GoalRunnerService } from "../src/goals/goal-runner.service";
 import { PipelineRunnerService } from "../src/pipelines/pipeline-runner.service";
 import { isAlive } from "../src/runner/runner-core";
 import { TaskSchedulerService } from "../src/tasks/task-scheduler.service";
+import { seedEmployeeFixture } from "./fixtures/employee-fixture";
 
 const CLASSIFY = "/api/tasks/classify";
 const CREATE = "/api/tasks";
@@ -30,6 +31,7 @@ const FAKE_CLAUDE = path.resolve(
 describe("Tasks API (e2e)", () => {
   let app: INestApplication;
   let agentsDir: string;
+  let employeesDir: string;
   let pipelinesDir: string;
   let runsDir: string;
   let tasksDir: string;
@@ -37,11 +39,17 @@ describe("Tasks API (e2e)", () => {
 
   beforeAll(async () => {
     agentsDir = await fs.mkdtemp(path.join(os.tmpdir(), "tasks-agents-e2e-"));
+    // D-015/D-017: isolated alongside AGENTS_DIR (and wiped the same way in
+    // `afterEach`) — otherwise this suite inherits the shared per-file data
+    // root's migrated `dev` employees, which seats "dev" independent of
+    // whatever this file's own `seedCatalog()`/ad-hoc agents actually hire.
+    employeesDir = await fs.mkdtemp(path.join(os.tmpdir(), "tasks-employees-e2e-"));
     pipelinesDir = await fs.mkdtemp(path.join(os.tmpdir(), "tasks-pipelines-e2e-"));
     runsDir = await fs.mkdtemp(path.join(os.tmpdir(), "tasks-runs-e2e-"));
     tasksDir = await fs.mkdtemp(path.join(os.tmpdir(), "tasks-scheduled-e2e-"));
     projectsDir = await fs.mkdtemp(path.join(os.tmpdir(), "tasks-projects-e2e-"));
     process.env.AGENTS_DIR = agentsDir;
+    process.env.EMPLOYEES_DIR = employeesDir;
     process.env.PIPELINES_DIR = pipelinesDir;
     process.env.AGENT_RUNS_DIR = runsDir;
     process.env.TASKS_DIR = tasksDir;
@@ -57,7 +65,7 @@ describe("Tasks API (e2e)", () => {
   });
 
   afterEach(async () => {
-    for (const dir of [agentsDir, pipelinesDir, tasksDir, projectsDir]) {
+    for (const dir of [agentsDir, employeesDir, pipelinesDir, tasksDir, projectsDir]) {
       for (const entry of await fs.readdir(dir)) {
         await fs.rm(path.join(dir, entry), { force: true });
       }
@@ -66,11 +74,12 @@ describe("Tasks API (e2e)", () => {
 
   afterAll(async () => {
     await app.close();
-    for (const dir of [agentsDir, pipelinesDir, runsDir, tasksDir, projectsDir]) {
+    for (const dir of [agentsDir, employeesDir, pipelinesDir, runsDir, tasksDir, projectsDir]) {
       await fs.rm(dir, { recursive: true, force: true });
     }
     for (const k of [
       "AGENTS_DIR",
+      "EMPLOYEES_DIR",
       "PIPELINES_DIR",
       "AGENT_RUNS_DIR",
       "TASKS_DIR",
@@ -105,11 +114,11 @@ describe("Tasks API (e2e)", () => {
     });
 
   /**
-   * A task text that overlaps CODEX's Czech mandate ("Správa paměti — vault,
+   * A task text that overlaps KNOWLEDGE's Czech mandate ("Správa paměti — vault,
    * grounding, noční destilace a poličky znalostí.") on `poličky` + `znalostí`.
-   * NS2 F9 made stage 1 subsystem-only and a stage-1 candidate's search blob is
-   * its subsystem's MANDATE, so a task that must reach a concrete unit has to
-   * overlap a mandate first. Codex owns exactly one unit here (`curator`), so
+   * NS2 F9 made stage 1 department-only and a stage-1 candidate's search blob is
+   * its department's MANDATE, so a task that must reach a concrete unit has to
+   * overlap a mandate first. Knowledge owns exactly one unit here (`curator`), so
    * stage 2 resolves without a second round-trip.
    */
   const CURATOR_TASK_TEXT = "Srovnej a popiš poličky znalostí v mé knihovně";
@@ -121,9 +130,9 @@ describe("Tasks API (e2e)", () => {
       category: "Média",
       description: "Třídí a popisuje média v knihovně",
       instructions: "Spravuj média.",
-      // Codex (memory/vault/knowledge shelves) rather than forge, so this file
-      // exercises the two-hop dispatch with a subsystem that owns ONE unit.
-      ownerSubsystem: "codex",
+      // Knowledge (memory/vault/knowledge shelves) rather than dev, so this file
+      // exercises the two-hop dispatch with a department that owns ONE unit.
+      department: "knw",
     });
     await request(app.getHttpServer()).post("/api/agents").send({
       id: "coder",
@@ -131,7 +140,7 @@ describe("Tasks API (e2e)", () => {
       category: "Vývoj",
       description: "Implementuje funkce podle zadání",
       instructions: "Piš kód.",
-      ownerSubsystem: "forge",
+      department: "dev",
     });
     await request(app.getHttpServer())
       .post("/api/pipelines")
@@ -152,31 +161,45 @@ describe("Tasks API (e2e)", () => {
         instructions: "Postav feature.",
         // NS2 F9: `POST /api/pipelines` 422s without an owner (an unowned
         // pipeline would be structurally unroutable).
-        ownerSubsystem: "forge",
+        department: "dev",
       })
       .expect(201);
+
+    // D-015: department ownership (stage 1 seating + stage-2 "owned agent") is an
+    // employee fact — hire both positions so "knw"/"dev" stay seated the same way
+    // they were before D-015 read `Agent.department` directly.
+    await seedEmployeeFixture(employeesDir, {
+      id: "employee_curator",
+      agentId: "curator",
+      department: "knw",
+    });
+    await seedEmployeeFixture(employeesDir, {
+      id: "employee_coder",
+      agentId: "coder",
+      department: "dev",
+    });
   };
 
   // Pre-F9 this asserted `target.id === "curator"` straight off classify. Stage 1
   // now answers only "whose domain is this?", so the same intent — a matching
   // task routes with real confidence and a usable candidate list — is asserted at
-  // the subsystem level, and the concrete unit is checked on the dispatch path
+  // the department level, and the concrete unit is checked on the dispatch path
   // (the `createTask` test below, which runs the scoped stage-2 hop).
-  it("routes a matching task to its owning SUBSYSTEM with confidence and candidates", async () => {
+  it("routes a matching task to its owning DEPARTMENT with confidence and candidates", async () => {
     await seedCatalog();
     const res = await request(app.getHttpServer()).post(CLASSIFY).send({ text: CURATOR_TASK_TEXT });
 
     expect(res.status).toBe(200);
-    expect(res.body.target).toMatchObject({ kind: "subsystem", id: "codex" });
+    expect(res.body.target).toMatchObject({ kind: "department", id: "knw" });
     expect(res.body.matchedTerms.length).toBeGreaterThan(0);
     expect(res.body.confidence).toBeGreaterThan(0.4);
-    // NS2 F9's invariant, over HTTP: the offered catalog is subsystem-only, so a
-    // manual override from this verdict cannot skip the subsystem layer either.
-    // Both seated subsystems are offered (forge via coder/build-feature, codex
+    // NS2 F9's invariant, over HTTP: the offered catalog is department-only, so a
+    // manual override from this verdict cannot skip the department layer either.
+    // Both seated departments are offered (dev via coder/build-feature, knowledge
     // via curator); nothing else owns anything.
     expect(
       res.body.candidates.map((c: { kind: string; id?: string }) => `${c.kind}:${c.id}`),
-    ).toEqual(["forge", "codex"].map((id) => `subsystem:${id}`));
+    ).toEqual(["dev", "knw"].map((id) => `department:${id}`));
   });
 
   it("routes to the orchestrator (low confidence) when nothing matches", async () => {
@@ -188,10 +211,10 @@ describe("Tasks API (e2e)", () => {
     expect(res.body.target.id).toBeUndefined();
     expect(res.body.target.name).toBeTruthy();
     expect(res.body.confidence).toBeLessThan(0.4);
-    // The two seated subsystems are still offered for a manual override — and
+    // The two seated departments are still offered for a manual override — and
     // since NS2 F9 that is the WHOLE catalog (see the test above).
     expect(res.body.candidates).toHaveLength(2);
-    expect(res.body.candidates.every((c: { kind: string }) => c.kind === "subsystem")).toBe(true);
+    expect(res.body.candidates.every((c: { kind: string }) => c.kind === "department")).toBe(true);
   });
 
   it("returns 422 when the catalog is empty", async () => {
@@ -217,10 +240,10 @@ describe("Tasks API (e2e)", () => {
     expect(res.body.outcome).toBe("pending");
     expect(res.body.task.status).toBe("pending");
 
-    // The full NS2 F9 journey: stage 1 names codex, then
-    // `TaskSchedulerService.resolveSubsystemTarget` resolves it to codex's own
+    // The full NS2 F9 journey: stage 1 names knowledge, then
+    // `TaskSchedulerService.resolveDepartmentTarget` resolves it to knowledge's own
     // owned unit — so the stored task target is the CONCRETE agent, never a
-    // subsystem, exactly as it was before F9 split the decision in two.
+    // department, exactly as it was before F9 split the decision in two.
     const task = await untilTaskStatus(res.body.task.id, "dispatched");
     expect(task.target?.id).toBe("curator");
     expect(typeof task.runRef).toBe("string");

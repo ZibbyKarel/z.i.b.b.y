@@ -65,9 +65,7 @@ describe("hooks DetailScreen (N4e grammar)", () => {
   });
 
   it("Delete asks in a CONFIRM dialog, then deletes and navigates back to /hooks", async () => {
-    hooks.del.mockImplementation((_args, opts?: { onSuccess?: () => void }) =>
-      opts?.onSuccess?.(),
-    );
+    hooks.del.mockImplementation((_args, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.());
     render(<DetailScreen hookId="audit-log" />);
     await userEvent.click(screen.getByTestId(HookDetailScreenTestId.Delete));
     expect(screen.getByText("Smazat hook?")).toBeInTheDocument();
@@ -79,6 +77,6 @@ describe("hooks DetailScreen (N4e grammar)", () => {
       { params: { id: "audit-log" } },
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     );
-    expect(push).toHaveBeenCalledWith("/hooks");
+    expect(push).toHaveBeenCalledWith("/system/registries/hooks");
   });
 });

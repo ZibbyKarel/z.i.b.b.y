@@ -1,10 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Button, Stack, Typography } from "@zibby/design-system";
+import { Button, Panel, Stack, Typography } from "@zibby/design-system";
 import type { Company } from "@zibby/contracts";
 import { FormTextInput, useFormControls } from "@zibby/forms";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 
 /** The core company record fields this panel edits (name/desc/default budget). */
 export interface CompanyBasicsBody {
@@ -129,8 +128,9 @@ export function CompanyBasicsPanel({
   const canSave = (watchedName ?? "").trim().length > 0;
 
   return renderForm(
-    <HudPanel
-      action={
+    <Panel
+      header={t("profile.basics.title")}
+      headerEnd={
         <Button
           data-testid="save-basics"
           disabled={!canSave || saving}
@@ -142,7 +142,7 @@ export function CompanyBasicsPanel({
           {isNew ? t("create") : t("save")}
         </Button>
       }
-      title={t("profile.basics.title")}
+      padding="200"
     >
       <Stack gap="200">
         {isNew && (
@@ -233,6 +233,6 @@ export function CompanyBasicsPanel({
           </Stack>
         )}
       </Stack>
-    </HudPanel>,
+    </Panel>,
   );
 }

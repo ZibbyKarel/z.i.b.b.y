@@ -9,7 +9,7 @@ import {
   SimilarNoteError,
   VaultService,
   domainOf,
-  ownerSubsystemOf,
+  ownerDepartmentOf,
 } from "./vault.service";
 
 describe("VaultService write paths", () => {
@@ -157,25 +157,25 @@ describe("VaultService write paths", () => {
     expect(hits.find((h) => h.id === "global-note")?.project).toBeUndefined();
   });
 
-  it("F4b: ownerSubsystemOf reads a valid subsystem, ignores an invalid one, is undefined when absent", async () => {
-    expect(ownerSubsystemOf({ subsystem: "forge" })).toBe("forge");
-    expect(ownerSubsystemOf({ subsystem: "not-a-subsystem" })).toBeUndefined();
-    expect(ownerSubsystemOf({})).toBeUndefined();
+  it("F4b: ownerDepartmentOf reads a valid department, ignores an invalid one, is undefined when absent", async () => {
+    expect(ownerDepartmentOf({ department: "dev" })).toBe("dev");
+    expect(ownerDepartmentOf({ department: "not-a-department" })).toBeUndefined();
+    expect(ownerDepartmentOf({})).toBeUndefined();
   });
 
-  it("F4b: index() carries tags/aliases/subsystem from a fixture note", async () => {
+  it("F4b: index() carries tags/aliases/department from a fixture note", async () => {
     await vault.createNote({
-      id: "subsystem-forge-moc",
+      id: "department-dev-moc",
       tier: "knowledge",
-      title: "Forge — polička",
+      title: "Dev — polička",
       body: "Shelf body.",
-      tags: ["subsystem", "forge", "moc"],
-      frontmatter: { subsystem: "forge", aliases: ["kovárna"] },
+      tags: ["department", "dev", "moc"],
+      frontmatter: { department: "dev", aliases: ["kovárna"] },
     });
     const index = await vault.index();
-    const entry = index.find((e) => e.id === "subsystem-forge-moc");
-    expect(entry?.subsystem).toBe("forge");
-    expect(entry?.tags).toEqual(["subsystem", "forge", "moc"]);
+    const entry = index.find((e) => e.id === "department-dev-moc");
+    expect(entry?.department).toBe("dev");
+    expect(entry?.tags).toEqual(["department", "dev", "moc"]);
     expect(entry?.aliases).toEqual(["kovárna"]);
   });
 
@@ -213,24 +213,24 @@ describe("VaultService write paths", () => {
     expect(hits.find((h) => h.id === "work-note")?.domain).toBeUndefined();
   });
 
-  it("F4b: index() omits tags/aliases/subsystem from a note that never set them", async () => {
+  it("F4b: index() omits tags/aliases/department from a note that never set them", async () => {
     await vault.createNote({ id: "plain-moc", tier: "knowledge", title: "Plain", body: "x" });
     const entry = (await vault.index()).find((e) => e.id === "plain-moc");
-    expect(entry?.subsystem).toBeUndefined();
+    expect(entry?.department).toBeUndefined();
     expect(entry?.tags).toBeUndefined();
     expect(entry?.aliases).toBeUndefined();
   });
 
-  it("F4b: graph() node carries subsystem", async () => {
+  it("F4b: graph() node carries department", async () => {
     await vault.createNote({
-      id: "subsystem-scout-moc",
+      id: "department-research-moc",
       tier: "knowledge",
-      title: "Scout — polička",
+      title: "Research — polička",
       body: "x",
-      frontmatter: { subsystem: "scout" },
+      frontmatter: { department: "rnd" },
     });
     const graph = await vault.graph();
-    expect(graph.nodes.find((n) => n.id === "subsystem-scout-moc")?.subsystem).toBe("scout");
+    expect(graph.nodes.find((n) => n.id === "department-research-moc")?.department).toBe("rnd");
   });
 
   it("round-trips typed `type`/`tags` through frontmatter (Fáze 3)", async () => {

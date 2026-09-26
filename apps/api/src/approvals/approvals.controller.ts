@@ -40,8 +40,8 @@ export class ApprovalsController {
       approveApproval: ({ params: { id } }) =>
         errors.or404(id, () => this.approvals.approve(id), decided),
 
-      rejectApproval: ({ params: { id } }) =>
-        errors.or404(id, () => this.approvals.reject(id), decided),
+      rejectApproval: ({ params: { id }, body }) =>
+        errors.or404(id, () => this.approvals.reject(id, body?.reason), decided),
     });
   }
 }

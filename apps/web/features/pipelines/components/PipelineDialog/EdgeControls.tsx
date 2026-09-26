@@ -1,6 +1,14 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { Button, Container, Icon, Stack, Typography } from "@zibby/design-system";
+import {
+  Button,
+  Container,
+  GraphIconButton,
+  GraphInlineInput,
+  Icon,
+  Stack,
+  Typography,
+} from "@zibby/design-system";
 import { BAD, BG0, LINE, mix } from "./canvas-tokens";
 
 /** Shared floating-control wrapper centred on a canvas point. */
@@ -69,25 +77,18 @@ export function FlowFileControl({
           </Typography>
         ) : (
           <>
-            <input
+            <GraphInlineInput
               aria-label={t("handoffFileAria")}
-              className="border-none bg-transparent font-mono text-[10px] text-accent outline-none focus-visible:ring-2 focus-visible:ring-accent"
               onChange={(e) => onChange(e.target.value)}
               // Auto-width to the filename (monospace `size` = char count) so the pill grows
               // with the name instead of clipping at a fixed width; floored so it stays usable.
               size={Math.max(value.length, 6)}
-              spellCheck={false}
               title={t("handoffHint")}
               value={value}
             />
-            <button
-              aria-label={t("disconnectAria")}
-              className="grid size-4 place-items-center rounded-sm border-none bg-transparent text-foreground-faint outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
-              onClick={onDelete}
-              type="button"
-            >
+            <GraphIconButton aria-label={t("disconnectAria")} onClick={onDelete}>
               <Icon name="x" size="xs" />
-            </button>
+            </GraphIconButton>
           </>
         )}
       </Stack>
@@ -106,9 +107,6 @@ export interface ReworkControlProps {
   /** Detail view: render retries/escalate as static text (no steppers/toggle/remove). */
   readOnly?: boolean;
 }
-
-const STEP =
-  "grid size-[15px] place-items-center rounded-sm border border-border bg-transparent font-mono text-[11px] leading-none text-foreground-dim outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent";
 
 /** Max-retries stepper + escalate-effort toggle floating on a rework arc. */
 export function ReworkControl({
@@ -147,14 +145,13 @@ export function ReworkControl({
           {t("loopMax")}
         </Typography>
         <Stack align="center" direction="row" gap="25">
-          <button
+          <GraphIconButton
             aria-label={t("retriesDownAria")}
-            className={STEP}
             onClick={() => onMaxRetries(Math.max(0, maxRetries - 1))}
-            type="button"
+            variant="step"
           >
             −
-          </button>
+          </GraphIconButton>
           <Typography
             mono
             size="xs"
@@ -164,14 +161,13 @@ export function ReworkControl({
           >
             {maxRetries}
           </Typography>
-          <button
+          <GraphIconButton
             aria-label={t("retriesUpAria")}
-            className={STEP}
             onClick={() => onMaxRetries(Math.min(9, maxRetries + 1))}
-            type="button"
+            variant="step"
           >
             +
-          </button>
+          </GraphIconButton>
         </Stack>
         <Button
           intent={escalate ? "primary" : "ghost"}
@@ -182,14 +178,9 @@ export function ReworkControl({
         >
           ↑ {t("escalateEffort")}
         </Button>
-        <button
-          aria-label={t("removeReworkAria")}
-          className="grid size-4 place-items-center rounded-sm border-none bg-transparent text-foreground-faint outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
-          onClick={onDelete}
-          type="button"
-        >
+        <GraphIconButton aria-label={t("removeReworkAria")} onClick={onDelete}>
           <Icon name="x" size="xs" />
-        </button>
+        </GraphIconButton>
       </Stack>
     </FloatingControl>
   );

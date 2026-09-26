@@ -2,8 +2,8 @@ import type {
   Agent,
   AgentModel,
   AgentThinking,
+  DepartmentId,
   PipelineComplexity,
-  SubsystemId,
 } from "@zibby/contracts";
 import type { IconName } from "@zibby/design-system";
 import type { MessageKey } from "./i18n/keys";
@@ -103,13 +103,13 @@ export interface Pipeline {
   /** Optional avatar image (data URI or `/avatars/*.png` path) shown in place of the glyph. */
   avatar?: string;
   /**
-   * Optional attribution to a subsystem of the federation (Phase 81 contract field) —
-   * which of the eight subsystems "owns" this pipeline for its Roster tab (Phase 85).
+   * Optional attribution to a department of the federation (Phase 81 contract field) —
+   * which of the eight departments "owns" this pipeline for its Roster tab (Phase 85).
    * Absent is a legitimate state: not every pipeline has an owner yet.
    */
-  ownerSubsystem?: SubsystemId;
+  department?: DepartmentId;
   /**
-   * NS2 F9 — the pipeline's rung on its owning subsystem's complexity ladder.
+   * NS2 F9 — the pipeline's rung on its owning department's complexity ladder.
    * Carried (not rendered) so a client-side duplicate preserves the rung instead
    * of silently resetting it to the contract's `"standard"` default; the rung is
    * authored in the `.pipeline.md`, like `outputs`.

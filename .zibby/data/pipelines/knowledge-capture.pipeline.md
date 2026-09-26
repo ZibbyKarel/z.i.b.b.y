@@ -26,7 +26,7 @@ desc: >-
   trezoru, poznamenej si, zapamatuj si to, destiluj, sepiš poznatky, shrň materiál,
   knowledge capture, vault nota, MOC, wikilink, index paměti, druhý mozek.
   Levná linka codexu — vzniká informace, nikdy kód.
-ownerSubsystem: codex
+department: knw
 complexity: light
 ---
 

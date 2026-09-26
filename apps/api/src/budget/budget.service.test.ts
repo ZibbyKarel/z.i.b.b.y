@@ -34,6 +34,8 @@ interface Deps {
   pipelineRuns?: PipelineRun[];
   /** Phase 70: override the effective budget the resolver returns (default: echoes `project.budget`). */
   resolveBudget?: (project: Project) => Promise<Project["budget"]>;
+  /** O-08: capture `activity.record` calls; defaults to a no-op spy. */
+  activityRecord?: ReturnType<typeof vi.fn>;
 }
 
 function build(deps: Deps = {}): BudgetService {
@@ -65,6 +67,7 @@ function build(deps: Deps = {}): BudgetService {
   // resolved-project.helpers.test.ts; `resolveBudget` below covers BudgetService
   // actually routing through the resolver rather than reading `project.budget` itself.
   const resolved = { resolveBudget: deps.resolveBudget ?? (async (p: Project) => p.budget) };
+  const activity = { record: deps.activityRecord ?? vi.fn(async () => {}) };
   return new BudgetService(
     ledger as never,
     config as never,
@@ -74,6 +77,7 @@ function build(deps: Deps = {}): BudgetService {
     agentRunner as never,
     pipelineRunner as never,
     tasks as never,
+    activity as never,
     fakeLogger as never,
   );
 }
@@ -481,5 +485,85 @@ describe("BudgetService.countRunningGlobal (125c)", () => {
   it("zero running anywhere is zero", async () => {
     const svc = build();
     expect(await svc.countRunningGlobal()).toBe(0);
+  });
+});
+
+describe("BudgetService.check — O-08 warn-crossing notice", () => {
+  it("writes a budget-warn activity entry the first time rolling usage crosses warnAtRollingPct", async () => {
+    const activityRecord = vi.fn(async () => {});
+    const svc = build({
+      activityRecord,
+      config: { read: async () => ({ warnAtRollingPct: 70 }) },
+      limitsSnapshot: async () => limits({ rolling: { usedPct: 75, resetsAt: null } }),
+    });
+    await svc.check(undefined);
+    expect(activityRecord).toHaveBeenCalledTimes(1);
+    expect(activityRecord).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "budget-warn", summary: expect.stringContaining("75%") }),
+    );
+  });
+
+  it("writes a budget-warn entry once weekly usage crosses warnAtWeeklyPct", async () => {
+    const activityRecord = vi.fn(async () => {});
+    const svc = build({
+      activityRecord,
+      config: { read: async () => ({ warnAtWeeklyPct: 60 }) },
+      limitsSnapshot: async () => limits({ weekly: { usedPct: 61, resetsAt: null } }),
+    });
+    await svc.check(undefined);
+    expect(activityRecord).toHaveBeenCalledTimes(1);
+    expect(activityRecord).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "budget-warn", summary: expect.stringContaining("weekly") }),
+    );
+  });
+
+  it("does not re-notify on a second dispatch while still over warn (edge-triggered)", async () => {
+    const activityRecord = vi.fn(async () => {});
+    const svc = build({
+      activityRecord,
+      config: { read: async () => ({ warnAtRollingPct: 70 }) },
+      limitsSnapshot: async () => limits({ rolling: { usedPct: 75, resetsAt: null } }),
+    });
+    await svc.check(undefined);
+    await svc.check(undefined);
+    expect(activityRecord).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-notifies after dropping back under warn and crossing again", async () => {
+    const activityRecord = vi.fn(async () => {});
+    let usedPct = 75;
+    const svc = build({
+      activityRecord,
+      config: { read: async () => ({ warnAtRollingPct: 70 }) },
+      limitsSnapshot: async () => limits({ rolling: { usedPct, resetsAt: null } }),
+    });
+    await svc.check(undefined);
+    usedPct = 50;
+    await svc.check(undefined);
+    usedPct = 80;
+    await svc.check(undefined);
+    expect(activityRecord).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not notify when no warn threshold is configured", async () => {
+    const activityRecord = vi.fn(async () => {});
+    const svc = build({
+      activityRecord,
+      config: { read: async () => ({}) },
+      limitsSnapshot: async () => limits({ rolling: { usedPct: 99, resetsAt: null } }),
+    });
+    await svc.check(undefined);
+    expect(activityRecord).not.toHaveBeenCalled();
+  });
+
+  it("does not notify while the limits snapshot is stale", async () => {
+    const activityRecord = vi.fn(async () => {});
+    const svc = build({
+      activityRecord,
+      config: { read: async () => ({ warnAtRollingPct: 10 }) },
+      limitsSnapshot: async () => limits({ rolling: { usedPct: 99, resetsAt: null }, stale: true }),
+    });
+    await svc.check(undefined);
+    expect(activityRecord).not.toHaveBeenCalled();
   });
 });

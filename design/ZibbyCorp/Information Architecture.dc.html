@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap">
+<style>html,body{margin:0;background:#F3F4F2}a{color:#111312}a:hover{color:#50544F}</style>
+</helmet>
+<div style="min-height:100vh;box-sizing:border-box;background-color:#F3F4F2;background-image:linear-gradient(rgba(17,19,18,.05) 1px, transparent 1px),linear-gradient(90deg, rgba(17,19,18,.05) 1px, transparent 1px);background-size:24px 24px;color:#111312;font-family:'Geist',system-ui,sans-serif">
+  <header style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;padding:16px 24px;border-bottom:1px solid #D9DBD6;background:#FAFAF8">
+    <div style="display:flex;align-items:center;gap:10px"><span style="font-family:'Geist Mono',monospace;font-size:13px;letter-spacing:.18em;font-weight:600">ZIBBYCORP</span><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:#8A8E88">/ INFORMATION ARCHITECTURE</span></div>
+    <div style="margin-left:auto;display:flex;gap:18px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;color:#50544F"><span>V0.1 · DRAFT</span><span>2026-09-24</span><span>SOURCE · ZIBBYKAREL/Z.I.B.B.Y</span></div>
+  </header>
+
+  <div style="max-width:1320px;margin:0 auto;padding:40px 24px 80px;display:flex;flex-direction:column;gap:56px">
+
+    <section data-screen-label="01 Decisions" style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:#8A8E88">01 — OPERATING MODEL</span><h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">From subsystem orbs to a company</h1></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1px;padding:1px">
+        <div style="background:#FAFAF8;box-shadow:0 0 0 1px #D9DBD6;padding:16px;display:flex;flex-direction:column;gap:6px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:#8A8E88">HIERARCHY</span><span style="font-size:14px;line-height:1.45;text-wrap:pretty">You are the CEO and appear only in the header. ZIBBY is the COO: the root node on the ORG map, with 11 departments under it.</span></div>
+        <div style="background:#FAFAF8;box-shadow:0 0 0 1px #D9DBD6;padding:16px;display:flex;flex-direction:column;gap:6px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:#8A8E88">NAMING</span><span style="font-size:14px;line-height:1.45;text-wrap:pretty">UI uses corporate names only. The old mythological names (Forge, Puls…) stay in code.</span></div>
+        <div style="background:#FAFAF8;box-shadow:0 0 0 1px #D9DBD6;padding:16px;display:flex;flex-direction:column;gap:6px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:#8A8E88">AGENTS</span><span style="font-size:14px;line-height:1.45;text-wrap:pretty">Agents live in a shared pool (Architect, Coder, Reviewer…). Departments borrow them per subtask.</span></div>
+        <div style="background:#FAFAF8;box-shadow:0 0 0 1px #D9DBD6;padding:16px;display:flex;flex-direction:column;gap:6px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:#8A8E88">TASK</span><span style="font-size:14px;line-height:1.45;text-wrap:pretty">A task is a parent. Each department it passes through runs its own subtask.</span></div>
+        <div style="background:#FAFAF8;box-shadow:0 0 0 1px #D9DBD6;padding:16px;display:flex;flex-direction:column;gap:6px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:#8A8E88">CHAIN</span><span style="font-size:14px;line-height:1.45;text-wrap:pretty">A chain is a fixed route across departments, defined globally in WORK. When a task has no chain, the COO classifier picks one and you can override it.</span></div>
+        <div style="background:#FAFAF8;box-shadow:0 0 0 1px #D9DBD6;padding:16px;display:flex;flex-direction:column;gap:6px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:#8A8E88">PIPELINE</span><span style="font-size:14px;line-height:1.45;text-wrap:pretty">A pipeline is a fixed flow inside one department and is defined in that department. Rework loops (Review → Coder) exist only here.</span></div>
+        <div style="background:#FAFAF8;box-shadow:0 0 0 1px #D9DBD6;padding:16px;display:flex;flex-direction:column;gap:6px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:#8A8E88">HANDOFF</span><span style="font-size:14px;line-height:1.45;text-wrap:pretty">Gate rules decide whether a handoff between departments runs automatically or waits in NEEDS YOU.</span></div>
+        <div style="background:#FAFAF8;box-shadow:0 0 0 1px #D9DBD6;padding:16px;display:flex;flex-direction:column;gap:6px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:#8A8E88">ENTRY</span><span style="font-size:14px;line-height:1.45;text-wrap:pretty">Tasks enter three ways: COO chat or form, directly into a department, or inbound Slack/e-mail/Jira/GitHub through Monitoring.</span></div>
+        <div style="background:#FAFAF8;box-shadow:0 0 0 1px #D9DBD6;padding:16px;display:flex;flex-direction:column;gap:8px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:#8A8E88">STATES</span>
+          <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:#50544F">
+            <span style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;background:oklch(0.6 0.14 160)"></span>WORKING ← running</span>
+            <span style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;background:oklch(0.58 0.14 250)"></span>THINKING</span>
+            <span style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;background:oklch(0.7 0.15 70)"></span>BLOCKED ← waiting</span>
+            <span style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;background:oklch(0.58 0.2 25)"></span>ERROR</span>
+            <span style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;background:oklch(0.56 0.15 300)"></span>DONE ← report</span>
+            <span style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;background:#A9ADA7"></span>IDLE</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section data-screen-label="02 Org" style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:#8A8E88">02 — ORG CHART</span><h2 style="margin:0;font-size:24px;font-weight:500;letter-spacing:-.01em">11 departments under the COO</h2></div>
+      <div style="display:flex;flex-direction:column;align-items:center">
+        <div style="display:flex;gap:10px;align-items:center;padding:10px 16px;border:1px solid #111312;background:#FAFAF8"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:#8A8E88">COO</span><span style="font-size:15px;font-weight:500">Zibby</span><span style="font-size:12px;color:#50544F">routes, classifies, chats</span></div>
+        <div style="width:1px;height:18px;background:#BFC2BC"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
+        <div style="border:1px solid #D9DBD6;background:#FAFAF8;padding:12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:#8A8E88"><span>DEV</span><span>FORGE</span></div><span style="font-size:14px;font-weight:500">Development</span><span style="font-size:12px;line-height:1.4;color:#50544F">Plans and implements tasks, then returns a PR.</span></div>
+        <div style="border:1px solid #D9DBD6;background:#FAFAF8;padding:12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:#8A8E88"><span>OPS</span><span>PULS</span></div><span style="font-size:14px;font-weight:500">Monitoring &amp; Ops</span><span style="font-size:12px;line-height:1.4;color:#50544F">Watches channels, calendar and CI on a heartbeat, and triages inbound work.</span></div>
+        <div style="border:1px solid #D9DBD6;background:#FAFAF8;padding:12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:#8A8E88"><span>SEC</span><span>SENTINEL</span></div><span style="font-size:14px;font-weight:500">Security</span><span style="font-size:12px;line-height:1.4;color:#50544F">Tracks CVEs and secret leaks, and guards the boundary to the outside world.</span></div>
+        <div style="border:1px solid #D9DBD6;background:#FAFAF8;padding:12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:#8A8E88"><span>REL</span><span>MAESTRO</span></div><span style="font-size:14px;font-weight:500">Release Management</span><span style="font-size:12px;line-height:1.4;color:#50544F">Prepares releases and changelogs, and waits for you to approve merges.</span></div>
+        <div style="border:1px solid #D9DBD6;background:#FAFAF8;padding:12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:#8A8E88"><span>INC</span><span>BEACON</span></div><span style="font-size:14px;font-weight:500">Incident Response</span><span style="font-size:12px;line-height:1.4;color:#50544F">Escalates critical issues: Tier-3 surface-and-wait.</span></div>
+        <div style="border:1px solid #D9DBD6;background:#FAFAF8;padding:12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:#8A8E88"><span>RND</span><span>SCOUT</span></div><span style="font-size:14px;font-weight:500">R&amp;D</span><span style="font-size:12px;line-height:1.4;color:#50544F">Runs research and hands the result on as an artifact.</span></div>
+        <div style="border:1px solid #D9DBD6;background:#FAFAF8;padding:12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:#8A8E88"><span>COM</span><span>HERALD</span></div><span style="font-size:14px;font-weight:500">Communications</span><span style="font-size:12px;line-height:1.4;color:#50544F">Speaks for the company externally and asks when information is missing.</span></div>
+        <div style="border:1px solid #D9DBD6;background:#FAFAF8;padding:12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:#8A8E88"><span>QA</span><span>LOOM</span></div><span style="font-size:14px;font-weight:500">QA &amp; Architecture</span><span style="font-size:12px;line-height:1.4;color:#50544F">Proactively scans code quality and passes findings to Development.</span></div>
+        <div style="border:1px solid #D9DBD6;background:#FAFAF8;padding:12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:#8A8E88"><span>KNW</span><span>CODEX</span></div><span style="font-size:14px;font-weight:500">Knowledge Management</span><span style="font-size:12px;line-height:1.4;color:#50544F">Maintains the memory vault, grounding and nightly distillation.</span></div>
+        <div style="border:1px solid #D9DBD6;background:#FAFAF8;padding:12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:#8A8E88"><span>FIN</span><span>LEDGER</span></div><span style="font-size:14px;font-weight:500">Finance</span><span style="font-size:12px;line-height:1.4;color:#50544F">Manages budgets, run caps and subscription thresholds.</span></div>
+        <div style="border:1px solid #D9DBD6;background:#FAFAF8;padding:12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:#8A8E88"><span>PER</span><span>HEARTH</span></div><span style="font-size:14px;font-weight:500">Personal Office</span><span style="font-size:12px;line-height:1.4;color:#50544F">Handles your personal life, separate from work.</span></div>
+      </div>
+    </section>
+
+    <section data-screen-label="03 Task model" style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:#8A8E88">03 — TASK MODEL</span><h2 style="margin:0;font-size:24px;font-weight:500;letter-spacing:-.01em">Chain across departments, pipeline inside</h2></div>
+      <div style="position:relative;border:1px solid #BFC2BC;background:#FAFAF8;padding:24px;display:flex;flex-direction:column;gap:20px">
+        <div style="position:absolute;top:-1px;left:-1px;width:10px;height:10px;border-top:1px solid #111312;border-left:1px solid #111312"></div>
+        <div style="position:absolute;top:-1px;right:-1px;width:10px;height:10px;border-top:1px solid #111312;border-right:1px solid #111312"></div>
+        <div style="position:absolute;bottom:-1px;left:-1px;width:10px;height:10px;border-bottom:1px solid #111312;border-left:1px solid #111312"></div>
+        <div style="position:absolute;bottom:-1px;right:-1px;width:10px;height:10px;border-bottom:1px solid #111312;border-right:1px solid #111312"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em"><span style="color:#8A8E88">PARENT TASK</span><span style="font-family:'Geist',sans-serif;font-size:16px;letter-spacing:0;font-weight:500">TSK-0142 · Add OAuth login to the client portal</span><span style="color:#50544F">CHAIN · FEATURE (auto-picked by COO)</span></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 28px minmax(0,2.2fr) 28px minmax(0,1fr);align-items:stretch">
+          <div style="border:1px solid #D9DBD6;background:#F3F4F2;padding:12px;display:flex;flex-direction:column;gap:8px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:#8A8E88">SUB 1 · RND</span><span style="font-size:14px;font-weight:500">R&amp;D</span><span style="font-size:12px;color:#50544F;line-height:1.4">Pipeline: Researcher → Summarizer</span><span style="margin-top:auto;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:#50544F">PRODUCES · research.md</span></div>
+          <div style="display:grid;place-items:center;font-family:'Geist Mono',monospace;font-size:10px;color:#8A8E88">→<br>GATE</div>
+          <div style="border:1px solid #111312;background:#F3F4F2;padding:12px;display:flex;flex-direction:column;gap:10px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:#8A8E88">SUB 2 · DEV · PIPELINE "DELIVERY"</span><span style="font-size:14px;font-weight:500">Development</span>
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em">
+              <span style="border:1px solid #BFC2BC;padding:5px 8px;background:#FAFAF8">ARCHITECT</span><span style="color:#8A8E88">→</span>
+              <span style="border:1px solid #BFC2BC;padding:5px 8px;background:#FAFAF8">CODER</span><span style="color:#8A8E88">⇄</span>
+              <span style="border:1px solid #BFC2BC;padding:5px 8px;background:#FAFAF8">REVIEW</span><span style="color:#8A8E88">⇄</span>
+              <span style="border:1px solid #BFC2BC;padding:5px 8px;background:#FAFAF8">TESTER</span><span style="color:#8A8E88">→</span>
+              <span style="border:1px solid #BFC2BC;padding:5px 8px;background:#FAFAF8">DOCUMENTER</span>
+            </div>
+            <span style="font-size:12px;color:#50544F;line-height:1.4">⇄ marks the rework loop, which is bounded (retry, then escalate). Agents are borrowed from the pool and each subtask runs in its own git worktree.</span>
+            <span style="margin-top:auto;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:#50544F">CONSUMES · research.md — PRODUCES · PR #318</span></div>
+          <div style="display:grid;place-items:center;font-family:'Geist Mono',monospace;font-size:10px;color:#8A8E88">→<br>GATE</div>
+          <div style="border:1px solid #D9DBD6;background:#F3F4F2;padding:12px;display:flex;flex-direction:column;gap:8px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:#8A8E88">SUB 3 · REL</span><span style="font-size:14px;font-weight:500">Release Management</span><span style="font-size:12px;color:#50544F;line-height:1.4">Pipeline: Changelog → Release prep</span><span style="margin-top:auto;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:#50544F">MERGE · NEVER AUTO</span></div>
+        </div>
+        <span style="font-size:13px;color:#50544F;line-height:1.5;text-wrap:pretty">The chain can't change once a task starts, and departments never pick the next department. At each GATE, the handoff rules decide whether the step runs automatically or asks you.</span>
+      </div>
+    </section>
+
+    <section data-screen-label="04 Sitemap" style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:#8A8E88">04 — SITEMAP</span><h2 style="margin:0;font-size:24px;font-weight:500;letter-spacing:-.01em">Operations global, configuration per department</h2></div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:#50544F">
+        <span style="border:1px solid #BFC2BC;padding:6px 10px;background:#FAFAF8">ALWAYS ON · HEADER: CEO, ACTIVE COUNT, LIMITS, ⌘K</span>
+        <span style="border:1px solid #BFC2BC;padding:6px 10px;background:#FAFAF8">ALWAYS ON · NEEDS YOU RAIL</span>
+        <span style="border:1px solid #BFC2BC;padding:6px 10px;background:#FAFAF8">ALWAYS ON · COO CHAT + VOICE DOCK</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px">
+        <div style="border:1px solid #111312;background:#FAFAF8;display:flex;flex-direction:column">
+          <div style="padding:12px 14px;border-bottom:1px solid #D9DBD6;display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em"><span style="font-weight:600">ORG</span><span style="color:#8A8E88">HOME</span></div>
+          <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px;font-size:13px;line-height:1.35">
+            <div style="display:flex;flex-direction:column;gap:2px"><span>Org map</span><span style="font-size:11px;color:#8A8E88">COO + departments, live handoffs animated</span></div>
+            <div style="display:flex;flex-direction:column;gap:2px"><span>Department detail</span><span style="font-size:11px;color:#8A8E88">tabs: Team · Subtasks · Pipelines · Skills · Integrations · Automations · Hooks</span></div>
+            <div style="display:flex;flex-direction:column;gap:2px"><span>Agent pool</span><span style="font-size:11px;color:#8A8E88">shared roster, who is borrowed where</span></div>
+            <div style="display:flex;flex-direction:column;gap:2px"><span>Agent profile</span><span style="font-size:11px;color:#8A8E88">current subtask, tools, history, session</span></div>
+            <div style="display:flex;flex-direction:column;gap:2px"><span>Department chat</span><span style="font-size:11px;color:#8A8E88">direct line, opened from a department</span></div>
+          </div>
+        </div>
+        <div style="border:1px solid #D9DBD6;background:#FAFAF8;display:flex;flex-direction:column">
+          <div style="padding:12px 14px;border-bottom:1px solid #D9DBD6;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;font-weight:600">WORK</div>
+          <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px;font-size:13px;line-height:1.35">
+            <div style="display:flex;flex-direction:column;gap:2px"><span>Tasks</span><span style="font-size:11px;color:#8A8E88">parent tasks, filter by dept / state / source</span></div>
+            <div style="display:flex;flex-direction:column;gap:2px"><span>Task detail</span><span style="font-size:11px;color:#8A8E88">chain progress, subtasks, artifacts, output</span></div>
+            <div style="display:flex;flex-direction:column;gap:2px"><span>New task</span><span style="font-size:11px;color:#8A8E88">form: entry dept or COO, chain override</span></div>
+            <div style="display:flex;flex-direction:column;gap:2px"><span>Chains</span><span style="font-size:11px;color:#8A8E88">library + editor of cross-dept routes</span></div>
+            <div style="display:flex;flex-direction:column;gap:2px"><span>Goals</span><span style="font-size:11px;color:#8A8E88">maker ⇄ verifier loops, run budget, parked</span></div>
+            <div style="display:flex;flex-direction:column;gap:2px"><span>Projects</span><span style="font-size:11px;color:#8A8E88">repos, per-project config</span></div>
+          </div>
+        </div>
+        <div style="border:1px solid #D9DBD6;background:#FAFAF8;display:flex;flex-direction:column">
+          <div style="padding:12px 14px;border-bottom:1px solid #D9DBD6;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;font-weight:600">ACTIVITY</div>
+          <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px;font-size:13px;line-height:1.35">
+            <div style="display:flex;flex-direction:column;gap:2px"><span>Live log</span><span style="font-size:11px;color:#8A8E88">SSE stream, filter by dept / agent / task</span></div>
+            <div style="display:flex;flex-direction:column;gap:2px"><span>Runs</span><span style="font-size:11px;color:#8A8E88">every run, events, retries, cost</span></div>
+            <div style="display:flex;flex-direction:column;gap:2px"><span>Inbox</span><span style="font-size:11px;color:#8A8E88">inbound from Slack · e-mail · Jira · GitHub, triaged by OPS</span></div>
+            <div style="display:flex;flex-direction:column;gap:2px"><span>Briefings</span><span style="font-size:11px;color:#8A8E88">daily standup, narrative summaries</span></div>
+          </div>
+        </div>
+        <div style="border:1px solid #D9DBD6;background:#FAFAF8;display:flex;flex-direction:column">
+          <div style="padding:12px 14px;border-bottom:1px solid #D9DBD6;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;font-weight:600">POLICY</div>
+          <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px;font-size:13px;line-height:1.35">
+            <div style="display:flex;flex-direction:column;gap:2px"><span>Approvals</span><span style="font-size:11px;color:#8A8E88">full NEEDS YOU queue + history</span></div>
+            <div style="display:flex;flex-direction:column;gap:2px"><span>Gate rules</span><span style="font-size:11px;color:#8A8E88">fixed floor + per-project rules, incl. handoff rules</span></div>
+            <div style="display:flex;flex-direction:column;gap:2px"><span>Learned patterns</span><span style="font-size:11px;color:#8A8E88">suggestions from past approvals</span></div>
+          </div>
+        </div>
+        <div style="border:1px solid #D9DBD6;background:#FAFAF8;display:flex;flex-direction:column">
+          <div style="padding:12px 14px;border-bottom:1px solid #D9DBD6;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;font-weight:600">KNOWLEDGE</div>
+          <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px;font-size:13px;line-height:1.35">
+            <div style="display:flex;flex-direction:column;gap:2px"><span>Vault</span><span style="font-size:11px;color:#8A8E88">MOC, wikilinks, daily notes</span></div>
+            <div style="display:flex;flex-direction:column;gap:2px"><span>Distillation</span><span style="font-size:11px;color:#8A8E88">nightly runs, gaps, app ideas</span></div>
+          </div>
+        </div>
+        <div style="border:1px solid #D9DBD6;background:#FAFAF8;display:flex;flex-direction:column">
+          <div style="padding:12px 14px;border-bottom:1px solid #D9DBD6;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;font-weight:600">LEDGER</div>
+          <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px;font-size:13px;line-height:1.35">
+            <div style="display:flex;flex-direction:column;gap:2px"><span>Budgets</span><span style="font-size:11px;color:#8A8E88">day / week / month run caps, per dept</span></div>
+            <div style="display:flex;flex-direction:column;gap:2px"><span>Spend</span><span style="font-size:11px;color:#8A8E88">subscription %, Agent SDK credit, thresholds</span></div>
+          </div>
+        </div>
+        <div style="border:1px dashed #BFC2BC;background:#F3F4F2;display:flex;flex-direction:column">
+          <div style="padding:12px 14px;border-bottom:1px solid #D9DBD6;display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em"><span style="font-weight:600">SYSTEM</span><span style="color:#8A8E88">⚙ OUT OF NAV</span></div>
+          <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px;font-size:13px;line-height:1.35">
+            <div style="display:flex;flex-direction:column;gap:2px"><span>Settings</span><span style="font-size:11px;color:#8A8E88">general, voice, theme</span></div>
+            <div style="display:flex;flex-direction:column;gap:2px"><span>Registries</span><span style="font-size:11px;color:#8A8E88">MCP servers · Skills · Hooks · Commands (global libraries that departments bind to)</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section data-screen-label="05 Legacy map" style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:#8A8E88">05 — MIGRATION</span><h2 style="margin:0;font-size:24px;font-weight:500;letter-spacing:-.01em">Where the 14 current segments go</h2></div>
+      <div style="border:1px solid #D9DBD6;background:#FAFAF8;font-size:13px">
+        <div style="display:grid;grid-template-columns:minmax(110px,1fr) minmax(0,3fr);padding:10px 14px;border-bottom:1px solid #D9DBD6;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:#8A8E88"><span>ZIBBY SEGMENT</span><span>ZIBBYCORP LOCATION</span></div>
+        <sc-for list="{{ legacy }}" as="r" hint-placeholder-count="14">
+          <div style="display:grid;grid-template-columns:minmax(110px,1fr) minmax(0,3fr);padding:9px 14px;border-bottom:1px solid #D9DBD6"><span style="font-family:'Geist Mono',monospace;font-size:12px">{{ r.from }}</span><span style="color:#50544F">{{ r.to }}</span></div>
+        </sc-for>
+      </div>
+    </section>
+
+    <section data-screen-label="06 Flows" style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:#8A8E88">06 — KEY FLOWS</span><h2 style="margin:0;font-size:24px;font-weight:500;letter-spacing:-.01em">Submitting a task, approving a gate</h2></div>
+      <sc-for list="{{ flows }}" as="f" hint-placeholder-count="2">
+        <div style="border:1px solid #D9DBD6;background:#FAFAF8;display:flex;flex-direction:column">
+          <div style="padding:12px 16px;border-bottom:1px solid #D9DBD6;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:#8A8E88">{{ f.code }}</span><span style="font-size:16px;font-weight:500">{{ f.title }}</span><span style="font-size:12px;color:#50544F">{{ f.sub }}</span></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:1px;padding:1px">
+            <sc-for list="{{ f.steps }}" as="s" hint-placeholder-count="6">
+              <div style="background:#FAFAF8;box-shadow:0 0 0 1px #D9DBD6;padding:14px;display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;justify-content:space-between;gap:8px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:#8A8E88"><span>{{ s.n }}</span><span style="text-align:right">{{ s.where }}</span></div>
+                <span style="font-size:13px;font-weight:500;line-height:1.3">{{ s.t }}</span>
+                <span style="font-size:12px;color:#50544F;line-height:1.4;text-wrap:pretty">{{ s.d }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </section>
+
+    <section data-screen-label="07 Build order" style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:#8A8E88">07 — NEXT</span><h2 style="margin:0;font-size:24px;font-weight:500;letter-spacing:-.01em">Proposed screen order</h2></div>
+      <div style="display:flex;flex-direction:column;border-top:1px solid #D9DBD6">
+        <sc-for list="{{ order }}" as="o" hint-placeholder-count="10">
+          <div style="display:grid;grid-template-columns:48px minmax(0,1.2fr) minmax(0,2fr) 90px;gap:14px;padding:11px 0;border-bottom:1px solid #D9DBD6;align-items:baseline"><span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A8E88">{{ o.n }}</span><span style="font-size:14px;font-weight:500">{{ o.t }}</span><span style="font-size:12px;color:#50544F">{{ o.d }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:#50544F;text-align:right">{{ o.s }}</span></div>
+        </sc-for>
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = (from, to) => ({ from, to });
+    const S = (n, where, t, d) => ({ n, where, t, d });
+    const O = (n, t, d, s) => ({ n, t, d, s });
+    return {
+      legacy: [
+        L('overview', 'ORG → Org map (home)'),
+        L('agents', 'ORG → Agent pool + Agent profile'),
+        L('pipelines', 'ORG → Department detail → Pipelines tab'),
+        L('chains', 'WORK → Chains'),
+        L('runs', 'ACTIVITY → Runs'),
+        L('projects', 'WORK → Projects'),
+        L('gates', 'POLICY → Gate rules; pending items → NEEDS YOU rail'),
+        L('memory', 'KNOWLEDGE → Vault (owned by Knowledge Management)'),
+        L('automations', 'ORG → Department detail → Automations tab'),
+        L('skills', 'SYSTEM → Registries (library); bound in Department → Skills'),
+        L('mcp', 'SYSTEM → Registries (library); bound in Department → Integrations'),
+        L('hooks', 'SYSTEM → Registries; per-dept overrides in Department → Hooks'),
+        L('commands', 'SYSTEM → Registries + ⌘K'),
+        L('settings', 'SYSTEM → Settings')
+      ],
+      flows: [
+        { code: 'FLOW A', title: 'Submitting a task', sub: 'Three entry points, one parent task', steps: [
+          S('01', 'COO DOCK / WORK / INBOX', 'Task enters', 'Through COO chat or voice, the New task form, a department\'s direct line, or an inbound message triaged by Monitoring.'),
+          S('02', 'COO', 'Chain selected', 'You pick the chain, or the COO classifier proposes one. You can override it until the task starts.'),
+          S('03', 'WORK · TASK DETAIL', 'Parent task created', 'The task appears in Tasks and its route lights up on the Org map.'),
+          S('04', 'DEPARTMENT', 'Subtask runs its pipeline', 'The department borrows agents from the pool. Rework loops stay inside the department.'),
+          S('05', 'GATE', 'Handoff', 'Each artifact goes to the next department. Rules decide: automatic, or a card in NEEDS YOU.'),
+          S('06', 'WORK · TASK DETAIL', 'Output', 'The task ends with a PR or a file, which is logged to Activity and distilled into the vault overnight.')
+        ]},
+        { code: 'FLOW B', title: 'Approving a gate', sub: 'From block to resume', steps: [
+          S('01', 'AGENT', 'Gate fires', 'An agent attempts a push, a payment, opening a PR, or a rule-guarded handoff.'),
+          S('02', 'NEEDS YOU · ORG', 'Surfaced', 'The agent turns BLOCKED, a card appears in the rail and its department shows an alert on the map.'),
+          S('03', 'APPROVAL SHEET', 'Context', 'Shows the rule that fired, the diff or artifact, the task chain and the cost so far.'),
+          S('04', 'APPROVAL SHEET', 'Decide', 'Approve, Deny with a reason, or Open session with the agent. Merging a PR is never offered.'),
+          S('05', 'DEPARTMENT', 'Resume', 'Approve continues the task. Deny sends it back inside the department pipeline, with a bounded retry.'),
+          S('06', 'POLICY', 'Learn', 'Each decision is logged, and repeated approvals turn into suggested rules.')
+        ]}
+      ],
+      order: [
+        O('01', 'Department detail', 'Team, subtasks and the pipelines tab: the core of the new model', 'NEXT'),
+        O('02', 'Agent pool + profile', 'Shared pool and borrowing across departments', ''),
+        O('03', 'Task detail', 'Parent task, chain progress, subtasks and artifacts', ''),
+        O('04', 'Tasks + New task', 'List, entry point, chain override', ''),
+        O('05', 'Approvals / NEEDS YOU sheet', 'Flow B', ''),
+        O('06', 'Chains editor', 'Cross-department routes', ''),
+        O('07', 'Activity: Live log, Runs, Inbox', 'SSE streams', ''),
+        O('08', 'Gate rules', 'Including handoff rules', ''),
+        O('09', 'Ledger', 'Budgets per department', ''),
+        O('10', 'Knowledge vault', '', ''),
+        O('11', 'COO chat + voice', 'Global dock plus department lines', ''),
+        O('12', 'System registries + Settings', '', '')
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

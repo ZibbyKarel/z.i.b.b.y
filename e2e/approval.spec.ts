@@ -5,36 +5,31 @@ import { expect, test } from "@playwright/test";
  * it resumes the run. This is the identity-core UI: ZIBBY never acts on its own — a
  * human decides.
  *
- * F8d: `/overview`'s standalone approvals queue is gone. The seeded gated AGENT run
- * (unlike the seeded CHANNEL approval in channels.spec) is a real entry in the
- * unified runs feed, so it still surfaces in `/chat`'s task gutter (`ChatTasksPanel`) —
- * opening its row renders the same `RunDetail` (`RunApprovalGate`) the old `/runs`
- * screen used, just inline beside the panel instead of on its own page (Phase 100).
+ * ZB-13: the old `/chat` task gutter (`ChatTasksPanel`/`ChatTaskRow`) is deleted along
+ * with the rest of the immersive chat UI. Pending approvals now surface in the
+ * shell-global "NEEDS YOU" rail (`AppShell`'s `NeedsYouRail`, mounted on every page)
+ * as an `ApprovalCard` — single-click approve is available right there (D-014/O-13),
+ * so this exercises the same identity-core throughline against the current surface.
  */
-test("confirm a pending approval from the chat task gutter", async ({ page }) => {
-  await page.goto("/chat");
+test("confirm a pending approval from the NEEDS YOU rail", async ({ page }) => {
+  await page.goto("/org");
 
-  // The seeded gated run is the only active task owned by "gated-agent" — filter on
-  // that stable owner text rather than a greedy `.first()` (the shared task gutter
-  // can carry other active runs from other specs in the same worker). Testid is
-  // `ChatTaskRowTestId.Row` (`apps/web/features/chat/components/ChatTaskRow.tsx`).
-  const gatedRow = page.getByTestId("chat-task-row").filter({ hasText: "gated-agent" });
-  await expect(gatedRow).toBeVisible({ timeout: 20000 });
-  await gatedRow.click();
+  // The seeded gated run is the only pending approval owned by "Gated Agent"
+  // (`e2e/global-setup.ts`'s agent id is "gated-agent", its display `name` —
+  // the approval's `skill` field, `ApprovalCard`'s `agentName` — is "Gated
+  // Agent") — filter on that stable name rather than a greedy `.first()` (the
+  // shared rail can carry other pending approvals from other specs in the
+  // same worker).
+  const gatedCard = page
+    .getByTestId("approval-card-root")
+    .filter({ has: page.getByTestId("approval-card-name").getByText("Gated Agent") });
+  await expect(gatedCard).toBeVisible({ timeout: 20000 });
 
-  // `ChatTaskDetailColumnTestId.Panel` — the inline detail column's animated panel.
-  const detailPanel = page.getByTestId("chat-task-detail-panel");
-  await expect(detailPanel).toBeVisible({ timeout: 20000 });
+  const approve = gatedCard.getByTestId("approval-card-approve");
+  await expect(approve).toBeVisible({ timeout: 20000 });
+  await approve.click();
 
-  // `RunApprovalGate` (`apps/web/features/runs/components/RunApprovalGate.tsx`) has no
-  // dedicated testid of its own — select its "Confirm" action by accessible name,
-  // scoped to the detail panel so it can't collide with anything else on the page.
-  const confirm = detailPanel.getByRole("button", { name: "Confirm" });
-  await expect(confirm).toBeVisible({ timeout: 20000 });
-  await confirm.click();
-
-  // Assert the DURABLE outcome, not the transient UI: confirming resolves the
-  // approval and resumes the run, so `RunApprovalGate` (gated on `approvalForRun`
-  // finding a still-pending entry) unmounts on the next refetch.
-  await expect(confirm).toHaveCount(0, { timeout: 20000 });
+  // Assert the DURABLE outcome, not the transient UI: approving resolves the approval
+  // and resumes the run, so the rail's pending-approvals query refetches without it.
+  await expect(gatedCard).toHaveCount(0, { timeout: 20000 });
 });

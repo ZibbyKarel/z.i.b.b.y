@@ -17,10 +17,10 @@ const { hooks } = vi.hoisted(() => ({
       isError: false,
       refetch: vi.fn(),
     },
-    subsystems: {
+    departments: {
       data: [
-        { id: "sentinel", name: "Sentinel" },
-        { id: "loom", name: "Loom" },
+        { id: "sec", name: "Security" },
+        { id: "qa", name: "Arch" },
       ],
     },
     deleteMutation: { mutate: vi.fn(), isPending: false },
@@ -32,8 +32,8 @@ const { hooks } = vi.hoisted(() => ({
 vi.mock("../../handoff/queries", () => ({
   useSignalKindsQuery: () => hooks.signalKinds,
 }));
-vi.mock("../../subsystems/queries", () => ({
-  useSubsystemsQuery: () => hooks.subsystems,
+vi.mock("../../departments/queries", () => ({
+  useDepartmentsQuery: () => hooks.departments,
 }));
 vi.mock("../../handoff/mutations", () => ({
   useDeleteSignalKindMutation: () => hooks.deleteMutation,
@@ -43,7 +43,7 @@ vi.mock("../../handoff/mutations", () => ({
 
 const CVE: HandoffSignalKind = {
   id: "cve",
-  from: "sentinel",
+  from: "sec",
   label: "CVE (stored)",
   description: "stored description",
   severityBearing: true,
@@ -53,7 +53,7 @@ const CVE: HandoffSignalKind = {
 
 const PENDING_WITH_BUILD_TASK: HandoffSignalKind = {
   id: "custom-thing",
-  from: "loom",
+  from: "qa",
   label: "Custom Thing",
   description: "an operator-registered signal",
   severityBearing: false,
@@ -80,7 +80,7 @@ describe("SignalDetailScreen (B3a, read-only)", () => {
   it("renders a built-in kind's localized label, builtin badge and system note — no mutating controls", () => {
     render(<SignalDetailScreen signalId="cve" />);
 
-    expect(screen.getByText("Zranitelnost (CVE)")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Zranitelnost (CVE)" })).toBeInTheDocument();
     expect(screen.getByTestId(SignalStatusBadgeTestId.Root)).toHaveTextContent("vestavěný");
     expect(screen.getByTestId(SignalDetailScreenTestId.SystemNote)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Smazat" })).toBeNull();
@@ -90,7 +90,7 @@ describe("SignalDetailScreen (B3a, read-only)", () => {
   it("renders a pending kind's build-task link when buildTaskId is set", () => {
     render(<SignalDetailScreen signalId="custom-thing" />);
 
-    expect(screen.getByText("Custom Thing")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Custom Thing" })).toBeInTheDocument();
     expect(screen.getByTestId(SignalStatusBadgeTestId.Root)).toHaveTextContent(
       "čeká na producenta",
     );

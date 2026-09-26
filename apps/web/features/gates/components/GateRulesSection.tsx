@@ -1,14 +1,21 @@
 "use client";
 
-import type { Decision, GlobalGateRule, GlobalGateRuleInput, SubsystemId } from "@zibby/contracts";
-import { Button, ButtonGroup, Icon, type IconName, Stack, Typography } from "@zibby/design-system";
+import type { Decision, DepartmentId, GlobalGateRule, GlobalGateRuleInput } from "@zibby/contracts";
+import {
+  Button,
+  ButtonGroup,
+  Icon,
+  type IconName,
+  Panel,
+  Stack,
+  Typography,
+} from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { ConfirmDeleteDialog } from "../../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import { EmptyState } from "../../../components/EmptyState/EmptyState";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
-import { HudPanel } from "../../../components/HudPanel/HudPanel";
 import { useAgentsQuery } from "../../agents";
 import { useSkillsQuery } from "../../skills";
 import { DECISION_META, DECISION_ORDER } from "../gate";
@@ -35,7 +42,7 @@ function moved(ids: string[], id: string, delta: -1 | 1): string[] | null {
 
 export interface GateRulesSectionProps {
   /**
-   * Restricts the visible catalog to rules tagged for this subsystem, and
+   * Restricts the visible catalog to rules tagged for this department, and
    * auto-tags every rule CREATED from this context with it (Phase 87 Gates
    * tab, its third call site). Absent = today's behavior exactly — the full
    * catalog, no auto-tag — so the Settings tab (this component's other call
@@ -44,37 +51,32 @@ export interface GateRulesSectionProps {
    * Reorder (whose order IS the evaluation order across the WHOLE catalog) is
    * disabled while filtered, same reasoning as the existing decision filter.
    */
-  ownerSubsystem?: SubsystemId;
+  department?: DepartmentId;
   /**
-   * Visual language (D7, docs/hud2chat/DECISIONS.md) — threaded to every
-   * `HudPanel` this component renders (its own two panels plus
-   * {@link SystemFloorPanel}). Defaults to `"hud"`, so the one consumer that
-   * must stay pixel-identical — `GatesTab` inside the Chat UI's subsystem
-   * drawer (Phase 87, F7 seam) — is unaffected by this prop's existence. The
-   * Settings "Pravidla schvalování" tab (F1) opts in with `surface="glass"`
-   * (the standalone `/gates` page did too, F7, until F10 deleted it, O8).
+   * ZB-08: `/policy/gates?section=global` shows the floor in its own `floor`
+   * section — set this to skip the embedded {@link SystemFloorPanel} so it
+   * isn't rendered twice. Every other call site (the department drawer's
+   * Gates tab, the pre-ZB-08 Settings tab) keeps today's behavior.
    */
-  surface?: "hud" | "glass";
+  hideFloor?: boolean;
 }
 
 /**
  * The global gate-rule catalog body — the editable list of approval rules with the
  * locked system floor above it. Content only (no page chrome), so it serves the
- * "Pravidla schvalování" tab in Settings AND (Phase 87) a subsystem's Gates tab
- * via `ownerSubsystem` (the standalone `/gates` page was a third consumer until
+ * "Pravidla schvalování" tab in Settings AND (Phase 87) a department's Gates tab
+ * via `department` (the standalone `/gates` page was a third consumer until
  * F10 deleted it, O8 — `GateRulesSection` and `SystemFloorPanel` themselves
  * stayed). Owns its own data + modal state;
  * `useGateRulesQuery` only fires once this mounts, so the Settings tab loads gate
  * rules lazily (the TabPanel unmounts inactive panels).
  */
-export function GateRulesSection({ ownerSubsystem, surface }: GateRulesSectionProps = {}) {
+export function GateRulesSection({ department, hideFloor }: GateRulesSectionProps = {}) {
   const t = useTranslations("gates");
   const tk = useTranslations();
   const rulesQuery = useGateRulesQuery();
   const allRules = rulesQuery.data ?? [];
-  const rules = ownerSubsystem
-    ? allRules.filter((r) => r.ownerSubsystem === ownerSubsystem)
-    : allRules;
+  const rules = department ? allRules.filter((r) => r.department === department) : allRules;
   const { data: agents = [] } = useAgentsQuery();
   const { data: skills = [] } = useSkillsQuery();
 
@@ -94,8 +96,8 @@ export function GateRulesSection({ ownerSubsystem, surface }: GateRulesSectionPr
   const ids = rules.map((r) => r.id);
   // Reordering submits a full-catalog id permutation (`GateRulesStorageService.reorder`
   // 422s on anything else) — `ids` above is only the FILTERED subset once
-  // `ownerSubsystem` is set, so reorder must stay off exactly like the decision filter.
-  const canReorder = filter === null && !ownerSubsystem;
+  // `department` is set, so reorder must stay off exactly like the decision filter.
+  const canReorder = filter === null && !department;
 
   const usersFor = (ruleId: string): { agents: RuleUser[]; skills: RuleUser[] } => ({
     agents: agents
@@ -118,16 +120,14 @@ export function GateRulesSection({ ownerSubsystem, surface }: GateRulesSectionPr
   const save = (input: GlobalGateRuleInput) => {
     const done = { onSuccess: () => setEditing(null) };
     if (editing && editing !== "new") {
-      // RuleModal's form has no ownerSubsystem field (the sentence-builder
+      // RuleModal's form has no department field (the sentence-builder
       // AUTHORING UI is deferred, per the Phase 87 plan) — its `input` never
       // carries the tag, so an edit must re-attach whatever tag the rule
       // already had or saving would silently un-tag it.
-      const body = editing.ownerSubsystem
-        ? { ...input, ownerSubsystem: editing.ownerSubsystem }
-        : input;
+      const body = editing.department ? { ...input, department: editing.department } : input;
       update.mutate({ params: { id: editing.id }, body }, done);
     } else {
-      const body = ownerSubsystem ? { ...input, ownerSubsystem } : input;
+      const body = department ? { ...input, department } : input;
       create.mutate({ body }, done);
     }
   };
@@ -135,7 +135,7 @@ export function GateRulesSection({ ownerSubsystem, surface }: GateRulesSectionPr
   return (
     <Stack gap="250">
       {/* decision filter tabs */}
-      <HudPanel padding="200" surface={surface}>
+      <Panel padding="200">
         <Stack wrap align="center" direction="row" gap="100">
           <ButtonGroup
             deselectable
@@ -155,21 +155,21 @@ export function GateRulesSection({ ownerSubsystem, surface }: GateRulesSectionPr
             </Typography>
           </Stack>
         </Stack>
-      </HudPanel>
+      </Panel>
 
       {/* hierarchy note: system floor → this catalog → agent/skill rules */}
-      <HudPanel padding="150" surface={surface}>
+      <Panel padding="150">
         <Stack align="center" direction="row" gap="100">
           <Icon name="bolt" size="xs" tone="accent" />
           <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
             {t("hierarchyNote")}
           </Typography>
         </Stack>
-      </HudPanel>
+      </Panel>
 
       {/* The locked POLICY.md floor — the structural guarantee, made visible above the
           editable catalog (Law 1: agents can only harden it; Law 4: never talked around). */}
-      <SystemFloorPanel surface={surface} />
+      {!hideFloor && <SystemFloorPanel />}
 
       {rulesQuery.isPending ? (
         <QueryLoading />

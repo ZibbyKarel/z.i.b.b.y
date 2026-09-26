@@ -3,6 +3,7 @@ import {
   type Attachment,
   type ClassificationTrace,
   type CreateTaskInput,
+  type DepartmentId,
   type ScheduledTask,
   ScheduledTaskSchema,
   type TaskOutcome,
@@ -12,6 +13,23 @@ import { EntityFileStore, collisionResistantId } from "../shared/file-storage";
 
 /** A create input carrying its attachment set's resolved metadata (Task 6). */
 type CreateTaskInputWithAttachments = CreateTaskInput & { attachments?: Attachment[] };
+
+/**
+ * ZB-04a — the provenance fields every persisted-shape builder below carries
+ * straight from the create input: `source` (O-18, resolved by the caller —
+ * `TaskSchedulerService.createTask` — before any of these run) and
+ * `parentTaskId`/`chain` (D-005, schema-only until ZB-05a dispatches a chain
+ * step, but persisted here so a hand-built fixture round-trips them).
+ */
+function provenanceFields(
+  input: CreateTaskInputWithAttachments,
+): Pick<ScheduledTask, "source" | "parentTaskId" | "chain"> {
+  return {
+    ...(input.source ? { source: input.source } : {}),
+    ...(input.parentTaskId ? { parentTaskId: input.parentTaskId } : {}),
+    ...(input.chain ? { chain: input.chain } : {}),
+  };
+}
 
 export const TASKS_DIR = "TASKS_DIR";
 
@@ -90,6 +108,7 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
       // Phase 11: a scheduled loop carries its `{ kind: "goal", id }` target so the
       // tick re-dispatches to it instead of re-classifying (goals are never routed).
       ...(input.target ? { target: input.target } : {}),
+      ...provenanceFields(input),
     };
     await this.writeEntity(task);
     return task;
@@ -116,6 +135,7 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
       ...(projectId ? { projectId } : {}),
       ...(input.attachmentSetId ? { attachmentSetId: input.attachmentSetId } : {}),
       ...(input.output ? { output: input.output } : {}),
+      ...provenanceFields(input),
     };
   }
 
@@ -164,9 +184,81 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
       ...(input.attachmentSetId ? { attachmentSetId: input.attachmentSetId } : {}),
       ...(input.output ? { output: input.output } : {}),
       ...(target ? { target } : {}),
+      ...provenanceFields(input),
     };
     await this.writeEntity(task);
     return task;
+  }
+
+  /**
+   * ZB-05a / D-005 — persist a chain's PARENT task: no run of its own (`runRef`
+   * absent) — its state is derived from its subtasks (`TaskParentsService`). Status
+   * `"dispatched"` (no outcome yet) reads as `"working"` there until the last hop
+   * finishes AND `markChainEnded` stamps `chainEndedAt`.
+   */
+  async createChainParent(
+    id: string,
+    input: CreateTaskInputWithAttachments,
+    projectId: string | undefined,
+    now: number,
+    target: TaskTarget,
+  ): Promise<ScheduledTask> {
+    const task: ScheduledTask = {
+      id,
+      title: input.title ?? "",
+      text: input.text,
+      paths: input.paths ?? [],
+      toolGrants: input.toolGrants ?? [],
+      attachments: input.attachments ?? [],
+      scheduledAt: now,
+      status: "dispatched",
+      createdAt: new Date(now).toISOString(),
+      target,
+      ...(projectId ? { projectId } : {}),
+      ...provenanceFields(input),
+    };
+    await this.writeEntity(task);
+    return task;
+  }
+
+  /**
+   * ZB-05a / D-005 — a chain target that has nothing to dispatch (missing or
+   * disabled): persisted straight to `failed` with `reason` as the visible error —
+   * never a silent no-op (Law 5).
+   */
+  async createChainParentFailed(
+    id: string,
+    input: CreateTaskInputWithAttachments,
+    projectId: string | undefined,
+    now: number,
+    target: TaskTarget,
+    reason: string,
+  ): Promise<ScheduledTask> {
+    const task: ScheduledTask = {
+      id,
+      title: input.title ?? "",
+      text: input.text,
+      paths: input.paths ?? [],
+      toolGrants: input.toolGrants ?? [],
+      attachments: input.attachments ?? [],
+      scheduledAt: now,
+      status: "failed",
+      createdAt: new Date(now).toISOString(),
+      error: reason,
+      target,
+      ...(projectId ? { projectId } : {}),
+      ...provenanceFields(input),
+    };
+    await this.writeEntity(task);
+    return task;
+  }
+
+  /** ZB-05a — stamp the chain-ended marker on a chain's parent task. */
+  async markChainEnded(id: string): Promise<ScheduledTask> {
+    return this.updateEntity(id, (existing) => ({
+      ...existing,
+      chainEndedAt: new Date().toISOString(),
+    }));
   }
 
   /**
@@ -207,7 +299,7 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
    *
    * `markDispatched` already writes the trace for the UNDIRECTED classify path,
    * but a caller that classified the task ITSELF and then dispatched it with an
-   * `explicitTarget` (the roadmap gate's subsystem-first release) never reaches
+   * `explicitTarget` (the roadmap gate's department-first release) never reaches
    * that branch — `TaskSchedulerService.dispatch` only builds a trace when it
    * did the classifying. Without this the run detail's classification panel goes
    * blank for exactly the runs whose routing is most worth explaining.
@@ -260,6 +352,7 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
       ...(projectId ? { projectId } : {}),
       ...(input.attachmentSetId ? { attachmentSetId: input.attachmentSetId } : {}),
       ...(input.output ? { output: input.output } : {}),
+      ...provenanceFields(input),
     };
     await this.writeEntity(task);
     return task;
@@ -323,6 +416,8 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
     projectId?: string,
     /** F2c — the switchboard's stage-1 classification trace (additive, optional). */
     classification?: ClassificationTrace,
+    /** ZB-04a / O-06 — the dispatched unit's owning department (see `ownerDepartmentOf`). */
+    department?: DepartmentId,
   ): Promise<ScheduledTask> {
     const task: ScheduledTask = {
       id,
@@ -340,6 +435,8 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
       ...(input.attachmentSetId ? { attachmentSetId: input.attachmentSetId } : {}),
       ...(input.output ? { output: input.output } : {}),
       ...(classification ? { classification } : {}),
+      ...(department ? { department } : {}),
+      ...provenanceFields(input),
     };
     await this.writeEntity(task);
     return task;
@@ -399,6 +496,8 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
     target: TaskTarget,
     /** F2c — the switchboard's stage-1 classification trace (additive, optional). */
     classification?: ClassificationTrace,
+    /** ZB-04a / O-06 — the dispatched unit's owning department (see `ownerDepartmentOf`). */
+    department?: DepartmentId,
   ): Promise<ScheduledTask> {
     return this.updateEntity(id, (existing) => ({
       ...existing,
@@ -406,6 +505,7 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
       runRef,
       target,
       ...(classification ? { classification } : {}),
+      ...(department ? { department } : {}),
     }));
   }
 

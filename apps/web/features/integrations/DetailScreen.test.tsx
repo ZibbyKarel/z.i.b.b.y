@@ -2,7 +2,7 @@ import { renderWithProviders as render, screen } from "../../test/render";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Integration } from "@zibby/contracts";
-import { ImmersivePageTestId } from "../../components/layout/ImmersivePage/ImmersivePage";
+import { BreadcrumbTestId } from "@zibby/design-system";
 import { DetailScreen, IntegrationDetailScreenTestId } from "./DetailScreen";
 import { IntegrationFormTestId } from "./components/IntegrationFormFields";
 
@@ -65,13 +65,13 @@ describe("integrations DetailScreen (N4h grammar — closes the series)", () => 
   });
 
   // F6 (docs/plans/hud2chat-F6-delivery-entities.md): the first dynamic
-  // `backHref` in this migration — two levels deep, it must return to ITS
+  // back link in this migration — two levels deep, it must return to ITS
   // project's integrations tab, not to `/projects` and not to `/chat`.
-  it("the immersive back button returns to its project's integrations tab", () => {
+  it("the breadcrumb back link returns to its project's integrations tab", () => {
     render(<DetailScreen integrationId="team-slack" projectId="acme" />);
-    expect(screen.getByTestId(ImmersivePageTestId.Back)).toHaveAttribute(
+    expect(screen.getByTestId(`${BreadcrumbTestId.Item}-0`)).toHaveAttribute(
       "href",
-      "/projects/acme?tab=integrations",
+      "/work/projects/acme/integrations",
     );
   });
 
@@ -127,6 +127,6 @@ describe("integrations DetailScreen (N4h grammar — closes the series)", () => 
       { params: { id: "team-slack" } },
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     );
-    expect(push).toHaveBeenCalledWith("/projects/acme?tab=integrations");
+    expect(push).toHaveBeenCalledWith("/work/projects/acme/integrations");
   });
 });

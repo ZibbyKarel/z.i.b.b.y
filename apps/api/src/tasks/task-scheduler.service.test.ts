@@ -5,6 +5,7 @@ import type { AgentRun, PipelineRun } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ActivityInput } from "../activity/activity-log.service";
 import type { BudgetCheck } from "../budget/budget.service";
+import { NoEmployeeError } from "../employees/employees.errors";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { AttachmentStorageService } from "./attachment-storage.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
@@ -66,12 +67,23 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     onRunStatus: ReturnType<typeof vi.fn>;
     get: ReturnType<typeof vi.fn>;
   };
-  /** Phase 91: the pipeline definition store, for subsystem-target resolution
-   *  (`ownerSubsystem` lookup). Empty by default — no test in this file dispatches
-   *  a subsystem target; `task-scheduler.subsystem-dispatch.test.ts` covers those. */
+  /** Phase 91: the pipeline definition store, for department-target resolution
+   *  (`department` lookup). Empty by default — no test in this file dispatches
+   *  a department target; `task-scheduler.department-dispatch.test.ts` covers those. */
   let pipelinesStore: { list: ReturnType<typeof vi.fn> };
-  /** F2b — {@link TaskSchedulerService}'s owned-agents lookup for subsystem resolution. */
+  /** F2b — {@link TaskSchedulerService}'s owned-agents lookup for department resolution. */
   let agentsStore: { listActive: ReturnType<typeof vi.fn> };
+  /**
+   * D-015/D-017 — the employees store double: `resolveDepartmentTargetOrNull`'s
+   * OWNERSHIP read (`list`) plus `acquireEmployeeForDispatch`'s any-department
+   * fallback (`listActiveByPositionAnyDepartment`). Empty by default (no employee
+   * anywhere → every existing dispatch stays unleased); F2b tests that need an
+   * owned agent set `.list` to a matching employee fixture.
+   */
+  let employeesStore: {
+    list: ReturnType<typeof vi.fn>;
+    listActiveByPositionAnyDepartment: ReturnType<typeof vi.fn>;
+  };
   let goalRunner: {
     start: ReturnType<typeof vi.fn>;
     onRunStatus: ReturnType<typeof vi.fn>;
@@ -79,8 +91,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
   };
   let classifier: {
     classify: ReturnType<typeof vi.fn>;
-    /** Phase 91 — the subsystem-scoped classify seam. */
-    classifyWithinSubsystem: ReturnType<typeof vi.fn>;
+    /** Phase 91 — the department-scoped classify seam. */
+    classifyWithinDepartment: ReturnType<typeof vi.fn>;
   };
   let fakeLimits: {
     windowExhausted: ReturnType<typeof vi.fn>;
@@ -110,6 +122,16 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
   let systemConfig: ReturnType<typeof fakeSystemConfigStore>;
   let attachmentStorage: AttachmentStorageService;
   let activity: { record: ReturnType<typeof vi.fn<(input: ActivityInput) => Promise<void>>> };
+  /**
+   * ZB-05a — `HandoffService` is resolved lazily via `ModuleRef` (see
+   * `TaskSchedulerService`'s own doc comment on the ctor param). No test in this
+   * file exercises a real chain hop end to end (that's
+   * `task-scheduler.chain-dispatch.test.ts`); `resolveChain` defaults to "not
+   * found" so a stray `{ kind: "chain" }` target still resolves deterministically
+   * rather than throwing on an unconfigured double.
+   */
+  let fakeHandoff: { resolveChain: ReturnType<typeof vi.fn>; evaluate: ReturnType<typeof vi.fn> };
+  let fakeModuleRef: { get: ReturnType<typeof vi.fn> };
 
   /** A fixed near-future window-reset epoch the limit guard defers to. */
   const RESET_AT = Date.parse("2026-06-13T04:30:00.000Z");
@@ -144,6 +166,10 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     };
     pipelinesStore = { list: vi.fn(async () => []) };
     agentsStore = { listActive: vi.fn(async () => []) };
+    employeesStore = {
+      list: vi.fn(async () => []),
+      listActiveByPositionAnyDepartment: vi.fn(async () => []),
+    };
     goalRunner = {
       start: vi.fn(async () => ({ goalRunId: "goal_1" })),
       onRunStatus: vi.fn(() => () => {}),
@@ -157,12 +183,12 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         matchedTerms: [],
         candidates: [{ kind: "agent", id: "writer", name: "Writer" }],
       })),
-      // Phase 91: no test in THIS describe block dispatches a subsystem target
-      // (see the "Phase 91 — subsystem dispatch" describe below); a call here
+      // Phase 91: no test in THIS describe block dispatches a department target
+      // (see the "Phase 91 — department dispatch" describe below); a call here
       // would be a scope-guard violation, so the default throws loudly rather
       // than silently returning something plausible.
-      classifyWithinSubsystem: vi.fn(async () => {
-        throw new Error("classifyWithinSubsystem should not be called by this describe block");
+      classifyWithinDepartment: vi.fn(async () => {
+        throw new Error("classifyWithinDepartment should not be called by this describe block");
       }),
     };
 
@@ -190,6 +216,11 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       reject: async () => {},
     };
     fakeGates = { floor: async () => [], evaluate: vi.fn(() => ({ decision: "allow" })) };
+    fakeHandoff = {
+      resolveChain: vi.fn(async () => null),
+      evaluate: vi.fn(async () => ({ action: "none" })),
+    };
+    fakeModuleRef = { get: vi.fn(() => fakeHandoff) };
     // Limits double (Phase 9): headroom by default; a test flips windowExhausted to
     // exercise the limit guard. resolveResumeAt echoes a fixed near-future reset.
     fakeLimits = {
@@ -205,6 +236,21 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       pipelineRunner as never,
       pipelinesStore as never,
       agentsStore as never,
+      // D-017: no fixture in this file gives a task a department context AND an
+      // agent-position lease scenario worth asserting on the allocator itself
+      // (that lives in employee-allocator.test.ts / employees-dispatch tests) —
+      // acquire always misses (falls through to the any-department ladder,
+      // itself empty by default) so every existing call keeps its unleased
+      // (pre-D-017) `agentRunner.start` argument list.
+      {
+        acquire: vi.fn(async () => {
+          throw new NoEmployeeError("dev", "unused");
+        }),
+        release: vi.fn(),
+        isBusy: vi.fn(() => false),
+        busy: vi.fn(() => new Map()),
+      } as never,
+      employeesStore as never,
       goalRunner as never,
       fakeLogger as never,
       fakeTrace as never,
@@ -226,6 +272,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       // F6c watcher-health registry double — registration is exercised in the
       // base/e2e specs, not here.
       { register: () => {} } as never,
+      undefined,
+      fakeModuleRef as never,
     );
     service.onModuleInit();
   });
@@ -280,6 +328,44 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     expect(persisted.outcome).toBeUndefined();
     // Pure intent (no target) is exactly what the classifier routes.
     expect(classifier.classify).toHaveBeenCalledTimes(1);
+  });
+
+  describe("ZB-05a — a missing/disabled chain target is a clear error outcome, never a silent no-op", () => {
+    it('persists the parent as a visible "failed" outcome when the chain does not resolve', async () => {
+      // `fakeHandoff.resolveChain` defaults to `null` (see beforeEach) — the
+      // scheduler must not throw (D-019 is superseded): it persists a record the
+      // operator can see, exactly like a held/queued task.
+      const result = await service.createTask({
+        text: "hand this off",
+        target: { kind: "chain", id: "c1", name: "Chain" },
+      });
+      expect(result.outcome).toBe("scheduled");
+      if (result.outcome !== "scheduled") return;
+      expect(result.task.status).toBe("failed");
+      expect(result.task.error).toMatch(/chain/i);
+      expect(result.task.target).toEqual({ kind: "chain", id: "c1", name: "Chain" });
+      const persisted = await storage.get(result.task.id);
+      expect(persisted.status).toBe("failed");
+    });
+
+    it("disabled resolves the same way as missing", async () => {
+      fakeHandoff.resolveChain = vi.fn(async () => ({
+        id: "c1",
+        label: "Chain",
+        description: "A test chain.",
+        entry: "rnd",
+        steps: [],
+        enabled: false,
+      }));
+      const result = await service.createTask({
+        text: "hand this off",
+        target: { kind: "chain", id: "c1", name: "Chain" },
+      });
+      expect(result.outcome).toBe("scheduled");
+      if (result.outcome !== "scheduled") return;
+      expect(result.task.status).toBe("failed");
+      expect(result.task.error).toMatch(/disabled/i);
+    });
   });
 
   describe("Phase 4a — orchestrator-fallback telemetry", () => {
@@ -419,6 +505,21 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       pipelineRunner as never,
       pipelinesStore as never,
       agentsStore as never,
+      // D-017: no fixture in this file gives a task a department context AND an
+      // agent-position lease scenario worth asserting on the allocator itself
+      // (that lives in employee-allocator.test.ts / employees-dispatch tests) —
+      // acquire always misses (falls through to the any-department ladder,
+      // itself empty by default) so every existing call keeps its unleased
+      // (pre-D-017) `agentRunner.start` argument list.
+      {
+        acquire: vi.fn(async () => {
+          throw new NoEmployeeError("dev", "unused");
+        }),
+        release: vi.fn(),
+        isBusy: vi.fn(() => false),
+        busy: vi.fn(() => new Map()),
+      } as never,
+      employeesStore as never,
       goalRunner as never,
       fakeLogger as never,
       fakeTrace as never,
@@ -444,6 +545,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       attachmentStorage,
       { register: () => {} } as never,
       [refProvider] as never,
+      fakeModuleRef as never,
     );
 
     const removed = await svcWithProvider.sweepOrphanAttachmentSets(
@@ -872,7 +974,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     expect(call.metrics).toBeUndefined();
   });
 
-  describe("Phase 91 — subsystem dispatch (0/1/N owned pipelines)", () => {
+  describe("Phase 91 — department dispatch (0/1/N owned pipelines)", () => {
     /** A minimal pipeline definition fixture — only the fields the resolver reads. */
     function pipelineDef(id: string, name: string) {
       // `outputs` mirrors `PipelineSchema`'s `default([])` and declares a `pr` sink —
@@ -881,7 +983,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       return {
         id,
         name,
-        ownerSubsystem: "forge",
+        department: "dev",
         desc: "",
         phases: [],
         outputs: [{ type: "pr", from: "out.md" }],
@@ -893,12 +995,12 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       const result = await service.createTask({
         text: "ship it",
         title: "Ship",
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
       });
       expect(result.outcome).toBe("dispatched");
       if (result.outcome !== "dispatched") return;
       expect(classifier.classify).not.toHaveBeenCalled();
-      expect(classifier.classifyWithinSubsystem).not.toHaveBeenCalled();
+      expect(classifier.classifyWithinDepartment).not.toHaveBeenCalled();
       expect(pipelineRunner.start).toHaveBeenCalledWith(
         "delivery",
         result.task.id,
@@ -907,9 +1009,9 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         undefined,
         undefined,
       );
-      // The resolved target IS a concrete pipeline target — a subsystem target
-      // never reaches persistence (its "via <subsystem>" attribution rides on the
-      // dispatched pipeline's own `ownerSubsystem`, not a new run-level field).
+      // The resolved target IS a concrete pipeline target — a department target
+      // never reaches persistence (its "via <department>" attribution rides on the
+      // dispatched pipeline's own `department`, not a new run-level field).
       expect(result.task.target).toEqual({
         kind: "pipeline",
         id: "delivery",
@@ -924,7 +1026,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         pipelineDef("delivery", "Delivery"),
         pipelineDef("build-feature", "Build Feature"),
       ]);
-      classifier.classifyWithinSubsystem.mockResolvedValue({
+      classifier.classifyWithinDepartment.mockResolvedValue({
         target: { kind: "pipeline", id: "build-feature", name: "Build Feature" },
         confidence: 0.9,
         reason: "matched",
@@ -937,14 +1039,14 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       const result = await service.createTask({
         text: "spec out the new feature",
         title: "Spec",
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
       });
       expect(result.outcome).toBe("dispatched");
       if (result.outcome !== "dispatched") return;
       expect(classifier.classify).not.toHaveBeenCalled();
-      expect(classifier.classifyWithinSubsystem).toHaveBeenCalledWith(
+      expect(classifier.classifyWithinDepartment).toHaveBeenCalledWith(
         { text: "spec out the new feature", paths: [] },
-        "forge",
+        "dev",
       );
       expect(pipelineRunner.start).toHaveBeenCalledWith(
         "build-feature",
@@ -956,16 +1058,16 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       );
     });
 
-    it("low-confidence N-owned verdict still lands INSIDE the subsystem, never the orchestrator (asserted via the classifier stub's own contract)", async () => {
+    it("low-confidence N-owned verdict still lands INSIDE the department, never the orchestrator (asserted via the classifier stub's own contract)", async () => {
       pipelinesStore.list.mockResolvedValue([
         pipelineDef("delivery", "Delivery"),
         pipelineDef("build-feature", "Build Feature"),
       ]);
-      // classifyWithinSubsystem itself is responsible for the never-orchestrator
+      // classifyWithinDepartment itself is responsible for the never-orchestrator
       // fallback rule (see task-classifier.service.test.ts's "low-confidence
       // fallback" case) — here we only assert the scheduler faithfully dispatches
       // whatever concrete pipeline target the scoped classify hands back.
-      classifier.classifyWithinSubsystem.mockResolvedValue({
+      classifier.classifyWithinDepartment.mockResolvedValue({
         target: { kind: "pipeline", id: "delivery", name: "Delivery" },
         confidence: 0,
         reason: "no confident match — first owned pipeline",
@@ -978,7 +1080,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       const result = await service.createTask({
         text: "xyzzy — no signal",
         title: "T",
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
       });
       expect(result.outcome).toBe("dispatched");
       if (result.outcome !== "dispatched") return;
@@ -998,25 +1100,25 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         service.createTask({
           text: "do anything",
           title: "T",
-          target: { kind: "subsystem", id: "forge", name: "Forge" },
+          target: { kind: "department", id: "dev", name: "Dev" },
         }),
-      ).rejects.toThrow(/Forge.*nemá žádnou pipeline/);
+      ).rejects.toThrow(/Dev.*nemá žádnou pipeline/);
       expect(classifier.classify).not.toHaveBeenCalled();
-      expect(classifier.classifyWithinSubsystem).not.toHaveBeenCalled();
+      expect(classifier.classifyWithinDepartment).not.toHaveBeenCalled();
       expect(pipelineRunner.start).not.toHaveBeenCalled();
       expect(agentRunner.start).not.toHaveBeenCalled();
       expect(agentRunner.startOrchestrator).not.toHaveBeenCalled();
     });
 
-    it("an explicit subsystem target never reaches the top-level classifier — 1-owned direct-dispatch path", async () => {
+    it("an explicit department target never reaches the top-level classifier — 1-owned direct-dispatch path", async () => {
       // Belt-and-braces on top of the first test above: the scope guard's whole
-      // point is that naming a subsystem is a hard override, structurally
+      // point is that naming a department is a hard override, structurally
       // incapable of falling through to the undirected top-level classify().
       pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery")]);
       await service.createTask({
         text: "ship it",
         title: "Ship",
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
       });
       expect(classifier.classify).not.toHaveBeenCalled();
     });
@@ -1031,7 +1133,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       return {
         id,
         name,
-        ownerSubsystem: "forge",
+        department: "dev",
         desc: "",
         phases: [],
         outputs: [{ type: "pr", from: "out.md" }],
@@ -1039,21 +1141,37 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     }
     /** A minimal agent definition fixture — only the fields the resolver reads. */
     function agentDef(id: string, name: string) {
-      return { id, name, ownerSubsystem: "forge" };
+      return { id, name, department: "dev" };
+    }
+    /**
+     * D-015: an active employee holding `agentId` in "dev" — `resolveDepartmentTargetOrNull`'s
+     * ownership read is now employees, not `Agent.department` (kept on `agentDef`
+     * above only as an unused legacy field on the fixture shape).
+     */
+    function employeeDef(agentId: string) {
+      return {
+        id: `employee_${agentId}`,
+        name: agentId,
+        agentId,
+        department: "dev" as const,
+        status: "active" as const,
+        hiredAt: "2026-01-01T00:00:00.000Z",
+      };
     }
 
     it("1 owned agent, 0 owned pipelines → direct dispatch to the agent, the classifier is NEVER called", async () => {
       pipelinesStore.list.mockResolvedValue([]);
       agentsStore.listActive.mockResolvedValue([agentDef("coder", "Coder")]);
+      employeesStore.list.mockResolvedValue([employeeDef("coder")]);
       const result = await service.createTask({
         text: "fix the bug",
         title: "Fix",
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
       });
       expect(result.outcome).toBe("dispatched");
       if (result.outcome !== "dispatched") return;
       expect(classifier.classify).not.toHaveBeenCalled();
-      expect(classifier.classifyWithinSubsystem).not.toHaveBeenCalled();
+      expect(classifier.classifyWithinDepartment).not.toHaveBeenCalled();
       expect(agentRunner.start).toHaveBeenCalledWith(
         "coder",
         "fix the bug",
@@ -1068,10 +1186,11 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       );
     });
 
-    it("1 owned pipeline + 1 owned agent (2 units) → classifyWithinSubsystem is invoked, restricted to the owned catalog", async () => {
+    it("1 owned pipeline + 1 owned agent (2 units) → classifyWithinDepartment is invoked, restricted to the owned catalog", async () => {
       pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery")]);
       agentsStore.listActive.mockResolvedValue([agentDef("coder", "Coder")]);
-      classifier.classifyWithinSubsystem.mockResolvedValue({
+      employeesStore.list.mockResolvedValue([employeeDef("coder")]);
+      classifier.classifyWithinDepartment.mockResolvedValue({
         target: { kind: "agent", id: "coder", name: "Coder" },
         confidence: 0.9,
         reason: "matched",
@@ -1084,13 +1203,13 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       const result = await service.createTask({
         text: "fix a small bug",
         title: "Fix",
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
       });
       expect(result.outcome).toBe("dispatched");
       if (result.outcome !== "dispatched") return;
-      expect(classifier.classifyWithinSubsystem).toHaveBeenCalledWith(
+      expect(classifier.classifyWithinDepartment).toHaveBeenCalledWith(
         { text: "fix a small bug", paths: [] },
-        "forge",
+        "dev",
       );
       expect(agentRunner.start).toHaveBeenCalledWith(
         "coder",
@@ -1114,12 +1233,12 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
    * to open a PR could still resolve to an agent that cannot open one — the misroute
    * that put a pnpm/Turborepo monorepo skeleton on `documentation-engineer`.
    */
-  describe("a required PR sink makes subsystem resolution a pipeline-only sizing choice", () => {
+  describe("a required PR sink makes department resolution a pipeline-only sizing choice", () => {
     function pipelineDef(id: string, name: string, deliversPr = true, complexity = "standard") {
       return {
         id,
         name,
-        ownerSubsystem: "forge",
+        department: "dev",
         desc: "",
         phases: [],
         complexity,
@@ -1127,7 +1246,18 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       };
     }
     function agentDef(id: string, name: string) {
-      return { id, name, ownerSubsystem: "forge" };
+      return { id, name, department: "dev" };
+    }
+    /** D-015: an active employee holding `agentId` in "dev" — see the F2b describe's twin. */
+    function employeeDef(agentId: string) {
+      return {
+        id: `employee_${agentId}`,
+        name: agentId,
+        agentId,
+        department: "dev" as const,
+        status: "active" as const,
+        hiredAt: "2026-01-01T00:00:00.000Z",
+      };
     }
 
     it("resolves to the sole PR-capable pipeline WITHOUT classifying, even though the roster has 2 units", async () => {
@@ -1138,11 +1268,11 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       const result = await service.createTask({
         text: "Monorepo & CLI skeleton — set up pnpm workspaces + Turborepo",
         title: "Skeleton",
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
         output: { type: "pr" },
       });
       expect(result.outcome).toBe("dispatched");
-      expect(classifier.classifyWithinSubsystem).not.toHaveBeenCalled();
+      expect(classifier.classifyWithinDepartment).not.toHaveBeenCalled();
       expect(agentRunner.start).not.toHaveBeenCalled();
       expect(pipelineRunner.start).toHaveBeenCalledWith(
         "delivery",
@@ -1154,13 +1284,13 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       );
     });
 
-    it("passes the sink into classifyWithinSubsystem when 2+ units stay eligible", async () => {
+    it("passes the sink into classifyWithinDepartment when 2+ units stay eligible", async () => {
       pipelinesStore.list.mockResolvedValue([
         pipelineDef("quick-fix", "Quick Fix", true, "light"),
         pipelineDef("delivery", "Delivery", true, "deep"),
       ]);
       agentsStore.listActive.mockResolvedValue([agentDef("documentation-engineer", "Docs")]);
-      classifier.classifyWithinSubsystem.mockResolvedValue({
+      classifier.classifyWithinDepartment.mockResolvedValue({
         target: { kind: "pipeline", id: "delivery", name: "Delivery" },
         confidence: 0.9,
         reason: "multi-surface scaffolding",
@@ -1173,16 +1303,16 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       await service.createTask({
         text: "prove the dev-loop mechanism on a real shop",
         title: "Spike",
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
         output: { type: "pr" },
       });
-      expect(classifier.classifyWithinSubsystem).toHaveBeenCalledWith(
+      expect(classifier.classifyWithinDepartment).toHaveBeenCalledWith(
         {
           text: "prove the dev-loop mechanism on a real shop",
           paths: [],
           output: { type: "pr" },
         },
-        "forge",
+        "dev",
       );
     });
 
@@ -1197,10 +1327,10 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       await service.createTask({
         text: "implement it",
         title: "Impl",
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
         output: { type: "pr" },
       });
-      expect(classifier.classifyWithinSubsystem).not.toHaveBeenCalled();
+      expect(classifier.classifyWithinDepartment).not.toHaveBeenCalled();
       expect(pipelineRunner.start).toHaveBeenCalledWith(
         "delivery",
         expect.any(String),
@@ -1219,7 +1349,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         pipelineDef("delivery", "Delivery", true, "deep"),
       ]);
       agentsStore.listActive.mockResolvedValue([]);
-      classifier.classifyWithinSubsystem.mockResolvedValue({
+      classifier.classifyWithinDepartment.mockResolvedValue({
         target: { kind: "pipeline", id: "delivery", name: "Delivery" },
         confidence: 0.9,
         reason: "deep",
@@ -1233,17 +1363,17 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         text: "Monorepo skeleton\n\n---\nZIBBY ROADMAP CONTEXT (system-generated …)\nEpic: Phase 0",
         routingText: "Monorepo skeleton",
         title: "Skeleton",
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
         output: { type: "pr" },
       });
-      expect(classifier.classifyWithinSubsystem).toHaveBeenCalledWith(
+      expect(classifier.classifyWithinDepartment).toHaveBeenCalledWith(
         { text: "Monorepo skeleton", paths: [], output: { type: "pr" } },
-        "forge",
+        "dev",
       );
     });
 
     it("persists the stage-2 rationale on the trace, including the leg and the constraint", async () => {
-      // The half of the trace that used to be discarded: `resolveSubsystemTargetOrNull`
+      // The half of the trace that used to be discarded: `resolveDepartmentTargetOrNull`
       // returned `routing?.target ?? primary`, so the decision that picks the RUNNING
       // unit left no record — which is what made the original misroute undiagnosable.
       pipelinesStore.list.mockResolvedValue([
@@ -1252,7 +1382,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       ]);
       agentsStore.listActive.mockResolvedValue([agentDef("documentation-engineer", "Docs")]);
       classifier.classify.mockResolvedValue({
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
         confidence: 0.8,
         reason: "delivery work",
         matchedTerms: ["code"],
@@ -1262,7 +1392,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         paths: [],
         leg: "router",
       });
-      classifier.classifyWithinSubsystem.mockResolvedValue({
+      classifier.classifyWithinDepartment.mockResolvedValue({
         target: { kind: "pipeline", id: "delivery", name: "Delivery" },
         confidence: 0.86,
         reason: "multi-surface scaffolding",
@@ -1284,7 +1414,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       expect(result.outcome).toBe("dispatched");
       if (result.outcome !== "dispatched") return;
       expect(result.task.classification).toMatchObject({
-        subsystem: "forge",
+        department: "dev",
         leg: "router",
         stage2: {
           target: { kind: "pipeline", id: "delivery" },
@@ -1300,36 +1430,37 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     it("without a PR sink the agent is still reachable — the constraint is what changes the outcome", async () => {
       pipelinesStore.list.mockResolvedValue([]);
       agentsStore.listActive.mockResolvedValue([agentDef("documentation-engineer", "Docs")]);
+      employeesStore.list.mockResolvedValue([employeeDef("documentation-engineer")]);
       const result = await service.createTask({
         text: "write the API guide",
         title: "Docs",
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
       });
       expect(result.outcome).toBe("dispatched");
       expect(agentRunner.start).toHaveBeenCalled();
     });
   });
 
-  describe("F2a — switchboard subsystem verdicts (soft stage-2 in dispatch(), never a hard error)", () => {
+  describe("F2a — switchboard department verdicts (soft stage-2 in dispatch(), never a hard error)", () => {
     /** A minimal pipeline definition fixture — only the fields the resolver reads. */
-    function pipelineDef(id: string, name: string, ownerSubsystem = "forge") {
+    function pipelineDef(id: string, name: string, department = "dev") {
       // See the `pipelineDef` above on why `outputs` has to be present.
       return {
         id,
         name,
-        ownerSubsystem,
+        department,
         desc: "",
         phases: [],
         outputs: [{ type: "pr", from: "out.md" }],
       };
     }
 
-    it("non-empty roster: an undirected subsystem verdict resolves to the owned pipeline and dispatches to it", async () => {
+    it("non-empty roster: an undirected department verdict resolves to the owned pipeline and dispatches to it", async () => {
       pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery")]);
       classifier.classify.mockResolvedValue({
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
         confidence: 0.8,
-        reason: "matches forge's mandate",
+        reason: "matches dev's mandate",
         matchedTerms: [],
         candidates: [],
       });
@@ -1338,7 +1469,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       if (result.outcome !== "dispatched") return;
       // A non-empty roster with exactly one owned pipeline resolves directly — the
       // scoped classifier is never called (mirrors the explicit-path 1-owned case).
-      expect(classifier.classifyWithinSubsystem).not.toHaveBeenCalled();
+      expect(classifier.classifyWithinDepartment).not.toHaveBeenCalled();
       expect(pipelineRunner.start).toHaveBeenCalledWith(
         "delivery",
         result.task.id,
@@ -1357,22 +1488,22 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     });
 
     it("empty roster: falls back to the orchestrator (soft — never a 422/thrown error), persists ORCHESTRATOR_TARGET, and records orchestrator-fallback", async () => {
-      pipelinesStore.list.mockResolvedValue([]); // forge owns nothing right now
+      pipelinesStore.list.mockResolvedValue([]); // dev owns nothing right now
       classifier.classify.mockResolvedValue({
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
         confidence: 0.6,
-        reason: "matches forge's mandate",
+        reason: "matches dev's mandate",
         matchedTerms: [],
         candidates: [],
       });
       const result = await service.createTask({ text: "ship something" });
       expect(result.outcome).toBe("dispatched");
       if (result.outcome !== "dispatched") return;
-      expect(classifier.classifyWithinSubsystem).not.toHaveBeenCalled();
+      expect(classifier.classifyWithinDepartment).not.toHaveBeenCalled();
       expect(agentRunner.startOrchestrator).toHaveBeenCalled();
       expect(pipelineRunner.start).not.toHaveBeenCalled();
       // The soft fallback persists the honest terminal target — never the raw
-      // subsystem verdict (that would be a lie: the subsystem never ran anything).
+      // department verdict (that would be a lie: the department never ran anything).
       expect(result.task.target).toEqual({
         kind: "orchestrator",
         name: "Orchestrator",
@@ -1384,26 +1515,26 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     });
   });
 
-  describe("F2c — classification trace persists + activity carries ownerSubsystem", () => {
+  describe("F2c — classification trace persists + activity carries department", () => {
     /** A minimal pipeline definition fixture — only the fields the resolver reads. */
-    function pipelineDef(id: string, name: string, ownerSubsystem = "forge") {
+    function pipelineDef(id: string, name: string, department = "dev") {
       // See the `pipelineDef` above on why `outputs` has to be present.
       return {
         id,
         name,
-        ownerSubsystem,
+        department,
         desc: "",
         phases: [],
         outputs: [{ type: "pr", from: "out.md" }],
       };
     }
 
-    it("an undirected subsystem verdict persists the full two-stage trace: stage1 is the raw subsystem verdict, subsystem is set, and the final target is the resolved concrete pipeline", async () => {
+    it("an undirected department verdict persists the full two-stage trace: stage1 is the raw department verdict, department is set, and the final target is the resolved concrete pipeline", async () => {
       pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery")]);
       classifier.classify.mockResolvedValue({
-        target: { kind: "subsystem", id: "forge", name: "Forge" },
+        target: { kind: "department", id: "dev", name: "Dev" },
         confidence: 0.8,
-        reason: "matches forge's mandate",
+        reason: "matches dev's mandate",
         matchedTerms: ["ship"],
         candidates: [],
       });
@@ -1411,24 +1542,24 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       expect(result.outcome).toBe("dispatched");
       if (result.outcome !== "dispatched") return;
       expect(result.task.classification?.stage1).toEqual({
-        kind: "subsystem",
-        id: "forge",
-        name: "Forge",
+        kind: "department",
+        id: "dev",
+        name: "Dev",
       });
-      expect(result.task.classification?.subsystem).toBe("forge");
+      expect(result.task.classification?.department).toBe("dev");
       expect(result.task.classification?.confidence).toBe(0.8);
       expect(result.task.classification?.matchedTerms).toEqual(["ship"]);
       expect(result.task.target?.kind).toBe("pipeline");
       expect(activity.record).toHaveBeenCalledWith(
         expect.objectContaining({
           kind: "task-dispatched",
-          refs: expect.objectContaining({ ownerSubsystem: "forge" }),
+          refs: expect.objectContaining({ department: "dev" }),
         }),
       );
     });
 
-    it("a directly-classified pipeline target (no subsystem delegation) persists a trace with NO subsystem field, and the activity's ownerSubsystem falls back to a guarded store read of the unit's own ownership", async () => {
-      pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery", "forge")]);
+    it("a directly-classified pipeline target (no department delegation) persists a trace with NO department field, and the activity's department falls back to a guarded store read of the unit's own ownership", async () => {
+      pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery", "dev")]);
       classifier.classify.mockResolvedValue({
         target: { kind: "pipeline", id: "delivery", name: "Delivery" },
         confidence: 0.9,
@@ -1444,10 +1575,10 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         id: "delivery",
         name: "Delivery",
       });
-      expect(result.task.classification?.subsystem).toBeUndefined();
+      expect(result.task.classification?.department).toBeUndefined();
       expect(activity.record).toHaveBeenCalledWith(
         expect.objectContaining({
-          refs: expect.objectContaining({ ownerSubsystem: "forge" }),
+          refs: expect.objectContaining({ department: "dev" }),
         }),
       );
     });
@@ -1513,8 +1644,8 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
         matchedTerms: [],
         candidates: [{ kind: "agent", id: "writer", name: "Writer" }],
       })),
-      classifyWithinSubsystem: vi.fn(async () => {
-        throw new Error("classifyWithinSubsystem should not be called by this describe block");
+      classifyWithinDepartment: vi.fn(async () => {
+        throw new Error("classifyWithinDepartment should not be called by this describe block");
       }),
     };
     const fakeProjects = {
@@ -1558,6 +1689,12 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
         };
       }),
     };
+    const fakeModuleRef = {
+      get: vi.fn(() => ({
+        resolveChain: vi.fn(async () => null),
+        evaluate: vi.fn(async () => ({ action: "none" })),
+      })),
+    };
 
     service = new TaskSchedulerService(
       storage,
@@ -1566,6 +1703,24 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
       pipelineRunner as never,
       pipelinesStore as never,
       agentsStore as never,
+      // D-017: no fixture in this file gives a task a department context AND an
+      // agent-position lease scenario worth asserting on the allocator itself
+      // (that lives in employee-allocator.test.ts / employees-dispatch tests) —
+      // acquire always misses (falls through to the any-department ladder,
+      // itself empty by default) so every existing call keeps its unleased
+      // (pre-D-017) `agentRunner.start` argument list.
+      {
+        acquire: vi.fn(async () => {
+          throw new NoEmployeeError("dev", "unused");
+        }),
+        release: vi.fn(),
+        isBusy: vi.fn(() => false),
+        busy: vi.fn(() => new Map()),
+      } as never,
+      {
+        list: vi.fn(async () => []),
+        listActiveByPositionAnyDepartment: vi.fn(async () => []),
+      } as never,
       goalRunner as never,
       fakeLogger as never,
       fakeTrace as never,
@@ -1583,6 +1738,8 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
       // F6c watcher-health registry double — registration is exercised in the
       // base/e2e specs, not here.
       { register: () => {} } as never,
+      undefined,
+      fakeModuleRef as never,
     );
     service.onModuleInit();
   });
@@ -1703,7 +1860,7 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
         matchedTerms: [],
         candidates: [{ kind: "agent", id: "writer", name: "Writer" }],
       })),
-      classifyWithinSubsystem: vi.fn(async () => {
+      classifyWithinDepartment: vi.fn(async () => {
         throw new Error("not exercised by this describe block");
       }),
     };
@@ -1738,6 +1895,12 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
     };
     const activity = { record: vi.fn(async (_input: ActivityInput) => {}) };
     const attachmentStorage = new AttachmentStorageService();
+    const fakeModuleRef = {
+      get: vi.fn(() => ({
+        resolveChain: vi.fn(async () => null),
+        evaluate: vi.fn(async () => ({ action: "none" })),
+      })),
+    };
 
     service = new TaskSchedulerService(
       storage,
@@ -1746,6 +1909,24 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
       pipelineRunner as never,
       pipelinesStore as never,
       agentsStore as never,
+      // D-017: no fixture in this file gives a task a department context AND an
+      // agent-position lease scenario worth asserting on the allocator itself
+      // (that lives in employee-allocator.test.ts / employees-dispatch tests) —
+      // acquire always misses (falls through to the any-department ladder,
+      // itself empty by default) so every existing call keeps its unleased
+      // (pre-D-017) `agentRunner.start` argument list.
+      {
+        acquire: vi.fn(async () => {
+          throw new NoEmployeeError("dev", "unused");
+        }),
+        release: vi.fn(),
+        isBusy: vi.fn(() => false),
+        busy: vi.fn(() => new Map()),
+      } as never,
+      {
+        list: vi.fn(async () => []),
+        listActiveByPositionAnyDepartment: vi.fn(async () => []),
+      } as never,
       goalRunner as never,
       fakeLogger as never,
       fakeTrace as never,
@@ -1763,6 +1944,8 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
       // F6c watcher-health registry double — registration is exercised in the
       // base/e2e specs, not here.
       { register: () => {} } as never,
+      undefined,
+      fakeModuleRef as never,
     );
     service.onModuleInit();
     return {
@@ -2087,7 +2270,7 @@ describe("125c — system-wide maxConcurrentRuns cap", () => {
         matchedTerms: [],
         candidates: [{ kind: "agent", id: "writer", name: "Writer" }],
       })),
-      classifyWithinSubsystem: vi.fn(async () => {
+      classifyWithinDepartment: vi.fn(async () => {
         throw new Error("not exercised by this describe block");
       }),
     };
@@ -2119,6 +2302,12 @@ describe("125c — system-wide maxConcurrentRuns cap", () => {
     };
     const activity = { record: vi.fn(async (_input: ActivityInput) => {}) };
     const attachmentStorage = new AttachmentStorageService();
+    const fakeModuleRef = {
+      get: vi.fn(() => ({
+        resolveChain: vi.fn(async () => null),
+        evaluate: vi.fn(async () => ({ action: "none" })),
+      })),
+    };
 
     service = new TaskSchedulerService(
       storage,
@@ -2127,6 +2316,24 @@ describe("125c — system-wide maxConcurrentRuns cap", () => {
       pipelineRunner as never,
       pipelinesStore as never,
       agentsStore as never,
+      // D-017: no fixture in this file gives a task a department context AND an
+      // agent-position lease scenario worth asserting on the allocator itself
+      // (that lives in employee-allocator.test.ts / employees-dispatch tests) —
+      // acquire always misses (falls through to the any-department ladder,
+      // itself empty by default) so every existing call keeps its unleased
+      // (pre-D-017) `agentRunner.start` argument list.
+      {
+        acquire: vi.fn(async () => {
+          throw new NoEmployeeError("dev", "unused");
+        }),
+        release: vi.fn(),
+        isBusy: vi.fn(() => false),
+        busy: vi.fn(() => new Map()),
+      } as never,
+      {
+        list: vi.fn(async () => []),
+        listActiveByPositionAnyDepartment: vi.fn(async () => []),
+      } as never,
       goalRunner as never,
       fakeLogger as never,
       fakeTrace as never,
@@ -2142,6 +2349,8 @@ describe("125c — system-wide maxConcurrentRuns cap", () => {
       { name: async () => null } as never,
       attachmentStorage,
       { register: () => {} } as never,
+      undefined,
+      fakeModuleRef as never,
     );
     service.onModuleInit();
   }

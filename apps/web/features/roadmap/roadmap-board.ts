@@ -147,9 +147,9 @@ export function dependentsOf(item: RoadmapItem, items: RoadmapItem[]): RoadmapIt
 }
 
 /**
- * Deterministic per-epic hue. `RoadmapItem` has no `subsystem` concept (unlike the
+ * Deterministic per-epic hue. `RoadmapItem` has no `department` concept (unlike the
  * design mock's fixture data, which hand-assigns each epic to one of five hard-coded
- * subsystems) — this hashes the epic's own `id` instead, so the same epic always
+ * departments) — this hashes the epic's own `id` instead, so the same epic always
  * renders the same tint without inventing a field the schema doesn't have. Fixed
  * saturation/lightness keeps every hue reading at a similar weight against the dark
  * HUD background (only the hue angle varies).

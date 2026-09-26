@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { IsoDateTimeSchema } from "../common.schema";
-import { SubsystemIdSchema } from "../subsystems/subsystem.schema";
+import { DepartmentIdSchema } from "../departments/department.schema";
 
 /**
  * The closed vocabulary of recordable activity (Phase 6.1). One kind per real,
@@ -80,19 +80,19 @@ export const ActivityKindSchema = z.enum([
   // Agent Factory's detector groups these by `refs.normalizedSummary` — repeated
   // escapes are the signal a missing specialist agent would resolve.
   "orchestrator-fallback",
-  // NS2 F5a/F5c — a subsystem watcher completed a scheduled scan (Tier-1, silent +
+  // NS2 F5a/F5c — a department watcher completed a scheduled scan (Tier-1, silent +
   // recorded): new findings rode a proposal note; a critical one dispatched a gated task.
-  "subsystem-scan",
+  "department-scan",
   // NS2 F7b-2. An operator-merged PR (through ZIBBY's gated endpoint) — the merge
   // loop's head; the post-merge watch rides its sha.
   "merge-completed",
   // NS2 F7b-2. The merged sha's target-branch CI resolved (green: silent Tier-1;
   // red: a gated fix task dispatched, riding taskId) or the watch window expired.
   "post-merge-outcome",
-  // Handoff A2 (design doc `docs/superpowers/specs/2026-07-22-subsystem-handoff-
+  // Handoff A2 (design doc `docs/superpowers/specs/2026-07-22-department-handoff-
   // design.md`, Part A.2). A Tier-2 `HandoffRule` matched a producer's signal and
   // dispatched a task to the resolved target — act-then-report, riding `runRef`
-  // (and `ownerSubsystem` when the target is a named subsystem). Tier-1 dispatches
+  // (and `department` when the target is a named department). Tier-1 dispatches
   // silently (no entry); a Tier-3 match instead rides `approval-requested`
   // (kind `handoff-proposal`) until the operator decides.
   "handoff",
@@ -112,6 +112,11 @@ export const ActivityKindSchema = z.enum([
   // the Sync button doesn't ride this either, since the operator already sees the
   // result directly in the response.
   "roadmap-sync",
+  // ZB-10 / O-08 (Ledger, Tier-1 — silent + recorded). The account's rolling-5h or
+  // weekly utilization crossed the operator's `warnAtRollingPct`/`warnAtWeeklyPct`
+  // (below the hard `pauseAt*` — dispatches keep flowing). Non-blocking, so it never
+  // rides `approval-requested`; the Ledger spend meter is the durable read.
+  "budget-warn",
 ]);
 export type ActivityKind = z.infer<typeof ActivityKindSchema>;
 
@@ -149,12 +154,12 @@ export const ActivityRefsSchema = z
     /** Comma-joined classifier-matched terms carried alongside `normalizedSummary`. */
     terms: z.string().optional(),
     /**
-     * F2c: the subsystem that owns the dispatched unit (its `Pipeline`/`Agent`
-     * `ownerSubsystem`), stamped on a dispatch entry when known — best-effort
+     * F2c: the department that owns the dispatched unit (its `Pipeline`/`Agent`
+     * `department`), stamped on a dispatch entry when known — best-effort
      * attribution, not authorization (Law 4). Absent when the target is
      * unattributed (e.g. the orchestrator fallback) or the store read failed.
      */
-    ownerSubsystem: SubsystemIdSchema.optional(),
+    department: DepartmentIdSchema.optional(),
   })
   .strict();
 export type ActivityRefs = z.infer<typeof ActivityRefsSchema>;

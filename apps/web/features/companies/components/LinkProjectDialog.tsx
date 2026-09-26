@@ -12,7 +12,7 @@ export enum LinkProjectDialogTestId {
   NoCandidates = "link-project-no-candidates",
 }
 
-/** Sentinel value for "nothing picked yet" — a real project id can never be empty. */
+/** Security value for "nothing picked yet" — a real project id can never be empty. */
 const NO_SELECTION = "";
 
 export interface LinkProjectDialogProps {
@@ -79,7 +79,11 @@ export function LinkProjectDialog({ companyId, onClose }: LinkProjectDialogProps
       closeLabel={tk("common.close")}
       onClose={onClose}
       title={
-        <DialogTitle glyph="branch" subtitle={t("linkDialog.subtitle")} title={t("linkDialog.title")} />
+        <DialogTitle
+          glyph="branch"
+          subtitle={t("linkDialog.subtitle")}
+          title={t("linkDialog.title")}
+        />
       }
       width="sm"
     >

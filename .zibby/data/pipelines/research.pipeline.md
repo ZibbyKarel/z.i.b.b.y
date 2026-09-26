@@ -37,7 +37,7 @@ phases:
 desc: >-
   Hloubkový výzkum tématu z více zdrojů → citovaná syntéza. Research, deep dive,
   market sizing, due diligence, rešerše, průzkum, co je nového v…
-ownerSubsystem: scout
+department: rnd
 complexity: standard
 ---
 

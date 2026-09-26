@@ -45,7 +45,7 @@ desc: >-
   Audituj existující kód bez jeho změny — kvalita, bezpečnost, přístupnost a výkon
   → souhrnná zpráva s prioritami. Audit, security review, code review,
   accessibility, performance, prohlídka kódu.
-ownerSubsystem: loom
+department: qa
 complexity: deep
 ---
 

@@ -27,7 +27,7 @@ desc: >-
   poznámky k vydání, co je nového, whats new, přehled změn, shrnutí releasu,
   seznam změn, verze, tag. Levná mechanická linka, nic nesahá na kód; plnou
   přípravu vydání s ověřením buildu dělá `release-prep`.
-ownerSubsystem: maestro
+department: rel
 complexity: light
 ---
 

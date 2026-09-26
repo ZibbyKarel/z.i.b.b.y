@@ -59,11 +59,18 @@ const labelClass = "font-mono text-sm uppercase tracking-wider text-foreground-f
 const hintClass = "font-mono text-xs text-foreground-faint";
 const errorClass = "font-mono text-xs text-bad";
 
-/** Shared control chrome for the text-like inputs (`TextInput`, `TextArea`, `Select`). */
+/**
+ * Shared control chrome for the text-like inputs (`TextInput`, `TextArea`,
+ * `Select`) — DS.md §8 Inputs: hairline `--line2` border, `--bg` fill, focus
+ * border in `--ink`. Keeps the DS's one accessible focus-visible ring
+ * ({@link focusRing}) on top of that border-color change — SKILL.md's a11y
+ * checklist requires a visible focus ring; DS.md's "no ring" is a cosmetic
+ * preference that doesn't override it.
+ */
 export const fieldControlClass =
-  "w-full rounded border border-border bg-background px-3.5 py-2.5 font-sans text-md " +
+  "w-full rounded-none border border-border-strong bg-background px-3.5 py-2.5 font-sans text-md " +
   "text-foreground transition-colors placeholder:text-foreground-faint " +
-  `${focusRing} focus-visible:border-accent/50 ` +
+  `${focusRing} focus-visible:border-ink ` +
   'aria-[invalid="true"]:border-bad aria-[invalid="true"]:focus-visible:ring-bad';
 
 /**

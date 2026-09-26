@@ -1,8 +1,5 @@
 ---
 name: Delivery
-desc: 'Postav, oprav nebo implementuj feature či bug v projektu — build, fix,
-  implement a feature or bug; deliver, postavit, opravit, implementovat, dodat,
-  rozbitý test, failing test.'
 phases:
   - id: architekt
     type: agent
@@ -28,7 +25,6 @@ phases:
     qualify: true
     loop:
       to: koder
-      driftTo: architekt
       maxRetries: 3
       escalate: true
       then: park
@@ -37,6 +33,7 @@ phases:
           thinking: high
         - model: opus
           thinking: high
+      driftTo: architekt
   - id: verify
     type: verify
     loop:
@@ -58,6 +55,12 @@ phases:
     produces: pr-draft.md
     model: sonnet
     thinking: medium
+desc: >-
+  Postav, oprav nebo implementuj feature či bug v projektu — build, fix,
+  implement a feature or bug; deliver, postavit, opravit, implementovat, dodat,
+  rozbitý test, failing test.
+department: dev
+complexity: standard
 ---
 
 # Delivery

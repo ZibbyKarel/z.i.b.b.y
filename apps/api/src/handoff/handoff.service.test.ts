@@ -17,33 +17,33 @@ const fakeLogger = {
  *  deliberately NOT the seeded system rules, so each test's matching is unambiguous. */
 const RULES: HandoffRule[] = [
   {
-    id: "sentinel-tier1",
-    from: "sentinel",
+    id: "security-tier1",
+    from: "sec",
     signalKind: "cve",
     minSeverity: "critical",
-    to: { kind: "subsystem", id: "forge" },
+    to: { kind: "department", id: "dev" },
     tier: 1,
     enabled: true,
   },
   {
-    id: "maestro-tier2",
-    from: "maestro",
+    id: "release-tier2",
+    from: "rel",
     signalKind: "post-merge-red",
-    to: { kind: "subsystem", id: "forge" },
+    to: { kind: "department", id: "dev" },
     tier: 2,
     enabled: true,
   },
   {
-    id: "loom-tier3",
-    from: "loom",
+    id: "arch-tier3",
+    from: "qa",
     signalKind: "*",
-    to: { kind: "subsystem", id: "forge" },
+    to: { kind: "department", id: "dev" },
     tier: 3,
     enabled: true,
   },
   {
-    id: "scout-pipeline-tier2",
-    from: "scout",
+    id: "research-pipeline-tier2",
+    from: "rnd",
     signalKind: "research-artifact",
     to: { kind: "pipeline", id: "delivery" },
     tier: 2,
@@ -55,7 +55,7 @@ let seq = 0;
 const cveSignal = (over: Partial<HandoffSignal> = {}): HandoffSignal => {
   seq += 1;
   return {
-    from: "sentinel",
+    from: "sec",
     kind: "cve",
     severity: "critical",
     title: `Kritická CVE ${seq}`,
@@ -139,6 +139,9 @@ describe("HandoffService", () => {
       approvals as never,
       activity as never,
       pipelines as never,
+      // ZB-05a — chain lookup only; no test in this file dispatches a real chain
+      // hop end to end (that's chain-view.test.ts / the chain e2e spec).
+      { get: vi.fn(async () => null) } as never,
       fakeLogger as never,
     );
   });
@@ -165,19 +168,20 @@ describe("HandoffService", () => {
       title: expect.stringContaining("Kritická CVE"),
       text: "Balíček má kritickou zranitelnost.",
       paths: [],
+      source: "handoff",
     });
-    expect(target).toEqual({ kind: "subsystem", id: "forge", name: "Forge" });
+    expect(target).toEqual({ kind: "department", id: "dev", name: "Development" });
     expect(activity.record).not.toHaveBeenCalled();
     expect(outcome).toEqual({
       action: "dispatched",
       runRef: "run_1",
-      target: { kind: "subsystem", id: "forge" },
+      target: { kind: "department", id: "dev" },
     });
   });
 
   it("Tier 2: dispatches AND records a handoff activity entry", async () => {
     const outcome = await service.evaluate({
-      from: "maestro",
+      from: "rel",
       kind: "post-merge-red",
       title: "CI red after merge",
       body: "Investigate and fix.",
@@ -193,14 +197,14 @@ describe("HandoffService", () => {
     expect(entry.refs).toMatchObject({
       runRef: "run_1",
       projectId: "proj_1",
-      ownerSubsystem: "forge",
+      department: "dev",
     });
     expect(outcome.action).toBe("dispatched");
   });
 
   it("Tier 2 with a pipeline target resolves the pipeline's display name", async () => {
     await service.evaluate({
-      from: "scout",
+      from: "rnd",
       kind: "research-artifact",
       title: "Research artifact ready",
       body: "Build it.",
@@ -218,11 +222,11 @@ describe("HandoffService", () => {
 
   it("Tier 3: does NOT dispatch — parks a proposal and requests a handoff-proposal approval", async () => {
     const outcome = await service.evaluate({
-      from: "loom",
+      from: "qa",
       kind: "god-node",
       title: "God node found",
       body: "graph.ts has too many incoming edges.",
-      fingerprint: "loom-1",
+      fingerprint: "arch-1",
     });
     expect(scheduler.createTask).not.toHaveBeenCalled();
     expect(approvals.requestApproval).toHaveBeenCalledTimes(1);
@@ -231,17 +235,17 @@ describe("HandoffService", () => {
     expect(outcome).toEqual({ action: "proposed", approvalId: "appr_1" });
     // The proposal is durably stored under the runId handed to approvals.
     const stored = await proposalStore.get(input.runId);
-    expect(stored.ruleId).toBe("loom-tier3");
-    expect(stored.signal.fingerprint).toBe("loom-1");
+    expect(stored.ruleId).toBe("arch-tier3");
+    expect(stored.signal.fingerprint).toBe("arch-1");
   });
 
   it("resume(proposalId) dispatches the parked payload's target and deletes the proposal", async () => {
     await service.evaluate({
-      from: "loom",
+      from: "qa",
       kind: "cycle",
       title: "Import cycle found",
       body: "a.ts <-> b.ts",
-      fingerprint: "loom-2",
+      fingerprint: "arch-2",
     });
     const [input] = approvals.requestApproval.mock.calls[0] as [{ runId: string }];
     const proposalId = input.runId;
@@ -259,18 +263,19 @@ describe("HandoffService", () => {
       title: "Import cycle found",
       text: "a.ts <-> b.ts",
       paths: [],
+      source: "handoff",
     });
-    expect(target).toEqual({ kind: "subsystem", id: "forge", name: "Forge" });
+    expect(target).toEqual({ kind: "department", id: "dev", name: "Development" });
     await expect(proposalStore.get(proposalId)).rejects.toThrow();
   });
 
   it("cancel(proposalId) deletes the proposal without dispatching", async () => {
     await service.evaluate({
-      from: "loom",
+      from: "qa",
       kind: "community",
       title: "Community cluster found",
       body: "details",
-      fingerprint: "loom-3",
+      fingerprint: "arch-3",
     });
     const [input] = approvals.requestApproval.mock.calls[0] as [{ runId: string }];
     const proposalId = input.runId;
@@ -293,12 +298,12 @@ describe("HandoffService", () => {
     expect(scheduler.createTask).toHaveBeenCalledTimes(1);
   });
 
-  it("wildcard signalKind matches any kind from that subsystem", async () => {
+  it("wildcard signalKind matches any kind from that department", async () => {
     for (const kind of ["god-node", "cycle", "community"]) {
       const outcome = await service.evaluate({
-        from: "loom",
+        from: "qa",
         kind,
-        title: `Loom finding: ${kind}`,
+        title: `Arch finding: ${kind}`,
         body: "details",
         fingerprint: `wild-${kind}`,
       });
@@ -309,7 +314,7 @@ describe("HandoffService", () => {
 
   it("idempotency: the same (ruleId, fingerprint) evaluated twice dispatches once", async () => {
     const signal: HandoffSignal = {
-      from: "maestro",
+      from: "rel",
       kind: "post-merge-red",
       title: "CI red",
       body: "fix it",
@@ -324,7 +329,7 @@ describe("HandoffService", () => {
 
   it("no matching rule → none, no dispatch (e.g. a leaked secret with no matching rule)", async () => {
     const outcome = await service.evaluate({
-      from: "sentinel",
+      from: "sec",
       kind: "secret",
       title: "Leaked secret",
       body: "found a key in the repo",
@@ -344,7 +349,7 @@ describe("HandoffService", () => {
   describe("B4 auto-activation (markSeen)", () => {
     it("flips a pending operator signal kind to active on its first real emission, even with no matching rule", async () => {
       const registered = await signalKindStore.create({
-        from: "sentinel",
+        from: "sec",
         label: "Dependency outdated",
         description: "A dependency has fallen behind its latest release.",
         severityBearing: false,
@@ -352,7 +357,7 @@ describe("HandoffService", () => {
       expect(registered.status).toBe("pending");
 
       const outcome = await service.evaluate({
-        from: "sentinel",
+        from: "sec",
         kind: registered.id,
         title: "Dependency outdated",
         body: "lodash is 3 majors behind",
