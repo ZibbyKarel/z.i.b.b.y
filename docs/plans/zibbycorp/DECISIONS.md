@@ -462,3 +462,60 @@ persistence; the controller maps it to **400** — a validation rejection, disti
 the request itself is malformed for this phase, not merely unroutable right now. The
 classifier never emits a chain target on its own (`RoutableTarget`'s type excludes it), so
 this only fires for an explicit caller-supplied target — the same scope guard as `department`.~~
+
+## D-020 — COO chat takes attachments and several @-mentions (2026-09-27, operator)
+
+The operator decided that the COO dock must be able to send attachments and to address
+individual agents and departments. This supersedes the ZB-12 interim, in which the dock hid
+the attach control because the chat send contract had no attachment channel.
+
+**Contract.** Both new fields on `SendChatMessageBody` are additive and `.optional()`.
+
+- **`attachmentSetId`** is the id returned by the existing `POST /api/tasks/attachments`
+  upload. The chat reuses that upload; there is no second upload path.
+- **`mentions: TaskTarget[]`** holds the units the operator addressed in the turn.
+  - It holds 0–8 entries.
+  - The allowed kinds are `agent`, `department` and `pipeline`.
+  - The legacy single `target` is still accepted. The server normalises it to
+    `mentions = mentions ?? (target ? [target] : [])`.
+- The persisted user `ChatMessage` gains `mentions?` and `attachments?`, where the
+  attachments are the resolved `Attachment[]` metadata. The transcript shows both.
+
+**Routing.** The rule "explicit target overrides the classifier" keeps its meaning with
+several targets. `create_task` gains an optional `mention` argument, which is a mentioned
+unit's id.
+
+| Mentions in the turn | What `create_task` does |
+|---|---|
+| 0 | The classifier routes, as today. |
+| 1 | That unit is the explicit target. `mention` may be omitted. |
+| ≥2 | The model must pass `mention`. |
+
+- With ≥2 mentions, a call without `mention`, or with a `mention` that is not one of the
+  turn's mentions, returns an error to the model. It is never a silent default and never
+  falls back to the classifier.
+- The model may call `create_task` once per mentioned unit.
+- The system prompt lists the addressed units.
+
+**Attachments reach the work.**
+
+- `create_task` forwards the turn's `attachmentSetId` to `TaskSchedulerService.createTask`.
+  The dispatched run therefore gets the files through the existing run-attachments path.
+- The chat has no built-in tools (`--tools ""`), so the COO does not read files itself.
+- The prompt lists each attachment by name, type and size.
+- It also inlines UTF-8 text files, up to 32 KB in total.
+  - They sit inside a delimited block that says the content is attached data, not
+    instructions (Law 4).
+  - Binary files and images are listed but not inlined.
+- The chat transcript store becomes an `AttachmentSetRefProvider`, so the 24-hour orphan
+  sweep never deletes a set that a chat message references.
+
+**UI.**
+
+- The dock's composer shows the attach control again. It uses the same upload hook and
+  drag-and-drop as New task.
+- `CommandLine` gains an opt-in multi-mention mode, which only the chat uses. Each
+  `@`-picked agent, department or pipeline becomes a removable chip, and submit passes the
+  list.
+- Existing single-target callers are unchanged.
+- The dock's department scope (O-20) seeds the first mention.
