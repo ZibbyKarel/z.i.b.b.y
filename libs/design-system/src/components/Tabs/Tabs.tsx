@@ -38,7 +38,7 @@ export interface TabsProps {
   direction?: "horizontal" | "vertical";
   /** `"mono"` is DS.md §8's top-nav / sub-nav look: mono uppercase labels with a
    *  1px `--ink` underline indicator, full header height. Defaults to the
-   *  existing accent-underline look. */
+   *  ink-underline look (hue is reserved for the six agent states). */
   variant?: TabsVariant;
   children: ReactNode;
 }
@@ -149,7 +149,7 @@ export function Tab({ value, children, ref, ...rest }: TabProps) {
           "transition-[color,border-color]",
           focusRingInset,
           isActive
-            ? "border-l-2 border-accent text-accent font-semibold"
+            ? "border-l-2 border-ink text-ink font-semibold"
             : "border-l-2 border-transparent text-foreground-dim hover:text-foreground",
         )}
         onClick={() => setActive(value)}
@@ -184,7 +184,7 @@ export function Tab({ value, children, ref, ...rest }: TabProps) {
           : cn(
               "font-mono text-base px-[14px] pt-2 pb-[7px]",
               isActive
-                ? "border-b-2 border-accent text-accent font-semibold"
+                ? "border-b-2 border-ink text-ink font-semibold"
                 : "border-b-2 border-transparent text-foreground-dim hover:text-foreground",
             ),
       )}
