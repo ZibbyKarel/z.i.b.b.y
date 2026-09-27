@@ -570,7 +570,9 @@ fits, so if `TasksController` came first, `GET /api/tasks/:id` would capture
 `GET /api/tasks/runs` as `id = "runs"` and return 404. Keep the literal `/api/tasks/runs*`
 controllers ahead of it. `unified-runs.e2e` and `health.e2e` guard this order.
 
-The COO chat also uses `POST /api/tasks/attachments` to upload attachments (D-020).
+The COO chat also uses `POST /api/tasks/attachments` to upload attachments (D-020). The chat
+transcript store is a third `AttachmentSetRefProvider` for the 24-hour orphan sweep, so a set a
+chat message references is never deleted.
 
 ## Parent/subtask read model (ZB-04a §5)
 

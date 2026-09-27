@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ChatPersona, ChatToolEvent, TaskTarget } from "@zibby/contracts";
 import { KbMcpAuthService } from "../kb/kb-mcp-auth.service";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
+import { AttachmentStorageService } from "../tasks/attachment-storage.service";
 import { CHAT_GOVERNOR_PROMPT, CHAT_PERSONAS } from "./chat-persona";
 import { ChatEventsService, type ChatTurnEvent } from "./chat-events.service";
 import { ChatMcpAuthService } from "./chat-mcp-auth.service";
@@ -49,6 +50,9 @@ class TestSession extends ChatSessionService {
     // posture as `mcpAuth` above; tests asserting a SPECIFIC KB token construct
     // their own and pass it explicitly (see the "zibby-kb MCP server" block below).
     kbMcpAuth: KbMcpAuthService = new KbMcpAuthService(),
+    // D-020: a fresh in-memory store by default — a test asserting attachment
+    // handling constructs its own and pre-seeds it (see the "attachments" block).
+    attachmentStorage: AttachmentStorageService = new AttachmentStorageService(),
   ) {
     super(
       store,
@@ -58,6 +62,7 @@ class TestSession extends ChatSessionService {
       mcpAuth,
       chatDir,
       kbMcpAuth,
+      attachmentStorage,
     );
   }
   protected createProcess(args: string[]): ClaudeProcess {
@@ -551,6 +556,123 @@ describe("ChatSessionService", () => {
       const args = await svc.buildArgs("ahoj", null, "c8");
       const prompt = args[args.indexOf("--append-system-prompt") + 1] ?? "";
       expect(prompt).not.toContain("@mention");
+    });
+  });
+
+  describe("D-020 — mentions + attachments", () => {
+    const agent: TaskTarget = { kind: "agent", id: "builder", name: "Builder" };
+    const dept: TaskTarget = { kind: "department", id: "dev", name: "Dev" };
+    const pipeline: TaskTarget = { kind: "pipeline", id: "delivery", name: "Delivery" };
+
+    it("normalises mentions ?? (target ? [target] : []) and persists mentions on the user message", async () => {
+      const svc = new TestSession(store, events, [
+        line({ type: "system", subtype: "init", session_id: "s" }),
+        line({ type: "result", is_error: false, result: "ok" }),
+      ]);
+      const result = await svc.sendMessage(
+        { conversationId: "c-mention-1", text: "postav appku", target: agent },
+        NOW,
+      );
+      await settled(result.turnId);
+      const transcript = await store.readTranscript(result.conversationId);
+      expect(transcript.messages[0]?.mentions).toEqual([agent]);
+    });
+
+    it("carries an explicit multi-mention list straight through, without folding in `target`", async () => {
+      const svc = new TestSession(store, events, [
+        line({ type: "system", subtype: "init", session_id: "s" }),
+        line({ type: "result", is_error: false, result: "ok" }),
+      ]);
+      const result = await svc.sendMessage(
+        { conversationId: "c-mention-2", text: "rozděl to", mentions: [agent, dept] },
+        NOW,
+      );
+      await settled(result.turnId);
+      const transcript = await store.readTranscript(result.conversationId);
+      expect(transcript.messages[0]?.mentions).toEqual([agent, dept]);
+    });
+
+    it("adds a plural mention line to the prompt, naming every unit and requiring `mention`", async () => {
+      const svc = new TestSession(store, events, [
+        line({ type: "system", subtype: "init", session_id: "s" }),
+        line({ type: "result", is_error: false, result: "ok" }),
+      ]);
+      const result = await svc.sendMessage(
+        { conversationId: "c-mention-3", text: "rozděl to", mentions: [agent, pipeline] },
+        NOW,
+      );
+      await settled(result.turnId);
+      const prompt = svc.lastArgs[svc.lastArgs.indexOf("--append-system-prompt") + 1] ?? "";
+      expect(prompt).toContain("Builder");
+      expect(prompt).toContain("Delivery");
+      expect(prompt).toContain("mention");
+    });
+
+    it("resolves body.attachmentSetId's metadata onto the persisted user message", async () => {
+      const attachmentStorage = new AttachmentStorageService();
+      const { attachmentSetId } = await attachmentStorage.save([
+        { originalname: "a.txt", size: 5, mimetype: "text/plain", buffer: Buffer.from("hello") },
+      ]);
+      const svc = new TestSession(
+        store,
+        events,
+        [
+          line({ type: "system", subtype: "init", session_id: "s" }),
+          line({ type: "result", is_error: false, result: "ok" }),
+        ],
+        "jarvis",
+        new ChatToolResultRegistry(),
+        undefined,
+        os.tmpdir(),
+        undefined,
+        attachmentStorage,
+      );
+      const result = await svc.sendMessage(
+        { conversationId: "c-attach-1", text: "zkontroluj přílohu", attachmentSetId },
+        NOW,
+      );
+      await settled(result.turnId);
+      const transcript = await store.readTranscript(result.conversationId);
+      expect(transcript.messages[0]?.attachmentSetId).toBe(attachmentSetId);
+      expect(transcript.messages[0]?.attachments).toEqual([
+        { name: "a.txt", size: 5, mediaType: "text/plain" },
+      ]);
+      await attachmentStorage.remove(attachmentSetId);
+    });
+
+    it("inlines the attachment's text content into the turn's system prompt", async () => {
+      const attachmentStorage = new AttachmentStorageService();
+      const { attachmentSetId } = await attachmentStorage.save([
+        {
+          originalname: "notes.txt",
+          size: 9,
+          mimetype: "text/plain",
+          buffer: Buffer.from("obsah dat"),
+        },
+      ]);
+      const svc = new TestSession(
+        store,
+        events,
+        [
+          line({ type: "system", subtype: "init", session_id: "s" }),
+          line({ type: "result", is_error: false, result: "ok" }),
+        ],
+        "jarvis",
+        new ChatToolResultRegistry(),
+        undefined,
+        os.tmpdir(),
+        undefined,
+        attachmentStorage,
+      );
+      const result = await svc.sendMessage(
+        { conversationId: "c-attach-2", text: "co je v souboru?", attachmentSetId },
+        NOW,
+      );
+      await settled(result.turnId);
+      const prompt = svc.lastArgs[svc.lastArgs.indexOf("--append-system-prompt") + 1] ?? "";
+      expect(prompt).toContain("obsah dat");
+      expect(prompt).toContain("notes.txt");
+      await attachmentStorage.remove(attachmentSetId);
     });
   });
 

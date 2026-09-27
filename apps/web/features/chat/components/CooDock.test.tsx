@@ -25,8 +25,11 @@ vi.mock("../../departments/queries/useDepartmentsQuery", () => ({
   useDepartmentsQuery: () => ({ data: [] }),
   getDepartmentsQueryKey: () => ["departments"],
 }));
+const uploadMutateAsync = vi
+  .fn()
+  .mockResolvedValue({ attachmentSetId: "set_1", files: [{ name: "a.txt", size: 2 }] });
 vi.mock("../../tasks/mutations/useUploadTaskAttachmentsMutation", () => ({
-  useUploadTaskAttachmentsMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useUploadTaskAttachmentsMutation: () => ({ mutateAsync: uploadMutateAsync, isPending: false }),
 }));
 vi.mock("../../teams", () => ({ useTeamsQuery: () => ({ data: [] }) }));
 vi.mock("../../system", () => ({ useSystemConfigQuery: () => ({ data: undefined }) }));
@@ -102,31 +105,46 @@ describe("CooDock (ZB-12)", () => {
     window.localStorage.clear();
   });
 
-  it("renders collapsed with the COO target chip and no attach control", () => {
+  it("renders collapsed with the COO target chip and the attach control back (D-020)", () => {
     renderDock({ open: false });
     expect(screen.getByTestId(ChatDockTestId.Root)).toBeInTheDocument();
     expect(screen.queryByTestId(ChatDockTestId.Transcript)).not.toBeInTheDocument();
     expect(screen.getByTestId(CooDockTestId.TargetChip)).toHaveTextContent("→ COO");
-    // The chat send contract has no attachment channel — never offer a silent drop.
-    expect(screen.queryByTestId(CommandLineTestId.Attach)).not.toBeInTheDocument();
+    // D-020: the chat send contract now carries attachmentSetId — the attach
+    // control is back.
+    expect(screen.getByTestId(CommandLineTestId.Attach)).toBeInTheDocument();
   });
 
-  it("sends through the COO classifier (no target) by default", async () => {
+  it("sends through the COO classifier (no mentions) by default", async () => {
     renderDock();
     await typeAndSend("Status of the release?");
     expect(sendMutate).toHaveBeenCalledTimes(1);
     const body = sendMutate.mock.calls[0]?.[0]?.body as Record<string, unknown>;
     expect(body.text).toBe("Status of the release?");
     expect(body.conversationId).toEqual(expect.stringMatching(/^conv_/));
+    expect(body).not.toHaveProperty("mentions");
     expect(body).not.toHaveProperty("target");
   });
 
-  it("sends the explicit department target when opened from a department (O-20)", async () => {
+  it("sends the dock's department scope as the turn's sole mention (O-20 / D-020)", async () => {
     renderDock({ department: true });
     expect(screen.getByTestId(CooDockTestId.TargetChip)).toHaveTextContent("Development");
     await typeAndSend("Ship the hotfix");
-    const body = sendMutate.mock.calls[0]?.[0]?.body as { target?: { kind: string; id: string } };
-    expect(body.target).toEqual(expect.objectContaining({ kind: "department", id: "dev" }));
+    const body = sendMutate.mock.calls[0]?.[0]?.body as {
+      mentions?: Array<{ kind: string; id: string }>;
+    };
+    expect(body.mentions).toEqual([expect.objectContaining({ kind: "department", id: "dev" })]);
+  });
+
+  it("forwards the uploaded attachmentSetId (D-020)", async () => {
+    const user = userEvent.setup();
+    renderDock();
+    const file = new File(["hi"], "a.txt", { type: "text/plain" });
+    await user.upload(screen.getByTestId(CommandLineTestId.FileInput), file);
+    await screen.findByText("a.txt");
+    await typeAndSend("zkontroluj přílohu");
+    const body = sendMutate.mock.calls[0]?.[0]?.body as { attachmentSetId?: string };
+    expect(body.attachmentSetId).toBe("set_1");
   });
 
   it("clearing the target chip falls back to the COO", async () => {
@@ -138,6 +156,7 @@ describe("CooDock (ZB-12)", () => {
     expect(screen.getByTestId(CooDockTestId.TargetChip)).toHaveTextContent("→ COO");
     await typeAndSend("hello");
     const body = sendMutate.mock.calls[0]?.[0]?.body as Record<string, unknown>;
+    expect(body).not.toHaveProperty("mentions");
     expect(body).not.toHaveProperty("target");
   });
 

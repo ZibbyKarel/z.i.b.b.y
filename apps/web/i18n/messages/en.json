@@ -1875,6 +1875,7 @@
     "mention": {
       "ariaLabel": "Search agents and pipelines to mention",
       "empty": "Nothing found",
+      "removeAria": "Remove {name}",
       "sections": {
         "agents": "Agents",
         "pipelines": "Pipelines"

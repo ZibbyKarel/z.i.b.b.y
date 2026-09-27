@@ -113,6 +113,19 @@ describe("ChatToolsService", () => {
       expect(out.text).toContain("Oslovil jsi přímo");
       expect(out.meta?.target).toEqual(DISPATCHED.target);
     });
+
+    it("D-020: forwards attachmentSetId straight through to the scheduler", async () => {
+      const createTask = vi.fn().mockResolvedValue(DISPATCHED);
+      const svc = makeService({ createTask });
+      await svc.createTask({ text: "zkontroluj přílohu", attachmentSetId: "set_1" });
+
+      expect(createTask).toHaveBeenCalledWith(
+        { text: "zkontroluj přílohu", attachmentSetId: "set_1" },
+        undefined,
+        undefined,
+        undefined,
+      );
+    });
   });
 
   describe("recallMemory", () => {

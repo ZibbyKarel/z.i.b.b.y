@@ -139,4 +139,56 @@ describe("ChatToolResultRegistry", () => {
       expect(registry.getExplicitTarget("c2")).toEqual(PIPELINE_TARGET);
     });
   });
+
+  describe("D-020 — mentions", () => {
+    it("returns an empty list when nothing was set", () => {
+      const registry = new ChatToolResultRegistry();
+      expect(registry.getMentions("c1")).toEqual([]);
+    });
+
+    it("holds a set mentions list and keeps returning it on repeated reads (non-destructive)", () => {
+      const registry = new ChatToolResultRegistry();
+      registry.setMentions("c1", [AGENT_TARGET, PIPELINE_TARGET]);
+      expect(registry.getMentions("c1")).toEqual([AGENT_TARGET, PIPELINE_TARGET]);
+      expect(registry.getMentions("c1")).toEqual([AGENT_TARGET, PIPELINE_TARGET]);
+    });
+
+    it("clears the mentions so a later read sees an empty list", () => {
+      const registry = new ChatToolResultRegistry();
+      registry.setMentions("c1", [AGENT_TARGET]);
+      registry.clearMentions("c1");
+      expect(registry.getMentions("c1")).toEqual([]);
+    });
+
+    it("keeps separate conversations' mentions independent", () => {
+      const registry = new ChatToolResultRegistry();
+      registry.setMentions("c1", [AGENT_TARGET]);
+      registry.setMentions("c2", [PIPELINE_TARGET]);
+      expect(registry.getMentions("c1")).toEqual([AGENT_TARGET]);
+      expect(registry.getMentions("c2")).toEqual([PIPELINE_TARGET]);
+    });
+  });
+
+  describe("D-020 — attachment set id", () => {
+    it("returns undefined when nothing was set", () => {
+      const registry = new ChatToolResultRegistry();
+      expect(registry.getAttachmentSetId("c1")).toBeUndefined();
+    });
+
+    it("holds a set id and clears it on demand", () => {
+      const registry = new ChatToolResultRegistry();
+      registry.setAttachmentSetId("c1", "set_1");
+      expect(registry.getAttachmentSetId("c1")).toBe("set_1");
+      registry.clearAttachmentSetId("c1");
+      expect(registry.getAttachmentSetId("c1")).toBeUndefined();
+    });
+
+    it("keeps separate conversations' attachment sets independent", () => {
+      const registry = new ChatToolResultRegistry();
+      registry.setAttachmentSetId("c1", "set_1");
+      registry.setAttachmentSetId("c2", "set_2");
+      expect(registry.getAttachmentSetId("c1")).toBe("set_1");
+      expect(registry.getAttachmentSetId("c2")).toBe("set_2");
+    });
+  });
 });

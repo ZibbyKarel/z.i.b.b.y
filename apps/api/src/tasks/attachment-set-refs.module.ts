@@ -1,6 +1,8 @@
 import { Global, Module } from "@nestjs/common";
 import { AutomationAttachmentRefProvider } from "../automations/automation-attachment-ref.provider";
 import { AutomationsModule } from "../automations/automations.module";
+import { ChatModule } from "../chat/chat.module";
+import { ChatTranscriptStore } from "../chat/chat-transcript.store";
 import { RoadmapAttachmentRefProvider } from "../roadmap/roadmap-attachment-ref.provider";
 import { RoadmapModule } from "../roadmap/roadmap.module";
 import type { AttachmentSetRefProvider } from "./attachment-set-ref-provider";
@@ -23,10 +25,19 @@ import { ATTACHMENT_SET_REF_PROVIDER } from "./attachment-set-ref-provider";
  * `RoadmapModule`'s exported `RoadmapStore`) the same way: extend this same
  * factory's array + `inject`, never add a second `provide:
  * ATTACHMENT_SET_REF_PROVIDER` entry (which would just shadow this one).
+ *
+ * D-020 adds a THIRD contributor, `ChatTranscriptStore` itself (it implements
+ * {@link AttachmentSetRefProvider} directly rather than needing a dedicated
+ * wrapper class — see its own docblock): a chat turn's `attachmentSetId`
+ * survives in the persisted transcript for the conversation's whole lifetime,
+ * long past any single turn, so it needs the same sweep exemption. `ChatModule`
+ * already imports `TasksModule` (for `create_task`'s scheduler dependency) —
+ * the same one-directional shape as `AutomationsModule`/`RoadmapModule` above,
+ * so importing `ChatModule` here closes no cycle either.
  */
 @Global()
 @Module({
-  imports: [AutomationsModule, RoadmapModule],
+  imports: [AutomationsModule, RoadmapModule, ChatModule],
   providers: [
     AutomationAttachmentRefProvider,
     RoadmapAttachmentRefProvider,
@@ -35,8 +46,9 @@ import { ATTACHMENT_SET_REF_PROVIDER } from "./attachment-set-ref-provider";
       useFactory: (
         automationRefs: AutomationAttachmentRefProvider,
         roadmapRefs: RoadmapAttachmentRefProvider,
-      ): AttachmentSetRefProvider[] => [automationRefs, roadmapRefs],
-      inject: [AutomationAttachmentRefProvider, RoadmapAttachmentRefProvider],
+        chatTranscripts: ChatTranscriptStore,
+      ): AttachmentSetRefProvider[] => [automationRefs, roadmapRefs, chatTranscripts],
+      inject: [AutomationAttachmentRefProvider, RoadmapAttachmentRefProvider, ChatTranscriptStore],
     },
   ],
   exports: [ATTACHMENT_SET_REF_PROVIDER],

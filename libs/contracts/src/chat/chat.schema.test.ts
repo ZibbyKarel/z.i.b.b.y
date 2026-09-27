@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Briefing } from "../briefing/briefing.schema";
 import { TaskTargetSchema } from "../tasks/task.schema";
-import { ChatMessageSchema, ChatToolEventSchema, SendChatMessageBodySchema } from "./chat.schema";
+import {
+  ChatMentionTargetSchema,
+  ChatMessageSchema,
+  ChatToolEventSchema,
+  SendChatMessageBodySchema,
+} from "./chat.schema";
 
 describe("ChatToolEventSchema.name (T11 finding #7)", () => {
   const base = { name: "create_task", status: "ok" as const };
@@ -105,5 +110,97 @@ describe("SendChatMessageBodySchema.teamId (Task 8 — tag a team on a chat turn
 
   it("does not add a team variant to TaskTarget", () => {
     expect(TaskTargetSchema.safeParse({ kind: "team", id: "devrel" }).success).toBe(false);
+  });
+});
+
+describe("D-020 — chat mentions + attachments", () => {
+  const agent = { kind: "agent" as const, id: "builder", name: "Builder" };
+  const department = { kind: "department" as const, id: "dev", name: "Dev" };
+  const pipeline = { kind: "pipeline" as const, id: "delivery", name: "Delivery" };
+
+  describe("ChatMentionTargetSchema", () => {
+    it.each([agent, department, pipeline])("accepts a %s mention", (target) => {
+      expect(ChatMentionTargetSchema.safeParse(target).success).toBe(true);
+    });
+
+    it("rejects a goal/chain/orchestrator mention — explicit-only kinds stay out of chat", () => {
+      expect(
+        ChatMentionTargetSchema.safeParse({ kind: "goal", id: "g1", name: "Goal" }).success,
+      ).toBe(false);
+      expect(
+        ChatMentionTargetSchema.safeParse({ kind: "chain", id: "c1", name: "Chain" }).success,
+      ).toBe(false);
+      expect(
+        ChatMentionTargetSchema.safeParse({ kind: "orchestrator", name: "Orchestrator" }).success,
+      ).toBe(false);
+    });
+  });
+
+  describe("SendChatMessageBodySchema.mentions/attachmentSetId", () => {
+    it("accepts 0–8 mentions", () => {
+      const eight = Array.from({ length: 8 }, (_, i) => ({ ...agent, id: `a${i}` }));
+      expect(SendChatMessageBodySchema.safeParse({ text: "x", mentions: [] }).success).toBe(true);
+      expect(SendChatMessageBodySchema.safeParse({ text: "x", mentions: eight }).success).toBe(
+        true,
+      );
+    });
+
+    it("rejects a 9th mention", () => {
+      const nine = Array.from({ length: 9 }, (_, i) => ({ ...agent, id: `a${i}` }));
+      expect(SendChatMessageBodySchema.safeParse({ text: "x", mentions: nine }).success).toBe(
+        false,
+      );
+    });
+
+    it("still accepts the legacy single target with no mentions field", () => {
+      const parsed = SendChatMessageBodySchema.safeParse({ text: "x", target: agent });
+      expect(parsed.success).toBe(true);
+      if (parsed.success) expect(parsed.data.mentions).toBeUndefined();
+    });
+
+    it("carries an attachmentSetId alongside mentions", () => {
+      const parsed = SendChatMessageBodySchema.safeParse({
+        text: "x",
+        mentions: [agent],
+        attachmentSetId: "set_1",
+      });
+      expect(parsed.success).toBe(true);
+      if (parsed.success) expect(parsed.data.attachmentSetId).toBe("set_1");
+    });
+  });
+
+  describe("ChatMessageSchema.mentions/attachments/attachmentSetId", () => {
+    it("still parses an old-shaped message with none of the three fields", () => {
+      const parsed = ChatMessageSchema.safeParse({
+        id: "msg_1",
+        role: "user",
+        text: "ahoj",
+        at: "2026-09-27T10:00:00.000Z",
+      });
+      expect(parsed.success).toBe(true);
+      if (parsed.success) {
+        expect(parsed.data.mentions).toBeUndefined();
+        expect(parsed.data.attachments).toBeUndefined();
+        expect(parsed.data.attachmentSetId).toBeUndefined();
+      }
+    });
+
+    it("parses a new-shaped user turn carrying mentions + resolved attachments + the set id", () => {
+      const parsed = ChatMessageSchema.safeParse({
+        id: "msg_2",
+        role: "user",
+        text: "spusť to",
+        at: "2026-09-27T10:00:00.000Z",
+        mentions: [agent, department],
+        attachments: [{ name: "a.txt", size: 12, mediaType: "text/plain" }],
+        attachmentSetId: "set_9",
+      });
+      expect(parsed.success).toBe(true);
+      if (parsed.success) {
+        expect(parsed.data.mentions).toHaveLength(2);
+        expect(parsed.data.attachments?.[0]?.name).toBe("a.txt");
+        expect(parsed.data.attachmentSetId).toBe("set_9");
+      }
+    });
   });
 });

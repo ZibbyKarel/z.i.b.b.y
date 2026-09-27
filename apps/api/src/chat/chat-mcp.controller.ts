@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { Controller, Get, Logger, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { DEPARTMENTS, type DepartmentId } from "@zibby/contracts";
+import { DEPARTMENTS, type DepartmentId, type TaskTarget } from "@zibby/contracts";
 import { z } from "zod";
 import { ChatMcpAuthGuard } from "./chat-mcp-auth.guard";
 import { ChatToolResultRegistry } from "./chat-tool-result.registry";
@@ -23,6 +23,74 @@ function conversationIdFromUrl(url: string | undefined): string {
 /** Wrap a tool's string result in the MCP text-content envelope. */
 function text(value: string): { content: Array<{ type: "text"; text: string }> } {
   return { content: [{ type: "text", text: value }] };
+}
+
+/**
+ * D-020 — wrap a tool FAILURE in the MCP error envelope (`isError: true`), so it
+ * reaches the model as a genuine tool error rather than a normal confirmation
+ * string it might narrate as if the dispatch had succeeded. Used only for the
+ * `create_task` `mention` validation rule below — every other tool here keeps
+ * its existing fail-open "apologetic string" posture.
+ */
+function errorText(value: string): {
+  content: Array<{ type: "text"; text: string }>;
+  isError: true;
+} {
+  return { content: [{ type: "text", text: value }], isError: true };
+}
+
+/** Every `TaskTarget` a chat `@mention` can carry (agent/department/pipeline, per
+ *  `ChatMentionTargetSchema`) has an `id`; the synthetic orchestrator does not — this
+ *  narrows safely instead of asserting. */
+function mentionId(target: TaskTarget): string | undefined {
+  return "id" in target ? target.id : undefined;
+}
+
+/**
+ * D-020 — resolve `create_task`'s explicit target from the turn's `mentions` (0–8
+ * units) plus the model's optional `mention` argument, per the decision's routing
+ * table:
+ *
+ *  - 0 mentions  → the classifier routes (`{ target: undefined }`).
+ *  - 1 mention   → that unit is the target; `mention` may be omitted, but if given
+ *                  it must name that same unit.
+ *  - ≥2 mentions → the model MUST pass `mention` naming one of them.
+ *
+ * A violation returns an `error` (never a silent classifier fallback — the
+ * decision is explicit that this is a hard error, not a default).
+ */
+function resolveMentionTarget(
+  mentions: TaskTarget[],
+  mention: string | undefined,
+): { target?: TaskTarget; error?: string } {
+  if (mentions.length === 0) return {};
+  if (mentions.length === 1) {
+    const only = mentions[0];
+    if (only && mention !== undefined && mention !== mentionId(only)) {
+      return {
+        error:
+          `Chyba: parametr mention ("${mention}") neodpovídá jednotce, kterou operátor ` +
+          "oslovil v této zprávě. Vynech mention, nebo zadej její id.",
+      };
+    }
+    return only ? { target: only } : {};
+  }
+  if (!mention) {
+    return {
+      error:
+        "Chyba: operátor v této zprávě oslovil více jednotek — je nutné zadat parametr " +
+        "mention s id té, pro kterou tento úkol zakládáš.",
+    };
+  }
+  const found = mentions.find((m) => mentionId(m) === mention);
+  if (!found) {
+    return {
+      error:
+        `Chyba: mention ("${mention}") neodpovídá žádné z jednotek, které operátor v této ` +
+        "zprávě oslovil.",
+    };
+  }
+  return { target: found };
 }
 
 /**
@@ -110,21 +178,42 @@ export class ChatMcpController {
           "Dispatch a NEW work task the operator explicitly requested (build, fix, run, " +
           "investigate something concrete). This STARTS a run and routes through the " +
           "approval gate. Do NOT call this for casual conversation, greetings, or " +
-          "questions about status — only when the operator asks for actual work to be done.",
+          "questions about status — only when the operator asks for actual work to be done. " +
+          "D-020: when the operator addressed SEVERAL units in this turn (see the system " +
+          "prompt), you MUST pass `mention` naming which one this call is for — omitting it, " +
+          "or naming a unit that wasn't addressed, is a tool ERROR, never a silent default.",
         inputSchema: {
           text: z.string().describe("The task in the operator's words."),
           paths: z
             .array(z.string())
             .optional()
             .describe("Optional file/folder paths the task concerns."),
+          mention: z
+            .string()
+            .optional()
+            .describe(
+              "The id of the @mentioned unit (agent/department/pipeline) this call is FOR — " +
+                "required when the operator addressed several units this turn, optional " +
+                "(and, if given, must match) when they addressed exactly one, and unused when " +
+                "they addressed none.",
+            ),
         },
       },
-      async ({ text: taskText, paths }) => {
-        // Fáze 14.2: an @mention picked in the composer bypasses the classifier for
-        // this conversation's in-flight turn — peek it (non-destructive; a turn may
-        // dispatch more than once) and forward it as the scheduler's explicit target.
-        const explicitTarget = this.toolResults.getExplicitTarget(conversationId);
-        const result = await this.tools.createTask({ text: taskText, paths, explicitTarget });
+      async ({ text: taskText, paths, mention }) => {
+        // D-020: resolve the turn's `@mention`(s) — 0 → the classifier routes, 1 → that
+        // unit is the explicit target, ≥2 → `mention` must name one of them. A violation
+        // is returned to the MODEL as a tool error, never a silent classifier fallback.
+        const mentions = this.toolResults.getMentions(conversationId);
+        const resolved = resolveMentionTarget(mentions, mention);
+        if (resolved.error) return errorText(resolved.error);
+
+        const attachmentSetId = this.toolResults.getAttachmentSetId(conversationId);
+        const result = await this.tools.createTask({
+          text: taskText,
+          paths,
+          explicitTarget: resolved.target,
+          ...(attachmentSetId ? { attachmentSetId } : {}),
+        });
         // Only the confirmation string goes to the model; the structured data (run/
         // target/task id) is queued for `chat-session.service#describeTool` to read
         // when it emits the inline `ChatToolEvent` — never round-tripped through the CLI.

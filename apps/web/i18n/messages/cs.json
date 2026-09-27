@@ -1875,6 +1875,7 @@
     "mention": {
       "ariaLabel": "Vyhledat agenta nebo pipeline k oslovení",
       "empty": "Nic nenalezeno",
+      "removeAria": "Odebrat {name}",
       "sections": {
         "agents": "Agenti",
         "pipelines": "Pipelines"

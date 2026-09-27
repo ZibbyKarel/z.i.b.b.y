@@ -486,6 +486,126 @@ describe("CommandLine (Phase 118d generic composer)", () => {
     });
   });
 
+  describe("D-020 — multipleTargets mode (chat's multi-mention picker)", () => {
+    it("picking several units appends removable chips instead of replacing a single target", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine multipleTargets onSubmit={vi.fn()} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+
+      await user.type(input, "@Bui");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`));
+      await user.type(input, "@Dev");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-department-dev`));
+
+      expect(
+        screen.getByTestId(`${CommandLineTestId.MentionChip}-agent-builder`),
+      ).toHaveTextContent("Builder");
+      expect(
+        screen.getByTestId(`${CommandLineTestId.MentionChip}-department-dev`),
+      ).toHaveTextContent("Dev");
+    });
+
+    it("submit passes the full mentions list as the 4th onSubmit arg, target stays undefined", async () => {
+      const onSubmit = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine multipleTargets onSubmit={onSubmit} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "@Bui");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`));
+      await user.type(input, "@Dev");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-department-dev`));
+      await user.type(input, "rozděl to");
+      await user.click(screen.getByTestId(CommandLineTestId.Send));
+
+      expect(onSubmit).toHaveBeenCalledWith("@Builder @Dev rozděl to", undefined, undefined, [
+        { kind: "agent", id: "builder", name: "Builder", glyph: "hammer" },
+        { kind: "department", id: "dev", name: "Dev", glyph: "grid" },
+      ]);
+    });
+
+    it("submits with mentions undefined (not an empty array) when nothing was picked", async () => {
+      const onSubmit = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine multipleTargets onSubmit={onSubmit} />);
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "ahoj");
+      await user.click(screen.getByTestId(CommandLineTestId.Send));
+      expect(onSubmit).toHaveBeenCalledWith("ahoj", undefined, undefined, undefined);
+    });
+
+    it("removing a chip clears both the picked state and its @Name from the text", async () => {
+      const onSubmit = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine multipleTargets onSubmit={onSubmit} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "@Bui");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`));
+      await user.type(input, "@Dev");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-department-dev`));
+
+      const { ChipTestId } = await import("@zibby/design-system");
+      const builderChip = screen.getByTestId(`${CommandLineTestId.MentionChip}-agent-builder`);
+      await user.click(within(builderChip).getByTestId(ChipTestId.Close));
+
+      expect(
+        screen.queryByTestId(`${CommandLineTestId.MentionChip}-agent-builder`),
+      ).not.toBeInTheDocument();
+      expect(input).toHaveValue("@Dev ");
+
+      await user.type(input, "shrň");
+      await user.click(screen.getByTestId(CommandLineTestId.Send));
+      expect(onSubmit).toHaveBeenCalledWith("@Dev shrň", undefined, undefined, [
+        { kind: "department", id: "dev", name: "Dev", glyph: "grid" },
+      ]);
+    });
+
+    it("deleting a chip's @Name out of the text clears it, same as single-target reconciliation", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine multipleTargets onSubmit={vi.fn()} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "@Bui");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`));
+      expect(
+        screen.getByTestId(`${CommandLineTestId.MentionChip}-agent-builder`),
+      ).toBeInTheDocument();
+
+      await user.clear(input);
+
+      expect(
+        screen.queryByTestId(`${CommandLineTestId.MentionChip}-agent-builder`),
+      ).not.toBeInTheDocument();
+    });
+
+    it("resets the chip row after a successful submit (resetOnSubmit default true)", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine multipleTargets onSubmit={vi.fn()} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "@Bui");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`));
+      await user.type(input, "ahoj");
+      await user.click(screen.getByTestId(CommandLineTestId.Send));
+
+      expect(
+        screen.queryByTestId(`${CommandLineTestId.MentionChip}-agent-builder`),
+      ).not.toBeInTheDocument();
+    });
+
+    it("every OTHER caller's onSubmit signature is unaffected (target still flows in single mode)", async () => {
+      const onSubmit = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine onSubmit={onSubmit} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "@Bui");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`));
+      await user.type(input, "ahoj");
+      await user.click(screen.getByTestId(CommandLineTestId.Send));
+      expect(onSubmit).toHaveBeenCalledWith(
+        "@Builder ahoj",
+        { kind: "agent", id: "builder", name: "Builder", glyph: "hammer" },
+        undefined,
+      );
+    });
+  });
+
   describe("Phase 31a — velin-b chrome, drag overlay, mention tones, suggestions", () => {
     it("wraps the input in the panel chrome by default (header icon + label + hint)", () => {
       render(<CommandLine onSubmit={vi.fn()} />);

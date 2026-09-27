@@ -3,6 +3,7 @@ import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import type { TaskTarget } from "@zibby/contracts";
 import request from "supertest";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ChatMcpAuthGuard } from "./chat-mcp-auth.guard";
@@ -29,6 +30,8 @@ describe("POST /api/chat/mcp — ChatMcpAuthGuard", () => {
   let app: INestApplication;
   let baseUrl: string;
   let auth: ChatMcpAuthService;
+
+  let toolResults: ChatToolResultRegistry;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -57,6 +60,7 @@ describe("POST /api/chat/mcp — ChatMcpAuthGuard", () => {
     const { port } = app.getHttpServer().address() as AddressInfo;
     baseUrl = `http://127.0.0.1:${port}`;
     auth = moduleRef.get(ChatMcpAuthService);
+    toolResults = moduleRef.get(ChatToolResultRegistry);
   });
 
   afterAll(async () => {
@@ -163,5 +167,95 @@ describe("POST /api/chat/mcp — ChatMcpAuthGuard", () => {
     });
 
     await client.close();
+  });
+
+  describe("D-020 — create_task's `mention` rule", () => {
+    const agent: TaskTarget = { kind: "agent", id: "builder", name: "Builder" };
+    const dept: TaskTarget = { kind: "department", id: "dev", name: "Dev" };
+
+    async function connectFor(conversationId: string) {
+      const transport = new StreamableHTTPClientTransport(
+        new URL(`${baseUrl}/api/chat/mcp?conversationId=${conversationId}`),
+        { requestInit: { headers: { Authorization: `Bearer ${auth.bearerToken}` } } },
+      );
+      const client = new Client({ name: "chat-mcp-test-client", version: "1.0.0" });
+      await client.connect(transport);
+      return client;
+    }
+
+    it("0 mentions: create_task dispatches with no explicit target — the classifier routes", async () => {
+      createTask.mockResolvedValue({ text: "ok" });
+      const client = await connectFor("conv-0");
+      await client.callTool({ name: "create_task", arguments: { text: "postav appku" } });
+      expect(createTask).toHaveBeenCalledWith(
+        expect.objectContaining({ explicitTarget: undefined }),
+      );
+      await client.close();
+    });
+
+    it("1 mention: create_task uses it as the explicit target, `mention` omitted", async () => {
+      createTask.mockResolvedValue({ text: "ok" });
+      toolResults.setMentions("conv-1", [agent]);
+      const client = await connectFor("conv-1");
+      await client.callTool({ name: "create_task", arguments: { text: "postav appku" } });
+      expect(createTask).toHaveBeenCalledWith(expect.objectContaining({ explicitTarget: agent }));
+      await client.close();
+    });
+
+    it("1 mention: a `mention` naming a DIFFERENT id errors instead of silently defaulting", async () => {
+      const client = await connectFor("conv-1b");
+      toolResults.setMentions("conv-1b", [agent]);
+      const result = await client.callTool({
+        name: "create_task",
+        arguments: { text: "x", mention: "someone-else" },
+      });
+      expect(result.isError).toBe(true);
+      expect(createTask).not.toHaveBeenCalled();
+      await client.close();
+    });
+
+    it("≥2 mentions: omitting `mention` is a tool error, never a classifier fallback", async () => {
+      toolResults.setMentions("conv-2", [agent, dept]);
+      const client = await connectFor("conv-2");
+      const result = await client.callTool({ name: "create_task", arguments: { text: "x" } });
+      expect(result.isError).toBe(true);
+      expect(createTask).not.toHaveBeenCalled();
+      await client.close();
+    });
+
+    it("≥2 mentions: a `mention` naming one not in the turn's list is a tool error", async () => {
+      toolResults.setMentions("conv-2b", [agent, dept]);
+      const client = await connectFor("conv-2b");
+      const result = await client.callTool({
+        name: "create_task",
+        arguments: { text: "x", mention: "nope" },
+      });
+      expect(result.isError).toBe(true);
+      expect(createTask).not.toHaveBeenCalled();
+      await client.close();
+    });
+
+    it("≥2 mentions: a `mention` naming one of them resolves that unit as the explicit target", async () => {
+      createTask.mockResolvedValue({ text: "ok" });
+      toolResults.setMentions("conv-2c", [agent, dept]);
+      const client = await connectFor("conv-2c");
+      await client.callTool({
+        name: "create_task",
+        arguments: { text: "x", mention: "dev" },
+      });
+      expect(createTask).toHaveBeenCalledWith(expect.objectContaining({ explicitTarget: dept }));
+      await client.close();
+    });
+
+    it("forwards the turn's attachmentSetId to createTask", async () => {
+      createTask.mockResolvedValue({ text: "ok" });
+      toolResults.setAttachmentSetId("conv-attach", "set_9");
+      const client = await connectFor("conv-attach");
+      await client.callTool({ name: "create_task", arguments: { text: "x" } });
+      expect(createTask).toHaveBeenCalledWith(
+        expect.objectContaining({ attachmentSetId: "set_9" }),
+      );
+      await client.close();
+    });
   });
 });

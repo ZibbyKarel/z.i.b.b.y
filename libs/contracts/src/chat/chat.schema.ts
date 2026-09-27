@@ -1,7 +1,29 @@
 import { z } from "zod";
 import { BriefingSchema } from "../briefing/briefing.schema";
-import { TaskTargetSchema } from "../tasks/task.schema";
+import {
+  AgentTaskTargetSchema,
+  AttachmentSchema,
+  DepartmentTaskTargetSchema,
+  PipelineTaskTargetSchema,
+  TaskTargetSchema,
+} from "../tasks/task.schema";
 import { TeamIdSchema } from "../teams/team.schema";
+
+/**
+ * D-020 — the restricted subset of {@link TaskTargetSchema} a chat `@mention` may
+ * name: a real, dispatchable agent/pipeline, or a named department — never a goal,
+ * a chain, or the synthetic orchestrator (none of those are something the operator
+ * "addresses" in a turn the way they address a unit that can pick up work).
+ */
+export const ChatMentionTargetSchema = z.discriminatedUnion("kind", [
+  AgentTaskTargetSchema,
+  DepartmentTaskTargetSchema,
+  PipelineTaskTargetSchema,
+]);
+export type ChatMentionTarget = z.infer<typeof ChatMentionTargetSchema>;
+
+/** D-020 — at most this many units addressed in one turn. */
+export const MAX_CHAT_MENTIONS = 8;
 
 /**
  * Chat (chat-first conversational layer, replaces the Voice UI). The operator
@@ -68,6 +90,28 @@ export const ChatMessageSchema = z.object({
    * schema change that broke an old line would be data loss, not styling).
    */
   briefing: BriefingSchema.optional(),
+  /**
+   * D-020 — the units the operator `@`-mentioned on THIS turn (0–8, restricted to
+   * {@link ChatMentionTargetSchema}). Persisted only on the user's own turn — an
+   * assistant reply never carries one. Optional/additive: every transcript line
+   * persisted before this field existed simply omits it.
+   */
+  mentions: z.array(ChatMentionTargetSchema).max(MAX_CHAT_MENTIONS).optional(),
+  /**
+   * D-020 — the resolved attachment metadata for this turn's `attachmentSetId`
+   * (never the raw files — mirrors {@link ScheduledTaskSchema.attachments} in
+   * `task.schema.ts`). Persisted only on the user's own turn. Optional/additive.
+   */
+  attachments: z.array(AttachmentSchema).optional(),
+  /**
+   * D-020 — the raw attachment SET id this turn referenced, kept alongside the
+   * resolved `attachments` metadata above so `ChatTranscriptStore` can act as an
+   * `AttachmentSetRefProvider` for the scheduler's 24h orphan sweep (see
+   * `attachment-set-ref-provider.ts`) — the resolved metadata alone carries no id
+   * to exempt. Never rendered by the UI directly (the transcript shows `attachments`
+   * instead). Optional/additive.
+   */
+  attachmentSetId: z.string().optional(),
 });
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 
@@ -89,6 +133,22 @@ export const SendChatMessageBodySchema = z.object({
    * target overrides the classifier".
    */
   target: TaskTargetSchema.optional(),
+  /**
+   * D-020 — every unit the operator `@`-mentioned this turn (0–8, restricted to
+   * {@link ChatMentionTargetSchema}). The legacy single `target` above is still
+   * accepted; the server normalises `mentions = mentions ?? (target ? [target] :
+   * [])` (`ChatSessionService.sendMessage`) so an old-shaped caller (a single
+   * `@mention`, Fáze 14.2) keeps working unchanged. `create_task`'s routing rule
+   * (0/1/≥2 mentions) reads the NORMALISED list, never `target` directly.
+   */
+  mentions: z.array(ChatMentionTargetSchema).max(MAX_CHAT_MENTIONS).optional(),
+  /**
+   * D-020 — reuses the existing task-attachment upload (`POST
+   * /api/tasks/attachments`) — there is no second upload path. `create_task`
+   * forwards this straight to `TaskSchedulerService.createTask`, and the turn's
+   * system prompt lists/inlines the resolved files (see `chat-attachment-prompt.ts`).
+   */
+  attachmentSetId: z.string().optional(),
   /**
    * Task 8: the operator's explicit team tag for THIS turn (the `@`-mention
    * picker's team row) — deliberately NOT a `TaskTarget` variant, carried as its

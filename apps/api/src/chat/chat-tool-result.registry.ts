@@ -37,6 +37,11 @@ export interface ChatCreateTaskMeta {
  *    consuming — a turn may call `create_task` more than once) by the MCP tool
  *    handler as `explicitTarget`, and cleared by the turn's `done`/`error` so a
  *    stale target never leaks into the next turn.
+ * 3. D-020 — the turn's full NORMALISED `mentions` list (0–8 units, `mentions ??
+ *    (target ? [target] : [])`) and its `attachmentSetId`, both one-shot per
+ *    turn exactly like `explicitTarget` above. `mentions` is what `create_task`'s
+ *    0/1/≥2 routing rule reads; `explicitTarget` above stays set (redundantly,
+ *    for the 1-mention case) so nothing that already reads it breaks.
  *
  * Deliberately dumb: no TTL, no cross-process sharing — the chat engine is a
  * single in-process service, and a turn's lifetime is seconds, not minutes.
@@ -45,6 +50,8 @@ export interface ChatCreateTaskMeta {
 export class ChatToolResultRegistry {
   private readonly queues = new Map<string, ChatCreateTaskMeta[]>();
   private readonly explicitTargets = new Map<string, TaskTarget>();
+  private readonly mentions = new Map<string, TaskTarget[]>();
+  private readonly attachmentSetIds = new Map<string, string>();
   private readonly subscribers = new Map<string, (result: ChatCreateTaskMeta) => void>();
 
   /**
@@ -104,5 +111,35 @@ export class ChatToolResultRegistry {
   /** Discard the explicit target once its turn ends (`done`/`error`) — one-shot per turn. */
   clearExplicitTarget(conversationId: string): void {
     this.explicitTargets.delete(conversationId);
+  }
+
+  /** D-020 — hold the turn's normalised `@mention` list (0–8 units). */
+  setMentions(conversationId: string, mentions: TaskTarget[]): void {
+    this.mentions.set(conversationId, mentions);
+  }
+
+  /** D-020 — peek the turn's mentions (non-destructive — `create_task` may be called more than once). */
+  getMentions(conversationId: string): TaskTarget[] {
+    return this.mentions.get(conversationId) ?? [];
+  }
+
+  /** D-020 — discard the turn's mentions once it ends — one-shot per turn. */
+  clearMentions(conversationId: string): void {
+    this.mentions.delete(conversationId);
+  }
+
+  /** D-020 — hold the turn's referenced attachment set id, when the operator attached files. */
+  setAttachmentSetId(conversationId: string, attachmentSetId: string): void {
+    this.attachmentSetIds.set(conversationId, attachmentSetId);
+  }
+
+  /** D-020 — peek the turn's attachment set id (non-destructive). */
+  getAttachmentSetId(conversationId: string): string | undefined {
+    return this.attachmentSetIds.get(conversationId);
+  }
+
+  /** D-020 — discard the turn's attachment set id once it ends — one-shot per turn. */
+  clearAttachmentSetId(conversationId: string): void {
+    this.attachmentSetIds.delete(conversationId);
   }
 }

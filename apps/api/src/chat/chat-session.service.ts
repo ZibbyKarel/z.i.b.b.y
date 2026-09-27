@@ -3,14 +3,19 @@ import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import {
+  type Attachment,
+  type ChatMentionTarget,
   type ChatMessage,
   type ChatToolEvent,
   type SendChatMessageBody,
   type SendChatMessageResult,
+  type TaskTarget,
 } from "@zibby/contracts";
 import { KbMcpAuthService } from "../kb/kb-mcp-auth.service";
 import { collisionResistantId, ensureDir } from "../shared/file-storage";
 import { SystemConfigStore } from "../system/system-config.store";
+import { AttachmentStorageService } from "../tasks/attachment-storage.service";
+import { buildAttachmentPromptSection } from "./chat-attachment-prompt";
 import { ChatEventsService } from "./chat-events.service";
 import { ChatMcpAuthService } from "./chat-mcp-auth.service";
 import { buildChatPrompt } from "./chat-persona";
@@ -29,6 +34,13 @@ export interface ClaudeProcess {
 
 /** Hard ceiling on one turn; a stuck `claude` is killed and the turn ends in error. */
 const TURN_TIMEOUT_MS = 120_000;
+
+/** D-020 — the only kinds a chat `@mention` may carry (mirrors `ChatMentionTargetSchema`);
+ *  narrows the legacy, broader `SendChatMessageBody.target` before folding it into
+ *  `mentions`, which the contract types strictly. */
+function isChatMentionTarget(target: TaskTarget): target is ChatMentionTarget {
+  return target.kind === "agent" || target.kind === "pipeline" || target.kind === "department";
+}
 
 /**
  * Merge a newly emitted {@link ChatToolEvent} into the turn's accumulated (and
@@ -84,27 +96,53 @@ export class ChatSessionService {
     // `kbMcpUrl`/`toolArgs`'s docblocks) for the `zibby-kb` MCP server this
     // service also mounts.
     private readonly kbMcpAuth: KbMcpAuthService,
+    // D-020: resolves a turn's `attachmentSetId` into its metadata (for the
+    // persisted `ChatMessage.attachments`) and reads the files themselves off
+    // disk (for the prompt's inline text section) — the same store the task
+    // composer's upload already writes to (no second upload path).
+    private readonly attachmentStorage: AttachmentStorageService,
   ) {}
 
   /**
    * Append the operator's turn and kick off the streaming assistant response. Returns
    * immediately with `{ conversationId, turnId }`; tokens arrive on the SSE stream.
    *
-   * `body.target` (Fáze 14.2, the @mention picker) is held in the tool-result registry
-   * BEFORE the turn starts, so `create_task` can read it as its explicit target and the
-   * prompt built in `buildArgs` can tell the model the operator addressed a specific unit.
+   * D-020: `body.mentions` (0–8 units) is the normalised form of "who the operator
+   * addressed"; the legacy single `body.target` (Fáze 14.2) is folded into it here —
+   * `mentions ?? (target ? [target] : [])` — so every downstream reader (the registry,
+   * `create_task`'s routing rule, the persisted transcript) only ever has to look at
+   * ONE list. Both the mentions and any `body.attachmentSetId` are held in the
+   * tool-result registry BEFORE the turn starts, so `create_task` can read them, and
+   * the prompt built in `buildArgs` can tell the model who was addressed and what was
+   * attached.
    */
   async sendMessage(
     body: SendChatMessageBody,
     now: Date = new Date(),
   ): Promise<SendChatMessageResult> {
     const conversationId = await this.store.ensureConversation(body.conversationId, now);
-    if (body.target) this.toolResults.setExplicitTarget(conversationId, body.target);
+    const mentions: ChatMentionTarget[] =
+      body.mentions ?? (body.target && isChatMentionTarget(body.target) ? [body.target] : []);
+    if (mentions.length > 0) {
+      this.toolResults.setMentions(conversationId, mentions);
+      // Kept for the single-mention case: every existing reader of the (older,
+      // singular) explicit target keeps working unchanged.
+      if (mentions.length === 1 && mentions[0]) {
+        this.toolResults.setExplicitTarget(conversationId, mentions[0]);
+      }
+    }
+    let attachments: Attachment[] = [];
+    if (body.attachmentSetId) {
+      this.toolResults.setAttachmentSetId(conversationId, body.attachmentSetId);
+      attachments = await this.attachmentStorage.list(body.attachmentSetId).catch(() => []);
+    }
     const userMessage: ChatMessage = {
       id: collisionResistantId("msg"),
       role: "user",
       text: body.text,
       at: now.toISOString(),
+      ...(mentions.length > 0 ? { mentions } : {}),
+      ...(attachments.length > 0 ? { attachments, attachmentSetId: body.attachmentSetId } : {}),
     };
     await this.store.appendMessage(conversationId, userMessage);
 
@@ -131,16 +169,39 @@ export class ChatSessionService {
     conversationId: string,
     teamId?: string,
   ): Promise<string[]> {
-    const explicitTarget = this.toolResults.getExplicitTarget(conversationId);
+    const mentions = this.toolResults.getMentions(conversationId);
     const persona = buildChatPrompt(this.systemConfig.current().chatPersona);
-    // Fáze 14.2: when the operator @mentioned a unit, tell the model plainly — it still
-    // decides WHETHER to call `create_task` (rule 3 of the governor), but if it does,
-    // routing is already decided (`explicitTarget` skips the classifier server-side).
-    const prompt = explicitTarget
-      ? `${persona}\n\nOperátor v této zprávě výslovně oslovil ${describeTarget(explicitTarget)} ` +
-        "(@mention). Pokud zavoláš create_task, tato volba už má přednost před klasifikací — " +
-        "nemusíš znovu vybírat cíl."
-      : persona;
+    // D-020: when the operator @mentioned one or more units, tell the model plainly —
+    // it still decides WHETHER to call `create_task` (rule 3 of the governor), but if
+    // it does, routing is already decided (mentions skip the classifier server-side).
+    // With a SINGLE mention it's exactly the Fáze 14.2 line; with several the model is
+    // told it must pass `mention` (`create_task`'s optional arg) naming which one.
+    const mentionLine =
+      mentions.length === 1 && mentions[0]
+        ? `Operátor v této zprávě výslovně oslovil ${describeTarget(mentions[0])} (@mention). ` +
+          "Pokud zavoláš create_task, tato volba už má přednost před klasifikací — nemusíš " +
+          "znovu vybírat cíl."
+        : mentions.length > 1
+          ? `Operátor v této zprávě výslovně oslovil více jednotek: ${mentions
+              .map((m) => `${describeTarget(m)} (id: ${"id" in m ? m.id : m.kind})`)
+              .join(", ")}. Pokud zavoláš create_task pro některou z nich, MUSÍŠ zadat ` +
+            "argument mention s jejím id — bez něj nebo s jiným id volání skončí chybou. " +
+            "Můžeš create_task zavolat i vícekrát, jednou pro každou oslovenou jednotku."
+          : undefined;
+
+    const attachmentSetId = this.toolResults.getAttachmentSetId(conversationId);
+    const attachments = attachmentSetId
+      ? await this.attachmentStorage.list(attachmentSetId).catch(() => [])
+      : [];
+    const attachmentSection =
+      attachments.length > 0 && attachmentSetId
+        ? await buildAttachmentPromptSection(
+            attachments,
+            this.attachmentStorage.dir(attachmentSetId),
+          )
+        : undefined;
+
+    const prompt = [persona, mentionLine, attachmentSection].filter(Boolean).join("\n\n");
     const args = [
       "-p",
       text,
@@ -397,9 +458,11 @@ export class ChatSessionService {
       await this.store.setSessionId(conversationId, capturedSession, now);
     }
 
-    // The @mention target (if any) is one-shot per turn — discard it now so a stale
-    // explicit target never leaks into the conversation's next turn.
+    // The @mention target(s) and any attachment set (if any) are one-shot per turn —
+    // discard them now so nothing stale leaks into the conversation's next turn.
     this.toolResults.clearExplicitTarget(conversationId);
+    this.toolResults.clearMentions(conversationId);
+    this.toolResults.clearAttachmentSetId(conversationId);
 
     if (errored && !accumulated) {
       this.events.emit({ conversationId, turnId, type: "error", message: errored });

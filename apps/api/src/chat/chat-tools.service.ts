@@ -102,11 +102,15 @@ export class ChatToolsService {
     text: string;
     paths?: string[];
     explicitTarget?: TaskTarget;
+    /** D-020 — forwarded straight to the scheduler so the dispatched run gets the
+     *  turn's attached files through the existing run-attachments path. */
+    attachmentSetId?: string;
   }): Promise<ChatCreateTaskOutcome> {
     const result: CreateTaskResult = await this.scheduler.createTask(
       {
         text: input.text,
         ...(input.paths && input.paths.length > 0 ? { paths: input.paths } : {}),
+        ...(input.attachmentSetId ? { attachmentSetId: input.attachmentSetId } : {}),
       },
       undefined,
       undefined,

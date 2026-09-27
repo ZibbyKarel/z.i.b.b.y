@@ -3,6 +3,7 @@ import {
   Button,
   Card,
   CardContent,
+  Chip,
   Container,
   FilePreview,
   type HighlightRange,
@@ -51,6 +52,9 @@ export enum CommandLineTestId {
   /** One compact attached-file tile — suffixed `-${file.name}` so a test can
    *  scope into a SPECIFIC file's remove button among several tiles. */
   FileTile = "command-line-file-tile",
+  /** D-020 — one removable `multipleTargets` mention chip — suffixed
+   *  `-${kind}-${id}` so a test can scope into a SPECIFIC chip among several. */
+  MentionChip = "command-line-mention-chip",
 }
 
 export interface CommandLineProps {
@@ -128,18 +132,36 @@ export interface CommandLineProps {
    * surfacing a mention it can't honor — every call site's intent must be explicit.
    */
   allowTeamMentions?: boolean;
+  /**
+   * D-020 — opt-in: the `@`-mention picker assigns SEVERAL agents/pipelines/
+   * departments instead of one, each rendered as its own removable chip; `target`/
+   * `onTargetChange`/`initialTarget` fall out of use in this mode (a picked routing
+   * unit goes onto `mentions` instead — see `onSubmit`'s 4th argument) though
+   * `initialTarget` still seeds the FIRST chip (mirrors how it seeds `target`
+   * otherwise). Team mentions (`allowTeamMentions`) are unaffected — a team was
+   * always independent of the routing target(s). Default `false` — every existing
+   * single-target caller is unchanged. Only the chat dock (`CooDock`) sets this.
+   */
+  multipleTargets?: boolean;
   /** Mirrors the attached file set up — needed by a parent whose OWN submit path
    *  (e.g. a synthesized loop) must carry the same attachment set. */
   onAttachmentsChange?: (set: TaskAttachmentSet) => void;
   /**
    * Fired on submit (Enter, or the trailing action) with the composed text, the
-   * picked `@`-mention target (if any), and the attached file set (if any). This is
-   * the ONLY dispatch path this component knows about — what happens after firing
-   * (launching a task, sending a chat message, saving an automation) is entirely the
-   * caller's concern; a container that needs task-launch semantics (scheduling, ack,
-   * loop) composes {@link TaskCommandLine} instead of reaching for those here.
+   * picked `@`-mention target (if any), the attached file set (if any), and — ONLY
+   * in {@link CommandLineProps.multipleTargets} mode — the full list of picked
+   * mentions (`target` above stays `undefined` in that mode). This is the ONLY
+   * dispatch path this component knows about — what happens after firing (launching
+   * a task, sending a chat message, saving an automation) is entirely the caller's
+   * concern; a container that needs task-launch semantics (scheduling, ack, loop)
+   * composes {@link TaskCommandLine} instead of reaching for those here.
    */
-  onSubmit: (text: string, target?: TaskTarget, attachments?: TaskAttachmentSet) => void;
+  onSubmit: (
+    text: string,
+    target?: TaskTarget,
+    attachments?: TaskAttachmentSet,
+    mentions?: TaskTarget[],
+  ) => void;
   /**
    * Whether a submit dispatch clears text/target/attachments afterwards — default
    * `true` (the chat/automations composer resets itself, ready for the next turn).
@@ -211,6 +233,13 @@ interface MentionResult {
   glyph: IconName;
   color?: string;
 }
+
+/** D-020 — mirrors the contract's `MAX_CHAT_MENTIONS` cap on `multipleTargets`. */
+const MAX_MENTION_TARGETS = 8;
+
+/** D-020 — the only kinds `multipleTargets` mode's mention picker ever produces
+ *  (mirrors `ChatMentionTarget` in `@zibby/contracts`) — every member has `id`. */
+type MultiMentionTarget = Extract<TaskTarget, { kind: "agent" | "pipeline" | "department" }>;
 
 /** Matches an in-progress `@query` immediately before the caret — an `@` followed
  * by word/`.`/`-` characters, anchored at the caret (`$`). Ported verbatim from
@@ -413,6 +442,7 @@ export function CommandLine({
   onTargetChange,
   onTeamChange,
   allowTeamMentions = false,
+  multipleTargets = false,
   onAttachmentsChange,
   onSubmit,
   resetOnSubmit = true,
@@ -439,6 +469,14 @@ export function CommandLine({
     return base.length > 0 ? `${mention}${base}` : mention;
   });
   const [target, setTarget] = useState<TaskTarget | undefined>(initialTarget);
+  // D-020 — `multipleTargets` mode's own state: a picked routing unit is APPENDED
+  // here instead of replacing `target` above (which stays unused in this mode).
+  // `initialTarget` seeds the first chip, mirroring how it seeds `target` otherwise.
+  const [mentionTargets, setMentionTargets] = useState<MultiMentionTarget[]>(() =>
+    multipleTargets && initialTarget && initialTarget.kind !== "orchestrator"
+      ? [initialTarget as MultiMentionTarget]
+      : [],
+  );
   // Task 8: the picked @-mention TEAM tag — independent of `target` (see
   // `onTeamChange`'s docblock). Keeps the name alongside the id so the same
   // "still referenced in the text" reconciliation `target` gets (below) applies
@@ -580,13 +618,26 @@ export function CommandLine({
     const trimmed = text.trim();
     if (!trimmed) return;
     const attachmentPayload = attachments.files.length > 0 ? attachments : undefined;
-    onSubmit(trimmed, target, attachmentPayload);
+    if (multipleTargets) {
+      onSubmit(
+        trimmed,
+        undefined,
+        attachmentPayload,
+        mentionTargets.length > 0 ? mentionTargets : undefined,
+      );
+    } else {
+      onSubmit(trimmed, target, attachmentPayload);
+    }
     if (resetOnSubmit) {
       setText("");
       onTextChange?.("");
       notifyDraftChange("");
-      setTarget(undefined);
-      onTargetChange?.(undefined);
+      if (multipleTargets) {
+        setMentionTargets([]);
+      } else {
+        setTarget(undefined);
+        onTargetChange?.(undefined);
+      }
       if (team) {
         setTeam(undefined);
         onTeamChange?.(undefined);
@@ -643,7 +694,9 @@ export function CommandLine({
     // only trace of `target`, so editing it out of the text is now the only way
     // to clear it. Reconcile on every change rather than sticking with a stale
     // target once its mention is deleted.
-    if (target && !hasMentionFor(nextValue, target.name)) {
+    if (multipleTargets) {
+      setMentionTargets((prev) => prev.filter((t) => hasMentionFor(nextValue, t.name)));
+    } else if (target && !hasMentionFor(nextValue, target.name)) {
       setTarget(undefined);
       onTargetChange?.(undefined);
     }
@@ -742,8 +795,20 @@ export function CommandLine({
                 name: result.name,
                 glyph: result.glyph,
               };
-      setTarget(picked);
-      onTargetChange?.(picked);
+      if (multipleTargets) {
+        // D-020 — append (deduplicated by kind+id), up to the contract's cap of 8.
+        // `picked` is always agent/pipeline/department in this branch (the switch
+        // above never produces anything else) — see `MultiMentionTarget`.
+        const asMulti = picked as MultiMentionTarget;
+        setMentionTargets((prev) => {
+          if (prev.some((t) => t.kind === asMulti.kind && t.id === asMulti.id)) return prev;
+          if (prev.length >= MAX_MENTION_TARGETS) return prev;
+          return [...prev, asMulti];
+        });
+      } else {
+        setTarget(picked);
+        onTargetChange?.(picked);
+      }
     }
 
     pendingCursorRef.current = mention.start + mentionText.length;
@@ -793,6 +858,21 @@ export function CommandLine({
     const next: TaskAttachmentSet = files.length > 0 ? { ...attachments, files } : { files: [] };
     setAttachments(next);
     onAttachmentsChange?.(next);
+  }
+
+  /** D-020 — removes ONE `multipleTargets` mention chip: drops it from the picked
+   *  list AND strips its `@Name` token out of the text, so the two stay in sync
+   *  (rather than leaving a now-unbacked `@Name` behind for the reconciliation in
+   *  `handleChange` to silently re-drop on the next keystroke). */
+  function removeMentionTarget(removed: MultiMentionTarget) {
+    setMentionTargets((prev) =>
+      prev.filter((t) => !(t.kind === removed.kind && t.id === removed.id)),
+    );
+    const needle = removed.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const next = text.replace(new RegExp(`@${needle}\\s?`, "i"), "");
+    setText(next);
+    onTextChange?.(next);
+    notifyDraftChange(next);
   }
 
   // The inline dropdown's rows — agents then pipelines, filtered live by the
@@ -1140,6 +1220,24 @@ export function CommandLine({
     </Container>
   );
 
+  // D-020 — `multipleTargets` mode's removable chip row, one per addressed unit.
+  const mentionChipsRow = multipleTargets && mentionTargets.length > 0 && (
+    <Stack wrap direction="row" gap="50">
+      {mentionTargets.map((t) => (
+        <Chip
+          closable
+          closeLabel={tMention("removeAria", { name: t.name })}
+          data-testid={`${CommandLineTestId.MentionChip}-${t.kind}-${t.id}`}
+          key={`${t.kind}-${t.id}`}
+          onClose={() => removeMentionTarget(t)}
+          tone="thinking"
+        >
+          {t.name}
+        </Chip>
+      ))}
+    </Stack>
+  );
+
   const belowBox = suggestions && suggestions.length > 0 && text.trim().length === 0 && (
     <Stack wrap direction="row" gap="75">
       {suggestions.map((suggestion) => (
@@ -1179,12 +1277,14 @@ export function CommandLine({
           padding="150"
         >
           <Stack gap="150">
+            {mentionChipsRow}
             {inputArea}
             {belowBox}
           </Stack>
         </Panel>
       ) : (
         <>
+          {mentionChipsRow}
           {inputArea}
           {belowBox}
         </>

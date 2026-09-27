@@ -88,4 +88,30 @@ describe("ChatTranscriptStore", () => {
     await store.markDistilled("c1", 7);
     expect(await store.distilledCount("c1")).toBe(7);
   });
+
+  describe("D-020 — AttachmentSetRefProvider", () => {
+    it("returns no ids when nothing was ever attached", async () => {
+      await store.ensureConversation("c-none");
+      await store.appendMessage("c-none", msg());
+      expect(await store.referencedSetIds()).toEqual([]);
+    });
+
+    it("collects a referenced attachmentSetId across conversations, deduplicated", async () => {
+      await store.ensureConversation("c-a");
+      await store.appendMessage(
+        "c-a",
+        msg({ attachmentSetId: "set_1", attachments: [{ name: "a.txt", size: 1 }] }),
+      );
+      await store.ensureConversation("c-b");
+      await store.appendMessage("c-b", msg({ attachmentSetId: "set_1" }));
+      await store.appendMessage("c-b", msg({ id: "m2", attachmentSetId: "set_2" }));
+
+      expect((await store.referencedSetIds()).sort()).toEqual(["set_1", "set_2"]);
+    });
+
+    it("never throws when the chat dir doesn't exist yet", async () => {
+      const empty = new ChatTranscriptStore(path.join(dir, "does-not-exist"));
+      await expect(empty.referencedSetIds()).resolves.toEqual([]);
+    });
+  });
 });

@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import type { Briefing } from "@zibby/contracts";
-import { renderWithProviders, screen } from "../../../test/render";
+import { FilePreviewTestId } from "@zibby/design-system";
+import { renderWithProviders, screen, within } from "../../../test/render";
 import { BriefingMessageCardTestId } from "./BriefingMessageCard";
 import { ChatMessage, ChatMessageTestId } from "./ChatMessage";
 import { TargetIdentityTestId } from "./TargetIdentity";
@@ -180,6 +181,73 @@ describe("ChatMessage", () => {
       />,
     );
     expect(screen.getByTestId(TargetIdentityTestId.Root)).toHaveTextContent("Orchestrator");
+  });
+
+  describe("D-020 — mentions + attachments on the user bubble", () => {
+    it("renders a mention chip row when the turn addressed a unit", () => {
+      renderWithProviders(
+        <ChatMessage
+          mentions={[{ kind: "agent", id: "builder", name: "Builder" }]}
+          role="user"
+          text="postav appku"
+        />,
+      );
+      expect(screen.getByTestId(ChatMessageTestId.Mentions)).toHaveTextContent("Builder");
+    });
+
+    it("renders every mentioned unit's chip, in order", () => {
+      renderWithProviders(
+        <ChatMessage
+          mentions={[
+            { kind: "agent", id: "builder", name: "Builder" },
+            { kind: "department", id: "dev", name: "Dev" },
+          ]}
+          role="user"
+          text="rozděl to"
+        />,
+      );
+      const row = screen.getByTestId(ChatMessageTestId.Mentions);
+      expect(within(row).getByText("Builder")).toBeInTheDocument();
+      expect(within(row).getByText("Dev")).toBeInTheDocument();
+    });
+
+    it("renders no mention row when the turn addressed nothing", () => {
+      renderWithProviders(<ChatMessage role="user" text="ahoj" />);
+      expect(screen.queryByTestId(ChatMessageTestId.Mentions)).not.toBeInTheDocument();
+    });
+
+    it("renders each attached file's name and size", () => {
+      renderWithProviders(
+        <ChatMessage
+          attachments={[{ name: "notes.txt", size: 2048, mediaType: "text/plain" }]}
+          role="user"
+          text="zkontroluj přílohu"
+        />,
+      );
+      const row = screen.getByTestId(ChatMessageTestId.Attachments);
+      expect(within(row).getByTestId(FilePreviewTestId.Name)).toHaveTextContent("notes.txt");
+      expect(within(row).getByTestId(FilePreviewTestId.Size)).toHaveTextContent("2 KB");
+      // Read-only in the transcript — never a remove control.
+      expect(within(row).queryByTestId(FilePreviewTestId.Remove)).not.toBeInTheDocument();
+    });
+
+    it("renders no attachment row when the turn attached nothing", () => {
+      renderWithProviders(<ChatMessage role="user" text="ahoj" />);
+      expect(screen.queryByTestId(ChatMessageTestId.Attachments)).not.toBeInTheDocument();
+    });
+
+    it("never renders mentions/attachments on an assistant turn", () => {
+      renderWithProviders(
+        <ChatMessage
+          attachments={[{ name: "a.txt", size: 1 }]}
+          mentions={[{ kind: "agent", id: "builder", name: "Builder" }]}
+          role="assistant"
+          text="Hotovo."
+        />,
+      );
+      expect(screen.queryByTestId(ChatMessageTestId.Mentions)).not.toBeInTheDocument();
+      expect(screen.queryByTestId(ChatMessageTestId.Attachments)).not.toBeInTheDocument();
+    });
   });
 
   describe("briefing payload (F8a / O6)", () => {

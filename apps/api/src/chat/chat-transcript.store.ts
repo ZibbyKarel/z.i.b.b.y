@@ -9,6 +9,7 @@ import {
   safeJson,
   writeFileAtomic,
 } from "../shared/file-storage";
+import type { AttachmentSetRefProvider } from "../tasks/attachment-set-ref-provider";
 
 /** DI token for the directory holding per-conversation chat transcripts. */
 export const CHAT_DIR = "CHAT_DIR";
@@ -33,10 +34,28 @@ interface ConversationMeta {
  * line-tolerant: a torn final line after a crash costs one message, not the thread.
  */
 @Injectable()
-export class ChatTranscriptStore {
+export class ChatTranscriptStore implements AttachmentSetRefProvider {
   private readonly logger = new Logger(ChatTranscriptStore.name);
 
   constructor(@Inject(CHAT_DIR) private readonly dir: string) {}
+
+  /**
+   * D-020 — every attachment-set id a persisted chat message references (see
+   * `ChatMessageSchema.attachmentSetId`), across every conversation, so the
+   * scheduler's 24h orphan sweep (`TaskSchedulerService.sweepOrphanAttachmentSets`,
+   * via `AttachmentSetRefsModule`) never deletes a set a chat turn still points at.
+   * Never throws (both underlying reads already degrade to `[]`/`null` on failure).
+   */
+  async referencedSetIds(): Promise<string[]> {
+    const ids = new Set<string>();
+    for (const conversationId of await this.listConversationIds()) {
+      const messages = await this.readMessages(conversationId);
+      for (const message of messages) {
+        if (message.attachmentSetId) ids.add(message.attachmentSetId);
+      }
+    }
+    return [...ids];
+  }
 
   /**
    * Resolve the conversation to write to: an explicit id, else the active thread,

@@ -38,12 +38,17 @@ function targetLabel(target: TaskTarget): string {
  *
  * - **Target chip (O-20):** "→ COO" by default (the classifier routes). A
  *   department page opens the dock with an explicit department target; the chip
- *   then names it and can be cleared back to the COO. A per-turn `@`-mention in
- *   the composer still wins for that one turn.
- * - **Composer:** the existing `CommandLine` with `@`-mentions (targets + team
- *   tags). Attachments are **not** offered: the chat send contract has no
- *   attachment channel, and an attach control that silently drops files would be
- *   a lie (they stay on `/work/tasks/new`).
+ *   then names it and can be cleared back to the COO. D-020: this scope is the
+ *   turn's SOLE mention when the composer's own `@`-mention row is empty
+ *   (`useCooChat.send`'s fallback — mirrors the old single-target fallback,
+ *   generalised to a list); a per-turn `@`-mention picked in the composer still
+ *   wins outright, exactly as before.
+ * - **Composer (D-020):** the existing `CommandLine`, with `multipleTargets` on —
+ *   each `@`-picked agent/pipeline/department becomes its own removable chip
+ *   IN THE COMPOSER (independent of the dock-level target chip above), and the
+ *   attach control is back (the same upload hook/drag-and-drop as New task): the
+ *   chat send contract now carries `mentions` + `attachmentSetId`, so there's no
+ *   longer anything to silently drop.
  * - **CREATE TASK** on a settled reply → `/work/tasks/new` prefilled with it.
  */
 export function CooDock() {
@@ -117,6 +122,9 @@ export function CooDock() {
         allowTeamMentions
         frameless
         hideLabel
+        multipleTargets
+        showAttach
+        attachIcon="paperclip"
         chrome={false}
         disabled={thinking}
         label={t("composer.label")}
@@ -124,7 +132,9 @@ export function CooDock() {
           voice.supported && <VoiceToggleButton active={voice.active} onToggle={voice.toggle} />
         }
         maxRows={COMPOSER_MAX_ROWS}
-        onSubmit={(text, target) => send(text, target)}
+        onSubmit={(text, _target, submittedAttachments, mentions) =>
+          send(text, mentions, submittedAttachments)
+        }
         onTeamChange={setTeamId}
         placeholder={t("composer.placeholder")}
         renderTrailing={({ canSubmit, submit }) => (
@@ -138,7 +148,6 @@ export function CooDock() {
             size="sm"
           />
         )}
-        showAttach={false}
       />
     </Stack>
   );

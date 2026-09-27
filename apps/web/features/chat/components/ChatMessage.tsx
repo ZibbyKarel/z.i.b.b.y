@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   Container,
+  FilePreview,
   Icon,
   Markdown,
   Stack,
@@ -13,7 +14,13 @@ import {
   Typography,
 } from "@zibby/design-system";
 import type { DotTone } from "@zibby/design-system";
-import type { Briefing, ChatMessage as ChatMessageType, ChatToolEvent } from "@zibby/contracts";
+import type {
+  Attachment,
+  Briefing,
+  ChatMentionTarget,
+  ChatMessage as ChatMessageType,
+  ChatToolEvent,
+} from "@zibby/contracts";
 import { useSystemConfigQuery } from "../../system";
 import { useAudioPlayback } from "../hooks/useAudioPlayback";
 import { useSynthesizeSpeechMutation } from "../mutations/useSynthesizeSpeechMutation";
@@ -31,12 +38,20 @@ export enum ChatMessageTestId {
   StreamingCursor = "chat-message-streaming-cursor",
   ReadAloudButton = "chat-message-read-aloud",
   CreateTaskButton = "chat-message-create-task",
+  /** D-020 — the user bubble's `@mention` chip row. */
+  Mentions = "chat-message-mentions",
+  /** D-020 — the user bubble's attached-file row. */
+  Attachments = "chat-message-attachments",
 }
 
 export interface ChatMessageProps {
   role: ChatMessageType["role"];
   text: string;
   toolEvents?: ChatToolEvent[];
+  /** D-020 — the units the operator `@`-mentioned on this (user) turn. */
+  mentions?: ChatMentionTarget[];
+  /** D-020 — this (user) turn's resolved attachment metadata. */
+  attachments?: Attachment[];
   /**
    * F8a (O6) — a structured butler-briefing payload riding this (always
    * `role: "assistant"`) turn. When present it renders as a distinguishable card
@@ -164,6 +179,8 @@ export function ChatMessage({
   role,
   text,
   toolEvents,
+  mentions,
+  attachments,
   briefing,
   streaming,
   onCreateTask,
@@ -191,10 +208,30 @@ export function ChatMessage({
         >
           <Container maxWidth="68ch" padding={["100", "150"]}>
             {isUser ? (
-              // The operator's own turn is plain text — render it verbatim.
-              <Typography data-testid={ChatMessageTestId.Text} type="text">
-                {text}
-              </Typography>
+              // The operator's own turn is plain text — render it verbatim, plus
+              // (D-020) the units they addressed and any files they attached.
+              <Stack direction="col" gap="75">
+                <Typography data-testid={ChatMessageTestId.Text} type="text">
+                  {text}
+                </Typography>
+                {mentions && mentions.length > 0 && (
+                  <Container data-testid={ChatMessageTestId.Mentions}>
+                    <TargetIdentity targets={mentions} />
+                  </Container>
+                )}
+                {attachments && attachments.length > 0 && (
+                  <Stack data-testid={ChatMessageTestId.Attachments} direction="col" gap="50">
+                    {attachments.map((file) => (
+                      <FilePreview
+                        key={file.name}
+                        mediaType={file.mediaType}
+                        name={file.name}
+                        size={file.size}
+                      />
+                    ))}
+                  </Stack>
+                )}
+              </Stack>
             ) : (
               // ZIBBY's turn is GitHub-flavoured markdown — format it. The live cursor
               // is a sibling, never part of the markdown string (so a half-typed `**`

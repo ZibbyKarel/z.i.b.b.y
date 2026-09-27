@@ -1,7 +1,8 @@
 "use client";
 
-import type { TaskTarget } from "@zibby/contracts";
+import type { ChatMentionTarget, TaskTarget } from "@zibby/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { TaskAttachmentSet } from "../../tasks/components/TaskAttachments";
 import { useChat } from "../ChatContext";
 import { useSendChatMessageMutation } from "../mutations/useSendChatMessageMutation";
 import { useChatTranscriptQuery } from "../queries/useChatTranscriptQuery";
@@ -9,18 +10,26 @@ import { useAnyAudioPlaying } from "./useAudioPlayback";
 import { type ChatStreamState, type CompletedTurn, useChatStream } from "./useChatStream";
 import { type VoiceMode, useVoiceMode } from "./useVoiceMode";
 
+/** D-020 — every kind `CommandLine`'s `multipleTargets` mention picker ever
+ *  produces (agent/pipeline/department, mirrors `ChatMentionTargetSchema`) — the
+ *  runtime shape `send`'s `mentions` argument always carries. */
+function isMentionTarget(target: TaskTarget): target is ChatMentionTarget {
+  return target.kind === "agent" || target.kind === "pipeline" || target.kind === "department";
+}
+
 export interface CooChat {
   /** The live SSE stream for the in-flight assistant turn. */
   stream: ChatStreamState;
   /** A turn is in flight: from send (`isPending`) through the terminal `done`/`error`. */
   thinking: boolean;
   /**
-   * Send one operator turn. `target` is the composer's per-turn `@`-mention;
-   * when absent the dock's explicit scope (`dockTarget`, O-20) applies; when both
-   * are absent the COO's classifier routes. Either way an explicit target is sent
-   * as `target` — "explicit target overrides the classifier".
+   * D-020 — send one operator turn. `mentions` is the composer's picked list of
+   * `@`-addressed units (0–8); when absent/empty the dock's explicit scope
+   * (`dockTarget`, O-20) applies as the sole mention; when both are empty the
+   * COO's classifier routes. `attachments`, when its upload produced a set,
+   * rides as `attachmentSetId`.
    */
-  send: (text: string, target?: TaskTarget) => void;
+  send: (text: string, mentions?: TaskTarget[], attachments?: TaskAttachmentSet) => void;
   /** The team tagged via the composer's `@`-mention (Task 8) — a KB scope, not a target. */
   setTeamId: (teamId: string | undefined) => void;
   /** Hands-free dictation over `useSpeechRecognition` (O-22). */
@@ -130,9 +139,15 @@ export function useCooChat(): CooChat {
   const [teamId, setTeamId] = useState<string | undefined>(undefined);
 
   const send = useCallback(
-    (text: string, target?: TaskTarget) => {
+    (text: string, mentions?: TaskTarget[], attachments?: TaskAttachmentSet) => {
       if (!conversationId) return;
-      const effectiveTarget = target ?? dockTarget ?? undefined;
+      // D-020: an empty/absent mentions list falls back to the dock's explicit
+      // scope (O-20) as the sole mention — mirrors the old single-`target`
+      // fallback, just generalised to a list. `CommandLine`'s picker only ever
+      // produces agent/pipeline/department targets, so this narrows safely.
+      const effectiveMentions = (
+        mentions && mentions.length > 0 ? mentions : dockTarget ? [dockTarget] : []
+      ).filter(isMentionTarget);
       setMessages((prev) => [
         ...prev,
         { id: `u-${crypto.randomUUID()}`, role: "user", text, at: new Date().toISOString() },
@@ -141,7 +156,8 @@ export function useCooChat(): CooChat {
         body: {
           conversationId,
           text,
-          ...(effectiveTarget ? { target: effectiveTarget } : {}),
+          ...(effectiveMentions.length > 0 ? { mentions: effectiveMentions } : {}),
+          ...(attachments?.attachmentSetId ? { attachmentSetId: attachments.attachmentSetId } : {}),
           ...(teamId ? { teamId } : {}),
         },
       });

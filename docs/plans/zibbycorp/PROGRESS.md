@@ -551,3 +551,19 @@ The ZibbyCorp migration is complete and parked at the PR gate. PR #70 goes to `m
 - ZB-08 gaps: per-project gate rules need `projectId` on rules, and PatternCard dismiss has no endpoint.
 - ZB-05b: the in-flight chain column shows "—", because `tasks/parents` has no chain field.
 
+## 2026-09-27 — Operator follow-ups
+
+- **Active-tab colour (ef7c090).** The default and vertical DS `Tabs` marked the active tab
+  with the accent blue. They now use ink.
+- **D-020 — COO chat takes attachments and several @-mentions (operator decision 1: yes).**
+  Implemented by a Sonnet subagent and reviewed by the orchestrator.
+  - Contract: `SendChatMessageBody.attachmentSetId?` and `mentions?` (≤8, agent/department/pipeline).
+  - `create_task` takes a `mention` argument under the 0 / 1 / ≥2 rule, and errors are returned to the model.
+  - Attachments are forwarded to the dispatched task.
+  - UTF-8 text files are inlined into the prompt, up to 32 KB in total, inside a Law-4 data block.
+  - The chat transcript is an attachment-set ref provider.
+  - The dock has an attach control and removable mention chips.
+  - Review fix: the data block's delimiter is now a random boundary minted for each turn, and file names are JSON-escaped. This is covered by an injection test.
+  - Deviation, accepted: the O-20 department scope applies at send time when the composer has no mentions. It is not seeded as a chip, which keeps the "clear the scope chip, fall back to the COO" behaviour.
+- Decisions 2 (finer "Bound in") and 3 (the two ZB-06 trims) remain open; the operator will decide later.
+
