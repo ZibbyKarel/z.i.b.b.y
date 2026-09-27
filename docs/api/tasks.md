@@ -564,6 +564,14 @@ GET    /api/tasks/parents             the parent/subtask read model (ZB-04a §5,
 GET    /api/tasks/:id                 one task, with its subtasks[] (ZB-04a §5, below)
 ```
 
+**Route order.** `TasksModule` registers `TaskRunsController` and
+`TaskRunLogsController` before `TasksController`. Express matches the first route that
+fits, so if `TasksController` came first, `GET /api/tasks/:id` would capture
+`GET /api/tasks/runs` as `id = "runs"` and return 404. Keep the literal `/api/tasks/runs*`
+controllers ahead of it. `unified-runs.e2e` and `health.e2e` guard this order.
+
+The COO chat also uses `POST /api/tasks/attachments` to upload attachments (D-020).
+
 ## Parent/subtask read model (ZB-04a §5)
 
 A `ScheduledTask` carries four additive, server-derived fields —
