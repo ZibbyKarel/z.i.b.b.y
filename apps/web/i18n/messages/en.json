@@ -2298,9 +2298,6 @@
     "needsYouOpen": "Open approval details for {agentName}"
   },
   "orgMap": {
-    "eyebrow": "01 — ORG MAP",
-    "ceoLabel": "CEO",
-    "ceoFallback": "CEO",
     "cooAvatarLabel": "Zibby · COO",
     "alert": {
       "errors": "{count, plural, one {# error} other {# errors}}",

@@ -25,13 +25,11 @@ import { useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useApprovalsQuery } from "../../approvals/queries";
 import { useHandoffRulesQuery } from "../../handoff/queries";
-import { useSystemConfigQuery } from "../../system/queries";
 import { useDepartmentSubtasksQuery, useDepartmentsQuery } from "../../departments/queries";
 import { useEmployeesQuery } from "../../employees/queries";
 
 export enum OrgMapScreenTestId {
   Root = "org-map-screen-root",
-  CeoNode = "org-map-ceo-node",
   CooNode = "org-map-coo-node",
   Grid = "org-map-grid",
   Division = "org-map-division",
@@ -88,7 +86,6 @@ export function OrgMapScreen() {
   const searchParams = useSearchParams();
   const focusId = (searchParams.get("focus") ?? undefined) as DepartmentId | undefined;
 
-  const { data: config } = useSystemConfigQuery();
   const { data: departments = [] } = useDepartmentsQuery();
   const { data: employees = [] } = useEmployeesQuery({ status: "active" });
   const { data: approvals = [] } = useApprovalsQuery();
@@ -114,26 +111,10 @@ export function OrgMapScreen() {
 
   return (
     <Stack data-testid={OrgMapScreenTestId.Root} gap="300">
-      <Row align="baseline" gap="200">
-        <Typography tracking="wider" type="labelSm" variant="secondary">
-          {t("eyebrow")}
-        </Typography>
-        <Typography type="h1">{config?.companyName ?? "ZibbyCorp"}</Typography>
-      </Row>
-
       {/* Map + focus panel sit flush so the selected stub runs into the panel. */}
       <Stack gap="0">
         <Stack align="center" gap="0">
           <Stack align="center" gap="100">
-            <Row data-testid={OrgMapScreenTestId.CeoNode} gap="100">
-              <Typography tracking="wider" type="labelSm" variant="secondary">
-                {t("ceoLabel")}
-              </Typography>
-              <Typography type="body" weight="medium">
-                {config?.operatorName ?? t("ceoFallback")}
-              </Typography>
-            </Row>
-
             <Container data-testid={OrgMapScreenTestId.CooNode}>
               <ZibbyAvatar label={t("cooAvatarLabel")} size={112} state={cooState} />
             </Container>

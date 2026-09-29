@@ -2,7 +2,6 @@ import type { ReactNode, Ref } from "react";
 import { LAYOUT } from "../../tokens";
 import { cn } from "../../utils/cn";
 import { focusRing, focusRingInset } from "../../utils/focus";
-import { AgentGlyph } from "../AgentGlyph/AgentGlyph";
 import { Container } from "../Container/Container";
 import { Row } from "../Stack/Stack";
 import type { SubNavLinkComponent } from "../SubNav/SubNav";
@@ -87,11 +86,10 @@ export function AppHeader({
         {homeHref ? (
           <HomeLink
             aria-label={homeLabel}
-            className={cn("inline-flex items-center gap-[10px]", focusRingInset)}
+            className={cn("inline-flex items-center", focusRingInset)}
             data-testid={AppHeaderTestId.HomeLink}
             href={homeHref}
           >
-            <AgentGlyph glow={false} seed="Zibby" size={22} state="idle" />
             {mark}
           </HomeLink>
         ) : (

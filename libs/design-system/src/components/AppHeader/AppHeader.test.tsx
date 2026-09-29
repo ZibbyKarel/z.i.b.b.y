@@ -1,7 +1,6 @@
 import { screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "../../utils/testRender";
-import { AgentGlyphTestId } from "../AgentGlyph/AgentGlyph";
 import { AppHeader, AppHeaderTestId } from "./AppHeader";
 
 describe("AppHeader", () => {
@@ -61,15 +60,12 @@ describe("AppHeader", () => {
     expect(screen.queryByTestId(AppHeaderTestId.HomeLink)).toBeNull();
   });
 
-  it("renders the brand mark as a link to homeHref, with the glyph, when given", () => {
+  it("renders the brand mark as a link to homeHref when given", () => {
     render(<AppHeader homeHref="/org" />);
     const link = screen.getByTestId(AppHeaderTestId.HomeLink);
     expect(link.tagName).toBe("A");
     expect(link).toHaveAttribute("href", "/org");
     expect(link).toHaveAccessibleName("ZibbyCorp");
-    expect(screen.getByTestId(AppHeaderTestId.HomeLink)).toContainElement(
-      screen.getByTestId(AgentGlyphTestId.Root),
-    );
   });
 
   it("renders the home link through a custom linkComponent", () => {

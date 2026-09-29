@@ -2298,9 +2298,6 @@
     "needsYouOpen": "Otevřít detail schválení pro {agentName}"
   },
   "orgMap": {
-    "eyebrow": "01 — MAPA ORGANIZACE",
-    "ceoLabel": "CEO",
-    "ceoFallback": "CEO",
     "cooAvatarLabel": "Zibby · COO",
     "alert": {
       "errors": "{count, plural, one {# chyba} few {# chyby} other {# chyb}}",

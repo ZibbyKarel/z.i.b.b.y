@@ -23,10 +23,6 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-vi.mock("../../system/queries/useSystemConfigQuery", () => ({
-  useSystemConfigQuery: () => ({ data: { operatorName: "Karel", companyName: "ZibbyCorp" } }),
-}));
-
 vi.mock("../../departments/queries/useDepartmentsQuery", () => ({
   useDepartmentsQuery: () => ({
     data: [
@@ -97,9 +93,8 @@ describe("OrgMapScreen", () => {
     expect(screen.getAllByTestId(OrgNodeTestId.Root)).toHaveLength(11);
   });
 
-  it("shows the CEO node and the COO as the Zibby avatar", () => {
+  it("shows the COO as the Zibby avatar", () => {
     render(<OrgMapScreen />);
-    expect(screen.getByTestId(OrgMapScreenTestId.CeoNode)).toHaveTextContent("Karel");
     const avatar = within(screen.getByTestId(OrgMapScreenTestId.CooNode)).getByTestId(
       ZibbyAvatarTestId.Root,
     );

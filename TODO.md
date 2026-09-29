@@ -26,6 +26,6 @@
 20. [x] Loader komponenta je stále ve starém designu (claude/zibbycorp-system-migration-7lx46s@9286f25e)
 21. [x] Tlačítko nastavení (ozubené kolo) v topBaru smažeme. Je redundantní (claude/zibbycorp-system-migration-7lx46s@2fbc3292)
 22. [x] Tlačítko "Nový úkol" musíme udělat výraznější (claude/zibbycorp-system-migration-7lx46s@2fbc3292)
-23. [ ] OrgChart - Chce to nějakou kompaktnější kartičku departmentu. Pokudj e více departmentů v rámci jendé groupy tak se detail departmentu otevírá tak, že není celý vidět. Navrhuji tělo kartičky místo jednoho sloupce rozdělit na dva a informace rozdělit mezi oba sloupečky
+23. [ ] OrgChart - Chce to nějakou kompaktnější kartičku departmentu. Pokudj e více departmentů v rámci jendé groupy tak se detail departmentu otevírá tak, že není celý vidět. Navrhuji tělo kartičky místo jednoho sloupce rozdělit na dva a informace rozdělit mezi oba sloupečky. nemusíme zobrazovat zkratku departmentu třeba nebo spíš co je lepší nemusíme zobrazovat počty lidí v departmentu protože to je udáno stavovými čtverečky a zkratku departmentu můžeme posunout na místo toho počku.
 24. [ ] TopBar - limity - nesedí s designem. Mělo by vypadat jako dva progressbary pod sebou s labelly napravo a nalevo
 25. [ ] Chat - nesedí s desinem.
