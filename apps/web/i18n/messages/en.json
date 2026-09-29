@@ -2301,9 +2301,7 @@
     "eyebrow": "01 — ORG MAP",
     "ceoLabel": "CEO",
     "ceoFallback": "CEO",
-    "cooLabel": "COO · ROOT",
-    "cooName": "Zibby",
-    "cooTagline": "Routes, classifies, chats",
+    "cooAvatarLabel": "Zibby · COO",
     "alert": {
       "errors": "{count, plural, one {# error} other {# errors}}",
       "approvals": "{count, plural, one {# approval waiting} other {# approvals waiting}}"

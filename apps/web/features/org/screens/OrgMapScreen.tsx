@@ -17,6 +17,7 @@ import {
   StatePill,
   type StateTone,
   Typography,
+  ZibbyAvatar,
 } from "@zibby/design-system";
 import Link from "next/link";
 import type { Route } from "next";
@@ -133,27 +134,13 @@ export function OrgMapScreen() {
               </Typography>
             </Row>
 
-            <Panel data-testid={OrgMapScreenTestId.CooNode} padding="100">
-              <Row gap="200">
-                <AgentGlyph seed="coo-zibby" size={48} state={cooState} />
-                <Stack gap="50">
-                  <Typography tracking="wider" type="labelSm" variant="secondary">
-                    {t("cooLabel")}
-                  </Typography>
-                  <Typography type="body" weight="medium">
-                    {t("cooName")}
-                  </Typography>
-                  <Typography type="labelSm" variant="secondary">
-                    {t("cooTagline")}
-                  </Typography>
-                </Stack>
-                <StatePill state={cooState} />
-              </Row>
-            </Panel>
+            <Container data-testid={OrgMapScreenTestId.CooNode}>
+              <ZibbyAvatar label={t("cooAvatarLabel")} size={112} state={cooState} />
+            </Container>
           </Stack>
 
-          {/* The COO trunk — joins the COO panel to the department bus below. */}
-          <OrgConnector length={22} orientation="vertical" />
+          {/* The COO trunk — joins the COO avatar to the department bus below. */}
+          <OrgConnector length={18} orientation="vertical" />
 
           {/* Only the division row scrolls on a narrow viewport; the bus lives
            *  inside it so it scrolls together with the nodes it spans. */}

@@ -211,6 +211,13 @@ export type { DotTone, StatusDotProps } from "./components/StatusDot/StatusDot";
 export { AgentGlyph, AgentGlyphTestId } from "./components/AgentGlyph/AgentGlyph";
 export type { AgentGlyphProps, GlyphSize } from "./components/AgentGlyph/AgentGlyph";
 
+export {
+  ZIBBY_AVATAR_ROWS,
+  ZibbyAvatar,
+  ZibbyAvatarTestId,
+} from "./components/ZibbyAvatar/ZibbyAvatar";
+export type { ZibbyAvatarProps, ZibbyAvatarSize } from "./components/ZibbyAvatar/ZibbyAvatar";
+
 export { StatePill, StatePillTestId } from "./components/StatePill/StatePill";
 export type { StatePillProps } from "./components/StatePill/StatePill";
 

@@ -2301,9 +2301,7 @@
     "eyebrow": "01 — MAPA ORGANIZACE",
     "ceoLabel": "CEO",
     "ceoFallback": "CEO",
-    "cooLabel": "COO · ROOT",
-    "cooName": "Zibby",
-    "cooTagline": "Routuje, klasifikuje, chatuje",
+    "cooAvatarLabel": "Zibby · COO",
     "alert": {
       "errors": "{count, plural, one {# chyba} few {# chyby} other {# chyb}}",
       "approvals": "{count, plural, one {# schválení čeká} few {# schválení čekají} other {# schválení čeká}}"

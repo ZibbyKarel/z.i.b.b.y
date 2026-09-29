@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AgentGlyphTestId, OrgConnectorTestId, OrgNodeTestId } from "@zibby/design-system";
-import { renderWithProviders as render, screen } from "../../../test/render";
+import {
+  AgentGlyphTestId,
+  OrgConnectorTestId,
+  OrgNodeTestId,
+  ZibbyAvatarTestId,
+} from "@zibby/design-system";
+import { renderWithProviders as render, screen, within } from "../../../test/render";
 import { OrgMapScreen, OrgMapScreenTestId } from "./OrgMapScreen";
 
 const push = vi.fn();
@@ -92,10 +97,14 @@ describe("OrgMapScreen", () => {
     expect(screen.getAllByTestId(OrgNodeTestId.Root)).toHaveLength(11);
   });
 
-  it("shows the CEO and COO nodes", () => {
+  it("shows the CEO node and the COO as the Zibby avatar", () => {
     render(<OrgMapScreen />);
     expect(screen.getByTestId(OrgMapScreenTestId.CeoNode)).toHaveTextContent("Karel");
-    expect(screen.getByTestId(OrgMapScreenTestId.CooNode)).toHaveTextContent("Zibby");
+    const avatar = within(screen.getByTestId(OrgMapScreenTestId.CooNode)).getByTestId(
+      ZibbyAvatarTestId.Root,
+    );
+    expect(avatar).toHaveRole("img");
+    expect(avatar).toHaveAccessibleName("Zibby · COO");
   });
 
   it("shows no focus panel without ?focus=", () => {
@@ -134,14 +143,14 @@ describe("OrgMapScreen", () => {
     expect(active).toHaveLength(1);
   });
 
-  it("renders an AgentGlyph for the COO only, with no focus panel open", () => {
+  it("renders no AgentGlyph with no focus panel open — the COO is the Zibby avatar", () => {
     render(<OrgMapScreen />);
-    expect(screen.getAllByTestId(AgentGlyphTestId.Root)).toHaveLength(1);
+    expect(screen.queryAllByTestId(AgentGlyphTestId.Root)).toHaveLength(0);
   });
 
-  it("renders an AgentGlyph for the COO and for each focus-panel team tile", () => {
+  it("renders an AgentGlyph for each focus-panel team tile", () => {
     focusParam = "dev";
     render(<OrgMapScreen />);
-    expect(screen.getAllByTestId(AgentGlyphTestId.Root)).toHaveLength(2);
+    expect(screen.getAllByTestId(AgentGlyphTestId.Root)).toHaveLength(1);
   });
 });
