@@ -1,15 +1,15 @@
 {
-  "taskTickMs": 150000,
-  "channelTickMs": 150000,
-  "monitorTickMs": 300000,
-  "automationTickMs": 0,
-  "limitResumeTickMs": 300000,
-  "limitResumeMax": 3,
+  "taskTickMs": 600000,
+  "channelTickMs": 600000,
+  "monitorTickMs": 1800000,
+  "automationTickMs": 60000,
+  "limitResumeTickMs": 1800000,
+  "limitResumeMax": 1,
   "goalVerifyTimeoutMs": 600000,
   "goalAutoResume": false,
   "chatPersona": "concise",
   "powerSaver": false,
   "ttsVoice": "cs_male_cv26_default",
   "maxConcurrentRuns": 3,
-  "roadmapTickMs": 60000
+  "roadmapTickMs": 10800000
 }

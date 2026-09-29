@@ -13,6 +13,7 @@ import {
 } from "@zibby/design-system";
 import type { SystemConfig } from "@zibby/contracts";
 import { useSetSystemConfigMutation, useSystemConfigQuery } from "../../system";
+import { DurationField } from "./DurationField";
 
 /** Testids for the system config editor (the screen + tests select via these). */
 export enum SystemSectionTestId {
@@ -109,59 +110,47 @@ function SystemEditor({ config }: { config: SystemConfig }) {
           {t("runtime.hint")}
         </Typography>
 
-        <NumberField
+        <DurationField
           data-testid={SystemSectionTestId.TaskTick}
-          hint={t("runtime.tickHint")}
+          hint={t("runtime.taskTickHint")}
           label={t("runtime.taskTick")}
-          min={0}
           onValueChange={setTaskTickMs}
-          step={1000}
-          value={taskTickMs}
+          valueMs={taskTickMs}
         />
-        <NumberField
+        <DurationField
           data-testid={SystemSectionTestId.ChannelTick}
-          hint={t("runtime.tickHint")}
+          hint={t("runtime.channelTickHint")}
           label={t("runtime.channelTick")}
-          min={0}
           onValueChange={setChannelTickMs}
-          step={1000}
-          value={channelTickMs}
+          valueMs={channelTickMs}
         />
-        <NumberField
+        <DurationField
           data-testid={SystemSectionTestId.MonitorTick}
-          hint={t("runtime.tickHint")}
+          hint={t("runtime.monitorTickHint")}
           label={t("runtime.monitorTick")}
-          min={0}
           onValueChange={setMonitorTickMs}
-          step={1000}
-          value={monitorTickMs}
+          valueMs={monitorTickMs}
         />
-        <NumberField
+        <DurationField
           data-testid={SystemSectionTestId.AutomationTick}
-          hint={t("runtime.tickHint")}
+          hint={t("runtime.automationTickHint")}
           label={t("runtime.automationTick")}
-          min={0}
           onValueChange={setAutomationTickMs}
-          step={1000}
-          value={automationTickMs}
+          valueMs={automationTickMs}
         />
-        <NumberField
+        <DurationField
           data-testid={SystemSectionTestId.LimitResumeTick}
-          hint={t("runtime.tickHint")}
+          hint={t("runtime.limitResumeTickHint")}
           label={t("runtime.limitResumeTick")}
-          min={0}
           onValueChange={setLimitResumeTickMs}
-          step={1000}
-          value={limitResumeTickMs}
+          valueMs={limitResumeTickMs}
         />
-        <NumberField
+        <DurationField
           data-testid={SystemSectionTestId.RoadmapTick}
           hint={t("runtime.roadmapTickHint")}
           label={t("runtime.roadmapTick")}
-          min={0}
           onValueChange={setRoadmapTickMs}
-          step={1000}
-          value={roadmapTickMs}
+          valueMs={roadmapTickMs}
         />
 
         <Divider />
@@ -182,14 +171,12 @@ function SystemEditor({ config }: { config: SystemConfig }) {
           onValueChange={setMaxConcurrentRuns}
           value={maxConcurrentRuns}
         />
-        <NumberField
+        <DurationField
           data-testid={SystemSectionTestId.GoalVerifyTimeout}
           hint={t("runtime.goalVerifyTimeoutHint")}
           label={t("runtime.goalVerifyTimeout")}
-          min={1}
           onValueChange={setGoalVerifyTimeoutMs}
-          step={1000}
-          value={goalVerifyTimeoutMs}
+          valueMs={goalVerifyTimeoutMs}
         />
 
         <Divider />
