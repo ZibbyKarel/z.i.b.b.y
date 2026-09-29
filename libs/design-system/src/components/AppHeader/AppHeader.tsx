@@ -1,7 +1,8 @@
 import type { ReactNode, Ref } from "react";
 import { LAYOUT } from "../../tokens";
 import { cn } from "../../utils/cn";
-import { focusRing } from "../../utils/focus";
+import { focusRing, focusRingInset } from "../../utils/focus";
+import { AgentGlyph } from "../AgentGlyph/AgentGlyph";
 import { Container } from "../Container/Container";
 import { Row } from "../Stack/Stack";
 import type { SubNavLinkComponent } from "../SubNav/SubNav";
@@ -10,18 +11,22 @@ import { Wordmark } from "../Wordmark/Wordmark";
 export enum AppHeaderTestId {
   Root = "app-header-root",
   Wordmark = "app-header-wordmark",
+  HomeLink = "app-header-home-link",
   Nav = "app-header-nav",
   Operator = "app-header-operator",
   ActiveCount = "app-header-active-count",
   Limits = "app-header-limits",
   Search = "app-header-search",
   SearchShortcut = "app-header-search-shortcut",
-  Settings = "app-header-settings",
 }
 
 export interface AppHeaderProps {
   /** Brand mark, leading the header. Defaults to `<Wordmark />`. */
   wordmark?: ReactNode;
+  /** Href the brand mark (glyph + wordmark) links to. Omit to render it inert. */
+  homeHref?: string;
+  /** Accessible name for the brand mark link (only used when `homeHref` is set). */
+  homeLabel?: string;
   /** Section navigation — the app composes a `Tabs variant="mono"`. */
   nav?: ReactNode;
   /** Operator identity slot, trailing cluster. */
@@ -34,10 +39,7 @@ export interface AppHeaderProps {
    *  `⌘K`. Omit `onSearchClick` to not render the trigger at all. */
   searchLabel?: string;
   onSearchClick?: () => void;
-  /** Settings link target, rendered as a `⚙` icon link. Omit to hide it. */
-  settingsHref?: string;
-  settingsLabel?: string;
-  /** Overrides the rendered anchor for `settingsHref` — pass the app's
+  /** Overrides the rendered anchor for `homeHref` — pass the app's
    *  `next/link` `Link`, same contract as `SubNav`/`Breadcrumb`. */
   linkComponent?: SubNavLinkComponent;
   ref?: Ref<HTMLElement>;
@@ -45,27 +47,29 @@ export interface AppHeaderProps {
 
 /**
  * DS.md §5/§8 app shell top bar — a fixed `LAYOUT.headerHeight` (56px) band,
- * `--panel` background, a bottom hairline. Leading brand mark + section nav,
- * trailing operator/active-count/usage/search/settings cluster. Every
- * trailing slot the app owns is an opaque `ReactNode` (domain-neutral, no
- * `next/link` import here) except the search trigger and settings link,
- * which `AppHeader` renders itself so every screen gets the identical `⌘K`
- * affordance and gear icon for free (DS.md §8 "Search trigger").
+ * `--panel` background, a bottom hairline. Leading brand mark (linking home,
+ * ZB-01) + section nav, trailing operator/active-count/usage/search cluster.
+ * Every trailing slot the app owns is an opaque `ReactNode` (domain-neutral,
+ * no `next/link` import here) except the search trigger, which `AppHeader`
+ * renders itself so every screen gets the identical `⌘K` affordance for free
+ * (DS.md §8 "Search trigger"). The settings link lives in the org's system
+ * section nav instead — a dedicated top-bar gear was redundant.
  */
 export function AppHeader({
   wordmark,
+  homeHref,
+  homeLabel = "ZibbyCorp",
   nav,
   operator,
   activeCount,
   limits,
   searchLabel = "Search",
   onSearchClick,
-  settingsHref,
-  settingsLabel = "Settings",
   linkComponent,
   ref,
 }: AppHeaderProps) {
-  const SettingsLink = linkComponent ?? "a";
+  const HomeLink = linkComponent ?? "a";
+  const mark = wordmark ?? <Wordmark />;
   return (
     <Row
       align="center"
@@ -79,7 +83,21 @@ export function AppHeader({
         borderBottom: "1px solid var(--color-line)",
       }}
     >
-      <div data-testid={AppHeaderTestId.Wordmark}>{wordmark ?? <Wordmark />}</div>
+      <div data-testid={AppHeaderTestId.Wordmark}>
+        {homeHref ? (
+          <HomeLink
+            aria-label={homeLabel}
+            className={cn("inline-flex items-center gap-[10px]", focusRingInset)}
+            data-testid={AppHeaderTestId.HomeLink}
+            href={homeHref}
+          >
+            <AgentGlyph glow={false} seed="Zibby" size={22} state="idle" />
+            {mark}
+          </HomeLink>
+        ) : (
+          mark
+        )}
+      </div>
 
       <Container grow minW0 data-testid={AppHeaderTestId.Nav} height="100%">
         {nav}
@@ -108,21 +126,6 @@ export function AppHeader({
               ⌘K
             </span>
           </button>
-        )}
-
-        {settingsHref && (
-          <SettingsLink
-            aria-label={settingsLabel}
-            className={cn(
-              "inline-flex items-center justify-center border border-line-2 px-[9px] py-[5px]",
-              "text-ink transition-colors hover:border-ink",
-              focusRing,
-            )}
-            data-testid={AppHeaderTestId.Settings}
-            href={settingsHref}
-          >
-            <span aria-hidden="true">⚙</span>
-          </SettingsLink>
         )}
       </Row>
     </Row>

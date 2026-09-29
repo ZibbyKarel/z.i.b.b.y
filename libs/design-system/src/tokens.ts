@@ -67,6 +67,7 @@ export const spacingValues: Record<Spacing, string> = {
  */
 export const LAYOUT = {
   headerHeight: 56,
+  subNavHeight: 44,
   railWidthLeft: 280,
   railWidthRight: 400,
   docMaxWidth: 1320,

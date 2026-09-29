@@ -18,12 +18,12 @@ import {
 } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { compactAgo } from "../../../utils/time";
-import { useApprovalsQuery, useApproveMutation } from "../../approvals";
+import { useApprovalsQuery, useApproveMutation, useRejectMutation } from "../../approvals";
 import { HIGH_RISK_TYPES, formatWaited } from "../../approvals/approval";
 import { useDepartmentRosterQuery } from "../../departments/queries";
 import { RunDetail } from "../../runs/components/RunDetail";
@@ -57,12 +57,15 @@ export interface TaskDetailScreenProps {
 export function TaskDetailScreen({ taskId }: TaskDetailScreenProps) {
   const t = useTranslations("tasksWork");
   const router = useRouter();
+  const pathname = usePathname();
   const [now] = useState(() => Date.now());
   const glyphById = useRunGlyphMap();
 
   const { data: task, isPending, isError, refetch } = useTaskQuery(taskId);
   const { data: approvals = [] } = useApprovalsQuery();
   const approve = useApproveMutation();
+  const reject = useRejectMutation();
+  const openApprovalSheet = (id: string) => router.push(`${pathname}?approval=${id}` as Route);
 
   const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -210,6 +213,8 @@ export function TaskDetailScreen({ taskId }: TaskDetailScreenProps) {
                       key={a.id}
                       meta={a.kind}
                       onApprove={() => approve.mutate({ params: { id: a.id }, body: {} })}
+                      onDeny={() => reject.mutate({ params: { id: a.id }, body: {} })}
+                      onOpen={() => openApprovalSheet(a.id)}
                       request={a.detail}
                       taskRef={a.runId}
                       waited={formatWaited(a.requestedAt)}

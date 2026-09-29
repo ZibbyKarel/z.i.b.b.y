@@ -58,9 +58,18 @@ export function Tabs({
     onValueChange?.(id);
   };
   const Root = direction === "vertical" ? Row : Stack;
+  // Mono top-nav (DS.md "Tabs (top nav)") fills the header's full height so its
+  // tab buttons' own `h-full` (Tab's mono className) resolves against a real
+  // size instead of collapsing to text height — Stack/Row set no height by
+  // default, so the ancestor chain otherwise has none to inherit.
+  const fillHeight = variant === "mono" && direction === "horizontal";
   return (
     <TabsContext.Provider value={{ active, setActive, direction, variant }}>
-      <Root align="stretch" data-testid={TabsTestId.Root}>
+      <Root
+        align="stretch"
+        data-testid={TabsTestId.Root}
+        style={fillHeight ? { height: "100%" } : undefined}
+      >
         {children}
       </Root>
     </TabsContext.Provider>
@@ -79,8 +88,19 @@ export function TabList({ children }: { children: ReactNode }) {
     );
   }
   return (
-    <div className={cn("border-b shrink-0", variant === "mono" ? "border-line" : "border-border")}>
-      <Row align="stretch" data-testid={TabsTestId.List} gap="25" role="tablist">
+    <div
+      className={cn(
+        "border-b shrink-0",
+        variant === "mono" ? "border-line h-full" : "border-border",
+      )}
+    >
+      <Row
+        align="stretch"
+        data-testid={TabsTestId.List}
+        gap="25"
+        role="tablist"
+        style={variant === "mono" ? { height: "100%" } : undefined}
+      >
         {children}
       </Row>
     </div>

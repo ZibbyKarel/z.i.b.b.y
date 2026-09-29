@@ -135,7 +135,7 @@ export function AppFrame({
           style={{ gridTemplateRows: "min-content minmax(0,1fr)" }}
         >
           {(subnav || rail) && (
-            <div className="flex min-w-0 items-stretch">
+            <div className="flex min-w-0 items-stretch" style={{ height: LAYOUT.subNavHeight }}>
               {/* Below `lg` the rail is a drawer; its toggle leads the subnav row
                   (in flow, so it never covers the subnav tabs or the COO dock). */}
               {rail && (

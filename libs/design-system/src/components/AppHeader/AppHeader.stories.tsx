@@ -27,9 +27,10 @@ type Story = StoryObj<typeof AppHeader>;
 export const Overview: Story = {
   render: () => (
     <div className="flex flex-col gap-6">
-      <AppHeader nav={nav} onSearchClick={() => {}} settingsHref="/settings" />
+      <AppHeader homeHref="/org" nav={nav} onSearchClick={() => {}} />
       <AppHeader
         activeCount={<Typography type="labelSm">6 active</Typography>}
+        homeHref="/org"
         limits={
           <div className="flex gap-4">
             <LimitBar label="5H" max={100} value={40} />
@@ -39,12 +40,11 @@ export const Overview: Story = {
         nav={nav}
         onSearchClick={() => {}}
         operator={<Typography type="labelSm">Karel</Typography>}
-        settingsHref="/settings"
       />
     </div>
   ),
 };
 
 export const Playground: Story = {
-  args: { nav, onSearchClick: () => {}, settingsHref: "/settings" },
+  args: { homeHref: "/org", nav, onSearchClick: () => {} },
 };

@@ -72,7 +72,10 @@ test("an approval is denied with a reason from the sheet, and the denial is reco
     .filter({ has: page.getByTestId("approval-card-name").getByText(agentName) });
   await expect(card).toBeVisible({ timeout: 20000 });
 
-  // Open the sheet via the card's "→" (Flow B step 02→03).
+  // Open the sheet via the whole-card click target (Flow B step 02→03) — the
+  // card no longer has a separate "→" button; its own inline Approve/Deny act
+  // directly, so this test goes through the sheet deliberately to exercise the
+  // reasoned-deny flow.
   await card.getByTestId("approval-card-open").click();
   await expect(page).toHaveURL(new RegExp(`\\?approval=${approvalId}$`));
 

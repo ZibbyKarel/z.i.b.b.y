@@ -2278,13 +2278,16 @@
     }
   },
   "shell": {
-    "newTask": "+ Nový úkol",
+    "newTask": "Nový úkol",
     "operatorFallback": "CEO",
     "active": "aktivních",
     "week": "TÝDEN",
     "needsYou": "Potřebuje tě",
     "needsYouEmpty": "Nic na tebe nečeká",
-    "needsYouToggle": "Potřebuje tě"
+    "needsYouToggle": "Potřebuje tě",
+    "needsYouApprove": "Schválit",
+    "needsYouDeny": "Zamítnout",
+    "needsYouOpen": "Otevřít detail schválení pro {agentName}"
   },
   "orgMap": {
     "eyebrow": "01 — MAPA ORGANIZACE",

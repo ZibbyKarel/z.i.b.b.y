@@ -9,6 +9,7 @@ import { Typography } from "../Typography/Typography";
 
 const header = (
   <AppHeader
+    homeHref="/org"
     nav={
       <Tabs value="org" variant="mono">
         <TabList>
@@ -19,7 +20,6 @@ const header = (
       </Tabs>
     }
     onSearchClick={() => {}}
-    settingsHref="/settings"
   />
 );
 

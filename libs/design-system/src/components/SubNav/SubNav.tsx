@@ -73,6 +73,10 @@ export function SubNav({ items, actions, linkComponent, orientation = "horizonta
           : "items-stretch justify-between border-b border-border",
       )}
       data-testid={SubNavTestId.Root}
+      // Fills the fixed-height row `AppFrame` reserves for it (`LAYOUT.subNavHeight`)
+      // so its items' own `h-full` (itemClass) resolves against a real size —
+      // a no-op when an ancestor gives no height (e.g. Storybook in isolation).
+      style={{ height: "100%" }}
     >
       <nav
         className={cn(

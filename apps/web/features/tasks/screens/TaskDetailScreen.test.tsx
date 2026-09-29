@@ -6,7 +6,10 @@ import { renderWithProviders as render, screen } from "../../../test/render";
 import { TaskDetailScreen } from "./TaskDetailScreen";
 
 const push = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push }),
+  usePathname: () => "/work/tasks/task-1",
+}));
 
 const { hooks } = vi.hoisted(() => ({
   hooks: {
@@ -17,6 +20,7 @@ const { hooks } = vi.hoisted(() => ({
 }));
 const refetch = vi.fn();
 const approveMutate = vi.fn();
+const rejectMutate = vi.fn();
 
 vi.mock("../queries", () => ({
   useTaskQuery: () => ({
@@ -29,6 +33,7 @@ vi.mock("../queries", () => ({
 vi.mock("../../approvals", () => ({
   useApprovalsQuery: () => ({ data: [] }),
   useApproveMutation: () => ({ mutate: approveMutate }),
+  useRejectMutation: () => ({ mutate: rejectMutate }),
 }));
 vi.mock("../../approvals/approval", () => ({
   HIGH_RISK_TYPES: new Set(),

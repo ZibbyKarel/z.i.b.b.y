@@ -42,7 +42,7 @@ describe("ApprovalCard", () => {
     expect(screen.getByTestId(ApprovalCardTestId.TaskRef)).toHaveTextContent("TASK · dev-142");
   });
 
-  it("calls onApprove/onDeny/onOpen from the card action row", async () => {
+  it("calls onApprove/onDeny directly and onOpen from the whole-card click target", async () => {
     const onApprove = vi.fn();
     const onDeny = vi.fn();
     const onOpen = vi.fn();
@@ -60,10 +60,20 @@ describe("ApprovalCard", () => {
     );
     await userEvent.click(screen.getByTestId(ApprovalCardTestId.Approve));
     await userEvent.click(screen.getByTestId(ApprovalCardTestId.Deny));
-    await userEvent.click(screen.getByTestId(ApprovalCardTestId.Open));
     expect(onApprove).toHaveBeenCalledOnce();
     expect(onDeny).toHaveBeenCalledOnce();
+    expect(onOpen).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByTestId(ApprovalCardTestId.Open));
     expect(onOpen).toHaveBeenCalledOnce();
+    // Approve/deny stay separate actions — the card-open click never re-triggers them.
+    expect(onApprove).toHaveBeenCalledOnce();
+    expect(onDeny).toHaveBeenCalledOnce();
+  });
+
+  it("omits the whole-card click target when onOpen isn't given", () => {
+    render(<ApprovalCard agentName="Kevin" glyphSeed="s" meta="m" request="r" waited="w" />);
+    expect(screen.queryByTestId(ApprovalCardTestId.Open)).toBeNull();
   });
 
   it("approve stays a single click even when highRisk is set (D-013/D-014)", async () => {
@@ -98,10 +108,35 @@ describe("ApprovalCard", () => {
   });
 
   it("gives the approve/deny/open buttons accessible names", () => {
-    render(<ApprovalCard agentName="Kevin" glyphSeed="s" meta="m" request="r" waited="w" />);
+    render(
+      <ApprovalCard
+        agentName="Kevin"
+        glyphSeed="s"
+        meta="m"
+        onOpen={() => {}}
+        request="r"
+        waited="w"
+      />,
+    );
     expect(screen.getByTestId(ApprovalCardTestId.Approve)).toHaveAccessibleName("Approve");
     expect(screen.getByTestId(ApprovalCardTestId.Deny)).toHaveAccessibleName("Deny");
     expect(screen.getByTestId(ApprovalCardTestId.Open)).toHaveAccessibleName("Open");
+  });
+
+  it("disables and shows a loading state on both actions while one is pending", () => {
+    render(
+      <ApprovalCard
+        approvePending
+        agentName="Kevin"
+        glyphSeed="s"
+        meta="m"
+        request="r"
+        waited="w"
+      />,
+    );
+    expect(screen.getByTestId(ApprovalCardTestId.Approve)).toBeDisabled();
+    expect(screen.getByTestId(ApprovalCardTestId.Approve)).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByTestId(ApprovalCardTestId.Deny)).toBeDisabled();
   });
 
   it("renders the compact row density with icon-only actions", () => {
@@ -127,6 +162,7 @@ describe("ApprovalCard", () => {
         denyLabel="Zamítnout"
         glyphSeed="s"
         meta="m"
+        onOpen={() => {}}
         openLabel="Otevřít"
         request="r"
         waited="w"

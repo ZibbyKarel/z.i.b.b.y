@@ -1,6 +1,7 @@
 import type { HTMLAttributes, Ref } from "react";
 import { cn } from "../../utils/cn";
 import type { StateTone } from "../../stateTone";
+import { focusRing } from "../../utils/focus";
 import { AgentGlyph } from "../AgentGlyph/AgentGlyph";
 import { Button } from "../Button/Button";
 import { Container } from "../Container/Container";
@@ -21,6 +22,8 @@ export enum ApprovalCardTestId {
   HighRisk = "approval-card-high-risk",
   Approve = "approval-card-approve",
   Deny = "approval-card-deny",
+  /** The whole-card click target (stretched over the card) that opens the
+   *  approval detail sheet — no longer a separate visible "open" button. */
   Open = "approval-card-open",
 }
 
@@ -50,10 +53,17 @@ export interface ApprovalCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 
   density?: ApprovalCardDensity;
   onApprove?: () => void;
   onDeny?: () => void;
+  /** Opens the approval detail sheet. The whole card is the click target
+   *  (stretched over the identity block) — there is no separate "open" button. */
   onOpen?: () => void;
   approveLabel?: string;
   denyLabel?: string;
+  /** Accessible name for the whole-card open control (no visible affordance). */
   openLabel?: string;
+  /** Shows the approve button's loading state and disables both actions. */
+  approvePending?: boolean;
+  /** Shows the deny button's loading state and disables both actions. */
+  denyPending?: boolean;
   ref?: Ref<HTMLDivElement>;
 }
 
@@ -81,129 +91,153 @@ export function ApprovalCard({
   approveLabel = "Approve",
   denyLabel = "Deny",
   openLabel = "Open",
+  approvePending = false,
+  denyPending = false,
   ref,
   ...rest
 }: ApprovalCardProps) {
   const glyphSize = density === "row" ? 22 : 30;
+  const actionsDisabled = approvePending || denyPending;
 
   return (
     <div
       className={cn(
-        "flex bg-background border border-line-2",
-        density === "row" ? "flex-row items-center gap-3 px-3 py-2" : "flex-col gap-2.5 p-3",
+        "relative bg-background border border-line-2",
+        density === "row" ? "px-3 py-2" : "p-3",
       )}
       data-density={density}
       data-testid={ApprovalCardTestId.Root}
       ref={ref}
       {...rest}
     >
-      <div className={cn("flex items-center gap-2.5", density === "row" && "min-w-0 flex-1")}>
-        <span data-testid={ApprovalCardTestId.Glyph}>
-          <AgentGlyph seed={glyphSeed} size={glyphSize} state={state} />
-        </span>
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <Typography
-            truncate
-            data-testid={ApprovalCardTestId.Name}
-            type="labelSm"
-            weight="semibold"
-          >
-            {agentName}
-          </Typography>
-          <Typography truncate data-testid={ApprovalCardTestId.Meta} type="labelSm">
-            {meta}
-          </Typography>
-        </div>
-        {density === "card" && (
-          <Typography nowrap data-testid={ApprovalCardTestId.Waited} type="labelSm">
-            {waited}
-          </Typography>
-        )}
-      </div>
+      {/* The stretched click target: a single element covering the whole card,
+       *  so clicking anywhere opens the approval sheet. The visible content
+       *  below sits in its own stacking context (`relative z-10`), painted on
+       *  top of this overlay, so the real action buttons intercept their own
+       *  clicks first — never bubbling into the card open. */}
+      {onOpen && (
+        <button
+          aria-label={openLabel}
+          className={cn("absolute inset-0", focusRing)}
+          data-testid={ApprovalCardTestId.Open}
+          onClick={onOpen}
+          type="button"
+        />
+      )}
 
-      {density === "row" ? (
-        <>
-          <Typography nowrap data-testid={ApprovalCardTestId.Waited} type="labelSm">
-            {waited}
-          </Typography>
-          {highRisk && (
-            <Tag uppercase data-testid={ApprovalCardTestId.HighRisk} icon="warn" tone="blocked">
-              {highRiskLabel}
-            </Tag>
-          )}
-          <Row gap="50" shrink={false}>
-            <Button
-              aria-label={approveLabel}
-              data-testid={ApprovalCardTestId.Approve}
-              icon="check"
-              intent="primary"
-              onClick={onApprove}
-              size="sm"
-            />
-            <Button
-              aria-label={denyLabel}
-              data-testid={ApprovalCardTestId.Deny}
-              icon="x"
-              intent="secondary"
-              onClick={onDeny}
-              size="sm"
-            />
-            <Button
-              aria-label={openLabel}
-              data-testid={ApprovalCardTestId.Open}
-              icon="arrow"
-              intent="secondary"
-              onClick={onOpen}
-              size="sm"
-            />
-          </Row>
-        </>
-      ) : (
-        <>
-          {highRisk && (
-            <Tag uppercase data-testid={ApprovalCardTestId.HighRisk} icon="warn" tone="blocked">
-              {highRiskLabel}
-            </Tag>
-          )}
-          <Typography data-testid={ApprovalCardTestId.Request} type="bodySm">
-            {request}
-          </Typography>
-          {taskRef && (
-            <Typography data-testid={ApprovalCardTestId.TaskRef} type="labelSm">
-              {taskRef}
+      <div
+        className={cn(
+          // Clicks fall through the content to the stretched open target; only
+          // the action buttons take pointer events back.
+          "pointer-events-none relative z-10 flex",
+          density === "row" ? "flex-row items-center gap-3" : "flex-col gap-2.5",
+        )}
+      >
+        <div className={cn("flex items-center gap-2.5", density === "row" && "min-w-0 flex-1")}>
+          <span data-testid={ApprovalCardTestId.Glyph}>
+            <AgentGlyph seed={glyphSeed} size={glyphSize} state={state} />
+          </span>
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <Typography
+              truncate
+              data-testid={ApprovalCardTestId.Name}
+              type="labelSm"
+              weight="semibold"
+            >
+              {agentName}
+            </Typography>
+            <Typography truncate data-testid={ApprovalCardTestId.Meta} type="labelSm">
+              {meta}
+            </Typography>
+          </div>
+          {density === "card" && (
+            <Typography nowrap data-testid={ApprovalCardTestId.Waited} type="labelSm">
+              {waited}
             </Typography>
           )}
-          <Row gap="100">
-            <Container grow>
-              <Button
-                block
-                data-testid={ApprovalCardTestId.Approve}
-                intent="primary"
-                onClick={onApprove}
-              >
-                {approveLabel}
-              </Button>
-            </Container>
-            <Container grow>
-              <Button
-                block
-                data-testid={ApprovalCardTestId.Deny}
-                intent="secondary"
-                onClick={onDeny}
-              >
-                {denyLabel}
-              </Button>
-            </Container>
-            <Button
-              aria-label={openLabel}
-              data-testid={ApprovalCardTestId.Open}
-              icon="arrow"
-              intent="secondary"
-              onClick={onOpen}
-            />
-          </Row>
-        </>
-      )}
+        </div>
+
+        {density === "row" ? (
+          <>
+            <Typography nowrap data-testid={ApprovalCardTestId.Waited} type="labelSm">
+              {waited}
+            </Typography>
+            {highRisk && (
+              <Tag uppercase data-testid={ApprovalCardTestId.HighRisk} icon="warn" tone="blocked">
+                {highRiskLabel}
+              </Tag>
+            )}
+            <div className="pointer-events-auto shrink-0">
+              <Row gap="50" shrink={false}>
+                <Button
+                  aria-label={approveLabel}
+                  data-testid={ApprovalCardTestId.Approve}
+                  disabled={actionsDisabled}
+                  icon="check"
+                  intent="primary"
+                  loading={approvePending}
+                  onClick={onApprove}
+                  size="sm"
+                />
+                <Button
+                  aria-label={denyLabel}
+                  data-testid={ApprovalCardTestId.Deny}
+                  disabled={actionsDisabled}
+                  icon="x"
+                  intent="secondary"
+                  loading={denyPending}
+                  onClick={onDeny}
+                  size="sm"
+                />
+              </Row>
+            </div>
+          </>
+        ) : (
+          <>
+            {highRisk && (
+              <Tag uppercase data-testid={ApprovalCardTestId.HighRisk} icon="warn" tone="blocked">
+                {highRiskLabel}
+              </Tag>
+            )}
+            <Typography data-testid={ApprovalCardTestId.Request} type="bodySm">
+              {request}
+            </Typography>
+            {taskRef && (
+              <Typography data-testid={ApprovalCardTestId.TaskRef} type="labelSm">
+                {taskRef}
+              </Typography>
+            )}
+            <div className="pointer-events-auto">
+              <Row gap="100">
+                <Container grow>
+                  <Button
+                    block
+                    data-testid={ApprovalCardTestId.Approve}
+                    disabled={actionsDisabled}
+                    intent="primary"
+                    loading={approvePending}
+                    onClick={onApprove}
+                  >
+                    {approveLabel}
+                  </Button>
+                </Container>
+                <Container grow>
+                  <Button
+                    block
+                    data-testid={ApprovalCardTestId.Deny}
+                    disabled={actionsDisabled}
+                    intent="secondary"
+                    loading={denyPending}
+                    onClick={onDeny}
+                  >
+                    {denyLabel}
+                  </Button>
+                </Container>
+              </Row>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

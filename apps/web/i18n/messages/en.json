@@ -2278,13 +2278,16 @@
     }
   },
   "shell": {
-    "newTask": "+ New task",
+    "newTask": "New task",
     "operatorFallback": "CEO",
     "active": "active",
     "week": "WEEK",
     "needsYou": "Needs you",
     "needsYouEmpty": "Nothing is waiting for you",
-    "needsYouToggle": "Needs you"
+    "needsYouToggle": "Needs you",
+    "needsYouApprove": "Approve",
+    "needsYouDeny": "Deny",
+    "needsYouOpen": "Open approval details for {agentName}"
   },
   "orgMap": {
     "eyebrow": "01 — ORG MAP",

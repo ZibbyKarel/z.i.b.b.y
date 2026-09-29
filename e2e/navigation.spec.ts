@@ -47,7 +47,7 @@ test("the sub-nav lists the active section's tabs and offers + New task", async 
   await expect(subnav).toContainText("Companies");
   await expect(subnav).toContainText("Projects");
 
-  await expect(subnav.getByRole("button", { name: "+ New task" })).toBeVisible();
+  await expect(subnav.getByRole("button", { name: "New task" })).toBeVisible();
 });
 
 test("the NEEDS YOU rail renders on every section", async ({ page }) => {

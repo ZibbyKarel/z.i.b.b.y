@@ -23,7 +23,11 @@ import { CatalogProvider } from "../../../state/store";
 import { NewTaskProvider } from "../../../features/tasks";
 import { ChatProvider, CooDock } from "../../../features/chat";
 import { CommandPaletteHost, useCommandPaletteHotkey } from "../../../features/command-palette";
-import { useApprovalsQuery, useApproveMutation } from "../../../features/approvals";
+import {
+  useApprovalsQuery,
+  useApproveMutation,
+  useRejectMutation,
+} from "../../../features/approvals";
 import { ApprovalSheet } from "../../../features/approvals/components/ApprovalSheet";
 import { HIGH_RISK_TYPES, formatWaited } from "../../../features/approvals/approval";
 import { useRunsQuery } from "../../../features/runs";
@@ -114,7 +118,7 @@ function SectionSubNav({ active }: { active: SectionId }) {
         // the other call sites that seed it with an initial target/context).
         <Button
           icon="plus"
-          intent="ghost"
+          intent="primary"
           onClick={() => router.push("/work/tasks/new" as Route)}
           size="sm"
         >
@@ -159,12 +163,13 @@ function useHeaderTrailing() {
 
 /** `Rail`'s "NEEDS YOU" — pending approvals as single-click `ApprovalCard`s
  * (D-014/O-13: no `HoldButton`, even for high-risk — `highRisk` is a marker
- * only). "Open" and the high-risk path both go to `LEGACY_APPROVAL_SURFACE`;
- * quick-approve handles the common non-high-risk case in place. */
+ * only). Approve/deny act directly from the card; the whole card is otherwise
+ * the click target that opens the full approval sheet. */
 function NeedsYouRail({ onOpenApproval }: { onOpenApproval: (id: string) => void }) {
   const t = useTranslations("shell");
   const { data: approvals } = useApprovalsQuery();
   const approve = useApproveMutation();
+  const reject = useRejectMutation();
   const pending = approvals ?? [];
 
   return (
@@ -187,16 +192,18 @@ function NeedsYouRail({ onOpenApproval }: { onOpenApproval: (id: string) => void
             return (
               <ApprovalCard
                 agentName={a.skill}
-                density="row"
+                approveLabel={t("needsYouApprove")}
+                approvePending={approve.isPending && approve.variables?.params.id === a.id}
+                denyLabel={t("needsYouDeny")}
+                denyPending={reject.isPending && reject.variables?.params.id === a.id}
                 glyphSeed={a.skill}
                 highRisk={highRisk}
                 key={a.id}
                 meta={a.kind}
                 onApprove={() => approve.mutate({ params: { id: a.id }, body: {} })}
-                // Deny takes a reason (Flow B), so it opens the sheet rather
-                // than denying blind from the rail.
-                onDeny={() => onOpenApproval(a.id)}
+                onDeny={() => reject.mutate({ params: { id: a.id }, body: {} })}
                 onOpen={() => onOpenApproval(a.id)}
+                openLabel={t("needsYouOpen", { agentName: a.skill })}
                 request={a.detail}
                 taskRef={a.runId}
                 waited={formatWaited(a.requestedAt)}
@@ -223,12 +230,12 @@ function AppShellChrome({ children }: { children: ReactNode }) {
       header={
         <AppHeader
           activeCount={trailing.activeCount}
+          homeHref="/org"
           limits={trailing.limits}
           linkComponent={NavLink}
           nav={<SectionNav active={active} />}
           onSearchClick={() => setPaletteOpen(true)}
           operator={trailing.operator}
-          settingsHref="/system/settings/general"
         />
       }
       rail={<NeedsYouRail onOpenApproval={approvalSheet.open} />}
