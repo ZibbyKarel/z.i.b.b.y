@@ -141,6 +141,50 @@ describe("Dropdown", () => {
     expect(opts[1]).not.toHaveTextContent("Výchozí jazyk");
   });
 
+  describe("panel width", () => {
+    // jsdom can't measure real layout (getBoundingClientRect/innerWidth don't reflect
+    // actual content), so these assert the style contract the panel is positioned
+    // with rather than a rendered pixel width.
+    const mockRect = (rect: Partial<DOMRect>) => {
+      vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+        width: 0,
+        height: 0,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        x: 0,
+        y: 0,
+        toJSON: () => {},
+        ...rect,
+      } as DOMRect);
+    };
+
+    it("field variant floors the panel at the trigger width and stays left-aligned", async () => {
+      mockRect({ left: 40, right: 290, top: 60, bottom: 100, width: 250 });
+      const user = userEvent.setup();
+      render(<Dropdown onChange={vi.fn()} options={OPTIONS} value="cs" variant="field" />);
+      await user.click(screen.getByTestId(DropdownTestId.Trigger));
+      const panel = screen.getByTestId(DropdownTestId.Panel);
+      expect(panel.style.left).toBe("40px");
+      expect(panel.style.width).toBe("max-content");
+      expect(panel.style.minWidth).toBe("250px");
+      expect(panel.style.right).toBe("");
+    });
+
+    it("inline variant floors the panel at a sensible minimum and stays right-aligned", async () => {
+      mockRect({ left: 10, right: 60, top: 60, bottom: 100, width: 50 });
+      const user = userEvent.setup();
+      render(<Dropdown onChange={vi.fn()} options={OPTIONS} value="cs" />);
+      await user.click(screen.getByTestId(DropdownTestId.Trigger));
+      const panel = screen.getByTestId(DropdownTestId.Panel);
+      expect(panel.style.right).toBe(`${window.innerWidth - 60}px`);
+      expect(panel.style.width).toBe("max-content");
+      expect(panel.style.minWidth).toBe("168px");
+      expect(panel.style.left).toBe("");
+    });
+  });
+
   describe("multi mode", () => {
     it("renders the trigger as a combobox with a chip per selected value", () => {
       render(<Dropdown multi onChange={vi.fn()} options={OPTIONS} value={["cs", "en"]} />);

@@ -19,6 +19,12 @@ const MODEL_OPTIONS_WITH_DESCRIPTIONS = [
   { value: "haiku", label: "haiku", description: "Nejrychlejší, nejlevnější" },
 ];
 
+const LONG_OPTIONS = [
+  { value: "a", label: "Přiřadit k projektu a upozornit odpovědného manažera" },
+  { value: "b", label: "Exportovat do CSV" },
+  { value: "c", label: "Trvale smazat včetně historie a příloh" },
+];
+
 const ACTION_OPTIONS = [
   { value: "reply", label: "reply" },
   { value: "create_task", label: "create_task" },
@@ -57,6 +63,8 @@ export const Overview: Story = {
     const [noCode, setNoCode] = useState("a");
     const [actions, setActions] = useState<string[]>(["reply"]);
     const [actionsAll, setActionsAll] = useState<string[]>(["reply"]);
+    const [longInline, setLongInline] = useState("b");
+    const [longField, setLongField] = useState("b");
 
     return (
       <div className="flex flex-col gap-6">
@@ -123,6 +131,35 @@ export const Overview: Story = {
               onChange={setModelDesc}
               options={MODEL_OPTIONS_WITH_DESCRIPTIONS}
               value={modelDesc}
+              variant="field"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <span className="font-mono text-sm text-foreground-dim">
+            inline, long options (panel stretches to the longest, right-aligned)
+          </span>
+          <div className="flex justify-end p-4">
+            <Dropdown
+              aria-label="Akce"
+              onChange={setLongInline}
+              options={LONG_OPTIONS}
+              value={longInline}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <span className="font-mono text-sm text-foreground-dim">
+            field, long options (panel stretches to the longest, left-aligned)
+          </span>
+          <div className="w-40 p-4">
+            <Dropdown
+              aria-label="Akce"
+              onChange={setLongField}
+              options={LONG_OPTIONS}
+              value={longField}
               variant="field"
             />
           </div>
