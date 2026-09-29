@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-738",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-576",
+  "name": "The publication backfill can die midway and leave its record half-written",
+  "description": "The publication backfill became a step of the deploy in PR #71 (`Backfill publication`, placed after `Verify`). That removed a manual SSH step — one the tailnet ACL makes unreachable anyway — but it also moved the one-time derivation from \"a person runs it and watches the output\" to \"CI runs it unattended\". Two gaps that were tolerable under the old shape are worth closing under the new one.\n\n## 1. The derivation is not atomic with its own stamp\n\n`backfillPublished` walks the sent releases and writes `carried_over_backfilled_at` only after the loop finishes. A run that dies midway therefore leaves rows stamped and the marker unset, so the next run re-derives — and the second half of one derivation then runs against statuses from a different day, which is exactly the condition the file's own header calls no longer defensible (\"on a second run it invents publication instead\"). The first run is also the only one that matters, because after it the approximate branch never runs again.\n\nWrapping the approximate branch and `markCarriedOverBackfilled` in one transaction removes that state entirely: either everything is stamped and the marker is written, or nothing happened. The exact branch does not need it — it is guarded by `isNull(publishedAt)`, so partial application is harmless there. `db.transaction` is already the pattern here (`transition.ts`, `engine-logins.ts`), so this is not new infrastructure.\n\n**Not a free change, and this is the part to settle first.** The step now runs while the worker is live and writing to `review_comments`, so a transaction holds locks on that table for the length of the derivation. PR #71 added `timeout-minutes: 10` for that same contention. The transaction and the timeout therefore have to be decided together: a longer lock makes the timeout likelier to fire, and a timeout firing mid-transaction is the one case where the rollback earns its keep.\n\n## 2. There is no way to run the step on its own\n\nThe workflow's only trigger is a push to master, so \"re-run the backfill\" means re-running the whole deploy from Actions. That is cheaper than it sounds — the build is cached and `compose up -d` over unchanged images is close to a no-op — so this is convenience, not a defect. But the operator messages now tell people to re-run the deploy, and `workflow_dispatch` is already used by `error-monitoring-tool.yml`. Adding it here would turn that instruction into a button. Whether the dispatch should also be able to skip the build is the open half of the question.\n\n## 3. An open question that may close on its own\n\n`timeout-minutes: 10` is justified as \"far above any real run\", but nobody has measured the first run — the one that does the derivation. If it overruns, the step is killed mid-derivation, producing the state item 1 describes, by our own hand. One query settles it:\n\n```sql\nSELECT count(*) FROM outbound_messages\n WHERE event = 'findings_release' AND status = 'sent';\n```\n\nTens: ten minutes has ample headroom and the question closes. Thousands: the first run deserves a measurement before the next deploy.\n\n**Done when:** an interrupted backfill leaves either a complete derivation with its marker or no change at all; the interaction between that transaction and the step's timeout is a decision rather than something inherited; and the operator messages point at something a person can actually press.\n\nFound while reviewing PR #71 and deliberately left out of it, because that PR's brief ruled the backfill's own logic out of scope.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-738",
+    "externalKey": "CZ3TDR1-738",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-738"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "external",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-09-29T04:50:39.052Z",
+  "updatedAt": "2026-09-29T05:58:22.321Z",
+  "syncedAt": "2026-09-29T05:58:22.321Z"
+}

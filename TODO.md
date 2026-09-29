@@ -16,3 +16,13 @@
 11. [ ] na githubu musím mít možnost sledovat nejen mentions a přiřazení PRs/Issues mojí osoby ale zároveň i týmů, ve kterém jsem v rámci githubu přiřazen.
 12. [x] Pokud je v systému chyba (kterou vidím ve stavovém řádku v levém horním rohu - v rámci StatusPill) tak musím být schopný ji stejně jako věci, které čekají na mě, rozbalit a zobrazit si její obsah. (main@cbf1dd36)
 13. [x] Backlog projektů by se měl synchronizovat celý nicméně musíme správně rozlišovat stavy synchronizovaných tasků. Pokud je originální task z JIRA již v inProgress, code-review nebo jiném než "TODO" stavu, nesmí se na nich začít pracovat protože bychom vyvýjeli duplicitní práci. (musíme ověřit které stavy jsou bezpečné pro zahájení práce a které tasky tedy přesuneme v rámci systému zibby do sloupečku "inProgress" a jen napojíme na již existující PR) (main@dc4d804b)
+14. [ ] Fronta Čeká na mě - Zručíme tlačítko "otevření cíle" a místo toho uděláme celou kartu klikací. Zároveň musíme ukázat alespoň nějaký krátký popis/nadpis co se děje. Teď je tam jenom avatar agenta, tag high prio a schvalovací tlačítka. Navíc tlačítka schvalování na kartě "čeká na mě" by měla rovnou provést akci a né otevírat detail. To pak zanáši duplicitu že všechna tři tlačítka dělají vlastně to samé.
+
+15. [ ] OrgChart - chybí propojení mezi COO a odděleními
+16. [ ] OrgChart - agenti v organizaci nemají přiřazené avatary. Každý agent by měl mít unikátního avatara přiřazeného, který zrcadlí stav.
+17. [ ] Menu - menu je nějak moc vyjeté nahoru. Srovnej ho podle designu
+18. [ ] Komponenta Dropdown - měla by mít minimální šířku. Většina options v ámci systému se pak nevleze na jeden řádek. Za mě klidně ať se roztáhne na šířku nejdelšího z options
+19. [ ] Logo ZibbyCorp by mělo odkazovat na orgchart
+20. [ ] Loader komponenta je stále ve starém designu
+21. [ ] Tlačítko nastavení (ozubené kolo) v topBaru smažeme. Je redundantní
+22. [ ] Tlačítko "Nový úkol" musíme udělat výraznější

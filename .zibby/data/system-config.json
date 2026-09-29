@@ -7,7 +7,9 @@
   "limitResumeMax": 3,
   "goalVerifyTimeoutMs": 600000,
   "goalAutoResume": false,
-  "chatPersona": "jarvis",
+  "chatPersona": "concise",
   "powerSaver": false,
-  "ttsVoice": "cs_male_cv26_default"
+  "ttsVoice": "cs_male_cv26_default",
+  "maxConcurrentRuns": 3,
+  "roadmapTickMs": 60000
 }
