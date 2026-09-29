@@ -46,6 +46,11 @@ describe("Card", () => {
     expect(cls).toContain("animate-scale-in");
   });
 
+  it("forces a solid --ink border when borderTone is 'ink'", () => {
+    render(<Card borderTone="ink">x</Card>);
+    expect(screen.getByTestId(CardTestId.Root)).toHaveClass("border-ink");
+  });
+
   it("CardHeader renders its children", () => {
     render(
       <Card>

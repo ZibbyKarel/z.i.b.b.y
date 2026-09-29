@@ -488,6 +488,9 @@ export type { ConfirmDeleteButtonProps } from "./components/ConfirmDeleteButton/
 export { OrgNode, OrgNodeTestId } from "./components/OrgNode/OrgNode";
 export type { OrgNodeProps } from "./components/OrgNode/OrgNode";
 
+export { OrgConnector, OrgConnectorTestId } from "./components/OrgConnector/OrgConnector";
+export type { OrgConnectorProps } from "./components/OrgConnector/OrgConnector";
+
 export { Legend, LegendTestId } from "./components/Legend/Legend";
 export type { LegendItem, LegendProps } from "./components/Legend/Legend";
 

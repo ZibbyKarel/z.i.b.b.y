@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { OrgNodeTestId } from "@zibby/design-system";
+import { AgentGlyphTestId, OrgConnectorTestId, OrgNodeTestId } from "@zibby/design-system";
 import { renderWithProviders as render, screen } from "../../../test/render";
 import { OrgMapScreen, OrgMapScreenTestId } from "./OrgMapScreen";
 
@@ -110,5 +110,31 @@ describe("OrgMapScreen", () => {
     expect(panel).toHaveTextContent("Kessler");
     expect(panel).toHaveTextContent("TSK-1");
     expect(panel).toHaveTextContent("post-merge-red");
+  });
+
+  it("joins the COO trunk, the department bus and each node with a connector", () => {
+    render(<OrgMapScreen />);
+    // 1 COO trunk + 1 bus + (1 drop + 1 stub) per department node.
+    expect(screen.getAllByTestId(OrgConnectorTestId.Root)).toHaveLength(2 + 11 * 2);
+  });
+
+  it("turns only the focused department's stub connector --ink", () => {
+    focusParam = "dev";
+    render(<OrgMapScreen />);
+    const active = screen
+      .getAllByTestId(OrgConnectorTestId.Root)
+      .filter((el) => el.className.includes("bg-ink"));
+    expect(active).toHaveLength(1);
+  });
+
+  it("renders an AgentGlyph for the COO only, with no focus panel open", () => {
+    render(<OrgMapScreen />);
+    expect(screen.getAllByTestId(AgentGlyphTestId.Root)).toHaveLength(1);
+  });
+
+  it("renders an AgentGlyph for the COO and for each focus-panel team tile", () => {
+    focusParam = "dev";
+    render(<OrgMapScreen />);
+    expect(screen.getAllByTestId(AgentGlyphTestId.Root)).toHaveLength(2);
   });
 });

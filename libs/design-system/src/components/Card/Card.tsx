@@ -103,6 +103,10 @@ export interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, "classNa
   type?: "button" | "submit" | "reset";
   /** Highlighted selected state (accent border + ring). */
   selected?: boolean;
+  /** Forces a solid `--ink` border, independent of `tone`/`elevated`/`selected` —
+   *  the org map's focus panel, which a selected department's connector stub
+   *  visually continues into (DS.md §8). */
+  borderTone?: "ink";
   /**
    * A solid 3px accent bar on the left edge, tinted by state — the runs-feed task
    * card's "state at a glance" marker (Phase 29). Deliberately independent of
@@ -196,6 +200,7 @@ export function Card({
   as: Tag = "div",
   type,
   selected = false,
+  borderTone,
   edge,
   header,
   footer,
@@ -224,9 +229,11 @@ export function Card({
         bordered &&
           (resolvedTone
             ? toneBorder[resolvedTone]
-            : elevated
-              ? "border border-border-strong"
-              : "border border-border"),
+            : borderTone === "ink"
+              ? "border border-ink"
+              : elevated
+                ? "border border-border-strong"
+                : "border border-border"),
         bordered && resolvedTone && "border",
         resolvedTone && !living && toneGlow[resolvedTone],
         borderStyle === "dashed" && "border-dashed",

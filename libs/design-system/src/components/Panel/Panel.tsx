@@ -36,6 +36,8 @@ export interface PanelProps extends Omit<HTMLAttributes<HTMLDivElement>, "classN
   background?: CardProps["background"];
   /** Corner radius — defaults to `Card`'s own default ("lg") when omitted. */
   radius?: CardProps["radius"];
+  /** Forces a solid `--ink` border — see {@link CardProps.borderTone}. */
+  borderTone?: CardProps["borderTone"];
   ref?: Ref<HTMLDivElement>;
 }
 
@@ -54,6 +56,7 @@ export function Panel({
   elevated = false,
   background,
   radius,
+  borderTone,
   children,
   ref,
   ...rest
@@ -62,6 +65,7 @@ export function Panel({
     <Card
       clip
       background={background}
+      borderTone={borderTone}
       corners={Boolean(tone)}
       data-testid={PanelTestId.Root}
       elevated={elevated}

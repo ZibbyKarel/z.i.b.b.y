@@ -9,6 +9,7 @@ import {
   Container,
   EmptyState,
   Grid,
+  OrgConnector,
   OrgNode,
   Panel,
   Row,
@@ -44,6 +45,19 @@ export enum OrgMapScreenTestId {
  *  scrolls horizontally in its own container instead of squeezing the
  *  department cards into overlapping text (ZB-14). */
 const GRID_11_COLS = { gridTemplateColumns: "repeat(11, minmax(96px, 1fr))" };
+
+/** `GRID_11_COLS`'s own gap (`gap="100"` → 8px, DS.md §4). */
+const GRID_GAP_PX = 8;
+
+/**
+ * The horizontal bus's `left`/`right` inset — the center of the first/last
+ * department column, i.e. half a column-and-gap unit in from each edge. With
+ * `DEPARTMENTS.length` columns and one gap between each, the row's total gap
+ * width is `(length - 1) * GRID_GAP_PX`; halving the remaining track count
+ * (`length * 2`) lands the bus on the column centers (DS.md §8 / design
+ * `Org Screens.dc.html`'s `calc((100% - 80px) / 22)` for 11 columns).
+ */
+const BUS_INSET = `calc((100% - ${(DEPARTMENTS.length - 1) * GRID_GAP_PX}px) / ${DEPARTMENTS.length * 2})`;
 
 /**
  * The alert an `OrgNode` shows: an error run beats a pending approval — worse
@@ -107,143 +121,172 @@ export function OrgMapScreen() {
         <Typography type="h1">{config?.companyName ?? "ZibbyCorp"}</Typography>
       </Row>
 
-      <Stack align="center" gap="100">
-        <Row data-testid={OrgMapScreenTestId.CeoNode} gap="100">
-          <Typography tracking="wider" type="labelSm" variant="secondary">
-            {t("ceoLabel")}
-          </Typography>
-          <Typography type="body" weight="medium">
-            {config?.operatorName ?? t("ceoFallback")}
-          </Typography>
-        </Row>
-
-        <Panel data-testid={OrgMapScreenTestId.CooNode} padding="100">
-          <Row gap="200">
-            <AgentGlyph seed="coo-zibby" size={48} state={cooState} />
-            <Stack gap="50">
+      {/* Map + focus panel sit flush so the selected stub runs into the panel. */}
+      <Stack gap="0">
+        <Stack align="center" gap="0">
+          <Stack align="center" gap="100">
+            <Row data-testid={OrgMapScreenTestId.CeoNode} gap="100">
               <Typography tracking="wider" type="labelSm" variant="secondary">
-                {t("cooLabel")}
+                {t("ceoLabel")}
               </Typography>
               <Typography type="body" weight="medium">
-                {t("cooName")}
+                {config?.operatorName ?? t("ceoFallback")}
               </Typography>
-              <Typography type="labelSm" variant="secondary">
-                {t("cooTagline")}
-              </Typography>
-            </Stack>
-            <StatePill state={cooState} />
-          </Row>
-        </Panel>
-      </Stack>
+            </Row>
 
-      {/* Only the department row scrolls on a narrow viewport. */}
-      <Container overflowX="auto">
-        <Grid data-testid={OrgMapScreenTestId.Grid} gap="100" style={GRID_11_COLS}>
-          {DEPARTMENTS.map((dept) => {
-            const status = departments.find((d) => d.id === dept.id);
-            const cells: StateTone[] = employees
-              .filter((e) => e.department === dept.id)
-              .map((e) => e.state);
-            const approvalCount = approvals.filter((a) => a.department === dept.id).length;
-            return (
-              <OrgNode
-                alert={pickAlert(status?.errorCount ?? 0, approvalCount, t)}
-                cells={cells}
-                code={dept.code}
-                key={dept.id}
-                name={dept.name}
-                onClick={() => setFocus(dept.id)}
-                selected={focusId === dept.id}
-              />
-            );
-          })}
-        </Grid>
-      </Container>
-
-      {focusDepartment && (
-        <Panel
-          data-testid={OrgMapScreenTestId.FocusPanel}
-          header={
-            <Typography tracking="wider" type="labelSm">
-              {t("focus.eyebrow", { code: focusDepartment.code })}
-            </Typography>
-          }
-          headerEnd={
-            <Link href={`/org/departments/${focusDepartment.id}` as Route}>
-              <Button intent="secondary" size="sm">
-                {t("focus.openDepartment")}
-              </Button>
-            </Link>
-          }
-          padding="200"
-        >
-          <Stack gap="300">
-            <Stack gap="100">
-              <Typography tracking="wider" type="labelSm" variant="secondary">
-                {t("focus.teamTitle")}
-              </Typography>
-              {focusEmployees.length === 0 ? (
-                <EmptyState body={t("focus.teamEmpty")} title={t("focus.teamEmptyTitle")} />
-              ) : (
-                <Grid cols={2} gap="100" lg={4} sm={3}>
-                  {focusEmployees.map((e) => (
-                    <Panel key={e.id} padding="100">
-                      <Stack gap="50">
-                        <Typography type="body" weight="medium">
-                          {e.name}
-                        </Typography>
-                        <Typography type="labelSm" variant="secondary">
-                          {e.position.title ?? e.position.name}
-                        </Typography>
-                        <StatePill state={e.state} />
-                      </Stack>
-                    </Panel>
-                  ))}
-                </Grid>
-              )}
-            </Stack>
-
-            <Stack gap="100">
-              <Typography tracking="wider" type="labelSm" variant="secondary">
-                {t("focus.subtasksTitle")}
-              </Typography>
-              {focusSubtasks.length === 0 ? (
-                <EmptyState body={t("focus.subtasksEmpty")} title={t("focus.subtasksEmptyTitle")} />
-              ) : (
+            <Panel data-testid={OrgMapScreenTestId.CooNode} padding="100">
+              <Row gap="200">
+                <AgentGlyph seed="coo-zibby" size={48} state={cooState} />
                 <Stack gap="50">
-                  {focusSubtasks.map((s) => (
-                    <Row gap="100" key={s.taskId}>
-                      <CellStrip cells={[s.state]} />
-                      <Typography type="labelSm" variant="secondary">
-                        {s.taskId}
-                      </Typography>
-                    </Row>
-                  ))}
+                  <Typography tracking="wider" type="labelSm" variant="secondary">
+                    {t("cooLabel")}
+                  </Typography>
+                  <Typography type="body" weight="medium">
+                    {t("cooName")}
+                  </Typography>
+                  <Typography type="labelSm" variant="secondary">
+                    {t("cooTagline")}
+                  </Typography>
                 </Stack>
-              )}
-            </Stack>
-
-            <Stack gap="100">
-              <Typography tracking="wider" type="labelSm" variant="secondary">
-                {t("focus.handoffTitle")}
-              </Typography>
-              {focusHandoff.length === 0 ? (
-                <EmptyState body={t("focus.handoffEmpty")} title={t("focus.handoffEmptyTitle")} />
-              ) : (
-                <Stack gap="50">
-                  {focusHandoff.map((r) => (
-                    <Typography key={r.id} type="labelSm" variant="secondary">
-                      {r.from === focusDepartment.id
-                        ? t("focus.out", { kind: r.signalKind })
-                        : t("focus.in", { kind: r.signalKind })}
-                    </Typography>
-                  ))}
-                </Stack>
-              )}
-            </Stack>
+                <StatePill state={cooState} />
+              </Row>
+            </Panel>
           </Stack>
-        </Panel>
-      )}
+
+          {/* The COO trunk — joins the COO panel to the department bus below. */}
+          <OrgConnector length={22} orientation="vertical" />
+
+          {/* Only the department row scrolls on a narrow viewport; the bus lives
+           *  inside it so it scrolls together with the nodes it spans. */}
+          <Container overflowX="auto" width="100%">
+            <Container position="relative">
+              <OrgConnector
+                orientation="horizontal"
+                style={{ left: BUS_INSET, right: BUS_INSET }}
+              />
+              <Grid data-testid={OrgMapScreenTestId.Grid} gap="100" style={GRID_11_COLS}>
+                {DEPARTMENTS.map((dept) => {
+                  const status = departments.find((d) => d.id === dept.id);
+                  const cells: StateTone[] = employees
+                    .filter((e) => e.department === dept.id)
+                    .map((e) => e.state);
+                  const approvalCount = approvals.filter((a) => a.department === dept.id).length;
+                  const isFocused = focusId === dept.id;
+                  return (
+                    <Stack align="center" gap="0" key={dept.id}>
+                      <OrgConnector length={18} orientation="vertical" />
+                      <OrgNode
+                        alert={pickAlert(status?.errorCount ?? 0, approvalCount, t)}
+                        cells={cells}
+                        code={dept.code}
+                        name={dept.name}
+                        onClick={() => setFocus(dept.id)}
+                        selected={isFocused}
+                      />
+                      <OrgConnector
+                        active={isFocused}
+                        hidden={!isFocused}
+                        length={22}
+                        orientation="vertical"
+                      />
+                    </Stack>
+                  );
+                })}
+              </Grid>
+            </Container>
+          </Container>
+        </Stack>
+
+        {focusDepartment && (
+          <Panel
+            borderTone="ink"
+            data-testid={OrgMapScreenTestId.FocusPanel}
+            header={
+              <Typography tracking="wider" type="labelSm">
+                {t("focus.eyebrow", { code: focusDepartment.code })}
+              </Typography>
+            }
+            headerEnd={
+              <Link href={`/org/departments/${focusDepartment.id}` as Route}>
+                <Button intent="secondary" size="sm">
+                  {t("focus.openDepartment")}
+                </Button>
+              </Link>
+            }
+            padding="200"
+          >
+            <Stack gap="300">
+              <Stack gap="100">
+                <Typography tracking="wider" type="labelSm" variant="secondary">
+                  {t("focus.teamTitle")}
+                </Typography>
+                {focusEmployees.length === 0 ? (
+                  <EmptyState body={t("focus.teamEmpty")} title={t("focus.teamEmptyTitle")} />
+                ) : (
+                  <Grid cols={2} gap="100" lg={4} sm={3}>
+                    {focusEmployees.map((e) => (
+                      <Panel key={e.id} padding="100">
+                        <Stack align="center" gap="50">
+                          <AgentGlyph seed={e.agentId} size={48} state={e.state} />
+                          <Typography type="body" weight="medium">
+                            {e.name}
+                          </Typography>
+                          <Typography type="labelSm" variant="secondary">
+                            {e.position.title ?? e.position.name}
+                          </Typography>
+                          <StatePill state={e.state} />
+                        </Stack>
+                      </Panel>
+                    ))}
+                  </Grid>
+                )}
+              </Stack>
+
+              <Stack gap="100">
+                <Typography tracking="wider" type="labelSm" variant="secondary">
+                  {t("focus.subtasksTitle")}
+                </Typography>
+                {focusSubtasks.length === 0 ? (
+                  <EmptyState
+                    body={t("focus.subtasksEmpty")}
+                    title={t("focus.subtasksEmptyTitle")}
+                  />
+                ) : (
+                  <Stack gap="50">
+                    {focusSubtasks.map((s) => (
+                      <Row gap="100" key={s.taskId}>
+                        <CellStrip cells={[s.state]} />
+                        <Typography type="labelSm" variant="secondary">
+                          {s.taskId}
+                        </Typography>
+                      </Row>
+                    ))}
+                  </Stack>
+                )}
+              </Stack>
+
+              <Stack gap="100">
+                <Typography tracking="wider" type="labelSm" variant="secondary">
+                  {t("focus.handoffTitle")}
+                </Typography>
+                {focusHandoff.length === 0 ? (
+                  <EmptyState body={t("focus.handoffEmpty")} title={t("focus.handoffEmptyTitle")} />
+                ) : (
+                  <Stack gap="50">
+                    {focusHandoff.map((r) => (
+                      <Typography key={r.id} type="labelSm" variant="secondary">
+                        {r.from === focusDepartment.id
+                          ? t("focus.out", { kind: r.signalKind })
+                          : t("focus.in", { kind: r.signalKind })}
+                      </Typography>
+                    ))}
+                  </Stack>
+                )}
+              </Stack>
+            </Stack>
+          </Panel>
+        )}
+      </Stack>
     </Stack>
   );
 }

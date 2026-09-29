@@ -69,4 +69,9 @@ describe("Panel", () => {
     render(<Panel>x</Panel>);
     expect(screen.queryByTestId(CardTestId.Corner)).not.toBeInTheDocument();
   });
+
+  it("forces a solid --ink border when borderTone is 'ink' (the org map's focus panel)", () => {
+    render(<Panel borderTone="ink">x</Panel>);
+    expect(screen.getByTestId(PanelTestId.Root).className).toContain("border-ink");
+  });
 });
