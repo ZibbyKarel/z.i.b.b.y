@@ -112,13 +112,20 @@ describe("OrgMapScreen", () => {
     expect(panel).toHaveTextContent("post-merge-red");
   });
 
-  it("joins the COO trunk, the department bus and each node with a connector", () => {
+  it("groups the departments under the four divisions", () => {
     render(<OrgMapScreen />);
-    // 1 COO trunk + 1 bus + (1 drop + 1 stub) per department node.
-    expect(screen.getAllByTestId(OrgConnectorTestId.Root)).toHaveLength(2 + 11 * 2);
+    const divisions = screen.getAllByTestId(OrgMapScreenTestId.Division);
+    expect(divisions).toHaveLength(4);
+    expect(divisions[0]).toHaveTextContent("Engineering");
   });
 
-  it("turns only the focused department's stub connector --ink", () => {
+  it("joins the COO trunk, the division bus, each division and each node with a connector", () => {
+    render(<OrgMapScreen />);
+    // 1 COO trunk + 1 bus + 1 drop per division + 1 drop per department node.
+    expect(screen.getAllByTestId(OrgConnectorTestId.Root)).toHaveLength(2 + 4 + 11);
+  });
+
+  it("turns only the focused department's drop connector --ink", () => {
     focusParam = "dev";
     render(<OrgMapScreen />);
     const active = screen

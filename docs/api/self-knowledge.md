@@ -42,6 +42,8 @@ is operator-owned and untouched by a merge. Block order = render order:
    `@zibby/contracts`' `DEPARTMENTS` — **never** live state/tier2Count/tier3Count
    (phase-105 decision 3: baking live status in would make drift read "changed"
    almost continuously, defeating the signal).
+   Reviewed 2026-09-29 (D-021): `Department` gained a required `division`
+   field; the composer does not render it, so the block is unchanged.
 5. **GATES** — the locked system floor (`POLICY.md`, via `PolicyStorageService.floor()`)
    plus the global gate-rule catalog, each rule rendered as `match → decision`.
 6. **CHANNELS** — the set of channel adapter _kinds_ ZIBBY knows how to speak

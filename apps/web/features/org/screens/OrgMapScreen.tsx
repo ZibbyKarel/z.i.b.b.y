@@ -1,7 +1,7 @@
 "use client";
 
 import type { DepartmentId } from "@zibby/contracts";
-import { DEPARTMENTS } from "@zibby/contracts";
+import { DEPARTMENTS, DIVISIONS } from "@zibby/contracts";
 import {
   AgentGlyph,
   Button,
@@ -33,31 +33,30 @@ export enum OrgMapScreenTestId {
   CeoNode = "org-map-ceo-node",
   CooNode = "org-map-coo-node",
   Grid = "org-map-grid",
+  Division = "org-map-division",
   FocusPanel = "org-map-focus-panel",
 }
 
-/** No `GridCols` value covers 11 across (its scale tops out at 5) — the map's own
- *  canonical department count is genuinely dynamic, so it goes through `Grid`'s
- *  `style` passthrough rather than a Tailwind utility class (CLAUDE.md's
- *  "no className" rule allows this one seam).
- *
- *  Each column keeps a readable minimum width; on a narrow viewport the row
- *  scrolls horizontally in its own container instead of squeezing the
- *  department cards into overlapping text (ZB-14). */
-const GRID_11_COLS = { gridTemplateColumns: "repeat(11, minmax(96px, 1fr))" };
+/** One column per division. `GridCols` has no fixed-4-with-minimum variant, so
+ *  the track list goes through `Grid`'s `style` passthrough (CLAUDE.md's
+ *  "no className" rule allows this one seam). Each column keeps a readable
+ *  minimum width; on a narrow viewport the row scrolls horizontally in its own
+ *  container instead of squeezing the cards (ZB-14). */
+const GRID_DIVISION_COLS = {
+  gridTemplateColumns: `repeat(${DIVISIONS.length}, minmax(160px, 1fr))`,
+};
 
-/** `GRID_11_COLS`'s own gap (`gap="100"` → 8px, DS.md §4). */
-const GRID_GAP_PX = 8;
+/** `GRID_DIVISION_COLS`'s own gap (`gap="200"` → 16px, DS.md §4). */
+const GRID_GAP_PX = 16;
 
 /**
  * The horizontal bus's `left`/`right` inset — the center of the first/last
- * department column, i.e. half a column-and-gap unit in from each edge. With
- * `DEPARTMENTS.length` columns and one gap between each, the row's total gap
- * width is `(length - 1) * GRID_GAP_PX`; halving the remaining track count
- * (`length * 2`) lands the bus on the column centers (DS.md §8 / design
- * `Org Screens.dc.html`'s `calc((100% - 80px) / 22)` for 11 columns).
+ * division column, i.e. half a column-and-gap unit in from each edge. With
+ * `DIVISIONS.length` columns the row's total gap width is
+ * `(length - 1) * GRID_GAP_PX`; halving the remaining track count
+ * (`length * 2`) lands the bus on the column centers (DS.md §8).
  */
-const BUS_INSET = `calc((100% - ${(DEPARTMENTS.length - 1) * GRID_GAP_PX}px) / ${DEPARTMENTS.length * 2})`;
+const BUS_INSET = `calc((100% - ${(DIVISIONS.length - 1) * GRID_GAP_PX}px) / ${DIVISIONS.length * 2})`;
 
 /**
  * The alert an `OrgNode` shows: an error run beats a pending approval — worse
@@ -77,7 +76,7 @@ function pickAlert(
 }
 
 /**
- * ZB-02 — the ORG map: CEO → COO → 11 department nodes, plus a `?focus=<id>` panel
+ * ZB-02 — the ORG map: CEO → COO → divisions (D-021) → 11 department nodes, plus a `?focus=<id>` panel
  * (department roster, open subtasks, handoff IN/OUT). PART-B.md ZB-02 / ROUTE-MAP.md
  * §1 ORG / D-014 / D-015 / O-04.
  */
@@ -156,7 +155,7 @@ export function OrgMapScreen() {
           {/* The COO trunk — joins the COO panel to the department bus below. */}
           <OrgConnector length={22} orientation="vertical" />
 
-          {/* Only the department row scrolls on a narrow viewport; the bus lives
+          {/* Only the division row scrolls on a narrow viewport; the bus lives
            *  inside it so it scrolls together with the nodes it spans. */}
           <Container overflowX="auto" width="100%">
             <Container position="relative">
@@ -164,31 +163,51 @@ export function OrgMapScreen() {
                 orientation="horizontal"
                 style={{ left: BUS_INSET, right: BUS_INSET }}
               />
-              <Grid data-testid={OrgMapScreenTestId.Grid} gap="100" style={GRID_11_COLS}>
-                {DEPARTMENTS.map((dept) => {
-                  const status = departments.find((d) => d.id === dept.id);
-                  const cells: StateTone[] = employees
-                    .filter((e) => e.department === dept.id)
+              <Grid data-testid={OrgMapScreenTestId.Grid} gap="200" style={GRID_DIVISION_COLS}>
+                {DIVISIONS.map((division) => {
+                  const members = DEPARTMENTS.filter((d) => d.division === division.id);
+                  const divisionCells: StateTone[] = employees
+                    .filter((e) => members.some((d) => d.id === e.department))
                     .map((e) => e.state);
-                  const approvalCount = approvals.filter((a) => a.department === dept.id).length;
-                  const isFocused = focusId === dept.id;
                   return (
-                    <Stack align="center" gap="0" key={dept.id}>
+                    <Stack align="center" gap="0" key={division.id}>
                       <OrgConnector length={18} orientation="vertical" />
-                      <OrgNode
-                        alert={pickAlert(status?.errorCount ?? 0, approvalCount, t)}
-                        cells={cells}
-                        code={dept.code}
-                        name={dept.name}
-                        onClick={() => setFocus(dept.id)}
-                        selected={isFocused}
-                      />
-                      <OrgConnector
-                        active={isFocused}
-                        hidden={!isFocused}
-                        length={22}
-                        orientation="vertical"
-                      />
+                      <Container width="100%">
+                        <Panel data-testid={OrgMapScreenTestId.Division} padding="100">
+                          <Stack gap="50">
+                            <Typography tracking="wider" type="labelSm" variant="secondary">
+                              {division.name}
+                            </Typography>
+                            <CellStrip cells={divisionCells} />
+                          </Stack>
+                        </Panel>
+                      </Container>
+                      {members.map((dept) => {
+                        const status = departments.find((d) => d.id === dept.id);
+                        const cells: StateTone[] = employees
+                          .filter((e) => e.department === dept.id)
+                          .map((e) => e.state);
+                        const approvalCount = approvals.filter(
+                          (a) => a.department === dept.id,
+                        ).length;
+                        const isFocused = focusId === dept.id;
+                        return (
+                          <Container key={dept.id} width="100%">
+                            <Stack align="center" gap="0">
+                              {/* The drop from the division — --ink on the focused department. */}
+                              <OrgConnector active={isFocused} length={18} orientation="vertical" />
+                              <OrgNode
+                                alert={pickAlert(status?.errorCount ?? 0, approvalCount, t)}
+                                cells={cells}
+                                code={dept.code}
+                                name={dept.name}
+                                onClick={() => setFocus(dept.id)}
+                                selected={isFocused}
+                              />
+                            </Stack>
+                          </Container>
+                        );
+                      })}
                     </Stack>
                   );
                 })}

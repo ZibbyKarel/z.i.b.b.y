@@ -519,3 +519,27 @@ unit's id.
   list.
 - Existing single-target callers are unchanged.
 - The dock's department scope (O-20) seeds the first mention.
+
+## D-021 — Departments are grouped under divisions (2026-09-29, operator)
+
+The operator wants the org to read like a real large company: COO → division → department,
+without a board (no CTO/CFO/… nodes). This refines D-004: the eleven departments stay the
+closed set, and each one now names its division.
+
+| Division | Departments |
+|---|---|
+| Engineering | `dev`, `rnd`, `qa` |
+| Infrastructure & Operations | `ops`, `rel`, `inc`, `sec` |
+| Business Operations | `com`, `knw`, `fin` |
+| Office of the CEO | `per` |
+
+**A division is a grouping only.** It owns nothing: no agents, employees, gate-rule bucket,
+tier default, budget or handoff target. Ownership, routing, gates and the allocator stay keyed
+on `DepartmentId`, and the COO still classifies straight to a department — a division is not
+an extra LLM hop.
+
+- `DivisionIdSchema`, `DIVISIONS` and the required `Department.division` live in
+  `libs/contracts/src/departments/department.schema.ts`.
+- The org map draws CEO → COO → a bus over the four divisions → each division's departments
+  stacked beneath it. The focused department's drop connector turns `--ink`.
+- A division-level gate bucket or spend cap is out of scope until the operator asks for one.

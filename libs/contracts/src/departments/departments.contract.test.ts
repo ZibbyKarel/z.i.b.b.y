@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 import { EmptyBodySchema } from "../common.schema";
 import {
   DEPARTMENTS,
+  DIVISIONS,
   DepartmentIdSchema,
   DepartmentSchema,
   DepartmentWithStatusSchema,
+  DivisionIdSchema,
   departmentsContract,
 } from "../index";
 
@@ -64,6 +66,13 @@ describe("DEPARTMENTS registry", () => {
       expect(department).toBeDefined();
       expect(department?.tagline.length).toBeGreaterThan(0);
       expect(department?.mandate.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("groups every department under a division, and every division holds at least one", () => {
+    expect(DIVISIONS.map((d) => d.id)).toEqual(DivisionIdSchema.options);
+    for (const division of DIVISIONS) {
+      expect(DEPARTMENTS.some((d) => d.division === division.id)).toBe(true);
     }
   });
 

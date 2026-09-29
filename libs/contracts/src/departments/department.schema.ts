@@ -24,6 +24,29 @@ export const DepartmentIdSchema = z.enum([
 export type DepartmentId = z.infer<typeof DepartmentIdSchema>;
 
 /**
+ * D-021 — the divisions the eleven departments are grouped under, so the org
+ * reads as COO → division → department like a real large company. A division
+ * is a GROUPING only: it owns nothing (no agents, employees, gate bucket,
+ * budget or handoff target) — ownership stays on the department id. Listed in
+ * org-chart order.
+ */
+export const DivisionIdSchema = z.enum(["engineering", "operations", "business", "office"]);
+export type DivisionId = z.infer<typeof DivisionIdSchema>;
+
+export const DivisionSchema = z.object({
+  id: DivisionIdSchema,
+  name: z.string().min(1),
+});
+export type Division = z.infer<typeof DivisionSchema>;
+
+export const DIVISIONS: readonly Division[] = [
+  { id: "engineering", name: "Engineering" },
+  { id: "operations", name: "Infrastructure & Operations" },
+  { id: "business", name: "Business Operations" },
+  { id: "office", name: "Office of the CEO" },
+];
+
+/**
  * A department's identity: its org-chart `code`, its English corporate `name`,
  * a short Czech tagline, its one-line Czech mandate, and a brand color.
  *
@@ -41,6 +64,7 @@ export const DepartmentSchema = z.object({
   tagline: z.string().min(1),
   mandate: z.string().min(1),
   color: z.string().regex(/^#[0-9a-f]{6}$/i),
+  division: DivisionIdSchema,
 });
 export type Department = z.infer<typeof DepartmentSchema>;
 
@@ -61,6 +85,7 @@ export const DEPARTMENTS: readonly Department[] = [
     mandate:
       "Orchestrace delivery pipeline: Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor.",
     color: "#5b8def",
+    division: "engineering",
   },
   {
     id: "ops",
@@ -69,6 +94,7 @@ export const DEPARTMENTS: readonly Department[] = [
     tagline: "Provoz a monitoring",
     mandate: "Sledování kanálů, kalendáře a CI/CD na pravidelném heartbeatu.",
     color: "#f2749e",
+    division: "operations",
   },
   {
     id: "sec",
@@ -77,6 +103,7 @@ export const DEPARTMENTS: readonly Department[] = [
     tagline: "Bezpečnost a dohled",
     mandate: "Bezpečnost vůči externímu prostředí — CVE závislostí, úniky tajemství.",
     color: "#34c9bd",
+    division: "operations",
   },
   {
     id: "rel",
@@ -85,6 +112,7 @@ export const DEPARTMENTS: readonly Department[] = [
     tagline: "Příprava a schvalování vydání",
     mandate: "Releasy — příprava, přehled a operátorem schválené sloučení.",
     color: "#e0a83c",
+    division: "operations",
   },
   {
     id: "inc",
@@ -93,6 +121,7 @@ export const DEPARTMENTS: readonly Department[] = [
     tagline: "Eskalace a řešení incidentů",
     mandate: "Eskalace incidentů — vlastní podoba Tier-3 kontraktu surface-and-wait.",
     color: "#f4785c",
+    division: "operations",
   },
   {
     id: "rnd",
@@ -101,6 +130,7 @@ export const DEPARTMENTS: readonly Department[] = [
     tagline: "Výzkum a analýza",
     mandate: "Výzkumné pipeline, které předávají výsledný artefakt dál.",
     color: "#46cf8b",
+    division: "engineering",
   },
   {
     id: "com",
@@ -109,6 +139,7 @@ export const DEPARTMENTS: readonly Department[] = [
     tagline: "Komunikace navenek",
     mandate: "Mluví za ZIBBY navenek — reaktivní odpovědi i proaktivní dotazování.",
     color: "#56c4d6",
+    division: "business",
   },
   {
     id: "qa",
@@ -117,6 +148,7 @@ export const DEPARTMENTS: readonly Department[] = [
     tagline: "Kvalita a architektura",
     mandate: "Proaktivní analýza kvality a architektury codebase, nálezy předává Dev.",
     color: "#b07cff",
+    division: "engineering",
   },
   {
     id: "knw",
@@ -125,6 +157,7 @@ export const DEPARTMENTS: readonly Department[] = [
     tagline: "Správa znalostí",
     mandate: "Správa paměti — vault, grounding, noční destilace a poličky znalostí.",
     color: "#c56fd4",
+    division: "business",
   },
   {
     id: "fin",
@@ -133,6 +166,7 @@ export const DEPARTMENTS: readonly Department[] = [
     tagline: "Rozpočty a limity",
     mandate: "Rozpočty a limity — stropy útrat, okna spotřeby, správa token-spend a limit-resume.",
     color: "#a9c23e",
+    division: "business",
   },
   {
     id: "per",
@@ -142,6 +176,7 @@ export const DEPARTMENTS: readonly Department[] = [
     mandate:
       "Osobní život operátora — rychlé poznámky, denní agenda, osobní poličky a připomínky, oddělené od práce.",
     color: "#d9694a",
+    division: "office",
   },
 ];
 
