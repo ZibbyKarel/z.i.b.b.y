@@ -205,9 +205,6 @@ export type { ProgressProps, ProgressTone } from "./components/Progress/Progress
 export { ProgressRing, ProgressRingTestId } from "./components/ProgressRing/ProgressRing";
 export type { ProgressRingProps, ProgressRingSize } from "./components/ProgressRing/ProgressRing";
 
-export { OrbitLoader, OrbitLoaderTestId } from "./components/OrbitLoader/OrbitLoader";
-export type { OrbitLoaderProps, OrbitLoaderSize } from "./components/OrbitLoader/OrbitLoader";
-
 export { StatusDot, StatusDotTestId } from "./components/StatusDot/StatusDot";
 export type { DotTone, StatusDotProps } from "./components/StatusDot/StatusDot";
 

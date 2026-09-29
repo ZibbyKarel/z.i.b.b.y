@@ -7,7 +7,7 @@ const meta: Meta<typeof Progress> = {
   component: Progress,
   parameters: { backgrounds: { default: "velin" } },
   argTypes: {
-    tone: { control: "select", options: ["accent", "ok", "warn", "bad", "run"] },
+    tone: { control: "select", options: ["accent", "ok", "warn", "bad", "run", "ink"] },
     height: { control: "select", options: ["25", "50", "75", "100", "125", "150"] },
   },
   args: { value: 64, tone: "warn", height: "75" },
@@ -42,6 +42,12 @@ export const Overview: Story = {
           <Progress height="50" tone="ok" value={60} />
           <Progress height="75" tone="ok" value={60} />
           <Progress height="100" tone="ok" value={60} />
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <Typography type="label">indeterminate (unknown-duration loading)</Typography>
+        <div className="flex flex-col gap-3">
+          <Progress indeterminate height="25" />
         </div>
       </div>
     </div>

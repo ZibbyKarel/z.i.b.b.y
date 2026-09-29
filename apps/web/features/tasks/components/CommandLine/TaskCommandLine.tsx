@@ -6,7 +6,7 @@ import {
   DropDownButton,
   type DropDownButtonItem,
   type IconName,
-  OrbitLoader,
+  Progress,
   Stack,
   Typography,
 } from "@zibby/design-system";
@@ -356,7 +356,9 @@ export function TaskCommandLine({
 
       {showAck && ack && (
         <Stack align="center" data-testid={TaskCommandLineTestId.AckRow} direction="row" gap="150">
-          <OrbitLoader size="sm" />
+          <Container shrink={false} width="20px">
+            <Progress indeterminate height="25" />
+          </Container>
           <Stack grow gap="25" style={{ minWidth: 0 }}>
             <Typography size="sm" type="note">
               {t("commandLine.ack.headline", { kind: ack.kind, exec: ack.exec })}

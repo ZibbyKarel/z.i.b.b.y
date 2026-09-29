@@ -203,8 +203,7 @@
   --animate-zt-float: ztFloat 7s ease-in-out infinite;
 
   /* Boot / loading screen */
-  --animate-orbit-spin: orbit-spin 12s linear infinite;
-  --animate-ring-pulse: ring-pulse 2.8s ease-in-out infinite;
+  --animate-progress-indeterminate: progress-indeterminate 1.2s ease-in-out infinite;
   --animate-logo-breathe: logo-breathe 3s ease-in-out infinite;
   --animate-ripple: ripple 2.8s ease-out infinite;
   --animate-letter-in: letter-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
@@ -460,21 +459,12 @@
 
 /* ---- Boot / loading screen ------------------------------------------------ */
 
-@keyframes orbit-spin {
-  to {
-    transform: rotate(360deg);
+@keyframes progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
   }
-}
-
-@keyframes ring-pulse {
-  0%,
   100% {
-    opacity: 0.4;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.03);
+    transform: translateX(300%);
   }
 }
 

@@ -20,6 +20,20 @@ describe("Progress", () => {
     render(<Progress value={20} />);
     expect(screen.getByTestId(ProgressTestId.Root)).not.toHaveAttribute("role");
   });
+
+  it("omits aria-valuenow when indeterminate", () => {
+    render(<Progress indeterminate label="loading" />);
+    const bar = screen.getByTestId(ProgressTestId.Root);
+    expect(bar).toHaveRole("progressbar");
+    expect(bar).not.toHaveAttribute("aria-valuenow");
+  });
+
+  it("animates the fill segment instead of sizing it by value", () => {
+    render(<Progress indeterminate value={50} />);
+    const fill = screen.getByTestId(ProgressTestId.Fill);
+    expect(fill).toHaveClass("animate-progress-indeterminate");
+    expect(fill).not.toHaveStyle({ width: "50%" });
+  });
 });
 
 describe("usageTone", () => {
