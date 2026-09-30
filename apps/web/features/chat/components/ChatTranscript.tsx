@@ -1,10 +1,12 @@
-import { Stack } from "@zibby/design-system";
+import { useTranslations } from "next-intl";
+import { Card, Container, Stack, TypingDots } from "@zibby/design-system";
 import type { ChatMessage as ChatMessageType, ChatToolEvent } from "@zibby/contracts";
 import { ChatMessage } from "./ChatMessage";
 
 export enum ChatTranscriptTestId {
   Root = "chat-transcript",
   LiveTurn = "chat-transcript-live-turn",
+  ThinkingTurn = "chat-transcript-thinking-turn",
 }
 
 export interface ChatTranscriptProps {
@@ -16,6 +18,10 @@ export interface ChatTranscriptProps {
   liveToolEvents?: ChatToolEvent[];
   /** Whether the live assistant turn is still streaming tokens. */
   streaming?: boolean;
+  /** A turn is in flight (from send through the terminal done/error) — drives
+   *  the {@link TypingDots} placeholder for the gap before any token or tool
+   *  event has arrived yet (ZB-12b). */
+  thinking?: boolean;
   /** ZB-12 — forwarded to each settled assistant turn's "CREATE TASK" action. */
   onCreateTask?: (text: string) => void;
 }
@@ -32,12 +38,17 @@ export function ChatTranscript({
   liveText,
   liveToolEvents,
   streaming,
+  thinking,
   onCreateTask,
 }: ChatTranscriptProps) {
+  const t = useTranslations("chat");
   const hasLive =
     Boolean(streaming) && ((liveText ?? "").length > 0 || (liveToolEvents?.length ?? 0) > 0);
+  // The gap between send and the first token/tool event — `thinking` is already
+  // true here, but there's nothing to render as the live turn yet.
+  const isThinking = Boolean(thinking) && !hasLive;
 
-  if (messages.length === 0 && !hasLive) return null;
+  if (messages.length === 0 && !hasLive && !isThinking) return null;
 
   return (
     <Stack data-testid={ChatTranscriptTestId.Root} direction="col" gap="200">
@@ -63,6 +74,21 @@ export function ChatTranscript({
             toolEvents={liveToolEvents}
           />
         </div>
+      )}
+
+      {isThinking && (
+        <Stack
+          align="start"
+          data-testid={ChatTranscriptTestId.ThinkingTurn}
+          direction="col"
+          gap="75"
+        >
+          <Card background="raised" radius="lg">
+            <Container padding={["100", "150"]}>
+              <TypingDots label={t("streaming")} />
+            </Container>
+          </Card>
+        </Stack>
       )}
     </Stack>
   );

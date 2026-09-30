@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
-import { ChatDockTestId, ChipTestId } from "@zibby/design-system";
+import { ChatDockTestId, ChipTestId, TypingDotsTestId } from "@zibby/design-system";
 import { useEffect } from "react";
 import { renderWithProviders, screen, within } from "../../../test/render";
 import { CommandLineTestId } from "../../tasks/components/CommandLine/CommandLine";
@@ -51,7 +51,13 @@ vi.mock("../mutations/useSynthesizeSpeechMutation", () => ({
   useSynthesizeSpeechMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
-const streamState = { turnId: null, text: "", toolEvents: [], streaming: false, error: null };
+const streamState: {
+  turnId: string | null;
+  text: string;
+  toolEvents: unknown[];
+  streaming: boolean;
+  error: string | null;
+} = { turnId: null, text: "", toolEvents: [], streaming: false, error: null };
 vi.mock("../hooks/useChatStream", () => ({ useChatStream: () => streamState }));
 
 const voiceState = {
@@ -102,14 +108,19 @@ describe("CooDock (ZB-12)", () => {
     transcriptState.data = undefined;
     transcriptState.isSuccess = false;
     transcriptState.isError = false;
+    streamState.text = "";
+    streamState.toolEvents = [];
+    streamState.streaming = false;
     window.localStorage.clear();
   });
 
-  it("renders collapsed with the COO target chip and the attach control back (D-020)", () => {
+  it("renders collapsed with no target chip for the COO default and the attach control back (D-020)", () => {
     renderDock({ open: false });
     expect(screen.getByTestId(ChatDockTestId.Root)).toBeInTheDocument();
     expect(screen.queryByTestId(ChatDockTestId.Transcript)).not.toBeInTheDocument();
-    expect(screen.getByTestId(CooDockTestId.TargetChip)).toHaveTextContent("→ COO");
+    // No chip for the obvious default (item 28) — only an explicit non-COO
+    // target earns one (see the department-scoped test below).
+    expect(screen.queryByTestId(CooDockTestId.TargetChip)).not.toBeInTheDocument();
     // D-020: the chat send contract now carries attachmentSetId — the attach
     // control is back.
     expect(screen.getByTestId(CommandLineTestId.Attach)).toBeInTheDocument();
@@ -153,7 +164,7 @@ describe("CooDock (ZB-12)", () => {
     await user.click(
       within(screen.getByTestId(CooDockTestId.TargetChip)).getByTestId(ChipTestId.Close),
     );
-    expect(screen.getByTestId(CooDockTestId.TargetChip)).toHaveTextContent("→ COO");
+    expect(screen.queryByTestId(CooDockTestId.TargetChip)).not.toBeInTheDocument();
     await typeAndSend("hello");
     const body = sendMutate.mock.calls[0]?.[0]?.body as Record<string, unknown>;
     expect(body).not.toHaveProperty("mentions");
@@ -197,6 +208,16 @@ describe("CooDock (ZB-12)", () => {
   it("keeps the mic idle-gated: voice is not suspended while idle", () => {
     renderDock();
     expect(voiceOptions.at(-1)?.suspended).toBe(false);
+  });
+
+  it("shows the typing-dots placeholder for the gap before any token has streamed in (item 28)", async () => {
+    streamState.streaming = true;
+    const user = userEvent.setup();
+    renderDock();
+    await user.type(screen.getByTestId(CommandLineTestId.Input), "hello");
+    await user.click(screen.getByTestId(CooDockTestId.Send));
+    expect(screen.getByRole("status", { name: "ZIBBY píše…" })).toBeInTheDocument();
+    expect(screen.getAllByTestId(TypingDotsTestId.Dot)).toHaveLength(3);
   });
 
   it("still sends from the collapsed dock when the server has no active thread (mints after hydration settles)", async () => {

@@ -69,6 +69,8 @@ export function CooDock() {
   const last = messages.at(-1);
   const latestLine = last ? last.text.slice(0, LATEST_LINE_MAX_CHARS) : undefined;
 
+  // No chip for the COO default (O-20) — it's the obvious fallback with
+  // nothing to disambiguate; only an explicit non-COO target earns the chip.
   const targetChip = dockTarget ? (
     <Chip
       closable
@@ -79,11 +81,7 @@ export function CooDock() {
     >
       {t("dock.targetExplicit", { name: targetLabel(dockTarget) })}
     </Chip>
-  ) : (
-    <Chip data-testid={CooDockTestId.TargetChip} tone="idle">
-      {t("dock.targetCoo")}
-    </Chip>
-  );
+  ) : undefined;
 
   const transcript =
     messages.length === 0 && !stream.streaming ? (
@@ -109,6 +107,7 @@ export function CooDock() {
           messages={messages}
           onCreateTask={createTask}
           streaming={stream.streaming}
+          thinking={thinking}
         />
       </Stack>
     );

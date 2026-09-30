@@ -208,6 +208,9 @@ export type { ProgressRingProps, ProgressRingSize } from "./components/ProgressR
 export { StatusDot, StatusDotTestId } from "./components/StatusDot/StatusDot";
 export type { DotTone, StatusDotProps } from "./components/StatusDot/StatusDot";
 
+export { TypingDots, TypingDotsTestId } from "./components/TypingDots/TypingDots";
+export type { TypingDotsProps } from "./components/TypingDots/TypingDots";
+
 export { AgentGlyph, AgentGlyphTestId } from "./components/AgentGlyph/AgentGlyph";
 export type { AgentGlyphProps, GlyphSize } from "./components/AgentGlyph/AgentGlyph";
 
