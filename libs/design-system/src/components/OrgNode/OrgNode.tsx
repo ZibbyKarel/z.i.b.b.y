@@ -30,48 +30,43 @@ export interface OrgNodeProps {
 }
 
 /**
- * DS.md §8 org node — a department card: name + code on one line, the cell
- * strip beneath, and (below a hairline) the alert line. A DS component rather
- * than an app composite (the app has no styling seam to reach this look —
- * D-007). No standalone agent count — the cell strip already carries that,
- * one dot per agent.
+ * DS.md §8 org node — a department card, two columns: name + cell strip on
+ * the left, code + alert on the right. Compacted so several stacked cards
+ * fit a division column without clipping (ZB-15) — no standalone agent
+ * count, the cell strip already carries that, one dot per agent.
  */
 export function OrgNode({ code, name, cells, alert, selected, href, onClick, ref }: OrgNodeProps) {
   const interactive = Boolean(href || onClick);
   const className = cn(
-    "flex w-full min-h-[72px] flex-col gap-2 border bg-surface-panel p-[10px] text-left",
+    "flex w-full flex-col gap-1.5 border bg-surface-panel p-[10px] text-left",
     selected ? "border-ink" : "border-border",
     interactive && cn("cursor-pointer transition-colors hover:bg-elevated", focusRing),
   );
 
   const content = (
-    <>
-      {/* Two columns, not two rows: name and code share one line — the code
-       *  sits where a redundant agent count used to (the cell strip below
-       *  already says how many, one dot per agent). */}
-      <div className="flex items-baseline justify-between gap-2">
+    <div className="flex items-start justify-between gap-2">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <Typography data-testid={OrgNodeTestId.Name} type="body" weight="medium">
           {name}
         </Typography>
+        <div data-testid={OrgNodeTestId.Cells}>
+          <CellStrip cells={cells} />
+        </div>
+      </div>
+      <div className="flex flex-col items-end gap-1.5">
         <Typography nowrap data-testid={OrgNodeTestId.Code} tracking="wider" type="labelSm">
           {code}
         </Typography>
+        {alert && (
+          <div className="flex items-center gap-1.5" data-testid={OrgNodeTestId.Alert}>
+            <StateDot data-testid={OrgNodeTestId.AlertDot} px={7} state={alert.state} />
+            <Typography nowrap type="labelSm" variant="secondary">
+              {alert.label}
+            </Typography>
+          </div>
+        )}
       </div>
-      <div className="min-h-[9px]" data-testid={OrgNodeTestId.Cells}>
-        <CellStrip cells={cells} />
-      </div>
-      {alert && (
-        <div
-          className="mt-auto flex items-center gap-1.5 border-t border-border pt-2"
-          data-testid={OrgNodeTestId.Alert}
-        >
-          <StateDot data-testid={OrgNodeTestId.AlertDot} px={7} state={alert.state} />
-          <Typography type="labelSm" variant="secondary">
-            {alert.label}
-          </Typography>
-        </div>
-      )}
-    </>
+    </div>
   );
 
   if (href) {
