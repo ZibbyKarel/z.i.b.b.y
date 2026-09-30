@@ -44,7 +44,7 @@ export function LimitBar({ label, value, max, ref }: LimitBarProps) {
         aria-valuemax={max}
         aria-valuemin={0}
         aria-valuenow={value}
-        className="relative h-[2px] w-full bg-border"
+        className="relative h-[4px] w-full bg-border"
         data-testid={LimitBarTestId.Track}
         role="meter"
       >
