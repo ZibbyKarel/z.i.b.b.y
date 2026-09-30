@@ -146,15 +146,15 @@ export class ArchService {
       refs: { noteId: NOTE_ID },
     });
 
-    for (const finding of newFindings) {
+    if (newFindings.length > 0) {
       try {
-        // Every finding goes through the rule engine — the wildcard tier-3 seed
-        // rule parks a proposal, never an autonomous dispatch (evaluate is itself
-        // fail-open, but the audit tick must survive regardless).
-        await this.handoff.evaluate(this.toSignal(finding));
+        // One handoff signal per audit run, not one per finding — the wildcard
+        // tier-3 seed rule parks a single proposal for the whole batch (evaluate
+        // is itself fail-open, but the audit tick must survive regardless).
+        await this.handoff.evaluate(this.toBatchSignal(newFindings, now));
       } catch (err) {
-        this.log.warn("arch: handoff evaluate failed — finding stays for retry", {
-          fingerprint: finding.fingerprint,
+        this.log.warn("arch: handoff evaluate failed — findings stay for retry", {
+          count: newFindings.length,
           error: String(err),
         });
       }
@@ -163,20 +163,15 @@ export class ArchService {
     return { findings };
   }
 
-  /** Normalize one finding into the handoff engine's signal shape — no severity, no projectId. */
-  private toSignal(f: ArchFinding): HandoffSignal {
-    const title =
-      f.kind === "god-node"
-        ? `Arch: god node ${f.name}`
-        : f.kind === "community"
-          ? `Arch: oversized community ${f.label}`
-          : "Arch: circular dependency";
+  /** Bundle a run's new findings into one handoff signal — one approval per audit run. */
+  private toBatchSignal(findings: ArchFinding[], now: Date): HandoffSignal {
+    const sortedFingerprints = findings.map((f) => f.fingerprint).sort();
     return {
       from: "qa",
-      kind: f.kind,
-      title,
-      body: toFindingLine(f),
-      fingerprint: f.fingerprint,
+      kind: "audit-batch",
+      title: `Arch: ${findings.length} nových nálezů kvality`,
+      body: findings.map((f) => `- ${toFindingLine(f)}`).join("\n"),
+      fingerprint: `archbatch-${now.toISOString().slice(0, 10)}-${sha1(sortedFingerprints.join("|"))}`,
     };
   }
 

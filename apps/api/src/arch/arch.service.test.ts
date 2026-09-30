@@ -115,21 +115,24 @@ describe("ArchService.audit", () => {
     expect(activity.record).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "department-scan" }),
     );
-    // Every new finding is normalized into a handoff signal — no severity, no
-    // projectId (only Security's CVEs carry severity).
-    expect(handoff.evaluate).toHaveBeenCalledTimes(2);
+    // A whole run's new findings are bundled into ONE handoff signal — one
+    // approval per audit, not one per finding — no severity, no projectId
+    // (only Security's CVEs carry severity).
+    expect(handoff.evaluate).toHaveBeenCalledTimes(1);
     expect(handoff.evaluate).toHaveBeenCalledWith(
-      expect.objectContaining({ from: "qa", kind: "god-node" }),
+      expect.objectContaining({
+        from: "qa",
+        kind: "audit-batch",
+        title: "Arch: 2 nových nálezů kvality",
+        body: expect.stringContaining("AppShell"),
+      }),
     );
-    expect(handoff.evaluate).toHaveBeenCalledWith(
-      expect.objectContaining({ from: "qa", kind: "community" }),
-    );
-    for (const call of handoff.evaluate.mock.calls as unknown as Array<
-      [{ severity?: string; projectId?: string }]
-    >) {
-      expect(call[0].severity).toBeUndefined();
-      expect(call[0].projectId).toBeUndefined();
-    }
+    const [signal] = handoff.evaluate.mock.calls[0] as [
+      { body: string; severity?: string; projectId?: string },
+    ];
+    expect(signal.body).toContain("LoggerService");
+    expect(signal.severity).toBeUndefined();
+    expect(signal.projectId).toBeUndefined();
   });
 
   it("a stubbed madge cycle is filed as a finding", async () => {
@@ -208,10 +211,14 @@ describe("ArchService.audit", () => {
     expect(noteBody).toContain("AppShell");
     expect(noteBody).toContain("LoggerService");
     expect(noteBody).toContain("apps/web/a.ts → apps/web/b.ts");
-    // Only the NEW finding (the cycle) is handed to the rule engine.
+    // Only the NEW finding (the cycle) is handed to the rule engine, as one batch signal.
     expect(built2.handoff.evaluate).toHaveBeenCalledTimes(1);
     expect(built2.handoff.evaluate).toHaveBeenCalledWith(
-      expect.objectContaining({ from: "qa", kind: "cycle" }),
+      expect.objectContaining({
+        from: "qa",
+        kind: "audit-batch",
+        body: expect.stringContaining("apps/web/a.ts → apps/web/b.ts"),
+      }),
     );
   });
 

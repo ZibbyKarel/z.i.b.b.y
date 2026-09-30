@@ -12,6 +12,15 @@ queue* service, unrelated to the department registry this doc describes beyond
 "Release" sharing a name/color entry; no department identity, status, or
 endpoint behaviour changed. This doc remains accurate. -->
 
+<!-- Reviewed 2026-09-30 (arch-audit approval flood fix): apps/api/src/arch/
+changed this session — `ArchService.audit()` now bundles a run's new findings
+into ONE `handoff-proposal` signal (kind `audit-batch`) instead of emitting one
+signal per finding, so a nightly audit no longer floods the approval queue with
+one item per god node/community/cycle. That's Arch's producer-side handoff
+emission, not the department registry's identity/status/roster/endpoints this
+doc describes; "Arch" still just a name/color entry here. This doc remains
+accurate. -->
+
 Phase 80 of the department-federation arc — see
 `docs/superpowers/specs/2026-07-08-department-federation-design.md` for the design
 doc, `docs/plans/phase-80-department-registry.md` for the registry plan, and
