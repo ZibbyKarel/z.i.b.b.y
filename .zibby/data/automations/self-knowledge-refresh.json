@@ -1,8 +1,1 @@
-{
-  "id": "self-knowledge-refresh",
-  "name": "Obnova sebeznalosti",
-  "trigger": { "type": "cron", "expr": "30 3 * * *" },
-  "target": { "type": "self-knowledge" },
-  "enabled": true,
-  "system": true
-}
+{"id":"self-knowledge-refresh","name":"Obnova sebeznalosti","trigger":{"type":"cron","expr":"30 3 * * *"},"target":{"type":"self-knowledge"},"enabled":true,"system":true,"lastFiredAt":"2026-09-30T01:30:28.063Z"}

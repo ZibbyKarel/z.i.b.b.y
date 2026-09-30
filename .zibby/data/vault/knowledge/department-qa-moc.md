@@ -1,8 +1,11 @@
 ---
-title: "QA & Architecture — polička"
+title: QA & Architecture — polička
 department: qa
 type: fact
-tags: [department, arch, moc]
+tags:
+  - department
+  - arch
+  - moc
 ---
 
 QA & Architecture owns proactive code quality: scheduled architecture and dead-code
@@ -13,3 +16,4 @@ tooling already exists in the repo.
 ## Poznatky
 
 [[zibby-index]] · [[north-star-2]]
+- [[suggestions/quality-findings]] — Audit kvality — 2026-09-30

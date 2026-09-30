@@ -4,21 +4,19 @@ import { useState } from "react";
 import { cn } from "../../utils/cn";
 import { focusRing } from "../../utils/focus";
 import { Button } from "../Button/Button";
+import { Icon } from "../Icon/Icon";
 import { Typography } from "../Typography/Typography";
 
 export enum ChatDockTestId {
   Root = "chat-dock-root",
   Transcript = "chat-dock-transcript",
   Header = "chat-dock-header",
-  Avatar = "chat-dock-avatar",
-  Title = "chat-dock-title",
-  Role = "chat-dock-role",
   CloseButton = "chat-dock-close-button",
   Messages = "chat-dock-messages",
   LatestLine = "chat-dock-latest-line",
   Footer = "chat-dock-footer",
   Toggle = "chat-dock-toggle",
-  ToggleAvatar = "chat-dock-toggle-avatar",
+  ToggleIcon = "chat-dock-toggle-icon",
   TargetChip = "chat-dock-target-chip",
   Composer = "chat-dock-composer",
 }
@@ -29,12 +27,6 @@ export interface ChatDockProps {
   /** Initial state when uncontrolled. */
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
-  /** Agent identity — DS App mock's "Zibby · COO". */
-  agentName?: string;
-  roleLabel?: string;
-  /** The agent's `AgentGlyph`/`IconTile`, rendered in the header and the
-   *  collapsed toggle. */
-  avatar?: ReactNode;
   /** Message list — a `LogStream`-like transcript, only rendered when open. */
   transcript?: ReactNode;
   /** The composer row — a render slot (`TextArea` + attach + mic + send); the
@@ -45,6 +37,7 @@ export interface ChatDockProps {
   /** A one-line preview of the latest message, shown above the composer only
    *  while collapsed. */
   latestLine?: string;
+  /** Accessible name for the open/close toggle. */
   toggleLabel?: string;
   closeLabel?: string;
   ref?: Ref<HTMLDivElement>;
@@ -55,20 +48,20 @@ export interface ChatDockProps {
  * bottom-right over the main content. Presentational only: the transcript,
  * composer and target chip are all slots the app fills in; `ChatDock` owns
  * only the open/collapsed choreography and the always-visible bottom bar
- * (toggle avatar, latest-line preview, target chip, composer).
+ * (toggle, latest-line preview, target chip, composer).
+ *
+ * Identity chrome (avatar, agent name, role label) is deliberately absent for
+ * now — just the text row — until that visual is designed.
  */
 export function ChatDock({
   open,
   defaultOpen = false,
   onOpenChange,
-  agentName = "Zibby",
-  roleLabel = "COO · Routes, classifies, chats",
-  avatar,
   transcript,
   composer,
   targetChip,
   latestLine,
-  toggleLabel,
+  toggleLabel = "Chat",
   closeLabel = "Close",
   ref,
 }: ChatDockProps) {
@@ -91,23 +84,9 @@ export function ChatDock({
           data-testid={ChatDockTestId.Transcript}
         >
           <div
-            className="flex items-center gap-2.5 border-b border-line px-3.5 py-3"
+            className="flex items-center justify-end border-b border-line px-3.5 py-3"
             data-testid={ChatDockTestId.Header}
           >
-            {avatar && <span data-testid={ChatDockTestId.Avatar}>{avatar}</span>}
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <Typography data-testid={ChatDockTestId.Title} type="body" weight="medium">
-                {agentName}
-              </Typography>
-              <Typography
-                data-testid={ChatDockTestId.Role}
-                tracking="wider"
-                type="labelSm"
-                variant="tertiary"
-              >
-                {roleLabel}
-              </Typography>
-            </div>
             <Button
               data-testid={ChatDockTestId.CloseButton}
               intent="secondary"
@@ -117,7 +96,10 @@ export function ChatDock({
               {closeLabel}
             </Button>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto p-3.5" data-testid={ChatDockTestId.Messages}>
+          <div
+            className="min-h-0 flex-1 overflow-y-auto p-3.5"
+            data-testid={ChatDockTestId.Messages}
+          >
             {transcript}
           </div>
         </div>
@@ -131,27 +113,38 @@ export function ChatDock({
         </div>
       )}
 
-      <div
-        className="flex items-center gap-2.5 p-2 pl-3"
-        data-testid={ChatDockTestId.Footer}
-      >
+      <div className="flex items-center gap-2.5 p-2 pl-3" data-testid={ChatDockTestId.Footer}>
         <button
           aria-expanded={isOpen}
-          aria-label={toggleLabel ?? agentName}
-          className={cn("inline-flex shrink-0 items-center gap-2", focusRing)}
+          aria-label={toggleLabel}
+          className={cn(
+            "inline-flex shrink-0 items-center justify-center p-1 text-foreground-dim",
+            focusRing,
+          )}
           data-testid={ChatDockTestId.Toggle}
           onClick={() => setOpen(!isOpen)}
           type="button"
         >
-          {avatar && <span data-testid={ChatDockTestId.ToggleAvatar}>{avatar}</span>}
-          <Typography tracking="wider" type="labelSm" variant="secondary">
-            {agentName}
-          </Typography>
+          <span
+            className={cn(
+              "inline-flex transition-transform duration-150",
+              isOpen ? "rotate-90" : "-rotate-90",
+            )}
+            data-testid={ChatDockTestId.ToggleIcon}
+          >
+            <Icon name="chevron" />
+          </span>
         </button>
 
         {targetChip && <span data-testid={ChatDockTestId.TargetChip}>{targetChip}</span>}
 
-        <div className="min-w-0 flex-1" data-testid={ChatDockTestId.Composer}>
+        {/* The composer's own frame — `CommandLine`'s `frameless` prop drops its
+         *  usual border/background on the assumption the host supplies one; this
+         *  is that surface (DS.md §6, sharp corners, no `Card` chrome). */}
+        <div
+          className="min-w-0 flex-1 border border-border-strong bg-background"
+          data-testid={ChatDockTestId.Composer}
+        >
           {composer}
         </div>
       </div>

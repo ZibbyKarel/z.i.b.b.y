@@ -7,10 +7,9 @@ import { OrgNode, OrgNodeTestId } from "./OrgNode";
 const CELLS: StateTone[] = ["working", "working", "idle"];
 
 describe("OrgNode", () => {
-  it("renders code, agent count and name", () => {
+  it("renders code and name", () => {
     render(<OrgNode cells={CELLS} code="DEV" name="Development" />);
     expect(screen.getByTestId(OrgNodeTestId.Code)).toHaveTextContent("DEV");
-    expect(screen.getByTestId(OrgNodeTestId.Count)).toHaveTextContent("3");
     expect(screen.getByTestId(OrgNodeTestId.Name)).toHaveTextContent("Development");
   });
 

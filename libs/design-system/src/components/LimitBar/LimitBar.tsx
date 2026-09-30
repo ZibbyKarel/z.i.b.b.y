@@ -1,5 +1,4 @@
 import type { Ref } from "react";
-import { Row, Stack } from "../Stack/Stack";
 import { Typography } from "../Typography/Typography";
 import { getUsageTone } from "../Progress/Progress";
 
@@ -20,31 +19,32 @@ export interface LimitBarProps {
 }
 
 /** A compact header variant of {@link BudgetMeter} — the top bar's `5H`/`WEEK`
- * rolling-usage readout: label + percentage inline, a 2px fill beneath. */
+ * rolling-usage readout: one row, label / 2px track / percentage — a `LimitBar`
+ * pair stacks (`AppShell`'s `useHeaderTrailing`) into the two-row usage
+ * readout next to search. */
 export function LimitBar({ label, value, max, ref }: LimitBarProps) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
   const tone = getUsageTone(pct);
   return (
-    <Stack data-testid={LimitBarTestId.Root} gap="25" ref={ref}>
-      <Row gap="100" justify="between">
-        <Typography data-testid={LimitBarTestId.Label} tracking="wider" type="labelSm">
-          {label}
-        </Typography>
-        <Typography
-          data-testid={LimitBarTestId.Value}
-          tracking="wider"
-          type="labelSm"
-          variant="secondary"
-        >
-          {Math.round(pct)}%
-        </Typography>
-      </Row>
+    <div
+      className="grid grid-cols-[44px_96px_30px] items-center gap-2"
+      data-testid={LimitBarTestId.Root}
+      ref={ref}
+    >
+      <Typography
+        data-testid={LimitBarTestId.Label}
+        tracking="wider"
+        type="labelSm"
+        variant="primary"
+      >
+        {label}
+      </Typography>
       <div
         aria-label={label}
         aria-valuemax={max}
         aria-valuemin={0}
         aria-valuenow={value}
-        className="relative h-[2px] w-[72px] bg-border"
+        className="relative h-[2px] w-full bg-border"
         data-testid={LimitBarTestId.Track}
         role="meter"
       >
@@ -60,6 +60,15 @@ export function LimitBar({ label, value, max, ref }: LimitBarProps) {
           style={{ width: `${pct}%` }}
         />
       </div>
-    </Stack>
+      <Typography
+        align="right"
+        data-testid={LimitBarTestId.Value}
+        tracking="wider"
+        type="labelSm"
+        variant="primary"
+      >
+        {Math.round(pct)}%
+      </Typography>
+    </div>
   );
 }

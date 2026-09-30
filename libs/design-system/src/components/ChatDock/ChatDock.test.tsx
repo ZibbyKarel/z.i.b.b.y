@@ -20,9 +20,7 @@ describe("ChatDock", () => {
 
   it("expands on toggle click (uncontrolled)", async () => {
     const user = userEvent.setup();
-    render(
-      <ChatDock composer={<input aria-label="Message" />} transcript={<div>Hi there</div>} />,
-    );
+    render(<ChatDock composer={<input aria-label="Message" />} transcript={<div>Hi there</div>} />);
     await user.click(screen.getByTestId(ChatDockTestId.Toggle));
     expect(screen.getByTestId(ChatDockTestId.Transcript)).toHaveTextContent("Hi there");
     expect(screen.getByTestId(ChatDockTestId.Toggle)).toHaveAttribute("aria-expanded", "true");
@@ -46,7 +44,11 @@ describe("ChatDock", () => {
     const onOpenChange = vi.fn();
     const user = userEvent.setup();
     render(
-      <ChatDock composer={<input aria-label="Message" />} onOpenChange={onOpenChange} open={false} />,
+      <ChatDock
+        composer={<input aria-label="Message" />}
+        onOpenChange={onOpenChange}
+        open={false}
+      />,
     );
     await user.click(screen.getByTestId(ChatDockTestId.Toggle));
     expect(onOpenChange).toHaveBeenCalledWith(true);
@@ -70,16 +72,9 @@ describe("ChatDock", () => {
     expect(screen.getByTestId(ChatDockTestId.TargetChip)).toHaveTextContent("Dept: dev");
   });
 
-  it("renders agentName and roleLabel in the expanded header", () => {
-    render(
-      <ChatDock
-        defaultOpen
-        agentName="Bob"
-        composer={<input aria-label="Message" />}
-        roleLabel="CTO · Ships the roadmap"
-      />,
-    );
-    expect(screen.getByTestId(ChatDockTestId.Title)).toHaveTextContent("Bob");
-    expect(screen.getByTestId(ChatDockTestId.Role)).toHaveTextContent("CTO · Ships the roadmap");
+  it("renders just the toggle and composer row, with no identity chrome", () => {
+    render(<ChatDock composer={<input aria-label="Message" />} />);
+    expect(screen.getByTestId(ChatDockTestId.Toggle)).toHaveAccessibleName("Chat");
+    expect(screen.getByTestId(ChatDockTestId.Toggle)).not.toHaveTextContent(/./);
   });
 });

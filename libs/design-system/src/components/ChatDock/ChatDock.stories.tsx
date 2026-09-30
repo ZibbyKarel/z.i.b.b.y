@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { ChatDock } from "./ChatDock";
-import { AgentGlyph } from "../AgentGlyph/AgentGlyph";
 import { Chip } from "../Chip/Chip";
 
 const composer = (
@@ -35,15 +34,9 @@ type Story = StoryObj<typeof ChatDock>;
 export const Overview: Story = {
   render: () => (
     <div className="flex flex-wrap items-end gap-8">
-      <ChatDock avatar={<AgentGlyph seed="Zibby" size={22} state="idle" />} composer={composer} />
+      <ChatDock composer={composer} />
+      <ChatDock defaultOpen composer={composer} transcript={transcript} />
       <ChatDock
-        defaultOpen
-        avatar={<AgentGlyph seed="Zibby" size={22} state="idle" />}
-        composer={composer}
-        transcript={transcript}
-      />
-      <ChatDock
-        avatar={<AgentGlyph seed="Zibby" size={22} state="idle" />}
         composer={composer}
         latestLine="On it — I’ll ping you when checks pass."
         targetChip={<Chip>Dept: dev</Chip>}
@@ -57,15 +50,7 @@ export const Playground: Story = {
   render: (args) => {
     function Controlled() {
       const [open, setOpen] = useState(false);
-      return (
-        <ChatDock
-          {...args}
-          avatar={<AgentGlyph seed="Zibby" size={22} state="idle" />}
-          onOpenChange={setOpen}
-          open={open}
-          transcript={transcript}
-        />
-      );
+      return <ChatDock {...args} onOpenChange={setOpen} open={open} transcript={transcript} />;
     }
     return <Controlled />;
   },

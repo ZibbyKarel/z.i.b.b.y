@@ -2,7 +2,7 @@
   "id": "shoptet-dev-rel-jira-cz3tdr1-647",
   "projectId": "shoptet-partner-cli",
   "level": "epic",
-  "name": "Addon check",
+  "name": "Addon check BAU",
   "description": "An umbrella task for addons review.",
   "source": {
     "kind": "jira",
@@ -19,6 +19,6 @@
   "runs": [],
   "syncNotes": [],
   "createdAt": "2026-09-24T06:59:47.294Z",
-  "updatedAt": "2026-09-29T08:55:25.687Z",
-  "syncedAt": "2026-09-29T08:55:25.687Z"
+  "updatedAt": "2026-09-30T01:41:28.173Z",
+  "syncedAt": "2026-09-30T01:41:28.173Z"
 }

@@ -29,3 +29,6 @@
 23. [ ] OrgChart - Chce to nějakou kompaktnější kartičku departmentu. Pokudj e více departmentů v rámci jendé groupy tak se detail departmentu otevírá tak, že není celý vidět. Navrhuji tělo kartičky místo jednoho sloupce rozdělit na dva a informace rozdělit mezi oba sloupečky. nemusíme zobrazovat zkratku departmentu třeba nebo spíš co je lepší nemusíme zobrazovat počty lidí v departmentu protože to je udáno stavovými čtverečky a zkratku departmentu můžeme posunout na místo toho počku.
 24. [ ] TopBar - limity - nesedí s designem. Mělo by vypadat jako dva progressbary pod sebou s labelly napravo a nalevo
 25. [ ] Chat - nesedí s desinem.
+26. [ ] Fronta "Potřebuje Tě" - musí být scrollovatelná. Pokud je tam hodně položek tak se natáhne celá stránka a chat odskočí někam hodně dolů
+27. [ ] Fronta "Potřebuje Tě" - Detail panel -> Otevřít úkol neudělá nic a celkově tady není moc informací o tom co se děje. Tenhle detail musí být popisnější abych hned věděl jestli schválit nebo ne
+28. [ ] Chat - Smaž tam tag "-> COO" není potřeba a pokud Zibby odepisuje budeme to signalizovat nějakou loading animací třeba tři tečky v místě kde bude další zpráva jeho

@@ -9,7 +9,6 @@ import { Typography } from "../Typography/Typography";
 export enum OrgNodeTestId {
   Root = "org-node-root",
   Code = "org-node-code",
-  Count = "org-node-count",
   Name = "org-node-name",
   Cells = "org-node-cells",
   Alert = "org-node-alert",
@@ -31,31 +30,33 @@ export interface OrgNodeProps {
 }
 
 /**
- * DS.md §8 org node — a department card: code + agent count, name, the cell
- * strip, and (below a hairline) the alert line. A DS component rather than an
- * app composite (the app has no styling seam to reach this look — D-007).
+ * DS.md §8 org node — a department card: name + code on one line, the cell
+ * strip beneath, and (below a hairline) the alert line. A DS component rather
+ * than an app composite (the app has no styling seam to reach this look —
+ * D-007). No standalone agent count — the cell strip already carries that,
+ * one dot per agent.
  */
 export function OrgNode({ code, name, cells, alert, selected, href, onClick, ref }: OrgNodeProps) {
   const interactive = Boolean(href || onClick);
   const className = cn(
-    "flex w-full min-h-[128px] flex-col gap-2 border bg-surface-panel p-[10px] text-left",
+    "flex w-full min-h-[72px] flex-col gap-2 border bg-surface-panel p-[10px] text-left",
     selected ? "border-ink" : "border-border",
     interactive && cn("cursor-pointer transition-colors hover:bg-elevated", focusRing),
   );
 
   const content = (
     <>
-      <div className="flex items-center justify-between">
-        <Typography data-testid={OrgNodeTestId.Code} tracking="wider" type="labelSm">
+      {/* Two columns, not two rows: name and code share one line — the code
+       *  sits where a redundant agent count used to (the cell strip below
+       *  already says how many, one dot per agent). */}
+      <div className="flex items-baseline justify-between gap-2">
+        <Typography data-testid={OrgNodeTestId.Name} type="body" weight="medium">
+          {name}
+        </Typography>
+        <Typography nowrap data-testid={OrgNodeTestId.Code} tracking="wider" type="labelSm">
           {code}
         </Typography>
-        <Typography data-testid={OrgNodeTestId.Count} tracking="wider" type="labelSm">
-          {cells.length}
-        </Typography>
       </div>
-      <Typography data-testid={OrgNodeTestId.Name} type="body" weight="medium">
-        {name}
-      </Typography>
       <div className="min-h-[9px]" data-testid={OrgNodeTestId.Cells}>
         <CellStrip cells={cells} />
       </div>

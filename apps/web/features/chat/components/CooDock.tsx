@@ -1,7 +1,7 @@
 "use client";
 
 import type { TaskTarget } from "@zibby/contracts";
-import { AgentGlyph, Button, ChatDock, Chip, Row, Stack, Typography } from "@zibby/design-system";
+import { Button, ChatDock, Chip, Row, Stack, Typography } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -68,8 +68,6 @@ export function CooDock() {
 
   const last = messages.at(-1);
   const latestLine = last ? last.text.slice(0, LATEST_LINE_MAX_CHARS) : undefined;
-
-  const avatar = <AgentGlyph seed="zibby" size={22} state={thinking ? "thinking" : "idle"} />;
 
   const targetChip = dockTarget ? (
     <Chip
@@ -154,13 +152,11 @@ export function CooDock() {
 
   return (
     <ChatDock
-      avatar={avatar}
       closeLabel={t("close")}
       composer={composer}
       latestLine={latestLine}
       onOpenChange={setDockOpen}
       open={dockOpen}
-      roleLabel={t("dock.role")}
       targetChip={targetChip}
       toggleLabel={t("dock.toggle")}
       transcript={transcript}

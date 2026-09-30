@@ -12,7 +12,7 @@ import {
   Button,
   LimitBar,
   Rail,
-  Row,
+  Stack,
   SubNav,
   Tab,
   TabList,
@@ -30,9 +30,7 @@ import {
 } from "../../../features/approvals";
 import { ApprovalSheet } from "../../../features/approvals/components/ApprovalSheet";
 import { HIGH_RISK_TYPES, formatWaited } from "../../../features/approvals/approval";
-import { useRunsQuery } from "../../../features/runs";
 import { useLimitsQuery } from "../../../features/limits";
-import { useSystemConfigQuery } from "../../../features/system";
 import { SECTIONS, type SectionId, sectionForPath } from "../../../state/config";
 
 /** Sets (or clears) the shell's `?approval=` search param over whatever page
@@ -131,32 +129,19 @@ function SectionSubNav({ active }: { active: SectionId }) {
   );
 }
 
-/** `AppHeader`'s trailing operator/active-count/limits cluster — a custom hook
- *  (not a component) so it can return plain nodes for `AppHeader`'s named slots
- *  rather than one wrapping element. */
+/** `AppHeader`'s trailing limits cluster — a custom hook (not a component) so
+ *  it can return a plain node for `AppHeader`'s named slot rather than one
+ *  wrapping element. */
 function useHeaderTrailing() {
   const t = useTranslations("shell");
-  const { data: config } = useSystemConfigQuery();
-  const { runs } = useRunsQuery();
   const { data: limits } = useLimitsQuery();
-  const activeCount = runs.filter((r) => r.status === "running").length;
 
   return {
-    operator: (
-      <Typography tracking="wider" type="labelSm" variant="secondary">
-        {config?.operatorName ?? t("operatorFallback")}
-      </Typography>
-    ),
-    activeCount: (
-      <Typography tracking="wider" type="labelSm" variant="secondary">
-        {activeCount} {t("active")}
-      </Typography>
-    ),
     limits: (
-      <Row gap="150">
+      <Stack gap="50">
         <LimitBar label="5H" max={100} value={limits?.rolling.usedPct ?? 0} />
         <LimitBar label={t("week")} max={100} value={limits?.weekly.usedPct ?? 0} />
-      </Row>
+      </Stack>
     ),
   };
 }
@@ -229,13 +214,11 @@ function AppShellChrome({ children }: { children: ReactNode }) {
       dock={<CooDock />}
       header={
         <AppHeader
-          activeCount={trailing.activeCount}
           homeHref="/org"
           limits={trailing.limits}
           linkComponent={NavLink}
           nav={<SectionNav active={active} />}
           onSearchClick={() => setPaletteOpen(true)}
-          operator={trailing.operator}
         />
       }
       rail={<NeedsYouRail onOpenApproval={approvalSheet.open} />}
