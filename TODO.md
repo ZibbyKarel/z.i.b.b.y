@@ -32,3 +32,4 @@
 26. [ ] Fronta "Potřebuje Tě" - musí být scrollovatelná. Pokud je tam hodně položek tak se natáhne celá stránka a chat odskočí někam hodně dolů
 27. [ ] Fronta "Potřebuje Tě" - Detail panel -> Otevřít úkol neudělá nic a celkově tady není moc informací o tom co se děje. Tenhle detail musí být popisnější abych hned věděl jestli schválit nebo ne
 28. [ ] Chat - Smaž tam tag "-> COO" není potřeba a pokud Zibby odepisuje budeme to signalizovat nějakou loading animací třeba tři tečky v místě kde bude další zpráva jeho
+29. [ ] Chat - nefunguje. Když mi chce Zibby odpovědět tak se napíše zpráva "claude chat turn failed"
