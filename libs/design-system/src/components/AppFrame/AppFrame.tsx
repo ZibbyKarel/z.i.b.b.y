@@ -103,6 +103,12 @@ export function AppFrame({
       <div
         className="grid min-h-0 grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)]"
         data-testid={AppFrameTestId.Body}
+        // Without an explicit row track, an auto-sized grid row grows to the
+        // rail's/main's full content height (CSS grid's auto-row sizing uses
+        // items' max-content contribution) — the overflow then escapes this
+        // (overflow-visible) div and scrolls the page instead of each pane
+        // scrolling on its own (ZB-16).
+        style={{ gridTemplateRows: "minmax(0,1fr)" }}
       >
         {rail && (
           <>
