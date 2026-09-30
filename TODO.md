@@ -26,10 +26,12 @@
 20. [x] Loader komponenta je stále ve starém designu (claude/zibbycorp-system-migration-7lx46s@9286f25e)
 21. [x] Tlačítko nastavení (ozubené kolo) v topBaru smažeme. Je redundantní (claude/zibbycorp-system-migration-7lx46s@2fbc3292)
 22. [x] Tlačítko "Nový úkol" musíme udělat výraznější (claude/zibbycorp-system-migration-7lx46s@2fbc3292)
-23. [ ] OrgChart - Chce to nějakou kompaktnější kartičku departmentu. Pokudj e více departmentů v rámci jendé groupy tak se detail departmentu otevírá tak, že není celý vidět. Navrhuji tělo kartičky místo jednoho sloupce rozdělit na dva a informace rozdělit mezi oba sloupečky. nemusíme zobrazovat zkratku departmentu třeba nebo spíš co je lepší nemusíme zobrazovat počty lidí v departmentu protože to je udáno stavovými čtverečky a zkratku departmentu můžeme posunout na místo toho počku.
-24. [ ] TopBar - limity - nesedí s designem. Mělo by vypadat jako dva progressbary pod sebou s labelly napravo a nalevo
-25. [ ] Chat - nesedí s desinem.
-26. [ ] Fronta "Potřebuje Tě" - musí být scrollovatelná. Pokud je tam hodně položek tak se natáhne celá stránka a chat odskočí někam hodně dolů
-27. [ ] Fronta "Potřebuje Tě" - Detail panel -> Otevřít úkol neudělá nic a celkově tady není moc informací o tom co se děje. Tenhle detail musí být popisnější abych hned věděl jestli schválit nebo ne
-28. [ ] Chat - Smaž tam tag "-> COO" není potřeba a pokud Zibby odepisuje budeme to signalizovat nějakou loading animací třeba tři tečky v místě kde bude další zpráva jeho
-29. [ ] Chat - nefunguje. Když mi chce Zibby odpovědět tak se napíše zpráva "claude chat turn failed"
+23. [x] OrgChart - Chce to nějakou kompaktnější kartičku departmentu. Pokudj e více departmentů v rámci jendé groupy tak se detail departmentu otevírá tak, že není celý vidět. Navrhuji tělo kartičky místo jednoho sloupce rozdělit na dva a informace rozdělit mezi oba sloupečky. nemusíme zobrazovat zkratku departmentu třeba nebo spíš co je lepší nemusíme zobrazovat počty lidí v departmentu protože to je udáno stavovými čtverečky a zkratku departmentu můžeme posunout na místo toho počku.
+24. [x] TopBar - limity - nesedí s designem. Mělo by vypadat jako dva progressbary pod sebou s labelly napravo a nalevo
+25. [x] Chat - nesedí s desinem.
+26. [x] Fronta "Potřebuje Tě" - musí být scrollovatelná. Pokud je tam hodně položek tak se natáhne celá stránka a chat odskočí někam hodně dolů
+27. [x] Fronta "Potřebuje Tě" - Detail panel -> Otevřít úkol neudělá nic a celkově tady není moc informací o tom co se děje. Tenhle detail musí být popisnější abych hned věděl jestli schválit nebo ne
+28. [x] Chat - Smaž tam tag "-> COO" není potřeba a pokud Zibby odepisuje budeme to signalizovat nějakou loading animací třeba tři tečky v místě kde bude další zpráva jeho
+29. [x] Chat - nefunguje. Když mi chce Zibby odpovědět tak se napíše zpráva "claude chat turn failed"
+30. [x] Názvy stránek - je to mess. Pomalu každá stránka má jiný design nadpisů. Příkladem třeba stránky "system/settings/general" a "system/registries/skills" a "/ledger/budgets" a "work/tasks". Sjednoť design všech názvů na všech stránkách. Dokonce na "work/projects/kzphoto" je i breadcrumb navigace tu sem snad nikde jinde neviděl. Drobečkovou navigaci bych udělal tak, že bych za submenu (tedy na stránce Práce tam kde jsou úkoly, řetězce, cíle, firmy, týmy a projekty) dal do stejného řádku za lomítko. Tzn na stránce kzphoto projektu by bylo v submenu zvýrazněno "Projekty " a za lomítkem pak " KZPHOTO" pokud bych se zanoři leště hlouběji tak tam bude KZPHOTO / INTEGRACE
+31. [ ] přestaly se u projektů zobrazovat loga

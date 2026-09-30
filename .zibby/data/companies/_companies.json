@@ -9,6 +9,12 @@
         "role": "Engineering Team Lead",
         "vip": true,
         "comms_style": "Přátelský, věcný, vtipný, tykání"
+      },
+      {
+        "id": "tomas-benes",
+        "name": "Tomáš Beneš",
+        "role": "Developer",
+        "vip": false
       }
     ]
   },
