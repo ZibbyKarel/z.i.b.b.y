@@ -94,6 +94,30 @@ Legend: ⬜ todo · 🟦 in progress · ✅ landed (sha) · ⛔ parked (reason)
 
 ---
 
+## Night run 1 (started 2026-10-01 evening) — goal and operator answers
+
+**Goal (operator, verbatim intent):** in ZibbyCorp, start autonomous creation of
+children's coloring books, runnable against a **local** model and against a **cloud**
+model; everything configurable through the ZibbyCorp UI; an automation that runs a
+pipeline **twice a week** and ends with a folder containing the book PDF as the output
+artifact.
+
+**Operator answers (binding for this night):**
+- Models: operator delegated the choice. **Local** = mflux FLUX.2 klein 4B (4-bit) +
+  Ollama `qwen3-vl:8b`. **Cloud** = fal.ai FLUX.2 klein 4B (same model, ~$0.012/img,
+  `FAL_KEY`) + Claude Haiku via `claude -p` for vision. Provider is a setting.
+- Gates: per-phase optional human check (`approval: ask`), settable in the pipeline;
+  **default fully autonomous** (no gate in the shipped pipeline).
+- Output: the run sandbox only (the `book/` folder in the run dir), linked from run detail.
+- Install: **allowed** — night run installs mflux (`uv tool install`) and Ollama (brew),
+  pulls `qwen3-vl:8b`. (Overrides Q5.)
+- Etsy: first API channel, key later (not tonight). No external human QA panel.
+
+**Night-1 scope (goal-critical first):** P1-01 tool phase · P1-02 phase approval ·
+P1-03 cost cap · P2 toolkit · P3 providers (mflux, fal, ollama, haiku, mock) · P0
+departments as data + `pub` · P4 agents/pipeline/employees · automation 2×/week ·
+settings via project env/secrets in UI. P5, P7–P11 are later nights.
+
 ## Defaults applied
 _(Q-number · default taken · where it shows)_
 
