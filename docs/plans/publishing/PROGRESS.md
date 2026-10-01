@@ -160,6 +160,8 @@ _(path · reason · subphase)_
 
 ## PR drafts
 
+- Night 1: https://github.com/ZibbyKarel/z.i.b.b.y/pull/71 (open, not merged)
+
 ## Operator action needed (morning)
 - Review and merge the PR (never auto-merged).
 - Tooling is installed on this Mac (mflux, Ollama, `qwen3-vl:8b-instruct`). The old
