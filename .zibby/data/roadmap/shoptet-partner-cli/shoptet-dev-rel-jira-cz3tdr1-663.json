@@ -20,10 +20,10 @@
   "dependsOnFromSource": [
     "shoptet-dev-rel-jira-cz3tdr1-662"
   ],
-  "lifecycle": "external",
+  "lifecycle": "done",
   "runs": [],
   "syncNotes": [],
   "createdAt": "2026-09-24T06:59:47.306Z",
-  "updatedAt": "2026-09-30T04:41:28.230Z",
-  "syncedAt": "2026-09-30T04:41:28.230Z"
+  "updatedAt": "2026-09-30T11:18:43.160Z",
+  "syncedAt": "2026-09-30T11:18:43.160Z"
 }
