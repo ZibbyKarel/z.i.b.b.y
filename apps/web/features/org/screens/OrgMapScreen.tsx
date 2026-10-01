@@ -5,6 +5,7 @@ import { DEPARTMENTS, DIVISIONS } from "@zibby/contracts";
 import {
   AgentGlyph,
   Button,
+  Card,
   CellStrip,
   Container,
   EmptyState,
@@ -13,6 +14,7 @@ import {
   OrgNode,
   Panel,
   Row,
+  SelectField,
   Stack,
   type StateTone,
   Typography,
@@ -22,9 +24,12 @@ import Link from "next/link";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { useAgentsQuery } from "../../agents";
 import { useApprovalsQuery } from "../../approvals/queries";
 import { useHandoffRulesQuery } from "../../handoff/queries";
 import { useDepartmentSubtasksQuery, useDepartmentsQuery } from "../../departments/queries";
+import { useHireEmployeeMutation } from "../../employees/mutations";
 import { useEmployeesQuery } from "../../employees/queries";
 
 export enum OrgMapScreenTestId {
@@ -33,6 +38,8 @@ export enum OrgMapScreenTestId {
   Grid = "org-map-grid",
   Division = "org-map-division",
   FocusPanel = "org-map-focus-panel",
+  TeamTile = "org-map-team-tile",
+  AddEmployeeButton = "org-map-add-employee-button",
 }
 
 /** One column per division. `GridCols` has no fixed-4-with-minimum variant, so
@@ -74,7 +81,7 @@ function pickAlert(
 }
 
 /**
- * ZB-02 — the ORG map: CEO → COO → divisions (D-021) → 11 department nodes, plus a `?focus=<id>` panel
+ * ZB-02 — the ORG map: CEO → COO → divisions (D-021) → 11 department nodes, plus a `?department=<id>` panel
  * (department roster, open subtasks, handoff IN/OUT). PART-B.md ZB-02 / ROUTE-MAP.md
  * §1 ORG / D-014 / D-015 / O-04.
  */
@@ -83,18 +90,21 @@ export function OrgMapScreen() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const focusId = (searchParams.get("focus") ?? undefined) as DepartmentId | undefined;
+  const focusId = (searchParams.get("department") ?? undefined) as DepartmentId | undefined;
 
   const { data: departments = [] } = useDepartmentsQuery();
   const { data: employees = [] } = useEmployeesQuery({ status: "active" });
   const { data: approvals = [] } = useApprovalsQuery();
   const { data: allHandoffRules = [] } = useHandoffRulesQuery();
   const { data: focusSubtasks = [] } = useDepartmentSubtasksQuery(focusId);
+  const { data: agents = [] } = useAgentsQuery();
+  const hire = useHireEmployeeMutation(focusId ?? "");
+  const [newAgentId, setNewAgentId] = useState("");
 
   function setFocus(id: DepartmentId) {
     const next = new URLSearchParams(searchParams.toString());
-    if (focusId === id) next.delete("focus");
-    else next.set("focus", id);
+    if (focusId === id) next.delete("department");
+    else next.set("department", id);
     const query = next.toString();
     router.push((query ? `${pathname}?${query}` : pathname) as Route);
   }
@@ -104,6 +114,8 @@ export function OrgMapScreen() {
 
   const focusDepartment = departments.find((d) => d.id === focusId);
   const focusEmployees = employees.filter((e) => e.department === focusId);
+  // An agent counts as allocated once any active employee holds its position.
+  const freeAgents = agents.filter((a) => !employees.some((e) => e.agentId === a.id));
   const focusHandoff = allHandoffRules.filter(
     (r) => r.from === focusId || (r.to.kind === "department" && r.to.id === focusId),
   );
@@ -206,22 +218,64 @@ export function OrgMapScreen() {
                 <Typography tracking="wider" type="labelSm" variant="secondary">
                   {t("focus.teamTitle")}
                 </Typography>
+                {freeAgents.length === 0 ? (
+                  <Typography type="labelSm" variant="tertiary">
+                    {t("focus.noFreeAgents")}
+                  </Typography>
+                ) : (
+                  <Stack align="end" direction="row" gap="100">
+                    <Container grow>
+                      <SelectField
+                        label={t("focus.addLabel")}
+                        onValueChange={setNewAgentId}
+                        options={freeAgents.map((a) => ({
+                          value: a.id,
+                          label: a.displayName ?? a.name ?? a.id,
+                        }))}
+                        value={newAgentId}
+                      />
+                    </Container>
+                    <Button
+                      data-testid={OrgMapScreenTestId.AddEmployeeButton}
+                      disabled={!newAgentId || hire.isPending}
+                      icon="plus"
+                      intent="primary"
+                      loading={hire.isPending}
+                      onClick={() =>
+                        hire.mutate(
+                          { params: { id: focusDepartment.id }, body: { agentId: newAgentId } },
+                          { onSuccess: () => setNewAgentId("") },
+                        )
+                      }
+                    >
+                      {t("focus.add")}
+                    </Button>
+                  </Stack>
+                )}
                 {focusEmployees.length === 0 ? (
                   <EmptyState body={t("focus.teamEmpty")} title={t("focus.teamEmptyTitle")} />
                 ) : (
                   <Grid cols={2} gap="100" lg={4} sm={3}>
                     {focusEmployees.map((e) => (
-                      <Panel key={e.id} padding="100">
-                        <Stack align="center" gap="50">
-                          <AgentGlyph seed={e.agentId} size={48} state={e.state} />
-                          <Typography type="body" weight="medium">
-                            {e.name}
-                          </Typography>
-                          <Typography type="labelSm" variant="secondary">
-                            {e.position.title ?? e.position.name}
-                          </Typography>
-                        </Stack>
-                      </Panel>
+                      <Link
+                        data-testid={OrgMapScreenTestId.TeamTile}
+                        href={`/system/registries/positions/${e.agentId}` as Route}
+                        key={e.id}
+                      >
+                        <Card interactive radius="sm">
+                          <Container padding="100">
+                            <Stack align="center" gap="50">
+                              <AgentGlyph seed={e.agentId} size={48} state={e.state} />
+                              <Typography type="body" weight="medium">
+                                {e.name}
+                              </Typography>
+                              <Typography type="labelSm" variant="secondary">
+                                {e.position.title ?? e.position.name}
+                              </Typography>
+                            </Stack>
+                          </Container>
+                        </Card>
+                      </Link>
                     ))}
                   </Grid>
                 )}

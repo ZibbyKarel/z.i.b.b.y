@@ -2316,7 +2316,10 @@
       "handoffEmptyTitle": "Nothing moving",
       "handoffEmpty": "Nothing moving in or out of this department.",
       "out": "→ OUT · {kind}",
-      "in": "→ IN · {kind}"
+      "in": "→ IN · {kind}",
+      "addLabel": "Add employee",
+      "add": "Add",
+      "noFreeAgents": "Every agent is already in a department."
     }
   },
   "activityLog": {

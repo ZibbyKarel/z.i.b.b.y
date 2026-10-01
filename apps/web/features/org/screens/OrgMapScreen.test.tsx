@@ -1,15 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AgentGlyphTestId,
+  DropdownTestId,
   OrgConnectorTestId,
   OrgNodeTestId,
   ZibbyAvatarTestId,
 } from "@zibby/design-system";
-import { renderWithProviders as render, screen, within } from "../../../test/render";
+import { fireEvent, renderWithProviders as render, screen, within } from "../../../test/render";
 import { OrgMapScreen, OrgMapScreenTestId } from "./OrgMapScreen";
 
 const push = vi.fn();
-/** The `?focus=` param the mocked URL reports — set per test, same pattern as
+/** The `?department=` param the mocked URL reports — set per test, same pattern as
  *  `Screen.test.tsx`'s `searchTab`. */
 let focusParam = "";
 
@@ -18,7 +19,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/org",
   useSearchParams: () => {
     const params = new URLSearchParams();
-    if (focusParam) params.set("focus", focusParam);
+    if (focusParam) params.set("department", focusParam);
     return params;
   },
 }));
@@ -82,9 +83,24 @@ vi.mock("../../departments/queries/useDepartmentSubtasksQuery", () => ({
   useDepartmentSubtasksQuery: () => ({ data: [{ taskId: "TSK-1", state: "working" }] }),
 }));
 
+vi.mock("../../agents", () => ({
+  useAgentsQuery: () => ({
+    data: [
+      { id: "koder", name: "Kodér" },
+      { id: "tester", name: "Tester" },
+    ],
+  }),
+}));
+
+const hireMutate = vi.fn();
+vi.mock("../../employees/mutations", () => ({
+  useHireEmployeeMutation: () => ({ mutate: hireMutate, isPending: false }),
+}));
+
 describe("OrgMapScreen", () => {
   beforeEach(() => {
     push.mockReset();
+    hireMutate.mockReset();
     focusParam = "";
   });
 
@@ -102,12 +118,12 @@ describe("OrgMapScreen", () => {
     expect(avatar).toHaveAccessibleName("Zibby · COO");
   });
 
-  it("shows no focus panel without ?focus=", () => {
+  it("shows no focus panel without ?department=", () => {
     render(<OrgMapScreen />);
     expect(screen.queryByTestId(OrgMapScreenTestId.FocusPanel)).not.toBeInTheDocument();
   });
 
-  it("shows the focus panel with the department's team, subtasks and handoff rows for ?focus=<id>", () => {
+  it("shows the focus panel with the department's team, subtasks and handoff rows for ?department=<id>", () => {
     focusParam = "dev";
     render(<OrgMapScreen />);
     const panel = screen.getByTestId(OrgMapScreenTestId.FocusPanel);
@@ -147,5 +163,35 @@ describe("OrgMapScreen", () => {
     focusParam = "dev";
     render(<OrgMapScreen />);
     expect(screen.getAllByTestId(AgentGlyphTestId.Root)).toHaveLength(1);
+  });
+
+  it("links each team tile to its agent's registry detail", () => {
+    focusParam = "dev";
+    render(<OrgMapScreen />);
+    expect(screen.getByTestId(OrgMapScreenTestId.TeamTile)).toHaveAttribute(
+      "href",
+      "/system/registries/positions/koder",
+    );
+  });
+
+  it("puts the clicked department into the ?department= param", () => {
+    render(<OrgMapScreen />);
+    fireEvent.click(screen.getAllByTestId(OrgNodeTestId.Root)[0]!);
+    expect(push).toHaveBeenCalledWith("/org?department=dev");
+  });
+
+  it("offers only agents no department holds yet, and hires the picked one into the focus department", () => {
+    focusParam = "dev";
+    render(<OrgMapScreen />);
+    fireEvent.click(screen.getByTestId(DropdownTestId.Trigger));
+    const options = screen.getAllByTestId(DropdownTestId.Option);
+    expect(options).toHaveLength(1);
+    expect(options[0]).toHaveTextContent("Tester");
+    fireEvent.click(options[0]!);
+    fireEvent.click(screen.getByTestId(OrgMapScreenTestId.AddEmployeeButton));
+    expect(hireMutate).toHaveBeenCalledWith(
+      { params: { id: "dev" }, body: { agentId: "tester" } },
+      expect.anything(),
+    );
   });
 });

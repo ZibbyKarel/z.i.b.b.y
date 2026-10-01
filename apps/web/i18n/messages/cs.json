@@ -2316,7 +2316,10 @@
       "handoffEmptyTitle": "Nic se nepředává",
       "handoffEmpty": "Do tohoto oddělení ani z něj se nic nepředává.",
       "out": "→ VEN · {kind}",
-      "in": "→ DOVNITŘ · {kind}"
+      "in": "→ DOVNITŘ · {kind}",
+      "addLabel": "Přidat zaměstnance",
+      "add": "Přidat",
+      "noFreeAgents": "Všichni agenti už jsou v nějakém oddělení."
     }
   },
   "activityLog": {
