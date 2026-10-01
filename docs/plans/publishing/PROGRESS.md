@@ -10,9 +10,9 @@
 **Branch:** `feat/publishing-factory`, worktree `worktrees/publishing-factory`.
 **Wave order:** Wave 1 (P0-01..03 ∥ P1 ∥ P2) → Wave 2 (P0-04 → P4 ∥ P3 ∥ P7-01..02) →
 Wave 3 (P5 → P7-03..04 → P8) → Wave 4, second night (P9 ∥ P10).
-**Last updated:** 2026-10-01 ~21:00 (Wave 1 + P4 done, P3 in progress).
+**Last updated:** 2026-10-01 ~23:45 — night-1 goal met: live 24-page book built end to end on local models.
 **Hard stop (operator, 2026-10-01):** if not finished by **2026-10-02 10:00**, stop and write the final state + what was not done.
-**Resume at:** wait for P3 agent → commit product-factory + P4 → live smoke (mflux+ollama) → morning checks + PR.
+**Resume at:** night 1 is closed (PR open, not merged). Next night: P5 → P7 → P8 (see board).
 
 ---
 
@@ -46,10 +46,10 @@ Legend: ⬜ todo · 🟦 in progress · ✅ landed (sha) · ⛔ parked (reason)
 ### Part P3 — Local generation
 | Phase | Title | Status | Commit |
 |---|---|---|---|
-| P3-01 | mflux provider + licence allow-list | ⬜ | |
-| P3-02 | Vision providers (ollama, haiku) | ⬜ | |
-| P3-03 | 24 GB memory choreography + ops doc | ⬜ | |
-| P3-04 | Bake-off | ⬜ | |
+| P3-01 | mflux provider + licence allow-list | ✅ (allow-list empty, `referenceImages` ignored) | |
+| P3-02 | Vision providers (ollama, haiku) | ✅ ollama live; haiku mock-tested only | |
+| P3-03 | 24 GB memory choreography + ops doc | ✅ `docs/ops/product-factory.md` | |
+| P3-04 | Bake-off | ✅ tool landed; z-image leg not rerun after the cache fix | |
 
 ### Part P4 — Milestone 1 (mock end-to-end)
 | Phase | Title | Status | Commit |
@@ -105,7 +105,7 @@ artifact.
 
 **Operator answers (binding for this night):**
 - Models: operator delegated the choice. **Local** = mflux FLUX.2 klein 4B (4-bit) +
-  Ollama `qwen3-vl:8b`. **Cloud** = fal.ai FLUX.2 klein 4B (same model, ~$0.012/img,
+  Ollama `qwen3-vl:8b-instruct` (the thinking build broke JSON replies). **Cloud** = fal.ai FLUX.2 klein 4B (same model, ~$0.012/img,
   `FAL_KEY`) + Claude Haiku via `claude -p` for vision. Provider is a setting.
 - Gates: per-phase optional human check (`approval: ask`), settable in the pipeline;
   **default fully autonomous** (no gate in the shipped pipeline).
@@ -146,16 +146,47 @@ _(path · reason · subphase)_
 - Pre-existing red test: `AppShell renders the header's section nav…` (no shell/header file touched on this branch).
 
 ## Follow-ups found
+- **Vision QA quality.** The 8B local judge is weak: it only checks subject, text, scary
+  content and over-complexity (pixel QA owns gray/contours/margins). Haiku vision
+  (`PF_VISION_PROVIDER=haiku`) is wired but has never run live — try it as the cloud judge.
+- **Cover is line art**, not a colour cover. Fine for v1; a colour cover sells better.
+- **fal.ai** never ran live (no `FAL_KEY`). Set it in project-secrets, switch
+  `PF_IMAGE_PROVIDER=fal` and run once.
+- `produce` with the old judge took 40 min for 24 pages (11 blocked × 3 attempts, model
+  swaps). With the narrowed judge the re-run of blocked pages took < 5 min.
+- Deferred: P1-04 employee pin, E4 cost ledger, editorial QA phase, real skills (folded
+  into agent instructions), P5, P7–P11, Etsy key (P8-00).
+- Pre-existing red web test `AppShell renders the header's section nav…` (untouched).
 
 ## PR drafts
 
 ## Operator action needed (morning)
-- Install local tooling (Q5 default = night run does not install):
-  `uv tool install --upgrade mflux` · `ollama pull qwen3-vl:8b` · then `product-factory doctor`
-- Pick the bake-off winner (P3-04) once it has run.
+- Review and merge the PR (never auto-merged).
+- Tooling is installed on this Mac (mflux, Ollama, `qwen3-vl:8b-instruct`). The old
+  `qwen3-vl:8b` (thinking build, 6 GB) can be removed: `ollama rm qwen3-vl:8b`.
+- The automation `coloring-book-twice-weekly` is enabled (Mon + Thu 02:00) — it runs
+  as soon as the API runs. Disable it in Automations if you do not want that yet.
 - P8-00 (when convenient, not blocking): create the Etsy shop + Seller-App API key
   (store in `project-secrets`) — `etsy-api` flips from prepare-only to full on its own;
   check Gumroad live docs for `POST /v2/products` (Q16).
 - Ask the accountant about CZ VAT registration before any direct (own-store) sale (Q20).
 
 ## Run log
+
+- **2026-10-01 21:35–23:36 · live smoke, real Claude + mflux + Ollama, isolated data dir.**
+  - Run 1: fake claude (vitest default `CLAUDE_BIN`) → set the real binary.
+  - Run 2: parked on approval — creative director wrote `books.md` with `>>`. Fix: File
+    writes rule in agent instructions (gate floor unchanged).
+  - Runs 3–4: Ollama vision returned empty / `<think>` JSON (~220 s/page). Fix:
+    `qwen3-vl:8b-instruct` default + `think:false` + verdict extraction (`36930fa`, `deff03a`).
+  - Run 5: parked on approval — illustrator wrote `jobs.json` with `cat <<EOF`. Fix: rule in
+    all five agents.
+  - Run 6: parked on retries — auditor rejected the same banana three times for thin lines.
+    Fix: blocking vs minor findings (`368bc5f`).
+  - **Run 7 (4 pages): `done` in 5.5 min, $0.90.** interior.pdf (9 pp) + cover.pdf, checked visually.
+  - Run 8: 24 pages, automation prompt (`theme: auto` → *Friendly Baby Dinosaurs*): first
+    `produce` blocked 11/25 on false vision claims → narrowed the local judge (`8ab5c43`);
+    auditor kept finding new pages per pass → re-audit checks only redrawn pages.
+    **`done` in 56 min, $3.61 tokens, $0 images**: interior.pdf 49 pp (single-sided),
+    cover.pdf with spine 0.11", preflight clean, listing.md, README.md.
+

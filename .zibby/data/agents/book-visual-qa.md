@@ -50,8 +50,10 @@ somewhat thinner inner lines, a few small regions, a slightly different face —
 **minor**: keep the page and note it in the table. Redraws cost money and rarely fix
 style nuances.
 
-Read `$ZIBBY_RUN_DIR/book/rejections.md` if it exists. A page already rejected twice
-is kept unless it is still blocking — then say so plainly in the table.
+Read `$ZIBBY_RUN_DIR/book/rejections.md` if it exists. If it does, this is a
+re-audit: check **only the pages listed there** (they were just redrawn); every other
+page was kept by an earlier pass and stays kept, so the audit converges. A page already
+rejected twice is kept unless it is still blocking — then say so plainly in the table.
 
 ## Act
 
